@@ -24,6 +24,8 @@
 #include <opm/output/data/Aquifer.hpp>
 #include <opm/parser/eclipse/EclipseState/Aquifer/NumericalAquifer/SingleNumericalAquifer.hpp>
 
+#include <utility>
+
 namespace Opm
 {
 template <typename TypeTag>
@@ -52,22 +54,22 @@ public:
                      const std::unordered_map<int, int>& cartesian_to_compressed,
                      const Simulator& ebos_simulator,
                      const int* global_cell)
-    : id_(aquifer.id())
-    , ebos_simulator_(ebos_simulator)
-    , flux_rate_(0.)
-    , cumulative_flux_(0.)
-    , global_cell_(global_cell)
+        : id_(aquifer.id())
+        , ebos_simulator_(ebos_simulator)
+        , flux_rate_(0.)
+        , cumulative_flux_(0.)
+        , global_cell_(global_cell)
+        , init_pressure_(aquifer.numCells(), 0.0)
     {
         this->cell_to_aquifer_cell_idx_.resize(this->ebos_simulator_.gridView().size(/*codim=*/0), -1);
 
         for (size_t idx = 0; idx < aquifer.numCells(); ++idx) {
-            const auto& cell = *(aquifer.getCellPrt(idx));
-            const int global_idx = cell.global_index;
-            const auto search = cartesian_to_compressed.find(global_idx);
+            const auto* cell = aquifer.getCellPrt(idx);
+
             // Due to parallelisation, the cell might not exist in the current process
+            auto search = cartesian_to_compressed.find(cell->global_index);
             if (search != cartesian_to_compressed.end()) {
-                const int cell_idx = cartesian_to_compressed.at(global_idx);
-                this->cell_to_aquifer_cell_idx_[cell_idx] = idx;
+                this->cell_to_aquifer_cell_idx_[search->second] = idx;
             }
         }
     }
@@ -87,19 +89,20 @@ public:
     data::AquiferData aquiferData() const
     {
         data::AquiferData data;
-        data.aquiferID = this->id_;
-        data.initPressure = this->init_pressure_;
+        data.aquiferID = this->aquiferID();
         data.pressure = this->pressure_;
         data.fluxRate = this->flux_rate_;
         data.volume = this->cumulative_flux_;
-        data.type = data::AquiferType::Numerical;
+
+        auto* aquNum = data.typeData.template create<data::AquiferType::Numerical>();
+        aquNum->initPressure = this->init_pressure_;
+
         return data;
     }
 
     void initialSolutionApplied()
     {
-        this->init_pressure_ = this->calculateAquiferPressure();
-        this->pressure_ = this->init_pressure_;
+        this->pressure_ = this->calculateAquiferPressure(this->init_pressure_);
         this->flux_rate_ = 0.;
         this->cumulative_flux_ = 0.;
     }
@@ -115,13 +118,19 @@ private:
     double flux_rate_; // aquifer influx rate
     double cumulative_flux_; // cumulative aquifer influx
     const int* global_cell_; // mapping to global index
-    double init_pressure_;
+    std::vector<double> init_pressure_{};
     double pressure_; // aquifer pressure
 
     // TODO: maybe unordered_map can also do the work to save memory?
     std::vector<int> cell_to_aquifer_cell_idx_;
 
     double calculateAquiferPressure() const
+    {
+        auto capture = std::vector<double>(this->init_pressure_.size(), 0.0);
+        return this->calculateAquiferPressure(capture);
+    }
+
+    double calculateAquiferPressure(std::vector<double>& cell_pressure) const
     {
         double sum_pressure_watervolume = 0.;
         double sum_watervolume = 0.;
@@ -158,11 +167,17 @@ private:
             const double water_volume = volume * porosity * water_saturation;
             sum_pressure_watervolume += water_volume * water_pressure_reservoir;
             sum_watervolume += water_volume;
+
+            cell_pressure[idx] = water_pressure_reservoir;
         }
 
         const auto& comm = this->ebos_simulator_.vanguard().grid().comm();
         comm.sum(&sum_pressure_watervolume, 1);
         comm.sum(&sum_watervolume, 1);
+
+        // Ensure all processes have same notion of the aquifer cells' pressure values.
+        comm.sum(cell_pressure.data(), cell_pressure.size());
+
         return sum_pressure_watervolume / sum_watervolume;
     }
 

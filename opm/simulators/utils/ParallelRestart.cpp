@@ -226,6 +226,11 @@ HANDLE_AS_POD(data::NodeData)
 HANDLE_AS_POD(data::Rates)
 HANDLE_AS_POD(data::Segment)
 
+std::size_t packSize(const data::NumericAquiferData& data, Dune::MPIHelper::MPICommunicator comm)
+{
+    return packSize(data.initPressure, comm);
+}
+
 std::size_t packSize(const data::AquiferData& data, Dune::MPIHelper::MPICommunicator comm)
 {
     const auto type = 0ull;
@@ -238,11 +243,20 @@ std::size_t packSize(const data::AquiferData& data, Dune::MPIHelper::MPICommunic
         + packSize(data.datumDepth, comm)
         + packSize(type, comm);
 
-    if (data.aquFet != nullptr) {
-        return base + packSize(*data.aquFet, comm);
+    if (auto const* aquFet = data.typeData.get<data::AquiferType::Fetkovich>();
+        aquFet != nullptr)
+    {
+        return base + packSize(*aquFet, comm);
     }
-    else if (data.aquCT != nullptr) {
-        return base + packSize(*data.aquCT, comm);
+    else if (auto const* aquCT = data.typeData.get<data::AquiferType::CarterTracy>();
+             aquCT != nullptr)
+    {
+        return base + packSize(*aquCT, comm);
+    }
+    else if (auto const* aquNum = data.typeData.get<data::AquiferType::Numerical>();
+             aquNum != nullptr)
+    {
+        return base + packSize(*aquNum, comm);
     }
 
     return base;
@@ -513,12 +527,19 @@ void pack(const std::unordered_map<T1,T2,H,P,A>& data, std::vector<char>& buffer
     }
 }
 
+void pack(const data::NumericAquiferData& data, std::vector<char>& buffer, int& position,
+          Dune::MPIHelper::MPICommunicator comm)
+{
+    pack(data.initPressure, buffer, position, comm);
+}
+
 void pack(const data::AquiferData& data, std::vector<char>& buffer, int& position,
           Dune::MPIHelper::MPICommunicator comm)
 {
     const auto type =
-          (data.aquFet != nullptr)*(1ull << 0)
-        + (data.aquCT  != nullptr)*(1ull << 1);
+          (data.typeData.is<data::AquiferType::Fetkovich>()   * (1ull << 0))
+        + (data.typeData.is<data::AquiferType::CarterTracy>() * (1ull << 1))
+        + (data.typeData.is<data::AquiferType::Numerical>()   * (1ull << 2));
 
     pack(data.aquiferID, buffer, position, comm);
     pack(data.pressure, buffer, position, comm);
@@ -528,11 +549,20 @@ void pack(const data::AquiferData& data, std::vector<char>& buffer, int& positio
     pack(data.datumDepth, buffer, position, comm);
     pack(type, buffer, position, comm);
 
-    if (data.aquFet != nullptr) {
-        pack(*data.aquFet, buffer, position, comm);
+    if (auto const* aquFet = data.typeData.get<data::AquiferType::Fetkovich>();
+        aquFet != nullptr)
+    {
+        pack(*aquFet, buffer, position, comm);
     }
-    else if (data.aquCT != nullptr) {
-        pack(*data.aquCT, buffer, position, comm);
+    else if (auto const* aquCT = data.typeData.get<data::AquiferType::CarterTracy>();
+             aquCT != nullptr)
+    {
+        pack(*aquCT, buffer, position, comm);
+    }
+    else if (auto const* aquNum = data.typeData.get<data::AquiferType::Numerical>();
+             aquNum != nullptr)
+    {
+        pack(*aquNum, buffer, position, comm);
     }
 }
 
@@ -865,6 +895,12 @@ void unpack(data::Well& data, std::vector<char>& buffer, int& position,
     unpack(data.guide_rates, buffer, position, comm);
 }
 
+void unpack(data::NumericAquiferData& data, std::vector<char>& buffer, int& position,
+            Dune::MPIHelper::MPICommunicator comm)
+{
+    unpack(data.initPressure, buffer, position, comm);
+}
+
 void unpack(data::AquiferData& data, std::vector<char>& buffer, int& position,
             Dune::MPIHelper::MPICommunicator comm)
 {
@@ -878,15 +914,17 @@ void unpack(data::AquiferData& data, std::vector<char>& buffer, int& position,
     unpack(data.datumDepth, buffer, position, comm);
     unpack(type, buffer, position, comm);
 
-    if (type == 1ull) {
-        data.type = data::AquiferType::Fetkovich;
-        data.aquFet = std::make_shared<data::FetkovichData>();
-        unpack(*data.aquFet, buffer, position, comm);
+    if (type == (1ull << 0)) {
+        auto* aquFet = data.typeData.create<data::AquiferType::Fetkovich>();
+        unpack(*aquFet, buffer, position, comm);
     }
-    else if (type == 2ull) {
-        data.type = data::AquiferType::CarterTracy;
-        data.aquCT = std::make_shared<data::CarterTracyData>();
-        unpack(*data.aquCT, buffer, position, comm);
+    else if (type == (1ull << 1)) {
+        auto* aquCT = data.typeData.create<data::AquiferType::CarterTracy>();
+        unpack(*aquCT, buffer, position, comm);
+    }
+    else if (type == (1ull << 2)) {
+        auto* aquNum = data.typeData.create<data::AquiferType::Numerical>();
+        unpack(*aquNum, buffer, position, comm);
     }
 }
 

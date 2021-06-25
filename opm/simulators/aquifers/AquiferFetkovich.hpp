@@ -27,6 +27,7 @@ along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <exception>
 #include <stdexcept>
+#include <utility>
 
 namespace Opm
 {
@@ -82,12 +83,11 @@ public:
                                         });
         data.volume = this->W_flux_.value();
         data.initPressure = this->pa0_;
-        data.type = data::AquiferType::Fetkovich;
 
-        data.aquFet = std::make_shared<data::FetkovichData>();
-        data.aquFet->initVolume = this->aqufetp_data_.initial_watvolume;
-        data.aquFet->prodIndex = this->aqufetp_data_.prod_index;
-        data.aquFet->timeConstant = this->aqufetp_data_.timeConstant();
+        auto* aquFet = data.typeData.template create<data::AquiferType::Fetkovich>();
+        aquFet->initVolume = this->aqufetp_data_.initial_watvolume;
+        aquFet->prodIndex = this->aqufetp_data_.prod_index;
+        aquFet->timeConstant = this->aqufetp_data_.timeConstant();
 
         return data;
     }
@@ -99,7 +99,7 @@ protected:
 
     void assignRestartData(const data::AquiferData& xaq) override
     {
-        if (xaq.type != data::AquiferType::Fetkovich) {
+        if (! xaq.typeData.is<data::AquiferType::Fetkovich>()) {
             throw std::invalid_argument {
                 "Analytic aquifer data for unexpected aquifer "
                 "type passed to Fetkovich aquifer"

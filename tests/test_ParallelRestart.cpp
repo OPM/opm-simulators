@@ -265,14 +265,14 @@ Opm::data::NodeData getNodeData()
 Opm::data::AquiferData getFetkovichAquifer(const int aquiferID = 1)
 {
     auto aquifer = Opm::data::AquiferData {
-        aquiferID, 123.456, 56.78, 9.0e10, 290.0, 2515.5, Opm::data::AquiferType::Fetkovich
+        aquiferID, 123.456, 56.78, 9.0e10, 290.0, 2515.5
     };
 
-    aquifer.aquFet = std::make_shared<Opm::data::FetkovichData>();
+    auto* aquFet = aquifer.typeData.create<Opm::data::AquiferType::Fetkovich>();
 
-    aquifer.aquFet->initVolume = 1.23;
-    aquifer.aquFet->prodIndex = 45.67;
-    aquifer.aquFet->timeConstant = 890.123;
+    aquFet->initVolume = 1.23;
+    aquFet->prodIndex = 45.67;
+    aquFet->timeConstant = 890.123;
 
     return aquifer;
 }
@@ -280,17 +280,33 @@ Opm::data::AquiferData getFetkovichAquifer(const int aquiferID = 1)
 Opm::data::AquiferData getCarterTracyAquifer(const int aquiferID = 5)
 {
     auto aquifer = Opm::data::AquiferData {
-        aquiferID, 123.456, 56.78, 9.0e10, 290.0, 2515.5, Opm::data::AquiferType::CarterTracy
+        aquiferID, 123.456, 56.78, 9.0e10, 290.0, 2515.5
     };
 
-    aquifer.aquCT = std::make_shared<Opm::data::CarterTracyData>();
+    auto* aquCT = aquifer.typeData.create<Opm::data::AquiferType::CarterTracy>();
 
-    aquifer.aquCT->timeConstant = 987.65;
-    aquifer.aquCT->influxConstant = 43.21;
-    aquifer.aquCT->waterDensity = 1014.5;
-    aquifer.aquCT->waterViscosity = 0.00318;
-    aquifer.aquCT->dimensionless_time = 42.0;
-    aquifer.aquCT->dimensionless_pressure = 2.34;
+    aquCT->timeConstant = 987.65;
+    aquCT->influxConstant = 43.21;
+    aquCT->waterDensity = 1014.5;
+    aquCT->waterViscosity = 0.00318;
+    aquCT->dimensionless_time = 42.0;
+    aquCT->dimensionless_pressure = 2.34;
+
+    return aquifer;
+}
+
+Opm::data::AquiferData getNumericalAquifer(const int aquiferID = 2)
+{
+    auto aquifer = Opm::data::AquiferData {
+        aquiferID, 123.456, 56.78, 9.0e10, 290.0, 2515.5
+    };
+
+    auto* aquNum = aquifer.typeData.create<Opm::data::AquiferType::Numerical>();
+
+    aquNum->initPressure.push_back(1.234);
+    aquNum->initPressure.push_back(2.345);
+    aquNum->initPressure.push_back(3.4);
+    aquNum->initPressure.push_back(9.876);
 
     return aquifer;
 }
@@ -363,12 +379,21 @@ BOOST_AUTO_TEST_CASE(dataCarterTracyData)
     DO_CHECKS(data::CarterTracyData)
 }
 
+BOOST_AUTO_TEST_CASE(dataNumericAquiferData)
+{
+    const auto val1 = getNumericalAquifer();
+    const auto val2 = PackUnpack(val1);
+
+    DO_CHECKS(data::NumericAquiferData)
+}
+
 BOOST_AUTO_TEST_CASE(dataAquifers)
 {
     const auto val1 = Opm::data::Aquifers {
         { 1, getFetkovichAquifer(1) },
         { 4, getFetkovichAquifer(4) },
         { 5, getCarterTracyAquifer(5) },
+        { 9, getNumericalAquifer(9) },
     };
 
     const auto val2 = PackUnpack(val1);

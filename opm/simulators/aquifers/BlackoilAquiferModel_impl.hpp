@@ -83,14 +83,12 @@ BlackoilAquiferModel<TypeTag>::initFromRestart(const data::Aquifers& aquiferSoln
 template <typename TypeTag>
 void
 BlackoilAquiferModel<TypeTag>::beginEpisode()
-{
-}
+{}
 
 template <typename TypeTag>
 void
 BlackoilAquiferModel<TypeTag>::beginIteration()
-{
-}
+{}
 
 template <typename TypeTag>
 void
@@ -131,8 +129,7 @@ BlackoilAquiferModel<TypeTag>::addToSource(RateVector& rates,
 template <typename TypeTag>
 void
 BlackoilAquiferModel<TypeTag>::endIteration()
-{
-}
+{}
 
 template <typename TypeTag>
 void
@@ -155,11 +152,11 @@ BlackoilAquiferModel<TypeTag>::endTimeStep()
         }
     }
 }
+
 template <typename TypeTag>
 void
 BlackoilAquiferModel<TypeTag>::endEpisode()
-{
-}
+{}
 
 template <typename TypeTag>
 template <class Restarter>
@@ -215,12 +212,14 @@ BlackoilAquiferModel<TypeTag>::init()
         }
     }
 }
+
 template <typename TypeTag>
 bool
 BlackoilAquiferModel<TypeTag>::aquiferCarterTracyActive() const
 {
     return !aquifers_CarterTracy.empty();
 }
+
 template <typename TypeTag>
 bool
 BlackoilAquiferModel<TypeTag>::aquiferFetkovichActive() const
@@ -236,7 +235,8 @@ BlackoilAquiferModel<TypeTag>::aquiferNumericalActive() const
 }
 
 template<typename TypeTag>
-data::Aquifers BlackoilAquiferModel<TypeTag>::aquiferData() const {
+data::Aquifers BlackoilAquiferModel<TypeTag>::aquiferData() const
+{
     data::Aquifers data;
     if (this->aquiferCarterTracyActive()) {
         for (const auto& aqu : this->aquifers_CarterTracy) {
