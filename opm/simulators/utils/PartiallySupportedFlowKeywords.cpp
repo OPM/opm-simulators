@@ -15,9 +15,6 @@
 
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
-
-  Generated : keyw-code.py
-  Date      : 2021-06-25 13:02:39
 */
 
 #include <opm/simulators/utils/PartiallySupportedFlowKeywords.hpp>
