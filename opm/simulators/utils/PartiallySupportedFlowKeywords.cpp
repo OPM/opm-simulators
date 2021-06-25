@@ -17,7 +17,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 
   Generated : keyw-code.py
-  Date      : 2021-06-23 12:54:52
+  Date      : 2021-06-25 13:02:39
 */
 
 #include <opm/simulators/utils/PartiallySupportedFlowKeywords.hpp>
@@ -46,8 +46,8 @@ partiallySupported()
          {
             "EDITNNC",
             {
-               {12,{false, allow_values<std::string> {}, "FACE1 not supported use 1* - will continue"}}, // VE_FACE1
-               {13,{false, allow_values<std::string> {}, "FACE2 not supported use 1* - will continue"}}, // VE_FACE2
+               {12,{false, allow_values<std::string> {}, "FACE1 not supported use 1* - will continue"}}, // FACE_FLOW12
+               {13,{false, allow_values<std::string> {}, "FACE2 not supported use 1* - will continue"}}, // FACE_FLOW21
             },
          },
          {
@@ -93,19 +93,19 @@ partiallySupported()
          {
             "MULTIREG",
             {
-               {4,{false, allow_values<std::string> {"F", "M", "O"}, "REGION_NAME must equal to F/M or O"}}, // REGION_NAME
+               {4,{false, allow_values<std::string> {"F", "M", "O"}, "REGION_NAME must equal to F/M or O"}}, // NOT_DEFINED
             },
          },
          {
             "MULTREGP",
             {
-               {3,{false, allow_values<std::string> {"F", "M", "O"}, "REGION_NAME must equal to F/M or O"}}, // REGION_NAME
+               {3,{false, allow_values<std::string> {"F", "M", "O"}, "REGION_NAME must equal to F/M or O"}}, // REGION_TYPE
             },
          },
          {
             "MULTREGT",
             {
-               {6,{false, allow_values<std::string> {"F", "M", "O"}, "REGION_NAME must equal to F/M or O"}}, // REGION_NAME
+               {6,{false, allow_values<std::string> {"F", "M", "O"}, "REGION_NAME must equal to F/M or O"}}, // REGION_DEF
             },
          },
          {
@@ -139,6 +139,13 @@ partiallySupported()
             },
          },
          {
+            "TABDIMS",
+            {
+               {20,{false, allow_values<std::string> {}, "NOTUSED should be defaulted (1*) - ignored as not used"}}, // ITEM20_NOT_USED
+               {25,{false, allow_values<std::string> {}, "RESVED should be defaulted (1*) - ignored as not used"}}, // RESERVED
+            },
+         },
+         {
             "UDQDIMS",
             {
                {11,{false, allow_values<std::string> {"N"}, "RSEED option is not supported – value ignored"}}, // RESTART_NEW_SEED
@@ -155,19 +162,12 @@ partiallySupported()
 {
    static const KeywordValidation::PartiallySupportedKeywords<int>partially_supported_keywords_int = {
          {
-            "AQUCON",
-            {
-               {11,{false, allow_values<int> {1}, "VEOPT1 Vertical Equilibrium option one– not used"}}, // VEFRAC
-               {12,{false, allow_values<int> {1}, "VEOPI2 Vertical Equilibrium option two– not used"}}, // VEFRACP
-            },
-         },
-         {
             "EDITNNC",
             {
-               {8,{false, allow_values<int> {0}, "ISATNUM1 only default value of 0 supported – will continue"}}, // SIM_DEPENDENT1
-               {9,{false, allow_values<int> {0}, "ISATNUM2 only default value of 0 supported – will continue"}}, // SIM_DEPENDENT2
-               {10,{false, allow_values<int> {0}, "IPRSNUM1 only default value of 0 supported – will continue"}}, // PRESSURE_TABLE1
-               {11,{false, allow_values<int> {0}, "IPRSNUM2 only default value of 0 supported – will continue"}}, // PRESSURE_TABLE2
+               {8,{false, allow_values<int> {0}, "ISATNUM1 only default value of 0 supported – will continue"}}, // SAT_TABLE12
+               {9,{false, allow_values<int> {0}, "ISATNUM2 only default value of 0 supported – will continue"}}, // SAT_TABLE21
+               {10,{false, allow_values<int> {0}, "IPRSNUM1 only default value of 0 supported – will continue"}}, // PRESS_TABLE12
+               {11,{false, allow_values<int> {0}, "IPRSNUM2 only default value of 0 supported – will continue"}}, // PRESS_TABLE21
             },
          },
          {
@@ -202,7 +202,7 @@ partiallySupported()
          {
             "NETWORK",
             {
-               {3,{false, allow_values<int> {}, "NBCMAX option is not used – value ignored"}}, // NBCMAX
+               {3,{false, allow_values<int> {20}, "NBCMAX option is not used and should be defaulted– value ignored"}}, // NBCMAX
             },
          },
          {
@@ -212,7 +212,6 @@ partiallySupported()
                {9,{false, allow_values<int> {0}, "ISATNUM2 only default value of 0 supported – will continue"}}, // SIM_DEPENDENT2
                {10,{false, allow_values<int> {0}, "IPRSNUM1 only default value of 0 supported – will continue"}}, // PRESSURE_TABLE1
                {11,{false, allow_values<int> {0}, "IPRSNUM2 only default value of 0 supported – will continue"}}, // PRESSURE_TABLE2
-               {17,{false, allow_values<int> {0}, "PERMNNC only default value of 0 supported – will continue"}}, // VDFLOW_PERM
             },
          },
          {
@@ -244,23 +243,21 @@ partiallySupported()
                {10,{false, allow_values<int> {1}, "NMEOSS should be equal to 1 - ignored as not used"}}, // NUM_EOS_SURFACE
                {12,{false, allow_values<int> {1}, "MXNTHR should be equal to 1 - ignored as not used"}}, // MAX_THERMAL_REGIONS
                {14,{false, allow_values<int> {0}, "MXNPMR should be equal to 0 - ignored as not used"}}, // MAX_PRESSURE_MAINTAINANCE_REGIONS
-               {15,{false, allow_values<int> {0}, "NTABKT should be defaulted (0) - ignored as not used"}}, // MAX_KVALUE_TABLES
+               {15,{false, allow_values<int> {0}, "NTABKT should be defaulted (0) – ignored as not used"}}, // MAX_KVALUE_TABLES
                {16,{false, allow_values<int> {0}, "NTALPHA should be defaulted (0) - ignored as not used"}}, // NTALPHA
                {17,{false, allow_values<int> {10}, "NASPKA should be defaulted (10) - ignored as not used"}}, // ASPHALTENE_ASPKDAM_MAX_ROWS
                {18,{false, allow_values<int> {10}, "MXRAWG should be defaulted (10) - ignored as not used"}}, // ASPHALTENE_ASPREWG_MAX_ROWS
                {19,{false, allow_values<int> {10}, "MXRASO should be defaulted (10) - ignored as not used"}}, // ASPHALTENE_ASPVISO_MAX_ROWS
-               {20,{false, allow_values<int> {}, "NOTUSED should be defaulted (1*) - ignored as not used"}}, // ITEM20_NOT_USED
                {21,{false, allow_values<int> {5}, "MCASPP should be defaulted (5) - ignored as not used"}}, // ASPHALTENE_ASPPW2D_MAX_COLUMNS
                {22,{false, allow_values<int> {5}, "MRASPP should be defaulted (5) - ignored as not used"}}, // ASPHALTENE_ASPPW2D_MAX_ROWS
                {23,{false, allow_values<int> {5}, "MXRATF should be defaulted (5) - ignored as not used"}}, // ASPHALTENE_ASPWETF_MAX_ROWS
                {24,{false, allow_values<int> {0}, "MXNKVT should be defaulted (0) - ignored as not used"}}, // NUM_KVALUE_TABLES
-               {25,{false, allow_values<int> {}, "RESVED should be defaulted (1*) - ignored as not used"}}, // RESERVED
             },
          },
          {
             "UDADIMS",
             {
-               {2,{false, allow_values<int> {0}, "IGNORED should be equal to 0 – ignored as not used"}}, // IGNORED
+               {2,{false, allow_values<int> {0}, "IGNORED should be defaulted (0) – ignored as not used"}}, // IGNORED
             },
          },
          {
@@ -295,16 +292,23 @@ partiallySupported()
 {
    static const KeywordValidation::PartiallySupportedKeywords<double> partially_supported_keywords_double = {
          {
+            "AQUCON",
+            {
+               {12,{false, allow_values<double> {1}, "VEOPT1 Vertical Equilibrium option one– not used"}}, // VEFRAC
+               {13,{false, allow_values<double> {1}, "VEOPI2 Vertical Equilibrium option two– not used"}}, // VEFRACP
+            },
+         },
+         {
             "AQUCT",
             {
-               {12,{false, allow_values<double> {0.0}, "SALTCON option is not used – value ignored"}}, // INI_SALT
-               {13,{false, allow_values<double> {}, "TEMP option is not used – value ignored"}}, // TEMP_AQUIFER
+               {12,{false, allow_values<double> {0}, "SALTCON option is not used and should be defaulted – value ignored"}}, // INI_SALT
+               {13,{false, allow_values<double> {}, "TEMP option is not used and should be defaulted – value ignored"}}, // TEMP_AQUIFER
             },
          },
          {
             "EDITNNC",
             {
-               {14,{false, allow_values<double> {0}, "DIFFNNC not supported – will continue"}}, // DIFFUSIVITY
+               {14,{false, allow_values<double> {0}, "DIFFNNC not supported – will continue"}}, // DIFFM
             },
          },
          {
@@ -319,7 +323,7 @@ partiallySupported()
          {
             "MULTFLT",
             {
-               {3,{false, allow_values<double> {}, "FLT-DIF the diffusivity multiplier option is not supported – will continue"}}, // REGION_NAME
+               {3,{false, allow_values<double> {}, "FLT-DIF the diffusivity multiplier option is not supported – will continue"}}, // NOT_DEFINED
             },
          },
          {
@@ -328,6 +332,13 @@ partiallySupported()
                {14,{false, allow_values<double> {0}, "DIFFNNC not supported – will continue"}}, // DIFFUSIVITY
                {15,{false, allow_values<double> {0}, "DISPNNC not supported – will continue"}}, // SIM_DEPENDENT3
                {16,{false, allow_values<double> {0}, "AREANNC not supported – will continue"}}, // VDFLOW_AREA
+               {17,{false, allow_values<double> {0}, "PERMNNC only default value of 0 supported – will continue"}}, // VDFLOW_PERM
+            },
+         },
+         {
+            "ROCKCOMP",
+            {
+               {4,{false, allow_values<double> {0}, "CARKZEXP transmissibility dependent on porosity model is not supported"}}, // CARKZEXP
             },
          },
    };
