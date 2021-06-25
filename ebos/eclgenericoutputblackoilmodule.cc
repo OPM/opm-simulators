@@ -73,6 +73,7 @@ EclGenericOutputBlackoilModule(const EclipseState& eclState,
                            bool enableTemperature,
                            bool enableSolvent,
                            bool enablePolymer,
+                           bool enablePolymerMolarWeight,
                            bool enableFoam,
                            bool enableBrine,
                            bool enableExtbo)
@@ -84,6 +85,7 @@ EclGenericOutputBlackoilModule(const EclipseState& eclState,
     , enableTemperature_(enableTemperature)
     , enableSolvent_(enableSolvent)
     , enablePolymer_(enablePolymer)
+    , enablePolymerMolarWeight_(enablePolymerMolarWeight)
     , enableFoam_(enableFoam)
     , enableBrine_(enableBrine)
     , enableExtbo_(enableExtbo)
@@ -670,6 +672,18 @@ assignToSolution(data::Solution& sol)
     if (!cPolymer_.empty())
         sol.insert ("POLYMER", UnitSystem::measure::identity, std::move(cPolymer_), data::TargetType::RESTART_SOLUTION);
 
+    if (!mwPolymer_.empty())
+        sol.insert ("POLY_MW", UnitSystem::measure::identity, std::move(mwPolymer_), data::TargetType::RESTART_SOLUTION);
+
+    if (!effectivePolymerViscosityPolymer_.empty())
+        sol.insert ("EPVIS", UnitSystem::measure::viscosity, std::move(effectivePolymerViscosityPolymer_), data::TargetType::RESTART_SOLUTION);
+
+    if (!effectiveMixtureViscosityPolymer_.empty())
+        sol.insert ("EMVIS", UnitSystem::measure::viscosity, std::move(effectiveMixtureViscosityPolymer_), data::TargetType::RESTART_SOLUTION);
+
+    if (!effectiveWaterViscosityPolymer_.empty())
+        sol.insert ("EWV_POL", UnitSystem::measure::viscosity, std::move(effectiveWaterViscosityPolymer_), data::TargetType::RESTART_SOLUTION);
+
     if (!cFoam_.empty())
         sol.insert ("FOAM", UnitSystem::measure::identity, std::move(cFoam_), data::TargetType::RESTART_SOLUTION);
 
@@ -758,13 +772,21 @@ setRestart(const data::Solution& sol,
         rv_[elemIdx] = sol.data("RV")[globalDofIndex];
     if (!cPolymer_.empty() && sol.has("POLYMER"))
         cPolymer_[elemIdx] = sol.data("POLYMER")[globalDofIndex];
+    if (!effectivePolymerViscosityPolymer_.empty() && sol.has("EPVIS"))
+        effectivePolymerViscosityPolymer_[elemIdx] = sol.data("EPVIS")[globalDofIndex];
+    if (!effectiveMixtureViscosityPolymer_.empty() && sol.has("EMVIS"))
+        effectiveMixtureViscosityPolymer_[elemIdx] = sol.data("EMVIS")[globalDofIndex];
+    if (!effectiveWaterViscosityPolymer_.empty() && sol.has("EWV_POL"))
+        effectiveWaterViscosityPolymer_[elemIdx] = sol.data("EWV_POL")[globalDofIndex];
+    if (!mwPolymer_.empty() && sol.has("POLY_MW"))
+        mwPolymer_[elemIdx] = sol.data("POLY_MW")[globalDofIndex];
     if (!cFoam_.empty() && sol.has("FOAM"))
         cFoam_[elemIdx] = sol.data("FOAM")[globalDofIndex];
     if (!cSalt_.empty() && sol.has("SALT"))
         cSalt_[elemIdx] = sol.data("SALT")[globalDofIndex];
     if (!soMax_.empty() && sol.has("SOMAX"))
         soMax_[elemIdx] = sol.data("SOMAX")[globalDofIndex];
-    if (!pcSwMdcOw_.empty() &&sol.has("PCSWM_OW"))
+    if (!pcSwMdcOw_.empty() && sol.has("PCSWM_OW"))
         pcSwMdcOw_[elemIdx] = sol.data("PCSWM_OW")[globalDofIndex];
     if (!krnSwMdcOw_.empty() && sol.has("KRNSW_OW"))
         krnSwMdcOw_[elemIdx] = sol.data("KRNSW_OW")[globalDofIndex];
@@ -939,8 +961,20 @@ doAllocBuffers(unsigned bufferSize,
 
     if (enableSolvent_)
         sSol_.resize(bufferSize, 0.0);
-    if (enablePolymer_)
+
+    if (enablePolymer_){
         cPolymer_.resize(bufferSize, 0.0);
+
+        if(enablePolymerMolarWeight_){
+            mwPolymer_.resize(bufferSize, 0.0);
+        }
+        else if(rstKeywords["VISC"] > 0){
+            effectivePolymerViscosityPolymer_.resize(bufferSize, 0.0);
+            effectiveMixtureViscosityPolymer_.resize(bufferSize, 0.0);
+            effectiveWaterViscosityPolymer_.resize(bufferSize, 0.0);
+        }
+    }
+
     if (enableFoam_)
         cFoam_.resize(bufferSize, 0.0);
     if (enableBrine_)

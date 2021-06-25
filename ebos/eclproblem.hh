@@ -2343,13 +2343,8 @@ private:
         if constexpr (enablePolymer)
             this->polymerConcentration_.resize(numElems, 0.0);
 
-        if constexpr (enablePolymerMolarWeight) {
-            const std::string msg {"Support of the RESTART for polymer molecular weight "
-                                   "is not implemented yet. The polymer weight value will be "
-                                   "zero when RESTART begins"};
-            OpmLog::warning("NO_POLYMW_RESTART", msg);
+        if constexpr (enablePolymerMolarWeight)
             this->polymerMoleWeight_.resize(numElems, 0.0);
-        }
 
         for (size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
             auto& elemFluidState = initialFluidStates_[elemIdx];
@@ -2379,7 +2374,10 @@ private:
 
             if constexpr (enablePolymer)
                  this->polymerConcentration_[elemIdx] = eclWriter_->eclOutputModule().getPolymerConcentration(elemIdx);
-            // if we need to restart for polymer molecular weight simulation, we need to add related here
+
+            if  constexpr (enablePolymerMolarWeight)
+                this->polymerMoleWeight_[elemIdx] = eclWriter_->eclOutputModule().getPolymerMW(elemIdx);
+
         }
 
         const int episodeIdx = this->episodeIndex();

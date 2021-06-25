@@ -109,6 +109,38 @@ public:
         return 0;
     }
 
+    Scalar getPolymerMW(unsigned elemIdx) const
+    {
+        if (mwPolymer_.size() > elemIdx)
+            return mwPolymer_[elemIdx];
+
+        return 0;
+    }
+
+    Scalar getEffectivePolymerViscosityPolymer(unsigned elemIdx) const
+    {
+        if (effectivePolymerViscosityPolymer_.size() > elemIdx)
+            return effectivePolymerViscosityPolymer_[elemIdx];
+
+        return 0;
+    }
+
+    Scalar getEffectiveMixtureViscosityPolymer(unsigned elemIdx) const
+    {
+        if (effectiveMixtureViscosityPolymer_.size() > elemIdx)
+            return effectiveMixtureViscosityPolymer_[elemIdx];
+
+        return 0;
+    }
+
+    Scalar getEffectiveWaterViscosityPolymer(unsigned elemIdx) const
+    {
+        if (effectiveWaterViscosityPolymer_.size() > elemIdx)
+            return effectiveWaterViscosityPolymer_[elemIdx];
+
+        return 0;
+    }
+
     Scalar getFoamConcentration(unsigned elemIdx) const
     {
         if (cFoam_.size() > elemIdx)
@@ -159,6 +191,7 @@ protected:
                                    bool enableTemperature,
                                    bool enableSolvent,
                                    bool enablePolymer,
+                                   bool enablePolymerMolarWeight,
                                    bool enableFoam,
                                    bool enableBrine,
                                    bool enableExtbo);
@@ -310,6 +343,7 @@ protected:
 
     bool enableSolvent_;
     bool enablePolymer_;
+    bool enablePolymerMolarWeight_;
     bool enableFoam_;
     bool enableBrine_;
     bool enableExtbo_;
@@ -341,6 +375,10 @@ protected:
     ScalarBuffer oilSaturationPressure_;
     ScalarBuffer sSol_;
     ScalarBuffer cPolymer_;
+    ScalarBuffer mwPolymer_;
+    ScalarBuffer effectivePolymerViscosityPolymer_;
+    ScalarBuffer effectiveMixtureViscosityPolymer_;
+    ScalarBuffer effectiveWaterViscosityPolymer_;
     ScalarBuffer cFoam_;
     ScalarBuffer cSalt_;
     ScalarBuffer extboX_;
