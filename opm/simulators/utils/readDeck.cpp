@@ -36,6 +36,8 @@
 #include <opm/io/eclipse/EclIOdata.hpp>
 
 #include <opm/output/eclipse/RestartIO.hpp>
+#include <opm/io/eclipse/ERst.hpp>
+#include <opm/io/eclipse/RestartFileView.hpp>
 #include <opm/io/eclipse/rst/state.hpp>
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
@@ -58,6 +60,8 @@
 #include <fmt/format.h>
 
 #include <cstdlib>
+#include <memory>
+#include <utility>
 
 namespace Opm
 {
@@ -232,10 +236,11 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
             */
             const auto& init_config = eclipseState->getInitConfig();
             if (init_config.restartRequested() && initFromRestart) {
-                int report_step = init_config.getRestartStep();
-                const auto& rst_filename = eclipseState->getIOConfig().getRestartFileName( init_config.getRestartRootName(), report_step, false );
-                Opm::EclIO::ERst rst_file(rst_filename);
-                const auto& rst_state = Opm::RestartIO::RstState::load(rst_file, report_step);
+                const int report_step = init_config.getRestartStep();
+                const auto rst_filename = eclipseState->getIOConfig().getRestartFileName( init_config.getRestartRootName(), report_step, false );
+                auto rst_file = std::make_shared<EclIO::ERst>(rst_filename);
+                auto rst_view = std::make_shared<EclIO::RestartFileView>(std::move(rst_file), report_step);
+                const auto rst_state = Opm::RestartIO::RstState::load(std::move(rst_view));
                 if (!schedule)
                     schedule = std::make_unique<Opm::Schedule>(*deck, *eclipseState, *parseContext, *errorGuard, python, outputInterval, &rst_state);
             }
