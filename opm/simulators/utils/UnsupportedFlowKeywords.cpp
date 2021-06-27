@@ -425,7 +425,6 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"NORSSPEC", {false, std::nullopt}},
         {"NOWARN", {false, std::nullopt}},
         {"NSTACK", {false, std::nullopt}},
-        {"NUMRES", {false, std::nullopt}},
         {"NWATREM", {false, std::nullopt}},
         {"NXFIN", {false, std::nullopt}},
         {"NYFIN", {false, std::nullopt}},
