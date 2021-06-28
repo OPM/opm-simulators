@@ -1306,6 +1306,27 @@ namespace WellGroupHelpers
         return std::make_pair(current_rate > target_rate, scale);
     }
 
+
+    template <class Comm>
+    void updateGuideRates(const Group& group,
+                          const Schedule& schedule,
+                          const SummaryState& summary_state,
+                          const PhaseUsage& pu,
+                          const int report_step,
+                          const double sim_time,
+                          WellState& well_state,
+                          const GroupState& group_state,
+                          const Comm& comm,
+                          GuideRate* guide_rate,
+                          std::vector<double>& pot,
+                          Opm::DeferredLogger& deferred_logger)
+    {
+        guide_rate->updateGuideRateExpiration(sim_time, report_step);
+        updateGuideRateForProductionGroups(group, schedule, pu, report_step, sim_time, well_state, group_state, comm, guide_rate, pot);
+        updateGuideRatesForInjectionGroups(group, schedule, summary_state, pu, report_step, well_state, group_state, guide_rate, deferred_logger);
+        updateGuideRatesForWells(schedule, pu, report_step, sim_time, well_state, comm, guide_rate);
+    }
+
     template <class Comm>
     void updateGuideRateForProductionGroups(const Group& group,
                                             const Schedule& schedule,
@@ -1454,7 +1475,20 @@ namespace WellGroupHelpers
                                                               const double& simTime, \
                                                               const WellState& wellState, \
                                                               const Dune::CollectiveCommunication<__VA_ARGS__>& comm, \
-                                                              GuideRate* guideRate);
+                                                              GuideRate* guideRate); \
+    template \
+    void updateGuideRates<Dune::CollectiveCommunication<__VA_ARGS__>>(const Group& group, \
+                                                                      const Schedule& schedule, \
+                                                                      const SummaryState& summary_state, \
+                                                                      const PhaseUsage& pu, \
+                                                                      const int report_step, \
+                                                                      const double sim_time, \
+                                                                      WellState& well_state, \
+                                                                      const GroupState& group_state, \
+                                                                      const Dune::CollectiveCommunication<__VA_ARGS__>& comm,\
+                                                                      GuideRate* guide_rate, \
+                                                                      std::vector<double>& pot,\
+                                                                      Opm::DeferredLogger& deferred_logger);
 
 #if HAVE_MPI
     INSTANCE_WELLGROUP_HELPERS(MPI_Comm)
