@@ -143,7 +143,7 @@ getGroupInjectionControl(const Group& group,
     WellGroupHelpers::FractionCalculator fcalc(schedule, well_state, group_state, baseif_.currentStep(), baseif_.guideRate(), tcalc.guideTargetMode(), pu, false, injectionPhase);
 
     auto localFraction = [&](const std::string& child) {
-        return fcalc.localFraction(child, "");
+        return fcalc.localFraction(child, child);
     };
 
     auto localReduction = [&](const std::string& group_name) {
@@ -237,7 +237,7 @@ getGroupProductionControl(const Group& group,
     WellGroupHelpers::FractionCalculator fcalc(schedule, well_state, group_state, baseif_.currentStep(), baseif_.guideRate(), tcalc.guideTargetMode(), pu, true, Phase::OIL);
 
     auto localFraction = [&](const std::string& child) {
-        return fcalc.localFraction(child, "");
+        return fcalc.localFraction(child, child);
     };
 
     auto localReduction = [&](const std::string& group_name) {
