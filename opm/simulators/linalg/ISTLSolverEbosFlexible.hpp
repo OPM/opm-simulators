@@ -296,7 +296,7 @@ protected:
             } else {
                 OPM_THROW(std::invalid_argument,
                           "Weights type " << weightsType << "not implemented for cpr."
-                                          << " Please use quasiimpes or trueimpes.");
+                                          << " Please use quasiimpes or trueimpes or quasiimpesmod or trueimpesmod or grueimpesbasic.");
             }
         }
         return weightsCalculator;
