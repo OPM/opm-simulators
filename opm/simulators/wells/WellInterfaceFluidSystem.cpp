@@ -998,7 +998,7 @@ getGroupInjectionTargetRate(const Group& group,
     WellGroupHelpers::FractionCalculator fcalc(schedule, well_state, group_state, currentStep(), guideRate(), tcalc.guideTargetMode(), pu, false, injectionPhase);
 
     auto localFraction = [&](const std::string& child) {
-        return fcalc.localFraction(child, "");
+        return fcalc.localFraction(child, child); //Note child needs to be passed to always include since the global isGrup map is not updated yet.
     };
 
     auto localReduction = [&](const std::string& group_name) {
@@ -1070,7 +1070,7 @@ getGroupProductionTargetRate(const Group& group,
     WellGroupHelpers::FractionCalculator fcalc(schedule, well_state, group_state, currentStep(), guideRate(), tcalc.guideTargetMode(), pu, true, Phase::OIL);
 
     auto localFraction = [&](const std::string& child) {
-        return fcalc.localFraction(child, "");
+        return fcalc.localFraction(child, child); //Note child needs to be passed to always include since the global isGrup map is not updated yet.
     };
 
     auto localReduction = [&](const std::string& group_name) {
