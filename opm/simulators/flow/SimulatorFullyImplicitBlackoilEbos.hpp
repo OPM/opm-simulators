@@ -215,7 +215,7 @@ public:
             ebosSimulator_.setEpisodeLength(0.0);
             ebosSimulator_.setTimeStepSize(0.0);
 
-            wellModel_().beginReportStep(timer.currentStepNum());
+            wellModel_().beginReportStep(timer.currentStepNum(), 0);
             ebosSimulator_.problem().writeOutput();
 
             report_.success.output_write_time += perfTimer.stop();

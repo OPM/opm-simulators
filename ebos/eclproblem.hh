@@ -1020,7 +1020,7 @@ public:
         bool tuningEvent = this->beginEpisode_(enableExperiments, this->episodeIndex());
 
         // set up the wells for the next episode.
-        wellModel_.beginEpisode();
+        this->wellModel_.beginEpisode(this->eclWriter_->previousRestartOutput());
 
         // set up the aquifers for the next episode.
         if (enableAquifers_)

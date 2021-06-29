@@ -27,6 +27,7 @@
 #ifndef EWOMS_ECL_OUTPUT_BLACK_OIL_MODULE_HH
 #define EWOMS_ECL_OUTPUT_BLACK_OIL_MODULE_HH
 
+#include <cstddef>
 #include <array>
 #include <numeric>
 #include <optional>
@@ -161,19 +162,27 @@ public:
      * \brief Allocate memory for the scalar fields we would like to
      *        write to ECL output files
      */
-    void allocBuffers(unsigned bufferSize, unsigned reportStepNum, const bool substep, const bool log, const bool isRestart)
+    void allocBuffers(const unsigned    bufferSize,
+                      const unsigned    reportStepNum,
+                      const std::size_t previousRestartOutputStep,
+                      const bool        substep,
+                      const bool        log,
+                      const bool        isRestart)
     {
         if (!std::is_same<Discretization, EcfvDiscretization<TypeTag> >::value)
             return;
 
+        const auto& problem = this->simulator_.problem();
+
         this->doAllocBuffers(bufferSize,
                              reportStepNum,
+                             previousRestartOutputStep,
                              substep,
                              log,
                              isRestart,
-                             simulator_.problem().vapparsActive(std::max(simulator_.episodeIndex(), 0)),
-                             simulator_.problem().materialLawManager()->enableHysteresis(),
-                             simulator_.problem().tracerModel().numTracers());
+                             problem.vapparsActive(std::max(simulator_.episodeIndex(), 0)),
+                             problem.materialLawManager()->enableHysteresis(),
+                             problem.tracerModel().numTracers());
     }
 
     /*!

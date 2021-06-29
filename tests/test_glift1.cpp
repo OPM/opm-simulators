@@ -140,7 +140,7 @@ BOOST_AUTO_TEST_CASE(G1)
     simulator->model().newtonMethod().setIterationIndex(0);
     WellModel& well_model = simulator->problem().wellModel();
     int report_step_idx = 0;
-    well_model.beginReportStep(report_step_idx);
+    well_model.beginReportStep(report_step_idx, report_step_idx);
     well_model.beginTimeStep();
     well_model.updatePerforationIntensiveQuantities();
     Opm::DeferredLogger deferred_logger;

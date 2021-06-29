@@ -738,14 +738,15 @@ regionSum(const ScalarBuffer& property,
 
 template<class FluidSystem, class Scalar>
 void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
-doAllocBuffers(unsigned bufferSize,
-               unsigned reportStepNum,
-               const bool substep,
-               const bool log,
-               const bool isRestart,
-               const bool vapparsActive,
-               const bool enableHysteresis,
-               unsigned numTracers)
+doAllocBuffers(const unsigned    bufferSize,
+               const unsigned    reportStepNum,
+               const std::size_t previousRestartOutputStep,
+               const bool        substep,
+               const bool        log,
+               const bool        isRestart,
+               const bool        vapparsActive,
+               const bool        enableHysteresis,
+               const unsigned    numTracers)
 {
     // Only output RESTART_AUXILIARY asked for by the user.
     std::map<std::string, int> rstKeywords = schedule_.rst_keywords(reportStepNum);
@@ -828,10 +829,13 @@ doAllocBuffers(unsigned bufferSize,
 
     // field data should be allocated
     // 1) when we want to restart
-    // 2) when it is ask for by the user via restartConfig
+    // 2) when the user asks for it via restartConfig
     // 3) when it is not a substep
-    if (!isRestart && (!schedule_.write_rst_file(reportStepNum, log) || substep))
+    if (!isRestart &&
+        (!schedule_.write_rst_file(reportStepNum, previousRestartOutputStep) || substep))
+    {
         return;
+    }
 
     // always output saturation of active phases
     for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
@@ -987,13 +991,15 @@ doAllocBuffers(unsigned bufferSize,
 
     //Warn for any unhandled keyword
     if (log) {
-        for (auto& keyValue: rstKeywords) {
-            if (keyValue.second > 0) {
-                std::string logstring = "Keyword '";
-                logstring.append(keyValue.first);
-                logstring.append("' is unhandled for output to file.");
-                OpmLog::warning("Unhandled output keyword", logstring);
+        for (const auto& [keyword, unhandled] : rstKeywords) {
+            if (! unhandled) {
+                continue;
             }
+
+            std::string logstring = "Keyword '";
+            logstring.append(keyword);
+            logstring.append("' is unhandled for output to file.");
+            OpmLog::warning("Unhandled output keyword", logstring);
         }
     }
 

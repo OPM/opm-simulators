@@ -24,14 +24,6 @@
 #ifndef OPM_BLACKOILWELLMODEL_GENERIC_HEADER_INCLUDED
 #define OPM_BLACKOILWELLMODEL_GENERIC_HEADER_INCLUDED
 
-#include <functional>
-#include <map>
-#include <memory>
-#include <string>
-#include <unordered_map>
-#include <unordered_set>
-#include <vector>
-
 #include <opm/output/data/GuideRateValue.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRate.hpp>
@@ -42,6 +34,15 @@
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 #include <opm/simulators/wells/WellProdIndexCalculator.hpp>
 #include <opm/simulators/wells/WGState.hpp>
+
+#include <cstddef>
+#include <functional>
+#include <map>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
 namespace Opm {
 
@@ -131,7 +132,7 @@ public:
                          WellState& well_state);
 
     void initFromRestartFile(const RestartValue& restartValues,
-                             const size_t numCells,
+                             const std::size_t numCells,
                              bool handle_ms_well);
 
     void setWellsActive(const bool wells_active);
@@ -354,6 +355,7 @@ protected:
 
     // Calculating well potentials for each well
     void updateWellPotentials(const int reportStepIdx,
+                              const std::size_t previousRestartOutput,
                               const bool onlyAfterEvent,
                               const SummaryConfig& summaryConfig,
                               DeferredLogger& deferred_logger);

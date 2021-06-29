@@ -28,6 +28,7 @@
 #define EWOMS_ECL_GENERIC_OUTPUT_BLACK_OIL_MODULE_HH
 
 #include <array>
+#include <cstddef>
 #include <map>
 #include <numeric>
 #include <optional>
@@ -231,14 +232,15 @@ protected:
         static constexpr int numWCNames = 3;
     };
 
-    void doAllocBuffers(unsigned bufferSize,
-                        unsigned reportStepNum,
-                        const bool substep,
-                        const bool log,
-                        const bool isRestart,
-                        const bool vapparsActive,
-                        const bool enableHysteresis,
-                        unsigned numTracers);
+    void doAllocBuffers(const unsigned    bufferSize,
+                        const unsigned    reportStepNum,
+                        const std::size_t previousRestartOutputStep,
+                        const bool        substep,
+                        const bool        log,
+                        const bool        isRestart,
+                        const bool        vapparsActive,
+                        const bool        enableHysteresis,
+                        const unsigned    numTracers);
 
     void fipUnitConvert_(std::unordered_map<Inplace::Phase, Scalar>& fip) const;
 

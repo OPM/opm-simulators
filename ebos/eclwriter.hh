@@ -302,7 +302,12 @@ public:
 
         const auto& gridView = simulator_.vanguard().gridView();
         unsigned numElements = gridView.size(/*codim=*/0);
-        eclOutputModule_->allocBuffers(numElements, restartStepIdx, /*isSubStep=*/false, /*log=*/false, /*isRestart*/ true);
+        eclOutputModule_->allocBuffers(numElements,
+                                       restartStepIdx,
+                                       restartStepIdx,
+                                       /*isSubStep=*/false,
+                                       /*log=*/false,
+                                       /*isRestart*/ true);
 
         {
             SummaryState& summaryState = simulator_.vanguard().summaryState();
@@ -333,6 +338,19 @@ public:
     void endRestart()
     {}
 
+    std::size_t previousRestartOutput() const
+    {
+        auto previous = std::size_t{0};
+        if (this->eclIO_ != nullptr) {
+            previous = this->eclIO_->previousRestartOutputStep();
+        }
+
+        this->simulator_.vanguard().gridView().comm()
+            .broadcast(&previous, 1, 0);
+
+        return previous;
+    }
+
     const EclOutputBlackOilModule<TypeTag>& eclOutputModule() const
     { return *eclOutputModule_; }
 
@@ -362,11 +380,16 @@ private:
                               const int  reportStepNum)
     {
         const auto& gridView = simulator_.vanguard().gridView();
+
         const int numElements = gridView.size(/*codim=*/0);
         const bool log = this->collectToIORank_.isIORank();
 
-        eclOutputModule_->allocBuffers(numElements, reportStepNum,
-                                      isSubStep, log, /*isRestart*/ false);
+        eclOutputModule_->allocBuffers(numElements,
+                                       reportStepNum,
+                                       this->previousRestartOutput(),
+                                       isSubStep,
+                                       log,
+                                       /*isRestart*/ false);
 
         ElementContext elemCtx(simulator_);
         ElementIterator elemIt = gridView.template begin</*codim=*/0>();

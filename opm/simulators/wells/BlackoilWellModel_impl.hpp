@@ -124,7 +124,7 @@ namespace Opm {
             const auto& connectionSet = well.getConnections();
             wellCells.reserve(connectionSet.size());
 
-            for ( size_t c=0; c < connectionSet.size(); c++ )
+            for (std::size_t c=0; c < connectionSet.size(); ++c)
             {
                 const auto& connection = connectionSet.get(c);
                 int compressed_idx = cartesian_to_compressed_
@@ -173,10 +173,13 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    beginReportStep(const int timeStepIdx)
+    beginReportStep(const int timeStepIdx,
+                    const std::size_t previousRestartOutput)
     {
         DeferredLogger local_deferredLogger;
         report_step_starts_ = true;
+
+        this->previousRestartOutput_ = previousRestartOutput;
 
         const Grid& grid = ebosSimulator_.vanguard().grid();
         const auto& summaryState = ebosSimulator_.vanguard().summaryState();
@@ -297,6 +300,7 @@ namespace Opm {
         // calculate the well potentials
         try {
             updateWellPotentials(reportStepIdx,
+                                 this->previousRestartOutput_,
                                  /*onlyAfterEvent*/true,
                                  ebosSimulator_.vanguard().summaryConfig(),
                                  local_deferredLogger);
@@ -462,6 +466,7 @@ namespace Opm {
         // calculate the well potentials
         try {
             updateWellPotentials(reportStepIdx,
+                                 this->previousRestartOutput_,
                                  /*onlyAfterEvent*/false,
                                  ebosSimulator_.vanguard().summaryConfig(),
                                  local_deferredLogger);

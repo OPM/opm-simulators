@@ -182,7 +182,7 @@ loadRestartData(const data::Wells& rst_wells,
             well_state.currentInjectionControl(well_index, rst_well.current_control.inj);
         }
 
-        for( size_t i = 0; i < phs.size(); ++i ) {
+        for (std::size_t i = 0; i < phs.size(); ++i) {
             assert( rst_well.rates.has( phs[ i ] ) );
             well_state.wellRates(well_index)[i] = rst_well.rates.get(phs[i]);
         }
@@ -254,7 +254,7 @@ loadRestartData(const data::Wells& rst_wells,
 void
 BlackoilWellModelGeneric::
 initFromRestartFile(const RestartValue& restartValues,
-                    const size_t numCells,
+                    const std::size_t numCells,
                     bool handle_ms_well)
 {
     // The restart step value is used to identify wells present at the given
@@ -1731,16 +1731,17 @@ gasLiftOptimizationStage2(DeferredLogger& deferred_logger,
 void
 BlackoilWellModelGeneric::
 updateWellPotentials(const int reportStepIdx,
+                     const std::size_t previousRestartOutput,
                      const bool onlyAfterEvent,
                      const SummaryConfig& summaryConfig,
                      DeferredLogger& deferred_logger)
 {
     auto well_state_copy = this->wellState();
 
-    const bool write_restart_file = schedule().write_rst_file(reportStepIdx);
+    const bool write_restart_file = schedule().write_rst_file(reportStepIdx, previousRestartOutput);
     auto exc_type = ExceptionType::NONE;
     std::string exc_msg;
-    size_t widx = 0;
+    std::size_t widx = 0;
     for (const auto& well : well_container_generic_) {
         const bool needed_for_summary =
                 ((summaryConfig.hasSummaryKey( "WWPI:" + well->name()) ||
@@ -1782,12 +1783,13 @@ updateWellPotentials(const int reportStepIdx,
         {
             this->computePotentials(widx, well_state_copy, exc_msg, exc_type, deferred_logger);
         }
+
         ++widx;
     }
+
     logAndCheckForExceptionsAndThrow(deferred_logger, exc_type,
                                      "computeWellPotentials() failed: " + exc_msg,
                                      terminal_output_);
-
 }
 
 void

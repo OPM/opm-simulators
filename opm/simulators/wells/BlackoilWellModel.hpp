@@ -28,6 +28,7 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <cassert>
+#include <cstddef>
 #include <map>
 #include <memory>
 #include <optional>
@@ -176,9 +177,10 @@ namespace Opm {
                 // TODO (?)
             }
 
-            void beginEpisode()
+            void beginEpisode(const std::size_t previousRestartOutput)
             {
-                beginReportStep(ebosSimulator_.episodeIndex());
+                this->beginReportStep(ebosSimulator_.episodeIndex(),
+                                      previousRestartOutput);
             }
 
             void beginTimeStep();
@@ -264,7 +266,8 @@ namespace Opm {
             }
 
             // called at the beginning of a report step
-            void beginReportStep(const int time_step);
+            void beginReportStep(const int         time_step,
+                                 const std::size_t previousRestartOutput);
 
             void updatePerforationIntensiveQuantities();
             // it should be able to go to prepareTimeStep(), however, the updateWellControls() and initPrimaryVariablesEvaluation()
@@ -308,12 +311,13 @@ namespace Opm {
 
 
             const ModelParameters param_;
-            size_t global_num_cells_{};
+            std::size_t global_num_cells_{};
             // the number of the cells in the local grid
-            size_t local_num_cells_{};
+            std::size_t local_num_cells_{};
             double gravity_{};
             std::vector<double> depth_{};
             bool alternative_well_rate_init_{};
+            std::size_t previousRestartOutput_{};
 
             std::unique_ptr<RateConverterType> rateConverter_{};
 

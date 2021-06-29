@@ -62,7 +62,7 @@ public:
         auto size = this->m_in_injecting_group.size();
         comm.sum( this->m_in_injecting_group.data(), size);
         comm.sum( this->m_in_producing_group.data(), size);
-    };
+    }
 
 
 
