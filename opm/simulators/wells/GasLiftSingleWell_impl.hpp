@@ -103,7 +103,7 @@ computeWellRates_(
     // NOTE: If we do not clear the potentials here, it will accumulate
     //   the new potentials to the old values..
     std::fill(potentials.begin(), potentials.end(), 0.0);
-    this->std_well_.computeWellRatesWithBhp(
+    this->std_well_.computeWellRatesWithBhpPotential(
         this->ebos_simulator_, bhp, potentials, this->deferred_logger_);
     if (debug_output) {
         const std::string msg = fmt::format("computed well potentials given bhp {}, "

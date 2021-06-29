@@ -194,7 +194,7 @@ namespace Opm
         virtual void computeWellPotentials(const Simulator& ebosSimulator,
                                            const WellState& well_state,
                                            std::vector<double>& well_potentials,
-                                           DeferredLogger& deferred_logger) /* const */ override;
+                                           DeferredLogger& deferred_logger) /*const */ override;
 
         virtual void updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_logger) const override;
 
@@ -265,6 +265,11 @@ namespace Opm
             const double& bhp,
             std::vector<double>& well_flux,
             DeferredLogger& deferred_logger) const;
+
+        void computeWellRatesWithBhpPotential(const Simulator& ebosSimulator,
+                                              const double& bhp,
+                                              std::vector<double>& well_flux,
+                                              DeferredLogger& deferred_logger) const;
 
         // NOTE: These cannot be protected since they are used by GasLiftRuntime
         using Base::phaseUsage;
@@ -367,11 +372,6 @@ namespace Opm
                              double& perf_dis_gas_rate,
                              double& perf_vap_oil_rate,
                              DeferredLogger& deferred_logger) const;
-
-        void computeWellRatesWithBhpPotential(const Simulator& ebosSimulator,
-                                              const double& bhp,
-                                              std::vector<double>& well_flux,
-                                              DeferredLogger& deferred_logger);
 
         std::vector<double> computeWellPotentialWithTHP(
             const Simulator& ebosSimulator,

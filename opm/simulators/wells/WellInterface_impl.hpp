@@ -511,11 +511,6 @@ namespace Opm
             return;
         }
 
-        // focusing on PRODUCER for now
-        if (this->isInjector()) {
-            return;
-        }
-
         if (!this->underPredictionMode() ) {
             return;
         }
@@ -535,7 +530,7 @@ namespace Opm
     {
         bool shut_unsolvable_wells = param_.shut_unsolvable_wells_;
         // the well operability system currently works only for producers in prediction mode
-        return shut_unsolvable_wells && !this->isInjector() && this->underPredictionMode();
+        return shut_unsolvable_wells && this->underPredictionMode();
     }
 
 
@@ -550,6 +545,11 @@ namespace Opm
                           DeferredLogger& deferred_logger)
     {
         this->operability_status_.reset();
+
+        // focusing on PRODUCER for now
+        if (this->isInjector()) {
+            return;
+        }
 
         auto current_control = well_state.currentProductionControl(this->index_of_well_);
         // Operability checking is not free
