@@ -220,7 +220,7 @@ if(amgcl_FOUND)
   # flag. With that nvcc fails as it does not that flag.
   # Hence we set AMGCL_INCLUDE_DIRS.
   get_property(AMGCL_INCLUDE_DIRS TARGET amgcl::amgcl PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
-  include_directories(${AMGCL_INCLUDE_DIRS})
+  include_directories(SYSTEM ${AMGCL_INCLUDE_DIRS})
   if(CUDA_FOUND)
     set_source_files_properties(opm/simulators/linalg/bda/amgclSolverBackend.cpp PROPERTIES LANGUAGE CUDA)
   endif()
@@ -240,8 +240,8 @@ if(OpenCL_FOUND)
     add_library(OPM::VexCL::OpenCL INTERFACE IMPORTED)
     set_target_properties(OPM::VexCL::OpenCL PROPERTIES
       INTERFACE_COMPILE_DEFINITIONS "${VEXCL_COMPILE_DEFINITIONS}"
-      INTERFACE_INCLUDE_DIRECTORIES "${VEXCL_INCLUDE_DIRS}"
       INTERFACE_LINK_LIBRARIES "${VEXCL_LINK_LIBRARIES}")
+    target_include_directories(OPM::VexCL::OpenCL SYSTEM INTERFACE "${VEXCL_INCLUDE_DIRS}")
   endif()
 endif()
 
