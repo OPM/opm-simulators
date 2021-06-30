@@ -226,6 +226,25 @@ if(amgcl_FOUND)
   endif()
 endif()
 
+if(OpenCL_FOUND)
+  find_package(VexCL)
+  if(VexCL_FOUND)
+    set(HAVE_VEXCL 1)
+    # generator expressions in vexcl do not seem to work and therefore
+    # we cannot use the imported target. Hence we exract the needed info
+    # from the targets
+    get_property(VEXCL_INCLUDE_DIRS TARGET VexCL::Common PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
+    get_property(VEXCL_LINK_LIBRARIES TARGET VexCL::Common PROPERTY INTERFACE_LINK_LIBRARIES)
+    get_property(VEXCL_COMPILE_DEFINITIONS TARGET VexCL::OpenCL PROPERTY INTERFACE_COMPILE_DEFINITIONS)
+    set(VEXCL_LINK_LIBRARIES "${VEXCL_LINK_LIBRARIES};OpenCL::OpenCL")
+    add_library(OPM::VexCL::OpenCL INTERFACE IMPORTED)
+    set_target_properties(OPM::VexCL::OpenCL PROPERTIES
+      INTERFACE_COMPILE_DEFINITIONS "${VEXCL_COMPILE_DEFINITIONS}"
+      INTERFACE_INCLUDE_DIRECTORIES "${VEXCL_INCLUDE_DIRS}"
+      INTERFACE_LINK_LIBRARIES "${VEXCL_LINK_LIBRARIES}")
+  endif()
+endif()
+
 # read the list of components from this file (in the project directory);
 # it should set various lists with the names of the files to include
 include (CMakeLists_files.cmake)
@@ -541,6 +560,9 @@ if(OpenCL_FOUND)
   target_link_libraries( opmsimulators PUBLIC ${OpenCL_LIBRARIES} )
 endif()
 
+if(VexCL_FOUND)
+  target_link_libraries( opmsimulators PUBLIC OPM::VexCL::OpenCL )
+endif()
 if(HAVE_FPGA)
   add_dependencies(opmsimulators FPGA_library)
   ExternalProject_Get_Property(FPGA_library binary_dir)

@@ -43,6 +43,9 @@
 #include <amgcl/relaxation/cusparse_ilu0.hpp>
 #endif
 
+#if HAVE_VEXCL
+#include <amgcl/backend/vexcl.hpp>
+#endif
 namespace bda
 {
 
