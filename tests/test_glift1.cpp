@@ -167,6 +167,7 @@ BOOST_AUTO_TEST_CASE(G1)
     BOOST_CHECK_EQUAL( well.name(), "B-1H");
     const auto& summary_state = simulator->vanguard().summaryState();
     WellState &well_state = well_model.wellState();
+    const auto &group_state = well_model.groupState();
     GLiftEclWells ecl_well_map;
     well_model.initGliftEclWellMap(ecl_well_map);
     const int iteration_idx = simulator->model().newtonMethod().numIterations();
@@ -183,7 +184,7 @@ BOOST_AUTO_TEST_CASE(G1)
     };
     GLiftSyncGroups sync_groups;
     GasLiftSingleWell glift {*std_well, *(simulator.get()), summary_state,
-        deferred_logger, well_state, group_info, sync_groups};
+        deferred_logger, well_state, group_state, group_info, sync_groups};
     auto state = glift.runOptimize(iteration_idx);
     BOOST_CHECK_CLOSE(state->oilRate(), 0.01736111111111111, 1e-8);
     BOOST_CHECK_CLOSE(state->gasRate(), 1.6464646999768586, 1e-8);

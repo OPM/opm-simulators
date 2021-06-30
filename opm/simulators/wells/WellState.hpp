@@ -76,6 +76,8 @@ public:
         return wellMap_.size();
     }
 
+    int wellIndex(const std::string& wellName) const;
+
     const ParallelWellInfo& parallelWellInfo(std::size_t well_index) const;
 
 

@@ -934,7 +934,7 @@ namespace Opm {
                     // NOTE: Only the wells in "group_info" needs to be optimized
                     if (group_info.hasWell(well->name())) {
                         well->gasLiftOptimizationStage1(
-                            this->wellState(), ebosSimulator_, deferred_logger,
+                            this->wellState(), this->groupState(), ebosSimulator_, deferred_logger,
                             prod_wells, glift_wells, state_map,
                             group_info, groups_to_sync);
                     }

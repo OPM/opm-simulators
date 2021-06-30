@@ -45,6 +45,7 @@ class Schedule;
 class SummaryState;
 class WellInterfaceGeneric;
 class WellState;
+class GroupState;
 
 class GasLiftSingleWellGeneric
 {
@@ -94,6 +95,7 @@ protected:
     GasLiftSingleWellGeneric(
         DeferredLogger &deferred_logger,
         WellState &well_state,
+        const GroupState& group_state,
         const Well& ecl_well,
         const SummaryState& summary_state,
         GasLiftGroupInfo &group_info,
@@ -125,7 +127,10 @@ protected:
         bool checkEcoGradient(double gradient);
         bool checkGroupALQrateExceeded(double delta_alq);
         bool checkGroupTargetsViolated(double delta_oil, double delta_gas);
+        std::tuple<double,double,double>
+          reduceALQtoGroupTarget(double alq, double oil_rate, double gas_rate, std::vector<double> &potentials);
         bool checkNegativeOilRate(double oil_rate);
+        bool checkThpControl();
         bool checkOilRateExceedsTarget(double oil_rate);
         bool checkRate(double rate, double limit, const std::string &rate_str) const;
         bool checkWellRatesViolated(std::vector<double> &potentials);
@@ -220,6 +225,7 @@ protected:
 
     DeferredLogger& deferred_logger_;
     WellState& well_state_;
+    const GroupState& group_state_;
     const Well& ecl_well_;
     const SummaryState& summary_state_;
     GasLiftGroupInfo& group_info_;

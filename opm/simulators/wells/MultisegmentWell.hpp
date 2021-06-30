@@ -105,6 +105,7 @@ namespace Opm
 
         virtual void gasLiftOptimizationStage1 (
             WellState&,
+            const GroupState&,
             const Simulator&,
             DeferredLogger&,
             GLiftProdWells &,

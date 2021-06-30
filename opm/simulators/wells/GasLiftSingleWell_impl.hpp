@@ -26,6 +26,7 @@ GasLiftSingleWell(const StdWell &std_well,
                   const SummaryState &summary_state,
                   DeferredLogger &deferred_logger,
                   WellState &well_state,
+                  const GroupState &group_state,
                   GasLiftGroupInfo &group_info,
                   GLiftSyncGroups &sync_groups
                  )
@@ -34,6 +35,7 @@ GasLiftSingleWell(const StdWell &std_well,
     : GasLiftSingleWellGeneric(
         deferred_logger,
         well_state,
+        group_state,
         std_well.wellEcl(),
         summary_state,
         group_info,

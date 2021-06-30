@@ -166,6 +166,7 @@ public:
 
     virtual void gasLiftOptimizationStage1 (
         WellState& well_state,
+        const GroupState& group_state,
         const Simulator& ebosSimulator,
         DeferredLogger& deferred_logger,
         GLiftProdWells& prod_wells,
