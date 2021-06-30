@@ -64,12 +64,15 @@ class amgclSolverBackend : public BdaSolver<block_size>
     using Base::tolerance;
     using Base::initialized;
 
+#if HAVE_CUDA
     typedef amgcl::backend::cuda<double> CUDA_Backend;
+    typedef amgcl::make_solver<amgcl::runtime::preconditioner<CUDA_Backend>, amgcl::runtime::solver::wrapper<CUDA_Backend> > CUDA_Solver;
+#endif
+
     typedef amgcl::static_matrix<double, block_size, block_size> dmat_type; // matrix value type in double precision
     typedef amgcl::static_matrix<double, block_size, 1> dvec_type; // the corresponding vector value type
     typedef amgcl::backend::builtin<dmat_type> CPU_Backend;
 
-    typedef amgcl::make_solver<amgcl::runtime::preconditioner<CUDA_Backend>, amgcl::runtime::solver::wrapper<CUDA_Backend> > CUDA_Solver;
     typedef amgcl::make_solver<amgcl::runtime::preconditioner<CPU_Backend>, amgcl::runtime::solver::wrapper<CPU_Backend> > CPU_Solver;
 
 private:
@@ -82,7 +85,9 @@ private:
                                      // if more backend are supported (vexcl), turn into enum
 
     boost::property_tree::ptree prm;         // amgcl parameters
+#if HAVE_CUDA
     typename CUDA_Backend::params CUDA_bprm; // amgcl backend parameters, only used for cusparseHandle
+#endif
 
     /// Initialize GPU and allocate memory
     /// \param[in] N              number of nonzeroes, divide by dim*dim to get number of blocks

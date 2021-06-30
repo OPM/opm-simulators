@@ -90,10 +90,14 @@ void amgclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doubl
     prm.erase("backend_type_cuda");             // delete custom parameter, otherwise amgcl prints a warning
 
     if (backend_type_cuda) {
+#if HAVE_CUDA
         cudaDeviceProp prop;
         cudaGetDeviceProperties(&prop, deviceID);
         out << prop.name << std::endl;
         cusparseCreate(&CUDA_bprm.cusparse_handle);
+#else
+        OPM_THROW(std::logic_error, "Error amgcl is trying to use CUDA, but CUDA was not found by CMake");
+#endif
     }
     OpmLog::info(out.str());
 
@@ -165,6 +169,7 @@ void amgclSolverBackend<block_size>::solve_system(double *b, WellContributions &
 
     try {
         if (backend_type_cuda) { // use CUDA
+#if HAVE_CUDA
             // create matrix object
             auto A = std::tie(N, A_rows, A_cols, A_vals);
 
@@ -186,6 +191,7 @@ void amgclSolverBackend<block_size>::solve_system(double *b, WellContributions &
             std::tie(iters, error) = solve(B, X);
 
             thrust::copy(X.begin(), X.end(), x.begin());
+#endif
         } else { // use builtin backend (CPU)
             // create matrix object
             auto Atmp = std::tie(N, A_rows, A_cols, A_vals);
