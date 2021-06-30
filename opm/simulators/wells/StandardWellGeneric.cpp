@@ -60,6 +60,7 @@ StandardWellGeneric(int Bhp,
     invDuneD_.setBuildMode(DiagMatWell::row_wise);
 }
 
+
 template<class Scalar>
 double
 StandardWellGeneric<Scalar>::
