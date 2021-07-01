@@ -201,34 +201,23 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
     if (rank==0) {
         try
         {
-            if ( (!deck || !schedule || !summaryConfig ) && !parseContext)
-            {
-                OPM_THROW(std::logic_error, "We need a parse context if deck, schedule, or summaryConfig are not initialized");
-            }
+            Opm::Parser parser;
+            deck = std::make_unique<Opm::Deck>( parser.parseFile(deckFilename , *parseContext, *errorGuard));
 
-            if (!deck)
-            {
-                Opm::Parser parser;
-                deck = std::make_unique<Opm::Deck>( parser.parseFile(deckFilename , *parseContext, *errorGuard));
+            Opm::KeywordValidation::KeywordValidator keyword_validator(Opm::FlowKeywordValidation::unsupportedKeywords(),
+                                                                       Opm::FlowKeywordValidation::partiallySupported<std::string>(),
+                                                                       Opm::FlowKeywordValidation::partiallySupported<int>(),
+                                                                       Opm::FlowKeywordValidation::partiallySupported<double>());
+            keyword_validator.validateDeck(*deck, *parseContext, *errorGuard);
 
-                Opm::KeywordValidation::KeywordValidator keyword_validator(
-                    Opm::FlowKeywordValidation::unsupportedKeywords(),
-                    Opm::FlowKeywordValidation::partiallySupported<std::string>(),
-                    Opm::FlowKeywordValidation::partiallySupported<int>(),
-                    Opm::FlowKeywordValidation::partiallySupported<double>());
-                keyword_validator.validateDeck(*deck, *parseContext, *errorGuard);
+            if ( checkDeck )
+                Opm::checkDeck(*deck, parser, *parseContext, *errorGuard);
 
-                if ( checkDeck )
-                    Opm::checkDeck(*deck, parser, *parseContext, *errorGuard);
-            }
-
-            if (!eclipseState) {
 #if HAVE_MPI
-                eclipseState = std::make_unique<Opm::ParallelEclipseState>(*deck);
+            eclipseState = std::make_unique<Opm::ParallelEclipseState>(*deck);
 #else
-                eclipseState = std::make_unique<Opm::EclipseState>(*deck);
+            eclipseState = std::make_unique<Opm::EclipseState>(*deck);
 #endif
-            }
             /*
               For the time being initializing wells and groups from the
               restart file is not possible, but work is underways and it is
@@ -241,20 +230,17 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
                 auto rst_file = std::make_shared<EclIO::ERst>(rst_filename);
                 auto rst_view = std::make_shared<EclIO::RestartFileView>(std::move(rst_file), report_step);
                 const auto rst_state = Opm::RestartIO::RstState::load(std::move(rst_view));
-                if (!schedule)
-                    schedule = std::make_unique<Opm::Schedule>(*deck, *eclipseState, *parseContext, *errorGuard, python, outputInterval, &rst_state);
+                schedule = std::make_unique<Opm::Schedule>(*deck, *eclipseState, *parseContext, *errorGuard, python, outputInterval, &rst_state);
             }
             else {
-                if (!schedule)
-                    schedule = std::make_unique<Opm::Schedule>(*deck, *eclipseState, *parseContext, *errorGuard, python);
+                schedule = std::make_unique<Opm::Schedule>(*deck, *eclipseState, *parseContext, *errorGuard, python);
             }
             if (Opm::OpmLog::hasBackend("STDOUT_LOGGER")) // loggers might not be set up!
             {
                 setupMessageLimiter(schedule->operator[](0).message_limits(), "STDOUT_LOGGER");
             }
-            if (!summaryConfig)
-                summaryConfig = std::make_unique<Opm::SummaryConfig>(*deck, *schedule, eclipseState->fieldProps(), 
-                                                                     eclipseState->aquifer(), *parseContext, *errorGuard);
+            summaryConfig = std::make_unique<Opm::SummaryConfig>(*deck, *schedule, eclipseState->fieldProps(), 
+                                                                 eclipseState->aquifer(), *parseContext, *errorGuard);
 
             Opm::checkConsistentArrayDimensions(*eclipseState, *schedule, *parseContext, *errorGuard);
         }
