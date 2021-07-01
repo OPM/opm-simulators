@@ -312,7 +312,7 @@ protected:
 
 
     void wellTestingEconomic(const Simulator& simulator,
-                             const double simulation_time, const WellState& well_state, const GroupState& group_state,
+                             const double simulation_time, WellState& well_state, const GroupState& group_state,
                              WellTestState& welltest_state, DeferredLogger& deferred_logger);
 
     void wellTestingPhysical(const Simulator& simulator,

@@ -239,7 +239,7 @@ namespace Opm
     void
     WellInterface<TypeTag>::
     wellTestingEconomic(const Simulator& simulator,
-                        const double simulation_time, const WellState& well_state, const GroupState& group_state,
+                        const double simulation_time, WellState& well_state, const GroupState& group_state,
                         WellTestState& welltest_state, DeferredLogger& deferred_logger)
     {
         deferred_logger.info(" well " + this->name() + " is being tested for economic limits");
@@ -260,6 +260,17 @@ namespace Opm
         while (testWell) {
             const size_t original_number_closed_completions = welltest_state_temp.sizeCompletions();
             solveWellForTesting(simulator, well_state_copy, group_state, deferred_logger);
+            std::vector<double> potentials;
+            try {
+                computeWellPotentials(simulator, well_state_copy, potentials, deferred_logger);
+            } catch (const std::exception& e) {
+                const std::string msg = std::string("well ") + this->name() + std::string(": computeWellPotentials() failed during testing for re-opening: ") + e.what();
+                deferred_logger.info(msg);
+            }
+            const int np = well_state_copy.numPhases();
+            for (int p = 0; p < np; ++p) {
+                well_state_copy.wellPotentials(this->indexOfWell())[p] = std::abs(potentials[p]);
+            }
             this->updateWellTestState(well_state_copy, simulation_time, /*writeMessageToOPMLog=*/ false, welltest_state_temp, deferred_logger);
             this->closeCompletions(welltest_state_temp);
 
@@ -285,6 +296,7 @@ namespace Opm
                     welltest_state.dropCompletion(this->name(), completion.first);
                 }
             }
+            well_state = well_state_copy;
         }
     }
 
@@ -487,6 +499,18 @@ namespace Opm
             welltest_state.openWell(this->name(), WellTestConfig::PHYSICAL );
             const std::string msg = " well " + this->name() + " is re-opened through well testing for physical reason";
             deferred_logger.info(msg);
+            // we need to populate the new well with potentials
+            std::vector<double> potentials;
+            try {
+                computeWellPotentials(ebos_simulator, well_state_copy, potentials, deferred_logger);
+            } catch (const std::exception& e) {
+                const std::string msg2 = std::string("well ") + this->name() + std::string(": computeWellPotentials() failed during testing for re-opening: ") + e.what();
+                deferred_logger.info(msg2);
+            }
+            const int np = well_state_copy.numPhases();
+            for (int p = 0; p < np; ++p) {
+                well_state_copy.wellPotentials(this->indexOfWell())[p] = std::abs(potentials[p]);
+            }
             well_state = well_state_copy;
         } else {
             const std::string msg = " well " + this->name() + " is not operable during well testing for physical reason";
