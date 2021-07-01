@@ -59,6 +59,7 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"AQUNNC", {false, std::nullopt}},
         {"AUTOCOAR", {false, std::nullopt}},
         {"AUTOREF", {false, std::nullopt}},
+        {"BCAD", {false, std::string{"Report not available"}}},
         {"BIGMODEL", {false, std::nullopt}},
         {"BDENSITY", {false, std::nullopt}},
         {"BGGI", {false, std::nullopt}},
