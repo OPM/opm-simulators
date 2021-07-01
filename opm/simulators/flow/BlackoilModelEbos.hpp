@@ -915,7 +915,8 @@ namespace Opm {
             // Get convergence reports for reservoir and wells.
             std::vector<Scalar> B_avg(numEq, 0.0);
             auto report = getReservoirConvergence(timer.currentStepLength(), iteration, B_avg, residual_norms);
-            report += wellModel().getWellConvergence(B_avg, true);
+            const int nupcol = ebosSimulator().vanguard().schedule()[timer.reportStepNum()].nupcol();
+            report += wellModel().getWellConvergence(B_avg, iteration < nupcol);
 
             return report;
         }
