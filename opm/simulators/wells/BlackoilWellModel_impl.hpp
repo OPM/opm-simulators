@@ -1209,7 +1209,7 @@ namespace Opm {
     template<typename TypeTag>
     ConvergenceReport
     BlackoilWellModel<TypeTag>::
-    getWellConvergence(const std::vector<Scalar>& B_avg, bool checkGroupConvergence)
+    getWellConvergence(const std::vector<Scalar>& B_avg, bool checkWellGroupControls)
     {
 
         DeferredLogger local_deferredLogger;
@@ -1220,14 +1220,9 @@ namespace Opm {
                 local_report += well->getWellConvergence(this->wellState(), B_avg, local_deferredLogger);
             }
         }
-        if (checkGroupConvergence) {
+        if (checkWellGroupControls) {
             bool violated = updateWellControls(local_deferredLogger, /* check group controls */ true);
-            //const int reportStepIdx = ebosSimulator_.episodeIndex();
-            //const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
-            //bool violated = checkGroupConstraints(fieldGroup,
-            //                                      ebosSimulator_.episodeIndex(),
-            //                                      local_deferredLogger);
-            local_report.setGroupConverged(!violated);
+            local_report.setWellGroupControlsSatisfied(!violated);
         }
 
         DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger);

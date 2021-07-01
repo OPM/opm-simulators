@@ -847,14 +847,11 @@ namespace Opm
                 for (int p = 0; p<np; ++p) {
                     total_rate -= well_state.wellRates(well_index)[p];
                 }
-                // if the total rates are negative or zero
-                // we try to provide a better intial well rate
-                // using the well potentials
-                //if (total_rate <= 0.0){
-                    for (int p = 0; p<np; ++p) {
-                        well_state.wellRates(well_index)[p] = -well_state.wellPotentials(well_index)[p];
-                    }
-                //}
+                // provide a better intial well rate using the well potentials
+                for (int p = 0; p<np; ++p) {
+                    well_state.wellRates(well_index)[p] = -well_state.wellPotentials(well_index)[p];
+                }
+
                 break;
             }
             case Well::ProducerCMode::THP:
@@ -866,15 +863,11 @@ namespace Opm
                 double bhp = this->calculateBhpFromThp(well_state, rates, well, summaryState, this->getRefDensity(), deferred_logger);
                 well_state.update_bhp(well_index, bhp);
 
-                // if the total rates are negative or zero
-                // we try to provide a better intial well rate
-                // using the well potentials
-                //double total_rate = -std::accumulate(rates.begin(), rates.end(), 0.0);
-                //if (total_rate <= 0.0){
-                    for (int p = 0; p<np; ++p) {
-                        well_state.wellRates(well_index)[p] = -well_state.wellPotentials(well_index)[p];
-                    }
-                //}
+                // provide a better intial well rate using the well potentials
+                for (int p = 0; p<np; ++p) {
+                    well_state.wellRates(well_index)[p] = -well_state.wellPotentials(well_index)[p];
+                }
+
                 break;
             }
             case Well::ProducerCMode::GRUP:
