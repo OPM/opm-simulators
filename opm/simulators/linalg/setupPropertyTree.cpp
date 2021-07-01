@@ -108,7 +108,6 @@ setupCPR(const std::string& conf, const FlowLinearSolverParameters& p)
     }
     prm.put("preconditioner.finesmoother.type", "ParOverILU0"s);
     prm.put("preconditioner.finesmoother.relaxation", 1.0);
-    prm.put("preconditioner.pressure_var_index", 1);
     prm.put("preconditioner.verbosity", 0);
     prm.put("preconditioner.coarsesolver.maxiter", 1);
     prm.put("preconditioner.coarsesolver.tol", 1e-1);

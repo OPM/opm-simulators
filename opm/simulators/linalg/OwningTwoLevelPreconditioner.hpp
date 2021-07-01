@@ -84,15 +84,17 @@ public:
     using PrecFactory = Opm::PreconditionerFactory<OperatorType, Communication>;
 
     OwningTwoLevelPreconditioner(const OperatorType& linearoperator, const Opm::PropertyTree& prm,
-                                 const std::function<VectorType()> weightsCalculator)
+                                 const std::function<VectorType()> weightsCalculator,
+                                 std::size_t pressureIndex)
         : linear_operator_(linearoperator)
         , finesmoother_(PrecFactory::create(linearoperator,
                                             prm.get_child_optional("finesmoother") ?
-                                            prm.get_child("finesmoother") : Opm::PropertyTree()))
+                                            prm.get_child("finesmoother") : Opm::PropertyTree(),
+                                            std::function<VectorType()>(), pressureIndex))
         , comm_(nullptr)
         , weightsCalculator_(weightsCalculator)
         , weights_(weightsCalculator())
-        , levelTransferPolicy_(dummy_comm_, weights_, prm.get<int>("pressure_var_index"))
+        , levelTransferPolicy_(dummy_comm_, weights_, pressureIndex)
         , coarseSolverPolicy_(prm.get_child_optional("coarsesolver")? prm.get_child("coarsesolver") : Opm::PropertyTree())
         , twolevel_method_(linearoperator,
                            finesmoother_,
@@ -113,15 +115,18 @@ public:
     }
 
     OwningTwoLevelPreconditioner(const OperatorType& linearoperator, const Opm::PropertyTree& prm,
-                                 const std::function<VectorType()> weightsCalculator, const Communication& comm)
+                                 const std::function<VectorType()> weightsCalculator,
+                                 std::size_t pressureIndex, const Communication& comm)
         : linear_operator_(linearoperator)
         , finesmoother_(PrecFactory::create(linearoperator,
                                             prm.get_child_optional("finesmoother") ?
-                                            prm.get_child("finesmoother"): Opm::PropertyTree(), comm))
+                                            prm.get_child("finesmoother"): Opm::PropertyTree(),
+                                            std::function<VectorType()>(),
+                                            comm, pressureIndex))
         , comm_(&comm)
         , weightsCalculator_(weightsCalculator)
         , weights_(weightsCalculator())
-        , levelTransferPolicy_(*comm_, weights_, prm.get<int>("pressure_var_index", 1))
+        , levelTransferPolicy_(*comm_, weights_, pressureIndex)
         , coarseSolverPolicy_(prm.get_child_optional("coarsesolver")? prm.get_child("coarsesolver") : Opm::PropertyTree())
         , twolevel_method_(linearoperator,
                            finesmoother_,

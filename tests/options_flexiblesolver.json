@@ -25,8 +25,7 @@
             "solver": "bicgstab"
         },
         "verbosity": "11",
-        "weights_filename" : "weight_cpr.txt",
-        "pressure_var_index" : "1"
+        "weights_filename" : "weight_cpr.txt"
     },
     "verbosity": "10",
     "solver": "bicgstab"

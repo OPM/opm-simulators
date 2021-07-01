@@ -63,7 +63,10 @@ namespace Amg
                 : linsolver_()
             {
                 assert(op.category() == Dune::SolverCategory::overlapping);
-                linsolver_ = std::make_unique<Solver>(op, comm, prm, std::function<X()>());
+                // Assuming that we do not use Cpr as Pressure solver and use hard
+                // coded pressure index that might be wrong but should be unused.
+                linsolver_ = std::make_unique<Solver>(op, comm, prm, std::function<X()>(),
+                                                      /* pressureIndex = */ 1);
             }
 #endif // HAVE_MPI
 
@@ -73,7 +76,10 @@ namespace Amg
                 : linsolver_()
             {
                 assert(op.category() != Dune::SolverCategory::overlapping);
-                linsolver_ = std::make_unique<Solver>(op, prm, std::function<X()>());
+                // Assuming that we do not use Cpr as Pressure solver and use hard
+                // coded pressure index that might be wrong but should be unused.
+                linsolver_ = std::make_unique<Solver>(op, prm, std::function<X()>(),
+                                                      /* pressureIndex = */ 1);
             }
 
 

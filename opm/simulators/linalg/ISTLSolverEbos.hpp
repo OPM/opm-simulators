@@ -91,6 +91,7 @@ namespace Opm
         using AbstractOperatorType = Dune::AssembledLinearOperator<Matrix, Vector, Vector>;
         using WellModelOperator = WellModelAsLinearOperator<WellModel, Vector, Vector>;
         using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
+        constexpr static std::size_t pressureIndex = GetPropType<TypeTag, Properties::Indices>::pressureSwitchIdx;
 
 #if HAVE_CUDA || HAVE_OPENCL || HAVE_FPGA
         static const unsigned int block_size = Matrix::block_type::rows;
@@ -360,24 +361,28 @@ namespace Opm
                     if (useWellConn_) {
                         using ParOperatorType = Dune::OverlappingSchwarzOperator<Matrix, Vector, Vector, Comm>;
                         linearOperatorForFlexibleSolver_ = std::make_unique<ParOperatorType>(getMatrix(), *comm_);
-                        flexibleSolver_ = std::make_unique<FlexibleSolverType>(*linearOperatorForFlexibleSolver_, *comm_, prm_, weightsCalculator);
+                        flexibleSolver_ = std::make_unique<FlexibleSolverType>(*linearOperatorForFlexibleSolver_, *comm_, prm_, weightsCalculator,
+                                                                               pressureIndex);
                     } else {
                         using ParOperatorType = WellModelGhostLastMatrixAdapter<Matrix, Vector, Vector, true>;
                         wellOperator_ = std::make_unique<WellModelOperator>(simulator_.problem().wellModel());
                         linearOperatorForFlexibleSolver_ = std::make_unique<ParOperatorType>(getMatrix(), *wellOperator_, interiorCellNum_);
-                        flexibleSolver_ = std::make_unique<FlexibleSolverType>(*linearOperatorForFlexibleSolver_, *comm_, prm_, weightsCalculator);
+                        flexibleSolver_ = std::make_unique<FlexibleSolverType>(*linearOperatorForFlexibleSolver_, *comm_, prm_, weightsCalculator,
+                                                                               pressureIndex);
                     }
 #endif
                 } else {
                     if (useWellConn_) {
                         using SeqOperatorType = Dune::MatrixAdapter<Matrix, Vector, Vector>;
                         linearOperatorForFlexibleSolver_ = std::make_unique<SeqOperatorType>(getMatrix());
-                        flexibleSolver_ = std::make_unique<FlexibleSolverType>(*linearOperatorForFlexibleSolver_, prm_, weightsCalculator);
+                        flexibleSolver_ = std::make_unique<FlexibleSolverType>(*linearOperatorForFlexibleSolver_, prm_, weightsCalculator,
+                                                                               pressureIndex);
                     } else {
                         using SeqOperatorType = WellModelMatrixAdapter<Matrix, Vector, Vector, false>;
                         wellOperator_ = std::make_unique<WellModelOperator>(simulator_.problem().wellModel());
                         linearOperatorForFlexibleSolver_ = std::make_unique<SeqOperatorType>(getMatrix(), *wellOperator_);
-                        flexibleSolver_ = std::make_unique<FlexibleSolverType>(*linearOperatorForFlexibleSolver_, prm_, weightsCalculator);
+                        flexibleSolver_ = std::make_unique<FlexibleSolverType>(*linearOperatorForFlexibleSolver_, prm_, weightsCalculator,
+                                                                               pressureIndex);
                     }
                 }
             }
@@ -429,15 +434,18 @@ namespace Opm
             if (preconditionerType == "cpr" || preconditionerType == "cprt") {
                 const bool transpose = preconditionerType == "cprt";
                 const auto weightsType = prm_.get("preconditioner.weight_type"s, "quasiimpes"s);
-                const auto pressureIndex = this->prm_.get("preconditioner.pressure_var_index", 1);
                 if (weightsType == "quasiimpes") {
-                    // weighs will be created as default in the solver
-                    weightsCalculator = [this, transpose, pressureIndex]() {
-                        return Amg::getQuasiImpesWeights<Matrix, Vector>(this->getMatrix(), pressureIndex, transpose);
+                    // weights will be created as default in the solver
+                    // assignment p = pressureIndex prevent compiler warning about
+                    // capturing variable with non-automatic storage duration
+                    weightsCalculator = [this, transpose, p = pressureIndex]() {
+                        return Amg::getQuasiImpesWeights<Matrix, Vector>(this->getMatrix(), p, transpose);
                     };
                 } else if (weightsType == "trueimpes") {
-                    weightsCalculator = [this, pressureIndex]() {
-                        return this->getTrueImpesWeights(pressureIndex);
+                    // assignment p = pressureIndex prevent compiler warning about
+                    // capturing variable with non-automatic storage duration
+                    weightsCalculator = [this, p = pressureIndex]() {
+                        return this->getTrueImpesWeights(p);
                     };
                 } else {
                     OPM_THROW(std::invalid_argument,

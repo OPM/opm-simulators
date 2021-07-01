@@ -150,10 +150,14 @@ public:
         return *coarseLevelCommunication_;
     }
 
+    std::size_t getPressureIndex() const
+    {
+        return pressure_var_index_;
+    }
 private:
     Communication* communication_;
     const FineVectorType& weights_;
-    const int pressure_var_index_;
+    const std::size_t pressure_var_index_;
     std::shared_ptr<Communication> coarseLevelCommunication_;
     std::shared_ptr<typename CoarseOperator::matrix_type> coarseLevelMatrix_;
 };

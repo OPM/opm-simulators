@@ -71,12 +71,12 @@ testSolver(const Opm::PropertyTree& prm, const std::string& matrix_filename, con
               {
                   return Opm::Amg::getQuasiImpesWeights<Matrix,
                                                         Vector>(matrix,
-                                                                prm.get<int>("preconditioner.pressure_var_index"),
+                                                                1,
                                                                 transpose);
               };
     using SeqOperatorType = Dune::MatrixAdapter<Matrix, Vector, Vector>;
     SeqOperatorType op(matrix);
-    Dune::FlexibleSolver<Matrix, Vector> solver(op, prm, wc);
+    Dune::FlexibleSolver<Matrix, Vector> solver(op, prm, wc, 1);
     Vector x(rhs.size());
     Dune::InverseOperatorResult res;
     solver.apply(x, rhs, res);
