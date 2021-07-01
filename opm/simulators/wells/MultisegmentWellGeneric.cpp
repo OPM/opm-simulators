@@ -395,7 +395,7 @@ computeBhpAtThpLimitInj(const std::function<std::vector<double>(const double)>& 
 
     // Handle the no solution case.
     if (sign_change_index == -1) {
-        return std::optional<double>();
+        return std::nullopt;
     }
 
     // Solve for the proper solution in the given interval.
@@ -414,7 +414,7 @@ computeBhpAtThpLimitInj(const std::function<std::vector<double>(const double)>& 
         assert(low == controls.bhp_limit);
         deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE",
                                 "Robust bhp(thp) solve failed for well " + baseif_.name());
-        return std::optional<double>();
+        return std::nullopt;
     }
     try {
         const double solved_bhp = RegulaFalsiBisection<WarnAndContinueOnError>::
@@ -428,7 +428,7 @@ computeBhpAtThpLimitInj(const std::function<std::vector<double>(const double)>& 
     catch (...) {
         deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE",
                                 "Robust bhp(thp) solve failed for well " + baseif_.name());
-        return std::optional<double>();
+        return std::nullopt;
     }
 }
 
@@ -591,7 +591,7 @@ computeBhpAtThpLimitProd(const std::function<std::vector<double>(const double)>&
                     // Return failure.
                     deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE_BRACKETING_FAILURE",
                                             "Robust bhp(thp) solve failed due to bracketing failure for well " + baseif_.name());
-                    return std::optional<double>();
+                    return std::nullopt;
                 }
             }
         }
@@ -617,7 +617,7 @@ computeBhpAtThpLimitProd(const std::function<std::vector<double>(const double)>&
     catch (...) {
         deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE",
                                 "Robust bhp(thp) solve failed for well " + baseif_.name());
-        return std::optional<double>();
+        return std::nullopt;
     }
 }
 
