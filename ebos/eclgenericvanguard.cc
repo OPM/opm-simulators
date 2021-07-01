@@ -261,7 +261,7 @@ void EclGenericVanguard::init()
 
     readDeck(myRank, fileName_, deck_, eclState_, eclSchedule_,
              eclSummaryConfig_, std::move(errorGuard), python,
-             std::move(parseContext_), /* initFromRestart = */ false,
+             *parseContext_, /* initFromRestart = */ false,
              /* checkDeck = */ enableExperiments_, outputInterval_);
 
     this->summaryState_ = std::make_unique<SummaryState>( TimeService::from_time_t(this->eclSchedule_->getStartTime() ));

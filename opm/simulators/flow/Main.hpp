@@ -441,14 +441,13 @@ namespace Opm
                                           outputDir,
                                           EWOMS_GET_PARAM(PreTypeTag, std::string, OutputMode),
                                           outputCout_, "STDOUT_LOGGER");
-                auto parseContext =
-                    std::make_unique<ParseContext>(std::vector<std::pair<std::string , InputError::Action>>
-                                                   {{ParseContext::PARSE_RANDOM_SLASH, InputError::IGNORE},
-                                                    {ParseContext::PARSE_MISSING_DIMS_KEYWORD, InputError::WARN},
-                                                    {ParseContext::SUMMARY_UNKNOWN_WELL, InputError::WARN},
-                                                    {ParseContext::SUMMARY_UNKNOWN_GROUP, InputError::WARN}});
+                ParseContext parseContext(std::vector<std::pair<std::string , InputError::Action>>
+                                          {{ParseContext::PARSE_RANDOM_SLASH, InputError::IGNORE},
+                                           {ParseContext::PARSE_MISSING_DIMS_KEYWORD, InputError::WARN},
+                                           {ParseContext::SUMMARY_UNKNOWN_WELL, InputError::WARN},
+                                           {ParseContext::SUMMARY_UNKNOWN_GROUP, InputError::WARN}});
                 if (EWOMS_GET_PARAM(PreTypeTag, bool, EclStrictParsing))
-                    parseContext->update(InputError::DELAYED_EXIT1);
+                    parseContext.update(InputError::DELAYED_EXIT1);
 
                 FlowMainEbos<PreTypeTag>::printPRTHeader(outputCout_);
 
@@ -462,7 +461,7 @@ namespace Opm
                     outputInterval = output_param;
 
                 readDeck(mpiRank, deckFilename, deck_, eclipseState_, schedule_,
-                         summaryConfig_, nullptr, python, std::move(parseContext),
+                         summaryConfig_, nullptr, python, parseContext,
                          init_from_restart_file, outputCout_, outputInterval);
 
                 setupTime_ = externalSetupTimer.elapsed();

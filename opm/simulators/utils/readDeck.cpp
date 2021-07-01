@@ -187,7 +187,7 @@ void setupMessageLimiter(const Opm::MessageLimits msgLimits,  const std::string&
 
 void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& deck, std::unique_ptr<Opm::EclipseState>& eclipseState,
               std::unique_ptr<Opm::Schedule>& schedule, std::unique_ptr<Opm::SummaryConfig>& summaryConfig,
-              std::unique_ptr<ErrorGuard> errorGuard, std::shared_ptr<Opm::Python>& python, std::unique_ptr<ParseContext> parseContext,
+              std::unique_ptr<ErrorGuard> errorGuard, std::shared_ptr<Opm::Python>& python, const ParseContext& parseContext,
               bool initFromRestart, bool checkDeck, const std::optional<int>& outputInterval)
 {
     if (!errorGuard)
@@ -202,16 +202,16 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
         try
         {
             Opm::Parser parser;
-            deck = std::make_unique<Opm::Deck>( parser.parseFile(deckFilename , *parseContext, *errorGuard));
+            deck = std::make_unique<Opm::Deck>( parser.parseFile(deckFilename , parseContext, *errorGuard));
 
             Opm::KeywordValidation::KeywordValidator keyword_validator(Opm::FlowKeywordValidation::unsupportedKeywords(),
                                                                        Opm::FlowKeywordValidation::partiallySupported<std::string>(),
                                                                        Opm::FlowKeywordValidation::partiallySupported<int>(),
                                                                        Opm::FlowKeywordValidation::partiallySupported<double>());
-            keyword_validator.validateDeck(*deck, *parseContext, *errorGuard);
+            keyword_validator.validateDeck(*deck, parseContext, *errorGuard);
 
             if ( checkDeck )
-                Opm::checkDeck(*deck, parser, *parseContext, *errorGuard);
+                Opm::checkDeck(*deck, parser, parseContext, *errorGuard);
 
 #if HAVE_MPI
             eclipseState = std::make_unique<Opm::ParallelEclipseState>(*deck);
@@ -230,19 +230,19 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
                 auto rst_file = std::make_shared<EclIO::ERst>(rst_filename);
                 auto rst_view = std::make_shared<EclIO::RestartFileView>(std::move(rst_file), report_step);
                 const auto rst_state = Opm::RestartIO::RstState::load(std::move(rst_view));
-                schedule = std::make_unique<Opm::Schedule>(*deck, *eclipseState, *parseContext, *errorGuard, python, outputInterval, &rst_state);
+                schedule = std::make_unique<Opm::Schedule>(*deck, *eclipseState, parseContext, *errorGuard, python, outputInterval, &rst_state);
             }
             else {
-                schedule = std::make_unique<Opm::Schedule>(*deck, *eclipseState, *parseContext, *errorGuard, python);
+                schedule = std::make_unique<Opm::Schedule>(*deck, *eclipseState, parseContext, *errorGuard, python);
             }
             if (Opm::OpmLog::hasBackend("STDOUT_LOGGER")) // loggers might not be set up!
             {
                 setupMessageLimiter(schedule->operator[](0).message_limits(), "STDOUT_LOGGER");
             }
             summaryConfig = std::make_unique<Opm::SummaryConfig>(*deck, *schedule, eclipseState->fieldProps(), 
-                                                                 eclipseState->aquifer(), *parseContext, *errorGuard);
+                                                                 eclipseState->aquifer(), parseContext, *errorGuard);
 
-            Opm::checkConsistentArrayDimensions(*eclipseState, *schedule, *parseContext, *errorGuard);
+            Opm::checkConsistentArrayDimensions(*eclipseState, *schedule, parseContext, *errorGuard);
         }
         catch(const OpmInputError& input_error) {
             failureMessage = input_error.what();
