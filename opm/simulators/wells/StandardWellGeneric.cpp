@@ -459,7 +459,7 @@ computeBhpAtThpLimitProdWithAlq(const std::function<std::vector<double>(const do
 
     // Handle the no solution case.
     if (sign_change_index == -1) {
-        return std::optional<double>();
+        return std::nullopt;
     }
 
     // Solve for the proper solution in the given interval.
@@ -478,7 +478,7 @@ computeBhpAtThpLimitProdWithAlq(const std::function<std::vector<double>(const do
         assert(low == controls.bhp_limit);
         deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE",
                                 "Robust bhp(thp) solve failed for well " + baseif_.name());
-        return std::optional<double>();
+        return std::nullopt;
     }
     try {
         const double solved_bhp = RegulaFalsiBisection<>::
@@ -492,7 +492,7 @@ computeBhpAtThpLimitProdWithAlq(const std::function<std::vector<double>(const do
     catch (...) {
         deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE",
                                 "Robust bhp(thp) solve failed for well " + baseif_.name());
-        return std::optional<double>();
+        return std::nullopt;
     }
 }
 
@@ -647,7 +647,7 @@ computeBhpAtThpLimitInj(const std::function<std::vector<double>(const double)>& 
 
     // Handle the no solution case.
     if (sign_change_index == -1) {
-        return std::optional<double>();
+        return std::nullopt;
     }
 
     // Solve for the proper solution in the given interval.
@@ -666,7 +666,7 @@ computeBhpAtThpLimitInj(const std::function<std::vector<double>(const double)>& 
         assert(low == controls.bhp_limit);
         deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE",
                                 "Robust bhp(thp) solve failed for well " + baseif_.name());
-        return std::optional<double>();
+        return std::nullopt;
     }
     try {
         const double solved_bhp = RegulaFalsiBisection<>::
@@ -680,7 +680,7 @@ computeBhpAtThpLimitInj(const std::function<std::vector<double>(const double)>& 
     catch (...) {
         deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE",
                                 "Robust bhp(thp) solve failed for well " + baseif_.name());
-        return std::optional<double>();
+        return std::nullopt;
     }
 }
 
