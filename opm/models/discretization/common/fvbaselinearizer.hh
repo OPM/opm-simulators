@@ -252,7 +252,7 @@ public:
             succeeded = comm.min(succeeded);
 
             if (!succeeded)
-                throw NumericalIssue("linearization of an auxilary equation failed");
+                throw NumericalIssue("linearization of an auxiliary equation failed");
         }
     }
 
