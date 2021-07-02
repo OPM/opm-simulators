@@ -79,13 +79,20 @@ class amgclSolverBackend : public BdaSolver<block_size>
     typedef amgcl::make_solver<amgcl::runtime::preconditioner<CPU_Backend>, amgcl::runtime::solver::wrapper<CPU_Backend> > CPU_Solver;
 
 private:
+
+    // amgcl can use different backends, this lets the user choose
+    enum Amgcl_backend_type {
+        cpu,
+        cuda,
+        vexcl
+    };
+
     // store matrix in CSR format
     std::vector<unsigned> A_rows, A_cols;
     std::vector<double> A_vals, rhs;
     std::vector<double> x;
     std::once_flag print_info;
-    bool backend_type_cuda = false;  // true if amgcl uses cuda, otherwise use cpu backend
-                                     // if more backend are supported (vexcl), turn into enum
+    Amgcl_backend_type backend_type = cpu;
 
     boost::property_tree::ptree prm;         // amgcl parameters
 #if HAVE_CUDA

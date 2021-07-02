@@ -68,14 +68,15 @@ void amgclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doubl
     // try to read amgcl parameters via json file
     std::string filename = "amgcl_options.json";
     std::ifstream file(filename);
+    std::string backend_type_string;
 
     if (file.is_open()) { // if file exists, read parameters from file
         boost::property_tree::read_json(file, prm);
 
-        backend_type_cuda = prm.get("backend_type_cuda", false); // defaults to false if not specified
+        backend_type_string = prm.get<std::string>("backend_type"); // defaults to cpu if not specified        
         out << "Using parameters from " << filename << ":\n";
     } else { // otherwise use default parameters, same as Dune
-        prm.put("backend_type_cuda", false);
+        prm.put("backend_type", "cpu");
         prm.put("precond.class", "relaxation");
         prm.put("precond.type", "ilu0");
         prm.put("precond.damping", 0.9);
@@ -87,9 +88,19 @@ void amgclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doubl
     }
 
     boost::property_tree::write_json(out, prm); // print amgcl parameters
-    prm.erase("backend_type_cuda");             // delete custom parameter, otherwise amgcl prints a warning
+    prm.erase("backend_type");                  // delete custom parameter, otherwise amgcl prints a warning
 
-    if (backend_type_cuda) {
+    if (backend_type_string == "cpu") {
+        backend_type = Amgcl_backend_type::cpu;
+    } else if (backend_type_string == "cuda") {
+        backend_type = Amgcl_backend_type::cuda;
+    } else if (backend_type_string == "vexcl") {
+        backend_type = Amgcl_backend_type::vexcl;
+    } else {
+        OPM_THROW(std::logic_error, "Error unknown value for amgcl parameter 'backend_type'");
+    }
+
+    if (backend_type == Amgcl_backend_type::cuda) {
 #if HAVE_CUDA
         cudaDeviceProp prop;
         cudaGetDeviceProperties(&prop, deviceID);
@@ -168,7 +179,7 @@ void amgclSolverBackend<block_size>::solve_system(double *b, WellContributions &
     double error = 0.0;
 
     try {
-        if (backend_type_cuda) { // use CUDA
+        if (backend_type == Amgcl_backend_type::cuda) { // use CUDA
 #if HAVE_CUDA
             // create matrix object
             auto A = std::tie(N, A_rows, A_cols, A_vals);
@@ -192,7 +203,7 @@ void amgclSolverBackend<block_size>::solve_system(double *b, WellContributions &
 
             thrust::copy(X.begin(), X.end(), x.begin());
 #endif
-        } else { // use builtin backend (CPU)
+        } else if (backend_type == Amgcl_backend_type::cpu) { // use builtin backend (CPU)
             // create matrix object
             auto Atmp = std::tie(N, A_rows, A_cols, A_vals);
             auto A = amgcl::adapter::block_matrix<dmat_type>(Atmp);
@@ -219,6 +230,44 @@ void amgclSolverBackend<block_size>::solve_system(double *b, WellContributions &
 
             // actually solve
             std::tie(iters, error) = solve(B, X);
+        } else if (backend_type == Amgcl_backend_type::vexcl) {
+            // vex::Context ctx(vex::Filter::Env && vex::Filter::Count(1));
+            // std::cout << ctx << std::endl;
+
+            // // Enable support for block-valued matrices in the VexCL kernels:
+            // vex::scoped_program_header h1(ctx, amgcl::backend::vexcl_static_matrix_declaration<double, block_size>());
+
+            // // typedef amgcl::static_matrix<double, block_size, block_size> dmat_type; // matrix value type in double precision
+            // // typedef amgcl::static_matrix<double, block_size, 1> dvec_type; // the corresponding vector value type
+            // typedef amgcl::backend::vexcl<dmat_type> Backend;
+
+            // typedef amgcl::make_block_solver<
+            //     amgcl::relaxation::as_preconditioner<Backend, amgcl::relaxation::ilu0>,
+            //     amgcl::solver::bicgstab<Backend>
+            //     > Solver;
+
+            // typename Backend::params bprm;
+            // bprm.q = ctx;  // set vexcl context
+
+            // typename Solver::params prm;
+            // prm.precond.damping = 0.9;
+            // prm.solver.maxiter = maxit;
+            // prm.solver.tol = tolerance;
+            // prm.solver.verbose = (verbosity >= 2);
+
+            // auto A = std::tie(N, A_rows, A_cols, A_vals);
+
+            // Solver solve(A, prm, bprm);
+
+            // auto f_ptr = reinterpret_cast<dvec_type*>(rhs.data());
+            // auto x_ptr = reinterpret_cast<dvec_type*>(x.data());
+            // vex::vector<dvec_type> F(ctx, N / block_size, f_ptr);
+            // vex::vector<dvec_type> X(ctx, N / block_size, x_ptr);
+
+            // std::tie(iters, error) = solve(F, X);
+
+            // vex::copy(X, x_ptr);
+
         }
     } catch (const std::exception& ex) {
         std::cerr << "Caught exception: " << ex.what() << std::endl;
