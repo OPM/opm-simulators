@@ -244,7 +244,7 @@ namespace Opm {
                 return wsrpt;
             }
 
-            // substract Binv(D)rw from r;
+            // subtract Binv(D)rw from r;
             void apply( BVector& r) const;
 
             // subtract B*inv(D)*C * x from A*x

@@ -293,7 +293,7 @@ bool FPGABILU0<block_size>::create_preconditioner(BlockedMatrix<block_size> *mat
             jRowEnd = LUMat->rowPointers[j + 1];
             jk = diagIndex[j] + 1;
             ik = ij + 1;
-            // substract that row scaled by the pivot from this row.
+            // subtract that row scaled by the pivot from this row.
             while (ik < iRowEnd && jk < jRowEnd) {
                 if (LUMat->colIndices[ik] == LUMat->colIndices[jk]) {
                     blockMultSub<bs>(LUMat->nnzValues + ik * bs * bs, pivot, LUMat->nnzValues + jk * bs * bs);

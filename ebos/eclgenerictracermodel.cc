@@ -95,7 +95,7 @@ doInit(bool enabled, size_t numGridDof,
     if (!enabled) {
         if (gridView_.comm().rank() == 0) {
             OpmLog::warning("Keyword TRACERS has only experimental support, and is hence ignored.\n"
-                            "The experimental tracer model can still be used, but must be set explicitely.\n"
+                            "The experimental tracer model can still be used, but must be set explicitly.\n"
                             "To use tracers, set the command line option: --enable-tracer-model=true"
                             "\n");
         }

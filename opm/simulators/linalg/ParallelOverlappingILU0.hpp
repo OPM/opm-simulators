@@ -1058,7 +1058,7 @@ public:
         catch (const Dune::MatrixBlockError& error)
         {
             message = error.what();
-            std::cerr<<"Exception occured on process " << rank << " during " <<
+            std::cerr<<"Exception occurred on process " << rank << " during " <<
                 "setup of ILU0 preconditioner with message: " <<
                 message<<std::endl;
             ilu_setup_successful = 0;

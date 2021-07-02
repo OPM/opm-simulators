@@ -1091,7 +1091,7 @@ checkGconsaleLimits(const Group& group,
     double sales_rate = production_rate - injection_rate;
     double production_target = gconsale.sales_target + injection_rate;
 
-    // add import rate and substract consumption rate for group for gas
+    // add import rate and subtract consumption rate for group for gas
     if (schedule()[reportStepIdx].gconsump().has(group.name())) {
         const auto& gconsump = schedule()[reportStepIdx].gconsump().get(group.name(), summaryState_);
         if (phase_usage_.phase_used[BlackoilPhases::Vapour]) {
