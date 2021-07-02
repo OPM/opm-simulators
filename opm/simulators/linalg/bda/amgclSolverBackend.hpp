@@ -45,7 +45,9 @@
 
 #if HAVE_VEXCL
 #include <amgcl/backend/vexcl.hpp>
+#include <amgcl/backend/vexcl_static_matrix.hpp>
 #endif
+
 namespace bda
 {
 

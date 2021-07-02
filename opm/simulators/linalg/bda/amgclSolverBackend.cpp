@@ -110,6 +110,11 @@ void amgclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doubl
         OPM_THROW(std::logic_error, "Error amgcl is trying to use CUDA, but CUDA was not found by CMake");
 #endif
     }
+    if (backend_type == Amgcl_backend_type::vexcl) {
+#if !HAVE_VEXCL
+        OPM_THROW(std::logic_error, "Error amgcl is trying to use VexCL, but VexCL was not found by CMake");
+#endif
+    }
     OpmLog::info(out.str());
 
     initialized = true;
@@ -231,43 +236,38 @@ void amgclSolverBackend<block_size>::solve_system(double *b, WellContributions &
             // actually solve
             std::tie(iters, error) = solve(B, X);
         } else if (backend_type == Amgcl_backend_type::vexcl) {
-            // vex::Context ctx(vex::Filter::Env && vex::Filter::Count(1));
-            // std::cout << ctx << std::endl;
+#if HAVE_VEXCL
+            if constexpr(block_size != 1){
+                vex::Context ctx(vex::Filter::Env && vex::Filter::Count(1));
+                std::cout << ctx << std::endl;
 
-            // // Enable support for block-valued matrices in the VexCL kernels:
-            // vex::scoped_program_header h1(ctx, amgcl::backend::vexcl_static_matrix_declaration<double, block_size>());
+                // allow vexcl to use blocked matrices
+                vex::scoped_program_header h1(ctx, amgcl::backend::vexcl_static_matrix_declaration<double, block_size>());
 
-            // // typedef amgcl::static_matrix<double, block_size, block_size> dmat_type; // matrix value type in double precision
-            // // typedef amgcl::static_matrix<double, block_size, 1> dvec_type; // the corresponding vector value type
-            // typedef amgcl::backend::vexcl<dmat_type> Backend;
+                typedef amgcl::backend::vexcl<dmat_type> Backend;
 
-            // typedef amgcl::make_block_solver<
-            //     amgcl::relaxation::as_preconditioner<Backend, amgcl::relaxation::ilu0>,
-            //     amgcl::solver::bicgstab<Backend>
-            //     > Solver;
+                typedef amgcl::make_block_solver<
+                    amgcl::relaxation::as_preconditioner<Backend, amgcl::relaxation::ilu0>,
+                    amgcl::solver::bicgstab<Backend>
+                    > Solver;
 
-            // typename Backend::params bprm;
-            // bprm.q = ctx;  // set vexcl context
+                typename Backend::params bprm;
+                bprm.q = ctx;  // set vexcl context
 
-            // typename Solver::params prm;
-            // prm.precond.damping = 0.9;
-            // prm.solver.maxiter = maxit;
-            // prm.solver.tol = tolerance;
-            // prm.solver.verbose = (verbosity >= 2);
+                auto A = std::tie(N, A_rows, A_cols, A_vals);
 
-            // auto A = std::tie(N, A_rows, A_cols, A_vals);
+                Solver solve(A, prm, bprm);
 
-            // Solver solve(A, prm, bprm);
+                auto b_ptr = reinterpret_cast<dvec_type*>(b);
+                auto x_ptr = reinterpret_cast<dvec_type*>(x.data());
+                vex::vector<dvec_type> B(ctx, N / block_size, b_ptr);
+                vex::vector<dvec_type> X(ctx, N / block_size, x_ptr);
 
-            // auto f_ptr = reinterpret_cast<dvec_type*>(rhs.data());
-            // auto x_ptr = reinterpret_cast<dvec_type*>(x.data());
-            // vex::vector<dvec_type> F(ctx, N / block_size, f_ptr);
-            // vex::vector<dvec_type> X(ctx, N / block_size, x_ptr);
+                std::tie(iters, error) = solve(B, X);
 
-            // std::tie(iters, error) = solve(F, X);
-
-            // vex::copy(X, x_ptr);
-
+                vex::copy(X, x_ptr);
+            }
+#endif
         }
     } catch (const std::exception& ex) {
         std::cerr << "Caught exception: " << ex.what() << std::endl;
