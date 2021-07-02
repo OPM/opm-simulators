@@ -141,6 +141,7 @@ public:
      */
     static void setExternalSummaryConfig(std::unique_ptr<SummaryConfig> summaryConfig);
 
+    static void setExternalUDQState(std::unique_ptr<UDQState> udqState);
     /*!
      * \brief Return a reference to the parsed ECL deck.
      */
@@ -277,6 +278,8 @@ protected:
     static std::unique_ptr<EclipseState> externalEclState_;
     static std::unique_ptr<Schedule> externalEclSchedule_;
     static std::unique_ptr<SummaryConfig> externalEclSummaryConfig_;
+    static std::unique_ptr<UDQState> externalUDQState_;
+
 
     std::string caseName_;
     std::string fileName_;

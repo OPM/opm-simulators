@@ -46,6 +46,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/SummaryState.hpp>
 #include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQState.hpp>
 
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Parser/ErrorGuard.hpp>
@@ -186,7 +187,7 @@ void setupMessageLimiter(const Opm::MessageLimits msgLimits,  const std::string&
 
 
 void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& deck, std::unique_ptr<Opm::EclipseState>& eclipseState,
-              std::unique_ptr<Opm::Schedule>& schedule, std::unique_ptr<Opm::SummaryConfig>& summaryConfig,
+              std::unique_ptr<Opm::Schedule>& schedule, std::unique_ptr<UDQState>& udqState, std::unique_ptr<Opm::SummaryConfig>& summaryConfig,
               std::unique_ptr<ErrorGuard> errorGuard, std::shared_ptr<Opm::Python>& python, std::unique_ptr<ParseContext> parseContext,
               bool initFromRestart, bool checkDeck, const std::optional<int>& outputInterval)
 {
@@ -243,11 +244,14 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
                 const auto rst_state = Opm::RestartIO::RstState::load(std::move(rst_view));
                 if (!schedule)
                     schedule = std::make_unique<Opm::Schedule>(*deck, *eclipseState, *parseContext, *errorGuard, python, outputInterval, &rst_state);
+                udqState = std::make_unique<Opm::UDQState>( schedule->operator[](0).udq().params().undefinedValue() );
             }
             else {
                 if (!schedule)
                     schedule = std::make_unique<Opm::Schedule>(*deck, *eclipseState, *parseContext, *errorGuard, python);
+                udqState = std::make_unique<Opm::UDQState>( schedule->operator[](0).udq().params().undefinedValue() );
             }
+
             if (Opm::OpmLog::hasBackend("STDOUT_LOGGER")) // loggers might not be set up!
             {
                 setupMessageLimiter(schedule->operator[](0).message_limits(), "STDOUT_LOGGER");

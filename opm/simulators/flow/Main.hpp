@@ -46,6 +46,7 @@
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/checkDeck.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/ArrayDimChecker.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQState.hpp>
 
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/parametersystem.hh>
@@ -461,7 +462,7 @@ namespace Opm
                 if (output_param >= 0)
                     outputInterval = output_param;
 
-                readDeck(mpiRank, deckFilename, deck_, eclipseState_, schedule_,
+                readDeck(mpiRank, deckFilename, deck_, eclipseState_, schedule_, udqState_,
                          summaryConfig_, nullptr, python, std::move(parseContext),
                          init_from_restart_file, outputCout_, outputInterval);
 
@@ -542,6 +543,7 @@ namespace Opm
         std::unique_ptr<Deck> deck_;
         std::unique_ptr<EclipseState> eclipseState_;
         std::unique_ptr<Schedule> schedule_;
+        std::unique_ptr<UDQState> udqState_;
         std::unique_ptr<SummaryConfig> summaryConfig_;
     };
 

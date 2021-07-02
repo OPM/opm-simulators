@@ -60,6 +60,7 @@ bool EclGenericVanguard::externalDeckSet_ = false;
 std::unique_ptr<EclipseState> EclGenericVanguard::externalEclState_;
 std::unique_ptr<Schedule> EclGenericVanguard::externalEclSchedule_;
 std::unique_ptr<SummaryConfig> EclGenericVanguard::externalEclSummaryConfig_;
+std::unique_ptr<UDQState> EclGenericVanguard::externalUDQState_;
 
 EclGenericVanguard::EclGenericVanguard()
     : python(std::make_shared<Python>())
@@ -97,6 +98,11 @@ void EclGenericVanguard::setExternalDeck(std::unique_ptr<Deck> deck)
 void EclGenericVanguard::setExternalEclState(std::unique_ptr<EclipseState> eclState)
 {
     externalEclState_ = std::move(eclState);
+}
+
+void EclGenericVanguard::setExternalUDQState(std::unique_ptr<UDQState> udqState)
+{
+    externalUDQState_ = std::move(udqState);
 }
 
 std::string EclGenericVanguard::canonicalDeckPath(const std::string& caseName)
@@ -259,14 +265,17 @@ void EclGenericVanguard::init()
         parseContext_ = createParseContext(ignoredKeywords_, eclStrictParsing_);
     }
 
-    readDeck(myRank, fileName_, deck_, eclState_, eclSchedule_,
+    readDeck(myRank, fileName_, deck_, eclState_, eclSchedule_, udqState_,
              eclSummaryConfig_, std::move(errorGuard), python,
              std::move(parseContext_), /* initFromRestart = */ false,
              /* checkDeck = */ enableExperiments_, outputInterval_);
 
+    if (EclGenericVanguard::externalUDQState_)
+        this->udqState_ = std::move(EclGenericVanguard::externalUDQState_);
+    else
+        this->udqState_ = std::make_unique<UDQState>( this->eclSchedule_->getUDQConfig(0).params().undefinedValue() );
     this->summaryState_ = std::make_unique<SummaryState>( TimeService::from_time_t(this->eclSchedule_->getStartTime() ));
-    this->udqState_ = std::make_unique<UDQState>( this->eclSchedule_->getUDQConfig(0).params().undefinedValue() );
-    this->actionState_ = std::make_unique<Action::State>() ;
+    this->actionState_ = std::make_unique<Action::State>();
 
     // Initialize parallelWells with all local wells
     const auto& schedule_wells = schedule().getWellsatEnd();
