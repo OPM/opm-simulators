@@ -381,7 +381,7 @@ public:
                     Opm::Valgrind::CheckDefined(minActivityCoeff_[globalIdx][compIdx]);
                 }
                 if (minActivityCoeff_[globalIdx][compIdx] <= 0)
-                    throw Opm::NumericalIssue("The minumum activity coefficient for component "+std::to_string(compIdx)
+                    throw Opm::NumericalIssue("The minimum activity coefficient for component "+std::to_string(compIdx)
                                                 +" on DOF "+std::to_string(globalIdx)+" is negative or zero!");
             }
         }
