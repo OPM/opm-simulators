@@ -188,6 +188,7 @@ namespace Opm
                     std::move(deck_),
                     std::move(eclipseState_),
                     std::move(schedule_),
+                    std::move(udqState_),
                     std::move(summaryConfig_));
                 return flowEbosBlackoilMainInit(
                     argc_, argv_, outputCout_, outputFiles_);
@@ -326,6 +327,7 @@ namespace Opm
                 flowEbosBlackoilSetDeck(setupTime_, std::move(deck_),
                                         std::move(eclipseState_),
                                         std::move(schedule_),
+                                        std::move(udqState_),
                                         std::move(summaryConfig_));
                 return flowEbosBlackoilMain(argc_, argv_, outputCout_, outputFiles_);
             }
