@@ -245,6 +245,7 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
                 if (!schedule)
                     schedule = std::make_unique<Opm::Schedule>(*deck, *eclipseState, *parseContext, *errorGuard, python, outputInterval, &rst_state);
                 udqState = std::make_unique<Opm::UDQState>( schedule->operator[](0).udq().params().undefinedValue() );
+                udqState->load_rst(rst_state);
             }
             else {
                 if (!schedule)
