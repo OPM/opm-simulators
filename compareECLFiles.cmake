@@ -960,6 +960,13 @@ add_test_compare_restarted_simulation(CASENAME spe1
                                       REL_TOL ${rel_tol_restart}
                                       TEST_ARGS --sched-restart=false)
 
+add_test_compare_restarted_simulation(CASENAME udq_actionx
+                                      FILENAME UDQ_M1
+                                      SIMULATOR flow
+                                      TEST_NAME restart_udq_m1_summary
+                                      ABS_TOL ${abs_tol_restart}
+                                      REL_TOL ${rel_tol_restart}
+                                      TEST_ARGS --sched-restart=false --solver-max-time-step-in-days=1.0)
 
 # PORV test
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-porv-acceptanceTest.sh "")
