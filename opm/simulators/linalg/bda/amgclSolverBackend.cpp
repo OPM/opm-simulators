@@ -23,6 +23,7 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <dune/common/timer.hh>
+#include <opm/material/common/Unused.hpp>
 
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
 #include <opm/simulators/linalg/bda/amgclSolverBackend.hpp>
@@ -45,7 +46,7 @@ amgclSolverBackend<block_size>::~amgclSolverBackend() {}
 
 
 template <unsigned int block_size>
-void amgclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, double *vals, int *rows, int *cols) {
+void amgclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim) {
     this->N = N_;
     this->nnz = nnz_;
     this->nnzb = nnz_ / block_size / block_size;
@@ -208,7 +209,7 @@ void solve_vexcl(
 #endif
 
 template <unsigned int block_size>
-void amgclSolverBackend<block_size>::solve_system(double *b, WellContributions &wellContribs, BdaResult &res) {
+void amgclSolverBackend<block_size>::solve_system(double *b, BdaResult &res) {
     Timer t;
     int iters = 0;
     double error = 0.0;
@@ -328,13 +329,13 @@ void amgclSolverBackend<block_size>::get_result(double *x_) {
 
 
 template <unsigned int block_size>
-SolverStatus amgclSolverBackend<block_size>::solve_system(int N_, int nnz_, int dim, double *vals, int *rows, int *cols, double *b, WellContributions& wellContribs, BdaResult &res) {
+SolverStatus amgclSolverBackend<block_size>::solve_system(int N_, int nnz_, int dim, double *vals, int *rows, int *cols, double *b, WellContributions& wellContribs OPM_UNUSED, BdaResult &res) {
     if (initialized == false) {
-        initialize(N_, nnz_, dim, vals, rows, cols);
+        initialize(N_, nnz_, dim);
         convert_sparsity_pattern(rows, cols);
     }
     convert_data(vals, rows);
-    solve_system(b, wellContribs, res);
+    solve_system(b, res);
     return SolverStatus::BDA_SOLVER_SUCCESS;
 }
 

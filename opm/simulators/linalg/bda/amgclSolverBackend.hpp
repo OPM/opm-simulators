@@ -105,10 +105,7 @@ private:
     /// \param[in] N              number of nonzeroes, divide by dim*dim to get number of blocks
     /// \param[in] nnz            number of nonzeroes, divide by dim*dim to get number of blocks
     /// \param[in] dim            size of block
-    /// \param[in] vals           array of nonzeroes, each block is stored row-wise and contiguous, contains nnz values
-    /// \param[in] rows           array of rowPointers, contains N/dim+1 values
-    /// \param[in] cols           array of columnIndices, contains nnz values
-    void initialize(int N, int nnz, int dim, double *vals, int *rows, int *cols);
+    void initialize(int N, int nnz, int dim);
 
     /// Convert the BCSR sparsity pattern to a CSR one
     /// \param[in] rows           array of rowPointers, contains N/dim+1 values
@@ -122,9 +119,8 @@ private:
 
     /// Solve linear system
     /// \param[in] b              pointer to b vector
-    /// \param[in] wellContribs   WellContributions, to apply them separately, instead of adding them to matrix A
     /// \param[inout] res         summary of solver result
-    void solve_system(double *b, WellContributions &wellContribs, BdaResult &res);
+    void solve_system(double *b, BdaResult &res);
 
 public:
     /// Construct a openclSolver
