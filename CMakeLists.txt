@@ -486,14 +486,6 @@ else()
   set(EBOS_DEBUG_EXTENSIONS_DEFAULT_ENABLE_IF "TRUE")
 endif()
 
-opm_add_test(ebos_altidx
-  ONLY_COMPILE
-  DEFAULT_ENABLE_IF ${EBOS_DEBUG_EXTENSIONS_DEFAULT_ENABLE_IF}
-  SOURCES ebos/ebos_altidx.cc
-  EXE_NAME ebos_altidx
-  DEPENDS opmsimulators
-  LIBRARIES opmsimulators)
-
 opm_add_test(ebos_plain
   ONLY_COMPILE
   DEFAULT_ENABLE_IF ${EBOS_DEBUG_EXTENSIONS_DEFAULT_ENABLE_IF}

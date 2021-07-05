@@ -23,7 +23,6 @@
 
 #include <config.h>
 #include <ebos/eclgenericoutputblackoilmodule.hh>
-#include <ebos/eclalternativeblackoilindices.hh>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 
@@ -1641,6 +1640,5 @@ updateSummaryRegionValues(const Inplace& inplace,
 }
 
 template class EclGenericOutputBlackoilModule<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,double>;
-template class EclGenericOutputBlackoilModule<BlackOilFluidSystem<double,EclAlternativeBlackOilIndexTraits>,double>;
 
 } // namespace Opm

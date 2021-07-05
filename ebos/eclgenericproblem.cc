@@ -24,8 +24,6 @@
 #include <config.h>
 #include <ebos/eclgenericproblem.hh>
 
-#include <ebos/eclalternativeblackoilindices.hh>
-
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
@@ -642,15 +640,9 @@ initDRSDT_(size_t numDof,
 template class EclGenericProblem<Dune::GridView<Dune::Fem::GridPart2GridViewTraits<Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>>>,
                                  BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,
                                  double>;
-template class EclGenericProblem<Dune::GridView<Dune::Fem::GridPart2GridViewTraits<Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>>>,
-                                 BlackOilFluidSystem<double,EclAlternativeBlackOilIndexTraits>,
-                                 double>;
 #else
 template class EclGenericProblem<Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>,
                                  BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,
-                                 double>;
-template class EclGenericProblem<Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>,
-                                 BlackOilFluidSystem<double,EclAlternativeBlackOilIndexTraits>,
                                  double>;
 #endif
 

@@ -34,7 +34,6 @@
 #include <opm/simulators/wells/WellState.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/TargetCalculator.hpp>
-#include <ebos/eclalternativeblackoilindices.hh>
 
 #include <cassert>
 #include <cmath>
@@ -1102,6 +1101,5 @@ getGroupProductionTargetRate(const Group& group,
     return scale;
 }
 template class WellInterfaceFluidSystem<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>>;
-template class WellInterfaceFluidSystem<BlackOilFluidSystem<double,EclAlternativeBlackOilIndexTraits>>;
 
 } // namespace Opm
