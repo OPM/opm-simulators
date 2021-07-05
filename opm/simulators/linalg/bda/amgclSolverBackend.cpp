@@ -176,6 +176,36 @@ void amgclSolverBackend<block_size>::convert_data(double *vals, int *rows) {
     }
 } // end convert_data()
 
+#if HAVE_VEXCL
+template <typename vexcl_matrix_type, typename vexcl_vector_type, unsigned int block_size>
+void solve_vexcl(
+    const auto A,
+    const boost::property_tree::ptree prm,
+    const vex::Context& ctx,
+    double *b,
+    std::vector<double>& x,
+    const int N,
+    int& iters,
+    double& error)
+{
+    typedef amgcl::backend::vexcl<vexcl_matrix_type> Backend;
+    typedef amgcl::make_solver<amgcl::runtime::preconditioner<Backend>, amgcl::runtime::solver::wrapper<Backend> > Solver;
+
+    typename Solver::backend_params bprm;
+    bprm.q = ctx;  // set vexcl context
+
+    Solver solve(A, prm, bprm); // create solver
+
+    auto b_ptr = reinterpret_cast<vexcl_vector_type*>(b);
+    auto x_ptr = reinterpret_cast<vexcl_vector_type*>(x.data());
+    vex::vector<vexcl_vector_type> B(ctx, N / block_size, b_ptr);
+    vex::vector<vexcl_vector_type> X(ctx, N / block_size, x_ptr);
+
+    std::tie(iters, error) = solve(B, X); // actually perform solve
+
+    vex::copy(X, x_ptr);
+}
+#endif
 
 template <unsigned int block_size>
 void amgclSolverBackend<block_size>::solve_system(double *b, WellContributions &wellContribs, BdaResult &res) {
@@ -237,54 +267,20 @@ void amgclSolverBackend<block_size>::solve_system(double *b, WellContributions &
             std::tie(iters, error) = solve(B, X);
         } else if (backend_type == Amgcl_backend_type::vexcl) {
 #if HAVE_VEXCL
-            if constexpr(block_size != 1){
-                vex::Context ctx(vex::Filter::Env && vex::Filter::Count(1));
-                std::cout << ctx << std::endl;
+            vex::Context ctx(vex::Filter::Env && vex::Filter::Count(1));
+            std::cout << ctx << std::endl;
+            if constexpr(block_size == 1){
+                auto A = std::tie(N, A_rows, A_cols, A_vals);
 
+                solve_vexcl<double, double, block_size>(A, prm, ctx, b, x, N, iters, error);
+            } else {
                 // allow vexcl to use blocked matrices
                 vex::scoped_program_header h1(ctx, amgcl::backend::vexcl_static_matrix_declaration<double, block_size>());
-
-                typedef amgcl::backend::vexcl<dmat_type> Backend;
-                typedef amgcl::make_solver<amgcl::runtime::preconditioner<Backend>, amgcl::runtime::solver::wrapper<Backend> > Solver;
-
-                typename Backend::params bprm;
-                bprm.q = ctx;  // set vexcl context
 
                 auto Atmp = std::tie(N, A_rows, A_cols, A_vals);
                 auto A = amgcl::adapter::block_matrix<dmat_type>(Atmp);
 
-                Solver solve(A, prm, bprm);
-
-                auto b_ptr = reinterpret_cast<dvec_type*>(b);
-                auto x_ptr = reinterpret_cast<dvec_type*>(x.data());
-                vex::vector<dvec_type> B(ctx, N / block_size, b_ptr);
-                vex::vector<dvec_type> X(ctx, N / block_size, x_ptr);
-
-                std::tie(iters, error) = solve(B, X);
-
-                vex::copy(X, x_ptr);
-            } else {
-                vex::Context ctx(vex::Filter::Env && vex::Filter::Count(1));
-                std::cout << ctx << std::endl;
-
-                typedef amgcl::backend::vexcl<double> Backend;
-                typedef amgcl::make_solver<amgcl::runtime::preconditioner<Backend>, amgcl::runtime::solver::wrapper<Backend> > Solver;
-
-                typename Backend::params bprm;
-                bprm.q = ctx;  // set vexcl context
-
-                auto A = std::tie(N, A_rows, A_cols, A_vals);
-
-                Solver solve(A, prm, bprm);
-
-                auto b_ptr = reinterpret_cast<double*>(b);
-                auto x_ptr = reinterpret_cast<double*>(x.data());
-                vex::vector<double> B(ctx, N / block_size, b_ptr);
-                vex::vector<double> X(ctx, N / block_size, x_ptr);
-
-                std::tie(iters, error) = solve(B, X);
-
-                vex::copy(X, x_ptr);
+                solve_vexcl<dmat_type, dvec_type, block_size>(A, prm, ctx, b, x, N, iters, error);
             }
 #endif
         }
