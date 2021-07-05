@@ -778,11 +778,11 @@ namespace WellGroupHelpers
                         const PhaseUsage& pu)
     {
         if (schedule.hasWell(name, reportStepIdx)) {
-            return guideRate->get(name, target, getWellRateVector(wellState, pu, name));
+            return guideRate->get(name, target);
         }
 
         if (guideRate->has(name)) {
-            return guideRate->get(name, target, getProductionGroupRateVector(group_state, pu, name));
+            return guideRate->get(name, target);
         }
 
         double totalGuideRate = 0.0;
@@ -810,7 +810,7 @@ namespace WellGroupHelpers
             if (!wellState.isProductionGrup(wellName))
                 continue;
 
-            totalGuideRate += guideRate->get(wellName, target, getWellRateVector(wellState, pu, wellName));
+            totalGuideRate += guideRate->get(wellName, target);
         }
         return totalGuideRate;
     }
@@ -827,7 +827,7 @@ namespace WellGroupHelpers
                            const PhaseUsage& pu)
     {
         if (schedule.hasWell(name, reportStepIdx)) {
-            return guideRate->get(name, target, getWellRateVector(wellState, pu, name));
+            return guideRate->get(name, target);
         }
 
         if (guideRate->has(name, injectionPhase)) {
@@ -860,7 +860,7 @@ namespace WellGroupHelpers
             if (!wellState.isInjectionGrup(wellName))
                 continue;
 
-            totalGuideRate += guideRate->get(wellName, target, getWellRateVector(wellState, pu, wellName));
+            totalGuideRate += guideRate->get(wellName, target);
         }
         return totalGuideRate;
     }
@@ -990,11 +990,11 @@ namespace WellGroupHelpers
     double FractionCalculator::guideRate(const std::string& name, const std::string& always_included_child)
     {
         if (schedule_.hasWell(name, report_step_)) {
-            return guide_rate_->get(name, target_, getWellRateVector(well_state_, pu_, name));
+            return guide_rate_->get(name, target_);
         } else {
             if (groupControlledWells(name, always_included_child) > 0) {
                 if (is_producer_ && guide_rate_->has(name)) {
-                    return guide_rate_->get(name, target_, getGroupRateVector(name));
+                    return guide_rate_->get(name, target_);
                 } else if (!is_producer_ && guide_rate_->has(name, injection_phase_)) {
                     return guide_rate_->get(name, injection_phase_);
                 } else {
