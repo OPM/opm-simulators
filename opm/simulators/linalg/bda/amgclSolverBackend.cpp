@@ -263,6 +263,28 @@ void amgclSolverBackend<block_size>::solve_system(double *b, WellContributions &
                 std::tie(iters, error) = solve(B, X);
 
                 vex::copy(X, x_ptr);
+            } else {
+                vex::Context ctx(vex::Filter::Env && vex::Filter::Count(1));
+                std::cout << ctx << std::endl;
+
+                typedef amgcl::backend::vexcl<double> Backend;
+                typedef amgcl::make_solver<amgcl::runtime::preconditioner<Backend>, amgcl::runtime::solver::wrapper<Backend> > Solver;
+
+                typename Backend::params bprm;
+                bprm.q = ctx;  // set vexcl context
+
+                auto A = std::tie(N, A_rows, A_cols, A_vals);
+
+                Solver solve(A, prm, bprm);
+
+                auto b_ptr = reinterpret_cast<double*>(b);
+                auto x_ptr = reinterpret_cast<double*>(x.data());
+                vex::vector<double> B(ctx, N / block_size, b_ptr);
+                vex::vector<double> X(ctx, N / block_size, x_ptr);
+
+                std::tie(iters, error) = solve(B, X);
+
+                vex::copy(X, x_ptr);
             }
 #endif
         }
