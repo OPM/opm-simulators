@@ -960,6 +960,13 @@ add_test_compare_restarted_simulation(CASENAME spe1
                                       REL_TOL ${rel_tol_restart}
                                       TEST_ARGS --sched-restart=false)
 
+add_test_compare_restarted_simulation(CASENAME model4
+                                      FILENAME MOD4_GRP
+                                      SIMULATOR flow
+                                      TEST_NAME restart_mod4_grp_summary
+                                      ABS_TOL ${abs_tol_restart}
+                                      REL_TOL ${rel_tol_restart}
+                                      TEST_ARGS --sched-restart=false)
 
 # PORV test
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-porv-acceptanceTest.sh "")
