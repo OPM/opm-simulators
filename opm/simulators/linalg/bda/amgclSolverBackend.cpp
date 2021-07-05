@@ -245,16 +245,13 @@ void amgclSolverBackend<block_size>::solve_system(double *b, WellContributions &
                 vex::scoped_program_header h1(ctx, amgcl::backend::vexcl_static_matrix_declaration<double, block_size>());
 
                 typedef amgcl::backend::vexcl<dmat_type> Backend;
-
-                typedef amgcl::make_block_solver<
-                    amgcl::relaxation::as_preconditioner<Backend, amgcl::relaxation::ilu0>,
-                    amgcl::solver::bicgstab<Backend>
-                    > Solver;
+                typedef amgcl::make_solver<amgcl::runtime::preconditioner<Backend>, amgcl::runtime::solver::wrapper<Backend> > Solver;
 
                 typename Backend::params bprm;
                 bprm.q = ctx;  // set vexcl context
 
-                auto A = std::tie(N, A_rows, A_cols, A_vals);
+                auto Atmp = std::tie(N, A_rows, A_cols, A_vals);
+                auto A = amgcl::adapter::block_matrix<dmat_type>(Atmp);
 
                 Solver solve(A, prm, bprm);
 
