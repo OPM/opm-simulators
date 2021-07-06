@@ -221,9 +221,6 @@ if(amgcl_FOUND)
   # Hence we set AMGCL_INCLUDE_DIRS.
   get_property(AMGCL_INCLUDE_DIRS TARGET amgcl::amgcl PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
   include_directories(SYSTEM ${AMGCL_INCLUDE_DIRS})
-  if(CUDA_FOUND)
-    set_source_files_properties(opm/simulators/linalg/bda/amgclSolverBackend.cpp PROPERTIES LANGUAGE CUDA)
-  endif()
 endif()
 
 if(OpenCL_FOUND)

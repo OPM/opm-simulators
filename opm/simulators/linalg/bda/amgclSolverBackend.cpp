@@ -30,6 +30,10 @@
 
 #include <boost/property_tree/json_parser.hpp>
 
+#if HAVE_VEXCL
+#include <amgcl/backend/vexcl.hpp>
+#include <amgcl/backend/vexcl_static_matrix.hpp>
+#endif
 
 namespace bda
 {
@@ -74,10 +78,10 @@ void amgclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim) {
     if (file.is_open()) { // if file exists, read parameters from file
         boost::property_tree::read_json(file, prm);
 
-        backend_type_string = prm.get<std::string>("backend_type"); // defaults to cpu if not specified        
+        backend_type_string = prm.get("backend_type", "cpu"); // defaults to cpu if not specified
         out << "Using parameters from " << filename << ":\n";
     } else { // otherwise use default parameters, same as Dune
-        prm.put("backend_type", "cpu");
+        prm.put("backend_type", "cpu"); // put it in the tree so it gets printed
         prm.put("precond.class", "relaxation");
         prm.put("precond.type", "ilu0");
         prm.put("precond.damping", 0.9);
@@ -85,6 +89,7 @@ void amgclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim) {
         prm.put("solver.tol", tolerance);
         prm.put("solver.maxiter", maxit);
         prm.put("solver.verbose", verbosity >= 2);
+        backend_type_string = prm.get("backend_type", "cpu");
         out << "Using default amgcl parameters:\n";
     }
 
@@ -98,16 +103,11 @@ void amgclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim) {
     } else if (backend_type_string == "vexcl") {
         backend_type = Amgcl_backend_type::vexcl;
     } else {
-        OPM_THROW(std::logic_error, "Error unknown value for amgcl parameter 'backend_type'");
+        OPM_THROW(std::logic_error, "Error unknown value for amgcl parameter 'backend_type', use [cpu|cuda|vexcl]");
     }
 
     if (backend_type == Amgcl_backend_type::cuda) {
-#if HAVE_CUDA
-        cudaDeviceProp prop;
-        cudaGetDeviceProperties(&prop, deviceID);
-        out << prop.name << std::endl;
-        cusparseCreate(&CUDA_bprm.cusparse_handle);
-#else
+#if !HAVE_CUDA
         OPM_THROW(std::logic_error, "Error amgcl is trying to use CUDA, but CUDA was not found by CMake");
 #endif
     }
@@ -211,33 +211,11 @@ void solve_vexcl(
 template <unsigned int block_size>
 void amgclSolverBackend<block_size>::solve_system(double *b, BdaResult &res) {
     Timer t;
-    int iters = 0;
-    double error = 0.0;
 
     try {
         if (backend_type == Amgcl_backend_type::cuda) { // use CUDA
 #if HAVE_CUDA
-            // create matrix object
-            auto A = std::tie(N, A_rows, A_cols, A_vals);
-
-            // create solver and construct preconditioner
-            // don't reuse this unless the preconditioner can be reused
-            CUDA_Solver solve(A, prm, CUDA_bprm);
-
-            // print solver structure (once)
-            std::call_once(print_info, [&](){
-                std::ostringstream out;
-                out << solve << std::endl;
-                OpmLog::info(out.str());
-            });
-
-            thrust::device_vector<double> B(b, b + N);
-            thrust::device_vector<double> X(N, 0.0);
-
-            // actually solve
-            std::tie(iters, error) = solve(B, X);
-
-            thrust::copy(X.begin(), X.end(), x.begin());
+            solve_cuda(b);
 #endif
         } else if (backend_type == Amgcl_backend_type::cpu) { // use builtin backend (CPU)
             // create matrix object

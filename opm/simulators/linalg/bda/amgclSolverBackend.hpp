@@ -38,16 +38,6 @@
 #include <amgcl/preconditioner/runtime.hpp>
 #include <amgcl/value_type/static_matrix.hpp>
 
-#if HAVE_CUDA
-#include <amgcl/backend/cuda.hpp>
-#include <amgcl/relaxation/cusparse_ilu0.hpp>
-#endif
-
-#if HAVE_VEXCL
-#include <amgcl/backend/vexcl.hpp>
-#include <amgcl/backend/vexcl_static_matrix.hpp>
-#endif
-
 namespace bda
 {
 
@@ -68,11 +58,6 @@ class amgclSolverBackend : public BdaSolver<block_size>
     using Base::maxit;
     using Base::tolerance;
     using Base::initialized;
-
-#if HAVE_CUDA
-    typedef amgcl::backend::cuda<double> CUDA_Backend;
-    typedef amgcl::make_solver<amgcl::runtime::preconditioner<CUDA_Backend>, amgcl::runtime::solver::wrapper<CUDA_Backend> > CUDA_Solver;
-#endif
 
     typedef amgcl::static_matrix<double, block_size, block_size> dmat_type; // matrix value type in double precision
     typedef amgcl::static_matrix<double, block_size, 1> dvec_type; // the corresponding vector value type
@@ -97,8 +82,12 @@ private:
     Amgcl_backend_type backend_type = cpu;
 
     boost::property_tree::ptree prm;         // amgcl parameters
+    int iters = 0;
+    double error = 0.0;
+
 #if HAVE_CUDA
-    typename CUDA_Backend::params CUDA_bprm; // amgcl backend parameters, only used for cusparseHandle
+    std::once_flag cuda_initialize;
+    void solve_cuda(double *b);
 #endif
 
     /// Initialize GPU and allocate memory
