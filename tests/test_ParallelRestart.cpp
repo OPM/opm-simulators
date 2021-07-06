@@ -89,6 +89,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WList.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WListManager.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/WriteRestartFileEvents.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/BCConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/RockConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
@@ -673,6 +674,7 @@ TEST_FOR_TYPE(WellSegments)
 TEST_FOR_TYPE(WellTestConfig)
 TEST_FOR_TYPE(WellType)
 TEST_FOR_TYPE(WListManager)
+TEST_FOR_TYPE(WriteRestartFileEvents)
 
 
 bool init_unit_test_func()
