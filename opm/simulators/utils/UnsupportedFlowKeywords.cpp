@@ -645,8 +645,6 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"TRACERKP", {false, std::nullopt}},
         {"TRACITVD", {false, std::nullopt}},
         {"TRACTVD", {false, std::nullopt}},
-        {"TRACER", {false, std::nullopt}},
-        {"TRACERS", {false, std::nullopt}},
         {"TRACITVD", {false, std::nullopt}},
         {"TRADS", {false, std::nullopt}},
         {"TRANGL", {false, std::nullopt}},
