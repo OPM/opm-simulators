@@ -390,6 +390,11 @@ protected:
             if (well.getStatus() == Well::Status::SHUT)
                 continue;
 
+            if (!well.isProducer()) //Injection rates already reported during assembly
+                continue;
+
+            Scalar rateWellPos = 0.0;
+            Scalar rateWellNeg = 0.0;
             std::array<int, 3> cartesianCoordinate;
             for (auto& connection : well.getConnections()) {
 
@@ -402,10 +407,32 @@ protected:
                 const size_t cartIdx = simulator_.vanguard().cartesianIndex(cartesianCoordinate);
                 const int I = this->cartToGlobal_[cartIdx];
                 Scalar rate = simulator_.problem().wellModel().well(well.name())->volumetricSurfaceRateForConnection(I, tr.phaseIdx_);
-                if (rate < 0 && well.isProducer()) { //Injection rates already reported during assembly
+                if (rate < 0) {
+                    rateWellNeg += rate;
                     for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
                         this->wellTracerRate_.at(std::make_pair(well.name(),this->tracerNames_[tr.idx_[tIdx]])) += rate*tr.concentration_[tIdx][I];
                     }
+                }
+                else {
+                    rateWellPos += rate;
+                }
+            }
+
+            Scalar rateWellTotal = rateWellNeg + rateWellPos;
+
+            // TODO: Some inconsistencies here that perhaps should be clarified. The "offical" rate as reported below is
+            //  occasionally significant different from the sum over connections (as calculated above). Only observed
+            //  for small values, neglible for the rate itself, but matters when used to calculate tracer concentrations.
+            std::size_t well_index = simulator_.problem().wellModel().wellState().wellIndex(well.name());
+            Scalar official_well_rate_total = simulator_.problem().wellModel().wellState().wellRates(well_index)[tr.phaseIdx_];
+
+            rateWellTotal = official_well_rate_total;
+
+            if (rateWellTotal > rateWellNeg) { // Cross flow
+                const Scalar bucketPrDay = 10.0/(1000.*3600.*24.); // ... keeps (some) trouble away
+                const Scalar factor = (rateWellTotal < -bucketPrDay) ? rateWellTotal/rateWellNeg : 0.0;
+                for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
+                    this->wellTracerRate_.at(std::make_pair(well.name(),this->tracerNames_[tr.idx_[tIdx]])) *= factor;
                 }
             }
         }
