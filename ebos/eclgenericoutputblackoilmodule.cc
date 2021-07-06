@@ -552,9 +552,62 @@ template<class FluidSystem, class Scalar>
 void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
 assignToSolution(data::Solution& sol)
 {
-    if (!oilPressure_.empty()) {
-        sol.insert("PRESSURE", UnitSystem::measure::pressure, std::move(oilPressure_), data::TargetType::RESTART_SOLUTION);
-    }
+    using DataEntry = std::tuple<std::string,
+                                 UnitSystem::measure,
+                                 data::TargetType,
+                                 const std::vector<Scalar>&>;
+    auto doInsert = [&sol](const DataEntry& entry)
+    {
+        if (!std::get<3>(entry).empty())
+            sol.insert(std::get<0>(entry), std::get<1>(entry),
+                       std::move(std::get<3>(entry)), std::get<2>(entry));
+    };
+
+    const std::vector<DataEntry> data = {
+        {"1OVERBG",  UnitSystem::measure::gas_inverse_formation_volume_factor,   data::TargetType::RESTART_AUXILIARY, invB_[gasPhaseIdx]},
+        {"1OVERBO",  UnitSystem::measure::oil_inverse_formation_volume_factor,   data::TargetType::RESTART_AUXILIARY, invB_[oilPhaseIdx]},
+        {"1OVERBW",  UnitSystem::measure::water_inverse_formation_volume_factor, data::TargetType::RESTART_AUXILIARY, invB_[waterPhaseIdx]},
+        {"FOAM",     UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      cFoam_},
+        {"GASKR",    UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     relativePermeability_[gasPhaseIdx]},
+        {"GAS_DEN",  UnitSystem::measure::density,   data::TargetType::RESTART_AUXILIARY,     density_[gasPhaseIdx]},
+        {"GAS_VISC", UnitSystem::measure::viscosity, data::TargetType::RESTART_AUXILIARY,     viscosity_[gasPhaseIdx]},
+        {"KRNSW_GO", UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     krnSwMdcGo_},
+        {"KRNSW_OW", UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     krnSwMdcOw_},
+        {"OILKR",    UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     relativePermeability_[oilPhaseIdx]},
+        {"OIL_DEN",  UnitSystem::measure::density,   data::TargetType::RESTART_AUXILIARY,     density_[oilPhaseIdx]},
+        {"OIL_VISC", UnitSystem::measure::viscosity, data::TargetType::RESTART_AUXILIARY,     viscosity_[oilPhaseIdx]},
+        {"PBUB",     UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     bubblePointPressure_},
+        {"PCSWM_GO", UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     pcSwMdcGo_},
+        {"PCSWM_OW", UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     pcSwMdcOw_},
+        {"PDEW",     UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     dewPointPressure_},
+        {"POLYMER",  UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      cPolymer_},
+        {"PORV_RC",  UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      rockCompPorvMultiplier_},
+        {"PPCW",     UnitSystem::measure::pressure,  data::TargetType::RESTART_SOLUTION,      ppcw_},
+        {"PRESROCC", UnitSystem::measure::pressure,  data::TargetType::RESTART_SOLUTION,      minimumOilPressure_},
+        {"PRESSURE", UnitSystem::measure::pressure,  data::TargetType::RESTART_SOLUTION,      oilPressure_},
+        {"PRES_OVB", UnitSystem::measure::pressure,  data::TargetType::RESTART_SOLUTION,      overburdenPressure_},
+        {"RS",       UnitSystem::measure::gas_oil_ratio, data::TargetType::RESTART_SOLUTION,  rs_},
+        {"RSSAT",    UnitSystem::measure::gas_oil_ratio, data::TargetType::RESTART_AUXILIARY, gasDissolutionFactor_},
+        {"RV",       UnitSystem::measure::oil_gas_ratio, data::TargetType::RESTART_SOLUTION,  rv_},
+        {"RVSAT",    UnitSystem::measure::oil_gas_ratio, data::TargetType::RESTART_AUXILIARY, oilVaporizationFactor_},
+        {"SALT",     UnitSystem::measure::salinity,  data::TargetType::RESTART_SOLUTION,      cSalt_},
+        {"SOMAX",    UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      soMax_},
+        {"SSOLVENT", UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      sSol_},
+        {"SS_X",     UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      extboX_},
+        {"SS_Y",     UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      extboY_},
+        {"SS_Z",     UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      extboZ_},
+        {"STD_CO2",  UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      mFracCo2_},
+        {"STD_GAS",  UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      mFracGas_},
+        {"STD_OIL",  UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      mFracOil_},
+        {"SWMAX",    UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      swMax_},
+        {"TMULT_RC", UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      rockCompTransMultiplier_},
+        {"WATKR",    UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     relativePermeability_[waterPhaseIdx]},
+        {"WAT_DEN",  UnitSystem::measure::density,   data::TargetType::RESTART_AUXILIARY,     density_[waterPhaseIdx]},
+        {"WAT_VISC", UnitSystem::measure::viscosity, data::TargetType::RESTART_AUXILIARY,     viscosity_[gasPhaseIdx]}
+    };
+
+    for (const auto& entry : data)
+        doInsert(entry);
 
     if (!temperature_.empty()) {
         if (enableEnergy_)
@@ -573,129 +626,6 @@ assignToSolution(data::Solution& sol)
     if (FluidSystem::phaseIsActive(gasPhaseIdx) && !saturation_[gasPhaseIdx].empty()) {
         sol.insert("SGAS", UnitSystem::measure::identity, std::move(saturation_[gasPhaseIdx]), data::TargetType::RESTART_SOLUTION);
     }
-    if (!ppcw_.empty()) {
-        sol.insert ("PPCW", UnitSystem::measure::pressure, std::move(ppcw_), data::TargetType::RESTART_SOLUTION);
-    }
-
-    if (!gasDissolutionFactor_.empty()) {
-        sol.insert("RSSAT", UnitSystem::measure::gas_oil_ratio, std::move(gasDissolutionFactor_), data::TargetType::RESTART_AUXILIARY);
-
-    }
-    if (!oilVaporizationFactor_.empty()) {
-        sol.insert("RVSAT", UnitSystem::measure::oil_gas_ratio, std::move(oilVaporizationFactor_), data::TargetType::RESTART_AUXILIARY);
-    }
-    if (!rs_.empty()) {
-        sol.insert("RS", UnitSystem::measure::gas_oil_ratio, std::move(rs_), data::TargetType::RESTART_SOLUTION);
-
-    }
-    if (!rv_.empty()) {
-        sol.insert("RV", UnitSystem::measure::oil_gas_ratio, std::move(rv_), data::TargetType::RESTART_SOLUTION);
-    }
-    if (!invB_[waterPhaseIdx].empty()) {
-        sol.insert("1OVERBW", UnitSystem::measure::water_inverse_formation_volume_factor, std::move(invB_[waterPhaseIdx]), data::TargetType::RESTART_AUXILIARY);
-    }
-    if (!invB_[oilPhaseIdx].empty()) {
-        sol.insert("1OVERBO", UnitSystem::measure::oil_inverse_formation_volume_factor, std::move(invB_[oilPhaseIdx]), data::TargetType::RESTART_AUXILIARY);
-    }
-    if (!invB_[gasPhaseIdx].empty()) {
-        sol.insert("1OVERBG", UnitSystem::measure::gas_inverse_formation_volume_factor, std::move(invB_[gasPhaseIdx]), data::TargetType::RESTART_AUXILIARY);
-    }
-
-    if (!density_[waterPhaseIdx].empty()) {
-        sol.insert("WAT_DEN", UnitSystem::measure::density, std::move(density_[waterPhaseIdx]), data::TargetType::RESTART_AUXILIARY);
-    }
-    if (!density_[oilPhaseIdx].empty()) {
-        sol.insert("OIL_DEN", UnitSystem::measure::density, std::move(density_[oilPhaseIdx]), data::TargetType::RESTART_AUXILIARY);
-    }
-    if (!density_[gasPhaseIdx].empty()) {
-        sol.insert("GAS_DEN", UnitSystem::measure::density, std::move(density_[gasPhaseIdx]), data::TargetType::RESTART_AUXILIARY);
-    }
-
-    if (!viscosity_[waterPhaseIdx].empty()) {
-        sol.insert("WAT_VISC", UnitSystem::measure::viscosity, std::move(viscosity_[waterPhaseIdx]), data::TargetType::RESTART_AUXILIARY);
-    }
-    if (!viscosity_[oilPhaseIdx].empty()) {
-        sol.insert("OIL_VISC", UnitSystem::measure::viscosity, std::move(viscosity_[oilPhaseIdx]), data::TargetType::RESTART_AUXILIARY);
-    }
-    if (!viscosity_[gasPhaseIdx].empty()) {
-        sol.insert("GAS_VISC", UnitSystem::measure::viscosity, std::move(viscosity_[gasPhaseIdx]), data::TargetType::RESTART_AUXILIARY);
-    }
-
-    if (!relativePermeability_[waterPhaseIdx].empty()) {
-        sol.insert("WATKR", UnitSystem::measure::identity, std::move(relativePermeability_[waterPhaseIdx]), data::TargetType::RESTART_AUXILIARY);
-    }
-    if (!relativePermeability_[oilPhaseIdx].empty()) {
-        sol.insert("OILKR", UnitSystem::measure::identity, std::move(relativePermeability_[oilPhaseIdx]), data::TargetType::RESTART_AUXILIARY);
-    }
-    if (!relativePermeability_[gasPhaseIdx].empty()) {
-        sol.insert("GASKR", UnitSystem::measure::identity, std::move(relativePermeability_[gasPhaseIdx]), data::TargetType::RESTART_AUXILIARY);
-    }
-
-    if (!pcSwMdcOw_.empty())
-        sol.insert ("PCSWM_OW", UnitSystem::measure::identity, std::move(pcSwMdcOw_), data::TargetType::RESTART_AUXILIARY);
-
-    if (!krnSwMdcOw_.empty())
-        sol.insert ("KRNSW_OW", UnitSystem::measure::identity, std::move(krnSwMdcOw_), data::TargetType::RESTART_AUXILIARY);
-
-    if (!pcSwMdcGo_.empty())
-        sol.insert ("PCSWM_GO", UnitSystem::measure::identity, std::move(pcSwMdcGo_), data::TargetType::RESTART_AUXILIARY);
-
-    if (!krnSwMdcGo_.empty())
-        sol.insert ("KRNSW_GO", UnitSystem::measure::identity, std::move(krnSwMdcGo_), data::TargetType::RESTART_AUXILIARY);
-
-    if (!soMax_.empty())
-        sol.insert ("SOMAX", UnitSystem::measure::identity, std::move(soMax_), data::TargetType::RESTART_SOLUTION);
-
-    if (!sSol_.empty())
-        sol.insert ("SSOLVENT", UnitSystem::measure::identity, std::move(sSol_), data::TargetType::RESTART_SOLUTION);
-
-    if (!extboX_.empty())
-        sol.insert ("SS_X", UnitSystem::measure::identity, std::move(extboX_), data::TargetType::RESTART_SOLUTION);
-
-    if (!extboY_.empty())
-        sol.insert ("SS_Y", UnitSystem::measure::identity, std::move(extboY_), data::TargetType::RESTART_SOLUTION);
-
-    if (!extboZ_.empty())
-        sol.insert ("SS_Z", UnitSystem::measure::identity, std::move(extboZ_), data::TargetType::RESTART_SOLUTION);
-
-    if (!mFracOil_.empty())
-        sol.insert ("STD_OIL", UnitSystem::measure::identity, std::move(mFracOil_), data::TargetType::RESTART_SOLUTION);
-
-    if (!mFracGas_.empty())
-        sol.insert ("STD_GAS", UnitSystem::measure::identity, std::move(mFracGas_), data::TargetType::RESTART_SOLUTION);
-
-    if (!mFracCo2_.empty())
-        sol.insert ("STD_CO2", UnitSystem::measure::identity, std::move(mFracCo2_), data::TargetType::RESTART_SOLUTION);
-
-    if (!cPolymer_.empty())
-        sol.insert ("POLYMER", UnitSystem::measure::identity, std::move(cPolymer_), data::TargetType::RESTART_SOLUTION);
-
-    if (!cFoam_.empty())
-        sol.insert ("FOAM", UnitSystem::measure::identity, std::move(cFoam_), data::TargetType::RESTART_SOLUTION);
-
-    if (!cSalt_.empty())
-        sol.insert ("SALT", UnitSystem::measure::salinity, std::move(cSalt_), data::TargetType::RESTART_SOLUTION);
-
-    if (!dewPointPressure_.empty())
-        sol.insert ("PDEW", UnitSystem::measure::pressure, std::move(dewPointPressure_), data::TargetType::RESTART_AUXILIARY);
-
-    if (!bubblePointPressure_.empty())
-        sol.insert ("PBUB", UnitSystem::measure::pressure, std::move(bubblePointPressure_), data::TargetType::RESTART_AUXILIARY);
-
-    if (!swMax_.empty())
-        sol.insert ("SWMAX", UnitSystem::measure::identity, std::move(swMax_), data::TargetType::RESTART_SOLUTION);
-
-    if (!minimumOilPressure_.empty())
-        sol.insert ("PRESROCC", UnitSystem::measure::pressure, std::move(minimumOilPressure_), data::TargetType::RESTART_SOLUTION);
-
-    if (!overburdenPressure_.empty())
-        sol.insert ("PRES_OVB", UnitSystem::measure::pressure, std::move(overburdenPressure_), data::TargetType::RESTART_SOLUTION);
-
-    if (!rockCompPorvMultiplier_.empty())
-        sol.insert ("PORV_RC", UnitSystem::measure::identity, std::move(rockCompPorvMultiplier_), data::TargetType::RESTART_SOLUTION);
-
-    if (!rockCompTransMultiplier_.empty())
-        sol.insert ("TMULT_RC", UnitSystem::measure::identity, std::move(rockCompTransMultiplier_), data::TargetType::RESTART_SOLUTION);
 
     // Fluid in place
     for (const auto& phase : Inplace::phases()) {
