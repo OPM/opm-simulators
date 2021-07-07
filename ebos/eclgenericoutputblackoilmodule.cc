@@ -830,7 +830,7 @@ doAllocBuffers(unsigned bufferSize,
     // 1) when we want to restart
     // 2) when it is ask for by the user via restartConfig
     // 3) when it is not a substep
-    if (!isRestart && (!schedule_.write_rst_file(reportStepNum, log) || substep))
+    if (!isRestart && (!schedule_.write_rst_file(reportStepNum) || substep))
         return;
 
     // always output saturation of active phases
