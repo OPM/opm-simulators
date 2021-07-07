@@ -102,14 +102,6 @@ doInit(bool enabled, size_t numGridDof,
         return; // Tracer transport must be enabled by the user
     }
 
-    if (comm.size() > 1) {
-        tracerNames_.resize(0);
-        if (comm.rank() == 0)
-            std::cout << "Warning: The tracer model currently does not work for parallel runs\n"
-                      << std::flush;
-        return;
-    }
-
     // retrieve the number of tracers from the deck
     const size_t numTracers = tracers.size();
     tracerNames_.resize(numTracers);
