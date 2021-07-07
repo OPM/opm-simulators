@@ -33,6 +33,7 @@ namespace Opm {
 void flowEbosBlackoilSetDeck(double setupTime, std::unique_ptr<Deck> deck,
                              std::unique_ptr<EclipseState> eclState,
                              std::unique_ptr<Schedule> schedule,
+                             std::unique_ptr<UDQState> udqState,
                              std::unique_ptr<SummaryConfig> summaryConfig)
 {
     using TypeTag = Properties::TTag::EclFlowProblem;
@@ -42,6 +43,7 @@ void flowEbosBlackoilSetDeck(double setupTime, std::unique_ptr<Deck> deck,
     Vanguard::setExternalDeck(std::move(deck));
     Vanguard::setExternalEclState(std::move(eclState));
     Vanguard::setExternalSchedule(std::move(schedule));
+    Vanguard::setExternalUDQState(std::move(udqState));
     Vanguard::setExternalSummaryConfig(std::move(summaryConfig));
 }
 
