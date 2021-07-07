@@ -143,6 +143,20 @@ partiallySupported()
             },
          },
          {
+            "TRACER",
+            {
+               {4,{false, allow_values<std::string> {}, "SOLUTION_PHASE: not supported - ignored as not used"}}, // SOLUTION_PHASE
+               {6,{false, allow_values<std::string> {}, "ADSORB_PHASE: not supported - ignored as not used"}}, // ADSORB_PHASE
+            },
+         },
+         {
+            "TRACERS",
+            {
+               {5,{false, allow_values<std::string> {"NODIFF"}, "NUMERIC_DIFF: not supported - ignored as not used"}}, // NUMERIC_DIFF
+               {8,{false, allow_values<std::string> {"NO"}, "PASSIVE_NONLINEAR: not supported - ignored as not used"}}, // PASSIVE_NONLINEAR
+            },
+         },
+         {
             "UDQDIMS",
             {
                {11,{false, allow_values<std::string> {"N"}, "RSEED option is not supported – value ignored"}}, // RESTART_NEW_SEED
@@ -252,6 +266,23 @@ partiallySupported()
             },
          },
          {
+            "TRACER",
+            {
+               {5,{false, allow_values<int> {0}, "NUM_PART_TABLE should be defaulted (0) - ignored as not used"}}, // NUM_PART_TABLE
+            },
+         },
+         {
+            "TRACERS",
+            {
+               {4,{false, allow_values<int> {0}, "MAX_ENV_TRACERS: not supported - ignored as not used"}}, // MAX_ENV_TRACERS
+               {6,{false, allow_values<int> {12}, "MAX_ITER: not supported - ignored as not used"}}, // MAX_ITER
+               {7,{false, allow_values<int> {1}, "MIN_ITER: not supported - ignored as not used"}}, // MIN_ITER
+               {9,{false, allow_values<int> {}, "ONEOFF_LIN_TIGHT: not supported - ignored as not used"}}, // ONEOFF_LIN_TIGHT
+               {10,{false, allow_values<int> {}, "ONEOFF_NLIN_TIGHT: not supported - ignored as not used"}}, // ONEOFF_NLIN_TIGHT
+               {12,{false, allow_values<int> {0}, "NTIGHTFACTORS: not supported - ignored as not used"}}, // NTIGHTFACTORS
+            },
+         },
+         {
             "UDADIMS",
             {
                {2,{false, allow_values<int> {0}, "IGNORED should be defaulted (0) – ignored as not used"}}, // IGNORED
@@ -336,6 +367,12 @@ partiallySupported()
             "ROCKCOMP",
             {
                {4,{false, allow_values<double> {0}, "CARKZEXP transmissibility dependent on porosity model is not supported"}}, // CARKZEXP
+            },
+         },
+         {
+            "TRACERS",
+            {
+               {11,{false, allow_values<double> {1.0}, "TIGHTENING_FACTORS: not supported - ignored as not used"}}, // TIGHTENING_FACTORS
             },
          },
    };

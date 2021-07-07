@@ -541,7 +541,7 @@ struct EnableThermalFluxBoundaries<TypeTag, TTag::EclBaseProblem> {
 
 template<class TypeTag>
 struct EnableTracerModel<TypeTag, TTag::EclBaseProblem> {
-    static constexpr bool value = false;
+    static constexpr bool value = true;
 };
 
 // By default, simulators derived from the EclBaseProblem are production simulators,
