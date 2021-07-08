@@ -247,7 +247,7 @@ protected:
             size_t I = elemCtx.globalSpaceIndex(/*dofIdx=*/ 0, /*timIdx=*/0);
             size_t I1 = elemCtx.globalSpaceIndex(/*dofIdx=*/ 0, /*timIdx=*/1);
 
-            Scalar storageOfTimeIndex1[tr.numTracer()];
+            std::vector<Scalar> storageOfTimeIndex1(tr.numTracer());
             if (elemCtx.enableStorageCache()) {
                 for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
                     storageOfTimeIndex1[tIdx] = tr.storageOfTimeIndex1_[tIdx][I];
@@ -302,7 +302,7 @@ protected:
             if (well.getStatus() == Well::Status::SHUT)
                 continue;
 
-            double wtracer[tr.numTracer()];
+            std::vector<double> wtracer(tr.numTracer());
             for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
                 wtracer[tIdx] = well.getTracerProperties().getConcentration(this->tracerNames_[tr.idx_[tIdx]]);
             }
