@@ -23,6 +23,7 @@
 
 #include "ParallelRestart.hpp"
 #include <cassert>
+#include <cstdint>
 #include <cstring>
 #include <ctime>
 #include <memory>
@@ -1033,12 +1034,16 @@ template void unpack(std::vector<__VA_ARGS__>& data, \
                      std::vector<char>& buffer, int& position, \
                      Dune::MPIHelper::MPICommunicator comm);
 
+INSTANTIATE_PACK_VECTOR(float)
 INSTANTIATE_PACK_VECTOR(double)
 INSTANTIATE_PACK_VECTOR(std::vector<double>)
 INSTANTIATE_PACK_VECTOR(bool)
 INSTANTIATE_PACK_VECTOR(char)
 INSTANTIATE_PACK_VECTOR(int)
-INSTANTIATE_PACK_VECTOR(size_t)
+INSTANTIATE_PACK_VECTOR(unsigned char)
+INSTANTIATE_PACK_VECTOR(unsigned int)
+INSTANTIATE_PACK_VECTOR(unsigned long int)
+INSTANTIATE_PACK_VECTOR(unsigned long long int)
 INSTANTIATE_PACK_VECTOR(std::time_t)
 INSTANTIATE_PACK_VECTOR(std::array<double, 3>)
 INSTANTIATE_PACK_VECTOR(std::pair<bool,double>)
@@ -1062,14 +1067,17 @@ template void unpack(__VA_ARGS__& data, \
                      std::vector<char>& buffer, int& position, \
                      Dune::MPIHelper::MPICommunicator comm);
 
+INSTANTIATE_PACK(float)
 INSTANTIATE_PACK(double)
-INSTANTIATE_PACK(std::size_t)
 INSTANTIATE_PACK(bool)
 INSTANTIATE_PACK(int)
+INSTANTIATE_PACK(unsigned char)
+INSTANTIATE_PACK(unsigned int)
+INSTANTIATE_PACK(unsigned long int)
+INSTANTIATE_PACK(unsigned long long int)
 INSTANTIATE_PACK(std::array<short,3>)
 INSTANTIATE_PACK(std::array<bool,3>)
 INSTANTIATE_PACK(std::array<int,3>)
-INSTANTIATE_PACK(unsigned char)
 INSTANTIATE_PACK(std::map<std::pair<int,int>,std::pair<bool,double>>)
 INSTANTIATE_PACK(std::optional<double>)
 INSTANTIATE_PACK(std::optional<std::string>)
