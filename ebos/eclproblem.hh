@@ -437,6 +437,11 @@ template<class TypeTag>
 struct EnableAsyncEclOutput<TypeTag, TTag::EclBaseProblem> {
     static constexpr bool value = true;
 };
+// Write ESMRY file for fast loading of summary data
+template<class TypeTag>
+struct EnableEsmry<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = false;
+};
 
 // By default, use single precision for the ECL formated results
 template<class TypeTag>
@@ -2544,7 +2549,7 @@ private:
             if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx))
                 dofFluidState.setSaturation(FluidSystem::waterPhaseIdx,
                                             waterSaturationData[dofIdx]);
-                                            
+
             if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)){
                 if (!FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)){
                     dofFluidState.setSaturation(FluidSystem::gasPhaseIdx,
