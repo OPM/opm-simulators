@@ -199,11 +199,39 @@ void amgclSolverBackend<block_size>::convert_data(double *vals, int *rows) {
 } // end convert_data()
 
 #if HAVE_VEXCL
+void initialize_vexcl(std::vector<cl::CommandQueue>& ctx, unsigned int platformID, unsigned int deviceID) {
+    std::vector<cl::Platform> platforms;
+    std::vector<cl::Device> devices;
+    cl::Platform::get(&platforms);
+
+    if (platforms.size() <= platformID) {
+        OPM_THROW(std::logic_error, "Error chosen too high OpenCL platform ID");
+    }
+
+    std::string platform_name, device_name;
+    platforms[platformID].getInfo(CL_PLATFORM_NAME, &platform_name);
+    platforms[platformID].getDevices(CL_DEVICE_TYPE_ALL, &devices);
+
+    if (devices.size() <= deviceID){
+        OPM_THROW(std::logic_error, "Error chosen too high OpenCL device ID");
+    }
+
+    devices[deviceID].getInfo(CL_DEVICE_NAME, &device_name);
+
+    cl::Context c(devices[deviceID]);
+    cl::CommandQueue q(c, devices[deviceID]);
+    ctx.push_back(q);
+
+    std::ostringstream out;
+    out << "Using VexCL on " << device_name << " (" << platform_name << ")\n";
+    OpmLog::info(out.str());
+}
+
 template <typename vexcl_matrix_type, typename vexcl_vector_type, unsigned int block_size>
 void solve_vexcl(
-    const auto A,
+    const auto& A,
     const boost::property_tree::ptree prm,
-    const vex::Context& ctx,
+    const std::vector<cl::CommandQueue>& ctx,
     double *b,
     std::vector<double>& x,
     const int N,
@@ -267,11 +295,9 @@ void amgclSolverBackend<block_size>::solve_system(double *b, BdaResult &res) {
             std::tie(iters, error) = solve(B, X);
         } else if (backend_type == Amgcl_backend_type::vexcl) {
 #if HAVE_VEXCL
-            static vex::Context ctx(vex::Filter::Env && vex::Filter::Count(1));
+            static std::vector<cl::CommandQueue> ctx; // using CommandQueue directly instead of vex::Context
             std::call_once(vexcl_initialize, [&](){
-                std::ostringstream out;
-                out << "Using VexCL on " << ctx << std::endl;
-                OpmLog::info(out.str());
+                initialize_vexcl(ctx, platformID, deviceID);
             });
             if constexpr(block_size == 1){
                 auto A = std::tie(N, A_rows, A_cols, A_vals);

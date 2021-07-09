@@ -93,8 +93,7 @@ private:
 #if HAVE_VEXCL
     std::once_flag vexcl_initialize;
 #endif
-
-    /// Initialize GPU and allocate memory
+    /// Initialize host memory and determine amgcl parameters
     /// \param[in] N              number of nonzeroes, divide by dim*dim to get number of blocks
     /// \param[in] nnz            number of nonzeroes, divide by dim*dim to get number of blocks
     /// \param[in] dim            size of block
