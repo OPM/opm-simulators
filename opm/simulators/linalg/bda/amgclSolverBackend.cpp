@@ -267,8 +267,12 @@ void amgclSolverBackend<block_size>::solve_system(double *b, BdaResult &res) {
             std::tie(iters, error) = solve(B, X);
         } else if (backend_type == Amgcl_backend_type::vexcl) {
 #if HAVE_VEXCL
-            vex::Context ctx(vex::Filter::Env && vex::Filter::Count(1));
-            std::cout << ctx << std::endl;
+            static vex::Context ctx(vex::Filter::Env && vex::Filter::Count(1));
+            std::call_once(vexcl_initialize, [&](){
+                std::ostringstream out;
+                out << "Using VexCL on " << ctx << std::endl;
+                OpmLog::info(out.str());
+            });
             if constexpr(block_size == 1){
                 auto A = std::tie(N, A_rows, A_cols, A_vals);
 

@@ -90,6 +90,10 @@ private:
     void solve_cuda(double *b);
 #endif
 
+#if HAVE_VEXCL
+    std::once_flag vexcl_initialize;
+#endif
+
     /// Initialize GPU and allocate memory
     /// \param[in] N              number of nonzeroes, divide by dim*dim to get number of blocks
     /// \param[in] nnz            number of nonzeroes, divide by dim*dim to get number of blocks
