@@ -69,7 +69,8 @@ public:
                      const GridView& gridView,
                      const Dune::CartesianIndexMapper<Grid>& cartMapper,
                      const Dune::CartesianIndexMapper<EquilGrid>* equilCartMapper,
-                     bool enableAsyncOutput);
+                     bool enableAsyncOutput,
+                     bool writeLodsmry);
 
     const EclipseIO& eclIO() const;
 

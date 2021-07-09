@@ -53,6 +53,10 @@ template<class TypeTag, class MyTypeTag>
 struct EclOutputDoublePrecision {
     using type = UndefinedProperty;
 };
+template<class TypeTag, class MyTypeTag>
+struct WriteLodsmry {
+    using type = UndefinedProperty;
+};
 
 } // namespace Opm::Properties
 
@@ -108,6 +112,8 @@ public:
 
         EWOMS_REGISTER_PARAM(TypeTag, bool, EnableAsyncEclOutput,
                              "Write the ECL-formated results in a non-blocking way (i.e., using a separate thread).");
+        EWOMS_REGISTER_PARAM(TypeTag, bool, WriteLodsmry,
+                             "Write LODMRY for fast load on demand.");
     }
 
     // The Simulator object should preferably have been const - the
@@ -122,7 +128,7 @@ public:
                    simulator.vanguard().gridView(),
                    simulator.vanguard().cartesianIndexMapper(),
                    simulator.vanguard().grid().comm().rank() == 0 ? &simulator.vanguard().equilCartesianIndexMapper() : nullptr,
-                   EWOMS_GET_PARAM(TypeTag, bool, EnableAsyncEclOutput))
+                   EWOMS_GET_PARAM(TypeTag, bool, EnableAsyncEclOutput), EWOMS_GET_PARAM(TypeTag, bool, WriteLodsmry))
         , simulator_(simulator)
     {
         this->eclOutputModule_ = std::make_unique<EclOutputBlackOilModule<TypeTag>>(simulator, this->wbp_index_list_, this->collectToIORank_);

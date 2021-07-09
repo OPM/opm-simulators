@@ -437,6 +437,11 @@ template<class TypeTag>
 struct EnableAsyncEclOutput<TypeTag, TTag::EclBaseProblem> {
     static constexpr bool value = true;
 };
+// If available, write the ECL output in a non-blocking manner
+template<class TypeTag>
+struct WriteLodsmry<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = false;
+};
 
 // By default, use single precision for the ECL formated results
 template<class TypeTag>

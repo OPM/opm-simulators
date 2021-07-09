@@ -163,7 +163,8 @@ EclGenericWriter(const Schedule& schedule,
                  const GridView& gridView,
                  const Dune::CartesianIndexMapper<Grid>& cartMapper,
                  const Dune::CartesianIndexMapper<EquilGrid>* equilCartMapper,
-                 bool enableAsyncOutput)
+                 bool enableAsyncOutput,
+                 bool writeLodsmry )
     : collectToIORank_(grid,
                        equilGrid,
                        gridView,
@@ -182,7 +183,7 @@ EclGenericWriter(const Schedule& schedule,
         eclIO_.reset(new EclipseIO(eclState_,
                                    UgGridHelpers::createEclipseGrid(*equilGrid, eclState_.getInputGrid()),
                                    schedule_,
-                                   summaryConfig_));
+                                   summaryConfig_, "", writeLodsmry));
 
         const auto& wbp_calculators = eclIO_->summary().wbp_calculators( schedule.size() - 1 );
         wbp_index_list_ = wbp_calculators.index_list();
