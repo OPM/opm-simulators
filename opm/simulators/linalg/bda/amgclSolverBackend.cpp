@@ -76,10 +76,31 @@ void amgclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim) {
     std::string backend_type_string;
 
     if (file.is_open()) { // if file exists, read parameters from file
-        boost::property_tree::read_json(file, prm);
+        try {
+            boost::property_tree::read_json(file, prm);
+        } catch (boost::property_tree::json_parser::json_parser_error e) {
+            OPM_THROW(std::logic_error, "Error cannot parse json file '" + filename + "'");
+        }
 
-        backend_type_string = prm.get("backend_type", "cpu"); // defaults to cpu if not specified
-        out << "Using parameters from " << filename << ":\n";
+        // the prm.get reads data from the file, with default values if not specified
+        // the prm.put puts the data in the property_tree, so it gets printed
+        backend_type_string = prm.get("backend_type", "cpu");
+        prm.put("backend_type", backend_type_string);
+        std::string t1 = prm.get("precond.class", "relaxation");
+        prm.put("precond.class", t1);
+        t1 = prm.get("precond.type", "ilu0");
+        prm.put("precond.type", t1);
+        double t2 = prm.get("precond.damping", 0.9);
+        prm.put("precond.damping", t2);
+        t1 = prm.get("solver.type", "bicgstab");
+        prm.put("solver.type", t1);
+        t2 = prm.get("solver.tol", tolerance);
+        prm.put("solver.tol", t2);
+        int t3 = prm.get("solver.maxiter", maxit);
+        prm.put("solver.maxiter", t3);
+        bool t4 = prm.get("solver.verbose", verbosity >= 2);
+        prm.put("solver.verbose", t4);
+        out << "Using parameters from " << filename << " (with default values for omitted parameters):\n";
     } else { // otherwise use default parameters, same as Dune
         prm.put("backend_type", "cpu"); // put it in the tree so it gets printed
         prm.put("precond.class", "relaxation");
