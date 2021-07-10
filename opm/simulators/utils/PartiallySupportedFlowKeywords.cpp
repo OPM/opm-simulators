@@ -19,11 +19,6 @@
 
 #include <opm/simulators/utils/PartiallySupportedFlowKeywords.hpp>
 
-/*
-   Generated : keyw-code.py
-   Date      : 2021-07-08 16:05:58
-*/
-
 using namespace Opm::KeywordValidation;
 namespace Opm::FlowKeywordValidation
 {
@@ -206,15 +201,15 @@ partiallySupported()
          {
             "TRACER",
             {
-               {4,{false, allow_values<std::string> {}, "SOLUTION_PHASE: not supported - ignored as not used"}}, // SOLUTION_PHASE
-               {6,{false, allow_values<std::string> {}, "ADSORB_PHASE: not supported - ignored as not used"}}, // ADSORB_PHASE
+               {4,{false, allow_values<std::string> {}, "TRACER(SOLPHASE): partitioned tracer model not supported - ignored as not used"}}, // SOLUTION_PHASE
+               {6,{false, allow_values<std::string> {}, "TRACER(ADSPHASE): partitioned tracer model not supported - ignored as not used"}}, // ADSORB_PHASE
             },
          },
          {
             "TRACERS",
             {
-               {5,{false, allow_values<std::string> {"NODIFF"}, "NUMERIC_DIFF: not supported - ignored as not used"}}, // NUMERIC_DIFF
-               {8,{false, allow_values<std::string> {"NO"}, "PASSIVE_NONLINEAR: not supported - ignored as not used"}}, // PASSIVE_NONLINEAR
+               {5,{false, allow_values<std::string> {"NODIFF"}, "TRACERS(DIFFOPT): numerical diffusion control not implemented. - ignored as not used"}}, // NUMERIC_DIFF
+               {8,{false, allow_values<std::string> {"NO"}, "TRACERS(NONLIN): only linear option NO supported – will continue"}}, // PASSIVE_NONLINEAR
             },
          },
          {
@@ -227,13 +222,6 @@ partiallySupported()
             "WCONHIST",
             {
                {3,{false, allow_values<std::string> {"ORAT", "WRAT", "GRAT", "LRAT", "RESV", "BHP"}, "WCONHIST(TARGET): should be set to ORAT/WRAT/GRAT/LRAT/RESV or BHP – will STOP"}}, // CMODE
-            },
-         },
-         {
-            "WCONPROD",
-            {
-               {17,{false, allow_values<std::string> {}, "WCONPROD(DELTAT): temperature offset not used and should be defaulted (1*) – will continue"}}, // E300_ITEM17
-               {19,{false, allow_values<std::string> {}, "WCONPROD(COMBPROC): linearly combined rate not used and should be defaulted (1*) – will continue"}}, // E300_ITEM19
             },
          },
          {
@@ -420,18 +408,18 @@ partiallySupported()
          {
             "TRACER",
             {
-               {5,{false, allow_values<int> {0}, "NUM_PART_TABLE should be defaulted (0) - ignored as not used"}}, // NUM_PART_TABLE
+               {5,{false, allow_values<int> {0}, "TRACER(KPNUM): partitioned tracer model not supported - ignored as not used"}}, // NUM_PART_TABLE
             },
          },
          {
             "TRACERS",
             {
-               {4,{false, allow_values<int> {0}, "MAX_ENV_TRACERS: not supported - ignored as not used"}}, // MAX_ENV_TRACERS
-               {6,{false, allow_values<int> {12}, "MAX_ITER: not supported - ignored as not used"}}, // MAX_ITER
-               {7,{false, allow_values<int> {1}, "MIN_ITER: not supported - ignored as not used"}}, // MIN_ITER
-               {9,{false, allow_values<int> {}, "ONEOFF_LIN_TIGHT: not supported - ignored as not used"}}, // ONEOFF_LIN_TIGHT
-               {10,{false, allow_values<int> {}, "ONEOFF_NLIN_TIGHT: not supported - ignored as not used"}}, // ONEOFF_NLIN_TIGHT
-               {12,{false, allow_values<int> {0}, "NTIGHTFACTORS: not supported - ignored as not used"}}, // NTIGHTFACTORS
+               {4,{false, allow_values<int> {0}, "TRACERS(MXENVTR):  passive environmental tracers not supported - ignored as not used"}}, // MAX_ENV_TRACERS
+               {6,{false, allow_values<int> {12}, "TRACERS(MXITRTR): not supported - ignored as not used"}}, // MAX_ITER
+               {7,{false, allow_values<int> {1}, "TRACERS(MNITRTR): not supported - ignored as not used"}}, // MIN_ITER
+               {9,{false, allow_values<int> {}, "TRACERS(LNCONFAC): not supported - ignored as not used"}}, // ONEOFF_LIN_TIGHT
+               {10,{false, allow_values<int> {}, "TRACERS(NLCONFAC): not supported - ignored as not used"}}, // ONEOFF_NLIN_TIGHT
+               {12,{false, allow_values<int> {0}, "TRACERS(NUMCONF): not supported - ignored as not used"}}, // NTIGHTFACTORS
             },
          },
          {
@@ -576,6 +564,12 @@ partiallySupported()
             },
          },
          {
+            "TRACERS",
+            {
+               {11,{false, allow_values<double> {1.0}, "TRACERS(CONFAC): not supported - ignored as not used"}}, // TIGHTENING_FACTORS
+            },
+         },
+         {
             "VISCREF",
             {
                {3,{false, allow_values<double> {}, "VISCREF(API): API tracking option is not supported - value ignored"}}, // API_GRAVITY
@@ -615,7 +609,9 @@ partiallySupported()
                {14,{false, allow_values<double> {}, "WCONPROD(MOLARATE): molar rate not used and should be defaulted (1*) – will continue"}}, // E300_ITEM14
                {15,{false, allow_values<double> {}, "WCONPROD(STEAMRAT): steam rate is not used and should be defaulted (1*) – will continue"}}, // E300_ITEM15
                {16,{false, allow_values<double> {}, "WCONPROD(DELTAP): pressure offset not used and should be defaulted (1*) – will continue"}}, // E300_ITEM16
+               {17,{false, allow_values<double> {}, "WCONPROD(DELTAT): temperature offset not used and should be defaulted (1*) – will continue"}}, // E300_ITEM17
                {18,{false, allow_values<double> {}, "WCONPROD(CALRATE): calorific rate not used and should be defaulted (1*) – will continue"}}, // E300_ITEM18
+               {19,{false, allow_values<double> {}, "WCONPROD(COMBPROC): linearly combined rate not used and should be defaulted (1*) – will continue"}}, // E300_ITEM19
                {20,{false, allow_values<double> {}, "WCONPROD(NGL): natural gas liquid rate  is not used and should be defaulted (1*) – will continue"}}, // E300_ITEM20
             },
          },
@@ -630,12 +626,6 @@ partiallySupported()
             "WLIFTOPT",
             {
                {6,{false, allow_values<double> {0}, "WLIFTOPT(OPTGAS): incremental gas weighting not supported – will continue"}}, // DELTA_GAS_RATE_WEIGHT_FACTOR
-            },
-         },
-         {
-            "TRACERS",
-            {
-               {11,{false, allow_values<double> {1.0}, "TIGHTENING_FACTORS: not supported - ignored as not used"}}, // TIGHTENING_FACTORS
             },
          },
    };
