@@ -980,7 +980,10 @@ private:
             std::vector<double> SwColumn = swfnTable.getColumn("SW").vectorCopy();
             
             effParams.setKrwSamples(SwColumn, normalizeKrValues_(tolcrit, swfnTable.getColumn("KRW")));
-            effParams.setKrnSamples(SwColumn, normalizeKrValues_(tolcrit, sgfnTable.getColumn("KRG")));
+            std::vector<double> SwSamples(sgfnTable.numRows());
+            for (size_t sampleIdx = 0; sampleIdx < sgfnTable.numRows(); ++ sampleIdx)
+                SwSamples[sampleIdx] = 1 - sgfnTable.get("SG", sampleIdx);
+            effParams.setKrnSamples(SwSamples, normalizeKrValues_(tolcrit, sgfnTable.getColumn("KRG")));
             //Capillary pressure is read from SWFN. 
             //For gas-water system the capillary pressure column values are set to 0 in SGFN
             effParams.setPcnwSamples(SwColumn, swfnTable.getColumn("PCOW").vectorCopy());
