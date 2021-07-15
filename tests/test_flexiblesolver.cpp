@@ -67,13 +67,11 @@ testSolver(const Opm::PropertyTree& prm, const std::string& matrix_filename, con
     if(prm.get<std::string>("preconditioner.type") == "cprt"){
         transpose = true;
     }
-    auto wc = [&matrix, &prm, transpose]()
-              {
-                  return Opm::Amg::getQuasiImpesWeights<Matrix,
-                                                        Vector>(matrix,
-                                                                1,
-                                                                transpose);
-              };
+    auto wc = [&matrix, transpose]()
+    {
+        return Opm::Amg::getQuasiImpesWeights<Matrix, Vector>(matrix, 1, transpose);
+    };
+
     using SeqOperatorType = Dune::MatrixAdapter<Matrix, Vector, Vector>;
     SeqOperatorType op(matrix);
     Dune::FlexibleSolver<Matrix, Vector> solver(op, prm, wc, 1);

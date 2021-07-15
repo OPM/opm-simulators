@@ -17,12 +17,33 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <random>
+#include <opm/simulators/linalg/bda/Reorder.hpp>
+
+#include <opm/simulators/linalg/bda/BlockedMatrix.hpp>
 
 #include <opm/common/ErrorMacros.hpp>
 
-#include <opm/simulators/linalg/bda/Reorder.hpp>
-#include <opm/simulators/linalg/bda/BlockedMatrix.hpp>
+#include <algorithm>
+#include <array>
+#include <functional>
+#include <random>
+#include <sstream>
+#include <vector>
+
+namespace {
+
+    std::mt19937 make_urng()
+    {
+        std::random_device rd;
+        std::array<unsigned int, std::mt19937::state_size> seed_data{};
+
+        std::generate_n(seed_data.begin(), seed_data.size(), std::ref(rd));
+        std::seed_seq seq(seed_data.begin(), seed_data.end());
+
+        return std::mt19937{ seq };
+    }
+
+}
 
 namespace bda
 {
@@ -37,34 +58,31 @@ namespace bda
 template <unsigned int block_size>
 int colorBlockedNodes(int rows, const int *CSRRowPointers, const int *CSRColIndices, const int *CSCColPointers, const int *CSCRowIndices, std::vector<int>& colors, int maxRowsPerColor, int maxColsPerColor)
 {
-    int left, c=-1;
+    auto left = static_cast<std::vector<int>::difference_type>(colors.size());
+    int c = -1;
     const int max_tries = 100;            // since coloring is random, it is possible that a coloring fails. In that case, try again.
-    std::vector<int> randoms;
-    randoms.resize(rows);
 
-    std::vector<bool> visitedColumns;
-    visitedColumns.resize(rows);
-    std::fill(visitedColumns.begin(), visitedColumns.end(), false);
+    std::vector<bool> visitedColumns(rows, false);
 
-    unsigned int colsInColor;
-    unsigned int additionalColsInRow;
+    auto gen = make_urng();
 
+    std::vector<int> randoms(rows);
     for (unsigned int t = 0; t < max_tries; t++) {
         // (re)initialize data for coloring process
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_int_distribution<> uniform(0, std::numeric_limits<int>::max());
+        std::uniform_int_distribution<int> uniform{}; // 0 .. INT_MAX
+
+        std::generate(randoms.begin(), randoms.end(),
+            [&uniform, &gen]()
         {
-            for (int i = 0; i < rows; ++i) {
-                randoms[i] = uniform(gen);
-            }
-        }
+            return uniform(gen);
+        });
+
         std::fill(colors.begin(), colors.end(), -1);
 
         // actually perform coloring
         for (c = 0; c < MAX_COLORS; c++) {
-            unsigned int rowsInColor = 0;
-            colsInColor = 0;
+            unsigned int rowsInColor = 0u;
+            unsigned int colsInColor = 0u;
             for (int i = 0; i < rows; i++)
             {
                 bool iMax = true; // true iff you have max random
@@ -118,7 +136,7 @@ int colorBlockedNodes(int rows, const int *CSRRowPointers, const int *CSRColIndi
 
                 // assign color if you have the maximum random number
                 if (iMax) {
-                    additionalColsInRow = 0;
+                    unsigned int additionalColsInRow = 0u;
                     for (int k = CSRRowPointers[i]; k < CSRRowPointers[i + 1]; k++) {
                         int j = CSRColIndices[k];
                         if (!visitedColumns[j]) {
@@ -136,15 +154,11 @@ int colorBlockedNodes(int rows, const int *CSRRowPointers, const int *CSRColIndi
                         break;
                     }
                 }
+            }
 
-            }
             // Check if graph coloring is done.
-            left = 0;
-            for (int k = 0; k < rows; k++) {
-                if (colors[k] == -1) {
-                    left++;
-                }
-            }
+            left = std::count_if(colors.begin(), colors.end(),
+                                 [](const int color) { return color == -1; });
             if (left == 0) {
                 return c + 1;
             }
