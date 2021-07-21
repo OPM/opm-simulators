@@ -45,6 +45,7 @@ template <class BridgeMatrix, class BridgeVector, int block_size>
 class BdaBridge
 {
 private:
+    int verbosity = 0;
     bool use_gpu = false;
     bool use_fpga = false;
     std::string accelerator_mode;

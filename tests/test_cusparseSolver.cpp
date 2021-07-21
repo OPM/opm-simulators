@@ -80,7 +80,7 @@ testCusparseSolver(const boost::property_tree::ptree& prm, const std::string& ma
     Dune::InverseOperatorResult result;
 
     Vector x(rhs.size());
-    Opm::WellContributions wellContribs("cusparse");
+    Opm::WellContributions wellContribs("cusparse", false);
     std::unique_ptr<Opm::BdaBridge<Matrix, Vector, bz> > bridge;
     try {
         bridge = std::make_unique<Opm::BdaBridge<Matrix, Vector, bz> >(gpu_mode, fpga_bitstream, linear_solver_verbosity, maxit, tolerance, platformID, deviceID, opencl_ilu_reorder);

@@ -28,7 +28,7 @@
 namespace Opm
 {
 
-WellContributions::WellContributions(std::string accelerator_mode){
+WellContributions::WellContributions(std::string accelerator_mode, bool useWellConn){
     if(accelerator_mode.compare("cusparse") == 0){
         cuda_gpu = true;
     }
@@ -37,6 +37,11 @@ WellContributions::WellContributions(std::string accelerator_mode){
     }
     else if(accelerator_mode.compare("fpga") == 0){
         // unused for FPGA, but must be defined to avoid error
+    }
+    else if(accelerator_mode.compare("amgcl") == 0){
+        if (!useWellConn) {
+            OPM_THROW(std::logic_error, "Error amgcl requires --matrix-add-well-contributions=true");
+        }
     }
     else{
         OPM_THROW(std::logic_error, "Invalid accelerator mode");
