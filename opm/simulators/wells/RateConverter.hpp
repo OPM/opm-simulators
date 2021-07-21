@@ -496,12 +496,6 @@ namespace Opm {
                     if (hydrocarbonPV > 0.) {
                         auto& attr = attributes_hpv[reg];
                         attr.pv += hydrocarbonPV;
-<<<<<<< HEAD
-                        attr.pressure += fs.pressure(FluidSystem::oilPhaseIdx).value() * hydrocarbonPV;
-                        attr.rs += fs.Rs().value() * hydrocarbonPV;
-                        attr.rv += fs.Rv().value() * hydrocarbonPV;
-                        attr.temperature += fs.temperature(FluidSystem::oilPhaseIdx).value() * hydrocarbonPV;
-=======
                         if (Details::PhaseUsed::oil(pu)) {
                             attr.pressure += fs.pressure(FluidSystem::oilPhaseIdx).value() * hydrocarbonPV;
                             attr.rs += fs.Rs().value() * hydrocarbonPV;
@@ -513,19 +507,12 @@ namespace Opm {
                             attr.pressure += fs.pressure(FluidSystem::gasPhaseIdx).value() * hydrocarbonPV;
                             attr.temperature += fs.temperature(FluidSystem::gasPhaseIdx).value() * hydrocarbonPV;
                         }
->>>>>>> 75076d46d... fix for the situation that hydrocarbon consist only of gas
                         attr.saltConcentration += fs.saltConcentration().value() * hydrocarbonPV;
                     }
 
                     if (pv_cell > 0.) {
                         auto& attr = attributes_pv[reg];
                         attr.pv += pv_cell;
-<<<<<<< HEAD
-                        attr.pressure += fs.pressure(FluidSystem::oilPhaseIdx).value() * pv_cell;
-                        attr.rs += fs.Rs().value() * pv_cell;
-                        attr.rv += fs.Rv().value() * pv_cell;
-                        attr.temperature += fs.temperature(FluidSystem::oilPhaseIdx).value() * pv_cell;
-=======
                         if (Details::PhaseUsed::oil(pu)) {
                             attr.pressure += fs.pressure(FluidSystem::oilPhaseIdx).value() * pv_cell;
                             attr.rs += fs.Rs().value() * pv_cell;
@@ -537,7 +524,6 @@ namespace Opm {
                              attr.pressure += fs.pressure(FluidSystem::gasPhaseIdx).value() * pv_cell;
                              attr.temperature += fs.temperature(FluidSystem::gasPhaseIdx).value() * pv_cell;
                         }
->>>>>>> 75076d46d... fix for the situation that hydrocarbon consist only of gas
                         attr.saltConcentration += fs.saltConcentration().value() * pv_cell;
                     }
                 }
