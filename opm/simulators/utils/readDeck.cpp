@@ -197,7 +197,6 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
     }
 
     int parseSuccess = 1; // > 0 is success
-    std::string failureMessage;
 
     if (rank==0) {
         try
@@ -264,12 +263,12 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
             Opm::checkConsistentArrayDimensions(*eclipseState, *schedule, *parseContext, *errorGuard);
         }
         catch(const OpmInputError& input_error) {
-            failureMessage = input_error.what();
+            OpmLog::error(fmt::format("Parsing input deck failed: Internal error message\n:{}", input_error.what()));
             parseSuccess = 0;
         }
         catch(const std::exception& std_error)
         {
-            failureMessage = std_error.what();
+            OpmLog::error(fmt::format("Parsing input deck failed: Internal error message\n:{}", std_error.what()));
             parseSuccess = 0;
         }
     }
@@ -289,7 +288,6 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
     }
     catch(const std::exception& broadcast_error)
     {
-        failureMessage = broadcast_error.what();
         OpmLog::error(fmt::format("Distributing properties to all processes failed\n"
                                   "Internal error message: {}", broadcast_error.what()));
         parseSuccess = 0;
