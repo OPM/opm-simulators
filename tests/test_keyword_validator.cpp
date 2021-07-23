@@ -91,7 +91,7 @@ ECHO
 )"};
     const auto deck = Parser {}.parseString(keywords_string);
     const auto& test_keyword = deck.getKeyword("ECHO");
-    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items);
+    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items, {});
     std::vector<ValidationError> errors;
     validator.validateDeckKeyword(test_keyword, errors);
     BOOST_CHECK(!errors[0].critical);
@@ -108,7 +108,7 @@ NOECHO
 )"};
     const auto deck = Parser {}.parseString(keywords_string);
     const auto& test_keyword = deck.getKeyword("NOECHO");
-    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items);
+    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items, {});
     std::vector<ValidationError> errors;
     validator.validateDeckKeyword(test_keyword, errors);
     BOOST_CHECK(errors[0].critical);
@@ -126,7 +126,7 @@ PINCH
 )"};
     const auto deck = Parser {}.parseString(keywords_string);
     const auto& test_keyword = deck.getKeyword("PINCH");
-    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items);
+    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items, {});
     std::vector<ValidationError> errors;
     validator.validateDeckKeyword(test_keyword, errors);
     BOOST_CHECK(!errors[0].critical);
@@ -144,7 +144,7 @@ PINCH
 )"};
     const auto deck = Parser {}.parseString(keywords_string);
     const auto& test_keyword = deck.getKeyword("PINCH");
-    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items);
+    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items, {});
     std::vector<ValidationError> errors;
     validator.validateDeckKeyword(test_keyword, errors);
     BOOST_CHECK(errors[0].critical);
@@ -162,7 +162,7 @@ ENDSCALE
 )"};
     const auto deck = Parser {}.parseString(keywords_string);
     const auto& test_keyword = deck.getKeyword("ENDSCALE");
-    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items);
+    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items, {});
     std::vector<ValidationError> errors;
     validator.validateDeckKeyword(test_keyword, errors);
     BOOST_CHECK(!errors[0].critical);
@@ -180,7 +180,7 @@ ENDSCALE
 )"};
     const auto deck = Parser {}.parseString(keywords_string);
     const auto& test_keyword = deck.getKeyword("ENDSCALE");
-    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items);
+    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items, {});
     std::vector<ValidationError> errors;
     validator.validateDeckKeyword(test_keyword, errors);
     BOOST_CHECK(errors[0].critical);
@@ -197,7 +197,7 @@ EHYSTR
 )"};
     const auto deck = Parser {}.parseString(keywords_string);
     const auto& test_keyword = deck.getKeyword("EHYSTR");
-    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items);
+    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items, {});
     std::vector<ValidationError> errors;
     validator.validateDeckKeyword(test_keyword, errors);
     BOOST_CHECK(errors.size() == 0);
@@ -211,7 +211,7 @@ EHYSTR
 )"};
     const auto deck = Parser {}.parseString(keywords_string);
     const auto& test_keyword = deck.getKeyword("EHYSTR");
-    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items);
+    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items, {});
     std::vector<ValidationError> errors;
     validator.validateDeckKeyword(test_keyword, errors);
     BOOST_CHECK(!errors[0].critical);
@@ -228,7 +228,7 @@ EHYSTR
 )"};
     const auto deck = Parser {}.parseString(keywords_string);
     const auto& test_keyword = deck.getKeyword("EHYSTR");
-    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items);
+    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items, {});
     std::vector<ValidationError> errors;
     validator.validateDeckKeyword(test_keyword, errors);
     BOOST_CHECK(!errors[0].critical);
@@ -248,7 +248,7 @@ ENDSCALE
     const auto deck = Parser {}.parseString(keywords_string);
     const auto& test_keyword1 = deck.getKeyword("PINCH");
     const auto& test_keyword2 = deck.getKeyword("ENDSCALE");
-    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items);
+    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items, {});
     std::vector<ValidationError> errors;
     validator.validateDeckKeyword(test_keyword1, errors);
     validator.validateDeckKeyword(test_keyword2, errors);
@@ -270,7 +270,7 @@ ECHO
 )"};
     const auto deck = Parser {}.parseString(keywords_string);
     const auto& test_keyword = deck.getKeyword("ECHO");
-    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items);
+    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items, {});
     std::vector<ValidationError> errors;
     validator.validateDeckKeyword(test_keyword, errors);
     const auto report = get_error_report(errors, false);
@@ -289,7 +289,7 @@ ECHO
 )"};
     const auto deck = Parser {}.parseString(keywords_string);
     const auto& test_keyword = deck.getKeyword("ECHO");
-    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items);
+    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items, {});
     std::vector<ValidationError> errors;
     validator.validateDeckKeyword(test_keyword, errors);
     const auto report = get_error_report(errors, true);
@@ -304,7 +304,7 @@ NOECHO
 )"};
     const auto deck = Parser {}.parseString(keywords_string);
     const auto& test_keyword = deck.getKeyword("NOECHO");
-    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items);
+    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items, {});
     std::vector<ValidationError> errors;
     validator.validateDeckKeyword(test_keyword, errors);
     const auto report = get_error_report(errors, true);
@@ -322,7 +322,7 @@ NOECHO
 )"};
     const auto deck = Parser {}.parseString(keywords_string);
     const auto& test_keyword = deck.getKeyword("NOECHO");
-    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items);
+    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items, {});
     std::vector<ValidationError> errors;
     validator.validateDeckKeyword(test_keyword, errors);
     const auto report = get_error_report(errors, false);
@@ -338,7 +338,7 @@ PINCH
 )"};
     const auto deck = Parser {}.parseString(keywords_string);
     const auto& test_keyword = deck.getKeyword("PINCH");
-    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items);
+    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items, {});
     std::vector<ValidationError> errors;
     validator.validateDeckKeyword(test_keyword, errors);
     const auto report = get_error_report(errors, false);
@@ -361,7 +361,7 @@ COMPDAT
 )"};
     const auto deck = Parser {}.parseString(keywords_string);
     const auto& test_keyword = deck.getKeyword("COMPDAT");
-    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items);
+    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items, {});
     std::vector<ValidationError> errors;
     validator.validateDeckKeyword(test_keyword, errors);
     const auto report = get_error_report(errors, false);
@@ -382,7 +382,7 @@ PINCH
 )"};
     const auto deck = Parser {}.parseString(keywords_string);
     const auto& test_keyword = deck.getKeyword("PINCH");
-    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items);
+    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items, {});
     std::vector<ValidationError> errors;
     validator.validateDeckKeyword(test_keyword, errors);
     const auto report = get_error_report(errors, true);
@@ -398,7 +398,7 @@ ENDSCALE
 )"};
     const auto deck = Parser {}.parseString(keywords_string);
     const auto& test_keyword = deck.getKeyword("ENDSCALE");
-    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items);
+    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items, {});
     std::vector<ValidationError> errors;
     validator.validateDeckKeyword(test_keyword, errors);
     const auto report = get_error_report(errors, false);
@@ -417,7 +417,7 @@ ENDSCALE
 )"};
     const auto deck = Parser {}.parseString(keywords_string);
     const auto& test_keyword = deck.getKeyword("ENDSCALE");
-    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items);
+    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items, {});
     std::vector<ValidationError> errors;
     validator.validateDeckKeyword(test_keyword, errors);
     const auto report = get_error_report(errors, true);
@@ -433,7 +433,7 @@ ENDSCALE
 )"};
     const auto deck = Parser {}.parseString(keywords_string);
     const auto& test_keyword = deck.getKeyword("ENDSCALE");
-    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items);
+    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items, {});
     std::vector<ValidationError> errors;
     validator.validateDeckKeyword(test_keyword, errors);
     const auto report = get_error_report(errors, true);
@@ -452,7 +452,7 @@ ENDSCALE
 )"};
     const auto deck = Parser {}.parseString(keywords_string);
     const auto& test_keyword = deck.getKeyword("ENDSCALE");
-    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items);
+    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items, {});
     std::vector<ValidationError> errors;
     validator.validateDeckKeyword(test_keyword, errors);
     const auto report = get_error_report(errors, false);
@@ -475,7 +475,7 @@ ENDSCALE
     const auto& test_keyword2 = deck.getKeyword("NOECHO");
     const auto& test_keyword3 = deck.getKeyword("PINCH");
     const auto& test_keyword4 = deck.getKeyword("ENDSCALE");
-    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items);
+    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items, {});
     std::vector<ValidationError> errors;
     validator.validateDeckKeyword(test_keyword1, errors);
     validator.validateDeckKeyword(test_keyword2, errors);
@@ -506,7 +506,7 @@ ENDSCALE
     const auto& test_keyword2 = deck.getKeyword("NOECHO");
     const auto& test_keyword3 = deck.getKeyword("PINCH");
     const auto& test_keyword4 = deck.getKeyword("ENDSCALE");
-    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items);
+    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items, {});
     std::vector<ValidationError> errors;
     validator.validateDeckKeyword(test_keyword1, errors);
     validator.validateDeckKeyword(test_keyword2, errors);
@@ -531,7 +531,7 @@ EQLOPTS
 )"};
     const auto deck = Parser {}.parseString(keywords_string);
     const auto& test_keyword = deck.getKeyword("EQLOPTS");
-    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items);
+    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items, {});
     std::vector<ValidationError> errors;
     validator.validateDeckKeyword(test_keyword, errors);
     BOOST_CHECK(errors.size() == 0);
@@ -547,7 +547,7 @@ EQLOPTS
 )"};
     const auto deck = Parser {}.parseString(keywords_string);
     const auto& test_keyword = deck.getKeyword("EQLOPTS");
-    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items);
+    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items, {});
     std::vector<ValidationError> errors;
     validator.validateDeckKeyword(test_keyword, errors);
     BOOST_CHECK(errors.size() == 1);
@@ -566,7 +566,7 @@ EQLOPTS
 )"};
     const auto deck = Parser {}.parseString(keywords_string);
     const auto& test_keyword = deck.getKeyword("EQLOPTS");
-    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items);
+    KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items, {});
     std::vector<ValidationError> errors;
     validator.validateDeckKeyword(test_keyword, errors);
     BOOST_CHECK(errors.size() == 0);

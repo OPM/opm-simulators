@@ -33,8 +33,11 @@
 namespace Opm
 {
 
+
+
 namespace KeywordValidation
 {
+
 
     std::string get_error_report(const std::vector<ValidationError>& errors, const bool critical)
     {
@@ -75,12 +78,21 @@ namespace KeywordValidation
     }
 
     void
-    KeywordValidator::validateDeck(const Deck& deck, const ParseContext& parse_context, ErrorGuard& error_guard) const
+    KeywordValidator::validateDeck(const Deck& deck,
+                                   const ParseContext& parse_context,
+                                   ErrorGuard& error_guard) const
     {
         // Make a vector with all problems encountered in the deck.
         std::vector<ValidationError> errors;
-        for (const auto& keyword : deck)
+        for (const auto& keyword : deck) {
             validateDeckKeyword(keyword, errors);
+
+            const auto& special_it = this->m_special_validation.find(keyword.name());
+            if (special_it != this->m_special_validation.end()) {
+                const auto& validator = special_it->second;
+                validator(keyword, errors);
+            }
+        }
 
         // First report non-critical problems as a warning.
         auto warning_report = get_error_report(errors, false);
