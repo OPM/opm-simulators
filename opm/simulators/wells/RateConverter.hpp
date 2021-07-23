@@ -496,13 +496,14 @@ namespace Opm {
                     if (hydrocarbonPV > 0.) {
                         auto& attr = attributes_hpv[reg];
                         attr.pv += hydrocarbonPV;
-                        if (Details::PhaseUsed::oil(pu)) {
-                            attr.pressure += fs.pressure(FluidSystem::oilPhaseIdx).value() * hydrocarbonPV;
+                        if (Details::PhaseUsed::oil(pu) && Details::PhaseUsed::gas(pu)) {
                             attr.rs += fs.Rs().value() * hydrocarbonPV;
                             attr.rv += fs.Rv().value() * hydrocarbonPV;
-                            attr.temperature += fs.temperature(FluidSystem::oilPhaseIdx).value() * hydrocarbonPV;
                         }
-                        else{
+                        if (Details::PhaseUsed::oil(pu)) {
+                            attr.pressure += fs.pressure(FluidSystem::oilPhaseIdx).value() * hydrocarbonPV;
+                            attr.temperature += fs.temperature(FluidSystem::oilPhaseIdx).value() * hydrocarbonPV;
+                        } else {
                             assert(Details::PhaseUsed::gas(pu));
                             attr.pressure += fs.pressure(FluidSystem::gasPhaseIdx).value() * hydrocarbonPV;
                             attr.temperature += fs.temperature(FluidSystem::gasPhaseIdx).value() * hydrocarbonPV;
@@ -513,13 +514,14 @@ namespace Opm {
                     if (pv_cell > 0.) {
                         auto& attr = attributes_pv[reg];
                         attr.pv += pv_cell;
-                        if (Details::PhaseUsed::oil(pu)) {
-                            attr.pressure += fs.pressure(FluidSystem::oilPhaseIdx).value() * pv_cell;
+                        if (Details::PhaseUsed::oil(pu) && Details::PhaseUsed::gas(pu)) {
                             attr.rs += fs.Rs().value() * pv_cell;
                             attr.rv += fs.Rv().value() * pv_cell;
-                            attr.temperature += fs.temperature(FluidSystem::oilPhaseIdx).value() * pv_cell;
                         }
-                        else{
+                        if (Details::PhaseUsed::oil(pu)) {
+                            attr.pressure += fs.pressure(FluidSystem::oilPhaseIdx).value() * pv_cell;
+                            attr.temperature += fs.temperature(FluidSystem::oilPhaseIdx).value() * pv_cell;
+                        } else {
                              assert(Details::PhaseUsed::gas(pu));
                              attr.pressure += fs.pressure(FluidSystem::gasPhaseIdx).value() * pv_cell;
                              attr.temperature += fs.temperature(FluidSystem::gasPhaseIdx).value() * pv_cell;
