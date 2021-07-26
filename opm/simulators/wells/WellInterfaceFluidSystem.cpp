@@ -38,6 +38,7 @@
 
 #include <cassert>
 #include <cmath>
+#include <fmt/format.h>
 
 namespace Opm
 {
@@ -261,6 +262,13 @@ checkIndividualConstraints(WellState& well_state,
         {
             const auto& thp = getTHPConstraint(summaryState);
             double current_thp =  well_state.thp(well_index);
+            {
+                const auto& wname = well_state.name(well_index);
+                if (wname == "PROD3" || wname == "PROD2" || wname == "PROD1") {
+                    auto msg = fmt::format("{}: Current THP: {}   Limit: {}", wname, current_thp, thp);
+                    OpmLog::info(msg);
+                }
+            }
             if (thp > current_thp) {
                 well_state.currentProductionControl(well_index, Well::ProducerCMode::THP);
                 return true;
