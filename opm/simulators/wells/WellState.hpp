@@ -339,6 +339,10 @@ public:
         return this->perfdata[well_index];
     }
 
+    const std::string& name(std::size_t well_index) const {
+        return this->status_.well_name(well_index);
+    }
+
 private:
     WellMapType wellMap_;
     // Use of std::optional<> here is a technical crutch, the
