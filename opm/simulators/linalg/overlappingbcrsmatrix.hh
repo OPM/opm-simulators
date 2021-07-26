@@ -36,7 +36,6 @@
 
 #include <dune/istl/scalarproducts.hh>
 #include <dune/istl/io.hh>
-
 #include <algorithm>
 #include <set>
 #include <map>
