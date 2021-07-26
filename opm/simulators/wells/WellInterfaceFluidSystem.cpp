@@ -80,192 +80,196 @@ calculateReservoirRates(WellState& well_state) const
     }
 }
 
+
+template <typename FluidSystem>
+Well::ProducerCMode
+WellInterfaceFluidSystem<FluidSystem>::
+activeProductionConstraint(const WellState& well_state,
+                           const SummaryState& summaryState) const
+{
+    const PhaseUsage& pu = this->phaseUsage();
+    const int well_index = this->index_of_well_;
+    const auto controls = this->well_ecl_.productionControls(summaryState);
+    auto currentControl = well_state.currentProductionControl(well_index);
+
+    if (controls.hasControl(Well::ProducerCMode::BHP) && currentControl != Well::ProducerCMode::BHP) {
+        const double bhp_limit = controls.bhp_limit;
+        double current_bhp = well_state.bhp(well_index);
+        if (bhp_limit > current_bhp)
+            return Well::ProducerCMode::BHP;
+    }
+
+    if (controls.hasControl(Well::ProducerCMode::ORAT) && currentControl != Well::ProducerCMode::ORAT) {
+        double current_rate = -well_state.wellRates(well_index)[pu.phase_pos[BlackoilPhases::Liquid]];
+        if (controls.oil_rate < current_rate)
+            return Well::ProducerCMode::ORAT;
+    }
+
+    if (controls.hasControl(Well::ProducerCMode::WRAT) && currentControl != Well::ProducerCMode::WRAT) {
+        double current_rate = -well_state.wellRates(well_index)[pu.phase_pos[BlackoilPhases::Aqua]];
+        if (controls.water_rate < current_rate)
+            return Well::ProducerCMode::WRAT;
+    }
+
+    if (controls.hasControl(Well::ProducerCMode::GRAT) && currentControl != Well::ProducerCMode::GRAT) {
+        double current_rate = -well_state.wellRates(well_index)[pu.phase_pos[BlackoilPhases::Vapour]];
+        if (controls.gas_rate < current_rate)
+            return Well::ProducerCMode::GRAT;
+    }
+
+    if (controls.hasControl(Well::ProducerCMode::LRAT) && currentControl != Well::ProducerCMode::LRAT) {
+        double current_rate = -well_state.wellRates(well_index)[pu.phase_pos[BlackoilPhases::Liquid]];
+        current_rate -= well_state.wellRates(well_index)[pu.phase_pos[BlackoilPhases::Aqua]];
+        if (controls.liquid_rate < current_rate)
+            return Well::ProducerCMode::LRAT;
+    }
+
+    if (controls.hasControl(Well::ProducerCMode::RESV) && currentControl != Well::ProducerCMode::RESV) {
+        double current_rate = 0.0;
+        if (pu.phase_used[BlackoilPhases::Aqua])
+            current_rate -= well_state.wellReservoirRates(well_index)[pu.phase_pos[BlackoilPhases::Aqua]];
+
+        if (pu.phase_used[BlackoilPhases::Liquid])
+            current_rate -= well_state.wellReservoirRates(well_index)[pu.phase_pos[BlackoilPhases::Liquid]];
+
+        if (pu.phase_used[BlackoilPhases::Vapour])
+            current_rate -= well_state.wellReservoirRates(well_index)[pu.phase_pos[BlackoilPhases::Vapour]];
+
+        if (controls.prediction_mode && controls.resv_rate < current_rate)
+            return Well::ProducerCMode::RESV;
+
+        if (!controls.prediction_mode) {
+            const int fipreg = 0; // not considering the region for now
+            const int np = number_of_phases_;
+
+            std::vector<double> surface_rates(np, 0.0);
+            if (pu.phase_used[BlackoilPhases::Aqua])
+                surface_rates[pu.phase_pos[BlackoilPhases::Aqua]] = controls.water_rate;
+            if (pu.phase_used[BlackoilPhases::Liquid])
+                surface_rates[pu.phase_pos[BlackoilPhases::Liquid]] = controls.oil_rate;
+            if (pu.phase_used[BlackoilPhases::Vapour])
+                surface_rates[pu.phase_pos[BlackoilPhases::Vapour]] = controls.gas_rate;
+
+            std::vector<double> voidage_rates(np, 0.0);
+            rateConverter_.calcReservoirVoidageRates(fipreg, pvtRegionIdx_, surface_rates, voidage_rates);
+
+            double resv_rate = 0.0;
+            for (int p = 0; p < np; ++p)
+                resv_rate += voidage_rates[p];
+
+            if (resv_rate < current_rate)
+                return Well::ProducerCMode::RESV;
+        }
+    }
+
+    if (controls.hasControl(Well::ProducerCMode::THP) && currentControl != Well::ProducerCMode::THP) {
+        const auto& thp = getTHPConstraint(summaryState);
+        double current_thp = well_state.thp(well_index);
+        if (thp > current_thp)
+            return Well::ProducerCMode::THP;
+    }
+
+    return well_state.currentProductionControl(well_index);
+}
+
+
+template <typename FluidSystem>
+Well::InjectorCMode
+WellInterfaceFluidSystem<FluidSystem>::
+activeInjectionConstraint(const WellState& well_state,
+                          const SummaryState& summaryState) const
+{
+    const PhaseUsage& pu = this->phaseUsage();
+    const int well_index = this->index_of_well_;
+
+    const auto controls = this->well_ecl_.injectionControls(summaryState);
+    auto currentControl = well_state.currentInjectionControl(well_index);
+
+    if (controls.hasControl(Well::InjectorCMode::BHP) && currentControl != Well::InjectorCMode::BHP)
+    {
+        const auto& bhp = controls.bhp_limit;
+        double current_bhp = well_state.bhp(well_index);
+        if (bhp < current_bhp)
+            return Well::InjectorCMode::BHP;
+    }
+
+    if (controls.hasControl(Well::InjectorCMode::RATE) && currentControl != Well::InjectorCMode::RATE)
+    {
+        InjectorType injectorType = controls.injector_type;
+        double current_rate = 0.0;
+
+        switch (injectorType) {
+        case InjectorType::WATER:
+        {
+            current_rate = well_state.wellRates(well_index)[ pu.phase_pos[BlackoilPhases::Aqua] ];
+            break;
+        }
+        case InjectorType::OIL:
+        {
+            current_rate = well_state.wellRates(well_index)[ pu.phase_pos[BlackoilPhases::Liquid] ];
+            break;
+        }
+        case InjectorType::GAS:
+        {
+            current_rate = well_state.wellRates(well_index)[  pu.phase_pos[BlackoilPhases::Vapour] ];
+            break;
+        }
+        default:
+            throw("Expected WATER, OIL or GAS as type for injectors " + this->well_ecl_.name());
+        }
+
+        if (controls.surface_rate < current_rate)
+            return Well::InjectorCMode::RATE;
+    }
+
+    if (controls.hasControl(Well::InjectorCMode::RESV) && currentControl != Well::InjectorCMode::RESV)
+    {
+        double current_rate = 0.0;
+        if( pu.phase_used[BlackoilPhases::Aqua] )
+            current_rate += well_state.wellReservoirRates(well_index)[ pu.phase_pos[BlackoilPhases::Aqua] ];
+
+        if( pu.phase_used[BlackoilPhases::Liquid] )
+            current_rate += well_state.wellReservoirRates(well_index)[ pu.phase_pos[BlackoilPhases::Liquid] ];
+
+        if( pu.phase_used[BlackoilPhases::Vapour] )
+            current_rate += well_state.wellReservoirRates(well_index)[ pu.phase_pos[BlackoilPhases::Vapour] ];
+
+        if (controls.reservoir_rate < current_rate)
+            return Well::InjectorCMode::RESV;
+    }
+
+    if (controls.hasControl(Well::InjectorCMode::THP) && currentControl != Well::InjectorCMode::THP)
+    {
+        const auto& thp = getTHPConstraint(summaryState);
+        double current_thp = well_state.thp(well_index);
+        if (thp < current_thp)
+            return Well::InjectorCMode::THP;
+    }
+
+    return well_state.currentInjectionControl(well_index);
+}
+
 template <typename FluidSystem>
 bool
 WellInterfaceFluidSystem<FluidSystem>::
 checkIndividualConstraints(WellState& well_state,
                            const SummaryState& summaryState) const
 {
-    const auto& well = well_ecl_;
-    const PhaseUsage& pu = phaseUsage();
-    const int well_index = index_of_well_;
-
-    if (well.isInjector()) {
-        const auto controls = well.injectionControls(summaryState);
-        const auto currentControl = well_state.currentInjectionControl(well_index);
-
-        if (controls.hasControl(Well::InjectorCMode::BHP) && currentControl != Well::InjectorCMode::BHP)
-        {
-            const auto& bhp = controls.bhp_limit;
-            double current_bhp = well_state.bhp(well_index);
-            if (bhp < current_bhp) {
-                well_state.currentInjectionControl(well_index, Well::InjectorCMode::BHP);
-                return true;
-            }
+    const int well_index = this->index_of_well_;
+    if (this->well_ecl_.isProducer()) {
+        auto new_cmode = this->activeProductionConstraint(well_state, summaryState);
+        if (new_cmode != well_state.currentProductionControl(well_index)) {
+            well_state.currentProductionControl(well_index, new_cmode);
+            return true;
         }
-
-        if (controls.hasControl(Well::InjectorCMode::RATE) && currentControl != Well::InjectorCMode::RATE)
-        {
-            InjectorType injectorType = controls.injector_type;
-            double current_rate = 0.0;
-
-            switch (injectorType) {
-            case InjectorType::WATER:
-            {
-                current_rate = well_state.wellRates(well_index)[ pu.phase_pos[BlackoilPhases::Aqua] ];
-                break;
-            }
-            case InjectorType::OIL:
-            {
-                current_rate = well_state.wellRates(well_index)[ pu.phase_pos[BlackoilPhases::Liquid] ];
-                break;
-            }
-            case InjectorType::GAS:
-            {
-                current_rate = well_state.wellRates(well_index)[  pu.phase_pos[BlackoilPhases::Vapour] ];
-                break;
-            }
-            default:
-                throw("Expected WATER, OIL or GAS as type for injectors " + well.name());
-            }
-
-            if (controls.surface_rate < current_rate) {
-                well_state.currentInjectionControl(well_index, Well::InjectorCMode::RATE);
-                return true;
-            }
-
-        }
-
-        if (controls.hasControl(Well::InjectorCMode::RESV) && currentControl != Well::InjectorCMode::RESV)
-        {
-            double current_rate = 0.0;
-            if( pu.phase_used[BlackoilPhases::Aqua] )
-                current_rate += well_state.wellReservoirRates(well_index)[ pu.phase_pos[BlackoilPhases::Aqua] ];
-
-            if( pu.phase_used[BlackoilPhases::Liquid] )
-                current_rate += well_state.wellReservoirRates(well_index)[ pu.phase_pos[BlackoilPhases::Liquid] ];
-
-            if( pu.phase_used[BlackoilPhases::Vapour] )
-                current_rate += well_state.wellReservoirRates(well_index)[ pu.phase_pos[BlackoilPhases::Vapour] ];
-
-            if (controls.reservoir_rate < current_rate) {
-                well_state.currentInjectionControl(well_index, Well::InjectorCMode::RESV);
-                return true;
-            }
-        }
-
-        if (controls.hasControl(Well::InjectorCMode::THP) && currentControl != Well::InjectorCMode::THP)
-        {
-            const auto& thp = getTHPConstraint(summaryState);
-            double current_thp = well_state.thp(well_index);
-            if (thp < current_thp) {
-                well_state.currentInjectionControl(well_index, Well::InjectorCMode::THP);
-                return true;
-            }
-        }
-
     }
 
-    if (well.isProducer( )) {
-        const auto controls = well.productionControls(summaryState);
-        auto currentControl = well_state.currentProductionControl(well_index);
-
-        if (controls.hasControl(Well::ProducerCMode::BHP) && currentControl != Well::ProducerCMode::BHP )
-        {
-            const double bhp = controls.bhp_limit;
-            double current_bhp = well_state.bhp(well_index);
-            if (bhp > current_bhp) {
-                well_state.currentProductionControl(well_index, Well::ProducerCMode::BHP);
-                return true;
-            }
+    if (this->well_ecl_.isInjector()) {
+        auto new_cmode = this->activeInjectionConstraint(well_state, summaryState);
+        if (new_cmode != well_state.currentInjectionControl(well_index)) {
+            well_state.currentInjectionControl(well_index, new_cmode);
+            return true;
         }
-
-        if (controls.hasControl(Well::ProducerCMode::ORAT) && currentControl != Well::ProducerCMode::ORAT) {
-            double current_rate = -well_state.wellRates(well_index)[ pu.phase_pos[BlackoilPhases::Liquid] ];
-            if (controls.oil_rate < current_rate  ) {
-                well_state.currentProductionControl(well_index, Well::ProducerCMode::ORAT);
-                return true;
-            }
-        }
-
-        if (controls.hasControl(Well::ProducerCMode::WRAT) && currentControl != Well::ProducerCMode::WRAT ) {
-            double current_rate = -well_state.wellRates(well_index)[ pu.phase_pos[BlackoilPhases::Aqua] ];
-            if (controls.water_rate < current_rate  ) {
-                well_state.currentProductionControl(well_index, Well::ProducerCMode::WRAT);
-                return true;
-            }
-        }
-
-        if (controls.hasControl(Well::ProducerCMode::GRAT) && currentControl != Well::ProducerCMode::GRAT ) {
-            double current_rate = -well_state.wellRates(well_index)[ pu.phase_pos[BlackoilPhases::Vapour] ];
-            if (controls.gas_rate < current_rate  ) {
-                well_state.currentProductionControl(well_index, Well::ProducerCMode::GRAT);
-                return true;
-            }
-        }
-
-        if (controls.hasControl(Well::ProducerCMode::LRAT) && currentControl != Well::ProducerCMode::LRAT) {
-            double current_rate = -well_state.wellRates(well_index)[ pu.phase_pos[BlackoilPhases::Liquid] ];
-            current_rate -= well_state.wellRates(well_index)[ pu.phase_pos[BlackoilPhases::Aqua] ];
-            if (controls.liquid_rate < current_rate  ) {
-                well_state.currentProductionControl(well_index, Well::ProducerCMode::LRAT);
-                return true;
-            }
-        }
-
-        if (controls.hasControl(Well::ProducerCMode::RESV) && currentControl != Well::ProducerCMode::RESV ) {
-            double current_rate = 0.0;
-            if( pu.phase_used[BlackoilPhases::Aqua] )
-                current_rate -= well_state.wellReservoirRates(well_index)[ pu.phase_pos[BlackoilPhases::Aqua] ];
-
-            if( pu.phase_used[BlackoilPhases::Liquid] )
-                current_rate -= well_state.wellReservoirRates(well_index)[ pu.phase_pos[BlackoilPhases::Liquid] ];
-
-            if( pu.phase_used[BlackoilPhases::Vapour] )
-                current_rate -= well_state.wellReservoirRates(well_index)[ pu.phase_pos[BlackoilPhases::Vapour] ];
-
-            if (controls.prediction_mode && controls.resv_rate < current_rate) {
-                well_state.currentProductionControl(well_index, Well::ProducerCMode::RESV);
-                return true;
-            }
-
-            if (!controls.prediction_mode) {
-                const int fipreg = 0; // not considering the region for now
-                const int np = number_of_phases_;
-
-                std::vector<double> surface_rates(np, 0.0);
-                if( pu.phase_used[BlackoilPhases::Aqua] )
-                    surface_rates[pu.phase_pos[BlackoilPhases::Aqua]] = controls.water_rate;
-                if( pu.phase_used[BlackoilPhases::Liquid] )
-                    surface_rates[pu.phase_pos[BlackoilPhases::Liquid]] = controls.oil_rate;
-                if( pu.phase_used[BlackoilPhases::Vapour] )
-                    surface_rates[pu.phase_pos[BlackoilPhases::Vapour]] = controls.gas_rate;
-
-                std::vector<double> voidage_rates(np, 0.0);
-                rateConverter_.calcReservoirVoidageRates(fipreg, pvtRegionIdx_, surface_rates, voidage_rates);
-
-                double resv_rate = 0.0;
-                for (int p = 0; p < np; ++p) {
-                    resv_rate += voidage_rates[p];
-                }
-
-                if (resv_rate < current_rate) {
-                    well_state.currentProductionControl(well_index, Well::ProducerCMode::RESV);
-                    return true;
-                }
-            }
-        }
-
-        if (controls.hasControl(Well::ProducerCMode::THP) && currentControl != Well::ProducerCMode::THP)
-        {
-            const auto& thp = getTHPConstraint(summaryState);
-            double current_thp =  well_state.thp(well_index);
-            if (thp > current_thp) {
-                well_state.currentProductionControl(well_index, Well::ProducerCMode::THP);
-                return true;
-            }
-        }
-
     }
 
     return false;

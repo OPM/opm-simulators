@@ -84,6 +84,12 @@ protected:
     bool checkIndividualConstraints(WellState& well_state,
                                     const SummaryState& summaryState) const;
 
+    Well::InjectorCMode activeInjectionConstraint(const WellState& well_state,
+                                                  const SummaryState& summaryState) const;
+
+    Well::ProducerCMode activeProductionConstraint(const WellState& well_state,
+                                                   const SummaryState& summaryState) const;
+
     std::pair<bool, double> checkGroupConstraintsInj(const Group& group,
                                                      const WellState& well_state,
                                                      const GroupState& group_state,
