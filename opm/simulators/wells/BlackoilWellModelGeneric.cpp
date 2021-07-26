@@ -233,6 +233,11 @@ loadRestartData(std::size_t report_step,
                   }
               }
         }
+
+        if (well_state.name(well_index) == "PROD3") {
+            auto msg = fmt::format("PROD3 THP after restart: {}", well_state.thp(well_index));
+            OpmLog::info(msg);
+        }
     }
 
     for (const auto& [group, value] : grpNwrkValues.groupData) {

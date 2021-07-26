@@ -37,6 +37,7 @@
 
 #include <cassert>
 #include <cmath>
+#include <fmt/format.h>
 
 namespace Opm
 {

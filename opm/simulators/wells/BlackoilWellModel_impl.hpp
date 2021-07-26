@@ -219,6 +219,30 @@ namespace Opm {
 
         // Store the current well state, to be able to recover in the case of failed iterations
         this->commitWGState();
+
+        for (std::size_t well_index = 0; well_index < this->wellState().size(); well_index++) {
+            const auto& name = this->wellState().name(well_index);
+            if (this->wellState().producer(well_index)) {
+                const auto& cmode = this->wellState().currentProductionControl(well_index);
+                const auto& well = this->schedule().getWell( name, timeStepIdx );
+                const auto& prod_props = well.getProductionProperties();
+                const auto& prod_controls = prod_props.controls(summaryState, 0);
+                auto msg = fmt::format("Producer: {} : {} Limit: {}", name, Well::ProducerCMode2String(cmode), prod_controls.limit(cmode));
+                OpmLog::info(msg);
+            } else {
+                const auto& cmode = this->wellState().currentInjectionControl(well_index);
+                auto msg = fmt::format("Injector: {} : {}", name, Well::InjectorCMode2String(cmode));
+                OpmLog::info(msg);
+                if (cmode == Well::InjectorCMode::GRUP) {
+                    const auto& group = this->schedule().getGroup("TEST", timeStepIdx);
+                    const auto& inj_controls = group.injectionControls(Phase::WATER, summaryState);
+                    const auto& group_cmode = inj_controls.cmode;
+                    const auto& limit = inj_controls.target_void_fraction;
+                    auto group_msg = fmt::format("   Group: {} : {} Limit: {}", group.name(), Group::InjectionCMode2String(group_cmode), limit);
+                    OpmLog::info(group_msg);
+                }
+            }
+        }
     }
 
 
