@@ -29,6 +29,7 @@
 #include <utility>
 
 #include <opm/common/OpmLog/KeywordLocation.hpp>
+#include <opm/common/utility/DebugConfig.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Deck/DeckItem.hpp>
 #include <opm/parser/eclipse/EclipseState/Aquifer/Aquancon.hpp>
@@ -570,6 +571,7 @@ TEST_FOR_TYPE(BCConfig)
 TEST_FOR_TYPE(BrineDensityTable)
 TEST_FOR_TYPE(ColumnSchema)
 TEST_FOR_TYPE(Connection)
+TEST_FOR_TYPE(DebugConfig)
 TEST_FOR_TYPE(Deck)
 TEST_FOR_TYPE(DeckItem)
 TEST_FOR_TYPE(DeckKeyword)

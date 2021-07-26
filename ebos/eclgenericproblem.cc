@@ -28,6 +28,7 @@
 
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
+#include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
@@ -344,8 +345,10 @@ beginEpisode_(bool enableExperiments,
         OpmLog::info(ss.str());
     }
 
-    const auto& events = schedule_[episodeIdx].events();
+    const auto& debug_config = schedule_[episodeIdx].debug_config();
+    OpmLog::updateDebugConfig(debug_config);
 
+    const auto& events = schedule_[episodeIdx].events();
     // react to TUNING changes
     if (episodeIdx > 0 && enableTuning_ && events.hasEvent(ScheduleEvents::TUNING_CHANGE))
     {
