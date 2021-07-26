@@ -25,12 +25,14 @@
 
 #include <dune/istl/scalarproducts.hh>
 #include <dune/istl/operators.hh>
-#include <dune/istl/preconditioners.hh>
 #include <dune/istl/solvers.hh>
 #include <dune/istl/owneroverlapcopy.hh>
-#include <dune/istl/paamg/amg.hh>
+#include <dune/istl/superlu.hh>
+#include <dune/istl/umfpack.hh>
+
 
 #include <dune/common/fmatrix.hh>
+#include <dune/common/typetraits.hh>
 
 namespace Opm {
 namespace MatrixBlockHelp {
@@ -247,10 +249,6 @@ void print_row(std::ostream& s, const Opm::MatrixBlock<K, n, m>& A,
                int precision)
 { print_row(s, A.asBase(), I, J, therow, width, precision); }
 
-template<class K, int n, int m>
-K& firstmatrixelement(Opm::MatrixBlock<K, n, m>& A)
-{ return firstmatrixelement(A.asBase()); }
-
 template <typename Scalar, int n, int m>
 struct MatrixDimension<Opm::MatrixBlock<Scalar, n, m> >
     : public MatrixDimension<typename Opm::MatrixBlock<Scalar, n, m>::BaseType>
@@ -296,6 +294,11 @@ public:
     {}
 };
 #endif
+
+template<typename T, int n, int m>
+struct IsNumber<Opm::MatrixBlock<T, n, m>>
+    : public IsNumber<Dune::FieldMatrix<T,n,m>>
+{};
 
 } // end namespace Dune
 
