@@ -166,6 +166,14 @@ public:
         return std::nullopt;
     }
 
+    const std::string& well_name(std::size_t well_index) const {
+        for (const auto& [wname, windex] : this->index_map) {
+            if (windex == well_index)
+                return wname;
+        }
+        throw std::logic_error("No such well");
+    }
+
 
 private:
     void update_if(std::size_t index, const std::string& name, const WellContainer<T>& other) {

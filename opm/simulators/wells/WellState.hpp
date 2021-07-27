@@ -71,9 +71,14 @@ public:
     const WellMapType& wellMap() const { return wellMap_; }
     WellMapType& wellMap() { return wellMap_; }
 
+    std::size_t size() const {
+        return this->wellMap_.size();
+    }
+
+
     int numWells() const
     {
-        return wellMap_.size();
+        return this->size();
     }
 
     int wellIndex(const std::string& wellName) const;
@@ -338,6 +343,15 @@ public:
     const PerfData& perfData(std::size_t well_index) const {
         return this->perfdata[well_index];
     }
+
+    const std::string& name(std::size_t well_index) const {
+        return this->status_.well_name(well_index);
+    }
+
+    bool producer(std::size_t well_index) const {
+        return this->is_producer_[well_index];
+    }
+
 
 private:
     WellMapType wellMap_;

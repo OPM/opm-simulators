@@ -432,6 +432,10 @@ BOOST_AUTO_TEST_CASE(TESTWellContainer) {
     BOOST_CHECK_THROW(wc["INVALID_WELL"], std::exception);
     BOOST_CHECK_EQUAL(wc["W1"], 1);
     BOOST_CHECK_EQUAL(wc["W2"], 2);
+    BOOST_CHECK_EQUAL(wc.well_name(0), "W1");
+    BOOST_CHECK_EQUAL(wc.well_name(1), "W2");
+    BOOST_CHECK_THROW(wc.well_name(10), std::exception);
+
 
     Opm::WellContainer<int> wc2;
     wc2.copy_welldata(wc);
