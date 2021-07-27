@@ -29,6 +29,7 @@
 
 #include <optional>
 #include <vector>
+#include <fmt/format.h>
 
 namespace Opm
 {
@@ -110,6 +111,8 @@ protected:
 
     const EvalWell& getBhp() const
     {
+        auto bhp = primary_variables_evaluation_[Bhp];
+        OpmLog::info(fmt::format("getBHP bhp:{}", bhp.value()));
         return primary_variables_evaluation_[Bhp];
     }
 

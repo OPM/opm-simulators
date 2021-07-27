@@ -40,6 +40,7 @@
 #include <cassert>
 #include <cmath>
 #include <stdexcept>
+#include <fmt/format.h>
 
 namespace Opm
 {
@@ -348,6 +349,7 @@ assembleControlEqProd_(const WellState& well_state,
     }
     case Well::ProducerCMode::THP: {
         control_eq = bhp - bhp_from_thp();
+        OpmLog::info(fmt::format("Assemble control THP EqProd : {} - {}", bhp.value(), bhp_from_thp().value()));
         break;
     }
     case Well::ProducerCMode::GRUP: {
@@ -375,6 +377,7 @@ assembleControlEqProd_(const WellState& well_state,
         OPM_DEFLOG_THROW(std::runtime_error, "Well control must be specified for well " + baseif_.name(), deferred_logger);
     }
     }
+    OpmLog::info(fmt::format("Assemble control EqProd : {}", control_eq.value()));
 }
 
 template<class FluidSystem>

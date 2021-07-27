@@ -227,7 +227,7 @@ namespace Opm {
                 const auto& well = this->schedule().getWell( name, timeStepIdx );
                 const auto& prod_props = well.getProductionProperties();
                 const auto& prod_controls = prod_props.controls(summaryState, 0);
-                auto msg = fmt::format("Producer: {} : {} Limit: {}", name, Well::ProducerCMode2String(cmode), prod_controls.limit(cmode));
+                auto msg = fmt::format("Producer: {}({}) : {} Limit: {}", name, prod_controls.controls, Well::ProducerCMode2String(cmode), prod_controls.limit(cmode));
                 OpmLog::info(msg);
             } else {
                 const auto& cmode = this->wellState().currentInjectionControl(well_index);

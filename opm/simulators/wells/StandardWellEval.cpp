@@ -37,6 +37,7 @@
 
 #include <cassert>
 #include <cmath>
+#include <fmt/format.h>
 
 #if HAVE_CUDA || HAVE_OPENCL
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
@@ -356,7 +357,10 @@ assembleControlEq(const WellState& well_state,
     static constexpr int Water = WellInterfaceIndices<FluidSystem,Indices,Scalar>::Water;
     EvalWell control_eq(numWellEq_ + Indices::numEq, 0.0);
 
+
     const auto& well = baseif_.wellEcl();
+    OpmLog::info(fmt::format("Assemble controlEq for: {}", well.name()));
+
 
     auto getRates = [&]() {
         std::vector<EvalWell> rates(3, EvalWell(numWellEq_ + Indices::numEq, 0.0));
