@@ -86,8 +86,10 @@ class BlackOilPrimaryVariables : public FvBasePrimaryVariables<TypeTag>
     enum { pressureSwitchIdx = Indices::pressureSwitchIdx };
     enum { compositionSwitchIdx = Indices::compositionSwitchIdx };
 
-    static const bool compositionSwitchEnabled = Indices::gasEnabled;
+    static const bool compositionSwitchEnabled = Indices::compositionSwitchIdx >= 0;
     static const bool waterEnabled = Indices::waterEnabled;
+    static const bool gasEnabled = Indices::gasEnabled;
+    static const bool oilEnabled = Indices::oilEnabled;
 
     // phase indices from the fluid system
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
@@ -315,7 +317,13 @@ public:
         else if (primaryVarsMeaning() == Sw_po_Sg) {
             if (waterEnabled)
                 (*this)[waterSaturationIdx] = FsToolbox::value(fluidState.saturation(waterPhaseIdx));
-            (*this)[pressureSwitchIdx] = FsToolbox::value(fluidState.pressure(oilPhaseIdx));
+            if (gasEnabled && waterEnabled && !oilEnabled) { 
+                //-> water-gas system   
+                (*this)[pressureSwitchIdx] = FsToolbox::value(fluidState.pressure(gasPhaseIdx));
+            }
+            else if (oilEnabled) {
+                (*this)[pressureSwitchIdx] = FsToolbox::value(fluidState.pressure(oilPhaseIdx));
+            }
             if( compositionSwitchEnabled )
                 (*this)[compositionSwitchIdx] = FsToolbox::value(fluidState.saturation(gasPhaseIdx));
         }
