@@ -95,9 +95,9 @@ struct BlackOilTwoPhaseIndices
      * \brief Index of the switching variable which determines the composition of the
      *        hydrocarbon phases.
      *
-     * \note For two-phase water oil models this is disabled.
+     * \note For two-phase water oil and water gas models this is disabled.
      */
-    static const int compositionSwitchIdx = gasEnabled ? PVOffset + 1 : -10000;
+    static const int compositionSwitchIdx = (gasEnabled && oilEnabled) ? PVOffset + 1 : -10000;
 
     //! Index of the primary variable for the first solvent
     static const int solventSaturationIdx =
