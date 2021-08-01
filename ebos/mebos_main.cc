@@ -171,10 +171,14 @@ int main(int argc, char **argv)
             return Opm::ebosGasOilMain(argc, argv);
         }
         else if (waterActive && gasActive) {
-            notSupportedErrorStream << "\n"
-                                    << "water-gas simulations are currently unsupported\n";
-            std::cerr << notSupportedErrorStream.str() << std::endl;
-            std::abort();
+            // run ebos_gaswater
+            if (myRank == 0)
+                std::cout << "Using gas-water mode" << std::endl;
+            Opm::ebosGasWaterSetDeck(std::move(deck),
+                                     std::move(parseContext),
+                                     std::move(errorGuard),
+                                     externalSetupTimer.elapsed());
+            return Opm::ebosGasWaterMain(argc, argv);
         }
     }
     else if (foamActive) {
