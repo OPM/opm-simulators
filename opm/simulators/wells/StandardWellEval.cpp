@@ -90,19 +90,20 @@ relaxationFactorFractionsProducer(const std::vector<double>& primary_variables,
     double relaxation_factor = 1.0;
 
     if (FluidSystem::numActivePhases() > 1) {
-        if (has_wfrac_variable) { 
+        if constexpr (has_wfrac_variable) { 
             const double relaxation_factor_w = StandardWellGeneric<Scalar>::
                                                relaxationFactorFraction(primary_variables[WFrac], dwells[0][WFrac]);
             relaxation_factor = std::min(relaxation_factor, relaxation_factor_w);
         }
 
-        if (has_gfrac_variable) { 
+        if constexpr (has_gfrac_variable) { 
             const double relaxation_factor_g = StandardWellGeneric<Scalar>::
                                                relaxationFactorFraction(primary_variables[GFrac], dwells[0][GFrac]);
             relaxation_factor = std::min(relaxation_factor, relaxation_factor_g);
         }
 
-        if (has_wfrac_variable && has_gfrac_variable) {
+
+        if constexpr (has_wfrac_variable && has_gfrac_variable) {
             // We need to make sure the even with the relaxation_factor, the sum of F_w and F_g is below one, so there will
             // not be negative oil fraction later
             const double original_sum = primary_variables[WFrac] + primary_variables[GFrac];
@@ -287,10 +288,10 @@ updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_log
     }
 
     if (std::abs(total_well_rate) > 0.) {
-        if (has_wfrac_variable) {
+        if constexpr (has_wfrac_variable) {
             primary_variables_[WFrac] = baseif_.scalingFactor(pu.phase_pos[Water]) * well_state.wellRates(well_index)[pu.phase_pos[Water]] / total_well_rate;
         }
-        if (has_gfrac_variable) {
+        if constexpr (has_gfrac_variable) {
             primary_variables_[GFrac] = baseif_.scalingFactor(pu.phase_pos[Gas]) * (well_state.wellRates(well_index)[pu.phase_pos[Gas]]
                                              - (Indices::enableSolvent ? well_state.solventWellRate(well_index) : 0.0) ) / total_well_rate ;
         }
@@ -326,11 +327,11 @@ updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_log
             // this will happen.
         } else if (baseif_.isProducer()) { // producers
             // TODO: the following are not addressed for the solvent case yet
-            if (has_wfrac_variable) {    
+            if constexpr (has_wfrac_variable) {    
                 primary_variables_[WFrac] = 1.0 / np;
             }
             
-            if (has_gfrac_variable) {   
+            if constexpr (has_gfrac_variable) {   
                 primary_variables_[GFrac] = 1.0 / np;
             }
         } else {
@@ -532,11 +533,11 @@ processFractions() const
         }
     }
     
-    if (has_wfrac_variable) {    
+    if constexpr (has_wfrac_variable) {    
         primary_variables_[WFrac] = F[pu.phase_pos[Water]];
     }
     
-    if (has_gfrac_variable) {        
+    if constexpr (has_gfrac_variable) {        
         primary_variables_[GFrac] = F[pu.phase_pos[Gas]];
     }
     if constexpr (Indices::enableSolvent) {
@@ -730,14 +731,14 @@ updatePrimaryVariablesNewton(const BVectorWell& dwells,
 
     // update the second and third well variable (The flux fractions)
     
-    if (has_wfrac_variable) {
+    if constexpr (has_wfrac_variable) {
         const int sign2 = dwells[0][WFrac] > 0 ? 1: -1;
         const double dx2_limited = sign2 * std::min(std::abs(dwells[0][WFrac] * relaxation_factor_fractions), dFLimit);
         // primary_variables_[WFrac] = old_primary_variables[WFrac] - dx2_limited;
         primary_variables_[WFrac] = old_primary_variables[WFrac] - dx2_limited;
     }
 
-    if (has_gfrac_variable) {        
+    if constexpr (has_gfrac_variable) {        
         const int sign3 = dwells[0][GFrac] > 0 ? 1: -1;
         const double dx3_limited = sign3 * std::min(std::abs(dwells[0][GFrac] * relaxation_factor_fractions), dFLimit);
         primary_variables_[GFrac] = old_primary_variables[GFrac] - dx3_limited;
