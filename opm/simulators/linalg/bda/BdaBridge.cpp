@@ -190,7 +190,10 @@ void getSparsityPattern(BridgeMatrix& mat, std::vector<int> &h_rows, std::vector
 
 
 template <class BridgeMatrix, class BridgeVector, int block_size>
-void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system(BridgeMatrix *mat OPM_UNUSED, BridgeVector &b OPM_UNUSED, WellContributions& wellContribs OPM_UNUSED, InverseOperatorResult &res OPM_UNUSED)
+void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system([[maybe_unused]] BridgeMatrix* mat,
+                                                                     [[maybe_unused]] BridgeVector& b,
+                                                                     [[maybe_unused]] WellContributions& wellContribs,
+                                                                     [[maybe_unused]] InverseOperatorResult& res)
 {
 
     if (use_gpu || use_fpga) {
@@ -256,7 +259,7 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system(BridgeMatri
 
 
 template <class BridgeMatrix, class BridgeVector, int block_size>
-void BdaBridge<BridgeMatrix, BridgeVector, block_size>::get_result(BridgeVector &x OPM_UNUSED) {
+void BdaBridge<BridgeMatrix, BridgeVector, block_size>::get_result([[maybe_unused]] BridgeVector& x) {
     if (use_gpu || use_fpga) {
         backend->get_result(static_cast<double*>(&(x[0][0])));
     }

@@ -401,7 +401,7 @@ namespace Opm {
         /// Called once after each time step.
         /// In this class, this function does nothing.
         /// \param[in] timer                  simulation timer
-        SimulatorReportSingle afterStep(const SimulatorTimerInterface& timer OPM_UNUSED)
+        SimulatorReportSingle afterStep(const SimulatorTimerInterface&)
         {
             SimulatorReportSingle report;
             Dune::Timer perfTimer;

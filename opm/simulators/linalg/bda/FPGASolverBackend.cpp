@@ -222,7 +222,7 @@ void FpgaSolverBackend<block_size>::get_result(double *x_)
 
 
 template <unsigned int block_size>
-SolverStatus FpgaSolverBackend<block_size>::solve_system(int N_, int nnz_, int dim, double *vals, int *rows, int *cols, double *b, WellContributions& wellContribs OPM_UNUSED, BdaResult &res)
+SolverStatus FpgaSolverBackend<block_size>::solve_system(int N_, int nnz_, int dim, double *vals, int *rows, int *cols, double *b, WellContributions&, BdaResult &res)
 {
     if (initialized == false) {
         initialize(N_, nnz_,  dim, vals, rows, cols);
