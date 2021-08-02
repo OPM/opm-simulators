@@ -145,7 +145,7 @@ public:
         return this->error_ <= this->tolerance() && errorSum_ <= sumTolerance_;
     }
 
-    void preSolve_(const SolutionVector& currentSolution  OPM_UNUSED,
+    void preSolve_(const SolutionVector&,
                    const GlobalEqVector& currentResidual)
     {
         const auto& constraintsMap = this->model().linearizer().constraintsMap();

@@ -72,7 +72,7 @@ public:
      *        aquifer pressure and the base run's total produced liquid
      *        volume from the model's aquifers.
      */
-    void initFromRestart(const data::Aquifers& aquiferSoln OPM_UNUSED)
+    void initFromRestart(const data::Aquifers&)
     {
         throw std::logic_error {
             "Initialization from restart data not supported "
@@ -102,10 +102,10 @@ public:
      * \brief Add the water which enters or leaves the reservoir due to aquifiers.
      */
     template <class Context>
-    void addToSource(RateVector& rate OPM_UNUSED,
-                     const Context& context OPM_UNUSED,
-                     unsigned spaceIdx OPM_UNUSED,
-                     unsigned timeIdx OPM_UNUSED) const
+    void addToSource(RateVector&,
+                     const Context&,
+                     unsigned,
+                     unsigned) const
     { }
 
     /*!
@@ -138,7 +138,7 @@ public:
      *        format.
      */
     template <class Restarter>
-    void serialize(Restarter& res OPM_UNUSED)
+    void serialize(Restarter&)
     { }
 
     /*!
@@ -146,7 +146,7 @@ public:
      *        format.
      */
     template <class Restarter>
-    void deserialize(Restarter& res OPM_UNUSED)
+    void deserialize(Restarter&)
     { }
 
 

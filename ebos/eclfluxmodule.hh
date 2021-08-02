@@ -87,7 +87,7 @@ class EclTransIntensiveQuantities
 {
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 protected:
-    void update_(const ElementContext& elemCtx OPM_UNUSED, unsigned dofIdx OPM_UNUSED, unsigned timeIdx OPM_UNUSED)
+    void update_(const ElementContext&, unsigned, unsigned)
     { }
 };
 
@@ -134,7 +134,7 @@ public:
      *
      * \param phaseIdx The index of the fluid phase
      */
-    const EvalDimVector& potentialGrad(unsigned phaseIdx OPM_UNUSED) const
+    const EvalDimVector& potentialGrad(unsigned) const
     {
         throw std::invalid_argument("The ECL transmissibility module does not provide explicit potential gradients");
     }
@@ -154,7 +154,7 @@ public:
      *
      * \param phaseIdx The index of the fluid phase
      */
-    const EvalDimVector& filterVelocity(unsigned phaseIdx OPM_UNUSED) const
+    const EvalDimVector& filterVelocity(unsigned) const
     {
         throw std::invalid_argument("The ECL transmissibility module does not provide explicit filter velocities");
     }
@@ -470,10 +470,10 @@ protected:
     /*!
      * \brief Update the volumetric fluxes for all fluid phases on the interior faces of the context
      */
-    void calculateFluxes_(const ElementContext& elemCtx OPM_UNUSED, unsigned scvfIdx OPM_UNUSED, unsigned timeIdx OPM_UNUSED)
+    void calculateFluxes_(const ElementContext&, unsigned, unsigned)
     { }
 
-    void calculateBoundaryFluxes_(const ElementContext& elemCtx OPM_UNUSED, unsigned scvfIdx OPM_UNUSED, unsigned timeIdx OPM_UNUSED)
+    void calculateBoundaryFluxes_(const ElementContext&, unsigned, unsigned)
     {}
 
 private:
