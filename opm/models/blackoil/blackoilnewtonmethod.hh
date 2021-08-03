@@ -247,6 +247,7 @@ protected:
         static constexpr bool enableEnergy = Indices::temperatureIdx >= 0;
         static constexpr bool enableFoam = Indices::foamConcentrationIdx >= 0;
         static constexpr bool enableBrine = Indices::saltConcentrationIdx >= 0;
+        static constexpr bool compositionSwitchEnabled = Indices::compositionSwitchIdx >= 0;
 
         currentValue.checkDefined();
         Valgrind::CheckDefined(update);
@@ -263,7 +264,7 @@ protected:
             deltaSo = -deltaSw;
         }
 
-        if (Indices::gasEnabled && currentValue.primaryVarsMeaning() == PrimaryVariables::Sw_po_Sg) {
+        if (compositionSwitchEnabled && currentValue.primaryVarsMeaning() == PrimaryVariables::Sw_po_Sg) {
             deltaSg = update[Indices::compositionSwitchIdx];
             deltaSo -= deltaSg;
         }
