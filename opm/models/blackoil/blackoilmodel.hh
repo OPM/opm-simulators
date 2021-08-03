@@ -279,7 +279,7 @@ class BlackOilModel
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
 
-    static const bool compositionSwitchEnabled = Indices::gasEnabled;
+    static const bool compositionSwitchEnabled = Indices::compositionSwitchIdx >= 0;
     static const bool waterEnabled = Indices::waterEnabled;
 
     using SolventModule = BlackOilSolventModule<TypeTag>;

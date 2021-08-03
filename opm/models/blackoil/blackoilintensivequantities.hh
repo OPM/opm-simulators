@@ -96,8 +96,10 @@ class BlackOilIntensiveQuantities
     enum { dimWorld = GridView::dimensionworld };
     enum { compositionSwitchIdx = Indices::compositionSwitchIdx };
 
-    static const bool compositionSwitchEnabled = Indices::gasEnabled;
+    static const bool compositionSwitchEnabled = Indices::compositionSwitchIdx >= 0;
     static const bool waterEnabled = Indices::waterEnabled;
+    static const bool gasEnabled = Indices::gasEnabled;
+    static const bool oilEnabled = Indices::oilEnabled;
 
     using Toolbox = MathToolbox<Evaluation>;
     using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
@@ -166,6 +168,9 @@ public:
                 // -> oil-water case
                 Sg = 0.0;
             }
+        }
+        if (gasEnabled && waterEnabled && !oilEnabled) {
+            Sg = 1.0 - Sw; 
         }
 
         Valgrind::CheckDefined(Sg);
