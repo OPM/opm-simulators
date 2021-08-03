@@ -68,7 +68,7 @@ LhsEval getRs_(typename std::enable_if<!HasMember_Rs<FluidState>::value, const F
 
 template <class FluidSystem, class FluidState, class LhsEval>
 auto getRs_(typename std::enable_if<HasMember_Rs<FluidState>::value, const FluidState&>::type fluidState,
-            unsigned regionIdx OPM_UNUSED)
+            unsigned)
     -> decltype(decay<LhsEval>(fluidState.Rs()))
 { return decay<LhsEval>(fluidState.Rs()); }
 
@@ -83,19 +83,19 @@ LhsEval getRv_(typename std::enable_if<!HasMember_Rv<FluidState>::value, const F
 
 template <class FluidSystem, class FluidState, class LhsEval>
 auto getRv_(typename std::enable_if<HasMember_Rv<FluidState>::value, const FluidState&>::type fluidState,
-            unsigned regionIdx OPM_UNUSED)
+            unsigned)
     -> decltype(decay<LhsEval>(fluidState.Rv()))
 { return decay<LhsEval>(fluidState.Rv()); }
 
 template <class FluidSystem, class FluidState, class LhsEval>
 LhsEval getSaltConcentration_(typename std::enable_if<!HasMember_saltConcentration<FluidState>::value,
-                              const FluidState&>::type fluidState OPM_UNUSED,
-                              unsigned regionIdx OPM_UNUSED)
+                              const FluidState&>::type,
+                              unsigned)
 {return 0.0;}
 
 template <class FluidSystem, class FluidState, class LhsEval>
 auto getSaltConcentration_(typename std::enable_if<HasMember_saltConcentration<FluidState>::value, const FluidState&>::type fluidState,
-            unsigned regionIdx OPM_UNUSED)
+            unsigned)
     -> decltype(decay<LhsEval>(fluidState.saltConcentration()))
 { return decay<LhsEval>(fluidState.saltConcentration()); }
 
@@ -1307,7 +1307,7 @@ public:
      *
      * This method is black-oil specific and only makes sense for isothermal simulations.
      */
-    static Scalar reservoirTemperature(unsigned pvtRegionIdx OPM_UNUSED = 0)
+    static Scalar reservoirTemperature(unsigned = 0)
     { return reservoirTemperature_; }
 
     /*!

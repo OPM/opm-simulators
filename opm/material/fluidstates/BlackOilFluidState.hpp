@@ -46,7 +46,7 @@ unsigned getPvtRegionIndex_(typename std::enable_if<HasMember_pvtRegionIndex<Flu
 
 template <class FluidState>
 unsigned getPvtRegionIndex_(typename std::enable_if<!HasMember_pvtRegionIndex<FluidState>::value,
-                                                    const FluidState&>::type fluidState OPM_UNUSED)
+                                                    const FluidState&>::type)
 { return 0; }
 
 OPM_GENERATE_HAS_MEMBER(invB, /*phaseIdx=*/0) // Creates 'HasMember_invB<T>'.
@@ -55,7 +55,7 @@ template <class FluidSystem, class FluidState, class LhsEval>
 auto getInvB_(typename std::enable_if<HasMember_invB<FluidState>::value,
                                       const FluidState&>::type fluidState,
               unsigned phaseIdx,
-              unsigned pvtRegionIdx OPM_UNUSED)
+              unsigned)
     -> decltype(decay<LhsEval>(fluidState.invB(phaseIdx)))
 { return decay<LhsEval>(fluidState.invB(phaseIdx)); }
 
@@ -84,7 +84,7 @@ auto getSaltConcentration_(typename std::enable_if<HasMember_saltConcentration<F
 
 template <class FluidState>
 auto getSaltConcentration_(typename std::enable_if<!HasMember_saltConcentration<FluidState>::value,
-                                                    const FluidState&>::type fluidState OPM_UNUSED)
+                                                    const FluidState&>::type)
 { return 0.0; }
 
 /*!
@@ -311,7 +311,7 @@ public:
     /*!
      * \brief Return the temperature [K]
      */
-    const Scalar& temperature(unsigned phaseIdx OPM_UNUSED) const
+    const Scalar& temperature(unsigned) const
     {
         if (!enableTemperature && !enableEnergy) {
             static Scalar tmp(FluidSystem::reservoirTemperature(pvtRegionIdx_));
@@ -409,7 +409,7 @@ public:
      * If the EnableEnergy property is not set to true, this method will throw an
      * exception!
      */
-    Scalar internalEnergy(unsigned phaseIdx OPM_UNUSED) const
+    Scalar internalEnergy(unsigned phaseIdx) const
     { return (*enthalpy_)[canonicalToStoragePhaseIndex_(phaseIdx)] - pressure(phaseIdx)/density(phaseIdx); }
 
     //////

@@ -244,8 +244,8 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     template <class Evaluation>
-    static Evaluation gasHeatCapacity(const Evaluation& temperature OPM_UNUSED,
-                                      const Evaluation& pressure OPM_UNUSED)
+    static Evaluation gasHeatCapacity(const Evaluation&,
+                                      const Evaluation&)
     {
         return 1005.0;
     }

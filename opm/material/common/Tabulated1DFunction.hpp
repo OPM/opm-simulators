@@ -301,7 +301,7 @@ public:
      *                    cause a failed assertation.
      */
     template <class Evaluation>
-    Evaluation evalSecondDerivative(const Evaluation& x OPM_UNUSED, bool extrapolate OPM_UNUSED = false) const
+    Evaluation evalSecondDerivative(const Evaluation&, bool = false) const
     { return 0.0; }
 
     /*!
@@ -319,7 +319,7 @@ public:
      *                    cause a failed assertation.
      */
     template <class Evaluation>
-    Evaluation evalThirdDerivative(const Evaluation& x OPM_UNUSED, bool extrapolate OPM_UNUSED = false) const
+    Evaluation evalThirdDerivative(const Evaluation&, bool = false) const
     { return 0.0; }
 
     /*!

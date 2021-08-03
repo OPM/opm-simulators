@@ -176,7 +176,7 @@ public:
      */
     template <class Evaluation>
     static Evaluation gasEnthalpy(const Evaluation& temperature,
-                                  const Evaluation& pressure OPM_UNUSED)
+                                  const Evaluation&)
     {
         // method of Joback
         const Scalar cpVapA = 31.15;
@@ -226,7 +226,7 @@ public:
      */
     template <class Evaluation>
     static Evaluation gasHeatCapacity(const Evaluation& temperature,
-                                      const Evaluation& pressure OPM_UNUSED)
+                                      const Evaluation&)
     {
         // method of Joback
         const Scalar cpVapA = 31.15;

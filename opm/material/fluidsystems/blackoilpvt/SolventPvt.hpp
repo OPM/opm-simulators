@@ -180,7 +180,7 @@ public:
      */
     template <class Evaluation>
     Evaluation viscosity(unsigned regionIdx,
-                                  const Evaluation& temperature OPM_UNUSED,
+                                  const Evaluation&,
                                   const Evaluation& pressure) const
     {
         const Evaluation& invBg = inverseSolventB_[regionIdx].eval(pressure, /*extrapolate=*/true);
@@ -208,7 +208,7 @@ public:
      */
     template <class Evaluation>
     Evaluation inverseFormationVolumeFactor(unsigned regionIdx,
-                                            const Evaluation& temperature OPM_UNUSED,
+                                            const Evaluation&,
                                             const Evaluation& pressure) const
     { return inverseSolventB_[regionIdx].eval(pressure, /*extrapolate=*/true); }
 

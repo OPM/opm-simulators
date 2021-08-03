@@ -50,7 +50,7 @@ public:
      * This solid energy law simply returns 0.
      */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
-    static Evaluation solidInternalEnergy(const Params& params OPM_UNUSED, const FluidState& fluidState OPM_UNUSED)
+    static Evaluation solidInternalEnergy(const Params&, const FluidState&)
     { return 0.0; }
 };
 } // namespace Opm

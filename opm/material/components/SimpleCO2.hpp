@@ -105,15 +105,15 @@ public:
      */
     template <class Evaluation>
     static Evaluation gasEnthalpy(const Evaluation& temperature,
-                                  const Evaluation& pressure OPM_UNUSED)
+                                  const Evaluation&)
     { return 350.0e3 + temperature*0.85e3; }
 
     /*!
      * \copydoc Component::gasHeatCapacity
      */
     template <class Evaluation>
-    static Evaluation gasHeatCapacity(const Evaluation& temperature OPM_UNUSED,
-                                      const Evaluation& pressure OPM_UNUSED)
+    static Evaluation gasHeatCapacity(const Evaluation&,
+                                      const Evaluation&)
     { return 0.85e3; }
 
     /*!
@@ -121,15 +121,15 @@ public:
      */
     template <class Evaluation>
     static Evaluation liquidEnthalpy(const Evaluation& temperature,
-                                     const Evaluation& pressure OPM_UNUSED)
+                                     const Evaluation&)
     { return temperature*2e3; }
 
     /*!
      * \copydoc Component::liquidHeatCapacity
      */
     template <class Evaluation>
-    static Evaluation liquidHeatCapacity(const Evaluation& temperature OPM_UNUSED,
-                                         const Evaluation& pressure OPM_UNUSED)
+    static Evaluation liquidHeatCapacity(const Evaluation&,
+                                         const Evaluation&)
     { return 2e3; /* TODO: UNKNOWN! */ }
 
     /*!
