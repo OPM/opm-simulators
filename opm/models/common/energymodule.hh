@@ -79,7 +79,7 @@ public:
      *        string if the specified primary variable index does not belong to
      *        the energy module.
      */
-    static std::string primaryVarName(unsigned pvIdx OPM_UNUSED)
+    static std::string primaryVarName(unsigned)
     { return ""; }
 
     /*!
@@ -87,32 +87,32 @@ public:
      *        string if the specified equation index does not belong to
      *        the energy module.
      */
-    static std::string eqName(unsigned eqIdx OPM_UNUSED)
+    static std::string eqName(unsigned)
     { return ""; }
 
     /*!
      * \brief Returns the relative weight of a primary variable for
      *        calculating relative errors.
      */
-    static Scalar primaryVarWeight(const Model& model OPM_UNUSED,
-                                   unsigned globalDofIdx OPM_UNUSED,
-                                   unsigned pvIdx OPM_UNUSED)
+    static Scalar primaryVarWeight(const Model&,
+                                   unsigned,
+                                   unsigned)
     { return -1; }
 
     /*!
      * \brief Returns the relative weight of a equation of the residual.
      */
-    static Scalar eqWeight(const Model& model OPM_UNUSED,
-                           unsigned globalDofIdx OPM_UNUSED,
-                           unsigned eqIdx OPM_UNUSED)
+    static Scalar eqWeight(const Model&,
+                           unsigned,
+                           unsigned)
     { return -1; }
 
     /*!
      * \brief Given a fluid state, set the temperature in the primary variables
      */
     template <class FluidState>
-    static void setPriVarTemperatures(PrimaryVariables& priVars OPM_UNUSED,
-                                      const FluidState& fs OPM_UNUSED)
+    static void setPriVarTemperatures(PrimaryVariables&,
+                                      const FluidState&)
     {}
 
     /*!
@@ -120,30 +120,30 @@ public:
      *        from a volumetric rate.
      */
     template <class RateVector, class FluidState>
-    static void setEnthalpyRate(RateVector& rateVec OPM_UNUSED,
-                                const FluidState& fluidState OPM_UNUSED,
-                                unsigned phaseIdx OPM_UNUSED,
-                                const Evaluation& volume OPM_UNUSED)
+    static void setEnthalpyRate(RateVector&,
+                                const FluidState&,
+                                unsigned,
+                                const Evaluation&)
     {}
 
     /*!
      * \brief Add the rate of the enthalpy flux to a rate vector.
      */
-    static void setEnthalpyRate(RateVector& rateVec OPM_UNUSED,
-                                const Evaluation& rate OPM_UNUSED)
+    static void setEnthalpyRate(RateVector&,
+                                const Evaluation&)
     {}
 
     /*!
      * \brief Add the rate of the enthalpy flux to a rate vector.
      */
-    static void addToEnthalpyRate(RateVector& rateVec OPM_UNUSED,
-                                  const Evaluation& rate OPM_UNUSED)
+    static void addToEnthalpyRate(RateVector&,
+                                  const Evaluation&)
     {}
 
     /*!
      * \brief Add the rate of the conductive energy flux to a rate vector.
      */
-    static Scalar thermalConductionRate(const ExtensiveQuantities& extQuants OPM_UNUSED)
+    static Scalar thermalConductionRate(const ExtensiveQuantities&)
     { return 0.0; }
 
     /*!
@@ -151,9 +151,9 @@ public:
      * vector
      */
     template <class LhsEval>
-    static void addPhaseStorage(Dune::FieldVector<LhsEval, numEq>& storage OPM_UNUSED,
-                                const IntensiveQuantities& intQuants OPM_UNUSED,
-                                unsigned phaseIdx OPM_UNUSED)
+    static void addPhaseStorage(Dune::FieldVector<LhsEval, numEq>&,
+                                const IntensiveQuantities&,
+                                unsigned)
     {}
 
     /*!
@@ -161,10 +161,10 @@ public:
      * vector
      */
     template <class LhsEval, class Scv>
-    static void addFracturePhaseStorage(Dune::FieldVector<LhsEval, numEq>& storage OPM_UNUSED,
-                                        const IntensiveQuantities& intQuants OPM_UNUSED,
-                                        const Scv& scv OPM_UNUSED,
-                                        unsigned phaseIdx OPM_UNUSED)
+    static void addFracturePhaseStorage(Dune::FieldVector<LhsEval, numEq>&,
+                                        const IntensiveQuantities&,
+                                        const Scv&,
+                                        unsigned)
     {}
 
     /*!
@@ -172,8 +172,8 @@ public:
      *        equation vector
      */
     template <class LhsEval>
-    static void addSolidEnergyStorage(Dune::FieldVector<LhsEval, numEq>& storage OPM_UNUSED,
-                                    const IntensiveQuantities& intQuants OPM_UNUSED)
+    static void addSolidEnergyStorage(Dune::FieldVector<LhsEval, numEq>&,
+                                    const IntensiveQuantities&)
     {}
 
     /*!
@@ -183,10 +183,10 @@ public:
      * This method is called by compute flux (base class)
      */
     template <class Context>
-    static void addAdvectiveFlux(RateVector& flux OPM_UNUSED,
-                                 const Context& context OPM_UNUSED,
-                                 unsigned spaceIdx OPM_UNUSED,
-                                 unsigned timeIdx OPM_UNUSED)
+    static void addAdvectiveFlux(RateVector&,
+                                 const Context&,
+                                 unsigned,
+                                 unsigned)
     {}
 
     /*!
@@ -195,10 +195,10 @@ public:
      *        volume and adds the result in the flux vector.
      */
     template <class Context>
-    static void handleFractureFlux(RateVector& flux OPM_UNUSED,
-                                   const Context& context OPM_UNUSED,
-                                   unsigned spaceIdx OPM_UNUSED,
-                                   unsigned timeIdx OPM_UNUSED)
+    static void handleFractureFlux(RateVector&,
+                                   const Context&,
+                                   unsigned,
+                                   unsigned)
     {}
 
     /*!
@@ -208,10 +208,10 @@ public:
      * This method is called by compute flux (base class)
      */
     template <class Context>
-    static void addDiffusiveFlux(RateVector& flux OPM_UNUSED,
-                                 const Context& context OPM_UNUSED,
-                                 unsigned spaceIdx OPM_UNUSED,
-                                 unsigned timeIdx OPM_UNUSED)
+    static void addDiffusiveFlux(RateVector&,
+                                 const Context&,
+                                 unsigned,
+                                 unsigned)
     {}
 };
 
@@ -287,8 +287,8 @@ public:
     /*!
      * \brief Returns the relative weight of a equation.
      */
-    static Scalar eqWeight(const Model& model OPM_UNUSED,
-                           unsigned globalDofIdx OPM_UNUSED,
+    static Scalar eqWeight(const Model&,
+                           unsigned,
                            unsigned eqIdx)
     {
         if (eqIdx != energyEqIdx)
@@ -581,11 +581,11 @@ protected:
      *        energy fluxes.
      */
     template <class FluidState>
-    void update_(FluidState& fs OPM_UNUSED,
-                 typename FluidSystem::template ParameterCache<typename FluidState::Scalar>& paramCache OPM_UNUSED,
-                 const ElementContext& elemCtx OPM_UNUSED,
-                 unsigned dofIdx OPM_UNUSED,
-                 unsigned timeIdx OPM_UNUSED)
+    void update_(FluidState&,
+                 typename FluidSystem::template ParameterCache<typename FluidState::Scalar>&,
+                 const ElementContext&,
+                 unsigned,
+                 unsigned)
     { }
 };
 
@@ -708,16 +708,16 @@ protected:
      * \brief Update the quantities required to calculate
      *        energy fluxes.
      */
-    void update_(const ElementContext& elemCtx OPM_UNUSED,
-                 unsigned faceIdx OPM_UNUSED,
-                 unsigned timeIdx OPM_UNUSED)
+    void update_(const ElementContext&,
+                 unsigned,
+                 unsigned)
     {}
 
     template <class Context, class FluidState>
-    void updateBoundary_(const Context& context OPM_UNUSED,
-                         unsigned bfIdx OPM_UNUSED,
-                         unsigned timeIdx OPM_UNUSED,
-                         const FluidState& fs OPM_UNUSED)
+    void updateBoundary_(const Context&,
+                         unsigned,
+                         unsigned,
+                         const FluidState&)
     {}
 
 public:

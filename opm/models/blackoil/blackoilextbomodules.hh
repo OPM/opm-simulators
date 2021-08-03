@@ -450,8 +450,8 @@ public:
     /*!
      * \brief Return how much a Newton-Raphson update is considered an error
      */
-    static Scalar computeUpdateError(const PrimaryVariables& oldPv OPM_UNUSED,
-                                     const EqVector& delta OPM_UNUSED)
+    static Scalar computeUpdateError(const PrimaryVariables&,
+                                     const EqVector&)
     {
         // do not consider consider the cange of solvent primary variables for
         // convergence
@@ -842,9 +842,9 @@ public:
     void zPvtUpdate_()
     { }
 
-    void zFractionUpdate_(const ElementContext& elemCtx OPM_UNUSED,
-                          unsigned scvIdx OPM_UNUSED,
-                          unsigned timeIdx OPM_UNUSED)
+    void zFractionUpdate_(const ElementContext&,
+                          unsigned,
+                          unsigned)
     { }
 
     const Evaluation& xVolume() const

@@ -685,8 +685,8 @@ public:
     /*!
      * \brief Return how much a Newton-Raphson update is considered an error
      */
-    static Scalar computeUpdateError(const PrimaryVariables& oldPv OPM_UNUSED,
-                                     const EqVector& delta OPM_UNUSED)
+    static Scalar computeUpdateError(const PrimaryVariables&,
+                                     const EqVector&)
     {
         // do not consider consider the cange of polymer primary variables for
         // convergence
@@ -1162,9 +1162,9 @@ class BlackOilPolymerIntensiveQuantities<TypeTag, false>
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
 public:
-    void polymerPropertiesUpdate_(const ElementContext& elemCtx OPM_UNUSED,
-                                  unsigned scvIdx OPM_UNUSED,
-                                  unsigned timeIdx OPM_UNUSED)
+    void polymerPropertiesUpdate_(const ElementContext&,
+                                  unsigned,
+                                  unsigned)
     { }
 
     const Evaluation& polymerMoleWeight() const
@@ -1228,9 +1228,9 @@ public:
      */
     template <class Dummy = bool> // we need to make this method a template to avoid
                                   // compiler errors if it is not instantiated!
-    void updateShearMultipliersPerm(const ElementContext& elemCtx OPM_UNUSED,
-                                    unsigned scvfIdx OPM_UNUSED,
-                                    unsigned timeIdx OPM_UNUSED)
+    void updateShearMultipliersPerm(const ElementContext&,
+                                    unsigned,
+                                    unsigned)
     {
         throw std::runtime_error("The extension of the blackoil model for polymers is not yet "
                                  "implemented for problems specified using permeabilities.");
@@ -1327,14 +1327,14 @@ class BlackOilPolymerExtensiveQuantities<TypeTag, false>
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
 
 public:
-    void updateShearMultipliers(const ElementContext& elemCtx OPM_UNUSED,
-                                unsigned scvfIdx OPM_UNUSED,
-                                unsigned timeIdx OPM_UNUSED)
+    void updateShearMultipliers(const ElementContext&,
+                                unsigned,
+                                unsigned)
     { }
 
-    void updateShearMultipliersPerm(const ElementContext& elemCtx OPM_UNUSED,
-                                    unsigned scvfIdx OPM_UNUSED,
-                                    unsigned timeIdx OPM_UNUSED)
+    void updateShearMultipliersPerm(const ElementContext&,
+                                    unsigned,
+                                    unsigned)
     { }
 
     const Evaluation& polymerShearFactor() const

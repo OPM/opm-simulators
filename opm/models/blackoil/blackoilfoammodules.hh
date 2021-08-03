@@ -237,8 +237,8 @@ public:
     /*!
      * \brief Register all foam specific VTK and ECL output modules.
      */
-    static void registerOutputModules(Model& model OPM_UNUSED,
-                                      Simulator& simulator OPM_UNUSED)
+    static void registerOutputModules(Model&,
+                                      Simulator&)
     {
         if (!enableFoam)
             // foam have been disabled at compile time
@@ -364,8 +364,8 @@ public:
     /*!
      * \brief Return how much a Newton-Raphson update is considered an error
      */
-    static Scalar computeUpdateError(const PrimaryVariables& oldPv OPM_UNUSED,
-                                     const EqVector& delta OPM_UNUSED)
+    static Scalar computeUpdateError(const PrimaryVariables&,
+                                     const EqVector&)
     {
         // do not consider the change of foam primary variables for convergence
         // TODO: maybe this should be changed
@@ -593,9 +593,9 @@ class BlackOilFoamIntensiveQuantities<TypeTag, false>
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
 public:
-    void foamPropertiesUpdate_(const ElementContext& elemCtx OPM_UNUSED,
-                                  unsigned scvIdx OPM_UNUSED,
-                                  unsigned timeIdx OPM_UNUSED)
+    void foamPropertiesUpdate_(const ElementContext&,
+                                  unsigned,
+                                  unsigned)
     { }
 
 

@@ -92,7 +92,7 @@ public:
     void updateBoundary(const Context& context,
                         unsigned bfIdx,
                         unsigned timeIdx,
-                        const FluidState& fluidState OPM_UNUSED)
+                        const FluidState&)
     {
         unsigned dofIdx = context.interiorScvIndex(bfIdx, timeIdx);
         interiorScvIdx_ = static_cast<unsigned short>(dofIdx);

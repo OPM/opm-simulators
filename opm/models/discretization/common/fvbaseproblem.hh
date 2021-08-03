@@ -229,7 +229,7 @@ public:
      *
      * If the returned string is empty, no help message will be generated.
      */
-    static std::string helpPreamble(int argc OPM_UNUSED,
+    static std::string helpPreamble(int,
                                     const char **argv)
     {
         std::string desc = Implementation::briefDescription();
@@ -268,12 +268,12 @@ public:
      *         the next regular parameter. If this is less than 1, it indicated that the
      *         positional parameter was invalid.
      */
-    static int handlePositionalParameter(std::set<std::string>& seenParams OPM_UNUSED,
+    static int handlePositionalParameter(std::set<std::string>&,
                                          std::string& errorMsg,
-                                         int argc OPM_UNUSED,
+                                         int,
                                          const char** argv,
                                          int paramIdx,
-                                         int posParamIdx OPM_UNUSED)
+                                         int)
     {
         errorMsg = std::string("Illegal parameter \"")+argv[paramIdx]+"\".";
         return 0;
@@ -291,7 +291,7 @@ public:
      * \brief Allows to improve the performance by prefetching all data which is
      *        associated with a given element.
      */
-    void prefetch(const Element& elem OPM_UNUSED) const
+    void prefetch(const Element&) const
     {
         // do nothing by default
     }
@@ -318,10 +318,10 @@ public:
      * \param timeIdx The index used for the time discretization
      */
     template <class Context>
-    void boundary(BoundaryRateVector& values OPM_UNUSED,
-                  const Context& context OPM_UNUSED,
-                  unsigned spaceIdx OPM_UNUSED,
-                  unsigned timeIdx OPM_UNUSED) const
+    void boundary(BoundaryRateVector&,
+                  const Context&,
+                  unsigned,
+                  unsigned) const
     { throw std::logic_error("Problem does not provide a boundary() method"); }
 
     /*!
@@ -335,10 +335,10 @@ public:
      * \param timeIdx The index used for the time discretization
      */
     template <class Context>
-    void constraints(Constraints& constrs OPM_UNUSED,
-                     const Context& context OPM_UNUSED,
-                     unsigned spaceIdx OPM_UNUSED,
-                     unsigned timeIdx OPM_UNUSED) const
+    void constraints(Constraints&,
+                     const Context&,
+                     unsigned,
+                     unsigned) const
     { throw std::logic_error("Problem does not provide a constraints() method"); }
 
     /*!
@@ -354,10 +354,10 @@ public:
      * \param timeIdx The index used for the time discretization
      */
     template <class Context>
-    void source(RateVector& rate OPM_UNUSED,
-                const Context& context OPM_UNUSED,
-                unsigned spaceIdx OPM_UNUSED,
-                unsigned timeIdx OPM_UNUSED) const
+    void source(RateVector&,
+                const Context&,
+                unsigned,
+                unsigned) const
     { throw std::logic_error("Problem does not provide a source() method"); }
 
     /*!
@@ -371,10 +371,10 @@ public:
      * \param timeIdx The index used for the time discretization
      */
     template <class Context>
-    void initial(PrimaryVariables& values OPM_UNUSED,
-                 const Context& context OPM_UNUSED,
-                 unsigned spaceIdx OPM_UNUSED,
-                 unsigned timeIdx OPM_UNUSED) const
+    void initial(PrimaryVariables&,
+                 const Context&,
+                 unsigned,
+                 unsigned) const
     { throw std::logic_error("Problem does not provide a initial() method"); }
 
     /*!
@@ -393,9 +393,9 @@ public:
      * \param timeIdx The index used for the time discretization
      */
     template <class Context>
-    Scalar extrusionFactor(const Context& context OPM_UNUSED,
-                           unsigned spaceIdx OPM_UNUSED,
-                           unsigned timeIdx OPM_UNUSED) const
+    Scalar extrusionFactor(const Context&,
+                           unsigned,
+                           unsigned) const
     { return asImp_().extrusionFactor(); }
 
     Scalar extrusionFactor() const

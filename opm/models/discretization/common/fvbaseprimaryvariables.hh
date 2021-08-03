@@ -111,7 +111,7 @@ public:
      * from the primary variables.)
      */
     template <class FluidState>
-    void assignNaive(const FluidState& fluidState OPM_UNUSED)
+    void assignNaive(const FluidState&)
     {
         throw std::runtime_error("The PrimaryVariables class does not define "
                                  "an assignNaive() method");
