@@ -21,8 +21,9 @@
 
 namespace Opm {
 
-SingleWellState::SingleWellState(bool is_producer)
+SingleWellState::SingleWellState(bool is_producer, double temp)
     : producer(is_producer)
+    , temperature(temp)
 {}
 
 
@@ -32,6 +33,7 @@ void SingleWellState::init_timestep(const SingleWellState& other) {
 
     this->bhp = other.bhp;
     this->thp = other.thp;
+    this->temperature = other.temperature;
 }
 
 

@@ -44,7 +44,6 @@ void WellState::base_init(const std::vector<double>& cellPressures,
     this->status_.clear();
     this->parallel_well_info_.clear();
     this->wellrates_.clear();
-    this->temperature_.clear();
     this->segment_state.clear();
     this->well_potentials_.clear();
     this->productivity_index_.clear();
@@ -90,8 +89,9 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
     // May be overwritten below.
     const auto& pu = this->phase_usage_;
     const int np = pu.num_phases;
+    double temp = well.isInjector() ? well.injectionControls(summary_state).temperature : 273.15 + 15.56;
 
-    auto& ws = this->wells_.add(well.name(), SingleWellState{well.isProducer()});
+    auto& ws = this->wells_.add(well.name(), SingleWellState{well.isProducer(), temp});
     this->status_.add(well.name(), Well::Status::OPEN);
     this->parallel_well_info_.add(well.name(), well_info);
     this->wellrates_.add(well.name(), std::vector<double>(np, 0));
@@ -100,10 +100,6 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
     this->segment_state.add(well.name(), SegmentState{});
     this->perfdata.add(well.name(), PerfData{static_cast<std::size_t>(num_perf_this_well), well.isInjector(), this->phase_usage_});
     this->productivity_index_.add(well.name(), std::vector<double>(np, 0));
-    if ( well.isInjector() )
-        this->temperature_.add(well.name(), well.injectionControls(summary_state).temperature);
-    else
-        this->temperature_.add(well.name(), 273.15 + 15.56); // standard condition temperature
 
     if ( num_perf_this_well == 0 )
         return;
@@ -513,7 +509,7 @@ WellState::report(const int* globalCellIdxMap,
         data::Well well;
         well.bhp = ws.bhp;
         well.thp = ws.thp;
-        well.temperature = this->temperature( well_index );
+        well.temperature = ws.temperature;
 
         if( pu.phase_used[BlackoilPhases::Aqua] ) {
             well.rates.set(rt::wat, wv[ pu.phase_pos[BlackoilPhases::Aqua] ] );

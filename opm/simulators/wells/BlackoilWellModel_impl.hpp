@@ -1732,7 +1732,7 @@ namespace Opm {
             }
             weighted_temperature = well_info.communication().sum(weighted_temperature);
             total_weight = well_info.communication().sum(total_weight);
-            this->wellState().update_temperature(wellID, weighted_temperature/total_weight);
+            this->wellState().well(wellID).temperature = weighted_temperature/total_weight;
         }
     }
 

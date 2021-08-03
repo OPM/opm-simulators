@@ -25,14 +25,13 @@ namespace Opm {
 
 class SingleWellState {
 public:
-    explicit SingleWellState(bool is_producer);
-
+    SingleWellState(bool is_producer, double temp);
 
 
     bool producer;
     double bhp{0};
     double thp{0};
-
+    double temperature{};
 
     void init_timestep(const SingleWellState& other);
     void shut();

@@ -310,10 +310,6 @@ public:
         return this->phase_usage_;
     }
 
-    /// One temperature per well.
-    void update_temperature(std::size_t well_index, double value) { temperature_[well_index] = value; }
-    double temperature(std::size_t well_index) const { return temperature_[well_index]; }
-
     /// One rate per well and phase.
     const WellContainer<std::vector<double>>& wellRates() const { return wellrates_; }
     std::vector<double>& wellRates(std::size_t well_index) { return wellrates_[well_index]; }
@@ -371,7 +367,6 @@ private:
     WellContainer<SingleWellState> wells_;
     WellContainer<Well::Status> status_;
     WellContainer<const ParallelWellInfo*> parallel_well_info_;
-    WellContainer<double> temperature_;
     WellContainer<std::vector<double>> wellrates_;
     PhaseUsage phase_usage_;
     WellContainer<PerfData> perfdata;

@@ -175,7 +175,7 @@ loadRestartData(const data::Wells& rst_wells,
         auto& ws = well_state.well(well_index);
         ws.bhp = rst_well.bhp;
         ws.thp = rst_well.thp;
-        well_state.update_temperature(well_index,  rst_well.temperature);
+        ws.temperature = rst_well.temperature;
 
         if (rst_well.current_control.isProducer) {
             well_state.currentProductionControl(well_index, rst_well.current_control.prod);
