@@ -92,7 +92,7 @@ checkIndividualConstraints(WellState& well_state,
 
     if (well.isInjector()) {
         const auto controls = well.injectionControls(summaryState);
-        auto currentControl = well_state.currentInjectionControl(well_index);
+        const auto currentControl = well_state.currentInjectionControl(well_index);
 
         if (controls.hasControl(Well::InjectorCMode::BHP) && currentControl != Well::InjectorCMode::BHP)
         {
@@ -149,7 +149,7 @@ checkIndividualConstraints(WellState& well_state,
                 current_rate += well_state.wellReservoirRates(well_index)[ pu.phase_pos[BlackoilPhases::Vapour] ];
 
             if (controls.reservoir_rate < current_rate) {
-                currentControl = Well::InjectorCMode::RESV;
+                well_state.currentInjectionControl(well_index, Well::InjectorCMode::RESV);
                 return true;
             }
         }
@@ -159,7 +159,7 @@ checkIndividualConstraints(WellState& well_state,
             const auto& thp = getTHPConstraint(summaryState);
             double current_thp = well_state.thp(well_index);
             if (thp < current_thp) {
-                currentControl = Well::InjectorCMode::THP;
+                well_state.currentInjectionControl(well_index, Well::InjectorCMode::THP);
                 return true;
             }
         }
