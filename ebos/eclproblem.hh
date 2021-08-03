@@ -2544,9 +2544,17 @@ private:
             if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx))
                 dofFluidState.setSaturation(FluidSystem::waterPhaseIdx,
                                             waterSaturationData[dofIdx]);
-            if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx))
-                dofFluidState.setSaturation(FluidSystem::gasPhaseIdx,
-                                            gasSaturationData[dofIdx]);
+                                            
+            if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)){
+                if (!FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)){
+                    dofFluidState.setSaturation(FluidSystem::gasPhaseIdx,
+                                            1.0
+                                            - waterSaturationData[dofIdx]);
+                }
+                else
+                    dofFluidState.setSaturation(FluidSystem::gasPhaseIdx,
+                                                gasSaturationData[dofIdx]);
+            }
             if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx))
                 dofFluidState.setSaturation(FluidSystem::oilPhaseIdx,
                                             1.0

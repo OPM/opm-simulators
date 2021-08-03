@@ -67,10 +67,28 @@ protected:
     // well control equation is always the last well equation.
     // TODO: in the current implementation, we use the well rate as the first primary variables for injectors,
     // instead of G_t.
-    static constexpr bool gasoil = Indices::numPhases == 2 && (Indices::compositionSwitchIdx >= 0);
-    static constexpr int WQTotal = 0;
-    static constexpr int WFrac = gasoil ? -1000 : 1;
-    static constexpr int GFrac = gasoil ? 1 : 2;
+
+    // Table showing the primary variable indices, depending on what phases are present:
+    //
+    //         WOG     OG     WG     WO    W/O/G (single phase)
+    // GTotal    0      0      0      0                       0
+    // WFrac     1  -1000     -1000   1                   -1000
+    // GFrac     2      1      1  -1000                   -1000
+    // Spres     3      2      2      2                       1
+
+    static const int WQTotal = 0; 
+    // In the implementation, one should use has_wfrac_variable
+    // rather than has_water to check if you should do something
+    // with the variable at the WFrac location, similar for GFrac.
+    // (following implementation MultisegmentWellEval.hpp)
+    static const bool waterEnabled = Indices::waterEnabled;
+    static const bool gasEnabled = Indices::gasEnabled;
+    static const bool oilEnabled = Indices::oilEnabled;
+
+    static constexpr bool has_wfrac_variable = Indices::waterEnabled && Indices::oilEnabled;;
+    static constexpr bool has_gfrac_variable = Indices::gasEnabled && Indices::numPhases > 1;
+    static constexpr int WFrac = has_wfrac_variable ? 1 : -1000;
+    static constexpr int GFrac = has_gfrac_variable ? has_wfrac_variable + 1 : -1000;
     static constexpr int SFrac = !Indices::enableSolvent ? -1000 : 3;
 
 public:

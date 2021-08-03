@@ -121,9 +121,9 @@ public:
     static const int contiPolymerMWEqIdx = Indices::contiPolymerMWEqIdx;
     static const int contiFoamEqIdx = Indices::contiFoamEqIdx;
     static const int contiBrineEqIdx = Indices::contiBrineEqIdx;
+    static const bool compositionSwitchEnabled = Indices::compositionSwitchIdx >= 0;
 
-    // For the conversion between the surface volume rate and reservoir voidage rate
-    static const bool compositionSwitchEnabled = Indices::gasEnabled;
+    // For the conversion between the surface volume rate and reservoir voidage rate 
     using FluidState = BlackOilFluidState<Eval,
                                           FluidSystem,
                                           has_temperature,

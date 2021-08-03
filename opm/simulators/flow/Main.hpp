@@ -224,9 +224,6 @@ namespace Opm
                 }
                 // gas-water
                 else if ( phases.active( Phase::GAS ) && phases.active( Phase::WATER ) ) {
-                    if (outputCout_)
-                        std::cerr << "Gas-water systems are not yet supported" << std::endl;
-                    return EXIT_FAILURE;
                     flowEbosGasWaterSetDeck(setupTime_, std::move(deck_), std::move(eclipseState_), std::move(schedule_), std::move(summaryConfig_));
                     return flowEbosGasWaterMain(argc_, argv_, outputCout_, outputFiles_);
                 }
