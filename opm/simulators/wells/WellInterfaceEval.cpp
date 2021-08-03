@@ -22,8 +22,6 @@
 #include <config.h>
 #include <opm/simulators/wells/WellInterfaceEval.hpp>
 
-#include <ebos/eclalternativeblackoilindices.hh>
-
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
@@ -535,10 +533,8 @@ calculateBhpFromThp<__VA_ARGS__>(const WellState&, \
                                  DeferredLogger&) const;
 
 using FluidSys = BlackOilFluidSystem<double, BlackOilDefaultIndexTraits>;
-using FluidAltSys = BlackOilFluidSystem<double, EclAlternativeBlackOilIndexTraits>;
 
 template class WellInterfaceEval<FluidSys>;
-template class WellInterfaceEval<FluidAltSys>;
 
 INSTANCE_METHODS(FluidSys, DenseAd::Evaluation<double,3,0u>)
 INSTANCE_METHODS(FluidSys, DenseAd::Evaluation<double,4,0u>)
@@ -554,9 +550,6 @@ INSTANCE_METHODS(FluidSys, DenseAd::Evaluation<double,-1,8u>)
 INSTANCE_METHODS(FluidSys, DenseAd::Evaluation<double,-1,9u>)
 INSTANCE_METHODS(FluidSys, DenseAd::Evaluation<double,-1,10u>)
 
-INSTANCE_METHODS(FluidAltSys, DenseAd::Evaluation<double,7,0u>)
-INSTANCE_METHODS(FluidAltSys, DenseAd::Evaluation<double,-1,8u>)
-
 #define INSTANCE_BHP(...) \
 template double WellInterfaceEval<__VA_ARGS__>:: \
 calculateBhpFromThp<double>(const WellState&, \
@@ -567,6 +560,5 @@ calculateBhpFromThp<double>(const WellState&, \
                             DeferredLogger&) const;
 
 INSTANCE_BHP(FluidSys)
-INSTANCE_BHP(FluidAltSys)
 
 } // namespace Opm

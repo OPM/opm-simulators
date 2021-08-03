@@ -22,8 +22,6 @@
 #include <config.h>
 #include <opm/simulators/wells/WellInterfaceIndices.hpp>
 
-#include <ebos/eclalternativeblackoilindices.hh>
-
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
 #include <opm/models/blackoil/blackoilindices.hh>
@@ -142,8 +140,5 @@ INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<0u,0u,1u,0u,false,false,0u>)
 INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<0u,0u,0u,1u,false,false,0u>)
 INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<0u,0u,0u,1u,false,false,1u>)
 INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<0u,0u,0u,0u,false,false,1u>)
-
-// Alternative indices
-INSTANCE(EclAlternativeBlackOilIndexTraits,BlackOilIndices<0u,0u,0u,0u,false,false,0u>)
 
 } // namespace Opm
