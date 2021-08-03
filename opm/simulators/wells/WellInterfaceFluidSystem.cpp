@@ -91,10 +91,11 @@ activeProductionConstraint(const WellState& well_state,
     const int well_index = this->index_of_well_;
     const auto controls = this->well_ecl_.productionControls(summaryState);
     auto currentControl = well_state.currentProductionControl(well_index);
+    auto& ws = well_state.well(well_index);
 
     if (controls.hasControl(Well::ProducerCMode::BHP) && currentControl != Well::ProducerCMode::BHP) {
         const double bhp_limit = controls.bhp_limit;
-        double current_bhp = well_state.bhp(well_index);
+        double current_bhp = ws.bhp;
         if (bhp_limit > current_bhp)
             return Well::ProducerCMode::BHP;
     }
@@ -164,7 +165,7 @@ activeProductionConstraint(const WellState& well_state,
 
     if (controls.hasControl(Well::ProducerCMode::THP) && currentControl != Well::ProducerCMode::THP) {
         const auto& thp = getTHPConstraint(summaryState);
-        double current_thp = well_state.thp(well_index);
+        double current_thp = ws.thp;
         if (thp > current_thp)
             return Well::ProducerCMode::THP;
     }
@@ -181,6 +182,7 @@ activeInjectionConstraint(const WellState& well_state,
 {
     const PhaseUsage& pu = this->phaseUsage();
     const int well_index = this->index_of_well_;
+    const auto& ws = well_state.well(well_index);
 
     const auto controls = this->well_ecl_.injectionControls(summaryState);
     auto currentControl = well_state.currentInjectionControl(well_index);
@@ -188,7 +190,7 @@ activeInjectionConstraint(const WellState& well_state,
     if (controls.hasControl(Well::InjectorCMode::BHP) && currentControl != Well::InjectorCMode::BHP)
     {
         const auto& bhp = controls.bhp_limit;
-        double current_bhp = well_state.bhp(well_index);
+        double current_bhp = ws.bhp;
         if (bhp < current_bhp)
             return Well::InjectorCMode::BHP;
     }
@@ -241,7 +243,7 @@ activeInjectionConstraint(const WellState& well_state,
     if (controls.hasControl(Well::InjectorCMode::THP) && currentControl != Well::InjectorCMode::THP)
     {
         const auto& thp = getTHPConstraint(summaryState);
-        double current_thp = well_state.thp(well_index);
+        double current_thp = ws.thp;
         if (thp < current_thp)
             return Well::InjectorCMode::THP;
     }

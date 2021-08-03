@@ -255,7 +255,7 @@ updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_log
     const int well_index = baseif_.indexOfWell();
     const int np = baseif_.numPhases();
     const auto& pu = baseif_.phaseUsage();
-
+    const auto& well = well_state.well(well_index);
     // the weighted total well rate
     double total_well_rate = 0.0;
     for (int p = 0; p < np; ++p) {
@@ -339,7 +339,7 @@ updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_log
 
 
     // BHP
-    primary_variables_[Bhp] = well_state.bhp(baseif_.indexOfWell());
+    primary_variables_[Bhp] = well.bhp;
 }
 
 template<class FluidSystem, class Indices, class Scalar>
@@ -553,10 +553,11 @@ updateThp(WellState& well_state,
     static constexpr int Gas = WellInterfaceIndices<FluidSystem,Indices,Scalar>::Gas;
     static constexpr int Oil = WellInterfaceIndices<FluidSystem,Indices,Scalar>::Oil;
     static constexpr int Water = WellInterfaceIndices<FluidSystem,Indices,Scalar>::Water;
+    auto& well = well_state.well(baseif_.indexOfWell());
 
     // When there is no vaild VFP table provided, we set the thp to be zero.
     if (!baseif_.isVFPActive(deferred_logger) || baseif_.wellIsStopped()) {
-        well_state.update_thp(baseif_.indexOfWell(), 0);
+        well.thp = 0;
         return;
     }
 
@@ -574,13 +575,12 @@ updateThp(WellState& well_state,
         rates[ Gas ] = well_state.wellRates(baseif_.indexOfWell())[pu.phase_pos[ Gas ] ];
     }
 
-    const double bhp = well_state.bhp(baseif_.indexOfWell());
+    const double bhp = well.bhp;
 
-    well_state.update_thp(baseif_.indexOfWell(),
-                          this->calculateThpFromBhp(well_state,
-                                                    rates,
-                                                    bhp,
-                                                    deferred_logger));
+    well.thp = this->calculateThpFromBhp(well_state,
+                                         rates,
+                                         bhp,
+                                         deferred_logger);
 }
 
 template<class FluidSystem, class Indices, class Scalar>
@@ -652,7 +652,8 @@ updateWellStateFromPrimaryVariables(WellState& well_state,
         F[pu.phase_pos[Gas]] += F_solvent;
     }
 
-    well_state.update_bhp(baseif_.indexOfWell(), primary_variables_[Bhp]);
+    auto& well = well_state.well(baseif_.indexOfWell());
+    well.bhp = primary_variables_[Bhp];
 
     // calculate the phase rates based on the primary variables
     // for producers, this is not a problem, while not sure for injectors here

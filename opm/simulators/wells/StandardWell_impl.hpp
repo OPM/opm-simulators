@@ -547,6 +547,7 @@ namespace Opm
                             cq_s, perf_dis_gas_rate, perf_vap_oil_rate, deferred_logger);
 
         auto& perf_data = well_state.perfData(this->index_of_well_);
+        auto& ws = well_state.well(this->index_of_well_);
         if constexpr (has_polymer && Base::has_polymermw) {
             if (this->isInjector()) {
                 // Store the original water flux computed from the reservoir quantities.
@@ -694,7 +695,7 @@ namespace Opm
         }
 
         // Store the perforation pressure for later usage.
-        perf_data.pressure[perf] = well_state.bhp(this->index_of_well_) + this->perf_pressure_diffs_[perf];
+        perf_data.pressure[perf] = ws.bhp + this->perf_pressure_diffs_[perf];
     }
 
 
@@ -1156,7 +1157,7 @@ namespace Opm
                                    const WellState& well_state,
                                    DeferredLogger& deferred_logger)
     {
-        const double bhp = well_state.bhp(index_of_well_);
+        const double bhp = well_state.well(index_of_well_).bhp;
         std::vector<double> well_rates;
         computeWellRatesWithBhp(ebos_simulator, bhp, well_rates, deferred_logger);
 
@@ -1211,6 +1212,7 @@ namespace Opm
         b_perf.resize(nperf * num_components_);
         surf_dens_perf.resize(nperf * num_components_);
         const int w = index_of_well_;
+        const auto& ws = well_state.well(this->index_of_well_);
 
         const bool waterPresent = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx);
         const bool oilPresent = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx);
@@ -1224,7 +1226,7 @@ namespace Opm
 
         // Compute the average pressure in each well block
         const auto& perf_press = well_state.perfData(w).pressure;
-        auto p_above =  this->parallel_well_info_.communicateAboveValues(well_state.bhp(w),
+        auto p_above =  this->parallel_well_info_.communicateAboveValues(ws.bhp,
                                                                          perf_press.data(),
                                                                          nperf);
 
@@ -1681,6 +1683,7 @@ namespace Opm
         // to replace the original one
         WellState well_state_copy = ebosSimulator.problem().wellModel().wellState();
         const auto& group_state  = ebosSimulator.problem().wellModel().groupState();
+        auto& ws = well_state_copy.well(this->index_of_well_);
 
         //  Set current control to bhp, and bhp value in state, modify bhp limit in control object.
         if (well_ecl_.isInjector()) {
@@ -1688,7 +1691,7 @@ namespace Opm
         } else {
             well_state_copy.currentProductionControl(index_of_well_, Well::ProducerCMode::BHP);
         }
-        well_state_copy.update_bhp(index_of_well_, bhp);
+        ws.bhp = bhp;
 
         const double dt = ebosSimulator.timeStepSize();
         bool converged = this->iterateWellEquations(ebosSimulator, dt, well_state_copy, group_state, deferred_logger);

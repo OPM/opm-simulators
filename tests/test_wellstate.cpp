@@ -26,6 +26,7 @@
 #include <opm/simulators/wells/GlobalWellInfo.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/WellState.hpp>
+#include <opm/simulators/wells/SingleWellState.hpp>
 #include <opm/simulators/wells/SegmentState.hpp>
 #include <opm/simulators/wells/WellContainer.hpp>
 #include <opm/simulators/wells/PerfData.hpp>
@@ -573,6 +574,21 @@ GAS
 
     BOOST_CHECK(!pd1.try_assign(pd4));
 }
+
+
+BOOST_AUTO_TEST_CASE(TestSingleWellState) {
+    Opm::SingleWellState ws1;
+    Opm::SingleWellState ws2;
+
+    ws1.bhp = 100;
+    ws1.thp = 200;
+
+    ws2.init_timestep(ws1);
+    BOOST_CHECK_EQUAL(ws2.bhp, ws1.bhp);
+    BOOST_CHECK_EQUAL(ws2.thp, ws1.thp);
+}
+
+
 
 
 

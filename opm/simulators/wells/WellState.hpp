@@ -22,6 +22,7 @@
 #define OPM_WELLSTATEFULLYIMPLICITBLACKOIL_HEADER_INCLUDED
 
 #include <opm/simulators/wells/ALQState.hpp>
+#include <opm/simulators/wells/SingleWellState.hpp>
 #include <opm/simulators/wells/GlobalWellInfo.hpp>
 #include <opm/simulators/wells/SegmentState.hpp>
 #include <opm/simulators/wells/WellContainer.hpp>
@@ -309,14 +310,6 @@ public:
         return this->phase_usage_;
     }
 
-    /// One bhp pressure per well.
-    void update_bhp(std::size_t well_index, double value) { bhp_[well_index] = value; }
-    double bhp(std::size_t well_index) const { return bhp_[well_index]; }
-
-    /// One thp pressure per well.
-    void update_thp(std::size_t well_index, double value) { thp_[well_index] = value; }
-    double thp(std::size_t well_index) const { return thp_[well_index]; }
-
     /// One temperature per well.
     void update_temperature(std::size_t well_index, double value) { temperature_[well_index] = value; }
     double temperature(std::size_t well_index) const { return temperature_[well_index]; }
@@ -352,6 +345,23 @@ public:
         return this->is_producer_[well_index];
     }
 
+    const SingleWellState& well(std::size_t well_index) const {
+        return this->wells_[well_index];
+    }
+
+    const SingleWellState& well(const std::string& well_name) const {
+        return this->wells_[well_name];
+    }
+
+    SingleWellState& well(std::size_t well_index) {
+        return this->wells_[well_index];
+    }
+
+    SingleWellState& well(const std::string& well_name) {
+        return this->wells_[well_name];
+    }
+
+
 
 private:
     WellMapType wellMap_;
@@ -362,10 +372,9 @@ private:
     ALQState alq_state;
     bool do_glift_optimization_;
 
+    WellContainer<SingleWellState> wells_;
     WellContainer<Well::Status> status_;
     WellContainer<const ParallelWellInfo*> parallel_well_info_;
-    WellContainer<double> bhp_;
-    WellContainer<double> thp_;
     WellContainer<double> temperature_;
     WellContainer<std::vector<double>> wellrates_;
     PhaseUsage phase_usage_;

@@ -172,8 +172,9 @@ loadRestartData(const data::Wells& rst_wells,
     for( const auto& wm : well_state.wellMap() ) {
         const auto well_index = wm.second[ 0 ];
         const auto& rst_well = rst_wells.at( wm.first );
-        well_state.update_thp(well_index, rst_well.thp);
-        well_state.update_bhp(well_index, rst_well.bhp);
+        auto& ws = well_state.well(well_index);
+        ws.bhp = rst_well.bhp;
+        ws.thp = rst_well.thp;
         well_state.update_temperature(well_index,  rst_well.temperature);
 
         if (rst_well.current_control.isProducer) {

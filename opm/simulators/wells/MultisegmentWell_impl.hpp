@@ -340,6 +340,7 @@ namespace Opm
         // store a copy of the well state, we don't want to update the real well state
         WellState well_state_copy = ebosSimulator.problem().wellModel().wellState();
         const auto& group_state = ebosSimulator.problem().wellModel().groupState();
+        auto& ws = well_state_copy.well(this->index_of_well_);
 
         // Get the current controls.
         const auto& summary_state = ebosSimulator.vanguard().summaryState();
@@ -358,7 +359,7 @@ namespace Opm
             prod_controls.bhp_limit = bhp;
             well_state_copy.currentProductionControl(index_of_well_, Well::ProducerCMode::BHP);
         }
-        well_state_copy.update_bhp(well_copy.index_of_well_, bhp);
+        ws.bhp = bhp;
         well_copy.scaleSegmentPressuresWithBhp(well_state_copy);
 
         // initialized the well rates with the potentials i.e. the well rates based on bhp

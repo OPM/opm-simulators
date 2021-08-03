@@ -44,12 +44,11 @@ void WellState::base_init(const std::vector<double>& cellPressures,
     this->status_.clear();
     this->parallel_well_info_.clear();
     this->wellrates_.clear();
-    this->bhp_.clear();
-    this->thp_.clear();
     this->temperature_.clear();
     this->segment_state.clear();
     this->well_potentials_.clear();
     this->productivity_index_.clear();
+    this->wells_.clear();
     {
         // const int nw = wells->number_of_wells;
         const int nw = wells_ecl.size();
@@ -92,6 +91,7 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
     const auto& pu = this->phase_usage_;
     const int np = pu.num_phases;
 
+    auto& ws = this->wells_.add(well.name(), SingleWellState{});
     this->status_.add(well.name(), Well::Status::OPEN);
     this->parallel_well_info_.add(well.name(), well_info);
     this->wellrates_.add(well.name(), std::vector<double>(np, 0));
@@ -99,8 +99,6 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
     const int num_perf_this_well = well_info->communication().sum(well_perf_data.size());
     this->segment_state.add(well.name(), SegmentState{});
     this->perfdata.add(well.name(), PerfData{static_cast<std::size_t>(num_perf_this_well), well.isInjector(), this->phase_usage_});
-    this->bhp_.add(well.name(), 0.0);
-    this->thp_.add(well.name(), 0.0);
     this->productivity_index_.add(well.name(), std::vector<double>(np, 0));
     if ( well.isInjector() )
         this->temperature_.add(well.name(), well.injectionControls(summary_state).temperature);
@@ -136,9 +134,9 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
         //    applicable, otherwise assign equal to
         //    first perforation cell pressure.
         if (is_bhp) {
-            bhp_[w] = bhp_limit;
+            ws.bhp = bhp_limit;
         } else {
-            bhp_[w] = global_pressure;
+            ws.bhp = global_pressure;
         }
     } else if (is_grup) {
         // Well under group control.
@@ -148,7 +146,7 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
         //    the well is an injector or producer)
         //    pressure in first perforation cell.
         const double safety_factor = well.isInjector() ? 1.01 : 0.99;
-        bhp_[w] = safety_factor * global_pressure;
+        ws.bhp = safety_factor * global_pressure;
     } else {
         // Open well, under own control:
         // 1. Rates: initialize well rates to match
@@ -206,10 +204,10 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
         //    the well is an injector or producer)
         //    pressure in first perforation cell.
         if (is_bhp) {
-            bhp_[w] = bhp_limit;
+            ws.bhp = bhp_limit;
         } else {
             const double safety_factor = well.isInjector() ? 1.01 : 0.99;
-            bhp_[w] = safety_factor * global_pressure;
+            ws.bhp = safety_factor * global_pressure;
         }
     }
 
@@ -219,7 +217,7 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
                                            : prod_controls.hasControl(Well::ProducerCMode::THP);
     const double thp_limit = well.isInjector() ? inj_controls.thp_limit : prod_controls.thp_limit;
     if (has_thp) {
-        thp_[w] = thp_limit;
+        ws.thp = thp_limit;
     }
 }
 
@@ -356,11 +354,17 @@ void WellState::init(const std::vector<double>& cellPressures,
                 continue;
             }
             const auto& wname = well.name();
+            auto& new_well = this->well(w);
             auto it = prevState->wellMap().find(well.name());
             if (it != end)
             {
                 const int newIndex = w;
                 const int oldIndex = it->second[ 0 ];
+
+                const auto& prev_well = prevState->well(oldIndex);
+                new_well.init_timestep(prev_well);
+
+
                 if (prevState->status_[oldIndex] == Well::Status::SHUT) {
                     // Well was shut in previous state, do not use its values.
                     continue;
@@ -370,12 +374,6 @@ void WellState::init(const std::vector<double>& cellPressures,
                     // Well changed to/from injector from/to producer, do not use its privious values.
                     continue;
                 }
-
-                // bhp
-                this->update_bhp( newIndex, prevState->bhp( oldIndex ));
-
-                // thp
-                this->update_thp( newIndex, prevState->thp( oldIndex ));
 
                 // If new target is set using WCONPROD, WCONINJE etc. we use the new control
                 if (!this->events_[w].hasEvent(WellState::event_mask)) {
@@ -436,7 +434,7 @@ void WellState::init(const std::vector<double>& cellPressures,
                 : well.productionControls(summary_state).hasControl(Well::ProducerCMode::THP);
 
             if (!has_thp) {
-                this->update_thp(w, 0.0);
+                new_well.thp = 0;
             }
         }
     }
@@ -512,6 +510,7 @@ WellState::report(const int* globalCellIdxMap,
         {
             continue;
         }
+        const auto& ws = this->well(well_index);
 
         const auto& reservoir_rates = this->well_reservoir_rates_[well_index];
         const auto& well_potentials = this->well_potentials_[well_index];
@@ -519,8 +518,8 @@ WellState::report(const int* globalCellIdxMap,
         const auto& wv = this->wellRates(well_index);
 
         data::Well well;
-        well.bhp = this->bhp(well_index);
-        well.thp = this->thp( well_index );
+        well.bhp = ws.bhp;
+        well.thp = ws.thp;
         well.temperature = this->temperature( well_index );
 
         if( pu.phase_used[BlackoilPhases::Aqua] ) {
@@ -680,6 +679,7 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
     // what we do here, is to set the segment rates and perforation rates
     for (int w = 0; w < nw; ++w) {
         const auto& well_ecl = wells_ecl[w];
+        auto& ws = this->well(w);
 
         if ( well_ecl.isMultiSegment() ) {
             const WellSegments& segment_set = well_ecl.getSegments();
@@ -748,7 +748,7 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
             {
                 // top segment is always the first one, and its pressure is the well bhp
                 auto& segment_pressure = this->segments(w).pressure;
-                segment_pressure[0] = bhp(w);
+                segment_pressure[0] = ws.bhp;
                 const auto& perf_press = perf_data.pressure;
                 for (int seg = 1; seg < well_nseg; ++seg) {
                     if ( !segment_perforations[seg].empty() ) {
@@ -842,15 +842,16 @@ double WellState::brineWellRate(const int w) const
 
 void WellState::stopWell(int well_index)
 {
+    auto& ws = this->well(well_index);
+    ws.stop();
     this->status_[well_index] = Well::Status::STOP;
-    this->thp_[well_index] = 0;
 }
 
 void WellState::shutWell(int well_index)
 {
+    auto& ws = this->well(well_index);
+    ws.shut();
     this->status_[well_index] = Well::Status::SHUT;
-    this->thp_[well_index] = 0;
-    this->bhp_[well_index] = 0;
     const int np = numPhases();
     this->wellrates_[well_index].assign(np, 0);
 
