@@ -334,7 +334,7 @@ public:
     }
 
     const std::string& name(std::size_t well_index) const {
-        return this->status_.well_name(well_index);
+        return this->wells_.well_name(well_index);
     }
 
     const SingleWellState& well(std::size_t well_index) const {
