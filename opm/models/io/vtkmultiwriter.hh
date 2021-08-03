@@ -513,12 +513,12 @@ private:
 
     // make sure the field is well defined if running under valgrind
     // and make sure that all values can be displayed by paraview
-    void sanitizeScalarBuffer_(ScalarBuffer& b OPM_UNUSED)
+    void sanitizeScalarBuffer_(ScalarBuffer&)
     {
         // nothing to do: this is done by VtkScalarFunction
     }
 
-    void sanitizeVectorBuffer_(VectorBuffer& b OPM_UNUSED)
+    void sanitizeVectorBuffer_(VectorBuffer&)
     {
         // nothing to do: this is done by VtkVectorFunction
     }

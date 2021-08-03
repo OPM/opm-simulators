@@ -83,7 +83,7 @@ protected:
     friend ParentType;
     friend NewtonMethod<TypeTag>;
 
-    void preSolve_(const SolutionVector& currentSolution OPM_UNUSED,
+    void preSolve_(const SolutionVector&,
                    const GlobalEqVector& currentResidual)
     {
         const auto& constraintsMap = this->model().linearizer().constraintsMap();
@@ -131,7 +131,7 @@ protected:
                                  PrimaryVariables& nextValue,
                                  const PrimaryVariables& currentValue,
                                  const EqVector& update,
-                                 const EqVector& currentResidual OPM_UNUSED)
+                                 const EqVector&)
     {
         // normal Newton-Raphson update
         nextValue = currentValue;

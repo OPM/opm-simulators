@@ -232,7 +232,7 @@ public:
      * \brief Assign the energy specific primary variables to a PrimaryVariables object
      */
     static void assignPrimaryVars(PrimaryVariables& priVars,
-                                  Scalar temperature OPM_UNUSED)
+                                  Scalar)
     {
         if (!enableEnergy)
             return;
@@ -270,8 +270,8 @@ public:
     /*!
      * \brief Return how much a Newton-Raphson update is considered an error
      */
-    static Scalar computeUpdateError(const PrimaryVariables& oldPv OPM_UNUSED,
-                                     const EqVector& delta OPM_UNUSED)
+    static Scalar computeUpdateError(const PrimaryVariables&,
+                                     const EqVector&)
     {
         // do not consider consider the cange of energy primary variables for
         // convergence
@@ -429,10 +429,10 @@ public:
         }
     }
 
-    void updateEnergyQuantities_(const ElementContext& elemCtx OPM_UNUSED,
-                                 unsigned dofIdx OPM_UNUSED,
-                                 unsigned timeIdx OPM_UNUSED,
-                                 const typename FluidSystem::template ParameterCache<Evaluation>& paramCache OPM_UNUSED)
+    void updateEnergyQuantities_(const ElementContext&,
+                                 unsigned,
+                                 unsigned,
+                                 const typename FluidSystem::template ParameterCache<Evaluation>&)
     { }
 
     const Evaluation& rockInternalEnergy() const
@@ -601,16 +601,16 @@ class BlackOilEnergyExtensiveQuantities<TypeTag, false>
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
 
 public:
-    void updateEnergy(const ElementContext& elemCtx OPM_UNUSED,
-                      unsigned scvfIdx OPM_UNUSED,
-                      unsigned timeIdx OPM_UNUSED)
+    void updateEnergy(const ElementContext&,
+                      unsigned,
+                      unsigned)
     {}
 
     template <class Context, class BoundaryFluidState>
-    void updateEnergyBoundary(const Context& ctx OPM_UNUSED,
-                              unsigned scvfIdx OPM_UNUSED,
-                              unsigned timeIdx OPM_UNUSED,
-                              const BoundaryFluidState& boundaryFs OPM_UNUSED)
+    void updateEnergyBoundary(const Context&,
+                              unsigned,
+                              unsigned,
+                              const BoundaryFluidState&)
     {}
 
     const Evaluation& energyFlux()  const

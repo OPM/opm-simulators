@@ -64,7 +64,7 @@ namespace Opm
        *  \note If this ratio is set, it is assume to be constant.
        */
       template <class Field>
-      void setFatherChildWeight(const Field& weight OPM_UNUSED) const
+      void setFatherChildWeight(const Field&) const
       {}
 
       //! restrict data to father
@@ -84,7 +84,7 @@ namespace Opm
       template< class Entity, class LocalGeometry >
       void restrictLocal(const Entity& father,
                          const Entity& son,
-                         const LocalGeometry& geometryInFather OPM_UNUSED,
+                         const LocalGeometry&,
                          bool initialize) const
       { restrictLocal(father, son, initialize); }
 
@@ -92,7 +92,7 @@ namespace Opm
       template< class Entity >
       void prolongLocal(const Entity& father,
                         const Entity& son,
-                        bool initialize OPM_UNUSED) const
+                        bool) const
       {
         container_.resize();
         assert( container_.codimension() == 0 );
@@ -104,7 +104,7 @@ namespace Opm
       template< class Entity, class LocalGeometry >
       void prolongLocal(const Entity& father,
                         const Entity& son,
-                        const LocalGeometry& geometryInFather OPM_UNUSED,
+                        const LocalGeometry&,
                         bool initialize) const
       { prolongLocal(father, son, initialize); }
 
@@ -112,7 +112,7 @@ namespace Opm
        *  \param[in]  comm  Communicator to add the discrete functions to
        */
       template< class Communicator >
-      void addToList(Communicator& comm OPM_UNUSED)
+      void addToList(Communicator&)
       {
         // TODO
       }
@@ -121,7 +121,7 @@ namespace Opm
        *  \param[in]  lb LoadBalancer to add the discrete functions to
        */
       template< class LoadBalancer >
-      void addToLoadBalancer(LoadBalancer& lb OPM_UNUSED)
+      void addToLoadBalancer(LoadBalancer&)
       {
         // TODO
       }
@@ -152,51 +152,51 @@ namespace Opm
        *  \note If this ratio is set, it is assume to be constant.
        */
       template <class Field>
-      void setFatherChildWeight(const Field& weight OPM_UNUSED) const
+      void setFatherChildWeight(const Field&) const
       { }
 
       //! restrict data to father
       template< class Entity >
-      void restrictLocal(const Entity& father OPM_UNUSED,
-                         const Entity& son OPM_UNUSED,
-                         bool initialize OPM_UNUSED) const
+      void restrictLocal(const Entity&,
+                         const Entity&,
+                         bool) const
       { }
 
       //! restrict data to father
       template< class Entity, class LocalGeometry >
-      void restrictLocal(const Entity& father OPM_UNUSED,
-                         const Entity& son OPM_UNUSED,
-                         const LocalGeometry& geometryInFather OPM_UNUSED,
-                         bool initialize OPM_UNUSED) const
+      void restrictLocal(const Entity&,
+                         const Entity&,
+                         const LocalGeometry&,
+                         bool) const
       { }
 
       //! prolong data to children
       template< class Entity >
-      void prolongLocal(const Entity& father OPM_UNUSED,
-                        const Entity& son OPM_UNUSED,
-                        bool initialize OPM_UNUSED) const
+      void prolongLocal(const Entity&,
+                        const Entity&,
+                        bool) const
       { }
 
       //! prolong data to children
       template< class Entity, class LocalGeometry >
-      void prolongLocal(const Entity& father OPM_UNUSED,
-                        const Entity& son OPM_UNUSED,
-                        const LocalGeometry& geometryInFather OPM_UNUSED,
-                        bool initialize OPM_UNUSED) const
+      void prolongLocal(const Entity&,
+                        const Entity&,
+                        const LocalGeometry&,
+                        bool) const
       { }
 
       /** \brief add discrete function to communicator
        *  \param[in]  comm  Communicator to add the discrete functions to
        */
       template< class Communicator >
-      void addToList(Communicator& comm OPM_UNUSED)
+      void addToList(Communicator&)
       { }
 
       /** \brief add discrete function to load balancer
        *  \param[in]  lb LoadBalancer to add the discrete functions to
        */
       template< class LoadBalancer >
-      void addToLoadBalancer(LoadBalancer& lb OPM_UNUSED)
+      void addToLoadBalancer(LoadBalancer&)
       { }
     };
 

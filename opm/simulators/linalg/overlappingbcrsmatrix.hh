@@ -91,9 +91,9 @@ public:
 
     // this constructor is required to make the class compatible with the SeqILU class of
     // Dune >= 2.7.
-    OverlappingBCRSMatrix(size_t numRows OPM_UNUSED,
-                          size_t numCols OPM_UNUSED,
-                          typename BCRSMatrix::BuildMode buildMode OPM_UNUSED)
+    OverlappingBCRSMatrix(size_t,
+                          size_t,
+                          typename BCRSMatrix::BuildMode)
     { throw std::logic_error("OverlappingBCRSMatrix objects cannot be build from scratch!"); }
 
     ~OverlappingBCRSMatrix()
@@ -448,8 +448,8 @@ private:
 
     // send the overlap indices to a peer
     template <class NativeBCRSMatrix>
-    void sendIndices_(const NativeBCRSMatrix& nativeMatrix OPM_UNUSED_NOMPI,
-                      ProcessRank peerRank OPM_UNUSED_NOMPI)
+    void sendIndices_([[maybe_unused]] const NativeBCRSMatrix& nativeMatrix,
+                      [[maybe_unused]] ProcessRank peerRank)
     {
 #if HAVE_MPI
         // send size of foreign overlap to peer
@@ -531,7 +531,7 @@ private:
     }
 
     // receive the overlap indices to a peer
-    void receiveIndices_(ProcessRank peerRank OPM_UNUSED_NOMPI)
+    void receiveIndices_([[maybe_unused]] ProcessRank peerRank)
     {
 #if HAVE_MPI
         // receive size of foreign overlap to peer
@@ -579,7 +579,7 @@ private:
 #endif // HAVE_MPI
     }
 
-    void sendEntries_(ProcessRank peerRank OPM_UNUSED_NOMPI)
+    void sendEntries_([[maybe_unused]] ProcessRank peerRank)
     {
 #if HAVE_MPI
         auto &mpiSendBuff = *entryValuesSendBuff_[peerRank];
@@ -608,7 +608,7 @@ private:
 #endif // HAVE_MPI
     }
 
-    void receiveAddEntries_(ProcessRank peerRank OPM_UNUSED_NOMPI)
+    void receiveAddEntries_([[maybe_unused]] ProcessRank peerRank)
     {
 #if HAVE_MPI
         auto &mpiRecvBuff = *entryValuesRecvBuff_[peerRank];
@@ -636,7 +636,7 @@ private:
 #endif // HAVE_MPI
     }
 
-    void receiveCopyEntries_(int peerRank OPM_UNUSED_NOMPI)
+    void receiveCopyEntries_([[maybe_unused]] int peerRank)
     {
 #if HAVE_MPI
         MpiBuffer<block_type> &mpiRecvBuff = *entryValuesRecvBuff_[peerRank];

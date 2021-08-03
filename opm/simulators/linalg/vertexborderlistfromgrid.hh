@@ -83,11 +83,11 @@ public:
     bool contains(int dim, int codim) const
     { return dim == codim; }
 
-    bool fixedsize(int dim OPM_UNUSED, int codim OPM_UNUSED) const
+    bool fixedsize(int, int) const
     { return true; }
 
     template <class EntityType>
-    size_t size(const EntityType& e OPM_UNUSED) const
+    size_t size(const EntityType&) const
     { return 2; }
 
     template <class MessageBufferImp, class EntityType>
@@ -98,7 +98,7 @@ public:
     }
 
     template <class MessageBufferImp, class EntityType>
-    void scatter(MessageBufferImp& buff, const EntityType& e, size_t n OPM_UNUSED)
+    void scatter(MessageBufferImp& buff, const EntityType& e, size_t)
     {
         BorderIndex bIdx;
 

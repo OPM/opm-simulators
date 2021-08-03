@@ -373,10 +373,10 @@ public:
      * \copydetails Doxygen::storageParam
      * \copydetails Doxygen::ecfvScvCtxParams
      */
-    void computeStorage(EqVector& storage OPM_UNUSED,
-                        const ElementContext& elemCtx OPM_UNUSED,
-                        unsigned dofIdx OPM_UNUSED,
-                        unsigned timeIdx OPM_UNUSED) const
+    void computeStorage(EqVector&,
+                        const ElementContext&,
+                        unsigned,
+                        unsigned) const
     {
         throw std::logic_error("Not implemented: The local residual "+Dune::className<Implementation>()
                                +" does not implement the required method 'computeStorage()'");
@@ -389,10 +389,10 @@ public:
      * \copydetails Doxygen::areaFluxParam
      * \copydetails Doxygen::ecfvScvfCtxParams
      */
-    void computeFlux(RateVector& flux OPM_UNUSED,
-                     const ElementContext& elemCtx OPM_UNUSED,
-                     unsigned scvfIdx OPM_UNUSED,
-                     unsigned timeIdx OPM_UNUSED) const
+    void computeFlux(RateVector&,
+                     const ElementContext&,
+                     unsigned,
+                     unsigned) const
     {
         throw std::logic_error("Not implemented: The local residual "+Dune::className<Implementation>()
                                +" does not implement the required method 'computeFlux()'");
@@ -404,10 +404,10 @@ public:
      * \copydoc Doxygen::sourceParam
      * \copydoc Doxygen::ecfvScvCtxParams
      */
-    void computeSource(RateVector& source OPM_UNUSED,
-                       const ElementContext& elemCtx OPM_UNUSED,
-                       unsigned dofIdx OPM_UNUSED,
-                       unsigned timeIdx OPM_UNUSED) const
+    void computeSource(RateVector&,
+                       const ElementContext&,
+                       unsigned,
+                       unsigned) const
     {
         throw std::logic_error("Not implemented: The local residual "+Dune::className<Implementation>()
                                +" does not implement the required method 'computeSource()'");

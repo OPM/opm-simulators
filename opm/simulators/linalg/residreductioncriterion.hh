@@ -76,7 +76,7 @@ public:
     /*!
      * \copydoc ConvergenceCriterion::setInitial(const Vector& , const Vector& )
      */
-    void setInitial(const Vector& curSol OPM_UNUSED, const Vector& curResid)
+    void setInitial(const Vector&, const Vector& curResid)
     {
         static constexpr Scalar eps = std::numeric_limits<Scalar>::min()*1e10;
 
@@ -90,8 +90,8 @@ public:
     /*!
      * \copydoc ConvergenceCriterion::update(const Vector& , const Vector& )
      */
-    void update(const Vector& curSol OPM_UNUSED,
-                const Vector& changeIndicator OPM_UNUSED,
+    void update(const Vector&,
+                const Vector&,
                 const Vector& curResid)
     {
         lastDefect_ = curDefect_;

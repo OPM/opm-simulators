@@ -70,10 +70,10 @@ public:
      *        integration point.
       */
     template <class Context>
-    static void addDiffusiveFlux(RateVector& flux OPM_UNUSED,
-                                 const Context& context OPM_UNUSED,
-                                 unsigned spaceIdx OPM_UNUSED,
-                                 unsigned timeIdx OPM_UNUSED)
+    static void addDiffusiveFlux(RateVector&,
+                                 const Context&,
+                                 unsigned,
+                                 unsigned)
     {}
 };
 
@@ -179,7 +179,7 @@ public:
      * \brief Returns the tortuousity of the sub-domain of a fluid
      *        phase in the porous medium.
      */
-    Scalar tortuosity(unsigned phaseIdx OPM_UNUSED) const
+    Scalar tortuosity(unsigned) const
     {
         throw std::logic_error("Method tortuosity() does not make sense "
                                "if diffusion is disabled");
@@ -189,7 +189,7 @@ public:
      * \brief Returns the molecular diffusion coefficient for a
      *        component in a phase.
      */
-    Scalar diffusionCoefficient(unsigned phaseIdx OPM_UNUSED, unsigned compIdx OPM_UNUSED) const
+    Scalar diffusionCoefficient(unsigned, unsigned) const
     {
         throw std::logic_error("Method diffusionCoefficient() does not "
                                "make sense if diffusion is disabled");
@@ -199,7 +199,7 @@ public:
      * \brief Returns the effective molecular diffusion coefficient of
      *        the porous medium for a component in a phase.
      */
-    Scalar effectiveDiffusionCoefficient(unsigned phaseIdx OPM_UNUSED, unsigned compIdx OPM_UNUSED) const
+    Scalar effectiveDiffusionCoefficient(unsigned, unsigned) const
     {
         throw std::logic_error("Method effectiveDiffusionCoefficient() "
                                "does not make sense if diffusion is disabled");
@@ -211,11 +211,11 @@ protected:
      *        mass fluxes.
      */
     template <class FluidState>
-    void update_(FluidState& fs OPM_UNUSED,
-                 typename FluidSystem::template ParameterCache<typename FluidState::Scalar>& paramCache OPM_UNUSED,
-                 const ElementContext& elemCtx OPM_UNUSED,
-                 unsigned dofIdx OPM_UNUSED,
-                 unsigned timeIdx OPM_UNUSED)
+    void update_(FluidState&,
+                 typename FluidSystem::template ParameterCache<typename FluidState::Scalar>&,
+                 const ElementContext&,
+                 unsigned,
+                 unsigned)
     { }
 };
 
@@ -331,16 +331,16 @@ protected:
      * \brief Update the quantities required to calculate
      *        the diffusive mass fluxes.
      */
-    void update_(const ElementContext& elemCtx OPM_UNUSED,
-                 unsigned faceIdx OPM_UNUSED,
-                 unsigned timeIdx OPM_UNUSED)
+    void update_(const ElementContext&,
+                 unsigned,
+                 unsigned)
     {}
 
     template <class Context, class FluidState>
-    void updateBoundary_(const Context& context OPM_UNUSED,
-                         unsigned bfIdx OPM_UNUSED,
-                         unsigned timeIdx OPM_UNUSED,
-                         const FluidState& fluidState OPM_UNUSED)
+    void updateBoundary_(const Context&,
+                         unsigned,
+                         unsigned,
+                         const FluidState&)
     {}
 
 public:
@@ -350,8 +350,8 @@ public:
      * \copydoc Doxygen::phaseIdxParam
      * \copydoc Doxygen::compIdxParam
      */
-    const Evaluation& moleFractionGradientNormal(unsigned phaseIdx OPM_UNUSED,
-                                                 unsigned compIdx OPM_UNUSED) const
+    const Evaluation& moleFractionGradientNormal(unsigned,
+                                                 unsigned) const
     {
         throw std::logic_error("The method moleFractionGradient() does not "
                                "make sense if diffusion is disabled.");
@@ -364,8 +364,8 @@ public:
      * \copydoc Doxygen::phaseIdxParam
      * \copydoc Doxygen::compIdxParam
      */
-    const Evaluation& effectiveDiffusionCoefficient(unsigned phaseIdx OPM_UNUSED,
-                                                    unsigned compIdx OPM_UNUSED) const
+    const Evaluation& effectiveDiffusionCoefficient(unsigned,
+                                                    unsigned) const
     {
         throw std::logic_error("The method effectiveDiffusionCoefficient() "
                                "does not make sense if diffusion is disabled.");
@@ -441,10 +441,10 @@ protected:
     }
 
     template <class Context, class FluidState>
-    void updateBoundary_(const Context& context OPM_UNUSED,
-                         unsigned bfIdx OPM_UNUSED,
-                         unsigned timeIdx OPM_UNUSED,
-                         const FluidState& fluidState OPM_UNUSED)
+    void updateBoundary_(const Context&,
+                         unsigned,
+                         unsigned,
+                         const FluidState&)
     {
         throw std::runtime_error("Not implemented: Diffusion across boundary not implemented for blackoil");
     }

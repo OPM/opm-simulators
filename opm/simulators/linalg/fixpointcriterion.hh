@@ -128,7 +128,7 @@ public:
     /*!
      * \copydoc ConvergenceCriterion::setInitial(const Vector&, const Vector&)
      */
-    void setInitial(const Vector& curSol, const Vector& curResid OPM_UNUSED)
+    void setInitial(const Vector& curSol, const Vector&)
     {
         lastSol_ = curSol;
         delta_ = 1000 * tolerance_;
@@ -138,8 +138,8 @@ public:
      * \copydoc ConvergenceCriterion::update(const Vector&, const Vector&, const Vector&)
      */
     void update(const Vector& curSol,
-                const Vector& changeIndicator OPM_UNUSED,
-                const Vector& curResid OPM_UNUSED)
+                const Vector&,
+                const Vector&)
     {
         assert(curSol.size() == lastSol_.size());
 

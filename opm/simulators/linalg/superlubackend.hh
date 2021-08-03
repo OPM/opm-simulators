@@ -64,7 +64,7 @@ class SuperLUBackend
                   "The SuperLU linear solver backend requires the IstlSparseMatrixAdapter");
 
 public:
-    SuperLUBackend(Simulator& simulator OPM_UNUSED)
+    SuperLUBackend(Simulator&)
     {}
 
     static void registerParameters()
