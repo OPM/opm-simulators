@@ -220,6 +220,13 @@ add_test_compareECLFiles(CASENAME spe1_oilgas
                          REL_TOL ${coarse_rel_tol}
                          DIR spe1)
 
+add_test_compareECLFiles(CASENAME spe1_gaswater
+                         FILENAME SPE1CASE2_GASWATER
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${coarse_rel_tol}
+                         DIR spe1)
+
 add_test_compareECLFiles(CASENAME spe1
                          FILENAME SPE1CASE1
                          SIMULATOR flow
@@ -1005,6 +1012,14 @@ if(MPI_FOUND)
                                        SIMULATOR flow
                                        ABS_TOL ${abs_tol_parallel}
                                        REL_TOL ${rel_tol_parallel}
+                                       TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
+
+  add_test_compare_parallel_simulation(CASENAME spe1_gaswater
+                                       FILENAME SPE1CASE2_GASWATER
+                                       SIMULATOR flow
+                                       ABS_TOL ${abs_tol_parallel}
+                                       REL_TOL ${rel_tol_parallel}
+                                       DIR spe1
                                        TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
 
   add_test_compare_parallel_simulation(CASENAME spe9
