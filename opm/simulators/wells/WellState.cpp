@@ -91,7 +91,7 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
     const auto& pu = this->phase_usage_;
     const int np = pu.num_phases;
 
-    auto& ws = this->wells_.add(well.name(), SingleWellState{});
+    auto& ws = this->wells_.add(well.name(), SingleWellState{well.isProducer()});
     this->status_.add(well.name(), Well::Status::OPEN);
     this->parallel_well_info_.add(well.name(), well_info);
     this->wellrates_.add(well.name(), std::vector<double>(np, 0));
@@ -305,12 +305,6 @@ void WellState::init(const std::vector<double>& cellPressures,
         this->well_vaporized_oil_rates_.add(wname, 0);
     }
 
-    is_producer_.clear();
-    for (int w = 0; w < nw; ++w) {
-        const auto& ecl_well = wells_ecl[w];
-        this->is_producer_.add( ecl_well.name(), ecl_well.isProducer());
-    }
-
     current_injection_controls_.clear();
     current_production_controls_.clear();
     for (int w = 0; w < nw; ++w) {
@@ -370,10 +364,9 @@ void WellState::init(const std::vector<double>& cellPressures,
                     continue;
                 }
 
-                if (is_producer_[newIndex] != prevState->is_producer_[oldIndex]) {
+                if (new_well.producer != prev_well.producer)
                     // Well changed to/from injector from/to producer, do not use its privious values.
                     continue;
-                }
 
                 // If new target is set using WCONPROD, WCONINJE etc. we use the new control
                 if (!this->events_[w].hasEvent(WellState::event_mask)) {
@@ -555,7 +548,7 @@ WellState::report(const int* globalCellIdxMap,
             well.rates.set(rt::brine, brineWellRate(well_index));
         }
 
-        if (is_producer_[well_index]) {
+        if (ws.producer) {
             well.rates.set(rt::alq, getALQ(wname));
         }
         else {
@@ -568,7 +561,7 @@ WellState::report(const int* globalCellIdxMap,
         {
             auto& curr = well.current_control;
 
-            curr.isProducer = this->is_producer_[well_index];
+            curr.isProducer = ws.producer;
             curr.prod = this->currentProductionControl(well_index);
             curr.inj  = this->currentInjectionControl(well_index);
         }

@@ -21,8 +21,15 @@
 
 namespace Opm {
 
+SingleWellState::SingleWellState(bool is_producer)
+    : producer(is_producer)
+{}
+
 
 void SingleWellState::init_timestep(const SingleWellState& other) {
+    if (this->producer != other.producer)
+        return;
+
     this->bhp = other.bhp;
     this->thp = other.thp;
 }

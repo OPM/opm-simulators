@@ -341,10 +341,6 @@ public:
         return this->status_.well_name(well_index);
     }
 
-    bool producer(std::size_t well_index) const {
-        return this->is_producer_[well_index];
-    }
-
     const SingleWellState& well(std::size_t well_index) const {
         return this->wells_[well_index];
     }
@@ -379,8 +375,6 @@ private:
     WellContainer<std::vector<double>> wellrates_;
     PhaseUsage phase_usage_;
     WellContainer<PerfData> perfdata;
-
-    WellContainer<int> is_producer_; // Size equal to number of local wells.
 
     // vector with size number of wells +1.
     // iterate over all perforations of a given well

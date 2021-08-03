@@ -25,6 +25,11 @@ namespace Opm {
 
 class SingleWellState {
 public:
+    explicit SingleWellState(bool is_producer);
+
+
+
+    bool producer;
     double bhp{0};
     double thp{0};
 
