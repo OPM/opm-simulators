@@ -90,8 +90,8 @@ activeProductionConstraint(const WellState& well_state,
     const PhaseUsage& pu = this->phaseUsage();
     const int well_index = this->index_of_well_;
     const auto controls = this->well_ecl_.productionControls(summaryState);
-    auto currentControl = well_state.currentProductionControl(well_index);
     auto& ws = well_state.well(well_index);
+    const auto currentControl = ws.production_cmode;
 
     if (controls.hasControl(Well::ProducerCMode::BHP) && currentControl != Well::ProducerCMode::BHP) {
         const double bhp_limit = controls.bhp_limit;
@@ -170,7 +170,7 @@ activeProductionConstraint(const WellState& well_state,
             return Well::ProducerCMode::THP;
     }
 
-    return well_state.currentProductionControl(well_index);
+    return currentControl;
 }
 
 
@@ -185,7 +185,7 @@ activeInjectionConstraint(const WellState& well_state,
     const auto& ws = well_state.well(well_index);
 
     const auto controls = this->well_ecl_.injectionControls(summaryState);
-    auto currentControl = well_state.currentInjectionControl(well_index);
+    const auto currentControl = ws.injection_cmode;
 
     if (controls.hasControl(Well::InjectorCMode::BHP) && currentControl != Well::InjectorCMode::BHP)
     {
@@ -248,7 +248,7 @@ activeInjectionConstraint(const WellState& well_state,
             return Well::InjectorCMode::THP;
     }
 
-    return well_state.currentInjectionControl(well_index);
+    return currentControl;
 }
 
 template <typename FluidSystem>
@@ -258,18 +258,19 @@ checkIndividualConstraints(WellState& well_state,
                            const SummaryState& summaryState) const
 {
     const int well_index = this->index_of_well_;
+    auto& ws = well_state.well(well_index);
     if (this->well_ecl_.isProducer()) {
         auto new_cmode = this->activeProductionConstraint(well_state, summaryState);
-        if (new_cmode != well_state.currentProductionControl(well_index)) {
-            well_state.currentProductionControl(well_index, new_cmode);
+        if (new_cmode != ws.production_cmode) {
+            ws.production_cmode = new_cmode;
             return true;
         }
     }
 
     if (this->well_ecl_.isInjector()) {
         auto new_cmode = this->activeInjectionConstraint(well_state, summaryState);
-        if (new_cmode != well_state.currentInjectionControl(well_index)) {
-            well_state.currentInjectionControl(well_index, new_cmode);
+        if (new_cmode != ws.injection_cmode) {
+            ws.injection_cmode = new_cmode;
             return true;
         }
     }
@@ -376,9 +377,10 @@ checkGroupConstraints(WellState& well_state,
 {
     const auto& well = well_ecl_;
     const int well_index = index_of_well_;
+    auto& ws = well_state.well(well_index);
 
     if (well.isInjector()) {
-        auto currentControl = well_state.currentInjectionControl(well_index);
+        const auto currentControl = ws.injection_cmode;
 
         if (currentControl != Well::InjectorCMode::GRUP) {
             // This checks only the first encountered group limit,
@@ -395,7 +397,7 @@ checkGroupConstraints(WellState& well_state,
             // If a group constraint was broken, we set the current well control to
             // be GRUP.
             if (group_constraint.first) {
-                well_state.currentInjectionControl(index_of_well_, Well::InjectorCMode::GRUP);
+                ws.injection_cmode = Well::InjectorCMode::GRUP;
                 const int np = well_state.numPhases();
                 for (int p = 0; p<np; ++p) {
                     well_state.wellRates(index_of_well_)[p] *= group_constraint.second;
@@ -406,7 +408,7 @@ checkGroupConstraints(WellState& well_state,
     }
 
     if (well.isProducer( )) {
-        auto currentControl = well_state.currentProductionControl(well_index);
+        const auto currentControl = ws.production_cmode;
 
         if (currentControl != Well::ProducerCMode::GRUP) {
             // This checks only the first encountered group limit,
@@ -423,7 +425,7 @@ checkGroupConstraints(WellState& well_state,
             // If a group constraint was broken, we set the current well control to
             // be GRUP.
             if (group_constraint.first) {
-                well_state.currentProductionControl(index_of_well_, Well::ProducerCMode::GRUP);
+                ws.production_cmode = Well::ProducerCMode::GRUP;
                 const int np = well_state.numPhases();
                 for (int p = 0; p<np; ++p) {
                     well_state.wellRates(index_of_well_)[p] *= group_constraint.second;

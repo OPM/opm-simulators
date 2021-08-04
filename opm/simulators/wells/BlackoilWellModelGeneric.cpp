@@ -178,10 +178,10 @@ loadRestartData(const data::Wells& rst_wells,
         ws.temperature = rst_well.temperature;
 
         if (rst_well.current_control.isProducer) {
-            well_state.currentProductionControl(well_index, rst_well.current_control.prod);
+            ws.production_cmode = rst_well.current_control.prod;
         }
         else {
-            well_state.currentInjectionControl(well_index, rst_well.current_control.inj);
+            ws.injection_cmode = rst_well.current_control.inj;
         }
 
         for( size_t i = 0; i < phs.size(); ++i ) {

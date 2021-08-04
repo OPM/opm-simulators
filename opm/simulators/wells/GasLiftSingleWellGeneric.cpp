@@ -1235,9 +1235,8 @@ bool
 GasLiftSingleWellGeneric::OptimizeState::
 checkThpControl()
 {
-    const int index = this->parent.well_state_.wellIndex(this->parent.well_name_);
-    const Well::ProducerCMode& control_mode
-        = this->parent.well_state_.currentProductionControl(index);
+    const int well_index = this->parent.well_state_.wellIndex(this->parent.well_name_);
+    const Well::ProducerCMode& control_mode = this->parent.well_state_.well(well_index).production_cmode;
     return control_mode == Well::ProducerCMode::THP;
 }
 

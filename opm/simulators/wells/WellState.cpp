@@ -296,19 +296,15 @@ void WellState::init(const std::vector<double>& cellPressures,
         this->well_vaporized_oil_rates_.add(wname, 0);
     }
 
-    current_injection_controls_.clear();
-    current_production_controls_.clear();
     for (int w = 0; w < nw; ++w) {
-        const auto& wname = wells_ecl[w].name();
-        current_production_controls_.add(wname, Well::ProducerCMode::CMODE_UNDEFINED);
-        current_injection_controls_.add(wname, Well::InjectorCMode::CMODE_UNDEFINED);
+        auto& ws = this->well(w);
         if (wells_ecl[w].isProducer()) {
             const auto controls = wells_ecl[w].productionControls(summary_state);
-            currentProductionControl(w, controls.cmode);
+            ws.production_cmode = controls.cmode;
         }
         else {
             const auto controls = wells_ecl[w].injectionControls(summary_state);
-            currentInjectionControl(w, controls.cmode);
+            ws.injection_cmode = controls.cmode;
         }
     }
 
@@ -361,8 +357,8 @@ void WellState::init(const std::vector<double>& cellPressures,
 
                 // If new target is set using WCONPROD, WCONINJE etc. we use the new control
                 if (!new_well.events.hasEvent(WellState::event_mask)) {
-                    current_injection_controls_[ newIndex ] = prevState->currentInjectionControl(oldIndex);
-                    current_production_controls_[ newIndex ] = prevState->currentProductionControl(oldIndex);
+                    new_well.injection_cmode = prev_well.injection_cmode;
+                    new_well.production_cmode = prev_well.production_cmode;
                 }
 
                 wellRates(w) = prevState->wellRates(oldIndex);
@@ -552,8 +548,8 @@ WellState::report(const int* globalCellIdxMap,
             auto& curr = well.current_control;
 
             curr.isProducer = ws.producer;
-            curr.prod = this->currentProductionControl(well_index);
-            curr.inj  = this->currentInjectionControl(well_index);
+            curr.prod = ws.production_cmode;
+            curr.inj  = ws.injection_cmode;
         }
 
         const auto& pwinfo = *this->parallel_well_info_[well_index];
@@ -922,9 +918,9 @@ void WellState::updateGlobalIsGrup(const Comm& comm)
     for (std::size_t well_index = 0; well_index < this->size(); well_index++) {
         const auto& ws = this->well(well_index);
         if (ws.producer)
-            this->global_well_info.value().update_producer(well_index, ws.status, this->current_production_controls_[well_index]);
+            this->global_well_info.value().update_producer(well_index, ws.status, ws.production_cmode);
         else
-            this->global_well_info.value().update_injector(well_index, ws.status, this->current_injection_controls_[well_index]);
+            this->global_well_info.value().update_injector(well_index, ws.status, ws.injection_cmode);
     }
     this->global_well_info.value().communicate(comm);
 }

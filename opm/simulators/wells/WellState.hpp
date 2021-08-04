@@ -108,14 +108,6 @@ public:
                 const std::vector<std::vector<PerforationData>>& well_perf_data,
                 const SummaryState& summary_state);
 
-    /// One current control per injecting well.
-    Well::InjectorCMode currentInjectionControl(std::size_t well_index) const { return current_injection_controls_[well_index]; }
-    void currentInjectionControl(std::size_t well_index, Well::InjectorCMode cmode) { current_injection_controls_[well_index] = cmode; }
-
-    /// One current control per producing well.
-    Well::ProducerCMode currentProductionControl(std::size_t well_index) const { return current_production_controls_[well_index]; }
-    void currentProductionControl(std::size_t well_index, Well::ProducerCMode cmode) { current_production_controls_[well_index] = cmode; }
-
     void setCurrentWellRates(const std::string& wellName, const std::vector<double>& new_rates ) {
         auto& [owner, rates] = this->well_rates.at(wellName);
         if (owner)
@@ -365,12 +357,6 @@ private:
     WellContainer<std::vector<double>> wellrates_;
     PhaseUsage phase_usage_;
     WellContainer<PerfData> perfdata;
-
-    // vector with size number of wells +1.
-    // iterate over all perforations of a given well
-    // for (int perf = first_perf_index_[well_index]; perf < first_perf_index_[well_index] + num_perf_[well_index]; ++perf)
-    WellContainer<Opm::Well::InjectorCMode> current_injection_controls_;
-    WellContainer<Well::ProducerCMode> current_production_controls_;
 
     // The well_rates variable is defined for all wells on all processors. The
     // bool in the value pair is whether the current process owns the well or

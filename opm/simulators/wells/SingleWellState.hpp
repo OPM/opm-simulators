@@ -35,6 +35,9 @@ public:
     double thp{0};
     double temperature{};
     Events events;
+    Well::InjectorCMode injection_cmode{Well::InjectorCMode::CMODE_UNDEFINED};
+    Well::ProducerCMode production_cmode{Well::ProducerCMode::CMODE_UNDEFINED};
+
 
     void init_timestep(const SingleWellState& other);
     void shut();

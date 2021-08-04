@@ -165,11 +165,12 @@ namespace Opm
         const auto& summaryState = ebos_simulator.vanguard().summaryState();
         const auto& schedule = ebos_simulator.vanguard().schedule();
         const auto& well = this->well_ecl_;
+        auto& ws = well_state.well(this->index_of_well_);
         std::string from;
         if (well.isInjector()) {
-            from = Well::InjectorCMode2String(well_state.currentInjectionControl(this->index_of_well_));
+            from = Well::InjectorCMode2String(ws.injection_cmode);
         } else {
-            from = Well::ProducerCMode2String(well_state.currentProductionControl(this->index_of_well_));
+            from = Well::ProducerCMode2String(ws.production_cmode);
         }
 
         bool changed = false;
@@ -188,9 +189,9 @@ namespace Opm
         if (changed) {
             std::string to;
             if (well.isInjector()) {
-                to = Well::InjectorCMode2String(well_state.currentInjectionControl(this->index_of_well_));
+                to = Well::InjectorCMode2String(ws.injection_cmode);
             } else {
-                to = Well::ProducerCMode2String(well_state.currentProductionControl(this->index_of_well_));
+                to = Well::ProducerCMode2String(ws.production_cmode);
             }
             std::ostringstream ss;
             ss << "    Switching control mode for well " << this->name()
@@ -573,7 +574,7 @@ namespace Opm
     {
         this->operability_status_.reset();
 
-        auto current_control = well_state.currentProductionControl(this->index_of_well_);
+        auto current_control = well_state.well(this->index_of_well_).production_cmode;
         // Operability checking is not free
         // Only check wells under BHP and THP control
         if(current_control == Well::ProducerCMode::BHP || current_control == Well::ProducerCMode::THP) {
@@ -639,7 +640,7 @@ namespace Opm
                 OPM_DEFLOG_THROW(std::runtime_error, "Expected WATER, OIL or GAS as type for injectors "  + this->name(), deferred_logger );
             }
 
-            auto current = well_state.currentInjectionControl(well_index);
+            const auto current = ws.injection_cmode;
 
             switch(current) {
             case Well::InjectorCMode::RATE:
@@ -722,7 +723,7 @@ namespace Opm
         //Producer
         else
         {
-            auto current = well_state.currentProductionControl(well_index);
+            const auto current = ws.production_cmode;
             const auto& controls = well.productionControls(summaryState);
             switch (current) {
             case Well::ProducerCMode::ORAT:

@@ -155,9 +155,10 @@ checkConvergenceControlEq(const WellState& well_state,
     CR::WellFailure::Type ctrltype = CR::WellFailure::Type::Invalid;
 
     const int well_index = baseif_.indexOfWell();
+    const auto& ws = well_state.well(well_index);
     if (baseif_.isInjector() )
     {
-        auto current = well_state.currentInjectionControl(well_index);
+        auto current = ws.injection_cmode;
         switch(current) {
         case Well::InjectorCMode::THP:
             ctrltype = CR::WellFailure::Type::ControlTHP;
@@ -183,7 +184,7 @@ checkConvergenceControlEq(const WellState& well_state,
 
     if (baseif_.isProducer() )
     {
-        auto current = well_state.currentProductionControl(well_index);
+        auto current = ws.production_cmode;
         switch(current) {
         case Well::ProducerCMode::THP:
             ctrltype = CR::WellFailure::Type::ControlTHP;
@@ -1797,9 +1798,10 @@ getControlTolerance(const WellState& well_state,
     double control_tolerance = 0.;
 
     const int well_index = baseif_.indexOfWell();
+    const auto& ws = well_state.well(well_index);
     if (baseif_.isInjector() )
     {
-        auto current = well_state.currentInjectionControl(well_index);
+        auto current = ws.injection_cmode;
         switch(current) {
         case Well::InjectorCMode::THP:
             control_tolerance = tolerance_pressure_ms_wells;
@@ -1821,7 +1823,7 @@ getControlTolerance(const WellState& well_state,
 
     if (baseif_.isProducer() )
     {
-        auto current = well_state.currentProductionControl(well_index);
+        auto current = ws.production_cmode;
         switch(current) {
         case Well::ProducerCMode::THP:
             control_tolerance = tolerance_pressure_ms_wells; // 0.1 bar

@@ -1687,9 +1687,9 @@ namespace Opm
 
         //  Set current control to bhp, and bhp value in state, modify bhp limit in control object.
         if (well_ecl_.isInjector()) {
-            well_state_copy.currentInjectionControl(index_of_well_, Well::InjectorCMode::BHP);
+            ws.injection_cmode = Well::InjectorCMode::BHP;
         } else {
-            well_state_copy.currentProductionControl(index_of_well_, Well::ProducerCMode::BHP);
+            ws.production_cmode = Well::ProducerCMode::BHP;
         }
         ws.bhp = bhp;
 
@@ -1839,8 +1839,9 @@ namespace Opm
         // If the well is pressure controlled the potential equals the rate.
         bool thp_controlled_well = false;
         bool bhp_controlled_well = false;
+        const auto& ws = well_state.well(this->index_of_well_);
         if (this->isInjector()) {
-            const Well::InjectorCMode& current = well_state.currentInjectionControl(index_of_well_);
+            const Well::InjectorCMode& current = ws.injection_cmode;
             if (current == Well::InjectorCMode::THP) {
                 thp_controlled_well = true;
             }
@@ -1848,7 +1849,7 @@ namespace Opm
                 bhp_controlled_well = true;
             }
         } else {
-            const Well::ProducerCMode& current = well_state.currentProductionControl(index_of_well_);
+            const Well::ProducerCMode& current = ws.production_cmode;
             if (current == Well::ProducerCMode::THP) {
                 thp_controlled_well = true;
             }

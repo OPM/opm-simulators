@@ -278,7 +278,7 @@ assembleControlEqProd_(const WellState& well_state,
                        EvalWell& control_eq,
                        DeferredLogger& deferred_logger) const
 {
-    auto current = well_state.currentProductionControl(baseif_.indexOfWell());
+    const auto current = well_state.well(baseif_.indexOfWell()).production_cmode;
     const auto& pu = baseif_.phaseUsage();
     const double efficiencyFactor = baseif_.wellEcl().getEfficiencyFactor();
 
@@ -392,7 +392,7 @@ assembleControlEqInj_(const WellState& well_state,
                       EvalWell& control_eq,
                       DeferredLogger& deferred_logger) const
 {
-    auto current = well_state.currentInjectionControl(baseif_.indexOfWell());
+    auto current = well_state.well(baseif_.indexOfWell()).injection_cmode;
     const InjectorType injectorType = controls.injector_type;
     const auto& pu = baseif_.phaseUsage();
     const double efficiencyFactor = baseif_.wellEcl().getEfficiencyFactor();
