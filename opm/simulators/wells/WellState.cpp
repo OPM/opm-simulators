@@ -41,7 +41,6 @@ void WellState::base_init(const std::vector<double>& cellPressures,
     // clear old name mapping
     this->wellMap_.clear();
     this->perfdata.clear();
-    this->status_.clear();
     this->parallel_well_info_.clear();
     this->wellrates_.clear();
     this->segment_state.clear();
@@ -92,7 +91,6 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
     double temp = well.isInjector() ? well.injectionControls(summary_state).temperature : 273.15 + 15.56;
 
     auto& ws = this->wells_.add(well.name(), SingleWellState{well.isProducer(), temp});
-    this->status_.add(well.name(), Well::Status::OPEN);
     this->parallel_well_info_.add(well.name(), well_info);
     this->wellrates_.add(well.name(), std::vector<double>(np, 0));
     this->well_potentials_.add(well.name(), std::vector<double>(np, 0));
@@ -120,7 +118,7 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
     const double global_pressure = well_info->broadcastFirstPerforationValue(local_pressure);
 
     if (well.getStatus() == Well::Status::OPEN) {
-        this->status_[w] = Well::Status::OPEN;
+        ws.status = Well::Status::OPEN;
     }
 
     if (well.getStatus() == Well::Status::STOP) {
@@ -355,7 +353,7 @@ void WellState::init(const std::vector<double>& cellPressures,
                 new_well.init_timestep(prev_well);
 
 
-                if (prevState->status_[oldIndex] == Well::Status::SHUT) {
+                if (prev_well.status == Well::Status::SHUT) {
                     // Well was shut in previous state, do not use its values.
                     continue;
                 }
@@ -494,12 +492,11 @@ WellState::report(const int* globalCellIdxMap,
     data::Wells res;
     for( const auto& [wname, winfo]: this->wellMap() ) {
         const auto well_index = winfo[ 0 ];
-        if ((this->status_[well_index] == Well::Status::SHUT) &&
-            ! wasDynamicallyClosed(well_index))
+        const auto& ws = this->well(well_index);
+        if ((ws.status == Well::Status::SHUT) && !wasDynamicallyClosed(well_index))
         {
             continue;
         }
-        const auto& ws = this->well(well_index);
 
         const auto& reservoir_rates = this->well_reservoir_rates_[well_index];
         const auto& well_potentials = this->well_potentials_[well_index];
@@ -766,7 +763,8 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
 
             const auto& wname = well.name();
             if (prev_well_state->segment_state.has(wname)) {
-                if (prev_well_state->status_[wname] == Well::Status::SHUT) {
+                const auto& prev_ws = prev_well_state->well(wname);
+                if (prev_ws.status == Well::Status::SHUT) {
                     continue;
                 }
 
@@ -833,14 +831,12 @@ void WellState::stopWell(int well_index)
 {
     auto& ws = this->well(well_index);
     ws.stop();
-    this->status_[well_index] = Well::Status::STOP;
 }
 
 void WellState::shutWell(int well_index)
 {
     auto& ws = this->well(well_index);
     ws.shut();
-    this->status_[well_index] = Well::Status::SHUT;
     const int np = numPhases();
     this->wellrates_[well_index].assign(np, 0);
 
@@ -925,7 +921,14 @@ void WellState::communicateGroupRates(const Comm& comm)
 template<class Comm>
 void WellState::updateGlobalIsGrup(const Comm& comm)
 {
-    this->global_well_info.value().update_group(this->status_.data(), this->current_injection_controls_.data(), this->current_production_controls_.data());
+    this->global_well_info.value().clear();
+    for (std::size_t well_index = 0; well_index < this->size(); well_index++) {
+        const auto& ws = this->well(well_index);
+        if (ws.producer)
+            this->global_well_info.value().update_producer(well_index, ws.status, this->current_production_controls_[well_index]);
+        else
+            this->global_well_info.value().update_injector(well_index, ws.status, this->current_injection_controls_[well_index]);
+    }
     this->global_well_info.value().communicate(comm);
 }
 

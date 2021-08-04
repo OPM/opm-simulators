@@ -37,10 +37,8 @@ GlobalWellInfo::GlobalWellInfo(const Schedule& sched, std::size_t report_step, c
         this->name_map.emplace( well.name(), global_well_index );
     }
 
-    for (const auto& well : local_wells) {
+    for (const auto& well : local_wells)
         this->local_map.push_back( well.seqIndex() );
-        this->is_injector.push_back( well.isInjector() );
-    }
 }
 
 
@@ -56,23 +54,19 @@ bool GlobalWellInfo::in_producing_group(const std::string& wname) const {
 }
 
 
-void GlobalWellInfo::update_group(const std::vector<Well::Status>& well_status, const std::vector<Well::InjectorCMode>& injection_cmode, const std::vector<Well::ProducerCMode>& production_cmode) {
-    if (well_status.size() != this->local_map.size())
-        throw std::logic_error("Size mismatch");
+void GlobalWellInfo::update_injector(std::size_t well_index, Well::Status well_status, Well::InjectorCMode injection_cmode) {
+    if (well_status == Well::Status::OPEN && injection_cmode == Well::InjectorCMode::GRUP)
+        this->m_in_injecting_group[this->local_map[well_index]] = 1;
+}
 
+void GlobalWellInfo::update_producer(std::size_t well_index, Well::Status well_status, Well::ProducerCMode production_cmode) {
+    if (well_status == Well::Status::OPEN && production_cmode == Well::ProducerCMode::GRUP)
+        this->m_in_producing_group[this->local_map[well_index]] = 1;
+}
+
+void GlobalWellInfo::clear() {
     this->m_in_injecting_group.assign(this->name_map.size(), 0);
     this->m_in_producing_group.assign(this->name_map.size(), 0);
-    for (std::size_t well_index = 0; well_index < well_status.size(); well_index++) {
-        if (well_status[well_index] == Well::Status::OPEN) {
-            if (this->is_injector[well_index]) {
-                if (injection_cmode[well_index] == Well::InjectorCMode::GRUP)
-                    this->m_in_injecting_group[this->local_map[well_index]] = 1;
-            } else {
-                if (production_cmode[well_index] == Well::ProducerCMode::GRUP)
-                    this->m_in_producing_group[this->local_map[well_index]] = 1;
-            }
-        }
-    }
 }
 
 

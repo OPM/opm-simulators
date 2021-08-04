@@ -31,6 +31,12 @@ void SingleWellState::init_timestep(const SingleWellState& other) {
     if (this->producer != other.producer)
         return;
 
+    if (this->status == Well::Status::SHUT)
+        return;
+
+    if (other.status == Well::Status::SHUT)
+        return;
+
     this->bhp = other.bhp;
     this->thp = other.thp;
     this->temperature = other.temperature;
@@ -40,10 +46,12 @@ void SingleWellState::init_timestep(const SingleWellState& other) {
 void SingleWellState::shut() {
     this->bhp = 0;
     this->thp = 0;
+    this->status = Well::Status::SHUT;
 }
 
 void SingleWellState::stop() {
     this->thp = 0;
+    this->status = Well::Status::STOP;
 }
 
 }

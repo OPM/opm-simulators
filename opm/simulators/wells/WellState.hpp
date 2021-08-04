@@ -294,7 +294,7 @@ public:
     void updateStatus(int well_index, Well::Status status);
 
     void openWell(int well_index) {
-        this->status_[well_index] = Well::Status::OPEN;
+        this->wells_[well_index].status = Well::Status::OPEN;
     }
 
     void shutWell(int well_index);
@@ -365,7 +365,6 @@ private:
     bool do_glift_optimization_;
 
     WellContainer<SingleWellState> wells_;
-    WellContainer<Well::Status> status_;
     WellContainer<const ParallelWellInfo*> parallel_well_info_;
     WellContainer<std::vector<double>> wellrates_;
     PhaseUsage phase_usage_;

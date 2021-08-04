@@ -20,6 +20,7 @@
 #ifndef OPM_SINGLE_WELL_STATE_HEADER_INCLUDED
 #define OPM_SINGLE_WELL_STATE_HEADER_INCLUDED
 
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
 
 namespace Opm {
 
@@ -27,7 +28,7 @@ class SingleWellState {
 public:
     SingleWellState(bool is_producer, double temp);
 
-
+    Well::Status status{Well::Status::OPEN};
     bool producer;
     double bhp{0};
     double thp{0};

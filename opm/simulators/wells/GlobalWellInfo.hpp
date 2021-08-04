@@ -69,13 +69,14 @@ public:
     GlobalWellInfo(const Schedule& sched, std::size_t report_step, const std::vector<Well>& local_wells);
     bool in_producing_group(const std::string& wname) const;
     bool in_injecting_group(const std::string& wname) const;
-    void update_group(const std::vector<Well::Status>& well_status, const std::vector<Well::InjectorCMode>& injection_cmode, const std::vector<Well::ProducerCMode>& production_cmode);
     std::size_t well_index(const std::string& wname) const;
     const std::string& well_name(std::size_t well_index) const;
+    void update_injector(std::size_t well_index, Well::Status well_status, Well::InjectorCMode injection_cmode);
+    void update_producer(std::size_t well_index, Well::Status well_status, Well::ProducerCMode production_cmode);
+    void clear();
 
 private:
     std::vector<std::size_t> local_map;    // local_index -> global_index
-    std::vector<bool> is_injector;         // local_index -> bool
 
     std::map<std::string, std::size_t> name_map; // string -> global_index
     std::vector<int> m_in_injecting_group;       // global_index -> int/bool
