@@ -128,7 +128,7 @@ int checkZeroDiagonal(BridgeMatrix& mat) {
     int numZeros = 0;
     const int dim = 3;                    // might be replaced with mat[0][0].N() or BridgeMatrix::block_type::size()
     const double zero_replace = 1e-15;
-    if (diag_indices.size() == 0) {
+    if (diag_indices.empty()) {
         int N = mat.N();
         diag_indices.reserve(N);
         for (typename BridgeMatrix::iterator r = mat.begin(); r != mat.end(); ++r) {
@@ -169,7 +169,7 @@ void getSparsityPattern(BridgeMatrix& mat, std::vector<int> &h_rows, std::vector
     int sum_nnzs = 0;
 
     // convert colIndices and rowPointers
-    if (h_rows.size() == 0) {
+    if (h_rows.empty()) {
         h_rows.emplace_back(0);
             for (typename BridgeMatrix::const_iterator r = mat.begin(); r != mat.end(); ++r) {
                 int size_row = 0;

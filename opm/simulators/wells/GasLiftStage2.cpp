@@ -705,11 +705,11 @@ GasLiftStage2::
 removeSurplusALQ_(const Group &group,
     std::vector<GradPair> &inc_grads, std::vector<GradPair> &dec_grads)
 {
-    if (dec_grads.size() == 0) {
+    if (dec_grads.empty()) {
         displayDebugMessage2B_("no wells to remove ALQ from. Skipping");
         return;
     }
-    assert(dec_grads.size() > 0);
+    assert(!dec_grads.empty());
     const auto &gl_group = this->glo_.group(group.name());
     const auto &max_glift = gl_group.max_lift_gas();
     const auto controls = group.productionControls(this->summary_state_);
@@ -760,7 +760,7 @@ removeSurplusALQ_(const Group &group,
             // NOTE: recalculateGradientAndUpdateData_() will remove the current gradient
             //   from dec_grads if it cannot calculate a new decremental gradient.
             //   This will invalidate dec_grad_itr and well_name
-            if (dec_grads.size() == 0) stop_iteration = true;
+            if (dec_grads.empty()) stop_iteration = true;
             ++state.it;
         }
         else {
@@ -907,7 +907,7 @@ std::pair<std::optional<GasLiftStage2::GradPairItr>,
 GasLiftStage2::OptimizeState::
 getEcoGradients(std::vector<GradPair> &inc_grads, std::vector<GradPair> &dec_grads)
 {
-    if (inc_grads.size() > 0 && dec_grads.size() > 0) {
+    if (!inc_grads.empty() && !dec_grads.empty()) {
         this->parent.sortGradients_(inc_grads);
         this->parent.sortGradients_(dec_grads);
         // The largest incremental gradient is the last element

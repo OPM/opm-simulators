@@ -49,7 +49,7 @@ openclSolverBackend<block_size>::openclSolverBackend(int verbosity_, int maxit_,
     try {
         std::vector<cl::Platform> platforms;
         cl::Platform::get(&platforms);
-        if (platforms.size() == 0) {
+        if (platforms.empty()) {
             OPM_THROW(std::logic_error, "Error openclSolver is selected but no OpenCL platforms are found");
         }
         out << "Found " << platforms.size() << " OpenCL platforms" << "\n";
@@ -89,7 +89,7 @@ openclSolverBackend<block_size>::openclSolverBackend(int verbosity_, int maxit_,
 
         platforms[platformID].getDevices(CL_DEVICE_TYPE_ALL, &devices);
 
-        if (devices.size() == 0){
+        if (devices.empty()) {
             OPM_THROW(std::logic_error, "Error openclSolver is selected but no OpenCL devices are found");
         }
         out << "Found " << devices.size() << " OpenCL devices" << "\n";

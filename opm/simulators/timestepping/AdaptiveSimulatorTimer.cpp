@@ -137,14 +137,14 @@ AdaptiveSimulatorTimer& AdaptiveSimulatorTimer::operator++ ()
     /// \brief return max step length used so far
     double AdaptiveSimulatorTimer::maxStepLength () const
     {
-        if( steps_.size() == 0 ) return 0.0;
+        if( steps_.empty() ) return 0.0;
         return *(std::max_element( steps_.begin(), steps_.end() ));
     }
 
     /// \brief return min step length used so far
     double AdaptiveSimulatorTimer::minStepLength () const
     {
-        if( steps_.size() == 0 ) return 0.0;
+        if( steps_.empty() ) return 0.0;
         return *(std::min_element( steps_.begin(), steps_.end() ));
     }
 

@@ -65,7 +65,7 @@ void WellState::base_init(const std::vector<double>& cellPressures,
             // Setup wellname -> well index mapping.
             const int num_perf_this_well = well_perf_data[w].size();
             std::string name = well.name();
-            assert( name.size() > 0 );
+            assert( !name.empty() );
             mapentry_t& wellMapEntry = wellMap_[name];
             wellMapEntry[ 0 ] = w;
             wellMapEntry[ 1 ] = connpos;
