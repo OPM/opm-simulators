@@ -21,6 +21,7 @@
 #define OPM_SINGLE_WELL_STATE_HEADER_INCLUDED
 
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
 
 namespace Opm {
 
@@ -33,6 +34,7 @@ public:
     double bhp{0};
     double thp{0};
     double temperature{};
+    Events events;
 
     void init_timestep(const SingleWellState& other);
     void shut();

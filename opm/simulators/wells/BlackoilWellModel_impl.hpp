@@ -612,7 +612,7 @@ namespace Opm {
                 if (this->wellTestState_.hasWellClosed(well_name)) {
                     // TODO: more checking here, to make sure this standard more specific and complete
                     // maybe there is some WCON keywords will not open the well
-                    auto& events = this->wellState().events(w);
+                    auto& events = this->wellState().well(w).events;
                     if (events.hasEvent(WellState::event_mask)) {
                         if (wellTestState_.lastTestTime(well_name) == ebosSimulator_.time()) {
                             // The well was shut this timestep, we are most likely retrying
@@ -1424,7 +1424,7 @@ namespace Opm {
 
                 if (!well->isOperable() ) continue;
 
-                auto& events = this->wellState().events(well->indexOfWell());
+                auto& events = this->wellState().well(well->indexOfWell()).events;
                 if (events.hasEvent(WellState::event_mask)) {
                     well->updateWellStateWithTarget(ebosSimulator_, this->groupState(), this->wellState(), deferred_logger);
                     // There is no new well control change input within a report step,

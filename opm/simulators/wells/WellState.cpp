@@ -257,15 +257,12 @@ void WellState::init(const std::vector<double>& cellPressures,
     well_dissolved_gas_rates_.clear();
     well_vaporized_oil_rates_.clear();
 
-    this->events_.clear();
     {
         const auto& wg_events = schedule[report_step].wellgroup_events();
         for (const auto& ecl_well : wells_ecl) {
             const auto& wname = ecl_well.name();
             if (wg_events.has(wname))
-                this->events_.add( wname, wg_events.at(wname) );
-            else
-                this->events_.add( wname, Events() );
+                this->well(wname).events = wg_events.at(wname);
         }
     }
 
@@ -363,7 +360,7 @@ void WellState::init(const std::vector<double>& cellPressures,
                     continue;
 
                 // If new target is set using WCONPROD, WCONINJE etc. we use the new control
-                if (!this->events_[w].hasEvent(WellState::event_mask)) {
+                if (!new_well.events.hasEvent(WellState::event_mask)) {
                     current_injection_controls_[ newIndex ] = prevState->currentInjectionControl(oldIndex);
                     current_production_controls_[ newIndex ] = prevState->currentProductionControl(oldIndex);
                 }

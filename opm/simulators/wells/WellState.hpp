@@ -148,10 +148,6 @@ public:
     static void calculateSegmentRates(const std::vector<std::vector<int>>& segment_inlets, const std::vector<std::vector<int>>&segment_perforations,
                                       const std::vector<double>& perforation_rates, const int np, const int segment, std::vector<double>& segment_rates);
 
-    Events& events(std::size_t well_index) {
-        return this->events_[well_index];
-    }
-
     /// One rate pr well
     double solventWellRate(const int w) const;
 
@@ -392,11 +388,6 @@ private:
     // vaporized oil rates or solution oil producation rates
     // should be zero for injection wells
     WellContainer<double> well_vaporized_oil_rates_;
-
-    // some events happens to the well, like this well is a new well
-    // or new well control keywords happens
-    // \Note: for now, only WCON* keywords, and well status change is considered
-    WellContainer<Events> events_;
 
     WellContainer<SegmentState> segment_state;
 
