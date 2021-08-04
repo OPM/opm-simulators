@@ -55,7 +55,9 @@ namespace Opm {
 namespace BlackOil {
 OPM_GENERATE_HAS_MEMBER(Rs, ) // Creates 'HasMember_Rs<T>'.
 OPM_GENERATE_HAS_MEMBER(Rv, ) // Creates 'HasMember_Rv<T>'.
+OPM_GENERATE_HAS_MEMBER(Rvw, ) // Creates 'HasMember_Rvw<T>'.
 OPM_GENERATE_HAS_MEMBER(saltConcentration, )
+OPM_GENERATE_HAS_MEMBER(saltSaturation, )
 
 template <class FluidSystem, class FluidState, class LhsEval>
 LhsEval getRs_(typename std::enable_if<!HasMember_Rs<FluidState>::value, const FluidState&>::type fluidState,
@@ -88,6 +90,21 @@ auto getRv_(typename std::enable_if<HasMember_Rv<FluidState>::value, const Fluid
 { return decay<LhsEval>(fluidState.Rv()); }
 
 template <class FluidSystem, class FluidState, class LhsEval>
+LhsEval getRvw_(typename std::enable_if<!HasMember_Rvw<FluidState>::value, const FluidState&>::type fluidState,
+               unsigned regionIdx)
+{
+    const auto& XgW =
+        decay<LhsEval>(fluidState.massFraction(FluidSystem::gasPhaseIdx, FluidSystem::waterCompIdx));
+    return FluidSystem::convertXgWToRvw(XgW, regionIdx);
+}
+
+template <class FluidSystem, class FluidState, class LhsEval>
+auto getRvw_(typename std::enable_if<HasMember_Rvw<FluidState>::value, const FluidState&>::type fluidState,
+            unsigned regionIdx OPM_UNUSED)
+    -> decltype(decay<LhsEval>(fluidState.Rvw()))
+{ return decay<LhsEval>(fluidState.Rvw()); }
+
+template <class FluidSystem, class FluidState, class LhsEval>
 LhsEval getSaltConcentration_(typename std::enable_if<!HasMember_saltConcentration<FluidState>::value,
                               const FluidState&>::type fluidState OPM_UNUSED,
                               unsigned regionIdx OPM_UNUSED)
@@ -98,6 +115,18 @@ auto getSaltConcentration_(typename std::enable_if<HasMember_saltConcentration<F
             unsigned regionIdx OPM_UNUSED)
     -> decltype(decay<LhsEval>(fluidState.saltConcentration()))
 { return decay<LhsEval>(fluidState.saltConcentration()); }
+
+template <class FluidSystem, class FluidState, class LhsEval>
+LhsEval getSaltSaturation_(typename std::enable_if<!HasMember_saltSaturation<FluidState>::value,
+                              const FluidState&>::type fluidState OPM_UNUSED,
+                              unsigned regionIdx OPM_UNUSED)
+{return 0.0;}
+
+template <class FluidSystem, class FluidState, class LhsEval>
+auto getSaltSaturation_(typename std::enable_if<HasMember_saltSaturation<FluidState>::value, const FluidState&>::type fluidState,
+            unsigned regionIdx OPM_UNUSED)
+    -> decltype(decay<LhsEval>(fluidState.saltSaturation()))
+{ return decay<LhsEval>(fluidState.saltSaturation()); }
 
 }
 
@@ -219,6 +248,7 @@ public:
 
         setEnableDissolvedGas(eclState.getSimulationConfig().hasDISGAS());
         setEnableVaporizedOil(eclState.getSimulationConfig().hasVAPOIL());
+        setEnableVaporizedWater(eclState.getSimulationConfig().hasVAPWAT());
 
         if (phaseIsActive(gasPhaseIdx)) {
             gasPvt_ = std::make_shared<GasPvt>();
@@ -297,6 +327,7 @@ public:
 
         enableDissolvedGas_ = true;
         enableVaporizedOil_ = false;
+        enableVaporizedWater_ = false;
         enableDiffusion_ = false;
 
         oilPvt_ = nullptr;
@@ -330,6 +361,15 @@ public:
      */
     static void setEnableVaporizedOil(bool yesno)
     { enableVaporizedOil_ = yesno; }
+
+     /*!
+     * \brief Specify whether the fluid system should consider that the water component can
+     *        dissolve in the gas phase
+     *
+     * By default, vaporized water is not considered.
+     */
+    static void setEnableVaporizedWater(bool yesno)
+    { enableVaporizedWater_ = yesno; }
 
     /*!
      * \brief Specify whether the fluid system should consider diffusion
@@ -589,6 +629,15 @@ public:
      */
     static bool enableVaporizedOil()
     { return enableVaporizedOil_; }
+
+    /*!
+     * \brief Returns whether the fluid system should consider that the water component can
+     *        dissolve in the gas phase
+     *
+     * By default, vaporized water is not considered.
+     */
+    static bool enableVaporizedWater()
+    { return enableVaporizedWater_; }
 
     /*!
      * \brief Returns whether the fluid system should consider diffusion
@@ -1197,6 +1246,20 @@ public:
     }
 
     /*!
+     * \brief Convert the mass fraction of the water component in the gas phase to the
+     *        corresponding water vaporization factor.
+     */
+    template <class LhsEval>
+    static LhsEval convertXgWToRvw(const LhsEval& XgW, unsigned regionIdx)
+    {
+        Scalar rho_wRef = referenceDensity_[regionIdx][waterPhaseIdx];
+        Scalar rho_gRef = referenceDensity_[regionIdx][gasPhaseIdx];
+
+        return XgW/(1.0 - XgW)*(rho_gRef/rho_wRef);
+    }
+
+
+    /*!
      * \brief Convert a gas dissolution factor to the the corresponding mass fraction
      *        of the gas component in the oil phase.
      */
@@ -1222,6 +1285,20 @@ public:
 
         const LhsEval& rho_gO = Rv*rho_oRef;
         return rho_gO/(rho_gRef + rho_gO);
+    }
+
+    /*!
+     * \brief Convert an water vaporization factor to the corresponding mass fraction
+     *        of the water component in the gas phase.
+     */
+    template <class LhsEval>
+    static LhsEval convertRvwToXgW(const LhsEval& Rvw, unsigned regionIdx)
+    {
+        Scalar rho_wRef = referenceDensity_[regionIdx][waterPhaseIdx];
+        Scalar rho_gRef = referenceDensity_[regionIdx][gasPhaseIdx];
+
+        const LhsEval& rho_gW = Rvw*rho_wRef;
+        return rho_gW/(rho_gRef + rho_gW);
     }
 
     /*!
@@ -1381,6 +1458,7 @@ private:
 
     static bool enableDissolvedGas_;
     static bool enableVaporizedOil_;
+    static bool enableVaporizedWater_;
     static bool enableDiffusion_;
 
     // HACK for GCC 4.4: the array size has to be specified using the literal value '3'
@@ -1425,6 +1503,9 @@ bool BlackOilFluidSystem<Scalar, IndexTraits>::enableDissolvedGas_;
 
 template <class Scalar, class IndexTraits>
 bool BlackOilFluidSystem<Scalar, IndexTraits>::enableVaporizedOil_;
+
+template <class Scalar, class IndexTraits>
+bool BlackOilFluidSystem<Scalar, IndexTraits>::enableVaporizedWater_;
 
 template <class Scalar, class IndexTraits>
 bool BlackOilFluidSystem<Scalar, IndexTraits>::enableDiffusion_;
