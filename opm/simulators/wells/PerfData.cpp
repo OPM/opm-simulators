@@ -24,16 +24,20 @@ namespace Opm
 {
 
 
-PerfData::PerfData(std::size_t num_perf, bool injector_, const PhaseUsage& pu_arg):
-    pu(pu_arg),
-    injector(injector_),
-    pressure(num_perf),
-    rates(num_perf),
-    phase_rates(num_perf * pu.num_phases),
-    solvent_rates(num_perf),
-    polymer_rates(num_perf),
-    brine_rates(num_perf),
-    prod_index(num_perf * pu.num_phases)
+PerfData::PerfData(std::size_t num_perf, bool injector_, const PhaseUsage& pu_arg)
+    : pu(pu_arg)
+    , injector(injector_)
+    , pressure(num_perf)
+    , rates(num_perf)
+    , phase_rates(num_perf * pu.num_phases)
+    , solvent_rates(num_perf)
+    , polymer_rates(num_perf)
+    , brine_rates(num_perf)
+    , prod_index(num_perf * pu.num_phases)
+    , cell_index(num_perf)
+    , connection_transmissibility_factor(num_perf)
+    , satnum_id(num_perf)
+    , ecl_index(num_perf)
 {
     if (injector) {
         this->water_throughput.resize(num_perf);

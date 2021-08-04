@@ -48,6 +48,12 @@ public:
     std::vector<double> brine_rates;
     std::vector<double> prod_index;
 
+    std::vector<std::size_t> cell_index;
+    std::vector<double> connection_transmissibility_factor;
+    std::vector<int> satnum_id;
+    std::vector<std::size_t> ecl_index;
+
+
     // The water_throughput, skin_pressure and water_velocity variables are only
     // used for injectors to check the injectivity.
     std::vector<double> water_throughput;

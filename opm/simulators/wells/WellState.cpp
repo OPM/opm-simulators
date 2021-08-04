@@ -42,7 +42,6 @@ void WellState::base_init(const std::vector<double>& cellPressures,
     this->wellMap_.clear();
     this->perfdata.clear();
     this->status_.clear();
-    this->well_perf_data_.clear();
     this->parallel_well_info_.clear();
     this->wellrates_.clear();
     this->bhp_.clear();
@@ -94,11 +93,10 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
     const int np = pu.num_phases;
 
     this->status_.add(well.name(), Well::Status::OPEN);
-    this->well_perf_data_.add(well.name(), well_perf_data);
     this->parallel_well_info_.add(well.name(), well_info);
     this->wellrates_.add(well.name(), std::vector<double>(np, 0));
     this->well_potentials_.add(well.name(), std::vector<double>(np, 0));
-    const int num_perf_this_well = well_info->communication().sum(well_perf_data_[w].size());
+    const int num_perf_this_well = well_info->communication().sum(well_perf_data.size());
     this->segment_state.add(well.name(), SegmentState{});
     this->perfdata.add(well.name(), PerfData{static_cast<std::size_t>(num_perf_this_well), well.isInjector(), this->phase_usage_});
     this->bhp_.add(well.name(), 0.0);
@@ -123,8 +121,8 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
 
     const double inj_surf_rate = well.isInjector() ? inj_controls.surface_rate : 0.0; // To avoid a "maybe-uninitialized" warning.
 
-    const double local_pressure = well_perf_data_[w].empty() ?
-                                      0 : cellPressures[well_perf_data_[w][0].cell_index];
+    const double local_pressure = well_perf_data.empty() ?
+                                      0 : cellPressures[well_perf_data[0].cell_index];
     const double global_pressure = well_info->broadcastFirstPerforationValue(local_pressure);
 
     if (well.getStatus() == Well::Status::OPEN) {
@@ -288,8 +286,14 @@ void WellState::init(const std::vector<double>& cellPressures,
         const int num_perf_this_well = well_info[2];
         const int global_num_perf_this_well = ecl_well.getConnections().num_open();
         auto& perf_data = this->perfData(w);
+        const auto& perf_input = well_perf_data[w];
 
         for (int perf = 0; perf < num_perf_this_well; ++perf) {
+            perf_data.cell_index[perf] = perf_input[perf].cell_index;
+            perf_data.connection_transmissibility_factor[perf] = perf_input[perf].connection_transmissibility_factor;
+            perf_data.satnum_id[perf] = perf_input[perf].satnum_id;
+            perf_data.ecl_index[perf] = perf_input[perf].ecl_index;
+
             if (wells_ecl[w].getStatus() == Well::Status::OPEN) {
                 for (int p = 0; p < this->numPhases(); ++p) {
                     perf_data.phase_rates[this->numPhases()*perf + p] = wellRates(w)[p] / double(global_num_perf_this_well);
@@ -601,19 +605,18 @@ void WellState::reportConnections(std::vector<data::Connection>& connections,
                                   const int* globalCellIdxMap) const
 {
     using rt = data::Rates::opt;
-    const auto& pd = this->well_perf_data_[well_index];
-    const int num_perf_well = pd.size();
-    connections.resize(num_perf_well);
     const auto& perf_data = this->perfData(well_index);
+    const int num_perf_well = perf_data.size();
+    connections.resize(num_perf_well);
     const auto& perf_rates = perf_data.rates;
     const auto& perf_pressure = perf_data.pressure;
     for( int i = 0; i < num_perf_well; ++i ) {
-        const auto active_index = this->well_perf_data_[well_index][i].cell_index;
+      const auto active_index = perf_data.cell_index[i];
         auto& connection = connections[ i ];
         connection.index = globalCellIdxMap[active_index];
         connection.pressure = perf_pressure[i];
         connection.reservoir_rate = perf_rates[i];
-        connection.trans_factor = pd[i].connection_transmissibility_factor;
+        connection.trans_factor = perf_data.connection_transmissibility_factor[i];
     }
     assert(num_perf_well == int(connections.size()));
 
@@ -659,7 +662,7 @@ void WellState::reportConnections(std::vector<data::Connection>& connections,
 
         ++local_comp_index;
     }
-    assert(local_comp_index == this->well_perf_data_[well_index].size());
+    assert(local_comp_index == this->perfdata[well_index].size());
 }
 
 void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
@@ -1032,41 +1035,37 @@ void WellState::updateWellsDefaultALQ( const std::vector<Well>& wells_ecl )
 }
 
 void WellState::resetConnectionTransFactors(const int well_index,
-                                                                 const std::vector<PerforationData>& well_perf_data)
+                                            const std::vector<PerforationData>& new_perf_data)
 {
-    if (this->well_perf_data_[well_index].size() != well_perf_data.size()) {
+    if (this->perfdata[well_index].size() != new_perf_data.size()) {
         throw std::invalid_argument {
             "Size mismatch for perforation data in well "
             + std::to_string(well_index)
         };
     }
 
-    auto connID = std::size_t{0};
-    auto dst = this->well_perf_data_[well_index].begin();
-    for (const auto& src : well_perf_data) {
-        if (dst->cell_index != src.cell_index) {
+    auto& perf_data = this->perfData(well_index);
+    for (std::size_t conn_index = 0; conn_index < new_perf_data.size(); conn_index++) {
+
+      if (perf_data.cell_index[conn_index] != static_cast<std::size_t>(new_perf_data[conn_index].cell_index)) {
             throw std::invalid_argument {
                 "Cell index mismatch in connection "
-                + std::to_string(connID)
+                + std::to_string(conn_index)
                         + " of well "
                         + std::to_string(well_index)
             };
         }
 
-        if (dst->satnum_id != src.satnum_id) {
+        if (perf_data.satnum_id[conn_index] != new_perf_data[conn_index].satnum_id) {
             throw std::invalid_argument {
                 "Saturation function table mismatch in connection "
-                + std::to_string(connID)
+                + std::to_string(conn_index)
                         + " of well "
                         + std::to_string(well_index)
             };
         }
 
-        dst->connection_transmissibility_factor =
-                src.connection_transmissibility_factor;
-
-        ++dst;
-        ++connID;
+        perf_data.connection_transmissibility_factor[conn_index] = new_perf_data[conn_index].connection_transmissibility_factor;
     }
 }
 
