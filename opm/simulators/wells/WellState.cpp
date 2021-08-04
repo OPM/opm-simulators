@@ -1033,7 +1033,7 @@ void WellState::resetConnectionTransFactors(const int well_index,
     auto& perf_data = this->perfData(well_index);
     for (std::size_t conn_index = 0; conn_index < new_perf_data.size(); conn_index++) {
 
-      if (perf_data.cell_index[conn_index] != static_cast<std::size_t>(new_perf_data[conn_index].cell_index)) {
+        if (perf_data.cell_index[conn_index] != static_cast<std::size_t>(new_perf_data[conn_index].cell_index)) {
             throw std::invalid_argument {
                 "Cell index mismatch in connection "
                 + std::to_string(conn_index)
