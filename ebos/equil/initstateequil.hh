@@ -47,6 +47,7 @@
 #include <opm/parser/eclipse/EclipseState/Tables/PbvdTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/PdvdTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Tables/SaltvdTable.hpp>
+#include <opm/parser/eclipse/EclipseState/Tables/SaltpvdTable.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <fmt/format.h>
 
@@ -1580,6 +1581,7 @@ public:
                          const bool applySwatInit = true)
         : temperature_(gridView.size(/*codim=*/0)),
           saltConcentration_(gridView.size(/*codim=*/0)),
+          saltSaturation_(gridView.size(/*codim=*/0)),
           pp_(FluidSystem::numPhases,
           std::vector<double>(gridView.size(/*codim=*/0))),
           sat_(FluidSystem::numPhases,
@@ -1711,6 +1713,9 @@ public:
         // EXTRACT the initial salt concentration
         updateInitialSaltConcentration_(eclipseState, eqlmap);
 
+        // EXTRACT the initial salt saturation
+        updateInitialSaltSaturation_(eclipseState, eqlmap);
+
         // Compute pressures, saturations, rs and rv factors.
         const auto& comm = gridView.comm();
         calcPressSatRsRv(eqlmap, rec, materialLawManager, comm, grav);
@@ -1727,6 +1732,7 @@ public:
 
     const Vec& temperature() const { return temperature_; }
     const Vec& saltConcentration() const { return saltConcentration_; }
+    const Vec& saltSaturation() const { return saltSaturation_; }
     const PVec& press() const { return pp_; }
     const PVec& saturation() const { return sat_; }
     const Vec& rs() const { return rs_; }
@@ -1767,14 +1773,45 @@ private:
             }
         }
     }
+    template <class RMap>
+    void updateInitialSaltSaturation_(const EclipseState& eclState, const RMap& reg)
+    {
+        const int numEquilReg = rsFunc_.size();
+        saltpVdTable_.resize(numEquilReg);
+        const auto& tables = eclState.getTableManager();
+        const TableContainer& saltpvdTables = tables.getSaltpvdTables();
+
+        // PJPE: Todo, this phony table isnot needed 
+        if (saltpvdTables.empty()) {
+            std::vector<double> x = {0.0,1.0};
+            std::vector<double> y = {0.0,0.0};
+            for (auto& table : this->saltpVdTable_) {
+                table.setXYContainers(x, y);
+            }
+        } else {
+            for (size_t i = 0; i < saltpvdTables.size(); ++i) {
+                const SaltpvdTable& saltpvdTable = saltpvdTables.getTable<SaltpvdTable>(i);
+                saltpVdTable_[i].setXYContainers(saltpvdTable.getDepthColumn(), saltpvdTable.getSaltpColumn());
+
+                const auto& cells = reg.cells(i);
+                for (const auto& cell : cells) {
+                    const double depth = cellCenterDepth_[cell];
+                    this->saltSaturation_[cell] = saltpVdTable_[i].eval(depth, /*extrapolate=*/true);
+                }
+            }
+        }
+    }
+
 
     std::vector< std::shared_ptr<Miscibility::RsFunction> > rsFunc_;
     std::vector< std::shared_ptr<Miscibility::RsFunction> > rvFunc_;
     using TabulatedFunction = Tabulated1DFunction<double>;
     std::vector<TabulatedFunction> saltVdTable_;
+    std::vector<TabulatedFunction> saltpVdTable_;
     std::vector<int> regionPvtIdx_;
     Vec temperature_;
     Vec saltConcentration_;
+    Vec saltSaturation_;
     PVec pp_;
     PVec sat_;
     Vec rs_;

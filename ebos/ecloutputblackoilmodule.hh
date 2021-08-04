@@ -316,6 +316,10 @@ public:
                 this->cSalt_[globalDofIdx] = fs.saltConcentration().value();
             }
 
+            if (!this->pSalt_.empty()) {
+                this->pSalt_[globalDofIdx] = intQuants.saltSaturation().value();
+            }
+
             if (!this->extboX_.empty()) {
                 this->extboX_[globalDofIdx] = intQuants.xVolume().value();
             }

@@ -675,6 +675,9 @@ assignToSolution(data::Solution& sol)
     if (!cSalt_.empty())
         sol.insert ("SALT", UnitSystem::measure::salinity, std::move(cSalt_), data::TargetType::RESTART_SOLUTION);
 
+    if (!pSalt_.empty())
+        sol.insert ("SALTP", UnitSystem::measure::identity, std::move(pSalt_), data::TargetType::RESTART_SOLUTION);
+
     if (!dewPointPressure_.empty())
         sol.insert ("PDEW", UnitSystem::measure::pressure, std::move(dewPointPressure_), data::TargetType::RESTART_AUXILIARY);
 
@@ -761,6 +764,8 @@ setRestart(const data::Solution& sol,
         cFoam_[elemIdx] = sol.data("FOAM")[globalDofIndex];
     if (!cSalt_.empty() && sol.has("SALT"))
         cSalt_[elemIdx] = sol.data("SALT")[globalDofIndex];
+    if (!pSalt_.empty() && sol.has("SALTP"))
+        pSalt_[elemIdx] = sol.data("SALTP")[globalDofIndex];
     if (!soMax_.empty() && sol.has("SOMAX"))
         soMax_[elemIdx] = sol.data("SOMAX")[globalDofIndex];
     if (!pcSwMdcOw_.empty() &&sol.has("PCSWM_OW"))
@@ -936,6 +941,9 @@ doAllocBuffers(unsigned bufferSize,
         cFoam_.resize(bufferSize, 0.0);
     if (enableBrine_)
         cSalt_.resize(bufferSize, 0.0);
+    bool enablePrecSalt_ = true; //HACK: testing    
+    if (enablePrecSalt_)
+        pSalt_.resize(bufferSize, 0.0);       
     if (enableExtbo_) {
         extboX_.resize(bufferSize, 0.0);
         extboY_.resize(bufferSize, 0.0);

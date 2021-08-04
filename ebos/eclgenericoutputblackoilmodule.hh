@@ -125,6 +125,15 @@ public:
         return 0;
     }
 
+    Scalar getSaltSaturation(unsigned elemIdx) const
+    {
+        if (pSalt_.size() > elemIdx)
+            return pSalt_[elemIdx];
+
+        return 0;
+    }
+
+
     const std::map<std::size_t, double>& getWBPData() const
     {
         return this->wbpData_;
@@ -342,6 +351,7 @@ protected:
     ScalarBuffer cPolymer_;
     ScalarBuffer cFoam_;
     ScalarBuffer cSalt_;
+    ScalarBuffer pSalt_;
     ScalarBuffer extboX_;
     ScalarBuffer extboY_;
     ScalarBuffer extboZ_;

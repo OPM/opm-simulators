@@ -152,6 +152,9 @@ public:
             // set salt concentration
             if (enableBrine)
                 fluidState.setSaltConcentration(initialState.saltConcentration()[elemIdx]);
+            //PJPE TODO: introduce enablePrecSalt
+            if (enableBrine)
+                fluidState.setSaltSaturation(initialState.saltSaturation()[elemIdx]);
         }
     }
 
