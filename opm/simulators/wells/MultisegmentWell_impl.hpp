@@ -367,8 +367,7 @@ namespace Opm
         const int np = number_of_phases_;
         const double sign = well_copy.well_ecl_.isInjector() ? 1.0 : -1.0;
         for (int phase = 0; phase < np; ++phase){
-            well_state_copy.wellRates(well_copy.index_of_well_)[phase]
-                    = sign * well_state_copy.wellPotentials(well_copy.index_of_well_)[phase];
+            well_state_copy.wellRates(well_copy.index_of_well_)[phase] = sign * ws.well_potentials[phase];
         }
         well_copy.scaleSegmentRatesWithWellRates(well_state_copy);
 

@@ -44,7 +44,6 @@ void WellState::base_init(const std::vector<double>& cellPressures,
     this->parallel_well_info_.clear();
     this->wellrates_.clear();
     this->segment_state.clear();
-    this->well_potentials_.clear();
     this->productivity_index_.clear();
     this->wells_.clear();
     {
@@ -90,10 +89,9 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
     const int np = pu.num_phases;
     double temp = well.isInjector() ? well.injectionControls(summary_state).temperature : 273.15 + 15.56;
 
-    auto& ws = this->wells_.add(well.name(), SingleWellState{well.isProducer(), temp});
+    auto& ws = this->wells_.add(well.name(), SingleWellState{well.isProducer(), static_cast<std::size_t>(np), temp});
     this->parallel_well_info_.add(well.name(), well_info);
     this->wellrates_.add(well.name(), std::vector<double>(np, 0));
-    this->well_potentials_.add(well.name(), std::vector<double>(np, 0));
     const int num_perf_this_well = well_info->communication().sum(well_perf_data.size());
     this->segment_state.add(well.name(), SegmentState{});
     this->perfdata.add(well.name(), PerfData{static_cast<std::size_t>(num_perf_this_well), well.isInjector(), this->phase_usage_});
@@ -334,7 +332,6 @@ void WellState::init(const std::vector<double>& cellPressures,
             auto it = prevState->wellMap().find(well.name());
             if (it != end)
             {
-                const int newIndex = w;
                 const int oldIndex = it->second[ 0 ];
 
                 const auto& prev_well = prevState->well(oldIndex);
@@ -358,11 +355,7 @@ void WellState::init(const std::vector<double>& cellPressures,
 
                 wellRates(w) = prevState->wellRates(oldIndex);
                 wellReservoirRates(w) = prevState->wellReservoirRates(oldIndex);
-
-                // Well potentials
-                for (int p=0; p < np; p++) {
-                    this->wellPotentials(newIndex)[p] = prevState->wellPotentials(oldIndex)[p];
-                }
+                new_well.well_potentials = prev_well.well_potentials;
 
                 // perfPhaseRates
                 const int num_perf_old_well = (*it).second[ 2 ];
@@ -487,7 +480,7 @@ WellState::report(const int* globalCellIdxMap,
         }
 
         const auto& reservoir_rates = this->well_reservoir_rates_[well_index];
-        const auto& well_potentials = this->well_potentials_[well_index];
+        const auto& well_potentials = ws.well_potentials;
         const auto& wpi = this->productivity_index_[well_index];
         const auto& wv = this->wellRates(well_index);
 

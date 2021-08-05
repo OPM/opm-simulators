@@ -20,6 +20,8 @@
 #ifndef OPM_SINGLE_WELL_STATE_HEADER_INCLUDED
 #define OPM_SINGLE_WELL_STATE_HEADER_INCLUDED
 
+#include <vector>
+
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
 
@@ -27,7 +29,7 @@ namespace Opm {
 
 class SingleWellState {
 public:
-    SingleWellState(bool is_producer, double temp);
+    SingleWellState(bool is_producer, std::size_t num_phases, double temp);
 
     Well::Status status{Well::Status::OPEN};
     bool producer;
@@ -36,6 +38,7 @@ public:
     double temperature{};
     double dissolved_gas_rate{0};
     double vaporized_oil_rate{0};
+    std::vector<double> well_potentials;
     Events events;
     Well::InjectorCMode injection_cmode{Well::InjectorCMode::CMODE_UNDEFINED};
     Well::ProducerCMode production_cmode{Well::ProducerCMode::CMODE_UNDEFINED};
