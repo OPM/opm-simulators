@@ -25,6 +25,7 @@ SingleWellState::SingleWellState(bool is_producer, std::size_t num_phases, doubl
     : producer(is_producer)
     , temperature(temp)
     , well_potentials(num_phases)
+    , productivity_index(num_phases)
 {}
 
 

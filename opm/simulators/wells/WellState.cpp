@@ -44,7 +44,6 @@ void WellState::base_init(const std::vector<double>& cellPressures,
     this->parallel_well_info_.clear();
     this->wellrates_.clear();
     this->segment_state.clear();
-    this->productivity_index_.clear();
     this->wells_.clear();
     {
         // const int nw = wells->number_of_wells;
@@ -95,7 +94,6 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
     const int num_perf_this_well = well_info->communication().sum(well_perf_data.size());
     this->segment_state.add(well.name(), SegmentState{});
     this->perfdata.add(well.name(), PerfData{static_cast<std::size_t>(num_perf_this_well), well.isInjector(), this->phase_usage_});
-    this->productivity_index_.add(well.name(), std::vector<double>(np, 0));
 
     if ( num_perf_this_well == 0 )
         return;
@@ -391,7 +389,7 @@ void WellState::init(const std::vector<double>& cellPressures,
                 }
 
                 // Productivity index.
-                this->productivity_index_.copy_welldata( prevState->productivity_index_, wname );
+                new_well.productivity_index = prev_well.productivity_index;
             }
 
             // If in the new step, there is no THP related
@@ -481,7 +479,7 @@ WellState::report(const int* globalCellIdxMap,
 
         const auto& reservoir_rates = this->well_reservoir_rates_[well_index];
         const auto& well_potentials = ws.well_potentials;
-        const auto& wpi = this->productivity_index_[well_index];
+        const auto& wpi = ws.productivity_index;
         const auto& wv = this->wellRates(well_index);
 
         data::Well well;
@@ -822,7 +820,7 @@ void WellState::shutWell(int well_index)
     this->wellrates_[well_index].assign(np, 0);
 
     auto& resv = this->well_reservoir_rates_[well_index];
-    auto& wpi  = this->productivity_index_[well_index];
+    auto& wpi  = ws.productivity_index;
 
     for (int p = 0; p < np; ++p) {
         resv[p] = 0.0;

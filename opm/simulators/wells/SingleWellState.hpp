@@ -39,6 +39,7 @@ public:
     double dissolved_gas_rate{0};
     double vaporized_oil_rate{0};
     std::vector<double> well_potentials;
+    std::vector<double> productivity_index;
     Events events;
     Well::InjectorCMode injection_cmode{Well::InjectorCMode::CMODE_UNDEFINED};
     Well::ProducerCMode production_cmode{Well::ProducerCMode::CMODE_UNDEFINED};
