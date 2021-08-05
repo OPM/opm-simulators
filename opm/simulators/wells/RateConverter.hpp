@@ -418,6 +418,7 @@ namespace Opm {
                 , rmap_ (region)
                 , attr_ (rmap_, Attributes())
             {
+                active = Details::PhaseUsed::gas(phaseUsage_) || Details::PhaseUsed::oil(phaseUsage_);
             }
 
 
@@ -432,6 +433,8 @@ namespace Opm {
             template <typename ElementContext, class EbosSimulator>
             void defineState(const EbosSimulator& simulator)
             {
+                if (!active)
+                    return;
 
                 // create map from cell to region
                 // and set all attributes to zero
@@ -607,6 +610,9 @@ namespace Opm {
             void
             calcCoeff(const RegionId r, const int pvtRegionIdx, Coeff& coeff) const
             {
+                if (!active)
+                    return;
+
                 const auto& pu = phaseUsage_;
                 const auto& ra = attr_.attributes(r);
                 const double p = ra.pressure;
@@ -665,6 +671,9 @@ namespace Opm {
             void
             calcInjCoeff(const RegionId r, const int pvtRegionIdx, Coeff& coeff) const
             {
+                if (!active)
+                    return;
+
                 const auto& pu = phaseUsage_;
                 const auto& ra = attr_.attributes(r);
                 const double p = ra.pressure;
@@ -719,6 +728,9 @@ namespace Opm {
             calcReservoirVoidageRates(const RegionId r, const int pvtRegionIdx, const Rates& surface_rates,
                                       Rates& voidage_rates) const
             {
+                if (!active)
+                    return;
+
                 assert(voidage_rates.size() == surface_rates.size());
 
                 std::fill(voidage_rates.begin(), voidage_rates.end(), 0.0);
@@ -809,6 +821,9 @@ namespace Opm {
             void
             calcCoeffSolvent(const RegionId r, const int pvtRegionIdx, double& coeff) const
             {
+                if (!active)
+                    return;
+
                 const auto& ra = attr_.attributes(r);
                 const double p = ra.pressure;
                 const double T = ra.temperature;
@@ -827,6 +842,8 @@ namespace Opm {
              * "Fluid-in-place" region mapping (forward and reverse).
              */
             const RegionMapping<Region> rmap_;
+
+            bool active; //!< True if converter is active
 
             /**
              * Derived property attributes for each active region.
