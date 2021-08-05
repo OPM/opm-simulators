@@ -444,7 +444,8 @@ updatePrimaryVariables(const WellState& well_state) const
     const Well& well = baseif_.wellEcl();
 
     // the index of the top segment in the WellState
-    const auto& segments = well_state.segments(baseif_.indexOfWell());
+    const auto& ws = well_state.well(baseif_.indexOfWell());
+    const auto& segments = ws.segments;
     const auto& segment_rates = segments.rates;
     const auto& segment_pressure = segments.pressure;
     const PhaseUsage& pu = baseif_.phaseUsage();
@@ -1537,7 +1538,8 @@ handleAccelerationPressureLoss(const int seg,
     const double sign = mass_rate < 0. ? 1.0 : - 1.0;
     accelerationPressureLoss *= sign;
 
-    well_state.segments(baseif_.indexOfWell()).pressure_drop_accel[seg] = accelerationPressureLoss.value();
+    auto& segments = well_state.well(baseif_.indexOfWell()).segments;
+    segments.pressure_drop_accel[seg] = accelerationPressureLoss.value();
 
     resWell_[seg][SPres] -= accelerationPressureLoss.value();
     duneD_[seg][seg][SPres][SPres] -= accelerationPressureLoss.derivative(SPres + Indices::numEq);
@@ -1566,7 +1568,8 @@ assembleDefaultPressureEq(const int seg,
     // TODO: we might be able to add member variables to store these values, then we update well state
     // after converged
     const auto hydro_pressure_drop = getHydroPressureLoss(seg);
-    auto& segments = well_state.segments(baseif_.indexOfWell());
+    auto& ws = well_state.well(baseif_.indexOfWell());
+    auto& segments = ws.segments;
     segments.pressure_drop_hydrostatic[seg] = hydro_pressure_drop.value();
     pressure_equation -= hydro_pressure_drop;
 
@@ -1616,8 +1619,8 @@ updateWellStateFromPrimaryVariables(WellState& well_state,
     assert( FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) );
     const int oil_pos = pu.phase_pos[Oil];
 
-    auto& well = well_state.well(baseif_.indexOfWell());
-    auto& segments = well_state.segments(baseif_.indexOfWell());
+    auto& ws = well_state.well(baseif_.indexOfWell());
+    auto& segments = ws.segments;
     auto& segment_rates = segments.rates;
     auto& segment_pressure = segments.pressure;
     for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
@@ -1661,7 +1664,7 @@ updateWellStateFromPrimaryVariables(WellState& well_state,
         // update the segment pressure
         segment_pressure[seg] = primary_variables_[seg][SPres];
         if (seg == 0) { // top segment
-            well.bhp = segment_pressure[seg];
+            ws.bhp = segment_pressure[seg];
         }
     }
     updateThp(well_state, rho, deferred_logger);
@@ -1702,7 +1705,8 @@ assembleICDPressureEq(const int seg,
         }
     }
     pressure_equation = pressure_equation - icd_pressure_drop;
-    well_state.segments(baseif_.indexOfWell()).pressure_drop_friction[seg] = icd_pressure_drop.value();
+    auto& ws = well_state.well(baseif_.indexOfWell());
+    ws.segments.pressure_drop_friction[seg] = icd_pressure_drop.value();
 
     const int seg_upwind = upwinding_segments_[seg];
     resWell_[seg][SPres] = pressure_equation.value();

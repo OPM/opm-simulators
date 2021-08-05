@@ -100,7 +100,8 @@ void
 MultisegmentWellGeneric<Scalar>::
 scaleSegmentRatesWithWellRates(WellState& well_state) const
 {
-    auto& segments = well_state.segments(baseif_.indexOfWell());
+    auto& ws = well_state.well(baseif_.indexOfWell());
+    auto& segments = ws.segments;
     auto& segment_rates = segments.rates;
     for (int phase = 0; phase < baseif_.numPhases(); ++phase) {
         const double unscaled_top_seg_rate = segment_rates[phase];
@@ -136,10 +137,9 @@ void
 MultisegmentWellGeneric<Scalar>::
 scaleSegmentPressuresWithBhp(WellState& well_state) const
 {
-    auto& well = well_state.well(baseif_.indexOfWell());
-    auto& segments = well_state.segments(baseif_.indexOfWell());
-    const auto bhp = well.bhp;
-    segments.scale_pressure(bhp);
+    auto& ws = well_state.well(baseif_.indexOfWell());
+    auto& segments = ws.segments;
+    segments.scale_pressure(ws.bhp);
 }
 
 template<typename Scalar>

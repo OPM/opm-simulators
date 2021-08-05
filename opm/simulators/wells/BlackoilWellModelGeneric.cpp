@@ -216,7 +216,7 @@ loadRestartData(const data::Wells& rst_wells,
             // \Note: eventually we need to handle the situations that some segments are shut
             assert(0u + segment_set.size() == rst_segments.size());
 
-            auto& segments = well_state.segments(well_index);
+            auto& segments = ws.segments;
             auto& segment_pressure = segments.pressure;
             auto& segment_rates  = segments.rates;
             for (const auto& rst_segment : rst_segments) {

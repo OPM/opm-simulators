@@ -162,22 +162,6 @@ public:
     }
 
 
-    const SegmentState& segments(const std::size_t well_index) const {
-        return this->segment_state[well_index];
-    }
-
-    SegmentState& segments(const std::size_t well_index) {
-        return this->segment_state[well_index];
-    }
-
-    const SegmentState& segments(const std::string& wname) const {
-        return this->segment_state[wname];
-    }
-
-    SegmentState& segments(const std::string& wname) {
-        return this->segment_state[wname];
-    }
-
     template<class Comm>
     void communicateGroupRates(const Comm& comm);
 
@@ -313,7 +297,9 @@ public:
         return this->wells_[well_name];
     }
 
-
+    bool has(const std::string& well_name) const {
+        return this->wells_.has(well_name);
+    }
 
 private:
     WellMapType wellMap_;
@@ -338,8 +324,6 @@ private:
     // phase rates under reservoir condition for wells
     // or voidage phase rates
     WellContainer<std::vector<double>> well_reservoir_rates_;
-
-    WellContainer<SegmentState> segment_state;
 
     data::Segment
     reportSegmentResults(const PhaseUsage& pu,
