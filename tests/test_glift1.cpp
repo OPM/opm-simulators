@@ -185,6 +185,7 @@ BOOST_AUTO_TEST_CASE(G1)
     GLiftSyncGroups sync_groups;
     GasLiftSingleWell glift {*std_well, *(simulator.get()), summary_state,
         deferred_logger, well_state, group_state, group_info, sync_groups};
+    group_info.initialize();
     auto state = glift.runOptimize(iteration_idx);
     BOOST_CHECK_CLOSE(state->oilRate(), 0.01736111111111111, 1e-8);
     BOOST_CHECK_CLOSE(state->gasRate(), 1.6464646999768586, 1e-8);
