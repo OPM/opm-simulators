@@ -83,25 +83,6 @@ public:
         return (index_map.count(name) != 0);
     }
 
-
-    void update(const std::string& name, T&& value) {
-        auto index = this->index_map.at(name);
-        this->m_data[index] = std::forward<T>(value);
-    }
-
-    void update(const std::string& name, const T& value) {
-        auto index = this->index_map.at(name);
-        this->m_data[index] = value;
-    }
-
-    void update(std::size_t index, T&& value) {
-        this->m_data.at(index) = std::forward<T>(value);
-    }
-
-    void update(std::size_t index, const T& value) {
-        this->m_data.at(index) = value;
-    }
-
     /*
       Will copy the value from other to this - for all wells which are present
       in both containers.
