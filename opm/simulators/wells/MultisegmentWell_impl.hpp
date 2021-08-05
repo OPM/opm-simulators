@@ -1189,8 +1189,9 @@ namespace Opm
 
         this->duneDSolver_.reset();
 
-        well_state.wellVaporizedOilRates(index_of_well_) = 0.;
-        well_state.wellDissolvedGasRates(index_of_well_) = 0.;
+        auto& ws = well_state.well(this->index_of_well_);
+        ws.dissolved_gas_rate = 0;
+        ws.vaporized_oil_rate = 0;
 
         // for the black oil cases, there will be four equations,
         // the first three of them are the mass balance equations, the last one is the pressure equations.
@@ -1284,8 +1285,8 @@ namespace Opm
 
                 // updating the solution gas rate and solution oil rate
                 if (this->isProducer()) {
-                    well_state.wellDissolvedGasRates(index_of_well_) += perf_dis_gas_rate;
-                    well_state.wellVaporizedOilRates(index_of_well_) += perf_vap_oil_rate;
+                    ws.dissolved_gas_rate += perf_dis_gas_rate;
+                    ws.vaporized_oil_rate += perf_vap_oil_rate;
                 }
 
                 // store the perf pressure and rates

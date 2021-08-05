@@ -161,18 +161,6 @@ public:
         return well_reservoir_rates_[well_index];
     }
 
-    double& wellDissolvedGasRates(std::size_t well_index)
-    {
-        return well_dissolved_gas_rates_[well_index];
-    }
-
-    double& wellVaporizedOilRates(std::size_t well_index)
-    {
-        return well_vaporized_oil_rates_[well_index];
-    }
-
-
-
 
     const SegmentState& segments(const std::size_t well_index) const {
         return this->segment_state[well_index];
@@ -351,11 +339,11 @@ private:
     std::optional<GlobalWellInfo> global_well_info;
     ALQState alq_state;
     bool do_glift_optimization_;
+    PhaseUsage phase_usage_;
 
     WellContainer<SingleWellState> wells_;
     WellContainer<const ParallelWellInfo*> parallel_well_info_;
     WellContainer<std::vector<double>> wellrates_;
-    PhaseUsage phase_usage_;
     WellContainer<PerfData> perfdata;
 
     // The well_rates variable is defined for all wells on all processors. The
@@ -366,14 +354,6 @@ private:
     // phase rates under reservoir condition for wells
     // or voidage phase rates
     WellContainer<std::vector<double>> well_reservoir_rates_;
-
-    // dissolved gas rates or solution gas production rates
-    // should be zero for injection wells
-    WellContainer<double> well_dissolved_gas_rates_;
-
-    // vaporized oil rates or solution oil producation rates
-    // should be zero for injection wells
-    WellContainer<double> well_vaporized_oil_rates_;
 
     WellContainer<SegmentState> segment_state;
 
