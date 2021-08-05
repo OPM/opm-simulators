@@ -499,12 +499,12 @@ public:
 
     template <typename Value>
     static Value xVolume(unsigned pvtRegionIdx, const Value& pressure, const Value& z) {
-        return X_[pvtRegionIdx].eval(z, pressure);
+        return X_[pvtRegionIdx].eval(z, pressure, true);
     }
 
     template <typename Value>
     static Value yVolume(unsigned pvtRegionIdx, const Value& pressure, const Value& z) {
-        return Y_[pvtRegionIdx].eval(z, pressure);
+        return Y_[pvtRegionIdx].eval(z, pressure, true);
     }
 
     template <typename Value>
@@ -519,32 +519,32 @@ public:
 
     template <typename Value>
     static Value oilViscosity(unsigned pvtRegionIdx, const Value& pressure, const Value& z) {
-        return VISCO_[pvtRegionIdx].eval(z, pressure);
+        return VISCO_[pvtRegionIdx].eval(z, pressure, true);
     }
 
     template <typename Value>
     static Value gasViscosity(unsigned pvtRegionIdx, const Value& pressure, const Value& z) {
-        return VISCG_[pvtRegionIdx].eval(z, pressure);
+        return VISCG_[pvtRegionIdx].eval(z, pressure, true);
     }
 
     template <typename Value>
     static Value bo(unsigned pvtRegionIdx, const Value& pressure, const Value& z) {
-        return BO_[pvtRegionIdx].eval(z, pressure);
+        return BO_[pvtRegionIdx].eval(z, pressure, true);
     }
 
     template <typename Value>
     static Value bg(unsigned pvtRegionIdx, const Value& pressure, const Value& z) {
-        return BG_[pvtRegionIdx].eval(z, pressure);
+        return BG_[pvtRegionIdx].eval(z, pressure, true);
     }
 
     template <typename Value>
     static Value rs(unsigned pvtRegionIdx, const Value& pressure, const Value& z) {
-        return RS_[pvtRegionIdx].eval(z, pressure);
+        return RS_[pvtRegionIdx].eval(z, pressure, true);
     }
 
     template <typename Value>
     static Value rv(unsigned pvtRegionIdx, const Value& pressure, const Value& z) {
-        return RV_[pvtRegionIdx].eval(z, pressure);
+        return RV_[pvtRegionIdx].eval(z, pressure, true);
     }
 
     static Scalar referenceDensity(unsigned regionIdx) {
