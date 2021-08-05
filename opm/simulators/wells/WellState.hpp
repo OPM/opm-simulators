@@ -178,14 +178,6 @@ public:
         return this->segment_state[wname];
     }
 
-    std::vector<double>& productivityIndex(std::size_t well_index) {
-        return this->productivity_index_[well_index];
-    }
-
-    const std::vector<double>& productivityIndex(std::size_t well_index) const {
-        return this->productivity_index_[well_index];
-    }
-
     template<class Comm>
     void communicateGroupRates(const Comm& comm);
 
@@ -348,9 +340,6 @@ private:
     WellContainer<std::vector<double>> well_reservoir_rates_;
 
     WellContainer<SegmentState> segment_state;
-
-    // Productivity Index
-    WellContainer<std::vector<double>> productivity_index_;
 
     data::Segment
     reportSegmentResults(const PhaseUsage& pu,

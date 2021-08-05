@@ -1374,8 +1374,9 @@ namespace Opm
             std::transform(src, src + np, dest, dest, std::plus<>{});
         };
 
+        auto& ws = well_state.well(this->index_of_well_);
         auto& perf_data = well_state.perfData(this->index_of_well_);
-        auto* wellPI = well_state.productivityIndex(this->index_of_well_).data();
+        auto* wellPI = ws.productivity_index.data();
         auto* connPI = perf_data.prod_index.data();
 
         setToZero(wellPI);
