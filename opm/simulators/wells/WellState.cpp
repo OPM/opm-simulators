@@ -254,9 +254,6 @@ void WellState::init(const std::vector<double>& cellPressures,
     }
 
     well_reservoir_rates_.clear();
-    well_dissolved_gas_rates_.clear();
-    well_vaporized_oil_rates_.clear();
-
     {
         const auto& wg_events = schedule[report_step].wellgroup_events();
         for (const auto& ecl_well : wells_ecl) {
@@ -292,8 +289,6 @@ void WellState::init(const std::vector<double>& cellPressures,
         }
 
         this->well_reservoir_rates_.add(wname, std::vector<double>(np, 0));
-        this->well_dissolved_gas_rates_.add(wname, 0);
-        this->well_vaporized_oil_rates_.add(wname, 0);
     }
 
     for (int w = 0; w < nw; ++w) {
@@ -541,8 +536,8 @@ WellState::report(const int* globalCellIdxMap,
             well.rates.set(rt::alq, 0.0);
         }
 
-        well.rates.set(rt::dissolved_gas, this->well_dissolved_gas_rates_[well_index]);
-        well.rates.set(rt::vaporized_oil, this->well_vaporized_oil_rates_[well_index]);
+        well.rates.set(rt::dissolved_gas, ws.dissolved_gas_rate);
+        well.rates.set(rt::vaporized_oil, ws.vaporized_oil_rate);
 
         {
             auto& curr = well.current_control;

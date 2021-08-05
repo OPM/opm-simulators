@@ -34,6 +34,8 @@ public:
     double bhp{0};
     double thp{0};
     double temperature{};
+    double dissolved_gas_rate{0};
+    double vaporized_oil_rate{0};
     Events events;
     Well::InjectorCMode injection_cmode{Well::InjectorCMode::CMODE_UNDEFINED};
     Well::ProducerCMode production_cmode{Well::ProducerCMode::CMODE_UNDEFINED};
