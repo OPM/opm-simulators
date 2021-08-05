@@ -1326,8 +1326,9 @@ namespace Opm {
         // Store it in the well state
         // potentials is resized and set to zero in the beginning of well->ComputeWellPotentials
         // and updated only if sucessfull. i.e. the potentials are zero for exceptions
+        auto& ws = this->wellState().well(well->indexOfWell());
         for (int p = 0; p < np; ++p) {
-            this->wellState().wellPotentials(well->indexOfWell())[p] = std::abs(potentials[p]);
+            ws.well_potentials[p] = std::abs(potentials[p]);
         }
     }
 

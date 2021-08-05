@@ -577,9 +577,9 @@ GAS
 
 
 BOOST_AUTO_TEST_CASE(TestSingleWellState) {
-    Opm::SingleWellState ws1(true, 1);
-    Opm::SingleWellState ws2(true, 2);
-    Opm::SingleWellState ws3(false, 3);
+    Opm::SingleWellState ws1(true,  3, 1);
+    Opm::SingleWellState ws2(true,  3, 2);
+    Opm::SingleWellState ws3(false, 3, 3);
 
     ws1.bhp = 100;
     ws1.thp = 200;
