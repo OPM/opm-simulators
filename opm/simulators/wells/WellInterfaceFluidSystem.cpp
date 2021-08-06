@@ -75,10 +75,7 @@ calculateReservoirRates(WellState& well_state) const
 
     std::vector<double> voidage_rates(np, 0.0);
     rateConverter_.calcReservoirVoidageRates(fipreg, pvtRegionIdx_, surface_rates, voidage_rates);
-
-    for (int p = 0; p < np; ++p) {
-        well_state.wellReservoirRates(index_of_well_)[p] = voidage_rates[p];
-    }
+    ws.reservoir_rates = voidage_rates;
 }
 
 
@@ -129,13 +126,13 @@ activeProductionConstraint(const WellState& well_state,
     if (controls.hasControl(Well::ProducerCMode::RESV) && currentControl != Well::ProducerCMode::RESV) {
         double current_rate = 0.0;
         if (pu.phase_used[BlackoilPhases::Aqua])
-            current_rate -= well_state.wellReservoirRates(well_index)[pu.phase_pos[BlackoilPhases::Aqua]];
+            current_rate -= ws.reservoir_rates[pu.phase_pos[BlackoilPhases::Aqua]];
 
         if (pu.phase_used[BlackoilPhases::Liquid])
-            current_rate -= well_state.wellReservoirRates(well_index)[pu.phase_pos[BlackoilPhases::Liquid]];
+            current_rate -= ws.reservoir_rates[pu.phase_pos[BlackoilPhases::Liquid]];
 
         if (pu.phase_used[BlackoilPhases::Vapour])
-            current_rate -= well_state.wellReservoirRates(well_index)[pu.phase_pos[BlackoilPhases::Vapour]];
+            current_rate -= ws.reservoir_rates[pu.phase_pos[BlackoilPhases::Vapour]];
 
         if (controls.prediction_mode && controls.resv_rate < current_rate)
             return Well::ProducerCMode::RESV;
@@ -229,13 +226,13 @@ activeInjectionConstraint(const WellState& well_state,
     {
         double current_rate = 0.0;
         if( pu.phase_used[BlackoilPhases::Aqua] )
-            current_rate += well_state.wellReservoirRates(well_index)[ pu.phase_pos[BlackoilPhases::Aqua] ];
+            current_rate += ws.reservoir_rates[ pu.phase_pos[BlackoilPhases::Aqua] ];
 
         if( pu.phase_used[BlackoilPhases::Liquid] )
-            current_rate += well_state.wellReservoirRates(well_index)[ pu.phase_pos[BlackoilPhases::Liquid] ];
+            current_rate += ws.reservoir_rates[ pu.phase_pos[BlackoilPhases::Liquid] ];
 
         if( pu.phase_used[BlackoilPhases::Vapour] )
-            current_rate += well_state.wellReservoirRates(well_index)[ pu.phase_pos[BlackoilPhases::Vapour] ];
+            current_rate += ws.reservoir_rates[ pu.phase_pos[BlackoilPhases::Vapour] ];
 
         if (controls.reservoir_rate < current_rate)
             return Well::InjectorCMode::RESV;

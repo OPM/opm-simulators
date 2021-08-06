@@ -99,7 +99,7 @@ namespace {
             double factor = wellEcl.getEfficiencyFactor();
             const auto& ws = wellState.well(well_index);
             if (res_rates) {
-                const auto& well_rates = wellState.wellReservoirRates(well_index);
+                const auto& well_rates = ws.reservoir_rates;
                 if (injector)
                     rate += factor * well_rates[phasePos];
                 else
