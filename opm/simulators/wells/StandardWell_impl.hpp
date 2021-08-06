@@ -431,7 +431,7 @@ namespace Opm
         const int np = number_of_phases_;
 
         std::vector<RateVector> connectionRates = connectionRates_; // Copy to get right size.
-        auto& perf_data = well_state.perfData(this->index_of_well_);
+        auto& perf_data = ws.perf_data;
         auto& perf_rates = perf_data.phase_rates;
         for (int perf = 0; perf < number_of_perforations_; ++perf) {
             // Calculate perforation quantities.
@@ -546,8 +546,8 @@ namespace Opm
         computePerfRateEval(intQuants, mob, bhp, Tw, perf, allow_cf,
                             cq_s, perf_dis_gas_rate, perf_vap_oil_rate, deferred_logger);
 
-        auto& perf_data = well_state.perfData(this->index_of_well_);
         auto& ws = well_state.well(this->index_of_well_);
+        auto& perf_data = ws.perf_data;
         if constexpr (has_polymer && Base::has_polymermw) {
             if (this->isInjector()) {
                 // Store the original water flux computed from the reservoir quantities.
@@ -1225,7 +1225,7 @@ namespace Opm
         }
 
         // Compute the average pressure in each well block
-        const auto& perf_press = well_state.perfData(w).pressure;
+        const auto& perf_press = ws.perf_data.pressure;
         auto p_above =  this->parallel_well_info_.communicateAboveValues(ws.bhp,
                                                                          perf_press.data(),
                                                                          nperf);
@@ -1375,7 +1375,7 @@ namespace Opm
         };
 
         auto& ws = well_state.well(this->index_of_well_);
-        auto& perf_data = well_state.perfData(this->index_of_well_);
+        auto& perf_data = ws.perf_data;
         auto* wellPI = ws.productivity_index.data();
         auto* connPI = perf_data.prod_index.data();
 
@@ -1438,7 +1438,8 @@ namespace Opm
         const int nperf = number_of_perforations_;
         const int np = number_of_phases_;
         std::vector<double> perfRates(b_perf.size(),0.0);
-        const auto& perf_data = well_state.perfData(this->index_of_well_);
+        const auto& ws = well_state.well(this->index_of_well_);
+        const auto& perf_data = ws.perf_data;
         const auto& perf_rates_state = perf_data.phase_rates;
 
         for (int perf = 0; perf < nperf; ++perf) {
@@ -1908,7 +1909,8 @@ namespace Opm
         // other primary variables related to polymer injection
         if constexpr (Base::has_polymermw) {
             if (this->isInjector()) {
-                const auto& perf_data = well_state.perfData(this->index_of_well_);
+                const auto& ws = well_state.well(this->index_of_well_);
+                const auto& perf_data = ws.perf_data;
                 const auto& water_velocity = perf_data.water_velocity;
                 const auto& skin_pressure = perf_data.skin_pressure;
                 for (int perf = 0; perf < number_of_perforations_; ++perf) {
@@ -2134,7 +2136,8 @@ namespace Opm
     {
         if constexpr (Base::has_polymermw) {
             if (this->isInjector()) {
-                auto& perf_water_throughput = well_state.perfData(this->index_of_well_).water_throughput;
+                auto& ws = well_state.well(this->index_of_well_);
+                auto& perf_water_throughput = ws.perf_data.water_throughput;
                 for (int perf = 0; perf < number_of_perforations_; ++perf) {
                     const double perf_water_vel = this->primary_variables_[Bhp + 1 + perf];
                     // we do not consider the formation damage due to water flowing from reservoir into wellbore
@@ -2195,7 +2198,8 @@ namespace Opm
         const EvalWell eq_wat_vel = this->primary_variables_evaluation_[wat_vel_index] - water_velocity;
         this->resWell_[0][wat_vel_index] = eq_wat_vel.value();
 
-        const auto& perf_data = well_state.perfData(this->index_of_well_);
+        const auto& ws = well_state.well(this->index_of_well_);
+        const auto& perf_data = ws.perf_data;
         const auto& perf_water_throughput = perf_data.water_throughput;
         const double throughput = perf_water_throughput[perf];
         const int pskin_index = Bhp + 1 + number_of_perforations_ + perf;
@@ -2257,7 +2261,8 @@ namespace Opm
             const int wat_vel_index = Bhp + 1 + perf;
             const EvalWell water_velocity = this->primary_variables_evaluation_[wat_vel_index];
             if (water_velocity > 0.) { // injecting
-                const auto& perf_water_throughput = well_state.perfData(this->index_of_well_).water_throughput;
+                const auto& ws = well_state.well(this->index_of_well_);
+                const auto& perf_water_throughput = ws.perf_data.water_throughput;
                 const double throughput = perf_water_throughput[perf];
                 const EvalWell molecular_weight = wpolymermw(throughput, water_velocity, deferred_logger);
                 cq_s_polymw *= molecular_weight;

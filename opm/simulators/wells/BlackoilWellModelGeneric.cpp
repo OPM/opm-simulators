@@ -189,7 +189,7 @@ loadRestartData(const data::Wells& rst_wells,
             ws.surface_rates[i] = rst_well.rates.get(phs[i]);
         }
 
-        auto& perf_data = well_state.perfData(well_index);
+        auto& perf_data = ws.perf_data;
         auto& perf_pressure = perf_data.pressure;
         auto& perf_rates = perf_data.rates;
         auto& perf_phase_rates = perf_data.phase_rates;

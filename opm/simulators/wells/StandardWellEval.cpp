@@ -694,7 +694,8 @@ StandardWellEval<FluidSystem,Indices,Scalar>::
 updateWellStateFromPrimaryVariablesPolyMW(WellState& well_state) const
 {
     if (baseif_.isInjector()) {
-        auto& perf_data = well_state.perfData(baseif_.indexOfWell());
+        auto& ws = well_state.well(baseif_.indexOfWell());
+        auto& perf_data = ws.perf_data;
         auto& perf_water_velocity = perf_data.water_velocity;
         auto& perf_skin_pressure = perf_data.skin_pressure;
         for (int perf = 0; perf < baseif_.numPerfs(); ++perf) {
