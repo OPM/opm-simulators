@@ -52,9 +52,6 @@ class Schedule;
 class WellState
 {
 public:
-    using mapentry_t = std::array<int, 3>;
-    using WellMapType = std::map<std::string, mapentry_t>;
-
     static const uint64_t event_mask = ScheduleEvents::WELL_STATUS_CHANGE + ScheduleEvents::PRODUCTION_UPDATE + ScheduleEvents::INJECTION_UPDATE;
 
     virtual ~WellState() = default;
@@ -69,11 +66,8 @@ public:
         this->phase_usage_ = pu;
     }
 
-    const WellMapType& wellMap() const { return wellMap_; }
-    WellMapType& wellMap() { return wellMap_; }
-
     std::size_t size() const {
-        return this->wellMap_.size();
+        return this->wells_.size();
     }
 
 
@@ -81,8 +75,6 @@ public:
     {
         return this->size();
     }
-
-    int wellIndex(const std::string& wellName) const;
 
     const ParallelWellInfo& parallelWellInfo(std::size_t well_index) const;
 
@@ -250,6 +242,10 @@ public:
         return this->wells_.well_name(well_index);
     }
 
+    std::optional<std::size_t> index(const std::string& well_name) const {
+        return this->wells_.well_index(well_name);
+    }
+
     const SingleWellState& well(std::size_t well_index) const {
         return this->wells_[well_index];
     }
@@ -271,7 +267,6 @@ public:
     }
 
 private:
-    WellMapType wellMap_;
     // Use of std::optional<> here is a technical crutch, the
     // WellStateFullyImplicitBlackoil class should be default constructible,
     // whereas the GlobalWellInfo is not.

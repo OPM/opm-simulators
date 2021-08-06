@@ -74,16 +74,13 @@ namespace {
             const auto& gefac = groupTmp.getGroupEfficiencyFactor();
             rate += gefac * sumWellPhaseRates(res_rates, groupTmp, schedule, wellState, reportStepIdx, phasePos, injector);
         }
-        const auto& end = wellState.wellMap().end();
 
         for (const std::string& wellName : group.wells()) {
-            const auto& it = wellState.wellMap().find(wellName);
-            if (it == end) // the well is not found
+            const auto& well_index = wellState.index(wellName);
+            if (!well_index.has_value())
                 continue;
 
-            int well_index = it->second[0];
-
-            if (! wellState.wellIsOwned(well_index, wellName) ) // Only sum once
+            if (! wellState.wellIsOwned(well_index.value(), wellName) ) // Only sum once
             {
                 continue;
             }
@@ -97,7 +94,7 @@ namespace {
                 continue;
 
             double factor = wellEcl.getEfficiencyFactor();
-            const auto& ws = wellState.well(well_index);
+            const auto& ws = wellState.well(well_index.value());
             if (res_rates) {
                 const auto& well_rates = ws.reservoir_rates;
                 if (injector)
@@ -216,15 +213,13 @@ namespace WellGroupHelpers
             const auto& gefac = groupTmp.getGroupEfficiencyFactor();
             rate += gefac * sumSolventRates(groupTmp, schedule, wellState, reportStepIdx, injector);
         }
-        const auto& end = wellState.wellMap().end();
+
         for (const std::string& wellName : group.wells()) {
-            const auto& it = wellState.wellMap().find(wellName);
-            if (it == end) // the well is not found
+            const auto& well_index = wellState.index(wellName);
+            if (!well_index.has_value())
                 continue;
 
-            int well_index = it->second[0];
-
-            if (! wellState.wellIsOwned(well_index, wellName) ) // Only sum once
+            if (! wellState.wellIsOwned(well_index.value(), wellName) ) // Only sum once
             {
                 continue;
             }
@@ -239,9 +234,9 @@ namespace WellGroupHelpers
 
             double factor = wellEcl.getEfficiencyFactor();
             if (injector)
-                rate += factor * wellState.solventWellRate(well_index);
+                rate += factor * wellState.solventWellRate(well_index.value());
             else
-                rate -= factor * wellState.solventWellRate(well_index);
+                rate -= factor * wellState.solventWellRate(well_index.value());
         }
         return rate;
     }
@@ -401,22 +396,19 @@ namespace WellGroupHelpers
             if (wellTmp.getStatus() == Well::Status::SHUT)
                 continue;
 
-            const auto& end = wellState.wellMap().end();
-            const auto& it = wellState.wellMap().find(wellName);
-            if (it == end) // the well is not found
+            const auto& well_index = wellState.index(wellName);
+            if (!well_index.has_value())
                 continue;
 
-            int well_index = it->second[0];
-
-            if (! wellState.wellIsOwned(well_index, wellName) ) // Only sum once
+            if (! wellState.wellIsOwned(well_index.value(), wellName) ) // Only sum once
             {
                 continue;
             }
 
             const double efficiency = wellTmp.getEfficiencyFactor();
             // add contributino from wells not under group control
-            const auto& ws_nupcol = wellStateNupcol.well(well_index);
-            const auto& ws = wellState.well(well_index);
+            const auto& ws_nupcol = wellStateNupcol.well(well_index.value());
+            const auto& ws = wellState.well(well_index.value());
             if (isInjector) {
                 if (ws.injection_cmode != Well::InjectorCMode::GRUP)
                     for (int phase = 0; phase < np; phase++) {
@@ -476,20 +468,17 @@ namespace WellGroupHelpers
             if (wellTmp.getStatus() == Well::Status::SHUT)
                 continue;
 
-            const auto& end = wellState.wellMap().end();
-            const auto& it = wellState.wellMap().find(wellName);
-            if (it == end) // the well is not found
+            const auto& well_index = wellState.index(wellName);
+            if (!well_index.has_value())
                 continue;
 
-            int well_index = it->second[0];
-
-            if (! wellState.wellIsOwned(well_index, wellName) ) // Only sum once
+            if (! wellState.wellIsOwned(well_index.value(), wellName) ) // Only sum once
             {
                 continue;
             }
 
             // scale rates
-            auto& ws = wellState.well(well_index);
+            auto& ws = wellState.well(well_index.value());
             if (isInjector) {
                 if (ws.injection_cmode == Well::InjectorCMode::GRUP)
                     for (int phase = 0; phase < np; phase++) {
@@ -568,19 +557,17 @@ namespace WellGroupHelpers
             updateWellRates(groupTmp, schedule, reportStepIdx, wellStateNupcol, wellState);
         }
         const int np = wellState.numPhases();
-        const auto& end = wellState.wellMap().end();
         for (const std::string& wellName : group.wells()) {
             std::vector<double> rates(np, 0.0);
-            const auto& it = wellState.wellMap().find(wellName);
-            if (it != end) { // the well is found on this node
-                int well_index = it->second[0];
+            const auto& well_index = wellState.index(wellName);
+            if (well_index.has_value()) { // the well is found on this node
                 const auto& wellTmp = schedule.getWell(wellName, reportStepIdx);
                 int sign = 1;
                 // production wellRates are negative. The users of currentWellRates uses the convention in
                 // opm-common that production and injection rates are positive.
                 if (!wellTmp.isInjector())
                     sign = -1;
-                const auto& ws = wellStateNupcol.well(well_index);
+                const auto& ws = wellStateNupcol.well(well_index.value());
                 for (int phase = 0; phase < np; ++phase) {
                     rates[phase] = sign * ws.surface_rates[phase];
                 }
@@ -1380,19 +1367,16 @@ namespace WellGroupHelpers
 
             if (wellTmp.getStatus() == Well::Status::SHUT)
                 continue;
-            const auto& end = wellState.wellMap().end();
-            const auto& it = wellState.wellMap().find(wellName);
-            if (it == end) // the well is not found
+            const auto& well_index = wellState.index(wellName);
+            if (!well_index.has_value()) // the well is not found
                 continue;
 
-            int well_index = it->second[0];
-
-            if (! wellState.wellIsOwned(well_index, wellName) ) // Only sum once
+            if (! wellState.wellIsOwned(well_index.value(), wellName) ) // Only sum once
             {
                 continue;
             }
 
-            const auto& ws = wellState.well(well_index);
+            const auto& ws = wellState.well(well_index.value());
             // add contribution from wells unconditionally
             for (int phase = 0; phase < np; phase++) {
                 pot[phase] += wefac * ws.well_potentials[phase];
@@ -1430,18 +1414,16 @@ namespace WellGroupHelpers
                                   const Comm& comm,
                                   GuideRate* guideRate)
     {
-        const auto& end = wellState.wellMap().end();
         for (const auto& well : schedule.getWells(reportStepIdx)) {
             double oilpot = 0.0;
             double gaspot = 0.0;
             double waterpot = 0.0;
 
-            const auto& it = wellState.wellMap().find(well.name());
-            if (it != end && wellState.wellIsOwned(it->second[0], well.name()))
+            const auto& well_index = wellState.index(well.name());
+            if (well_index.has_value() && wellState.wellIsOwned(well_index.value(), well.name()))
             {
                 // the well is found and owned
-                int well_index = it->second[0];
-                const auto& ws = wellState.well(well_index);
+                const auto& ws = wellState.well(well_index.value());
                 const auto& wpot = ws.well_potentials;
                 if (pu.phase_used[BlackoilPhases::Liquid] > 0)
                     oilpot = wpot[pu.phase_pos[BlackoilPhases::Liquid]];
