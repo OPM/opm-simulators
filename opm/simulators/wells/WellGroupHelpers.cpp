@@ -97,18 +97,17 @@ double sumWellPhaseRates(bool res_rates,
 
         double factor = wellEcl.getEfficiencyFactor();
         const auto& ws = wellState.well(well_index);
+
         if (res_rates) {
-            const auto& well_rates = wellState.wellReservoirRates(well_index);
             if (injector)
-                rate += factor * well_rates[phasePos];
+                rate += factor * ws.reservoir_rates[phasePos];
             else
-                rate -= factor * well_rates[phasePos];
+                rate -= factor * ws.reservoir_rates[phasePos];
         } else {
-            const auto& well_rates = ws.surface_rates;
             if (injector)
-                rate += factor * well_rates[phasePos];
+                rate += factor * ws.surface_rates[phasePos];
             else
-                rate -= factor * well_rates[phasePos];
+                rate -= factor * ws.surface_rates[phasePos];
         }
     }
     const auto& gefac = group.getGroupEfficiencyFactor();

@@ -149,18 +149,6 @@ public:
     /// One rate pr well
     double brineWellRate(const int w) const;
 
-    const WellContainer<std::vector<double>>& wellReservoirRates() const { return well_reservoir_rates_; }
-
-    std::vector<double>& wellReservoirRates(std::size_t well_index)
-    {
-        return well_reservoir_rates_[well_index];
-    }
-
-    const std::vector<double>& wellReservoirRates(std::size_t well_index) const
-    {
-        return well_reservoir_rates_[well_index];
-    }
-
 
     template<class Comm>
     void communicateGroupRates(const Comm& comm);
@@ -315,10 +303,6 @@ private:
     // bool in the value pair is whether the current process owns the well or
     // not.
     std::map<std::string, std::pair<bool, std::vector<double>>> well_rates;
-
-    // phase rates under reservoir condition for wells
-    // or voidage phase rates
-    WellContainer<std::vector<double>> well_reservoir_rates_;
 
     data::Segment
     reportSegmentResults(const PhaseUsage& pu,

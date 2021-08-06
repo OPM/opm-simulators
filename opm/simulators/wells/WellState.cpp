@@ -244,7 +244,6 @@ void WellState::init(const std::vector<double>& cellPressures,
         nperf += wpd.size();
     }
 
-    well_reservoir_rates_.clear();
     {
         const auto& wg_events = schedule[report_step].wellgroup_events();
         for (const auto& ecl_well : wells_ecl) {
@@ -279,8 +278,6 @@ void WellState::init(const std::vector<double>& cellPressures,
             }
             perf_data.pressure[perf] = cellPressures[well_perf_data[w][perf].cell_index];
         }
-
-        this->well_reservoir_rates_.add(wname, std::vector<double>(np, 0));
     }
 
     for (int w = 0; w < nw; ++w) {
@@ -347,7 +344,7 @@ void WellState::init(const std::vector<double>& cellPressures,
                 }
 
                 new_well.surface_rates = prev_well.surface_rates;
-                wellReservoirRates(w) = prevState->wellReservoirRates(oldIndex);
+                new_well.reservoir_rates = prev_well.reservoir_rates;
                 new_well.well_potentials = prev_well.well_potentials;
 
                 // perfPhaseRates
@@ -472,7 +469,7 @@ WellState::report(const int* globalCellIdxMap,
             continue;
         }
 
-        const auto& reservoir_rates = this->well_reservoir_rates_[well_index];
+        const auto& reservoir_rates = ws.reservoir_rates;
         const auto& well_potentials = ws.well_potentials;
         const auto& wpi = ws.productivity_index;
         const auto& wv = ws.surface_rates;
@@ -811,12 +808,6 @@ void WellState::shutWell(int well_index)
 {
     auto& ws = this->well(well_index);
     ws.shut();
-    const int np = numPhases();
-
-    auto& resv = this->well_reservoir_rates_[well_index];
-    for (int p = 0; p < np; ++p) {
-        resv[p] = 0.0;
-    }
 
     auto& perf_data = this->perfData(well_index);
     auto& connpi = perf_data.prod_index;
