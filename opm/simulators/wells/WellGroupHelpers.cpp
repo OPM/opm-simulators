@@ -138,7 +138,8 @@ namespace WellGroupHelpers
         double rate = 0.0;
         for (const std::string& groupName : group.groups()) {
             const Group& groupTmp = schedule.getGroup(groupName, reportStepIdx);
-            rate += sumWellPhaseRates(rates, groupTmp, schedule, wellState, reportStepIdx, phasePos, injector);
+            const auto& gefac = groupTmp.getGroupEfficiencyFactor();
+            rate += gefac * sumWellPhaseRates(rates, groupTmp, schedule, wellState, reportStepIdx, phasePos, injector);
         }
         const auto& end = wellState.wellMap().end();
 
@@ -169,8 +170,7 @@ namespace WellGroupHelpers
             else
                 rate -= factor * well_rates[phasePos];
         }
-        const auto& gefac = group.getGroupEfficiencyFactor();
-        return gefac * rate;
+        return rate;
     }
 
     double sumWellRates(const Group& group,
@@ -204,7 +204,8 @@ namespace WellGroupHelpers
         double rate = 0.0;
         for (const std::string& groupName : group.groups()) {
             const Group& groupTmp = schedule.getGroup(groupName, reportStepIdx);
-            rate += sumSolventRates(groupTmp, schedule, wellState, reportStepIdx, injector);
+            const auto& gefac = groupTmp.getGroupEfficiencyFactor();
+            rate += gefac * sumSolventRates(groupTmp, schedule, wellState, reportStepIdx, injector);
         }
         const auto& end = wellState.wellMap().end();
         for (const std::string& wellName : group.wells()) {
@@ -233,8 +234,7 @@ namespace WellGroupHelpers
             else
                 rate -= factor * wellState.solventWellRate(well_index);
         }
-        const auto& gefac = group.getGroupEfficiencyFactor();
-        return gefac * rate;
+        return rate;
     }
 
     void updateGuideRatesForInjectionGroups(const Group& group,
@@ -323,6 +323,8 @@ namespace WellGroupHelpers
                                        group_state,
                                        subGroupTargetReduction);
 
+            const double subGroupEfficiency = subGroup.getGroupEfficiencyFactor();
+
             // accumulate group contribution from sub group
             if (isInjector) {
                 const Phase all[] = {Phase::WATER, Phase::OIL, Phase::GAS};
@@ -339,7 +341,7 @@ namespace WellGroupHelpers
                 if (individual_control || num_group_controlled_wells == 0) {
                     for (int phase = 0; phase < np; phase++) {
                         groupTargetReduction[phase]
-                            += sumWellRates(subGroup, schedule, wellStateNupcol, reportStepIdx, phase, isInjector);
+                            += subGroupEfficiency * sumWellRates(subGroup, schedule, wellStateNupcol, reportStepIdx, phase, isInjector);
                     }
                 } else {
                     // The subgroup may participate in group control.
@@ -351,7 +353,7 @@ namespace WellGroupHelpers
                     if (!has_guide_rate) {
                         // Accumulate from this subgroup only if no group guide rate is set for it.
                         for (int phase = 0; phase < np; phase++) {
-                            groupTargetReduction[phase] += subGroupTargetReduction[phase];
+                            groupTargetReduction[phase] += subGroupEfficiency * subGroupTargetReduction[phase];
                         }
                     }
                 }
@@ -364,14 +366,14 @@ namespace WellGroupHelpers
                 if (individual_control || num_group_controlled_wells == 0) {
                     for (int phase = 0; phase < np; phase++) {
                         groupTargetReduction[phase]
-                            += sumWellRates(subGroup, schedule, wellStateNupcol, reportStepIdx, phase, isInjector);
+                            += subGroupEfficiency * sumWellRates(subGroup, schedule, wellStateNupcol, reportStepIdx, phase, isInjector);
                     }
                 } else {
                     // The subgroup may participate in group control.
                     if (!guide_rate.has(subGroupName)) {
                         // Accumulate from this subgroup only if no group guide rate is set for it.
                         for (int phase = 0; phase < np; phase++) {
-                            groupTargetReduction[phase] += subGroupTargetReduction[phase];
+                            groupTargetReduction[phase] += subGroupEfficiency * subGroupTargetReduction[phase];
                         }
                     }
                 }
@@ -416,10 +418,6 @@ namespace WellGroupHelpers
                         groupTargetReduction[phase] -= wellStateNupcol.wellRates(well_index)[phase] * efficiency;
                     }
             }
-        }
-        const double groupEfficiency = group.getGroupEfficiencyFactor();
-        for (double& elem : groupTargetReduction) {
-            elem *= groupEfficiency;
         }
         if (isInjector)
             group_state.update_injection_reduction_rates(group.name(), groupTargetReduction);
@@ -1144,7 +1142,6 @@ namespace WellGroupHelpers
             }
         }
 
-        double efficiencyFactorInclGroup = efficiencyFactor * group.getGroupEfficiencyFactor();
         double target = orig_target;
         for (size_t ii = 0; ii < num_ancestors; ++ii) {
             if ((ii == 0) || guideRate->has(chain[ii])) {
@@ -1155,7 +1152,7 @@ namespace WellGroupHelpers
 
                 // Add my reduction back at the level where it is included in the local reduction
                 if (local_reduction_level == ii )
-                    target += current_rate * efficiencyFactorInclGroup;
+                    target += current_rate * efficiencyFactor;
             }
             if (ii < num_ancestors - 1) {
                 // Not final level. Add sub-level reduction back, if
@@ -1174,10 +1171,11 @@ namespace WellGroupHelpers
             target *= localFraction(chain[ii + 1]);
         }
         // Avoid negative target rates comming from too large local reductions.
-        const double target_rate = std::max(1e-12, target / efficiencyFactorInclGroup);
+        const double target_rate = std::max(1e-12, target / efficiencyFactor);
         double scale = 1.0;
         if (current_rate > 1e-12)
             scale = target_rate / current_rate;
+
         return std::make_pair(current_rate > target_rate, scale);
     }
 
@@ -1271,7 +1269,6 @@ namespace WellGroupHelpers
             }
         }
 
-        double efficiencyFactorInclGroup = efficiencyFactor * group.getGroupEfficiencyFactor();
         double target = orig_target;
         for (size_t ii = 0; ii < num_ancestors; ++ii) {
             if ((ii == 0) || guideRate->has(chain[ii], injectionPhase)) {
@@ -1282,7 +1279,7 @@ namespace WellGroupHelpers
 
                 // Add my reduction back at the level where it is included in the local reduction
                 if (local_reduction_level == ii )
-                    target += current_rate * efficiencyFactorInclGroup;
+                    target += current_rate * efficiencyFactor;
             }
             if (ii < num_ancestors - 1) {
                 // Not final level. Add sub-level reduction back, if
@@ -1301,10 +1298,11 @@ namespace WellGroupHelpers
             target *= localFraction(chain[ii + 1]);
         }
         // Avoid negative target rates comming from too large local reductions.
-        const double target_rate = std::max(1e-12, target / efficiencyFactorInclGroup);
+        const double target_rate = std::max(1e-12, target / efficiencyFactor);
         double scale = 1.0;
         if (current_rate > 1e-12)
             scale = target_rate / current_rate;
+
         return std::make_pair(current_rate > target_rate, scale);
     }
 
@@ -1355,8 +1353,12 @@ namespace WellGroupHelpers
                     && currentGroupControl != Group::ProductionCMode::NONE) {
                 continue;
             }
+
+            // Apply group efficiency factor for this goup
+            auto gefac = groupTmp.getGroupEfficiencyFactor();
+
             for (int phase = 0; phase < np; phase++) {
-                pot[phase] += thisPot[phase];
+                pot[phase] += gefac*thisPot[phase];
             }
 
         }
@@ -1385,13 +1387,6 @@ namespace WellGroupHelpers
             for (int phase = 0; phase < np; phase++) {
                 pot[phase] += wefac * wellState.wellPotentials(well_index)[phase];
             }
-        }
-
-        // Apply group efficiency factor for this goup
-        auto gefac = group.getGroupEfficiencyFactor();
-
-        for (int phase = 0; phase < np; phase++) {
-            pot[phase] *= gefac;
         }
 
         double oilPot = 0.0;

@@ -982,7 +982,6 @@ getGroupInjectionTargetRate(const Group& group,
         }
     }
 
-    efficiencyFactor *= group.getGroupEfficiencyFactor();
     const auto pu = phaseUsage();
 
     if (!group.isInjectionGroup()) {
@@ -1027,7 +1026,6 @@ getGroupInjectionTargetRate(const Group& group,
         }
         target *= localFraction(chain[ii+1]);
     }
-    // Avoid negative target rates coming from too large local reductions.
     return std::max(0.0, target / efficiencyFactor);
 }
 template<typename FluidSystem>
@@ -1053,7 +1051,6 @@ getGroupProductionTargetRate(const Group& group,
         }
     }
 
-    efficiencyFactor *= group.getGroupEfficiencyFactor();
     const auto pu = phaseUsage();
 
     if (!group.isProductionGroup()) {
