@@ -85,10 +85,10 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
     const int np = pu.num_phases;
     double temp = well.isInjector() ? well.injectionControls(summary_state).temperature : 273.15 + 15.56;
 
-    auto& ws = this->wells_.add(well.name(), SingleWellState{well.isProducer(), static_cast<std::size_t>(np), temp});
     this->parallel_well_info_.add(well.name(), well_info);
     const int num_perf_this_well = well_info->communication().sum(well_perf_data.size());
-    this->perfdata.add(well.name(), PerfData{static_cast<std::size_t>(num_perf_this_well), well.isInjector(), this->phase_usage_});
+    this->perfdata.add(well.name(), PerfData{static_cast<std::size_t>(num_perf_this_well), well.isInjector(), this->phase_usage_.num_phases});
+    auto& ws = this->wells_.add(well.name(), SingleWellState{well.isProducer(), num_perf_this_well, static_cast<std::size_t>(np), temp});
 
     if ( num_perf_this_well == 0 )
         return;

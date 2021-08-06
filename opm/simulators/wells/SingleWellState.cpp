@@ -21,13 +21,14 @@
 
 namespace Opm {
 
-SingleWellState::SingleWellState(bool is_producer, std::size_t num_phases, double temp)
+SingleWellState::SingleWellState(bool is_producer, std::size_t num_perf, std::size_t num_phases, double temp)
     : producer(is_producer)
     , temperature(temp)
     , well_potentials(num_phases)
     , productivity_index(num_phases)
     , surface_rates(num_phases)
     , reservoir_rates(num_phases)
+    , perf_data(num_perf, !is_producer, num_phases)
 {}
 
 
