@@ -363,7 +363,6 @@ private:
     bool do_glift_optimization_;
 
     WellContainer<Well::Status> status_;
-    WellContainer<std::vector<PerforationData>> well_perf_data_;
     WellContainer<const ParallelWellInfo*> parallel_well_info_;
     WellContainer<double> bhp_;
     WellContainer<double> thp_;
