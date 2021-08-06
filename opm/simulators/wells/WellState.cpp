@@ -39,29 +39,17 @@ void WellState::base_init(const std::vector<double>& cellPressures,
                                                const SummaryState& summary_state)
 {
     // clear old name mapping
-    this->wellMap_.clear();
     this->parallel_well_info_.clear();
     this->wells_.clear();
     {
         // const int nw = wells->number_of_wells;
         const int nw = wells_ecl.size();
         // const int np = wells->number_of_phases;
-        int connpos = 0;
         for (int w = 0; w < nw; ++w) {
             const Well& well = wells_ecl[w];
 
             // Initialize bhp(), thp(), wellRates(), temperature().
             initSingleWell(cellPressures, well, well_perf_data[w], parallel_well_info[w], summary_state);
-
-            // Setup wellname -> well index mapping.
-            const int num_perf_this_well = well_perf_data[w].size();
-            std::string name = well.name();
-            assert( !name.empty() );
-            mapentry_t& wellMapEntry = wellMap_[name];
-            wellMapEntry[ 0 ] = w;
-            wellMapEntry[ 1 ] = connpos;
-            wellMapEntry[ 2 ] = num_perf_this_well;
-            connpos += num_perf_this_well;
         }
     }
 }
@@ -85,10 +73,9 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
     double temp = well.isInjector() ? well.injectionControls(summary_state).temperature : 273.15 + 15.56;
 
     this->parallel_well_info_.add(well.name(), well_info);
-    const int num_perf_this_well = well_info->communication().sum(well_perf_data.size());
-    auto& ws = this->wells_.add(well.name(), SingleWellState{well.isProducer(), static_cast<std::size_t>(num_perf_this_well), static_cast<std::size_t>(np), temp});
+    auto& ws = this->wells_.add(well.name(), SingleWellState{well.isProducer(), well_perf_data.size(), static_cast<std::size_t>(np), temp});
 
-    if ( num_perf_this_well == 0 )
+    if ( ws.perf_data.empty())
         return;
 
     const auto inj_controls = well.isInjector() ? well.injectionControls(summary_state) : Well::InjectionControls(0);
@@ -256,11 +243,10 @@ void WellState::init(const std::vector<double>& cellPressures,
         // rates divided by the number of perforations.
         const auto& ecl_well = wells_ecl[w];
         const auto& wname = ecl_well.name();
-        const auto& well_info = this->wellMap().at(wname);
-        const int num_perf_this_well = well_info[2];
-        const int global_num_perf_this_well = ecl_well.getConnections().num_open();
         auto& ws = this->well(w);
         auto& perf_data = ws.perf_data;
+        const int num_perf_this_well = perf_data.size();
+        const int global_num_perf_this_well = ecl_well.getConnections().num_open();
         const auto& perf_input = well_perf_data[w];
 
         for (int perf = 0; perf < num_perf_this_well; ++perf) {
@@ -309,20 +295,16 @@ void WellState::init(const std::vector<double>& cellPressures,
 
     // intialize wells that have been there before
     // order may change so the mapping is based on the well name
-    if (prevState && !prevState->wellMap().empty()) {
-        auto end = prevState->wellMap().end();
+    if (prevState && prevState->size() > 0) {
         for (int w = 0; w < nw; ++w) {
             const Well& well = wells_ecl[w];
             if (well.getStatus() == Well::Status::SHUT) {
                 continue;
             }
             auto& new_well = this->well(w);
-            auto it = prevState->wellMap().find(well.name());
-            if (it != end)
-            {
-                const int oldIndex = it->second[ 0 ];
-
-                const auto& prev_well = prevState->well(oldIndex);
+            const auto& old_index = prevState->index(well.name());
+            if (old_index.has_value()) {
+                const auto& prev_well = prevState->well(old_index.value());
                 new_well.init_timestep(prev_well);
 
 
@@ -346,16 +328,8 @@ void WellState::init(const std::vector<double>& cellPressures,
                 new_well.well_potentials = prev_well.well_potentials;
 
                 // perfPhaseRates
-                const int num_perf_old_well = (*it).second[ 2 ];
-                const auto new_iter = this->wellMap().find(well.name());
-                if (new_iter == this->wellMap().end()) {
-                    throw std::logic_error {
-                        well.name() + " is not in internal well map - "
-                        "Bug in WellState"
-                    };
-                }
-
-                const int num_perf_this_well = new_iter->second[2];
+                const int num_perf_old_well = prev_well.perf_data.size();
+                const int num_perf_this_well = new_well.perf_data.size();
                 const bool global_num_perf_same = (num_perf_this_well == num_perf_old_well);
 
                 // copy perforation rates when the number of
@@ -459,8 +433,7 @@ WellState::report(const int* globalCellIdxMap,
     const auto& pu = this->phaseUsage();
 
     data::Wells res;
-    for( const auto& [wname, winfo]: this->wellMap() ) {
-        const auto well_index = winfo[ 0 ];
+    for( std::size_t well_index = 0; well_index < this->size(); well_index++) {
         const auto& ws = this->well(well_index);
         if ((ws.status == Well::Status::SHUT) && !wasDynamicallyClosed(well_index))
         {
@@ -471,6 +444,8 @@ WellState::report(const int* globalCellIdxMap,
         const auto& well_potentials = ws.well_potentials;
         const auto& wpi = ws.productivity_index;
         const auto& wv = ws.surface_rates;
+        const auto& wname = this->name(well_index);
+
 
         data::Well well;
         well.bhp = ws.bhp;
@@ -947,21 +922,11 @@ bool WellState::wellIsOwned(std::size_t well_index,
 
 bool WellState::wellIsOwned(const std::string& wellName) const
 {
-    const auto& it = this->wellMap_.find( wellName );
-    if (it == this->wellMap_.end()) {
+    const auto& well_index = this->index(wellName);
+    if (!well_index.has_value())
         OPM_THROW(std::logic_error, "Could not find well " << wellName << " in well map");
-    }
-    const int well_index = it->second[0];
-    return wellIsOwned(well_index, wellName);
-}
 
-int WellState::wellIndex(const std::string& wellName) const
-{
-    const auto& it = this->wellMap_.find( wellName );
-    if (it == this->wellMap_.end()) {
-        OPM_THROW(std::logic_error, "Could not find well " << wellName << " in well map");
-    }
-    return it->second[0];
+    return wellIsOwned(well_index.value(), wellName);
 }
 
 int WellState::numSegments(const int well_id) const

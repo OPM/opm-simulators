@@ -169,9 +169,9 @@ loadRestartData(const data::Wells& rst_wells,
         phs.at( phases.phase_pos[BlackoilPhases::Vapour] ) = rt::gas;
     }
 
-    for( const auto& wm : well_state.wellMap() ) {
-        const auto well_index = wm.second[ 0 ];
-        const auto& rst_well = rst_wells.at( wm.first );
+    for( std::size_t well_index = 0; well_index < well_state.size(); well_index++) {
+        const auto& well_name = well_state.name(well_index);
+        const auto& rst_well = rst_wells.at(well_name);
         auto& ws = well_state.well(well_index);
         ws.bhp = rst_well.bhp;
         ws.thp = rst_well.thp;
@@ -206,7 +206,6 @@ loadRestartData(const data::Wells& rst_wells,
 
         if (handle_ms_well && !rst_well.segments.empty()) {
             // we need the well_ecl_ information
-            const std::string& well_name = wm.first;
             const Well& well_ecl = getWellEcl(well_name);
 
             const WellSegments& segment_set = well_ecl.getSegments();
@@ -1528,7 +1527,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
     // Set ALQ for off-process wells to zero
     for (const auto& wname : schedule().wellNames(reportStepIdx)) {
         const bool is_producer = schedule().getWell(wname, reportStepIdx).isProducer();
-        const bool not_on_this_process = well_state.wellMap().count(wname) == 0;
+        const bool not_on_this_process = !well_state.has(wname);
         if (is_producer && not_on_this_process) {
             well_state.setALQ(wname, 0.0);
         }
