@@ -548,12 +548,10 @@ OIL
 WATER
 GAS
 )";
-    Opm::PhaseUsage pu = Opm::phaseUsageFromDeck(Opm::Parser{}.parseString(deck_string));
-
-    Opm::PerfData pd1(3, true, pu);
-    Opm::PerfData pd2(3, true, pu);
-    Opm::PerfData pd3(2, true, pu);
-    Opm::PerfData pd4(3, false, pu);
+    Opm::PerfData pd1(3, true, 3);
+    Opm::PerfData pd2(3, true, 3);
+    Opm::PerfData pd3(2, true, 3);
+    Opm::PerfData pd4(3, false, 3);
 
 
     for (std::size_t i = 0; i < 3; i++) {
@@ -577,9 +575,9 @@ GAS
 
 
 BOOST_AUTO_TEST_CASE(TestSingleWellState) {
-    Opm::SingleWellState ws1(true,  3, 1);
-    Opm::SingleWellState ws2(true,  3, 2);
-    Opm::SingleWellState ws3(false, 3, 3);
+    Opm::SingleWellState ws1(true,  10, 3, 1);
+    Opm::SingleWellState ws2(true,  10, 3, 2);
+    Opm::SingleWellState ws3(false, 10, 3, 3);
 
     ws1.bhp = 100;
     ws1.thp = 200;
