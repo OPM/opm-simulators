@@ -279,14 +279,14 @@ namespace Opm
 
             double total_rate = 0.0;
             for (int phase = 0; phase < np; ++phase){
-                total_rate += well_state.wellRates(index_of_well_)[phase];
+                total_rate += ws.surface_rates[phase];
             }
             // for pressure controlled wells the well rates are the potentials
             // if the rates are trivial we are most probably looking at the newly
             // opened well and we therefore make the affort of computing the potentials anyway.
             if (std::abs(total_rate) > 0) {
                 for (int phase = 0; phase < np; ++phase){
-                    well_potentials[phase] = well_state.wellRates(index_of_well_)[phase];
+                    well_potentials[phase] = ws.surface_rates[phase];
                 }
                 return;
             }
@@ -367,7 +367,7 @@ namespace Opm
         const int np = number_of_phases_;
         const double sign = well_copy.well_ecl_.isInjector() ? 1.0 : -1.0;
         for (int phase = 0; phase < np; ++phase){
-            well_state_copy.wellRates(well_copy.index_of_well_)[phase] = sign * ws.well_potentials[phase];
+            ws.surface_rates[phase] = sign * ws.well_potentials[phase];
         }
         well_copy.scaleSegmentRatesWithWellRates(well_state_copy);
 

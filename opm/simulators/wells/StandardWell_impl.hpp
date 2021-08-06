@@ -1252,10 +1252,10 @@ namespace Opm
                 const int gaspos = gasCompIdx + perf * num_components_;
 
                 if (oilPresent) {
-                    const double oilrate = std::abs(well_state.wellRates(w)[pu.phase_pos[Oil]]); //in order to handle negative rates in producers
+                    const double oilrate = std::abs(ws.surface_rates[pu.phase_pos[Oil]]); //in order to handle negative rates in producers
                     rvmax_perf[perf] = FluidSystem::gasPvt().saturatedOilVaporizationFactor(fs.pvtRegionIndex(), temperature, p_avg);
                     if (oilrate > 0) {
-                        const double gasrate = std::abs(well_state.wellRates(w)[pu.phase_pos[Gas]]) - (has_solvent ? well_state.solventWellRate(w) : 0.0);
+                        const double gasrate = std::abs(ws.surface_rates[pu.phase_pos[Gas]]) - (has_solvent ? well_state.solventWellRate(w) : 0.0);
                         double rv = 0.0;
                         if (gasrate > 0) {
                             rv = oilrate / gasrate;
@@ -1278,9 +1278,9 @@ namespace Opm
                 const int oilpos = oilCompIdx + perf * num_components_;
                 if (gasPresent) {
                     rsmax_perf[perf] = FluidSystem::oilPvt().saturatedGasDissolutionFactor(fs.pvtRegionIndex(), temperature, p_avg);
-                    const double gasrate = std::abs(well_state.wellRates(w)[pu.phase_pos[Gas]]) - (has_solvent ? well_state.solventWellRate(w) : 0.0);
+                    const double gasrate = std::abs(ws.surface_rates[pu.phase_pos[Gas]]) - (has_solvent ? well_state.solventWellRate(w) : 0.0);
                     if (gasrate > 0) {
-                        const double oilrate = std::abs(well_state.wellRates(w)[pu.phase_pos[Oil]]);
+                        const double oilrate = std::abs(ws.surface_rates[pu.phase_pos[Oil]]);
                         double rs = 0.0;
                         if (oilrate > 0) {
                             rs = gasrate / oilrate;
@@ -1862,14 +1862,14 @@ namespace Opm
 
             double total_rate = 0.0;
             for (int phase = 0; phase < np; ++phase){
-                total_rate += well_state.wellRates(index_of_well_)[phase];
+                total_rate += ws.surface_rates[phase];
             }
             // for pressure controlled wells the well rates are the potentials
             // if the rates are trivial we are most probably looking at the newly
             // opened well and we therefore make the affort of computing the potentials anyway.
             if (std::abs(total_rate) > 0) {
                 for (int phase = 0; phase < np; ++phase){
-                    well_potentials[phase] = well_state.wellRates(index_of_well_)[phase];
+                    well_potentials[phase] = ws.surface_rates[phase];
                 }
                 return;
             }

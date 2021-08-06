@@ -41,6 +41,7 @@ public:
     double vaporized_oil_rate{0};
     std::vector<double> well_potentials;
     std::vector<double> productivity_index;
+    std::vector<double> surface_rates;
     SegmentState segments;
     Events events;
     Well::InjectorCMode injection_cmode{Well::InjectorCMode::CMODE_UNDEFINED};

@@ -610,7 +610,7 @@ namespace Opm
 
         if (this->wellIsStopped()) {
             for (int p = 0; p<np; ++p) {
-                well_state.wellRates(well_index)[p] = 0.0;
+                ws.surface_rates[p] = 0;
             }
             ws.thp = 0;
             return;
@@ -647,7 +647,7 @@ namespace Opm
             switch(current) {
             case Well::InjectorCMode::RATE:
             {
-                well_state.wellRates(well_index)[phasePos] = controls.surface_rate;
+                ws.surface_rates[phasePos] = controls.surface_rate;
                 break;
             }
 
@@ -656,16 +656,13 @@ namespace Opm
                 std::vector<double> convert_coeff(this->number_of_phases_, 1.0);
                 this->rateConverter_.calcCoeff(/*fipreg*/ 0, this->pvtRegionIdx_, convert_coeff);
                 const double coeff = convert_coeff[phasePos];
-                well_state.wellRates(well_index)[phasePos] = controls.reservoir_rate/coeff;
+                ws.surface_rates[phasePos] = controls.reservoir_rate/coeff;
                 break;
             }
 
             case Well::InjectorCMode::THP:
             {
-                std::vector<double> rates(3, 0.0);
-                for (int p = 0; p<np; ++p) {
-                    rates[p] = well_state.wellRates(well_index)[p];
-                }
+                auto rates = ws.surface_rates;
                 double bhp = this->calculateBhpFromThp(well_state, rates, well, summaryState, this->getRefDensity(), deferred_logger);
                 ws.bhp = bhp;
 
@@ -673,11 +670,9 @@ namespace Opm
                 // we try to provide a better intial well rate
                 // using the well potentials
                 double total_rate = std::accumulate(rates.begin(), rates.end(), 0.0);
-                if (total_rate <= 0.0){
-                    for (int p = 0; p<np; ++p) {
-                        well_state.wellRates(well_index)[p] = ws.well_potentials[p];
-                    }
-                }
+                if (total_rate <= 0.0)
+                    ws.surface_rates = ws.well_potentials;
+
                 break;
             }
             case Well::InjectorCMode::BHP:
@@ -685,16 +680,14 @@ namespace Opm
                 ws.bhp = controls.bhp_limit;
                 double total_rate = 0.0;
                 for (int p = 0; p<np; ++p) {
-                    total_rate += well_state.wellRates(well_index)[p];
+                    total_rate += ws.surface_rates[p];
                 }
                 // if the total rates are negative or zero
                 // we try to provide a better intial well rate
                 // using the well potentials
-                if (total_rate <= 0.0){
-                    for (int p = 0; p<np; ++p) {
-                        well_state.wellRates(well_index)[p] = ws.well_potentials[p];
-                    }
-                }
+                if (total_rate <= 0.0)
+                    ws.surface_rates = ws.well_potentials;
+
                 break;
             }
             case Well::InjectorCMode::GRUP:
@@ -712,7 +705,7 @@ namespace Opm
                                                           efficiencyFactor,
                                                           deferred_logger);
                 if (target)
-                    well_state.wellRates(well_index)[phasePos] = *target;
+                    ws.surface_rates[phasePos] = *target;
                 break;
             }
             case Well::InjectorCMode::CMODE_UNDEFINED:
@@ -730,19 +723,19 @@ namespace Opm
             switch (current) {
             case Well::ProducerCMode::ORAT:
             {
-                double current_rate = -well_state.wellRates(well_index)[ pu.phase_pos[Oil] ];
+                double current_rate = -ws.surface_rates[ pu.phase_pos[Oil] ];
                 // for trivial rates or opposite direction we don't just scale the rates
                 // but use either the potentials or the mobility ratio to initial the well rates
                 if (current_rate > 0.0) {
                     for (int p = 0; p<np; ++p) {
-                        well_state.wellRates(well_index)[p] *= controls.oil_rate/current_rate;
+                        ws.surface_rates[p] *= controls.oil_rate/current_rate;
                     }
                 } else {
                     const std::vector<double> fractions = initialWellRateFractions(ebos_simulator, well_state);
                     double control_fraction = fractions[pu.phase_pos[Oil]];
                     if (control_fraction != 0.0) {
                         for (int p = 0; p<np; ++p) {
-                            well_state.wellRates(well_index)[p] = - fractions[p] * controls.oil_rate/control_fraction;
+                            ws.surface_rates[p] = - fractions[p] * controls.oil_rate/control_fraction;
                         }
                     }
                 }
@@ -750,19 +743,19 @@ namespace Opm
             }
             case Well::ProducerCMode::WRAT:
             {
-                double current_rate = -well_state.wellRates(well_index)[ pu.phase_pos[Water] ];
+                double current_rate = -ws.surface_rates[ pu.phase_pos[Water] ];
                 // for trivial rates or opposite direction we don't just scale the rates
                 // but use either the potentials or the mobility ratio to initial the well rates
                 if (current_rate > 0.0) {
                     for (int p = 0; p<np; ++p) {
-                        well_state.wellRates(well_index)[p] *= controls.water_rate/current_rate;
+                        ws.surface_rates[p] *= controls.water_rate/current_rate;
                     }
                 } else {
                     const std::vector<double> fractions = initialWellRateFractions(ebos_simulator, well_state);
                     double control_fraction = fractions[pu.phase_pos[Water]];
                     if (control_fraction != 0.0) {
                         for (int p = 0; p<np; ++p) {
-                            well_state.wellRates(well_index)[p] = - fractions[p] * controls.water_rate/control_fraction;
+                            ws.surface_rates[p] = - fractions[p] * controls.water_rate/control_fraction;
                         }
                     }
                 }
@@ -770,19 +763,19 @@ namespace Opm
             }
             case Well::ProducerCMode::GRAT:
             {
-                double current_rate = -well_state.wellRates(well_index)[pu.phase_pos[Gas] ];
+                double current_rate = -ws.surface_rates[pu.phase_pos[Gas] ];
                 // or trivial rates or opposite direction we don't just scale the rates
                 // but use either the potentials or the mobility ratio to initial the well rates
                 if (current_rate > 0.0) {
                     for (int p = 0; p<np; ++p) {
-                        well_state.wellRates(well_index)[p] *= controls.gas_rate/current_rate;
+                        ws.surface_rates[p] *= controls.gas_rate/current_rate;
                     }
                 } else {
                     const std::vector<double> fractions = initialWellRateFractions(ebos_simulator, well_state);
                     double control_fraction = fractions[pu.phase_pos[Gas]];
                     if (control_fraction != 0.0) {
                         for (int p = 0; p<np; ++p) {
-                            well_state.wellRates(well_index)[p] = - fractions[p] * controls.gas_rate/control_fraction;
+                            ws.surface_rates[p] = - fractions[p] * controls.gas_rate/control_fraction;
                         }
                     }
                 }
@@ -792,20 +785,20 @@ namespace Opm
             }
             case Well::ProducerCMode::LRAT:
             {
-                double current_rate = -well_state.wellRates(well_index)[ pu.phase_pos[Water] ]
-                        - well_state.wellRates(well_index)[ pu.phase_pos[Oil] ];
+                double current_rate = -ws.surface_rates[ pu.phase_pos[Water] ]
+                        - ws.surface_rates[ pu.phase_pos[Oil] ];
                 // or trivial rates or opposite direction we don't just scale the rates
                 // but use either the potentials or the mobility ratio to initial the well rates
                 if (current_rate > 0.0) {
                     for (int p = 0; p<np; ++p) {
-                        well_state.wellRates(well_index)[p] *= controls.liquid_rate/current_rate;
+                        ws.surface_rates[p] *= controls.liquid_rate/current_rate;
                     }
                 } else {
                     const std::vector<double> fractions = initialWellRateFractions(ebos_simulator, well_state);
                     double control_fraction = fractions[pu.phase_pos[Water]] + fractions[pu.phase_pos[Oil]];
                     if (control_fraction != 0.0) {
                         for (int p = 0; p<np; ++p) {
-                            well_state.wellRates(well_index)[p] = - fractions[p] * controls.liquid_rate / control_fraction;
+                            ws.surface_rates[p] = - fractions[p] * controls.liquid_rate / control_fraction;
                         }
                     }
                 }
@@ -821,19 +814,19 @@ namespace Opm
                 this->rateConverter_.calcCoeff(/*fipreg*/ 0, this->pvtRegionIdx_, convert_coeff);
                 double total_res_rate = 0.0;
                 for (int p = 0; p<np; ++p) {
-                    total_res_rate -= well_state.wellRates(well_index)[p] * convert_coeff[p];
+                    total_res_rate -= ws.surface_rates[p] * convert_coeff[p];
                 }
                 if (controls.prediction_mode) {
                     // or trivial rates or opposite direction we don't just scale the rates
                     // but use either the potentials or the mobility ratio to initial the well rates
                     if (total_res_rate > 0.0) {
                         for (int p = 0; p<np; ++p) {
-                            well_state.wellRates(well_index)[p] *= controls.resv_rate/total_res_rate;
+                            ws.surface_rates[p] *= controls.resv_rate/total_res_rate;
                         }
                     } else {
                         const std::vector<double> fractions = initialWellRateFractions(ebos_simulator, well_state);
                         for (int p = 0; p<np; ++p) {
-                            well_state.wellRates(well_index)[p] = - fractions[p] * controls.resv_rate / convert_coeff[p];
+                            ws.surface_rates[p] = - fractions[p] * controls.resv_rate / convert_coeff[p];
                         }
                     }
                 } else {
@@ -854,12 +847,12 @@ namespace Opm
                     // but use either the potentials or the mobility ratio to initial the well rates
                     if (total_res_rate > 0.0) {
                         for (int p = 0; p<np; ++p) {
-                            well_state.wellRates(well_index)[p] *= target/total_res_rate;
+                            ws.surface_rates[p] *= target/total_res_rate;
                         }
                     } else {
                         const std::vector<double> fractions = initialWellRateFractions(ebos_simulator, well_state);
                         for (int p = 0; p<np; ++p) {
-                            well_state.wellRates(well_index)[p] = - fractions[p] * target / convert_coeff[p];
+                            ws.surface_rates[p] = - fractions[p] * target / convert_coeff[p];
                         }
                     }
 
@@ -871,24 +864,21 @@ namespace Opm
                 ws.bhp = controls.bhp_limit;
                 double total_rate = 0.0;
                 for (int p = 0; p<np; ++p) {
-                    total_rate -= well_state.wellRates(well_index)[p];
+                    total_rate -= ws.surface_rates[p];
                 }
                 // if the total rates are negative or zero
                 // we try to provide a better intial well rate
                 // using the well potentials
                 if (total_rate <= 0.0){
                     for (int p = 0; p<np; ++p) {
-                        well_state.wellRates(well_index)[p] = -ws.well_potentials[p];
+                        ws.surface_rates[p] = -ws.well_potentials[p];
                     }
                 }
                 break;
             }
             case Well::ProducerCMode::THP:
             {
-                std::vector<double> rates(3, 0.0);
-                for (int p = 0; p<np; ++p) {
-                    rates[p] = well_state.wellRates(well_index)[p];
-                }
+                auto rates = ws.surface_rates;
                 double bhp = this->calculateBhpFromThp(well_state, rates, well, summaryState, this->getRefDensity(), deferred_logger);
                 ws.bhp = bhp;
 
@@ -898,7 +888,7 @@ namespace Opm
                 double total_rate = -std::accumulate(rates.begin(), rates.end(), 0.0);
                 if (total_rate <= 0.0){
                     for (int p = 0; p<np; ++p) {
-                        well_state.wellRates(well_index)[p] = -ws.well_potentials[p];
+                        ws.surface_rates[p] = -ws.well_potentials[p];
                     }
                 }
                 break;
@@ -918,7 +908,7 @@ namespace Opm
                 // we don't want to scale with zero and get zero rates.
                 if (scale > 0) {
                     for (int p = 0; p<np; ++p) {
-                        well_state.wellRates(well_index)[p] *= scale;
+                        ws.surface_rates[p] *= scale;
                     }
                 }
                 break;
@@ -989,9 +979,10 @@ namespace Opm
     {
         // Check if the rates of this well only are single-phase, do nothing
         // if more than one nonzero rate.
+        auto& ws = well_state.well(this->index_of_well_);
         int nonzero_rate_index = -1;
         for (int p = 0; p < this->number_of_phases_; ++p) {
-            if (well_state.wellRates(this->index_of_well_)[p] != 0.0) {
+            if (ws.surface_rates[p] != 0.0) {
                 if (nonzero_rate_index == -1) {
                     nonzero_rate_index = p;
                 } else {
@@ -1009,12 +1000,12 @@ namespace Opm
         std::vector<double> well_q_s = computeCurrentWellRates(ebosSimulator, deferred_logger);
 
         // Set the currently-zero phase flows to be nonzero in proportion to well_q_s.
-        const double initial_nonzero_rate = well_state.wellRates(this->index_of_well_)[nonzero_rate_index];
+        const double initial_nonzero_rate = ws.surface_rates[nonzero_rate_index];
         const int comp_idx_nz = this->flowPhaseToEbosCompIdx(nonzero_rate_index);
         for (int p = 0; p < this->number_of_phases_; ++p) {
             if (p != nonzero_rate_index) {
                 const int comp_idx = this->flowPhaseToEbosCompIdx(p);
-                double& rate = well_state.wellRates(this->index_of_well_)[p];
+                double& rate = ws.surface_rates[p];
                 rate = (initial_nonzero_rate/well_q_s[comp_idx_nz]) * (well_q_s[comp_idx]);
             }
         }

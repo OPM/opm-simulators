@@ -255,11 +255,11 @@ updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_log
     const int well_index = baseif_.indexOfWell();
     const int np = baseif_.numPhases();
     const auto& pu = baseif_.phaseUsage();
-    const auto& well = well_state.well(well_index);
+    const auto& ws = well_state.well(well_index);
     // the weighted total well rate
     double total_well_rate = 0.0;
     for (int p = 0; p < np; ++p) {
-        total_well_rate += baseif_.scalingFactor(p) * well_state.wellRates(well_index)[p];
+        total_well_rate += baseif_.scalingFactor(p) * ws.surface_rates[p];
     }
 
     // Not: for the moment, the first primary variable for the injectors is not G_total. The injection rate
@@ -267,13 +267,13 @@ updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_log
     if (baseif_.isInjector()) {
         switch (baseif_.wellEcl().injectorType()) {
         case InjectorType::WATER:
-            primary_variables_[WQTotal] = well_state.wellRates(well_index)[pu.phase_pos[Water]];
+            primary_variables_[WQTotal] = ws.surface_rates[pu.phase_pos[Water]];
             break;
         case InjectorType::GAS:
-            primary_variables_[WQTotal] = well_state.wellRates(well_index)[pu.phase_pos[Gas]];
+            primary_variables_[WQTotal] = ws.surface_rates[pu.phase_pos[Gas]];
             break;
         case InjectorType::OIL:
-            primary_variables_[WQTotal] = well_state.wellRates(well_index)[pu.phase_pos[Oil]];
+            primary_variables_[WQTotal] = ws.surface_rates[pu.phase_pos[Oil]];
             break;
         case InjectorType::MULTI:
             // Not supported.
@@ -287,10 +287,10 @@ updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_log
 
     if (std::abs(total_well_rate) > 0.) {
         if constexpr (has_wfrac_variable) {
-            primary_variables_[WFrac] = baseif_.scalingFactor(pu.phase_pos[Water]) * well_state.wellRates(well_index)[pu.phase_pos[Water]] / total_well_rate;
+            primary_variables_[WFrac] = baseif_.scalingFactor(pu.phase_pos[Water]) * ws.surface_rates[pu.phase_pos[Water]] / total_well_rate;
         }
         if constexpr (has_gfrac_variable) {
-            primary_variables_[GFrac] = baseif_.scalingFactor(pu.phase_pos[Gas]) * (well_state.wellRates(well_index)[pu.phase_pos[Gas]]
+            primary_variables_[GFrac] = baseif_.scalingFactor(pu.phase_pos[Gas]) * (ws.surface_rates[pu.phase_pos[Gas]]
                                              - (Indices::enableSolvent ? well_state.solventWellRate(well_index) : 0.0) ) / total_well_rate ;
         }
         if constexpr (Indices::enableSolvent) {
@@ -339,7 +339,7 @@ updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_log
 
 
     // BHP
-    primary_variables_[Bhp] = well.bhp;
+    primary_variables_[Bhp] = ws.bhp;
 }
 
 template<class FluidSystem, class Indices, class Scalar>
@@ -553,11 +553,11 @@ updateThp(WellState& well_state,
     static constexpr int Gas = WellInterfaceIndices<FluidSystem,Indices,Scalar>::Gas;
     static constexpr int Oil = WellInterfaceIndices<FluidSystem,Indices,Scalar>::Oil;
     static constexpr int Water = WellInterfaceIndices<FluidSystem,Indices,Scalar>::Water;
-    auto& well = well_state.well(baseif_.indexOfWell());
+    auto& ws = well_state.well(baseif_.indexOfWell());
 
     // When there is no vaild VFP table provided, we set the thp to be zero.
     if (!baseif_.isVFPActive(deferred_logger) || baseif_.wellIsStopped()) {
-        well.thp = 0;
+        ws.thp = 0;
         return;
     }
 
@@ -566,20 +566,18 @@ updateThp(WellState& well_state,
 
     const PhaseUsage& pu = baseif_.phaseUsage();
     if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-        rates[ Water ] = well_state.wellRates(baseif_.indexOfWell())[pu.phase_pos[ Water ] ];
+        rates[ Water ] = ws.surface_rates[pu.phase_pos[ Water ] ];
     }
     if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-        rates[ Oil ] = well_state.wellRates(baseif_.indexOfWell())[pu.phase_pos[ Oil ] ];
+        rates[ Oil ] = ws.surface_rates[pu.phase_pos[ Oil ] ];
     }
     if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-        rates[ Gas ] = well_state.wellRates(baseif_.indexOfWell())[pu.phase_pos[ Gas ] ];
+        rates[ Gas ] = ws.surface_rates[pu.phase_pos[ Gas ] ];
     }
 
-    const double bhp = well.bhp;
-
-    well.thp = this->calculateThpFromBhp(well_state,
+    ws.thp = this->calculateThpFromBhp(well_state,
                                          rates,
-                                         bhp,
+                                         ws.bhp,
                                          deferred_logger);
 }
 
@@ -652,29 +650,29 @@ updateWellStateFromPrimaryVariables(WellState& well_state,
         F[pu.phase_pos[Gas]] += F_solvent;
     }
 
-    auto& well = well_state.well(baseif_.indexOfWell());
-    well.bhp = primary_variables_[Bhp];
+    auto& ws = well_state.well(baseif_.indexOfWell());
+    ws.bhp = primary_variables_[Bhp];
 
     // calculate the phase rates based on the primary variables
     // for producers, this is not a problem, while not sure for injectors here
     if (baseif_.isProducer()) {
         const double g_total = primary_variables_[WQTotal];
         for (int p = 0; p < baseif_.numPhases(); ++p) {
-            well_state.wellRates(baseif_.indexOfWell())[p] = g_total * F[p];
+            ws.surface_rates[p] = g_total * F[p];
         }
     } else { // injectors
         for (int p = 0; p < baseif_.numPhases(); ++p) {
-            well_state.wellRates(baseif_.indexOfWell())[p] = 0.0;
+            ws.surface_rates[p] = 0.0;
         }
         switch (baseif_.wellEcl().injectorType()) {
         case InjectorType::WATER:
-            well_state.wellRates(baseif_.indexOfWell())[pu.phase_pos[Water]] = primary_variables_[WQTotal];
+            ws.surface_rates[pu.phase_pos[Water]] = primary_variables_[WQTotal];
             break;
         case InjectorType::GAS:
-            well_state.wellRates(baseif_.indexOfWell())[pu.phase_pos[Gas]] = primary_variables_[WQTotal];
+            ws.surface_rates[pu.phase_pos[Gas]] = primary_variables_[WQTotal];
             break;
         case InjectorType::OIL:
-            well_state.wellRates(baseif_.indexOfWell())[pu.phase_pos[Oil]] = primary_variables_[WQTotal];
+            ws.surface_rates[pu.phase_pos[Oil]] = primary_variables_[WQTotal];
             break;
         case InjectorType::MULTI:
             // Not supported.

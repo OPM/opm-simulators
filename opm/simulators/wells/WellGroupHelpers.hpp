@@ -61,20 +61,12 @@ namespace WellGroupHelpers
                                          const int reportStepIdx,
                                          double& factor);
 
-    double sumWellPhaseRates(const WellContainer<std::vector<double>>& rates,
-                             const Group& group,
-                             const Schedule& schedule,
-                             const WellState& wellState,
-                             const int reportStepIdx,
-                             const int phasePos,
-                             const bool injector);
-
-    double sumWellRates(const Group& group,
-                        const Schedule& schedule,
-                        const WellState& wellState,
-                        const int reportStepIdx,
-                        const int phasePos,
-                        const bool injector);
+    double sumWellSurfaceRates(const Group& group,
+                               const Schedule& schedule,
+                               const WellState& wellState,
+                               const int reportStepIdx,
+                               const int phasePos,
+                               const bool injector);
 
     double sumWellResRates(const Group& group,
                            const Schedule& schedule,
