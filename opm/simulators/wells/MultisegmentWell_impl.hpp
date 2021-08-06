@@ -598,7 +598,7 @@ namespace Opm
         };
 
         auto& ws = well_state.well(this->index_of_well_);
-        auto& perf_data = well_state.perfData(this->index_of_well_);
+        auto& perf_data = ws.perf_data;
         auto* connPI = perf_data.prod_index.data();
         auto* wellPI = ws.productivity_index.data();
 
@@ -1267,7 +1267,7 @@ namespace Opm
 
             // calculating the perforation rate for each perforation that belongs to this segment
             const EvalWell seg_pressure = this->getSegmentPressure(seg);
-            auto& perf_data = well_state.perfData(this->index_of_well_);
+            auto& perf_data = ws.perf_data;
             auto& perf_rates = perf_data.phase_rates;
             auto& perf_press_state = perf_data.pressure;
             for (const int perf : this->segment_perforations_[seg]) {

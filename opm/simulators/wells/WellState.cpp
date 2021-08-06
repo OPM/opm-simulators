@@ -40,7 +40,6 @@ void WellState::base_init(const std::vector<double>& cellPressures,
 {
     // clear old name mapping
     this->wellMap_.clear();
-    this->perfdata.clear();
     this->parallel_well_info_.clear();
     this->wells_.clear();
     {
@@ -87,8 +86,7 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
 
     this->parallel_well_info_.add(well.name(), well_info);
     const int num_perf_this_well = well_info->communication().sum(well_perf_data.size());
-    this->perfdata.add(well.name(), PerfData{static_cast<std::size_t>(num_perf_this_well), well.isInjector(), this->phase_usage_.num_phases});
-    auto& ws = this->wells_.add(well.name(), SingleWellState{well.isProducer(), num_perf_this_well, static_cast<std::size_t>(np), temp});
+    auto& ws = this->wells_.add(well.name(), SingleWellState{well.isProducer(), static_cast<std::size_t>(num_perf_this_well), static_cast<std::size_t>(np), temp});
 
     if ( num_perf_this_well == 0 )
         return;
@@ -261,9 +259,9 @@ void WellState::init(const std::vector<double>& cellPressures,
         const auto& well_info = this->wellMap().at(wname);
         const int num_perf_this_well = well_info[2];
         const int global_num_perf_this_well = ecl_well.getConnections().num_open();
-        auto& perf_data = this->perfData(w);
+        auto& ws = this->well(w);
+        auto& perf_data = ws.perf_data;
         const auto& perf_input = well_perf_data[w];
-        const auto& ws = this->well(w);
 
         for (int perf = 0; perf < num_perf_this_well; ++perf) {
             perf_data.cell_index[perf] = perf_input[perf].cell_index;
@@ -366,12 +364,12 @@ void WellState::init(const std::vector<double>& cellPressures,
                 // number of perforations.
                 if (global_num_perf_same)
                 {
-                    auto& perf_data = this->perfData(w);
-                    const auto& prev_perf_data = prevState->perfData(w);
+                    auto& perf_data = new_well.perf_data;
+                    const auto& prev_perf_data = prev_well.perf_data;
                     perf_data.try_assign( prev_perf_data );
                 } else {
                     const int global_num_perf_this_well = well.getConnections().num_open();
-                    auto& perf_data = this->perfData(w);
+                    auto& perf_data = new_well.perf_data;
                     auto& target_rates = perf_data.phase_rates;
                     for (int perf_index = 0; perf_index < num_perf_this_well; perf_index++) {
                         for (int p = 0; p < np; ++p) {
@@ -561,7 +559,7 @@ void WellState::reportConnections(std::vector<data::Connection>& connections,
                                   const int* globalCellIdxMap) const
 {
     using rt = data::Rates::opt;
-    const auto& perf_data = this->perfData(well_index);
+    const auto& perf_data = this->well(well_index).perf_data;
     const int num_perf_well = perf_data.size();
     connections.resize(num_perf_well);
     const auto& perf_rates = perf_data.rates;
@@ -672,7 +670,7 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
             }
 
 
-            auto& perf_data = this->perfData(w);
+            auto& perf_data = ws.perf_data;
             // for the seg_rates_, now it becomes a recursive solution procedure.
             {
                 // make sure the information from wells_ecl consistent with wells
@@ -778,21 +776,24 @@ WellState::calculateSegmentRates(const std::vector<std::vector<int>>& segment_in
 
 double WellState::solventWellRate(const int w) const
 {
-    const auto& perf_data = this->perfData(w);
+    auto& ws = this->well(w);
+    const auto& perf_data = ws.perf_data;
     const auto& perf_rates_solvent = perf_data.solvent_rates;
     return parallel_well_info_[w]->sumPerfValues(perf_rates_solvent.begin(), perf_rates_solvent.end());
 }
 
 double WellState::polymerWellRate(const int w) const
 {
-    const auto& perf_data = this->perfData(w);
+    auto& ws = this->well(w);
+    const auto& perf_data = ws.perf_data;
     const auto& perf_rates_polymer = perf_data.polymer_rates;
     return parallel_well_info_[w]->sumPerfValues(perf_rates_polymer.begin(), perf_rates_polymer.end());
 }
 
 double WellState::brineWellRate(const int w) const
 {
-    const auto& perf_data = this->perfData(w);
+    auto& ws = this->well(w);
+    const auto& perf_data = ws.perf_data;
     const auto& perf_rates_brine = perf_data.brine_rates;
     return parallel_well_info_[w]->sumPerfValues(perf_rates_brine.begin(), perf_rates_brine.end());
 }
@@ -809,7 +810,7 @@ void WellState::shutWell(int well_index)
     auto& ws = this->well(well_index);
     ws.shut();
 
-    auto& perf_data = this->perfData(well_index);
+    auto& perf_data = ws.perf_data;
     auto& connpi = perf_data.prod_index;
     connpi.assign(connpi.size(), 0);
 }
@@ -991,16 +992,16 @@ void WellState::updateWellsDefaultALQ( const std::vector<Well>& wells_ecl )
 void WellState::resetConnectionTransFactors(const int well_index,
                                             const std::vector<PerforationData>& new_perf_data)
 {
-    if (this->perfdata[well_index].size() != new_perf_data.size()) {
+    auto& ws = this->well(well_index);
+    auto& perf_data = ws.perf_data;
+    if (perf_data.size() != new_perf_data.size()) {
         throw std::invalid_argument {
             "Size mismatch for perforation data in well "
             + std::to_string(well_index)
         };
     }
 
-    auto& perf_data = this->perfData(well_index);
     for (std::size_t conn_index = 0; conn_index < new_perf_data.size(); conn_index++) {
-
         if (perf_data.cell_index[conn_index] != static_cast<std::size_t>(new_perf_data[conn_index].cell_index)) {
             throw std::invalid_argument {
                 "Cell index mismatch in connection "

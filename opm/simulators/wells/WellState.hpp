@@ -242,25 +242,6 @@ public:
         return this->phase_usage_;
     }
 
-
-    std::size_t numPerf(std::size_t well_index) const { return this->perfdata[well_index].size(); }
-
-    PerfData& perfData(const std::string& wname) {
-        return this->perfdata[wname];
-    }
-
-    const PerfData& perfData(const std::string& wname) const {
-        return this->perfdata[wname];
-    }
-
-    PerfData& perfData(std::size_t well_index) {
-        return this->perfdata[well_index];
-    }
-
-    const PerfData& perfData(std::size_t well_index) const {
-        return this->perfdata[well_index];
-    }
-
     const std::string& name(std::size_t well_index) const {
         return this->wells_.well_name(well_index);
     }
@@ -297,8 +278,6 @@ private:
 
     WellContainer<SingleWellState> wells_;
     WellContainer<const ParallelWellInfo*> parallel_well_info_;
-    WellContainer<PerfData> perfdata;
-
     // The well_rates variable is defined for all wells on all processors. The
     // bool in the value pair is whether the current process owns the well or
     // not.
