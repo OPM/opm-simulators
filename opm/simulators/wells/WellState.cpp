@@ -242,7 +242,6 @@ void WellState::init(const std::vector<double>& cellPressures,
         // Initialize perfphaserates_ to well
         // rates divided by the number of perforations.
         const auto& ecl_well = wells_ecl[w];
-        const auto& wname = ecl_well.name();
         auto& ws = this->well(w);
         auto& perf_data = ws.perf_data;
         const int num_perf_this_well = perf_data.size();
