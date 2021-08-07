@@ -716,14 +716,14 @@ template<class FluidSystem, class Indices, class Scalar>
 void
 StandardWellEval<FluidSystem,Indices,Scalar>::
 updatePrimaryVariablesNewton(const BVectorWell& dwells,
-                             const double dFLimit,
+                             [[maybe_unused]] const double dFLimit,
                              const double dBHPLimit) const
 {
     const std::vector<double> old_primary_variables = primary_variables_;
 
     // for injectors, very typical one of the fractions will be one, and it is easy to get zero value
     // fractions. not sure what is the best way to handle it yet, so we just use 1.0 here
-    const double relaxation_factor_fractions =
+    [[maybe_unused]] const double relaxation_factor_fractions =
         (baseif_.isProducer()) ? relaxationFactorFractionsProducer(old_primary_variables, dwells)
                                : 1.0;
 

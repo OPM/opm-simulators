@@ -270,7 +270,7 @@ void findLevelScheduling(int *CSRColIndices, int *CSRRowPointers, int *CSCRowInd
     std::vector <int> rowsToStart;
 
     // since emplace_back() is used to fill, the vector must be empty
-    assert(rowsPerColor.size() == 0);
+    assert(rowsPerColor.empty());
 
     // find starting rows: rows that are independent from all rows that come before them.
     for (thisRow = 0; thisRow < Nb; thisRow++) {
