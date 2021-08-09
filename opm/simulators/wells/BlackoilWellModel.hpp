@@ -252,7 +252,7 @@ namespace Opm {
             void applyScaleAdd(const Scalar alpha, const BVector& x, BVector& Ax) const;
 
             // Check if well equations is converged.
-            ConvergenceReport getWellConvergence(const std::vector<Scalar>& B_avg, const bool checkGroupConvergence = false) const;
+            ConvergenceReport getWellConvergence(const std::vector<Scalar>& B_avg, const bool checkWellGroupControls = false);
 
             const SimulatorReportSingle& lastReport() const;
 
@@ -277,7 +277,7 @@ namespace Opm {
             // at the beginning of each time step (Not report step)
             void prepareTimeStep(DeferredLogger& deferred_logger);
             void initPrimaryVariablesEvaluation() const;
-            void updateWellControls(DeferredLogger& deferred_logger, const bool checkGroupControls);
+            bool updateWellControls(DeferredLogger& deferred_logger, const bool checkGroupControls);
             WellInterfacePtr getWell(const std::string& well_name) const;
             void initGliftEclWellMap(GLiftEclWells &ecl_well_map);
 
@@ -323,6 +323,10 @@ namespace Opm {
             mutable BVector scaleAddRes_{};
 
             std::vector<Scalar> B_avg_{};
+
+            std::map<std::string, std::pair<std::string, std::string>> switched_wells_;
+            std::map<std::string, std::pair<std::string, std::string>> switched_prod_groups_;
+            std::map<std::pair<Phase, std::string>, std::pair<std::string, std::string>> switched_inj_groups_;
 
             const Grid& grid() const
             { return ebosSimulator_.vanguard().grid(); }

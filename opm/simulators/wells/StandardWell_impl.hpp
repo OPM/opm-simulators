@@ -1375,7 +1375,7 @@ namespace Opm
     computeWellRatesWithBhpPotential(const Simulator& ebosSimulator,
                             const double& bhp,
                             std::vector<double>& well_flux,
-                            DeferredLogger& deferred_logger)
+                            DeferredLogger& deferred_logger) const
     {
 
         // iterate to get a more accurate well density
@@ -1384,28 +1384,42 @@ namespace Opm
         WellState well_state_copy = ebosSimulator.problem().wellModel().wellState();
         const auto& group_state  = ebosSimulator.problem().wellModel().groupState();
 
+        // creating a copy of the well itself, to avoid messing up the explicit informations
+        // during this copy, the only information not copied properly is the well controls
+        StandardWell<TypeTag> well(*this);
+        well.calculateExplicitQuantities(ebosSimulator, well_state_copy, deferred_logger);
+
+
         //  Set current control to bhp, and bhp value in state, modify bhp limit in control object.
-        if (well_ecl_.isInjector()) {
-            well_state_copy.currentInjectionControl(index_of_well_, Well::InjectorCMode::BHP);
+        if (well.well_ecl_.isInjector()) {
+            well_state_copy.currentInjectionControl(well.index_of_well_, Well::InjectorCMode::BHP);
         } else {
-            well_state_copy.currentProductionControl(index_of_well_, Well::ProducerCMode::BHP);
+            well_state_copy.currentProductionControl(well.index_of_well_, Well::ProducerCMode::BHP);
         }
-        well_state_copy.update_bhp(index_of_well_, bhp);
+        well_state_copy.update_bhp(well.index_of_well_, bhp);
+
+        // initialized the well rates with the potentials i.e. the well rates based on bhp
+        const int np = number_of_phases_;
+        const double sign = well_ecl_.isInjector() ? 1.0 : -1.0;
+        for (int phase = 0; phase < np; ++phase){
+            well_state_copy.wellRates(well.index_of_well_)[phase]
+                    = sign * well_state_copy.wellPotentials(index_of_well_)[phase];
+        }
 
         const double dt = ebosSimulator.timeStepSize();
-        bool converged = this->iterateWellEquations(ebosSimulator, dt, well_state_copy, group_state, deferred_logger);
+        bool converged = well.iterateWellEquations(ebosSimulator, dt, well_state_copy, group_state, deferred_logger);
         if (!converged) {
             const std::string msg = " well " + name() + " did not get converged during well potential calculations "
                                                         "returning zero values for the potential";
             deferred_logger.debug(msg);
             return;
         }
-        updatePrimaryVariables(well_state_copy, deferred_logger);
-        computeWellConnectionPressures(ebosSimulator, well_state_copy);
-        initPrimaryVariablesEvaluation();
+        well.updatePrimaryVariables(well_state_copy, deferred_logger);
+        well.computeWellConnectionPressures(ebosSimulator, well_state_copy);
+        well.initPrimaryVariablesEvaluation();
 
 
-        computeWellRatesWithBhp(ebosSimulator, bhp, well_flux, deferred_logger);
+        well.computeWellRatesWithBhp(ebosSimulator, bhp, well_flux, deferred_logger);
     }
 
 
@@ -1557,21 +1571,16 @@ namespace Opm
             return;
         }
 
-        // creating a copy of the well itself, to avoid messing up the explicit informations
-        // during this copy, the only information not copied properly is the well controls
-        StandardWell<TypeTag> well(*this);
-        well.calculateExplicitQuantities(ebosSimulator, well_state, deferred_logger);
-
         // does the well have a THP related constraint?
         const auto& summaryState = ebosSimulator.vanguard().summaryState();
-        if (!well.Base::wellHasTHPConstraints(summaryState)) {
+        if (!Base::wellHasTHPConstraints(summaryState)) {
             // get the bhp value based on the bhp constraints
-            const double bhp = well.mostStrictBhpFromBhpLimits(summaryState);
+            const double bhp = mostStrictBhpFromBhpLimits(summaryState);
             assert(std::abs(bhp) != std::numeric_limits<double>::max());
-            well.computeWellRatesWithBhpPotential(ebosSimulator, bhp, well_potentials, deferred_logger);
+            computeWellRatesWithBhpPotential(ebosSimulator, bhp, well_potentials, deferred_logger);
         } else {
             // the well has a THP related constraint
-            well_potentials = well.computeWellPotentialWithTHP(ebosSimulator, deferred_logger, well_state);
+            well_potentials = computeWellPotentialWithTHP(ebosSimulator, deferred_logger, well_state);
         }
     }
 

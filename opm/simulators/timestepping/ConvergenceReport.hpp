@@ -86,7 +86,7 @@ namespace Opm
             : status_{AllGood}
             , res_failures_{}
             , well_failures_{}
-            , groupConverged_(true)
+            , well_group_controls_is_ok_(true)
         {
         }
 
@@ -95,7 +95,7 @@ namespace Opm
             status_ = AllGood;
             res_failures_.clear();
             well_failures_.clear();
-            groupConverged_ = true;
+            well_group_controls_is_ok_ = true;
         }
 
         void setReservoirFailed(const ReservoirFailure& rf)
@@ -110,9 +110,9 @@ namespace Opm
             well_failures_.push_back(wf);
         }
 
-        void setGroupConverged(const bool groupConverged)
+        void setWellGroupControlsSatisfied(const bool well_group_controls_is_ok)
         {
-            groupConverged_ = groupConverged;
+            well_group_controls_is_ok_ = well_group_controls_is_ok;
         }
 
         ConvergenceReport& operator+=(const ConvergenceReport& other)
@@ -129,7 +129,7 @@ namespace Opm
 
         bool converged() const
         {
-            return status_ == AllGood && groupConverged_;
+            return status_ == AllGood && well_group_controls_is_ok_;
         }
 
         bool reservoirFailed() const
@@ -174,7 +174,7 @@ namespace Opm
         Status status_;
         std::vector<ReservoirFailure> res_failures_;
         std::vector<WellFailure> well_failures_;
-        bool groupConverged_;
+        bool well_group_controls_is_ok_;
     };
 
 } // namespace Opm

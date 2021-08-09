@@ -156,6 +156,7 @@ namespace Opm
                       const IndividualOrGroup iog,
                       WellState& well_state,
                       const GroupState& group_state,
+                      std::map<std::string, std::pair<std::string, std::string>>& switched_wells,
                       DeferredLogger& deferred_logger) /* const */
     {
         if (this->wellIsStopped()) {
@@ -199,7 +200,8 @@ namespace Opm
             if (cc.size() > 1) {
                ss << " on rank " << cc.rank();
             }
-            deferred_logger.info(ss.str());
+            deferred_logger.debug(ss.str());
+            switched_wells[this->name()] = std::make_pair(from, to);
             updateWellStateWithTarget(ebos_simulator, group_state, well_state, deferred_logger);
             updatePrimaryVariables(well_state, deferred_logger);
         }
@@ -533,11 +535,6 @@ namespace Opm
             return;
         }
 
-        // focusing on PRODUCER for now
-        if (this->isInjector()) {
-            return;
-        }
-
         if (!this->underPredictionMode() ) {
             return;
         }
@@ -557,7 +554,7 @@ namespace Opm
     {
         bool shut_unsolvable_wells = param_.shut_unsolvable_wells_;
         // the well operability system currently works only for producers in prediction mode
-        return shut_unsolvable_wells && !this->isInjector() && this->underPredictionMode();
+        return shut_unsolvable_wells && this->underPredictionMode();
     }
 
 
@@ -572,6 +569,11 @@ namespace Opm
                           DeferredLogger& deferred_logger)
     {
         this->operability_status_.reset();
+
+        // focusing on PRODUCER for now
+        if (this->isInjector()) {
+            return;
+        }
 
         auto current_control = well_state.currentProductionControl(this->index_of_well_);
         // Operability checking is not free
@@ -668,12 +670,12 @@ namespace Opm
                 // if the total rates are negative or zero
                 // we try to provide a better intial well rate
                 // using the well potentials
-                double total_rate = std::accumulate(rates.begin(), rates.end(), 0.0);
-                if (total_rate <= 0.0){
+                //double total_rate = std::accumulate(rates.begin(), rates.end(), 0.0);
+                //if (total_rate <= 0.0){
                     for (int p = 0; p<np; ++p) {
                         well_state.wellRates(well_index)[p] = well_state.wellPotentials(well_index)[p];
                     }
-                }
+                //}
                 break;
             }
             case Well::InjectorCMode::BHP:
@@ -686,11 +688,11 @@ namespace Opm
                 // if the total rates are negative or zero
                 // we try to provide a better intial well rate
                 // using the well potentials
-                if (total_rate <= 0.0){
+                //if (total_rate <= 0.0){
                     for (int p = 0; p<np; ++p) {
                         well_state.wellRates(well_index)[p] = well_state.wellPotentials(well_index)[p];
                     }
-                }
+                //}
                 break;
             }
             case Well::InjectorCMode::GRUP:
@@ -869,14 +871,11 @@ namespace Opm
                 for (int p = 0; p<np; ++p) {
                     total_rate -= well_state.wellRates(well_index)[p];
                 }
-                // if the total rates are negative or zero
-                // we try to provide a better intial well rate
-                // using the well potentials
-                if (total_rate <= 0.0){
-                    for (int p = 0; p<np; ++p) {
-                        well_state.wellRates(well_index)[p] = -well_state.wellPotentials(well_index)[p];
-                    }
+                // provide a better intial well rate using the well potentials
+                for (int p = 0; p<np; ++p) {
+                    well_state.wellRates(well_index)[p] = -well_state.wellPotentials(well_index)[p];
                 }
+
                 break;
             }
             case Well::ProducerCMode::THP:
@@ -888,15 +887,11 @@ namespace Opm
                 double bhp = this->calculateBhpFromThp(well_state, rates, well, summaryState, this->getRefDensity(), deferred_logger);
                 well_state.update_bhp(well_index, bhp);
 
-                // if the total rates are negative or zero
-                // we try to provide a better intial well rate
-                // using the well potentials
-                double total_rate = -std::accumulate(rates.begin(), rates.end(), 0.0);
-                if (total_rate <= 0.0){
-                    for (int p = 0; p<np; ++p) {
-                        well_state.wellRates(well_index)[p] = -well_state.wellPotentials(well_index)[p];
-                    }
+                // provide a better intial well rate using the well potentials
+                for (int p = 0; p<np; ++p) {
+                    well_state.wellRates(well_index)[p] = -well_state.wellPotentials(well_index)[p];
                 }
+
                 break;
             }
             case Well::ProducerCMode::GRUP:

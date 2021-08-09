@@ -234,6 +234,9 @@ namespace Opm {
         DeferredLogger local_deferredLogger;
 
         this->resetWGState();
+        switched_wells_.clear();
+        switched_prod_groups_.clear();
+        switched_inj_groups_.clear();
         const int reportStepIdx = ebosSimulator_.episodeIndex();
         updateAndCommunicateGroupData(reportStepIdx,
                                       ebosSimulator_.model().newtonMethod().numIterations());
@@ -476,6 +479,38 @@ namespace Opm {
                             ebosSimulator_.episodeIndex(), local_deferredLogger);
 
         this->calculateProductivityIndexValues(local_deferredLogger);
+
+        // output if well/group controll has changed
+        auto cc = Dune::MPIHelper::getCollectiveCommunication();
+        for (const auto& [well_name, from_to] : switched_wells_) {
+            std::ostringstream ss;
+            ss << "Switching control mode for well " << well_name
+               << " from " << from_to.first
+               << " to " <<  from_to.second;
+            if (cc.size() > 1) {
+                ss << " on rank " << cc.rank();
+            }
+            local_deferredLogger.info(ss.str());
+        }
+        if (cc.size() == 0) {
+            for (const auto& [group_name, from_to] : switched_prod_groups_) {
+                std::ostringstream ss;
+                ss << "Switching control mode for production group " << group_name
+                   << " from " << from_to.first
+                   << " to " <<  from_to.second;
+                local_deferredLogger.info(ss.str());
+            }
+            for (const auto& [group_name_phase, from_to] : switched_inj_groups_) {
+                std::ostringstream ss;
+                ss << "Switching control mode for " << group_name_phase.second << " injection group "
+                   <<  group_name_phase.second
+                   << " from " << from_to.first
+                   << " to " <<  from_to.second;
+                local_deferredLogger.info(ss.str());
+            }
+        }
+
+
 
         this->commitWGState();
 
@@ -1174,7 +1209,7 @@ namespace Opm {
     template<typename TypeTag>
     ConvergenceReport
     BlackoilWellModel<TypeTag>::
-    getWellConvergence(const std::vector<Scalar>& B_avg, bool checkGroupConvergence) const
+    getWellConvergence(const std::vector<Scalar>& B_avg, bool checkWellGroupControls)
     {
 
         DeferredLogger local_deferredLogger;
@@ -1185,6 +1220,11 @@ namespace Opm {
                 local_report += well->getWellConvergence(this->wellState(), B_avg, local_deferredLogger);
             }
         }
+        if (checkWellGroupControls) {
+            bool violated = updateWellControls(local_deferredLogger, /* check group controls */ true);
+            local_report.setWellGroupControlsSatisfied(!violated);
+        }
+
         DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger);
         if (terminal_output_) {
             global_deferredLogger.logMessages();
@@ -1203,14 +1243,6 @@ namespace Opm {
             }
         }
 
-        if (checkGroupConvergence) {
-            const int reportStepIdx = ebosSimulator_.episodeIndex();
-            const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
-            bool violated = checkGroupConstraints(fieldGroup,
-                                                  ebosSimulator_.episodeIndex(),
-                                                  global_deferredLogger);
-            report.setGroupConverged(!violated);
-        }
         return report;
     }
 
@@ -1234,56 +1266,73 @@ namespace Opm {
 
 
     template<typename TypeTag>
-    void
+    bool
     BlackoilWellModel<TypeTag>::
     updateWellControls(DeferredLogger& deferred_logger, const bool checkGroupControls)
     {
         // Even if there are no wells active locally, we cannot
         // return as the DeferredLogger uses global communication.
         // For no well active globally we simply return.
-        if( !wellsActive() ) return ;
+        if( !wellsActive() ) return true;
 
         const int episodeIdx = ebosSimulator_.episodeIndex();
         const int iterationIdx = ebosSimulator_.model().newtonMethod().numIterations();
         updateAndCommunicateGroupData(episodeIdx, iterationIdx);
 
         updateNetworkPressures(episodeIdx);
+        const auto& comm = ebosSimulator_.vanguard().grid().comm();
 
-        std::set<std::string> switched_wells;
-        std::set<std::string> switched_groups;
+        bool changed = false;
+        int iter = 0;
+        while(!changed && iter < 5) {
+            if (checkGroupControls) {
+                // Check group individual constraints.
+                const bool changed_ind = updateGroupIndividualControls(deferred_logger,
+                                                                       switched_prod_groups_,
+                                                                       switched_inj_groups_,
+                                                                       episodeIdx, iterationIdx);
+                if ( changed_ind ) {
+                    updateAndCommunicateGroupData(episodeIdx, iterationIdx);
+                    changed = true;
+                }
 
-        if (checkGroupControls) {
-            // Check group individual constraints.
-            updateGroupIndividualControls(deferred_logger, switched_groups,
-                                          episodeIdx, iterationIdx);
+                // Check group's constraints from higher levels.
+                const bool changed_higher = updateGroupHigherControls(deferred_logger,
+                                                                      episodeIdx,
+                                                                      switched_prod_groups_,
+                                                                      switched_inj_groups_);
+                if ( changed_higher ) {
+                    updateAndCommunicateGroupData(episodeIdx, iterationIdx);
+                    changed = true;
+                }
 
-            // Check group's constraints from higher levels.
-            updateGroupHigherControls(deferred_logger,
-                                      episodeIdx,
-                                      switched_groups);
+                // Check wells' group constraints and communicate.
+                for (const auto& well : well_container_) {
+                    const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Group;
+                    const bool changed_well = well->updateWellControl(ebosSimulator_, mode, this->wellState(), this->groupState(), switched_wells_, deferred_logger);
+                    if (changed_well) {
+                        changed = true;
+                    }
+                }
+                // This needs to be called after all well check to avoid MPI deadlock
+                updateAndCommunicateGroupData(episodeIdx, iterationIdx);
 
-            updateAndCommunicateGroupData(episodeIdx, iterationIdx);
+            }
 
-            // Check wells' group constraints and communicate.
+            // Check individual well constraints and communicate.
             for (const auto& well : well_container_) {
-                const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Group;
-                const bool changed = well->updateWellControl(ebosSimulator_, mode, this->wellState(), this->groupState(), deferred_logger);
-                if (changed) {
-                    switched_wells.insert(well->name());
+                const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Individual;
+                const bool changed_well = well->updateWellControl(ebosSimulator_, mode, this->wellState(), this->groupState(), switched_wells_, deferred_logger);
+                if (changed_well) {
+                    changed = true;
                 }
             }
+            // This needs to be called after all well check to avoid MPI deadlock
             updateAndCommunicateGroupData(episodeIdx, iterationIdx);
+            changed = comm.sum(changed);
+            iter++;
         }
-
-        // Check individual well constraints and communicate.
-        for (const auto& well : well_container_) {
-            if (switched_wells.count(well->name())) {
-                continue;
-            }
-            const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Individual;
-            well->updateWellControl(ebosSimulator_, mode, this->wellState(), this->groupState(), deferred_logger);
-        }
-        updateAndCommunicateGroupData(episodeIdx, iterationIdx);
+        return changed;
     }
 
 
