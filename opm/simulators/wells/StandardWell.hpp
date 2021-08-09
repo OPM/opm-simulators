@@ -343,13 +343,39 @@ namespace Opm
         void computeWellConnectionPressures(const Simulator& ebosSimulator,
                                             const WellState& well_state);
 
-        void computePerfRate(const IntensiveQuantities& intQuants,
-                             const std::vector<EvalWell>& mob,
-                             const EvalWell& bhp,
+        void computePerfRateEval(const IntensiveQuantities& intQuants,
+                                 const std::vector<EvalWell>& mob,
+                                 const EvalWell& bhp,
+                                 const double Tw,
+                                 const int perf,
+                                 const bool allow_cf,
+                                 std::vector<EvalWell>& cq_s,
+                                 double& perf_dis_gas_rate,
+                                 double& perf_vap_oil_rate,
+                                 DeferredLogger& deferred_logger) const;
+
+        void computePerfRateScalar(const IntensiveQuantities& intQuants,
+                                   const std::vector<Scalar>& mob,
+                                   const Scalar& bhp,
+                                   const double Tw,
+                                   const int perf,
+                                   const bool allow_cf,
+                                   std::vector<Scalar>& cq_s,
+                                   DeferredLogger& deferred_logger) const;
+
+        template<class Value>
+        void computePerfRate(const std::vector<Value>& mob,
+                             const Value& pressure,
+                             const Value& bhp,
+                             const Value& rs,
+                             const Value& rv,
+                             std::vector<Value>& b_perfcells_dense,
                              const double Tw,
                              const int perf,
                              const bool allow_cf,
-                             std::vector<EvalWell>& cq_s,
+                             const Value& skin_pressure,
+                             const std::vector<Value>& cmix_s,
+                             std::vector<Value>& cq_s,
                              double& perf_dis_gas_rate,
                              double& perf_vap_oil_rate,
                              DeferredLogger& deferred_logger) const;
@@ -368,10 +394,17 @@ namespace Opm
         virtual double getRefDensity() const override;
 
         // get the mobility for specific perforation
-        void getMobility(const Simulator& ebosSimulator,
-                         const int perf,
-                         std::vector<EvalWell>& mob,
-                         DeferredLogger& deferred_logger) const;
+        void getMobilityEval(const Simulator& ebosSimulator,
+                             const int perf,
+                             std::vector<EvalWell>& mob,
+                             DeferredLogger& deferred_logger) const;
+
+        // get the mobility for specific perforation
+        void getMobilityScalar(const Simulator& ebosSimulator,
+                               const int perf,
+                               std::vector<Scalar>& mob,
+                               DeferredLogger& deferred_logger) const;
+
 
         void updateWaterMobilityWithPolymer(const Simulator& ebos_simulator,
                                             const int perf,

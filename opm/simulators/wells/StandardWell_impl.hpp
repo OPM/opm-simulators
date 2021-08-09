@@ -103,16 +103,16 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    computePerfRate(const IntensiveQuantities& intQuants,
-                    const std::vector<EvalWell>& mob,
-                    const EvalWell& bhp,
-                    const double Tw,
-                    const int perf,
-                    const bool allow_cf,
-                    std::vector<EvalWell>& cq_s,
-                    double& perf_dis_gas_rate,
-                    double& perf_vap_oil_rate,
-                    DeferredLogger& deferred_logger) const
+    computePerfRateEval(const IntensiveQuantities& intQuants,
+                        const std::vector<EvalWell>& mob,
+                        const EvalWell& bhp,
+                        const double Tw,
+                        const int perf,
+                        const bool allow_cf,
+                        std::vector<EvalWell>& cq_s,
+                        double& perf_dis_gas_rate,
+                        double& perf_vap_oil_rate,
+                        DeferredLogger& deferred_logger) const
     {
         const auto& fs = intQuants.fluidState();
         const EvalWell pressure = this->extendEval(getPerfCellPressure(fs));
@@ -137,22 +137,251 @@ namespace Opm
                 b_perfcells_dense[gasCompIdx] += wsolvent()*intQuants.zPureInvFormationVolumeFactor().value();
             }
         }
-        this->StdWellEval::computePerfRate(mob,
-                                           pressure,
-                                           bhp,
-                                           rs,
-                                           rv,
-                                           b_perfcells_dense,
-                                           Tw,
-                                           perf,
-                                           allow_cf,
-                                           has_polymermw,
-                                           cq_s,
-                                           perf_dis_gas_rate,
-                                           perf_vap_oil_rate,
-                                           deferred_logger);
+
+        EvalWell skin_pressure = EvalWell{this->numWellEq_ + numEq, 0.0};
+        if (has_polymermw) {
+            if (this->isInjector()) {
+                const int pskin_index = Bhp + 1 + this->numPerfs() + perf;
+                skin_pressure = this->primary_variables_evaluation_[pskin_index];
+            }
+        }
+
+        // surface volume fraction of fluids within wellbore
+        std::vector<EvalWell> cmix_s(this->numComponents(), EvalWell{this->numWellEq_ + numEq});
+        for (int componentIdx = 0; componentIdx < this->numComponents(); ++componentIdx) {
+            cmix_s[componentIdx] = this->wellSurfaceVolumeFraction(componentIdx);
+        }
+
+        computePerfRate(mob,
+                        pressure,
+                        bhp,
+                        rs,
+                        rv,
+                        b_perfcells_dense,
+                        Tw,
+                        perf,
+                        allow_cf,
+                        skin_pressure,
+                        cmix_s,
+                        cq_s,
+                        perf_dis_gas_rate,
+                        perf_vap_oil_rate,
+                        deferred_logger);
     }
 
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    computePerfRateScalar(const IntensiveQuantities& intQuants,
+                          const std::vector<Scalar>& mob,
+                          const Scalar& bhp,
+                          const double Tw,
+                          const int perf,
+                          const bool allow_cf,
+                          std::vector<Scalar>& cq_s,
+                          DeferredLogger& deferred_logger) const
+    {
+        const auto& fs = intQuants.fluidState();
+        const Scalar pressure = getPerfCellPressure(fs).value();
+        const Scalar rs = fs.Rs().value();
+        const Scalar rv = fs.Rv().value();
+        std::vector<Scalar> b_perfcells_dense(num_components_, 0.0);
+        for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
+            if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                continue;
+            }
+            const unsigned compIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
+            b_perfcells_dense[compIdx] =  fs.invB(phaseIdx).value();
+        }
+        if constexpr (has_solvent) {
+            b_perfcells_dense[contiSolventEqIdx] = intQuants.solventInverseFormationVolumeFactor().value();
+        }
+
+        if constexpr (has_zFraction) {
+            if (this->isInjector()) {
+                const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+                b_perfcells_dense[gasCompIdx] *= (1.0 - wsolvent());
+                b_perfcells_dense[gasCompIdx] += wsolvent()*intQuants.zPureInvFormationVolumeFactor().value();
+            }
+        }
+
+        Scalar skin_pressure =0.0;
+        if (has_polymermw) {
+            if (this->isInjector()) {
+                const int pskin_index = Bhp + 1 + this->numPerfs() + perf;
+                skin_pressure = getValue(this->primary_variables_evaluation_[pskin_index]);
+            }
+        }
+
+        Scalar perf_dis_gas_rate = 0.0;
+        Scalar perf_vap_oil_rate = 0.0;
+
+        // surface volume fraction of fluids within wellbore
+        std::vector<Scalar> cmix_s(this->numComponents(), 0.0);
+        for (int componentIdx = 0; componentIdx < this->numComponents(); ++componentIdx) {
+            cmix_s[componentIdx] = getValue(this->wellSurfaceVolumeFraction(componentIdx));
+        }
+
+        computePerfRate(mob,
+                        pressure,
+                        bhp,
+                        rs,
+                        rv,
+                        b_perfcells_dense,
+                        Tw,
+                        perf,
+                        allow_cf,
+                        skin_pressure,
+                        cmix_s,
+                        cq_s,
+                        perf_dis_gas_rate,
+                        perf_vap_oil_rate,
+                        deferred_logger);
+    }
+
+    template<typename TypeTag>
+    template<class Value>
+    void
+    StandardWell<TypeTag>::
+    computePerfRate(const std::vector<Value>& mob,
+                    const Value& pressure,
+                    const Value& bhp,
+                    const Value& rs,
+                    const Value& rv,
+                    std::vector<Value>& b_perfcells_dense,
+                    const double Tw,
+                    const int perf,
+                    const bool allow_cf,
+                    const Value& skin_pressure,
+                    const std::vector<Value>& cmix_s,
+                    std::vector<Value>& cq_s,
+                    double& perf_dis_gas_rate,
+                    double& perf_vap_oil_rate,
+                    DeferredLogger& deferred_logger) const
+    {
+        // Pressure drawdown (also used to determine direction of flow)
+        const Value well_pressure = bhp + this->perf_pressure_diffs_[perf];
+        Value drawdown = pressure - well_pressure;
+        if (this->isInjector()) {
+            drawdown += skin_pressure;
+        }
+
+        // producing perforations
+        if ( drawdown > 0 )  {
+            //Do nothing if crossflow is not allowed
+            if (!allow_cf && this->isInjector()) {
+                return;
+            }
+
+            // compute component volumetric rates at standard conditions
+            for (int componentIdx = 0; componentIdx < this->numComponents(); ++componentIdx) {
+                const Value cq_p = - Tw * (mob[componentIdx] * drawdown);
+                cq_s[componentIdx] = b_perfcells_dense[componentIdx] * cq_p;
+            }
+
+            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
+                const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+                const Value cq_sOil = cq_s[oilCompIdx];
+                const Value cq_sGas = cq_s[gasCompIdx];
+                const Value dis_gas = rs * cq_sOil;
+                const Value vap_oil = rv * cq_sGas;
+
+                cq_s[gasCompIdx] += dis_gas;
+                cq_s[oilCompIdx] += vap_oil;
+
+                // recording the perforation solution gas rate and solution oil rates
+                if (this->isProducer()) {
+                    perf_dis_gas_rate = getValue(dis_gas);
+                    perf_vap_oil_rate = getValue(vap_oil);
+                }
+            }
+
+        } else {
+            //Do nothing if crossflow is not allowed
+            if (!allow_cf && this->isProducer()) {
+                return;
+            }
+
+            // Using total mobilities
+            Value total_mob_dense = mob[0];
+            for (int componentIdx = 1; componentIdx < this->numComponents(); ++componentIdx) {
+                total_mob_dense += mob[componentIdx];
+            }
+
+            // injection perforations total volume rates
+            const Value cqt_i = - Tw * (total_mob_dense * drawdown);
+
+            // compute volume ratio between connection at standard conditions
+            Value volumeRatio = bhp * 0.0; // initialize it with the correct type
+;
+            if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+                volumeRatio += cmix_s[waterCompIdx] / b_perfcells_dense[waterCompIdx];
+            }
+
+            if constexpr (Indices::enableSolvent) {
+                volumeRatio += cmix_s[Indices::contiSolventEqIdx] / b_perfcells_dense[Indices::contiSolventEqIdx];
+            }
+
+            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
+                const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+                // Incorporate RS/RV factors if both oil and gas active
+                const Value d = 1.0 - rv * rs;
+
+                if (getValue(d) == 0.0) {
+                    OPM_DEFLOG_THROW(NumericalIssue, "Zero d value obtained for well " << this->name() << " during flux calcuation"
+                                                  << " with rs " << rs << " and rv " << rv, deferred_logger);
+                }
+
+                const Value tmp_oil = (cmix_s[oilCompIdx] - rv * cmix_s[gasCompIdx]) / d;
+                volumeRatio += tmp_oil / b_perfcells_dense[oilCompIdx];
+
+                const Value tmp_gas = (cmix_s[gasCompIdx] - rs * cmix_s[oilCompIdx]) / d;
+                volumeRatio += tmp_gas / b_perfcells_dense[gasCompIdx];
+            }
+            else {
+                if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                    const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
+                    volumeRatio += cmix_s[oilCompIdx] / b_perfcells_dense[oilCompIdx];
+                }
+                if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                    const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+                    volumeRatio += cmix_s[gasCompIdx] / b_perfcells_dense[gasCompIdx];
+                }
+            }
+
+            // injecting connections total volumerates at standard conditions
+            Value cqt_is = cqt_i/volumeRatio;
+            for (int componentIdx = 0; componentIdx < this->numComponents(); ++componentIdx) {
+                cq_s[componentIdx] = cmix_s[componentIdx] * cqt_is;
+            }
+
+            // calculating the perforation solution gas rate and solution oil rates
+            if (this->isProducer()) {
+                if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                    const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
+                    const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+                    // TODO: the formulations here remain to be tested with cases with strong crossflow through production wells
+                    // s means standard condition, r means reservoir condition
+                    // q_os = q_or * b_o + rv * q_gr * b_g
+                    // q_gs = q_gr * g_g + rs * q_or * b_o
+                    // d = 1.0 - rs * rv
+                    // q_or = 1 / (b_o * d) * (q_os - rv * q_gs)
+                    // q_gr = 1 / (b_g * d) * (q_gs - rs * q_os)
+
+                    const double d = 1.0 - getValue(rv) * getValue(rs);
+                    // vaporized oil into gas
+                    // rv * q_gr * b_g = rv * (q_gs - rs * q_os) / d
+                    perf_vap_oil_rate = getValue(rv) * (getValue(cq_s[gasCompIdx]) - getValue(rs) * getValue(cq_s[oilCompIdx])) / d;
+                    // dissolved of gas in oil
+                    // rs * q_or * b_o = rs * (q_os - rv * q_gs) / d
+                    perf_dis_gas_rate = getValue(rs) * (getValue(cq_s[oilCompIdx]) - getValue(rv) * getValue(cq_s[gasCompIdx])) / d;
+                }
+            }
+        }
+    }
 
 
     template<typename TypeTag>
@@ -308,14 +537,14 @@ namespace Opm
         const int cell_idx = well_cells_[perf];
         const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
         std::vector<EvalWell> mob(num_components_, {this->numWellEq_ + numEq, 0.});
-        getMobility(ebosSimulator, perf, mob, deferred_logger);
+        getMobilityEval(ebosSimulator, perf, mob, deferred_logger);
 
         double perf_dis_gas_rate = 0.;
         double perf_vap_oil_rate = 0.;
         double trans_mult = ebosSimulator.problem().template rockCompTransMultiplier<double>(intQuants,  cell_idx);
         const double Tw = well_index_[perf] * trans_mult;
-        computePerfRate(intQuants, mob, bhp, Tw, perf, allow_cf,
-                        cq_s, perf_dis_gas_rate, perf_vap_oil_rate, deferred_logger);
+        computePerfRateEval(intQuants, mob, bhp, Tw, perf, allow_cf,
+                            cq_s, perf_dis_gas_rate, perf_vap_oil_rate, deferred_logger);
 
         auto& perf_data = well_state.perfData(this->index_of_well_);
         if constexpr (has_polymer && Base::has_polymermw) {
@@ -474,10 +703,10 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    getMobility(const Simulator& ebosSimulator,
-                const int perf,
-                std::vector<EvalWell>& mob,
-                DeferredLogger& deferred_logger) const
+    getMobilityEval(const Simulator& ebosSimulator,
+                    const int perf,
+                    std::vector<EvalWell>& mob,
+                    DeferredLogger& deferred_logger) const
     {
         const int cell_idx = well_cells_[perf];
         assert (int(mob.size()) == num_components_);
@@ -540,7 +769,78 @@ namespace Opm
         }
     }
 
+    template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    getMobilityScalar(const Simulator& ebosSimulator,
+                      const int perf,
+                      std::vector<Scalar>& mob,
+                      DeferredLogger& deferred_logger) const
+    {
+        const int cell_idx = well_cells_[perf];
+        assert (int(mob.size()) == num_components_);
+        const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
+        const auto& materialLawManager = ebosSimulator.problem().materialLawManager();
 
+        // either use mobility of the perforation cell or calcualte its own
+        // based on passing the saturation table index
+        const int satid = saturation_table_number_[perf] - 1;
+        const int satid_elem = materialLawManager->satnumRegionIdx(cell_idx);
+        if( satid == satid_elem ) { // the same saturation number is used. i.e. just use the mobilty from the cell
+
+            for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
+                if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                    continue;
+                }
+
+                const unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
+                mob[activeCompIdx] = getValue(intQuants.mobility(phaseIdx));
+            }
+            if (has_solvent) {
+                mob[contiSolventEqIdx] = getValue(intQuants.solventMobility());
+            }
+        } else {
+
+            const auto& paramsCell = materialLawManager->connectionMaterialLawParams(satid, cell_idx);
+            Eval relativePerms[3] = { 0.0, 0.0, 0.0 };
+            MaterialLaw::relativePermeabilities(relativePerms, paramsCell, intQuants.fluidState());
+
+            // reset the satnumvalue back to original
+            materialLawManager->connectionMaterialLawParams(satid_elem, cell_idx);
+
+            // compute the mobility
+            for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
+                if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                    continue;
+                }
+
+                const unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
+                mob[activeCompIdx] = getValue(relativePerms[phaseIdx]) / getValue(intQuants.fluidState().viscosity(phaseIdx));
+            }
+
+            // this may not work if viscosity and relperms has been modified?
+            if constexpr (has_solvent) {
+                OPM_DEFLOG_THROW(std::runtime_error, "individual mobility for wells does not work in combination with solvent", deferred_logger);
+            }
+        }
+
+        // modify the water mobility if polymer is present
+        if constexpr (has_polymer) {
+            if (!FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                OPM_DEFLOG_THROW(std::runtime_error, "Water is required when polymer is active", deferred_logger);
+            }
+
+            // for the cases related to polymer molecular weight, we assume fully mixing
+            // as a result, the polymer and water share the same viscosity
+            if constexpr (!Base::has_polymermw) {
+                std::vector<EvalWell> mob_eval(num_components_, {this->numWellEq_ + numEq, 0.});
+                updateWaterMobilityWithPolymer(ebosSimulator, perf, mob_eval, deferred_logger);
+                for (size_t i = 0; i < mob.size(); ++i) {
+                    mob[i] = getValue(mob_eval[i]);
+                }
+            }
+        }
+    }
 
 
 
@@ -639,7 +939,7 @@ namespace Opm
         for (int perf = 0; perf < number_of_perforations_; ++perf) {
             std::vector<EvalWell> mob(num_components_, {this->numWellEq_ + numEq, 0.0});
             // TODO: mabye we should store the mobility somewhere, so that we only need to calculate it one per iteration
-            getMobility(ebos_simulator, perf, mob, deferred_logger);
+            getMobilityEval(ebos_simulator, perf, mob, deferred_logger);
 
             const int cell_idx = well_cells_[perf];
             const auto& int_quantities = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
@@ -1090,7 +1390,7 @@ namespace Opm
             };
 
             std::vector<EvalWell> mob(num_components_, {this->numWellEq_ + numEq, 0.0});
-            getMobility(ebosSimulator, static_cast<int>(subsetPerfID), mob, deferred_logger);
+            getMobilityEval(ebosSimulator, static_cast<int>(subsetPerfID), mob, deferred_logger);
 
             const auto& fs = fluidState(subsetPerfID);
             setToZero(connPI);
@@ -1349,19 +1649,17 @@ namespace Opm
             const int cell_idx = well_cells_[perf];
             const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
             // flux for each perforation
-            std::vector<EvalWell> mob(num_components_, {this->numWellEq_ + numEq, 0.});
-            getMobility(ebosSimulator, perf, mob, deferred_logger);
+            std::vector<Scalar> mob(num_components_, 0.);
+            getMobilityScalar(ebosSimulator, perf, mob, deferred_logger);
             double trans_mult = ebosSimulator.problem().template rockCompTransMultiplier<double>(intQuants, cell_idx);
             const double Tw = well_index_[perf] * trans_mult;
 
-            std::vector<EvalWell> cq_s(num_components_, {this->numWellEq_ + numEq, 0.});
-            double perf_dis_gas_rate = 0.;
-            double perf_vap_oil_rate = 0.;
-            computePerfRate(intQuants, mob, EvalWell(this->numWellEq_ + numEq, bhp), Tw, perf, allow_cf,
-                            cq_s, perf_dis_gas_rate, perf_vap_oil_rate, deferred_logger);
+            std::vector<Scalar> cq_s(num_components_, 0.);
+            computePerfRateScalar(intQuants, mob, bhp, Tw, perf, allow_cf,
+                            cq_s, deferred_logger);
 
             for(int p = 0; p < np; ++p) {
-                well_flux[ebosCompIdxToFlowCompIdx(p)] += cq_s[p].value();
+                well_flux[ebosCompIdxToFlowCompIdx(p)] += cq_s[p];
             }
         }
         this->parallel_well_info_.communication().sum(well_flux.data(), well_flux.size());
@@ -1657,8 +1955,8 @@ namespace Opm
             double perf_vap_oil_rate = 0.;
             double trans_mult = ebos_simulator.problem().template rockCompTransMultiplier<double>(int_quant, cell_idx);
             const double Tw = well_index_[perf] * trans_mult;
-            computePerfRate(int_quant, mob, bhp, Tw, perf, allow_cf,
-                            cq_s, perf_dis_gas_rate, perf_vap_oil_rate, deferred_logger);
+            computePerfRateEval(int_quant, mob, bhp, Tw, perf, allow_cf,
+                                cq_s, perf_dis_gas_rate, perf_vap_oil_rate, deferred_logger);
             // TODO: make area a member
             const double area = 2 * M_PI * perf_rep_radius_[perf] * perf_length_[perf];
             const auto& material_law_manager = ebos_simulator.problem().materialLawManager();
@@ -2081,35 +2379,29 @@ namespace Opm
                             DeferredLogger& deferred_logger) const
     {
         // Calculate the rates that follow from the current primary variables.
-        std::vector<EvalWell> well_q_s(num_components_, {this->numWellEq_ + numEq, 0.});
+        std::vector<double> well_q_s(num_components_, 0.);
         const EvalWell& bhp = this->getBhp();
         const bool allow_cf = getAllowCrossFlow() || openCrossFlowAvoidSingularity(ebosSimulator);
         for (int perf = 0; perf < number_of_perforations_; ++perf) {
             const int cell_idx = well_cells_[perf];
             const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
-            std::vector<EvalWell> mob(num_components_, {this->numWellEq_ + numEq, 0.});
-            getMobility(ebosSimulator, perf, mob, deferred_logger);
-            std::vector<EvalWell> cq_s(num_components_, {this->numWellEq_ + numEq, 0.});
-            double perf_dis_gas_rate = 0.;
-            double perf_vap_oil_rate = 0.;
+            std::vector<Scalar> mob(num_components_, 0.);
+            getMobilityScalar(ebosSimulator, perf, mob, deferred_logger);
+            std::vector<Scalar> cq_s(num_components_, 0.);
             double trans_mult = ebosSimulator.problem().template rockCompTransMultiplier<double>(intQuants,  cell_idx);
             const double Tw = well_index_[perf] * trans_mult;
-            computePerfRate(intQuants, mob, bhp, Tw, perf, allow_cf,
-                            cq_s, perf_dis_gas_rate, perf_vap_oil_rate, deferred_logger);
+            computePerfRateScalar(intQuants, mob, bhp.value(), Tw, perf, allow_cf,
+                            cq_s, deferred_logger);
             for (int comp = 0; comp < num_components_; ++comp) {
                 well_q_s[comp] += cq_s[comp];
             }
         }
-        std::vector<double> well_q_s_noderiv(well_q_s.size());
-        for (int comp = 0; comp < num_components_; ++comp) {
-            well_q_s_noderiv[comp] = well_q_s[comp].value();
-        }
         const auto& comm = this->parallel_well_info_.communication();
         if (comm.size() > 1)
         {
-            comm.sum(well_q_s_noderiv.data(), well_q_s_noderiv.size());
+            comm.sum(well_q_s.data(), well_q_s.size());
         }
-        return well_q_s_noderiv;
+        return well_q_s;
     }
 
 

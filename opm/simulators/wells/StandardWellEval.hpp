@@ -146,21 +146,6 @@ protected:
                                     const std::vector<double>& rvmax_perf,
                                     const std::vector<double>& surf_dens_perf);
 
-    void computePerfRate(const std::vector<EvalWell>& mob,
-                         const EvalWell& pressure,
-                         const EvalWell& bhp,
-                         const EvalWell& rs,
-                         const EvalWell& rv,
-                         std::vector<EvalWell>& b_perfcells_dense,
-                         const double Tw,
-                         const int perf,
-                         const bool allow_cf,
-                         const bool enable_polymermw,
-                         std::vector<EvalWell>& cq_s,
-                         double& perf_dis_gas_rate,
-                         double& perf_vap_oil_rate,
-                         DeferredLogger& deferred_logger) const;
-
     ConvergenceReport getWellConvergence(const WellState& well_state,
                                          const std::vector<double>& B_avg,
                                          const double tol_wells,
