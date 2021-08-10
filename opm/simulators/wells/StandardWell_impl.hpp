@@ -1834,25 +1834,40 @@ namespace Opm
         }
 
         // If the well is pressure controlled the potential equals the rate.
-        bool pressure_controlled_well = false;
+        bool thp_controlled_well = false;
+        bool bhp_controlled_well = false;
         if (this->isInjector()) {
             const Well::InjectorCMode& current = well_state.currentInjectionControl(index_of_well_);
-            if (current == Well::InjectorCMode::BHP || current == Well::InjectorCMode::THP) {
-                pressure_controlled_well = true;
+            if (current == Well::InjectorCMode::THP) {
+                thp_controlled_well = true;
+            }
+            if (current == Well::InjectorCMode::BHP) {
+                bhp_controlled_well = true;
             }
         } else {
             const Well::ProducerCMode& current = well_state.currentProductionControl(index_of_well_);
-            if (current == Well::ProducerCMode::BHP || current == Well::ProducerCMode::THP) {
-                pressure_controlled_well = true;
+            if (current == Well::ProducerCMode::THP) {
+                thp_controlled_well = true;
+            }
+            if (current == Well::ProducerCMode::BHP) {
+                bhp_controlled_well = true;
             }
         }
-        if (pressure_controlled_well) {
-            // initialized the well rates with the potentials i.e. the well rates based on bhp
-            const double sign = this->well_ecl_.isInjector() ? 1.0 : -1.0;
+        if (thp_controlled_well || bhp_controlled_well) {
+
+            double total_rate = 0.0;
             for (int phase = 0; phase < np; ++phase){
-                well_potentials[phase] = sign * well_state.wellRates(index_of_well_)[phase];
+                total_rate += well_state.wellRates(index_of_well_)[phase];
             }
-            return;
+            // for pressure controlled wells the well rates are the potentials
+            // if the rates are trivial we are most probably looking at the newly
+            // opened well and we therefore make the affort of computing the potentials anyway.
+            if (std::abs(total_rate) > 0) {
+                for (int phase = 0; phase < np; ++phase){
+                    well_potentials[phase] = well_state.wellRates(index_of_well_)[phase];
+                }
+                return;
+            }
         }
 
         // creating a copy of the well itself, to avoid messing up the explicit informations
@@ -1862,7 +1877,7 @@ namespace Opm
 
         // does the well have a THP related constraint?
         const auto& summaryState = ebosSimulator.vanguard().summaryState();
-        if (!well.Base::wellHasTHPConstraints(summaryState)) {
+        if (!well.Base::wellHasTHPConstraints(summaryState) || bhp_controlled_well) {
             // get the bhp value based on the bhp constraints
             const double bhp = well.mostStrictBhpFromBhpLimits(summaryState);
             assert(std::abs(bhp) != std::numeric_limits<double>::max());

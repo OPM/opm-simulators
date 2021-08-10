@@ -454,7 +454,6 @@ namespace Opm {
                 well->updateWaterThroughput(dt, this->wellState());
             }
         }
-        updateWellTestState(simulationTime, wellTestState_);
 
         // update the rate converter with current averages pressures etc in
         rateConverter_->template defineState<ElementContext>(ebosSimulator_);
@@ -469,6 +468,8 @@ namespace Opm {
             const std::string msg = "A zero well potential is returned for output purposes. ";
             local_deferredLogger.warning("WELL_POTENTIAL_CALCULATION_FAILED", msg);
         }
+
+        updateWellTestState(simulationTime, wellTestState_);
 
         // check group sales limits at the end of the timestep
         const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
