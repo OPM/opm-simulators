@@ -50,8 +50,12 @@ private:
     bool hasRunInit_ = false;
     bool hasRunCleanup_ = false;
 
-    std::unique_ptr<Opm::FlowMainEbos<TypeTag>> mainEbos_;
+    // This *must* be declared before other pointers
+    // to simulator objects. This in order to deinitialize
+    // MPI at the correct time (ie after the other objects).
     std::unique_ptr<Opm::Main> main_;
+
+    std::unique_ptr<Opm::FlowMainEbos<TypeTag>> mainEbos_;
     Simulator *ebosSimulator_;
     std::unique_ptr<PyMaterialState<TypeTag>> materialState_;
 };

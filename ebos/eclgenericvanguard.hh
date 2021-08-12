@@ -29,6 +29,10 @@
 
 #include <opm/grid/common/GridEnums.hpp>
 
+#include <dune/common/version.hh>
+#include <dune/common/parallel/collectivecommunication.hh>
+#include <dune/common/parallel/mpihelper.hh>
+
 #include <array>
 #include <memory>
 #include <optional>
@@ -56,6 +60,12 @@ class UDQState;
 class EclGenericVanguard {
 public:
     using ParallelWellStruct = std::vector<std::pair<std::string,bool>>;
+
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
+    using CommunicationType = Dune::Communication<Dune::MPIHelper::MPICommunicator>;
+#else
+    using CommunicationType = Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator>;
+#endif
 
     /*!
      * \brief Constructor.
@@ -260,6 +270,17 @@ public:
     const ParallelWellStruct& parallelWells() const
     { return parallelWells_; }
 
+    //! \brief Set global communication.
+    static void setCommunication(std::unique_ptr<CommunicationType> comm)
+    { comm_ = std::move(comm); }
+
+    //! \brief Obtain global communicator.
+    static CommunicationType& comm()
+    {
+        assert(comm_);
+        return *comm_;
+    }
+
 protected:
     void updateOutputDir_(std::string outputDir,
                           bool enableEclCompatFile);
@@ -279,7 +300,7 @@ protected:
     static std::unique_ptr<Schedule> externalEclSchedule_;
     static std::unique_ptr<SummaryConfig> externalEclSummaryConfig_;
     static std::unique_ptr<UDQState> externalUDQState_;
-
+    static std::unique_ptr<CommunicationType> comm_;
 
     std::string caseName_;
     std::string fileName_;
