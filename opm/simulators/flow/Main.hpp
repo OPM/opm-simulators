@@ -120,7 +120,7 @@ namespace Opm
         using FlowMainEbosType = FlowMainEbos<Properties::TTag::EclFlowProblem>;
 
     public:
-        Main(int argc, char** argv) : argc_(argc), argv_(argv)  {  }
+        Main(int argc, char** argv) : argc_(argc), argv_(argv)  { initMPI();  }
 
         Main(const std::string &filename)
         {
@@ -130,6 +130,7 @@ namespace Opm
             saveArgs_[0] = const_cast<char *>(flowProgName_.c_str());
             saveArgs_[1] = const_cast<char *>(deckFilename_.c_str());
             argv_ = saveArgs_;
+            initMPI();
         }
 
         Main(int argc,
@@ -145,14 +146,26 @@ namespace Opm
             , schedule_(std::move(schedule))
             , summaryConfig_(std::move(summaryConfig))
         {
+          initMPI();
         }
 
         ~Main()
         {
-#if HAVE_MPI && !HAVE_DUNE_FEM
             EclGenericVanguard::setCommunication(nullptr);
+
+#if HAVE_MPI && !HAVE_DUNE_FEM
             MPI_Finalize();
 #endif
+        }
+
+        void initMPI()
+        {
+#if HAVE_DUNE_FEM
+            Dune::Fem::MPIManager::initialize(argc_, argv_);
+#elif HAVE_MPI
+            MPI_Init(&argc_, &argv_);
+#endif
+            EclGenericVanguard::setCommunication(std::make_unique<EclGenericVanguard::CommunicationType>());
         }
 
         int runDynamic()
@@ -359,15 +372,9 @@ namespace Opm
             externalSetupTimer.start();
 
             handleVersionCmdLine_(argc_, argv_);
-            // MPI setup.
 #if HAVE_DUNE_FEM
-            Dune::Fem::MPIManager::initialize(argc_, argv_);
             int mpiRank = Dune::Fem::MPIManager::rank();
 #else
-#if HAVE_MPI
-            MPI_Init(&argc_, &argv_);
-#endif
-            EclGenericVanguard::setCommunication(std::make_unique<EclGenericVanguard::CommunicationType>());
             int mpiRank = EclGenericVanguard::comm().rank();
 #endif
 
