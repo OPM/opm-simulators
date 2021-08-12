@@ -34,6 +34,7 @@
 #include <dune/common/parallel/mpihelper.hh>
 
 #include <array>
+#include <cassert>
 #include <memory>
 #include <optional>
 #include <stdexcept>
