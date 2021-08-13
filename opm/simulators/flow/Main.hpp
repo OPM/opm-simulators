@@ -149,8 +149,27 @@ namespace Opm
           initMPI();
         }
 
+#define DEMONSTRATE_RUN_WITH_NONWORLD_COMM 1
+
         ~Main()
         {
+#if DEMONSTRATE_RUN_WITH_NONWORLD_COMM
+#if HAVE_MPI
+            // Cannot use EclGenericVanguard::comm()
+            // to get world size here, as it may be
+            // a split communication at this point.
+            int world_size;
+            MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+            if (world_size > 1) {
+                MPI_Comm new_comm = EclGenericVanguard::comm();
+                int result;
+                MPI_Comm_compare(MPI_COMM_WORLD, new_comm, &result);
+                assert(result == MPI_UNEQUAL);
+                MPI_Comm_free(&new_comm);
+            }
+#endif // HAVE_MPI
+#endif // DEMONSTRATE_RUN_WITH_NONWORLD_COMM
+
             EclGenericVanguard::setCommunication(nullptr);
 
 #if HAVE_MPI && !HAVE_DUNE_FEM
@@ -166,27 +185,42 @@ namespace Opm
             MPI_Init(&argc_, &argv_);
 #endif
             EclGenericVanguard::setCommunication(std::make_unique<EclGenericVanguard::CommunicationType>());
+
+#if DEMONSTRATE_RUN_WITH_NONWORLD_COMM
+#if HAVE_MPI
+            if (EclGenericVanguard::comm().size() > 1) {
+                int world_rank = EclGenericVanguard::comm().rank();
+                int color = (world_rank == 0);
+                MPI_Comm new_comm;
+                MPI_Comm_split(EclGenericVanguard::comm(), color, world_rank, &new_comm);
+                isSimulationRank_ = (world_rank > 0);
+                EclGenericVanguard::setCommunication(std::make_unique<EclGenericVanguard::CommunicationType>(new_comm));
+            }
+#endif // HAVE_MPI
+#endif // DEMONSTRATE_RUN_WITH_NONWORLD_COMM
         }
 
         int runDynamic()
         {
             int exitCode = EXIT_SUCCESS;
-            if (initialize_<Properties::TTag::FlowEarlyBird>(exitCode)) {
-                return dispatchDynamic_();
-            } else {
-                return exitCode;
+            if (isSimulationRank_) {
+                if (initialize_<Properties::TTag::FlowEarlyBird>(exitCode)) {
+                    return dispatchDynamic_();
+                }
             }
+            return exitCode;
         }
 
         template <class TypeTag>
         int runStatic()
         {
             int exitCode = EXIT_SUCCESS;
-            if (initialize_<TypeTag>(exitCode)) {
-                return dispatchStatic_<TypeTag>();
-            } else {
-                return exitCode;
+            if (isSimulationRank_) {
+                if (initialize_<TypeTag>(exitCode)) {
+                    return dispatchStatic_<TypeTag>();
+                }
             }
+            return exitCode;
         }
 
         // To be called from the Python interface code. Only do the
@@ -553,6 +587,7 @@ namespace Opm
         std::unique_ptr<Schedule> schedule_;
         std::unique_ptr<UDQState> udqState_;
         std::unique_ptr<SummaryConfig> summaryConfig_;
+        bool isSimulationRank_ = true;
     };
 
 } // namespace Opm
