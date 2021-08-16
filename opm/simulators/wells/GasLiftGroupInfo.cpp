@@ -202,9 +202,9 @@ checkDoGasLiftOptimization_(const std::string &well_name)
         if (itr != this->ecl_wells_.end()) {
             //const Well *well = (itr->second).first;
             //assert(well); // Should never be nullptr
-            const int index = (itr->second).second;
-            const Well::ProducerCMode& control_mode
-                = this->well_state_.currentProductionControl(index);
+            const int well_index = (itr->second).second;
+            const auto& ws = this->well_state_.well(well_index);
+            const Well::ProducerCMode& control_mode = ws.production_cmode;
             if (control_mode != Well::ProducerCMode::THP ) {
                 displayDebugMessage_("Not THP control. Skipping.", well_name);
                 return false;

@@ -22,6 +22,7 @@
 #define OPM_WELLSTATEFULLYIMPLICITBLACKOIL_HEADER_INCLUDED
 
 #include <opm/simulators/wells/ALQState.hpp>
+#include <opm/simulators/wells/SingleWellState.hpp>
 #include <opm/simulators/wells/GlobalWellInfo.hpp>
 #include <opm/simulators/wells/SegmentState.hpp>
 #include <opm/simulators/wells/WellContainer.hpp>
@@ -107,14 +108,6 @@ public:
                 const std::vector<std::vector<PerforationData>>& well_perf_data,
                 const SummaryState& summary_state);
 
-    /// One current control per injecting well.
-    Well::InjectorCMode currentInjectionControl(std::size_t well_index) const { return current_injection_controls_[well_index]; }
-    void currentInjectionControl(std::size_t well_index, Well::InjectorCMode cmode) { current_injection_controls_[well_index] = cmode; }
-
-    /// One current control per producing well.
-    Well::ProducerCMode currentProductionControl(std::size_t well_index) const { return current_production_controls_[well_index]; }
-    void currentProductionControl(std::size_t well_index, Well::ProducerCMode cmode) { current_production_controls_[well_index] = cmode; }
-
     void setCurrentWellRates(const std::string& wellName, const std::vector<double>& new_rates ) {
         auto& [owner, rates] = this->well_rates.at(wellName);
         if (owner)
@@ -146,10 +139,6 @@ public:
 
     static void calculateSegmentRates(const std::vector<std::vector<int>>& segment_inlets, const std::vector<std::vector<int>>&segment_perforations,
                                       const std::vector<double>& perforation_rates, const int np, const int segment, std::vector<double>& segment_rates);
-
-    Events& events(std::size_t well_index) {
-        return this->events_[well_index];
-    }
 
     /// One rate pr well
     double solventWellRate(const int w) const;
@@ -293,7 +282,7 @@ public:
     void updateStatus(int well_index, Well::Status status);
 
     void openWell(int well_index) {
-        this->status_[well_index] = Well::Status::OPEN;
+        this->wells_[well_index].status = Well::Status::OPEN;
     }
 
     void shutWell(int well_index);
@@ -308,18 +297,6 @@ public:
     const PhaseUsage& phaseUsage() const {
         return this->phase_usage_;
     }
-
-    /// One bhp pressure per well.
-    void update_bhp(std::size_t well_index, double value) { bhp_[well_index] = value; }
-    double bhp(std::size_t well_index) const { return bhp_[well_index]; }
-
-    /// One thp pressure per well.
-    void update_thp(std::size_t well_index, double value) { thp_[well_index] = value; }
-    double thp(std::size_t well_index) const { return thp_[well_index]; }
-
-    /// One temperature per well.
-    void update_temperature(std::size_t well_index, double value) { temperature_[well_index] = value; }
-    double temperature(std::size_t well_index) const { return temperature_[well_index]; }
 
     /// One rate per well and phase.
     const WellContainer<std::vector<double>>& wellRates() const { return wellrates_; }
@@ -345,12 +322,25 @@ public:
     }
 
     const std::string& name(std::size_t well_index) const {
-        return this->status_.well_name(well_index);
+        return this->wells_.well_name(well_index);
     }
 
-    bool producer(std::size_t well_index) const {
-        return this->is_producer_[well_index];
+    const SingleWellState& well(std::size_t well_index) const {
+        return this->wells_[well_index];
     }
+
+    const SingleWellState& well(const std::string& well_name) const {
+        return this->wells_[well_name];
+    }
+
+    SingleWellState& well(std::size_t well_index) {
+        return this->wells_[well_index];
+    }
+
+    SingleWellState& well(const std::string& well_name) {
+        return this->wells_[well_name];
+    }
+
 
 
 private:
@@ -362,22 +352,11 @@ private:
     ALQState alq_state;
     bool do_glift_optimization_;
 
-    WellContainer<Well::Status> status_;
+    WellContainer<SingleWellState> wells_;
     WellContainer<const ParallelWellInfo*> parallel_well_info_;
-    WellContainer<double> bhp_;
-    WellContainer<double> thp_;
-    WellContainer<double> temperature_;
     WellContainer<std::vector<double>> wellrates_;
     PhaseUsage phase_usage_;
     WellContainer<PerfData> perfdata;
-
-    WellContainer<int> is_producer_; // Size equal to number of local wells.
-
-    // vector with size number of wells +1.
-    // iterate over all perforations of a given well
-    // for (int perf = first_perf_index_[well_index]; perf < first_perf_index_[well_index] + num_perf_[well_index]; ++perf)
-    WellContainer<Opm::Well::InjectorCMode> current_injection_controls_;
-    WellContainer<Well::ProducerCMode> current_production_controls_;
 
     // The well_rates variable is defined for all wells on all processors. The
     // bool in the value pair is whether the current process owns the well or
@@ -395,11 +374,6 @@ private:
     // vaporized oil rates or solution oil producation rates
     // should be zero for injection wells
     WellContainer<double> well_vaporized_oil_rates_;
-
-    // some events happens to the well, like this well is a new well
-    // or new well control keywords happens
-    // \Note: for now, only WCON* keywords, and well status change is considered
-    WellContainer<Events> events_;
 
     WellContainer<SegmentState> segment_state;
 

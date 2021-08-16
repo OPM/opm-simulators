@@ -41,15 +41,12 @@ void WellState::base_init(const std::vector<double>& cellPressures,
     // clear old name mapping
     this->wellMap_.clear();
     this->perfdata.clear();
-    this->status_.clear();
     this->parallel_well_info_.clear();
     this->wellrates_.clear();
-    this->bhp_.clear();
-    this->thp_.clear();
-    this->temperature_.clear();
     this->segment_state.clear();
     this->well_potentials_.clear();
     this->productivity_index_.clear();
+    this->wells_.clear();
     {
         // const int nw = wells->number_of_wells;
         const int nw = wells_ecl.size();
@@ -91,21 +88,16 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
     // May be overwritten below.
     const auto& pu = this->phase_usage_;
     const int np = pu.num_phases;
+    double temp = well.isInjector() ? well.injectionControls(summary_state).temperature : 273.15 + 15.56;
 
-    this->status_.add(well.name(), Well::Status::OPEN);
+    auto& ws = this->wells_.add(well.name(), SingleWellState{well.isProducer(), temp});
     this->parallel_well_info_.add(well.name(), well_info);
     this->wellrates_.add(well.name(), std::vector<double>(np, 0));
     this->well_potentials_.add(well.name(), std::vector<double>(np, 0));
     const int num_perf_this_well = well_info->communication().sum(well_perf_data.size());
     this->segment_state.add(well.name(), SegmentState{});
     this->perfdata.add(well.name(), PerfData{static_cast<std::size_t>(num_perf_this_well), well.isInjector(), this->phase_usage_});
-    this->bhp_.add(well.name(), 0.0);
-    this->thp_.add(well.name(), 0.0);
     this->productivity_index_.add(well.name(), std::vector<double>(np, 0));
-    if ( well.isInjector() )
-        this->temperature_.add(well.name(), well.injectionControls(summary_state).temperature);
-    else
-        this->temperature_.add(well.name(), 273.15 + 15.56); // standard condition temperature
 
     if ( num_perf_this_well == 0 )
         return;
@@ -126,7 +118,7 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
     const double global_pressure = well_info->broadcastFirstPerforationValue(local_pressure);
 
     if (well.getStatus() == Well::Status::OPEN) {
-        this->status_[w] = Well::Status::OPEN;
+        ws.status = Well::Status::OPEN;
     }
 
     if (well.getStatus() == Well::Status::STOP) {
@@ -136,9 +128,9 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
         //    applicable, otherwise assign equal to
         //    first perforation cell pressure.
         if (is_bhp) {
-            bhp_[w] = bhp_limit;
+            ws.bhp = bhp_limit;
         } else {
-            bhp_[w] = global_pressure;
+            ws.bhp = global_pressure;
         }
     } else if (is_grup) {
         // Well under group control.
@@ -148,7 +140,7 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
         //    the well is an injector or producer)
         //    pressure in first perforation cell.
         const double safety_factor = well.isInjector() ? 1.01 : 0.99;
-        bhp_[w] = safety_factor * global_pressure;
+        ws.bhp = safety_factor * global_pressure;
     } else {
         // Open well, under own control:
         // 1. Rates: initialize well rates to match
@@ -206,10 +198,10 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
         //    the well is an injector or producer)
         //    pressure in first perforation cell.
         if (is_bhp) {
-            bhp_[w] = bhp_limit;
+            ws.bhp = bhp_limit;
         } else {
             const double safety_factor = well.isInjector() ? 1.01 : 0.99;
-            bhp_[w] = safety_factor * global_pressure;
+            ws.bhp = safety_factor * global_pressure;
         }
     }
 
@@ -219,7 +211,7 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
                                            : prod_controls.hasControl(Well::ProducerCMode::THP);
     const double thp_limit = well.isInjector() ? inj_controls.thp_limit : prod_controls.thp_limit;
     if (has_thp) {
-        thp_[w] = thp_limit;
+        ws.thp = thp_limit;
     }
 }
 
@@ -265,15 +257,12 @@ void WellState::init(const std::vector<double>& cellPressures,
     well_dissolved_gas_rates_.clear();
     well_vaporized_oil_rates_.clear();
 
-    this->events_.clear();
     {
         const auto& wg_events = schedule[report_step].wellgroup_events();
         for (const auto& ecl_well : wells_ecl) {
             const auto& wname = ecl_well.name();
             if (wg_events.has(wname))
-                this->events_.add( wname, wg_events.at(wname) );
-            else
-                this->events_.add( wname, Events() );
+                this->well(wname).events = wg_events.at(wname);
         }
     }
 
@@ -307,25 +296,15 @@ void WellState::init(const std::vector<double>& cellPressures,
         this->well_vaporized_oil_rates_.add(wname, 0);
     }
 
-    is_producer_.clear();
     for (int w = 0; w < nw; ++w) {
-        const auto& ecl_well = wells_ecl[w];
-        this->is_producer_.add( ecl_well.name(), ecl_well.isProducer());
-    }
-
-    current_injection_controls_.clear();
-    current_production_controls_.clear();
-    for (int w = 0; w < nw; ++w) {
-        const auto& wname = wells_ecl[w].name();
-        current_production_controls_.add(wname, Well::ProducerCMode::CMODE_UNDEFINED);
-        current_injection_controls_.add(wname, Well::InjectorCMode::CMODE_UNDEFINED);
+        auto& ws = this->well(w);
         if (wells_ecl[w].isProducer()) {
             const auto controls = wells_ecl[w].productionControls(summary_state);
-            currentProductionControl(w, controls.cmode);
+            ws.production_cmode = controls.cmode;
         }
         else {
             const auto controls = wells_ecl[w].injectionControls(summary_state);
-            currentInjectionControl(w, controls.cmode);
+            ws.injection_cmode = controls.cmode;
         }
     }
 
@@ -356,31 +335,30 @@ void WellState::init(const std::vector<double>& cellPressures,
                 continue;
             }
             const auto& wname = well.name();
+            auto& new_well = this->well(w);
             auto it = prevState->wellMap().find(well.name());
             if (it != end)
             {
                 const int newIndex = w;
                 const int oldIndex = it->second[ 0 ];
-                if (prevState->status_[oldIndex] == Well::Status::SHUT) {
+
+                const auto& prev_well = prevState->well(oldIndex);
+                new_well.init_timestep(prev_well);
+
+
+                if (prev_well.status == Well::Status::SHUT) {
                     // Well was shut in previous state, do not use its values.
                     continue;
                 }
 
-                if (is_producer_[newIndex] != prevState->is_producer_[oldIndex]) {
+                if (new_well.producer != prev_well.producer)
                     // Well changed to/from injector from/to producer, do not use its privious values.
                     continue;
-                }
-
-                // bhp
-                this->update_bhp( newIndex, prevState->bhp( oldIndex ));
-
-                // thp
-                this->update_thp( newIndex, prevState->thp( oldIndex ));
 
                 // If new target is set using WCONPROD, WCONINJE etc. we use the new control
-                if (!this->events_[w].hasEvent(WellState::event_mask)) {
-                    current_injection_controls_[ newIndex ] = prevState->currentInjectionControl(oldIndex);
-                    current_production_controls_[ newIndex ] = prevState->currentProductionControl(oldIndex);
+                if (!new_well.events.hasEvent(WellState::event_mask)) {
+                    new_well.injection_cmode = prev_well.injection_cmode;
+                    new_well.production_cmode = prev_well.production_cmode;
                 }
 
                 wellRates(w) = prevState->wellRates(oldIndex);
@@ -436,7 +414,7 @@ void WellState::init(const std::vector<double>& cellPressures,
                 : well.productionControls(summary_state).hasControl(Well::ProducerCMode::THP);
 
             if (!has_thp) {
-                this->update_thp(w, 0.0);
+                new_well.thp = 0;
             }
         }
     }
@@ -507,8 +485,8 @@ WellState::report(const int* globalCellIdxMap,
     data::Wells res;
     for( const auto& [wname, winfo]: this->wellMap() ) {
         const auto well_index = winfo[ 0 ];
-        if ((this->status_[well_index] == Well::Status::SHUT) &&
-            ! wasDynamicallyClosed(well_index))
+        const auto& ws = this->well(well_index);
+        if ((ws.status == Well::Status::SHUT) && !wasDynamicallyClosed(well_index))
         {
             continue;
         }
@@ -519,9 +497,9 @@ WellState::report(const int* globalCellIdxMap,
         const auto& wv = this->wellRates(well_index);
 
         data::Well well;
-        well.bhp = this->bhp(well_index);
-        well.thp = this->thp( well_index );
-        well.temperature = this->temperature( well_index );
+        well.bhp = ws.bhp;
+        well.thp = ws.thp;
+        well.temperature = ws.temperature;
 
         if( pu.phase_used[BlackoilPhases::Aqua] ) {
             well.rates.set(rt::wat, wv[ pu.phase_pos[BlackoilPhases::Aqua] ] );
@@ -556,7 +534,7 @@ WellState::report(const int* globalCellIdxMap,
             well.rates.set(rt::brine, brineWellRate(well_index));
         }
 
-        if (is_producer_[well_index]) {
+        if (ws.producer) {
             well.rates.set(rt::alq, getALQ(wname));
         }
         else {
@@ -569,9 +547,9 @@ WellState::report(const int* globalCellIdxMap,
         {
             auto& curr = well.current_control;
 
-            curr.isProducer = this->is_producer_[well_index];
-            curr.prod = this->currentProductionControl(well_index);
-            curr.inj  = this->currentInjectionControl(well_index);
+            curr.isProducer = ws.producer;
+            curr.prod = ws.production_cmode;
+            curr.inj  = ws.injection_cmode;
         }
 
         const auto& pwinfo = *this->parallel_well_info_[well_index];
@@ -680,6 +658,7 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
     // what we do here, is to set the segment rates and perforation rates
     for (int w = 0; w < nw; ++w) {
         const auto& well_ecl = wells_ecl[w];
+        auto& ws = this->well(w);
 
         if ( well_ecl.isMultiSegment() ) {
             const WellSegments& segment_set = well_ecl.getSegments();
@@ -748,7 +727,7 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
             {
                 // top segment is always the first one, and its pressure is the well bhp
                 auto& segment_pressure = this->segments(w).pressure;
-                segment_pressure[0] = bhp(w);
+                segment_pressure[0] = ws.bhp;
                 const auto& perf_press = perf_data.pressure;
                 for (int seg = 1; seg < well_nseg; ++seg) {
                     if ( !segment_perforations[seg].empty() ) {
@@ -777,7 +756,8 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
 
             const auto& wname = well.name();
             if (prev_well_state->segment_state.has(wname)) {
-                if (prev_well_state->status_[wname] == Well::Status::SHUT) {
+                const auto& prev_ws = prev_well_state->well(wname);
+                if (prev_ws.status == Well::Status::SHUT) {
                     continue;
                 }
 
@@ -842,15 +822,14 @@ double WellState::brineWellRate(const int w) const
 
 void WellState::stopWell(int well_index)
 {
-    this->status_[well_index] = Well::Status::STOP;
-    this->thp_[well_index] = 0;
+    auto& ws = this->well(well_index);
+    ws.stop();
 }
 
 void WellState::shutWell(int well_index)
 {
-    this->status_[well_index] = Well::Status::SHUT;
-    this->thp_[well_index] = 0;
-    this->bhp_[well_index] = 0;
+    auto& ws = this->well(well_index);
+    ws.shut();
     const int np = numPhases();
     this->wellrates_[well_index].assign(np, 0);
 
@@ -935,7 +914,14 @@ void WellState::communicateGroupRates(const Comm& comm)
 template<class Comm>
 void WellState::updateGlobalIsGrup(const Comm& comm)
 {
-    this->global_well_info.value().update_group(this->status_.data(), this->current_injection_controls_.data(), this->current_production_controls_.data());
+    this->global_well_info.value().clear();
+    for (std::size_t well_index = 0; well_index < this->size(); well_index++) {
+        const auto& ws = this->well(well_index);
+        if (ws.producer)
+            this->global_well_info.value().update_producer(well_index, ws.status, ws.production_cmode);
+        else
+            this->global_well_info.value().update_injector(well_index, ws.status, ws.injection_cmode);
+    }
     this->global_well_info.value().communicate(comm);
 }
 

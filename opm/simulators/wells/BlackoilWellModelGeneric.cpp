@@ -172,15 +172,16 @@ loadRestartData(const data::Wells& rst_wells,
     for( const auto& wm : well_state.wellMap() ) {
         const auto well_index = wm.second[ 0 ];
         const auto& rst_well = rst_wells.at( wm.first );
-        well_state.update_thp(well_index, rst_well.thp);
-        well_state.update_bhp(well_index, rst_well.bhp);
-        well_state.update_temperature(well_index,  rst_well.temperature);
+        auto& ws = well_state.well(well_index);
+        ws.bhp = rst_well.bhp;
+        ws.thp = rst_well.thp;
+        ws.temperature = rst_well.temperature;
 
         if (rst_well.current_control.isProducer) {
-            well_state.currentProductionControl(well_index, rst_well.current_control.prod);
+            ws.production_cmode = rst_well.current_control.prod;
         }
         else {
-            well_state.currentInjectionControl(well_index, rst_well.current_control.inj);
+            ws.injection_cmode = rst_well.current_control.inj;
         }
 
         for( size_t i = 0; i < phs.size(); ++i ) {

@@ -265,7 +265,7 @@ doGasLiftOptimize(const WellState &well_state,
     }
     if (glift_optimize_only_thp_wells) {
         const int well_index = baseif_.indexOfWell();
-        auto control_mode = well_state.currentProductionControl(well_index);
+        auto control_mode = well_state.well(well_index).production_cmode;
         if (control_mode != Well::ProducerCMode::THP ) {
             gliftDebug("Not THP control", deferred_logger);
             return false;
@@ -698,13 +698,14 @@ checkConvergenceControlEq(const WellState& well_state,
     CR::WellFailure::Type ctrltype = CR::WellFailure::Type::Invalid;
 
     const int well_index = baseif_.indexOfWell();
+    const auto& ws = well_state.well(well_index);
     if (baseif_.wellIsStopped()) {
         ctrltype = CR::WellFailure::Type::ControlRate;
         control_tolerance = 1.e-6; // use smaller tolerance for zero control?
     }
     else if (baseif_.isInjector() )
     {
-        auto current = well_state.currentInjectionControl(well_index);
+        auto current = ws.injection_cmode;
         switch(current) {
         case Well::InjectorCMode::THP:
             ctrltype = CR::WellFailure::Type::ControlTHP;
@@ -729,7 +730,7 @@ checkConvergenceControlEq(const WellState& well_state,
     }
     else if (baseif_.isProducer() )
     {
-        auto current = well_state.currentProductionControl(well_index);
+        auto current = ws.production_cmode;
         switch(current) {
         case Well::ProducerCMode::THP:
             ctrltype = CR::WellFailure::Type::ControlTHP;

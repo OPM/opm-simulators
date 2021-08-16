@@ -404,13 +404,14 @@ namespace WellGroupHelpers
 
             const double efficiency = wellTmp.getEfficiencyFactor();
             // add contributino from wells not under group control
+            const auto& ws = wellState.well(well_index);
             if (isInjector) {
-                if (wellState.currentInjectionControl(well_index) != Well::InjectorCMode::GRUP)
+                if (ws.injection_cmode != Well::InjectorCMode::GRUP)
                     for (int phase = 0; phase < np; phase++) {
                         groupTargetReduction[phase] += wellStateNupcol.wellRates(well_index)[phase] * efficiency;
                     }
             } else {
-                if (wellState.currentProductionControl(well_index) != Well::ProducerCMode::GRUP)
+                if (ws.production_cmode != Well::ProducerCMode::GRUP)
                     for (int phase = 0; phase < np; phase++) {
                         groupTargetReduction[phase] -= wellStateNupcol.wellRates(well_index)[phase] * efficiency;
                     }
@@ -480,13 +481,14 @@ namespace WellGroupHelpers
             }
 
             // scale rates
+            const auto& ws = wellState.well(well_index);
             if (isInjector) {
-                if (wellState.currentInjectionControl(well_index) == Well::InjectorCMode::GRUP)
+                if (ws.injection_cmode == Well::InjectorCMode::GRUP)
                     for (int phase = 0; phase < np; phase++) {
                         wellState.wellRates(well_index)[phase] *= scale;
                     }
             } else {
-                if (wellState.currentProductionControl(well_index) == Well::ProducerCMode::GRUP)
+                if (ws.production_cmode == Well::ProducerCMode::GRUP)
                     for (int phase = 0; phase < np; phase++) {
                         wellState.wellRates(well_index)[phase] *= scale;
                     }

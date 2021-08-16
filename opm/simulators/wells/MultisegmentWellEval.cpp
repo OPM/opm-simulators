@@ -155,9 +155,10 @@ checkConvergenceControlEq(const WellState& well_state,
     CR::WellFailure::Type ctrltype = CR::WellFailure::Type::Invalid;
 
     const int well_index = baseif_.indexOfWell();
+    const auto& ws = well_state.well(well_index);
     if (baseif_.isInjector() )
     {
-        auto current = well_state.currentInjectionControl(well_index);
+        auto current = ws.injection_cmode;
         switch(current) {
         case Well::InjectorCMode::THP:
             ctrltype = CR::WellFailure::Type::ControlTHP;
@@ -183,7 +184,7 @@ checkConvergenceControlEq(const WellState& well_state,
 
     if (baseif_.isProducer() )
     {
-        auto current = well_state.currentProductionControl(well_index);
+        auto current = ws.production_cmode;
         switch(current) {
         case Well::ProducerCMode::THP:
             ctrltype = CR::WellFailure::Type::ControlTHP;
@@ -1474,7 +1475,8 @@ updateThp(WellState& well_state,
 
     // When there is no vaild VFP table provided, we set the thp to be zero.
     if (!baseif_.isVFPActive(deferred_logger) || baseif_.wellIsStopped()) {
-        well_state.update_thp(baseif_.indexOfWell(), 0.);
+        auto& well = well_state.well(baseif_.indexOfWell());
+        well.thp = 0;
         return;
     }
 
@@ -1492,9 +1494,9 @@ updateThp(WellState& well_state,
         rates[ Gas ] = well_state.wellRates(baseif_.indexOfWell())[pu.phase_pos[ Gas ] ];
     }
 
-    const double bhp = well_state.bhp(baseif_.indexOfWell());
-
-    well_state.update_thp(baseif_.indexOfWell(), this->calculateThpFromBhp(rates, bhp, rho, deferred_logger));
+    auto& well = well_state.well(baseif_.indexOfWell());
+    const double bhp = well.bhp;
+    well.thp = this->calculateThpFromBhp(rates, bhp, rho, deferred_logger);
 }
 
 template<typename FluidSystem, typename Indices, typename Scalar>
@@ -1614,6 +1616,7 @@ updateWellStateFromPrimaryVariables(WellState& well_state,
     assert( FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) );
     const int oil_pos = pu.phase_pos[Oil];
 
+    auto& well = well_state.well(baseif_.indexOfWell());
     auto& segments = well_state.segments(baseif_.indexOfWell());
     auto& segment_rates = segments.rates;
     auto& segment_pressure = segments.pressure;
@@ -1658,7 +1661,7 @@ updateWellStateFromPrimaryVariables(WellState& well_state,
         // update the segment pressure
         segment_pressure[seg] = primary_variables_[seg][SPres];
         if (seg == 0) { // top segment
-            well_state.update_bhp(baseif_.indexOfWell(), segment_pressure[seg]);
+            well.bhp = segment_pressure[seg];
         }
     }
     updateThp(well_state, rho, deferred_logger);
@@ -1795,9 +1798,10 @@ getControlTolerance(const WellState& well_state,
     double control_tolerance = 0.;
 
     const int well_index = baseif_.indexOfWell();
+    const auto& ws = well_state.well(well_index);
     if (baseif_.isInjector() )
     {
-        auto current = well_state.currentInjectionControl(well_index);
+        auto current = ws.injection_cmode;
         switch(current) {
         case Well::InjectorCMode::THP:
             control_tolerance = tolerance_pressure_ms_wells;
@@ -1819,7 +1823,7 @@ getControlTolerance(const WellState& well_state,
 
     if (baseif_.isProducer() )
     {
-        auto current = well_state.currentProductionControl(well_index);
+        auto current = ws.production_cmode;
         switch(current) {
         case Well::ProducerCMode::THP:
             control_tolerance = tolerance_pressure_ms_wells; // 0.1 bar

@@ -136,8 +136,9 @@ void
 MultisegmentWellGeneric<Scalar>::
 scaleSegmentPressuresWithBhp(WellState& well_state) const
 {
+    auto& well = well_state.well(baseif_.indexOfWell());
     auto& segments = well_state.segments(baseif_.indexOfWell());
-    auto bhp = well_state.bhp(baseif_.indexOfWell());
+    const auto bhp = well.bhp;
     segments.scale_pressure(bhp);
 }
 

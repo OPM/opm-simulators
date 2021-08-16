@@ -61,20 +61,22 @@ public:
         return this->m_data.size();
     }
 
-    void add(const std::string& name, T&& value) {
+    T& add(const std::string& name, T&& value) {
         if (index_map.count(name) != 0)
             throw std::logic_error("An object with name: " + name + " already exists in container");
 
         this->index_map.emplace(name, this->m_data.size());
         this->m_data.push_back(std::forward<T>(value));
+        return this->m_data.back();
     }
 
-    void add(const std::string& name, const T& value) {
+    T& add(const std::string& name, const T& value) {
         if (index_map.count(name) != 0)
             throw std::logic_error("An object with name: " + name + " already exists in container");
 
         this->index_map.emplace(name, this->m_data.size());
         this->m_data.push_back(value);
+        return this->m_data.back();
     }
 
     bool has(const std::string& name) const {
