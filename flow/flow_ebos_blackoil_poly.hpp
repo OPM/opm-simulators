@@ -1,5 +1,7 @@
 /*
-  Copyright 2020, NORCE AS
+  Copyright 2013, 2014, 2015 SINTEF ICT, Applied Mathematics.
+  Copyright 2014 Dr. Blatt - HPC-Simulation-Software & Services
+  Copyright 2015, 2017 IRIS AS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -16,10 +18,12 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include "config.h"
-#include <flow/flow_ebos_blackoil_poly.hpp>
 
-int main(int argc, char** argv)
-{
-    return Opm::flowEbosBlackoilPolyMain(argc, argv);
+#ifndef FLOW_BLACKOIL_POLY_HPP
+#define FLOW_BLACKOIL_POLY_HPP
+
+namespace Opm {
+  int flowEbosBlackoilPolyMain(int argc, char** argv);
 }
+
+#endif

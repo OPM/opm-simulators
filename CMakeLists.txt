@@ -354,6 +354,13 @@ if(BUILD_FLOW_VARIANTS)
   endif()
 endif()
 
+if(BUILD_FLOW_POLY_GRID)
+  add_library(flow_libblackoil_poly OBJECT flow/flow_ebos_blackoil_poly.cpp)
+  if(TARGET fmt::fmt)
+    target_link_libraries(flow_libblackoil_poly fmt::fmt)
+   endif()
+endif()
+
 # the production oriented general-purpose ECL simulator
 opm_add_test(flow
   ONLY_COMPILE
@@ -402,6 +409,7 @@ opm_add_test(flow_poly
   LIBRARIES opmsimulators
   SOURCES
   flow/flow_blackoil_poly.cpp
+  $<TARGET_OBJECTS:flow_libblackoil_poly>
   $<TARGET_OBJECTS:moduleVersion>)
 target_compile_definitions(flow_poly PRIVATE USE_POLYHEDRALGRID)
 
