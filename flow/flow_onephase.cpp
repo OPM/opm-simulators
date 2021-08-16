@@ -19,44 +19,10 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "config.h"
-#include <opm/simulators/flow/Main.hpp>
-#include <opm/models/blackoil/blackoilonephaseindices.hh>
+#include <flow/flow_ebos_onephase.hpp>
 
-
-namespace Opm::Properties {
-
-namespace TTag {
-struct EclFlowProblemSimple {
-    using InheritsFrom = std::tuple<EclFlowProblem>;
-};
-}
-//! The indices required by the model
-template<class TypeTag>
-struct Indices<TypeTag, TTag::EclFlowProblemSimple>
-{
-private:
-    // it is unfortunately not possible to simply use 'TypeTag' here because this leads
-    // to cyclic definitions of some properties. if this happens the compiler error
-    // messages unfortunately are *really* confusing and not really helpful.
-    using BaseTypeTag = TTag::EclFlowProblem;
-    using FluidSystem = GetPropType<BaseTypeTag, Properties::FluidSystem>;
-
-public:
-    using type = BlackOilOnePhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
-                                         getPropValue<TypeTag, Properties::EnableExtbo>(),
-                                         getPropValue<TypeTag, Properties::EnablePolymer>(),
-                                         getPropValue<TypeTag, Properties::EnableEnergy>(),
-                                         getPropValue<TypeTag, Properties::EnableFoam>(),
-                                         getPropValue<TypeTag, Properties::EnableBrine>(),
-                                         /*PVOffset=*/0,
-                                         /*enabledCompIdx=*/FluidSystem::waterCompIdx>;
-};
-
-} // namespace Opm::Properties
 
 int main(int argc, char** argv)
 {
-    using TypeTag = Opm::Properties::TTag::EclFlowProblemSimple;
-    auto mainObject = Opm::Main(argc, argv);
-    return mainObject.runStatic<TypeTag>();
+    return Opm::flowEbosOnephaseMain(argc, argv);
 }

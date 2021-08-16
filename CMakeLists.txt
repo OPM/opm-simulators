@@ -345,6 +345,15 @@ foreach(OBJ ${COMMON_MODELS} ${FLOW_MODELS})
 endforeach()
 set_property(TARGET flow_libblackoil PROPERTY POSITION_INDEPENDENT_CODE ON)
 
+if(BUILD_FLOW_VARIANTS)
+  add_library(flow_libonephase_energy OBJECT flow/flow_ebos_onephase_energy.cpp)
+  add_library(flow_libonephase OBJECT flow/flow_ebos_onephase.cpp)
+  if(TARGET fmt::fmt)
+    target_link_libraries(flow_libonephase_energy fmt::fmt)
+    target_link_libraries(flow_libonephase fmt::fmt)
+  endif()
+endif()
+
 # the production oriented general-purpose ECL simulator
 opm_add_test(flow
   ONLY_COMPILE
@@ -432,6 +441,7 @@ opm_add_test(flow_onephase
   SOURCES
   flow/flow_onephase.cpp
   $<TARGET_OBJECTS:moduleVersion>
+  $<TARGET_OBJECTS:flow_libonephase>
   EXE_NAME flow_onephase
   DEPENDS opmsimulators
   LIBRARIES opmsimulators)
@@ -442,8 +452,9 @@ opm_add_test(flow_onephase_energy
   SOURCES
   flow/flow_onephase_energy.cpp
   $<TARGET_OBJECTS:moduleVersion>
+  $<TARGET_OBJECTS:flow_libonephase_energy>
   EXE_NAME flow_onephase_energy
-  DEPENDS opmsimulators
+  DEPENDS opmsimulators flow_libonephase_energy
   LIBRARIES opmsimulators)
 
 if (BUILD_FLOW)
