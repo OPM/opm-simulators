@@ -17,19 +17,9 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "config.h"
-#include <opm/simulators/flow/Main.hpp>
-
-namespace Opm::Properties {
-    namespace TTag {
-        struct EclFlowProblemPoly {
-            using InheritsFrom = std::tuple<EclFlowProblem>;
-        };
-    }
-}
+#include <flow/flow_ebos_blackoil_poly.hpp>
 
 int main(int argc, char** argv)
 {
-    using TypeTag = Opm::Properties::TTag::EclFlowProblemPoly;
-    auto mainObject = Opm::Main(argc, argv);
-    return mainObject.runStatic<TypeTag>();
+    return Opm::flowEbosBlackoilPolyMain(argc, argv);
 }

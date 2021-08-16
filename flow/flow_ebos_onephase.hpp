@@ -18,10 +18,12 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include "config.h"
-#include <flow/flow_ebos_onephase_energy.hpp>
 
-int main(int argc, char** argv)
-{
-    return Opm::flowEbosOnephaseEnergyMain(argc,argv);
+#ifndef FLOW_ONEPHASE_HPP
+#define FLOW_ONEPHASE_HPP
+
+namespace Opm {
+  int flowEbosOnephaseMain(int argc, char** argv);
 }
+
+#endif

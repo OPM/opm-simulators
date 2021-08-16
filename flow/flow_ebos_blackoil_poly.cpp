@@ -1,7 +1,5 @@
 /*
-  Copyright 2013, 2014, 2015 SINTEF ICT, Applied Mathematics.
-  Copyright 2014 Dr. Blatt - HPC-Simulation-Software & Services
-  Copyright 2015, 2017 IRIS AS
+  Copyright 2020, NORCE AS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -19,9 +17,22 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "config.h"
-#include <flow/flow_ebos_onephase_energy.hpp>
+#include <opm/simulators/flow/Main.hpp>
 
-int main(int argc, char** argv)
+namespace Opm {
+namespace Properties {
+    namespace TTag {
+        struct EclFlowProblemPoly {
+            using InheritsFrom = std::tuple<EclFlowProblem>;
+        };
+    }
+}
+
+int flowEbosBlackoilPolyMain(int argc, char** argv)
 {
-    return Opm::flowEbosOnephaseEnergyMain(argc,argv);
+    using TypeTag = Opm::Properties::TTag::EclFlowProblemPoly;
+    auto mainObject = Opm::Main(argc, argv);
+    return mainObject.runStatic<TypeTag>();
+}
+
 }
