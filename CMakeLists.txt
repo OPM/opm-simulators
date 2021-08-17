@@ -325,6 +325,18 @@ else()
   set(FLOW_DEFAULT_ENABLE_IF "TRUE")
 endif()
 
+if (NOT BUILD_FLOW_VARIANTS)
+  set(FLOW_VARIANTS_DEFAULT_ENABLE_IF "FALSE")
+else()
+  set(FLOW_VARIANTS_DEFAULT_ENABLE_IF "TRUE")
+endif()
+
+if (NOT BUILD_FLOW_POLY_GRID)
+  set(FLOW_POLY_ONLY_DEFAULT_ENABLE_IF "FALSE")
+else()
+  set(FLOW_POLY_ONLY_DEFAULT_ENABLE_IF "TRUE")
+endif()
+
 add_library(moduleVersion OBJECT opm/simulators/utils/moduleVersion.cpp)
 set_property(TARGET moduleVersion PROPERTY POSITION_INDEPENDENT_CODE ON)
 
@@ -345,21 +357,20 @@ foreach(OBJ ${COMMON_MODELS} ${FLOW_MODELS})
 endforeach()
 set_property(TARGET flow_libblackoil PROPERTY POSITION_INDEPENDENT_CODE ON)
 
-if(BUILD_FLOW_VARIANTS)
-  add_library(flow_libonephase_energy OBJECT flow/flow_ebos_onephase_energy.cpp)
-  add_library(flow_libonephase OBJECT flow/flow_ebos_onephase.cpp)
-  if(TARGET fmt::fmt)
-    target_link_libraries(flow_libonephase_energy fmt::fmt)
-    target_link_libraries(flow_libonephase fmt::fmt)
-  endif()
+add_library(flow_libonephase_energy OBJECT flow/flow_ebos_onephase_energy.cpp)
+add_library(flow_libonephase OBJECT flow/flow_ebos_onephase.cpp)
+if(TARGET fmt::fmt)
+  target_link_libraries(flow_libonephase_energy fmt::fmt)
+  target_link_libraries(flow_libonephase fmt::fmt)
 endif()
+set_property(TARGET flow_libonephase PROPERTY EXCLUDE_FROM_ALL ${FLOW_VARIANTS_DEFAULT_ENABLE_IF})
+set_property(TARGET flow_libonephase_energy PROPERTY EXCLUDE_FROM_ALL ${FLOW_VARIANTS_DEFAULT_ENABLE_IF})
 
-if(BUILD_FLOW_POLY_GRID)
-  add_library(flow_libblackoil_poly OBJECT flow/flow_ebos_blackoil_poly.cpp)
-  if(TARGET fmt::fmt)
-    target_link_libraries(flow_libblackoil_poly fmt::fmt)
-   endif()
-endif()
+add_library(flow_libblackoil_poly OBJECT flow/flow_ebos_blackoil_poly.cpp)
+if(TARGET fmt::fmt)
+  target_link_libraries(flow_libblackoil_poly fmt::fmt)
+ endif()
+set_property(TARGET flow_libblackoil_poly PROPERTY EXCLUDE_FROM_ALL ${FLOW_POLY_ONLY_DEFAULT_ENABLE_IF})
 
 # the production oriented general-purpose ECL simulator
 opm_add_test(flow
@@ -394,12 +405,6 @@ opm_add_test(flow_blackoil
   $<TARGET_OBJECTS:moduleVersion>)
 target_compile_definitions(flow_blackoil PRIVATE "FLOW_BLACKOIL_ONLY")
 
-if (NOT BUILD_FLOW_POLY_GRID)
-  set(FLOW_POLY_ONLY_DEFAULT_ENABLE_IF "FALSE")
-else()
-  set(FLOW_POLY_ONLY_DEFAULT_ENABLE_IF "TRUE")
-endif()
-
 # the production oriented general-purpose ECL simulator
 opm_add_test(flow_poly
   ONLY_COMPILE
@@ -425,12 +430,6 @@ opm_add_test(flow_distribute_z
   ${FLOW_TGTS}
   $<TARGET_OBJECTS:moduleVersion>
   )
-
-if (NOT BUILD_FLOW_VARIANTS)
-  set(FLOW_VARIANTS_DEFAULT_ENABLE_IF "FALSE")
-else()
-  set(FLOW_VARIANTS_DEFAULT_ENABLE_IF "TRUE")
-endif()
 
 # Variant versions of Flow.
 opm_add_test(flow_blackoil_dunecpr
