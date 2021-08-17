@@ -1202,7 +1202,7 @@ getGuideRateValues(const GuideRate::RateVector& qs,
 {
     auto getGR = [this, &wgname, &qs](const GuideRateModel::Target t)
     {
-        return this->guideRate_.get(wgname, t, qs);
+        return this->guideRate_.getSI(wgname, t, qs);
     };
 
     // Note: GuideRate does currently (2020-07-20) not support Target::RES.
