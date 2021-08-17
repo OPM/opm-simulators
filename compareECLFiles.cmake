@@ -933,6 +933,7 @@ add_test_compare_restarted_simulation(CASENAME spe1
                                       ABS_TOL ${abs_tol_restart}
                                       REL_TOL ${rel_tol_restart}
                                       TEST_ARGS --sched-restart=false)
+
 add_test_compare_restarted_simulation(CASENAME spe9
                                       FILENAME SPE9_CP_SHORT
                                       SIMULATOR flow
@@ -971,6 +972,13 @@ add_test_compare_restarted_simulation(CASENAME numerical_aquifer_3d_2aqu
                                       REL_TOL 4.0e-3
                                       DIR aquifer-num
                                       TEST_ARGS --sched-restart=true --enable-tuning=true)
+
+add_test_compare_restarted_simulation(CASENAME udq_actionx
+                                      FILENAME UDQ_WCONPROD
+                                      SIMULATOR flow
+                                      ABS_TOL ${abs_tol_restart}
+                                      REL_TOL ${rel_tol_restart}
+                                      TEST_ARGS --sched-restart=false)
 
 # The dynamic MSW data is not written to /read from the restart file
 # We therefore accept significant deviation in the results.
