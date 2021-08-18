@@ -1613,19 +1613,19 @@ protected:
 
     // third derivative of the hermite basis functions
     template <class Evaluation>
-    Scalar h00_prime3_(const Evaluation& t OPM_UNUSED) const
+    Scalar h00_prime3_(const Evaluation&) const
     { return 2*3*2; }
 
     template <class Evaluation>
-    Scalar h10_prime3_(const Evaluation& t OPM_UNUSED) const
+    Scalar h10_prime3_(const Evaluation&) const
     { return 2*3; }
 
     template <class Evaluation>
-    Scalar h01_prime3_(const Evaluation& t OPM_UNUSED) const
+    Scalar h01_prime3_(const Evaluation&) const
     { return -2*3*2; }
 
     template <class Evaluation>
-    Scalar h11_prime3_(const Evaluation& t OPM_UNUSED) const
+    Scalar h11_prime3_(const Evaluation&) const
     { return 2*3; }
 
     // returns the monotonicality of an interval of a spline segment

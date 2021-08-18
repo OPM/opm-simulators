@@ -151,8 +151,8 @@ public:
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
      */
     template <class Evaluation>
-    static Evaluation liquidHeatCapacity(const Evaluation& temperature OPM_UNUSED,
-                                         const Evaluation& pressure OPM_UNUSED)
+    static Evaluation liquidHeatCapacity(const Evaluation&,
+                                         const Evaluation&)
     {
         return 120.0/molarMass();
     }

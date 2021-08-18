@@ -164,9 +164,9 @@ public:
      * \brief Returns the specific enthalpy [J/kg] of water given a set of parameters.
      */
     template <class Evaluation>
-    Evaluation internalEnergy(unsigned regionIdx OPM_UNUSED,
-                        const Evaluation& temperature OPM_UNUSED,
-                        const Evaluation& pressure OPM_UNUSED) const
+    Evaluation internalEnergy(unsigned,
+                        const Evaluation&,
+                        const Evaluation&) const
     {
         throw std::runtime_error("Requested the enthalpy of water but the thermal option is not enabled");
     }

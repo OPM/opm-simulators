@@ -129,10 +129,10 @@ public:
      * \brief Returns the specific enthalpy [J/kg] of gas given a set of parameters.
      */
     template <class Evaluation>
-    Evaluation internalEnergy(unsigned regionIdx OPM_UNUSED,
+    Evaluation internalEnergy(unsigned,
                         const Evaluation& temperature,
                         const Evaluation& pressure,
-                        const Evaluation& Rv OPM_UNUSED) const
+                        const Evaluation&) const
     {
         return CO2::gasInternalEnergy(temperature, pressure);
     }

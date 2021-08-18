@@ -55,7 +55,7 @@ public:
       */
     template <class FluidState, class Evaluation = typename FluidState::Scalar>
     static Evaluation thermalConductivity(const Params& params,
-                                          const FluidState& fluidState OPM_UNUSED)
+                                          const FluidState&)
     {
         // The thermal conductivity approach based on the THC* keywords.
 

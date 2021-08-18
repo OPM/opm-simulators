@@ -268,7 +268,7 @@ inline quad real(quad val)
 inline quad real(const std::complex<quad>& val)
 { return val.real(); }
 
-inline quad imag(quad val OPM_UNUSED)
+inline quad imag(quad)
 { return 0.0; }
 
 inline quad imag(const std::complex<quad>& val)

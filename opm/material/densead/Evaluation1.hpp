@@ -141,15 +141,15 @@ public:
     // is equivalent to creating an uninitialized object using the default
     // constructor, while for dynamic evaluations, it creates an Evaluation
     // object which exhibits the same number of derivatives as the argument.
-    static Evaluation createBlank(const Evaluation& x OPM_UNUSED)
+    static Evaluation createBlank(const Evaluation&)
     { return Evaluation(); }
 
     // create an Evaluation with value and all the derivatives to be zero
-    static Evaluation createConstantZero(const Evaluation& x OPM_UNUSED)
+    static Evaluation createConstantZero(const Evaluation&)
     { return Evaluation(0.); }
 
     // create an Evaluation with value to be one and all the derivatives to be zero
-    static Evaluation createConstantOne(const Evaluation& x OPM_UNUSED)
+    static Evaluation createConstantOne(const Evaluation&)
     { return Evaluation(1.); }
 
     // create a function evaluation for a "naked" depending variable (i.e., f(x) = x)
@@ -174,7 +174,7 @@ public:
     }
 
     template <class RhsValueType>
-    static Evaluation createVariable(const Evaluation& x OPM_UNUSED, const RhsValueType& value, int varPos)
+    static Evaluation createVariable(const Evaluation&, const RhsValueType& value, int varPos)
     {
         // copy function value and set all derivatives to 0, except for the variable
         // which is represented by the value (which is set to 1.0)
@@ -204,7 +204,7 @@ public:
     // "evaluate" a constant function (i.e. a function that does not depend on the set of
     // relevant variables, f(x) = c).
     template <class RhsValueType>
-    static Evaluation createConstant(const Evaluation& x OPM_UNUSED, const RhsValueType& value)
+    static Evaluation createConstant(const Evaluation&, const RhsValueType& value)
     {
         return Evaluation(value);
     }

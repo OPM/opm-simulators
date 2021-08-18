@@ -222,8 +222,8 @@ public:
     template <class Evaluation>
     Evaluation internalEnergy(unsigned regionIdx,
                               const Evaluation& temperature,
-                              const Evaluation& pressure OPM_UNUSED,
-                              const Evaluation& Rv OPM_UNUSED) const
+                              const Evaluation&,
+                              const Evaluation&) const
     {
         if (!enableInternalEnergy_)
             throw std::runtime_error("Requested the internal energy of oil but it is disabled");

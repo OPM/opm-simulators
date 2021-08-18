@@ -110,7 +110,7 @@ public:
     {
         // ensure that T has a default constructor without actually calling it
         if (false) {
-            T OPM_UNUSED dummy; // <- if the compiler bails out here, T does not have a default constructor
+            [[maybe_unused]] T dummy; // <- if the compiler bails out here, T does not have a default constructor
         }
     }
 
@@ -118,7 +118,7 @@ public:
     {
         // ensure that T has a default constructor without actually calling it
         if (false) {
-            T OPM_UNUSED dummy(v); // <- if the compiler bails out here, T does not have a copy constructor
+            [[maybe_unused]] T dummy(v); // <- if the compiler bails out here, T does not have a copy constructor
         }
     }
 
@@ -133,7 +133,7 @@ public:
         // ensure that the arguments are valid without actually calling the constructor
         // of T
         if (false) {
-            T OPM_UNUSED dummy(args...); // <- if the compiler bails out here, T does not have the requested constructor
+            [[maybe_unused]] T dummy(args...); // <- if the compiler bails out here, T does not have the requested constructor
         }
     }
 
