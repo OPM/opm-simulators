@@ -244,7 +244,7 @@ struct MaxPressureChangeMsWells<TypeTag, TTag::FlowModelParameters> {
 };
 template<class TypeTag>
 struct MaxNewtonIterationsWithInnerWellIterations<TypeTag, TTag::FlowModelParameters> {
-    static constexpr int value = 3;
+    static constexpr int value = 8;
 };
 template<class TypeTag>
 struct MaxInnerIterMsWells<TypeTag, TTag::FlowModelParameters> {
