@@ -154,7 +154,7 @@ public:
     template <class FluidState>
     void assignMassConservative(const FluidState& fluidState,
                                 const MaterialLawParams& matParams,
-                                bool isInEquilibrium OPM_UNUSED= false)
+                                bool = false)
     {
         ComponentVector globalMolarities(0.0);
         for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {

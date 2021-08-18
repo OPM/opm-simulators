@@ -332,7 +332,7 @@ public:
     /*!
      * \copydoc FvBaseDiscretization::primaryVarWeight
      */
-    Scalar primaryVarWeight(unsigned globalDofIdx OPM_UNUSED, unsigned pvIdx) const
+    Scalar primaryVarWeight(unsigned, unsigned pvIdx) const
     {
         if (Indices::pressureWIdx == pvIdx) {
             return 10 / referencePressure_;
@@ -344,10 +344,9 @@ public:
     /*!
      * \copydoc FvBaseDiscretization::eqWeight
      */
-    Scalar eqWeight(unsigned globalDofIdx OPM_UNUSED, unsigned OPM_OPTIM_UNUSED eqIdx) const
+    Scalar eqWeight(unsigned, [[maybe_unused]] unsigned eqIdx) const
     {
-        unsigned OPM_OPTIM_UNUSED compIdx = eqIdx - Indices::contiEqIdx;
-        assert(compIdx <= FluidSystem::numPhases);
+        assert((eqIdx - Indices::contiEqIdx) <= FluidSystem::numPhases);
 
         // make all kg equal
         return 1.0;

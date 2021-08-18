@@ -114,7 +114,7 @@ class VcfvScvGeometries<Scalar, /*dim=*/1, ElementType::simplex>
 public:
     using ScvLocalGeometry = QuadrialteralQuadratureGeometry<Scalar, dim>;
 
-    static const ScvLocalGeometry& get(unsigned scvIdx OPM_UNUSED)
+    static const ScvLocalGeometry& get(unsigned)
     {
         throw std::logic_error("Not implemented: VcfvScvGeometries<Scalar, 1, ElementType::simplex>");
     }

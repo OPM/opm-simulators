@@ -625,8 +625,8 @@ public:
     /*!
      * \brief Return how much a Newton-Raphson update is considered an error
      */
-    static Scalar computeUpdateError(const PrimaryVariables& oldPv OPM_UNUSED,
-                                     const EqVector& delta OPM_UNUSED)
+    static Scalar computeUpdateError(const PrimaryVariables&,
+                                     const EqVector&)
     {
         // do not consider consider the cange of solvent primary variables for
         // convergence
@@ -1267,19 +1267,19 @@ class BlackOilSolventIntensiveQuantities<TypeTag, false>
 
 
 public:
-    void solventPreSatFuncUpdate_(const ElementContext& elemCtx OPM_UNUSED,
-                                  unsigned scvIdx OPM_UNUSED,
-                                  unsigned timeIdx OPM_UNUSED)
+    void solventPreSatFuncUpdate_(const ElementContext&,
+                                  unsigned,
+                                  unsigned)
     { }
 
-    void solventPostSatFuncUpdate_(const ElementContext& elemCtx OPM_UNUSED,
-                                   unsigned scvIdx OPM_UNUSED,
-                                   unsigned timeIdx OPM_UNUSED)
+    void solventPostSatFuncUpdate_(const ElementContext&,
+                                   unsigned,
+                                   unsigned)
     { }
 
-    void solventPvtUpdate_(const ElementContext& elemCtx OPM_UNUSED,
-                           unsigned scvIdx OPM_UNUSED,
-                           unsigned timeIdx OPM_UNUSED)
+    void solventPvtUpdate_(const ElementContext&,
+                           unsigned,
+                           unsigned)
     { }
 
     const Evaluation& solventSaturation() const
@@ -1541,14 +1541,14 @@ class BlackOilSolventExtensiveQuantities<TypeTag, false>
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
 
 public:
-    void updateVolumeFluxPerm(const ElementContext& elemCtx OPM_UNUSED,
-                              unsigned scvfIdx OPM_UNUSED,
-                              unsigned timeIdx OPM_UNUSED)
+    void updateVolumeFluxPerm(const ElementContext&,
+                              unsigned,
+                              unsigned)
     { }
 
-    void updateVolumeFluxTrans(const ElementContext& elemCtx OPM_UNUSED,
-                              unsigned scvfIdx OPM_UNUSED,
-                              unsigned timeIdx OPM_UNUSED)
+    void updateVolumeFluxTrans(const ElementContext&,
+                              unsigned,
+                              unsigned)
     { }
 
     unsigned solventUpstreamIndex() const

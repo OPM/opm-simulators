@@ -257,8 +257,8 @@ public:
     /*!
      * \brief Return how much a Newton-Raphson update is considered an error
      */
-    static Scalar computeUpdateError(const PrimaryVariables& oldPv OPM_UNUSED,
-                                     const EqVector& delta OPM_UNUSED)
+    static Scalar computeUpdateError(const PrimaryVariables&,
+                                     const EqVector&)
     {
         // do not consider consider the change of Brine primary variables for
         // convergence
@@ -400,9 +400,9 @@ class BlackOilBrineIntensiveQuantities<TypeTag, false>
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
 public:
-    void updateSaltConcentration_(const ElementContext& elemCtx OPM_UNUSED,
-                                  unsigned dofIdx OPM_UNUSED,
-                                  unsigned timeIdx OPM_UNUSED)
+    void updateSaltConcentration_(const ElementContext&,
+                                  unsigned,
+                                  unsigned)
     { }
 
     const Evaluation& saltConcentration() const

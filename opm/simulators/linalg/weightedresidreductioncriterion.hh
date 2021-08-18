@@ -185,7 +185,7 @@ public:
      * \copydoc ConvergenceCriterion::update(const Vector& , const Vector& )
      */
     void update(const Vector& curSol,
-                const Vector& changeIndicator OPM_UNUSED,
+                const Vector&,
                 const Vector& curResid)
     {
         lastResidualError_ = residualError_;

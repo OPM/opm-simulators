@@ -79,7 +79,7 @@ public:
      * \param timeIdx The index used by the time discretization.
      */
     template <bool prepareValues = true, bool prepareGradients = true>
-    void prepare(const ElementContext& elemCtx OPM_UNUSED, unsigned timeIdx OPM_UNUSED)
+    void prepare(const ElementContext&, unsigned)
     { /* noting to do */ }
 
     /*!
@@ -262,8 +262,8 @@ public:
      *               freedom
      */
     template <class QuantityCallback>
-    auto calculateBoundaryValue(const ElementContext& elemCtx OPM_UNUSED,
-                                unsigned fapIdx OPM_UNUSED,
+    auto calculateBoundaryValue(const ElementContext&,
+                                unsigned,
                                 const QuantityCallback& quantityCallback)
         -> decltype(quantityCallback.boundaryValue())
     { return quantityCallback.boundaryValue(); }

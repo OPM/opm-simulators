@@ -79,7 +79,7 @@ protected:
                                  PrimaryVariables& nextValue,
                                  const PrimaryVariables& currentValue,
                                  const EqVector& update,
-                                 const EqVector& currentResidual OPM_UNUSED)
+                                 const EqVector&)
     {
         // normal Newton-Raphson update
         nextValue = currentValue;

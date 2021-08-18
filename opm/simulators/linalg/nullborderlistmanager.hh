@@ -52,7 +52,7 @@ class NullBorderListCreator
 {
 public:
     NullBorderListCreator(const GridView& gridView,
-                          const DofMapper& map OPM_UNUSED)
+                          const DofMapper&)
     {
         if (gridView.comm().size() > 1)
             throw std::runtime_error("The used model is not usable for parallel computations");

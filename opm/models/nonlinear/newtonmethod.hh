@@ -596,7 +596,7 @@ protected:
      *
      * \param u The initial solution
      */
-    void begin_(const SolutionVector& u  OPM_UNUSED)
+    void begin_(const SolutionVector&)
     {
         numIterations_ = 0;
 
@@ -647,7 +647,7 @@ protected:
         model().linearizer().finalize();
     }
 
-    void preSolve_(const SolutionVector& currentSolution  OPM_UNUSED,
+    void preSolve_(const SolutionVector&,
                    const GlobalEqVector& currentResidual)
     {
         const auto& constraintsMap = model().linearizer().constraintsMap();
@@ -696,9 +696,9 @@ protected:
      *                        iteration's solution.
      * \param solutionUpdate The difference between the current and the next solution
      */
-    void postSolve_(const SolutionVector& currentSolution OPM_UNUSED,
-                    const GlobalEqVector& currentResidual OPM_UNUSED,
-                    GlobalEqVector& solutionUpdate OPM_UNUSED)
+    void postSolve_(const SolutionVector&,
+                    const GlobalEqVector&,
+                    GlobalEqVector& solutionUpdate)
     {
         // loop over the auxiliary modules and ask them to post process the solution
         // vector.
@@ -790,7 +790,7 @@ protected:
     /*!
      * \brief Update the primary variables for a degree of freedom which is constraint.
      */
-    void updateConstraintDof_(unsigned globalDofIdx  OPM_UNUSED,
+    void updateConstraintDof_(unsigned,
                               PrimaryVariables& nextValue,
                               const Constraints& constraints)
     { nextValue = constraints; }
@@ -798,11 +798,11 @@ protected:
     /*!
      * \brief Update a single primary variables object.
      */
-    void updatePrimaryVariables_(unsigned globalDofIdx  OPM_UNUSED,
+    void updatePrimaryVariables_(unsigned,
                                  PrimaryVariables& nextValue,
                                  const PrimaryVariables& currentValue,
                                  const EqVector& update,
-                                 const EqVector& currentResidual  OPM_UNUSED)
+                                 const EqVector&)
     {
         nextValue = currentValue;
         nextValue -= update;
@@ -830,8 +830,8 @@ protected:
      * \param nextSolution The solution after the current Newton iteration
      * \param currentSolution The solution at the beginning of the current Newton iteration
      */
-    void endIteration_(const SolutionVector& nextSolution  OPM_UNUSED,
-                       const SolutionVector& currentSolution  OPM_UNUSED)
+    void endIteration_(const SolutionVector&,
+                       const SolutionVector&)
     {
         ++numIterations_;
 

@@ -89,9 +89,9 @@ class DarcyIntensiveQuantities
 {
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 protected:
-    void update_(const ElementContext& elemCtx OPM_UNUSED,
-                 unsigned dofIdx OPM_UNUSED,
-                 unsigned timeIdx OPM_UNUSED)
+    void update_(const ElementContext&,
+                 unsigned,
+                 unsigned)
     { }
 };
 
