@@ -67,6 +67,15 @@
 #include <string>
 #include <type_traits>
 
+
+#ifdef NDEBUG
+static_assert(false, "In order to enforce assert(...) checks flow can *not* be compiled with -DNDEBUG");
+#endif
+
+
+
+
+
 namespace Opm::Properties {
 
 // this is a dummy type tag that is used to setup the parameters before the actual
