@@ -386,7 +386,7 @@ class FvBaseDiscretization
     protected:
         SolutionVector blockVector_;
     public:
-        BlockVectorWrapper(const std::string& name OPM_UNUSED, const size_t size)
+        BlockVectorWrapper(const std::string&, const size_t size)
             : blockVector_(size)
         {}
 
@@ -649,7 +649,7 @@ public:
      * \brief Allows to improve the performance by prefetching all data which is
      *        associated with a given element.
      */
-    void prefetch(const Element& elem OPM_UNUSED) const
+    void prefetch(const Element&) const
     {
         // do nothing by default
     }
@@ -1222,7 +1222,7 @@ public:
      * \param globalVertexIdx The global index of the vertex
      * \param eqIdx The index of the equation
      */
-    Scalar eqWeight(unsigned globalVertexIdx OPM_UNUSED, unsigned eqIdx OPM_UNUSED) const
+    Scalar eqWeight(unsigned, unsigned) const
     { return 1.0; }
 
     /*!
@@ -1452,7 +1452,7 @@ public:
      * \param res The serializer object
      */
     template <class Restarter>
-    void serialize(Restarter& res OPM_UNUSED)
+    void serialize(Restarter&)
     {
         throw std::runtime_error("Not implemented: The discretization chosen for this problem "
                                  "does not support restart files. (serialize() method unimplemented)");
@@ -1466,7 +1466,7 @@ public:
      * \param res The serializer object
      */
     template <class Restarter>
-    void deserialize(Restarter& res OPM_UNUSED)
+    void deserialize(Restarter&)
     {
         throw std::runtime_error("Not implemented: The discretization chosen for this problem "
                                  "does not support restart files. (deserialize() method unimplemented)");
@@ -1611,7 +1611,7 @@ public:
      *
      * \copydetails Doxygen::ecfvElemCtxParam
      */
-    void updatePVWeights(const ElementContext& elemCtx OPM_UNUSED) const
+    void updatePVWeights(const ElementContext&) const
     { }
 
     /*!
@@ -1893,10 +1893,10 @@ protected:
         }
     }
     template <class Context>
-    void supplementInitialSolution_(PrimaryVariables& priVars OPM_UNUSED,
-                                    const Context& context OPM_UNUSED,
-                                    unsigned dofIdx OPM_UNUSED,
-                                    unsigned timeIdx OPM_UNUSED)
+    void supplementInitialSolution_(PrimaryVariables&,
+                                    const Context&,
+                                    unsigned,
+                                    unsigned)
     { }
 
     /*!

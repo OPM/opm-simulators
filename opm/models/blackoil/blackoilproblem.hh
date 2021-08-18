@@ -66,7 +66,7 @@ public:
      *
      * This is required for the DRSDT keyword.
      */
-    Scalar maxGasDissolutionFactor(unsigned timeIdx OPM_UNUSED, unsigned globalDofIdx OPM_UNUSED) const
+    Scalar maxGasDissolutionFactor(unsigned, unsigned) const
     { return std::numeric_limits<Scalar>::max()/2; }
 
     /*!
@@ -75,7 +75,7 @@ public:
      *
      * This is required for the DRVDT keyword.
      */
-    Scalar maxOilVaporizationFactor(unsigned timeIdx OPM_UNUSED, unsigned globalDofIdx OPM_UNUSED) const
+    Scalar maxOilVaporizationFactor(unsigned, unsigned) const
     { return std::numeric_limits<Scalar>::max()/2; }
 
     /*!
@@ -84,61 +84,61 @@ public:
      *
      * This is required for the VAPPARS keyword.
      */
-    Scalar maxOilSaturation(unsigned globalDofIdx OPM_UNUSED) const
+    Scalar maxOilSaturation(unsigned) const
     { return 1.0; }
 
     /*!
      * \brief Returns the index of the relevant region for thermodynmic properties
      */
     template <class Context>
-    unsigned pvtRegionIndex(const Context& context OPM_UNUSED,
-                            unsigned spaceIdx OPM_UNUSED,
-                            unsigned timeIdx OPM_UNUSED) const
+    unsigned pvtRegionIndex(const Context&,
+                            unsigned,
+                            unsigned) const
     { return 0; }
 
     /*!
      * \brief Returns the index of the relevant region for saturation functions
      */
     template <class Context>
-    unsigned satnumRegionIndex(const Context& context OPM_UNUSED,
-                               unsigned spaceIdx OPM_UNUSED,
-                               unsigned timeIdx OPM_UNUSED) const
+    unsigned satnumRegionIndex(const Context&,
+                               unsigned,
+                               unsigned) const
     { return 0; }
 
     /*!
      * \brief Returns the index of the relevant region for solvent mixing functions
      */
     template <class Context>
-    unsigned miscnumRegionIndex(const Context& context OPM_UNUSED,
-                                unsigned spaceIdx OPM_UNUSED,
-                                unsigned timeIdx OPM_UNUSED) const
+    unsigned miscnumRegionIndex(const Context&,
+                                unsigned,
+                                unsigned) const
     { return 0; }
 
     /*!
      * \brief Returns the index of the relevant region for polymer mixing functions
      */
     template <class Context>
-    unsigned plmixnumRegionIndex(const Context& context OPM_UNUSED,
-                                 unsigned spaceIdx OPM_UNUSED,
-                                 unsigned timeIdx OPM_UNUSED) const
+    unsigned plmixnumRegionIndex(const Context&,
+                                 unsigned,
+                                 unsigned) const
     { return 0; }
 
     /*!
      * \brief Returns the compressibility of the porous medium of a cell
      */
     template <class Context>
-    Scalar rockCompressibility(const Context& context OPM_UNUSED,
-                               unsigned spaceIdx OPM_UNUSED,
-                               unsigned timeIdx OPM_UNUSED) const
+    Scalar rockCompressibility(const Context&,
+                               unsigned,
+                               unsigned) const
     { return 0.0; }
 
     /*!
      * \brief Returns the reference pressure for rock the compressibility of a cell
      */
     template <class Context>
-    Scalar rockReferencePressure(const Context& context OPM_UNUSED,
-                                 unsigned spaceIdx OPM_UNUSED,
-                                 unsigned timeIdx OPM_UNUSED) const
+    Scalar rockReferencePressure(const Context&,
+                                 unsigned,
+                                 unsigned) const
     { return 1e5; }
 
     /*!
@@ -157,8 +157,8 @@ public:
      * method.
      */
     template <class Evaluation>
-    Scalar rockCompPoroMultiplier(const IntensiveQuantities& intQuants OPM_UNUSED,
-                                  unsigned globalSpaceIdx OPM_UNUSED) const
+    Scalar rockCompPoroMultiplier(const IntensiveQuantities&,
+                                  unsigned) const
     { return 1.0; }
 
 private:

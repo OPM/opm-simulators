@@ -191,7 +191,7 @@ public:
      *
      * \param phaseIdx The index of the fluid phase in question
      */
-    bool phaseIsConsidered(unsigned phaseIdx OPM_UNUSED) const
+    bool phaseIsConsidered(unsigned) const
     { return true; }
 
     /*!

@@ -93,9 +93,9 @@ public:
      * turbolence.
      */
     template <class Context>
-    Scalar ergunCoefficient(const Context& context OPM_UNUSED,
-                            unsigned spaceIdx OPM_UNUSED,
-                            unsigned timeIdx OPM_UNUSED) const
+    Scalar ergunCoefficient(const Context&,
+                            unsigned,
+                            unsigned) const
     {
         throw std::logic_error("Not implemented: Problem::ergunCoefficient()");
     }

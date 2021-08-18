@@ -76,7 +76,7 @@ public:
     virtual int ncomps() const
     { return 1; }
 
-    virtual double evaluate(int mycomp OPM_UNUSED,
+    virtual double evaluate(int,
                             const Element& e,
                             const Dune::FieldVector<ctype, dim>& xi) const
     {

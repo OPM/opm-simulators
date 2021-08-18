@@ -51,14 +51,14 @@ public:
         : mapper_(mapper), container_(container)
     {}
 
-    bool contains(int dim OPM_UNUSED, int codim) const
+    bool contains(int, int codim) const
     {
         // return true if the codim is the same as the codim which we
         // are asked to communicate with.
         return codim == commCodim;
     }
 
-    bool fixedsize(int dim OPM_UNUSED, int codim OPM_UNUSED) const
+    bool fixedsize(int, int) const
     {
         // for each DOF we communicate a single value which has a
         // fixed size
@@ -66,7 +66,7 @@ public:
     }
 
     template <class EntityType>
-    size_t size(const EntityType& e OPM_UNUSED) const
+    size_t size(const EntityType&) const
     {
         // communicate a field type per entity
         return 1;
@@ -80,7 +80,7 @@ public:
     }
 
     template <class MessageBufferImp, class EntityType>
-    void scatter(MessageBufferImp& buff, const EntityType& e, size_t n OPM_UNUSED)
+    void scatter(MessageBufferImp& buff, const EntityType& e, size_t)
     {
         unsigned dofIdx = static_cast<unsigned>(mapper_.index(e));
 
@@ -111,14 +111,14 @@ public:
     {
     }
 
-    bool contains(int dim OPM_UNUSED, int codim) const
+    bool contains(int, int codim) const
     {
         // return true if the codim is the same as the codim which we
         // are asked to communicate with.
         return codim == commCodim;
     }
 
-    bool fixedsize(int dim OPM_UNUSED, int codim OPM_UNUSED) const
+    bool fixedsize(int, int) const
     {
         // for each DOF we communicate a single value which has a
         // fixed size
@@ -126,7 +126,7 @@ public:
     }
 
     template <class EntityType>
-    size_t size(const EntityType& e OPM_UNUSED) const
+    size_t size(const EntityType&) const
     {
         // communicate a field type per entity
         return 1;
@@ -140,7 +140,7 @@ public:
     }
 
     template <class MessageBufferImp, class EntityType>
-    void scatter(MessageBufferImp& buff, const EntityType& e, size_t n OPM_UNUSED)
+    void scatter(MessageBufferImp& buff, const EntityType& e, size_t)
     {
         unsigned dofIdx = static_cast<unsigned>(mapper_.index(e));
         buff.read(container_[dofIdx]);
@@ -166,14 +166,14 @@ public:
         : mapper_(mapper), container_(container)
     {}
 
-    bool contains(int dim OPM_UNUSED, int codim) const
+    bool contains(int, int codim) const
     {
         // return true if the codim is the same as the codim which we
         // are asked to communicate with.
         return codim == commCodim;
     }
 
-    bool fixedsize(int dim OPM_UNUSED, int codim OPM_UNUSED) const
+    bool fixedsize(int, int) const
     {
         // for each DOF we communicate a single value which has a
         // fixed size
@@ -181,7 +181,7 @@ public:
     }
 
     template <class EntityType>
-    size_t size(const EntityType& e OPM_UNUSED) const
+    size_t size(const EntityType&) const
     {
         // communicate a field type per entity
         return 1;
@@ -195,7 +195,7 @@ public:
     }
 
     template <class MessageBufferImp, class EntityType>
-    void scatter(MessageBufferImp& buff, const EntityType& e, size_t n OPM_UNUSED)
+    void scatter(MessageBufferImp& buff, const EntityType& e, size_t)
     {
         unsigned dofIdx = static_cast<unsigned>(mapper_.index(e));
         FieldType tmp;
@@ -223,14 +223,14 @@ public:
         : mapper_(mapper), container_(container)
     {}
 
-    bool contains(int dim OPM_UNUSED, int codim) const
+    bool contains(int, int codim) const
     {
         // return true if the codim is the same as the codim which we
         // are asked to communicate with.
         return codim == commCodim;
     }
 
-    bool fixedsize(int dim OPM_UNUSED, int codim OPM_UNUSED) const
+    bool fixedsize(int, int) const
     {
         // for each DOF we communicate a single value which has a
         // fixed size
@@ -238,7 +238,7 @@ public:
     }
 
     template <class EntityType>
-    size_t size(const EntityType& e OPM_UNUSED) const
+    size_t size(const EntityType&) const
     {
         // communicate a field type per entity
         return 1;
@@ -252,7 +252,7 @@ public:
     }
 
     template <class MessageBufferImp, class EntityType>
-    void scatter(MessageBufferImp& buff, const EntityType& e, size_t n OPM_UNUSED)
+    void scatter(MessageBufferImp& buff, const EntityType& e, size_t)
     {
         unsigned dofIdx = static_cast<unsigned>(mapper_.index(e));
         FieldType tmp;

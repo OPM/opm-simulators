@@ -76,11 +76,11 @@ protected:
     /*!
      * \copydoc FvBaseNewtonMethod::updatePrimaryVariables_
      */
-    void updatePrimaryVariables_(unsigned globalDofIdx OPM_UNUSED,
+    void updatePrimaryVariables_(unsigned,
                                  PrimaryVariables& nextValue,
                                  const PrimaryVariables& currentValue,
                                  const EqVector& update,
-                                 const EqVector& currentResidual OPM_UNUSED)
+                                 const EqVector&)
     {
         // normal Newton-Raphson update
         nextValue = currentValue;
