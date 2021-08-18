@@ -1,6 +1,9 @@
 #!/bin/bash
 
 OPM_TESTS_ROOT=$1
+BUILD_DIR=$2
+CONVERT_ECL=$3
+
 TMPDIR=`mktemp -d`
 mkdir $TMPDIR/orig
 mkdir $TMPDIR/new
@@ -22,21 +25,21 @@ copyToReferenceDir () {
   do
     # Don't flag as changed if both reference and result dir lack a file type
     # In particular to handle the optional RFT's
-    if [ ! -f $WORKSPACE/$SRC_DIR$STEM.$filetype ] && [ ! -f $DST_DIR/$STEM.$filetype ]
+    if [ ! -f $SRC_DIR/$STEM.$filetype ] && [ ! -f $DST_DIR/$STEM.$filetype ]
     then
       continue
     fi
-    diff -q "$WORKSPACE/$SRC_DIR$STEM.$filetype" "$DST_DIR/$STEM.$filetype"
-    if test $? -ne 0
+    diff -q "$SRC_DIR/$STEM.$filetype" "$DST_DIR/$STEM.$filetype"
+    if test $? -ne 0 && test -n "$CONVERT_ECL"
     then
-      cp $WORKSPACE/$SRC_DIR$STEM.$filetype $TMPDIR/new
-      $configuration/install/bin/convertECL $TMPDIR/new/$STEM.$filetype
+      cp $SRC_DIR/$STEM.$filetype $TMPDIR/new
+      $CONVERT_ECL $TMPDIR/new/$STEM.$filetype
       cp $DST_DIR/$STEM.$filetype $TMPDIR/orig
-      $configuration/install/bin/convertECL $TMPDIR/orig/$STEM.$filetype
+      $CONVERT_ECL $TMPDIR/orig/$STEM.$filetype
       diff -u $TMPDIR/orig/$STEM.F$filetype $TMPDIR/new/$STEM.F$filetype >> $WORKSPACE/data_diff
-      cp "$WORKSPACE/$SRC_DIR$STEM.$filetype" $DST_DIR
-      DIFF=0
     fi
+    cp "$SRC_DIR/$STEM.$filetype" $DST_DIR
+    DIFF=0
   done
 
   return $DIFF
@@ -156,7 +159,7 @@ tests[co2store_drsdtcon]="flow co2store CO2STORE_DRSDTCON"
 changed_tests=""
 
 # Read failed tests
-FAILED_TESTS=`cat $WORKSPACE/$configuration/build-opm-simulators/Testing/Temporary/LastTestsFailed*.log`
+FAILED_TESTS=`cat $BUILD_DIR/Testing/Temporary/LastTestsFailed*.log`
 
 test -z "$FAILED_TESTS" && exit 5
 
@@ -171,7 +174,7 @@ do
     if grep -q "$failed" <<< "$binary+$casename"
     then
       copyToReferenceDir \
-          $configuration/build-opm-simulators/tests/results/$binary+$test_name/ \
+          $BUILD_DIR/tests/results/$binary+$test_name \
           $OPM_TESTS_ROOT/$dirname/opm-simulation-reference/$binary \
           $casename \
           EGRID INIT RFT SMSPEC UNRST UNSMRY
@@ -182,29 +185,32 @@ done
 
 # special tests
 copyToReferenceDir \
-      $configuration/build-opm-simulators/tests/results/init/flow+norne/ \
+      $BUILD_DIR/tests/results/init/flow+norne \
       $OPM_TESTS_ROOT/norne/opm-simulation-reference/flow \
       NORNE_ATW2013 \
       EGRID INIT
 test $? -eq 0 && changed_tests="$changed_tests norne_init"
 
 changed_tests=`echo $changed_tests | xargs`
-echo -e "Automatic Reference Data Update for PR ${REASON:-(Unknown)}\n" > /tmp/cmsg
+echo -e "Automatic Reference Data Update for ${REASON:-(Unknown)}\n" > /tmp/cmsg
 if [ -z "$REASON" ]
 then
   echo -e "Reason: fill in this\n" >> /tmp/cmsg
 else
   echo -e "Reason: $REASON\n" >> /tmp/cmsg
 fi
-for dep in opm-common opm-grid opm-material opm-models
-do
-  pushd $WORKSPACE/deps/$dep > /dev/null
-  name=`printf "%-14s" $dep`
-  rev=`git rev-parse HEAD`
-  echo -e "$name = $rev" >> /tmp/cmsg
-  popd > /dev/null
-done
-echo -e "opm-simulators = `git rev-parse HEAD`" >> /tmp/cmsg
+if [ -n "$CONVERT_ECL" ]
+then
+  for dep in opm-common opm-grid opm-material opm-models
+  do
+    pushd $WORKSPACE/deps/$dep > /dev/null
+    name=`printf "%-14s" $dep`
+    rev=`git rev-parse HEAD`
+    echo -e "$name = $rev" >> /tmp/cmsg
+    popd > /dev/null
+  done
+  echo -e "opm-simulators = `git rev-parse HEAD`" >> /tmp/cmsg
+fi
 
 echo -e "\n### Changed Tests ###\n" >> /tmp/cmsg
 for t in ${changed_tests}
