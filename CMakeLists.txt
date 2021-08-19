@@ -533,14 +533,6 @@ else()
   set(EBOS_DEBUG_EXTENSIONS_DEFAULT_ENABLE_IF "TRUE")
 endif()
 
-opm_add_test(ebos_plain
-  ONLY_COMPILE
-  DEFAULT_ENABLE_IF ${EBOS_DEBUG_EXTENSIONS_DEFAULT_ENABLE_IF}
-  SOURCES ebos/ebos_plain.cc
-  EXE_NAME ebos_plain
-  DEPENDS opmsimulators
-  LIBRARIES opmsimulators)
-
 if (BUILD_EBOS_EXTENSIONS)
   foreach(TGT ${COMMON_MODELS})
     install(TARGETS ebos_${TGT} DESTINATION bin)
