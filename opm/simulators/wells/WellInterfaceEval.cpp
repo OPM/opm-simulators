@@ -114,7 +114,6 @@ getGroupInjectionControl(const Group& group,
         }
     }
 
-    efficiencyFactor *= group.getGroupEfficiencyFactor();
     const auto& well = baseif_.wellEcl();
     const auto pu = baseif_.phaseUsage();
 
@@ -165,7 +164,8 @@ getGroupInjectionControl(const Group& group,
     }
     // Avoid negative target rates coming from too large local reductions.
     const double target_rate = std::max(0.0, target / efficiencyFactor);
-    const auto current_rate = injection_rate; // Switch sign since 'rates' are negative for producers.
+    const auto current_rate = injection_rate;
+
     control_eq = current_rate - target_rate;
 }
 
@@ -207,7 +207,6 @@ getGroupProductionControl(const Group& group,
         }
     }
 
-    efficiencyFactor *= group.getGroupEfficiencyFactor();
     const auto& well = baseif_.wellEcl();
     const auto pu = baseif_.phaseUsage();
 
