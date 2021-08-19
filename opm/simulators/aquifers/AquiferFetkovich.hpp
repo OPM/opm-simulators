@@ -107,6 +107,7 @@ protected:
         }
 
         this->aquifer_pressure_ = xaq.pressure;
+        this->rhow_ = this->aqufetp_data_.waterDensity();
     }
 
     inline Eval dpai(int idx)
