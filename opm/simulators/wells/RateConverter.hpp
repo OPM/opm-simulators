@@ -521,10 +521,13 @@ namespace Opm {
                         if (Details::PhaseUsed::oil(pu)) {
                             attr.pressure += fs.pressure(FluidSystem::oilPhaseIdx).value() * pv_cell;
                             attr.temperature += fs.temperature(FluidSystem::oilPhaseIdx).value() * pv_cell;
-                        } else {
-                             assert(Details::PhaseUsed::gas(pu));
+                        } else if (Details::PhaseUsed::gas(pu)) {
                              attr.pressure += fs.pressure(FluidSystem::gasPhaseIdx).value() * pv_cell;
                              attr.temperature += fs.temperature(FluidSystem::gasPhaseIdx).value() * pv_cell;
+                        } else {
+                            assert(Details::PhaseUsed::water(pu));
+                            attr.pressure += fs.pressure(FluidSystem::waterPhaseIdx).value() * pv_cell;
+                            attr.temperature += fs.temperature(FluidSystem::waterPhaseIdx).value() * pv_cell;
                         }
                         attr.saltConcentration += fs.saltConcentration().value() * pv_cell;
                     }
