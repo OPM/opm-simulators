@@ -210,7 +210,6 @@ namespace Opm {
 
 
             using WellInterfacePtr = std::shared_ptr<WellInterface<TypeTag> >;
-            WellInterfacePtr well(const std::string& wellName) const;
 
             using BlackoilWellModelGeneric::initFromRestartFile;
             void initFromRestartFile(const RestartValue& restartValues)
@@ -279,6 +278,8 @@ namespace Opm {
             void initPrimaryVariablesEvaluation() const;
             void updateWellControls(DeferredLogger& deferred_logger, const bool checkGroupControls);
             WellInterfacePtr getWell(const std::string& well_name) const;
+            bool hasWell(const std::string& well_name) const;
+
             void initGliftEclWellMap(GLiftEclWells &ecl_well_map);
 
         protected:

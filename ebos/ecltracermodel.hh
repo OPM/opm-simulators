@@ -302,6 +302,11 @@ protected:
             if (well.getStatus() == Well::Status::SHUT)
                 continue;
 
+            if (!simulator_.problem().wellModel().hasWell(well.name()))
+                continue;
+
+            const auto& wellPtr = simulator_.problem().wellModel().getWell(well.name());
+
             std::vector<double> wtracer(tr.numTracer());
             for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
                 wtracer[tIdx] = well.getTracerProperties().getConcentration(this->tracerNames_[tr.idx_[tIdx]]);
@@ -318,7 +323,7 @@ protected:
                 cartesianCoordinate[2] = connection.getK();
                 const size_t cartIdx = simulator_.vanguard().cartesianIndex(cartesianCoordinate);
                 const int I = this->cartToGlobal_[cartIdx];
-                Scalar rate = simulator_.problem().wellModel().well(well.name())->volumetricSurfaceRateForConnection(I, tr.phaseIdx_);
+                Scalar rate = wellPtr->volumetricSurfaceRateForConnection(I, tr.phaseIdx_);
                 if (rate > 0) {
                     for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
                         tr.residual_[tIdx][I][0] -= rate*wtracer[tIdx];
@@ -390,6 +395,11 @@ protected:
             if (well.getStatus() == Well::Status::SHUT)
                 continue;
 
+            if (!simulator_.problem().wellModel().hasWell(well.name()))
+                continue;
+
+            const auto& wellPtr = simulator_.problem().wellModel().getWell(well.name());
+
             if (!well.isProducer()) //Injection rates already reported during assembly
                 continue;
 
@@ -406,7 +416,7 @@ protected:
                 cartesianCoordinate[2] = connection.getK();
                 const size_t cartIdx = simulator_.vanguard().cartesianIndex(cartesianCoordinate);
                 const int I = this->cartToGlobal_[cartIdx];
-                Scalar rate = simulator_.problem().wellModel().well(well.name())->volumetricSurfaceRateForConnection(I, tr.phaseIdx_);
+                Scalar rate = wellPtr->volumetricSurfaceRateForConnection(I, tr.phaseIdx_);
                 if (rate < 0) {
                     rateWellNeg += rate;
                     for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
