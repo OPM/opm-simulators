@@ -1289,10 +1289,10 @@ public:
                 const auto& wellpi = this->fetchWellPI(reportStep, *action, schedule, matching_wells);
 
                 auto affected_wells = schedule.applyAction(reportStep, TimeService::from_time_t(simTime), *action, actionResult, wellpi);
-                actionState.add_run(*action, simTime);
                 this->wellModel_.updateEclWells(reportStep, affected_wells);
                 if (!affected_wells.empty())
                     commit_wellstate = true;
+                actionState.add_run(*action, simTime, std::move(actionResult));
             } else {
                 std::string msg = "The action: " + action->name() + " evaluated to false at " + ts;
                 OpmLog::info(msg);
