@@ -49,6 +49,10 @@ std::size_t PerfData::size() const {
     return this->pressure.size();
 }
 
+bool PerfData::empty() const {
+    return this->pressure.empty();
+}
+
 bool PerfData::try_assign(const PerfData& other) {
     if (this->size() != other.size())
         return false;

@@ -34,6 +34,7 @@ private:
 public:
     PerfData(std::size_t num_perf, bool injector_, std::size_t num_phases);
     std::size_t size() const;
+    bool empty() const;
     bool try_assign(const PerfData& other);
 
 
