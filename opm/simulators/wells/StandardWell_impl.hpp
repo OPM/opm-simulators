@@ -1711,9 +1711,8 @@ namespace Opm
         bool converged = well.iterateWellEquations(ebosSimulator, dt, well_state_copy, group_state, deferred_logger);
         if (!converged) {
             const std::string msg = " well " + name() + " did not get converged during well potential calculations "
-                                                        "returning zero values for the potential";
+                                                        " potentials are computed based on uncoverged solution";
             deferred_logger.debug(msg);
-            return;
         }
         well.updatePrimaryVariables(well_state_copy, deferred_logger);
         well.computeWellConnectionPressures(ebosSimulator, well_state_copy);
