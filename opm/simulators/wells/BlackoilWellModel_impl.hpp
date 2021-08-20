@@ -512,22 +512,6 @@ namespace Opm {
 
 
     template<typename TypeTag>
-    typename BlackoilWellModel<TypeTag>::WellInterfacePtr
-    BlackoilWellModel<TypeTag>::
-    well(const std::string& wellName) const
-    {
-        for (const auto& well : well_container_) {
-            if (well->name() == wellName) {
-                return well;
-            }
-        }
-        OPM_THROW(std::invalid_argument, "The well with name " + wellName + " is not in the well Container");
-        return nullptr;
-    }
-
-
-
-    template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
     initializeWellState(const int           timeStepIdx,
@@ -1643,6 +1627,18 @@ namespace Opm {
         assert(well != well_container_.end());
 
         return *well;
+    }
+
+    template<typename TypeTag>
+    bool
+    BlackoilWellModel<TypeTag>::
+    hasWell(const std::string& well_name) const
+    {
+        return std::any_of(well_container_.begin(), well_container_.end(),
+            [&well_name](const WellInterfacePtr& elem) -> bool
+        {
+            return elem->name() == well_name;
+        });
     }
 
 
