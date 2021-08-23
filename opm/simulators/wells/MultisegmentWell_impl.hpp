@@ -367,8 +367,7 @@ namespace Opm
         const int np = number_of_phases_;
         const double sign = well_copy.well_ecl_.isInjector() ? 1.0 : -1.0;
         for (int phase = 0; phase < np; ++phase){
-            well_state_copy.wellRates(well_copy.index_of_well_)[phase]
-                    = sign * well_state_copy.wellPotentials(well_copy.index_of_well_)[phase];
+            well_state_copy.wellRates(well_copy.index_of_well_)[phase] = sign * ws.well_potentials[phase];
         }
         well_copy.scaleSegmentRatesWithWellRates(well_state_copy);
 
@@ -598,9 +597,10 @@ namespace Opm
             std::transform(src, src + np, dest, dest, std::plus<>{});
         };
 
+        auto& ws = well_state.well(this->index_of_well_);
         auto& perf_data = well_state.perfData(this->index_of_well_);
-        auto* wellPI = well_state.productivityIndex(this->index_of_well_).data();
         auto* connPI = perf_data.prod_index.data();
+        auto* wellPI = ws.productivity_index.data();
 
         setToZero(wellPI);
 
@@ -1189,8 +1189,9 @@ namespace Opm
 
         this->duneDSolver_.reset();
 
-        well_state.wellVaporizedOilRates(index_of_well_) = 0.;
-        well_state.wellDissolvedGasRates(index_of_well_) = 0.;
+        auto& ws = well_state.well(this->index_of_well_);
+        ws.dissolved_gas_rate = 0;
+        ws.vaporized_oil_rate = 0;
 
         // for the black oil cases, there will be four equations,
         // the first three of them are the mass balance equations, the last one is the pressure equations.
@@ -1284,8 +1285,8 @@ namespace Opm
 
                 // updating the solution gas rate and solution oil rate
                 if (this->isProducer()) {
-                    well_state.wellDissolvedGasRates(index_of_well_) += perf_dis_gas_rate;
-                    well_state.wellVaporizedOilRates(index_of_well_) += perf_vap_oil_rate;
+                    ws.dissolved_gas_rate += perf_dis_gas_rate;
+                    ws.vaporized_oil_rate += perf_vap_oil_rate;
                 }
 
                 // store the perf pressure and rates

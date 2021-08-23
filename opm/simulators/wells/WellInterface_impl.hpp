@@ -246,6 +246,7 @@ namespace Opm
         deferred_logger.info(" well " + this->name() + " is being tested for economic limits");
 
         WellState well_state_copy = well_state;
+        auto& ws = well_state_copy.well(this->indexOfWell());
 
         updateWellStateWithTarget(simulator, group_state, well_state_copy, deferred_logger);
         calculateExplicitQuantities(simulator, well_state_copy, deferred_logger);
@@ -270,7 +271,7 @@ namespace Opm
             }
             const int np = well_state_copy.numPhases();
             for (int p = 0; p < np; ++p) {
-                well_state_copy.wellPotentials(this->indexOfWell())[p] = std::abs(potentials[p]);
+                ws.well_potentials[p] = std::abs(potentials[p]);
             }
             this->updateWellTestState(well_state_copy, simulation_time, /*writeMessageToOPMLog=*/ false, welltest_state_temp, deferred_logger);
             this->closeCompletions(welltest_state_temp);
@@ -470,6 +471,7 @@ namespace Opm
         // create a copy of the well_state to use. If the operability checking is sucessful, we use this one
         // to replace the original one
         WellState well_state_copy = well_state;
+        auto& ws = well_state_copy.well(this->indexOfWell());
 
         // TODO: well state for this well is kind of all zero status
         // we should be able to provide a better initialization
@@ -510,7 +512,7 @@ namespace Opm
             }
             const int np = well_state_copy.numPhases();
             for (int p = 0; p < np; ++p) {
-                well_state_copy.wellPotentials(this->indexOfWell())[p] = std::abs(potentials[p]);
+                ws.well_potentials[p] = std::abs(potentials[p]);
             }
             well_state = well_state_copy;
         } else {
@@ -673,7 +675,7 @@ namespace Opm
                 double total_rate = std::accumulate(rates.begin(), rates.end(), 0.0);
                 if (total_rate <= 0.0){
                     for (int p = 0; p<np; ++p) {
-                        well_state.wellRates(well_index)[p] = well_state.wellPotentials(well_index)[p];
+                        well_state.wellRates(well_index)[p] = ws.well_potentials[p];
                     }
                 }
                 break;
@@ -690,7 +692,7 @@ namespace Opm
                 // using the well potentials
                 if (total_rate <= 0.0){
                     for (int p = 0; p<np; ++p) {
-                        well_state.wellRates(well_index)[p] = well_state.wellPotentials(well_index)[p];
+                        well_state.wellRates(well_index)[p] = ws.well_potentials[p];
                     }
                 }
                 break;
@@ -876,7 +878,7 @@ namespace Opm
                 // using the well potentials
                 if (total_rate <= 0.0){
                     for (int p = 0; p<np; ++p) {
-                        well_state.wellRates(well_index)[p] = -well_state.wellPotentials(well_index)[p];
+                        well_state.wellRates(well_index)[p] = -ws.well_potentials[p];
                     }
                 }
                 break;
@@ -896,7 +898,7 @@ namespace Opm
                 double total_rate = -std::accumulate(rates.begin(), rates.end(), 0.0);
                 if (total_rate <= 0.0){
                     for (int p = 0; p<np; ++p) {
-                        well_state.wellRates(well_index)[p] = -well_state.wellPotentials(well_index)[p];
+                        well_state.wellRates(well_index)[p] = -ws.well_potentials[p];
                     }
                 }
                 break;
@@ -939,14 +941,15 @@ namespace Opm
     {
         const int np = this->number_of_phases_;
         std::vector<double> scaling_factor(np);
+        const auto& ws = well_state.well(this->index_of_well_);
 
         double total_potentials = 0.0;
         for (int p = 0; p<np; ++p) {
-            total_potentials += well_state.wellPotentials(this->index_of_well_)[p];
+            total_potentials += ws.well_potentials[p];
         }
         if (total_potentials > 0) {
             for (int p = 0; p<np; ++p) {
-                scaling_factor[p] = well_state.wellPotentials(this->index_of_well_)[p] / total_potentials;
+                scaling_factor[p] = ws.well_potentials[p] / total_potentials;
             }
             return scaling_factor;
         }

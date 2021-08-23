@@ -43,9 +43,6 @@ void WellState::base_init(const std::vector<double>& cellPressures,
     this->perfdata.clear();
     this->parallel_well_info_.clear();
     this->wellrates_.clear();
-    this->segment_state.clear();
-    this->well_potentials_.clear();
-    this->productivity_index_.clear();
     this->wells_.clear();
     {
         // const int nw = wells->number_of_wells;
@@ -90,14 +87,11 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
     const int np = pu.num_phases;
     double temp = well.isInjector() ? well.injectionControls(summary_state).temperature : 273.15 + 15.56;
 
-    auto& ws = this->wells_.add(well.name(), SingleWellState{well.isProducer(), temp});
+    auto& ws = this->wells_.add(well.name(), SingleWellState{well.isProducer(), static_cast<std::size_t>(np), temp});
     this->parallel_well_info_.add(well.name(), well_info);
     this->wellrates_.add(well.name(), std::vector<double>(np, 0));
-    this->well_potentials_.add(well.name(), std::vector<double>(np, 0));
     const int num_perf_this_well = well_info->communication().sum(well_perf_data.size());
-    this->segment_state.add(well.name(), SegmentState{});
     this->perfdata.add(well.name(), PerfData{static_cast<std::size_t>(num_perf_this_well), well.isInjector(), this->phase_usage_});
-    this->productivity_index_.add(well.name(), std::vector<double>(np, 0));
 
     if ( num_perf_this_well == 0 )
         return;
@@ -254,9 +248,6 @@ void WellState::init(const std::vector<double>& cellPressures,
     }
 
     well_reservoir_rates_.clear();
-    well_dissolved_gas_rates_.clear();
-    well_vaporized_oil_rates_.clear();
-
     {
         const auto& wg_events = schedule[report_step].wellgroup_events();
         for (const auto& ecl_well : wells_ecl) {
@@ -292,8 +283,6 @@ void WellState::init(const std::vector<double>& cellPressures,
         }
 
         this->well_reservoir_rates_.add(wname, std::vector<double>(np, 0));
-        this->well_dissolved_gas_rates_.add(wname, 0);
-        this->well_vaporized_oil_rates_.add(wname, 0);
     }
 
     for (int w = 0; w < nw; ++w) {
@@ -334,12 +323,10 @@ void WellState::init(const std::vector<double>& cellPressures,
             if (well.getStatus() == Well::Status::SHUT) {
                 continue;
             }
-            const auto& wname = well.name();
             auto& new_well = this->well(w);
             auto it = prevState->wellMap().find(well.name());
             if (it != end)
             {
-                const int newIndex = w;
                 const int oldIndex = it->second[ 0 ];
 
                 const auto& prev_well = prevState->well(oldIndex);
@@ -363,11 +350,7 @@ void WellState::init(const std::vector<double>& cellPressures,
 
                 wellRates(w) = prevState->wellRates(oldIndex);
                 wellReservoirRates(w) = prevState->wellReservoirRates(oldIndex);
-
-                // Well potentials
-                for (int p=0; p < np; p++) {
-                    this->wellPotentials(newIndex)[p] = prevState->wellPotentials(oldIndex)[p];
-                }
+                new_well.well_potentials = prev_well.well_potentials;
 
                 // perfPhaseRates
                 const int num_perf_old_well = (*it).second[ 2 ];
@@ -403,7 +386,7 @@ void WellState::init(const std::vector<double>& cellPressures,
                 }
 
                 // Productivity index.
-                this->productivity_index_.copy_welldata( prevState->productivity_index_, wname );
+                new_well.productivity_index = prev_well.productivity_index;
             }
 
             // If in the new step, there is no THP related
@@ -492,8 +475,8 @@ WellState::report(const int* globalCellIdxMap,
         }
 
         const auto& reservoir_rates = this->well_reservoir_rates_[well_index];
-        const auto& well_potentials = this->well_potentials_[well_index];
-        const auto& wpi = this->productivity_index_[well_index];
+        const auto& well_potentials = ws.well_potentials;
+        const auto& wpi = ws.productivity_index;
         const auto& wv = this->wellRates(well_index);
 
         data::Well well;
@@ -541,8 +524,8 @@ WellState::report(const int* globalCellIdxMap,
             well.rates.set(rt::alq, 0.0);
         }
 
-        well.rates.set(rt::dissolved_gas, this->well_dissolved_gas_rates_[well_index]);
-        well.rates.set(rt::vaporized_oil, this->well_vaporized_oil_rates_[well_index]);
+        well.rates.set(rt::dissolved_gas, ws.dissolved_gas_rate);
+        well.rates.set(rt::vaporized_oil, ws.vaporized_oil_rate);
 
         {
             auto& curr = well.current_control;
@@ -665,7 +648,7 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
             // assuming the order of the perforations in well_ecl is the same with Wells
             const WellConnections& completion_set = well_ecl.getConnections();
             // number of segment for this single well
-            this->segment_state.update(w, SegmentState{np, segment_set});
+            ws.segments = SegmentState{np, segment_set};
             const int well_nseg = segment_set.size();
             int n_activeperf = 0;
 
@@ -716,8 +699,7 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
                 const auto& perf_rates = perf_data.phase_rates;
                 std::vector<double> perforation_rates(perf_rates.begin(), perf_rates.end());
 
-                auto& segments = this->segments(w);
-                calculateSegmentRates(segment_inlets, segment_perforations, perforation_rates, np, 0 /* top segment */, segments.rates);
+                calculateSegmentRates(segment_inlets, segment_perforations, perforation_rates, np, 0 /* top segment */, ws.segments.rates);
             }
             // for the segment pressure, the segment pressure is the same with the first perforation belongs to the segment
             // if there is no perforation associated with this segment, it uses the pressure from the outlet segment
@@ -726,7 +708,7 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
             // improved during the solveWellEq process
             {
                 // top segment is always the first one, and its pressure is the well bhp
-                auto& segment_pressure = this->segments(w).pressure;
+                auto& segment_pressure = ws.segments.pressure;
                 segment_pressure[0] = ws.bhp;
                 const auto& perf_press = perf_data.pressure;
                 for (int seg = 1; seg < well_nseg; ++seg) {
@@ -755,7 +737,8 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
                 continue;
 
             const auto& wname = well.name();
-            if (prev_well_state->segment_state.has(wname)) {
+            if (prev_well_state->has(wname)) {
+                auto& ws = this->well(w);
                 const auto& prev_ws = prev_well_state->well(wname);
                 if (prev_ws.status == Well::Status::SHUT) {
                     continue;
@@ -764,7 +747,7 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
                 // TODO: the well with same name can change a lot, like they might not have same number of segments
                 // we need to handle that later.
                 // for now, we just copy them.
-                this->segment_state.copy_welldata(prev_well_state->segment_state, wname);
+                ws.segments = prev_ws.segments;
             }
         }
     }
@@ -834,7 +817,7 @@ void WellState::shutWell(int well_index)
     this->wellrates_[well_index].assign(np, 0);
 
     auto& resv = this->well_reservoir_rates_[well_index];
-    auto& wpi  = this->productivity_index_[well_index];
+    auto& wpi  = ws.productivity_index;
 
     for (int p = 0; p < np; ++p) {
         resv[p] = 0.0;
@@ -931,7 +914,7 @@ WellState::reportSegmentResults(const PhaseUsage& pu,
                                                      const int         seg_ix,
                                                      const int         seg_no) const
 {
-    const auto& segments = this->segments(well_id);
+    const auto& segments = this->well(well_id).segments;
     if (segments.empty())
         return {};
 
@@ -997,14 +980,14 @@ int WellState::wellIndex(const std::string& wellName) const
 
 int WellState::numSegments(const int well_id) const
 {
-    const auto& segments = this->segments(well_id);
-    return segments.size();
+    const auto& ws = this->well(well_id);
+    return ws.segments.size();
 }
 
 int WellState::segmentNumber(const int well_id, const int seg_id) const
 {
-    const auto& segments = this->segment_state[well_id];
-    return segments.segment_number()[seg_id];
+    const auto& ws = this->well(well_id);
+    return ws.segments.segment_number()[seg_id];
 }
 
 void WellState::updateWellsDefaultALQ( const std::vector<Well>& wells_ecl )
@@ -1033,7 +1016,7 @@ void WellState::resetConnectionTransFactors(const int well_index,
     auto& perf_data = this->perfData(well_index);
     for (std::size_t conn_index = 0; conn_index < new_perf_data.size(); conn_index++) {
 
-      if (perf_data.cell_index[conn_index] != static_cast<std::size_t>(new_perf_data[conn_index].cell_index)) {
+        if (perf_data.cell_index[conn_index] != static_cast<std::size_t>(new_perf_data[conn_index].cell_index)) {
             throw std::invalid_argument {
                 "Cell index mismatch in connection "
                 + std::to_string(conn_index)

@@ -423,10 +423,10 @@ namespace Opm
 
         // TODO: it probably can be static member for StandardWell
         const double volume = 0.002831684659200; // 0.1 cu ft;
+        auto& ws = well_state.well(this->index_of_well_);
 
-        // the solution gas rate and solution oil rate needs to be reset to be zero for well_state.
-        well_state.wellVaporizedOilRates(index_of_well_) = 0.;
-        well_state.wellDissolvedGasRates(index_of_well_) = 0.;
+        ws.vaporized_oil_rate = 0;
+        ws.dissolved_gas_rate = 0;
 
         const int np = number_of_phases_;
 
@@ -562,8 +562,8 @@ namespace Opm
 
         // updating the solution gas rate and solution oil rate
         if (this->isProducer()) {
-            well_state.wellDissolvedGasRates(index_of_well_) += perf_dis_gas_rate;
-            well_state.wellVaporizedOilRates(index_of_well_) += perf_vap_oil_rate;
+            ws.dissolved_gas_rate += perf_dis_gas_rate;
+            ws.vaporized_oil_rate += perf_vap_oil_rate;
         }
 
         if constexpr (has_energy) {
@@ -1374,8 +1374,9 @@ namespace Opm
             std::transform(src, src + np, dest, dest, std::plus<>{});
         };
 
+        auto& ws = well_state.well(this->index_of_well_);
         auto& perf_data = well_state.perfData(this->index_of_well_);
-        auto* wellPI = well_state.productivityIndex(this->index_of_well_).data();
+        auto* wellPI = ws.productivity_index.data();
         auto* connPI = perf_data.prod_index.data();
 
         setToZero(wellPI);

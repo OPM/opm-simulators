@@ -175,7 +175,8 @@ namespace {
             }
 
             const auto  pressTop = 100.0 * wellID;
-            auto& segments = wstate.segments(wellID);
+            auto& ws = wstate.well(wellID);
+            auto& segments = ws.segments;
             segments.pressure[0] = pressTop;
 
             const auto& segSet = well.getSegments();
@@ -215,7 +216,8 @@ namespace {
             }
 
             const auto  rateTop  = 1000.0 * wellID;
-            auto& segments = wstate.segments(wellID);
+            auto& ws = wstate.well(wellID);
+            auto& segments = ws.segments;
             auto& segRates = segments.rates;
 
             if (wat) { segRates[iw] = rateTop; }
@@ -250,8 +252,9 @@ BOOST_AUTO_TEST_CASE(Linearisation)
 
     std::vector<Opm::ParallelWellInfo> pinfos;
     const auto wstate = buildWellState(setup, tstep, pinfos);
+    const auto& ws = wstate.well("PROD01");
 
-    BOOST_CHECK_EQUAL(wstate.segments("PROD01").size(), 6);
+    BOOST_CHECK_EQUAL(ws.segments.size(), 6);
 
     const auto& wells = setup.sched.getWellsatEnd();
     BOOST_CHECK_EQUAL(wells.size(), 2);
@@ -468,9 +471,6 @@ BOOST_AUTO_TEST_CASE(TESTWellContainer) {
     BOOST_CHECK_EQUAL(wc.size(), 0);
 
 
-    BOOST_CHECK_THROW(wc3.update("NO_SUCH_WELL", -1), std::exception);
-    BOOST_CHECK_THROW(wc3.update(100, -1), std::exception);
-
     BOOST_CHECK(wc3.has("W2"));
     BOOST_CHECK(!wc3.has("NO_SUCH_WELL"));
 
@@ -515,9 +515,9 @@ BOOST_AUTO_TEST_CASE(TESTSegmentState2) {
     std::vector<Opm::ParallelWellInfo> pinfo;
     const auto wstate = buildWellState(setup, 0, pinfo);
     const auto& well = setup.sched.getWell("PROD01", 0);
+    const auto& ws = wstate.well("PROD01");
 
-    BOOST_CHECK_THROW(wstate.segments(100), std::exception);
-    auto segments = wstate.segments(1);   // PROD01 is well 1
+    auto segments = ws.segments;
     BOOST_CHECK_EQUAL(segments.pressure.size(), well.getSegments().size());
 
     segments.pressure_drop_friction[0] = 1;
@@ -577,9 +577,9 @@ GAS
 
 
 BOOST_AUTO_TEST_CASE(TestSingleWellState) {
-    Opm::SingleWellState ws1(true, 1);
-    Opm::SingleWellState ws2(true, 2);
-    Opm::SingleWellState ws3(false, 3);
+    Opm::SingleWellState ws1(true,  3, 1);
+    Opm::SingleWellState ws2(true,  3, 2);
+    Opm::SingleWellState ws3(false, 3, 3);
 
     ws1.bhp = 100;
     ws1.thp = 200;

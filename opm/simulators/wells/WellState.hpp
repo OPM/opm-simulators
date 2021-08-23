@@ -161,50 +161,6 @@ public:
         return well_reservoir_rates_[well_index];
     }
 
-    double& wellDissolvedGasRates(std::size_t well_index)
-    {
-        return well_dissolved_gas_rates_[well_index];
-    }
-
-    double& wellVaporizedOilRates(std::size_t well_index)
-    {
-        return well_vaporized_oil_rates_[well_index];
-    }
-
-
-
-
-    const SegmentState& segments(const std::size_t well_index) const {
-        return this->segment_state[well_index];
-    }
-
-    SegmentState& segments(const std::size_t well_index) {
-        return this->segment_state[well_index];
-    }
-
-    const SegmentState& segments(const std::string& wname) const {
-        return this->segment_state[wname];
-    }
-
-    SegmentState& segments(const std::string& wname) {
-        return this->segment_state[wname];
-    }
-
-    std::vector<double>& productivityIndex(std::size_t well_index) {
-        return this->productivity_index_[well_index];
-    }
-
-    const std::vector<double>& productivityIndex(std::size_t well_index) const {
-        return this->productivity_index_[well_index];
-    }
-
-    std::vector<double>& wellPotentials(std::size_t well_index) {
-        return this->well_potentials_[well_index];
-    }
-
-    const std::vector<double>& wellPotentials(std::size_t well_index) const {
-        return this->well_potentials_[well_index];
-    }
 
     template<class Comm>
     void communicateGroupRates(const Comm& comm);
@@ -341,7 +297,9 @@ public:
         return this->wells_[well_name];
     }
 
-
+    bool has(const std::string& well_name) const {
+        return this->wells_.has(well_name);
+    }
 
 private:
     WellMapType wellMap_;
@@ -351,11 +309,11 @@ private:
     std::optional<GlobalWellInfo> global_well_info;
     ALQState alq_state;
     bool do_glift_optimization_;
+    PhaseUsage phase_usage_;
 
     WellContainer<SingleWellState> wells_;
     WellContainer<const ParallelWellInfo*> parallel_well_info_;
     WellContainer<std::vector<double>> wellrates_;
-    PhaseUsage phase_usage_;
     WellContainer<PerfData> perfdata;
 
     // The well_rates variable is defined for all wells on all processors. The
@@ -366,23 +324,6 @@ private:
     // phase rates under reservoir condition for wells
     // or voidage phase rates
     WellContainer<std::vector<double>> well_reservoir_rates_;
-
-    // dissolved gas rates or solution gas production rates
-    // should be zero for injection wells
-    WellContainer<double> well_dissolved_gas_rates_;
-
-    // vaporized oil rates or solution oil producation rates
-    // should be zero for injection wells
-    WellContainer<double> well_vaporized_oil_rates_;
-
-    WellContainer<SegmentState> segment_state;
-
-    // Productivity Index
-    WellContainer<std::vector<double>> productivity_index_;
-
-    // Well potentials
-    WellContainer<std::vector<double>> well_potentials_;
-
 
     data::Segment
     reportSegmentResults(const PhaseUsage& pu,
