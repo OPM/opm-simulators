@@ -58,6 +58,61 @@ namespace {
 
         return {oilRate, gasRate, waterRate};
     }
+
+    double sumWellPhaseRates(bool res_rates,
+                             const Opm::Group& group,
+                             const Opm::Schedule& schedule,
+                             const Opm::WellState& wellState,
+                             const int reportStepIdx,
+                             const int phasePos,
+                             const bool injector)
+    {
+
+        double rate = 0.0;
+        for (const std::string& groupName : group.groups()) {
+            const auto& groupTmp = schedule.getGroup(groupName, reportStepIdx);
+            const auto& gefac = groupTmp.getGroupEfficiencyFactor();
+            rate += gefac * sumWellPhaseRates(res_rates, groupTmp, schedule, wellState, reportStepIdx, phasePos, injector);
+        }
+        const auto& end = wellState.wellMap().end();
+
+        for (const std::string& wellName : group.wells()) {
+            const auto& it = wellState.wellMap().find(wellName);
+            if (it == end) // the well is not found
+                continue;
+
+            int well_index = it->second[0];
+
+            if (! wellState.wellIsOwned(well_index, wellName) ) // Only sum once
+            {
+                continue;
+            }
+
+            const auto& wellEcl = schedule.getWell(wellName, reportStepIdx);
+            // only count producers or injectors
+            if ((wellEcl.isProducer() && injector) || (wellEcl.isInjector() && !injector))
+                continue;
+
+            if (wellEcl.getStatus() == Opm::Well::Status::SHUT)
+                continue;
+
+            double factor = wellEcl.getEfficiencyFactor();
+            if (res_rates) {
+                const auto& well_rates = wellState.wellReservoirRates(well_index);
+                if (injector)
+                    rate += factor * well_rates[phasePos];
+                else
+                    rate -= factor * well_rates[phasePos];
+            } else {
+                const auto& well_rates = wellState.wellRates(well_index);
+                if (injector)
+                    rate += factor * well_rates[phasePos];
+                else
+                    rate -= factor * well_rates[phasePos];
+            }
+        }
+        return rate;
+    }
 } // namespace Anonymous
 
 namespace Opm
@@ -126,61 +181,15 @@ namespace WellGroupHelpers
                 schedule.getGroup(group.parent(), reportStepIdx), schedule, reportStepIdx, factor);
     }
 
-    double sumWellPhaseRates(const WellContainer<std::vector<double>>& rates,
-                             const Group& group,
-                             const Schedule& schedule,
-                             const WellState& wellState,
-                             const int reportStepIdx,
-                             const int phasePos,
-                             const bool injector)
+
+    double sumWellSurfaceRates(const Group& group,
+                               const Schedule& schedule,
+                               const WellState& wellState,
+                               const int reportStepIdx,
+                               const int phasePos,
+                               const bool injector)
     {
-
-        double rate = 0.0;
-        for (const std::string& groupName : group.groups()) {
-            const Group& groupTmp = schedule.getGroup(groupName, reportStepIdx);
-            const auto& gefac = groupTmp.getGroupEfficiencyFactor();
-            rate += gefac * sumWellPhaseRates(rates, groupTmp, schedule, wellState, reportStepIdx, phasePos, injector);
-        }
-        const auto& end = wellState.wellMap().end();
-
-        for (const std::string& wellName : group.wells()) {
-            const auto& it = wellState.wellMap().find(wellName);
-            if (it == end) // the well is not found
-                continue;
-
-            int well_index = it->second[0];
-
-            if (! wellState.wellIsOwned(well_index, wellName) ) // Only sum once
-            {
-                continue;
-            }
-
-            const auto& wellEcl = schedule.getWell(wellName, reportStepIdx);
-            // only count producers or injectors
-            if ((wellEcl.isProducer() && injector) || (wellEcl.isInjector() && !injector))
-                continue;
-
-            if (wellEcl.getStatus() == Well::Status::SHUT)
-                continue;
-
-            double factor = wellEcl.getEfficiencyFactor();
-            const auto& well_rates = rates[well_index];
-            if (injector)
-                rate += factor * well_rates[phasePos];
-            else
-                rate -= factor * well_rates[phasePos];
-        }
-        return rate;
-    }
-
-    double sumWellRates(const Group& group,
-                        const Schedule& schedule,
-                        const WellState& wellState,
-                        const int reportStepIdx,
-                        const int phasePos,
-                        const bool injector)
-    {
-        return sumWellPhaseRates(wellState.wellRates(), group, schedule, wellState, reportStepIdx, phasePos, injector);
+        return sumWellPhaseRates(false, group, schedule, wellState, reportStepIdx, phasePos, injector);
     }
 
     double sumWellResRates(const Group& group,
@@ -190,8 +199,7 @@ namespace WellGroupHelpers
                            const int phasePos,
                            const bool injector)
     {
-        return sumWellPhaseRates(
-            wellState.wellReservoirRates(), group, schedule, wellState, reportStepIdx, phasePos, injector);
+        return sumWellPhaseRates(true, group, schedule, wellState, reportStepIdx, phasePos, injector);
     }
 
     double sumSolventRates(const Group& group,
@@ -341,7 +349,7 @@ namespace WellGroupHelpers
                 if (individual_control || num_group_controlled_wells == 0) {
                     for (int phase = 0; phase < np; phase++) {
                         groupTargetReduction[phase]
-                            += subGroupEfficiency * sumWellRates(subGroup, schedule, wellStateNupcol, reportStepIdx, phase, isInjector);
+                            += subGroupEfficiency * sumWellSurfaceRates(subGroup, schedule, wellStateNupcol, reportStepIdx, phase, isInjector);
                     }
                 } else {
                     // The subgroup may participate in group control.
@@ -366,7 +374,7 @@ namespace WellGroupHelpers
                 if (individual_control || num_group_controlled_wells == 0) {
                     for (int phase = 0; phase < np; phase++) {
                         groupTargetReduction[phase]
-                            += subGroupEfficiency * sumWellRates(subGroup, schedule, wellStateNupcol, reportStepIdx, phase, isInjector);
+                            += subGroupEfficiency * sumWellSurfaceRates(subGroup, schedule, wellStateNupcol, reportStepIdx, phase, isInjector);
                     }
                 } else {
                     // The subgroup may participate in group control.
@@ -511,10 +519,10 @@ namespace WellGroupHelpers
         const int np = wellState.numPhases();
         double resv = 0.0;
         for (int phase = 0; phase < np; ++phase) {
-            resv += sumWellPhaseRates(wellStateNupcol.wellReservoirRates(),
+            resv += sumWellPhaseRates(true,
                                       group,
                                       schedule,
-                                      wellState,
+                                      wellStateNupcol,
                                       reportStepIdx,
                                       phase,
                                       /*isInjector*/ false);
@@ -536,10 +544,10 @@ namespace WellGroupHelpers
         const int np = wellState.numPhases();
         std::vector<double> resv(np, 0.0);
         for (int phase = 0; phase < np; ++phase) {
-            resv[phase] = sumWellPhaseRates(wellStateNupcol.wellReservoirRates(),
+            resv[phase] = sumWellPhaseRates(true,
                                             group,
                                             schedule,
-                                            wellState,
+                                            wellStateNupcol,
                                             reportStepIdx,
                                             phase,
                                             /*isInjector*/ true);
@@ -592,8 +600,7 @@ namespace WellGroupHelpers
         const int np = wellState.numPhases();
         std::vector<double> rates(np, 0.0);
         for (int phase = 0; phase < np; ++phase) {
-            rates[phase] = sumWellPhaseRates(
-                wellStateNupcol.wellRates(), group, schedule, wellState, reportStepIdx, phase, /*isInjector*/ false);
+            rates[phase] = sumWellPhaseRates(false, group, schedule, wellStateNupcol, reportStepIdx, phase, /*isInjector*/ false);
         }
         group_state.update_production_rates(group.name(), rates);
     }
@@ -616,8 +623,7 @@ namespace WellGroupHelpers
 
         std::vector<double> rein(np, 0.0);
         for (int phase = 0; phase < np; ++phase) {
-            rein[phase] = sumWellPhaseRates(
-                wellStateNupcol.wellRates(), group, schedule, wellState, reportStepIdx, phase, /*isInjector*/ false);
+            rein[phase] = sumWellPhaseRates(false, group, schedule, wellStateNupcol, reportStepIdx, phase, /*isInjector*/ false);
         }
 
         // add import rate and substract consumption rate for group for gas

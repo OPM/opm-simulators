@@ -255,7 +255,6 @@ public:
     }
 
     /// One rate per well and phase.
-    const WellContainer<std::vector<double>>& wellRates() const { return wellrates_; }
     std::vector<double>& wellRates(std::size_t well_index) { return wellrates_[well_index]; }
     const std::vector<double>& wellRates(std::size_t well_index) const { return wellrates_[well_index]; }
 
