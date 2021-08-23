@@ -945,9 +945,16 @@ namespace WellGroupHelpers
         const double my_guide_rate = guideRate(name, always_included_child);
         const Group& parent_group = schedule_.getGroup(parent(name), report_step_);
         const double total_guide_rate = guideRateSum(parent_group, always_included_child);
-        assert(total_guide_rate >= my_guide_rate);
+
+        // the total guide gate is the same as my_guide rate
+        // the well/group is probably on its own, i.e. return 1
+        // even is its guide_rate is zero
         const double guide_rate_epsilon = 1e-12;
-        return (total_guide_rate > guide_rate_epsilon) ? my_guide_rate / total_guide_rate : 0.0;
+        if ( std::abs(my_guide_rate - total_guide_rate) < guide_rate_epsilon )
+            return 1.0;
+
+        assert(total_guide_rate > my_guide_rate);
+        return my_guide_rate / total_guide_rate;
     }
     std::string FractionCalculator::parent(const std::string& name)
     {
