@@ -71,7 +71,8 @@ double sumWellPhaseRates(bool res_rates,
     double rate = 0.0;
     for (const std::string& groupName : group.groups()) {
         const auto& groupTmp = schedule.getGroup(groupName, reportStepIdx);
-        rate += sumWellPhaseRates(res_rates, groupTmp, schedule, wellState, reportStepIdx, phasePos, injector);
+        const auto& gefac = groupTmp.getGroupEfficiencyFactor();
+        rate += gefac * sumWellPhaseRates(res_rates, groupTmp, schedule, wellState, reportStepIdx, phasePos, injector);
     }
 
     for (const std::string& wellName : group.wells()) {
@@ -107,8 +108,7 @@ double sumWellPhaseRates(bool res_rates,
                 rate -= factor * ws.surface_rates[phasePos];
         }
     }
-    const auto& gefac = group.getGroupEfficiencyFactor();
-    return gefac * rate;
+    return rate;
 }
 } // namespace Anonymous
 
