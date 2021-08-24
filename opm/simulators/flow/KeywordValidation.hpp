@@ -83,24 +83,35 @@ namespace KeywordValidation
     // them, the result will be an empty string.
     std::string get_error_report(const std::vector<ValidationError>& errors, const bool critical);
 
+
+
+    // These are special case validation functions for keyword which do not fit nicely into the general
+    // validation framework. The validation function itself is void, but error conditions are signalled by
+    // appending ValidationError instances to the @errors vector.
+    void validateBRINE(const DeckKeyword& keyword, std::vector<ValidationError>& errors);
+
     class KeywordValidator
     {
     public:
         KeywordValidator(const UnsupportedKeywords& keywords,
                          const PartiallySupportedKeywords<std::string>& string_items,
                          const PartiallySupportedKeywords<int>& int_items,
-                         const PartiallySupportedKeywords<double>& double_items)
+                         const PartiallySupportedKeywords<double>& double_items,
+                         const std::unordered_map<std::string, std::function<void(const DeckKeyword& keyword, std::vector<ValidationError>& errors)>>& special_validation)
             : m_keywords(keywords)
             , m_string_items(string_items)
             , m_int_items(int_items)
             , m_double_items(double_items)
+            , m_special_validation(special_validation)
         {
         }
 
         // Validate a deck, reporting warnings and errors. If there are only
         // warnings, these will be reported. If there are errors, these are
         // reported, and execution of the program is halted.
-        void validateDeck(const Deck& deck, const ParseContext& parse_context, ErrorGuard& error_guard) const;
+        void validateDeck(const Deck& deck,
+                          const ParseContext& parse_context,
+                          ErrorGuard& error_guard) const;
 
         // Validate a single deck keyword. If a problem is encountered, add the
         // relevant information to the errors vector.
@@ -126,6 +137,7 @@ namespace KeywordValidation
         const PartiallySupportedKeywords<std::string> m_string_items;
         const PartiallySupportedKeywords<int> m_int_items;
         const PartiallySupportedKeywords<double> m_double_items;
+        const std::unordered_map<std::string, std::function<void(const DeckKeyword& keyword, std::vector<ValidationError>& errors)>> m_special_validation;
     };
 
 

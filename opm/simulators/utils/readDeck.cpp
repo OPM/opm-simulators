@@ -55,6 +55,7 @@
 #include "UnsupportedFlowKeywords.hpp"
 #include "PartiallySupportedFlowKeywords.hpp"
 #include <opm/simulators/flow/KeywordValidation.hpp>
+#include <opm/simulators/flow/ValidationFunctions.hpp>
 
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
 #include <opm/simulators/utils/ParallelSerialization.hpp>
@@ -62,7 +63,9 @@
 #include <fmt/format.h>
 
 #include <cstdlib>
+#include <functional>
 #include <memory>
+#include <unordered_map>
 #include <utility>
 
 namespace Opm
@@ -210,6 +213,7 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
 
             if (!deck)
             {
+
                 Opm::Parser parser;
                 deck = std::make_unique<Opm::Deck>( parser.parseFile(deckFilename , *parseContext, *errorGuard));
 
@@ -217,7 +221,9 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
                     Opm::FlowKeywordValidation::unsupportedKeywords(),
                     Opm::FlowKeywordValidation::partiallySupported<std::string>(),
                     Opm::FlowKeywordValidation::partiallySupported<int>(),
-                    Opm::FlowKeywordValidation::partiallySupported<double>());
+                    Opm::FlowKeywordValidation::partiallySupported<double>(),
+                    Opm::KeywordValidation::specialValidation());
+
                 keyword_validator.validateDeck(*deck, *parseContext, *errorGuard);
 
                 if ( checkDeck )
