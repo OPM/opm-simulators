@@ -214,36 +214,13 @@ namespace Opm
     void
     WellInterface<TypeTag>::
     wellTesting(const Simulator& simulator,
-                const double simulation_time, const int report_step,
-                const WellTestConfig::Reason testing_reason,
+                const double simulation_time,
                 /* const */ WellState& well_state,
                 const GroupState& group_state,
                 WellTestState& well_test_state,
                 DeferredLogger& deferred_logger)
     {
-        if (testing_reason == WellTestConfig::Reason::PHYSICAL) {
-            wellTestingPhysical(simulator, simulation_time, report_step,
-                                well_state, group_state, well_test_state, deferred_logger);
-        }
-
-        if (testing_reason == WellTestConfig::Reason::ECONOMIC) {
-            wellTestingEconomic(simulator, simulation_time,
-                                well_state, group_state, well_test_state, deferred_logger);
-        }
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    void
-    WellInterface<TypeTag>::
-    wellTestingEconomic(const Simulator& simulator,
-                        const double simulation_time, WellState& well_state, const GroupState& group_state,
-                        WellTestState& welltest_state, DeferredLogger& deferred_logger)
-    {
-        deferred_logger.info(" well " + this->name() + " is being tested for economic limits");
+        deferred_logger.info(" well " + this->name() + " is being tested");
 
         WellState well_state_copy = well_state;
         auto& ws = well_state_copy.well(this->indexOfWell());
@@ -261,13 +238,27 @@ namespace Opm
         // untill the number of closed completions do not increase anymore.
         while (testWell) {
             const size_t original_number_closed_completions = welltest_state_temp.sizeCompletions();
-            solveWellForTesting(simulator, well_state_copy, group_state, deferred_logger);
+            bool converged = solveWellForTesting(simulator, well_state_copy, group_state, deferred_logger);
+            if (!converged) {
+                const auto msg = fmt::format("WTEST: Well {} is not solvable (physical)", this->name());
+                deferred_logger.debug(msg);
+                return;
+            }
+
+            updateWellOperability(simulator, well_state_copy, deferred_logger);
+            if ( !this->isOperable() ) {
+                const auto msg = fmt::format("WTEST: Well {} is not operable (physical)", this->name());
+                deferred_logger.debug(msg);
+                return;
+            }
+
             std::vector<double> potentials;
             try {
                 computeWellPotentials(simulator, well_state_copy, potentials, deferred_logger);
             } catch (const std::exception& e) {
                 const std::string msg = std::string("well ") + this->name() + std::string(": computeWellPotentials() failed during testing for re-opening: ") + e.what();
                 deferred_logger.info(msg);
+                return;
             }
             const int np = well_state_copy.numPhases();
             for (int p = 0; p < np; ++p) {
@@ -287,15 +278,16 @@ namespace Opm
         }
 
         // update wellTestState if the well test succeeds
-        if (!welltest_state_temp.hasWellClosed(this->name(), WellTestConfig::Reason::ECONOMIC)) {
-            welltest_state.openWell(this->name(), WellTestConfig::Reason::ECONOMIC);
-            const std::string msg = std::string("well ") + this->name() + std::string(" is re-opened through ECONOMIC testing");
+        if (!welltest_state_temp.hasWellClosed(this->name())) {
+            well_test_state.openWell(this->name());
+
+            std::string msg = std::string("well ") + this->name() + std::string(" is re-opened");
             deferred_logger.info(msg);
 
             // also reopen completions
             for (auto& completion : this->well_ecl_.getCompletions()) {
                 if (!welltest_state_temp.hasCompletion(this->name(), completion.first)) {
-                    welltest_state.dropCompletion(this->name(), completion.first);
+                    well_test_state.dropCompletion(this->name(), completion.first);
                 }
             }
             // set the status of the well_state to open
@@ -303,6 +295,7 @@ namespace Opm
             well_state = well_state_copy;
         }
     }
+
 
 
 
@@ -324,7 +317,7 @@ namespace Opm
 
 
     template<typename TypeTag>
-    void
+    bool
     WellInterface<TypeTag>::
     solveWellForTesting(const Simulator& ebosSimulator, WellState& well_state, const GroupState& group_state,
                         DeferredLogger& deferred_logger)
@@ -335,13 +328,15 @@ namespace Opm
         const bool converged = iterateWellEquations(ebosSimulator, dt, well_state, group_state, deferred_logger);
         if (converged) {
             deferred_logger.debug("WellTest: Well equation for well " + this->name() +  " converged");
-        } else {
-            const int max_iter = param_.max_welleq_iter_;
-            deferred_logger.debug("WellTest: Well equation for well " + this->name() + " failed converging in "
-                          + std::to_string(max_iter) + " iterations");
-            well_state = well_state0;
+            return true;
         }
+        const int max_iter = param_.max_welleq_iter_;
+        deferred_logger.debug("WellTest: Well equation for well " + this->name() + " failed converging in "
+                              + std::to_string(max_iter) + " iterations");
+        well_state = well_state0;
+        return false;
     }
+
 
     template<typename TypeTag>
     void
@@ -448,82 +443,6 @@ namespace Opm
         return 0.0;
     }
 
-
-    template<typename TypeTag>
-    void
-    WellInterface<TypeTag>::
-    wellTestingPhysical(const Simulator& ebos_simulator,
-                        const double /* simulation_time */, const int /* report_step */,
-                        WellState& well_state,
-                        const GroupState& group_state,
-                        WellTestState& welltest_state,
-                        DeferredLogger& deferred_logger)
-    {
-        deferred_logger.info(" well " + this->name() + " is being tested for physical limits");
-
-        // some most difficult things are the explicit quantities, since there is no information
-        // in the WellState to do a decent initialization
-
-        // TODO: Let us assume that the simulator is updated
-
-        // Let us try to do a normal simualtion running, to keep checking the operability status
-        // If the well is not operable during any of the time. It means it does not pass the physical
-        // limit test.
-
-        // create a copy of the well_state to use. If the operability checking is sucessful, we use this one
-        // to replace the original one
-        WellState well_state_copy = well_state;
-        auto& ws = well_state_copy.well(this->indexOfWell());
-
-        // TODO: well state for this well is kind of all zero status
-        // we should be able to provide a better initialization
-        calculateExplicitQuantities(ebos_simulator, well_state_copy, deferred_logger);
-
-        updateWellOperability(ebos_simulator, well_state_copy, deferred_logger);
-
-        if ( !this->isOperable() ) {
-            const std::string msg = " well " + this->name() + " is not operable during well testing for physical reason";
-            deferred_logger.debug(msg);
-            return;
-        }
-
-        updateWellStateWithTarget(ebos_simulator, group_state, well_state_copy, deferred_logger);
-
-        calculateExplicitQuantities(ebos_simulator, well_state_copy, deferred_logger);
-
-        const double dt = ebos_simulator.timeStepSize();
-        const bool converged = this->iterateWellEquations(ebos_simulator, dt, well_state_copy, group_state, deferred_logger);
-
-        if (!converged) {
-            const std::string msg = " well " + this->name() + " did not get converged during well testing for physical reason";
-            deferred_logger.debug(msg);
-            return;
-        }
-
-        if (this->isOperable() ) {
-            welltest_state.openWell(this->name(), WellTestConfig::PHYSICAL );
-            const std::string msg = " well " + this->name() + " is re-opened through well testing for physical reason";
-            deferred_logger.info(msg);
-            // we need to populate the new well with potentials
-            std::vector<double> potentials;
-            try {
-                computeWellPotentials(ebos_simulator, well_state_copy, potentials, deferred_logger);
-            } catch (const std::exception& e) {
-                const std::string msg2 = std::string("well ") + this->name() + std::string(": computeWellPotentials() failed during testing for re-opening: ") + e.what();
-                deferred_logger.info(msg2);
-            }
-            const int np = well_state_copy.numPhases();
-            for (int p = 0; p < np; ++p) {
-                ws.well_potentials[p] = std::abs(potentials[p]);
-            }
-            //set the status of the well_state to open
-            ws.open();
-            well_state = well_state_copy;
-        } else {
-            const std::string msg = " well " + this->name() + " is not operable during well testing for physical reason";
-            deferred_logger.debug(msg);
-        }
-    }
 
 
 
