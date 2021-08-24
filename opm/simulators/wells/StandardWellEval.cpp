@@ -300,23 +300,26 @@ updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_log
         if (baseif_.isInjector()) {
             auto phase = baseif_.wellEcl().getInjectionProperties().injectorType;
             // only single phase injection handled
-            if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-                if (phase == InjectorType::WATER) {
-                    primary_variables_[WFrac] = 1.0;
-                } else {
-                    primary_variables_[WFrac] = 0.0;
+            if constexpr (has_wfrac_variable) {
+                if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                    if (phase == InjectorType::WATER) {
+                        primary_variables_[WFrac] = 1.0;
+                    } else {
+                        primary_variables_[WFrac] = 0.0;
+                    }
                 }
             }
-
-            if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                if (phase == InjectorType::GAS) {
-                    primary_variables_[GFrac] = 1.0;
-                    if constexpr (Indices::enableSolvent) {
-                        primary_variables_[GFrac] = 1.0 - baseif_.wsolvent();
-                        primary_variables_[SFrac] = baseif_.wsolvent();
+            if constexpr (has_gfrac_variable) {
+                if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                    if (phase == InjectorType::GAS) {
+                        primary_variables_[GFrac] = 1.0;
+                        if constexpr (Indices::enableSolvent) {
+                            primary_variables_[GFrac] = 1.0 - baseif_.wsolvent();
+                            primary_variables_[SFrac] = baseif_.wsolvent();
+                        }
+                    } else {
+                        primary_variables_[GFrac] = 0.0;
                     }
-                } else {
-                    primary_variables_[GFrac] = 0.0;
                 }
             }
 
