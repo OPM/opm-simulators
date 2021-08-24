@@ -1700,7 +1700,7 @@ namespace Opm
         const double sign = well_ecl_.isInjector() ? 1.0 : -1.0;
         for (int phase = 0; phase < np; ++phase){
             well_state_copy.wellRates(index_of_well_)[phase]
-                    = sign * well_state_copy.wellPotentials(index_of_well_)[phase];
+                    = sign * ws.well_potentials[phase];
         }
         // creating a copy of the well itself, to avoid messing up the explicit informations
         // during this copy, the only information not copied properly is the well controls
@@ -1711,7 +1711,7 @@ namespace Opm
         bool converged = well.iterateWellEquations(ebosSimulator, dt, well_state_copy, group_state, deferred_logger);
         if (!converged) {
             const std::string msg = " well " + name() + " did not get converged during well potential calculations "
-                                                        " potentials are computed based on uncoverged solution";
+                                                        " potentials are computed based on unconverged solution";
             deferred_logger.debug(msg);
         }
         well.updatePrimaryVariables(well_state_copy, deferred_logger);
