@@ -255,8 +255,8 @@ public:
     }
 
     /// One rate per well and phase.
-    std::vector<double>& wellRates(std::size_t well_index) { return wellrates_[well_index]; }
-    const std::vector<double>& wellRates(std::size_t well_index) const { return wellrates_[well_index]; }
+    std::vector<double>& wellRates(std::size_t well_index) { return this->wells_[well_index].surface_rates; }
+    const std::vector<double>& wellRates(std::size_t well_index) const { return this->wells_[well_index].surface_rates; }
 
     std::size_t numPerf(std::size_t well_index) const { return this->perfdata[well_index].size(); }
 
@@ -312,7 +312,6 @@ private:
 
     WellContainer<SingleWellState> wells_;
     WellContainer<const ParallelWellInfo*> parallel_well_info_;
-    WellContainer<std::vector<double>> wellrates_;
     WellContainer<PerfData> perfdata;
 
     // The well_rates variable is defined for all wells on all processors. The
@@ -358,7 +357,6 @@ private:
                    const SummaryState& summary_state);
 
     void initSingleWell(const std::vector<double>& cellPressures,
-                        const int w,
                         const Well& well,
                         const std::vector<PerforationData>& well_perf_data,
                         const ParallelWellInfo* well_info,

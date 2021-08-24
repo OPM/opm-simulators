@@ -105,7 +105,7 @@ scaleSegmentRatesWithWellRates(WellState& well_state) const
     auto& segment_rates = segments.rates;
     for (int phase = 0; phase < baseif_.numPhases(); ++phase) {
         const double unscaled_top_seg_rate = segment_rates[phase];
-        const double well_phase_rate = well_state.wellRates(baseif_.indexOfWell())[phase];
+        const double well_phase_rate = ws.surface_rates[phase];
         if (std::abs(unscaled_top_seg_rate) > 1e-12)
         {
             for (int seg = 0; seg < numberOfSegments(); ++seg) {
@@ -120,7 +120,7 @@ scaleSegmentRatesWithWellRates(WellState& well_state) const
             }
 
             std::vector<double> perforation_rates(baseif_.numPhases() * baseif_.numPerfs(),0.0);
-            const double perf_phaserate_scaled = well_state.wellRates(baseif_.indexOfWell())[phase] / sumTw;
+            const double perf_phaserate_scaled = ws.surface_rates[phase] / sumTw;
             for (int perf = 0; perf < baseif_.numPerfs(); ++perf) {
                 perforation_rates[baseif_.numPhases()* perf + phase] = baseif_.wellIndex()[perf] * perf_phaserate_scaled;
             }

@@ -67,9 +67,10 @@ calculateReservoirRates(WellState& well_state) const
     const int fipreg = 0; // not considering the region for now
     const int np = number_of_phases_;
 
+    auto& ws = well_state.well(this->index_of_well_);
     std::vector<double> surface_rates(np, 0.0);
     for (int p = 0; p < np; ++p) {
-        surface_rates[p] = well_state.wellRates(index_of_well_)[p];
+        surface_rates[p] = ws.surface_rates[p];
     }
 
     std::vector<double> voidage_rates(np, 0.0);
@@ -101,26 +102,26 @@ activeProductionConstraint(const WellState& well_state,
     }
 
     if (controls.hasControl(Well::ProducerCMode::ORAT) && currentControl != Well::ProducerCMode::ORAT) {
-        double current_rate = -well_state.wellRates(well_index)[pu.phase_pos[BlackoilPhases::Liquid]];
+        double current_rate = -ws.surface_rates[pu.phase_pos[BlackoilPhases::Liquid]];
         if (controls.oil_rate < current_rate)
             return Well::ProducerCMode::ORAT;
     }
 
     if (controls.hasControl(Well::ProducerCMode::WRAT) && currentControl != Well::ProducerCMode::WRAT) {
-        double current_rate = -well_state.wellRates(well_index)[pu.phase_pos[BlackoilPhases::Aqua]];
+        double current_rate = -ws.surface_rates[pu.phase_pos[BlackoilPhases::Aqua]];
         if (controls.water_rate < current_rate)
             return Well::ProducerCMode::WRAT;
     }
 
     if (controls.hasControl(Well::ProducerCMode::GRAT) && currentControl != Well::ProducerCMode::GRAT) {
-        double current_rate = -well_state.wellRates(well_index)[pu.phase_pos[BlackoilPhases::Vapour]];
+        double current_rate = -ws.surface_rates[pu.phase_pos[BlackoilPhases::Vapour]];
         if (controls.gas_rate < current_rate)
             return Well::ProducerCMode::GRAT;
     }
 
     if (controls.hasControl(Well::ProducerCMode::LRAT) && currentControl != Well::ProducerCMode::LRAT) {
-        double current_rate = -well_state.wellRates(well_index)[pu.phase_pos[BlackoilPhases::Liquid]];
-        current_rate -= well_state.wellRates(well_index)[pu.phase_pos[BlackoilPhases::Aqua]];
+        double current_rate = -ws.surface_rates[pu.phase_pos[BlackoilPhases::Liquid]];
+        current_rate -= ws.surface_rates[pu.phase_pos[BlackoilPhases::Aqua]];
         if (controls.liquid_rate < current_rate)
             return Well::ProducerCMode::LRAT;
     }
@@ -203,17 +204,17 @@ activeInjectionConstraint(const WellState& well_state,
         switch (injectorType) {
         case InjectorType::WATER:
         {
-            current_rate = well_state.wellRates(well_index)[ pu.phase_pos[BlackoilPhases::Aqua] ];
+            current_rate = ws.surface_rates[ pu.phase_pos[BlackoilPhases::Aqua] ];
             break;
         }
         case InjectorType::OIL:
         {
-            current_rate = well_state.wellRates(well_index)[ pu.phase_pos[BlackoilPhases::Liquid] ];
+            current_rate = ws.surface_rates[ pu.phase_pos[BlackoilPhases::Liquid] ];
             break;
         }
         case InjectorType::GAS:
         {
-            current_rate = well_state.wellRates(well_index)[  pu.phase_pos[BlackoilPhases::Vapour] ];
+            current_rate = ws.surface_rates[  pu.phase_pos[BlackoilPhases::Vapour] ];
             break;
         }
         default:
@@ -317,6 +318,7 @@ checkGroupConstraintsInj(const Group& group,
     std::vector<double> resv_coeff(phaseUsage().num_phases, 1.0);
     rateConverter_.calcInjCoeff(0, pvtRegionIdx_, resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
 
+    const auto& ws = well_state.well(this->index_of_well_);
     // Call check for the well's injection phase.
     return WellGroupHelpers::checkGroupConstraintsInj(name(),
                                                       well_ecl_.groupName(),
@@ -325,7 +327,7 @@ checkGroupConstraintsInj(const Group& group,
                                                       group_state,
                                                       current_step_,
                                                       guide_rate_,
-                                                      well_state.wellRates(index_of_well_).data(),
+                                                      ws.surface_rates.data(),
                                                       injectionPhase,
                                                       phaseUsage(),
                                                       efficiencyFactor,
@@ -350,6 +352,7 @@ checkGroupConstraintsProd(const Group& group,
     std::vector<double> resv_coeff(this->phaseUsage().num_phases, 1.0);
     rateConverter_.calcCoeff(0, pvtRegionIdx_, resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
 
+    const auto& ws = well_state.well(this->index_of_well_);
     return WellGroupHelpers::checkGroupConstraintsProd(name(),
                                                        well_ecl_.groupName(),
                                                        group,
@@ -357,7 +360,7 @@ checkGroupConstraintsProd(const Group& group,
                                                        group_state,
                                                        current_step_,
                                                        guide_rate_,
-                                                       well_state.wellRates(index_of_well_).data(),
+                                                       ws.surface_rates.data(),
                                                        phaseUsage(),
                                                        efficiencyFactor,
                                                        schedule,
@@ -400,7 +403,7 @@ checkGroupConstraints(WellState& well_state,
                 ws.injection_cmode = Well::InjectorCMode::GRUP;
                 const int np = well_state.numPhases();
                 for (int p = 0; p<np; ++p) {
-                    well_state.wellRates(index_of_well_)[p] *= group_constraint.second;
+                    ws.surface_rates[p] *= group_constraint.second;
                 }
             }
             return group_constraint.first;
@@ -428,7 +431,7 @@ checkGroupConstraints(WellState& well_state,
                 ws.production_cmode = Well::ProducerCMode::GRUP;
                 const int np = well_state.numPhases();
                 for (int p = 0; p<np; ++p) {
-                    well_state.wellRates(index_of_well_)[p] *= group_constraint.second;
+                    ws.surface_rates[p] *= group_constraint.second;
                 }
             }
             return group_constraint.first;
@@ -698,7 +701,7 @@ updateWellTestStateEconomic(const WellState& well_state,
         if (quantity_limit == WellEconProductionLimits::QuantityLimit::POTN)
             rate_limit_violated = checkRateEconLimits(econ_production_limits, ws.well_potentials.data(), deferred_logger);
         else {
-            rate_limit_violated = checkRateEconLimits(econ_production_limits, well_state.wellRates(index_of_well_).data(), deferred_logger);
+            rate_limit_violated = checkRateEconLimits(econ_production_limits, ws.surface_rates.data(), deferred_logger);
         }
     }
 
@@ -899,9 +902,9 @@ checkMaxRatioLimitWell(const WellState& well_state,
     const int np = number_of_phases_;
 
     std::vector<double> well_rates(np, 0.0);
-
+    const auto& ws = well_state.well(this->index_of_well_);
     for (int p = 0; p < np; ++p) {
-        well_rates[p] = well_state.wellRates(index_of_well_)[p];
+        well_rates[p] = ws.surface_rates[p];
     }
 
     const double well_ratio = ratioFunc(well_rates, phaseUsage());
@@ -1099,7 +1102,8 @@ getGroupProductionTargetRate(const Group& group,
     }
     // Avoid negative target rates coming from too large local reductions.
     const double target_rate = std::max(0.0, target / efficiencyFactor);
-    const auto& rates = well_state.wellRates(index_of_well_);
+    const auto& ws = well_state.well(this->index_of_well_);
+    const auto& rates = ws.surface_rates;
     const auto current_rate = -tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
     double scale = 1.0;
     if (current_rate > 1e-14)

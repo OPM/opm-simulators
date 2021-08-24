@@ -1473,11 +1473,11 @@ updateThp(WellState& well_state,
     static constexpr int Gas = BlackoilPhases::Vapour;
     static constexpr int Oil = BlackoilPhases::Liquid;
     static constexpr int Water = BlackoilPhases::Aqua;
+    auto& ws = well_state.well(baseif_.indexOfWell());
 
     // When there is no vaild VFP table provided, we set the thp to be zero.
     if (!baseif_.isVFPActive(deferred_logger) || baseif_.wellIsStopped()) {
-        auto& well = well_state.well(baseif_.indexOfWell());
-        well.thp = 0;
+        ws.thp = 0;
         return;
     }
 
@@ -1486,18 +1486,16 @@ updateThp(WellState& well_state,
 
     const PhaseUsage& pu = baseif_.phaseUsage();
     if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-        rates[ Water ] = well_state.wellRates(baseif_.indexOfWell())[pu.phase_pos[ Water ] ];
+        rates[ Water ] = ws.surface_rates[pu.phase_pos[ Water ] ];
     }
     if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-        rates[ Oil ] = well_state.wellRates(baseif_.indexOfWell())[pu.phase_pos[ Oil ] ];
+        rates[ Oil ] = ws.surface_rates[pu.phase_pos[ Oil ] ];
     }
     if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-        rates[ Gas ] = well_state.wellRates(baseif_.indexOfWell())[pu.phase_pos[ Gas ] ];
+        rates[ Gas ] = ws.surface_rates[pu.phase_pos[ Gas ] ];
     }
 
-    auto& well = well_state.well(baseif_.indexOfWell());
-    const double bhp = well.bhp;
-    well.thp = this->calculateThpFromBhp(rates, bhp, rho, deferred_logger);
+    ws.thp = this->calculateThpFromBhp(rates, ws.bhp, rho, deferred_logger);
 }
 
 template<typename FluidSystem, typename Indices, typename Scalar>
@@ -1657,7 +1655,7 @@ updateWellStateFromPrimaryVariables(WellState& well_state,
             const double phase_rate = g_total * fractions[p];
             segment_rates[seg*baseif_.numPhases() + p] = phase_rate;
             if (seg == 0) { // top segment
-                well_state.wellRates(baseif_.indexOfWell())[p] = phase_rate;
+                ws.surface_rates[p] = phase_rate;
             }
         }
 

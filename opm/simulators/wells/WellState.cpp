@@ -42,7 +42,6 @@ void WellState::base_init(const std::vector<double>& cellPressures,
     this->wellMap_.clear();
     this->perfdata.clear();
     this->parallel_well_info_.clear();
-    this->wellrates_.clear();
     this->wells_.clear();
     {
         // const int nw = wells->number_of_wells;
@@ -53,7 +52,7 @@ void WellState::base_init(const std::vector<double>& cellPressures,
             const Well& well = wells_ecl[w];
 
             // Initialize bhp(), thp(), wellRates(), temperature().
-            initSingleWell(cellPressures, w, well, well_perf_data[w], parallel_well_info[w], summary_state);
+            initSingleWell(cellPressures, well, well_perf_data[w], parallel_well_info[w], summary_state);
 
             // Setup wellname -> well index mapping.
             const int num_perf_this_well = well_perf_data[w].size();
@@ -73,11 +72,10 @@ void WellState::base_init(const std::vector<double>& cellPressures,
 
 
 void WellState::initSingleWell(const std::vector<double>& cellPressures,
-                                                    const int w,
-                                                    const Well& well,
-                                                    const std::vector<PerforationData>& well_perf_data,
-                                                    const ParallelWellInfo* well_info,
-                                                    const SummaryState& summary_state)
+                               const Well& well,
+                               const std::vector<PerforationData>& well_perf_data,
+                               const ParallelWellInfo* well_info,
+                               const SummaryState& summary_state)
 {
     assert(well.isInjector() || well.isProducer());
 
@@ -89,7 +87,6 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
 
     auto& ws = this->wells_.add(well.name(), SingleWellState{well.isProducer(), static_cast<std::size_t>(np), temp});
     this->parallel_well_info_.add(well.name(), well_info);
-    this->wellrates_.add(well.name(), std::vector<double>(np, 0));
     const int num_perf_this_well = well_info->communication().sum(well_perf_data.size());
     this->perfdata.add(well.name(), PerfData{static_cast<std::size_t>(num_perf_this_well), well.isInjector(), this->phase_usage_});
 
@@ -142,7 +139,7 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
         //    (producer) or RATE (injector).
         //    Otherwise, we cannot set the correct
         //    value here and initialize to zero rate.
-        auto& rates = this->wellrates_[w];
+        auto& rates = ws.surface_rates;
         if (well.isInjector()) {
             if (inj_controls.cmode == Well::InjectorCMode::RATE) {
                 switch (inj_controls.injector_type) {
@@ -267,6 +264,7 @@ void WellState::init(const std::vector<double>& cellPressures,
         const int global_num_perf_this_well = ecl_well.getConnections().num_open();
         auto& perf_data = this->perfData(w);
         const auto& perf_input = well_perf_data[w];
+        const auto& ws = this->well(w);
 
         for (int perf = 0; perf < num_perf_this_well; ++perf) {
             perf_data.cell_index[perf] = perf_input[perf].cell_index;
@@ -276,7 +274,7 @@ void WellState::init(const std::vector<double>& cellPressures,
 
             if (wells_ecl[w].getStatus() == Well::Status::OPEN) {
                 for (int p = 0; p < this->numPhases(); ++p) {
-                    perf_data.phase_rates[this->numPhases()*perf + p] = wellRates(w)[p] / double(global_num_perf_this_well);
+                    perf_data.phase_rates[this->numPhases()*perf + p] = ws.surface_rates[p] / double(global_num_perf_this_well);
                 }
             }
             perf_data.pressure[perf] = cellPressures[well_perf_data[w][perf].cell_index];
@@ -348,7 +346,7 @@ void WellState::init(const std::vector<double>& cellPressures,
                     new_well.production_cmode = prev_well.production_cmode;
                 }
 
-                wellRates(w) = prevState->wellRates(oldIndex);
+                new_well.surface_rates = prev_well.surface_rates;
                 wellReservoirRates(w) = prevState->wellReservoirRates(oldIndex);
                 new_well.well_potentials = prev_well.well_potentials;
 
@@ -380,7 +378,7 @@ void WellState::init(const std::vector<double>& cellPressures,
                     auto& target_rates = perf_data.phase_rates;
                     for (int perf_index = 0; perf_index < num_perf_this_well; perf_index++) {
                         for (int p = 0; p < np; ++p) {
-                            target_rates[perf_index*np + p] = wellRates(w)[p] / double(global_num_perf_this_well);
+                            target_rates[perf_index*np + p] = new_well.surface_rates[p] / double(global_num_perf_this_well);
                         }
                     }
                 }
@@ -477,7 +475,7 @@ WellState::report(const int* globalCellIdxMap,
         const auto& reservoir_rates = this->well_reservoir_rates_[well_index];
         const auto& well_potentials = ws.well_potentials;
         const auto& wpi = ws.productivity_index;
-        const auto& wv = this->wellRates(well_index);
+        const auto& wv = ws.surface_rates;
 
         data::Well well;
         well.bhp = ws.bhp;
@@ -814,14 +812,10 @@ void WellState::shutWell(int well_index)
     auto& ws = this->well(well_index);
     ws.shut();
     const int np = numPhases();
-    this->wellrates_[well_index].assign(np, 0);
 
     auto& resv = this->well_reservoir_rates_[well_index];
-    auto& wpi  = ws.productivity_index;
-
     for (int p = 0; p < np; ++p) {
         resv[p] = 0.0;
-        wpi[p]  = 0.0;
     }
 
     auto& perf_data = this->perfData(well_index);

@@ -186,7 +186,7 @@ loadRestartData(const data::Wells& rst_wells,
 
         for( size_t i = 0; i < phs.size(); ++i ) {
             assert( rst_well.rates.has( phs[ i ] ) );
-            well_state.wellRates(well_index)[i] = rst_well.rates.get(phs[i]);
+            ws.surface_rates[i] = rst_well.rates.get(phs[i]);
         }
 
         auto& perf_data = well_state.perfData(well_index);
@@ -1173,7 +1173,7 @@ getGuideRateValues(const Well& well) const
     auto grval = data::GuideRateValue{};
 
     const auto& wname = well.name();
-    if (!this->wellState().hasWellRates(wname)) {
+    if (!this->wellState().has(wname)) {
         // No flow rates for 'wname' -- might be before well comes
         // online (e.g., for the initial condition before simulation
         // starts).
@@ -1333,7 +1333,7 @@ calculateAllGroupGuiderates(const int reportStepIdx) const
     // group tree (FIELD group).
 
     for (const auto& wname : schedule_.wellNames(reportStepIdx)) {
-        if (! (this->wellState().hasWellRates(wname) &&
+        if (! (this->wellState().has(wname) &&
                this->guideRate_.has(wname)))
         {
             continue;

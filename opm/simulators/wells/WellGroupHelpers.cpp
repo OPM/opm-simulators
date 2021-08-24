@@ -97,6 +97,7 @@ namespace {
                 continue;
 
             double factor = wellEcl.getEfficiencyFactor();
+            const auto& ws = wellState.well(well_index);
             if (res_rates) {
                 const auto& well_rates = wellState.wellReservoirRates(well_index);
                 if (injector)
@@ -104,7 +105,7 @@ namespace {
                 else
                     rate -= factor * well_rates[phasePos];
             } else {
-                const auto& well_rates = wellState.wellRates(well_index);
+                const auto& well_rates = ws.surface_rates;
                 if (injector)
                     rate += factor * well_rates[phasePos];
                 else
@@ -414,16 +415,17 @@ namespace WellGroupHelpers
 
             const double efficiency = wellTmp.getEfficiencyFactor();
             // add contributino from wells not under group control
+            const auto& ws_nupcol = wellStateNupcol.well(well_index);
             const auto& ws = wellState.well(well_index);
             if (isInjector) {
                 if (ws.injection_cmode != Well::InjectorCMode::GRUP)
                     for (int phase = 0; phase < np; phase++) {
-                        groupTargetReduction[phase] += wellStateNupcol.wellRates(well_index)[phase] * efficiency;
+                        groupTargetReduction[phase] += ws_nupcol.surface_rates[phase] * efficiency;
                     }
             } else {
                 if (ws.production_cmode != Well::ProducerCMode::GRUP)
                     for (int phase = 0; phase < np; phase++) {
-                        groupTargetReduction[phase] -= wellStateNupcol.wellRates(well_index)[phase] * efficiency;
+                        groupTargetReduction[phase] -= ws_nupcol.surface_rates[phase] * efficiency;
                     }
             }
         }
@@ -487,16 +489,16 @@ namespace WellGroupHelpers
             }
 
             // scale rates
-            const auto& ws = wellState.well(well_index);
+            auto& ws = wellState.well(well_index);
             if (isInjector) {
                 if (ws.injection_cmode == Well::InjectorCMode::GRUP)
                     for (int phase = 0; phase < np; phase++) {
-                        wellState.wellRates(well_index)[phase] *= scale;
+                        ws.surface_rates[phase] *= scale;
                     }
             } else {
                 if (ws.production_cmode == Well::ProducerCMode::GRUP)
                     for (int phase = 0; phase < np; phase++) {
-                        wellState.wellRates(well_index)[phase] *= scale;
+                        ws.surface_rates[phase] *= scale;
                     }
             }
         }
@@ -578,8 +580,9 @@ namespace WellGroupHelpers
                 // opm-common that production and injection rates are positive.
                 if (!wellTmp.isInjector())
                     sign = -1;
+                const auto& ws = wellStateNupcol.well(well_index);
                 for (int phase = 0; phase < np; ++phase) {
-                    rates[phase] = sign * wellStateNupcol.wellRates(well_index)[phase];
+                    rates[phase] = sign * ws.surface_rates[phase];
                 }
             }
             wellState.setCurrentWellRates(wellName, rates);
