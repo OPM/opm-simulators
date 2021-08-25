@@ -294,8 +294,8 @@ BOOST_AUTO_TEST_CASE(Pressure)
         }
     }
 
-
-    const auto& perf_data = wstate.perfData("PROD01");
+    const auto& ws = wstate.well("PROD01");
+    const auto& perf_data = ws.perf_data;
     (void) perf_data;
 }
 
@@ -362,7 +362,8 @@ BOOST_AUTO_TEST_CASE(STOP_well)
     std::vector<Opm::ParallelWellInfo> pinfos;
     auto wstate = buildWellState(setup, 0, pinfos);
     for (std::size_t well_index = 0; well_index < setup.sched.numWells(0); well_index++) {
-        const auto& perf_data = wstate.perfData(well_index);
+        const auto& ws = wstate.well(well_index);
+        const auto& perf_data = ws.perf_data;
         for (const auto& p : perf_data.pressure)
             BOOST_CHECK(p > 0);
     }
@@ -541,19 +542,10 @@ BOOST_AUTO_TEST_CASE(TESTSegmentState2) {
 
 
 BOOST_AUTO_TEST_CASE(TESTPerfData) {
-    const auto& deck_string = R"(
-RUNSPEC
-
-OIL
-WATER
-GAS
-)";
-    Opm::PhaseUsage pu = Opm::phaseUsageFromDeck(Opm::Parser{}.parseString(deck_string));
-
-    Opm::PerfData pd1(3, true, pu);
-    Opm::PerfData pd2(3, true, pu);
-    Opm::PerfData pd3(2, true, pu);
-    Opm::PerfData pd4(3, false, pu);
+    Opm::PerfData pd1(3, true, 3);
+    Opm::PerfData pd2(3, true, 3);
+    Opm::PerfData pd3(2, true, 3);
+    Opm::PerfData pd4(3, false, 3);
 
 
     for (std::size_t i = 0; i < 3; i++) {
@@ -577,9 +569,9 @@ GAS
 
 
 BOOST_AUTO_TEST_CASE(TestSingleWellState) {
-    Opm::SingleWellState ws1(true,  3, 1);
-    Opm::SingleWellState ws2(true,  3, 2);
-    Opm::SingleWellState ws3(false, 3, 3);
+    Opm::SingleWellState ws1(true,  10, 3, 1);
+    Opm::SingleWellState ws2(true,  10, 3, 2);
+    Opm::SingleWellState ws3(false, 10, 3, 3);
 
     ws1.bhp = 100;
     ws1.thp = 200;

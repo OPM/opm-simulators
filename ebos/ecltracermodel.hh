@@ -433,8 +433,8 @@ protected:
             // TODO: Some inconsistencies here that perhaps should be clarified. The "offical" rate as reported below is
             //  occasionally significant different from the sum over connections (as calculated above). Only observed
             //  for small values, neglible for the rate itself, but matters when used to calculate tracer concentrations.
-            std::size_t well_index = simulator_.problem().wellModel().wellState().wellIndex(well.name());
-            Scalar official_well_rate_total = simulator_.problem().wellModel().wellState().wellRates(well_index)[tr.phaseIdx_];
+            std::size_t well_index = simulator_.problem().wellModel().wellState().index(well.name()).value();
+            Scalar official_well_rate_total = simulator_.problem().wellModel().wellState().well(well_index).surface_rates[tr.phaseIdx_];
 
             rateWellTotal = official_well_rate_total;
 

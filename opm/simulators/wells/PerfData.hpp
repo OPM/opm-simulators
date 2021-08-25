@@ -23,20 +23,18 @@
 
 #include <vector>
 
-#include <opm/core/props/BlackoilPhases.hpp>
-
 namespace Opm
 {
 
 class PerfData
 {
 private:
-    PhaseUsage pu;
     bool injector;
 
 public:
-    PerfData(std::size_t num_perf, bool injector_, const PhaseUsage& pu);
+    PerfData(std::size_t num_perf, bool injector_, std::size_t num_phases);
     std::size_t size() const;
+    bool empty() const;
     bool try_assign(const PerfData& other);
 
 

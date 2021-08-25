@@ -52,9 +52,6 @@ class Schedule;
 class WellState
 {
 public:
-    using mapentry_t = std::array<int, 3>;
-    using WellMapType = std::map<std::string, mapentry_t>;
-
     static const uint64_t event_mask = ScheduleEvents::WELL_STATUS_CHANGE + ScheduleEvents::PRODUCTION_UPDATE + ScheduleEvents::INJECTION_UPDATE;
 
     virtual ~WellState() = default;
@@ -69,11 +66,8 @@ public:
         this->phase_usage_ = pu;
     }
 
-    const WellMapType& wellMap() const { return wellMap_; }
-    WellMapType& wellMap() { return wellMap_; }
-
     std::size_t size() const {
-        return this->wellMap_.size();
+        return this->wells_.size();
     }
 
 
@@ -81,8 +75,6 @@ public:
     {
         return this->size();
     }
-
-    int wellIndex(const std::string& wellName) const;
 
     const ParallelWellInfo& parallelWellInfo(std::size_t well_index) const;
 
@@ -148,18 +140,6 @@ public:
 
     /// One rate pr well
     double brineWellRate(const int w) const;
-
-    const WellContainer<std::vector<double>>& wellReservoirRates() const { return well_reservoir_rates_; }
-
-    std::vector<double>& wellReservoirRates(std::size_t well_index)
-    {
-        return well_reservoir_rates_[well_index];
-    }
-
-    const std::vector<double>& wellReservoirRates(std::size_t well_index) const
-    {
-        return well_reservoir_rates_[well_index];
-    }
 
 
     template<class Comm>
@@ -255,30 +235,15 @@ public:
     }
 
     /// One rate per well and phase.
-    const WellContainer<std::vector<double>>& wellRates() const { return wellrates_; }
-    std::vector<double>& wellRates(std::size_t well_index) { return wellrates_[well_index]; }
-    const std::vector<double>& wellRates(std::size_t well_index) const { return wellrates_[well_index]; }
-
-    std::size_t numPerf(std::size_t well_index) const { return this->perfdata[well_index].size(); }
-
-    PerfData& perfData(const std::string& wname) {
-        return this->perfdata[wname];
-    }
-
-    const PerfData& perfData(const std::string& wname) const {
-        return this->perfdata[wname];
-    }
-
-    PerfData& perfData(std::size_t well_index) {
-        return this->perfdata[well_index];
-    }
-
-    const PerfData& perfData(std::size_t well_index) const {
-        return this->perfdata[well_index];
-    }
+    std::vector<double>& wellRates(std::size_t well_index) { return this->wells_[well_index].surface_rates; }
+    const std::vector<double>& wellRates(std::size_t well_index) const { return this->wells_[well_index].surface_rates; }
 
     const std::string& name(std::size_t well_index) const {
         return this->wells_.well_name(well_index);
+    }
+
+    std::optional<std::size_t> index(const std::string& well_name) const {
+        return this->wells_.well_index(well_name);
     }
 
     const SingleWellState& well(std::size_t well_index) const {
@@ -302,7 +267,6 @@ public:
     }
 
 private:
-    WellMapType wellMap_;
     // Use of std::optional<> here is a technical crutch, the
     // WellStateFullyImplicitBlackoil class should be default constructible,
     // whereas the GlobalWellInfo is not.
@@ -313,17 +277,10 @@ private:
 
     WellContainer<SingleWellState> wells_;
     WellContainer<const ParallelWellInfo*> parallel_well_info_;
-    WellContainer<std::vector<double>> wellrates_;
-    WellContainer<PerfData> perfdata;
-
     // The well_rates variable is defined for all wells on all processors. The
     // bool in the value pair is whether the current process owns the well or
     // not.
     std::map<std::string, std::pair<bool, std::vector<double>>> well_rates;
-
-    // phase rates under reservoir condition for wells
-    // or voidage phase rates
-    WellContainer<std::vector<double>> well_reservoir_rates_;
 
     data::Segment
     reportSegmentResults(const PhaseUsage& pu,
@@ -359,7 +316,6 @@ private:
                    const SummaryState& summary_state);
 
     void initSingleWell(const std::vector<double>& cellPressures,
-                        const int w,
                         const Well& well,
                         const std::vector<PerforationData>& well_perf_data,
                         const ParallelWellInfo* well_info,

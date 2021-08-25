@@ -24,16 +24,15 @@ namespace Opm
 {
 
 
-PerfData::PerfData(std::size_t num_perf, bool injector_, const PhaseUsage& pu_arg)
-    : pu(pu_arg)
-    , injector(injector_)
+PerfData::PerfData(std::size_t num_perf, bool injector_, std::size_t num_phases)
+    : injector(injector_)
     , pressure(num_perf)
     , rates(num_perf)
-    , phase_rates(num_perf * pu.num_phases)
+    , phase_rates(num_perf * num_phases)
     , solvent_rates(num_perf)
     , polymer_rates(num_perf)
     , brine_rates(num_perf)
-    , prod_index(num_perf * pu.num_phases)
+    , prod_index(num_perf * num_phases)
     , cell_index(num_perf)
     , connection_transmissibility_factor(num_perf)
     , satnum_id(num_perf)
@@ -48,6 +47,10 @@ PerfData::PerfData(std::size_t num_perf, bool injector_, const PhaseUsage& pu_ar
 
 std::size_t PerfData::size() const {
     return this->pressure.size();
+}
+
+bool PerfData::empty() const {
+    return this->pressure.empty();
 }
 
 bool PerfData::try_assign(const PerfData& other) {

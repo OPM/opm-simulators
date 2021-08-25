@@ -300,7 +300,8 @@ GasLiftGroupInfo::
 getProducerWellRates_(int well_index)
 {
     const auto& pu = this->phase_usage_;
-    const auto& wrate = this->well_state_.wellRates(well_index);
+    const auto& ws= this->well_state_.well(well_index);
+    const auto& wrate = ws.surface_rates;
 
     const auto oil_rate = pu.phase_used[Oil]
         ? -wrate[pu.phase_pos[Oil]]

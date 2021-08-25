@@ -21,11 +21,14 @@
 
 namespace Opm {
 
-SingleWellState::SingleWellState(bool is_producer, std::size_t num_phases, double temp)
+SingleWellState::SingleWellState(bool is_producer, std::size_t num_perf, std::size_t num_phases, double temp)
     : producer(is_producer)
     , temperature(temp)
     , well_potentials(num_phases)
     , productivity_index(num_phases)
+    , surface_rates(num_phases)
+    , reservoir_rates(num_phases)
+    , perf_data(num_perf, !is_producer, num_phases)
 {}
 
 
@@ -49,6 +52,9 @@ void SingleWellState::shut() {
     this->bhp = 0;
     this->thp = 0;
     this->status = Well::Status::SHUT;
+    std::fill(this->surface_rates.begin(), this->surface_rates.end(), 0);
+    std::fill(this->reservoir_rates.begin(), this->reservoir_rates.end(), 0);
+    std::fill(this->productivity_index.begin(), this->productivity_index.end(), 0);
 }
 
 void SingleWellState::stop() {

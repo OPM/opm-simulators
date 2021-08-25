@@ -25,12 +25,13 @@
 #include <opm/simulators/wells/SegmentState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
+#include <opm/simulators/wells/PerfData.hpp>
 
 namespace Opm {
 
 class SingleWellState {
 public:
-    SingleWellState(bool is_producer, std::size_t num_phases, double temp);
+    SingleWellState(bool is_producer, std::size_t num_perf, std::size_t num_phases, double temp);
 
     Well::Status status{Well::Status::OPEN};
     bool producer;
@@ -41,6 +42,9 @@ public:
     double vaporized_oil_rate{0};
     std::vector<double> well_potentials;
     std::vector<double> productivity_index;
+    std::vector<double> surface_rates;
+    std::vector<double> reservoir_rates;
+    PerfData perf_data;
     SegmentState segments;
     Events events;
     Well::InjectorCMode injection_cmode{Well::InjectorCMode::CMODE_UNDEFINED};
