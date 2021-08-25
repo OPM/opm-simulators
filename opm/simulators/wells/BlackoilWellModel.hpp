@@ -282,6 +282,11 @@ namespace Opm {
             void prepareTimeStep(DeferredLogger& deferred_logger);
             void initPrimaryVariablesEvaluation() const;
             void updateWellControls(DeferredLogger& deferred_logger, const bool checkGroupControls);
+
+            void updateAndCommunicate(const int reportStepIdx,
+                                      const int iterationIdx,
+                                      DeferredLogger& deferred_logger);
+
             WellInterfacePtr getWell(const std::string& well_name) const;
             bool hasWell(const std::string& well_name) const;
 

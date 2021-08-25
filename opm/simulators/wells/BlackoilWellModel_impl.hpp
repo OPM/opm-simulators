@@ -1272,7 +1272,8 @@ namespace Opm {
 
         const int episodeIdx = ebosSimulator_.episodeIndex();
         const int iterationIdx = ebosSimulator_.model().newtonMethod().numIterations();
-        updateAndCommunicateGroupData(episodeIdx, iterationIdx);
+
+        updateAndCommunicate(episodeIdx, iterationIdx, deferred_logger);
 
         updateNetworkPressures(episodeIdx);
 
@@ -1284,12 +1285,14 @@ namespace Opm {
             updateGroupIndividualControls(deferred_logger, switched_groups,
                                           episodeIdx, iterationIdx);
 
+            updateAndCommunicate(episodeIdx, iterationIdx, deferred_logger);
+
             // Check group's constraints from higher levels.
             updateGroupHigherControls(deferred_logger,
                                       episodeIdx,
                                       switched_groups);
 
-            updateAndCommunicateGroupData(episodeIdx, iterationIdx);
+            updateAndCommunicate(episodeIdx, iterationIdx, deferred_logger);
 
             // Check wells' group constraints and communicate.
             for (const auto& well : well_container_) {
@@ -1299,7 +1302,7 @@ namespace Opm {
                     switched_wells.insert(well->name());
                 }
             }
-            updateAndCommunicateGroupData(episodeIdx, iterationIdx);
+            updateAndCommunicate(episodeIdx, iterationIdx, deferred_logger);
         }
 
         // Check individual well constraints and communicate.
@@ -1310,11 +1313,23 @@ namespace Opm {
             const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Individual;
             well->updateWellControl(ebosSimulator_, mode, this->wellState(), this->groupState(), deferred_logger);
         }
-        updateAndCommunicateGroupData(episodeIdx, iterationIdx);
+        updateAndCommunicate(episodeIdx, iterationIdx, deferred_logger);
     }
 
 
-
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    updateAndCommunicate(const int reportStepIdx,
+                         const int iterationIdx,
+                         DeferredLogger& deferred_logger)
+    {
+        updateAndCommunicateGroupData(reportStepIdx, iterationIdx);
+        // if a well or group change control it affects all wells that are under the same group
+        for (const auto& well : well_container_) {
+            well->updateWellStateWithTarget(ebosSimulator_, this->groupState(), this->wellState(), deferred_logger);
+        }
+    }
 
     template<typename TypeTag>
     void
