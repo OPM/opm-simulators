@@ -78,6 +78,13 @@ public:
                          const bool substep,
                          const Comm& comm);
 
+    // write Reservoir Volumes to output log
+    Inplace outputFipresvLog(std::map<std::string, double>& miscSummaryData,
+                         std::map<std::string, std::vector<double>>& regionData,
+                         const bool substep,
+                         const Comm& comm);
+
+
 
     void outputErrorLog(const Comm& comm) const;
 
@@ -247,6 +254,8 @@ protected:
     void outputRegionFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> oip,
                                    std::unordered_map<Inplace::Phase, Scalar> cip,
                                    const Scalar& pav, const int reg = 0) const;
+    void outputResvFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> cipr,
+                                 const int reg = 0) const;
     void outputProductionReport_(const ScalarBuffer& wellProd,
                                  const StringBuffer& wellProdNames,
                                  const bool forceDisableProdOutput);
@@ -258,6 +267,8 @@ protected:
                                  const bool forceDisableCumOutput);
 
     void outputFipLogImpl(const Inplace& inplace) const;
+
+    void outputFipresvLogImpl(const Inplace& inplace) const;
 
     void makeRegionSum(Inplace& inplace,
                        const std::string& region_name,
@@ -315,6 +326,7 @@ protected:
     bool enableExtbo_;
 
     bool forceDisableFipOutput_;
+    bool forceDisableFipresvOutput_;
     bool outputFipRestart_;
     bool computeFip_;
 

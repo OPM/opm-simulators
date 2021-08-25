@@ -196,6 +196,7 @@ public:
         std::map<std::string, double> miscSummaryData;
         std::map<std::string, std::vector<double>> regionData;
         auto inplace = eclOutputModule_->outputFipLog(miscSummaryData, regionData, isSubStep, simulator_.gridView().comm());
+        eclOutputModule_->outputFipresvLog(miscSummaryData, regionData, isSubStep, simulator_.gridView().comm());
 
         bool forceDisableProdOutput = false;
         bool forceDisableInjOutput = false;

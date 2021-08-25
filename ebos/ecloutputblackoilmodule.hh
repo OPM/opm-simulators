@@ -69,6 +69,18 @@ struct ForceDisableFluidInPlaceOutput<TypeTag, TTag::EclOutputBlackOil> {
     static constexpr bool value = false;
 };
 
+
+template<class TypeTag, class MyTypeTag>
+struct ForceDisableResvFluidInPlaceOutput {
+    using type = UndefinedProperty;
+};
+
+template<class TypeTag>
+struct ForceDisableResvFluidInPlaceOutput<TypeTag, TTag::EclOutputBlackOil> {
+    static constexpr bool value = false;
+};
+
+
 } // namespace Opm::Properties
 
 namespace Opm {
@@ -146,6 +158,7 @@ public:
         }
 
         this->forceDisableFipOutput_ = EWOMS_GET_PARAM(TypeTag, bool, ForceDisableFluidInPlaceOutput);
+        this->forceDisableFipresvOutput_ = EWOMS_GET_PARAM(TypeTag, bool, ForceDisableResvFluidInPlaceOutput);
     }
 
     /*!
@@ -155,6 +168,8 @@ public:
     {
         EWOMS_REGISTER_PARAM(TypeTag, bool, ForceDisableFluidInPlaceOutput,
                              "Do not print fluid-in-place values after each report step even if requested by the deck.");
+        EWOMS_REGISTER_PARAM(TypeTag, bool, ForceDisableResvFluidInPlaceOutput,
+                             "Do not print reservoir volumes values after each report step even if requested by the deck.");
     }
 
     /*!
@@ -652,6 +667,7 @@ private:
 
         if (this->computeFip_) {
             Scalar fip[FluidSystem::numPhases];
+            Scalar fipr[FluidSystem::numPhases]; // at reservoir condition
             for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
                 fip[phaseIdx] = 0.0;
 
@@ -660,7 +676,8 @@ private:
 
                 const double b = getValue(fs.invB(phaseIdx));
                 const double s = getValue(fs.saturation(phaseIdx));
-                fip[phaseIdx] = b * s * pv;
+                fipr[phaseIdx] = s * pv;
+                fip[phaseIdx] = b * fipr[phaseIdx];
             }
 
             if (FluidSystem::phaseIsActive(oilPhaseIdx) && !this->fip_[Inplace::Phase::OIL].empty())
@@ -669,6 +686,13 @@ private:
                 this->fip_[Inplace::Phase::GAS][globalDofIdx] = fip[gasPhaseIdx];
             if (FluidSystem::phaseIsActive(waterPhaseIdx) && !this->fip_[Inplace::Phase::WATER].empty())
                 this->fip_[Inplace::Phase::WATER][globalDofIdx] = fip[waterPhaseIdx];
+
+            if (FluidSystem::phaseIsActive(oilPhaseIdx) && !this->fip_[Inplace::Phase::OilResVolume].empty())
+                this->fip_[Inplace::Phase::OilResVolume][globalDofIdx] = fipr[oilPhaseIdx];
+            if (FluidSystem::phaseIsActive(gasPhaseIdx) && !this->fip_[Inplace::Phase::GasResVolume].empty())
+                this->fip_[Inplace::Phase::GasResVolume][globalDofIdx] = fipr[gasPhaseIdx];
+            if (FluidSystem::phaseIsActive(waterPhaseIdx) && !this->fip_[Inplace::Phase::WaterResVolume].empty())
+                this->fip_[Inplace::Phase::WaterResVolume][globalDofIdx] = fipr[waterPhaseIdx];
 
             // Store the pure oil and gas Fip
             if (FluidSystem::phaseIsActive(oilPhaseIdx) && !this->fip_[Inplace::Phase::OilInLiquidPhase].empty())
