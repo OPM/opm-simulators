@@ -675,7 +675,7 @@ private:
                     continue;
 
                 const double b = getValue(fs.invB(phaseIdx));
-                const double s = getValue(fs.saturation(phaseIdx));
+                const double s = getValue(fs.saturation(phaseIdx));                
                 fipr[phaseIdx] = s * pv;
                 fip[phaseIdx] = b * fipr[phaseIdx];
             }
@@ -693,6 +693,9 @@ private:
                 this->fip_[Inplace::Phase::GasResVolume][globalDofIdx] = fipr[gasPhaseIdx];
             if (FluidSystem::phaseIsActive(waterPhaseIdx) && !this->fip_[Inplace::Phase::WaterResVolume].empty())
                 this->fip_[Inplace::Phase::WaterResVolume][globalDofIdx] = fipr[waterPhaseIdx];
+            
+            if (FluidSystem::phaseIsActive(waterPhaseIdx) && !this->fip_[Inplace::Phase::SALT].empty()) 
+                this->fip_[Inplace::Phase::SALT][globalDofIdx] = fipr[waterPhaseIdx] * fs.saltConcentration().value();
 
             // Store the pure oil and gas Fip
             if (FluidSystem::phaseIsActive(oilPhaseIdx) && !this->fip_[Inplace::Phase::OilInLiquidPhase].empty())

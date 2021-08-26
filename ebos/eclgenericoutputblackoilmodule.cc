@@ -57,6 +57,7 @@ std::string EclString(Opm::Inplace::Phase phase) {
     case Opm::Inplace::Phase::WaterResVolume: return "WIPR";
     case Opm::Inplace::Phase::OilResVolume: return "OIPR";
     case Opm::Inplace::Phase::GasResVolume: return "GIPR";
+    case Opm::Inplace::Phase::SALT: return "SIP";
     default: throw std::logic_error("Phase not recognized");
     }
 }
@@ -1051,6 +1052,7 @@ fipUnitConvert_(std::unordered_map<Inplace::Phase, Scalar>& fip) const
         {Inplace::Phase::WaterResVolume,    M::volume},
         {Inplace::Phase::OilResVolume,      M::volume},
         {Inplace::Phase::GasResVolume,      M::volume},
+        {Inplace::Phase::SALT,              M::mass},
     };
 
     for (auto& [phase, value] : fip) {
@@ -1621,6 +1623,7 @@ updateSummaryRegionValues(const Inplace& inplace,
                                  inplace.get(Inplace::Phase::PoreVolume),
                                  false);
         }
+
     }
 
     // The region summary vectors should loop through the FIPxxx regions to
