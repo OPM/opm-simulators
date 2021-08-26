@@ -58,7 +58,11 @@ public:
         return codim == commCodim;
     }
 
+#if DUNE_VERSION_LT(DUNE_GRID, 2, 8)
     bool fixedsize(int, int) const
+#else
+    bool fixedSize(int, int) const
+#endif
     {
         // for each DOF we communicate a single value which has a
         // fixed size
@@ -118,7 +122,11 @@ public:
         return codim == commCodim;
     }
 
+#if DUNE_VERSION_LT(DUNE_GRID, 2, 8)
     bool fixedsize(int, int) const
+#else
+    bool fixedSize(int, int) const
+#endif
     {
         // for each DOF we communicate a single value which has a
         // fixed size
@@ -173,7 +181,11 @@ public:
         return codim == commCodim;
     }
 
+#if DUNE_VERSION_LT(DUNE_GRID, 2, 8)
     bool fixedsize(int, int) const
+#else
+    bool fixedSize(int, int) const
+#endif
     {
         // for each DOF we communicate a single value which has a
         // fixed size
@@ -230,7 +242,11 @@ public:
         return codim == commCodim;
     }
 
+#if DUNE_VERSION_LT(DUNE_GRID, 2, 8)
     bool fixedsize(int, int) const
+#else
+    bool fixedSize(int, int) const
+#endif
     {
         // for each DOF we communicate a single value which has a
         // fixed size
