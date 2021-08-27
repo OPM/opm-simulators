@@ -300,22 +300,22 @@ protected:
                              const int reportStepIdx,
                              DeferredLogger& deferred_logger);
 
-    void checkGroupHigherConstraints(const Group& group,
+    bool checkGroupHigherConstraints(const Group& group,
                                      DeferredLogger& deferred_logger,
                                      const int reportStepIdx,
                                      std::set<std::string>& switched_groups);
 
-    void updateGroupIndividualControl(const Group& group,
+    bool updateGroupIndividualControl(const Group& group,
                                       DeferredLogger& deferred_logger,
                                       const int reportStepIdx,
                                       std::set<std::string>& switched_groups);
 
-    void updateGroupIndividualControls(DeferredLogger& deferred_logger,
+    bool updateGroupIndividualControls(DeferredLogger& deferred_logger,
                                        std::set<std::string>& switched_groups,
                                        const int reportStepIdx,
                                        const int iterationIdx);
 
-    void updateGroupHigherControls(DeferredLogger& deferred_logger,
+    bool updateGroupHigherControls(DeferredLogger& deferred_logger,
                                    const int reportStepIdx,
                                    std::set<std::string>& switched_groups);
 

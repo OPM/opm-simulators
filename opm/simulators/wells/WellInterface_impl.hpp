@@ -608,12 +608,11 @@ namespace Opm
         const auto& summaryState = ebos_simulator.vanguard().summaryState();
         const auto& schedule = ebos_simulator.vanguard().schedule();
 
-        if (this->wellIsStopped() || !this->isOperable()) {
+        if (this->wellIsStopped()) {
             for (int p = 0; p<np; ++p) {
-                ws.surface_rates[p] = 0.0;
-                ws.well_potentials[p] = 0.0;
+                ws.surface_rates[p] = 0;
             }
-            ws.thp = 0.0;
+            ws.thp = 0;
             return;
         }
 

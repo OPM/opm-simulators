@@ -780,7 +780,7 @@ checkGconsaleLimits(const Group& group,
         deferred_logger.info(ss.str());
 }
 
-void
+bool
 BlackoilWellModelGeneric::
 checkGroupHigherConstraints(const Group& group,
                             DeferredLogger& deferred_logger,
@@ -797,6 +797,7 @@ checkGroupHigherConstraints(const Group& group,
         ? pvt_region_idx_[0]
         : pvt_region_idx_[well_perf_data_[0][0].cell_index];
 
+    bool changed = false;
     if ( comm_.size() > 1)
     {
         // Just like in the sequential case the pvtregion is determined
@@ -832,7 +833,7 @@ checkGroupHigherConstraints(const Group& group,
             auto currentControl = this->groupState().injection_control(group.name(), phase);
             if (currentControl != Group::InjectionCMode::FLD && group.injectionGroupControlAvailable(phase)) {
                 const Group& parentGroup = schedule().getGroup(group.parent(), reportStepIdx);
-                const std::pair<bool, double> changed = WellGroupHelpers::checkGroupConstraintsInj(
+                const std::pair<bool, double> changed_this = WellGroupHelpers::checkGroupConstraintsInj(
                     group.name(),
                     group.parent(),
                     parentGroup,
@@ -848,10 +849,11 @@ checkGroupHigherConstraints(const Group& group,
                     summaryState_,
                     resv_coeff_inj,
                     deferred_logger);
-                if (changed.first) {
+                if (changed_this.first) {
                     switched_groups.insert(group.name());
                     actionOnBrokenConstraints(group, Group::InjectionCMode::FLD, phase, deferred_logger);
-                    WellGroupHelpers::updateWellRatesFromGroupTargetScale(changed.second, group, schedule(), reportStepIdx, /* isInjector */ true, this->groupState(), this->wellState());
+                    WellGroupHelpers::updateWellRatesFromGroupTargetScale(changed_this.second, group, schedule(), reportStepIdx, /* isInjector */ true, this->groupState(), this->wellState());
+                    changed = true;
                 }
             }
         }
@@ -870,7 +872,7 @@ checkGroupHigherConstraints(const Group& group,
         const Group::ProductionCMode& currentControl = this->groupState().production_control(group.name());
             if (currentControl != Group::ProductionCMode::FLD && group.productionGroupControlAvailable()) {
                 const Group& parentGroup = schedule().getGroup(group.parent(), reportStepIdx);
-                const std::pair<bool, double> changed = WellGroupHelpers::checkGroupConstraintsProd(
+                const std::pair<bool, double> changed_this = WellGroupHelpers::checkGroupConstraintsProd(
                     group.name(),
                     group.parent(),
                     parentGroup,
@@ -885,28 +887,33 @@ checkGroupHigherConstraints(const Group& group,
                     summaryState_,
                     resv_coeff,
                     deferred_logger);
-                if (changed.first) {
+                if (changed_this.first) {
                     switched_groups.insert(group.name());
                     const auto exceed_action = group.productionControls(summaryState_).exceed_action;
                     actionOnBrokenConstraints(group, exceed_action, Group::ProductionCMode::FLD, deferred_logger);
-                    WellGroupHelpers::updateWellRatesFromGroupTargetScale(changed.second, group, schedule(), reportStepIdx, /* isInjector */ false, this->groupState(), this->wellState());
+                    WellGroupHelpers::updateWellRatesFromGroupTargetScale(changed_this.second, group, schedule(), reportStepIdx, /* isInjector */ false, this->groupState(), this->wellState());
+                    changed = true;
                 }
             }
     }
 
     // call recursively down the group hiearchy
     for (const std::string& groupName : group.groups()) {
-        checkGroupHigherConstraints( schedule().getGroup(groupName, reportStepIdx), deferred_logger, reportStepIdx, switched_groups);
-     }
+        bool changed_this = checkGroupHigherConstraints( schedule().getGroup(groupName, reportStepIdx), deferred_logger, reportStepIdx, switched_groups);
+        changed = changed || changed_this;
+    }
+
+    return changed;
 }
 
-void
+bool
 BlackoilWellModelGeneric::
 updateGroupIndividualControl(const Group& group,
                              DeferredLogger& deferred_logger,
                              const int reportStepIdx,
                              std::set<std::string>& switched_groups)
 {
+    bool changed = false;
     const bool skip = switched_groups.count(group.name());
     if (!skip && group.isInjectionGroup())
     {
@@ -915,33 +922,38 @@ updateGroupIndividualControl(const Group& group,
             if (!group.hasInjectionControl(phase)) {
                 continue;
             }
-            const auto& changed = checkGroupInjectionConstraints(group, reportStepIdx, phase);
-            if (changed.first != Group::InjectionCMode::NONE)
+            const auto& changed_this = checkGroupInjectionConstraints(group, reportStepIdx, phase);
+            if (changed_this.first != Group::InjectionCMode::NONE)
             {
                 switched_groups.insert(group.name());
-                actionOnBrokenConstraints(group, changed.first, phase, deferred_logger);
-                WellGroupHelpers::updateWellRatesFromGroupTargetScale(changed.second, group, schedule(), reportStepIdx, /* isInjector */ false, this->groupState(), this->wellState());
+                actionOnBrokenConstraints(group, changed_this.first, phase, deferred_logger);
+                WellGroupHelpers::updateWellRatesFromGroupTargetScale(changed_this.second, group, schedule(), reportStepIdx, /* isInjector */ false, this->groupState(), this->wellState());
+                changed = true;
             }
         }
     }
     if (!skip && group.isProductionGroup()) {
-        const auto& changed = checkGroupProductionConstraints(group, reportStepIdx, deferred_logger);
+        const auto& changed_this = checkGroupProductionConstraints(group, reportStepIdx, deferred_logger);
         const auto controls = group.productionControls(summaryState_);
-        if (changed.first != Group::ProductionCMode::NONE)
+        if (changed_this.first != Group::ProductionCMode::NONE)
         {
             switched_groups.insert(group.name());
-            actionOnBrokenConstraints(group, controls.exceed_action, changed.first, deferred_logger);
-            WellGroupHelpers::updateWellRatesFromGroupTargetScale(changed.second, group, schedule(), reportStepIdx, /* isInjector */ false, this->groupState(), this->wellState());
+            actionOnBrokenConstraints(group, controls.exceed_action, changed_this.first, deferred_logger);
+            WellGroupHelpers::updateWellRatesFromGroupTargetScale(changed_this.second, group, schedule(), reportStepIdx, /* isInjector */ false, this->groupState(), this->wellState());
+            changed = true;
         }
     }
 
     // call recursively down the group hiearchy
     for (const std::string& groupName : group.groups()) {
-        updateGroupIndividualControl( schedule().getGroup(groupName, reportStepIdx), deferred_logger, reportStepIdx, switched_groups);
+        bool changed_this = updateGroupIndividualControl( schedule().getGroup(groupName, reportStepIdx), deferred_logger, reportStepIdx, switched_groups);
+        changed = changed || changed_this;
     }
+
+    return changed;
 }
 
-void
+bool
 BlackoilWellModelGeneric::
 updateGroupIndividualControls(DeferredLogger& deferred_logger,
                               std::set<std::string>& switched_groups,
@@ -952,21 +964,21 @@ updateGroupIndividualControls(DeferredLogger& deferred_logger,
     // don't switch group control when iterationIdx > nupcol
     // to avoid oscilations between group controls
     if (iterationIdx > nupcol)
-        return;
+        return false;
 
     const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
-    updateGroupIndividualControl(fieldGroup, deferred_logger,
-                                 reportStepIdx, switched_groups);
+    return updateGroupIndividualControl(fieldGroup, deferred_logger,
+                                        reportStepIdx, switched_groups);
 }
 
-void
+bool
 BlackoilWellModelGeneric::
 updateGroupHigherControls(DeferredLogger& deferred_logger,
                           const int reportStepIdx,
                           std::set<std::string>& switched_groups)
 {
     const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
-    checkGroupHigherConstraints(fieldGroup, deferred_logger, reportStepIdx, switched_groups);
+    return checkGroupHigherConstraints(fieldGroup, deferred_logger, reportStepIdx, switched_groups);
 }
 
 void
