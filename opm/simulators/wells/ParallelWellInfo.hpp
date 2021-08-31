@@ -279,20 +279,26 @@ public:
     /// \brief Collectively decide which rank has first perforation.
     void communicateFirstPerforation(bool hasFirst);
 
+
+    /// If the well does not have any open connections the member rankWithFirstPerf
+    /// is not initialized, and no broadcast is performed. In this case the argument
+    /// is returned unmodified.
     template<class T>
     T broadcastFirstPerforationValue(const T& t) const
     {
         T res = t;
+        if (rankWithFirstPerf_ >= 0) {
 #ifndef NDEBUG
-        assert(rankWithFirstPerf_ >= 0 && rankWithFirstPerf_ < comm_->size());
-        // At least on some OpenMPI version this might broadcast might interfere
-        // with other communication if there are bugs
-        comm_->barrier();
+            assert(rankWithFirstPerf_ < comm_->size());
+            // At least on some OpenMPI version this might broadcast might interfere
+            // with other communication if there are bugs
+            comm_->barrier();
 #endif
-        comm_->broadcast(&res, 1, rankWithFirstPerf_);
+            comm_->broadcast(&res, 1, rankWithFirstPerf_);
 #ifndef NDEBUG
-        comm_->barrier();
+            comm_->barrier();
 #endif
+        }
         return res;
     }
 
@@ -406,7 +412,7 @@ private:
     bool hasLocalCells_;
     /// \brief Whether we own the well and should do reports etc.
     bool isOwner_;
-    /// \brief Rank with the first perforation on it.
+    /// \brief Rank with the first perforation on it, -1 for wells with no open connections.
     int rankWithFirstPerf_;
     /// \brief Communication object for the well
     ///
