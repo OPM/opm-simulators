@@ -468,3 +468,14 @@ BOOST_AUTO_TEST_CASE(GlobalPerfFactoryParallel1)
     testGlobalPerfFactoryParallel(1);
     testGlobalPerfFactoryParallel(3);
 }
+
+
+BOOST_AUTO_TEST_CASE(EmptyWell) {
+    auto comm = Communication(Dune::MPIHelper::getCommunicator());
+    Opm::ParallelWellInfo pw({"WELL1", true}, comm);
+    pw.communicateFirstPerforation(false);
+    double local_p = 1;
+    auto global_p = pw.broadcastFirstPerforationValue(local_p);
+
+    BOOST_CHECK_EQUAL(local_p, global_p);
+}

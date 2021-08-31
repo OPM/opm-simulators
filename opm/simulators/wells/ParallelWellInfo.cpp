@@ -381,7 +381,8 @@ void ParallelWellInfo::communicateFirstPerforation(bool hasFirst)
     comm_->allgather(&first, 1, firstVec.data());
     auto found = std::find_if(firstVec.begin(), firstVec.end(),
                               [](int i) -> bool{ return i;});
-    rankWithFirstPerf_ = found - firstVec.begin();
+    if (found != firstVec.end())
+        rankWithFirstPerf_ = found - firstVec.begin();
 }
 
 void ParallelWellInfo::pushBackEclIndex(int above, int current)
