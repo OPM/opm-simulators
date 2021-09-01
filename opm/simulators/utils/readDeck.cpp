@@ -324,9 +324,17 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
             eclipseState = std::make_unique<Opm::ParallelEclipseState>();
     }
 
+    // In case of parse errors eclipseState/schedule might be null
+    // and trigger segmentation faults in parallel during broadcast
+    // (e.g. when serializing the non-existent TableManager)
+    auto comm = Dune::MPIHelper::getCollectiveCommunication();
+    parseSuccess = comm.min(parseSuccess);
     try
     {
-        Opm::eclStateBroadcast(*eclipseState, *schedule, *summaryConfig);
+        if (parseSuccess)
+        {
+            Opm::eclStateBroadcast(*eclipseState, *schedule, *summaryConfig);
+        }
     }
     catch(const std::exception& broadcast_error)
     {
@@ -344,8 +352,6 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
         errorGuard->clear();
     }
 
-
-    auto comm = Dune::MPIHelper::getCollectiveCommunication();
     parseSuccess = comm.min(parseSuccess);
 
     if (!parseSuccess)
