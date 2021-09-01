@@ -26,6 +26,8 @@
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
 #include <opm/parser/eclipse/EclipseState/Runspec.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Group/GPMaint.hpp>
+#include <opm/simulators/wells/WellContainer.hpp>
 
 namespace Opm {
 
@@ -74,6 +76,8 @@ public:
     std::size_t data_size() const;
     std::size_t collect(double * data) const;
     std::size_t distribute(const double * data);
+
+    GPMaint::State& gpmaint(const std::string& gname);
 
 
     template<class Comm>
@@ -165,6 +169,7 @@ private:
 
 
     std::map<std::pair<Phase, std::string>, Group::InjectionCMode> injection_controls;
+    WellContainer<GPMaint::State> gpmaint_state;
 };
 
 }
