@@ -45,7 +45,10 @@ namespace WellGroupHelpers
         TargetCalculator(const Group::ProductionCMode cmode,
                          const PhaseUsage& pu,
                          const std::vector<double>& resv_coeff,
-                         const double group_grat_target_from_sales);
+                         const double group_grat_target_from_sales,
+                         const std::string& group_name,
+                         const GroupState& group_state,
+                         const bool use_gpmaint);
 
         template <typename RateType>
         RateType calcModeRateFromRates(const std::vector<RateType>& rates) const
@@ -65,6 +68,9 @@ namespace WellGroupHelpers
         const PhaseUsage& pu_;
         const std::vector<double>& resv_coeff_;
         const double group_grat_target_from_sales_;
+        const std::string& group_name_;
+        const GroupState& group_state_;
+        bool use_gpmaint_;
     };
 
     /// Based on a group control mode, extract or calculate rates, and
@@ -79,6 +85,7 @@ namespace WellGroupHelpers
                                   const double sales_target,
                                   const GroupState& group_state,
                                   const Phase& injection_phase,
+                                  const bool use_gpmaint,
                                   DeferredLogger& deferred_logger);
 
         template <typename RateVec>
@@ -98,6 +105,7 @@ namespace WellGroupHelpers
         const std::string& group_name_;
         double sales_target_;
         const GroupState& group_state_;
+        bool use_gpmaint_;
         int pos_;
         GuideRateModel::Target target_;
     };

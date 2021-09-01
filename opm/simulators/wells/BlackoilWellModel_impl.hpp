@@ -207,6 +207,13 @@ namespace Opm {
                                                     std::vector<int>(local_num_cells_, 0)));
         rateConverter_->template defineState<ElementContext>(ebosSimulator_);
 
+        // Compute reservoir volumes for RESV controls.
+        const auto& fp = this->eclState_.fieldProps();
+        const auto fipnum = fp.get_int("FIPNUM");
+        gpmaint_.reset(new AverageRegionalPressureType (phase_usage_,
+                                                            fipnum));
+        gpmaint_->template defineState<ElementContext>(ebosSimulator_);
+
         {
             const auto& sched_state = this->schedule()[timeStepIdx];
             // update VFP properties
@@ -458,6 +465,12 @@ namespace Opm {
         // update the rate converter with current averages pressures etc in
         rateConverter_->template defineState<ElementContext>(ebosSimulator_);
 
+        gpmaint_->template defineState<ElementContext>(ebosSimulator_);
+        const Group& fieldGroup = schedule_.getGroup("FIELD", reportStepIdx);
+        WellGroupHelpers::updateGpMaintTargetForGroups(fieldGroup,
+                                                       schedule_, *gpmaint_, reportStepIdx, dt, this->wellState(), this->groupState());
+
+
         // calculate the well potentials
         try {
             updateWellPotentials(reportStepIdx,
@@ -472,7 +485,6 @@ namespace Opm {
         updateWellTestState(simulationTime, wellTestState_);
 
         // check group sales limits at the end of the timestep
-        const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
         checkGconsaleLimits(fieldGroup, this->wellState(),
                             ebosSimulator_.episodeIndex(), local_deferredLogger);
 

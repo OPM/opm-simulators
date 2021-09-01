@@ -450,10 +450,15 @@ checkGroupInjectionConstraints(const Group& group,
             current_rate = comm_.sum(current_rate);
 
             const auto& controls = group.injectionControls(phase, this->summaryState_);
-            if (controls.surface_max_rate < current_rate) {
+            double target = controls.surface_max_rate;
+
+            if (group.has_gpmaint_control(phase, Group::InjectionCMode::RATE) && this->groupState().has_gpmaint_target(group.name()))
+                target = this->groupState().gpmaint_target(group.name());
+
+            if (target < current_rate) {
                 double scale = 1.0;
                 if (current_rate > 1e-12)
-                    scale = controls.surface_max_rate / current_rate;
+                    scale = target / current_rate;
                 return std::make_pair(Group::InjectionCMode::RATE, scale);
             }
         }
@@ -468,10 +473,15 @@ checkGroupInjectionConstraints(const Group& group,
             current_rate = comm_.sum(current_rate);
 
             const auto& controls = group.injectionControls(phase, this->summaryState_);
-            if (controls.resv_max_rate < current_rate) {
+            double target = controls.resv_max_rate;
+
+            if (group.has_gpmaint_control(phase, Group::InjectionCMode::RESV) && this->groupState().has_gpmaint_target(group.name()))
+                target = this->groupState().gpmaint_target(group.name());
+
+            if (target < current_rate) {
                 double scale = 1.0;
                 if (current_rate > 1e-12)
-                    scale = controls.resv_max_rate / current_rate;
+                    scale = target / current_rate;
                 return std::make_pair(Group::InjectionCMode::RESV, scale);
             }
         }
@@ -637,10 +647,14 @@ checkGroupProductionConstraints(const Group& group,
             // sum over all nodes
             current_rate = comm_.sum(current_rate);
 
-            if (controls.resv_target < current_rate  ) {
+            double target = controls.resv_target;
+            if (group.has_gpmaint_control(Group::ProductionCMode::RESV) && this->groupState().has_gpmaint_target(group.name()))
+                target = this->groupState().gpmaint_target(group.name());
+
+            if ( target < current_rate ) {
                 double scale = 1.0;
                 if (current_rate > 1e-12)
-                    scale = controls.resv_target / current_rate;
+                    scale = target / current_rate;
                 return std::make_pair(Group::ProductionCMode::RESV, scale);
             }
         }
@@ -1521,6 +1535,8 @@ updateAndCommunicateGroupData(const int reportStepIdx,
     WellGroupHelpers::updateVREPForGroups(fieldGroup, schedule(), reportStepIdx, well_state_nupcol, well_state, this->groupState());
 
     WellGroupHelpers::updateReservoirRatesInjectionGroups(fieldGroup, schedule(), reportStepIdx, well_state_nupcol, well_state, this->groupState());
+    WellGroupHelpers::updateSurfaceRatesInjectionGroups(fieldGroup, schedule(), reportStepIdx, well_state_nupcol, well_state, this->groupState());
+
     WellGroupHelpers::updateGroupProductionRates(fieldGroup, schedule(), reportStepIdx, well_state_nupcol, well_state, this->groupState());
 
     // We use the rates from the previous time-step to reduce oscillations

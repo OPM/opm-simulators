@@ -40,13 +40,19 @@ namespace WellGroupHelpers
 TargetCalculator::TargetCalculator(const Group::ProductionCMode cmode,
                                    const PhaseUsage& pu,
                                    const std::vector<double>& resv_coeff,
-                                   const double group_grat_target_from_sales)
+                                   const double group_grat_target_from_sales,
+                                   const std::string& group_name,
+                                   const GroupState& group_state,
+                                   const bool use_gpmaint)
     : cmode_(cmode)
     , pu_(pu)
     , resv_coeff_(resv_coeff)
     , group_grat_target_from_sales_(group_grat_target_from_sales)
-{
+    , group_name_(group_name)
+    , group_state_(group_state)
+    , use_gpmaint_(use_gpmaint)
 
+{
 }
 
 template <typename RateType>
@@ -107,7 +113,12 @@ double TargetCalculator::groupTarget(const Group::ProductionControls ctrl) const
     case Group::ProductionCMode::LRAT:
         return ctrl.liquid_target;
     case Group::ProductionCMode::RESV:
+    {
+        if(use_gpmaint_ && this->group_state_.has_gpmaint_target(this->group_name_))
+            return this->group_state_.gpmaint_target(this->group_name_);
+
         return ctrl.resv_target;
+    }
     default:
         // Should never be here.
         assert(false);
@@ -142,6 +153,7 @@ InjectionTargetCalculator::InjectionTargetCalculator(const Group::InjectionCMode
                                                      const double sales_target,
                                                      const GroupState& group_state,
                                                      const Phase& injection_phase,
+                                                     const bool use_gpmaint,
                                                      DeferredLogger& deferred_logger)
     : cmode_(cmode)
     , pu_(pu)
@@ -149,6 +161,8 @@ InjectionTargetCalculator::InjectionTargetCalculator(const Group::InjectionCMode
     , group_name_(group_name)
     , sales_target_(sales_target)
     , group_state_(group_state)
+    , use_gpmaint_(use_gpmaint)
+
 {
     // initialize to avoid warning
     pos_ = pu.phase_pos[BlackoilPhases::Aqua];
@@ -182,8 +196,14 @@ double InjectionTargetCalculator::groupTarget(const Group::InjectionControls& ct
 {
     switch (cmode_) {
     case Group::InjectionCMode::RATE:
+        if(use_gpmaint_ && this->group_state_.has_gpmaint_target(this->group_name_))
+            return this->group_state_.gpmaint_target(this->group_name_);
+
         return ctrl.surface_max_rate;
     case Group::InjectionCMode::RESV:
+        if(use_gpmaint_ && this->group_state_.has_gpmaint_target(this->group_name_))
+            return this->group_state_.gpmaint_target(this->group_name_) / resv_coeff_[pos_];
+
         return ctrl.resv_max_rate / resv_coeff_[pos_];
     case Group::InjectionCMode::REIN: {
         double production_rate = this->group_state_.injection_rein_rates(ctrl.reinj_group)[pos_];

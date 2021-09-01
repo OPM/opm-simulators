@@ -197,6 +197,32 @@ namespace Opm {
                     return this->find(reg).cell_;
                 }
 
+                bool has(const RegionID reg) const
+                {
+                    const auto& i = attr_.find(reg);
+
+                    if (i == attr_.end()) {
+                        return false;
+                    }
+
+                    return true;
+                }
+
+                void insert(const RegionID r, const Attributes& attr)
+                {
+                    using VT = typename AttributeMap::value_type;
+
+                    auto v = std::make_unique<Value>(attr);
+
+                    const auto stat = attr_.insert(VT(r, std::move(v)));
+
+                    if (stat.second) {
+                        // Region's representative cell.
+                        stat.first->second->cell_ = -1.0;
+                    }
+                }
+
+
                 /**
                  * Request read-only access to region's attributes.
                  *
@@ -850,6 +876,213 @@ namespace Opm {
                 double rv;
                 double pv;
                 double saltConcentration;
+            };
+
+            Details::RegionAttributes<RegionId, Attributes> attr_;
+
+        };
+
+        /**
+         * Computes hydrocarbon weighed average pressures over regions
+         *
+         * \tparam FluidSystem Fluid system class. Expected to be a BlackOilFluidSystem
+         *
+         * \tparam Region Type of a forward region mapping.  Expected
+         * to provide indexed access through \code operator[]()
+         * \endcode as well as inner types \c value_type, \c
+         * size_type, and \c const_iterator.  Typically \code
+         * std::vector<int> \endcode.
+         */
+        template <class FluidSystem, class Region>
+        class AverageRegionalPressure {
+        public:
+            /**
+             * Constructor.
+             *
+             * \param[in] region Forward region mapping.  Often
+             * corresponds to the "FIPNUM" mapping of an ECLIPSE input
+             * deck.
+             */
+            AverageRegionalPressure(const PhaseUsage& phaseUsage,
+                                      const Region&   region)
+                : phaseUsage_(phaseUsage)
+                , rmap_ (region)
+                , attr_ (rmap_, Attributes())
+            {
+            }
+
+
+            /**
+             * Compute pore volume averaged hydrocarbon state pressure,              *
+             */
+            template <typename ElementContext, class EbosSimulator>
+            void defineState(const EbosSimulator& simulator)
+            {
+
+
+                int numRegions = 0;
+                const auto& gridView = simulator.gridView();
+                const auto& comm = gridView.comm();
+                for (const auto& reg : rmap_.activeRegions()) {
+                    numRegions = std::max(numRegions, reg);
+                }
+                numRegions = comm.max(numRegions);
+                for (int reg = 0; reg < numRegions; ++ reg) {
+                    if(!attr_.has(reg))
+                        attr_.insert(reg, Attributes());
+                }
+                // create map from cell to region
+                // and set all attributes to zero
+                for (int reg = 0; reg < numRegions; ++ reg) {
+                    auto& ra = attr_.attributes(reg);
+                    ra.pressure = 0.0;
+                    ra.pv = 0.0;
+
+                }
+
+                // quantities for pore volume average
+                std::unordered_map<RegionId, Attributes> attributes_pv;
+
+                // quantities for hydrocarbon volume average
+                std::unordered_map<RegionId, Attributes> attributes_hpv;
+
+                for (int reg = 0; reg < numRegions; ++ reg) {
+                    attributes_pv.insert({reg, Attributes()});
+                    attributes_hpv.insert({reg, Attributes()});
+                }
+
+                for (int reg = 0; reg < numRegions; ++ reg) {
+                    auto& ra = attributes_pv[reg];
+                    ra.pressure = 0.0;
+                    ra.pv = 0.0;
+                }
+                for (int reg = 0; reg < numRegions; ++ reg) {
+                    auto& ra = attributes_hpv[reg];
+                    ra.pressure = 0.0;
+                    ra.pv = 0.0;
+                }
+
+                ElementContext elemCtx( simulator );
+                 const auto& elemEndIt = gridView.template end</*codim=*/0>();
+                for (auto elemIt = gridView.template begin</*codim=*/0>();
+                     elemIt != elemEndIt;
+                     ++elemIt)
+                {
+
+                    const auto& elem = *elemIt;
+                    if (elem.partitionType() != Dune::InteriorEntity)
+                        continue;
+
+                    elemCtx.updatePrimaryStencil(elem);
+                    elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+                    const unsigned cellIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+                    const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
+                    const auto& fs = intQuants.fluidState();
+                    // use pore volume weighted averages.
+                    const double pv_cell =
+                            simulator.model().dofTotalVolume(cellIdx)
+                            * intQuants.porosity().value();
+
+                    // only count oil and gas filled parts of the domain
+                    double hydrocarbon = 1.0;
+                    const auto& pu = phaseUsage_;
+                    if (Details::PhaseUsed::water(pu)) {
+                        hydrocarbon -= fs.saturation(FluidSystem::waterPhaseIdx).value();
+                    }
+
+                    const int reg = rmap_.region(cellIdx);
+                    assert(reg >= 0);
+
+                    // sum p, rs, rv, and T.
+                    const double hydrocarbonPV = pv_cell*hydrocarbon;
+                    if (hydrocarbonPV > 0.) {
+                        auto& attr = attributes_hpv[reg];
+                        attr.pv += hydrocarbonPV;
+                        if (Details::PhaseUsed::oil(pu)) {
+                            attr.pressure += fs.pressure(FluidSystem::oilPhaseIdx).value() * hydrocarbonPV;
+                        } else {
+                            assert(Details::PhaseUsed::gas(pu));
+                            attr.pressure += fs.pressure(FluidSystem::gasPhaseIdx).value() * hydrocarbonPV;
+                        }
+                    }
+
+                    if (pv_cell > 0.) {
+                        auto& attr = attributes_pv[reg];
+                        attr.pv += pv_cell;
+                        if (Details::PhaseUsed::oil(pu)) {
+                            attr.pressure += fs.pressure(FluidSystem::oilPhaseIdx).value() * pv_cell;
+                        } else if (Details::PhaseUsed::gas(pu)) {
+                             attr.pressure += fs.pressure(FluidSystem::gasPhaseIdx).value() * pv_cell;
+                        } else {
+                            assert(Details::PhaseUsed::water(pu));
+                            attr.pressure += fs.pressure(FluidSystem::waterPhaseIdx).value() * pv_cell;
+                        }
+                    }
+                }
+
+                for (int reg = 0; reg < numRegions; ++ reg) {
+                      auto& ra = attr_.attributes(reg);
+                      const double hpv_sum = comm.sum(attributes_hpv[reg].pv);
+                      // TODO: should we have some epsilon here instead of zero?
+                      if (hpv_sum > 0.) {
+                          const auto& attri_hpv = attributes_hpv[reg];
+                          const double p_hpv_sum = comm.sum(attri_hpv.pressure);
+                          ra.pressure = p_hpv_sum / hpv_sum;
+                      } else {
+                          // using the pore volume to do the averaging
+                          const auto& attri_pv = attributes_pv[reg];
+                          const double pv_sum = comm.sum(attri_pv.pv);
+                          assert(pv_sum > 0.);
+                          const double p_pv_sum = comm.sum(attri_pv.pressure);
+                          ra.pressure = p_pv_sum / pv_sum;
+
+                      }
+                }
+            }
+
+            /**
+             * Region identifier.
+             *
+             * Integral type.
+             */
+            typedef typename RegionMapping<Region>::RegionId RegionId;
+
+            /**
+             * Average pressure
+             *
+             */
+            double
+            fpr(const RegionId r) const
+            {
+                const auto& ra = attr_.attributes(r);
+                return ra.pressure;
+            }
+
+
+        private:
+            /**
+             * Fluid property object.
+             */
+            const PhaseUsage phaseUsage_;
+
+            /**
+             * "Fluid-in-place" region mapping (forward and reverse).
+             */
+            const RegionMapping<Region> rmap_;
+
+            /**
+             * Derived property attributes for each active region.
+             */
+            struct Attributes {
+                Attributes()
+                    : pressure   (0.0)
+                    , pv(0.0)
+
+                {}
+
+                double pressure;
+                double pv;
+
             };
 
             Details::RegionAttributes<RegionId, Attributes> attr_;

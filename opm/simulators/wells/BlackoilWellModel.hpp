@@ -132,6 +132,10 @@ namespace Opm {
             using RateConverterType = RateConverter::
                 SurfaceToReservoirVoidage<FluidSystem, std::vector<int> >;
 
+            // For computing average pressured used by gpmaint
+            using AverageRegionalPressureType = RateConverter::
+                AverageRegionalPressure<FluidSystem, std::vector<int> >;
+
             BlackoilWellModel(Simulator& ebosSimulator);
 
             void init();
@@ -317,6 +321,8 @@ namespace Opm {
             bool alternative_well_rate_init_{};
 
             std::unique_ptr<RateConverterType> rateConverter_{};
+            std::unique_ptr<AverageRegionalPressureType> gpmaint_{};
+
 
             SimulatorReportSingle last_report_{};
 

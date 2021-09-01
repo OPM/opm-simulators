@@ -52,6 +52,11 @@ public:
     void update_injection_reservoir_rates(const std::string& gname, const std::vector<double>& rates);
     const std::vector<double>& injection_reservoir_rates(const std::string& gname) const;
 
+    bool has_injection_surface_rates(const std::string& gname) const;
+    void update_injection_surface_rates(const std::string& gname, const std::vector<double>& rates);
+    const std::vector<double>& injection_surface_rates(const std::string& gname) const;
+
+
     void update_injection_rein_rates(const std::string& gname, const std::vector<double>& rates);
     const std::vector<double>& injection_rein_rates(const std::string& gname) const;
 
@@ -64,6 +69,10 @@ public:
     void update_grat_sales_target(const std::string& gname, double target);
     double grat_sales_target(const std::string& gname) const;
     bool has_grat_sales_target(const std::string& gname) const;
+
+    void update_gpmaint_target(const std::string& gname, double target);
+    double gpmaint_target(const std::string& gname) const;
+    bool has_gpmaint_target(const std::string& gname) const;
 
     bool has_production_control(const std::string& gname) const;
     void production_control(const std::string& gname, Group::ProductionCMode cmode);
@@ -161,11 +170,13 @@ private:
     std::map<std::string, Group::ProductionCMode> production_controls;
     std::map<std::string, std::vector<double>> prod_red_rates;
     std::map<std::string, std::vector<double>> inj_red_rates;
+    std::map<std::string, std::vector<double>> inj_surface_rates;
     std::map<std::string, std::vector<double>> inj_resv_rates;
     std::map<std::string, std::vector<double>> inj_potentials;
     std::map<std::string, std::vector<double>> inj_rein_rates;
     std::map<std::string, double> inj_vrep_rate;
     std::map<std::string, double> m_grat_sales_target;
+    std::map<std::string, double> m_gpmaint_target;
 
 
     std::map<std::pair<Phase, std::string>, Group::InjectionCMode> injection_controls;
