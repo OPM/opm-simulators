@@ -37,6 +37,7 @@
 #include <opm/parser/eclipse/Units/Units.hpp>
 
 #include <cassert>
+#include <fmt/format.h>
 #include <initializer_list>
 #include <iomanip>
 #include <sstream>
@@ -58,7 +59,7 @@ std::string EclString(Opm::Inplace::Phase phase) {
     case Opm::Inplace::Phase::OilResVolume: return "OIPR";
     case Opm::Inplace::Phase::GasResVolume: return "GIPR";
     case Opm::Inplace::Phase::SALT: return "SIP";
-    default: throw std::logic_error("Phase not recognized");
+    default: throw std::logic_error(fmt::format("Phase enum with integer value: {} not recognized", static_cast<int>(phase)));
     }
 }
 
