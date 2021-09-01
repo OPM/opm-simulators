@@ -22,6 +22,7 @@
 #ifndef OPM_READDECK_HEADER_INCLUDED
 #define OPM_READDECK_HEADER_INCLUDED
 
+#include <dune/common/parallel/mpihelper.hh>
 #include <memory>
 #include <optional>
 #include <string>
@@ -50,10 +51,11 @@ enum class FileOutputMode {
 // Setup the OpmLog backends
 FileOutputMode setupLogging(int mpi_rank_, const std::string& deck_filename, const std::string& cmdline_output_dir, const std::string& cmdline_output, bool output_cout_, const std::string& stdout_log_id);
 
+using CollCommType = Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator>;
 /// \brief Reads the deck and creates all necessary objects if needed
 ///
 /// If pointers already contains objects then they are used otherwise they are created and can be used outside later.
-void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Deck>& deck, std::unique_ptr<EclipseState>& eclipseState,
+void readDeck(CollCommType comm, std::string& deckFilename, std::unique_ptr<Deck>& deck, std::unique_ptr<EclipseState>& eclipseState,
               std::unique_ptr<Schedule>& schedule, std::unique_ptr<UDQState>& udqState, std::unique_ptr<SummaryConfig>& summaryConfig,
               std::unique_ptr<ErrorGuard> errorGuard, std::shared_ptr<Python>& python, std::unique_ptr<ParseContext> parseContext,
               bool initFromRestart, bool checkDeck, const std::optional<int>& outputInterval);
