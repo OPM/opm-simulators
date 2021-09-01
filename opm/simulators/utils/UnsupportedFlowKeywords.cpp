@@ -502,7 +502,6 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"RBEDCONT", {false, std::nullopt}},
         {"RADFIN", {false, std::nullopt}},
         {"RADFIN4", {false, std::nullopt}},
-        {"RADIAL", {false, std::nullopt}},
         {"RCMASTS", {false, std::nullopt}},
         {"REACACT", {false, std::nullopt}},
         {"REACHES", {false, std::nullopt}},

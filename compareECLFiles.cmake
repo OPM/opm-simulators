@@ -306,6 +306,13 @@ add_test_compareECLFiles(CASENAME spe1_spider
                            REL_TOL ${rel_tol}
                            DIR radial_grid)
 
+add_test_compareECLFiles(CASENAME spe1_radial
+                           FILENAME RADIAL_CAKESLICE
+                           SIMULATOR flow
+                           ABS_TOL ${abs_tol}
+                           REL_TOL ${rel_tol}
+                           DIR radial_grid)
+
 add_test_compareECLFiles(CASENAME ctaquifer_2d_oilwater
                          FILENAME 2D_OW_CTAQUIFER
                          SIMULATOR flow
