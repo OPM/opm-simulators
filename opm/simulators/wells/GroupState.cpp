@@ -239,6 +239,15 @@ Group::InjectionCMode GroupState::injection_control(const std::string& gname, Ph
 
 //-------------------------------------------------------------------------
 
+GPMaint::State& GroupState::gpmaint(const std::string& gname) {
+    if (!this->gpmaint_state.has(gname))
+        this->gpmaint_state.add(gname, GPMaint::State{});
+    return this->gpmaint_state[gname];
+}
+
+
+//-------------------------------------------------------------------------
+
 namespace {
 
 template <typename T>
