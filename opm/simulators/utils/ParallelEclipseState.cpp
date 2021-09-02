@@ -31,6 +31,13 @@ ParallelFieldPropsManager::ParallelFieldPropsManager(FieldPropsManager& manager)
 {
 }
 
+// EXPERIMENTAL FUNCTION TO ADD COMM AS INPUT
+ParallelFieldPropsManager::ParallelFieldPropsManager(FieldPropsManager& manager, Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> comm)
+    : m_manager(manager)
+    , m_comm(comm)
+{
+}
+
 
 std::vector<int> ParallelFieldPropsManager::actnum() const
 {
@@ -208,8 +215,8 @@ bool ParallelFieldPropsManager::has_double(const std::string& keyword) const
 }
 
 
-ParallelEclipseState::ParallelEclipseState()
-    : m_fieldProps(field_props)
+ParallelEclipseState::ParallelEclipseState(Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> comm)
+    : m_fieldProps(field_props, comm)
 {
 }
 
@@ -220,6 +227,11 @@ ParallelEclipseState::ParallelEclipseState(const Deck& deck)
 {
 }
 
+ParallelEclipseState::ParallelEclipseState(const Deck& deck, Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> comm)
+    : EclipseState(deck)
+    , m_fieldProps(field_props, comm)
+{
+}
 
 const FieldPropsManager& ParallelEclipseState::fieldProps() const
 {

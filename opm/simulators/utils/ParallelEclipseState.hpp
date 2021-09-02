@@ -47,6 +47,10 @@ public:
     //! \param manager The field property manager to wrap.
     ParallelFieldPropsManager(FieldPropsManager& manager);
 
+    //! \brief Constructor.
+    //! \param manager The field property manager to wrap.
+    ParallelFieldPropsManager(FieldPropsManager& manager, Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> comm);
+
     //! \brief Returns actnum vector.
     //! \details If called on non-root process an empty vector is returned
     std::vector<int> actnum() const override;
@@ -130,12 +134,18 @@ class ParallelEclipseState : public EclipseState {
     friend class PropsCentroidsDataHandle;
 public:
     //! \brief Default constructor.
-    ParallelEclipseState();
+    ParallelEclipseState(Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> comm);
 
     //! \brief Construct from a deck instance.
     //! \param deck The deck to construct from
     //! \details Only called on root process
     ParallelEclipseState(const Deck& deck);
+
+    //! EXPERIMENTAL FUNCTION TO ADD COMM AS INPUT.
+    //! \brief Construct from a deck instance.
+    //! \param deck The deck to construct from
+    //! \details Only called on root process
+    ParallelEclipseState(const Deck& deck, Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> comm);
 
     //! \brief Switch to global field properties.
     //! \details Called on root process to use the global field properties
