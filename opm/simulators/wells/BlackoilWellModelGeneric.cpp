@@ -438,10 +438,8 @@ checkGroupInjectionConstraints(const Group& group,
     else
         OPM_THROW(std::runtime_error, "Unknown phase" );
 
-    const auto& controls = group.injectionControls(phase, summaryState_);
     auto currentControl = this->groupState().injection_control(group.name(), phase);
-
-    if (controls.has_control(Group::InjectionCMode::RATE))
+    if (group.has_control(phase, Group::InjectionCMode::RATE))
     {
         if (currentControl != Group::InjectionCMode::RATE)
         {
@@ -451,6 +449,7 @@ checkGroupInjectionConstraints(const Group& group,
             // sum over all nodes
             current_rate = comm_.sum(current_rate);
 
+            const auto& controls = group.injectionControls(phase, this->summaryState_);
             if (controls.surface_max_rate < current_rate) {
                 double scale = 1.0;
                 if (current_rate > 1e-12)
@@ -459,7 +458,7 @@ checkGroupInjectionConstraints(const Group& group,
             }
         }
     }
-    if (controls.has_control(Group::InjectionCMode::RESV))
+    if (group.has_control(phase, Group::InjectionCMode::RESV))
     {
         if (currentControl != Group::InjectionCMode::RESV)
         {
@@ -468,6 +467,7 @@ checkGroupInjectionConstraints(const Group& group,
             // sum over all nodes
             current_rate = comm_.sum(current_rate);
 
+            const auto& controls = group.injectionControls(phase, this->summaryState_);
             if (controls.resv_max_rate < current_rate) {
                 double scale = 1.0;
                 if (current_rate > 1e-12)
@@ -476,11 +476,12 @@ checkGroupInjectionConstraints(const Group& group,
             }
         }
     }
-    if (controls.has_control(Group::InjectionCMode::REIN))
+    if (group.has_control(phase, Group::InjectionCMode::REIN))
     {
         if (currentControl != Group::InjectionCMode::REIN)
         {
             double production_Rate = 0.0;
+            const auto& controls = group.injectionControls(phase, this->summaryState_);
             const Group& groupRein = schedule().getGroup(controls.reinj_group, reportStepIdx);
             production_Rate += WellGroupHelpers::sumWellSurfaceRates(groupRein, schedule(), well_state, reportStepIdx, phasePos, /*isInjector*/false);
 
@@ -501,11 +502,12 @@ checkGroupInjectionConstraints(const Group& group,
             }
         }
     }
-    if (controls.has_control(Group::InjectionCMode::VREP))
+    if (group.has_control(phase, Group::InjectionCMode::VREP))
     {
         if (currentControl != Group::InjectionCMode::VREP)
         {
             double voidage_rate = 0.0;
+            const auto& controls = group.injectionControls(phase, this->summaryState_);
             const Group& groupVoidage = schedule().getGroup(controls.voidage_group, reportStepIdx);
             voidage_rate += WellGroupHelpers::sumWellResRates(groupVoidage, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Aqua], false);
             voidage_rate += WellGroupHelpers::sumWellResRates(groupVoidage, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Liquid], false);
