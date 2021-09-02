@@ -235,10 +235,10 @@ ParallelEclipseState::ParallelEclipseState(const Deck& deck, Dune::CollectiveCom
 
 const FieldPropsManager& ParallelEclipseState::fieldProps() const
 {
-    if (!m_parProps && Dune::MPIHelper::getCollectiveCommunication().rank() != 0)
+    if (!m_parProps && m_comm.rank() != 0)
         OPM_THROW(std::runtime_error, "Attempt to access field properties on no-root process before switch to parallel properties");
 
-    if (!m_parProps || Dune::MPIHelper::getCollectiveCommunication().size() == 1)
+    if (!m_parProps || m_comm.size() == 1)
         return this->EclipseState::fieldProps();
 
     return m_fieldProps;
@@ -247,7 +247,7 @@ const FieldPropsManager& ParallelEclipseState::fieldProps() const
 
 const FieldPropsManager& ParallelEclipseState::globalFieldProps() const
 {
-    if (Dune::MPIHelper::getCollectiveCommunication().rank() != 0)
+    if (m_comm.rank() != 0)
         OPM_THROW(std::runtime_error, "Attempt to access global field properties on non-root process");
     return this->EclipseState::globalFieldProps();
 }
@@ -255,7 +255,7 @@ const FieldPropsManager& ParallelEclipseState::globalFieldProps() const
 
 const EclipseGrid& ParallelEclipseState::getInputGrid() const
 {
-    if (Dune::MPIHelper::getCollectiveCommunication().rank() != 0)
+    if (m_comm.rank() != 0)
         OPM_THROW(std::runtime_error, "Attempt to access eclipse grid on non-root process");
     return this->EclipseState::getInputGrid();
 }
@@ -269,8 +269,7 @@ void ParallelEclipseState::switchToGlobalProps()
 
 void ParallelEclipseState::switchToDistributedProps()
 {
-    const auto& comm = Dune::MPIHelper::getCollectiveCommunication();
-    if (comm.size() == 1) // No need for the parallel frontend
+    if (m_comm.size() == 1) // No need for the parallel frontend
         return;
 
     m_parProps = true;
