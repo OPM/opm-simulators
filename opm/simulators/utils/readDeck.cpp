@@ -352,7 +352,7 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
         errorGuard->clear();
     }
 
-    parseSuccess = comm.min(parseSuccess);
+    parseSuccess = Dune::MPIHelper::getCollectiveCommunication().min(parseSuccess);
 
     if (!parseSuccess)
     {
