@@ -262,7 +262,7 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
                 // too expensive however since doing so will create a copy
                 // of the grid inside the optional<>.
                 const auto rst_state = RestartIO::RstState::
-                    load(std::move(rst_view), &eclipseState->getInputGrid());
+                    load(std::move(rst_view), eclipseState->runspec(), &eclipseState->getInputGrid());
 
                 eclipseState->loadRestartAquifers(rst_state.aquifers);
 
