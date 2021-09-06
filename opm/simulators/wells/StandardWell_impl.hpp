@@ -1471,14 +1471,14 @@ namespace Opm
                 const double well_tw_fraction = well_index_[perf] / total_tw;
                 double total_mobility = 0.0;
                 for (int p = 0; p < np; ++p) {
-                    int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(p);
+                    int ebosPhaseIdx = this->flowPhaseToEbosPhaseIdx(p);
                     total_mobility += fs.invB(ebosPhaseIdx).value() * intQuants.mobility(ebosPhaseIdx).value();
                 }
                 if constexpr (has_solvent) {
                     total_mobility += intQuants.solventInverseFormationVolumeFactor().value() * intQuants.solventMobility().value();
                 }
                 for (int p = 0; p < np; ++p) {
-                    int ebosPhaseIdx = flowPhaseToEbosPhaseIdx(p);
+                    int ebosPhaseIdx = this->flowPhaseToEbosPhaseIdx(p);
                     perfRates[perf * num_components_ + p] = well_tw_fraction * intQuants.mobility(ebosPhaseIdx).value() / total_mobility;
                 }
                 if constexpr (has_solvent) {
@@ -2452,7 +2452,7 @@ namespace Opm
             // the reciprocal FVF.
             const auto connMob =
                 mobility[ this->flowPhaseToEbosCompIdx(p) ].value()
-                    * fs.invB(flowPhaseToEbosPhaseIdx(p)).value();
+                    * fs.invB(this->flowPhaseToEbosPhaseIdx(p)).value();
 
             connPI[p] = connPICalc(connMob);
         }
@@ -2509,6 +2509,6 @@ namespace Opm
 
         const auto zero   = EvalWell { this->numWellEq_ + Indices::numEq, 0.0 };
         const auto mt     = std::accumulate(mobility.begin(), mobility.end(), zero);
-        connII[phase_pos] = connIICalc(mt.value() * fs.invB(flowPhaseToEbosPhaseIdx(phase_pos)).value());
+        connII[phase_pos] = connIICalc(mt.value() * fs.invB(this->flowPhaseToEbosPhaseIdx(phase_pos)).value());
     }
 } // namespace Opm
