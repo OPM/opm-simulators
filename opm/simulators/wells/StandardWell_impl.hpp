@@ -653,7 +653,7 @@ namespace Opm
             const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
             EvalWell cq_s_foam = cq_s[gasCompIdx] * well_efficiency_factor_;
             if (this->isInjector()) {
-                cq_s_foam *= wfoam();
+                cq_s_foam *= this->wfoam();
             } else {
                 cq_s_foam *= this->extendEval(intQuants.foamConcentration());
             }
