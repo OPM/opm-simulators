@@ -211,7 +211,7 @@ namespace WellGroupHelpers
             return;
 
         const auto [name, number] = *gpm->region();
-        const double error = gpm->pressure_target() - regional_values.fpr(number);
+        const double error = gpm->pressure_target() - regional_values.pressure(number);
         double current_rate = 0.0;
         const auto& pu = well_state.phaseUsage();
         double sign = 1.0;
