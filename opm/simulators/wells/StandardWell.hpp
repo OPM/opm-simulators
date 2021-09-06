@@ -262,7 +262,6 @@ namespace Opm
 
     protected:
         // protected member variables from the Base class
-        using Base::well_ecl_;
         using Base::param_;
         using Base::well_efficiency_factor_;
         using Base::perf_depth_;

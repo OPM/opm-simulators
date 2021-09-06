@@ -1688,7 +1688,7 @@ namespace Opm
         auto& ws = well_state_copy.well(this->index_of_well_);
 
         //  Set current control to bhp, and bhp value in state, modify bhp limit in control object.
-        if (well_ecl_.isInjector()) {
+        if (this->well_ecl_.isInjector()) {
             ws.injection_cmode = Well::InjectorCMode::BHP;
         } else {
             ws.production_cmode = Well::ProducerCMode::BHP;
@@ -1697,7 +1697,7 @@ namespace Opm
 
         // initialized the well rates with the potentials i.e. the well rates based on bhp
         const int np = number_of_phases_;
-        const double sign = well_ecl_.isInjector() ? 1.0 : -1.0;
+        const double sign = this->well_ecl_.isInjector() ? 1.0 : -1.0;
         for (int phase = 0; phase < np; ++phase){
             well_state_copy.wellRates(index_of_well_)[phase]
                     = sign * ws.well_potentials[phase];
@@ -1733,9 +1733,9 @@ namespace Opm
         std::vector<double> potentials(number_of_phases_, 0.0);
         const auto& summary_state = ebos_simulator.vanguard().summaryState();
 
-        const auto& well = well_ecl_;
+        const auto& well = this->well_ecl_;
         if (well.isInjector()){
-            const auto& controls = well_ecl_.injectionControls(summary_state);
+            const auto& controls = this->well_ecl_.injectionControls(summary_state);
             auto bhp_at_thp_limit = computeBhpAtThpLimitInj(ebos_simulator, summary_state, deferred_logger);
             if (bhp_at_thp_limit) {
                 const double bhp = std::min(*bhp_at_thp_limit, controls.bhp_limit);
@@ -1770,7 +1770,7 @@ namespace Opm
         auto bhp_at_thp_limit = computeBhpAtThpLimitProdWithAlq(
                               ebos_simulator, summary_state, deferred_logger, alq);
         if (bhp_at_thp_limit) {
-            const auto& controls = well_ecl_.productionControls(summary_state);
+            const auto& controls = this->well_ecl_.productionControls(summary_state);
             bhp = std::max(*bhp_at_thp_limit, controls.bhp_limit);
             computeWellRatesWithBhpPotential(ebos_simulator, bhp, potentials, deferred_logger);
         }
@@ -1778,7 +1778,7 @@ namespace Opm
             deferred_logger.warning("FAILURE_GETTING_CONVERGED_POTENTIAL",
                 "Failed in getting converged thp based potential calculation for well "
                 + name() + ". Instead the bhp based value is used");
-            const auto& controls = well_ecl_.productionControls(summary_state);
+            const auto& controls = this->well_ecl_.productionControls(summary_state);
             bhp = controls.bhp_limit;
             computeWellRatesWithBhpPotential(ebos_simulator, bhp, potentials, deferred_logger);
         }
@@ -2045,7 +2045,7 @@ namespace Opm
               DeferredLogger& deferred_logger) const
     {
         if constexpr (Base::has_polymermw) {
-            const int water_table_id = well_ecl_.getPolymerProperties().m_skprwattable;
+            const int water_table_id = this->well_ecl_.getPolymerProperties().m_skprwattable;
             if (water_table_id <= 0) {
                 OPM_DEFLOG_THROW(std::runtime_error, "Unused SKPRWAT table id used for well " << name(), deferred_logger);
             }
@@ -2079,7 +2079,7 @@ namespace Opm
             if (poly_inj_conc == 0.) {
                 return sign * pskinwater(throughput, water_velocity_abs, deferred_logger);
             }
-            const int polymer_table_id = well_ecl_.getPolymerProperties().m_skprpolytable;
+            const int polymer_table_id = this->well_ecl_.getPolymerProperties().m_skprpolytable;
             if (polymer_table_id <= 0) {
                 OPM_DEFLOG_THROW(std::runtime_error, "Unavailable SKPRPOLY table id used for well " << name(), deferred_logger);
             }
@@ -2114,7 +2114,7 @@ namespace Opm
                DeferredLogger& deferred_logger) const
     {
         if constexpr (Base::has_polymermw) {
-            const int table_id = well_ecl_.getPolymerProperties().m_plymwinjtable;
+            const int table_id = this->well_ecl_.getPolymerProperties().m_plymwinjtable;
             const auto& table_func = PolymerModule::getPlymwinjTable(table_id);
             const EvalWell throughput_eval(this->numWellEq_ + Indices::numEq, throughput);
             EvalWell molecular_weight(this->numWellEq_ + Indices::numEq, 0.);
