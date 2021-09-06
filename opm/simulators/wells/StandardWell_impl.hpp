@@ -433,7 +433,7 @@ namespace Opm
         std::vector<RateVector> connectionRates = connectionRates_; // Copy to get right size.
         auto& perf_data = ws.perf_data;
         auto& perf_rates = perf_data.phase_rates;
-        for (int perf = 0; perf < number_of_perforations_; ++perf) {
+        for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
             // Calculate perforation quantities.
             std::vector<EvalWell> cq_s(num_components_, {this->numWellEq_ + Indices::numEq, 0.0});
             EvalWell water_flux_s{this->numWellEq_ + Indices::numEq, 0.0};
@@ -937,7 +937,7 @@ namespace Opm
         std::fill(ipr_a_.begin(), ipr_a_.end(), 0.);
         std::fill(ipr_b_.begin(), ipr_b_.end(), 0.);
 
-        for (int perf = 0; perf < number_of_perforations_; ++perf) {
+        for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
             std::vector<EvalWell> mob(num_components_, {this->numWellEq_ + Indices::numEq, 0.0});
             // TODO: mabye we should store the mobility somewhere, so that we only need to calculate it one per iteration
             getMobilityEval(ebos_simulator, perf, mob, deferred_logger);
@@ -1115,7 +1115,7 @@ namespace Opm
     {
         bool all_drawdown_wrong_direction = true;
 
-        for (int perf = 0; perf < number_of_perforations_; ++perf) {
+        for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
             const int cell_idx = this->well_cells_[perf];
             const auto& intQuants = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
             const auto& fs = intQuants.fluidState();
@@ -1207,7 +1207,7 @@ namespace Opm
                                                 std::vector<double>& rvmax_perf,
                                                 std::vector<double>& surf_dens_perf) const
     {
-        const int nperf = number_of_perforations_;
+        const int nperf = this->number_of_perforations_;
         const PhaseUsage& pu = phaseUsage();
         b_perf.resize(nperf * num_components_);
         surf_dens_perf.resize(nperf * num_components_);
@@ -1435,7 +1435,7 @@ namespace Opm
                                            const std::vector<double>& surf_dens_perf)
     {
         // Compute densities
-        const int nperf = number_of_perforations_;
+        const int nperf = this->number_of_perforations_;
         const int np = number_of_phases_;
         std::vector<double> perfRates(b_perf.size(),0.0);
         const auto& ws = well_state.well(this->index_of_well_);
@@ -1649,7 +1649,7 @@ namespace Opm
 
         const bool allow_cf = this->getAllowCrossFlow();
 
-        for (int perf = 0; perf < number_of_perforations_; ++perf) {
+        for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
             const int cell_idx = this->well_cells_[perf];
             const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
             // flux for each perforation
@@ -1917,9 +1917,9 @@ namespace Opm
                 const auto& perf_data = ws.perf_data;
                 const auto& water_velocity = perf_data.water_velocity;
                 const auto& skin_pressure = perf_data.skin_pressure;
-                for (int perf = 0; perf < number_of_perforations_; ++perf) {
+                for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
                     this->primary_variables_[Bhp + 1 + perf] = water_velocity[perf];
-                    this->primary_variables_[Bhp + 1 + number_of_perforations_ + perf] = skin_pressure[perf];
+                    this->primary_variables_[Bhp + 1 + this->number_of_perforations_ + perf] = skin_pressure[perf];
                 }
             }
         }
@@ -2142,7 +2142,7 @@ namespace Opm
             if (this->isInjector()) {
                 auto& ws = well_state.well(this->index_of_well_);
                 auto& perf_water_throughput = ws.perf_data.water_throughput;
-                for (int perf = 0; perf < number_of_perforations_; ++perf) {
+                for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
                     const double perf_water_vel = this->primary_variables_[Bhp + 1 + perf];
                     // we do not consider the formation damage due to water flowing from reservoir into wellbore
                     if (perf_water_vel > 0.) {
@@ -2206,7 +2206,7 @@ namespace Opm
         const auto& perf_data = ws.perf_data;
         const auto& perf_water_throughput = perf_data.water_throughput;
         const double throughput = perf_water_throughput[perf];
-        const int pskin_index = Bhp + 1 + number_of_perforations_ + perf;
+        const int pskin_index = Bhp + 1 + this->number_of_perforations_ + perf;
 
         EvalWell poly_conc(this->numWellEq_ + Indices::numEq, 0.0);
         poly_conc.setValue(this->wpolymer());
@@ -2411,7 +2411,7 @@ namespace Opm
         std::vector<double> well_q_s(num_components_, 0.);
         const EvalWell& bhp = this->getBhp();
         const bool allow_cf = this->getAllowCrossFlow() || openCrossFlowAvoidSingularity(ebosSimulator);
-        for (int perf = 0; perf < number_of_perforations_; ++perf) {
+        for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
             const int cell_idx = this->well_cells_[perf];
             const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
             std::vector<Scalar> mob(num_components_, 0.);
