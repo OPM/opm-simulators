@@ -262,7 +262,6 @@ namespace Opm
 
     protected:
         // protected functions from the Base class
-        using Base::wsolvent;
         using Base::wpolymer;
         using Base::wfoam;
         using Base::mostStrictBhpFromBhpLimits;

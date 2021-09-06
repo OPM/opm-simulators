@@ -133,8 +133,8 @@ namespace Opm
         if constexpr (has_zFraction) {
             if (this->isInjector()) {
                 const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-                b_perfcells_dense[gasCompIdx] *= (1.0 - wsolvent());
-                b_perfcells_dense[gasCompIdx] += wsolvent()*intQuants.zPureInvFormationVolumeFactor().value();
+                b_perfcells_dense[gasCompIdx] *= (1.0 - this->wsolvent());
+                b_perfcells_dense[gasCompIdx] += this->wsolvent()*intQuants.zPureInvFormationVolumeFactor().value();
             }
         }
 
@@ -200,8 +200,8 @@ namespace Opm
         if constexpr (has_zFraction) {
             if (this->isInjector()) {
                 const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-                b_perfcells_dense[gasCompIdx] *= (1.0 - wsolvent());
-                b_perfcells_dense[gasCompIdx] += wsolvent()*intQuants.zPureInvFormationVolumeFactor().value();
+                b_perfcells_dense[gasCompIdx] *= (1.0 - this->wsolvent());
+                b_perfcells_dense[gasCompIdx] += this->wsolvent()*intQuants.zPureInvFormationVolumeFactor().value();
             }
         }
 
@@ -665,7 +665,7 @@ namespace Opm
             const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
             cq_s_zfrac_effective = cq_s[gasCompIdx];
             if (this->isInjector()) {
-                cq_s_zfrac_effective *= wsolvent();
+                cq_s_zfrac_effective *= this->wsolvent();
             } else if (cq_s_zfrac_effective.value() != 0.0) {
                 const double dis_gas_frac = perf_dis_gas_rate / cq_s_zfrac_effective.value();
                 cq_s_zfrac_effective *= this->extendEval(dis_gas_frac*intQuants.xVolume() + (1.0-dis_gas_frac)*intQuants.yVolume());
