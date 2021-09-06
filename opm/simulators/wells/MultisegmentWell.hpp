@@ -180,9 +180,6 @@ namespace Opm
         // multi-phase flow model
         WellSegments::MultiPhaseModel multiphaseModel() const;
 
-        // protected functions from the Base class
-        using Base::getAllowCrossFlow;
-
         // the intial amount of fluids in each segment under surface condition
         std::vector<std::vector<double> > segment_fluid_initial_;
 

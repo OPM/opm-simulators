@@ -1198,7 +1198,7 @@ namespace Opm
         //
         // but for the top segment, the pressure equation will be the well control equation, and the other three will be the same.
 
-        const bool allow_cf = getAllowCrossFlow() || openCrossFlowAvoidSingularity(ebosSimulator);
+        const bool allow_cf = this->getAllowCrossFlow() || openCrossFlowAvoidSingularity(ebosSimulator);
 
         const int nseg = this->numberOfSegments();
 
@@ -1348,7 +1348,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     openCrossFlowAvoidSingularity(const Simulator& ebos_simulator) const
     {
-        return !getAllowCrossFlow() && allDrawDownWrongDirection(ebos_simulator);
+        return !this->getAllowCrossFlow() && allDrawDownWrongDirection(ebos_simulator);
     }
 
 
@@ -1524,7 +1524,7 @@ namespace Opm
     {
         // Calculate the rates that follow from the current primary variables.
         std::vector<EvalWell> well_q_s(this->num_components_, 0.0);
-        const bool allow_cf = getAllowCrossFlow() || openCrossFlowAvoidSingularity(ebosSimulator);
+        const bool allow_cf = this->getAllowCrossFlow() || openCrossFlowAvoidSingularity(ebosSimulator);
         const int nseg = this->numberOfSegments();
         for (int seg = 0; seg < nseg; ++seg) {
             // calculating the perforation rate for each perforation that belongs to this segment
