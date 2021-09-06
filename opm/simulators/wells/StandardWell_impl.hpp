@@ -2451,7 +2451,7 @@ namespace Opm
             // Note: E100's notion of PI value phase mobility includes
             // the reciprocal FVF.
             const auto connMob =
-                mobility[ flowPhaseToEbosCompIdx(p) ].value()
+                mobility[ this->flowPhaseToEbosCompIdx(p) ].value()
                     * fs.invB(flowPhaseToEbosPhaseIdx(p)).value();
 
             connPI[p] = connPICalc(connMob);

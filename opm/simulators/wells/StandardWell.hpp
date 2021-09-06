@@ -262,7 +262,6 @@ namespace Opm
 
     protected:
         // protected functions from the Base class
-        using Base::flowPhaseToEbosCompIdx;
         using Base::flowPhaseToEbosPhaseIdx;
         using Base::ebosCompIdxToFlowCompIdx;
         using Base::wsalt;
