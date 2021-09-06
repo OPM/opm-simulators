@@ -955,7 +955,7 @@ namespace Opm
             }
 
             // the well index associated with the connection
-            const double tw_perf = well_index_[perf]*ebos_simulator.problem().template rockCompTransMultiplier<double>(int_quantities, cell_idx);
+            const double tw_perf = this->well_index_[perf]*ebos_simulator.problem().template rockCompTransMultiplier<double>(int_quantities, cell_idx);
 
             // TODO: there might be some indices related problems here
             // phases vs components
@@ -1276,7 +1276,7 @@ namespace Opm
                 std::vector<EvalWell> mob(num_components_, 0.0);
                 getMobility(ebosSimulator, perf, mob);
                 const double trans_mult = ebosSimulator.problem().template rockCompTransMultiplier<double>(int_quants, cell_idx);
-                const double Tw = well_index_[perf] * trans_mult;
+                const double Tw = this->well_index_[perf] * trans_mult;
                 std::vector<EvalWell> cq_s(num_components_, 0.0);
                 EvalWell perf_press;
                 double perf_dis_gas_rate = 0.;
@@ -1535,7 +1535,7 @@ namespace Opm
                 std::vector<EvalWell> mob(num_components_, 0.0);
                 getMobility(ebosSimulator, perf, mob);
                 const double trans_mult = ebosSimulator.problem().template rockCompTransMultiplier<double>(int_quants, cell_idx);
-                const double Tw = well_index_[perf] * trans_mult;
+                const double Tw = this->well_index_[perf] * trans_mult;
                 std::vector<EvalWell> cq_s(num_components_, 0.0);
                 EvalWell perf_press;
                 double perf_dis_gas_rate = 0.;
