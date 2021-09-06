@@ -211,26 +211,14 @@ namespace Opm {
 
                 bool has(const RegionID reg) const
                 {
-                    const auto& i = attr_.find(reg);
-
-                    if (i == attr_.end()) {
-                        return false;
-                    }
-
-                    return true;
+                    return this->attr_.find(reg) != this->attr_.end();
                 }
 
                 void insert(const RegionID r, const Attributes& attr)
                 {
-                    using VT = typename AttributeMap::value_type;
-
-                    auto v = std::make_unique<Value>(attr);
-
-                    const auto stat = attr_.insert(VT(r, std::move(v)));
-
-                    if (stat.second) {
-                        // Region's representative cell.
-                        stat.first->second->cell_ = -1.0;
+                    auto [pos, inserted] = this->attr_.try_emplace(r, std::make_unique<Value>(attr));
+                    if (inserted) {
+                        pos->second->cell_ = -1; // NOT -1.0 -- "cell_" is 'int'
                     }
                 }
 

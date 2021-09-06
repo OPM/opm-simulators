@@ -555,17 +555,16 @@ namespace WellGroupHelpers
     }
 
     void updateSurfaceRatesInjectionGroups(const Group& group,
-                                             const Schedule& schedule,
-                                             const int reportStepIdx,
-                                             const WellState& wellStateNupcol,
-                                             WellState& wellState,
-                                             GroupState& group_state)
+                                           const Schedule& schedule,
+                                           const int reportStepIdx,
+                                           const WellState& wellStateNupcol,
+                                           GroupState& group_state)
     {
         for (const std::string& groupName : group.groups()) {
             const Group& groupTmp = schedule.getGroup(groupName, reportStepIdx);
-            updateSurfaceRatesInjectionGroups(groupTmp, schedule, reportStepIdx, wellStateNupcol, wellState, group_state);
+            updateSurfaceRatesInjectionGroups(groupTmp, schedule, reportStepIdx, wellStateNupcol, group_state);
         }
-        const int np = wellState.numPhases();
+        const int np = wellStateNupcol.numPhases();
         std::vector<double> rates(np, 0.0);
         for (int phase = 0; phase < np; ++phase) {
             rates[phase] = sumWellPhaseRates(false,

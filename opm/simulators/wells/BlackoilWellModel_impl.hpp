@@ -203,16 +203,14 @@ namespace Opm {
         WellGroupHelpers::setCmodeGroup(fieldGroup, schedule(), summaryState, timeStepIdx, this->wellState(), this->groupState());
 
         // Compute reservoir volumes for RESV controls.
-        rateConverter_.reset(new RateConverterType (phase_usage_,
-                                                    std::vector<int>(local_num_cells_, 0)));
+        rateConverter_.reset(new RateConverterType (phase_usage_, std::vector<int>(local_num_cells_, 0)));
         rateConverter_->template defineState<ElementContext>(ebosSimulator_);
 
-        // Compute reservoir volumes for RESV controls.
+        // Compute regional average pressures used by gpmaint
         const auto& fp = this->eclState_.fieldProps();
-        const auto fipnum = fp.get_int("FIPNUM");
-        gpmaint_.reset(new AverageRegionalPressureType (phase_usage_,
-                                                            fipnum));
-        gpmaint_->template defineState<ElementContext>(ebosSimulator_);
+        const auto& fipnum = fp.get_int("FIPNUM");
+        regionalAveragePressureCalculator_.reset(new AverageRegionalPressureType (phase_usage_,fipnum));
+        regionalAveragePressureCalculator_->template defineState<ElementContext>(ebosSimulator_);
 
         {
             const auto& sched_state = this->schedule()[timeStepIdx];
@@ -465,10 +463,10 @@ namespace Opm {
         // update the rate converter with current averages pressures etc in
         rateConverter_->template defineState<ElementContext>(ebosSimulator_);
 
-        gpmaint_->template defineState<ElementContext>(ebosSimulator_);
+        regionalAveragePressureCalculator_->template defineState<ElementContext>(ebosSimulator_);
         const Group& fieldGroup = schedule_.getGroup("FIELD", reportStepIdx);
         WellGroupHelpers::updateGpMaintTargetForGroups(fieldGroup,
-                                                       schedule_, *gpmaint_, reportStepIdx, dt, this->wellState(), this->groupState());
+                                                       schedule_, *regionalAveragePressureCalculator_, reportStepIdx, dt, this->wellState(), this->groupState());
 
 
         // calculate the well potentials

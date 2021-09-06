@@ -322,7 +322,7 @@ namespace Opm {
             bool alternative_well_rate_init_{};
 
             std::unique_ptr<RateConverterType> rateConverter_{};
-            std::unique_ptr<AverageRegionalPressureType> gpmaint_{};
+            std::unique_ptr<AverageRegionalPressureType> regionalAveragePressureCalculator_{};
 
 
             SimulatorReportSingle last_report_{};

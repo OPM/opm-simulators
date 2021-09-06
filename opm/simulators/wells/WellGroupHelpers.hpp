@@ -157,11 +157,10 @@ namespace WellGroupHelpers
                                              GroupState& group_state);
 
     void updateSurfaceRatesInjectionGroups(const Group& group,
-                                             const Schedule& schedule,
-                                             const int reportStepIdx,
-                                             const WellState& wellStateNupcol,
-                                             WellState& wellState,
-                                             GroupState& group_state);
+                                           const Schedule& schedule,
+                                           const int reportStepIdx,
+                                           const WellState& wellStateNupcol,
+                                           GroupState& group_state);
 
     void updateWellRates(const Group& group,
                          const Schedule& schedule,

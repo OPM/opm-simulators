@@ -68,7 +68,7 @@ namespace Opm {
              * deck.
              */
             AverageRegionalPressure(const PhaseUsage& phaseUsage,
-                                      const Region&   region)
+                                    const Region&   region)
                 : phaseUsage_(phaseUsage)
                 , rmap_ (region)
                 , attr_ (rmap_, Attributes())
@@ -91,13 +91,13 @@ namespace Opm {
                     numRegions = std::max(numRegions, reg);
                 }
                 numRegions = comm.max(numRegions);
-                for (int reg = 0; reg < numRegions; ++ reg) {
+                for (int reg = 1; reg <= numRegions ; ++ reg) {
                     if(!attr_.has(reg))
                         attr_.insert(reg, Attributes());
                 }
                 // create map from cell to region
                 // and set all attributes to zero
-                for (int reg = 0; reg < numRegions; ++ reg) {
+                for (int reg = 1; reg <= numRegions ; ++ reg) {
                     auto& ra = attr_.attributes(reg);
                     ra.pressure = 0.0;
                     ra.pv = 0.0;
@@ -110,20 +110,9 @@ namespace Opm {
                 // quantities for hydrocarbon volume average
                 std::unordered_map<RegionId, Attributes> attributes_hpv;
 
-                for (int reg = 0; reg < numRegions; ++ reg) {
+                for (int reg = 1; reg <= numRegions ; ++ reg) {
                     attributes_pv.insert({reg, Attributes()});
                     attributes_hpv.insert({reg, Attributes()});
-                }
-
-                for (int reg = 0; reg < numRegions; ++ reg) {
-                    auto& ra = attributes_pv[reg];
-                    ra.pressure = 0.0;
-                    ra.pv = 0.0;
-                }
-                for (int reg = 0; reg < numRegions; ++ reg) {
-                    auto& ra = attributes_hpv[reg];
-                    ra.pressure = 0.0;
-                    ra.pv = 0.0;
                 }
 
                 ElementContext elemCtx( simulator );
@@ -184,7 +173,7 @@ namespace Opm {
                     }
                 }
 
-                for (int reg = 0; reg < numRegions; ++ reg) {
+                for (int reg = 1; reg <= numRegions ; ++ reg) {
                       auto& ra = attr_.attributes(reg);
                       const double hpv_sum = comm.sum(attributes_hpv[reg].pv);
                       // TODO: should we have some epsilon here instead of zero?
