@@ -263,7 +263,6 @@ namespace Opm
     protected:
         // protected member variables from the Base class
 
-        using Base::ipr_a_;
         using Base::ipr_b_;
 
         Eval getPerfCellPressure(const FluidState& fs) const;
