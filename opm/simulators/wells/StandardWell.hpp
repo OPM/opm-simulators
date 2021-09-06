@@ -262,7 +262,6 @@ namespace Opm
 
     protected:
         // protected member variables from the Base class
-        using Base::connectionRates_;
 
         using Base::perf_rep_radius_;
         using Base::perf_length_;

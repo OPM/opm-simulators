@@ -430,7 +430,7 @@ namespace Opm
 
         const int np = this->number_of_phases_;
 
-        std::vector<RateVector> connectionRates = connectionRates_; // Copy to get right size.
+        std::vector<RateVector> connectionRates = this->connectionRates_; // Copy to get right size.
         auto& perf_data = ws.perf_data;
         auto& perf_rates = perf_data.phase_rates;
         for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
@@ -483,7 +483,7 @@ namespace Opm
             }
         }
         // Update the connection
-        connectionRates_ = connectionRates;
+        this->connectionRates_ = connectionRates;
 
         // accumulate resWell_ and invDuneD_ in parallel to get effects of all perforations (might be distributed)
         wellhelpers::sumDistributedWellEntries(this->invDuneD_[0][0], this->resWell_[0],
