@@ -632,7 +632,7 @@ namespace Opm
             const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
             EvalWell cq_s_poly = cq_s[waterCompIdx];
             if (this->isInjector()) {
-                cq_s_poly *= wpolymer();
+                cq_s_poly *= this->wpolymer();
             } else {
                 cq_s_poly *= this->extendEval(intQuants.polymerConcentration() * intQuants.polymerViscosityCorrection());
             }
@@ -1968,7 +1968,7 @@ namespace Opm
         if (PolymerModule::hasPlyshlog()) {
             // we do not calculate the shear effects for injection wells when they do not
             // inject polymer.
-            if (this->isInjector() && wpolymer() == 0.) {
+            if (this->isInjector() && this->wpolymer() == 0.) {
                 return;
             }
             // compute the well water velocity with out shear effects.
@@ -2118,7 +2118,7 @@ namespace Opm
             const auto& table_func = PolymerModule::getPlymwinjTable(table_id);
             const EvalWell throughput_eval(this->numWellEq_ + Indices::numEq, throughput);
             EvalWell molecular_weight(this->numWellEq_ + Indices::numEq, 0.);
-            if (wpolymer() == 0.) { // not injecting polymer
+            if (this->wpolymer() == 0.) { // not injecting polymer
                 return molecular_weight;
             }
             molecular_weight = table_func.eval(throughput_eval, abs(water_velocity));
@@ -2209,7 +2209,7 @@ namespace Opm
         const int pskin_index = Bhp + 1 + number_of_perforations_ + perf;
 
         EvalWell poly_conc(this->numWellEq_ + Indices::numEq, 0.0);
-        poly_conc.setValue(wpolymer());
+        poly_conc.setValue(this->wpolymer());
 
         // equation for the skin pressure
         const EvalWell eq_pskin = this->primary_variables_evaluation_[pskin_index]
