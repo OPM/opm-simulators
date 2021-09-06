@@ -246,7 +246,7 @@ namespace Opm
                           std::vector<double>& well_potentials,
                           DeferredLogger& deferred_logger)
     {
-        const int np = number_of_phases_;
+        const int np = this->number_of_phases_;
         well_potentials.resize(np, 0.0);
 
         // Stopped wells have zero potential.
@@ -364,7 +364,7 @@ namespace Opm
         well_copy.scaleSegmentPressuresWithBhp(well_state_copy);
 
         // initialized the well rates with the potentials i.e. the well rates based on bhp
-        const int np = number_of_phases_;
+        const int np = this->number_of_phases_;
         const double sign = well_copy.well_ecl_.isInjector() ? 1.0 : -1.0;
         for (int phase = 0; phase < np; ++phase){
             ws.surface_rates[phase] = sign * ws.well_potentials[phase];
@@ -395,7 +395,7 @@ namespace Opm
     computeWellPotentialWithTHP(const Simulator& ebos_simulator,
                                 DeferredLogger& deferred_logger) const
     {
-        std::vector<double> potentials(number_of_phases_, 0.0);
+        std::vector<double> potentials(this->number_of_phases_, 0.0);
         const auto& summary_state = ebos_simulator.vanguard().summaryState();
 
         const auto& well = this->well_ecl_;
@@ -463,8 +463,8 @@ namespace Opm
     {
         for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
 
-            std::vector<double> kr(number_of_phases_, 0.0);
-            std::vector<double> density(number_of_phases_, 0.0);
+            std::vector<double> kr(this->number_of_phases_, 0.0);
+            std::vector<double> density(this->number_of_phases_, 0.0);
 
             const int cell_idx = well_cells_[perf];
             const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
@@ -498,7 +498,7 @@ namespace Opm
 
             // calculate the average density
             double average_density = 0.;
-            for (int p = 0; p < number_of_phases_; ++p) {
+            for (int p = 0; p < this->number_of_phases_; ++p) {
                 average_density += kr[p] * density[p];
             }
             average_density /= sum_kr;
@@ -851,7 +851,7 @@ namespace Opm
             // we need to check the BHP limit
 
             double temp = 0;
-            for (int p = 0; p < number_of_phases_; ++p) {
+            for (int p = 0; p < this->number_of_phases_; ++p) {
                 temp += ipr_a_[p] - ipr_b_[p] * bhp_limit;
             }
             if (temp < 0.) {
@@ -962,7 +962,7 @@ namespace Opm
             // ipr values for the perforation
             std::vector<double> ipr_a_perf(ipr_a_.size());
             std::vector<double> ipr_b_perf(ipr_b_.size());
-            for (int p = 0; p < number_of_phases_; ++p) {
+            for (int p = 0; p < this->number_of_phases_; ++p) {
                 const double tw_mob = tw_perf * mob[p].value() * b_perf[p];
                 ipr_a_perf[p] += tw_mob * pressure_diff;
                 ipr_b_perf[p] += tw_mob;
@@ -988,7 +988,7 @@ namespace Opm
                 ipr_b_perf[oil_comp_idx] += vap_oil_b;
             }
 
-            for (int p = 0; p < number_of_phases_; ++p) {
+            for (int p = 0; p < this->number_of_phases_; ++p) {
                 // TODO: double check the indices here
                 ipr_a_[ebosCompIdxToFlowCompIdx(p)] += ipr_a_perf[p];
                 ipr_b_[ebosCompIdxToFlowCompIdx(p)] += ipr_b_perf[p];
@@ -1291,7 +1291,7 @@ namespace Opm
 
                 // store the perf pressure and rates
                 for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
-                    perf_rates[perf*number_of_phases_ + ebosCompIdxToFlowCompIdx(comp_idx)] = cq_s[comp_idx].value();
+                    perf_rates[perf*this->number_of_phases_ + ebosCompIdxToFlowCompIdx(comp_idx)] = cq_s[comp_idx].value();
                 }
                 perf_press_state[perf] = perf_press.value();
 
