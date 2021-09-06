@@ -262,7 +262,6 @@ namespace Opm
 
     protected:
         // protected member variables from the Base class
-        using Base::index_of_well_;
         using Base::num_components_;
         using Base::connectionRates_;
 

@@ -1157,7 +1157,7 @@ namespace Opm
                                    const WellState& well_state,
                                    DeferredLogger& deferred_logger)
     {
-        const double bhp = well_state.well(index_of_well_).bhp;
+        const double bhp = well_state.well(this->index_of_well_).bhp;
         std::vector<double> well_rates;
         computeWellRatesWithBhp(ebos_simulator, bhp, well_rates, deferred_logger);
 
@@ -1211,7 +1211,7 @@ namespace Opm
         const PhaseUsage& pu = phaseUsage();
         b_perf.resize(nperf * num_components_);
         surf_dens_perf.resize(nperf * num_components_);
-        const int w = index_of_well_;
+        const int w = this->index_of_well_;
         const auto& ws = well_state.well(this->index_of_well_);
 
         const bool waterPresent = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx);
@@ -1699,7 +1699,7 @@ namespace Opm
         const int np = this->number_of_phases_;
         const double sign = this->well_ecl_.isInjector() ? 1.0 : -1.0;
         for (int phase = 0; phase < np; ++phase){
-            well_state_copy.wellRates(index_of_well_)[phase]
+            well_state_copy.wellRates(this->index_of_well_)[phase]
                     = sign * ws.well_potentials[phase];
         }
         // creating a copy of the well itself, to avoid messing up the explicit informations
