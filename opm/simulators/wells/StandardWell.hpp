@@ -282,21 +282,13 @@ namespace Opm
         using Base::wsolvent;
         using Base::wpolymer;
         using Base::wfoam;
-        using Base::scalingFactor;
         using Base::mostStrictBhpFromBhpLimits;
-        using Base::updateWellOperability;
-        using Base::checkWellOperability;
-        using Base::wellIsStopped;
-        using Base::calculateBhpFromThp;
         using Base::getALQ;
 
         // protected member variables from the Base class
-        using Base::current_step_;
         using Base::well_ecl_;
-        using Base::gravity_;
         using Base::param_;
         using Base::well_efficiency_factor_;
-        using Base::ref_depth_;
         using Base::perf_depth_;
         using Base::well_cells_;
         using Base::number_of_perforations_;
@@ -312,7 +304,6 @@ namespace Opm
         using Base::bore_diameters_;
         using Base::ipr_a_;
         using Base::ipr_b_;
-        using Base::changed_to_stopped_this_step_;
 
         Eval getPerfCellPressure(const FluidState& fs) const;
 
