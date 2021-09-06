@@ -870,8 +870,8 @@ namespace Opm
     updatePrimaryVariablesNewton(const BVectorWell& dwells,
                                  const WellState& /* well_state */) const
     {
-        const double dFLimit = param_.dwell_fraction_max_;
-        const double dBHPLimit = param_.dbhp_max_rel_;
+        const double dFLimit = this->param_.dwell_fraction_max_;
+        const double dBHPLimit = this->param_.dbhp_max_rel_;
         this->StdWellEval::updatePrimaryVariablesNewton(dwells, dFLimit, dBHPLimit);
 
         updateExtraPrimaryVariables(dwells);
@@ -1329,8 +1329,8 @@ namespace Opm
         // For the polymer, energy and foam cases, there is one more mass balance equations of reservoir than wells
         assert((int(B_avg.size()) == num_components_) || has_polymer || has_energy || has_foam || has_brine || has_zFraction);
 
-        const double tol_wells = param_.tolerance_wells_;
-        const double maxResidualAllowed = param_.max_residual_allowed_;
+        const double tol_wells = this->param_.tolerance_wells_;
+        const double maxResidualAllowed = this->param_.max_residual_allowed_;
 
         std::vector<double> res;
         ConvergenceReport report = this->StdWellEval::getWellConvergence(well_state,
@@ -1559,7 +1559,7 @@ namespace Opm
     {
         if (!this->isOperable() && !this->wellIsStopped()) return;
 
-        if ( param_.matrix_add_well_contributions_ )
+        if (this->param_.matrix_add_well_contributions_)
         {
             // Contributions are already in the matrix itself
             return;
@@ -2241,7 +2241,7 @@ namespace Opm
 
         // checking the convergence of the extra equations related to polymer injectivity
         if constexpr (Base::has_polymermw) {
-            this->checkConvergencePolyMW(res, report, param_.max_residual_allowed_);
+            this->checkConvergencePolyMW(res, report, this->param_.max_residual_allowed_);
         }
     }
 
@@ -2373,7 +2373,7 @@ namespace Opm
                              const GroupState& group_state,
                              DeferredLogger& deferred_logger)
     {
-        const int max_iter = param_.max_inner_iter_wells_;
+        const int max_iter = this->param_.max_inner_iter_wells_;
         int it = 0;
         bool converged;
         do {

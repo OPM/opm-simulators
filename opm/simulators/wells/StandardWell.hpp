@@ -197,7 +197,7 @@ namespace Opm
         /// \brief Wether the Jacobian will also have well contributions in it.
         virtual bool jacobianContainsWellContributions() const override
         {
-            return param_.matrix_add_well_contributions_;
+            return this->param_.matrix_add_well_contributions_;
         }
 
         virtual void gasLiftOptimizationStage1 (
@@ -262,7 +262,6 @@ namespace Opm
 
     protected:
         // protected member variables from the Base class
-        using Base::param_;
         using Base::well_efficiency_factor_;
         using Base::perf_depth_;
         using Base::well_cells_;
