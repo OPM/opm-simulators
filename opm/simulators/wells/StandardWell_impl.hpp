@@ -472,7 +472,7 @@ namespace Opm
                     auto& perf_rate_solvent = perf_data.solvent_rates;
                     perf_rate_solvent[perf] = cq_s[componentIdx].value();
                 } else {
-                    perf_rates[perf*np + ebosCompIdxToFlowCompIdx(componentIdx)] = cq_s[componentIdx].value();
+                    perf_rates[perf*np + this->ebosCompIdxToFlowCompIdx(componentIdx)] = cq_s[componentIdx].value();
                 }
             }
 
@@ -1007,8 +1007,8 @@ namespace Opm
 
             for (int p = 0; p < number_of_phases_; ++p) {
                 // TODO: double check the indices here
-                ipr_a_[ebosCompIdxToFlowCompIdx(p)] += ipr_a_perf[p];
-                ipr_b_[ebosCompIdxToFlowCompIdx(p)] += ipr_b_perf[p];
+                ipr_a_[this->ebosCompIdxToFlowCompIdx(p)] += ipr_a_perf[p];
+                ipr_b_[this->ebosCompIdxToFlowCompIdx(p)] += ipr_b_perf[p];
             }
         }
         this->parallel_well_info_.communication().sum(ipr_a_.data(), ipr_a_.size());
@@ -1444,7 +1444,7 @@ namespace Opm
 
         for (int perf = 0; perf < nperf; ++perf) {
             for (int comp = 0; comp < np; ++comp) {
-                perfRates[perf * num_components_ + comp] =  perf_rates_state[perf * np + ebosCompIdxToFlowCompIdx(comp)];
+                perfRates[perf * num_components_ + comp] =  perf_rates_state[perf * np + this->ebosCompIdxToFlowCompIdx(comp)];
             }
         }
 
@@ -1663,7 +1663,7 @@ namespace Opm
                             cq_s, deferred_logger);
 
             for(int p = 0; p < np; ++p) {
-                well_flux[ebosCompIdxToFlowCompIdx(p)] += cq_s[p];
+                well_flux[this->ebosCompIdxToFlowCompIdx(p)] += cq_s[p];
             }
         }
         this->parallel_well_info_.communication().sum(well_flux.data(), well_flux.size());

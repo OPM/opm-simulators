@@ -262,7 +262,6 @@ namespace Opm
 
     protected:
         // protected functions from the Base class
-        using Base::ebosCompIdxToFlowCompIdx;
         using Base::wsalt;
         using Base::wsolvent;
         using Base::wpolymer;
