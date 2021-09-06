@@ -1299,7 +1299,7 @@ namespace Opm
                     // the cq_s entering mass balance equations need to consider the efficiency factors.
                     const EvalWell cq_s_effective = cq_s[comp_idx] * this->well_efficiency_factor_;
 
-                    connectionRates_[perf][comp_idx] = Base::restrictEval(cq_s_effective);
+                    this->connectionRates_[perf][comp_idx] = Base::restrictEval(cq_s_effective);
 
                     // subtract sum of phase fluxes in the well equations.
                     this->resWell_[seg][comp_idx] += cq_s_effective.value();
