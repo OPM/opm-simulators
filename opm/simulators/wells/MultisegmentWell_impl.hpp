@@ -789,7 +789,7 @@ namespace Opm
 
         // either use mobility of the perforation cell or calcualte its own
         // based on passing the saturation table index
-        const int satid = saturation_table_number_[perf] - 1;
+        const int satid = this->saturation_table_number_[perf] - 1;
         const int satid_elem = materialLawManager->satnumRegionIdx(cell_idx);
         if( satid == satid_elem ) { // the same saturation number is used. i.e. just use the mobilty from the cell
 
