@@ -1999,7 +1999,7 @@ namespace Opm
             if (PolymerModule::hasShrate()) {
                 // the equation for the water velocity conversion for the wells and reservoir are from different version
                 // of implementation. It can be changed to be more consistent when possible.
-                water_velocity *= PolymerModule::shrate( int_quant.pvtRegionIndex() ) / bore_diameters_[perf];
+                water_velocity *= PolymerModule::shrate( int_quant.pvtRegionIndex() ) / this->bore_diameters_[perf];
             }
             const EvalWell shear_factor = PolymerModule::computeShearFactor(polymer_concentration,
                                                                 int_quant.pvtRegionIndex(),
@@ -2168,7 +2168,7 @@ namespace Opm
         const auto& int_quants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
         const auto& fs = int_quants.fluidState();
         const EvalWell b_w = this->extendEval(fs.invB(FluidSystem::waterPhaseIdx));
-        const double area = M_PI * bore_diameters_[perf] * this->perf_length_[perf];
+        const double area = M_PI * this->bore_diameters_[perf] * this->perf_length_[perf];
         const int wat_vel_index = Bhp + 1 + perf;
         const unsigned water_comp_idx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
 
@@ -2194,7 +2194,7 @@ namespace Opm
         const auto& fs = int_quants.fluidState();
         const EvalWell b_w = this->extendEval(fs.invB(FluidSystem::waterPhaseIdx));
         const EvalWell water_flux_r = water_flux_s / b_w;
-        const double area = M_PI * bore_diameters_[perf] * this->perf_length_[perf];
+        const double area = M_PI * this->bore_diameters_[perf] * this->perf_length_[perf];
         const EvalWell water_velocity = water_flux_r / area;
         const int wat_vel_index = Bhp + 1 + perf;
 
