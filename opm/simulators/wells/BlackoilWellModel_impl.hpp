@@ -1050,7 +1050,7 @@ namespace Opm {
     getWellContributions(WellContributions& wellContribs) const
     {
         // prepare for StandardWells
-        wellContribs.setBlockSize(StandardWell<TypeTag>::numEq, StandardWell<TypeTag>::numStaticWellEq);
+        wellContribs.setBlockSize(StandardWell<TypeTag>::Indices::numEq, StandardWell<TypeTag>::numStaticWellEq);
 
         for(unsigned int i = 0; i < well_container_.size(); i++){
             auto& well = well_container_[i];

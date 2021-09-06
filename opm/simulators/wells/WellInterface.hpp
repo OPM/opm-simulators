@@ -88,14 +88,12 @@ public:
         typename BlackoilWellModel<TypeTag>::GLiftWellStateMap;
     using GLiftSyncGroups = typename GasLiftSingleWellGeneric::GLiftSyncGroups;
 
-    static const int numEq = Indices::numEq;
-    static const int numPhases = Indices::numPhases;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
-    using VectorBlockType = Dune::FieldVector<Scalar, numEq>;
-    using MatrixBlockType = Dune::FieldMatrix<Scalar, numEq, numEq>;
+    using VectorBlockType = Dune::FieldVector<Scalar, Indices::numEq>;
+    using MatrixBlockType = Dune::FieldMatrix<Scalar, Indices::numEq, Indices::numEq>;
     using BVector = Dune::BlockVector<VectorBlockType>;
-    using Eval = DenseAd::Evaluation<Scalar, /*size=*/numEq>;
+    using Eval = DenseAd::Evaluation<Scalar, /*size=*/Indices::numEq>;
 
     using RateConverterType =
     typename WellInterfaceFluidSystem<FluidSystem>::RateConverterType;
@@ -114,21 +112,13 @@ public:
     static constexpr bool has_polymermw = getPropValue<TypeTag, Properties::EnablePolymerMW>();
     static constexpr bool has_foam = getPropValue<TypeTag, Properties::EnableFoam>();
     static constexpr bool has_brine = getPropValue<TypeTag, Properties::EnableBrine>();
-    static const int contiSolventEqIdx = Indices::contiSolventEqIdx;
-    static const int contiZfracEqIdx = Indices::contiZfracEqIdx;
-    static const int contiPolymerEqIdx = Indices::contiPolymerEqIdx;
-    // index for the polymer molecular weight continuity equation
-    static const int contiPolymerMWEqIdx = Indices::contiPolymerMWEqIdx;
-    static const int contiFoamEqIdx = Indices::contiFoamEqIdx;
-    static const int contiBrineEqIdx = Indices::contiBrineEqIdx;
-    static const bool compositionSwitchEnabled = Indices::compositionSwitchIdx >= 0;
 
     // For the conversion between the surface volume rate and reservoir voidage rate 
     using FluidState = BlackOilFluidState<Eval,
                                           FluidSystem,
                                           has_temperature,
                                           has_energy,
-                                          compositionSwitchEnabled,
+                                          Indices::compositionSwitchIdx >= 0,
                                           has_brine,
                                           Indices::numPhases >;
     /// Constructor
@@ -235,7 +225,7 @@ public:
     {
         Eval out = 0.0;
         out.setValue(in.value());
-        for(int eqIdx = 0; eqIdx < numEq;++eqIdx) {
+        for (int eqIdx = 0; eqIdx < Indices::numEq; ++eqIdx) {
             out.setDerivative(eqIdx, in.derivative(eqIdx));
         }
         return out;

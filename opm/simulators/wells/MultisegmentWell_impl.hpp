@@ -1219,7 +1219,7 @@ namespace Opm
 
                     this->resWell_[seg][comp_idx] += accumulation_term.value();
                     for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-                        this->duneD_[seg][seg][comp_idx][pv_idx] += accumulation_term.derivative(pv_idx + numEq);
+                        this->duneD_[seg][seg][comp_idx][pv_idx] += accumulation_term.derivative(pv_idx + Indices::numEq);
                     }
                 }
             }
@@ -1232,12 +1232,12 @@ namespace Opm
                     // segment_rate contains the derivatives with respect to GTotal in seg,
                     // and WFrac and GFrac in seg_upwind
                     this->resWell_[seg][comp_idx] -= segment_rate.value();
-                    this->duneD_[seg][seg][comp_idx][GTotal] -= segment_rate.derivative(GTotal + numEq);
+                    this->duneD_[seg][seg][comp_idx][GTotal] -= segment_rate.derivative(GTotal + Indices::numEq);
                     if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-                        this->duneD_[seg][seg_upwind][comp_idx][WFrac] -= segment_rate.derivative(WFrac + numEq);
+                        this->duneD_[seg][seg_upwind][comp_idx][WFrac] -= segment_rate.derivative(WFrac + Indices::numEq);
                     }
                     if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                        this->duneD_[seg][seg_upwind][comp_idx][GFrac] -= segment_rate.derivative(GFrac + numEq);
+                        this->duneD_[seg][seg_upwind][comp_idx][GFrac] -= segment_rate.derivative(GFrac + Indices::numEq);
                     }
                     // pressure derivative should be zero
                 }
@@ -1253,12 +1253,12 @@ namespace Opm
                         // inlet_rate contains the derivatives with respect to GTotal in inlet,
                         // and WFrac and GFrac in inlet_upwind
                         this->resWell_[seg][comp_idx] += inlet_rate.value();
-                        this->duneD_[seg][inlet][comp_idx][GTotal] += inlet_rate.derivative(GTotal + numEq);
+                        this->duneD_[seg][inlet][comp_idx][GTotal] += inlet_rate.derivative(GTotal + Indices::numEq);
                         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-                            this->duneD_[seg][inlet_upwind][comp_idx][WFrac] += inlet_rate.derivative(WFrac + numEq);
+                            this->duneD_[seg][inlet_upwind][comp_idx][WFrac] += inlet_rate.derivative(WFrac + Indices::numEq);
                         }
                         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                            this->duneD_[seg][inlet_upwind][comp_idx][GFrac] += inlet_rate.derivative(GFrac + numEq);
+                            this->duneD_[seg][inlet_upwind][comp_idx][GFrac] += inlet_rate.derivative(GFrac + Indices::numEq);
                         }
                         // pressure derivative should be zero
                     }
@@ -1308,13 +1308,13 @@ namespace Opm
                     for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
 
                         // also need to consider the efficiency factor when manipulating the jacobians.
-                        this->duneC_[seg][cell_idx][pv_idx][comp_idx] -= cq_s_effective.derivative(pv_idx + numEq); // intput in transformed matrix
+                        this->duneC_[seg][cell_idx][pv_idx][comp_idx] -= cq_s_effective.derivative(pv_idx + Indices::numEq); // intput in transformed matrix
 
                         // the index name for the D should be eq_idx / pv_idx
-                        this->duneD_[seg][seg][comp_idx][pv_idx] += cq_s_effective.derivative(pv_idx + numEq);
+                        this->duneD_[seg][seg][comp_idx][pv_idx] += cq_s_effective.derivative(pv_idx + Indices::numEq);
                     }
 
-                    for (int pv_idx = 0; pv_idx < numEq; ++pv_idx) {
+                    for (int pv_idx = 0; pv_idx < Indices::numEq; ++pv_idx) {
                         // also need to consider the efficiency factor when manipulating the jacobians.
                         this->duneB_[seg][cell_idx][comp_idx][pv_idx] += cq_s_effective.derivative(pv_idx);
                     }

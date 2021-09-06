@@ -177,7 +177,7 @@ BOOST_AUTO_TEST_CASE(TestBehavoir) {
         const auto& well = wells[0];
         BOOST_CHECK_EQUAL(well->name(), "PROD1");
         BOOST_CHECK(well->isProducer());
-        BOOST_CHECK(well->numEq == 3);
+        BOOST_CHECK(StandardWell::Indices::numEq == 3);
         BOOST_CHECK(well->numStaticWellEq== 4);
     }
 
@@ -186,7 +186,7 @@ BOOST_AUTO_TEST_CASE(TestBehavoir) {
         const auto& well = wells[1];
         BOOST_CHECK_EQUAL(well->name(), "INJE1");
         BOOST_CHECK(well->isInjector());
-        BOOST_CHECK(well->numEq == 3);
+        BOOST_CHECK(StandardWell::Indices::numEq == 3);
         BOOST_CHECK(well->numStaticWellEq== 4);      
     }
 }
