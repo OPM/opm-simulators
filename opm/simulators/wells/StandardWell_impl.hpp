@@ -542,7 +542,7 @@ namespace Opm
         double perf_dis_gas_rate = 0.;
         double perf_vap_oil_rate = 0.;
         double trans_mult = ebosSimulator.problem().template rockCompTransMultiplier<double>(intQuants,  cell_idx);
-        const double Tw = well_index_[perf] * trans_mult;
+        const double Tw = this->well_index_[perf] * trans_mult;
         computePerfRateEval(intQuants, mob, bhp, Tw, perf, allow_cf,
                             cq_s, perf_dis_gas_rate, perf_vap_oil_rate, deferred_logger);
 
@@ -972,7 +972,7 @@ namespace Opm
             }
 
             // the well index associated with the connection
-            const double tw_perf = well_index_[perf]*ebos_simulator.problem().template rockCompTransMultiplier<double>(int_quantities, cell_idx);
+            const double tw_perf = this->well_index_[perf]*ebos_simulator.problem().template rockCompTransMultiplier<double>(int_quantities, cell_idx);
 
             // TODO: there might be some indices related problems here
             // phases vs components
@@ -1462,13 +1462,13 @@ namespace Opm
         if ( all_zero && this->isProducer() ) {
             double total_tw = 0;
             for (int perf = 0; perf < nperf; ++perf) {
-                total_tw += well_index_[perf];
+                total_tw += this->well_index_[perf];
             }
             for (int perf = 0; perf < nperf; ++perf) {
                 const int cell_idx = this->well_cells_[perf];
                 const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
                 const auto& fs = intQuants.fluidState();
-                const double well_tw_fraction = well_index_[perf] / total_tw;
+                const double well_tw_fraction = this->well_index_[perf] / total_tw;
                 double total_mobility = 0.0;
                 for (int p = 0; p < np; ++p) {
                     int ebosPhaseIdx = this->flowPhaseToEbosPhaseIdx(p);
@@ -1656,7 +1656,7 @@ namespace Opm
             std::vector<Scalar> mob(num_components_, 0.);
             getMobilityScalar(ebosSimulator, perf, mob, deferred_logger);
             double trans_mult = ebosSimulator.problem().template rockCompTransMultiplier<double>(intQuants, cell_idx);
-            const double Tw = well_index_[perf] * trans_mult;
+            const double Tw = this->well_index_[perf] * trans_mult;
 
             std::vector<Scalar> cq_s(num_components_, 0.);
             computePerfRateScalar(intQuants, mob, bhp, Tw, perf, allow_cf,
@@ -1980,7 +1980,7 @@ namespace Opm
             double perf_dis_gas_rate = 0.;
             double perf_vap_oil_rate = 0.;
             double trans_mult = ebos_simulator.problem().template rockCompTransMultiplier<double>(int_quant, cell_idx);
-            const double Tw = well_index_[perf] * trans_mult;
+            const double Tw = this->well_index_[perf] * trans_mult;
             computePerfRateEval(int_quant, mob, bhp, Tw, perf, allow_cf,
                                 cq_s, perf_dis_gas_rate, perf_vap_oil_rate, deferred_logger);
             // TODO: make area a member
@@ -2418,7 +2418,7 @@ namespace Opm
             getMobilityScalar(ebosSimulator, perf, mob, deferred_logger);
             std::vector<Scalar> cq_s(num_components_, 0.);
             double trans_mult = ebosSimulator.problem().template rockCompTransMultiplier<double>(intQuants,  cell_idx);
-            const double Tw = well_index_[perf] * trans_mult;
+            const double Tw = this->well_index_[perf] * trans_mult;
             computePerfRateScalar(intQuants, mob, bhp.value(), Tw, perf, allow_cf,
                             cq_s, deferred_logger);
             for (int comp = 0; comp < num_components_; ++comp) {
