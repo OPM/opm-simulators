@@ -1572,7 +1572,7 @@ namespace Opm
             // the reciprocal FVF.
             const auto connMob =
                 mobility[ this->flowPhaseToEbosCompIdx(p) ].value()
-                * fs.invB(flowPhaseToEbosPhaseIdx(p)).value();
+                * fs.invB(this->flowPhaseToEbosPhaseIdx(p)).value();
 
             connPI[p] = connPICalc(connMob);
         }
@@ -1629,7 +1629,7 @@ namespace Opm
 
         const auto zero   = EvalWell { 0.0 };
         const auto mt     = std::accumulate(mobility.begin(), mobility.end(), zero);
-        connII[phase_pos] = connIICalc(mt.value() * fs.invB(flowPhaseToEbosPhaseIdx(phase_pos)).value());
+        connII[phase_pos] = connIICalc(mt.value() * fs.invB(this->flowPhaseToEbosPhaseIdx(phase_pos)).value());
     }
 
 } // namespace Opm
