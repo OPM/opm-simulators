@@ -262,7 +262,6 @@ namespace Opm
 
     protected:
         // protected member variables from the Base class
-        using Base::saturation_table_number_;
         using Base::well_index_;
         using Base::index_of_well_;
         using Base::num_components_;
