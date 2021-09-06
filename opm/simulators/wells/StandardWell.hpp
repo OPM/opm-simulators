@@ -263,7 +263,6 @@ namespace Opm
     protected:
         // protected member variables from the Base class
 
-        using Base::perf_rep_radius_;
         using Base::perf_length_;
         using Base::bore_diameters_;
         using Base::ipr_a_;

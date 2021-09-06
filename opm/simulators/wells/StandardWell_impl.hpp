@@ -1984,7 +1984,7 @@ namespace Opm
             computePerfRateEval(int_quant, mob, bhp, Tw, perf, allow_cf,
                                 cq_s, perf_dis_gas_rate, perf_vap_oil_rate, deferred_logger);
             // TODO: make area a member
-            const double area = 2 * M_PI * perf_rep_radius_[perf] * perf_length_[perf];
+            const double area = 2 * M_PI * this->perf_rep_radius_[perf] * perf_length_[perf];
             const auto& material_law_manager = ebos_simulator.problem().materialLawManager();
             const auto& scaled_drainage_info =
                         material_law_manager->oilWaterScaledEpsInfoDrainage(cell_idx);
