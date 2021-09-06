@@ -179,8 +179,8 @@ public:
     }
 private:
     bool m_parProps = false; //! True to use distributed properties on root process
-    Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> m_comm; //!< Collective communication handler.
     ParallelFieldPropsManager m_fieldProps; //!< The parallel field properties
+    Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> m_comm; //!< Collective communication handler.
 };
 
 

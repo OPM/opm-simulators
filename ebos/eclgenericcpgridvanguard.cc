@@ -58,7 +58,7 @@ template<class ElementMapper, class GridView, class Scalar>
 EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::EclGenericCpGridVanguard()
 {
 #if HAVE_MPI
-    MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
+    MPI_Comm_rank(EclGenericVanguard::comm(), &mpiRank);
 #else
   mpiRank = 0;
 #endif
@@ -85,7 +85,7 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doLoadBalance_(Dun
                                                                              EclGenericVanguard::ParallelWellStruct& parallelWells)
 {
     int mpiSize = 1;
-    MPI_Comm_size(MPI_COMM_WORLD, &mpiSize);
+    MPI_Comm_size(grid_->comm(), &mpiSize);
 
     if (mpiSize > 1) {
         // the CpGrid's loadBalance() method likes to have the transmissibilities as
@@ -188,7 +188,7 @@ template<class ElementMapper, class GridView, class Scalar>
 void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::distributeFieldProps_(EclipseState& eclState1)
 {
     int mpiSize = 1;
-    MPI_Comm_size(MPI_COMM_WORLD, &mpiSize);
+    MPI_Comm_size(grid_->comm(), &mpiSize);
 
     if (mpiSize > 1) {
         try
@@ -262,7 +262,7 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Ecl
     {
         const bool has_numerical_aquifer = eclState.aquifer().hasNumericalAquifer();
         int mpiSize = 1;
-        MPI_Comm_size(MPI_COMM_WORLD, &mpiSize);
+        MPI_Comm_size(grid_->comm(), &mpiSize);
         // when there is numerical aquifers, new NNC are generated during grid processing
         // we need to pass the NNC from root process to other processes
         if (has_numerical_aquifer && mpiSize > 1) {
@@ -312,7 +312,7 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doFilterConnection
     {
         // Broadcast another time to remove inactive peforations on
         // slave processors.
-        eclScheduleBroadcast(schedule);
+        eclScheduleBroadcast(EclGenericVanguard::comm(), schedule);
     }
     catch(const std::exception& broadcast_error)
     {

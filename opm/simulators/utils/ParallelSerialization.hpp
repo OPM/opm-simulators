@@ -19,22 +19,25 @@
 #ifndef PARALLEL_SERIALIZATION_HPP
 #define PARALLEL_SERIALIZATION_HPP
 
+#include <dune/common/parallel/mpihelper.hh>
+
 namespace Opm {
 
 class EclipseState;
 class Schedule;
 class SummaryConfig;
 
+using CollCommType = Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator>;
 /*! \brief Broadcasts an eclipse state from root node in parallel runs.
  *! \param eclState EclipseState to broadcast
  *! \param schedule Schedule to broadcast
  *! \param summaryConfig SummaryConfig to broadcast
 */
-void eclStateBroadcast(EclipseState& eclState, Schedule& schedule,
+void eclStateBroadcast(CollCommType comm, EclipseState& eclState, Schedule& schedule,
                        SummaryConfig& summaryConfig);
 
 /// \brief Broadcasts an schedule from root node in parallel runs.
-void eclScheduleBroadcast(Schedule& schedule);
+void eclScheduleBroadcast(CollCommType comm, Schedule& schedule);
 
 } // end namespace Opm
 

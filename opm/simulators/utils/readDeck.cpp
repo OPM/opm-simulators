@@ -334,7 +334,7 @@ void readDeck(CollCommType comm, std::string& deckFilename, std::unique_ptr<Opm:
     {
         if (parseSuccess)
         {
-            Opm::eclStateBroadcast(*eclipseState, *schedule, *summaryConfig);
+            Opm::eclStateBroadcast(comm, *eclipseState, *schedule, *summaryConfig);
         }
     }
     catch(const std::exception& broadcast_error)
