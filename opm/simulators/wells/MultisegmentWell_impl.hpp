@@ -102,7 +102,7 @@ namespace Opm
 
         // calcuate the depth difference between the perforations and the perforated grid block
         for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
-            const int cell_idx = well_cells_[perf];
+            const int cell_idx = this->well_cells_[perf];
             this->cell_perforation_depth_diffs_[perf] = depth_arg[cell_idx] - perf_depth_[perf];
         }
     }
@@ -466,7 +466,7 @@ namespace Opm
             std::vector<double> kr(this->number_of_phases_, 0.0);
             std::vector<double> density(this->number_of_phases_, 0.0);
 
-            const int cell_idx = well_cells_[perf];
+            const int cell_idx = this->well_cells_[perf];
             const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
             const auto& fs = intQuants.fluidState();
 
@@ -757,7 +757,7 @@ namespace Opm
         int pvt_region_index;
         {
             // using the first perforated cell
-            const int cell_idx = well_cells_[0];
+            const int cell_idx = this->well_cells_[0];
             const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
             const auto& fs = intQuants.fluidState();
             temperature.setValue(fs.temperature(FluidSystem::oilPhaseIdx).value());
@@ -782,7 +782,7 @@ namespace Opm
                 std::vector<EvalWell>& mob) const
     {
         // TODO: most of this function, if not the whole function, can be moved to the base class
-        const int cell_idx = well_cells_[perf];
+        const int cell_idx = this->well_cells_[perf];
         assert (int(mob.size()) == num_components_);
         const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
         const auto& materialLawManager = ebosSimulator.problem().materialLawManager();
@@ -922,7 +922,7 @@ namespace Opm
             // TODO: mabye we should store the mobility somewhere, so that we only need to calculate it one per iteration
             getMobility(ebos_simulator, perf, mob);
 
-            const int cell_idx = well_cells_[perf];
+            const int cell_idx = this->well_cells_[perf];
             const auto& int_quantities = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
             const auto& fs = int_quantities.fluidState();
             // the pressure of the reservoir grid block the well connection is in
@@ -1271,7 +1271,7 @@ namespace Opm
             auto& perf_rates = perf_data.phase_rates;
             auto& perf_press_state = perf_data.pressure;
             for (const int perf : this->segment_perforations_[seg]) {
-                const int cell_idx = well_cells_[perf];
+                const int cell_idx = this->well_cells_[perf];
                 const auto& int_quants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
                 std::vector<EvalWell> mob(num_components_, 0.0);
                 getMobility(ebosSimulator, perf, mob);
@@ -1364,7 +1364,7 @@ namespace Opm
             const EvalWell segment_pressure = this->getSegmentPressure(seg);
             for (const int perf : this->segment_perforations_[seg]) {
 
-                const int cell_idx = well_cells_[perf];
+                const int cell_idx = this->well_cells_[perf];
                 const auto& intQuants = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
                 const auto& fs = intQuants.fluidState();
 
@@ -1418,7 +1418,7 @@ namespace Opm
         {
             // using the pvt region of first perforated cell
             // TODO: it should be a member of the WellInterface, initialized properly
-            const int cell_idx = well_cells_[0];
+            const int cell_idx = this->well_cells_[0];
             const auto& intQuants = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
             const auto& fs = intQuants.fluidState();
             temperature.setValue(fs.temperature(FluidSystem::oilPhaseIdx).value());
@@ -1502,7 +1502,7 @@ namespace Opm
         const int nseg = this->numberOfSegments();
         for (int seg = 0; seg < nseg; ++seg) {
             for (const int perf : this->segment_perforations_[seg]) {
-                const int cell_idx = well_cells_[perf];
+                const int cell_idx = this->well_cells_[perf];
                 const auto& int_quants = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
                 const auto& fs = int_quants.fluidState();
                 double pressure_cell = fs.pressure(FluidSystem::oilPhaseIdx).value();
@@ -1530,7 +1530,7 @@ namespace Opm
             // calculating the perforation rate for each perforation that belongs to this segment
             const EvalWell seg_pressure = this->getSegmentPressure(seg);
             for (const int perf : this->segment_perforations_[seg]) {
-                const int cell_idx = well_cells_[perf];
+                const int cell_idx = this->well_cells_[perf];
                 const auto& int_quants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
                 std::vector<EvalWell> mob(num_components_, 0.0);
                 getMobility(ebosSimulator, perf, mob);

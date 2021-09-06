@@ -180,9 +180,6 @@ namespace Opm
         // multi-phase flow model
         WellSegments::MultiPhaseModel multiphaseModel() const;
 
-        // TODO: the current implementation really relies on the order of the
-        // perforation does not change from the parser to Wells structure.
-        using Base::well_cells_;
         using Base::param_;
         using Base::well_index_;
         using Base::saturation_table_number_;
