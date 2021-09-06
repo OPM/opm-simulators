@@ -103,7 +103,7 @@ namespace Opm
         // calcuate the depth difference between the perforations and the perforated grid block
         for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
             const int cell_idx = this->well_cells_[perf];
-            this->cell_perforation_depth_diffs_[perf] = depth_arg[cell_idx] - perf_depth_[perf];
+            this->cell_perforation_depth_diffs_[perf] = depth_arg[cell_idx] - this->perf_depth_[perf];
         }
     }
 

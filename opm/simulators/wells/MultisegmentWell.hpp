@@ -180,7 +180,6 @@ namespace Opm
         // multi-phase flow model
         WellSegments::MultiPhaseModel multiphaseModel() const;
 
-        using Base::perf_depth_;
         using Base::num_components_;
         using Base::connectionRates_;
         using Base::ipr_a_;
