@@ -1984,7 +1984,7 @@ namespace Opm
             computePerfRateEval(int_quant, mob, bhp, Tw, perf, allow_cf,
                                 cq_s, perf_dis_gas_rate, perf_vap_oil_rate, deferred_logger);
             // TODO: make area a member
-            const double area = 2 * M_PI * this->perf_rep_radius_[perf] * perf_length_[perf];
+            const double area = 2 * M_PI * this->perf_rep_radius_[perf] * this->perf_length_[perf];
             const auto& material_law_manager = ebos_simulator.problem().materialLawManager();
             const auto& scaled_drainage_info =
                         material_law_manager->oilWaterScaledEpsInfoDrainage(cell_idx);
@@ -2168,7 +2168,7 @@ namespace Opm
         const auto& int_quants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
         const auto& fs = int_quants.fluidState();
         const EvalWell b_w = this->extendEval(fs.invB(FluidSystem::waterPhaseIdx));
-        const double area = M_PI * bore_diameters_[perf] * perf_length_[perf];
+        const double area = M_PI * bore_diameters_[perf] * this->perf_length_[perf];
         const int wat_vel_index = Bhp + 1 + perf;
         const unsigned water_comp_idx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
 
@@ -2194,7 +2194,7 @@ namespace Opm
         const auto& fs = int_quants.fluidState();
         const EvalWell b_w = this->extendEval(fs.invB(FluidSystem::waterPhaseIdx));
         const EvalWell water_flux_r = water_flux_s / b_w;
-        const double area = M_PI * bore_diameters_[perf] * perf_length_[perf];
+        const double area = M_PI * bore_diameters_[perf] * this->perf_length_[perf];
         const EvalWell water_velocity = water_flux_r / area;
         const int wat_vel_index = Bhp + 1 + perf;
 
