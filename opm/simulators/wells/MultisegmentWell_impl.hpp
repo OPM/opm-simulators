@@ -503,7 +503,7 @@ namespace Opm
             }
             average_density /= sum_kr;
 
-            this->cell_perforation_pressure_diffs_[perf] = gravity_ * average_density * this->cell_perforation_depth_diffs_[perf];
+            this->cell_perforation_pressure_diffs_[perf] = this->gravity_ * average_density * this->cell_perforation_depth_diffs_[perf];
         }
     }
 
@@ -912,7 +912,7 @@ namespace Opm
         for (int seg = 0; seg < nseg; ++seg) {
             // calculating the perforation rate for each perforation that belongs to this segment
             const double segment_depth = this->segmentSet()[seg].depth();
-            const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth, segment_depth, this->segment_densities_[seg].value(), gravity_);
+            const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth, segment_depth, this->segment_densities_[seg].value(), this->gravity_);
             ref_depth = segment_depth;
             seg_bhp_press_diff += dp;
             for (const int perf : this->segment_perforations_[seg]) {
@@ -927,7 +927,7 @@ namespace Opm
             const auto& fs = int_quantities.fluidState();
             // the pressure of the reservoir grid block the well connection is in
                     // pressure difference between the segment and the perforation
-            const double perf_seg_press_diff = gravity_ * this->segment_densities_[seg].value() * this->perforation_segment_depth_diffs_[perf];
+            const double perf_seg_press_diff = this->gravity_ * this->segment_densities_[seg].value() * this->perforation_segment_depth_diffs_[perf];
             // pressure difference between the perforation and the grid cell
             const double cell_perf_press_diff = this->cell_perforation_pressure_diffs_[perf];
             const double pressure_cell = fs.pressure(FluidSystem::oilPhaseIdx).value();
@@ -1369,7 +1369,7 @@ namespace Opm
                 const auto& fs = intQuants.fluidState();
 
                 // pressure difference between the segment and the perforation
-                const EvalWell perf_seg_press_diff = gravity_ * this->segment_densities_[seg] * this->perforation_segment_depth_diffs_[perf];
+                const EvalWell perf_seg_press_diff = this->gravity_ * this->segment_densities_[seg] * this->perforation_segment_depth_diffs_[perf];
                 // pressure difference between the perforation and the grid cell
                 const double cell_perf_press_diff = this->cell_perforation_pressure_diffs_[perf];
 
