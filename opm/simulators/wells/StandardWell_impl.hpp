@@ -449,7 +449,7 @@ namespace Opm
             const int cell_idx = well_cells_[perf];
             for (int componentIdx = 0; componentIdx < num_components_; ++componentIdx) {
                 // the cq_s entering mass balance equations need to consider the efficiency factors.
-                const EvalWell cq_s_effective = cq_s[componentIdx] * well_efficiency_factor_;
+                const EvalWell cq_s_effective = cq_s[componentIdx] * this->well_efficiency_factor_;
 
                 connectionRates[perf][componentIdx] = Base::restrictEval(cq_s_effective);
 
@@ -497,7 +497,7 @@ namespace Opm
                 assert(dt > 0);
                 resWell_loc += (this->wellSurfaceVolumeFraction(componentIdx) - this->F0_[componentIdx]) * volume / dt;
             }
-            resWell_loc -= this->getQs(componentIdx) * well_efficiency_factor_;
+            resWell_loc -= this->getQs(componentIdx) * this->well_efficiency_factor_;
             for (int pvIdx = 0; pvIdx < this->numWellEq_; ++pvIdx) {
                 this->invDuneD_[0][0][componentIdx][pvIdx] += resWell_loc.derivative(pvIdx+Indices::numEq);
             }
@@ -640,7 +640,7 @@ namespace Opm
             auto& perf_rate_polymer = perf_data.polymer_rates;
             perf_rate_polymer[perf] = cq_s_poly.value();
 
-            cq_s_poly *= well_efficiency_factor_;
+            cq_s_poly *= this->well_efficiency_factor_;
             connectionRates[perf][Indices::contiPolymerEqIdx] = Base::restrictEval(cq_s_poly);
 
             if constexpr (Base::has_polymermw) {
@@ -651,7 +651,7 @@ namespace Opm
         if constexpr (has_foam) {
             // TODO: the application of well efficiency factor has not been tested with an example yet
             const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-            EvalWell cq_s_foam = cq_s[gasCompIdx] * well_efficiency_factor_;
+            EvalWell cq_s_foam = cq_s[gasCompIdx] * this->well_efficiency_factor_;
             if (this->isInjector()) {
                 cq_s_foam *= this->wfoam();
             } else {
@@ -673,7 +673,7 @@ namespace Opm
             auto& perf_rate_solvent = perf_data.solvent_rates;
             perf_rate_solvent[perf] = cq_s_zfrac_effective.value();
 
-            cq_s_zfrac_effective *= well_efficiency_factor_;
+            cq_s_zfrac_effective *= this->well_efficiency_factor_;
             connectionRates[perf][Indices::contiZfracEqIdx] = Base::restrictEval(cq_s_zfrac_effective);
         }
 
@@ -690,7 +690,7 @@ namespace Opm
             auto& perf_rate_brine = perf_data.brine_rates;
             perf_rate_brine[perf] = cq_s_sm.value();
 
-            cq_s_sm *= well_efficiency_factor_;
+            cq_s_sm *= this->well_efficiency_factor_;
             connectionRates[perf][Indices::contiBrineEqIdx] = Base::restrictEval(cq_s_sm);
         }
 
