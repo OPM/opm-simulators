@@ -1022,7 +1022,7 @@ namespace Opm
     checkOperabilityUnderBHPLimitProducer(const WellState& well_state, const Simulator& ebos_simulator, DeferredLogger& deferred_logger)
     {
         const auto& summaryState = ebos_simulator.vanguard().summaryState();
-        const double bhp_limit = mostStrictBhpFromBhpLimits(summaryState);
+        const double bhp_limit = this->mostStrictBhpFromBhpLimits(summaryState);
         // Crude but works: default is one atmosphere.
         // TODO: a better way to detect whether the BHP is defaulted or not
         const bool bhp_limit_not_defaulted = bhp_limit > 1.5 * unit::barsa;
@@ -1081,7 +1081,7 @@ namespace Opm
         if (obtain_bhp) {
             this->operability_status_.can_obtain_bhp_with_thp_limit = true;
 
-            const double  bhp_limit = mostStrictBhpFromBhpLimits(summaryState);
+            const double  bhp_limit = this->mostStrictBhpFromBhpLimits(summaryState);
             this->operability_status_.obey_bhp_limit_with_thp_limit = (*obtain_bhp >= bhp_limit);
 
             const double thp_limit = this->getTHPConstraint(summaryState);
@@ -1889,7 +1889,7 @@ namespace Opm
         const auto& summaryState = ebosSimulator.vanguard().summaryState();
         if (!Base::wellHasTHPConstraints(summaryState) || bhp_controlled_well) {
             // get the bhp value based on the bhp constraints
-            const double bhp = mostStrictBhpFromBhpLimits(summaryState);
+            const double bhp = this->mostStrictBhpFromBhpLimits(summaryState);
             assert(std::abs(bhp) != std::numeric_limits<double>::max());
             computeWellRatesWithBhpPotential(ebosSimulator, bhp, well_potentials, deferred_logger);
         } else {
