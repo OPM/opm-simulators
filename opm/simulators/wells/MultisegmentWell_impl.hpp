@@ -1226,7 +1226,7 @@ namespace Opm
             // considering the contributions due to flowing out from the segment
             {
                 for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
-                    const EvalWell segment_rate = this->getSegmentRateUpwinding(seg, comp_idx) * well_efficiency_factor_;
+                    const EvalWell segment_rate = this->getSegmentRateUpwinding(seg, comp_idx) * this->well_efficiency_factor_;
 
                     const int seg_upwind = this->upwinding_segments_[seg];
                     // segment_rate contains the derivatives with respect to GTotal in seg,
@@ -1247,7 +1247,7 @@ namespace Opm
             {
                 for (const int inlet : this->segment_inlets_[seg]) {
                     for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
-                        const EvalWell inlet_rate = this->getSegmentRateUpwinding(inlet, comp_idx) * well_efficiency_factor_;
+                        const EvalWell inlet_rate = this->getSegmentRateUpwinding(inlet, comp_idx) * this->well_efficiency_factor_;
 
                         const int inlet_upwind = this->upwinding_segments_[inlet];
                         // inlet_rate contains the derivatives with respect to GTotal in inlet,
@@ -1297,7 +1297,7 @@ namespace Opm
 
                 for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
                     // the cq_s entering mass balance equations need to consider the efficiency factors.
-                    const EvalWell cq_s_effective = cq_s[comp_idx] * well_efficiency_factor_;
+                    const EvalWell cq_s_effective = cq_s[comp_idx] * this->well_efficiency_factor_;
 
                     connectionRates_[perf][comp_idx] = Base::restrictEval(cq_s_effective);
 
