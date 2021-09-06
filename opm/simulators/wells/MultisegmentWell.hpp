@@ -181,7 +181,6 @@ namespace Opm
         WellSegments::MultiPhaseModel multiphaseModel() const;
 
         // protected member variables from the Base class
-        using Base::well_ecl_;
         using Base::ref_depth_;
         using Base::number_of_perforations_; // TODO: can use well_ecl_?
         using Base::number_of_phases_;
