@@ -532,7 +532,7 @@ namespace Opm
                         EvalWell& cq_s_zfrac_effective,
                         DeferredLogger& deferred_logger) const
     {
-        const bool allow_cf = getAllowCrossFlow() || openCrossFlowAvoidSingularity(ebosSimulator);
+        const bool allow_cf = this->getAllowCrossFlow() || openCrossFlowAvoidSingularity(ebosSimulator);
         const EvalWell& bhp = this->getBhp();
         const int cell_idx = well_cells_[perf];
         const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
@@ -1191,7 +1191,7 @@ namespace Opm
     StandardWell<TypeTag>::
     openCrossFlowAvoidSingularity(const Simulator& ebos_simulator) const
     {
-        return !getAllowCrossFlow() && allDrawDownWrongDirection(ebos_simulator);
+        return !this->getAllowCrossFlow() && allDrawDownWrongDirection(ebos_simulator);
     }
 
 
@@ -1647,7 +1647,7 @@ namespace Opm
         const int np = number_of_phases_;
         well_flux.resize(np, 0.0);
 
-        const bool allow_cf = getAllowCrossFlow();
+        const bool allow_cf = this->getAllowCrossFlow();
 
         for (int perf = 0; perf < number_of_perforations_; ++perf) {
             const int cell_idx = well_cells_[perf];
@@ -1973,7 +1973,7 @@ namespace Opm
             }
             // compute the well water velocity with out shear effects.
             // TODO: do we need to turn on crossflow here?
-            const bool allow_cf = getAllowCrossFlow() || openCrossFlowAvoidSingularity(ebos_simulator);
+            const bool allow_cf = this->getAllowCrossFlow() || openCrossFlowAvoidSingularity(ebos_simulator);
             const EvalWell& bhp = this->getBhp();
 
             std::vector<EvalWell> cq_s(num_components_, {this->numWellEq_ + Indices::numEq, 0.});
@@ -2410,7 +2410,7 @@ namespace Opm
         // Calculate the rates that follow from the current primary variables.
         std::vector<double> well_q_s(num_components_, 0.);
         const EvalWell& bhp = this->getBhp();
-        const bool allow_cf = getAllowCrossFlow() || openCrossFlowAvoidSingularity(ebosSimulator);
+        const bool allow_cf = this->getAllowCrossFlow() || openCrossFlowAvoidSingularity(ebosSimulator);
         for (int perf = 0; perf < number_of_perforations_; ++perf) {
             const int cell_idx = well_cells_[perf];
             const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));

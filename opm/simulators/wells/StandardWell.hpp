@@ -262,7 +262,6 @@ namespace Opm
 
     protected:
         // protected functions from the Base class
-        using Base::getAllowCrossFlow;
         using Base::flowPhaseToEbosCompIdx;
         using Base::flowPhaseToEbosPhaseIdx;
         using Base::ebosCompIdxToFlowCompIdx;
