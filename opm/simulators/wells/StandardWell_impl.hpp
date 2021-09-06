@@ -64,7 +64,7 @@ namespace Opm
          const std::vector< Scalar >& B_avg)
     {
         Base::init(phase_usage_arg, depth_arg, gravity_arg, num_cells, B_avg);
-        this->StdWellEval::init(perf_depth_, depth_arg, num_cells, Base::has_polymermw);
+        this->StdWellEval::init(this->perf_depth_, depth_arg, num_cells, Base::has_polymermw);
     }
 
 
