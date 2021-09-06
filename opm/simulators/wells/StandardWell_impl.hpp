@@ -682,7 +682,7 @@ namespace Opm
             const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
             EvalWell cq_s_sm = cq_s[waterCompIdx];
             if (this->isInjector()) {
-                cq_s_sm *= wsalt();
+                cq_s_sm *= this->wsalt();
             } else {
                 cq_s_sm *= this->extendEval(intQuants.fluidState().saltConcentration());
             }
