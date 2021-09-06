@@ -140,6 +140,27 @@ namespace Opm {
                     typename Select::RegionIDParameter
                     <RegionId, std::is_integral<RegionId>::value>::type;
 
+                using ID =
+                    typename std::remove_reference<RegionId>::type;
+
+                /**
+                 * Aggregate per-region attributes along with region's
+                 * representative cell.
+                 */
+                struct Value {
+                    Value(const Attributes& attr)
+                        : attr_(attr)
+                        , cell_(-1)
+                    {}
+
+                    Attributes attr_;
+                    int        cell_;
+                };
+
+                using AttributeMap =
+                    std::unordered_map<ID, std::unique_ptr<Value>>;
+
+
                 /**
                  * Constructor.
                  *
@@ -213,6 +234,17 @@ namespace Opm {
                     }
                 }
 
+                /**
+                 * Request read-only access to region's attributes.
+                 *
+                *
+                 * \return Read-only access to all regions attributes.
+                 */
+                const AttributeMap& attributes() const
+                {
+                    return attr_;
+                }
+
 
                 /**
                  * Request read-only access to region's attributes.
@@ -241,25 +273,6 @@ namespace Opm {
                 }
 
             private:
-                /**
-                 * Aggregate per-region attributes along with region's
-                 * representative cell.
-                 */
-                struct Value {
-                    Value(const Attributes& attr)
-                        : attr_(attr)
-                        , cell_(-1)
-                    {}
-
-                    Attributes attr_;
-                    int        cell_;
-                };
-
-                using ID =
-                    typename std::remove_reference<RegionId>::type;
-
-                using AttributeMap =
-                    std::unordered_map<ID, std::unique_ptr<Value>>;
 
                 AttributeMap attr_;
 

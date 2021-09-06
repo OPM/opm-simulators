@@ -218,6 +218,19 @@ namespace Opm {
             double
             pressure(const RegionId r) const
             {
+                if (r == 0 ) // region 0 is the whole field
+                {
+                    double pressure = 0.0;
+                    int num_active_regions = 0;
+                    for (const auto& attr :  attr_.attributes()) {
+                        const auto& value = *attr.second;
+                        const auto& ra = value.attr_;
+                        pressure += ra.pressure;
+                        num_active_regions ++;
+                    }
+                    return pressure / num_active_regions;
+                }
+
                 const auto& ra = attr_.attributes(r);
                 return ra.pressure;
             }
