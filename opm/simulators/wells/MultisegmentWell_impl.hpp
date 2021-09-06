@@ -908,7 +908,7 @@ namespace Opm
 
         const int nseg = this->numberOfSegments();
         double seg_bhp_press_diff = 0;
-        double ref_depth = ref_depth_;
+        double ref_depth = this->ref_depth_;
         for (int seg = 0; seg < nseg; ++seg) {
             // calculating the perforation rate for each perforation that belongs to this segment
             const double segment_depth = this->segmentSet()[seg].depth();
