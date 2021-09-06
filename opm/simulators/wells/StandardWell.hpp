@@ -261,9 +261,6 @@ namespace Opm
 
 
     protected:
-        // protected functions from the Base class
-        using Base::getALQ;
-
         // protected member variables from the Base class
         using Base::well_ecl_;
         using Base::param_;

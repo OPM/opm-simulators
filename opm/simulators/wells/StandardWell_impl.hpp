@@ -1750,7 +1750,7 @@ namespace Opm
         } else {
             computeWellRatesWithThpAlqProd(
                 ebos_simulator, summary_state,
-                deferred_logger, potentials, getALQ(well_state)
+                deferred_logger, potentials, this->getALQ(well_state)
             );
         }
 
@@ -2303,7 +2303,7 @@ namespace Opm
         return computeBhpAtThpLimitProdWithAlq(ebos_simulator,
                                                summary_state,
                                                deferred_logger,
-                                               getALQ(well_state));
+                                               this->getALQ(well_state));
     }
 
     template<typename TypeTag>
