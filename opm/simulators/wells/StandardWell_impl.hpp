@@ -446,7 +446,7 @@ namespace Opm
                     handleInjectivityEquations(ebosSimulator, well_state, perf, water_flux_s, deferred_logger);
                 }
             }
-            const int cell_idx = well_cells_[perf];
+            const int cell_idx = this->well_cells_[perf];
             for (int componentIdx = 0; componentIdx < num_components_; ++componentIdx) {
                 // the cq_s entering mass balance equations need to consider the efficiency factors.
                 const EvalWell cq_s_effective = cq_s[componentIdx] * this->well_efficiency_factor_;
@@ -534,7 +534,7 @@ namespace Opm
     {
         const bool allow_cf = this->getAllowCrossFlow() || openCrossFlowAvoidSingularity(ebosSimulator);
         const EvalWell& bhp = this->getBhp();
-        const int cell_idx = well_cells_[perf];
+        const int cell_idx = this->well_cells_[perf];
         const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
         std::vector<EvalWell> mob(num_components_, {this->numWellEq_ + Indices::numEq, 0.});
         getMobilityEval(ebosSimulator, perf, mob, deferred_logger);
@@ -709,7 +709,7 @@ namespace Opm
                     std::vector<EvalWell>& mob,
                     DeferredLogger& deferred_logger) const
     {
-        const int cell_idx = well_cells_[perf];
+        const int cell_idx = this->well_cells_[perf];
         assert (int(mob.size()) == num_components_);
         const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
         const auto& materialLawManager = ebosSimulator.problem().materialLawManager();
@@ -778,7 +778,7 @@ namespace Opm
                       std::vector<Scalar>& mob,
                       DeferredLogger& deferred_logger) const
     {
-        const int cell_idx = well_cells_[perf];
+        const int cell_idx = this->well_cells_[perf];
         assert (int(mob.size()) == num_components_);
         const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
         const auto& materialLawManager = ebosSimulator.problem().materialLawManager();
@@ -942,7 +942,7 @@ namespace Opm
             // TODO: mabye we should store the mobility somewhere, so that we only need to calculate it one per iteration
             getMobilityEval(ebos_simulator, perf, mob, deferred_logger);
 
-            const int cell_idx = well_cells_[perf];
+            const int cell_idx = this->well_cells_[perf];
             const auto& int_quantities = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
             const auto& fs = int_quantities.fluidState();
             // the pressure of the reservoir grid block the well connection is in
@@ -1116,7 +1116,7 @@ namespace Opm
         bool all_drawdown_wrong_direction = true;
 
         for (int perf = 0; perf < number_of_perforations_; ++perf) {
-            const int cell_idx = well_cells_[perf];
+            const int cell_idx = this->well_cells_[perf];
             const auto& intQuants = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
             const auto& fs = intQuants.fluidState();
 
@@ -1231,7 +1231,7 @@ namespace Opm
                                                                          nperf);
 
         for (int perf = 0; perf < nperf; ++perf) {
-            const int cell_idx = well_cells_[perf];
+            const int cell_idx = this->well_cells_[perf];
             const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
             const auto& fs = intQuants.fluidState();
 
@@ -1465,7 +1465,7 @@ namespace Opm
                 total_tw += well_index_[perf];
             }
             for (int perf = 0; perf < nperf; ++perf) {
-                const int cell_idx = well_cells_[perf];
+                const int cell_idx = this->well_cells_[perf];
                 const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
                 const auto& fs = intQuants.fluidState();
                 const double well_tw_fraction = well_index_[perf] / total_tw;
@@ -1650,7 +1650,7 @@ namespace Opm
         const bool allow_cf = this->getAllowCrossFlow();
 
         for (int perf = 0; perf < number_of_perforations_; ++perf) {
-            const int cell_idx = well_cells_[perf];
+            const int cell_idx = this->well_cells_[perf];
             const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
             // flux for each perforation
             std::vector<Scalar> mob(num_components_, 0.);
@@ -1952,7 +1952,7 @@ namespace Opm
                                    std::vector<EvalWell>& mob,
                                    DeferredLogger& deferred_logger) const
     {
-        const int cell_idx = well_cells_[perf];
+        const int cell_idx = this->well_cells_[perf];
         const auto& int_quant = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
         const EvalWell polymer_concentration = this->extendEval(int_quant.polymerConcentration());
 
@@ -2164,7 +2164,7 @@ namespace Opm
                           const int perf,
                           std::vector<EvalWell>& cq_s) const
     {
-        const int cell_idx = well_cells_[perf];
+        const int cell_idx = this->well_cells_[perf];
         const auto& int_quants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
         const auto& fs = int_quants.fluidState();
         const EvalWell b_w = this->extendEval(fs.invB(FluidSystem::waterPhaseIdx));
@@ -2189,7 +2189,7 @@ namespace Opm
                                const EvalWell& water_flux_s,
                                DeferredLogger& deferred_logger)
     {
-        const int cell_idx = well_cells_[perf];
+        const int cell_idx = this->well_cells_[perf];
         const auto& int_quants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
         const auto& fs = int_quants.fluidState();
         const EvalWell b_w = this->extendEval(fs.invB(FluidSystem::waterPhaseIdx));
@@ -2412,7 +2412,7 @@ namespace Opm
         const EvalWell& bhp = this->getBhp();
         const bool allow_cf = this->getAllowCrossFlow() || openCrossFlowAvoidSingularity(ebosSimulator);
         for (int perf = 0; perf < number_of_perforations_; ++perf) {
-            const int cell_idx = well_cells_[perf];
+            const int cell_idx = this->well_cells_[perf];
             const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
             std::vector<Scalar> mob(num_components_, 0.);
             getMobilityScalar(ebosSimulator, perf, mob, deferred_logger);
