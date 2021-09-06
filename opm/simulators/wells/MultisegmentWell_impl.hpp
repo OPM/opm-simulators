@@ -101,7 +101,7 @@ namespace Opm
         this->initMatrixAndVectors(num_cells);
 
         // calcuate the depth difference between the perforations and the perforated grid block
-        for (int perf = 0; perf < number_of_perforations_; ++perf) {
+        for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
             const int cell_idx = well_cells_[perf];
             this->cell_perforation_depth_diffs_[perf] = depth_arg[cell_idx] - perf_depth_[perf];
         }
@@ -461,7 +461,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     computePerfCellPressDiffs(const Simulator& ebosSimulator)
     {
-        for (int perf = 0; perf < number_of_perforations_; ++perf) {
+        for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
 
             std::vector<double> kr(number_of_phases_, 0.0);
             std::vector<double> density(number_of_phases_, 0.0);
