@@ -166,11 +166,11 @@ namespace Opm
         return this->MSWEval::getWellConvergence(well_state,
                                                  B_avg,
                                                  deferred_logger,
-                                                 param_.max_residual_allowed_,
-                                                 param_.tolerance_wells_,
-                                                 param_.relaxed_inner_tolerance_flow_ms_well_,
-                                                 param_.tolerance_pressure_ms_wells_,
-                                                 param_.relaxed_inner_tolerance_pressure_ms_well_,
+                                                 this->param_.max_residual_allowed_,
+                                                 this->param_.tolerance_wells_,
+                                                 this->param_.relaxed_inner_tolerance_flow_ms_well_,
+                                                 this->param_.tolerance_pressure_ms_wells_,
+                                                 this->param_.relaxed_inner_tolerance_pressure_ms_well_,
                                                  relax_tolerance);
     }
 
@@ -185,7 +185,7 @@ namespace Opm
     {
         if (!this->isOperable() && !this->wellIsStopped()) return;
 
-        if ( param_.matrix_add_well_contributions_ )
+        if ( this->param_.matrix_add_well_contributions_ )
         {
             // Contributions are already in the matrix itself
             return;
@@ -539,8 +539,8 @@ namespace Opm
     {
         if (!this->isOperable() && !this->wellIsStopped()) return;
 
-        const double dFLimit = param_.dwell_fraction_max_;
-        const double max_pressure_change = param_.max_pressure_change_ms_wells_;
+        const double dFLimit = this->param_.dwell_fraction_max_;
+        const double max_pressure_change = this->param_.max_pressure_change_ms_wells_;
         this->MSWEval::updateWellState(dwells,
                                        relaxation_factor,
                                        dFLimit,
@@ -1050,7 +1050,7 @@ namespace Opm
     {
         if (!this->isOperable() && !this->wellIsStopped()) return true;
 
-        const int max_iter_number = param_.max_inner_iter_ms_wells_;
+        const int max_iter_number = this->param_.max_inner_iter_ms_wells_;
         const WellState well_state0 = well_state;
         const std::vector<Scalar> residuals0 = this->getWellResiduals(Base::B_avg_, deferred_logger);
         std::vector<std::vector<Scalar> > residual_history;
@@ -1068,7 +1068,7 @@ namespace Opm
 
             const BVectorWell dx_well = mswellhelpers::applyUMFPack(this->duneD_, this->duneDSolver_, this->resWell_);
 
-            if (it > param_.strict_inner_iter_ms_wells_)
+            if (it > this->param_.strict_inner_iter_ms_wells_)
                 relax_convergence = true;
 
             const auto report = getWellConvergence(well_state, Base::B_avg_, deferred_logger, relax_convergence);
@@ -1080,8 +1080,8 @@ namespace Opm
             residual_history.push_back(this->getWellResiduals(Base::B_avg_, deferred_logger));
             measure_history.push_back(this->getResidualMeasureValue(well_state,
                                                                     residual_history[it],
-                                                                    param_.tolerance_wells_,
-                                                                    param_.tolerance_pressure_ms_wells_,
+                                                                    this->param_.tolerance_wells_,
+                                                                    this->param_.tolerance_pressure_ms_wells_,
                                                                     deferred_logger) );
 
             bool is_oscillate = false;
@@ -1133,7 +1133,7 @@ namespace Opm
             std::ostringstream sstr;
             sstr << "     Well " << name() << " converged in " << it << " inner iterations.";
             if (relax_convergence)
-                sstr << "      (A relaxed tolerance was used after "<< param_.strict_inner_iter_ms_wells_ << " iterations)";
+                sstr << "      (A relaxed tolerance was used after "<< this->param_.strict_inner_iter_ms_wells_ << " iterations)";
             deferred_logger.debug(sstr.str());
         } else {
             std::ostringstream sstr;
@@ -1211,7 +1211,7 @@ namespace Opm
                 // Add a regularization_factor to increase the accumulation term
                 // This will make the system less stiff and help convergence for
                 // difficult cases
-                const Scalar regularization_factor =  param_.regularization_factor_ms_wells_;
+                const Scalar regularization_factor =  this->param_.regularization_factor_ms_wells_;
                 // for each component
                 for (int comp_idx = 0; comp_idx < num_components_; ++comp_idx) {
                     const EvalWell accumulation_term = regularization_factor * (segment_surface_volume * this->surfaceVolumeFraction(seg, comp_idx)
