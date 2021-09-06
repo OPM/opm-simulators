@@ -472,7 +472,7 @@ namespace Opm
 
             double sum_kr = 0.;
 
-            const PhaseUsage& pu = phaseUsage();
+            const PhaseUsage& pu = this->phaseUsage();
             if (pu.phase_used[Water]) {
                 const int water_pos = pu.phase_pos[Water];
                 kr[water_pos] = intQuants.relativePermeability(FluidSystem::waterPhaseIdx).value();

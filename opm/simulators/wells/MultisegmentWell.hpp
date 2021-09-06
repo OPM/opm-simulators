@@ -181,7 +181,6 @@ namespace Opm
         WellSegments::MultiPhaseModel multiphaseModel() const;
 
         // protected functions from the Base class
-        using Base::phaseUsage;
         using Base::name;
         using Base::flowPhaseToEbosCompIdx;
         using Base::flowPhaseToEbosPhaseIdx;
