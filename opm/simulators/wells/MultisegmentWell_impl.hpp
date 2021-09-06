@@ -168,9 +168,9 @@ namespace Opm
                                                  deferred_logger,
                                                  this->param_.max_residual_allowed_,
                                                  this->param_.tolerance_wells_,
-                                                 this->param_.relaxed_inner_tolerance_flow_ms_well_,
+                                                 this->param_.relaxed_tolerance_flow_well_,
                                                  this->param_.tolerance_pressure_ms_wells_,
-                                                 this->param_.relaxed_inner_tolerance_pressure_ms_well_,
+                                                 this->param_.relaxed_tolerance_pressure_ms_well_,
                                                  relax_tolerance);
     }
 
@@ -1314,7 +1314,7 @@ namespace Opm
 
             const BVectorWell dx_well = mswellhelpers::applyUMFPack(this->duneD_, this->duneDSolver_, this->resWell_);
 
-            if (it > this->param_.strict_inner_iter_ms_wells_)
+            if (it > this->param_.strict_inner_iter_wells_)
                 relax_convergence = true;
 
             const auto report = getWellConvergence(well_state, Base::B_avg_, deferred_logger, relax_convergence);
@@ -1379,7 +1379,7 @@ namespace Opm
             std::ostringstream sstr;
             sstr << "     Well " << this->name() << " converged in " << it << " inner iterations.";
             if (relax_convergence)
-                sstr << "      (A relaxed tolerance was used after "<< this->param_.strict_inner_iter_ms_wells_ << " iterations)";
+                sstr << "      (A relaxed tolerance was used after "<< this->param_.strict_inner_iter_wells_ << " iterations)";
             deferred_logger.debug(sstr.str());
         } else {
             std::ostringstream sstr;

@@ -148,8 +148,10 @@ protected:
 
     ConvergenceReport getWellConvergence(const WellState& well_state,
                                          const std::vector<double>& B_avg,
-                                         const double tol_wells,
                                          const double maxResidualAllowed,
+                                         const double tol_wells,
+                                         const double relaxed_tolerance_flow,
+                                         const bool relax_tolerance,
                                          std::vector<double>& res,
                                          DeferredLogger& deferred_logger) const;
 

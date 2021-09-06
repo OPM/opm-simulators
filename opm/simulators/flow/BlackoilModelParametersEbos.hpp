@@ -122,19 +122,19 @@ struct MaxInnerIterMsWells {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
-struct StrictInnerIterMsWells {
+struct StrictInnerIterWells {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
-struct StrictOuterIterMsWells {
+struct RelaxedWellFlowTol {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
-struct RelaxedFlowTolInnerIterMsw {
+struct StrictOuterIterWells {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
-struct RelaxedPressureTolInnerIterMsw {
+struct RelaxedPressureTolMsw {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
@@ -267,11 +267,11 @@ struct AlternativeWellRateInit<TypeTag, TTag::FlowModelParameters> {
     static constexpr bool value = true;
 };
 template<class TypeTag>
-struct StrictOuterIterMsWells<TypeTag, TTag::FlowModelParameters> {
+struct StrictOuterIterWells<TypeTag, TTag::FlowModelParameters> {
     static constexpr int value = 99;
 };
 template<class TypeTag>
-struct StrictInnerIterMsWells<TypeTag, TTag::FlowModelParameters> {
+struct StrictInnerIterWells<TypeTag, TTag::FlowModelParameters> {
     static constexpr int value = 40;
 };
 template<class TypeTag>
@@ -284,12 +284,12 @@ struct EnableWellOperabilityCheck<TypeTag, TTag::FlowModelParameters> {
     static constexpr bool value = true;
 };
 template<class TypeTag>
-struct RelaxedFlowTolInnerIterMsw<TypeTag, TTag::FlowModelParameters> {
+struct RelaxedWellFlowTol<TypeTag, TTag::FlowModelParameters> {
     using type = GetPropType<TypeTag, Scalar>;
     static constexpr type value = 1;
 };
 template<class TypeTag>
-struct RelaxedPressureTolInnerIterMsw<TypeTag, TTag::FlowModelParameters> {
+struct RelaxedPressureTolMsw<TypeTag, TTag::FlowModelParameters> {
     using type = GetPropType<TypeTag, Scalar>;
     static constexpr type value = 0.5e5;
 };
@@ -336,11 +336,11 @@ namespace Opm
         double tolerance_well_control_;
         /// Tolerance for the pressure equations for multisegment wells
         double tolerance_pressure_ms_wells_;
+        /// Relaxed tolerance for for the well flow residual
+        double relaxed_tolerance_flow_well_;
 
-        /// Relaxed tolerance for the inner iteration for the MSW flow solution
-        double relaxed_inner_tolerance_flow_ms_well_;
-        /// Relaxed tolerance for the inner iteration for the MSW pressure solution
-        double relaxed_inner_tolerance_pressure_ms_well_;
+        /// Relaxed tolerance for the MSW pressure solution
+        double relaxed_tolerance_pressure_ms_well_;
 
         /// Maximum pressure change over an iteratio for ms wells
         double max_pressure_change_ms_wells_;
@@ -348,11 +348,11 @@ namespace Opm
         /// Maximum inner iteration number for ms wells
         int max_inner_iter_ms_wells_;
 
-        /// Strict inner iteration number for ms wells
-        int strict_inner_iter_ms_wells_;
+        /// Strict inner iteration number for wells
+        int strict_inner_iter_wells_;
 
-        /// Newton iteration where ms wells are stricly convergent
-        int strict_outer_iter_ms_wells_;
+        /// Newton iteration where wells are stricly convergent
+        int strict_outer_iter_wells_;
 
         /// Regularization factor for ms wells
         int regularization_factor_ms_wells_;
@@ -413,12 +413,12 @@ namespace Opm
             max_welleq_iter_ = EWOMS_GET_PARAM(TypeTag, int, MaxWelleqIter);
             use_multisegment_well_ = EWOMS_GET_PARAM(TypeTag, bool, UseMultisegmentWell);
             tolerance_pressure_ms_wells_ = EWOMS_GET_PARAM(TypeTag, Scalar, TolerancePressureMsWells);
-            relaxed_inner_tolerance_flow_ms_well_ = EWOMS_GET_PARAM(TypeTag, Scalar, RelaxedFlowTolInnerIterMsw);
-            relaxed_inner_tolerance_pressure_ms_well_ = EWOMS_GET_PARAM(TypeTag, Scalar, RelaxedPressureTolInnerIterMsw);
+            relaxed_tolerance_flow_well_ = EWOMS_GET_PARAM(TypeTag, Scalar, RelaxedWellFlowTol);
+            relaxed_tolerance_pressure_ms_well_ = EWOMS_GET_PARAM(TypeTag, Scalar, RelaxedPressureTolMsw);
             max_pressure_change_ms_wells_ = EWOMS_GET_PARAM(TypeTag, Scalar, MaxPressureChangeMsWells);
             max_inner_iter_ms_wells_ = EWOMS_GET_PARAM(TypeTag, int, MaxInnerIterMsWells);
-            strict_inner_iter_ms_wells_ = EWOMS_GET_PARAM(TypeTag, int, StrictInnerIterMsWells);
-            strict_outer_iter_ms_wells_ = EWOMS_GET_PARAM(TypeTag, int, StrictOuterIterMsWells);
+            strict_inner_iter_wells_ = EWOMS_GET_PARAM(TypeTag, int, StrictInnerIterWells);
+            strict_outer_iter_wells_ = EWOMS_GET_PARAM(TypeTag, int, StrictOuterIterWells);
             regularization_factor_ms_wells_ = EWOMS_GET_PARAM(TypeTag, Scalar, RegularizationFactorMsw);
             max_niter_inner_well_iter_ = EWOMS_GET_PARAM(TypeTag, int, MaxNewtonIterationsWithInnerWellIterations);
             shut_unsolvable_wells_ = EWOMS_GET_PARAM(TypeTag, bool, ShutUnsolvableWells);
@@ -448,12 +448,12 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, int, MaxWelleqIter, "Maximum number of iterations to determine solution the  well equations");
             EWOMS_REGISTER_PARAM(TypeTag, bool, UseMultisegmentWell, "Use the well model for multi-segment wells instead of the one for single-segment wells");
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, TolerancePressureMsWells, "Tolerance for the pressure equations for multi-segment wells");
-            EWOMS_REGISTER_PARAM(TypeTag, Scalar, RelaxedFlowTolInnerIterMsw, "Relaxed tolerance for the inner iteration for the MSW flow solution");
-            EWOMS_REGISTER_PARAM(TypeTag, Scalar, RelaxedPressureTolInnerIterMsw, "Relaxed tolerance for the inner iteration for the MSW pressure solution");
+            EWOMS_REGISTER_PARAM(TypeTag, Scalar, RelaxedWellFlowTol, "Relaxed tolerance for the well flow residual");
+            EWOMS_REGISTER_PARAM(TypeTag, Scalar, RelaxedPressureTolMsw, "Relaxed tolerance for the MSW pressure solution");
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, MaxPressureChangeMsWells, "Maximum relative pressure change for a single iteration of the multi-segment well model");
             EWOMS_REGISTER_PARAM(TypeTag, int, MaxInnerIterMsWells, "Maximum number of inner iterations for multi-segment wells");
-            EWOMS_REGISTER_PARAM(TypeTag, int, StrictInnerIterMsWells, "Number of inner iterations for multi-segment wells with strict tolerance");
-            EWOMS_REGISTER_PARAM(TypeTag, int, StrictOuterIterMsWells, "Number of newton iterations for which multi-segment wells are checked with strict tolerance");
+            EWOMS_REGISTER_PARAM(TypeTag, int, StrictInnerIterWells, "Number of inner well iterations with strict tolerance");
+            EWOMS_REGISTER_PARAM(TypeTag, int, StrictOuterIterWells, "Number of newton iterations for which wells are checked with strict tolerance");
             EWOMS_REGISTER_PARAM(TypeTag, int, MaxNewtonIterationsWithInnerWellIterations, "Maximum newton iterations with inner well iterations");
             EWOMS_REGISTER_PARAM(TypeTag, bool, ShutUnsolvableWells, "Shut unsolvable wells");
             EWOMS_REGISTER_PARAM(TypeTag, int, MaxInnerIterWells, "Maximum number of inner iterations for standard wells");

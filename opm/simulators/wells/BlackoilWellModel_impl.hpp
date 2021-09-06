@@ -1181,7 +1181,7 @@ namespace Opm {
         const int iterationIdx = ebosSimulator_.model().newtonMethod().numIterations();
         for (const auto& well : well_container_) {
             if (well->isOperable() ) {
-                local_report += well->getWellConvergence(this->wellState(), B_avg, local_deferredLogger, iterationIdx > param_.strict_outer_iter_ms_wells_ );
+                local_report += well->getWellConvergence(this->wellState(), B_avg, local_deferredLogger, iterationIdx > param_.strict_outer_iter_wells_ );
             }
         }
         DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger);

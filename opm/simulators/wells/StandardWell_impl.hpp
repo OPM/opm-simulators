@@ -1323,20 +1323,19 @@ namespace Opm
     getWellConvergence(const WellState& well_state,
                        const std::vector<double>& B_avg,
                        DeferredLogger& deferred_logger,
-                       const bool /*relax_tolerance*/) const
+                       const bool relax_tolerance) const
     {
         // the following implementation assume that the polymer is always after the w-o-g phases
         // For the polymer, energy and foam cases, there is one more mass balance equations of reservoir than wells
         assert((int(B_avg.size()) == this->num_components_) || has_polymer || has_energy || has_foam || has_brine || has_zFraction);
 
-        const double tol_wells = this->param_.tolerance_wells_;
-        const double maxResidualAllowed = this->param_.max_residual_allowed_;
-
         std::vector<double> res;
         ConvergenceReport report = this->StdWellEval::getWellConvergence(well_state,
                                                                          B_avg,
-                                                                         tol_wells,
-                                                                         maxResidualAllowed,
+                                                                         this->param_.max_residual_allowed_,
+                                                                         this->param_.tolerance_wells_,
+                                                                         this->param_.relaxed_tolerance_flow_well_,
+                                                                         relax_tolerance,
                                                                          res,
                                                                          deferred_logger);
         checkConvergenceExtraEqs(res, report);
