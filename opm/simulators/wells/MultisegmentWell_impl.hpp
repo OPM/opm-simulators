@@ -301,7 +301,7 @@ namespace Opm
             well_potentials = computeWellPotentialWithTHP(ebosSimulator, deferred_logger);
         }
         deferred_logger.debug("Cost in iterations of finding well potential for well "
-                              + name() + ": " + std::to_string(debug_cost_counter_));
+                              + this->name() + ": " + std::to_string(debug_cost_counter_));
     }
 
 
@@ -406,11 +406,11 @@ namespace Opm
                 const double bhp = std::min(*bhp_at_thp_limit, controls.bhp_limit);
                 computeWellRatesWithBhp(ebos_simulator, bhp, potentials, deferred_logger);
                 deferred_logger.debug("Converged thp based potential calculation for well "
-                                      + name() + ", at bhp = " + std::to_string(bhp));
+                                      + this->name() + ", at bhp = " + std::to_string(bhp));
             } else {
                 deferred_logger.warning("FAILURE_GETTING_CONVERGED_POTENTIAL",
                                         "Failed in getting converged thp based potential calculation for well "
-                                        + name() + ". Instead the bhp based value is used");
+                                        + this->name() + ". Instead the bhp based value is used");
                 const auto& controls = well.injectionControls(summary_state);
                 const double bhp = controls.bhp_limit;
                 computeWellRatesWithBhp(ebos_simulator, bhp, potentials, deferred_logger);
@@ -422,11 +422,11 @@ namespace Opm
                 const double bhp = std::max(*bhp_at_thp_limit, controls.bhp_limit);
                 computeWellRatesWithBhp(ebos_simulator, bhp, potentials, deferred_logger);
                 deferred_logger.debug("Converged thp based potential calculation for well "
-                                      + name() + ", at bhp = " + std::to_string(bhp));
+                                      + this->name() + ", at bhp = " + std::to_string(bhp));
             } else {
                 deferred_logger.warning("FAILURE_GETTING_CONVERGED_POTENTIAL",
                                         "Failed in getting converged thp based potential calculation for well "
-                                        + name() + ". Instead the bhp based value is used");
+                                        + this->name() + ". Instead the bhp based value is used");
                 const auto& controls = well.productionControls(summary_state);
                 const double bhp = controls.bhp_limit;
                 computeWellRatesWithBhp(ebos_simulator, bhp, potentials, deferred_logger);
@@ -951,7 +951,7 @@ namespace Opm
             // to taking into consideration the crossflow here.
             if (pressure_diff <= 0.) {
                 deferred_logger.warning("NON_POSITIVE_DRAWDOWN_IPR",
-                                "non-positive drawdown found when updateIPR for well " + name());
+                                "non-positive drawdown found when updateIPR for well " + this->name());
             }
 
             // the well index associated with the connection
@@ -1016,7 +1016,7 @@ namespace Opm
                 const std::string msg = " obtained bhp " + std::to_string(unit::convert::to(*obtain_bhp, unit::barsa))
                                         + " bars is SMALLER than thp limit "
                                         + std::to_string(unit::convert::to(thp_limit, unit::barsa))
-                                        + " bars as a producer for well " + name();
+                                        + " bars as a producer for well " + this->name();
                 deferred_logger.debug(msg);
             }
         } else {
@@ -1028,7 +1028,7 @@ namespace Opm
                 const double thp_limit = this->getTHPConstraint(summaryState);
                 deferred_logger.debug(" could not find bhp value at thp limit "
                                       + std::to_string(unit::convert::to(thp_limit, unit::barsa))
-                                      + " bar for well " + name() + ", the well might need to be closed ");
+                                      + " bar for well " + this->name() + ", the well might need to be closed ");
             }
         }
     }
@@ -1098,11 +1098,11 @@ namespace Opm
                     // Still stagnating, terminate iterations if 5 iterations pass.
                     ++stagnate_count;
                     if (stagnate_count == 6) {
-                        sstr << " well " << name() << " observes severe stagnation and/or oscillation. We relax the tolerance and check for convergence. \n";
+                        sstr << " well " << this->name() << " observes severe stagnation and/or oscillation. We relax the tolerance and check for convergence. \n";
                         const auto reportStag = getWellConvergence(well_state, Base::B_avg_, deferred_logger, true);
                         if (reportStag.converged()) {
                             converged = true;
-                            sstr << " well " << name() << " manages to get converged with relaxed tolerances in " << it << " inner iterations";
+                            sstr << " well " << this->name() << " manages to get converged with relaxed tolerances in " << it << " inner iterations";
                             deferred_logger.debug(sstr.str());
                             return converged;
                         }
@@ -1115,11 +1115,11 @@ namespace Opm
 
                 // debug output
                 if (is_stagnate) {
-                    sstr << " well " << name() << " observes stagnation in inner iteration " << it << "\n";
+                    sstr << " well " << this->name() << " observes stagnation in inner iteration " << it << "\n";
 
                 }
                 if (is_oscillate) {
-                    sstr << " well " << name() << " observes oscillation in inner iteration " << it << "\n";
+                    sstr << " well " << this->name() << " observes oscillation in inner iteration " << it << "\n";
                 }
                 sstr << " relaxation_factor is " << relaxation_factor << " now\n";
                 deferred_logger.debug(sstr.str());
@@ -1131,16 +1131,16 @@ namespace Opm
         // TODO: we should decide whether to keep the updated well_state, or recover to use the old well_state
         if (converged) {
             std::ostringstream sstr;
-            sstr << "     Well " << name() << " converged in " << it << " inner iterations.";
+            sstr << "     Well " << this->name() << " converged in " << it << " inner iterations.";
             if (relax_convergence)
                 sstr << "      (A relaxed tolerance was used after "<< this->param_.strict_inner_iter_ms_wells_ << " iterations)";
             deferred_logger.debug(sstr.str());
         } else {
             std::ostringstream sstr;
-            sstr << "     Well " << name() << " did not converge in " << it << " inner iterations.";
+            sstr << "     Well " << this->name() << " did not converge in " << it << " inner iterations.";
 #define EXTRA_DEBUG_MSW 0
 #if EXTRA_DEBUG_MSW
-            sstr << "***** Outputting the residual history for well " << name() << " during inner iterations:";
+            sstr << "***** Outputting the residual history for well " << this->name() << " during inner iterations:";
             for (int i = 0; i < it; ++i) {
                 const auto& residual = residual_history[i];
                 sstr << " residual at " << i << "th iteration ";
