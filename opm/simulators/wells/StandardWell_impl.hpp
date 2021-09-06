@@ -428,7 +428,7 @@ namespace Opm
         ws.vaporized_oil_rate = 0;
         ws.dissolved_gas_rate = 0;
 
-        const int np = number_of_phases_;
+        const int np = this->number_of_phases_;
 
         std::vector<RateVector> connectionRates = connectionRates_; // Copy to get right size.
         auto& perf_data = ws.perf_data;
@@ -979,7 +979,7 @@ namespace Opm
             // ipr values for the perforation
             std::vector<double> ipr_a_perf(ipr_a_.size());
             std::vector<double> ipr_b_perf(ipr_b_.size());
-            for (int p = 0; p < number_of_phases_; ++p) {
+            for (int p = 0; p < this->number_of_phases_; ++p) {
                 const double tw_mob = tw_perf * mob[p].value() * b_perf[p];
                 ipr_a_perf[p] += tw_mob * pressure_diff;
                 ipr_b_perf[p] += tw_mob;
@@ -1005,7 +1005,7 @@ namespace Opm
                 ipr_b_perf[oil_comp_idx] += vap_oil_b;
             }
 
-            for (int p = 0; p < number_of_phases_; ++p) {
+            for (int p = 0; p < this->number_of_phases_; ++p) {
                 // TODO: double check the indices here
                 ipr_a_[this->ebosCompIdxToFlowCompIdx(p)] += ipr_a_perf[p];
                 ipr_b_[this->ebosCompIdxToFlowCompIdx(p)] += ipr_b_perf[p];
@@ -1030,7 +1030,7 @@ namespace Opm
             // if the BHP limit is not defaulted or the well does not have a THP limit
             // we need to check the BHP limit
 
-            for (int p = 0; p < number_of_phases_; ++p) {
+            for (int p = 0; p < this->number_of_phases_; ++p) {
                 const double temp = ipr_a_[p] - ipr_b_[p] * bhp_limit;
                 if (temp < 0.) {
                     this->operability_status_.operable_under_only_bhp_limit = false;
@@ -1436,7 +1436,7 @@ namespace Opm
     {
         // Compute densities
         const int nperf = this->number_of_perforations_;
-        const int np = number_of_phases_;
+        const int np = this->number_of_phases_;
         std::vector<double> perfRates(b_perf.size(),0.0);
         const auto& ws = well_state.well(this->index_of_well_);
         const auto& perf_data = ws.perf_data;
@@ -1644,7 +1644,7 @@ namespace Opm
                             DeferredLogger& deferred_logger) const
     {
 
-        const int np = number_of_phases_;
+        const int np = this->number_of_phases_;
         well_flux.resize(np, 0.0);
 
         const bool allow_cf = this->getAllowCrossFlow();
@@ -1696,7 +1696,7 @@ namespace Opm
         ws.bhp = bhp;
 
         // initialized the well rates with the potentials i.e. the well rates based on bhp
-        const int np = number_of_phases_;
+        const int np = this->number_of_phases_;
         const double sign = this->well_ecl_.isInjector() ? 1.0 : -1.0;
         for (int phase = 0; phase < np; ++phase){
             well_state_copy.wellRates(index_of_well_)[phase]
@@ -1730,7 +1730,7 @@ namespace Opm
                                DeferredLogger& deferred_logger,
                                const WellState &well_state) const
     {
-        std::vector<double> potentials(number_of_phases_, 0.0);
+        std::vector<double> potentials(this->number_of_phases_, 0.0);
         const auto& summary_state = ebos_simulator.vanguard().summaryState();
 
         const auto& well = this->well_ecl_;
@@ -1840,7 +1840,7 @@ namespace Opm
                           std::vector<double>& well_potentials,
                           DeferredLogger& deferred_logger) // const
     {
-        const int np = number_of_phases_;
+        const int np = this->number_of_phases_;
         well_potentials.resize(np, 0.0);
 
         if (this->wellIsStopped()) {
