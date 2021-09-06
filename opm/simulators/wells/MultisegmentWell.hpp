@@ -180,8 +180,6 @@ namespace Opm
         // multi-phase flow model
         WellSegments::MultiPhaseModel multiphaseModel() const;
 
-        using Base::ipr_b_;
-
         // protected functions from the Base class
         using Base::phaseUsage;
         using Base::name;

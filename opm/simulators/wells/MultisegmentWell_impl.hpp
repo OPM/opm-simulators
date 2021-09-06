@@ -852,7 +852,7 @@ namespace Opm
 
             double temp = 0;
             for (int p = 0; p < this->number_of_phases_; ++p) {
-                temp += this->ipr_a_[p] - ipr_b_[p] * bhp_limit;
+                temp += this->ipr_a_[p] - this->ipr_b_[p] * bhp_limit;
             }
             if (temp < 0.) {
                 this->operability_status_.operable_under_only_bhp_limit = false;
@@ -904,7 +904,7 @@ namespace Opm
 
         // initialize all the values to be zero to begin with
         std::fill(this->ipr_a_.begin(), this->ipr_a_.end(), 0.);
-        std::fill(ipr_b_.begin(), ipr_b_.end(), 0.);
+        std::fill(this->ipr_b_.begin(), this->ipr_b_.end(), 0.);
 
         const int nseg = this->numberOfSegments();
         double seg_bhp_press_diff = 0;
@@ -961,7 +961,7 @@ namespace Opm
             // phases vs components
             // ipr values for the perforation
             std::vector<double> ipr_a_perf(this->ipr_a_.size());
-            std::vector<double> ipr_b_perf(ipr_b_.size());
+            std::vector<double> ipr_b_perf(this->ipr_b_.size());
             for (int p = 0; p < this->number_of_phases_; ++p) {
                 const double tw_mob = tw_perf * mob[p].value() * b_perf[p];
                 ipr_a_perf[p] += tw_mob * pressure_diff;
@@ -991,7 +991,7 @@ namespace Opm
             for (int p = 0; p < this->number_of_phases_; ++p) {
                 // TODO: double check the indices here
                 this->ipr_a_[ebosCompIdxToFlowCompIdx(p)] += ipr_a_perf[p];
-                ipr_b_[ebosCompIdxToFlowCompIdx(p)] += ipr_b_perf[p];
+                this->ipr_b_[ebosCompIdxToFlowCompIdx(p)] += ipr_b_perf[p];
             }
             }
         }
