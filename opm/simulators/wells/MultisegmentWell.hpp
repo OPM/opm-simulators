@@ -181,7 +181,6 @@ namespace Opm
         WellSegments::MultiPhaseModel multiphaseModel() const;
 
         // protected functions from the Base class
-        using Base::ebosCompIdxToFlowCompIdx;
         using Base::getAllowCrossFlow;
 
         // the intial amount of fluids in each segment under surface condition

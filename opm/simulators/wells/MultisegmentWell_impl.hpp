@@ -382,7 +382,7 @@ namespace Opm
         well_flux.resize(np, 0.0);
         for (int compIdx = 0; compIdx < this->num_components_; ++compIdx) {
             const EvalWell rate = well_copy.getQs(compIdx);
-            well_flux[ebosCompIdxToFlowCompIdx(compIdx)] = rate.value();
+            well_flux[this->ebosCompIdxToFlowCompIdx(compIdx)] = rate.value();
         }
         debug_cost_counter_ += well_copy.debug_cost_counter_;
     }
@@ -990,8 +990,8 @@ namespace Opm
 
             for (int p = 0; p < this->number_of_phases_; ++p) {
                 // TODO: double check the indices here
-                this->ipr_a_[ebosCompIdxToFlowCompIdx(p)] += ipr_a_perf[p];
-                this->ipr_b_[ebosCompIdxToFlowCompIdx(p)] += ipr_b_perf[p];
+                this->ipr_a_[this->ebosCompIdxToFlowCompIdx(p)] += ipr_a_perf[p];
+                this->ipr_b_[this->ebosCompIdxToFlowCompIdx(p)] += ipr_b_perf[p];
             }
             }
         }
@@ -1291,7 +1291,7 @@ namespace Opm
 
                 // store the perf pressure and rates
                 for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
-                    perf_rates[perf*this->number_of_phases_ + ebosCompIdxToFlowCompIdx(comp_idx)] = cq_s[comp_idx].value();
+                    perf_rates[perf*this->number_of_phases_ + this->ebosCompIdxToFlowCompIdx(comp_idx)] = cq_s[comp_idx].value();
                 }
                 perf_press_state[perf] = perf_press.value();
 
