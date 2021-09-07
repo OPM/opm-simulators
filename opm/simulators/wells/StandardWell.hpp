@@ -88,9 +88,6 @@ namespace Opm
         using typename Base::GLiftWellStateMap;
         using typename Base::GLiftSyncGroups;
 
-        using Base::numEq;
-        using Base::numPhases;
-
         using Base::has_solvent;
         using Base::has_zFraction;
         using Base::has_polymer;
@@ -103,20 +100,18 @@ namespace Opm
         using FoamModule = BlackOilFoamModule<TypeTag>;
         using BrineModule = BlackOilBrineModule<TypeTag>;
 
-        static const int numSolventEq = Indices::numSolvents;
-
         // number of the conservation equations
-        static const int numWellConservationEq = numPhases + numSolventEq;
+        static constexpr int numWellConservationEq = Indices::numPhases + Indices::numSolvents;
         // number of the well control equations
-        static const int numWellControlEq = 1;
+        static constexpr int numWellControlEq = 1;
         // number of the well equations that will always be used
         // based on the solution strategy, there might be other well equations be introduced
-        static const int numStaticWellEq = numWellConservationEq + numWellControlEq;
+        static constexpr int numStaticWellEq = numWellConservationEq + numWellControlEq;
 
         // the index for Bhp in primary variables and also the index of well control equation
         // they both will be the last one in their respective system.
         // TODO: we should have indices for the well equations and well primary variables separately
-        static const int Bhp = numStaticWellEq - numWellControlEq;
+        static constexpr int Bhp = numStaticWellEq - numWellControlEq;
 
         using typename Base::Scalar;
 
@@ -131,13 +126,6 @@ namespace Opm
         using Eval = typename StdWellEval::Eval;
         using EvalWell = typename StdWellEval::EvalWell;
         using BVectorWell = typename StdWellEval::BVectorWell;
-
-        using Base::contiSolventEqIdx;
-        using Base::contiZfracEqIdx;
-        using Base::contiPolymerEqIdx;
-        using Base::contiFoamEqIdx;
-        using Base::contiBrineEqIdx;
-        static const int contiEnergyEqIdx = Indices::contiEnergyEqIdx;
 
         StandardWell(const Well& well,
                      const ParallelWellInfo& pw_info,

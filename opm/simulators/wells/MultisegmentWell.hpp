@@ -58,10 +58,6 @@ namespace Opm
         using typename Base::GLiftWellStateMap;
         using typename Base::GLiftSyncGroups;
 
-        /// the number of reservior equations
-        using Base::numEq;
-        using Base::numPhases;
-
         using Base::has_solvent;
         using Base::has_polymer;
         using Base::Water;
