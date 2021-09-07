@@ -21,13 +21,10 @@
 #include <config.h>
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
 
-#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GConSump.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GConSale.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
-#include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/TargetCalculator.hpp>
 #include <opm/simulators/wells/VFPProdProperties.hpp>
 #include <opm/simulators/wells/WellState.hpp>
@@ -161,6 +158,17 @@ namespace WellGroupHelpers
             && events.hasEvent(group.name(), ScheduleEvents::GROUP_PRODUCTION_UPDATE)) {
             const auto controls = group.productionControls(summaryState);
             group_state.production_control(group.name(), controls.cmode);
+        }
+
+        if (group.has_gpmaint_control(Group::ProductionCMode::RESV)) {
+            group_state.production_control(group.name(), Group::ProductionCMode::RESV);
+        }
+        for (Phase phase : all) {
+            if (group.has_gpmaint_control(phase, Group::InjectionCMode::RATE)) {
+                group_state.injection_control(group.name(), phase, Group::InjectionCMode::RATE);
+            } else if (group.has_gpmaint_control(phase, Group::InjectionCMode::RESV)) {
+                group_state.injection_control(group.name(), phase, Group::InjectionCMode::RESV);
+            }
         }
 
         if (schedule[reportStepIdx].gconsale().has(group.name())) {
@@ -544,6 +552,30 @@ namespace WellGroupHelpers
                                             /*isInjector*/ true);
         }
         group_state.update_injection_reservoir_rates(group.name(), resv);
+    }
+
+    void updateSurfaceRatesInjectionGroups(const Group& group,
+                                           const Schedule& schedule,
+                                           const int reportStepIdx,
+                                           const WellState& wellStateNupcol,
+                                           GroupState& group_state)
+    {
+        for (const std::string& groupName : group.groups()) {
+            const Group& groupTmp = schedule.getGroup(groupName, reportStepIdx);
+            updateSurfaceRatesInjectionGroups(groupTmp, schedule, reportStepIdx, wellStateNupcol, group_state);
+        }
+        const int np = wellStateNupcol.numPhases();
+        std::vector<double> rates(np, 0.0);
+        for (int phase = 0; phase < np; ++phase) {
+            rates[phase] = sumWellPhaseRates(false,
+                                            group,
+                                            schedule,
+                                            wellStateNupcol,
+                                            reportStepIdx,
+                                            phase,
+                                            /*isInjector*/ true);
+        }
+        group_state.update_injection_surface_rates(group.name(), rates);
     }
 
     void updateWellRates(const Group& group,
@@ -1118,7 +1150,7 @@ namespace WellGroupHelpers
         if (group_state.has_grat_sales_target(group.name()))
             gratTargetFromSales = group_state.grat_sales_target(group.name());
 
-        TargetCalculator tcalc(currentGroupControl, pu, resv_coeff, gratTargetFromSales);
+        TargetCalculator tcalc(currentGroupControl, pu, resv_coeff, gratTargetFromSales, group.name(), group_state, group.has_gpmaint_control(currentGroupControl));
         FractionCalculator fcalc(schedule, wellState, group_state, reportStepIdx, guideRate, tcalc.guideTargetMode(), pu, true, Phase::OIL);
 
         auto localFraction = [&](const std::string& child) { return fcalc.localFraction(child, name); };
@@ -1245,7 +1277,7 @@ namespace WellGroupHelpers
             const auto& gconsale = schedule[reportStepIdx].gconsale().get(group.name(), summaryState);
             sales_target = gconsale.sales_target;
         }
-        InjectionTargetCalculator tcalc(currentGroupControl, pu, resv_coeff, group.name(), sales_target, group_state, injectionPhase, deferred_logger);
+        InjectionTargetCalculator tcalc(currentGroupControl, pu, resv_coeff, group.name(), sales_target, group_state, injectionPhase, group.has_gpmaint_control(injectionPhase, currentGroupControl), deferred_logger);
         FractionCalculator fcalc(schedule, wellState, group_state, reportStepIdx, guideRate, tcalc.guideTargetMode(), pu, false, injectionPhase);
 
         auto localFraction = [&](const std::string& child) { return fcalc.localFraction(child, name); };

@@ -60,6 +60,7 @@
 #include <opm/simulators/wells/WellState.hpp>
 #include <opm/simulators/wells/WGState.hpp>
 #include <opm/simulators/wells/RateConverter.hpp>
+#include <opm/simulators/wells/RegionAverageCalculator.hpp>
 #include <opm/simulators/wells/WellInterface.hpp>
 #include <opm/simulators/wells/StandardWell.hpp>
 #include <opm/simulators/wells/MultisegmentWell.hpp>
@@ -131,6 +132,10 @@ namespace Opm {
             // For the conversion between the surface volume rate and resrevoir voidage rate
             using RateConverterType = RateConverter::
                 SurfaceToReservoirVoidage<FluidSystem, std::vector<int> >;
+
+            // For computing average pressured used by gpmaint
+            using AverageRegionalPressureType = RegionAverageCalculator::
+                AverageRegionalPressure<FluidSystem, std::vector<int> >;
 
             BlackoilWellModel(Simulator& ebosSimulator);
 
@@ -317,6 +322,8 @@ namespace Opm {
             bool alternative_well_rate_init_{};
 
             std::unique_ptr<RateConverterType> rateConverter_{};
+            std::unique_ptr<AverageRegionalPressureType> regionalAveragePressureCalculator_{};
+
 
             SimulatorReportSingle last_report_{};
 

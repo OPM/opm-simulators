@@ -25,7 +25,7 @@
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/grid/utility/RegionMapping.hpp>
 #include <opm/simulators/linalg/ParallelIstlInformation.hpp>
-
+#include <opm/simulators/wells/RegionAttributeHelpers.hpp>
 #include <dune/grid/common/gridenums.hh>
 #include <algorithm>
 #include <cmath>
@@ -47,345 +47,6 @@
 
 namespace Opm {
     namespace RateConverter {
-        /**
-         * Convenience tools for implementing the rate conversion
-         * facility.
-         */
-        namespace Details {
-            namespace Select {
-                template <class RegionID, bool>
-                struct RegionIDParameter
-                {
-                    using type =
-                        typename std::remove_reference<RegionID>::type &;
-                };
-
-                template <class RegionID>
-                struct RegionIDParameter<RegionID, true>
-                {
-                    using type = RegionID;
-                };
-            } // Select
-
-            /**
-             * \brief Computes the temperature, pressure, and counter increment.
-             *
-             * In a parallel run only cells owned contribute to the cell average.
-             * \tparam is_parallel Whether this is a parallel run.
-             */
-             template<bool is_parallel>
-            struct AverageIncrementCalculator
-            {
-                /**
-                 * \brief Computes the temperature, pressure, and counter increment.
-                 * \param pressure    The pressure.
-                 * \param temperature The temperature.
-                 * \param rs          The rs.
-                 * \param rv          The rv.
-                 * \param cell        The current cell index.
-                 * \param ownership   A vector indicating whether a cell is owned
-                 *                    by this process (value 1), or not (value 0).
-                 * \param cell        The cell index.
-                 */
-                std::tuple<double, double, double, double, int>
-                operator()(const std::vector<double>& pressure,
-                           const std::vector<double>& temperature,
-                           const std::vector<double>& rs,
-                           const std::vector<double>& rv,
-                           const std::vector<double>& ownership,
-                           std::size_t cell){
-                    if ( ownership[cell] )
-                    {
-                        return std::make_tuple(pressure[cell],
-                                               temperature[cell],
-                                               rs[cell],
-                                               rv[cell],
-                                               1);
-                    }
-                    else
-                    {
-                        return std::make_tuple(0, 0, 0, 0, 0);
-                    }
-                }
-            };
-            template<>
-            struct AverageIncrementCalculator<false>
-            {
-                std::tuple<double, double, double, double, int>
-                operator()(const std::vector<double>& pressure,
-                           const std::vector<double>& temperature,
-                           const std::vector<double>& rs,
-                           const std::vector<double>& rv,
-                           const std::vector<double>&,
-                           std::size_t cell){
-                    return std::make_tuple(pressure[cell],
-                                           temperature[cell],
-                                           rs[cell],
-                                           rv[cell],
-                                           1);
-                }
-            };
-            /**
-             * Provide mapping from Region IDs to user-specified collection
-             * of per-region attributes.
-             *
-             * \tparam RegionId Region identifier type.  Must be hashable by
-             * \code std::hash<> \endcode.  Typically a built-in integer
-             * type--e.g., \c int.
-             *
-             * \tparam Attributes User-defined type that represents
-             * collection of attributes that have meaning in a per-region
-             * aggregate sense.  Must be copy-constructible.
-             */
-            template <typename RegionId, class Attributes>
-            class RegionAttributes
-            {
-            public:
-                /**
-                 * Expose \c RegionId as a vocabulary type for use in query
-                 * methods.
-                 */
-                using RegionID =
-                    typename Select::RegionIDParameter
-                    <RegionId, std::is_integral<RegionId>::value>::type;
-
-                /**
-                 * Constructor.
-                 *
-                 * \tparam RMap Class type that implements the RegionMapping
-                 * protocol.  Typically an instantiation of \code
-                 * Opm::RegionMapping<> \endcode.
-                 *
-                 * \param[in] rmap Specific region mapping that provides
-                 * reverse lookup from regions to cells.
-                 *
-                 * \param[in] attr Pre-constructed initialiser for \c
-                 * Attributes.
-                 */
-                template <class RMap>
-                RegionAttributes(const RMap&       rmap,
-                                 const Attributes& attr)
-                {
-                    using VT = typename AttributeMap::value_type;
-
-                    for (const auto& r : rmap.activeRegions()) {
-                        auto v = std::make_unique<Value>(attr);
-
-                        const auto stat = attr_.insert(VT(r, std::move(v)));
-
-                        if (stat.second) {
-                            // New value inserted.
-                            const auto& cells = rmap.cells(r);
-
-                            assert (! cells.empty());
-
-                            // Region's representative cell.
-                            stat.first->second->cell_ = cells[0];
-                        }
-                    }
-                }
-
-                /**
-                 * Retrieve representative cell in region.
-                 *
-                 * \param[in] reg Specific region.
-                 *
-                 * \return Representative cell in region \p reg.
-                 */
-                int cell(const RegionID reg) const
-                {
-                    return this->find(reg).cell_;
-                }
-
-                /**
-                 * Request read-only access to region's attributes.
-                 *
-                 * \param[in] reg Specific region.
-                 *
-                 * \return Read-only access to region \p reg's per-region
-                 * attributes.
-                 */
-                const Attributes& attributes(const RegionID reg) const
-                {
-                    return this->find(reg).attr_;
-                }
-
-                /**
-                 * Request modifiable access to region's attributes.
-                 *
-                 * \param[in] reg Specific region.
-                 *
-                 * \return Read-write access to region \p reg's per-region
-                 * attributes.
-                 */
-                Attributes& attributes(const RegionID reg)
-                {
-                    return this->find(reg).attr_;
-                }
-
-            private:
-                /**
-                 * Aggregate per-region attributes along with region's
-                 * representative cell.
-                 */
-                struct Value {
-                    Value(const Attributes& attr)
-                        : attr_(attr)
-                        , cell_(-1)
-                    {}
-
-                    Attributes attr_;
-                    int        cell_;
-                };
-
-                using ID =
-                    typename std::remove_reference<RegionId>::type;
-
-                using AttributeMap =
-                    std::unordered_map<ID, std::unique_ptr<Value>>;
-
-                AttributeMap attr_;
-
-                /**
-                 * Read-only access to region's properties.
-                 */
-                const Value& find(const RegionID reg) const
-                {
-                    const auto& i = attr_.find(reg);
-
-                    if (i == attr_.end()) {
-                        throw std::invalid_argument("Unknown region ID");
-                    }
-
-                    return *i->second;
-                }
-
-                /**
-                 * Read-write access to region's properties.
-                 */
-                Value& find(const RegionID reg)
-                {
-                    const auto& i = attr_.find(reg);
-
-                    if (i == attr_.end()) {
-                        throw std::invalid_argument("Unknown region ID");
-                    }
-
-                    return *i->second;
-                }
-            };
-
-            /**
-             * Convenience functions for querying presence/absence of
-             * active phases.
-             */
-            namespace PhaseUsed {
-                /**
-                 * Active water predicate.
-                 *
-                 * \param[in] pu Active phase object.
-                 *
-                 * \return Whether or not water is an active phase.
-                 */
-                inline bool
-                water(const PhaseUsage& pu)
-                {
-                    return pu.phase_used[ BlackoilPhases::Aqua ] != 0;
-                }
-
-                /**
-                 * Active oil predicate.
-                 *
-                 * \param[in] pu Active phase object.
-                 *
-                 * \return Whether or not oil is an active phase.
-                 */
-                inline bool
-                oil(const PhaseUsage& pu)
-                {
-                    return pu.phase_used[ BlackoilPhases::Liquid ] != 0;
-                }
-
-                /**
-                 * Active gas predicate.
-                 *
-                 * \param[in] pu Active phase object.
-                 *
-                 * \return Whether or not gas is an active phase.
-                 */
-                inline bool
-                gas(const PhaseUsage& pu)
-                {
-                    return pu.phase_used[ BlackoilPhases::Vapour ] != 0;
-                }
-            } // namespace PhaseUsed
-
-            /**
-             * Convenience functions for querying numerical IDs
-             * ("positions") of active phases.
-             */
-            namespace PhasePos {
-                /**
-                 * Numerical ID of active water phase.
-                 *
-                 * \param[in] pu Active phase object.
-                 *
-                 * \return Non-negative index/position of water if
-                 * active, -1 if not.
-                 */
-                inline int
-                water(const PhaseUsage& pu)
-                {
-                    int p = -1;
-
-                    if (PhaseUsed::water(pu)) {
-                        p = pu.phase_pos[ BlackoilPhases::Aqua ];
-                    }
-
-                    return p;
-                }
-
-                /**
-                 * Numerical ID of active oil phase.
-                 *
-                 * \param[in] pu Active phase object.
-                 *
-                 * \return Non-negative index/position of oil if
-                 * active, -1 if not.
-                 */
-                inline int
-                oil(const PhaseUsage& pu)
-                {
-                    int p = -1;
-
-                    if (PhaseUsed::oil(pu)) {
-                        p = pu.phase_pos[ BlackoilPhases::Liquid ];
-                    }
-
-                    return p;
-                }
-
-                /**
-                 * Numerical ID of active gas phase.
-                 *
-                 * \param[in] pu Active phase object.
-                 *
-                 * \return Non-negative index/position of gas if
-                 * active, -1 if not.
-                 */
-                inline int
-                gas(const PhaseUsage& pu)
-                {
-                    int p = -1;
-
-                    if (PhaseUsed::gas(pu)) {
-                        p = pu.phase_pos[ BlackoilPhases::Vapour ];
-                    }
-
-                    return p;
-                }
-            } // namespace PhasePos
-        } // namespace Details
 
         /**
          * Convert component rates at surface conditions to phase
@@ -484,7 +145,7 @@ namespace Opm {
                     // only count oil and gas filled parts of the domain
                     double hydrocarbon = 1.0;
                     const auto& pu = phaseUsage_;
-                    if (Details::PhaseUsed::water(pu)) {
+                    if (RegionAttributeHelpers::PhaseUsed::water(pu)) {
                         hydrocarbon -= fs.saturation(FluidSystem::waterPhaseIdx).value();
                     }
 
@@ -496,15 +157,15 @@ namespace Opm {
                     if (hydrocarbonPV > 0.) {
                         auto& attr = attributes_hpv[reg];
                         attr.pv += hydrocarbonPV;
-                        if (Details::PhaseUsed::oil(pu) && Details::PhaseUsed::gas(pu)) {
+                        if (RegionAttributeHelpers::PhaseUsed::oil(pu) && RegionAttributeHelpers::PhaseUsed::gas(pu)) {
                             attr.rs += fs.Rs().value() * hydrocarbonPV;
                             attr.rv += fs.Rv().value() * hydrocarbonPV;
                         }
-                        if (Details::PhaseUsed::oil(pu)) {
+                        if (RegionAttributeHelpers::PhaseUsed::oil(pu)) {
                             attr.pressure += fs.pressure(FluidSystem::oilPhaseIdx).value() * hydrocarbonPV;
                             attr.temperature += fs.temperature(FluidSystem::oilPhaseIdx).value() * hydrocarbonPV;
                         } else {
-                            assert(Details::PhaseUsed::gas(pu));
+                            assert(RegionAttributeHelpers::PhaseUsed::gas(pu));
                             attr.pressure += fs.pressure(FluidSystem::gasPhaseIdx).value() * hydrocarbonPV;
                             attr.temperature += fs.temperature(FluidSystem::gasPhaseIdx).value() * hydrocarbonPV;
                         }
@@ -514,18 +175,18 @@ namespace Opm {
                     if (pv_cell > 0.) {
                         auto& attr = attributes_pv[reg];
                         attr.pv += pv_cell;
-                        if (Details::PhaseUsed::oil(pu) && Details::PhaseUsed::gas(pu)) {
+                        if (RegionAttributeHelpers::PhaseUsed::oil(pu) && RegionAttributeHelpers::PhaseUsed::gas(pu)) {
                             attr.rs += fs.Rs().value() * pv_cell;
                             attr.rv += fs.Rv().value() * pv_cell;
                         }
-                        if (Details::PhaseUsed::oil(pu)) {
+                        if (RegionAttributeHelpers::PhaseUsed::oil(pu)) {
                             attr.pressure += fs.pressure(FluidSystem::oilPhaseIdx).value() * pv_cell;
                             attr.temperature += fs.temperature(FluidSystem::oilPhaseIdx).value() * pv_cell;
-                        } else if (Details::PhaseUsed::gas(pu)) {
+                        } else if (RegionAttributeHelpers::PhaseUsed::gas(pu)) {
                              attr.pressure += fs.pressure(FluidSystem::gasPhaseIdx).value() * pv_cell;
                              attr.temperature += fs.temperature(FluidSystem::gasPhaseIdx).value() * pv_cell;
                         } else {
-                            assert(Details::PhaseUsed::water(pu));
+                            assert(RegionAttributeHelpers::PhaseUsed::water(pu));
                             attr.pressure += fs.pressure(FluidSystem::waterPhaseIdx).value() * pv_cell;
                             attr.temperature += fs.temperature(FluidSystem::waterPhaseIdx).value() * pv_cell;
                         }
@@ -616,13 +277,13 @@ namespace Opm {
                 const double T = ra.temperature;
                 const double saltConcentration = ra.saltConcentration;
 
-                const int   iw = Details::PhasePos::water(pu);
-                const int   io = Details::PhasePos::oil  (pu);
-                const int   ig = Details::PhasePos::gas  (pu);
+                const int   iw = RegionAttributeHelpers::PhasePos::water(pu);
+                const int   io = RegionAttributeHelpers::PhasePos::oil  (pu);
+                const int   ig = RegionAttributeHelpers::PhasePos::gas  (pu);
 
                 std::fill(& coeff[0], & coeff[0] + phaseUsage_.num_phases, 0.0);
 
-                if (Details::PhaseUsed::water(pu)) {
+                if (RegionAttributeHelpers::PhaseUsed::water(pu)) {
                     // q[w]_r = q[w]_s / bw
 
                     const double bw = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, saltConcentration);
@@ -637,7 +298,7 @@ namespace Opm {
                 // Determinant of 'R' matrix
                 const double detR = 1.0 - (Rs * Rv);
 
-                if (Details::PhaseUsed::oil(pu)) {
+                if (RegionAttributeHelpers::PhaseUsed::oil(pu)) {
                     // q[o]_r = 1/(bo * (1 - rs*rv)) * (q[o]_s - rv*q[g]_s)
 
                     const double bo = FluidSystem::oilPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rs);
@@ -645,12 +306,12 @@ namespace Opm {
 
                     coeff[io] += 1.0 / den;
 
-                    if (Details::PhaseUsed::gas(pu)) {
+                    if (RegionAttributeHelpers::PhaseUsed::gas(pu)) {
                         coeff[ig] -= ra.rv / den;
                     }
                 }
 
-                if (Details::PhaseUsed::gas(pu)) {
+                if (RegionAttributeHelpers::PhaseUsed::gas(pu)) {
                     // q[g]_r = 1/(bg * (1 - rs*rv)) * (q[g]_s - rs*q[o]_s)
 
                     const double bg  = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rv);
@@ -658,7 +319,7 @@ namespace Opm {
 
                     coeff[ig] += 1.0 / den;
 
-                    if (Details::PhaseUsed::oil(pu)) {
+                    if (RegionAttributeHelpers::PhaseUsed::oil(pu)) {
                         coeff[io] -= ra.rs / den;
                     }
                 }
@@ -674,13 +335,13 @@ namespace Opm {
                 const double T = ra.temperature;
                 const double saltConcentration = ra.saltConcentration;
 
-                const int   iw = Details::PhasePos::water(pu);
-                const int   io = Details::PhasePos::oil  (pu);
-                const int   ig = Details::PhasePos::gas  (pu);
+                const int   iw = RegionAttributeHelpers::PhasePos::water(pu);
+                const int   io = RegionAttributeHelpers::PhasePos::oil  (pu);
+                const int   ig = RegionAttributeHelpers::PhasePos::gas  (pu);
 
                 std::fill(& coeff[0], & coeff[0] + phaseUsage_.num_phases, 0.0);
 
-                if (Details::PhaseUsed::water(pu)) {
+                if (RegionAttributeHelpers::PhaseUsed::water(pu)) {
                     // q[w]_r = q[w]_s / bw
 
                     const double bw = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, saltConcentration);
@@ -688,12 +349,12 @@ namespace Opm {
                     coeff[iw] = 1.0 / bw;
                 }
 
-                if (Details::PhaseUsed::oil(pu)) {
+                if (RegionAttributeHelpers::PhaseUsed::oil(pu)) {
                     const double bo = FluidSystem::oilPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, 0.0);
                     coeff[io] += 1.0 / bo;
                 }
 
-                if (Details::PhaseUsed::gas(pu)) {
+                if (RegionAttributeHelpers::PhaseUsed::gas(pu)) {
                     const double bg = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, 0.0);
                     coeff[ig] += 1.0 / bg;
                 }
@@ -732,11 +393,11 @@ namespace Opm {
                 const double T = ra.temperature;
                 const double saltConcentration = ra.saltConcentration;
 
-                const int   iw = Details::PhasePos::water(pu);
-                const int   io = Details::PhasePos::oil  (pu);
-                const int   ig = Details::PhasePos::gas  (pu);
+                const int   iw = RegionAttributeHelpers::PhasePos::water(pu);
+                const int   io = RegionAttributeHelpers::PhasePos::oil  (pu);
+                const int   ig = RegionAttributeHelpers::PhasePos::gas  (pu);
 
-                if (Details::PhaseUsed::water(pu)) {
+                if (RegionAttributeHelpers::PhaseUsed::water(pu)) {
                     // q[w]_r = q[w]_s / bw
 
                     const double bw = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, saltConcentration);
@@ -764,7 +425,7 @@ namespace Opm {
                 // Determinant of 'R' matrix
                 const double detR = 1.0 - (Rs * Rv);
 
-                if (Details::PhaseUsed::oil(pu)) {
+                if (RegionAttributeHelpers::PhaseUsed::oil(pu)) {
                     // q[o]_r = 1/(bo * (1 - rs*rv)) * (q[o]_s - rv*q[g]_s)
 
                     const double bo = FluidSystem::oilPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rs);
@@ -772,14 +433,14 @@ namespace Opm {
 
                     voidage_rates[io] = surface_rates[io];
 
-                    if (Details::PhaseUsed::gas(pu)) {
+                    if (RegionAttributeHelpers::PhaseUsed::gas(pu)) {
                         voidage_rates[io] -= Rv * surface_rates[ig];
                     }
 
                     voidage_rates[io] /= den;
                 }
 
-                if (Details::PhaseUsed::gas(pu)) {
+                if (RegionAttributeHelpers::PhaseUsed::gas(pu)) {
                     // q[g]_r = 1/(bg * (1 - rs*rv)) * (q[g]_s - rs*q[o]_s)
 
                     const double bg  = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rv);
@@ -787,7 +448,7 @@ namespace Opm {
 
                     voidage_rates[ig] = surface_rates[ig];
 
-                    if (Details::PhaseUsed::oil(pu)) {
+                    if (RegionAttributeHelpers::PhaseUsed::oil(pu)) {
                         voidage_rates[ig] -= Rs * surface_rates[io];
                     }
 
@@ -852,7 +513,7 @@ namespace Opm {
                 double saltConcentration;
             };
 
-            Details::RegionAttributes<RegionId, Attributes> attr_;
+            RegionAttributeHelpers::RegionAttributes<RegionId, Attributes> attr_;
 
         };
     } // namespace RateConverter

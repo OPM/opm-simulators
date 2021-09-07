@@ -309,6 +309,8 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/PerfData.hpp
   opm/simulators/wells/PerforationData.hpp
   opm/simulators/wells/RateConverter.hpp
+  opm/simulators/wells/RegionAttributeHelpers.hpp
+  opm/simulators/wells/RegionAverageCalculator.hpp
   opm/simulators/utils/readDeck.hpp
   opm/simulators/wells/SingleWellState.hpp
   opm/simulators/wells/TargetCalculator.hpp

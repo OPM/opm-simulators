@@ -107,6 +107,27 @@ const std::vector<double>& GroupState::injection_reduction_rates(const std::stri
 
     return group_iter->second;
 }
+//-------------------------------------------------------------------------
+
+bool GroupState::has_injection_surface_rates(const std::string& gname) const {
+    auto group_iter = this->inj_surface_rates.find(gname);
+    return (group_iter != this->inj_surface_rates.end());
+}
+
+void GroupState::update_injection_surface_rates(const std::string& gname, const std::vector<double>& rates) {
+    if (rates.size() != this->num_phases)
+        throw std::logic_error("Wrong number of phases");
+
+    this->inj_surface_rates[gname] = rates;
+}
+
+const std::vector<double>& GroupState::injection_surface_rates(const std::string& gname) const {
+    auto group_iter = this->inj_surface_rates.find(gname);
+    if (group_iter == this->inj_surface_rates.end())
+        throw std::logic_error("No such group");
+
+    return group_iter->second;
+}
 
 //-------------------------------------------------------------------------
 
@@ -245,6 +266,24 @@ GPMaint::State& GroupState::gpmaint(const std::string& gname) {
     return this->gpmaint_state[gname];
 }
 
+
+//-------------------------------------------------------------------------
+
+void GroupState::update_gpmaint_target(const std::string& gname, double target) {
+    this->m_gpmaint_target[gname] = target;
+}
+
+double GroupState::gpmaint_target(const std::string& gname) const {
+    auto group_iter = this->m_gpmaint_target.find(gname);
+    if (group_iter == this->m_gpmaint_target.end())
+        throw std::logic_error("No such group");
+
+    return group_iter->second;
+}
+
+bool GroupState::has_gpmaint_target(const std::string& gname) const {
+    return (this->m_gpmaint_target.count(gname) > 0);
+}
 
 //-------------------------------------------------------------------------
 
