@@ -1039,6 +1039,14 @@ public:
             // if TUNING is enabled, also limit the time step size after a tuning event to TSINIT
             dt = std::min(dt, this->initialTimeStepSize_);
         simulator.setTimeStepSize(dt);
+
+        // Evaluate UDQ assign statements to make sure the settings are
+        // available as UDA controls for the current report step.
+        const auto& udq = schedule[episodeIdx].udq();
+        const auto& well_matcher = schedule.wellMatcher(episodeIdx);
+        auto& summary_state = simulator.vanguard().summaryState();
+        auto& udq_state = simulator.vanguard().udqState();
+        udq.eval_assign(episodeIdx, well_matcher, summary_state, udq_state);
     }
 
     /*!
