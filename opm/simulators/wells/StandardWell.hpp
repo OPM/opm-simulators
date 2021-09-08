@@ -197,7 +197,7 @@ namespace Opm
         /// \brief Wether the Jacobian will also have well contributions in it.
         virtual bool jacobianContainsWellContributions() const override
         {
-            return param_.matrix_add_well_contributions_;
+            return this->param_.matrix_add_well_contributions_;
         }
 
         virtual void gasLiftOptimizationStage1 (
@@ -261,38 +261,6 @@ namespace Opm
 
 
     protected:
-        // protected functions from the Base class
-        using Base::getAllowCrossFlow;
-        using Base::flowPhaseToEbosCompIdx;
-        using Base::flowPhaseToEbosPhaseIdx;
-        using Base::ebosCompIdxToFlowCompIdx;
-        using Base::wsalt;
-        using Base::wsolvent;
-        using Base::wpolymer;
-        using Base::wfoam;
-        using Base::mostStrictBhpFromBhpLimits;
-        using Base::getALQ;
-
-        // protected member variables from the Base class
-        using Base::well_ecl_;
-        using Base::param_;
-        using Base::well_efficiency_factor_;
-        using Base::perf_depth_;
-        using Base::well_cells_;
-        using Base::number_of_perforations_;
-        using Base::number_of_phases_;
-        using Base::saturation_table_number_;
-        using Base::well_index_;
-        using Base::index_of_well_;
-        using Base::num_components_;
-        using Base::connectionRates_;
-
-        using Base::perf_rep_radius_;
-        using Base::perf_length_;
-        using Base::bore_diameters_;
-        using Base::ipr_a_;
-        using Base::ipr_b_;
-
         Eval getPerfCellPressure(const FluidState& fs) const;
 
         // xw = inv(D)*(rw - C*x)
