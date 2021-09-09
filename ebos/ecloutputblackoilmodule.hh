@@ -668,8 +668,6 @@ private:
             } else if (FluidSystem::phaseIsActive(waterPhaseIdx)) {
                 this->pressureTimesPoreVolume_[globalDofIdx] = getValue(fs.pressure(waterPhaseIdx)) * pv; 
             }
-
-            }
         }
 
         if (this->computeFip_) {
