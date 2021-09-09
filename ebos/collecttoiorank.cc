@@ -722,7 +722,7 @@ CollectDataToIORank(const Grid& grid, const EquilGrid* equilGrid,
                     const GridView& localGridView,
                     const Dune::CartesianIndexMapper<Grid>& cartMapper,
                     const Dune::CartesianIndexMapper<EquilGrid>* equilCartMapper)
-    : toIORankComm_()
+    : toIORankComm_(grid.comm())
 {
     // index maps only have to be build when reordering is needed
     if (!needsReordering && !isParallel())

@@ -505,11 +505,11 @@ evalSummary(int reportStepNum,
     if (collectToIORank_.isParallel()) {
 #ifdef HAVE_MPI
         unsigned long buffer_size = buffer.size();
-        MPI_Bcast(&buffer_size, 1, MPI_UNSIGNED_LONG, collectToIORank_.ioRank, MPI_COMM_WORLD);
+        MPI_Bcast(&buffer_size, 1, MPI_UNSIGNED_LONG, collectToIORank_.ioRank, grid_.comm());
         if (!collectToIORank_.isIORank())
             buffer.resize( buffer_size );
 
-        MPI_Bcast(buffer.data(), buffer_size, MPI_CHAR, collectToIORank_.ioRank, MPI_COMM_WORLD);
+        MPI_Bcast(buffer.data(), buffer_size, MPI_CHAR, collectToIORank_.ioRank, grid_.comm());
         if (!collectToIORank_.isIORank()) {
             SummaryState& st = summaryState;
             st.deserialize(buffer);
