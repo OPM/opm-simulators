@@ -662,6 +662,13 @@ private:
             if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
                 this->pressureTimesPoreVolume_[globalDofIdx] = getValue(fs.pressure(oilPhaseIdx)) * pv;
                 this->pressureTimesHydrocarbonVolume_[globalDofIdx] = this->pressureTimesPoreVolume_[globalDofIdx] * hydrocarbon;
+            } else if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
+                this->pressureTimesPoreVolume_[globalDofIdx] = getValue(fs.pressure(gasPhaseIdx)) * pv;
+                this->pressureTimesHydrocarbonVolume_[globalDofIdx] = this->pressureTimesPoreVolume_[globalDofIdx] * hydrocarbon;
+            } else if (FluidSystem::phaseIsActive(waterPhaseIdx)) {
+                this->pressureTimesPoreVolume_[globalDofIdx] = getValue(fs.pressure(waterPhaseIdx)) * pv; 
+            }
+
             }
         }
 
