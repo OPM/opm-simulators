@@ -206,6 +206,7 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
     if (rank==0) {
         try
         {
+            Opm::Parser parser;
             if ( (!deck || !schedule || !summaryConfig ) && !parseContext)
             {
                 OPM_THROW(std::logic_error, "We need a parse context if deck, schedule, or summaryConfig are not initialized");
@@ -214,7 +215,6 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
             if (!deck)
             {
 
-                Opm::Parser parser;
                 deck = std::make_unique<Opm::Deck>( parser.parseFile(deckFilename , *parseContext, *errorGuard));
 
                 Opm::KeywordValidation::KeywordValidator keyword_validator(
@@ -262,7 +262,7 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
                 // too expensive however since doing so will create a copy
                 // of the grid inside the optional<>.
                 const auto rst_state = RestartIO::RstState::
-                    load(std::move(rst_view), eclipseState->runspec(), &eclipseState->getInputGrid());
+                    load(std::move(rst_view), eclipseState->runspec(), parser, &eclipseState->getInputGrid());
 
                 eclipseState->loadRestartAquifers(rst_state.aquifers);
 
