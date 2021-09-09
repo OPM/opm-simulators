@@ -372,6 +372,10 @@ namespace Opm {
         logAndCheckForExceptionsAndThrow(local_deferredLogger,
             exc_type, "beginTimeStep() failed: " + exc_msg, terminal_output_);
 
+        printf("After beginTimeStep: ");
+        for (const auto& well : this->well_container_generic_)
+            printf("%s ",well->name().c_str());
+        printf("\n");
     }
 
     template<typename TypeTag>

@@ -294,6 +294,10 @@ getLocalWells(const int timeStepIdx) const
 {
     auto w = schedule().getWells(timeStepIdx);
     w.erase(std::remove_if(w.begin(), w.end(), not_on_process_), w.end());
+    printf("Schedule.getWells(%d) : ", timeStepIdx);
+    for (const auto& well : w)
+        printf("%s ",well.name().c_str());
+    printf("\n");
     return w;
 }
 
@@ -1680,6 +1684,12 @@ getGenWell(const std::string& well_name)
                                      return elem->name() == well_name;
                                  });
 
+    if (well == well_container_generic_.end()) {
+        printf("Could not find well: %s \nWells: ",well_name.c_str());
+        for (const auto& w : well_container_generic_)
+            printf("%s ", w->name().c_str());
+        printf("\n");
+    }
     assert(well != well_container_generic_.end());
 
     return *well;
