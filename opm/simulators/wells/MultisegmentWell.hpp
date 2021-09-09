@@ -182,11 +182,8 @@ namespace Opm
 
         // protected member variables from the Base class
         using Base::well_ecl_;
-        using Base::vfp_properties_;
         using Base::ref_depth_;
         using Base::number_of_perforations_; // TODO: can use well_ecl_?
-        using Base::current_step_;
-        using Base::index_of_well_;
         using Base::number_of_phases_;
 
         // TODO: the current implementation really relies on the order of the
@@ -202,7 +199,6 @@ namespace Opm
         using Base::connectionRates_;
         using Base::ipr_a_;
         using Base::ipr_b_;
-        using Base::changed_to_stopped_this_step_;
 
         // protected functions from the Base class
         using Base::phaseUsage;
@@ -211,12 +207,6 @@ namespace Opm
         using Base::flowPhaseToEbosPhaseIdx;
         using Base::ebosCompIdxToFlowCompIdx;
         using Base::getAllowCrossFlow;
-        using Base::scalingFactor;
-        using Base::wellIsStopped;
-        using Base::updateWellOperability;
-        using Base::checkWellOperability;
-        using Base::calculateBhpFromThp;
-        using Base::getALQ;
 
         // the intial amount of fluids in each segment under surface condition
         std::vector<std::vector<double> > segment_fluid_initial_;
