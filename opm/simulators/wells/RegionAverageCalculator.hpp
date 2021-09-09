@@ -185,10 +185,11 @@ namespace Opm {
                           // using the pore volume to do the averaging
                           const auto& attri_pv = attributes_pv[reg];
                           const double pv_sum = comm.sum(attri_pv.pv);
-                          assert(pv_sum > 0.);
-                          const double p_pv_sum = comm.sum(attri_pv.pressure);
-                          ra.pressure = p_pv_sum / pv_sum;
-
+                          // pore volums can be zero if a fipnum region is empty
+                          if (pv_sum > 0) {
+                            const double p_pv_sum = comm.sum(attri_pv.pressure);
+                            ra.pressure = p_pv_sum / pv_sum;
+                          }
                       }
                 }
             }
