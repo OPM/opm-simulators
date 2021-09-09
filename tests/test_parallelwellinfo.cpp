@@ -113,7 +113,12 @@ BOOST_AUTO_TEST_CASE(ParallelWellComparison)
         pairs = {{"Test1", false},{"Test2", true}, {"Test1", true} };
 
     std::vector<Opm::ParallelWellInfo> well_info;
-    well_info.assign(pairs.begin(), pairs.end());
+    
+    for (const auto& wellinfo : pairs) {                   
+        well_info.emplace_back(wellinfo, MPI_COMM_WORLD);         
+    }
+
+    //well_info.assign(pairs.begin(), pairs.end());
 
     BOOST_CHECK_EQUAL_COLLECTIONS(pairs.begin(), pairs.end(),
                                   well_info.begin(), well_info.end());

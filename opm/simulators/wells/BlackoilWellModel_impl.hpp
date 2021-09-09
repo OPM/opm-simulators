@@ -59,8 +59,10 @@ namespace Opm {
                                         cartDims[0] * cartDims[1] * cartDims[2]);
 
             auto& parallel_wells = ebosSimulator.vanguard().parallelWells();
-            this->parallel_well_info_.assign(parallel_wells.begin(),
-                                             parallel_wells.end());
+
+            for (const auto& wellinfo : parallel_wells) {                   
+                this->parallel_well_info_.emplace_back(wellinfo, grid.comm());         
+            }
         }
 
         this->alternative_well_rate_init_ =

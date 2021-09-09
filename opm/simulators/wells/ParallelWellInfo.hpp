@@ -269,7 +269,7 @@ public:
     /// \param allComm The communication object with all MPI ranks active in the simulation.
     ///                Default is the one with all ranks available.
     ParallelWellInfo(const std::pair<std::string,bool>& well_info,
-                     Communication allComm = Communication());
+                     Communication allComm);
 
     const Communication& communication() const
     {
