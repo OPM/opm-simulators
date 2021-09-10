@@ -162,6 +162,8 @@ namespace Opm
             return false;
         }
 
+        this->resetControlSwitched();
+
         const auto& summaryState = ebos_simulator.vanguard().summaryState();
         const auto& schedule = ebos_simulator.vanguard().schedule();
         const auto& well = this->well_ecl_;
@@ -203,6 +205,7 @@ namespace Opm
             deferred_logger.info(ss.str());
             updateWellStateWithTarget(ebos_simulator, group_state, well_state, deferred_logger);
             updatePrimaryVariables(well_state, deferred_logger);
+            this->controlSwitched();
         }
 
         return changed;
@@ -385,7 +388,7 @@ namespace Opm
         // only use inner well iterations for the first newton iterations.
         const int iteration_idx = ebosSimulator.model().newtonMethod().numIterations();
         bool converged = true;
-        if (iteration_idx < param_.max_niter_inner_well_iter_)
+        if (iteration_idx < param_.max_niter_inner_well_iter_ || this->hasControlJustSwitched())
             converged = this->iterateWellEquations(ebosSimulator, dt, well_state, group_state, deferred_logger);
 
         // unsolvable wells are treated as not operable and will not be solved for in this iteration.

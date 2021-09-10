@@ -168,6 +168,18 @@ public:
     // whether a well is specified with a non-zero and valid VFP table number
     bool isVFPActive(DeferredLogger& deferred_logger) const;
 
+    bool hasControlJustSwitched() const {
+        return control_switched_;
+    }
+
+    void controlSwitched() {
+        control_switched_ = true;
+    }
+
+    void resetControlSwitched() {
+        control_switched_ = false;
+    }
+
 protected:
     bool getAllowCrossFlow() const;
     double mostStrictBhpFromBhpLimits(const SummaryState& summaryState) const;
@@ -302,6 +314,8 @@ protected:
     double well_efficiency_factor_;
     const VFPProperties* vfp_properties_;
     const GuideRate* guide_rate_;
+
+    bool control_switched_;
 };
 
 }

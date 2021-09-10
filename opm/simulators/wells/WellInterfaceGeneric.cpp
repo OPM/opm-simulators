@@ -96,6 +96,8 @@ WellInterfaceGeneric::WellInterfaceGeneric(const Well& well,
     }
 
     wsolvent_ = 0.0;
+
+    control_switched_ = false;
 }
 
 const std::string& WellInterfaceGeneric::name() const
