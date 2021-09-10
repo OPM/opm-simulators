@@ -663,7 +663,7 @@ reduceALQtoOilTarget_(double alq,
     double orig_alq = alq;
     // NOTE: This method should only be called if oil_is_limited, and hence
     //   we know that it has oil rate control
-    assert(this->controls_.hasControl(Well::ProducerCMode::ORAT));
+    assert(this->controls_.hasControl(Well::ProducerCMode::ORAT) || this->controls_.hasControl(Well::ProducerCMode::LRAT));
     auto target = this->controls_.oil_rate;
     bool stop_iteration = false;
     double temp_alq = alq;
