@@ -328,7 +328,6 @@ void readDeck(CollCommType comm, std::string& deckFilename, std::unique_ptr<Opm:
     // In case of parse errors eclipseState/schedule might be null
     // and trigger segmentation faults in parallel during broadcast
     // (e.g. when serializing the non-existent TableManager)
-    auto comm = Dune::MPIHelper::getCollectiveCommunication();
     parseSuccess = comm.min(parseSuccess);
     try
     {
