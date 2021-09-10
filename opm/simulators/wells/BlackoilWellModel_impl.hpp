@@ -207,10 +207,12 @@ namespace Opm {
         rateConverter_->template defineState<ElementContext>(ebosSimulator_);
 
         // Compute regional average pressures used by gpmaint
-        const auto& fp = this->eclState_.fieldProps();
-        const auto& fipnum = fp.get_int("FIPNUM");
-        regionalAveragePressureCalculator_.reset(new AverageRegionalPressureType (phase_usage_,fipnum));
-        regionalAveragePressureCalculator_->template defineState<ElementContext>(ebosSimulator_);
+        if (schedule_[timeStepIdx].has_gpmaint()) {
+            const auto& fp = this->eclState_.fieldProps();
+            const auto& fipnum = fp.get_int("FIPNUM");
+            regionalAveragePressureCalculator_.reset(new AverageRegionalPressureType (phase_usage_,fipnum));
+            regionalAveragePressureCalculator_->template defineState<ElementContext>(ebosSimulator_);
+        }
 
         {
             const auto& sched_state = this->schedule()[timeStepIdx];
@@ -463,11 +465,12 @@ namespace Opm {
         // update the rate converter with current averages pressures etc in
         rateConverter_->template defineState<ElementContext>(ebosSimulator_);
 
-        regionalAveragePressureCalculator_->template defineState<ElementContext>(ebosSimulator_);
         const Group& fieldGroup = schedule_.getGroup("FIELD", reportStepIdx);
-        WellGroupHelpers::updateGpMaintTargetForGroups(fieldGroup,
-                                                       schedule_, *regionalAveragePressureCalculator_, reportStepIdx, dt, this->wellState(), this->groupState());
-
+        if (schedule_[reportStepIdx].has_gpmaint()) {
+            regionalAveragePressureCalculator_->template defineState<ElementContext>(ebosSimulator_);
+            WellGroupHelpers::updateGpMaintTargetForGroups(fieldGroup,
+                                                           schedule_, *regionalAveragePressureCalculator_, reportStepIdx, dt, this->wellState(), this->groupState());
+        }
 
         // calculate the well potentials
         try {
