@@ -21,9 +21,10 @@
 #ifndef OPM_FLEXIBLE_SOLVER_IMPL_HEADER_INCLUDED
 #define OPM_FLEXIBLE_SOLVER_IMPL_HEADER_INCLUDED
 
+#include <opm/simulators/linalg/matrixblock.hh>
+#include <opm/simulators/linalg/ilufirstelement.hh>
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
 #include <opm/simulators/linalg/PreconditionerFactory.hpp>
-#include <opm/simulators/linalg/matrixblock.hh>
 
 #include <dune/common/fmatrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
