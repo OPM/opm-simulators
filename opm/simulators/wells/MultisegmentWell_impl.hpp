@@ -1743,22 +1743,20 @@ namespace Opm
             return rates;
         };
 
-        auto bhp = this->MultisegmentWellGeneric<Scalar>::
+        auto bhpAtLimit = this->MultisegmentWellGeneric<Scalar>::
                computeBhpAtThpLimitProd(frates,
                                         summary_state,
                                         maxPerfPress(ebos_simulator),
                                         getRefDensity(),
                                         deferred_logger);
 
-       if(bhp)
-           return bhp;
+       if(bhpAtLimit)
+           return bhpAtLimit;
 
        auto fratesIter = [this, &ebos_simulator, &deferred_logger](const double bhp) {
-           // Not solving the well equations here, which means we are
-           // calculating at the current Fg/Fw values of the
-           // well. This does not matter unless the well is
-           // crossflowing, and then it is likely still a good
-           // approximation.
+           // Solver the well iterations to see if we are
+           // able to get a solution with an update
+           // solution
            std::vector<double> rates(3);
            computeWellRatesWithBhpIterations(ebos_simulator, bhp, rates, deferred_logger);
            return rates;
@@ -1795,21 +1793,19 @@ namespace Opm
             return rates;
         };
 
-        auto bhp = this->MultisegmentWellGeneric<Scalar>::
+        auto bhpAtLimit = this->MultisegmentWellGeneric<Scalar>::
                 computeBhpAtThpLimitInj(frates,
                                         summary_state,
                                         getRefDensity(),
                                         deferred_logger);
 
-        if(bhp)
-            return bhp;
+        if(bhpAtLimit)
+            return bhpAtLimit;
 
        auto fratesIter = [this, &ebos_simulator, &deferred_logger](const double bhp) {
-           // Not solving the well equations here, which means we are
-           // calculating at the current Fg/Fw values of the
-           // well. This does not matter unless the well is
-           // crossflowing, and then it is likely still a good
-           // approximation.
+           // Solver the well iterations to see if we are
+           // able to get a solution with an update
+           // solution
            std::vector<double> rates(3);
            computeWellRatesWithBhpIterations(ebos_simulator, bhp, rates, deferred_logger);
            return rates;
