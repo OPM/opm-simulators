@@ -162,13 +162,13 @@ namespace Opm
 
         void computeConnLevelProdInd(const FluidState& fs,
                                      const std::function<double(const double)>& connPICalc,
-                                     const std::vector<EvalWell>& mobility,
+                                     const std::vector<Scalar>& mobility,
                                      double* connPI) const;
 
         void computeConnLevelInjInd(const FluidState& fs,
                                     const Phase preferred_phase,
                                     const std::function<double(const double)>& connIICalc,
-                                    const std::vector<EvalWell>& mobility,
+                                    const std::vector<Scalar>& mobility,
                                     double* connII,
                                     DeferredLogger& deferred_logger) const;
 
@@ -198,27 +198,63 @@ namespace Opm
         // compute the pressure difference between the perforation and cell center
         void computePerfCellPressDiffs(const Simulator& ebosSimulator);
 
-        void computePerfRatePressure(const IntensiveQuantities& int_quants,
-                                     const std::vector<EvalWell>& mob_perfcells,
-                                     const double Tw,
-                                     const int seg,
-                                     const int perf,
-                                     const EvalWell& segment_pressure,
-                                     const bool& allow_cf,
-                                     std::vector<EvalWell>& cq_s,
-                                     EvalWell& perf_press,
-                                     double& perf_dis_gas_rate,
-                                     double& perf_vap_oil_rate,
-                                     DeferredLogger& deferred_logger) const;
+        void computePerfRateScalar(const IntensiveQuantities& int_quants,
+                                   const std::vector<Scalar>& mob_perfcells,
+                                   const double Tw,
+                                   const int seg,
+                                   const int perf,
+                                   const Scalar& segment_pressure,
+                                   const bool& allow_cf,
+                                   std::vector<Scalar>& cq_s,
+                                   Scalar& perf_press,
+                                   double& perf_dis_gas_rate,
+                                   double& perf_vap_oil_rate,
+                                   DeferredLogger& deferred_logger) const;
+
+        void computePerfRateEval(const IntensiveQuantities& int_quants,
+                                 const std::vector<EvalWell>& mob_perfcells,
+                                 const double Tw,
+                                 const int seg,
+                                 const int perf,
+                                 const EvalWell& segment_pressure,
+                                 const bool& allow_cf,
+                                 std::vector<EvalWell>& cq_s,
+                                 EvalWell& perf_press,
+                                 double& perf_dis_gas_rate,
+                                 double& perf_vap_oil_rate,
+                                 DeferredLogger& deferred_logger) const;
+
+        template<class Value>
+        void computePerfRate(const Value& pressure_cell,
+                        const Value& rs,
+                        const Value& rv,
+                        const std::vector<Value>& b_perfcells,
+                        const std::vector<Value>& mob_perfcells,
+                        const double Tw,
+                        const int perf,
+                        const Value& segment_pressure,
+                        const Value& segment_density,
+                        const bool& allow_cf,
+                        const std::vector<Value>& cmix_s,
+                        std::vector<Value>& cq_s,
+                        Value& perf_press,
+                        double& perf_dis_gas_rate,
+                        double& perf_vap_oil_rate,
+                        DeferredLogger& deferred_logger) const;
 
         // compute the fluid properties, such as densities, viscosities, and so on, in the segments
         // They will be treated implicitly, so they need to be of Evaluation type
         void computeSegmentFluidProperties(const Simulator& ebosSimulator);
 
         // get the mobility for specific perforation
-        void getMobility(const Simulator& ebosSimulator,
-                         const int perf,
-                         std::vector<EvalWell>& mob) const;
+        void getMobilityEval(const Simulator& ebosSimulator,
+                             const int perf,
+                             std::vector<EvalWell>& mob) const;
+
+        // get the mobility for specific perforation
+        void getMobilityScalar(const Simulator& ebosSimulator,
+                               const int perf,
+                               std::vector<Scalar>& mob) const;
 
         void computeWellRatesAtBhpLimit(const Simulator& ebosSimulator,
                                         std::vector<double>& well_flux,

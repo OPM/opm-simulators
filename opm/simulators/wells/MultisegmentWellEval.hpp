@@ -150,22 +150,6 @@ protected:
                                    const double max_residual_allowed,
                                    DeferredLogger& deferred_logger) const;
 
-    void computePerfRatePressure(const EvalWell& pressure_cell,
-                                 const EvalWell& rs,
-                                 const EvalWell& rv,
-                                 const std::vector<EvalWell>& b_perfcells,
-                                 const std::vector<EvalWell>& mob_perfcells,
-                                 const double Tw,
-                                 const int seg,
-                                 const int perf,
-                                 const EvalWell& segment_pressure,
-                                 const bool& allow_cf,
-                                 std::vector<EvalWell>& cq_s,
-                                 EvalWell& perf_press,
-                                 double& perf_dis_gas_rate,
-                                 double& perf_vap_oil_rate,
-                                 DeferredLogger& deferred_logger) const;
-
     /// check whether the well equations get converged for this well
     ConvergenceReport getWellConvergence(const WellState& well_state,
                                          const std::vector<double>& B_avg,
