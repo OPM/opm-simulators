@@ -537,14 +537,14 @@ template class EclGenericWriter<Dune::CpGrid,
 template class EclGenericWriter<Dune::CpGrid,
                                 Dune::CpGrid,
                                 Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>,
-                                Dune::MultipleCodimMultipleGeomTypeMapper<Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>, Dune::Impl::MCMGFailLayout>,
+                                Dune::MultipleCodimMultipleGeomTypeMapper<Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>>,
                                 double>;
 #endif
 
 template class EclGenericWriter<Dune::PolyhedralGrid<3,3,double>,
                                 Dune::PolyhedralGrid<3,3,double>,
                                 Dune::GridView<Dune::PolyhedralGridViewTraits<3, 3, double, Dune::PartitionIteratorType(4)>>,
-                                Dune::MultipleCodimMultipleGeomTypeMapper<Dune::GridView<Dune::PolyhedralGridViewTraits<3,3,double,Dune::PartitionIteratorType(4)>>, Dune::Impl::MCMGFailLayout>,
+                                Dune::MultipleCodimMultipleGeomTypeMapper<Dune::GridView<Dune::PolyhedralGridViewTraits<3,3,double,Dune::PartitionIteratorType(4)>>>,
                                 double>;
 
 } // namespace Opm

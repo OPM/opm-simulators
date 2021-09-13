@@ -289,14 +289,14 @@ template class EclGenericTracerModel<Dune::CpGrid,
 #else
 template class EclGenericTracerModel<Dune::CpGrid,
                                      Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>,
-                                     Dune::MultipleCodimMultipleGeomTypeMapper<Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>,Dune::Impl::MCMGFailLayout>,
+                                     Dune::MultipleCodimMultipleGeomTypeMapper<Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>>,
                                      Opm::EcfvStencil<double,Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>,false,false>,
                                      double>;
 #endif
 
 template class EclGenericTracerModel<Dune::PolyhedralGrid<3,3,double>,
                                      Dune::GridView<Dune::PolyhedralGridViewTraits<3,3,double,Dune::PartitionIteratorType(4)>>,
-                                     Dune::MultipleCodimMultipleGeomTypeMapper<Dune::GridView<Dune::PolyhedralGridViewTraits<3,3,double,Dune::PartitionIteratorType(4)>>,Dune::Impl::MCMGFailLayout>,
+                                     Dune::MultipleCodimMultipleGeomTypeMapper<Dune::GridView<Dune::PolyhedralGridViewTraits<3,3,double,Dune::PartitionIteratorType(4)>>>,
                                      Opm::EcfvStencil<double, Dune::GridView<Dune::PolyhedralGridViewTraits<3,3,double,Dune::PartitionIteratorType(4)>>,false,false>,
                                      double>;
 
