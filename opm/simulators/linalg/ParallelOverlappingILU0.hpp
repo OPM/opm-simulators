@@ -25,6 +25,7 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <dune/common/version.hh>
 #include <dune/istl/preconditioner.hh>
+#include <dune/istl/ilu.hh>
 #include <dune/istl/paamg/smoother.hh>
 #include <dune/istl/paamg/graph.hh>
 #include <dune/istl/paamg/pinfo.hh>
@@ -430,7 +431,11 @@ namespace Opm
                                           detail::IsPositiveFunctor() );
             break;
         default:
+#if DUNE_VERSION_LT(DUNE_GRID, 2, 8)
             bilu0_decomposition( ILU );
+#else
+            Dune::ILU::blockILU0Decomposition( ILU );
+#endif
             break;
         }
     }
@@ -1022,7 +1027,11 @@ public:
                     break;
                 default:
                     if (interiorSize_ == A_->N())
+#if DUNE_VERSION_LT(DUNE_GRID, 2, 8)
                         bilu0_decomposition( *ILU );
+#else
+                        Dune::ILU::blockILU0Decomposition( *ILU );
+#endif
                     else
                         detail::ghost_last_bilu0_decomposition(*ILU, interiorSize_);
                     break;

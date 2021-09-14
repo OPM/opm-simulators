@@ -380,7 +380,7 @@ template class EclGenericCpGridVanguard<Dune::MultipleCodimMultipleGeomTypeMappe
                                         Dune::CpGrid, Dune::PartitionIteratorType(4), false>>>,
                                         double>;
 #else
-template class EclGenericCpGridVanguard<Dune::MultipleCodimMultipleGeomTypeMapper<Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>,Dune::Impl::MCMGFailLayout>,
+template class EclGenericCpGridVanguard<Dune::MultipleCodimMultipleGeomTypeMapper<Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>>,
                                         Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>,
                                         double>;
 #endif

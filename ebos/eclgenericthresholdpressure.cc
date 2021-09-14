@@ -253,13 +253,13 @@ template class EclGenericThresholdPressure<Dune::CpGrid,
 #else
 template class EclGenericThresholdPressure<Dune::CpGrid,
                                            Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>,
-                                           Dune::MultipleCodimMultipleGeomTypeMapper<Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>,Dune::Impl::MCMGFailLayout>,
+                                           Dune::MultipleCodimMultipleGeomTypeMapper<Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>>,
                                            double>;
 #endif
 
 template class EclGenericThresholdPressure<Dune::PolyhedralGrid<3,3,double>,
                                            Dune::GridView<Dune::PolyhedralGridViewTraits<3,3,double,Dune::PartitionIteratorType(4)>>,
-                                           Dune::MultipleCodimMultipleGeomTypeMapper<Dune::GridView<Dune::PolyhedralGridViewTraits<3,3,double,Dune::PartitionIteratorType(4)>>, Dune::Impl::MCMGFailLayout>,
+                                           Dune::MultipleCodimMultipleGeomTypeMapper<Dune::GridView<Dune::PolyhedralGridViewTraits<3,3,double,Dune::PartitionIteratorType(4)>>>,
                                            double>;
 
 } // namespace Opm

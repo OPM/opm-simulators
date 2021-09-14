@@ -1631,10 +1631,10 @@ updateSummaryRegionValues(const Inplace& inplace,
     // support the RPR__xxx summary keywords.
     {
         auto get_vector = [&inplace]
-            (const auto&          node,
-             const Inplace::Phase phase)
+            (const auto&          node_,
+             const Inplace::Phase phase_)
         {
-            return inplace.get_vector(node.fip_region(), phase);
+            return inplace.get_vector(node_.fip_region(), phase_);
         };
 
         for (const auto& phase : Inplace::phases()) {

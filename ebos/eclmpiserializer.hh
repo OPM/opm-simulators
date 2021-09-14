@@ -168,7 +168,7 @@ public:
                              m_packSize += Mpi::packSize(d, m_comm);
                          };
 
-        auto pack = [&](auto& d) {
+        auto packer = [&](auto& d) {
                           Mpi::pack(d, m_buffer, m_position, m_comm);
                       };
 
@@ -177,7 +177,7 @@ public:
             std::visit( [&] (auto& arg) { pack_size(arg); }, data);
         } else if (m_op == Operation::PACK) {
             Mpi::pack(data.index(), m_buffer, m_position, m_comm);
-            std::visit([&](auto& arg) { pack(arg); }, data);
+            std::visit([&](auto& arg) { packer(arg); }, data);
         } else if (m_op == Operation::UNPACK) {
             size_t index;
             std::variant<T0,T1>& mutable_data = const_cast<std::variant<T0,T1>&>(data);
