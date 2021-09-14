@@ -30,8 +30,8 @@
 #include "overlappingscalarproduct.hh"
 
 #include <opm/material/common/Exceptions.hpp>
-
-#include <dune/istl/preconditioners.hh>
+#include <opm/simulators/linalg/ilufirstelement.hh> //definitions needed in next header
+#include <dune/istl/preconditioner.hh>
 
 #include <dune/common/version.hh>
 
