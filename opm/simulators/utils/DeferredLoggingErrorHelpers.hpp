@@ -23,6 +23,8 @@
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
 
+#include <opm/material/common/Exceptions.hpp>
+
 #include <dune/common/version.hh>
 #include <dune/common/parallel/mpihelper.hh>
 
@@ -63,6 +65,9 @@ void _throw(Opm::ExceptionType::ExcEnum exc_type, const std::string& message) {
         break;
     case Opm::ExceptionType::INVALID_ARGUMENT:
         throw std::invalid_argument(message);
+        break;
+    case Opm::ExceptionType::NUMERICAL_ISSUE:
+        throw Opm::NumericalIssue(message);
         break;
     case Opm::ExceptionType::DEFAULT:
     case Opm::ExceptionType::LOGIC_ERROR:
