@@ -772,8 +772,10 @@ ConvergenceReport
 StandardWellEval<FluidSystem,Indices,Scalar>::
 getWellConvergence(const WellState& well_state,
                    const std::vector<double>& B_avg,
-                   const double tol_wells,
                    const double maxResidualAllowed,
+                   const double tol_wells,
+                   const double relaxed_tolerance_flow,
+                   const bool relax_tolerance,
                    std::vector<double>& res,
                    DeferredLogger& deferred_logger) const
 {
@@ -807,7 +809,9 @@ getWellConvergence(const WellState& well_state,
             report.setWellFailed({type, CR::Severity::NotANumber, compIdx, baseif_.name()});
         } else if (well_flux_residual[compIdx] > maxResidualAllowed) {
             report.setWellFailed({type, CR::Severity::TooLarge, compIdx, baseif_.name()});
-        } else if (well_flux_residual[compIdx] > tol_wells) {
+        } else if (!relax_tolerance && well_flux_residual[compIdx] > tol_wells) {
+            report.setWellFailed({type, CR::Severity::Normal, compIdx, baseif_.name()});
+        } else if (well_flux_residual[compIdx] > relaxed_tolerance_flow) {
             report.setWellFailed({type, CR::Severity::Normal, compIdx, baseif_.name()});
         }
     }
