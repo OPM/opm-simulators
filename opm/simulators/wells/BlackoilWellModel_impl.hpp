@@ -176,6 +176,9 @@ namespace Opm {
     beginReportStep(const int timeStepIdx)
     {
         DeferredLogger local_deferredLogger;
+
+        std::string exc_msg;
+        auto exc_type = ExceptionType::NONE;
         report_step_starts_ = true;
 
         const Grid& grid = ebosSimulator_.vanguard().grid();
@@ -184,46 +187,71 @@ namespace Opm {
         wells_ecl_ = getLocalWells(timeStepIdx);
         local_parallel_well_info_ = createLocalParallelWellInfo(wells_ecl_);
 
-        // The well state initialize bhp with the cell pressure in the top cell.
-        // We must therefore provide it with updated cell pressures
-        this->initializeWellPerfData();
-        this->initializeWellState(timeStepIdx, summaryState);
-
-        // Wells are active if they are active wells on at least
-        // one process.
-        wells_active_ = localWellsActive() ? 1 : 0;
-        wells_active_ = grid.comm().max(wells_active_);
-
-        // handling MS well related
-        if (param_.use_multisegment_well_&& anyMSWellOpenLocal()) { // if we use MultisegmentWell model
-            this->wellState().initWellStateMSWell(wells_ecl_, &this->prevWellState());
-        }
-
-        const Group& fieldGroup = schedule().getGroup("FIELD", timeStepIdx);
-        WellGroupHelpers::setCmodeGroup(fieldGroup, schedule(), summaryState, timeStepIdx, this->wellState(), this->groupState());
-
-        // Compute reservoir volumes for RESV controls.
-        rateConverter_.reset(new RateConverterType (phase_usage_, std::vector<int>(local_num_cells_, 0)));
-        rateConverter_->template defineState<ElementContext>(ebosSimulator_);
-
-        // Compute regional average pressures used by gpmaint
-        if (schedule_[timeStepIdx].has_gpmaint()) {
-            const auto& fp = this->eclState_.fieldProps();
-            const auto& fipnum = fp.get_int("FIPNUM");
-            regionalAveragePressureCalculator_.reset(new AverageRegionalPressureType (phase_usage_,fipnum));
-            regionalAveragePressureCalculator_->template defineState<ElementContext>(ebosSimulator_);
-        }
-
+        // at least initializeWellState might be throw
+        // exception in opm-material (UniformTabulated2DFunction.hpp)
+        // playing it safe by extending the scope a bit.
+        try
         {
-            const auto& sched_state = this->schedule()[timeStepIdx];
-            // update VFP properties
-            vfp_properties_.reset(new VFPProperties( sched_state.vfpinj(), sched_state.vfpprod()) );
-            this->initializeWellProdIndCalculators();
-            if (sched_state.events().hasEvent(ScheduleEvents::Events::WELL_PRODUCTIVITY_INDEX)) {
-                this->runWellPIScaling(timeStepIdx, local_deferredLogger);
+
+            // The well state initialize bhp with the cell pressure in the top cell.
+            // We must therefore provide it with updated cell pressures
+            this->initializeWellPerfData();
+            this->initializeWellState(timeStepIdx, summaryState);
+
+            // Wells are active if they are active wells on at least
+            // one process.
+            wells_active_ = localWellsActive() ? 1 : 0;
+            wells_active_ = grid.comm().max(wells_active_);
+
+            // handling MS well related
+            if (param_.use_multisegment_well_&& anyMSWellOpenLocal()) { // if we use MultisegmentWell model
+                this->wellState().initWellStateMSWell(wells_ecl_, &this->prevWellState());
+            }
+
+            const Group& fieldGroup = schedule().getGroup("FIELD", timeStepIdx);
+            WellGroupHelpers::setCmodeGroup(fieldGroup, schedule(), summaryState, timeStepIdx, this->wellState(), this->groupState());
+
+            // Compute reservoir volumes for RESV controls.
+            rateConverter_.reset(new RateConverterType (phase_usage_,
+                                                        std::vector<int>(local_num_cells_, 0)));
+            rateConverter_->template defineState<ElementContext>(ebosSimulator_);
+
+            // Compute regional average pressures used by gpmaint
+            if (schedule_[timeStepIdx].has_gpmaint()) {
+                const auto& fp = this->eclState_.fieldProps();
+                const auto& fipnum = fp.get_int("FIPNUM");
+                regionalAveragePressureCalculator_.reset(new AverageRegionalPressureType (phase_usage_,fipnum));
+                regionalAveragePressureCalculator_->template defineState<ElementContext>(ebosSimulator_);
+            }
+
+            {
+                const auto& sched_state = this->schedule()[timeStepIdx];
+                // update VFP properties
+                vfp_properties_.reset(new VFPProperties( sched_state.vfpinj(), sched_state.vfpprod()) );
+                this->initializeWellProdIndCalculators();
+                if (sched_state.events().hasEvent(ScheduleEvents::Events::WELL_PRODUCTIVITY_INDEX)) {
+                    this->runWellPIScaling(timeStepIdx, local_deferredLogger);
+                }
             }
         }
-
+        catch (const Opm::NumericalIssue& e){
+            exc_type = ExceptionType::NUMERICAL_ISSUE;
+            exc_msg = e.what();
+        } catch (const std::runtime_error& e) {
+            exc_type = ExceptionType::RUNTIME_ERROR;
+            exc_msg = e.what();
+        } catch (const std::invalid_argument& e) {
+            exc_type = ExceptionType::INVALID_ARGUMENT;
+            exc_msg = e.what();
+        } catch (const std::logic_error& e) {
+            exc_type = ExceptionType::LOGIC_ERROR;
+            exc_msg = e.what();
+        } catch (const std::exception& e) {
+            exc_type = ExceptionType::DEFAULT;
+            exc_msg = e.what();
+        }
+        
+        logAndCheckForExceptionsAndThrow(local_deferredLogger, exc_type, "beginReportStep() failed: " + exc_msg, terminal_output_);
         // Store the current well state, to be able to recover in the case of failed iterations
         this->commitWGState();
     }
