@@ -92,8 +92,7 @@ namespace WellGroupHelpers
                                     const bool isInjector,
                                     const PhaseUsage& pu,
                                     const GuideRate& guide_rate,
-                                    const WellState& wellStateNupcol,
-                                    WellState& wellState,
+                                    const WellState& wellState,
                                     GroupState& group_state,
                                     std::vector<double>& groupTargetReduction);
 
@@ -145,21 +144,19 @@ namespace WellGroupHelpers
     void updateVREPForGroups(const Group& group,
                              const Schedule& schedule,
                              const int reportStepIdx,
-                             const WellState& wellStateNupcol,
-                             WellState& wellState,
+                             const WellState& wellState,
                              GroupState& group_state);
 
     void updateReservoirRatesInjectionGroups(const Group& group,
                                              const Schedule& schedule,
                                              const int reportStepIdx,
-                                             const WellState& wellStateNupcol,
-                                             WellState& wellState,
+                                             const WellState& wellState,
                                              GroupState& group_state);
 
     void updateSurfaceRatesInjectionGroups(const Group& group,
                                            const Schedule& schedule,
                                            const int reportStepIdx,
-                                           const WellState& wellStateNupcol,
+                                           const WellState& wellState,
                                            GroupState& group_state);
 
     void updateWellRates(const Group& group,
@@ -171,8 +168,7 @@ namespace WellGroupHelpers
     void updateGroupProductionRates(const Group& group,
                                     const Schedule& schedule,
                                     const int reportStepIdx,
-                                    const WellState& wellStateNupcol,
-                                    WellState& wellState,
+                                    const WellState& wellState,
                                     GroupState& group_state);
 
     void updateWellRatesFromGroupTargetScale(const double scale,
@@ -188,8 +184,7 @@ namespace WellGroupHelpers
                              const int reportStepIdx,
                              const PhaseUsage& pu,
                              const SummaryState& st,
-                             const WellState& wellStateNupcol,
-                             WellState& wellState,
+                             const WellState& wellState,
                              GroupState& group_state);
 
     template <class RegionalValues>
