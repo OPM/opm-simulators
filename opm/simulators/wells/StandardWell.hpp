@@ -327,7 +327,7 @@ namespace Opm
                              double& perf_vap_oil_rate,
                              DeferredLogger& deferred_logger) const;
 
-        void computeWellRatesWithBhpPotential(const Simulator& ebosSimulator,
+        void computeWellRatesWithBhpIterations(const Simulator& ebosSimulator,
                                               const double& bhp,
                                               std::vector<double>& well_flux,
                                               DeferredLogger& deferred_logger) const;

@@ -206,9 +206,6 @@ namespace Opm
                                    const Scalar& segment_pressure,
                                    const bool& allow_cf,
                                    std::vector<Scalar>& cq_s,
-                                   Scalar& perf_press,
-                                   double& perf_dis_gas_rate,
-                                   double& perf_vap_oil_rate,
                                    DeferredLogger& deferred_logger) const;
 
         void computePerfRateEval(const IntensiveQuantities& int_quants,
@@ -261,9 +258,14 @@ namespace Opm
                                         DeferredLogger& deferred_logger) const;
 
         void computeWellRatesWithBhp(const Simulator& ebosSimulator,
-                                     const Scalar bhp,
+                                     const Scalar& bhp,
                                      std::vector<double>& well_flux,
                                      DeferredLogger& deferred_logger) const;
+
+        void computeWellRatesWithBhpIterations(const Simulator& ebosSimulator,
+                                               const Scalar& bhp,
+                                               std::vector<double>& well_flux,
+                                               DeferredLogger& deferred_logger) const;
 
         std::vector<double>
         computeWellPotentialWithTHP(const Simulator& ebos_simulator,
