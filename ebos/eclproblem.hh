@@ -131,6 +131,12 @@ struct EclBaseProblem {
 #endif
 }
 
+// Determine whether to throw for untabulated values
+template<class TypeTag, class MyTypeTag>
+struct ThrowUntabulated {
+    using type = UndefinedProperty;
+};
+
 // The class which deals with ECL wells
 template<class TypeTag, class MyTypeTag>
 struct EclWellModel {
@@ -302,6 +308,11 @@ struct EclEnableAquifers<TypeTag, TTag::EclBaseProblem> {
     static constexpr bool value = true;
 };
 
+// Throw for untabulated values
+template<class TypeTag>
+struct ThrowUntabulated<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = false;
+};
 // Enable gravity
 template<class TypeTag>
 struct EnableGravity<TypeTag, TTag::EclBaseProblem> {
@@ -683,6 +694,8 @@ public:
         EclWriterType::registerParameters();
         VtkEclTracerModule<TypeTag>::registerParameters();
 
+        EWOMS_REGISTER_PARAM(TypeTag, bool, ThrowUntabulated,
+                             "Whether to abort if untabulated values are queried from PVT Tables (default: false) Currently only used for CO2");
         EWOMS_REGISTER_PARAM(TypeTag, bool, EnableWriteAllSolutions,
                              "Write all solutions to disk instead of only the ones for the "
                              "report steps");
@@ -779,6 +792,8 @@ public:
         , pffDofData_(simulator.gridView(), this->elementMapper())
         , tracerModel_(simulator)
     {
+        UniformTabulated2DFunction<Scalar>::throwUntabulated =
+            EWOMS_GET_PARAM(TypeTag, bool, ThrowUntabulated);
         this->model().addOutputModule(new VtkEclTracerModule<TypeTag>(simulator));
         // Tell the black-oil extensions to initialize their internal data structures
         const auto& vanguard = simulator.vanguard();
