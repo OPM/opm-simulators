@@ -88,8 +88,9 @@ enum ExcEnum {
 
     private:
         std::vector<Message> messages_;
+        using MPIComm = typename Dune::MPIHelper::MPICommunicator;
         friend DeferredLogger gatherDeferredLogger(const DeferredLogger& local_deferredlogger,
-                                                   Dune::MPIHelper::MPICommunicator mpi_communicator);
+                                                   MPIComm mpi_communicator);
     };
 
 } // namespace Opm

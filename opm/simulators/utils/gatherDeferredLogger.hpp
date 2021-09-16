@@ -23,12 +23,15 @@
 
 #include <dune/common/parallel/mpihelper.hh>
 #include <opm/simulators/utils/DeferredLogger.hpp>
+#include <dune/common/version.hh>
+
+using MPIComm = typename Dune::MPIHelper::MPICommunicator;
 
 namespace Opm
 {
 
     /// Create a global log combining local logs
-    Opm::DeferredLogger gatherDeferredLogger(const Opm::DeferredLogger& local_deferredlogger, Dune::MPIHelper::MPICommunicator communicator);
+    Opm::DeferredLogger gatherDeferredLogger(const Opm::DeferredLogger& local_deferredlogger, MPIComm communicator);
 
 } // namespace Opm
 

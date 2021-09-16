@@ -166,7 +166,7 @@ namespace Opm
 namespace Opm
 {
     Opm::DeferredLogger gatherDeferredLogger(const Opm::DeferredLogger& local_deferredlogger,
-                                             Dune::MPIHelper::MPICommunicator /* dummy communicator */)
+                                             MPIComm /* dummy communicator */)
     {
         return local_deferredlogger;
     }

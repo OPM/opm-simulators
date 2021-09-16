@@ -202,7 +202,7 @@ namespace Opm
 
 namespace Opm
 {
-    ConvergenceReport gatherConvergenceReport(const ConvergenceReport& local_report, Dune::MPIHelper::MPICommunicator mpi_communicator)
+    ConvergenceReport gatherConvergenceReport(const ConvergenceReport& local_report, MPIComm mpi_communicator)
     {
         return local_report;
     }

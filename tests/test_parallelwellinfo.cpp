@@ -18,7 +18,10 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include<config.h>
+
 #include<opm/simulators/wells/ParallelWellInfo.hpp>
+
+#include <dune/common/version.hh>
 #include<vector>
 #include<string>
 #include<tuple>
@@ -106,6 +109,12 @@ BOOST_AUTO_TEST_CASE(ParallelWellComparison)
     int argc = 0;
     char** argv = nullptr;
     const auto& helper = Dune::MPIHelper::instance(argc, argv);
+        using MPIComm = typename Dune::MPIHelper::MPICommunicator;
+    #if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
+        using Communication = Dune::Communication<MPIComm>;
+    #else
+        using Communication = Dune::CollectiveCommunication<MPIComm>;
+    #endif
     std::vector<std::pair<std::string,bool>> pairs;
     if (helper.rank() == 0)
         pairs = {{"Test1", true},{"Test2", true}, {"Test1", false} };
@@ -115,7 +124,7 @@ BOOST_AUTO_TEST_CASE(ParallelWellComparison)
     std::vector<Opm::ParallelWellInfo> well_info;
     
     for (const auto& wellinfo : pairs) {                   
-        well_info.emplace_back(wellinfo, MPI_COMM_WORLD);         
+        well_info.emplace_back(wellinfo, Communication());         
     }
 
     //well_info.assign(pairs.begin(), pairs.end());

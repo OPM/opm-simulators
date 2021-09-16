@@ -32,6 +32,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include <dune/common/version.hh>
 #include <opm/output/data/GuideRateValue.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRate.hpp>
@@ -68,7 +69,12 @@ class BlackoilWellModelGeneric
 {
 public:
     // ---------      Types      ---------
-    using Comm = Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator>;
+    using MPIComm = typename Dune::MPIHelper::MPICommunicator;
+    #if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
+        using Communication = Dune::Communication<MPIComm>; 
+    #else
+        using Communication = Dune::CollectiveCommunication<MPIComm>;
+    #endif
     using GLiftOptWells = std::map<std::string,std::unique_ptr<GasLiftSingleWellGeneric>>;
     using GLiftProdWells = std::map<std::string,const WellInterfaceGeneric*>;
     using GLiftWellStateMap = std::map<std::string,std::unique_ptr<GasLiftWellState>>;
@@ -77,7 +83,7 @@ public:
                              const SummaryState& summaryState,
                              const EclipseState& eclState,
                              const PhaseUsage& phase_usage,
-                             const Comm& comm);
+                             const Communication& comm);
 
     virtual ~BlackoilWellModelGeneric() = default;
 
@@ -372,7 +378,7 @@ protected:
     Schedule& schedule_;
     const SummaryState& summaryState_;
     const EclipseState& eclState_;
-    const Comm& comm_;
+    const Communication& comm_;
 
     PhaseUsage phase_usage_;
     bool terminal_output_{false};

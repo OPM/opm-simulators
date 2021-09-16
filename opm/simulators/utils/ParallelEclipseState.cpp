@@ -27,12 +27,12 @@ namespace Opm {
 
 ParallelFieldPropsManager::ParallelFieldPropsManager(FieldPropsManager& manager)
     : m_manager(manager)
-    , m_comm(Dune::MPIHelper::getCollectiveCommunication())
+    , m_comm(Communication())
 {
 }
 
 // EXPERIMENTAL FUNCTION TO ADD COMM AS INPUT
-ParallelFieldPropsManager::ParallelFieldPropsManager(FieldPropsManager& manager, Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> comm)
+ParallelFieldPropsManager::ParallelFieldPropsManager(FieldPropsManager& manager, Communication comm)
     : m_manager(manager)
     , m_comm(comm)
 {
@@ -215,7 +215,7 @@ bool ParallelFieldPropsManager::has_double(const std::string& keyword) const
 }
 
 
-ParallelEclipseState::ParallelEclipseState(Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> comm)
+ParallelEclipseState::ParallelEclipseState(Communication comm)
     : m_fieldProps(field_props, comm)
     , m_comm(comm)
 {
@@ -228,7 +228,7 @@ ParallelEclipseState::ParallelEclipseState(const Deck& deck)
 {
 }
 
-ParallelEclipseState::ParallelEclipseState(const Deck& deck, Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> comm)
+ParallelEclipseState::ParallelEclipseState(const Deck& deck, Communication comm)
     : EclipseState(deck)
     , m_fieldProps(field_props, comm)
     , m_comm(comm)

@@ -19,11 +19,19 @@
 #ifndef PARALLEL_ECLIPSE_STATE_HPP
 #define PARALLEL_ECLIPSE_STATE_HPP
 
+#include <dune/common/version.hh>
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/parser/eclipse/EclipseState/Grid/TranCalculator.hpp>
 #include <dune/common/parallel/mpihelper.hh>
 
 #include <functional>
+
+using MPIComm = typename Dune::MPIHelper::MPICommunicator;
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
+    using Communication = Dune::Communication<MPIComm>;
+#else
+    using Communication = Dune::CollectiveCommunication<MPIComm>;
+#endif
 
 namespace Opm {
 
@@ -49,7 +57,7 @@ public:
 
     //! \brief Constructor.
     //! \param manager The field property manager to wrap.
-    ParallelFieldPropsManager(FieldPropsManager& manager, Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> comm);
+    ParallelFieldPropsManager(FieldPropsManager& manager, Communication comm);
 
     //! \brief Returns actnum vector.
     //! \details If called on non-root process an empty vector is returned
@@ -110,7 +118,7 @@ protected:
     std::map<std::string, Fieldprops::FieldData<int>> m_intProps; //!< Map of integer properties in process-local compressed indices.
     std::map<std::string, Fieldprops::FieldData<double>> m_doubleProps; //!< Map of double properties in process-local compressed indices.
     FieldPropsManager& m_manager; //!< Underlying field property manager (only used on root process).
-    Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> m_comm; //!< Collective communication handler.
+    Communication m_comm; //!< Collective communication handler.
     std::function<int(void)> m_activeSize; //!< active size function of the grid
     std::function<int(const int)> m_local2Global; //!< mapping from local to global cartesian indices
     std::unordered_map<std::string, Fieldprops::TranCalculator> m_tran; //!< calculators map
@@ -134,7 +142,7 @@ class ParallelEclipseState : public EclipseState {
     friend class PropsCentroidsDataHandle;
 public:
     //! \brief Default constructor.
-    ParallelEclipseState(Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> comm);
+    ParallelEclipseState(Communication comm);
 
     //! \brief Construct from a deck instance.
     //! \param deck The deck to construct from
@@ -145,7 +153,7 @@ public:
     //! \brief Construct from a deck instance.
     //! \param deck The deck to construct from
     //! \details Only called on root process
-    ParallelEclipseState(const Deck& deck, Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> comm);
+    ParallelEclipseState(const Deck& deck, Communication comm);
 
     //! \brief Switch to global field properties.
     //! \details Called on root process to use the global field properties
@@ -180,7 +188,7 @@ public:
 private:
     bool m_parProps = false; //! True to use distributed properties on root process
     ParallelFieldPropsManager m_fieldProps; //!< The parallel field properties
-    Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> m_comm; //!< Collective communication handler.
+    Communication m_comm; //!< Collective communication handler.
 };
 
 

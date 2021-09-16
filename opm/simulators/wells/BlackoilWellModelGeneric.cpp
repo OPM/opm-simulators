@@ -49,7 +49,7 @@ BlackoilWellModelGeneric(Schedule& schedule,
                          const SummaryState& summaryState,
                          const EclipseState& eclState,
                          const PhaseUsage& phase_usage,
-                         const Comm& comm)
+                         const Communication& comm)
     : schedule_(schedule)
     , summaryState_(summaryState)
     , eclState_(eclState)
@@ -1016,7 +1016,7 @@ actionOnBrokenConstraints(const Group& group,
         throw("Invalid procedure for maximum rate limit selected for group" + group.name());
     }
 
-    auto cc = Dune::MPIHelper::getCollectiveCommunication();
+    Communication cc = comm_;
     if (!ss.str().empty() && cc.rank() == 0)
         deferred_logger.info(ss.str());
 }
@@ -1038,7 +1038,8 @@ actionOnBrokenConstraints(const Group& group,
            << " to " << Group::InjectionCMode2String(newControl);
         this->groupState().injection_control(group.name(), controlPhase, newControl);
     }
-    auto cc = Dune::MPIHelper::getCollectiveCommunication();
+
+    Communication cc = comm_;
     if (!ss.str().empty() && cc.rank() == 0)
         deferred_logger.info(ss.str());
 }

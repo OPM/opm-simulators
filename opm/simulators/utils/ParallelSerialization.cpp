@@ -39,7 +39,7 @@
 
 namespace Opm {
 
-void eclStateBroadcast(CollCommType comm, EclipseState& eclState, Schedule& schedule,
+void eclStateBroadcast(Communication comm, EclipseState& eclState, Schedule& schedule,
                        SummaryConfig& summaryConfig)
 {
     Opm::EclMpiSerializer ser(comm);
@@ -48,7 +48,7 @@ void eclStateBroadcast(CollCommType comm, EclipseState& eclState, Schedule& sche
     ser.broadcast(summaryConfig);
 }
 
-void eclScheduleBroadcast(CollCommType comm, Schedule& schedule)
+void eclScheduleBroadcast(Communication comm, Schedule& schedule)
 {
     Opm::EclMpiSerializer ser(comm);
     ser.broadcast(schedule);
