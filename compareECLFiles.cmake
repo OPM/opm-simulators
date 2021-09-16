@@ -927,6 +927,13 @@ add_test_compareECLFiles(CASENAME 3d_tran_operator
                          REL_TOL ${rel_tol}
                          DIR parallel_fieldprops)
 
+
+add_test_compareECLFiles(CASENAME actionx_gconinje
+                         FILENAME ACTIONX_GCONINJE
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR actionx)
 # Restart tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-restart-regressionTest.sh "")
 
