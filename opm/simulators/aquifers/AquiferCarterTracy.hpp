@@ -50,8 +50,6 @@ public:
     using typename Base::Simulator;
     using typename Base::ElementMapper;
 
-    using Base::waterCompIdx;
-    using Base::waterPhaseIdx;
     AquiferCarterTracy(const std::vector<Aquancon::AquancCell>& connections,
                        const Simulator& ebosSimulator,
                        const AquiferCT::AQUCT_data& aquct_data)
@@ -83,12 +81,21 @@ public:
         data.initPressure = this->pa0_;
 
         auto* aquCT = data.typeData.template create<data::AquiferType::CarterTracy>();
-        aquCT->timeConstant = this->aquct_data_.timeConstant();
-        aquCT->influxConstant = this->aquct_data_.influxConstant();
-        aquCT->waterDensity = this->aquct_data_.waterDensity();
-        aquCT->waterViscosity = this->aquct_data_.waterViscosity();
+
         aquCT->dimensionless_time = this->dimensionless_time_;
         aquCT->dimensionless_pressure = this->dimensionless_pressure_;
+        aquCT->influxConstant = this->aquct_data_.influxConstant();
+
+        if (!this->co2store_()) {
+            aquCT->timeConstant = this->aquct_data_.timeConstant();
+            aquCT->waterDensity = this->aquct_data_.waterDensity();
+            aquCT->waterViscosity = this->aquct_data_.waterViscosity();
+        } else {
+            aquCT->waterDensity = this->rhow_;
+            aquCT->timeConstant = this->Tc_;
+            const auto x = this->aquct_data_.porosity * this->aquct_data_.total_compr * this->aquct_data_.inner_radius * this->aquct_data_.inner_radius;
+            aquCT->waterViscosity = this->Tc_ *  this->aquct_data_.permeability / x;
+        }
 
         return data;
     }
@@ -159,6 +166,11 @@ protected:
         return std::make_pair(a, b);
     }
 
+    std::size_t pvtRegionIdx() const
+    {
+        return this->aquct_data_.pvttableID - 1;
+    }
+
     // This function implements Eq 5.7 of the EclipseTechnicalDescription
     inline void calculateInflowRate(int idx, const Simulator& simulator) override
     {
@@ -170,7 +182,19 @@ protected:
 
     inline void calculateAquiferConstants() override
     {
-        this->Tc_ = this->aquct_data_.timeConstant();
+        if(this->co2store_()) {
+             const auto press = this->aquct_data_.initial_pressure.value();
+             Scalar temp = FluidSystem::reservoirTemperature();
+             if (this->aquct_data_.initial_temperature.has_value())
+                 temp = this->aquct_data_.initial_temperature.value();
+
+             Scalar rs = 0.0; // no dissolved CO2
+             Scalar waterViscosity = FluidSystem::oilPvt().viscosity(pvtRegionIdx(), temp, press, rs);
+             const auto x = this->aquct_data_.porosity * this->aquct_data_.total_compr * this->aquct_data_.inner_radius * this->aquct_data_.inner_radius;
+             this->Tc_  = waterViscosity * x / this->aquct_data_.permeability;
+        } else {
+             this->Tc_ = this->aquct_data_.timeConstant();
+        }
         this->beta_ = this->aquct_data_.influxConstant();
     }
 
@@ -191,7 +215,20 @@ protected:
         }
 
         this->pa0_ = this->aquct_data_.initial_pressure.value();
-        this->rhow_ = this->aquct_data_.waterDensity();
+        if(this->co2store_()) {
+             const auto press = this->aquct_data_.initial_pressure.value();
+
+             Scalar temp = FluidSystem::reservoirTemperature();
+             if (this->aquct_data_.initial_temperature.has_value())
+                 temp = this->aquct_data_.initial_temperature.value();
+
+             Scalar rs = 0.0; // no dissolved CO2
+             Scalar waterDensity = FluidSystem::oilPvt().inverseFormationVolumeFactor(pvtRegionIdx(), temp, press, rs)
+                     * FluidSystem::oilPvt().oilReferenceDensity(pvtRegionIdx());
+             this->rhow_  = waterDensity;
+        } else {
+            this->rhow_ = this->aquct_data_.waterDensity();
+        }
     }
 
     virtual Scalar aquiferDepth() const override

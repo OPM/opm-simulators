@@ -50,9 +50,6 @@ public:
     using typename Base::Simulator;
     using typename Base::ElementMapper;
 
-    using Base::waterCompIdx;
-    using Base::waterPhaseIdx;
-
     AquiferFetkovich(const std::vector<Aquancon::AquancCell>& connections,
                      const Simulator& ebosSimulator,
                      const Aquifetp::AQUFETP_data& aqufetp_data)
