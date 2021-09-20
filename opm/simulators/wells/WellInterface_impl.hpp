@@ -24,6 +24,15 @@
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/TargetCalculator.hpp>
 
+#include <dune/common/version.hh>
+
+using MPIComm = typename Dune::MPIHelper::MPICommunicator;
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
+    using Communication = Dune::Communication<MPIComm>; 
+#else
+    using Communication = Dune::CollectiveCommunication<MPIComm>;
+#endif
+
 namespace Opm
 {
 
@@ -183,8 +192,7 @@ namespace Opm
             changed = this->checkConstraints(well_state, group_state, schedule, summaryState, deferred_logger);
         }
 
-        Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> cc = ebos_simulator.vanguard().grid().comm();
-
+        Communication cc = ebos_simulator.vanguard().grid().comm();
         // checking whether control changed
         if (changed) {
             std::string to;
