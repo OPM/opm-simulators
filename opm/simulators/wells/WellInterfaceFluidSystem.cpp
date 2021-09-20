@@ -32,6 +32,7 @@
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
 #include <opm/simulators/wells/WellState.hpp>
+#include <opm/simulators/wells/SingleWellState.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/TargetCalculator.hpp>
 
@@ -62,12 +63,11 @@ WellInterfaceFluidSystem(const Well& well,
 template<typename FluidSystem>
 void
 WellInterfaceFluidSystem<FluidSystem>::
-calculateReservoirRates(WellState& well_state) const
+calculateReservoirRates(SingleWellState& ws) const
 {
     const int fipreg = 0; // not considering the region for now
     const int np = number_of_phases_;
 
-    auto& ws = well_state.well(this->index_of_well_);
     std::vector<double> surface_rates(np, 0.0);
     for (int p = 0; p < np; ++p) {
         surface_rates[p] = ws.surface_rates[p];
@@ -82,13 +82,11 @@ calculateReservoirRates(WellState& well_state) const
 template <typename FluidSystem>
 Well::ProducerCMode
 WellInterfaceFluidSystem<FluidSystem>::
-activeProductionConstraint(const WellState& well_state,
+activeProductionConstraint(const SingleWellState& ws,
                            const SummaryState& summaryState) const
 {
     const PhaseUsage& pu = this->phaseUsage();
-    const int well_index = this->index_of_well_;
     const auto controls = this->well_ecl_.productionControls(summaryState);
-    auto& ws = well_state.well(well_index);
     const auto currentControl = ws.production_cmode;
 
     if (controls.hasControl(Well::ProducerCMode::BHP) && currentControl != Well::ProducerCMode::BHP) {
@@ -175,12 +173,10 @@ activeProductionConstraint(const WellState& well_state,
 template <typename FluidSystem>
 Well::InjectorCMode
 WellInterfaceFluidSystem<FluidSystem>::
-activeInjectionConstraint(const WellState& well_state,
+activeInjectionConstraint(const SingleWellState& ws,
                           const SummaryState& summaryState) const
 {
     const PhaseUsage& pu = this->phaseUsage();
-    const int well_index = this->index_of_well_;
-    const auto& ws = well_state.well(well_index);
 
     const auto controls = this->well_ecl_.injectionControls(summaryState);
     const auto currentControl = ws.injection_cmode;
@@ -252,13 +248,11 @@ activeInjectionConstraint(const WellState& well_state,
 template <typename FluidSystem>
 bool
 WellInterfaceFluidSystem<FluidSystem>::
-checkIndividualConstraints(WellState& well_state,
+checkIndividualConstraints(SingleWellState& ws,
                            const SummaryState& summaryState) const
 {
-    const int well_index = this->index_of_well_;
-    auto& ws = well_state.well(well_index);
     if (this->well_ecl_.isProducer()) {
-        auto new_cmode = this->activeProductionConstraint(well_state, summaryState);
+        auto new_cmode = this->activeProductionConstraint(ws, summaryState);
         if (new_cmode != ws.production_cmode) {
             ws.production_cmode = new_cmode;
             return true;
@@ -266,7 +260,7 @@ checkIndividualConstraints(WellState& well_state,
     }
 
     if (this->well_ecl_.isInjector()) {
-        auto new_cmode = this->activeInjectionConstraint(well_state, summaryState);
+        auto new_cmode = this->activeInjectionConstraint(ws, summaryState);
         if (new_cmode != ws.injection_cmode) {
             ws.injection_cmode = new_cmode;
             return true;
@@ -447,7 +441,7 @@ checkConstraints(WellState& well_state,
                  const SummaryState& summaryState,
                  DeferredLogger& deferred_logger) const
 {
-    const bool ind_broken = checkIndividualConstraints(well_state, summaryState);
+    const bool ind_broken = checkIndividualConstraints(well_state.well(this->index_of_well_), summaryState);
     if (ind_broken) {
         return true;
     } else {
@@ -505,7 +499,7 @@ template<typename FluidSystem>
 void
 WellInterfaceFluidSystem<FluidSystem>::
 checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
-                      const WellState& well_state,
+                      const SingleWellState& ws,
                       RatioLimitCheckReport& report) const
 {
     assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
@@ -532,11 +526,11 @@ checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
     const double max_water_cut_limit = econ_production_limits.maxWaterCut();
     assert(max_water_cut_limit > 0.);
 
-    const bool watercut_limit_violated = checkMaxRatioLimitWell(well_state, max_water_cut_limit, waterCut);
+    const bool watercut_limit_violated = checkMaxRatioLimitWell(ws, max_water_cut_limit, waterCut);
 
     if (watercut_limit_violated) {
         report.ratio_limit_violated = true;
-        checkMaxRatioLimitCompletions(well_state, max_water_cut_limit, waterCut, report);
+        checkMaxRatioLimitCompletions(ws, max_water_cut_limit, waterCut, report);
     }
 }
 
@@ -544,7 +538,7 @@ template<typename FluidSystem>
 void
 WellInterfaceFluidSystem<FluidSystem>::
 checkMaxGORLimit(const WellEconProductionLimits& econ_production_limits,
-                 const WellState& well_state,
+                 const SingleWellState& ws,
                  RatioLimitCheckReport& report) const
 {
     assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
@@ -578,11 +572,11 @@ checkMaxGORLimit(const WellEconProductionLimits& econ_production_limits,
     const double max_gor_limit = econ_production_limits.maxGasOilRatio();
     assert(max_gor_limit > 0.);
 
-    const bool gor_limit_violated = checkMaxRatioLimitWell(well_state, max_gor_limit, gor);
+    const bool gor_limit_violated = checkMaxRatioLimitWell(ws, max_gor_limit, gor);
 
     if (gor_limit_violated) {
         report.ratio_limit_violated = true;
-        checkMaxRatioLimitCompletions(well_state, max_gor_limit, gor, report);
+        checkMaxRatioLimitCompletions(ws, max_gor_limit, gor, report);
     }
 }
 
@@ -590,7 +584,7 @@ template<typename FluidSystem>
 void
 WellInterfaceFluidSystem<FluidSystem>::
 checkMaxWGRLimit(const WellEconProductionLimits& econ_production_limits,
-                 const WellState& well_state,
+                 const SingleWellState& ws,
                  RatioLimitCheckReport& report) const
 {
     assert(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx));
@@ -624,11 +618,11 @@ checkMaxWGRLimit(const WellEconProductionLimits& econ_production_limits,
     const double max_wgr_limit = econ_production_limits.maxWaterGasRatio();
     assert(max_wgr_limit > 0.);
 
-    const bool wgr_limit_violated = checkMaxRatioLimitWell(well_state, max_wgr_limit, wgr);
+    const bool wgr_limit_violated = checkMaxRatioLimitWell(ws, max_wgr_limit, wgr);
 
     if (wgr_limit_violated) {
         report.ratio_limit_violated = true;
-        checkMaxRatioLimitCompletions(well_state, max_wgr_limit, wgr, report);
+        checkMaxRatioLimitCompletions(ws, max_wgr_limit, wgr, report);
     }
 }
 
@@ -636,7 +630,7 @@ template<typename FluidSystem>
 void
 WellInterfaceFluidSystem<FluidSystem>::
 checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
-                     const WellState& well_state,
+                     const SingleWellState& ws,
                      RatioLimitCheckReport& report,
                      DeferredLogger& deferred_logger) const
 {
@@ -649,15 +643,15 @@ checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
     //       extent.
 
     if (econ_production_limits.onMaxWaterCut()) {
-        checkMaxWaterCutLimit(econ_production_limits, well_state, report);
+        checkMaxWaterCutLimit(econ_production_limits, ws, report);
     }
 
     if (econ_production_limits.onMaxGasOilRatio()) {
-        checkMaxGORLimit(econ_production_limits, well_state, report);
+        checkMaxGORLimit(econ_production_limits, ws, report);
     }
 
     if (econ_production_limits.onMaxWaterGasRatio()) {
-        checkMaxWGRLimit(econ_production_limits, well_state, report);
+        checkMaxWGRLimit(econ_production_limits, ws, report);
     }
 
     if (econ_production_limits.onMaxGasLiquidRatio()) {
@@ -673,7 +667,7 @@ checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
 template<typename FluidSystem>
 void
 WellInterfaceFluidSystem<FluidSystem>::
-updateWellTestStateEconomic(const WellState& well_state,
+updateWellTestStateEconomic(const SingleWellState& ws,
                             const double simulation_time,
                             const bool write_message_to_opmlog,
                             WellTestState& well_test_state,
@@ -693,7 +687,6 @@ updateWellTestStateEconomic(const WellState& well_state,
     bool rate_limit_violated = false;
 
     const auto& quantity_limit = econ_production_limits.quantityLimit();
-    const auto& ws = well_state.well(this->index_of_well_);
     if (econ_production_limits.onAnyRateLimit()) {
         if (quantity_limit == WellEconProductionLimits::QuantityLimit::POTN)
             rate_limit_violated = checkRateEconLimits(econ_production_limits, ws.well_potentials.data(), deferred_logger);
@@ -738,7 +731,7 @@ updateWellTestStateEconomic(const WellState& well_state,
     // checking for ratio related limits, mostly all kinds of ratio.
     RatioLimitCheckReport ratio_report;
 
-    checkRatioEconLimits(econ_production_limits, well_state, ratio_report, deferred_logger);
+    checkRatioEconLimits(econ_production_limits, ws, ratio_report, deferred_logger);
 
     if (ratio_report.ratio_limit_violated) {
         const auto workover = econ_production_limits.workover();
@@ -812,7 +805,7 @@ updateWellTestStateEconomic(const WellState& well_state,
 template<typename FluidSystem>
 void
 WellInterfaceFluidSystem<FluidSystem>::
-updateWellTestState(const WellState& well_state,
+updateWellTestState(const SingleWellState& ws,
                     const double& simulationTime,
                     const bool& writeMessageToOPMLog,
                     WellTestState& wellTestState,
@@ -831,10 +824,10 @@ updateWellTestState(const WellState& well_state,
     }
 
     // updating well test state based on physical (THP/BHP) limits.
-    updateWellTestStatePhysical(well_state, simulationTime, writeMessageToOPMLog, wellTestState, deferred_logger);
+    updateWellTestStatePhysical(ws, simulationTime, writeMessageToOPMLog, wellTestState, deferred_logger);
 
     // updating well test state based on Economic limits.
-    updateWellTestStateEconomic(well_state, simulationTime, writeMessageToOPMLog, wellTestState, deferred_logger);
+    updateWellTestStateEconomic(ws, simulationTime, writeMessageToOPMLog, wellTestState, deferred_logger);
 
     // TODO: well can be shut/closed due to other reasons
 }
@@ -842,7 +835,7 @@ updateWellTestState(const WellState& well_state,
 template<typename FluidSystem>
 template <typename RatioFunc>
 void WellInterfaceFluidSystem<FluidSystem>::
-checkMaxRatioLimitCompletions(const WellState& well_state,
+checkMaxRatioLimitCompletions(const SingleWellState& ws,
                               const double max_ratio_limit,
                               const RatioFunc& ratioFunc,
                               RatioLimitCheckReport& report) const
@@ -854,7 +847,6 @@ checkMaxRatioLimitCompletions(const WellState& well_state,
     double max_ratio_completion = 0;
     const int np = number_of_phases_;
 
-    const auto& ws = well_state.well(this->index_of_well_);
     const auto& perf_data = ws.perf_data;
     const auto& perf_phase_rates = perf_data.phase_rates;
     // look for the worst_offending_completion
@@ -893,14 +885,13 @@ checkMaxRatioLimitCompletions(const WellState& well_state,
 template<typename FluidSystem>
 template<typename RatioFunc>
 bool WellInterfaceFluidSystem<FluidSystem>::
-checkMaxRatioLimitWell(const WellState& well_state,
+checkMaxRatioLimitWell(const SingleWellState& ws,
                        const double max_ratio_limit,
                        const RatioFunc& ratioFunc) const
 {
     const int np = number_of_phases_;
 
     std::vector<double> well_rates(np, 0.0);
-    const auto& ws = well_state.well(this->index_of_well_);
     for (int p = 0; p < np; ++p) {
         well_rates[p] = ws.surface_rates[p];
     }

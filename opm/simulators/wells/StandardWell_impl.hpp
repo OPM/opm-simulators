@@ -857,7 +857,7 @@ namespace Opm
         updatePrimaryVariablesNewton(dwells, well_state);
 
         updateWellStateFromPrimaryVariables(well_state, deferred_logger);
-        Base::calculateReservoirRates(well_state);
+        Base::calculateReservoirRates(well_state.well(this->index_of_well_));
     }
 
 

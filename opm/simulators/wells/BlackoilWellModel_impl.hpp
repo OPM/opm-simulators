@@ -1323,12 +1323,13 @@ namespace Opm {
     {
         DeferredLogger local_deferredLogger;
         for (const auto& well : well_container_) {
-            const auto wasClosed = wellTestState.hasWellClosed(well->name());
+            const auto& wname = well->name();
+            const auto wasClosed = wellTestState.hasWellClosed(wname);
 
-            well->updateWellTestState(this->wellState(), simulationTime, /*writeMessageToOPMLog=*/ true, wellTestState, local_deferredLogger);
+            well->updateWellTestState(this->wellState().well(wname), simulationTime, /*writeMessageToOPMLog=*/ true, wellTestState, local_deferredLogger);
 
-            if (!wasClosed && wellTestState.hasWellClosed(well->name())) {
-                this->closed_this_step_.insert(well->name());
+            if (!wasClosed && wellTestState.hasWellClosed(wname)) {
+                this->closed_this_step_.insert(wname);
             }
         }
 
