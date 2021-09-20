@@ -49,7 +49,8 @@ public:
       ownerAbove = 3,
       overlapAbove = 4
     };
-    using MPIComm = typename Dune::MPIHelper::MPICommunicator;
+
+using MPIComm = typename Dune::MPIHelper::MPICommunicator;
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
     using Communication = Dune::Communication<MPIComm>;
 #else
