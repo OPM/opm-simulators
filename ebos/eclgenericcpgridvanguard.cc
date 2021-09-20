@@ -38,6 +38,13 @@
 #include <dune/common/version.hh>
 #include <dune/grid/common/mcmgmapper.hh>
 
+using MPIComm = typename Dune::MPIHelper::MPICommunicator;
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
+    using Communication = Dune::Communication<MPIComm>;
+#else
+    using Communication = Dune::CollectiveCommunication<MPIComm>;
+#endif
+
 #if HAVE_DUNE_FEM
 #include <dune/fem/gridpart/adaptiveleafgridpart.hh>
 #include <dune/fem/gridpart/common/gridpart2gridview.hh>
@@ -267,7 +274,8 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Ecl
         // we need to pass the NNC from root process to other processes
         if (has_numerical_aquifer && mpiSize > 1) {
             auto nnc_input = eclState.getInputNNC();
-            EclMpiSerializer ser(Dune::MPIHelper::getCollectiveCommunication());
+            const auto& comm_nnc = Communication();
+            EclMpiSerializer ser(comm_nnc);
             ser.broadcast(nnc_input);
             if (mpiRank > 0) {
                 eclState.setInputNNC(nnc_input);

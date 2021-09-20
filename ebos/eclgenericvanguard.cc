@@ -48,6 +48,13 @@
 #include <mpi.h>
 #endif // HAVE_MPI
 
+using MPIComm = typename Dune::MPIHelper::MPICommunicator;
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
+    using Communication = Dune::Communication<MPIComm>; 
+#else
+    using Communication = Dune::CollectiveCommunication<MPIComm>;
+#endif
+
 #include <stdexcept>
 
 namespace Opm {
@@ -304,11 +311,8 @@ void EclGenericVanguard::init()
                 }
             }
         }
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
-        const auto& comm = Dune::MPIHelper::getCommunication();
-#else
-        const auto& comm = Dune::MPIHelper::getCollectiveCommunication();
-#endif
+
+        const auto& comm = Communication();
         hasMsWell = comm.max(hasMsWell);
 
         if (hasMsWell)
