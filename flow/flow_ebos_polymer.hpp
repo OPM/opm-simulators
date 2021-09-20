@@ -26,10 +26,10 @@ class EclipseState;
 class Schedule;
 class SummaryConfig;
 
-void flowEbosPolymerSetDeck(double setupTime, std::unique_ptr<Deck> deck,
-                            std::unique_ptr<EclipseState> eclState,
-                            std::unique_ptr<Schedule> schedule,
-                            std::unique_ptr<SummaryConfig> summaryConfig);
+void flowEbosPolymerSetDeck(double setupTime, std::shared_ptr<Deck>& deck,
+                            std::shared_ptr<EclipseState>& eclState,
+                            std::shared_ptr<Schedule>& schedule,
+                            std::shared_ptr<SummaryConfig>& summaryConfig);
 int flowEbosPolymerMain(int argc, char** argv, bool outputCout, bool outputFiles);
 
 }

@@ -43,19 +43,19 @@ struct EnableExtbo<TypeTag, TTag::EclFlowExtboProblem> {
 }}
 
 namespace Opm {
-void flowEbosExtboSetDeck(double setupTime, std::unique_ptr<Deck> deck,
-                            std::unique_ptr<EclipseState> eclState,
-                            std::unique_ptr<Schedule> schedule,
-                            std::unique_ptr<SummaryConfig> summaryConfig)
+void flowEbosExtboSetDeck(double setupTime, std::shared_ptr<Deck>& deck,
+                            std::shared_ptr<EclipseState>& eclState,
+                            std::shared_ptr<Schedule>& schedule,
+                            std::shared_ptr<SummaryConfig>& summaryConfig)
 {
     using TypeTag = Properties::TTag::EclFlowExtboProblem;
     using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
 
     Vanguard::setExternalSetupTime(setupTime);
-    Vanguard::setExternalDeck(std::move(deck));
-    Vanguard::setExternalEclState(std::move(eclState));
-    Vanguard::setExternalSchedule(std::move(schedule));
-    Vanguard::setExternalSummaryConfig(std::move(summaryConfig));
+    Vanguard::setExternalDeck(deck);
+    Vanguard::setExternalEclState(eclState);
+    Vanguard::setExternalSchedule(schedule);
+    Vanguard::setExternalSummaryConfig(summaryConfig);
 }
 
 // ----------------- Main program -----------------

@@ -82,13 +82,16 @@ struct FlowEarlyBird {
 
 namespace Opm {
   template <class TypeTag>
-  void flowEbosSetDeck(std::unique_ptr<Deck> deck, std::unique_ptr<EclipseState> eclState, std::unique_ptr<Schedule> schedule, std::unique_ptr<SummaryConfig> summaryConfig)
+  void flowEbosSetDeck(std::shared_ptr<Deck>& deck,
+                       std::shared_ptr<EclipseState>& eclState,
+                       std::shared_ptr<Schedule>& schedule,
+                       std::shared_ptr<SummaryConfig> summaryConfig)
   {
     using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
-    Vanguard::setExternalDeck(std::move(deck));
-    Vanguard::setExternalEclState(std::move(eclState));
-    Vanguard::setExternalSchedule(std::move(schedule));
-    Vanguard::setExternalSummaryConfig(std::move(summaryConfig));
+    Vanguard::setExternalDeck(deck);
+    Vanguard::setExternalEclState(eclState);
+    Vanguard::setExternalSchedule(schedule);
+    Vanguard::setExternalSummaryConfig(summaryConfig);
   }
 
 // ----------------- Main program -----------------
@@ -123,31 +126,27 @@ namespace Opm
     public:
         Main(int argc, char** argv) : argc_(argc), argv_(argv)  { initMPI();  }
 
+        // This constructor can be called from Python
         Main(const std::string &filename)
         {
-            deckFilename_.assign(filename);
-            flowProgName_.assign("flow");
-            argc_ = 2;
-            saveArgs_[0] = const_cast<char *>(flowProgName_.c_str());
-            saveArgs_[1] = const_cast<char *>(deckFilename_.c_str());
-            argv_ = saveArgs_;
+            setArgvArgc_(filename);
             initMPI();
         }
 
-        Main(int argc,
-             char** argv,
-             std::unique_ptr<Deck> deck,
-             std::unique_ptr<EclipseState> eclipseState,
-             std::unique_ptr<Schedule> schedule,
-             std::unique_ptr<SummaryConfig> summaryConfig)
-            : argc_(argc)
-            , argv_(argv)
-            , deck_(std::move(deck))
-            , eclipseState_(std::move(eclipseState))
-            , schedule_(std::move(schedule))
-            , summaryConfig_(std::move(summaryConfig))
+        // This constructor can be called from Python when Python has already
+        //  parsed a deck
+        Main(
+             std::shared_ptr<Deck>& deck,
+             std::shared_ptr<EclipseState>& eclipseState,
+             std::shared_ptr<Schedule>& schedule,
+             std::shared_ptr<SummaryConfig>& summaryConfig)
+            : deck_{deck}
+            , eclipseState_{eclipseState}
+            , schedule_{schedule}
+            , summaryConfig_{summaryConfig}
         {
-          initMPI();
+            setArgvArgc_(deck->getDataFile());
+            initMPI();
         }
 
         ~Main()
@@ -157,6 +156,16 @@ namespace Opm
 #if HAVE_MPI && !HAVE_DUNE_FEM
             MPI_Finalize();
 #endif
+        }
+
+        void setArgvArgc_(const std::string& filename)
+        {
+            deckFilename_.assign(filename);
+            flowProgName_.assign("flow");
+            argc_ = 2;
+            saveArgs_[0] = const_cast<char *>(flowProgName_.c_str());
+            saveArgs_[1] = const_cast<char *>(deckFilename_.c_str());
+            argv_ = saveArgs_;
         }
 
         void initMPI()
@@ -202,11 +211,11 @@ namespace Opm
                 // case. E.g. check that number of phases == 3
                 flowEbosBlackoilSetDeck(
                     setupTime_,
-                    std::move(deck_),
-                    std::move(eclipseState_),
-                    std::move(schedule_),
+                    deck_,
+                    eclipseState_,
+                    schedule_,
                     std::move(udqState_),
-                    std::move(summaryConfig_));
+                    summaryConfig_);
                 return flowEbosBlackoilMainInit(
                     argc_, argv_, outputCout_, outputFiles_);
             } else {
@@ -230,18 +239,20 @@ namespace Opm
             else if( phases.size() == 2 ) {
                 // oil-gas
                 if (phases.active( Phase::OIL ) && phases.active( Phase::GAS )) {
-                    flowEbosGasOilSetDeck(setupTime_, std::move(deck_), std::move(eclipseState_),
-                                          std::move(schedule_), std::move(summaryConfig_));
+                    flowEbosGasOilSetDeck(
+                         setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
                     return flowEbosGasOilMain(argc_, argv_, outputCout_, outputFiles_);
                 }
                 // oil-water
                 else if ( phases.active( Phase::OIL ) && phases.active( Phase::WATER ) ) {
-                    flowEbosOilWaterSetDeck(setupTime_, std::move(deck_), std::move(eclipseState_), std::move(schedule_), std::move(summaryConfig_));
+                    flowEbosOilWaterSetDeck(
+                        setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
                     return flowEbosOilWaterMain(argc_, argv_, outputCout_, outputFiles_);
                 }
                 // gas-water
                 else if ( phases.active( Phase::GAS ) && phases.active( Phase::WATER ) ) {
-                    flowEbosGasWaterSetDeck(setupTime_, std::move(deck_), std::move(eclipseState_), std::move(schedule_), std::move(summaryConfig_));
+                    flowEbosGasWaterSetDeck(
+                        setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
                     return flowEbosGasWaterMain(argc_, argv_, outputCout_, outputFiles_);
                 }
                 else {
@@ -268,25 +279,19 @@ namespace Opm
                 }
 
                 if ( phases.size() == 3 ) { // oil water polymer case
-                    flowEbosOilWaterPolymerSetDeck(setupTime_, std::move(deck_),
-                                                   std::move(eclipseState_),
-                                                   std::move(schedule_),
-                                                   std::move(summaryConfig_));
+                    flowEbosOilWaterPolymerSetDeck(
+                        setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
                     return flowEbosOilWaterPolymerMain(argc_, argv_, outputCout_, outputFiles_);
                 } else {
-                    flowEbosPolymerSetDeck(setupTime_, std::move(deck_),
-                                                std::move(eclipseState_),
-                                                std::move(schedule_),
-                                                std::move(summaryConfig_));
+                    flowEbosPolymerSetDeck(
+                        setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
                     return flowEbosPolymerMain(argc_, argv_, outputCout_, outputFiles_);
                 }
             }
             // Foam case
             else if ( phases.active( Phase::FOAM ) ) {
-                flowEbosFoamSetDeck(setupTime_, std::move(deck_),
-                                    std::move(eclipseState_),
-                                    std::move(schedule_),
-                                    std::move(summaryConfig_));
+                flowEbosFoamSetDeck(
+                    setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
                 return flowEbosFoamMain(argc_, argv_, outputCout_, outputFiles_);
             }
             // Brine case
@@ -298,51 +303,43 @@ namespace Opm
                     return EXIT_FAILURE;
                 }
                 if ( phases.size() == 3 ) { // oil water brine case
-                    flowEbosOilWaterBrineSetDeck(setupTime_, std::move(deck_),
-                                                 std::move(eclipseState_),
-                                                 std::move(schedule_),
-                                                 std::move(summaryConfig_));
+                    flowEbosOilWaterBrineSetDeck(
+                        setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
                     return flowEbosOilWaterBrineMain(argc_, argv_, outputCout_, outputFiles_);
                 } else {
-                    flowEbosBrineSetDeck(setupTime_, std::move(deck_),
-                                         std::move(eclipseState_),
-                                         std::move(schedule_),
-                                         std::move(summaryConfig_));
+                    flowEbosBrineSetDeck(
+                        setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
                     return flowEbosBrineMain(argc_, argv_, outputCout_, outputFiles_);
                 }
             }
             // Solvent case
             else if ( phases.active( Phase::SOLVENT ) ) {
-                flowEbosSolventSetDeck(setupTime_, std::move(deck_),
-                                       std::move(eclipseState_),
-                                       std::move(schedule_),
-                                       std::move(summaryConfig_));
+                flowEbosSolventSetDeck(
+                    setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
                 return flowEbosSolventMain(argc_, argv_, outputCout_, outputFiles_);
             }
             // Extended BO case
             else if ( phases.active( Phase::ZFRACTION ) ) {
-                flowEbosExtboSetDeck(setupTime_, std::move(deck_),
-                                     std::move(eclipseState_),
-                                     std::move(schedule_),
-                                     std::move(summaryConfig_));
+                flowEbosExtboSetDeck(
+                    setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
                 return flowEbosExtboMain(argc_, argv_, outputCout_, outputFiles_);
             }
             // Energy case
             else if (eclipseState_->getSimulationConfig().isThermal()) {
-                flowEbosEnergySetDeck(setupTime_, std::move(deck_),
-                                      std::move(eclipseState_),
-                                      std::move(schedule_),
-                                      std::move(summaryConfig_));
+                flowEbosEnergySetDeck(
+                    setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
                 return flowEbosEnergyMain(argc_, argv_, outputCout_, outputFiles_);
             }
 #endif // FLOW_BLACKOIL_ONLY
             // Blackoil case
             else if( phases.size() == 3 ) {
-                flowEbosBlackoilSetDeck(setupTime_, std::move(deck_),
-                                        std::move(eclipseState_),
-                                        std::move(schedule_),
-                                        std::move(udqState_),
-                                        std::move(summaryConfig_));
+                flowEbosBlackoilSetDeck(
+                    setupTime_,
+                    deck_,
+                    eclipseState_,
+                    schedule_,
+                    std::move(udqState_),
+                    summaryConfig_);
                 return flowEbosBlackoilMain(argc_, argv_, outputCout_, outputFiles_);
             }
             else {
@@ -355,10 +352,8 @@ namespace Opm
         template <class TypeTag>
         int dispatchStatic_()
         {
-            flowEbosSetDeck<TypeTag>(std::move(deck_),
-                                     std::move(eclipseState_),
-                                     std::move(schedule_),
-                                     std::move(summaryConfig_));
+            flowEbosSetDeck<TypeTag>(
+                deck_, eclipseState_, schedule_, summaryConfig_);
             return flowEbosMain<TypeTag>(argc_, argv_, outputCout_, outputFiles_);
         }
 
@@ -549,12 +544,14 @@ namespace Opm
         std::string deckFilename_;
         std::string flowProgName_;
         char *saveArgs_[2];
-        std::unique_ptr<Deck> deck_;
-        std::unique_ptr<EclipseState> eclipseState_;
-        std::unique_ptr<Schedule> schedule_;
         std::unique_ptr<UDQState> udqState_;
         std::unique_ptr<Action::State> actionState_;
-        std::unique_ptr<SummaryConfig> summaryConfig_;
+
+        // These variables may be owned by both Python and the simulator
+        std::shared_ptr<Deck> deck_;
+        std::shared_ptr<EclipseState> eclipseState_;
+        std::shared_ptr<Schedule> schedule_;
+        std::shared_ptr<SummaryConfig> summaryConfig_;
     };
 
 } // namespace Opm
