@@ -25,6 +25,8 @@
 
 #include <opm/parser/eclipse/EclipseState/Aquifer/NumericalAquifer/SingleNumericalAquifer.hpp>
 
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -193,6 +195,8 @@ private:
         const auto& gridView = this->ebos_simulator_.gridView();
         auto elemIt = gridView.template begin</*codim=*/0>();
         const auto& elemEndIt = gridView.template end</*codim=*/0>();
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
+
         for (; elemIt != elemEndIt; ++elemIt) {
             const auto& elem = *elemIt;
             if (elem.partitionType() != Dune::InteriorEntity) {
@@ -225,6 +229,7 @@ private:
             cell_pressure[idx] = water_pressure_reservoir;
         }
 
+        OPM_END_PARALLEL_TRY_CATCH("AquiferNumerical::calculateAquiferPressure() failed: ");
         const auto& comm = this->ebos_simulator_.vanguard().grid().comm();
         comm.sum(&sum_pressure_watervolume, 1);
         comm.sum(&sum_watervolume, 1);

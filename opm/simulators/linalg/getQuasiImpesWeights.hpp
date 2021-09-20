@@ -22,6 +22,8 @@
 
 #include <dune/common/fvector.hh>
 
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+
 #include <algorithm>
 #include <cmath>
 
@@ -100,6 +102,7 @@ namespace Amg
         int index = 0;
         auto elemIt = gridView.template begin</*codim=*/0>();
         const auto& elemEndIt = gridView.template end</*codim=*/0>();
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
         for (; elemIt != elemEndIt; ++elemIt) {
             elemCtx.updatePrimaryStencil(*elemIt);
             elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
@@ -125,6 +128,7 @@ namespace Amg
             weights[index] = bweights;
             ++index;
         }
+        OPM_END_PARALLEL_TRY_CATCH("getTrueImpesWeights() failed: ");
     }
 } // namespace Amg
 

@@ -27,6 +27,8 @@
 
 #include <opm/output/data/Aquifer.hpp>
 
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+
 #include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/material/densead/Math.hpp>
@@ -110,6 +112,8 @@ public:
         ElementContext elemCtx(ebos_simulator_);
         auto elemIt = ebos_simulator_.gridView().template begin<0>();
         const auto& elemEndIt = ebos_simulator_.gridView().template end<0>();
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
+
         for (; elemIt != elemEndIt; ++elemIt) {
             const auto& elem = *elemIt;
 
@@ -124,6 +128,7 @@ public:
             const auto& iq = elemCtx.intensiveQuantities(0, 0);
             pressure_previous_[idx] = getValue(iq.fluidState().pressure(phaseIdx_()));
         }
+        OPM_END_PARALLEL_TRY_CATCH("AquiferInterface::beginTimeStep() failed: ");
     }
 
     template <class Context>

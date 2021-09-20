@@ -68,6 +68,8 @@
 
 #include <opm/core/props/satfunc/RelpermDiagnostics.hpp>
 
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+
 #include <opm/models/utils/pffgridvector.hh>
 #include <opm/models/blackoil/blackoilmodel.hh>
 #include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
@@ -2027,6 +2029,7 @@ private:
         const auto& simulator = this->simulator();
         int episodeIdx = this->episodeIndex();
 
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
         if (this->drsdtConvective_(episodeIdx)) {
             // This implements the convective DRSDT as described in
             // Sandve et al. "Convective dissolution in field scale CO2 storage simulations using the OPM Flow simulator"
@@ -2118,6 +2121,7 @@ private:
                                               Scalar>(fs, iq.pvtRegionIndex());
             }
         }
+        OPM_END_PARALLEL_TRY_CATCH("EclProblem::_updateCompositionLayers() failed: ");
     }
 
     bool updateMaxOilSaturation_()
@@ -2131,6 +2135,7 @@ private:
             const auto& vanguard = simulator.vanguard();
             auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
             const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
+            OPM_BEGIN_PARALLEL_TRY_CATCH();
             for (; elemIt != elemEndIt; ++elemIt) {
                 const Element& elem = *elemIt;
 
@@ -2145,7 +2150,7 @@ private:
 
                 this->maxOilSaturation_[compressedDofIdx] = std::max(this->maxOilSaturation_[compressedDofIdx], So);
             }
-
+            OPM_END_PARALLEL_TRY_CATCH("EclProblem::updateMayOilSaturation() failed:");
             // we need to invalidate the intensive quantities cache here because the
             // derivatives of Rs and Rv will most likely have changed
             return true;
@@ -2165,6 +2170,7 @@ private:
         const auto& vanguard = this->simulator().vanguard();
         auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
         const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
         for (; elemIt != elemEndIt; ++elemIt) {
             const Element& elem = *elemIt;
 
@@ -2178,6 +2184,7 @@ private:
             Scalar Sw = decay<Scalar>(fs.saturation(waterPhaseIdx));
             this->maxWaterSaturation_[compressedDofIdx] = std::max(this->maxWaterSaturation_[compressedDofIdx], Sw);
         }
+        OPM_END_PARALLEL_TRY_CATCH("EclProblem::updateMayWaterSaturation() failed: ");
 
         return true;
     }
@@ -2188,6 +2195,7 @@ private:
         if (this->minOilPressure_.empty())
             return false;
 
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
         ElementContext elemCtx(this->simulator());
         const auto& vanguard = this->simulator().vanguard();
         auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
@@ -2207,6 +2215,7 @@ private:
                          getValue(fs.pressure(oilPhaseIdx)));
         }
 
+        OPM_END_PARALLEL_TRY_CATCH("EclProblem::updateMinPressure_() failed: ");
         return true;
     }
 
@@ -2638,6 +2647,7 @@ private:
         const auto& vanguard = simulator.vanguard();
         auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
         const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
         for (; elemIt != elemEndIt; ++elemIt) {
             const Element& elem = *elemIt;
 
@@ -2648,6 +2658,7 @@ private:
             const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
             materialLawManager_->updateHysteresis(intQuants.fluidState(), compressedDofIdx);
         }
+        OPM_END_PARALLEL_TRY_CATCH("EclProblem::updateHyteresis_(): ");
         return true;
     }
 
@@ -2659,6 +2670,7 @@ private:
         const auto& vanguard = simulator.vanguard();
         auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
         const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
         for (; elemIt != elemEndIt; ++elemIt) {
             const Element& elem = *elemIt;
 
@@ -2671,6 +2683,7 @@ private:
             this->maxPolymerAdsorption_[compressedDofIdx] = std::max(this->maxPolymerAdsorption_[compressedDofIdx],
                                                                      scalarValue(intQuants.polymerAdsorption()));
         }
+        OPM_END_PARALLEL_TRY_CATCH("EclProblem::updateMaxPolymerAdsorption_(): ");
     }
 
     struct PffDofData_

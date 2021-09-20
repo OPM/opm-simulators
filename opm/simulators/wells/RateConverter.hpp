@@ -26,6 +26,7 @@
 #include <opm/grid/utility/RegionMapping.hpp>
 #include <opm/simulators/linalg/ParallelIstlInformation.hpp>
 #include <opm/simulators/wells/RegionAttributeHelpers.hpp>
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <dune/grid/common/gridenums.hh>
 #include <algorithm>
 #include <cmath>
@@ -121,6 +122,7 @@ namespace Opm {
                 ElementContext elemCtx( simulator );
                 const auto& gridView = simulator.gridView();
                 const auto& comm = gridView.comm();
+                OPM_BEGIN_PARALLEL_TRY_CATCH();
 
                 const auto& elemEndIt = gridView.template end</*codim=*/0>();
                 for (auto elemIt = gridView.template begin</*codim=*/0>();
@@ -193,6 +195,8 @@ namespace Opm {
                         attr.saltConcentration += fs.saltConcentration().value() * pv_cell;
                     }
                 }
+
+                OPM_END_PARALLEL_TRY_CATCH("SurfaceToReservoirVoidage::defineState() failed: ");
 
                 for (const auto& reg : rmap_.activeRegions()) {
                       auto& ra = attr_.attributes(reg);

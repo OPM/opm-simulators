@@ -527,6 +527,8 @@ namespace Opm {
 
         const auto& gridView = ebosSimulator_.vanguard().gridView();
         const auto& elemEndIt = gridView.template end</*codim=*/0>();
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
+
         for (auto elemIt = gridView.template begin</*codim=*/0>();
              elemIt != elemEndIt;
              ++elemIt)
@@ -549,6 +551,7 @@ namespace Opm {
                 perf_pressure = fs.pressure(FluidSystem::gasPhaseIdx).value();
             }
         }
+        OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::initializeWellState() failed: ");
 
         this->wellState().init(cellPressures, schedule(), wells_ecl_, local_parallel_well_info_, timeStepIdx,
                                &this->prevWellState(), well_perf_data_,
@@ -1486,6 +1489,7 @@ namespace Opm {
         const auto& gridView = grid.leafGridView();
         ElementContext elemCtx(ebosSimulator_);
         const auto& elemEndIt = gridView.template end</*codim=*/0, Dune::Interior_Partition>();
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
 
         for (auto elemIt = gridView.template begin</*codim=*/0, Dune::Interior_Partition>();
              elemIt != elemEndIt; ++elemIt)
@@ -1512,6 +1516,7 @@ namespace Opm {
                 B += 1 / intQuants.solventInverseFormationVolumeFactor().value();
             }
         }
+        OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::updateAverageFormationFactor() failed: ")
 
         // compute global average
         grid.comm().sum(B_avg.data(), B_avg.size());
@@ -1587,6 +1592,7 @@ namespace Opm {
         ElementContext elemCtx(ebosSimulator_);
         const auto& gridView = ebosSimulator_.gridView();
         const auto& elemEndIt = gridView.template end</*codim=*/0, Dune::Interior_Partition>();
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
         for (auto elemIt = gridView.template begin</*codim=*/0, Dune::Interior_Partition>();
              elemIt != elemEndIt;
              ++elemIt)
@@ -1600,6 +1606,7 @@ namespace Opm {
             }
             elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
         }
+        OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::updatePerforationIntensiveQuantities() failed: ");
     }
 
 
