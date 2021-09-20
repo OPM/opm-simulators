@@ -100,4 +100,60 @@ inline void logAndCheckForExceptionsAndThrow(Opm::DeferredLogger& deferred_logge
     _throw(exc_type, message);
 }
 
+
+/// \brief Macro to setup the try of a parallel try-catch
+///
+/// Use OPM_END_PARALLEL_TRY_CATCH or OPM_END_PARALLEL_TRY_CATCH_LOG
+/// fot the catch part.
+#define OPM_BEGIN_PARALLEL_TRY_CATCH()    \
+std::string obptc_exc_msg;                \
+auto obptc_exc_type = Opm::ExceptionType::NONE; \
+try {
+
+/// \brief Inserts catch classes for the parallel try-catch
+///
+/// There is a clause that will catch anything
+#define OPM_PARALLEL_CATCH_CLAUSE(obptc_exc_type,          \
+                                  obptc_exc_msg)           \
+catch (const Opm::NumericalIssue& e){                      \
+    obptc_exc_type = Opm::ExceptionType::NUMERICAL_ISSUE;  \
+    obptc_exc_msg = e.what();                              \
+} catch (const std::runtime_error& e) {                    \
+    obptc_exc_type = Opm::ExceptionType::RUNTIME_ERROR;    \
+    obptc_exc_msg = e.what();                              \
+} catch (const std::invalid_argument& e) {                 \
+    obptc_exc_type = Opm::ExceptionType::INVALID_ARGUMENT; \
+    obptc_exc_msg = e.what();                              \
+} catch (const std::logic_error& e) {                      \
+    obptc_exc_type = Opm::ExceptionType::LOGIC_ERROR;      \
+    obptc_exc_msg = e.what();                              \
+} catch (const std::exception& e) {                        \
+    obptc_exc_type = Opm::ExceptionType::DEFAULT;          \
+    obptc_exc_msg = e.what();                              \
+} catch (...) {                                            \
+    obptc_exc_type = Opm::ExceptionType::DEFAULT;          \
+    obptc_exc_msg = "Unknown exception was thrown";        \
+}
+
+/// \brief Catch exception and throw in a parallel try-catch clause
+///
+/// Assumes that OPM_BEGIN_PARALLEL_TRY_CATCH() was called to initiate
+/// the try-catch clause
+#define OPM_END_PARALLEL_TRY_CATCH(prefix)               \
+}                                                        \
+OPM_PARALLEL_CATCH_CLAUSE(obptc_exc_type, obptc_exc_msg);\
+checkForExceptionsAndThrow(obptc_exc_type,               \
+                           prefix + obptc_exc_msg);
+
+/// \brief Catch exception, log, and throw in a parallel try-catch clause
+///
+/// Assumes that OPM_BEGIN_PARALLEL_TRY_CATCH() was called to initiate
+/// the try-catch clause
+#define OPM_END_PARALLEL_TRY_CATCH_LOG(obptc_logger,           \
+                                       obptc_prefix,           \
+                                       obptc_output)           \
+}                                                              \
+OPM_PARALLEL_CATCH_CLAUSE(obptc_exc_type, obptc_exc_msg);      \
+logAndCheckForExceptionsAndThrow(obptc_logger, obptc_exc_type, \
+    obptc_prefix + obptc_exc_msg, obptc_output);
 #endif // OPM_DEFERREDLOGGINGERRORHELPERS_HPP
