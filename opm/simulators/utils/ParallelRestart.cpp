@@ -39,17 +39,17 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/SummaryState.hpp>
 
 #define HANDLE_AS_POD(T) \
-  std::size_t packSize(const T& data, Dune::MPIHelper::MPICommunicator comm) \
+  std::size_t packSize(const T& data, MPIComm comm) \
   { \
       return packSize(data, comm, std::integral_constant<bool,true>()); \
   } \
   void pack(const T& data, std::vector<char>& buffer, int& position, \
-            Dune::MPIHelper::MPICommunicator comm) \
+            MPIComm comm) \
   { \
       pack(data, buffer, position, comm, std::integral_constant<bool,true>()); \
   } \
   void unpack(T& data, std::vector<char>& buffer, int& position, \
-              Dune::MPIHelper::MPICommunicator comm) \
+              MPIComm comm) \
   { \
       unpack(data, buffer, position, comm, std::integral_constant<bool,true>()); \
   }
@@ -59,14 +59,14 @@ namespace Opm
 namespace Mpi
 {
 template<class T>
-std::size_t packSize(const T*, std::size_t, Dune::MPIHelper::MPICommunicator,
+std::size_t packSize(const T*, std::size_t, MPIComm,
                      std::integral_constant<bool, false>)
 {
     OPM_THROW(std::logic_error, "Packing not (yet) supported for this non-pod type.");
 }
 
 template<class T>
-std::size_t packSize(const T*, std::size_t l, Dune::MPIHelper::MPICommunicator comm,
+std::size_t packSize(const T*, std::size_t l, MPIComm comm,
                      std::integral_constant<bool, true>)
 {
 #if HAVE_MPI
@@ -82,19 +82,19 @@ std::size_t packSize(const T*, std::size_t l, Dune::MPIHelper::MPICommunicator c
 }
 
 template<class T>
-std::size_t packSize(const T* data, std::size_t l, Dune::MPIHelper::MPICommunicator comm)
+std::size_t packSize(const T* data, std::size_t l, MPIComm comm)
 {
     return packSize(data, l, comm, typename std::is_pod<T>::type());
 }
 
 template<class T1, class T2>
-std::size_t packSize(const std::pair<T1,T2>& data, Dune::MPIHelper::MPICommunicator comm)
+std::size_t packSize(const std::pair<T1,T2>& data, MPIComm comm)
 {
     return packSize(data.first, comm) + packSize(data.second, comm);
 }
 
 template<class T>
-std::size_t packSize(const std::optional<T>& data, Dune::MPIHelper::MPICommunicator comm)
+std::size_t packSize(const std::optional<T>& data, MPIComm comm)
 {
     bool has_value = data.has_value();
     std::size_t pack_size = packSize(has_value, comm);
@@ -105,7 +105,7 @@ std::size_t packSize(const std::optional<T>& data, Dune::MPIHelper::MPICommunica
 
 
 template<class T, class A>
-std::size_t packSize(const std::vector<T,A>& data, Dune::MPIHelper::MPICommunicator comm)
+std::size_t packSize(const std::vector<T,A>& data, MPIComm comm)
 {
     if (std::is_pod<T>::value)
         // size written automatically
@@ -120,7 +120,7 @@ std::size_t packSize(const std::vector<T,A>& data, Dune::MPIHelper::MPICommunica
 }
 
 template<class A>
-std::size_t packSize(const std::vector<bool,A>& data, Dune::MPIHelper::MPICommunicator comm)
+std::size_t packSize(const std::vector<bool,A>& data, MPIComm comm)
 {
     bool entry;
     return packSize(data.size(), comm) + data.size()*packSize(entry,comm);
@@ -128,27 +128,27 @@ std::size_t packSize(const std::vector<bool,A>& data, Dune::MPIHelper::MPICommun
 
 template<std::size_t I = 0, typename Tuple>
 typename std::enable_if<I == std::tuple_size<Tuple>::value, std::size_t>::type
-pack_size_tuple_entry(const Tuple&, Dune::MPIHelper::MPICommunicator)
+pack_size_tuple_entry(const Tuple&, MPIComm)
 {
     return 0;
 }
 
 template<std::size_t I = 0, typename Tuple>
 typename std::enable_if<I != std::tuple_size<Tuple>::value, std::size_t>::type
-pack_size_tuple_entry(const Tuple& tuple, Dune::MPIHelper::MPICommunicator comm)
+pack_size_tuple_entry(const Tuple& tuple, MPIComm comm)
 {
     return packSize(std::get<I>(tuple), comm) + pack_size_tuple_entry<I+1>(tuple, comm);
 }
 
 template<class... Ts>
-std::size_t packSize(const std::tuple<Ts...>& data, Dune::MPIHelper::MPICommunicator comm)
+std::size_t packSize(const std::tuple<Ts...>& data, MPIComm comm)
 {
     return pack_size_tuple_entry(data, comm);
 }
 
 template<class T, class H, class KE, class A>
 std::size_t packSize(const std::unordered_set<T,H,KE,A>& data,
-                     Dune::MPIHelper::MPICommunicator comm)
+                     MPIComm comm)
 {
     std::size_t totalSize = packSize(data.size(), comm);
     for (const auto& entry : data)
@@ -160,7 +160,7 @@ std::size_t packSize(const std::unordered_set<T,H,KE,A>& data,
 
 template<class K, class C, class A>
 std::size_t packSize(const std::set<K,C,A>& data,
-                     Dune::MPIHelper::MPICommunicator comm)
+                     MPIComm comm)
 {
     std::size_t totalSize = packSize(data.size(), comm);
     for (const auto& entry : data)
@@ -170,7 +170,7 @@ std::size_t packSize(const std::set<K,C,A>& data,
     return totalSize;
 }
 
-std::size_t packSize(const char* str, Dune::MPIHelper::MPICommunicator comm)
+std::size_t packSize(const char* str, MPIComm comm)
 {
 #if HAVE_MPI
     int size;
@@ -185,13 +185,13 @@ std::size_t packSize(const char* str, Dune::MPIHelper::MPICommunicator comm)
 #endif
 }
 
-std::size_t packSize(const std::string& str, Dune::MPIHelper::MPICommunicator comm)
+std::size_t packSize(const std::string& str, MPIComm comm)
 {
     return packSize(str.c_str(), comm);
 }
 
 template<class T1, class T2, class C, class A>
-std::size_t packSize(const std::map<T1,T2,C,A>& data, Dune::MPIHelper::MPICommunicator comm)
+std::size_t packSize(const std::map<T1,T2,C,A>& data, MPIComm comm)
 {
     std::size_t totalSize = packSize(data.size(), comm);
     for (const auto& entry: data)
@@ -202,7 +202,7 @@ std::size_t packSize(const std::map<T1,T2,C,A>& data, Dune::MPIHelper::MPICommun
 }
 
 template<class T1, class T2, class H, class P, class A>
-std::size_t packSize(const std::unordered_map<T1,T2,H,P,A>& data, Dune::MPIHelper::MPICommunicator comm)
+std::size_t packSize(const std::unordered_map<T1,T2,H,P,A>& data, MPIComm comm)
 {
     std::size_t totalSize = packSize(data.size(), comm);
     for (const auto& entry: data)
@@ -213,7 +213,7 @@ std::size_t packSize(const std::unordered_map<T1,T2,H,P,A>& data, Dune::MPIHelpe
 }
 
 template<class T, std::size_t N>
-std::size_t packSize(const std::array<T,N>& data, Dune::MPIHelper::MPICommunicator comm)
+std::size_t packSize(const std::array<T,N>& data, MPIComm comm)
 {
     return N*packSize(data[0], comm);
 }
@@ -227,12 +227,12 @@ HANDLE_AS_POD(data::NodeData)
 HANDLE_AS_POD(data::Rates)
 HANDLE_AS_POD(data::Segment)
 
-std::size_t packSize(const data::NumericAquiferData& data, Dune::MPIHelper::MPICommunicator comm)
+std::size_t packSize(const data::NumericAquiferData& data, MPIComm comm)
 {
     return packSize(data.initPressure, comm);
 }
 
-std::size_t packSize(const data::AquiferData& data, Dune::MPIHelper::MPICommunicator comm)
+std::size_t packSize(const data::AquiferData& data, MPIComm comm)
 {
     const auto type = 0ull;
 
@@ -263,7 +263,7 @@ std::size_t packSize(const data::AquiferData& data, Dune::MPIHelper::MPICommunic
     return base;
 }
 
-std::size_t packSize(const data::GuideRateValue&, Dune::MPIHelper::MPICommunicator comm)
+std::size_t packSize(const data::GuideRateValue&, MPIComm comm)
 {
     const auto nItem = static_cast<std::size_t>(data::GuideRateValue::Item::NumItems);
 
@@ -271,19 +271,19 @@ std::size_t packSize(const data::GuideRateValue&, Dune::MPIHelper::MPICommunicat
         +  packSize(std::array<double, nItem>{}, comm);
 }
 
-std::size_t packSize(const data::GroupGuideRates& data, Dune::MPIHelper::MPICommunicator comm)
+std::size_t packSize(const data::GroupGuideRates& data, MPIComm comm)
 {
     return packSize(data.production, comm)
         +  packSize(data.injection, comm);
 }
 
-std::size_t packSize(const data::GroupData& data, Dune::MPIHelper::MPICommunicator comm)
+std::size_t packSize(const data::GroupData& data, MPIComm comm)
 {
     return packSize(data.currentControl, comm)
         +  packSize(data.guideRates, comm);
 }
 
-std::size_t packSize(const data::Well& data, Dune::MPIHelper::MPICommunicator comm)
+std::size_t packSize(const data::Well& data, MPIComm comm)
 {
     std::size_t size = packSize(data.rates, comm);
     size += packSize(data.bhp, comm) + packSize(data.thp, comm);
@@ -296,37 +296,37 @@ std::size_t packSize(const data::Well& data, Dune::MPIHelper::MPICommunicator co
     return size;
 }
 
-std::size_t packSize(const data::CellData& data, Dune::MPIHelper::MPICommunicator comm)
+std::size_t packSize(const data::CellData& data, MPIComm comm)
 {
     return packSize(data.dim, comm) + packSize(data.data, comm) + packSize(data.target, comm);
 }
 
-std::size_t packSize(const RestartKey& data, Dune::MPIHelper::MPICommunicator comm)
+std::size_t packSize(const RestartKey& data, MPIComm comm)
 {
     return packSize(data.key, comm) + packSize(data.dim, comm) + packSize(data.required, comm);
 }
 
-std::size_t packSize(const data::Solution& data, Dune::MPIHelper::MPICommunicator comm)
+std::size_t packSize(const data::Solution& data, MPIComm comm)
 {
     // Needs explicit conversion to a supported base type holding the data
     // to prevent throwing.
     return packSize(static_cast<const std::map< std::string, data::CellData>&>(data), comm);
 }
 
-std::size_t packSize(const data::GroupAndNetworkValues& data, Dune::MPIHelper::MPICommunicator comm)
+std::size_t packSize(const data::GroupAndNetworkValues& data, MPIComm comm)
 {
     return packSize(data.groupData, comm)
         +  packSize(data.nodeData, comm);
 }
 
-std::size_t packSize(const data::Wells& data, Dune::MPIHelper::MPICommunicator comm)
+std::size_t packSize(const data::Wells& data, MPIComm comm)
 {
     // Needs explicit conversion to a supported base type holding the data
     // to prevent throwing.
     return packSize(static_cast<const std::map< std::string, data::Well>&>(data), comm);
 }
 
-std::size_t packSize(const RestartValue& data, Dune::MPIHelper::MPICommunicator comm)
+std::size_t packSize(const RestartValue& data, MPIComm comm)
 {
     return packSize(data.solution, comm)
         +  packSize(data.wells, comm)
@@ -335,7 +335,7 @@ std::size_t packSize(const RestartValue& data, Dune::MPIHelper::MPICommunicator 
         +  packSize(data.extra, comm);
 }
 
-std::size_t packSize(const Opm::time_point&, Dune::MPIHelper::MPICommunicator comm)
+std::size_t packSize(const Opm::time_point&, MPIComm comm)
 {
     std::time_t tp;
     return packSize(tp, comm);
@@ -346,14 +346,14 @@ std::size_t packSize(const Opm::time_point&, Dune::MPIHelper::MPICommunicator co
 
 template<class T>
 void pack(const T*, std::size_t, std::vector<char>&, int&,
-          Dune::MPIHelper::MPICommunicator, std::integral_constant<bool, false>)
+          MPIComm, std::integral_constant<bool, false>)
 {
     OPM_THROW(std::logic_error, "Packing not (yet) supported for this non-pod type.");
 }
 
 template<class T>
 void pack(const T* data, std::size_t l, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm,
+          MPIComm comm,
           std::integral_constant<bool, true>)
 {
 #if HAVE_MPI
@@ -372,14 +372,14 @@ void pack(const T* data, std::size_t l, std::vector<char>& buffer, int& position
 
 template<class T>
 void pack(const T* data, std::size_t l, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
+          MPIComm comm)
 {
     pack(data, l, buffer, position, comm, typename std::is_pod<T>::type());
 }
 
 template<class T1, class T2>
 void pack(const std::pair<T1,T2>& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
+          MPIComm comm)
 {
     pack(data.first, buffer, position, comm);
     pack(data.second, buffer, position, comm);
@@ -387,7 +387,7 @@ void pack(const std::pair<T1,T2>& data, std::vector<char>& buffer, int& position
 
 template<class T>
 void pack(const std::optional<T>& data, std::vector<char>& buffer, int& position,
-    Dune::MPIHelper::MPICommunicator comm)
+    MPIComm comm)
 {
     bool has_value = data.has_value();
     pack(has_value, buffer, position, comm);
@@ -398,7 +398,7 @@ void pack(const std::optional<T>& data, std::vector<char>& buffer, int& position
 
 template<class T, class A>
 void pack(const std::vector<T, A>& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
+          MPIComm comm)
 {
     if (std::is_pod<T>::value)
     {
@@ -416,7 +416,7 @@ void pack(const std::vector<T, A>& data, std::vector<char>& buffer, int& positio
 template<class K, class C, class A>
 void pack(const std::set<K,C,A>& data,
           std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
+          MPIComm comm)
 {
     pack(data.size(), buffer, position, comm);
 
@@ -429,7 +429,7 @@ void pack(const std::set<K,C,A>& data,
 template<class T, class H, class KE, class A>
 void pack(const std::unordered_set<T,H,KE,A>& data,
           std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
+          MPIComm comm)
 {
     pack(data.size(), buffer, position, comm);
 
@@ -441,7 +441,7 @@ void pack(const std::unordered_set<T,H,KE,A>& data,
 
 template<class T, size_t N>
 void pack(const std::array<T,N>& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
+          MPIComm comm)
 {
     for (const T& entry : data)
         pack(entry, buffer, position, comm);
@@ -449,7 +449,7 @@ void pack(const std::array<T,N>& data, std::vector<char>& buffer, int& position,
 
 template<class A>
 void pack(const std::vector<bool,A>& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
+          MPIComm comm)
 {
     pack(data.size(), buffer, position, comm);
     for (const auto entry : data) { // Not a reference: vector<bool> range
@@ -461,14 +461,14 @@ void pack(const std::vector<bool,A>& data, std::vector<char>& buffer, int& posit
 template<std::size_t I = 0, typename Tuple>
 typename std::enable_if<I == std::tuple_size<Tuple>::value, void>::type
 pack_tuple_entry(const Tuple&, std::vector<char>&, int&,
-                      Dune::MPIHelper::MPICommunicator)
+                      MPIComm)
 {
 }
 
 template<std::size_t I = 0, typename Tuple>
 typename std::enable_if<I != std::tuple_size<Tuple>::value, void>::type
 pack_tuple_entry(const Tuple& tuple, std::vector<char>& buffer,
-                 int& position, Dune::MPIHelper::MPICommunicator comm)
+                 int& position, MPIComm comm)
 {
     pack(std::get<I>(tuple), buffer, position, comm);
     pack_tuple_entry<I+1>(tuple, buffer, position, comm);
@@ -476,13 +476,13 @@ pack_tuple_entry(const Tuple& tuple, std::vector<char>& buffer,
 
 template<class... Ts>
 void pack(const std::tuple<Ts...>& data, std::vector<char>& buffer,
-          int& position, Dune::MPIHelper::MPICommunicator comm)
+          int& position, MPIComm comm)
 {
     pack_tuple_entry(data, buffer, position, comm);
 }
 
 void pack(const char* str, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
+          MPIComm comm)
 {
 #if HAVE_MPI
     std::size_t length = strlen(str)+1;
@@ -499,14 +499,14 @@ void pack(const char* str, std::vector<char>& buffer, int& position,
 }
 
 void pack(const std::string& str, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
+          MPIComm comm)
 {
     pack(str.c_str(), buffer, position, comm);
 }
 
 template<class T1, class T2, class C, class A>
 void pack(const std::map<T1,T2,C,A>& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
+          MPIComm comm)
 {
     pack(data.size(), buffer, position, comm);
 
@@ -518,7 +518,7 @@ void pack(const std::map<T1,T2,C,A>& data, std::vector<char>& buffer, int& posit
 
 template<class T1, class T2, class H, class P, class A>
 void pack(const std::unordered_map<T1,T2,H,P,A>& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
+          MPIComm comm)
 {
     pack(data.size(), buffer, position, comm);
 
@@ -529,13 +529,13 @@ void pack(const std::unordered_map<T1,T2,H,P,A>& data, std::vector<char>& buffer
 }
 
 void pack(const data::NumericAquiferData& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
+          MPIComm comm)
 {
     pack(data.initPressure, buffer, position, comm);
 }
 
 void pack(const data::AquiferData& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
+          MPIComm comm)
 {
     const auto type =
           (data.typeData.is<data::AquiferType::Fetkovich>()   * (1ull << 0))
@@ -568,7 +568,7 @@ void pack(const data::AquiferData& data, std::vector<char>& buffer, int& positio
 }
 
 void pack(const data::GuideRateValue& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
+          MPIComm comm)
 {
     using Item = data::GuideRateValue::Item;
     const auto nItem = static_cast<std::size_t>(Item::NumItems);
@@ -590,21 +590,21 @@ void pack(const data::GuideRateValue& data, std::vector<char>& buffer, int& posi
 }
 
 void pack(const data::GroupGuideRates& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
+          MPIComm comm)
 {
     pack(data.production, buffer, position, comm);
     pack(data.injection, buffer, position, comm);
 }
 
 void pack(const data::GroupData& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
+          MPIComm comm)
 {
     pack(data.currentControl, buffer, position, comm);
     pack(data.guideRates, buffer, position, comm);
 }
 
 void pack(const data::Well& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
+          MPIComm comm)
 {
     pack(data.rates, buffer, position, comm);
     pack(data.bhp, buffer, position, comm);
@@ -618,7 +618,7 @@ void pack(const data::Well& data, std::vector<char>& buffer, int& position,
 }
 
 void pack(const RestartKey& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
+          MPIComm comm)
 {
     pack(data.key, buffer, position, comm);
     pack(data.dim, buffer, position, comm);
@@ -626,7 +626,7 @@ void pack(const RestartKey& data, std::vector<char>& buffer, int& position,
 }
 
 void pack(const data::CellData& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
+          MPIComm comm)
 {
     pack(data.dim, buffer, position, comm);
     pack(data.data, buffer, position, comm);
@@ -634,7 +634,7 @@ void pack(const data::CellData& data, std::vector<char>& buffer, int& position,
 }
 
 void pack(const data::Solution& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
+          MPIComm comm)
 {
     // Needs explicit conversion to a supported base type holding the data
     // to prevent throwing.
@@ -643,7 +643,7 @@ void pack(const data::Solution& data, std::vector<char>& buffer, int& position,
 }
 
 void pack(const data::Wells& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
+          MPIComm comm)
 {
     // Needs explicit conversion to a supported base type holding the data
     // to prevent throwing.
@@ -652,14 +652,14 @@ void pack(const data::Wells& data, std::vector<char>& buffer, int& position,
 }
 
 void pack(const data::GroupAndNetworkValues& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
+          MPIComm comm)
 {
     pack(data.groupData, buffer, position, comm);
     pack(data.nodeData, buffer, position, comm);
 }
 
 void pack(const RestartValue& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
+          MPIComm comm)
 {
     pack(data.solution, buffer, position, comm);
     pack(data.wells, buffer, position, comm);
@@ -669,7 +669,7 @@ void pack(const RestartValue& data, std::vector<char>& buffer, int& position,
 }
 
 void pack(const Opm::time_point& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
+          MPIComm comm)
 {
     pack(Opm::TimeService::to_time_t(data), buffer, position, comm);
 }
@@ -679,14 +679,14 @@ void pack(const Opm::time_point& data, std::vector<char>& buffer, int& position,
 
 template<class T>
 void unpack(T*, const std::size_t&, std::vector<char>&, int&,
-            Dune::MPIHelper::MPICommunicator, std::integral_constant<bool, false>)
+            MPIComm, std::integral_constant<bool, false>)
 {
     OPM_THROW(std::logic_error, "Packing not (yet) supported for this non-pod type.");
 }
 
 template<class T>
 void unpack(T* data, const std::size_t& l, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm,
+            MPIComm comm,
             std::integral_constant<bool, true>)
 {
 #if HAVE_MPI
@@ -703,14 +703,14 @@ void unpack(T* data, const std::size_t& l, std::vector<char>& buffer, int& posit
 
 template<class T>
 void unpack(T* data, const std::size_t& l, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
+            MPIComm comm)
 {
     unpack(data, l, buffer, position, comm, typename std::is_pod<T>::type());
 }
 
 template<class T1, class T2>
 void unpack(std::pair<T1,T2>& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
+            MPIComm comm)
 {
     unpack(data.first, buffer, position, comm);
     unpack(data.second, buffer, position, comm);
@@ -718,7 +718,7 @@ void unpack(std::pair<T1,T2>& data, std::vector<char>& buffer, int& position,
 
 template<class T>
 void unpack(std::optional<T>&data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
+            MPIComm comm)
 {
     bool has_value;
     unpack(has_value, buffer, position, comm);
@@ -733,7 +733,7 @@ void unpack(std::optional<T>&data, std::vector<char>& buffer, int& position,
 
 template<class T, class A>
 void unpack(std::vector<T,A>& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
+            MPIComm comm)
 {
     std::size_t length = 0;
     unpack(length, buffer, position, comm);
@@ -751,7 +751,7 @@ void unpack(std::vector<T,A>& data, std::vector<char>& buffer, int& position,
 
 template<class A>
 void unpack(std::vector<bool,A>& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
+            MPIComm comm)
 {
     size_t size;
     unpack(size, buffer, position, comm);
@@ -767,14 +767,14 @@ void unpack(std::vector<bool,A>& data, std::vector<char>& buffer, int& position,
 template<std::size_t I = 0, typename Tuple>
 typename std::enable_if<I == std::tuple_size<Tuple>::value, void>::type
 unpack_tuple_entry(Tuple&, std::vector<char>&, int&,
-                   Dune::MPIHelper::MPICommunicator)
+                   MPIComm)
 {
 }
 
 template<std::size_t I = 0, typename Tuple>
 typename std::enable_if<I != std::tuple_size<Tuple>::value, void>::type
 unpack_tuple_entry(Tuple& tuple, std::vector<char>& buffer,
-                   int& position, Dune::MPIHelper::MPICommunicator comm)
+                   int& position, MPIComm comm)
 {
     unpack(std::get<I>(tuple), buffer, position, comm);
     unpack_tuple_entry<I+1>(tuple, buffer, position, comm);
@@ -782,7 +782,7 @@ unpack_tuple_entry(Tuple& tuple, std::vector<char>& buffer,
 
 template<class... Ts>
 void unpack(std::tuple<Ts...>& data, std::vector<char>& buffer,
-            int& position, Dune::MPIHelper::MPICommunicator comm)
+            int& position, MPIComm comm)
 {
     unpack_tuple_entry(data, buffer, position, comm);
 }
@@ -790,7 +790,7 @@ void unpack(std::tuple<Ts...>& data, std::vector<char>& buffer,
 template<class K, class C, class A>
 void unpack(std::set<K,C,A>& data,
             std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
+            MPIComm comm)
 {
     std::size_t size = 0;
     unpack(size, buffer, position, comm);
@@ -806,7 +806,7 @@ void unpack(std::set<K,C,A>& data,
 template<class T, class H, class KE, class A>
 void unpack(std::unordered_set<T,H,KE,A>& data,
             std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
+            MPIComm comm)
 {
     std::size_t size=0;
     unpack(size, buffer, position, comm);
@@ -821,14 +821,14 @@ void unpack(std::unordered_set<T,H,KE,A>& data,
 
 template<class T, size_t N>
 void unpack(std::array<T,N>& data, std::vector<char>& buffer, int& position,
-          Dune::MPIHelper::MPICommunicator comm)
+          MPIComm comm)
 {
     for (T& entry : data)
         unpack(entry, buffer, position, comm);
 }
 
 void unpack(char* str, std::size_t length, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
+            MPIComm comm)
 {
 #if HAVE_MPI
     MPI_Unpack(buffer.data(), buffer.size(), &position, const_cast<char*>(str), length, MPI_CHAR, comm);
@@ -842,7 +842,7 @@ void unpack(char* str, std::size_t length, std::vector<char>& buffer, int& posit
 }
 
 void unpack(std::string& str, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
+            MPIComm comm)
 {
     std::size_t length=0;
     unpack(length, buffer, position, comm);
@@ -854,7 +854,7 @@ void unpack(std::string& str, std::vector<char>& buffer, int& position,
 
 template<class T1, class T2, class C, class A>
 void unpack(std::map<T1,T2,C,A>& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
+            MPIComm comm)
 {
     std::size_t size=0;
     unpack(size, buffer, position, comm);
@@ -869,7 +869,7 @@ void unpack(std::map<T1,T2,C,A>& data, std::vector<char>& buffer, int& position,
 
 template<class T1, class T2, class H, class P, class A>
 void unpack(std::unordered_map<T1,T2,H,P,A>& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
+            MPIComm comm)
 {
     std::size_t size=0;
     unpack(size, buffer, position, comm);
@@ -883,7 +883,7 @@ void unpack(std::unordered_map<T1,T2,H,P,A>& data, std::vector<char>& buffer, in
 }
 
 void unpack(data::Well& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
+            MPIComm comm)
 {
     unpack(data.rates, buffer, position, comm);
     unpack(data.bhp, buffer, position, comm);
@@ -897,13 +897,13 @@ void unpack(data::Well& data, std::vector<char>& buffer, int& position,
 }
 
 void unpack(data::NumericAquiferData& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
+            MPIComm comm)
 {
     unpack(data.initPressure, buffer, position, comm);
 }
 
 void unpack(data::AquiferData& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
+            MPIComm comm)
 {
     auto type = 0ull;
 
@@ -930,7 +930,7 @@ void unpack(data::AquiferData& data, std::vector<char>& buffer, int& position,
 }
 
 void unpack(data::GuideRateValue& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
+            MPIComm comm)
 {
     using Item = data::GuideRateValue::Item;
     const auto nItem = static_cast<std::size_t>(Item::NumItems);
@@ -949,21 +949,21 @@ void unpack(data::GuideRateValue& data, std::vector<char>& buffer, int& position
 }
 
 void unpack(data::GroupGuideRates& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
+            MPIComm comm)
 {
     unpack(data.production, buffer, position, comm);
     unpack(data.injection, buffer, position, comm);
 }
 
 void unpack(data::GroupData& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
+            MPIComm comm)
 {
     unpack(data.currentControl, buffer, position, comm);
     unpack(data.guideRates, buffer, position, comm);
 }
 
 void unpack(RestartKey& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
+            MPIComm comm)
 {
     unpack(data.key, buffer, position, comm);
     unpack(data.dim, buffer, position, comm);
@@ -971,7 +971,7 @@ void unpack(RestartKey& data, std::vector<char>& buffer, int& position,
 }
 
 void unpack(data::CellData& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
+            MPIComm comm)
 {
     unpack(data.dim, buffer, position, comm);
     unpack(data.data, buffer, position, comm);
@@ -979,7 +979,7 @@ void unpack(data::CellData& data, std::vector<char>& buffer, int& position,
 }
 
 void unpack(data::Solution& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
+            MPIComm comm)
 {
     // Needs explicit conversion to a supported base type holding the data
     // to prevent throwing.
@@ -988,7 +988,7 @@ void unpack(data::Solution& data, std::vector<char>& buffer, int& position,
 }
 
 void unpack(data::Wells& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
+            MPIComm comm)
 {
     // Needs explicit conversion to a supported base type holding the data
     // to prevent throwing.
@@ -997,14 +997,14 @@ void unpack(data::Wells& data, std::vector<char>& buffer, int& position,
 }
 
 void unpack(data::GroupAndNetworkValues& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
+            MPIComm comm)
 {
     unpack(data.groupData, buffer, position, comm);
     unpack(data.nodeData, buffer, position, comm);
 }
 
 void unpack(RestartValue& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
+            MPIComm comm)
 {
     unpack(data.solution, buffer, position, comm);
     unpack(data.wells, buffer, position, comm);
@@ -1014,7 +1014,7 @@ void unpack(RestartValue& data, std::vector<char>& buffer, int& position,
 }
 
 void unpack([[maybe_unused]] Opm::time_point& data, std::vector<char>& buffer, int& position,
-            Dune::MPIHelper::MPICommunicator comm)
+            MPIComm comm)
 {
     std::time_t tp;
     unpack(tp, buffer, position, comm);
@@ -1026,13 +1026,13 @@ void unpack([[maybe_unused]] Opm::time_point& data, std::vector<char>& buffer, i
 
 #define INSTANTIATE_PACK_VECTOR(...) \
 template std::size_t packSize(const std::vector<__VA_ARGS__>& data, \
-                              Dune::MPIHelper::MPICommunicator comm); \
+                              MPIComm comm); \
 template void pack(const std::vector<__VA_ARGS__>& data, \
                    std::vector<char>& buffer, int& position, \
-                   Dune::MPIHelper::MPICommunicator comm); \
+                   MPIComm comm); \
 template void unpack(std::vector<__VA_ARGS__>& data, \
                      std::vector<char>& buffer, int& position, \
-                     Dune::MPIHelper::MPICommunicator comm);
+                     MPIComm comm);
 
 INSTANTIATE_PACK_VECTOR(float)
 INSTANTIATE_PACK_VECTOR(double)
@@ -1059,13 +1059,13 @@ INSTANTIATE_PACK_VECTOR(std::string)
 
 #define INSTANTIATE_PACK(...) \
 template std::size_t packSize(const __VA_ARGS__& data, \
-                              Dune::MPIHelper::MPICommunicator comm); \
+                              MPIComm comm); \
 template void pack(const __VA_ARGS__& data, \
                    std::vector<char>& buffer, int& position, \
-                   Dune::MPIHelper::MPICommunicator comm); \
+                   MPIComm comm); \
 template void unpack(__VA_ARGS__& data, \
                      std::vector<char>& buffer, int& position, \
-                     Dune::MPIHelper::MPICommunicator comm);
+                     MPIComm comm);
 
 INSTANTIATE_PACK(float)
 INSTANTIATE_PACK(double)
@@ -1101,7 +1101,7 @@ INSTANTIATE_PACK(std::set<std::string>)
 RestartValue loadParallelRestart(const EclipseIO* eclIO, Action::State& actionState, SummaryState& summaryState,
                                  const std::vector<Opm::RestartKey>& solutionKeys,
                                  const std::vector<Opm::RestartKey>& extraKeys,
-                                 Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> comm)
+                                 Communication comm)
 {
 #if HAVE_MPI
     RestartValue restartValues{};

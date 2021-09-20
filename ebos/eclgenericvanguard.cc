@@ -61,7 +61,7 @@ std::unique_ptr<EclipseState> EclGenericVanguard::externalEclState_;
 std::unique_ptr<Schedule> EclGenericVanguard::externalEclSchedule_;
 std::unique_ptr<SummaryConfig> EclGenericVanguard::externalEclSummaryConfig_;
 std::unique_ptr<UDQState> EclGenericVanguard::externalUDQState_;
-std::unique_ptr<EclGenericVanguard::CommunicationType> EclGenericVanguard::comm_;
+std::unique_ptr<EclGenericVanguard::Communication> EclGenericVanguard::comm_;
 
 EclGenericVanguard::EclGenericVanguard()
     : python(std::make_shared<Python>())

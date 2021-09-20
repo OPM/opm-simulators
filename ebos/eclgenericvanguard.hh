@@ -60,12 +60,12 @@ class UDQState;
 
 class EclGenericVanguard {
 public:
-    using ParallelWellStruct = std::vector<std::pair<std::string,bool>>;
-
+   
+using ParallelWellStruct = std::vector<std::pair<std::string,bool>>;
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
-    using CommunicationType = Dune::Communication<Dune::MPIHelper::MPICommunicator>;
+    using Communication = Dune::Communication<Dune::MPIHelper::MPICommunicator>;
 #else
-    using CommunicationType = Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator>;
+    using Communication = Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator>;
 #endif
 
     /*!
@@ -272,11 +272,11 @@ public:
     { return parallelWells_; }
 
     //! \brief Set global communication.
-    static void setCommunication(std::unique_ptr<CommunicationType> comm)
+    static void setCommunication(std::unique_ptr<Communication> comm)
     { comm_ = std::move(comm); }
 
     //! \brief Obtain global communicator.
-    static CommunicationType& comm()
+    static Communication& comm()
     {
         assert(comm_);
         return *comm_;
@@ -301,7 +301,7 @@ protected:
     static std::unique_ptr<Schedule> externalEclSchedule_;
     static std::unique_ptr<SummaryConfig> externalEclSummaryConfig_;
     static std::unique_ptr<UDQState> externalUDQState_;
-    static std::unique_ptr<CommunicationType> comm_;
+    static std::unique_ptr<Communication> comm_;
 
     std::string caseName_;
     std::string fileName_;

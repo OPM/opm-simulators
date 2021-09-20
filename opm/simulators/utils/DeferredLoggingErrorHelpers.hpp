@@ -32,6 +32,13 @@
 #include <exception>
 #include <stdexcept>
 
+using MPIComm = typename Dune::MPIHelper::MPICommunicator;
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
+    using Communication = Dune::Communication<MPIComm>; 
+#else
+    using Communication = Dune::CollectiveCommunication<MPIComm>;
+#endif
+
 // Macro to throw an exception.
 // Inspired by ErrorMacros.hpp in opm-common.
 // NOTE: For this macro to work, the
@@ -54,7 +61,7 @@ namespace {
 
 void _throw(Opm::ExceptionType::ExcEnum exc_type,
             const std::string& message,
-            Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> cc)
+            Communication cc)
 {
     auto global_exc = cc.max(exc_type);
 
@@ -82,7 +89,7 @@ void _throw(Opm::ExceptionType::ExcEnum exc_type,
 
 inline void checkForExceptionsAndThrow(Opm::ExceptionType::ExcEnum exc_type,
                                        const std::string& message,
-                                       Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> cc)
+                                       Communication cc)
 {
     _throw(exc_type, message, cc);
 }
@@ -91,7 +98,7 @@ inline void logAndCheckForExceptionsAndThrow(Opm::DeferredLogger& deferred_logge
                                              Opm::ExceptionType::ExcEnum exc_type,
                                              const std::string& message,
                                              const bool terminal_output,
-                                             Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> cc)
+                                             Communication cc)
 {
     Opm::DeferredLogger global_deferredLogger = gatherDeferredLogger(deferred_logger, cc);
 

@@ -184,7 +184,7 @@ namespace Opm
 #elif HAVE_MPI
             MPI_Init(&argc_, &argv_);
 #endif
-            EclGenericVanguard::setCommunication(std::make_unique<EclGenericVanguard::CommunicationType>());
+            EclGenericVanguard::setCommunication(std::make_unique<EclGenericVanguard::Communication>());
 
 #if DEMONSTRATE_RUN_WITH_NONWORLD_COMM
 #if HAVE_MPI
@@ -194,7 +194,7 @@ namespace Opm
                 MPI_Comm new_comm;
                 MPI_Comm_split(EclGenericVanguard::comm(), color, world_rank, &new_comm);
                 isSimulationRank_ = (world_rank > 0);
-                EclGenericVanguard::setCommunication(std::make_unique<EclGenericVanguard::CommunicationType>(new_comm));
+                EclGenericVanguard::setCommunication(std::make_unique<EclGenericVanguard::Communication>(new_comm));
             }
 #endif // HAVE_MPI
 #endif // DEMONSTRATE_RUN_WITH_NONWORLD_COMM
