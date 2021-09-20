@@ -48,6 +48,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/SummaryState.hpp>
 #include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQState.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Action/State.hpp>
 
 #include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Parser/ErrorGuard.hpp>
@@ -191,7 +192,7 @@ void setupMessageLimiter(const Opm::MessageLimits msgLimits,  const std::string&
 
 
 void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& deck, std::unique_ptr<Opm::EclipseState>& eclipseState,
-              std::unique_ptr<Opm::Schedule>& schedule, std::unique_ptr<UDQState>& udqState, std::unique_ptr<Opm::SummaryConfig>& summaryConfig,
+              std::unique_ptr<Opm::Schedule>& schedule, std::unique_ptr<UDQState>& udqState, std::unique_ptr<Action::State>& actionState, std::unique_ptr<Opm::SummaryConfig>& summaryConfig,
               std::unique_ptr<ErrorGuard> errorGuard, std::shared_ptr<Opm::Python>& python, std::unique_ptr<ParseContext> parseContext,
               bool initFromRestart, bool checkDeck, const std::optional<int>& outputInterval)
 {
@@ -280,6 +281,7 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
 
                 udqState = std::make_unique<UDQState>((*schedule)[0].udq().params().undefinedValue());
                 udqState->load_rst(rst_state);
+                actionState = std::make_unique<Action::State>();
             }
             else {
                 if (!schedule) {
@@ -289,6 +291,7 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
                 }
 
                 udqState = std::make_unique<UDQState>((*schedule)[0].udq().params().undefinedValue());
+                actionState = std::make_unique<Action::State>();
             }
 
 

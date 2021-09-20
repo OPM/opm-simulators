@@ -153,6 +153,7 @@ public:
     static void setExternalSummaryConfig(std::unique_ptr<SummaryConfig> summaryConfig);
 
     static void setExternalUDQState(std::unique_ptr<UDQState> udqState);
+    static void setExternalActionState(std::unique_ptr<Action::State> actionState);
     /*!
      * \brief Return a reference to the parsed ECL deck.
      */
@@ -301,6 +302,7 @@ protected:
     static std::unique_ptr<Schedule> externalEclSchedule_;
     static std::unique_ptr<SummaryConfig> externalEclSummaryConfig_;
     static std::unique_ptr<UDQState> externalUDQState_;
+    static std::unique_ptr<Action::State> externalActionState_;
     static std::unique_ptr<CommunicationType> comm_;
 
     std::string caseName_;

@@ -61,6 +61,7 @@ std::unique_ptr<EclipseState> EclGenericVanguard::externalEclState_;
 std::unique_ptr<Schedule> EclGenericVanguard::externalEclSchedule_;
 std::unique_ptr<SummaryConfig> EclGenericVanguard::externalEclSummaryConfig_;
 std::unique_ptr<UDQState> EclGenericVanguard::externalUDQState_;
+std::unique_ptr<Action::State> EclGenericVanguard::externalActionState_;
 std::unique_ptr<EclGenericVanguard::CommunicationType> EclGenericVanguard::comm_;
 
 EclGenericVanguard::EclGenericVanguard()
@@ -104,6 +105,11 @@ void EclGenericVanguard::setExternalEclState(std::unique_ptr<EclipseState> eclSt
 void EclGenericVanguard::setExternalUDQState(std::unique_ptr<UDQState> udqState)
 {
     externalUDQState_ = std::move(udqState);
+}
+
+void EclGenericVanguard::setExternalActionState(std::unique_ptr<Action::State> actionState)
+{
+    externalActionState_ = std::move(actionState);
 }
 
 std::string EclGenericVanguard::canonicalDeckPath(const std::string& caseName)
@@ -266,7 +272,7 @@ void EclGenericVanguard::init()
         parseContext_ = createParseContext(ignoredKeywords_, eclStrictParsing_);
     }
 
-    readDeck(myRank, fileName_, deck_, eclState_, eclSchedule_, udqState_,
+    readDeck(myRank, fileName_, deck_, eclState_, eclSchedule_, udqState_, actionState_,
              eclSummaryConfig_, std::move(errorGuard), python,
              std::move(parseContext_), /* initFromRestart = */ false,
              /* checkDeck = */ enableExperiments_, outputInterval_);
@@ -275,8 +281,13 @@ void EclGenericVanguard::init()
         this->udqState_ = std::move(EclGenericVanguard::externalUDQState_);
     else
         this->udqState_ = std::make_unique<UDQState>( this->eclSchedule_->getUDQConfig(0).params().undefinedValue() );
+
+    if (EclGenericVanguard::externalActionState_)
+        this->actionState_ = std::move(EclGenericVanguard::externalActionState_);
+    else
+        this->actionState_ = std::make_unique<Action::State>();
+
     this->summaryState_ = std::make_unique<SummaryState>( TimeService::from_time_t(this->eclSchedule_->getStartTime() ));
-    this->actionState_ = std::make_unique<Action::State>();
 
     // Initialize parallelWells with all local wells
     const auto& schedule_wells = schedule().getWellsatEnd();
