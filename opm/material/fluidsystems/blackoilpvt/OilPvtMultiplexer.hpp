@@ -180,7 +180,7 @@ public:
     /*!
      * \brief Return the reference density which are considered by this PVT-object.
      */
-    const Scalar oilReferenceDensity(unsigned regionIdx)
+    const Scalar oilReferenceDensity(unsigned regionIdx) const
     { OPM_OIL_PVT_MULTIPLEXER_CALL(return pvtImpl.oilReferenceDensity(regionIdx)); return 700.; }
 
     /*!
