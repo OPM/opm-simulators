@@ -824,7 +824,7 @@ updateWellTestState(const SingleWellState& ws,
     }
 
     // updating well test state based on physical (THP/BHP) limits.
-    updateWellTestStatePhysical(ws, simulationTime, writeMessageToOPMLog, wellTestState, deferred_logger);
+    updateWellTestStatePhysical(simulationTime, writeMessageToOPMLog, wellTestState, deferred_logger);
 
     // updating well test state based on Economic limits.
     updateWellTestStateEconomic(ws, simulationTime, writeMessageToOPMLog, wellTestState, deferred_logger);
