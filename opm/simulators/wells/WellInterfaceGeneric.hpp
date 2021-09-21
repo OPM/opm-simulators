@@ -201,7 +201,6 @@ protected:
             obey_thp_limit_under_bhp_limit = true;
             can_obtain_bhp_with_thp_limit = true;
             obey_bhp_limit_with_thp_limit = true;
-            solvable = true;
         }
 
         // whether the well can be operated under bhp limit

@@ -377,19 +377,23 @@ namespace Opm
                    DeferredLogger& deferred_logger)
     {
         const bool old_well_operable = this->operability_status_.isOperable();
-        checkWellOperability(ebosSimulator, well_state, deferred_logger);
+
+        if (param_.check_well_operabilty_iter_)
+            checkWellOperability(ebosSimulator, well_state, deferred_logger);
 
         // only use inner well iterations for the first newton iterations.
         const int iteration_idx = ebosSimulator.model().newtonMethod().numIterations();
-        bool converged = true;
-        if (iteration_idx < param_.max_niter_inner_well_iter_)
-            converged = this->iterateWellEquations(ebosSimulator, dt, well_state, group_state, deferred_logger);
+        if (iteration_idx < param_.max_niter_inner_well_iter_) {
+            this->operability_status_.solvable = true;
+            bool converged = this->iterateWellEquations(ebosSimulator, dt, well_state, group_state, deferred_logger);
 
-        // unsolvable wells are treated as not operable and will not be solved for in this iteration.
-        if (!converged) {
-            if (this->shutUnsolvableWells())
-                this->operability_status_.solvable = false;
+            // unsolvable wells are treated as not operable and will not be solved for in this iteration.
+            if (!converged) {
+                if (this->shutUnsolvableWells())
+                    this->operability_status_.solvable = false;
+            }
         }
+
         const bool well_operable = this->operability_status_.isOperable();
         if (!well_operable && old_well_operable) {
             if (this->well_ecl_.getAutomaticShutIn()) {
@@ -454,8 +458,7 @@ namespace Opm
                          DeferredLogger& deferred_logger)
     {
 
-        const bool checkOperability = EWOMS_GET_PARAM(TypeTag, bool, EnableWellOperabilityCheck);
-        if (!checkOperability) {
+        if (!param_.check_well_operabilty_) {
             return;
         }
 

@@ -107,7 +107,10 @@ template<class TypeTag, class MyTypeTag>
 struct EnableWellOperabilityCheck {
     using type = UndefinedProperty;
 };
-
+template<class TypeTag, class MyTypeTag>
+struct EnableWellOperabilityCheckIter {
+    using type = UndefinedProperty;
+};
 // parameters for multisegment wells
 template<class TypeTag, class MyTypeTag>
 struct TolerancePressureMsWells {
@@ -284,6 +287,10 @@ struct EnableWellOperabilityCheck<TypeTag, TTag::FlowModelParameters> {
     static constexpr bool value = true;
 };
 template<class TypeTag>
+struct EnableWellOperabilityCheckIter<TypeTag, TTag::FlowModelParameters> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
 struct RelaxedWellFlowTol<TypeTag, TTag::FlowModelParameters> {
     using type = GetPropType<TypeTag, Scalar>;
     static constexpr type value = 1;
@@ -398,6 +405,12 @@ namespace Opm
         // Whether to add influences of wells between cells to the matrix and preconditioner matrix
         bool matrix_add_well_contributions_;
 
+        // Whether to check well operability
+        bool check_well_operabilty_;
+        // Whether to check well operability during iterations
+        bool check_well_operabilty_iter_;
+
+
         /// Construct from user parameters or defaults.
         BlackoilModelParametersEbos()
         {
@@ -429,6 +442,8 @@ namespace Opm
             update_equations_scaling_ = EWOMS_GET_PARAM(TypeTag, bool, UpdateEquationsScaling);
             use_update_stabilization_ = EWOMS_GET_PARAM(TypeTag, bool, UseUpdateStabilization);
             matrix_add_well_contributions_ = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
+            check_well_operabilty_ = EWOMS_GET_PARAM(TypeTag, bool, EnableWellOperabilityCheck);
+            check_well_operabilty_iter_ = EWOMS_GET_PARAM(TypeTag, bool, EnableWellOperabilityCheckIter);
 
             deck_file_name_ = EWOMS_GET_PARAM(TypeTag, std::string, EclDeckFileName);
         }
@@ -466,6 +481,7 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, bool, UseUpdateStabilization, "Try to detect and correct oscillations or stagnation during the Newton method");
             EWOMS_REGISTER_PARAM(TypeTag, bool, MatrixAddWellContributions, "Explicitly specify the influences of wells between cells in the Jacobian and preconditioner matrices");
             EWOMS_REGISTER_PARAM(TypeTag, bool, EnableWellOperabilityCheck, "Enable the well operability checking");
+            EWOMS_REGISTER_PARAM(TypeTag, bool, EnableWellOperabilityCheckIter, "Enable the well operability checking during iterations");
         }
     };
 } // namespace Opm
