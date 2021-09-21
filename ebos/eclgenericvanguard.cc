@@ -81,9 +81,9 @@ void EclGenericVanguard::setExternalErrorGuard(std::unique_ptr<ErrorGuard> error
     externalErrorGuard_ = std::move(errorGuard);
 }
 
-void EclGenericVanguard::setExternalSchedule(std::shared_ptr<Schedule>& schedule)
+void EclGenericVanguard::setExternalSchedule(std::shared_ptr<Schedule> schedule)
 {
-    externalEclSchedule_ = schedule;
+    externalEclSchedule_ = std::move(schedule);
 }
 
 void EclGenericVanguard::setExternalSchedule(std::unique_ptr<Schedule> schedule)
@@ -92,9 +92,9 @@ void EclGenericVanguard::setExternalSchedule(std::unique_ptr<Schedule> schedule)
 }
 
 void EclGenericVanguard::setExternalSummaryConfig(
-    std::shared_ptr<SummaryConfig>& summaryConfig)
+    std::shared_ptr<SummaryConfig> summaryConfig)
 {
-    externalEclSummaryConfig_ = summaryConfig;
+    externalEclSummaryConfig_ = std::move(summaryConfig);
 }
 
 void EclGenericVanguard::setExternalSummaryConfig(
@@ -103,9 +103,9 @@ void EclGenericVanguard::setExternalSummaryConfig(
     externalEclSummaryConfig_ = std::move(summaryConfig);
 }
 
-void EclGenericVanguard::setExternalDeck(std::shared_ptr<Deck>& deck)
+void EclGenericVanguard::setExternalDeck(std::shared_ptr<Deck> deck)
 {
-    externalDeck_ = deck;
+    externalDeck_ = std::move(deck);
     externalDeckSet_ = true;
 }
 
@@ -115,9 +115,9 @@ void EclGenericVanguard::setExternalDeck(std::unique_ptr<Deck> deck)
     externalDeckSet_ = true;
 }
 
-void EclGenericVanguard::setExternalEclState(std::shared_ptr<EclipseState>& eclState)
+void EclGenericVanguard::setExternalEclState(std::shared_ptr<EclipseState> eclState)
 {
-    externalEclState_ = eclState;
+    externalEclState_ = std::move(eclState);
 }
 
 void EclGenericVanguard::setExternalEclState(std::unique_ptr<EclipseState> eclState)

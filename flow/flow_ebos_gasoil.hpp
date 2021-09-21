@@ -26,10 +26,10 @@ class EclipseState;
 class Schedule;
 class SummaryConfig;
 
-void flowEbosGasOilSetDeck(double setupTime, std::shared_ptr<Deck>& deck,
-                           std::shared_ptr<EclipseState>& eclState,
-                           std::shared_ptr<Schedule>& schedule,
-                           std::shared_ptr<SummaryConfig>& summaryConfig);
+void flowEbosGasOilSetDeck(double setupTime, std::shared_ptr<Deck> deck,
+                           std::shared_ptr<EclipseState> eclState,
+                           std::shared_ptr<Schedule> schedule,
+                           std::shared_ptr<SummaryConfig> summaryConfig);
 int flowEbosGasOilMain(int argc, char** argv, bool outputCout, bool outputFiles);
 
 }

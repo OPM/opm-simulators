@@ -43,10 +43,10 @@ struct EnableBrine<TypeTag, TTag::EclFlowBrineProblem> {
 }}
 
 namespace Opm {
-void flowEbosBrineSetDeck(double setupTime, std::shared_ptr<Deck>& deck,
-                          std::shared_ptr<EclipseState>& eclState,
-                          std::shared_ptr<Schedule>& schedule,
-                          std::shared_ptr<SummaryConfig>& summaryConfig)
+void flowEbosBrineSetDeck(double setupTime, std::shared_ptr<Deck> deck,
+                          std::shared_ptr<EclipseState> eclState,
+                          std::shared_ptr<Schedule> schedule,
+                          std::shared_ptr<SummaryConfig> summaryConfig)
 {
     using TypeTag = Properties::TTag::EclFlowBrineProblem;
     using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;

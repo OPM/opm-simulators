@@ -43,10 +43,10 @@ struct EnablePolymer<TypeTag, TTag::EclFlowPolymerProblem> {
 }}
 
 namespace Opm {
-void flowEbosPolymerSetDeck(double setupTime, std::shared_ptr<Deck>& deck,
-                            std::shared_ptr<EclipseState>& eclState,
-                            std::shared_ptr<Schedule>& schedule,
-                            std::shared_ptr<SummaryConfig>& summaryConfig)
+void flowEbosPolymerSetDeck(double setupTime, std::shared_ptr<Deck> deck,
+                            std::shared_ptr<EclipseState> eclState,
+                            std::shared_ptr<Schedule> schedule,
+                            std::shared_ptr<SummaryConfig> summaryConfig)
 {
     using TypeTag = Properties::TTag::EclFlowPolymerProblem;
     using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;

@@ -30,11 +30,11 @@
 
 namespace Opm {
 
-void flowEbosBlackoilSetDeck(double setupTime, std::shared_ptr<Deck>& deck,
-                             std::shared_ptr<EclipseState>& eclState,
-                             std::shared_ptr<Schedule>& schedule,
+void flowEbosBlackoilSetDeck(double setupTime, std::shared_ptr<Deck> deck,
+                             std::shared_ptr<EclipseState> eclState,
+                             std::shared_ptr<Schedule> schedule,
                              std::unique_ptr<UDQState> udqState,
-                             std::shared_ptr<SummaryConfig>& summaryConfig)
+                             std::shared_ptr<SummaryConfig> summaryConfig)
 {
     using TypeTag = Properties::TTag::EclFlowProblem;
     using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;

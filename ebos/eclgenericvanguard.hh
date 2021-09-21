@@ -128,14 +128,14 @@ public:
      * management of these two objects, i.e., they are not allowed to be deleted as long
      * as the simulator vanguard object is alive.
      */
-    static void setExternalDeck(std::shared_ptr<Deck>& deck);
+    static void setExternalDeck(std::shared_ptr<Deck> deck);
     static void setExternalDeck(std::unique_ptr<Deck> deck);
 
     /*!
      * \brief Set the Opm::EclipseState object which ought to be used when the simulator
      *        vanguard is instantiated.
      */
-    static void setExternalEclState(std::shared_ptr<EclipseState>& eclState);
+    static void setExternalEclState(std::shared_ptr<EclipseState> eclState);
     static void setExternalEclState(std::unique_ptr<EclipseState> eclState);
 
     /*!
@@ -144,7 +144,7 @@ public:
      * The lifetime of this object is not managed by the vanguard, i.e., the object must
      * stay valid until after the vanguard gets destroyed.
      */
-    static void setExternalSchedule(std::shared_ptr<Schedule>& schedule);
+    static void setExternalSchedule(std::shared_ptr<Schedule> schedule);
     static void setExternalSchedule(std::unique_ptr<Schedule> schedule);
 
     /*!
@@ -153,7 +153,7 @@ public:
      * The lifetime of this object is not managed by the vanguard, i.e., the object must
      * stay valid until after the vanguard gets destroyed.
      */
-    static void setExternalSummaryConfig(std::shared_ptr<SummaryConfig>& summaryConfig);
+    static void setExternalSummaryConfig(std::shared_ptr<SummaryConfig> summaryConfig);
     static void setExternalSummaryConfig(std::unique_ptr<SummaryConfig> summaryConfig);
 
     static void setExternalUDQState(std::unique_ptr<UDQState> udqState);

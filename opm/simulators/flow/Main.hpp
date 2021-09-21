@@ -82,9 +82,9 @@ struct FlowEarlyBird {
 
 namespace Opm {
   template <class TypeTag>
-  void flowEbosSetDeck(std::shared_ptr<Deck>& deck,
-                       std::shared_ptr<EclipseState>& eclState,
-                       std::shared_ptr<Schedule>& schedule,
+  void flowEbosSetDeck(std::shared_ptr<Deck> deck,
+                       std::shared_ptr<EclipseState> eclState,
+                       std::shared_ptr<Schedule> schedule,
                        std::shared_ptr<SummaryConfig> summaryConfig)
   {
     using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
@@ -136,16 +136,16 @@ namespace Opm
         // This constructor can be called from Python when Python has already
         //  parsed a deck
         Main(
-             std::shared_ptr<Deck>& deck,
-             std::shared_ptr<EclipseState>& eclipseState,
-             std::shared_ptr<Schedule>& schedule,
-             std::shared_ptr<SummaryConfig>& summaryConfig)
-            : deck_{deck}
-            , eclipseState_{eclipseState}
-            , schedule_{schedule}
-            , summaryConfig_{summaryConfig}
+             std::shared_ptr<Deck> deck,
+             std::shared_ptr<EclipseState> eclipseState,
+             std::shared_ptr<Schedule> schedule,
+             std::shared_ptr<SummaryConfig> summaryConfig)
+            : deck_{std::move(deck)}
+            , eclipseState_{std::move(eclipseState)}
+            , schedule_{std::move(schedule)}
+            , summaryConfig_{std::move(summaryConfig)}
         {
-            setArgvArgc_(deck->getDataFile());
+            setArgvArgc_(deck_->getDataFile());
             initMPI();
         }
 

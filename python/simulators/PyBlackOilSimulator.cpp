@@ -40,15 +40,15 @@ PyBlackOilSimulator::PyBlackOilSimulator( const std::string &deckFilename)
 }
 
 PyBlackOilSimulator::PyBlackOilSimulator(
-    std::shared_ptr<Opm::Deck>& deck,
-    std::shared_ptr<Opm::EclipseState>& state,
-    std::shared_ptr<Opm::Schedule>& schedule,
-    std::shared_ptr<Opm::SummaryConfig>& summary_config
+    std::shared_ptr<Opm::Deck> deck,
+    std::shared_ptr<Opm::EclipseState> state,
+    std::shared_ptr<Opm::Schedule> schedule,
+    std::shared_ptr<Opm::SummaryConfig> summary_config
 )
-    : deck_{deck}
-    , eclipse_state_{state}
-    , schedule_{schedule}
-    , summary_config_{summary_config}
+    : deck_{std::move(deck)}
+    , eclipse_state_{std::move(state)}
+    , schedule_{std::move(schedule)}
+    , summary_config_{std::move(summary_config)}
 {
 }
 
@@ -145,10 +145,10 @@ void export_PyBlackOilSimulator(py::module& m)
     py::class_<PyBlackOilSimulator>(m, "BlackOilSimulator")
         .def(py::init< const std::string& >())
         .def(py::init<
-            std::shared_ptr<Opm::Deck>&,
-            std::shared_ptr<Opm::EclipseState>&,
-            std::shared_ptr<Opm::Schedule>&,
-            std::shared_ptr<Opm::SummaryConfig>& >())
+            std::shared_ptr<Opm::Deck>,
+            std::shared_ptr<Opm::EclipseState>,
+            std::shared_ptr<Opm::Schedule>,
+            std::shared_ptr<Opm::SummaryConfig> >())
         .def("get_porosity", &PyBlackOilSimulator::getPorosity,
             py::return_value_policy::copy)
         .def("run", &PyBlackOilSimulator::run)

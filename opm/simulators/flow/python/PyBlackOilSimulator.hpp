@@ -40,10 +40,10 @@ private:
 public:
     PyBlackOilSimulator( const std::string& deckFilename);
     PyBlackOilSimulator(
-        std::shared_ptr<Opm::Deck>& deck,
-        std::shared_ptr<Opm::EclipseState>& state,
-        std::shared_ptr<Opm::Schedule>& schedule,
-        std::shared_ptr<Opm::SummaryConfig>& summary_config);
+        std::shared_ptr<Opm::Deck> deck,
+        std::shared_ptr<Opm::EclipseState> state,
+        std::shared_ptr<Opm::Schedule> schedule,
+        std::shared_ptr<Opm::SummaryConfig> summary_config);
     py::array_t<double> getPorosity();
     int run();
     void setPorosity(
