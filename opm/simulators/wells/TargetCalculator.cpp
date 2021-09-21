@@ -114,7 +114,7 @@ double TargetCalculator::groupTarget(const Group::ProductionControls ctrl) const
         return ctrl.liquid_target;
     case Group::ProductionCMode::RESV:
     {
-        if(use_gpmaint_ && this->group_state_.has_gpmaint_target(this->group_name_))
+        if(use_gpmaint_)
             return this->group_state_.gpmaint_target(this->group_name_);
 
         return ctrl.resv_target;

@@ -452,7 +452,7 @@ checkGroupInjectionConstraints(const Group& group,
             const auto& controls = group.injectionControls(phase, this->summaryState_);
             double target = controls.surface_max_rate;
 
-            if (group.has_gpmaint_control(phase, Group::InjectionCMode::RATE) && this->groupState().has_gpmaint_target(group.name()))
+            if (group.has_gpmaint_control(phase, Group::InjectionCMode::RATE))
                 target = this->groupState().gpmaint_target(group.name());
 
             if (target < current_rate) {
@@ -475,7 +475,7 @@ checkGroupInjectionConstraints(const Group& group,
             const auto& controls = group.injectionControls(phase, this->summaryState_);
             double target = controls.resv_max_rate;
 
-            if (group.has_gpmaint_control(phase, Group::InjectionCMode::RESV) && this->groupState().has_gpmaint_target(group.name()))
+            if (group.has_gpmaint_control(phase, Group::InjectionCMode::RESV))
                 target = this->groupState().gpmaint_target(group.name());
 
             if (target < current_rate) {
@@ -648,7 +648,7 @@ checkGroupProductionConstraints(const Group& group,
             current_rate = comm_.sum(current_rate);
 
             double target = controls.resv_target;
-            if (group.has_gpmaint_control(Group::ProductionCMode::RESV) && this->groupState().has_gpmaint_target(group.name()))
+            if (group.has_gpmaint_control(Group::ProductionCMode::RESV))
                 target = this->groupState().gpmaint_target(group.name());
 
             if ( target < current_rate ) {

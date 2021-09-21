@@ -221,7 +221,6 @@ namespace Opm {
                 const auto& fp = this->eclState_.fieldProps();
                 const auto& fipnum = fp.get_int("FIPNUM");
                 regionalAveragePressureCalculator_.reset(new AverageRegionalPressureType (phase_usage_,fipnum));
-                regionalAveragePressureCalculator_->template defineState<ElementContext>(ebosSimulator_);
             }
 
             {
@@ -359,6 +358,15 @@ namespace Opm {
         const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
         WellGroupHelpers::updateGuideRates(fieldGroup, schedule(), summaryState, this->phase_usage_, reportStepIdx, simulationTime,
                                            this->wellState(), this->groupState(), comm, &this->guideRate_, pot, local_deferredLogger);
+
+
+        // update gpmaint targets
+        if (schedule_[reportStepIdx].has_gpmaint()) {
+            regionalAveragePressureCalculator_->template defineState<ElementContext>(ebosSimulator_);
+            const double dt = ebosSimulator_.timeStepSize();
+            WellGroupHelpers::updateGpMaintTargetForGroups(fieldGroup,
+                                                           schedule_, *regionalAveragePressureCalculator_, reportStepIdx, dt, this->wellState(), this->groupState());
+        }
         try {
             // Compute initial well solution for new wells and injectors that change injection type i.e. WAG.
             for (auto& well : well_container_) {
@@ -496,13 +504,6 @@ namespace Opm {
         // update the rate converter with current averages pressures etc in
         rateConverter_->template defineState<ElementContext>(ebosSimulator_);
 
-        const Group& fieldGroup = schedule_.getGroup("FIELD", reportStepIdx);
-        if (schedule_[reportStepIdx].has_gpmaint()) {
-            regionalAveragePressureCalculator_->template defineState<ElementContext>(ebosSimulator_);
-            WellGroupHelpers::updateGpMaintTargetForGroups(fieldGroup,
-                                                           schedule_, *regionalAveragePressureCalculator_, reportStepIdx, dt, this->wellState(), this->groupState());
-        }
-
         // calculate the well potentials
         try {
             updateWellPotentials(reportStepIdx,
@@ -517,6 +518,7 @@ namespace Opm {
         updateWellTestState(simulationTime, wellTestState());
 
         // check group sales limits at the end of the timestep
+        const Group& fieldGroup = schedule_.getGroup("FIELD", reportStepIdx);
         checkGconsaleLimits(fieldGroup, this->wellState(),
                             ebosSimulator_.episodeIndex(), local_deferredLogger);
 
