@@ -938,9 +938,8 @@ namespace Opm
         std::fill(this->ipr_b_.begin(), this->ipr_b_.end(), 0.);
 
         for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
-            std::vector<EvalWell> mob(this->num_components_, {this->numWellEq_ + Indices::numEq, 0.0});
-            // TODO: mabye we should store the mobility somewhere, so that we only need to calculate it one per iteration
-            getMobilityEval(ebos_simulator, perf, mob, deferred_logger);
+            std::vector<Scalar> mob(this->num_components_, 0.0);
+            getMobilityScalar(ebos_simulator, perf, mob, deferred_logger);
 
             const int cell_idx = this->well_cells_[perf];
             const auto& int_quantities = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
@@ -980,7 +979,7 @@ namespace Opm
             std::vector<double> ipr_a_perf(this->ipr_a_.size());
             std::vector<double> ipr_b_perf(this->ipr_b_.size());
             for (int p = 0; p < this->number_of_phases_; ++p) {
-                const double tw_mob = tw_perf * mob[p].value() * b_perf[p];
+                const double tw_mob = tw_perf * mob[p] * b_perf[p];
                 ipr_a_perf[p] += tw_mob * pressure_diff;
                 ipr_b_perf[p] += tw_mob;
             }
