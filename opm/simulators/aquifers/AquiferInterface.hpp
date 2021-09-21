@@ -72,9 +72,6 @@ public:
                                BlackoilIndices::numPhases>
         FluidState;
 
-    static const auto waterCompIdx = FluidSystem::waterCompIdx;
-    static const auto waterPhaseIdx = FluidSystem::waterPhaseIdx;
-
     // Constructor
     AquiferInterface(int aqID,
                      const std::vector<Aquancon::AquancCell>& connections,
@@ -125,7 +122,7 @@ public:
 
             elemCtx.updateIntensiveQuantities(0);
             const auto& iq = elemCtx.intensiveQuantities(0, 0);
-            pressure_previous_[idx] = getValue(iq.fluidState().pressure(waterPhaseIdx));
+            pressure_previous_[idx] = getValue(iq.fluidState().pressure(phaseIdx_()));
         }
     }
 
@@ -150,7 +147,7 @@ public:
         this->updateCellPressure(this->pressure_current_, idx, intQuants);
         this->calculateInflowRate(idx, context.simulator());
 
-        rates[BlackoilIndices::conti0EqIdx + FluidSystem::waterCompIdx]
+        rates[BlackoilIndices::conti0EqIdx + compIdx_()]
             += this->Qai_[idx] / context.dofVolume(spaceIdx, timeIdx);
     }
 
@@ -165,6 +162,28 @@ protected:
     {
         return ebos_simulator_.problem().gravity()[2];
     }
+
+    inline bool co2store_() const
+    {
+        return ebos_simulator_.vanguard().eclState().runspec().co2Storage();
+    }
+
+    inline bool phaseIdx_() const
+    {
+        if(co2store_())
+            return FluidSystem::oilPhaseIdx;
+
+        return FluidSystem::waterPhaseIdx;
+    }
+
+    inline bool compIdx_() const
+    {
+        if(co2store_())
+            return FluidSystem::oilCompIdx;
+
+        return FluidSystem::waterCompIdx;
+    }
+
 
     inline void initQuantities()
     {
@@ -188,14 +207,14 @@ protected:
     updateCellPressure(std::vector<Eval>& pressure_water, const int idx, const IntensiveQuantities& intQuants)
     {
         const auto& fs = intQuants.fluidState();
-        pressure_water.at(idx) = fs.pressure(waterPhaseIdx);
+        pressure_water.at(idx) = fs.pressure(phaseIdx_());
     }
 
     inline void
     updateCellPressure(std::vector<Scalar>& pressure_water, const int idx, const IntensiveQuantities& intQuants)
     {
         const auto& fs = intQuants.fluidState();
-        pressure_water.at(idx) = fs.pressure(waterPhaseIdx).value();
+        pressure_water.at(idx) = fs.pressure(phaseIdx_()).value();
     }
 
     virtual void endTimeStep() = 0;
@@ -380,8 +399,8 @@ protected:
             const auto& iq0 = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
             const auto& fs = iq0.fluidState();
 
-            water_pressure_reservoir = fs.pressure(waterPhaseIdx).value();
-            const auto water_density = fs.density(waterPhaseIdx);
+            water_pressure_reservoir = fs.pressure(phaseIdx_()).value();
+            const auto water_density = fs.density(phaseIdx_());
 
             const auto gdz =
                 this->gravity_() * (this->cell_depth_[idx] - this->aquiferDepth());
