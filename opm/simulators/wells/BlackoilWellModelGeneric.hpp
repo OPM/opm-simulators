@@ -116,6 +116,10 @@ public:
 
     GroupState& groupState() { return this->active_wgstate_.group_state; }
 
+    WellTestState& wellTestState() { return this->active_wgstate_.well_test_state; }
+
+    const WellTestState& wellTestState() const { return this->active_wgstate_.well_test_state; }
+
 
     double wellPI(const int well_index) const;
     double wellPI(const std::string& well_name) const;
@@ -405,7 +409,6 @@ protected:
 
     mutable std::unordered_set<std::string> closed_this_step_;
 
-    WellTestState wellTestState_{};
     GuideRate guideRate_;
     std::unique_ptr<VFPProperties> vfp_properties_{};
     std::map<std::string, double> node_pressures_; // Storing network pressures for output.

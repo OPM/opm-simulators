@@ -326,7 +326,7 @@ namespace Opm {
 
         // Close completions due to economical reasons
         for (auto& well : well_container_) {
-            well->closeCompletions(wellTestState_);
+            well->closeCompletions(wellTestState());
         }
 
         // calculate the well potentials
@@ -415,7 +415,7 @@ namespace Opm {
     {
         const auto& wtest_config = schedule()[timeStepIdx].wtest_config();
         if (wtest_config.size() != 0) { // there is a WTEST request
-            const auto wellsForTesting = wellTestState_
+            const auto wellsForTesting = wellTestState()
                 .updateWells(wtest_config, wells_ecl_, simulationTime);
 
             for (const auto& testWell : wellsForTesting) {
@@ -438,7 +438,7 @@ namespace Opm {
                 const WellTestConfig::Reason testing_reason = testWell.second;
 
                 well->wellTesting(ebosSimulator_, simulationTime, timeStepIdx,
-                                  testing_reason, this->wellState(), this->groupState(), wellTestState_, deferred_logger);
+                                  testing_reason, this->wellState(), this->groupState(), wellTestState(), deferred_logger);
             }
         }
     }
@@ -514,7 +514,7 @@ namespace Opm {
             local_deferredLogger.warning("WELL_POTENTIAL_CALCULATION_FAILED", msg);
         }
 
-        updateWellTestState(simulationTime, wellTestState_);
+        updateWellTestState(simulationTime, wellTestState());
 
         // check group sales limits at the end of the timestep
         checkGconsaleLimits(fieldGroup, this->wellState(),
@@ -637,28 +637,28 @@ namespace Opm {
                 }
 
                 // A new WCON keywords can re-open a well that was closed/shut due to Physical limit
-                if (this->wellTestState_.hasWellClosed(well_name)) {
+                if (this->wellTestState().hasWellClosed(well_name)) {
                     // TODO: more checking here, to make sure this standard more specific and complete
                     // maybe there is some WCON keywords will not open the well
                     auto& events = this->wellState().well(w).events;
                     if (events.hasEvent(WellState::event_mask)) {
-                        if (wellTestState_.lastTestTime(well_name) == ebosSimulator_.time()) {
+                        if (wellTestState().lastTestTime(well_name) == ebosSimulator_.time()) {
                             // The well was shut this timestep, we are most likely retrying
                             // a timestep without the well in question, after it caused
                             // repeated timestep cuts. It should therefore not be opened,
                             // even if it was new or received new targets this report step.
                             events.clearEvent(WellState::event_mask);
                         } else {
-                            wellTestState_.openWell(well_name);
+                            wellTestState().openWell(well_name);
                         }
                     }
                 }
 
                 // TODO: should we do this for all kinds of closing reasons?
-                // something like wellTestState_.hasWell(well_name)?
+                // something like wellTestState().hasWell(well_name)?
                 bool wellIsStopped = false;
-                if (wellTestState_.hasWellClosed(well_name, WellTestConfig::Reason::ECONOMIC) ||
-                    wellTestState_.hasWellClosed(well_name, WellTestConfig::Reason::PHYSICAL))
+                if (wellTestState().hasWellClosed(well_name, WellTestConfig::Reason::ECONOMIC) ||
+                    wellTestState().hasWellClosed(well_name, WellTestConfig::Reason::PHYSICAL))
                 {
                     if (well_ecl.getAutomaticShutIn()) {
                         // shut wells are not added to the well container
