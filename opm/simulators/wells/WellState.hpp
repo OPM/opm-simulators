@@ -217,10 +217,7 @@ public:
 
     void updateStatus(int well_index, Well::Status status);
 
-    void openWell(int well_index) {
-        this->wells_[well_index].status = Well::Status::OPEN;
-    }
-
+    void openWell(int well_index);
     void shutWell(int well_index);
     void stopWell(int well_index);
 

@@ -298,6 +298,8 @@ namespace Opm
                     welltest_state.dropCompletion(this->name(), completion.first);
                 }
             }
+            // set the status of the well_state to open
+            ws.open();
             well_state = well_state_copy;
         }
     }
@@ -514,6 +516,8 @@ namespace Opm
             for (int p = 0; p < np; ++p) {
                 ws.well_potentials[p] = std::abs(potentials[p]);
             }
+            //set the status of the well_state to open
+            ws.open();
             well_state = well_state_copy;
         } else {
             const std::string msg = " well " + this->name() + " is not operable during well testing for physical reason";

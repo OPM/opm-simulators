@@ -770,6 +770,12 @@ void WellState::stopWell(int well_index)
     ws.stop();
 }
 
+void WellState::openWell(int well_index)
+{
+    auto& ws = this->well(well_index);
+    ws.open();
+}
+
 void WellState::shutWell(int well_index)
 {
     auto& ws = this->well(well_index);
