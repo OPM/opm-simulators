@@ -24,7 +24,8 @@ namespace Opm {
 
 WGState::WGState(const PhaseUsage& pu) :
     well_state(pu),
-    group_state(pu.num_phases)
+    group_state(pu.num_phases),
+    well_test_state{}
 {}
 
 }

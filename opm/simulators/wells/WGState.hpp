@@ -22,11 +22,12 @@
 
 #include <opm/simulators/wells/WellState.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestState.hpp>
 
 namespace Opm {
 
 /*
-  Microscopic class to handle a pair of well and group state.
+  Microscopic class to handle well , group and well test state.
 */
 
 struct PhaseUsage;
@@ -36,6 +37,8 @@ struct WGState {
 
     WellState well_state;
     GroupState group_state;
+    WellTestState well_test_state;
+
 };
 
 }

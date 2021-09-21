@@ -1312,7 +1312,7 @@ assignShutConnections(data::Wells& wsrpt,
             return wellIsOpen && (conn.state() != Connection::State::SHUT);
         };
 
-        if (this->wellTestState_.hasWellClosed(well.name()) &&
+        if (this->wellTestState().hasWellClosed(well.name()) &&
             !this->wasDynamicallyShutThisTimeStep(wellID))
         {
             xwel.dynamicStatus = well.getAutomaticShutIn()
@@ -1581,7 +1581,7 @@ forceShutWellByNameIfPredictionMode(const std::string& wellname,
     for (const auto& well : well_container_generic_) {
         if (well->name() == wellname && !well->wellIsStopped()) {
             if (well->underPredictionMode()) {
-                wellTestState_.closeWell(wellname, WellTestConfig::Reason::PHYSICAL, simulation_time);
+                wellTestState().closeWell(wellname, WellTestConfig::Reason::PHYSICAL, simulation_time);
                 well_was_shut = 1;
             }
             break;
