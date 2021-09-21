@@ -1588,6 +1588,10 @@ forceShutWellByNameIfPredictionMode(const std::string& wellname,
         }
     }
 
+    // the wellTesteState is updated between timesteps and we also need to update the privous WGstate
+    if(well_was_shut)
+        this->commitWGState();
+
     // Communicate across processes if a well was shut.
     well_was_shut = comm_.max(well_was_shut);
 
