@@ -62,6 +62,10 @@ void SingleWellState::stop() {
     this->status = Well::Status::STOP;
 }
 
+void SingleWellState::open() {
+    this->status = Well::Status::OPEN;
+}
+
 }
 
 

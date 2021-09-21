@@ -54,6 +54,7 @@ public:
     void init_timestep(const SingleWellState& other);
     void shut();
     void stop();
+    void open();
 };
 
 

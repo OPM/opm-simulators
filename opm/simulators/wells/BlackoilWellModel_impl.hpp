@@ -369,7 +369,10 @@ namespace Opm {
 
                 const auto& events = schedule()[reportStepIdx].wellgroup_events();
                 const bool event = report_step_starts_ && events.hasEvent(well->name(), effective_events_mask);
-                if (event) {
+                const bool dyn_status_change = this->wellState().well(well->name()).status
+                        != this->prevWellState().well(well->name()).status;
+
+                if (event || dyn_status_change) {
                     try {
                         well->updateWellStateWithTarget(ebosSimulator_, this->groupState(), this->wellState(), local_deferredLogger);
                         well->calculateExplicitQuantities(ebosSimulator_, this->wellState(), local_deferredLogger);
