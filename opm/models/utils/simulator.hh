@@ -95,17 +95,29 @@ class Simulator
     using Model = GetPropType<TypeTag, Properties::Model>;
     using Problem = GetPropType<TypeTag, Properties::Problem>;
 
+    using MPIComm = typename Dune::MPIHelper::MPICommunicator;
+    #if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
+        using Communication = Dune::Communication<MPIComm>;
+    #else
+        using Communication = Dune::CollectiveCommunication<MPIComm>;
+    #endif
+
+
 public:
     // do not allow to copy simulators around
     Simulator(const Simulator& ) = delete;
 
     Simulator(bool verbose = true)
+        :Simulator(Communication(), verbose)   
+    {  
+    }
+
+    Simulator(Communication comm, bool verbose = true)
     {
         TimerGuard setupTimerGuard(setupTimer_);
 
         setupTimer_.start();
 
-        const auto& comm = Dune::MPIHelper::getCollectiveCommunication();
         verbose_ = verbose && comm.rank() == 0;
 
         timeStepIdx_ = 0;
