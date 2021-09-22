@@ -934,6 +934,14 @@ add_test_compareECLFiles(CASENAME actionx_gconinje
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR actionx)
+
+add_test_compareECLFiles(CASENAME actionx_wconinje
+                         FILENAME ACTIONX_WCONINJE
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR actionx)
+
 # Restart tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-restart-regressionTest.sh "")
 
