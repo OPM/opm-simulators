@@ -175,7 +175,7 @@ namespace Opm
 
         bool changed = false;
         if (iog == IndividualOrGroup::Individual) {
-            changed = this->checkIndividualConstraints(well_state, summaryState);
+            changed = this->checkIndividualConstraints(ws, summaryState);
         } else if (iog == IndividualOrGroup::Group) {
             changed = this->checkGroupConstraints(well_state, group_state, schedule, summaryState, deferred_logger);
         } else {
@@ -273,7 +273,7 @@ namespace Opm
             for (int p = 0; p < np; ++p) {
                 ws.well_potentials[p] = std::abs(potentials[p]);
             }
-            this->updateWellTestState(well_state_copy, simulation_time, /*writeMessageToOPMLog=*/ false, welltest_state_temp, deferred_logger);
+            this->updateWellTestState(well_state_copy.well(this->indexOfWell()), simulation_time, /*writeMessageToOPMLog=*/ false, welltest_state_temp, deferred_logger);
             this->closeCompletions(welltest_state_temp);
 
             // Stop testing if the well is closed or shut due to all completions shut

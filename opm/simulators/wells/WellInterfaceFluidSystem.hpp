@@ -40,6 +40,7 @@ class Group;
 class GroupState;
 class Schedule;
 class WellState;
+class SingleWellState;
 
 template<class FluidSystem>
 class WellInterfaceFluidSystem : public WellInterfaceGeneric {
@@ -50,7 +51,7 @@ protected:
     static constexpr int INVALIDCOMPLETION = std::numeric_limits<int>::max();
 
 public:
-    void updateWellTestState(const WellState& well_state,
+    void updateWellTestState(const SingleWellState& ws,
                              const double& simulationTime,
                              const bool& writeMessageToOPMLog,
                              WellTestState& wellTestState,
@@ -79,15 +80,15 @@ protected:
                              const std::vector<PerforationData>& perf_data);
 
     // updating the voidage rates in well_state when requested
-    void calculateReservoirRates(WellState& well_state) const;
+    void calculateReservoirRates(SingleWellState& ws) const;
 
-    bool checkIndividualConstraints(WellState& well_state,
+    bool checkIndividualConstraints(SingleWellState& ws,
                                     const SummaryState& summaryState) const;
 
-    Well::InjectorCMode activeInjectionConstraint(const WellState& well_state,
+    Well::InjectorCMode activeInjectionConstraint(const SingleWellState& ws,
                                                   const SummaryState& summaryState) const;
 
-    Well::ProducerCMode activeProductionConstraint(const WellState& well_state,
+    Well::ProducerCMode activeProductionConstraint(const SingleWellState& ws,
                                                    const SummaryState& summaryState) const;
 
     std::pair<bool, double> checkGroupConstraintsInj(const Group& group,
@@ -129,23 +130,23 @@ protected:
     };
 
     void checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
-                               const WellState& well_state,
+                               const SingleWellState& ws,
                                RatioLimitCheckReport& report) const;
 
     void checkMaxGORLimit(const WellEconProductionLimits& econ_production_limits,
-                          const WellState& well_state,
+                          const SingleWellState& ws,
                           RatioLimitCheckReport& report) const;
 
     void checkMaxWGRLimit(const WellEconProductionLimits& econ_production_limits,
-                          const WellState& well_state,
+                          const SingleWellState& ws,
                           RatioLimitCheckReport& report) const;
 
     void checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
-                              const WellState& well_state,
+                              const SingleWellState& ws,
                               RatioLimitCheckReport& report,
                               DeferredLogger& deferred_logger) const;
 
-    void updateWellTestStateEconomic(const WellState& well_state,
+    void updateWellTestStateEconomic(const SingleWellState& ws,
                                      const double simulation_time,
                                      const bool write_message_to_opmlog,
                                      WellTestState& well_test_state,
@@ -174,13 +175,13 @@ protected:
 
 private:
     template <typename RatioFunc>
-    void checkMaxRatioLimitCompletions(const WellState& well_state,
+    void checkMaxRatioLimitCompletions(const SingleWellState& ws,
                                        const double max_ratio_limit,
                                        const RatioFunc& ratioFunc,
                                        RatioLimitCheckReport& report) const;
 
     template<typename RatioFunc>
-    bool checkMaxRatioLimitWell(const WellState& well_state,
+    bool checkMaxRatioLimitWell(const SingleWellState& well_state,
                                 const double max_ratio_limit,
                                 const RatioFunc& ratioFunc) const;
 };
