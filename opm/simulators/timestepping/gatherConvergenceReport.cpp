@@ -167,7 +167,7 @@ namespace Opm
 
     /// Create a global convergence report combining local
     /// (per-process) reports.
-    ConvergenceReport gatherConvergenceReport(const ConvergenceReport& local_report, MPI_Comm mpi_communicator)
+    ConvergenceReport gatherConvergenceReport(const ConvergenceReport& local_report, Communication mpi_communicator)
     {
         // Pack local report.
         int message_size = messageSize(local_report, mpi_communicator);
@@ -202,7 +202,7 @@ namespace Opm
 
 namespace Opm
 {
-    ConvergenceReport gatherConvergenceReport(const ConvergenceReport& local_report, MPIComm mpi_communicator)
+    ConvergenceReport gatherConvergenceReport(const ConvergenceReport& local_report, Communication mpi_communicator)
     {
         return local_report;
     }

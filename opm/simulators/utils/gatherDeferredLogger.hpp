@@ -26,12 +26,17 @@
 #include <dune/common/version.hh>
 
 using MPIComm = typename Dune::MPIHelper::MPICommunicator;
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
+    using Communication = Dune::Communication<MPIComm>;
+#else
+    using Communication = Dune::CollectiveCommunication<MPIComm>;
+#endif
 
 namespace Opm
 {
 
     /// Create a global log combining local logs
-    Opm::DeferredLogger gatherDeferredLogger(const Opm::DeferredLogger& local_deferredlogger, MPIComm communicator);
+    Opm::DeferredLogger gatherDeferredLogger(const Opm::DeferredLogger& local_deferredlogger, Communication communicator);
 
 } // namespace Opm
 

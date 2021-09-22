@@ -44,6 +44,16 @@
 #include <dune/common/enumset.hh>
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
+#include <dune/common/version.hh>
+#include <dune/common/parallel/mpihelper.hh>
+
+using MPIComm = typename Dune::MPIHelper::MPICommunicator;
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
+    using CommunicationType = Dune::Communication<MPIComm>; 
+#else
+    using CommunicationType = Dune::CollectiveCommunication<MPIComm>;
+#endif
+
 namespace Opm
 {
 namespace
@@ -109,7 +119,7 @@ public:
         return remoteIndices_;
     }
     /// \brief Get the Collective MPI communicator that we use.
-    Dune::CollectiveCommunication<MPI_Comm> communicator() const
+    CommunicationType communicator() const
     {
         return communicator_;
     }
