@@ -282,6 +282,7 @@ void readDeck(int rank, std::string& deckFilename, std::unique_ptr<Opm::Deck>& d
                 udqState = std::make_unique<UDQState>((*schedule)[0].udq().params().undefinedValue());
                 udqState->load_rst(rst_state);
                 actionState = std::make_unique<Action::State>();
+                actionState->load_rst(schedule->operator[](report_step).actions(), rst_state);
             }
             else {
                 if (!schedule) {
