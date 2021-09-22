@@ -1277,6 +1277,7 @@ namespace Opm {
 
         const int episodeIdx = ebosSimulator_.episodeIndex();
         const int iterationIdx = ebosSimulator_.model().newtonMethod().numIterations();
+        const auto& comm = ebosSimulator_.vanguard().grid().comm();
         updateAndCommunicateGroupData(episodeIdx, iterationIdx);
 
         updateNetworkPressures(episodeIdx);
@@ -1286,40 +1287,67 @@ namespace Opm {
 
         if (checkGroupControls) {
             // Check group individual constraints.
-            updateGroupIndividualControls(deferred_logger, switched_groups,
-                                          episodeIdx, iterationIdx);
+            bool changed_individual = updateGroupIndividualControls(deferred_logger, switched_groups,
+                                                        episodeIdx, iterationIdx);
+
+            if (changed_individual)
+                updateAndCommunicate(episodeIdx, iterationIdx, deferred_logger);
 
             // Check group's constraints from higher levels.
-            updateGroupHigherControls(deferred_logger,
-                                      episodeIdx,
-                                      switched_groups);
+            bool changed_higher = updateGroupHigherControls(deferred_logger,
+                                                            episodeIdx,
+                                                            switched_groups);
 
-            updateAndCommunicateGroupData(episodeIdx, iterationIdx);
+            if (changed_higher)
+                updateAndCommunicate(episodeIdx, iterationIdx, deferred_logger);
 
             // Check wells' group constraints and communicate.
+            bool changed_well_group = false;
             for (const auto& well : well_container_) {
                 const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Group;
-                const bool changed = well->updateWellControl(ebosSimulator_, mode, this->wellState(), this->groupState(), deferred_logger);
-                if (changed) {
+                const bool changed_well = well->updateWellControl(ebosSimulator_, mode, this->wellState(), this->groupState(), deferred_logger);
+                if (changed_well) {
                     switched_wells.insert(well->name());
+                    changed_well_group = changed_well || changed_well_group;
                 }
             }
-            updateAndCommunicateGroupData(episodeIdx, iterationIdx);
+            changed_well_group = comm.sum(changed_well_group);
+            if (changed_well_group)
+                updateAndCommunicate(episodeIdx, iterationIdx, deferred_logger);
         }
 
         // Check individual well constraints and communicate.
+        bool changed_well_individual = false;
         for (const auto& well : well_container_) {
             if (switched_wells.count(well->name())) {
                 continue;
             }
             const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Individual;
-            well->updateWellControl(ebosSimulator_, mode, this->wellState(), this->groupState(), deferred_logger);
+            const bool changed_well = well->updateWellControl(ebosSimulator_, mode, this->wellState(), this->groupState(), deferred_logger);
+            if (changed_well) {
+                changed_well_individual = changed_well || changed_well_individual;
+            }
         }
-        updateAndCommunicateGroupData(episodeIdx, iterationIdx);
+        changed_well_individual = comm.sum(changed_well_individual);
+        if (changed_well_individual)
+            updateAndCommunicate(episodeIdx, iterationIdx, deferred_logger);
     }
 
 
-
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    updateAndCommunicate(const int reportStepIdx,
+                         const int iterationIdx,
+                         DeferredLogger& deferred_logger)
+    {
+        updateAndCommunicateGroupData(reportStepIdx, iterationIdx);
+        // if a well or group change control it affects all wells that are under the same group
+        for (const auto& well : well_container_) {
+            well->updateWellStateWithTarget(ebosSimulator_, this->groupState(), this->wellState(), deferred_logger);
+        }
+        updateAndCommunicateGroupData(reportStepIdx, iterationIdx);
+    }
 
     template<typename TypeTag>
     void
