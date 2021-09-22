@@ -194,10 +194,10 @@ protected:
      *         inactive cells are omitted in these vectors.
      */
     std::tuple<std::vector<NNCdata>, std::vector<NNCdata>>
-    applyNncToGridTrans_(const std::vector<int>& cartesianToCompressed);
+    applyNncToGridTrans_(const std::unordered_map<std::size_t,int>& cartesianToCompressed);
 
     /// \brief Multiplies the grid transmissibilities according to EDITNNC.
-    void applyEditNncToGridTrans_(const std::vector<int>& globalToLocal);
+    void applyEditNncToGridTrans_(const std::unordered_map<std::size_t,int>& globalToLocal);
 
     void extractPermeability_();
 

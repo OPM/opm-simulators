@@ -472,9 +472,7 @@ update(bool global)
     updateFromEclState_(global);
 
     // Create mapping from global to local index
-    const size_t cartesianSize = cartMapper_.cartesianSize();
-    // reserve memory
-    std::vector<int> globalToLocal(cartesianSize, -1);
+    std::unordered_map<std::size_t,int> globalToLocal;
 
     // loop over all elements (global grid) and store Cartesian index
     elemIt = grid_.leafGridView().template begin<0>();
@@ -813,7 +811,7 @@ computeFaceProperties(const Intersection& intersection,
 template<class Grid, class GridView, class ElementMapper, class Scalar>
 std::tuple<std::vector<NNCdata>, std::vector<NNCdata>>
 EclTransmissibility<Grid,GridView,ElementMapper,Scalar>::
-applyNncToGridTrans_(const std::vector<int>& cartesianToCompressed)
+applyNncToGridTrans_(const std::unordered_map<std::size_t,int>& cartesianToCompressed)
 {
     // First scale NNCs with EDITNNC.
     std::vector<NNCdata> unprocessedNnc;
@@ -825,8 +823,10 @@ applyNncToGridTrans_(const std::vector<int>& cartesianToCompressed)
     for (const auto& nncEntry : nnc_input) {
         auto c1 = nncEntry.cell1;
         auto c2 = nncEntry.cell2;
-        auto low = cartesianToCompressed[c1];
-        auto high = cartesianToCompressed[c2];
+        auto lowIt = cartesianToCompressed.find(c1);
+        auto highIt = cartesianToCompressed.find(c2);
+        int low = (lowIt == cartesianToCompressed.end())? -1 : lowIt->second;
+        int high = (highIt == cartesianToCompressed.end())? -1 : highIt->second;
 
         if (low > high)
             std::swap(low, high);
@@ -863,7 +863,7 @@ applyNncToGridTrans_(const std::vector<int>& cartesianToCompressed)
 
 template<class Grid, class GridView, class ElementMapper, class Scalar>
 void EclTransmissibility<Grid,GridView,ElementMapper,Scalar>::
-applyEditNncToGridTrans_(const std::vector<int>& globalToLocal)
+applyEditNncToGridTrans_(const std::unordered_map<std::size_t,int>& globalToLocal)
 {
     const auto& nnc_input = eclState_.getInputNNC();
     const auto& editNnc = nnc_input.edit();
@@ -879,11 +879,13 @@ applyEditNncToGridTrans_(const std::vector<int>& globalToLocal)
         return fmt::format("({},{},{})", i + 1,j + 1,k + 1);
     };
 
-    auto make_warning = [&format_ijk] (const KeywordLocation& location, const NNCdata& nnc) -> std::string {
-        return fmt::format("Problem with EDITNNC keyword\n"
-                           "In {} line {} \n"
-                           "No NNC defined for connection {} -> {}", location.filename, location.lineno, format_ijk(nnc.cell1), format_ijk(nnc.cell2));
-
+    auto print_warning = [&format_ijk, &nnc_input] (const NNCdata& nnc) {
+            const auto& location = nnc_input.edit_location( nnc );
+            auto warning =  fmt::format("Problem with EDITNNC keyword\n"
+                                        "In {} line {} \n"
+                                        "No NNC defined for connection {} -> {}", location.filename,
+                                        location.lineno, format_ijk(nnc.cell1), format_ijk(nnc.cell2));
+            OpmLog::warning("EDITNNC", warning);
     };
 
     // editNnc is supposed to only reference non-neighboring connections and not
@@ -895,16 +897,24 @@ applyEditNncToGridTrans_(const std::vector<int>& globalToLocal)
     while (nnc != end) {
         auto c1 = nnc->cell1;
         auto c2 = nnc->cell2;
-        auto low = globalToLocal[c1];
-        auto high = globalToLocal[c2];
+        auto lowIt = globalToLocal.find(c1);
+        auto highIt = globalToLocal.find(c2);
+
+        if (lowIt == globalToLocal.end() || highIt == globalToLocal.end()) {
+            print_warning(*nnc);
+            ++nnc;
+            warning_count++;
+            continue;
+        }
+
+        auto low = lowIt->second, high = highIt->second;
+
         if (low > high)
             std::swap(low, high);
 
         auto candidate = trans_.find(isId(low, high));
         if (candidate == trans_.end()) {
-            const auto& location = nnc_input.edit_location( *nnc );
-            auto warning = make_warning(location, *nnc);
-            OpmLog::warning("EDITNNC", warning);
+            print_warning(*nnc);
             ++nnc;
             warning_count++;
         }
