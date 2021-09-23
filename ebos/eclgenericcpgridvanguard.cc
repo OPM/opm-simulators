@@ -237,11 +237,12 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Ecl
         OpmLog::info("\nProcessing grid");
     }
 
-    #if HAVE_MPI
-        grid_.reset(new Dune::CpGrid(EclGenericVanguard::comm()));
-    #else
-        grid_.reset(new Dune::CpGrid());
-    #endif
+#if HAVE_MPI
+    grid_.reset(new Dune::CpGrid(EclGenericVanguard::comm()));
+#else
+    grid_.reset(new Dune::CpGrid());
+#endif
+
     const auto& removed_cells = grid_->processEclipseFormat(input_grid,
                                                             &eclState,
                                                             /*isPeriodic=*/false,
