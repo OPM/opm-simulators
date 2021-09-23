@@ -72,10 +72,10 @@ void flowEbosGasOilSetDeck(double setupTime, std::shared_ptr<Deck> deck,
     using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
 
     Vanguard::setExternalSetupTime(setupTime);
-    Vanguard::setExternalDeck(deck);
-    Vanguard::setExternalEclState(eclState);
-    Vanguard::setExternalSchedule(schedule);
-    Vanguard::setExternalSummaryConfig(summaryConfig);
+    Vanguard::setExternalDeck(std::move(deck));
+    Vanguard::setExternalEclState(std::move(eclState));
+    Vanguard::setExternalSchedule(std::move(schedule));
+    Vanguard::setExternalSummaryConfig(std::move(summaryConfig));
 }
 
 

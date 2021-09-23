@@ -40,11 +40,11 @@ void flowEbosBlackoilSetDeck(double setupTime, std::shared_ptr<Deck> deck,
     using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
 
     Vanguard::setExternalSetupTime(setupTime);
-    Vanguard::setExternalDeck(deck);
-    Vanguard::setExternalEclState(eclState);
-    Vanguard::setExternalSchedule(schedule);
+    Vanguard::setExternalDeck(std::move(deck));
+    Vanguard::setExternalEclState(std::move(eclState));
+    Vanguard::setExternalSchedule(std::move(schedule));
     Vanguard::setExternalUDQState(std::move(udqState));
-    Vanguard::setExternalSummaryConfig(summaryConfig);
+    Vanguard::setExternalSummaryConfig(std::move(summaryConfig));
 }
 
 std::unique_ptr<FlowMainEbos<Properties::TTag::EclFlowProblem>>
