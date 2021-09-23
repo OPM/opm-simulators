@@ -811,14 +811,23 @@ namespace Opm {
 
         updatePerforationIntensiveQuantities();
 
-        OPM_BEGIN_PARALLEL_TRY_CATCH();
-        {
-            if (iterationIdx == 0) {
+        if (iterationIdx == 0) {
+            // try-catch is needed here as updateWellControls
+            // contains global communication and has either to
+            // be reached by all processes or all need to abort
+            // before.
+            OPM_BEGIN_PARALLEL_TRY_CATCH();
+            {
                 calculateExplicitQuantities(local_deferredLogger);
                 prepareTimeStep(local_deferredLogger);
             }
-            updateWellControls(local_deferredLogger, /* check group controls */ true);
+            OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger, "assemble() failed (It=0): ",
+                                               terminal_output_);
+        }
+        updateWellControls(local_deferredLogger, /* check group controls */ true);
 
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
+        {
             // Set the well primary variables based on the value of well solutions
             initPrimaryVariablesEvaluation();
 
