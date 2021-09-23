@@ -28,6 +28,7 @@
 // NOTE: EXIT_SUCCESS, EXIT_FAILURE is defined in cstdlib
 #include <cstdlib>
 #include <iostream>
+#include <stdexcept>
 #include <string>
 #include <opm/simulators/flow/python/PyBlackOilSimulator.hpp>
 
@@ -56,7 +57,7 @@ const Opm::FlowMainEbos<typename Opm::Pybind::PyBlackOilSimulator::TypeTag>&
          PyBlackOilSimulator::getFlowMainEbos() const
 {
     if (this->mainEbos_) {
-        return *(this->mainEbos_.get());
+        return *this->mainEbos_;
     }
     else {
         throw std::runtime_error("BlackOilSimulator not initialized: "

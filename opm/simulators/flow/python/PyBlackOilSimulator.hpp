@@ -33,8 +33,8 @@
 namespace Opm::Pybind {
 class PyBlackOilSimulator
 {
-    using TypeTag = Opm::Properties::TTag::EclFlowProblem;
 private:
+    using TypeTag = Opm::Properties::TTag::EclFlowProblem;
     using Simulator = Opm::GetPropType<TypeTag, Opm::Properties::Simulator>;
 
 public:
