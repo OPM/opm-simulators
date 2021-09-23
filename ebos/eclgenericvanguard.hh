@@ -128,12 +128,14 @@ public:
      * management of these two objects, i.e., they are not allowed to be deleted as long
      * as the simulator vanguard object is alive.
      */
+    static void setExternalDeck(std::shared_ptr<Deck> deck);
     static void setExternalDeck(std::unique_ptr<Deck> deck);
 
     /*!
      * \brief Set the Opm::EclipseState object which ought to be used when the simulator
      *        vanguard is instantiated.
      */
+    static void setExternalEclState(std::shared_ptr<EclipseState> eclState);
     static void setExternalEclState(std::unique_ptr<EclipseState> eclState);
 
     /*!
@@ -142,6 +144,7 @@ public:
      * The lifetime of this object is not managed by the vanguard, i.e., the object must
      * stay valid until after the vanguard gets destroyed.
      */
+    static void setExternalSchedule(std::shared_ptr<Schedule> schedule);
     static void setExternalSchedule(std::unique_ptr<Schedule> schedule);
 
     /*!
@@ -150,6 +153,7 @@ public:
      * The lifetime of this object is not managed by the vanguard, i.e., the object must
      * stay valid until after the vanguard gets destroyed.
      */
+    static void setExternalSummaryConfig(std::shared_ptr<SummaryConfig> summaryConfig);
     static void setExternalSummaryConfig(std::unique_ptr<SummaryConfig> summaryConfig);
 
     static void setExternalUDQState(std::unique_ptr<UDQState> udqState);
@@ -296,11 +300,14 @@ protected:
     static double externalSetupTime_;
     static std::unique_ptr<ParseContext> externalParseContext_;
     static std::unique_ptr<ErrorGuard> externalErrorGuard_;
-    static std::unique_ptr<Deck> externalDeck_;
+
+    // These variables may be owned by both Python and the simulator
+    static std::shared_ptr<Deck> externalDeck_;
+    static std::shared_ptr<EclipseState> externalEclState_;
+    static std::shared_ptr<Schedule> externalEclSchedule_;
+    static std::shared_ptr<SummaryConfig> externalEclSummaryConfig_;
+
     static bool externalDeckSet_;
-    static std::unique_ptr<EclipseState> externalEclState_;
-    static std::unique_ptr<Schedule> externalEclSchedule_;
-    static std::unique_ptr<SummaryConfig> externalEclSummaryConfig_;
     static std::unique_ptr<UDQState> externalUDQState_;
     static std::unique_ptr<Action::State> externalActionState_;
     static std::unique_ptr<CommunicationType> comm_;
@@ -326,11 +333,12 @@ protected:
     // parser objects.
     std::unique_ptr<ParseContext> parseContext_;
     std::unique_ptr<ErrorGuard> errorGuard_;
-    std::unique_ptr<Deck> deck_;
-    std::unique_ptr<EclipseState> eclState_;
-    std::unique_ptr<Schedule> eclSchedule_;
-    std::unique_ptr<SummaryConfig> eclSummaryConfig_;
     std::shared_ptr<Python> python;
+    // These variables may be owned by both Python and the simulator
+    std::shared_ptr<Deck> deck_;
+    std::shared_ptr<EclipseState> eclState_;
+    std::shared_ptr<Schedule> eclSchedule_;
+    std::shared_ptr<SummaryConfig> eclSummaryConfig_;
 
     /*! \brief Information about wells in parallel
      *

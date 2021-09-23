@@ -66,10 +66,10 @@ public:
 }}
 
 namespace Opm {
-void flowEbosGasWaterSetDeck(double setupTime, std::unique_ptr<Deck> deck,
-                           std::unique_ptr<EclipseState> eclState,
-                           std::unique_ptr<Schedule> schedule,
-                           std::unique_ptr<SummaryConfig> summaryConfig)
+void flowEbosGasWaterSetDeck(double setupTime, std::shared_ptr<Deck> deck,
+                           std::shared_ptr<EclipseState> eclState,
+                           std::shared_ptr<Schedule> schedule,
+                           std::shared_ptr<SummaryConfig> summaryConfig)
 {
     using TypeTag = Properties::TTag::EclFlowGasWaterProblem;
     using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;

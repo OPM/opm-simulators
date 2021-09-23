@@ -26,10 +26,10 @@ class EclipseState;
 class Schedule;
 class SummaryConfig;
 
-void flowEbosSolventSetDeck(double setupTime, std::unique_ptr<Deck> deck,
-                            std::unique_ptr<EclipseState> eclState,
-                            std::unique_ptr<Schedule> schedule,
-                            std::unique_ptr<SummaryConfig> summaryConfig);
+void flowEbosSolventSetDeck(double setupTime, std::shared_ptr<Deck> deck,
+                            std::shared_ptr<EclipseState> eclState,
+                            std::shared_ptr<Schedule> schedule,
+                            std::shared_ptr<SummaryConfig> summaryConfig);
 int flowEbosSolventMain(int argc, char** argv, bool outoutCout, bool outputFiles);
 
 }

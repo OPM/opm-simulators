@@ -55,11 +55,11 @@ namespace Opm {
 double EclGenericVanguard::externalSetupTime_ = 0.0;
 std::unique_ptr<ParseContext> EclGenericVanguard::externalParseContext_;
 std::unique_ptr<ErrorGuard> EclGenericVanguard::externalErrorGuard_;
-std::unique_ptr<Deck> EclGenericVanguard::externalDeck_;
+std::shared_ptr<Deck> EclGenericVanguard::externalDeck_;
 bool EclGenericVanguard::externalDeckSet_ = false;
-std::unique_ptr<EclipseState> EclGenericVanguard::externalEclState_;
-std::unique_ptr<Schedule> EclGenericVanguard::externalEclSchedule_;
-std::unique_ptr<SummaryConfig> EclGenericVanguard::externalEclSummaryConfig_;
+std::shared_ptr<EclipseState> EclGenericVanguard::externalEclState_;
+std::shared_ptr<Schedule> EclGenericVanguard::externalEclSchedule_;
+std::shared_ptr<SummaryConfig> EclGenericVanguard::externalEclSummaryConfig_;
 std::unique_ptr<UDQState> EclGenericVanguard::externalUDQState_;
 std::unique_ptr<Action::State> EclGenericVanguard::externalActionState_;
 std::unique_ptr<EclGenericVanguard::CommunicationType> EclGenericVanguard::comm_;
@@ -81,20 +81,43 @@ void EclGenericVanguard::setExternalErrorGuard(std::unique_ptr<ErrorGuard> error
     externalErrorGuard_ = std::move(errorGuard);
 }
 
+void EclGenericVanguard::setExternalSchedule(std::shared_ptr<Schedule> schedule)
+{
+    externalEclSchedule_ = std::move(schedule);
+}
+
 void EclGenericVanguard::setExternalSchedule(std::unique_ptr<Schedule> schedule)
 {
     externalEclSchedule_ = std::move(schedule);
 }
 
-void EclGenericVanguard::setExternalSummaryConfig(std::unique_ptr<SummaryConfig> summaryConfig)
+void EclGenericVanguard::setExternalSummaryConfig(
+    std::shared_ptr<SummaryConfig> summaryConfig)
 {
     externalEclSummaryConfig_ = std::move(summaryConfig);
+}
+
+void EclGenericVanguard::setExternalSummaryConfig(
+    std::unique_ptr<SummaryConfig> summaryConfig)
+{
+    externalEclSummaryConfig_ = std::move(summaryConfig);
+}
+
+void EclGenericVanguard::setExternalDeck(std::shared_ptr<Deck> deck)
+{
+    externalDeck_ = std::move(deck);
+    externalDeckSet_ = true;
 }
 
 void EclGenericVanguard::setExternalDeck(std::unique_ptr<Deck> deck)
 {
     externalDeck_ = std::move(deck);
     externalDeckSet_ = true;
+}
+
+void EclGenericVanguard::setExternalEclState(std::shared_ptr<EclipseState> eclState)
+{
+    externalEclState_ = std::move(eclState);
 }
 
 void EclGenericVanguard::setExternalEclState(std::unique_ptr<EclipseState> eclState)
