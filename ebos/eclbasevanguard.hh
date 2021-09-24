@@ -297,8 +297,11 @@ public:
      */
     int compressedIndex(int cartesianCellIdx) const
     {
-        int index = cartesianToCompressed_[cartesianCellIdx];
-        return index;
+        auto index_pair = cartesianToCompressed_.find(cartesianCellIdx);
+        if (index_pair!=cartesianToCompressed_.end())
+            return index_pair->second;
+        else
+            return -1;
     }
 
     /*!
@@ -399,7 +402,6 @@ protected:
     void updateCartesianToCompressedMapping_()
     {
         size_t num_cells = asImp_().grid().leafGridView().size(0);
-        cartesianToCompressed_.resize(cartesianSize(), -1);
         for (unsigned i = 0; i < num_cells; ++i) {
             unsigned cartesianCellIdx = cartesianIndex(i);
             cartesianToCompressed_[cartesianCellIdx] = i;
@@ -482,7 +484,7 @@ protected:
     /*! \brief Mapping between cartesian and compressed cells.
      *  It is initialized the first time it is called
      */
-    std::vector<int> cartesianToCompressed_;
+    std::unordered_map<int,int> cartesianToCompressed_;
 
     /*! \brief Cell center depths
      */
