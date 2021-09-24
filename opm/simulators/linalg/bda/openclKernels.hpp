@@ -48,6 +48,10 @@ using ilu_decomp_kernel_type = cl::make_kernel<const unsigned int, const unsigne
     /// a = a + alpha * b
     std::string get_axpy_string();
 
+    /// Generate string with scale kernel
+    /// a = a * alpha
+    std::string get_scale_string();
+
     /// returns partial sums, instead of the final dot product
     /// partial sums are added on CPU
     std::string get_dot_1_string();
