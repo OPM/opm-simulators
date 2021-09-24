@@ -1331,6 +1331,10 @@ namespace Opm {
         changed_well_individual = comm.sum(changed_well_individual);
         if (changed_well_individual)
             updateAndCommunicate(episodeIdx, iterationIdx, deferred_logger);
+
+        // update wsolvent fraction for REIN wells
+        const Group& fieldGroup = schedule().getGroup("FIELD", episodeIdx);
+        updateWsolvent(fieldGroup, episodeIdx,  this->nupcolWellState());
     }
 
 

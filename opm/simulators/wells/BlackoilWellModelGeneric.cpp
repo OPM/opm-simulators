@@ -1565,8 +1565,6 @@ updateAndCommunicateGroupData(const int reportStepIdx,
 
     well_state.communicateGroupRates(comm_);
     this->groupState().communicate_rates(comm_);
-    // compute wsolvent fraction for REIN wells
-    updateWsolvent(fieldGroup, reportStepIdx,  well_state_nupcol);
 }
 
 bool
