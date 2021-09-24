@@ -357,10 +357,6 @@ namespace Opm
             const int max_iter = param_.max_welleq_iter_;
             deferred_logger.debug("Compute initial well solution for well " + this->name() + ". Failed to converge in "
                                   + std::to_string(max_iter) + " iterations");
-            // the well operability system currently works only for producers in prediction mode
-            if (this->shutUnsolvableWells())
-                this->operability_status_.solvable = false;
-
             well_state = well_state0;
         }
     }

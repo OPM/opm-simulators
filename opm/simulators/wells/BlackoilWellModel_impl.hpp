@@ -1394,49 +1394,20 @@ namespace Opm {
     prepareTimeStep(DeferredLogger& deferred_logger)
     {
         for (const auto& well : well_container_) {
-            const bool old_well_operable = well->isOperable();
-            well->checkWellOperability(ebosSimulator_, this->wellState(), deferred_logger);
-
-                if (well->isOperable()) {
-                    auto& events = this->wellState().well(well->indexOfWell()).events;
-                    if (events.hasEvent(WellState::event_mask)) {
-                        well->updateWellStateWithTarget(ebosSimulator_, this->groupState(), this->wellState(), deferred_logger);
-                        // There is no new well control change input within a report step,
-                        // so next time step, the well does not consider to have effective events anymore.
-                        events.clearEvent(WellState::event_mask);
-                    }
-
-                    // solve the well equation initially to improve the initial solution of the well model
-                    if (param_.solve_welleq_initially_) {
-                        well->solveWellEquation(ebosSimulator_, this->wellState(), this->groupState(), deferred_logger);
-                    }
-                }
-
-                const bool well_operable = well->isOperable();
-                if (!well_operable && old_well_operable) {
-                    const Well& well_ecl = getWellEcl(well->name());
-                    if (well_ecl.getAutomaticShutIn()) {
-                        deferred_logger.info(" well " + well->name() + " gets SHUT at the beginning of the time step ");
-                    } else {
-                        if (!well->wellIsStopped()) {
-                            deferred_logger.info(" well " + well->name() + " gets STOPPED at the beginning of the time step ");
-                            well->stopWell();
-                        }
-                    }
-                } else if (well_operable && !old_well_operable) {
-                    deferred_logger.info(" well " + well->name() + " gets REVIVED at the beginning of the time step ");
-                    well->openWell();
-                }
-            } else if (well_operable && !old_well_operable) {
-                deferred_logger.info(" well " + well->name() + " gets REVIVED at the beginning of the time step ");
-                well->openWell();
+            auto& events = this->wellState().well(well->indexOfWell()).events;
+            if (events.hasEvent(WellState::event_mask)) {
+                well->updateWellStateWithTarget(ebosSimulator_, this->groupState(), this->wellState(), deferred_logger);
+                // There is no new well control change input within a report step,
+                // so next time step, the well does not consider to have effective events anymore.
+                events.clearEvent(WellState::event_mask);
             }
-
-        }  // end of for (const auto& well : well_container_)
+            // solve the well equation initially to improve the initial solution of the well model
+            if (param_.solve_welleq_initially_) {
+                well->solveWellEquation(ebosSimulator_, this->wellState(), this->groupState(), deferred_logger);
+            }
+        }
         updatePrimaryVariables(deferred_logger);
     }
-
-
 
 
 
