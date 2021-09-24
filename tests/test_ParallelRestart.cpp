@@ -50,6 +50,8 @@
 #include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/RSTConfig.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionResult.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Action/State.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionAST.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/PyAction.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/Actions.hpp>
@@ -566,6 +568,7 @@ TEST_FOR_TYPE2(Action, Actions)
 TEST_FOR_TYPE2(Action, ActionX)
 TEST_FOR_TYPE2(Action, AST)
 TEST_FOR_TYPE2(Action, ASTNode)
+TEST_FOR_TYPE2(Action, State)
 TEST_FOR_TYPE(BCConfig)
 TEST_FOR_TYPE(BrineDensityTable)
 TEST_FOR_TYPE(ColumnSchema)
