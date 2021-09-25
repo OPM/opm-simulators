@@ -81,6 +81,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQFunction.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQFunctionTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQInput.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPInjTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/VFPProdTable.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/PAvg.hpp>
@@ -655,6 +656,7 @@ TEST_FOR_TYPE(UDQConfig)
 TEST_FOR_TYPE(UDQDefine)
 TEST_FOR_TYPE(UDQIndex)
 TEST_FOR_TYPE(UDQParams)
+TEST_FOR_TYPE(UDQState)
 TEST_FOR_TYPE(UnitSystem)
 TEST_FOR_TYPE(Valve)
 TEST_FOR_TYPE(VFPInjTable)
