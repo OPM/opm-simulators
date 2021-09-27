@@ -23,6 +23,7 @@
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/simulators/wells/RegionAttributeHelpers.hpp>
 #include <opm/simulators/linalg/ParallelIstlInformation.hpp>
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
 #include <dune/grid/common/gridenums.hh>
 #include <algorithm>
@@ -116,7 +117,9 @@ namespace Opm {
                 }
 
                 ElementContext elemCtx( simulator );
-                 const auto& elemEndIt = gridView.template end</*codim=*/0>();
+                const auto& elemEndIt = gridView.template end</*codim=*/0>();
+                OPM_BEGIN_PARALLEL_TRY_CATCH();
+
                 for (auto elemIt = gridView.template begin</*codim=*/0>();
                      elemIt != elemEndIt;
                      ++elemIt)
@@ -172,6 +175,7 @@ namespace Opm {
                         }
                     }
                 }
+                OPM_END_PARALLEL_TRY_CATCH("AverageRegionalPressure::defineState(): ");
 
                 for (int reg = 1; reg <= numRegions ; ++ reg) {
                       auto& ra = attr_.attributes(reg);

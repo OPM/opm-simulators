@@ -177,8 +177,6 @@ namespace Opm {
     {
         DeferredLogger local_deferredLogger;
 
-        std::string exc_msg;
-        auto exc_type = ExceptionType::NONE;
         report_step_starts_ = true;
 
         const Grid& grid = ebosSimulator_.vanguard().grid();
@@ -190,7 +188,7 @@ namespace Opm {
         // at least initializeWellState might be throw
         // exception in opm-material (UniformTabulated2DFunction.hpp)
         // playing it safe by extending the scope a bit.
-        try
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
         {
 
             // The well state initialize bhp with the cell pressure in the top cell.
@@ -233,24 +231,8 @@ namespace Opm {
                 }
             }
         }
-        catch (const Opm::NumericalIssue& e){
-            exc_type = ExceptionType::NUMERICAL_ISSUE;
-            exc_msg = e.what();
-        } catch (const std::runtime_error& e) {
-            exc_type = ExceptionType::RUNTIME_ERROR;
-            exc_msg = e.what();
-        } catch (const std::invalid_argument& e) {
-            exc_type = ExceptionType::INVALID_ARGUMENT;
-            exc_msg = e.what();
-        } catch (const std::logic_error& e) {
-            exc_type = ExceptionType::LOGIC_ERROR;
-            exc_msg = e.what();
-        } catch (const std::exception& e) {
-            exc_type = ExceptionType::DEFAULT;
-            exc_msg = e.what();
-        }
-        
-        logAndCheckForExceptionsAndThrow(local_deferredLogger, exc_type, "beginReportStep() failed: " + exc_msg, terminal_output_);
+        OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger, "beginReportStep() failed: ",
+                                       terminal_output_);
         // Store the current well state, to be able to recover in the case of failed iterations
         this->commitWGState();
     }
@@ -273,9 +255,8 @@ namespace Opm {
                                       ebosSimulator_.model().newtonMethod().numIterations());
         this->wellState().gliftTimeStepInit();
         const double simulationTime = ebosSimulator_.time();
-        std::string exc_msg;
-        auto exc_type = ExceptionType::NONE;
-        try {
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
+        {
             // test wells
             wellTesting(reportStepIdx, simulationTime, local_deferredLogger);
 
@@ -302,21 +283,9 @@ namespace Opm {
                     setRepRadiusPerfLength();
                 }
             }
-        } catch (const std::runtime_error& e) {
-            exc_type = ExceptionType::RUNTIME_ERROR;
-            exc_msg = e.what();
-        } catch (const std::invalid_argument& e) {
-            exc_type = ExceptionType::INVALID_ARGUMENT;
-            exc_msg = e.what();
-        } catch (const std::logic_error& e) {
-            exc_type = ExceptionType::LOGIC_ERROR;
-            exc_msg = e.what();
-        } catch (const std::exception& e) {
-            exc_type = ExceptionType::DEFAULT;
-            exc_msg = e.what();
         }
-
-        logAndCheckForExceptionsAndThrow(local_deferredLogger, exc_type, "beginTimeStep() failed: " + exc_msg, terminal_output_);
+        OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger, "beginTimeStep() failed: ",
+                                        terminal_output_);
 
         for (auto& well : well_container_) {
             well->setVFPProperties(vfp_properties_.get());
@@ -358,8 +327,8 @@ namespace Opm {
         const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
         WellGroupHelpers::updateGuideRates(fieldGroup, schedule(), summaryState, this->phase_usage_, reportStepIdx, simulationTime,
                                            this->wellState(), this->groupState(), comm, &this->guideRate_, pot, local_deferredLogger);
-
-
+        std::string exc_msg;
+        auto exc_type = ExceptionType::NONE;
         // update gpmaint targets
         if (schedule_[reportStepIdx].has_gpmaint()) {
             regionalAveragePressureCalculator_->template defineState<ElementContext>(ebosSimulator_);
@@ -391,19 +360,9 @@ namespace Opm {
                     }
                 }
             }
-        } catch (const std::runtime_error& e) {
-            exc_type = ExceptionType::RUNTIME_ERROR;
-            exc_msg = e.what();
-        } catch (const std::invalid_argument& e) {
-            exc_type = ExceptionType::INVALID_ARGUMENT;
-            exc_msg = e.what();
-        } catch (const std::logic_error& e) {
-            exc_type = ExceptionType::LOGIC_ERROR;
-            exc_msg = e.what();
-        } catch (const std::exception& e) {
-            exc_type = ExceptionType::DEFAULT;
-            exc_msg = e.what();
         }
+        // Catch clauses for all errors setting exc_type and exc_msg
+        OPM_PARALLEL_CATCH_CLAUSE(exc_type, exc_msg);
 
         if (exc_type != ExceptionType::NONE) {
             const std::string msg = "Compute initial well solution for new wells failed. Continue with zero initial rates";
@@ -568,6 +527,8 @@ namespace Opm {
 
         const auto& gridView = ebosSimulator_.vanguard().gridView();
         const auto& elemEndIt = gridView.template end</*codim=*/0>();
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
+
         for (auto elemIt = gridView.template begin</*codim=*/0>();
              elemIt != elemEndIt;
              ++elemIt)
@@ -590,6 +551,7 @@ namespace Opm {
                 perf_pressure = fs.pressure(FluidSystem::gasPhaseIdx).value();
             }
         }
+        OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::initializeWellState() failed: ");
 
         this->wellState().init(cellPressures, schedule(), wells_ecl_, local_parallel_well_info_, timeStepIdx,
                                &this->prevWellState(), well_perf_data_,
@@ -849,34 +811,31 @@ namespace Opm {
 
         updatePerforationIntensiveQuantities();
 
-        auto exc_type = ExceptionType::NONE;
-        std::string exc_msg;
-        try {
-            if (iterationIdx == 0) {
+        if (iterationIdx == 0) {
+            // try-catch is needed here as updateWellControls
+            // contains global communication and has either to
+            // be reached by all processes or all need to abort
+            // before.
+            OPM_BEGIN_PARALLEL_TRY_CATCH();
+            {
                 calculateExplicitQuantities(local_deferredLogger);
                 prepareTimeStep(local_deferredLogger);
             }
-            updateWellControls(local_deferredLogger, /* check group controls */ true);
+            OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger, "assemble() failed (It=0): ",
+                                               terminal_output_);
+        }
+        updateWellControls(local_deferredLogger, /* check group controls */ true);
 
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
+        {
             // Set the well primary variables based on the value of well solutions
             initPrimaryVariablesEvaluation();
 
             maybeDoGasLiftOptimize(local_deferredLogger);
             assembleWellEq(dt, local_deferredLogger);
-        } catch (const std::runtime_error& e) {
-            exc_type = ExceptionType::RUNTIME_ERROR;
-            exc_msg = e.what();
-        } catch (const std::invalid_argument& e) {
-            exc_type = ExceptionType::INVALID_ARGUMENT;
-            exc_msg = e.what();
-        } catch (const std::logic_error& e) {
-            exc_type = ExceptionType::LOGIC_ERROR;
-            exc_msg = e.what();
-        } catch (const std::exception& e) {
-            exc_type = ExceptionType::DEFAULT;
-            exc_msg = e.what();
         }
-        logAndCheckForExceptionsAndThrow(local_deferredLogger, exc_type, "assemble() failed: " + exc_msg, terminal_output_);
+        OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger, "assemble() failed: ",
+                                       terminal_output_);
         last_report_.converged = true;
         last_report_.assemble_time_well += perfTimer.stop();
     }
@@ -1160,28 +1119,17 @@ namespace Opm {
     recoverWellSolutionAndUpdateWellState(const BVector& x)
     {
         DeferredLogger local_deferredLogger;
-        auto exc_type = ExceptionType::NONE;
-        std::string exc_msg;
-        try {
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
+        {
             if (localWellsActive()) {
                 for (auto& well : well_container_) {
                     well->recoverWellSolutionAndUpdateWellState(x, this->wellState(), local_deferredLogger);
                 }
             }
-        } catch (const std::runtime_error& e) {
-            exc_type = ExceptionType::RUNTIME_ERROR;
-            exc_msg = e.what();
-        } catch (const std::invalid_argument& e) {
-            exc_type = ExceptionType::INVALID_ARGUMENT;
-            exc_msg = e.what();
-        } catch (const std::logic_error& e) {
-            exc_type = ExceptionType::LOGIC_ERROR;
-            exc_msg = e.what();
-        } catch (const std::exception& e) {
-            exc_type = ExceptionType::DEFAULT;
-            exc_msg = e.what();
         }
-        logAndCheckForExceptionsAndThrow(local_deferredLogger, exc_type, "recoverWellSolutionAndUpdateWellState() failed: " + exc_msg, terminal_output_);
+        OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger,
+                                       "recoverWellSolutionAndUpdateWellState() failed: ",
+                                       terminal_output_);
     }
 
 
@@ -1390,19 +1338,9 @@ namespace Opm {
         const auto& well= well_container_[widx];
         try {
             well->computeWellPotentials(ebosSimulator_, well_state_copy, potentials, deferred_logger);
-        } catch (const std::runtime_error& e) {
-            exc_type = ExceptionType::RUNTIME_ERROR;
-            exc_msg = e.what();
-        } catch (const std::invalid_argument& e) {
-            exc_type = ExceptionType::INVALID_ARGUMENT;
-            exc_msg = e.what();
-        } catch (const std::logic_error& e) {
-            exc_type = ExceptionType::LOGIC_ERROR;
-            exc_msg = e.what();
-        } catch (const std::exception& e) {
-            exc_type = ExceptionType::DEFAULT;
-            exc_msg = e.what();
         }
+        // catch all possible exception and store type and message.
+        OPM_PARALLEL_CATCH_CLAUSE(exc_type, exc_msg);
         // Store it in the well state
         // potentials is resized and set to zero in the beginning of well->ComputeWellPotentials
         // and updated only if sucessfull. i.e. the potentials are zero for exceptions
@@ -1480,60 +1418,43 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     prepareTimeStep(DeferredLogger& deferred_logger)
     {
-        auto exc_type = ExceptionType::NONE;
-        std::string exc_msg;
-        try {
-            for (const auto& well : well_container_) {
-                const bool old_well_operable = well->isOperable();
-                well->checkWellOperability(ebosSimulator_, this->wellState(), deferred_logger);
+        for (const auto& well : well_container_) {
+            const bool old_well_operable = well->isOperable();
+            well->checkWellOperability(ebosSimulator_, this->wellState(), deferred_logger);
 
-                if (!well->isOperable() ) continue;
+            if (!well->isOperable() ) continue;
 
-                auto& events = this->wellState().well(well->indexOfWell()).events;
-                if (events.hasEvent(WellState::event_mask)) {
-                    well->updateWellStateWithTarget(ebosSimulator_, this->groupState(), this->wellState(), deferred_logger);
-                    // There is no new well control change input within a report step,
-                    // so next time step, the well does not consider to have effective events anymore.
-                    events.clearEvent(WellState::event_mask);
-                }
+            auto& events = this->wellState().well(well->indexOfWell()).events;
+            if (events.hasEvent(WellState::event_mask)) {
+                well->updateWellStateWithTarget(ebosSimulator_, this->groupState(), this->wellState(), deferred_logger);
+                // There is no new well control change input within a report step,
+                // so next time step, the well does not consider to have effective events anymore.
+                events.clearEvent(WellState::event_mask);
+            }
 
-                // solve the well equation initially to improve the initial solution of the well model
-                if (param_.solve_welleq_initially_) {
-                    well->solveWellEquation(ebosSimulator_, this->wellState(), this->groupState(), deferred_logger);
-                }
+            // solve the well equation initially to improve the initial solution of the well model
+            if (param_.solve_welleq_initially_) {
+                well->solveWellEquation(ebosSimulator_, this->wellState(), this->groupState(), deferred_logger);
+            }
 
-                const bool well_operable = well->isOperable();
-                if (!well_operable && old_well_operable) {
-                    const Well& well_ecl = getWellEcl(well->name());
-                    if (well_ecl.getAutomaticShutIn()) {
-                        deferred_logger.info(" well " + well->name() + " gets SHUT at the beginning of the time step ");
-                    } else {
-                        if (!well->wellIsStopped()) {
-                            deferred_logger.info(" well " + well->name() + " gets STOPPED at the beginning of the time step ");
-                            well->stopWell();
-                        }
+            const bool well_operable = well->isOperable();
+            if (!well_operable && old_well_operable) {
+                const Well& well_ecl = getWellEcl(well->name());
+                if (well_ecl.getAutomaticShutIn()) {
+                    deferred_logger.info(" well " + well->name() + " gets SHUT at the beginning of the time step ");
+                } else {
+                    if (!well->wellIsStopped()) {
+                        deferred_logger.info(" well " + well->name() + " gets STOPPED at the beginning of the time step ");
+                        well->stopWell();
                     }
-                } else if (well_operable && !old_well_operable) {
-                    deferred_logger.info(" well " + well->name() + " gets REVIVED at the beginning of the time step ");
-                    well->openWell();
                 }
+            } else if (well_operable && !old_well_operable) {
+                deferred_logger.info(" well " + well->name() + " gets REVIVED at the beginning of the time step ");
+                well->openWell();
+            }
 
-             }  // end of for (const auto& well : well_container_)
-            updatePrimaryVariables(deferred_logger);
-        } catch (const std::runtime_error& e) {
-            exc_type = ExceptionType::RUNTIME_ERROR;
-            exc_msg = e.what();
-        } catch (const std::invalid_argument& e) {
-            exc_type = ExceptionType::INVALID_ARGUMENT;
-            exc_msg = e.what();
-        } catch (const std::logic_error& e) {
-            exc_type = ExceptionType::LOGIC_ERROR;
-            exc_msg = e.what();
-        } catch (const std::exception& e) {
-            exc_type = ExceptionType::DEFAULT;
-            exc_msg = e.what();
-        }
-        logAndCheckForExceptionsAndThrow(deferred_logger, exc_type, "prepareTimestep() failed: " + exc_msg, terminal_output_);
+        }  // end of for (const auto& well : well_container_)
+        updatePrimaryVariables(deferred_logger);
     }
 
 
@@ -1576,6 +1497,7 @@ namespace Opm {
         const auto& gridView = grid.leafGridView();
         ElementContext elemCtx(ebosSimulator_);
         const auto& elemEndIt = gridView.template end</*codim=*/0, Dune::Interior_Partition>();
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
 
         for (auto elemIt = gridView.template begin</*codim=*/0, Dune::Interior_Partition>();
              elemIt != elemEndIt; ++elemIt)
@@ -1602,6 +1524,7 @@ namespace Opm {
                 B += 1 / intQuants.solventInverseFormationVolumeFactor().value();
             }
         }
+        OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::updateAverageFormationFactor() failed: ")
 
         // compute global average
         grid.comm().sum(B_avg.data(), B_avg.size());
@@ -1677,6 +1600,7 @@ namespace Opm {
         ElementContext elemCtx(ebosSimulator_);
         const auto& gridView = ebosSimulator_.gridView();
         const auto& elemEndIt = gridView.template end</*codim=*/0, Dune::Interior_Partition>();
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
         for (auto elemIt = gridView.template begin</*codim=*/0, Dune::Interior_Partition>();
              elemIt != elemEndIt;
              ++elemIt)
@@ -1690,6 +1614,7 @@ namespace Opm {
             }
             elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
         }
+        OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::updatePerforationIntensiveQuantities() failed: ");
     }
 
 

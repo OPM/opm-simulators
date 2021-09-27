@@ -35,6 +35,7 @@
 #include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
 #include <opm/simulators/wells/WellConnectionAuxiliaryModule.hpp>
 #include <opm/simulators/flow/countGlobalCells.hpp>
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
 #include <opm/grid/UnstructuredGrid.h>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
@@ -643,6 +644,7 @@ namespace Opm {
             ElementContext elemCtx(ebosSimulator_);
             const auto& gridView = ebosSimulator().gridView();
             const auto& elemEndIt = gridView.template end</*codim=*/0, Dune::Interior_Partition>();
+            OPM_BEGIN_PARALLEL_TRY_CATCH();
 
             for (auto elemIt = gridView.template begin</*codim=*/0, Dune::Interior_Partition>();
                  elemIt != elemEndIt;
@@ -725,6 +727,8 @@ namespace Opm {
 
             }
 
+            OPM_END_PARALLEL_TRY_CATCH("BlackoilModelEbos::localConvergenceData() failed: ");
+
             // compute local average in terms of global number of elements
             const int bSize = B_avg.size();
             for ( int i = 0; i<bSize; ++i )
@@ -743,6 +747,8 @@ namespace Opm {
             const auto& ebosResid = ebosSimulator_.model().linearizer().residual();
             const auto& gridView = ebosSimulator().gridView();
             ElementContext elemCtx(ebosSimulator_);
+
+            OPM_BEGIN_PARALLEL_TRY_CATCH();
 
             for (const auto& elem: elements(gridView, Dune::Partitions::interiorBorder))
             {
@@ -765,6 +771,8 @@ namespace Opm {
                     errorPV += pvValue;
                 }
             }
+
+            OPM_END_PARALLEL_TRY_CATCH("BlackoilModelEbos::ComputeCnvError() failed: ");
 
             return grid_.comm().sum(errorPV);
         }

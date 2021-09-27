@@ -38,6 +38,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 #include <opm/simulators/wells/WGState.hpp>
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellConnections.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
 #include <opm/output/eclipse/RestartValue.hpp>
@@ -407,6 +408,7 @@ public:
         const auto gridView = simulator_.vanguard().gridView();
         auto elemIt = gridView.template begin</*codim=*/0>();
         const auto& elemEndIt = gridView.template end</*codim=*/0>();
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
         for (; elemIt != elemEndIt; ++elemIt) {
             const Element& elem = *elemIt;
             if (elem.partitionType() != Dune::InteriorEntity)
@@ -418,6 +420,7 @@ public:
             for (size_t wellIdx = 0; wellIdx < wellSize; ++wellIdx)
                 wells_[wellIdx]->beginIterationAccumulate(elemCtx, /*timeIdx=*/0);
         }
+        OPM_END_PARALLEL_TRY_CATCH("EclWellManager::beginIteration() failed: ");
 
         // call the postprocessing routines
         for (size_t wellIdx = 0; wellIdx < wellSize; ++wellIdx)

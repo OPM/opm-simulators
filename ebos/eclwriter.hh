@@ -34,6 +34,7 @@
 #include <opm/parser/eclipse/Units/UnitSystem.hpp>
 
 #include <opm/simulators/utils/ParallelRestart.hpp>
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
 #include <ebos/eclgenericwriter.hh>
 
@@ -379,6 +380,7 @@ private:
         ElementIterator elemIt = gridView.template begin</*codim=*/0>();
 
         const ElementIterator& elemEndIt = gridView.template end</*codim=*/0>();
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
         for (; elemIt != elemEndIt; ++elemIt) {
             const Element& elem = *elemIt;
 
@@ -387,6 +389,7 @@ private:
 
             eclOutputModule_->processElement(elemCtx);
         }
+        OPM_END_PARALLEL_TRY_CATCH("EclWriter::prepareLocalCellData() failed: ")
     }
 
     Simulator& simulator_;
