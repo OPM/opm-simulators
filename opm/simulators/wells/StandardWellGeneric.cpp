@@ -253,11 +253,6 @@ doGasLiftOptimize(const WellState &well_state,
                   const Schedule& schedule,
                   DeferredLogger& deferred_logger) const
 {
-    gliftDebug("checking if GLIFT should be done..", deferred_logger);
-    if (!well_state.gliftOptimizationEnabled()) {
-        gliftDebug("Optimization disabled in WellState", deferred_logger);
-        return false;
-    }
     if (well_state.gliftCheckAlqOscillation(baseif_.name())) {
         gliftDebug("further optimization skipped due to oscillation in ALQ",
                    deferred_logger);

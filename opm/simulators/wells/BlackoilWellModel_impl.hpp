@@ -845,7 +845,8 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     maybeDoGasLiftOptimize(DeferredLogger& deferred_logger)
     {
-        if (checkDoGasLiftOptimization(deferred_logger)) {
+        const bool do_glift_optimization = true;
+        if (do_glift_optimization) {
             GLiftOptWells glift_wells;
             GLiftProdWells prod_wells;
             GLiftWellStateMap state_map;
@@ -985,27 +986,6 @@ namespace Opm {
         }
     }
 
-    template<typename TypeTag>
-    bool
-    BlackoilWellModel<TypeTag>::
-    checkDoGasLiftOptimization(Opm::DeferredLogger& deferred_logger)
-    {
-        gliftDebug("checking if GLIFT should be done..", deferred_logger);
-        /*
-        std::size_t num_procs = ebosSimulator_.gridView().comm().size();
-        if (num_procs > 1u) {
-            const std::string msg = fmt::format("  GLIFT: skipping optimization. "
-                "Parallel run not supported yet: num procs = {}", num_procs);
-            deferred_logger.warning(msg);
-            return false;
-        }
-        */
-        if (!(this->wellState().gliftOptimizationEnabled())) {
-            gliftDebug("Optimization disabled in WellState", deferred_logger);
-            return false;
-        }
-        return true;
-    }
 
     template<typename TypeTag>
     void
