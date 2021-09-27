@@ -370,8 +370,6 @@ namespace Opm {
             // setting the well_solutions_ based on well_state.
             void updatePrimaryVariables(DeferredLogger& deferred_logger);
 
-            void setupCartesianToCompressed_(const int* global_cell, int local_num__cells);
-
             void updateAverageFormationFactor();
 
             void computePotentials(const std::size_t widx,
@@ -420,6 +418,10 @@ namespace Opm {
             void computeWellTemperature();
 
             void assignWellTracerRates(data::Wells& wsrpt) const;
+
+            int compressedIndex(int cartesian_cell_idx) const override {
+                return ebosSimulator_.vanguard().compressedIndex(cartesian_cell_idx);
+            }
 
         private:
             BlackoilWellModel(Simulator& ebosSimulator, const PhaseUsage& pu);

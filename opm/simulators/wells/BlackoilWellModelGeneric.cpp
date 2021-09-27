@@ -349,8 +349,7 @@ initializeWellPerfData()
         parallelWellInfo.beginReset();
 
         for (const auto& completion : well.getConnections()) {
-            const int active_index =
-                cartesian_to_compressed_[completion.global_index()];
+            const int active_index = compressedIndex(completion.global_index());
             if (completion.state() == Connection::State::OPEN) {
                 if (active_index >= 0) {
                     if (firstOpenCompletion)
@@ -1706,7 +1705,7 @@ BlackoilWellModelGeneric::
 setRepRadiusPerfLength()
 {
     for (const auto& well : well_container_generic_) {
-        well->setRepRadiusPerfLength(cartesian_to_compressed_);
+        well->setRepRadiusPerfLength();
     }
 }
 
