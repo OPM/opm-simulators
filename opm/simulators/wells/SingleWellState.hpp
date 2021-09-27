@@ -20,6 +20,7 @@
 #ifndef OPM_SINGLE_WELL_STATE_HEADER_INCLUDED
 #define OPM_SINGLE_WELL_STATE_HEADER_INCLUDED
 
+#include <functional>
 #include <vector>
 
 #include <opm/simulators/wells/SegmentState.hpp>
@@ -32,9 +33,9 @@ namespace Opm {
 
 class SingleWellState {
 public:
-    SingleWellState(const ParallelWellInfo* pinfo, bool is_producer, std::size_t num_perf, std::size_t num_phases, double temp);
+    SingleWellState(const ParallelWellInfo& pinfo, bool is_producer, std::size_t num_perf, std::size_t num_phases, double temp);
 
-    const ParallelWellInfo* parallel_info;
+    std::reference_wrapper<const ParallelWellInfo> parallel_info;
 
     Well::Status status{Well::Status::OPEN};
     bool producer;

@@ -241,7 +241,7 @@ protected:
 
     /// \brief Create the parallel well information
     /// \param localWells The local wells from ECL schedule
-    std::vector<ParallelWellInfo*> createLocalParallelWellInfo(const std::vector<Well>& wells);
+    std::vector<std::reference_wrapper<ParallelWellInfo>> createLocalParallelWellInfo(const std::vector<Well>& wells);
 
     void initializeWellProdIndCalculators();
     void initializeWellPerfData();
@@ -396,7 +396,7 @@ protected:
     std::vector<int> local_shut_wells_{};
 
     std::vector<ParallelWellInfo> parallel_well_info_;
-    std::vector<ParallelWellInfo*> local_parallel_well_info_;
+    std::vector<std::reference_wrapper<ParallelWellInfo>> local_parallel_well_info_;
 
     std::vector<WellProdIndexCalculator> prod_index_calc_;
 

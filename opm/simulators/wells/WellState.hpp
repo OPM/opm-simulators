@@ -86,14 +86,14 @@ public:
     void init(const std::vector<double>& cellPressures,
               const Schedule& schedule,
               const std::vector<Well>& wells_ecl,
-              const std::vector<ParallelWellInfo*>& parallel_well_info,
+              const std::vector<std::reference_wrapper<ParallelWellInfo>>& parallel_well_info,
               const int report_step,
               const WellState* prevState,
               const std::vector<std::vector<PerforationData>>& well_perf_data,
               const SummaryState& summary_state);
 
     void resize(const std::vector<Well>& wells_ecl,
-                const std::vector<ParallelWellInfo*>& parallel_well_info,
+                const std::vector<std::reference_wrapper<ParallelWellInfo>>& parallel_well_info,
                 const Schedule& schedule,
                 const bool handle_ms_well,
                 const size_t numCells,
@@ -302,14 +302,14 @@ private:
     /// with -1e100.
     void base_init(const std::vector<double>& cellPressures,
                    const std::vector<Well>& wells_ecl,
-                   const std::vector<ParallelWellInfo*>& parallel_well_info,
+                   const std::vector<std::reference_wrapper<ParallelWellInfo>>& parallel_well_info,
                    const std::vector<std::vector<PerforationData>>& well_perf_data,
                    const SummaryState& summary_state);
 
     void initSingleWell(const std::vector<double>& cellPressures,
                         const Well& well,
                         const std::vector<PerforationData>& well_perf_data,
-                        const ParallelWellInfo* well_info,
+                        const ParallelWellInfo& well_info,
                         const SummaryState& summary_state);
 
 
