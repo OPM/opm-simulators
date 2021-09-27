@@ -291,6 +291,44 @@ public:
         }
     }
 
+    template<class Set, bool complexType = true>
+    void set(Set& data)
+    {
+        using Data = typename Set::value_type;
+
+        auto handle = [&](auto& d)
+        {
+            if constexpr (is_vector<Data>::value)
+                this->template vector<typename Data::value_type,complexType>(d);
+            else if constexpr (is_ptr<Data>::value)
+                ptr(d);
+            else if constexpr (complexType)
+                d.serializeOp(*this);
+            else
+                (*this)(d);
+        };
+
+        if (m_op == Operation::PACKSIZE) {
+            m_packSize += Mpi::packSize(data.size(), m_comm);
+            for (auto& it : data) {
+                handle(it);
+            }
+        } else if (m_op == Operation::PACK) {
+            Mpi::pack(data.size(), m_buffer, m_position, m_comm);
+            for (auto& it : data) {
+                handle(it);
+            }
+        } else if (m_op == Operation::UNPACK) {
+            size_t size;
+            Mpi::unpack(size, m_buffer, m_position, m_comm);
+            for (size_t i = 0; i < size; ++i) {
+                Data entry;
+                handle(entry);
+                data.insert(entry);
+            }
+        }
+    }
+
     //! \brief Call this to serialize data.
     //! \tparam T Type of class to serialize
     //! \param data Class to serialize
