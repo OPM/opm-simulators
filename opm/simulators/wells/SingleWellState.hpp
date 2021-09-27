@@ -59,6 +59,15 @@ public:
     void shut();
     void stop();
     void open();
+
+    // The sum_xxx_rates() functions sum over all connection rates of pertinent
+    // types. In the case of distributed wells this involves an MPI
+    // communication.
+    double sum_solvent_rates() const;
+    double sum_polymer_rates() const;
+    double sum_brine_rates() const;
+private:
+    double sum_connection_rates(const std::vector<double> connection_rates) const;
 };
 
 

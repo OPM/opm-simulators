@@ -132,15 +132,6 @@ public:
     static void calculateSegmentRates(const std::vector<std::vector<int>>& segment_inlets, const std::vector<std::vector<int>>&segment_perforations,
                                       const std::vector<double>& perforation_rates, const int np, const int segment, std::vector<double>& segment_rates);
 
-    /// One rate pr well
-    double solventWellRate(const int w) const;
-
-    /// One rate pr well
-    double polymerWellRate(const int w) const;
-
-    /// One rate pr well
-    double brineWellRate(const int w) const;
-
 
     template<class Comm>
     void communicateGroupRates(const Comm& comm);

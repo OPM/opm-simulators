@@ -240,11 +240,12 @@ namespace WellGroupHelpers
             if (wellEcl.getStatus() == Well::Status::SHUT)
                 continue;
 
+            const auto& ws = wellState.well(well_index.value());
             double factor = wellEcl.getEfficiencyFactor();
             if (injector)
-                rate += factor * wellState.solventWellRate(well_index.value());
+                rate += factor * ws.sum_solvent_rates();
             else
-                rate -= factor * wellState.solventWellRate(well_index.value());
+                rate -= factor * ws.sum_solvent_rates();
         }
         return rate;
     }

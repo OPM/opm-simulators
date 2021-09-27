@@ -469,15 +469,15 @@ WellState::report(const int* globalCellIdxMap,
         }
 
         if (pu.has_solvent || pu.has_zFraction) {
-            well.rates.set(rt::solvent, solventWellRate(well_index));
+            well.rates.set(rt::solvent, ws.sum_solvent_rates());
         }
 
         if (pu.has_polymer) {
-            well.rates.set(rt::polymer, polymerWellRate(well_index));
+            well.rates.set(rt::polymer, ws.sum_polymer_rates());
         }
 
         if (pu.has_brine) {
-            well.rates.set(rt::brine, brineWellRate(well_index));
+            well.rates.set(rt::brine, ws.sum_brine_rates());
         }
 
         if (ws.producer) {
@@ -734,31 +734,6 @@ WellState::calculateSegmentRates(const std::vector<std::vector<int>>& segment_in
         }
     }
 }
-
-double WellState::solventWellRate(const int w) const
-{
-    auto& ws = this->well(w);
-    const auto& perf_data = ws.perf_data;
-    const auto& perf_rates_solvent = perf_data.solvent_rates;
-    return ws.parallel_info.get().sumPerfValues(perf_rates_solvent.begin(), perf_rates_solvent.end());
-}
-
-double WellState::polymerWellRate(const int w) const
-{
-    auto& ws = this->well(w);
-    const auto& perf_data = ws.perf_data;
-    const auto& perf_rates_polymer = perf_data.polymer_rates;
-    return ws.parallel_info.get().sumPerfValues(perf_rates_polymer.begin(), perf_rates_polymer.end());
-}
-
-double WellState::brineWellRate(const int w) const
-{
-    auto& ws = this->well(w);
-    const auto& perf_data = ws.perf_data;
-    const auto& perf_rates_brine = perf_data.brine_rates;
-    return ws.parallel_info.get().sumPerfValues(perf_rates_brine.begin(), perf_rates_brine.end());
-}
-
 
 void WellState::stopWell(int well_index)
 {

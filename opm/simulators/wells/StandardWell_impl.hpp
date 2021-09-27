@@ -1210,7 +1210,6 @@ namespace Opm
         const PhaseUsage& pu = phaseUsage();
         b_perf.resize(nperf * this->num_components_);
         surf_dens_perf.resize(nperf * this->num_components_);
-        const int w = this->index_of_well_;
         const auto& ws = well_state.well(this->index_of_well_);
 
         const bool waterPresent = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx);
@@ -1254,7 +1253,7 @@ namespace Opm
                     const double oilrate = std::abs(ws.surface_rates[pu.phase_pos[Oil]]); //in order to handle negative rates in producers
                     rvmax_perf[perf] = FluidSystem::gasPvt().saturatedOilVaporizationFactor(fs.pvtRegionIndex(), temperature, p_avg);
                     if (oilrate > 0) {
-                        const double gasrate = std::abs(ws.surface_rates[pu.phase_pos[Gas]]) - (has_solvent ? well_state.solventWellRate(w) : 0.0);
+                        const double gasrate = std::abs(ws.surface_rates[pu.phase_pos[Gas]]) - (has_solvent ? ws.sum_solvent_rates() : 0.0);
                         double rv = 0.0;
                         if (gasrate > 0) {
                             rv = oilrate / gasrate;
@@ -1277,7 +1276,7 @@ namespace Opm
                 const int oilpos = oilCompIdx + perf * this->num_components_;
                 if (gasPresent) {
                     rsmax_perf[perf] = FluidSystem::oilPvt().saturatedGasDissolutionFactor(fs.pvtRegionIndex(), temperature, p_avg);
-                    const double gasrate = std::abs(ws.surface_rates[pu.phase_pos[Gas]]) - (has_solvent ? well_state.solventWellRate(w) : 0.0);
+                    const double gasrate = std::abs(ws.surface_rates[pu.phase_pos[Gas]]) - (has_solvent ? ws.sum_solvent_rates() : 0.0);
                     if (gasrate > 0) {
                         const double oilrate = std::abs(ws.surface_rates[pu.phase_pos[Oil]]);
                         double rs = 0.0;

@@ -291,10 +291,10 @@ updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_log
         }
         if constexpr (has_gfrac_variable) {
             primary_variables_[GFrac] = baseif_.scalingFactor(pu.phase_pos[Gas]) * (ws.surface_rates[pu.phase_pos[Gas]]
-                                             - (Indices::enableSolvent ? well_state.solventWellRate(well_index) : 0.0) ) / total_well_rate ;
+                                                                                    - (Indices::enableSolvent ? ws.sum_solvent_rates() : 0.0) ) / total_well_rate ;
         }
         if constexpr (Indices::enableSolvent) {
-            primary_variables_[SFrac] = baseif_.scalingFactor(pu.phase_pos[Gas]) * well_state.solventWellRate(well_index) / total_well_rate ;
+            primary_variables_[SFrac] = baseif_.scalingFactor(pu.phase_pos[Gas]) * ws.sum_solvent_rates() / total_well_rate ;
         }
     } else { // total_well_rate == 0
         if (baseif_.isInjector()) {
