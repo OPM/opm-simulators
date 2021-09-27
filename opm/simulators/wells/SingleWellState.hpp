@@ -26,12 +26,15 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
 #include <opm/simulators/wells/PerfData.hpp>
+#include <opm/simulators/wells/ParallelWellInfo.hpp>
 
 namespace Opm {
 
 class SingleWellState {
 public:
-    SingleWellState(bool is_producer, std::size_t num_perf, std::size_t num_phases, double temp);
+    SingleWellState(const ParallelWellInfo* pinfo, bool is_producer, std::size_t num_perf, std::size_t num_phases, double temp);
+
+    const ParallelWellInfo* parallel_info;
 
     Well::Status status{Well::Status::OPEN};
     bool producer;

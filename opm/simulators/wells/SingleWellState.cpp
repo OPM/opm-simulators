@@ -21,8 +21,9 @@
 
 namespace Opm {
 
-SingleWellState::SingleWellState(bool is_producer, std::size_t num_perf, std::size_t num_phases, double temp)
-    : producer(is_producer)
+SingleWellState::SingleWellState(const ParallelWellInfo* pinfo, bool is_producer, std::size_t num_perf, std::size_t num_phases, double temp)
+    : parallel_info(pinfo)
+    , producer(is_producer)
     , temperature(temp)
     , well_potentials(num_phases)
     , productivity_index(num_phases)

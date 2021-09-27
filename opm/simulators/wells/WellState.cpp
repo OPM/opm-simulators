@@ -39,7 +39,6 @@ void WellState::base_init(const std::vector<double>& cellPressures,
                                                const SummaryState& summary_state)
 {
     // clear old name mapping
-    this->parallel_well_info_.clear();
     this->wells_.clear();
     {
         // const int nw = wells->number_of_wells;
@@ -72,8 +71,7 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
     const int np = pu.num_phases;
     double temp = well.isInjector() ? well.injectionControls(summary_state).temperature : 273.15 + 15.56;
 
-    this->parallel_well_info_.add(well.name(), well_info);
-    auto& ws = this->wells_.add(well.name(), SingleWellState{well.isProducer(), well_perf_data.size(), static_cast<std::size_t>(np), temp});
+    auto& ws = this->wells_.add(well.name(), SingleWellState{well_info, well.isProducer(), well_perf_data.size(), static_cast<std::size_t>(np), temp});
 
     if ( ws.perf_data.empty())
         return;
@@ -500,7 +498,7 @@ WellState::report(const int* globalCellIdxMap,
             curr.inj  = ws.injection_cmode;
         }
 
-        const auto& pwinfo = *this->parallel_well_info_[well_index];
+        const auto& pwinfo = *ws.parallel_info;
         if (pwinfo.communication().size()==1)
         {
             reportConnections(well.connections, pu, well_index, globalCellIdxMap);
@@ -742,7 +740,7 @@ double WellState::solventWellRate(const int w) const
     auto& ws = this->well(w);
     const auto& perf_data = ws.perf_data;
     const auto& perf_rates_solvent = perf_data.solvent_rates;
-    return parallel_well_info_[w]->sumPerfValues(perf_rates_solvent.begin(), perf_rates_solvent.end());
+    return ws.parallel_info->sumPerfValues(perf_rates_solvent.begin(), perf_rates_solvent.end());
 }
 
 double WellState::polymerWellRate(const int w) const
@@ -750,7 +748,7 @@ double WellState::polymerWellRate(const int w) const
     auto& ws = this->well(w);
     const auto& perf_data = ws.perf_data;
     const auto& perf_rates_polymer = perf_data.polymer_rates;
-    return parallel_well_info_[w]->sumPerfValues(perf_rates_polymer.begin(), perf_rates_polymer.end());
+    return ws.parallel_info->sumPerfValues(perf_rates_polymer.begin(), perf_rates_polymer.end());
 }
 
 double WellState::brineWellRate(const int w) const
@@ -758,7 +756,7 @@ double WellState::brineWellRate(const int w) const
     auto& ws = this->well(w);
     const auto& perf_data = ws.perf_data;
     const auto& perf_rates_brine = perf_data.brine_rates;
-    return parallel_well_info_[w]->sumPerfValues(perf_rates_brine.begin(), perf_rates_brine.end());
+    return ws.parallel_info->sumPerfValues(perf_rates_brine.begin(), perf_rates_brine.end());
 }
 
 
@@ -986,7 +984,8 @@ void WellState::resetConnectionTransFactors(const int well_index,
 const ParallelWellInfo&
 WellState::parallelWellInfo(std::size_t well_index) const
 {
-    return *parallel_well_info_[well_index];
+    const auto& ws = this->well(well_index);
+    return *ws.parallel_info;
 }
 
 template void WellState::updateGlobalIsGrup<ParallelWellInfo::Communication>(const ParallelWellInfo::Communication& comm);

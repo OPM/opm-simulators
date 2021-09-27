@@ -268,7 +268,6 @@ private:
     PhaseUsage phase_usage_;
 
     WellContainer<SingleWellState> wells_;
-    WellContainer<const ParallelWellInfo*> parallel_well_info_;
     // The well_rates variable is defined for all wells on all processors. The
     // bool in the value pair is whether the current process owns the well or
     // not.
