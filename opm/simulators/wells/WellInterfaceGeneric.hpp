@@ -90,7 +90,7 @@ public:
     void setVFPProperties(const VFPProperties* vfp_properties_arg);
     void setGuideRate(const GuideRate* guide_rate_arg);
     void setWellEfficiencyFactor(const double efficiency_factor);
-    void setRepRadiusPerfLength(const std::vector<int>& cartesian_to_compressed);
+    void setRepRadiusPerfLength();
     void setWsolvent(const double wsolvent);
     void setDynamicThpLimit(const double thp_limit);
     void updatePerforatedCell(std::vector<bool>& is_cell_perforated);

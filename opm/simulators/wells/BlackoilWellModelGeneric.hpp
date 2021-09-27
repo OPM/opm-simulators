@@ -373,6 +373,9 @@ protected:
     void runWellPIScaling(const int timeStepIdx,
                           DeferredLogger& local_deferredLogger);
 
+    virtual int compressedIndex(int cartesian_cell_idx) const = 0;
+
+
     Schedule& schedule_;
     const SummaryState& summaryState_;
     const EclipseState& eclState_;
@@ -399,11 +402,6 @@ protected:
     std::vector<ParallelWellInfo*> local_parallel_well_info_;
 
     std::vector<WellProdIndexCalculator> prod_index_calc_;
-
-    // Map from logically cartesian cell indices to compressed ones.
-    // Cells not in the interior are not mapped. This deactivates
-    // these for distributed wells and makes the distribution non-overlapping.
-    std::vector<int> cartesian_to_compressed_;
 
     std::vector<int> pvt_region_idx_;
 
