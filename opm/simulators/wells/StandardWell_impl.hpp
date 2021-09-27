@@ -1233,8 +1233,6 @@ namespace Opm
             const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
             const auto& fs = intQuants.fluidState();
 
-            // TODO: this is another place to show why WellState need to be a vector of WellState.
-            // TODO: to check why should be perf - 1
             const double p_avg = (perf_press[perf] + p_above[perf])/2;
             const double temperature = fs.temperature(FluidSystem::oilPhaseIdx).value();
             const double saltConcentration = fs.saltConcentration().value();
