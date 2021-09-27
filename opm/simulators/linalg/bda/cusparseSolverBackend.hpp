@@ -84,7 +84,7 @@ private:
     /// Copy linear system to GPU
     /// \param[in] vals        array of nonzeroes, each block is stored row-wise, contains nnz values
     /// \param[in] rows        array of rowPointers, contains N/dim+1 values
-    /// \param[in] cols        array of columnIndices, contains nnz values
+    /// \param[in] cols        array of columnIndices, contains nnzb values
     /// \param[in] b           input vector, contains N values
     void copy_system_to_gpu(double *vals, int *rows, int *cols, double *b);
 
