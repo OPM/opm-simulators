@@ -227,8 +227,8 @@ void cusparseSolverBackend<block_size>::initialize(int N, int nnz, int dim) {
     cudaMalloc((void**)&d_t, sizeof(double) * N);
     cudaMalloc((void**)&d_v, sizeof(double) * N);
     cudaMalloc((void**)&d_bVals, sizeof(double) * nnz);
-    cudaMalloc((void**)&d_bCols, sizeof(double) * nnz);
-    cudaMalloc((void**)&d_bRows, sizeof(double) * (Nb + 1));
+    cudaMalloc((void**)&d_bCols, sizeof(int) * nnzb);
+    cudaMalloc((void**)&d_bRows, sizeof(int) * (Nb + 1));
     cudaMalloc((void**)&d_mVals, sizeof(double) * nnz);
     cudaCheckLastError("Could not allocate enough memory on GPU");
 
@@ -295,7 +295,7 @@ void cusparseSolverBackend<block_size>::copy_system_to_gpu(double *vals, int *ro
     cudaMemcpyAsync(d_bVals, vals, nnz * sizeof(double), cudaMemcpyHostToDevice, stream);
 #endif
 
-    cudaMemcpyAsync(d_bCols, cols, nnz * sizeof(int), cudaMemcpyHostToDevice, stream);
+    cudaMemcpyAsync(d_bCols, cols, nnzb * sizeof(int), cudaMemcpyHostToDevice, stream);
     cudaMemcpyAsync(d_bRows, rows, (Nb + 1) * sizeof(int), cudaMemcpyHostToDevice, stream);
     cudaMemcpyAsync(d_b, b, N * sizeof(double), cudaMemcpyHostToDevice, stream);
     cudaMemsetAsync(d_x, 0, sizeof(double) * N, stream);
