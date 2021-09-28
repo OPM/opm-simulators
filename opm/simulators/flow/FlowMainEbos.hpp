@@ -431,7 +431,10 @@ namespace Opm
                         std::cout << message.str() << "\n";
                     }
                 }
-
+#if HAVE_MPI
+                if (this->mpi_size_ > 1)
+                    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+#endif
                 return EXIT_FAILURE;
             }
         }
