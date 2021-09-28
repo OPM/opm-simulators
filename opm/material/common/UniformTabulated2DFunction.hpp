@@ -202,7 +202,7 @@ public:
         {
             std::string msg = "Attempt to get tabulated value for ("
                 +std::to_string(double(scalarValue(x)))+", "+std::to_string(double(scalarValue(y)))
-                +") on a table of extend "
+                +") on a table of extent "
                 +std::to_string(xMin())+" to "+std::to_string(xMax())+" times "
                 +std::to_string(yMin())+" to "+std::to_string(yMax());
 
