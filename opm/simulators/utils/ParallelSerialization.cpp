@@ -26,7 +26,8 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/ASTNode.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/SICD.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/MSW/Valve.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQActive.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Action/State.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQASTNode.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WList.hpp>
@@ -40,12 +41,16 @@
 namespace Opm {
 
 void eclStateBroadcast(EclipseState& eclState, Schedule& schedule,
-                       SummaryConfig& summaryConfig)
+                       SummaryConfig& summaryConfig,
+                       UDQState& udqState,
+                       Action::State& actionState)
 {
     Opm::EclMpiSerializer ser(Dune::MPIHelper::getCollectiveCommunication());
     ser.broadcast(eclState);
     ser.broadcast(schedule);
     ser.broadcast(summaryConfig);
+    ser.broadcast(udqState);
+    ser.broadcast(actionState);
 }
 
 void eclScheduleBroadcast(Schedule& schedule)

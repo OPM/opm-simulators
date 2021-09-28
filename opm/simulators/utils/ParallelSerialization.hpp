@@ -24,6 +24,12 @@ namespace Opm {
 class EclipseState;
 class Schedule;
 class SummaryConfig;
+class UDQState;
+
+namespace Action {
+class State;
+}
+
 
 /*! \brief Broadcasts an eclipse state from root node in parallel runs.
  *! \param eclState EclipseState to broadcast
@@ -31,7 +37,9 @@ class SummaryConfig;
  *! \param summaryConfig SummaryConfig to broadcast
 */
 void eclStateBroadcast(EclipseState& eclState, Schedule& schedule,
-                       SummaryConfig& summaryConfig);
+                       SummaryConfig& summaryConfig,
+                       UDQState& udqState,
+                       Action::State& actionState);
 
 /// \brief Broadcasts an schedule from root node in parallel runs.
 void eclScheduleBroadcast(Schedule& schedule);

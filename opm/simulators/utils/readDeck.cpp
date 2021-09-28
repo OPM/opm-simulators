@@ -280,8 +280,8 @@ void readDeck(int rank, std::string& deckFilename, std::shared_ptr<Opm::Deck>& d
                 }
 
                 udqState = std::make_unique<UDQState>((*schedule)[0].udq().params().undefinedValue());
-                udqState->load_rst(rst_state);
                 actionState = std::make_unique<Action::State>();
+                udqState->load_rst(rst_state);
                 actionState->load_rst(schedule->operator[](report_step).actions(), rst_state);
             }
             else {
@@ -290,7 +290,6 @@ void readDeck(int rank, std::string& deckFilename, std::shared_ptr<Opm::Deck>& d
                                                           *parseContext, *errorGuard,
                                                           python);
                 }
-
                 udqState = std::make_unique<UDQState>((*schedule)[0].udq().params().undefinedValue());
                 actionState = std::make_unique<Action::State>();
             }
@@ -326,6 +325,10 @@ void readDeck(int rank, std::string& deckFilename, std::shared_ptr<Opm::Deck>& d
             schedule = std::make_unique<Opm::Schedule>(python);
         if (!eclipseState)
             eclipseState = std::make_unique<Opm::ParallelEclipseState>();
+        if (!udqState)
+            udqState = std::make_unique<UDQState>(0);
+        if (!actionState)
+            actionState = std::make_unique<Action::State>();
     }
 
     // In case of parse errors eclipseState/schedule might be null
@@ -337,7 +340,7 @@ void readDeck(int rank, std::string& deckFilename, std::shared_ptr<Opm::Deck>& d
     {
         if (parseSuccess)
         {
-            Opm::eclStateBroadcast(*eclipseState, *schedule, *summaryConfig);
+            Opm::eclStateBroadcast(*eclipseState, *schedule, *summaryConfig, *udqState, *actionState);
         }
     }
     catch(const std::exception& broadcast_error)
