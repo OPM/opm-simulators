@@ -80,13 +80,13 @@ void testSimpleH2O()
         T += 5;
         for (int iP = 0; iP < numP; ++iP) {
             p *= 1.1;
-            if (!EvalToolbox::isSame(H2O::liquidDensity(T,p), SimpleHuDuanH2O::liquidDensity(T,p), /*tolerance=*/1e-3*H2O::liquidDensity(T,p).value()))
+            if (!EvalToolbox::isSame(H2O::liquidDensity(T,p), SimpleHuDuanH2O::liquidDensity(T,p,false), /*tolerance=*/1e-3*H2O::liquidDensity(T,p).value()))
                 throw std::logic_error("oops: the water density based on Hu-Duan has more then 1e-3 deviation from IAPWS'97");
 
             if (T >= 570) // for temperature larger then 570 the viscosity based on HuDuan is too far from IAPWS.
                 continue;
 
-            if (!EvalToolbox::isSame(H2O::liquidViscosity(T,p), SimpleHuDuanH2O::liquidViscosity(T,p), /*tolerance=*/5.e-2*H2O::liquidViscosity(T,p).value())){
+            if (!EvalToolbox::isSame(H2O::liquidViscosity(T,p), SimpleHuDuanH2O::liquidViscosity(T,p,false), /*tolerance=*/5.e-2*H2O::liquidViscosity(T,p).value())){
                 throw std::logic_error("oops: the water viscosity based on Hu-Duan has more then 5e-2 deviation from IAPWS'97");
             }
         }

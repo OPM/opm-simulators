@@ -37,6 +37,12 @@
 
 #include <opm/material/common/Unused.hpp>
 
+#if HAVE_OPM_COMMON
+#include <opm/common/OpmLog/OpmLog.hpp>
+#else
+#include <iostream>
+#endif
+
 #include <cmath>
 
 namespace Opm {
@@ -296,11 +302,14 @@ public:
      *
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
+     * \param extrapolate Whether to extrapolate for untabulated/unreasonable
+     *                    values. If false an exception might be thrown.
      */
     template <class Evaluation>
-    static Evaluation liquidDensity(const Evaluation& temperature, const Evaluation& pressure)
+    static Evaluation liquidDensity(const Evaluation& temperature, const Evaluation& pressure,
+                                    bool extrapolate)
     {
-        return liquidDensity_(temperature, pressure);
+        return liquidDensity_(temperature, pressure, extrapolate);
     }
 
     /*!
@@ -334,18 +343,30 @@ public:
      *
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
+     * \param extrapolate Whether to extrapolate for untabulated/unreasonable
+     *                    values. If false an exception might be thrown.
      */
     template <class Evaluation>
-    static Evaluation liquidViscosity(const Evaluation& temperature, const Evaluation& pressure)
+    static Evaluation liquidViscosity(const Evaluation& temperature, const Evaluation& pressure,
+                                      bool extrapolate)
     {
         if (temperature > 570) {
             std::ostringstream oss;
             oss << "Viscosity of water based on Hu et al is too different from IAPWS for T above 570K and "
                 << "(T = " << temperature << ")";
-            throw NumericalIssue(oss.str());
+            if(extrapolate)
+            {
+#if HAVE_OPM_COMMON
+                OpmLog::warning(oss.str());
+#else
+                std::cerr << "warning: "<< oss.str() <<std::endl;
+#endif
+            }
+            else
+                throw NumericalIssue(oss.str());
         }
 
-        const Evaluation& rho = liquidDensity(temperature, pressure);
+        const Evaluation& rho = liquidDensity(temperature, pressure, extrapolate);
         return Common::viscosity(temperature, rho);
     }
 
@@ -356,9 +377,11 @@ private:
      *
      * \param temperature temperature of component in \f$\mathrm{[K]}\f$
      * \param pressure pressure of component in \f$\mathrm{[Pa]}\f$
+     * \param extrapolate Whether to extrapolate for untabulated/unreasonable
+     *                    values. If false an exception might be thrown.
      */
     template <class Evaluation>
-    static Evaluation liquidDensity_(const Evaluation& T, const Evaluation& pressure) {
+    static Evaluation liquidDensity_(const Evaluation& T, const Evaluation& pressure, bool extrapolate) {
         // Hu, Duan, Zhu and Chou: PVTx properties of the CO2-H2O and CO2-H2O-NaCl
         // systems below 647 K: Assessment of experimental data and
         // thermodynamics models, Chemical Geology, 2007.
@@ -366,7 +389,16 @@ private:
             std::ostringstream oss;
             oss << "Density of water is only implemented for temperatures below 647K and "
                 << "pressures below 100MPa. (T = " << T << ", p=" << pressure;
-            throw NumericalIssue(oss.str());
+            if(extrapolate)
+            {
+#if HAVE_OPM_COMMON
+                OpmLog::warning(oss.str());
+#else
+                std::cerr << "warning: "<< oss.str() <<std::endl;
+#endif
+            }
+            else
+                throw NumericalIssue(oss.str());
         }
 
         Evaluation p = pressure / 1e6; // to MPa
