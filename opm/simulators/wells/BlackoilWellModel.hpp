@@ -387,8 +387,6 @@ namespace Opm {
 
             void maybeDoGasLiftOptimize(DeferredLogger& deferred_logger);
 
-            bool checkDoGasLiftOptimization(DeferredLogger& deferred_logger);
-
             void gasLiftOptimizationStage1(DeferredLogger& deferred_logger,
                 GLiftProdWells &prod_wells, GLiftOptWells &glift_wells,
                 GasLiftGroupInfo &group_info, GLiftWellStateMap &state_map);

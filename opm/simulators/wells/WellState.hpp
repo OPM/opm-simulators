@@ -182,10 +182,6 @@ public:
         this->alq_state.update_count(name, increase);
     }
 
-    bool gliftOptimizationEnabled() const {
-        return do_glift_optimization_;
-    }
-
     void gliftTimeStepInit() {
         this->alq_state.reset_count();
     }
@@ -269,7 +265,6 @@ private:
     // whereas the GlobalWellInfo is not.
     std::optional<GlobalWellInfo> global_well_info;
     ALQState alq_state;
-    bool do_glift_optimization_;
     PhaseUsage phase_usage_;
 
     WellContainer<SingleWellState> wells_;

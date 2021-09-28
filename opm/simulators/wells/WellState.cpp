@@ -216,8 +216,6 @@ void WellState::init(const std::vector<double>& cellPressures,
 
     const int nw = wells_ecl.size();
 
-    do_glift_optimization_ = true;
-
     if( nw == 0 ) return ;
 
     // Initialize perfphaserates_, which must be done here.
