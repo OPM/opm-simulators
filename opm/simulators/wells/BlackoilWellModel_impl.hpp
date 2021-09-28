@@ -382,12 +382,10 @@ namespace Opm {
     {
         const auto& wtest_config = schedule()[timeStepIdx].wtest_config();
         if (wtest_config.size() != 0) { // there is a WTEST request
-            const auto wellsForTesting = wellTestState()
+            const std::vector<std::string> wellsForTesting = wellTestState()
                 .updateWells(wtest_config, wells_ecl_, simulationTime);
 
-            for (const auto& testWell : wellsForTesting) {
-                const std::string& well_name = testWell.first;
-
+            for (const std::string& well_name : wellsForTesting) {
                 // this is the well we will test
                 WellInterfacePtr well = createWellForWellTest(well_name, timeStepIdx, deferred_logger);
 
@@ -402,10 +400,7 @@ namespace Opm {
                 well->setVFPProperties(vfp_properties_.get());
                 well->setGuideRate(&guideRate_);
 
-                const WellTestConfig::Reason testing_reason = testWell.second;
-
-                well->wellTesting(ebosSimulator_, simulationTime, timeStepIdx,
-                                  testing_reason, this->wellState(), this->groupState(), wellTestState(), deferred_logger);
+                well->wellTesting(ebosSimulator_, simulationTime, this->wellState(), this->groupState(), wellTestState(), deferred_logger);
             }
         }
     }

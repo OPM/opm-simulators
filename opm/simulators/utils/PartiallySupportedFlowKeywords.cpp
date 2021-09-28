@@ -273,7 +273,7 @@ partiallySupported()
          {
             "WTEST",
             {
-               {3,{false, allow_values<std::string> {"E", ""}, "WTEST(TEST): only the E (economic) option is currently supported – will continue"}}, // REASON
+               {3,{false, allow_values<std::string> {"E", "P", ""}, "WTEST(TEST): only the E (economic) and P (physical) option is currently supported – will continue"}}, // REASON
             },
          },
    };

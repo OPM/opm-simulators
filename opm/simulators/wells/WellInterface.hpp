@@ -234,8 +234,7 @@ public:
     // TODO: theoretically, it should be a const function
     // Simulator is not const is because that assembleWellEq is non-const Simulator
     void wellTesting(const Simulator& simulator,
-                     const double simulation_time, const int report_step,
-                     const WellTestConfig::Reason testing_reason,
+                     const double simulation_time,
                      /* const */ WellState& well_state, const GroupState& group_state, WellTestState& welltest_state,
                      DeferredLogger& deferred_logger);
 
@@ -300,18 +299,6 @@ protected:
 
     virtual void updateIPR(const Simulator& ebos_simulator, DeferredLogger& deferred_logger) const=0;
 
-
-    void wellTestingEconomic(const Simulator& simulator,
-                             const double simulation_time, WellState& well_state, const GroupState& group_state,
-                             WellTestState& welltest_state, DeferredLogger& deferred_logger);
-
-    void wellTestingPhysical(const Simulator& simulator,
-                             const double simulation_time, const int report_step,
-                             WellState& well_state,
-                             const GroupState& group_state,
-                             WellTestState& welltest_state, DeferredLogger& deferred_logger);
-
-
     virtual void assembleWellEqWithoutIteration(const Simulator& ebosSimulator,
                                                 const double dt,
                                                 const Well::InjectionControls& inj_controls,
@@ -335,7 +322,7 @@ protected:
                               const GroupState& group_state,
                               DeferredLogger& deferred_logger);
 
-    void solveWellForTesting(const Simulator& ebosSimulator, WellState& well_state, const GroupState& group_state,
+    bool solveWellForTesting(const Simulator& ebosSimulator, WellState& well_state, const GroupState& group_state,
                              DeferredLogger& deferred_logger);
 
     bool shutUnsolvableWells() const;
