@@ -181,8 +181,8 @@ struct Test
 
             for (unsigned j = 0; j < numY; ++j) {
                 Scalar y = yMin + Scalar(j)/numY*(yMax - yMin);
-                if (std::abs(table->eval(x, y) - f(x, y)) > tolerance) {
-                    std::cerr << __FILE__ << ":" << __LINE__ << ": table->eval("<<x<<","<<y<<") != f("<<x<<","<<y<<"): " << table->eval(x,y) << " != " << f(x,y) << "\n";
+                if (std::abs(table->eval(x, y, false) - f(x, y)) > tolerance) {
+                    std::cerr << __FILE__ << ":" << __LINE__ << ": table->eval("<<x<<","<<y<<") != f("<<x<<","<<y<<"): " << table->eval(x,y, false) << " != " << f(x,y) << "\n";
                     return false;
                 }
             }

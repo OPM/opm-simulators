@@ -252,7 +252,7 @@ public:
         Evaluation tempC = temperature - 273.15;
         Evaluation pMPa = pressure/1.0E6;
 
-        const Evaluation rhow = H2O::liquidDensity(temperature, pressure);
+        const Evaluation rhow = H2O::liquidDensity(temperature, pressure, true);
         return
             rhow +
             1000*salinity*(

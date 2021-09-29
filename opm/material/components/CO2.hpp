@@ -52,7 +52,6 @@ template <class Scalar, class CO2Tables>
 class CO2 : public Component<Scalar, CO2<Scalar, CO2Tables> >
 {
     static const Scalar R;
-    static bool warningPrinted;
 
 public:
     /*!
@@ -165,7 +164,8 @@ public:
     static Evaluation gasEnthalpy(const Evaluation& temperature,
                                   const Evaluation& pressure)
     {
-        return CO2Tables::tabulatedEnthalpy.eval(temperature, pressure);
+        return CO2Tables::tabulatedEnthalpy.eval(temperature, pressure,
+                                                 /* extrapolate = */ true);
     }
 
     /*!
@@ -187,7 +187,8 @@ public:
     template <class Evaluation>
     static Evaluation gasDensity(const Evaluation& temperature, const Evaluation& pressure)
     {
-        return CO2Tables::tabulatedDensity.eval(temperature, pressure);
+        return CO2Tables::tabulatedDensity.eval(temperature, pressure,
+                                                /* extrapolate = */ true);
     }
 
     /*!
@@ -261,8 +262,6 @@ public:
     }
 };
 
-template <class Scalar, class CO2Tables>
-bool CO2<Scalar, CO2Tables>::warningPrinted = false;
 
 template <class Scalar, class CO2Tables>
 const Scalar CO2<Scalar, CO2Tables>::R = Constants<Scalar>::R;

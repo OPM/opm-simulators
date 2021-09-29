@@ -31,6 +31,11 @@
 #include <opm/material/common/Exceptions.hpp>
 #include <opm/material/common/MathToolbox.hpp>
 
+#if HAVE_OPM_COMMON
+#include <opm/common/OpmLog/OpmLog.hpp>
+#else
+#include <iostream>
+#endif
 
 #include <vector>
 
@@ -185,22 +190,36 @@ public:
     /*!
      * \brief Evaluate the function at a given (x,y) position.
      *
-     * If this method is called for a value outside of the tabulated
-     * range, a \c Opm::NumericalIssue exception is thrown.
+     * \param x x-position
+     * \param y y-position
+     * \param extrapolate Whether to extrapolate for untabulated values. If false then
+     * an exception might be thrown.
      */
     template <class Evaluation>
-    Evaluation eval(const Evaluation& x, const Evaluation& y) const
+    Evaluation eval(const Evaluation& x, const Evaluation& y, bool extrapolate) const
     {
-#ifndef NDEBUG
         if (!applies(x,y))
         {
-            throw NumericalIssue("Attempt to get tabulated value for ("
-                                   +std::to_string(double(scalarValue(x)))+", "+std::to_string(double(scalarValue(y)))
-                                   +") on a table of extend "
-                                   +std::to_string(xMin())+" to "+std::to_string(xMax())+" times "
-                                   +std::to_string(yMin())+" to "+std::to_string(yMax()));
-        };
+            std::string msg = "Attempt to get tabulated value for ("
+                +std::to_string(double(scalarValue(x)))+", "+std::to_string(double(scalarValue(y)))
+                +") on a table of extent "
+                +std::to_string(xMin())+" to "+std::to_string(xMax())+" times "
+                +std::to_string(yMin())+" to "+std::to_string(yMax());
+
+            if (!extrapolate)
+            {
+                throw NumericalIssue(msg);
+            }
+            else
+            {
+#if HAVE_OPM_COMMON
+                OpmLog::warning("PVT Table evaluation:" + msg + ". Will use extrapolation");
+#else
+                std::cerr << "warning: "<< msg<<std::endl;
 #endif
+            }
+
+        };
 
         Evaluation alpha = xToI(x);
         Evaluation beta = yToJ(y);
@@ -281,6 +300,7 @@ private:
     Scalar yMin_;
     Scalar yMax_;
 };
+
 } // namespace Opm
 
 #endif

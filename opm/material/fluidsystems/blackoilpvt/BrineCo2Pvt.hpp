@@ -286,7 +286,7 @@ public:
         const Evaluation log_D_H20 = -4.1764 + 712.52 / temperature - 2.5907e5 / (temperature*temperature);
 
         //Diffusion coefficient of CO2 in the brine phase modified following (Ratcliff and Holdcroft,1963 and Al-Rawajfeh, 2004)
-        const Evaluation& mu_H20 = H2O::liquidViscosity(temperature, pressure); // Water viscosity
+        const Evaluation& mu_H20 = H2O::liquidViscosity(temperature, pressure, true); // Water viscosity
         const Evaluation& mu_Brine = Brine::liquidViscosity(temperature, pressure); // Brine viscosity
         const Evaluation log_D_Brine = log_D_H20 - 0.87*log10(mu_Brine / mu_H20);
 
@@ -337,7 +337,7 @@ private:
         }
 
         const LhsEval& rho_brine = Brine::liquidDensity(T, pl);
-        const LhsEval& rho_pure = H2O::liquidDensity(T, pl);
+        const LhsEval& rho_pure = H2O::liquidDensity(T, pl, true);
         const LhsEval& rho_lCO2 = liquidDensityWaterCO2_(T, pl, xlCO2);
         const LhsEval& contribCO2 = rho_lCO2 - rho_pure;
 
@@ -353,7 +353,7 @@ private:
         Scalar M_H2O = H2O::molarMass();
 
         const LhsEval& tempC = temperature - 273.15;        /* tempC : temperature in °C */
-        const LhsEval& rho_pure = H2O::liquidDensity(temperature, pl);
+        const LhsEval& rho_pure = H2O::liquidDensity(temperature, pl, true);
         // calculate the mole fraction of CO2 in the liquid. note that xlH2O is available
         // as a function parameter, but in the case of a pure gas phase the value of M_T
         // for the virtual liquid phase can become very large
