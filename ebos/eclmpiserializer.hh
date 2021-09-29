@@ -22,7 +22,10 @@
 #define ECL_MPI_SERIALIZER_HH
 
 #include <opm/simulators/utils/ParallelRestart.hpp>
+
 #include <optional>
+#include <type_traits>
+#include <utility>
 #include <variant>
 
 namespace Opm {
@@ -68,7 +71,7 @@ public:
     //! \tparam T Type for vector elements
     //! \tparam complexType Whether or not T is a complex type
     //! \param data The vector to (de-)serialize
-    template<class T, bool complexType = true>
+    template <typename T, bool complexType = true>
     void vector(std::vector<T>& data)
     {
         auto handle = [&](auto& d)
@@ -355,7 +358,9 @@ public:
         data.serializeOp(*this);
     }
 
-    //! \brief Serialize and broadcast on root process, de-serialize on others.
+    //! \brief Serialize and broadcast on root process, de-serialize on
+    //! others.
+    //!
     //! \tparam T Type of class to broadcast
     //! \param data Class to broadcast
     template<class T>
@@ -466,6 +471,21 @@ protected:
         constexpr static bool value = true;
     };
 
+    //! Detect existence of \c serializeOp member function
+    //!
+    //! Base case (no \c serializeOp member function)
+    template <typename, class = void>
+    struct has_serializeOp : public std::false_type {};
+
+    //! Detect existence of \c serializeOp member function
+    //!
+    //! Non-default, albeit common, case (type has \c serializeOp member
+    //! function)
+    template <typename T>
+    struct has_serializeOp<
+        T, std::void_t<decltype(std::declval<T>().serializeOp(std::declval<EclMpiSerializer&>()))>
+    > : public std::true_type {};
+
     //! \brief Handler for pairs.
     //! \details If data is POD or a string, we pass it to the underlying serializer,
     //!          if not we assume a complex type.
@@ -498,21 +518,6 @@ protected:
         if (data)
             data->serializeOp(*this);
     }
-
-    //! \brief Checks if a type has a serializeOp member.
-    //! \detail Ideally we would check for the serializeOp member,
-    //!         but this is a member template. For simplicity,
-    //!         we use serializeObject as our check for now.
-    template <typename T>
-    class has_serializeOp
-    {
-        using yes_type = char;
-        using no_type = long;
-        template <typename U> static yes_type test(decltype(&U::serializeObject));
-        template <typename U> static no_type  test(...);
-    public:
-        static constexpr bool value = sizeof(test<T>(0)) == sizeof(yes_type);
-    };
 
     Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> m_comm; //!< Communicator to broadcast using
 
