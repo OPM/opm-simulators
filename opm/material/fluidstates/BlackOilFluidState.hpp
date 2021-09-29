@@ -101,7 +101,7 @@ template <class ScalarT,
           bool enableDissolution = true,
           bool enableEvaporation = false,
           bool enableBrine = false,
-          bool enableSolidSalt = false,
+          bool enableSaltPrecipitation = false,
           unsigned numStoragePhases = FluidSystem::numPhases>
 class BlackOilFluidState
 {
@@ -154,7 +154,7 @@ public:
             Valgrind::CheckDefined(*saltConcentration_);
         }
 
-        if (enableSolidSalt) {
+        if (enableSaltPrecipitation) {
             Valgrind::CheckDefined(*saltSaturation_);
         }
 
@@ -186,7 +186,7 @@ public:
         if (enableBrine){
             setSaltConcentration(BlackOil::getSaltConcentration_<FluidSystem, FluidState, Scalar>(fs, pvtRegionIdx));
         }
-        if (enableSolidSalt){
+        if (enableSaltPrecipitation){
             setSaltSaturation(BlackOil::getSaltSaturation_<FluidSystem, FluidState, Scalar>(fs, pvtRegionIdx));
         }
         for (unsigned storagePhaseIdx = 0; storagePhaseIdx < numStoragePhases; ++storagePhaseIdx) {
@@ -428,7 +428,7 @@ public:
      */
     const Scalar& saltSaturation() const
     {
-        if (!enableSolidSalt) {
+        if (!enableSaltPrecipitation) {
             static Scalar null = 0.0;
             return null;
         }
@@ -646,7 +646,7 @@ private:
     ConditionalStorage<enableDissolution, Scalar> Rv_;
     ConditionalStorage<enableEvaporation,Scalar> Rvw_;
     ConditionalStorage<enableBrine, Scalar> saltConcentration_;
-    ConditionalStorage<enableSolidSalt, Scalar> saltSaturation_;
+    ConditionalStorage<enableSaltPrecipitation, Scalar> saltSaturation_;
     unsigned short pvtRegionIdx_;
 };
 
