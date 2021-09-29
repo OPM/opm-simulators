@@ -67,7 +67,7 @@ public:
     double sum_polymer_rates() const;
     double sum_brine_rates() const;
 private:
-    double sum_connection_rates(const std::vector<double> connection_rates) const;
+    double sum_connection_rates(const std::vector<double>& connection_rates) const;
 };
 
 
