@@ -90,9 +90,6 @@ namespace Opm
         /// Return start date of simulation
         boost::posix_time::ptime startDateTime() const override;
 
-        /// Return current date.
-        boost::posix_time::ptime currentDateTime() const override;
-
         /// Set total time.
         /// This is primarily intended for multi-epoch schedules,
         /// where a timer for a given epoch does not have
