@@ -261,6 +261,8 @@ public:
                                            localWellTestState);
         }
 
+        WellTestState wtestState;
+
         if (this->collectToIORank_.isIORank()) {
             const Scalar curTime = simulator_.time() + simulator_.timeStepSize();
             const Scalar nextStepSize = simulator_.problem().nextTimeStepSize();
@@ -270,6 +272,7 @@ public:
                                 std::move(localGroupAndNetworkData),
                                 std::move(localAquiferData),
                                 this->actionState(),
+                                wtestState,
                                 this->udqState(),
                                 this->summaryState(),
                                 simulator_.problem().thresholdPressure().data(),

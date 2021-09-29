@@ -38,6 +38,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/SummaryState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQState.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestState.hpp>
 #include <opm/parser/eclipse/Units/UnitSystem.hpp>
 
 #include <dune/grid/common/mcmgmapper.hh>
@@ -106,6 +107,7 @@ bool directVerticalNeighbors(const std::array<int, 3>& cartDims,
 struct EclWriteTasklet : public Opm::TaskletInterface
 {
     Opm::Action::State actionState_;
+    Opm::WellTestState wtestState_;
     Opm::SummaryState summaryState_;
     Opm::UDQState udqState_;
     Opm::EclipseIO& eclIO_;
@@ -116,6 +118,7 @@ struct EclWriteTasklet : public Opm::TaskletInterface
     bool writeDoublePrecision_;
 
     explicit EclWriteTasklet(const Opm::Action::State& actionState,
+                             const Opm::WellTestState& wtestState,
                              const Opm::SummaryState& summaryState,
                              const Opm::UDQState& udqState,
                              Opm::EclipseIO& eclIO,
@@ -139,6 +142,7 @@ struct EclWriteTasklet : public Opm::TaskletInterface
     void run()
     {
         eclIO_.writeTimeStep(actionState_,
+                             wtestState_,
                              summaryState_,
                              udqState_,
                              reportStepNum_,
@@ -393,6 +397,7 @@ doWriteOutput(const int                     reportStepNum,
               data::GroupAndNetworkValues&& localGroupAndNetworkData,
               data::Aquifers&&              localAquiferData,
               const Action::State& actionState,
+              const WellTestState& wtestState,
               const UDQState& udqState,
               const SummaryState& summaryState,
               const std::vector<Scalar>& thresholdPressure,
@@ -428,9 +433,8 @@ doWriteOutput(const int                     reportStepNum,
 
     // first, create a tasklet to write the data for the current time
     // step to disk
-    auto eclWriteTasklet = std::make_shared<EclWriteTasklet>(
-        actionState, summaryState, udqState, *this->eclIO_,
-        reportStepNum, isSubStep, curTime, std::move(restartValue), doublePrecision);
+    auto eclWriteTasklet = std::make_shared<EclWriteTasklet>(actionState, wtestState, summaryState, udqState, *this->eclIO_,
+                                                             reportStepNum, isSubStep, curTime, std::move(restartValue), doublePrecision);
 
     // then, make sure that the previous I/O request has been completed
     // and the number of incomplete tasklets does not increase between

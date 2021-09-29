@@ -50,6 +50,7 @@ class Schedule;
 class SummaryConfig;
 class SummaryState;
 class UDQState;
+class WellTestState;
 
 template <class Grid, class EquilGrid, class GridView, class ElementMapper, class Scalar>
 class EclGenericWriter
@@ -91,6 +92,7 @@ protected:
                        data::GroupAndNetworkValues&& localGroupAndNetworkData,
                        data::Aquifers&&              localAquiferData,
                        const Action::State& actionState,
+                       const WellTestState& wtestState,
                        const UDQState& udqState,
                        const SummaryState& summaryState,
                        const std::vector<Scalar>& thresholdPressure,
