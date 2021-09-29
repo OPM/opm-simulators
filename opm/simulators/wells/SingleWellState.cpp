@@ -68,7 +68,7 @@ void SingleWellState::open() {
 }
 
 
-double SingleWellState::sum_connection_rates(const std::vector<double> connection_rates) const {
+double SingleWellState::sum_connection_rates(const std::vector<double>& connection_rates) const {
     return this->parallel_info.get().sumPerfValues(connection_rates.begin(), connection_rates.end());
 }
 
