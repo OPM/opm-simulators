@@ -381,7 +381,7 @@ namespace Opm {
                                             DeferredLogger& deferred_logger)
     {
         const auto& wtest_config = schedule()[timeStepIdx].wtest_config();
-        if (wtest_config.size() != 0) { // there is a WTEST request
+        if (!wtest_config.empty()) { // there is a WTEST request
             const std::vector<std::string> wellsForTesting = wellTestState()
                 .updateWells(wtest_config, wells_ecl_, simulationTime);
 
