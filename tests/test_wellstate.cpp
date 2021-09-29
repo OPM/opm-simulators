@@ -18,6 +18,7 @@
 */
 
 #include <config.h>
+#include <functional>
 
 #define BOOST_TEST_MODULE WellStateFIBOTest
 
@@ -138,17 +139,15 @@ namespace {
 
         auto wells = setup.sched.getWells(timeStep);
         pinfos.resize(wells.size());
-        std::vector<Opm::ParallelWellInfo*> ppinfos(wells.size());
+        std::vector<std::reference_wrapper<Opm::ParallelWellInfo>> ppinfos;
         auto pw = pinfos.begin();
-        auto ppw = ppinfos.begin();
 
         for (const auto& well : wells)
         {
             *pw = {well.name()};
-            *ppw = &(*pw);
+            ppinfos.push_back(std::ref(*pw));
             pw->communicateFirstPerforation(true);
             ++pw;
-            ++ppw;
         }
 
         state.init(cpress, setup.sched,
@@ -569,9 +568,10 @@ BOOST_AUTO_TEST_CASE(TESTPerfData) {
 
 
 BOOST_AUTO_TEST_CASE(TestSingleWellState) {
-    Opm::SingleWellState ws1(true,  10, 3, 1);
-    Opm::SingleWellState ws2(true,  10, 3, 2);
-    Opm::SingleWellState ws3(false, 10, 3, 3);
+    Opm::ParallelWellInfo pinfo;
+    Opm::SingleWellState ws1(pinfo, true,  10, 3, 1);
+    Opm::SingleWellState ws2(pinfo, true,  10, 3, 2);
+    Opm::SingleWellState ws3(pinfo, false, 10, 3, 3);
 
     ws1.bhp = 100;
     ws1.thp = 200;

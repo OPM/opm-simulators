@@ -183,7 +183,7 @@ namespace Opm {
         const auto& summaryState = ebosSimulator_.vanguard().summaryState();
         // Make wells_ecl_ contain only this partition's wells.
         wells_ecl_ = getLocalWells(timeStepIdx);
-        local_parallel_well_info_ = createLocalParallelWellInfo(wells_ecl_);
+        this->local_parallel_well_info_ = createLocalParallelWellInfo(wells_ecl_);
 
         // at least initializeWellState might be throw
         // exception in opm-material (UniformTabulated2DFunction.hpp)
@@ -416,9 +416,9 @@ namespace Opm {
     endReportStep()
     {
         // Clear the communication data structures for above values.
-        for (auto&& pinfo : local_parallel_well_info_)
+        for (auto&& pinfo : this->local_parallel_well_info_)
         {
-            pinfo->clear();
+            pinfo.get().clear();
         }
     }
 
@@ -736,7 +736,7 @@ namespace Opm {
         const auto pvtreg = perf_data.empty()
             ? 0 : pvt_region_idx_[perf_data.front().cell_index];
 
-        const auto& parallel_well_info = *local_parallel_well_info_[wellID];
+        const auto& parallel_well_info = this->local_parallel_well_info_[wellID].get();
         const auto global_pvtreg = parallel_well_info.broadcastFirstPerforationValue(pvtreg);
 
         return std::make_unique<WellType>(this->wells_ecl_[wellID],
@@ -1685,7 +1685,7 @@ namespace Opm {
             double weighted_temperature = 0.0;
             double total_weight = 0.0;
 
-            auto& well_info = *local_parallel_well_info_[wellID];
+            auto& well_info = local_parallel_well_info_[wellID].get();
             const int num_perf_this_well = well_info.communication().sum(well_perf_data_[wellID].size());
             auto& ws = this->wellState().well(wellID);
             auto& perf_data = ws.perf_data;

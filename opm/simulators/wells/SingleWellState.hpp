@@ -20,18 +20,22 @@
 #ifndef OPM_SINGLE_WELL_STATE_HEADER_INCLUDED
 #define OPM_SINGLE_WELL_STATE_HEADER_INCLUDED
 
+#include <functional>
 #include <vector>
 
 #include <opm/simulators/wells/SegmentState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
 #include <opm/simulators/wells/PerfData.hpp>
+#include <opm/simulators/wells/ParallelWellInfo.hpp>
 
 namespace Opm {
 
 class SingleWellState {
 public:
-    SingleWellState(bool is_producer, std::size_t num_perf, std::size_t num_phases, double temp);
+    SingleWellState(const ParallelWellInfo& pinfo, bool is_producer, std::size_t num_perf, std::size_t num_phases, double temp);
+
+    std::reference_wrapper<const ParallelWellInfo> parallel_info;
 
     Well::Status status{Well::Status::OPEN};
     bool producer;
@@ -55,6 +59,15 @@ public:
     void shut();
     void stop();
     void open();
+
+    // The sum_xxx_rates() functions sum over all connection rates of pertinent
+    // types. In the case of distributed wells this involves an MPI
+    // communication.
+    double sum_solvent_rates() const;
+    double sum_polymer_rates() const;
+    double sum_brine_rates() const;
+private:
+    double sum_connection_rates(const std::vector<double> connection_rates) const;
 };
 
 

@@ -33,13 +33,12 @@ namespace Opm
 {
 
 void WellState::base_init(const std::vector<double>& cellPressures,
-                                               const std::vector<Well>& wells_ecl,
-                                               const std::vector<ParallelWellInfo*>& parallel_well_info,
-                                               const std::vector<std::vector<PerforationData>>& well_perf_data,
-                                               const SummaryState& summary_state)
+                          const std::vector<Well>& wells_ecl,
+                          const std::vector<std::reference_wrapper<ParallelWellInfo>>& parallel_well_info,
+                          const std::vector<std::vector<PerforationData>>& well_perf_data,
+                          const SummaryState& summary_state)
 {
     // clear old name mapping
-    this->parallel_well_info_.clear();
     this->wells_.clear();
     {
         // const int nw = wells->number_of_wells;
@@ -61,7 +60,7 @@ void WellState::base_init(const std::vector<double>& cellPressures,
 void WellState::initSingleWell(const std::vector<double>& cellPressures,
                                const Well& well,
                                const std::vector<PerforationData>& well_perf_data,
-                               const ParallelWellInfo* well_info,
+                               const ParallelWellInfo& well_info,
                                const SummaryState& summary_state)
 {
     assert(well.isInjector() || well.isProducer());
@@ -72,8 +71,7 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
     const int np = pu.num_phases;
     double temp = well.isInjector() ? well.injectionControls(summary_state).temperature : 273.15 + 15.56;
 
-    this->parallel_well_info_.add(well.name(), well_info);
-    auto& ws = this->wells_.add(well.name(), SingleWellState{well.isProducer(), well_perf_data.size(), static_cast<std::size_t>(np), temp});
+    auto& ws = this->wells_.add(well.name(), SingleWellState{well_info, well.isProducer(), well_perf_data.size(), static_cast<std::size_t>(np), temp});
 
     if ( ws.perf_data.empty())
         return;
@@ -91,7 +89,7 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
 
     const double local_pressure = well_perf_data.empty() ?
                                       0 : cellPressures[well_perf_data[0].cell_index];
-    const double global_pressure = well_info->broadcastFirstPerforationValue(local_pressure);
+    const double global_pressure = well_info.broadcastFirstPerforationValue(local_pressure);
 
     if (well.getStatus() == Well::Status::OPEN) {
         ws.status = Well::Status::OPEN;
@@ -194,13 +192,13 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
 
 
 void WellState::init(const std::vector<double>& cellPressures,
-                                          const Schedule& schedule,
-                                          const std::vector<Well>& wells_ecl,
-                                          const std::vector<ParallelWellInfo*>& parallel_well_info,
-                                          const int report_step,
-                                          const WellState* prevState,
-                                          const std::vector<std::vector<PerforationData>>& well_perf_data,
-                                          const SummaryState& summary_state)
+                     const Schedule& schedule,
+                     const std::vector<Well>& wells_ecl,
+                     const std::vector<std::reference_wrapper<ParallelWellInfo>>& parallel_well_info,
+                     const int report_step,
+                     const WellState* prevState,
+                     const std::vector<std::vector<PerforationData>>& well_perf_data,
+                     const SummaryState& summary_state)
 {
     // call init on base class
     this->base_init(cellPressures, wells_ecl, parallel_well_info, well_perf_data, summary_state);
@@ -211,7 +209,7 @@ void WellState::init(const std::vector<double>& cellPressures,
     }
     for (const auto& winfo: parallel_well_info)
     {
-        well_rates[winfo->name()].first = winfo->isOwner();
+        well_rates[winfo.get().name()].first = winfo.get().isOwner();
     }
 
     const int nw = wells_ecl.size();
@@ -371,12 +369,12 @@ void WellState::init(const std::vector<double>& cellPressures,
 }
 
 void WellState::resize(const std::vector<Well>& wells_ecl,
-                                            const std::vector<ParallelWellInfo*>& parallel_well_info,
-                                            const Schedule& schedule,
-                                            const bool handle_ms_well,
-                                            const size_t numCells,
-                                            const std::vector<std::vector<PerforationData>>& well_perf_data,
-                                            const SummaryState& summary_state)
+                       const std::vector<std::reference_wrapper<ParallelWellInfo>>& parallel_well_info,
+                       const Schedule& schedule,
+                       const bool handle_ms_well,
+                       const size_t numCells,
+                       const std::vector<std::vector<PerforationData>>& well_perf_data,
+                       const SummaryState& summary_state)
 {
     const std::vector<double> tmp(numCells, 0.0); // <- UGLY HACK to pass the size
     init(tmp, schedule, wells_ecl, parallel_well_info, 0, nullptr, well_perf_data, summary_state);
@@ -471,15 +469,15 @@ WellState::report(const int* globalCellIdxMap,
         }
 
         if (pu.has_solvent || pu.has_zFraction) {
-            well.rates.set(rt::solvent, solventWellRate(well_index));
+            well.rates.set(rt::solvent, ws.sum_solvent_rates());
         }
 
         if (pu.has_polymer) {
-            well.rates.set(rt::polymer, polymerWellRate(well_index));
+            well.rates.set(rt::polymer, ws.sum_polymer_rates());
         }
 
         if (pu.has_brine) {
-            well.rates.set(rt::brine, brineWellRate(well_index));
+            well.rates.set(rt::brine, ws.sum_brine_rates());
         }
 
         if (ws.producer) {
@@ -500,7 +498,7 @@ WellState::report(const int* globalCellIdxMap,
             curr.inj  = ws.injection_cmode;
         }
 
-        const auto& pwinfo = *this->parallel_well_info_[well_index];
+        const auto& pwinfo = ws.parallel_info.get();
         if (pwinfo.communication().size()==1)
         {
             reportConnections(well.connections, pu, well_index, globalCellIdxMap);
@@ -737,31 +735,6 @@ WellState::calculateSegmentRates(const std::vector<std::vector<int>>& segment_in
     }
 }
 
-double WellState::solventWellRate(const int w) const
-{
-    auto& ws = this->well(w);
-    const auto& perf_data = ws.perf_data;
-    const auto& perf_rates_solvent = perf_data.solvent_rates;
-    return parallel_well_info_[w]->sumPerfValues(perf_rates_solvent.begin(), perf_rates_solvent.end());
-}
-
-double WellState::polymerWellRate(const int w) const
-{
-    auto& ws = this->well(w);
-    const auto& perf_data = ws.perf_data;
-    const auto& perf_rates_polymer = perf_data.polymer_rates;
-    return parallel_well_info_[w]->sumPerfValues(perf_rates_polymer.begin(), perf_rates_polymer.end());
-}
-
-double WellState::brineWellRate(const int w) const
-{
-    auto& ws = this->well(w);
-    const auto& perf_data = ws.perf_data;
-    const auto& perf_rates_brine = perf_data.brine_rates;
-    return parallel_well_info_[w]->sumPerfValues(perf_rates_brine.begin(), perf_rates_brine.end());
-}
-
-
 void WellState::stopWell(int well_index)
 {
     auto& ws = this->well(well_index);
@@ -908,7 +881,7 @@ WellState::reportSegmentResults(const PhaseUsage& pu,
 bool WellState::wellIsOwned(std::size_t well_index,
                                                  [[maybe_unused]] const std::string& wellName) const
 {
-    const auto& well_info = parallelWellInfo(well_index);
+    const auto& well_info = this->parallelWellInfo(well_index);
     assert(well_info.name() == wellName);
 
     return well_info.isOwner();
@@ -986,7 +959,8 @@ void WellState::resetConnectionTransFactors(const int well_index,
 const ParallelWellInfo&
 WellState::parallelWellInfo(std::size_t well_index) const
 {
-    return *parallel_well_info_[well_index];
+    const auto& ws = this->well(well_index);
+    return ws.parallel_info;
 }
 
 template void WellState::updateGlobalIsGrup<ParallelWellInfo::Communication>(const ParallelWellInfo::Communication& comm);

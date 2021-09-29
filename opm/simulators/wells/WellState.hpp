@@ -86,14 +86,14 @@ public:
     void init(const std::vector<double>& cellPressures,
               const Schedule& schedule,
               const std::vector<Well>& wells_ecl,
-              const std::vector<ParallelWellInfo*>& parallel_well_info,
+              const std::vector<std::reference_wrapper<ParallelWellInfo>>& parallel_well_info,
               const int report_step,
               const WellState* prevState,
               const std::vector<std::vector<PerforationData>>& well_perf_data,
               const SummaryState& summary_state);
 
     void resize(const std::vector<Well>& wells_ecl,
-                const std::vector<ParallelWellInfo*>& parallel_well_info,
+                const std::vector<std::reference_wrapper<ParallelWellInfo>>& parallel_well_info,
                 const Schedule& schedule,
                 const bool handle_ms_well,
                 const size_t numCells,
@@ -131,15 +131,6 @@ public:
 
     static void calculateSegmentRates(const std::vector<std::vector<int>>& segment_inlets, const std::vector<std::vector<int>>&segment_perforations,
                                       const std::vector<double>& perforation_rates, const int np, const int segment, std::vector<double>& segment_rates);
-
-    /// One rate pr well
-    double solventWellRate(const int w) const;
-
-    /// One rate pr well
-    double polymerWellRate(const int w) const;
-
-    /// One rate pr well
-    double brineWellRate(const int w) const;
 
 
     template<class Comm>
@@ -268,7 +259,6 @@ private:
     PhaseUsage phase_usage_;
 
     WellContainer<SingleWellState> wells_;
-    WellContainer<const ParallelWellInfo*> parallel_well_info_;
     // The well_rates variable is defined for all wells on all processors. The
     // bool in the value pair is whether the current process owns the well or
     // not.
@@ -303,14 +293,14 @@ private:
     /// with -1e100.
     void base_init(const std::vector<double>& cellPressures,
                    const std::vector<Well>& wells_ecl,
-                   const std::vector<ParallelWellInfo*>& parallel_well_info,
+                   const std::vector<std::reference_wrapper<ParallelWellInfo>>& parallel_well_info,
                    const std::vector<std::vector<PerforationData>>& well_perf_data,
                    const SummaryState& summary_state);
 
     void initSingleWell(const std::vector<double>& cellPressures,
                         const Well& well,
                         const std::vector<PerforationData>& well_perf_data,
-                        const ParallelWellInfo* well_info,
+                        const ParallelWellInfo& well_info,
                         const SummaryState& summary_state);
 
 
