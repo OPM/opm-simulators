@@ -250,7 +250,7 @@ updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_log
     static constexpr int Oil = WellInterfaceIndices<FluidSystem,Indices,Scalar>::Oil;
     static constexpr int Water = WellInterfaceIndices<FluidSystem,Indices,Scalar>::Water;
 
-    if (!baseif_.isOperable() && !baseif_.wellIsStopped()) return;
+    if (!baseif_.isOperableAndSolvable() && !baseif_.wellIsStopped()) return;
 
     const int well_index = baseif_.indexOfWell();
     const int np = baseif_.numPhases();

@@ -246,7 +246,7 @@ namespace Opm
             }
 
             updateWellOperability(simulator, well_state_copy, deferred_logger);
-            if ( !this->isOperable() ) {
+            if ( !this->isOperableAndSolvable() ) {
                 const auto msg = fmt::format("WTEST: Well {} is not operable (physical)", this->name());
                 deferred_logger.debug(msg);
                 return;
@@ -346,7 +346,7 @@ namespace Opm
                       const GroupState& group_state,
                       DeferredLogger& deferred_logger)
     {
-        if (!this->isOperable())
+        if (!this->isOperableAndSolvable())
             return;
 
         // keep a copy of the original well state
@@ -372,9 +372,9 @@ namespace Opm
                    const GroupState& group_state,
                    DeferredLogger& deferred_logger)
     {
-        const bool old_well_operable = this->operability_status_.isOperable();
+        const bool old_well_operable = this->operability_status_.isOperableAndSolvable();
 
-        if (param_.check_well_operabilty_iter_)
+        if (param_.check_well_operability_iter_)
             checkWellOperability(ebosSimulator, well_state, deferred_logger);
 
         // only use inner well iterations for the first newton iterations.
@@ -390,7 +390,7 @@ namespace Opm
             }
         }
 
-        const bool well_operable = this->operability_status_.isOperable();
+        const bool well_operable = this->operability_status_.isOperableAndSolvable();
         if (!well_operable && old_well_operable) {
             if (this->well_ecl_.getAutomaticShutIn()) {
                 deferred_logger.info(" well " + this->name() + " gets SHUT during iteration ");
@@ -454,7 +454,7 @@ namespace Opm
                          DeferredLogger& deferred_logger)
     {
 
-        if (!param_.check_well_operabilty_) {
+        if (!param_.check_well_operability_) {
             return;
         }
 
@@ -496,7 +496,7 @@ namespace Opm
                           const WellState& well_state,
                           DeferredLogger& deferred_logger)
     {
-        this->operability_status_.reset();
+        this->operability_status_.resetOperability();
 
         auto current_control = well_state.well(this->index_of_well_).production_cmode;
         // Operability checking is not free

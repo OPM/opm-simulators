@@ -1136,7 +1136,7 @@ namespace Opm {
         ConvergenceReport local_report;
         const int iterationIdx = ebosSimulator_.model().newtonMethod().numIterations();
         for (const auto& well : well_container_) {
-            if (well->isOperable() ) {
+            if (well->isOperableAndSolvable() ) {
                 local_report += well->getWellConvergence(this->wellState(), B_avg, local_deferredLogger, iterationIdx > param_.strict_outer_iter_wells_ );
             }
         }
@@ -1178,7 +1178,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     calculateExplicitQuantities(DeferredLogger& deferred_logger) const
     {
-        // TODO: checking isOperable() ?
+        // TODO: checking isOperableAndSolvable() ?
         for (auto& well : well_container_) {
             well->calculateExplicitQuantities(ebosSimulator_, this->wellState(), deferred_logger);
         }

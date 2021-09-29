@@ -183,7 +183,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     apply(const BVector& x, BVector& Ax) const
     {
-        if (!this->isOperable() && !this->wellIsStopped()) return;
+        if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
         if ( this->param_.matrix_add_well_contributions_ )
         {
@@ -210,7 +210,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     apply(BVector& r) const
     {
-        if (!this->isOperable() && !this->wellIsStopped()) return;
+        if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
         // invDrw_ = duneD^-1 * resWell_
         const BVectorWell invDrw = mswellhelpers::applyUMFPack(this->duneD_, this->duneDSolver_, this->resWell_);
@@ -227,7 +227,7 @@ namespace Opm
                                           WellState& well_state,
                                           DeferredLogger& deferred_logger) const
     {
-        if (!this->isOperable() && !this->wellIsStopped()) return;
+        if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
         BVectorWell xw(1);
         this->recoverSolutionWell(x, xw);
@@ -484,7 +484,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     solveEqAndUpdateWellState(WellState& well_state, DeferredLogger& deferred_logger)
     {
-        if (!this->isOperable() && !this->wellIsStopped()) return;
+        if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
         // We assemble the well equations, then we check the convergence,
         // which is why we do not put the assembleWellEq here.
@@ -578,7 +578,7 @@ namespace Opm
                     DeferredLogger& deferred_logger,
                     const double relaxation_factor) const
     {
-        if (!this->isOperable() && !this->wellIsStopped()) return;
+        if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
         const double dFLimit = this->param_.dwell_fraction_max_;
         const double max_pressure_change = this->param_.max_pressure_change_ms_wells_;
@@ -1336,7 +1336,7 @@ namespace Opm
                              const GroupState& group_state,
                              DeferredLogger& deferred_logger)
     {
-        if (!this->isOperable() && !this->wellIsStopped()) return true;
+        if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return true;
 
         const int max_iter_number = this->param_.max_inner_iter_ms_wells_;
         const WellState well_state0 = well_state;
@@ -1460,7 +1460,7 @@ namespace Opm
                                    DeferredLogger& deferred_logger)
     {
 
-        if (!this->isOperable() && !this->wellIsStopped()) return;
+        if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
         // update the upwinding segments
         this->updateUpwindingSegments();

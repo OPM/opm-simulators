@@ -406,9 +406,9 @@ namespace Opm
         bool matrix_add_well_contributions_;
 
         // Whether to check well operability
-        bool check_well_operabilty_;
+        bool check_well_operability_;
         // Whether to check well operability during iterations
-        bool check_well_operabilty_iter_;
+        bool check_well_operability_iter_;
 
 
         /// Construct from user parameters or defaults.
@@ -442,8 +442,8 @@ namespace Opm
             update_equations_scaling_ = EWOMS_GET_PARAM(TypeTag, bool, UpdateEquationsScaling);
             use_update_stabilization_ = EWOMS_GET_PARAM(TypeTag, bool, UseUpdateStabilization);
             matrix_add_well_contributions_ = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
-            check_well_operabilty_ = EWOMS_GET_PARAM(TypeTag, bool, EnableWellOperabilityCheck);
-            check_well_operabilty_iter_ = EWOMS_GET_PARAM(TypeTag, bool, EnableWellOperabilityCheckIter);
+            check_well_operability_ = EWOMS_GET_PARAM(TypeTag, bool, EnableWellOperabilityCheck);
+            check_well_operability_iter_ = EWOMS_GET_PARAM(TypeTag, bool, EnableWellOperabilityCheckIter);
 
             deck_file_name_ = EWOMS_GET_PARAM(TypeTag, std::string, EclDeckFileName);
         }

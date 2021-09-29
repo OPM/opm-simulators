@@ -82,7 +82,7 @@ public:
     bool underPredictionMode() const;
 
     // whether the well is operable
-    bool isOperable() const;
+    bool isOperableAndSolvable() const;
 
     void initCompletions();
     void closeCompletions(WellTestState& wellTestState);
@@ -180,7 +180,7 @@ protected:
 
     // definition of the struct OperabilityStatus
     struct OperabilityStatus {
-        bool isOperable() const {
+        bool isOperableAndSolvable() const {
             if (!operable_under_only_bhp_limit || !solvable) {
                 return false;
             } else {
@@ -196,7 +196,7 @@ protected:
             return can_obtain_bhp_with_thp_limit && obey_bhp_limit_with_thp_limit;
         }
 
-        void reset() {
+        void resetOperability() {
             operable_under_only_bhp_limit = true;
             obey_thp_limit_under_bhp_limit = true;
             can_obtain_bhp_with_thp_limit = true;

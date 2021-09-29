@@ -439,7 +439,7 @@ updatePrimaryVariables(const WellState& well_state) const
 
     // TODO: to test using rate conversion coefficients to see if it will be better than
     // this default one
-    if (!baseif_.isOperable() && !baseif_.wellIsStopped()) return;
+    if (!baseif_.isOperableAndSolvable() && !baseif_.wellIsStopped()) return;
 
     const Well& well = baseif_.wellEcl();
 
@@ -510,7 +510,7 @@ void
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 recoverSolutionWell(const BVector& x, BVectorWell& xw) const
 {
-    if (!baseif_.isOperable() && !baseif_.wellIsStopped()) return;
+    if (!baseif_.isOperableAndSolvable() && !baseif_.wellIsStopped()) return;
 
     BVectorWell resWell = resWell_;
     // resWell = resWell - B * x
