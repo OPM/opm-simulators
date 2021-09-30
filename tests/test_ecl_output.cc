@@ -41,6 +41,7 @@
 #include <ebos/ecloutputblackoilmodule.hh>
 #include <ebos/eclwriter.hh>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/State.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestState.hpp>
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/misc/mpimanager.hh>
@@ -169,6 +170,7 @@ BOOST_AUTO_TEST_CASE(Summary)
     typedef Opm::EclWriter<TypeTag> EclWriterType;
     // create the actual ECL writer
     std::unique_ptr<EclWriterType> eclWriter = std::unique_ptr<EclWriterType>(new EclWriterType(*simulator));
+    Opm::WellTestState wtestState;
 
     simulator->model().applyInitialSolution();
     Opm::data::Wells dw;
@@ -177,15 +179,15 @@ BOOST_AUTO_TEST_CASE(Summary)
 
     simulator->setEpisodeIndex(0);
     eclWriter->evalSummaryState(substep);
-    eclWriter->writeOutput(substep);
+    eclWriter->writeOutput(substep, wtestState);
 
     simulator->setEpisodeIndex(1);
     eclWriter->evalSummaryState(substep);
-    eclWriter->writeOutput(substep);
+    eclWriter->writeOutput(substep, wtestState);
 
     simulator->setEpisodeIndex(2);
     eclWriter->evalSummaryState(substep);
-    eclWriter->writeOutput(substep);
+    eclWriter->writeOutput(substep, wtestState);
 
     auto res = readsum( casename );
     const auto* resp = res.get();

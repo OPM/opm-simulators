@@ -147,7 +147,7 @@ public:
     /*!
      * \brief collect and pass data and pass it to eclIO writer
      */
-    void evalSummaryState(bool isSubStep)
+    void evalSummaryState(bool isSubStep, const WellTestState& wtestState)
     {
         const int reportStepNum = simulator_.episodeIndex() + 1;
         /*
@@ -261,8 +261,6 @@ public:
                                            localWellTestState);
         }
 
-        WellTestState wtestState;
-
         if (this->collectToIORank_.isIORank()) {
             const Scalar curTime = simulator_.time() + simulator_.timeStepSize();
             const Scalar nextStepSize = simulator_.problem().nextTimeStepSize();
@@ -272,7 +270,7 @@ public:
                                 std::move(localGroupAndNetworkData),
                                 std::move(localAquiferData),
                                 this->actionState(),
-                                wtestState,
+                                std::move(localWTestState),
                                 this->udqState(),
                                 this->summaryState(),
                                 simulator_.problem().thresholdPressure().data(),

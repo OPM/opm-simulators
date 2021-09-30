@@ -1198,7 +1198,7 @@ public:
 
         bool isSubStep = !EWOMS_GET_PARAM(TypeTag, bool, EnableWriteAllSolutions) && !this->simulator().episodeWillBeOver();
         if (enableEclOutput_)
-            eclWriter_->writeOutput(isSubStep);
+            eclWriter_->writeOutput(isSubStep, this->wellModel_.wellTestState());
     }
 
     void finalizeOutput() {

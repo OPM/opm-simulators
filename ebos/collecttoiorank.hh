@@ -42,6 +42,7 @@ template<class Grid> class CartesianIndexMapper;
 
 namespace Opm {
 
+
 template <class Grid, class EquilGrid, class GridView>
 class CollectDataToIORank
 {

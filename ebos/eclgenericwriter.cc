@@ -397,7 +397,7 @@ doWriteOutput(const int                     reportStepNum,
               data::GroupAndNetworkValues&& localGroupAndNetworkData,
               data::Aquifers&&              localAquiferData,
               const Action::State& actionState,
-              const WellTestState& wtestState,
+              WellTestState&&               localwtestState,
               const UDQState& udqState,
               const SummaryState& summaryState,
               const std::vector<Scalar>& thresholdPressure,
@@ -433,8 +433,16 @@ doWriteOutput(const int                     reportStepNum,
 
     // first, create a tasklet to write the data for the current time
     // step to disk
-    auto eclWriteTasklet = std::make_shared<EclWriteTasklet>(actionState, wtestState, summaryState, udqState, *this->eclIO_,
-                                                             reportStepNum, isSubStep, curTime, std::move(restartValue), doublePrecision);
+    auto eclWriteTasklet = std::make_shared<EclWriteTasklet>(actionState,
+                                                             isParallel ? this->collectToIORank.globalWellTestState() : std::move(wtestState),
+                                                             summaryState,
+                                                             udqState,
+                                                             *this->eclIO_,
+                                                             reportStepNum,
+                                                             isSubStep,
+                                                             curTime,
+                                                             std::move(restartValue),
+                                                             doublePrecision);
 
     // then, make sure that the previous I/O request has been completed
     // and the number of incomplete tasklets does not increase between
