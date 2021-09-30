@@ -158,6 +158,7 @@ tests[co2store]="flow co2store CO2STORE"
 tests[co2store_diffusive]="flow co2store CO2STORE_DIFFUSIVE"
 tests[co2store_drsdtcon]="flow co2store CO2STORE_DRSDTCON"
 tests[actionx_gconinje]="flow actionx ACTIONX_GCONINJE"
+tests[actionx_gconprod]="flow actionx ACTIONX_GCONPROD"
 tests[actionx_wconinje]="flow actionx ACTIONX_WCONINJE"
 
 changed_tests=""

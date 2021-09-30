@@ -935,6 +935,14 @@ add_test_compareECLFiles(CASENAME actionx_gconinje
                          REL_TOL ${rel_tol}
                          DIR actionx)
 
+add_test_compareECLFiles(CASENAME actionx_gconprod
+                         FILENAME ACTIONX_GCONPROD
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR actionx)
+
+
 add_test_compareECLFiles(CASENAME actionx_wconinje
                          FILENAME ACTIONX_WCONINJE
                          SIMULATOR flow
