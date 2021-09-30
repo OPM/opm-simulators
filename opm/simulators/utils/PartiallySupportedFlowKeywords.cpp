@@ -85,7 +85,7 @@ partiallySupported()
          {
             "GCONINJE",
             {
-               {10,{false, allow_values<std::string> {"RATE", "NETV", "VOID"}, "GCONINJE(GUIPHASE): only RATE/NETV/VOID are supported - will STOP"}}, // GUIDE_RATE_DEF
+               {10,{false, allow_values<std::string> {"RATE", "NETV", "RESV", "VOID"}, "GCONINJE(GUIPHASE): only RATE/NETV/VOID are supported - will STOP"}}, // GUIDE_RATE_DEF
             },
          },
          {
@@ -273,7 +273,7 @@ partiallySupported()
          {
             "WTEST",
             {
-               {3,{false, allow_values<std::string> {"E", "P", ""}, "WTEST(TEST): only the E (economic) and P (physical) option is currently supported – will continue"}}, // REASON
+               {3,{false, allow_values<std::string> {"E", "P", "EP", "PE", ""}, "WTEST(TEST): only the E (economic) option is currently supported – will continue"}}, // REASON
             },
          },
    };
@@ -476,7 +476,6 @@ partiallySupported()
             "AQUCT",
             {
                {12,{false, allow_values<double> {0}, "AQUCT(SALTCON): option is not used and should be defaulted – value ignored"}}, // INI_SALT
-               {13,{false, allow_values<double> {}, "AQUCT(TEMP): option is not used and should be defaulted – value ignored"}}, // TEMP_AQUIFER
             },
          },
          {
