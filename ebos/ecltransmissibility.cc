@@ -88,7 +88,7 @@ EclTransmissibility(const EclipseState& eclState,
                     const GridView& gridView,
                     const Dune::CartesianIndexMapper<Grid>& cartMapper,
                     const Grid& grid,
-                    const std::vector<double>& centroids,
+                    std::function<std::array<double,dimWorld>(int)> centroids,
                     bool enableEnergy,
                     bool enableDiffusivity)
       : eclState_(eclState)
@@ -174,15 +174,7 @@ update(bool global)
         // compute the axis specific "centroids" used for the transmissibilities. for
         // consistency with the flow simulator, we use the element centers as
         // computed by opm-parser's Opm::EclipseGrid class for all axes.
-        std::array<double, 3> centroid;
-        if (gridView_.comm().rank() == 0) {
-            const auto& eclGrid = eclState_.getInputGrid();
-            unsigned cartesianCellIdx = cartMapper_.cartesianIndex(elemIdx);
-            centroid = eclGrid.getCellCenter(cartesianCellIdx);
-        } else
-            std::copy(centroids_.begin() + centroidIdx * dimWorld,
-                      centroids_.begin() + (centroidIdx + 1) * dimWorld,
-                      centroid.begin());
+        std::array<double, dimWorld> centroid = centroids_(elemIdx);
 
         for (unsigned axisIdx = 0; axisIdx < dimWorld; ++axisIdx)
             for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx)

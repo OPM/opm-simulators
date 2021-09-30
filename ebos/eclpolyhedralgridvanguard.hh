@@ -92,7 +92,7 @@ private:
     typedef Grid* GridPointer;
     typedef EquilGrid* EquilGridPointer;
     typedef Dune::CartesianIndexMapper<Grid> CartesianIndexMapper;
-    typedef CartesianIndexMapper* CartesianIndexMapperPointer;
+    typedef std::unique_ptr<CartesianIndexMapper> CartesianIndexMapperPointer;
 
 public:
     EclPolyhedralGridVanguard(Simulator& simulator)
@@ -104,7 +104,6 @@ public:
 
     ~EclPolyhedralGridVanguard()
     {
-        delete cartesianIndexMapper_;
         delete grid_;
     }
 
@@ -184,11 +183,23 @@ public:
         return simulator_.problem().eclTransmissibilities();
     }
 
+    /*!
+     * \brief Get function to query cell centroids for a distributed grid.
+     *
+     * Currently this only non-empty for a loadbalanced CpGrid.
+     * It is a function return the centroid for the given element
+     * index.
+     */
+    std::function<std::array<double,dimensionworld>(int)>
+    cellCentroids() const
+    {
+        return this->cellCentroids_(this->cartesianIndexMapper());
+    }
 protected:
     void createGrids_()
     {
         grid_ = new Grid(this->eclState().getInputGrid(), this->eclState().fieldProps().porv(true));
-        cartesianIndexMapper_ = new CartesianIndexMapper(*grid_);
+        cartesianIndexMapper_ = std::make_unique<CartesianIndexMapper>(*grid_);
         this->updateCartesianToCompressedMapping_();
         this->updateCellDepths_();
     }

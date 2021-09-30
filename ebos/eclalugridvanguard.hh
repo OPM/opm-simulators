@@ -102,7 +102,6 @@ public:
 
     ~EclAluGridVanguard()
     {
-        delete cartesianIndexMapper_;
         delete equilCartesianIndexMapper_;
         delete grid_;
         delete equilGrid_;
@@ -178,6 +177,18 @@ public:
     const EquilCartesianIndexMapper& equilCartesianIndexMapper() const
     { return *equilCartesianIndexMapper_; }
 
+    /*!
+     * \brief Get function to query cell centroids for a distributed grid.
+     *
+     * Currently this only non-empty for a loadbalanced CpGrid.
+     * It is a function return the centroid for the given element
+     * index.
+     */
+    std::function<std::array<double,dimensionworld>(int)>
+    cellCentroids() const
+    {
+        return this->cellCentroids_(cartesianIndexMapper_.get());
+    }
 protected:
     void createGrids_()
     {
@@ -210,7 +221,8 @@ protected:
         grid_ = factory.convert(*equilGrid_, cartesianCellId_);
 
         cartesianIndexMapper_ =
-            new CartesianIndexMapper(*grid_, cartesianDimension_, cartesianCellId_);
+            std::make_unique<CartesianIndexMapper>(*grid_, cartesianDimension_,
+                                                   cartesianCellId_);
     }
 
     void filterConnections_()
@@ -222,7 +234,7 @@ protected:
     EquilGrid* equilGrid_;
     std::vector<int> cartesianCellId_;
     std::array<int,dimension> cartesianDimension_;
-    CartesianIndexMapper* cartesianIndexMapper_;
+    std::unique_ptr<CartesianIndexMapper> cartesianIndexMapper_;
     EquilCartesianIndexMapper* equilCartesianIndexMapper_;
 };
 

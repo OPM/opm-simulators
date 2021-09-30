@@ -92,7 +92,6 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doLoadBalance_(Dun
         // its edge weights. since this is (kind of) a layering violation and
         // transmissibilities are relatively expensive to compute, we only do it if
         // more than a single process is involved in the simulation.
-        cartesianIndexMapper_.reset(new CartesianIndexMapper(*grid_));
         if (grid_->size(0))
         {
             this->allocTrans();
@@ -175,8 +174,6 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doLoadBalance_(Dun
         }
         grid_->switchToDistributedView();
 
-        cartesianIndexMapper_.reset();
-
         // Calling Schedule::filterConnections would remove any perforated
         // cells that exist only on other ranks even in the case of distributed wells
         // But we need all connections to figure out the first cell of a well (e.g. for
@@ -209,12 +206,6 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::distributeFieldPro
     }
 }
 #endif
-
-template<class ElementMapper, class GridView, class Scalar>
-void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::allocCartMapper()
-{
-    this->cartesianIndexMapper_.reset(new CartesianIndexMapper(this->grid()));
-}
 
 template<class ElementMapper, class GridView, class Scalar>
 void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(EclipseState& eclState)
@@ -258,6 +249,9 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Ecl
         }
 
     }
+
+    cartesianIndexMapper_ = std::make_unique<CartesianIndexMapper>(*grid_);
+
 #if HAVE_MPI
     {
         const bool has_numerical_aquifer = eclState.aquifer().hasNumericalAquifer();
@@ -285,7 +279,7 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Ecl
     if (mpiRank == 0)
     {
         equilGrid_.reset(new Dune::CpGrid(*grid_));
-        equilCartesianIndexMapper_.reset(new CartesianIndexMapper(*equilGrid_));
+        equilCartesianIndexMapper_ = std::make_unique<CartesianIndexMapper>(*equilGrid_);
 
         std::vector<int> actnum = UgGridHelpers::createACTNUM(*grid_);
         auto &field_props = eclState.fieldProps();
