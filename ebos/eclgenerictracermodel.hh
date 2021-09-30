@@ -51,7 +51,7 @@ public:
     using TracerMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, 1, 1>>;
     using TracerVector = Dune::BlockVector<Dune::FieldVector<Scalar,1>>;
     using CartesianIndexMapper = Dune::CartesianIndexMapper<Grid>;
-
+    static const int dimWorld = Grid::dimensionworld;
     /*!
      * \brief Return the number of tracers considered by the tracerModel.
      */
@@ -78,7 +78,8 @@ protected:
     EclGenericTracerModel(const GridView& gridView,
                           const EclipseState& eclState,
                           const CartesianIndexMapper& cartMapper,
-                          const DofMapper& dofMapper);
+                          const DofMapper& dofMapper,
+                          const std::function<std::array<double,dimWorld>(int)> centroids);
 
     /*!
      * \brief Initialize all internal data structures needed by the tracer module
@@ -109,7 +110,8 @@ protected:
 
     // <wellName, tracerIdx> -> wellRate
     std::map<std::pair<std::string, std::string>, double> wellTracerRate_;
-
+    /// \brief Function returning the cell centers
+    std::function<std::array<double,dimWorld>(int)> centroids_;
 };
 
 } // namespace Opm

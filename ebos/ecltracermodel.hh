@@ -90,7 +90,8 @@ public:
         : BaseType(simulator.vanguard().gridView(),
                    simulator.vanguard().eclState(),
                    simulator.vanguard().cartesianIndexMapper(),
-                   simulator.model().dofMapper())
+                   simulator.model().dofMapper(),
+                   simulator.vanguard().cellCentroids())
         , simulator_(simulator)
         , wat_(TracerBatch<TracerVector>(waterPhaseIdx))
         , oil_(TracerBatch<TracerVector>(oilPhaseIdx))

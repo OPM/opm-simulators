@@ -45,6 +45,8 @@
 #include <iostream>
 #include <set>
 #include <stdexcept>
+#include <functional>
+#include <array>
 
 namespace Opm {
 
@@ -53,11 +55,13 @@ EclGenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
 EclGenericTracerModel(const GridView& gridView,
                       const EclipseState& eclState,
                       const CartesianIndexMapper& cartMapper,
-                      const DofMapper& dofMapper)
+                      const DofMapper& dofMapper,
+                      const std::function<std::array<double,dimWorld>(int)> centroids)
     : gridView_(gridView)
     , eclState_(eclState)
     , cartMapper_(cartMapper)
     , dofMapper_(dofMapper)
+    , centroids_(centroids)
 {
 }
 
@@ -137,12 +141,10 @@ doInit(bool enabled, size_t numGridDof,
         }
         //TVDPF keyword
         else {
-            const auto& eclGrid = eclState_.getInputGrid();
-
             for (size_t globalDofIdx = 0; globalDofIdx < numGridDof; ++globalDofIdx){
-                int cartDofIdx = cartMapper_.cartesianIndex(globalDofIdx);
-                const auto& center = eclGrid.getCellCenter(cartDofIdx);
-                tracerConcentration_[tracerIdx][globalDofIdx] = tracer.free_tvdp.evaluate("TRACER_CONCENTRATION", center[2]);
+                tracerConcentration_[tracerIdx][globalDofIdx] =
+                    tracer.free_tvdp.evaluate("TRACER_CONCENTRATION",
+                                              centroids_(globalDofIdx)[2]);
             }
         }
         ++tracerIdx;
