@@ -28,6 +28,7 @@
 #include <opm/output/data/Solution.hpp>
 #include <opm/output/data/Wells.hpp>
 #include <opm/output/data/Groups.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestState.hpp>
 
 #include <opm/grid/common/p2pcommunicator.hh>
 
@@ -69,7 +70,8 @@ public:
                  const std::map<std::size_t, double>& localWBPData,
                  const data::Wells& localWellData,
                  const data::GroupAndNetworkValues& localGroupAndNetworkData,
-                 const data::Aquifers& localAquiferData);
+                 const data::Aquifers& localAquiferData,
+                 const WellTestState& localWellTestState);
 
     const std::map<std::size_t, double>& globalWBPData() const
     { return this->globalWBPData_; }
@@ -82,6 +84,9 @@ public:
 
     const data::Wells& globalWellData() const
     { return globalWellData_; }
+
+    const WellTestState& globalWellTestState() const
+    { return this->globalWellTestState_; }
 
     const data::GroupAndNetworkValues& globalGroupAndNetworkData() const
     { return globalGroupAndNetworkData_; }
@@ -117,6 +122,7 @@ protected:
     data::Wells globalWellData_;
     data::GroupAndNetworkValues globalGroupAndNetworkData_;
     data::Aquifers globalAquiferData_;
+    WellTestState globalWellTestState_;
     std::vector<int> localIdxToGlobalIdx_;
     /// \brief sorted list of cartesian indices present-
     ///

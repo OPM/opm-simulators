@@ -576,6 +576,41 @@ public:
     }
 };
 
+class PackUnPackWellTestState : public P2PCommunicatorType::DataHandleInterface
+{
+public:
+    PackUnPackWellTestState(const WellTestState& localWTestState,
+                            WellTestState& globalWTestState,
+                            bool isIORank)
+        : local_(localWTestState)
+        , global_(globalWTestState)
+    {
+        if (isIORank) {
+            MessageBufferType buffer;
+            pack(0, buffer);
+
+            // pass a dummyLink to satisfy virtual class
+            int dummyLink = -1;
+            unpack(dummyLink, buffer);
+        }
+    }
+
+    void pack(int link, MessageBufferType& buffer) {
+        if (link != 0)
+            throw std::logic_error("link in method pack is not 0 as expected");
+        this->local_.pack(buffer);
+    }
+
+    void unpack(int, MessageBufferType& buffer) {
+        this->global_.unpack(buffer);
+    }
+
+private:
+    const WellTestState& local_;
+    WellTestState& global_;
+};
+
+
 class PackUnPackAquiferData : public P2PCommunicatorType::DataHandleInterface
 {
     const data::Aquifers& localAquiferData_;
@@ -842,7 +877,8 @@ collect(const data::Solution& localCellData,
         const std::map<std::size_t, double>& localWBPData,
         const data::Wells& localWellData,
         const data::GroupAndNetworkValues& localGroupAndNetworkData,
-        const data::Aquifers& localAquiferData)
+        const data::Aquifers& localAquiferData,
+        const WellTestState& localWellTestState)
 {
     globalCellData_ = {};
     globalBlockData_.clear();
@@ -850,6 +886,7 @@ collect(const data::Solution& localCellData,
     globalWellData_.clear();
     globalGroupAndNetworkData_.clear();
     globalAquiferData_.clear();
+    globalWellTestState_.clear();
 
     // index maps only have to be build when reordering is needed
     if(!needsReordering && !isParallel())
@@ -900,12 +937,19 @@ collect(const data::Solution& localCellData,
                 this->isIORank()
     };
 
+    PackUnPackWellTestState packUnpackWellTestState {
+        localWellTestState,
+        this->globalWellTestState_,
+        this->isIORank()
+    };
+
     toIORankComm_.exchange(packUnpackCellData);
     toIORankComm_.exchange(packUnpackWellData);
     toIORankComm_.exchange(packUnpackGroupAndNetworkData);
     toIORankComm_.exchange(packUnpackBlockData);
     toIORankComm_.exchange(packUnpackWBPData);
     toIORankComm_.exchange(packUnpackAquiferData);
+    toIORankComm_.exchange(packUnpackWellTestState);
 
 #ifndef NDEBUG
     // make sure every process is on the same page
