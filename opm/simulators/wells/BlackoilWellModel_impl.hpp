@@ -1136,7 +1136,7 @@ namespace Opm {
         ConvergenceReport local_report;
         const int iterationIdx = ebosSimulator_.model().newtonMethod().numIterations();
         for (const auto& well : well_container_) {
-            if (well->isOperable() ) {
+            if (well->isOperableAndSolvable() ) {
                 local_report += well->getWellConvergence(this->wellState(), B_avg, local_deferredLogger, iterationIdx > param_.strict_outer_iter_wells_ );
             }
         }
@@ -1178,7 +1178,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     calculateExplicitQuantities(DeferredLogger& deferred_logger) const
     {
-        // TODO: checking isOperable() ?
+        // TODO: checking isOperableAndSolvable() ?
         for (auto& well : well_container_) {
             well->calculateExplicitQuantities(ebosSimulator_, this->wellState(), deferred_logger);
         }
@@ -1285,7 +1285,7 @@ namespace Opm {
         for (const auto& well : well_container_) {
             const auto& wname = well->name();
             const auto wasClosed = wellTestState.hasWellClosed(wname);
-
+            well->checkWellOperability(ebosSimulator_, this->wellState(), local_deferredLogger);
             well->updateWellTestState(this->wellState().well(wname), simulationTime, /*writeMessageToOPMLog=*/ true, wellTestState, local_deferredLogger);
 
             if (!wasClosed && wellTestState.hasWellClosed(wname)) {
@@ -1394,11 +1394,6 @@ namespace Opm {
     prepareTimeStep(DeferredLogger& deferred_logger)
     {
         for (const auto& well : well_container_) {
-            const bool old_well_operable = well->isOperable();
-            well->checkWellOperability(ebosSimulator_, this->wellState(), deferred_logger);
-
-            if (!well->isOperable() ) continue;
-
             auto& events = this->wellState().well(well->indexOfWell()).events;
             if (events.hasEvent(WellState::event_mask)) {
                 well->updateWellStateWithTarget(ebosSimulator_, this->groupState(), this->wellState(), deferred_logger);
@@ -1406,33 +1401,13 @@ namespace Opm {
                 // so next time step, the well does not consider to have effective events anymore.
                 events.clearEvent(WellState::event_mask);
             }
-
             // solve the well equation initially to improve the initial solution of the well model
             if (param_.solve_welleq_initially_) {
                 well->solveWellEquation(ebosSimulator_, this->wellState(), this->groupState(), deferred_logger);
             }
-
-            const bool well_operable = well->isOperable();
-            if (!well_operable && old_well_operable) {
-                const Well& well_ecl = getWellEcl(well->name());
-                if (well_ecl.getAutomaticShutIn()) {
-                    deferred_logger.info(" well " + well->name() + " gets SHUT at the beginning of the time step ");
-                } else {
-                    if (!well->wellIsStopped()) {
-                        deferred_logger.info(" well " + well->name() + " gets STOPPED at the beginning of the time step ");
-                        well->stopWell();
-                    }
-                }
-            } else if (well_operable && !old_well_operable) {
-                deferred_logger.info(" well " + well->name() + " gets REVIVED at the beginning of the time step ");
-                well->openWell();
-            }
-
-        }  // end of for (const auto& well : well_container_)
+        }
         updatePrimaryVariables(deferred_logger);
     }
-
-
 
 
 

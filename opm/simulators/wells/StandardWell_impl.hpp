@@ -397,7 +397,7 @@ namespace Opm
     {
         // TODO: only_wells should be put back to save some computation
         // for example, the matrices B C does not need to update if only_wells
-        if (!this->isOperable() && !this->wellIsStopped()) return;
+        if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
         // clear all entries
         this->duneB_ = 0.0;
@@ -852,7 +852,7 @@ namespace Opm
                     WellState& well_state,
                     DeferredLogger& deferred_logger) const
     {
-        if (!this->isOperable() && !this->wellIsStopped()) return;
+        if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
         updatePrimaryVariablesNewton(dwells, well_state);
 
@@ -1517,7 +1517,7 @@ namespace Opm
     StandardWell<TypeTag>::
     solveEqAndUpdateWellState(WellState& well_state, DeferredLogger& deferred_logger)
     {
-        if (!this->isOperable() && !this->wellIsStopped()) return;
+        if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
         // We assemble the well equations, then we check the convergence,
         // which is why we do not put the assembleWellEq here.
@@ -1552,7 +1552,7 @@ namespace Opm
     StandardWell<TypeTag>::
     apply(const BVector& x, BVector& Ax) const
     {
-        if (!this->isOperable() && !this->wellIsStopped()) return;
+        if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
         if (this->param_.matrix_add_well_contributions_)
         {
@@ -1583,7 +1583,7 @@ namespace Opm
     StandardWell<TypeTag>::
     apply(BVector& r) const
     {
-        if (!this->isOperable() && !this->wellIsStopped()) return;
+        if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
         assert( this->invDrw_.size() == this->invDuneD_.N() );
 
@@ -1598,7 +1598,7 @@ namespace Opm
     StandardWell<TypeTag>::
     recoverSolutionWell(const BVector& x, BVectorWell& xw) const
     {
-        if (!this->isOperable() && !this->wellIsStopped()) return;
+        if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
         BVectorWell resWell = this->resWell_;
         // resWell = resWell - B * x
@@ -1618,7 +1618,7 @@ namespace Opm
                                           WellState& well_state,
                                           DeferredLogger& deferred_logger) const
     {
-        if (!this->isOperable() && !this->wellIsStopped()) return;
+        if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
         BVectorWell xw(1);
         xw[0].resize(this->numWellEq_);
@@ -1903,7 +1903,7 @@ namespace Opm
     updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_logger) const
     {
         this->StdWellEval::updatePrimaryVariables(well_state, deferred_logger);
-        if (!this->isOperable() && !this->wellIsStopped()) return;
+        if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
         // other primary variables related to polymer injection
         if constexpr (Base::has_polymermw) {

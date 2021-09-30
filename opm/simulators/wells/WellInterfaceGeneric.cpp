@@ -352,7 +352,7 @@ void WellInterfaceGeneric::updateWellTestStatePhysical(const double simulation_t
                                                        WellTestState& well_test_state,
                                                        DeferredLogger& deferred_logger) const
 {
-    if (!isOperable()) {
+    if (!isOperableAndSolvable()) {
         if (well_test_state.hasWellClosed(name(), WellTestConfig::Reason::ECONOMIC) ||
             well_test_state.hasWellClosed(name(), WellTestConfig::Reason::PHYSICAL) ) {
             // Already closed, do nothing.
@@ -368,9 +368,9 @@ void WellInterfaceGeneric::updateWellTestStatePhysical(const double simulation_t
     }
 }
 
-bool WellInterfaceGeneric::isOperable() const
+bool WellInterfaceGeneric::isOperableAndSolvable() const
 {
-    return operability_status_.isOperable();
+    return operability_status_.isOperableAndSolvable();
 }
 
 double WellInterfaceGeneric::getALQ(const WellState& well_state) const
