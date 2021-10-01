@@ -896,17 +896,7 @@ bool WellState::wellIsOwned(const std::string& wellName) const
     return wellIsOwned(well_index.value(), wellName);
 }
 
-int WellState::numSegments(const int well_id) const
-{
-    const auto& ws = this->well(well_id);
-    return ws.segments.size();
-}
 
-int WellState::segmentNumber(const int well_id, const int seg_id) const
-{
-    const auto& ws = this->well(well_id);
-    return ws.segments.segment_number()[seg_id];
-}
 
 void WellState::updateWellsDefaultALQ( const std::vector<Well>& wells_ecl )
 {

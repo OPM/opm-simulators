@@ -278,10 +278,6 @@ private:
                          const int         seg_ix,
                          const int         seg_no) const;
 
-    int numSegments(const int well_id) const;
-
-    int segmentNumber(const int well_id, const int seg_id) const;
-
     // If the ALQ has changed since the previous report step,
     // reset current_alq and update default_alq. ALQ is used for
     // constant lift gas injection and for gas lift optimization
