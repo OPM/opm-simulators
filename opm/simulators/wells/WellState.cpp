@@ -511,10 +511,10 @@ WellState::report(const int* globalCellIdxMap,
             gatherVectorsOnRoot(connections, well.connections, pwinfo.communication());
         }
 
-        const auto nseg = this->numSegments(well_index);
+        const auto nseg = ws.segments.size();
         for (auto seg_ix = 0*nseg; seg_ix < nseg; ++seg_ix) {
-            const auto seg_no = this->segmentNumber(well_index, seg_ix);
-            well.segments[seg_no] = this->reportSegmentResults(pu, well_index, seg_ix, seg_no);
+            const auto seg_no = ws.segments.segment_number()[seg_ix];
+            well.segments[seg_no] = this->reportSegmentResults(well_index, seg_ix, seg_no);
         }
 
         res.insert( {wname, well} );
@@ -837,10 +837,9 @@ void WellState::updateGlobalIsGrup(const Comm& comm)
 }
 
 data::Segment
-WellState::reportSegmentResults(const PhaseUsage& pu,
-                                                     const int         well_id,
-                                                     const int         seg_ix,
-                                                     const int         seg_no) const
+WellState::reportSegmentResults(const int         well_id,
+                                const int         seg_ix,
+                                const int         seg_no) const
 {
     const auto& segments = this->well(well_id).segments;
     if (segments.empty())
@@ -857,6 +856,7 @@ WellState::reportSegmentResults(const PhaseUsage& pu,
         segpress[Value::PDropAccel] = segments.pressure_drop_accel[seg_ix];
     }
 
+    const auto& pu = this->phaseUsage();
     const auto rate = &segments.rates[seg_ix * pu.num_phases];
     if (pu.phase_used[Water]) {
         seg_res.rates.set(data::Rates::opt::wat,

@@ -273,8 +273,7 @@ private:
     std::map<std::string, std::pair<bool, std::vector<double>>> well_rates;
 
     data::Segment
-    reportSegmentResults(const PhaseUsage& pu,
-                         const int         well_id,
+    reportSegmentResults(const int         well_id,
                          const int         seg_ix,
                          const int         seg_no) const;
 
