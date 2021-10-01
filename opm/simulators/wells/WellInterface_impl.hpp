@@ -551,11 +551,6 @@ namespace Opm
             return;
         }
 
-        // focusing on PRODUCER for now
-        if (this->isInjector()) {
-            return;
-        }
-
         if (!this->underPredictionMode() ) {
             return;
         }
@@ -575,7 +570,7 @@ namespace Opm
     {
         bool shut_unsolvable_wells = param_.shut_unsolvable_wells_;
         // the well operability system currently works only for producers in prediction mode
-        return shut_unsolvable_wells && !this->isInjector() && this->underPredictionMode();
+        return shut_unsolvable_wells && this->underPredictionMode();
     }
 
 
@@ -591,16 +586,20 @@ namespace Opm
     {
         this->operability_status_.resetOperability();
 
-        auto current_control = well_state.well(this->index_of_well_).production_cmode;
+        bool thp_controled = this->isInjector() ? well_state.well(this->index_of_well_).injection_cmode == Well::InjectorCMode::THP:
+                                              well_state.well(this->index_of_well_).production_cmode == Well::ProducerCMode::THP;
+        bool bhp_controled = this->isInjector() ? well_state.well(this->index_of_well_).injection_cmode == Well::InjectorCMode::BHP:
+                                              well_state.well(this->index_of_well_).production_cmode == Well::ProducerCMode::BHP;
+
         // Operability checking is not free
         // Only check wells under BHP and THP control
-        if(current_control == Well::ProducerCMode::BHP || current_control == Well::ProducerCMode::THP) {
+        if(bhp_controled || thp_controled) {
             updateIPR(ebos_simulator, deferred_logger);
-            checkOperabilityUnderBHPLimitProducer(well_state, ebos_simulator, deferred_logger);
+            checkOperabilityUnderBHPLimit(well_state, ebos_simulator, deferred_logger);
         }
         // we do some extra checking for wells under THP control.
-        if (current_control == Well::ProducerCMode::THP) {
-            checkOperabilityUnderTHPLimitProducer(ebos_simulator, well_state, deferred_logger);
+        if (thp_controled) {
+            checkOperabilityUnderTHPLimit(ebos_simulator, well_state, deferred_logger);
         }
     }
 

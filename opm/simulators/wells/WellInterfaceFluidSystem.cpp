@@ -812,11 +812,6 @@ updateWellTestState(const SingleWellState& ws,
                     DeferredLogger& deferred_logger) const
 {
 
-    // currently, we only updateWellTestState for producers
-    if (this->isInjector()) {
-        return;
-    }
-
     // Based on current understanding, only under prediction mode, we need to shut well due to various
     // reasons or limits. With more knowlage or testing cases later, this might need to be corrected.
     if (!underPredictionMode() ) {
@@ -897,7 +892,6 @@ checkMaxRatioLimitWell(const SingleWellState& ws,
     }
 
     const double well_ratio = ratioFunc(well_rates, phaseUsage());
-
     return (well_ratio > max_ratio_limit);
 }
 
