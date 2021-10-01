@@ -251,39 +251,37 @@ public:
     }
 
 private:
+    PhaseUsage phase_usage_;
+
+    // The wells_ variable is essentially a map of all the wells on the current
+    // process. Observe that since a well can be split over several processes a
+    // well might appear in the WellContainer on different processes.
+    WellContainer<SingleWellState> wells_;
+
+    // The members alq_state, global_well_info and well_rates are map like
+    // structures which will have entries for *all* the wells in the system.
+
     // Use of std::optional<> here is a technical crutch, the
     // WellStateFullyImplicitBlackoil class should be default constructible,
     // whereas the GlobalWellInfo is not.
     std::optional<GlobalWellInfo> global_well_info;
     ALQState alq_state;
-    PhaseUsage phase_usage_;
 
-    WellContainer<SingleWellState> wells_;
     // The well_rates variable is defined for all wells on all processors. The
     // bool in the value pair is whether the current process owns the well or
     // not.
     std::map<std::string, std::pair<bool, std::vector<double>>> well_rates;
 
     data::Segment
-    reportSegmentResults(const PhaseUsage& pu,
-                         const int         well_id,
+    reportSegmentResults(const int         well_id,
                          const int         seg_ix,
                          const int         seg_no) const;
-
-    int numSegments(const int well_id) const;
-
-    int segmentNumber(const int well_id, const int seg_id) const;
 
     // If the ALQ has changed since the previous report step,
     // reset current_alq and update default_alq. ALQ is used for
     // constant lift gas injection and for gas lift optimization
     // (THP controlled wells).
-    //
-    // NOTE: If a well is no longer used (e.g. it is shut down)
-    // it is still kept in the maps "default_alq_" and "current_alq_". Since the
-    // number of unused entries should be small (negligible memory
-    // overhead) this is simpler than writing code to delete it.
-    //
+
     void updateWellsDefaultALQ(const std::vector<Well>& wells_ecl);
 
     /// Allocate and initialize if wells is non-null.
