@@ -182,7 +182,7 @@ public:
 
 
         const auto localAquiferData = simulator_.problem().aquiferModel().aquiferData();
-
+        const auto localWellTestState = simulator_.problem().wellModel().wellTestState();
         this->prepareLocalCellData(isSubStep, reportStepNum);
 
         if (this->collectToIORank_.isParallel())
@@ -191,7 +191,8 @@ public:
                                            eclOutputModule_->getWBPData(),
                                            localWellData,
                                            localGroupAndNetworkData,
-                                           localAquiferData);
+                                           localAquiferData,
+                                           localWellTestState);
 
 
         std::map<std::string, double> miscSummaryData;
@@ -240,6 +241,7 @@ public:
             .groupAndNetworkData(reportStepNum);
 
         auto localAquiferData = simulator_.problem().aquiferModel().aquiferData();
+        auto localWellTestState = simulator_.problem().wellModel().wellTestState();
 
         data::Solution localCellData = {};
         if (! isSubStep) {
@@ -255,7 +257,8 @@ public:
                                            eclOutputModule_->getWBPData(),
                                            localWellData,
                                            localGroupAndNetworkData,
-                                           localAquiferData);
+                                           localAquiferData,
+                                           localWellTestState);
         }
 
         if (this->collectToIORank_.isIORank()) {

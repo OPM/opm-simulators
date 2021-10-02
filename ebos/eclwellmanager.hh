@@ -646,6 +646,12 @@ public:
         throw std::logic_error("commitWGState() method not implemented for class eclwellmanager");
     }
 
+    WellTestState& wellTestState() {
+        throw std::logic_error("wellTestState() method not implemented for class eclwellmanager");
+    }
+
+
+
     void resetWGState()
     {
         throw std::logic_error("resetWGState() method not implemented for class eclwellmanager");
