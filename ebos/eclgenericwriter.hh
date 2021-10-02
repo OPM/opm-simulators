@@ -90,6 +90,7 @@ protected:
                        data::Wells&&                 localWellData,
                        data::GroupAndNetworkValues&& localGroupAndNetworkData,
                        data::Aquifers&&              localAquiferData,
+                       WellTestState&&               localWTestState,
                        const Action::State& actionState,
                        const UDQState& udqState,
                        const SummaryState& summaryState,

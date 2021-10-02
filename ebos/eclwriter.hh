@@ -269,6 +269,7 @@ public:
                                 std::move(localWellData),
                                 std::move(localGroupAndNetworkData),
                                 std::move(localAquiferData),
+                                std::move(localWellTestState),
                                 this->actionState(),
                                 this->udqState(),
                                 this->summaryState(),
