@@ -61,6 +61,7 @@ namespace Opm
                 }
             }
         }
+        well_control_log_.clear();
     }
 
 
@@ -172,7 +173,24 @@ namespace Opm
         } else {
             from = Well::ProducerCMode2String(ws.production_cmode);
         }
+        bool oscillating = std::count(well_control_log_.begin(), well_control_log_.end(), from) >= param_.max_number_of_well_switches_;
 
+        if (oscillating) {
+            // only output frist time
+            bool output = std::count(well_control_log_.begin(), well_control_log_.end(), from) == param_.max_number_of_well_switches_;
+            if (output) {
+                std::ostringstream ss;
+                ss << "    The control model for well " << this->name()
+                   << " is oscillating\n"
+                   << "    We don't allow for more than "
+                   << param_.max_number_of_well_switches_
+                   << " switches. The control is kept at " << from;
+                deferred_logger.info(ss.str());
+                // add one more to avoid outputting the same info again
+                well_control_log_.push_back(from);
+            }
+            return false;
+        }
         bool changed = false;
         if (iog == IndividualOrGroup::Individual) {
             changed = this->checkIndividualConstraints(ws, summaryState);
@@ -193,6 +211,7 @@ namespace Opm
             } else {
                 to = Well::ProducerCMode2String(ws.production_cmode);
             }
+            well_control_log_.push_back(from);
             std::ostringstream ss;
             ss << "    Switching control mode for well " << this->name()
                << " from " << from

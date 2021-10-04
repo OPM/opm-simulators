@@ -278,6 +278,8 @@ protected:
 
     bool changed_to_stopped_this_step_ = false;
 
+    std::vector< std::string> well_control_log_;
+
     double wpolymer() const;
 
     double wfoam() const;
