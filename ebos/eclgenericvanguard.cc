@@ -224,12 +224,6 @@ void EclGenericVanguard::updateOutputDir_(std::string outputDir,
 
 void EclGenericVanguard::init()
 {
-    int myRank = 0;
-
-#if HAVE_MPI
-    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-#endif
-
     // Make proper case name.
     {
         if (fileName_.empty())
@@ -326,10 +320,11 @@ void EclGenericVanguard::init()
     if (enableDistributedWells() )
     {
         int hasMsWell = false;
+        const auto& comm = EclGenericVanguard::comm();
 
         if (useMultisegmentWell_)
         {
-            if (myRank == 0)
+            if (comm.rank() == 0)
             {
                 const auto& wells = this->schedule().getWellsatEnd();
                 for ( const auto& well: wells)
@@ -339,12 +334,11 @@ void EclGenericVanguard::init()
             }
         }
 
-        const auto& comm = Parallel::Communication();
         hasMsWell = comm.max(hasMsWell);
 
         if (hasMsWell)
         {
-            if (myRank == 0)
+            if (comm.rank() == 0)
             {
                 std::string message =
                         std::string("Option --allow-distributed-wells=true is only allowed if model\n")
