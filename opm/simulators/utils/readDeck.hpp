@@ -22,8 +22,8 @@
 #ifndef OPM_READDECK_HEADER_INCLUDED
 #define OPM_READDECK_HEADER_INCLUDED
 
-#include <dune/common/version.hh>
-#include <dune/common/parallel/mpihelper.hh>
+#include <opm/simulators/utils/ParallelCommunication.hpp>
+
 #include <memory>
 #include <optional>
 #include <string>
@@ -42,14 +42,6 @@ class UDQState;
 
 namespace Action {
 class State;
-}
-
-namespace Parallel {   
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
-    using Communication = Dune::Communication<Dune::MPIHelper::MPICommunicator>; 
-#else
-    using Communication = Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator>;
-#endif
 }
 
 enum class FileOutputMode {

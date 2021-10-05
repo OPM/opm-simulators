@@ -272,8 +272,7 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Ecl
         // we need to pass the NNC from root process to other processes
         if (has_numerical_aquifer && mpiSize > 1) {
             auto nnc_input = eclState.getInputNNC();
-            const auto& comm_nnc = Opm::Parallel::Communication();
-            EclMpiSerializer ser(comm_nnc);
+            EclMpiSerializer ser(grid_->comm());
             ser.broadcast(nnc_input);
             if (mpiRank > 0) {
                 eclState.setInputNNC(nnc_input);

@@ -68,8 +68,7 @@ class UDQState;
 
 class EclGenericVanguard {
 public:
-   
-using ParallelWellStruct = std::vector<std::pair<std::string,bool>>;
+   using ParallelWellStruct = std::vector<std::pair<std::string,bool>>;
 
     /*!
      * \brief Constructor.

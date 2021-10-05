@@ -26,8 +26,7 @@
 
 #include <opm/material/common/Exceptions.hpp>
 
-#include <dune/common/version.hh>
-#include <dune/common/parallel/mpihelper.hh>
+#include <opm/simulators/utils/ParallelCommunication.hpp>
 
 #include <string>
 #include <sstream>

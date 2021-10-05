@@ -108,7 +108,7 @@ BOOST_AUTO_TEST_CASE(ParallelWellComparison)
 {
     int argc = 0;
     char** argv = nullptr;
-    const auto& helper = Dune::MPIHelper::instance(argc, argv);       
+    const auto& helper = Dune::MPIHelper::instance(argc, argv);
     std::vector<std::pair<std::string,bool>> pairs;
     if (helper.rank() == 0)
         pairs = {{"Test1", true},{"Test2", true}, {"Test1", false} };

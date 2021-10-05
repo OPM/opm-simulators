@@ -81,7 +81,7 @@ void initLogger(std::ostringstream& log_stream) {
 
 BOOST_AUTO_TEST_CASE(NoMessages)
 {
-    const Opm::Parallel::Communication& cc = Dune::MPIHelper::getCollectiveCommunication();
+    auto cc = Dune::MPIHelper::getCollectiveCommunication();
 
     std::ostringstream log_stream;
     initLogger(log_stream);

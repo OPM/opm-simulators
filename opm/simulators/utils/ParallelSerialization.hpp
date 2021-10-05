@@ -19,16 +19,7 @@
 #ifndef PARALLEL_SERIALIZATION_HPP
 #define PARALLEL_SERIALIZATION_HPP
 
-#include <dune/common/version.hh>
-#include <dune/common/parallel/mpihelper.hh>
-
-namespace Opm::Parallel {   
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
-    using Communication = Dune::Communication<Dune::MPIHelper::MPICommunicator>; 
-#else
-    using Communication = Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator>;
-#endif
-}
+#include <opm/simulators/utils/ParallelCommunication.hpp>
 
 namespace Opm {
 

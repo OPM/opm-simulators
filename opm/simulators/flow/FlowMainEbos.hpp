@@ -25,7 +25,6 @@
 
 #include <sys/utsname.h>
 
-#include <dune/common/version.hh>
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp>
 #include <opm/simulators/utils/ParallelFileMerger.hpp>
 #include <opm/simulators/utils/moduleVersion.hpp>
@@ -44,14 +43,6 @@
 #else
 #include <dune/common/parallel/mpihelper.hh>
 #endif
-
-namespace Opm::Parallel {   
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
-    using Communication = Dune::Communication<Dune::MPIHelper::MPICommunicator>; 
-#else
-    using Communication = Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator>;
-#endif
-}
 
 namespace Opm::Properties {
 

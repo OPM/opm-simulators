@@ -1,6 +1,5 @@
 /*
-  Copyright 2018 SINTEF Digital, Mathematics and Cybernetics.
-  Copyright 2018 Equinor.
+  Copyright 2021 SINTEF Digital, Mathematics and Cybernetics.
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -18,21 +17,21 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_GATHERCONVERGENCEREPORT_HEADER_INCLUDED
-#define OPM_GATHERCONVERGENCEREPORT_HEADER_INCLUDED
+#ifndef OPM_PARALLELCOMMUNICATION_HEADER_INCLUDED
+#define OPM_PARALLELCOMMUNICATION_HEADER_INCLUDED
 
-#include <opm/simulators/timestepping/ConvergenceReport.hpp>
-
-#include <opm/simulators/utils/ParallelCommunication.hpp>
+#include <dune/common/version.hh>
+#include <dune/common/parallel/mpihelper.hh>
 
 namespace Opm
-{
-
-    /// Create a global convergence report combining local
-    /// (per-process) reports.
-    ConvergenceReport gatherConvergenceReport(const ConvergenceReport& local_report, Parallel::Communication communicator);
-
-} // namespace Opm
-
-
-#endif // OPM_GATHERCONVERGENCEREPORT_HEADER_INCLUDED
+{ 
+namespace Parallel {
+using MPIComm = typename Dune::MPIHelper::MPICommunicator;  
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
+    using Communication = Dune::Communication<MPIComm>; 
+#else
+    using Communication = Dune::CollectiveCommunication<MPIComm>;
+#endif
+}
+} // end namespace Opm
+#endif // OPM_PARALLELCOMMUNICATION_HEADER_INCLUDED

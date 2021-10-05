@@ -24,15 +24,9 @@
 #include <opm/parser/eclipse/EclipseState/Grid/TranCalculator.hpp>
 #include <dune/common/parallel/mpihelper.hh>
 
-#include <functional>
+#include <opm/simulators/utils/ParallelCommunication.hpp>
 
-namespace Opm::Parallel { 
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
-    using Communication = Dune::Communication<Dune::MPIHelper::MPICommunicator>; 
-#else
-    using Communication = Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator>;
-#endif
-} // end namespace Communication
+#include <functional>
 
 namespace Opm {
 
