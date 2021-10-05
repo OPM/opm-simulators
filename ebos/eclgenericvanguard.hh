@@ -29,9 +29,8 @@
 
 #include <opm/grid/common/GridEnums.hpp>
 
-#include <dune/common/version.hh>
+#include <opm/simulators/utils/ParallelCommunication.hpp>
 #include <dune/common/parallel/collectivecommunication.hh>
-#include <dune/common/parallel/mpihelper.hh>
 
 #include <array>
 #include <cassert>
@@ -44,13 +43,6 @@
 #include <utility>
 #include <vector>
 
-namespace Opm::Parallel {   
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
-    using Communication = Dune::Communication<Dune::MPIHelper::MPICommunicator>; 
-#else
-    using Communication = Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator>;
-#endif
-}
 
 namespace Opm {
 
@@ -68,7 +60,7 @@ class UDQState;
 
 class EclGenericVanguard {
 public:
-   using ParallelWellStruct = std::vector<std::pair<std::string,bool>>;
+    using ParallelWellStruct = std::vector<std::pair<std::string,bool>>;
 
     /*!
      * \brief Constructor.
