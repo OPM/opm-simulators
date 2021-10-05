@@ -222,16 +222,17 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Ecl
     }
 
 #if HAVE_MPI
-    grid_.reset(new Dune::CpGrid(EclGenericVanguard::comm()));
+    this->grid_ = std::make_unique<Dune::CpGrid>(EclGenericVanguard::comm());
 #else
-    grid_.reset(new Dune::CpGrid());
+    this->grid_ = std::make_unique<Dune::CpGrid>();
 #endif
 
-    const auto& removed_cells = grid_->processEclipseFormat(input_grid,
-                                                            &eclState,
-                                                            /*isPeriodic=*/false,
-                                                            /*flipNormals=*/false,
-                                                            /*clipZ=*/false);
+    const auto& removed_cells =
+        this->grid_->processEclipseFormat(input_grid,
+                                          &eclState,
+                                          /*isPeriodic=*/false,
+                                          /*flipNormals=*/false,
+                                          /*clipZ=*/false);
 
     if (mpiRank == 0) {
         const auto& active_porv = eclState.fieldProps().porv(false);
@@ -252,7 +253,6 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Ecl
                                      volume_unit,
                                      100 * removed_pore_volume / total_pore_volume));
         }
-
     }
 
     cartesianIndexMapper_ = std::make_unique<CartesianIndexMapper>(*grid_);
@@ -262,8 +262,10 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Ecl
         const bool has_numerical_aquifer = eclState.aquifer().hasNumericalAquifer();
         int mpiSize = 1;
         MPI_Comm_size(grid_->comm(), &mpiSize);
-        // when there is numerical aquifers, new NNC are generated during grid processing
-        // we need to pass the NNC from root process to other processes
+
+        // when there is numerical aquifers, new NNC are generated during
+        // grid processing we need to pass the NNC from root process to
+        // other processes
         if (has_numerical_aquifer && mpiSize > 1) {
             auto nnc_input = eclState.getInputNNC();
             EclMpiSerializer ser(grid_->comm());
@@ -275,12 +277,14 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Ecl
     }
 #endif
 
-    // we use separate grid objects: one for the calculation of the initial condition
-    // via EQUIL and one for the actual simulation. The reason is that the EQUIL code
-    // is allergic to distributed grids and the simulation grid is distributed before
-    // the initial condition is calculated.
-    // After loadbalance grid_ will contain a global and distribute view.
-    // equilGrid_being a shallow copy only the global view.
+    // We use separate grid objects: one for the calculation of the initial
+    // condition via EQUIL and one for the actual simulation. The reason is
+    // that the EQUIL code is allergic to distributed grids and the
+    // simulation grid is distributed before the initial condition is
+    // calculated.
+    //
+    // After loadbalance, grid_ will contain a global and distribute view.
+    // equilGrid_ being a shallow copy only the global view.
     if (mpiRank == 0)
     {
         equilGrid_.reset(new Dune::CpGrid(*grid_));
