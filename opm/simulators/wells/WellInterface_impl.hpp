@@ -330,8 +330,15 @@ namespace Opm
         const auto& summary_state = ebosSimulator.vanguard().summaryState();
         const auto inj_controls = this->well_ecl_.isInjector() ? this->well_ecl_.injectionControls(summary_state) : Well::InjectionControls(0);
         const auto prod_controls = this->well_ecl_.isProducer() ? this->well_ecl_.productionControls(summary_state) : Well::ProductionControls(0);
-
-        return this->iterateWellEqWithControl(ebosSimulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
+        bool converged = false;
+        try {
+            converged = this->iterateWellEqWithControl(ebosSimulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
+        } catch (NumericalIssue& e ) {
+            const std::string msg = "Inner well iterations failed for well " + this->name() + " Treat the well as unconverged. ";
+            deferred_logger.warning("INNER_ITERATION_FAILED", msg);
+            converged = false;
+        }
+        return converged;
     }
 
 
