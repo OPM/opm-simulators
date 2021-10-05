@@ -227,7 +227,8 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Ecl
     this->grid_ = std::make_unique<Dune::CpGrid>();
 #endif
 
-    const auto& removed_cells =
+    // Note: removed_cells is guaranteed to be empty on ranks other than 0.
+    auto removed_cells =
         this->grid_->processEclipseFormat(input_grid,
                                           &eclState,
                                           /*isPeriodic=*/false,
@@ -294,6 +295,22 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Ecl
         auto &field_props = eclState.fieldProps();
         const_cast<FieldPropsManager&>(field_props).reset_actnum(actnum);
     }
+
+    {
+        auto size = removed_cells.size();
+
+        this->grid_->comm().broadcast(&size, 1, 0);
+
+        if (mpiRank != 0) {
+            removed_cells.resize(size);
+        }
+
+        this->grid_->comm().broadcast(removed_cells.data(), size, 0);
+    }
+
+    // Inform the aquifer object that we might have removed/deactivated
+    // cells as part of minimum pore-volume threshold processing.
+    eclState.pruneDeactivatedAquiferConnections(removed_cells);
 }
 
 template<class ElementMapper, class GridView, class Scalar>
