@@ -162,6 +162,7 @@ tests[actionx_gconprod]="flow actionx ACTIONX_GCONPROD"
 tests[actionx_wconinje]="flow actionx ACTIONX_WCONINJE"
 tests[actionx_wefac]="flow actionx ACTIONX_WEFAC"
 tests[micp]="flow micp MICP"
+tests[0_base_model6]="flow model6 0_BASE_MODEL6"
 
 changed_tests=""
 

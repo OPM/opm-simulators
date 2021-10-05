@@ -987,6 +987,13 @@ add_test_compareECLFiles(CASENAME micp
                          REL_TOL ${rel_tol}
                          DIR micp)
 
+add_test_compareECLFiles(CASENAME 0_base_model6
+                         FILENAME 0_BASE_MODEL6
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR model6)
+
 # Restart tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-restart-regressionTest.sh "")
 
