@@ -854,7 +854,7 @@ namespace Opm
     {
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
-        updatePrimaryVariablesNewton(dwells, well_state);
+        updatePrimaryVariablesNewton(dwells, well_state, deferred_logger);
 
         updateWellStateFromPrimaryVariables(well_state, deferred_logger);
         Base::calculateReservoirRates(well_state.well(this->index_of_well_));
@@ -868,7 +868,8 @@ namespace Opm
     void
     StandardWell<TypeTag>::
     updatePrimaryVariablesNewton(const BVectorWell& dwells,
-                                 const WellState& /* well_state */) const
+                                 const WellState& /* well_state */,
+                                 DeferredLogger& deferred_logger) const
     {
         const double dFLimit = this->param_.dwell_fraction_max_;
         const double dBHPLimit = this->param_.dbhp_max_rel_;
@@ -876,11 +877,10 @@ namespace Opm
 
         updateExtraPrimaryVariables(dwells);
 
-#ifndef NDEBUG
         for (double v : this->primary_variables_) {
-            assert(isfinite(v));
+            if(!isfinite(v))
+                OPM_DEFLOG_THROW(NumericalIssue, "Infinite primary variable after newton update well: " << this->name(),  deferred_logger);
         }
-#endif
 
     }
 
@@ -1918,11 +1918,10 @@ namespace Opm
                 }
             }
         }
-#ifndef NDEBUG
         for (double v : this->primary_variables_) {
-            assert(isfinite(v));
+            if(!isfinite(v))
+                OPM_DEFLOG_THROW(NumericalIssue, "Infinite primary variable after update from wellState well: " << this->name(),  deferred_logger);
         }
-#endif
     }
 
 

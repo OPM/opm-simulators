@@ -359,7 +359,8 @@ namespace Opm
                                             DeferredLogger& deferred_logger) const;
 
         void updatePrimaryVariablesNewton(const BVectorWell& dwells,
-                                          const WellState& well_state) const;
+                                          const WellState& well_state,
+                                          DeferredLogger& deferred_logger) const;
 
         // update extra primary vriables if there are any
         void updateExtraPrimaryVariables(const BVectorWell& dwells) const;
