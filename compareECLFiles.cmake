@@ -28,7 +28,7 @@ function(add_test_runSimulator)
     set(PARAM_DIR ${PARAM_CASENAME})
   endif()
   set(RESULT_PATH ${BASE_RESULT_PATH}${PARAM_DIR_PREFIX}/${PARAM_SIMULATOR}+${PARAM_CASENAME})
-  set(TEST_ARGS ${OPM_TESTS_ROOT}/${PARAM_DIR}/${PARAM_FILENAME} ${PARAM_TEST_ARGS})
+  set(TEST_ARGS ${PARAM_TEST_ARGS})
   opm_add_test(runSimulator/${PARAM_CASENAME} NO_COMPILE
                EXE_NAME ${PARAM_SIMULATOR}
                DRIVER_ARGS ${OPM_TESTS_ROOT}/${PARAM_DIR}
@@ -50,7 +50,7 @@ endfunction()
 # Details:
 #   - This test class compares output from a simulation to reference files.
 function(add_test_compareECLFiles)
-  set(oneValueArgs CASENAME FILENAME SIMULATOR ABS_TOL REL_TOL DIR DIR_PREFIX PREFIX)
+  set(oneValueArgs CASENAME FILENAME SIMULATOR ABS_TOL REL_TOL DIR DIR_PREFIX PREFIX RESTART_STEP)
   set(multiValueArgs TEST_ARGS)
   cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
   if(NOT PARAM_DIR)
@@ -59,8 +59,11 @@ function(add_test_compareECLFiles)
   if(NOT PARAM_PREFIX)
     set(PARAM_PREFIX compareECLFiles)
   endif()
+  if(NOT PARAM_RESTART_STEP)
+    set(PARAM_RESTART_STEP 0)
+  endif()
   set(RESULT_PATH ${BASE_RESULT_PATH}${PARAM_DIR_PREFIX}/${PARAM_SIMULATOR}+${PARAM_CASENAME})
-  set(TEST_ARGS ${OPM_TESTS_ROOT}/${PARAM_DIR}/${PARAM_FILENAME} ${PARAM_TEST_ARGS})
+  set(TEST_ARGS ${PARAM_TEST_ARGS})
   opm_add_test(${PARAM_PREFIX}_${PARAM_SIMULATOR}+${PARAM_FILENAME} NO_COMPILE
                EXE_NAME ${PARAM_SIMULATOR}
                DRIVER_ARGS ${OPM_TESTS_ROOT}/${PARAM_DIR} ${RESULT_PATH}
@@ -68,6 +71,8 @@ function(add_test_compareECLFiles)
                            ${PARAM_FILENAME}
                            ${PARAM_ABS_TOL} ${PARAM_REL_TOL}
                            ${COMPARE_ECL_COMMAND}
+                           ${RST_DECK_COMMAND}
+                           ${PARAM_RESTART_STEP}
                TEST_ARGS ${TEST_ARGS})
 endfunction()
 

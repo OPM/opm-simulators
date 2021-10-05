@@ -13,14 +13,15 @@ FILENAME="$4"
 ABS_TOL="$5"
 REL_TOL="$6"
 COMPARE_ECL_COMMAND="$7"
-EXE_NAME="${8}"
-shift 8
+# param 8 and 9 ignored, only used with regression tests
+EXE_NAME="${10}"
+shift 10
 TEST_ARGS="$@"
 
 rm -Rf  ${RESULT_PATH}
 mkdir -p ${RESULT_PATH}
 cd ${RESULT_PATH}
-${BINPATH}/${EXE_NAME} ${TEST_ARGS} --enable-dry-run=true --output-dir=${RESULT_PATH}
+${BINPATH}/${EXE_NAME} ${TEST_ARGS} --enable-dry-run=true --output-dir=${RESULT_PATH} ${INPUT_DATA_PATH}/${FILENAME}
 cd ..
 
 ecode=0
