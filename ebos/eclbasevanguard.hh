@@ -36,6 +36,7 @@
 #include <opm/grid/common/GridEnums.hpp>
 #include <opm/grid/common/CartesianIndexMapper.hpp>
 #include <opm/parser/eclipse/EclipseState/Aquifer/NumericalAquifer/NumericalAquiferCell.hpp>
+#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
 
 #include <array>
@@ -185,6 +186,7 @@ public:
 
 protected:
     static const int dimension = Grid::dimension;
+    static const int dimensionworld = Grid::dimensionworld;
     using Element = typename GridView::template Codim<0>::Entity;
     using CartesianIndexMapper = Dune::CartesianIndexMapper<Grid>;
 
@@ -330,16 +332,6 @@ public:
 
 
     /*!
-     * \brief Get the cell centroids for a distributed grid.
-     *
-     * Currently this only non-empty for a loadbalanced CpGrid.
-     */
-    const std::vector<double>& cellCentroids() const
-    {
-        return centroids_;
-    }
-
-    /*!
      * \brief Returns the depth of a degree of freedom [m]
      *
      * For ECL problems this is defined as the average of the depth of an element and is
@@ -389,6 +381,36 @@ public:
     }
 
 protected:
+    /*!
+     * \brief Get function to query cell centroids for a distributed grid.
+     *
+     * Currently this only non-empty for a loadbalanced CpGrid.
+     * It is a function return the centroid for the given element
+     * index.
+     * \param cartMapper The cartesian index mapper for lookup of
+     *        cartesian indices
+     */
+    template<class CartMapper>
+    std::function<std::array<double,dimensionworld>(int)>
+    cellCentroids_(const CartMapper& cartMapper) const
+    {
+        return [this, cartMapper](int elemIdx) {
+                   const auto& centroids = this->centroids_;
+                   auto rank = this->gridView().comm().rank();
+                   std::array<double,dimensionworld> centroid;
+                   if (rank == 0) {
+                       unsigned cartesianCellIdx = cartMapper.cartesianIndex(elemIdx);
+                       centroid = this->eclState().getInputGrid().getCellCenter(cartesianCellIdx);
+                   } else
+                   {
+                       std::copy(centroids.begin() + elemIdx * dimensionworld,
+                                 centroids.begin() + (elemIdx + 1) * dimensionworld,
+                                 centroid.begin());
+                   }
+                   return centroid;
+               };
+    }
+
     void callImplementationInit()
     {
         asImp_().createGrids_();

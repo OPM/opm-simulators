@@ -38,6 +38,7 @@
 #include <tuple>
 #include <vector>
 #include <unordered_map>
+#include <functional>
 
 namespace Opm {
 
@@ -58,7 +59,7 @@ public:
                         const GridView& gridView,
                         const Dune::CartesianIndexMapper<Grid>& cartMapper,
                         const Grid& grid,
-                        const std::vector<double>& centroids,
+                        std::function<std::array<double,dimWorld>(int)> centroids,
                         bool enableEnergy,
                         bool enableDiffusivity);
 
@@ -236,7 +237,7 @@ protected:
     const GridView& gridView_;
     const Dune::CartesianIndexMapper<Grid>& cartMapper_;
     const Grid& grid_;
-    const std::vector<double>& centroids_;
+    std::function<std::array<double,dimWorld>(int)> centroids_;
     Scalar transmissibilityThreshold_;
     std::map<std::pair<unsigned, unsigned>, Scalar> transBoundary_;
     std::map<std::pair<unsigned, unsigned>, Scalar> thermalHalfTransBoundary_;

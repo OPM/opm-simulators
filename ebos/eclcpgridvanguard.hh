@@ -90,6 +90,7 @@ public:
     using EquilGrid = GetPropType<TypeTag, Properties::EquilGrid>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
     using TransmissibilityType = EclTransmissibility<Grid, GridView, ElementMapper, Scalar>;
+    static const int dimensionworld = Grid::dimensionworld;
 
 private:
     typedef Dune::CartesianIndexMapper<Grid> CartesianIndexMapper;
@@ -138,7 +139,6 @@ public:
                              this->eclState(), this->parallelWells_);
 #endif
 
-        this->allocCartMapper();
         this->updateGridView_();
         this->updateCartesianToCompressedMapping_();
         this->updateCellDepths_();
@@ -149,6 +149,18 @@ public:
 #endif
     }
 
+    /*!
+     * \brief Get function to query cell centroids for a distributed grid.
+     *
+     * Currently this only non-empty for a loadbalanced CpGrid.
+     * It is a function return the centroid for the given element
+     * index.
+     */
+    std::function<std::array<double,dimensionworld>(int)>
+    cellCentroids() const
+    {
+        return this->cellCentroids_(this->cartesianIndexMapper());
+    }
 
 protected:
     void createGrids_()
