@@ -106,6 +106,7 @@ bool directVerticalNeighbors(const std::array<int, 3>& cartDims,
 struct EclWriteTasklet : public Opm::TaskletInterface
 {
     Opm::Action::State actionState_;
+    Opm::WellTestState wtestState_;
     Opm::SummaryState summaryState_;
     Opm::UDQState udqState_;
     Opm::EclipseIO& eclIO_;
@@ -116,6 +117,7 @@ struct EclWriteTasklet : public Opm::TaskletInterface
     bool writeDoublePrecision_;
 
     explicit EclWriteTasklet(const Opm::Action::State& actionState,
+                             const Opm::WellTestState& wtestState,
                              const Opm::SummaryState& summaryState,
                              const Opm::UDQState& udqState,
                              Opm::EclipseIO& eclIO,
@@ -125,6 +127,7 @@ struct EclWriteTasklet : public Opm::TaskletInterface
                              Opm::RestartValue restartValue,
                              bool writeDoublePrecision)
         : actionState_(actionState)
+        , wtestState_(wtestState)
         , summaryState_(summaryState)
         , udqState_(udqState)
         , eclIO_(eclIO)
@@ -139,6 +142,7 @@ struct EclWriteTasklet : public Opm::TaskletInterface
     void run()
     {
         eclIO_.writeTimeStep(actionState_,
+                             wtestState_,
                              summaryState_,
                              udqState_,
                              reportStepNum_,
@@ -392,6 +396,7 @@ doWriteOutput(const int                     reportStepNum,
               data::Wells&&                 localWellData,
               data::GroupAndNetworkValues&& localGroupAndNetworkData,
               data::Aquifers&&              localAquiferData,
+              WellTestState&&               localWTestState,
               const Action::State& actionState,
               const UDQState& udqState,
               const SummaryState& summaryState,
@@ -429,7 +434,9 @@ doWriteOutput(const int                     reportStepNum,
     // first, create a tasklet to write the data for the current time
     // step to disk
     auto eclWriteTasklet = std::make_shared<EclWriteTasklet>(
-        actionState, summaryState, udqState, *this->eclIO_,
+        actionState,
+        isParallel ? this->collectToIORank_.globalWellTestState() : std::move(localWTestState),
+        summaryState, udqState, *this->eclIO_,
         reportStepNum, isSubStep, curTime, std::move(restartValue), doublePrecision);
 
     // then, make sure that the previous I/O request has been completed
