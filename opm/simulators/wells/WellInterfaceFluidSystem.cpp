@@ -508,19 +508,18 @@ checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
     // function to calculate water cut based on rates
     auto waterCut = [](const std::vector<double>& rates,
                        const PhaseUsage& pu) {
-
-        const double oil_rate = rates[pu.phase_pos[Oil]];
-        const double water_rate = rates[pu.phase_pos[Water]];
-
-        // both rate should be in the same direction
-        assert(oil_rate * water_rate >= 0.);
-
+        const double oil_rate = -rates[pu.phase_pos[Oil]];
+        const double water_rate = -rates[pu.phase_pos[Water]];
         const double liquid_rate = oil_rate + water_rate;
-        if (liquid_rate != 0.) {
-            return (water_rate / liquid_rate);
-        } else {
+        if (liquid_rate == 0.)
             return 0.;
-        }
+        else if (water_rate < 0)
+            return 0.;
+        else if (oil_rate < 0)
+            return 1.;
+        else
+            return (water_rate / liquid_rate);
+
     };
 
     const double max_water_cut_limit = econ_production_limits.maxWaterCut();
@@ -547,26 +546,14 @@ checkMaxGORLimit(const WellEconProductionLimits& econ_production_limits,
     // function to calculate gor based on rates
     auto gor = [](const std::vector<double>& rates,
                   const PhaseUsage& pu) {
-
-        const double oil_rate = rates[pu.phase_pos[Oil]];
-        const double gas_rate = rates[pu.phase_pos[Gas]];
-
-        // both rate should be in the same direction
-        assert(oil_rate * gas_rate >= 0.);
-
-        double gas_oil_ratio = 0.;
-
-        if (oil_rate != 0.) {
-            gas_oil_ratio = gas_rate / oil_rate;
-        } else {
-            if (gas_rate != 0.) {
-                gas_oil_ratio = 1.e100; // big value to mark it as violated
-            } else {
-                gas_oil_ratio = 0.0;
-            }
-        }
-
-        return gas_oil_ratio;
+        const double oil_rate = -rates[pu.phase_pos[Oil]];
+        const double gas_rate = -rates[pu.phase_pos[Gas]];
+        if (gas_rate <= 0.)
+            return 0.;
+        else if (oil_rate <= 0.)
+            return 1.e100; // big value to mark it as violated
+        else
+            return (gas_rate / oil_rate);
     };
 
     const double max_gor_limit = econ_production_limits.maxGasOilRatio();
@@ -594,25 +581,14 @@ checkMaxWGRLimit(const WellEconProductionLimits& econ_production_limits,
     auto wgr = [](const std::vector<double>& rates,
                   const PhaseUsage& pu) {
 
-        const double water_rate = rates[pu.phase_pos[Water]];
-        const double gas_rate = rates[pu.phase_pos[Gas]];
-
-        // both rate should be in the same direction
-        assert(water_rate * gas_rate >= 0.);
-
-        double water_gas_ratio = 0.;
-
-        if (gas_rate != 0.) {
-            water_gas_ratio = water_rate / gas_rate;
-        } else {
-            if (water_rate != 0.) {
-                water_gas_ratio = 1.e100; // big value to mark it as violated
-            } else {
-                water_gas_ratio = 0.0;
-            }
-        }
-
-        return water_gas_ratio;
+        const double water_rate = -rates[pu.phase_pos[Water]];
+        const double gas_rate = -rates[pu.phase_pos[Gas]];
+        if (water_rate <= 0.)
+            return 0.;
+        else if (gas_rate <= 0.)
+            return 1.e100; // big value to mark it as violated
+        else
+            return (water_rate / gas_rate);
     };
 
     const double max_wgr_limit = econ_production_limits.maxWaterGasRatio();
