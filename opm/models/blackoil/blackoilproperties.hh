@@ -58,6 +58,9 @@ struct EnableFoam { using type = UndefinedProperty; };
 //! Enable the ECL-blackoil extension for salt
 template<class TypeTag, class MyTypeTag>
 struct EnableBrine { using type = UndefinedProperty; };
+//! Enable the ECL-blackoil extension for MICP.
+template<class TypeTag, class MyTypeTag>
+struct EnableMICP { using type = UndefinedProperty; };
 
 
 //! Allow the spatial and temporal domains to exhibit non-constant temperature

@@ -37,7 +37,7 @@ namespace Opm {
  *
  * \brief The primary variable and equation indices for the black-oil model.
  */
-template <unsigned numSolventsV, unsigned numExtbosV, unsigned numPolymersV, unsigned numEnergyV, bool enableFoam, bool enableBrine, unsigned PVOffset, unsigned disabledCanonicalCompIdx>
+template <unsigned numSolventsV, unsigned numExtbosV, unsigned numPolymersV, unsigned numEnergyV, bool enableFoam, bool enableBrine, unsigned PVOffset, unsigned disabledCanonicalCompIdx, unsigned numMICPsV>
 struct BlackOilTwoPhaseIndices
 {
     //! Is phase enabled or not
@@ -56,6 +56,9 @@ struct BlackOilTwoPhaseIndices
 
     //! Shall energy be conserved?
     static const bool enableEnergy = numEnergyV > 0;
+
+    //! Is MICP involved?
+    static const bool enableMICP = numMICPsV > 0;
 
     //! Number of solvent components to be considered
     static const int numSolvents = enableSolvent ? numSolventsV : 0;
@@ -78,8 +81,11 @@ struct BlackOilTwoPhaseIndices
     //! The number of fluid phases
     static const int numPhases = 2;
 
+    //! Number of MICP components to be considered
+    static const int numMICPs = enableMICP ? numMICPsV : 0;
+
     //! The number of equations
-    static const int numEq = numPhases + numSolvents + numExtbos + numPolymers + numEnergy + numFoam + numBrine;
+    static const int numEq = numPhases + numSolvents + numExtbos + numPolymers + numEnergy + numFoam + numBrine + numMICPs;
 
     //////////////////////////////
     // Primary variable indices
@@ -115,17 +121,37 @@ struct BlackOilTwoPhaseIndices
     static const int polymerMoleWeightIdx =
         numPolymers > 1 ? polymerConcentrationIdx + 1 : -1000;
 
+    //! Index of the primary variable for the first MICP component
+    static const int microbialConcentrationIdx =
+        enableMICP ? PVOffset + numPhases + numSolvents : -1000;
+
+    //! Index of the primary variable for the second MICP component
+    static const int oxygenConcentrationIdx =
+        numMICPs > 1 ? microbialConcentrationIdx + 1 : -1000;
+
+    //! Index of the primary variable for the third MICP component
+    static const int ureaConcentrationIdx =
+        numMICPs > 2 ? oxygenConcentrationIdx + 1 : -1000;
+
+    //! Index of the primary variable for the fourth MICP component
+    static const int biofilmConcentrationIdx =
+        numMICPs > 3 ? ureaConcentrationIdx + 1 : -1000;
+
+    //! Index of the primary variable for the fifth MICP component
+    static const int calciteConcentrationIdx =
+        numMICPs > 4 ? biofilmConcentrationIdx + 1 : -1000;
+
     //! Index of the primary variable for the foam
     static const int foamConcentrationIdx =
-        enableFoam ? PVOffset + numPhases + numSolvents + numPolymers : -1000;
+        enableFoam ? PVOffset + numPhases + numSolvents + numPolymers + numMICPs : -1000;
 
     //! Index of the primary variable for the salt
     static const int saltConcentrationIdx =
-        enableBrine ? PVOffset + numPhases + numSolvents + numPolymers + numFoam : -1000;
+        enableBrine ? PVOffset + numPhases + numSolvents + numPolymers + numMICPs + numFoam : -1000;
 
     //! Index of the primary variable for temperature
     static const int temperatureIdx  =
-        enableEnergy ? PVOffset + numPhases + numSolvents + numExtbos + numPolymers + numFoam + numBrine : - 1000;
+        enableEnergy ? PVOffset + numPhases + numSolvents + numExtbos + numPolymers + numMICPs + numFoam + numBrine : - 1000;
 
     //////////////////////
     // Equation indices
@@ -188,17 +214,37 @@ struct BlackOilTwoPhaseIndices
     static const int contiPolymerMWEqIdx =
         numPolymers > 1 ? contiPolymerEqIdx + 1 : -1000;
 
+    //! Index of the continuity equation for the first MICP component
+    static const int contiMicrobialEqIdx =
+        enableMICP ? PVOffset + numPhases + numSolvents : -1000;
+
+    //! Index of the continuity equation for the second MICP component
+    static const int contiOxygenEqIdx =
+        numMICPs > 1 ? contiMicrobialEqIdx + 1 : -1000;
+
+    //! Index of the continuity equation for the third MICP component
+    static const int contiUreaEqIdx =
+        numMICPs > 2 ? contiOxygenEqIdx + 1 : -1000;
+
+    //! Index of the continuity equation for the fourth MICP component
+    static const int contiBiofilmEqIdx =
+        numMICPs > 3 ? contiUreaEqIdx + 1 : -1000;
+
+    //! Index of the continuity equation for the fifth MICP component
+    static const int contiCalciteEqIdx =
+        numMICPs > 4 ? contiBiofilmEqIdx + 1 : -1000;
+
     //! Index of the continuity equation for the foam component
     static const int contiFoamEqIdx =
-        enableFoam ? PVOffset + numPhases + numSolvents + numPolymers : -1000;
+        enableFoam ? PVOffset + numPhases + numSolvents + numPolymers + numMICPs : -1000;
 
     //! Index of the continuity equation for the salt component
     static const int contiBrineEqIdx =
-        enableBrine ? PVOffset + numPhases + numSolvents + numPolymers + numFoam : -1000;
+        enableBrine ? PVOffset + numPhases + numSolvents + numPolymers + numMICPs + numFoam : -1000;
 
     //! Index of the continuity equation for energy
     static const int contiEnergyEqIdx =
-        enableEnergy ? PVOffset + numPhases + numSolvents + numExtbos + numPolymers + numFoam + numBrine : -1000;
+        enableEnergy ? PVOffset + numPhases + numSolvents + numExtbos + numPolymers + numMICPs + numFoam + numBrine: -1000;
 };
 
 } // namespace Opm

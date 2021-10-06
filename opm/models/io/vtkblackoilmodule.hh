@@ -225,8 +225,10 @@ public:
             const auto& primaryVars = elemCtx.primaryVars(dofIdx, /*timeIdx=*/0);
 
             unsigned pvtRegionIdx = elemCtx.primaryVars(dofIdx, /*timeIdx=*/0).pvtRegionIndex();
-            Scalar SoMax = std::max(getValue(fs.saturation(oilPhaseIdx)),
-                                    elemCtx.problem().maxOilSaturation(globalDofIdx));
+            Scalar SoMax = 0.0;
+            if (FluidSystem::phaseIsActive(oilPhaseIdx))
+                SoMax = std::max(getValue(fs.saturation(oilPhaseIdx)),
+                               elemCtx.problem().maxOilSaturation(globalDofIdx));
 
             if (FluidSystem::phaseIsActive(gasPhaseIdx) && FluidSystem::phaseIsActive(oilPhaseIdx)) {
                 Scalar x_oG = getValue(fs.moleFraction(oilPhaseIdx, gasCompIdx));
