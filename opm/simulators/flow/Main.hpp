@@ -37,6 +37,7 @@
 #  include <flow/flow_ebos_energy.hpp>
 #  include <flow/flow_ebos_oilwater_polymer.hpp>
 #  include <flow/flow_ebos_oilwater_polymer_injectivity.hpp>
+#  include <flow/flow_ebos_micp.hpp>
 # endif
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
@@ -235,6 +236,19 @@ namespace Opm
 
             if ( false ) {}
 #ifndef FLOW_BLACKOIL_ONLY
+            // Single-phase case
+            else if( eclipseState_->runspec().micp() ) {
+              // micp
+              if ( !phases.active( Phase::WATER) || phases.size() > 2) {
+                if (outputCout_)
+                std::cerr << "No valid configuration is found for MICP simulation, the only valid option is "
+                      << "water + MICP" << std::endl;
+                return EXIT_FAILURE;
+            }
+            flowEbosMICPSetDeck(
+                        setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
+                    return flowEbosMICPMain(argc_, argv_, outputCout_, outputFiles_);
+            }
             // Twophase cases
             else if( phases.size() == 2 ) {
                 // oil-gas

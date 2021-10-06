@@ -45,6 +45,7 @@ public:
     std::vector<double> polymer_rates;
     std::vector<double> brine_rates;
     std::vector<double> prod_index;
+    std::vector<double> micp_rates;
 
     std::vector<std::size_t> cell_index;
     std::vector<double> connection_transmissibility_factor;

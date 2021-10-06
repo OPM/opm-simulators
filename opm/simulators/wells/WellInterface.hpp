@@ -112,8 +112,9 @@ public:
     static constexpr bool has_polymermw = getPropValue<TypeTag, Properties::EnablePolymerMW>();
     static constexpr bool has_foam = getPropValue<TypeTag, Properties::EnableFoam>();
     static constexpr bool has_brine = getPropValue<TypeTag, Properties::EnableBrine>();
+    static constexpr bool has_micp = getPropValue<TypeTag, Properties::EnableMICP>();
 
-    // For the conversion between the surface volume rate and reservoir voidage rate 
+    // For the conversion between the surface volume rate and reservoir voidage rate
     using FluidState = BlackOilFluidState<Eval,
                                           FluidSystem,
                                           has_temperature,
@@ -285,6 +286,12 @@ protected:
     double wfoam() const;
 
     double wsalt() const;
+
+    double wmicrobes() const;
+
+    double woxygen() const;
+
+    double wurea() const;
 
     virtual double getRefDensity() const = 0;
 

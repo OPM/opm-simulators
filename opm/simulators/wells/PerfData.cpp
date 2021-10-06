@@ -37,6 +37,7 @@ PerfData::PerfData(std::size_t num_perf, bool injector_, std::size_t num_phases)
     , connection_transmissibility_factor(num_perf)
     , satnum_id(num_perf)
     , ecl_index(num_perf)
+    , micp_rates(num_perf)
 {
     if (injector) {
         this->water_throughput.resize(num_perf);
@@ -70,8 +71,8 @@ bool PerfData::try_assign(const PerfData& other) {
     this->skin_pressure = other.skin_pressure;
     this->water_velocity = other.water_velocity;
     this->prod_index = other.prod_index;
+    this->micp_rates = other.micp_rates;
     return true;
 }
 
 }
-

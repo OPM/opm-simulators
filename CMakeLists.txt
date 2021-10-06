@@ -345,7 +345,7 @@ set_property(TARGET moduleVersion PROPERTY POSITION_INDEPENDENT_CODE ON)
 add_dependencies(moduleVersion opmsimulators)
 
 set(COMMON_MODELS brine energy extbo foam gasoil gaswater oilwater oilwater_polymer polymer solvent)
-set(FLOW_MODELS   blackoil oilwater_brine oilwater_polymer_injectivity)
+set(FLOW_MODELS   blackoil oilwater_brine oilwater_polymer_injectivity micp)
 
 set(FLOW_TGTS)
 foreach(OBJ ${COMMON_MODELS} ${FLOW_MODELS})

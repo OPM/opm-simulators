@@ -694,6 +694,31 @@ namespace Opm
             connectionRates[perf][Indices::contiBrineEqIdx] = Base::restrictEval(cq_s_sm);
         }
 
+        if constexpr (has_micp) {
+            const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+            EvalWell cq_s_microbe = cq_s[waterCompIdx];
+            if (this->isInjector()) {
+                cq_s_microbe *= this->wmicrobes();
+            } else {
+                cq_s_microbe *= this->extendEval(intQuants.microbialConcentration());
+            }
+            connectionRates[perf][Indices::contiMicrobialEqIdx] = Base::restrictEval(cq_s_microbe);
+            EvalWell cq_s_oxygen = cq_s[waterCompIdx];
+            if (this->isInjector()) {
+                cq_s_oxygen *= this->woxygen();
+            } else {
+                cq_s_oxygen *= this->extendEval(intQuants.oxygenConcentration());
+            }
+            connectionRates[perf][Indices::contiOxygenEqIdx] = Base::restrictEval(cq_s_oxygen);
+            EvalWell cq_s_urea = cq_s[waterCompIdx];
+            if (this->isInjector()) {
+                cq_s_urea *= this->wurea();
+            } else {
+                cq_s_urea *= this->extendEval(intQuants.ureaConcentration());
+            }
+            connectionRates[perf][Indices::contiUreaEqIdx] = Base::restrictEval(cq_s_urea);
+        }
+
         // Store the perforation pressure for later usage.
         perf_data.pressure[perf] = ws.bhp + this->perf_pressure_diffs_[perf];
     }
@@ -1323,7 +1348,7 @@ namespace Opm
     {
         // the following implementation assume that the polymer is always after the w-o-g phases
         // For the polymer, energy and foam cases, there is one more mass balance equations of reservoir than wells
-        assert((int(B_avg.size()) == this->num_components_) || has_polymer || has_energy || has_foam || has_brine || has_zFraction);
+        assert((int(B_avg.size()) == this->num_components_) || has_polymer || has_energy || has_foam || has_brine || has_zFraction || has_micp);
 
         std::vector<double> res;
         ConvergenceReport report = this->StdWellEval::getWellConvergence(well_state,

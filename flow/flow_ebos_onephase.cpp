@@ -43,6 +43,7 @@ private:
     using FluidSystem = GetPropType<BaseTypeTag, Properties::FluidSystem>;
 
 public:
+public:
     using type = BlackOilOnePhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
                                          getPropValue<TypeTag, Properties::EnableExtbo>(),
                                          getPropValue<TypeTag, Properties::EnablePolymer>(),
@@ -50,7 +51,8 @@ public:
                                          getPropValue<TypeTag, Properties::EnableFoam>(),
                                          getPropValue<TypeTag, Properties::EnableBrine>(),
                                          /*PVOffset=*/0,
-                                         /*enabledCompIdx=*/FluidSystem::waterCompIdx>;
+                                         /*enabledCompIdx=*/FluidSystem::waterCompIdx,
+                                         getPropValue<TypeTag, Properties::EnableMICP>()>;
 };
 
 } // namespace Opm::Properties

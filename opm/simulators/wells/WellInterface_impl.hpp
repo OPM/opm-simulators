@@ -149,6 +149,74 @@ namespace Opm
         return 0.0;
     }
 
+    template<typename TypeTag>
+    double
+    WellInterface<TypeTag>::
+    wmicrobes() const
+    {
+      if constexpr (has_micp) {
+          auto injectorType = this->well_ecl_.injectorType();
+
+          if (injectorType == InjectorType::WATER) {
+              WellMICPProperties microbes = this->well_ecl_.getMICPProperties();
+              const double microbial_injection_concentration = microbes.m_microbialConcentration;
+              return microbial_injection_concentration;
+          } else {
+              // Not a water injection well => no microbes.
+              return 0.0;
+          }
+      }
+
+      return 0.0;
+    }
+
+    template<typename TypeTag>
+    double
+    WellInterface<TypeTag>::
+    woxygen() const
+    {
+      if constexpr (has_micp) {
+          auto injectorType = this->well_ecl_.injectorType();
+
+          if (injectorType == InjectorType::WATER) {
+              WellMICPProperties oxygen = this->well_ecl_.getMICPProperties();
+              const double oxygen_injection_concentration = oxygen.m_oxygenConcentration;
+              return oxygen_injection_concentration;
+          } else {
+              // Not a water injection well => no oxygen.
+              return 0.0;
+          }
+      }
+
+      return 0.0;
+    }
+
+    // The urea injection concentration is scaled down by a factor of 10, since its value
+    // can be much bigger than 1 (not doing this slows the simulations). The
+    // corresponding values are scaled accordingly in blackoilmicpmodules.hh when computing
+    // the reactions and also when writing the output files (vtk and eclipse format, i.e.,
+    // vtkblackoilmicpmodule.hh and ecloutputblackoilmodel.hh respectively).
+
+    template<typename TypeTag>
+    double
+    WellInterface<TypeTag>::
+    wurea() const
+    {
+      if constexpr (has_micp) {
+          auto injectorType = this->well_ecl_.injectorType();
+
+          if (injectorType == InjectorType::WATER) {
+              WellMICPProperties urea = this->well_ecl_.getMICPProperties();
+              const double urea_injection_concentration = urea.m_ureaConcentration / 10.; //Dividing by scaling factor 10
+              return urea_injection_concentration;
+          } else {
+              // Not a water injection well => no urea.
+              return 0.0;
+          }
+      }
+
+      return 0.0;
+    }
 
     template<typename TypeTag>
     bool
