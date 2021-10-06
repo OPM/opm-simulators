@@ -32,6 +32,7 @@
 
 #include <opm/models/utils/signum.hh>
 #include <opm/models/nonlinear/newtonmethod.hh>
+#include "blackoilmicpmodules.hh"
 
 #include <opm/material/common/Unused.hpp>
 
@@ -111,8 +112,10 @@ class BlackOilNewtonMethod : public GetPropType<TypeTag, Properties::DiscNewtonM
     using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
     using EqVector = GetPropType<TypeTag, Properties::EqVector>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Linearizer = GetPropType<TypeTag, Properties::Linearizer>;
+    using MICPModule = BlackOilMICPModule<TypeTag>;
 
     static const unsigned numEq = getPropValue<TypeTag, Properties::NumEq>();
 
@@ -248,6 +251,7 @@ protected:
         static constexpr bool enableFoam = Indices::foamConcentrationIdx >= 0;
         static constexpr bool enableBrine = Indices::saltConcentrationIdx >= 0;
         static constexpr bool compositionSwitchEnabled = Indices::compositionSwitchIdx >= 0;
+        static constexpr bool enableMICP = Indices::microbialConcentrationIdx >= 0;
 
         currentValue.checkDefined();
         Valgrind::CheckDefined(update);
@@ -259,7 +263,7 @@ protected:
         Scalar deltaSg = 0.0;
         Scalar deltaSs = 0.0;
 
-        if (Indices::waterEnabled) {
+        if (Indices::waterEnabled && FluidSystem::numActivePhases() > 1) {
             deltaSw = update[Indices::waterSaturationIdx];
             deltaSo = -deltaSw;
         }
@@ -371,6 +375,22 @@ protected:
             // keep the temperature within given values
             if (enableEnergy && pvIdx == Indices::temperatureIdx)
                 nextValue[pvIdx] = std::clamp(nextValue[pvIdx], tempMin_, tempMax_);
+
+            // Limit the variables to [0, cmax] values to improve the convergence.
+            // For the microorganisms we set this value equal to the biomass density value.
+            // For the oxygen and urea we set this value to the maximum injected
+            // concentration (the urea concentration has been scaled by 10). For
+            // the biofilm and calcite, we set this value equal to the porosity minus the clogging tolerance.
+            if (enableMICP && pvIdx == Indices::microbialConcentrationIdx)
+                nextValue[pvIdx] = std::clamp(nextValue[pvIdx], 0.0, MICPModule::MICPparaDensityBiofilm());
+            if (enableMICP && pvIdx == Indices::oxygenConcentrationIdx)
+                nextValue[pvIdx] = std::clamp(nextValue[pvIdx], 0.0, MICPModule::MICPparaMaximumOxygenConcentration());
+            if (enableMICP && pvIdx == Indices::ureaConcentrationIdx)
+                nextValue[pvIdx] = std::clamp(nextValue[pvIdx], 0.0, MICPModule::MICPparaMaximumUreaConcentration());
+            if (enableMICP && pvIdx == Indices::biofilmConcentrationIdx)
+                nextValue[pvIdx] = std::clamp(nextValue[pvIdx], 0.0, MICPModule::phi()[globalDofIdx] - MICPModule::MICPparaToleranceBeforeClogging());
+            if (enableMICP && pvIdx == Indices::calciteConcentrationIdx)
+                nextValue[pvIdx] = std::clamp(nextValue[pvIdx], 0.0, MICPModule::phi()[globalDofIdx] - MICPModule::MICPparaToleranceBeforeClogging());
         }
 
         // switch the new primary variables to something which is physically meaningful.

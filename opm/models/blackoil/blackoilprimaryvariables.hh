@@ -2,20 +2,16 @@
 // vi: set et ts=4 sw=4 sts=4:
 /*
   This file is part of the Open Porous Media project (OPM).
-
   OPM is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 2 of the License, or
   (at your option) any later version.
-
   OPM is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
-
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
-
   Consult the COPYING file in the top-level source directory of this
   module for the precise wording of the license and the list of
   copyright holders.
@@ -35,6 +31,7 @@
 #include "blackoilenergymodules.hh"
 #include "blackoilfoammodules.hh"
 #include "blackoilbrinemodules.hh"
+#include "blackoilmicpmodules.hh"
 
 #include <opm/models/discretization/common/fvbaseprimaryvariables.hh>
 
@@ -105,6 +102,7 @@ class BlackOilPrimaryVariables : public FvBasePrimaryVariables<TypeTag>
     enum { enableFoam = getPropValue<TypeTag, Properties::EnableFoam>() };
     enum { enableBrine = getPropValue<TypeTag, Properties::EnableBrine>() };
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    enum { enableMICP = getPropValue<TypeTag, Properties::EnableMICP>() };
     enum { gasCompIdx = FluidSystem::gasCompIdx };
     enum { waterCompIdx = FluidSystem::waterCompIdx };
     enum { oilCompIdx = FluidSystem::oilCompIdx };
@@ -117,6 +115,7 @@ class BlackOilPrimaryVariables : public FvBasePrimaryVariables<TypeTag>
     using EnergyModule = BlackOilEnergyModule<TypeTag, enableEnergy>;
     using FoamModule = BlackOilFoamModule<TypeTag, enableFoam>;
     using BrineModule = BlackOilBrineModule<TypeTag, enableBrine>;
+    using MICPModule = BlackOilMICPModule<TypeTag, enableMICP>;
 
     static_assert(numPhases == 3, "The black-oil model assumes three phases!");
     static_assert(numComponents == 3, "The black-oil model assumes three components!");
@@ -312,13 +311,13 @@ public:
             } else {
                 throw std::logic_error("For single-phase runs, only pure water is presently allowed.");
             }
-            
+
         }
         else if (primaryVarsMeaning() == Sw_po_Sg) {
             if (waterEnabled)
                 (*this)[waterSaturationIdx] = FsToolbox::value(fluidState.saturation(waterPhaseIdx));
-            if (gasEnabled && waterEnabled && !oilEnabled) { 
-                //-> water-gas system   
+            if (gasEnabled && waterEnabled && !oilEnabled) {
+                //-> water-gas system
                 (*this)[pressureSwitchIdx] = FsToolbox::value(fluidState.pressure(gasPhaseIdx));
             }
             else if (oilEnabled) {
@@ -603,13 +602,13 @@ public:
             Scalar Ssol = 0.0;
             if (enableSolvent)
                 Ssol =(*this) [Indices::solventSaturationIdx];
-            
+
             Scalar So = 1.0 - Sw - Sg - Ssol;
             Sw = std::min(std::max(Sw,0.0),1.0);
             So = std::min(std::max(So,0.0),1.0);
             Sg = std::min(std::max(Sg,0.0),1.0);
             Ssol = std::min(std::max(Ssol,0.0),1.0);
-            
+
             Scalar St = Sw + So + Sg + Ssol;
             Sw = Sw/St;
             Sg = Sg/St;
@@ -622,8 +621,8 @@ public:
             if (enableSolvent)
                 (*this)[Indices::solventSaturationIdx] = Ssol;
             return not(St==1);
-            
-        }else if (primaryVarsMeaning() == Sw_po_Rs) { 
+
+        }else if (primaryVarsMeaning() == Sw_po_Rs) {
             Scalar Ssol = 0.0;
             if (enableSolvent)
                 Ssol = (*this)[Indices::solventSaturationIdx];
@@ -639,7 +638,7 @@ public:
             if (waterEnabled)
                 (*this)[Indices::waterSaturationIdx]= Sw;
             if (enableSolvent)
-                (*this)[Indices::solventSaturationIdx] = Ssol;            
+                (*this)[Indices::solventSaturationIdx] = Ssol;
             return not(St==1);
         }else{
             assert(primaryVarsMeaning() == Sw_pg_Rv);
@@ -660,11 +659,11 @@ public:
                 (*this)[Indices::waterSaturationIdx]= Sw;
             if (enableSolvent)
                 (*this)[Indices::solventSaturationIdx] = Ssol;
-            return not(St==1);            
+            return not(St==1);
         }
-        assert(false); 
+        assert(false);
     }
-    
+
     BlackOilPrimaryVariables& operator=(const BlackOilPrimaryVariables& other) = default;
     BlackOilPrimaryVariables& operator=(Scalar value)
     {
@@ -747,6 +746,46 @@ private:
             return FluidSystem::reservoirTemperature();
 
         return (*this)[Indices::temperatureIdx];
+    }
+
+    Scalar microbialConcentration_() const
+    {
+        if (!enableMICP)
+            return 0.0;
+
+        return (*this)[Indices::microbialConcentrationIdx];
+    }
+
+    Scalar oxygenConcentration_() const
+    {
+        if (!enableMICP)
+            return 0.0;
+
+        return (*this)[Indices::oxygenConcentrationIdx];
+    }
+
+    Scalar ureaConcentration_() const
+    {
+        if (!enableMICP)
+            return 0.0;
+
+        return (*this)[Indices::ureaConcentrationIdx];
+    }
+
+    Scalar biofilmConcentration_() const
+    {
+        if (!enableMICP)
+            return 0.0;
+
+        return (*this)[Indices::biofilmConcentrationIdx];
+    }
+
+    Scalar calciteConcentration_() const
+    {
+        if (!enableMICP)
+            return 0.0;
+
+        return (*this)[Indices::calciteConcentrationIdx];
     }
 
     template <class Container>
