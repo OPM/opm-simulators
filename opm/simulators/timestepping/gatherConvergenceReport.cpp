@@ -202,7 +202,8 @@ namespace Opm
 
 namespace Opm
 {
-    ConvergenceReport gatherConvergenceReport(const ConvergenceReport& local_report, Parallel::Communication mpi_communicator)
+    ConvergenceReport gatherConvergenceReport(const ConvergenceReport& local_report,
+                                              Parallel::Communication mpi_communicator [[maybe_unused]])
     {
         return local_report;
     }
