@@ -62,7 +62,7 @@ std::shared_ptr<Schedule> EclGenericVanguard::externalEclSchedule_;
 std::shared_ptr<SummaryConfig> EclGenericVanguard::externalEclSummaryConfig_;
 std::unique_ptr<UDQState> EclGenericVanguard::externalUDQState_;
 std::unique_ptr<Action::State> EclGenericVanguard::externalActionState_;
-std::unique_ptr<EclGenericVanguard::CommunicationType> EclGenericVanguard::comm_;
+std::unique_ptr<Parallel::Communication> EclGenericVanguard::comm_;
 
 EclGenericVanguard::EclGenericVanguard()
     : python(std::make_shared<Python>())
@@ -224,12 +224,6 @@ void EclGenericVanguard::updateOutputDir_(std::string outputDir,
 
 void EclGenericVanguard::init()
 {
-    int myRank = 0;
-
-#if HAVE_MPI
-    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-#endif
-
     // Make proper case name.
     {
         if (fileName_.empty())
@@ -295,7 +289,7 @@ void EclGenericVanguard::init()
         parseContext_ = createParseContext(ignoredKeywords_, eclStrictParsing_);
     }
 
-    readDeck(myRank, fileName_, deck_, eclState_, eclSchedule_, udqState_, actionState_,
+    readDeck(EclGenericVanguard::comm(), fileName_, deck_, eclState_, eclSchedule_, udqState_, actionState_,
              eclSummaryConfig_, std::move(errorGuard), python,
              std::move(parseContext_), /* initFromRestart = */ false,
              /* checkDeck = */ enableExperiments_, outputInterval_);
@@ -326,10 +320,11 @@ void EclGenericVanguard::init()
     if (enableDistributedWells() )
     {
         int hasMsWell = false;
+        const auto& comm = EclGenericVanguard::comm();
 
         if (useMultisegmentWell_)
         {
-            if (myRank == 0)
+            if (comm.rank() == 0)
             {
                 const auto& wells = this->schedule().getWellsatEnd();
                 for ( const auto& well: wells)
@@ -338,16 +333,12 @@ void EclGenericVanguard::init()
                 }
             }
         }
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
-        const auto& comm = Dune::MPIHelper::getCommunication();
-#else
-        const auto& comm = Dune::MPIHelper::getCollectiveCommunication();
-#endif
+
         hasMsWell = comm.max(hasMsWell);
 
         if (hasMsWell)
         {
-            if (myRank == 0)
+            if (comm.rank() == 0)
             {
                 std::string message =
                         std::string("Option --allow-distributed-wells=true is only allowed if model\n")

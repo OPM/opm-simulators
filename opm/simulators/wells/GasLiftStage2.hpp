@@ -55,18 +55,13 @@ class GasLiftStage2 {
     using GradInfo = typename GasLiftSingleWellGeneric::GradInfo;
     using GradMap = std::map<std::string, GradInfo>;
     using MPIComm = typename Dune::MPIHelper::MPICommunicator;
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
-    using Communication = Dune::Communication<MPIComm>;
-#else
-    using Communication = Dune::CollectiveCommunication<MPIComm>;
-#endif
     static const int Water = BlackoilPhases::Aqua;
     static const int Oil = BlackoilPhases::Liquid;
     static const int Gas = BlackoilPhases::Vapour;
 public:
     GasLiftStage2(
         const int report_step_idx,
-        const Communication& comm,
+        const Parallel::Communication& comm,
         const Schedule& schedule,
         const SummaryState& summary_state,
         DeferredLogger& deferred_logger,
@@ -136,7 +131,7 @@ private:
     const SummaryState& summary_state_;
     const Schedule& schedule_;
     const GasLiftOpt& glo_;
-    const Communication& comm_;
+    const Parallel::Communication& comm_;
     GradMap inc_grads_;
     GradMap dec_grads_;
     bool debug_;

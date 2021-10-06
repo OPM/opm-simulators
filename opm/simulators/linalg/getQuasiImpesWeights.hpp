@@ -128,7 +128,7 @@ namespace Amg
             weights[index] = bweights;
             ++index;
         }
-        OPM_END_PARALLEL_TRY_CATCH("getTrueImpesWeights() failed: ");
+        OPM_END_PARALLEL_TRY_CATCH("getTrueImpesWeights() failed: ", elemCtx.simulator().vanguard().grid().comm());
     }
 } // namespace Amg
 

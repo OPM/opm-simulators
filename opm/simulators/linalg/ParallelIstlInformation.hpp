@@ -44,6 +44,8 @@
 #include <dune/common/enumset.hh>
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
+#include <opm/simulators/utils/ParallelCommunication.hpp>
+
 namespace Opm
 {
 namespace
@@ -109,7 +111,7 @@ public:
         return remoteIndices_;
     }
     /// \brief Get the Collective MPI communicator that we use.
-    Dune::CollectiveCommunication<MPI_Comm> communicator() const
+    Parallel::Communication communicator() const
     {
         return communicator_;
     }

@@ -727,7 +727,7 @@ namespace Opm {
 
             }
 
-            OPM_END_PARALLEL_TRY_CATCH("BlackoilModelEbos::localConvergenceData() failed: ");
+            OPM_END_PARALLEL_TRY_CATCH("BlackoilModelEbos::localConvergenceData() failed: ", grid_.comm());
 
             // compute local average in terms of global number of elements
             const int bSize = B_avg.size();
@@ -772,7 +772,7 @@ namespace Opm {
                 }
             }
 
-            OPM_END_PARALLEL_TRY_CATCH("BlackoilModelEbos::ComputeCnvError() failed: ");
+            OPM_END_PARALLEL_TRY_CATCH("BlackoilModelEbos::ComputeCnvError() failed: ", grid_.comm());
 
             return grid_.comm().sum(errorPV);
         }

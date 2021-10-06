@@ -40,12 +40,13 @@
 
 namespace Opm {
 
-void eclStateBroadcast(EclipseState& eclState, Schedule& schedule,
+
+void eclStateBroadcast(Parallel::Communication comm, EclipseState& eclState, Schedule& schedule,
                        SummaryConfig& summaryConfig,
                        UDQState& udqState,
                        Action::State& actionState)
 {
-    Opm::EclMpiSerializer ser(Dune::MPIHelper::getCollectiveCommunication());
+    Opm::EclMpiSerializer ser(comm);
     ser.broadcast(eclState);
     ser.broadcast(schedule);
     ser.broadcast(summaryConfig);
@@ -53,9 +54,9 @@ void eclStateBroadcast(EclipseState& eclState, Schedule& schedule,
     ser.broadcast(actionState);
 }
 
-void eclScheduleBroadcast(Schedule& schedule)
+void eclScheduleBroadcast(Parallel::Communication comm, Schedule& schedule)
 {
-    Opm::EclMpiSerializer ser(Dune::MPIHelper::getCollectiveCommunication());
+    Opm::EclMpiSerializer ser(comm);
     ser.broadcast(schedule);
 }
 }

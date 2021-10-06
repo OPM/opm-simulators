@@ -196,7 +196,7 @@ namespace Opm {
                     }
                 }
 
-                OPM_END_PARALLEL_TRY_CATCH("SurfaceToReservoirVoidage::defineState() failed: ");
+                OPM_END_PARALLEL_TRY_CATCH("SurfaceToReservoirVoidage::defineState() failed: ", simulator.vanguard().grid().comm());
 
                 for (const auto& reg : rmap_.activeRegions()) {
                       auto& ra = attr_.attributes(reg);

@@ -24,6 +24,8 @@
 #include <dune/common/parallel/plocalindex.hh>
 #include <dune/istl/owneroverlapcopy.hh>
 
+#include <opm/simulators/utils/ParallelCommunication.hpp>
+
 #include <opm/common/ErrorMacros.hpp>
 
 #include <memory>
@@ -60,7 +62,7 @@ public:
 #if HAVE_MPI
     using RI = Dune::RemoteIndices<IndexSet>;
 #endif
-
+   
     explicit CommunicateAboveBelow(const Communication& comm);
     /// \brief Adds information about original index of the perforations in ECL Schedule.
     ///
@@ -255,7 +257,7 @@ public:
 #else
     using Communication = Dune::CollectiveCommunication<MPIComm>;
 #endif
-
+ 
     static constexpr int INVALID_ECL_INDEX = -1;
 
     /// \brief Constructs object using MPI_COMM_SELF
@@ -269,7 +271,7 @@ public:
     /// \param allComm The communication object with all MPI ranks active in the simulation.
     ///                Default is the one with all ranks available.
     ParallelWellInfo(const std::pair<std::string,bool>& well_info,
-                     Communication allComm = Communication());
+                     Communication allComm);
 
     const Communication& communication() const
     {

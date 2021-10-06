@@ -69,7 +69,7 @@ public:
           m_centroids(centroids)
     {
         // Scatter the keys
-        const auto& comm = Dune::MPIHelper::getCollectiveCommunication();
+        const Parallel::Communication comm = m_grid.comm();
         if (comm.rank() == 0)
         {
             const auto& globalProps = eclState.globalFieldProps();

@@ -22,6 +22,8 @@
 #ifndef OPM_READDECK_HEADER_INCLUDED
 #define OPM_READDECK_HEADER_INCLUDED
 
+#include <opm/simulators/utils/ParallelCommunication.hpp>
+
 #include <memory>
 #include <optional>
 #include <string>
@@ -57,7 +59,7 @@ FileOutputMode setupLogging(int mpi_rank_, const std::string& deck_filename, con
 /// \brief Reads the deck and creates all necessary objects if needed
 ///
 /// If pointers already contains objects then they are used otherwise they are created and can be used outside later.
-void readDeck(int rank, std::string& deckFilename, std::shared_ptr<Deck>& deck, std::shared_ptr<EclipseState>& eclipseState,
+void readDeck(Parallel::Communication comm, std::string& deckFilename, std::shared_ptr<Deck>& deck, std::shared_ptr<EclipseState>& eclipseState,
               std::shared_ptr<Schedule>& schedule, std::unique_ptr<UDQState>& udqState, std::unique_ptr<Action::State>& actionState, std::shared_ptr<SummaryConfig>& summaryConfig,
               std::unique_ptr<ErrorGuard> errorGuard, std::shared_ptr<Python>& python, std::unique_ptr<ParseContext> parseContext,
               bool initFromRestart, bool checkDeck, const std::optional<int>& outputInterval);

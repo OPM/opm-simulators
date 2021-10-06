@@ -39,7 +39,7 @@ namespace Opm {
 
 GasLiftStage2::GasLiftStage2(
     const int report_step_idx,
-    const Communication& comm,
+    const Parallel::Communication& comm,
     const Schedule& schedule,
     const SummaryState& summary_state,
     DeferredLogger &deferred_logger,

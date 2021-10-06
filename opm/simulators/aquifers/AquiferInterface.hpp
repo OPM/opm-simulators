@@ -128,7 +128,8 @@ public:
             const auto& iq = elemCtx.intensiveQuantities(0, 0);
             pressure_previous_[idx] = getValue(iq.fluidState().pressure(phaseIdx_()));
         }
-        OPM_END_PARALLEL_TRY_CATCH("AquiferInterface::beginTimeStep() failed: ");
+
+        OPM_END_PARALLEL_TRY_CATCH("AquiferInterface::beginTimeStep() failed: ", ebos_simulator_.vanguard().grid().comm());
     }
 
     template <class Context>

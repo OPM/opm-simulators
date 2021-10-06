@@ -24,6 +24,8 @@
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/TargetCalculator.hpp>
 
+#include <dune/common/version.hh>
+
 namespace Opm
 {
 
@@ -201,8 +203,7 @@ namespace Opm
             changed = this->checkConstraints(well_state, group_state, schedule, summaryState, deferred_logger);
         }
 
-        auto cc = Dune::MPIHelper::getCollectiveCommunication();
-
+        Parallel::Communication cc = ebos_simulator.vanguard().grid().comm();
         // checking whether control changed
         if (changed) {
             std::string to;

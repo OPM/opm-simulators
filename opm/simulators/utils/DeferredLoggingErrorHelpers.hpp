@@ -22,11 +22,11 @@
 #define OPM_DEFERREDLOGGINGERRORHELPERS_HPP
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
+#include <opm/simulators/utils/gatherDeferredLogger.hpp>
 
 #include <opm/material/common/Exceptions.hpp>
 
-#include <dune/common/version.hh>
-#include <dune/common/parallel/mpihelper.hh>
+#include <opm/simulators/utils/ParallelCommunication.hpp>
 
 #include <string>
 #include <sstream>
@@ -53,9 +53,11 @@
 
 namespace {
 
-void _throw(Opm::ExceptionType::ExcEnum exc_type, const std::string& message) {
-    const auto& cc = Dune::MPIHelper::getCollectiveCommunication();
-    auto global_exc = cc.max(exc_type);
+void _throw(Opm::ExceptionType::ExcEnum exc_type,
+            const std::string& message,
+            Opm::Parallel::Communication comm)
+{
+    auto global_exc = comm.max(exc_type);
 
     switch (global_exc) {
     case Opm::ExceptionType::NONE:
@@ -78,18 +80,25 @@ void _throw(Opm::ExceptionType::ExcEnum exc_type, const std::string& message) {
     }
 }
 
+} // anonymous namespace
+
+
+
+inline void checkForExceptionsAndThrow(Opm::ExceptionType::ExcEnum exc_type,
+                                       const std::string& message,
+                                       Opm::Parallel::Communication comm)
+{
+    _throw(exc_type, message, comm);
 }
 
-
-
-inline void checkForExceptionsAndThrow(Opm::ExceptionType::ExcEnum exc_type, const std::string& message)
+inline void logAndCheckForExceptionsAndThrow(Opm::DeferredLogger& deferred_logger,
+                                             Opm::ExceptionType::ExcEnum exc_type,
+                                             const std::string& message,
+                                             const bool terminal_output,
+                                             Opm::Parallel::Communication comm)
 {
-    _throw(exc_type, message);
-}
+    Opm::DeferredLogger global_deferredLogger = gatherDeferredLogger(deferred_logger, comm);
 
-inline void logAndCheckForExceptionsAndThrow(Opm::DeferredLogger& deferred_logger, Opm::ExceptionType::ExcEnum exc_type , const std::string& message, const bool terminal_output)
-{
-    Opm::DeferredLogger global_deferredLogger = gatherDeferredLogger(deferred_logger);
     if (terminal_output) {
         global_deferredLogger.logMessages();
     }
@@ -97,7 +106,7 @@ inline void logAndCheckForExceptionsAndThrow(Opm::DeferredLogger& deferred_logge
     // cleared from the global logger, but we must also clear them
     // from the local logger.
     deferred_logger.clearMessages();
-    _throw(exc_type, message);
+    _throw(exc_type, message, comm);
 }
 
 
@@ -139,21 +148,19 @@ catch (const Opm::NumericalIssue& e){                      \
 ///
 /// Assumes that OPM_BEGIN_PARALLEL_TRY_CATCH() was called to initiate
 /// the try-catch clause
-#define OPM_END_PARALLEL_TRY_CATCH(prefix)               \
+#define OPM_END_PARALLEL_TRY_CATCH(prefix, comm)         \
 }                                                        \
 OPM_PARALLEL_CATCH_CLAUSE(obptc_exc_type, obptc_exc_msg);\
 checkForExceptionsAndThrow(obptc_exc_type,               \
-                           prefix + obptc_exc_msg);
+                           prefix + obptc_exc_msg, comm);                        
 
 /// \brief Catch exception, log, and throw in a parallel try-catch clause
 ///
 /// Assumes that OPM_BEGIN_PARALLEL_TRY_CATCH() was called to initiate
 /// the try-catch clause
-#define OPM_END_PARALLEL_TRY_CATCH_LOG(obptc_logger,           \
-                                       obptc_prefix,           \
-                                       obptc_output)           \
+#define OPM_END_PARALLEL_TRY_CATCH_LOG(obptc_logger, obptc_prefix, obptc_output, comm)\
 }                                                              \
 OPM_PARALLEL_CATCH_CLAUSE(obptc_exc_type, obptc_exc_msg);      \
 logAndCheckForExceptionsAndThrow(obptc_logger, obptc_exc_type, \
-    obptc_prefix + obptc_exc_msg, obptc_output);
+    obptc_prefix + obptc_exc_msg, obptc_output, comm);
 #endif // OPM_DEFERREDLOGGINGERRORHELPERS_HPP
