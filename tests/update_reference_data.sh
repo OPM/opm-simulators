@@ -161,7 +161,10 @@ tests[actionx_gconinje]="flow actionx ACTIONX_GCONINJE"
 tests[actionx_gconprod]="flow actionx ACTIONX_GCONPROD"
 tests[actionx_wconinje]="flow actionx ACTIONX_WCONINJE"
 tests[actionx_wefac]="flow actionx ACTIONX_WEFAC"
-tests[0-base-model6]="flow model6 0_BASE_MODEL6"
+tests[0_base_model6]="flow model6 0_BASE_MODEL6"
+tests[0a_aquct_model6]="flow model6 0A_AQUCT_MODEL6"
+tests[0b_rocktab_model6]="flow model6 0B_ROCKTAB_MODEL6"
+tests[1_msw_model6]="flow model6 1_MSW_MODEL6"
 
 changed_tests=""
 
