@@ -24,10 +24,13 @@
 
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
 
+#include <opm/output/data/GuideRateValue.hpp>
 #include <opm/output/data/Groups.hpp>
+#include <opm/output/data/Wells.hpp>
 #include <opm/output/eclipse/RestartValue.hpp>
 
 #include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRateConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRate.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
@@ -42,9 +45,42 @@
 #include <algorithm>
 #include <cassert>
 #include <stdexcept>
+#include <unordered_map>
 #include <vector>
 
 #include <fmt/format.h>
+
+namespace {
+    Opm::data::GuideRateValue::Item
+    guideRateRestartItem(const Opm::GuideRateModel::Target target)
+    {
+        using Item = Opm::data::GuideRateValue::Item;
+        using Target = Opm::GuideRateModel::Target;
+
+        static const auto items = std::unordered_map<Target, Item> {
+            { Target::OIL, Item::Oil   },
+            { Target::GAS, Item::Gas   },
+            { Target::WAT, Item::Water },
+            { Target::RES, Item::ResV  },
+        };
+
+        auto i = items.find(target);
+        return (i == items.end()) ? Item::NumItems : i->second;
+    }
+
+    Opm::GuideRate::GuideRateValue
+    makeGuideRateValue(const Opm::data::GuideRateValue&  restart,
+                       const Opm::GuideRateModel::Target target)
+    {
+        const auto item = guideRateRestartItem(target);
+
+        if (! restart.has(item)) {
+            return {};
+        }
+
+        return { 0.0, restart.get(item), target };
+    }
+} // Anonymous
 
 namespace Opm {
 
@@ -268,6 +304,45 @@ loadRestartGroupData(const std::string&     group,
 
 void
 BlackoilWellModelGeneric::
+loadRestartGuideRates(const int                    report_step,
+                      const GuideRateModel::Target target,
+                      const data::Wells&           rst_wells)
+{
+    for (const auto& [well_name, rst_well] : rst_wells) {
+        if (! this->hasWell(well_name) || this->getWellEcl(well_name).isInjector()) {
+            continue;
+        }
+
+        this->guideRate_.init_grvalue_SI(report_step, well_name,
+                                         makeGuideRateValue(rst_well.guide_rates, target));
+    }
+}
+
+void
+BlackoilWellModelGeneric::
+loadRestartGuideRates(const int                                     report_step,
+                      const GuideRateConfig&                        config,
+                      const std::map<std::string, data::GroupData>& rst_groups)
+{
+    const auto target = config.model().target();
+
+    for (const auto& [group_name, rst_group] : rst_groups) {
+        if (! config.has_production_group(group_name)) {
+            continue;
+        }
+
+        const auto& group = config.production_group(group_name);
+        if ((group.guide_rate > 0.0) || (group.target != Group::GuideRateProdTarget::FORM)) {
+            continue;
+        }
+
+        this->guideRate_.init_grvalue_SI(report_step, group_name,
+                                         makeGuideRateValue(rst_group.guideRates.production, target));
+    }
+}
+
+void
+BlackoilWellModelGeneric::
 loadRestartData(const data::Wells&                 rst_wells,
                 const data::GroupAndNetworkValues& grpNwrkValues,
                 const PhaseUsage&                  phases,
@@ -319,6 +394,9 @@ initFromRestartFile(const RestartValue& restartValues,
     // will not be present in a restart file. Use the previous time step to retrieve
     // wells that have information written to the restart file.
     const int report_step = std::max(eclState_.getInitConfig().getRestartStep() - 1, 0);
+
+    const auto& config = this->schedule()[report_step].guide_rate();
+
     // wells_ecl_ should only contain wells on this processor.
     wells_ecl_ = getLocalWells(report_step);
     this->local_parallel_well_info_ = createLocalParallelWellInfo(wells_ecl_);
@@ -335,6 +413,18 @@ initFromRestartFile(const RestartValue& restartValues,
 
         loadRestartData(restartValues.wells, restartValues.grp_nwrk,
                         this->phase_usage_, handle_ms_well, this->wellState());
+
+        if (config.has_model()) {
+            this->loadRestartGuideRates(report_step,
+                                        config.model().target(),
+                                        restartValues.wells);
+        }
+    }
+
+    if (config.has_model()) {
+        this->loadRestartGuideRates(report_step, config, restartValues.grp_nwrk.groupData);
+
+        this->guideRate_.updateGuideRateExpiration(this->schedule().seconds(report_step), report_step);
     }
 
 

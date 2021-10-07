@@ -307,6 +307,14 @@ protected:
     void loadRestartGroupData(const std::string&     group,
                               const data::GroupData& value);
 
+    void loadRestartGuideRates(const int                    report_step,
+                               const GuideRateModel::Target target,
+                               const data::Wells&           rst_wells);
+
+    void loadRestartGuideRates(const int                                     report_step,
+                               const GuideRateConfig&                        config,
+                               const std::map<std::string, data::GroupData>& rst_groups);
+
     std::unordered_map<std::string, data::GroupGuideRates>
     calculateAllGroupGuiderates(const int reportStepIdx) const;
 
