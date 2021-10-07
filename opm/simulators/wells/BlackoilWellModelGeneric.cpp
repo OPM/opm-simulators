@@ -1592,7 +1592,7 @@ forceShutWellByNameIfPredictionMode(const std::string& wellname,
     for (const auto& well : well_container_generic_) {
         if (well->name() == wellname && !well->wellIsStopped()) {
             if (well->underPredictionMode()) {
-                wellTestState().closeWell(wellname, WellTestConfig::Reason::PHYSICAL, simulation_time);
+                wellTestState().close_well(wellname, WellTestConfig::Reason::PHYSICAL, simulation_time);
                 well_was_shut = 1;
             }
             break;

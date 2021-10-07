@@ -356,7 +356,7 @@ void WellInterfaceGeneric::updateWellTestStatePhysical(const double simulation_t
         if (well_test_state.hasWellClosed(name())) {
             // Already closed, do nothing.
         } else {
-            well_test_state.closeWell(name(), WellTestConfig::Reason::PHYSICAL, simulation_time);
+            well_test_state.close_well(name(), WellTestConfig::Reason::PHYSICAL, simulation_time);
             if (write_message_to_opmlog) {
                 const std::string action = well_ecl_.getAutomaticShutIn() ? "shut" : "stopped";
                 const std::string msg = "Well " + name()
