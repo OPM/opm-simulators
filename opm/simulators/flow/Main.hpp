@@ -65,8 +65,14 @@
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
 #endif
 
+#include <cassert>
+#include <cstdlib>
+#include <iostream>
+#include <memory>
+#include <stdexcept>
 #include <string>
 #include <type_traits>
+#include <utility>
 
 namespace Opm::Properties {
 
@@ -81,30 +87,31 @@ struct FlowEarlyBird {
 } // namespace Opm::Properties
 
 namespace Opm {
-  template <class TypeTag>
-  void flowEbosSetDeck(std::shared_ptr<Deck> deck,
-                       std::shared_ptr<EclipseState> eclState,
-                       std::shared_ptr<Schedule> schedule,
-                       std::shared_ptr<SummaryConfig> summaryConfig)
-  {
-    using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
-    Vanguard::setExternalDeck(deck);
-    Vanguard::setExternalEclState(eclState);
-    Vanguard::setExternalSchedule(schedule);
-    Vanguard::setExternalSummaryConfig(summaryConfig);
-  }
+    template <class TypeTag>
+    void flowEbosSetDeck(std::shared_ptr<Deck> deck,
+                         std::shared_ptr<EclipseState> eclState,
+                         std::shared_ptr<Schedule> schedule,
+                         std::shared_ptr<SummaryConfig> summaryConfig)
+    {
+        using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
 
-// ----------------- Main program -----------------
-  template <class TypeTag>
-  int flowEbosMain(int argc, char** argv, bool outputCout, bool outputFiles)
-  {
-    // we always want to use the default locale, and thus spare us the trouble
-    // with incorrect locale settings.
-    resetLocale();
+        Vanguard::setExternalDeck(deck);
+        Vanguard::setExternalEclState(eclState);
+        Vanguard::setExternalSchedule(schedule);
+        Vanguard::setExternalSummaryConfig(summaryConfig);
+    }
 
-    FlowMainEbos<TypeTag> mainfunc(argc, argv, outputCout, outputFiles);
-    return mainfunc.execute();
-  }
+    // ----------------- Main program -----------------
+    template <class TypeTag>
+    int flowEbosMain(int argc, char** argv, bool outputCout, bool outputFiles)
+    {
+        // we always want to use the default locale, and thus spare us the trouble
+        // with incorrect locale settings.
+        resetLocale();
+
+        FlowMainEbos<TypeTag> mainfunc(argc, argv, outputCout, outputFiles);
+        return mainfunc.execute();
+    }
 }
 
 
@@ -127,16 +134,15 @@ namespace Opm
         Main(int argc, char** argv) : argc_(argc), argv_(argv)  { initMPI();  }
 
         // This constructor can be called from Python
-        Main(const std::string &filename)
+        Main(const std::string& filename)
         {
             setArgvArgc_(filename);
             initMPI();
         }
 
-        // This constructor can be called from Python when Python has already
-        //  parsed a deck
-        Main(
-             std::shared_ptr<Deck> deck,
+        // This constructor can be called from Python when Python has
+        // already parsed a deck
+        Main(std::shared_ptr<Deck> deck,
              std::shared_ptr<EclipseState> eclipseState,
              std::shared_ptr<Schedule> schedule,
              std::shared_ptr<SummaryConfig> summaryConfig)
@@ -215,9 +221,10 @@ namespace Opm
             int exitCode = EXIT_SUCCESS;
             if (isSimulationRank_) {
                 if (initialize_<Properties::TTag::FlowEarlyBird>(exitCode)) {
-                    return dispatchDynamic_();
+                    return this->dispatchDynamic_();
                 }
             }
+
             return exitCode;
         }
 
@@ -227,9 +234,10 @@ namespace Opm
             int exitCode = EXIT_SUCCESS;
             if (isSimulationRank_) {
                 if (initialize_<TypeTag>(exitCode)) {
-                    return dispatchStatic_<TypeTag>();
+                    return this->dispatchStatic_<TypeTag>();
                 }
             }
+
             return exitCode;
         }
 
@@ -393,8 +401,10 @@ namespace Opm
 
         /// \brief Initialize
         /// \param exitCode The exitCode of the program.
-        /// \return Whether to actually run the simulator. I.e. true if parsing of command line
-        /// was successful and no --help, --print-properties, or --print-parameters have been found.
+        ///
+        /// \return Whether to actually run the simulator. I.e. true if
+        /// parsing of command line was successful and no --help,
+        /// --print-properties, or --print-parameters have been found.
         template <class TypeTagEarlyBird>
         bool initialize_(int& exitCode)
         {
@@ -524,33 +534,33 @@ namespace Opm
             return true;
         }
 
-        filesystem::path simulationCaseName_( const std::string& casename ) {
+        filesystem::path simulationCaseName_(const std::string& casename)
+        {
             namespace fs = ::Opm::filesystem;
 
-            const auto exists = []( const fs::path& f ) -> bool {
-                if( !fs::exists( f ) ) return false;
-
-                if( fs::is_regular_file( f ) ) return true;
-
-                return fs::is_symlink( f )
-                && fs::is_regular_file( fs::read_symlink( f ) );
+            auto exists = [](const fs::path& f)
+            {
+                return (fs::exists(f) && fs::is_regular_file(f))
+                    || (fs::is_symlink(f) &&
+                        fs::is_regular_file(fs::read_symlink(f)));
             };
 
-            auto simcase = fs::path( casename );
+            auto simcase = fs::path { casename };
 
-            if( exists( simcase ) ) {
+            if (exists(simcase)) {
                 return simcase;
             }
 
-            for( const auto& ext : { std::string("data"), std::string("DATA") } ) {
-                if( exists( simcase.replace_extension( ext ) ) ) {
+            for (const auto& ext : { std::string("DATA"), std::string("data") }) {
+                if (exists(simcase.replace_extension(ext))) {
                     return simcase;
                 }
             }
 
-            throw std::invalid_argument( "Cannot find input case " + casename );
+            throw std::invalid_argument {
+                "Cannot find input case '" + casename + '\''
+            };
         }
-
 
         // This function is an extreme special case, if the program has been invoked
         // *exactly* as:
