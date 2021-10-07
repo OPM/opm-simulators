@@ -20,9 +20,19 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-
 #ifndef OPM_BLACKOILWELLMODEL_GENERIC_HEADER_INCLUDED
 #define OPM_BLACKOILWELLMODEL_GENERIC_HEADER_INCLUDED
+
+#include <opm/output/data/GuideRateValue.hpp>
+
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestState.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRate.hpp>
+
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+
+#include <opm/simulators/wells/PerforationData.hpp>
+#include <opm/simulators/wells/WellProdIndexCalculator.hpp>
+#include <opm/simulators/wells/WGState.hpp>
 
 #include <functional>
 #include <map>
@@ -32,46 +42,39 @@
 #include <unordered_set>
 #include <vector>
 
-#include <dune/common/version.hh>
-#include <opm/output/data/GuideRateValue.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestState.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRate.hpp>
+namespace Opm {
+    class DeferredLogger;
+    class EclipseState;
+    class GasLiftSingleWellGeneric;
+    class GasLiftWellState;
+    class Group;
+    class GuideRateConfig;
+    class ParallelWellInfo;
+    class RestartValue;
+    class Schedule;
+    class SummaryConfig;
+    class VFPProperties;
+    class WellInterfaceGeneric;
+    class WellState;
+} // namespace Opm
 
-#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
-#include <opm/simulators/wells/ParallelWellInfo.hpp>
-#include <opm/simulators/wells/PerforationData.hpp>
-#include <opm/simulators/wells/WellInterfaceGeneric.hpp>
-#include <opm/simulators/wells/WellProdIndexCalculator.hpp>
-#include <opm/simulators/wells/WGState.hpp>
+namespace Opm { namespace data {
+    struct GroupData;
+    struct GroupGuideRates;
+    class GroupAndNetworkValues;
+    struct NodeData;
+}} // namespace Opm::data
 
 namespace Opm {
-
-namespace data {
-struct GroupData;
-struct GroupGuideRates;
-class GroupAndNetworkValues;
-struct NodeData;
-}
-
-class DeferredLogger;
-class EclipseState;
-class GasLiftSingleWellGeneric;
-class GasLiftWellState;
-class Group;
-class RestartValue;
-class Schedule;
-class SummaryConfig;
-class VFPProperties;
-class WellState;
 
 /// Class for handling the blackoil well model.
 class BlackoilWellModelGeneric
 {
 public:
     // ---------      Types      ---------
-    using GLiftOptWells = std::map<std::string,std::unique_ptr<GasLiftSingleWellGeneric>>;
-    using GLiftProdWells = std::map<std::string,const WellInterfaceGeneric*>;
-    using GLiftWellStateMap = std::map<std::string,std::unique_ptr<GasLiftWellState>>;
+    using GLiftOptWells = std::map<std::string, std::unique_ptr<GasLiftSingleWellGeneric>>;
+    using GLiftProdWells = std::map<std::string, const WellInterfaceGeneric*>;
+    using GLiftWellStateMap = std::map<std::string, std::unique_ptr<GasLiftWellState>>;
 
     BlackoilWellModelGeneric(Schedule& schedule,
                              const SummaryState& summaryState,
@@ -284,6 +287,26 @@ protected:
                            std::map<std::string, data::GroupData>& gvalues) const;
     void assignNodeValues(std::map<std::string, data::NodeData>& nodevalues) const;
 
+    void loadRestartConnectionData(const std::vector<data::Rates::opt>& phs,
+                                   const data::Well&                    rst_well,
+                                   const std::vector<PerforationData>&  old_perf_data,
+                                   SingleWellState&                     ws);
+
+    void loadRestartSegmentData(const std::string&                   well_name,
+                                const std::vector<data::Rates::opt>& phs,
+                                const data::Well&                    rst_well,
+                                SingleWellState&                     ws);
+
+    void loadRestartWellData(const std::string&                   well_name,
+                             const bool                           handle_ms_well,
+                             const std::vector<data::Rates::opt>& phs,
+                             const data::Well&                    rst_well,
+                             const std::vector<PerforationData>&  old_perf_data,
+                             SingleWellState&                     ws);
+
+    void loadRestartGroupData(const std::string&     group,
+                              const data::GroupData& value);
+
     std::unordered_map<std::string, data::GroupGuideRates>
     calculateAllGroupGuiderates(const int reportStepIdx) const;
 
@@ -426,7 +449,7 @@ protected:
 
     bool glift_debug = false;
 
-  private:
+private:
     WellInterfaceGeneric* getGenWell(const std::string& well_name);
 };
 
