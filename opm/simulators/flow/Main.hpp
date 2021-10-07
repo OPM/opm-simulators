@@ -270,123 +270,63 @@ namespace Opm
         int dispatchDynamic_()
         {
             const auto& phases = eclipseState_->runspec().phases();
+
             // run the actual simulator
             //
-            // TODO: make sure that no illegal combinations like thermal and twophase are
-            //       requested.
+            // TODO: make sure that no illegal combinations like thermal and
+            //       twophase are requested.
 
-            if ( false ) {}
+            if (false) {}
+
 #ifndef FLOW_BLACKOIL_ONLY
             // Twophase cases
-            else if( phases.size() == 2 ) {
-                // oil-gas
-                if (phases.active( Phase::OIL ) && phases.active( Phase::GAS )) {
-                    flowEbosGasOilSetDeck(
-                         setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
-                    return flowEbosGasOilMain(argc_, argv_, outputCout_, outputFiles_);
-                }
-                // oil-water
-                else if ( phases.active( Phase::OIL ) && phases.active( Phase::WATER ) ) {
-                    flowEbosOilWaterSetDeck(
-                        setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
-                    return flowEbosOilWaterMain(argc_, argv_, outputCout_, outputFiles_);
-                }
-                // gas-water
-                else if ( phases.active( Phase::GAS ) && phases.active( Phase::WATER ) ) {
-                    flowEbosGasWaterSetDeck(
-                        setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
-                    return flowEbosGasWaterMain(argc_, argv_, outputCout_, outputFiles_);
-                }
-                else {
-                    if (outputCout_)
-                        std::cerr << "No suitable configuration found, valid are Twophase (oilwater, oilgas and gaswater), polymer, solvent, or blackoil" << std::endl;
-                    return EXIT_FAILURE;
-                }
+            else if (phases.size() == 2) {
+                return this->runTwoPhase(phases);
             }
+
             // Polymer case
-            else if ( phases.active( Phase::POLYMER ) ) {
-                if ( !phases.active( Phase::WATER) ) {
-                    if (outputCout_)
-                        std::cerr << "No valid configuration is found for polymer simulation, valid options include "
-                                  << "oilwater + polymer and blackoil + polymer" << std::endl;
-                    return EXIT_FAILURE;
-                }
-
-                // Need to track the polymer molecular weight
-                // for the injectivity study
-                if ( phases.active( Phase::POLYMW ) ) {
-                    // only oil water two phase for now
-                    assert( phases.size() == 4);
-                    return flowEbosOilWaterPolymerInjectivityMain(argc_, argv_, outputCout_, outputFiles_);
-                }
-
-                if ( phases.size() == 3 ) { // oil water polymer case
-                    flowEbosOilWaterPolymerSetDeck(
-                        setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
-                    return flowEbosOilWaterPolymerMain(argc_, argv_, outputCout_, outputFiles_);
-                } else {
-                    flowEbosPolymerSetDeck(
-                        setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
-                    return flowEbosPolymerMain(argc_, argv_, outputCout_, outputFiles_);
-                }
+            else if (phases.active(Phase::POLYMER)) {
+                return this->runPolymer(phases);
             }
+
             // Foam case
-            else if ( phases.active( Phase::FOAM ) ) {
-                flowEbosFoamSetDeck(
-                    setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
-                return flowEbosFoamMain(argc_, argv_, outputCout_, outputFiles_);
+            else if (phases.active(Phase::FOAM)) {
+                return this->runFoam();
             }
+
             // Brine case
-            else if ( phases.active( Phase::BRINE ) ) {
-                if ( !phases.active( Phase::WATER) ) {
-                    if (outputCout_)
-                        std::cerr << "No valid configuration is found for brine simulation, valid options include "
-                                  << "oilwater + brine and blackoil + brine" << std::endl;
-                    return EXIT_FAILURE;
-                }
-                if ( phases.size() == 3 ) { // oil water brine case
-                    flowEbosOilWaterBrineSetDeck(
-                        setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
-                    return flowEbosOilWaterBrineMain(argc_, argv_, outputCout_, outputFiles_);
-                } else {
-                    flowEbosBrineSetDeck(
-                        setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
-                    return flowEbosBrineMain(argc_, argv_, outputCout_, outputFiles_);
-                }
+            else if (phases.active(Phase::BRINE)) {
+                return this->runBrine(phases);
             }
+
             // Solvent case
-            else if ( phases.active( Phase::SOLVENT ) ) {
-                flowEbosSolventSetDeck(
-                    setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
-                return flowEbosSolventMain(argc_, argv_, outputCout_, outputFiles_);
+            else if (phases.active(Phase::SOLVENT)) {
+                return this->runSolvent();
             }
+
             // Extended BO case
-            else if ( phases.active( Phase::ZFRACTION ) ) {
-                flowEbosExtboSetDeck(
-                    setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
-                return flowEbosExtboMain(argc_, argv_, outputCout_, outputFiles_);
+            else if (phases.active(Phase::ZFRACTION)) {
+                return this->runExtendedBlackOil();
             }
+
             // Energy case
             else if (eclipseState_->getSimulationConfig().isThermal()) {
-                flowEbosEnergySetDeck(
-                    setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
-                return flowEbosEnergyMain(argc_, argv_, outputCout_, outputFiles_);
+                return this->runThermal();
             }
 #endif // FLOW_BLACKOIL_ONLY
+
             // Blackoil case
-            else if( phases.size() == 3 ) {
-                flowEbosBlackoilSetDeck(
-                    setupTime_,
-                    deck_,
-                    eclipseState_,
-                    schedule_,
-                    std::move(udqState_),
-                    summaryConfig_);
-                return flowEbosBlackoilMain(argc_, argv_, outputCout_, outputFiles_);
+            else if (phases.size() == 3) {
+                return this->runBlackOil();
             }
+
             else {
-                if (outputCout_)
-                    std::cerr << "No suitable configuration found, valid are Twophase, polymer, foam, brine, solvent, energy, blackoil." << std::endl;
+                if (outputCout_) {
+                    std::cerr << "No suitable configuration found, valid are "
+                              << "Twophase, polymer, foam, brine, solvent, "
+                              << "energy, and blackoil.\n";
+                }
+
                 return EXIT_FAILURE;
             }
         }
@@ -579,23 +519,152 @@ namespace Opm
             }
         }
 
+#ifndef FLOW_BLACKOIL_ONLY
+        int runTwoPhase(const Phases& phases)
+        {
+            // oil-gas
+            if (phases.active( Phase::OIL ) && phases.active( Phase::GAS )) {
+                flowEbosGasOilSetDeck(
+                    setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
+                return flowEbosGasOilMain(argc_, argv_, outputCout_, outputFiles_);
+            }
 
-        int argc_;
-        char** argv_;
-        bool outputCout_;
-        bool outputFiles_;
-        double setupTime_;
-        std::string deckFilename_;
-        std::string flowProgName_;
-        char *saveArgs_[2];
-        std::unique_ptr<UDQState> udqState_;
-        std::unique_ptr<Action::State> actionState_;
+            // oil-water
+            else if ( phases.active( Phase::OIL ) && phases.active( Phase::WATER ) ) {
+                flowEbosOilWaterSetDeck(
+                    setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
+                return flowEbosOilWaterMain(argc_, argv_, outputCout_, outputFiles_);
+            }
+
+            // gas-water
+            else if ( phases.active( Phase::GAS ) && phases.active( Phase::WATER ) ) {
+                flowEbosGasWaterSetDeck(
+                    setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
+                return flowEbosGasWaterMain(argc_, argv_, outputCout_, outputFiles_);
+            }
+            else {
+                if (outputCout_) {
+                    std::cerr << "No suitable configuration found, valid are Twophase (oilwater, oilgas and gaswater), polymer, solvent, or blackoil" << std::endl;
+                }
+
+                return EXIT_FAILURE;
+            }
+        }
+
+        int runPolymer(const Phases& phases)
+        {
+            if (! phases.active(Phase::WATER)) {
+                if (outputCout_)
+                    std::cerr << "No valid configuration is found for polymer simulation, valid options include "
+                              << "oilwater + polymer and blackoil + polymer" << std::endl;
+
+                return EXIT_FAILURE;
+            }
+
+            // Need to track the polymer molecular weight
+            // for the injectivity study
+            if (phases.active(Phase::POLYMW)) {
+                // only oil water two phase for now
+                assert (phases.size() == 4);
+                return flowEbosOilWaterPolymerInjectivityMain(argc_, argv_, outputCout_, outputFiles_);
+            }
+
+            if (phases.size() == 3) { // oil water polymer case
+                flowEbosOilWaterPolymerSetDeck(
+                    setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
+                return flowEbosOilWaterPolymerMain(argc_, argv_, outputCout_, outputFiles_);
+            }
+            else {
+                flowEbosPolymerSetDeck(
+                    setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
+                return flowEbosPolymerMain(argc_, argv_, outputCout_, outputFiles_);
+            }
+        }
+
+        int runFoam()
+        {
+            flowEbosFoamSetDeck(
+                setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
+
+            return flowEbosFoamMain(argc_, argv_, outputCout_, outputFiles_);
+        }
+
+        int runBrine(const Phases& phases)
+        {
+            if (! phases.active(Phase::WATER)) {
+                if (outputCout_)
+                    std::cerr << "No valid configuration is found for brine simulation, valid options include "
+                              << "oilwater + brine and blackoil + brine" << std::endl;
+
+                return EXIT_FAILURE;
+            }
+
+            if (phases.size() == 3) { // oil water brine case
+                flowEbosOilWaterBrineSetDeck(
+                    setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
+                return flowEbosOilWaterBrineMain(argc_, argv_, outputCout_, outputFiles_);
+            }
+            else {
+                flowEbosBrineSetDeck(
+                    setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
+                return flowEbosBrineMain(argc_, argv_, outputCout_, outputFiles_);
+            }
+        }
+
+        int runSolvent()
+        {
+            flowEbosSolventSetDeck(
+                setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
+
+            return flowEbosSolventMain(argc_, argv_, outputCout_, outputFiles_);
+        }
+
+        int runExtendedBlackOil()
+        {
+            flowEbosExtboSetDeck(
+                setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
+
+            return flowEbosExtboMain(argc_, argv_, outputCout_, outputFiles_);
+        }
+
+        int runThermal()
+        {
+            flowEbosEnergySetDeck(
+                setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
+
+            return flowEbosEnergyMain(argc_, argv_, outputCout_, outputFiles_);
+        }
+#endif  // FLOW_BLACKOIL_ONLY
+
+        int runBlackOil()
+        {
+            flowEbosBlackoilSetDeck(this->setupTime_,
+                                    this->deck_,
+                                    this->eclipseState_,
+                                    this->schedule_,
+                                    std::move(this->udqState_),
+                                    this->summaryConfig_);
+
+            return flowEbosBlackoilMain(argc_, argv_, outputCout_, outputFiles_);
+        }
+
+        int argc_{0};
+        char** argv_{nullptr};
+        bool outputCout_{false};
+        bool outputFiles_{false};
+        double setupTime_{0.0};
+        std::string deckFilename_{};
+        std::string flowProgName_{};
+        char *saveArgs_[2]{nullptr};
+        std::unique_ptr<UDQState> udqState_{};
+        std::unique_ptr<Action::State> actionState_{};
 
         // These variables may be owned by both Python and the simulator
-        std::shared_ptr<Deck> deck_;
-        std::shared_ptr<EclipseState> eclipseState_;
-        std::shared_ptr<Schedule> schedule_;
-        std::shared_ptr<SummaryConfig> summaryConfig_;
+        std::shared_ptr<Deck> deck_{};
+        std::shared_ptr<EclipseState> eclipseState_{};
+        std::shared_ptr<Schedule> schedule_{};
+        std::shared_ptr<SummaryConfig> summaryConfig_{};
+
         // To demonstrate run with non_world_comm
         bool isSimulationRank_ = true;
     };
