@@ -509,13 +509,17 @@ namespace Opm
         //
         // the call is intercepted by this function which will print "flow $version"
         // on stdout and exit(0).
-        void handleVersionCmdLine_(int argc, char** argv) {
-            for ( int i = 1; i < argc; ++i )
+        void handleVersionCmdLine_(int argc, char** argv)
+        {
+            auto pos = std::find_if(argv, argv + argc,
+                [](const char* arg)
             {
-                if (std::strcmp(argv[i], "--version") == 0) {
-                    std::cout << "flow " << moduleVersionName() << std::endl;
-                    std::exit(EXIT_SUCCESS);
-                }
+                return std::strcmp(arg, "--version") == 0;
+            });
+
+            if (pos != argv + argc) {
+                std::cout << "flow " << moduleVersionName() << std::endl;
+                std::exit(EXIT_SUCCESS);
             }
         }
 
