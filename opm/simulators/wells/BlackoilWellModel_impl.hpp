@@ -612,7 +612,7 @@ namespace Opm {
                             events.clearEvent(WellState::event_mask);
                         } else {
                             wellTestState().openWell(well_name);
-                            wellTestState().openAllCompletions(well_name);
+                            wellTestState().open_completions(well_name);
                         }
                     }
                 }
