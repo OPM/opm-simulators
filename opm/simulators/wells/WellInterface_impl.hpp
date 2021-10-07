@@ -306,7 +306,7 @@ namespace Opm
 
             // also reopen completions
             for (auto& completion : this->well_ecl_.getCompletions()) {
-                if (!welltest_state_temp.hasCompletion(this->name(), completion.first)) {
+                if (!welltest_state_temp.completion_is_closed(this->name(), completion.first)) {
                     well_test_state.dropCompletion(this->name(), completion.first);
                 }
             }

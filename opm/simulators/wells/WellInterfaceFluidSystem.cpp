@@ -757,7 +757,7 @@ updateWellTestStateEconomic(const SingleWellState& ws,
                 const auto& connections = well_ecl_.getConnections();
                 for (const auto& connection : connections) {
                     if (connection.state() == Connection::State::OPEN
-                        && !well_test_state.hasCompletion(name(), connection.complnum())) {
+                        && !well_test_state.completion_is_closed(name(), connection.complnum())) {
                         allCompletionsClosed = false;
                     }
                 }

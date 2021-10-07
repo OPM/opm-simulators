@@ -233,7 +233,7 @@ void WellInterfaceGeneric::closeCompletions(WellTestState& wellTestState)
     int perfIdx = 0;
     for (const auto& connection : connections) {
         if (connection.state() == Connection::State::OPEN) {
-            if (wellTestState.hasCompletion(name(), connection.complnum())) {
+            if (wellTestState.completion_is_closed(name(), connection.complnum())) {
                 well_index_[perfIdx] = 0.0;
             }
             perfIdx++;
