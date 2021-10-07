@@ -740,7 +740,7 @@ updateWellTestStateEconomic(const SingleWellState& ws,
             {
                 const int worst_offending_completion = ratio_report.worst_offending_completion;
 
-                well_test_state.addClosedCompletion(name(), worst_offending_completion, simulation_time);
+                well_test_state.close_completion(name(), worst_offending_completion, simulation_time);
                 if (write_message_to_opmlog) {
                     if (worst_offending_completion < 0) {
                         const std::string msg = std::string("Connection ") + std::to_string(- worst_offending_completion)
