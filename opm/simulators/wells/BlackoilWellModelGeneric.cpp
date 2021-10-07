@@ -1325,7 +1325,7 @@ assignShutConnections(data::Wells& wsrpt,
             return wellIsOpen && (conn.state() != Connection::State::SHUT);
         };
 
-        if (this->wellTestState().hasWellClosed(well.name()) &&
+        if (this->wellTestState().well_is_closed(well.name()) &&
             !this->wasDynamicallyShutThisTimeStep(wellID))
         {
             xwel.dynamicStatus = well.getAutomaticShutIn()

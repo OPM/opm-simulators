@@ -353,7 +353,7 @@ void WellInterfaceGeneric::updateWellTestStatePhysical(const double simulation_t
                                                        DeferredLogger& deferred_logger) const
 {
     if (!isOperableAndSolvable()) {
-        if (well_test_state.hasWellClosed(name())) {
+        if (well_test_state.well_is_closed(name())) {
             // Already closed, do nothing.
         } else {
             well_test_state.close_well(name(), WellTestConfig::Reason::PHYSICAL, simulation_time);
