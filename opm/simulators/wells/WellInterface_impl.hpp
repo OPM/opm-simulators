@@ -299,7 +299,7 @@ namespace Opm
 
         // update wellTestState if the well test succeeds
         if (!welltest_state_temp.well_is_closed(this->name())) {
-            well_test_state.openWell(this->name());
+            well_test_state.open_well(this->name());
 
             std::string msg = std::string("well ") + this->name() + std::string(" is re-opened");
             deferred_logger.info(msg);

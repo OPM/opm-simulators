@@ -611,7 +611,7 @@ namespace Opm {
                             // even if it was new or received new targets this report step.
                             events.clearEvent(WellState::event_mask);
                         } else {
-                            wellTestState().openWell(well_name);
+                            wellTestState().open_well(well_name);
                             wellTestState().open_completions(well_name);
                         }
                     }
