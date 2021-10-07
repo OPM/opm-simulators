@@ -60,6 +60,9 @@ public:
                          const int index_of_well,
                          const std::vector<PerforationData>& perf_data);
 
+    /// \brief Get the perforations of the well
+    const std::vector<PerforationData>& perforationData() const;
+
     /// Well name.
     const std::string& name() const;
 
