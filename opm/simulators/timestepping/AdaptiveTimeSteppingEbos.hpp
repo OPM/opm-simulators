@@ -675,9 +675,8 @@ namespace Opm {
             assert(growthFactor_ >= 1.0);
         }
 
-
-        template <class StepReportVector>
-        std::set<std::string> consistentlyFailingWells(const StepReportVector& sr)
+        template <class ProblemType>
+        std::set<std::string> consistentlyFailingWells(const std::vector<ProblemType>& sr)
         {
             // If there are wells that cause repeated failures, we
             // close them, and restart the un-chopped timestep.

@@ -257,7 +257,7 @@ namespace Opm
         // individually. We first open all completions, then we close one by one by calling updateWellTestState
         // untill the number of closed completions do not increase anymore.
         while (testWell) {
-            const size_t original_number_closed_completions = welltest_state_temp.sizeCompletions();
+            const size_t original_number_closed_completions = welltest_state_temp.num_closed_completions();
             bool converged = solveWellForTesting(simulator, well_state_copy, group_state, deferred_logger);
             if (!converged) {
                 const auto msg = fmt::format("WTEST: Well {} is not solvable (physical)", this->name());
@@ -291,8 +291,8 @@ namespace Opm
             // Also check if number of completions has increased. If the number of closed completions do not increased
             // we stop the testing.
             // TODO: it can be tricky here, if the well is shut/closed due to other reasons
-            if ( welltest_state_temp.sizeWells() > 0 ||
-                (original_number_closed_completions == welltest_state_temp.sizeCompletions()) ) {
+            if ( welltest_state_temp.num_closed_wells() > 0 ||
+                (original_number_closed_completions == welltest_state_temp.num_closed_completions()) ) {
                     testWell = false; // this terminates the while loop
             }
         }
