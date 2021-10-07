@@ -185,12 +185,18 @@ namespace Opm
 
         void setArgvArgc_(const std::string& filename)
         {
-            deckFilename_.assign(filename);
-            flowProgName_.assign("flow");
-            argc_ = 2;
-            saveArgs_[0] = const_cast<char *>(flowProgName_.c_str());
-            saveArgs_[1] = const_cast<char *>(deckFilename_.c_str());
-            argv_ = saveArgs_;
+            this->deckFilename_ = filename;
+            this->flowProgName_ = "flow";
+
+            this->argc_ = 2;
+            this->saveArgs_[0] = const_cast<char *>(this->flowProgName_.c_str());
+            this->saveArgs_[1] = const_cast<char *>(this->deckFilename_.c_str());
+
+            // Note: argv[argc] must exist and be nullptr
+            assert ((sizeof this->saveArgs_) > (this->argc_ * sizeof this->saveArgs_[0]));
+            this->saveArgs_[this->argc_] = nullptr;
+
+            this->argv_ = this->saveArgs_;
         }
 
         void initMPI()
@@ -659,7 +665,7 @@ namespace Opm
         double setupTime_{0.0};
         std::string deckFilename_{};
         std::string flowProgName_{};
-        char *saveArgs_[2]{nullptr};
+        char *saveArgs_[3]{nullptr};
         std::unique_ptr<UDQState> udqState_{};
         std::unique_ptr<Action::State> actionState_{};
 
