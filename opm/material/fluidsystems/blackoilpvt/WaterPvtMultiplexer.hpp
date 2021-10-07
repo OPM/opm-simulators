@@ -193,7 +193,7 @@ public:
             break;
 
         case WaterPvtApproach::ThermalWaterPvt:
-            realWaterPvt_ = new WaterPvtThermal<Scalar>;
+            realWaterPvt_ = new WaterPvtThermal<Scalar, enableBrine>;
             break;
 
         case WaterPvtApproach::NoWaterPvt:
@@ -241,17 +241,17 @@ public:
     }
 
     template <WaterPvtApproach approachV>
-    typename std::enable_if<approachV == WaterPvtApproach::ThermalWaterPvt, WaterPvtThermal<Scalar> >::type& getRealPvt()
+    typename std::enable_if<approachV == WaterPvtApproach::ThermalWaterPvt, WaterPvtThermal<Scalar, enableBrine> >::type& getRealPvt()
     {
         assert(approach() == approachV);
-        return *static_cast<WaterPvtThermal<Scalar>* >(realWaterPvt_);
+        return *static_cast<WaterPvtThermal<Scalar, enableBrine>* >(realWaterPvt_);
     }
 
     template <WaterPvtApproach approachV>
-    typename std::enable_if<approachV == WaterPvtApproach::ThermalWaterPvt, const WaterPvtThermal<Scalar> >::type& getRealPvt() const
+    typename std::enable_if<approachV == WaterPvtApproach::ThermalWaterPvt, const WaterPvtThermal<Scalar, enableBrine> >::type& getRealPvt() const
     {
         assert(approach() == approachV);
-        return *static_cast<WaterPvtThermal<Scalar>* >(realWaterPvt_);
+        return *static_cast<WaterPvtThermal<Scalar, enableBrine>* >(realWaterPvt_);
     }
 
     const void* realWaterPvt() const { return realWaterPvt_; }
@@ -269,8 +269,8 @@ public:
             return *static_cast<const ConstantCompressibilityBrinePvt<Scalar>*>(realWaterPvt_) ==
                    *static_cast<const ConstantCompressibilityBrinePvt<Scalar>*>(data.realWaterPvt_);
         case WaterPvtApproach::ThermalWaterPvt:
-            return *static_cast<const WaterPvtThermal<Scalar>*>(realWaterPvt_) ==
-                   *static_cast<const WaterPvtThermal<Scalar>*>(data.realWaterPvt_);
+            return *static_cast<const WaterPvtThermal<Scalar, enableBrine>*>(realWaterPvt_) ==
+                   *static_cast<const WaterPvtThermal<Scalar, enableBrine>*>(data.realWaterPvt_);
         default:
             return true;
         }
@@ -287,7 +287,7 @@ public:
             realWaterPvt_ = new ConstantCompressibilityBrinePvt<Scalar>(*static_cast<const ConstantCompressibilityBrinePvt<Scalar>*>(data.realWaterPvt_));
             break;
         case WaterPvtApproach::ThermalWaterPvt:
-            realWaterPvt_ = new WaterPvtThermal<Scalar>(*static_cast<const WaterPvtThermal<Scalar>*>(data.realWaterPvt_));
+            realWaterPvt_ = new WaterPvtThermal<Scalar, enableBrine>(*static_cast<const WaterPvtThermal<Scalar, enableBrine>*>(data.realWaterPvt_));
             break;
         default:
             break;

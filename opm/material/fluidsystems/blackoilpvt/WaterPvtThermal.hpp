@@ -50,12 +50,12 @@ class WaterPvtMultiplexer;
  * Note that this _only_ implements the temperature part, i.e., it requires the
  * isothermal properties as input.
  */
-template <class Scalar>
+template <class Scalar, bool enableBrine>
 class WaterPvtThermal
 {
 public:
     typedef Tabulated1DFunction<Scalar> TabulatedOneDFunction;
-    typedef WaterPvtMultiplexer<Scalar, /*enableThermal=*/false, false> IsothermalPvt;
+    typedef WaterPvtMultiplexer<Scalar, /*enableThermal=*/false, enableBrine> IsothermalPvt;
 
     WaterPvtThermal()
     {
@@ -344,7 +344,7 @@ public:
     bool enableInternalEnergy() const
     { return enableInternalEnergy_; }
 
-    bool operator==(const WaterPvtThermal<Scalar>& data) const
+    bool operator==(const WaterPvtThermal<Scalar, enableBrine>& data) const
     {
         if (isothermalPvt_ && !data.isothermalPvt_)
             return false;
@@ -369,7 +369,7 @@ public:
                this->enableInternalEnergy() == data.enableInternalEnergy();
     }
 
-    WaterPvtThermal<Scalar>& operator=(const WaterPvtThermal<Scalar>& data)
+    WaterPvtThermal<Scalar, enableBrine>& operator=(const WaterPvtThermal<Scalar, enableBrine>& data)
     {
         if (data.isothermalPvt_)
             isothermalPvt_ = new IsothermalPvt(*data.isothermalPvt_);
