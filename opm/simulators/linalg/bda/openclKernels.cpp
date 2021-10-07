@@ -42,6 +42,26 @@ namespace bda
     }
 
 
+    // scale vector with scalar
+    std::string get_scale_string() {
+        return R"(
+        __kernel void scale(
+            __global double *vec,
+            const double a,
+            const int N)
+        {
+            unsigned int NUM_THREADS = get_global_size(0);
+            int idx = get_global_id(0);
+
+            while(idx < N){
+                vec[idx] *= a;
+                idx += NUM_THREADS;
+            }
+        }
+        )";
+    }
+
+
     // returns partial sums, instead of the final dot product
     std::string get_dot_1_string() {
         return R"(
@@ -319,13 +339,12 @@ namespace bda
                 const unsigned int num_blocks_per_warp = warpsize/bs/bs;
                 const unsigned int NUM_THREADS = get_global_size(0);
                 const unsigned int num_warps_in_grid = NUM_THREADS / warpsize;
-                unsigned int idx = get_global_id(0);
-                unsigned int target_block_row = idx / warpsize;
+                unsigned int idx_g = get_global_id(0);
+                unsigned int target_block_row = idx_g / warpsize;
                 target_block_row += nodesPerColorPrefix[color];
                 const unsigned int lane = idx_t % warpsize;
                 const unsigned int c = (lane / bs) % bs;
                 const unsigned int r = lane % bs;
-                const double relaxation = 0.9;
 
                 while(target_block_row < nodesPerColorPrefix[color+1]){
                     )";
@@ -372,7 +391,7 @@ namespace bda
                         }
 
                         const unsigned int row = target_block_row*bs + lane;
-                        x[row] = relaxation * sum;
+                        x[row] = sum;
                     }
 
                     target_block_row += num_warps_in_grid;

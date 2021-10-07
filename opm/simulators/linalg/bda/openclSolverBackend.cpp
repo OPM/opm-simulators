@@ -509,7 +509,7 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
 
         get_opencl_kernels();
 
-        prec->setKernels(ILU_apply1_k.get(), ILU_apply2_k.get(), ilu_decomp_k.get());
+        prec->setKernels(ILU_apply1_k.get(), ILU_apply2_k.get(), scale_k.get(), ilu_decomp_k.get());
 
     } catch (const cl::Error& error) {
         std::ostringstream oss;
@@ -535,6 +535,8 @@ void openclSolverBackend<block_size>::get_opencl_kernels() {
         cl::Program::Sources sources;
         std::string axpy_s = get_axpy_string();
         add_kernel_string(sources, axpy_s);
+        std::string scale_s = get_scale_string();
+        add_kernel_string(sources, scale_s);
         std::string dot_1_s = get_dot_1_string();
         add_kernel_string(sources, dot_1_s);
         std::string norm_s = get_norm_string();
@@ -569,6 +571,7 @@ void openclSolverBackend<block_size>::get_opencl_kernels() {
         dot_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg>(cl::Kernel(program, "dot_1")));
         norm_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg>(cl::Kernel(program, "norm")));
         axpy_k.reset(new cl::make_kernel<cl::Buffer&, const double, cl::Buffer&, const unsigned int>(cl::Kernel(program, "axpy")));
+        scale_k.reset(new cl::make_kernel<cl::Buffer&, const double, const unsigned int>(cl::Kernel(program, "scale")));
         custom_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const double, const double, const unsigned int>(cl::Kernel(program, "custom")));
         spmv_blocked_k.reset(new spmv_kernel_type(cl::Kernel(program, "spmv_blocked")));
         ILU_apply1_k.reset(new ilu_apply1_kernel_type(cl::Kernel(program, "ILU_apply1")));

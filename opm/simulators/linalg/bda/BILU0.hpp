@@ -85,9 +85,10 @@ namespace bda
 
         ilu_apply1_kernel_type *ILU_apply1;
         ilu_apply2_kernel_type *ILU_apply2;
+        cl::make_kernel<cl::Buffer&, const double, const unsigned int> *scale;
         cl::make_kernel<const unsigned int, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&,
                                         cl::Buffer&, cl::Buffer&,
-                                        const int, cl::LocalSpaceArg> *ilu_decomp_k;
+                                        const int, cl::LocalSpaceArg> *ilu_decomp;
 
         GPU_storage s;
         cl::Context *context;
@@ -114,8 +115,8 @@ namespace bda
         // ilu_decomposition
         bool create_preconditioner(BlockedMatrix<block_size> *mat);
 
-        // apply preconditioner, y = prec(x)
-        void apply(cl::Buffer& x, cl::Buffer& y);
+        // apply preconditioner, x = prec(y)
+        void apply(cl::Buffer& y, cl::Buffer& x);
 
         void setOpenCLContext(cl::Context *context);
         void setOpenCLQueue(cl::CommandQueue *queue);
@@ -123,7 +124,8 @@ namespace bda
         void setKernels(
             cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> *ILU_apply1,
             cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> *ILU_apply2,
-            cl::make_kernel<const unsigned int, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const int, cl::LocalSpaceArg> *ilu_decomp_k
+            cl::make_kernel<cl::Buffer&, const double, const unsigned int> *scale,
+            cl::make_kernel<const unsigned int, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const int, cl::LocalSpaceArg> *ilu_decomp
             );
 
         int* getToOrder()
