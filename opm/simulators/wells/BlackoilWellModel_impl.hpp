@@ -385,7 +385,7 @@ namespace Opm {
         const auto& wtest_config = schedule()[timeStepIdx].wtest_config();
         if (!wtest_config.empty()) { // there is a WTEST request
             const std::vector<std::string> wellsForTesting = wellTestState()
-                .updateWells(wtest_config, simulationTime);
+                .test_wells(wtest_config, simulationTime);
 
             for (const std::string& well_name : wellsForTesting) {
                 const auto& ws = this->wellState().well(well_name);
