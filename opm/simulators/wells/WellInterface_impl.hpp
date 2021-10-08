@@ -306,9 +306,8 @@ namespace Opm
 
             // also reopen completions
             for (auto& completion : this->well_ecl_.getCompletions()) {
-                if (!welltest_state_temp.completion_is_closed(this->name(), completion.first)) {
-                    well_test_state.dropCompletion(this->name(), completion.first);
-                }
+                if (!welltest_state_temp.completion_is_closed(this->name(), completion.first))
+                    well_test_state.open_completion(this->name(), completion.first);
             }
             // set the status of the well_state to open
             ws.open();
