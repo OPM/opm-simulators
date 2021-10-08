@@ -150,13 +150,18 @@ namespace Opm {
         if (!localWellsActive())
             return;
 
-        if (!param_.matrix_add_well_contributions_) {
-            // if the well contributions are not supposed to be included explicitly in
-            // the matrix, we only apply the vector part of the Schur complement here.
-            for (const auto& well: well_container_) {
-                // r = r - duneC_^T * invDuneD_ * resWell_
-                well->apply(res);
+        if (!param_.matrix_add_well_contributions_)
+        {
+            OPM_BEGIN_PARALLEL_TRY_CATCH();
+            {
+                // if the well contributions are not supposed to be included explicitly in
+                // the matrix, we only apply the vector part of the Schur complement here.
+                for (const auto& well: well_container_) {
+                    // r = r - duneC_^T * invDuneD_ * resWell_
+                    well->apply(res);
+                }
             }
+            OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::linearize failed: ")
             return;
         }
 
