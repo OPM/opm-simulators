@@ -149,9 +149,6 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     linearize(SparseMatrixAdapter& jacobian, GlobalEqVector& res)
     {
-        if (!localWellsActive())
-            return;
-
         if (!param_.matrix_add_well_contributions_)
         {
             OPM_BEGIN_PARALLEL_TRY_CATCH();
