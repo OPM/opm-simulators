@@ -335,14 +335,15 @@ namespace Opm {
                 const int nc = UgGridHelpers::numCells(grid_);
                 BVector x(nc);
 
-                // apply the Schur compliment of the well model to the reservoir linearized
-                // equations
-                wellModel().linearize(ebosSimulator().model().linearizer().jacobian(),
-                                      ebosSimulator().model().linearizer().residual());
-
                 // Solve the linear system.
                 linear_solve_setup_time_ = 0.0;
                 try {
+                    // apply the Schur compliment of the well model to the reservoir linearized
+                    // equations
+                    // Note that linearize may throw for MSwells.
+                    wellModel().linearize(ebosSimulator().model().linearizer().jacobian(),
+                                          ebosSimulator().model().linearizer().residual());
+
                     solveJacobianSystem(x);
                     report.linear_solve_setup_time += linear_solve_setup_time_;
                     report.linear_solve_time += perfTimer.stop();
