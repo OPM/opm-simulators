@@ -169,6 +169,8 @@ public:
     // whether a well is specified with a non-zero and valid VFP table number
     bool isVFPActive(DeferredLogger& deferred_logger) const;
 
+    void reportWellSwitching(const SingleWellState& ws, DeferredLogger& deferred_logger) const;
+
 protected:
     bool getAllowCrossFlow() const;
     double mostStrictBhpFromBhpLimits(const SummaryState& summaryState) const;
@@ -301,6 +303,8 @@ protected:
     double well_efficiency_factor_;
     const VFPProperties* vfp_properties_;
     const GuideRate* guide_rate_;
+
+    std::vector< std::string> well_control_log_;
 };
 
 }

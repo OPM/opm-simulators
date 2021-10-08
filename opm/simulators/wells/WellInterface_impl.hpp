@@ -63,7 +63,6 @@ namespace Opm
                 }
             }
         }
-        well_control_log_.clear();
     }
 
 
@@ -175,11 +174,11 @@ namespace Opm
         } else {
             from = Well::ProducerCMode2String(ws.production_cmode);
         }
-        bool oscillating = std::count(well_control_log_.begin(), well_control_log_.end(), from) >= param_.max_number_of_well_switches_;
+        bool oscillating = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) >= param_.max_number_of_well_switches_;
 
         if (oscillating) {
             // only output frist time
-            bool output = std::count(well_control_log_.begin(), well_control_log_.end(), from) == param_.max_number_of_well_switches_;
+            bool output = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) == param_.max_number_of_well_switches_;
             if (output) {
                 std::ostringstream ss;
                 ss << "    The control model for well " << this->name()
@@ -189,7 +188,7 @@ namespace Opm
                    << " switches. The control is kept at " << from;
                 deferred_logger.info(ss.str());
                 // add one more to avoid outputting the same info again
-                well_control_log_.push_back(from);
+                this->well_control_log_.push_back(from);
             }
             return false;
         }
@@ -202,7 +201,6 @@ namespace Opm
             assert(iog == IndividualOrGroup::Both);
             changed = this->checkConstraints(well_state, group_state, schedule, summaryState, deferred_logger);
         }
-
         Parallel::Communication cc = ebos_simulator.vanguard().grid().comm();
         // checking whether control changed
         if (changed) {
@@ -212,7 +210,6 @@ namespace Opm
             } else {
                 to = Well::ProducerCMode2String(ws.production_cmode);
             }
-            well_control_log_.push_back(from);
             std::ostringstream ss;
             ss << "    Switching control mode for well " << this->name()
                << " from " << from
@@ -220,7 +217,9 @@ namespace Opm
             if (cc.size() > 1) {
                ss << " on rank " << cc.rank();
             }
-            deferred_logger.info(ss.str());
+            deferred_logger.debug(ss.str());
+
+            this->well_control_log_.push_back(from);
             updateWellStateWithTarget(ebos_simulator, group_state, well_state, deferred_logger);
             updatePrimaryVariables(well_state, deferred_logger);
         }

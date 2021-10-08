@@ -456,6 +456,10 @@ namespace Opm {
                 well->updateWaterThroughput(dt, this->wellState());
             }
         }
+        // report well switching
+        for (const auto& well : well_container_) {
+            well->reportWellSwitching(this->wellState().well(well->indexOfWell()), local_deferredLogger);
+        }
 
         // update the rate converter with current averages pressures etc in
         rateConverter_->template defineState<ElementContext>(ebosSimulator_);
