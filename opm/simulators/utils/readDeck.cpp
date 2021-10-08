@@ -169,8 +169,7 @@ namespace {
         actionState->load_rst((*schedule)[report_step].actions(), rst_state);
     }
 
-    void createNonRestartDynamicObjects(Opm::Parallel::Communication         comm,
-                                        const Opm::Deck&                     deck,
+    void createNonRestartDynamicObjects(const Opm::Deck&                     deck,
                                         const Opm::EclipseState&             eclipseState,
                                         const Opm::ParseContext&             parseContext,
                                         std::shared_ptr<Opm::Python>         python,
@@ -270,7 +269,7 @@ namespace {
                                    errorGuard);
         }
         else {
-            createNonRestartDynamicObjects(comm, *deck, *eclipseState,
+            createNonRestartDynamicObjects(*deck, *eclipseState,
                                            *parseContext, std::move(python),
                                            schedule, udqState, actionState,
                                            errorGuard);
