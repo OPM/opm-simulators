@@ -385,12 +385,14 @@ namespace Opm {
         const auto& wtest_config = schedule()[timeStepIdx].wtest_config();
         if (!wtest_config.empty()) { // there is a WTEST request
             const std::vector<std::string> wellsForTesting = wellTestState()
-                .updateWells(wtest_config, wells_ecl_, simulationTime);
+                .updateWells(wtest_config, simulationTime);
 
             for (const std::string& well_name : wellsForTesting) {
-                // this is the well we will test
-                WellInterfacePtr well = createWellForWellTest(well_name, timeStepIdx, deferred_logger);
+                const auto& ws = this->wellState().well(well_name);
+                if (ws.status != Well::Status::OPEN)
+                    continue;
 
+                WellInterfacePtr well = createWellForWellTest(well_name, timeStepIdx, deferred_logger);
                 // some preparation before the well can be used
                 well->init(&phase_usage_, depth_, gravity_, local_num_cells_, B_avg_);
                 const Well& wellEcl = schedule().getWell(well_name, timeStepIdx);
