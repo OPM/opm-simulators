@@ -291,9 +291,7 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Ecl
         equilGrid_.reset(new Dune::CpGrid(*grid_));
         equilCartesianIndexMapper_ = std::make_unique<CartesianIndexMapper>(*equilGrid_);
 
-        std::vector<int> actnum = UgGridHelpers::createACTNUM(*grid_);
-        auto &field_props = eclState.fieldProps();
-        const_cast<FieldPropsManager&>(field_props).reset_actnum(actnum);
+        eclState.reset_actnum(UgGridHelpers::createACTNUM(*grid_));
     }
 
     {
