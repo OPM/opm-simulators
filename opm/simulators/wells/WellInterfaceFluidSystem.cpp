@@ -708,7 +708,7 @@ updateWellTestStateEconomic(const SingleWellState& ws,
             deferred_logger.warning("NOT_SUPPORTING_FOLLOWONWELL", "opening following on well after well closed is not supported yet");
         }
 
-        well_test_state.closeWell(name(), WellTestConfig::Reason::ECONOMIC, simulation_time);
+        well_test_state.close_well(name(), WellTestConfig::Reason::ECONOMIC, simulation_time);
         if (write_message_to_opmlog) {
             if (this->well_ecl_.getAutomaticShutIn()) {
                 const std::string msg = std::string("well ") + name() + std::string(" will be shut due to rate economic limit");
@@ -740,7 +740,7 @@ updateWellTestStateEconomic(const SingleWellState& ws,
             {
                 const int worst_offending_completion = ratio_report.worst_offending_completion;
 
-                well_test_state.addClosedCompletion(name(), worst_offending_completion, simulation_time);
+                well_test_state.close_completion(name(), worst_offending_completion, simulation_time);
                 if (write_message_to_opmlog) {
                     if (worst_offending_completion < 0) {
                         const std::string msg = std::string("Connection ") + std::to_string(- worst_offending_completion)
@@ -757,13 +757,13 @@ updateWellTestStateEconomic(const SingleWellState& ws,
                 const auto& connections = well_ecl_.getConnections();
                 for (const auto& connection : connections) {
                     if (connection.state() == Connection::State::OPEN
-                        && !well_test_state.hasCompletion(name(), connection.complnum())) {
+                        && !well_test_state.completion_is_closed(name(), connection.complnum())) {
                         allCompletionsClosed = false;
                     }
                 }
 
                 if (allCompletionsClosed) {
-                    well_test_state.closeWell(name(), WellTestConfig::Reason::ECONOMIC, simulation_time);
+                    well_test_state.close_well(name(), WellTestConfig::Reason::ECONOMIC, simulation_time);
                     if (write_message_to_opmlog) {
                         if (this->well_ecl_.getAutomaticShutIn()) {
                             const std::string msg = name() + std::string(" will be shut due to last completion closed");
@@ -778,7 +778,7 @@ updateWellTestStateEconomic(const SingleWellState& ws,
             }
         case WellEconProductionLimits::EconWorkover::WELL:
             {
-            well_test_state.closeWell(name(), WellTestConfig::Reason::ECONOMIC, simulation_time);
+            well_test_state.close_well(name(), WellTestConfig::Reason::ECONOMIC, simulation_time);
             if (write_message_to_opmlog) {
                 if (well_ecl_.getAutomaticShutIn()) {
                     // tell the control that the well is closed

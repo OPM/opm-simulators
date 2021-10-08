@@ -599,7 +599,7 @@ namespace Opm {
                 }
 
                 // A new WCON keywords can re-open a well that was closed/shut due to Physical limit
-                if (this->wellTestState().hasWellClosed(well_name)) {
+                if (this->wellTestState().well_is_closed(well_name)) {
                     // TODO: more checking here, to make sure this standard more specific and complete
                     // maybe there is some WCON keywords will not open the well
                     auto& events = this->wellState().well(w).events;
@@ -611,8 +611,8 @@ namespace Opm {
                             // even if it was new or received new targets this report step.
                             events.clearEvent(WellState::event_mask);
                         } else {
-                            wellTestState().openWell(well_name);
-                            wellTestState().openAllCompletions(well_name);
+                            wellTestState().open_well(well_name);
+                            wellTestState().open_completions(well_name);
                         }
                     }
                 }
@@ -620,7 +620,7 @@ namespace Opm {
                 // TODO: should we do this for all kinds of closing reasons?
                 // something like wellTestState().hasWell(well_name)?
                 bool wellIsStopped = false;
-                if (wellTestState().hasWellClosed(well_name))
+                if (wellTestState().well_is_closed(well_name))
                 {
                     if (well_ecl.getAutomaticShutIn()) {
                         // shut wells are not added to the well container
@@ -1294,11 +1294,11 @@ namespace Opm {
         DeferredLogger local_deferredLogger;
         for (const auto& well : well_container_) {
             const auto& wname = well->name();
-            const auto wasClosed = wellTestState.hasWellClosed(wname);
+            const auto wasClosed = wellTestState.well_is_closed(wname);
             well->checkWellOperability(ebosSimulator_, this->wellState(), local_deferredLogger);
             well->updateWellTestState(this->wellState().well(wname), simulationTime, /*writeMessageToOPMLog=*/ true, wellTestState, local_deferredLogger);
 
-            if (!wasClosed && wellTestState.hasWellClosed(wname)) {
+            if (!wasClosed && wellTestState.well_is_closed(wname)) {
                 this->closed_this_step_.insert(wname);
             }
         }

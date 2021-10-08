@@ -233,7 +233,7 @@ void WellInterfaceGeneric::closeCompletions(WellTestState& wellTestState)
     int perfIdx = 0;
     for (const auto& connection : connections) {
         if (connection.state() == Connection::State::OPEN) {
-            if (wellTestState.hasCompletion(name(), connection.complnum())) {
+            if (wellTestState.completion_is_closed(name(), connection.complnum())) {
                 well_index_[perfIdx] = 0.0;
             }
             perfIdx++;
@@ -353,10 +353,10 @@ void WellInterfaceGeneric::updateWellTestStatePhysical(const double simulation_t
                                                        DeferredLogger& deferred_logger) const
 {
     if (!isOperableAndSolvable()) {
-        if (well_test_state.hasWellClosed(name())) {
+        if (well_test_state.well_is_closed(name())) {
             // Already closed, do nothing.
         } else {
-            well_test_state.closeWell(name(), WellTestConfig::Reason::PHYSICAL, simulation_time);
+            well_test_state.close_well(name(), WellTestConfig::Reason::PHYSICAL, simulation_time);
             if (write_message_to_opmlog) {
                 const std::string action = well_ecl_.getAutomaticShutIn() ? "shut" : "stopped";
                 const std::string msg = "Well " + name()

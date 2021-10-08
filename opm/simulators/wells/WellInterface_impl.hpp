@@ -298,17 +298,16 @@ namespace Opm
         }
 
         // update wellTestState if the well test succeeds
-        if (!welltest_state_temp.hasWellClosed(this->name())) {
-            well_test_state.openWell(this->name());
+        if (!welltest_state_temp.well_is_closed(this->name())) {
+            well_test_state.open_well(this->name());
 
             std::string msg = std::string("well ") + this->name() + std::string(" is re-opened");
             deferred_logger.info(msg);
 
             // also reopen completions
             for (auto& completion : this->well_ecl_.getCompletions()) {
-                if (!welltest_state_temp.hasCompletion(this->name(), completion.first)) {
-                    well_test_state.dropCompletion(this->name(), completion.first);
-                }
+                if (!welltest_state_temp.completion_is_closed(this->name(), completion.first))
+                    well_test_state.open_completion(this->name(), completion.first);
             }
             // set the status of the well_state to open
             ws.open();
