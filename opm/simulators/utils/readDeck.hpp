@@ -28,41 +28,61 @@
 #include <optional>
 #include <string>
 
-namespace Opm 
-{
+namespace Opm {
+    class Deck;
+    class EclipseState;
+    class ErrorGuard;
+    class ParseContext;
+    class Python;
+    class Schedule;
+    class SummaryConfig;
+    class UDQState;
+} // end namespace Opm
 
-class Deck;
-class EclipseState;
-class ErrorGuard;
-class ParseContext;
-class Python;
-class Schedule;
-class SummaryConfig;
-class UDQState;
+namespace Opm {
 
 namespace Action {
 class State;
 }
 
 enum class FileOutputMode {
-    //! \brief No output to files.
+    //! \brief No file output.
     OUTPUT_NONE = 0,
-    //! \brief Output only to log files, no eclipse output.
+
+    //! \brief Output only to log files, no ECLIPSE output.
     OUTPUT_LOG_ONLY = 1,
+
     //! \brief Output to all files.
-    OUTPUT_ALL = 3
+    OUTPUT_ALL = 3,
 };
 
 // Setup the OpmLog backends
-FileOutputMode setupLogging(int mpi_rank_, const std::string& deck_filename, const std::string& cmdline_output_dir, const std::string& cmdline_output, bool output_cout_, const std::string& stdout_log_id);
+FileOutputMode
+setupLogging(int                mpi_rank_,
+             const std::string& deck_filename,
+             const std::string& cmdline_output_dir,
+             const std::string& cmdline_output,
+             bool               output_cout_,
+             const std::string& stdout_log_id);
 
 /// \brief Reads the deck and creates all necessary objects if needed
 ///
-/// If pointers already contains objects then they are used otherwise they are created and can be used outside later.
-void readDeck(Parallel::Communication comm, std::string& deckFilename, std::shared_ptr<Deck>& deck, std::shared_ptr<EclipseState>& eclipseState,
-              std::shared_ptr<Schedule>& schedule, std::unique_ptr<UDQState>& udqState, std::unique_ptr<Action::State>& actionState, std::shared_ptr<SummaryConfig>& summaryConfig,
-              std::unique_ptr<ErrorGuard> errorGuard, std::shared_ptr<Python>& python, std::unique_ptr<ParseContext> parseContext,
-              bool initFromRestart, bool checkDeck, const std::optional<int>& outputInterval);
+/// If pointers already contains objects then they are used otherwise they
+/// are created and can be used outside later.
+void readDeck(Parallel::Communication         comm,
+              const std::string&              deckFilename,
+              std::shared_ptr<Deck>&          deck,
+              std::shared_ptr<EclipseState>&  eclipseState,
+              std::shared_ptr<Schedule>&      schedule,
+              std::unique_ptr<UDQState>&      udqState,
+              std::unique_ptr<Action::State>& actionState,
+              std::shared_ptr<SummaryConfig>& summaryConfig,
+              std::unique_ptr<ErrorGuard>     errorGuard,
+              std::shared_ptr<Python>         python,
+              std::unique_ptr<ParseContext>   parseContext,
+              bool                            initFromRestart,
+              bool                            checkDeck,
+              const std::optional<int>&       outputInterval);
 } // end namespace Opm
 
 #endif // OPM_READDECK_HEADER_INCLUDED
