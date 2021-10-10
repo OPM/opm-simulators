@@ -227,14 +227,14 @@ void WellInterfaceGeneric::initCompletions()
     assert(my_next_perf == perf_data_->end());
 }
 
-void WellInterfaceGeneric::closeCompletions(WellTestState& wellTestState)
+void WellInterfaceGeneric::closeCompletions(const WellTestState& wellTestState)
 {
     const auto& connections = well_ecl_.getConnections();
     int perfIdx = 0;
     for (const auto& connection : connections) {
         if (connection.state() == Connection::State::OPEN) {
             if (wellTestState.completion_is_closed(name(), connection.complnum())) {
-                well_index_[perfIdx] = 0.0;
+                this->well_index_[perfIdx] = 0.0;
             }
             perfIdx++;
         }

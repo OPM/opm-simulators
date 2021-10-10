@@ -85,7 +85,7 @@ public:
     bool isOperableAndSolvable() const;
 
     void initCompletions();
-    void closeCompletions(WellTestState& wellTestState);
+    void closeCompletions(const WellTestState& wellTestState);
 
     void setVFPProperties(const VFPProperties* vfp_properties_arg);
     void setGuideRate(const GuideRate* guide_rate_arg);
