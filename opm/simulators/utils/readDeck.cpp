@@ -218,8 +218,8 @@ namespace {
     }
 
     std::shared_ptr<Opm::EclipseState>
-    createEclipseState(Opm::Parallel::Communication comm,
-                       const Opm::Deck&             deck)
+    createEclipseState([[maybe_unused]] Opm::Parallel::Communication comm,
+                       const Opm::Deck&                              deck)
     {
 #if HAVE_MPI
         return std::make_shared<Opm::ParallelEclipseState>(deck, comm);
