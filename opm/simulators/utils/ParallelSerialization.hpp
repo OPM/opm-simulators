@@ -27,6 +27,7 @@ class EclipseState;
 class Schedule;
 class SummaryConfig;
 class UDQState;
+class WellTestState;
 
 namespace Action {
 class State;
@@ -41,7 +42,8 @@ class State;
 void eclStateBroadcast(Parallel::Communication  comm, EclipseState& eclState, Schedule& schedule,
                        SummaryConfig& summaryConfig,
                        UDQState& udqState,
-                       Action::State& actionState);
+                       Action::State& actionState,
+                       WellTestState& wtestState);
 
 /// \brief Broadcasts an schedule from root node in parallel runs.
 void eclScheduleBroadcast(Parallel::Communication comm, Schedule& schedule);

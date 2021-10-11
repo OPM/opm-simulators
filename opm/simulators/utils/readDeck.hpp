@@ -37,6 +37,7 @@ namespace Opm {
     class Schedule;
     class SummaryConfig;
     class UDQState;
+    class WellTestState;
 } // end namespace Opm
 
 namespace Opm {
@@ -76,6 +77,7 @@ void readDeck(Parallel::Communication         comm,
               std::shared_ptr<Schedule>&      schedule,
               std::unique_ptr<UDQState>&      udqState,
               std::unique_ptr<Action::State>& actionState,
+              std::unique_ptr<WellTestState>& wtestState,
               std::shared_ptr<SummaryConfig>& summaryConfig,
               std::unique_ptr<ErrorGuard>     errorGuard,
               std::shared_ptr<Python>         python,

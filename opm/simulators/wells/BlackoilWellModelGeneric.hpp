@@ -135,6 +135,7 @@ public:
                          WellState& well_state);
 
     void initFromRestartFile(const RestartValue& restartValues,
+                             WellTestState wtestState,
                              const size_t numCells,
                              bool handle_ms_well);
 

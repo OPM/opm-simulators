@@ -48,6 +48,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/ArrayDimChecker.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/State.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestState.hpp>
 
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/parametersystem.hh>
@@ -264,6 +265,7 @@ namespace Opm
                     schedule_,
                     std::move(udqState_),
                     std::move(this->actionState_),
+                    std::move(this->wtestState_),
                     summaryConfig_);
                 return flowEbosBlackoilMainInit(
                     argc_, argv_, outputCout_, outputFiles_);
@@ -457,7 +459,7 @@ namespace Opm
                 if (output_param >= 0)
                     outputInterval = output_param;
 
-                readDeck(EclGenericVanguard::comm(), deckFilename, deck_, eclipseState_, schedule_, udqState_, actionState_,
+                readDeck(EclGenericVanguard::comm(), deckFilename, deck_, eclipseState_, schedule_, udqState_, actionState_, wtestState_,
                          summaryConfig_, nullptr, python, std::move(parseContext),
                          init_from_restart_file, outputCout_, outputInterval);
 
@@ -655,6 +657,7 @@ namespace Opm
                                     this->schedule_,
                                     std::move(this->udqState_),
                                     std::move(this->actionState_),
+                                    std::move(this->wtestState_),
                                     this->summaryConfig_);
 
             return flowEbosBlackoilMain(argc_, argv_, outputCout_, outputFiles_);
@@ -670,6 +673,7 @@ namespace Opm
         char *saveArgs_[3]{nullptr};
         std::unique_ptr<UDQState> udqState_{};
         std::unique_ptr<Action::State> actionState_{};
+        std::unique_ptr<WellTestState> wtestState_{};
 
         // These variables may be owned by both Python and the simulator
         std::shared_ptr<Deck> deck_{};
