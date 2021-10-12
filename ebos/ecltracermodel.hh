@@ -291,38 +291,21 @@ protected:
         }
 
         // Wells  terms
-        const int episodeIdx = simulator_.episodeIndex();
-        const auto& wells = simulator_.vanguard().schedule().getWells(episodeIdx);
-        for (const auto& well : wells) {
+        const auto& wellPtrs = simulator_.problem().wellModel().localNonshutWells();
+        for (const auto& wellPtr : wellPtrs) {
+            const auto& well = wellPtr->wellEcl();
 
             for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
                 this->wellTracerRate_[std::make_pair(well.name(),this->tracerNames_[tr.idx_[tIdx]])] = 0.0;
             }
-
-            if (well.getStatus() == Well::Status::SHUT)
-                continue;
-
-            if (!simulator_.problem().wellModel().hasWell(well.name()))
-                continue;
-
-            const auto& wellPtr = simulator_.problem().wellModel().getWell(well.name());
 
             std::vector<double> wtracer(tr.numTracer());
             for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
                 wtracer[tIdx] = well.getTracerProperties().getConcentration(this->tracerNames_[tr.idx_[tIdx]]);
             }
 
-            std::array<int, 3> cartesianCoordinate;
-            for (auto& connection : well.getConnections()) {
-
-                if (connection.state() == Connection::State::SHUT)
-                    continue;
-
-                cartesianCoordinate[0] = connection.getI();
-                cartesianCoordinate[1] = connection.getJ();
-                cartesianCoordinate[2] = connection.getK();
-                const size_t cartIdx = simulator_.vanguard().cartesianIndex(cartesianCoordinate);
-                const int I = this->cartToGlobal_[cartIdx];
+            for (auto& perfData : wellPtr->perforationData()) {
+                auto I = perfData.cell_index;
                 Scalar rate = wellPtr->volumetricSurfaceRateForConnection(I, tr.phaseIdx_);
                 if (rate > 0) {
                     for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
@@ -388,34 +371,17 @@ protected:
         }
 
         // Store _producer_ tracer rate for reporting
-        const int episodeIdx = simulator_.episodeIndex();
-        const auto& wells = simulator_.vanguard().schedule().getWells(episodeIdx);
-        for (const auto& well : wells) {
-
-            if (well.getStatus() == Well::Status::SHUT)
-                continue;
-
-            if (!simulator_.problem().wellModel().hasWell(well.name()))
-                continue;
-
-            const auto& wellPtr = simulator_.problem().wellModel().getWell(well.name());
+        const auto& wellPtrs = simulator_.problem().wellModel().localNonshutWells();
+        for (const auto& wellPtr : wellPtrs) {
+            const auto& well = wellPtr->wellEcl();
 
             if (!well.isProducer()) //Injection rates already reported during assembly
                 continue;
 
             Scalar rateWellPos = 0.0;
             Scalar rateWellNeg = 0.0;
-            std::array<int, 3> cartesianCoordinate;
-            for (auto& connection : well.getConnections()) {
-
-                if (connection.state() == Connection::State::SHUT)
-                    continue;
-
-                cartesianCoordinate[0] = connection.getI();
-                cartesianCoordinate[1] = connection.getJ();
-                cartesianCoordinate[2] = connection.getK();
-                const size_t cartIdx = simulator_.vanguard().cartesianIndex(cartesianCoordinate);
-                const int I = this->cartToGlobal_[cartIdx];
+            for (auto& perfData : wellPtr->perforationData()) {
+                const int I = perfData.cell_index;
                 Scalar rate = wellPtr->volumetricSurfaceRateForConnection(I, tr.phaseIdx_);
                 if (rate < 0) {
                     rateWellNeg += rate;
@@ -490,7 +456,7 @@ protected:
     // Since oil or gas tracers appears in dual compositions when VAPOIL respectively DISGAS
     // is active, the template argument is intended to support future extension to these 
     // scenarios by supplying an extended vector type.
- 
+
     template <typename TV>
     struct TracerBatch {
       std::vector<int> idx_;

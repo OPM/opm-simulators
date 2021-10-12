@@ -98,6 +98,11 @@ WellInterfaceGeneric::WellInterfaceGeneric(const Well& well,
     wsolvent_ = 0.0;
 }
 
+const std::vector<PerforationData>& WellInterfaceGeneric::perforationData() const
+{
+    return *perf_data_;
+}
+
 const std::string& WellInterfaceGeneric::name() const
 {
     return well_ecl_.name();
