@@ -960,7 +960,9 @@ add_test_compareECLFiles(CASENAME actionx_wconinje
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR actionx)
+                         DIR actionx
+                         RESTART_SCHED false
+                         RESTART_STEP 20)
 
 add_test_compareECLFiles(CASENAME actionx_wefac
                          FILENAME ACTIONX_WEFAC
