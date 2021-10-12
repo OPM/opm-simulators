@@ -263,6 +263,7 @@ namespace Opm
                     eclipseState_,
                     schedule_,
                     std::move(udqState_),
+                    std::move(this->actionState_),
                     summaryConfig_);
                 return flowEbosBlackoilMainInit(
                     argc_, argv_, outputCout_, outputFiles_);
@@ -653,6 +654,7 @@ namespace Opm
                                     this->eclipseState_,
                                     this->schedule_,
                                     std::move(this->udqState_),
+                                    std::move(this->actionState_),
                                     this->summaryConfig_);
 
             return flowEbosBlackoilMain(argc_, argv_, outputCout_, outputFiles_);
