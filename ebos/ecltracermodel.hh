@@ -31,6 +31,7 @@
 #include <ebos/eclgenerictracermodel.hh>
 
 #include <opm/models/utils/propertysystem.hh>
+#include <opm/simulators/utils/VectorVectorDataHandle.hpp>
 
 #include <string>
 #include <vector>
@@ -235,6 +236,15 @@ protected:
         for (; elemIt != elemEndIt; ++ elemIt) {
             elemCtx.updateAll(*elemIt);
 
+            size_t I = elemCtx.globalSpaceIndex(/*dofIdx=*/ 0, /*timIdx=*/0);
+
+            if (elemIt->partitionType() != Dune::InteriorEntity)
+            {
+                // Dirichlet boundary conditions needed for the parallel matrix
+                (*this->tracerMatrix_)[I][I][0][0] = 1.;
+                continue;
+            }
+
             Scalar extrusionFactor =
                     elemCtx.intensiveQuantities(/*dofIdx=*/ 0, /*timeIdx=*/0).extrusionFactor();
             Valgrind::CheckDefined(extrusionFactor);
@@ -245,7 +255,6 @@ protected:
                     * extrusionFactor;
             Scalar dt = elemCtx.simulator().timeStepSize();
 
-            size_t I = elemCtx.globalSpaceIndex(/*dofIdx=*/ 0, /*timIdx=*/0);
             size_t I1 = elemCtx.globalSpaceIndex(/*dofIdx=*/ 0, /*timIdx=*/1);
 
             std::vector<Scalar> storageOfTimeIndex1(tr.numTracer());
@@ -323,6 +332,12 @@ protected:
                 }
             }
         }
+
+        // Communicate overlap using grid Communication
+        auto handle = VectorVectorDataHandle<GridView, std::vector<TracerVector>>(tr.residual_,
+                                                                                  simulator_.gridView());
+        simulator_.gridView().communicate(handle, Dune::InteriorBorder_All_Interface,
+                                          Dune::ForwardCommunication);
     }
 
     template <class TrRe>
