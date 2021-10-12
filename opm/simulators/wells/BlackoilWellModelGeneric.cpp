@@ -1286,12 +1286,14 @@ getGuideRateInjectionGroupValues(const Group& group) const
     const auto& gname = group.name();
     if (this->guideRate_.has(gname, Phase::GAS)) {
         grval.set(data::GuideRateValue::Item::Gas,
-                  this->guideRate_.get(gname, Phase::GAS));
+                  this->guideRate_.getSI(gname, Phase::GAS));
     }
+
     if (this->guideRate_.has(gname, Phase::WATER)) {
         grval.set(data::GuideRateValue::Item::Water,
-                  this->guideRate_.get(gname, Phase::WATER));
+                  this->guideRate_.getSI(gname, Phase::WATER));
     }
+
     return grval;
 }
 
@@ -1406,8 +1408,9 @@ calculateAllGroupGuiderates(const int reportStepIdx) const
                 gr[gname].production = this->getGuideRateValues(group);
             }
 
-            if (this->guideRate_.has(gname, Phase::WATER)
-                    || this->guideRate_.has(gname, Phase::GAS)) {
+            if (this->guideRate_.has(gname, Phase::WATER) ||
+                this->guideRate_.has(gname, Phase::GAS))
+            {
                 gr[gname].injection = this->getGuideRateInjectionGroupValues(group);
             }
 
@@ -1416,6 +1419,7 @@ calculateAllGroupGuiderates(const int reportStepIdx) const
 
             gr[parent].injection  += gr[gname].injection;
             gr[parent].production += gr[gname].production;
+
             up.push_back(parent);
         }
 
