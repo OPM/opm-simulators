@@ -13,9 +13,9 @@ FILENAME="$4"
 ABS_TOL="$5"
 REL_TOL="$6"
 COMPARE_ECL_COMMAND="$7"
-# param 8 and 9 ignored, only used with regression tests
-EXE_NAME="${10}"
-shift 10
+# param 8, 9 and 10 ignored, only used with regression tests
+EXE_NAME="${11}"
+shift 11
 TEST_ARGS="$@"
 
 rm -Rf  ${RESULT_PATH}
