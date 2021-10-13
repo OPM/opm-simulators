@@ -26,7 +26,6 @@
 
 #include <ebos/equil/equilibrationhelpers.hh>
 #include <ebos/eclproblem.hh>
-#include <ebos/eclwellmanager.hh>
 #include <opm/models/utils/start.hh>
 
 #include <opm/grid/UnstructuredGrid.h>
@@ -41,6 +40,7 @@
 #include <ebos/ecloutputblackoilmodule.hh>
 #include <ebos/eclwriter.hh>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/State.hpp>
+#include <opm/simulators/wells/BlackoilWellModel.hpp>
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/misc/mpimanager.hh>
@@ -86,7 +86,7 @@ struct EnableAsyncEclOutput<TypeTag, TTag::TestEclOutputTypeTag> {
 
 template<class TypeTag>
 struct EclWellModel<TypeTag, TTag::TestEclOutputTypeTag> {
-    using type = EclWellManager<TypeTag>;
+    using type = BlackoilWellModel<TypeTag>;
 };
 
 } // namespace Opm::Properties
