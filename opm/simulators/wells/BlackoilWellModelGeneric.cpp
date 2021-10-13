@@ -255,6 +255,7 @@ loadRestartData(const data::Wells& rst_wells,
 void
 BlackoilWellModelGeneric::
 initFromRestartFile(const RestartValue& restartValues,
+                    WellTestState wtestState,
                     const size_t numCells,
                     bool handle_ms_well)
 {
@@ -277,6 +278,8 @@ initFromRestartFile(const RestartValue& restartValues,
         loadRestartData(restartValues.wells, restartValues.grp_nwrk, phase_usage_, handle_ms_well, this->wellState());
     }
 
+
+    this->active_wgstate_.well_test_state = std::move(wtestState);
     this->commitWGState();
     initial_step_ = false;
 }

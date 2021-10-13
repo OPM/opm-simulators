@@ -28,7 +28,7 @@
 #define EWOMS_ECL_GENERIC_VANGUARD_HH
 
 #include <opm/grid/common/GridEnums.hpp>
-
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestState.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 #include <dune/common/parallel/collectivecommunication.hh>
 
@@ -57,6 +57,7 @@ class Python;
 class SummaryConfig;
 class SummaryState;
 class UDQState;
+class WellTestState;
 
 class EclGenericVanguard {
 public:
@@ -152,6 +153,9 @@ public:
 
     static void setExternalUDQState(std::unique_ptr<UDQState> udqState);
     static void setExternalActionState(std::unique_ptr<Action::State> actionState);
+    static void setExternalWTestState(std::unique_ptr<WellTestState> wtestState);
+
+
     /*!
      * \brief Return a reference to the parsed ECL deck.
      */
@@ -220,6 +224,11 @@ public:
 
     const UDQState& udqState() const
     { return *udqState_; }
+
+    WellTestState transferWTestState() {
+        return *this->wtestState_.release();
+    }
+
 
     /*!
      * \brief Returns the name of the case.
@@ -304,6 +313,7 @@ protected:
     static bool externalDeckSet_;
     static std::unique_ptr<UDQState> externalUDQState_;
     static std::unique_ptr<Action::State> externalActionState_;
+    static std::unique_ptr<WellTestState> externalWTestState_;
     static std::unique_ptr<Parallel::Communication> comm_;
 
     std::string caseName_;
@@ -320,8 +330,14 @@ protected:
     bool enableExperiments_;
 
     std::unique_ptr<SummaryState> summaryState_;
-    std::unique_ptr<Action::State> actionState_;
     std::unique_ptr<UDQState> udqState_;
+    std::unique_ptr<Action::State> actionState_;
+
+    // Observe that this instance is handled differently from the other state
+    // variables, it will only be initialized for a restart run. While
+    // initializing a restarted run this instance is transferred to the WGState
+    // member in the well model.
+    std::unique_ptr<WellTestState> wtestState_;
 
     // these attributes point  either to the internal  or to the external version of the
     // parser objects.

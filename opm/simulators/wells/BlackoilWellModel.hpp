@@ -220,6 +220,7 @@ namespace Opm {
             void initFromRestartFile(const RestartValue& restartValues)
             {
                 initFromRestartFile(restartValues,
+                                    this->ebosSimulator_.vanguard().transferWTestState(),
                                     UgGridHelpers::numCells(grid()),
                                     param_.use_multisegment_well_);
             }

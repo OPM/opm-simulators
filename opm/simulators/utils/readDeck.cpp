@@ -49,6 +49,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/SummaryState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQState.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestState.hpp>
 #include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
 #include <opm/parser/eclipse/Parser/ErrorGuard.hpp>
@@ -117,6 +118,7 @@ namespace {
                                 std::shared_ptr<Opm::Schedule>&      schedule,
                                 std::unique_ptr<Opm::UDQState>&      udqState,
                                 std::unique_ptr<Opm::Action::State>& actionState,
+                                std::unique_ptr<Opm::WellTestState>& wtestState,
                                 Opm::ErrorGuard&                     errorGuard)
     {
         // Analytic aquifers must always be loaded from the restart file in
@@ -167,6 +169,8 @@ namespace {
 
         actionState = std::make_unique<Opm::Action::State>();
         actionState->load_rst((*schedule)[report_step].actions(), rst_state);
+
+        wtestState = std::make_unique<Opm::WellTestState>(schedule->runspec().start_time(), rst_state);
     }
 
     void createNonRestartDynamicObjects(const Opm::Deck&                     deck,
@@ -236,6 +240,7 @@ namespace {
                       std::shared_ptr<Opm::Schedule>&      schedule,
                       std::unique_ptr<Opm::UDQState>&      udqState,
                       std::unique_ptr<Opm::Action::State>& actionState,
+                      std::unique_ptr<Opm::WellTestState>& wtestState,
                       std::shared_ptr<Opm::SummaryConfig>& summaryConfig,
                       std::shared_ptr<Opm::Python>         python,
                       const bool                           initFromRestart,
@@ -265,13 +270,13 @@ namespace {
             loadObjectsFromRestart(*deck, parser, *parseContext,
                                    initFromRestart, outputInterval,
                                    *eclipseState, std::move(python),
-                                   schedule, udqState, actionState,
+                                   schedule, udqState, actionState, wtestState,
                                    errorGuard);
         }
         else {
             createNonRestartDynamicObjects(*deck, *eclipseState,
                                            *parseContext, std::move(python),
-                                           schedule, udqState, actionState,
+                                           schedule, udqState, actionState, 
                                            errorGuard);
         }
 
@@ -423,6 +428,7 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
                    std::shared_ptr<Schedule>&      schedule,
                    std::unique_ptr<UDQState>&      udqState,
                    std::unique_ptr<Action::State>& actionState,
+                   std::unique_ptr<WellTestState>& wtestState,
                    std::shared_ptr<SummaryConfig>& summaryConfig,
                    std::unique_ptr<ErrorGuard>     errorGuard,
                    std::shared_ptr<Python>         python,
@@ -441,7 +447,7 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
     if (comm.rank() == 0) { // Always true when !HAVE_MPI
         try {
             readOnIORank(comm, deckFilename, parseContext.get(), deck,
-                         eclipseState, schedule, udqState, actionState,
+                         eclipseState, schedule, udqState, actionState, wtestState,
                          summaryConfig, std::move(python), initFromRestart,
                          checkDeck, outputInterval, *errorGuard);
         }
@@ -469,7 +475,7 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
     try {
         if (parseSuccess) {
             eclStateBroadcast(comm, *eclipseState, *schedule,
-                              *summaryConfig, *udqState, *actionState);
+                              *summaryConfig, *udqState, *actionState, *wtestState);
         }
     }
     catch (const std::exception& broadcast_error) {

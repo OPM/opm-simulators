@@ -33,6 +33,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/State.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/OilVaporizationProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/SummaryState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQState.hpp>
 #include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
@@ -62,6 +63,7 @@ std::shared_ptr<Schedule> EclGenericVanguard::externalEclSchedule_;
 std::shared_ptr<SummaryConfig> EclGenericVanguard::externalEclSummaryConfig_;
 std::unique_ptr<UDQState> EclGenericVanguard::externalUDQState_;
 std::unique_ptr<Action::State> EclGenericVanguard::externalActionState_;
+std::unique_ptr<WellTestState> EclGenericVanguard::externalWTestState_;
 std::unique_ptr<Parallel::Communication> EclGenericVanguard::comm_;
 
 EclGenericVanguard::EclGenericVanguard()
@@ -133,6 +135,11 @@ void EclGenericVanguard::setExternalUDQState(std::unique_ptr<UDQState> udqState)
 void EclGenericVanguard::setExternalActionState(std::unique_ptr<Action::State> actionState)
 {
     externalActionState_ = std::move(actionState);
+}
+
+void EclGenericVanguard::setExternalWTestState(std::unique_ptr<WellTestState> wtestState)
+{
+    externalWTestState_ = std::move(wtestState);
 }
 
 std::string EclGenericVanguard::canonicalDeckPath(const std::string& caseName)
@@ -289,7 +296,7 @@ void EclGenericVanguard::init()
         parseContext_ = createParseContext(ignoredKeywords_, eclStrictParsing_);
     }
 
-    readDeck(EclGenericVanguard::comm(), fileName_, deck_, eclState_, eclSchedule_, udqState_, actionState_,
+    readDeck(EclGenericVanguard::comm(), fileName_, deck_, eclState_, eclSchedule_, udqState_, actionState_, wtestState_,
              eclSummaryConfig_, std::move(errorGuard), python,
              std::move(parseContext_), /* initFromRestart = */ false,
              /* checkDeck = */ enableExperiments_, outputInterval_);
@@ -303,6 +310,11 @@ void EclGenericVanguard::init()
         this->actionState_ = std::move(EclGenericVanguard::externalActionState_);
     else
         this->actionState_ = std::make_unique<Action::State>();
+
+    if (EclGenericVanguard::externalWTestState_)
+        this->wtestState_ = std::move(EclGenericVanguard::externalWTestState_);
+    else
+        this->wtestState_ = std::make_unique<WellTestState>();
 
     this->summaryState_ = std::make_unique<SummaryState>( TimeService::from_time_t(this->eclSchedule_->getStartTime() ));
 
