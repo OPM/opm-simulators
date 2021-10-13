@@ -385,9 +385,7 @@ namespace Opm
                 // the program should abort. This is the case e.g. for the --help and the
                 // --print-properties parameters.
 #if HAVE_MPI
-                if (status < 0)
-                    MPI_Finalize(); // graceful stop for --help or --print-properties command line.
-                else
+                if (status >= 0)
                     MPI_Abort(MPI_COMM_WORLD, status);
 #endif
                 exitCode = (status > 0) ? status : EXIT_SUCCESS;
