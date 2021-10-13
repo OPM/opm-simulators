@@ -41,6 +41,7 @@
 #include <ebos/eclwriter.hh>
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/State.hpp>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
+#include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/misc/mpimanager.hh>
@@ -70,9 +71,14 @@ namespace Opm::Properties {
 namespace TTag {
 
 struct TestEclOutputTypeTag {
-    using InheritsFrom = std::tuple<EclBaseProblem, BlackOilModel>;
+    using InheritsFrom = std::tuple<FlowModelParameters, EclBaseProblem, BlackOilModel>;
 };
 }
+
+template<class TypeTag>
+struct EnableTerminalOutput<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = true;
+};
 
 template<class TypeTag>
 struct EnableGravity<TypeTag, TTag::TestEclOutputTypeTag> {
@@ -92,24 +98,24 @@ struct EclWellModel<TypeTag, TTag::TestEclOutputTypeTag> {
 } // namespace Opm::Properties
 
 namespace {
-//std::unique_ptr<Opm::EclIO::ESmry> readsum(const std::string& base)
-//{
-//    return std::make_unique<Opm::EclIO::ESmry>(base);
-//}
-//
-//double ecl_sum_get_field_var(const Opm::EclIO::ESmry* smry,
-//                             const int                timeIdx,
-//                             const std::string&       var)
-//{
-//    return smry->get(var)[timeIdx];
-//}
-//
-//double ecl_sum_get_general_var(const Opm::EclIO::ESmry* smry,
-//                               const int                timeIdx,
-//                               const std::string&       var)
-//{
-//    return smry->get(var)[timeIdx];
-//}
+std::unique_ptr<Opm::EclIO::ESmry> readsum(const std::string& base)
+{
+   return std::make_unique<Opm::EclIO::ESmry>(base);
+}
+
+double ecl_sum_get_field_var(const Opm::EclIO::ESmry* smry,
+                            const int                timeIdx,
+                            const std::string&       var)
+{
+   return smry->get(var)[timeIdx];
+}
+
+double ecl_sum_get_general_var(const Opm::EclIO::ESmry* smry,
+                              const int                timeIdx,
+                              const std::string&       var)
+{
+   return smry->get(var)[timeIdx];
+}
 
 template <class TypeTag>
 std::unique_ptr<Opm::GetPropType<TypeTag, Opm::Properties::Simulator>>
@@ -132,14 +138,20 @@ initSimulator(const char *filename)
 
 struct EclOutputFixture {
     EclOutputFixture () {
-    int argc = boost::unit_test::framework::master_test_suite().argc;
-    char** argv = boost::unit_test::framework::master_test_suite().argv;
+        int argc = boost::unit_test::framework::master_test_suite().argc;
+        char** argv = boost::unit_test::framework::master_test_suite().argv;
 #if HAVE_DUNE_FEM
-    Dune::Fem::MPIManager::initialize(argc, argv);
+        Dune::Fem::MPIManager::initialize(argc, argv);
 #else
-    Dune::MPIHelper::instance(argc, argv);
+        Dune::MPIHelper::instance(argc, argv);
 #endif
+        Opm::EclGenericVanguard::setCommunication(std::make_unique<Opm::Parallel::Communication>());
         using TypeTag = Opm::Properties::TTag::TestEclOutputTypeTag;
+        Opm::BlackoilModelParametersEbos<TypeTag>::registerParameters();
+        Opm::Parameters::registerParam<TypeTag, bool>("EnableTerminalOutput",
+                                                      "EnableTerminalOutput",
+                                                      Opm::getPropValue<TypeTag, Opm::Properties::EnableTerminalOutput>(),
+                                                      "Dummy added for the well model to compile.");
         Opm::registerAllParameters_<TypeTag>();
     }
 };
@@ -150,15 +162,6 @@ BOOST_GLOBAL_FIXTURE(EclOutputFixture);
 
 BOOST_AUTO_TEST_CASE(Summary)
 {
-    /*
-    This test is commented out following commit: "Collect WellTestState on
-    IORank". As part of that commit the CollectTOIORank::collect() method will
-    access the method WellModel::wellTestState(). That method throws a not
-    implemented exception in the EclWellManager - and this test instantiates
-    and uses a EclWellManager deep down.
-
-    ----------------------------------------------------------------------------
-
     using TypeTag = Opm::Properties::TTag::TestEclOutputTypeTag;
     const std::string filename = "SUMMARY_DECK_NON_CONSTANT_POROSITY.DATA";
     const std::string casename = "SUMMARY_DECK_NON_CONSTANT_POROSITY";
@@ -231,7 +234,6 @@ BOOST_AUTO_TEST_CASE(Summary)
     // roip = sum_ (b * s * pv) // rs == 0;
     const double roip2 = ( (0.5 * 0.1 * 100 + 0.6 * 0.2 * 100) * (1 - 0.2) );
     BOOST_CHECK_CLOSE(roip2, ecl_sum_get_general_var( resp, 1, "ROIP:2" ), 1e-1 );
-    */
 }
 
 BOOST_AUTO_TEST_CASE(readWriteWells)
