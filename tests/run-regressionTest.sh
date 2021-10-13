@@ -12,8 +12,9 @@ REL_TOL="$6"
 COMPARE_ECL_COMMAND="$7"
 RST_DECK_COMMAND="$8"
 RESTART_STEP="${9}"
-EXE_NAME="${10}"
-shift 10
+RESTART_SCHED="${10}"
+EXE_NAME="${11}"
+shift 11
 TEST_ARGS="$@"
 
 mkdir -p ${RESULT_PATH}
@@ -42,12 +43,18 @@ fi
 if test $RESTART_STEP -ne 0
 then
   echo "=== Executing restart run ==="
+  if [ "$RESTART_SCHED" = "--" ]; then
+      sched_rst=""
+  else
+      sched_rst="${RESTART_SCHED}"
+  fi
+
   mkdir -p ${RESULT_PATH}/restart
   cp -f ${RESULT_PATH}/${FILENAME}.UNRST ${RESULT_PATH}/restart
   ${RST_DECK_COMMAND}  ${INPUT_DATA_PATH}/${FILENAME}.DATA ${FILENAME}:${RESTART_STEP} -m inline -s > ${RESULT_PATH}/restart/${FILENAME}.DATA
   cd ${RESULT_PATH}/restart
-  echo ${BINPATH}/${EXE_NAME} ${TEST_ARGS} --output-dir=${RESULT_PATH}/restart ${FILENAME}
-  ${BINPATH}/${EXE_NAME} ${TEST_ARGS} --output-dir=${RESULT_PATH}/restart ${FILENAME}
+  echo ${BINPATH}/${EXE_NAME} ${TEST_ARGS} ${sched_rst} --output-dir=${RESULT_PATH}/restart ${FILENAME}
+  ${BINPATH}/${EXE_NAME} ${TEST_ARGS} ${sched_rst} --output-dir=${RESULT_PATH}/restart ${FILENAME}
   test $? -eq 0 || exit 1
 
   echo "=== Executing comparison for EGRID, INIT, UNRST and RFT files for restarted run ==="

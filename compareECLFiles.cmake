@@ -50,7 +50,7 @@ endfunction()
 # Details:
 #   - This test class compares output from a simulation to reference files.
 function(add_test_compareECLFiles)
-  set(oneValueArgs CASENAME FILENAME SIMULATOR ABS_TOL REL_TOL DIR DIR_PREFIX PREFIX RESTART_STEP)
+  set(oneValueArgs CASENAME FILENAME SIMULATOR ABS_TOL REL_TOL DIR DIR_PREFIX PREFIX RESTART_STEP RESTART_SCHED)
   set(multiValueArgs TEST_ARGS)
   cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
   if(NOT PARAM_DIR)
@@ -61,6 +61,11 @@ function(add_test_compareECLFiles)
   endif()
   if(NOT PARAM_RESTART_STEP)
     set(PARAM_RESTART_STEP 0)
+  endif()
+  if(NOT DEFINED PARAM_RESTART_SCHED)
+    set(sched_restart "--")
+  else()
+    set(sched_restart "--sched-restart=${PARAM_RESTART_SCHED}")
   endif()
   set(RESULT_PATH ${BASE_RESULT_PATH}${PARAM_DIR_PREFIX}/${PARAM_SIMULATOR}+${PARAM_CASENAME})
   set(TEST_ARGS ${PARAM_TEST_ARGS})
@@ -73,6 +78,7 @@ function(add_test_compareECLFiles)
                            ${COMPARE_ECL_COMMAND}
                            ${RST_DECK_COMMAND}
                            ${PARAM_RESTART_STEP}
+                           ${sched_restart}
                TEST_ARGS ${TEST_ARGS})
 endfunction()
 
@@ -209,6 +215,7 @@ add_test_compareECLFiles(CASENAME spe12
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${coarse_rel_tol}
+                         RESTART_SCHED false
                          DIR spe1)
 
 add_test_compareECLFiles(CASENAME spe1_2p
