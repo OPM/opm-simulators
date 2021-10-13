@@ -3,18 +3,44 @@
 # This runs a simulator, then compares the summary, restart and init
 # files against a reference.
 
-INPUT_DATA_PATH="$1"
-RESULT_PATH="$2"
-BINPATH="$3"
-FILENAME="$4"
-ABS_TOL="$5"
-REL_TOL="$6"
-COMPARE_ECL_COMMAND="$7"
-RST_DECK_COMMAND="$8"
-RESTART_STEP="${9}"
-RESTART_SCHED="${10}"
-EXE_NAME="${11}"
-shift 11
+if test $# -eq 0
+then
+  echo -e "Usage:\t$0 <options> -- [additional simulator options]"
+  echo -e "\tMandatory options:"
+  echo -e "\t\t -i <path>     Path to read deck from"
+  echo -e "\t\t -r <path>     Path to store results in"
+  echo -e "\t\t -b <path>     Path to simulator binary"
+  echo -e "\t\t -f <filename> Deck file name"
+  echo -e "\t\t -a <tol>      Absolute tolerance in comparison"
+  echo -e "\t\t -t <tol>      Relative tolerance in comparison"
+  echo -e "\t\t -c <path>     Path to comparison tool"
+  echo -e "\t\t -d <path>     Path to restart deck tool"
+  echo -e "\t\t -e <filename> Simulator binary to use"
+  echo -e "\tOptional options:"
+  echo -e "\t\t -s <step>     Step to do restart testing from"
+  echo -e "\t\t -h value      sched_restart value to use in restart test"
+  exit 1
+fi
+
+RESTART_STEP=0
+OPTIND=1
+while getopts "i:r:b:f:a:t:c:d:s:e:h:" OPT
+do
+  case "${OPT}" in
+    i) INPUT_DATA_PATH=${OPTARG} ;;
+    r) RESULT_PATH=${OPTARG} ;;
+    b) BINPATH=${OPTARG} ;;
+    f) FILENAME=${OPTARG} ;;
+    a) ABS_TOL=${OPTARG} ;;
+    t) REL_TOL=${OPTARG} ;;
+    c) COMPARE_ECL_COMMAND=${OPTARG} ;;
+    d) RST_DECK_COMMAND=${OPTARG} ;;
+    s) RESTART_STEP=${OPTARG} ;;
+    e) EXE_NAME=${OPTARG} ;;
+    h) RESTART_SCHED=${OPTARG} ;;
+  esac
+done
+shift $(($OPTIND-1))
 TEST_ARGS="$@"
 
 mkdir -p ${RESULT_PATH}
@@ -43,17 +69,14 @@ fi
 if test $RESTART_STEP -ne 0
 then
   echo "=== Executing restart run ==="
-  if [ "$RESTART_SCHED" = "--" ]; then
-      sched_rst=""
-  else
-      sched_rst="${RESTART_SCHED}"
-  fi
-
   mkdir -p ${RESULT_PATH}/restart
   cp -f ${RESULT_PATH}/${FILENAME}.UNRST ${RESULT_PATH}/restart
   ${RST_DECK_COMMAND}  ${INPUT_DATA_PATH}/${FILENAME}.DATA ${FILENAME}:${RESTART_STEP} -m inline -s > ${RESULT_PATH}/restart/${FILENAME}.DATA
   cd ${RESULT_PATH}/restart
-  echo ${BINPATH}/${EXE_NAME} ${TEST_ARGS} ${sched_rst} --output-dir=${RESULT_PATH}/restart ${FILENAME}
+  if test -n "$RESTART_SCHED"
+  then
+    sched_rst="--sched-restart=${RESTART_SCHED}"
+  fi
   ${BINPATH}/${EXE_NAME} ${TEST_ARGS} ${sched_rst} --output-dir=${RESULT_PATH}/restart ${FILENAME}
   test $? -eq 0 || exit 1
 

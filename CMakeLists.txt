@@ -293,7 +293,8 @@ opm_add_test(test_gatherconvergencereport
   CONDITION
     MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
   DRIVER_ARGS
-    4 ${PROJECT_BINARY_DIR}
+    -n 4
+    -b ${PROJECT_BINARY_DIR}
 )
 
 opm_add_test(test_gatherdeferredlogger
@@ -304,7 +305,8 @@ opm_add_test(test_gatherdeferredlogger
   CONDITION
     MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
   DRIVER_ARGS
-    4 ${PROJECT_BINARY_DIR}
+    -n 4
+    -b ${PROJECT_BINARY_DIR}
 )
 
 opm_add_test(test_parallelwellinfo_mpi
@@ -313,7 +315,8 @@ opm_add_test(test_parallelwellinfo_mpi
   CONDITION
     MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
   DRIVER_ARGS
-    4 ${PROJECT_BINARY_DIR}
+    -n 4
+    -b ${PROJECT_BINARY_DIR}
   NO_COMPILE
     )
 
