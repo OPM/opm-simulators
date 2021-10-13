@@ -11,7 +11,7 @@ MY_DIR="$(dirname "$0")"
 usage() {
     echo "Usage:"
     echo
-    echo "runTest.sh TEST_TYPE [TEST_ARGS]"
+    echo "runTest.sh TEST_TYPE -e binary -- [TEST_ARGS]"
     echo "where TEST_TYPE can either be --plain, --simulation, --spe1 or --parallel-simulation=\$NUM_CORES (is '$TEST_TYPE')."
 };
 
@@ -37,8 +37,11 @@ clipToHelpMessage()
 }
 
 TEST_TYPE="$1"
-TEST_NAME="$2"
-TEST_ARGS="${@:3:100}"
+if test "$2" != "-e"; then
+  echo "Expects second option to be -e"
+fi
+TEST_NAME="$3"
+TEST_ARGS="${@:5:100}"
 
 # make sure we have at least 2 parameters
 if test "$#" -lt 2; then
