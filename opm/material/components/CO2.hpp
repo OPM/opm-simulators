@@ -162,10 +162,10 @@ public:
      */
     template <class Evaluation>
     static Evaluation gasEnthalpy(const Evaluation& temperature,
-                                  const Evaluation& pressure)
+                                  const Evaluation& pressure,
+                                  bool extrapolate = false)
     {
-        return CO2Tables::tabulatedEnthalpy.eval(temperature, pressure,
-                                                 /* extrapolate = */ true);
+        return CO2Tables::tabulatedEnthalpy.eval(temperature, pressure, extrapolate);
     }
 
     /*!
@@ -173,10 +173,11 @@ public:
      */
     template <class Evaluation>
     static Evaluation gasInternalEnergy(const Evaluation& temperature,
-                                        const Evaluation& pressure)
+                                        const Evaluation& pressure,
+                                        bool extrapolate = false)
     {
-        const Evaluation& h = gasEnthalpy(temperature, pressure);
-        const Evaluation& rho = gasDensity(temperature, pressure);
+        const Evaluation& h = gasEnthalpy(temperature, pressure, extrapolate);
+        const Evaluation& rho = gasDensity(temperature, pressure, extrapolate);
 
         return h - (pressure / rho);
     }
@@ -185,10 +186,11 @@ public:
      * \brief The density of CO2 at a given pressure and temperature [kg/m^3].
      */
     template <class Evaluation>
-    static Evaluation gasDensity(const Evaluation& temperature, const Evaluation& pressure)
+    static Evaluation gasDensity(const Evaluation& temperature,
+                                 const Evaluation& pressure,
+                                 bool extrapolate = false)
     {
-        return CO2Tables::tabulatedDensity.eval(temperature, pressure,
-                                                /* extrapolate = */ true);
+        return CO2Tables::tabulatedDensity.eval(temperature, pressure, extrapolate);
     }
 
     /*!
@@ -198,7 +200,9 @@ public:
      *                        - Fenhour etl al., 1998
      */
     template <class Evaluation>
-    static Evaluation gasViscosity(Evaluation temperature, const Evaluation& pressure)
+    static Evaluation gasViscosity(Evaluation temperature,
+                                   const Evaluation& pressure,
+                                   bool extrapolate = false)
     {
         const Scalar a0 = 0.235156;
         const Scalar a1 = -0.491266;
@@ -224,7 +228,7 @@ public:
 
         Evaluation mu0 = 1.00697*sqrt(temperature) / SigmaStar;
 
-        const Evaluation& rho = gasDensity(temperature, pressure); // CO2 mass density [kg/m^3]
+        const Evaluation& rho = gasDensity(temperature, pressure, extrapolate); // CO2 mass density [kg/m^3]
 
         // dmu : excess viscosity at elevated density
         Evaluation dmu =

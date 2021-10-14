@@ -689,9 +689,11 @@ public:
      * \param pressure Phase pressure in \f$\mathrm{[Pa]}\f$
      */
     template <class Evaluation>
-    static Evaluation liquidDensity(const Evaluation& temperature, const Evaluation& pressure, bool = false)
+    static Evaluation liquidDensity(const Evaluation& temperature,
+                                    const Evaluation& pressure,
+                                    bool extrapolate = false)
     {
-        if (!Region1::isValid(temperature, pressure))
+        if (!extrapolate && !Region1::isValid(temperature, pressure))
         {
             std::ostringstream oss;
             oss << "Density of water is only implemented for temperatures below 623.15K and "
@@ -817,9 +819,11 @@ public:
      * \param pressure Phase pressure in \f$\mathrm{[Pa]}\f$
      */
     template <class Evaluation>
-    static Evaluation liquidViscosity(const Evaluation& temperature, const Evaluation& pressure)
+    static Evaluation liquidViscosity(const Evaluation& temperature,
+                                      const Evaluation& pressure,
+                                      bool extrapolate = false)
     {
-        if (!Region1::isValid(temperature, pressure))
+        if (!extrapolate && !Region1::isValid(temperature, pressure))
         {
             std::ostringstream oss;
             oss << "Viscosity of water is only implemented for temperatures below 623.15K and "
@@ -827,7 +831,7 @@ public:
             throw NumericalIssue(oss.str());
         };
 
-        const Evaluation& rho = liquidDensity(temperature, pressure);
+        const Evaluation& rho = liquidDensity(temperature, pressure, extrapolate);
         return Common::viscosity(temperature, rho);
     }
 
