@@ -55,6 +55,7 @@ class Co2GasPvt
     typedef std::vector<std::pair<Scalar, Scalar> > SamplingPoints;
     typedef ::Opm::CO2<Scalar, CO2Tables> CO2;
     typedef SimpleHuDuanH2O<Scalar> H2O;
+    static const bool extrapolate = true;
 
 public:
     typedef Tabulated1DFunction<Scalar> TabulatedOneDFunction;
@@ -89,7 +90,7 @@ public:
         size_t regionIdx = 0;
         Scalar T_ref = eclState.getTableManager().stCond().temperature;
         Scalar P_ref = eclState.getTableManager().stCond().pressure;
-        gasReferenceDensity_[regionIdx] = CO2::gasDensity(T_ref, P_ref);
+        gasReferenceDensity_[regionIdx] = CO2::gasDensity(T_ref, P_ref, extrapolate);
         initEnd();
     }
 #endif
@@ -134,7 +135,7 @@ public:
                         const Evaluation& pressure,
                         const Evaluation&) const
     {
-        return CO2::gasInternalEnergy(temperature, pressure);
+        return CO2::gasInternalEnergy(temperature, pressure, extrapolate);
     }
 
     /*!
@@ -155,7 +156,7 @@ public:
                                   const Evaluation& temperature,
                                   const Evaluation& pressure) const
     {
-        return CO2::gasViscosity(temperature, pressure);
+        return CO2::gasViscosity(temperature, pressure, extrapolate);
     }
 
     /*!
@@ -176,7 +177,7 @@ public:
                                                      const Evaluation& temperature,
                                                      const Evaluation& pressure) const
     {
-        return CO2::gasDensity(temperature, pressure)/gasReferenceDensity_[regionIdx];
+        return CO2::gasDensity(temperature, pressure, extrapolate)/gasReferenceDensity_[regionIdx];
     }
 
     /*!

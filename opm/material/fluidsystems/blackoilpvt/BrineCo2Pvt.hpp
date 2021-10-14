@@ -57,7 +57,7 @@ template <class Scalar>
 class BrineCo2Pvt
 {
     typedef std::vector<std::pair<Scalar, Scalar> > SamplingPoints;
-
+    static const bool extrapolate = true;
     //typedef H2O<Scalar> H2O_IAPWS;
     //typedef Brine<Scalar, H2O_IAPWS> Brine_IAPWS;
     //typedef TabulatedComponent<Scalar, H2O_IAPWS> H2O_Tabulated;
@@ -117,8 +117,8 @@ public:
         Scalar T_ref = eclState.getTableManager().stCond().temperature;
         Scalar P_ref = eclState.getTableManager().stCond().pressure;
 
-        brineReferenceDensity_[regionIdx] = Brine::liquidDensity(T_ref, P_ref);
-        co2ReferenceDensity_[regionIdx] = CO2::gasDensity(T_ref, P_ref);
+        brineReferenceDensity_[regionIdx] = Brine::liquidDensity(T_ref, P_ref, extrapolate);
+        co2ReferenceDensity_[regionIdx] = CO2::gasDensity(T_ref, P_ref, extrapolate);
     }
 #endif
 
@@ -286,7 +286,7 @@ public:
         const Evaluation log_D_H20 = -4.1764 + 712.52 / temperature - 2.5907e5 / (temperature*temperature);
 
         //Diffusion coefficient of CO2 in the brine phase modified following (Ratcliff and Holdcroft,1963 and Al-Rawajfeh, 2004)
-        const Evaluation& mu_H20 = H2O::liquidViscosity(temperature, pressure, true); // Water viscosity
+        const Evaluation& mu_H20 = H2O::liquidViscosity(temperature, pressure, extrapolate); // Water viscosity
         const Evaluation& mu_Brine = Brine::liquidViscosity(temperature, pressure); // Brine viscosity
         const Evaluation log_D_Brine = log_D_H20 - 0.87*log10(mu_Brine / mu_H20);
 
@@ -323,21 +323,21 @@ private:
         Valgrind::CheckDefined(pl);
         Valgrind::CheckDefined(xlCO2);
 
-        if(T < 273.15) {
+        if(!extrapolate && T < 273.15) {
             std::ostringstream oss;
             oss << "Liquid density for Brine and CO2 is only "
                    "defined above 273.15K (is "<<T<<"K)";
             throw NumericalIssue(oss.str());
         }
-        if(pl >= 2.5e8) {
+        if(!extrapolate && pl >= 2.5e8) {
             std::ostringstream oss;
             oss << "Liquid density for Brine and CO2 is only "
                    "defined below 250MPa (is "<<pl<<"Pa)";
             throw NumericalIssue(oss.str());
         }
 
-        const LhsEval& rho_brine = Brine::liquidDensity(T, pl);
-        const LhsEval& rho_pure = H2O::liquidDensity(T, pl, true);
+        const LhsEval& rho_brine = Brine::liquidDensity(T, pl, extrapolate);
+        const LhsEval& rho_pure = H2O::liquidDensity(T, pl, extrapolate);
         const LhsEval& rho_lCO2 = liquidDensityWaterCO2_(T, pl, xlCO2);
         const LhsEval& contribCO2 = rho_lCO2 - rho_pure;
 
@@ -353,7 +353,7 @@ private:
         Scalar M_H2O = H2O::molarMass();
 
         const LhsEval& tempC = temperature - 273.15;        /* tempC : temperature in °C */
-        const LhsEval& rho_pure = H2O::liquidDensity(temperature, pl, true);
+        const LhsEval& rho_pure = H2O::liquidDensity(temperature, pl, extrapolate);
         // calculate the mole fraction of CO2 in the liquid. note that xlH2O is available
         // as a function parameter, but in the case of a pure gas phase the value of M_T
         // for the virtual liquid phase can become very large
@@ -507,7 +507,7 @@ private:
         delta_hCO2 = (-57.4375 + T * 0.1325) * 1000/44;
 
         /* enthalpy contribution of CO2 (kJ/kg) */
-        hg = CO2::gasEnthalpy(T, p)/1E3 + delta_hCO2;
+        hg = CO2::gasEnthalpy(T, p, extrapolate)/1E3 + delta_hCO2;
 
         /* Enthalpy of brine with dissolved CO2 */
         return (h_ls1 - X_CO2_w*hw + hg*X_CO2_w)*1E3; /*J/kg*/

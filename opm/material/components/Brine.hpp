@@ -247,12 +247,12 @@ public:
      * - cited by: Adams & Bachu in Geofluids (2002) 2, 257-271
      */
     template <class Evaluation>
-    static Evaluation liquidDensity(const Evaluation& temperature, const Evaluation& pressure)
+    static Evaluation liquidDensity(const Evaluation& temperature, const Evaluation& pressure, bool extrapolate = false)
     {
         Evaluation tempC = temperature - 273.15;
         Evaluation pMPa = pressure/1.0E6;
 
-        const Evaluation rhow = H2O::liquidDensity(temperature, pressure, true);
+        const Evaluation rhow = H2O::liquidDensity(temperature, pressure, extrapolate);
         return
             rhow +
             1000*salinity*(
