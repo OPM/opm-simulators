@@ -47,6 +47,7 @@
 #include "blackoilbrinemodules.hh"
 #include "blackoilextbomodules.hh"
 #include "blackoildarcyfluxmodule.hh"
+#include "blackoilmicpmodules.hh"
 
 #include <opm/models/common/multiphasebasemodel.hh>
 #include <opm/models/io/vtkcompositionmodule.hh>
@@ -78,7 +79,8 @@ struct BlackOilModel { using InheritsFrom = std::tuple<VtkComposition,
                                                        VtkBlackOilPolymer,
                                                        VtkBlackOilSolvent,
                                                        VtkBlackOil,
-                                                       MultiPhaseBaseModel>; };
+                                                       MultiPhaseBaseModel,
+                                                       VtkBlackOilMICP>; };
 } // namespace TTag
 
 //! Set the local residual function
@@ -131,7 +133,8 @@ struct Indices<TypeTag, TTag::BlackOilModel>
                                getPropValue<TypeTag, Properties::EnableEnergy>(),
                                getPropValue<TypeTag, Properties::EnableFoam>(),
                                getPropValue<TypeTag, Properties::EnableBrine>(),
-                               /*PVOffset=*/0>; };
+                               /*PVOffset=*/0,
+                               getPropValue<TypeTag, Properties::EnableMICP>()>; };
 
 //! Set the fluid system to the black-oil fluid system by default
 template<class TypeTag>
@@ -158,6 +161,8 @@ template<class TypeTag>
 struct EnableFoam<TypeTag, TTag::BlackOilModel> { static constexpr bool value = false; };
 template<class TypeTag>
 struct EnableBrine<TypeTag, TTag::BlackOilModel> { static constexpr bool value = false; };
+template<class TypeTag>
+struct EnableMICP<TypeTag, TTag::BlackOilModel> { static constexpr bool value = false; };
 
 //! By default, the blackoil model is isothermal and does not conserve energy
 template<class TypeTag>
@@ -287,6 +292,7 @@ class BlackOilModel
     using PolymerModule = BlackOilPolymerModule<TypeTag>;
     using EnergyModule = BlackOilEnergyModule<TypeTag>;
     using DiffusionModule = BlackOilDiffusionModule<TypeTag, enableDiffusion>;
+    using MICPModule = BlackOilMICPModule<TypeTag>;
 
 public:
     BlackOilModel(Simulator& simulator)
@@ -305,6 +311,7 @@ public:
         PolymerModule::registerParameters();
         EnergyModule::registerParameters();
         DiffusionModule::registerParameters();
+        MICPModule::registerParameters();
 
         // register runtime parameters of the VTK output modules
         VtkBlackOilModule<TypeTag>::registerParameters();
@@ -595,6 +602,7 @@ protected:
         SolventModule::registerOutputModules(*this, this->simulator_);
         PolymerModule::registerOutputModules(*this, this->simulator_);
         EnergyModule::registerOutputModules(*this, this->simulator_);
+        MICPModule::registerOutputModules(*this, this->simulator_);
 
         this->addOutputModule(new VtkBlackOilModule<TypeTag>(this->simulator_));
         this->addOutputModule(new VtkCompositionModule<TypeTag>(this->simulator_));

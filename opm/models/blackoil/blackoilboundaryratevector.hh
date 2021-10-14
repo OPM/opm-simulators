@@ -62,6 +62,7 @@ class BlackOilBoundaryRateVector : public GetPropType<TypeTag, Properties::RateV
     enum { conti0EqIdx = Indices::conti0EqIdx };
     enum { contiEnergyEqIdx = Indices::contiEnergyEqIdx };
     enum { enableFoam = getPropValue<TypeTag, Properties::EnableFoam>() };
+    enum { enableMICP = getPropValue<TypeTag, Properties::EnableMICP>() };
 
     static constexpr bool blackoilConserveSurfaceVolume = getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>();
 
@@ -175,6 +176,12 @@ public:
 
         if (enablePolymer) {
             (*this)[Indices::contiPolymerEqIdx] = extQuants.volumeFlux(FluidSystem::waterPhaseIdx) * insideIntQuants.polymerConcentration();
+        }
+
+        if (enableMICP) {
+            (*this)[Indices::contiMicrobialEqIdx] = extQuants.volumeFlux(FluidSystem::waterPhaseIdx) * insideIntQuants.microbialConcentration();
+            (*this)[Indices::contiOxygenEqIdx] = extQuants.volumeFlux(FluidSystem::waterPhaseIdx) * insideIntQuants.oxygenConcentration();
+            (*this)[Indices::contiUreaEqIdx] = extQuants.volumeFlux(FluidSystem::waterPhaseIdx) * insideIntQuants.ureaConcentration();
         }
 
         // make sure that the right mass conservation quantities are used

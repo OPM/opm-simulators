@@ -36,6 +36,7 @@
 #include "blackoilbrinemodules.hh"
 #include "blackoilenergymodules.hh"
 #include "blackoildiffusionmodule.hh"
+#include "blackoilmicpmodules.hh"
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
 #include <opm/material/common/Valgrind.hpp>
 #include <dune/common/fmatrix.hh>
@@ -62,6 +63,7 @@ class BlackOilIntensiveQuantities
     , public BlackOilFoamIntensiveQuantities<TypeTag>
     , public BlackOilBrineIntensiveQuantities<TypeTag>
     , public BlackOilEnergyIntensiveQuantities<TypeTag>
+    , public BlackOilMICPIntensiveQuantities<TypeTag>
 {
     using ParentType = GetPropType<TypeTag, Properties::DiscIntensiveQuantities>;
     using Implementation = GetPropType<TypeTag, Properties::IntensiveQuantities>;
@@ -85,6 +87,7 @@ class BlackOilIntensiveQuantities
     enum { enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>() };
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
     enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
+    enum { enableMICP = getPropValue<TypeTag, Properties::EnableMICP>() };
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
     enum { waterCompIdx = FluidSystem::waterCompIdx };
@@ -129,6 +132,7 @@ public:
 
         const auto& problem = elemCtx.problem();
         const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
+        const auto& linearizationType = elemCtx.linearizationType();
 
         asImp_().updateTemperature_(elemCtx, dofIdx, timeIdx);
 
@@ -170,7 +174,7 @@ public:
             }
         }
         if (gasEnabled && waterEnabled && !oilEnabled) {
-            Sg = 1.0 - Sw; 
+            Sg = 1.0 - Sw;
         }
 
         Valgrind::CheckDefined(Sg);
@@ -384,11 +388,19 @@ public:
         // deal with water induced rock compaction
         porosity_ *= problem.template rockCompPoroMultiplier<Evaluation>(*this, globalSpaceIdx);
 
+        // the MICP processes change the porosity
+        if (enableMICP){
+          Evaluation biofilm_ = priVars.makeEvaluation(Indices::biofilmConcentrationIdx, timeIdx, linearizationType);
+          Evaluation calcite_ = priVars.makeEvaluation(Indices::calciteConcentrationIdx, timeIdx, linearizationType);
+          porosity_ += - biofilm_ - calcite_;
+        }
+
         asImp_().solventPvtUpdate_(elemCtx, dofIdx, timeIdx);
         asImp_().zPvtUpdate_();
         asImp_().polymerPropertiesUpdate_(elemCtx, dofIdx, timeIdx);
         asImp_().updateEnergyQuantities_(elemCtx, dofIdx, timeIdx, paramCache);
         asImp_().foamPropertiesUpdate_(elemCtx, dofIdx, timeIdx);
+        asImp_().MICPPropertiesUpdate_(elemCtx, dofIdx, timeIdx);
 
         // update the quantities which are required by the chosen
         // velocity model
@@ -474,6 +486,7 @@ private:
     friend BlackOilEnergyIntensiveQuantities<TypeTag>;
     friend BlackOilFoamIntensiveQuantities<TypeTag>;
     friend BlackOilBrineIntensiveQuantities<TypeTag>;
+    friend BlackOilMICPIntensiveQuantities<TypeTag>;
 
 
     Implementation& asImp_()
