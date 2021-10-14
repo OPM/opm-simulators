@@ -670,6 +670,11 @@ assignToSolution(data::Solution& sol)
             std::string tmp = tracer.name + "F";
             sol.insert(tmp, UnitSystem::measure::identity, std::move(tracerConcentrations_[tracerIdx++]), data::TargetType::RESTART_SOLUTION);
         }
+        // We need put tracerConcentrations into a valid state.
+        // Otherwise next time we end up here outside of a restart write we will
+        // move invalidated data above (as it was moved away before and never
+        // reallocated)
+        tracerConcentrations_.resize(0);
     }
 }
 
