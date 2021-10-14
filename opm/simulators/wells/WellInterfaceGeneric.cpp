@@ -96,6 +96,8 @@ WellInterfaceGeneric::WellInterfaceGeneric(const Well& well,
     }
 
     wsolvent_ = 0.0;
+
+    well_control_log_.clear();
 }
 
 const std::vector<PerforationData>& WellInterfaceGeneric::perforationData() const
@@ -381,5 +383,26 @@ double WellInterfaceGeneric::getALQ(const WellState& well_state) const
 {
     return well_state.getALQ(name());
 }
+
+void WellInterfaceGeneric::reportWellSwitching(const SingleWellState& ws, DeferredLogger& deferred_logger) const
+{
+    if (well_control_log_.empty())
+        return;
+
+    std::string msg = "    Well " + name()
+        + " control mode changed from ";
+    for (const std::string& from : well_control_log_) {
+        msg += from + "->";
+    }
+    std::string to;
+    if (isInjector()) {
+        to = Well::InjectorCMode2String(ws.injection_cmode);
+    } else {
+        to = Well::ProducerCMode2String(ws.production_cmode);
+    }
+    msg += to;
+    deferred_logger.info(msg);
+}
+
 
 } // namespace Opm
