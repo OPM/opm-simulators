@@ -36,6 +36,7 @@
 #include "blackoilfoammodules.hh"
 #include "blackoilbrinemodules.hh"
 #include "blackoildiffusionmodule.hh"
+#include "blackoilmicpmodules.hh"
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
 
 namespace Opm {
@@ -88,6 +89,7 @@ class BlackOilLocalResidual : public GetPropType<TypeTag, Properties::DiscLocalR
     using FoamModule = BlackOilFoamModule<TypeTag>;
     using BrineModule = BlackOilBrineModule<TypeTag>;
     using DiffusionModule = BlackOilDiffusionModule<TypeTag, enableDiffusion>;
+    using MICPModule = BlackOilMICPModule<TypeTag>;
 
 public:
     /*!
@@ -161,6 +163,9 @@ public:
 
         // deal with salt (if present)
         BrineModule::addStorage(storage, intQuants);
+
+        // deal with micp (if present)
+        MICPModule::addStorage(storage, intQuants);
     }
 
     /*!
@@ -208,6 +213,9 @@ public:
         // deal with salt (if present)
         BrineModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
+        // deal with micp (if present)
+        MICPModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
+
         DiffusionModule::addDiffusiveFlux(flux, elemCtx, scvfIdx, timeIdx);
     }
 
@@ -221,6 +229,9 @@ public:
     {
         // retrieve the source term intrinsic to the problem
         elemCtx.problem().source(source, elemCtx, dofIdx, timeIdx);
+
+        // deal with MICP (if present)
+        MICPModule::addSource(source, elemCtx, dofIdx, timeIdx);
 
         // scale the source term of the energy equation
         if (enableEnergy)
