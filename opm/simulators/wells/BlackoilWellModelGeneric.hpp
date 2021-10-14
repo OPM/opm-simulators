@@ -157,10 +157,10 @@ public:
     /// Return true if any well has a THP constraint.
     bool hasTHPConstraints() const;
 
-    /// Shut down any single well, but only if it is in prediction mode.
+    /// Shut down any single well
     /// Returns true if the well was actually found and shut.
-    bool forceShutWellByNameIfPredictionMode(const std::string& wellname,
-                                             const double simulation_time);
+    bool forceShutWellByName(const std::string& wellname,
+                             const double simulation_time);
 
 protected:
 

@@ -811,13 +811,6 @@ updateWellTestState(const SingleWellState& ws,
                     WellTestState& wellTestState,
                     DeferredLogger& deferred_logger) const
 {
-
-    // Based on current understanding, only under prediction mode, we need to shut well due to various
-    // reasons or limits. With more knowlage or testing cases later, this might need to be corrected.
-    if (!underPredictionMode() ) {
-        return;
-    }
-
     // updating well test state based on physical (THP/BHP) limits.
     updateWellTestStatePhysical(simulationTime, writeMessageToOPMLog, wellTestState, deferred_logger);
 
