@@ -135,7 +135,8 @@ public:
                    getPropValue<TypeTag, Properties::EnablePolymer>(),
                    getPropValue<TypeTag, Properties::EnableFoam>(),
                    getPropValue<TypeTag, Properties::EnableBrine>(),
-                   getPropValue<TypeTag, Properties::EnableExtbo>())
+                   getPropValue<TypeTag, Properties::EnableExtbo>(),
+                   getPropValue<TypeTag, Properties::EnableMICP>())
          , simulator_(simulator)
     {
         const SummaryConfig summaryConfig = simulator_.vanguard().summaryConfig();
@@ -357,6 +358,26 @@ public:
                 this->mFracOil_[globalDofIdx] = stdVolOil*rhoO/stdMassTotal;
                 this->mFracGas_[globalDofIdx] = stdVolGas*rhoG/stdMassTotal;
                 this->mFracCo2_[globalDofIdx] = stdVolCo2*rhoCO2/stdMassTotal;
+            }
+
+            if (!this->cMicrobes_.empty()) {
+                this->cMicrobes_[globalDofIdx] = intQuants.microbialConcentration().value();
+            }
+
+            if (!this->cOxygen_.empty()) {
+                this->cOxygen_[globalDofIdx] = intQuants.oxygenConcentration().value();
+            }
+
+            if (!this->cUrea_.empty()) {
+                this->cUrea_[globalDofIdx] = 10 * intQuants.ureaConcentration().value(); //Reescaling back the urea concentration (see WellInterface_impl.hpp)
+            }
+
+            if (!this->cBiofilm_.empty()) {
+                this->cBiofilm_[globalDofIdx] = intQuants.biofilmConcentration().value();
+            }
+
+            if (!this->cCalcite_.empty()) {
+                this->cCalcite_[globalDofIdx] = intQuants.calciteConcentration().value();
             }
 
             if (!this->bubblePointPressure_.empty()) {
@@ -666,7 +687,7 @@ private:
                 this->pressureTimesPoreVolume_[globalDofIdx] = getValue(fs.pressure(gasPhaseIdx)) * pv;
                 this->pressureTimesHydrocarbonVolume_[globalDofIdx] = this->pressureTimesPoreVolume_[globalDofIdx] * hydrocarbon;
             } else if (FluidSystem::phaseIsActive(waterPhaseIdx)) {
-                this->pressureTimesPoreVolume_[globalDofIdx] = getValue(fs.pressure(waterPhaseIdx)) * pv; 
+                this->pressureTimesPoreVolume_[globalDofIdx] = getValue(fs.pressure(waterPhaseIdx)) * pv;
             }
         }
 
@@ -680,7 +701,7 @@ private:
                     continue;
 
                 const double b = getValue(fs.invB(phaseIdx));
-                const double s = getValue(fs.saturation(phaseIdx));                
+                const double s = getValue(fs.saturation(phaseIdx));
                 fipr[phaseIdx] = s * pv;
                 fip[phaseIdx] = b * fipr[phaseIdx];
             }
@@ -698,8 +719,8 @@ private:
                 this->fip_[Inplace::Phase::GasResVolume][globalDofIdx] = fipr[gasPhaseIdx];
             if (FluidSystem::phaseIsActive(waterPhaseIdx) && !this->fip_[Inplace::Phase::WaterResVolume].empty())
                 this->fip_[Inplace::Phase::WaterResVolume][globalDofIdx] = fipr[waterPhaseIdx];
-            
-            if (FluidSystem::phaseIsActive(waterPhaseIdx) && !this->fip_[Inplace::Phase::SALT].empty()) 
+
+            if (FluidSystem::phaseIsActive(waterPhaseIdx) && !this->fip_[Inplace::Phase::SALT].empty())
                 this->fip_[Inplace::Phase::SALT][globalDofIdx] = fipr[waterPhaseIdx] * fs.saltConcentration().value();
 
             // Store the pure oil and gas Fip

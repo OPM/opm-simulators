@@ -51,14 +51,15 @@ private:
     using FluidSystem = GetPropType<BaseTypeTag, Properties::FluidSystem>;
 
 public:
-    typedef BlackOilTwoPhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
-                                    getPropValue<TypeTag, Properties::EnableExtbo>(),
-                                    getPropValue<TypeTag, Properties::EnablePolymer>(),
-                                    getPropValue<TypeTag, Properties::EnableEnergy>(),
-                                    getPropValue<TypeTag, Properties::EnableFoam>(),
-                                    getPropValue<TypeTag, Properties::EnableBrine>(),
-                                    /*PVOffset=*/0,
-                                    /*disabledCompIdx=*/FluidSystem::waterCompIdx> type;
+  typedef BlackOilTwoPhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
+                                  getPropValue<TypeTag, Properties::EnableExtbo>(),
+                                  getPropValue<TypeTag, Properties::EnablePolymer>(),
+                                  getPropValue<TypeTag, Properties::EnableEnergy>(),
+                                  getPropValue<TypeTag, Properties::EnableFoam>(),
+                                  getPropValue<TypeTag, Properties::EnableBrine>(),
+                                  /*PVOffset=*/0,
+                                  /*disabledCompIdx=*/FluidSystem::waterCompIdx,
+                                  getPropValue<TypeTag, Properties::EnableMICP>()> type;
 };
 }}
 

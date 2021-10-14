@@ -53,7 +53,8 @@ public:
                                          getPropValue<TypeTag, Properties::EnableFoam>(),
                                          getPropValue<TypeTag, Properties::EnableBrine>(),
                                          /*PVOffset=*/0,
-                                         /*enebledCompIdx=*/FluidSystem::waterCompIdx>
+                                         /*enebledCompIdx=*/FluidSystem::waterCompIdx,
+                                         getPropValue<TypeTag, Properties::EnableMICP>()>
         type;
 };
 

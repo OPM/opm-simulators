@@ -83,6 +83,7 @@ public:
 
     typedef AdaptiveTimeSteppingEbos<TypeTag> TimeStepper;
     typedef BlackOilPolymerModule<TypeTag> PolymerModule;
+    typedef BlackOilMICPModule<TypeTag> MICPModule;
 
     typedef BlackoilModelEbos<TypeTag> Model;
     typedef NonlinearSolverEbos<TypeTag, Model> Solver;

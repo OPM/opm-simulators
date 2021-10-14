@@ -2,20 +2,16 @@
 // vi: set et ts=4 sw=4 sts=4:
 /*
   This file is part of the Open Porous Media project (OPM).
-
   OPM is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 2 of the License, or
   (at your option) any later version.
-
   OPM is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
-
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
-
   Consult the COPYING file in the top-level source directory of this
   module for the precise wording of the license and the list of
   copyright holders.
@@ -79,7 +75,8 @@ EclGenericOutputBlackoilModule(const EclipseState& eclState,
                            bool enablePolymer,
                            bool enableFoam,
                            bool enableBrine,
-                           bool enableExtbo)
+                           bool enableExtbo,
+                           bool enableMICP)
     : eclState_(eclState)
     , schedule_(schedule)
     , summaryConfig_(summaryConfig)
@@ -91,6 +88,7 @@ EclGenericOutputBlackoilModule(const EclipseState& eclState,
     , enableFoam_(enableFoam)
     , enableBrine_(enableBrine)
     , enableExtbo_(enableExtbo)
+    , enableMICP_(enableMICP)
 {
     const auto& fp = eclState_.fieldProps();
 
@@ -592,15 +590,19 @@ assignToSolution(data::Solution& sol)
         {"1OVERBG",  UnitSystem::measure::gas_inverse_formation_volume_factor,   data::TargetType::RESTART_AUXILIARY, invB_[gasPhaseIdx]},
         {"1OVERBO",  UnitSystem::measure::oil_inverse_formation_volume_factor,   data::TargetType::RESTART_AUXILIARY, invB_[oilPhaseIdx]},
         {"1OVERBW",  UnitSystem::measure::water_inverse_formation_volume_factor, data::TargetType::RESTART_AUXILIARY, invB_[waterPhaseIdx]},
+        {"BIOFILM",  UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      cBiofilm_},
+        {"CALCITE",  UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      cCalcite_},
         {"FOAM",     UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      cFoam_},
         {"GASKR",    UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     relativePermeability_[gasPhaseIdx]},
         {"GAS_DEN",  UnitSystem::measure::density,   data::TargetType::RESTART_AUXILIARY,     density_[gasPhaseIdx]},
         {"GAS_VISC", UnitSystem::measure::viscosity, data::TargetType::RESTART_AUXILIARY,     viscosity_[gasPhaseIdx]},
         {"KRNSW_GO", UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     krnSwMdcGo_},
         {"KRNSW_OW", UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     krnSwMdcOw_},
+        {"MICROBES", UnitSystem::measure::density,   data::TargetType::RESTART_SOLUTION,      cMicrobes_},
         {"OILKR",    UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     relativePermeability_[oilPhaseIdx]},
         {"OIL_DEN",  UnitSystem::measure::density,   data::TargetType::RESTART_AUXILIARY,     density_[oilPhaseIdx]},
         {"OIL_VISC", UnitSystem::measure::viscosity, data::TargetType::RESTART_AUXILIARY,     viscosity_[oilPhaseIdx]},
+        {"OXYGEN",   UnitSystem::measure::density,   data::TargetType::RESTART_SOLUTION,      cOxygen_},
         {"PBUB",     UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     bubblePointPressure_},
         {"PCSWM_GO", UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     pcSwMdcGo_},
         {"PCSWM_OW", UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     pcSwMdcOw_},
@@ -625,6 +627,7 @@ assignToSolution(data::Solution& sol)
         {"STD_GAS",  UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      mFracGas_},
         {"STD_OIL",  UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      mFracOil_},
         {"SWMAX",    UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      swMax_},
+        {"UREA",     UnitSystem::measure::density,   data::TargetType::RESTART_SOLUTION,      cUrea_},
         {"TMULT_RC", UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      rockCompTransMultiplier_},
         {"WATKR",    UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     relativePermeability_[waterPhaseIdx]},
         {"WAT_DEN",  UnitSystem::measure::density,   data::TargetType::RESTART_AUXILIARY,     density_[waterPhaseIdx]},
@@ -734,6 +737,16 @@ setRestart(const data::Solution& sol,
         krnSwMdcGo_[elemIdx] = sol.data("KRNSW_GO")[globalDofIndex];
     if (!ppcw_.empty() && sol.has("PPCW"))
         ppcw_[elemIdx] = sol.data("PPCW")[globalDofIndex];
+    if (!cMicrobes_.empty() && sol.has("MICROBES"))
+        cMicrobes_[elemIdx] = sol.data("MICROBES")[globalDofIndex];
+    if (!cOxygen_.empty() && sol.has("OXYGEN"))
+        cOxygen_[elemIdx] = sol.data("OXYGEN")[globalDofIndex];
+    if (!cUrea_.empty() && sol.has("UREA"))
+        cUrea_[elemIdx] = sol.data("UREA")[globalDofIndex];
+    if (!cBiofilm_.empty() && sol.has("BIOFILM"))
+        cBiofilm_[elemIdx] = sol.data("BIOFILM")[globalDofIndex];
+    if (!cCalcite_.empty() && sol.has("CALCITE"))
+        cCalcite_[elemIdx] = sol.data("CALCITE")[globalDofIndex];
 }
 
 template<class FluidSystem,class Scalar>
@@ -912,6 +925,13 @@ doAllocBuffers(unsigned bufferSize,
         mFracOil_.resize(bufferSize, 0.0);
         mFracGas_.resize(bufferSize, 0.0);
         mFracCo2_.resize(bufferSize, 0.0);
+    }
+    if (enableMICP_){
+        cMicrobes_.resize(bufferSize, 0.0);
+        cOxygen_.resize(bufferSize, 0.0);
+        cUrea_.resize(bufferSize, 0.0);
+        cBiofilm_.resize(bufferSize, 0.0);
+        cCalcite_.resize(bufferSize, 0.0);
     }
 
     if (vapparsActive)
@@ -1169,14 +1189,14 @@ outputResvFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> cipr, const i
         }
         ss << ":---------:---------------:---------------:---------------:---------------:---------------:\n"
            << ": REGION  :  TOTAL PORE   :  PORE VOLUME  :  PORE VOLUME  : PORE VOLUME   :  PORE VOLUME  :\n"
-           << ":         :   VOLUME      :  CONTAINING   :  CONTAINING   : CONTAINING    :  CONTAINING   :\n" 
-           << ":         :               :     OIL       :    WATER      :    GAS        :  HYDRO-CARBON :\n" 
+           << ":         :   VOLUME      :  CONTAINING   :  CONTAINING   : CONTAINING    :  CONTAINING   :\n"
+           << ":         :               :     OIL       :    WATER      :    GAS        :  HYDRO-CARBON :\n"
            << ":---------:---------------:---------------:---------------:---------------:---------------\n";
-    } 
-    else { 
+    }
+    else {
         ss << std::right << std::fixed << std::setprecision(0) << ":" << std::setw (9) <<  reg << ":" << std::setw(15) << cipr[Inplace::Phase::DynamicPoreVolume] << ":" << std::setw(15) << cipr[Inplace::Phase::OilResVolume] << ":" << std::setw(15) << cipr[Inplace::Phase::WaterResVolume] << ":" << std::setw(15) << cipr[Inplace::Phase::GasResVolume] << ":" << std::setw(15) << cipr[Inplace::Phase::OilResVolume] + cipr[Inplace::Phase::GasResVolume] << ":\n"
         << ":---------:---------------:---------------:---------------:---------------:---------------:\n";
-    }   
+    }
     OpmLog::note(ss.str());
 }
 

@@ -39,6 +39,7 @@
 #include <opm/models/blackoil/blackoilextbomodules.hh>
 #include <opm/models/blackoil/blackoilfoammodules.hh>
 #include <opm/models/blackoil/blackoilbrinemodules.hh>
+#include <opm/models/blackoil/blackoilmicpmodules.hh>
 
 #include <opm/material/densead/DynamicEvaluation.hpp>
 #include <opm/parser/eclipse/EclipseState/Runspec.hpp>
@@ -95,6 +96,7 @@ namespace Opm
         using Base::has_foam;
         using Base::has_brine;
         using Base::has_energy;
+        using Base::has_micp;
 
         using PolymerModule =  BlackOilPolymerModule<TypeTag>;
         using FoamModule = BlackOilFoamModule<TypeTag>;

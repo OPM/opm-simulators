@@ -88,13 +88,13 @@ relaxationFactorFractionsProducer(const std::vector<double>& primary_variables,
     double relaxation_factor = 1.0;
 
     if (FluidSystem::numActivePhases() > 1) {
-        if constexpr (has_wfrac_variable) { 
+        if constexpr (has_wfrac_variable) {
             const double relaxation_factor_w = StandardWellGeneric<Scalar>::
                                                relaxationFactorFraction(primary_variables[WFrac], dwells[0][WFrac]);
             relaxation_factor = std::min(relaxation_factor, relaxation_factor_w);
         }
 
-        if constexpr (has_gfrac_variable) { 
+        if constexpr (has_gfrac_variable) {
             const double relaxation_factor_g = StandardWellGeneric<Scalar>::
                                                relaxationFactorFraction(primary_variables[GFrac], dwells[0][GFrac]);
             relaxation_factor = std::min(relaxation_factor, relaxation_factor_g);
@@ -329,11 +329,11 @@ updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_log
             // this will happen.
         } else if (baseif_.isProducer()) { // producers
             // TODO: the following are not addressed for the solvent case yet
-            if constexpr (has_wfrac_variable) {    
+            if constexpr (has_wfrac_variable) {
                 primary_variables_[WFrac] = 1.0 / np;
             }
-            
-            if constexpr (has_gfrac_variable) {   
+
+            if constexpr (has_gfrac_variable) {
                 primary_variables_[GFrac] = 1.0 / np;
             }
         } else {
@@ -534,12 +534,12 @@ processFractions() const
             F[pu.phase_pos[Oil]] = 0.0;
         }
     }
-    
-    if constexpr (has_wfrac_variable) {    
+
+    if constexpr (has_wfrac_variable) {
         primary_variables_[WFrac] = F[pu.phase_pos[Water]];
     }
-    
-    if constexpr (has_gfrac_variable) {        
+
+    if constexpr (has_gfrac_variable) {
         primary_variables_[GFrac] = F[pu.phase_pos[Gas]];
     }
     if constexpr (Indices::enableSolvent) {
@@ -732,7 +732,7 @@ updatePrimaryVariablesNewton(const BVectorWell& dwells,
                                : 1.0;
 
     // update the second and third well variable (The flux fractions)
-    
+
     if constexpr (has_wfrac_variable) {
         const int sign2 = dwells[0][WFrac] > 0 ? 1: -1;
         const double dx2_limited = sign2 * std::min(std::abs(dwells[0][WFrac] * relaxation_factor_fractions), dFLimit);
@@ -740,7 +740,7 @@ updatePrimaryVariablesNewton(const BVectorWell& dwells,
         primary_variables_[WFrac] = old_primary_variables[WFrac] - dx2_limited;
     }
 
-    if constexpr (has_gfrac_variable) {        
+    if constexpr (has_gfrac_variable) {
         const int sign3 = dwells[0][GFrac] > 0 ? 1: -1;
         const double dx3_limited = sign3 * std::min(std::abs(dwells[0][GFrac] * relaxation_factor_fractions), dFLimit);
         primary_variables_[GFrac] = old_primary_variables[GFrac] - dx3_limited;
@@ -1110,26 +1110,27 @@ addWellContribution(WellContributions& wellContribs) const
 template class StandardWellEval<BlackOilFluidSystem<double,A>,__VA_ARGS__,double>;
 
 // One phase
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilOnePhaseIndices<0u,0u,0u,1u,false,false,0u,1u>)
+INSTANCE(BlackOilDefaultIndexTraits,BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>)
+INSTANCE(BlackOilDefaultIndexTraits,BlackOilOnePhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>)
+INSTANCE(BlackOilDefaultIndexTraits,BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,5u>)
 
 // Two phase
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,0u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,1u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,2u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,2u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilTwoPhaseIndices<0u,0u,1u,0u,false,false,0u,2u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilTwoPhaseIndices<0u,0u,1u,0u,false,true,0u,2u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilTwoPhaseIndices<0u,0u,2u,0u,false,false,0u,2u>)
+INSTANCE(BlackOilDefaultIndexTraits,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,0u,0u>)
+INSTANCE(BlackOilDefaultIndexTraits,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>)
+INSTANCE(BlackOilDefaultIndexTraits,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,2u,0u>)
+INSTANCE(BlackOilDefaultIndexTraits,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,2u,0u>)
+INSTANCE(BlackOilDefaultIndexTraits,BlackOilTwoPhaseIndices<0u,0u,1u,0u,false,false,0u,2u,0u>)
+INSTANCE(BlackOilDefaultIndexTraits,BlackOilTwoPhaseIndices<0u,0u,1u,0u,false,true,0u,2u,0u>)
+INSTANCE(BlackOilDefaultIndexTraits,BlackOilTwoPhaseIndices<0u,0u,2u,0u,false,false,0u,2u,0u>)
 
 // Blackoil
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<0u,0u,0u,0u,false,false,0u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<0u,0u,0u,0u,true,false,0u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<0u,0u,0u,0u,false,true,0u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<1u,0u,0u,0u,false,false,0u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<0u,1u,0u,0u,false,false,0u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<0u,0u,1u,0u,false,false,0u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<0u,0u,0u,1u,false,false,0u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<0u,0u,0u,1u,false,false,1u>)
+INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<0u,0u,0u,0u,false,false,0u,0u>)
+INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<0u,0u,0u,0u,true,false,0u,0u>)
+INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<0u,0u,0u,0u,false,true,0u,0u>)
+INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<1u,0u,0u,0u,false,false,0u,0u>)
+INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<0u,1u,0u,0u,false,false,0u,0u>)
+INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<0u,0u,1u,0u,false,false,0u,0u>)
+INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<0u,0u,0u,1u,false,false,0u,0u>)
+INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<0u,0u,0u,1u,false,false,1u,0u>)
 
 }

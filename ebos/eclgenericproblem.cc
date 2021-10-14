@@ -407,7 +407,8 @@ checkDeckCompatibility_(const Deck& deck,
                         int numPhases,
                         bool indicesGasEnabled,
                         bool indicesOilEnabled,
-                        bool indicesWaterEnabled) const
+                        bool indicesWaterEnabled,
+                        bool enableMICP) const
 {
     if (enableApiTracking)
         throw std::logic_error("API tracking is not yet implemented but requested at compile time.");
@@ -423,6 +424,11 @@ checkDeckCompatibility_(const Deck& deck,
         throw std::runtime_error("The simulator requires the polymer option to be enabled, but the deck does not.");
     else if (!enablePolymer && deck.hasKeyword("POLYMER"))
         throw std::runtime_error("The deck enables the polymer option, but the simulator is compiled without it.");
+
+    if (enableMICP && !deck.hasKeyword("MICP"))
+        throw std::runtime_error("The simulator requires the MICP option to be enabled, but the deck does not.");
+    else if (!enableMICP && deck.hasKeyword("MICP"))
+        throw std::runtime_error("The deck enables the MICP option, but the simulator is compiled without it.");
 
     if (enableExtbo && !deck.hasKeyword("PVTSOL"))
         throw std::runtime_error("The simulator requires the extendedBO option to be enabled, but the deck does not.");
@@ -476,7 +482,8 @@ void EclGenericProblem<GridView,FluidSystem,Scalar>::
 readBlackoilExtentionsInitialConditions_(size_t numDof,
                                          bool enableSolvent,
                                          bool enablePolymer,
-                                         bool enablePolymerMolarWeight)
+                                         bool enablePolymerMolarWeight,
+                                         bool enableMICP)
 {
     if (enableSolvent) {
         if (eclState_.fieldProps().has_double("SSOL"))
@@ -498,6 +505,29 @@ readBlackoilExtentionsInitialConditions_(size_t numDof,
         else
             polymerMoleWeight_.resize(numDof, 0.0);
     }
+
+    if (enableMICP) {
+        if (eclState_.fieldProps().has_double("SMICR"))
+            microbialConcentration_ = eclState_.fieldProps().get_double("SMICR");
+        else
+            microbialConcentration_.resize(numDof, 0.0);
+        if (eclState_.fieldProps().has_double("SOXYG"))
+            oxygenConcentration_ = eclState_.fieldProps().get_double("SOXYG");
+        else
+            oxygenConcentration_.resize(numDof, 0.0);
+        if (eclState_.fieldProps().has_double("SUREA"))
+            ureaConcentration_ = eclState_.fieldProps().get_double("SUREA");
+        else
+            ureaConcentration_.resize(numDof, 0.0);
+        if (eclState_.fieldProps().has_double("SBIOF"))
+            biofilmConcentration_ = eclState_.fieldProps().get_double("SBIOF");
+        else
+            biofilmConcentration_.resize(numDof, 0.0);
+        if (eclState_.fieldProps().has_double("SCALC"))
+            calciteConcentration_ = eclState_.fieldProps().get_double("SCALC");
+        else
+            calciteConcentration_.resize(numDof, 0.0);
+}
 }
 
 
@@ -559,6 +589,56 @@ polymerMolecularWeight(const unsigned elemIdx) const
         return 0.0;
 
     return polymerMoleWeight_[elemIdx];
+}
+
+template<class GridView, class FluidSystem, class Scalar>
+Scalar EclGenericProblem<GridView,FluidSystem,Scalar>::
+microbialConcentration(unsigned elemIdx) const
+{
+    if (microbialConcentration_.empty())
+        return 0;
+
+    return microbialConcentration_[elemIdx];
+}
+
+template<class GridView, class FluidSystem, class Scalar>
+Scalar EclGenericProblem<GridView,FluidSystem,Scalar>::
+oxygenConcentration(unsigned elemIdx) const
+{
+    if (oxygenConcentration_.empty())
+        return 0;
+
+    return oxygenConcentration_[elemIdx];
+}
+
+template<class GridView, class FluidSystem, class Scalar>
+Scalar EclGenericProblem<GridView,FluidSystem,Scalar>::
+ureaConcentration(unsigned elemIdx) const
+{
+    if (ureaConcentration_.empty())
+        return 0;
+
+    return ureaConcentration_[elemIdx];
+}
+
+template<class GridView, class FluidSystem, class Scalar>
+Scalar EclGenericProblem<GridView,FluidSystem,Scalar>::
+biofilmConcentration(unsigned elemIdx) const
+{
+    if (biofilmConcentration_.empty())
+        return 0;
+
+    return biofilmConcentration_[elemIdx];
+}
+
+template<class GridView, class FluidSystem, class Scalar>
+Scalar EclGenericProblem<GridView,FluidSystem,Scalar>::
+calciteConcentration(unsigned elemIdx) const
+{
+    if (calciteConcentration_.empty())
+        return 0;
+
+    return calciteConcentration_[elemIdx];
 }
 
 template<class GridView, class FluidSystem, class Scalar>

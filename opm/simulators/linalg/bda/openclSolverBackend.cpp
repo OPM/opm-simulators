@@ -173,7 +173,7 @@ openclSolverBackend<block_size>::openclSolverBackend(int verbosity_, int maxit_,
 
         context = std::make_shared<cl::Context>(devices[0]);
         queue.reset(new cl::CommandQueue(*context, devices[0], 0, &err));
-       
+
     } catch (const cl::Error& error) {
         std::ostringstream oss;
         oss << "OpenCL Error: " << error.what() << "(" << error.err() << ")\n";
@@ -815,8 +815,9 @@ INSTANTIATE_BDA_FUNCTIONS(1);
 INSTANTIATE_BDA_FUNCTIONS(2);
 INSTANTIATE_BDA_FUNCTIONS(3);
 INSTANTIATE_BDA_FUNCTIONS(4);
+INSTANTIATE_BDA_FUNCTIONS(5);
+INSTANTIATE_BDA_FUNCTIONS(6);
 
 #undef INSTANTIATE_BDA_FUNCTIONS
 
 } // namespace bda
-
