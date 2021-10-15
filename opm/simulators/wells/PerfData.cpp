@@ -33,11 +33,11 @@ PerfData::PerfData(std::size_t num_perf, bool injector_, std::size_t num_phases)
     , polymer_rates(num_perf)
     , brine_rates(num_perf)
     , prod_index(num_perf * num_phases)
+    , micp_rates(num_perf)
     , cell_index(num_perf)
     , connection_transmissibility_factor(num_perf)
     , satnum_id(num_perf)
     , ecl_index(num_perf)
-    , micp_rates(num_perf)
 {
     if (injector) {
         this->water_throughput.resize(num_perf);
