@@ -44,8 +44,10 @@
 
 #include <algorithm>
 #include <cassert>
+#include <stack>
 #include <stdexcept>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include <fmt/format.h>
@@ -1517,49 +1519,33 @@ BlackoilWellModelGeneric::
 calculateAllGroupGuiderates(const int reportStepIdx) const
 {
     auto gr = std::unordered_map<std::string, data::GroupGuideRates>{};
-    auto up = std::vector<std::string>{};
 
-    // Start at well level, accumulate contributions towards root of
-    // group tree (FIELD group).
+    // Stack backed by vector<> since the number of groups is expected to be
+    // small.  We don't need the full power of std::deque here.
+    auto unprocessed = std::stack<std::string, std::vector<std::string>>{};
+    auto discovered = std::unordered_set<std::size_t>{};
 
-    for (const auto& wname : schedule_.wellNames(reportStepIdx)) {
-        if (! (this->wellState().has(wname) &&
-               this->guideRate_.has(wname)))
-        {
-            continue;
-        }
+    auto is_seen = [&discovered](const Group& group)
+    {
+        return discovered.find(group.insert_index()) != discovered.end();
+    };
 
-        const auto& well   = schedule_.getWell(wname, reportStepIdx);
-        const auto& parent = well.groupName();
+    auto is_seen_group = [this, &is_seen, reportStepIdx](const std::string& group)
+    {
+        return is_seen(this->schedule().getGroup(group, reportStepIdx));
+    };
 
-        if (parent == "FIELD") {
-            // Well parented directly to "FIELD".  Inadvisable and
-            // unexpected, but nothing to do about that here.  Just skip
-            // this guide rate contribution.
-            continue;
-        }
+    // Post-order depth first tree traversal, starting from 'FIELD', during
+    // which we visit a node (i.e., a group) only once all of its children
+    // have been visited.
+    unprocessed.push("FIELD");
 
-        auto& grval = well.isInjector()
-            ? gr[parent].injection
-            : gr[parent].production;
+    while (! unprocessed.empty()) {
+        const auto& group = this->schedule().getGroup(unprocessed.top(), reportStepIdx);
+        const auto& gname = group.name();
 
-        grval += this->getGuideRateValues(well);
-        up.push_back(parent);
-    }
-
-    // Propagate accumulated guide rates up towards root of group tree.
-    // Override accumulation if there is a GUIDERAT specification that
-    // applies to a group.
-    std::sort(up.begin(), up.end());
-    auto start = 0*up.size();
-    auto u     = std::unique(up.begin(), up.end());
-    auto nu    = std::distance(up.begin(), u);
-    while (nu > 0) {
-        const auto ntot = up.size();
-
-        for (auto gi = 0*nu; gi < nu; ++gi) {
-            const auto& gname = up[start + gi];
-            const auto& group = schedule_.getGroup(gname, reportStepIdx);
+        if (is_seen(group)) {
+            unprocessed.pop();
 
             if (this->guideRate_.has(gname)) {
                 gr[gname].production = this->getGuideRateValues(group);
@@ -1568,8 +1554,11 @@ calculateAllGroupGuiderates(const int reportStepIdx) const
             if (this->guideRate_.has(gname, Phase::WATER) ||
                 this->guideRate_.has(gname, Phase::GAS))
             {
-                gr[gname].injection = this->getGuideRateInjectionGroupValues(group);
+                gr[gname].injection =
+                    this->getGuideRateInjectionGroupValues(group);
             }
+
+            if (gname == "FIELD") { continue; }
 
             const auto parent = group.parent();
             if (parent == "FIELD") { continue; }
@@ -1577,15 +1566,29 @@ calculateAllGroupGuiderates(const int reportStepIdx) const
             gr[parent].injection  += gr[gname].injection;
             gr[parent].production += gr[gname].production;
 
-            up.push_back(parent);
+            continue;
         }
 
-        start = ntot;
+        discovered.insert(group.insert_index());
 
-        auto begin = up.begin() + ntot;
-        std::sort(begin, up.end());
-        u  = std::unique(begin, up.end());
-        nu = std::distance(begin, u);
+        if (group.wellgroup()) {
+            for (const auto& wname : group.wells()) {
+                const auto& well = this->schedule().getWell(wname, reportStepIdx);
+
+                auto& grval = well.isInjector()
+                    ? gr[gname].injection
+                    : gr[gname].production;
+
+                grval += this->getGuideRateValues(well);
+            }
+        }
+        else {
+            for (const auto& grp : group.groups()) {
+                if (! is_seen_group(grp)) {
+                    unprocessed.push(grp);
+                }
+            }
+        }
     }
 
     return gr;
