@@ -1633,16 +1633,22 @@ assignGroupGuideRates(const Group& group,
     auto& inj  = gdata.guideRates.injection;   inj .clear();
 
     auto xgrPos = groupGuideRates.find(group.name());
-    if ((xgrPos == groupGuideRates.end()) ||
-        !this->guideRate_.has(group.name()))
-    {
+    if (xgrPos == groupGuideRates.end()) {
         // No guiderates defined for this group.
         return;
     }
 
     const auto& xgr = xgrPos->second;
-    prod = xgr.production;
-    inj  = xgr.injection;
+
+    if (this->guideRate_.has(group.name())) {
+        prod = xgr.production;
+    }
+
+    if (this->guideRate_.has(group.name(), Phase::WATER) ||
+        this->guideRate_.has(group.name(), Phase::GAS))
+    {
+        inj = xgr.injection;
+    }
 }
 
 void
