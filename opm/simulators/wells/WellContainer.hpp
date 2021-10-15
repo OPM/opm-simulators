@@ -157,6 +157,15 @@ public:
         throw std::logic_error("No such well");
     }
 
+    std::vector<std::string> wells() const {
+        std::vector<std::string> wlist;
+        for (const auto& [wname, _] : this->index_map) {
+            (void)_;
+            wlist.push_back(wname);
+        }
+        return wlist;
+    }
+
 
 private:
     void update_if(std::size_t index, const std::string& name, const WellContainer<T>& other) {

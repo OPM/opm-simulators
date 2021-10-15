@@ -17,8 +17,10 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <algorithm>
 #include <config.h>
 #include <functional>
+#include <vector>
 
 #define BOOST_TEST_MODULE WellStateFIBOTest
 
@@ -440,6 +442,9 @@ BOOST_AUTO_TEST_CASE(TESTWellContainer) {
     BOOST_CHECK_EQUAL(wc.well_name(1), "W2");
     BOOST_CHECK_THROW(wc.well_name(10), std::exception);
 
+    const auto& wells = wc.wells();
+    std::vector<std::string> expected = {"W1", "W2"};
+    BOOST_CHECK( std::is_permutation( wells.begin(), wells.end(), expected.begin(), expected.end()) );
 
     Opm::WellContainer<int> wc2;
     wc2.copy_welldata(wc);
