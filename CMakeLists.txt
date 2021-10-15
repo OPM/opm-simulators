@@ -442,6 +442,16 @@ opm_add_test(flow_blackoil_dunecpr
   DEPENDS opmsimulators
   LIBRARIES opmsimulators)
 
+opm_add_test(flow_brine_thermal
+  ONLY_COMPILE
+  DEFAULT_ENABLE_IF ${FLOW_VARIANTS_DEFAULT_ENABLE_IF}
+  SOURCES
+  flow/flow_brine_thermal.cpp
+  $<TARGET_OBJECTS:moduleVersion>
+  EXE_NAME flow_brine_thermal
+  DEPENDS opmsimulators
+  LIBRARIES opmsimulators)
+
 opm_add_test(flow_onephase
   ONLY_COMPILE
   DEFAULT_ENABLE_IF ${FLOW_VARIANTS_DEFAULT_ENABLE_IF}
