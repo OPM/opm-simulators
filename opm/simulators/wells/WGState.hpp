@@ -34,6 +34,7 @@ struct PhaseUsage;
 
 struct WGState {
     WGState(const PhaseUsage& pu);
+    void wtest_state(WellTestState wtest_state);
 
     WellState well_state;
     GroupState group_state;

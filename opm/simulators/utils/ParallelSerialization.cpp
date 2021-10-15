@@ -46,7 +46,7 @@ void eclStateBroadcast(Parallel::Communication comm, EclipseState& eclState, Sch
                        SummaryConfig& summaryConfig,
                        UDQState& udqState,
                        Action::State& actionState,
-                       WellTestState& /* wtestState */)
+                       WellTestState&  wtestState)
 {
     Opm::EclMpiSerializer ser(comm);
     ser.broadcast(eclState);

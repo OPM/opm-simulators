@@ -279,7 +279,7 @@ initFromRestartFile(const RestartValue& restartValues,
     }
 
 
-    this->active_wgstate_.well_test_state = std::move(wtestState);
+    this->active_wgstate_.wtest_state(std::move(wtestState));
     this->commitWGState();
     initial_step_ = false;
 }
