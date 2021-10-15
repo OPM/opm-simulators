@@ -54,7 +54,7 @@ void eclStateBroadcast(Parallel::Communication comm, EclipseState& eclState, Sch
     ser.broadcast(summaryConfig);
     ser.broadcast(udqState);
     ser.broadcast(actionState);
-    //ser.broadcast(wtestState);
+    ser.broadcast(wtestState);
 }
 
 void eclScheduleBroadcast(Parallel::Communication comm, Schedule& schedule)
