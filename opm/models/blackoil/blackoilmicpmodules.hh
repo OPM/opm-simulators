@@ -220,7 +220,7 @@ public:
         return eqIdx == contiMicrobialEqIdx || eqIdx == contiOxygenEqIdx || eqIdx == contiUreaEqIdx || eqIdx == contiBiofilmEqIdx || eqIdx == contiCalciteEqIdx;
     }
 
-    static Scalar eqWeight(unsigned eqIdx OPM_OPTIM_UNUSED)
+    static Scalar eqWeight([[maybe_unused]] unsigned eqIdx)
     {
         assert(eqApplies(eqIdx));
 
