@@ -37,9 +37,6 @@
 #include <opm/parser/eclipse/EclipseState/MICPpara.hpp>
 #endif
 
-#include <opm/material/common/Valgrind.hpp>
-#include <opm/material/common/Unused.hpp>
-
 #include <dune/common/fvector.hh>
 
 #include <string>
