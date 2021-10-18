@@ -360,14 +360,13 @@ foreach(OBJ ${COMMON_MODELS} ${FLOW_MODELS})
 endforeach()
 set_property(TARGET flow_libblackoil PROPERTY POSITION_INDEPENDENT_CODE ON)
 
-add_library(flow_libonephase_energy OBJECT flow/flow_ebos_onephase_energy.cpp)
-add_library(flow_libonephase OBJECT flow/flow_ebos_onephase.cpp)
-if(TARGET fmt::fmt)
-  target_link_libraries(flow_libonephase_energy fmt::fmt)
-  target_link_libraries(flow_libonephase fmt::fmt)
-endif()
-set_property(TARGET flow_libonephase PROPERTY EXCLUDE_FROM_ALL ${FLOW_VARIANTS_DEFAULT_ENABLE_IF})
-set_property(TARGET flow_libonephase_energy PROPERTY EXCLUDE_FROM_ALL ${FLOW_VARIANTS_DEFAULT_ENABLE_IF})
+foreach(OBJ brine_energy onephase onephase_energy)
+  add_library(flow_lib${OBJ} OBJECT flow/flow_ebos_${OBJ}.cpp)
+  if(TARGET fmt::fmt)
+    target_link_libraries(flow_lib${OBJ} fmt::fmt)
+  endif()
+  set_property(TARGET flow_lib${OBJ} PROPERTY EXCLUDE_FROM_ALL ${FLOW_VARIANTS_DEFAULT_ENABLE_IF})
+endforeach()
 
 add_library(flow_libblackoil_poly OBJECT flow/flow_ebos_blackoil_poly.cpp)
 if(TARGET fmt::fmt)
@@ -451,6 +450,7 @@ opm_add_test(flow_brine_energy
   SOURCES
   flow/flow_brine_energy.cpp
   $<TARGET_OBJECTS:moduleVersion>
+  $<TARGET_OBJECTS:flow_libbrine_energy>
   EXE_NAME flow_brine_energy
   DEPENDS opmsimulators
   LIBRARIES opmsimulators)
