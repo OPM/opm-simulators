@@ -16,6 +16,7 @@
 #include <opm/simulators/timestepping/TimeStepControlInterface.hpp>
 #include <opm/simulators/timestepping/TimeStepControl.hpp>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/ScheduleState.hpp>
 #include <opm/common/Exceptions.hpp>
 
 namespace Opm::Properties {
@@ -289,7 +290,8 @@ namespace Opm {
         //! \brief contructor taking parameter object
         //! \param tuning Pointer to ecl TUNING keyword
         //! \param timeStep current report step
-        AdaptiveTimeSteppingEbos(const Tuning& tuning,
+        AdaptiveTimeSteppingEbos(double max_next_tstep,
+                                 const Tuning& tuning,
                                  const UnitSystem& unitSystem,
                                  const bool terminalOutput = true)
             : timeStepControl_()
@@ -302,7 +304,7 @@ namespace Opm {
             , solverRestartMax_(EWOMS_GET_PARAM(TypeTag, int, SolverMaxRestarts)) // 10
             , solverVerbose_(EWOMS_GET_PARAM(TypeTag, int, SolverVerbosity) > 0 && terminalOutput) // 2
             , timestepVerbose_(EWOMS_GET_PARAM(TypeTag, int, TimeStepVerbosity) > 0 && terminalOutput) // 2
-            , suggestedNextTimestep_(tuning.TSINIT) // 1.0
+            , suggestedNextTimestep_(max_next_tstep) // 1.0
             , fullTimestepInitially_(EWOMS_GET_PARAM(TypeTag, bool, FullTimeStepInitially)) // false
             , timestepAfterEvent_(tuning.TMAXWC) // 1e30
             , useNewtonIteration_(false)
@@ -637,13 +639,13 @@ namespace Opm {
         void setSuggestedNextStep(const double x)
         { suggestedNextTimestep_ = x; }
 
-        void updateTUNING(const Tuning& tuning)
+        void updateTUNING(double max_next_tstep, const Tuning& tuning)
         {
             restartFactor_ = tuning.TSFCNV;
             growthFactor_ = tuning.TFDIFF;
             maxGrowth_ = tuning.TSFMAX;
             maxTimeStep_ = tuning.TSMAXZ;
-            suggestedNextTimestep_ = tuning.TSINIT;
+            suggestedNextTimestep_ = max_next_tstep;
             timestepAfterEvent_ = tuning.TMAXWC;
         }
 
