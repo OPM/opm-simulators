@@ -15,10 +15,30 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "config.h"
-#include <flow/flow_ebos_brine_energy.hpp>
+#include <opm/simulators/flow/Main.hpp>
 
+namespace Opm {
+namespace Properties {
+namespace TTag {
+struct EclFlowBrineProblem {
+    using InheritsFrom = std::tuple<EclFlowProblem>;
+};
+}
+template<class TypeTag>
+struct EnableBrine<TypeTag, TTag::EclFlowBrineProblem> {
+    static constexpr bool value = true;
+};
+template<class TypeTag>
+struct EnableEnergy<TypeTag, TTag::EclFlowBrineProblem> {
+    static constexpr bool value = true;
+};
+}
 
-int main(int argc, char** argv)
+int flowEbosBrineEnergyMain(int argc, char** argv)
 {
-    return Opm::flowEbosBrineEnergyMain(argc, argv);
+    using TypeTag = Opm::Properties::TTag::EclFlowBrineProblem;
+    auto mainObject = Opm::Main(argc, argv);
+    return mainObject.runStatic<TypeTag>();
+}
+
 }

@@ -14,11 +14,12 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include "config.h"
-#include <flow/flow_ebos_brine_energy.hpp>
 
+#ifndef FLOW_EBOS_BRINE_ENERGY_HPP
+#define FLOW_EBOS_BRINE_ENERGY_HPP
 
-int main(int argc, char** argv)
-{
-    return Opm::flowEbosBrineEnergyMain(argc, argv);
+namespace Opm {
+  int flowEbosBrineEnergyMain(int argc, char** argv);
 }
+
+#endif
