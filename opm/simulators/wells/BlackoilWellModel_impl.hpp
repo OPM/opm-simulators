@@ -125,7 +125,7 @@ namespace Opm {
             for ( size_t c=0; c < connectionSet.size(); c++ )
             {
                 const auto& connection = connectionSet.get(c);
-                int compressed_idx = compressedIndex(connection.global_index());
+                int compressed_idx = compressedIndexForInterior(connection.global_index());
 
                 if ( compressed_idx >= 0 ) { // Ignore connections in inactive/remote cells.
                     wellCells.push_back(compressed_idx);

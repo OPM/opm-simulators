@@ -374,7 +374,8 @@ protected:
     void runWellPIScaling(const int timeStepIdx,
                           DeferredLogger& local_deferredLogger);
 
-    virtual int compressedIndex(int cartesian_cell_idx) const = 0;
+    /// \brief get compressed index for interior cells (-1, otherwise
+    virtual int compressedIndexForInterior(int cartesian_cell_idx) const = 0;
 
 
     Schedule& schedule_;

@@ -296,6 +296,8 @@ public:
     /*!
      * \brief Return compressed index from cartesian index
      *
+     * \return compressed index of cell is in interior, -1 otherwise
+     *
      */
     int compressedIndex(int cartesianCellIdx) const
     {
@@ -306,6 +308,25 @@ public:
             return -1;
     }
 
+    /*!
+     * \brief Return compressed index from cartesian index only in interior
+     *
+     * \return compressed index of cell is in interior, -1 otherwise
+     *
+     */
+    int compressedIndexForInterior(int cartesianCellIdx) const
+    {
+        auto index_pair = cartesianToCompressed_.find(cartesianCellIdx);
+        if (index_pair == cartesianToCompressed_.end() ||
+            !is_interior_[index_pair->second])
+        {
+            return -1;
+        }
+        else
+        {
+            return index_pair->second;
+        }
+    }
     /*!
      * \brief Extract Cartesian index triplet (i,j,k) of an active cell.
      *
@@ -424,9 +445,22 @@ protected:
     void updateCartesianToCompressedMapping_()
     {
         size_t num_cells = asImp_().grid().leafGridView().size(0);
-        for (unsigned i = 0; i < num_cells; ++i) {
-            unsigned cartesianCellIdx = cartesianIndex(i);
-            cartesianToCompressed_[cartesianCellIdx] = i;
+        is_interior_.resize(num_cells);
+        
+        ElementMapper elemMapper(this->gridView(), Dune::mcmgElementLayout());
+        for (const auto& element : elements(this->gridView()))
+        {
+            const auto elemIdx = elemMapper.index(element);
+            unsigned cartesianCellIdx = cartesianIndex(elemIdx);
+            cartesianToCompressed_[cartesianCellIdx] = elemIdx;
+            if (element.partitionType() == Dune::InteriorEntity)
+            {
+                is_interior_[elemIdx] = 1;
+            }
+            else
+            {
+                is_interior_[elemIdx] = 0;
+            }
         }
     }
 
@@ -515,6 +549,10 @@ protected:
     /*! \brief Cell thickness
      */
     std::vector<Scalar> cellThickness_;
+
+    /*! \brief Whether a cells is in the interior.
+     */
+    std::vector<int> is_interior_;
 };
 
 } // namespace Opm

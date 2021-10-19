@@ -419,8 +419,8 @@ namespace Opm {
 
             void assignWellTracerRates(data::Wells& wsrpt) const;
 
-            int compressedIndex(int cartesian_cell_idx) const override {
-                return ebosSimulator_.vanguard().compressedIndex(cartesian_cell_idx);
+            int compressedIndexForInterior(int cartesian_cell_idx) const override {
+                return ebosSimulator_.vanguard().compressedIndexForInterior(cartesian_cell_idx);
             }
 
         private:
