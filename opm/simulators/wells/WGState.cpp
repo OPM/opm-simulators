@@ -28,4 +28,10 @@ WGState::WGState(const PhaseUsage& pu) :
     well_test_state{}
 {}
 
+void WGState::wtest_state(WellTestState wtest_state)
+{
+    wtest_state.filter_wells( this->well_state.wells() );
+    this->well_test_state = std::move(wtest_state);
+}
+
 }

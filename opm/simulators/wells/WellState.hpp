@@ -73,6 +73,10 @@ public:
         return this->wells_.size();
     }
 
+    std::vector<std::string> wells() const {
+        return this->wells_.wells();
+    }
+
 
     int numWells() const
     {

@@ -180,6 +180,7 @@ namespace {
                                         std::shared_ptr<Opm::Schedule>&      schedule,
                                         std::unique_ptr<Opm::UDQState>&      udqState,
                                         std::unique_ptr<Opm::Action::State>& actionState,
+                                        std::unique_ptr<Opm::WellTestState>& wtestState,
                                         Opm::ErrorGuard&                     errorGuard)
     {
         if (schedule == nullptr) {
@@ -192,6 +193,7 @@ namespace {
             ((*schedule)[0].udq().params().undefinedValue());
 
         actionState = std::make_unique<Opm::Action::State>();
+        wtestState = std::make_unique<Opm::WellTestState>();
     }
 
     std::shared_ptr<Opm::Deck>
@@ -276,7 +278,7 @@ namespace {
         else {
             createNonRestartDynamicObjects(*deck, *eclipseState,
                                            *parseContext, std::move(python),
-                                           schedule, udqState, actionState, 
+                                           schedule, udqState, actionState, wtestState,
                                            errorGuard);
         }
 
@@ -302,6 +304,7 @@ namespace {
                                        std::shared_ptr<Opm::Schedule>&      schedule,
                                        std::unique_ptr<Opm::UDQState>&      udqState,
                                        std::unique_ptr<Opm::Action::State>& actionState,
+                                       std::unique_ptr<Opm::WellTestState>& wtestState,
                                        std::shared_ptr<Opm::SummaryConfig>& summaryConfig)
     {
         if (eclipseState == nullptr) {
@@ -318,6 +321,10 @@ namespace {
 
         if (actionState == nullptr) {
             actionState = std::make_unique<Opm::Action::State>();
+        }
+
+        if (wtestState == nullptr) {
+            wtestState = std::make_unique<Opm::WellTestState>();
         }
 
         if (summaryConfig == nullptr) {
@@ -464,7 +471,7 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
 #if HAVE_MPI
     else {
         defineStateObjectsOnNonIORank(comm, std::move(python), eclipseState,
-                                      schedule, udqState, actionState,
+                                      schedule, udqState, actionState, wtestState,
                                       summaryConfig);
     }
 
