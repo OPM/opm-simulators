@@ -225,6 +225,7 @@ add_test_compareECLFiles(CASENAME spe12
                          ABS_TOL ${abs_tol}
                          REL_TOL ${coarse_rel_tol}
                          RESTART_SCHED false
+                         RESTART_STEP 60
                          DIR spe1)
 
 add_test_compareECLFiles(CASENAME spe1_2p
@@ -375,7 +376,8 @@ add_test_compareECLFiles(CASENAME spe9
                          FILENAME SPE9_CP_SHORT
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol})
+                         REL_TOL ${rel_tol}
+                         RESTART_STEP 10)
 
 add_test_compareECLFiles(CASENAME spe9group
                          FILENAME SPE9_CP_GROUP
