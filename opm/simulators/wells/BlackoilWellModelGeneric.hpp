@@ -20,9 +20,19 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-
 #ifndef OPM_BLACKOILWELLMODEL_GENERIC_HEADER_INCLUDED
 #define OPM_BLACKOILWELLMODEL_GENERIC_HEADER_INCLUDED
+
+#include <opm/output/data/GuideRateValue.hpp>
+
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestState.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRate.hpp>
+
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+
+#include <opm/simulators/wells/PerforationData.hpp>
+#include <opm/simulators/wells/WellProdIndexCalculator.hpp>
+#include <opm/simulators/wells/WGState.hpp>
 
 #include <functional>
 #include <map>
@@ -32,52 +42,45 @@
 #include <unordered_set>
 #include <vector>
 
-#include <opm/output/data/GuideRateValue.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestState.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRate.hpp>
+namespace Opm {
+    class DeferredLogger;
+    class EclipseState;
+    class GasLiftSingleWellGeneric;
+    class GasLiftWellState;
+    class Group;
+    class GuideRateConfig;
+    class ParallelWellInfo;
+    class RestartValue;
+    class Schedule;
+    class SummaryConfig;
+    class VFPProperties;
+    class WellInterfaceGeneric;
+    class WellState;
+} // namespace Opm
 
-#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
-#include <opm/simulators/wells/ParallelWellInfo.hpp>
-#include <opm/simulators/wells/PerforationData.hpp>
-#include <opm/simulators/wells/WellInterfaceGeneric.hpp>
-#include <opm/simulators/wells/WellProdIndexCalculator.hpp>
-#include <opm/simulators/wells/WGState.hpp>
+namespace Opm { namespace data {
+    struct GroupData;
+    struct GroupGuideRates;
+    class GroupAndNetworkValues;
+    struct NodeData;
+}} // namespace Opm::data
 
 namespace Opm {
-
-namespace data {
-struct GroupData;
-struct GroupGuideRates;
-class GroupAndNetworkValues;
-struct NodeData;
-}
-
-class DeferredLogger;
-class EclipseState;
-class GasLiftSingleWellGeneric;
-class GasLiftWellState;
-class Group;
-class RestartValue;
-class Schedule;
-class SummaryConfig;
-class VFPProperties;
-class WellState;
 
 /// Class for handling the blackoil well model.
 class BlackoilWellModelGeneric
 {
 public:
     // ---------      Types      ---------
-    using Comm = Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator>;
-    using GLiftOptWells = std::map<std::string,std::unique_ptr<GasLiftSingleWellGeneric>>;
-    using GLiftProdWells = std::map<std::string,const WellInterfaceGeneric*>;
-    using GLiftWellStateMap = std::map<std::string,std::unique_ptr<GasLiftWellState>>;
+    using GLiftOptWells = std::map<std::string, std::unique_ptr<GasLiftSingleWellGeneric>>;
+    using GLiftProdWells = std::map<std::string, const WellInterfaceGeneric*>;
+    using GLiftWellStateMap = std::map<std::string, std::unique_ptr<GasLiftWellState>>;
 
     BlackoilWellModelGeneric(Schedule& schedule,
                              const SummaryState& summaryState,
                              const EclipseState& eclState,
                              const PhaseUsage& phase_usage,
-                             const Comm& comm);
+                             const Parallel::Communication& comm);
 
     virtual ~BlackoilWellModelGeneric() = default;
 
@@ -135,6 +138,7 @@ public:
                          WellState& well_state);
 
     void initFromRestartFile(const RestartValue& restartValues,
+                             WellTestState wtestState,
                              const size_t numCells,
                              bool handle_ms_well);
 
@@ -156,10 +160,10 @@ public:
     /// Return true if any well has a THP constraint.
     bool hasTHPConstraints() const;
 
-    /// Shut down any single well, but only if it is in prediction mode.
+    /// Shut down any single well
     /// Returns true if the well was actually found and shut.
-    bool forceShutWellByNameIfPredictionMode(const std::string& wellname,
-                                             const double simulation_time);
+    bool forceShutWellByName(const std::string& wellname,
+                             const double simulation_time);
 
 protected:
 
@@ -283,6 +287,34 @@ protected:
                            std::map<std::string, data::GroupData>& gvalues) const;
     void assignNodeValues(std::map<std::string, data::NodeData>& nodevalues) const;
 
+    void loadRestartConnectionData(const std::vector<data::Rates::opt>& phs,
+                                   const data::Well&                    rst_well,
+                                   const std::vector<PerforationData>&  old_perf_data,
+                                   SingleWellState&                     ws);
+
+    void loadRestartSegmentData(const std::string&                   well_name,
+                                const std::vector<data::Rates::opt>& phs,
+                                const data::Well&                    rst_well,
+                                SingleWellState&                     ws);
+
+    void loadRestartWellData(const std::string&                   well_name,
+                             const bool                           handle_ms_well,
+                             const std::vector<data::Rates::opt>& phs,
+                             const data::Well&                    rst_well,
+                             const std::vector<PerforationData>&  old_perf_data,
+                             SingleWellState&                     ws);
+
+    void loadRestartGroupData(const std::string&     group,
+                              const data::GroupData& value);
+
+    void loadRestartGuideRates(const int                    report_step,
+                               const GuideRateModel::Target target,
+                               const data::Wells&           rst_wells);
+
+    void loadRestartGuideRates(const int                                     report_step,
+                               const GuideRateConfig&                        config,
+                               const std::map<std::string, data::GroupData>& rst_groups);
+
     std::unordered_map<std::string, data::GroupGuideRates>
     calculateAllGroupGuiderates(const int reportStepIdx) const;
 
@@ -376,7 +408,7 @@ protected:
     Schedule& schedule_;
     const SummaryState& summaryState_;
     const EclipseState& eclState_;
-    const Comm& comm_;
+    const Parallel::Communication& comm_;
 
     PhaseUsage phase_usage_;
     bool terminal_output_{false};
@@ -425,7 +457,7 @@ protected:
 
     bool glift_debug = false;
 
-  private:
+private:
     WellInterfaceGeneric* getGenWell(const std::string& well_name);
 };
 

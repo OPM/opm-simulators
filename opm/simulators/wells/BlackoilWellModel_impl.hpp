@@ -59,8 +59,10 @@ namespace Opm {
                                         cartDims[0] * cartDims[1] * cartDims[2]);
 
             auto& parallel_wells = ebosSimulator.vanguard().parallelWells();
-            this->parallel_well_info_.assign(parallel_wells.begin(),
-                                             parallel_wells.end());
+
+            for (const auto& wellinfo : parallel_wells) {                   
+                this->parallel_well_info_.emplace_back(wellinfo, grid.comm());         
+            }
         }
 
         this->alternative_well_rate_init_ =
@@ -147,16 +149,19 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     linearize(SparseMatrixAdapter& jacobian, GlobalEqVector& res)
     {
-        if (!localWellsActive())
-            return;
-
-        if (!param_.matrix_add_well_contributions_) {
-            // if the well contributions are not supposed to be included explicitly in
-            // the matrix, we only apply the vector part of the Schur complement here.
-            for (const auto& well: well_container_) {
-                // r = r - duneC_^T * invDuneD_ * resWell_
-                well->apply(res);
+        if (!param_.matrix_add_well_contributions_)
+        {
+            OPM_BEGIN_PARALLEL_TRY_CATCH();
+            {
+                // if the well contributions are not supposed to be included explicitly in
+                // the matrix, we only apply the vector part of the Schur complement here.
+                for (const auto& well: well_container_) {
+                    // r = r - duneC_^T * invDuneD_ * resWell_
+                    well->apply(res);
+                }
             }
+            OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::linearize failed: ",
+                                       ebosSimulator_.gridView().comm());
             return;
         }
 
@@ -232,7 +237,7 @@ namespace Opm {
             }
         }
         OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger, "beginReportStep() failed: ",
-                                       terminal_output_);
+                                       terminal_output_, grid.comm());
         // Store the current well state, to be able to recover in the case of failed iterations
         this->commitWGState();
     }
@@ -246,7 +251,6 @@ namespace Opm {
     {
         updatePerforationIntensiveQuantities();
         updateAverageFormationFactor();
-
         DeferredLogger local_deferredLogger;
 
         this->resetWGState();
@@ -283,9 +287,10 @@ namespace Opm {
                     setRepRadiusPerfLength();
                 }
             }
+
         }
         OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger, "beginTimeStep() failed: ",
-                                        terminal_output_);
+                                        terminal_output_, ebosSimulator_.vanguard().grid().comm());
 
         for (auto& well : well_container_) {
             well->setVFPProperties(vfp_properties_.get());
@@ -370,7 +375,7 @@ namespace Opm {
         }
 
         logAndCheckForExceptionsAndThrow(local_deferredLogger,
-            exc_type, "beginTimeStep() failed: " + exc_msg, terminal_output_);
+            exc_type, "beginTimeStep() failed: " + exc_msg, terminal_output_, comm);
 
     }
 
@@ -383,12 +388,14 @@ namespace Opm {
         const auto& wtest_config = schedule()[timeStepIdx].wtest_config();
         if (!wtest_config.empty()) { // there is a WTEST request
             const std::vector<std::string> wellsForTesting = wellTestState()
-                .updateWells(wtest_config, wells_ecl_, simulationTime);
+                .test_wells(wtest_config, simulationTime);
 
             for (const std::string& well_name : wellsForTesting) {
-                // this is the well we will test
-                WellInterfacePtr well = createWellForWellTest(well_name, timeStepIdx, deferred_logger);
+                const auto& ws = this->wellState().well(well_name);
+                if (ws.status != Well::Status::OPEN)
+                    continue;
 
+                WellInterfacePtr well = createWellForWellTest(well_name, timeStepIdx, deferred_logger);
                 // some preparation before the well can be used
                 well->init(&phase_usage_, depth_, gravity_, local_num_cells_, B_avg_);
                 const Well& wellEcl = schedule().getWell(well_name, timeStepIdx);
@@ -454,6 +461,10 @@ namespace Opm {
                 well->updateWaterThroughput(dt, this->wellState());
             }
         }
+        // report well switching
+        for (const auto& well : well_container_) {
+            well->reportWellSwitching(this->wellState().well(well->indexOfWell()), local_deferredLogger);
+        }
 
         // update the rate converter with current averages pressures etc in
         rateConverter_->template defineState<ElementContext>(ebosSimulator_);
@@ -479,8 +490,9 @@ namespace Opm {
         this->calculateProductivityIndexValues(local_deferredLogger);
 
         this->commitWGState();
-
-        DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger);
+ 
+        const Opm::Parallel::Communication& comm = grid().comm();
+        DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger, comm);
         if (terminal_output_) {
             global_deferredLogger.logMessages();
         }
@@ -546,7 +558,7 @@ namespace Opm {
                 perf_pressure = fs.pressure(FluidSystem::gasPhaseIdx).value();
             }
         }
-        OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::initializeWellState() failed: ");
+        OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::initializeWellState() failed: ", ebosSimulator_.vanguard().grid().comm());
 
         this->wellState().init(cellPressures, schedule(), wells_ecl_, local_parallel_well_info_, timeStepIdx,
                                &this->prevWellState(), well_perf_data_,
@@ -596,7 +608,7 @@ namespace Opm {
                 }
 
                 // A new WCON keywords can re-open a well that was closed/shut due to Physical limit
-                if (this->wellTestState().hasWellClosed(well_name)) {
+                if (this->wellTestState().well_is_closed(well_name)) {
                     // TODO: more checking here, to make sure this standard more specific and complete
                     // maybe there is some WCON keywords will not open the well
                     auto& events = this->wellState().well(w).events;
@@ -608,8 +620,8 @@ namespace Opm {
                             // even if it was new or received new targets this report step.
                             events.clearEvent(WellState::event_mask);
                         } else {
-                            wellTestState().openWell(well_name);
-                            wellTestState().openAllCompletions(well_name);
+                            wellTestState().open_well(well_name);
+                            wellTestState().open_completions(well_name);
                         }
                     }
                 }
@@ -617,8 +629,7 @@ namespace Opm {
                 // TODO: should we do this for all kinds of closing reasons?
                 // something like wellTestState().hasWell(well_name)?
                 bool wellIsStopped = false;
-                if (wellTestState().hasWellClosed(well_name, WellTestConfig::Reason::ECONOMIC) ||
-                    wellTestState().hasWellClosed(well_name, WellTestConfig::Reason::PHYSICAL))
+                if (wellTestState().well_is_closed(well_name))
                 {
                     if (well_ecl.getAutomaticShutIn()) {
                         // shut wells are not added to the well container
@@ -691,7 +702,9 @@ namespace Opm {
         }
 
         // Collect log messages and print.
-        DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger);
+        
+        const Opm::Parallel::Communication& comm = grid().comm();
+        DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger, comm);
         if (terminal_output_) {
             global_deferredLogger.logMessages();
         }
@@ -818,7 +831,7 @@ namespace Opm {
                 prepareTimeStep(local_deferredLogger);
             }
             OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger, "assemble() failed (It=0): ",
-                                               terminal_output_);
+                                               terminal_output_, grid().comm());
         }
         updateWellControls(local_deferredLogger, /* check group controls */ true);
 
@@ -831,7 +844,7 @@ namespace Opm {
             assembleWellEq(dt, local_deferredLogger);
         }
         OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger, "assemble() failed: ",
-                                       terminal_output_);
+                                       terminal_output_, grid().comm());
         last_report_.converged = true;
         last_report_.assemble_time_well += perfTimer.stop();
     }
@@ -1094,6 +1107,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     recoverWellSolutionAndUpdateWellState(const BVector& x)
     {
+         
         DeferredLogger local_deferredLogger;
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         {
@@ -1102,10 +1116,12 @@ namespace Opm {
                     well->recoverWellSolutionAndUpdateWellState(x, this->wellState(), local_deferredLogger);
                 }
             }
+
         }
         OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger,
                                        "recoverWellSolutionAndUpdateWellState() failed: ",
-                                       terminal_output_);
+                                       terminal_output_, ebosSimulator_.vanguard().grid().comm());
+
     }
 
 
@@ -1141,12 +1157,14 @@ namespace Opm {
                 local_report += well->getWellConvergence(this->wellState(), B_avg, local_deferredLogger, iterationIdx > param_.strict_outer_iter_wells_ );
             }
         }
-        DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger);
+        
+        const Opm::Parallel::Communication comm = grid().comm();
+        DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger, comm);
         if (terminal_output_) {
             global_deferredLogger.logMessages();
         }
 
-        ConvergenceReport report = gatherConvergenceReport(local_report);
+        ConvergenceReport report = gatherConvergenceReport(local_report, comm);
 
         // Log debug messages for NaN or too large residuals.
         if (terminal_output_) {
@@ -1285,16 +1303,17 @@ namespace Opm {
         DeferredLogger local_deferredLogger;
         for (const auto& well : well_container_) {
             const auto& wname = well->name();
-            const auto wasClosed = wellTestState.hasWellClosed(wname);
+            const auto wasClosed = wellTestState.well_is_closed(wname);
             well->checkWellOperability(ebosSimulator_, this->wellState(), local_deferredLogger);
             well->updateWellTestState(this->wellState().well(wname), simulationTime, /*writeMessageToOPMLog=*/ true, wellTestState, local_deferredLogger);
 
-            if (!wasClosed && wellTestState.hasWellClosed(wname)) {
+            if (!wasClosed && wellTestState.well_is_closed(wname)) {
                 this->closed_this_step_.insert(wname);
             }
         }
-
-        DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger);
+               
+        const Opm::Parallel::Communication comm = grid().comm();
+        DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger, comm);
         if (terminal_output_) {
             global_deferredLogger.logMessages();
         }
@@ -1475,7 +1494,7 @@ namespace Opm {
                 B += 1 / intQuants.solventInverseFormationVolumeFactor().value();
             }
         }
-        OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::updateAverageFormationFactor() failed: ")
+        OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::updateAverageFormationFactor() failed: ", grid.comm())
 
         // compute global average
         grid.comm().sum(B_avg.data(), B_avg.size());
@@ -1565,7 +1584,7 @@ namespace Opm {
             }
             elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
         }
-        OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::updatePerforationIntensiveQuantities() failed: ");
+        OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::updatePerforationIntensiveQuantities() failed: ", ebosSimulator_.vanguard().grid().comm());
     }
 
 

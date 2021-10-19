@@ -19,74 +19,332 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+
 #include "config.h"
 
 #if HAVE_MPI
 #include "mpi.h"
 #endif
-#include "readDeck.hpp"
 
-#include <opm/common/OpmLog/OpmLog.hpp>
-#include <opm/common/OpmLog/EclipsePRTLog.hpp>
-#include <opm/common/utility/String.hpp>
-#include <opm/common/utility/OpmInputError.hpp>
+#include <opm/simulators/utils/readDeck.hpp>
+
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/common/OpmLog/EclipsePRTLog.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/utility/FileSystem.hpp>
+#include <opm/common/utility/OpmInputError.hpp>
+#include <opm/common/utility/String.hpp>
 
 #include <opm/io/eclipse/EclIOdata.hpp>
-
-#include <opm/output/eclipse/RestartIO.hpp>
 #include <opm/io/eclipse/ERst.hpp>
 #include <opm/io/eclipse/RestartFileView.hpp>
 #include <opm/io/eclipse/rst/aquifer.hpp>
 #include <opm/io/eclipse/rst/state.hpp>
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
+
 #include <opm/parser/eclipse/EclipseState/checkDeck.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Action/State.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/ArrayDimChecker.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/SummaryState.hpp>
-#include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQState.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Action/State.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestState.hpp>
+#include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
-#include <opm/parser/eclipse/Parser/Parser.hpp>
 #include <opm/parser/eclipse/Parser/ErrorGuard.hpp>
+#include <opm/parser/eclipse/Parser/Parser.hpp>
 
-#include "UnsupportedFlowKeywords.hpp"
-#include "PartiallySupportedFlowKeywords.hpp"
 #include <opm/simulators/flow/KeywordValidation.hpp>
 #include <opm/simulators/flow/ValidationFunctions.hpp>
-
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
 #include <opm/simulators/utils/ParallelSerialization.hpp>
+#include <opm/simulators/utils/PartiallySupportedFlowKeywords.hpp>
+#include <opm/simulators/utils/UnsupportedFlowKeywords.hpp>
 
 #include <fmt/format.h>
 
 #include <cstdlib>
+#include <cstdint>
 #include <functional>
 #include <memory>
+#include <sstream>
+#include <stdexcept>
 #include <unordered_map>
 #include <utility>
 
-namespace Opm
-{
+namespace {
 
-void ensureOutputDirExists_(const std::string& cmdline_output_dir)
-{
-    if (!Opm::filesystem::is_directory(cmdline_output_dir)) {
-        try {
-            Opm::filesystem::create_directories(cmdline_output_dir);
-        }
-        catch (...) {
-            throw std::runtime_error(fmt::format("Creation of output directory '{}' failed\n", cmdline_output_dir));
+    void setupMessageLimiter(const Opm::MessageLimits& msgLimits,
+                             const std::string& stdout_log_id)
+    {
+        const auto limits = std::map<std::int64_t, int> {
+            {Opm::Log::MessageType::Note,     msgLimits.getCommentPrintLimit()},
+            {Opm::Log::MessageType::Info,     msgLimits.getMessagePrintLimit()},
+            {Opm::Log::MessageType::Warning,  msgLimits.getWarningPrintLimit()},
+            {Opm::Log::MessageType::Error,    msgLimits.getErrorPrintLimit()},
+            {Opm::Log::MessageType::Problem,  msgLimits.getProblemPrintLimit()},
+            {Opm::Log::MessageType::Bug,      msgLimits.getBugPrintLimit()},
+        };
+
+        Opm::OpmLog::getBackend<Opm::StreamLog>(stdout_log_id)
+            ->setMessageLimiter(std::make_shared<Opm::MessageLimiter>(10, limits));
+    }
+
+    void ensureOutputDirExists_(const std::string& cmdline_output_dir)
+    {
+        namespace fs = Opm::filesystem;
+
+        if (! fs::is_directory(cmdline_output_dir)) {
+            try {
+                fs::create_directories(cmdline_output_dir);
+            }
+            catch (...) {
+                throw std::runtime_error {
+                    fmt::format("Creation of output directory '{}' failed",
+                                cmdline_output_dir)
+                };
+            }
         }
     }
+
+    void loadObjectsFromRestart(const Opm::Deck&                     deck,
+                                const Opm::Parser&                   parser,
+                                const Opm::ParseContext&             parseContext,
+                                const bool                           initFromRestart,
+                                const std::optional<int>&            outputInterval,
+                                Opm::EclipseState&                   eclipseState,
+                                std::shared_ptr<Opm::Python>         python,
+                                std::shared_ptr<Opm::Schedule>&      schedule,
+                                std::unique_ptr<Opm::UDQState>&      udqState,
+                                std::unique_ptr<Opm::Action::State>& actionState,
+                                std::unique_ptr<Opm::WellTestState>& wtestState,
+                                Opm::ErrorGuard&                     errorGuard)
+    {
+        // Analytic aquifers must always be loaded from the restart file in
+        // restarted runs and the corresponding keywords (e.g., AQUANCON and
+        // AQUCT) do not exist in the input deck in this case.  In other
+        // words, there's no way to check if there really are analytic
+        // aquifers in the run until we attempt to read the specifications
+        // from the restart file.  If the loader determines that there are
+        // no analytic aquifers, then 'EclipseState::loadRestartAquifers()'
+        // does nothing.
+        const auto& init_config = eclipseState.getInitConfig();
+        const int report_step = init_config.getRestartStep();
+        const auto rst_filename = eclipseState.getIOConfig()
+            .getRestartFileName(init_config.getRestartRootName(), report_step, false);
+
+        auto rst_file = std::make_shared<Opm::EclIO::ERst>(rst_filename);
+        auto rst_view = std::make_shared<Opm::EclIO::RestartFileView>
+            (std::move(rst_file), report_step);
+
+        // Note: RstState::load() will just *read* from the grid structure,
+        // and only do so if the case actually includes analytic aquifers.
+        // The pointer to the input grid is just to allow 'nullptr' to
+        // signify "don't load aquifers" in certain unit tests.  Passing an
+        // optional<EclipseGrid> is too expensive however since doing so
+        // will create a copy of the grid inside the optional<>.
+        const auto rst_state = Opm::RestartIO::RstState::
+            load(std::move(rst_view),
+                 eclipseState.runspec(), parser,
+                 &eclipseState.getInputGrid());
+
+        eclipseState.loadRestartAquifers(rst_state.aquifers);
+
+        // For the time being initializing wells and groups from the restart
+        // file is not possible.  Work is underway and the ability is
+        // included here contingent on user-level switch 'initFromRestart'
+        // (i.e., setting "--sched-restart=false" as a command line
+        // invocation parameter).
+        const auto* init_state = initFromRestart ? &rst_state : nullptr;
+        if (schedule == nullptr) {
+            schedule = std::make_shared<Opm::Schedule>
+                (deck, eclipseState, parseContext, errorGuard,
+                 std::move(python), outputInterval, init_state);
+        }
+
+        udqState = std::make_unique<Opm::UDQState>
+            ((*schedule)[0].udq().params().undefinedValue());
+        udqState->load_rst(rst_state);
+
+        actionState = std::make_unique<Opm::Action::State>();
+        actionState->load_rst((*schedule)[report_step].actions(), rst_state);
+
+        wtestState = std::make_unique<Opm::WellTestState>(schedule->runspec().start_time(), rst_state);
+    }
+
+    void createNonRestartDynamicObjects(const Opm::Deck&                     deck,
+                                        const Opm::EclipseState&             eclipseState,
+                                        const Opm::ParseContext&             parseContext,
+                                        std::shared_ptr<Opm::Python>         python,
+                                        std::shared_ptr<Opm::Schedule>&      schedule,
+                                        std::unique_ptr<Opm::UDQState>&      udqState,
+                                        std::unique_ptr<Opm::Action::State>& actionState,
+                                        std::unique_ptr<Opm::WellTestState>& wtestState,
+                                        Opm::ErrorGuard&                     errorGuard)
+    {
+        if (schedule == nullptr) {
+            schedule = std::make_shared<Opm::Schedule>
+                (deck, eclipseState, parseContext,
+                 errorGuard, std::move(python));
+        }
+
+        udqState = std::make_unique<Opm::UDQState>
+            ((*schedule)[0].udq().params().undefinedValue());
+
+        actionState = std::make_unique<Opm::Action::State>();
+        wtestState = std::make_unique<Opm::WellTestState>();
+    }
+
+    std::shared_ptr<Opm::Deck>
+    readDeckFile(const std::string&       deckFilename,
+                 const bool               checkDeck,
+                 const Opm::Parser&       parser,
+                 const Opm::ParseContext& parseContext,
+                 Opm::ErrorGuard&         errorGuard)
+    {
+        auto deck = std::make_shared<Opm::Deck>
+            (parser.parseFile(deckFilename, parseContext, errorGuard));
+
+        auto keyword_validator = Opm::KeywordValidation::KeywordValidator {
+            Opm::FlowKeywordValidation::unsupportedKeywords(),
+            Opm::FlowKeywordValidation::partiallySupported<std::string>(),
+            Opm::FlowKeywordValidation::partiallySupported<int>(),
+            Opm::FlowKeywordValidation::partiallySupported<double>(),
+            Opm::KeywordValidation::specialValidation()
+        };
+
+        keyword_validator.validateDeck(*deck, parseContext, errorGuard);
+
+        if (checkDeck) {
+            Opm::checkDeck(*deck, parser, parseContext, errorGuard);
+        }
+
+        return deck;
+    }
+
+    std::shared_ptr<Opm::EclipseState>
+    createEclipseState([[maybe_unused]] Opm::Parallel::Communication comm,
+                       const Opm::Deck&                              deck)
+    {
+#if HAVE_MPI
+        return std::make_shared<Opm::ParallelEclipseState>(deck, comm);
+#else
+        return std::make_shared<Opm::EclipseState>(deck);
+#endif
+    }
+
+    void readOnIORank(Opm::Parallel::Communication         comm,
+                      const std::string&                   deckFilename,
+                      const Opm::ParseContext*             parseContext,
+                      std::shared_ptr<Opm::Deck>&          deck,
+                      std::shared_ptr<Opm::EclipseState>&  eclipseState,
+                      std::shared_ptr<Opm::Schedule>&      schedule,
+                      std::unique_ptr<Opm::UDQState>&      udqState,
+                      std::unique_ptr<Opm::Action::State>& actionState,
+                      std::unique_ptr<Opm::WellTestState>& wtestState,
+                      std::shared_ptr<Opm::SummaryConfig>& summaryConfig,
+                      std::shared_ptr<Opm::Python>         python,
+                      const bool                           initFromRestart,
+                      const bool                           checkDeck,
+                      const std::optional<int>&            outputInterval,
+                      Opm::ErrorGuard&                     errorGuard)
+    {
+        if (((deck == nullptr) || (schedule == nullptr) || (summaryConfig == nullptr)) &&
+            (parseContext == nullptr))
+        {
+            OPM_THROW(std::logic_error,
+                      "We need a parse context if deck, schedule, "
+                      "or summaryConfig are not initialized");
+        }
+
+        auto parser = Opm::Parser{};
+        if (deck == nullptr) {
+            deck = readDeckFile(deckFilename, checkDeck, parser,
+                                *parseContext, errorGuard);
+        }
+
+        if (eclipseState == nullptr) {
+            eclipseState = createEclipseState(comm, *deck);
+        }
+
+        if (eclipseState->getInitConfig().restartRequested()) {
+            loadObjectsFromRestart(*deck, parser, *parseContext,
+                                   initFromRestart, outputInterval,
+                                   *eclipseState, std::move(python),
+                                   schedule, udqState, actionState, wtestState,
+                                   errorGuard);
+        }
+        else {
+            createNonRestartDynamicObjects(*deck, *eclipseState,
+                                           *parseContext, std::move(python),
+                                           schedule, udqState, actionState, wtestState,
+                                           errorGuard);
+        }
+
+        if (Opm::OpmLog::hasBackend("STDOUT_LOGGER")) {
+            // loggers might not be set up!
+            setupMessageLimiter((*schedule)[0].message_limits(), "STDOUT_LOGGER");
+        }
+
+        if (summaryConfig == nullptr) {
+            summaryConfig = std::make_shared<Opm::SummaryConfig>
+                (*deck, *schedule, eclipseState->fieldProps(),
+                 eclipseState->aquifer(), *parseContext, errorGuard);
+        }
+
+        Opm::checkConsistentArrayDimensions(*eclipseState, *schedule,
+                                            *parseContext, errorGuard);
+    }
+
+#if HAVE_MPI
+    void defineStateObjectsOnNonIORank(Opm::Parallel::Communication         comm,
+                                       std::shared_ptr<Opm::Python>         python,
+                                       std::shared_ptr<Opm::EclipseState>&  eclipseState,
+                                       std::shared_ptr<Opm::Schedule>&      schedule,
+                                       std::unique_ptr<Opm::UDQState>&      udqState,
+                                       std::unique_ptr<Opm::Action::State>& actionState,
+                                       std::unique_ptr<Opm::WellTestState>& wtestState,
+                                       std::shared_ptr<Opm::SummaryConfig>& summaryConfig)
+    {
+        if (eclipseState == nullptr) {
+            eclipseState = std::make_shared<Opm::ParallelEclipseState>(comm);
+        }
+
+        if (schedule == nullptr) {
+            schedule = std::make_shared<Opm::Schedule>(std::move(python));
+        }
+
+        if (udqState == nullptr) {
+            udqState = std::make_unique<Opm::UDQState>(0);
+        }
+
+        if (actionState == nullptr) {
+            actionState = std::make_unique<Opm::Action::State>();
+        }
+
+        if (wtestState == nullptr) {
+            wtestState = std::make_unique<Opm::WellTestState>();
+        }
+
+        if (summaryConfig == nullptr) {
+            summaryConfig = std::make_shared<Opm::SummaryConfig>();
+        }
+    }
+#endif
 }
 
-// Setup the OpmLog backends
-FileOutputMode setupLogging(int mpi_rank_, const std::string& deck_filename, const std::string& cmdline_output_dir, const std::string& cmdline_output, bool output_cout_, const std::string& stdout_log_id) {
+// ---------------------------------------------------------------------------
 
+// Setup the OpmLog backends
+Opm::FileOutputMode
+Opm::setupLogging(const int          mpi_rank_,
+                  const std::string& deck_filename,
+                  const std::string& cmdline_output_dir,
+                  const std::string& cmdline_output,
+                  const bool         output_cout_,
+                  const std::string& stdout_log_id)
+{
     if (!cmdline_output_dir.empty()) {
         ensureOutputDirExists_(cmdline_output_dir);
     }
@@ -102,7 +360,8 @@ FileOutputMode setupLogging(int mpi_rank_, const std::string& deck_filename, con
     std::string extension = uppercase(fpath.extension().string());
     if (extension == ".DATA" || extension == ".") {
         baseName = uppercase(fpath.stem().string());
-    } else {
+    }
+    else {
         baseName = uppercase(fpath.filename().string());
     }
 
@@ -140,9 +399,8 @@ FileOutputMode setupLogging(int mpi_rank_, const std::string& deck_filename, con
         }
         else {
             output = FileOutputMode::OUTPUT_ALL;
-            std::cerr << "Value " << cmdline_output <<
-                " is not a recognized output mode. Using \"all\" instead."
-                      << std::endl;
+            std::cerr << "Value " << cmdline_output
+                      << " is not a recognized output mode. Using \"all\" instead.\n";
         }
     }
 
@@ -166,191 +424,73 @@ FileOutputMode setupLogging(int mpi_rank_, const std::string& deck_filename, con
         bool use_color_coding = OpmLog::stdoutIsTerminal();
         streamLog->setMessageFormatter(std::make_shared<Opm::SimpleMessageFormatter>(use_color_coding));
     }
+
     return output;
 }
 
-
-namespace {
-void setupMessageLimiter(const Opm::MessageLimits msgLimits,  const std::string& stdout_log_id) {
-    std::shared_ptr<Opm::StreamLog> stream_log = Opm::OpmLog::getBackend<Opm::StreamLog>(stdout_log_id);
-
-    const std::map<int64_t, int> limits = {{Opm::Log::MessageType::Note,
-                                            msgLimits.getCommentPrintLimit()},
-                                           {Opm::Log::MessageType::Info,
-                                            msgLimits.getMessagePrintLimit()},
-                                           {Opm::Log::MessageType::Warning,
-                                            msgLimits.getWarningPrintLimit()},
-                                           {Opm::Log::MessageType::Error,
-                                            msgLimits.getErrorPrintLimit()},
-                                           {Opm::Log::MessageType::Problem,
-                                            msgLimits.getProblemPrintLimit()},
-                                           {Opm::Log::MessageType::Bug,
-                                            msgLimits.getBugPrintLimit()}};
-    stream_log->setMessageLimiter(std::make_shared<Opm::MessageLimiter>(10, limits));
-}
-}
-
-
-void readDeck(int rank, std::string& deckFilename, std::shared_ptr<Opm::Deck>& deck, std::shared_ptr<Opm::EclipseState>& eclipseState,
-              std::shared_ptr<Opm::Schedule>& schedule, std::unique_ptr<UDQState>& udqState, std::unique_ptr<Action::State>& actionState, std::shared_ptr<Opm::SummaryConfig>& summaryConfig,
-              std::unique_ptr<ErrorGuard> errorGuard, std::shared_ptr<Opm::Python>& python, std::unique_ptr<ParseContext> parseContext,
-              bool initFromRestart, bool checkDeck, const std::optional<int>& outputInterval)
+void Opm::readDeck(Opm::Parallel::Communication    comm,
+                   const std::string&              deckFilename,
+                   std::shared_ptr<Deck>&          deck,
+                   std::shared_ptr<EclipseState>&  eclipseState,
+                   std::shared_ptr<Schedule>&      schedule,
+                   std::unique_ptr<UDQState>&      udqState,
+                   std::unique_ptr<Action::State>& actionState,
+                   std::unique_ptr<WellTestState>& wtestState,
+                   std::shared_ptr<SummaryConfig>& summaryConfig,
+                   std::unique_ptr<ErrorGuard>     errorGuard,
+                   std::shared_ptr<Python>         python,
+                   std::unique_ptr<ParseContext>   parseContext,
+                   const bool                      initFromRestart,
+                   const bool                      checkDeck,
+                   const std::optional<int>&       outputInterval)
 {
-    if (!errorGuard)
-    {
+    if (errorGuard == nullptr) {
         errorGuard = std::make_unique<ErrorGuard>();
     }
 
     int parseSuccess = 1; // > 0 is success
     std::string failureMessage;
 
-    if (rank==0) {
-        try
-        {
-            Opm::Parser parser;
-            if ( (!deck || !schedule || !summaryConfig ) && !parseContext)
-            {
-                OPM_THROW(std::logic_error, "We need a parse context if deck, schedule, or summaryConfig are not initialized");
-            }
-
-            if (!deck)
-            {
-
-                deck = std::make_unique<Opm::Deck>( parser.parseFile(deckFilename , *parseContext, *errorGuard));
-
-                Opm::KeywordValidation::KeywordValidator keyword_validator(
-                    Opm::FlowKeywordValidation::unsupportedKeywords(),
-                    Opm::FlowKeywordValidation::partiallySupported<std::string>(),
-                    Opm::FlowKeywordValidation::partiallySupported<int>(),
-                    Opm::FlowKeywordValidation::partiallySupported<double>(),
-                    Opm::KeywordValidation::specialValidation());
-
-                keyword_validator.validateDeck(*deck, *parseContext, *errorGuard);
-
-                if ( checkDeck )
-                    Opm::checkDeck(*deck, parser, *parseContext, *errorGuard);
-            }
-
-            if (!eclipseState) {
-#if HAVE_MPI
-                eclipseState = std::make_unique<Opm::ParallelEclipseState>(*deck);
-#else
-                eclipseState = std::make_unique<Opm::EclipseState>(*deck);
-#endif
-            }
-
-            const auto& init_config = eclipseState->getInitConfig();
-            if (init_config.restartRequested()) {
-                // Analytic aquifers must always be loaded from the restart
-                // file in restarted runs and the corresponding keywords
-                // (e.g., AQUANCON and AQUCT) do not exist in the input deck
-                // in this case.  In other words, there's no way to check if
-                // there really are analytic aquifers in the run until we
-                // attempt to read the specifications from the restart file.
-                // If the loader determines that there are no analytic
-                // aquifers, then 'EclipseState::loadRestartAquifers()' does
-                // nothing.
-                const int report_step = init_config.getRestartStep();
-                const auto rst_filename = eclipseState->getIOConfig().getRestartFileName( init_config.getRestartRootName(), report_step, false );
-                auto rst_file = std::make_shared<EclIO::ERst>(rst_filename);
-                auto rst_view = std::make_shared<EclIO::RestartFileView>(std::move(rst_file), report_step);
-
-                // Note: RstState::load() will just *read* from the grid
-                // structure, and only do so if the case actually includes
-                // analytic aquifers.  The pointer to the input grid is just
-                // to allow 'nullptr' to signify "don't load aquifers" in
-                // certain unit tests.  Passing an optional<EclipseGrid> is
-                // too expensive however since doing so will create a copy
-                // of the grid inside the optional<>.
-                const auto rst_state = RestartIO::RstState::
-                    load(std::move(rst_view), eclipseState->runspec(), parser, &eclipseState->getInputGrid());
-
-                eclipseState->loadRestartAquifers(rst_state.aquifers);
-
-                // For the time being initializing wells and groups from the
-                // restart file is not possible.  Work is underway and the
-                // ability is included here contingent on user-level switch
-                // 'initFromRestart' (i.e., setting "--sched-restart=false"
-                // as a command line invocation parameter).
-                const auto* init_state = initFromRestart ? &rst_state : nullptr;
-                if (!schedule) {
-                    schedule = std::make_unique<Schedule>(*deck, *eclipseState,
-                                                          *parseContext, *errorGuard,
-                                                          python, outputInterval, init_state);
-                }
-
-                udqState = std::make_unique<UDQState>((*schedule)[0].udq().params().undefinedValue());
-                actionState = std::make_unique<Action::State>();
-                udqState->load_rst(rst_state);
-                actionState->load_rst(schedule->operator[](report_step).actions(), rst_state);
-            }
-            else {
-                if (!schedule) {
-                    schedule = std::make_unique<Schedule>(*deck, *eclipseState,
-                                                          *parseContext, *errorGuard,
-                                                          python);
-                }
-                udqState = std::make_unique<UDQState>((*schedule)[0].udq().params().undefinedValue());
-                actionState = std::make_unique<Action::State>();
-            }
-
-
-            if (Opm::OpmLog::hasBackend("STDOUT_LOGGER")) {
-                // loggers might not be set up!
-                setupMessageLimiter((*schedule)[0].message_limits(), "STDOUT_LOGGER");
-            }
-
-            if (!summaryConfig) {
-                summaryConfig = std::make_unique<Opm::SummaryConfig>(*deck, *schedule, eclipseState->fieldProps(),
-                                                                     eclipseState->aquifer(), *parseContext, *errorGuard);
-            }
-
-            Opm::checkConsistentArrayDimensions(*eclipseState, *schedule, *parseContext, *errorGuard);
+    if (comm.rank() == 0) { // Always true when !HAVE_MPI
+        try {
+            readOnIORank(comm, deckFilename, parseContext.get(), deck,
+                         eclipseState, schedule, udqState, actionState, wtestState,
+                         summaryConfig, std::move(python), initFromRestart,
+                         checkDeck, outputInterval, *errorGuard);
         }
-        catch(const OpmInputError& input_error) {
+        catch (const OpmInputError& input_error) {
             failureMessage = input_error.what();
             parseSuccess = 0;
         }
-        catch(const std::exception& std_error)
-        {
+        catch (const std::exception& std_error) {
             failureMessage = std_error.what();
             parseSuccess = 0;
         }
     }
+
 #if HAVE_MPI
     else {
-        if (!summaryConfig)
-            summaryConfig = std::make_unique<Opm::SummaryConfig>();
-        if (!schedule)
-            schedule = std::make_unique<Opm::Schedule>(python);
-        if (!eclipseState)
-            eclipseState = std::make_unique<Opm::ParallelEclipseState>();
-        if (!udqState)
-            udqState = std::make_unique<UDQState>(0);
-        if (!actionState)
-            actionState = std::make_unique<Action::State>();
+        defineStateObjectsOnNonIORank(comm, std::move(python), eclipseState,
+                                      schedule, udqState, actionState, wtestState,
+                                      summaryConfig);
     }
 
-    // In case of parse errors eclipseState/schedule might be null
-    // and trigger segmentation faults in parallel during broadcast
-    // (e.g. when serializing the non-existent TableManager)
-    auto comm = Dune::MPIHelper::getCollectiveCommunication();
+    // In case of parse errors eclipseState/schedule might be null and
+    // trigger segmentation faults in parallel during broadcast (e.g. when
+    // serializing the non-existent TableManager)
     parseSuccess = comm.min(parseSuccess);
-    try
-    {
-        if (parseSuccess)
-        {
-            Opm::eclStateBroadcast(*eclipseState, *schedule, *summaryConfig, *udqState, *actionState);
+    try {
+        if (parseSuccess) {
+            eclStateBroadcast(comm, *eclipseState, *schedule,
+                              *summaryConfig, *udqState, *actionState, *wtestState);
         }
     }
-    catch(const std::exception& broadcast_error)
-    {
+    catch (const std::exception& broadcast_error) {
         failureMessage = broadcast_error.what();
         OpmLog::error(fmt::format("Distributing properties to all processes failed\n"
                                   "Internal error message: {}", broadcast_error.what()));
         parseSuccess = 0;
     }
-
 #endif
 
     if (*errorGuard) { // errors encountered
@@ -359,18 +499,17 @@ void readDeck(int rank, std::string& deckFilename, std::shared_ptr<Opm::Deck>& d
         errorGuard->clear();
     }
 
-    parseSuccess = Dune::MPIHelper::getCollectiveCommunication().min(parseSuccess);
+    parseSuccess = comm.min(parseSuccess);
 
-    if (!parseSuccess)
-    {
-        if (rank == 0)
-        {
+    if (! parseSuccess) {
+        if (comm.rank() == 0) {
             OpmLog::error("Unrecoverable errors were encountered while loading input");
         }
+
 #if HAVE_MPI
         MPI_Finalize();
 #endif
+
         std::exit(EXIT_FAILURE);
     }
 }
-} // end namespace Opm

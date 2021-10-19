@@ -19,12 +19,15 @@
 #ifndef PARALLEL_SERIALIZATION_HPP
 #define PARALLEL_SERIALIZATION_HPP
 
+#include <opm/simulators/utils/ParallelCommunication.hpp>
+
 namespace Opm {
 
 class EclipseState;
 class Schedule;
 class SummaryConfig;
 class UDQState;
+class WellTestState;
 
 namespace Action {
 class State;
@@ -36,13 +39,14 @@ class State;
  *! \param schedule Schedule to broadcast
  *! \param summaryConfig SummaryConfig to broadcast
 */
-void eclStateBroadcast(EclipseState& eclState, Schedule& schedule,
+void eclStateBroadcast(Parallel::Communication  comm, EclipseState& eclState, Schedule& schedule,
                        SummaryConfig& summaryConfig,
                        UDQState& udqState,
-                       Action::State& actionState);
+                       Action::State& actionState,
+                       WellTestState& wtestState);
 
 /// \brief Broadcasts an schedule from root node in parallel runs.
-void eclScheduleBroadcast(Schedule& schedule);
+void eclScheduleBroadcast(Parallel::Communication comm, Schedule& schedule);
 
 } // end namespace Opm
 

@@ -131,5 +131,6 @@ INSTANCE(DenseAd::Evaluation<double, 5, 0u>)
 INSTANCE(DenseAd::Evaluation<double, 6, 0u>)
 INSTANCE(DenseAd::Evaluation<double, 7, 0u>)
 INSTANCE(DenseAd::Evaluation<double, 8, 0u>)
+INSTANCE(DenseAd::Evaluation<double, 9, 0u>)
 
 } //Namespace Opm

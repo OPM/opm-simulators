@@ -1,7 +1,4 @@
 /*
-  Copyright 2018 SINTEF Digital, Mathematics and Cybernetics.
-  Copyright 2018 Equinor.
-
   This file is part of the Open Porous Media project (OPM).
 
   OPM is free software: you can redistribute it and/or modify
@@ -17,22 +14,11 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include "config.h"
+#include <flow/flow_ebos_brine_energy.hpp>
 
-#ifndef OPM_GATHERCONVERGENCEREPORT_HEADER_INCLUDED
-#define OPM_GATHERCONVERGENCEREPORT_HEADER_INCLUDED
 
-#include <opm/simulators/timestepping/ConvergenceReport.hpp>
-
-#include <opm/simulators/utils/ParallelCommunication.hpp>
-
-namespace Opm
+int main(int argc, char** argv)
 {
-
-    /// Create a global convergence report combining local
-    /// (per-process) reports.
-    ConvergenceReport gatherConvergenceReport(const ConvergenceReport& local_report, Parallel::Communication communicator);
-
-} // namespace Opm
-
-
-#endif // OPM_GATHERCONVERGENCEREPORT_HEADER_INCLUDED
+    return Opm::flowEbosBrineEnergyMain(argc, argv);
+}

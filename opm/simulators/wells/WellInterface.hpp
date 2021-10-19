@@ -112,8 +112,9 @@ public:
     static constexpr bool has_polymermw = getPropValue<TypeTag, Properties::EnablePolymerMW>();
     static constexpr bool has_foam = getPropValue<TypeTag, Properties::EnableFoam>();
     static constexpr bool has_brine = getPropValue<TypeTag, Properties::EnableBrine>();
+    static constexpr bool has_micp = getPropValue<TypeTag, Properties::EnableMICP>();
 
-    // For the conversion between the surface volume rate and reservoir voidage rate 
+    // For the conversion between the surface volume rate and reservoir voidage rate
     using FluidState = BlackOilFluidState<Eval,
                                           FluidSystem,
                                           has_temperature,
@@ -278,13 +279,17 @@ protected:
 
     bool changed_to_stopped_this_step_ = false;
 
-    std::vector< std::string> well_control_log_;
-
     double wpolymer() const;
 
     double wfoam() const;
 
     double wsalt() const;
+
+    double wmicrobes() const;
+
+    double woxygen() const;
+
+    double wurea() const;
 
     virtual double getRefDensity() const = 0;
 
@@ -294,10 +299,10 @@ protected:
     std::vector<double> initialWellRateFractions(const Simulator& ebosSimulator, const WellState& well_state) const;
 
     // check whether the well is operable under BHP limit with current reservoir condition
-    virtual void checkOperabilityUnderBHPLimitProducer(const WellState& well_state, const Simulator& ebos_simulator, DeferredLogger& deferred_logger) =0;
+    virtual void checkOperabilityUnderBHPLimit(const WellState& well_state, const Simulator& ebos_simulator, DeferredLogger& deferred_logger) =0;
 
     // check whether the well is operable under THP limit with current reservoir condition
-    virtual void checkOperabilityUnderTHPLimitProducer(const Simulator& ebos_simulator, const WellState& well_state, DeferredLogger& deferred_logger) =0;
+    virtual void checkOperabilityUnderTHPLimit(const Simulator& ebos_simulator, const WellState& well_state, DeferredLogger& deferred_logger) =0;
 
     virtual void updateIPR(const Simulator& ebos_simulator, DeferredLogger& deferred_logger) const=0;
 
@@ -327,7 +332,6 @@ protected:
     bool solveWellForTesting(const Simulator& ebosSimulator, WellState& well_state, const GroupState& group_state,
                              DeferredLogger& deferred_logger);
 
-    bool shutUnsolvableWells() const;
 };
 
 }

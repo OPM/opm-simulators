@@ -357,7 +357,8 @@ ParallelWellInfo::ParallelWellInfo(const std::string& name,
       commAboveBelow_(new CommunicateAboveBelow(*comm_))
 {}
 
-ParallelWellInfo::ParallelWellInfo(const std::pair<std::string,bool>& well_info,
+
+ParallelWellInfo::ParallelWellInfo(const std::pair<std::string, bool>& well_info,
                                    [[maybe_unused]] Communication allComm)
     : name_(well_info.first), hasLocalCells_(well_info.second),
       rankWithFirstPerf_(-1)
@@ -373,6 +374,7 @@ ParallelWellInfo::ParallelWellInfo(const std::pair<std::string,bool>& well_info,
     commAboveBelow_.reset(new CommunicateAboveBelow(*comm_));
     isOwner_ = (comm_->rank() == 0);
 }
+
 
 void ParallelWellInfo::communicateFirstPerforation(bool hasFirst)
 {

@@ -119,6 +119,7 @@ namespace Opm {
             static constexpr bool has_solvent_ = getPropValue<TypeTag, Properties::EnableSolvent>();
             static constexpr bool has_polymer_ = getPropValue<TypeTag, Properties::EnablePolymer>();
             static constexpr bool has_energy_ = getPropValue<TypeTag, Properties::EnableEnergy>();
+            static constexpr bool has_micp_ = getPropValue<TypeTag, Properties::EnableMICP>();
 
             // TODO: where we should put these types, WellInterface or Well Model?
             // or there is some other strategy, like TypeTag
@@ -128,6 +129,7 @@ namespace Opm {
             typedef Dune::FieldMatrix<Scalar, numEq, numEq > MatrixBlockType;
 
             typedef BlackOilPolymerModule<TypeTag> PolymerModule;
+            typedef BlackOilMICPModule<TypeTag> MICPModule;
 
             // For the conversion between the surface volume rate and resrevoir voidage rate
             using RateConverterType = RateConverter::
@@ -220,6 +222,7 @@ namespace Opm {
             void initFromRestartFile(const RestartValue& restartValues)
             {
                 initFromRestartFile(restartValues,
+                                    this->ebosSimulator_.vanguard().transferWTestState(),
                                     UgGridHelpers::numCells(grid()),
                                     param_.use_multisegment_well_);
             }
@@ -291,6 +294,12 @@ namespace Opm {
             bool hasWell(const std::string& well_name) const;
 
             void initGliftEclWellMap(GLiftEclWells &ecl_well_map);
+
+            /// \brief Get list of local nonshut wells
+            const std::vector<WellInterfacePtr>& localNonshutWells()
+            {
+                return well_container_;
+            }
 
         protected:
             Simulator& ebosSimulator_;

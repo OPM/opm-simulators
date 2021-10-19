@@ -228,8 +228,7 @@ private:
 
             cell_pressure[idx] = water_pressure_reservoir;
         }
-
-        OPM_END_PARALLEL_TRY_CATCH("AquiferNumerical::calculateAquiferPressure() failed: ");
+        OPM_END_PARALLEL_TRY_CATCH("AquiferNumerical::calculateAquiferPressure() failed: ", this->ebos_simulator_.vanguard().grid().comm());
         const auto& comm = this->ebos_simulator_.vanguard().grid().comm();
         comm.sum(&sum_pressure_watervolume, 1);
         comm.sum(&sum_watervolume, 1);

@@ -584,7 +584,7 @@ BILU0<block_size>::~BILU0()
             if (verbosity >= 4) {
                 out << "color " << color << ": " << firstRow << " - " << lastRow << " = " << lastRow - firstRow << "\n";
             }
-            event = (*ilu_decomp_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items2), cl::NDRange(work_group_size2)), firstRow, lastRow, s.LUvals, s.LUcols, s.LUrows, s.invDiagVals, s.diagIndex, LUmat->Nb, cl::Local(lmem_per_work_group2));
+            event = (*ilu_decomp)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items2), cl::NDRange(work_group_size2)), firstRow, lastRow, s.LUvals, s.LUcols, s.LUrows, s.invDiagVals, s.diagIndex, LUmat->Nb, cl::Local(lmem_per_work_group2));
             event.wait();
         }
 
@@ -601,28 +601,33 @@ BILU0<block_size>::~BILU0()
     // however, if individual kernel calls are timed, waiting for events is needed
     // behavior on other GPUs is untested
     template <unsigned int block_size>
-    void BILU0<block_size>::apply(cl::Buffer& x, cl::Buffer& y)
+    void BILU0<block_size>::apply(cl::Buffer& y, cl::Buffer& x)
     {
+        const double relaxation = 0.9;
         cl::Event event;
         Timer t_apply;
 
         for(int color = 0; color < numColors; ++color){
 #if CHOW_PATEL
-            event = (*ILU_apply1)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), s.Lvals, s.Lcols, s.Lrows, s.diagIndex, x, y, s.rowsPerColor, color, block_size, cl::Local(lmem_per_work_group));
+            event = (*ILU_apply1)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), s.Lvals, s.Lcols, s.Lrows, s.diagIndex, y, x, s.rowsPerColor, color, block_size, cl::Local(lmem_per_work_group));
 #else
-            event = (*ILU_apply1)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), s.LUvals, s.LUcols, s.LUrows, s.diagIndex, x, y, s.rowsPerColor, color, block_size, cl::Local(lmem_per_work_group));
+            event = (*ILU_apply1)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), s.LUvals, s.LUcols, s.LUrows, s.diagIndex, y, x, s.rowsPerColor, color, block_size, cl::Local(lmem_per_work_group));
 #endif
             // event.wait();
         }
 
         for(int color = numColors-1; color >= 0; --color){
 #if CHOW_PATEL
-            event = (*ILU_apply2)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), s.Uvals, s.Ucols, s.Urows, s.diagIndex, s.invDiagVals, y, s.rowsPerColor, color, block_size, cl::Local(lmem_per_work_group));
+            event = (*ILU_apply2)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), s.Uvals, s.Ucols, s.Urows, s.diagIndex, s.invDiagVals, x, s.rowsPerColor, color, block_size, cl::Local(lmem_per_work_group));
 #else
-            event = (*ILU_apply2)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), s.LUvals, s.LUcols, s.LUrows, s.diagIndex, s.invDiagVals, y, s.rowsPerColor, color, block_size, cl::Local(lmem_per_work_group));
+            event = (*ILU_apply2)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), s.LUvals, s.LUcols, s.LUrows, s.diagIndex, s.invDiagVals, x, s.rowsPerColor, color, block_size, cl::Local(lmem_per_work_group));
 #endif
             // event.wait();
         }
+
+        // apply relaxation
+        event = (*scale)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), x, relaxation, N);
+        event.wait();
 
         if (verbosity >= 4) {
             event.wait();
@@ -651,11 +656,13 @@ template <unsigned int block_size>
 void BILU0<block_size>::setKernels(
     cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> *ILU_apply1_,
     cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> *ILU_apply2_,
-    cl::make_kernel<const unsigned int, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const int, cl::LocalSpaceArg> *ilu_decomp_k_
+    cl::make_kernel<cl::Buffer&, const double, const unsigned int> *scale_,
+    cl::make_kernel<const unsigned int, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const int, cl::LocalSpaceArg> *ilu_decomp_
 ){
     this->ILU_apply1 = ILU_apply1_;
     this->ILU_apply2 = ILU_apply2_;
-    this->ilu_decomp_k = ilu_decomp_k_;
+    this->scale = scale_;
+    this->ilu_decomp = ilu_decomp_;
 }
 
 
@@ -672,16 +679,17 @@ template void BILU0<n>::setKernelParameters(unsigned int, unsigned int, unsigned
 template void BILU0<n>::setKernels(                                                      \
     cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> *, \
     cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> *, \
-    cl::make_kernel<const unsigned int, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const int, cl::LocalSpaceArg> *                 \
+    cl::make_kernel<cl::Buffer&, const double, const unsigned int> *, \
+    cl::make_kernel<const unsigned int, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const int, cl::LocalSpaceArg> * \
     );
 
 INSTANTIATE_BDA_FUNCTIONS(1);
 INSTANTIATE_BDA_FUNCTIONS(2);
 INSTANTIATE_BDA_FUNCTIONS(3);
 INSTANTIATE_BDA_FUNCTIONS(4);
+INSTANTIATE_BDA_FUNCTIONS(5);
+INSTANTIATE_BDA_FUNCTIONS(6);
 
 #undef INSTANTIATE_BDA_FUNCTIONS
 
 } // end namespace bda
-
-

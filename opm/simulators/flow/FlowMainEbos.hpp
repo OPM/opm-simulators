@@ -104,7 +104,7 @@ namespace Opm
         }
 
         // Read the command line parameters. Throws an exception if something goes wrong.
-        static int setupParameters_(int argc, char** argv)
+        static int setupParameters_(int argc, char** argv, Parallel::Communication comm)
         {
             using ParamsMeta = GetProp<TypeTag, Properties::ParameterMetaData>;
             if (!ParamsMeta::registrationOpen()) {
@@ -214,10 +214,7 @@ namespace Opm
             
             EWOMS_END_PARAM_REGISTRATION(TypeTag);
 
-            int mpiRank = 0;
-#if HAVE_MPI
-            MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
-#endif
+            int mpiRank = comm.rank();
 
             // read in the command line parameters
             int status = ::Opm::setupParameters_<TypeTag>(argc, const_cast<const char**>(argv), /*doRegistration=*/false, /*allowUnused=*/true, /*handleHelp=*/(mpiRank==0));
@@ -229,11 +226,8 @@ namespace Opm
                 if (mpiRank == 0) {
                     unknownKeyWords = Parameters::printUnused<TypeTag>(std::cerr);
                 }
-#if HAVE_MPI
-                int globalUnknownKeyWords;
-                MPI_Allreduce(&unknownKeyWords,  &globalUnknownKeyWords, 1, MPI_INT,  MPI_SUM, MPI_COMM_WORLD);
+                int globalUnknownKeyWords = comm.sum(unknownKeyWords);
                 unknownKeyWords = globalUnknownKeyWords;
-#endif
                 if ( unknownKeyWords )
                 {
                     if ( mpiRank == 0 )
@@ -275,7 +269,7 @@ namespace Opm
             return status;
         }
 
-        static void printBanner()
+        static void printBanner(Parallel::Communication comm)
         {
             const int lineLen = 70;
             const std::string version = moduleVersionName();
@@ -293,7 +287,6 @@ namespace Opm
             std::cout << "**********************************************************************\n\n";
 
             int threads = 1;
-            int mpiSize = 1;
 
 #ifdef _OPENMP
             // This function is called before the parallel OpenMP stuff gets initialized.
@@ -310,9 +303,7 @@ namespace Opm
                 threads = std::min(input_threads, omp_get_max_threads());
 #endif
 
-#if HAVE_MPI
-            MPI_Comm_size(MPI_COMM_WORLD, &mpiSize);
-#endif
+            int mpiSize = comm.size();
 
             std::cout << "Using "<< mpiSize << " MPI processes with "<< threads <<" OMP threads on each \n\n";
         }
@@ -402,7 +393,7 @@ namespace Opm
             try {
                 // deal with some administrative boilerplate
 
-                int status = setupParameters_(this->argc_, this->argv_);
+                int status = setupParameters_(this->argc_, this->argv_, EclGenericVanguard::comm());
                 if (status)
                     return status;
 
@@ -450,13 +441,9 @@ namespace Opm
             // determine the rank of the current process and the number of processes
             // involved in the simulation. MPI must have already been initialized
             // here. (yes, the name of this method is misleading.)
-#if HAVE_MPI
-            MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank_);
-            MPI_Comm_size(MPI_COMM_WORLD, &mpi_size_);
-#else
-            mpi_rank_ = 0;
-            mpi_size_ = 1;
-#endif
+            auto comm = EclGenericVanguard::comm();
+            mpi_rank_ = comm.rank();
+            mpi_size_ = comm.size();
 
 #if _OPENMP
             // if openMP is available, default to 2 threads per process.
@@ -502,7 +489,7 @@ namespace Opm
 
         void setupEbosSimulator()
         {
-            ebosSimulator_.reset(new EbosSimulator(/*verbose=*/false));
+            ebosSimulator_.reset(new EbosSimulator(EclGenericVanguard::comm(), /*verbose=*/false));
             ebosSimulator_->executionTimer().start();
             ebosSimulator_->model().applyInitialSolution();
 

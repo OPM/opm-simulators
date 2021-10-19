@@ -316,10 +316,10 @@ namespace Opm
         double maxPerfPress(const Simulator& ebos_simulator) const;
 
         // check whether the well is operable under BHP limit with current reservoir condition
-        virtual void checkOperabilityUnderBHPLimitProducer(const WellState& well_state, const Simulator& ebos_simulator, DeferredLogger& deferred_logger) override;
+        virtual void checkOperabilityUnderBHPLimit(const WellState& well_state, const Simulator& ebos_simulator, DeferredLogger& deferred_logger) override;
 
         // check whether the well is operable under THP limit with current reservoir condition
-        virtual void checkOperabilityUnderTHPLimitProducer(const Simulator& ebos_simulator, const WellState& well_state, DeferredLogger& deferred_logger) override;
+        virtual void checkOperabilityUnderTHPLimit(const Simulator& ebos_simulator, const WellState& well_state, DeferredLogger& deferred_logger) override;
 
         // updating the inflow based on the current reservoir condition
         virtual void updateIPR(const Simulator& ebos_simulator, DeferredLogger& deferred_logger) const override;

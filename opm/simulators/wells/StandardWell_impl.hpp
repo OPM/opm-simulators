@@ -694,6 +694,31 @@ namespace Opm
             connectionRates[perf][Indices::contiBrineEqIdx] = Base::restrictEval(cq_s_sm);
         }
 
+        if constexpr (has_micp) {
+            const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+            EvalWell cq_s_microbe = cq_s[waterCompIdx];
+            if (this->isInjector()) {
+                cq_s_microbe *= this->wmicrobes();
+            } else {
+                cq_s_microbe *= this->extendEval(intQuants.microbialConcentration());
+            }
+            connectionRates[perf][Indices::contiMicrobialEqIdx] = Base::restrictEval(cq_s_microbe);
+            EvalWell cq_s_oxygen = cq_s[waterCompIdx];
+            if (this->isInjector()) {
+                cq_s_oxygen *= this->woxygen();
+            } else {
+                cq_s_oxygen *= this->extendEval(intQuants.oxygenConcentration());
+            }
+            connectionRates[perf][Indices::contiOxygenEqIdx] = Base::restrictEval(cq_s_oxygen);
+            EvalWell cq_s_urea = cq_s[waterCompIdx];
+            if (this->isInjector()) {
+                cq_s_urea *= this->wurea();
+            } else {
+                cq_s_urea *= this->extendEval(intQuants.ureaConcentration());
+            }
+            connectionRates[perf][Indices::contiUreaEqIdx] = Base::restrictEval(cq_s_urea);
+        }
+
         // Store the perforation pressure for later usage.
         perf_data.pressure[perf] = ws.bhp + this->perf_pressure_diffs_[perf];
     }
@@ -854,7 +879,7 @@ namespace Opm
     {
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
-        updatePrimaryVariablesNewton(dwells, well_state);
+        updatePrimaryVariablesNewton(dwells, well_state, deferred_logger);
 
         updateWellStateFromPrimaryVariables(well_state, deferred_logger);
         Base::calculateReservoirRates(well_state.well(this->index_of_well_));
@@ -868,7 +893,8 @@ namespace Opm
     void
     StandardWell<TypeTag>::
     updatePrimaryVariablesNewton(const BVectorWell& dwells,
-                                 const WellState& /* well_state */) const
+                                 const WellState& /* well_state */,
+                                 DeferredLogger& deferred_logger) const
     {
         const double dFLimit = this->param_.dwell_fraction_max_;
         const double dBHPLimit = this->param_.dbhp_max_rel_;
@@ -876,11 +902,10 @@ namespace Opm
 
         updateExtraPrimaryVariables(dwells);
 
-#ifndef NDEBUG
         for (double v : this->primary_variables_) {
-            assert(isfinite(v));
+            if(!isfinite(v))
+                OPM_DEFLOG_THROW(NumericalIssue, "Infinite primary variable after newton update well: " << this->name(),  deferred_logger);
         }
-#endif
 
     }
 
@@ -927,12 +952,6 @@ namespace Opm
     {
         // TODO: not handling solvent related here for now
 
-        // TODO: it only handles the producers for now
-        // the formular for the injectors are not formulated yet
-        if (this->isInjector()) {
-            return;
-        }
-
         // initialize all the values to be zero to begin with
         std::fill(this->ipr_a_.begin(), this->ipr_a_.end(), 0.);
         std::fill(this->ipr_b_.begin(), this->ipr_b_.end(), 0.);
@@ -965,9 +984,9 @@ namespace Opm
             // Let us add a check, since the pressure is calculated based on zero value BHP
             // it should not be negative anyway. If it is negative, we might need to re-formulate
             // to taking into consideration the crossflow here.
-            if (pressure_diff <= 0.) {
-                deferred_logger.warning("NON_POSITIVE_DRAWDOWN_IPR",
-                                "non-positive drawdown found when updateIPR for well " + name());
+            if ( (this->isProducer() && pressure_diff < 0.) || (this->isInjector() && pressure_diff > 0.) ) {
+                deferred_logger.debug("CROSSFLOW_IPR",
+                                "cross flow found when updateIPR for well " + name());
             }
 
             // the well index associated with the connection
@@ -1018,7 +1037,7 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    checkOperabilityUnderBHPLimitProducer(const WellState& well_state, const Simulator& ebos_simulator, DeferredLogger& deferred_logger)
+    checkOperabilityUnderBHPLimit(const WellState& well_state, const Simulator& ebos_simulator, DeferredLogger& deferred_logger)
     {
         const auto& summaryState = ebos_simulator.vanguard().summaryState();
         const double bhp_limit = this->mostStrictBhpFromBhpLimits(summaryState);
@@ -1030,8 +1049,8 @@ namespace Opm
             // we need to check the BHP limit
 
             for (int p = 0; p < this->number_of_phases_; ++p) {
-                const double temp = this->ipr_a_[p] - this->ipr_b_[p] * bhp_limit;
-                if (temp < 0.) {
+                const double ipr_rate = this->ipr_a_[p] - this->ipr_b_[p] * bhp_limit;
+                if ( (this->isProducer() && ipr_rate < 0.) || (this->isInjector() && ipr_rate > 0.) ) {
                     this->operability_status_.operable_under_only_bhp_limit = false;
                     break;
                 }
@@ -1047,8 +1066,7 @@ namespace Opm
 
                 const double thp = this->calculateThpFromBhp(well_state, well_rates_bhp_limit, bhp_limit, deferred_logger);
                 const double thp_limit = this->getTHPConstraint(summaryState);
-
-                if (thp < thp_limit) {
+                if ( (this->isProducer() && thp < thp_limit) || (this->isInjector() && thp > thp_limit) ) {
                     this->operability_status_.obey_thp_limit_under_bhp_limit = false;
                 }
             }
@@ -1072,10 +1090,11 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    checkOperabilityUnderTHPLimitProducer(const Simulator& ebos_simulator, const WellState& well_state, DeferredLogger& deferred_logger)
+    checkOperabilityUnderTHPLimit(const Simulator& ebos_simulator, const WellState& well_state, DeferredLogger& deferred_logger)
     {
         const auto& summaryState = ebos_simulator.vanguard().summaryState();
-        const auto obtain_bhp = computeBhpAtThpLimitProd(well_state, ebos_simulator, summaryState, deferred_logger);
+        const auto obtain_bhp = this->isProducer() ? computeBhpAtThpLimitProd(well_state, ebos_simulator, summaryState, deferred_logger)
+        : computeBhpAtThpLimitInj(ebos_simulator, summaryState, deferred_logger);
 
         if (obtain_bhp) {
             this->operability_status_.can_obtain_bhp_with_thp_limit = true;
@@ -1084,11 +1103,18 @@ namespace Opm
             this->operability_status_.obey_bhp_limit_with_thp_limit = (*obtain_bhp >= bhp_limit);
 
             const double thp_limit = this->getTHPConstraint(summaryState);
-            if (*obtain_bhp < thp_limit) {
+            if (this->isProducer() && *obtain_bhp < thp_limit) {
                 const std::string msg = " obtained bhp " + std::to_string(unit::convert::to(*obtain_bhp, unit::barsa))
                                         + " bars is SMALLER than thp limit "
                                         + std::to_string(unit::convert::to(thp_limit, unit::barsa))
                                         + " bars as a producer for well " + name();
+                deferred_logger.debug(msg);
+            }
+            else if (this->isInjector() && *obtain_bhp > thp_limit) {
+                const std::string msg = " obtained bhp " + std::to_string(unit::convert::to(*obtain_bhp, unit::barsa))
+                                        + " bars is LARGER than thp limit "
+                                        + std::to_string(unit::convert::to(thp_limit, unit::barsa))
+                                        + " bars as a injector for well " + name();
                 deferred_logger.debug(msg);
             }
         } else {
@@ -1323,7 +1349,7 @@ namespace Opm
     {
         // the following implementation assume that the polymer is always after the w-o-g phases
         // For the polymer, energy and foam cases, there is one more mass balance equations of reservoir than wells
-        assert((int(B_avg.size()) == this->num_components_) || has_polymer || has_energy || has_foam || has_brine || has_zFraction);
+        assert((int(B_avg.size()) == this->num_components_) || has_polymer || has_energy || has_foam || has_brine || has_zFraction || has_micp);
 
         std::vector<double> res;
         ConvergenceReport report = this->StdWellEval::getWellConvergence(well_state,
@@ -1918,11 +1944,10 @@ namespace Opm
                 }
             }
         }
-#ifndef NDEBUG
         for (double v : this->primary_variables_) {
-            assert(isfinite(v));
+            if(!isfinite(v))
+                OPM_DEFLOG_THROW(NumericalIssue, "Infinite primary variable after update from wellState well: " << this->name(),  deferred_logger);
         }
-#endif
     }
 
 

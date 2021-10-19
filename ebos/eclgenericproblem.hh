@@ -146,6 +146,31 @@ public:
     Scalar polymerMolecularWeight(const unsigned elemIdx) const;
 
     /*!
+     * \brief Returns the initial microbial concentration for a given a cell index
+     */
+    Scalar  microbialConcentration(unsigned elemIdx) const;
+
+    /*!
+     * \brief Returns the initial oxygen concentration for a given a cell index
+     */
+    Scalar  oxygenConcentration(unsigned elemIdx) const;
+
+    /*!
+     * \brief Returns the initial urea concentration for a given a cell index
+     */
+    Scalar  ureaConcentration(unsigned elemIdx) const;
+
+    /*!
+     * \brief Returns the initial biofilm concentration for a given a cell index
+     */
+    Scalar  biofilmConcentration(unsigned elemIdx) const;
+
+    /*!
+     * \brief Returns the initial calcite concentration for a given a cell index
+     */
+    Scalar  calciteConcentration(unsigned elemIdx) const;
+
+    /*!
      * \brief Returns the index the relevant PVT region given a cell index
      */
     unsigned pvtRegionIndex(unsigned elemIdx) const;
@@ -231,7 +256,8 @@ protected:
                                  int numPhases,
                                  bool indicesGasEnabled,
                                  bool indicesOilEnabled,
-                                 bool indicesWaterEnabled) const;
+                                 bool indicesWaterEnabled,
+                                 bool enableMICP) const;
 
 
     void readRockParameters_(const std::vector<Scalar>& cellCenterDepths);
@@ -240,7 +266,8 @@ protected:
     void readBlackoilExtentionsInitialConditions_(size_t numDof,
                                                   bool enableSolvent,
                                                   bool enablePolymer,
-                                                  bool enablePolymerMolarWeight);
+                                                  bool enablePolymerMolarWeight,
+                                                  bool enableMICP);
 
     void updatePvtnum_();
     void updateSatnum_();
@@ -274,6 +301,11 @@ protected:
     std::vector<Scalar> polymerConcentration_;
     std::vector<Scalar> polymerMoleWeight_; // polymer molecular weight
     std::vector<Scalar> solventSaturation_;
+    std::vector<Scalar> microbialConcentration_;
+    std::vector<Scalar> oxygenConcentration_;
+    std::vector<Scalar> ureaConcentration_;
+    std::vector<Scalar> biofilmConcentration_;
+    std::vector<Scalar> calciteConcentration_;
 
     std::vector<Scalar> lastRv_;
     std::vector<Scalar> maxDRv_;

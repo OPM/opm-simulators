@@ -16,6 +16,7 @@
 #include <opm/simulators/timestepping/TimeStepControlInterface.hpp>
 #include <opm/simulators/timestepping/TimeStepControl.hpp>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/ScheduleState.hpp>
 #include <opm/common/Exceptions.hpp>
 
 namespace Opm::Properties {
@@ -42,6 +43,10 @@ struct SolverMaxTimeStepInDays {
 };
 template<class TypeTag, class MyTypeTag>
 struct SolverMinTimeStep {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct SolverContinueOnConvergenceFailure {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
@@ -137,6 +142,10 @@ template<class TypeTag>
 struct SolverMinTimeStep<TypeTag, TTag::FlowTimeSteppingParameters> {
     using type = GetPropType<TypeTag, Scalar>;
     static constexpr type value = 1.0e-12;
+};
+template<class TypeTag>
+struct SolverContinueOnConvergenceFailure<TypeTag, TTag::FlowTimeSteppingParameters> {
+    static constexpr bool value = false;
 };
 template<class TypeTag>
 struct SolverMaxRestarts<TypeTag, TTag::FlowTimeSteppingParameters> {
@@ -262,6 +271,7 @@ namespace Opm {
             , maxGrowth_(EWOMS_GET_PARAM(TypeTag, double, SolverMaxGrowth)) // 3.0
             , maxTimeStep_(EWOMS_GET_PARAM(TypeTag, double, SolverMaxTimeStepInDays)*24*60*60) // 365.25
             , minTimeStep_(unitSystem.to_si(UnitSystem::measure::time, EWOMS_GET_PARAM(TypeTag, double, SolverMinTimeStep))) // 1e-12;
+            , ignoreConvergenceFailure_(EWOMS_GET_PARAM(TypeTag, bool, SolverContinueOnConvergenceFailure)) // false;
             , solverRestartMax_(EWOMS_GET_PARAM(TypeTag, int, SolverMaxRestarts)) // 10
             , solverVerbose_(EWOMS_GET_PARAM(TypeTag, int, SolverVerbosity) > 0 && terminalOutput) // 2
             , timestepVerbose_(EWOMS_GET_PARAM(TypeTag, int, TimeStepVerbosity) > 0 && terminalOutput) // 2
@@ -280,7 +290,8 @@ namespace Opm {
         //! \brief contructor taking parameter object
         //! \param tuning Pointer to ecl TUNING keyword
         //! \param timeStep current report step
-        AdaptiveTimeSteppingEbos(const Tuning& tuning,
+        AdaptiveTimeSteppingEbos(double max_next_tstep,
+                                 const Tuning& tuning,
                                  const UnitSystem& unitSystem,
                                  const bool terminalOutput = true)
             : timeStepControl_()
@@ -288,11 +299,12 @@ namespace Opm {
             , growthFactor_(tuning.TFDIFF)
             , maxGrowth_(tuning.TSFMAX)
             , maxTimeStep_(tuning.TSMAXZ) // 365.25
-            , minTimeStep_(unitSystem.to_si(UnitSystem::measure::time, EWOMS_GET_PARAM(TypeTag, double, SolverMinTimeStep))) // 1e-12;
+            , minTimeStep_(tuning.TSFMIN) // 0.1;
+            , ignoreConvergenceFailure_(true)
             , solverRestartMax_(EWOMS_GET_PARAM(TypeTag, int, SolverMaxRestarts)) // 10
             , solverVerbose_(EWOMS_GET_PARAM(TypeTag, int, SolverVerbosity) > 0 && terminalOutput) // 2
             , timestepVerbose_(EWOMS_GET_PARAM(TypeTag, int, TimeStepVerbosity) > 0 && terminalOutput) // 2
-            , suggestedNextTimestep_(tuning.TSINIT) // 1.0
+            , suggestedNextTimestep_(max_next_tstep) // 1.0
             , fullTimestepInitially_(EWOMS_GET_PARAM(TypeTag, bool, FullTimeStepInitially)) // false
             , timestepAfterEvent_(tuning.TMAXWC) // 1e30
             , useNewtonIteration_(false)
@@ -314,6 +326,8 @@ namespace Opm {
                                  "The maximum size of a time step in days");
             EWOMS_REGISTER_PARAM(TypeTag, double, SolverMinTimeStep,
                                  "The minimum size of a time step in days for field and metric and hours for lab. If a step cannot converge without getting cut below this step size the simulator will stop");
+            EWOMS_REGISTER_PARAM(TypeTag, bool, SolverContinueOnConvergenceFailure,
+                                 "Continue instead of stop when minimum solver time step is reached");
             EWOMS_REGISTER_PARAM(TypeTag, int, SolverMaxRestarts,
                                  "The maximum number of breakdowns before a substep is given up and the simulator is terminated");
             EWOMS_REGISTER_PARAM(TypeTag, int, SolverVerbosity,
@@ -444,7 +458,20 @@ namespace Opm {
 
                 report += substepReport;
 
-                if (substepReport.converged) {
+                bool continue_on_uncoverged_solution = ignoreConvergenceFailure_ && !substepReport.converged && dt <= minTimeStep_;
+
+                if (continue_on_uncoverged_solution) {
+                    const auto msg = std::string("Solver failed to converge but timestep ")
+                            + std::to_string(dt) + " is smaller or equal to "
+                            + std::to_string(minTimeStep_) + "\n which is the minimum threshold given"
+                            +  "by option --solver-min-time-step= \n";
+                    if (solverVerbose_) {
+                        OpmLog::error(msg);
+                    }
+                }
+
+                if (substepReport.converged || continue_on_uncoverged_solution) {
+
                     // advance by current dt
                     ++substepTimer;
 
@@ -560,14 +587,14 @@ namespace Opm {
                             // Close all consistently failing wells.
                             int num_shut_wells = 0;
                             for (const auto& well : failing_wells) {
-                                bool was_shut = solver.model().wellModel().forceShutWellByNameIfPredictionMode(well, substepTimer.simulationTimeElapsed());
+                                bool was_shut = solver.model().wellModel().forceShutWellByName(well, substepTimer.simulationTimeElapsed());
                                 if (was_shut) {
                                     ++num_shut_wells;
                                 }
                             }
                             if (num_shut_wells == 0) {
-                                // None of the problematic wells were prediction wells,
-                                // so none were shut. We must fall back to chopping again.
+                                // None of the problematic wells were shut.
+                                // We must fall back to chopping again.
                                 chopTimestep();
                             } else {
                                 substepTimer.provideTimeStepEstimate(dt);
@@ -612,13 +639,13 @@ namespace Opm {
         void setSuggestedNextStep(const double x)
         { suggestedNextTimestep_ = x; }
 
-        void updateTUNING(const Tuning& tuning)
+        void updateTUNING(double max_next_tstep, const Tuning& tuning)
         {
             restartFactor_ = tuning.TSFCNV;
             growthFactor_ = tuning.TFDIFF;
             maxGrowth_ = tuning.TSFMAX;
             maxTimeStep_ = tuning.TSMAXZ;
-            suggestedNextTimestep_ = tuning.TSINIT;
+            suggestedNextTimestep_ = max_next_tstep;
             timestepAfterEvent_ = tuning.TMAXWC;
         }
 
@@ -675,9 +702,8 @@ namespace Opm {
             assert(growthFactor_ >= 1.0);
         }
 
-
-        template <class StepReportVector>
-        std::set<std::string> consistentlyFailingWells(const StepReportVector& sr)
+        template <class ProblemType>
+        std::set<std::string> consistentlyFailingWells(const std::vector<ProblemType>& sr)
         {
             // If there are wells that cause repeated failures, we
             // close them, and restart the un-chopped timestep.
@@ -736,6 +762,7 @@ namespace Opm {
         double maxGrowth_;                   //!< factor that limits the maximum growth of a time step
         double maxTimeStep_;                //!< maximal allowed time step size in days
         double minTimeStep_;                //!< minimal allowed time step size before throwing
+        bool ignoreConvergenceFailure_;     //!< continue instead of stop when minimum time step is reached
         int solverRestartMax_;        //!< how many restart of solver are allowed
         bool solverVerbose_;           //!< solver verbosity
         bool timestepVerbose_;         //!< timestep verbosity

@@ -33,6 +33,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Action/State.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/OilVaporizationProperties.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/SummaryState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQState.hpp>
 #include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
@@ -62,7 +63,8 @@ std::shared_ptr<Schedule> EclGenericVanguard::externalEclSchedule_;
 std::shared_ptr<SummaryConfig> EclGenericVanguard::externalEclSummaryConfig_;
 std::unique_ptr<UDQState> EclGenericVanguard::externalUDQState_;
 std::unique_ptr<Action::State> EclGenericVanguard::externalActionState_;
-std::unique_ptr<EclGenericVanguard::CommunicationType> EclGenericVanguard::comm_;
+std::unique_ptr<WellTestState> EclGenericVanguard::externalWTestState_;
+std::unique_ptr<Parallel::Communication> EclGenericVanguard::comm_;
 
 EclGenericVanguard::EclGenericVanguard()
     : python(std::make_shared<Python>())
@@ -133,6 +135,11 @@ void EclGenericVanguard::setExternalUDQState(std::unique_ptr<UDQState> udqState)
 void EclGenericVanguard::setExternalActionState(std::unique_ptr<Action::State> actionState)
 {
     externalActionState_ = std::move(actionState);
+}
+
+void EclGenericVanguard::setExternalWTestState(std::unique_ptr<WellTestState> wtestState)
+{
+    externalWTestState_ = std::move(wtestState);
 }
 
 std::string EclGenericVanguard::canonicalDeckPath(const std::string& caseName)
@@ -224,12 +231,6 @@ void EclGenericVanguard::updateOutputDir_(std::string outputDir,
 
 void EclGenericVanguard::init()
 {
-    int myRank = 0;
-
-#if HAVE_MPI
-    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-#endif
-
     // Make proper case name.
     {
         if (fileName_.empty())
@@ -295,7 +296,7 @@ void EclGenericVanguard::init()
         parseContext_ = createParseContext(ignoredKeywords_, eclStrictParsing_);
     }
 
-    readDeck(myRank, fileName_, deck_, eclState_, eclSchedule_, udqState_, actionState_,
+    readDeck(EclGenericVanguard::comm(), fileName_, deck_, eclState_, eclSchedule_, udqState_, actionState_, wtestState_,
              eclSummaryConfig_, std::move(errorGuard), python,
              std::move(parseContext_), /* initFromRestart = */ false,
              /* checkDeck = */ enableExperiments_, outputInterval_);
@@ -309,6 +310,11 @@ void EclGenericVanguard::init()
         this->actionState_ = std::move(EclGenericVanguard::externalActionState_);
     else
         this->actionState_ = std::make_unique<Action::State>();
+
+    if (EclGenericVanguard::externalWTestState_)
+        this->wtestState_ = std::move(EclGenericVanguard::externalWTestState_);
+    else
+        this->wtestState_ = std::make_unique<WellTestState>();
 
     this->summaryState_ = std::make_unique<SummaryState>( TimeService::from_time_t(this->eclSchedule_->getStartTime() ));
 
@@ -326,10 +332,11 @@ void EclGenericVanguard::init()
     if (enableDistributedWells() )
     {
         int hasMsWell = false;
+        const auto& comm = EclGenericVanguard::comm();
 
         if (useMultisegmentWell_)
         {
-            if (myRank == 0)
+            if (comm.rank() == 0)
             {
                 const auto& wells = this->schedule().getWellsatEnd();
                 for ( const auto& well: wells)
@@ -338,16 +345,12 @@ void EclGenericVanguard::init()
                 }
             }
         }
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
-        const auto& comm = Dune::MPIHelper::getCommunication();
-#else
-        const auto& comm = Dune::MPIHelper::getCollectiveCommunication();
-#endif
+
         hasMsWell = comm.max(hasMsWell);
 
         if (hasMsWell)
         {
-            if (myRank == 0)
+            if (comm.rank() == 0)
             {
                 std::string message =
                         std::string("Option --allow-distributed-wells=true is only allowed if model\n")

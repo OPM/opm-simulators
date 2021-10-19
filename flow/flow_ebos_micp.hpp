@@ -1,7 +1,4 @@
 /*
-  Copyright 2018 SINTEF Digital, Mathematics and Cybernetics.
-  Copyright 2018 Equinor.
-
   This file is part of the Open Porous Media project (OPM).
 
   OPM is free software: you can redistribute it and/or modify
@@ -17,22 +14,24 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+#ifndef FLOW_EBOS_MICP_HPP
+#define FLOW_EBOS_MICP_HPP
 
-#ifndef OPM_GATHERCONVERGENCEREPORT_HEADER_INCLUDED
-#define OPM_GATHERCONVERGENCEREPORT_HEADER_INCLUDED
+#include <memory>
 
-#include <opm/simulators/timestepping/ConvergenceReport.hpp>
+namespace Opm {
 
-#include <opm/simulators/utils/ParallelCommunication.hpp>
+class Deck;
+class EclipseState;
+class Schedule;
+class SummaryConfig;
 
-namespace Opm
-{
+void flowEbosMICPSetDeck(double setupTime, std::shared_ptr<Deck> deck,
+                                    std::shared_ptr<EclipseState> eclState,
+                                    std::shared_ptr<Schedule> schedule,
+                                    std::shared_ptr<SummaryConfig> summaryConfig);
+int flowEbosMICPMain(int argc, char** argv, bool outputCout, bool outputFiles);
 
-    /// Create a global convergence report combining local
-    /// (per-process) reports.
-    ConvergenceReport gatherConvergenceReport(const ConvergenceReport& local_report, Parallel::Communication communicator);
+}
 
-} // namespace Opm
-
-
-#endif // OPM_GATHERCONVERGENCEREPORT_HEADER_INCLUDED
+#endif // FLOW_EBOS_MICP_HPP

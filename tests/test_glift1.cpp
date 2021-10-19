@@ -105,6 +105,7 @@ struct GliftFixture {
 #else
     Dune::MPIHelper::instance(argc, argv);
 #endif
+        Opm::EclGenericVanguard::setCommunication(std::make_unique<Opm::Parallel::Communication>());
         using TypeTag = Opm::Properties::TTag::EclFlowProblem;
         Opm::registerAllParameters_<TypeTag>();
     }

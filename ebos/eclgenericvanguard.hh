@@ -28,10 +28,9 @@
 #define EWOMS_ECL_GENERIC_VANGUARD_HH
 
 #include <opm/grid/common/GridEnums.hpp>
-
-#include <dune/common/version.hh>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestState.hpp>
+#include <opm/simulators/utils/ParallelCommunication.hpp>
 #include <dune/common/parallel/collectivecommunication.hh>
-#include <dune/common/parallel/mpihelper.hh>
 
 #include <array>
 #include <cassert>
@@ -43,6 +42,7 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
+
 
 namespace Opm {
 
@@ -57,16 +57,11 @@ class Python;
 class SummaryConfig;
 class SummaryState;
 class UDQState;
+class WellTestState;
 
 class EclGenericVanguard {
 public:
     using ParallelWellStruct = std::vector<std::pair<std::string,bool>>;
-
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
-    using CommunicationType = Dune::Communication<Dune::MPIHelper::MPICommunicator>;
-#else
-    using CommunicationType = Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator>;
-#endif
 
     /*!
      * \brief Constructor.
@@ -158,6 +153,9 @@ public:
 
     static void setExternalUDQState(std::unique_ptr<UDQState> udqState);
     static void setExternalActionState(std::unique_ptr<Action::State> actionState);
+    static void setExternalWTestState(std::unique_ptr<WellTestState> wtestState);
+
+
     /*!
      * \brief Return a reference to the parsed ECL deck.
      */
@@ -227,6 +225,11 @@ public:
     const UDQState& udqState() const
     { return *udqState_; }
 
+    WellTestState transferWTestState() {
+        return *this->wtestState_.release();
+    }
+
+
     /*!
      * \brief Returns the name of the case.
      *
@@ -277,11 +280,11 @@ public:
     { return parallelWells_; }
 
     //! \brief Set global communication.
-    static void setCommunication(std::unique_ptr<CommunicationType> comm)
+    static void setCommunication(std::unique_ptr<Opm::Parallel::Communication> comm)
     { comm_ = std::move(comm); }
 
     //! \brief Obtain global communicator.
-    static CommunicationType& comm()
+    static Parallel::Communication& comm()
     {
         assert(comm_);
         return *comm_;
@@ -310,7 +313,8 @@ protected:
     static bool externalDeckSet_;
     static std::unique_ptr<UDQState> externalUDQState_;
     static std::unique_ptr<Action::State> externalActionState_;
-    static std::unique_ptr<CommunicationType> comm_;
+    static std::unique_ptr<WellTestState> externalWTestState_;
+    static std::unique_ptr<Parallel::Communication> comm_;
 
     std::string caseName_;
     std::string fileName_;
@@ -326,8 +330,14 @@ protected:
     bool enableExperiments_;
 
     std::unique_ptr<SummaryState> summaryState_;
-    std::unique_ptr<Action::State> actionState_;
     std::unique_ptr<UDQState> udqState_;
+    std::unique_ptr<Action::State> actionState_;
+
+    // Observe that this instance is handled differently from the other state
+    // variables, it will only be initialized for a restart run. While
+    // initializing a restarted run this instance is transferred to the WGState
+    // member in the well model.
+    std::unique_ptr<WellTestState> wtestState_;
 
     // these attributes point  either to the internal  or to the external version of the
     // parser objects.

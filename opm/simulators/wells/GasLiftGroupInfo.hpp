@@ -55,11 +55,10 @@ class GasLiftGroupInfo
     using GroupRateMap =
         std::map<std::string, GroupRates>;
     using GroupIdxMap = std::map<std::string, int>;
-    using MPIComm = typename Dune::MPIHelper::MPICommunicator;
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
-    using Communication = Dune::Communication<MPIComm>;
+    using Communication = Dune::Communication<Dune::MPIHelper::MPICommunicator>;
 #else
-    using Communication = Dune::CollectiveCommunication<MPIComm>;
+    using Communication = Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator>;
 #endif
 
     // TODO: same definition with WellInterface, and
@@ -78,7 +77,7 @@ public:
         const PhaseUsage& phase_usage,
         DeferredLogger& deferred_logger,
         WellState& well_state,
-        const Communication& comm);
+        const Parallel::Communication& comm);
     std::vector<std::pair<std::string,double>>& getWellGroups(
         const std::string& well_name);
 
@@ -163,7 +162,7 @@ private:
     const PhaseUsage &phase_usage_;
     DeferredLogger &deferred_logger_;
     WellState &well_state_;
-    const Communication &comm_;
+    const Parallel::Communication &comm_;
     const GasLiftOpt& glo_;
     GroupRateMap group_rate_map_;
     Well2GroupMap well_group_map_;

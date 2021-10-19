@@ -34,6 +34,9 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
 
+#include <dune/common/version.hh>
+#include <dune/common/parallel/mpihelper.hh>
+
 #include <functional>
 #include <map>
 #include <optional>
@@ -68,6 +71,10 @@ public:
 
     std::size_t size() const {
         return this->wells_.size();
+    }
+
+    std::vector<std::string> wells() const {
+        return this->wells_.wells();
     }
 
 

@@ -33,6 +33,7 @@ PerfData::PerfData(std::size_t num_perf, bool injector_, std::size_t num_phases)
     , polymer_rates(num_perf)
     , brine_rates(num_perf)
     , prod_index(num_perf * num_phases)
+    , micp_rates(num_perf)
     , cell_index(num_perf)
     , connection_transmissibility_factor(num_perf)
     , satnum_id(num_perf)
@@ -70,8 +71,8 @@ bool PerfData::try_assign(const PerfData& other) {
     this->skin_pressure = other.skin_pressure;
     this->water_velocity = other.water_velocity;
     this->prod_index = other.prod_index;
+    this->micp_rates = other.micp_rates;
     return true;
 }
 
 }
-

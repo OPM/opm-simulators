@@ -32,6 +32,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQConfig.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WList.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WListManager.hpp>
+#include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestState.hpp>
 #include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
 #include <ebos/eclmpiserializer.hh>
@@ -40,22 +41,25 @@
 
 namespace Opm {
 
-void eclStateBroadcast(EclipseState& eclState, Schedule& schedule,
+
+void eclStateBroadcast(Parallel::Communication comm, EclipseState& eclState, Schedule& schedule,
                        SummaryConfig& summaryConfig,
                        UDQState& udqState,
-                       Action::State& actionState)
+                       Action::State& actionState,
+                       WellTestState&  wtestState)
 {
-    Opm::EclMpiSerializer ser(Dune::MPIHelper::getCollectiveCommunication());
+    Opm::EclMpiSerializer ser(comm);
     ser.broadcast(eclState);
     ser.broadcast(schedule);
     ser.broadcast(summaryConfig);
     ser.broadcast(udqState);
     ser.broadcast(actionState);
+    ser.broadcast(wtestState);
 }
 
-void eclScheduleBroadcast(Schedule& schedule)
+void eclScheduleBroadcast(Parallel::Communication comm, Schedule& schedule)
 {
-    Opm::EclMpiSerializer ser(Dune::MPIHelper::getCollectiveCommunication());
+    Opm::EclMpiSerializer ser(comm);
     ser.broadcast(schedule);
 }
 }

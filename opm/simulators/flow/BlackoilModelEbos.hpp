@@ -126,6 +126,10 @@ template<class TypeTag>
 struct EnableBrine<TypeTag, TTag::EclFlowProblem> {
     static constexpr bool value = false;
 };
+template<class TypeTag>
+struct EnableMICP<TypeTag, TTag::EclFlowProblem> {
+    static constexpr bool value = false;
+};
 
 template<class TypeTag>
 struct EclWellModel<TypeTag, TTag::EclFlowProblem> {
@@ -172,6 +176,11 @@ namespace Opm {
         static const int contiPolymerMWEqIdx = Indices::contiPolymerMWEqIdx;
         static const int contiFoamEqIdx = Indices::contiFoamEqIdx;
 	static const int contiBrineEqIdx = Indices::contiBrineEqIdx;
+        static const int contiMicrobialEqIdx = Indices::contiMicrobialEqIdx;
+        static const int contiOxygenEqIdx = Indices::contiOxygenEqIdx;
+        static const int contiUreaEqIdx = Indices::contiUreaEqIdx;
+        static const int contiBiofilmEqIdx = Indices::contiBiofilmEqIdx;
+        static const int contiCalciteEqIdx = Indices::contiCalciteEqIdx;
         static const int solventSaturationIdx = Indices::solventSaturationIdx;
         static const int zFractionIdx = Indices::zFractionIdx;
         static const int polymerConcentrationIdx = Indices::polymerConcentrationIdx;
@@ -179,6 +188,11 @@ namespace Opm {
         static const int temperatureIdx = Indices::temperatureIdx;
         static const int foamConcentrationIdx = Indices::foamConcentrationIdx;
 	static const int saltConcentrationIdx = Indices::saltConcentrationIdx;
+        static const int microbialConcentrationIdx = Indices::microbialConcentrationIdx;
+        static const int oxygenConcentrationIdx = Indices::oxygenConcentrationIdx;
+        static const int ureaConcentrationIdx = Indices::ureaConcentrationIdx;
+        static const int biofilmConcentrationIdx = Indices::biofilmConcentrationIdx;
+        static const int calciteConcentrationIdx = Indices::calciteConcentrationIdx;
 
         typedef Dune::FieldVector<Scalar, numEq >        VectorBlockType;
         typedef typename SparseMatrixAdapter::MatrixBlock MatrixBlockType;
@@ -335,14 +349,15 @@ namespace Opm {
                 const int nc = UgGridHelpers::numCells(grid_);
                 BVector x(nc);
 
-                // apply the Schur compliment of the well model to the reservoir linearized
-                // equations
-                wellModel().linearize(ebosSimulator().model().linearizer().jacobian(),
-                                      ebosSimulator().model().linearizer().residual());
-
                 // Solve the linear system.
                 linear_solve_setup_time_ = 0.0;
                 try {
+                    // apply the Schur compliment of the well model to the reservoir linearized
+                    // equations
+                    // Note that linearize may throw for MSwells.
+                    wellModel().linearize(ebosSimulator().model().linearizer().jacobian(),
+                                          ebosSimulator().model().linearizer().residual());
+
                     solveJacobianSystem(x);
                     report.linear_solve_setup_time += linear_solve_setup_time_;
                     report.linear_solve_time += perfTimer.stop();
@@ -451,13 +466,13 @@ namespace Opm {
 
                 Scalar saturationsNew[FluidSystem::numPhases] = { 0.0 };
                 Scalar oilSaturationNew = 1.0;
-                if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && FluidSystem::numActivePhases() > 1) {
                     saturationsNew[FluidSystem::waterPhaseIdx] = priVarsNew[Indices::waterSaturationIdx];
                     oilSaturationNew -= saturationsNew[FluidSystem::waterPhaseIdx];
                 }
 
-                if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && 
-                    FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && 
+                if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) &&
+                    FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
                     priVarsNew.primaryVarsMeaning() == PrimaryVariables::Sw_po_Sg) {
                     assert(Indices::compositionSwitchIdx >= 0 );
                     saturationsNew[FluidSystem::gasPhaseIdx] = priVarsNew[Indices::compositionSwitchIdx];
@@ -488,7 +503,7 @@ namespace Opm {
                     }
 
                     if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) &&
-                        FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && 
+                        FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
                         priVarsOld.primaryVarsMeaning() == PrimaryVariables::Sw_po_Sg)
                     {
                         assert(Indices::compositionSwitchIdx >= 0 );
@@ -725,9 +740,31 @@ namespace Opm {
                     maxCoeff[ contiEnergyEqIdx ] = std::max( maxCoeff[ contiEnergyEqIdx ], std::abs( R2 ) / pvValue );
                 }
 
+                if constexpr (has_micp_) {
+                    B_avg[ contiMicrobialEqIdx ] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
+                    const auto R1 = ebosResid[cell_idx][contiMicrobialEqIdx];
+                    R_sum[ contiMicrobialEqIdx ] += R1;
+                    maxCoeff[ contiMicrobialEqIdx ] = std::max( maxCoeff[ contiMicrobialEqIdx ], std::abs( R1 ) / pvValue );
+                    B_avg[ contiOxygenEqIdx ] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
+                    const auto R2 = ebosResid[cell_idx][contiOxygenEqIdx];
+                    R_sum[ contiOxygenEqIdx ] += R2;
+                    maxCoeff[ contiOxygenEqIdx ] = std::max( maxCoeff[ contiOxygenEqIdx ], std::abs( R2 ) / pvValue );
+                    B_avg[ contiUreaEqIdx ] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
+                    const auto R3 = ebosResid[cell_idx][contiUreaEqIdx];
+                    R_sum[ contiUreaEqIdx ] += R3;
+                    maxCoeff[ contiUreaEqIdx ] = std::max( maxCoeff[ contiUreaEqIdx ], std::abs( R3 ) / pvValue );
+                    B_avg[ contiBiofilmEqIdx ] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
+                    const auto R4 = ebosResid[cell_idx][contiBiofilmEqIdx];
+                    R_sum[ contiBiofilmEqIdx ] += R4;
+                    maxCoeff[ contiBiofilmEqIdx ] = std::max( maxCoeff[ contiBiofilmEqIdx ], std::abs( R4 ) / pvValue );
+                    B_avg[ contiCalciteEqIdx ] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
+                    const auto R5 = ebosResid[cell_idx][contiCalciteEqIdx];
+                    R_sum[ contiCalciteEqIdx ] += R5;
+                    maxCoeff[ contiCalciteEqIdx ] = std::max( maxCoeff[ contiCalciteEqIdx ], std::abs( R5 ) / pvValue );
             }
+          }
 
-            OPM_END_PARALLEL_TRY_CATCH("BlackoilModelEbos::localConvergenceData() failed: ");
+            OPM_END_PARALLEL_TRY_CATCH("BlackoilModelEbos::localConvergenceData() failed: ", grid_.comm());
 
             // compute local average in terms of global number of elements
             const int bSize = B_avg.size();
@@ -772,7 +809,7 @@ namespace Opm {
                 }
             }
 
-            OPM_END_PARALLEL_TRY_CATCH("BlackoilModelEbos::ComputeCnvError() failed: ");
+            OPM_END_PARALLEL_TRY_CATCH("BlackoilModelEbos::ComputeCnvError() failed: ", grid_.comm());
 
             return grid_.comm().sum(errorPV);
         }
@@ -801,7 +838,7 @@ namespace Opm {
             // max_strict_iter_ is 8. Hence only iteration chooses
             // whether to use relaxed or not.
             // To activate only fraction use fraction below 1 and iter 0.
-            const bool use_relaxed = cnvErrorPvFraction < param_.relaxed_max_pv_fraction_ && iteration >= param_.max_strict_iter_;                                              
+            const bool use_relaxed = cnvErrorPvFraction < param_.relaxed_max_pv_fraction_ && iteration >= param_.max_strict_iter_;
             const double tol_cnv = use_relaxed ? param_.tolerance_cnv_relaxed_ :  param_.tolerance_cnv_;
 
             // Finish computation
@@ -848,6 +885,13 @@ namespace Opm {
                 if constexpr (has_brine_) {
                     compNames[saltConcentrationIdx] = "Brine";
                 }
+                if constexpr (has_micp_) {
+                    compNames[microbialConcentrationIdx] = "Microbes";
+                    compNames[oxygenConcentrationIdx] = "Oxygen";
+                    compNames[ureaConcentrationIdx] = "Urea";
+                    compNames[biofilmConcentrationIdx] = "Biofilm";
+                    compNames[calciteConcentrationIdx] = "Calcite";
+            }
             }
 
             // Create convergence report.
@@ -993,6 +1037,7 @@ namespace Opm {
         static constexpr bool has_energy_ = getPropValue<TypeTag, Properties::EnableEnergy>();
         static constexpr bool has_foam_ = getPropValue<TypeTag, Properties::EnableFoam>();
         static constexpr bool has_brine_ = getPropValue<TypeTag, Properties::EnableBrine>();
+        static constexpr bool has_micp_ = getPropValue<TypeTag, Properties::EnableMICP>();
 
         ModelParameters                 param_;
         SimulatorReportSingle failureReport_;

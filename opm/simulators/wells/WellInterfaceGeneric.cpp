@@ -96,6 +96,13 @@ WellInterfaceGeneric::WellInterfaceGeneric(const Well& well,
     }
 
     wsolvent_ = 0.0;
+
+    well_control_log_.clear();
+}
+
+const std::vector<PerforationData>& WellInterfaceGeneric::perforationData() const
+{
+    return *perf_data_;
 }
 
 const std::string& WellInterfaceGeneric::name() const
@@ -227,14 +234,14 @@ void WellInterfaceGeneric::initCompletions()
     assert(my_next_perf == perf_data_->end());
 }
 
-void WellInterfaceGeneric::closeCompletions(WellTestState& wellTestState)
+void WellInterfaceGeneric::closeCompletions(const WellTestState& wellTestState)
 {
     const auto& connections = well_ecl_.getConnections();
     int perfIdx = 0;
     for (const auto& connection : connections) {
         if (connection.state() == Connection::State::OPEN) {
-            if (wellTestState.hasCompletion(name(), connection.complnum())) {
-                well_index_[perfIdx] = 0.0;
+            if (wellTestState.completion_is_closed(name(), connection.complnum())) {
+                this->well_index_[perfIdx] = 0.0;
             }
             perfIdx++;
         }
@@ -353,11 +360,10 @@ void WellInterfaceGeneric::updateWellTestStatePhysical(const double simulation_t
                                                        DeferredLogger& deferred_logger) const
 {
     if (!isOperableAndSolvable()) {
-        if (well_test_state.hasWellClosed(name(), WellTestConfig::Reason::ECONOMIC) ||
-            well_test_state.hasWellClosed(name(), WellTestConfig::Reason::PHYSICAL) ) {
+        if (well_test_state.well_is_closed(name())) {
             // Already closed, do nothing.
         } else {
-            well_test_state.closeWell(name(), WellTestConfig::Reason::PHYSICAL, simulation_time);
+            well_test_state.close_well(name(), WellTestConfig::Reason::PHYSICAL, simulation_time);
             if (write_message_to_opmlog) {
                 const std::string action = well_ecl_.getAutomaticShutIn() ? "shut" : "stopped";
                 const std::string msg = "Well " + name()
@@ -377,5 +383,26 @@ double WellInterfaceGeneric::getALQ(const WellState& well_state) const
 {
     return well_state.getALQ(name());
 }
+
+void WellInterfaceGeneric::reportWellSwitching(const SingleWellState& ws, DeferredLogger& deferred_logger) const
+{
+    if (well_control_log_.empty())
+        return;
+
+    std::string msg = "    Well " + name()
+        + " control mode changed from ";
+    for (const std::string& from : well_control_log_) {
+        msg += from + "->";
+    }
+    std::string to;
+    if (isInjector()) {
+        to = Well::InjectorCMode2String(ws.injection_cmode);
+    } else {
+        to = Well::ProducerCMode2String(ws.production_cmode);
+    }
+    msg += to;
+    deferred_logger.info(msg);
+}
+
 
 } // namespace Opm

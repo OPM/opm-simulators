@@ -175,7 +175,7 @@ namespace Opm {
                         }
                     }
                 }
-                OPM_END_PARALLEL_TRY_CATCH("AverageRegionalPressure::defineState(): ");
+                OPM_END_PARALLEL_TRY_CATCH("AverageRegionalPressure::defineState(): ", simulator.vanguard().grid().comm());
 
                 for (int reg = 1; reg <= numRegions ; ++ reg) {
                       auto& ra = attr_.attributes(reg);

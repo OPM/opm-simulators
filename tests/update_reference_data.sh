@@ -165,6 +165,7 @@ tests[0_base_model6]="flow model6 0_BASE_MODEL6"
 tests[0a_aquct_model6]="flow model6 0A_AQUCT_MODEL6"
 tests[0b_rocktab_model6]="flow model6 0B_ROCKTAB_MODEL6"
 tests[1_msw_model6]="flow model6 1_MSW_MODEL6"
+tests[micp]="flow micp MICP"
 
 changed_tests=""
 

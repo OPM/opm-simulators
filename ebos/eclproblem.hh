@@ -539,6 +539,10 @@ template<class TypeTag>
 struct EnableExtbo<TypeTag, TTag::EclBaseProblem> {
     static constexpr bool value = false;
 };
+template<class TypeTag>
+struct EnableMICP<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = false;
+};
 
 // disable thermal flux boundaries by default
 template<class TypeTag>
@@ -627,6 +631,7 @@ class EclProblem : public GetPropType<TypeTag, Properties::BaseProblem>
     enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
     enum { enableThermalFluxBoundaries = getPropValue<TypeTag, Properties::EnableThermalFluxBoundaries>() };
     enum { enableApiTracking = getPropValue<TypeTag, Properties::EnableApiTracking>() };
+    enum { enableMICP = getPropValue<TypeTag, Properties::EnableMICP>() };
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
     enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
     enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
@@ -658,6 +663,7 @@ class EclProblem : public GetPropType<TypeTag, Properties::BaseProblem>
     using FoamModule = BlackOilFoamModule<TypeTag>;
     using BrineModule = BlackOilBrineModule<TypeTag>;
     using ExtboModule = BlackOilExtboModule<TypeTag>;
+    using MICPModule= BlackOilMICPModule<TypeTag>;
 
     using InitialFluidState = typename EclEquilInitializer<TypeTag>::ScalarFluidState;
 
@@ -789,6 +795,7 @@ public:
         FoamModule::initFromState(vanguard.eclState());
         BrineModule::initFromState(vanguard.eclState());
         ExtboModule::initFromState(vanguard.eclState());
+        MICPModule::initFromState(vanguard.eclState());
 
         // create the ECL writer
         eclWriter_.reset(new EclWriterType(simulator));
@@ -908,7 +915,8 @@ public:
                                                   Indices::numPhases,
                                                   Indices::gasEnabled,
                                                   Indices::oilEnabled,
-                                                  Indices::waterEnabled);
+                                                  Indices::waterEnabled,
+                                                  enableMICP);
             }
             catch(const std::exception& e)
             {
@@ -1161,6 +1169,16 @@ public:
                            schedule,
                            simulator.vanguard().actionState(),
                            simulator.vanguard().summaryState());
+
+        // deal with "clogging" for the MICP model
+        if constexpr (enableMICP){
+          auto& model = this->model();
+          const auto& residual = this->model().linearizer().residual();
+          for (unsigned globalDofIdx = 0; globalDofIdx < residual.size(); globalDofIdx ++) {
+            auto& phi = this->referencePorosity_[/*timeIdx=*/1][globalDofIdx];
+            MICPModule::checkCloggingMICP(model, phi, globalDofIdx);
+        }
+      }
     }
 
     /*!
@@ -1805,6 +1823,14 @@ public:
         if constexpr (enableBrine)
             values[Indices::saltConcentrationIdx] = initialFluidStates_[globalDofIdx].saltConcentration();
 
+        if constexpr (enableMICP){
+            values[Indices::microbialConcentrationIdx]= this->microbialConcentration_[globalDofIdx];
+            values[Indices::oxygenConcentrationIdx]= this->oxygenConcentration_[globalDofIdx];
+            values[Indices::ureaConcentrationIdx]= this->ureaConcentration_[globalDofIdx];
+            values[Indices::calciteConcentrationIdx]= this->calciteConcentration_[globalDofIdx];
+            values[Indices::biofilmConcentrationIdx]= this->biofilmConcentration_[globalDofIdx];
+        }
+
         values.checkDefined();
     }
 
@@ -2121,7 +2147,7 @@ private:
                                               Scalar>(fs, iq.pvtRegionIndex());
             }
         }
-        OPM_END_PARALLEL_TRY_CATCH("EclProblem::_updateCompositionLayers() failed: ");
+        OPM_END_PARALLEL_TRY_CATCH("EclProblem::_updateCompositionLayers() failed: ", this->simulator().vanguard().grid().comm());
     }
 
     bool updateMaxOilSaturation_()
@@ -2150,7 +2176,7 @@ private:
 
                 this->maxOilSaturation_[compressedDofIdx] = std::max(this->maxOilSaturation_[compressedDofIdx], So);
             }
-            OPM_END_PARALLEL_TRY_CATCH("EclProblem::updateMayOilSaturation() failed:");
+            OPM_END_PARALLEL_TRY_CATCH("EclProblem::updateMayOilSaturation() failed:", vanguard.grid().comm());
             // we need to invalidate the intensive quantities cache here because the
             // derivatives of Rs and Rv will most likely have changed
             return true;
@@ -2184,7 +2210,7 @@ private:
             Scalar Sw = decay<Scalar>(fs.saturation(waterPhaseIdx));
             this->maxWaterSaturation_[compressedDofIdx] = std::max(this->maxWaterSaturation_[compressedDofIdx], Sw);
         }
-        OPM_END_PARALLEL_TRY_CATCH("EclProblem::updateMayWaterSaturation() failed: ");
+        OPM_END_PARALLEL_TRY_CATCH("EclProblem::updateMayWaterSaturation() failed: ", vanguard.grid().comm());
 
         return true;
     }
@@ -2214,8 +2240,7 @@ private:
                 std::min(this->minOilPressure_[compressedDofIdx],
                          getValue(fs.pressure(oilPhaseIdx)));
         }
-
-        OPM_END_PARALLEL_TRY_CATCH("EclProblem::updateMinPressure_() failed: ");
+        OPM_END_PARALLEL_TRY_CATCH("EclProblem::updateMinPressure_() failed: ", this->simulator().vanguard().grid().comm());
         return true;
     }
 
@@ -2298,11 +2323,12 @@ private:
         else
             readExplicitInitialCondition_();
 
-        if constexpr (enableSolvent || enablePolymer || enablePolymerMolarWeight)
+        if constexpr (enableSolvent || enablePolymer || enablePolymerMolarWeight || enableMICP)
             this->readBlackoilExtentionsInitialConditions_(this->model().numGridDof(),
                                                            enableSolvent,
                                                            enablePolymer,
-                                                           enablePolymerMolarWeight);
+                                                           enablePolymerMolarWeight,
+                                                           enableMICP);
 
         //initialize min/max values
         size_t numElems = this->model().numGridDof();
@@ -2373,6 +2399,14 @@ private:
             this->polymerMoleWeight_.resize(numElems, 0.0);
         }
 
+        if constexpr (enableMICP){
+            this->microbialConcentration_.resize(numElems, 0.0);
+            this->oxygenConcentration_.resize(numElems, 0.0);
+            this->ureaConcentration_.resize(numElems, 0.0);
+            this->biofilmConcentration_.resize(numElems, 0.0);
+            this->calciteConcentration_.resize(numElems, 0.0);
+          }
+
         for (size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
             auto& elemFluidState = initialFluidStates_[elemIdx];
             elemFluidState.setPvtRegionIndex(pvtRegionIndex(elemIdx));
@@ -2406,6 +2440,13 @@ private:
 
             if constexpr (enablePolymer)
                  this->polymerConcentration_[elemIdx] = eclWriter_->eclOutputModule().getPolymerConcentration(elemIdx);
+            if constexpr (enableMICP){
+                 this->microbialConcentration_[elemIdx] = eclWriter_->eclOutputModule().getMicrobialConcentration(elemIdx);
+                 this->oxygenConcentration_[elemIdx] = eclWriter_->eclOutputModule().getOxygenConcentration(elemIdx);
+                 this->ureaConcentration_[elemIdx] = eclWriter_->eclOutputModule().getUreaConcentration(elemIdx);
+                 this->biofilmConcentration_[elemIdx] = eclWriter_->eclOutputModule().getBiofilmConcentration(elemIdx);
+                 this->calciteConcentration_[elemIdx] = eclWriter_->eclOutputModule().getCalciteConcentration(elemIdx);
+            }
             // if we need to restart for polymer molecular weight simulation, we need to add related here
         }
 
@@ -2658,7 +2699,7 @@ private:
             const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
             materialLawManager_->updateHysteresis(intQuants.fluidState(), compressedDofIdx);
         }
-        OPM_END_PARALLEL_TRY_CATCH("EclProblem::updateHyteresis_(): ");
+        OPM_END_PARALLEL_TRY_CATCH("EclProblem::updateHyteresis_(): ", vanguard.grid().comm());
         return true;
     }
 
@@ -2683,7 +2724,7 @@ private:
             this->maxPolymerAdsorption_[compressedDofIdx] = std::max(this->maxPolymerAdsorption_[compressedDofIdx],
                                                                      scalarValue(intQuants.polymerAdsorption()));
         }
-        OPM_END_PARALLEL_TRY_CATCH("EclProblem::updateMaxPolymerAdsorption_(): ");
+        OPM_END_PARALLEL_TRY_CATCH("EclProblem::updateMaxPolymerAdsorption_(): ", vanguard.grid().comm());
     }
 
     struct PffDofData_

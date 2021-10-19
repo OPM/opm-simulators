@@ -60,6 +60,9 @@ public:
                          const int index_of_well,
                          const std::vector<PerforationData>& perf_data);
 
+    /// \brief Get the perforations of the well
+    const std::vector<PerforationData>& perforationData() const;
+
     /// Well name.
     const std::string& name() const;
 
@@ -85,7 +88,7 @@ public:
     bool isOperableAndSolvable() const;
 
     void initCompletions();
-    void closeCompletions(WellTestState& wellTestState);
+    void closeCompletions(const WellTestState& wellTestState);
 
     void setVFPProperties(const VFPProperties* vfp_properties_arg);
     void setGuideRate(const GuideRate* guide_rate_arg);
@@ -168,6 +171,8 @@ public:
 
     // whether a well is specified with a non-zero and valid VFP table number
     bool isVFPActive(DeferredLogger& deferred_logger) const;
+
+    void reportWellSwitching(const SingleWellState& ws, DeferredLogger& deferred_logger) const;
 
 protected:
     bool getAllowCrossFlow() const;
@@ -301,6 +306,8 @@ protected:
     double well_efficiency_factor_;
     const VFPProperties* vfp_properties_;
     const GuideRate* guide_rate_;
+
+    std::vector< std::string> well_control_log_;
 };
 
 }

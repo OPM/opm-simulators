@@ -31,11 +31,11 @@ function(add_test_runSimulator)
   set(TEST_ARGS ${PARAM_TEST_ARGS})
   opm_add_test(runSimulator/${PARAM_CASENAME} NO_COMPILE
                EXE_NAME ${PARAM_SIMULATOR}
-               DRIVER_ARGS ${OPM_TESTS_ROOT}/${PARAM_DIR}
-                           ${RESULT_PATH}
-                           ${PROJECT_BINARY_DIR}/bin
-                           ${PARAM_FILENAME}
-                           ${PARAM_PROCS}
+               DRIVER_ARGS -i ${OPM_TESTS_ROOT}/${PARAM_DIR}
+                           -r ${RESULT_PATH}
+                           -b ${PROJECT_BINARY_DIR}/bin
+                           -f ${PARAM_FILENAME}
+                           -n ${PARAM_PROCS}
                TEST_ARGS ${TEST_ARGS}
                CONFIGURATION extra)
 endfunction()
@@ -50,7 +50,7 @@ endfunction()
 # Details:
 #   - This test class compares output from a simulation to reference files.
 function(add_test_compareECLFiles)
-  set(oneValueArgs CASENAME FILENAME SIMULATOR ABS_TOL REL_TOL DIR DIR_PREFIX PREFIX RESTART_STEP)
+  set(oneValueArgs CASENAME FILENAME SIMULATOR ABS_TOL REL_TOL DIR DIR_PREFIX PREFIX RESTART_STEP RESTART_SCHED)
   set(multiValueArgs TEST_ARGS)
   cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
   if(NOT PARAM_DIR)
@@ -59,20 +59,25 @@ function(add_test_compareECLFiles)
   if(NOT PARAM_PREFIX)
     set(PARAM_PREFIX compareECLFiles)
   endif()
-  if(NOT PARAM_RESTART_STEP)
-    set(PARAM_RESTART_STEP 0)
-  endif()
   set(RESULT_PATH ${BASE_RESULT_PATH}${PARAM_DIR_PREFIX}/${PARAM_SIMULATOR}+${PARAM_CASENAME})
   set(TEST_ARGS ${PARAM_TEST_ARGS})
+  set(DRIVER_ARGS -i ${OPM_TESTS_ROOT}/${PARAM_DIR}
+                  -r ${RESULT_PATH}
+                  -b ${PROJECT_BINARY_DIR}/bin
+                  -f ${PARAM_FILENAME}
+                  -a ${PARAM_ABS_TOL}
+                  -t ${PARAM_REL_TOL}
+                  -c ${COMPARE_ECL_COMMAND}
+                  -d ${RST_DECK_COMMAND})
+   if(PARAM_RESTART_STEP)
+     list(APPEND DRIVER_ARGS -s ${PARAM_RESTART_STEP})
+   endif()
+  if(PARAM_RESTART_SCHED)
+   list(APPEND DRIVER_ARGS -h ${PARAM_RESTART_SCHED})
+  endif()
   opm_add_test(${PARAM_PREFIX}_${PARAM_SIMULATOR}+${PARAM_FILENAME} NO_COMPILE
                EXE_NAME ${PARAM_SIMULATOR}
-               DRIVER_ARGS ${OPM_TESTS_ROOT}/${PARAM_DIR} ${RESULT_PATH}
-                           ${PROJECT_BINARY_DIR}/bin
-                           ${PARAM_FILENAME}
-                           ${PARAM_ABS_TOL} ${PARAM_REL_TOL}
-                           ${COMPARE_ECL_COMMAND}
-                           ${RST_DECK_COMMAND}
-                           ${PARAM_RESTART_STEP}
+               DRIVER_ARGS ${DRIVER_ARGS}
                TEST_ARGS ${TEST_ARGS})
 endfunction()
 
@@ -102,12 +107,14 @@ function(add_test_compare_restarted_simulation)
   set(RESULT_PATH ${BASE_RESULT_PATH}/restart/${PARAM_SIMULATOR}+${PARAM_CASENAME})
   opm_add_test(${TEST_NAME} NO_COMPILE
                EXE_NAME ${PARAM_SIMULATOR}
-               DRIVER_ARGS ${OPM_TESTS_ROOT}/${PARAM_DIR} ${RESULT_PATH}
-                           ${PROJECT_BINARY_DIR}/bin
-                           ${PARAM_FILENAME}
-                           ${PARAM_ABS_TOL} ${PARAM_REL_TOL}
-                           ${COMPARE_ECL_COMMAND}
-                           ${OPM_PACK_COMMAND}
+               DRIVER_ARGS -i ${OPM_TESTS_ROOT}/${PARAM_DIR}
+                           -r ${RESULT_PATH}
+                           -b ${PROJECT_BINARY_DIR}/bin
+                           -f ${PARAM_FILENAME}
+                           -a ${PARAM_ABS_TOL}
+                           -t ${PARAM_REL_TOL}
+                           -c ${COMPARE_ECL_COMMAND}
+                           -p ${OPM_PACK_COMMAND}
                TEST_ARGS ${PARAM_TEST_ARGS})
 endfunction()
 
@@ -136,11 +143,13 @@ function(add_test_compare_parallel_simulation)
   # Add test that runs flow_mpi and outputs the results to file
   opm_add_test(compareParallelSim_${PARAM_SIMULATOR}+${PARAM_FILENAME} NO_COMPILE
                EXE_NAME ${PARAM_SIMULATOR}
-               DRIVER_ARGS ${OPM_TESTS_ROOT}/${PARAM_DIR} ${RESULT_PATH}
-                           ${PROJECT_BINARY_DIR}/bin
-                           ${PARAM_FILENAME}
-                           ${PARAM_ABS_TOL} ${PARAM_REL_TOL}
-                           ${COMPARE_ECL_COMMAND}
+               DRIVER_ARGS -i ${OPM_TESTS_ROOT}/${PARAM_DIR}
+                           -r ${RESULT_PATH}
+                           -b ${PROJECT_BINARY_DIR}/bin
+                           -f ${PARAM_FILENAME}
+                           -a ${PARAM_ABS_TOL}
+                           -t ${PARAM_REL_TOL}
+                           -c ${COMPARE_ECL_COMMAND}
                TEST_ARGS ${TEST_ARGS})
   set_tests_properties(compareParallelSim_${PARAM_SIMULATOR}+${PARAM_FILENAME}
                        PROPERTIES RUN_SERIAL 1)
@@ -158,22 +167,28 @@ endfunction()
 #   - This test class compares the output from a restarted parallel simulation
 #     to that of a non-restarted parallel simulation.
 function(add_test_compare_parallel_restarted_simulation)
-  set(oneValueArgs CASENAME FILENAME SIMULATOR ABS_TOL REL_TOL DIR)
+  set(oneValueArgs CASENAME FILENAME SIMULATOR ABS_TOL REL_TOL DIR MPI_PROCS)
   set(multiValueArgs TEST_ARGS)
   cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
   if(NOT PARAM_DIR)
     set(PARAM_DIR ${PARAM_CASENAME})
   endif()
   set(RESULT_PATH ${BASE_RESULT_PATH}/parallelRestart/${PARAM_SIMULATOR}+${PARAM_CASENAME})
+  set(DRIVER_ARGS -i ${OPM_TESTS_ROOT}/${PARAM_DIR}
+                  -r ${RESULT_PATH}
+                  -b ${PROJECT_BINARY_DIR}/bin
+                  -f ${PARAM_FILENAME}
+                  -a ${PARAM_ABS_TOL}
+                  -t ${PARAM_REL_TOL}
+                  -c ${COMPARE_ECL_COMMAND}
+                  -p ${OPM_PACK_COMMAND})
+  if(PARAM_MPI_PROCS)
+    list(APPEND DRIVER_ARGS -n ${PARAM_MPI_PROCS})
+  endif()
 
   opm_add_test(compareParallelRestartedSim_${PARAM_SIMULATOR}+${PARAM_FILENAME} NO_COMPILE
                EXE_NAME ${PARAM_SIMULATOR}
-               DRIVER_ARGS ${OPM_TESTS_ROOT}/${PARAM_DIR} ${RESULT_PATH}
-                           ${PROJECT_BINARY_DIR}/bin
-                           ${PARAM_FILENAME}
-                           ${PARAM_ABS_TOL} ${PARAM_REL_TOL}
-                           ${COMPARE_ECL_COMMAND}
-                           ${OPM_PACK_COMMAND}
+               DRIVER_ARGS ${DRIVER_ARGS}
                TEST_ARGS ${PARAM_TEST_ARGS})
   set_tests_properties(compareParallelRestartedSim_${PARAM_SIMULATOR}+${PARAM_FILENAME}
                        PROPERTIES RUN_SERIAL 1)
@@ -209,6 +224,8 @@ add_test_compareECLFiles(CASENAME spe12
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${coarse_rel_tol}
+                         RESTART_SCHED false
+                         RESTART_STEP 60
                          DIR spe1)
 
 add_test_compareECLFiles(CASENAME spe1_2p
@@ -359,7 +376,8 @@ add_test_compareECLFiles(CASENAME spe9
                          FILENAME SPE9_CP_SHORT
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol})
+                         REL_TOL ${rel_tol}
+                         RESTART_STEP 10)
 
 add_test_compareECLFiles(CASENAME spe9group
                          FILENAME SPE9_CP_GROUP
@@ -989,6 +1007,13 @@ add_test_compareECLFiles(CASENAME 1_msw_model6
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR model6)
+
+add_test_compareECLFiles(CASENAME micp
+                         FILENAME MICP
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR micp)
 
 # Restart tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-restart-regressionTest.sh "")

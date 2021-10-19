@@ -21,6 +21,7 @@
 #ifndef ECL_MPI_SERIALIZER_HH
 #define ECL_MPI_SERIALIZER_HH
 
+#include <dune/common/version.hh>
 #include <opm/simulators/utils/ParallelRestart.hpp>
 
 #include <optional>
@@ -39,7 +40,7 @@ class EclMpiSerializer {
 public:
     //! \brief Constructor.
     //! \param comm The global communicator to broadcast using
-    explicit EclMpiSerializer(Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> comm) :
+    explicit EclMpiSerializer(Opm::Parallel::Communication comm) :
         m_comm(comm)
     {}
 

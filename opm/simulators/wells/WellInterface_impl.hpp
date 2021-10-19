@@ -24,6 +24,8 @@
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/TargetCalculator.hpp>
 
+#include <dune/common/version.hh>
+
 namespace Opm
 {
 
@@ -61,7 +63,6 @@ namespace Opm
                 }
             }
         }
-        well_control_log_.clear();
     }
 
 
@@ -149,6 +150,74 @@ namespace Opm
         return 0.0;
     }
 
+    template<typename TypeTag>
+    double
+    WellInterface<TypeTag>::
+    wmicrobes() const
+    {
+      if constexpr (has_micp) {
+          auto injectorType = this->well_ecl_.injectorType();
+
+          if (injectorType == InjectorType::WATER) {
+              WellMICPProperties microbes = this->well_ecl_.getMICPProperties();
+              const double microbial_injection_concentration = microbes.m_microbialConcentration;
+              return microbial_injection_concentration;
+          } else {
+              // Not a water injection well => no microbes.
+              return 0.0;
+          }
+      }
+
+      return 0.0;
+    }
+
+    template<typename TypeTag>
+    double
+    WellInterface<TypeTag>::
+    woxygen() const
+    {
+      if constexpr (has_micp) {
+          auto injectorType = this->well_ecl_.injectorType();
+
+          if (injectorType == InjectorType::WATER) {
+              WellMICPProperties oxygen = this->well_ecl_.getMICPProperties();
+              const double oxygen_injection_concentration = oxygen.m_oxygenConcentration;
+              return oxygen_injection_concentration;
+          } else {
+              // Not a water injection well => no oxygen.
+              return 0.0;
+          }
+      }
+
+      return 0.0;
+    }
+
+    // The urea injection concentration is scaled down by a factor of 10, since its value
+    // can be much bigger than 1 (not doing this slows the simulations). The
+    // corresponding values are scaled accordingly in blackoilmicpmodules.hh when computing
+    // the reactions and also when writing the output files (vtk and eclipse format, i.e.,
+    // vtkblackoilmicpmodule.hh and ecloutputblackoilmodel.hh respectively).
+
+    template<typename TypeTag>
+    double
+    WellInterface<TypeTag>::
+    wurea() const
+    {
+      if constexpr (has_micp) {
+          auto injectorType = this->well_ecl_.injectorType();
+
+          if (injectorType == InjectorType::WATER) {
+              WellMICPProperties urea = this->well_ecl_.getMICPProperties();
+              const double urea_injection_concentration = urea.m_ureaConcentration / 10.; //Dividing by scaling factor 10
+              return urea_injection_concentration;
+          } else {
+              // Not a water injection well => no urea.
+              return 0.0;
+          }
+      }
+
+      return 0.0;
+    }
 
     template<typename TypeTag>
     bool
@@ -173,11 +242,11 @@ namespace Opm
         } else {
             from = Well::ProducerCMode2String(ws.production_cmode);
         }
-        bool oscillating = std::count(well_control_log_.begin(), well_control_log_.end(), from) >= param_.max_number_of_well_switches_;
+        bool oscillating = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) >= param_.max_number_of_well_switches_;
 
         if (oscillating) {
             // only output frist time
-            bool output = std::count(well_control_log_.begin(), well_control_log_.end(), from) == param_.max_number_of_well_switches_;
+            bool output = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) == param_.max_number_of_well_switches_;
             if (output) {
                 std::ostringstream ss;
                 ss << "    The control model for well " << this->name()
@@ -187,7 +256,7 @@ namespace Opm
                    << " switches. The control is kept at " << from;
                 deferred_logger.info(ss.str());
                 // add one more to avoid outputting the same info again
-                well_control_log_.push_back(from);
+                this->well_control_log_.push_back(from);
             }
             return false;
         }
@@ -200,9 +269,7 @@ namespace Opm
             assert(iog == IndividualOrGroup::Both);
             changed = this->checkConstraints(well_state, group_state, schedule, summaryState, deferred_logger);
         }
-
-        auto cc = Dune::MPIHelper::getCollectiveCommunication();
-
+        Parallel::Communication cc = ebos_simulator.vanguard().grid().comm();
         // checking whether control changed
         if (changed) {
             std::string to;
@@ -211,7 +278,6 @@ namespace Opm
             } else {
                 to = Well::ProducerCMode2String(ws.production_cmode);
             }
-            well_control_log_.push_back(from);
             std::ostringstream ss;
             ss << "    Switching control mode for well " << this->name()
                << " from " << from
@@ -219,7 +285,9 @@ namespace Opm
             if (cc.size() > 1) {
                ss << " on rank " << cc.rank();
             }
-            deferred_logger.info(ss.str());
+            deferred_logger.debug(ss.str());
+
+            this->well_control_log_.push_back(from);
             updateWellStateWithTarget(ebos_simulator, group_state, well_state, deferred_logger);
             updatePrimaryVariables(well_state, deferred_logger);
         }
@@ -256,7 +324,7 @@ namespace Opm
         // individually. We first open all completions, then we close one by one by calling updateWellTestState
         // untill the number of closed completions do not increase anymore.
         while (testWell) {
-            const size_t original_number_closed_completions = welltest_state_temp.sizeCompletions();
+            const size_t original_number_closed_completions = welltest_state_temp.num_closed_completions();
             bool converged = solveWellForTesting(simulator, well_state_copy, group_state, deferred_logger);
             if (!converged) {
                 const auto msg = fmt::format("WTEST: Well {} is not solvable (physical)", this->name());
@@ -290,24 +358,23 @@ namespace Opm
             // Also check if number of completions has increased. If the number of closed completions do not increased
             // we stop the testing.
             // TODO: it can be tricky here, if the well is shut/closed due to other reasons
-            if ( welltest_state_temp.sizeWells() > 0 ||
-                (original_number_closed_completions == welltest_state_temp.sizeCompletions()) ) {
+            if ( welltest_state_temp.num_closed_wells() > 0 ||
+                (original_number_closed_completions == welltest_state_temp.num_closed_completions()) ) {
                     testWell = false; // this terminates the while loop
             }
         }
 
         // update wellTestState if the well test succeeds
-        if (!welltest_state_temp.hasWellClosed(this->name())) {
-            well_test_state.openWell(this->name());
+        if (!welltest_state_temp.well_is_closed(this->name())) {
+            well_test_state.open_well(this->name());
 
             std::string msg = std::string("well ") + this->name() + std::string(" is re-opened");
             deferred_logger.info(msg);
 
             // also reopen completions
             for (auto& completion : this->well_ecl_.getCompletions()) {
-                if (!welltest_state_temp.hasCompletion(this->name(), completion.first)) {
-                    well_test_state.dropCompletion(this->name(), completion.first);
-                }
+                if (!welltest_state_temp.completion_is_closed(this->name(), completion.first))
+                    well_test_state.open_completion(this->name(), completion.first);
             }
             // set the status of the well_state to open
             ws.open();
@@ -330,8 +397,15 @@ namespace Opm
         const auto& summary_state = ebosSimulator.vanguard().summaryState();
         const auto inj_controls = this->well_ecl_.isInjector() ? this->well_ecl_.injectionControls(summary_state) : Well::InjectionControls(0);
         const auto prod_controls = this->well_ecl_.isProducer() ? this->well_ecl_.productionControls(summary_state) : Well::ProductionControls(0);
-
-        return this->iterateWellEqWithControl(ebosSimulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
+        bool converged = false;
+        try {
+            converged = this->iterateWellEqWithControl(ebosSimulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
+        } catch (NumericalIssue& e ) {
+            const std::string msg = "Inner well iterations failed for well " + this->name() + " Treat the well as unconverged. ";
+            deferred_logger.warning("INNER_ITERATION_FAILED", msg);
+            converged = false;
+        }
+        return converged;
     }
 
 
@@ -404,7 +478,7 @@ namespace Opm
 
             // unsolvable wells are treated as not operable and will not be solved for in this iteration.
             if (!converged) {
-                if (this->shutUnsolvableWells())
+                if (param_.shut_unsolvable_wells_)
                     this->operability_status_.solvable = false;
             }
         }
@@ -477,34 +551,12 @@ namespace Opm
             return;
         }
 
-        // focusing on PRODUCER for now
-        if (this->isInjector()) {
-            return;
-        }
-
-        if (!this->underPredictionMode() ) {
-            return;
-        }
-
         if (this->wellIsStopped() && !changed_to_stopped_this_step_) {
             return;
         }
 
         updateWellOperability(ebos_simulator, well_state, deferred_logger);
     }
-
-
-    template<typename TypeTag>
-    bool
-    WellInterface<TypeTag>::
-    shutUnsolvableWells() const
-    {
-        bool shut_unsolvable_wells = param_.shut_unsolvable_wells_;
-        // the well operability system currently works only for producers in prediction mode
-        return shut_unsolvable_wells && !this->isInjector() && this->underPredictionMode();
-    }
-
-
 
 
 
@@ -517,16 +569,20 @@ namespace Opm
     {
         this->operability_status_.resetOperability();
 
-        auto current_control = well_state.well(this->index_of_well_).production_cmode;
+        bool thp_controled = this->isInjector() ? well_state.well(this->index_of_well_).injection_cmode == Well::InjectorCMode::THP:
+                                              well_state.well(this->index_of_well_).production_cmode == Well::ProducerCMode::THP;
+        bool bhp_controled = this->isInjector() ? well_state.well(this->index_of_well_).injection_cmode == Well::InjectorCMode::BHP:
+                                              well_state.well(this->index_of_well_).production_cmode == Well::ProducerCMode::BHP;
+
         // Operability checking is not free
         // Only check wells under BHP and THP control
-        if(current_control == Well::ProducerCMode::BHP || current_control == Well::ProducerCMode::THP) {
+        if(bhp_controled || thp_controled) {
             updateIPR(ebos_simulator, deferred_logger);
-            checkOperabilityUnderBHPLimitProducer(well_state, ebos_simulator, deferred_logger);
+            checkOperabilityUnderBHPLimit(well_state, ebos_simulator, deferred_logger);
         }
         // we do some extra checking for wells under THP control.
-        if (current_control == Well::ProducerCMode::THP) {
-            checkOperabilityUnderTHPLimitProducer(ebos_simulator, well_state, deferred_logger);
+        if (thp_controled) {
+            checkOperabilityUnderTHPLimit(ebos_simulator, well_state, deferred_logger);
         }
     }
 

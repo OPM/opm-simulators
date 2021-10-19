@@ -39,6 +39,7 @@
 #include <opm/models/blackoil/blackoilextbomodules.hh>
 #include <opm/models/blackoil/blackoilfoammodules.hh>
 #include <opm/models/blackoil/blackoilbrinemodules.hh>
+#include <opm/models/blackoil/blackoilmicpmodules.hh>
 
 #include <opm/material/densead/DynamicEvaluation.hpp>
 #include <opm/parser/eclipse/EclipseState/Runspec.hpp>
@@ -95,6 +96,7 @@ namespace Opm
         using Base::has_foam;
         using Base::has_brine;
         using Base::has_energy;
+        using Base::has_micp;
 
         using PolymerModule =  BlackOilPolymerModule<TypeTag>;
         using FoamModule = BlackOilFoamModule<TypeTag>;
@@ -359,7 +361,8 @@ namespace Opm
                                             DeferredLogger& deferred_logger) const;
 
         void updatePrimaryVariablesNewton(const BVectorWell& dwells,
-                                          const WellState& well_state) const;
+                                          const WellState& well_state,
+                                          DeferredLogger& deferred_logger) const;
 
         // update extra primary vriables if there are any
         void updateExtraPrimaryVariables(const BVectorWell& dwells) const;
@@ -391,10 +394,10 @@ namespace Opm
                                  DeferredLogger& deferred_logger) const;
 
         // check whether the well is operable under BHP limit with current reservoir condition
-        virtual void checkOperabilityUnderBHPLimitProducer(const WellState& well_state, const Simulator& ebos_simulator, DeferredLogger& deferred_logger) override;
+        virtual void checkOperabilityUnderBHPLimit(const WellState& well_state, const Simulator& ebos_simulator, DeferredLogger& deferred_logger) override;
 
         // check whether the well is operable under THP limit with current reservoir condition
-        virtual void checkOperabilityUnderTHPLimitProducer(const Simulator& ebos_simulator, const WellState& well_state, DeferredLogger& deferred_logger) override;
+        virtual void checkOperabilityUnderTHPLimit(const Simulator& ebos_simulator, const WellState& well_state, DeferredLogger& deferred_logger) override;
 
         // updating the inflow based on the current reservoir condition
         virtual void updateIPR(const Simulator& ebos_simulator, DeferredLogger& deferred_logger) const override;

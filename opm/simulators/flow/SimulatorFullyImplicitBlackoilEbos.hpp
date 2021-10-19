@@ -83,6 +83,7 @@ public:
 
     typedef AdaptiveTimeSteppingEbos<TypeTag> TimeStepper;
     typedef BlackOilPolymerModule<TypeTag> PolymerModule;
+    typedef BlackOilMICPModule<TypeTag> MICPModule;
 
     typedef BlackoilModelEbos<TypeTag> Model;
     typedef NonlinearSolverEbos<TypeTag, Model> Solver;
@@ -170,7 +171,10 @@ public:
         if (enableAdaptive) {
             const UnitSystem& unitSystem = this->ebosSimulator_.vanguard().eclState().getUnits();
             if (enableTUNING) {
-                adaptiveTimeStepping_ = std::make_unique<TimeStepper>(schedule()[timer.currentStepNum()].tuning(),
+                const auto& sched_state = schedule()[timer.currentStepNum()];
+                auto max_next_tstep = sched_state.max_next_tstep();
+                adaptiveTimeStepping_ = std::make_unique<TimeStepper>(max_next_tstep,
+                                                                      sched_state.tuning(),
                                                                       unitSystem, terminalOutput_);
             }
             else {
@@ -243,7 +247,10 @@ public:
             const auto& events = schedule()[timer.currentStepNum()].events();
             if (enableTUNING) {
                 if (events.hasEvent(ScheduleEvents::TUNING_CHANGE)) {
-                    adaptiveTimeStepping_->updateTUNING(schedule()[timer.currentStepNum()].tuning());
+                    const auto& sched_state = schedule()[timer.currentStepNum()];
+                    const auto& tuning = sched_state.tuning();
+                    const auto& max_next_tstep = sched_state.max_next_tstep();
+                    adaptiveTimeStepping_->updateTUNING(max_next_tstep, tuning);
                 }
             }
             bool event = events.hasEvent(ScheduleEvents::NEW_WELL) ||

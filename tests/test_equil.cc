@@ -26,8 +26,10 @@
 
 #include <ebos/equil/equilibrationhelpers.hh>
 #include <ebos/eclproblem.hh>
-#include <ebos/eclwellmanager.hh>
 #include <opm/models/utils/start.hh>
+
+#include <opm/simulators/wells/BlackoilWellModel.hpp>
+#include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
 
 #include <opm/grid/UnstructuredGrid.h>
 #include <opm/grid/GridManager.hpp>
@@ -64,16 +66,23 @@
 
 
 namespace Opm::Properties {
+
+template<class TypeTag>
+struct EnableTerminalOutput<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = true;
+};
+
 namespace TTag {
 
+
 struct TestEquilTypeTag {
-    using InheritsFrom = std::tuple<EclBaseProblem, BlackOilModel>;
+    using InheritsFrom = std::tuple<FlowModelParameters, EclBaseProblem, BlackOilModel>;
 };
 }
 
 template<class TypeTag>
 struct EclWellModel<TypeTag, TTag::TestEquilTypeTag> {
-    using type = EclWellManager<TypeTag>;
+    using type = BlackoilWellModel<TypeTag>;
 };
 
 } // namespace Opm::Properties
@@ -199,14 +208,20 @@ namespace {
 
 struct EquilFixture {
     EquilFixture() {
-    int argc = boost::unit_test::framework::master_test_suite().argc;
-    char** argv = boost::unit_test::framework::master_test_suite().argv;
+        int argc = boost::unit_test::framework::master_test_suite().argc;
+        char** argv = boost::unit_test::framework::master_test_suite().argv;
 #if HAVE_DUNE_FEM
-    Dune::Fem::MPIManager::initialize(argc, argv);
+        Dune::Fem::MPIManager::initialize(argc, argv);
 #else
-    Dune::MPIHelper::instance(argc, argv);
+        Dune::MPIHelper::instance(argc, argv);
 #endif
+        Opm::EclGenericVanguard::setCommunication(std::make_unique<Opm::Parallel::Communication>());
         using TypeTag = Opm::Properties::TTag::TestEquilTypeTag;
+        Opm::BlackoilModelParametersEbos<TypeTag>::registerParameters();
+        Opm::Parameters::registerParam<TypeTag, bool>("EnableTerminalOutput",
+                                                      "EnableTerminalOutput",
+                                                      Opm::getPropValue<TypeTag, Opm::Properties::EnableTerminalOutput>(),
+                                                      "Dummy added for the well model to compile.");
         Opm::registerAllParameters_<TypeTag>();
     }
 };

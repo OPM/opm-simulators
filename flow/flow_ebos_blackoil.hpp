@@ -27,12 +27,18 @@ template<class TypeTag> class FlowMainEbos;
 class Schedule;
 class SummaryConfig;
 class UDQState;
+class WellTestState;
+namespace Action {
+class State;
+}
 namespace Properties { namespace TTag { struct EclFlowProblem; } }
 
 void flowEbosBlackoilSetDeck(double setupTime, std::shared_ptr<Deck> deck,
                              std::shared_ptr<EclipseState> eclState,
                              std::shared_ptr<Schedule> schedule,
                              std::unique_ptr<UDQState> udqState,
+                             std::unique_ptr<Action::State> actionState,
+                             std::unique_ptr<WellTestState> wtestState,
                              std::shared_ptr<SummaryConfig> summaryConfig);
 
 int flowEbosBlackoilMain(int argc, char** argv, bool outputCout, bool outputFiles);

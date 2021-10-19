@@ -68,6 +68,7 @@ private:
     std::unique_ptr<cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg> > dot_k;
     std::unique_ptr<cl::make_kernel<cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg> > norm_k;
     std::unique_ptr<cl::make_kernel<cl::Buffer&, const double, cl::Buffer&, const unsigned int> > axpy_k;
+    std::unique_ptr<cl::make_kernel<cl::Buffer&, const double, const unsigned int> > scale_k;
     std::unique_ptr<cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const double, const double, const unsigned int> > custom_k;
     std::unique_ptr<spmv_kernel_type> spmv_blocked_k;
     std::shared_ptr<ilu_apply1_kernel_type> ILU_apply1_k;
@@ -110,6 +111,11 @@ private:
     /// \param[in] a          scalar value to multiply input vector
     /// \param[inout] out     output vector
     void axpy_w(cl::Buffer in, const double a, cl::Buffer out);
+
+    /// Perform scale: vec *= a
+    /// \param[inout] vec     vector to scale
+    /// \param[in] a          scalar value to multiply vector
+    void scale_w(cl::Buffer vec, const double a);
 
     /// Custom function that combines scale, axpy and add functions in bicgstab
     /// p = (p - omega * v) * beta + r

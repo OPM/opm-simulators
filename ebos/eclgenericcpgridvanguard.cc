@@ -58,7 +58,7 @@ template<class ElementMapper, class GridView, class Scalar>
 EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::EclGenericCpGridVanguard()
 {
 #if HAVE_MPI
-    MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
+    MPI_Comm_rank(EclGenericVanguard::comm(), &mpiRank);
 #else
   mpiRank = 0;
 #endif
@@ -85,7 +85,7 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doLoadBalance_(Dun
                                                                              EclGenericVanguard::ParallelWellStruct& parallelWells)
 {
     int mpiSize = 1;
-    MPI_Comm_size(MPI_COMM_WORLD, &mpiSize);
+    MPI_Comm_size(grid_->comm(), &mpiSize);
 
     if (mpiSize > 1) {
         // the CpGrid's loadBalance() method likes to have the transmissibilities as
@@ -185,7 +185,7 @@ template<class ElementMapper, class GridView, class Scalar>
 void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::distributeFieldProps_(EclipseState& eclState1)
 {
     int mpiSize = 1;
-    MPI_Comm_size(MPI_COMM_WORLD, &mpiSize);
+    MPI_Comm_size(grid_->comm(), &mpiSize);
 
     if (mpiSize > 1) {
         try
@@ -221,12 +221,19 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Ecl
         OpmLog::info("\nProcessing grid");
     }
 
-    grid_.reset(new Dune::CpGrid());
-    const auto& removed_cells = grid_->processEclipseFormat(input_grid,
-                                                            &eclState,
-                                                            /*isPeriodic=*/false,
-                                                            /*flipNormals=*/false,
-                                                            /*clipZ=*/false);
+#if HAVE_MPI
+    this->grid_ = std::make_unique<Dune::CpGrid>(EclGenericVanguard::comm());
+#else
+    this->grid_ = std::make_unique<Dune::CpGrid>();
+#endif
+
+    // Note: removed_cells is guaranteed to be empty on ranks other than 0.
+    auto removed_cells =
+        this->grid_->processEclipseFormat(input_grid,
+                                          &eclState,
+                                          /*isPeriodic=*/false,
+                                          /*flipNormals=*/false,
+                                          /*clipZ=*/false);
 
     if (mpiRank == 0) {
         const auto& active_porv = eclState.fieldProps().porv(false);
@@ -247,7 +254,6 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Ecl
                                      volume_unit,
                                      100 * removed_pore_volume / total_pore_volume));
         }
-
     }
 
     cartesianIndexMapper_ = std::make_unique<CartesianIndexMapper>(*grid_);
@@ -256,12 +262,14 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Ecl
     {
         const bool has_numerical_aquifer = eclState.aquifer().hasNumericalAquifer();
         int mpiSize = 1;
-        MPI_Comm_size(MPI_COMM_WORLD, &mpiSize);
-        // when there is numerical aquifers, new NNC are generated during grid processing
-        // we need to pass the NNC from root process to other processes
+        MPI_Comm_size(grid_->comm(), &mpiSize);
+
+        // when there is numerical aquifers, new NNC are generated during
+        // grid processing we need to pass the NNC from root process to
+        // other processes
         if (has_numerical_aquifer && mpiSize > 1) {
             auto nnc_input = eclState.getInputNNC();
-            EclMpiSerializer ser(Dune::MPIHelper::getCollectiveCommunication());
+            EclMpiSerializer ser(grid_->comm());
             ser.broadcast(nnc_input);
             if (mpiRank > 0) {
                 eclState.setInputNNC(nnc_input);
@@ -270,21 +278,37 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Ecl
     }
 #endif
 
-    // we use separate grid objects: one for the calculation of the initial condition
-    // via EQUIL and one for the actual simulation. The reason is that the EQUIL code
-    // is allergic to distributed grids and the simulation grid is distributed before
-    // the initial condition is calculated.
-    // After loadbalance grid_ will contain a global and distribute view.
-    // equilGrid_being a shallow copy only the global view.
+    // We use separate grid objects: one for the calculation of the initial
+    // condition via EQUIL and one for the actual simulation. The reason is
+    // that the EQUIL code is allergic to distributed grids and the
+    // simulation grid is distributed before the initial condition is
+    // calculated.
+    //
+    // After loadbalance, grid_ will contain a global and distribute view.
+    // equilGrid_ being a shallow copy only the global view.
     if (mpiRank == 0)
     {
         equilGrid_.reset(new Dune::CpGrid(*grid_));
         equilCartesianIndexMapper_ = std::make_unique<CartesianIndexMapper>(*equilGrid_);
 
-        std::vector<int> actnum = UgGridHelpers::createACTNUM(*grid_);
-        auto &field_props = eclState.fieldProps();
-        const_cast<FieldPropsManager&>(field_props).reset_actnum(actnum);
+        eclState.reset_actnum(UgGridHelpers::createACTNUM(*grid_));
     }
+
+    {
+        auto size = removed_cells.size();
+
+        this->grid_->comm().broadcast(&size, 1, 0);
+
+        if (mpiRank != 0) {
+            removed_cells.resize(size);
+        }
+
+        this->grid_->comm().broadcast(removed_cells.data(), size, 0);
+    }
+
+    // Inform the aquifer object that we might have removed/deactivated
+    // cells as part of minimum pore-volume threshold processing.
+    eclState.pruneDeactivatedAquiferConnections(removed_cells);
 }
 
 template<class ElementMapper, class GridView, class Scalar>
@@ -306,7 +330,7 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doFilterConnection
     {
         // Broadcast another time to remove inactive peforations on
         // slave processors.
-        eclScheduleBroadcast(schedule);
+        eclScheduleBroadcast(EclGenericVanguard::comm(), schedule);
     }
     catch(const std::exception& broadcast_error)
     {
