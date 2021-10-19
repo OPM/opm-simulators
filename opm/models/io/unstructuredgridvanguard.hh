@@ -28,8 +28,9 @@
 #include <opm/models/utils/parametersystem.hh>
 #include <opm/models/utils/propertysystem.hh>
 
+#ifdef HAVE_OPM_GRID
 #include "opm/grid/UnstructuredGrid.h"
-
+#endif
 
 namespace Opm {
 /*!
@@ -62,7 +63,7 @@ class UnstructuredGridVanguard : public BaseVanguard<TypeTag> {
      * \brief Load the grid from the file.
      */
     UnstructuredGridVanguard(Simulator& simulator) : ParentType(simulator){
-
+#ifdef HAVE_OPM_GRID
         const std::string gridFileName = EWOMS_GET_PARAM(TypeTag, std::string, GridFile);
         unsigned numRefinments = EWOMS_GET_PARAM(TypeTag, unsigned, GridGlobalRefinements);
 
@@ -82,6 +83,7 @@ class UnstructuredGridVanguard : public BaseVanguard<TypeTag> {
             gridPtr_->globalRefine(static_cast<int>(numRefinments));
         }
         this->finalizeInit_();
+#endif
     }
 
     /*!
