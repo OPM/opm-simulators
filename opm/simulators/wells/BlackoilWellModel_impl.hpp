@@ -52,10 +52,13 @@ namespace Opm {
         global_num_cells_ = ebosSimulator_.vanguard().globalNumCells();
 
         // Set up parallel wells
+        auto& parallel_wells = ebosSimulator.vanguard().parallelWells();
+
+        this->parallel_well_info_.reserve(parallel_wells.size());
+        for( const auto& name_bool: parallel_wells)
         {
-            auto& parallel_wells = ebosSimulator.vanguard().parallelWells();
-            this->parallel_well_info_.assign(parallel_wells.begin(),
-                                             parallel_wells.end());
+            this->parallel_well_info_.emplace_back(name_bool,
+                                                   ebosSimulator_.gridView().comm());
         }
 
         this->alternative_well_rate_init_ =
