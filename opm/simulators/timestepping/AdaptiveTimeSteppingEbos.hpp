@@ -587,14 +587,14 @@ namespace Opm {
                             // Close all consistently failing wells.
                             int num_shut_wells = 0;
                             for (const auto& well : failing_wells) {
-                                bool was_shut = solver.model().wellModel().forceShutWellByNameIfPredictionMode(well, substepTimer.simulationTimeElapsed());
+                                bool was_shut = solver.model().wellModel().forceShutWellByName(well, substepTimer.simulationTimeElapsed());
                                 if (was_shut) {
                                     ++num_shut_wells;
                                 }
                             }
                             if (num_shut_wells == 0) {
-                                // None of the problematic wells were prediction wells,
-                                // so none were shut. We must fall back to chopping again.
+                                // None of the problematic wells were shut.
+                                // We must fall back to chopping again.
                                 chopTimestep();
                             } else {
                                 substepTimer.provideTimeStepEstimate(dt);

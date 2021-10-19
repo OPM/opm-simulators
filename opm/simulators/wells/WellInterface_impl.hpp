@@ -478,7 +478,7 @@ namespace Opm
 
             // unsolvable wells are treated as not operable and will not be solved for in this iteration.
             if (!converged) {
-                if (this->shutUnsolvableWells())
+                if (param_.shut_unsolvable_wells_)
                     this->operability_status_.solvable = false;
             }
         }
@@ -551,29 +551,12 @@ namespace Opm
             return;
         }
 
-        if (!this->underPredictionMode() ) {
-            return;
-        }
-
         if (this->wellIsStopped() && !changed_to_stopped_this_step_) {
             return;
         }
 
         updateWellOperability(ebos_simulator, well_state, deferred_logger);
     }
-
-
-    template<typename TypeTag>
-    bool
-    WellInterface<TypeTag>::
-    shutUnsolvableWells() const
-    {
-        bool shut_unsolvable_wells = param_.shut_unsolvable_wells_;
-        // the well operability system currently works only for producers in prediction mode
-        return shut_unsolvable_wells && this->underPredictionMode();
-    }
-
-
 
 
 

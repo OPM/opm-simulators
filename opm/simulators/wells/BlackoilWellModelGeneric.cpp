@@ -1586,18 +1586,16 @@ hasTHPConstraints() const
 
 bool
 BlackoilWellModelGeneric::
-forceShutWellByNameIfPredictionMode(const std::string& wellname,
-                                    const double simulation_time)
+forceShutWellByName(const std::string& wellname,
+                    const double simulation_time)
 {
     // Only add the well to the closed list on the
     // process that owns it.
     int well_was_shut = 0;
     for (const auto& well : well_container_generic_) {
         if (well->name() == wellname && !well->wellIsStopped()) {
-            if (well->underPredictionMode()) {
-                wellTestState().close_well(wellname, WellTestConfig::Reason::PHYSICAL, simulation_time);
-                well_was_shut = 1;
-            }
+            wellTestState().close_well(wellname, WellTestConfig::Reason::PHYSICAL, simulation_time);
+            well_was_shut = 1;
             break;
         }
     }
