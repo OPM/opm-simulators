@@ -202,10 +202,6 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
     double rho, rhop, beta, alpha, omega, tmp1, tmp2;
     double norm, norm_0;
 
-    if(wellContribs.getNumWells() > 0){
-        // wellContribs.setKernel(stdwell_apply_k.get(), stdwell_apply_no_reorder_k.get());
-    }
-
     Timer t_total, t_prec(false), t_spmv(false), t_well(false), t_rest(false);
 
     // set r to the initial residual

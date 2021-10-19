@@ -309,6 +309,49 @@ void OpenclKernels::ILU_decomp(int firstRow, int lastRow, cl::Buffer& vals, cl::
     }
 }
 
+void OpenclKernels::apply_stdwells_reorder(cl::Buffer& d_Cnnzs_ocl, cl::Buffer &d_Dnnzs_ocl, cl::Buffer &d_Bnnzs_ocl,
+    cl::Buffer &d_Ccols_ocl, cl::Buffer &d_Bcols_ocl, cl::Buffer &d_x, cl::Buffer &d_y,
+    cl::Buffer &d_toOrder, int dim, int dim_wells, cl::Buffer &d_val_pointers_ocl, int num_std_wells)
+{
+    const unsigned int work_group_size = 32;
+    const unsigned int total_work_items = num_std_wells * work_group_size;
+    const unsigned int lmem1 = sizeof(double) * work_group_size;
+    const unsigned int lmem2 = sizeof(double) * dim_wells;
+    Timer t_apply_stdwells;
+
+    cl::Event event = (*stdwell_apply_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)),
+                          d_Cnnzs_ocl, d_Dnnzs_ocl, d_Bnnzs_ocl, d_Ccols_ocl, d_Bcols_ocl, d_x, d_y, d_toOrder, dim, dim_wells, d_val_pointers_ocl,
+                          cl::Local(lmem1), cl::Local(lmem2), cl::Local(lmem2));
+
+    if (verbosity >= 4) {
+        event.wait();
+        std::ostringstream oss;
+        oss << std::scientific << "OpenclKernels apply_stdwells() time: " << t_apply_stdwells.stop() << " s";
+        OpmLog::info(oss.str());
+    }
+}
+
+void OpenclKernels::apply_stdwells_no_reorder(cl::Buffer& d_Cnnzs_ocl, cl::Buffer &d_Dnnzs_ocl, cl::Buffer &d_Bnnzs_ocl,
+    cl::Buffer &d_Ccols_ocl, cl::Buffer &d_Bcols_ocl, cl::Buffer &d_x, cl::Buffer &d_y,
+    int dim, int dim_wells, cl::Buffer &d_val_pointers_ocl, int num_std_wells)
+{
+    const unsigned int work_group_size = 32;
+    const unsigned int total_work_items = num_std_wells * work_group_size;
+    const unsigned int lmem1 = sizeof(double) * work_group_size;
+    const unsigned int lmem2 = sizeof(double) * dim_wells;
+    Timer t_apply_stdwells;
+
+    cl::Event event = (*stdwell_apply_no_reorder_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)),
+                          d_Cnnzs_ocl, d_Dnnzs_ocl, d_Bnnzs_ocl, d_Ccols_ocl, d_Bcols_ocl, d_x, d_y, dim, dim_wells, d_val_pointers_ocl,
+                          cl::Local(lmem1), cl::Local(lmem2), cl::Local(lmem2));
+
+    if (verbosity >= 4) {
+        event.wait();
+        std::ostringstream oss;
+        oss << std::scientific << "OpenclKernels apply_stdwells() time: " << t_apply_stdwells.stop() << " s";
+        OpmLog::info(oss.str());
+    }
+}
 
 
     std::string OpenclKernels::get_axpy_string() {
