@@ -435,7 +435,8 @@ private:
                                                     salinity_[regionIdx],
                                                     /*knownPhaseIdx=*/-1,
                                                     xlCO2,
-                                                    xgH2O);
+                                                    xgH2O,
+                                                    extrapolate);
 
         // normalize the phase compositions
         xlCO2 = max(0.0, min(1.0, xlCO2));
