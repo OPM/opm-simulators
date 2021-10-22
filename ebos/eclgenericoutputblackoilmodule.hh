@@ -47,6 +47,14 @@ class EclipseState;
 template<class FluidSystem, class Scalar>
 class EclGenericOutputBlackoilModule {
 public:
+     Scalar* getPRESSURE_ptr(void) {
+        return (this->oilPressure_.data()) ;
+    };
+    
+    int  getPRESSURE_size( void ) {
+        return (this->oilPressure_.size()) ;
+    };
+    
     // write cumulative production and injection reports to output
     void outputCumLog(size_t reportStepNum,
                       const bool substep,

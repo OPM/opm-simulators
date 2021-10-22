@@ -44,6 +44,7 @@ set (opm-simulators_DEPS
   "opm-material REQUIRED"
   "opm-grid REQUIRED"
   "opm-models REQUIRED"
+  "Damaris 1.7"
   )
 
 find_package_deps(opm-simulators)

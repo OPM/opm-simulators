@@ -74,6 +74,10 @@
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
 #endif
 
+#if HAVE_DAMARIS
+#include <opm/simulators/utils/DamarisOutputModule.hpp>
+#endif
+
 #include <cassert>
 #include <cstdlib>
 #include <filesystem>
@@ -165,6 +169,13 @@ public:
 #endif // HAVE_MPI
 
         EclGenericVanguard::setCommunication(nullptr);
+        
+#if  HAVE_DAMARIS  
+        int err = damaris_finalize();
+        if (err != DAMARIS_OK ) {
+            std::cerr << "ERROR: Damaris library produced an error result for damaris_initialize()" << std::endl;
+        }
+#endif
 
 #if HAVE_MPI && !HAVE_DUNE_FEM
         MPI_Finalize();
@@ -381,7 +392,7 @@ private:
         int mpiRank = Dune::Fem::MPIManager::rank();
 #else
         int mpiRank = EclGenericVanguard::comm().rank();
-#endif
+#endif // HAVE_DUNE_FEM
 
         // we always want to use the default locale, and thus spare us the trouble
         // with incorrect locale settings.
@@ -483,6 +494,27 @@ private:
             int output_param = EWOMS_GET_PARAM(PreTypeTag, int, EclOutputInterval);
             if (output_param >= 0)
                 outputInterval = output_param;
+
+#if  HAVE_DAMARIS
+            if (EWOMS_GET_PARAM(PreTypeTag, bool, EnableDamarisOutput)) {
+            // By default EnableAsyncDamarisOutput is false so FilePerCore Mode is used in Damaris so  all the simulation results 
+            // in each node are aggregated by dedicated cores and stored asynchronously at the end of each iteration.
+               if (EWOMS_GET_PARAM(PreTypeTag, bool, EnableAsyncDamarisOutput))
+                   enableAsyncDamarisOutput = true;
+            // Using the ModifyModel class to set the XML file for Damaris.
+            // If EnableAsyncDamarisOutput is enabled, all simulation results will 
+            // be written into one single file for each iteration using Parallel HDF5.
+            DamarisOutput::initializeDamaris(EclGenericVanguard::comm(),  mpiRank, outputDir, enableAsyncDamarisOutput);
+            int is_client;
+            MPI_Comm new_comm;
+            int err = damaris_start(&is_client) ;
+            isSimulationRank_ = (is_client > 0) ;
+            if (isSimulationRank_) {
+                damaris_client_comm_get (&new_comm) ;
+                EclGenericVanguard::setCommunication(std::make_unique<Parallel::Communication>(new_comm));
+                }    
+            }
+ #endif // HAVE_DAMARIS
 
             readDeck(EclGenericVanguard::comm(), deckFilename, deck_, eclipseState_, schedule_, udqState_, actionState_, wtestState_,
                      summaryConfig_, nullptr, python, std::move(parseContext),
@@ -787,6 +819,8 @@ private:
     // To demonstrate run with non_world_comm
     bool test_split_comm_ = false;
     bool isSimulationRank_ = true;
+    // To use Damaris with parallel HDF5: Asynchronous Output using a separate core 
+    bool enableAsyncDamarisOutput = false;
 };
 
 } // namespace Opm

@@ -66,6 +66,8 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/utils/PartiallySupportedFlowKeywords.cpp
   opm/simulators/utils/readDeck.cpp
   opm/simulators/utils/UnsupportedFlowKeywords.cpp
+  opm/simulators/utils/DamarisOutputModule.cpp
+  opm/simulators/utils/DamarisKeywords.cpp
   opm/simulators/timestepping/AdaptiveSimulatorTimer.cpp
   opm/simulators/timestepping/AdaptiveTimeSteppingEbos.cpp
   opm/simulators/timestepping/TimeStepControl.cpp

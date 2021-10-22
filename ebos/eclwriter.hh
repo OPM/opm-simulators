@@ -39,8 +39,9 @@
 
 #include <dune/grid/common/partitionset.hh>
 
-#include <limits>
-#include <stdexcept>
+#if HAVE_DAMARIS
+#include <opm/simulators/utils/DamarisOutputModule.hpp>
+#endif
 #include <string>
 
 namespace Opm::Properties {
@@ -58,10 +59,17 @@ struct EclOutputDoublePrecision {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
+struct EnableDamarisOutput {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct EnableAsyncDamarisOutput {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
 struct EnableEsmry {
     using type = UndefinedProperty;
 };
-
 } // namespace Opm::Properties
 
 namespace Opm {
@@ -116,6 +124,8 @@ public:
 
         EWOMS_REGISTER_PARAM(TypeTag, bool, EnableAsyncEclOutput,
                              "Write the ECL-formated results in a non-blocking way (i.e., using a separate thread).");
+        EWOMS_REGISTER_PARAM(TypeTag, bool, EnableAsyncDamarisOutput,
+                             "Write specific variable in parallel using Damaris (i.e., using parallel HDF5).");                     
         EWOMS_REGISTER_PARAM(TypeTag, bool, EnableEsmry,
                              "Write ESMRY file for fast loading of summary data.");
     }
@@ -135,6 +145,10 @@ public:
                    EWOMS_GET_PARAM(TypeTag, bool, EnableAsyncEclOutput), EWOMS_GET_PARAM(TypeTag, bool, EnableEsmry))
         , simulator_(simulator)
     {
+#ifdef HAVE_DAMARIS
+      if (enableDamarisOutput_())  
+          this->damarisUpdate = true ; 
+#endif         
         this->eclOutputModule_ = std::make_unique<EclOutputBlackOilModule<TypeTag>>(simulator, this->wbp_index_list_, this->collectToIORank_);
         this->wbp_index_list_.clear();
     }
@@ -280,11 +294,34 @@ public:
 
     void writeOutput(bool isSubStep)
     {
+        
         const int reportStepNum = simulator_.episodeIndex() + 1;
-
         this->prepareLocalCellData(isSubStep, reportStepNum);
         this->eclOutputModule_->outputErrorLog(simulator_.gridView().comm());
+        
+#ifdef HAVE_DAMARIS  
+       if (EWOMS_GET_PARAM(TypeTag, bool, EnableDamarisOutput)) {    
+       /* N.B. damarisUpdate should be set to true if at any time the model geometry changes */                         
+          if (this->damarisUpdate == true)
+          {
+              const auto& gridView = simulator_.gridView();
+              const int numElements = gridView.size(/*codim=*/0);  // I think this might be the full model size? No, it is the local ranks model size
+              Opm::DamarisOutput::setupDamarisWritingPars(simulator_.vanguard().grid().comm(), numElements);
+              // By defauls we assume static grid                         
+              this->damarisUpdate = false;
+          }
 
+          if (! isSubStep) {
+              data::Solution localCellData = {};
+              this->eclOutputModule_->assignToSolution(localCellData);
+              // Output the PRESSURE field
+              if (this->eclOutputModule_->getPRESSURE_ptr() != nullptr) {
+                  damaris_write("PRESSURE",  (void *) this->eclOutputModule_->getPRESSURE_ptr());
+                  damaris_end_iteration( );
+              }
+          }
+       }
+#else           
         // output using eclWriter if enabled
         auto localWellData = simulator_.problem().wellModel().wellData();
         auto localGroupAndNetworkData = simulator_.problem().wellModel()
@@ -328,6 +365,7 @@ public:
                                 curTime, nextStepSize,
                                 EWOMS_GET_PARAM(TypeTag, bool, EclOutputDoublePrecision));
         }
+#endif         
     }
 
     void beginRestart()
@@ -422,6 +460,9 @@ public:
 private:
     static bool enableEclOutput_()
     { return EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput); }
+    
+    static bool enableDamarisOutput_()
+    { return EWOMS_GET_PARAM(TypeTag, bool, EnableDamarisOutput); }
 
     const EclipseState& eclState() const
     { return simulator_.vanguard().eclState(); }
@@ -503,6 +544,9 @@ private:
     Simulator& simulator_;
     std::unique_ptr<EclOutputBlackOilModule<TypeTag>> eclOutputModule_;
     Scalar restartTimeStepSize_;
+#ifdef HAVE_DAMARIS
+    bool damarisUpdate ;  ///< Whenever this is true writeOutput() will set up Damris offsets of model fields
+#endif
 };
 } // namespace Opm
 
