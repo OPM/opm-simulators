@@ -279,7 +279,8 @@ namespace Opm
     private:
         int dispatchDynamic_()
         {
-            const auto& phases = eclipseState_->runspec().phases();
+            const auto& rspec = this->eclipseState_->runspec();
+            const auto& phases = rspec.phases();
 
             // run the actual simulator
             //
@@ -290,18 +291,10 @@ namespace Opm
 
 #ifndef FLOW_BLACKOIL_ONLY
             // Single-phase case
-            else if( eclipseState_->runspec().micp() ) {
-              // micp
-              if ( !phases.active( Phase::WATER) || phases.size() > 2) {
-                if (outputCout_)
-                std::cerr << "No valid configuration is found for MICP simulation, the only valid option is "
-                      << "water + MICP" << std::endl;
-                return EXIT_FAILURE;
+            else if (rspec.micp()) {
+                return this->runMICP(phases);
             }
-            flowEbosMICPSetDeck(
-                        setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
-                    return flowEbosMICPMain(argc_, argv_, outputCout_, outputFiles_);
-            }
+
             // Twophase cases
             else if (phases.size() == 2) {
                 return this->runTwoPhase(phases);
@@ -553,6 +546,29 @@ namespace Opm
         }
 
 #ifndef FLOW_BLACKOIL_ONLY
+        int runMICP(const Phases& phases)
+        {
+            if (!phases.active(Phase::WATER) || (phases.size() > 2)) {
+                if (outputCout_) {
+                    std::cerr << "No valid configuration is found for MICP simulation, "
+                              << "the only valid option is water + MICP\n";
+                }
+
+                return EXIT_FAILURE;
+            }
+
+            flowEbosMICPSetDeck(this->setupTime_,
+                                this->deck_,
+                                this->eclipseState_,
+                                this->schedule_,
+                                this->summaryConfig_);
+
+            return flowEbosMICPMain(this->argc_,
+                                    this->argv_,
+                                    this->outputCout_,
+                                    this->outputFiles_);
+        }
+
         int runTwoPhase(const Phases& phases)
         {
             // oil-gas
