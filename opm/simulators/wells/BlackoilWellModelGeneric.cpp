@@ -44,8 +44,11 @@
 
 #include <algorithm>
 #include <cassert>
+#include <functional>
 #include <stack>
 #include <stdexcept>
+#include <string_view>
+#include <tuple>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -81,6 +84,192 @@ namespace {
         }
 
         return { 0.0, restart.get(item), target };
+    }
+
+    class GroupTreeWalker
+    {
+    public:
+        using GroupOp = std::function<void(const Opm::Group&)>;
+        using WellOp = std::function<void(const Opm::Well&)>;
+
+        explicit GroupTreeWalker(const Opm::Schedule& sched,
+                                 const int            reportStepIdx)
+            : sched_        (sched)
+            , reportStepIdx_(reportStepIdx)
+        {}
+
+        GroupTreeWalker& groupOp(GroupOp visit)
+        {
+            this->visitGroup_ = std::move(visit);
+            return *this;
+        }
+
+        GroupTreeWalker& wellOp(WellOp visit)
+        {
+            this->visitWell_ = std::move(visit);
+            return *this;
+        }
+
+        void clear()
+        {
+            this->visitGroup_ = GroupOp{};
+            this->visitWell_ = WellOp{};
+        }
+
+        void traversePreOrder();
+        void traversePostOrder();
+
+    private:
+        using NodeOp = void (GroupTreeWalker::*)(std::string_view) const;
+
+        std::reference_wrapper<const Opm::Schedule> sched_;
+        int reportStepIdx_;
+
+        GroupOp visitGroup_{};
+        WellOp visitWell_{};
+
+        std::stack<std::string_view, std::vector<std::string_view>> dfsGroupStack_{};
+        std::unordered_set<std::size_t> dfsGroupDiscovered_{};
+
+        NodeOp postDiscover_{nullptr};
+        NodeOp preFinish_{nullptr};
+
+        void traverse();
+
+        void startWalk();
+        void discover(std::string_view group);
+        void finish(std::string_view group);
+
+        bool isSeen(std::string_view group) const;
+        std::size_t insertIndex(std::string_view group) const;
+
+        void visitGroup(std::string_view group) const;
+        void visitWell(std::string_view well) const;
+
+        const Opm::Group& getGroup(std::string_view group) const;
+        const Opm::Well& getWell(std::string_view well) const;
+    };
+
+    void GroupTreeWalker::traversePreOrder()
+    {
+        this->preFinish_ = nullptr;
+        this->postDiscover_ = &GroupTreeWalker::visitGroup;
+
+        this->traverse();
+    }
+
+    void GroupTreeWalker::traversePostOrder()
+    {
+        this->preFinish_ = &GroupTreeWalker::visitGroup;
+        this->postDiscover_ = nullptr;
+
+        this->traverse();
+    }
+
+    void GroupTreeWalker::traverse()
+    {
+        this->startWalk();
+
+        while (! this->dfsGroupStack_.empty()) {
+            const auto gname = this->dfsGroupStack_.top();
+
+            if (this->isSeen(gname)) {
+                if (this->preFinish_ != nullptr) {
+                    (this->*preFinish_)(gname);
+                }
+
+                this->finish(gname);
+                continue;
+            }
+
+            this->discover(gname);
+
+            if (this->postDiscover_ != nullptr) {
+                (this->*postDiscover_)(gname);
+            }
+
+            const auto& group = this->getGroup(gname);
+
+            if (! group.wellgroup()) { // Node group.  Register child groups.
+                for (const auto& child : group.groups()) {
+                    if (! this->isSeen(child)) {
+                        this->dfsGroupStack_.push(child);
+                    }
+                }
+            }
+            else { // Group is a well group--visit its wells.
+                for (const auto& well : group.wells()) {
+                    this->visitWell(well);
+                }
+            }
+        }
+    }
+
+    void GroupTreeWalker::startWalk()
+    {
+        this->dfsGroupDiscovered_.clear();
+
+        while (! this->dfsGroupStack_.empty()) {
+            this->dfsGroupStack_.pop();
+        }
+
+        this->dfsGroupStack_.push("FIELD");
+    }
+
+    void GroupTreeWalker::discover(std::string_view group)
+    {
+        this->dfsGroupDiscovered_.insert(this->insertIndex(group));
+    }
+
+    void GroupTreeWalker::finish(std::string_view group)
+    {
+        if (this->dfsGroupStack_.top() != group) {
+            throw std::invalid_argument {
+                fmt::format("Internal Error: Expected group '{}', but got '{}'",
+                            group, this->dfsGroupStack_.top())
+            };
+        }
+
+        this->dfsGroupStack_.pop();
+    }
+
+    bool GroupTreeWalker::isSeen(std::string_view group) const
+    {
+        return this->dfsGroupDiscovered_.find(this->insertIndex(group))
+            != this->dfsGroupDiscovered_.end();
+    }
+
+    std::size_t GroupTreeWalker::insertIndex(std::string_view group) const
+    {
+        return this->getGroup(group).insert_index();
+    }
+
+    void GroupTreeWalker::visitGroup(std::string_view group) const
+    {
+        if (! this->visitGroup_) {
+            return;
+        }
+
+        this->visitGroup_(this->getGroup(group));
+    }
+
+    void GroupTreeWalker::visitWell(std::string_view well) const
+    {
+        if (! this->visitWell_) {
+            return;
+        }
+
+        this->visitWell_(this->getWell(well));
+    }
+
+    const Opm::Group& GroupTreeWalker::getGroup(std::string_view group) const
+    {
+        return this->sched_.get().getGroup({group.data(), group.size()}, this->reportStepIdx_);
+    }
+
+    const Opm::Well& GroupTreeWalker::getWell(std::string_view well) const
+    {
+        return this->sched_.get().getWell({well.data(), well.size()}, this->reportStepIdx_);
     }
 } // Anonymous
 
@@ -1520,76 +1709,51 @@ calculateAllGroupGuiderates(const int reportStepIdx) const
 {
     auto gr = std::unordered_map<std::string, data::GroupGuideRates>{};
 
-    // Stack backed by vector<> since the number of groups is expected to be
-    // small.  We don't need the full power of std::deque here.
-    auto unprocessed = std::stack<std::string, std::vector<std::string>>{};
-    auto discovered = std::unordered_set<std::size_t>{};
+    auto walker = GroupTreeWalker{ this->schedule(), reportStepIdx };
 
-    auto is_seen = [&discovered](const Group& group)
+    // Populates 'gr'.
+    walker.groupOp([this, &gr](const Group& group)
     {
-        return discovered.find(group.insert_index()) != discovered.end();
-    };
-
-    auto is_seen_group = [this, &is_seen, reportStepIdx](const std::string& group)
-    {
-        return is_seen(this->schedule().getGroup(group, reportStepIdx));
-    };
-
-    // Post-order depth first tree traversal, starting from 'FIELD', during
-    // which we visit a node (i.e., a group) only once all of its children
-    // have been visited.
-    unprocessed.push("FIELD");
-
-    while (! unprocessed.empty()) {
-        const auto& group = this->schedule().getGroup(unprocessed.top(), reportStepIdx);
         const auto& gname = group.name();
 
-        if (is_seen(group)) {
-            unprocessed.pop();
-
-            if (this->guideRate_.has(gname)) {
-                gr[gname].production = this->getGuideRateValues(group);
-            }
-
-            if (this->guideRate_.has(gname, Phase::WATER) ||
-                this->guideRate_.has(gname, Phase::GAS))
-            {
-                gr[gname].injection =
-                    this->getGuideRateInjectionGroupValues(group);
-            }
-
-            if (gname == "FIELD") { continue; }
-
-            const auto parent = group.parent();
-            if (parent == "FIELD") { continue; }
-
-            gr[parent].injection  += gr[gname].injection;
-            gr[parent].production += gr[gname].production;
-
-            continue;
+        if (this->guideRate_.has(gname)) {
+            gr[gname].production = this->getGuideRateValues(group);
         }
 
-        discovered.insert(group.insert_index());
-
-        if (group.wellgroup()) {
-            for (const auto& wname : group.wells()) {
-                const auto& well = this->schedule().getWell(wname, reportStepIdx);
-
-                auto& grval = well.isInjector()
-                    ? gr[gname].injection
-                    : gr[gname].production;
-
-                grval += this->getGuideRateValues(well);
-            }
+        if (this->guideRate_.has(gname, Phase::WATER) ||
+            this->guideRate_.has(gname, Phase::GAS))
+        {
+            gr[gname].injection =
+                this->getGuideRateInjectionGroupValues(group);
         }
-        else {
-            for (const auto& grp : group.groups()) {
-                if (! is_seen_group(grp)) {
-                    unprocessed.push(grp);
-                }
-            }
-        }
-    }
+
+        if (gname == "FIELD") { return; }
+
+        const auto parent = group.parent();
+        if (parent == "FIELD") { return; }
+
+        gr[parent].injection  += gr[gname].injection;
+        gr[parent].production += gr[gname].production;
+    });
+
+    // Populates 'gr'.
+    walker.wellOp([this, &gr](const Well& well)
+    {
+        const auto& gname = well.groupName();
+
+        auto& grval = well.isInjector()
+            ? gr[gname].injection
+            : gr[gname].production;
+
+        grval += this->getGuideRateValues(well);
+    });
+
+    // Visit wells and groups before their parents, meaning no group is
+    // visited until all of its children down to the leaves of the group
+    // tree have been visited.  Upon completion, 'gr' contains guide rate
+    // values for all groups reachable from 'FIELD' at this time/report
+    // step.
+    walker.traversePostOrder();
 
     return gr;
 }
