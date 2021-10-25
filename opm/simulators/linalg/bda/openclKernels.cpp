@@ -27,7 +27,9 @@
 #include <opm/simulators/linalg/bda/openclKernels.hpp>
 #include <opm/simulators/linalg/bda/ChowPatelIlu.hpp>  // defines CHOW_PATEL
 
-namespace bda
+namespace Opm
+{
+namespace Accelerator
 {
 
 using Opm::OpmLog;
@@ -968,5 +970,6 @@ void OpenclKernels::apply_stdwells_no_reorder(cl::Buffer& d_Cnnzs_ocl, cl::Buffe
         )";
     }
 
-} // end namespace bda
+} // namespace Accelerator
+} // namespace Opm
 

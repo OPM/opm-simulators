@@ -38,7 +38,7 @@ namespace Opm
 {
 
 typedef Dune::InverseOperatorResult InverseOperatorResult;
-using bda::ILUReorder;
+using Opm::Accelerator::ILUReorder;
 
 /// BdaBridge acts as interface between opm-simulators with the BdaSolvers
 template <class BridgeMatrix, class BridgeVector, int block_size>
@@ -49,7 +49,7 @@ private:
     bool use_gpu = false;
     bool use_fpga = false;
     std::string accelerator_mode;
-    std::unique_ptr<bda::BdaSolver<block_size> > backend;
+    std::unique_ptr<Opm::Accelerator::BdaSolver<block_size> > backend;
 
 public:
     /// Construct a BdaBridge

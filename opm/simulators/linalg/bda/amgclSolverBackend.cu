@@ -28,7 +28,9 @@
 
 /// This file is only compiled when both amgcl and CUDA are found by CMake
 
-namespace bda
+namespace Opm
+{
+namespace Accelerator
 {
 
 using Opm::OpmLog;
@@ -87,5 +89,6 @@ INSTANTIATE_BDA_FUNCTIONS(6);
 
 #undef INSTANTIATE_BDA_FUNCTIONS
 
-} // namespace bda
+} // namespace Accelerator
+} // namespace Opm
 

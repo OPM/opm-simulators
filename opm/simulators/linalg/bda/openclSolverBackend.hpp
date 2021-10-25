@@ -30,7 +30,9 @@
 
 #include <tuple>
 
-namespace bda
+namespace Opm
+{
+namespace Accelerator
 {
 
 /// This class implements a opencl-based ilu0-bicgstab solver on GPU
@@ -204,7 +206,8 @@ public:
 
 }; // end class openclSolverBackend
 
-} // namespace bda
+} // namespace Accelerator
+} // namespace Opm
 
 #endif
 

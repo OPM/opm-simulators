@@ -40,7 +40,9 @@
 
 #if CHOW_PATEL
 
-namespace bda
+namespace Opm
+{
+namespace Accelerator
 {
 
 
@@ -117,7 +119,8 @@ public:
 
 };
 
-} // end namespace bda
+} // namespace Accelerator
+} // namespace Opm
 
 #endif // CHOW_PATEL
 

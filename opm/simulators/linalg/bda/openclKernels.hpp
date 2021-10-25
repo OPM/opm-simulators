@@ -25,7 +25,9 @@
 
 #include <opm/simulators/linalg/bda/opencl.hpp>
 
-namespace bda
+namespace Opm
+{
+namespace Accelerator
 {
 
 using spmv_kernel_type = cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int,
@@ -145,6 +147,7 @@ public:
         int dim, int dim_wells, cl::Buffer &d_val_pointers_ocl, int num_std_wells);
 };
 
-} // end namespace bda
+} // namespace Accelerator
+} // namespace Opm
 
 #endif

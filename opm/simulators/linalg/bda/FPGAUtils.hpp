@@ -20,7 +20,9 @@
 #ifndef FPGA_UTILS_HEADER_INCLUDED
 #define FPGA_UTILS_HEADER_INCLUDED
 
-namespace bda
+namespace Opm
+{
+namespace Accelerator
 {
 
 union double2int
@@ -34,6 +36,7 @@ bool even(int n);
 int roundUpTo(int i, int n);
 bool fileExists(const char *filename);
 
-} // end namespace bda
+} // namespace Accelerator
+} // namespace Opm
 
 #endif // FPGA_UTILS_HEADER_INCLUDED

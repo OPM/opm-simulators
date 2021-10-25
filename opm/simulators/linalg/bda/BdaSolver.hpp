@@ -24,7 +24,9 @@
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
 
-namespace bda
+namespace Opm
+{
+namespace Accelerator
 {
 
     using Opm::WellContributions;
@@ -91,6 +93,7 @@ namespace bda
 
     }; // end class BdaSolver
 
-} // end namespace bda
+} // namespace Accelerator
+} // namespace Opm
 
 #endif

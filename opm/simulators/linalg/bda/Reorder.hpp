@@ -24,7 +24,9 @@
 
 #include <opm/simulators/linalg/bda/BlockedMatrix.hpp>
 
-namespace bda
+namespace Opm
+{
+namespace Accelerator
 {
 
 #define MAX_COLORS 256
@@ -121,6 +123,7 @@ void findGraphColoring(const int *CSRColIndices, const int *CSRRowPointers, cons
 /// \param[in] Nb                number of blockrows in the matrix
 void csrPatternToCsc(int *CSRColIndices, int *CSRRowPointers, int *CSCRowIndices, int *CSCColPointers, int Nb);
 
-}
+} // namespace Accelerator
+} // namespace Opm
 
 #endif

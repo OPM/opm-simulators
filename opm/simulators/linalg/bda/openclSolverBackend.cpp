@@ -35,7 +35,9 @@
 // otherwise, the nonzeroes of the matrix are assumed to be in a contiguous array, and a single GPU memcpy is enough
 #define COPY_ROW_BY_ROW 0
 
-namespace bda
+namespace Opm
+{
+namespace Accelerator
 {
 
 using Opm::OpmLog;
@@ -633,4 +635,5 @@ INSTANTIATE_BDA_FUNCTIONS(6);
 
 #undef INSTANTIATE_BDA_FUNCTIONS
 
-} // namespace bda
+} // namespace Accelerator
+} // namespace Opm

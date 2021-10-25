@@ -22,7 +22,9 @@
 
 #include <vector>
 
-namespace bda
+namespace Opm
+{
+namespace Accelerator
 {
 
 /// This struct resembles a csr matrix, only doubles are supported
@@ -79,6 +81,7 @@ public:
 
 void sortRow(int *colIndices, double *data, int left, int right);
 
-} // end namespace bda
+} // namespace Accelerator
+} // namespace Opm
 
 #endif // FPGA_MATRIX_HEADER_INCLUDED

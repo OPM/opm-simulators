@@ -30,7 +30,9 @@
 #include <opm/simulators/linalg/bda/Reorder.hpp>
 
 
-namespace bda
+namespace Opm
+{
+namespace Accelerator
 {
 
 using Opm::OpmLog;
@@ -322,4 +324,5 @@ INSTANTIATE_BDA_FUNCTIONS(6);
 
 #undef INSTANTIATE_BDA_FUNCTIONS
 
-} // end namespace bda
+} // namespace Accelerator
+} // namespace Opm

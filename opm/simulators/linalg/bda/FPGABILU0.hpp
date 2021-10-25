@@ -25,7 +25,9 @@
 #include <opm/simulators/linalg/bda/ILUReorder.hpp>
 #include <opm/simulators/linalg/bda/BlockedMatrix.hpp>
 
-namespace bda
+namespace Opm
+{
+namespace Accelerator
 {
 
 /*
@@ -112,6 +114,7 @@ public:
 
 };
 
-} //namespace bda
+} // namespace Accelerator
+} // namespace Opm
 
 #endif // FPGA_BILU0_HEADER_INCLUDED

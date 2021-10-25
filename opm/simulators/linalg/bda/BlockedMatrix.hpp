@@ -26,7 +26,9 @@
 
 #include <opm/simulators/linalg/bda/FPGAMatrix.hpp>
 
-namespace bda
+namespace Opm
+{
+namespace Accelerator
 {
 
 /// This struct resembles a blocked csr matrix, like Dune::BCRSMatrix.
@@ -164,6 +166,7 @@ void blockVectMult(double *mat, double *vect, double scale, double *resVect, boo
 void blockedDiagtoRDF(double *blockedDiagVals, int rowSize, int numColors, std::vector<int>& rowsPerColor, double *RDFDiag);
 #endif
 
-} // end namespace bda
+} // namespace Accelerator
+} // namespace Opm
 
 #endif

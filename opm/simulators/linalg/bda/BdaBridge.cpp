@@ -47,10 +47,10 @@ typedef Dune::InverseOperatorResult InverseOperatorResult;
 namespace Opm
 {
 
-    using bda::BdaResult;
-    using bda::BdaSolver;
-    using bda::SolverStatus;
-    using bda::ILUReorder;
+    using Opm::Accelerator::BdaResult;
+    using Opm::Accelerator::BdaSolver;
+    using Opm::Accelerator::SolverStatus;
+    using Opm::Accelerator::ILUReorder;
 
 template <class BridgeMatrix, class BridgeVector, int block_size>
 BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string accelerator_mode_,
@@ -65,7 +65,7 @@ BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string acceler
     if (accelerator_mode.compare("cusparse") == 0) {
 #if HAVE_CUDA
         use_gpu = true;
-        backend.reset(new bda::cusparseSolverBackend<block_size>(linear_solver_verbosity, maxit, tolerance, deviceID));
+        backend.reset(new Opm::Accelerator::cusparseSolverBackend<block_size>(linear_solver_verbosity, maxit, tolerance, deviceID));
 #else
         OPM_THROW(std::logic_error, "Error cusparseSolver was chosen, but CUDA was not found by CMake");
 #endif
@@ -74,17 +74,17 @@ BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string acceler
         use_gpu = true;
         ILUReorder ilu_reorder;
         if (opencl_ilu_reorder == "") {
-            ilu_reorder = bda::ILUReorder::GRAPH_COLORING;  // default when not selected by user
+            ilu_reorder = Opm::Accelerator::ILUReorder::GRAPH_COLORING;  // default when not selected by user
         } else if (opencl_ilu_reorder == "level_scheduling") {
-            ilu_reorder = bda::ILUReorder::LEVEL_SCHEDULING;
+            ilu_reorder = Opm::Accelerator::ILUReorder::LEVEL_SCHEDULING;
         } else if (opencl_ilu_reorder == "graph_coloring") {
-            ilu_reorder = bda::ILUReorder::GRAPH_COLORING;
+            ilu_reorder = Opm::Accelerator::ILUReorder::GRAPH_COLORING;
         } else if (opencl_ilu_reorder == "none") {
-            ilu_reorder = bda::ILUReorder::NONE;
+            ilu_reorder = Opm::Accelerator::ILUReorder::NONE;
         } else {
             OPM_THROW(std::logic_error, "Error invalid argument for --opencl-ilu-reorder, usage: '--opencl-ilu-reorder=[level_scheduling|graph_coloring]'");
         }
-        backend.reset(new bda::openclSolverBackend<block_size>(linear_solver_verbosity, maxit, tolerance, platformID, deviceID, ilu_reorder));
+        backend.reset(new Opm::Accelerator::openclSolverBackend<block_size>(linear_solver_verbosity, maxit, tolerance, platformID, deviceID, ilu_reorder));
 #else
         OPM_THROW(std::logic_error, "Error openclSolver was chosen, but OpenCL was not found by CMake");
 #endif
@@ -93,22 +93,22 @@ BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string acceler
         use_fpga = true;
         ILUReorder ilu_reorder;
         if (opencl_ilu_reorder == "") {
-            ilu_reorder = bda::ILUReorder::LEVEL_SCHEDULING;  // default when not selected by user
+            ilu_reorder = Opm::Accelerator::ILUReorder::LEVEL_SCHEDULING;  // default when not selected by user
         } else if (opencl_ilu_reorder == "level_scheduling") {
-            ilu_reorder = bda::ILUReorder::LEVEL_SCHEDULING;
+            ilu_reorder = Opm::Accelerator::ILUReorder::LEVEL_SCHEDULING;
         } else if (opencl_ilu_reorder == "graph_coloring") {
-            ilu_reorder = bda::ILUReorder::GRAPH_COLORING;
+            ilu_reorder = Opm::Accelerator::ILUReorder::GRAPH_COLORING;
         } else {
             OPM_THROW(std::logic_error, "Error invalid argument for --opencl-ilu-reorder, usage: '--opencl-ilu-reorder=[level_scheduling|graph_coloring]'");
         }
-        backend.reset(new bda::FpgaSolverBackend<block_size>(fpga_bitstream, linear_solver_verbosity, maxit, tolerance, ilu_reorder));
+        backend.reset(new Opm::Accelerator::FpgaSolverBackend<block_size>(fpga_bitstream, linear_solver_verbosity, maxit, tolerance, ilu_reorder));
 #else
         OPM_THROW(std::logic_error, "Error fpgaSolver was chosen, but FPGA was not enabled by CMake");
 #endif
     } else if (accelerator_mode.compare("amgcl") == 0) {
 #if HAVE_AMGCL
         use_gpu = true; // should be replaced by a 'use_bridge' boolean
-        backend.reset(new bda::amgclSolverBackend<block_size>(linear_solver_verbosity, maxit, tolerance, platformID, deviceID));
+        backend.reset(new Opm::Accelerator::amgclSolverBackend<block_size>(linear_solver_verbosity, maxit, tolerance, platformID, deviceID));
 #else
         OPM_THROW(std::logic_error, "Error amgclSolver was chosen, but amgcl was not found by CMake");
 #endif
@@ -269,7 +269,7 @@ template <class BridgeMatrix, class BridgeVector, int block_size>
 void BdaBridge<BridgeMatrix, BridgeVector, block_size>::initWellContributions([[maybe_unused]] WellContributions& wellContribs) {
     if(accelerator_mode.compare("opencl") == 0){
 #if HAVE_OPENCL
-        const auto openclBackend = static_cast<const bda::openclSolverBackend<block_size>*>(backend.get());
+        const auto openclBackend = static_cast<const Opm::Accelerator::openclSolverBackend<block_size>*>(backend.get());
         wellContribs.setOpenCLEnv(openclBackend->context.get(), openclBackend->queue.get());
 #else
         OPM_THROW(std::logic_error, "Error openclSolver was chosen, but OpenCL was not found by CMake");

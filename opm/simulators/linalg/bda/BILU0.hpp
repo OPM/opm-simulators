@@ -30,7 +30,9 @@
 #include <opm/simulators/linalg/bda/ChowPatelIlu.hpp>
 
 
-namespace bda
+namespace Opm
+{
+namespace Accelerator
 {
 
     /// This class implementa a Blocked ILU0 preconditioner
@@ -117,7 +119,8 @@ namespace bda
 
     };
 
-} // end namespace bda
+} // namespace Accelerator
+} // namespace Opm
 
 #endif
 
