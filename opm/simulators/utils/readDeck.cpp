@@ -254,7 +254,7 @@ namespace {
             (parseContext == nullptr))
         {
             OPM_THROW(std::logic_error,
-                      "We need a parse context if deck, schedule, "
+                      "We need a ParseContext if deck, schedule, "
                       "or summaryConfig are not initialized");
         }
 
