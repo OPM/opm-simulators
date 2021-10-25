@@ -332,7 +332,7 @@ namespace Opm {
                 if (severity == ConvergenceReport::Severity::NotANumber) {
                     OPM_THROW(NumericalIssue, "NaN residual found!");
                 } else if (severity == ConvergenceReport::Severity::TooLarge) {
-                    OPM_THROW(NumericalIssue, "Too large residual found!");
+                    OPM_THROW_NOLOG(NumericalIssue, "Too large residual found!");
                 }
             }
             report.update_time += perfTimer.stop();
