@@ -51,18 +51,14 @@ namespace Opm {
         // Number of cells the global grid view
         global_num_cells_ = ebosSimulator_.vanguard().globalNumCells();
 
-        // Set up cartesian mapping.
+        // Set up parallel wells
+        auto& parallel_wells = ebosSimulator.vanguard().parallelWells();
+
+        this->parallel_well_info_.reserve(parallel_wells.size());
+        for( const auto& name_bool: parallel_wells)
         {
-            const auto& grid = this->ebosSimulator_.vanguard().grid();
-            const auto& cartDims = UgGridHelpers::cartDims(grid);
-            setupCartesianToCompressed_(UgGridHelpers::globalCell(grid),
-                                        cartDims[0] * cartDims[1] * cartDims[2]);
-
-            auto& parallel_wells = ebosSimulator.vanguard().parallelWells();
-
-            for (const auto& wellinfo : parallel_wells) {                   
-                this->parallel_well_info_.emplace_back(wellinfo, grid.comm());         
-            }
+            this->parallel_well_info_.emplace_back(name_bool,
+                                                   ebosSimulator_.gridView().comm());
         }
 
         this->alternative_well_rate_init_ =
@@ -129,8 +125,7 @@ namespace Opm {
             for ( size_t c=0; c < connectionSet.size(); c++ )
             {
                 const auto& connection = connectionSet.get(c);
-                int compressed_idx = cartesian_to_compressed_
-                    .at(connection.global_index());
+                int compressed_idx = compressedIndexForInterior(connection.global_index());
 
                 if ( compressed_idx >= 0 ) { // Ignore connections in inactive/remote cells.
                     wellCells.push_back(compressed_idx);
@@ -1431,31 +1426,6 @@ namespace Opm {
 
 
 
-    template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    setupCartesianToCompressed_(const int* global_cell, int number_of_cartesian_cells)
-    {
-        cartesian_to_compressed_.resize(number_of_cartesian_cells, -1);
-        if (global_cell) {
-            auto elemIt = ebosSimulator_.gridView().template begin</*codim=*/ 0>();
-            for (unsigned i = 0; i < local_num_cells_; ++i) {
-                // Skip perforations in the overlap/ghost for distributed wells.
-                if (elemIt->partitionType() == Dune::InteriorEntity)
-                {
-                    assert(ebosSimulator_.gridView().indexSet().index(*elemIt) == static_cast<int>(i));
-                    cartesian_to_compressed_[global_cell[i]] = i;
-                }
-                ++elemIt;
-            }
-        }
-        else {
-            for (unsigned i = 0; i < local_num_cells_; ++i) {
-                cartesian_to_compressed_[i] = i;
-            }
-        }
-
-    }
 
     template<typename TypeTag>
     void

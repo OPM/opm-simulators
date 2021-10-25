@@ -263,7 +263,7 @@ void WellInterfaceGeneric::setWellEfficiencyFactor(const double efficiency_facto
     well_efficiency_factor_ = efficiency_factor;
 }
 
-void WellInterfaceGeneric::setRepRadiusPerfLength(const std::vector<int>& cartesian_to_compressed)
+void WellInterfaceGeneric::setRepRadiusPerfLength()
 {
     const int nperf = number_of_perforations_;
 
@@ -275,31 +275,35 @@ void WellInterfaceGeneric::setRepRadiusPerfLength(const std::vector<int>& cartes
     perf_length_.reserve(nperf);
     bore_diameters_.reserve(nperf);
 
-    // COMPDAT handling
-    const auto& connectionSet = well_ecl_.getConnections();
-    CheckDistributedWellConnections checker(well_ecl_, parallel_well_info_);
-    for (size_t c=0; c<connectionSet.size(); c++) {
-        const auto& connection = connectionSet.get(c);
-        const int cell =
-                cartesian_to_compressed[connection.global_index()];
-        if (connection.state() != Connection::State::OPEN || cell >= 0)
+    const WellConnections& connections = well_ecl_.getConnections();
+    const std::size_t num_conns = connections.size();
+    int num_active_connections = 0;
+    auto my_next_perf = perf_data_->begin();
+    for (std::size_t c = 0; c < num_conns; ++c) {
+        if (my_next_perf == perf_data_->end())
         {
-            checker.connectionFound(c);
+            break;
         }
+        if (my_next_perf->ecl_index > c)
+        {
+            continue;
+        }
+        assert(my_next_perf->ecl_index == c);
+        const auto& connection = connections[c];
         if (connection.state() == Connection::State::OPEN) {
-
-            if (cell >= 0) {
-                double radius = connection.rw();
-                double re = connection.re(); // area equivalent radius of the grid block
-                double perf_length = connection.connectionLength(); // the length of the well perforation
-                const double repR = std::sqrt(re * radius);
-                perf_rep_radius_.push_back(repR);
-                perf_length_.push_back(perf_length);
-                bore_diameters_.push_back(2. * radius);
-            }
+            double radius = connection.rw();
+            double re = connection.re(); // area equivalent radius of the grid block
+            double perf_length = connection.connectionLength(); // the length of the well perforation
+            const double repR = std::sqrt(re * radius);
+            perf_rep_radius_.push_back(repR);
+            perf_length_.push_back(perf_length);
+            bore_diameters_.push_back(2. * radius);
+            num_active_connections++;
         }
+        ++my_next_perf;
     }
-    checker.checkAllConnectionsFound();
+    assert(my_next_perf == perf_data_->end());
+    assert(num_active_connections == nperf);
 }
 
 void WellInterfaceGeneric::setWsolvent(const double wsolvent)
