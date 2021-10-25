@@ -26,6 +26,10 @@
 #include <opm/simulators/linalg/bda/opencl.hpp>
 #include <opm/simulators/linalg/bda/BlockedMatrix.hpp>
 
+// Variables CHOW_PATEL, CHOW_PATEL_GPU and CHOW_PATEL_GPU_PARALLEL are set by CMake
+// Pass -DUSE_CHOW_PATEL_ILU=1 to cmake to define CHOW_PATEL and use the iterative ILU decomposition
+// Pass -DUSE_CHOW_PATEL_ILU_GPU=1 to run the ILU decomposition sweeps on the GPU
+// Pass -DUSE_CHOW_PATEL_ILU_GPU_PARALLEL=1 to use more parallelisation in the GPU kernel, see ChowPatelIlu.cpp
 
 // if CHOW_PATEL is 0, exact ILU decomposition is performed on CPU
 // if CHOW_PATEL is 1, iterative ILU decomposition (FGPILU) is done, as described in:
@@ -35,8 +39,6 @@
 // the apply phase of the ChowPatelIlu uses two triangular matrices: L and U
 // the exact decomposition uses a full matrix LU which is the superposition of L and U
 // ChowPatelIlu could also operate on a full matrix LU when L and U are merged, but it is generally better to keep them split
-#define CHOW_PATEL     0
-#define CHOW_PATEL_GPU 1
 
 #if CHOW_PATEL
 

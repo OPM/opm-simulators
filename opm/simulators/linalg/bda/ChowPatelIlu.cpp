@@ -36,7 +36,7 @@ namespace Accelerator
 using Opm::OpmLog;
 using Dune::Timer;
 
-// if PARALLEL is 0:
+// if CHOW_PATEL_GPU_PARALLEL is 0:
 //    Each row gets 1 workgroup, 1 workgroup can do multiple rows sequentially.
 //    Each block in a row gets 1 workitem, all blocks are expected to be processed simultaneously,
 //    except when the number of blocks in that row exceeds the number of workitems per workgroup.
@@ -48,15 +48,13 @@ using Dune::Timer;
 //    If the number of blocks exceeds the number of warps, some warps will process multiple blocks sequentially.
 
 // Notes:
-// PARALLEL 0 should be able to run with any number of workitems per workgroup, but 8 and 16 tend to be quicker than 32.
-// PARALLEL 1 should be run with at least 32 workitems per workgroup.
+// CHOW_PATEL_GPU_PARALLEL 0 should be able to run with any number of workitems per workgroup, but 8 and 16 tend to be quicker than 32.
+// CHOW_PATEL_GPU_PARALLEL 1 should be run with at least 32 workitems per workgroup.
 // The recommended number of workgroups for both options is Nb, which gives every row their own workgroup.
-// PARALLEL 0 is generally faster, despite not having parallelization.
+// CHOW_PATEL_GPU_PARALLEL 0 is generally faster, despite not having parallelization.
 // only 3x3 blocks are supported
 
-#define PARALLEL 0
-
-#if PARALLEL
+#if CHOW_PATEL_GPU_PARALLEL
 inline const char* chow_patel_ilu_sweep_s  = R"(
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
@@ -272,7 +270,7 @@ __kernel void chow_patel_ilu_sweep(
 }
 )";
 
-#else // PARALLEL
+#else // CHOW_PATEL_GPU_PARALLEL
 
 inline const char* chow_patel_ilu_sweep_s  = R"(
 
@@ -475,7 +473,7 @@ __kernel void chow_patel_ilu_sweep(
 }
 )";
 
-#endif // PARALLEL
+#endif // CHOW_PATEL_GPU_PARALLEL
 
 
 
@@ -898,7 +896,7 @@ void ChowPatelIlu<block_size>::gpu_decomposition(
                 OpmLog::info(out.str());
             }
             std::ostringstream out;
-            out << "ChowPatelIlu PARALLEL: " << PARALLEL;
+            out << "ChowPatelIlu PARALLEL: " << CHOW_PATEL_GPU_PARALLEL;
             OpmLog::info(out.str());
         });
 
@@ -932,7 +930,7 @@ void ChowPatelIlu<block_size>::gpu_decomposition(
             auto *Uarg1 = (sweep % 2 == 0) ? &d_Ut_vals : &d_Utmp;
             auto *Uarg2 = (sweep % 2 == 0) ? &d_Utmp : &d_Ut_vals;
             int num_work_groups = Nb;
-#if PARALLEL
+#if CHOW_PATEL_GPU_PARALLEL
             int work_group_size = 32;
 #else
             int work_group_size = 16;
