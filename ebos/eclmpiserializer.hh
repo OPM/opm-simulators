@@ -103,6 +103,36 @@ public:
         }
     }
 
+    template <class Array, bool complexType = true>
+    void array(Array& data)
+    {
+        using T = typename Array::value_type;
+
+        auto handle = [&](auto& d) {
+            for (auto& it : d) {
+                if constexpr (is_pair<T>::value)
+                    pair(it);
+                else if constexpr (is_ptr<T>::value)
+                    ptr(it);
+                else if constexpr (!complexType)
+                    (*this)(it);
+                else
+                    it.serializeOp(*this);
+            }
+        };
+
+        if (m_op == Operation::PACKSIZE) {
+            m_packSize += Mpi::packSize(data.size(), m_comm);
+            handle(data);
+        } else if (m_op == Operation::PACK) {
+            Mpi::pack(data.size(), m_buffer, m_position, m_comm);
+            handle(data);
+        } else if (m_op == Operation::UNPACK) {
+            size_t size;
+            Mpi::unpack(size, m_buffer, m_position, m_comm);
+            handle(data);
+        }
+    }
 
     //! \brief Handler for std::variant<> with four types
 
