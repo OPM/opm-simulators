@@ -230,15 +230,15 @@ namespace Opm {
             data::Wells wellData() const
             {
                 auto wsrpt = this->wellState()
-                    .report(UgGridHelpers::globalCell(grid()),
-                            [this](const int well_ndex) -> bool
+                    .report(UgGridHelpers::globalCell(this->grid()),
+                            [this](const int well_index) -> bool
                 {
-                    return this->wasDynamicallyShutThisTimeStep(well_ndex);
+                    return this->wasDynamicallyShutThisTimeStep(well_index);
                 });
 
                 this->assignWellTracerRates(wsrpt);
 
-                this->assignWellGuideRates(wsrpt);
+                this->assignWellGuideRates(wsrpt, this->reportStepIndex());
                 this->assignShutConnections(wsrpt, this->reportStepIndex());
 
                 return wsrpt;

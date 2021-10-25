@@ -86,6 +86,46 @@ namespace {
         return { 0.0, restart.get(item), target };
     }
 
+    struct RetrieveWellGuideRate
+    {
+        RetrieveWellGuideRate() = default;
+
+        explicit RetrieveWellGuideRate(const Opm::GuideRate& guideRate,
+                                       const std::string&    wgname);
+
+        explicit RetrieveWellGuideRate(const Opm::GuideRate& guideRate,
+                                       const Opm::Group&     group);
+
+        bool prod      { false };
+        bool inj_water { false };
+        bool inj_gas   { false };
+    };
+
+    RetrieveWellGuideRate
+    operator||(RetrieveWellGuideRate lhs, const RetrieveWellGuideRate& rhs)
+    {
+        lhs.prod      = lhs.prod      || rhs.prod;
+        lhs.inj_water = lhs.inj_water || rhs.inj_water;
+        lhs.inj_gas   = lhs.inj_gas   || rhs.inj_gas;
+
+        return lhs;
+    }
+
+    RetrieveWellGuideRate::RetrieveWellGuideRate(const Opm::GuideRate& guideRate,
+                                                 const std::string&    wgname)
+        : prod      { guideRate.has(wgname) }
+        , inj_water { guideRate.has(wgname, Opm::Phase::WATER) }
+        , inj_gas   { guideRate.has(wgname, Opm::Phase::GAS)   }
+    {}
+
+    RetrieveWellGuideRate::RetrieveWellGuideRate(const Opm::GuideRate& guideRate,
+                                                 const Opm::Group&     group)
+        : RetrieveWellGuideRate{ guideRate, group.name() }
+    {
+        this->inj_water = this->inj_water || group.hasInjectionControl(Opm::Phase::WATER);
+        this->inj_gas   = this->inj_gas   || group.hasInjectionControl(Opm::Phase::GAS);
+    }
+
     class GroupTreeWalker
     {
     public:
@@ -1647,15 +1687,100 @@ getGuideRateInjectionGroupValues(const Group& group) const
 
 void
 BlackoilWellModelGeneric::
-assignWellGuideRates(data::Wells& wsrpt) const
+assignWellGuideRates(data::Wells& wsrpt,
+                     const int    reportStepIdx) const
 {
+    auto all = std::unordered_map<std::string, data::GuideRateValue>{};
+    auto retrieve = std::unordered_map<std::string, RetrieveWellGuideRate>{};
+
+    auto walker = GroupTreeWalker{ this->schedule(), reportStepIdx };
+
+    // Populates 'retrieve'.
+    walker.groupOp([this, &retrieve](const Group& group)
+    {
+        const auto& gname = group.name();
+
+        const auto parent = (gname == "FIELD")
+            ? RetrieveWellGuideRate{}
+            : retrieve[group.parent()];
+
+        auto [elm, inserted] =
+            retrieve.emplace(std::piecewise_construct,
+                             std::forward_as_tuple(gname),
+                             std::forward_as_tuple(this->guideRate_, group));
+
+        if (inserted) {
+            elm->second = elm->second || parent;
+        }
+    });
+
+    // Populates 'all'.
+    walker.wellOp([this, &retrieve, &all](const Well& well)
+    {
+        const auto& wname = well.name();
+
+        const auto is_nontrivial =
+            this->guideRate_.has(wname) || this->guideRate_.hasPotentials(wname);
+
+        if (! (is_nontrivial && this->wellState().has(wname))) {
+            all[wname].clear();
+            return;
+        }
+
+        auto parent_pos = retrieve.find(well.groupName());
+        const auto parent = (parent_pos == retrieve.end())
+            ? RetrieveWellGuideRate{} // No entry for 'parent'--unexpected.
+            : parent_pos->second;
+
+        const auto get_gr = parent
+            || RetrieveWellGuideRate{ this->guideRate_, wname };
+
+        const auto qs = WellGroupHelpers::
+            getWellRateVector(this->wellState(), this->phase_usage_, wname);
+
+        auto getGR = [this, &wname, &qs](const GuideRateModel::Target t)
+        {
+            return this->guideRate_.getSI(wname, t, qs);
+        };
+
+        auto& grval = all[wname];
+
+        if (well.isInjector()) {
+            if (get_gr.inj_gas) { // Well supports WGIGR
+                grval.set(data::GuideRateValue::Item::Gas,
+                          getGR(GuideRateModel::Target::GAS));
+            }
+            if (get_gr.inj_water) { // Well supports WWIGR
+                grval.set(data::GuideRateValue::Item::Water,
+                          getGR(GuideRateModel::Target::WAT));
+            }
+        }
+        else if (get_gr.prod) { // Well is producer AND we want/support WxPGR
+            grval
+                .set(data::GuideRateValue::Item::Oil  , getGR(GuideRateModel::Target::OIL))
+                .set(data::GuideRateValue::Item::Gas  , getGR(GuideRateModel::Target::GAS))
+                .set(data::GuideRateValue::Item::Water, getGR(GuideRateModel::Target::WAT));
+        }
+    });
+
+    // Visit groups before their children, meaning no well is visited until
+    // all of its upline parent groups--up to FIELD--have been visited.
+    // Upon completion, 'all' contains guide rate values for all wells
+    // reachable from 'FIELD' at this time/report step.
+    walker.traversePreOrder();
+
     for (const auto& well : this->wells_ecl_) {
         auto xwPos = wsrpt.find(well.name());
         if (xwPos == wsrpt.end()) { // No well results.  Unexpected.
             continue;
         }
 
-        xwPos->second.guide_rates = this->getGuideRateValues(well);
+        auto grPos = all.find(well.name());
+        if (grPos == all.end()) {
+            continue;
+        }
+
+        xwPos->second.guide_rates = grPos->second;
     }
 }
 
@@ -1716,6 +1841,8 @@ calculateAllGroupGuiderates(const int reportStepIdx) const
     {
         const auto& gname = group.name();
 
+        if (gname == "FIELD") { return; }
+
         if (this->guideRate_.has(gname)) {
             gr[gname].production = this->getGuideRateValues(group);
         }
@@ -1727,8 +1854,6 @@ calculateAllGroupGuiderates(const int reportStepIdx) const
                 this->getGuideRateInjectionGroupValues(group);
         }
 
-        if (gname == "FIELD") { return; }
-
         const auto parent = group.parent();
         if (parent == "FIELD") { return; }
 
@@ -1739,6 +1864,12 @@ calculateAllGroupGuiderates(const int reportStepIdx) const
     // Populates 'gr'.
     walker.wellOp([this, &gr](const Well& well)
     {
+        if (! (this->guideRate_.has(well.name()) ||
+               this->guideRate_.hasPotentials(well.name())))
+        {
+            return;
+        }
+
         const auto& gname = well.groupName();
 
         auto& grval = well.isInjector()
