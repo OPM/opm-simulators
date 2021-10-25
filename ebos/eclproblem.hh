@@ -2371,7 +2371,6 @@ private:
         {
             int restart_step = initconfig.getRestartStep();
 
-            simulator.setStartTime(schedule.simTime(0));
             simulator.setTime(schedule.seconds(restart_step));
 
             simulator.startNextEpisode(simulator.startTime() + simulator.time(),
