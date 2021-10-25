@@ -126,7 +126,7 @@ struct EclStrictParsing<TypeTag, TTag::EclBaseVanguard> {
 };
 template<class TypeTag>
 struct SchedRestart<TypeTag, TTag::EclBaseVanguard> {
-    static constexpr bool value = true;
+    static constexpr bool value = false;
 };
 template<class TypeTag>
 struct EdgeWeightsMethod<TypeTag, TTag::EclBaseVanguard> {
