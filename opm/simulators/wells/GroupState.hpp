@@ -112,6 +112,7 @@ public:
             iterateContainer(inj_red_rates, func);
             iterateContainer(inj_resv_rates, func);
             iterateContainer(inj_rein_rates, func);
+            iterateContainer(inj_surface_rates, func);
         };
 
         // Compute the size of the data.
