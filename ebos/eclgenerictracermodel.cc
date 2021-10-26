@@ -286,6 +286,15 @@ template class EclGenericTracerModel<Dune::CpGrid,
                                      Dune::MultipleCodimMultipleGeomTypeMapper<Dune::GridView<Dune::Fem::GridPart2GridViewTraits<Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>>>>,
                                      Opm::EcfvStencil<double,Dune::GridView<Dune::Fem::GridPart2GridViewTraits<Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>>>,false,false>,
                                      double>;
+template class EclGenericTracerModel<Dune::CpGrid,
+                                     Dune::Fem::GridPart2GridViewImpl<Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, (Dune::PartitionIteratorType)4, false> >,
+                                     Dune::MultipleCodimMultipleGeomTypeMapper<
+                                         Dune::Fem::GridPart2GridViewImpl<
+                                             Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false> > >,
+                                     Opm::EcfvStencil<double, Dune::Fem::GridPart2GridViewImpl<
+                                                                  Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false> >,
+                                                      false, false>,
+                                     double>;
 #else
 template class EclGenericTracerModel<Dune::CpGrid,
                                      Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>,

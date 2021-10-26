@@ -397,6 +397,18 @@ template class EclGenericCpGridVanguard<Dune::MultipleCodimMultipleGeomTypeMappe
                                         Dune::Fem::AdaptiveLeafGridPart<
                                         Dune::CpGrid, Dune::PartitionIteratorType(4), false>>>,
                                         double>;
+template class EclGenericCpGridVanguard<Dune::MultipleCodimMultipleGeomTypeMapper<
+                                            Dune::Fem::GridPart2GridViewImpl<
+                                                Dune::Fem::AdaptiveLeafGridPart<
+                                                    Dune::CpGrid,
+                                                    Dune::PartitionIteratorType(4),
+                                                    false>>>,
+                                        Dune::Fem::GridPart2GridViewImpl<
+                                            Dune::Fem::AdaptiveLeafGridPart<
+                                                Dune::CpGrid,
+                                                Dune::PartitionIteratorType(4),
+                                                false> >,
+                                        double>;
 #else
 template class EclGenericCpGridVanguard<Dune::MultipleCodimMultipleGeomTypeMapper<Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>>,
                                         Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>,
