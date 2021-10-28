@@ -237,20 +237,36 @@ public:
         return this->wells_.well_index(well_name);
     }
 
-    const SingleWellState& well(std::size_t well_index) const {
+    const SingleWellState& operator[](std::size_t well_index) const {
         return this->wells_[well_index];
+    }
+
+    const SingleWellState& operator[](const std::string& well_name) const {
+        return this->wells_[well_name];
+    }
+
+    SingleWellState& operator[](std::size_t well_index) {
+        return this->wells_[well_index];
+    }
+
+    SingleWellState& operator[](const std::string& well_name) {
+        return this->wells_[well_name];
+    }
+
+    const SingleWellState& well(std::size_t well_index) const {
+        return this->operator[](well_index);
     }
 
     const SingleWellState& well(const std::string& well_name) const {
-        return this->wells_[well_name];
+        return this->operator[](well_name);
     }
 
     SingleWellState& well(std::size_t well_index) {
-        return this->wells_[well_index];
+        return this->operator[](well_index);
     }
 
     SingleWellState& well(const std::string& well_name) {
-        return this->wells_[well_name];
+        return this->operator[](well_name);
     }
 
     bool has(const std::string& well_name) const {
