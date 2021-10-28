@@ -85,10 +85,10 @@ namespace bda
 
         ilu_apply1_kernel_type *ILU_apply1;
         ilu_apply2_kernel_type *ILU_apply2;
-        cl::make_kernel<cl::Buffer&, const double, const unsigned int> *scale;
-        cl::make_kernel<const unsigned int, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&,
-                                        cl::Buffer&, cl::Buffer&,
-                                        const int, cl::LocalSpaceArg> *ilu_decomp;
+        cl::KernelFunctor<cl::Buffer&, const double, const unsigned int> *scale;
+        cl::KernelFunctor<const unsigned int, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&,
+                          cl::Buffer&, cl::Buffer&,
+                          const int, cl::LocalSpaceArg> *ilu_decomp;
 
         GPU_storage s;
         cl::Context *context;
@@ -122,10 +122,10 @@ namespace bda
         void setOpenCLQueue(cl::CommandQueue *queue);
         void setKernelParameters(const unsigned int work_group_size, const unsigned int total_work_items, const unsigned int lmem_per_work_group);
         void setKernels(
-            cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> *ILU_apply1,
-            cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> *ILU_apply2,
-            cl::make_kernel<cl::Buffer&, const double, const unsigned int> *scale,
-            cl::make_kernel<const unsigned int, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const int, cl::LocalSpaceArg> *ilu_decomp
+            cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> *ILU_apply1,
+            cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> *ILU_apply2,
+            cl::KernelFunctor<cl::Buffer&, const double, const unsigned int> *scale,
+            cl::KernelFunctor<const unsigned int, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const int, cl::LocalSpaceArg> *ilu_decomp
             );
 
         int* getToOrder()

@@ -22,7 +22,10 @@
 
 #define __CL_ENABLE_EXCEPTIONS
 #define CL_TARGET_OPENCL_VERSION 120   // indicate OpenCL 1.2 is used
-#include <CL/cl.hpp>                   // supports up to OpenCL 1.2
+#define CL_HPP_TARGET_OPENCL_VERSION 120 // indicate OpenCL 1.2 is used
+#define CL_HPP_MINIMUM_VERSION 120
+#define CL_HPP_MINIMUM_OPENCL_VERSION 120
+#include <CL/cl2.hpp>                   // supports up to OpenCL 1.2
 
 #include <string>
 

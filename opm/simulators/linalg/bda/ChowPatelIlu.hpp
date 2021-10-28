@@ -47,7 +47,7 @@ namespace bda
         cl_int err;
         std::once_flag initialize_flag;
 
-        std::unique_ptr<cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&,
+        std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&,
                                         cl::Buffer&, cl::Buffer&, cl::Buffer&,
                                         cl::Buffer&, cl::Buffer&, cl::Buffer&,
                                         cl::Buffer&, cl::Buffer&,

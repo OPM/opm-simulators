@@ -27,21 +27,21 @@
 namespace bda
 {
 
-using spmv_kernel_type = cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int,
+using spmv_kernel_type = cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int,
                                          cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg>;
-using ilu_apply1_kernel_type = cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
+using ilu_apply1_kernel_type = cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
                                                cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg>;
-using ilu_apply2_kernel_type = cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
+using ilu_apply2_kernel_type = cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
                                                cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg>;
-using stdwell_apply_kernel_type = cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
+using stdwell_apply_kernel_type = cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
                                                   cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
                                                   const unsigned int, const unsigned int, cl::Buffer&,
                                                   cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg>;
-using stdwell_apply_no_reorder_kernel_type = cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
+using stdwell_apply_no_reorder_kernel_type = cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
                                                              cl::Buffer&, cl::Buffer&, cl::Buffer&,
                                                              const unsigned int, const unsigned int, cl::Buffer&,
                                                              cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg>;
-using ilu_decomp_kernel_type = cl::make_kernel<const unsigned int, const unsigned int, cl::Buffer&, cl::Buffer&,
+using ilu_decomp_kernel_type = cl::KernelFunctor<const unsigned int, const unsigned int, cl::Buffer&, cl::Buffer&,
                                                cl::Buffer&, cl::Buffer&, cl::Buffer&, const int, cl::LocalSpaceArg>;
 
     /// Generate string with axpy kernel
