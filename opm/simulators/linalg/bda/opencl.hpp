@@ -20,7 +20,7 @@
 /// This file includes the relevant OpenCL header(s)
 /// All bda files using OpenCL declarations should include this header
 
-#define __CL_ENABLE_EXCEPTIONS
+#define CL_HPP_ENABLE_EXCEPTIONS
 #define CL_TARGET_OPENCL_VERSION 120   // indicate OpenCL 1.2 is used
 #define CL_HPP_TARGET_OPENCL_VERSION 120 // indicate OpenCL 1.2 is used
 #define CL_HPP_MINIMUM_VERSION 120
