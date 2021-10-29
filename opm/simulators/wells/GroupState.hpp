@@ -60,9 +60,6 @@ public:
     void update_injection_rein_rates(const std::string& gname, const std::vector<double>& rates);
     const std::vector<double>& injection_rein_rates(const std::string& gname) const;
 
-    void update_injection_potentials(const std::string& gname, const std::vector<double>& potentials);
-    const std::vector<double>& injection_potentials(const std::string& gname) const;
-
     void update_injection_vrep_rate(const std::string& gname, double rate);
     double injection_vrep_rate(const std::string& gname) const;
 
@@ -112,6 +109,7 @@ public:
             iterateContainer(inj_red_rates, func);
             iterateContainer(inj_resv_rates, func);
             iterateContainer(inj_rein_rates, func);
+            iterateContainer(inj_surface_rates, func);
         };
 
         // Compute the size of the data.
@@ -172,7 +170,6 @@ private:
     std::map<std::string, std::vector<double>> inj_red_rates;
     std::map<std::string, std::vector<double>> inj_surface_rates;
     std::map<std::string, std::vector<double>> inj_resv_rates;
-    std::map<std::string, std::vector<double>> inj_potentials;
     std::map<std::string, std::vector<double>> inj_rein_rates;
     std::map<std::string, double> inj_vrep_rate;
     std::map<std::string, double> m_grat_sales_target;

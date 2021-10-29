@@ -35,9 +35,9 @@ bool GroupState::operator==(const GroupState& other) const {
            this->prod_red_rates == other.prod_red_rates &&
            this->inj_red_rates == other.inj_red_rates &&
            this->inj_resv_rates == other.inj_resv_rates &&
-           this->inj_potentials == other.inj_potentials &&
            this->inj_rein_rates == other.inj_rein_rates &&
            this->inj_vrep_rate == other.inj_vrep_rate &&
+           this->inj_surface_rates == other.inj_surface_rates &&
            this->m_grat_sales_target == other.m_grat_sales_target &&
            this->injection_controls == other.injection_controls;
 }
@@ -202,23 +202,6 @@ bool GroupState::has_grat_sales_target(const std::string& gname) const {
 
 //-------------------------------------------------------------------------
 
-void GroupState::update_injection_potentials(const std::string& gname, const std::vector<double>& potentials) {
-    if (potentials.size() != this->num_phases)
-        throw std::logic_error("Wrong number of phases");
-
-    this->inj_potentials[gname] = potentials;
-}
-
-const std::vector<double>& GroupState::injection_potentials(const std::string& gname) const {
-    auto group_iter = this->inj_potentials.find(gname);
-    if (group_iter == this->inj_potentials.end())
-        throw std::logic_error("No such group");
-
-    return group_iter->second;
-}
-
-//-------------------------------------------------------------------------
-
 bool GroupState::has_production_control(const std::string& gname) const {
     auto group_iter = this->production_controls.find(gname);
     if (group_iter == this->production_controls.end())
@@ -321,7 +304,6 @@ std::string GroupState::dump() const
     dump_groupmap(root, "prod_red_rates", this->prod_red_rates);
     dump_groupmap(root, "inj_red_rates", this->inj_red_rates);
     dump_groupmap(root, "inj_resv_rates", this->inj_resv_rates);
-    dump_groupmap(root, "inj_potentials", this->inj_potentials);
     dump_groupmap(root, "inj_rein_rates", this->inj_rein_rates);
     dump_groupmap(root, "vrep_rate", this->inj_vrep_rate);
     dump_groupmap(root, "grat_sales_target", this->m_grat_sales_target);
