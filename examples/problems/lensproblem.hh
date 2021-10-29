@@ -507,7 +507,7 @@ public:
     void endTimeStep()
     {
 #ifndef NDEBUG
-        this->model().checkConservativeness();
+        //this->model().checkConservativeness();
 
         // Calculate storage terms
         EqVector storage;
