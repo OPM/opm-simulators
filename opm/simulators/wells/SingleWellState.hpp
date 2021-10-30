@@ -65,7 +65,6 @@ public:
     ///    PerforationData::connection_transmissibility_factor actually
     ///    used (overwrites existing internal values).
     void reset_connection_factors(const std::vector<PerforationData>& new_perf_data);
-
     void updateStatus(Well::Status status);
     void init_timestep(const SingleWellState& other);
     void shut();
