@@ -56,6 +56,10 @@ void SingleWellState::shut() {
     std::fill(this->surface_rates.begin(), this->surface_rates.end(), 0);
     std::fill(this->reservoir_rates.begin(), this->reservoir_rates.end(), 0);
     std::fill(this->productivity_index.begin(), this->productivity_index.end(), 0);
+
+    auto& perf_data = this->perf_data;
+    auto& connpi = perf_data.prod_index;
+    connpi.assign(connpi.size(), 0);
 }
 
 void SingleWellState::stop() {

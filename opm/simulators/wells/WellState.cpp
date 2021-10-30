@@ -751,10 +751,6 @@ void WellState::shutWell(int well_index)
 {
     auto& ws = this->well(well_index);
     ws.shut();
-
-    auto& perf_data = ws.perf_data;
-    auto& connpi = perf_data.prod_index;
-    connpi.assign(connpi.size(), 0);
 }
 
 void WellState::updateStatus(int well_index, Well::Status status)
