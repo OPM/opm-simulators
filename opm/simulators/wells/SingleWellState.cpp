@@ -57,8 +57,7 @@ void SingleWellState::shut() {
     std::fill(this->reservoir_rates.begin(), this->reservoir_rates.end(), 0);
     std::fill(this->productivity_index.begin(), this->productivity_index.end(), 0);
 
-    auto& perf_data = this->perf_data;
-    auto& connpi = perf_data.prod_index;
+    auto& connpi = this->perf_data.prod_index;
     connpi.assign(connpi.size(), 0);
 }
 
@@ -71,6 +70,21 @@ void SingleWellState::open() {
     this->status = Well::Status::OPEN;
 }
 
+void SingleWellState::updateStatus(Well::Status new_status) {
+    switch (new_status) {
+    case Well::Status::OPEN:
+        this->open();
+        break;
+    case Well::Status::SHUT:
+        this->shut();
+        break;
+    case Well::Status::STOP:
+        this->stop();
+        break;
+    default:
+        throw std::logic_error("Invalid well status");
+    }
+}
 
 double SingleWellState::sum_connection_rates(const std::vector<double>& connection_rates) const {
     return this->parallel_info.get().sumPerfValues(connection_rates.begin(), connection_rates.end());

@@ -755,19 +755,8 @@ void WellState::shutWell(int well_index)
 
 void WellState::updateStatus(int well_index, Well::Status status)
 {
-    switch (status) {
-    case Well::Status::OPEN:
-        this->openWell(well_index);
-        break;
-    case Well::Status::SHUT:
-        this->shutWell(well_index);
-        break;
-    case Well::Status::STOP:
-        this->stopWell(well_index);
-        break;
-    default:
-        throw std::logic_error("Invalid well status");
-    }
+    auto& ws = this->well(well_index);
+    ws.updateStatus(status);
 }
 
 

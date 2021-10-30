@@ -55,6 +55,7 @@ public:
     Well::ProducerCMode production_cmode{Well::ProducerCMode::CMODE_UNDEFINED};
 
 
+    void updateStatus(Well::Status status);
     void init_timestep(const SingleWellState& other);
     void shut();
     void stop();
