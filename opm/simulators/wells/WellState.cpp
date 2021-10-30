@@ -71,7 +71,7 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
     const int np = pu.num_phases;
     double temp = well.isInjector() ? well.injectionControls(summary_state).temperature : 273.15 + 15.56;
 
-    auto& ws = this->wells_.add(well.name(), SingleWellState{well_info, well.isProducer(), well_perf_data.size(), static_cast<std::size_t>(np), temp});
+    auto& ws = this->wells_.add(well.name(), SingleWellState{well.name(), well_info, well.isProducer(), well_perf_data.size(), static_cast<std::size_t>(np), temp});
 
     if ( ws.perf_data.empty())
         return;

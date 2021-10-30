@@ -33,8 +33,9 @@ namespace Opm {
 
 class SingleWellState {
 public:
-    SingleWellState(const ParallelWellInfo& pinfo, bool is_producer, std::size_t num_perf, std::size_t num_phases, double temp);
+    SingleWellState(const std::string& name, const ParallelWellInfo& pinfo, bool is_producer, std::size_t num_perf, std::size_t num_phases, double temp);
 
+    std::string name;
     std::reference_wrapper<const ParallelWellInfo> parallel_info;
 
     Well::Status status{Well::Status::OPEN};
