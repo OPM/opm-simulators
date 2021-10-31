@@ -56,8 +56,6 @@ void WellState::base_init(const std::vector<double>& cellPressures,
 
 
 
-
-
 void WellState::initSingleWell(const std::vector<double>& cellPressures,
                                const Well& well,
                                const std::vector<PerforationData>& well_perf_data,
@@ -83,8 +81,6 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
     const bool is_bhp = well.isInjector() ? (inj_controls.cmode == Well::InjectorCMode::BHP)
                                           : (prod_controls.cmode == Well::ProducerCMode::BHP);
     const double bhp_limit = well.isInjector() ? inj_controls.bhp_limit : prod_controls.bhp_limit;
-    const bool is_grup = well.isInjector() ? (inj_controls.cmode == Well::InjectorCMode::GRUP)
-                                           : (prod_controls.cmode == Well::ProducerCMode::GRUP);
 
     const double inj_surf_rate = well.isInjector() ? inj_controls.surface_rate : 0.0; // To avoid a "maybe-uninitialized" warning.
     const double global_pressure = well_info.broadcastFirstPerforationValue(cellPressures[well_perf_data[0].cell_index]);
@@ -97,8 +93,8 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
     // otherwise keep it zero.
     const bool has_thp = well.isInjector() ? inj_controls.hasControl(Well::InjectorCMode::THP)
         : prod_controls.hasControl(Well::ProducerCMode::THP);
-    const double thp_limit = well.isInjector() ? inj_controls.thp_limit : prod_controls.thp_limit;
     if (has_thp) {
+        const double thp_limit = well.isInjector() ? inj_controls.thp_limit : prod_controls.thp_limit;
         ws.thp = thp_limit;
     }
 
@@ -115,6 +111,9 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
         }
         return;
     }
+
+    const bool is_grup = well.isInjector() ? (inj_controls.cmode == Well::InjectorCMode::GRUP)
+        : (prod_controls.cmode == Well::ProducerCMode::GRUP);
     if (is_grup) {
         // Well under group control.
         // 1. Rates: zero well rates.
@@ -940,3 +939,5 @@ WellState::parallelWellInfo(std::size_t well_index) const
 template void WellState::updateGlobalIsGrup<ParallelWellInfo::Communication>(const ParallelWellInfo::Communication& comm);
 template void WellState::communicateGroupRates<ParallelWellInfo::Communication>(const ParallelWellInfo::Communication& comm);
 } // namespace Opm
+
+
