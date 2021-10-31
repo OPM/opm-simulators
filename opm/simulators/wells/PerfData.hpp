@@ -32,12 +32,13 @@ private:
     bool injector;
 
 public:
-    PerfData(std::size_t num_perf, bool injector_, std::size_t num_phases);
+    PerfData(std::size_t num_perf, double pressure_first_connection_, bool injector_, std::size_t num_phases);
     std::size_t size() const;
     bool empty() const;
     bool try_assign(const PerfData& other);
 
 
+    double pressure_first_connection;
     std::vector<double> pressure;
     std::vector<double> rates;
     std::vector<double> phase_rates;

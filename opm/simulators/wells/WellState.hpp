@@ -296,16 +296,16 @@ private:
                         const ParallelWellInfo& well_info,
                         const SummaryState& summary_state);
 
-    void initSingleProducer(const std::vector<double>& cellPressures,
-                            const Well& well,
-                            const std::vector<PerforationData>& well_perf_data,
+    void initSingleProducer(const Well& well,
                             const ParallelWellInfo& well_info,
+                            double pressure_first_connection,
+                            const std::vector<PerforationData>& well_perf_data,
                             const SummaryState& summary_state);
 
-    void initSingleInjector(const std::vector<double>& cellPressures,
-                            const Well& well,
-                            const std::vector<PerforationData>& well_perf_data,
+    void initSingleInjector(const Well& well,
                             const ParallelWellInfo& well_info,
+                            double pressure_first_connection,
+                            const std::vector<PerforationData>& well_perf_data,
                             const SummaryState& summary_state);
 
 };

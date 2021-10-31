@@ -1239,7 +1239,7 @@ updateEclWells(const int timeStepIdx,
         }
         auto& ws = this->wellState().well(well_index);
 
-        this->wellState().updateStatus(well_index, well.getStatus());
+        ws.updateStatus( well.getStatus() );
         ws.reset_connection_factors(pd);
         this->prod_index_calc_[well_index].reInit(well);
     }

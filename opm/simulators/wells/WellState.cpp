@@ -54,17 +54,15 @@ void WellState::base_init(const std::vector<double>& cellPressures,
     }
 }
 
-void WellState::initSingleProducer(const std::vector<double>& cellPressures,
-                                   const Well& well,
-                                   const std::vector<PerforationData>& well_perf_data,
+void WellState::initSingleProducer(const Well& well,
                                    const ParallelWellInfo& well_info,
+                                   double pressure_first_connection,
+                                   const std::vector<PerforationData>& well_perf_data,
                                    const SummaryState& summary_state) {
-    const double bhp_safety_factor = 0.99;
     const auto& pu = this->phase_usage_;
-    const int np = pu.num_phases;
     const double temp = 273.15 + 15.56;
 
-    auto& ws = this->wells_.add(well.name(), SingleWellState{well.name(), well_info, true, well_perf_data, static_cast<std::size_t>(np), temp});
+    auto& ws = this->wells_.add(well.name(), SingleWellState{well.name(), well_info, true, pressure_first_connection, well_perf_data, pu, temp});
     if ( ws.perf_data.empty())
         return;
 
@@ -72,67 +70,21 @@ void WellState::initSingleProducer(const std::vector<double>& cellPressures,
         ws.status = Well::Status::OPEN;
     }
 
-    const auto& prod_controls = well.isProducer() ? well.productionControls(summary_state) : Well::ProductionControls(0);
-    if (prod_controls.hasControl(Well::ProducerCMode::THP))
-        ws.thp = prod_controls.thp_limit;
-
-
-    auto cmode_is_bhp = (prod_controls.cmode == Well::ProducerCMode::BHP);
-    auto bhp_limit = prod_controls.bhp_limit;
-    auto pressure_first_connection = well_info.broadcastFirstPerforationValue(cellPressures[ws.perf_data.cell_index[0]]);
-
-    if (well.getStatus() == Well::Status::STOP) {
-        if (cmode_is_bhp)
-            ws.bhp = bhp_limit;
-        else
-            ws.bhp = pressure_first_connection;
-
-        return;
-    }
-
-    if (prod_controls.cmode == Well::ProducerCMode::GRUP) {
-        ws.bhp = pressure_first_connection * bhp_safety_factor;
-        return;
-    }
-
-    switch (prod_controls.cmode) {
-    case Well::ProducerCMode::ORAT:
-        assert(pu.phase_used[BlackoilPhases::Liquid]);
-        ws.surface_rates[pu.phase_pos[BlackoilPhases::Liquid]] = -prod_controls.oil_rate;
-        break;
-    case Well::ProducerCMode::WRAT:
-        assert(pu.phase_used[BlackoilPhases::Aqua]);
-        ws.surface_rates[pu.phase_pos[BlackoilPhases::Aqua]] = -prod_controls.water_rate;
-        break;
-    case Well::ProducerCMode::GRAT:
-        assert(pu.phase_used[BlackoilPhases::Vapour]);
-        ws.surface_rates[pu.phase_pos[BlackoilPhases::Vapour]] = -prod_controls.gas_rate;
-        break;
-    default:
-        // Keep zero init.
-        break;
-    }
-
-    if (cmode_is_bhp)
-        ws.bhp = bhp_limit;
-    else
-        ws.bhp = pressure_first_connection * bhp_safety_factor;
+    ws.update_producer_targets(well, summary_state);
 }
 
 
-void WellState::initSingleInjector(const std::vector<double>& cellPressures,
-                                   const Well& well,
-                                   const std::vector<PerforationData>& well_perf_data,
+void WellState::initSingleInjector(const Well& well,
                                    const ParallelWellInfo& well_info,
+                                   double pressure_first_connection,
+                                   const std::vector<PerforationData>& well_perf_data,
                                    const SummaryState& summary_state) {
 
-    const double bhp_safety_factor = 1.01;
     const auto& pu = this->phase_usage_;
-    const int np = pu.num_phases;
     const auto& inj_controls = well.injectionControls(summary_state);
     const double temp = inj_controls.temperature;
 
-    auto& ws = this->wells_.add(well.name(), SingleWellState{well.name(), well_info, well.isProducer(), well_perf_data, static_cast<std::size_t>(np), temp});
+    auto& ws = this->wells_.add(well.name(), SingleWellState{well.name(), well_info, false, pressure_first_connection, well_perf_data, pu, temp});
     if ( ws.perf_data.empty())
         return;
 
@@ -140,53 +92,7 @@ void WellState::initSingleInjector(const std::vector<double>& cellPressures,
         ws.status = Well::Status::OPEN;
     }
 
-    if (inj_controls.hasControl(Well::InjectorCMode::THP))
-        ws.thp = inj_controls.thp_limit;
-
-    auto cmode_is_bhp = (inj_controls.cmode == Well::InjectorCMode::BHP);
-    auto bhp_limit = inj_controls.bhp_limit;
-    auto pressure_first_connection = well_info.broadcastFirstPerforationValue(cellPressures[ws.perf_data.cell_index[0]]);
-
-    if (well.getStatus() == Well::Status::STOP) {
-        if (cmode_is_bhp)
-            ws.bhp = bhp_limit;
-        else
-            ws.bhp = pressure_first_connection;
-
-        return;
-    }
-
-
-    if (inj_controls.cmode == Well::InjectorCMode::GRUP) {
-        ws.bhp = pressure_first_connection * bhp_safety_factor;
-        return;
-    }
-
-    if (inj_controls.cmode == Well::InjectorCMode::RATE) {
-        auto inj_surf_rate = inj_controls.surface_rate;
-        switch (inj_controls.injector_type) {
-        case InjectorType::WATER:
-            assert(pu.phase_used[BlackoilPhases::Aqua]);
-            ws.surface_rates[pu.phase_pos[BlackoilPhases::Aqua]] = inj_surf_rate;
-            break;
-        case InjectorType::GAS:
-            assert(pu.phase_used[BlackoilPhases::Vapour]);
-            ws.surface_rates[pu.phase_pos[BlackoilPhases::Vapour]] = inj_surf_rate;
-            break;
-        case InjectorType::OIL:
-            assert(pu.phase_used[BlackoilPhases::Liquid]);
-            ws.surface_rates[pu.phase_pos[BlackoilPhases::Liquid]] = inj_surf_rate;
-            break;
-        case InjectorType::MULTI:
-            // Not currently handled, keep zero init.
-            break;
-        }
-    }
-
-    if (cmode_is_bhp)
-        ws.bhp = bhp_limit;
-    else
-        ws.bhp = pressure_first_connection * bhp_safety_factor;
+    ws.update_injector_targets(well, summary_state);
 }
 
 
@@ -200,10 +106,15 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
     if (well.isInjector() == well.isProducer())
         throw std::logic_error(fmt::format("Well must be either producer or injector - logic error for well: {}", well.name()));
 
+    double pressure_first_connection = -1;
+    if (!well_perf_data.empty())
+        pressure_first_connection = cellPressures[well_perf_data[0].cell_index];
+    pressure_first_connection = well_info.broadcastFirstPerforationValue(pressure_first_connection);
+
     if (well.isInjector())
-        this->initSingleInjector(cellPressures, well, well_perf_data, well_info, summary_state);
+        this->initSingleInjector(well, well_info, pressure_first_connection, well_perf_data, summary_state);
     else
-        this->initSingleProducer(cellPressures, well, well_perf_data, well_info, summary_state);
+        this->initSingleProducer(well, well_info, pressure_first_connection, well_perf_data, summary_state);
 }
 
 
