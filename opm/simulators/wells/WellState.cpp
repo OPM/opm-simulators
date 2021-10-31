@@ -72,7 +72,7 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
     const auto inj_controls = well.isInjector() ? well.injectionControls(summary_state) : Well::InjectionControls(0);
     double temp = well.isInjector() ? inj_controls.temperature : 273.15 + 15.56;
 
-    auto& ws = this->wells_.add(well.name(), SingleWellState{well.name(), well_info, well.isProducer(), well_perf_data.size(), static_cast<std::size_t>(np), temp});
+    auto& ws = this->wells_.add(well.name(), SingleWellState{well.name(), well_info, well.isProducer(), well_perf_data, static_cast<std::size_t>(np), temp});
     if ( ws.perf_data.empty())
         return;
 
@@ -83,7 +83,7 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
     const double bhp_limit = well.isInjector() ? inj_controls.bhp_limit : prod_controls.bhp_limit;
 
     const double inj_surf_rate = well.isInjector() ? inj_controls.surface_rate : 0.0; // To avoid a "maybe-uninitialized" warning.
-    const double global_pressure = well_info.broadcastFirstPerforationValue(cellPressures[well_perf_data[0].cell_index]);
+    const double global_pressure = well_info.broadcastFirstPerforationValue(cellPressures[ws.perf_data.cell_index[0]]);
 
     if (well.getStatus() == Well::Status::OPEN) {
         ws.status = Well::Status::OPEN;
@@ -240,14 +240,8 @@ void WellState::init(const std::vector<double>& cellPressures,
         auto& perf_data = ws.perf_data;
         const int num_perf_this_well = perf_data.size();
         const int global_num_perf_this_well = ecl_well.getConnections().num_open();
-        const auto& perf_input = well_perf_data[w];
 
         for (int perf = 0; perf < num_perf_this_well; ++perf) {
-            perf_data.cell_index[perf] = perf_input[perf].cell_index;
-            perf_data.connection_transmissibility_factor[perf] = perf_input[perf].connection_transmissibility_factor;
-            perf_data.satnum_id[perf] = perf_input[perf].satnum_id;
-            perf_data.ecl_index[perf] = perf_input[perf].ecl_index;
-
             if (wells_ecl[w].getStatus() == Well::Status::OPEN) {
                 for (int p = 0; p < this->numPhases(); ++p) {
                     perf_data.phase_rates[this->numPhases()*perf + p] = ws.surface_rates[p] / double(global_num_perf_this_well);

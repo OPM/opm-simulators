@@ -574,9 +574,10 @@ BOOST_AUTO_TEST_CASE(TESTPerfData) {
 
 BOOST_AUTO_TEST_CASE(TestSingleWellState) {
     Opm::ParallelWellInfo pinfo;
-    Opm::SingleWellState ws1("W1", pinfo, true,  10, 3, 1);
-    Opm::SingleWellState ws2("W2", pinfo, true,  10, 3, 2);
-    Opm::SingleWellState ws3("W3", pinfo, false, 10, 3, 3);
+    std::vector<Opm::PerforationData> connections = {{0,1,1,0},{1,1,1,1},{2,1,1,2}};
+    Opm::SingleWellState ws1("W1", pinfo, true,  connections, 3, 1);
+    Opm::SingleWellState ws2("W2", pinfo, true,  connections, 3, 2);
+    Opm::SingleWellState ws3("W3", pinfo, false, connections, 3, 3);
 
     ws1.bhp = 100;
     ws1.thp = 200;

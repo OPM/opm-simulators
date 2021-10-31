@@ -18,10 +18,11 @@
 */
 
 #include <opm/simulators/wells/SingleWellState.hpp>
+#include <opm/simulators/wells/PerforationData.hpp>
 
 namespace Opm {
 
-SingleWellState::SingleWellState(const std::string& name_, const ParallelWellInfo& pinfo, bool is_producer, std::size_t num_perf, std::size_t num_phases, double temp)
+SingleWellState::SingleWellState(const std::string& name_, const ParallelWellInfo& pinfo, bool is_producer, const std::vector<PerforationData>& perf_input, std::size_t num_phases, double temp)
     : name(name_)
     , parallel_info(pinfo)
     , producer(is_producer)
@@ -30,8 +31,15 @@ SingleWellState::SingleWellState(const std::string& name_, const ParallelWellInf
     , productivity_index(num_phases)
     , surface_rates(num_phases)
     , reservoir_rates(num_phases)
-    , perf_data(num_perf, !is_producer, num_phases)
-{}
+    , perf_data(perf_input.size(), !is_producer, num_phases)
+{
+    for (std::size_t perf = 0; perf < perf_input.size(); perf++) {
+        this->perf_data.cell_index[perf] = perf_input[perf].cell_index;
+        this->perf_data.connection_transmissibility_factor[perf] = perf_input[perf].connection_transmissibility_factor;
+        this->perf_data.satnum_id[perf] = perf_input[perf].satnum_id;
+        this->perf_data.ecl_index[perf] = perf_input[perf].ecl_index;
+    }
+}
 
 
 void SingleWellState::init_timestep(const SingleWellState& other) {

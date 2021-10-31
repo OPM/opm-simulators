@@ -31,9 +31,11 @@
 
 namespace Opm {
 
+struct PerforationData;
+
 class SingleWellState {
 public:
-    SingleWellState(const std::string& name, const ParallelWellInfo& pinfo, bool is_producer, std::size_t num_perf, std::size_t num_phases, double temp);
+    SingleWellState(const std::string& name, const ParallelWellInfo& pinfo, bool is_producer, const std::vector<PerforationData>& perf_input, std::size_t num_phases, double temp);
 
     std::string name;
     std::reference_wrapper<const ParallelWellInfo> parallel_info;
