@@ -63,22 +63,22 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
                                const ParallelWellInfo& well_info,
                                const SummaryState& summary_state)
 {
-    assert(well.isInjector() || well.isProducer());
+    if (well.isInjector() == well.isProducer())
+        throw std::logic_error(fmt::format("Well must be either producer or injector - logic error for well: {}", well.name()));
 
     // Set default zero initial well rates.
     // May be overwritten below.
     const auto& pu = this->phase_usage_;
     const int np = pu.num_phases;
-    double temp = well.isInjector() ? well.injectionControls(summary_state).temperature : 273.15 + 15.56;
+    const auto inj_controls = well.isInjector() ? well.injectionControls(summary_state) : Well::InjectionControls(0);
+    double temp = well.isInjector() ? inj_controls.temperature : 273.15 + 15.56;
 
     auto& ws = this->wells_.add(well.name(), SingleWellState{well.name(), well_info, well.isProducer(), well_perf_data.size(), static_cast<std::size_t>(np), temp});
-
     if ( ws.perf_data.empty())
         return;
 
-    const auto inj_controls = well.isInjector() ? well.injectionControls(summary_state) : Well::InjectionControls(0);
-    const auto prod_controls = well.isProducer() ? well.productionControls(summary_state) : Well::ProductionControls(0);
 
+    const auto prod_controls = well.isProducer() ? well.productionControls(summary_state) : Well::ProductionControls(0);
     const bool is_bhp = well.isInjector() ? (inj_controls.cmode == Well::InjectorCMode::BHP)
                                           : (prod_controls.cmode == Well::ProducerCMode::BHP);
     const double bhp_limit = well.isInjector() ? inj_controls.bhp_limit : prod_controls.bhp_limit;
@@ -142,7 +142,6 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
                 // Keep zero init.
             }
         } else {
-            assert(well.isProducer());
             // Note negative rates for producing wells.
             switch (prod_controls.cmode) {
             case Well::ProducerCMode::ORAT:
