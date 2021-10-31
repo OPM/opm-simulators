@@ -86,10 +86,7 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
                                            : (prod_controls.cmode == Well::ProducerCMode::GRUP);
 
     const double inj_surf_rate = well.isInjector() ? inj_controls.surface_rate : 0.0; // To avoid a "maybe-uninitialized" warning.
-
-    const double local_pressure = well_perf_data.empty() ?
-                                      0 : cellPressures[well_perf_data[0].cell_index];
-    const double global_pressure = well_info.broadcastFirstPerforationValue(local_pressure);
+    const double global_pressure = well_info.broadcastFirstPerforationValue(cellPressures[well_perf_data[0].cell_index]);
 
     if (well.getStatus() == Well::Status::OPEN) {
         ws.status = Well::Status::OPEN;
@@ -122,21 +119,20 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
         //    (producer) or RATE (injector).
         //    Otherwise, we cannot set the correct
         //    value here and initialize to zero rate.
-        auto& rates = ws.surface_rates;
         if (well.isInjector()) {
             if (inj_controls.cmode == Well::InjectorCMode::RATE) {
                 switch (inj_controls.injector_type) {
                 case InjectorType::WATER:
                     assert(pu.phase_used[BlackoilPhases::Aqua]);
-                    rates[pu.phase_pos[BlackoilPhases::Aqua]] = inj_surf_rate;
+                    ws.surface_rates[pu.phase_pos[BlackoilPhases::Aqua]] = inj_surf_rate;
                     break;
                 case InjectorType::GAS:
                     assert(pu.phase_used[BlackoilPhases::Vapour]);
-                    rates[pu.phase_pos[BlackoilPhases::Vapour]] = inj_surf_rate;
+                    ws.surface_rates[pu.phase_pos[BlackoilPhases::Vapour]] = inj_surf_rate;
                     break;
                 case InjectorType::OIL:
                     assert(pu.phase_used[BlackoilPhases::Liquid]);
-                    rates[pu.phase_pos[BlackoilPhases::Liquid]] = inj_surf_rate;
+                    ws.surface_rates[pu.phase_pos[BlackoilPhases::Liquid]] = inj_surf_rate;
                     break;
                 case InjectorType::MULTI:
                     // Not currently handled, keep zero init.
@@ -151,15 +147,15 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
             switch (prod_controls.cmode) {
             case Well::ProducerCMode::ORAT:
                 assert(pu.phase_used[BlackoilPhases::Liquid]);
-                rates[pu.phase_pos[BlackoilPhases::Liquid]] = -prod_controls.oil_rate;
+                ws.surface_rates[pu.phase_pos[BlackoilPhases::Liquid]] = -prod_controls.oil_rate;
                 break;
             case Well::ProducerCMode::WRAT:
                 assert(pu.phase_used[BlackoilPhases::Aqua]);
-                rates[pu.phase_pos[BlackoilPhases::Aqua]] = -prod_controls.water_rate;
+                ws.surface_rates[pu.phase_pos[BlackoilPhases::Aqua]] = -prod_controls.water_rate;
                 break;
             case Well::ProducerCMode::GRAT:
                 assert(pu.phase_used[BlackoilPhases::Vapour]);
-                rates[pu.phase_pos[BlackoilPhases::Vapour]] = -prod_controls.gas_rate;
+                ws.surface_rates[pu.phase_pos[BlackoilPhases::Vapour]] = -prod_controls.gas_rate;
                 break;
             default:
                 // Keep zero init.
