@@ -594,6 +594,27 @@ BOOST_AUTO_TEST_CASE(TestSingleWellState) {
 
 
 
+BOOST_AUTO_TEST_CASE(TestPU) {
+    Opm::PhaseUsage pu({Opm::BlackoilPhases::Polymer, Opm::BlackoilPhases::Solvent, Opm::BlackoilPhases::Aqua, Opm::BlackoilPhases::ZFraction});
+
+    BOOST_CHECK(pu.phase_used[Opm::BlackoilPhases::Aqua]);      BOOST_CHECK_EQUAL(pu.phase_pos[Opm::BlackoilPhases::Aqua], 0);
+    BOOST_CHECK(pu.phase_used[Opm::BlackoilPhases::Solvent]);   BOOST_CHECK_EQUAL(pu.phase_pos[Opm::BlackoilPhases::Solvent], 1);
+    BOOST_CHECK(pu.phase_used[Opm::BlackoilPhases::Polymer]);   BOOST_CHECK_EQUAL(pu.phase_pos[Opm::BlackoilPhases::Polymer], 2);
+    BOOST_CHECK(pu.phase_used[Opm::BlackoilPhases::ZFraction]); BOOST_CHECK_EQUAL(pu.phase_pos[Opm::BlackoilPhases::ZFraction], 3);
+
+    BOOST_CHECK(!pu.phase_used[Opm::BlackoilPhases::Liquid]);   BOOST_CHECK_EQUAL(pu.phase_pos[Opm::BlackoilPhases::Liquid], -1);
+    BOOST_CHECK(!pu.phase_used[Opm::BlackoilPhases::Energy]);   BOOST_CHECK_EQUAL(pu.phase_pos[Opm::BlackoilPhases::Energy], -1);
+
+    BOOST_CHECK_EQUAL(pu.num_phases, 1);  // Only Aqua counts as a phase.
+    BOOST_CHECK(pu.has_polymer);
+    BOOST_CHECK(pu.has_solvent);
+    BOOST_CHECK(pu.has_zFraction);
+
+    BOOST_CHECK(!pu.has_energy);
+    BOOST_CHECK(!pu.has_polymermw);
+    BOOST_CHECK(!pu.has_foam);
+    BOOST_CHECK(!pu.has_brine);
+}
 
 
 BOOST_AUTO_TEST_SUITE_END()

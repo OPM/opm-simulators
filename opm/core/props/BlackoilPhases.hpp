@@ -21,6 +21,7 @@
 #define OPM_BLACKOILPHASES_HEADER_INCLUDED
 
 #include <array>
+#include <vector>
 
 namespace Opm
 {
@@ -43,6 +44,10 @@ namespace Opm
 
     struct PhaseUsage : public BlackoilPhases
     {
+        PhaseUsage() = default;
+        explicit PhaseUsage(std::vector<BlackoilPhases::PhaseIndex> phases);
+
+
         std::array<int, MaxNumPhases + NumCryptoPhases> phase_used;
         std::array<int, MaxNumPhases + NumCryptoPhases> phase_pos;
 

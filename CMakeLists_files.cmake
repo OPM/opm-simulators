@@ -32,6 +32,7 @@ list (APPEND MAIN_SOURCE_FILES
   ebos/eclgenericvanguard.cc
   ebos/eclgenericwriter.cc
   ebos/ecltransmissibility.cc
+  opm/core/props/BlackoilPhases.cpp
   opm/core/props/phaseUsageFromDeck.cpp
   opm/core/props/satfunc/RelpermDiagnostics.cpp
   opm/simulators/timestepping/SimulatorReport.cpp
