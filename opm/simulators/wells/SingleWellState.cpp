@@ -95,6 +95,36 @@ void SingleWellState::updateStatus(Well::Status new_status) {
     }
 }
 
+void SingleWellState::reset_connection_factors(const std::vector<PerforationData>& new_perf_data) {
+    if (this->perf_data.size() != new_perf_data.size()) {
+        throw std::invalid_argument {
+            "Size mismatch for perforation data in well " + this->name
+        };
+    }
+
+    for (std::size_t conn_index = 0; conn_index < new_perf_data.size(); conn_index++) {
+        if (this->perf_data.cell_index[conn_index] != static_cast<std::size_t>(new_perf_data[conn_index].cell_index)) {
+            throw std::invalid_argument {
+                "Cell index mismatch in connection "
+                    + std::to_string(conn_index)
+                    + " of well "
+                    + this->name
+            };
+        }
+
+        if (this->perf_data.satnum_id[conn_index] != new_perf_data[conn_index].satnum_id) {
+            throw std::invalid_argument {
+                "Saturation function table mismatch in connection "
+                + std::to_string(conn_index)
+                        + " of well "
+                        + this->name
+            };
+        }
+        this->perf_data.connection_transmissibility_factor[conn_index] = new_perf_data[conn_index].connection_transmissibility_factor;
+    }
+}
+
+
 double SingleWellState::sum_connection_rates(const std::vector<double>& connection_rates) const {
     return this->parallel_info.get().sumPerfValues(connection_rates.begin(), connection_rates.end());
 }

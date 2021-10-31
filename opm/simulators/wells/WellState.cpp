@@ -906,40 +906,6 @@ void WellState::updateWellsDefaultALQ( const std::vector<Well>& wells_ecl )
     }
 }
 
-void WellState::resetConnectionTransFactors(const int well_index,
-                                            const std::vector<PerforationData>& new_perf_data)
-{
-    auto& ws = this->well(well_index);
-    auto& perf_data = ws.perf_data;
-    if (perf_data.size() != new_perf_data.size()) {
-        throw std::invalid_argument {
-            "Size mismatch for perforation data in well "
-            + std::to_string(well_index)
-        };
-    }
-
-    for (std::size_t conn_index = 0; conn_index < new_perf_data.size(); conn_index++) {
-        if (perf_data.cell_index[conn_index] != static_cast<std::size_t>(new_perf_data[conn_index].cell_index)) {
-            throw std::invalid_argument {
-                "Cell index mismatch in connection "
-                + std::to_string(conn_index)
-                        + " of well "
-                        + std::to_string(well_index)
-            };
-        }
-
-        if (perf_data.satnum_id[conn_index] != new_perf_data[conn_index].satnum_id) {
-            throw std::invalid_argument {
-                "Saturation function table mismatch in connection "
-                + std::to_string(conn_index)
-                        + " of well "
-                        + std::to_string(well_index)
-            };
-        }
-
-        perf_data.connection_transmissibility_factor[conn_index] = new_perf_data[conn_index].connection_transmissibility_factor;
-    }
-}
 
 const ParallelWellInfo&
 WellState::parallelWellInfo(std::size_t well_index) const

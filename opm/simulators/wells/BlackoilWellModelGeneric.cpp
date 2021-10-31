@@ -1237,9 +1237,10 @@ updateEclWells(const int timeStepIdx,
                 ++pdIter;
             }
         }
+        auto& ws = this->wellState().well(well_index);
 
         this->wellState().updateStatus(well_index, well.getStatus());
-        this->wellState().resetConnectionTransFactors(well_index, pd);
+        ws.reset_connection_factors(pd);
         this->prod_index_calc_[well_index].reInit(well);
     }
 }
@@ -2028,7 +2029,8 @@ runWellPIScaling(const int timeStepIdx,
                 ++pdIter;
             }
         }
-        this->wellState().resetConnectionTransFactors(well_index, pd);
+        auto& ws = this->wellState().well(well_index);
+        ws.reset_connection_factors(pd);
         this->prod_index_calc_[well_index].reInit(well);
     };
 

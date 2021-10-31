@@ -58,6 +58,14 @@ public:
     Well::ProducerCMode production_cmode{Well::ProducerCMode::CMODE_UNDEFINED};
 
 
+    /// Special purpose method to support dynamically rescaling a well's
+    /// CTFs through WELPI.
+    ///
+    /// \param[in] new_perf_data New perforation data.  Only
+    ///    PerforationData::connection_transmissibility_factor actually
+    ///    used (overwrites existing internal values).
+    void reset_connection_factors(const std::vector<PerforationData>& new_perf_data);
+
     void updateStatus(Well::Status status);
     void init_timestep(const SingleWellState& other);
     void shut();
