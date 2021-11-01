@@ -423,6 +423,14 @@ namespace Opm
                 deckFilename = EWOMS_GET_PARAM(PreTypeTag, std::string, EclDeckFileName);
             }
 
+            if (deckFilename.empty()) {
+                if (mpiRank == 0) {
+                    std::cerr << "No input case given. Try '--help' for a usage description.\n";
+                }
+                exitCode = EXIT_FAILURE;
+                return false;
+            }
+
             using PreVanguard = GetPropType<PreTypeTag, Properties::Vanguard>;
             try {
                 deckFilename = PreVanguard::canonicalDeckPath(deckFilename);
