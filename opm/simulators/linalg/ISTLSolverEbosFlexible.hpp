@@ -108,7 +108,7 @@ public:
         // Set it up manually
         using ElementMapper =
             Dune::MultipleCodimMultipleGeomTypeMapper<GridView>;
-        ElementMapper elemMapper(simulator_.vanguard().grid().leafGridView(), Dune::mcmgElementLayout());
+        ElementMapper elemMapper(simulator_.gridView(), Dune::mcmgElementLayout());
         detail::findOverlapAndInterior(simulator_.vanguard().grid(), elemMapper, overlapRows_, interiorRows_);
 #if HAVE_MPI
         if (parallelInformation_.type() == typeid(ParallelISTLInformation)) {

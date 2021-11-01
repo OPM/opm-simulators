@@ -991,6 +991,13 @@ isCartIdxOnThisRank(int cartIdx) const
 template class CollectDataToIORank<Dune::CpGrid,
                                    Dune::CpGrid,
                                    Dune::GridView<Dune::Fem::GridPart2GridViewTraits<Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>>>>;
+template class CollectDataToIORank<Dune::CpGrid,
+                                   Dune::CpGrid,
+                                   Dune::Fem::GridPart2GridViewImpl<
+                                       Dune::Fem::AdaptiveLeafGridPart<
+                                           Dune::CpGrid,
+                                           Dune::PartitionIteratorType(4),
+                                           false> > >;
 #else
 template class CollectDataToIORank<Dune::CpGrid,
                                    Dune::CpGrid,
