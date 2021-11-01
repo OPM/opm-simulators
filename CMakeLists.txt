@@ -22,9 +22,6 @@ option(SIBLING_SEARCH "Search for other modules in sibling directories?" ON)
 set( USE_OPENMP_DEFAULT OFF ) # Use of OpenMP is considered experimental
 option(BUILD_FLOW "Build the production oriented flow simulator?" ON)
 option(BUILD_FLOW_VARIANTS "Build the variants for flow by default?" OFF)
-option(BUILD_EBOS "Build the research oriented ebos simulator?" ON)
-option(BUILD_EBOS_EXTENSIONS "Build the variants for various extensions of ebos by default?" OFF)
-option(BUILD_EBOS_DEBUG_EXTENSIONS "Build the ebos variants which are purely for debugging by default?" OFF)
 option(BUILD_FLOW_POLY_GRID "Build flow blackoil with polyhedral grid" OFF)
 option(OPM_ENABLE_PYTHON "Enable python bindings?" OFF)
 option(OPM_ENABLE_PYTHON_TESTS "Enable tests for the python bindings?" ON)
@@ -346,8 +343,9 @@ set_property(TARGET moduleVersion PROPERTY POSITION_INDEPENDENT_CODE ON)
 # but this is not exposed in a super-build.
 add_dependencies(moduleVersion opmsimulators)
 
-set(COMMON_MODELS brine energy extbo foam gasoil gaswater oilwater oilwater_polymer polymer solvent)
-set(FLOW_MODELS   blackoil oilwater_brine oilwater_polymer_injectivity micp)
+set(FLOW_MODELS blackoil brine energy extbo foam gasoil gaswater
+                oilwater oilwater_brine oilwater_polymer
+                oilwater_polymer_injectivity micp polymer solvent)
 set(FLOW_VARIANT_MODELS brine_energy onephase onephase_energy)
 
 set(FLOW_TGTS)
@@ -392,7 +390,6 @@ opm_add_test(flow
   $<TARGET_OBJECTS:moduleVersion>
   )
 
-# the production oriented general-purpose ECL simulator
 opm_add_test(flow_poly
   ONLY_COMPILE
   ALWAYS_ENABLE
@@ -405,7 +402,6 @@ opm_add_test(flow_poly
   $<TARGET_OBJECTS:moduleVersion>)
 target_compile_definitions(flow_poly PRIVATE USE_POLYHEDRALGRID)
 
-# the production oriented general-purpose ECL simulator
 opm_add_test(flow_distribute_z
   ONLY_COMPILE
   ALWAYS_ENABLE
@@ -437,74 +433,6 @@ if (BUILD_FLOW)
     COMMAND flow --version)
   set_tests_properties(flow__version PROPERTIES
     PASS_REGULAR_EXPRESSION "${${project}_LABEL}")
-endif()
-
-if (NOT BUILD_EBOS)
-  set(EBOS_DEFAULT_ENABLE_IF "FALSE")
-else()
-  set(EBOS_DEFAULT_ENABLE_IF "TRUE")
-endif()
-
-# the research oriented general-purpose ECL simulator ("ebos" == &ecl
-# &black-&oil &simulator)
-set(MEBOS_TARGETS "")
-foreach(OBJ ${COMMON_MODELS} blackoil)
-  add_library(ebos_lib${OBJ} OBJECT EXCLUDE_FROM_ALL ebos/ebos_${OBJ}.cc)
-  if(TARGET fmt::fmt)
-    target_link_libraries(ebos_lib${OBJ} fmt::fmt)
-  endif()
-  list(APPEND MEBOS_TARGETS $<TARGET_OBJECTS:ebos_lib${OBJ}>)
-endforeach()
-
-opm_add_test(ebos
-  ONLY_COMPILE
-  DEFAULT_ENABLE_IF ${EBOS_DEFAULT_ENABLE_IF}
-  ALWAYS_ENABLE
-  EXE_NAME ebos
-  LIBRARIES opmsimulators
-  SOURCES ebos/ebos_main.cc $<TARGET_OBJECTS:ebos_libblackoil>)
-
-if (BUILD_EBOS)
-  install(TARGETS ebos DESTINATION bin)
-  opm_add_bash_completion(ebos)
-endif()
-
-if (NOT BUILD_EBOS_EXTENSIONS)
-  set(EBOS_EXTENSIONS_DEFAULT_ENABLE_IF "FALSE")
-else()
-  set(EBOS_EXTENSIONS_DEFAULT_ENABLE_IF "TRUE")
-endif()
-
-foreach(OBJ ${COMMON_MODELS})
-  opm_add_test(ebos_${OBJ}
-    ONLY_COMPILE
-    DEFAULT_ENABLE_IF ${EBOS_EXTENSIONS_DEFAULT_ENABLE_IF}
-    SOURCES ebos/ebos_${OBJ}_main.cc $<TARGET_OBJECTS:ebos_lib${OBJ}>
-    EXE_NAME ebos_${OBJ}
-    LIBRARIES opmsimulators)
-endforeach()
-
-opm_add_test(mebos
-  ONLY_COMPILE
-  DEFAULT_ENABLE_IF ${EBOS_EXTENSIONS_DEFAULT_ENABLE_IF}
-  SOURCES ebos/mebos_main.cc
-          ${MEBOS_TARGETS}
-  EXE_NAME mebos
-  LIBRARIES opmsimulators)
-
-if (NOT BUILD_EBOS_DEBUG_EXTENSIONS)
-  set(EBOS_DEBUG_EXTENSIONS_DEFAULT_ENABLE_IF "FALSE")
-else()
-  set(EBOS_DEBUG_EXTENSIONS_DEFAULT_ENABLE_IF "TRUE")
-endif()
-
-if (BUILD_EBOS_EXTENSIONS)
-  foreach(TGT ${COMMON_MODELS})
-    install(TARGETS ebos_${TGT} DESTINATION bin)
-    opm_add_bash_completion(ebos_${TGT})
-  endforeach()
-  install(TARGETS mebos DESTINATION bin)
-  opm_add_bash_completion(mebos)
 endif()
 
 if (OPM_ENABLE_PYTHON)
