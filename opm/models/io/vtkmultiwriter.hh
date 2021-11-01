@@ -35,8 +35,6 @@
 #include <opm/models/io/baseoutputwriter.hh>
 #include <opm/models/parallel/tasklets.hh>
 
-#include <opm/common/utility/FileSystem.hpp>
-
 #include <opm/material/common/Valgrind.hpp>
 #include <opm/material/common/Unused.hpp>
 
@@ -48,6 +46,7 @@
 #include <mpi.h>
 #endif
 
+#include <filesystem>
 #include <list>
 #include <string>
 #include <limits>
@@ -88,7 +87,7 @@ class VtkMultiWriter : public BaseOutputWriter
             // determine name to write into the multi-file for the
             // current time step
             // The file names in the pvd file are relative, the path should therefore be stripped.
-            const filesystem::path fullPath{fileName};
+            const std::filesystem::path fullPath{fileName};
             const std::string localFileName = fullPath.filename();
             multiWriter_.multiFile_.precision(16);
             multiWriter_.multiFile_ << "   <DataSet timestep=\"" << multiWriter_.curTime_ << "\" file=\""
