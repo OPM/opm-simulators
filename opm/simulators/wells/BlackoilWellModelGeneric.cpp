@@ -122,8 +122,14 @@ namespace {
                                                  const Opm::Group&     group)
         : RetrieveWellGuideRate{ guideRate, group.name() }
     {
-        this->inj_water = this->inj_water || group.hasInjectionControl(Opm::Phase::WATER);
-        this->inj_gas   = this->inj_gas   || group.hasInjectionControl(Opm::Phase::GAS);
+        if (group.isProductionGroup()) {
+            this->prod = true;
+        }
+
+        if (group.isInjectionGroup()) {
+            this->inj_water = this->inj_water || group.hasInjectionControl(Opm::Phase::WATER);
+            this->inj_gas   = this->inj_gas   || group.hasInjectionControl(Opm::Phase::GAS);
+        }
     }
 
     class GroupTreeWalker
