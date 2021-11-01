@@ -250,6 +250,19 @@ template class EclGenericThresholdPressure<Dune::CpGrid,
                                            Dune::GridView<Dune::Fem::GridPart2GridViewTraits<Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>>>,
                                            Dune::MultipleCodimMultipleGeomTypeMapper<Dune::GridView<Dune::Fem::GridPart2GridViewTraits<Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>>>>,
                                            double>;
+template class EclGenericThresholdPressure<Dune::CpGrid,
+                                            Dune::Fem::GridPart2GridViewImpl<
+                                                Dune::Fem::AdaptiveLeafGridPart<
+                                                    Dune::CpGrid,
+                                                    Dune::PartitionIteratorType(4),
+                                                    false> >,
+                                            Dune::MultipleCodimMultipleGeomTypeMapper<
+                                                Dune::Fem::GridPart2GridViewImpl<
+                                                    Dune::Fem::AdaptiveLeafGridPart<
+                                                        Dune::CpGrid,
+                                                        Dune::PartitionIteratorType(4),
+                                                        false>>>,
+                                            double>;
 #else
 template class EclGenericThresholdPressure<Dune::CpGrid,
                                            Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>,
