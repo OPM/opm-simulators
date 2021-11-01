@@ -488,7 +488,7 @@ void ChowPatelIlu::decomposition(
     try {
         // just put everything in the capture list
         std::call_once(initialize_flag, [&](){
-            cl::Program::Sources source(1, std::make_pair(chow_patel_ilu_sweep_s, strlen(chow_patel_ilu_sweep_s)));  // what does this '1' mean? cl::Program::Sources is of type 'std::vector<std::pair<const char*, long unsigned int> >'
+            cl::Program::Sources source(1, chow_patel_ilu_sweep_s);  // what does this '1' mean? cl::Program::Sources is of type 'std::vector<std::pair<const char*, long unsigned int> >'
             cl::Program program = cl::Program(*context, source, &err);
             if (err != CL_SUCCESS) {
                 OPM_THROW(std::logic_error, "ChowPatelIlu OpenCL could not create Program");
@@ -497,7 +497,7 @@ void ChowPatelIlu::decomposition(
             std::vector<cl::Device> devices = context->getInfo<CL_CONTEXT_DEVICES>();
             program.build(devices);
 
-            chow_patel_ilu_sweep_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&,
+            chow_patel_ilu_sweep_k.reset(new cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&,
                                                      cl::Buffer&, cl::Buffer&, cl::Buffer&,
                                                      cl::Buffer&, cl::Buffer&, cl::Buffer&,
                                                      cl::Buffer&, cl::Buffer&,

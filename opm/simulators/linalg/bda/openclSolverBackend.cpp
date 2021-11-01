@@ -526,7 +526,7 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
 } // end initialize()
 
 void add_kernel_string(cl::Program::Sources &sources, std::string &source) {
-        sources.emplace_back(std::make_pair(source.c_str(), source.size()));
+        sources.emplace_back(source);
 }
 
 template <unsigned int block_size>
@@ -565,14 +565,14 @@ void openclSolverBackend<block_size>::get_opencl_kernels() {
         program.build(devices);
 
         // queue.enqueueNDRangeKernel() is a blocking/synchronous call, at least for NVIDIA
-        // cl::make_kernel<> myKernel(); myKernel(args, arg1, arg2); is also blocking
+        // cl::KernelFunctor<> myKernel(); myKernel(args, arg1, arg2); is also blocking
 
         // actually creating the kernels
-        dot_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg>(cl::Kernel(program, "dot_1")));
-        norm_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg>(cl::Kernel(program, "norm")));
-        axpy_k.reset(new cl::make_kernel<cl::Buffer&, const double, cl::Buffer&, const unsigned int>(cl::Kernel(program, "axpy")));
-        scale_k.reset(new cl::make_kernel<cl::Buffer&, const double, const unsigned int>(cl::Kernel(program, "scale")));
-        custom_k.reset(new cl::make_kernel<cl::Buffer&, cl::Buffer&, cl::Buffer&, const double, const double, const unsigned int>(cl::Kernel(program, "custom")));
+        dot_k.reset(new cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg>(cl::Kernel(program, "dot_1")));
+        norm_k.reset(new cl::KernelFunctor<cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg>(cl::Kernel(program, "norm")));
+        axpy_k.reset(new cl::KernelFunctor<cl::Buffer&, const double, cl::Buffer&, const unsigned int>(cl::Kernel(program, "axpy")));
+        scale_k.reset(new cl::KernelFunctor<cl::Buffer&, const double, const unsigned int>(cl::Kernel(program, "scale")));
+        custom_k.reset(new cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const double, const double, const unsigned int>(cl::Kernel(program, "custom")));
         spmv_blocked_k.reset(new spmv_kernel_type(cl::Kernel(program, "spmv_blocked")));
         ILU_apply1_k.reset(new ilu_apply1_kernel_type(cl::Kernel(program, "ILU_apply1")));
         ILU_apply2_k.reset(new ilu_apply2_kernel_type(cl::Kernel(program, "ILU_apply2")));
