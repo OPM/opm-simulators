@@ -200,14 +200,14 @@ if(ENABLE_FPGA)
 endif()
 
 if(OpenCL_FOUND)
-  # the current OpenCL implementation relies on cl.hpp, not cl2.hpp
+  # the current OpenCL implementation relies on cl2.hpp, not cl.hpp
   # make sure it is available, otherwise disable OpenCL
-  find_file(CL_HPP CL/cl.hpp HINTS ${OpenCL_INCLUDE_DIRS})
-  if(CL_HPP)
+  find_file(CL2_HPP CL/cl2.hpp HINTS ${OpenCL_INCLUDE_DIRS})
+  if(CL2_HPP)
     set(HAVE_OPENCL 1)
     include_directories(${OpenCL_INCLUDE_DIRS})
   else()
-    message(WARNING " OpenCL was found, but this version of opm-simulators relies on CL/cl.hpp, which implements OpenCL 1.0, 1.1 and 1.2.\n Deactivating OpenCL")
+    message(WARNING " OpenCL was found, but this version of opm-simulators relies on CL/cl2.hpp, which implements OpenCL 1.0, 1.1 and 1.2.\n Deactivating OpenCL")
     set(OpenCL_FOUND OFF)
     set(OPENCL_FOUND OFF)
   endif()
