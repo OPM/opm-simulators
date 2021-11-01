@@ -69,6 +69,7 @@
 
 #include <cassert>
 #include <cstdlib>
+#include <filesystem>
 #include <iostream>
 #include <memory>
 #include <stdexcept>
@@ -496,9 +497,9 @@ namespace Opm
             return true;
         }
 
-        filesystem::path simulationCaseName_(const std::string& casename)
+        std::filesystem::path simulationCaseName_(const std::string& casename)
         {
-            namespace fs = ::Opm::filesystem;
+            namespace fs = ::std::filesystem;
 
             auto exists = [](const fs::path& f)
             {

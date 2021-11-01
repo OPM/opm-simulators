@@ -21,12 +21,11 @@
 #ifndef OPM_PARALLELFILEMERGER_HEADER_INCLUDED
 #define OPM_PARALLELFILEMERGER_HEADER_INCLUDED
 
+#include <filesystem>
 #include <fstream>
 #include <memory>
 #include <regex>
 #include <string>
-
-#include <opm/common/utility/FileSystem.hpp>
 
 
 namespace Opm
@@ -34,7 +33,7 @@ namespace Opm
 namespace detail
 {
 
-namespace fs = ::Opm::filesystem;
+namespace fs = ::std::filesystem;
 
 /// \brief A functor that merges multiple files of a parallel run to one file.
 ///

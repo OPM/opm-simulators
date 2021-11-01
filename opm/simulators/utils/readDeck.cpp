@@ -31,7 +31,6 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/OpmLog/EclipsePRTLog.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
-#include <opm/common/utility/FileSystem.hpp>
 #include <opm/common/utility/OpmInputError.hpp>
 #include <opm/common/utility/String.hpp>
 
@@ -66,6 +65,7 @@
 
 #include <cstdlib>
 #include <cstdint>
+#include <filesystem>
 #include <functional>
 #include <memory>
 #include <sstream>
@@ -93,7 +93,7 @@ namespace {
 
     void ensureOutputDirExists_(const std::string& cmdline_output_dir)
     {
-        namespace fs = Opm::filesystem;
+        namespace fs = std::filesystem;
 
         if (! fs::is_directory(cmdline_output_dir)) {
             try {
@@ -350,7 +350,7 @@ Opm::setupLogging(const int          mpi_rank_,
     }
 
     // create logFile
-    using Opm::filesystem::path;
+    using std::filesystem::path;
     path fpath(deck_filename);
     std::string baseName;
     std::ostringstream debugFileStream;
@@ -369,7 +369,7 @@ Opm::setupLogging(const int          mpi_rank_,
     if (output_dir.empty()) {
         output_dir = fpath.has_parent_path()
             ? absolute(fpath.parent_path()).generic_string()
-            : Opm::filesystem::current_path().generic_string();
+            : std::filesystem::current_path().generic_string();
     }
 
     logFileStream << output_dir << "/" << baseName;

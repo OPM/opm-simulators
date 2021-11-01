@@ -29,6 +29,8 @@
 #include <dune/common/parallel/mpihelper.hh>
 #endif
 
+#include <filesystem>
+
 namespace Opm {
 namespace Properties {
 namespace TTag {
