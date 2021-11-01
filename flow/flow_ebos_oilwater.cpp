@@ -23,7 +23,7 @@
 
 #include <opm/grid/CpGrid.hpp>
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp>
-#include <opm/simulators/flow/FlowMainEbos.hpp>
+#include <opm/simulators/flow/Main.hpp>
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/misc/mpimanager.hh>
@@ -95,6 +95,13 @@ int flowEbosOilWaterMain(int argc, char** argv, bool outputCout, bool outputFile
     FlowMainEbos<Properties::TTag::EclFlowOilWaterProblem>
         mainfunc {argc, argv, outputCout, outputFiles};
     return mainfunc.execute();
+}
+
+int flowEbosOilWaterMainStandalone(int argc, char** argv)
+{
+    using TypeTag = Properties::TTag::EclFlowOilWaterProblem;
+    auto mainObject = Opm::Main(argc, argv);
+    return mainObject.runStatic<TypeTag>();
 }
 
 }

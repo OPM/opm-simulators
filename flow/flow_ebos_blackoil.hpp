@@ -41,10 +41,16 @@ void flowEbosBlackoilSetDeck(double setupTime, std::shared_ptr<Deck> deck,
                              std::unique_ptr<WellTestState> wtestState,
                              std::shared_ptr<SummaryConfig> summaryConfig);
 
+//! \brief Main function used in flow binary.
 int flowEbosBlackoilMain(int argc, char** argv, bool outputCout, bool outputFiles);
 
+//! \brief Initialization function used in flow binary and python simulator.
 std::unique_ptr<FlowMainEbos<Properties::TTag::EclFlowProblem>>
     flowEbosBlackoilMainInit(int argc, char** argv, bool outputCout, bool outputFiles);
+
+//! \brief Main function used in flow_blackoil binary.
+int flowEbosBlackoilMainStandalone(int argc, char** argv);
+
 }
 
 #endif // FLOW_EBOS_BLACKOIL_HPP

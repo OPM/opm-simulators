@@ -30,7 +30,12 @@ void flowEbosSolventSetDeck(double setupTime, std::shared_ptr<Deck> deck,
                             std::shared_ptr<EclipseState> eclState,
                             std::shared_ptr<Schedule> schedule,
                             std::shared_ptr<SummaryConfig> summaryConfig);
+
+//! \brief Main function used in flow binary.
 int flowEbosSolventMain(int argc, char** argv, bool outoutCout, bool outputFiles);
+
+//! \brief Main function used in flow_solvent binary.
+int flowEbosSolventMainStandalone(int argc, char** argv);
 
 }
 

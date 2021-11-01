@@ -30,7 +30,12 @@ void flowEbosOilWaterSetDeck(double setupTime, std::shared_ptr<Deck> deck,
                              std::shared_ptr<EclipseState> eclState,
                              std::shared_ptr<Schedule> schedule,
                              std::shared_ptr<SummaryConfig> summaryConfig);
+
+//! \brief Main functon used in main flow binary.
 int flowEbosOilWaterMain(int argc, char** argv, bool outputCout, bool outputFiles);
+
+//! \brief Main function used in flow_oilwater binary.
+int flowEbosOilWaterMainStandalone(int argc, char** argv);
 
 }
 

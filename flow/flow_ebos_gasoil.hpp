@@ -30,7 +30,12 @@ void flowEbosGasOilSetDeck(double setupTime, std::shared_ptr<Deck> deck,
                            std::shared_ptr<EclipseState> eclState,
                            std::shared_ptr<Schedule> schedule,
                            std::shared_ptr<SummaryConfig> summaryConfig);
+
+//! \brief Main function used in flow binary.
 int flowEbosGasOilMain(int argc, char** argv, bool outputCout, bool outputFiles);
+
+//! \brief Main function used in flow_gasoil binary.
+int flowEbosGasOilMainStandalone(int argc, char** argv);
 
 }
 
