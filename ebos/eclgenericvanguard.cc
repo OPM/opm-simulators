@@ -25,7 +25,6 @@
 #include <ebos/eclgenericvanguard.hh>
 
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/common/utility/FileSystem.hpp>
 #include <opm/common/utility/TimeService.hpp>
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/EclipseState/Aquifer/NumericalAquifer/NumericalAquiferCell.hpp>
@@ -49,6 +48,7 @@
 #include <mpi.h>
 #endif // HAVE_MPI
 
+#include <filesystem>
 #include <stdexcept>
 
 namespace Opm {
@@ -144,18 +144,18 @@ void EclGenericVanguard::setExternalWTestState(std::unique_ptr<WellTestState> wt
 
 std::string EclGenericVanguard::canonicalDeckPath(const std::string& caseName)
 {
-    const auto fileExists = [](const filesystem::path& f) -> bool
+    const auto fileExists = [](const std::filesystem::path& f) -> bool
     {
-        if (!filesystem::exists(f))
+        if (!std::filesystem::exists(f))
             return false;
 
-        if (filesystem::is_regular_file(f))
+        if (std::filesystem::is_regular_file(f))
             return true;
 
-        return filesystem::is_symlink(f) && filesystem::is_regular_file(filesystem::read_symlink(f));
+        return std::filesystem::is_symlink(f) && std::filesystem::is_regular_file(std::filesystem::read_symlink(f));
     };
 
-    auto simcase = filesystem::path(caseName);
+    auto simcase = std::filesystem::path(caseName);
     if (fileExists(simcase))
         return simcase.string();
 
@@ -213,9 +213,9 @@ void EclGenericVanguard::updateOutputDir_(std::string outputDir,
         outputDir = ioConfig.getOutputDir();
 
     // ensure that the output directory exists and that it is a directory
-    if (!filesystem::is_directory(outputDir)) {
+    if (!std::filesystem::is_directory(outputDir)) {
         try {
-            filesystem::create_directories(outputDir);
+            std::filesystem::create_directories(outputDir);
         }
         catch (...) {
             throw std::runtime_error("Creation of output directory '"+outputDir+"' failed\n");

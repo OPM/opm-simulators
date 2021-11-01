@@ -21,8 +21,7 @@
 
 #include <opm/simulators/linalg/setupPropertyTree.hpp>
 
-#include <opm/common/utility/FileSystem.hpp>
-
+#include <filesystem>
 #include <boost/version.hpp>
 
 namespace Opm
@@ -43,7 +42,7 @@ setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters 
     // Get configuration from file.
     if (conf.size() > 5 && conf.substr(conf.size() - 5, 5) == ".json") { // the ends_with() method is not available until C++20
 #if BOOST_VERSION / 100 % 1000 > 48
-        if ( !filesystem::exists(conf) ) {
+        if ( !std::filesystem::exists(conf) ) {
             OPM_THROW(std::invalid_argument, "JSON file " << conf << " does not exist.");
         }
         try {

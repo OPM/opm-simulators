@@ -23,6 +23,7 @@
 #define BOOST_TEST_MODULE VFPTest
 
 #include <algorithm>
+#include <filesystem>
 #include <memory>
 #include <map>
 #include <sstream>
@@ -645,7 +646,7 @@ BOOST_AUTO_TEST_CASE(ParseInterpolateRealisticVFPPROD)
     auto units = Opm::UnitSystem::newMETRIC();
 
     Opm::Parser parser;
-    Opm::filesystem::path file("VFPPROD2");
+    std::filesystem::path file("VFPPROD2");
 
     auto deck = parser.parseFile(file.string());
 

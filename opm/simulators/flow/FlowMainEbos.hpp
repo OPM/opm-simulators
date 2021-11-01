@@ -37,6 +37,7 @@
 #include <opm/common/utility/String.hpp>
 
 #include <fmt/format.h>
+#include <filesystem>
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/misc/mpimanager.hh>
@@ -466,7 +467,7 @@ namespace Opm
                 return;
             }
 
-            namespace fs = ::Opm::filesystem;
+            namespace fs = ::std::filesystem;
             const std::string& output_dir = eclState().getIOConfig().getOutputDir();
             fs::path output_path(output_dir);
             fs::path deck_filename(EWOMS_GET_PARAM(TypeTag, std::string, EclDeckFileName));
@@ -578,7 +579,7 @@ namespace Opm
                 report.reportFullyImplicit(ss);
                 OpmLog::info(ss.str());
                 const std::string dir = eclState().getIOConfig().getOutputDir();
-                namespace fs = ::Opm::filesystem;
+                namespace fs = ::std::filesystem;
                 fs::path output_dir(dir);
                 {
                     std::string filename = eclState().getIOConfig().getBaseName() + ".INFOSTEP";
