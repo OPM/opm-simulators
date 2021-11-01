@@ -499,11 +499,6 @@ opm_add_test(ebos
   LIBRARIES opmsimulators
   SOURCES ebos/ebos_main.cc $<TARGET_OBJECTS:ebos_libblackoil>)
 
-if (BUILD_EBOS)
-  install(TARGETS ebos DESTINATION bin)
-  opm_add_bash_completion(ebos)
-endif()
-
 if (NOT BUILD_EBOS_EXTENSIONS)
   set(EBOS_EXTENSIONS_DEFAULT_ENABLE_IF "FALSE")
 else()
@@ -531,15 +526,6 @@ if (NOT BUILD_EBOS_DEBUG_EXTENSIONS)
   set(EBOS_DEBUG_EXTENSIONS_DEFAULT_ENABLE_IF "FALSE")
 else()
   set(EBOS_DEBUG_EXTENSIONS_DEFAULT_ENABLE_IF "TRUE")
-endif()
-
-if (BUILD_EBOS_EXTENSIONS)
-  foreach(TGT ${COMMON_MODELS})
-    install(TARGETS ebos_${TGT} DESTINATION bin)
-    opm_add_bash_completion(ebos_${TGT})
-  endforeach()
-  install(TARGETS mebos DESTINATION bin)
-  opm_add_bash_completion(mebos)
 endif()
 
 if (OPM_ENABLE_PYTHON)
