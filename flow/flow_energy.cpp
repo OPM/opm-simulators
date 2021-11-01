@@ -14,17 +14,11 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef FLOW_EBOS_OILWATER_POLYMER_INJECTIVITY_HPP
-#define FLOW_EBOS_OILWATER_POLYMER_INJECTIVITY_HPP
+#include "config.h"
+#include <flow/flow_ebos_energy.hpp>
 
-namespace Opm {
 
-//! \brief Main function used in flow binary.
-int flowEbosOilWaterPolymerInjectivityMain(int argc, char** argv, bool outputCout, bool outputFiles);
-
-//! \brief Main function used in flow_oilwater_polymer_injectivity binary.
-int flowEbosOilWaterPolymerInjectivityMainStandalone(int argc, char** argv);
-
+int main(int argc, char** argv)
+{
+    return Opm::flowEbosEnergyMainStandalone(argc, argv);
 }
-
-#endif // FLOW_EBOS_OILWATER_POLYMER_INJECTIVITY_HPP

@@ -20,7 +20,7 @@
 
 #include <opm/material/common/ResetLocale.hpp>
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp>
-#include <opm/simulators/flow/FlowMainEbos.hpp>
+#include <opm/simulators/flow/Main.hpp>
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/misc/mpimanager.hh>
@@ -73,6 +73,13 @@ int flowEbosBlackoilMain(int argc, char** argv, bool outputCout, bool outputFile
 {
     auto mainfunc = flowEbosBlackoilMainInit(argc, argv, outputCout, outputFiles);
     return mainfunc->execute();
+}
+
+int flowEbosBlackoilMainStandalone(int argc, char** argv)
+{
+    using TypeTag = Properties::TTag::EclFlowProblem;
+    auto mainObject = Opm::Main(argc, argv);
+    return mainObject.runStatic<TypeTag>();
 }
 
 }

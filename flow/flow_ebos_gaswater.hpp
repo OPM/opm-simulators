@@ -30,7 +30,12 @@ void flowEbosGasWaterSetDeck(double setupTime, std::shared_ptr<Deck> deck,
                            std::shared_ptr<EclipseState> eclState,
                            std::shared_ptr<Schedule> schedule,
                            std::shared_ptr<SummaryConfig> summaryConfig);
+
+//! \brief Main function used in flow binary.
 int flowEbosGasWaterMain(int argc, char** argv, bool outputCout, bool outputFiles);
+
+//! \brief Main function used in flow_gaswater binary.
+int flowEbosGasWaterMainStandalone(int argc, char** argv);
 
 }
 

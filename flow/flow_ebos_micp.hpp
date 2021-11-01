@@ -30,7 +30,12 @@ void flowEbosMICPSetDeck(double setupTime, std::shared_ptr<Deck> deck,
                                     std::shared_ptr<EclipseState> eclState,
                                     std::shared_ptr<Schedule> schedule,
                                     std::shared_ptr<SummaryConfig> summaryConfig);
+
+//! \brief Main function used in flow binary.
 int flowEbosMICPMain(int argc, char** argv, bool outputCout, bool outputFiles);
+
+//! \brief Main function used in flow_micp binary.
+int flowEbosMICPMainStandalone(int argc, char** argv);
 
 }
 

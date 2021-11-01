@@ -21,7 +21,6 @@ cmake_minimum_required (VERSION 3.10)
 option(SIBLING_SEARCH "Search for other modules in sibling directories?" ON)
 set( USE_OPENMP_DEFAULT OFF ) # Use of OpenMP is considered experimental
 option(BUILD_FLOW "Build the production oriented flow simulator?" ON)
-option(BUILD_FLOW_BLACKOIL_ONLY "Build the production oriented flow simulator only supporting the blackoil model?" OFF)
 option(BUILD_FLOW_VARIANTS "Build the variants for flow by default?" OFF)
 option(BUILD_EBOS "Build the research oriented ebos simulator?" ON)
 option(BUILD_EBOS_EXTENSIONS "Build the variants for various extensions of ebos by default?" OFF)
@@ -349,22 +348,28 @@ add_dependencies(moduleVersion opmsimulators)
 
 set(COMMON_MODELS brine energy extbo foam gasoil gaswater oilwater oilwater_polymer polymer solvent)
 set(FLOW_MODELS   blackoil oilwater_brine oilwater_polymer_injectivity micp)
+set(FLOW_VARIANT_MODELS brine_energy onephase onephase_energy)
 
 set(FLOW_TGTS)
-foreach(OBJ ${COMMON_MODELS} ${FLOW_MODELS})
+foreach(OBJ ${COMMON_MODELS} ${FLOW_MODELS} ${FLOW_VARIANT_MODELS})
   add_library(flow_lib${OBJ} OBJECT flow/flow_ebos_${OBJ}.cpp)
   list(APPEND FLOW_TGTS $<TARGET_OBJECTS:flow_lib${OBJ}>)
   if(TARGET fmt::fmt)
     target_link_libraries(flow_lib${OBJ} fmt::fmt)
   endif()
+  opm_add_test(flow_${OBJ}
+               ONLY_COMPILE
+               SOURCES
+               flow/flow_${OBJ}.cpp
+               $<TARGET_OBJECTS:moduleVersion>
+               $<TARGET_OBJECTS:flow_lib${OBJ}>
+               EXE_NAME flow_${OBJ}
+               DEPENDS opmsimulators
+               LIBRARIES opmsimulators)
 endforeach()
 set_property(TARGET flow_libblackoil PROPERTY POSITION_INDEPENDENT_CODE ON)
 
-foreach(OBJ brine_energy onephase onephase_energy)
-  add_library(flow_lib${OBJ} OBJECT flow/flow_ebos_${OBJ}.cpp)
-  if(TARGET fmt::fmt)
-    target_link_libraries(flow_lib${OBJ} fmt::fmt)
-  endif()
+foreach(OBJ ${FLOW_VARIANT_MODELS})
   set_property(TARGET flow_lib${OBJ} PROPERTY EXCLUDE_FROM_ALL ${FLOW_VARIANTS_DEFAULT_ENABLE_IF})
 endforeach()
 
@@ -386,26 +391,6 @@ opm_add_test(flow
   ${FLOW_TGTS}
   $<TARGET_OBJECTS:moduleVersion>
   )
-
-
-if (NOT BUILD_FLOW_BLACKOIL_ONLY)
-  set(FLOW_BLACKOIL_ONLY_DEFAULT_ENABLE_IF "FALSE")
-else()
-  set(FLOW_BLACKOIL_ONLY_DEFAULT_ENABLE_IF "TRUE")
-endif()
-
-# the production oriented general-purpose ECL simulator
-opm_add_test(flow_blackoil
-  ONLY_COMPILE
-  ALWAYS_ENABLE
-  DEFAULT_ENABLE_IF ${FLOW_BLACKOIL_ONLY_DEFAULT_ENABLE_IF}
-  DEPENDS opmsimulators
-  LIBRARIES opmsimulators
-  SOURCES
-  flow/flow.cpp
-  $<TARGET_OBJECTS:flow_libblackoil>
-  $<TARGET_OBJECTS:moduleVersion>)
-target_compile_definitions(flow_blackoil PRIVATE "FLOW_BLACKOIL_ONLY")
 
 # the production oriented general-purpose ECL simulator
 opm_add_test(flow_poly
@@ -442,39 +427,6 @@ opm_add_test(flow_blackoil_dunecpr
   $<TARGET_OBJECTS:moduleVersion>
   EXE_NAME flow_blackoil_dunecpr
   DEPENDS opmsimulators
-  LIBRARIES opmsimulators)
-
-opm_add_test(flow_brine_energy
-  ONLY_COMPILE
-  DEFAULT_ENABLE_IF ${FLOW_VARIANTS_DEFAULT_ENABLE_IF}
-  SOURCES
-  flow/flow_brine_energy.cpp
-  $<TARGET_OBJECTS:moduleVersion>
-  $<TARGET_OBJECTS:flow_libbrine_energy>
-  EXE_NAME flow_brine_energy
-  DEPENDS opmsimulators
-  LIBRARIES opmsimulators)
-
-opm_add_test(flow_onephase
-  ONLY_COMPILE
-  DEFAULT_ENABLE_IF ${FLOW_VARIANTS_DEFAULT_ENABLE_IF}
-  SOURCES
-  flow/flow_onephase.cpp
-  $<TARGET_OBJECTS:moduleVersion>
-  $<TARGET_OBJECTS:flow_libonephase>
-  EXE_NAME flow_onephase
-  DEPENDS opmsimulators
-  LIBRARIES opmsimulators)
-
-opm_add_test(flow_onephase_energy
-  ONLY_COMPILE
-  DEFAULT_ENABLE_IF ${FLOW_VARIANTS_DEFAULT_ENABLE_IF}
-  SOURCES
-  flow/flow_onephase_energy.cpp
-  $<TARGET_OBJECTS:moduleVersion>
-  $<TARGET_OBJECTS:flow_libonephase_energy>
-  EXE_NAME flow_onephase_energy
-  DEPENDS opmsimulators flow_libonephase_energy
   LIBRARIES opmsimulators)
 
 if (BUILD_FLOW)
