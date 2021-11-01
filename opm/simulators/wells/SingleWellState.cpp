@@ -251,6 +251,14 @@ void SingleWellState::update_injector_targets(const Well& ecl_well, const Summar
     else
         this->bhp = this->perf_data.pressure_first_connection * bhp_safety_factor;
 }
+
+void SingleWellState::update_targets(const Well& ecl_well, const SummaryState& st) {
+    if (this->producer)
+        this->update_producer_targets(ecl_well, st);
+    else
+        this->update_injector_targets(ecl_well, st);
+}
+
 }
 
 

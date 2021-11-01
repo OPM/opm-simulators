@@ -128,7 +128,8 @@ public:
     double wellPI(const std::string& well_name) const;
 
     void updateEclWells(const int timeStepIdx,
-                        const std::unordered_set<std::string>& wells);
+                        const std::unordered_set<std::string>& wells,
+                        const SummaryState& st);
 
 
     void loadRestartData(const data::Wells& rst_wells,
