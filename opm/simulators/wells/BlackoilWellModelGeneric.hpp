@@ -275,7 +275,8 @@ protected:
                             const std::string&           wgname,
                             data::GuideRateValue&        grval) const;
 
-    void assignWellGuideRates(data::Wells& wsrpt) const;
+    void assignWellGuideRates(data::Wells& wsrpt,
+                              const int reportStepIdx) const;
     void assignShutConnections(data::Wells& wsrpt,
                                const int reportStepIndex) const;
     void assignGroupControl(const Group& group,
