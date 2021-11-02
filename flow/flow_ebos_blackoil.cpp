@@ -22,12 +22,6 @@
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp>
 #include <opm/simulators/flow/Main.hpp>
 
-#if HAVE_DUNE_FEM
-#include <dune/fem/misc/mpimanager.hh>
-#else
-#include <dune/common/parallel/mpihelper.hh>
-#endif
-
 namespace Opm {
 
 void flowEbosBlackoilSetDeck(double setupTime, std::shared_ptr<Deck> deck,
@@ -57,12 +51,6 @@ flowEbosBlackoilMainInit(int argc, char** argv, bool outputCout, bool outputFile
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
     resetLocale();
-
-#if HAVE_DUNE_FEM
-    Dune::Fem::MPIManager::initialize(argc, argv);
-#else
-    Dune::MPIHelper::instance(argc, argv);
-#endif
 
     return std::make_unique<FlowMainEbos<Properties::TTag::EclFlowProblem>>(
         argc, argv, outputCout, outputFiles);

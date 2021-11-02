@@ -25,12 +25,6 @@
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp>
 #include <opm/simulators/flow/Main.hpp>
 
-#if HAVE_DUNE_FEM
-#include <dune/fem/misc/mpimanager.hh>
-#else
-#include <dune/common/parallel/mpihelper.hh>
-#endif
-
 namespace Opm {
 namespace Properties {
 namespace TTag {
@@ -88,12 +82,6 @@ int flowEbosMICPMain(int argc, char** argv, bool outputCout, bool outputFiles)
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
     resetLocale();
-
-#if HAVE_DUNE_FEM
-    Dune::Fem::MPIManager::initialize(argc, argv);
-#else
-    Dune::MPIHelper::instance(argc, argv);
-#endif
 
     FlowMainEbos<Properties::TTag::EclFlowMICPProblem>
         mainfunc {argc, argv, outputCout, outputFiles};
