@@ -482,7 +482,15 @@ private:
             return unscaledPcnw*alpha;
         }
         else if (params.config().enablePcScaling()) {
-            Scalar alpha = params.scaledPoints().maxPcnw()/params.unscaledPoints().maxPcnw();
+            const auto& scaled_maxPcnw = params.scaledPoints().maxPcnw();
+            const auto& unscaled_maxPcnw = params.unscaledPoints().maxPcnw();
+
+            Scalar alpha;
+            if (scaled_maxPcnw == unscaled_maxPcnw)
+                alpha = 1.0;
+            else
+                alpha = params.scaledPoints().maxPcnw()/params.unscaledPoints().maxPcnw();
+
             return unscaledPcnw*alpha;
         }
 
@@ -497,7 +505,15 @@ private:
             return scaledPcnw/alpha;
         }
         else if (params.config().enablePcScaling()) {
-            Scalar alpha = params.unscaledPoints().maxPcnw()/params.scaledPoints().maxPcnw();
+            const auto& scaled_maxPcnw = params.scaledPoints().maxPcnw();
+            const auto& unscaled_maxPcnw = params.unscaledPoints().maxPcnw();
+
+            Scalar alpha;
+            if (scaled_maxPcnw == unscaled_maxPcnw)
+                alpha = 1.0;
+            else
+                alpha = params.scaledPoints().maxPcnw()/params.unscaledPoints().maxPcnw();
+
             return scaledPcnw/alpha;
         }
 
