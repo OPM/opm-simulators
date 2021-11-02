@@ -25,7 +25,11 @@
 #define CL_HPP_TARGET_OPENCL_VERSION 120 // indicate OpenCL 1.2 is used
 #define CL_HPP_MINIMUM_VERSION 120
 #define CL_HPP_MINIMUM_OPENCL_VERSION 120
+#if HAVE_OPENCL_HPP
+#include <CL/opencl.hpp>
+#else
 #include <CL/cl2.hpp>                   // supports up to OpenCL 1.2
+#endif
 
 #include <string>
 
