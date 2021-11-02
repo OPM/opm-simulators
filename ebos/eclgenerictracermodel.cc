@@ -131,7 +131,6 @@ doInit(bool enabled, size_t numGridDof,
        size_t gasPhaseIdx, size_t oilPhaseIdx, size_t waterPhaseIdx)
 {
     const auto& tracers = eclState_.tracer();
-    const auto& comm = gridView_.comm();
 
     if (tracers.size() == 0)
         return; // tracer treatment is supposed to be disabled
