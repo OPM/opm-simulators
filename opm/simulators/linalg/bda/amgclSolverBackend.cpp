@@ -78,7 +78,7 @@ void amgclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim) {
     if (file.is_open()) { // if file exists, read parameters from file
         try {
             boost::property_tree::read_json(file, prm);
-        } catch (boost::property_tree::json_parser::json_parser_error e) {
+        } catch (boost::property_tree::json_parser::json_parser_error& e) {
             OPM_THROW(std::logic_error, "Error cannot parse json file '" + filename + "'");
         }
 
