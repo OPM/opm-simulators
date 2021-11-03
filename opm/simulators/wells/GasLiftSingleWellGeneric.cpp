@@ -843,15 +843,15 @@ GasLiftSingleWellGeneric::
 runOptimize1_()
 {
     std::unique_ptr<GasLiftWellState> state;
-    auto inc_count = this->well_state_.gliftGetAlqIncreaseCount(this->well_name_);
-    auto dec_count = this->well_state_.gliftGetAlqDecreaseCount(this->well_name_);
+    int inc_count = this->well_state_.gliftGetAlqIncreaseCount(this->well_name_);
+    int dec_count = this->well_state_.gliftGetAlqDecreaseCount(this->well_name_);
     if (dec_count == 0 && inc_count == 0) {
         state = tryIncreaseLiftGas_();
-        if (!state && !state->alqChanged()) {
+        if (!state || !(state->alqChanged())) {
             state = tryDecreaseLiftGas_();
         }
     }
-    else if (dec_count == 0) {
+     else if (dec_count == 0) {
         assert(inc_count > 0);
         state = tryIncreaseLiftGas_();
     }
