@@ -29,6 +29,8 @@
 #ifndef EWOMS_EQUILIBRATIONHELPERS_HH
 #define EWOMS_EQUILIBRATIONHELPERS_HH
 
+#include <fmt/format.h>
+
 #include <opm/material/common/Tabulated1DFunction.hpp>
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 #include <opm/material/fluidstates/SimpleModularFluidState.hpp>
@@ -827,11 +829,14 @@ double satFromPc(const MaterialLawManager& materialLawManager,
     const PcEq<FluidSystem, MaterialLaw, MaterialLawManager> f(materialLawManager, phase, cell, targetPc);
     double f0 = f(s0);
     double f1 = f(s1);
+    if (!std::isfinite(f0 + f1))
+        throw std::logic_error(fmt::format("The capillary pressure values {} and {} are not finite", f0, f1));
+
     if (f0 <= 0.0)
         return s0;
     else if (f1 >= 0.0)
         return s1;
-    assert(f0 > 0 && f1 < 0);
+
     const double tol = 1e-10;
     // should at least converge in 2 times bisection but some safety here:
     const int maxIter = -2*static_cast<int>(std::log2(tol)) + 10;
