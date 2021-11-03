@@ -18,6 +18,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <fmt/format.h>
 #include <config.h>
 #include <opm/simulators/wells/WellState.hpp>
 
@@ -53,7 +54,46 @@ void WellState::base_init(const std::vector<double>& cellPressures,
     }
 }
 
+void WellState::initSingleProducer(const Well& well,
+                                   const ParallelWellInfo& well_info,
+                                   double pressure_first_connection,
+                                   const std::vector<PerforationData>& well_perf_data,
+                                   const SummaryState& summary_state) {
+    const auto& pu = this->phase_usage_;
+    const double temp = 273.15 + 15.56;
 
+    auto& ws = this->wells_.add(well.name(), SingleWellState{well.name(), well_info, true, pressure_first_connection, well_perf_data, pu, temp});
+    if ( ws.perf_data.empty())
+        return;
+
+    if (well.getStatus() == Well::Status::OPEN) {
+        ws.status = Well::Status::OPEN;
+    }
+
+    ws.update_producer_targets(well, summary_state);
+}
+
+
+void WellState::initSingleInjector(const Well& well,
+                                   const ParallelWellInfo& well_info,
+                                   double pressure_first_connection,
+                                   const std::vector<PerforationData>& well_perf_data,
+                                   const SummaryState& summary_state) {
+
+    const auto& pu = this->phase_usage_;
+    const auto& inj_controls = well.injectionControls(summary_state);
+    const double temp = inj_controls.temperature;
+
+    auto& ws = this->wells_.add(well.name(), SingleWellState{well.name(), well_info, false, pressure_first_connection, well_perf_data, pu, temp});
+    if ( ws.perf_data.empty())
+        return;
+
+    if (well.getStatus() == Well::Status::OPEN) {
+        ws.status = Well::Status::OPEN;
+    }
+
+    ws.update_injector_targets(well, summary_state);
+}
 
 
 
@@ -63,132 +103,16 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
                                const ParallelWellInfo& well_info,
                                const SummaryState& summary_state)
 {
-    assert(well.isInjector() || well.isProducer());
+    double pressure_first_connection = -1;
+    if (!well_perf_data.empty())
+        pressure_first_connection = cellPressures[well_perf_data[0].cell_index];
+    pressure_first_connection = well_info.broadcastFirstPerforationValue(pressure_first_connection);
 
-    // Set default zero initial well rates.
-    // May be overwritten below.
-    const auto& pu = this->phase_usage_;
-    const int np = pu.num_phases;
-    double temp = well.isInjector() ? well.injectionControls(summary_state).temperature : 273.15 + 15.56;
-
-    auto& ws = this->wells_.add(well.name(), SingleWellState{well_info, well.isProducer(), well_perf_data.size(), static_cast<std::size_t>(np), temp});
-
-    if ( ws.perf_data.empty())
-        return;
-
-    const auto inj_controls = well.isInjector() ? well.injectionControls(summary_state) : Well::InjectionControls(0);
-    const auto prod_controls = well.isProducer() ? well.productionControls(summary_state) : Well::ProductionControls(0);
-
-    const bool is_bhp = well.isInjector() ? (inj_controls.cmode == Well::InjectorCMode::BHP)
-                                          : (prod_controls.cmode == Well::ProducerCMode::BHP);
-    const double bhp_limit = well.isInjector() ? inj_controls.bhp_limit : prod_controls.bhp_limit;
-    const bool is_grup = well.isInjector() ? (inj_controls.cmode == Well::InjectorCMode::GRUP)
-                                           : (prod_controls.cmode == Well::ProducerCMode::GRUP);
-
-    const double inj_surf_rate = well.isInjector() ? inj_controls.surface_rate : 0.0; // To avoid a "maybe-uninitialized" warning.
-
-    const double local_pressure = well_perf_data.empty() ?
-                                      0 : cellPressures[well_perf_data[0].cell_index];
-    const double global_pressure = well_info.broadcastFirstPerforationValue(local_pressure);
-
-    if (well.getStatus() == Well::Status::OPEN) {
-        ws.status = Well::Status::OPEN;
-    }
-
-    if (well.getStatus() == Well::Status::STOP) {
-        // Stopped well:
-        // 1. Rates: zero well rates.
-        // 2. Bhp: assign bhp equal to bhp control, if
-        //    applicable, otherwise assign equal to
-        //    first perforation cell pressure.
-        if (is_bhp) {
-            ws.bhp = bhp_limit;
-        } else {
-            ws.bhp = global_pressure;
-        }
-    } else if (is_grup) {
-        // Well under group control.
-        // 1. Rates: zero well rates.
-        // 2. Bhp: initialize bhp to be a
-        //    little above or below (depending on if
-        //    the well is an injector or producer)
-        //    pressure in first perforation cell.
-        const double safety_factor = well.isInjector() ? 1.01 : 0.99;
-        ws.bhp = safety_factor * global_pressure;
-    } else {
-        // Open well, under own control:
-        // 1. Rates: initialize well rates to match
-        //    controls if type is ORAT/GRAT/WRAT
-        //    (producer) or RATE (injector).
-        //    Otherwise, we cannot set the correct
-        //    value here and initialize to zero rate.
-        auto& rates = ws.surface_rates;
-        if (well.isInjector()) {
-            if (inj_controls.cmode == Well::InjectorCMode::RATE) {
-                switch (inj_controls.injector_type) {
-                case InjectorType::WATER:
-                    assert(pu.phase_used[BlackoilPhases::Aqua]);
-                    rates[pu.phase_pos[BlackoilPhases::Aqua]] = inj_surf_rate;
-                    break;
-                case InjectorType::GAS:
-                    assert(pu.phase_used[BlackoilPhases::Vapour]);
-                    rates[pu.phase_pos[BlackoilPhases::Vapour]] = inj_surf_rate;
-                    break;
-                case InjectorType::OIL:
-                    assert(pu.phase_used[BlackoilPhases::Liquid]);
-                    rates[pu.phase_pos[BlackoilPhases::Liquid]] = inj_surf_rate;
-                    break;
-                case InjectorType::MULTI:
-                    // Not currently handled, keep zero init.
-                    break;
-                }
-            } else {
-                // Keep zero init.
-            }
-        } else {
-            assert(well.isProducer());
-            // Note negative rates for producing wells.
-            switch (prod_controls.cmode) {
-            case Well::ProducerCMode::ORAT:
-                assert(pu.phase_used[BlackoilPhases::Liquid]);
-                rates[pu.phase_pos[BlackoilPhases::Liquid]] = -prod_controls.oil_rate;
-                break;
-            case Well::ProducerCMode::WRAT:
-                assert(pu.phase_used[BlackoilPhases::Aqua]);
-                rates[pu.phase_pos[BlackoilPhases::Aqua]] = -prod_controls.water_rate;
-                break;
-            case Well::ProducerCMode::GRAT:
-                assert(pu.phase_used[BlackoilPhases::Vapour]);
-                rates[pu.phase_pos[BlackoilPhases::Vapour]] = -prod_controls.gas_rate;
-                break;
-            default:
-                // Keep zero init.
-                break;
-            }
-        }
-        // 2. Bhp: initialize bhp to be target pressure if
-        //    bhp-controlled well, otherwise set to a
-        //    little above or below (depending on if
-        //    the well is an injector or producer)
-        //    pressure in first perforation cell.
-        if (is_bhp) {
-            ws.bhp = bhp_limit;
-        } else {
-            const double safety_factor = well.isInjector() ? 1.01 : 0.99;
-            ws.bhp = safety_factor * global_pressure;
-        }
-    }
-
-    // 3. Thp: assign thp equal to thp target/limit, if such a limit exists,
-    //    otherwise keep it zero.
-    const bool has_thp = well.isInjector() ? inj_controls.hasControl(Well::InjectorCMode::THP)
-                                           : prod_controls.hasControl(Well::ProducerCMode::THP);
-    const double thp_limit = well.isInjector() ? inj_controls.thp_limit : prod_controls.thp_limit;
-    if (has_thp) {
-        ws.thp = thp_limit;
-    }
+    if (well.isInjector())
+        this->initSingleInjector(well, well_info, pressure_first_connection, well_perf_data, summary_state);
+    else
+        this->initSingleProducer(well, well_info, pressure_first_connection, well_perf_data, summary_state);
 }
-
 
 
 void WellState::init(const std::vector<double>& cellPressures,
@@ -242,14 +166,8 @@ void WellState::init(const std::vector<double>& cellPressures,
         auto& perf_data = ws.perf_data;
         const int num_perf_this_well = perf_data.size();
         const int global_num_perf_this_well = ecl_well.getConnections().num_open();
-        const auto& perf_input = well_perf_data[w];
 
         for (int perf = 0; perf < num_perf_this_well; ++perf) {
-            perf_data.cell_index[perf] = perf_input[perf].cell_index;
-            perf_data.connection_transmissibility_factor[perf] = perf_input[perf].connection_transmissibility_factor;
-            perf_data.satnum_id[perf] = perf_input[perf].satnum_id;
-            perf_data.ecl_index[perf] = perf_input[perf].ecl_index;
-
             if (wells_ecl[w].getStatus() == Well::Status::OPEN) {
                 for (int p = 0; p < this->numPhases(); ++p) {
                     perf_data.phase_rates[this->numPhases()*perf + p] = ws.surface_rates[p] / double(global_num_perf_this_well);
@@ -751,27 +669,12 @@ void WellState::shutWell(int well_index)
 {
     auto& ws = this->well(well_index);
     ws.shut();
-
-    auto& perf_data = ws.perf_data;
-    auto& connpi = perf_data.prod_index;
-    connpi.assign(connpi.size(), 0);
 }
 
 void WellState::updateStatus(int well_index, Well::Status status)
 {
-    switch (status) {
-    case Well::Status::OPEN:
-        this->openWell(well_index);
-        break;
-    case Well::Status::SHUT:
-        this->shutWell(well_index);
-        break;
-    case Well::Status::STOP:
-        this->stopWell(well_index);
-        break;
-    default:
-        throw std::logic_error("Invalid well status");
-    }
+    auto& ws = this->well(well_index);
+    ws.updateStatus(status);
 }
 
 
@@ -911,40 +814,6 @@ void WellState::updateWellsDefaultALQ( const std::vector<Well>& wells_ecl )
     }
 }
 
-void WellState::resetConnectionTransFactors(const int well_index,
-                                            const std::vector<PerforationData>& new_perf_data)
-{
-    auto& ws = this->well(well_index);
-    auto& perf_data = ws.perf_data;
-    if (perf_data.size() != new_perf_data.size()) {
-        throw std::invalid_argument {
-            "Size mismatch for perforation data in well "
-            + std::to_string(well_index)
-        };
-    }
-
-    for (std::size_t conn_index = 0; conn_index < new_perf_data.size(); conn_index++) {
-        if (perf_data.cell_index[conn_index] != static_cast<std::size_t>(new_perf_data[conn_index].cell_index)) {
-            throw std::invalid_argument {
-                "Cell index mismatch in connection "
-                + std::to_string(conn_index)
-                        + " of well "
-                        + std::to_string(well_index)
-            };
-        }
-
-        if (perf_data.satnum_id[conn_index] != new_perf_data[conn_index].satnum_id) {
-            throw std::invalid_argument {
-                "Saturation function table mismatch in connection "
-                + std::to_string(conn_index)
-                        + " of well "
-                        + std::to_string(well_index)
-            };
-        }
-
-        perf_data.connection_transmissibility_factor[conn_index] = new_perf_data[conn_index].connection_transmissibility_factor;
-    }
-}
 
 const ParallelWellInfo&
 WellState::parallelWellInfo(std::size_t well_index) const
@@ -956,3 +825,5 @@ WellState::parallelWellInfo(std::size_t well_index) const
 template void WellState::updateGlobalIsGrup<ParallelWellInfo::Communication>(const ParallelWellInfo::Communication& comm);
 template void WellState::communicateGroupRates<ParallelWellInfo::Communication>(const ParallelWellInfo::Communication& comm);
 } // namespace Opm
+
+

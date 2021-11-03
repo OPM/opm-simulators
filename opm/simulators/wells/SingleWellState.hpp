@@ -23,22 +23,34 @@
 #include <functional>
 #include <vector>
 
-#include <opm/simulators/wells/SegmentState.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
+
+#include <opm/simulators/wells/SegmentState.hpp>
 #include <opm/simulators/wells/PerfData.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
+#include <opm/core/props/BlackoilPhases.hpp>
 
 namespace Opm {
 
+struct PerforationData;
+
 class SingleWellState {
 public:
-    SingleWellState(const ParallelWellInfo& pinfo, bool is_producer, std::size_t num_perf, std::size_t num_phases, double temp);
+    SingleWellState(const std::string& name,
+                    const ParallelWellInfo& pinfo,
+                    bool is_producer,
+                    double presssure_first_connection,
+                    const std::vector<PerforationData>& perf_input,
+                    const PhaseUsage& pu,
+                    double temp);
 
+    std::string name;
     std::reference_wrapper<const ParallelWellInfo> parallel_info;
 
     Well::Status status{Well::Status::OPEN};
     bool producer;
+    PhaseUsage pu;
     double bhp{0};
     double thp{0};
     double temperature{0};
@@ -55,6 +67,16 @@ public:
     Well::ProducerCMode production_cmode{Well::ProducerCMode::CMODE_UNDEFINED};
 
 
+    /// Special purpose method to support dynamically rescaling a well's
+    /// CTFs through WELPI.
+    ///
+    /// \param[in] new_perf_data New perforation data.  Only
+    ///    PerforationData::connection_transmissibility_factor actually
+    ///    used (overwrites existing internal values).
+    void reset_connection_factors(const std::vector<PerforationData>& new_perf_data);
+    void update_producer_targets(const Well& ecl_well, const SummaryState& st);
+    void update_injector_targets(const Well& ecl_well, const SummaryState& st);
+    void updateStatus(Well::Status status);
     void init_timestep(const SingleWellState& other);
     void shut();
     void stop();

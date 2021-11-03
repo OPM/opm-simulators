@@ -546,10 +546,10 @@ BOOST_AUTO_TEST_CASE(TESTSegmentState2) {
 
 
 BOOST_AUTO_TEST_CASE(TESTPerfData) {
-    Opm::PerfData pd1(3, true, 3);
-    Opm::PerfData pd2(3, true, 3);
-    Opm::PerfData pd3(2, true, 3);
-    Opm::PerfData pd4(3, false, 3);
+    Opm::PerfData pd1(3, 100, true, 3);
+    Opm::PerfData pd2(3, 100, true, 3);
+    Opm::PerfData pd3(2, 100, true, 3);
+    Opm::PerfData pd4(3, 100, false, 3);
 
 
     for (std::size_t i = 0; i < 3; i++) {
@@ -574,9 +574,15 @@ BOOST_AUTO_TEST_CASE(TESTPerfData) {
 
 BOOST_AUTO_TEST_CASE(TestSingleWellState) {
     Opm::ParallelWellInfo pinfo;
-    Opm::SingleWellState ws1(pinfo, true,  10, 3, 1);
-    Opm::SingleWellState ws2(pinfo, true,  10, 3, 2);
-    Opm::SingleWellState ws3(pinfo, false, 10, 3, 3);
+    std::vector<Opm::PerforationData> connections = {{0,1,1,0},{1,1,1,1},{2,1,1,2}};
+    Opm::PhaseUsage pu;
+
+    // This is totally bonkers, but the pu needs a complete deck to initialize properly
+    pu.num_phases = 3;
+
+    Opm::SingleWellState ws1("W1", pinfo, true,  100, connections, pu, 1);
+    Opm::SingleWellState ws2("W2", pinfo, true,  100, connections, pu, 2);
+    Opm::SingleWellState ws3("W3", pinfo, false, 100, connections, pu, 3);
 
     ws1.bhp = 100;
     ws1.thp = 200;

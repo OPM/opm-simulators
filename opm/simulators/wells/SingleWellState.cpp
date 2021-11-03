@@ -18,19 +18,35 @@
 */
 
 #include <opm/simulators/wells/SingleWellState.hpp>
+#include <opm/simulators/wells/PerforationData.hpp>
 
 namespace Opm {
 
-SingleWellState::SingleWellState(const ParallelWellInfo& pinfo, bool is_producer, std::size_t num_perf, std::size_t num_phases, double temp)
-    : parallel_info(pinfo)
+SingleWellState::SingleWellState(const std::string& name_,
+                                 const ParallelWellInfo& pinfo,
+                                 bool is_producer,
+                                 double pressure_first_connection,
+                                 const std::vector<PerforationData>& perf_input,
+                                 const PhaseUsage& pu_,
+                                 double temp)
+    : name(name_)
+    , parallel_info(pinfo)
     , producer(is_producer)
+    , pu(pu_)
     , temperature(temp)
-    , well_potentials(num_phases)
-    , productivity_index(num_phases)
-    , surface_rates(num_phases)
-    , reservoir_rates(num_phases)
-    , perf_data(num_perf, !is_producer, num_phases)
-{}
+    , well_potentials(pu_.num_phases)
+    , productivity_index(pu_.num_phases)
+    , surface_rates(pu_.num_phases)
+    , reservoir_rates(pu_.num_phases)
+    , perf_data(perf_input.size(), pressure_first_connection, !is_producer, pu_.num_phases)
+{
+    for (std::size_t perf = 0; perf < perf_input.size(); perf++) {
+        this->perf_data.cell_index[perf] = perf_input[perf].cell_index;
+        this->perf_data.connection_transmissibility_factor[perf] = perf_input[perf].connection_transmissibility_factor;
+        this->perf_data.satnum_id[perf] = perf_input[perf].satnum_id;
+        this->perf_data.ecl_index[perf] = perf_input[perf].ecl_index;
+    }
+}
 
 
 void SingleWellState::init_timestep(const SingleWellState& other) {
@@ -56,6 +72,9 @@ void SingleWellState::shut() {
     std::fill(this->surface_rates.begin(), this->surface_rates.end(), 0);
     std::fill(this->reservoir_rates.begin(), this->reservoir_rates.end(), 0);
     std::fill(this->productivity_index.begin(), this->productivity_index.end(), 0);
+
+    auto& connpi = this->perf_data.prod_index;
+    connpi.assign(connpi.size(), 0);
 }
 
 void SingleWellState::stop() {
@@ -65,6 +84,51 @@ void SingleWellState::stop() {
 
 void SingleWellState::open() {
     this->status = Well::Status::OPEN;
+}
+
+void SingleWellState::updateStatus(Well::Status new_status) {
+    switch (new_status) {
+    case Well::Status::OPEN:
+        this->open();
+        break;
+    case Well::Status::SHUT:
+        this->shut();
+        break;
+    case Well::Status::STOP:
+        this->stop();
+        break;
+    default:
+        throw std::logic_error("Invalid well status");
+    }
+}
+
+void SingleWellState::reset_connection_factors(const std::vector<PerforationData>& new_perf_data) {
+    if (this->perf_data.size() != new_perf_data.size()) {
+        throw std::invalid_argument {
+            "Size mismatch for perforation data in well " + this->name
+        };
+    }
+
+    for (std::size_t conn_index = 0; conn_index < new_perf_data.size(); conn_index++) {
+        if (this->perf_data.cell_index[conn_index] != static_cast<std::size_t>(new_perf_data[conn_index].cell_index)) {
+            throw std::invalid_argument {
+                "Cell index mismatch in connection "
+                    + std::to_string(conn_index)
+                    + " of well "
+                    + this->name
+            };
+        }
+
+        if (this->perf_data.satnum_id[conn_index] != new_perf_data[conn_index].satnum_id) {
+            throw std::invalid_argument {
+                "Saturation function table mismatch in connection "
+                + std::to_string(conn_index)
+                        + " of well "
+                        + this->name
+            };
+        }
+        this->perf_data.connection_transmissibility_factor[conn_index] = new_perf_data[conn_index].connection_transmissibility_factor;
+    }
 }
 
 
@@ -86,7 +150,110 @@ double SingleWellState::sum_solvent_rates() const {
     return this->sum_connection_rates(this->perf_data.solvent_rates);
 }
 
+
+void SingleWellState::update_producer_targets(const Well& ecl_well, const SummaryState& st) {
+    const double bhp_safety_factor = 0.99;
+    const auto& prod_controls = ecl_well.productionControls(st);
+    if (prod_controls.hasControl(Well::ProducerCMode::THP))
+        this->thp = prod_controls.thp_limit;
+
+
+    auto cmode_is_bhp = (prod_controls.cmode == Well::ProducerCMode::BHP);
+    auto bhp_limit = prod_controls.bhp_limit;
+
+    if (ecl_well.getStatus() == Well::Status::STOP) {
+        if (cmode_is_bhp)
+            this->bhp = bhp_limit;
+        else
+            this->bhp = this->perf_data.pressure_first_connection;
+
+        return;
+    }
+
+    if (prod_controls.cmode == Well::ProducerCMode::GRUP) {
+        this->bhp = this->perf_data.pressure_first_connection * bhp_safety_factor;
+        return;
+    }
+
+    switch (prod_controls.cmode) {
+    case Well::ProducerCMode::ORAT:
+        assert(this->pu.phase_used[BlackoilPhases::Liquid]);
+        this->surface_rates[pu.phase_pos[BlackoilPhases::Liquid]] = -prod_controls.oil_rate;
+        break;
+    case Well::ProducerCMode::WRAT:
+        assert(this->pu.phase_used[BlackoilPhases::Aqua]);
+        this->surface_rates[pu.phase_pos[BlackoilPhases::Aqua]] = -prod_controls.water_rate;
+        break;
+    case Well::ProducerCMode::GRAT:
+        assert(this->pu.phase_used[BlackoilPhases::Vapour]);
+        this->surface_rates[pu.phase_pos[BlackoilPhases::Vapour]] = -prod_controls.gas_rate;
+        break;
+    default:
+        // Keep zero init.
+        break;
+    }
+
+    if (cmode_is_bhp)
+        this->bhp = bhp_limit;
+    else
+        this->bhp = this->perf_data.pressure_first_connection * bhp_safety_factor;
+
 }
+
+void SingleWellState::update_injector_targets(const Well& ecl_well, const SummaryState& st) {
+    const double bhp_safety_factor = 1.01;
+    const auto& inj_controls = ecl_well.injectionControls(st);
+
+    if (inj_controls.hasControl(Well::InjectorCMode::THP))
+        this->thp = inj_controls.thp_limit;
+
+    auto cmode_is_bhp = (inj_controls.cmode == Well::InjectorCMode::BHP);
+    auto bhp_limit = inj_controls.bhp_limit;
+
+    if (ecl_well.getStatus() == Well::Status::STOP) {
+        if (cmode_is_bhp)
+            this->bhp = bhp_limit;
+        else
+            this->bhp = this->perf_data.pressure_first_connection;
+
+        return;
+    }
+
+
+    if (inj_controls.cmode == Well::InjectorCMode::GRUP) {
+        this->bhp = this->perf_data.pressure_first_connection * bhp_safety_factor;
+        return;
+    }
+
+    if (inj_controls.cmode == Well::InjectorCMode::RATE) {
+        auto inj_surf_rate = inj_controls.surface_rate;
+        switch (inj_controls.injector_type) {
+        case InjectorType::WATER:
+            assert(pu.phase_used[BlackoilPhases::Aqua]);
+            this->surface_rates[pu.phase_pos[BlackoilPhases::Aqua]] = inj_surf_rate;
+            break;
+        case InjectorType::GAS:
+            assert(pu.phase_used[BlackoilPhases::Vapour]);
+            this->surface_rates[pu.phase_pos[BlackoilPhases::Vapour]] = inj_surf_rate;
+            break;
+        case InjectorType::OIL:
+            assert(pu.phase_used[BlackoilPhases::Liquid]);
+            this->surface_rates[pu.phase_pos[BlackoilPhases::Liquid]] = inj_surf_rate;
+            break;
+        case InjectorType::MULTI:
+            // Not currently handled, keep zero init.
+            break;
+        }
+    }
+
+    if (cmode_is_bhp)
+        this->bhp = bhp_limit;
+    else
+        this->bhp = this->perf_data.pressure_first_connection * bhp_safety_factor;
+}
+}
+
+
 
 
 

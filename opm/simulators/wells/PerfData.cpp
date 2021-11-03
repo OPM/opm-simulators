@@ -24,8 +24,9 @@ namespace Opm
 {
 
 
-PerfData::PerfData(std::size_t num_perf, bool injector_, std::size_t num_phases)
+PerfData::PerfData(std::size_t num_perf, double pressure_first_connection_, bool injector_, std::size_t num_phases)
     : injector(injector_)
+    , pressure_first_connection(pressure_first_connection_)
     , pressure(num_perf)
     , rates(num_perf)
     , phase_rates(num_perf * num_phases)
@@ -61,6 +62,7 @@ bool PerfData::try_assign(const PerfData& other) {
     if (this->injector != other.injector)
         return false;
 
+    this->pressure_first_connection = other.pressure_first_connection;
     this->pressure = other.pressure;
     this->rates = other.rates;
     this->phase_rates = other.phase_rates;
