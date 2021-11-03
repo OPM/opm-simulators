@@ -103,9 +103,6 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
                                const ParallelWellInfo& well_info,
                                const SummaryState& summary_state)
 {
-    if (well.isInjector() == well.isProducer())
-        throw std::logic_error(fmt::format("Well must be either producer or injector - logic error for well: {}", well.name()));
-
     double pressure_first_connection = -1;
     if (!well_perf_data.empty())
         pressure_first_connection = cellPressures[well_perf_data[0].cell_index];
