@@ -101,12 +101,6 @@ public:
 
     data::Aquifers aquiferData() const;
 
-    template <class Restarter>
-    void serialize(Restarter& res);
-
-    template <class Restarter>
-    void deserialize(Restarter& res);
-
 protected:
     // ---------      Types      ---------
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
