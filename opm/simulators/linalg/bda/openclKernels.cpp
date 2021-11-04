@@ -58,14 +58,14 @@ unsigned int ceilDivision(const unsigned int A, const unsigned int B)
     return A / B + (A % B > 0);
 }
 
-void add_kernel_string(cl::Program::Sources &sources, std::string &source) {
-        sources.emplace_back(source);
+void add_kernel_string(cl::Program::Sources &sources, const std::string &source) {
+    sources.emplace_back(source);
 }
 
 void OpenclKernels::init(cl::Context *context, cl::CommandQueue *queue_, std::vector<cl::Device>& devices, int verbosity_) {
 
     if (initialized) {
-        OpmLog::warning("Warning OpenclKernels is already initialized");
+        OpmLog::debug("Warning OpenclKernels is already initialized");
         return;
     }
 
@@ -73,32 +73,32 @@ void OpenclKernels::init(cl::Context *context, cl::CommandQueue *queue_, std::ve
     verbosity = verbosity_;
 
     cl::Program::Sources sources;
-    std::string axpy_s = get_axpy_string();
+    const std::string& axpy_s = get_axpy_string();
     add_kernel_string(sources, axpy_s);
-    std::string scale_s = get_scale_string();
+    const std::string& scale_s = get_scale_string();
     add_kernel_string(sources, scale_s);
-    std::string dot_1_s = get_dot_1_string();
+    const std::string& dot_1_s = get_dot_1_string();
     add_kernel_string(sources, dot_1_s);
-    std::string norm_s = get_norm_string();
+    const std::string& norm_s = get_norm_string();
     add_kernel_string(sources, norm_s);
-    std::string custom_s = get_custom_string();
+    const std::string& custom_s = get_custom_string();
     add_kernel_string(sources, custom_s);
-    std::string spmv_blocked_s = get_spmv_blocked_string();
+    const std::string& spmv_blocked_s = get_spmv_blocked_string();
     add_kernel_string(sources, spmv_blocked_s);
 #if CHOW_PATEL
     bool ilu_operate_on_full_matrix = false;
 #else
     bool ilu_operate_on_full_matrix = true;
 #endif
-    std::string ILU_apply1_s = get_ILU_apply1_string(ilu_operate_on_full_matrix);
+    const std::string& ILU_apply1_s = get_ILU_apply1_string(ilu_operate_on_full_matrix);
     add_kernel_string(sources, ILU_apply1_s);
-    std::string ILU_apply2_s = get_ILU_apply2_string(ilu_operate_on_full_matrix);
+    const std::string& ILU_apply2_s = get_ILU_apply2_string(ilu_operate_on_full_matrix);
     add_kernel_string(sources, ILU_apply2_s);
-    std::string stdwell_apply_s = get_stdwell_apply_string(true);
+    const std::string& stdwell_apply_s = get_stdwell_apply_string(true);
     add_kernel_string(sources, stdwell_apply_s);
-    std::string stdwell_apply_no_reorder_s = get_stdwell_apply_string(false);
+    const std::string& stdwell_apply_no_reorder_s = get_stdwell_apply_string(false);
     add_kernel_string(sources, stdwell_apply_no_reorder_s);
-    std::string ilu_decomp_s = get_ilu_decomp_string();
+    const std::string& ilu_decomp_s = get_ilu_decomp_string();
     add_kernel_string(sources, ilu_decomp_s);
 
     cl::Program program = cl::Program(*context, sources);
