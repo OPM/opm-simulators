@@ -84,13 +84,13 @@ gasTarget(const std::string& group_name)
     return group_rate.gasTarget();
 }
 
-std::tuple<double, double, double>
+std::tuple<double, double, double, double>
 GasLiftGroupInfo::
 getRates(int group_idx)
 {
     const auto& group_name = groupIdxToName(group_idx);
     auto& rates = this->group_rate_map_.at(group_name);
-    return std::make_tuple(rates.oilRate(), rates.gasRate(), rates.alq());
+    return std::make_tuple(rates.oilRate(), rates.gasRate(), rates.waterRate(), rates.alq());
 }
 
 std::vector<std::pair<std::string,double>>&
@@ -165,22 +165,46 @@ oilTarget(const std::string &group_name)
     return group_rate.oilTarget();
 }
 
-void
+double
 GasLiftGroupInfo::
-update(
-    const std::string &group_name, double delta_oil, double delta_gas, double delta_alq)
+waterRate(const std::string &group_name)
 {
     auto& group_rate = this->group_rate_map_.at(group_name);
-    group_rate.update(delta_oil, delta_gas, delta_alq);
+    return group_rate.waterRate();
+}
+
+std::optional<double>
+GasLiftGroupInfo::
+waterTarget(const std::string &group_name)
+{
+    auto& group_rate = this->group_rate_map_.at(group_name);
+    return group_rate.waterTarget();
+}
+
+std::optional<double>
+GasLiftGroupInfo::
+liquidTarget(const std::string &group_name)
+{
+    auto& group_rate = this->group_rate_map_.at(group_name);
+    return group_rate.liquidTarget();
 }
 
 void
 GasLiftGroupInfo::
-updateRate(int idx, double oil_rate, double gas_rate, double alq)
+update(
+    const std::string &group_name, double delta_oil, double delta_gas, double delta_water, double delta_alq)
+{
+    auto& group_rate = this->group_rate_map_.at(group_name);
+    group_rate.update(delta_oil, delta_gas, delta_water, delta_alq);
+}
+
+void
+GasLiftGroupInfo::
+updateRate(int idx, double oil_rate, double gas_rate, double water_rate, double alq)
 {
     const auto& group_name = groupIdxToName(idx);
     auto& rates = this->group_rate_map_.at(group_name);
-    rates.assign(oil_rate, gas_rate, alq);
+    rates.assign(oil_rate, gas_rate, water_rate, alq);
 }
 
 /****************************************
@@ -295,7 +319,7 @@ displayDebugMessage_(const std::string &msg, const std::string &well_name)
 }
 
 
-std::pair<double, double>
+std::tuple<double, double, double>
 GasLiftGroupInfo::
 getProducerWellRates_(int well_index)
 {
@@ -311,14 +335,19 @@ getProducerWellRates_(int well_index)
         ? -wrate[pu.phase_pos[Gas]]
         : 0.0;
 
-    return {oil_rate, gas_rate};
+    const auto water_rate = pu.phase_used[Water]
+        ? -wrate[pu.phase_pos[Water]]
+        : 0.0;
+
+    return {oil_rate, gas_rate, water_rate};
 }
 
-std::tuple<double, double, double>
+std::tuple<double, double, double, double>
 GasLiftGroupInfo::
 initializeGroupRatesRecursive_(const Group &group)
 {
     double oil_rate = 0.0;
+    double water_rate = 0.0;
     double gas_rate = 0.0;
     double alq = 0.0;
     if (group.wellgroup()) {
@@ -335,17 +364,19 @@ initializeGroupRatesRecursive_(const Group &group)
                 assert(well); // Should never be nullptr
                 const int index = (itr->second).second;
                 if (well->isProducer()) {
-                    auto [sw_oil_rate, sw_gas_rate] = getProducerWellRates_(index);
+                    auto [sw_oil_rate, sw_gas_rate, sw_water_rate] = getProducerWellRates_(index);
                     auto sw_alq = this->well_state_.getALQ(well_name);
                     double factor = well->getEfficiencyFactor();
                     oil_rate += (factor * sw_oil_rate);
                     gas_rate += (factor * sw_gas_rate);
+                    water_rate += (factor * sw_water_rate);
                     alq += (factor * sw_alq);
                 }
             }
         }
         oil_rate = this->comm_.sum(oil_rate);
         gas_rate = this->comm_.sum(gas_rate);
+        water_rate = this->comm_.sum(water_rate);
         alq = this->comm_.sum(alq);
     }
     else {
@@ -354,33 +385,40 @@ initializeGroupRatesRecursive_(const Group &group)
                 continue;
             const Group& sub_group = this->schedule_.getGroup(
                 group_name, this->report_step_idx_);
-            auto [sg_oil_rate, sg_gas_rate, sg_alq]
+            auto [sg_oil_rate, sg_gas_rate, sg_water_rate, sg_alq]
                 = initializeGroupRatesRecursive_(sub_group);
             const auto gefac = sub_group.getGroupEfficiencyFactor();
             oil_rate += (gefac * sg_oil_rate);
             gas_rate += (gefac * sg_gas_rate);
+            water_rate += (gefac * sg_water_rate);
             alq += (gefac * sg_alq);
         }
     }
-    std::optional<double> oil_target, gas_target, max_total_gas, max_alq;
+    std::optional<double> oil_target, gas_target, water_target, liquid_target, max_total_gas, max_alq;
     const auto controls = group.productionControls(this->summary_state_);
+    if (group.has_control(Group::ProductionCMode::LRAT)) {
+        liquid_target = controls.liquid_target;
+    }
     if (group.has_control(Group::ProductionCMode::ORAT)) {
         oil_target = controls.oil_target;
     }
     if (group.has_control(Group::ProductionCMode::GRAT)) {
         gas_target = controls.gas_target;
     }
+    if (group.has_control(Group::ProductionCMode::WRAT)) {
+        water_target = controls.water_target;
+    }
     if (this->glo_.has_group(group.name())) {
         const auto &gl_group = this->glo_.group(group.name());
         max_alq = gl_group.max_lift_gas();
         max_total_gas = gl_group.max_total_gas();
     }
-    if (oil_target || gas_target || max_total_gas || max_alq) {
+    if (oil_target || liquid_target || water_target || gas_target || max_total_gas || max_alq) {
         updateGroupIdxMap_(group.name());
         this->group_rate_map_.try_emplace(group.name(),
-            oil_rate, gas_rate, alq, oil_target, gas_target, max_total_gas, max_alq);
+            oil_rate, gas_rate, water_rate, alq, oil_target, gas_target, water_target, liquid_target, max_total_gas, max_alq);
     }
-    return std::make_tuple(oil_rate, gas_rate, alq);
+    return std::make_tuple(oil_rate, gas_rate, water_rate, alq);
 }
 
 void
