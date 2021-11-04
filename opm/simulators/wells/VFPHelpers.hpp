@@ -149,13 +149,13 @@ VFPEvaluation bhp(const VFPInjTable& table,
  * Returns the table from the map if found, or throws an exception
  */
 template <typename T>
-const T& getTable(const std::map<int, std::reference_wrapper<const T>> tables, int table_id);
+const T& getTable(const std::map<int, std::reference_wrapper<const T>>& tables, int table_id);
 
 /**
  * Check whether we have a table with the table number
  */
 template <typename T>
-bool hasTable(const std::map<int, std::reference_wrapper<const T>> tables, int table_id) {
+bool hasTable(const std::map<int, std::reference_wrapper<const T>>& tables, int table_id) {
     const auto entry = tables.find(table_id);
     return (entry != tables.end() );
 }
