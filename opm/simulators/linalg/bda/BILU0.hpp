@@ -29,17 +29,6 @@
 #include <opm/simulators/linalg/bda/openclKernels.hpp>
 #include <opm/simulators/linalg/bda/ChowPatelIlu.hpp>
 
-// if CHOW_PATEL is 0, exact ILU decomposition is performed on CPU
-// if CHOW_PATEL is 1, iterative ILU decomposition (FGPILU) is done, as described in:
-//    FINE-GRAINED PARALLEL INCOMPLETE LU FACTORIZATION, E. Chow and A. Patel, SIAM 2015, https://doi.org/10.1137/140968896
-// if CHOW_PATEL_GPU is 0, the decomposition is done on CPU
-// if CHOW_PATEL_GPU is 1, the decomposition is done by bda::FGPILU::decomposition() on GPU
-// the apply phase of the ChowPatelIlu uses two triangular matrices: L and U
-// the exact decomposition uses a full matrix LU which is the superposition of L and U
-// ChowPatelIlu could also operate on a full matrix LU when L and U are merged, but it is generally better to keep them split
-#define CHOW_PATEL     0
-#define CHOW_PATEL_GPU 1
-
 
 namespace bda
 {
@@ -99,9 +88,9 @@ namespace bda
         int total_work_items = 0;
         int lmem_per_work_group = 0;
 
-        ChowPatelIlu chowPatelIlu;
-
-        void chow_patel_decomposition();
+#if CHOW_PATEL
+        ChowPatelIlu<block_size> chowPatelIlu;
+#endif
 
     public:
 
