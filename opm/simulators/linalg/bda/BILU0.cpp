@@ -241,16 +241,10 @@ BILU0<block_size>::~BILU0()
         for (int color = 0; color < numColors; ++color) {
             const unsigned int firstRow = rowsPerColorPrefix[color];
             const unsigned int lastRow = rowsPerColorPrefix[color+1];
-            const unsigned int work_group_size2 = 128;
-            const unsigned int num_work_groups2 = 1024;
-            const unsigned int total_work_items2 = num_work_groups2 * work_group_size2;
-            const unsigned int num_hwarps_per_group = work_group_size2 / 16;
-            const unsigned int lmem_per_work_group2 = num_hwarps_per_group * bs * bs * sizeof(double);           // each block needs a pivot
             if (verbosity >= 4) {
                 out << "color " << color << ": " << firstRow << " - " << lastRow << " = " << lastRow - firstRow << "\n";
             }
-            event = (*ilu_decomp)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items2), cl::NDRange(work_group_size2)), firstRow, lastRow, s.LUvals, s.LUcols, s.LUrows, s.invDiagVals, s.diagIndex, LUmat->Nb, cl::Local(lmem_per_work_group2));
-            event.wait();
+            OpenclKernels::ILU_decomp(firstRow, lastRow, s.LUvals, s.LUcols, s.LUrows, s.diagIndex, s.invDiagVals, Nb, block_size);
         }
 
         if (verbosity >= 3) {
@@ -266,7 +260,7 @@ BILU0<block_size>::~BILU0()
     // however, if individual kernel calls are timed, waiting for events is needed
     // behavior on other GPUs is untested
     template <unsigned int block_size>
-    void BILU0<block_size>::apply(cl::Buffer& y, cl::Buffer& x)
+    void BILU0<block_size>::apply(const cl::Buffer& y, cl::Buffer& x)
     {
         const double relaxation = 0.9;
         cl::Event event;
@@ -274,28 +268,24 @@ BILU0<block_size>::~BILU0()
 
         for(int color = 0; color < numColors; ++color){
 #if CHOW_PATEL
-            event = (*ILU_apply1)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), s.Lvals, s.Lcols, s.Lrows, s.diagIndex, y, x, s.rowsPerColor, color, block_size, cl::Local(lmem_per_work_group));
+            OpenclKernels::ILU_apply1(s.Lvals, s.Lcols, s.Lrows, s.diagIndex, y, x, s.rowsPerColor, color, Nb, block_size);
 #else
-            event = (*ILU_apply1)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), s.LUvals, s.LUcols, s.LUrows, s.diagIndex, y, x, s.rowsPerColor, color, block_size, cl::Local(lmem_per_work_group));
+            OpenclKernels::ILU_apply1(s.LUvals, s.LUcols, s.LUrows, s.diagIndex, y, x, s.rowsPerColor, color, Nb, block_size);
 #endif
-            // event.wait();
         }
 
         for(int color = numColors-1; color >= 0; --color){
 #if CHOW_PATEL
-            event = (*ILU_apply2)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), s.Uvals, s.Ucols, s.Urows, s.diagIndex, s.invDiagVals, x, s.rowsPerColor, color, block_size, cl::Local(lmem_per_work_group));
+            OpenclKernels::ILU_apply2(s.Uvals, s.Ucols, s.Urows, s.diagIndex, s.invDiagVals, x, s.rowsPerColor, color, Nb, block_size);
 #else
-            event = (*ILU_apply2)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), s.LUvals, s.LUcols, s.LUrows, s.diagIndex, s.invDiagVals, x, s.rowsPerColor, color, block_size, cl::Local(lmem_per_work_group));
+            OpenclKernels::ILU_apply2(s.LUvals, s.LUcols, s.LUrows, s.diagIndex, s.invDiagVals, x, s.rowsPerColor, color, Nb, block_size);
 #endif
-            // event.wait();
         }
 
         // apply relaxation
-        event = (*scale)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), x, relaxation, N);
-        event.wait();
+        OpenclKernels::scale(x, relaxation, N);
 
         if (verbosity >= 4) {
-            event.wait();
             std::ostringstream out;
             out << "BILU0 apply: " << t_apply.stop() << " s";
             OpmLog::info(out.str());
@@ -311,41 +301,17 @@ template <unsigned int block_size>
 void BILU0<block_size>::setOpenCLQueue(cl::CommandQueue *queue_) {
     this->queue = queue_;
 }
-template <unsigned int block_size>
-void BILU0<block_size>::setKernelParameters(const unsigned int work_group_size_, const unsigned int total_work_items_, const unsigned int lmem_per_work_group_) {
-    this->work_group_size = work_group_size_;
-    this->total_work_items = total_work_items_;
-    this->lmem_per_work_group = lmem_per_work_group_;
-}
-template <unsigned int block_size>
-void BILU0<block_size>::setKernels(
-    cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> *ILU_apply1_,
-    cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> *ILU_apply2_,
-    cl::KernelFunctor<cl::Buffer&, const double, const unsigned int> *scale_,
-    cl::KernelFunctor<const unsigned int, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const int, cl::LocalSpaceArg> *ilu_decomp_
-){
-    this->ILU_apply1 = ILU_apply1_;
-    this->ILU_apply2 = ILU_apply2_;
-    this->scale = scale_;
-    this->ilu_decomp = ilu_decomp_;
-}
 
 
-#define INSTANTIATE_BDA_FUNCTIONS(n)                                                     \
-template BILU0<n>::BILU0(ILUReorder, int);                                               \
-template BILU0<n>::~BILU0();                                                             \
-template bool BILU0<n>::init(BlockedMatrix<n>*);                                         \
-template bool BILU0<n>::create_preconditioner(BlockedMatrix<n>*);                        \
-template void BILU0<n>::apply(cl::Buffer& x, cl::Buffer& y);                             \
-template void BILU0<n>::setOpenCLContext(cl::Context*);                                  \
-template void BILU0<n>::setOpenCLQueue(cl::CommandQueue*);                               \
-template void BILU0<n>::setKernelParameters(unsigned int, unsigned int, unsigned int);   \
-template void BILU0<n>::setKernels(                                                      \
-    cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> *, \
-    cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> *, \
-    cl::KernelFunctor<cl::Buffer&, const double, const unsigned int> *, \
-    cl::KernelFunctor<const unsigned int, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const int, cl::LocalSpaceArg> * \
-    );
+#define INSTANTIATE_BDA_FUNCTIONS(n)                              \
+template BILU0<n>::BILU0(ILUReorder, int);                        \
+template BILU0<n>::~BILU0();                                      \
+template bool BILU0<n>::init(BlockedMatrix<n>*);                  \
+template bool BILU0<n>::create_preconditioner(BlockedMatrix<n>*); \
+template void BILU0<n>::apply(const cl::Buffer&, cl::Buffer&);    \
+template void BILU0<n>::setOpenCLContext(cl::Context*);           \
+template void BILU0<n>::setOpenCLQueue(cl::CommandQueue*);
+
 
 INSTANTIATE_BDA_FUNCTIONS(1);
 INSTANTIATE_BDA_FUNCTIONS(2);

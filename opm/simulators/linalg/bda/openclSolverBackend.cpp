@@ -174,6 +174,8 @@ openclSolverBackend<block_size>::openclSolverBackend(int verbosity_, int maxit_,
         context = std::make_shared<cl::Context>(devices[0]);
         queue.reset(new cl::CommandQueue(*context, devices[0], 0, &err));
 
+        OpenclKernels::init(context.get(), queue.get(), devices, verbosity);
+
     } catch (const cl::Error& error) {
         std::ostringstream oss;
         oss << "OpenCL Error: " << error.what() << "(" << error.err() << ")\n";
@@ -193,125 +195,6 @@ openclSolverBackend<block_size>::~openclSolverBackend() {
 }
 
 
-// divide A by B, and round up: return (int)ceil(A/B)
-template <unsigned int block_size>
-unsigned int openclSolverBackend<block_size>::ceilDivision(const unsigned int A, const unsigned int B)
-{
-    return A / B + (A % B > 0);
-}
-
-
-template <unsigned int block_size>
-double openclSolverBackend<block_size>::dot_w(cl::Buffer in1, cl::Buffer in2, cl::Buffer out)
-{
-    const unsigned int work_group_size = 256;
-    const unsigned int num_work_groups = ceilDivision(N, work_group_size);
-    const unsigned int total_work_items = num_work_groups * work_group_size;
-    const unsigned int lmem_per_work_group = sizeof(double) * work_group_size;
-    Timer t_dot;
-
-    cl::Event event = (*dot_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), in1, in2, out, N, cl::Local(lmem_per_work_group));
-
-    queue->enqueueReadBuffer(out, CL_TRUE, 0, sizeof(double) * num_work_groups, tmp);
-
-    double gpu_sum = 0.0;
-    for (unsigned int i = 0; i < num_work_groups; ++i) {
-        gpu_sum += tmp[i];
-    }
-
-    if (verbosity >= 4) {
-        event.wait();
-        std::ostringstream oss;
-        oss << std::scientific << "openclSolver dot_w time: " << t_dot.stop() << " s";
-        OpmLog::info(oss.str());
-    }
-
-    return gpu_sum;
-}
-
-template <unsigned int block_size>
-double openclSolverBackend<block_size>::norm_w(cl::Buffer in, cl::Buffer out)
-{
-    const unsigned int work_group_size = 256;
-    const unsigned int num_work_groups = ceilDivision(N, work_group_size);
-    const unsigned int total_work_items = num_work_groups * work_group_size;
-    const unsigned int lmem_per_work_group = sizeof(double) * work_group_size;
-    Timer t_norm;
-
-    cl::Event event = (*norm_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), in, out, N, cl::Local(lmem_per_work_group));
-
-    queue->enqueueReadBuffer(out, CL_TRUE, 0, sizeof(double) * num_work_groups, tmp);
-
-    double gpu_norm = 0.0;
-    for (unsigned int i = 0; i < num_work_groups; ++i) {
-        gpu_norm += tmp[i];
-    }
-    gpu_norm = sqrt(gpu_norm);
-
-    if (verbosity >= 4) {
-        event.wait();
-        std::ostringstream oss;
-        oss << std::scientific << "openclSolver norm_w time: " << t_norm.stop() << " s";
-        OpmLog::info(oss.str());
-    }
-
-    return gpu_norm;
-}
-
-template <unsigned int block_size>
-void openclSolverBackend<block_size>::axpy_w(cl::Buffer in, const double a, cl::Buffer out)
-{
-    const unsigned int work_group_size = 32;
-    const unsigned int num_work_groups = ceilDivision(N, work_group_size);
-    const unsigned int total_work_items = num_work_groups * work_group_size;
-    Timer t_axpy;
-
-    cl::Event event = (*axpy_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), in, a, out, N);
-
-    if (verbosity >= 4) {
-        event.wait();
-        std::ostringstream oss;
-        oss << std::scientific << "openclSolver axpy_w time: " << t_axpy.stop() << " s";
-        OpmLog::info(oss.str());
-    }
-}
-
-template <unsigned int block_size>
-void openclSolverBackend<block_size>::custom_w(cl::Buffer p, cl::Buffer v, cl::Buffer r, const double omega, const double beta)
-{
-    const unsigned int work_group_size = 32;
-    const unsigned int num_work_groups = ceilDivision(N, work_group_size);
-    const unsigned int total_work_items = num_work_groups * work_group_size;
-    Timer t_custom;
-
-    cl::Event event = (*custom_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), p, v, r, omega, beta, N);
-
-    if (verbosity >= 4) {
-        event.wait();
-        std::ostringstream oss;
-        oss << std::scientific << "openclSolver custom_w time: " << t_custom.stop() << " s";
-        OpmLog::info(oss.str());
-    }
-}
-
-template <unsigned int block_size>
-void openclSolverBackend<block_size>::spmv_blocked_w(cl::Buffer vals, cl::Buffer cols, cl::Buffer rows, cl::Buffer x, cl::Buffer b)
-{
-    const unsigned int work_group_size = 32;
-    const unsigned int num_work_groups = ceilDivision(N, work_group_size);
-    const unsigned int total_work_items = num_work_groups * work_group_size;
-    const unsigned int lmem_per_work_group = sizeof(double) * work_group_size;
-    Timer t_spmv;
-
-    cl::Event event = (*spmv_blocked_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), vals, cols, rows, Nb, x, b, block_size, cl::Local(lmem_per_work_group));
-
-    if (verbosity >= 4) {
-        event.wait();
-        std::ostringstream oss;
-        oss << std::scientific << "openclSolver spmv_blocked_w time: " << t_spmv.stop() << " s";
-        OpmLog::info(oss.str());
-    }
-}
 
 template <unsigned int block_size>
 void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContribs, BdaResult& res) {
@@ -320,7 +203,7 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
     double norm, norm_0;
 
     if(wellContribs.getNumWells() > 0){
-        wellContribs.setKernel(stdwell_apply_k.get(), stdwell_apply_no_reorder_k.get());
+        // wellContribs.setKernel(stdwell_apply_k.get(), stdwell_apply_no_reorder_k.get());
     }
 
     Timer t_total, t_prec(false), t_spmv(false), t_well(false), t_rest(false);
@@ -348,7 +231,7 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
         OPM_THROW(std::logic_error, "openclSolverBackend OpenCL enqueue[Fill|Copy]Buffer error");
     }
 
-    norm = norm_w(d_r, d_tmp);
+    norm = OpenclKernels::norm(d_r, d_tmp, N);
     norm_0 = norm;
 
     if (verbosity > 1) {
@@ -360,11 +243,11 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
     t_rest.start();
     for (it = 0.5; it < maxit; it += 0.5) {
         rhop = rho;
-        rho = dot_w(d_rw, d_r, d_tmp);
+        rho = OpenclKernels::dot(d_rw, d_r, d_tmp, N);
 
         if (it > 1) {
             beta = (rho / rhop) * (alpha / omega);
-            custom_w(d_p, d_v, d_r, omega, beta);
+            OpenclKernels::custom(d_p, d_v, d_r, omega, beta, N);
         }
         t_rest.stop();
 
@@ -375,7 +258,7 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
 
         // v = A * pw
         t_spmv.start();
-        spmv_blocked_w(d_Avals, d_Acols, d_Arows, d_pw, d_v);
+        OpenclKernels::spmv_blocked(d_Avals, d_Acols, d_Arows, d_pw, d_v, Nb, block_size);
         t_spmv.stop();
 
         // apply wellContributions
@@ -386,11 +269,11 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
         t_well.stop();
 
         t_rest.start();
-        tmp1 = dot_w(d_rw, d_v, d_tmp);
+        tmp1 = OpenclKernels::dot(d_rw, d_v, d_tmp, N);
         alpha = rho / tmp1;
-        axpy_w(d_v, -alpha, d_r);      // r = r - alpha * v
-        axpy_w(d_pw, alpha, d_x);      // x = x + alpha * pw
-        norm = norm_w(d_r, d_tmp);
+        OpenclKernels::axpy(d_v, -alpha, d_r, N);      // r = r - alpha * v
+        OpenclKernels::axpy(d_pw, alpha, d_x, N);      // x = x + alpha * pw
+        norm = OpenclKernels::norm(d_r, d_tmp, N);
         t_rest.stop();
 
         if (norm < tolerance * norm_0) {
@@ -406,7 +289,7 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
 
         // t = A * s
         t_spmv.start();
-        spmv_blocked_w(d_Avals, d_Acols, d_Arows, d_s, d_t);
+        OpenclKernels::spmv_blocked(d_Avals, d_Acols, d_Arows, d_s, d_t, Nb, block_size);
         t_spmv.stop();
 
         // apply wellContributions
@@ -417,12 +300,12 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
         t_well.stop();
 
         t_rest.start();
-        tmp1 = dot_w(d_t, d_r, d_tmp);
-        tmp2 = dot_w(d_t, d_t, d_tmp);
+        tmp1 = OpenclKernels::dot(d_t, d_r, d_tmp, N);
+        tmp2 = OpenclKernels::dot(d_t, d_t, d_tmp, N);
         omega = tmp1 / tmp2;
-        axpy_w(d_s, omega, d_x);     // x = x + omega * s
-        axpy_w(d_t, -omega, d_r);    // r = r - omega * t
-        norm = norm_w(d_r, d_tmp);
+        OpenclKernels::axpy(d_s, omega, d_x, N);     // x = x + omega * s
+        OpenclKernels::axpy(d_t, -omega, d_r, N);    // r = r - omega * t
+        norm = OpenclKernels::norm(d_r, d_tmp, N);
         t_rest.stop();
 
         if (norm < tolerance * norm_0) {
@@ -479,7 +362,6 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
         prec->setOpenCLContext(context.get());
         prec->setOpenCLQueue(queue.get());
 
-        tmp = new double[N];
 #if COPY_ROW_BY_ROW
         vals_contiguous = new double[N];
 #endif
@@ -507,10 +389,6 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
             d_toOrder = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * Nb);
         }
 
-        get_opencl_kernels();
-
-        prec->setKernels(ILU_apply1_k.get(), ILU_apply2_k.get(), scale_k.get(), ilu_decomp_k.get());
-
     } catch (const cl::Error& error) {
         std::ostringstream oss;
         oss << "OpenCL Error: " << error.what() << "(" << error.err() << ")\n";
@@ -525,68 +403,12 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
     initialized = true;
 } // end initialize()
 
-void add_kernel_string(cl::Program::Sources &sources, std::string &source) {
-        sources.emplace_back(source);
-}
-
-template <unsigned int block_size>
-void openclSolverBackend<block_size>::get_opencl_kernels() {
-
-        cl::Program::Sources sources;
-        std::string axpy_s = get_axpy_string();
-        add_kernel_string(sources, axpy_s);
-        std::string scale_s = get_scale_string();
-        add_kernel_string(sources, scale_s);
-        std::string dot_1_s = get_dot_1_string();
-        add_kernel_string(sources, dot_1_s);
-        std::string norm_s = get_norm_string();
-        add_kernel_string(sources, norm_s);
-        std::string custom_s = get_custom_string();
-        add_kernel_string(sources, custom_s);
-        std::string spmv_blocked_s = get_spmv_blocked_string();
-        add_kernel_string(sources, spmv_blocked_s);
-#if CHOW_PATEL
-        bool ilu_operate_on_full_matrix = false;
-#else
-        bool ilu_operate_on_full_matrix = true;
-#endif
-        std::string ILU_apply1_s = get_ILU_apply1_string(ilu_operate_on_full_matrix);
-        add_kernel_string(sources, ILU_apply1_s);
-        std::string ILU_apply2_s = get_ILU_apply2_string(ilu_operate_on_full_matrix);
-        add_kernel_string(sources, ILU_apply2_s);
-        std::string stdwell_apply_s = get_stdwell_apply_string(true);
-        add_kernel_string(sources, stdwell_apply_s);
-        std::string stdwell_apply_no_reorder_s = get_stdwell_apply_string(false);
-        add_kernel_string(sources, stdwell_apply_no_reorder_s);
-        std::string ilu_decomp_s = get_ilu_decomp_string();
-        add_kernel_string(sources, ilu_decomp_s);
-
-        cl::Program program = cl::Program(*context, sources);
-        program.build(devices);
-
-        // queue.enqueueNDRangeKernel() is a blocking/synchronous call, at least for NVIDIA
-        // cl::KernelFunctor<> myKernel(); myKernel(args, arg1, arg2); is also blocking
-
-        // actually creating the kernels
-        dot_k.reset(new cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg>(cl::Kernel(program, "dot_1")));
-        norm_k.reset(new cl::KernelFunctor<cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg>(cl::Kernel(program, "norm")));
-        axpy_k.reset(new cl::KernelFunctor<cl::Buffer&, const double, cl::Buffer&, const unsigned int>(cl::Kernel(program, "axpy")));
-        scale_k.reset(new cl::KernelFunctor<cl::Buffer&, const double, const unsigned int>(cl::Kernel(program, "scale")));
-        custom_k.reset(new cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const double, const double, const unsigned int>(cl::Kernel(program, "custom")));
-        spmv_blocked_k.reset(new spmv_kernel_type(cl::Kernel(program, "spmv_blocked")));
-        ILU_apply1_k.reset(new ilu_apply1_kernel_type(cl::Kernel(program, "ILU_apply1")));
-        ILU_apply2_k.reset(new ilu_apply2_kernel_type(cl::Kernel(program, "ILU_apply2")));
-        stdwell_apply_k.reset(new stdwell_apply_kernel_type(cl::Kernel(program, "stdwell_apply")));
-        stdwell_apply_no_reorder_k.reset(new stdwell_apply_no_reorder_kernel_type(cl::Kernel(program, "stdwell_apply_no_reorder")));
-        ilu_decomp_k.reset(new ilu_decomp_kernel_type(cl::Kernel(program, "ilu_decomp")));
-} // end get_opencl_kernels()
 
 template <unsigned int block_size>
 void openclSolverBackend<block_size>::finalize() {
     if (opencl_ilu_reorder != ILUReorder::NONE) {
         delete[] rb;
     }
-    delete[] tmp;
 #if COPY_ROW_BY_ROW
     delete[] vals_contiguous;
 #endif
@@ -672,11 +494,6 @@ bool openclSolverBackend<block_size>::analyse_matrix() {
     Timer t;
 
     bool success = prec->init(mat.get());
-    int work_group_size = 32;
-    int num_work_groups = ceilDivision(N, work_group_size);
-    int total_work_items = num_work_groups * work_group_size;
-    int lmem_per_work_group = work_group_size * sizeof(double);
-    prec->setKernelParameters(work_group_size, total_work_items, lmem_per_work_group);
 
     if (opencl_ilu_reorder == ILUReorder::NONE) {
         rmat = mat.get();

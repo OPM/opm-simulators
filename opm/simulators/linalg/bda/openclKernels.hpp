@@ -21,6 +21,7 @@
 #define OPENCL_HPP
 
 #include <string>
+#include <memory>
 
 #include <opm/simulators/linalg/bda/opencl.hpp>
 
@@ -29,7 +30,7 @@ namespace bda
 
 using spmv_kernel_type = cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int,
                                          cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg>;
-using ilu_apply1_kernel_type = cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
+using ilu_apply1_kernel_type = cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const cl::Buffer&,
                                                cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg>;
 using ilu_apply2_kernel_type = cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
                                                cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg>;
@@ -44,56 +45,93 @@ using stdwell_apply_no_reorder_kernel_type = cl::KernelFunctor<cl::Buffer&, cl::
 using ilu_decomp_kernel_type = cl::KernelFunctor<const unsigned int, const unsigned int, cl::Buffer&, cl::Buffer&,
                                                cl::Buffer&, cl::Buffer&, cl::Buffer&, const int, cl::LocalSpaceArg>;
 
+class OpenclKernels
+{
+private:
+    static int verbosity;
+    static cl::CommandQueue *queue;
+    static std::vector<double> tmp;     // used as tmp CPU buffer for dot() and norm()
+    static bool initialized;
+
+    static std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg> > dot_k;
+    static std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg> > norm_k;
+    static std::unique_ptr<cl::KernelFunctor<cl::Buffer&, const double, cl::Buffer&, const unsigned int> > axpy_k;
+    static std::unique_ptr<cl::KernelFunctor<cl::Buffer&, const double, const unsigned int> > scale_k;
+    static std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const double, const double, const unsigned int> > custom_k;
+    static std::unique_ptr<spmv_kernel_type> spmv_blocked_k;
+    static std::unique_ptr<ilu_apply1_kernel_type> ILU_apply1_k;
+    static std::unique_ptr<ilu_apply2_kernel_type> ILU_apply2_k;
+    static std::unique_ptr<stdwell_apply_kernel_type> stdwell_apply_k;
+    static std::unique_ptr<stdwell_apply_no_reorder_kernel_type> stdwell_apply_no_reorder_k;
+    static std::unique_ptr<ilu_decomp_kernel_type> ilu_decomp_k;
+
     /// Generate string with axpy kernel
     /// a = a + alpha * b
-    std::string get_axpy_string();
+    static std::string get_axpy_string();
 
     /// Generate string with scale kernel
     /// a = a * alpha
-    std::string get_scale_string();
+    static std::string get_scale_string();
 
     /// returns partial sums, instead of the final dot product
     /// partial sums are added on CPU
-    std::string get_dot_1_string();
+    static std::string get_dot_1_string();
 
     /// returns partial sums, instead of the final norm
     /// the square root must be computed on CPU
-    std::string get_norm_string();
+    static std::string get_norm_string();
 
     /// Generate string with custom kernel
     /// This kernel combines some ilubicgstab vector operations into 1
     /// p = (p - omega * v) * beta + r
-    std::string get_custom_string();
+    static std::string get_custom_string();
 
     /// b = mat * x
     /// algorithm based on:
     /// Optimization of Block Sparse Matrix-Vector Multiplication on Shared-MemoryParallel Architectures,
     /// Ryan Eberhardt, Mark Hoemmen, 2016, https://doi.org/10.1109/IPDPSW.2016.42
-    std::string get_spmv_blocked_string();
+    static std::string get_spmv_blocked_string();
 
     /// ILU apply part 1: forward substitution
     /// solves L*x=y where L is a lower triangular sparse blocked matrix
     /// this L can be it's own BSR matrix (if full_matrix is false),
     /// or it can be inside a normal, square matrix, in that case diagIndex indicates where the rows of L end
     /// \param[in] full_matrix   whether the kernel should operate on a full (square) matrix or not
-    std::string get_ILU_apply1_string(bool full_matrix);
+    static std::string get_ILU_apply1_string(bool full_matrix);
 
     /// ILU apply part 2: backward substitution
     /// solves U*x=y where U is an upper triangular sparse blocked matrix
     /// this U can be it's own BSR matrix (if full_matrix is false),
     /// or it can be inside a normal, square matrix, in that case diagIndex indicates where the rows of U start
     /// \param[in] full_matrix   whether the kernel should operate on a full (square) matrix or not
-    std::string get_ILU_apply2_string(bool full_matrix);
+    static std::string get_ILU_apply2_string(bool full_matrix);
 
     /// Generate string with the stdwell_apply kernels
     /// If reorder is true, the B/Ccols do not correspond with the x/y vector
     /// the x/y vector is reordered, use toOrder to address that
     /// \param[in] reorder   whether the matrix is reordered or not
-    std::string get_stdwell_apply_string(bool reorder);
+    static std::string get_stdwell_apply_string(bool reorder);
 
     /// Generate string with the exact ilu decomposition kernel
     /// The kernel takes a full BSR matrix and performs inplace ILU decomposition
-    std::string get_ilu_decomp_string();
+    static std::string get_ilu_decomp_string();
+
+    OpenclKernels(){}; // disable instantiation
+
+public:
+    static void init(cl::Context *context, cl::CommandQueue *queue, std::vector<cl::Device>& devices, int verbosity);
+
+    static double dot(cl::Buffer& in1, cl::Buffer& in2, cl::Buffer& out, int N);
+    static double norm(cl::Buffer& in, cl::Buffer& out, int N);
+    static void axpy(cl::Buffer& in, const double a, cl::Buffer& out, int N);
+    static void scale(cl::Buffer& in, const double a, int N);
+    static void custom(cl::Buffer& p, cl::Buffer& v, cl::Buffer& r, const double omega, const double beta, int N);
+    static void spmv_blocked(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows, cl::Buffer& x, cl::Buffer& b, int Nb, unsigned int block_size);
+    static void ILU_apply1(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows, cl::Buffer& diagIndex, const cl::Buffer& y, cl::Buffer& x, cl::Buffer& rowsPerColor, int color, int Nb, unsigned int block_size);
+    static void ILU_apply2(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows, cl::Buffer& diagIndex, cl::Buffer& invDiagVals, cl::Buffer& x, cl::Buffer& rowsPerColor, int color, int Nb, unsigned int block_size);
+
+    static void ILU_decomp(int firstRow, int lastRow, cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows, cl::Buffer& diagIndex, cl::Buffer& invDiagVals, int Nb, unsigned int block_size);
+};
 
 } // end namespace bda
 

@@ -72,21 +72,11 @@ namespace bda
 #endif
         } GPU_storage;
 
-        ilu_apply1_kernel_type *ILU_apply1;
-        ilu_apply2_kernel_type *ILU_apply2;
-        cl::KernelFunctor<cl::Buffer&, const double, const unsigned int> *scale;
-        cl::KernelFunctor<const unsigned int, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&,
-                          cl::Buffer&, cl::Buffer&,
-                          const int, cl::LocalSpaceArg> *ilu_decomp;
-
         GPU_storage s;
         cl::Context *context;
         cl::CommandQueue *queue;
         std::vector<cl::Event> events;
         cl_int err;
-        int work_group_size = 0;
-        int total_work_items = 0;
-        int lmem_per_work_group = 0;
 
 #if CHOW_PATEL
         ChowPatelIlu<block_size> chowPatelIlu;
@@ -105,17 +95,10 @@ namespace bda
         bool create_preconditioner(BlockedMatrix<block_size> *mat);
 
         // apply preconditioner, x = prec(y)
-        void apply(cl::Buffer& y, cl::Buffer& x);
+        void apply(const cl::Buffer& y, cl::Buffer& x);
 
         void setOpenCLContext(cl::Context *context);
         void setOpenCLQueue(cl::CommandQueue *queue);
-        void setKernelParameters(const unsigned int work_group_size, const unsigned int total_work_items, const unsigned int lmem_per_work_group);
-        void setKernels(
-            cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> *ILU_apply1,
-            cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> *ILU_apply2,
-            cl::KernelFunctor<cl::Buffer&, const double, const unsigned int> *scale,
-            cl::KernelFunctor<const unsigned int, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const int, cl::LocalSpaceArg> *ilu_decomp
-            );
 
         int* getToOrder()
         {
