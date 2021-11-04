@@ -27,6 +27,8 @@ option(OPM_ENABLE_PYTHON "Enable python bindings?" OFF)
 option(OPM_ENABLE_PYTHON_TESTS "Enable tests for the python bindings?" ON)
 option(ENABLE_FPGA "Enable FPGA kernels integration?" OFF)
 
+list(APPEND CMAKE_PREFIX_PATH /var/lib/jenkins/amgcl/install)
+
 if(SIBLING_SEARCH AND NOT opm-common_DIR)
   # guess the sibling dir
   get_filename_component(_leaf_dir_name ${PROJECT_BINARY_DIR} NAME)
