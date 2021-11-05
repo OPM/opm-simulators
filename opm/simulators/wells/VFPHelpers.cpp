@@ -590,7 +590,7 @@ T getGFR(const VFPProdTable& table,
 }
 
 template <typename T>
-const T& getTable(const std::map<int, std::reference_wrapper<const T>> tables, int table_id)
+const T& getTable(const std::map<int, std::reference_wrapper<const T>>& tables, int table_id)
 {
     auto entry = tables.find(table_id);
     if (entry == tables.end()) {
@@ -628,8 +628,8 @@ VFPInjTable::FLO_TYPE getType(const VFPInjTable& table)
     return table.getFloType();
 }
 
-template const VFPInjTable& getTable<VFPInjTable>(const std::map<int, std::reference_wrapper<const VFPInjTable>>, int);
-template const VFPProdTable& getTable<VFPProdTable>(const std::map<int, std::reference_wrapper<const VFPProdTable>>, int);
+template const VFPInjTable& getTable<VFPInjTable>(const std::map<int, std::reference_wrapper<const VFPInjTable>>&, int);
+template const VFPProdTable& getTable<VFPProdTable>(const std::map<int, std::reference_wrapper<const VFPProdTable>>&, int);
 
 #define INSTANCE(...) \
     template __VA_ARGS__ getFlo(const VFPInjTable&, const __VA_ARGS__&, const __VA_ARGS__&, const __VA_ARGS__&); \
