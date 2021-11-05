@@ -1317,7 +1317,7 @@ public:
                 const auto& wellpi = this->fetchWellPI(reportStep, *action, schedule, matching_wells);
 
                 auto affected_wells = schedule.applyAction(reportStep, TimeService::from_time_t(simTime), *action, actionResult, wellpi);
-                this->wellModel_.updateEclWells(reportStep, affected_wells);
+                this->wellModel_.updateEclWells(reportStep, affected_wells, summaryState);
                 if (!affected_wells.empty())
                     commit_wellstate = true;
                 actionState.add_run(*action, simTime, std::move(actionResult));

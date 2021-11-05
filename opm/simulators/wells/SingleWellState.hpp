@@ -76,6 +76,7 @@ public:
     void reset_connection_factors(const std::vector<PerforationData>& new_perf_data);
     void update_producer_targets(const Well& ecl_well, const SummaryState& st);
     void update_injector_targets(const Well& ecl_well, const SummaryState& st);
+    void update_targets(const Well& ecl_well, const SummaryState& st);
     void updateStatus(Well::Status status);
     void init_timestep(const SingleWellState& other);
     void shut();

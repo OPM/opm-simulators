@@ -1447,7 +1447,8 @@ actionOnBrokenConstraints(const Group& group,
 void
 BlackoilWellModelGeneric::
 updateEclWells(const int timeStepIdx,
-               const std::unordered_set<std::string>& wells)
+               const std::unordered_set<std::string>& wells,
+               const SummaryState& st)
 {
     for (const auto& wname : wells) {
         auto well_iter = std::find_if(this->wells_ecl_.begin(), this->wells_ecl_.end(),
@@ -1476,6 +1477,7 @@ updateEclWells(const int timeStepIdx,
 
         ws.updateStatus( well.getStatus() );
         ws.reset_connection_factors(pd);
+        ws.update_targets(well, st);
         this->prod_index_calc_[well_index].reInit(well);
     }
 }
