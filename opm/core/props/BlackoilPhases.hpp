@@ -21,6 +21,7 @@
 #define OPM_BLACKOILPHASES_HEADER_INCLUDED
 
 #include <array>
+#include <vector>
 
 namespace Opm
 {
@@ -43,6 +44,10 @@ namespace Opm
 
     struct PhaseUsage : public BlackoilPhases
     {
+        PhaseUsage() = default;
+        explicit PhaseUsage(std::vector<BlackoilPhases::PhaseIndex> phases);
+
+
         std::array<int, MaxNumPhases + NumCryptoPhases> phase_used;
         std::array<int, MaxNumPhases + NumCryptoPhases> phase_pos;
 
@@ -56,43 +61,6 @@ namespace Opm
         bool has_brine;
         bool has_zFraction;
 
-    };
-
-    /// Check or assign presence of a formed, free phase.  Limited to
-    /// the 'BlackoilPhases'.
-    ///
-    /// Use a std::vector<PhasePresence> to represent the conditions
-    /// in an entire model.
-    class PhasePresence
-    {
-    public:
-        PhasePresence()
-            : present_(0)
-        {}
-
-        bool hasFreeWater() const { return present(BlackoilPhases::Aqua  ); }
-        bool hasFreeOil  () const { return present(BlackoilPhases::Liquid); }
-        bool hasFreeGas  () const { return present(BlackoilPhases::Vapour); }
-
-        void setFreeWater() { insert(BlackoilPhases::Aqua  ); }
-        void setFreeOil  () { insert(BlackoilPhases::Liquid); }
-        void setFreeGas  () { insert(BlackoilPhases::Vapour); }
-
-        bool operator==(const PhasePresence& other) const { return present_ == other.present_; }
-        bool operator!=(const PhasePresence& other) const { return !this->operator==(other); }
-
-    private:
-        unsigned char present_;
-
-        bool present(const BlackoilPhases::PhaseIndex i) const
-        {
-            return present_ & (1 << i);
-        }
-
-        void insert(const BlackoilPhases::PhaseIndex i)
-        {
-            present_ |= (1 << i);
-        }
     };
 
 } // namespace Opm
