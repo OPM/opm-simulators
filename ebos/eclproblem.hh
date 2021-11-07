@@ -1023,7 +1023,7 @@ public:
             // has changed, the grid may need be re-created which has some serious
             // implications on e.g., the solution of the simulation.)
             const auto& miniDeck = schedule[episodeIdx].geo_keywords();
-            eclState.apply_geo_keywords( miniDeck );
+            eclState.apply_schedule_keywords( miniDeck );
 
             // re-compute all quantities which may possibly be affected.
             transmissibilities_.update(true);
