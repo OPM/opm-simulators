@@ -242,7 +242,6 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"GRAVDR", {false, std::nullopt}},
         {"GRAVDRB", {false, std::nullopt}},
         {"GRAVDRM", {false, std::nullopt}},
-        {"GRAVITY", {false, std::string{"Use the DENSITY keyword instead"}}},
         {"GRDREACH", {false, std::nullopt}},
         {"GRIDUNIT", {false, std::nullopt}},
         {"GRUPMAST", {false, std::nullopt}},
