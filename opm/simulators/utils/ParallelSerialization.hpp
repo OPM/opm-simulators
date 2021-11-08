@@ -45,8 +45,10 @@ void eclStateBroadcast(Parallel::Communication  comm, EclipseState& eclState, Sc
                        Action::State& actionState,
                        WellTestState& wtestState);
 
-/// \brief Broadcasts an schedule from root node in parallel runs.
-void eclScheduleBroadcast(Parallel::Communication comm, Schedule& schedule);
+
+template <class T>
+void eclBroadcast(Parallel::Communication comm, T& );
+
 
 } // end namespace Opm
 
