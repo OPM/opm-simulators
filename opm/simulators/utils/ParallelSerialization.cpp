@@ -34,6 +34,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WListManager.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestState.hpp>
 #include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
+#include <opm/parser/eclipse/EclipseState/Grid/TransMult.hpp>
 
 #include <ebos/eclmpiserializer.hh>
 

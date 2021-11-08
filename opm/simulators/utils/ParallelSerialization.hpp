@@ -28,6 +28,7 @@ class Schedule;
 class SummaryConfig;
 class UDQState;
 class WellTestState;
+class TransMult;
 
 namespace Action {
 class State;

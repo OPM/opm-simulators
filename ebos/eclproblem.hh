@@ -69,6 +69,7 @@
 #include <opm/core/props/satfunc/RelpermDiagnostics.hpp>
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+#include <opm/simulators/utils/ParallelSerialization.hpp>
 
 #include <opm/models/utils/pffgridvector.hh>
 #include <opm/models/blackoil/blackoilmodel.hh>
@@ -1023,7 +1024,9 @@ public:
             // has changed, the grid may need be re-created which has some serious
             // implications on e.g., the solution of the simulation.)
             const auto& miniDeck = schedule[episodeIdx].geo_keywords();
+            const auto& cc = simulator.vanguard().grid().comm();
             eclState.apply_schedule_keywords( miniDeck );
+            eclBroadcast(cc, eclState.getTransMult() );
 
             // re-compute all quantities which may possibly be affected.
             transmissibilities_.update(true);
