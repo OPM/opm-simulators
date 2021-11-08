@@ -29,7 +29,9 @@
 #include <opm/simulators/linalg/bda/Reorder.hpp>
 #include <opm/simulators/linalg/bda/FPGAUtils.hpp>
 
-namespace bda
+namespace Opm
+{
+namespace Accelerator
 {
 
 using Opm::OpmLog;
@@ -412,4 +414,5 @@ INSTANTIATE_BDA_FUNCTIONS(6);
 
 #undef INSTANTIATE_BDA_FUNCTIONS
 
-} //namespace bda
+} // namespace Accelerator
+} // namespace Opm

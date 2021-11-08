@@ -28,7 +28,9 @@
 #include <opm/simulators/linalg/bda/BdaSolver.hpp>
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
 
-namespace bda
+namespace Opm
+{
+namespace Accelerator
 {
 
 /// This class implements a cusparse-based ilu0-bicgstab solver on GPU
@@ -142,7 +144,8 @@ public:
 
 }; // end class cusparseSolverBackend
 
-} // namespace bda
+} // namespace Accelerator
+} // namespace Opm
 
 #endif
 

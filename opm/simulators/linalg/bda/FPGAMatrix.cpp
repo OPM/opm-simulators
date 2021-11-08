@@ -23,7 +23,9 @@
 #include <opm/simulators/linalg/bda/FPGAMatrix.hpp>
 #include <opm/simulators/linalg/bda/FPGAUtils.hpp>
 
-namespace bda
+namespace Opm
+{
+namespace Accelerator
 {
 
 /*Sort a row of matrix elements from a CSR-format.*/
@@ -246,4 +248,5 @@ int Matrix::toRDF(int numColors, std::vector<int>& nodesPerColor,
     return 0;
 }
 
-} // end namespace bda
+} // namespace Accelerator
+} // namespace Opm

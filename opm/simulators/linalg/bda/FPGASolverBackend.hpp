@@ -27,7 +27,9 @@
 #include <linearalgebra/ilu0bicgstab/xilinx/src/sda_app/common/opencl_lib.hpp>
 #include <linearalgebra/ilu0bicgstab/xilinx/src/sda_app/common/fpga_functions_bicgstab.hpp>
 
-namespace bda
+namespace Opm
+{
+namespace Accelerator
 {
 
 /// This class implements an ilu0-bicgstab solver on FPGA
@@ -259,7 +261,8 @@ public:
 
 }; // end class fpgaSolverBackend
 
-} //namespace bda
+} // namespace Accelerator
+} // namespace Opm
 
 #endif
 

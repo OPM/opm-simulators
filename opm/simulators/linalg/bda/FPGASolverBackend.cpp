@@ -39,7 +39,9 @@
 //#define FPGA_STATISTICS_FILE_ENABLED
 #undef FPGA_STATISTICS_FILE_ENABLED
 
-namespace bda
+namespace Opm
+{
+namespace Accelerator
 {
 
 using Opm::OpmLog;
@@ -731,4 +733,5 @@ INSTANTIATE_BDA_FUNCTIONS(6);
 
 #undef INSTANTIATE_BDA_FUNCTIONS
 
-} //namespace bda
+} // namespace Accelerator
+} // namespace Opm

@@ -30,7 +30,9 @@
 
 #include <tuple>
 
-namespace bda
+namespace Opm
+{
+namespace Accelerator
 {
 
 /// This class implements a opencl-based ilu0-bicgstab solver on GPU
@@ -61,21 +63,8 @@ private:
     cl::Buffer d_pw, d_s, d_t, d_v;              // vectors, used during linear solve
     cl::Buffer d_tmp;                            // used as tmp GPU buffer for dot() and norm()
     cl::Buffer d_toOrder;                        // only used when reordering is used
-    double *tmp = nullptr;                       // used as tmp CPU buffer for dot() and norm()
 
-    // shared pointers are also passed to other objects
     std::vector<cl::Device> devices;
-    std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg> > dot_k;
-    std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg> > norm_k;
-    std::unique_ptr<cl::KernelFunctor<cl::Buffer&, const double, cl::Buffer&, const unsigned int> > axpy_k;
-    std::unique_ptr<cl::KernelFunctor<cl::Buffer&, const double, const unsigned int> > scale_k;
-    std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const double, const double, const unsigned int> > custom_k;
-    std::unique_ptr<spmv_kernel_type> spmv_blocked_k;
-    std::shared_ptr<ilu_apply1_kernel_type> ILU_apply1_k;
-    std::shared_ptr<ilu_apply2_kernel_type> ILU_apply2_k;
-    std::shared_ptr<stdwell_apply_kernel_type> stdwell_apply_k;
-    std::shared_ptr<stdwell_apply_no_reorder_kernel_type> stdwell_apply_no_reorder_k;
-    std::shared_ptr<ilu_decomp_kernel_type> ilu_decomp_k;
 
     Preconditioner *prec = nullptr;                               // only supported preconditioner is BILU0
     int *toOrder = nullptr, *fromOrder = nullptr;                 // BILU0 reorders rows of the matrix via these mappings
@@ -150,9 +139,6 @@ private:
     /// \param[in] cols           array of columnIndices, contains nnz values
     void initialize(int N, int nnz, int dim, double *vals, int *rows, int *cols);
 
-    /// Generate and compile opencl kernels
-    void get_opencl_kernels();
-
     /// Clean memory
     void finalize();
 
@@ -220,7 +206,8 @@ public:
 
 }; // end class openclSolverBackend
 
-} // namespace bda
+} // namespace Accelerator
+} // namespace Opm
 
 #endif
 

@@ -18,12 +18,345 @@
 */
 
 #include <config.h>
-#include <opm/simulators/linalg/bda/openclKernels.hpp>
+#include <cmath>
+#include <sstream>
 
-namespace bda
+#include <opm/common/OpmLog/OpmLog.hpp>
+#include <dune/common/timer.hh>
+
+#include <opm/simulators/linalg/bda/openclKernels.hpp>
+#include <opm/simulators/linalg/bda/ChowPatelIlu.hpp>  // defines CHOW_PATEL
+
+namespace Opm
+{
+namespace Accelerator
 {
 
-    std::string get_axpy_string() {
+using Opm::OpmLog;
+using Dune::Timer;
+
+// define static variables and kernels
+int OpenclKernels::verbosity;
+cl::CommandQueue *OpenclKernels::queue;
+std::vector<double> OpenclKernels::tmp;
+bool OpenclKernels::initialized = false;
+
+std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg> > OpenclKernels::dot_k;
+std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg> > OpenclKernels::norm_k;
+std::unique_ptr<cl::KernelFunctor<cl::Buffer&, const double, cl::Buffer&, const unsigned int> > OpenclKernels::axpy_k;
+std::unique_ptr<cl::KernelFunctor<cl::Buffer&, const double, const unsigned int> > OpenclKernels::scale_k;
+std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const double, const double, const unsigned int> > OpenclKernels::custom_k;
+std::unique_ptr<spmv_kernel_type> OpenclKernels::spmv_blocked_k;
+std::unique_ptr<ilu_apply1_kernel_type> OpenclKernels::ILU_apply1_k;
+std::unique_ptr<ilu_apply2_kernel_type> OpenclKernels::ILU_apply2_k;
+std::unique_ptr<stdwell_apply_kernel_type> OpenclKernels::stdwell_apply_k;
+std::unique_ptr<stdwell_apply_no_reorder_kernel_type> OpenclKernels::stdwell_apply_no_reorder_k;
+std::unique_ptr<ilu_decomp_kernel_type> OpenclKernels::ilu_decomp_k;
+
+
+// divide A by B, and round up: return (int)ceil(A/B)
+unsigned int ceilDivision(const unsigned int A, const unsigned int B)
+{
+    return A / B + (A % B > 0);
+}
+
+void add_kernel_string(cl::Program::Sources &sources, const std::string &source) {
+    sources.emplace_back(source);
+}
+
+void OpenclKernels::init(cl::Context *context, cl::CommandQueue *queue_, std::vector<cl::Device>& devices, int verbosity_) {
+
+    if (initialized) {
+        OpmLog::debug("Warning OpenclKernels is already initialized");
+        return;
+    }
+
+    queue = queue_;
+    verbosity = verbosity_;
+
+    cl::Program::Sources sources;
+    const std::string& axpy_s = get_axpy_string();
+    add_kernel_string(sources, axpy_s);
+    const std::string& scale_s = get_scale_string();
+    add_kernel_string(sources, scale_s);
+    const std::string& dot_1_s = get_dot_1_string();
+    add_kernel_string(sources, dot_1_s);
+    const std::string& norm_s = get_norm_string();
+    add_kernel_string(sources, norm_s);
+    const std::string& custom_s = get_custom_string();
+    add_kernel_string(sources, custom_s);
+    const std::string& spmv_blocked_s = get_spmv_blocked_string();
+    add_kernel_string(sources, spmv_blocked_s);
+#if CHOW_PATEL
+    bool ilu_operate_on_full_matrix = false;
+#else
+    bool ilu_operate_on_full_matrix = true;
+#endif
+    const std::string& ILU_apply1_s = get_ILU_apply1_string(ilu_operate_on_full_matrix);
+    add_kernel_string(sources, ILU_apply1_s);
+    const std::string& ILU_apply2_s = get_ILU_apply2_string(ilu_operate_on_full_matrix);
+    add_kernel_string(sources, ILU_apply2_s);
+    const std::string& stdwell_apply_s = get_stdwell_apply_string(true);
+    add_kernel_string(sources, stdwell_apply_s);
+    const std::string& stdwell_apply_no_reorder_s = get_stdwell_apply_string(false);
+    add_kernel_string(sources, stdwell_apply_no_reorder_s);
+    const std::string& ilu_decomp_s = get_ilu_decomp_string();
+    add_kernel_string(sources, ilu_decomp_s);
+
+    cl::Program program = cl::Program(*context, sources);
+    program.build(devices);
+
+    // queue.enqueueNDRangeKernel() is a blocking/synchronous call, at least for NVIDIA
+    // cl::KernelFunctor<> myKernel(); myKernel(args, arg1, arg2); is also blocking
+
+    // actually creating the kernels
+    dot_k.reset(new cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg>(cl::Kernel(program, "dot_1")));
+    norm_k.reset(new cl::KernelFunctor<cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg>(cl::Kernel(program, "norm")));
+    axpy_k.reset(new cl::KernelFunctor<cl::Buffer&, const double, cl::Buffer&, const unsigned int>(cl::Kernel(program, "axpy")));
+    scale_k.reset(new cl::KernelFunctor<cl::Buffer&, const double, const unsigned int>(cl::Kernel(program, "scale")));
+    custom_k.reset(new cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const double, const double, const unsigned int>(cl::Kernel(program, "custom")));
+    spmv_blocked_k.reset(new spmv_kernel_type(cl::Kernel(program, "spmv_blocked")));
+    ILU_apply1_k.reset(new ilu_apply1_kernel_type(cl::Kernel(program, "ILU_apply1")));
+    ILU_apply2_k.reset(new ilu_apply2_kernel_type(cl::Kernel(program, "ILU_apply2")));
+    stdwell_apply_k.reset(new stdwell_apply_kernel_type(cl::Kernel(program, "stdwell_apply")));
+    stdwell_apply_no_reorder_k.reset(new stdwell_apply_no_reorder_kernel_type(cl::Kernel(program, "stdwell_apply_no_reorder")));
+    ilu_decomp_k.reset(new ilu_decomp_kernel_type(cl::Kernel(program, "ilu_decomp")));
+
+    initialized = true;
+} // end get_opencl_kernels()
+
+
+
+
+double OpenclKernels::dot(cl::Buffer& in1, cl::Buffer& in2, cl::Buffer& out, int N)
+{
+    const unsigned int work_group_size = 256;
+    const unsigned int num_work_groups = ceilDivision(N, work_group_size);
+    const unsigned int total_work_items = num_work_groups * work_group_size;
+    const unsigned int lmem_per_work_group = sizeof(double) * work_group_size;
+    Timer t_dot;
+    tmp.resize(num_work_groups);
+
+    cl::Event event = (*dot_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), in1, in2, out, N, cl::Local(lmem_per_work_group));
+
+    queue->enqueueReadBuffer(out, CL_TRUE, 0, sizeof(double) * num_work_groups, tmp.data());
+
+    double gpu_sum = 0.0;
+    for (unsigned int i = 0; i < num_work_groups; ++i) {
+        gpu_sum += tmp[i];
+    }
+
+    if (verbosity >= 4) {
+        event.wait();
+        std::ostringstream oss;
+        oss << std::scientific << "OpenclKernels dot() time: " << t_dot.stop() << " s";
+        OpmLog::info(oss.str());
+    }
+
+    return gpu_sum;
+}
+
+double OpenclKernels::norm(cl::Buffer& in, cl::Buffer& out, int N)
+{
+    const unsigned int work_group_size = 256;
+    const unsigned int num_work_groups = ceilDivision(N, work_group_size);
+    const unsigned int total_work_items = num_work_groups * work_group_size;
+    const unsigned int lmem_per_work_group = sizeof(double) * work_group_size;
+    Timer t_norm;
+    tmp.resize(num_work_groups);
+
+    cl::Event event = (*norm_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), in, out, N, cl::Local(lmem_per_work_group));
+
+    queue->enqueueReadBuffer(out, CL_TRUE, 0, sizeof(double) * num_work_groups, tmp.data());
+
+    double gpu_norm = 0.0;
+    for (unsigned int i = 0; i < num_work_groups; ++i) {
+        gpu_norm += tmp[i];
+    }
+    gpu_norm = sqrt(gpu_norm);
+
+    if (verbosity >= 4) {
+        event.wait();
+        std::ostringstream oss;
+        oss << std::scientific << "OpenclKernels norm() time: " << t_norm.stop() << " s";
+        OpmLog::info(oss.str());
+    }
+
+    return gpu_norm;
+}
+
+void OpenclKernels::axpy(cl::Buffer& in, const double a, cl::Buffer& out, int N)
+{
+    const unsigned int work_group_size = 32;
+    const unsigned int num_work_groups = ceilDivision(N, work_group_size);
+    const unsigned int total_work_items = num_work_groups * work_group_size;
+    Timer t_axpy;
+
+    cl::Event event = (*axpy_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), in, a, out, N);
+
+    if (verbosity >= 4) {
+        event.wait();
+        std::ostringstream oss;
+        oss << std::scientific << "OpenclKernels axpy() time: " << t_axpy.stop() << " s";
+        OpmLog::info(oss.str());
+    }
+}
+
+void OpenclKernels::scale(cl::Buffer& in, const double a, int N)
+{
+    const unsigned int work_group_size = 32;
+    const unsigned int num_work_groups = ceilDivision(N, work_group_size);
+    const unsigned int total_work_items = num_work_groups * work_group_size;
+    Timer t_scale;
+
+    cl::Event event = (*scale_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), in, a, N);
+
+    if (verbosity >= 4) {
+        event.wait();
+        std::ostringstream oss;
+        oss << std::scientific << "OpenclKernels scale() time: " << t_scale.stop() << " s";
+        OpmLog::info(oss.str());
+    }
+}
+
+void OpenclKernels::custom(cl::Buffer& p, cl::Buffer& v, cl::Buffer& r, const double omega, const double beta, int N)
+{
+    const unsigned int work_group_size = 32;
+    const unsigned int num_work_groups = ceilDivision(N, work_group_size);
+    const unsigned int total_work_items = num_work_groups * work_group_size;
+    Timer t_custom;
+
+    cl::Event event = (*custom_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), p, v, r, omega, beta, N);
+
+    if (verbosity >= 4) {
+        event.wait();
+        std::ostringstream oss;
+        oss << std::scientific << "OpenclKernels custom() time: " << t_custom.stop() << " s";
+        OpmLog::info(oss.str());
+    }
+}
+
+void OpenclKernels::spmv_blocked(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows, cl::Buffer& x, cl::Buffer& b, int Nb, unsigned int block_size)
+{
+    const unsigned int work_group_size = 32;
+    const unsigned int num_work_groups = ceilDivision(Nb, work_group_size);
+    const unsigned int total_work_items = num_work_groups * work_group_size;
+    const unsigned int lmem_per_work_group = sizeof(double) * work_group_size;
+    Timer t_spmv;
+
+    cl::Event event = (*spmv_blocked_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), vals, cols, rows, Nb, x, b, block_size, cl::Local(lmem_per_work_group));
+
+    if (verbosity >= 4) {
+        event.wait();
+        std::ostringstream oss;
+        oss << std::scientific << "OpenclKernels spmv_blocked() time: " << t_spmv.stop() << " s";
+        OpmLog::info(oss.str());
+    }
+}
+
+
+void OpenclKernels::ILU_apply1(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows, cl::Buffer& diagIndex, const cl::Buffer& y, cl::Buffer& x, cl::Buffer& rowsPerColor, int color, int Nb, unsigned int block_size)
+{
+    const unsigned int work_group_size = 32;
+    const unsigned int num_work_groups = ceilDivision(Nb, work_group_size);
+    const unsigned int total_work_items = num_work_groups * work_group_size;
+    const unsigned int lmem_per_work_group = sizeof(double) * work_group_size;
+    Timer t_ilu_apply1;
+
+    cl::Event event = (*ILU_apply1_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), vals, cols, rows, diagIndex, y, x, rowsPerColor, color, block_size, cl::Local(lmem_per_work_group));
+
+    if (verbosity >= 5) {
+        event.wait();
+        std::ostringstream oss;
+        oss << std::scientific << "OpenclKernels ILU_apply1() time: " << t_ilu_apply1.stop() << " s";
+        OpmLog::info(oss.str());
+    }
+}
+
+
+void OpenclKernels::ILU_apply2(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows, cl::Buffer& diagIndex, cl::Buffer& invDiagVals, cl::Buffer& x, cl::Buffer& rowsPerColor, int color, int Nb, unsigned int block_size)
+{
+    const unsigned int work_group_size = 32;
+    const unsigned int num_work_groups = ceilDivision(Nb, work_group_size);
+    const unsigned int total_work_items = num_work_groups * work_group_size;
+    const unsigned int lmem_per_work_group = sizeof(double) * work_group_size;
+    Timer t_ilu_apply2;
+
+    cl::Event event = (*ILU_apply2_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), vals, cols, rows, diagIndex, invDiagVals, x, rowsPerColor, color, block_size, cl::Local(lmem_per_work_group));
+
+    if (verbosity >= 5) {
+        event.wait();
+        std::ostringstream oss;
+        oss << std::scientific << "OpenclKernels ILU_apply2() time: " << t_ilu_apply2.stop() << " s";
+        OpmLog::info(oss.str());
+    }
+}
+
+void OpenclKernels::ILU_decomp(int firstRow, int lastRow, cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows, cl::Buffer& diagIndex, cl::Buffer& invDiagVals, int Nb, unsigned int block_size)
+{
+    const unsigned int work_group_size2 = 128;
+    const unsigned int num_work_groups2 = 1024;
+    const unsigned int total_work_items2 = num_work_groups2 * work_group_size2;
+    const unsigned int num_hwarps_per_group = work_group_size2 / 16;
+    const unsigned int lmem_per_work_group2 = num_hwarps_per_group * block_size * block_size * sizeof(double);           // each block needs a pivot
+    Timer t_ilu_decomp;
+
+    cl::Event event = (*ilu_decomp_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items2), cl::NDRange(work_group_size2)), firstRow, lastRow, vals, cols, rows, invDiagVals, diagIndex, Nb, cl::Local(lmem_per_work_group2));
+
+    if (verbosity >= 4) {
+        event.wait();
+        std::ostringstream oss;
+        oss << std::scientific << "OpenclKernels ILU_decomp() time: " << t_ilu_decomp.stop() << " s";
+        OpmLog::info(oss.str());
+    }
+}
+
+void OpenclKernels::apply_stdwells_reorder(cl::Buffer& d_Cnnzs_ocl, cl::Buffer &d_Dnnzs_ocl, cl::Buffer &d_Bnnzs_ocl,
+    cl::Buffer &d_Ccols_ocl, cl::Buffer &d_Bcols_ocl, cl::Buffer &d_x, cl::Buffer &d_y,
+    cl::Buffer &d_toOrder, int dim, int dim_wells, cl::Buffer &d_val_pointers_ocl, int num_std_wells)
+{
+    const unsigned int work_group_size = 32;
+    const unsigned int total_work_items = num_std_wells * work_group_size;
+    const unsigned int lmem1 = sizeof(double) * work_group_size;
+    const unsigned int lmem2 = sizeof(double) * dim_wells;
+    Timer t_apply_stdwells;
+
+    cl::Event event = (*stdwell_apply_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)),
+                          d_Cnnzs_ocl, d_Dnnzs_ocl, d_Bnnzs_ocl, d_Ccols_ocl, d_Bcols_ocl, d_x, d_y, d_toOrder, dim, dim_wells, d_val_pointers_ocl,
+                          cl::Local(lmem1), cl::Local(lmem2), cl::Local(lmem2));
+
+    if (verbosity >= 4) {
+        event.wait();
+        std::ostringstream oss;
+        oss << std::scientific << "OpenclKernels apply_stdwells() time: " << t_apply_stdwells.stop() << " s";
+        OpmLog::info(oss.str());
+    }
+}
+
+void OpenclKernels::apply_stdwells_no_reorder(cl::Buffer& d_Cnnzs_ocl, cl::Buffer &d_Dnnzs_ocl, cl::Buffer &d_Bnnzs_ocl,
+    cl::Buffer &d_Ccols_ocl, cl::Buffer &d_Bcols_ocl, cl::Buffer &d_x, cl::Buffer &d_y,
+    int dim, int dim_wells, cl::Buffer &d_val_pointers_ocl, int num_std_wells)
+{
+    const unsigned int work_group_size = 32;
+    const unsigned int total_work_items = num_std_wells * work_group_size;
+    const unsigned int lmem1 = sizeof(double) * work_group_size;
+    const unsigned int lmem2 = sizeof(double) * dim_wells;
+    Timer t_apply_stdwells;
+
+    cl::Event event = (*stdwell_apply_no_reorder_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)),
+                          d_Cnnzs_ocl, d_Dnnzs_ocl, d_Bnnzs_ocl, d_Ccols_ocl, d_Bcols_ocl, d_x, d_y, dim, dim_wells, d_val_pointers_ocl,
+                          cl::Local(lmem1), cl::Local(lmem2), cl::Local(lmem2));
+
+    if (verbosity >= 4) {
+        event.wait();
+        std::ostringstream oss;
+        oss << std::scientific << "OpenclKernels apply_stdwells() time: " << t_apply_stdwells.stop() << " s";
+        OpmLog::info(oss.str());
+    }
+}
+
+
+    std::string OpenclKernels::get_axpy_string() {
         return R"(
         __kernel void axpy(
             __global double *in,
@@ -44,7 +377,7 @@ namespace bda
 
 
     // scale vector with scalar
-    std::string get_scale_string() {
+    std::string OpenclKernels::get_scale_string() {
         return R"(
         __kernel void scale(
             __global double *vec,
@@ -64,7 +397,7 @@ namespace bda
 
 
     // returns partial sums, instead of the final dot product
-    std::string get_dot_1_string() {
+    std::string OpenclKernels::get_dot_1_string() {
         return R"(
         __kernel void dot_1(
             __global double *in1,
@@ -107,7 +440,7 @@ namespace bda
 
     // returns partial sums, instead of the final norm
     // the square root must be computed on CPU
-    std::string get_norm_string() {
+    std::string OpenclKernels::get_norm_string() {
         return R"(
         __kernel void norm(
             __global double *in,
@@ -148,7 +481,7 @@ namespace bda
 
 
     // p = (p - omega * v) * beta + r
-    std::string get_custom_string() {
+    std::string OpenclKernels::get_custom_string() {
         return R"(
         __kernel void custom(
             __global double *p,
@@ -173,7 +506,7 @@ namespace bda
         )";
     }
 
-    std::string get_spmv_blocked_string() {
+    std::string OpenclKernels::get_spmv_blocked_string() {
         return R"(
         __kernel void spmv_blocked(
             __global const double *vals,
@@ -243,7 +576,7 @@ namespace bda
 
 
 
-    std::string get_ILU_apply1_string(bool full_matrix) {
+    std::string OpenclKernels::get_ILU_apply1_string(bool full_matrix) {
         std::string s = R"(
             __kernel void ILU_apply1(
                 __global const double *LUvals,
@@ -319,7 +652,7 @@ namespace bda
     }
 
 
-    std::string get_ILU_apply2_string(bool full_matrix) {
+    std::string OpenclKernels::get_ILU_apply2_string(bool full_matrix) {
         std::string s = R"(
             __kernel void ILU_apply2(
                 __global const double *LUvals,
@@ -402,7 +735,7 @@ namespace bda
         return s;
     }
 
-    std::string get_stdwell_apply_string(bool reorder) {
+    std::string OpenclKernels::get_stdwell_apply_string(bool reorder) {
         std::string kernel_name = reorder ? "stdwell_apply" : "stdwell_apply_no_reorder";
         std::string s = "__kernel void " + kernel_name + R"((
                         __global const double *Cnnzs,
@@ -497,7 +830,7 @@ namespace bda
     }
 
 
-    std::string get_ilu_decomp_string() {
+    std::string OpenclKernels::get_ilu_decomp_string() {
         return R"(
 
         // a = a - (b * c)
@@ -637,5 +970,6 @@ namespace bda
         )";
     }
 
-} // end namespace bda
+} // namespace Accelerator
+} // namespace Opm
 

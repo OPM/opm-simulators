@@ -38,7 +38,9 @@
 #include <amgcl/preconditioner/runtime.hpp>
 #include <amgcl/value_type/static_matrix.hpp>
 
-namespace bda
+namespace Opm
+{
+namespace Accelerator
 {
 
 /// This class does not implement a solver, but converts the BCSR format to normal CSR and uses amgcl for solving
@@ -149,7 +151,8 @@ public:
 
 }; // end class amgclSolverBackend
 
-} // namespace bda
+} // namespace Accelerator
+} // namespace Opm
 
 #endif
 

@@ -45,7 +45,9 @@ namespace {
 
 }
 
-namespace bda
+namespace Opm
+{
+namespace Accelerator
 {
 
 
@@ -381,4 +383,5 @@ INSTANTIATE_BDA_FUNCTIONS(6);
 
 #undef INSTANTIATE_BDA_FUNCTIONS
 
-} //namespace bda
+} // namespace Accelerator
+} // namespace Opm

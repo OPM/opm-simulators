@@ -20,7 +20,9 @@
 #include <sys/time.h>
 #include <fstream>
 
-namespace bda
+namespace Opm
+{
+namespace Accelerator
 {
 
 double second(void)
@@ -60,4 +62,5 @@ bool fileExists(const char *filename)
     }
 }
 
-} //namespace bda
+} // namespace Accelerator
+} // namespace Opm

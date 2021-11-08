@@ -28,7 +28,9 @@
 #include <opm/simulators/linalg/bda/BlockedMatrix.hpp>
 #include <opm/simulators/linalg/bda/FPGAUtils.hpp>
 
-namespace bda
+namespace Opm
+{
+namespace Accelerator
 {
 
 using Opm::OpmLog;
@@ -504,5 +506,5 @@ INSTANTIATE_BDA_FPGA_FUNCTIONS(4);
 #undef INSTANTIATE_BDA_FPGA_FUNCTIONS
 #endif // HAVE_FPGA
 
-
-} // end namespace bda
+} // namespace Accelerator
+} // namespace Opm

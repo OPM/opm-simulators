@@ -29,19 +29,10 @@
 #include <opm/simulators/linalg/bda/openclKernels.hpp>
 #include <opm/simulators/linalg/bda/ChowPatelIlu.hpp>
 
-// if CHOW_PATEL is 0, exact ILU decomposition is performed on CPU
-// if CHOW_PATEL is 1, iterative ILU decomposition (FGPILU) is done, as described in:
-//    FINE-GRAINED PARALLEL INCOMPLETE LU FACTORIZATION, E. Chow and A. Patel, SIAM 2015, https://doi.org/10.1137/140968896
-// if CHOW_PATEL_GPU is 0, the decomposition is done on CPU
-// if CHOW_PATEL_GPU is 1, the decomposition is done by bda::FGPILU::decomposition() on GPU
-// the apply phase of the ChowPatelIlu uses two triangular matrices: L and U
-// the exact decomposition uses a full matrix LU which is the superposition of L and U
-// ChowPatelIlu could also operate on a full matrix LU when L and U are merged, but it is generally better to keep them split
-#define CHOW_PATEL     0
-#define CHOW_PATEL_GPU 1
 
-
-namespace bda
+namespace Opm
+{
+namespace Accelerator
 {
 
     /// This class implementa a Blocked ILU0 preconditioner
@@ -83,25 +74,15 @@ namespace bda
 #endif
         } GPU_storage;
 
-        ilu_apply1_kernel_type *ILU_apply1;
-        ilu_apply2_kernel_type *ILU_apply2;
-        cl::KernelFunctor<cl::Buffer&, const double, const unsigned int> *scale;
-        cl::KernelFunctor<const unsigned int, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&,
-                          cl::Buffer&, cl::Buffer&,
-                          const int, cl::LocalSpaceArg> *ilu_decomp;
-
         GPU_storage s;
         cl::Context *context;
         cl::CommandQueue *queue;
         std::vector<cl::Event> events;
         cl_int err;
-        int work_group_size = 0;
-        int total_work_items = 0;
-        int lmem_per_work_group = 0;
 
-        ChowPatelIlu chowPatelIlu;
-
-        void chow_patel_decomposition();
+#if CHOW_PATEL
+        ChowPatelIlu<block_size> chowPatelIlu;
+#endif
 
     public:
 
@@ -116,17 +97,10 @@ namespace bda
         bool create_preconditioner(BlockedMatrix<block_size> *mat);
 
         // apply preconditioner, x = prec(y)
-        void apply(cl::Buffer& y, cl::Buffer& x);
+        void apply(const cl::Buffer& y, cl::Buffer& x);
 
         void setOpenCLContext(cl::Context *context);
         void setOpenCLQueue(cl::CommandQueue *queue);
-        void setKernelParameters(const unsigned int work_group_size, const unsigned int total_work_items, const unsigned int lmem_per_work_group);
-        void setKernels(
-            cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> *ILU_apply1,
-            cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg> *ILU_apply2,
-            cl::KernelFunctor<cl::Buffer&, const double, const unsigned int> *scale,
-            cl::KernelFunctor<const unsigned int, const unsigned int, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const int, cl::LocalSpaceArg> *ilu_decomp
-            );
 
         int* getToOrder()
         {
@@ -145,7 +119,8 @@ namespace bda
 
     };
 
-} // end namespace bda
+} // namespace Accelerator
+} // namespace Opm
 
 #endif
 

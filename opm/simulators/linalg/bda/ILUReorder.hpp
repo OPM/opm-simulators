@@ -20,7 +20,9 @@
 #ifndef ILUREORDER_HEADER_INCLUDED
 #define ILUREORDER_HEADER_INCLUDED
 
-namespace bda
+namespace Opm
+{
+namespace Accelerator
 {
     // Level Scheduling respects the dependencies in the original matrix, and behaves like Dune and cusparse
     // Graph Coloring is more aggresive and is likely to increase the number of linearizations and linear iterations to converge significantly, but can still be faster on GPU because it results in more parallelism
@@ -31,6 +33,7 @@ namespace bda
         NONE
     };
 
-}
+} // namespace Accelerator
+} // namespace Opm
 
 #endif

@@ -23,10 +23,13 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/ErrorMacros.hpp>
 
+#include <opm/simulators/linalg/bda/openclKernels.hpp>
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
 
 namespace Opm
 {
+
+using Opm::Accelerator::OpenclKernels;
 
 WellContributions::WellContributions(std::string accelerator_mode, bool useWellConn){
     if(accelerator_mode.compare("cusparse") == 0){
@@ -82,8 +85,8 @@ void WellContributions::setOpenCLEnv(cl::Context *context_, cl::CommandQueue *qu
     this->queue = queue_;
 }
 
-void WellContributions::setKernel(bda::stdwell_apply_kernel_type *kernel_,
-                                  bda::stdwell_apply_no_reorder_kernel_type *kernel_no_reorder_){
+void WellContributions::setKernel(Opm::Accelerator::stdwell_apply_kernel_type *kernel_,
+                                  Opm::Accelerator::stdwell_apply_no_reorder_kernel_type *kernel_no_reorder_){
     this->kernel = kernel_;
     this->kernel_no_reorder = kernel_no_reorder_;
 }
@@ -95,22 +98,13 @@ void WellContributions::setReordering(int *h_toOrder_, bool reorder_)
 }
 
 void WellContributions::apply_stdwells(cl::Buffer d_x, cl::Buffer d_y, cl::Buffer d_toOrder){
-    const unsigned int work_group_size = 32;
-    const unsigned int total_work_items = num_std_wells * work_group_size;
-    const unsigned int lmem1 = sizeof(double) * work_group_size;
-    const unsigned int lmem2 = sizeof(double) * dim_wells;
-
-    cl::Event event;
     if (reorder) {
-        event = (*kernel)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)),
-                          *d_Cnnzs_ocl, *d_Dnnzs_ocl, *d_Bnnzs_ocl, *d_Ccols_ocl, *d_Bcols_ocl, d_x, d_y, d_toOrder, dim, dim_wells, *d_val_pointers_ocl,
-                          cl::Local(lmem1), cl::Local(lmem2), cl::Local(lmem2));
+        OpenclKernels::apply_stdwells_reorder(*d_Cnnzs_ocl, *d_Dnnzs_ocl, *d_Bnnzs_ocl, *d_Ccols_ocl, *d_Bcols_ocl,
+            d_x, d_y, d_toOrder, dim, dim_wells, *d_val_pointers_ocl, num_std_wells);
     } else {
-        event = (*kernel_no_reorder)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)),
-                          *d_Cnnzs_ocl, *d_Dnnzs_ocl, *d_Bnnzs_ocl, *d_Ccols_ocl, *d_Bcols_ocl, d_x, d_y, dim, dim_wells, *d_val_pointers_ocl,
-                          cl::Local(lmem1), cl::Local(lmem2), cl::Local(lmem2));
+        OpenclKernels::apply_stdwells_no_reorder(*d_Cnnzs_ocl, *d_Dnnzs_ocl, *d_Bnnzs_ocl, *d_Ccols_ocl, *d_Bcols_ocl,
+            d_x, d_y, dim, dim_wells, *d_val_pointers_ocl, num_std_wells);
     }
-    event.wait();
 }
 
 void WellContributions::apply_mswells(cl::Buffer d_x, cl::Buffer d_y){

@@ -20,7 +20,9 @@
 #ifndef BDARESULT_HEADER_INCLUDED
 #define BDARESULT_HEADER_INCLUDED
 
-namespace bda
+namespace Opm
+{
+namespace Accelerator
 {
 
 /// This class is based on InverseOperatorResult struct from dune/istl/solver.hh
@@ -39,6 +41,7 @@ public:
 
 }; // end class BdaResult
 
-}
+} // namespace Accelerator
+} // namespace Opm
 
 #endif
