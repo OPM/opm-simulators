@@ -608,7 +608,7 @@ assignToSolution(data::Solution& sol)
         {"PCSWM_OW", UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     pcSwMdcOw_},
         {"PDEW",     UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     dewPointPressure_},
         {"POLYMER",  UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      cPolymer_},
-        {"PORV_RC",  UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      rockCompPorvMultiplier_},
+        {"PORV_RC",  UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     rockCompPorvMultiplier_},
         {"PPCW",     UnitSystem::measure::pressure,  data::TargetType::RESTART_SOLUTION,      ppcw_},
         {"PRESROCC", UnitSystem::measure::pressure,  data::TargetType::RESTART_SOLUTION,      minimumOilPressure_},
         {"PRESSURE", UnitSystem::measure::pressure,  data::TargetType::RESTART_SOLUTION,      oilPressure_},
@@ -628,7 +628,7 @@ assignToSolution(data::Solution& sol)
         {"STD_OIL",  UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      mFracOil_},
         {"SWMAX",    UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      swMax_},
         {"UREA",     UnitSystem::measure::density,   data::TargetType::RESTART_SOLUTION,      cUrea_},
-        {"TMULT_RC", UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      rockCompTransMultiplier_},
+        {"TMULT_RC", UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     rockCompTransMultiplier_},
         {"WATKR",    UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     relativePermeability_[waterPhaseIdx]},
         {"WAT_DEN",  UnitSystem::measure::density,   data::TargetType::RESTART_AUXILIARY,     density_[waterPhaseIdx]},
         {"WAT_VISC", UnitSystem::measure::viscosity, data::TargetType::RESTART_AUXILIARY,     viscosity_[gasPhaseIdx]}
