@@ -34,6 +34,7 @@
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WListManager.hpp>
 #include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestState.hpp>
 #include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
+#include <opm/parser/eclipse/EclipseState/Grid/TransMult.hpp>
 
 #include <ebos/eclmpiserializer.hh>
 
@@ -57,9 +58,15 @@ void eclStateBroadcast(Parallel::Communication comm, EclipseState& eclState, Sch
     ser.broadcast(wtestState);
 }
 
-void eclScheduleBroadcast(Parallel::Communication comm, Schedule& schedule)
+template <class T>
+void eclBroadcast(Parallel::Communication comm, T& data)
 {
     Opm::EclMpiSerializer ser(comm);
-    ser.broadcast(schedule);
+    ser.broadcast(data);
 }
+
+
+template void eclBroadcast<TransMult>(Parallel::Communication, TransMult&);
+template void eclBroadcast<Schedule>(Parallel::Communication, Schedule&);
+
 }

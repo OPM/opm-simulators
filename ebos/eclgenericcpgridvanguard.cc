@@ -330,7 +330,7 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doFilterConnection
     {
         // Broadcast another time to remove inactive peforations on
         // slave processors.
-        eclScheduleBroadcast(EclGenericVanguard::comm(), schedule);
+        eclBroadcast(EclGenericVanguard::comm(), schedule);
     }
     catch(const std::exception& broadcast_error)
     {
