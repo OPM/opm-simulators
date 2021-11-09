@@ -342,6 +342,18 @@ opm_add_test(test_parallelwellinfo_mpi
   NO_COMPILE
     )
 
+opm_add_test(test_broadcast
+  DEPENDS "opmsimulators"
+  LIBRARIES opmsimulators ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
+  SOURCES
+    tests/test_broadcast.cpp
+  CONDITION
+    MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
+  DRIVER_ARGS
+    -n 4
+    -b ${PROJECT_BINARY_DIR}
+)
+
 include(OpmBashCompletion)
 
 if (NOT BUILD_FLOW)
