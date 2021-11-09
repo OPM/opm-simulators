@@ -229,7 +229,7 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
     double rho, rhop, beta, alpha, omega, tmp1, tmp2;
     double norm, norm_0;
 
-    Timer t_total, t_prec(false), t_spmv(false), t_well(false), t_rest(false);
+    Timer t_total, t_bilu0(false), t_cpr(false), t_spmv(false), t_well(false), t_rest(false);
 
     // set r to the initial residual
     // if initial x guess is not 0, must call applyblockedscaleadd(), not implemented
@@ -275,12 +275,14 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
         t_rest.stop();
 
         // pw = prec(p)
-        t_prec.start();
+        t_bilu0.start();
         bilu0->apply(d_p, d_pw);
-        t_prec.stop();
+        t_bilu0.stop();
 
         if (use_cpr) {
+            t_cpr.start();
             cpr->apply(d_p, d_pw);
+            t_cpr.stop();
         }
 
         // v = A * pw
@@ -310,12 +312,14 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
         it += 0.5;
 
         // s = prec(r)
-        t_prec.start();
+        t_bilu0.start();
         bilu0->apply(d_r, d_s);
-        t_prec.stop();
+        t_bilu0.stop();
 
         if (use_cpr) {
+            t_cpr.start();
             cpr->apply(d_r, d_s);
+            t_cpr.stop();
         }
 
         // t = A * s
@@ -364,7 +368,10 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
     }
     if (verbosity >= 4) {
         std::ostringstream out;
-        out << "openclSolver::ilu_apply:   " << t_prec.elapsed() << " s\n";
+        out << "openclSolver::ilu_apply:   " << t_bilu0.elapsed() << " s\n";
+        if (use_cpr) {
+            out << "openclSolver::cpr_apply:   " << t_cpr.elapsed() << " s\n";
+        }
         out << "wellContributions::apply:  " << t_well.elapsed() << " s\n";
         out << "openclSolver::spmv:        " << t_spmv.elapsed() << " s\n";
         out << "openclSolver::rest:        " << t_rest.elapsed() << " s\n";
