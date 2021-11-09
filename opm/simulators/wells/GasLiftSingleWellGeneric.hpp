@@ -213,7 +213,7 @@ protected:
           bool increase, double alq, double oil_rate, double gas_rate, double water_rate,
           bool oil_is_limited, bool gas_is_limited, bool water_is_limited, std::vector<double> &potentials);
     std::tuple<double,double,bool,bool,double>
-      reduceALQtoOilTarget_(double alq, double oil_rate, double gas_rate,
+      reduceALQtoOilTarget_(double alq, double oil_rate, double gas_rate, double water_rate,
           bool oil_is_limited, bool gas_is_limited, std::vector<double> &potentials);
 
     std::unique_ptr<GasLiftWellState> runOptimize1_();

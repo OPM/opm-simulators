@@ -755,7 +755,7 @@ maybeAdjustALQbeforeOptimizeLoop_(
         //   is no point in using a higher ALQ value then.
         std::tie(oil_rate, gas_rate, oil_is_limited, gas_is_limited, alq) =
             reduceALQtoOilTarget_(
-                alq, oil_rate, gas_rate, oil_is_limited, gas_is_limited, potentials);
+                alq, oil_rate, gas_rate, water_rate, oil_is_limited, gas_is_limited, potentials);
     }
     else {
         if (increase && oil_rate < 0) {
@@ -784,6 +784,7 @@ GasLiftSingleWellGeneric::
 reduceALQtoOilTarget_(double alq,
                       double oil_rate,
                       double gas_rate,
+                      double water_rate,
                       bool oil_is_limited,
                       bool gas_is_limited,
                       std::vector<double>& potentials)
@@ -792,10 +793,11 @@ reduceALQtoOilTarget_(double alq,
     double orig_oil_rate = oil_rate;
     double orig_alq = alq;
     // NOTE: This method should only be called if oil_is_limited, and hence
-    //   we know that it has oil rate control
+    //   we know that it has oil rate control or liquid control
     assert(this->controls_.hasControl(Well::ProducerCMode::ORAT) || this->controls_.hasControl(Well::ProducerCMode::LRAT));
-    auto target = this->controls_.oil_rate;
-    bool stop_iteration = false;
+    auto oiltarget = this->controls_.oil_rate;
+    bool stop_iteration = (oiltarget == 0);
+    bool limiting_orat = false;
     double temp_alq = alq;
     while(!stop_iteration) {
         temp_alq -= this->increment_;
@@ -805,15 +807,36 @@ reduceALQtoOilTarget_(double alq,
         auto bhp_this = getBhpWithLimit_(*bhp_opt);
         computeWellRates_(bhp_this.first, potentials);
         oil_rate = -potentials[this->oil_pos_];
-        if (oil_rate < target) {
+        if (oil_rate < oiltarget) {
             break;
         }
         alq = temp_alq;
+        limiting_orat = true;
+    }
+    auto liquidtarget = this->controls_.liquid_rate;
+    stop_iteration = (liquidtarget == 0);
+    bool limiting_lrat = false;
+    temp_alq = alq;
+    while(!stop_iteration) {
+        temp_alq -= this->increment_;
+        if (temp_alq <= 0) break;
+        auto bhp_opt = computeBhpAtThpLimit_(temp_alq);
+        if (!bhp_opt) break;
+        auto bhp_this = getBhpWithLimit_(*bhp_opt);
+        computeWellRates_(bhp_this.first, potentials);
+        oil_rate = -potentials[this->oil_pos_];
+        water_rate = -potentials[this->water_pos_];
+        if ( (oil_rate + water_rate) < liquidtarget) {
+            break;
+        }
+        alq = temp_alq;
+        limiting_lrat = true;
     }
     std::tie(oil_rate, oil_is_limited) = getOilRateWithLimit_(potentials);
     std::tie(gas_rate, gas_is_limited) = getGasRateWithLimit_(potentials);
     if (this->debug_) {
         assert( alq <= orig_alq );
+        auto target = limiting_orat ? oiltarget : liquidtarget;
         if (alq < orig_alq) {
             // NOTE: ALQ may drop below zero before we are able to meet the target
             const std::string msg = fmt::format(
@@ -824,7 +847,7 @@ reduceALQtoOilTarget_(double alq,
         else if (alq == orig_alq) {
             // We might not be able to reduce ALQ, for example if ALQ starts out at zero.
             const std::string msg = fmt::format("Not able to reduce ALQ {} further. "
-                "Oil rate is {} and oil target is {}", orig_alq, oil_rate, target);
+                "Oil rate is {} and target is {}", orig_alq, oil_rate, target);
             displayDebugMessage_(msg);
         }
     }
