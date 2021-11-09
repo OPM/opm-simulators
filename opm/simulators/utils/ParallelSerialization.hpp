@@ -48,7 +48,12 @@ void eclStateBroadcast(Parallel::Communication  comm, EclipseState& eclState, Sc
 
 
 template <class T>
-void eclBroadcast(Parallel::Communication comm, T& );
+void eclBroadcast(Parallel::Communication, T& )
+#if HAVE_MPI
+;
+#else
+{}
+#endif
 
 
 } // end namespace Opm
