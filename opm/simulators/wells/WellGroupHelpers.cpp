@@ -1480,21 +1480,18 @@ namespace WellGroupHelpers
             }
         }
 
-        double oilPot = 0.0;
+        std::array<double,3> potentials{};
+        auto& [oilPot, gasPot, waterPot] = potentials;
         if (pu.phase_used[BlackoilPhases::Liquid])
             oilPot = pot[pu.phase_pos[BlackoilPhases::Liquid]];
 
-        double gasPot = 0.0;
         if (pu.phase_used[BlackoilPhases::Vapour])
             gasPot = pot[pu.phase_pos[BlackoilPhases::Vapour]];
 
-        double waterPot = 0.0;
         if (pu.phase_used[BlackoilPhases::Aqua])
             waterPot = pot[pu.phase_pos[BlackoilPhases::Aqua]];
 
-        oilPot = comm.sum(oilPot);
-        gasPot = comm.sum(gasPot);
-        waterPot = comm.sum(waterPot);
+        comm.sum(potentials.data(), potentials.size());
         const UnitSystem& unit_system = schedule.getUnits();
         oilPot = unit_system.from_si(UnitSystem::measure::liquid_surface_rate, oilPot);
         waterPot = unit_system.from_si(UnitSystem::measure::liquid_surface_rate, waterPot);
@@ -1512,9 +1509,8 @@ namespace WellGroupHelpers
                                   GuideRate* guideRate)
     {
         for (const auto& well : schedule.getWells(reportStepIdx)) {
-            double oilpot = 0.0;
-            double gaspot = 0.0;
-            double waterpot = 0.0;
+            std::array<double,3> potentials{};
+            auto& [oilpot, gaspot, waterpot] = potentials;
 
             const auto& well_index = wellState.index(well.name());
             if (well_index.has_value() && wellState.wellIsOwned(well_index.value(), well.name()))
@@ -1531,9 +1527,7 @@ namespace WellGroupHelpers
                 if (pu.phase_used[BlackoilPhases::Aqua] > 0)
                     waterpot = wpot[pu.phase_pos[BlackoilPhases::Aqua]];
             }
-            oilpot = comm.sum(oilpot);
-            gaspot = comm.sum(gaspot);
-            waterpot = comm.sum(waterpot);
+            comm.sum(potentials.data(), potentials.size());
             const UnitSystem& unit_system = schedule.getUnits();
             oilpot = unit_system.from_si(UnitSystem::measure::liquid_surface_rate, oilpot);
             waterpot = unit_system.from_si(UnitSystem::measure::liquid_surface_rate, waterpot);
