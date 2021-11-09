@@ -948,12 +948,15 @@ namespace Opm {
                 group_oil_rates.reserve(num_rates_to_sync);
                 std::vector<double> group_gas_rates;
                 group_gas_rates.reserve(num_rates_to_sync);
+                std::vector<double> group_water_rates;
+                group_water_rates.reserve(num_rates_to_sync);
                 if (comm.rank() == i) {
                     for (auto idx : groups_to_sync) {
-                        auto [oil_rate, gas_rate, alq] = group_info.getRates(idx);
+                        auto [oil_rate, gas_rate, water_rate, alq] = group_info.getRates(idx);
                         group_indexes.push_back(idx);
                         group_oil_rates.push_back(oil_rate);
                         group_gas_rates.push_back(gas_rate);
+                        group_water_rates.push_back(water_rate);
                         group_alq_rates.push_back(alq);
                     }
                 }
@@ -968,11 +971,12 @@ namespace Opm {
                 comm.broadcast(group_indexes.data(), num_rates_to_sync, i);
                 comm.broadcast(group_oil_rates.data(), num_rates_to_sync, i);
                 comm.broadcast(group_gas_rates.data(), num_rates_to_sync, i);
+                comm.broadcast(group_water_rates.data(), num_rates_to_sync, i);
                 comm.broadcast(group_alq_rates.data(), num_rates_to_sync, i);
                 if (comm.rank() != i) {
                     for (int j=0; j<num_rates_to_sync; j++) {
                         group_info.updateRate(group_indexes[j],
-                            group_oil_rates[j], group_gas_rates[j], group_alq_rates[j]);
+                            group_oil_rates[j], group_gas_rates[j], group_water_rates[j], group_alq_rates[j]);
                     }
                 }
             }

@@ -84,25 +84,28 @@ public:
     double alqRate(const std::string& group_name);
     double gasRate(const std::string& group_name);
     int getGroupIdx(const std::string& group_name);
-    std::tuple<double,double,double> getRates(int group_idx);
+    std::tuple<double,double,double,double> getRates(int group_idx);
     std::optional<double> gasTarget(const std::string& group_name);
     const std::string& groupIdxToName(int group_idx);
     bool hasWell(const std::string& well_name);
     void initialize();
     std::optional<double> maxAlq(const std::string& group_name);
     double oilRate(const std::string& group_name);
+    double waterRate(const std::string& group_name);
     std::optional<double> oilTarget(const std::string& group_name);
+    std::optional<double> waterTarget(const std::string& group_name);
+    std::optional<double> liquidTarget(const std::string& group_name);
     void update(const std::string& well_name,
-        double delta_oil, double delta_gas, double delta_alq);
-    void updateRate(int idx, double oil_rate, double gas_rate, double alq);
+        double delta_oil, double delta_gas, double delta_water, double delta_alq);
+    void updateRate(int idx, double oil_rate, double gas_rate, double water_rate, double alq);
     const Well2GroupMap& wellGroupMap() { return well_group_map_; }
 private:
     bool checkDoGasLiftOptimization_(const std::string& well_name);
     bool checkNewtonIterationIdxOk_(const std::string& well_name);
     void displayDebugMessage_(const std::string& msg);
     void displayDebugMessage_(const std::string& msg, const std::string& well_name);
-    std::pair<double, double> getProducerWellRates_(const int index);
-    std::tuple<double, double, double>
+    std::tuple<double, double, double> getProducerWellRates_(const int index);
+    std::tuple<double, double, double, double>
         initializeGroupRatesRecursive_(const Group &group);
     void initializeWell2GroupMapRecursive_(
         const Group& group, std::vector<std::string>& group_names,
@@ -112,44 +115,58 @@ private:
 
     class GroupRates {
     public:
-        GroupRates( double oil_rate, double gas_rate, double alq,
+        GroupRates( double oil_rate, double gas_rate, double water_rate, double alq,
             std::optional<double> oil_target,
             std::optional<double> gas_target,
+            std::optional<double> water_target,
+            std::optional<double> liquid_target,
             std::optional<double> total_gas,
             std::optional<double> max_alq
                   ) :
             oil_rate_{oil_rate},
             gas_rate_{gas_rate},
+            water_rate_{water_rate},
             alq_{alq},
             oil_target_{oil_target},
             gas_target_{gas_target},
+            water_target_{water_target},
+            liquid_target_{liquid_target},
             total_gas_{total_gas},
             max_alq_{max_alq}
         {}
         double alq() const { return alq_; }
-        void assign(double oil_rate, double gas_rate, double alq)
+        void assign(double oil_rate, double gas_rate, double water_rate, double alq)
         {
             oil_rate_ = oil_rate;
             gas_rate_ = gas_rate;
+            water_rate_ = water_rate;
             alq_ = alq;
         }
         double gasRate() const { return gas_rate_; }
+        double waterRate() const { return water_rate_; }
         std::optional<double> gasTarget() const { return gas_target_; }
+        std::optional<double> waterTarget() const { return water_target_; }
         std::optional<double> maxAlq() const { return max_alq_; }
         double oilRate() const { return oil_rate_; }
         std::optional<double> oilTarget() const { return oil_target_; }
-        void update(double delta_oil, double delta_gas, double delta_alq)
+        std::optional<double> liquidTarget() const { return liquid_target_; }
+
+        void update(double delta_oil, double delta_gas, double delta_water, double delta_alq)
         {
             oil_rate_ += delta_oil;
             gas_rate_ += delta_gas;
+            water_rate_ += delta_water;
             alq_ += delta_alq;
         }
     private:
         double oil_rate_;
         double gas_rate_;
+        double water_rate_;
         double alq_;
         std::optional<double> oil_target_;
         std::optional<double> gas_target_;
+        std::optional<double> water_target_;
+        std::optional<double> liquid_target_;
         std::optional<double> total_gas_;
         std::optional<double> max_alq_;
     };

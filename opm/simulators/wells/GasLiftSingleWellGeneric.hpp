@@ -126,9 +126,9 @@ protected:
         bool checkAlqOutsideLimits(double alq, double oil_rate);
         bool checkEcoGradient(double gradient);
         bool checkGroupALQrateExceeded(double delta_alq);
-        bool checkGroupTargetsViolated(double delta_oil, double delta_gas);
-        std::tuple<double,double,double>
-          reduceALQtoGroupTarget(double alq, double oil_rate, double gas_rate, std::vector<double> &potentials);
+        bool checkGroupTargetsViolated(double delta_oil, double delta_gas, double delta_water);
+        std::tuple<double,double,double,double>
+          reduceALQtoGroupTarget(double alq, double oil_rate, double gas_rate, double water_rate, std::vector<double> &potentials);
         bool checkNegativeOilRate(double oil_rate);
         bool checkThpControl();
         bool checkOilRateExceedsTarget(double oil_rate);
@@ -137,7 +137,7 @@ protected:
         bool computeBhpAtThpLimit(double alq);
         void debugShowIterationInfo(double alq);
         double getBhpWithLimit();
-        void updateGroupRates(double delta_oil, double delta_gas, double delta_alq);
+        void updateGroupRates(double delta_oil, double delta_gas, double delta_water, double delta_alq);
         void warn_(std::string msg) {parent.displayWarning_(msg);}
     };
 
@@ -162,8 +162,9 @@ protected:
     bool computeInitialWellRates_(std::vector<double>& potentials);
 
     void debugCheckNegativeGradient_(double grad, double alq, double new_alq,
-                                     double oil_rate, double new_oil_rate, double gas_rate,
-                                     double new_gas_rate, bool increase) const;
+                                     double oil_rate, double new_oil_rate,
+                                     double gas_rate, double new_gas_rate,
+                                     bool increase) const;
 
     void debugShowAlqIncreaseDecreaseCounts_();
 
@@ -178,9 +179,16 @@ protected:
 
     std::pair<double, bool> getBhpWithLimit_(double bhp) const;
     std::pair<double, bool> getGasRateWithLimit_(const std::vector<double>& potentials) const;
-    std::tuple<double,double,bool,bool>
+    std::tuple<double,double,double,bool,bool,bool>
     getInitialRatesWithLimit_(const std::vector<double>& potentials);
     std::pair<double, bool> getOilRateWithLimit_(const std::vector<double>& potentials) const;
+    std::pair<double, bool> getWaterRateWithLimit_(const std::vector<double>& potentials) const;
+
+    std::pair<double, bool> getOilRateWithGroupLimit_(const double new_oil_rate, const double oil_rate) const;
+    std::pair<double, bool> getGasRateWithGroupLimit_(const double new_gas_rate, const double gas_rate) const;
+    std::pair<double, bool> getWaterRateWithGroupLimit_(const double new_water_rate, const double water_rate) const;
+    std::tuple<double,double,bool,bool> getLiquidRateWithGroupLimit_(double new_oil_rate, const double oil_rate,
+                                                                     double new_water_rate, const double water_rate) const;
 
     std::tuple<double,double,bool,bool,double>
     increaseALQtoPositiveOilRate_(double alq,
@@ -200,10 +208,10 @@ protected:
 
     void logSuccess_(double alq,
                      const int iteration_idx);
-    std::tuple<double,double,double,bool,bool>
+    std::tuple<double,double,double, double,bool,bool,bool>
       maybeAdjustALQbeforeOptimizeLoop_(
-          bool increase, double alq, double oil_rate, double gas_rate,
-          bool oil_is_limited, bool gas_is_limited, std::vector<double> &potentials);
+          bool increase, double alq, double oil_rate, double gas_rate, double water_rate,
+          bool oil_is_limited, bool gas_is_limited, bool water_is_limited, std::vector<double> &potentials);
     std::tuple<double,double,bool,bool,double>
       reduceALQtoOilTarget_(double alq, double oil_rate, double gas_rate,
           bool oil_is_limited, bool gas_is_limited, std::vector<double> &potentials);
