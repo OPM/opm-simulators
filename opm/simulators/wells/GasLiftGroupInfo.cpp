@@ -346,10 +346,8 @@ std::tuple<double, double, double, double>
 GasLiftGroupInfo::
 initializeGroupRatesRecursive_(const Group &group)
 {
-    double oil_rate = 0.0;
-    double water_rate = 0.0;
-    double gas_rate = 0.0;
-    double alq = 0.0;
+    std::array<double,4> rates{};
+    auto& [oil_rate, water_rate, gas_rate, alq] = rates;
     if (group.wellgroup()) {
         for (const std::string& well_name : group.wells()) {
             // NOTE: we cannot simply use:
@@ -374,10 +372,7 @@ initializeGroupRatesRecursive_(const Group &group)
                 }
             }
         }
-        oil_rate = this->comm_.sum(oil_rate);
-        gas_rate = this->comm_.sum(gas_rate);
-        water_rate = this->comm_.sum(water_rate);
-        alq = this->comm_.sum(alq);
+        this->comm_.sum(rates.data(), rates.size());
     }
     else {
         for (const std::string& group_name : group.groups()) {
