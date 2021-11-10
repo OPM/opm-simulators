@@ -229,9 +229,9 @@ void initialize_vexcl(std::vector<cl::CommandQueue>& ctx, unsigned int platformI
     OpmLog::info(out.str());
 }
 
-template <typename vexcl_matrix_type, typename vexcl_vector_type, unsigned int block_size>
+template <typename vexcl_matrix_type, typename vexcl_vector_type, unsigned int block_size, typename AIJInfo>
 void solve_vexcl(
-    const auto& A,
+    const AIJInfo& A,
     const boost::property_tree::ptree prm,
     const std::vector<cl::CommandQueue>& ctx,
     double *b,
