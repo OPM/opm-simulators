@@ -24,21 +24,19 @@
 
 #include <flow/flow_ebos_blackoil.hpp>
 
-# ifndef FLOW_BLACKOIL_ONLY
-#  include <flow/flow_ebos_gasoil.hpp>
-#  include <flow/flow_ebos_oilwater.hpp>
-#  include <flow/flow_ebos_gaswater.hpp>
-#  include <flow/flow_ebos_solvent.hpp>
-#  include <flow/flow_ebos_polymer.hpp>
-#  include <flow/flow_ebos_extbo.hpp>
-#  include <flow/flow_ebos_foam.hpp>
-#  include <flow/flow_ebos_brine.hpp>
-#  include <flow/flow_ebos_oilwater_brine.hpp>
-#  include <flow/flow_ebos_energy.hpp>
-#  include <flow/flow_ebos_oilwater_polymer.hpp>
-#  include <flow/flow_ebos_oilwater_polymer_injectivity.hpp>
-#  include <flow/flow_ebos_micp.hpp>
-# endif
+#include <flow/flow_ebos_gasoil.hpp>
+#include <flow/flow_ebos_oilwater.hpp>
+#include <flow/flow_ebos_gaswater.hpp>
+#include <flow/flow_ebos_solvent.hpp>
+#include <flow/flow_ebos_polymer.hpp>
+#include <flow/flow_ebos_extbo.hpp>
+#include <flow/flow_ebos_foam.hpp>
+#include <flow/flow_ebos_brine.hpp>
+#include <flow/flow_ebos_oilwater_brine.hpp>
+#include <flow/flow_ebos_energy.hpp>
+#include <flow/flow_ebos_oilwater_polymer.hpp>
+#include <flow/flow_ebos_oilwater_polymer_injectivity.hpp>
+#include <flow/flow_ebos_micp.hpp>
 
 #include <opm/parser/eclipse/Deck/Deck.hpp>
 #include <opm/parser/eclipse/Parser/ErrorGuard.hpp>
@@ -288,11 +286,8 @@ namespace Opm
             // TODO: make sure that no illegal combinations like thermal and
             //       twophase are requested.
 
-            if (false) {}
-
-#ifndef FLOW_BLACKOIL_ONLY
             // Single-phase case
-            else if (rspec.micp()) {
+            if (rspec.micp()) {
                 return this->runMICP(phases);
             }
 
@@ -330,7 +325,6 @@ namespace Opm
             else if (eclipseState_->getSimulationConfig().isThermal()) {
                 return this->runThermal();
             }
-#endif // FLOW_BLACKOIL_ONLY
 
             // Blackoil case
             else if (phases.size() == 3) {
@@ -546,7 +540,6 @@ namespace Opm
             }
         }
 
-#ifndef FLOW_BLACKOIL_ONLY
         int runMICP(const Phases& phases)
         {
             if (!phases.active(Phase::WATER) || (phases.size() > 2)) {
@@ -684,7 +677,6 @@ namespace Opm
 
             return flowEbosEnergyMain(argc_, argv_, outputCout_, outputFiles_);
         }
-#endif  // FLOW_BLACKOIL_ONLY
 
         int runBlackOil()
         {
