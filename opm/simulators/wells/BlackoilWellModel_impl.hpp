@@ -959,6 +959,12 @@ namespace Opm {
                         group_water_rates.push_back(water_rate);
                         group_alq_rates.push_back(alq);
                     }
+                } else {
+                    group_indexes.resize(num_rates_to_sync);
+                    group_oil_rates.resize(num_rates_to_sync);
+                    group_gas_rates.resize(num_rates_to_sync);
+                    group_water_rates.resize(num_rates_to_sync);
+                    group_alq_rates.resize(num_rates_to_sync);
                 }
                 // TODO: We only need to broadcast to processors with index
                 //   j > i since we do not use the "group_info" in stage 2. In
@@ -968,11 +974,8 @@ namespace Opm {
                 //   data if they are going to check the group rates in stage1
                 //   Another similar idea is to only communicate the rates to
                 //   process j = i + 1
-                comm.broadcast(group_indexes.data(), num_rates_to_sync, i);
-                comm.broadcast(group_oil_rates.data(), num_rates_to_sync, i);
-                comm.broadcast(group_gas_rates.data(), num_rates_to_sync, i);
-                comm.broadcast(group_water_rates.data(), num_rates_to_sync, i);
-                comm.broadcast(group_alq_rates.data(), num_rates_to_sync, i);
+                Mpi::broadcast(comm, i, group_indexes, group_oil_rates,
+                               group_gas_rates, group_water_rates, group_alq_rates);
                 if (comm.rank() != i) {
                     for (int j=0; j<num_rates_to_sync; j++) {
                         group_info.updateRate(group_indexes[j],
