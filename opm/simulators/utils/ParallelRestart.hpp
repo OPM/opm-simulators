@@ -385,6 +385,7 @@ void variadic_unpack(int& pos, std::vector<char>& buffer, Parallel::Communicatio
       variadic_unpack(pos, buffer, comm, std::forward<Args>(args)...);
 }
 
+#if HAVE_MPI
 template<typename... Args>
 void broadcast(Parallel::Communication comm, int root, Args&&... args)
 {
@@ -407,6 +408,11 @@ void broadcast(Parallel::Communication comm, int root, Args&&... args)
       variadic_unpack(pos, buffer, comm, std::forward<Args>(args)...);
   }
 }
+#else
+template<typename... Args>
+void broadcast(Parallel::Communication, int, Args&&...)
+{}
+#endif
 
 } // end namespace Mpi
 
