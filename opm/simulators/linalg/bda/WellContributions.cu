@@ -127,18 +127,18 @@ __global__ void apply_well_contributions(
 
 void WellContributions::allocStandardWells()
 {
-    cudaMalloc((void**)&d_Cnnzs, sizeof(double) * num_blocks * dim * dim_wells);
-    cudaMalloc((void**)&d_Dnnzs, sizeof(double) * num_std_wells * dim_wells * dim_wells);
-    cudaMalloc((void**)&d_Bnnzs, sizeof(double) * num_blocks * dim * dim_wells);
-    cudaMalloc((void**)&d_Ccols, sizeof(int) * num_blocks);
-    cudaMalloc((void**)&d_Bcols, sizeof(int) * num_blocks);
-    cudaMalloc((void**)&d_val_pointers, sizeof(unsigned int) * (num_std_wells + 1));
+    cudaMalloc((void**)&d_Cnnzs, sizeof(double) * dimensions.num_blocks * dimensions.dim * dimensions.dim_wells);
+    cudaMalloc((void**)&d_Dnnzs, sizeof(double) * dimensions.num_std_wells * dimensions.dim_wells * dimensions.dim_wells);
+    cudaMalloc((void**)&d_Bnnzs, sizeof(double) * dimensions.num_blocks * dimensions.dim * dimensions.dim_wells);
+    cudaMalloc((void**)&d_Ccols, sizeof(int) * dimensions.num_blocks);
+    cudaMalloc((void**)&d_Bcols, sizeof(int) * dimensions.num_blocks);
+    cudaMalloc((void**)&d_val_pointers, sizeof(unsigned int) * (dimensions.num_std_wells + 1));
     cudaCheckLastError("apply_gpu malloc failed");
 }
 
 void WellContributions::freeCudaMemory() {
     // delete data for StandardWell
-    if (num_std_wells > 0) {
+    if (dimensions.num_std_wells > 0) {
         cudaFree(d_Cnnzs);
         cudaFree(d_Dnnzs);
         cudaFree(d_Bnnzs);
@@ -147,7 +147,7 @@ void WellContributions::freeCudaMemory() {
         cudaFree(d_val_pointers);
     }
 
-    if (num_ms_wells > 0 && h_x) {
+    if (dimensions.num_ms_wells > 0 && h_x) {
         cudaFreeHost(h_x);
         cudaFreeHost(h_y);
         h_x = h_y = nullptr; // Mark as free for constructor
@@ -164,16 +164,16 @@ void WellContributions::apply(double *d_x, double *d_y)
     // make sure the stream is empty if timing measurements are done
     cudaStreamSynchronize(stream);
 
-    if (num_ms_wells > 0) {
+    if (dimensions.num_ms_wells > 0) {
         // allocate pinned memory on host if not yet done
         if (h_x == nullptr) {
-            cudaMallocHost(&h_x, sizeof(double) * N);
-            cudaMallocHost(&h_y, sizeof(double) * N);
+            cudaMallocHost(&h_x, sizeof(double) * dimensions.N);
+            cudaMallocHost(&h_y, sizeof(double) * dimensions.N);
         }
 
         // copy vectors x and y from GPU to CPU
-        cudaMemcpyAsync(h_x, d_x, sizeof(double) * N, cudaMemcpyDeviceToHost, stream);
-        cudaMemcpyAsync(h_y, d_y, sizeof(double) * N, cudaMemcpyDeviceToHost, stream);
+        cudaMemcpyAsync(h_x, d_x, sizeof(double) * dimensions.N, cudaMemcpyDeviceToHost, stream);
+        cudaMemcpyAsync(h_y, d_y, sizeof(double) * dimensions.N, cudaMemcpyDeviceToHost, stream);
         cudaStreamSynchronize(stream);
 
         // actually apply MultisegmentWells
@@ -182,14 +182,14 @@ void WellContributions::apply(double *d_x, double *d_y)
         }
 
         // copy vector y from CPU to GPU
-        cudaMemcpyAsync(d_y, h_y, sizeof(double) * N, cudaMemcpyHostToDevice, stream);
+        cudaMemcpyAsync(d_y, h_y, sizeof(double) * dimensions.N, cudaMemcpyHostToDevice, stream);
         cudaStreamSynchronize(stream);
     }
 
     // apply StandardWells
-    if (num_std_wells > 0) {
-        int smem_size = 2 * sizeof(double) * dim_wells;
-        apply_well_contributions <<< num_std_wells, 32, smem_size, stream>>>(d_Cnnzs, d_Dnnzs, d_Bnnzs, d_Ccols, d_Bcols, d_x, d_y, dim, dim_wells, d_val_pointers);
+    if (dimensions.num_std_wells > 0) {
+        int smem_size = 2 * sizeof(double) * dimensions.dim_wells;
+        apply_well_contributions <<< dimensions.num_std_wells, 32, smem_size, stream>>>(d_Cnnzs, d_Dnnzs, d_Bnnzs, d_Ccols, d_Bcols, d_x, d_y, dimensions.dim, dimensions.dim_wells, d_val_pointers);
     }
 }
 
@@ -198,19 +198,19 @@ void WellContributions::addMatrixGpu(MatrixType type, int *colIndices, double *v
 {
     switch (type) {
     case MatrixType::C:
-        cudaMemcpy(d_Cnnzs + num_blocks_so_far * dim * dim_wells, values, sizeof(double) * val_size * dim * dim_wells, cudaMemcpyHostToDevice);
+        cudaMemcpy(d_Cnnzs + num_blocks_so_far * dimensions.dim * dimensions.dim_wells, values, sizeof(double) * val_size * dimensions.dim * dimensions.dim_wells, cudaMemcpyHostToDevice);
         cudaMemcpy(d_Ccols + num_blocks_so_far, colIndices, sizeof(int) * val_size, cudaMemcpyHostToDevice);
         break;
     case MatrixType::D:
-        cudaMemcpy(d_Dnnzs + num_std_wells_so_far * dim_wells * dim_wells, values, sizeof(double) * dim_wells * dim_wells, cudaMemcpyHostToDevice);
+        cudaMemcpy(d_Dnnzs + num_std_wells_so_far * dimensions.dim_wells * dimensions.dim_wells, values, sizeof(double) * dimensions.dim_wells * dimensions.dim_wells, cudaMemcpyHostToDevice);
         break;
     case MatrixType::B:
-        cudaMemcpy(d_Bnnzs + num_blocks_so_far * dim * dim_wells, values, sizeof(double) * val_size * dim * dim_wells, cudaMemcpyHostToDevice);
+        cudaMemcpy(d_Bnnzs + num_blocks_so_far * dimensions.dim * dimensions.dim_wells, values, sizeof(double) * val_size * dimensions.dim * dimensions.dim_wells, cudaMemcpyHostToDevice);
         cudaMemcpy(d_Bcols + num_blocks_so_far, colIndices, sizeof(int) * val_size, cudaMemcpyHostToDevice);
         val_pointers[num_std_wells_so_far] = num_blocks_so_far;
-        if (num_std_wells_so_far == num_std_wells - 1) {
-            val_pointers[num_std_wells] = num_blocks;
-            cudaMemcpy(d_val_pointers, val_pointers, sizeof(unsigned int) * (num_std_wells + 1), cudaMemcpyHostToDevice);
+        if (num_std_wells_so_far == dimensions.num_std_wells - 1) {
+            val_pointers[dimensions.num_std_wells] = dimensions.num_blocks;
+            cudaMemcpy(d_val_pointers, val_pointers, sizeof(unsigned int) * (dimensions.num_std_wells + 1), cudaMemcpyHostToDevice);
         }
         break;
     default:

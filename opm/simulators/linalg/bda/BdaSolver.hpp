@@ -22,15 +22,15 @@
 
 
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
-#include <opm/simulators/linalg/bda/WellContributions.hpp>
+
+#include <string>
 
 namespace Opm
 {
+class WellContributions;
+
 namespace Accelerator
 {
-
-    using Opm::WellContributions;
-
     enum class SolverStatus {
         BDA_SOLVER_SUCCESS,
         BDA_SOLVER_ANALYSIS_FAILED,
@@ -57,7 +57,7 @@ namespace Accelerator
         int maxit = 200;
         double tolerance = 1e-2;
 
-        std::string bitstream = "";
+        std::string bitstream;
 
         int N;           // number of rows
         int Nb;          // number of blocked rows (Nb*block_size == N)

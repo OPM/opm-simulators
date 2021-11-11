@@ -24,11 +24,6 @@
 #include <cuda_runtime.h>
 #endif
 
-#if HAVE_OPENCL
-#include <opm/simulators/linalg/bda/opencl.hpp>
-#include <opm/simulators/linalg/bda/openclKernels.hpp>
-#endif
-
 #include <vector>
 
 #include <opm/simulators/linalg/bda/MultisegmentWellContribution.hpp>
@@ -37,8 +32,21 @@
 #endif
 #include <dune/common/version.hh>
 
+#include <opm/simulators/linalg/bda/BdaSolver.hpp>
+
+#include <memory>
+
+#if HAVE_OPENCL
+namespace cl { class Buffer; }
+#endif
+
 namespace Opm
 {
+
+#if HAVE_OPENCL
+struct OpenCLData;
+#endif
+
 
 /// This class serves to eliminate the need to include the WellContributions into the matrix (with --matrix-add-well-contributions=true) for the cusparseSolver
 /// If the --matrix-add-well-contributions commandline parameter is true, this class should not be used
@@ -72,38 +80,29 @@ public:
         B
     };
 
+    struct Dimensions {
+        unsigned int N;                          // number of rows (not blockrows) in vectors x and y
+        unsigned int dim;                        // number of columns in blocks in B and C, equal to StandardWell::numEq
+        unsigned int dim_wells;                  // number of rows in blocks in B and C, equal to StandardWell::numStaticWellEq
+        unsigned int num_blocks = 0;             // total number of blocks in all wells
+        unsigned int num_std_wells = 0;          // number of StandardWells in this object
+        unsigned int num_ms_wells = 0;           // number of MultisegmentWells in this object, must equal multisegments.size()
+    };
+
 private:
     bool opencl_gpu = false;
     bool cuda_gpu = false;
     bool allocated = false;
 
-    unsigned int N;                          // number of rows (not blockrows) in vectors x and y
-    unsigned int dim;                        // number of columns in blocks in B and C, equal to StandardWell::numEq
-    unsigned int dim_wells;                  // number of rows in blocks in B and C, equal to StandardWell::numStaticWellEq
-    unsigned int num_blocks = 0;             // total number of blocks in all wells
-    unsigned int num_std_wells = 0;          // number of StandardWells in this object
-    unsigned int num_ms_wells = 0;           // number of MultisegmentWells in this object, must equal multisegments.size()
+    Dimensions dimensions;
     unsigned int num_blocks_so_far = 0;      // keep track of where next data is written
     unsigned int num_std_wells_so_far = 0;   // keep track of where next data is written
     unsigned int *val_pointers = nullptr;    // val_pointers[wellID] == index of first block for this well in Ccols and Bcols
 
-    double *h_x = nullptr;
-    double *h_y = nullptr;
     std::vector<MultisegmentWellContribution*> multisegments;
 
 #if HAVE_OPENCL
-    cl::Context *context;
-    cl::CommandQueue *queue;
-    Opm::Accelerator::stdwell_apply_kernel_type *kernel;
-    Opm::Accelerator::stdwell_apply_no_reorder_kernel_type *kernel_no_reorder;
-    std::vector<cl::Event> events;
-
-    std::unique_ptr<cl::Buffer> d_Cnnzs_ocl, d_Dnnzs_ocl, d_Bnnzs_ocl;
-    std::unique_ptr<cl::Buffer> d_Ccols_ocl, d_Bcols_ocl;
-    std::unique_ptr<cl::Buffer> d_val_pointers_ocl;
-
-    bool reorder = false;
-    int *h_toOrder = nullptr;
+    std::unique_ptr<OpenCLData> ocldata;
 #endif
 
 #if HAVE_CUDA
@@ -118,6 +117,9 @@ private:
     double *d_z1 = nullptr;
     double *d_z2 = nullptr;
     unsigned int *d_val_pointers = nullptr;
+    double *h_x = nullptr;
+    double *h_y = nullptr;
+
 
     /// Allocate GPU memory for StandardWells
     void allocStandardWells();
@@ -147,22 +149,20 @@ public:
 #endif
 
 #if HAVE_OPENCL
-    void setKernel(Opm::Accelerator::stdwell_apply_kernel_type *kernel_,
-                   Opm::Accelerator::stdwell_apply_no_reorder_kernel_type *kernel_no_reorder_);
-    void setOpenCLEnv(cl::Context *context_, cl::CommandQueue *queue_);
+    template<unsigned int block_size>
+    void setOpenCLEnv(Accelerator::BdaSolver<block_size>& backend);
+
+    void apply(cl::Buffer& d_x, cl::Buffer& d_y, cl::Buffer& d_toOrder);
 
     /// Since the rows of the matrix are reordered, the columnindices of the matrixdata is incorrect
     /// Those indices need to be mapped via toOrder
     /// \param[in] toOrder    array with mappings
     /// \param[in] reorder    whether reordering is actually used or not
     void setReordering(int *toOrder, bool reorder);
-    void apply_stdwells(cl::Buffer d_x, cl::Buffer d_y, cl::Buffer d_toOrder);
-    void apply_mswells(cl::Buffer d_x, cl::Buffer d_y);
-    void apply(cl::Buffer d_x, cl::Buffer d_y, cl::Buffer d_toOrder);
 #endif
 
     unsigned int getNumWells(){
-        return num_std_wells + num_ms_wells;
+        return dimensions.num_std_wells + dimensions.num_ms_wells;
     }
 
     /// Indicate how large the next StandardWell is, this function cannot be called after alloc() is called

@@ -269,8 +269,7 @@ template <class BridgeMatrix, class BridgeVector, int block_size>
 void BdaBridge<BridgeMatrix, BridgeVector, block_size>::initWellContributions([[maybe_unused]] WellContributions& wellContribs) {
     if(accelerator_mode.compare("opencl") == 0){
 #if HAVE_OPENCL
-        const auto openclBackend = static_cast<const Opm::Accelerator::openclSolverBackend<block_size>*>(backend.get());
-        wellContribs.setOpenCLEnv(openclBackend->context.get(), openclBackend->queue.get());
+        wellContribs.setOpenCLEnv(*backend);
 #else
         OPM_THROW(std::logic_error, "Error openclSolver was chosen, but OpenCL was not found by CMake");
 #endif
