@@ -27,7 +27,6 @@
 
 #include <opm/simulators/linalg/bda/BdaSolver.hpp>
 #include <opm/simulators/linalg/bda/ILUReorder.hpp>
-#include <opm/simulators/linalg/bda/WellContributions.hpp>
 
 
 #if HAVE_FPGA
@@ -36,6 +35,8 @@
 
 namespace Opm
 {
+
+class WellContributions;
 
 typedef Dune::InverseOperatorResult InverseOperatorResult;
 using Opm::Accelerator::ILUReorder;
