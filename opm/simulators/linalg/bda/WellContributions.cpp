@@ -54,10 +54,6 @@ WellContributions::WellContributions(std::string accelerator_mode, bool useWellC
 
 WellContributions::~WellContributions()
 {
-    // delete MultisegmentWellContributions
-    for (auto ms: multisegments) {
-        delete ms;
-    }
     multisegments.clear();
 
 #if HAVE_CUDA
@@ -121,7 +117,7 @@ void WellContributions::apply_mswells(cl::Buffer d_x, cl::Buffer d_y){
     events.clear();
 
     // actually apply MultisegmentWells
-    for(Opm::MultisegmentWellContribution *well: multisegments){
+    for (auto& well : multisegments) {
         well->setReordering(h_toOrder, reorder);
         well->apply(h_x, h_y);
     }
@@ -253,15 +249,30 @@ void WellContributions::alloc()
     }
 }
 
-void WellContributions::addMultisegmentWellContribution(unsigned int dim_, unsigned int dim_wells_,
-        unsigned int Mb,
-        std::vector<double> &Bvalues, std::vector<unsigned int> &BcolIndices, std::vector<unsigned int> &BrowPointers,
-        unsigned int DnumBlocks, double *Dvalues, UMFPackIndex *DcolPointers, UMFPackIndex *DrowIndices,
-        std::vector<double> &Cvalues)
+void WellContributions::addMultisegmentWellContribution(unsigned int dim_,
+                                                        unsigned int dim_wells_,
+                                                        unsigned int Mb,
+                                                        std::vector<double>& Bvalues,
+                                                        std::vector<unsigned int>& BcolIndices,
+                                                        std::vector<unsigned int>& BrowPointers,
+                                                        unsigned int DnumBlocks,
+                                                        double* Dvalues,
+                                                        UMFPackIndex* DcolPointers,
+                                                        UMFPackIndex* DrowIndices,
+                                                        std::vector<double>& Cvalues)
 {
     assert(dim==dim_);
-    MultisegmentWellContribution *well = new MultisegmentWellContribution(dim_, dim_wells_, Mb, Bvalues, BcolIndices, BrowPointers, DnumBlocks, Dvalues, DcolPointers, DrowIndices, Cvalues);
-    multisegments.emplace_back(well);
+    multisegments.push_back(std::make_unique<MultisegmentWellContribution>(dim_,
+                                                                           dim_wells_,
+                                                                           Mb,
+                                                                           Bvalues,
+                                                                           BcolIndices,
+                                                                           BrowPointers,
+                                                                           DnumBlocks,
+                                                                           Dvalues,
+                                                                           DcolPointers,
+                                                                           DrowIndices,
+                                                                           Cvalues));
     ++num_ms_wells;
 }
 

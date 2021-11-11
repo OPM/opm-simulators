@@ -29,6 +29,7 @@
 #include <opm/simulators/linalg/bda/openclKernels.hpp>
 #endif
 
+#include <memory>
 #include <vector>
 
 #include <opm/simulators/linalg/bda/MultisegmentWellContribution.hpp>
@@ -89,7 +90,7 @@ private:
 
     double *h_x = nullptr;
     double *h_y = nullptr;
-    std::vector<MultisegmentWellContribution*> multisegments;
+    std::vector<std::unique_ptr<MultisegmentWellContribution>> multisegments;
 
 #if HAVE_OPENCL
     cl::Context *context;

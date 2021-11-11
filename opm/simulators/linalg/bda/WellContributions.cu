@@ -177,7 +177,7 @@ void WellContributions::apply(double *d_x, double *d_y)
         cudaStreamSynchronize(stream);
 
         // actually apply MultisegmentWells
-        for (MultisegmentWellContribution *well : multisegments) {
+        for (auto& well : multisegments) {
             well->apply(h_x, h_y);
         }
 
@@ -222,7 +222,7 @@ void WellContributions::addMatrixGpu(MatrixType type, int *colIndices, double *v
 void WellContributions::setCudaStream(cudaStream_t stream_)
 {
     this->stream = stream_;
-    for (MultisegmentWellContribution *well : multisegments) {
+    for (auto& well : multisegments) {
         well->setCudaStream(stream_);
     }
 }
