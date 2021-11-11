@@ -25,10 +25,6 @@
 #include <opm/simulators/linalg/bda/BdaSolver.hpp>
 #include <opm/simulators/linalg/bda/ILUReorder.hpp>
 
-#if HAVE_FPGA
-#include <opm/simulators/linalg/bda/FPGASolverBackend.hpp>
-#endif
-
 namespace Opm
 {
 
