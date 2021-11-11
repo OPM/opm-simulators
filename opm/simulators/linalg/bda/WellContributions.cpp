@@ -23,13 +23,14 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/ErrorMacros.hpp>
 
-#include <opm/simulators/linalg/bda/openclKernels.hpp>
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
 
 namespace Opm
 {
 
+#if HAVE_OPENCL
 using Opm::Accelerator::OpenclKernels;
+#endif
 
 WellContributions::WellContributions(std::string accelerator_mode, bool useWellConn){
     if(accelerator_mode.compare("cusparse") == 0){
