@@ -86,7 +86,7 @@ private:
     unsigned int num_ms_wells = 0;           // number of MultisegmentWells in this object, must equal multisegments.size()
     unsigned int num_blocks_so_far = 0;      // keep track of where next data is written
     unsigned int num_std_wells_so_far = 0;   // keep track of where next data is written
-    unsigned int *val_pointers = nullptr;    // val_pointers[wellID] == index of first block for this well in Ccols and Bcols
+    std::vector<unsigned int> val_pointers;    // val_pointers[wellID] == index of first block for this well in Ccols and Bcols
 
     double *h_x = nullptr;
     double *h_y = nullptr;

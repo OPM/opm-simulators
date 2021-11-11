@@ -210,7 +210,7 @@ void WellContributions::addMatrixGpu(MatrixType type, int *colIndices, double *v
         val_pointers[num_std_wells_so_far] = num_blocks_so_far;
         if (num_std_wells_so_far == num_std_wells - 1) {
             val_pointers[num_std_wells] = num_blocks;
-            cudaMemcpy(d_val_pointers, val_pointers, sizeof(unsigned int) * (num_std_wells + 1), cudaMemcpyHostToDevice);
+            cudaMemcpy(d_val_pointers, val_pointers.data(), sizeof(unsigned int) * (num_std_wells + 1), cudaMemcpyHostToDevice);
         }
         break;
     default:

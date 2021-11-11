@@ -62,10 +62,6 @@ WellContributions::~WellContributions()
     }
 #endif
 
-    if(num_std_wells > 0){
-        delete[] val_pointers;
-    }
-
 #if HAVE_OPENCL
     if(opencl_gpu){
         if(num_ms_wells > 0){
@@ -181,7 +177,7 @@ void WellContributions::addMatrix([[maybe_unused]] MatrixType type, [[maybe_unus
             if (num_std_wells_so_far == num_std_wells - 1) {
                 val_pointers[num_std_wells] = num_blocks;
                 events.resize(1);
-                queue->enqueueWriteBuffer(*d_val_pointers_ocl, CL_FALSE, 0, sizeof(unsigned int) * (num_std_wells + 1), val_pointers, nullptr, &events[0]);
+                queue->enqueueWriteBuffer(*d_val_pointers_ocl, CL_FALSE, 0, sizeof(unsigned int) * (num_std_wells + 1), val_pointers.data(), nullptr, &events[0]);
                 events[0].wait();
                 events.clear();
             }
@@ -227,7 +223,7 @@ void WellContributions::addNumBlocks(unsigned int numBlocks)
 void WellContributions::alloc()
 {
     if (num_std_wells > 0) {
-        val_pointers = new unsigned int[num_std_wells + 1];
+        val_pointers.resize(num_std_wells+1);
 
 #if HAVE_CUDA
         if(cuda_gpu){
