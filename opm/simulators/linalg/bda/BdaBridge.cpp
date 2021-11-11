@@ -19,6 +19,9 @@
 
 #include <config.h>
 
+#include "dune/istl/bcrsmatrix.hh"
+#include <opm/simulators/linalg/matrixblock.hh>
+
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/material/common/Unused.hpp>
