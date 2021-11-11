@@ -32,7 +32,7 @@
 #include <opm/models/immiscible/immiscibleproperties.hh>
 #include <opm/models/discretization/common/fvbaseadlocallinearizer.hh>
 #include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
-
+#include <opm/models/common/transfluxmodule.hh>
 #include <opm/material/fluidmatrixinteractions/RegularizedVanGenuchten.hpp>
 #include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/EffToAbsLaw.hpp>
@@ -482,10 +482,16 @@ public:
 
         bool useAutoDiff = std::is_same<LLS, Properties::TTag::AutoDiffLocalLinearizer>::value;
 
+        using FM = GetPropType<TypeTag, Properties::FluxModule>;
+        bool useTrans = std::is_same<FM, Opm::TransFluxModule<TypeTag>>::value;
+
         std::ostringstream oss;
         oss << "lens_" << Model::name()
             << "_" << Model::discretizationName()
             << "_" << (useAutoDiff?"ad":"fd");
+        if (useTrans)
+            oss << "_trans";
+
         return oss.str();
     }
 
