@@ -747,17 +747,16 @@ maybeAdjustALQbeforeOptimizeLoop_(
         const std::string msg = fmt::format("initial ALQ: {}", alq);
         displayDebugMessage_(msg);
     }
-    if (!increase && oil_is_limited) {
-        // NOTE: Try to decrease ALQ down to a value where the oil target is
+    if (!increase && ( oil_is_limited || water_is_limited || gas_is_limited)) {
+        // NOTE: Try to decrease ALQ down to a value where the well target is
         //   not exceeded.
         // NOTE: This may reduce ALQ below the minimum value set in WLIFTOPT
         //   item 5. However, this is OK since the rate target is met and there
         //   is no point in using a higher ALQ value then.
-        std::tie(oil_rate, gas_rate, oil_is_limited, gas_is_limited, alq) =
-            reduceALQtoOilTarget_(
-                alq, oil_rate, gas_rate, oil_is_limited, gas_is_limited, potentials);
-    }
-    else {
+        std::tie(oil_rate, gas_rate, water_rate, oil_is_limited, gas_is_limited, water_is_limited, alq) =
+            reduceALQtoWellTarget_(alq, oil_rate, gas_rate, water_rate,
+                                   oil_is_limited, gas_is_limited, water_is_limited, potentials);
+    } else {
         if (increase && oil_rate < 0) {
             // NOTE: Try to increase ALQ up to a value where oil_rate is positive
             std::tie(oil_rate, gas_rate, oil_is_limited, gas_is_limited, alq) =
@@ -779,23 +778,24 @@ maybeAdjustALQbeforeOptimizeLoop_(
     return std::make_tuple(oil_rate, gas_rate, water_rate, alq, oil_is_limited, gas_is_limited, water_is_limited);
 }
 
-std::tuple<double,double,bool,bool,double>
+std::tuple<double,double,double, bool, bool,bool,double>
 GasLiftSingleWellGeneric::
-reduceALQtoOilTarget_(double alq,
+reduceALQtoWellTarget_(double alq,
                       double oil_rate,
                       double gas_rate,
+                      double water_rate,
                       bool oil_is_limited,
                       bool gas_is_limited,
+                      bool water_is_limited,
                       std::vector<double>& potentials)
 {
-    displayDebugMessage_("Reducing ALQ to meet oil target before iteration starts..");
+    displayDebugMessage_("Reducing ALQ to meet well target before iteration starts..");
     double orig_oil_rate = oil_rate;
     double orig_alq = alq;
-    // NOTE: This method should only be called if oil_is_limited, and hence
-    //   we know that it has oil rate control
-    assert(this->controls_.hasControl(Well::ProducerCMode::ORAT) || this->controls_.hasControl(Well::ProducerCMode::LRAT));
-    auto target = this->controls_.oil_rate;
+
+    // check well targets
     bool stop_iteration = false;
+    auto limiting_control = Well::ProducerCMode::NONE;
     double temp_alq = alq;
     while(!stop_iteration) {
         temp_alq -= this->increment_;
@@ -805,30 +805,68 @@ reduceALQtoOilTarget_(double alq,
         auto bhp_this = getBhpWithLimit_(*bhp_opt);
         computeWellRates_(bhp_this.first, potentials);
         oil_rate = -potentials[this->oil_pos_];
-        if (oil_rate < target) {
+        water_rate = -potentials[this->water_pos_];
+        gas_rate = -potentials[this->gas_pos_];
+        if (oil_is_limited && this->controls_.hasControl(Well::ProducerCMode::ORAT) && oil_rate < this->controls_.oil_rate) {
+            limiting_control = Well::ProducerCMode::ORAT;
+            break;
+        }
+        if (oil_is_limited && this->controls_.hasControl(Well::ProducerCMode::LRAT) && (oil_rate + water_rate) < this->controls_.liquid_rate) {
+            limiting_control = Well::ProducerCMode::LRAT;
+            break;
+        }
+        if (gas_is_limited && gas_rate < this->controls_.gas_rate) {
+            limiting_control = Well::ProducerCMode::GRAT;
+            break;
+        }
+        if (water_is_limited && water_rate < this->controls_.water_rate) {
+            limiting_control = Well::ProducerCMode::WRAT;
             break;
         }
         alq = temp_alq;
     }
     std::tie(oil_rate, oil_is_limited) = getOilRateWithLimit_(potentials);
     std::tie(gas_rate, gas_is_limited) = getGasRateWithLimit_(potentials);
+    std::tie(water_rate, water_is_limited) = getWaterRateWithLimit_(potentials);
+
     if (this->debug_) {
         assert( alq <= orig_alq );
+        std::string type;
+        double target = 0.0;
+        double rate = 0.0;
+        if (limiting_control == Well::ProducerCMode::ORAT) {
+            rate = oil_rate;
+            target = this->controls_.oil_rate;
+            type = "ORAT";
+        } else if(limiting_control == Well::ProducerCMode::LRAT) {
+            rate = oil_rate + water_rate;
+            target = this->controls_.liquid_rate;
+            type = "LRAT";
+        } else if (limiting_control == Well::ProducerCMode::WRAT) {
+            rate = water_rate;
+            target = this->controls_.water_rate;
+            type = "WRAT";
+        } else if (limiting_control == Well::ProducerCMode::GRAT) {
+            rate = gas_rate;
+            target = this->controls_.gas_rate;
+            type = "GRAT";
+        }
         if (alq < orig_alq) {
             // NOTE: ALQ may drop below zero before we are able to meet the target
             const std::string msg = fmt::format(
-                "Reduced (oil_rate, alq) from ({}, {}) to ({}, {}) to meet target "
-                "at {}. ", orig_oil_rate, orig_alq, oil_rate, alq, target);
+                "Reduced (rate, alq) from ({}, {}) to ({}, {}) to meet {} target "
+                "at {}. ", orig_oil_rate, orig_alq, rate, alq, type, target);
             displayDebugMessage_(msg);
         }
         else if (alq == orig_alq) {
             // We might not be able to reduce ALQ, for example if ALQ starts out at zero.
             const std::string msg = fmt::format("Not able to reduce ALQ {} further. "
-                "Oil rate is {} and oil target is {}", orig_alq, oil_rate, target);
+                " {} is {} and target is {}", orig_alq, type, rate, target);
             displayDebugMessage_(msg);
         }
     }
-    return std::make_tuple(oil_rate, gas_rate, oil_is_limited, gas_is_limited, alq);
+    return std::make_tuple(oil_rate, gas_rate, water_rate,
+                           oil_is_limited, gas_is_limited, water_is_limited, alq);
 }
 
 // INPUT:
