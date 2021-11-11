@@ -35,6 +35,7 @@
 
 #if HAVE_OPENCL
 #include <opm/simulators/linalg/bda/openclSolverBackend.hpp>
+#include <opm/simulators/linalg/bda/openclWellContributions.hpp>
 #endif
 
 #if HAVE_FPGA
@@ -273,7 +274,7 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::initWellContributions([[
     if(accelerator_mode.compare("opencl") == 0){
 #if HAVE_OPENCL
         const auto openclBackend = static_cast<const Opm::Accelerator::openclSolverBackend<block_size>*>(backend.get());
-        wellContribs.setOpenCLEnv(openclBackend->context.get(), openclBackend->queue.get());
+        static_cast<WellContributionsOCL&>(wellContribs).setOpenCLEnv(openclBackend->context.get(), openclBackend->queue.get());
 #else
         OPM_THROW(std::logic_error, "Error openclSolver was chosen, but OpenCL was not found by CMake");
 #endif

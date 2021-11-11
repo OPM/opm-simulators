@@ -26,6 +26,7 @@
 #include <dune/common/timer.hh>
 
 #include <opm/simulators/linalg/bda/openclSolverBackend.hpp>
+#include <opm/simulators/linalg/bda/openclWellContributions.hpp>
 
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
 #include <opm/simulators/linalg/bda/Reorder.hpp>
@@ -262,7 +263,7 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
         // apply wellContributions
         t_well.start();
         if(wellContribs.getNumWells() > 0){
-            wellContribs.apply(d_pw, d_v, d_toOrder);
+            static_cast<WellContributionsOCL&>(wellContribs).apply(d_pw, d_v, d_toOrder);
         }
         t_well.stop();
 
@@ -293,7 +294,7 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
         // apply wellContributions
         t_well.start();
         if(wellContribs.getNumWells() > 0){
-            wellContribs.apply(d_s, d_t, d_toOrder);
+            static_cast<WellContributionsOCL&>(wellContribs).apply(d_s, d_t, d_toOrder);
         }
         t_well.stop();
 
@@ -520,10 +521,10 @@ void openclSolverBackend<block_size>::update_system(double *vals, double *b, Wel
     mat->nnzValues = vals;
     if (opencl_ilu_reorder != ILUReorder::NONE) {
         reorderBlockedVectorByPattern<block_size>(mat->Nb, b, fromOrder, rb);
-        wellContribs.setReordering(toOrder, true);
+        static_cast<WellContributionsOCL&>(wellContribs).setReordering(toOrder, true);
     } else {
         rb = b;
-        wellContribs.setReordering(nullptr, false);
+        static_cast<WellContributionsOCL&>(wellContribs).setReordering(nullptr, false);
     }
 
     if (verbosity > 2) {

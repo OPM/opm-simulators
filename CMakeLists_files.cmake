@@ -49,6 +49,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/linalg/FlexibleSolver6.cpp
   opm/simulators/linalg/PropertyTree.cpp
   opm/simulators/linalg/setupPropertyTree.cpp
+  opm/simulators/linalg/bda/WellContributions.cpp
   opm/simulators/utils/PartiallySupportedFlowKeywords.cpp
   opm/simulators/utils/readDeck.cpp
   opm/simulators/utils/UnsupportedFlowKeywords.cpp
@@ -93,8 +94,7 @@ list (APPEND MAIN_SOURCE_FILES
 
 if(CUDA_FOUND)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/cusparseSolverBackend.cu)
-  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/WellContributions.cpp)
-  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/WellContributions.cu)
+  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/cuWellContributions.cu)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/MultisegmentWellContribution.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/BdaBridge.cpp)
 endif()
@@ -106,6 +106,7 @@ if(OPENCL_FOUND)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/openclKernels.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/openclSolverBackend.cpp)
+  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/openclWellContributions.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/BdaBridge.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/WellContributions.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/MultisegmentWellContribution.cpp)
@@ -265,6 +266,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/bda/opencl.hpp
   opm/simulators/linalg/bda/openclKernels.hpp
   opm/simulators/linalg/bda/openclSolverBackend.hpp
+  opm/simulators/linalg/bda/openclWellContributions.hpp
   opm/simulators/linalg/bda/MultisegmentWellContribution.hpp
   opm/simulators/linalg/bda/WellContributions.hpp
   opm/simulators/linalg/amgcpr.hh

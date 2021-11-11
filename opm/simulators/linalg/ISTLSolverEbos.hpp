@@ -262,18 +262,18 @@ namespace Opm
             bool use_fpga = bdaBridge->getUseFpga();
             if (use_gpu || use_fpga) {
                 const std::string accelerator_mode = EWOMS_GET_PARAM(TypeTag, std::string, AcceleratorMode);
-                WellContributions wellContribs(accelerator_mode, useWellConn_);
-                bdaBridge->initWellContributions(wellContribs);
+                auto wellContribs = WellContributions::create(accelerator_mode, useWellConn_);
+                bdaBridge->initWellContributions(*wellContribs);
 
                 // the WellContributions can only be applied separately with CUDA or OpenCL, not with an FPGA or amgcl
 #if HAVE_CUDA || HAVE_OPENCL
                 if (!useWellConn_) {
-                    simulator_.problem().wellModel().getWellContributions(wellContribs);
+                    simulator_.problem().wellModel().getWellContributions(*wellContribs);
                 }
 #endif
 
                 // Const_cast needed since the CUDA stuff overwrites values for better matrix condition..
-                bdaBridge->solve_system(const_cast<Matrix*>(&getMatrix()), *rhs_, wellContribs, result);
+                bdaBridge->solve_system(const_cast<Matrix*>(&getMatrix()), *rhs_, *wellContribs, result);
                 if (result.converged) {
                     // get result vector x from non-Dune backend, iff solve was successful
                     bdaBridge->get_result(x);
