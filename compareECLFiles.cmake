@@ -355,7 +355,7 @@ add_test_compareECLFiles(CASENAME numerical_aquifer_3d_2aqu
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR aquifer-num
-                         TEST_ARGS --relaxed-max-pv-fraction=0 --tolerance-cnv=0.00003 --time-step-control=pid --linsolver=cpr)
+                         TEST_ARGS --tolerance-cnv=0.00003 --time-step-control=pid --linsolver=cpr)
 
 add_test_compareECLFiles(CASENAME numerical_aquifer_3d_1aqu
                          FILENAME 3D_1AQU_3CELLS
@@ -363,7 +363,7 @@ add_test_compareECLFiles(CASENAME numerical_aquifer_3d_1aqu
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR aquifer-num
-                         TEST_ARGS --relaxed-max-pv-fraction=0 --tolerance-cnv=0.00003 --time-step-control=pid --linsolver=cpr)
+                         TEST_ARGS --tolerance-cnv=0.00003 --time-step-control=pid --linsolver=cpr)
 
 add_test_compareECLFiles(CASENAME spe3
                          FILENAME SPE3CASE1
@@ -1155,7 +1155,7 @@ if(MPI_FOUND)
                                                  ABS_TOL 0.12
                                                  REL_TOL 5.0e-2
                                                  DIR aquifer-num
-                                                 TEST_ARGS --enable-tuning=true --relaxed-max-pv-fraction=0 --tolerance-cnv=0.00003 --time-step-control=pid --linsolver=cpr)
+                                                 TEST_ARGS --enable-tuning=true --tolerance-cnv=0.00003 --time-step-control=pid --linsolver=cpr)
 
   add_test_compare_parallel_restarted_simulation(CASENAME numerical_aquifer_3d_1aqu
                                                  FILENAME 3D_1AQU_3CELLS
@@ -1163,7 +1163,7 @@ if(MPI_FOUND)
                                                  ABS_TOL 0.12
                                                  REL_TOL 5.0e-2
                                                  DIR aquifer-num
-                                                 TEST_ARGS --enable-tuning=true --relaxed-max-pv-fraction=0 --tolerance-cnv=0.00003 --time-step-control=pid --linsolver=cpr)
+                                                 TEST_ARGS --enable-tuning=true --tolerance-cnv=0.00003 --time-step-control=pid --linsolver=cpr)
 
   opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-parallel-regressionTest.sh "")
 
@@ -1299,7 +1299,7 @@ endif()
                                        ABS_TOL 0.12
                                        REL_TOL ${coarse_rel_tol_parallel}
                                        DIR aquifer-num
-                                       TEST_ARGS --relaxed-max-pv-fraction=0 --tolerance-cnv=0.00003 --time-step-control=pid --linsolver=cpr)
+                                       TEST_ARGS --tolerance-cnv=0.00003 --time-step-control=pid --linsolver=cpr)
 
   add_test_compare_parallel_simulation(CASENAME numerical_aquifer_3d_1aqu
                                        FILENAME 3D_1AQU_3CELLS
@@ -1307,7 +1307,7 @@ endif()
                                        ABS_TOL ${abs_tol_parallel}
                                        REL_TOL ${coarse_rel_tol_parallel}
                                        DIR aquifer-num
-                                       TEST_ARGS --relaxed-max-pv-fraction=0 --tolerance-cnv=0.00003 --time-step-control=pid --linsolver=cpr)
+                                       TEST_ARGS --tolerance-cnv=0.00003 --time-step-control=pid --linsolver=cpr)
 
   add_test_compare_parallel_simulation(CASENAME actionx_m1
                                        FILENAME ACTIONX_M1
