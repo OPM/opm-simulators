@@ -246,7 +246,7 @@ done
 cd $OPM_TESTS_ROOT
 if [ -n "$BRANCH_NAME" ]
 then
-  git checkout -b $BRANCH_NAME origin/master
+  git checkout -b $BRANCH_NAME $BRANCH_BASE
 fi
 
 # Add potential new files
