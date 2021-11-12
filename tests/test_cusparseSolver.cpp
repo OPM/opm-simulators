@@ -85,14 +85,18 @@ testCusparseSolver(const boost::property_tree::ptree& prm, const std::string& ma
     std::unique_ptr<Opm::BdaBridge<Matrix, Vector, bz> > bridge;
     try {
         bridge = std::make_unique<Opm::BdaBridge<Matrix, Vector, bz> >(gpu_mode, fpga_bitstream, linear_solver_verbosity, maxit, tolerance, platformID, deviceID, opencl_ilu_reorder);
+
+        bridge->solve_system(&matrix, rhs, *wellContribs, result);
+        bridge->get_result(x);
+
+        return x;
     } catch (const std::logic_error& error) {
         BOOST_WARN_MESSAGE(true, error.what());
-        throw DeviceInitException(error.what());
+        if (strstr(error.what(), "Could not get device") != nullptr)
+            throw DeviceInitException(error.what());
+        else
+            throw error;
     }
-    bridge->solve_system(&matrix, rhs, *wellContribs, result);
-    bridge->get_result(x);
-
-    return x;
 }
 
 namespace pt = boost::property_tree;
