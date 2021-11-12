@@ -28,6 +28,7 @@
 #include <opm/simulators/linalg/bda/BlockedMatrix.hpp>
 #include <opm/simulators/linalg/bda/Matrix.hpp>
 #include <opm/simulators/linalg/bda/FPGAUtils.hpp>
+#include <opm/simulators/linalg/bda/Matrix.hpp>
 
 namespace Opm
 {

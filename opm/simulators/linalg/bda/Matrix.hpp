@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef FPGA_MATRIX_HEADER_INCLUDED
-#define FPGA_MATRIX_HEADER_INCLUDED
+#ifndef MATRIX_HEADER_INCLUDED
+#define MATRIX_HEADER_INCLUDED
 
 #include <vector>
 
@@ -126,4 +126,4 @@ void sortRow(int *colIndices, double *data, int left, int right);
 } // namespace Accelerator
 } // namespace Opm
 
-#endif // FPGA_MATRIX_HEADER_INCLUDED
+#endif // MATRIX_HEADER_INCLUDED
