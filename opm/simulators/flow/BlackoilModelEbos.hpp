@@ -590,14 +590,16 @@ namespace Opm {
         }
 
         template <class CollectiveCommunication>
-        double convergenceReduction(const CollectiveCommunication& comm,
-                                    const double pvSumLocal,
-                                    std::vector< Scalar >& R_sum,
-                                    std::vector< Scalar >& maxCoeff,
-                                    std::vector< Scalar >& B_avg)
+        std::tuple<double,double> convergenceReduction(const CollectiveCommunication& comm,
+                                                       const double pvSumLocal,
+                                                       const double numAquiferPvSumLocal,
+                                                       std::vector< Scalar >& R_sum,
+                                                       std::vector< Scalar >& maxCoeff,
+                                                       std::vector< Scalar >& B_avg)
         {
             // Compute total pore volume (use only owned entries)
             double pvSum = pvSumLocal;
+            double numAquiferPvSum = numAquiferPvSumLocal;
 
             if( comm.size() > 1 )
             {
@@ -605,7 +607,7 @@ namespace Opm {
                 std::vector< Scalar > sumBuffer;
                 std::vector< Scalar > maxBuffer;
                 const int numComp = B_avg.size();
-                sumBuffer.reserve( 2*numComp + 1 ); // +1 for pvSum
+                sumBuffer.reserve( 2*numComp + 2 ); // +2 for (numAquifer)pvSum
                 maxBuffer.reserve( numComp );
                 for( int compIdx = 0; compIdx < numComp; ++compIdx )
                 {
@@ -616,6 +618,7 @@ namespace Opm {
 
                 // Compute total pore volume
                 sumBuffer.push_back( pvSum );
+                sumBuffer.push_back( numAquiferPvSum );
 
                 // compute global sum
                 comm.sum( sumBuffer.data(), sumBuffer.size() );
@@ -638,19 +641,23 @@ namespace Opm {
                 }
 
                 // restore global pore volume
-                pvSum = sumBuffer.back();
+                pvSum = sumBuffer[sumBuffer.size()-2];
+                numAquiferPvSum = sumBuffer.back();
             }
 
             // return global pore volume
-            return pvSum;
+            return {pvSum, numAquiferPvSum};
         }
 
-        // Get reservoir quantities on this process needed for convergence calculations.
-        double localConvergenceData(std::vector<Scalar>& R_sum,
+        /// \brief Get reservoir quantities on this process needed for convergence calculations.
+        /// \return A pair of the local pore volume of interior cells and the pore volumes
+        ///         of the cells associated with a numerical aquifer.
+        std::tuple<double,double> localConvergenceData(std::vector<Scalar>& R_sum,
                                     std::vector<Scalar>& maxCoeff,
                                     std::vector<Scalar>& B_avg)
         {
             double pvSumLocal = 0.0;
+            double numAquiferPvSumLocal = 0.0;
             const auto& ebosModel = ebosSimulator_.model();
             const auto& ebosProblem = ebosSimulator_.problem();
 
@@ -674,6 +681,11 @@ namespace Opm {
 
                 const double pvValue = ebosProblem.referencePorosity(cell_idx, /*timeIdx=*/0) * ebosModel.dofTotalVolume( cell_idx );
                 pvSumLocal += pvValue;
+
+                if (isNumericalAquiferCell(gridView.grid(), elem))
+                {
+                    numAquiferPvSumLocal += pvValue;
+                }
 
                 for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx)
                 {
@@ -773,9 +785,11 @@ namespace Opm {
                 B_avg[ i ] /= Scalar( global_nc_ );
             }
 
-            return pvSumLocal;
+            return {pvSumLocal, numAquiferPvSumLocal};
         }
 
+        /// \brief Compute the total pore volume of cells violating CNV that are not part
+        ///        of a numerical aquifer.
         double computeCnvErrorPv(const std::vector<Scalar>& B_avg, double dt)
         {
             double errorPV{};
@@ -789,6 +803,11 @@ namespace Opm {
 
             for (const auto& elem: elements(gridView, Dune::Partitions::interiorBorder))
             {
+                // Skip cells of numerical Aquifer
+                if (isNumericalAquiferCell(gridView.grid(), elem))
+                {
+                    continue;
+                }
                 elemCtx.updatePrimaryStencil(elem);
                 elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
                 const unsigned cell_idx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
@@ -824,14 +843,16 @@ namespace Opm {
             const int numComp = numEq;
             Vector R_sum(numComp, 0.0 );
             Vector maxCoeff(numComp, std::numeric_limits< Scalar >::lowest() );
-            const double pvSumLocal = localConvergenceData(R_sum, maxCoeff, B_avg);
+            const auto [ pvSumLocal, numAquiferPvSumLocal] = localConvergenceData(R_sum, maxCoeff, B_avg);
 
             // compute global sum and max of quantities
-            const double pvSum = convergenceReduction(grid_.comm(), pvSumLocal,
-                                                      R_sum, maxCoeff, B_avg);
+            const auto [ pvSum, numAquiferPvSum ] =
+                convergenceReduction(grid_.comm(), pvSumLocal,
+                                     numAquiferPvSumLocal,
+                                     R_sum, maxCoeff, B_avg);
 
             auto cnvErrorPvFraction = computeCnvErrorPv(B_avg, dt);
-            cnvErrorPvFraction /= pvSum;
+            cnvErrorPvFraction /= (pvSum - numAquiferPvSum);
 
             const double tol_mb  = param_.tolerance_mb_;
             // Default value of relaxed_max_pv_fraction_ is 1 and
@@ -1074,6 +1095,25 @@ namespace Opm {
         }
 
     private:
+        template<class T>
+        bool isNumericalAquiferCell(const Dune::CpGrid& grid, const T& elem)
+        {
+            const auto& aquiferCells = grid.sortedNumAquiferCells();
+            if (aquiferCells.empty())
+            {
+                return false;
+            }
+            auto candidate = std::lower_bound(aquiferCells.begin(), aquiferCells.end(),
+                                              elem.index());
+            return candidate != aquiferCells.end() && *candidate == elem.index();
+        }
+
+        template<class G, class T>
+        typename std::enable_if<!std::is_same<G,Dune::CpGrid>::value, bool>::type
+        isNumericalAquiferCell(const G& grid, const T& elem)
+        {
+            return false;
+        }
 
         double dpMaxRel() const { return param_.dp_max_rel_; }
         double dsMax() const { return param_.ds_max_; }
