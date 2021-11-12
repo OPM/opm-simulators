@@ -106,7 +106,7 @@ void solve_transposed_3x3(const double *A, const double *b, double *x) {
 
 
 template <unsigned int block_size>
-void CPR<block_size>::create_preconditioner(BlockedMatrix<block_size> *mat_) {
+void CPR<block_size>::create_preconditioner(BlockedMatrix *mat_) {
     this->mat = mat_;
 
     try{
@@ -498,11 +498,8 @@ void CPR<block_size>::apply(const cl::Buffer& y, cl::Buffer& x) {
 
 
 
-#define INSTANTIATE_BDA_FUNCTIONS(n)                                     \
-template CPR<n>::CPR(int, ILUReorder);                                   \
-template void CPR<n>::init(int, int, std::shared_ptr<cl::Context>&, std::shared_ptr<cl::CommandQueue>&); \
-template void CPR<n>::apply(const cl::Buffer&, cl::Buffer&);             \
-template void CPR<n>::create_preconditioner(BlockedMatrix<n> *mat);
+#define INSTANTIATE_BDA_FUNCTIONS(n)  \
+template class CPR<n>;
 
 INSTANTIATE_BDA_FUNCTIONS(1);
 INSTANTIATE_BDA_FUNCTIONS(2);

@@ -177,10 +177,10 @@ int colorBlockedNodes(int rows, const int *CSRRowPointers, const int *CSRColIndi
 /* Reorder a matrix by a specified input order.
  * Both a to order array, which contains for every node from the old matrix where it will move in the new matrix,
  * and the from order, which contains for every node in the new matrix where it came from in the old matrix.*/
+void reorderBlockedMatrixByPattern(BlockedMatrix *mat, int *toOrder, int *fromOrder, BlockedMatrix *rmat) {
+    assert(mat->block_size == rmat->block_size);
 
-template <unsigned int block_size>
-void reorderBlockedMatrixByPattern(BlockedMatrix<block_size> *mat, int *toOrder, int *fromOrder, BlockedMatrix<block_size> *rmat) {
-    const unsigned int bs = block_size;
+    const unsigned int bs = mat->block_size;
     int rIndex = 0;
     int i, k;
     unsigned int j;
@@ -204,7 +204,7 @@ void reorderBlockedMatrixByPattern(BlockedMatrix<block_size> *mat, int *toOrder,
     }
     // re-sort the column indices of every row.
     for (i = 0; i < mat->Nb; i++) {
-        sortBlockedRow<bs>(rmat->colIndices, rmat->nnzValues, rmat->rowPointers[i], rmat->rowPointers[i + 1] - 1);
+        sortBlockedRow(rmat->colIndices, rmat->nnzValues, rmat->rowPointers[i], rmat->rowPointers[i + 1] - 1, bs);
     }
 }
 
@@ -370,7 +370,6 @@ void csrPatternToCsc(int *CSRColIndices, int *CSRRowPointers, int *CSCRowIndices
 
 #define INSTANTIATE_BDA_FUNCTIONS(n)                                                                                                            \
 template int colorBlockedNodes<n>(int, const int *, const int *, const int *, const int *, std::vector<int>&, int, int);                        \
-template void reorderBlockedMatrixByPattern<n>(BlockedMatrix<n> *, int *, int *, BlockedMatrix<n> *);                                           \
 template void reorderBlockedVectorByPattern<n>(int, double*, int*, double*);                                                                    \
 template void findGraphColoring<n>(const int *, const int *, const int *, const int *, int, int, int, int *, int *, int *, std::vector<int>&);  \
 

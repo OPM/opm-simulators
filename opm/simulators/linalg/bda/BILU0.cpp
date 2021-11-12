@@ -54,7 +54,7 @@ BILU0<block_size>::~BILU0()
 }
 
     template <unsigned int block_size>
-    bool BILU0<block_size>::init(BlockedMatrix<block_size> *mat)
+    bool BILU0<block_size>::init(BlockedMatrix *mat)
     {
         const unsigned int bs = block_size;
 
@@ -67,14 +67,14 @@ BILU0<block_size>::~BILU0()
         int *CSCColPointers = nullptr;
 
         if (opencl_ilu_reorder == ILUReorder::NONE) {
-            LUmat = std::make_unique<BlockedMatrix<block_size> >(*mat);
+            LUmat = std::make_unique<BlockedMatrix>(*mat);
         } else {
             toOrder.resize(Nb);
             fromOrder.resize(Nb);
             CSCRowIndices = new int[nnzbs];
             CSCColPointers = new int[Nb + 1];
-            rmat = std::make_shared<BlockedMatrix<block_size> >(mat->Nb, mat->nnzbs);
-            LUmat = std::make_unique<BlockedMatrix<block_size> >(*rmat);
+            rmat = std::make_shared<BlockedMatrix>(mat->Nb, mat->nnzbs, block_size);
+            LUmat = std::make_unique<BlockedMatrix>(*rmat);
 
             Timer t_convert;
             csrPatternToCsc(mat->colIndices, mat->rowPointers, CSCRowIndices, CSCColPointers, mat->Nb);
@@ -122,8 +122,8 @@ BILU0<block_size>::~BILU0()
         invDiagVals = new double[mat->Nb * bs * bs];
 
 #if CHOW_PATEL
-        Lmat = std::make_unique<BlockedMatrix<block_size> >(mat->Nb, (mat->nnzbs - mat->Nb) / 2);
-        Umat = std::make_unique<BlockedMatrix<block_size> >(mat->Nb, (mat->nnzbs - mat->Nb) / 2);
+        Lmat = std::make_unique<BlockedMatrix>(mat->Nb, (mat->nnzbs - mat->Nb) / 2);
+        Umat = std::make_unique<BlockedMatrix>(mat->Nb, (mat->nnzbs - mat->Nb) / 2);
 #endif
 
         LUmat->nnzValues = new double[mat->nnzbs * bs * bs];
@@ -166,7 +166,7 @@ BILU0<block_size>::~BILU0()
 
 
     template <unsigned int block_size>
-    bool BILU0<block_size>::create_preconditioner(BlockedMatrix<block_size> *mat)
+    bool BILU0<block_size>::create_preconditioner(BlockedMatrix *mat)
     {
         const unsigned int bs = block_size;
         auto *m = mat;
@@ -174,7 +174,7 @@ BILU0<block_size>::~BILU0()
         if (opencl_ilu_reorder != ILUReorder::NONE) {
             m = rmat.get();
             Timer t_reorder;
-            reorderBlockedMatrixByPattern<block_size>(mat, toOrder.data(), fromOrder.data(), rmat.get());
+            reorderBlockedMatrixByPattern(mat, toOrder.data(), fromOrder.data(), rmat.get());
 
             if (verbosity >= 3){
                 std::ostringstream out;
@@ -308,8 +308,8 @@ void BILU0<block_size>::setOpenCLQueue(cl::CommandQueue *queue_) {
 #define INSTANTIATE_BDA_FUNCTIONS(n)                              \
 template BILU0<n>::BILU0(ILUReorder, int);                        \
 template BILU0<n>::~BILU0();                                      \
-template bool BILU0<n>::init(BlockedMatrix<n>*);                  \
-template bool BILU0<n>::create_preconditioner(BlockedMatrix<n>*); \
+template bool BILU0<n>::init(BlockedMatrix*);                     \
+template bool BILU0<n>::create_preconditioner(BlockedMatrix*);    \
 template void BILU0<n>::apply(const cl::Buffer&, cl::Buffer&);    \
 template void BILU0<n>::setOpenCLContext(cl::Context*);           \
 template void BILU0<n>::setOpenCLQueue(cl::CommandQueue*);

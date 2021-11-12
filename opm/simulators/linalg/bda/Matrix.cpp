@@ -53,7 +53,7 @@ void OpenclMatrix<block_size>::upload(cl::CommandQueue *queue, Matrix *matrix) {
 }
 
 template <unsigned int block_size>
-void OpenclMatrix<block_size>::upload(cl::CommandQueue *queue, BlockedMatrix<block_size> *matrix) {
+void OpenclMatrix<block_size>::upload(cl::CommandQueue *queue, BlockedMatrix *matrix) {
     upload(queue, matrix->nnzValues, matrix->colIndices, matrix->rowPointers);
 }
 

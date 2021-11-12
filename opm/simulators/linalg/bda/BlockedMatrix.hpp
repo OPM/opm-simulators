@@ -39,7 +39,6 @@ namespace Accelerator
 
 /// This struct resembles a blocked csr matrix, like Dune::BCRSMatrix.
 /// The data is stored in contiguous memory, such that they can be copied to a device in one transfer.
-template<unsigned int block_size>
 class BlockedMatrix
 {
 
@@ -48,12 +47,14 @@ public:
     /// Allocate BlockedMatrix and data arrays with given sizes
     /// \param[in] Nb               number of blockrows
     /// \param[in] nnzbs            number of nonzero blocks
-    BlockedMatrix(int Nb_, int nnzbs_)
-    : nnzValues(new double[nnzbs_*block_size*block_size]),
-      colIndices(new int[nnzbs_*block_size*block_size]),
+    /// \param[in] block_size       the number of rows and columns for each block
+    BlockedMatrix(int Nb_, int nnzbs_, unsigned int block_size_)
+    : nnzValues(new double[nnzbs_*block_size_*block_size_]),
+      colIndices(new int[nnzbs_*block_size_*block_size_]),
       rowPointers(new int[Nb_+1]),
       Nb(Nb_),
       nnzbs(nnzbs_),
+      block_size(block_size_),
       deleteNnzs(true),
       deleteSparsity(true)
     {}
@@ -61,11 +62,12 @@ public:
     /// Allocate BlockedMatrix, but copy sparsity pattern instead of allocating new memory
     /// \param[in] M              matrix to be copied
     BlockedMatrix(const BlockedMatrix& M)
-    : nnzValues(new double[M.nnzbs*block_size*block_size]),
+    : nnzValues(new double[M.nnzbs*M.block_size*M.block_size]),
       colIndices(M.colIndices),
       rowPointers(M.rowPointers),
       Nb(M.Nb),
       nnzbs(M.nnzbs),
+      block_size(M.block_size),
       deleteNnzs(true),
       deleteSparsity(false)
     {}
@@ -73,15 +75,17 @@ public:
     /// Allocate BlockedMatrix, but let data arrays point to existing arrays
     /// \param[in] Nb             number of blockrows
     /// \param[in] nnzbs          number of nonzero blocks
+    /// \param[in] block_size     the number of rows and columns for each block
     /// \param[in] nnzValues      array of nonzero values, contains nnzb*block_size*block_size scalars
     /// \param[in] colIndices     array of column indices, contains nnzb entries
     /// \param[in] rowPointers    array of row pointers, contains Nb+1 entries
-    BlockedMatrix(int Nb_, int nnzbs_, double *nnzValues_, int *colIndices_, int *rowPointers_)
+    BlockedMatrix(int Nb_, int nnzbs_, unsigned int block_size_, double *nnzValues_, int *colIndices_, int *rowPointers_)
     : nnzValues(nnzValues_),
       colIndices(colIndices_),
       rowPointers(rowPointers_),
       Nb(Nb_),
       nnzbs(nnzbs_),
+      block_size(block_size_),
       deleteNnzs(false),
       deleteSparsity(false)
     {}
@@ -123,6 +127,7 @@ public:
     int *rowPointers;
     int Nb;
     int nnzbs;
+    unsigned int block_size;
     bool deleteNnzs;
     bool deleteSparsity;
 };
@@ -133,8 +138,8 @@ public:
 /// \param[inout] data           
 /// \param[in] left              lower index of data of row
 /// \param[in] right             upper index of data of row
-template <unsigned int block_size>
-void sortBlockedRow(int *colIndices, double *data, int left, int right);
+/// \param[in] block_size        size of blocks in the row
+void sortBlockedRow(int *colIndices, double *data, int left, int right, unsigned block_size);
 
 /// Multiply and subtract blocks
 /// a = a - (b * c)

@@ -75,8 +75,8 @@ private:
     bool use_cpr;                                                 // allow to enable CPR
     int *toOrder = nullptr, *fromOrder = nullptr;                 // BILU0 reorders rows of the matrix via these mappings
     bool analysis_done = false;
-    std::unique_ptr<BlockedMatrix<block_size> > mat = nullptr;    // original matrix 
-    BlockedMatrix<block_size> *rmat = nullptr;                    // reordered matrix (or original if no reordering), used for spmv
+    std::unique_ptr<BlockedMatrix> mat = nullptr;                 // original matrix
+    BlockedMatrix *rmat = nullptr;                                // reordered matrix (or original if no reordering), used for spmv
     ILUReorder opencl_ilu_reorder;                                // reordering strategy
     std::vector<cl::Event> events;
     cl_int err;

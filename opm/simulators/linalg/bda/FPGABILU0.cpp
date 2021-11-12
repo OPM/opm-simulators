@@ -59,7 +59,7 @@ FPGABILU0<block_size>::~FPGABILU0()
 
 
 template <unsigned int block_size>
-bool FPGABILU0<block_size>::init(BlockedMatrix<block_size> *mat)
+bool FPGABILU0<block_size>::init(BlockedMatrix *mat)
 {
     const unsigned int bs = block_size;
 
@@ -91,8 +91,8 @@ bool FPGABILU0<block_size>::init(BlockedMatrix<block_size> *mat)
     }
 
     Timer t_analysis;
-    rMat = std::make_shared<BlockedMatrix<block_size> >(mat->Nb, mat->nnzbs);
-    LUMat = std::make_unique<BlockedMatrix<block_size> >(*rMat);
+    rMat = std::make_shared<BlockedMatrix>(mat->Nb, mat->nnzbs, block_size);
+    LUMat = std::make_unique<BlockedMatrix>(*rMat);
     std::ostringstream out;
     if (level_scheduling) {
         out << "FPGABILU0 reordering strategy: " << "level_scheduling\n";
@@ -117,7 +117,7 @@ bool FPGABILU0<block_size>::init(BlockedMatrix<block_size> *mat)
     int NROffsetSize = 0, LNROffsetSize = 0, UNROffsetSize = 0;
     int blockDiagSize = 0;
     // This reordering is needed here only to te result can be used to calculate worst-case scenario array sizes
-    reorderBlockedMatrixByPattern<bs>(mat, toOrder.data(), fromOrder.data(), rMat.get());
+    reorderBlockedMatrixByPattern(mat, toOrder.data(), fromOrder.data(), rMat.get());
     int doneRows = 0;
     for (int c = 0; c < numColors; c++) {
         for (int i = doneRows; i < doneRows + rowsPerColor[c]; i++) {
@@ -187,8 +187,8 @@ bool FPGABILU0<block_size>::init(BlockedMatrix<block_size> *mat)
 
     diagIndex.resize(mat->Nb, 0);
     invDiagVals = new double[mat->Nb * bs * bs];
-    LMat = std::make_unique<BlockedMatrix<block_size> >(mat->Nb, (mat->nnzbs - mat->Nb) / 2);
-    UMat = std::make_unique<BlockedMatrix<block_size> >(mat->Nb, (mat->nnzbs - mat->Nb) / 2);
+    LMat = std::make_unique<BlockedMatrix>(mat->Nb, (mat->nnzbs - mat->Nb) / 2, block_size);
+    UMat = std::make_unique<BlockedMatrix>(mat->Nb, (mat->nnzbs - mat->Nb) / 2, block_size);
     resultPointers[0] = (void *) colorSizes.data();
     resultPointers[1] = (void *) PIndicesAddr.data();
     resultPointers[2] = (void *) nnzValues.data();
@@ -232,11 +232,11 @@ bool FPGABILU0<block_size>::init(BlockedMatrix<block_size> *mat)
 
 
 template <unsigned int block_size>
-bool FPGABILU0<block_size>::create_preconditioner(BlockedMatrix<block_size> *mat)
+bool FPGABILU0<block_size>::create_preconditioner(BlockedMatrix *mat)
 {
     const unsigned int bs = block_size;
     Timer t_reorder;
-    reorderBlockedMatrixByPattern<bs>(mat, toOrder.data(), fromOrder.data(), rMat.get());
+    reorderBlockedMatrixByPattern(mat, toOrder.data(), fromOrder.data(), rMat.get());
 
     if (verbosity >= 3) {
         std::ostringstream out;
@@ -402,8 +402,8 @@ bool FPGABILU0<block_size>::create_preconditioner(BlockedMatrix<block_size> *mat
 #define INSTANTIATE_BDA_FUNCTIONS(n)                                    \
 template FPGABILU0<n>::FPGABILU0(ILUReorder, int, int, int, int, int);  \
 template FPGABILU0<n>::~FPGABILU0();                                    \
-template bool FPGABILU0<n>::init(BlockedMatrix<n> *);                   \
-template bool FPGABILU0<n>::create_preconditioner(BlockedMatrix<n> *);  \
+template bool FPGABILU0<n>::init(BlockedMatrix*);                       \
+template bool FPGABILU0<n>::create_preconditioner(BlockedMatrix *);
 
 INSTANTIATE_BDA_FUNCTIONS(1);
 INSTANTIATE_BDA_FUNCTIONS(2);

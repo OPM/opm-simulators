@@ -46,10 +46,10 @@ namespace Accelerator
         int Nb;      // number of blockrows of the matrix
         int nnz;     // number of nonzeroes of the matrix (scalar)
         int nnzbs;   // number of blocks of the matrix
-        std::unique_ptr<BlockedMatrix<block_size> > LUmat = nullptr;
-        std::shared_ptr<BlockedMatrix<block_size> > rmat = nullptr; // only used with PAR_SIM
+        std::unique_ptr<BlockedMatrix> LUmat = nullptr;
+        std::shared_ptr<BlockedMatrix> rmat = nullptr; // only used with PAR_SIM
 #if CHOW_PATEL
-        std::unique_ptr<BlockedMatrix<block_size> > Lmat = nullptr, Umat = nullptr;
+        std::unique_ptr<BlockedMatrix> Lmat = nullptr, Umat = nullptr;
 #endif
         double *invDiagVals = nullptr;
         std::vector<int> diagIndex;
@@ -91,10 +91,10 @@ namespace Accelerator
         ~BILU0();
 
         // analysis
-        bool init(BlockedMatrix<block_size> *mat);
+        bool init(BlockedMatrix *mat);
 
         // ilu_decomposition
-        bool create_preconditioner(BlockedMatrix<block_size> *mat);
+        bool create_preconditioner(BlockedMatrix *mat);
 
         // apply preconditioner, x = prec(y)
         void apply(const cl::Buffer& y, cl::Buffer& x);
@@ -112,7 +112,7 @@ namespace Accelerator
             return fromOrder.data();
         }
 
-        BlockedMatrix<block_size>* getRMat()
+        BlockedMatrix* getRMat()
         {
             return rmat.get();
         }

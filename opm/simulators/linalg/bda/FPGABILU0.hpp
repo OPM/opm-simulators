@@ -45,8 +45,8 @@ private:
     int Nb;      // number of blockrows of the matrix
     int nnz;     // number of nonzeroes of the matrix (scalar)
     int nnzbs;   // number of blocks of the matrix
-    std::unique_ptr<BlockedMatrix<block_size> > LMat = nullptr, UMat = nullptr, LUMat = nullptr;
-    std::shared_ptr<BlockedMatrix<block_size> > rMat = nullptr; // reordered mat
+    std::unique_ptr<BlockedMatrix> LMat = nullptr, UMat = nullptr, LUMat = nullptr;
+    std::shared_ptr<BlockedMatrix> rMat = nullptr; // reordered mat
     double *invDiagVals = nullptr;
     std::vector<int> diagIndex;
     std::vector<int> toOrder, fromOrder;
@@ -82,10 +82,10 @@ public:
     ~FPGABILU0();
 
     // analysis (optional)
-    bool init(BlockedMatrix<block_size> *mat);
+    bool init(BlockedMatrix *mat);
 
     // ilu_decomposition
-    bool create_preconditioner(BlockedMatrix<block_size> *mat);
+    bool create_preconditioner(BlockedMatrix *mat);
 
     int* getToOrder()
     {
@@ -97,7 +97,7 @@ public:
         return fromOrder.data();
     }
 
-    BlockedMatrix<block_size>* getRMat()
+    BlockedMatrix* getRMat()
     {
         return rMat.get();
     }

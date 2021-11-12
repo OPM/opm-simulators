@@ -482,7 +482,7 @@ __kernel void chow_patel_ilu_sweep(
 template <unsigned int block_size>
 void ChowPatelIlu<block_size>::decomposition(
     cl::CommandQueue *queue, [[maybe_unused]] cl::Context *context,
-    BlockedMatrix<block_size> *LUmat, BlockedMatrix<block_size> *Lmat, BlockedMatrix<block_size> *Umat,
+    BlockedMatrix *LUmat, BlockedMatrix *Lmat, BlockedMatrix *Umat,
     double *invDiagVals, std::vector<int>& diagIndex,
     cl::Buffer& d_diagIndex, cl::Buffer& d_invDiagVals,
     cl::Buffer& d_Lvals, cl::Buffer& d_Lcols, cl::Buffer& d_Lrows,

@@ -407,7 +407,7 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
 #if COPY_ROW_BY_ROW
         vals_contiguous = new double[N];
 #endif
-        mat.reset(new BlockedMatrix<block_size>(Nb, nnzb, vals, cols, rows));
+        mat.reset(new BlockedMatrix(Nb, nnzb, block_size, vals, cols, rows));
 
         d_x = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * N);
         d_b = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * N);

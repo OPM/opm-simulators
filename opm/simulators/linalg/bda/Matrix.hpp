@@ -50,7 +50,7 @@ public:
 
     void upload(cl::CommandQueue *queue, double *vals, int *cols, int *rows);
     void upload(cl::CommandQueue *queue, Matrix *matrix);
-    void upload(cl::CommandQueue *queue, BlockedMatrix<block_size> *matrix);
+    void upload(cl::CommandQueue *queue, BlockedMatrix *matrix);
 
     cl::Buffer nnzValues;
     cl::Buffer colIndices;
