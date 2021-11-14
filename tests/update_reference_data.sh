@@ -30,7 +30,8 @@ copyToReferenceDir () {
       continue
     fi
     diff -q "$SRC_DIR/$STEM.$filetype" "$DST_DIR/$STEM.$filetype"
-    if test $? -ne 0 && test -n "$CONVERT_ECL"
+    res=$?
+    if test $res -ne 0 && test -n "$CONVERT_ECL"
     then
       cp $SRC_DIR/$STEM.$filetype $TMPDIR/new
       $CONVERT_ECL $TMPDIR/new/$STEM.$filetype
@@ -38,8 +39,11 @@ copyToReferenceDir () {
       $CONVERT_ECL $TMPDIR/orig/$STEM.$filetype
       diff -u $TMPDIR/orig/$STEM.F$filetype $TMPDIR/new/$STEM.F$filetype >> $WORKSPACE/data_diff
     fi
-    cp "$SRC_DIR/$STEM.$filetype" $DST_DIR
-    DIFF=0
+    if test $res -ne 0
+    then
+      cp "$SRC_DIR/$STEM.$filetype" $DST_DIR
+      DIFF=0
+    fi
   done
 
   return $DIFF
@@ -242,7 +246,7 @@ done
 cd $OPM_TESTS_ROOT
 if [ -n "$BRANCH_NAME" ]
 then
-  git checkout -b $BRANCH_NAME origin/master
+  git checkout -b $BRANCH_NAME $BRANCH_BASE
 fi
 
 # Add potential new files
