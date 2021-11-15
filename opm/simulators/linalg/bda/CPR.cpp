@@ -225,21 +225,21 @@ void CPR<block_size>::create_preconditioner(BlockedMatrix *mat_) {
             d_Rmatrices.reserve(num_levels - 1);
             d_invDiags.reserve(num_levels-1);
             for (Matrix& m : Amatrices) {
-                d_Amatrices.emplace_back(context.get(), m.N, m.M, m.nnzs);
+                d_Amatrices.emplace_back(context.get(), m.N, m.M, m.nnzs, 1);
             }
             for (Matrix& m : Pmatrices) {
-                d_Pmatrices.emplace_back(context.get(), m.N, m.M, m.nnzs);
+                d_Pmatrices.emplace_back(context.get(), m.N, m.M, m.nnzs, 1);
                 d_invDiags.emplace_back(*context, CL_MEM_READ_WRITE, sizeof(double) * m.N); // create a cl::Buffer
                 d_t.emplace_back(*context, CL_MEM_READ_WRITE, sizeof(double) * m.N);
             }
             for (Matrix& m : Rmatrices) {
-                d_Rmatrices.emplace_back(context.get(), m.N, m.M, m.nnzs);
+                d_Rmatrices.emplace_back(context.get(), m.N, m.M, m.nnzs, 1);
                 d_f.emplace_back(*context, CL_MEM_READ_WRITE, sizeof(double) * m.N);
                 d_u.emplace_back(*context, CL_MEM_READ_WRITE, sizeof(double) * m.N);
             }
             d_weights = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE, sizeof(double) * N);
             d_rs = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE, sizeof(double) * N);
-            d_mat = std::make_unique<OpenclMatrix<block_size> >(context.get(), Nb, Nb, nnzb);
+            d_mat = std::make_unique<OpenclMatrix>(context.get(), Nb, Nb, nnzb, block_size);
             d_coarse_y = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE, sizeof(double) * Nb);
             d_coarse_x = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE, sizeof(double) * Nb);
         });
@@ -419,9 +419,9 @@ void solve_coarse_umfpack(const Matrix *A, std::vector<double> &y, std::vector<d
 
 template <unsigned int block_size>
 void CPR<block_size>::amg_cycle_gpu(const int level, cl::Buffer &y, cl::Buffer &x) {
-    OpenclMatrix<1> *A = &d_Amatrices[level];
-    OpenclMatrix<1> *P = &d_Pmatrices[level];
-    OpenclMatrix<1> *R = &d_Rmatrices[level];
+    OpenclMatrix *A = &d_Amatrices[level];
+    OpenclMatrix *P = &d_Pmatrices[level];
+    OpenclMatrix *R = &d_Rmatrices[level];
     int Ncur = A->Nb;
 
     if (level == num_levels - 1) {

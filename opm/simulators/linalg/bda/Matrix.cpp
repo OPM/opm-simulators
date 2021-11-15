@@ -31,8 +31,7 @@ namespace Opm
 namespace Accelerator
 {
 
-template <unsigned int block_size>
-void OpenclMatrix<block_size>::upload(cl::CommandQueue *queue, double *vals, int *cols, int *rows) {
+void OpenclMatrix::upload(cl::CommandQueue *queue, double *vals, int *cols, int *rows) {
     std::vector<cl::Event> events(3);
 
     cl_int err = queue->enqueueWriteBuffer(nnzValues, CL_FALSE, 0, sizeof(double) * block_size * block_size * nnzbs, vals, nullptr, &events[0]);
@@ -47,13 +46,11 @@ void OpenclMatrix<block_size>::upload(cl::CommandQueue *queue, double *vals, int
     }
 }
 
-template <unsigned int block_size>
-void OpenclMatrix<block_size>::upload(cl::CommandQueue *queue, Matrix *matrix) {
+void OpenclMatrix::upload(cl::CommandQueue *queue, Matrix *matrix) {
     upload(queue, matrix->nnzValues.data(), matrix->colIndices.data(), matrix->rowPointers.data());
 }
 
-template <unsigned int block_size>
-void OpenclMatrix<block_size>::upload(cl::CommandQueue *queue, BlockedMatrix *matrix) {
+void OpenclMatrix::upload(cl::CommandQueue *queue, BlockedMatrix *matrix) {
     upload(queue, matrix->nnzValues, matrix->colIndices, matrix->rowPointers);
 }
 
@@ -279,18 +276,6 @@ int Matrix::toRDF(int numColors, std::vector<int>& nodesPerColor,
 }
 #endif
 
-#define INSTANTIATE_BDA_FUNCTIONS(n)  \
-template class OpenclMatrix<n>;
-
-
-INSTANTIATE_BDA_FUNCTIONS(1);
-INSTANTIATE_BDA_FUNCTIONS(2);
-INSTANTIATE_BDA_FUNCTIONS(3);
-INSTANTIATE_BDA_FUNCTIONS(4);
-INSTANTIATE_BDA_FUNCTIONS(5);
-INSTANTIATE_BDA_FUNCTIONS(6);
-
-#undef INSTANTIATE_BDA_FUNCTIONS
 
 } // namespace Accelerator
 } // namespace Opm

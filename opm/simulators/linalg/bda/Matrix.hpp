@@ -34,14 +34,14 @@ class Matrix;
 
 /// This struct resembles a csr matrix, only doubles are supported
 /// The matrix data is stored in OpenCL Buffers
-template <unsigned int block_size>
 class OpenclMatrix {
 public:
 
-    OpenclMatrix(cl::Context *context, int Nb_, int Mb_, int nnzbs_)
+    OpenclMatrix(cl::Context *context, int Nb_, int Mb_, int nnzbs_, unsigned int block_size_)
     : Nb(Nb_),
       Mb(Mb_),
-      nnzbs(nnzbs_)
+      nnzbs(nnzbs_),
+      block_size(block_size_)
     {
         nnzValues = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * block_size * block_size * nnzbs);
         colIndices = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * nnzbs);
@@ -57,6 +57,7 @@ public:
     cl::Buffer rowPointers;
     int Nb, Mb;
     int nnzbs;
+    unsigned int block_size;
 };
 
 
