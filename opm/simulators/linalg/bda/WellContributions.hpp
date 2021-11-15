@@ -20,15 +20,6 @@
 #ifndef WELLCONTRIBUTIONS_HEADER_INCLUDED
 #define WELLCONTRIBUTIONS_HEADER_INCLUDED
 
-#if HAVE_CUDA
-#include <cuda_runtime.h>
-#endif
-
-#if HAVE_OPENCL
-#include <opm/simulators/linalg/bda/opencl.hpp>
-#include <opm/simulators/linalg/bda/openclKernels.hpp>
-#endif
-
 #include <memory>
 #include <vector>
 
@@ -61,6 +52,8 @@ namespace Opm
 class WellContributions
 {
 public:
+    static std::unique_ptr<WellContributions> create(const std::string& accelerator_mode, bool useWellConn);
+
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
     using UMFPackIndex = SuiteSparse_long;
 #else
@@ -73,9 +66,7 @@ public:
         B
     };
 
-private:
-    bool opencl_gpu = false;
-    bool cuda_gpu = false;
+protected:
     bool allocated = false;
 
     unsigned int N;                          // number of rows (not blockrows) in vectors x and y
@@ -88,80 +79,9 @@ private:
     unsigned int num_std_wells_so_far = 0;   // keep track of where next data is written
     std::vector<unsigned int> val_pointers;    // val_pointers[wellID] == index of first block for this well in Ccols and Bcols
 
-    double *h_x = nullptr;
-    double *h_y = nullptr;
     std::vector<std::unique_ptr<MultisegmentWellContribution>> multisegments;
 
-#if HAVE_OPENCL
-    cl::Context *context;
-    cl::CommandQueue *queue;
-    Opm::Accelerator::stdwell_apply_kernel_type *kernel;
-    Opm::Accelerator::stdwell_apply_no_reorder_kernel_type *kernel_no_reorder;
-    std::vector<cl::Event> events;
-
-    std::unique_ptr<cl::Buffer> d_Cnnzs_ocl, d_Dnnzs_ocl, d_Bnnzs_ocl;
-    std::unique_ptr<cl::Buffer> d_Ccols_ocl, d_Bcols_ocl;
-    std::unique_ptr<cl::Buffer> d_val_pointers_ocl;
-
-    bool reorder = false;
-    int *h_toOrder = nullptr;
-#endif
-
-#if HAVE_CUDA
-    cudaStream_t stream;
-
-    // data for StandardWells, could remain nullptrs if not used
-    double *d_Cnnzs = nullptr;
-    double *d_Dnnzs = nullptr;
-    double *d_Bnnzs = nullptr;
-    int *d_Ccols = nullptr;
-    int *d_Bcols = nullptr;
-    double *d_z1 = nullptr;
-    double *d_z2 = nullptr;
-    unsigned int *d_val_pointers = nullptr;
-
-    /// Allocate GPU memory for StandardWells
-    void allocStandardWells();
-
-    /// Free GPU memory allocated with cuda.
-    void freeCudaMemory();
-
-    /// Store a matrix in this object, in blocked csr format, can only be called after alloc() is called
-    /// \param[in] type        indicate if C, D or B is sent
-    /// \param[in] colIndices  columnindices of blocks in C or B, ignored for D
-    /// \param[in] values      array of nonzeroes
-    /// \param[in] val_size    number of blocks in C or B, ignored for D
-    void addMatrixGpu(MatrixType type, int *colIndices, double *values, unsigned int val_size);
-#endif
-
 public:
-#if HAVE_CUDA
-    /// Set a cudaStream to be used
-    /// \param[in] stream           the cudaStream that is used to launch the kernel in
-    void setCudaStream(cudaStream_t stream);
-
-    /// Apply all Wells in this object
-    /// performs y -= (C^T * (D^-1 * (B*x))) for all Wells
-    /// \param[in] d_x        vector x, must be on GPU
-    /// \param[inout] d_y     vector y, must be on GPU
-    void apply(double *d_x, double *d_y);
-#endif
-
-#if HAVE_OPENCL
-    void setKernel(Opm::Accelerator::stdwell_apply_kernel_type *kernel_,
-                   Opm::Accelerator::stdwell_apply_no_reorder_kernel_type *kernel_no_reorder_);
-    void setOpenCLEnv(cl::Context *context_, cl::CommandQueue *queue_);
-
-    /// Since the rows of the matrix are reordered, the columnindices of the matrixdata is incorrect
-    /// Those indices need to be mapped via toOrder
-    /// \param[in] toOrder    array with mappings
-    /// \param[in] reorder    whether reordering is actually used or not
-    void setReordering(int *toOrder, bool reorder);
-    void apply_stdwells(cl::Buffer d_x, cl::Buffer d_y, cl::Buffer d_toOrder);
-    void apply_mswells(cl::Buffer d_x, cl::Buffer d_y);
-    void apply(cl::Buffer d_x, cl::Buffer d_y, cl::Buffer d_toOrder);
-#endif
-
     unsigned int getNumWells(){
         return num_std_wells + num_ms_wells;
     }
@@ -173,13 +93,8 @@ public:
     /// Allocate memory for the StandardWells
     void alloc();
 
-    /// Create a new WellContributions
-    /// \param[in] accelerator_mode    string indicating which solverBackend is used
-    /// \param[in] useWellConn         true iff wellcontributions are added to the matrix
-    WellContributions(std::string accelerator_mode, bool useWellConn);
-
-    /// Destroy a WellContributions, and free memory
-    ~WellContributions();
+    /// Empty destructor.
+    virtual ~WellContributions() = default;
 
     /// Indicate how large the blocks of the StandardWell (C and B) are
     /// \param[in] dim         number of columns
@@ -212,6 +127,12 @@ public:
                                          unsigned int DnumBlocks, double *Dvalues,
                                          UMFPackIndex *DcolPointers, UMFPackIndex *DrowIndices,
                                          std::vector<double> &Cvalues);
+protected:
+    //! \brief API specific allocation.
+    virtual void APIalloc() {}
+
+    /// Api specific upload of matrix.
+    virtual void APIaddMatrix(MatrixType, int*, double*, unsigned int) {}
 };
 } //namespace Opm
 

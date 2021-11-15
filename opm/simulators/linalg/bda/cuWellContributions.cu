@@ -22,12 +22,13 @@
 #include <cstdlib>
 #include <cstring>
 
+#include "opm/simulators/linalg/bda/cuWellContributions.hpp"
+
 #include "opm/simulators/linalg/bda/cuda_header.hpp"
 #include <cuda_runtime.h>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/ErrorMacros.hpp>
-#include "opm/simulators/linalg/bda/WellContributions.hpp"
 
 namespace Opm
 {
@@ -125,18 +126,8 @@ __global__ void apply_well_contributions(
 
 }
 
-void WellContributions::allocStandardWells()
+WellContributionsCuda::~WellContributionsCuda()
 {
-    cudaMalloc((void**)&d_Cnnzs, sizeof(double) * num_blocks * dim * dim_wells);
-    cudaMalloc((void**)&d_Dnnzs, sizeof(double) * num_std_wells * dim_wells * dim_wells);
-    cudaMalloc((void**)&d_Bnnzs, sizeof(double) * num_blocks * dim * dim_wells);
-    cudaMalloc((void**)&d_Ccols, sizeof(int) * num_blocks);
-    cudaMalloc((void**)&d_Bcols, sizeof(int) * num_blocks);
-    cudaMalloc((void**)&d_val_pointers, sizeof(unsigned int) * (num_std_wells + 1));
-    cudaCheckLastError("apply_gpu malloc failed");
-}
-
-void WellContributions::freeCudaMemory() {
     // delete data for StandardWell
     if (num_std_wells > 0) {
         cudaFree(d_Cnnzs);
@@ -154,10 +145,20 @@ void WellContributions::freeCudaMemory() {
     }
 }
 
+void WellContributionsCuda::APIalloc()
+{
+    cudaMalloc((void**)&d_Cnnzs, sizeof(double) * num_blocks * dim * dim_wells);
+    cudaMalloc((void**)&d_Dnnzs, sizeof(double) * num_std_wells * dim_wells * dim_wells);
+    cudaMalloc((void**)&d_Bnnzs, sizeof(double) * num_blocks * dim * dim_wells);
+    cudaMalloc((void**)&d_Ccols, sizeof(int) * num_blocks);
+    cudaMalloc((void**)&d_Bcols, sizeof(int) * num_blocks);
+    cudaMalloc((void**)&d_val_pointers, sizeof(unsigned int) * (num_std_wells + 1));
+    cudaCheckLastError("apply_gpu malloc failed");
+}
 
 // Apply the WellContributions, similar to StandardWell::apply()
 // y -= (C^T *(D^-1*(   B*x)))
-void WellContributions::apply(double *d_x, double *d_y)
+void WellContributionsCuda::apply(double *d_x, double *d_y)
 {
     // apply MultisegmentWells
 
@@ -194,7 +195,7 @@ void WellContributions::apply(double *d_x, double *d_y)
 }
 
 
-void WellContributions::addMatrixGpu(MatrixType type, int *colIndices, double *values, unsigned int val_size)
+void WellContributionsCuda::APIaddMatrix(MatrixType type, int *colIndices, double *values, unsigned int val_size)
 {
     switch (type) {
     case MatrixType::C:
@@ -219,7 +220,7 @@ void WellContributions::addMatrixGpu(MatrixType type, int *colIndices, double *v
     cudaCheckLastError("WellContributions::addMatrix() failed");
 }
 
-void WellContributions::setCudaStream(cudaStream_t stream_)
+void WellContributionsCuda::setCudaStream(cudaStream_t stream_)
 {
     this->stream = stream_;
     for (auto& well : multisegments) {

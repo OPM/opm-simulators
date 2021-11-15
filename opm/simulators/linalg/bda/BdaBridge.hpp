@@ -22,16 +22,8 @@
 
 #include "dune/istl/solver.hh" // for struct InverseOperatorResult
 
-#include "dune/istl/bcrsmatrix.hh"
-#include <opm/simulators/linalg/matrixblock.hh>
-
 #include <opm/simulators/linalg/bda/BdaSolver.hpp>
 #include <opm/simulators/linalg/bda/ILUReorder.hpp>
-
-
-#if HAVE_FPGA
-#include <opm/simulators/linalg/bda/FPGASolverBackend.hpp>
-#endif
 
 namespace Opm
 {

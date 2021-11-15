@@ -26,6 +26,7 @@
 #include <dune/common/timer.hh>
 
 #include <opm/simulators/linalg/bda/cusparseSolverBackend.hpp>
+#include <opm/simulators/linalg/bda/cuWellContributions.hpp>
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
 #include <opm/simulators/linalg/bda/cuda_header.hpp>
 
@@ -72,7 +73,7 @@ void cusparseSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellCon
     float it;
 
     if (wellContribs.getNumWells() > 0) {
-        wellContribs.setCudaStream(stream);
+        static_cast<WellContributionsCuda&>(wellContribs).setCudaStream(stream);
     }
 
     cusparseDbsrmv(cusparseHandle, order, operation, Nb, Nb, nnzb, &one, descr_M, d_bVals, d_bRows, d_bCols, block_size, d_x, &zero, d_r);
@@ -116,7 +117,7 @@ void cusparseSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellCon
 
         // apply wellContributions
         if (wellContribs.getNumWells() > 0) {
-            wellContribs.apply(d_pw, d_v);
+            static_cast<WellContributionsCuda&>(wellContribs).apply(d_pw, d_v);
         }
 
         cublasDdot(cublasHandle, n, d_rw, 1, d_v, 1, &tmp1);
@@ -147,7 +148,7 @@ void cusparseSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellCon
 
         // apply wellContributions
         if (wellContribs.getNumWells() > 0) {
-            wellContribs.apply(d_s, d_t);
+            static_cast<WellContributionsCuda&>(wellContribs).apply(d_s, d_t);
         }
 
         cublasDdot(cublasHandle, n, d_t, 1, d_r, 1, &tmp1);
