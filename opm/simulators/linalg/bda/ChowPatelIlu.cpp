@@ -569,7 +569,7 @@ void ChowPatelIlu<block_size>::decomposition(
             } else {
                 Lmat->colIndices[num_blocks_L] = j;
                 // multiply block of L with corresponding diag block
-                blockMult<bs>(LUmat->nnzValues + ij * bs * bs, invDiagVals + i * bs * bs, Lmat->nnzValues + num_blocks_L * bs * bs);
+                blockMult(LUmat->nnzValues + ij * bs * bs, invDiagVals + i * bs * bs, Lmat->nnzValues + num_blocks_L * bs * bs, bs);
                 num_blocks_L++;
             }
         }
@@ -671,7 +671,7 @@ void ChowPatelIlu<block_size>::decomposition(
                         }
                         if (colL == rowU2) {
                             // Aij -= (Lik * Ukj)
-                            blockMultSub<bs>(&aij[0], Lmat->nnzValues + jk * bs * bs, Ut->nnzValues + k * bs * bs);
+                            blockMultSub(&aij[0], Lmat->nnzValues + jk * bs * bs, Ut->nnzValues + k * bs * bs, bs);
                         }
                     }
                 }
@@ -713,7 +713,7 @@ void ChowPatelIlu<block_size>::decomposition(
 
                     if (rowU == colL) {
                         // Aij -= (Lik * Ukj)
-                        blockMultSub<bs>(&aij[0], Lmat->nnzValues + k * bs * bs , Ut->nnzValues + jk * bs * bs);
+                        blockMultSub(&aij[0], Lmat->nnzValues + k * bs * bs , Ut->nnzValues + jk * bs * bs, bs);
                     }
                 }
 
@@ -721,7 +721,7 @@ void ChowPatelIlu<block_size>::decomposition(
                 double ujj[bs*bs];
                 inverter(Ut->nnzValues + (Ut->rowPointers[j+1] - 1) * bs * bs, &ujj[0]);
                 // Lij_new = (Aij - sum) / Ujj
-                blockMult<bs>(&aij[0], &ujj[0], Ltmp + ij * bs * bs);
+                blockMult(&aij[0], &ujj[0], Ltmp + ij * bs * bs, bs);
             }
         }
         // 1st sweep writes to Ltmp

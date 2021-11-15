@@ -73,8 +73,7 @@ void sortBlockedRow(int *colIndices, double *data, int left, int right, unsigned
 
 // LUMat->nnzValues[ik] = LUMat->nnzValues[ik] - (pivot * LUMat->nnzValues[jk]) in ilu decomposition
 // a = a - (b * c)
-template <unsigned int block_size>
-void blockMultSub(double *a, double *b, double *c)
+void blockMultSub(double *a, double *b, double *c, unsigned int block_size)
 {
     for (unsigned int row = 0; row < block_size; row++) {
         for (unsigned int col = 0; col < block_size; col++) {
@@ -89,8 +88,7 @@ void blockMultSub(double *a, double *b, double *c)
 
 /*Perform a 3x3 matrix-matrix multiplicationj on two blocks*/
 
-template <unsigned int block_size>
-void blockMult(double *mat1, double *mat2, double *resMat) {
+void blockMult(double *mat1, double *mat2, double *resMat, unsigned int block_size) {
     for (unsigned int row = 0; row < block_size; row++) {
         for (unsigned int col = 0; col < block_size; col++) {
             double temp = 0;
@@ -105,8 +103,7 @@ void blockMult(double *mat1, double *mat2, double *resMat) {
 #if HAVE_FPGA
 
 /*Subtract two blocks from one another element by element*/
-template <unsigned int block_size>
-void blockSub(double *mat1, double *mat2, double *resMat) {
+void blockSub(double *mat1, double *mat2, double *resMat, unsigned int block_size) {
     for (unsigned int row = 0; row < block_size; row++) {
         for (unsigned int col = 0; col < block_size; col++) {
             resMat[row * block_size + col] = mat1[row * block_size + col] - mat2[row * block_size + col];
@@ -115,8 +112,7 @@ void blockSub(double *mat1, double *mat2, double *resMat) {
 }
 
 /*Multiply a block with a vector block, and add the result, scaled by a constant, to the result vector*/
-template <unsigned int block_size>
-void blockVectMult(double *mat, double *vect, double scale, double *resVect, bool resetRes) {
+void blockVectMult(double *mat, double *vect, double scale, double *resVect, bool resetRes, unsigned int block_size) {
     for (unsigned int row = 0; row < block_size; row++) {
         if (resetRes) {
             resVect[row] = 0.0;
@@ -466,35 +462,6 @@ void blockedDiagtoRDF(double *blockedDiagVals, int rowSize, int numColors, std::
 
 #endif // HAVE_FPGA
 
-
-
-#define INSTANTIATE_BDA_FUNCTIONS(n)                                        \
-template void blockMultSub<n>(double *, double *, double *);                \
-template void blockMult<n>(double *, double *, double *);                   \
-
-INSTANTIATE_BDA_FUNCTIONS(1);
-INSTANTIATE_BDA_FUNCTIONS(2);
-INSTANTIATE_BDA_FUNCTIONS(3);
-INSTANTIATE_BDA_FUNCTIONS(4);
-INSTANTIATE_BDA_FUNCTIONS(5);
-INSTANTIATE_BDA_FUNCTIONS(6);
-
-#undef INSTANTIATE_BDA_FUNCTIONS
-
-#if HAVE_FPGA
-#define INSTANTIATE_BDA_FPGA_FUNCTIONS(n)                                             \
-template void blockSub<n>(double *, double *, double *);                              \
-template void blockVectMult<n>(double *, double *, double, double *, bool);
-
-INSTANTIATE_BDA_FPGA_FUNCTIONS(1);
-INSTANTIATE_BDA_FPGA_FUNCTIONS(2);
-INSTANTIATE_BDA_FPGA_FUNCTIONS(3);
-INSTANTIATE_BDA_FPGA_FUNCTIONS(4);
-INSTANTIATE_BDA_FPGA_FUNCTIONS(5);
-INSTANTIATE_BDA_FPGA_FUNCTIONS(6);
-
-#undef INSTANTIATE_BDA_FPGA_FUNCTIONS
-#endif // HAVE_FPGA
 
 } // namespace Accelerator
 } // namespace Opm

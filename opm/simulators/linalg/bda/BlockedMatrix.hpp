@@ -146,23 +146,37 @@ void sortBlockedRow(int *colIndices, double *data, int left, int right, unsigned
 /// \param[inout] a              block to be subtracted from
 /// \param[in] b                 input block
 /// \param[in] c                 input block
-template <unsigned int block_size>
-void blockMultSub(double *a, double *b, double *c);
+/// \param[in] block_size        size of block
+void blockMultSub(double *a, double *b, double *c, unsigned int block_size);
 
-/// Perform a 3x3 matrix-matrix multiplication on two blocks
+/// Perform a matrix-matrix multiplication on two blocks
+/// resMat = mat1 * mat2
 /// \param[in] mat1              input block 1
 /// \param[in] mat2              input block 2
-/// \param[inout] resMat         output block
-template <unsigned int block_size>
-void blockMult(double *mat1, double *mat2, double *resMat);
+/// \param[out] resMat           output block
+/// \param[in] block_size        size of block
+void blockMult(double *mat1, double *mat2, double *resMat, unsigned int block_size);
 
 
 #if HAVE_FPGA
-template <unsigned int block_size>
-void blockSub(double *mat1, double *mat2, double *resMat);
+/// Perform a matrix-matrix subtraction on two blocks, element-wise
+/// resMat = mat1 - mat2
+/// \param[in] mat1              input block 1
+/// \param[in] mat2              input block 2
+/// \param[out] resMat           output block
+/// \param[in] block_size        size of block
+void blockSub(double *mat1, double *mat2, double *resMat, unsigned int block_size);
 
-template <unsigned int block_size>
-void blockVectMult(double *mat, double *vect, double scale, double *resVect, bool resetRes);
+/// Perform a matrix-vector multiplication
+/// resVect = mat * vect
+/// resVect += mat * vect
+/// \param[in] mat               input matrix
+/// \param[in] vect              input vector
+/// \param[in] scale             multiply output with this factor
+/// \param[inout] resVect        output vector
+/// \param[in] resetRes          if true, overwrite resVect, otherwise add to it
+/// \param[in] block_size        size of block
+void blockVectMult(double *mat, double *vect, double scale, double *resVect, bool resetRes, unsigned int block_size);
 
 /// Convert a blocked inverse diagonal to the FPGA format.
 /// This is the only blocked structure on the FPGA, since it needs blocked matrix-vector multiplication after the backwards substitution of U.

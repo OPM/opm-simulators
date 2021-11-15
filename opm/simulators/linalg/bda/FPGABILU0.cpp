@@ -286,7 +286,7 @@ bool FPGABILU0<block_size>::create_preconditioner(BlockedMatrix *mat)
 
             LSize++;
             // calculate the pivot of this row
-            blockMult<bs>(LUMat->nnzValues + ij * bs * bs, invDiagVals + j * bs * bs, &pivot[0]);
+            blockMult(LUMat->nnzValues + ij * bs * bs, invDiagVals + j * bs * bs, &pivot[0], bs);
 
             memcpy(LUMat->nnzValues + ij * bs * bs, &pivot[0], sizeof(double) * bs * bs);
 
@@ -296,7 +296,7 @@ bool FPGABILU0<block_size>::create_preconditioner(BlockedMatrix *mat)
             // subtract that row scaled by the pivot from this row.
             while (ik < iRowEnd && jk < jRowEnd) {
                 if (LUMat->colIndices[ik] == LUMat->colIndices[jk]) {
-                    blockMultSub<bs>(LUMat->nnzValues + ik * bs * bs, pivot, LUMat->nnzValues + jk * bs * bs);
+                    blockMultSub(LUMat->nnzValues + ik * bs * bs, pivot, LUMat->nnzValues + jk * bs * bs, bs);
                     ik++;
                     jk++;
                 } else {
