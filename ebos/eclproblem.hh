@@ -1168,6 +1168,7 @@ public:
         int episodeIdx = this->episodeIndex();
         this->applyActions(episodeIdx,
                            simulator.time() + simulator.timeStepSize(),
+                           simulator.vanguard().grid().comm(),
                            ecl_state,
                            schedule,
                            simulator.vanguard().actionState(),
@@ -1278,6 +1279,7 @@ public:
 
     void applyActions(int reportStep,
                       double sim_time,
+                      Parallel::Communication comm,
                       EclipseState& ecl_state,
                       Schedule& schedule,
                       Action::State& actionState,
@@ -1323,6 +1325,15 @@ public:
                 this->wellModel_.updateEclWells(reportStep, sim_update.affected_wells, summaryState);
                 if (!sim_update.affected_wells.empty())
                     commit_wellstate = true;
+
+                if (sim_update.tran_update) {
+                    const auto& keywords = schedule[reportStep].geo_keywords();
+                    ecl_state.apply_schedule_keywords( keywords );
+                    eclBroadcast(comm, ecl_state.getTransMult() );
+
+                    // re-compute transmissibility
+                    transmissibilities_.update(true);
+                }
                 actionState.add_run(*action, simTime, std::move(actionResult));
             } else {
                 std::string msg = "The action: " + action->name() + " evaluated to false at " + ts;
