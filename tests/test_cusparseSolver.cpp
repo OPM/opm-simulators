@@ -30,6 +30,7 @@
     BOOST_VERSION / 100 % 1000 > 48
 
 #include <opm/simulators/linalg/bda/BdaBridge.hpp>
+#include <opm/simulators/linalg/bda/WellContributions.hpp>
 
 #include <dune/common/fvector.hh>
 #include <dune/istl/bvector.hh>

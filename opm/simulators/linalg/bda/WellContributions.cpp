@@ -54,10 +54,6 @@ WellContributions::WellContributions(std::string accelerator_mode, bool useWellC
 
 WellContributions::~WellContributions()
 {
-    // delete MultisegmentWellContributions
-    for (auto ms: multisegments) {
-        delete ms;
-    }
     multisegments.clear();
 
 #if HAVE_CUDA
@@ -65,10 +61,6 @@ WellContributions::~WellContributions()
         freeCudaMemory(); // should come before 'delete[] h_x'
     }
 #endif
-
-    if(num_std_wells > 0){
-        delete[] val_pointers;
-    }
 
 #if HAVE_OPENCL
     if(opencl_gpu){
@@ -121,7 +113,7 @@ void WellContributions::apply_mswells(cl::Buffer d_x, cl::Buffer d_y){
     events.clear();
 
     // actually apply MultisegmentWells
-    for(Opm::MultisegmentWellContribution *well: multisegments){
+    for (auto& well : multisegments) {
         well->setReordering(h_toOrder, reorder);
         well->apply(h_x, h_y);
     }
@@ -185,7 +177,7 @@ void WellContributions::addMatrix([[maybe_unused]] MatrixType type, [[maybe_unus
             if (num_std_wells_so_far == num_std_wells - 1) {
                 val_pointers[num_std_wells] = num_blocks;
                 events.resize(1);
-                queue->enqueueWriteBuffer(*d_val_pointers_ocl, CL_FALSE, 0, sizeof(unsigned int) * (num_std_wells + 1), val_pointers, nullptr, &events[0]);
+                queue->enqueueWriteBuffer(*d_val_pointers_ocl, CL_FALSE, 0, sizeof(unsigned int) * (num_std_wells + 1), val_pointers.data(), nullptr, &events[0]);
                 events[0].wait();
                 events.clear();
             }
@@ -231,7 +223,7 @@ void WellContributions::addNumBlocks(unsigned int numBlocks)
 void WellContributions::alloc()
 {
     if (num_std_wells > 0) {
-        val_pointers = new unsigned int[num_std_wells + 1];
+        val_pointers.resize(num_std_wells+1);
 
 #if HAVE_CUDA
         if(cuda_gpu){
@@ -253,15 +245,30 @@ void WellContributions::alloc()
     }
 }
 
-void WellContributions::addMultisegmentWellContribution(unsigned int dim_, unsigned int dim_wells_,
-        unsigned int Mb,
-        std::vector<double> &Bvalues, std::vector<unsigned int> &BcolIndices, std::vector<unsigned int> &BrowPointers,
-        unsigned int DnumBlocks, double *Dvalues, UMFPackIndex *DcolPointers, UMFPackIndex *DrowIndices,
-        std::vector<double> &Cvalues)
+void WellContributions::addMultisegmentWellContribution(unsigned int dim_,
+                                                        unsigned int dim_wells_,
+                                                        unsigned int Mb,
+                                                        std::vector<double>& Bvalues,
+                                                        std::vector<unsigned int>& BcolIndices,
+                                                        std::vector<unsigned int>& BrowPointers,
+                                                        unsigned int DnumBlocks,
+                                                        double* Dvalues,
+                                                        UMFPackIndex* DcolPointers,
+                                                        UMFPackIndex* DrowIndices,
+                                                        std::vector<double>& Cvalues)
 {
     assert(dim==dim_);
-    MultisegmentWellContribution *well = new MultisegmentWellContribution(dim_, dim_wells_, Mb, Bvalues, BcolIndices, BrowPointers, DnumBlocks, Dvalues, DcolPointers, DrowIndices, Cvalues);
-    multisegments.emplace_back(well);
+    multisegments.push_back(std::make_unique<MultisegmentWellContribution>(dim_,
+                                                                           dim_wells_,
+                                                                           Mb,
+                                                                           Bvalues,
+                                                                           BcolIndices,
+                                                                           BrowPointers,
+                                                                           DnumBlocks,
+                                                                           Dvalues,
+                                                                           DcolPointers,
+                                                                           DrowIndices,
+                                                                           Cvalues));
     ++num_ms_wells;
 }
 

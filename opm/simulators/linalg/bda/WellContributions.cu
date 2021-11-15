@@ -177,7 +177,7 @@ void WellContributions::apply(double *d_x, double *d_y)
         cudaStreamSynchronize(stream);
 
         // actually apply MultisegmentWells
-        for (MultisegmentWellContribution *well : multisegments) {
+        for (auto& well : multisegments) {
             well->apply(h_x, h_y);
         }
 
@@ -210,7 +210,7 @@ void WellContributions::addMatrixGpu(MatrixType type, int *colIndices, double *v
         val_pointers[num_std_wells_so_far] = num_blocks_so_far;
         if (num_std_wells_so_far == num_std_wells - 1) {
             val_pointers[num_std_wells] = num_blocks;
-            cudaMemcpy(d_val_pointers, val_pointers, sizeof(unsigned int) * (num_std_wells + 1), cudaMemcpyHostToDevice);
+            cudaMemcpy(d_val_pointers, val_pointers.data(), sizeof(unsigned int) * (num_std_wells + 1), cudaMemcpyHostToDevice);
         }
         break;
     default:
@@ -222,7 +222,7 @@ void WellContributions::addMatrixGpu(MatrixType type, int *colIndices, double *v
 void WellContributions::setCudaStream(cudaStream_t stream_)
 {
     this->stream = stream_;
-    for (MultisegmentWellContribution *well : multisegments) {
+    for (auto& well : multisegments) {
         well->setCudaStream(stream_);
     }
 }
