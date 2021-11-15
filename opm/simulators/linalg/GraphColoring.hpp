@@ -26,6 +26,7 @@
 #include <numeric>
 #include <queue>
 #include <cstddef>
+#include <limits>
 
 namespace Opm
 {
