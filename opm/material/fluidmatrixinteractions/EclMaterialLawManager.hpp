@@ -541,7 +541,7 @@ public:
 
 #if HAVE_OPM_COMMON
         if (enableHysteresis())
-            OpmLog::warning("Warning: Using non-default satnum regions for conenction is not tested in combination with hysteresis");
+            OpmLog::warning("Warning: Using non-default satnum regions for connection is not tested in combination with hysteresis");
 #endif
         // Currently we don't support COMPIMP. I.e. use the same table lookup for the hysteresis curves.
         // unsigned impRegionIdx = satRegionIdx;
