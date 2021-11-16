@@ -200,7 +200,7 @@ do
         copyToReferenceDir \
             $BUILD_DIR/tests/results/$binary+$test_name/restart/ \
             $OPM_TESTS_ROOT/$dirname/opm-simulation-reference/$binary/restart \
-            $casename \
+            ${casename}_RESTART \
             EGRID INIT RFT SMSPEC UNRST UNSMRY
         test $? -eq 0 && changed_tests="$changed_tests $test_name(restart)"
       fi
