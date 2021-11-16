@@ -142,7 +142,7 @@ List of Eclipse keywords which should be ignored. As a ':' separated string. Def
 The fill\-in level of the linear solver's ILU preconditioner. Default: 0
 .TP
 \fB\-\-ilu\-redblack\fR=\fI\,BOOLEAN\/\fR
-Use red\-black partioning for the ILU preconditioner. Default: false
+Use red\-black partitioning for the ILU preconditioner. Default: false
 .TP
 \fB\-\-ilu\-relaxation\fR=\fI\,SCALAR\/\fR
 The relaxation factor of the linear solver's ILU preconditioner. Default: 0.9
@@ -205,7 +205,7 @@ Maximum number of iterations to determine solution the  well equations. Default:
 Maximum number of times a well can switch to the same control. Default: 3
 .TP
 \fB\-\-milu\-variant\fR=\fI\,STRING\/\fR
-Specify which variant of the modified\-ILU preconditioner ought to be used. Possible variants are: ILU (default, plain ILU), MILU_1 (lump diagonal with dropped row entries), MILU_2 (lump diagonal with the sum of the absolute values of the dropped row  entries), MILU_3 (if diagonal is positive add sum of dropped row entrires. Otherwise substract them), MILU_4 (if diagonal is positive add sum of dropped row entrires. Otherwise do nothing. Default: "ILU"
+Specify which variant of the modified\-ILU preconditioner ought to be used. Possible variants are: ILU (default, plain ILU), MILU_1 (lump diagonal with dropped row entries), MILU_2 (lump diagonal with the sum of the absolute values of the dropped row  entries), MILU_3 (if diagonal is positive add sum of dropped row entrires. Otherwise subtract them), MILU_4 (if diagonal is positive add sum of dropped row entrires. Otherwise do nothing. Default: "ILU"
 .TP
 \fB\-\-min\-time\-step\-based\-on\-newton\-iterations\fR=\fI\,SCALAR\/\fR
 The minimum time step size (in days for field and metric unit and hours for lab unit) can be reduced to based on newton iteration counts. Default: 0
