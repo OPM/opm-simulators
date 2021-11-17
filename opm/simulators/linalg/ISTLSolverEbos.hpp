@@ -33,7 +33,7 @@
 #include <opm/simulators/linalg/findOverlapRowsAndColumns.hpp>
 #include <opm/simulators/linalg/getQuasiImpesWeights.hpp>
 #include <opm/simulators/linalg/setupPropertyTree.hpp>
-
+#include <opm/simulators/linalg/bda/WellContributions.hpp>
 
 #if HAVE_CUDA || HAVE_OPENCL || HAVE_FPGA || HAVE_AMGCL
 #include <opm/simulators/linalg/bda/BdaBridge.hpp>
