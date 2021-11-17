@@ -70,8 +70,7 @@ if test $RESTART_STEP -ne 0
 then
   echo "=== Executing restart run ==="
   mkdir -p ${RESULT_PATH}/restart
-  cp -f ${RESULT_PATH}/${FILENAME}.UNRST ${RESULT_PATH}/restart
-  ${RST_DECK_COMMAND}  ${INPUT_DATA_PATH}/${FILENAME}.DATA ${FILENAME}:${RESTART_STEP} -m inline -s > ${RESULT_PATH}/restart/${FILENAME}_RESTART.DATA
+  ${RST_DECK_COMMAND}  ${INPUT_DATA_PATH}/${FILENAME}.DATA ${RESULT_PATH}/${FILENAME}.UNRST:${RESTART_STEP} ${RESULT_PATH}/restart/${FILENAME}_RESTART.DATA -m inline -s
   cd ${RESULT_PATH}/restart
   if test -n "$RESTART_SCHED"
   then
