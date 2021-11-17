@@ -267,7 +267,7 @@ namespace Opm {
             std::fill(wasSwitched_.begin(), wasSwitched_.end(), false);
 
             if (param_.update_equations_scaling_) {
-                std::cout << "equation scaling not suported yet" << std::endl;
+                std::cout << "equation scaling not supported yet" << std::endl;
                 //updateEquationsScaling();
             }
             report.pre_post_time += perfTimer.stop();

@@ -338,7 +338,7 @@ bool WellInterfaceGeneric::isVFPActive(DeferredLogger& deferred_logger) const
             if (vfp_properties_->getProd()->hasTable(table_id)) {
                 return true;
             } else {
-                OPM_DEFLOG_THROW(std::runtime_error, "VFPPROD table " << std::to_string(table_id) << " is specfied,"
+                OPM_DEFLOG_THROW(std::runtime_error, "VFPPROD table " << std::to_string(table_id) << " is specified,"
                               << " for well " << name() << ", while we could not access it during simulation", deferred_logger);
             }
         }
@@ -351,7 +351,7 @@ bool WellInterfaceGeneric::isVFPActive(DeferredLogger& deferred_logger) const
             if (vfp_properties_->getInj()->hasTable(table_id)) {
                 return true;
             } else {
-                OPM_DEFLOG_THROW(std::runtime_error, "VFPINJ table " << std::to_string(table_id) << " is specfied,"
+                OPM_DEFLOG_THROW(std::runtime_error, "VFPINJ table " << std::to_string(table_id) << " is specified,"
                               << " for well " << name() << ", while we could not access it during simulation", deferred_logger);
             }
         }

@@ -932,7 +932,7 @@ getEcoGradients(std::vector<GradPair> &inc_grads, std::vector<GradPair> &dec_gra
 
 // Recalculate gradients (and related information, see struct GradInfo in
 //   GasLiftSingleWell.hpp) after an ALQ increment
-//   has been given from the well with minumum decremental gradient (represented
+//   has been given from the well with minimum decremental gradient (represented
 //   by the input argument min_dec_grad_itr) to the well with the largest
 //   incremental gradient (represented by input argument max_inc_grad_itr).
 //

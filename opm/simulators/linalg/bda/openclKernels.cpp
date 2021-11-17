@@ -941,7 +941,7 @@ void OpenclKernels::apply_stdwells_no_reorder(cl::Buffer& d_Cnnzs_ocl, cl::Buffe
                         int jRowEnd = LUrows[j + 1];
                         int jk = diagIndex[j] + 1;
                         int ik = ij + 1;
-                        // substract that row scaled by the pivot from this row.
+                        // subtract that row scaled by the pivot from this row.
                         while (ik < iRowEnd && jk < jRowEnd) {
                             if (LUcols[ik] == LUcols[jk]) {
                                 block_mult_sub(LUvals + ik * bs * bs, pivot + lmem_offset, LUvals + jk * bs * bs);

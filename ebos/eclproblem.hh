@@ -2941,7 +2941,7 @@ private:
                 dtNext = std::min(this->maxTimeStepSize_, remainingEpisodeTime/2.0);
 
             if (simulator.episodeStarts()) {
-                // if a well event occured, respect the limit for the maximum time step after
+                // if a well event occurred, respect the limit for the maximum time step after
                 // that, too
                 int reportStepIdx = std::max(episodeIdx, 0);
                 const auto& events = simulator.vanguard().schedule()[reportStepIdx].events();

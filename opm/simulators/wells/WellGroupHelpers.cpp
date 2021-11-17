@@ -642,7 +642,7 @@ namespace WellGroupHelpers
             rein[phase] = sumWellPhaseRates(false, group, schedule, wellState, reportStepIdx, phase, /*isInjector*/ false);
         }
 
-        // add import rate and substract consumption rate for group for gas
+        // add import rate and subtract consumption rate for group for gas
         if (schedule[reportStepIdx].gconsump().has(group.name())) {
             const auto& gconsump = schedule[reportStepIdx].gconsump().get(group.name(), st);
             if (pu.phase_used[BlackoilPhases::Vapour]) {
