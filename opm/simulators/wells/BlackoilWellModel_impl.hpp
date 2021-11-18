@@ -840,6 +840,18 @@ namespace Opm {
         }
         OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger, "assemble() failed: ",
                                        terminal_output_, grid().comm());
+
+        //update guide rates
+        if (guideRateUpdateIsNeeded()) {
+            const int reportStepIdx = ebosSimulator_.episodeIndex();
+            const double simulationTime = ebosSimulator_.time();
+            const auto& comm = ebosSimulator_.vanguard().grid().comm();
+            const auto& summaryState = ebosSimulator_.vanguard().summaryState();
+            std::vector<double> pot(numPhases(), 0.0);
+            const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
+            WellGroupHelpers::updateGuideRates(fieldGroup, schedule(), summaryState, this->phase_usage_, reportStepIdx, simulationTime,
+                                        this->wellState(), this->groupState(), comm, &this->guideRate_, pot, local_deferredLogger);
+        }
         last_report_.converged = true;
         last_report_.assemble_time_well += perfTimer.stop();
     }
@@ -1343,7 +1355,8 @@ namespace Opm {
         // and updated only if sucessfull. i.e. the potentials are zero for exceptions
         auto& ws = this->wellState().well(well->indexOfWell());
         for (int p = 0; p < np; ++p) {
-            ws.well_potentials[p] = std::abs(potentials[p]);
+            // make sure the potentials are positive
+            ws.well_potentials[p] = std::max(0.0, potentials[p]);
         }
     }
 
@@ -1424,8 +1437,13 @@ namespace Opm {
                 events.clearEvent(WellState::event_mask);
             }
             // solve the well equation initially to improve the initial solution of the well model
-            if (param_.solve_welleq_initially_) {
-                well->solveWellEquation(ebosSimulator_, this->wellState(), this->groupState(), deferred_logger);
+            if (param_.solve_welleq_initially_ && well->isOperableAndSolvable()) {
+                try {
+                    well->solveWellEquation(ebosSimulator_, this->wellState(), this->groupState(), deferred_logger);
+                } catch (const std::exception& e) {
+                    const std::string msg = "Compute initial well solution for " + well->name() + " initially failed. Continue with the privious rates";
+                    deferred_logger.warning("WELL_INITIAL_SOLVE_FAILED", msg);
+                }
             }
         }
         updatePrimaryVariables(deferred_logger);

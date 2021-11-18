@@ -2374,4 +2374,20 @@ runWellPIScaling(const int timeStepIdx,
     this->last_run_wellpi_ = timeStepIdx;
 }
 
+
+bool
+BlackoilWellModelGeneric::
+guideRateUpdateIsNeeded() const {
+    int update = 0;
+    for (const auto& well : well_container_generic_) {
+        if (well->changedToOpenThisStep()) {
+            update = 1;
+            break;
+        }
+    }
+    update = comm_.max(update);
+    return update;
+}
+
+
 }

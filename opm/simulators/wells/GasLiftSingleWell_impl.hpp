@@ -112,6 +112,11 @@ computeWellRates_(
             -potentials[this->water_pos_]);
         displayDebugMessage_(msg);
     }
+
+    for (size_t phase = 0; phase < potentials.size(); ++phase){
+        // make sure the potentials are negative
+        potentials[phase] = std::min(0.0, potentials[phase]);
+    }
 }
 
 template<typename TypeTag>

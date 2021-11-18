@@ -253,6 +253,7 @@ namespace Opm
         if (this->wellIsStopped()) {
             return;
         }
+        this->operability_status_.has_non_positive_potentials = false;
 
         // If the well is pressure controlled the potential equals the rate.
         bool thp_controlled_well = false;
@@ -285,9 +286,20 @@ namespace Opm
             // if the rates are trivial we are most probably looking at the newly
             // opened well and we therefore make the affort of computing the potentials anyway.
             if (std::abs(total_rate) > 0) {
+                const double sign = this->isInjector() ? 1.0:-1.0;
+                double total_potential = 0.0;
                 for (int phase = 0; phase < np; ++phase){
-                    well_potentials[phase] = ws.surface_rates[phase];
+                    well_potentials[phase] = sign * ws.surface_rates[phase];
+                    total_potential += well_potentials[phase];
                 }
+                if (total_potential <= 0.0) {
+                // wells with trivial or non-positive potentials
+                // are not operable
+                this->operability_status_.has_non_positive_potentials = true;
+                const std::string msg = std::string("well ") + this->name() + std::string(": has non positive potentials and is not operable");
+                deferred_logger.info(msg);
+                }
+
                 return;
             }
         }
@@ -302,6 +314,20 @@ namespace Opm
         }
         deferred_logger.debug("Cost in iterations of finding well potential for well "
                               + this->name() + ": " + std::to_string(debug_cost_counter_));
+
+        const double sign = this->isInjector() ? 1.0:-1.0;
+        double total_potential = 0.0;
+        for (int phase = 0; phase < np; ++phase){
+            well_potentials[phase] *= sign;
+            total_potential += well_potentials[phase];
+        }
+        if (total_potential <= 0.0) {
+            // wells with trivial or non-positive potentials
+            // are not operable
+            this->operability_status_.has_non_positive_potentials = true;
+            const std::string msg = std::string("well ") + this->name() + std::string(": has non positive potentials is not operable");
+            deferred_logger.info(msg);
+        }
     }
 
 
