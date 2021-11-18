@@ -671,7 +671,7 @@ assignToSolution(data::Solution& sol)
         size_t tracerIdx = 0;
         for (const auto& tracer : tracers) {
             std::string tmp = tracer.name + "F";
-            sol.insert(tmp, UnitSystem::measure::identity, std::move(tracerConcentrations_[tracerIdx++]), data::TargetType::RESTART_SOLUTION);
+            sol.insert(tmp, UnitSystem::measure::identity, std::move(tracerConcentrations_[tracerIdx++]), data::TargetType::RESTART_TRACER_SOLUTION);
         }
         // We need put tracerConcentrations into a valid state.
         // Otherwise next time we end up here outside of a restart write we will
