@@ -68,7 +68,7 @@ unsigned int ceilDivision(const unsigned int A, const unsigned int B)
     return A / B + (A % B > 0);
 }
 
-void add_kernel_string(cl::Program::Sources &sources, const std::string &source) {
+void add_kernel_source(cl::Program::Sources &sources, const std::string &source) {
     sources.emplace_back(source);
 }
 
@@ -83,47 +83,47 @@ void OpenclKernels::init(cl::Context *context, cl::CommandQueue *queue_, std::ve
     verbosity = verbosity_;
 
     cl::Program::Sources sources;
-    const std::string& axpy_s = get_axpy_string();
-    add_kernel_string(sources, axpy_s);
-    const std::string& scale_s = get_scale_string();
-    add_kernel_string(sources, scale_s);
-    const std::string& vmul_s = get_vmul_string();
-    add_kernel_string(sources, vmul_s);
-    const std::string& dot_1_s = get_dot_1_string();
-    add_kernel_string(sources, dot_1_s);
-    const std::string& norm_s = get_norm_string();
-    add_kernel_string(sources, norm_s);
-    const std::string& custom_s = get_custom_string();
-    add_kernel_string(sources, custom_s);
-    const std::string& move_to_coarse_s = get_move_to_coarse_string();
-    add_kernel_string(sources, move_to_coarse_s);
-    const std::string& move_to_fine_s = get_move_to_fine_string();
-    add_kernel_string(sources, move_to_fine_s);
-    const std::string& spmv_blocked_s = get_blocked_matrix_operation_string(matrix_operation::spmv_op);
-    add_kernel_string(sources, spmv_blocked_s);
-    const std::string& spmv_s = get_matrix_operation_string(matrix_operation::spmv_op, true);
-    add_kernel_string(sources, spmv_s);
-    const std::string& spmv_noreset_s = get_matrix_operation_string(matrix_operation::spmv_op, false);
-    add_kernel_string(sources, spmv_noreset_s);
-    const std::string& residual_blocked_s = get_blocked_matrix_operation_string(matrix_operation::residual_op);
-    add_kernel_string(sources, residual_blocked_s);
-    const std::string& residual_s = get_matrix_operation_string(matrix_operation::residual_op);
-    add_kernel_string(sources, residual_s);
+    const std::string& axpy_s = get_axpy_source();
+    add_kernel_source(sources, axpy_s);
+    const std::string& scale_s = get_scale_source();
+    add_kernel_source(sources, scale_s);
+    const std::string& vmul_s = get_vmul_source();
+    add_kernel_source(sources, vmul_s);
+    const std::string& dot_1_s = get_dot_1_source();
+    add_kernel_source(sources, dot_1_s);
+    const std::string& norm_s = get_norm_source();
+    add_kernel_source(sources, norm_s);
+    const std::string& custom_s = get_custom_source();
+    add_kernel_source(sources, custom_s);
+    const std::string& move_to_coarse_s = get_move_to_coarse_source();
+    add_kernel_source(sources, move_to_coarse_s);
+    const std::string& move_to_fine_s = get_move_to_fine_source();
+    add_kernel_source(sources, move_to_fine_s);
+    const std::string& spmv_blocked_s = get_blocked_matrix_operation_source(matrix_operation::spmv_op);
+    add_kernel_source(sources, spmv_blocked_s);
+    const std::string& spmv_s = get_matrix_operation_source(matrix_operation::spmv_op, true);
+    add_kernel_source(sources, spmv_s);
+    const std::string& spmv_noreset_s = get_matrix_operation_source(matrix_operation::spmv_op, false);
+    add_kernel_source(sources, spmv_noreset_s);
+    const std::string& residual_blocked_s = get_blocked_matrix_operation_source(matrix_operation::residual_op);
+    add_kernel_source(sources, residual_blocked_s);
+    const std::string& residual_s = get_matrix_operation_source(matrix_operation::residual_op);
+    add_kernel_source(sources, residual_s);
 #if CHOW_PATEL
     bool ilu_operate_on_full_matrix = false;
 #else
     bool ilu_operate_on_full_matrix = true;
 #endif
-    const std::string& ILU_apply1_s = get_ILU_apply1_string(ilu_operate_on_full_matrix);
-    add_kernel_string(sources, ILU_apply1_s);
-    const std::string& ILU_apply2_s = get_ILU_apply2_string(ilu_operate_on_full_matrix);
-    add_kernel_string(sources, ILU_apply2_s);
-    const std::string& stdwell_apply_s = get_stdwell_apply_string(true);
-    add_kernel_string(sources, stdwell_apply_s);
-    const std::string& stdwell_apply_no_reorder_s = get_stdwell_apply_string(false);
-    add_kernel_string(sources, stdwell_apply_no_reorder_s);
-    const std::string& ilu_decomp_s = get_ilu_decomp_string();
-    add_kernel_string(sources, ilu_decomp_s);
+    const std::string& ILU_apply1_s = get_ILU_apply1_source(ilu_operate_on_full_matrix);
+    add_kernel_source(sources, ILU_apply1_s);
+    const std::string& ILU_apply2_s = get_ILU_apply2_source(ilu_operate_on_full_matrix);
+    add_kernel_source(sources, ILU_apply2_s);
+    const std::string& stdwell_apply_s = get_stdwell_apply_source(true);
+    add_kernel_source(sources, stdwell_apply_s);
+    const std::string& stdwell_apply_no_reorder_s = get_stdwell_apply_source(false);
+    add_kernel_source(sources, stdwell_apply_no_reorder_s);
+    const std::string& ilu_decomp_s = get_ilu_decomp_source();
+    add_kernel_source(sources, ilu_decomp_s);
 
     cl::Program program = cl::Program(*context, sources);
     program.build(devices);
@@ -468,7 +468,7 @@ void OpenclKernels::apply_stdwells_no_reorder(cl::Buffer& d_Cnnzs_ocl, cl::Buffe
 }
 
 
-    std::string OpenclKernels::get_axpy_string() {
+    std::string OpenclKernels::get_axpy_source() {
         return R"(
         __kernel void axpy(
             __global double *in,
@@ -489,7 +489,7 @@ void OpenclKernels::apply_stdwells_no_reorder(cl::Buffer& d_Cnnzs_ocl, cl::Buffe
 
 
     // scale vector with scalar
-    std::string OpenclKernels::get_scale_string() {
+    std::string OpenclKernels::get_scale_source() {
         return R"(
         __kernel void scale(
             __global double *vec,
@@ -508,7 +508,7 @@ void OpenclKernels::apply_stdwells_no_reorder(cl::Buffer& d_Cnnzs_ocl, cl::Buffe
     }
 
     // multiply vector with another vector, element-wise
-    std::string OpenclKernels::get_vmul_string() {
+    std::string OpenclKernels::get_vmul_source() {
         return R"(
         __kernel void vmul(
             const double alpha,
@@ -530,7 +530,7 @@ void OpenclKernels::apply_stdwells_no_reorder(cl::Buffer& d_Cnnzs_ocl, cl::Buffe
 
 
     // returns partial sums, instead of the final dot product
-    std::string OpenclKernels::get_dot_1_string() {
+    std::string OpenclKernels::get_dot_1_source() {
         return R"(
         __kernel void dot_1(
             __global double *in1,
@@ -573,7 +573,7 @@ void OpenclKernels::apply_stdwells_no_reorder(cl::Buffer& d_Cnnzs_ocl, cl::Buffe
 
     // returns partial sums, instead of the final norm
     // the square root must be computed on CPU
-    std::string OpenclKernels::get_norm_string() {
+    std::string OpenclKernels::get_norm_source() {
         return R"(
         __kernel void norm(
             __global double *in,
@@ -614,7 +614,7 @@ void OpenclKernels::apply_stdwells_no_reorder(cl::Buffer& d_Cnnzs_ocl, cl::Buffe
 
 
     // p = (p - omega * v) * beta + r
-    std::string OpenclKernels::get_custom_string() {
+    std::string OpenclKernels::get_custom_source() {
         return R"(
         __kernel void custom(
             __global double *p,
@@ -642,7 +642,7 @@ void OpenclKernels::apply_stdwells_no_reorder(cl::Buffer& d_Cnnzs_ocl, cl::Buffe
 
     // transform blocked vector to scalar vector using pressure-weights
     // every workitem handles one blockrow
-    std::string OpenclKernels::get_move_to_coarse_string() {
+    std::string OpenclKernels::get_move_to_coarse_source() {
         return R"(
         __kernel void move_to_coarse(
             __global const double *fine_y,
@@ -669,7 +669,7 @@ void OpenclKernels::apply_stdwells_no_reorder(cl::Buffer& d_Cnnzs_ocl, cl::Buffe
 
     // add the coarse pressure solution back to the finer, complete solution
     // every workitem handles one blockrow
-    std::string OpenclKernels::get_move_to_fine_string() {
+    std::string OpenclKernels::get_move_to_fine_source() {
         return R"(
         __kernel void move_to_fine(
             __global const double *coarse_x,
@@ -692,7 +692,7 @@ void OpenclKernels::apply_stdwells_no_reorder(cl::Buffer& d_Cnnzs_ocl, cl::Buffe
 
 /// either b = mat * x
 /// or res = rhs - mat * x
-std::string OpenclKernels::get_blocked_matrix_operation_string(matrix_operation op) {
+std::string OpenclKernels::get_blocked_matrix_operation_source(matrix_operation op) {
     std::string s;
     if (op == matrix_operation::spmv_op) {
         s += "__kernel void spmv_blocked(";
@@ -779,7 +779,7 @@ std::string OpenclKernels::get_blocked_matrix_operation_string(matrix_operation 
 
 /// either b = mat * x
 /// or res = rhs - mat * x
-std::string OpenclKernels::get_matrix_operation_string(matrix_operation op, bool spmv_reset) {
+std::string OpenclKernels::get_matrix_operation_source(matrix_operation op, bool spmv_reset) {
     std::string s;
     if (op == matrix_operation::spmv_op) {
         if (spmv_reset) {
@@ -853,7 +853,7 @@ std::string OpenclKernels::get_matrix_operation_string(matrix_operation op, bool
 }
 
 
-    std::string OpenclKernels::get_ILU_apply1_string(bool full_matrix) {
+    std::string OpenclKernels::get_ILU_apply1_source(bool full_matrix) {
         std::string s = R"(
             __kernel void ILU_apply1(
                 __global const double *LUvals,
@@ -929,7 +929,7 @@ std::string OpenclKernels::get_matrix_operation_string(matrix_operation op, bool
     }
 
 
-    std::string OpenclKernels::get_ILU_apply2_string(bool full_matrix) {
+    std::string OpenclKernels::get_ILU_apply2_source(bool full_matrix) {
         std::string s = R"(
             __kernel void ILU_apply2(
                 __global const double *LUvals,
@@ -1012,7 +1012,7 @@ std::string OpenclKernels::get_matrix_operation_string(matrix_operation op, bool
         return s;
     }
 
-    std::string OpenclKernels::get_stdwell_apply_string(bool reorder) {
+    std::string OpenclKernels::get_stdwell_apply_source(bool reorder) {
         std::string kernel_name = reorder ? "stdwell_apply" : "stdwell_apply_no_reorder";
         std::string s = "__kernel void " + kernel_name + R"((
                         __global const double *Cnnzs,
@@ -1107,7 +1107,7 @@ std::string OpenclKernels::get_matrix_operation_string(matrix_operation op, bool
     }
 
 
-    std::string OpenclKernels::get_ilu_decomp_string() {
+    std::string OpenclKernels::get_ilu_decomp_source() {
         return R"(
 
         // a = a - (b * c)

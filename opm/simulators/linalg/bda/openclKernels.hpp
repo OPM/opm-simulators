@@ -87,34 +87,34 @@ private:
 
     /// Generate string with axpy kernel
     /// a = a + alpha * b
-    static std::string get_axpy_string();
+    static std::string get_axpy_source();
 
     /// Generate string with scale kernel
     /// a = a * alpha
-    static std::string get_scale_string();
+    static std::string get_scale_source();
 
     /// multiply vector with another vector and a scalar, element-wise
     /// add result to a third vector
-    static std::string get_vmul_string();
+    static std::string get_vmul_source();
 
     /// returns partial sums, instead of the final dot product
     /// partial sums are added on CPU
-    static std::string get_dot_1_string();
+    static std::string get_dot_1_source();
 
     /// returns partial sums, instead of the final norm
     /// the square root must be computed on CPU
-    static std::string get_norm_string();
+    static std::string get_norm_source();
 
     /// Generate string with custom kernel
     /// This kernel combines some ilubicgstab vector operations into 1
     /// p = (p - omega * v) * beta + r
-    static std::string get_custom_string();
+    static std::string get_custom_source();
 
     /// Transform blocked vector to scalar vector using pressure-weights
-    static std::string get_move_to_coarse_string();
+    static std::string get_move_to_coarse_source();
 
     /// Add the coarse pressure solution back to the finer, complete solution
-    static std::string get_move_to_fine_string();
+    static std::string get_move_to_fine_source();
 
     /// b = mat * x
     /// algorithm based on:
@@ -122,32 +122,32 @@ private:
     /// Ryan Eberhardt, Mark Hoemmen, 2016, https://doi.org/10.1109/IPDPSW.2016.42
     /// or
     /// res = rhs - (mat * x)
-    static std::string get_blocked_matrix_operation_string(matrix_operation op);
-    static std::string get_matrix_operation_string(matrix_operation op, bool spmv_reset = true);
+    static std::string get_blocked_matrix_operation_source(matrix_operation op);
+    static std::string get_matrix_operation_source(matrix_operation op, bool spmv_reset = true);
 
     /// ILU apply part 1: forward substitution
     /// solves L*x=y where L is a lower triangular sparse blocked matrix
     /// this L can be it's own BSR matrix (if full_matrix is false),
     /// or it can be inside a normal, square matrix, in that case diagIndex indicates where the rows of L end
     /// \param[in] full_matrix   whether the kernel should operate on a full (square) matrix or not
-    static std::string get_ILU_apply1_string(bool full_matrix);
+    static std::string get_ILU_apply1_source(bool full_matrix);
 
     /// ILU apply part 2: backward substitution
     /// solves U*x=y where U is an upper triangular sparse blocked matrix
     /// this U can be it's own BSR matrix (if full_matrix is false),
     /// or it can be inside a normal, square matrix, in that case diagIndex indicates where the rows of U start
     /// \param[in] full_matrix   whether the kernel should operate on a full (square) matrix or not
-    static std::string get_ILU_apply2_string(bool full_matrix);
+    static std::string get_ILU_apply2_source(bool full_matrix);
 
     /// Generate string with the stdwell_apply kernels
     /// If reorder is true, the B/Ccols do not correspond with the x/y vector
     /// the x/y vector is reordered, use toOrder to address that
     /// \param[in] reorder   whether the matrix is reordered or not
-    static std::string get_stdwell_apply_string(bool reorder);
+    static std::string get_stdwell_apply_source(bool reorder);
 
     /// Generate string with the exact ilu decomposition kernel
     /// The kernel takes a full BSR matrix and performs inplace ILU decomposition
-    static std::string get_ilu_decomp_string();
+    static std::string get_ilu_decomp_source();
 
     OpenclKernels(){}; // disable instantiation
 
