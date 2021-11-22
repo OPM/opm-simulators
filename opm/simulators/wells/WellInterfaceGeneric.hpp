@@ -189,7 +189,7 @@ protected:
     // definition of the struct OperabilityStatus
     struct OperabilityStatus {
         bool isOperableAndSolvable() const {
-            if (!operable_under_only_bhp_limit || !solvable || has_non_positive_potentials) {
+            if (!operable_under_only_bhp_limit || !solvable || has_negative_potentials) {
                 return false;
             } else {
                 return ( (isOperableUnderBHPLimit() || isOperableUnderTHPLimit()) );
@@ -225,7 +225,7 @@ protected:
         // the well is solveable
         bool solvable = true;
         // the well have non positive potentials
-        bool has_non_positive_potentials = false;
+        bool has_negative_potentials = false;
     };
 
     OperabilityStatus operability_status_;

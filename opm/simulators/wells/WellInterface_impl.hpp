@@ -482,7 +482,7 @@ namespace Opm
                     this->operability_status_.solvable = false;
             }
         }
-        if (this->operability_status_.has_non_positive_potentials) {
+        if (this->operability_status_.has_negative_potentials) {
             auto well_state_copy = well_state;
             std::vector<double> potentials;
             try {
@@ -490,7 +490,7 @@ namespace Opm
             } catch (const std::exception& e) {
                 const std::string msg = std::string("well ") + this->name() + std::string(": computeWellPotentials() failed during for re-computing: ") + e.what();
                 deferred_logger.info(msg);
-                this->operability_status_.has_non_positive_potentials = true;
+                this->operability_status_.has_negative_potentials = true;
             }
             auto& ws = well_state.well(this->indexOfWell());
             const int np = well_state.numPhases();

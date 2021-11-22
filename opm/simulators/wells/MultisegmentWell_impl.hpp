@@ -253,7 +253,7 @@ namespace Opm
         if (this->wellIsStopped()) {
             return;
         }
-        this->operability_status_.has_non_positive_potentials = false;
+        this->operability_status_.has_negative_potentials = false;
 
         // If the well is pressure controlled the potential equals the rate.
         bool thp_controlled_well = false;
@@ -279,27 +279,17 @@ namespace Opm
         if (thp_controlled_well || bhp_controlled_well) {
 
             double total_rate = 0.0;
+            const double sign = this->isInjector() ? 1.0:-1.0;
             for (int phase = 0; phase < np; ++phase){
-                total_rate += ws.surface_rates[phase];
+                total_rate += sign * ws.surface_rates[phase];
             }
             // for pressure controlled wells the well rates are the potentials
             // if the rates are trivial we are most probably looking at the newly
             // opened well and we therefore make the affort of computing the potentials anyway.
-            if (std::abs(total_rate) > 0) {
-                const double sign = this->isInjector() ? 1.0:-1.0;
-                double total_potential = 0.0;
+            if (total_rate > 0) {
                 for (int phase = 0; phase < np; ++phase){
                     well_potentials[phase] = sign * ws.surface_rates[phase];
-                    total_potential += well_potentials[phase];
                 }
-                if (total_potential <= 0.0) {
-                // wells with trivial or non-positive potentials
-                // are not operable
-                this->operability_status_.has_non_positive_potentials = true;
-                const std::string msg = std::string("well ") + this->name() + std::string(": has non positive potentials and is not operable");
-                deferred_logger.info(msg);
-                }
-
                 return;
             }
         }
@@ -321,11 +311,10 @@ namespace Opm
             well_potentials[phase] *= sign;
             total_potential += well_potentials[phase];
         }
-        if (total_potential <= 0.0) {
-            // wells with trivial or non-positive potentials
-            // are not operable
-            this->operability_status_.has_non_positive_potentials = true;
-            const std::string msg = std::string("well ") + this->name() + std::string(": has non positive potentials is not operable");
+        if (total_potential < 0.0) {
+            // wells with negative potentials are not operable
+            this->operability_status_.has_negative_potentials = true;
+            const std::string msg = std::string("well ") + this->name() + std::string(": has non negative potentials is not operable");
             deferred_logger.info(msg);
         }
     }
