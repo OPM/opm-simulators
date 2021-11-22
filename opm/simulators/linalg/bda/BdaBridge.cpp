@@ -171,7 +171,6 @@ int checkZeroDiagonal(BridgeMatrix& mat) {
 // this could be removed if Dune::BCRSMatrix features an API call that returns colIndices and rowPointers
 template <class BridgeMatrix, class BridgeVector, int block_size>
 void BdaBridge<BridgeMatrix, BridgeVector, block_size>::getSparsityPattern(const BridgeMatrix& mat, std::vector<int> &h_rows, std::vector<int> &h_cols) {
-    int sum_nnzs = 0;
 
     h_rows.clear();
     h_cols.clear();
@@ -179,13 +178,10 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::getSparsityPattern(const
     // convert colIndices and rowPointers
     h_rows.emplace_back(0);
     for (typename BridgeMatrix::const_iterator r = mat.begin(); r != mat.end(); ++r) {
-        int size_row = 0;
         for (auto c = r->begin(); c != r->end(); ++c) {
             h_cols.emplace_back(c.index());
-            size_row++;
         }
-        sum_nnzs += size_row;
-        h_rows.emplace_back(sum_nnzs);
+        h_rows.emplace_back(h_cols.size());
     }
 
     // h_rows and h_cols could be changed to 'unsigned int', but cusparse expects 'int'
