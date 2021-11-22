@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef MATRIX_HEADER_INCLUDED
-#define MATRIX_HEADER_INCLUDED
+#ifndef OPM_MATRIX_HEADER_INCLUDED
+#define OPM_MATRIX_HEADER_INCLUDED
 
 #include <vector>
 
@@ -127,4 +127,4 @@ void sortRow(int *colIndices, double *data, int left, int right);
 } // namespace Accelerator
 } // namespace Opm
 
-#endif // MATRIX_HEADER_INCLUDED
+#endif // OPM_MATRIX_HEADER_INCLUDED

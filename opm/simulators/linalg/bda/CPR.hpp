@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef CPR_HPP
-#define CPR_HPP
+#ifndef OPM_CPR_HPP
+#define OPM_CPR_HPP
 
 #include <mutex>
 

@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef BLOCKED_MATRIX_HPP
-#define BLOCKED_MATRIX_HPP
+#ifndef OPM_BLOCKED_MATRIX_HPP
+#define OPM_BLOCKED_MATRIX_HPP
 
 #if HAVE_FPGA
 #include <vector>
