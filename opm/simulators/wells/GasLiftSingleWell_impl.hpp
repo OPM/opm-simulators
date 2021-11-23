@@ -113,9 +113,8 @@ computeWellRates_(
         displayDebugMessage_(msg);
     }
 
-    for (size_t phase = 0; phase < potentials.size(); ++phase){
-        // make sure the potentials are negative
-        potentials[phase] = std::min(0.0, potentials[phase]);
+    for (auto& potential : potentials) {
+        potential = std::min(0.0, potential);
     }
 }
 

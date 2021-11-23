@@ -488,7 +488,7 @@ namespace Opm
             try {
                 computeWellPotentials(ebosSimulator, well_state_copy, potentials, deferred_logger);
             } catch (const std::exception& e) {
-                const std::string msg = std::string("well ") + this->name() + std::string(": computeWellPotentials() failed during for re-computing: ") + e.what();
+                const std::string msg = std::string("well ") + this->name() + std::string(": computeWellPotentials() failed during attempt to recompute potentials for well : ") + e.what();
                 deferred_logger.info(msg);
                 this->operability_status_.has_negative_potentials = true;
             }

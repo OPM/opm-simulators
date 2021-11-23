@@ -2378,15 +2378,14 @@ runWellPIScaling(const int timeStepIdx,
 bool
 BlackoilWellModelGeneric::
 guideRateUpdateIsNeeded() const {
-    int update = 0;
-    for (const auto& well : well_container_generic_) {
-        if (well->changedToOpenThisStep()) {
-            update = 1;
-            break;
-        }
-    }
-    update = comm_.max(update);
-    return update;
+    const auto need_update =
+    std::any_of(this->well_container_generic_.begin(),
+                this->well_container_generic_.end(),
+    [](const WellInterfaceGeneric* well)
+    {
+        return well->changedToOpenThisStep();
+    });
+    return this->comm_.max(static_cast<int>(need_update));
 }
 
 

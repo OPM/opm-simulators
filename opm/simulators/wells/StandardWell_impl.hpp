@@ -1901,7 +1901,6 @@ namespace Opm
             // if the rates are trivial we are most probably looking at the newly
             // opened well and we therefore make the affort of computing the potentials anyway.
             if (total_rate > 0) {
-                const double sign = this->isInjector() ? 1.0:-1.0;
                 for (int phase = 0; phase < np; ++phase){
                     well_potentials[phase] = sign * ws.surface_rates[phase];
                 }
