@@ -38,6 +38,7 @@ public:
     /// \param[in] nnzs            number of nonzeros
     Matrix(int N_, int nnzs_)
     : N(N_),
+      M(N_),
       nnzs(nnzs_)
     {
         nnzValues.resize(nnzs);
@@ -50,13 +51,9 @@ public:
     /// \param[in] M               number of columns
     /// \param[in] nnzs            number of nonzeros
     Matrix(int N_, int M_, int nnzs_)
-    : N(N_),
-      M(M_),
-      nnzs(nnzs_)
+    : Matrix(N_, nnzs_)
     {
-        nnzValues.resize(nnzs);
-        colIndices.resize(nnzs);
-        rowPointers.resize(N+1);
+        M = M_;
     }
 
 #if HAVE_FPGA
