@@ -303,6 +303,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/utils/ParallelEclipseState.hpp
   opm/simulators/utils/ParallelRestart.hpp
   opm/simulators/utils/PropsCentroidsDataHandle.hpp
+  opm/simulators/utils/VectorVectorDataHandle.hpp
   opm/simulators/wells/PerfData.hpp
   opm/simulators/wells/PerforationData.hpp
   opm/simulators/wells/RateConverter.hpp
