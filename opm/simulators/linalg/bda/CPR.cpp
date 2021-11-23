@@ -140,7 +140,8 @@ void CPR<block_size>::create_preconditioner(BlockedMatrix *mat_) {
             }
         }
 
-        // transform blocks to scalars
+        // extract pressure
+        // transform blocks to scalars to create scalar linear system
         for (int row = 0; row < Nb; ++row) {
             int start = mat->rowPointers[row];
             int end = mat->rowPointers[row + 1];

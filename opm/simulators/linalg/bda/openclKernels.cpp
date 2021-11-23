@@ -507,7 +507,8 @@ void OpenclKernels::apply_stdwells_no_reorder(cl::Buffer& d_Cnnzs_ocl, cl::Buffe
         )";
     }
 
-    // multiply vector with another vector, element-wise
+    // multiply vector with another vector and a scalar, element-wise
+    // add result to a third vector
     std::string OpenclKernels::get_vmul_source() {
         return R"(
         __kernel void vmul(
