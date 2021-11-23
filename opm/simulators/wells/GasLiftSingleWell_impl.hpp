@@ -112,6 +112,10 @@ computeWellRates_(
             -potentials[this->water_pos_]);
         displayDebugMessage_(msg);
     }
+
+    for (auto& potential : potentials) {
+        potential = std::min(0.0, potential);
+    }
 }
 
 template<typename TypeTag>

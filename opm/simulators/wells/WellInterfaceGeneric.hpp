@@ -174,6 +174,9 @@ public:
 
     void reportWellSwitching(const SingleWellState& ws, DeferredLogger& deferred_logger) const;
 
+    bool changedToOpenThisStep() const {
+        return this->changed_to_open_this_step_;
+    }
 protected:
     bool getAllowCrossFlow() const;
     double mostStrictBhpFromBhpLimits(const SummaryState& summaryState) const;
@@ -186,7 +189,7 @@ protected:
     // definition of the struct OperabilityStatus
     struct OperabilityStatus {
         bool isOperableAndSolvable() const {
-            if (!operable_under_only_bhp_limit || !solvable) {
+            if (!operable_under_only_bhp_limit || !solvable || has_negative_potentials) {
                 return false;
             } else {
                 return ( (isOperableUnderBHPLimit() || isOperableUnderTHPLimit()) );
@@ -221,6 +224,8 @@ protected:
         bool obey_bhp_limit_with_thp_limit = true;
         // the well is solveable
         bool solvable = true;
+        // the well have non positive potentials
+        bool has_negative_potentials = false;
     };
 
     OperabilityStatus operability_status_;
@@ -308,6 +313,8 @@ protected:
     const GuideRate* guide_rate_;
 
     std::vector< std::string> well_control_log_;
+
+    bool changed_to_open_this_step_ = false;
 };
 
 }

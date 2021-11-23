@@ -1868,6 +1868,7 @@ namespace Opm
             return;
         }
 
+        this->operability_status_.has_negative_potentials = false;
         // If the well is pressure controlled the potential equals the rate.
         bool thp_controlled_well = false;
         bool bhp_controlled_well = false;
@@ -1892,15 +1893,16 @@ namespace Opm
         if (thp_controlled_well || bhp_controlled_well) {
 
             double total_rate = 0.0;
+            const double sign = this->isInjector() ? 1.0:-1.0;
             for (int phase = 0; phase < np; ++phase){
-                total_rate += ws.surface_rates[phase];
+                total_rate += sign * ws.surface_rates[phase];
             }
             // for pressure controlled wells the well rates are the potentials
             // if the rates are trivial we are most probably looking at the newly
             // opened well and we therefore make the affort of computing the potentials anyway.
-            if (std::abs(total_rate) > 0) {
+            if (total_rate > 0) {
                 for (int phase = 0; phase < np; ++phase){
-                    well_potentials[phase] = ws.surface_rates[phase];
+                    well_potentials[phase] = sign * ws.surface_rates[phase];
                 }
                 return;
             }
@@ -1916,6 +1918,19 @@ namespace Opm
         } else {
             // the well has a THP related constraint
             well_potentials = computeWellPotentialWithTHP(ebosSimulator, deferred_logger, well_state);
+        }
+
+        const double sign = this->isInjector() ? 1.0:-1.0;
+        double total_potential = 0.0;
+        for (int phase = 0; phase < np; ++phase){
+            well_potentials[phase] *= sign;
+            total_potential += well_potentials[phase];
+        }
+        if (total_potential < 0.0) {
+            // wells with negative potentials are not operable
+            this->operability_status_.has_negative_potentials = true;
+            const std::string msg = std::string("well ") + this->name() + std::string(": has negative potentials and is not operable");
+            deferred_logger.info(msg);
         }
     }
 

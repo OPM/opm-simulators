@@ -349,7 +349,7 @@ namespace Opm
             }
             const int np = well_state_copy.numPhases();
             for (int p = 0; p < np; ++p) {
-                ws.well_potentials[p] = std::abs(potentials[p]);
+                ws.well_potentials[p] = std::max(0.0, potentials[p]);
             }
             this->updateWellTestState(well_state_copy.well(this->indexOfWell()), simulation_time, /*writeMessageToOPMLog=*/ false, welltest_state_temp, deferred_logger);
             this->closeCompletions(welltest_state_temp);
@@ -482,7 +482,23 @@ namespace Opm
                     this->operability_status_.solvable = false;
             }
         }
-
+        if (this->operability_status_.has_negative_potentials) {
+            auto well_state_copy = well_state;
+            std::vector<double> potentials;
+            try {
+                computeWellPotentials(ebosSimulator, well_state_copy, potentials, deferred_logger);
+            } catch (const std::exception& e) {
+                const std::string msg = std::string("well ") + this->name() + std::string(": computeWellPotentials() failed during attempt to recompute potentials for well : ") + e.what();
+                deferred_logger.info(msg);
+                this->operability_status_.has_negative_potentials = true;
+            }
+            auto& ws = well_state.well(this->indexOfWell());
+            const int np = well_state.numPhases();
+            for (int p = 0; p < np; ++p) {
+                ws.well_potentials[p] = std::max(0.0, potentials[p]);
+            }
+        }
+        this->changed_to_open_this_step_ = false;
         const bool well_operable = this->operability_status_.isOperableAndSolvable();
         if (!well_operable && old_well_operable) {
             if (this->well_ecl_.getAutomaticShutIn()) {
@@ -498,6 +514,7 @@ namespace Opm
             deferred_logger.info(" well " + this->name() + " gets REVIVED during iteration ");
             this->openWell();
             changed_to_stopped_this_step_ = false;
+            this->changed_to_open_this_step_ = true;
         }
 
         const auto& summary_state = ebosSimulator.vanguard().summaryState();
