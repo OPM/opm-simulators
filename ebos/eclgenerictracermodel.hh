@@ -67,6 +67,7 @@ public:
      * \brief Return the tracer concentration for tracer index and global DofIdx
      */
     Scalar tracerConcentration(int tracerIdx, int globalDofIdx) const;
+    void setTracerConcentration(int tracerIdx, int globalDofIdx, Scalar value);
 
     /*!
     * \brief Return well tracer rates
