@@ -208,7 +208,7 @@ applyExplicitThresholdPressures_()
     if (enableExperiments_) {
         // apply threshold pressures accross faults (experimental!)
         if (deck_.hasKeyword("THPRESFT"))
-            extractThpresft_(deck_.getKeyword("THPRESFT"));
+            extractThpresft_(deck_["THPRESFT"].back());
     }
 }
 
