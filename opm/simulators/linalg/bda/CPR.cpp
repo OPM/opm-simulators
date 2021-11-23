@@ -103,6 +103,60 @@ void solve_transposed_3x3(const double *A, const double *b, double *x) {
 
 
 template <unsigned int block_size>
+void CPR<block_size>::init_opencl_buffers() {
+    d_Amatrices.reserve(num_levels);
+    d_Pmatrices.reserve(num_levels - 1);
+    d_Rmatrices.reserve(num_levels - 1);
+    d_invDiags.reserve(num_levels - 1);
+    for (Matrix& m : Amatrices) {
+        d_Amatrices.emplace_back(context.get(), m.N, m.M, m.nnzs, 1);
+    }
+    for (Matrix& m : Pmatrices) {
+        d_Pmatrices.emplace_back(context.get(), m.N, m.M, m.nnzs, 1);
+        d_invDiags.emplace_back(*context, CL_MEM_READ_WRITE, sizeof(double) * m.N); // create a cl::Buffer
+        d_t.emplace_back(*context, CL_MEM_READ_WRITE, sizeof(double) * m.N);
+    }
+    for (Matrix& m : Rmatrices) {
+        d_Rmatrices.emplace_back(context.get(), m.N, m.M, m.nnzs, 1);
+        d_f.emplace_back(*context, CL_MEM_READ_WRITE, sizeof(double) * m.N);
+        d_u.emplace_back(*context, CL_MEM_READ_WRITE, sizeof(double) * m.N);
+    }
+    d_weights = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE, sizeof(double) * N);
+    d_rs = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE, sizeof(double) * N);
+    d_mat = std::make_unique<OpenclMatrix>(context.get(), Nb, Nb, nnzb, block_size);
+    d_coarse_y = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE, sizeof(double) * Nb);
+    d_coarse_x = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE, sizeof(double) * Nb);
+}
+
+
+template <unsigned int block_size>
+void CPR<block_size>::opencl_upload() {
+    d_mat->upload(queue.get(), mat);
+
+    err = CL_SUCCESS;
+    events.resize(Pmatrices.size() + 1);
+    for (unsigned int i = 0; i < Pmatrices.size(); ++i) {
+        d_Amatrices[i].upload(queue.get(), &Amatrices[i]);
+
+        err |= queue->enqueueWriteBuffer(d_invDiags[i], CL_FALSE, 0, sizeof(double) * Amatrices[i].N, invDiags[i].data(), nullptr, &events[i]);
+    }
+    err |= queue->enqueueWriteBuffer(*d_weights, CL_FALSE, 0, sizeof(double) * N, weights.data(), nullptr, &events[Pmatrices.size()]);
+    cl::WaitForEvents(events);
+    events.clear();
+    if (err != CL_SUCCESS) {
+        // enqueueWriteBuffer is C and does not throw exceptions like C++ OpenCL
+        OPM_THROW(std::logic_error, "CPR OpenCL enqueueWriteBuffer error");
+    }
+    for (unsigned int i = 0; i < Pmatrices.size(); ++i) {
+        d_Pmatrices[i].upload(queue.get(), &Pmatrices[i]);
+    }
+    for (unsigned int i = 0; i < Rmatrices.size(); ++i) {
+        d_Rmatrices[i].upload(queue.get(), &Rmatrices[i]);
+    }
+}
+
+
+template <unsigned int block_size>
 void CPR<block_size>::create_preconditioner(BlockedMatrix *mat_) {
     this->mat = mat_;
 
@@ -217,54 +271,11 @@ void CPR<block_size>::create_preconditioner(BlockedMatrix *mat_) {
         }
 
         // initialize OpenclMatrices and Buffers if needed
-        std::call_once(opencl_buffers_allocated, [&](){
-            d_Amatrices.reserve(num_levels);
-            d_Pmatrices.reserve(num_levels - 1);
-            d_Rmatrices.reserve(num_levels - 1);
-            d_invDiags.reserve(num_levels-1);
-            for (Matrix& m : Amatrices) {
-                d_Amatrices.emplace_back(context.get(), m.N, m.M, m.nnzs, 1);
-            }
-            for (Matrix& m : Pmatrices) {
-                d_Pmatrices.emplace_back(context.get(), m.N, m.M, m.nnzs, 1);
-                d_invDiags.emplace_back(*context, CL_MEM_READ_WRITE, sizeof(double) * m.N); // create a cl::Buffer
-                d_t.emplace_back(*context, CL_MEM_READ_WRITE, sizeof(double) * m.N);
-            }
-            for (Matrix& m : Rmatrices) {
-                d_Rmatrices.emplace_back(context.get(), m.N, m.M, m.nnzs, 1);
-                d_f.emplace_back(*context, CL_MEM_READ_WRITE, sizeof(double) * m.N);
-                d_u.emplace_back(*context, CL_MEM_READ_WRITE, sizeof(double) * m.N);
-            }
-            d_weights = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE, sizeof(double) * N);
-            d_rs = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE, sizeof(double) * N);
-            d_mat = std::make_unique<OpenclMatrix>(context.get(), Nb, Nb, nnzb, block_size);
-            d_coarse_y = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE, sizeof(double) * Nb);
-            d_coarse_x = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE, sizeof(double) * Nb);
-        });
+        auto init_func = std::bind(&CPR::init_opencl_buffers, this);
+        std::call_once(opencl_buffers_allocated, init_func);
 
         // upload matrices and vectors to GPU
-        d_mat->upload(queue.get(), mat);
-
-        err = CL_SUCCESS;
-        events.resize(Pmatrices.size() + 1);
-        for (unsigned int i = 0; i < Pmatrices.size(); ++i) {
-            d_Amatrices[i].upload(queue.get(), &Amatrices[i]);
-
-            err |= queue->enqueueWriteBuffer(d_invDiags[i], CL_FALSE, 0, sizeof(double) * Amatrices[i].N, invDiags[i].data(), nullptr, &events[i]);
-        }
-        err |= queue->enqueueWriteBuffer(*d_weights, CL_FALSE, 0, sizeof(double) * N, weights.data(), nullptr, &events[Pmatrices.size()]);
-        cl::WaitForEvents(events);
-        events.clear();
-        if (err != CL_SUCCESS) {
-            // enqueueWriteBuffer is C and does not throw exceptions like C++ OpenCL
-            OPM_THROW(std::logic_error, "CPR OpenCL enqueueWriteBuffer error");
-        }
-        for (unsigned int i = 0; i < Pmatrices.size(); ++i) {
-            d_Pmatrices[i].upload(queue.get(), &Pmatrices[i]);
-        }
-        for (unsigned int i = 0; i < Rmatrices.size(); ++i) {
-            d_Rmatrices[i].upload(queue.get(), &Rmatrices[i]);
-        }
+        opencl_upload();
 
     } catch (const std::exception& ex) {
         std::cerr << "Caught exception: " << ex.what() << std::endl;

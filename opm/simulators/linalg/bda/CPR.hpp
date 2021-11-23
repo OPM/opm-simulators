@@ -97,6 +97,12 @@ private:
     // These can be reused, so only use when recalculate_aggregates is true
     void analyzeAggregateMaps();
 
+    // Initialize and allocate matrices and vectors
+    void init_opencl_buffers();
+
+    // Copy matrices and vectors to GPU
+    void opencl_upload();
+
     void amg_cycle_gpu(const int level, cl::Buffer &y, cl::Buffer &x);
 
 public:
