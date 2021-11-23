@@ -24,11 +24,11 @@
 
 #include <dune/istl/paamg/matrixhierarchy.hh>
 
-#include <opm/simulators/linalg/bda/BlockedMatrix.hpp>
+#include <opm/simulators/linalg/bda/opencl.hpp>
 #include <opm/simulators/linalg/bda/Matrix.hpp>
+#include <opm/simulators/linalg/bda/OpenclMatrix.hpp>
 #include <opm/simulators/linalg/bda/ILUReorder.hpp>
 
-#include <opm/simulators/linalg/bda/opencl.hpp>
 #include <opm/simulators/linalg/bda/openclKernels.hpp>
 #include <opm/simulators/linalg/bda/ChowPatelIlu.hpp>
 #include <opm/simulators/linalg/bda/openclSolverBackend.hpp>
@@ -40,6 +40,8 @@ namespace Accelerator
 
 template <unsigned int block_size>
 class openclSolverBackend;
+
+class BlockedMatrix;
 
 /// This class implements a Constrained Pressure Residual (CPR) preconditioner
 template <unsigned int block_size>

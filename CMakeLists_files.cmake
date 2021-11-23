@@ -103,6 +103,7 @@ if(OPENCL_FOUND)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/CPR.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/openclKernels.cpp)
+  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/OpenclMatrix.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/openclSolverBackend.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/openclWellContributions.cpp)
 endif()
@@ -259,6 +260,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/bda/ILUReorder.hpp
   opm/simulators/linalg/bda/opencl.hpp
   opm/simulators/linalg/bda/openclKernels.hpp
+  opm/simulators/linalg/bda/OpenclMatrix.hpp
   opm/simulators/linalg/bda/openclSolverBackend.hpp
   opm/simulators/linalg/bda/openclWellContributions.hpp
   opm/simulators/linalg/bda/Matrix.hpp

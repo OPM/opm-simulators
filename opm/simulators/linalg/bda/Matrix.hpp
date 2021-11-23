@@ -22,44 +22,10 @@
 
 #include <vector>
 
-#include <opm/simulators/linalg/bda/opencl.hpp>
-#include <opm/simulators/linalg/bda/BlockedMatrix.hpp>
-
 namespace Opm
 {
 namespace Accelerator
 {
-
-class Matrix;
-
-/// This struct resembles a csr matrix, only doubles are supported
-/// The matrix data is stored in OpenCL Buffers
-class OpenclMatrix {
-public:
-
-    OpenclMatrix(cl::Context *context, int Nb_, int Mb_, int nnzbs_, unsigned int block_size_)
-    : Nb(Nb_),
-      Mb(Mb_),
-      nnzbs(nnzbs_),
-      block_size(block_size_)
-    {
-        nnzValues = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * block_size * block_size * nnzbs);
-        colIndices = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * nnzbs);
-        rowPointers = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * (Nb + 1));
-    }
-
-    void upload(cl::CommandQueue *queue, double *vals, int *cols, int *rows);
-    void upload(cl::CommandQueue *queue, Matrix *matrix);
-    void upload(cl::CommandQueue *queue, BlockedMatrix *matrix);
-
-    cl::Buffer nnzValues;
-    cl::Buffer colIndices;
-    cl::Buffer rowPointers;
-    int Nb, Mb;
-    int nnzbs;
-    unsigned int block_size;
-};
-
 
 /// This struct resembles a csr matrix, only doubles are supported
 /// The data is stored in contiguous memory, such that they can be copied to a device in one transfer.

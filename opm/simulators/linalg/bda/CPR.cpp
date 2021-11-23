@@ -30,7 +30,9 @@
 #include <opm/simulators/linalg/PropertyTree.hpp>
 
 #include <opm/simulators/linalg/bda/BdaBridge.hpp>
+#include <opm/simulators/linalg/bda/BlockedMatrix.hpp>
 #include <opm/simulators/linalg/bda/CPR.hpp>
+#include <opm/simulators/linalg/bda/OpenclMatrix.hpp>
 
 
 namespace Opm

@@ -22,13 +22,7 @@
 
 #if HAVE_FPGA
 #include <vector>
-namespace Opm
-{
-namespace Accelerator
-{
-    class Matrix;
-}
-}
+#include <opm/simulators/linalg/bda/Matrix.hpp>
 #endif
 
 

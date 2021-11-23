@@ -31,29 +31,6 @@ namespace Opm
 namespace Accelerator
 {
 
-void OpenclMatrix::upload(cl::CommandQueue *queue, double *vals, int *cols, int *rows) {
-    std::vector<cl::Event> events(3);
-
-    cl_int err = queue->enqueueWriteBuffer(nnzValues, CL_FALSE, 0, sizeof(double) * block_size * block_size * nnzbs, vals, nullptr, &events[0]);
-    err |= queue->enqueueWriteBuffer(colIndices, CL_FALSE, 0, sizeof(int) * nnzbs, cols, nullptr, &events[1]);
-    err |= queue->enqueueWriteBuffer(rowPointers, CL_FALSE, 0, sizeof(int) * (Nb + 1), rows, nullptr, &events[2]);
-
-    cl::WaitForEvents(events);
-    events.clear();
-    if (err != CL_SUCCESS) {
-        // enqueueWriteBuffer is C and does not throw exceptions like C++ OpenCL
-        OPM_THROW(std::logic_error, "OpenclMatrix OpenCL enqueueWriteBuffer error");
-    }
-}
-
-void OpenclMatrix::upload(cl::CommandQueue *queue, Matrix *matrix) {
-    upload(queue, matrix->nnzValues.data(), matrix->colIndices.data(), matrix->rowPointers.data());
-}
-
-void OpenclMatrix::upload(cl::CommandQueue *queue, BlockedMatrix *matrix) {
-    upload(queue, matrix->nnzValues, matrix->colIndices, matrix->rowPointers);
-}
-
 /*Sort a row of matrix elements from a CSR-format.*/
 void sortRow(int *colIndices, double *data, int left, int right) {
     int l = left;
