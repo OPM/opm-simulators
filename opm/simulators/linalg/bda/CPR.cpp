@@ -492,11 +492,11 @@ void CPR<block_size>::apply(const cl::Buffer& y, cl::Buffer& x) {
     }
 
     OpenclKernels::residual(d_mat->nnzValues, d_mat->colIndices, d_mat->rowPointers, x, y, *d_rs, Nb, block_size);
-    OpenclKernels::move_to_coarse(*d_rs, *d_weights, *d_coarse_y, Nb);
+    OpenclKernels::full_to_pressure_restriction(*d_rs, *d_weights, *d_coarse_y, Nb);
 
     amg_cycle_gpu(0, *d_coarse_y, *d_coarse_x);
 
-    OpenclKernels::move_to_fine(*d_coarse_x, x, pressure_idx, Nb);
+    OpenclKernels::add_coarse_pressure_correction(*d_coarse_x, x, pressure_idx, Nb);
 }
 
 

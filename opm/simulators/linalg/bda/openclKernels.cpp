@@ -48,8 +48,8 @@ std::unique_ptr<cl::KernelFunctor<cl::Buffer&, const double, cl::Buffer&, const 
 std::unique_ptr<cl::KernelFunctor<cl::Buffer&, const double, const unsigned int> > OpenclKernels::scale_k;
 std::unique_ptr<cl::KernelFunctor<const double, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int> > OpenclKernels::vmul_k;
 std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const double, const double, const unsigned int> > OpenclKernels::custom_k;
-std::unique_ptr<cl::KernelFunctor<const cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int> > OpenclKernels::move_to_coarse_k;
-std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int> > OpenclKernels::move_to_fine_k;
+std::unique_ptr<cl::KernelFunctor<const cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int> > OpenclKernels::full_to_pressure_restriction_k;
+std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int> > OpenclKernels::add_coarse_pressure_correction_k;
 std::unique_ptr<spmv_blocked_kernel_type> OpenclKernels::spmv_blocked_k;
 std::unique_ptr<spmv_kernel_type> OpenclKernels::spmv_k;
 std::unique_ptr<spmv_kernel_type> OpenclKernels::spmv_noreset_k;
@@ -95,10 +95,10 @@ void OpenclKernels::init(cl::Context *context, cl::CommandQueue *queue_, std::ve
     add_kernel_source(sources, norm_s);
     const std::string& custom_s = get_custom_source();
     add_kernel_source(sources, custom_s);
-    const std::string& move_to_coarse_s = get_move_to_coarse_source();
-    add_kernel_source(sources, move_to_coarse_s);
-    const std::string& move_to_fine_s = get_move_to_fine_source();
-    add_kernel_source(sources, move_to_fine_s);
+    const std::string& full_to_pressure_restriction_s = get_full_to_pressure_restriction_source();
+    add_kernel_source(sources, full_to_pressure_restriction_s);
+    const std::string& add_coarse_pressure_correction_s = get_add_coarse_pressure_correction_source();
+    add_kernel_source(sources, add_coarse_pressure_correction_s);
     const std::string& spmv_blocked_s = get_blocked_matrix_operation_source(matrix_operation::spmv_op);
     add_kernel_source(sources, spmv_blocked_s);
     const std::string& spmv_s = get_matrix_operation_source(matrix_operation::spmv_op, true);
@@ -138,8 +138,8 @@ void OpenclKernels::init(cl::Context *context, cl::CommandQueue *queue_, std::ve
     scale_k.reset(new cl::KernelFunctor<cl::Buffer&, const double, const unsigned int>(cl::Kernel(program, "scale")));
     vmul_k.reset(new cl::KernelFunctor<const double, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int>(cl::Kernel(program, "vmul")));
     custom_k.reset(new cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const double, const double, const unsigned int>(cl::Kernel(program, "custom")));
-    move_to_coarse_k.reset(new cl::KernelFunctor<const cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int>(cl::Kernel(program, "move_to_coarse")));
-    move_to_fine_k.reset(new cl::KernelFunctor<cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int>(cl::Kernel(program, "move_to_fine")));
+    full_to_pressure_restriction_k.reset(new cl::KernelFunctor<const cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int>(cl::Kernel(program, "full_to_pressure_restriction")));
+    add_coarse_pressure_correction_k.reset(new cl::KernelFunctor<cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int>(cl::Kernel(program, "add_coarse_pressure_correction")));
     spmv_blocked_k.reset(new spmv_blocked_kernel_type(cl::Kernel(program, "spmv_blocked")));
     spmv_k.reset(new spmv_kernel_type(cl::Kernel(program, "spmv")));
     spmv_noreset_k.reset(new spmv_kernel_type(cl::Kernel(program, "spmv_noreset")));
@@ -282,36 +282,36 @@ void OpenclKernels::custom(cl::Buffer& p, cl::Buffer& v, cl::Buffer& r, const do
     }
 }
 
-void OpenclKernels::move_to_coarse(const cl::Buffer& fine_y, cl::Buffer& weights, cl::Buffer& coarse_y, int Nb)
+void OpenclKernels::full_to_pressure_restriction(const cl::Buffer& fine_y, cl::Buffer& weights, cl::Buffer& coarse_y, int Nb)
 {
     const unsigned int work_group_size = 32;
     const unsigned int num_work_groups = ceilDivision(Nb, work_group_size);
     const unsigned int total_work_items = num_work_groups * work_group_size;
     Timer t;
 
-    cl::Event event = (*move_to_coarse_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), fine_y, weights, coarse_y, Nb);
+    cl::Event event = (*full_to_pressure_restriction_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), fine_y, weights, coarse_y, Nb);
 
     if (verbosity >= 4) {
         event.wait();
         std::ostringstream oss;
-        oss << std::scientific << "OpenclKernels move_to_coarse() time: " << t.stop() << " s";
+        oss << std::scientific << "OpenclKernels full_to_pressure_restriction() time: " << t.stop() << " s";
         OpmLog::info(oss.str());
     }
 }
 
-void OpenclKernels::move_to_fine(cl::Buffer& coarse_x, cl::Buffer& fine_x, int pressure_idx, int Nb)
+void OpenclKernels::add_coarse_pressure_correction(cl::Buffer& coarse_x, cl::Buffer& fine_x, int pressure_idx, int Nb)
 {
     const unsigned int work_group_size = 32;
     const unsigned int num_work_groups = ceilDivision(Nb, work_group_size);
     const unsigned int total_work_items = num_work_groups * work_group_size;
     Timer t;
 
-    cl::Event event = (*move_to_fine_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), coarse_x, fine_x, pressure_idx, Nb);
+    cl::Event event = (*add_coarse_pressure_correction_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), coarse_x, fine_x, pressure_idx, Nb);
 
     if (verbosity >= 4) {
         event.wait();
         std::ostringstream oss;
-        oss << std::scientific << "OpenclKernels move_to_fine() time: " << t.stop() << " s";
+        oss << std::scientific << "OpenclKernels add_coarse_pressure_correction() time: " << t.stop() << " s";
         OpmLog::info(oss.str());
     }
 }
@@ -643,9 +643,9 @@ void OpenclKernels::apply_stdwells_no_reorder(cl::Buffer& d_Cnnzs_ocl, cl::Buffe
 
     // transform blocked vector to scalar vector using pressure-weights
     // every workitem handles one blockrow
-    std::string OpenclKernels::get_move_to_coarse_source() {
+    std::string OpenclKernels::get_full_to_pressure_restriction_source() {
         return R"(
-        __kernel void move_to_coarse(
+        __kernel void full_to_pressure_restriction(
             __global const double *fine_y,
             __global const double *weights,
             __global double *coarse_y,
@@ -670,9 +670,9 @@ void OpenclKernels::apply_stdwells_no_reorder(cl::Buffer& d_Cnnzs_ocl, cl::Buffe
 
     // add the coarse pressure solution back to the finer, complete solution
     // every workitem handles one blockrow
-    std::string OpenclKernels::get_move_to_fine_source() {
+    std::string OpenclKernels::get_add_coarse_pressure_correction_source() {
         return R"(
-        __kernel void move_to_fine(
+        __kernel void add_coarse_pressure_correction(
             __global const double *coarse_x,
             __global double *fine_x,
             const unsigned int pressure_idx,

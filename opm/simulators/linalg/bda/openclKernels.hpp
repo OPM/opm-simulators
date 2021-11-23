@@ -72,8 +72,8 @@ private:
     static std::unique_ptr<cl::KernelFunctor<cl::Buffer&, const double, const unsigned int> > scale_k;
     static std::unique_ptr<cl::KernelFunctor<const double, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int> > vmul_k;
     static std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const double, const double, const unsigned int> > custom_k;
-    static std::unique_ptr<cl::KernelFunctor<const cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int> > move_to_coarse_k;
-    static std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int> > move_to_fine_k;
+    static std::unique_ptr<cl::KernelFunctor<const cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int> > full_to_pressure_restriction_k;
+    static std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int> > add_coarse_pressure_correction_k;
     static std::unique_ptr<spmv_blocked_kernel_type> spmv_blocked_k;
     static std::unique_ptr<spmv_kernel_type> spmv_k;
     static std::unique_ptr<spmv_kernel_type> spmv_noreset_k;
@@ -111,10 +111,10 @@ private:
     static std::string get_custom_source();
 
     /// Transform blocked vector to scalar vector using pressure-weights
-    static std::string get_move_to_coarse_source();
+    static std::string get_full_to_pressure_restriction_source();
 
     /// Add the coarse pressure solution back to the finer, complete solution
-    static std::string get_move_to_fine_source();
+    static std::string get_add_coarse_pressure_correction_source();
 
     /// b = mat * x
     /// algorithm based on:
@@ -160,8 +160,8 @@ public:
     static void scale(cl::Buffer& in, const double a, int N);
     static void vmul(const double alpha, cl::Buffer& in1, cl::Buffer& in2, cl::Buffer& out, int N);
     static void custom(cl::Buffer& p, cl::Buffer& v, cl::Buffer& r, const double omega, const double beta, int N);
-    static void move_to_coarse(const cl::Buffer& fine_y, cl::Buffer& weights, cl::Buffer& coarse_y, int Nb);
-    static void move_to_fine(cl::Buffer& coarse_x, cl::Buffer& fine_x, int pressure_idx, int Nb);
+    static void full_to_pressure_restriction(const cl::Buffer& fine_y, cl::Buffer& weights, cl::Buffer& coarse_y, int Nb);
+    static void add_coarse_pressure_correction(cl::Buffer& coarse_x, cl::Buffer& fine_x, int pressure_idx, int Nb);
     static void spmv(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows, cl::Buffer& x, cl::Buffer& b, int Nb, unsigned int block_size, bool reset = true);
     static void residual(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows, cl::Buffer& x, const cl::Buffer& rhs, cl::Buffer& out, int Nb, unsigned int block_size);
 
