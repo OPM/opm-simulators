@@ -1465,6 +1465,9 @@ public:
     const EclTracerModel<TypeTag>& tracerModel() const
     { return tracerModel_; }
 
+    EclTracerModel<TypeTag>& tracerModel()
+    { return tracerModel_; }
+
     /*!
      * \copydoc FvBaseMultiPhaseProblem::porosity
      *
