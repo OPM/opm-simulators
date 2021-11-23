@@ -68,14 +68,9 @@ void CPR<block_size>::init(int Nb_, int nnzb_, std::shared_ptr<cl::Context>& con
 }
 
 
-double get_absmax(const double *data, const int B) {
-    double abs_max = 0.0;
-    for (int i = 0; i < B; ++i) {
-        if (std::fabs(data[i]) > abs_max) {
-            abs_max = std::fabs(data[i]);
-        }
-    }
-    return abs_max;
+// return the absolute value of the N elements for which the absolute value is highest
+double get_absmax(const double *data, const int N) {
+    return std::abs(*std::max_element(data, data + N, [](double a, double b){return std::fabs(a) < std::fabs(b);}));
 }
 
 
