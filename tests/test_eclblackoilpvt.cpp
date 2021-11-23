@@ -233,7 +233,7 @@ inline void testAll()
     Opm::EclipseState eclState(deck);
     Opm::Schedule schedule(deck, eclState, python);
 
-    const auto& pvtwKeyword = deck.getKeyword("PVTW");
+    const auto& pvtwKeyword = deck["PVTW"].back();
     size_t numPvtRegions = pvtwKeyword.size();
 
     if (numPvtRegions != 2)
