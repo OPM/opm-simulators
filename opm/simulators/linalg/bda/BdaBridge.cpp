@@ -170,7 +170,7 @@ int checkZeroDiagonal(BridgeMatrix& mat) {
 // sparsity pattern should stay the same
 // this could be removed if Dune::BCRSMatrix features an API call that returns colIndices and rowPointers
 template <class BridgeMatrix, class BridgeVector, int block_size>
-void BdaBridge<BridgeMatrix, BridgeVector, block_size>::getSparsityPattern(const BridgeMatrix& mat, std::vector<int> &h_rows, std::vector<int> &h_cols) {
+void BdaBridge<BridgeMatrix, BridgeVector, block_size>::copySparsityPatternFromISTL(const BridgeMatrix& mat, std::vector<int> &h_rows, std::vector<int> &h_cols) {
 
     h_rows.clear();
     h_cols.clear();
@@ -186,9 +186,9 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::getSparsityPattern(const
 
     // h_rows and h_cols could be changed to 'unsigned int', but cusparse expects 'int'
     if (static_cast<unsigned int>(h_rows[mat.N()]) != mat.nonzeroes()) {
-        OPM_THROW(std::logic_error, "Error size of rows do not sum to number of nonzeroes in BdaBridge::getSparsityPattern()");
+        OPM_THROW(std::logic_error, "Error size of rows do not sum to number of nonzeroes in BdaBridge::copySparsityPatternFromISTL()");
     }
-} // end getSparsityPattern()
+}
 
 
 template <class BridgeMatrix, class BridgeVector, int block_size>
@@ -218,7 +218,7 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system([[maybe_unu
         if (h_rows.capacity() == 0) {
             h_rows.reserve(Nb+1);
             h_cols.reserve(nnzb);
-            getSparsityPattern(*mat, h_rows, h_cols);
+            copySparsityPatternFromISTL(*mat, h_rows, h_cols);
         }
 
         Dune::Timer t_zeros;

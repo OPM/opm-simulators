@@ -325,7 +325,7 @@ void CPR<block_size>::analyzeHierarchy() {
             }
         }
 
-        Opm::BdaBridge<DuneMat, DuneVec, 1>::getSparsityPattern(A, Amatrices.back().rowPointers, Amatrices.back().colIndices);
+        Opm::BdaBridge<DuneMat, DuneVec, 1>::copySparsityPatternFromISTL(A, Amatrices.back().rowPointers, Amatrices.back().colIndices);
 
         // compute inverse diagonal values for current level
         invDiags.emplace_back(A.N());

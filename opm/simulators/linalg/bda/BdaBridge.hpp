@@ -81,7 +81,7 @@ public:
     /// \param[in] mat       input matrix, probably BCRSMatrix
     /// \param[out] h_rows   rowpointers
     /// \param[out] h_cols   columnindices
-    static void getSparsityPattern(const BridgeMatrix& mat, std::vector<int>& h_rows, std::vector<int>& h_cols);
+    static void copySparsityPatternFromISTL(const BridgeMatrix& mat, std::vector<int>& h_rows, std::vector<int>& h_cols);
 
     /// Initialize the WellContributions object with opencl context and queue
     /// those must be set before calling BlackOilWellModel::getWellContributions() in ISTL
