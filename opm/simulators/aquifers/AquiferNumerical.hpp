@@ -50,8 +50,6 @@ public:
 
     enum { dimWorld = GridView::dimensionworld };
 
-    static const auto waterPhaseIdx = FluidSystem::waterPhaseIdx;
-
     static const int numEq = BlackoilIndices::numEq;
 
     using Eval =  DenseAd::Evaluation<double, numEq>;
@@ -158,6 +156,19 @@ private:
     // TODO: maybe unordered_map can also do the work to save memory?
     std::vector<int> cell_to_aquifer_cell_idx_;
 
+    inline bool co2store_() const
+    {
+        return ebos_simulator_.vanguard().eclState().runspec().co2Storage();
+    }
+
+    inline bool phaseIdx_() const
+    {
+        if(co2store_())
+            return FluidSystem::oilPhaseIdx;
+
+        return FluidSystem::waterPhaseIdx;
+    }
+
     void checkConnectsToReservoir()
     {
         ElementContext elem_ctx(this->ebos_simulator_);
@@ -217,11 +228,11 @@ private:
             // TODO: the porosity of the cells are still wrong for numerical aquifer cells
             // Because the dofVolume still based on the grid information.
             // The pore volume is correct. Extra efforts will be done to get sensible porosity value here later.
-            const double water_saturation = fs.saturation(waterPhaseIdx).value();
+            const double water_saturation = fs.saturation(this->phaseIdx_()).value();
             const double porosity = iq0.porosity().value();
             const double volume = elem_ctx.dofTotalVolume(0, 0);
             // TODO: not sure we should use water pressure here
-            const double water_pressure_reservoir = fs.pressure(waterPhaseIdx).value();
+            const double water_pressure_reservoir = fs.pressure(this->phaseIdx_()).value();
             const double water_volume = volume * porosity * water_saturation;
             sum_pressure_watervolume += water_volume * water_pressure_reservoir;
             sum_watervolume += water_volume;
@@ -290,11 +301,11 @@ private:
                     continue;
                 }
                 const auto& exQuants = elem_ctx.extensiveQuantities(face_idx, /*timeIdx*/ 0);
-                const double water_flux = Toolbox::value(exQuants.volumeFlux(waterPhaseIdx));
+                const double water_flux = Toolbox::value(exQuants.volumeFlux(this->phaseIdx_()));
 
                 const std::size_t up_id = water_flux >= 0.0 ? i : j;
                 const auto& intQuantsIn = elem_ctx.intensiveQuantities(up_id, 0);
-                const double invB = Toolbox::value(intQuantsIn.fluidState().invB(waterPhaseIdx));
+                const double invB = Toolbox::value(intQuantsIn.fluidState().invB(this->phaseIdx_()));
                 const double face_area = face.area();
                 aquifer_flux += water_flux * invB * face_area;
             }
