@@ -47,6 +47,7 @@
 #include <ebos/femcpgridcompat.hh>
 #endif
 
+#include <fmt/format.h>
 #include <iostream>
 #include <set>
 #include <stdexcept>
@@ -168,24 +169,28 @@ doInit(bool enabled, size_t numGridDof,
 
 
         //TBLK keyword
-        if (!tracer.free_concentration.empty()){
-            int tblkDatasize = tracer.free_concentration.size();
+        if (tracer.free_concentration.has_value()){
+            const auto& free_concentration = tracer.free_concentration.value();
+            int tblkDatasize = free_concentration.size();
             if (tblkDatasize < cartMapper_.cartesianSize()){
                 throw std::runtime_error("Wrong size of TBLK for" + tracer.name);
             }
             for (size_t globalDofIdx = 0; globalDofIdx < numGridDof; ++globalDofIdx){
                 int cartDofIdx = cartMapper_.cartesianIndex(globalDofIdx);
-                tracerConcentration_[tracerIdx][globalDofIdx] = tracer.free_concentration[cartDofIdx];
+                tracerConcentration_[tracerIdx][globalDofIdx] = free_concentration[cartDofIdx];
             }
         }
         //TVDPF keyword
-        else {
+        else if (tracer.free_tvdp.has_value()) {
+            const auto& free_tvdp = tracer.free_tvdp.value();
             for (size_t globalDofIdx = 0; globalDofIdx < numGridDof; ++globalDofIdx){
                 tracerConcentration_[tracerIdx][globalDofIdx] =
-                    tracer.free_tvdp.evaluate("TRACER_CONCENTRATION",
-                                              centroids_(globalDofIdx)[2]);
+                    free_tvdp.evaluate("TRACER_CONCENTRATION",
+                                       centroids_(globalDofIdx)[2]);
             }
-        }
+        } else
+            throw std::logic_error(fmt::format("Can not initialize tracer: {}", tracer.name));
+
         ++tracerIdx;
     }
 
