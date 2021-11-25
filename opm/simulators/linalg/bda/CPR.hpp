@@ -25,6 +25,7 @@
 #include <dune/istl/paamg/matrixhierarchy.hh>
 #include <dune/istl/umfpack.hh>
 
+#include <opm/simulators/linalg/bda/BILU0.hpp>
 #include <opm/simulators/linalg/bda/opencl.hpp>
 #include <opm/simulators/linalg/bda/Matrix.hpp>
 #include <opm/simulators/linalg/bda/OpenclMatrix.hpp>
@@ -69,7 +70,10 @@ private:
     std::unique_ptr<cl::Buffer> d_coarse_y, d_coarse_x; // stores the scalar vectors
     std::once_flag opencl_buffers_allocated;  // only allocate OpenCL Buffers once
 
+    std::unique_ptr<BILU0<block_size> > bilu0;                    // Blocked ILU0 preconditioner
     BlockedMatrix *mat = nullptr;    // input matrix, blocked
+
+    bool use_amg;                               // enable AMG preconditioner on pressure component
     using DuneMat = Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1> >;
     using DuneVec = Dune::BlockVector<Dune::FieldVector<double, 1> >;
     using MatrixOperator = Dune::MatrixAdapter<DuneMat, DuneVec, DuneVec>;
@@ -105,19 +109,42 @@ private:
     // Copy matrices and vectors to GPU
     void opencl_upload();
 
+    // apply pressure correction to vector
+    void apply_amg(const cl::Buffer& y, cl::Buffer& x);
+
     void amg_cycle_gpu(const int level, cl::Buffer &y, cl::Buffer &x);
+
+    void create_preconditioner_amg(BlockedMatrix *mat);
 
 public:
 
-    CPR(int verbosity, ILUReorder opencl_ilu_reorder);
+    CPR(int verbosity, ILUReorder opencl_ilu_reorder, bool use_amg);
 
     void init(int Nb, int nnzb, std::shared_ptr<cl::Context>& context, std::shared_ptr<cl::CommandQueue>& queue);
 
+    bool analyse_matrix(BlockedMatrix *mat);
+
     // apply preconditioner, x = prec(y)
+    // always applies blocked ilu0
+    // also applies amg for pressure component if use_amg is true
     void apply(const cl::Buffer& y, cl::Buffer& x);
 
-    void create_preconditioner(BlockedMatrix *mat);
+    bool create_preconditioner(BlockedMatrix *mat);
 
+    int* getToOrder()
+    {
+        return bilu0->getToOrder();
+    }
+
+    int* getFromOrder()
+    {
+        return bilu0->getFromOrder();
+    }
+
+    BlockedMatrix* getRMat()
+    {
+        return bilu0->getRMat();
+    }
 };
 
 } // namespace Accelerator

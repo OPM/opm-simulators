@@ -91,7 +91,7 @@ namespace Accelerator
         ~BILU0();
 
         // analysis
-        bool init(BlockedMatrix *mat);
+        bool init(const BlockedMatrix *mat);
 
         // ilu_decomposition
         bool create_preconditioner(BlockedMatrix *mat);

@@ -54,7 +54,7 @@ BILU0<block_size>::~BILU0()
 }
 
     template <unsigned int block_size>
-    bool BILU0<block_size>::init(BlockedMatrix *mat)
+    bool BILU0<block_size>::init(const BlockedMatrix *mat)
     {
         const unsigned int bs = block_size;
 
@@ -305,14 +305,8 @@ void BILU0<block_size>::setOpenCLQueue(cl::CommandQueue *queue_) {
 }
 
 
-#define INSTANTIATE_BDA_FUNCTIONS(n)                              \
-template BILU0<n>::BILU0(ILUReorder, int);                        \
-template BILU0<n>::~BILU0();                                      \
-template bool BILU0<n>::init(BlockedMatrix*);                     \
-template bool BILU0<n>::create_preconditioner(BlockedMatrix*);    \
-template void BILU0<n>::apply(const cl::Buffer&, cl::Buffer&);    \
-template void BILU0<n>::setOpenCLContext(cl::Context*);           \
-template void BILU0<n>::setOpenCLQueue(cl::CommandQueue*);
+#define INSTANTIATE_BDA_FUNCTIONS(n) \
+template class BILU0<n>;
 
 
 INSTANTIATE_BDA_FUNCTIONS(1);

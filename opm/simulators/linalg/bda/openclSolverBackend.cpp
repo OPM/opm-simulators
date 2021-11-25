@@ -47,18 +47,20 @@ using Dune::Timer;
 template <unsigned int block_size>
 openclSolverBackend<block_size>::openclSolverBackend(int verbosity_, int maxit_, double tolerance_, unsigned int platformID_, unsigned int deviceID_, ILUReorder opencl_ilu_reorder_, std::string linsolver) : BdaSolver<block_size>(verbosity_, maxit_, tolerance_, platformID_, deviceID_), opencl_ilu_reorder(opencl_ilu_reorder_) {
 
-    if (linsolver.compare("ilu0") == 0) {
-        use_cpr = false;
-    } else if (linsolver.compare("cpr_quasiimpes") == 0) {
-        use_cpr = true;
+    bool use_amg = false;  // default case if linsolver == "ilu0"
+    if (linsolver.compare("cpr_quasiimpes") == 0) {
+        use_amg = true;
+    } else if (linsolver.compare("cpr_trueimpes") == 0) {
+        OPM_THROW(std::logic_error, "Error openclSolver does not support --linsolver=cpr_trueimpes");
     } else {
         OPM_THROW(std::logic_error, "Error unknown value for argument --linsolver, " + linsolver);
     }
 
-    bilu0 = std::make_unique<BILU0<block_size> >(opencl_ilu_reorder, verbosity_);
-    if (use_cpr) {
-        cpr = std::make_unique<CPR<block_size> >(verbosity_, opencl_ilu_reorder);
-    }
+    // bilu0 = std::make_unique<BILU0<block_size> >(opencl_ilu_reorder, verbosity_);
+    cpr = std::make_unique<CPR<block_size> >(verbosity_, opencl_ilu_reorder, use_amg);
+    // if (use_amg) {
+    //     cpr = std::make_unique<CPR<block_size> >(verbosity_, opencl_ilu_reorder);
+    // }
 
     std::ostringstream out;
     try {
@@ -205,9 +207,10 @@ openclSolverBackend<block_size>::openclSolverBackend(int verbosity_, int maxit_,
 
 template <unsigned int block_size>
 openclSolverBackend<block_size>::openclSolverBackend(int verbosity_, int maxit_, double tolerance_, ILUReorder opencl_ilu_reorder_) :
-    BdaSolver<block_size>(verbosity_, maxit_, tolerance_), use_cpr(false), opencl_ilu_reorder(opencl_ilu_reorder_)
+    BdaSolver<block_size>(verbosity_, maxit_, tolerance_), opencl_ilu_reorder(opencl_ilu_reorder_)
 {
-    bilu0 = std::make_unique<BILU0<block_size> >(opencl_ilu_reorder, verbosity_);
+    // bilu0 = std::make_unique<BILU0<block_size> >(opencl_ilu_reorder, verbosity_);
+    cpr = std::make_unique<CPR<block_size> >(verbosity_, opencl_ilu_reorder, /*use_amg=*/false);
 }
 
 template <unsigned int block_size>
@@ -229,7 +232,7 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
     double rho, rhop, beta, alpha, omega, tmp1, tmp2;
     double norm, norm_0;
 
-    Timer t_total, t_bilu0(false), t_cpr(false), t_spmv(false), t_well(false), t_rest(false);
+    Timer t_total, t_prec(false), t_spmv(false), t_well(false), t_rest(false);
 
     // set r to the initial residual
     // if initial x guess is not 0, must call applyblockedscaleadd(), not implemented
@@ -275,15 +278,9 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
         t_rest.stop();
 
         // pw = prec(p)
-        t_bilu0.start();
-        bilu0->apply(d_p, d_pw);
-        t_bilu0.stop();
-
-        if (use_cpr) {
-            t_cpr.start();
-            cpr->apply(d_p, d_pw);
-            t_cpr.stop();
-        }
+        t_prec.start();
+        cpr->apply(d_p, d_pw);
+        t_prec.stop();
 
         // v = A * pw
         t_spmv.start();
@@ -312,15 +309,9 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
         it += 0.5;
 
         // s = prec(r)
-        t_bilu0.start();
-        bilu0->apply(d_r, d_s);
-        t_bilu0.stop();
-
-        if (use_cpr) {
-            t_cpr.start();
-            cpr->apply(d_r, d_s);
-            t_cpr.stop();
-        }
+        t_prec.start();
+        cpr->apply(d_r, d_s);
+        t_prec.stop();
 
         // t = A * s
         t_spmv.start();
@@ -368,10 +359,7 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
     }
     if (verbosity >= 4) {
         std::ostringstream out;
-        out << "openclSolver::ilu_apply:   " << t_bilu0.elapsed() << " s\n";
-        if (use_cpr) {
-            out << "openclSolver::cpr_apply:   " << t_cpr.elapsed() << " s\n";
-        }
+        out << "openclSolver::prec_apply:  " << t_prec.elapsed() << " s\n";
         out << "wellContributions::apply:  " << t_well.elapsed() << " s\n";
         out << "openclSolver::spmv:        " << t_spmv.elapsed() << " s\n";
         out << "openclSolver::rest:        " << t_rest.elapsed() << " s\n";
@@ -397,12 +385,7 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
     out.clear();
 
     try {
-        bilu0->setOpenCLContext(context.get());
-        bilu0->setOpenCLQueue(queue.get());
-
-        if (use_cpr) {
-            cpr->init(Nb, nnzb, context, queue);
-        }
+        cpr->init(Nb, nnzb, context, queue);
 
 #if COPY_ROW_BY_ROW
         vals_contiguous = new double[N];
@@ -534,15 +517,20 @@ template <unsigned int block_size>
 bool openclSolverBackend<block_size>::analyse_matrix() {
     Timer t;
 
-    bool success = bilu0->init(mat.get());
+    // bool success = bilu0->init(mat.get());
+    bool success = cpr->analyse_matrix(mat.get());
 
     if (opencl_ilu_reorder == ILUReorder::NONE) {
         rmat = mat.get();
     } else {
-        toOrder = bilu0->getToOrder();
-        fromOrder = bilu0->getFromOrder();
-        rmat = bilu0->getRMat();
+        // toOrder = bilu0->getToOrder();
+        // fromOrder = bilu0->getFromOrder();
+        // rmat = bilu0->getRMat();
+        toOrder = cpr->getToOrder();
+        fromOrder = cpr->getFromOrder();
+        rmat = cpr->getRMat();
     }
+
 
     if (verbosity > 2) {
         std::ostringstream out;
@@ -581,14 +569,7 @@ template <unsigned int block_size>
 bool openclSolverBackend<block_size>::create_preconditioner() {
     Timer t;
 
-    bool result = bilu0->create_preconditioner(mat.get());
-    if (use_cpr) {
-        if (opencl_ilu_reorder == ILUReorder::NONE) {
-            cpr->create_preconditioner(mat.get());
-        } else {
-            cpr->create_preconditioner(bilu0->getRMat());
-        }
-    }
+    bool result = cpr->create_preconditioner(mat.get());
 
     if (verbosity > 2) {
         std::ostringstream out;

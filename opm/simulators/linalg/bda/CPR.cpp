@@ -43,14 +43,15 @@ using Opm::OpmLog;
 using Dune::Timer;
 
 template <unsigned int block_size>
-CPR<block_size>::CPR(int verbosity_, ILUReorder opencl_ilu_reorder_) :
-    verbosity(verbosity_), opencl_ilu_reorder(opencl_ilu_reorder_)
-{}
+CPR<block_size>::CPR(int verbosity_, ILUReorder opencl_ilu_reorder_, bool use_amg_) :
+    verbosity(verbosity_), opencl_ilu_reorder(opencl_ilu_reorder_), use_amg(use_amg_)
+{
+    bilu0 = std::make_unique<BILU0<block_size> >(opencl_ilu_reorder, verbosity_);
+}
 
 
 template <unsigned int block_size>
-void CPR<block_size>::init(int Nb_, int nnzb_, std::shared_ptr<cl::Context>& context_, std::shared_ptr<cl::CommandQueue>& queue_)
-{
+void CPR<block_size>::init(int Nb_, int nnzb_, std::shared_ptr<cl::Context>& context_, std::shared_ptr<cl::CommandQueue>& queue_) {
     this->Nb = Nb_;
     this->nnzb = nnzb_;
     this->N = Nb_ * block_size;
@@ -64,8 +65,33 @@ void CPR<block_size>::init(int Nb_, int nnzb_, std::shared_ptr<cl::Context>& con
     coarse_y.resize(Nb);
     weights.resize(N);
     diagIndices.resize(1);
+
+    bilu0->setOpenCLContext(context.get());
+    bilu0->setOpenCLQueue(queue.get());
 }
 
+
+template <unsigned int block_size>
+bool CPR<block_size>::analyse_matrix(BlockedMatrix *mat_) {
+    bool success = bilu0->init(mat_);
+
+    if (opencl_ilu_reorder == ILUReorder::NONE) {
+        mat = mat_;
+    } else {
+        mat = bilu0->getRMat();
+    }
+    return success;
+}
+
+
+template <unsigned int block_size>
+bool CPR<block_size>::create_preconditioner(BlockedMatrix *mat_) {
+    bool result = bilu0->create_preconditioner(mat_);
+    if (use_amg) {
+        create_preconditioner_amg(mat); // already points to bilu0::rmat if needed
+    }
+    return result;
+}
 
 // return the absolute value of the N elements for which the absolute value is highest
 double get_absmax(const double *data, const int N) {
@@ -156,7 +182,7 @@ void CPR<block_size>::opencl_upload() {
 
 
 template <unsigned int block_size>
-void CPR<block_size>::create_preconditioner(BlockedMatrix *mat_) {
+void CPR<block_size>::create_preconditioner_amg(BlockedMatrix *mat_) {
     this->mat = mat_;
 
     try{
@@ -450,7 +476,7 @@ void CPR<block_size>::amg_cycle_gpu(const int level, cl::Buffer &y, cl::Buffer &
 
 // x = prec(y)
 template <unsigned int block_size>
-void CPR<block_size>::apply(const cl::Buffer& y, cl::Buffer& x) {
+void CPR<block_size>::apply_amg(const cl::Buffer& y, cl::Buffer& x) {
     // 0-initialize u and x vectors
     events.resize(d_u.size() + 1);
     err = queue->enqueueFillBuffer(*d_coarse_x, 0, 0, sizeof(double) * Nb, nullptr, &events[0]);
@@ -472,6 +498,13 @@ void CPR<block_size>::apply(const cl::Buffer& y, cl::Buffer& x) {
     OpenclKernels::add_coarse_pressure_correction(*d_coarse_x, x, pressure_idx, Nb);
 }
 
+template <unsigned int block_size>
+void CPR<block_size>::apply(const cl::Buffer& y, cl::Buffer& x) {
+    bilu0->apply(y, x);
+    if (use_amg) {
+        apply_amg(y, x);
+    }
+}
 
 
 #define INSTANTIATE_BDA_FUNCTIONS(n)  \

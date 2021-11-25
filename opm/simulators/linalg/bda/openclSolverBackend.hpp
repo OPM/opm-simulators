@@ -69,10 +69,9 @@ private:
 
     std::vector<cl::Device> devices;
 
-    std::unique_ptr<BILU0<block_size> > bilu0;                    // Blocked ILU0 preconditioner
     std::unique_ptr<CPR<block_size> > cpr;                        // Constrained Pressure Residual preconditioner
+                                                                  // can perform blocked ILU0 and AMG on pressure component
     bool is_root;                                                 // allow for nested solvers, the root solver is called by BdaBridge
-    bool use_cpr;                                                 // allow to enable CPR
     int *toOrder = nullptr, *fromOrder = nullptr;                 // BILU0 reorders rows of the matrix via these mappings
     bool analysis_done = false;
     std::unique_ptr<BlockedMatrix> mat = nullptr;                 // original matrix
