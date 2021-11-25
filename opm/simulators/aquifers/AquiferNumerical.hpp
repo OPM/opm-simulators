@@ -161,7 +161,7 @@ private:
         return ebos_simulator_.vanguard().eclState().runspec().co2Storage();
     }
 
-    inline bool phaseIdx_() const
+    inline int phaseIdx_() const
     {
         if(co2store_())
             return FluidSystem::oilPhaseIdx;
