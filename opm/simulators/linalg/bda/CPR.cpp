@@ -86,9 +86,21 @@ bool CPR<block_size>::analyse_matrix(BlockedMatrix *mat_) {
 
 template <unsigned int block_size>
 bool CPR<block_size>::create_preconditioner(BlockedMatrix *mat_) {
+    Dune::Timer t_bilu0;
     bool result = bilu0->create_preconditioner(mat_);
+    if (verbosity >= 3) {
+        std::ostringstream out;
+        out << "CPR create_preconditioner bilu0(): " << t_bilu0.stop() << " s";
+        OpmLog::info(out.str());
+    }
     if (use_amg) {
+        Dune::Timer t_amg;
         create_preconditioner_amg(mat); // already points to bilu0::rmat if needed
+        if (verbosity >= 3) {
+            std::ostringstream out;
+            out << "CPR create_preconditioner_amg(): " << t_amg.stop() << " s";
+            OpmLog::info(out.str());
+        }
     }
     return result;
 }
@@ -500,9 +512,22 @@ void CPR<block_size>::apply_amg(const cl::Buffer& y, cl::Buffer& x) {
 
 template <unsigned int block_size>
 void CPR<block_size>::apply(const cl::Buffer& y, cl::Buffer& x) {
+    Dune::Timer t_bilu0;
     bilu0->apply(y, x);
+    if (verbosity >= 4) {
+        std::ostringstream out;
+        out << "CPR apply bilu0(): " << t_bilu0.stop() << " s";
+        OpmLog::info(out.str());
+    }
+
     if (use_amg) {
+        Dune::Timer t_amg;
         apply_amg(y, x);
+        if (verbosity >= 4) {
+            std::ostringstream out;
+            out << "CPR apply amg(): " << t_amg.stop() << " s";
+            OpmLog::info(out.str());
+        }
     }
 }
 
