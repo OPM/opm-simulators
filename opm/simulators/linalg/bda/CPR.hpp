@@ -149,6 +149,11 @@ public:
     }
 };
 
+// solve A^T * x = b
+// A should represent a 3x3 matrix
+// x and b are vectors with 3 elements
+void solve_transposed_3x3(const double *A, const double *b, double *x);
+
 } // namespace Accelerator
 } // namespace Opm
 

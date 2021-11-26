@@ -147,6 +147,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_timer.cpp
   tests/test_invert.cpp
   tests/test_stoppedwells.cpp
+  tests/test_solvetransposed3x3.cpp
   tests/test_relpermdiagnostics.cpp
   tests/test_norne_pvt.cpp
   tests/test_wellprodindexcalculator.cpp
