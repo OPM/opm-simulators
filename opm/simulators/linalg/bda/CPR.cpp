@@ -383,33 +383,32 @@ void CPR<block_size>::analyzeAggregateMaps() {
     for(int level = 0; level < num_levels - 1; ++mapIter, ++level) {
         DuneAmg::AggregatesMap *map = *mapIter;
 
+        Rmatrices.emplace_back(level_sizes[level+1], level_sizes[level], level_sizes[level]);
+        std::fill(Rmatrices.back().nnzValues.begin(), Rmatrices.back().nnzValues.end(), 1.0);
+
         // get indices for each row of P and R
+        std::vector<std::vector<unsigned> > indicesR(level_sizes[level+1]);
         PcolIndices[level].resize(level_sizes[level]);
-        std::vector<std::set<long int> > indicesR(level_sizes[level+1]);
+
         using AggregateIterator = DuneAmg::AggregatesMap::const_iterator;
         for(AggregateIterator ai = map->begin(); ai != map->end(); ++ai){
             if (*ai != DuneAmg::AggregatesMap::ISOLATED) {
                 const long int diff = ai - map->begin();
                 PcolIndices[level][diff] = *ai;
-                indicesR[*ai].insert(diff);
+                indicesR[*ai].emplace_back(diff);
             }
         }
 
-        Rmatrices.emplace_back(level_sizes[level+1], level_sizes[level], level_sizes[level]);
-        std::fill(Rmatrices.back().nnzValues.begin(), Rmatrices.back().nnzValues.end(), 1.0);
-
-        // set sparsity pattern of R
         int col_idx = 0;
+        // set sparsity pattern of R
         Rmatrices.back().rowPointers[0] = 0;
         for (unsigned int i = 0; i < indicesR.size(); ++i) {
             Rmatrices.back().rowPointers[i + 1] = Rmatrices.back().rowPointers[i] + indicesR[i].size();
             for (auto it = indicesR[i].begin(); it != indicesR[i].end(); ++it) {
-                Rmatrices.back().colIndices[col_idx] = *it;
-                col_idx++;
+                Rmatrices.back().colIndices[col_idx++] = *it;
             }
         }
     }
-
 }
 
 
