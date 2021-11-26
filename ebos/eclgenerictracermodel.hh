@@ -55,8 +55,7 @@ public:
     /*!
      * \brief Return the number of tracers considered by the tracerModel.
      */
-    int numTracers() const
-    { return tracerNames_.size(); }
+    int numTracers() const;
 
     /*!
      * \brief Return the tracer name

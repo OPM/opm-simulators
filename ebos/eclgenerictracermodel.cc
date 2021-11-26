@@ -134,6 +134,13 @@ setTracerConcentration(int tracerIdx, int globalDofIdx, Scalar value)
     this->tracerConcentration_[tracerIdx][globalDofIdx] = value;
 }
 
+template<class Grid,class GridView, class DofMapper, class Stencil, class Scalar>
+int EclGenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
+numTracers() const
+{
+    return this->eclState_.tracer().size();
+}
+
 
 template<class Grid,class GridView, class DofMapper, class Stencil, class Scalar>
 void EclGenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
