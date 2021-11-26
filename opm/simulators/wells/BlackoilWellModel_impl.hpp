@@ -384,16 +384,16 @@ namespace Opm {
         if (!wtest_config.empty()) { // there is a WTEST request
             const std::vector<std::string> wellsForTesting = wellTestState()
                 .test_wells(wtest_config, simulationTime);
-
             for (const std::string& well_name : wellsForTesting) {
-                const auto& ws = this->wellState().well(well_name);
-                if (ws.status != Well::Status::OPEN)
+
+                const Well& wellEcl = schedule().getWell(well_name, timeStepIdx);
+                if (wellEcl.getStatus() == Well::Status::SHUT)
                     continue;
 
                 WellInterfacePtr well = createWellForWellTest(well_name, timeStepIdx, deferred_logger);
                 // some preparation before the well can be used
                 well->init(&phase_usage_, depth_, gravity_, local_num_cells_, B_avg_);
-                const Well& wellEcl = schedule().getWell(well_name, timeStepIdx);
+
                 double well_efficiency_factor = wellEcl.getEfficiencyFactor();
                 WellGroupHelpers::accumulateGroupEfficiencyFactor(schedule().getGroup(wellEcl.groupName(), timeStepIdx),
                                                                   schedule(), timeStepIdx, well_efficiency_factor);
