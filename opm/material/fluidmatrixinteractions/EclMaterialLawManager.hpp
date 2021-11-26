@@ -927,17 +927,27 @@ private:
         case SatFuncControls::KeywordFamily::Family_II:
         {
             const auto& swfnTable = tableManager.getSwfnTables().getTable<SwfnTable>(satRegionIdx);
-            const auto& sof3Table = tableManager.getSof3Tables().getTable<Sof3Table>(satRegionIdx);
             const std::vector<double> SwColumn = swfnTable.getColumn("SW").vectorCopy();
-
-            // convert the saturations of the SOF3 keyword from oil to water saturations
-            std::vector<double> SwSamples(sof3Table.numRows());
-            for (size_t sampleIdx = 0; sampleIdx < sof3Table.numRows(); ++ sampleIdx)
-                SwSamples[sampleIdx] = 1 - sof3Table.get("SO", sampleIdx);
-
             effParams.setKrwSamples(SwColumn, normalizeKrValues_(tolcrit, swfnTable.getColumn("KRW")));
-            effParams.setKrnSamples(SwSamples, normalizeKrValues_(tolcrit, sof3Table.getColumn("KROW")));
             effParams.setPcnwSamples(SwColumn, swfnTable.getColumn("PCOW").vectorCopy());
+
+            if (!hasGas) {
+                const auto& sof2Table = tableManager.getSof2Tables().getTable<Sof2Table>(satRegionIdx);
+                // convert the saturations of the SOF2 keyword from oil to water saturations
+                std::vector<double> SwSamples(sof2Table.numRows());
+                for (size_t sampleIdx = 0; sampleIdx < sof2Table.numRows(); ++ sampleIdx)
+                    SwSamples[sampleIdx] = 1 - sof2Table.get("SO", sampleIdx);
+
+                effParams.setKrnSamples(SwSamples, normalizeKrValues_(tolcrit, sof2Table.getColumn("KRO")));
+            } else {
+                const auto& sof3Table = tableManager.getSof3Tables().getTable<Sof3Table>(satRegionIdx);
+                // convert the saturations of the SOF3 keyword from oil to water saturations
+                std::vector<double> SwSamples(sof3Table.numRows());
+                for (size_t sampleIdx = 0; sampleIdx < sof3Table.numRows(); ++ sampleIdx)
+                    SwSamples[sampleIdx] = 1 - sof3Table.get("SO", sampleIdx);
+
+                effParams.setKrnSamples(SwSamples, normalizeKrValues_(tolcrit, sof3Table.getColumn("KROW")));
+            }
             effParams.finalize();
             break;
         }
