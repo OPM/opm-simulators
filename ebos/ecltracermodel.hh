@@ -103,10 +103,10 @@ public:
     /*!
      * \brief Initialize all internal data structures needed by the tracer module
      */
-    void init()
+    void init(bool rst)
     {
         bool enabled = EWOMS_GET_PARAM(TypeTag, bool, EnableTracerModel);
-        this->doInit(enabled, simulator_.model().numGridDof(),
+        this->doInit(enabled, rst, simulator_.model().numGridDof(),
                      gasPhaseIdx, oilPhaseIdx, waterPhaseIdx);
 
         prepareTracerBatches();

@@ -149,7 +149,7 @@ name(int tracerIdx) const
 
 template<class Grid,class GridView, class DofMapper, class Stencil, class Scalar>
 void EclGenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
-doInit(bool enabled, size_t numGridDof,
+doInit(bool enabled, bool rst, size_t numGridDof,
        size_t gasPhaseIdx, size_t oilPhaseIdx, size_t waterPhaseIdx)
 {
     const auto& tracers = eclState_.tracer();
@@ -186,6 +186,9 @@ doInit(bool enabled, size_t numGridDof,
 
         tracerConcentration_[tracerIdx].resize(numGridDof);
         storageOfTimeIndex1_[tracerIdx].resize(numGridDof);
+
+        if (rst)
+            continue;
 
 
         //TBLK keyword

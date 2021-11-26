@@ -87,6 +87,7 @@ protected:
      * \brief Initialize all internal data structures needed by the tracer module
      */
     void doInit(bool enabled,
+                bool rst,
                 size_t numGridDof,
                 size_t gasPhaseIdx,
                 size_t oilPhaseIdx,
