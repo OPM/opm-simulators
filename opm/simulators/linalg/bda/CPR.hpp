@@ -59,8 +59,10 @@ private:
 
     int num_levels;
     std::vector<double> weights, coarse_vals, coarse_x, coarse_y;
-    std::vector<Matrix> Amatrices, Pmatrices, Rmatrices; // scalar matrices that represent the AMG hierarchy
-    std::vector<OpenclMatrix> d_Amatrices, d_Pmatrices, d_Rmatrices; // scalar matrices that represent the AMG hierarchy
+    std::vector<Matrix> Amatrices, Rmatrices; // scalar matrices that represent the AMG hierarchy
+    std::vector<OpenclMatrix> d_Amatrices, d_Rmatrices; // scalar matrices that represent the AMG hierarchy
+    std::vector<std::vector<int> > PcolIndices; // prolongation does not need a full matrix, only store colIndices
+    std::vector<cl::Buffer> d_PcolIndices;
     std::vector<std::vector<double> > invDiags; // inverse of diagonal of Amatrices
     std::vector<cl::Buffer> d_invDiags;
     std::vector<cl::Buffer> d_t, d_f, d_u; // intermediate vectors used during amg cycle

@@ -142,21 +142,19 @@ void solve_transposed_3x3(const double *A, const double *b, double *x) {
 template <unsigned int block_size>
 void CPR<block_size>::init_opencl_buffers() {
     d_Amatrices.reserve(num_levels);
-    d_Pmatrices.reserve(num_levels - 1);
     d_Rmatrices.reserve(num_levels - 1);
     d_invDiags.reserve(num_levels - 1);
     for (Matrix& m : Amatrices) {
         d_Amatrices.emplace_back(context.get(), m.N, m.M, m.nnzs, 1);
     }
-    for (Matrix& m : Pmatrices) {
-        d_Pmatrices.emplace_back(context.get(), m.N, m.M, m.nnzs, 1);
-        d_invDiags.emplace_back(*context, CL_MEM_READ_WRITE, sizeof(double) * m.N); // create a cl::Buffer
-        d_t.emplace_back(*context, CL_MEM_READ_WRITE, sizeof(double) * m.N);
-    }
     for (Matrix& m : Rmatrices) {
         d_Rmatrices.emplace_back(context.get(), m.N, m.M, m.nnzs, 1);
         d_f.emplace_back(*context, CL_MEM_READ_WRITE, sizeof(double) * m.N);
         d_u.emplace_back(*context, CL_MEM_READ_WRITE, sizeof(double) * m.N);
+
+        d_PcolIndices.emplace_back(*context, CL_MEM_READ_WRITE, sizeof(int) * m.M);
+        d_invDiags.emplace_back(*context, CL_MEM_READ_WRITE, sizeof(double) * m.M); // create a cl::Buffer
+        d_t.emplace_back(*context, CL_MEM_READ_WRITE, sizeof(double) * m.M);
     }
     d_weights = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE, sizeof(double) * N);
     d_rs = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE, sizeof(double) * N);
@@ -171,21 +169,19 @@ void CPR<block_size>::opencl_upload() {
     d_mat->upload(queue.get(), mat);
 
     err = CL_SUCCESS;
-    events.resize(Pmatrices.size() + 1);
-    for (unsigned int i = 0; i < Pmatrices.size(); ++i) {
+    events.resize(2 * Rmatrices.size() + 1);
+    err |= queue->enqueueWriteBuffer(*d_weights, CL_FALSE, 0, sizeof(double) * N, weights.data(), nullptr, &events[0]);
+    for (unsigned int i = 0; i < Rmatrices.size(); ++i) {
         d_Amatrices[i].upload(queue.get(), &Amatrices[i]);
 
-        err |= queue->enqueueWriteBuffer(d_invDiags[i], CL_FALSE, 0, sizeof(double) * Amatrices[i].N, invDiags[i].data(), nullptr, &events[i]);
+        err |= queue->enqueueWriteBuffer(d_invDiags[i], CL_FALSE, 0, sizeof(double) * Amatrices[i].N, invDiags[i].data(), nullptr, &events[2*i+1]);
+        err |= queue->enqueueWriteBuffer(d_PcolIndices[i], CL_FALSE, 0, sizeof(int) * Amatrices[i].N, PcolIndices[i].data(), nullptr, &events[2*i+2]);
     }
-    err |= queue->enqueueWriteBuffer(*d_weights, CL_FALSE, 0, sizeof(double) * N, weights.data(), nullptr, &events[Pmatrices.size()]);
     cl::WaitForEvents(events);
     events.clear();
     if (err != CL_SUCCESS) {
         // enqueueWriteBuffer is C and does not throw exceptions like C++ OpenCL
         OPM_THROW(std::logic_error, "CPR OpenCL enqueueWriteBuffer error");
-    }
-    for (unsigned int i = 0; i < Pmatrices.size(); ++i) {
-        d_Pmatrices[i].upload(queue.get(), &Pmatrices[i]);
     }
     for (unsigned int i = 0; i < Rmatrices.size(); ++i) {
         d_Rmatrices[i].upload(queue.get(), &Rmatrices[i]);
@@ -333,8 +329,7 @@ void CPR<block_size>::analyzeHierarchy() {
     diagIndices.resize(num_levels);
 
     Amatrices.reserve(num_levels);
-    Pmatrices.reserve(num_levels - 1);  // coarsest level does not need one
-    Rmatrices.reserve(num_levels - 1);
+    Rmatrices.reserve(num_levels - 1);  // coarsest level does not need one
     invDiags.reserve(num_levels);
 
     Amatrices.clear();
@@ -379,7 +374,7 @@ void CPR<block_size>::analyzeHierarchy() {
 template <unsigned int block_size>
 void CPR<block_size>::analyzeAggregateMaps() {
 
-    Pmatrices.clear();
+    PcolIndices.resize(num_levels - 1);
     Rmatrices.clear();
 
     const DuneAmg::AggregatesMapList& aggregatesMaps = dune_amg->aggregatesMaps();
@@ -389,34 +384,22 @@ void CPR<block_size>::analyzeAggregateMaps() {
         DuneAmg::AggregatesMap *map = *mapIter;
 
         // get indices for each row of P and R
-        std::vector<std::set<long int> > indicesP(level_sizes[level]);
+        PcolIndices[level].resize(level_sizes[level]);
         std::vector<std::set<long int> > indicesR(level_sizes[level+1]);
         using AggregateIterator = DuneAmg::AggregatesMap::const_iterator;
         for(AggregateIterator ai = map->begin(); ai != map->end(); ++ai){
             if (*ai != DuneAmg::AggregatesMap::ISOLATED) {
                 const long int diff = ai - map->begin();
-                indicesP[diff].insert(*ai);
+                PcolIndices[level][diff] = *ai;
                 indicesR[*ai].insert(diff);
             }
         }
 
-        Pmatrices.emplace_back(level_sizes[level], level_sizes[level+1], level_sizes[level]);
         Rmatrices.emplace_back(level_sizes[level+1], level_sizes[level], level_sizes[level]);
-        std::fill(Pmatrices.back().nnzValues.begin(), Pmatrices.back().nnzValues.end(), 1.0);
         std::fill(Rmatrices.back().nnzValues.begin(), Rmatrices.back().nnzValues.end(), 1.0);
 
-        // set sparsity pattern of P
-        int col_idx = 0;
-        Pmatrices.back().rowPointers[0] = 0;
-        for (unsigned int i = 0; i < indicesP.size(); ++i) {
-            Pmatrices.back().rowPointers[i + 1] = Pmatrices.back().rowPointers[i] + indicesP[i].size();
-            for (auto it = indicesP[i].begin(); it != indicesP[i].end(); ++it) {
-                Pmatrices.back().colIndices[col_idx] = *it;
-                col_idx++;
-            }
-        }
         // set sparsity pattern of R
-        col_idx = 0;
+        int col_idx = 0;
         Rmatrices.back().rowPointers[0] = 0;
         for (unsigned int i = 0; i < indicesR.size(); ++i) {
             Rmatrices.back().rowPointers[i + 1] = Rmatrices.back().rowPointers[i] + indicesR[i].size();
@@ -433,7 +416,6 @@ void CPR<block_size>::analyzeAggregateMaps() {
 template <unsigned int block_size>
 void CPR<block_size>::amg_cycle_gpu(const int level, cl::Buffer &y, cl::Buffer &x) {
     OpenclMatrix *A = &d_Amatrices[level];
-    OpenclMatrix *P = &d_Pmatrices[level];
     OpenclMatrix *R = &d_Rmatrices[level];
     int Ncur = A->Nb;
 
@@ -478,7 +460,7 @@ void CPR<block_size>::amg_cycle_gpu(const int level, cl::Buffer &y, cl::Buffer &
     OpenclKernels::residual(A->nnzValues, A->colIndices, A->rowPointers, x, y, t, Ncur, 1);
     OpenclKernels::spmv(R->nnzValues, R->colIndices, R->rowPointers, t, f, Nnext, 1, true);
     amg_cycle_gpu(level + 1, f, u);
-    OpenclKernels::spmv(P->nnzValues, P->colIndices, P->rowPointers, u, x, Ncur, 1, false);
+    OpenclKernels::prolongate_vector(u, x, d_PcolIndices[level], Ncur);
 
     // postsmooth
     OpenclKernels::residual(A->nnzValues, A->colIndices, A->rowPointers, x, y, t, Ncur, 1);
