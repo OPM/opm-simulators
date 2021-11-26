@@ -74,6 +74,7 @@ private:
     static std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const double, const double, const unsigned int> > custom_k;
     static std::unique_ptr<cl::KernelFunctor<const cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int> > full_to_pressure_restriction_k;
     static std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int> > add_coarse_pressure_correction_k;
+    static std::unique_ptr<cl::KernelFunctor<const cl::Buffer&, cl::Buffer&, const cl::Buffer&, const unsigned int> > prolongate_vector_k;
     static std::unique_ptr<spmv_blocked_kernel_type> spmv_blocked_k;
     static std::unique_ptr<spmv_kernel_type> spmv_k;
     static std::unique_ptr<spmv_kernel_type> spmv_noreset_k;
@@ -115,6 +116,9 @@ private:
 
     /// Add the coarse pressure solution back to the finer, complete solution
     static std::string get_add_coarse_pressure_correction_source();
+
+    /// Prolongate a vector during the AMG cycle
+    static std::string get_prolongate_vector_source();
 
     /// b = mat * x
     /// algorithm based on:
@@ -162,6 +166,7 @@ public:
     static void custom(cl::Buffer& p, cl::Buffer& v, cl::Buffer& r, const double omega, const double beta, int N);
     static void full_to_pressure_restriction(const cl::Buffer& fine_y, cl::Buffer& weights, cl::Buffer& coarse_y, int Nb);
     static void add_coarse_pressure_correction(cl::Buffer& coarse_x, cl::Buffer& fine_x, int pressure_idx, int Nb);
+    static void prolongate_vector(const cl::Buffer& in, cl::Buffer& out, const cl::Buffer& cols, int N);
     static void spmv(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows, cl::Buffer& x, cl::Buffer& b, int Nb, unsigned int block_size, bool reset = true);
     static void residual(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows, cl::Buffer& x, const cl::Buffer& rhs, cl::Buffer& out, int Nb, unsigned int block_size);
 

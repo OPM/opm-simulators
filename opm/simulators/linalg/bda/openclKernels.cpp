@@ -50,6 +50,7 @@ std::unique_ptr<cl::KernelFunctor<const double, cl::Buffer&, cl::Buffer&, cl::Bu
 std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const double, const double, const unsigned int> > OpenclKernels::custom_k;
 std::unique_ptr<cl::KernelFunctor<const cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int> > OpenclKernels::full_to_pressure_restriction_k;
 std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int> > OpenclKernels::add_coarse_pressure_correction_k;
+std::unique_ptr<cl::KernelFunctor<const cl::Buffer&, cl::Buffer&, const cl::Buffer&, const unsigned int> > OpenclKernels::prolongate_vector_k;
 std::unique_ptr<spmv_blocked_kernel_type> OpenclKernels::spmv_blocked_k;
 std::unique_ptr<spmv_kernel_type> OpenclKernels::spmv_k;
 std::unique_ptr<spmv_kernel_type> OpenclKernels::spmv_noreset_k;
@@ -99,6 +100,8 @@ void OpenclKernels::init(cl::Context *context, cl::CommandQueue *queue_, std::ve
     add_kernel_source(sources, full_to_pressure_restriction_s);
     const std::string& add_coarse_pressure_correction_s = get_add_coarse_pressure_correction_source();
     add_kernel_source(sources, add_coarse_pressure_correction_s);
+    const std::string& prolongate_vector_s = get_prolongate_vector_source();
+    add_kernel_source(sources, prolongate_vector_s);
     const std::string& spmv_blocked_s = get_blocked_matrix_operation_source(matrix_operation::spmv_op);
     add_kernel_source(sources, spmv_blocked_s);
     const std::string& spmv_s = get_matrix_operation_source(matrix_operation::spmv_op, true);
@@ -140,6 +143,7 @@ void OpenclKernels::init(cl::Context *context, cl::CommandQueue *queue_, std::ve
     custom_k.reset(new cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const double, const double, const unsigned int>(cl::Kernel(program, "custom")));
     full_to_pressure_restriction_k.reset(new cl::KernelFunctor<const cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int>(cl::Kernel(program, "full_to_pressure_restriction")));
     add_coarse_pressure_correction_k.reset(new cl::KernelFunctor<cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int>(cl::Kernel(program, "add_coarse_pressure_correction")));
+    prolongate_vector_k.reset(new cl::KernelFunctor<const cl::Buffer&, cl::Buffer&, const cl::Buffer&, const unsigned int>(cl::Kernel(program, "prolongate_vector")));
     spmv_blocked_k.reset(new spmv_blocked_kernel_type(cl::Kernel(program, "spmv_blocked")));
     spmv_k.reset(new spmv_kernel_type(cl::Kernel(program, "spmv")));
     spmv_noreset_k.reset(new spmv_kernel_type(cl::Kernel(program, "spmv_noreset")));
@@ -312,6 +316,23 @@ void OpenclKernels::add_coarse_pressure_correction(cl::Buffer& coarse_x, cl::Buf
         event.wait();
         std::ostringstream oss;
         oss << std::scientific << "OpenclKernels add_coarse_pressure_correction() time: " << t.stop() << " s";
+        OpmLog::info(oss.str());
+    }
+}
+
+void OpenclKernels::prolongate_vector(const cl::Buffer& in, cl::Buffer& out, const cl::Buffer& cols, int N)
+{
+    const unsigned int work_group_size = 32;
+    const unsigned int num_work_groups = ceilDivision(N, work_group_size);
+    const unsigned int total_work_items = num_work_groups * work_group_size;
+    Timer t;
+
+    cl::Event event = (*prolongate_vector_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), in, out, cols, N);
+
+    if (verbosity >= 4) {
+        event.wait();
+        std::ostringstream oss;
+        oss << std::scientific << "OpenclKernels prolongate_vector() time: " << t.stop() << " s";
         OpmLog::info(oss.str());
     }
 }
@@ -685,6 +706,27 @@ void OpenclKernels::apply_stdwells_no_reorder(cl::Buffer& d_Cnnzs_ocl, cl::Buffe
             while(target_block_row < Nb){
                 fine_x[target_block_row * block_size + pressure_idx] += coarse_x[target_block_row];
                 target_block_row += NUM_THREADS;
+            }
+        }
+        )";
+    }
+
+    // prolongate vector during amg cycle
+    // every workitem handles one row
+    std::string OpenclKernels::get_prolongate_vector_source() {
+        return R"(
+        __kernel void prolongate_vector(
+            __global const double *in,
+            __global double *out,
+            __global const int *cols,
+            const unsigned int N)
+        {
+            const unsigned int NUM_THREADS = get_global_size(0);
+            unsigned int row = get_global_id(0);
+
+            while(row < N){
+                out[row] += in[cols[row]];
+                row += NUM_THREADS;
             }
         }
         )";
