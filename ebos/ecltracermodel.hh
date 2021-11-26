@@ -306,12 +306,12 @@ protected:
             const auto& well = wellPtr->wellEcl();
 
             for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
-                this->wellTracerRate_[std::make_pair(well.name(),this->tracerNames_[tr.idx_[tIdx]])] = 0.0;
+                this->wellTracerRate_[std::make_pair(well.name(), this->name(tr.idx_[tIdx]))] = 0.0;
             }
 
             std::vector<double> wtracer(tr.numTracer());
             for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
-                wtracer[tIdx] = well.getTracerProperties().getConcentration(this->tracerNames_[tr.idx_[tIdx]]);
+                wtracer[tIdx] = well.getTracerProperties().getConcentration(this->name(tr.idx_[tIdx]));
             }
 
             for (auto& perfData : wellPtr->perforationData()) {
@@ -321,7 +321,7 @@ protected:
                     for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
                         tr.residual_[tIdx][I][0] -= rate*wtracer[tIdx];
                         // Store _injector_ tracer rate for reporting
-                        this->wellTracerRate_.at(std::make_pair(well.name(),this->tracerNames_[tr.idx_[tIdx]])) += rate*wtracer[tIdx];
+                        this->wellTracerRate_.at(std::make_pair(well.name(),this->name(tr.idx_[tIdx]))) += rate*wtracer[tIdx];
                     }
                 }
                 else if (rate < 0) {
@@ -402,7 +402,7 @@ protected:
                 if (rate < 0) {
                     rateWellNeg += rate;
                     for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
-                        this->wellTracerRate_.at(std::make_pair(well.name(),this->tracerNames_[tr.idx_[tIdx]])) += rate*tr.concentration_[tIdx][I];
+                        this->wellTracerRate_.at(std::make_pair(well.name(),this->name(tr.idx_[tIdx]))) += rate*tr.concentration_[tIdx][I];
                     }
                 }
                 else {
@@ -424,7 +424,7 @@ protected:
                 const Scalar bucketPrDay = 10.0/(1000.*3600.*24.); // ... keeps (some) trouble away
                 const Scalar factor = (rateWellTotal < -bucketPrDay) ? rateWellTotal/rateWellNeg : 0.0;
                 for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
-                    this->wellTracerRate_.at(std::make_pair(well.name(),this->tracerNames_[tr.idx_[tIdx]])) *= factor;
+                    this->wellTracerRate_.at(std::make_pair(well.name(),this->name(tr.idx_[tIdx]))) *= factor;
                 }
             }
         }
@@ -435,27 +435,27 @@ protected:
         for (size_t tracerIdx=0; tracerIdx<this->tracerPhaseIdx_.size(); ++tracerIdx) {
             if (this->tracerPhaseIdx_[tracerIdx] == FluidSystem::waterPhaseIdx) {
                 if (! FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)){
-                    throw std::runtime_error("Water tracer specified for non-water fluid system:" + this->tracerNames_[tracerIdx]);
+                    throw std::runtime_error("Water tracer specified for non-water fluid system:" + this->name(tracerIdx));
                 }
 
                 wat_.addTracer(tracerIdx, this->tracerConcentration_[tracerIdx]);
             }
             else if (this->tracerPhaseIdx_[tracerIdx] == FluidSystem::oilPhaseIdx) {
                 if (! FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)){
-                    throw std::runtime_error("Oil tracer specified for non-oil fluid system:" + this->tracerNames_[tracerIdx]);
+                    throw std::runtime_error("Oil tracer specified for non-oil fluid system:" + this->name(tracerIdx));
                 }
                 if (FluidSystem::enableVaporizedOil()) {
-                    throw std::runtime_error("Oil tracer in combination with kw VAPOIL is not supported: " + this->tracerNames_[tracerIdx]);
+                    throw std::runtime_error("Oil tracer in combination with kw VAPOIL is not supported: " + this->name(tracerIdx));
                 }
 
                 oil_.addTracer(tracerIdx, this->tracerConcentration_[tracerIdx]);
             }
             else if (this->tracerPhaseIdx_[tracerIdx] == FluidSystem::gasPhaseIdx) {
                 if (! FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)){
-                    throw std::runtime_error("Gas tracer specified for non-gas fluid system:" + this->tracerNames_[tracerIdx]);
+                    throw std::runtime_error("Gas tracer specified for non-gas fluid system:" + this->name(tracerIdx));
                 }
                 if (FluidSystem::enableDissolvedGas()) {
-                    throw std::runtime_error("Gas tracer in combination with kw DISGAS is not supported: " + this->tracerNames_[tracerIdx]);
+                    throw std::runtime_error("Gas tracer in combination with kw DISGAS is not supported: " + this->name(tracerIdx));
                 }
 
                 gas_.addTracer(tracerIdx, this->tracerConcentration_[tracerIdx]);

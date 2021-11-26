@@ -106,15 +106,6 @@ EclGenericTracerModel(const GridView& gridView,
 {
 }
 
-template<class Grid,class GridView, class DofMapper, class Stencil, class Scalar>
-const std::string& EclGenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
-tracerName(int tracerIdx) const
-{
-    if (tracerNames_.empty())
-        throw std::logic_error("This method should never be called when there are no tracers in the model");
-
-    return tracerNames_[tracerIdx];
-}
 
 template<class Grid,class GridView, class DofMapper, class Stencil, class Scalar>
 Scalar EclGenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
@@ -141,6 +132,20 @@ numTracers() const
     return this->eclState_.tracer().size();
 }
 
+template<class Grid,class GridView, class DofMapper, class Stencil, class Scalar>
+std::string EclGenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
+fname(int tracerIdx) const
+{
+    return this->eclState_.tracer()[tracerIdx].fname();
+}
+
+template<class Grid,class GridView, class DofMapper, class Stencil, class Scalar>
+const std::string& EclGenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
+name(int tracerIdx) const
+{
+    return this->eclState_.tracer()[tracerIdx].name;
+}
+
 
 template<class Grid,class GridView, class DofMapper, class Stencil, class Scalar>
 void EclGenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
@@ -164,15 +169,14 @@ doInit(bool enabled, size_t numGridDof,
 
     // retrieve the number of tracers from the deck
     const size_t numTracers = tracers.size();
-    tracerNames_.resize(numTracers);
     tracerConcentration_.resize(numTracers);
     storageOfTimeIndex1_.resize(numTracers);
 
     // the phase where the tracer is
     tracerPhaseIdx_.resize(numTracers);
-    size_t tracerIdx = 0;
-    for (const auto& tracer : tracers) {
-        tracerNames_[tracerIdx] = tracer.name;
+    for (size_t tracerIdx = 0; tracerIdx < numTracers; tracerIdx++) {
+        const auto& tracer = tracers[tracerIdx];
+
         if (tracer.phase == Phase::WATER)
             tracerPhaseIdx_[tracerIdx] = waterPhaseIdx;
         else if (tracer.phase == Phase::OIL)
@@ -206,8 +210,6 @@ doInit(bool enabled, size_t numGridDof,
             }
         } else
             throw std::logic_error(fmt::format("Can not initialize tracer: {}", tracer.name));
-
-        ++tracerIdx;
     }
 
     // initial tracer concentration

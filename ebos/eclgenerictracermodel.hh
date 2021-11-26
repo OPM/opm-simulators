@@ -60,7 +60,9 @@ public:
     /*!
      * \brief Return the tracer name
      */
-    const std::string& tracerName(int tracerIdx) const;
+    const std::string& name(int tracerIdx) const;
+    std::string fname(int tracerIdx) const;
+
 
     /*!
      * \brief Return the tracer concentration for tracer index and global DofIdx
@@ -99,7 +101,6 @@ protected:
     const CartesianIndexMapper& cartMapper_;
     const DofMapper& dofMapper_;
 
-    std::vector<std::string> tracerNames_;
     std::vector<int> tracerPhaseIdx_;
     std::vector<Dune::BlockVector<Dune::FieldVector<Scalar, 1>>> tracerConcentration_;
     std::vector<Dune::BlockVector<Dune::FieldVector<Scalar, 1>>> tracerConcentrationInitial_;
