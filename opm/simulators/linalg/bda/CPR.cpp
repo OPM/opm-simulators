@@ -279,6 +279,8 @@ void CPR<block_size>::create_preconditioner_amg(BlockedMatrix *mat_) {
             using CriterionBase = Dune::Amg::AggregationCriterion<Dune::Amg::SymmetricDependency<DuneMat, Dune::Amg::FirstDiagonal>>;
             using Criterion = Dune::Amg::CoarsenCriterion<CriterionBase>;
             const Criterion c = Opm::PreconditionerFactory<MatrixOperator, Dune::Amg::SequentialInformation>::amgCriterion(property_tree);
+            num_pre_smooth_steps = c.getNoPreSmoothSteps();
+            num_post_smooth_steps = c.getNoPostSmoothSteps();
 
             dune_amg->build<OverlapFlags>(c);
 
@@ -451,9 +453,11 @@ void CPR<block_size>::amg_cycle_gpu(const int level, cl::Buffer &y, cl::Buffer &
     cl::Buffer& u = d_u[level]; // u was 0-initialized earlier
 
     // presmooth
-    double jacobi_damping = 0.72; // default value in amgcl: 0.72
-    OpenclKernels::residual(A->nnzValues, A->colIndices, A->rowPointers, x, y, t, Ncur, 1);
-    OpenclKernels::vmul(jacobi_damping, d_invDiags[level], t, x, Ncur);
+    double jacobi_damping = 0.65; // default value in amgcl: 0.72
+    for (unsigned i = 0; i < num_pre_smooth_steps; ++i){
+        OpenclKernels::residual(A->nnzValues, A->colIndices, A->rowPointers, x, y, t, Ncur, 1);
+        OpenclKernels::vmul(jacobi_damping, d_invDiags[level], t, x, Ncur);
+    }
 
     // move to coarser level
     OpenclKernels::residual(A->nnzValues, A->colIndices, A->rowPointers, x, y, t, Ncur, 1);
@@ -462,8 +466,10 @@ void CPR<block_size>::amg_cycle_gpu(const int level, cl::Buffer &y, cl::Buffer &
     OpenclKernels::prolongate_vector(u, x, d_PcolIndices[level], Ncur);
 
     // postsmooth
-    OpenclKernels::residual(A->nnzValues, A->colIndices, A->rowPointers, x, y, t, Ncur, 1);
-    OpenclKernels::vmul(jacobi_damping, d_invDiags[level], t, x, Ncur);
+    for (unsigned i = 0; i < num_post_smooth_steps; ++i){
+        OpenclKernels::residual(A->nnzValues, A->colIndices, A->rowPointers, x, y, t, Ncur, 1);
+        OpenclKernels::vmul(jacobi_damping, d_invDiags[level], t, x, Ncur);
+    }
 }
 
 

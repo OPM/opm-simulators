@@ -89,6 +89,8 @@ private:
     bool always_recalculate_aggregates = false; // OPM always reuses the aggregates by default
     bool recalculate_aggregates = true;         // only rerecalculate if true
     const int pressure_idx = 1;                 // hardcoded to mimic OPM
+    unsigned num_pre_smooth_steps;              // number of Jacobi smooth steps before restriction
+    unsigned num_post_smooth_steps;             // number of Jacobi smooth steps after prolongation
 
     std::unique_ptr<openclSolverBackend<1> > coarse_solver; // coarse solver is scalar
     ILUReorder opencl_ilu_reorder;                          // reordering strategy for ILU0 in coarse solver
