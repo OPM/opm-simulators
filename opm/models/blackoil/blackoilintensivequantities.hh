@@ -84,6 +84,8 @@ class BlackOilIntensiveQuantities
     enum { enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>() };
     enum { enableFoam = getPropValue<TypeTag, Properties::EnableFoam>() };
     enum { enableBrine = getPropValue<TypeTag, Properties::EnableBrine>() };
+    enum { enableEvaporation = getPropValue<TypeTag, Properties::EnableEvaporation>() };
+    enum { enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>() };
     enum { enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>() };
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
     enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
@@ -107,7 +109,7 @@ class BlackOilIntensiveQuantities
     using Toolbox = MathToolbox<Evaluation>;
     using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
     using FluxIntensiveQuantities = typename FluxModule::FluxIntensiveQuantities;
-    using FluidState = BlackOilFluidState<Evaluation, FluidSystem, enableTemperature, enableEnergy, compositionSwitchEnabled,  enableBrine, Indices::numPhases >;
+    using FluidState = BlackOilFluidState<Evaluation, FluidSystem, enableTemperature, enableEnergy, compositionSwitchEnabled,  enableEvaporation, enableBrine, enableSaltPrecipitation, Indices::numPhases >;
     using DiffusionIntensiveQuantities = BlackOilDiffusionIntensiveQuantities<TypeTag, enableDiffusion>;
 
 public:
