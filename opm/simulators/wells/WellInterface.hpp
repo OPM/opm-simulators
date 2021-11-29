@@ -112,6 +112,8 @@ public:
     static constexpr bool has_polymermw = getPropValue<TypeTag, Properties::EnablePolymerMW>();
     static constexpr bool has_foam = getPropValue<TypeTag, Properties::EnableFoam>();
     static constexpr bool has_brine = getPropValue<TypeTag, Properties::EnableBrine>();
+    static constexpr bool has_watVapor = getPropValue<TypeTag, Properties::EnableEvaporation>();
+    static constexpr bool has_saltPrecip = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>();
     static constexpr bool has_micp = getPropValue<TypeTag, Properties::EnableMICP>();
 
     // For the conversion between the surface volume rate and reservoir voidage rate
@@ -120,7 +122,9 @@ public:
                                           has_temperature,
                                           has_energy,
                                           Indices::compositionSwitchIdx >= 0,
+                                          has_watVapor,
                                           has_brine,
+                                          has_saltPrecip,
                                           Indices::numPhases >;
     /// Constructor
     WellInterface(const Well& well,
