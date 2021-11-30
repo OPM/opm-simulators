@@ -668,10 +668,9 @@ assignToSolution(data::Solution& sol)
     // tracers
     if (!tracerConcentrations_.empty()) {
         const auto& tracers = eclState_.tracer();
-        size_t tracerIdx = 0;
-        for (const auto& tracer : tracers) {
-            std::string tmp = tracer.name + "F";
-            sol.insert(tmp, UnitSystem::measure::identity, std::move(tracerConcentrations_[tracerIdx++]), data::TargetType::RESTART_TRACER_SOLUTION);
+        for (std::size_t tracerIdx = 0; tracerIdx < tracers.size(); tracerIdx++) {
+            const auto& tracer = tracers[tracerIdx];
+            sol.insert(tracer.fname(), UnitSystem::measure::identity, std::move(tracerConcentrations_[tracerIdx]), data::TargetType::RESTART_TRACER_SOLUTION);
         }
         // We need put tracerConcentrations into a valid state.
         // Otherwise next time we end up here outside of a restart write we will

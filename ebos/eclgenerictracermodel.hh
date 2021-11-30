@@ -55,18 +55,20 @@ public:
     /*!
      * \brief Return the number of tracers considered by the tracerModel.
      */
-    int numTracers() const
-    { return tracerNames_.size(); }
+    int numTracers() const;
 
     /*!
      * \brief Return the tracer name
      */
-    const std::string& tracerName(int tracerIdx) const;
+    const std::string& name(int tracerIdx) const;
+    std::string fname(int tracerIdx) const;
+
 
     /*!
      * \brief Return the tracer concentration for tracer index and global DofIdx
      */
     Scalar tracerConcentration(int tracerIdx, int globalDofIdx) const;
+    void setTracerConcentration(int tracerIdx, int globalDofIdx, Scalar value);
 
     /*!
     * \brief Return well tracer rates
@@ -85,6 +87,7 @@ protected:
      * \brief Initialize all internal data structures needed by the tracer module
      */
     void doInit(bool enabled,
+                bool rst,
                 size_t numGridDof,
                 size_t gasPhaseIdx,
                 size_t oilPhaseIdx,
@@ -99,7 +102,6 @@ protected:
     const CartesianIndexMapper& cartMapper_;
     const DofMapper& dofMapper_;
 
-    std::vector<std::string> tracerNames_;
     std::vector<int> tracerPhaseIdx_;
     std::vector<Dune::BlockVector<Dune::FieldVector<Scalar, 1>>> tracerConcentration_;
     std::vector<Dune::BlockVector<Dune::FieldVector<Scalar, 1>>> tracerConcentrationInitial_;
