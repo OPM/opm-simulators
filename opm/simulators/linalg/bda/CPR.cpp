@@ -43,8 +43,8 @@ using Opm::OpmLog;
 using Dune::Timer;
 
 template <unsigned int block_size>
-CPR<block_size>::CPR(int verbosity_, ILUReorder opencl_ilu_reorder_, bool use_amg_) :
-    verbosity(verbosity_), opencl_ilu_reorder(opencl_ilu_reorder_), use_amg(use_amg_)
+CPR<block_size>::CPR(int verbosity_, ILUReorder opencl_ilu_reorder_) :
+    Preconditioner<block_size>(verbosity_), opencl_ilu_reorder(opencl_ilu_reorder_)
 {
     bilu0 = std::make_unique<BILU0<block_size> >(opencl_ilu_reorder, verbosity_);
 }
@@ -66,14 +66,13 @@ void CPR<block_size>::init(int Nb_, int nnzb_, std::shared_ptr<cl::Context>& con
     weights.resize(N);
     diagIndices.resize(1);
 
-    bilu0->setOpenCLContext(context.get());
-    bilu0->setOpenCLQueue(queue.get());
+    bilu0->init(Nb, nnzb, context, queue);
 }
 
 
 template <unsigned int block_size>
-bool CPR<block_size>::analyse_matrix(BlockedMatrix *mat_) {
-    bool success = bilu0->init(mat_);
+bool CPR<block_size>::analyze_matrix(BlockedMatrix *mat_) {
+    bool success = bilu0->analyze_matrix(mat_);
 
     if (opencl_ilu_reorder == ILUReorder::NONE) {
         mat = mat_;
@@ -93,14 +92,13 @@ bool CPR<block_size>::create_preconditioner(BlockedMatrix *mat_) {
         out << "CPR create_preconditioner bilu0(): " << t_bilu0.stop() << " s";
         OpmLog::info(out.str());
     }
-    if (use_amg) {
-        Dune::Timer t_amg;
-        create_preconditioner_amg(mat); // already points to bilu0::rmat if needed
-        if (verbosity >= 3) {
-            std::ostringstream out;
-            out << "CPR create_preconditioner_amg(): " << t_amg.stop() << " s";
-            OpmLog::info(out.str());
-        }
+
+    Dune::Timer t_amg;
+    create_preconditioner_amg(mat); // already points to bilu0::rmat if needed
+    if (verbosity >= 3) {
+        std::ostringstream out;
+        out << "CPR create_preconditioner_amg(): " << t_amg.stop() << " s";
+        OpmLog::info(out.str());
     }
     return result;
 }
@@ -507,14 +505,12 @@ void CPR<block_size>::apply(const cl::Buffer& y, cl::Buffer& x) {
         OpmLog::info(out.str());
     }
 
-    if (use_amg) {
-        Dune::Timer t_amg;
-        apply_amg(y, x);
-        if (verbosity >= 4) {
-            std::ostringstream out;
-            out << "CPR apply amg(): " << t_amg.stop() << " s";
-            OpmLog::info(out.str());
-        }
+    Dune::Timer t_amg;
+    apply_amg(y, x);
+    if (verbosity >= 4) {
+        std::ostringstream out;
+        out << "CPR apply amg(): " << t_amg.stop() << " s";
+        OpmLog::info(out.str());
     }
 }
 

@@ -1,0 +1,60 @@
+/*
+  Copyright 2021 Equinor ASA
+
+  This file is part of the Open Porous Media project (OPM).
+
+  OPM is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OPM is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with OPM.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+#include <config.h>
+#include <memory>
+
+#include <opm/common/ErrorMacros.hpp>
+
+#include <opm/simulators/linalg/bda/BILU0.hpp>
+#include <opm/simulators/linalg/bda/CPR.hpp>
+#include <opm/simulators/linalg/bda/opencl/Preconditioner.hpp>
+
+namespace Opm
+{
+namespace Accelerator
+{
+
+template <unsigned int block_size>
+std::unique_ptr<Preconditioner<block_size> > Preconditioner<block_size>::create(PreconditionerType type, int verbosity, ILUReorder opencl_ilu_reorder) {
+    if (type == PreconditionerType::BILU0) {
+        return std::make_unique<Opm::Accelerator::BILU0<block_size> >(opencl_ilu_reorder, verbosity);
+    } else if (type == PreconditionerType::CPR) {
+        return std::make_unique<Opm::Accelerator::CPR<block_size> >(verbosity, opencl_ilu_reorder);
+    } else {
+        OPM_THROW(std::logic_error, "Invalid PreconditionerType");
+    }
+}
+
+
+#define INSTANTIATE_BDA_FUNCTIONS(n)  \
+template std::unique_ptr<Preconditioner<n> > Preconditioner<n>::create(PreconditionerType, int, ILUReorder);
+
+INSTANTIATE_BDA_FUNCTIONS(1);
+INSTANTIATE_BDA_FUNCTIONS(2);
+INSTANTIATE_BDA_FUNCTIONS(3);
+INSTANTIATE_BDA_FUNCTIONS(4);
+INSTANTIATE_BDA_FUNCTIONS(5);
+INSTANTIATE_BDA_FUNCTIONS(6);
+
+#undef INSTANTIATE_BDA_FUNCTIONS
+
+} //namespace Accelerator
+} //namespace Opm
+

@@ -27,6 +27,7 @@
 
 #include <opm/simulators/linalg/bda/opencl.hpp>
 #include <opm/simulators/linalg/bda/openclKernels.hpp>
+#include <opm/simulators/linalg/bda/opencl/Preconditioner.hpp>
 #include <opm/simulators/linalg/bda/ChowPatelIlu.hpp>
 
 
@@ -35,17 +36,20 @@ namespace Opm
 namespace Accelerator
 {
 
-    /// This class implementa a Blocked ILU0 preconditioner
+    /// This class implements a Blocked ILU0 preconditioner
     /// The decomposition is done on CPU, and reorders the rows of the matrix
     template <unsigned int block_size>
-    class BILU0
+    class BILU0 : public Preconditioner<block_size>
     {
+        typedef Preconditioner<block_size> Base;
+
+        using Base::N;
+        using Base::Nb;
+        using Base::nnz;
+        using Base::nnzb;
+        using Base::verbosity;
 
     private:
-        int N;       // number of rows of the matrix
-        int Nb;      // number of blockrows of the matrix
-        int nnz;     // number of nonzeroes of the matrix (scalar)
-        int nnzbs;   // number of blocks of the matrix
         std::unique_ptr<BlockedMatrix> LUmat = nullptr;
         std::shared_ptr<BlockedMatrix> rmat = nullptr; // only used with PAR_SIM
 #if CHOW_PATEL
@@ -57,7 +61,6 @@ namespace Accelerator
         std::vector<int> rowsPerColorPrefix;  // the prefix sum of rowsPerColor
         std::vector<int> toOrder, fromOrder;
         int numColors;
-        int verbosity;
         std::once_flag pattern_uploaded;
 
         ILUReorder opencl_ilu_reorder;
@@ -90,29 +93,28 @@ namespace Accelerator
 
         ~BILU0();
 
-        // analysis
-        bool init(const BlockedMatrix *mat);
+        void init(int Nb, int nnzb, std::shared_ptr<cl::Context>& context, std::shared_ptr<cl::CommandQueue>& queue) override;
+
+        // analysis, find reordering if specified
+        bool analyze_matrix(BlockedMatrix *mat) override;
 
         // ilu_decomposition
-        bool create_preconditioner(BlockedMatrix *mat);
+        bool create_preconditioner(BlockedMatrix *mat) override;
 
         // apply preconditioner, x = prec(y)
-        void apply(const cl::Buffer& y, cl::Buffer& x);
+        void apply(const cl::Buffer& y, cl::Buffer& x) override;
 
-        void setOpenCLContext(cl::Context *context);
-        void setOpenCLQueue(cl::CommandQueue *queue);
-
-        int* getToOrder()
+        int* getToOrder() override
         {
             return toOrder.data();
         }
 
-        int* getFromOrder()
+        int* getFromOrder() override
         {
             return fromOrder.data();
         }
 
-        BlockedMatrix* getRMat()
+        BlockedMatrix* getRMat() override
         {
             return rmat.get();
         }

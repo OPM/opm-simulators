@@ -27,7 +27,8 @@
 #include <opm/simulators/linalg/bda/ILUReorder.hpp>
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
 #include <opm/simulators/linalg/bda/BILU0.hpp>
-#include <opm/simulators/linalg/bda/CPR.hpp>
+
+#include <opm/simulators/linalg/bda/opencl/Preconditioner.hpp>
 
 #include <tuple>
 
@@ -69,7 +70,7 @@ private:
 
     std::vector<cl::Device> devices;
 
-    std::unique_ptr<CPR<block_size> > cpr;                        // Constrained Pressure Residual preconditioner
+    std::unique_ptr<Preconditioner<block_size> > prec;
                                                                   // can perform blocked ILU0 and AMG on pressure component
     bool is_root;                                                 // allow for nested solvers, the root solver is called by BdaBridge
     int *toOrder = nullptr, *fromOrder = nullptr;                 // BILU0 reorders rows of the matrix via these mappings
@@ -159,9 +160,9 @@ private:
     /// Update linear system on GPU, don't copy rowpointers and colindices, they stay the same
     void update_system_on_gpu();
 
-    /// Analyse sparsity pattern to extract parallelism
+    /// Analyze sparsity pattern to extract parallelism
     /// \return true iff analysis was successful
-    bool analyse_matrix();
+    bool analyze_matrix();
 
     /// Perform ilu0-decomposition
     /// \return true iff decomposition was successful

@@ -40,7 +40,7 @@ using Dune::Timer;
 
 template <unsigned int block_size>
 BILU0<block_size>::BILU0(ILUReorder opencl_ilu_reorder_, int verbosity_) :
-    verbosity(verbosity_), opencl_ilu_reorder(opencl_ilu_reorder_)
+    Preconditioner<block_size>(verbosity_), opencl_ilu_reorder(opencl_ilu_reorder_)
 {
 #if CHOW_PATEL
     chowPatelIlu.setVerbosity(verbosity);
@@ -53,15 +53,23 @@ BILU0<block_size>::~BILU0()
     delete[] invDiagVals;
 }
 
+
+template <unsigned int block_size>
+void BILU0<block_size>::init(int Nb, int nnzb, std::shared_ptr<cl::Context>& context_, std::shared_ptr<cl::CommandQueue>& queue_)
+{
+    context = context_.get();
+    queue = queue_.get();
+}
+
     template <unsigned int block_size>
-    bool BILU0<block_size>::init(const BlockedMatrix *mat)
+    bool BILU0<block_size>::analyze_matrix(BlockedMatrix *mat)
     {
         const unsigned int bs = block_size;
 
         this->N = mat->Nb * block_size;
         this->Nb = mat->Nb;
         this->nnz = mat->nnzbs * block_size * block_size;
-        this->nnzbs = mat->nnzbs;
+        this->nnzb = mat->nnzbs;
 
         int *CSCRowIndices = nullptr;
         int *CSCColPointers = nullptr;
@@ -71,7 +79,7 @@ BILU0<block_size>::~BILU0()
         } else {
             toOrder.resize(Nb);
             fromOrder.resize(Nb);
-            CSCRowIndices = new int[nnzbs];
+            CSCRowIndices = new int[nnzb];
             CSCColPointers = new int[Nb + 1];
             rmat = std::make_shared<BlockedMatrix>(mat->Nb, mat->nnzbs, block_size);
             LUmat = std::make_unique<BlockedMatrix>(*rmat);
@@ -294,15 +302,6 @@ BILU0<block_size>::~BILU0()
         }
     }
 
-
-template <unsigned int block_size>
-void BILU0<block_size>::setOpenCLContext(cl::Context *context_) {
-    this->context = context_;
-}
-template <unsigned int block_size>
-void BILU0<block_size>::setOpenCLQueue(cl::CommandQueue *queue_) {
-    this->queue = queue_;
-}
 
 
 #define INSTANTIATE_BDA_FUNCTIONS(n) \

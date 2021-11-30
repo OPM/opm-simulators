@@ -47,20 +47,23 @@ using Dune::Timer;
 template <unsigned int block_size>
 openclSolverBackend<block_size>::openclSolverBackend(int verbosity_, int maxit_, double tolerance_, unsigned int platformID_, unsigned int deviceID_, ILUReorder opencl_ilu_reorder_, std::string linsolver) : BdaSolver<block_size>(verbosity_, maxit_, tolerance_, platformID_, deviceID_), opencl_ilu_reorder(opencl_ilu_reorder_) {
 
-    bool use_amg = false;  // default case if linsolver == "ilu0"
-    if (linsolver.compare("cpr_quasiimpes") == 0) {
-        use_amg = true;
+    bool use_cpr;
+    if (linsolver.compare("ilu0") == 0) {
+        use_cpr = false;
+    } else if (linsolver.compare("cpr_quasiimpes") == 0) {
+        use_cpr = true;
     } else if (linsolver.compare("cpr_trueimpes") == 0) {
         OPM_THROW(std::logic_error, "Error openclSolver does not support --linsolver=cpr_trueimpes");
     } else {
         OPM_THROW(std::logic_error, "Error unknown value for argument --linsolver, " + linsolver);
     }
 
-    // bilu0 = std::make_unique<BILU0<block_size> >(opencl_ilu_reorder, verbosity_);
-    cpr = std::make_unique<CPR<block_size> >(verbosity_, opencl_ilu_reorder, use_amg);
-    // if (use_amg) {
-    //     cpr = std::make_unique<CPR<block_size> >(verbosity_, opencl_ilu_reorder);
-    // }
+    using PreconditionerType = typename Preconditioner<block_size>::PreconditionerType;
+    if (use_cpr) {
+        prec = Preconditioner<block_size>::create(PreconditionerType::CPR, verbosity, opencl_ilu_reorder);
+    } else {
+        prec = Preconditioner<block_size>::create(PreconditionerType::BILU0, verbosity, opencl_ilu_reorder);
+    }
 
     std::ostringstream out;
     try {
@@ -209,8 +212,8 @@ template <unsigned int block_size>
 openclSolverBackend<block_size>::openclSolverBackend(int verbosity_, int maxit_, double tolerance_, ILUReorder opencl_ilu_reorder_) :
     BdaSolver<block_size>(verbosity_, maxit_, tolerance_), opencl_ilu_reorder(opencl_ilu_reorder_)
 {
-    // bilu0 = std::make_unique<BILU0<block_size> >(opencl_ilu_reorder, verbosity_);
-    cpr = std::make_unique<CPR<block_size> >(verbosity_, opencl_ilu_reorder, /*use_amg=*/false);
+    // prec = std::make_unique<BILU0<block_size> >(opencl_ilu_reorder, verbosity_);
+    // cpr = std::make_unique<CPR<block_size> >(verbosity_, opencl_ilu_reorder, /*use_amg=*/false);
 }
 
 template <unsigned int block_size>
@@ -279,7 +282,7 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
 
         // pw = prec(p)
         t_prec.start();
-        cpr->apply(d_p, d_pw);
+        prec->apply(d_p, d_pw);
         t_prec.stop();
 
         // v = A * pw
@@ -310,7 +313,7 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
 
         // s = prec(r)
         t_prec.start();
-        cpr->apply(d_r, d_s);
+        prec->apply(d_r, d_s);
         t_prec.stop();
 
         // t = A * s
@@ -385,7 +388,7 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
     out.clear();
 
     try {
-        cpr->init(Nb, nnzb, context, queue);
+        prec->init(Nb, nnzb, context, queue);
 
 #if COPY_ROW_BY_ROW
         vals_contiguous = new double[N];
@@ -514,11 +517,11 @@ void openclSolverBackend<block_size>::update_system_on_gpu() {
 
 
 template <unsigned int block_size>
-bool openclSolverBackend<block_size>::analyse_matrix() {
+bool openclSolverBackend<block_size>::analyze_matrix() {
     Timer t;
 
     // bool success = bilu0->init(mat.get());
-    bool success = cpr->analyse_matrix(mat.get());
+    bool success = prec->analyze_matrix(mat.get());
 
     if (opencl_ilu_reorder == ILUReorder::NONE) {
         rmat = mat.get();
@@ -526,22 +529,22 @@ bool openclSolverBackend<block_size>::analyse_matrix() {
         // toOrder = bilu0->getToOrder();
         // fromOrder = bilu0->getFromOrder();
         // rmat = bilu0->getRMat();
-        toOrder = cpr->getToOrder();
-        fromOrder = cpr->getFromOrder();
-        rmat = cpr->getRMat();
+        toOrder = prec->getToOrder();
+        fromOrder = prec->getFromOrder();
+        rmat = prec->getRMat();
     }
 
 
     if (verbosity > 2) {
         std::ostringstream out;
-        out << "openclSolver::analyse_matrix(): " << t.stop() << " s";
+        out << "openclSolver::analyze_matrix(): " << t.stop() << " s";
         OpmLog::info(out.str());
     }
 
     analysis_done = true;
 
     return success;
-} // end analyse_matrix()
+} // end analyze_matrix()
 
 
 template <unsigned int block_size>
@@ -569,7 +572,7 @@ template <unsigned int block_size>
 bool openclSolverBackend<block_size>::create_preconditioner() {
     Timer t;
 
-    bool result = cpr->create_preconditioner(mat.get());
+    bool result = prec->create_preconditioner(mat.get());
 
     if (verbosity > 2) {
         std::ostringstream out;
@@ -633,7 +636,7 @@ SolverStatus openclSolverBackend<block_size>::solve_system(int N_, int nnz_, int
     if (initialized == false) {
         initialize(N_, nnz_,  dim, vals, rows, cols);
         if (analysis_done == false) {
-            if (!analyse_matrix()) {
+            if (!analyze_matrix()) {
                 return SolverStatus::BDA_SOLVER_ANALYSIS_FAILED;
             }
         }

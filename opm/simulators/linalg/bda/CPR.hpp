@@ -30,6 +30,7 @@
 #include <opm/simulators/linalg/bda/Matrix.hpp>
 #include <opm/simulators/linalg/bda/OpenclMatrix.hpp>
 #include <opm/simulators/linalg/bda/ILUReorder.hpp>
+#include <opm/simulators/linalg/bda/opencl/Preconditioner.hpp>
 
 #include <opm/simulators/linalg/bda/openclKernels.hpp>
 #include <opm/simulators/linalg/bda/ChowPatelIlu.hpp>
@@ -47,16 +48,17 @@ class BlockedMatrix;
 
 /// This class implements a Constrained Pressure Residual (CPR) preconditioner
 template <unsigned int block_size>
-class CPR
+class CPR : public Preconditioner<block_size>
 {
+    typedef Preconditioner<block_size> Base;
+
+    using Base::N;
+    using Base::Nb;
+    using Base::nnz;
+    using Base::nnzb;
+    using Base::verbosity;
 
 private:
-    int N;       // number of rows of the matrix
-    int Nb;      // number of blockrows of the matrix
-    int nnz;     // number of nonzeroes of the matrix (scalar)
-    int nnzb;    // number of blocks of the matrix
-    int verbosity;
-
     int num_levels;
     std::vector<double> weights, coarse_vals, coarse_x, coarse_y;
     std::vector<Matrix> Amatrices, Rmatrices; // scalar matrices that represent the AMG hierarchy
@@ -75,7 +77,6 @@ private:
     std::unique_ptr<BILU0<block_size> > bilu0;                    // Blocked ILU0 preconditioner
     BlockedMatrix *mat = nullptr;    // input matrix, blocked
 
-    bool use_amg;                               // enable AMG preconditioner on pressure component
     using DuneMat = Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1> >;
     using DuneVec = Dune::BlockVector<Dune::FieldVector<double, 1> >;
     using MatrixOperator = Dune::MatrixAdapter<DuneMat, DuneVec, DuneVec>;
@@ -122,30 +123,29 @@ private:
 
 public:
 
-    CPR(int verbosity, ILUReorder opencl_ilu_reorder, bool use_amg);
+    CPR(int verbosity, ILUReorder opencl_ilu_reorder);
 
-    void init(int Nb, int nnzb, std::shared_ptr<cl::Context>& context, std::shared_ptr<cl::CommandQueue>& queue);
+    void init(int Nb, int nnzb, std::shared_ptr<cl::Context>& context, std::shared_ptr<cl::CommandQueue>& queue) override;
 
-    bool analyse_matrix(BlockedMatrix *mat);
+    bool analyze_matrix(BlockedMatrix *mat) override;
 
-    // apply preconditioner, x = prec(y)
-    // always applies blocked ilu0
-    // also applies amg for pressure component if use_amg is true
-    void apply(const cl::Buffer& y, cl::Buffer& x);
+    // applies blocked ilu0
+    // also applies amg for pressure component
+    void apply(const cl::Buffer& y, cl::Buffer& x) override;
 
-    bool create_preconditioner(BlockedMatrix *mat);
+    bool create_preconditioner(BlockedMatrix *mat) override;
 
-    int* getToOrder()
+    int* getToOrder() override
     {
         return bilu0->getToOrder();
     }
 
-    int* getFromOrder()
+    int* getFromOrder() override
     {
         return bilu0->getFromOrder();
     }
 
-    BlockedMatrix* getRMat()
+    BlockedMatrix* getRMat() override
     {
         return bilu0->getRMat();
     }

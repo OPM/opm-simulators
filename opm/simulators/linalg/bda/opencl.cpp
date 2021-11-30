@@ -21,6 +21,11 @@
 #include <opm/simulators/linalg/bda/opencl.hpp>
 #include <string>
 
+namespace Opm
+{
+namespace Accelerator
+{
+
 /// Translate OpenCL error codes to strings
 /// Integer - String combinations are defined in CL/cl.h
 /// \param[in] error     error code
@@ -95,3 +100,6 @@ std::string getErrorString(cl_int error)
         default: return "UNKNOWN_CL_CODE";
     }
 }
+
+} // namespace Accelerator
+} // namespace Opm
