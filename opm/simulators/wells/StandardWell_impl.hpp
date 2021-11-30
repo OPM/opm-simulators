@@ -83,24 +83,6 @@ namespace Opm
 
 
     template<typename TypeTag>
-    typename StandardWell<TypeTag>::Eval
-    StandardWell<TypeTag>::getPerfCellPressure(const typename StandardWell<TypeTag>::FluidState& fs) const
-    {
-        Eval pressure;
-        if (Indices::oilEnabled) {
-            pressure = fs.pressure(FluidSystem::oilPhaseIdx);
-        } else {
-            if (Indices::waterEnabled) {
-                pressure = fs.pressure(FluidSystem::waterPhaseIdx);
-            } else {
-                pressure = fs.pressure(FluidSystem::gasPhaseIdx);
-            }
-        }
-        return pressure;
-    }
-
-
-    template<typename TypeTag>
     void
     StandardWell<TypeTag>::
     computePerfRateEval(const IntensiveQuantities& intQuants,
@@ -115,7 +97,7 @@ namespace Opm
                         DeferredLogger& deferred_logger) const
     {
         const auto& fs = intQuants.fluidState();
-        const EvalWell pressure = this->extendEval(getPerfCellPressure(fs));
+        const EvalWell pressure = this->extendEval(this->getPerfCellPressure(fs));
         const EvalWell rs = this->extendEval(fs.Rs());
         const EvalWell rv = this->extendEval(fs.Rv());
         std::vector<EvalWell> b_perfcells_dense(this->num_components_, EvalWell{this->numWellEq_ + Indices::numEq, 0.0});
@@ -182,7 +164,7 @@ namespace Opm
                           DeferredLogger& deferred_logger) const
     {
         const auto& fs = intQuants.fluidState();
-        const Scalar pressure = getPerfCellPressure(fs).value();
+        const Scalar pressure = this->getPerfCellPressure(fs).value();
         const Scalar rs = fs.Rs().value();
         const Scalar rv = fs.Rv().value();
         std::vector<Scalar> b_perfcells_dense(this->num_components_, 0.0);
@@ -964,8 +946,7 @@ namespace Opm
             const auto& int_quantities = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
             const auto& fs = int_quantities.fluidState();
             // the pressure of the reservoir grid block the well connection is in
-            Eval perf_pressure = getPerfCellPressure(fs);
-            double p_r = perf_pressure.value();
+            double p_r = this->getPerfCellPressure(fs).value();
 
             // calculating the b for the connection
             std::vector<double> b_perf(this->num_components_);
@@ -1145,7 +1126,7 @@ namespace Opm
             const auto& intQuants = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
             const auto& fs = intQuants.fluidState();
 
-            const double pressure = (fs.pressure(FluidSystem::oilPhaseIdx)).value();
+            const double pressure = this->getPerfCellPressure(fs).value();
             const double bhp = this->getBhp().value();
 
             // Pressure drawdown (also used to determine direction of flow)

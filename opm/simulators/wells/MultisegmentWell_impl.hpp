@@ -887,7 +887,7 @@ namespace Opm
     {
         const auto& fs = int_quants.fluidState();
 
-        const EvalWell pressure_cell = this->extendEval(fs.pressure(FluidSystem::oilPhaseIdx));
+        const EvalWell pressure_cell = this->extendEval(this->getPerfCellPressure(fs));
         const EvalWell rs = this->extendEval(fs.Rs());
         const EvalWell rv = this->extendEval(fs.Rv());
 
@@ -944,7 +944,7 @@ namespace Opm
     {
         const auto& fs = int_quants.fluidState();
 
-        const Scalar pressure_cell = getValue(fs.pressure(FluidSystem::oilPhaseIdx));
+        const Scalar pressure_cell = getValue(this->getPerfCellPressure(fs));
         const Scalar rs = getValue(fs.Rs());
         const Scalar rv = getValue(fs.Rv());
 
@@ -1225,7 +1225,7 @@ namespace Opm
             const double perf_seg_press_diff = this->gravity_ * this->segment_densities_[seg].value() * this->perforation_segment_depth_diffs_[perf];
             // pressure difference between the perforation and the grid cell
             const double cell_perf_press_diff = this->cell_perforation_pressure_diffs_[perf];
-            const double pressure_cell = fs.pressure(FluidSystem::oilPhaseIdx).value();
+            const double pressure_cell = this->getPerfCellPressure(fs).value();
 
             // calculating the b for the connection
             std::vector<double> b_perf(this->num_components_);
@@ -1674,7 +1674,7 @@ namespace Opm
                 // pressure difference between the perforation and the grid cell
                 const double cell_perf_press_diff = this->cell_perforation_pressure_diffs_[perf];
 
-                const double pressure_cell = (fs.pressure(FluidSystem::oilPhaseIdx)).value();
+                const double pressure_cell = this->getPerfCellPressure(fs).value();
                 const double perf_press = pressure_cell - cell_perf_press_diff;
                 // Pressure drawdown (also used to determine direction of flow)
                 // TODO: not 100% sure about the sign of the seg_perf_press_diff
@@ -1844,7 +1844,7 @@ namespace Opm
                 const int cell_idx = this->well_cells_[perf];
                 const auto& int_quants = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
                 const auto& fs = int_quants.fluidState();
-                double pressure_cell = fs.pressure(FluidSystem::oilPhaseIdx).value();
+                double pressure_cell = this->getPerfCellPressure(fs).value();
                 max_pressure = std::max(max_pressure, pressure_cell);
             }
         }

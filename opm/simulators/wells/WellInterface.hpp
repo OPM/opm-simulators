@@ -332,6 +332,9 @@ protected:
     bool solveWellForTesting(const Simulator& ebosSimulator, WellState& well_state, const GroupState& group_state,
                              DeferredLogger& deferred_logger);
 
+    Eval getPerfCellPressure(const FluidState& fs) const;
+
+
 };
 
 }

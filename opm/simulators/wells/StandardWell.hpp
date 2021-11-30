@@ -263,8 +263,6 @@ namespace Opm
 
 
     protected:
-        Eval getPerfCellPressure(const FluidState& fs) const;
-
         // xw = inv(D)*(rw - C*x)
         void recoverSolutionWell(const BVector& x, BVectorWell& xw) const;
 
