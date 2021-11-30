@@ -92,7 +92,7 @@ endfunction()
 #   - This test class compares the output from a restarted simulation
 #     to that of a non-restarted simulation.
 function(add_test_compare_restarted_simulation)
-  set(oneValueArgs CASENAME FILENAME SIMULATOR TEST_NAME ABS_TOL REL_TOL DIR)
+  set(oneValueArgs CASENAME FILENAME SIMULATOR TEST_NAME ABS_TOL REL_TOL DIR RESTART_STEP)
   set(multiValueArgs TEST_ARGS)
   cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
   if(NOT PARAM_DIR)
@@ -114,7 +114,8 @@ function(add_test_compare_restarted_simulation)
                            -a ${PARAM_ABS_TOL}
                            -t ${PARAM_REL_TOL}
                            -c ${COMPARE_ECL_COMMAND}
-                           -p ${OPM_PACK_COMMAND}
+                           -d ${RST_DECK_COMMAND}
+                           -s ${PARAM_RESTART_STEP}
                TEST_ARGS ${PARAM_TEST_ARGS})
 endfunction()
 
@@ -167,7 +168,7 @@ endfunction()
 #   - This test class compares the output from a restarted parallel simulation
 #     to that of a non-restarted parallel simulation.
 function(add_test_compare_parallel_restarted_simulation)
-  set(oneValueArgs CASENAME FILENAME SIMULATOR ABS_TOL REL_TOL DIR MPI_PROCS)
+  set(oneValueArgs CASENAME FILENAME SIMULATOR ABS_TOL REL_TOL DIR MPI_PROCS RESTART_STEP)
   set(multiValueArgs TEST_ARGS)
   cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
   if(NOT PARAM_DIR)
@@ -181,7 +182,8 @@ function(add_test_compare_parallel_restarted_simulation)
                   -a ${PARAM_ABS_TOL}
                   -t ${PARAM_REL_TOL}
                   -c ${COMPARE_ECL_COMMAND}
-                  -p ${OPM_PACK_COMMAND})
+                  -s ${PARAM_RESTART_STEP}
+                  -d ${RST_DECK_COMMAND})
   if(PARAM_MPI_PROCS)
     list(APPEND DRIVER_ARGS -n ${PARAM_MPI_PROCS})
   endif()
@@ -1027,12 +1029,15 @@ add_test_compare_restarted_simulation(CASENAME spe1
                                       SIMULATOR flow
                                       ABS_TOL ${abs_tol_restart}
                                       REL_TOL ${rel_tol_restart}
+                                      RESTART_STEP 6
                                       TEST_ARGS --sched-restart=false)
+
 add_test_compare_restarted_simulation(CASENAME spe9
                                       FILENAME SPE9_CP_SHORT
                                       SIMULATOR flow
                                       ABS_TOL ${abs_tol_restart}
                                       REL_TOL ${rel_tol_restart}
+                                      RESTART_STEP 15
                                       TEST_ARGS --sched-restart=false)
 
 add_test_compare_restarted_simulation(CASENAME ctaquifer_2d_oilwater
@@ -1041,6 +1046,7 @@ add_test_compare_restarted_simulation(CASENAME ctaquifer_2d_oilwater
                                       ABS_TOL ${abs_tol_restart}
                                       REL_TOL ${rel_tol_restart}
                                       DIR aquifer-oilwater
+                                      RESTART_STEP 15
                                       TEST_ARGS --sched-restart=true)
 
 add_test_compare_restarted_simulation(CASENAME fetkovich_2d
@@ -1048,6 +1054,7 @@ add_test_compare_restarted_simulation(CASENAME fetkovich_2d
                                       SIMULATOR flow
                                       ABS_TOL ${abs_tol_restart}
                                       REL_TOL ${rel_tol_restart}
+                                      RESTART_STEP 30
                                       DIR aquifer-fetkovich
                                       TEST_ARGS --sched-restart=true)
 
@@ -1056,6 +1063,7 @@ add_test_compare_restarted_simulation(CASENAME numerical_aquifer_3d_1aqu
                                       SIMULATOR flow
                                       ABS_TOL ${abs_tol_restart}
                                       REL_TOL ${rel_tol_restart}
+                                      RESTART_STEP 3
                                       DIR aquifer-num
                                       TEST_ARGS --sched-restart=true --enable-tuning=true)
 
@@ -1064,6 +1072,7 @@ add_test_compare_restarted_simulation(CASENAME numerical_aquifer_3d_2aqu
                                       SIMULATOR flow
                                       ABS_TOL 0.4
                                       REL_TOL 4.0e-3
+                                      RESTART_STEP 3
                                       DIR aquifer-num
                                       TEST_ARGS --sched-restart=true --enable-tuning=true)
 
@@ -1079,6 +1088,7 @@ add_test_compare_restarted_simulation(CASENAME msw_3d_hfa
                                       SIMULATOR flow
                                       ABS_TOL ${abs_tol_restart_msw}
                                       REL_TOL ${rel_tol_restart_msw}
+                                      RESTART_STEP 10
                                       TEST_ARGS --enable-adaptive-time-stepping=false --sched-restart=true)
 
 
@@ -1092,6 +1102,7 @@ add_test_compare_restarted_simulation(CASENAME spe1
                                       TEST_NAME restart_spe1_summary
                                       ABS_TOL ${abs_tol_restart}
                                       REL_TOL ${rel_tol_restart}
+                                      RESTART_STEP 6
                                       TEST_ARGS --sched-restart=false)
 
 
@@ -1131,6 +1142,7 @@ if(MPI_FOUND)
                                                  SIMULATOR flow
                                                  ABS_TOL ${abs_tol_restart}
                                                  REL_TOL ${rel_tol_restart}
+                                                 RESTART_STEP 6
                                                  TEST_ARGS --sched-restart=false)
 
   add_test_compare_parallel_restarted_simulation(CASENAME ctaquifer_2d_oilwater
@@ -1138,6 +1150,7 @@ if(MPI_FOUND)
                                                  SIMULATOR flow
                                                  ABS_TOL ${abs_tol_restart}
                                                  REL_TOL ${rel_tol_restart}
+                                                 RESTART_STEP 15
                                                  DIR aquifer-oilwater
                                                  TEST_ARGS --enable-tuning=true --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-6)
 
@@ -1146,6 +1159,7 @@ if(MPI_FOUND)
                                                  SIMULATOR flow
                                                  ABS_TOL ${abs_tol_restart}
                                                  REL_TOL ${rel_tol_restart}
+                                                 RESTART_STEP 30
                                                  DIR aquifer-fetkovich
                                                  TEST_ARGS --enable-tuning=true --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-6)
 
@@ -1154,6 +1168,7 @@ if(MPI_FOUND)
                                                  SIMULATOR flow
                                                  ABS_TOL 0.12
                                                  REL_TOL 5.0e-2
+                                                 RESTART_STEP 3
                                                  DIR aquifer-num
                                                  TEST_ARGS --enable-tuning=true --tolerance-cnv=0.00003 --time-step-control=pid --linsolver=cpr)
 
@@ -1162,6 +1177,7 @@ if(MPI_FOUND)
                                                  SIMULATOR flow
                                                  ABS_TOL 0.12
                                                  REL_TOL 5.0e-2
+                                                 RESTART_STEP 3
                                                  DIR aquifer-num
                                                  TEST_ARGS --enable-tuning=true --tolerance-cnv=0.00003 --time-step-control=pid --linsolver=cpr)
 

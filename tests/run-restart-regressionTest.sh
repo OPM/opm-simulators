@@ -15,13 +15,14 @@ then
   echo -e "\t\t -a <tol>      Absolute tolerance in comparison"
   echo -e "\t\t -t <tol>      Relative tolerance in comparison"
   echo -e "\t\t -c <path>     Path to comparison tool"
-  echo -e "\t\t -p <path>     Path to deck packing tool"
+  echo -e "\t\t -d <path>     Path to restart deck tool"
   echo -e "\t\t -e <filename> Simulator binary to use"
+  echo -e "\t\t -s <step>     Step to do restart testing from"
   exit 1
 fi
 
 OPTIND=1
-while getopts "i:r:b:f:a:t:c:p:e:" OPT
+while getopts "i:r:b:f:a:t:c:e:d:s:" OPT
 do
   case "${OPT}" in
     i) INPUT_DATA_PATH=${OPTARG} ;;
@@ -31,14 +32,15 @@ do
     a) ABS_TOL=${OPTARG} ;;
     t) REL_TOL=${OPTARG} ;;
     c) COMPARE_ECL_COMMAND=${OPTARG} ;;
-    p) OPM_PACK_COMMAND=${OPTARG} ;;
+    d) RST_DECK_COMMAND=${OPTARG} ;;
+    s) RESTART_STEP=${OPTARG} ;;
     e) EXE_NAME=${OPTARG} ;;
   esac
 done
 shift $(($OPTIND-1))
 TEST_ARGS="$@"
 
-BASE_NAME=${FILENAME}_RESTART.DATA
+BASE_NAME=${FILENAME}_RESTART
 
 rm -Rf ${RESULT_PATH}
 mkdir -p ${RESULT_PATH}
@@ -47,7 +49,7 @@ ${BINPATH}/${EXE_NAME} ${INPUT_DATA_PATH}/${FILENAME} --output-dir=${RESULT_PATH
 
 test $? -eq 0 || exit 1
 
-${OPM_PACK_COMMAND} -o ${BASE_NAME} ${INPUT_DATA_PATH}/${FILENAME}_RESTART.DATA
+${RST_DECK_COMMAND} ${INPUT_DATA_PATH}/${FILENAME}.DATA ${FILENAME}.UNRST:${RESTART_STEP} ${BASE_NAME}.DATA -m inline -s
 
 ${BINPATH}/${EXE_NAME} ${BASE_NAME} --output-dir=${RESULT_PATH} ${TEST_ARGS}
 test $? -eq 0 || exit 1
