@@ -17,7 +17,6 @@ then
   echo -e "\t\t -a <tol>      Absolute tolerance in comparison"
   echo -e "\t\t -t <tol>      Relative tolerance in comparison"
   echo -e "\t\t -c <path>     Path to comparison tool"
-  echo -e "\t\t -p <path>     Path to deck packing tool"
   echo -e "\t\t -d <path>     Path to restart deck tool"
   echo -e "\t\t -e <filename> Simulator binary to use"
   echo -e "\t\t -s <step>     Step to do restart testing from"
@@ -25,7 +24,7 @@ then
 fi
 
 OPTIND=1
-while getopts "i:r:b:f:a:t:c:p:e:d:s:" OPT
+while getopts "i:r:b:f:a:t:c:e:d:s:" OPT
 do
   case "${OPT}" in
     i) INPUT_DATA_PATH=${OPTARG} ;;
@@ -36,7 +35,6 @@ do
     t) REL_TOL=${OPTARG} ;;
     c) COMPARE_ECL_COMMAND=${OPTARG} ;;
     d) RST_DECK_COMMAND=${OPTARG} ;;
-    p) OPM_PACK_COMMAND=${OPTARG} ;;
     s) RESTART_STEP=${OPTARG} ;;
     e) EXE_NAME=${OPTARG} ;;
   esac

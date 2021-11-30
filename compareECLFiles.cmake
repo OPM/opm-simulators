@@ -114,7 +114,6 @@ function(add_test_compare_restarted_simulation)
                            -a ${PARAM_ABS_TOL}
                            -t ${PARAM_REL_TOL}
                            -c ${COMPARE_ECL_COMMAND}
-                           -p ${OPM_PACK_COMMAND}
                            -d ${RST_DECK_COMMAND}
                            -s ${PARAM_RESTART_STEP}
                TEST_ARGS ${PARAM_TEST_ARGS})
@@ -184,8 +183,7 @@ function(add_test_compare_parallel_restarted_simulation)
                   -t ${PARAM_REL_TOL}
                   -c ${COMPARE_ECL_COMMAND}
                   -s ${PARAM_RESTART_STEP}
-                  -d ${RST_DECK_COMMAND}
-                  -p ${OPM_PACK_COMMAND})
+                  -d ${RST_DECK_COMMAND})
   if(PARAM_MPI_PROCS)
     list(APPEND DRIVER_ARGS -n ${PARAM_MPI_PROCS})
   endif()
