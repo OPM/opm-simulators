@@ -23,7 +23,6 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <dune/common/timer.hh>
 
-#include <dune/istl/umfpack.hh>
 #include <dune/common/shared_ptr.hh>
 
 #include <opm/simulators/linalg/PreconditionerFactory.hpp>
@@ -288,6 +287,9 @@ template <unsigned int block_size>
 void CPR<block_size>::analyzeHierarchy() {
     const DuneAmg::ParallelMatrixHierarchy& matrixHierarchy = dune_amg->matrices();
 
+    // store coarsest AMG level in umfpack format, also performs LU decomposition
+    umfpack.setMatrix((*matrixHierarchy.coarsest()).getmat());
+
     num_levels = dune_amg->levels();
     level_sizes.resize(num_levels);
     diagIndices.resize(num_levels);
@@ -390,42 +392,6 @@ void CPR<block_size>::analyzeAggregateMaps() {
 }
 
 
-void solve_coarse_umfpack(const Matrix *A, std::vector<double> &y, std::vector<double> &x) {
-    const int N = A->N;
-    const int nnzs = A->nnzs;
-
-    using DuneMat = Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1> >;
-    DuneMat B(N, N, nnzs, DuneMat::row_wise);
-
-    typedef DuneMat::CreateIterator Iter;
-
-    // setup sparsity pattern
-    for(Iter row = B.createbegin(); row != B.createend(); ++row){
-        int start = A->rowPointers[row.index()];
-        int end = A->rowPointers[row.index() + 1];
-        for (int idx = start; idx < end; ++idx) {
-            int col = A->colIndices[idx];
-            row.insert(col);
-        }
-    }
-
-    // set values
-    for (int row = 0; row < N; ++row) {
-        int start = A->rowPointers[row];
-        int end = A->rowPointers[row + 1];
-        for (int idx = start; idx < end; ++idx) {
-            int col = A->colIndices[idx];
-            B[row][col] = A->nnzValues[idx];
-        }
-    }
-
-    // create umfpack object
-    Dune::UMFPack<DuneMat> umfpack(B, 0);
-
-    umfpack.apply(x.data(), y.data());
-}
-
-
 template <unsigned int block_size>
 void CPR<block_size>::amg_cycle_gpu(const int level, cl::Buffer &y, cl::Buffer &x) {
     OpenclMatrix *A = &d_Amatrices[level];
@@ -446,7 +412,8 @@ void CPR<block_size>::amg_cycle_gpu(const int level, cl::Buffer &y, cl::Buffer &
             OPM_THROW(std::logic_error, "CPR OpenCL enqueueReadBuffer error");
         }
 
-        solve_coarse_umfpack(&Amatrices[level], h_y, h_x);
+        // solve coarsest level using umfpack
+        umfpack.apply(h_x.data(), h_y.data());
 
         events.resize(1);
         err = queue->enqueueWriteBuffer(x, CL_FALSE, 0, sizeof(double) * Ncur, h_x.data(), nullptr, &events[0]);
