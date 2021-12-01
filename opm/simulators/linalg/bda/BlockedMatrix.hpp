@@ -22,9 +22,15 @@
 
 #if HAVE_FPGA
 #include <vector>
+namespace Opm
+{
+namespace Accelerator
+{
+    class Matrix;
+}
+}
 #endif
 
-#include <opm/simulators/linalg/bda/FPGAMatrix.hpp>
 
 namespace Opm
 {

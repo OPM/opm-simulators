@@ -17,16 +17,45 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <config.h>
+
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/ErrorMacros.hpp>
 
-#include <opm/simulators/linalg/bda/FPGAMatrix.hpp>
+#include <opm/simulators/linalg/bda/BlockedMatrix.hpp>
+#include <opm/simulators/linalg/bda/Matrix.hpp>
 #include <opm/simulators/linalg/bda/FPGAUtils.hpp>
 
 namespace Opm
 {
 namespace Accelerator
 {
+
+template <unsigned int block_size>
+void OpenclMatrix<block_size>::upload(cl::CommandQueue *queue, double *vals, int *cols, int *rows) {
+    std::vector<cl::Event> events(3);
+
+    cl_int err = queue->enqueueWriteBuffer(nnzValues, CL_FALSE, 0, sizeof(double) * block_size * block_size * nnzbs, vals, nullptr, &events[0]);
+    err |= queue->enqueueWriteBuffer(colIndices, CL_FALSE, 0, sizeof(int) * nnzbs, cols, nullptr, &events[1]);
+    err |= queue->enqueueWriteBuffer(rowPointers, CL_FALSE, 0, sizeof(int) * (Nb + 1), rows, nullptr, &events[2]);
+
+    cl::WaitForEvents(events);
+    events.clear();
+    if (err != CL_SUCCESS) {
+        // enqueueWriteBuffer is C and does not throw exceptions like C++ OpenCL
+        OPM_THROW(std::logic_error, "OpenclMatrix OpenCL enqueueWriteBuffer error");
+    }
+}
+
+template <unsigned int block_size>
+void OpenclMatrix<block_size>::upload(cl::CommandQueue *queue, Matrix *matrix) {
+    upload(queue, matrix->nnzValues.data(), matrix->colIndices.data(), matrix->rowPointers.data());
+}
+
+template <unsigned int block_size>
+void OpenclMatrix<block_size>::upload(cl::CommandQueue *queue, BlockedMatrix<block_size> *matrix) {
+    upload(queue, matrix->nnzValues, matrix->colIndices, matrix->rowPointers);
+}
 
 /*Sort a row of matrix elements from a CSR-format.*/
 void sortRow(int *colIndices, double *data, int left, int right) {
@@ -57,6 +86,7 @@ void sortRow(int *colIndices, double *data, int left, int right) {
 
 }
 
+#if HAVE_FPGA
 /*
  * Write all data used by the VHDL testbenches to raw data arrays. The arrays are as follows:
  * - The "colorSizes" array, which first contains the number of rows, columns, non-zero values
@@ -247,6 +277,20 @@ int Matrix::toRDF(int numColors, std::vector<int>& nodesPerColor,
 
     return 0;
 }
+#endif
+
+#define INSTANTIATE_BDA_FUNCTIONS(n)  \
+template class OpenclMatrix<n>;
+
+
+INSTANTIATE_BDA_FUNCTIONS(1);
+INSTANTIATE_BDA_FUNCTIONS(2);
+INSTANTIATE_BDA_FUNCTIONS(3);
+INSTANTIATE_BDA_FUNCTIONS(4);
+INSTANTIATE_BDA_FUNCTIONS(5);
+INSTANTIATE_BDA_FUNCTIONS(6);
+
+#undef INSTANTIATE_BDA_FUNCTIONS
 
 } // namespace Accelerator
 } // namespace Opm

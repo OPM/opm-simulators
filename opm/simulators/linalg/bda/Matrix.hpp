@@ -22,10 +22,43 @@
 
 #include <vector>
 
+#include <opm/simulators/linalg/bda/opencl.hpp>
+#include <opm/simulators/linalg/bda/BlockedMatrix.hpp>
+
 namespace Opm
 {
 namespace Accelerator
 {
+
+class Matrix;
+
+/// This struct resembles a csr matrix, only doubles are supported
+/// The matrix data is stored in OpenCL Buffers
+template <unsigned int block_size>
+class OpenclMatrix {
+public:
+
+    OpenclMatrix(cl::Context *context, int Nb_, int Mb_, int nnzbs_)
+    : Nb(Nb_),
+      Mb(Mb_),
+      nnzbs(nnzbs_)
+    {
+        nnzValues = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * block_size * block_size * nnzbs);
+        colIndices = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * nnzbs);
+        rowPointers = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * (Nb + 1));
+    }
+
+    void upload(cl::CommandQueue *queue, double *vals, int *cols, int *rows);
+    void upload(cl::CommandQueue *queue, Matrix *matrix);
+    void upload(cl::CommandQueue *queue, BlockedMatrix<block_size> *matrix);
+
+    cl::Buffer nnzValues;
+    cl::Buffer colIndices;
+    cl::Buffer rowPointers;
+    int Nb, Mb;
+    int nnzbs;
+};
+
 
 /// This struct resembles a csr matrix, only doubles are supported
 /// The data is stored in contiguous memory, such that they can be copied to a device in one transfer.
@@ -33,25 +66,33 @@ class Matrix {
 
 public:
 
-    /// Allocate Matrix and data arrays with given sizes
+    /// Allocate square Matrix and data arrays with given sizes
     /// \param[in] N               number of rows
     /// \param[in] nnzs            number of nonzeros
     Matrix(int N_, int nnzs_)
-    : nnzValues(new double[nnzs_]),
-      colIndices(new int[nnzs_]),
-      rowPointers(new int[N_+1]),
-      N(N_),
+    : N(N_),
       nnzs(nnzs_)
-    {}
-
-    /// All constructors allocate new memory, so always delete here
-    ~Matrix(){
-        delete[] nnzValues;
-        delete[] colIndices;
-        delete[] rowPointers;
+    {
+        nnzValues.resize(nnzs);
+        colIndices.resize(nnzs);
+        rowPointers.resize(N+1);
     }
 
+    /// Allocate rectangular Matrix and data arrays with given sizes
+    /// \param[in] N               number of rows
+    /// \param[in] M               number of columns
+    /// \param[in] nnzs            number of nonzeros
+    Matrix(int N_, int M_, int nnzs_)
+    : N(N_),
+      M(M_),
+      nnzs(nnzs_)
+    {
+        nnzValues.resize(nnzs);
+        colIndices.resize(nnzs);
+        rowPointers.resize(N+1);
+    }
 
+#if HAVE_FPGA
     /// Converts this matrix to the dataformat used by the FPGA.
     /// The FPGA uses a new data format called CSRO (Compressed Sparse Row Offset).
     /// The purpose of this format is to allow the data to be streamable.
@@ -71,11 +112,12 @@ public:
     int toRDF(int numColors, std::vector<int>& nodesPerColor,
         std::vector<std::vector<int> >& colIndicesInColor, int nnzsPerRowLimit, 
         std::vector<std::vector<double> >& ubNnzValues, short int *ubColIndices, int *nnzValsSizes, unsigned char *NROffsets, int *colorSizes);
+#endif
 
-    double *nnzValues;
-    int *colIndices;
-    int *rowPointers;
-    int N;
+    std::vector<double> nnzValues;
+    std::vector<int> colIndices;
+    std::vector<int> rowPointers;
+    int N, M;
     int nnzs;
 };
 

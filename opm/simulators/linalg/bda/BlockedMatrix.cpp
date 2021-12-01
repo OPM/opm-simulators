@@ -26,6 +26,7 @@
 #include <opm/common/ErrorMacros.hpp>
 
 #include <opm/simulators/linalg/bda/BlockedMatrix.hpp>
+#include <opm/simulators/linalg/bda/Matrix.hpp>
 #include <opm/simulators/linalg/bda/FPGAUtils.hpp>
 
 namespace Opm
@@ -502,6 +503,8 @@ INSTANTIATE_BDA_FPGA_FUNCTIONS(1);
 INSTANTIATE_BDA_FPGA_FUNCTIONS(2);
 INSTANTIATE_BDA_FPGA_FUNCTIONS(3);
 INSTANTIATE_BDA_FPGA_FUNCTIONS(4);
+INSTANTIATE_BDA_FPGA_FUNCTIONS(5);
+INSTANTIATE_BDA_FPGA_FUNCTIONS(6);
 
 #undef INSTANTIATE_BDA_FPGA_FUNCTIONS
 #endif // HAVE_FPGA

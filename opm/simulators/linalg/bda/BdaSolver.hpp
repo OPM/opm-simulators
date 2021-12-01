@@ -76,6 +76,7 @@ namespace Accelerator {
         /// \param[in] tolerance                  required relative tolerance for solver
         /// \param[in] platformID                 the OpenCL platform to be used, only used in openclSolver
         /// \param[in] deviceID                   the device to be used
+        BdaSolver(int linear_solver_verbosity, int max_it, double tolerance_) : verbosity(linear_solver_verbosity), maxit(max_it), tolerance(tolerance_) {};
         BdaSolver(int linear_solver_verbosity, int max_it, double tolerance_, unsigned int deviceID_) : verbosity(linear_solver_verbosity), maxit(max_it), tolerance(tolerance_), deviceID(deviceID_) {};
         BdaSolver(int linear_solver_verbosity, int max_it, double tolerance_, unsigned int platformID_, unsigned int deviceID_) : verbosity(linear_solver_verbosity), maxit(max_it), tolerance(tolerance_), platformID(platformID_), deviceID(deviceID_) {};
         BdaSolver(std::string fpga_bitstream, int linear_solver_verbosity, int max_it, double tolerance_) : verbosity(linear_solver_verbosity), maxit(max_it), tolerance(tolerance_), bitstream(fpga_bitstream) {};

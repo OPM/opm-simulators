@@ -30,8 +30,14 @@ namespace Opm
 namespace Accelerator
 {
 
-using spmv_kernel_type = cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int,
+using spmv_blocked_kernel_type = cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int,
                                          cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg>;
+using spmv_kernel_type = cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int,
+                                         cl::Buffer&, cl::Buffer&, cl::LocalSpaceArg>;
+using residual_blocked_kernel_type = cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int,
+                                         cl::Buffer&, const cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg>;
+using residual_kernel_type = cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int,
+                                         cl::Buffer&, const cl::Buffer&, cl::Buffer&, cl::LocalSpaceArg>;
 using ilu_apply1_kernel_type = cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const cl::Buffer&,
                                                cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg>;
 using ilu_apply2_kernel_type = cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
@@ -55,12 +61,24 @@ private:
     static std::vector<double> tmp;     // used as tmp CPU buffer for dot() and norm()
     static bool initialized;
 
+    enum matrix_operation {
+        spmv_op,
+        residual_op
+    };
+
     static std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg> > dot_k;
     static std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg> > norm_k;
     static std::unique_ptr<cl::KernelFunctor<cl::Buffer&, const double, cl::Buffer&, const unsigned int> > axpy_k;
     static std::unique_ptr<cl::KernelFunctor<cl::Buffer&, const double, const unsigned int> > scale_k;
+    static std::unique_ptr<cl::KernelFunctor<const double, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int> > vmul_k;
     static std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const double, const double, const unsigned int> > custom_k;
-    static std::unique_ptr<spmv_kernel_type> spmv_blocked_k;
+    static std::unique_ptr<cl::KernelFunctor<const cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int> > move_to_coarse_k;
+    static std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int> > move_to_fine_k;
+    static std::unique_ptr<spmv_blocked_kernel_type> spmv_blocked_k;
+    static std::unique_ptr<spmv_kernel_type> spmv_k;
+    static std::unique_ptr<spmv_kernel_type> spmv_noreset_k;
+    static std::unique_ptr<residual_blocked_kernel_type> residual_blocked_k;
+    static std::unique_ptr<residual_kernel_type> residual_k;
     static std::unique_ptr<ilu_apply1_kernel_type> ILU_apply1_k;
     static std::unique_ptr<ilu_apply2_kernel_type> ILU_apply2_k;
     static std::unique_ptr<stdwell_apply_kernel_type> stdwell_apply_k;
@@ -75,6 +93,10 @@ private:
     /// a = a * alpha
     static std::string get_scale_string();
 
+    /// multiply vector with another vector and a scalar, element-wise
+    /// add result to a third vector
+    static std::string get_vmul_string();
+
     /// returns partial sums, instead of the final dot product
     /// partial sums are added on CPU
     static std::string get_dot_1_string();
@@ -88,11 +110,20 @@ private:
     /// p = (p - omega * v) * beta + r
     static std::string get_custom_string();
 
+    /// Transform blocked vector to scalar vector using pressure-weights
+    static std::string get_move_to_coarse_string();
+
+    /// Add the coarse pressure solution back to the finer, complete solution
+    static std::string get_move_to_fine_string();
+
     /// b = mat * x
     /// algorithm based on:
     /// Optimization of Block Sparse Matrix-Vector Multiplication on Shared-MemoryParallel Architectures,
     /// Ryan Eberhardt, Mark Hoemmen, 2016, https://doi.org/10.1109/IPDPSW.2016.42
-    static std::string get_spmv_blocked_string();
+    /// or
+    /// res = rhs - (mat * x)
+    static std::string get_blocked_matrix_operation_string(matrix_operation op);
+    static std::string get_matrix_operation_string(matrix_operation op, bool spmv_reset = true);
 
     /// ILU apply part 1: forward substitution
     /// solves L*x=y where L is a lower triangular sparse blocked matrix
@@ -127,8 +158,13 @@ public:
     static double norm(cl::Buffer& in, cl::Buffer& out, int N);
     static void axpy(cl::Buffer& in, const double a, cl::Buffer& out, int N);
     static void scale(cl::Buffer& in, const double a, int N);
+    static void vmul(const double alpha, cl::Buffer& in1, cl::Buffer& in2, cl::Buffer& out, int N);
     static void custom(cl::Buffer& p, cl::Buffer& v, cl::Buffer& r, const double omega, const double beta, int N);
-    static void spmv_blocked(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows, cl::Buffer& x, cl::Buffer& b, int Nb, unsigned int block_size);
+    static void move_to_coarse(const cl::Buffer& fine_y, cl::Buffer& weights, cl::Buffer& coarse_y, int Nb);
+    static void move_to_fine(cl::Buffer& coarse_x, cl::Buffer& fine_x, int pressure_idx, int Nb);
+    static void spmv(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows, cl::Buffer& x, cl::Buffer& b, int Nb, unsigned int block_size, bool reset = true);
+    static void residual(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows, cl::Buffer& x, const cl::Buffer& rhs, cl::Buffer& out, int Nb, unsigned int block_size);
+
     static void ILU_apply1(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows, cl::Buffer& diagIndex,
         const cl::Buffer& y, cl::Buffer& x, cl::Buffer& rowsPerColor, int color, int Nb, unsigned int block_size);
 

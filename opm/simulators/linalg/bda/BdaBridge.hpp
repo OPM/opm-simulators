@@ -54,7 +54,9 @@ public:
     /// \param[in] platformID                 the OpenCL platform ID to be used
     /// \param[in] deviceID                   the device ID to be used by the cusparse- and openclSolvers, too high values could cause runtime errors
     /// \param[in] opencl_ilu_reorder         select either level_scheduling or graph_coloring, see ILUReorder.hpp for explanation
-    BdaBridge(std::string accelerator_mode, std::string fpga_bitstream, int linear_solver_verbosity, int maxit, double tolerance, unsigned int platformID, unsigned int deviceID, std::string opencl_ilu_reorder);
+    /// \param[in] linsolver                  copy of cmdline argument --linsolver
+    BdaBridge(std::string accelerator_mode, std::string fpga_bitstream, int linear_solver_verbosity, int maxit, double tolerance,
+        unsigned int platformID, unsigned int deviceID, std::string opencl_ilu_reorder, std::string linsolver);
 
 
     /// Solve linear system, A*x = b
@@ -74,6 +76,12 @@ public:
     bool getUseGpu(){
         return use_gpu;
     }
+
+    /// Store sparsity pattern into vectors
+    /// \param[in] mat       input matrix, probably BCRSMatrix
+    /// \param[out] h_rows   rowpointers
+    /// \param[out] h_cols   columnindices
+    static void getSparsityPattern(const BridgeMatrix& mat, std::vector<int>& h_rows, std::vector<int>& h_cols);
 
     /// Initialize the WellContributions object with opencl context and queue
     /// those must be set before calling BlackOilWellModel::getWellContributions() in ISTL

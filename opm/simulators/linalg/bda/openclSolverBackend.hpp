@@ -27,6 +27,7 @@
 #include <opm/simulators/linalg/bda/ILUReorder.hpp>
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
 #include <opm/simulators/linalg/bda/BILU0.hpp>
+#include <opm/simulators/linalg/bda/CPR.hpp>
 
 #include <tuple>
 
@@ -35,12 +36,14 @@ namespace Opm
 namespace Accelerator
 {
 
+template <unsigned int block_size>
+class CPR;
+
 /// This class implements a opencl-based ilu0-bicgstab solver on GPU
 template <unsigned int block_size>
 class openclSolverBackend : public BdaSolver<block_size>
 {
     typedef BdaSolver<block_size> Base;
-    typedef BILU0<block_size> Preconditioner;
 
     using Base::N;
     using Base::Nb;
@@ -66,7 +69,10 @@ private:
 
     std::vector<cl::Device> devices;
 
-    Preconditioner *prec = nullptr;                               // only supported preconditioner is BILU0
+    std::unique_ptr<BILU0<block_size> > bilu0;                    // Blocked ILU0 preconditioner
+    std::unique_ptr<CPR<block_size> > cpr;                        // Constrained Pressure Residual preconditioner
+    bool is_root;                                                 // allow for nested solvers, the root solver is called by BdaBridge
+    bool use_cpr;                                                 // allow to enable CPR
     int *toOrder = nullptr, *fromOrder = nullptr;                 // BILU0 reorders rows of the matrix via these mappings
     bool analysis_done = false;
     std::unique_ptr<BlockedMatrix<block_size> > mat = nullptr;    // original matrix 
@@ -178,7 +184,13 @@ public:
     /// \param[in] platformID                 the OpenCL platform to be used
     /// \param[in] deviceID                   the device to be used
     /// \param[in] opencl_ilu_reorder         select either level_scheduling or graph_coloring, see BILU0.hpp for explanation
-    openclSolverBackend(int linear_solver_verbosity, int maxit, double tolerance, unsigned int platformID, unsigned int deviceID, ILUReorder opencl_ilu_reorder);
+    /// \param[in] linsolver                  indicating the preconditioner, equal to the --linsolver cmdline argument
+    ///                                       only ilu0 and cpr_quasiimpes are supported
+    openclSolverBackend(int linear_solver_verbosity, int maxit, double tolerance, unsigned int platformID, unsigned int deviceID,
+        ILUReorder opencl_ilu_reorder, std::string linsolver);
+
+    /// For the CPR coarse solver
+    openclSolverBackend(int linear_solver_verbosity, int maxit, double tolerance, ILUReorder opencl_ilu_reorder);
 
     /// Destroy a openclSolver, and free memory
     ~openclSolverBackend();
@@ -200,9 +212,19 @@ public:
     /// \return                   status code
     SolverStatus solve_system(int N, int nnz, int dim, double *vals, int *rows, int *cols, double *b, WellContributions& wellContribs, BdaResult &res) override;
 
+    /// Solve scalar linear system, for example a coarse system of an AMG preconditioner
+    /// Data is already on the GPU
+    // SolverStatus solve_system(BdaResult &res);
+
     /// Get result after linear solve, and peform postprocessing if necessary
     /// \param[inout] x          resulting x vector, caller must guarantee that x points to a valid array
     void get_result(double *x) override;
+
+    /// Set OpenCL objects
+    /// This class either creates them based on platformID and deviceID or receives them through this function
+    /// \param[in] context   the opencl context to be used
+    /// \param[in] queue     the opencl queue to be used
+    void setOpencl(std::shared_ptr<cl::Context>& context, std::shared_ptr<cl::CommandQueue>& queue);
 
 }; // end class openclSolverBackend
 

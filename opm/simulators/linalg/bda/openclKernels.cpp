@@ -22,6 +22,7 @@
 #include <sstream>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/common/ErrorMacros.hpp>
 #include <dune/common/timer.hh>
 
 #include <opm/simulators/linalg/bda/openclKernels.hpp>
@@ -45,8 +46,15 @@ std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const u
 std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg> > OpenclKernels::norm_k;
 std::unique_ptr<cl::KernelFunctor<cl::Buffer&, const double, cl::Buffer&, const unsigned int> > OpenclKernels::axpy_k;
 std::unique_ptr<cl::KernelFunctor<cl::Buffer&, const double, const unsigned int> > OpenclKernels::scale_k;
+std::unique_ptr<cl::KernelFunctor<const double, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int> > OpenclKernels::vmul_k;
 std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const double, const double, const unsigned int> > OpenclKernels::custom_k;
-std::unique_ptr<spmv_kernel_type> OpenclKernels::spmv_blocked_k;
+std::unique_ptr<cl::KernelFunctor<const cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int> > OpenclKernels::move_to_coarse_k;
+std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int> > OpenclKernels::move_to_fine_k;
+std::unique_ptr<spmv_blocked_kernel_type> OpenclKernels::spmv_blocked_k;
+std::unique_ptr<spmv_kernel_type> OpenclKernels::spmv_k;
+std::unique_ptr<spmv_kernel_type> OpenclKernels::spmv_noreset_k;
+std::unique_ptr<residual_blocked_kernel_type> OpenclKernels::residual_blocked_k;
+std::unique_ptr<residual_kernel_type> OpenclKernels::residual_k;
 std::unique_ptr<ilu_apply1_kernel_type> OpenclKernels::ILU_apply1_k;
 std::unique_ptr<ilu_apply2_kernel_type> OpenclKernels::ILU_apply2_k;
 std::unique_ptr<stdwell_apply_kernel_type> OpenclKernels::stdwell_apply_k;
@@ -79,14 +87,28 @@ void OpenclKernels::init(cl::Context *context, cl::CommandQueue *queue_, std::ve
     add_kernel_string(sources, axpy_s);
     const std::string& scale_s = get_scale_string();
     add_kernel_string(sources, scale_s);
+    const std::string& vmul_s = get_vmul_string();
+    add_kernel_string(sources, vmul_s);
     const std::string& dot_1_s = get_dot_1_string();
     add_kernel_string(sources, dot_1_s);
     const std::string& norm_s = get_norm_string();
     add_kernel_string(sources, norm_s);
     const std::string& custom_s = get_custom_string();
     add_kernel_string(sources, custom_s);
-    const std::string& spmv_blocked_s = get_spmv_blocked_string();
+    const std::string& move_to_coarse_s = get_move_to_coarse_string();
+    add_kernel_string(sources, move_to_coarse_s);
+    const std::string& move_to_fine_s = get_move_to_fine_string();
+    add_kernel_string(sources, move_to_fine_s);
+    const std::string& spmv_blocked_s = get_blocked_matrix_operation_string(matrix_operation::spmv_op);
     add_kernel_string(sources, spmv_blocked_s);
+    const std::string& spmv_s = get_matrix_operation_string(matrix_operation::spmv_op, true);
+    add_kernel_string(sources, spmv_s);
+    const std::string& spmv_noreset_s = get_matrix_operation_string(matrix_operation::spmv_op, false);
+    add_kernel_string(sources, spmv_noreset_s);
+    const std::string& residual_blocked_s = get_blocked_matrix_operation_string(matrix_operation::residual_op);
+    add_kernel_string(sources, residual_blocked_s);
+    const std::string& residual_s = get_matrix_operation_string(matrix_operation::residual_op);
+    add_kernel_string(sources, residual_s);
 #if CHOW_PATEL
     bool ilu_operate_on_full_matrix = false;
 #else
@@ -114,8 +136,15 @@ void OpenclKernels::init(cl::Context *context, cl::CommandQueue *queue_, std::ve
     norm_k.reset(new cl::KernelFunctor<cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg>(cl::Kernel(program, "norm")));
     axpy_k.reset(new cl::KernelFunctor<cl::Buffer&, const double, cl::Buffer&, const unsigned int>(cl::Kernel(program, "axpy")));
     scale_k.reset(new cl::KernelFunctor<cl::Buffer&, const double, const unsigned int>(cl::Kernel(program, "scale")));
+    vmul_k.reset(new cl::KernelFunctor<const double, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int>(cl::Kernel(program, "vmul")));
     custom_k.reset(new cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const double, const double, const unsigned int>(cl::Kernel(program, "custom")));
-    spmv_blocked_k.reset(new spmv_kernel_type(cl::Kernel(program, "spmv_blocked")));
+    move_to_coarse_k.reset(new cl::KernelFunctor<const cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int>(cl::Kernel(program, "move_to_coarse")));
+    move_to_fine_k.reset(new cl::KernelFunctor<cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int>(cl::Kernel(program, "move_to_fine")));
+    spmv_blocked_k.reset(new spmv_blocked_kernel_type(cl::Kernel(program, "spmv_blocked")));
+    spmv_k.reset(new spmv_kernel_type(cl::Kernel(program, "spmv")));
+    spmv_noreset_k.reset(new spmv_kernel_type(cl::Kernel(program, "spmv_noreset")));
+    residual_blocked_k.reset(new residual_blocked_kernel_type(cl::Kernel(program, "residual_blocked")));
+    residual_k.reset(new residual_kernel_type(cl::Kernel(program, "residual")));
     ILU_apply1_k.reset(new ilu_apply1_kernel_type(cl::Kernel(program, "ILU_apply1")));
     ILU_apply2_k.reset(new ilu_apply2_kernel_type(cl::Kernel(program, "ILU_apply2")));
     stdwell_apply_k.reset(new stdwell_apply_kernel_type(cl::Kernel(program, "stdwell_apply")));
@@ -219,6 +248,23 @@ void OpenclKernels::scale(cl::Buffer& in, const double a, int N)
     }
 }
 
+void OpenclKernels::vmul(const double alpha, cl::Buffer& in1, cl::Buffer& in2, cl::Buffer& out, int N)
+{
+    const unsigned int work_group_size = 32;
+    const unsigned int num_work_groups = ceilDivision(N, work_group_size);
+    const unsigned int total_work_items = num_work_groups * work_group_size;
+    Timer t_vmul;
+
+    cl::Event event = (*vmul_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), alpha, in1, in2, out, N);
+
+    if (verbosity >= 4) {
+        event.wait();
+        std::ostringstream oss;
+        oss << std::scientific << "OpenclKernels vmul() time: " << t_vmul.stop() << " s";
+        OpmLog::info(oss.str());
+    }
+}
+
 void OpenclKernels::custom(cl::Buffer& p, cl::Buffer& v, cl::Buffer& r, const double omega, const double beta, int N)
 {
     const unsigned int work_group_size = 32;
@@ -236,20 +282,86 @@ void OpenclKernels::custom(cl::Buffer& p, cl::Buffer& v, cl::Buffer& r, const do
     }
 }
 
-void OpenclKernels::spmv_blocked(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows, cl::Buffer& x, cl::Buffer& b, int Nb, unsigned int block_size)
+void OpenclKernels::move_to_coarse(const cl::Buffer& fine_y, cl::Buffer& weights, cl::Buffer& coarse_y, int Nb)
+{
+    const unsigned int work_group_size = 32;
+    const unsigned int num_work_groups = ceilDivision(Nb, work_group_size);
+    const unsigned int total_work_items = num_work_groups * work_group_size;
+    Timer t;
+
+    cl::Event event = (*move_to_coarse_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), fine_y, weights, coarse_y, Nb);
+
+    if (verbosity >= 4) {
+        event.wait();
+        std::ostringstream oss;
+        oss << std::scientific << "OpenclKernels move_to_coarse() time: " << t.stop() << " s";
+        OpmLog::info(oss.str());
+    }
+}
+
+void OpenclKernels::move_to_fine(cl::Buffer& coarse_x, cl::Buffer& fine_x, int pressure_idx, int Nb)
+{
+    const unsigned int work_group_size = 32;
+    const unsigned int num_work_groups = ceilDivision(Nb, work_group_size);
+    const unsigned int total_work_items = num_work_groups * work_group_size;
+    Timer t;
+
+    cl::Event event = (*move_to_fine_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), coarse_x, fine_x, pressure_idx, Nb);
+
+    if (verbosity >= 4) {
+        event.wait();
+        std::ostringstream oss;
+        oss << std::scientific << "OpenclKernels move_to_fine() time: " << t.stop() << " s";
+        OpmLog::info(oss.str());
+    }
+}
+
+void OpenclKernels::spmv(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows, cl::Buffer& x, cl::Buffer& b, int Nb, unsigned int block_size, bool reset)
 {
     const unsigned int work_group_size = 32;
     const unsigned int num_work_groups = ceilDivision(Nb, work_group_size);
     const unsigned int total_work_items = num_work_groups * work_group_size;
     const unsigned int lmem_per_work_group = sizeof(double) * work_group_size;
     Timer t_spmv;
+    cl::Event event;
 
-    cl::Event event = (*spmv_blocked_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), vals, cols, rows, Nb, x, b, block_size, cl::Local(lmem_per_work_group));
+    if (block_size > 1) {
+        event = (*spmv_blocked_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), vals, cols, rows, Nb, x, b, block_size, cl::Local(lmem_per_work_group));
+    } else {
+        if (reset) {
+            event = (*spmv_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), vals, cols, rows, Nb, x, b, cl::Local(lmem_per_work_group));
+        } else {
+            event = (*spmv_noreset_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), vals, cols, rows, Nb, x, b, cl::Local(lmem_per_work_group));
+        }
+    }
 
     if (verbosity >= 4) {
         event.wait();
         std::ostringstream oss;
         oss << std::scientific << "OpenclKernels spmv_blocked() time: " << t_spmv.stop() << " s";
+        OpmLog::info(oss.str());
+    }
+}
+
+void OpenclKernels::residual(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows, cl::Buffer& x, const cl::Buffer& rhs, cl::Buffer& out, int Nb, unsigned int block_size)
+{
+    const unsigned int work_group_size = 32;
+    const unsigned int num_work_groups = ceilDivision(Nb, work_group_size);
+    const unsigned int total_work_items = num_work_groups * work_group_size;
+    const unsigned int lmem_per_work_group = sizeof(double) * work_group_size;
+    Timer t_residual;
+    cl::Event event;
+
+    if (block_size > 1) {
+        event = (*residual_blocked_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), vals, cols, rows, Nb, x, rhs, out, block_size, cl::Local(lmem_per_work_group));
+    } else {
+        event = (*residual_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), vals, cols, rows, Nb, x, rhs, out, cl::Local(lmem_per_work_group));
+    }
+
+    if (verbosity >= 4) {
+        event.wait();
+        std::ostringstream oss;
+        oss << std::scientific << "OpenclKernels residual_blocked() time: " << t_residual.stop() << " s";
         OpmLog::info(oss.str());
     }
 }
@@ -395,6 +507,27 @@ void OpenclKernels::apply_stdwells_no_reorder(cl::Buffer& d_Cnnzs_ocl, cl::Buffe
         )";
     }
 
+    // multiply vector with another vector, element-wise
+    std::string OpenclKernels::get_vmul_string() {
+        return R"(
+        __kernel void vmul(
+            const double alpha,
+            __global double const *in1,
+            __global double const *in2,
+            __global double *out,
+            const int N)
+        {
+            unsigned int NUM_THREADS = get_global_size(0);
+            int idx = get_global_id(0);
+
+            while(idx < N){
+                out[idx] += alpha * in1[idx] * in2[idx];
+                idx += NUM_THREADS;
+            }
+        }
+        )";
+    }
+
 
     // returns partial sums, instead of the final dot product
     std::string OpenclKernels::get_dot_1_string() {
@@ -506,15 +639,77 @@ void OpenclKernels::apply_stdwells_no_reorder(cl::Buffer& d_Cnnzs_ocl, cl::Buffe
         )";
     }
 
-    std::string OpenclKernels::get_spmv_blocked_string() {
+
+    // transform blocked vector to scalar vector using pressure-weights
+    // every workitem handles one blockrow
+    std::string OpenclKernels::get_move_to_coarse_string() {
         return R"(
-        __kernel void spmv_blocked(
-            __global const double *vals,
+        __kernel void move_to_coarse(
+            __global const double *fine_y,
+            __global const double *weights,
+            __global double *coarse_y,
+            const unsigned int Nb)
+        {
+            const unsigned int NUM_THREADS = get_global_size(0);
+            const unsigned int block_size = 3;
+            unsigned int target_block_row = get_global_id(0);
+
+            while(target_block_row < Nb){
+                double sum = 0.0;
+                unsigned int idx = block_size * target_block_row;
+                for (unsigned int i = 0; i < block_size; ++i) {
+                    sum += fine_y[idx + i] * weights[idx + i];
+                }
+                coarse_y[target_block_row] = sum;
+                target_block_row += NUM_THREADS;
+            }
+        }
+        )";
+    }
+
+    // add the coarse pressure solution back to the finer, complete solution
+    // every workitem handles one blockrow
+    std::string OpenclKernels::get_move_to_fine_string() {
+        return R"(
+        __kernel void move_to_fine(
+            __global const double *coarse_x,
+            __global double *fine_x,
+            const unsigned int pressure_idx,
+            const unsigned int Nb)
+        {
+            const unsigned int NUM_THREADS = get_global_size(0);
+            const unsigned int block_size = 3;
+            unsigned int target_block_row = get_global_id(0);
+
+            while(target_block_row < Nb){
+                fine_x[target_block_row * block_size + pressure_idx] += coarse_x[target_block_row];
+                target_block_row += NUM_THREADS;
+            }
+        }
+        )";
+    }
+
+
+/// either b = mat * x
+/// or res = rhs - mat * x
+std::string OpenclKernels::get_blocked_matrix_operation_string(matrix_operation op) {
+    std::string s;
+    if (op == matrix_operation::spmv_op) {
+        s += "__kernel void spmv_blocked(";
+    } else {
+        s += "__kernel void residual_blocked(";
+    }
+        s += R"(__global const double *vals,
             __global const int *cols,
             __global const int *rows,
             const int Nb,
             __global const double *x,
-            __global double *b,
+            )";
+    if (op == matrix_operation::residual_op) {
+        s += "__global const double *rhs,";
+    }
+        s += R"(
+            __global double *out,
             const unsigned int block_size,
             __local double *tmp)
         {
@@ -566,14 +761,96 @@ void OpenclKernels::apply_stdwells_no_reorder(cl::Buffer& d_Cnnzs_ocl, cl::Buffe
 
                 if(lane < bs){
                     unsigned int row = target_block_row*bs + lane;
-                    b[row] = tmp[lane];
+              )";
+    if (op == matrix_operation::spmv_op) {
+        s += "      out[row] = tmp[lane];";
+    } else {
+        s += "      out[row] = rhs[row] - tmp[lane];";
+    }
+        s += R"(
                 }
                 target_block_row += num_warps_in_grid;
             }
         }
-        )";
-    }
+    )";
+    return s;
+}
 
+
+/// either b = mat * x
+/// or res = rhs - mat * x
+std::string OpenclKernels::get_matrix_operation_string(matrix_operation op, bool spmv_reset) {
+    std::string s;
+    if (op == matrix_operation::spmv_op) {
+        if (spmv_reset) {
+            s += "__kernel void spmv(";
+        } else {
+            s += "__kernel void spmv_noreset(";
+        }
+    } else {
+        s += "__kernel void residual(";
+    }
+    s += R"(__global const double *vals,
+            __global const int *cols,
+            __global const int *rows,
+            const int N,
+            __global const double *x,
+            )";
+    if (op == matrix_operation::residual_op) {
+        s += "__global const double *rhs,";
+    }
+        s += R"(
+            __global double *out,
+            __local double *tmp)
+        {
+            const unsigned int bsize = get_local_size(0);
+            const unsigned int idx_b = get_global_id(0) / bsize;
+            const unsigned int idx_t = get_local_id(0);
+            const unsigned int num_workgroups = get_num_groups(0);
+
+            int row = idx_b;
+
+            while (row < N) {
+                int rowStart = rows[row];
+                int rowEnd = rows[row+1];
+                int rowLength = rowEnd - rowStart;
+                double local_sum = 0.0;
+                for (int j = rowStart + idx_t; j < rowEnd; j += bsize) {
+                    int col = cols[j];
+                    local_sum += vals[j] * x[col];
+                }
+
+                tmp[idx_t] = local_sum;
+                barrier(CLK_LOCAL_MEM_FENCE);
+
+                int offset = bsize / 2;
+                while(offset > 0) {
+                    if (idx_t < offset) {
+                        tmp[idx_t] += tmp[idx_t + offset];
+                    }
+                    barrier(CLK_LOCAL_MEM_FENCE);
+                    offset = offset / 2;
+                }
+
+                if (idx_t == 0) {
+              )";
+    if (op == matrix_operation::spmv_op) {
+        if (spmv_reset) {
+            s += "  out[row] = tmp[idx_t];";
+        } else {
+            s += "  out[row] += tmp[idx_t];";
+        }
+    } else {
+        s += "      out[row] = rhs[row] - tmp[idx_t];";
+    }
+        s += R"(
+                }
+                row += num_workgroups;
+            }
+        }
+        )";
+    return s;
+}
 
 
     std::string OpenclKernels::get_ILU_apply1_string(bool full_matrix) {

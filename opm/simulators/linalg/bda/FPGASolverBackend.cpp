@@ -20,6 +20,7 @@
 #include <config.h>
 
 #include <cmath>
+#include <cstring>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/material/common/Unused.hpp>
