@@ -128,14 +128,14 @@ outputCumLog(size_t reportStepNum, const bool substep, bool forceDisableCumOutpu
             tmp_names[0] = gname;
 
             if (tmp_names[0] == "FIELD"){
-                tmp_values[2] = st.get("FOPT"); //WellCumDataType::OilProd
-                tmp_values[3] = st.get("FWPT"); //WellCumDataType::WaterProd
-                tmp_values[4] = st.get("FGPT"); //WellCumDataType::GasProd
-                tmp_values[5] = st.get("FVPT");//WellCumDataType::FluidResVolProd
-                tmp_values[6] = st.get("FOIT"); //WellCumDataType::OilInj
-                tmp_values[7] = st.get("FWIT"); //WellCumDataType::WaterInj
-                tmp_values[8] = st.get("FGIT"); //WellCumDataType::GasInj
-                tmp_values[9] = st.get("FVIT");//WellCumDataType::FluidResVolInj
+                tmp_values[2] = st.get("FOPT", 0.0); //WellCumDataType::OilProd
+                tmp_values[3] = st.get("FWPT", 0.0); //WellCumDataType::WaterProd
+                tmp_values[4] = st.get("FGPT", 0.0); //WellCumDataType::GasProd
+                tmp_values[5] = st.get("FVPT", 0.0);//WellCumDataType::FluidResVolProd
+                tmp_values[6] = st.get("FOIT", 0.0); //WellCumDataType::OilInj
+                tmp_values[7] = st.get("FWIT", 0.0); //WellCumDataType::WaterInj
+                tmp_values[8] = st.get("FGIT", 0.0); //WellCumDataType::GasInj
+                tmp_values[9] = st.get("FVIT", 0.0);//WellCumDataType::FluidResVolInj
             }
             else {
                 tmp_values[2] = get("GOPT"); //WellCumDataType::OilProd
@@ -292,12 +292,12 @@ outputProdLog(size_t reportStepNum,
             tmp_names[0] = gname;
 
             if (tmp_names[0] == "FIELD"){
-                tmp_values[2] = st.get("FOPR"); //WellProdDataType::OilRate
-                tmp_values[3] = st.get("FWPR"); //WellProdDataType::WaterRate
-                tmp_values[4] = st.get("FGPR"); //WellProdDataType::GasRate
-                tmp_values[5] = st.get("FVPR"); //WellProdDataType::FluidResVol
-                tmp_values[6] = st.get("FWCT"); //WellProdDataType::WaterCut
-                tmp_values[7] = st.get("FGOR"); //WellProdDataType::GasOilRatio
+                tmp_values[2] = st.get("FOPR", 0.0); //WellProdDataType::OilRate
+                tmp_values[3] = st.get("FWPR", 0.0); //WellProdDataType::WaterRate
+                tmp_values[4] = st.get("FGPR", 0.0); //WellProdDataType::GasRate
+                tmp_values[5] = st.get("FVPR", 0.0); //WellProdDataType::FluidResVol
+                tmp_values[6] = st.get("FWCT", 0.0); //WellProdDataType::WaterCut
+                tmp_values[7] = st.get("FGOR", 0.0); //WellProdDataType::GasOilRatio
             } else {
                 tmp_values[2] = get("GOPR"); //WellProdDataType::OilRate
                 tmp_values[3] = get("GWPR"); //WellProdDataType::WaterRate
@@ -409,10 +409,10 @@ outputInjLog(size_t reportStepNum, const bool substep, bool forceDisableInjOutpu
             tmp_names[0] = gname;
 
             if (tmp_names[0] == "FIELD"){
-                tmp_values[2] = st.get("FOIR");//WellInjDataType::OilRate
-                tmp_values[3] = st.get("FWIR"); //WellInjDataType::WaterRate
-                tmp_values[4] = st.get("FGIR"); //WellInjDataType::GasRate
-                tmp_values[5] = st.get("FVIR");//WellInjDataType::FluidResVol
+                tmp_values[2] = st.get("FOIR", 0.0);//WellInjDataType::OilRate
+                tmp_values[3] = st.get("FWIR", 0.0); //WellInjDataType::WaterRate
+                tmp_values[4] = st.get("FGIR", 0.0); //WellInjDataType::GasRate
+                tmp_values[5] = st.get("FVIR", 0.0);//WellInjDataType::FluidResVol
             }
             else {
                 tmp_values[2] = get("GOIR");//WellInjDataType::OilRate
