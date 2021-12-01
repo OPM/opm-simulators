@@ -149,23 +149,13 @@ name(int tracerIdx) const
 
 template<class Grid,class GridView, class DofMapper, class Stencil, class Scalar>
 void EclGenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
-doInit(bool enabled, bool rst, size_t numGridDof,
+doInit(bool rst, size_t numGridDof,
        size_t gasPhaseIdx, size_t oilPhaseIdx, size_t waterPhaseIdx)
 {
     const auto& tracers = eclState_.tracer();
 
     if (tracers.size() == 0)
         return; // tracer treatment is supposed to be disabled
-
-    if (!enabled) {
-        if (gridView_.comm().rank() == 0) {
-            OpmLog::warning("Keyword TRACERS has only experimental support, and is hence ignored.\n"
-                            "The experimental tracer model can still be used, but must be set explicitly.\n"
-                            "To use tracers, set the command line option: --enable-tracer-model=true"
-                            "\n");
-        }
-        return; // Tracer transport must be enabled by the user
-    }
 
     // retrieve the number of tracers from the deck
     const size_t numTracers = tracers.size();

@@ -105,8 +105,7 @@ public:
      */
     void init(bool rst)
     {
-        bool enabled = EWOMS_GET_PARAM(TypeTag, bool, EnableTracerModel);
-        this->doInit(enabled, rst, simulator_.model().numGridDof(),
+        this->doInit(rst, simulator_.model().numGridDof(),
                      gasPhaseIdx, oilPhaseIdx, waterPhaseIdx);
 
         prepareTracerBatches();
