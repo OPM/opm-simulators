@@ -104,7 +104,6 @@ protected:
 
     std::vector<int> tracerPhaseIdx_;
     std::vector<Dune::BlockVector<Dune::FieldVector<Scalar, 1>>> tracerConcentration_;
-    std::vector<Dune::BlockVector<Dune::FieldVector<Scalar, 1>>> tracerConcentrationInitial_;
     TracerMatrix *tracerMatrix_;
     TracerVector tracerResidual_;
     std::vector<int> cartToGlobal_;
