@@ -391,7 +391,7 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
         prec->init(Nb, nnzb, context, queue);
 
 #if COPY_ROW_BY_ROW
-        vals_contiguous = new double[N];
+        vals_contiguous.resize(nnz);
 #endif
         mat.reset(new BlockedMatrix(Nb, nnzb, block_size, vals, cols, rows));
 
@@ -437,9 +437,6 @@ void openclSolverBackend<block_size>::finalize() {
     if (opencl_ilu_reorder != ILUReorder::NONE) {
         delete[] rb;
     }
-#if COPY_ROW_BY_ROW
-    delete[] vals_contiguous;
-#endif
 } // end finalize()
 
 template <unsigned int block_size>
@@ -451,10 +448,10 @@ void openclSolverBackend<block_size>::copy_system_to_gpu() {
     int sum = 0;
     for (int i = 0; i < Nb; ++i) {
         int size_row = rmat->rowPointers[i + 1] - rmat->rowPointers[i];
-        memcpy(vals_contiguous + sum, reinterpret_cast<double*>(rmat->nnzValues) + sum, size_row * sizeof(double) * block_size * block_size);
+        memcpy(vals_contiguous.data() + sum, reinterpret_cast<double*>(rmat->nnzValues) + sum, size_row * sizeof(double) * block_size * block_size);
         sum += size_row * block_size * block_size;
     }
-    err = queue->enqueueWriteBuffer(d_Avals, CL_TRUE, 0, sizeof(double) * nnz, vals_contiguous, nullptr, &events[0]);
+    err = queue->enqueueWriteBuffer(d_Avals, CL_TRUE, 0, sizeof(double) * nnz, vals_contiguous.data(), nullptr, &events[0]);
 #else
     err = queue->enqueueWriteBuffer(d_Avals, CL_TRUE, 0, sizeof(double) * nnz, rmat->nnzValues, nullptr, &events[0]);
 #endif
@@ -491,10 +488,10 @@ void openclSolverBackend<block_size>::update_system_on_gpu() {
     int sum = 0;
     for (int i = 0; i < Nb; ++i) {
         int size_row = rmat->rowPointers[i + 1] - rmat->rowPointers[i];
-        memcpy(vals_contiguous + sum, reinterpret_cast<double*>(rmat->nnzValues) + sum, size_row * sizeof(double) * block_size * block_size);
+        memcpy(vals_contiguous.data() + sum, reinterpret_cast<double*>(rmat->nnzValues) + sum, size_row * sizeof(double) * block_size * block_size);
         sum += size_row * block_size * block_size;
     }
-    err = queue->enqueueWriteBuffer(d_Avals, CL_TRUE, 0, sizeof(double) * nnz, vals_contiguous, nullptr, &events[0]);
+    err = queue->enqueueWriteBuffer(d_Avals, CL_TRUE, 0, sizeof(double) * nnz, vals_contiguous.data(), nullptr, &events[0]);
 #else
     err = queue->enqueueWriteBuffer(d_Avals, CL_TRUE, 0, sizeof(double) * nnz, rmat->nnzValues, nullptr, &events[0]);
 #endif

@@ -49,13 +49,6 @@ BILU0<block_size>::BILU0(ILUReorder opencl_ilu_reorder_, int verbosity_) :
 
 
 template <unsigned int block_size>
-BILU0<block_size>::~BILU0()
-{
-    delete[] invDiagVals;
-}
-
-
-template <unsigned int block_size>
 void BILU0<block_size>::init(int Nb, int nnzb, std::shared_ptr<cl::Context>& context_, std::shared_ptr<cl::CommandQueue>& queue_)
 {
     context = context_.get();
@@ -73,21 +66,21 @@ bool BILU0<block_size>::analyze_matrix(BlockedMatrix *mat)
     this->nnz = mat->nnzbs * block_size * block_size;
     this->nnzb = mat->nnzbs;
 
-    int *CSCRowIndices = nullptr;
-    int *CSCColPointers = nullptr;
+    std::vector<int> CSCRowIndices;
+    std::vector<int> CSCColPointers;
 
     if (opencl_ilu_reorder == ILUReorder::NONE) {
         LUmat = std::make_unique<BlockedMatrix>(*mat);
     } else {
         toOrder.resize(Nb);
         fromOrder.resize(Nb);
-        CSCRowIndices = new int[nnzb];
-        CSCColPointers = new int[Nb + 1];
+        CSCRowIndices.resize(nnzb);
+        CSCColPointers.resize(Nb + 1);
         rmat = std::make_shared<BlockedMatrix>(mat->Nb, mat->nnzbs, block_size);
         LUmat = std::make_unique<BlockedMatrix>(*rmat);
 
         Timer t_convert;
-        csrPatternToCsc(mat->colIndices, mat->rowPointers, CSCRowIndices, CSCColPointers, mat->Nb);
+        csrPatternToCsc(mat->colIndices, mat->rowPointers, CSCRowIndices.data(), CSCColPointers.data(), mat->Nb);
         if (verbosity >= 3) {
             std::ostringstream out;
             out << "BILU0 convert CSR to CSC: " << t_convert.stop() << " s";
@@ -99,10 +92,10 @@ bool BILU0<block_size>::analyze_matrix(BlockedMatrix *mat)
     std::ostringstream out;
     if (opencl_ilu_reorder == ILUReorder::LEVEL_SCHEDULING) {
         out << "BILU0 reordering strategy: " << "level_scheduling\n";
-        findLevelScheduling(mat->colIndices, mat->rowPointers, CSCRowIndices, CSCColPointers, mat->Nb, &numColors, toOrder.data(), fromOrder.data(), rowsPerColor);
+        findLevelScheduling(mat->colIndices, mat->rowPointers, CSCRowIndices.data(), CSCColPointers.data(), mat->Nb, &numColors, toOrder.data(), fromOrder.data(), rowsPerColor);
     } else if (opencl_ilu_reorder == ILUReorder::GRAPH_COLORING) {
         out << "BILU0 reordering strategy: " << "graph_coloring\n";
-        findGraphColoring<block_size>(mat->colIndices, mat->rowPointers, CSCRowIndices, CSCColPointers, mat->Nb, mat->Nb, mat->Nb, &numColors, toOrder.data(), fromOrder.data(), rowsPerColor);
+        findGraphColoring<block_size>(mat->colIndices, mat->rowPointers, CSCRowIndices.data(), CSCColPointers.data(), mat->Nb, mat->Nb, mat->Nb, &numColors, toOrder.data(), fromOrder.data(), rowsPerColor);
     } else if (opencl_ilu_reorder == ILUReorder::NONE) {
         out << "BILU0 reordering strategy: none\n";
         // numColors = 1;
@@ -122,21 +115,13 @@ bool BILU0<block_size>::analyze_matrix(BlockedMatrix *mat)
 #endif
     OpmLog::info(out.str());
 
-
-    if (opencl_ilu_reorder != ILUReorder::NONE) {
-        delete[] CSCRowIndices;
-        delete[] CSCColPointers;
-    }
-
     diagIndex.resize(mat->Nb);
-    invDiagVals = new double[mat->Nb * bs * bs];
+    invDiagVals.resize(mat->Nb * bs * bs);
 
 #if CHOW_PATEL
     Lmat = std::make_unique<BlockedMatrix>(mat->Nb, (mat->nnzbs - mat->Nb) / 2);
     Umat = std::make_unique<BlockedMatrix>(mat->Nb, (mat->nnzbs - mat->Nb) / 2);
 #endif
-
-    LUmat->nnzValues = new double[mat->nnzbs * bs * bs];
 
     s.invDiagVals = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * bs * bs * mat->Nb);
     s.rowsPerColor = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * (numColors + 1));
@@ -155,7 +140,7 @@ bool BILU0<block_size>::analyze_matrix(BlockedMatrix *mat)
 #endif
 
     events.resize(2);
-    err = queue->enqueueWriteBuffer(s.invDiagVals, CL_FALSE, 0, mat->Nb * sizeof(double) * bs * bs, invDiagVals, nullptr, &events[0]);
+    err = queue->enqueueWriteBuffer(s.invDiagVals, CL_FALSE, 0, mat->Nb * sizeof(double) * bs * bs, invDiagVals.data(), nullptr, &events[0]);
 
     rowsPerColorPrefix.resize(numColors + 1); // resize initializes value 0.0
     for (int i = 0; i < numColors; ++i) {
@@ -206,7 +191,7 @@ bool BILU0<block_size>::create_preconditioner(BlockedMatrix *mat)
 #if CHOW_PATEL
     chowPatelIlu.decomposition(queue, context,
                                LUmat.get(), Lmat.get(), Umat.get(),
-                               invDiagVals, diagIndex,
+                               invDiagVals.data(), diagIndex,
                                s.diagIndex, s.invDiagVals,
                                s.Lvals, s.Lcols, s.Lrows,
                                s.Uvals, s.Ucols, s.Urows);

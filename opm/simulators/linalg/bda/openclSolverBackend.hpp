@@ -59,7 +59,7 @@ class openclSolverBackend : public BdaSolver<block_size>
 
 private:
     double *rb = nullptr;                 // reordered b vector, if the matrix is reordered, rb is newly allocated, otherwise it just points to b
-    double *vals_contiguous = nullptr;    // only used if COPY_ROW_BY_ROW is true in openclSolverBackend.cpp
+    std::vector<double> vals_contiguous;  // only used if COPY_ROW_BY_ROW is true in openclSolverBackend.cpp
 
     // OpenCL variables must be reusable, they are initialized in initialize()
     cl::Buffer d_Avals, d_Acols, d_Arows;        // (reordered) matrix in BSR format on GPU

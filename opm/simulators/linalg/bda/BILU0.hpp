@@ -55,7 +55,7 @@ private:
 #if CHOW_PATEL
     std::unique_ptr<BlockedMatrix> Lmat = nullptr, Umat = nullptr;
 #endif
-    double *invDiagVals = nullptr;
+    std::vector<double> invDiagVals;
     std::vector<int> diagIndex;
     std::vector<int> rowsPerColor;  // color i contains rowsPerColor[i] rows, which are processed in parallel
     std::vector<int> rowsPerColorPrefix;  // the prefix sum of rowsPerColor
@@ -90,8 +90,6 @@ private:
 public:
 
     BILU0(ILUReorder opencl_ilu_reorder, int verbosity);
-
-    ~BILU0();
 
     void init(int Nb, int nnzb, std::shared_ptr<cl::Context>& context, std::shared_ptr<cl::CommandQueue>& queue) override;
 
