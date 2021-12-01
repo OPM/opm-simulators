@@ -31,6 +31,13 @@ namespace Opm
 namespace Accelerator
 {
 
+
+template <unsigned int block_size>
+void Preconditioner<block_size>::setOpencl(std::shared_ptr<cl::Context>& context_, std::shared_ptr<cl::CommandQueue>& queue_) {
+    context = context_;
+    queue = queue_;
+}
+
 template <unsigned int block_size>
 std::unique_ptr<Preconditioner<block_size> > Preconditioner<block_size>::create(PreconditionerType type, int verbosity, ILUReorder opencl_ilu_reorder) {
     if (type == PreconditionerType::BILU0) {
@@ -44,7 +51,8 @@ std::unique_ptr<Preconditioner<block_size> > Preconditioner<block_size>::create(
 
 
 #define INSTANTIATE_BDA_FUNCTIONS(n)  \
-template std::unique_ptr<Preconditioner<n> > Preconditioner<n>::create(PreconditionerType, int, ILUReorder);
+template std::unique_ptr<Preconditioner<n> > Preconditioner<n>::create(PreconditionerType, int, ILUReorder);  \
+template void Preconditioner<n>::setOpencl(std::shared_ptr<cl::Context>&, std::shared_ptr<cl::CommandQueue>&);
 
 INSTANTIATE_BDA_FUNCTIONS(1);
 INSTANTIATE_BDA_FUNCTIONS(2);

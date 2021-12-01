@@ -42,6 +42,11 @@ protected:
     int nnzb = 0;    // number of blocks of the matrix
     int verbosity = 0;
 
+    std::shared_ptr<cl::Context> context;
+    std::shared_ptr<cl::CommandQueue> queue;
+    std::vector<cl::Event> events;
+    cl_int err;
+
     Preconditioner(int verbosity_) :
     verbosity(verbosity_)
     {};
@@ -54,7 +59,8 @@ public:
 
     static std::unique_ptr<Preconditioner> create(PreconditionerType type, int verbosity, ILUReorder opencl_ilu_reorder);
 
-    virtual void init(int Nb, int nnzb, std::shared_ptr<cl::Context>& context, std::shared_ptr<cl::CommandQueue>& queue);
+    // nested Preconditioners might need to override this
+    virtual void setOpencl(std::shared_ptr<cl::Context>& context, std::shared_ptr<cl::CommandQueue>& queue);
 
     // apply preconditioner, x = prec(y)
     virtual void apply(const cl::Buffer& y, cl::Buffer& x) = 0;

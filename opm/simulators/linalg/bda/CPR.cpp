@@ -47,31 +47,28 @@ CPR<block_size>::CPR(int verbosity_, ILUReorder opencl_ilu_reorder_) :
     Preconditioner<block_size>(verbosity_), opencl_ilu_reorder(opencl_ilu_reorder_)
 {
     bilu0 = std::make_unique<BILU0<block_size> >(opencl_ilu_reorder, verbosity_);
+    diagIndices.resize(1);
 }
 
 
 template <unsigned int block_size>
-void CPR<block_size>::init(int Nb_, int nnzb_, std::shared_ptr<cl::Context>& context_, std::shared_ptr<cl::CommandQueue>& queue_) {
-    this->Nb = Nb_;
-    this->nnzb = nnzb_;
-    this->N = Nb_ * block_size;
-    this->nnz = nnzb_ * block_size * block_size;
+void CPR<block_size>::setOpencl(std::shared_ptr<cl::Context>& context_, std::shared_ptr<cl::CommandQueue>& queue_) {
 
     context = context_;
     queue = queue_;
 
-    coarse_vals.resize(nnzb);
-    coarse_x.resize(Nb);
-    coarse_y.resize(Nb);
-    weights.resize(N);
-    diagIndices.resize(1);
-
-    bilu0->init(Nb, nnzb, context, queue);
+    bilu0->setOpencl(context, queue);
 }
 
 
 template <unsigned int block_size>
 bool CPR<block_size>::analyze_matrix(BlockedMatrix *mat_) {
+
+    this->Nb = mat_->Nb;
+    this->nnzb = mat_->nnzbs;
+    this->N = Nb * block_size;
+    this->nnz = nnzb * block_size * block_size;
+
     bool success = bilu0->analyze_matrix(mat_);
 
     if (opencl_ilu_reorder == ILUReorder::NONE) {
@@ -190,6 +187,11 @@ void CPR<block_size>::opencl_upload() {
 template <unsigned int block_size>
 void CPR<block_size>::create_preconditioner_amg(BlockedMatrix *mat_) {
     this->mat = mat_;
+
+    coarse_vals.resize(nnzb);
+    coarse_x.resize(Nb);
+    coarse_y.resize(Nb);
+    weights.resize(N);
 
     try{
         double rhs[] = {0, 0, 0};

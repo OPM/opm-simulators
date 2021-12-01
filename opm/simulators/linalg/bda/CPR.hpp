@@ -57,6 +57,10 @@ class CPR : public Preconditioner<block_size>
     using Base::nnz;
     using Base::nnzb;
     using Base::verbosity;
+    using Base::context;
+    using Base::queue;
+    using Base::events;
+    using Base::err;
 
 private:
     int num_levels;
@@ -96,11 +100,6 @@ private:
     std::unique_ptr<openclSolverBackend<1> > coarse_solver; // coarse solver is scalar
     ILUReorder opencl_ilu_reorder;                          // reordering strategy for ILU0 in coarse solver
 
-    std::shared_ptr<cl::Context> context;
-    std::shared_ptr<cl::CommandQueue> queue;
-    std::vector<cl::Event> events;
-    cl_int err;
-
     // Analyze the AMG hierarchy build by Dune
     void analyzeHierarchy();
 
@@ -125,9 +124,10 @@ public:
 
     CPR(int verbosity, ILUReorder opencl_ilu_reorder);
 
-    void init(int Nb, int nnzb, std::shared_ptr<cl::Context>& context, std::shared_ptr<cl::CommandQueue>& queue) override;
-
     bool analyze_matrix(BlockedMatrix *mat) override;
+
+    // set own Opencl variables, but also that of the bilu0 preconditioner
+    void setOpencl(std::shared_ptr<cl::Context>& context, std::shared_ptr<cl::CommandQueue>& queue) override;
 
     // applies blocked ilu0
     // also applies amg for pressure component

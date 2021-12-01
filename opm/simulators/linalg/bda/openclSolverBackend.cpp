@@ -388,7 +388,7 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
     out.clear();
 
     try {
-        prec->init(Nb, nnzb, context, queue);
+        prec->setOpencl(context, queue);
 
 #if COPY_ROW_BY_ROW
         vals_contiguous.resize(nnz);

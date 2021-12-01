@@ -49,14 +49,6 @@ BILU0<block_size>::BILU0(ILUReorder opencl_ilu_reorder_, int verbosity_) :
 
 
 template <unsigned int block_size>
-void BILU0<block_size>::init(int Nb, int nnzb, std::shared_ptr<cl::Context>& context_, std::shared_ptr<cl::CommandQueue>& queue_)
-{
-    context = context_.get();
-    queue = queue_.get();
-}
-
-
-template <unsigned int block_size>
 bool BILU0<block_size>::analyze_matrix(BlockedMatrix *mat)
 {
     const unsigned int bs = block_size;

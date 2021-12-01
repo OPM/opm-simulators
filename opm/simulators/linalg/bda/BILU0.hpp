@@ -48,6 +48,10 @@ class BILU0 : public Preconditioner<block_size>
     using Base::nnz;
     using Base::nnzb;
     using Base::verbosity;
+    using Base::context;
+    using Base::queue;
+    using Base::events;
+    using Base::err;
 
 private:
     std::unique_ptr<BlockedMatrix> LUmat = nullptr;
@@ -78,10 +82,6 @@ private:
     } GPU_storage;
 
     GPU_storage s;
-    cl::Context *context;
-    cl::CommandQueue *queue;
-    std::vector<cl::Event> events;
-    cl_int err;
 
 #if CHOW_PATEL
     ChowPatelIlu<block_size> chowPatelIlu;
@@ -90,8 +90,6 @@ private:
 public:
 
     BILU0(ILUReorder opencl_ilu_reorder, int verbosity);
-
-    void init(int Nb, int nnzb, std::shared_ptr<cl::Context>& context, std::shared_ptr<cl::CommandQueue>& queue) override;
 
     // analysis, find reordering if specified
     bool analyze_matrix(BlockedMatrix *mat) override;
