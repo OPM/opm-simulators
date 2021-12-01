@@ -97,6 +97,7 @@ namespace Opm {
             typedef BlackoilModelParametersEbos<TypeTag> ModelParameters;
 
             using Grid = GetPropType<TypeTag, Properties::Grid>;
+            using EquilGrid = GetPropType<TypeTag, Properties::EquilGrid>;
             using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
             using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
             using Indices = GetPropType<TypeTag, Properties::Indices>;
@@ -224,14 +225,14 @@ namespace Opm {
             {
                 initFromRestartFile(restartValues,
                                     this->ebosSimulator_.vanguard().transferWTestState(),
-                                    UgGridHelpers::numCells(grid()),
+                                    grid().size(0),
                                     param_.use_multisegment_well_);
             }
 
             data::Wells wellData() const
             {
                 auto wsrpt = this->wellState()
-                    .report(UgGridHelpers::globalCell(this->grid()),
+                    .report(ebosSimulator_.vanguard().globalCell().data(),
                             [this](const int well_index) -> bool
                 {
                     return this->wasDynamicallyShutThisTimeStep(well_index);
@@ -314,6 +315,9 @@ namespace Opm {
 
             // a vector of all the wells.
             std::vector<WellInterfacePtr > well_container_{};
+ 
+            // map from logically cartesian cell indices to compressed ones
+            std::vector<int> cartesian_to_compressed_;
 
             std::vector<bool> is_cell_perforated_{};
 
@@ -357,6 +361,9 @@ namespace Opm {
             const Grid& grid() const
             { return ebosSimulator_.vanguard().grid(); }
 
+            const EquilGrid& equilGrid() const
+            { return ebosSimulator_.vanguard().equilGrid(); }
+
             const EclipseState& eclState() const
             { return ebosSimulator_.vanguard().eclState(); }
 
@@ -377,6 +384,8 @@ namespace Opm {
 
             // setting the well_solutions_ based on well_state.
             void updatePrimaryVariables(DeferredLogger& deferred_logger);
+
+            void setupCartesianToCompressed_();
 
             void updateAverageFormationFactor();
 

@@ -30,6 +30,7 @@ option(ENABLE_FPGA "Enable FPGA kernels integration?" OFF)
 option(USE_CHOW_PATEL_ILU "Use the iterative ILU by Chow and Patel?" OFF)
 option(USE_CHOW_PATEL_ILU_GPU "Run iterative ILU decomposition on GPU? Requires USE_CHOW_PATEL_ILU" OFF)
 option(USE_CHOW_PATEL_ILU_GPU_PARALLEL "Try to use more parallelism on the GPU during the iterative ILU decomposition? Requires USE_CHOW_PATEL_ILU_GPU" OFF)
+option(BUILD_FLOW_ALU_GRID "Build flow blackoil with alu grid" OFF)
 
 # The following was copied from CMakeLists.txt in opm-common.
 # TODO: factor out the common parts in opm-common and opm-simulator as a cmake module
@@ -453,7 +454,6 @@ if(TARGET fmt::fmt)
  endif()
 set_property(TARGET flow_libblackoil_poly PROPERTY EXCLUDE_FROM_ALL ${FLOW_POLY_ONLY_DEFAULT_ENABLE_IF})
 
-# the production oriented general-purpose ECL simulator
 opm_add_test(flow
   ONLY_COMPILE
   ALWAYS_ENABLE
@@ -489,6 +489,23 @@ opm_add_test(flow_distribute_z
   ${FLOW_TGTS}
   $<TARGET_OBJECTS:moduleVersion>
   )
+if (NOT BUILD_FLOW_ALU_GRID)
+  set(FLOW_ALUGRID_ONLY_DEFAULT_ENABLE_IF "FALSE")
+else()
+  set(FLOW_ALUGRID_ONLY_DEFAULT_ENABLE_IF "TRUE")
+endif()
+
+# the production oriented general-purpose ECL simulator
+opm_add_test(flow_alugrid
+  ONLY_COMPILE
+  ALWAYS_ENABLE
+  DEFAULT_ENABLE_IF ${FLOW_ALUGRID_ONLY_DEFAULT_ENABLE_IF}
+  DEPENDS opmsimulators
+  LIBRARIES opmsimulators
+  SOURCES
+  flow/flow_blackoil_alugrid.cpp
+  $<TARGET_OBJECTS:moduleVersion>)
+target_compile_definitions(flow_alugrid PRIVATE USE_ALUGRID)
 
 if (BUILD_FLOW)
   install(TARGETS flow DESTINATION bin)

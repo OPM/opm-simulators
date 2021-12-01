@@ -503,7 +503,7 @@ BOOST_AUTO_TEST_CASE(DeckAllDead)
     const UnstructuredGrid& grid = *(gm.c_grid());
 
     Opm::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(),
-                                                                  eclipseState, simulator->vanguard().gridView(),
+                                                                  eclipseState, simulator->vanguard(),
                                                                   simulator->vanguard().cartesianMapper(), 10.0);
     const auto& pressures = comp.press();
     BOOST_REQUIRE_EQUAL(pressures.size(), 3U);
@@ -582,7 +582,7 @@ BOOST_AUTO_TEST_CASE(DeckWithCapillary)
     const UnstructuredGrid& grid = *(gm.c_grid());
 
     Opm::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(),
-                                                                  eclipseState, simulator->vanguard().gridView(),
+                                                                  eclipseState, simulator->vanguard(),
                                                                   simulator->vanguard().cartesianMapper(), 10.0);
 
     const auto& pressures = comp.press();
@@ -622,7 +622,7 @@ BOOST_AUTO_TEST_CASE(DeckWithCapillaryOverlap)
     const UnstructuredGrid& grid = *(gm.c_grid());
 
     Opm::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(),
-                                                                  eclipseState, simulator->vanguard().gridView(),
+                                                                  eclipseState, simulator->vanguard(),
                                                                   simulator->vanguard().cartesianMapper(), 9.80665);
     const auto& pressures = comp.press();
     BOOST_REQUIRE_EQUAL(pressures.size(), 3U);
@@ -683,7 +683,7 @@ BOOST_AUTO_TEST_CASE(DeckWithLiveOil)
 
     // Initialize the fluid system
     Opm::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(),
-                                                                  eclipseState, simulator->vanguard().gridView(),
+                                                                  eclipseState, simulator->vanguard(),
                                                                   simulator->vanguard().cartesianMapper(), 9.80665);
     const auto& pressures = comp.press();
     BOOST_REQUIRE_EQUAL(pressures.size(), 3U);
@@ -760,7 +760,7 @@ BOOST_AUTO_TEST_CASE(DeckWithLiveGas)
     const UnstructuredGrid& grid = *(gm.c_grid());
 
     Opm::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(),
-                                                                  eclipseState, simulator->vanguard().gridView(),
+                                                                  eclipseState, simulator->vanguard(),
                                                                   simulator->vanguard().cartesianMapper(), 9.80665);
     const auto& pressures = comp.press();
     BOOST_REQUIRE_EQUAL(pressures.size(), 3U);
@@ -840,7 +840,7 @@ BOOST_AUTO_TEST_CASE(DeckWithRSVDAndRVVD)
     const UnstructuredGrid& grid = *(gm.c_grid());
 
     Opm::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(),
-                                                                  eclipseState, simulator->vanguard().gridView(),
+                                                                  eclipseState, simulator->vanguard(),
                                                                   simulator->vanguard().cartesianMapper(), 9.80665);
     const auto& pressures = comp.press();
     BOOST_REQUIRE_EQUAL(pressures.size(), 3U);
@@ -940,7 +940,7 @@ BOOST_AUTO_TEST_CASE(DeckWithPBVDAndPDVD)
     const UnstructuredGrid& grid = *(gm.c_grid());
 
     Opm::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(),
-                                                                  eclipseState, simulator->vanguard().gridView(),
+                                                                  eclipseState, simulator->vanguard(),
                                                                   simulator->vanguard().cartesianMapper(), 9.80665);
     const auto& pressures = comp.press();
     BOOST_REQUIRE_EQUAL(pressures.size(), 3U);

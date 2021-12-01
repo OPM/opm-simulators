@@ -48,7 +48,7 @@
 #include <dune/fem/gridpart/adaptiveleafgridpart.hh>
 #include <dune/fem/gridpart/common/gridpart2gridview.hh>
 #include <ebos/femcpgridcompat.hh>
-#endif
+#endif //HAVE_DUNE_FEM
 
 #include <cassert>
 #include <numeric>

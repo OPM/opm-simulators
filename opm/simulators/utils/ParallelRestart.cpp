@@ -36,6 +36,7 @@
 #include <opm/output/data/Wells.hpp>
 #include <opm/input/eclipse/EclipseState/Util/OrderedMap.hpp>
 #include <opm/output/eclipse/EclipseIO.hpp>
+#include <opm/input/eclipse/EclipseState/Util/OrderedMap.hpp>
 #include <opm/output/eclipse/RestartValue.hpp>
 #include <opm/input/eclipse/Schedule/SummaryState.hpp>
 

@@ -428,6 +428,10 @@ public:
         return grid.comm().sum(local_cells);
     }
 
+    void setupCartesianToCompressed_() {
+          this->updateCartesianToCompressedMapping_();
+    }
+
 protected:
     /*!
      * \brief Get function to query cell centroids for a distributed grid.
@@ -502,15 +506,14 @@ protected:
 
         const auto num_aqu_cells = this->allAquiferCells();
 
-        for (; elemIt != elemEndIt; ++elemIt) {
-            const Element& element = *elemIt;
+        for(const auto& element : elements(this->gridView())) {
             const unsigned int elemIdx = elemMapper.index(element);
             cellCenterDepth_[elemIdx] = cellCenterDepth(element);
 
             if (!num_aqu_cells.empty()) {
-                const unsigned int global_index = cartesianIndex(elemIdx);
-                const auto search = num_aqu_cells.find(global_index);
-                if (search != num_aqu_cells.end()) {
+               const unsigned int global_index = cartesianIndex(elemIdx);
+               const auto search = num_aqu_cells.find(global_index);
+               if (search != num_aqu_cells.end()) {
                     // updating the cell depth using aquifer cell depth
                     cellCenterDepth_[elemIdx] = search->second->depth;
                 }
@@ -530,9 +533,9 @@ protected:
         auto elemIt = this->gridView().template begin</*codim=*/0>();
         const auto& elemEndIt = this->gridView().template end</*codim=*/0>();
         for (; elemIt != elemEndIt; ++elemIt) {
-            const Element& element = *elemIt;
+            const auto& element = *elemIt;
             const unsigned int elemIdx = elemMapper.index(element);
-            cellThickness_[elemIdx] = asImp_().computeCellThickness(element);
+            cellThickness_[elemIdx] = computeCellThickness(element);
         }
     }
 
@@ -551,6 +554,29 @@ private:
 
         return zz/Scalar(corners);
     }
+    
+    Scalar computeCellThickness(const typename GridView::template Codim<0>::Entity& element) const
+    {
+        typedef typename Element::Geometry Geometry;
+        static constexpr int zCoord = Element::dimension - 1;
+        Scalar zz1 = 0.0;
+        Scalar zz2 = 0.0;
+
+        const Geometry& geometry = element.geometry();
+        // This code only works with CP-grid where the
+        // number of corners are 8 and
+        // also assumes that the first
+        // 4 corners are the top surface and
+        // the 4 next are the bottomn.
+        assert(geometry.corners() == 8);
+        for (int i=0; i < 4; ++i){
+            zz1 += geometry.corner(i)[zCoord];
+            zz2 += geometry.corner(i+4)[zCoord];
+        }
+        zz1 /=4;
+        zz2 /=4;
+        return zz2-zz1;
+     }
 
     Implementation& asImp_()
     { return *static_cast<Implementation*>(this); }

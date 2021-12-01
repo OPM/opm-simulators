@@ -300,8 +300,8 @@ public:
             // add cell data to perforations for Rft output
             this->eclOutputModule_->addRftDataToWells(localWellData, reportStepNum);
         }
-
-        if (this->collectToIORank_.isParallel()) {
+        
+        if (this->collectToIORank_.isParallel()|| this->collectToIORank_.doesNeedReordering()) {
             this->collectToIORank_.collect(localCellData,
                                            eclOutputModule_->getBlockData(),
                                            eclOutputModule_->getWBPData(),
@@ -461,7 +461,7 @@ private:
 
             eclOutputModule_->processElement(elemCtx);
         }
-        OPM_END_PARALLEL_TRY_CATCH("EclWriter::prepareLocalCellData() failed: ", simulator_.vanguard().grid().comm())
+        OPM_END_PARALLEL_TRY_CATCH("EclWriter::prepareLocalCellData() failed: ", simulator_.vanguard().grid().comm());
     }
 
     void captureLocalFluxData()

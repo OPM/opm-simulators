@@ -30,7 +30,10 @@
 
 #include "collecttoiorank.hh"
 #include <ebos/ecltransmissibility.hh>
-
+#if HAVE_DUNE_ALUGRID
+#include "alucartesianindexmapper.hh"
+#include <dune/alugrid/common/fromtogridfactory.hh>
+#endif // HAVE_DUNE_ALUGRID
 #include <opm/models/parallel/tasklets.hh>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 
@@ -62,9 +65,11 @@ namespace Opm {
 
 template <class Grid, class EquilGrid, class GridView, class ElementMapper, class Scalar>
 class EclGenericWriter
-{
+{ 
+    typedef Dune::CartesianIndexMapper<Grid> CartesianIndexMapper;
+    typedef Dune::CartesianIndexMapper<EquilGrid> EquilCartesianIndexMapper; 
     using CollectDataToIORankType = CollectDataToIORank<Grid,EquilGrid,GridView>;
-    using TransmissibilityType = EclTransmissibility<Grid,GridView,ElementMapper,Scalar>;
+    using TransmissibilityType = EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>;
 
 public:
     // The Simulator object should preferably have been const - the
@@ -83,7 +88,7 @@ public:
 
     const EclipseIO& eclIO() const;
 
-    void writeInit();
+    void writeInit(const std::function<unsigned int(unsigned int)>& map);
 
     void setTransmissibilities(const TransmissibilityType* globalTrans)
     {
@@ -98,10 +103,10 @@ public:
     {
         simulation_report_ = report;
     }
-
-
+   
 protected:
     const TransmissibilityType& globalTrans() const;
+    unsigned int gridEquilIdxToGridIdx(unsigned int elemIndex) const;
 
     void doWriteOutput(const int                     reportStepNum,
                        const bool                    isSubStep,
@@ -151,8 +156,8 @@ protected:
     SimulatorReport simulation_report_;
 
 private:
-    data::Solution computeTrans_(const std::unordered_map<int,int>& cartesianToActive) const;
-    std::vector<NNCdata> exportNncStructure_(const std::unordered_map<int,int>& cartesianToActive) const;
+    data::Solution computeTrans_(const std::unordered_map<int,int>& cartesianToActive, const std::function<unsigned int(unsigned int)>& map) const;
+    std::vector<NNCdata> exportNncStructure_(const std::unordered_map<int,int>& cartesianToActive, const std::function<unsigned int(unsigned int)>& map) const;
 };
 
 } // namespace Opm

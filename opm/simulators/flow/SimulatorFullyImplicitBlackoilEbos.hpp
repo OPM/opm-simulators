@@ -80,6 +80,7 @@ public:
     using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
     using SolutionVector = GetPropType<TypeTag, Properties::SolutionVector>;
     using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>;
+    using AquiferModel = GetPropType<TypeTag, Properties::EclAquiferModel>;
 
     typedef AdaptiveTimeSteppingEbos<TypeTag> TimeStepper;
     typedef BlackOilPolymerModule<TypeTag> PolymerModule;
@@ -90,7 +91,6 @@ public:
     typedef typename Model::ModelParameters ModelParameters;
     typedef typename Solver::SolverParameters SolverParameters;
     typedef BlackoilWellModel<TypeTag> WellModel;
-    typedef BlackoilAquiferModel<TypeTag> AquiferModel;
 
 
     /// Initialise from parameters and objects to observe.
