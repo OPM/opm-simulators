@@ -203,9 +203,6 @@ public:
         bool forceDisableProdOutput = false;
         bool forceDisableInjOutput = false;
         bool forceDisableCumOutput = false;
-        eclOutputModule_->outputProdLog(reportStepNum, isSubStep, forceDisableProdOutput);
-        eclOutputModule_->outputInjLog(reportStepNum, isSubStep, forceDisableInjOutput);
-        eclOutputModule_->outputCumLog(reportStepNum, isSubStep, forceDisableCumOutput);
 
         // Add TCPU
         if (totalCpuTime != 0.0) {
@@ -226,6 +223,10 @@ public:
                           summaryState(), udqState(),
                           inplace,
                           eclOutputModule_->initialInplace());
+
+        eclOutputModule_->outputProdLog(reportStepNum, isSubStep, forceDisableProdOutput);
+        eclOutputModule_->outputInjLog(reportStepNum, isSubStep, forceDisableInjOutput);
+        eclOutputModule_->outputCumLog(reportStepNum, isSubStep, forceDisableCumOutput);
     }
 
     void writeOutput(bool isSubStep)
