@@ -215,9 +215,6 @@ doInit(bool enabled, bool rst, size_t numGridDof,
             throw std::logic_error(fmt::format("Can not initialize tracer: {}", tracer.name));
     }
 
-    // initial tracer concentration
-    tracerConcentrationInitial_ = tracerConcentration_;
-
     // residual of tracers
     tracerResidual_.resize(numGridDof);
 

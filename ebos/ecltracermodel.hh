@@ -100,16 +100,62 @@ public:
     { }
 
 
-    /*!
-     * \brief Initialize all internal data structures needed by the tracer module
-     */
+    /*
+      The initialization of the tracer model is a three step process:
+
+      1. The init() method is called. This will allocate buffers and initialize
+         some phase index stuff. If this is a normal run the initial tracer
+         concentrations will be assigned from the TBLK or TVDPF keywords.
+
+      2. [Restart only:] The tracer concenntration are read from the restart
+         file and the concentrations are applied with repeated calls to the
+         setTracerConcentration() method. This is currently done in the
+         eclwriter::beginRestart() method.
+
+      3. Internally the tracer model manages the concentrations in "batches" for
+         the oil, water and gas tracers respectively. The batches should be
+         initialized with the initial concentration, that must be performed
+         after the concentration values have been assigned. This is done in
+         method prepareTracerBatches() called from eclproblem::finishInit().
+    */
     void init(bool rst)
     {
         bool enabled = EWOMS_GET_PARAM(TypeTag, bool, EnableTracerModel);
         this->doInit(enabled, rst, simulator_.model().numGridDof(),
                      gasPhaseIdx, oilPhaseIdx, waterPhaseIdx);
+    }
 
-        prepareTracerBatches();
+    void prepareTracerBatches()
+    {
+        for (size_t tracerIdx=0; tracerIdx<this->tracerPhaseIdx_.size(); ++tracerIdx) {
+            if (this->tracerPhaseIdx_[tracerIdx] == FluidSystem::waterPhaseIdx) {
+                if (! FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)){
+                    throw std::runtime_error("Water tracer specified for non-water fluid system:" + this->name(tracerIdx));
+                }
+
+                wat_.addTracer(tracerIdx, this->tracerConcentration_[tracerIdx]);
+            }
+            else if (this->tracerPhaseIdx_[tracerIdx] == FluidSystem::oilPhaseIdx) {
+                if (! FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)){
+                    throw std::runtime_error("Oil tracer specified for non-oil fluid system:" + this->name(tracerIdx));
+                }
+                if (FluidSystem::enableVaporizedOil()) {
+                    throw std::runtime_error("Oil tracer in combination with kw VAPOIL is not supported: " + this->name(tracerIdx));
+                }
+
+                oil_.addTracer(tracerIdx, this->tracerConcentration_[tracerIdx]);
+            }
+            else if (this->tracerPhaseIdx_[tracerIdx] == FluidSystem::gasPhaseIdx) {
+                if (! FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)){
+                    throw std::runtime_error("Gas tracer specified for non-gas fluid system:" + this->name(tracerIdx));
+                }
+                if (FluidSystem::enableDissolvedGas()) {
+                    throw std::runtime_error("Gas tracer in combination with kw DISGAS is not supported: " + this->name(tracerIdx));
+                }
+
+                gas_.addTracer(tracerIdx, this->tracerConcentration_[tracerIdx]);
+            }
+        }
     }
 
     void beginTimeStep()
@@ -430,38 +476,6 @@ protected:
         }
     }
 
-    void prepareTracerBatches()
-    {
-        for (size_t tracerIdx=0; tracerIdx<this->tracerPhaseIdx_.size(); ++tracerIdx) {
-            if (this->tracerPhaseIdx_[tracerIdx] == FluidSystem::waterPhaseIdx) {
-                if (! FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)){
-                    throw std::runtime_error("Water tracer specified for non-water fluid system:" + this->name(tracerIdx));
-                }
-
-                wat_.addTracer(tracerIdx, this->tracerConcentration_[tracerIdx]);
-            }
-            else if (this->tracerPhaseIdx_[tracerIdx] == FluidSystem::oilPhaseIdx) {
-                if (! FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)){
-                    throw std::runtime_error("Oil tracer specified for non-oil fluid system:" + this->name(tracerIdx));
-                }
-                if (FluidSystem::enableVaporizedOil()) {
-                    throw std::runtime_error("Oil tracer in combination with kw VAPOIL is not supported: " + this->name(tracerIdx));
-                }
-
-                oil_.addTracer(tracerIdx, this->tracerConcentration_[tracerIdx]);
-            }
-            else if (this->tracerPhaseIdx_[tracerIdx] == FluidSystem::gasPhaseIdx) {
-                if (! FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)){
-                    throw std::runtime_error("Gas tracer specified for non-gas fluid system:" + this->name(tracerIdx));
-                }
-                if (FluidSystem::enableDissolvedGas()) {
-                    throw std::runtime_error("Gas tracer in combination with kw DISGAS is not supported: " + this->name(tracerIdx));
-                }
-
-                gas_.addTracer(tracerIdx, this->tracerConcentration_[tracerIdx]);
-            }
-        }
-    }
 
     Simulator& simulator_;
 

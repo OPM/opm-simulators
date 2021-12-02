@@ -880,6 +880,7 @@ public:
             readEclRestartSolution_();
         else
             readInitialCondition_();
+        tracerModel_.prepareTracerBatches();
 
         updatePffDofData_();
 
