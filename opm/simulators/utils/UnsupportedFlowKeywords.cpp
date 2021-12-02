@@ -400,7 +400,6 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"NETBALAN", {false, std::nullopt}},
         {"NETCOMPA", {false, std::nullopt}},
         {"NEXT", {false, std::nullopt}},
-        {"NEXTSTEP", {false, std::nullopt}},
         {"NEXTSTPL", {false, std::nullopt}},
         {"NINENUM", {false, std::nullopt}},
         {"NINEPOIN", {false, std::nullopt}},

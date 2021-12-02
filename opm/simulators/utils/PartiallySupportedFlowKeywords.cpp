@@ -37,7 +37,7 @@ partiallySupported()
          {
             "COMPORD",
             {
-               {2,{false, allow_values<std::string> {"INPUT", "TRACK"}, "COMPORD(COMPORD): only INPUT and TRACK options supported – will STOP"}}, // ORDER_TYPE
+               {2,{true, allow_values<std::string> {"DEPTH", "INPUT", "TRACK"}, "COMPORD(COMPORD): should equal DEPTH INPUT or TRACK – will STOP"}}, // ORDER_TYPE
             },
          },
          {
@@ -50,7 +50,7 @@ partiallySupported()
          {
             "EHYSTR",
             {
-               {5,{false, allow_values<std::string> {"BOTH"}, "EHYSTR(HYSTOPT): only default value of BOTH is supported – will STOP"}}, // limiting_hyst_flag
+               {5,{true, allow_values<std::string> {"KR"}, "EHYSTR(HYSTOPT): only the KR relative permeability hysteresis option is supported – will STOP"}}, // limiting_hyst_flag
                {6,{false, allow_values<std::string> {}, "EHYSTR(HYSTSCAN): Killough’s option not supported and is ignored"}}, // shape_cap_press_flag
                {7,{false, allow_values<std::string> {}, "EHYSTR(HYSTMOB): mobility option not supported and is ignored"}}, // init_fluid_mob_flag
                {8,{false, allow_values<std::string> {"OIL"}, "EHYSTR(HYSTWET): only OIL supported value is ignored"}}, // wetting_phase_flag
@@ -85,36 +85,36 @@ partiallySupported()
          {
             "GCONINJE",
             {
-               {10,{false, allow_values<std::string> {"RATE", "NETV", "RESV", "VOID"}, "GCONINJE(GUIPHASE): only RATE/NETV/VOID are supported - will STOP"}}, // GUIDE_RATE_DEF
+               {10,{true, allow_values<std::string> {"RATE", "NETV", "RESV", "VOID"}, "GCONINJE(GUIPHASE): only RATE/NETV/RESV/VOID are supported - will STOP"}}, // GUIDE_RATE_DEF
             },
          },
          {
             "GCONPROD",
             {
-               {2,{false, allow_values<std::string> {"NONE", "FLD", "ORAT", "WRAT", "GRAT", "LRAT", "RESV"}, "GCONPROD(TARGET): valid option should be FLD/ORAT/WRAT/GRAT/LRAT or RESV – will STOP"}}, // CONTROL_MODE
-               {11,{false, allow_values<std::string> {}, "GCONPROD(ACTWAT): water violation procedure not implemented – will STOP"}}, // WATER_EXCEED_PROCEDURE
-               {12,{false, allow_values<std::string> {}, "GCONPROD(ACTGAS): gas violation procedure not implemented – will STOP"}}, // GAS_EXCEED_PROCEDURE
-               {13,{false, allow_values<std::string> {}, "GCONPROD(ACTLIQ): liquid violation procedure not implemented – will STOP"}}, // LIQUID_EXCEED_PROCEDURE
+               {2,{true, allow_values<std::string> {"NONE", "FLD", "ORAT", "WRAT", "GRAT", "LRAT", "RESV"}, "GCONPROD(TARGET): valid option should be NONE/FLD/ORAT/WRAT/GRAT/LRAT or RESV – will STOP"}}, // CONTROL_MODE
+               {11,{true, allow_values<std::string> {}, "GCONPROD(ACTWAT): water violation procedure not implemented – will STOP"}}, // WATER_EXCEED_PROCEDURE
+               {12,{true, allow_values<std::string> {}, "GCONPROD(ACTGAS): gas violation procedure not implemented – will STOP"}}, // GAS_EXCEED_PROCEDURE
+               {13,{true, allow_values<std::string> {}, "GCONPROD(ACTLIQ): liquid violation procedure not implemented – will STOP"}}, // LIQUID_EXCEED_PROCEDURE
                {21,{false, allow_values<std::string> {}, "GCONPROD(COMBPROC): linearly combined procedure is not used and should be defaulted (1*) – will continue"}}, // LIN_TARGET_EXCEED_PROCEDURE
             },
          },
          {
             "GEFAC",
             {
-               {3,{false, allow_values<std::string> {"YES"}, "GEFAC(GRPNETWK): Extended Network Model efficiency NO option not implemented – will STOP"}}, // TRANSFER_EXT_NET
+               {3,{true, allow_values<std::string> {"YES"}, "GEFAC(GRPNETWK): Extended Network Model efficiency NO option not implemented – will STOP"}}, // TRANSFER_EXT_NET
             },
          },
          {
             "GRIDOPTS",
             {
-               {1,{false, allow_values<std::string> {"NO"}, "GRIDOPTS(TRANMULT): only the NO option is supported – value ignored"}}, // TRANMULT
+               {1,{true, allow_values<std::string> {"NO", "YES"}, "GRIDOPTS(TRANMULT): should be set to either NO or YES – will STOP"}}, // TRANMULT
             },
          },
          {
             "GUIDERAT",
             {
                {2,{true, allow_values<std::string> {"OIL", "LIQ", "GAS", "RES", "NONE"}, "GUIDERAT(PHASE): unsupported option must be OIL LIQ GAS RES or NONE – will STOP"}}, // NOMINATED_PHASE
-               {9,{false, allow_values<std::string> {"YES"}, "GUIDERAT(GROPT01): only the default option of YES supported – will STOP"}}, // ALLOW_INCREASE
+               {9,{true, allow_values<std::string> {"YES"}, "GUIDERAT(GROPT01): only the default option of YES supported – will STOP"}}, // ALLOW_INCREASE
             },
          },
          {
@@ -158,14 +158,14 @@ partiallySupported()
          {
             "RESTART",
             {
-               {3,{false, allow_values<std::string> {}, "RESTART(RSTYPE): restart from SAVE file not supported – will STOP"}}, // SAVEFILE
-               {4,{false, allow_values<std::string> {"UNFORMATTED"}, "RESTART(RSFORMAT): restart from SAVE file not supported – will STOP"}}, // SAVEFILE_FORMAT
+               {3,{true, allow_values<std::string> {}, "RESTART(RSTYPE): restart from SAVE file not supported – will STOP"}}, // SAVEFILE
+               {4,{true, allow_values<std::string> {"UNFORMATTED"}, "RESTART(RSFORMAT): restart from SAVE file not supported – will STOP"}}, // SAVEFILE_FORMAT
             },
          },
          {
             "ROCKCOMP",
             {
-               {1,{false, allow_values<std::string> {"REVERS"}, "ROCKCOMP(ROCKOPT): only the REVERS option is supported"}}, // HYSTERESIS
+               {1,{true, allow_values<std::string> {"REVERS", "IRREVERS"}, "ROCKCOMP(ROCKOPT): only the REVERS and IRREVERS options are supported – will STOP"}}, // HYSTERESIS
                {3,{false, allow_values<std::string> {"YES"}, "ROCKCOMP(WATINOPT): only equal to YES is supported"}}, // WATER_COMPACTION
                {4,{false, allow_values<std::string> {}, "ROCKCOMP(PORTXROP): transmissibility dependent on porosity model is not supported"}}, // PORTXROP
             },
@@ -188,7 +188,7 @@ partiallySupported()
          {
             "SPECGRID",
             {
-               {5,{false, allow_values<std::string> {"F"}, "SPECGRID(TYPE): only option F (Cartesian grids supported) supported – will STOP"}}, // COORD_TYPE
+               {5,{true, allow_values<std::string> {"F"}, "SPECGRID(TYPE): only option F (Cartesian grids supported) supported – will STOP"}}, // COORD_TYPE
             },
          },
          {
@@ -221,19 +221,19 @@ partiallySupported()
          {
             "WCONHIST",
             {
-               {3,{false, allow_values<std::string> {"ORAT", "WRAT", "GRAT", "LRAT", "RESV", "BHP"}, "WCONHIST(TARGET): should be set to ORAT/WRAT/GRAT/LRAT/RESV or BHP – will STOP"}}, // CMODE
+               {3,{true, allow_values<std::string> {"ORAT", "WRAT", "GRAT", "LRAT", "RESV", "BHP"}, "WCONHIST(TARGET): should be set to ORAT/WRAT/GRAT/LRAT/RESV or BHP – will STOP"}}, // CMODE
             },
          },
          {
             "WEFAC",
             {
-               {3,{false, allow_values<std::string> {"YES"}, "WEFAC(WELNETWK): only the YES option is supported – will STOP"}}, // EXTENDED_NETWORK_OPT
+               {3,{true, allow_values<std::string> {"YES"}, "WEFAC(WELNETWK): only the YES option is supported – will STOP"}}, // EXTENDED_NETWORK_OPT
             },
          },
          {
             "WELSPECS",
             {
-               {8,{false, allow_values<std::string> {"STD", "NO"}, "WELSPECS(WELNETWK): only the STD and NO options are supported – will STOP"}}, // INFLOW_EQ
+               {8,{true, allow_values<std::string> {"STD", "NO"}, "WELSPECS(WELNETWK): only the STD and NO options are supported – will STOP"}}, // INFLOW_EQ
                {12,{false, allow_values<std::string> {"SEG"}, "WELSPECS(DENOPT): only the SEG option is supported – will continue"}}, // DENSITY_CALC
                {14,{false, allow_values<std::string> {}, "WELSPECS(STRMLIN1): not used  – will continue"}}, // FRONTSIM1
                {15,{false, allow_values<std::string> {}, "WELSPECS(STRMLIN2): not used – will continue"}}, // FRONTSIM2
@@ -243,13 +243,13 @@ partiallySupported()
          {
             "WELTARG",
             {
-               {2,{false, allow_values<std::string> {"ORAT", "WRAT", "GRAT", "LRAT", "RESV", "BHP", "THP", "VFP", "LIFT", "GUID"}, "WELTARG(TARGET): invalid option – will STOP"}}, // CMODE
+               {2,{true, allow_values<std::string> {"ORAT", "WRAT", "GRAT", "LRAT", "RESV", "BHP", "THP", "VFP", "LIFT", "GUID"}, "WELTARG(TARGET): invalid option – will STOP"}}, // CMODE
             },
          },
          {
             "WGRUPCON",
             {
-               {4,{false, allow_values<std::string> {"OIL", "WAT", "GAS", "LIQ", "RES", "RAT"}, "WGRUPCON(TARGET): only OIL WAT GAS LIQ RES RAT options are supported – will STOP"}}, // PHASE
+               {4,{true, allow_values<std::string> {"OIL", "WAT", "GAS", "LIQ", "RES", "RAT"}, "WGRUPCON(TARGET): only OIL WAT GAS LIQ RES RAT options are supported – will STOP"}}, // PHASE
             },
          },
          {
@@ -320,7 +320,7 @@ partiallySupported()
          {
             "EQUIL",
             {
-               {9,{false, [](int x) { return x >= -20 && x <= 0; }, "EQUIL(EQLOPT3): only values less than or equal to zero are supported (default is -5) - will STOP"}}, // OIP_INIT
+               {9,{true, [](int x) { return x >= -20 && x <= 0; }, "EQUIL(EQLOPT3): only values less than or equal to zero are supported (default is -5) - will STOP"}}, // OIP_INIT
                {10,{false, allow_values<int> {}, "EQUIL(EQLOPT4): compositional option not used – will continue"}}, // EQLOPT4
                {11,{false, allow_values<int> {}, "EQUIL(EQLOPT5): compositional option not used – will continue"}}, // EQLOPT5
             },
@@ -368,7 +368,7 @@ partiallySupported()
          {
             "NUMRES",
             {
-               {1,{false, allow_values<int> {1}, "NUMRES(NUMRES): only a value of one is supported – will STOP"}}, // NUM
+               {1,{true, allow_values<int> {1}, "NUMRES(NUMRES): only a value of one is supported – will STOP"}}, // NUM
             },
          },
          {
@@ -452,7 +452,7 @@ partiallySupported()
          {
             "WELSPECS",
             {
-               {17,{false, allow_values<int> {0}, "WELSPECS(POLYTAB): only the default value of zero is supported – will STOP"}}, // POLYMER_TABLE
+               {17,{true, allow_values<int> {0}, "WELSPECS(POLYTAB): only the default value of zero is supported – will STOP"}}, // POLYMER_TABLE
             },
          },
    };
@@ -492,6 +492,13 @@ partiallySupported()
             },
          },
          {
+            "DIFFC",
+            {
+               {7,{false, allow_values<double> {0}, "DIFFC(ISATNUM1): only default value of 0 supported – will continue"}}, // GAS_OIL_CROSS_DIFF_COEFF
+               {8,{false, allow_values<double> {0}, "DIFFC(ISATNUM2): only default value of 0 supported – will continue"}}, // OIL_OIL_CROSS_DIFF_COEFF
+            },
+         },
+         {
             "EDITNNC",
             {
                {14,{false, allow_values<double> {0}, "EDITNNC(DIFFNNC): not supported – will continue"}}, // DIFFM
@@ -500,7 +507,7 @@ partiallySupported()
          {
             "EHYSTR",
             {
-               {1,{false, allow_values<double> {0.1}, "EHYSTR(HYSTRCP): option is not supported – value ignored"}}, // curvature_caplillary_pressure_hyst
+               {1,{false, allow_values<double> {0.1}, "EHYSTR(HYSTRCP): option is not supported – value ignored"}}, // curvature_capillary_pressure_hyst
                {3,{false, allow_values<double> {1.0}, "EHYSTR(HYSTREL): Killough’s option not supported and is ignored"}}, // curvature_param_killough_wetting
                {4,{false, allow_values<double> {0.1}, "EHYSTR(HYSTSGR): Killough’s option not supported and is ignored"}}, // mod_param_trapped
                {12,{false, allow_values<double> {0}, "EHYSTR(HYTHRESH): Killough’s option not supported and is ignored"}}, // threshold_saturation
@@ -532,7 +539,7 @@ partiallySupported()
          {
             "GUIDERAT",
             {
-               {10,{false, [](double x) { return x >= 0; }, "GUIDERAT(GROPT01): only only positive values allowed – will STOP"}}, // ALLOW_INCREASE
+               {10,{true, [](double x) { return x >= 0; }, "GUIDERAT(GROPT01): only only positive values allowed – will STOP"}}, // ALLOW_INCREASE
             },
          },
          {

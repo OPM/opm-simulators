@@ -1741,13 +1741,13 @@ namespace Opm
             auto bhp_at_thp_limit = computeBhpAtThpLimitInj(ebos_simulator, summary_state, deferred_logger);
             if (bhp_at_thp_limit) {
                 const double bhp = std::min(*bhp_at_thp_limit, controls.bhp_limit);
-                computeWellRatesWithBhpIterations(ebos_simulator, bhp, potentials, deferred_logger);
+                computeWellRatesWithBhp(ebos_simulator, bhp, potentials, deferred_logger);
             } else {
                 deferred_logger.warning("FAILURE_GETTING_CONVERGED_POTENTIAL",
                                         "Failed in getting converged thp based potential calculation for well "
                                         + name() + ". Instead the bhp based value is used");
                 const double bhp = controls.bhp_limit;
-                computeWellRatesWithBhpIterations(ebos_simulator, bhp, potentials, deferred_logger);
+                computeWellRatesWithBhp(ebos_simulator, bhp, potentials, deferred_logger);
             }
         } else {
             computeWellRatesWithThpAlqProd(
@@ -1774,7 +1774,7 @@ namespace Opm
         if (bhp_at_thp_limit) {
             const auto& controls = this->well_ecl_.productionControls(summary_state);
             bhp = std::max(*bhp_at_thp_limit, controls.bhp_limit);
-            computeWellRatesWithBhpIterations(ebos_simulator, bhp, potentials, deferred_logger);
+            computeWellRatesWithBhp(ebos_simulator, bhp, potentials, deferred_logger);
         }
         else {
             deferred_logger.warning("FAILURE_GETTING_CONVERGED_POTENTIAL",
@@ -1782,7 +1782,7 @@ namespace Opm
                 + name() + ". Instead the bhp based value is used");
             const auto& controls = this->well_ecl_.productionControls(summary_state);
             bhp = controls.bhp_limit;
-            computeWellRatesWithBhpIterations(ebos_simulator, bhp, potentials, deferred_logger);
+            computeWellRatesWithBhp(ebos_simulator, bhp, potentials, deferred_logger);
         }
         return bhp;
     }

@@ -84,13 +84,52 @@ gasTarget(const std::string& group_name)
     return group_rate.gasTarget();
 }
 
+double
+GasLiftGroupInfo::
+getRate(Rate rate_type, const std::string& group_name)
+{
+    switch (rate_type) {
+    case Rate::oil:
+        return oilRate(group_name);
+    case Rate::gas:
+        return gasRate(group_name);
+    case Rate::water:
+        return waterRate(group_name);
+    case Rate::liquid:
+        return oilRate(group_name) + waterRate(group_name);
+    default:
+        // Need this to avoid compiler warning : control reaches end of non-void function
+        throw std::runtime_error("This should not happen");
+    }
+}
+
+
 std::tuple<double, double, double, double>
 GasLiftGroupInfo::
-getRates(int group_idx)
+getRates(const int group_idx)
 {
     const auto& group_name = groupIdxToName(group_idx);
     auto& rates = this->group_rate_map_.at(group_name);
     return std::make_tuple(rates.oilRate(), rates.gasRate(), rates.waterRate(), rates.alq());
+}
+
+std::optional<double>
+GasLiftGroupInfo::
+getTarget(Rate rate_type, const std::string& group_name)
+{
+    switch (rate_type) {
+    case Rate::oil:
+        return oilTarget(group_name);
+    case Rate::gas:
+        return gasTarget(group_name);
+    case Rate::water:
+        return waterTarget(group_name);
+    case Rate::liquid:
+        return liquidTarget(group_name);
+    default:
+        // Need this to avoid compiler warning : control reaches end of non-void function
+        throw std::runtime_error("This should not happen");
+    }
 }
 
 std::vector<std::pair<std::string,double>>&
@@ -187,6 +226,23 @@ liquidTarget(const std::string &group_name)
 {
     auto& group_rate = this->group_rate_map_.at(group_name);
     return group_rate.liquidTarget();
+}
+
+const std::string
+GasLiftGroupInfo::
+rateToString(Rate rate) {
+    switch (rate) {
+    case Rate::oil:
+        return "oil";
+    case Rate::gas:
+        return "gas";
+    case Rate::water:
+        return "water";
+    case Rate::liquid:
+        return "liquid";
+    default:
+        throw std::runtime_error("This should not happen");
+    }
 }
 
 void
