@@ -25,6 +25,7 @@
 #include <flow/flow_ebos_blackoil.hpp>
 
 #include <flow/flow_ebos_gasoil.hpp>
+#include <flow/flow_ebos_gasoil_energy.hpp>
 #include <flow/flow_ebos_oilwater.hpp>
 #include <flow/flow_ebos_gaswater.hpp>
 #include <flow/flow_ebos_solvent.hpp>
@@ -288,7 +289,7 @@ private:
         }
 
         // Twophase cases
-        else if (phases.size() == 2) {
+        else if (phases.size() == 2 && !eclipseState_->getSimulationConfig().isThermal()) {
             return this->runTwoPhase(phases);
         }
 
@@ -319,7 +320,7 @@ private:
 
         // Energy case
         else if (eclipseState_->getSimulationConfig().isThermal()) {
-            return this->runThermal();
+            return this->runThermal(phases);
         }
 
         // Blackoil case
@@ -666,8 +667,15 @@ private:
         return flowEbosExtboMain(argc_, argv_, outputCout_, outputFiles_);
     }
 
-    int runThermal()
+    int runThermal(const Phases& phases)
     {
+        // oil-gas-thermal
+        if (!phases.active( Phase::WATER ) && phases.active( Phase::OIL ) && phases.active( Phase::GAS )) {
+            flowEbosGasOilEnergySetDeck(
+                setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
+            return flowEbosGasOilEnergyMain(argc_, argv_, outputCout_, outputFiles_);
+        }
+
         flowEbosEnergySetDeck(
             setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
 
