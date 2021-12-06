@@ -347,8 +347,9 @@ beginEpisode_(bool enableExperiments,
     // react to TUNING changes
     if (episodeIdx > 0 && enableTuning_ && events.hasEvent(ScheduleEvents::TUNING_CHANGE))
     {
-        const auto& tuning = schedule_[episodeIdx].tuning();
-        initialTimeStepSize_ = tuning.TSINIT;
+        const auto& sched_state = schedule_[episodeIdx];
+        const auto& tuning = sched_state.tuning();
+        initialTimeStepSize_ = sched_state.max_next_tstep();
         maxTimeStepAfterWellEvent_ = tuning.TMAXWC;
         maxTimeStepSize_ = tuning.TSMAXZ;
         restartShrinkFactor_ = 1./tuning.TSFCNV;
