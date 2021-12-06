@@ -551,11 +551,6 @@ struct EnableThermalFluxBoundaries<TypeTag, TTag::EclBaseProblem> {
     static constexpr bool value = false;
 };
 
-template<class TypeTag>
-struct EnableTracerModel<TypeTag, TTag::EclBaseProblem> {
-    static constexpr bool value = true;
-};
-
 // By default, simulators derived from the EclBaseProblem are production simulators,
 // i.e., experimental features must be explicitly enabled at compile time
 template<class TypeTag>
@@ -702,8 +697,6 @@ public:
                              "Tell the output writer to use double precision. Useful for 'perfect' restarts");
         EWOMS_REGISTER_PARAM(TypeTag, unsigned, RestartWritingInterval,
                              "The frequencies of which time steps are serialized to disk");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, EnableTracerModel,
-                             "Transport tracers found in the deck.");
         EWOMS_REGISTER_PARAM(TypeTag, bool, EclEnableDriftCompensation,
                              "Enable partial compensation of systematic mass losses via the source term of the next time step");
         if constexpr (enableExperiments)
