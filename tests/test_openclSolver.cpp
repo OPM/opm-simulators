@@ -75,15 +75,16 @@ testOpenclSolver(const boost::property_tree::ptree& prm, const std::string& matr
     const std::string opencl_ilu_reorder("none");
     const int platformID = 0;
     const int deviceID = 0;
-    const std::string gpu_mode("opencl");
+    const std::string accelerator_mode("opencl");
     const std::string fpga_bitstream("empty");    // unused
+    const std::string linsolver("ilu0");
     Dune::InverseOperatorResult result;
 
     Vector x(rhs.size());
     auto wellContribs = Opm::WellContributions::create("opencl", false);
     std::unique_ptr<Opm::BdaBridge<Matrix, Vector, bz> > bridge;
     try {
-        bridge = std::make_unique<Opm::BdaBridge<Matrix, Vector, bz> >(gpu_mode, fpga_bitstream, linear_solver_verbosity, maxit, tolerance, platformID, deviceID, opencl_ilu_reorder);
+        bridge = std::make_unique<Opm::BdaBridge<Matrix, Vector, bz> >(accelerator_mode, fpga_bitstream, linear_solver_verbosity, maxit, tolerance, platformID, deviceID, opencl_ilu_reorder, linsolver);
     } catch (const std::logic_error& error) {
         BOOST_WARN_MESSAGE(true, error.what());
         throw PlatformInitException(error.what());
@@ -100,8 +101,8 @@ void test3(const pt::ptree& prm)
 {
     const int bz = 3;
     auto sol = testOpenclSolver<bz>(prm, "matr33.txt", "rhs3.txt");
-    Dune::BlockVector<Dune::FieldVector<double, bz>> expected {{-1.30307e-2, -3.58263e-6, 1.13836e-9},
-            {-1.25425e-3, -1.4167e-4, -3.2213e-3},
+    Dune::BlockVector<Dune::FieldVector<double, bz>> expected {{-0.0131626, -3.58263e-6, 1.13836e-9},
+            {-1.25425e-3, -1.4167e-4, -0.0029366},
                 {-4.5436e-4, 1.28682e-5, 4.7644e-6}};
     BOOST_REQUIRE_EQUAL(sol.size(), expected.size());
     for (size_t i = 0; i < sol.size(); ++i) {

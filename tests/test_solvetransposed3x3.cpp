@@ -32,24 +32,48 @@ BOOST_AUTO_TEST_CASE(testsolvetransposed3x3)
     const unsigned numTests = 3;
     const unsigned blockSize = 3;
 
-    std::vector<std::vector<double> > A = {{-0.0973322, 1.18758e-08, -0.000185231,
-                                            0.125114, 1.24919e-11, 0,
-                                            -11.3854, 1.32995e-06, 0.065447},
-                                           {-0.00354818, 2.24354e-08, 55.9563,
-                                            0.284031, 2.83543e-11, 0,
-                                            -62.1156, 0.000392767, 6350.26},
-                                           {1, 0, 2,
-                                            3, 1, 0,
-                                            0, 0, 3}};
+    std::vector<std::vector<double> > A = {{4, 2, 1,
+                                            3, 4, 2,
+                                            2, 4, 3},
+                                           {1, 2, 4,
+                                            1, 3, 2,
+                                            2, 4, 2},
+                                           {1, 2, 2,
+                                            1, 3, 5,
+                                            3, 2, 4}};
 
-    std::vector<double> b = {0, 1, 0};
-    std::vector<double> x(blockSize);
-    std::vector<std::vector<double> > x_expected = {{63886256.67, 66154278, 180813.715},
-                                                    {-290820.58, 556792.09, 2562.61063},
-                                                    {-3, 1, 2}};
+    std::vector<std::vector<double> > b = {{0, 1, 0},
+                                           {1, 3, 5},
+                                           {2, 4, 5}};
+
+    std::vector<std::vector<double> > x_expected = {{-0.5,   1, -0.5},
+                                                    {   1,   1, -0.5},
+                                                    { 1.3, 0.4,  0.1}};
 
     for (unsigned testId = 0; testId < numTests; ++testId) {
-        Opm::Accelerator::solve_transposed_3x3(A[testId].data(), b.data(), x.data());
+        std::vector<double> x(blockSize);
+        Opm::Accelerator::solve_transposed_3x3(A[testId].data(), b[testId].data(), x.data());
+
+        for (unsigned i = 0; i < blockSize; ++i) {
+            BOOST_CHECK_CLOSE(x[i], x_expected[testId][i], 1e-6);
+        }
+    }
+
+    // retest cases using Dune methods
+    using Mat3 = Dune::FieldMatrix<double, 3, 3>;
+    using Vec3 = Dune::FieldVector<double, 3>;
+    for (unsigned testId = 0; testId < numTests; ++testId) {
+        Mat3 a3 = {{ A[testId][0], A[testId][1], A[testId][2] },
+                   { A[testId][3], A[testId][4], A[testId][5] },
+                   { A[testId][6], A[testId][7], A[testId][8] } };
+        Vec3 y({b[testId][0], b[testId][1], b[testId][2]});
+        Mat3 b3 = a3;
+
+        // b3 = inv(a3^T)
+        Dune::FMatrixHelp::invertMatrix_retTransposed(a3, b3);
+
+        // x = b3 * y
+        Vec3 x = Dune::FMatrixHelp::mult(b3, y);
 
         for (unsigned i = 0; i < blockSize; ++i) {
             BOOST_CHECK_CLOSE(x[i], x_expected[testId][i], 1e-6);
