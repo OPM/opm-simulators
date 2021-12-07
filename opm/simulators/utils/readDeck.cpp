@@ -30,6 +30,7 @@
 
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/OpmLog/EclipsePRTLog.hpp>
+#include <opm/common/OpmLog/LogBackend.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/utility/OpmInputError.hpp>
 #include <opm/common/utility/String.hpp>
@@ -74,6 +75,19 @@
 #include <utility>
 
 namespace {
+
+    class NullLog : public Opm::LogBackend
+    {
+    public:
+        explicit NullLog(const std::int64_t messageMask)
+            : Opm::LogBackend{ messageMask }
+        {}
+
+    protected:
+        void addMessageUnconditionally([[maybe_unused]] const std::int64_t messageType,
+                                       [[maybe_unused]] const std::string& message) override
+        {}
+    };
 
     void setupMessageLimiter(const Opm::MessageLimits& msgLimits,
                              const std::string& stdout_log_id)
@@ -405,16 +419,27 @@ Opm::setupLogging(const int          mpi_rank_,
     }
 
     if (output > FileOutputMode::OUTPUT_NONE) {
-        std::shared_ptr<Opm::EclipsePRTLog> prtLog = std::make_shared<Opm::EclipsePRTLog>(logFileStream.str(), Opm::Log::NoDebugMessageTypes, false, output_cout_);
-        Opm::OpmLog::addBackend("ECLIPSEPRTLOG", prtLog);
-        prtLog->setMessageLimiter(std::make_shared<Opm::MessageLimiter>());
-        prtLog->setMessageFormatter(std::make_shared<Opm::SimpleMessageFormatter>(false));
+        if (mpi_rank_ == 0) {
+            std::shared_ptr<Opm::EclipsePRTLog> prtLog = std::make_shared<Opm::EclipsePRTLog>(logFileStream.str(), Opm::Log::NoDebugMessageTypes, false, output_cout_);
+            Opm::OpmLog::addBackend("ECLIPSEPRTLOG", prtLog);
+            prtLog->setMessageLimiter(std::make_shared<Opm::MessageLimiter>());
+            prtLog->setMessageFormatter(std::make_shared<Opm::SimpleMessageFormatter>(false));
+        }
+        else {
+            auto prtLog = std::make_shared<NullLog>(Opm::Log::NoDebugMessageTypes);
+            Opm::OpmLog::addBackend("ECLIPSEPRTLOG", std::move(prtLog));
+        }
     }
 
     if (output >= FileOutputMode::OUTPUT_LOG_ONLY) {
-        std::string debugFile = debugFileStream.str();
-        std::shared_ptr<Opm::StreamLog> debugLog = std::make_shared<Opm::EclipsePRTLog>(debugFileStream.str(), Opm::Log::DefaultMessageTypes, false, output_cout_);
-        Opm::OpmLog::addBackend("DEBUGLOG", debugLog);
+        if (mpi_rank_ == 0) {
+            std::shared_ptr<Opm::StreamLog> debugLog = std::make_shared<Opm::EclipsePRTLog>(debugFileStream.str(), Opm::Log::DefaultMessageTypes, false, output_cout_);
+            Opm::OpmLog::addBackend("DEBUGLOG", std::move(debugLog));
+        }
+        else {
+            auto debugLog = std::make_shared<NullLog>(Opm::Log::DefaultMessageTypes);
+            Opm::OpmLog::addBackend("DEBUGLOG", std::move(debugLog));
+        }
     }
 
     if (mpi_rank_ == 0) {
