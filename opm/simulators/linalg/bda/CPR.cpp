@@ -238,7 +238,11 @@ void CPR<block_size>::create_preconditioner_amg(BlockedMatrix *mat_) {
             }
         }
 
+#if HAVE_MPI
         using Communication = Dune::OwnerOverlapCopyCommunication<int, int>;
+#else
+	using Communication = Dune::Amg::SequentialInformation;
+#endif
         using OverlapFlags = Dune::NegateSet<Communication::OwnerSet>;
         if (recalculate_aggregates) {
             dune_coarse = std::make_unique<DuneMat>(Nb, Nb, nnzb, DuneMat::row_wise);
