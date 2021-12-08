@@ -69,6 +69,7 @@ tests[spe1_thermal_onephase]="flow_onephase_energy spe1 SPE1CASE2_THERMAL_ONEPHA
 tests[spe1_thermal_watvisc]="flow spe1 SPE1CASE2_THERMAL_WATVISC"
 tests[spe1_rockcomp]="flow spe1 SPE1CASE2_ROCK2DTR"
 tests[spe1_brine]="flow spe1_brine SPE1CASE1_BRINE"
+tests[spe1_brine_gaswater]="flow spe1_brine SPE1CASE2_BRINE_GASWATER"
 tests[spe1_water]="flow_onephase spe1 SPE1CASE1_WATER"
 tests[spe1_spider]="flow radial_grid SPIDER_CAKESLICE"
 tests[spe1_radial]="flow radial_grid RADIAL_CAKESLICE"
