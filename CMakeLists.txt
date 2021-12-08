@@ -382,7 +382,7 @@ set_property(TARGET moduleVersion PROPERTY POSITION_INDEPENDENT_CODE ON)
 add_dependencies(moduleVersion opmsimulators)
 
 set(FLOW_MODELS blackoil brine energy extbo foam gasoil gaswater
-                oilwater oilwater_brine oilwater_polymer
+                oilwater oilwater_brine gaswater_brine oilwater_polymer
                 oilwater_polymer_injectivity micp polymer solvent
                 gasoil_energy)
 set(FLOW_VARIANT_MODELS brine_energy onephase onephase_energy)

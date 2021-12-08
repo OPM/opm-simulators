@@ -34,6 +34,7 @@
 #include <flow/flow_ebos_foam.hpp>
 #include <flow/flow_ebos_brine.hpp>
 #include <flow/flow_ebos_oilwater_brine.hpp>
+#include <flow/flow_ebos_gaswater_brine.hpp>
 #include <flow/flow_ebos_energy.hpp>
 #include <flow/flow_ebos_oilwater_polymer.hpp>
 #include <flow/flow_ebos_oilwater_polymer_injectivity.hpp>
@@ -639,10 +640,18 @@ private:
             return EXIT_FAILURE;
         }
 
-        if (phases.size() == 3) { // oil water brine case
-            flowEbosOilWaterBrineSetDeck(
-                setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
-            return flowEbosOilWaterBrineMain(argc_, argv_, outputCout_, outputFiles_);
+        if (phases.size() == 3) { 
+
+            if (phases.active(Phase::OIL)){ // oil water brine case
+                flowEbosOilWaterBrineSetDeck(
+                    setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
+                return flowEbosOilWaterBrineMain(argc_, argv_, outputCout_, outputFiles_);
+            }
+            if (phases.active(Phase::GAS)){ // gas water brine case
+                flowEbosGasWaterBrineSetDeck(
+                    setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
+                return flowEbosGasWaterBrineMain(argc_, argv_, outputCout_, outputFiles_);
+            }
         }
         else {
             flowEbosBrineSetDeck(
