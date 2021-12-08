@@ -17,10 +17,13 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <config.h>
+
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/ErrorMacros.hpp>
 
-#include <opm/simulators/linalg/bda/FPGAMatrix.hpp>
+#include <opm/simulators/linalg/bda/BlockedMatrix.hpp>
+#include <opm/simulators/linalg/bda/Matrix.hpp>
 #include <opm/simulators/linalg/bda/FPGAUtils.hpp>
 
 namespace Opm
@@ -57,6 +60,7 @@ void sortRow(int *colIndices, double *data, int left, int right) {
 
 }
 
+#if HAVE_FPGA
 /*
  * Write all data used by the VHDL testbenches to raw data arrays. The arrays are as follows:
  * - The "colorSizes" array, which first contains the number of rows, columns, non-zero values
@@ -247,6 +251,8 @@ int Matrix::toRDF(int numColors, std::vector<int>& nodesPerColor,
 
     return 0;
 }
+#endif
+
 
 } // namespace Accelerator
 } // namespace Opm

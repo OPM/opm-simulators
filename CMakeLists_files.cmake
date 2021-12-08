@@ -100,18 +100,21 @@ if(OPENCL_FOUND)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/BILU0.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/Reorder.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/ChowPatelIlu.cpp)
+  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/CPR.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/openclKernels.cpp)
+  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/OpenclMatrix.cpp)
+  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/Preconditioner.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/openclSolverBackend.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/openclWellContributions.cpp)
 endif()
 if(CUDA_FOUND OR OPENCL_FOUND OR HAVE_FPGA OR HAVE_AMGCL)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/WellContributions.cpp)
+  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/Matrix.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/MultisegmentWellContribution.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/BdaBridge.cpp)
 endif()
 if(HAVE_FPGA)
-  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/FPGAMatrix.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/FPGABILU0.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/FPGASolverBackend.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/FPGAUtils.cpp)
@@ -145,6 +148,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_timer.cpp
   tests/test_invert.cpp
   tests/test_stoppedwells.cpp
+  tests/test_solvetransposed3x3.cpp
   tests/test_relpermdiagnostics.cpp
   tests/test_norne_pvt.cpp
   tests/test_wellprodindexcalculator.cpp
@@ -247,10 +251,10 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/bda/BdaSolver.hpp
   opm/simulators/linalg/bda/BILU0.hpp
   opm/simulators/linalg/bda/BlockedMatrix.hpp
+  opm/simulators/linalg/bda/CPR.hpp
   opm/simulators/linalg/bda/cuda_header.hpp
   opm/simulators/linalg/bda/cusparseSolverBackend.hpp
   opm/simulators/linalg/bda/ChowPatelIlu.hpp
-  opm/simulators/linalg/bda/FPGAMatrix.hpp
   opm/simulators/linalg/bda/FPGABILU0.hpp
   opm/simulators/linalg/bda/FPGASolverBackend.hpp
   opm/simulators/linalg/bda/FPGAUtils.hpp
@@ -258,8 +262,11 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/bda/ILUReorder.hpp
   opm/simulators/linalg/bda/opencl.hpp
   opm/simulators/linalg/bda/openclKernels.hpp
+  opm/simulators/linalg/bda/OpenclMatrix.hpp
+  opm/simulators/linalg/bda/opencl/Preconditioner.hpp
   opm/simulators/linalg/bda/openclSolverBackend.hpp
   opm/simulators/linalg/bda/openclWellContributions.hpp
+  opm/simulators/linalg/bda/Matrix.hpp
   opm/simulators/linalg/bda/MultisegmentWellContribution.hpp
   opm/simulators/linalg/bda/WellContributions.hpp
   opm/simulators/linalg/amgcpr.hh

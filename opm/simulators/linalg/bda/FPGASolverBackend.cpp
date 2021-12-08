@@ -20,6 +20,7 @@
 #include <config.h>
 
 #include <cmath>
+#include <cstring>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/material/common/Unused.hpp>
@@ -261,7 +262,7 @@ void FpgaSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, double
 
     // allocate host memory for matrices and vectors
     // actual data for mat points to std::vector.data() in ISTLSolverEbos, so no alloc/free here
-    mat.reset(new BlockedMatrix<block_size>(N_ / block_size, nnz_ / block_size / block_size, vals, cols, rows));
+    mat.reset(new BlockedMatrix(N_ / block_size, nnz_ / block_size / block_size, block_size, vals, cols, rows));
 
     std::ostringstream oss;
     oss << "Initializing FPGA data, matrix size: " << this->N << " blocks, nnz: " << this->nnzb << " blocks, " << \

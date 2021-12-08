@@ -52,9 +52,8 @@ int colorBlockedNodes(int rows, const int *CSRRowPointers, const int *CSRColIndi
 /// \param[in] mat           matrix to be reordered
 /// \param[in] toOrder       reorder pattern that lists for each index in the original order, to which index in the new order it should be moved
 /// \param[in] fromOrder     reorder pattern that lists for each index in the new order, from which index in the original order it was moved
-/// \param[inout] rMat       reordered Matrix 
-template <unsigned int block_size>
-void reorderBlockedMatrixByPattern(BlockedMatrix<block_size> *mat, int *toOrder, int *fromOrder, BlockedMatrix<block_size> *rmat);
+/// \param[inout] rMat       reordered Matrix
+void reorderBlockedMatrixByPattern(BlockedMatrix *mat, int *toOrder, int *fromOrder, BlockedMatrix *rmat);
 
 /// Compute reorder mapping from the color that each node has received
 /// The toOrder, fromOrder and iters arrays must be allocated already

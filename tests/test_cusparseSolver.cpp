@@ -76,15 +76,16 @@ testCusparseSolver(const boost::property_tree::ptree& prm, const std::string& ma
     const std::string opencl_ilu_reorder("none"); // unused
     const int platformID = 0;                     // unused
     const int deviceID = 0;
-    const std::string gpu_mode("cusparse");
+    const std::string accelerator_mode("cusparse");
     const std::string fpga_bitstream("empty");    // unused
+    const std::string linsolver("ilu0");
     Dune::InverseOperatorResult result;
 
     Vector x(rhs.size());
     auto wellContribs = Opm::WellContributions::create("cusparse", false);
     std::unique_ptr<Opm::BdaBridge<Matrix, Vector, bz> > bridge;
     try {
-        bridge = std::make_unique<Opm::BdaBridge<Matrix, Vector, bz> >(gpu_mode, fpga_bitstream, linear_solver_verbosity, maxit, tolerance, platformID, deviceID, opencl_ilu_reorder);
+        bridge = std::make_unique<Opm::BdaBridge<Matrix, Vector, bz> >(accelerator_mode, fpga_bitstream, linear_solver_verbosity, maxit, tolerance, platformID, deviceID, opencl_ilu_reorder, linsolver);
 
         bridge->solve_system(&matrix, rhs, *wellContribs, result);
         bridge->get_result(x);

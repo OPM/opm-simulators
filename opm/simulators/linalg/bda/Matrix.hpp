@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef FPGA_MATRIX_HEADER_INCLUDED
-#define FPGA_MATRIX_HEADER_INCLUDED
+#ifndef OPM_MATRIX_HEADER_INCLUDED
+#define OPM_MATRIX_HEADER_INCLUDED
 
 #include <vector>
 
@@ -33,25 +33,30 @@ class Matrix {
 
 public:
 
-    /// Allocate Matrix and data arrays with given sizes
+    /// Allocate square Matrix and data arrays with given sizes
     /// \param[in] N               number of rows
     /// \param[in] nnzs            number of nonzeros
     Matrix(int N_, int nnzs_)
-    : nnzValues(new double[nnzs_]),
-      colIndices(new int[nnzs_]),
-      rowPointers(new int[N_+1]),
-      N(N_),
+    : N(N_),
+      M(N_),
       nnzs(nnzs_)
-    {}
-
-    /// All constructors allocate new memory, so always delete here
-    ~Matrix(){
-        delete[] nnzValues;
-        delete[] colIndices;
-        delete[] rowPointers;
+    {
+        nnzValues.resize(nnzs);
+        colIndices.resize(nnzs);
+        rowPointers.resize(N+1);
     }
 
+    /// Allocate rectangular Matrix and data arrays with given sizes
+    /// \param[in] N               number of rows
+    /// \param[in] M               number of columns
+    /// \param[in] nnzs            number of nonzeros
+    Matrix(int N_, int M_, int nnzs_)
+    : Matrix(N_, nnzs_)
+    {
+        M = M_;
+    }
 
+#if HAVE_FPGA
     /// Converts this matrix to the dataformat used by the FPGA.
     /// The FPGA uses a new data format called CSRO (Compressed Sparse Row Offset).
     /// The purpose of this format is to allow the data to be streamable.
@@ -71,11 +76,12 @@ public:
     int toRDF(int numColors, std::vector<int>& nodesPerColor,
         std::vector<std::vector<int> >& colIndicesInColor, int nnzsPerRowLimit, 
         std::vector<std::vector<double> >& ubNnzValues, short int *ubColIndices, int *nnzValsSizes, unsigned char *NROffsets, int *colorSizes);
+#endif
 
-    double *nnzValues;
-    int *colIndices;
-    int *rowPointers;
-    int N;
+    std::vector<double> nnzValues;
+    std::vector<int> colIndices;
+    std::vector<int> rowPointers;
+    int N, M;
     int nnzs;
 };
 
@@ -84,4 +90,4 @@ void sortRow(int *colIndices, double *data, int left, int right);
 } // namespace Accelerator
 } // namespace Opm
 
-#endif // FPGA_MATRIX_HEADER_INCLUDED
+#endif // OPM_MATRIX_HEADER_INCLUDED

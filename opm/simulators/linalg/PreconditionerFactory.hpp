@@ -122,7 +122,6 @@ public:
         instance().doAddCreator(type, creator);
     }
 
-private:
     using CriterionBase
         = Dune::Amg::AggregationCriterion<Dune::Amg::SymmetricDependency<Matrix, Dune::Amg::FirstDiagonal>>;
     using Criterion = Dune::Amg::CoarsenCriterion<CriterionBase>;
@@ -150,6 +149,7 @@ private:
         criterion.setMinAggregateSize(prm.get<int>("minaggsize", 4));
         return criterion;
     }
+private:
 
     /// Helper struct to explicitly overload amgSmootherArgs() version for
     /// ParallelOverlappingILU0, since in-class specialization is not allowed.

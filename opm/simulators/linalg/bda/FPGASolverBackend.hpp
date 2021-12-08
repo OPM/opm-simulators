@@ -56,8 +56,8 @@ private:
     bool level_scheduling = false;
 
     // LUMat will shallow copy rowPointers and colIndices of mat/rMat
-    std::unique_ptr<BlockedMatrix<block_size> > mat = nullptr;
-    BlockedMatrix<block_size> *rMat = nullptr;
+    std::unique_ptr<BlockedMatrix> mat = nullptr;
+    BlockedMatrix *rMat = nullptr;
     std::unique_ptr<Preconditioner> prec = nullptr;
 
     // vectors with data processed by the preconditioner (input to the kernel)

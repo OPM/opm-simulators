@@ -146,7 +146,8 @@ namespace Opm
                 const std::string opencl_ilu_reorder = EWOMS_GET_PARAM(TypeTag, std::string, OpenclIluReorder);
                 const int linear_solver_verbosity = parameters_.linear_solver_verbosity_;
                 std::string fpga_bitstream = EWOMS_GET_PARAM(TypeTag, std::string, FpgaBitstream);
-                bdaBridge.reset(new BdaBridge<Matrix, Vector, block_size>(accelerator_mode, fpga_bitstream, linear_solver_verbosity, maxit, tolerance, platformID, deviceID, opencl_ilu_reorder));
+                std::string linsolver = EWOMS_GET_PARAM(TypeTag, std::string, Linsolver);
+                bdaBridge.reset(new BdaBridge<Matrix, Vector, block_size>(accelerator_mode, fpga_bitstream, linear_solver_verbosity, maxit, tolerance, platformID, deviceID, opencl_ilu_reorder, linsolver));
             }
 #else
             if (EWOMS_GET_PARAM(TypeTag, std::string, AcceleratorMode) != "none") {

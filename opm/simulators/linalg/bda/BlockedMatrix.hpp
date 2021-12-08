@@ -17,14 +17,14 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef BLOCKED_MATRIX_HPP
-#define BLOCKED_MATRIX_HPP
+#ifndef OPM_BLOCKED_MATRIX_HPP
+#define OPM_BLOCKED_MATRIX_HPP
 
 #if HAVE_FPGA
 #include <vector>
+#include <opm/simulators/linalg/bda/Matrix.hpp>
 #endif
 
-#include <opm/simulators/linalg/bda/FPGAMatrix.hpp>
 
 namespace Opm
 {
@@ -33,7 +33,6 @@ namespace Accelerator
 
 /// This struct resembles a blocked csr matrix, like Dune::BCRSMatrix.
 /// The data is stored in contiguous memory, such that they can be copied to a device in one transfer.
-template<unsigned int block_size>
 class BlockedMatrix
 {
 
@@ -42,12 +41,14 @@ public:
     /// Allocate BlockedMatrix and data arrays with given sizes
     /// \param[in] Nb               number of blockrows
     /// \param[in] nnzbs            number of nonzero blocks
-    BlockedMatrix(int Nb_, int nnzbs_)
-    : nnzValues(new double[nnzbs_*block_size*block_size]),
-      colIndices(new int[nnzbs_*block_size*block_size]),
+    /// \param[in] block_size       the number of rows and columns for each block
+    BlockedMatrix(int Nb_, int nnzbs_, unsigned int block_size_)
+    : nnzValues(new double[nnzbs_*block_size_*block_size_]),
+      colIndices(new int[nnzbs_*block_size_*block_size_]),
       rowPointers(new int[Nb_+1]),
       Nb(Nb_),
       nnzbs(nnzbs_),
+      block_size(block_size_),
       deleteNnzs(true),
       deleteSparsity(true)
     {}
@@ -55,11 +56,12 @@ public:
     /// Allocate BlockedMatrix, but copy sparsity pattern instead of allocating new memory
     /// \param[in] M              matrix to be copied
     BlockedMatrix(const BlockedMatrix& M)
-    : nnzValues(new double[M.nnzbs*block_size*block_size]),
+    : nnzValues(new double[M.nnzbs*M.block_size*M.block_size]),
       colIndices(M.colIndices),
       rowPointers(M.rowPointers),
       Nb(M.Nb),
       nnzbs(M.nnzbs),
+      block_size(M.block_size),
       deleteNnzs(true),
       deleteSparsity(false)
     {}
@@ -67,15 +69,17 @@ public:
     /// Allocate BlockedMatrix, but let data arrays point to existing arrays
     /// \param[in] Nb             number of blockrows
     /// \param[in] nnzbs          number of nonzero blocks
+    /// \param[in] block_size     the number of rows and columns for each block
     /// \param[in] nnzValues      array of nonzero values, contains nnzb*block_size*block_size scalars
     /// \param[in] colIndices     array of column indices, contains nnzb entries
     /// \param[in] rowPointers    array of row pointers, contains Nb+1 entries
-    BlockedMatrix(int Nb_, int nnzbs_, double *nnzValues_, int *colIndices_, int *rowPointers_)
+    BlockedMatrix(int Nb_, int nnzbs_, unsigned int block_size_, double *nnzValues_, int *colIndices_, int *rowPointers_)
     : nnzValues(nnzValues_),
       colIndices(colIndices_),
       rowPointers(rowPointers_),
       Nb(Nb_),
       nnzbs(nnzbs_),
+      block_size(block_size_),
       deleteNnzs(false),
       deleteSparsity(false)
     {}
@@ -117,6 +121,7 @@ public:
     int *rowPointers;
     int Nb;
     int nnzbs;
+    unsigned int block_size;
     bool deleteNnzs;
     bool deleteSparsity;
 };
@@ -127,31 +132,45 @@ public:
 /// \param[inout] data           
 /// \param[in] left              lower index of data of row
 /// \param[in] right             upper index of data of row
-template <unsigned int block_size>
-void sortBlockedRow(int *colIndices, double *data, int left, int right);
+/// \param[in] block_size        size of blocks in the row
+void sortBlockedRow(int *colIndices, double *data, int left, int right, unsigned block_size);
 
 /// Multiply and subtract blocks
 /// a = a - (b * c)
 /// \param[inout] a              block to be subtracted from
 /// \param[in] b                 input block
 /// \param[in] c                 input block
-template <unsigned int block_size>
-void blockMultSub(double *a, double *b, double *c);
+/// \param[in] block_size        size of block
+void blockMultSub(double *a, double *b, double *c, unsigned int block_size);
 
-/// Perform a 3x3 matrix-matrix multiplication on two blocks
+/// Perform a matrix-matrix multiplication on two blocks
+/// resMat = mat1 * mat2
 /// \param[in] mat1              input block 1
 /// \param[in] mat2              input block 2
-/// \param[inout] resMat         output block
-template <unsigned int block_size>
-void blockMult(double *mat1, double *mat2, double *resMat);
+/// \param[out] resMat           output block
+/// \param[in] block_size        size of block
+void blockMult(double *mat1, double *mat2, double *resMat, unsigned int block_size);
 
 
 #if HAVE_FPGA
-template <unsigned int block_size>
-void blockSub(double *mat1, double *mat2, double *resMat);
+/// Perform a matrix-matrix subtraction on two blocks, element-wise
+/// resMat = mat1 - mat2
+/// \param[in] mat1              input block 1
+/// \param[in] mat2              input block 2
+/// \param[out] resMat           output block
+/// \param[in] block_size        size of block
+void blockSub(double *mat1, double *mat2, double *resMat, unsigned int block_size);
 
-template <unsigned int block_size>
-void blockVectMult(double *mat, double *vect, double scale, double *resVect, bool resetRes);
+/// Perform a matrix-vector multiplication
+/// resVect = mat * vect
+/// resVect += mat * vect
+/// \param[in] mat               input matrix
+/// \param[in] vect              input vector
+/// \param[in] scale             multiply output with this factor
+/// \param[inout] resVect        output vector
+/// \param[in] resetRes          if true, overwrite resVect, otherwise add to it
+/// \param[in] block_size        size of block
+void blockVectMult(double *mat, double *vect, double scale, double *resVect, bool resetRes, unsigned int block_size);
 
 /// Convert a blocked inverse diagonal to the FPGA format.
 /// This is the only blocked structure on the FPGA, since it needs blocked matrix-vector multiplication after the backwards substitution of U.

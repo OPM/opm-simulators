@@ -63,7 +63,8 @@ BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string acceler
                                                              double tolerance,
                                                              [[maybe_unused]] unsigned int platformID,
                                                              unsigned int deviceID,
-                                                             [[maybe_unused]] std::string opencl_ilu_reorder)
+                                                             [[maybe_unused]] std::string opencl_ilu_reorder,
+                                                             [[maybe_unused]] std::string linsolver)
 : verbosity(linear_solver_verbosity), accelerator_mode(accelerator_mode_)
 {
     if (accelerator_mode.compare("cusparse") == 0) {
@@ -88,7 +89,7 @@ BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string acceler
         } else {
             OPM_THROW(std::logic_error, "Error invalid argument for --opencl-ilu-reorder, usage: '--opencl-ilu-reorder=[level_scheduling|graph_coloring]'");
         }
-        backend.reset(new Opm::Accelerator::openclSolverBackend<block_size>(linear_solver_verbosity, maxit, tolerance, platformID, deviceID, ilu_reorder));
+        backend.reset(new Opm::Accelerator::openclSolverBackend<block_size>(linear_solver_verbosity, maxit, tolerance, platformID, deviceID, ilu_reorder, linsolver));
 #else
         OPM_THROW(std::logic_error, "Error openclSolver was chosen, but OpenCL was not found by CMake");
 #endif
@@ -168,29 +169,26 @@ int checkZeroDiagonal(BridgeMatrix& mat) {
 // iterate sparsity pattern from Matrix and put colIndices and rowPointers in arrays
 // sparsity pattern should stay the same
 // this could be removed if Dune::BCRSMatrix features an API call that returns colIndices and rowPointers
-template <class BridgeMatrix>
-void getSparsityPattern(BridgeMatrix& mat, std::vector<int> &h_rows, std::vector<int> &h_cols) {
-    int sum_nnzs = 0;
+template <class BridgeMatrix, class BridgeVector, int block_size>
+void BdaBridge<BridgeMatrix, BridgeVector, block_size>::copySparsityPatternFromISTL(const BridgeMatrix& mat, std::vector<int> &h_rows, std::vector<int> &h_cols) {
+
+    h_rows.clear();
+    h_cols.clear();
 
     // convert colIndices and rowPointers
-    if (h_rows.empty()) {
-        h_rows.emplace_back(0);
-            for (typename BridgeMatrix::const_iterator r = mat.begin(); r != mat.end(); ++r) {
-                int size_row = 0;
-                for (auto c = r->begin(); c != r->end(); ++c) {
-                    h_cols.emplace_back(c.index());
-                    size_row++;
-                }
-                sum_nnzs += size_row;
-                h_rows.emplace_back(sum_nnzs);
-            }
-
-        // h_rows and h_cols could be changed to 'unsigned int', but cusparse expects 'int'
-        if (static_cast<unsigned int>(h_rows[mat.N()]) != mat.nonzeroes()) {
-            OPM_THROW(std::logic_error, "Error size of rows do not sum to number of nonzeroes in BdaBridge::getSparsityPattern()");
+    h_rows.emplace_back(0);
+    for (typename BridgeMatrix::const_iterator r = mat.begin(); r != mat.end(); ++r) {
+        for (auto c = r->begin(); c != r->end(); ++c) {
+            h_cols.emplace_back(c.index());
         }
+        h_rows.emplace_back(h_cols.size());
     }
-} // end getSparsityPattern()
+
+    // h_rows and h_cols could be changed to 'unsigned int', but cusparse expects 'int'
+    if (static_cast<unsigned int>(h_rows[mat.N()]) != mat.nonzeroes()) {
+        OPM_THROW(std::logic_error, "Error size of rows do not sum to number of nonzeroes in BdaBridge::copySparsityPatternFromISTL()");
+    }
+}
 
 
 template <class BridgeMatrix, class BridgeVector, int block_size>
@@ -220,7 +218,7 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system([[maybe_unu
         if (h_rows.capacity() == 0) {
             h_rows.reserve(Nb+1);
             h_cols.reserve(nnzb);
-            getSparsityPattern(*mat, h_rows, h_cols);
+            copySparsityPatternFromISTL(*mat, h_rows, h_cols);
         }
 
         Dune::Timer t_zeros;

@@ -26,7 +26,9 @@
 #include <opm/common/ErrorMacros.hpp>
 
 #include <opm/simulators/linalg/bda/BlockedMatrix.hpp>
+#include <opm/simulators/linalg/bda/Matrix.hpp>
 #include <opm/simulators/linalg/bda/FPGAUtils.hpp>
+#include <opm/simulators/linalg/bda/Matrix.hpp>
 
 namespace Opm
 {
@@ -37,8 +39,7 @@ using Opm::OpmLog;
 
 /*Sort a row of matrix elements from a blocked CSR-format.*/
 
-template <unsigned int block_size>
-void sortBlockedRow(int *colIndices, double *data, int left, int right) {
+void sortBlockedRow(int *colIndices, double *data, int left, int right, unsigned block_size) {
     const unsigned int bs = block_size;
     int l = left;
     int r = right;
@@ -63,17 +64,16 @@ void sortBlockedRow(int *colIndices, double *data, int left, int right) {
     } while (l < r);
 
     if (left < r)
-        sortBlockedRow<bs>(colIndices, data, left, r);
+        sortBlockedRow(colIndices, data, left, r, bs);
 
     if (right > l)
-        sortBlockedRow<bs>(colIndices, data, l, right);
+        sortBlockedRow(colIndices, data, l, right, bs);
 }
 
 
 // LUMat->nnzValues[ik] = LUMat->nnzValues[ik] - (pivot * LUMat->nnzValues[jk]) in ilu decomposition
 // a = a - (b * c)
-template <unsigned int block_size>
-void blockMultSub(double *a, double *b, double *c)
+void blockMultSub(double *a, double *b, double *c, unsigned int block_size)
 {
     for (unsigned int row = 0; row < block_size; row++) {
         for (unsigned int col = 0; col < block_size; col++) {
@@ -88,8 +88,7 @@ void blockMultSub(double *a, double *b, double *c)
 
 /*Perform a 3x3 matrix-matrix multiplicationj on two blocks*/
 
-template <unsigned int block_size>
-void blockMult(double *mat1, double *mat2, double *resMat) {
+void blockMult(double *mat1, double *mat2, double *resMat, unsigned int block_size) {
     for (unsigned int row = 0; row < block_size; row++) {
         for (unsigned int col = 0; col < block_size; col++) {
             double temp = 0;
@@ -104,8 +103,7 @@ void blockMult(double *mat1, double *mat2, double *resMat) {
 #if HAVE_FPGA
 
 /*Subtract two blocks from one another element by element*/
-template <unsigned int block_size>
-void blockSub(double *mat1, double *mat2, double *resMat) {
+void blockSub(double *mat1, double *mat2, double *resMat, unsigned int block_size) {
     for (unsigned int row = 0; row < block_size; row++) {
         for (unsigned int col = 0; col < block_size; col++) {
             resMat[row * block_size + col] = mat1[row * block_size + col] - mat2[row * block_size + col];
@@ -114,8 +112,7 @@ void blockSub(double *mat1, double *mat2, double *resMat) {
 }
 
 /*Multiply a block with a vector block, and add the result, scaled by a constant, to the result vector*/
-template <unsigned int block_size>
-void blockVectMult(double *mat, double *vect, double scale, double *resVect, bool resetRes) {
+void blockVectMult(double *mat, double *vect, double scale, double *resVect, bool resetRes, unsigned int block_size) {
     for (unsigned int row = 0; row < block_size; row++) {
         if (resetRes) {
             resVect[row] = 0.0;
@@ -128,8 +125,7 @@ void blockVectMult(double *mat, double *vect, double scale, double *resVect, boo
 
 
 
-template <unsigned int block_size>
-int BlockedMatrix<block_size>::countUnblockedNnzs() {
+int BlockedMatrix::countUnblockedNnzs() {
     int numNnzsOverThreshold = 0;
     int totalNnzs = rowPointers[Nb];
     for (unsigned int idx = 0; idx < totalNnzs * block_size * block_size; idx++) {
@@ -144,8 +140,7 @@ int BlockedMatrix<block_size>::countUnblockedNnzs() {
  * Unblock the blocked matrix. Input the blocked matrix and output a CSR matrix without blocks.
  * If unblocking the U matrix, the rows in all blocks need to written to the new matrix in reverse order.
 */
-template <unsigned int block_size>
-void BlockedMatrix<block_size>::unblock(Matrix *mat, bool isUMatrix) {
+void BlockedMatrix::unblock(Matrix *mat, bool isUMatrix) {
     const unsigned int bs = block_size;
     int valIndex = 0, nnzsPerRow;
 
@@ -183,8 +178,7 @@ void BlockedMatrix<block_size>::unblock(Matrix *mat, bool isUMatrix) {
 
 /*Optimized version*/
 // ub* prefixes indicate unblocked data
-template <unsigned int block_size>
-int BlockedMatrix<block_size>::toRDF(int numColors, int *nodesPerColor, bool isUMatrix,
+int BlockedMatrix::toRDF(int numColors, int *nodesPerColor, bool isUMatrix,
                                      std::vector<std::vector<int> >& colIndicesInColor, int nnzsPerRowLimit, int *nnzValsSizes,
                                      std::vector<std::vector<double> >& ubNnzValues, short int *ubColIndices, unsigned char *NROffsets, int *colorSizes, int *valSize)
 {
@@ -223,8 +217,7 @@ int BlockedMatrix<block_size>::toRDF(int numColors, int *nodesPerColor, bool isU
 // PIndicesAddr: contiguously for each color: indices of x in global x vector, unblocked
 //               if color 0 has A unique colAccesses, PIndicesAddr[0 - A] are for color 0
 //               then PIndicesAddr[A - A+B] are for color 1. Directly copied to FPGA
-template <unsigned int block_size>
-int BlockedMatrix<block_size>::findPartitionColumns(int numColors, int *nodesPerColor,
+int BlockedMatrix::findPartitionColumns(int numColors, int *nodesPerColor,
         int rowsPerColorLimit, int columnsPerColorLimit,
         std::vector<std::vector<int> >& colIndicesInColor, int *PIndicesAddr, int *colorSizes,
         std::vector<std::vector<int> >& LColIndicesInColor, int *LPIndicesAddr, int *LColorSizes,
@@ -469,42 +462,6 @@ void blockedDiagtoRDF(double *blockedDiagVals, int rowSize, int numColors, std::
 
 #endif // HAVE_FPGA
 
-
-
-#define INSTANTIATE_BDA_FUNCTIONS(n)                                        \
-template void sortBlockedRow<n>(int *, double *, int, int);                 \
-template void blockMultSub<n>(double *, double *, double *);                \
-template void blockMult<n>(double *, double *, double *);                   \
-
-INSTANTIATE_BDA_FUNCTIONS(1);
-INSTANTIATE_BDA_FUNCTIONS(2);
-INSTANTIATE_BDA_FUNCTIONS(3);
-INSTANTIATE_BDA_FUNCTIONS(4);
-INSTANTIATE_BDA_FUNCTIONS(5);
-INSTANTIATE_BDA_FUNCTIONS(6);
-
-#undef INSTANTIATE_BDA_FUNCTIONS
-
-#if HAVE_FPGA
-#define INSTANTIATE_BDA_FPGA_FUNCTIONS(n)                                             \
-template void blockSub<n>(double *, double *, double *);                              \
-template void blockVectMult<n>(double *, double *, double, double *, bool);           \
-template int BlockedMatrix<n>::toRDF(int, int *, bool,                                \
-    std::vector<std::vector<int> >& , int, int *,                                     \
-    std::vector<std::vector<double> >&, short int *, unsigned char *, int *,  int *); \
-template int BlockedMatrix<n>::findPartitionColumns(int, int *,                       \
-        int, int,                                                                     \
-        std::vector<std::vector<int> >& , int *, int *,                               \
-        std::vector<std::vector<int> >& , int *, int *,                               \
-        std::vector<std::vector<int> >& , int *, int *);
-
-INSTANTIATE_BDA_FPGA_FUNCTIONS(1);
-INSTANTIATE_BDA_FPGA_FUNCTIONS(2);
-INSTANTIATE_BDA_FPGA_FUNCTIONS(3);
-INSTANTIATE_BDA_FPGA_FUNCTIONS(4);
-
-#undef INSTANTIATE_BDA_FPGA_FUNCTIONS
-#endif // HAVE_FPGA
 
 } // namespace Accelerator
 } // namespace Opm
