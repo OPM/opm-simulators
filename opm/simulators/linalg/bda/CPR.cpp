@@ -241,7 +241,7 @@ void CPR<block_size>::create_preconditioner_amg(BlockedMatrix *mat_) {
 #if HAVE_MPI
         using Communication = Dune::OwnerOverlapCopyCommunication<int, int>;
 #else
-	using Communication = Dune::Amg::SequentialInformation;
+        using Communication = Dune::Amg::SequentialInformation;
 #endif
         using OverlapFlags = Dune::NegateSet<Communication::OwnerSet>;
         if (recalculate_aggregates) {
@@ -270,8 +270,12 @@ void CPR<block_size>::create_preconditioner_amg(BlockedMatrix *mat_) {
             }
 
             dune_op = std::make_shared<MatrixOperator>(*dune_coarse);
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
             Dune::Amg::SequentialInformation seqinfo;
             dune_amg = std::make_unique<DuneAmg>(dune_op, Dune::stackobject_to_shared_ptr(seqinfo));
+#else
+            dune_amg = std::make_unique<DuneAmg>(*dune_op);
+#endif
 
             Opm::PropertyTree property_tree;
             property_tree.put("alpha", 0.333333333333);
