@@ -753,9 +753,21 @@ maybeAdjustALQbeforeOptimizeLoop_(
         // NOTE: This may reduce ALQ below the minimum value set in WLIFTOPT
         //   item 5. However, this is OK since the rate target is met and there
         //   is no point in using a higher ALQ value then.
-        std::tie(oil_rate, gas_rate, water_rate, oil_is_limited, gas_is_limited, water_is_limited, alq) =
+        double reduced_oil_rate, reduced_gas_rate, reduced_water_rate, reduced_alq;
+
+        std::tie(reduced_oil_rate, reduced_gas_rate, reduced_water_rate, oil_is_limited, gas_is_limited, water_is_limited, reduced_alq) =
             reduceALQtoWellTarget_(alq, oil_rate, gas_rate, water_rate,
                                    oil_is_limited, gas_is_limited, water_is_limited, potentials);
+
+        // potentially reduce alq if group control is violated
+        OptimizeState state {*this, increase};
+        double reduced2_oil_rate, reduced2_gas_rate, reduced2_water_rate, reduced2_alq;
+        std::tie(reduced2_oil_rate, reduced2_gas_rate, reduced2_water_rate, reduced2_alq) =
+        state.reduceALQtoGroupTarget(alq, oil_rate, gas_rate, water_rate, potentials);
+        oil_rate = std::min(reduced_oil_rate, reduced2_oil_rate);
+        gas_rate = std::min(reduced_gas_rate, reduced2_gas_rate);
+        water_rate = std::min(reduced_water_rate, reduced2_water_rate);
+        alq = std::min(reduced_alq, reduced2_alq);
     } else {
         if (increase && oil_rate < 0) {
             // NOTE: Try to increase ALQ up to a value where oil_rate is positive
@@ -909,10 +921,6 @@ runOptimizeLoop_(bool increase)
     double delta_alq = 0.0;
     double delta_water = 0.0;
     OptimizeState state {*this, increase};
-
-    // potentially reduce alq if group control is violated
-    std::tie(new_oil_rate, new_gas_rate, new_water_rate, new_alq) =
-        state.reduceALQtoGroupTarget(new_alq, new_oil_rate, new_gas_rate, new_water_rate, potentials);
 
     if (checkInitialALQmodified_(new_alq, cur_alq)) {
         delta_oil = new_oil_rate - oil_rate;
@@ -1431,9 +1439,9 @@ reduceALQtoGroupTarget(double alq,
         oil_rate = -potentials[this->parent.oil_pos_];
         gas_rate = -potentials[this->parent.gas_pos_];
         water_rate = -potentials[this->parent.gas_pos_];
-        double delta_oil = oil_rate_orig - oil_rate;
-        double delta_gas = gas_rate_orig - gas_rate;
-        double delta_water = water_rate_orig - water_rate;
+        double delta_oil = oil_rate - oil_rate_orig;
+        double delta_gas = gas_rate - gas_rate_orig;
+        double delta_water = water_rate - water_rate_orig;
 
         if (!this->checkGroupTargetsViolated(delta_oil, delta_gas, delta_water)) {
             break;
