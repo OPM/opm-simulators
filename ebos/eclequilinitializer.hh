@@ -74,6 +74,8 @@ class EclEquilInitializer
     enum { enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>() };
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
     enum { enableBrine = getPropValue<TypeTag, Properties::EnableBrine>() };
+    enum { enableEvaporation = getPropValue<TypeTag, Properties::EnableEvaporation>() };
+    enum { enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>() };
 
 public:
     // NB: setting the enableEnergy argument to true enables storage of enthalpy and
@@ -83,7 +85,9 @@ public:
                                                 enableTemperature,
                                                 enableEnergy,
                                                 Indices::gasEnabled,
+                                                enableEvaporation,
                                                 enableBrine,
+                                                enableSaltPrecipitation,
                                                 Indices::numPhases>;
 
 
