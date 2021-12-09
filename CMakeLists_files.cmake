@@ -148,7 +148,6 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_timer.cpp
   tests/test_invert.cpp
   tests/test_stoppedwells.cpp
-  tests/test_solvetransposed3x3.cpp
   tests/test_relpermdiagnostics.cpp
   tests/test_norne_pvt.cpp
   tests/test_wellprodindexcalculator.cpp
@@ -169,6 +168,7 @@ if(CUDA_FOUND)
 endif()
 if(OPENCL_FOUND)
   list(APPEND TEST_SOURCE_FILES tests/test_openclSolver.cpp)
+  list(APPEND TEST_SOURCE_FILES tests/test_solvetransposed3x3.cpp)
 endif()
 
 list (APPEND TEST_DATA_FILES
