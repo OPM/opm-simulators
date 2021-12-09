@@ -126,9 +126,6 @@ protected:
         bool checkAlqOutsideLimits(double alq, double oil_rate);
         bool checkEcoGradient(double gradient);
         bool checkGroupALQrateExceeded(double delta_alq);
-        bool checkGroupTargetsViolated(double delta_oil, double delta_gas, double delta_water);
-        std::tuple<double,double,double,double>
-          reduceALQtoGroupTarget(double alq, double oil_rate, double gas_rate, double water_rate, std::vector<double> &potentials);
         bool checkNegativeOilRate(double oil_rate);
         bool checkThpControl();
         bool checkOilRateExceedsTarget(double oil_rate);
@@ -148,6 +145,8 @@ protected:
                             double gas_rate, double new_gas_rate, bool increase) const;
 
     bool checkALQequal_(double alq1, double alq2) const;
+    bool checkGroupTargetsViolated(
+        double delta_oil, double delta_gas, double delta_water) const;
     bool checkInitialALQmodified_(double alq, double initial_alq) const;
 
     bool checkWellRatesViolated_(std::vector<double>& potentials,
@@ -212,9 +211,14 @@ protected:
       maybeAdjustALQbeforeOptimizeLoop_(
           bool increase, double alq, double oil_rate, double gas_rate, double water_rate,
           bool oil_is_limited, bool gas_is_limited, bool water_is_limited, std::vector<double> &potentials);
+    std::tuple<double,double,double,double>
+      reduceALQtoGroupTarget(double alq, double oil_rate, double gas_rate,
+                             double water_rate, std::vector<double> &potentials) const;
     std::tuple<double,double,double, bool, bool,bool,double>
-      reduceALQtoWellTarget_(double alq, double oil_rate, double gas_rate, double water_rate,
-          bool oil_is_limited, bool gas_is_limited, bool water_is_limited, std::vector<double> &potentials);
+      reduceALQtoWellTarget_(double alq, double oil_rate, double gas_rate,
+                             double water_rate, bool oil_is_limited,
+                             bool gas_is_limited, bool water_is_limited,
+                             std::vector<double> &potentials);
 
     std::unique_ptr<GasLiftWellState> runOptimize1_();
     std::unique_ptr<GasLiftWellState> runOptimize2_();
