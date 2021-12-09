@@ -222,6 +222,76 @@ checkALQequal_(double alq1, double alq2) const
 
 bool
 GasLiftSingleWellGeneric::
+checkGroupTargetsViolated(double delta_oil, double delta_gas, double delta_water) const
+{
+    const auto &pairs =
+        this->group_info_.getWellGroups(this->well_name_);
+    for (const auto &[group_name, efficiency] : pairs) {
+        auto oil_target_opt = this->group_info_.oilTarget(group_name);
+        if (oil_target_opt) {
+            double oil_rate =
+                this->group_info_.oilRate(group_name) + efficiency * delta_oil;
+            if (oil_rate > *oil_target_opt) {
+                if (this->debug_) {
+                    const std::string msg = fmt::format(
+                       "Group {} : oil rate {} exceeds oil target {}. Stopping iteration",
+                       group_name, oil_rate, *oil_target_opt);
+                    displayDebugMessage_(msg);
+                }
+                return true;
+            }
+        }
+        auto gas_target_opt = this->group_info_.gasTarget(group_name);
+        if (gas_target_opt) {
+            double gas_rate =
+                this->group_info_.gasRate(group_name) + efficiency * delta_gas;
+            if (gas_rate > *gas_target_opt) {
+                if (this->debug_) {
+                    const std::string msg = fmt::format(
+                       "Group {} : gas rate {} exceeds gas target {}. Stopping iteration",
+                       group_name, gas_rate, *gas_target_opt);
+                    displayDebugMessage_(msg);
+                }
+                return true;
+            }
+        }
+        auto liquid_target_opt = this->group_info_.liquidTarget(group_name);
+        if (liquid_target_opt) {
+            double oil_rate =
+                this->group_info_.oilRate(group_name) + efficiency * delta_oil;
+            double water_rate =
+                this->group_info_.waterRate(group_name) + efficiency * delta_water;
+            double liquid_rate = oil_rate + water_rate;
+            if (liquid_rate > *liquid_target_opt) {
+                if (this->debug_) {
+                    const std::string msg = fmt::format(
+                       "Group {} : liquid rate {} exceeds liquid target {}. Stopping iteration",
+                       group_name, liquid_rate, *liquid_target_opt);
+                    this->displayDebugMessage_(msg);
+                }
+                return true;
+            }
+        }
+        auto water_target_opt = this->group_info_.waterTarget(group_name);
+        if (water_target_opt) {
+            double water_rate =
+                this->group_info_.waterRate(group_name) + efficiency * delta_water;
+            if (water_rate > *water_target_opt) {
+                if (this->debug_) {
+                    const std::string msg = fmt::format(
+                       "Group {} : water rate {} exceeds water target {}. Stopping iteration",
+                       group_name, water_rate, *water_target_opt);
+                    displayDebugMessage_(msg);
+                }
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool
+GasLiftSingleWellGeneric::
 checkInitialALQmodified_(double alq, double initial_alq) const
 {
     if (checkALQequal_(alq,initial_alq)) {
@@ -760,10 +830,11 @@ maybeAdjustALQbeforeOptimizeLoop_(
                                    oil_is_limited, gas_is_limited, water_is_limited, potentials);
 
         // potentially reduce alq if group control is violated
-        OptimizeState state {*this, increase};
         double reduced2_oil_rate, reduced2_gas_rate, reduced2_water_rate, reduced2_alq;
-        std::tie(reduced2_oil_rate, reduced2_gas_rate, reduced2_water_rate, reduced2_alq) =
-        state.reduceALQtoGroupTarget(alq, oil_rate, gas_rate, water_rate, potentials);
+        std::tie(reduced2_oil_rate, reduced2_gas_rate,
+                 reduced2_water_rate, reduced2_alq)
+           = reduceALQtoGroupTarget(
+                alq, oil_rate, gas_rate, water_rate, potentials);
         oil_rate = std::min(reduced_oil_rate, reduced2_oil_rate);
         gas_rate = std::min(reduced_gas_rate, reduced2_gas_rate);
         water_rate = std::min(reduced_water_rate, reduced2_water_rate);
@@ -788,6 +859,55 @@ maybeAdjustALQbeforeOptimizeLoop_(
         displayDebugMessage_(msg);
     }
     return std::make_tuple(oil_rate, gas_rate, water_rate, alq, oil_is_limited, gas_is_limited, water_is_limited);
+}
+
+std::tuple<double,double,double,double>
+GasLiftSingleWellGeneric::
+reduceALQtoGroupTarget(double alq,
+                       double oil_rate,
+                       double gas_rate,
+                       double water_rate,
+                       std::vector<double>& potentials) const
+{
+    bool stop_this_iteration = true;
+    const auto &pairs =
+        this->group_info_.getWellGroups(this->well_name_);
+    for (const auto &groups : pairs) {
+        if (!this->group_state_.has_production_control(groups.first))
+            continue;
+        const auto& current_control = this->group_state_.production_control(groups.first);
+        if(current_control == Group::ProductionCMode::ORAT
+                || current_control == Group::ProductionCMode::LRAT
+                || current_control == Group::ProductionCMode::WRAT
+                || current_control == Group::ProductionCMode::GRAT){
+            stop_this_iteration = false;
+            displayDebugMessage_("Reducing ALQ to meet groups target before iteration starts.");
+            break;
+        }
+    }
+    double temp_alq = alq;
+    double oil_rate_orig = oil_rate;
+    double gas_rate_orig = gas_rate;
+    double water_rate_orig = water_rate;
+    while(!stop_this_iteration) {
+        temp_alq -= this->increment_;
+        if (temp_alq <= 0) break;
+        auto bhp_opt = computeBhpAtThpLimit_(temp_alq);
+        if (!bhp_opt) break;
+        auto bhp_this = getBhpWithLimit_(*bhp_opt);
+        computeWellRates_(bhp_this.first, potentials);
+        oil_rate = -potentials[this->oil_pos_];
+        gas_rate = -potentials[this->gas_pos_];
+        water_rate = -potentials[this->water_pos_];
+        double delta_oil = oil_rate - oil_rate_orig;
+        double delta_gas = gas_rate - gas_rate_orig;
+        double delta_water = water_rate - water_rate_orig;
+        if (!checkGroupTargetsViolated(delta_oil, delta_gas, delta_water)) {
+            break;
+        }
+        alq = temp_alq;
+    }
+    return std::make_tuple(oil_rate, gas_rate, water_rate, alq);
 }
 
 std::tuple<double,double,double, bool, bool,bool,double>
@@ -927,7 +1047,7 @@ runOptimizeLoop_(bool increase)
         delta_gas = new_gas_rate - gas_rate;
         delta_water = new_water_rate - water_rate;
         delta_alq = new_alq - cur_alq;
-        if (!(state.checkGroupTargetsViolated(delta_oil, delta_gas, delta_water)) &&
+        if (!(checkGroupTargetsViolated(delta_oil, delta_gas, delta_water)) &&
             !(state.checkGroupALQrateExceeded(delta_alq)))
         {
             oil_rate = new_oil_rate;
@@ -953,7 +1073,7 @@ runOptimizeLoop_(bool increase)
     while (!state.stop_iteration && (++state.it <= this->max_iterations_)) {
         if (!increase && state.checkNegativeOilRate(oil_rate)) break;
         if (state.checkWellRatesViolated(potentials)) break;
-        if (state.checkGroupTargetsViolated(delta_oil, delta_gas, delta_water)) break;
+        if (checkGroupTargetsViolated(delta_oil, delta_gas, delta_water)) break;
         if (state.checkAlqOutsideLimits(temp_alq, oil_rate)) break;
         std::optional<double> alq_opt;
         std::tie(alq_opt, alq_is_limited)
@@ -1331,125 +1451,7 @@ checkGroupALQrateExceeded(double delta_alq)
     return false;
 }
 
-bool
-GasLiftSingleWellGeneric::OptimizeState::
-checkGroupTargetsViolated(double delta_oil, double delta_gas, double delta_water)
-{
-    const auto &pairs =
-        this->parent.group_info_.getWellGroups(this->parent.well_name_);
-    for (const auto &[group_name, efficiency] : pairs) {
-        auto oil_target_opt = this->parent.group_info_.oilTarget(group_name);
-        if (oil_target_opt) {
-            double oil_rate =
-                this->parent.group_info_.oilRate(group_name) + efficiency * delta_oil;
-            if (oil_rate > *oil_target_opt) {
-                if (this->parent.debug_) {
-                    const std::string msg = fmt::format(
-                       "Group {} : oil rate {} exceeds oil target {}. Stopping iteration",
-                       group_name, oil_rate, *oil_target_opt);
-                    this->parent.displayDebugMessage_(msg);
-                }
-                return true;
-            }
-        }
-        auto gas_target_opt = this->parent.group_info_.gasTarget(group_name);
-        if (gas_target_opt) {
-            double gas_rate =
-                this->parent.group_info_.gasRate(group_name) + efficiency * delta_gas;
-            if (gas_rate > *gas_target_opt) {
-                if (this->parent.debug_) {
-                    const std::string msg = fmt::format(
-                       "Group {} : gas rate {} exceeds gas target {}. Stopping iteration",
-                       group_name, gas_rate, *gas_target_opt);
-                    this->parent.displayDebugMessage_(msg);
-                }
-                return true;
-            }
-        }
-        auto liquid_target_opt = this->parent.group_info_.liquidTarget(group_name);
-        if (liquid_target_opt) {
-            double oil_rate =
-                this->parent.group_info_.oilRate(group_name) + efficiency * delta_oil;
-            double water_rate =
-                this->parent.group_info_.waterRate(group_name) + efficiency * delta_water;
-            double liquid_rate = oil_rate + water_rate;
-            if (liquid_rate > *liquid_target_opt) {
-                if (this->parent.debug_) {
-                    const std::string msg = fmt::format(
-                       "Group {} : liquid rate {} exceeds liquid target {}. Stopping iteration",
-                       group_name, liquid_rate, *liquid_target_opt);
-                    this->parent.displayDebugMessage_(msg);
-                }
-                return true;
-            }
-        }
-        auto water_target_opt = this->parent.group_info_.waterTarget(group_name);
-        if (water_target_opt) {
-            double water_rate =
-                this->parent.group_info_.waterRate(group_name) + efficiency * delta_water;
-            if (water_rate > *water_target_opt) {
-                if (this->parent.debug_) {
-                    const std::string msg = fmt::format(
-                       "Group {} : water rate {} exceeds water target {}. Stopping iteration",
-                       group_name, water_rate, *water_target_opt);
-                    this->parent.displayDebugMessage_(msg);
-                }
-                return true;
-            }
-        }
-    }
-    return false;
-}
 
-std::tuple<double,double,double,double>
-GasLiftSingleWellGeneric::OptimizeState::
-reduceALQtoGroupTarget(double alq,
-                       double oil_rate,
-                       double gas_rate,
-                       double water_rate,
-                       std::vector<double>& potentials)
-{
-    bool stop_this_iteration = true;
-    const auto &pairs =
-        this->parent.group_info_.getWellGroups(this->parent.well_name_);
-    for (const auto &groups : pairs) {
-        if (!this->parent.group_state_.has_production_control(groups.first))
-            continue;
-        const auto& current_control = this->parent.group_state_.production_control(groups.first);
-        if(current_control == Group::ProductionCMode::ORAT
-                || current_control == Group::ProductionCMode::LRAT
-                || current_control == Group::ProductionCMode::WRAT
-                || current_control == Group::ProductionCMode::GRAT){
-            stop_this_iteration = false;
-            this->parent.displayDebugMessage_("Reducing ALQ to meet groups target before iteration starts.");
-            break;
-        }
-    }
-    double temp_alq = alq;
-    double oil_rate_orig = oil_rate;
-    double gas_rate_orig = gas_rate;
-    double water_rate_orig = water_rate;
-    while(!stop_this_iteration) {
-        temp_alq -= this->parent.increment_;
-        if (temp_alq <= 0) break;
-        auto bhp_opt = this->parent.computeBhpAtThpLimit_(temp_alq);
-        if (!bhp_opt) break;
-        auto bhp_this = this->parent.getBhpWithLimit_(*bhp_opt);
-        this->parent.computeWellRates_(bhp_this.first, potentials);
-        oil_rate = -potentials[this->parent.oil_pos_];
-        gas_rate = -potentials[this->parent.gas_pos_];
-        water_rate = -potentials[this->parent.gas_pos_];
-        double delta_oil = oil_rate - oil_rate_orig;
-        double delta_gas = gas_rate - gas_rate_orig;
-        double delta_water = water_rate - water_rate_orig;
-
-        if (!this->checkGroupTargetsViolated(delta_oil, delta_gas, delta_water)) {
-            break;
-        }
-        alq = temp_alq;
-    }
-    return std::make_tuple(oil_rate, gas_rate, water_rate, alq);
-}
 bool
 GasLiftSingleWellGeneric::OptimizeState::
 checkNegativeOilRate(double oil_rate)
