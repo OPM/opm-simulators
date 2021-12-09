@@ -99,7 +99,9 @@ template <class ScalarT,
           bool enableTemperature = false,
           bool enableEnergy = false,
           bool enableDissolution = true,
+          bool enableEvaporation = false,
           bool enableBrine = false,
+          bool enableSaltPrecipitation = false,
           unsigned numStoragePhases = FluidSystem::numPhases>
 class BlackOilFluidState
 {
@@ -144,8 +146,16 @@ public:
             Valgrind::CheckDefined(*Rv_);
         }
 
+        if (enableEvaporation) {
+            Valgrind::CheckDefined(*Rvw_);
+        }
+
         if (enableBrine) {
             Valgrind::CheckDefined(*saltConcentration_);
+        }
+
+        if (enableSaltPrecipitation) {
+            Valgrind::CheckDefined(*saltSaturation_);
         }
 
         if (enableTemperature || enableEnergy)
@@ -170,9 +180,14 @@ public:
             setRs(BlackOil::getRs_<FluidSystem, FluidState, Scalar>(fs, pvtRegionIdx));
             setRv(BlackOil::getRv_<FluidSystem, FluidState, Scalar>(fs, pvtRegionIdx));
         }
-
+        if (enableEvaporation) {
+            setRvw(BlackOil::getRvw_<FluidSystem, FluidState, Scalar>(fs, pvtRegionIdx));
+        }
         if (enableBrine){
             setSaltConcentration(BlackOil::getSaltConcentration_<FluidSystem, FluidState, Scalar>(fs, pvtRegionIdx));
+        }
+        if (enableSaltPrecipitation){
+            setSaltSaturation(BlackOil::getSaltSaturation_<FluidSystem, FluidState, Scalar>(fs, pvtRegionIdx));
         }
         for (unsigned storagePhaseIdx = 0; storagePhaseIdx < numStoragePhases; ++storagePhaseIdx) {
             unsigned phaseIdx = storageToCanonicalPhaseIndex_(storagePhaseIdx);
@@ -277,10 +292,24 @@ public:
     { *Rv_ = newRv; }
 
     /*!
+     * \brief Set the water vaporization factor [m^3/m^3] of the gas phase.
+     *
+     * This quantity is very specific to the black-oil model.
+     */
+    void setRvw(const Scalar& newRvw)
+    { *Rvw_ = newRvw; }
+
+    /*!
      * \brief Set the salt concentration.
      */
     void setSaltConcentration(const Scalar& newSaltConcentration)
     { *saltConcentration_ = newSaltConcentration; }
+
+    /*!
+     * \brief Set the solid salt saturation.
+     */
+    void setSaltSaturation(const Scalar& newSaltSaturation)
+    { *saltSaturation_ = newSaltSaturation; }
 
     /*!
      * \brief Return the pressure of a fluid phase [Pa]
@@ -365,6 +394,23 @@ public:
     }
 
     /*!
+     * \brief Return the water vaporization factor of gas [m^3/m^3].
+     *
+     * I.e., the amount of water which is present in the gas phase in terms of cubic meters
+     * of liquid water at surface conditions per cubic meter of gas at surface
+     * conditions. This method is specific to the black-oil model.
+     */
+    const Scalar& Rvw() const
+    {
+        if (!enableEvaporation) {
+            static Scalar null = 0.0;
+            return null;
+        }
+
+        return *Rvw_;
+    }
+
+    /*!
      * \brief Return the concentration of salt in water
      */
     const Scalar& saltConcentration() const
@@ -375,6 +421,19 @@ public:
         }
 
         return *saltConcentration_;
+    }
+
+    /*!
+     * \brief Return the saturation of solid salt
+     */
+    const Scalar& saltSaturation() const
+    {
+        if (!enableSaltPrecipitation) {
+            static Scalar null = 0.0;
+            return null;
+        }
+
+        return *saltSaturation_;
     }
 
     /*!
@@ -585,7 +644,9 @@ private:
     std::array<Scalar, numStoragePhases> density_;
     ConditionalStorage<enableDissolution,Scalar> Rs_;
     ConditionalStorage<enableDissolution, Scalar> Rv_;
+    ConditionalStorage<enableEvaporation,Scalar> Rvw_;
     ConditionalStorage<enableBrine, Scalar> saltConcentration_;
+    ConditionalStorage<enableSaltPrecipitation, Scalar> saltSaturation_;
     unsigned short pvtRegionIdx_;
 };
 
