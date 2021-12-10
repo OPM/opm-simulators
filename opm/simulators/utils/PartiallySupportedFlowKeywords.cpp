@@ -91,7 +91,7 @@ partiallySupported()
          {
             "GCONPROD",
             {
-               {2,{false, allow_values<std::string> {"NONE", "FLD", "ORAT", "WRAT", "GRAT", "LRAT", "RESV"}, "GCONPROD(TARGET): valid option should be NONE/FLD/ORAT/WRAT/GRAT/LRAT or RESV – will STOP"}}, // CONTROL_MODE
+               {2,{true, allow_values<std::string> {"NONE", "FLD", "ORAT", "WRAT", "GRAT", "LRAT", "RESV"}, "GCONPROD(TARGET): valid option should be NONE/FLD/ORAT/WRAT/GRAT/LRAT or RESV – will STOP"}}, // CONTROL_MODE
                {11,{true, allow_values<std::string> {}, "GCONPROD(ACTWAT): water violation procedure not implemented – will STOP"}}, // WATER_EXCEED_PROCEDURE
                {12,{true, allow_values<std::string> {}, "GCONPROD(ACTGAS): gas violation procedure not implemented – will STOP"}}, // GAS_EXCEED_PROCEDURE
                {13,{true, allow_values<std::string> {}, "GCONPROD(ACTLIQ): liquid violation procedure not implemented – will STOP"}}, // LIQUID_EXCEED_PROCEDURE
