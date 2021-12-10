@@ -61,11 +61,6 @@ private:
     static std::vector<double> tmp;     // used as tmp CPU buffer for dot() and norm()
     static bool initialized;
 
-    enum matrix_operation {
-        spmv_op,
-        residual_op
-    };
-
     static std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg> > dot_k;
     static std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg> > norm_k;
     static std::unique_ptr<cl::KernelFunctor<cl::Buffer&, const double, cl::Buffer&, const unsigned int> > axpy_k;
@@ -86,76 +81,34 @@ private:
     static std::unique_ptr<stdwell_apply_no_reorder_kernel_type> stdwell_apply_no_reorder_k;
     static std::unique_ptr<ilu_decomp_kernel_type> ilu_decomp_k;
 
-    /// Generate string with axpy kernel
-    /// a = a + alpha * b
-    static std::string get_axpy_source();
-
-    /// Generate string with scale kernel
-    /// a = a * alpha
-    static std::string get_scale_source();
-
-    /// multiply vector with another vector and a scalar, element-wise
-    /// add result to a third vector
-    static std::string get_vmul_source();
-
-    /// returns partial sums, instead of the final dot product
-    /// partial sums are added on CPU
-    static std::string get_dot_1_source();
-
-    /// returns partial sums, instead of the final norm
-    /// the square root must be computed on CPU
-    static std::string get_norm_source();
-
-    /// Generate string with custom kernel
-    /// This kernel combines some ilubicgstab vector operations into 1
-    /// p = (p - omega * v) * beta + r
-    static std::string get_custom_source();
-
-    /// Transform blocked vector to scalar vector using pressure-weights
-    static std::string get_full_to_pressure_restriction_source();
-
-    /// Add the coarse pressure solution back to the finer, complete solution
-    static std::string get_add_coarse_pressure_correction_source();
-
-    /// Prolongate a vector during the AMG cycle
-    static std::string get_prolongate_vector_source();
-
-    /// b = mat * x
-    /// algorithm based on:
-    /// Optimization of Block Sparse Matrix-Vector Multiplication on Shared-MemoryParallel Architectures,
-    /// Ryan Eberhardt, Mark Hoemmen, 2016, https://doi.org/10.1109/IPDPSW.2016.42
-    /// or
-    /// res = rhs - (mat * x)
-    static std::string get_blocked_matrix_operation_source(matrix_operation op);
-    static std::string get_matrix_operation_source(matrix_operation op, bool spmv_reset = true);
-
-    /// ILU apply part 1: forward substitution
-    /// solves L*x=y where L is a lower triangular sparse blocked matrix
-    /// this L can be it's own BSR matrix (if full_matrix is false),
-    /// or it can be inside a normal, square matrix, in that case diagIndex indicates where the rows of L end
-    /// \param[in] full_matrix   whether the kernel should operate on a full (square) matrix or not
-    static std::string get_ILU_apply1_source(bool full_matrix);
-
-    /// ILU apply part 2: backward substitution
-    /// solves U*x=y where U is an upper triangular sparse blocked matrix
-    /// this U can be it's own BSR matrix (if full_matrix is false),
-    /// or it can be inside a normal, square matrix, in that case diagIndex indicates where the rows of U start
-    /// \param[in] full_matrix   whether the kernel should operate on a full (square) matrix or not
-    static std::string get_ILU_apply2_source(bool full_matrix);
-
-    /// Generate string with the stdwell_apply kernels
-    /// If reorder is true, the B/Ccols do not correspond with the x/y vector
-    /// the x/y vector is reordered, use toOrder to address that
-    /// \param[in] reorder   whether the matrix is reordered or not
-    static std::string get_stdwell_apply_source(bool reorder);
-
-    /// Generate string with the exact ilu decomposition kernel
-    /// The kernel takes a full BSR matrix and performs inplace ILU decomposition
-    static std::string get_ilu_decomp_source();
-
     OpenclKernels(){}; // disable instantiation
 
 public:
+    static const std::string axpy_str;
+    static const std::string scale_str;
+    static const std::string vmul_str;
+    static const std::string dot_1_str;
+    static const std::string norm_str;
+    static const std::string custom_str;
+    static const std::string full_to_pressure_restriction_str;
+    static const std::string add_coarse_pressure_correction_str;
+    static const std::string prolongate_vector_str;
+    static const std::string spmv_blocked_str;
+    static const std::string spmv_str;
+    static const std::string spmv_noreset_str;
+    static const std::string residual_blocked_str;
+    static const std::string residual_str;
+#if CHOW_PATEL
+    static const std::string ILU_apply1_str;
+    static const std::string ILU_apply2_str;
+#else
+    static const std::string ILU_apply1_fm_str;
+    static const std::string ILU_apply2_fm_str;
+#endif
+    static const std::string stdwell_apply_str;
+    static const std::string stdwell_apply_no_reorder_str;
+    static const std::string ILU_decomp_str;
+
     static void init(cl::Context *context, cl::CommandQueue *queue, std::vector<cl::Device>& devices, int verbosity);
 
     static double dot(cl::Buffer& in1, cl::Buffer& in2, cl::Buffer& out, int N);

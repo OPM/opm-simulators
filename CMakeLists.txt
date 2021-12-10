@@ -287,6 +287,10 @@ macro (prereqs_hook)
 endmacro (prereqs_hook)
 
 macro (sources_hook)
+  if(OPENCL_FOUND)
+    include(opencl-source-provider)
+    list(APPEND opm-simulators_SOURCES ${PROJECT_BINARY_DIR}/clSources.cpp)
+  endif()
 endmacro (sources_hook)
 
 macro (fortran_hook)
