@@ -103,6 +103,12 @@ calcIncOrDecGradient(double oil_rate, double gas_rate, double alq, bool increase
         computeWellRates_(new_bhp.first, potentials);
         auto [new_oil_rate, oil_is_limited] = getOilRateWithLimit_(potentials);
         auto [new_gas_rate, gas_is_limited] = getGasRateWithLimit_(potentials);
+        bool oil_is_limited_group, gas_is_limited_group;
+        std::tie(new_oil_rate, oil_is_limited_group) = getOilRateWithGroupLimit_(new_oil_rate, oil_rate);
+        std::tie(new_gas_rate, gas_is_limited_group) = getGasRateWithGroupLimit_(new_gas_rate, gas_rate);
+        oil_is_limited = oil_is_limited || oil_is_limited_group;
+        gas_is_limited = gas_is_limited || gas_is_limited_group;
+
         if (!increase && new_oil_rate < 0 ) {
             return std::nullopt;
         }
@@ -836,8 +842,12 @@ maybeAdjustALQbeforeOptimizeLoop_(
            = reduceALQtoGroupTarget(
                 alq, oil_rate, gas_rate, water_rate, potentials);
         oil_rate = std::min(reduced_oil_rate, reduced2_oil_rate);
+        oil_is_limited = oil_is_limited || reduced2_oil_rate < reduced_oil_rate;
         gas_rate = std::min(reduced_gas_rate, reduced2_gas_rate);
+        gas_is_limited = gas_is_limited || reduced2_gas_rate < reduced_gas_rate;
         water_rate = std::min(reduced_water_rate, reduced2_water_rate);
+        water_is_limited = water_is_limited || reduced2_water_rate < reduced_water_rate;
+
         alq = std::min(reduced_alq, reduced2_alq);
     } else {
         if (increase && oil_rate < 0) {
@@ -1087,9 +1097,10 @@ runOptimizeLoop_(bool increase)
         // NOTE: if BHP is below limit, we set state.stop_iteration = true
         auto bhp = state.getBhpWithLimit();
         computeWellRates_(bhp, potentials);
+        bool new_oil_is_limited_group;
         std::tie(new_oil_rate, new_oil_is_limited) = getOilRateWithLimit_(potentials);
-        std::tie(new_oil_rate, new_oil_is_limited) = getOilRateWithGroupLimit_(new_oil_rate, oil_rate);
-
+        std::tie(new_oil_rate, new_oil_is_limited_group) = getOilRateWithGroupLimit_(new_oil_rate, oil_rate);
+        new_oil_is_limited = new_oil_is_limited || new_oil_is_limited_group;
 /*        if (this->debug_abort_if_decrease_and_oil_is_limited_) {
             if (oil_is_limited && !increase) {
                 // if oil is limited we do not want to decrease
@@ -1099,14 +1110,21 @@ runOptimizeLoop_(bool increase)
             }
             }
 */
+        bool new_gas_is_limited_group;
         std::tie(new_gas_rate, new_gas_is_limited) = getGasRateWithLimit_(potentials);
-        std::tie(new_gas_rate, new_gas_is_limited) = getGasRateWithGroupLimit_(new_gas_rate, gas_rate);
+        std::tie(new_gas_rate, new_gas_is_limited_group) = getGasRateWithGroupLimit_(new_gas_rate, gas_rate);
+        new_gas_is_limited = new_gas_is_limited || new_gas_is_limited_group;
 
+        bool new_water_is_limited_group;
         std::tie(new_water_rate, new_water_is_limited) = getWaterRateWithLimit_(potentials);
-        std::tie(new_water_rate, new_water_is_limited) = getWaterRateWithGroupLimit_(new_water_rate, water_rate);
+        std::tie(new_water_rate, new_water_is_limited_group) = getWaterRateWithGroupLimit_(new_water_rate, water_rate);
+        new_water_is_limited = new_water_is_limited || new_water_is_limited_group;
 
-        std::tie(new_oil_rate, new_water_rate, new_oil_is_limited, new_water_is_limited)
+        bool new_oil_is_limited_group_lrat, new_water_is_limited_group_lrat;
+        std::tie(new_oil_rate, new_water_rate, new_oil_is_limited_group_lrat, new_water_is_limited_group_lrat)
             = getLiquidRateWithGroupLimit_(new_oil_rate, oil_rate, new_water_rate, water_rate);
+        new_oil_is_limited = new_oil_is_limited || new_oil_is_limited_group_lrat;
+        new_water_is_limited = new_water_is_limited || new_water_is_limited_group_lrat;
 
 
 /*        if (this->debug_abort_if_increase_and_gas_is_limited_) {
