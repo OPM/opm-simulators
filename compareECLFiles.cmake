@@ -1024,6 +1024,14 @@ add_test_compareECLFiles(CASENAME 0b_rocktab_model6
                          REL_TOL ${rel_tol}
                          DIR model6)
 
+add_test_compareECLFiles(CASENAME base_wt_tracer
+                         FILENAME BASE_WT_TRACER
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR tracer
+			 RESTART_STEP 1,3,7)
+
 # Restart tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-restart-regressionTest.sh "")
 

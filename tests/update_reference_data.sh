@@ -58,6 +58,7 @@ declare -A tests
 # The key in the dictionary must agree with the name given to the test when
 # registering it with cmake in compareEclFiles.cmake. The SIMULATION_CASE should
 # be the basename of the .DATA file used for the simulation.
+
 tests[spe1]="flow spe1 SPE1CASE1"
 tests[spe12]="flow spe1 SPE1CASE2"
 tests[spe1_2p]="flow spe1 SPE1CASE2_2P"
@@ -171,6 +172,7 @@ tests[micp]="flow micp MICP"
 tests[0_base_model6]="flow model6 0_BASE_MODEL6"
 tests[0a_aquct_model6]="flow model6 0A_AQUCT_MODEL6"
 tests[0b_rocktab_model6]="flow model6 0B_ROCKTAB_MODEL6"
+tests[base_wt_tracer]="flow tracer BASE_WT_TRACER"
 
 changed_tests=""
 
@@ -198,12 +200,20 @@ do
 
       if [ -d $configuration/build-opm-simulators/tests/results/$binary+$test_name/restart ]
       then
-        copyToReferenceDir \
-            $BUILD_DIR/tests/results/$binary+$test_name/restart/ \
-            $OPM_TESTS_ROOT/$dirname/opm-simulation-reference/$binary/restart \
-            ${casename}_RESTART \
-            EGRID INIT RFT SMSPEC UNRST UNSMRY
-        test $? -eq 0 && changed_tests="$changed_tests $test_name(restart)"
+
+        RSTEPS=`ls -1 $BUILD_DIR/tests/results/$binary+$test_name/restart/*.UNRST | sed -e 's/.*RESTART_*//' | sed 's/[.].*//' `
+        result=0
+        for RSTEP in $RSTEPS
+        do
+          copyToReferenceDir \
+              $BUILD_DIR/tests/results/$binary+$test_name/restart/ \
+              $OPM_TESTS_ROOT/$dirname/opm-simulation-reference/$binary/restart \
+              ${casename}_RESTART_${RSTEP} \
+              EGRID INIT RFT SMSPEC UNRST UNSMRY
+          res=$?
+          test $result -eq 0 || result=$res
+        done
+        test $result -eq 0 && changed_tests="$changed_tests $test_name(restart)"
       fi
     fi
   done
