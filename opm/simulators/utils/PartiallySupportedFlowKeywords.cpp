@@ -165,7 +165,7 @@ partiallySupported()
          {
             "ROCKCOMP",
             {
-               {1,{false, allow_values<std::string> {"REVERS"}, "ROCKCOMP(ROCKOPT): only the REVERS option is supported"}}, // HYSTERESIS
+               {1,{false, allow_values<std::string> {"REVERS", "IRREVERS"}, "ROCKCOMP(ROCKOPT): only the REVERS and IRREVERS options are supported"}}, // HYSTERESIS
                {3,{false, allow_values<std::string> {"YES"}, "ROCKCOMP(WATINOPT): only equal to YES is supported"}}, // WATER_COMPACTION
                {4,{false, allow_values<std::string> {}, "ROCKCOMP(PORTXROP): transmissibility dependent on porosity model is not supported"}}, // PORTXROP
             },
