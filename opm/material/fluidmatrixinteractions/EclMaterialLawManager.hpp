@@ -118,7 +118,7 @@ private:
     typedef std::vector<std::shared_ptr<EclEpsScalingPoints<Scalar> > > GasOilScalingPointsVector;
     typedef std::vector<std::shared_ptr<EclEpsScalingPoints<Scalar> > > OilWaterScalingPointsVector;
     typedef std::vector<std::shared_ptr<EclEpsScalingPoints<Scalar> > > GasWaterScalingPointsVector;
-    typedef std::vector<std::shared_ptr<EclEpsScalingPointsInfo<Scalar> > > OilWaterScalingInfoVector;
+    typedef std::vector<EclEpsScalingPointsInfo<Scalar>> OilWaterScalingInfoVector;
     typedef std::vector<std::shared_ptr<GasOilTwoPhaseHystParams> > GasOilParamVector;
     typedef std::vector<std::shared_ptr<OilWaterTwoPhaseHystParams> > OilWaterParamVector;
     typedef std::vector<std::shared_ptr<GasWaterTwoPhaseHystParams> > GasWaterParamVector;
@@ -272,8 +272,7 @@ public:
                                   epsGridProperties,
                                   elemIdx,
                                   EclOilWaterSystem);
-            oilWaterScaledEpsInfoDrainage_[elemIdx] =
-                std::make_shared<EclEpsScalingPointsInfo<Scalar>>(owinfo);
+            oilWaterScaledEpsInfoDrainage_[elemIdx] = owinfo;
 
             auto [gasWaterScaledInfo, gasWaterScaledPoint] =
                 readScaledPoints_(*gasWaterConfig,
@@ -392,7 +391,7 @@ public:
             initThreePhaseParams_(eclState,
                                   *materialLawParams_[elemIdx],
                                   satRegionIdx,
-                                  *oilWaterScaledEpsInfoDrainage_[elemIdx],
+                                  oilWaterScaledEpsInfoDrainage_[elemIdx],
                                   oilWaterParams,
                                   gasOilParams,
                                   gasWaterParams);
@@ -414,7 +413,7 @@ public:
                          Scalar pcow,
                          Scalar Sw)
     {
-        auto& elemScaledEpsInfo = *oilWaterScaledEpsInfoDrainage_[elemIdx];
+        auto& elemScaledEpsInfo = oilWaterScaledEpsInfoDrainage_[elemIdx];
 
         // TODO: Mixed wettability systems - see ecl kw OPTIONS switch 74
 
@@ -660,9 +659,6 @@ public:
     }
 
     const EclEpsScalingPointsInfo<Scalar>& oilWaterScaledEpsInfoDrainage(size_t elemIdx) const
-    { return *oilWaterScaledEpsInfoDrainage_[elemIdx]; }
-
-    std::shared_ptr<EclEpsScalingPointsInfo<Scalar> >& oilWaterScaledEpsInfoDrainagePointerReferenceHack(unsigned elemIdx)
     { return oilWaterScaledEpsInfoDrainage_[elemIdx]; }
 
 private:
