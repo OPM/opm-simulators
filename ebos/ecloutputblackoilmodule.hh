@@ -625,8 +625,9 @@ public:
         }
 
         if (simulator_.vanguard().eclState().fieldProps().has_double("SWATINIT")) {
-            auto oilWaterScaledEpsInfoDrainage = simulator.problem().materialLawManager()->oilWaterScaledEpsInfoDrainagePointerReferenceHack(elemIdx);
-            oilWaterScaledEpsInfoDrainage->maxPcow =  this->ppcw_[elemIdx];
+            const auto& oilWaterScaledEpsInfoDrainage =
+                simulator.problem().materialLawManager()->oilWaterScaledEpsInfoDrainage(elemIdx);
+            const_cast<EclEpsScalingPointsInfo<Scalar>&>(oilWaterScaledEpsInfoDrainage).maxPcow = this->ppcw_[elemIdx];
         }
 
     }
