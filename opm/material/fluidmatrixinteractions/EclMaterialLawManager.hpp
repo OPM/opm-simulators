@@ -118,9 +118,7 @@ private:
     typedef std::vector<std::shared_ptr<EclEpsScalingPoints<Scalar> > > GasOilScalingPointsVector;
     typedef std::vector<std::shared_ptr<EclEpsScalingPoints<Scalar> > > OilWaterScalingPointsVector;
     typedef std::vector<std::shared_ptr<EclEpsScalingPoints<Scalar> > > GasWaterScalingPointsVector;
-    typedef std::vector<std::shared_ptr<EclEpsScalingPointsInfo<Scalar> > > GasOilScalingInfoVector;
     typedef std::vector<std::shared_ptr<EclEpsScalingPointsInfo<Scalar> > > OilWaterScalingInfoVector;
-    typedef std::vector<std::shared_ptr<EclEpsScalingPointsInfo<Scalar> > > GasWaterScalingInfoVector;
     typedef std::vector<std::shared_ptr<GasOilTwoPhaseHystParams> > GasOilParamVector;
     typedef std::vector<std::shared_ptr<OilWaterTwoPhaseHystParams> > OilWaterParamVector;
     typedef std::vector<std::shared_ptr<GasWaterTwoPhaseHystParams> > GasWaterParamVector;
@@ -1102,7 +1100,6 @@ private:
     OilWaterScalingInfoVector oilWaterScaledEpsInfoDrainage_;
 
     std::shared_ptr<EclEpsConfig> gasWaterEclEpsConfig_;
-    GasWaterScalingInfoVector gasWaterScaledEpsInfoDrainage_;
 
     GasOilScalingPointsVector gasOilUnscaledPointsVector_;
     OilWaterScalingPointsVector oilWaterUnscaledPointsVector_;
