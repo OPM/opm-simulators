@@ -101,12 +101,9 @@ public:
     /*!
      * \brief Sets the parameters used for the drainage curve
      */
-    void setDrainageParams(std::shared_ptr<EffLawParams> value,
-                           const EclEpsScalingPointsInfo<Scalar>& /* info */,
-                           EclTwoPhaseSystemType /* twoPhaseSystem */)
-
+    void setDrainageParams(const EffLawParams& value)
     {
-        drainageParams_ = *value;
+        drainageParams_ = value;
     }
 
     /*!
@@ -121,11 +118,11 @@ public:
     /*!
      * \brief Sets the parameters used for the imbibition curve
      */
-    void setImbibitionParams(std::shared_ptr<EffLawParams> value,
+    void setImbibitionParams(const EffLawParams& value,
                              const EclEpsScalingPointsInfo<Scalar>& /* info */,
                              EclTwoPhaseSystemType /* twoPhaseSystem */)
     {
-        imbibitionParams_ = *value;
+        imbibitionParams_ = value;
 
 /*
         if (twoPhaseSystem == EclGasOilSystem) {
