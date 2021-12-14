@@ -21,20 +21,20 @@
 
 #include <opm/simulators/utils/ParallelSerialization.hpp>
 
-#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Action/ASTNode.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/MSW/SICD.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/MSW/Valve.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Action/State.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQState.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQASTNode.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQConfig.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/WList.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/WListManager.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestState.hpp>
-#include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
-#include <opm/parser/eclipse/EclipseState/Grid/TransMult.hpp>
+#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
+#include <opm/input/eclipse/Schedule/Action/ASTNode.hpp>
+#include <opm/input/eclipse/Schedule/MSW/SICD.hpp>
+#include <opm/input/eclipse/Schedule/MSW/Valve.hpp>
+#include <opm/input/eclipse/Schedule/Action/State.hpp>
+#include <opm/input/eclipse/Schedule/UDQ/UDQState.hpp>
+#include <opm/input/eclipse/Schedule/UDQ/UDQASTNode.hpp>
+#include <opm/input/eclipse/Schedule/UDQ/UDQConfig.hpp>
+#include <opm/input/eclipse/Schedule/Well/WList.hpp>
+#include <opm/input/eclipse/Schedule/Well/WListManager.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
+#include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
+#include <opm/input/eclipse/EclipseState/Grid/TransMult.hpp>
 
 #include <ebos/eclmpiserializer.hh>
 

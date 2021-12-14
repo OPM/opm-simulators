@@ -31,7 +31,7 @@
 #include "collecttoiorank.hh"
 #include "ecloutputblackoilmodule.hh"
 
-#include <opm/parser/eclipse/Units/UnitSystem.hpp>
+#include <opm/input/eclipse/Units/UnitSystem.hpp>
 
 #include <opm/simulators/utils/ParallelRestart.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>

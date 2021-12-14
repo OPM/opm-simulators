@@ -19,7 +19,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <opm/parser/eclipse/EclipseState/Schedule/ScheduleTypes.hpp>
+#include <opm/input/eclipse/Schedule/ScheduleTypes.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/TargetCalculator.hpp>

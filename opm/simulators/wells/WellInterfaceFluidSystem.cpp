@@ -24,8 +24,8 @@
 
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestState.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/wells/RateConverter.hpp>

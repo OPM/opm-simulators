@@ -25,7 +25,7 @@
 
 #include <opm/grid/CpGrid.hpp>
 
-#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 
 namespace Opm
 {

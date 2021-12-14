@@ -30,11 +30,11 @@
 #include <opm/grid/CpGrid.hpp>
 #include <opm/grid/polyhedralgrid.hh>
 
-#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/parser/eclipse/EclipseState/Grid/FaceDir.hpp>
-#include <opm/parser/eclipse/EclipseState/Grid/FieldPropsManager.hpp>
-#include <opm/parser/eclipse/EclipseState/Grid/TransMult.hpp>
-#include <opm/parser/eclipse/Units/Units.hpp>
+#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
+#include <opm/input/eclipse/EclipseState/Grid/FieldPropsManager.hpp>
+#include <opm/input/eclipse/EclipseState/Grid/TransMult.hpp>
+#include <opm/input/eclipse/Units/Units.hpp>
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/gridpart/adaptiveleafgridpart.hh>

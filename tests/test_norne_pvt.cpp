@@ -34,14 +34,14 @@
 #include <sstream>
 #include <iostream>
 
-#include <opm/parser/eclipse/Python/Python.hpp>
-#include <opm/parser/eclipse/Units/Units.hpp>
-#include <opm/parser/eclipse/Parser/Parser.hpp>
-#include <opm/parser/eclipse/Parser/ParseContext.hpp>
-#include <opm/parser/eclipse/Parser/ErrorGuard.hpp>
-#include <opm/parser/eclipse/Deck/Deck.hpp>
-#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
+#include <opm/input/eclipse/Python/Python.hpp>
+#include <opm/input/eclipse/Units/Units.hpp>
+#include <opm/input/eclipse/Parser/Parser.hpp>
+#include <opm/input/eclipse/Parser/ParseContext.hpp>
+#include <opm/input/eclipse/Parser/ErrorGuard.hpp>
+#include <opm/input/eclipse/Deck/Deck.hpp>
+#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/TableManager.hpp>
 
 #include <opm/material/fluidsystems/blackoilpvt/LiveOilPvt.hpp>
 

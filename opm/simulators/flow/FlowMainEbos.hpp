@@ -30,10 +30,10 @@
 #include <opm/simulators/utils/moduleVersion.hpp>
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
 
-#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/parser/eclipse/EclipseState/IOConfig/IOConfig.hpp>
-#include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/UDQ/UDQState.hpp>
+#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/EclipseState/IOConfig/IOConfig.hpp>
+#include <opm/input/eclipse/EclipseState/InitConfig/InitConfig.hpp>
+#include <opm/input/eclipse/Schedule/UDQ/UDQState.hpp>
 #include <opm/common/utility/String.hpp>
 
 #include <fmt/format.h>

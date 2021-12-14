@@ -19,7 +19,7 @@
 
 #include <config.h>
 #include <opm/simulators/timestepping/SimulatorTimerInterface.hpp>
-#include <opm/parser/eclipse/Units/Units.hpp>
+#include <opm/input/eclipse/Units/Units.hpp>
 #include <boost/date_time/posix_time/conversion.hpp>
 
 namespace Opm

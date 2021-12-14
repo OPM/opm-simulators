@@ -24,7 +24,7 @@
 #include <algorithm>
 #include <numeric>
 
-#include <opm/parser/eclipse/Units/Units.hpp>
+#include <opm/input/eclipse/Units/Units.hpp>
 #include <opm/simulators/timestepping/AdaptiveSimulatorTimer.hpp>
 
 #include <boost/date_time/posix_time/posix_time.hpp>

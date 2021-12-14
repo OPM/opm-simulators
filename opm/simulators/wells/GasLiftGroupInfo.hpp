@@ -26,11 +26,11 @@
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/parametersystem.hh>
-#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/GasLiftOpt.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/SummaryState.hpp>
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
+#include <opm/input/eclipse/Schedule/Well/Well.hpp>
+#include <opm/input/eclipse/Schedule/Group/Group.hpp>
+#include <opm/input/eclipse/Schedule/GasLiftOpt.hpp>
+#include <opm/input/eclipse/Schedule/SummaryState.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 

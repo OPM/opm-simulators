@@ -23,7 +23,7 @@
 
 #include <opm/output/data/Aquifer.hpp>
 
-#include <opm/parser/eclipse/EclipseState/Aquifer/NumericalAquifer/SingleNumericalAquifer.hpp>
+#include <opm/input/eclipse/EclipseState/Aquifer/NumericalAquifer/SingleNumericalAquifer.hpp>
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 

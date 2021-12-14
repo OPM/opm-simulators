@@ -21,7 +21,7 @@
 
 #include <opm/simulators/wells/MSWellHelpers.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/MSW/Valve.hpp>
+#include <opm/input/eclipse/Schedule/MSW/Valve.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <string>

@@ -1,6 +1,6 @@
-#include <opm/parser/eclipse/Parser/Parser.hpp>
-#include <opm/parser/eclipse/Parser/ParseContext.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
+#include <opm/input/eclipse/Parser/Parser.hpp>
+#include <opm/input/eclipse/Parser/ParseContext.hpp>
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
 
 #include <opm/grid/UnstructuredGrid.h>
 #include <opm/core/grid/cornerpoint_grid.h>

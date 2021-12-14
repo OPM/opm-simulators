@@ -30,9 +30,9 @@
 #include <opm/grid/CpGrid.hpp>
 #include <opm/grid/polyhedralgrid.hh>
 #include <opm/models/discretization/ecfv/ecfvstencil.hh>
-#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/parser/eclipse/EclipseState/Runspec.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/TracerVdTable.hpp>
+#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/EclipseState/Runspec.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/TracerVdTable.hpp>
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
 
 #include <dune/istl/operators.hh>

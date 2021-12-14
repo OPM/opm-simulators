@@ -19,9 +19,9 @@
 
 #include <opm/simulators/wells/WellProdIndexCalculator.hpp>
 
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/Connection.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/WellConnections.hpp>
+#include <opm/input/eclipse/Schedule/Well/Connection.hpp>
+#include <opm/input/eclipse/Schedule/Well/Well.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 
 #include <algorithm>
 #include <cmath>

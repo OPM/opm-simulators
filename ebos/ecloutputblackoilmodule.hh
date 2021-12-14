@@ -39,8 +39,8 @@
 
 #include <opm/material/common/Valgrind.hpp>
 
-#include <opm/parser/eclipse/Units/Units.hpp>
-#include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
+#include <opm/input/eclipse/Units/Units.hpp>
+#include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 #include <opm/output/data/Cells.hpp>
 #include <opm/output/eclipse/EclipseIO.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>

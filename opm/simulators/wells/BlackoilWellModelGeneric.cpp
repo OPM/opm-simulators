@@ -29,11 +29,11 @@
 #include <opm/output/data/Wells.hpp>
 #include <opm/output/eclipse/RestartValue.hpp>
 
-#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRateConfig.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRate.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
-#include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
+#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/Schedule/Group/GuideRateConfig.hpp>
+#include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
+#include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/wells/GasLiftStage2.hpp>

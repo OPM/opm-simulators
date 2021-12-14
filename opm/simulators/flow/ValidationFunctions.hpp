@@ -22,7 +22,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include <opm/parser/eclipse/Deck/Deck.hpp>
+#include <opm/input/eclipse/Deck/Deck.hpp>
 #include <opm/simulators/flow/KeywordValidation.hpp>
 
 

@@ -24,7 +24,7 @@
 #ifndef OPM_WELLINTERFACE_GENERIC_HEADER_INCLUDED
 #define OPM_WELLINTERFACE_GENERIC_HEADER_INCLUDED
 
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
+#include <opm/input/eclipse/Schedule/Well/Well.hpp>
 
 #include <map>
 #include <optional>

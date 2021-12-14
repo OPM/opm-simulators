@@ -88,12 +88,12 @@
 #include <opm/material/fluidsystems/blackoilpvt/ConstantCompressibilityWaterPvt.hpp>
 
 #include <opm/material/common/Valgrind.hpp>
-#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/Eqldims.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionContext.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Action/ActionX.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Action/State.hpp>
+#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/Eqldims.hpp>
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
+#include <opm/input/eclipse/Schedule/Action/ActionContext.hpp>
+#include <opm/input/eclipse/Schedule/Action/ActionX.hpp>
+#include <opm/input/eclipse/Schedule/Action/State.hpp>
 #include <opm/common/utility/TimeService.hpp>
 #include <opm/material/common/ConditionalStorage.hpp>
 

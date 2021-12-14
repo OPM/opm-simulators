@@ -4,7 +4,7 @@
 #include <config.h>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
-#include <opm/parser/eclipse/Units/Units.hpp>
+#include <opm/input/eclipse/Units/Units.hpp>
 #include <opm/simulators/timestepping/AdaptiveSimulatorTimer.hpp>
 #include <boost/date_time.hpp>
 #include <sstream>

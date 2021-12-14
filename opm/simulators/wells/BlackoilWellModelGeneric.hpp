@@ -25,8 +25,8 @@
 
 #include <opm/output/data/GuideRateValue.hpp>
 
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestState.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRate.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
+#include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 

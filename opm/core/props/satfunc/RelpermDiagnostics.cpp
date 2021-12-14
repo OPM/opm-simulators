@@ -22,19 +22,19 @@
 
 #include <opm/material/fluidmatrixinteractions/EclEpsScalingPoints.hpp>
 
-#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/parser/eclipse/EclipseState/Grid/SatfuncPropertyInitializers.hpp>
-#include <opm/parser/eclipse/EclipseState/Runspec.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/SgfnTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/SgofTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/SgwfnTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/SlgofTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/Sof2Table.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/Sof3Table.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/SsfnTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/SwfnTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/SwofTable.hpp>
+#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/EclipseState/Grid/SatfuncPropertyInitializers.hpp>
+#include <opm/input/eclipse/EclipseState/Runspec.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/TableManager.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/SgfnTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/SgofTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/SgwfnTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/SlgofTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/Sof2Table.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/Sof3Table.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/SsfnTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/SwfnTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/SwofTable.hpp>
 
 #include <opm/grid/CpGrid.hpp>
 #include <opm/grid/polyhedralgrid.hh>

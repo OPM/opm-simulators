@@ -23,7 +23,7 @@
 #define OPM_AQUIFERINTERFACE_HEADER_INCLUDED
 
 #include <opm/common/utility/numeric/linearInterpolation.hpp>
-#include <opm/parser/eclipse/EclipseState/Aquifer/Aquancon.hpp>
+#include <opm/input/eclipse/EclipseState/Aquifer/Aquancon.hpp>
 
 #include <opm/output/data/Aquifer.hpp>
 

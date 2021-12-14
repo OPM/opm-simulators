@@ -26,12 +26,12 @@
 
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/material/densead/Math.hpp>
-#include <opm/parser/eclipse/Deck/Deck.hpp>
-#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/parser/eclipse/EclipseState/Grid/FieldPropsManager.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/Eqldims.hpp>
-#include <opm/parser/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
-#include <opm/parser/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
+#include <opm/input/eclipse/Deck/Deck.hpp>
+#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/EclipseState/Grid/FieldPropsManager.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/Eqldims.hpp>
+#include <opm/input/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
+#include <opm/input/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
 
 #include <dune/grid/common/mcmgmapper.hh>
 

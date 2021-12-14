@@ -26,7 +26,7 @@
 
 #include <opm/material/densead/Evaluation.hpp>
 
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
+#include <opm/input/eclipse/Schedule/Well/Well.hpp>
 
 #include <dune/common/fmatrix.hh>
 #include <dune/common/fvector.hh>

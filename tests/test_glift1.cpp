@@ -31,8 +31,8 @@
 #include <ebos/ebos.hh>
 #include <opm/models/utils/start.hh>
 
-#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
+#include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/flow/BlackoilModelEbos.hpp>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>

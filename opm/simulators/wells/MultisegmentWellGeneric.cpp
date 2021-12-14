@@ -23,7 +23,7 @@
 
 #include <opm/common/utility/numeric/RootFinders.hpp>
 
-#include <opm/parser/eclipse/EclipseState/Schedule/VFPInjTable.hpp>
+#include <opm/input/eclipse/Schedule/VFPInjTable.hpp>
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/VFPHelpers.hpp>

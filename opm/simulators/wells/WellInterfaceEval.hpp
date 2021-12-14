@@ -26,8 +26,8 @@
 
 #include <opm/core/props/BlackoilPhases.hpp>
 
-#include <opm/parser/eclipse/EclipseState/Schedule/ScheduleTypes.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
+#include <opm/input/eclipse/Schedule/ScheduleTypes.hpp>
+#include <opm/input/eclipse/Schedule/Well/Well.hpp>
 
 #include <functional>
 

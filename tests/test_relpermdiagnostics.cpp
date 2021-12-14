@@ -40,8 +40,8 @@
 #include <dune/grid/common/mcmgmapper.hh>
 
 #include <opm/core/props/satfunc/RelpermDiagnostics.hpp>
-#include <opm/parser/eclipse/Parser/Parser.hpp>
-#include <opm/parser/eclipse/Deck/Deck.hpp>
+#include <opm/input/eclipse/Parser/Parser.hpp>
+#include <opm/input/eclipse/Deck/Deck.hpp>
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/misc/mpimanager.hh>

@@ -25,8 +25,8 @@
 
 #include <opm/core/props/BlackoilPhases.hpp>
 
-#include <opm/parser/eclipse/EclipseState/Schedule/GasLiftOpt.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
+#include <opm/input/eclipse/Schedule/GasLiftOpt.hpp>
+#include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/simulators/wells/GasLiftGroupInfo.hpp>
 
 #include <functional>

@@ -21,12 +21,12 @@
 #ifndef OPM_WELLGROUPHELPERS_HEADER_INCLUDED
 #define OPM_WELLGROUPHELPERS_HEADER_INCLUDED
 
-#include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRate.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Group/GPMaint.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
+#include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
+#include <opm/input/eclipse/Schedule/Group/GPMaint.hpp>
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/WellState.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
+#include <opm/input/eclipse/Schedule/Group/Group.hpp>
 
 #include <map>
 #include <string>

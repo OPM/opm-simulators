@@ -26,7 +26,7 @@
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/MSW/SICD.hpp>
+#include <opm/input/eclipse/Schedule/MSW/SICD.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <string>
 #include<dune/istl/matrix.hh>

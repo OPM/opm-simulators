@@ -20,7 +20,7 @@
 #ifndef OPM_SIMULATORTIMER_HEADER_INCLUDED
 #define OPM_SIMULATORTIMER_HEADER_INCLUDED
 
-#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/simulators/timestepping/SimulatorTimerInterface.hpp>
 
 #include <iosfwd>

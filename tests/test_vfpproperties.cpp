@@ -35,12 +35,12 @@
 #include <opm/common/utility/FileSystem.hpp>
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
-#include <opm/parser/eclipse/Deck/Deck.hpp>
-#include <opm/parser/eclipse/Parser/Parser.hpp>
-#include <opm/parser/eclipse/Units/UnitSystem.hpp>
+#include <opm/input/eclipse/Deck/Deck.hpp>
+#include <opm/input/eclipse/Parser/Parser.hpp>
+#include <opm/input/eclipse/Units/UnitSystem.hpp>
 #include <opm/simulators/wells/VFPHelpers.hpp>
 #include <opm/simulators/wells/VFPProdProperties.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/VFPProdTable.hpp>
+#include <opm/input/eclipse/Schedule/VFPProdTable.hpp>
 
 
 

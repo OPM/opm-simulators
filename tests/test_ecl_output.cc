@@ -31,7 +31,7 @@
 #include <opm/grid/UnstructuredGrid.h>
 #include <opm/grid/GridManager.hpp>
 
-#include <opm/parser/eclipse/Units/Units.hpp>
+#include <opm/input/eclipse/Units/Units.hpp>
 
 #include <opm/io/eclipse/ESmry.hpp>
 
@@ -39,7 +39,7 @@
 #include <ebos/collecttoiorank.hh>
 #include <ebos/ecloutputblackoilmodule.hh>
 #include <ebos/eclwriter.hh>
-#include <opm/parser/eclipse/EclipseState/Schedule/Action/State.hpp>
+#include <opm/input/eclipse/Schedule/Action/State.hpp>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
 #include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
 

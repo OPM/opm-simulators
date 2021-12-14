@@ -32,8 +32,8 @@
 
 #include <opm/output/data/Wells.hpp>
 #include <opm/output/eclipse/Inplace.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/SummaryState.hpp>
-#include <opm/parser/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
+#include <opm/input/eclipse/Schedule/SummaryState.hpp>
+#include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
 #include <dune/common/version.hh>
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
