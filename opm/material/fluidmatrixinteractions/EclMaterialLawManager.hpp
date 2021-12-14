@@ -386,17 +386,15 @@ public:
             if (hasGas && hasWater && !hasOil)
                 gasWaterParams->finalize();
 
-            materialLawParams_[elemIdx] = std::make_shared<MaterialLawParams>();
-
             initThreePhaseParams_(eclState,
-                                  *materialLawParams_[elemIdx],
+                                  materialLawParams_[elemIdx],
                                   satRegionIdx,
                                   oilWaterScaledEpsInfoDrainage_[elemIdx],
                                   oilWaterParams,
                                   gasOilParams,
                                   gasWaterParams);
 
-            materialLawParams_[elemIdx]->finalize();
+            materialLawParams_[elemIdx].finalize();
         }
     }
 
@@ -466,13 +464,13 @@ public:
     MaterialLawParams& materialLawParams(unsigned elemIdx)
     {
         assert(elemIdx <  materialLawParams_.size());
-        return *materialLawParams_[elemIdx];
+        return materialLawParams_[elemIdx];
     }
 
     const MaterialLawParams& materialLawParams(unsigned elemIdx) const
     {
         assert(elemIdx <  materialLawParams_.size());
-        return *materialLawParams_[elemIdx];
+        return materialLawParams_[elemIdx];
     }
 
     /*!
@@ -485,7 +483,7 @@ public:
      */
     const MaterialLawParams& connectionMaterialLawParams(unsigned satRegionIdx, unsigned elemIdx) const
     {
-        MaterialLawParams& mlp = *materialLawParams_[elemIdx];
+        MaterialLawParams& mlp = const_cast<MaterialLawParams&>(materialLawParams_[elemIdx]);
 
 #if HAVE_OPM_COMMON
         if (enableHysteresis())
@@ -582,8 +580,7 @@ public:
         if (!enableHysteresis())
             return;
 
-        auto threePhaseParams = materialLawParams_[elemIdx];
-        MaterialLaw::updateHysteresis(*threePhaseParams, fluidState);
+        MaterialLaw::updateHysteresis(materialLawParams_[elemIdx], fluidState);
     }
 
     void oilWaterHysteresisParams(Scalar& pcSwMdc,
@@ -632,7 +629,7 @@ public:
 
     EclEpsScalingPoints<Scalar>& oilWaterScaledEpsPointsDrainage(unsigned elemIdx)
     {
-        auto& materialParams = *materialLawParams_[elemIdx];
+        auto& materialParams = materialLawParams_[elemIdx];
         switch (materialParams.approach()) {
         case EclMultiplexerApproach::EclStone1Approach: {
             auto& realParams = materialParams.template getRealParams<EclMultiplexerApproach::EclStone1Approach>();
@@ -1109,7 +1106,7 @@ private:
     // this attribute only makes sense for twophase simulations!
     enum EclTwoPhaseApproach twoPhaseApproach_ = EclTwoPhaseApproach::EclTwoPhaseGasOil;
 
-    std::vector<std::shared_ptr<MaterialLawParams> > materialLawParams_;
+    std::vector<MaterialLawParams> materialLawParams_;
 
     std::vector<int> satnumRegionArray_;
     std::vector<int> imbnumRegionArray_;
