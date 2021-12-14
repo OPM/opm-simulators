@@ -360,7 +360,7 @@ public:
 
                     oilWaterParams->setImbibitionParams(oilWaterImbParamsHyst,
                                                         gasOilScaledImbInfo,
-                                                        EclGasOilSystem);
+                                                        EclOilWaterSystem);
                 }
 
                 if (hasGas && hasWater && !hasOil) {
