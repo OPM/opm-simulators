@@ -46,9 +46,9 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 #endif
 
-#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/TableColumn.hpp>
+#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/TableManager.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/TableColumn.hpp>
 
 #include <algorithm>
 #include <cassert>

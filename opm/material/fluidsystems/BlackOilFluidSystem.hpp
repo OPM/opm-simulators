@@ -42,9 +42,9 @@
 #include <opm/material/common/Exceptions.hpp>
 
 #if HAVE_ECL_INPUT
-#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/FlatTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
+#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/FlatTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/TableManager.hpp>
 #endif
 
 #include <memory>

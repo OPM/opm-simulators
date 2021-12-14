@@ -32,8 +32,8 @@
 #include "WaterPvtThermal.hpp"
 
 #if HAVE_ECL_INPUT
-#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/parser/eclipse/EclipseState/Runspec.hpp>
+#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/EclipseState/Runspec.hpp>
 #endif
 
 #define OPM_WATER_PVT_MULTIPLEXER_CALL(codeToCall)                      \
