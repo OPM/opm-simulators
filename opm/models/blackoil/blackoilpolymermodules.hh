@@ -38,12 +38,12 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #if HAVE_ECL_INPUT
-#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/PlyadsTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/PlymaxTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/PlyrockTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/PlyshlogTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/PlyviscTable.hpp>
+#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/PlyadsTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/PlymaxTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/PlyrockTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/PlyshlogTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/PlyviscTable.hpp>
 #endif
 
 #include <opm/material/common/Valgrind.hpp>

@@ -36,16 +36,16 @@
 #include <opm/material/common/Tabulated1DFunction.hpp>
 
 #if HAVE_ECL_INPUT
-#include <opm/parser/eclipse/Deck/Deck.hpp>
-#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/SsfnTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/Sof2Table.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/MsfnTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/PmiscTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/MiscTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/SorwmisTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/SgcwmisTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/TlpmixpaTable.hpp>
+#include <opm/input/eclipse/Deck/Deck.hpp>
+#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/SsfnTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/Sof2Table.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/MsfnTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/PmiscTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/MiscTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/SorwmisTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/SgcwmisTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/TlpmixpaTable.hpp>
 #endif
 
 #include <opm/material/common/Valgrind.hpp>
