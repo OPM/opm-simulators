@@ -607,22 +607,47 @@ GasLiftSingleWellGeneric::
 getOilRateWithGroupLimit_(const double new_oil_rate, const double oil_rate) const
 {
     const double delta_oil = new_oil_rate - oil_rate;
-    const auto &pairs =
-        this->group_info_.getWellGroups(this->well_name_);
-    for (const auto &[group_name, efficiency] : pairs) {
-        auto gr_oil_target_opt = this->group_info_.oilTarget(group_name);
-        if (gr_oil_target_opt) {
-            double gr_oil_rate =
-                this->group_info_.oilRate(group_name);
-            double new_gr_oil_rate = gr_oil_rate + efficiency * delta_oil;
-            if (new_gr_oil_rate > *gr_oil_target_opt) {
-                const std::string msg = fmt::format("limiting oil rate to group target: "
-                    "computed group rate: {}, target: {}", new_gr_oil_rate, *gr_oil_target_opt);
-                displayDebugMessage_(msg);
-                double new_rate = oil_rate + (*gr_oil_target_opt - gr_oil_rate) / efficiency;
-                return { std::min(new_rate, new_oil_rate), /*limit=*/true};
+    if (delta_oil > 0) {
+      // It is required that the production rate for a given group is
+      // is less than or equal to its target rate, see assert() below.
+      // Then it only makes sense to check if the group target is exceeded
+      //  if delta_oil > 0
+      const auto &pairs =
+          this->group_info_.getWellGroups(this->well_name_);
+      bool limit = false;
+      double limited_oil_rate = new_oil_rate;
+      double gr_oil_target, new_gr_oil_rate;
+      const std::string *group_name = nullptr;
+      for (const auto& [group_name_temp, efficiency] : pairs) {
+          auto gr_oil_target_opt = this->group_info_.oilTarget(group_name_temp);
+          if (gr_oil_target_opt) {
+            double gr_oil_target_temp = *gr_oil_target_opt;
+            double gr_oil_rate_temp =
+                this->group_info_.oilRate(group_name_temp);
+            assert(gr_oil_rate_temp <= gr_oil_target_temp);
+            double new_gr_oil_rate_temp = gr_oil_rate_temp + efficiency * delta_oil;
+            if (new_gr_oil_rate_temp > gr_oil_target_temp) {
+                double limited_oil_rate_temp =
+                    oil_rate + (gr_oil_target_temp - gr_oil_rate_temp) / efficiency;
+                if (limited_oil_rate_temp < limited_oil_rate) {
+                    limit = true;
+                    group_name = &group_name_temp;
+                    limited_oil_rate = limited_oil_rate_temp;
+                    gr_oil_target = gr_oil_target_temp;
+                    new_gr_oil_rate = new_gr_oil_rate_temp;
+                }
             }
-        }
+         }
+      }
+      if (this->debug_ && limit) {
+          const std::string msg = fmt::format(
+              "limiting oil rate from {} to {} to meet group target {} "
+              "for group {}. Computed group rate was: {}",
+              new_oil_rate, limited_oil_rate, gr_oil_target,
+              *group_name, new_gr_oil_rate);
+          displayDebugMessage_(msg);
+          return { limited_oil_rate, /*limit=*/true};
+      }
     }
     return { new_oil_rate, /*limit=*/false};
 }
