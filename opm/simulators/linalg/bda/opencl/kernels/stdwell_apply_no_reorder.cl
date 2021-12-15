@@ -35,15 +35,17 @@ __kernel void stdwell_apply_no_reorder(
             b += numBlocksPerWarp;
         }
 
+        // merge all blocks in this workgroup into 1 block
+        // if numBlocksPerWarp >= 3, should use loop
         if(wiId < valsPerBlock){
-            localSum[wiId] += localSum[wiId + valsPerBlock];
+            for (int i = 1; i < numBlocksPerWarp; ++i) {
+                localSum[wiId] += localSum[wiId + i*valsPerBlock];
+	    }
         }
 
-        b = wiId/valsPerBlock + val_pointers[wgId];
-
         if(c == 0 && wiId < valsPerBlock){
-            for(unsigned int stride = 2; stride > 0; stride >>= 1){
-                localSum[wiId] += localSum[wiId + stride];
+            for(unsigned int i = dim - 1; i > 0; --i){
+                localSum[wiId] += localSum[wiId + i];
             }
             z1[r] = localSum[wiId];
         }
