@@ -80,10 +80,9 @@ __global__ void apply_well_contributions(
         }
 
         // merge all blocks into 1 dim*dim_wells block
-        // since NORNE has only 2 parallel blocks, do not use a loop
+        // since 3*4 blocks has give 2 parallel blocks, do not use a loop
+        // 0x00ffffff contains 24 ones, representing the two blocks that are added
         temp += __shfl_down_sync(0x00ffffff, temp, dim * dim_wells);
-
-        b = idx_t / vals_per_block + val_pointers[idx_b];
 
         // merge all (dim) columns of 1 block, results in a single 1*dim_wells vector, which is used to multiply with invD
         if (idx_t < vals_per_block) {
