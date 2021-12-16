@@ -106,8 +106,8 @@ public:
     /*!
      * \brief Set the scaling points which are seen by the physical model
      */
-    void setScaledPoints(std::shared_ptr<ScalingPoints> value)
-    { scaledPoints_ = *value; }
+    void setScaledPoints(const ScalingPoints& value)
+    { scaledPoints_ = value; }
 
     /*!
      * \brief Returns the scaling points which are seen by the physical model
