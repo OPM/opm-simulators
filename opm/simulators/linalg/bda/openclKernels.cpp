@@ -1105,6 +1105,12 @@ std::string OpenclKernels::get_matrix_operation_source(matrix_operation op, bool
 
                     // merge all blocks in this workgroup into 1 block
                     // if numBlocksPerWarp >= 3, should use loop
+                    // block 1:     block 2:
+                    //  0  1  2     12 13 14
+                    //  3  4  5     15 16 17
+                    //  6  7  8     18 19 20
+                    //  9 10 11     21 22 23
+                    // workitem i will hold the sum of workitems i and i + valsPerBlock
                     if(wiId < valsPerBlock){
                         for (int i = 1; i < numBlocksPerWarp; ++i) {
                             localSum[wiId] += localSum[wiId + i*valsPerBlock];
