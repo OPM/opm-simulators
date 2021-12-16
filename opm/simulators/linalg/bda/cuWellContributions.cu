@@ -82,6 +82,12 @@ __global__ void apply_well_contributions(
         // merge all blocks into 1 dim*dim_wells block
         // since 3*4 blocks has give 2 parallel blocks, do not use a loop
         // 0x00ffffff contains 24 ones, representing the two blocks that are added
+        // block 1:     block 2:
+        //  0  1  2     12 13 14
+        //  3  4  5     15 16 17
+        //  6  7  8     18 19 20
+        //  9 10 11     21 22 23
+        // thread i will hold the sum of thread i and i + vals_per_block
         temp += __shfl_down_sync(0x00ffffff, temp, dim * dim_wells);
 
         // merge all (dim) columns of 1 block, results in a single 1*dim_wells vector, which is used to multiply with invD
