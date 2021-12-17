@@ -40,7 +40,7 @@ __kernel void spmv_noreset(
         }
 
         if (idx_t == 0) {
-            out[row] += tmp[idx_t];";
+            out[row] += tmp[idx_t];
         }
 
         row += num_workgroups;

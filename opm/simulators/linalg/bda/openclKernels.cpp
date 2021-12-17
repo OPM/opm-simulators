@@ -21,6 +21,7 @@
 #include <cmath>
 #include <sstream>
 #include <fstream>
+#include <iostream>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/ErrorMacros.hpp>
@@ -70,13 +71,6 @@ unsigned int ceilDivision(const unsigned int A, const unsigned int B)
     return A / B + (A % B > 0);
 }
 
-void add_kernel_source(cl::Program::Sources &sources, const std::string fname)
-{
-    std::ifstream sourceFile("opencl/kernels/" + fname);
-    std::string sourceCode(std::istreambuf_iterator<char>(sourceFile), (std::istreambuf_iterator<char>()));
-    sources.emplace_back(sourceCode);
-}
-
 void OpenclKernels::init(cl::Context *context, cl::CommandQueue *queue_, std::vector<cl::Device>& devices, int verbosity_)
 {
     if (initialized) {
@@ -88,30 +82,30 @@ void OpenclKernels::init(cl::Context *context, cl::CommandQueue *queue_, std::ve
     verbosity = verbosity_;
 
     cl::Program::Sources sources;
-    add_kernel_source(sources, "axpy.cl");
-    add_kernel_source(sources, "scale.cl");
-    add_kernel_source(sources, "vmul.cl");
-    add_kernel_source(sources, "dot_1.cl");
-    add_kernel_source(sources, "norm.cl");
-    add_kernel_source(sources, "custom.cl");
-    add_kernel_source(sources, "full_to_pressure_restriction.cl");
-    add_kernel_source(sources, "add_coarse_pressure_correction.cl");
-    add_kernel_source(sources, "prolongate_vector.cl");
-    add_kernel_source(sources, "spmv_blocked.cl");
-    add_kernel_source(sources, "spmv.cl");
-    add_kernel_source(sources, "spmv_noreset.cl");
-    add_kernel_source(sources, "residual_blocked.cl");
-    add_kernel_source(sources, "residual.cl");
+    sources.emplace_back(axpy_str);
+    sources.emplace_back(scale_str);
+    sources.emplace_back(vmul_str);
+    sources.emplace_back(dot_1_str);
+    sources.emplace_back(norm_str);
+    sources.emplace_back(custom_str);
+    sources.emplace_back(full_to_pressure_restriction_str);
+    sources.emplace_back(add_coarse_pressure_correction_str);
+    sources.emplace_back(prolongate_vector_str);
+    sources.emplace_back(spmv_blocked_str);
+    sources.emplace_back(spmv_str);
+    sources.emplace_back(spmv_noreset_str);
+    sources.emplace_back(residual_blocked_str);
+    sources.emplace_back(residual_str);
 #if CHOW_PATEL
-    add_kernel_source(sources, "ILU_apply1.cl");
-    add_kernel_source(sources, "ILU_apply2.cl");
+    sources.emplace_back(ILU_apply1_str);
+    sources.emplace_back(ILU_apply2_str);
 #else
-    add_kernel_source(sources, "ILU_apply1_fm.cl");
-    add_kernel_source(sources, "ILU_apply2_fm.cl");
+    sources.emplace_back(ILU_apply1_fm_str);
+    sources.emplace_back(ILU_apply2_fm_str);
 #endif
-    add_kernel_source(sources, "stdwell_apply.cl");
-    add_kernel_source(sources, "stdwell_apply_no_reorder.cl");
-    add_kernel_source(sources, "ilu_decomp.cl");
+    sources.emplace_back(stdwell_apply_str);
+    sources.emplace_back(stdwell_apply_no_reorder_str);
+    sources.emplace_back(ILU_decomp_str);
 
     cl::Program program = cl::Program(*context, sources);
     program.build(devices);

@@ -8,7 +8,7 @@ __kernel void residual(
     __global const int *rows,
     const int N,
     __global const double *x,
-    __global const double *rhs,";
+    __global const double *rhs,
     __global double *out,
     __local double *tmp)
 {

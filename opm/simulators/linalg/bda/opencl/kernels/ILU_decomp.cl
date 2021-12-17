@@ -67,14 +67,14 @@ __kernel void inverter(__global double *matrix, __global double *inverse)
 /// Exact ilu decomposition kernel
 /// The kernel takes a full BSR matrix and performs inplace ILU decomposition
 __kernel void ilu_decomp(const unsigned int firstRow,
-                            const unsigned int lastRow,
-                            __global double *LUvals,
-                            __global const int *LUcols,
-                            __global const int *LUrows,
-                            __global double *invDiagVals,
-                            __global int *diagIndex,
-                            const unsigned int Nb,
-                            __local double *pivot)
+                         const unsigned int lastRow,
+                         __global double *LUvals,
+                         __global const int *LUcols,
+                         __global const int *LUrows,
+                         __global double *invDiagVals,
+                         __global int *diagIndex,
+                         const unsigned int Nb,
+                         __local double *pivot)
 {
     const unsigned int bs = 3;
     const unsigned int hwarp_size = 16;

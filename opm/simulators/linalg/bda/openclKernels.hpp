@@ -84,6 +84,31 @@ private:
     OpenclKernels(){}; // disable instantiation
 
 public:
+    static const std::string axpy_str;
+    static const std::string scale_str;
+    static const std::string vmul_str;
+    static const std::string dot_1_str;
+    static const std::string norm_str;
+    static const std::string custom_str;
+    static const std::string full_to_pressure_restriction_str;
+    static const std::string add_coarse_pressure_correction_str;
+    static const std::string prolongate_vector_str;
+    static const std::string spmv_blocked_str;
+    static const std::string spmv_str;
+    static const std::string spmv_noreset_str;
+    static const std::string residual_blocked_str;
+    static const std::string residual_str;
+#if CHOW_PATEL
+    static const std::string ILU_apply1_str;
+    static const std::string ILU_apply2_str;
+#else
+    static const std::string ILU_apply1_fm_str;
+    static const std::string ILU_apply2_fm_str;
+#endif
+    static const std::string stdwell_apply_str;
+    static const std::string stdwell_apply_no_reorder_str;
+    static const std::string ILU_decomp_str;
+
     static void init(cl::Context *context, cl::CommandQueue *queue, std::vector<cl::Device>& devices, int verbosity);
 
     static double dot(cl::Buffer& in1, cl::Buffer& in2, cl::Buffer& out, int N);
