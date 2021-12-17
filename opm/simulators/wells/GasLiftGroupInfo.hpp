@@ -67,6 +67,8 @@ class GasLiftGroupInfo
     static const int Oil = BlackoilPhases::Liquid;
     static const int Gas = BlackoilPhases::Vapour;
 public:
+    enum class Rate {oil, gas, water, liquid};
+
     using GLiftEclWells = std::map<std::string,std::pair<const Well *,int>>;
     GasLiftGroupInfo(
         GLiftEclWells& ecl_wells,
@@ -84,13 +86,16 @@ public:
     double alqRate(const std::string& group_name);
     double gasRate(const std::string& group_name);
     int getGroupIdx(const std::string& group_name);
+    double getRate(Rate rate_type, const std::string& group_name);
     std::tuple<double,double,double,double> getRates(int group_idx);
     std::optional<double> gasTarget(const std::string& group_name);
+    std::optional<double> getTarget(Rate rate_type, const std::string& group_name);
     const std::string& groupIdxToName(int group_idx);
     bool hasWell(const std::string& well_name);
     void initialize();
     std::optional<double> maxAlq(const std::string& group_name);
     double oilRate(const std::string& group_name);
+    static const std::string rateToString(Rate rate);
     double waterRate(const std::string& group_name);
     std::optional<double> oilTarget(const std::string& group_name);
     std::optional<double> waterTarget(const std::string& group_name);
