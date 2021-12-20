@@ -182,9 +182,11 @@ protected:
     std::tuple<double,double,double,bool,bool,bool>
     getInitialRatesWithLimit_(const std::vector<double>& potentials);
     std::tuple<double, const std::string*, double> getRateWithGroupLimit_(
-        Rate rate_type, const double new_rate, const double old_rate) const;
-    std::pair<double, bool> getOilRateWithLimit_(const std::vector<double>& potentials) const;
-    std::pair<double, bool> getWaterRateWithLimit_(const std::vector<double>& potentials) const;
+                  Rate rate_type, const double new_rate, const double old_rate) const;
+    std::pair<double, bool> getOilRateWithLimit_(
+                  const std::vector<double>& potentials) const;
+    std::pair<double, bool> getWaterRateWithLimit_(
+                  const std::vector<double>& potentials) const;
 
     std::pair<double, bool> getOilRateWithGroupLimit_(
                            double new_oil_rate, double oil_rate) const;
@@ -193,8 +195,8 @@ protected:
     std::pair<double, bool> getWaterRateWithGroupLimit_(
                            double new_water_rate, double water_rate) const;
     std::tuple<double,double,bool,bool> getLiquidRateWithGroupLimit_(
-                           double new_oil_rate, double oil_rate,
-                           double new_water_rate, double water_rate) const;
+                           const double new_oil_rate, const double oil_rate,
+                           const double new_water_rate, const double water_rate) const;
 
     std::tuple<double,double,bool,bool,double>
     increaseALQtoPositiveOilRate_(double alq,

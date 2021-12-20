@@ -633,8 +633,8 @@ getWaterRateWithGroupLimit_(double new_water_rate, double water_rate) const
 
 std::tuple<double, double, bool, bool>
 GasLiftSingleWellGeneric::
-getLiquidRateWithGroupLimit_(double new_oil_rate, double oil_rate,
-                             double new_water_rate, double water_rate) const
+getLiquidRateWithGroupLimit_(const double new_oil_rate, const double oil_rate,
+                             const double new_water_rate, const double water_rate) const
 {
     auto liquid_rate = oil_rate + water_rate;
     auto new_liquid_rate = new_oil_rate + new_water_rate;
@@ -662,8 +662,9 @@ getLiquidRateWithGroupLimit_(double new_oil_rate, double oil_rate,
 
         double oil_fraction = new_gr_oil_rate / new_gr_liquid_rate;
         double delta_liquid = liquid_rate_limited - liquid_rate;
-        new_oil_rate = oil_rate + oil_fraction * delta_liquid;
-        new_water_rate = water_rate + (1.0 - oil_fraction) * delta_liquid;
+        auto limited_oil_rate = oil_rate + oil_fraction * delta_liquid;
+        auto limited_water_rate = water_rate + (1.0 - oil_fraction) * delta_liquid;
+        return {limited_oil_rate, limited_water_rate, limited, limited};
     }
     return {new_oil_rate, new_water_rate, limited, limited};
 }

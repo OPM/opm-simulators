@@ -87,7 +87,7 @@ public:
     double gasRate(const std::string& group_name);
     int getGroupIdx(const std::string& group_name);
     double getRate(Rate rate_type, const std::string& group_name);
-    std::tuple<double,double,double,double> getRates(int group_idx);
+    std::tuple<double,double,double,double> getRates(const int group_idx);
     std::optional<double> gasTarget(const std::string& group_name);
     std::optional<double> getTarget(Rate rate_type, const std::string& group_name);
     const std::string& groupIdxToName(int group_idx);

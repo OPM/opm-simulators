@@ -106,7 +106,7 @@ getRate(Rate rate_type, const std::string& group_name)
 
 std::tuple<double, double, double, double>
 GasLiftGroupInfo::
-getRates(int group_idx)
+getRates(const int group_idx)
 {
     const auto& group_name = groupIdxToName(group_idx);
     auto& rates = this->group_rate_map_.at(group_name);
