@@ -153,26 +153,25 @@ public:
         initMPI();
     }
 
-#define DEMONSTRATE_RUN_WITH_NONWORLD_COMM 0
 
     ~Main()
     {
-#if DEMONSTRATE_RUN_WITH_NONWORLD_COMM
 #if HAVE_MPI
-        // Cannot use EclGenericVanguard::comm()
-        // to get world size here, as it may be
-        // a split communication at this point.
-        int world_size;
-        MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-        if (world_size > 1) {
-            MPI_Comm new_comm = EclGenericVanguard::comm();
-            int result;
-            MPI_Comm_compare(MPI_COMM_WORLD, new_comm, &result);
-            assert(result == MPI_UNEQUAL);
-            MPI_Comm_free(&new_comm);
+        if (test_split_comm_) {
+            // Cannot use EclGenericVanguard::comm()
+            // to get world size here, as it may be
+            // a split communication at this point.
+            int world_size;
+            MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+            if (world_size > 1) {
+                MPI_Comm new_comm = EclGenericVanguard::comm();
+                int result;
+                MPI_Comm_compare(MPI_COMM_WORLD, new_comm, &result);
+                assert(result == MPI_UNEQUAL);
+                MPI_Comm_free(&new_comm);
+            }
         }
 #endif // HAVE_MPI
-#endif // DEMONSTRATE_RUN_WITH_NONWORLD_COMM
 
         EclGenericVanguard::setCommunication(nullptr);
 
@@ -206,9 +205,10 @@ public:
 #endif
         EclGenericVanguard::setCommunication(std::make_unique<Parallel::Communication>());
 
-#if DEMONSTRATE_RUN_WITH_NONWORLD_COMM
+        handleTestSplitCommunicatorCmdLine_();
+
 #if HAVE_MPI
-        if (EclGenericVanguard::comm().size() > 1) {
+        if (test_split_comm_ && EclGenericVanguard::comm().size() > 1) {
             int world_rank = EclGenericVanguard::comm().rank();
             int color = (world_rank == 0);
             MPI_Comm new_comm;
@@ -217,7 +217,6 @@ public:
             EclGenericVanguard::setCommunication(std::make_unique<Parallel::Communication>(new_comm));
         }
 #endif // HAVE_MPI
-#endif // DEMONSTRATE_RUN_WITH_NONWORLD_COMM
     }
 
     int runDynamic()
@@ -537,6 +536,22 @@ private:
         }
     }
 
+    // This function is a special case, if the program has been invoked
+    // with the argument "--test-split-communicator=true" as the FIRST
+    // argument, it will be removed from the argument list and we set the
+    // test_split_comm_ flag to true.
+    // Note: initializing the parameter system before MPI could make this
+    // use the parameter system instead.
+    void handleTestSplitCommunicatorCmdLine_()
+    {
+        if (argc_ >= 2 && std::strcmp(argv_[1], "--test-split-communicator=true") == 0) {
+            test_split_comm_ = true;
+            --argc_;             // We have one less argument.
+            argv_[1] = argv_[0]; // What used to be the first proper argument now becomes the command argument.
+            ++argv_;             // Pretend this is what it always was.
+        }
+    }
+
     int runMICP(const Phases& phases)
     {
         if (!phases.active(Phase::WATER) || (phases.size() > 2)) {
@@ -715,6 +730,7 @@ private:
     std::shared_ptr<SummaryConfig> summaryConfig_{};
 
     // To demonstrate run with non_world_comm
+    bool test_split_comm_ = false;
     bool isSimulationRank_ = true;
 };
 
