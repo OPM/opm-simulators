@@ -84,22 +84,23 @@ public:
         const std::string& well_name);
 
     double alqRate(const std::string& group_name);
-    double gasRate(const std::string& group_name);
+    double gasRate(const std::string& group_name) const;
     int getGroupIdx(const std::string& group_name);
-    double getRate(Rate rate_type, const std::string& group_name);
-    std::tuple<double,double,double,double> getRates(const int group_idx);
-    std::optional<double> gasTarget(const std::string& group_name);
-    std::optional<double> getTarget(Rate rate_type, const std::string& group_name);
-    const std::string& groupIdxToName(int group_idx);
+    double getRate(Rate rate_type, const std::string& group_name) const;
+    std::tuple<double,double,double,double> getRates(const int group_idx) const;
+    std::optional<double> gasTarget(const std::string& group_name) const;
+    std::optional<double> getTarget(
+        Rate rate_type, const std::string& group_name) const;
+    const std::string& groupIdxToName(int group_idx) const;
     bool hasWell(const std::string& well_name);
     void initialize();
+    std::optional<double> liquidTarget(const std::string& group_name) const;
     std::optional<double> maxAlq(const std::string& group_name);
-    double oilRate(const std::string& group_name);
+    double oilRate(const std::string& group_name) const;
+    std::optional<double> oilTarget(const std::string& group_name) const;
     static const std::string rateToString(Rate rate);
-    double waterRate(const std::string& group_name);
-    std::optional<double> oilTarget(const std::string& group_name);
-    std::optional<double> waterTarget(const std::string& group_name);
-    std::optional<double> liquidTarget(const std::string& group_name);
+    double waterRate(const std::string& group_name) const;
+    std::optional<double> waterTarget(const std::string& group_name) const;
     void update(const std::string& well_name,
         double delta_oil, double delta_gas, double delta_water, double delta_alq);
     void updateRate(int idx, double oil_rate, double gas_rate, double water_rate, double alq);
