@@ -1,11 +1,12 @@
 set(BDA_DIR opm/simulators/linalg/bda)
 set(KERNELS_DIR ${BDA_DIR}/opencl/kernels)
 
-if(DEBUG_KERNELS)
-  set(DEBUG_DIR ${KERNELS_DIR}/.debug)
+option(DEBUG_OPENCL_KERNELS_INTEL "Run ocloc to check kernel (works only on Intel)" OFF)
+if(DEBUG_OPENCL_KERNELS_INTEL)
+  set(DEBUG_OPENCL_DIR ${KERNELS_DIR}/.debug)
 
   execute_process(
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${DEBUG_DIR}
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${DEBUG_OPENCL_DIR}
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
   )
 endif()
@@ -34,9 +35,9 @@ foreach(CL ${CL_LIST})
   file(APPEND ${CL_SRC_FILE} "${CL_CONTENT}")
   file(APPEND ${CL_SRC_FILE} "\)\"; \n\n")
 
-  if(DEBUG_KERNELS)
+  if(DEBUG_OPENCL_KERNELS_INTEL)
     execute_process(
-      COMMAND ocloc -file ${CL} -device kbl -out_dir ${DEBUG_DIR}
+      COMMAND ocloc -file ${CL} -device kbl -out_dir ${DEBUG_OPENCL_DIR}
       WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
       )
   endif()
@@ -45,6 +46,6 @@ endforeach()
 file(APPEND ${CL_SRC_FILE} "\}\n")
 file(APPEND ${CL_SRC_FILE} "\}")
 
-if(DEBUG_KERNELS)
+if(DEBUG_OPENCL_KERNELS_INTEL)
   file(REMOVE_RECURSE ${DEBUG_DIR})
 endif()
