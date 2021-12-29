@@ -112,13 +112,16 @@ namespace Opm{
         const TableContainer& sof2Tables = tableManager.getSof2Tables();
         const TableContainer& sgwfnTables= tableManager.getSgwfnTables();
 
+        const SwofletTable& swofletTable = tableManager.getSwofletTable();
+        const SgofletTable& sgofletTable = tableManager.getSgofletTable();
+
         // Family I test.
         bool family1 = pu.phase_used[BlackoilPhases::Liquid];
         if (pu.phase_used[BlackoilPhases::Aqua]) {
-            family1 = family1 && !swofTables.empty();
+            family1 = family1 && (!swofTables.empty() || !swofletTable.empty());
         }
         if (pu.phase_used[BlackoilPhases::Vapour]) {
-            family1 = family1 && (!sgofTables.empty() || !slgofTables.empty());
+            family1 = family1 && ((!sgofTables.empty() || !sgofletTable.empty()) || !slgofTables.empty());
         }
 
         // Family II test.
@@ -664,7 +667,9 @@ namespace Opm{
             satfunc::getRawFunctionValues(tables, phases, rtep);
 
         const TableContainer&  swofTables = tables.getSwofTables();
+        const SwofletTable&  swofletTables = tables.getSwofletTable();
         const TableContainer&  sgofTables = tables.getSgofTables();
+        const SgofletTable&  sgofletTables = tables.getSgofletTable();
         const TableContainer& slgofTables = tables.getSlgofTables();
         const TableContainer&  sof3Tables = tables.getSof3Tables();
 
@@ -693,14 +698,19 @@ namespace Opm{
                      if (!sgofTables.empty()) {
                          const auto& table = sgofTables.getTable<SgofTable>(satnumIdx);
                          krog_value = table.evaluate( "KROG" , unscaledEpsInfo_[satnumIdx].Sgl );
+                     } else if (!sgofletTables.empty()) {
+                         krog_value = sgofletTables[satnumIdx].krt2_relperm;
                      } else {
                          assert(!slgofTables.empty());
                          const auto& table = slgofTables.getTable<SlgofTable>(satnumIdx);
                          krog_value = table.evaluate( "KROG" , unscaledEpsInfo_[satnumIdx].Sgl );
                      }
-                     {
+                     if (!swofTables.empty()) {
                          const auto& table = swofTables.getTable<SwofTable>(satnumIdx);
                          krow_value = table.evaluate("KROW" , unscaledEpsInfo_[satnumIdx].Swl);
+                     } else {
+                         assert(!swofletTables.empty());
+                         krow_value = swofletTables[satnumIdx].krt2_relperm;
                      }
                  }
                  if (satFamily_ == SaturationFunctionFamily::FamilyII) {
