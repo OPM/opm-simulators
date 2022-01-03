@@ -25,7 +25,7 @@
 #include <string>
 #include <vector>
 
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
+#include <opm/input/eclipse/Schedule/Well/Well.hpp>
 
 namespace Opm {
 

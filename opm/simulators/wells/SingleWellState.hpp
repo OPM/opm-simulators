@@ -23,8 +23,8 @@
 #include <functional>
 #include <vector>
 
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Events.hpp>
+#include <opm/input/eclipse/Schedule/Well/Well.hpp>
+#include <opm/input/eclipse/Schedule/Events.hpp>
 
 #include <opm/simulators/wells/SegmentState.hpp>
 #include <opm/simulators/wells/PerfData.hpp>

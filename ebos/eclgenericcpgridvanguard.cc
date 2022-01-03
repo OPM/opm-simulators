@@ -30,7 +30,7 @@
 
 #include <opm/common/utility/ActiveGridCells.hpp>
 #include <opm/grid/cpgrid/GridHelpers.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
 #include <opm/simulators/utils/PropsCentroidsDataHandle.hpp>
 #include <opm/simulators/utils/ParallelSerialization.hpp>

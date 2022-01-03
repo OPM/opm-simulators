@@ -21,7 +21,7 @@
 
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
-#include <opm/parser/eclipse/Units/Units.hpp>
+#include <opm/input/eclipse/Units/Units.hpp>
 
 #include <iomanip>
 #include <ostream>

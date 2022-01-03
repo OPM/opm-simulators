@@ -33,16 +33,16 @@
 #include <opm/simulators/wells/SegmentState.hpp>
 #include <opm/simulators/wells/WellContainer.hpp>
 #include <opm/simulators/wells/PerfData.hpp>
-#include <opm/parser/eclipse/Python/Python.hpp>
+#include <opm/input/eclipse/Python/Python.hpp>
 
 #include <boost/test/unit_test.hpp>
 
-#include <opm/parser/eclipse/Deck/Deck.hpp>
-#include <opm/parser/eclipse/Parser/Parser.hpp>
-#include <opm/parser/eclipse/Parser/ParseContext.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/SummaryState.hpp>
-#include <opm/parser/eclipse/Units/Units.hpp>
+#include <opm/input/eclipse/Deck/Deck.hpp>
+#include <opm/input/eclipse/Parser/Parser.hpp>
+#include <opm/input/eclipse/Parser/ParseContext.hpp>
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
+#include <opm/input/eclipse/Schedule/SummaryState.hpp>
+#include <opm/input/eclipse/Units/Units.hpp>
 #include <opm/common/utility/TimeService.hpp>
 
 #include <opm/grid/GridHelpers.hpp>

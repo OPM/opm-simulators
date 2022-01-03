@@ -23,7 +23,7 @@
 #include <opm/simulators/wells/WellState.hpp>
 
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 
 #include <algorithm>

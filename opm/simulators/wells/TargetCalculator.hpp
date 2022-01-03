@@ -21,8 +21,8 @@
 #ifndef OPM_TARGETCALCULATOR_HEADER_INCLUDED
 #define OPM_TARGETCALCULATOR_HEADER_INCLUDED
 
-#include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRate.hpp>
+#include <opm/input/eclipse/Schedule/Group/Group.hpp>
+#include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
 
 #include <string>
 #include <vector>

@@ -39,12 +39,12 @@
 
 #include <stddef.h>
 
-#include <opm/parser/eclipse/EclipseState/Runspec.hpp>
+#include <opm/input/eclipse/EclipseState/Runspec.hpp>
 
-#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestState.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Group/GuideRate.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
+#include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
+#include <opm/input/eclipse/Schedule/Group/Group.hpp>
 
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/flow/countGlobalCells.hpp>

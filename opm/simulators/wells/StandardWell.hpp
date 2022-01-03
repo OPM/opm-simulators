@@ -42,8 +42,8 @@
 #include <opm/models/blackoil/blackoilmicpmodules.hh>
 
 #include <opm/material/densead/DynamicEvaluation.hpp>
-#include <opm/parser/eclipse/EclipseState/Runspec.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/ScheduleTypes.hpp>
+#include <opm/input/eclipse/EclipseState/Runspec.hpp>
+#include <opm/input/eclipse/Schedule/ScheduleTypes.hpp>
 
 #include <opm/simulators/wells/StandardWellEval.hpp>
 

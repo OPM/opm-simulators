@@ -36,7 +36,7 @@
 #include <opm/output/data/Wells.hpp>
 #include <opm/output/eclipse/EclipseIO.hpp>
 #include <opm/output/eclipse/RestartValue.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/SummaryState.hpp>
+#include <opm/input/eclipse/Schedule/SummaryState.hpp>
 
 #define HANDLE_AS_POD(T) \
   std::size_t packSize(const T& data, Opm::Parallel::MPIComm comm) \

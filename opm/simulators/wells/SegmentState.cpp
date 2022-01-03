@@ -21,8 +21,8 @@
 
 #include <opm/simulators/wells/SegmentState.hpp>
 
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/WellConnections.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/MSW/WellSegments.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
+#include <opm/input/eclipse/Schedule/MSW/WellSegments.hpp>
 
 namespace Opm
 {

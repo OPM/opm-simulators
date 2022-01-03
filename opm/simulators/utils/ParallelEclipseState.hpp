@@ -20,8 +20,8 @@
 #define PARALLEL_ECLIPSE_STATE_HPP
 
 #include <dune/common/version.hh>
-#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/parser/eclipse/EclipseState/Grid/TranCalculator.hpp>
+#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/EclipseState/Grid/TranCalculator.hpp>
 #include <dune/common/parallel/mpihelper.hh>
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>

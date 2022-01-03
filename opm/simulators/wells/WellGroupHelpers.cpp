@@ -21,8 +21,8 @@
 #include <config.h>
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
 
-#include <opm/parser/eclipse/EclipseState/Schedule/Group/GConSump.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Group/GConSale.hpp>
+#include <opm/input/eclipse/Schedule/Group/GConSump.hpp>
+#include <opm/input/eclipse/Schedule/Group/GConSale.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/TargetCalculator.hpp>

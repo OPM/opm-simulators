@@ -20,7 +20,7 @@
 #include "config.h"
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
 #include <opm/common/utility/parameters/ParameterGroup.hpp>
-#include <opm/parser/eclipse/Units/Units.hpp>
+#include <opm/input/eclipse/Units/Units.hpp>
 #include <ostream>
 #include <numeric>
 

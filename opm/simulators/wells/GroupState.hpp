@@ -24,9 +24,9 @@
 #include <vector>
 
 #include <opm/core/props/BlackoilPhases.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Group/Group.hpp>
-#include <opm/parser/eclipse/EclipseState/Runspec.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Group/GPMaint.hpp>
+#include <opm/input/eclipse/Schedule/Group/Group.hpp>
+#include <opm/input/eclipse/EclipseState/Runspec.hpp>
+#include <opm/input/eclipse/Schedule/Group/GPMaint.hpp>
 #include <opm/simulators/wells/WellContainer.hpp>
 
 namespace Opm {

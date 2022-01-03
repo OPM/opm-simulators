@@ -35,8 +35,8 @@
 
 #include <opm/grid/common/GridEnums.hpp>
 #include <opm/grid/common/CartesianIndexMapper.hpp>
-#include <opm/parser/eclipse/EclipseState/Aquifer/NumericalAquifer/NumericalAquiferCell.hpp>
-#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/EclipseState/Aquifer/NumericalAquifer/NumericalAquiferCell.hpp>
+#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
 
 #include <array>

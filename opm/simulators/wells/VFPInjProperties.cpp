@@ -27,7 +27,7 @@
 #include <opm/material/densead/Math.hpp>
 #include <opm/material/densead/Evaluation.hpp>
 
-#include <opm/parser/eclipse/EclipseState/Schedule/VFPInjTable.hpp>
+#include <opm/input/eclipse/Schedule/VFPInjTable.hpp>
 
 #include <opm/simulators/wells/VFPHelpers.hpp>
 

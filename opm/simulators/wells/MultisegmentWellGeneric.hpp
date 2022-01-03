@@ -22,7 +22,7 @@
 #ifndef OPM_MULTISEGMENTWELL_GENERIC_HEADER_INCLUDED
 #define OPM_MULTISEGMENTWELL_GENERIC_HEADER_INCLUDED
 
-#include <opm/parser/eclipse/EclipseState/Schedule/MSW/WellSegments.hpp>
+#include <opm/input/eclipse/Schedule/MSW/WellSegments.hpp>
 
 #include <functional>
 #include <optional>

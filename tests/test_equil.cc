@@ -34,7 +34,7 @@
 #include <opm/grid/UnstructuredGrid.h>
 #include <opm/grid/GridManager.hpp>
 
-#include <opm/parser/eclipse/Units/Units.hpp>
+#include <opm/input/eclipse/Units/Units.hpp>
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/misc/mpimanager.hh>

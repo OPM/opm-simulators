@@ -19,7 +19,7 @@
 #include <stdexcept>
 
 #include <opm/simulators/wells/GlobalWellInfo.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Schedule.hpp>
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
 
 
 namespace Opm {

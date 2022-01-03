@@ -28,7 +28,7 @@
 #define EWOMS_ECL_GENERIC_VANGUARD_HH
 
 #include <opm/grid/common/GridEnums.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestState.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
 #include <dune/common/parallel/communication.hh>

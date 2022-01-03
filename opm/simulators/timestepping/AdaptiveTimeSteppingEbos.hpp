@@ -16,7 +16,7 @@
 #include <opm/simulators/timestepping/TimeStepControlInterface.hpp>
 #include <opm/simulators/timestepping/TimeStepControl.hpp>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/ScheduleState.hpp>
+#include <opm/input/eclipse/Schedule/ScheduleState.hpp>
 #include <opm/common/Exceptions.hpp>
 
 namespace Opm::Properties {

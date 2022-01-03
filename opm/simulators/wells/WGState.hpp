@@ -22,7 +22,7 @@
 
 #include <opm/simulators/wells/WellState.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/WellTestState.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
 
 namespace Opm {
 

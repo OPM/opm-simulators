@@ -20,7 +20,7 @@
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/parser/eclipse/EclipseState/Schedule/Well/Well.hpp>
+#include <opm/input/eclipse/Schedule/Well/Well.hpp>
 
 namespace Dune
 {
