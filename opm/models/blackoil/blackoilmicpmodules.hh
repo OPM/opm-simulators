@@ -33,8 +33,8 @@
 #include <opm/models/common/quantitycallbacks.hh>
 
 #if HAVE_ECL_INPUT
-#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/parser/eclipse/EclipseState/MICPpara.hpp>
+#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/EclipseState/MICPpara.hpp>
 #endif
 
 #include <dune/common/fvector.hh>
