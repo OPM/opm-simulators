@@ -28,18 +28,18 @@
 #include "EclEpsConfig.hpp"
 
 #if HAVE_ECL_INPUT
-#include <opm/parser/eclipse/Deck/Deck.hpp>
-#include <opm/parser/eclipse/Deck/DeckRecord.hpp>
-#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/parser/eclipse/EclipseState/Grid/FieldPropsManager.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/SgfnTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/SgofTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/SlgofTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/Sof2Table.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/Sof3Table.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/SwfnTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/SwofTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
+#include <opm/input/eclipse/Deck/Deck.hpp>
+#include <opm/input/eclipse/Deck/DeckRecord.hpp>
+#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/EclipseState/Grid/FieldPropsManager.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/SgfnTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/SgofTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/SlgofTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/Sof2Table.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/Sof3Table.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/SwfnTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/SwofTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/TableManager.hpp>
 #endif
 
 #include <opm/material/common/Means.hpp>

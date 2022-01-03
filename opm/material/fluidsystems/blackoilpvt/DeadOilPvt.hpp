@@ -32,9 +32,9 @@
 #include <opm/material/common/Spline.hpp>
 
 #if HAVE_ECL_INPUT
-#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/PvdoTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
+#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/PvdoTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/TableManager.hpp>
 #endif
 
 namespace Opm {

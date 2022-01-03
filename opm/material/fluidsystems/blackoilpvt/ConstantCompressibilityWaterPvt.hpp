@@ -30,7 +30,7 @@
 #include <opm/material/common/Tabulated1DFunction.hpp>
 
 #if HAVE_ECL_INPUT
-#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #endif
 
 #include <vector>

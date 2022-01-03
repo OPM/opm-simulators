@@ -33,7 +33,7 @@
 #include "Co2GasPvt.hpp"
 
 #if HAVE_ECL_INPUT
-#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #endif
 
 namespace Opm {

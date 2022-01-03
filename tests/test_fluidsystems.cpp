@@ -58,9 +58,9 @@
 // include the tables for CO2 which are delivered with opm-material by default
 #include <opm/material/common/UniformTabulated2DFunction.hpp>
 
-#include <opm/parser/eclipse/Python/Python.hpp>
+#include <opm/input/eclipse/Python/Python.hpp>
 #if HAVE_ECL_INPUT
-#include <opm/parser/eclipse/Deck/Deck.hpp>
+#include <opm/input/eclipse/Deck/Deck.hpp>
 #endif
 
 #include <dune/common/parallel/mpihelper.hh>
