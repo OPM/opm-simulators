@@ -530,32 +530,7 @@ std::pair<double, bool>
 GasLiftSingleWellGeneric::
 getGasRateWithLimit_(const std::vector<double>& potentials) const
 {
-    double new_rate = -potentials[this->gas_pos_];
-    bool limit = false;
-    if (this->controls_.hasControl(Well::ProducerCMode::GRAT)) {
-        auto target = this->controls_.gas_rate;
-        if (new_rate > target) {
-            new_rate = target;
-            limit = true;
-        }
-    }
-    return { new_rate, limit};
-}
-
-std::pair<double, bool>
-GasLiftSingleWellGeneric::
-getWaterRateWithLimit_(const std::vector<double>& potentials) const
-{
-    double new_rate = -potentials[this->water_pos_];
-    bool limit = false;
-    if (this->controls_.hasControl(Well::ProducerCMode::WRAT)) {
-        auto target = this->controls_.water_rate;
-        if (new_rate > target) {
-            new_rate = target;
-            limit = true;
-        }
-    }
-    return { new_rate, limit};
+    return getRateWithLimit_(Rate::gas, potentials);
 }
 
 // NOTE: If the computed oil rate is larger than the target
@@ -571,32 +546,100 @@ std::pair<double, bool>
 GasLiftSingleWellGeneric::
 getOilRateWithLimit_(const std::vector<double>& potentials) const
 {
-    double oil_rate = -potentials[this->oil_pos_];
-    double new_rate = oil_rate;
+    return getRateWithLimit_(Rate::oil, potentials);
+}
+
+std::pair<double, bool>
+GasLiftSingleWellGeneric::
+getWaterRateWithLimit_(const std::vector<double>& potentials) const
+{
+    return getRateWithLimit_(Rate::water, potentials);
+}
+
+double
+GasLiftSingleWellGeneric::
+getRate_(Rate rate, const std::vector<double>& potentials) const
+{
+    switch (rate) {
+    case Rate::oil:
+        return -potentials[this->oil_pos_];
+    case Rate::gas:
+        return -potentials[this->gas_pos_];
+    case Rate::water:
+        return -potentials[this->water_pos_];
+    case Rate::liquid:
+        return -potentials[this->oil_pos_] - potentials[this->water_pos_];
+    default:
+        // Need this to avoid compiler warning : control reaches end of non-void function
+        throw std::runtime_error("This should not happen");
+    }
+}
+
+double
+GasLiftSingleWellGeneric::
+getProductionTarget_(Rate rate) const
+{
+    switch (rate) {
+    case Rate::oil:
+        return this->controls_.oil_rate;
+    case Rate::gas:
+        return this->controls_.gas_rate;
+    case Rate::water:
+        return this->controls_.water_rate;
+    case Rate::liquid:
+        return this->controls_.liquid_rate;
+    default:
+        // Need this to avoid compiler warning : control reaches end of non-void function
+        throw std::runtime_error("This should not happen");
+    }
+}
+
+std::pair<double, bool>
+GasLiftSingleWellGeneric::
+getRateWithLimit_(Rate rate_type, const std::vector<double>& potentials) const
+{
+    double new_rate = getRate_(rate_type, potentials);
     bool limited = false;
-    if (this->controls_.hasControl(Well::ProducerCMode::ORAT)) {
-        auto target = this->controls_.oil_rate;
-        if (oil_rate > target) {
-            const std::string msg = fmt::format("limiting oil rate to target: "
-                "computed rate: {}, target: {}", new_rate, target);
-            displayDebugMessage_(msg);
+    if (hasProductionControl_(rate_type)) {
+        auto target = getProductionTarget_(rate_type);
+        if (new_rate > target) {
             new_rate = target;
             limited = true;
+            const std::string msg = fmt::format("limiting {} rate to target: "
+                                                "computed rate: {}, target: {}",
+                  GasLiftGroupInfo::rateToString(rate_type), new_rate, target);
+            displayDebugMessage_(msg);
         }
     }
-    if (this->controls_.hasControl(Well::ProducerCMode::LRAT)) {
-        auto target = this->controls_.liquid_rate;
-        double water_rate = -potentials[this->water_pos_];
-        double liq_rate = oil_rate + water_rate;
-        if (liq_rate > target) {
-            double oil_fraction = oil_rate / liq_rate;
-            new_rate = std::min(new_rate, oil_fraction * target);
+    if ((rate_type == Rate::oil) || (rate_type == Rate::water)) {
+        double rate2;
+        if (rate_type == Rate::oil) {
+            rate2 = getRate_(Rate::water, potentials);
+        }
+        else {
+            rate2 = getRate_(Rate::oil, potentials);
+        }
+        double liq_rate = new_rate + rate2;
+        auto liq_target = getProductionTarget_(Rate::liquid);
+        if (liq_rate > liq_target) {
+            double fraction = new_rate / liq_rate;
+            // NOTE: since
+            //      fraction * liq_rate = new_rate,
+            //  we must have
+            //      fraction * liq_target < new_rate
+            //  since
+            //      liq_target < liq_rate
+            //  therefore new_rate will become less than it original was and
+            //  limited = true.
+            new_rate = fraction * liq_target;
             limited = true;
             const std::string msg = fmt::format(
-                "limiting oil rate due to LRAT target: "
-                "computed rate: {}, target: {}", oil_rate, new_rate);
+                "limiting {} rate to {} due to LRAT target: "
+                "computed LRAT: {}, target LRAT: {}",
+                GasLiftGroupInfo::rateToString(rate_type), new_rate,
+                liq_rate, liq_target);
             displayDebugMessage_(msg);
-       }
+        }
     }
     return { new_rate, limited};
 }
@@ -745,6 +788,26 @@ getInitialRatesWithLimit_(const std::vector<double>& potentials)
     }
     return std::make_tuple(oil_rate, gas_rate, water_rate, oil_is_limited, gas_is_limited, water_is_limited);
 }
+
+bool
+GasLiftSingleWellGeneric::
+hasProductionControl_(Rate rate) const
+{
+    switch (rate) {
+    case Rate::oil:
+        return this->controls_.hasControl(Well::ProducerCMode::ORAT);
+    case Rate::gas:
+        return this->controls_.hasControl(Well::ProducerCMode::GRAT);
+    case Rate::water:
+        return this->controls_.hasControl(Well::ProducerCMode::WRAT);
+    case Rate::liquid:
+        return this->controls_.hasControl(Well::ProducerCMode::LRAT);
+    default:
+        // Need this to avoid compiler warning : control reaches end of non-void function
+        throw std::runtime_error("This should not happen");
+    }
+}
+
 
 std::tuple<double,double,bool,bool,double>
 GasLiftSingleWellGeneric::
