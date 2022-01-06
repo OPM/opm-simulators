@@ -36,18 +36,18 @@
 
 #include <opm/grid/cpgrid/GridHelpers.hpp>
 
-#include <opm/parser/eclipse/Units/Units.hpp>
-#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/parser/eclipse/EclipseState/InitConfig/Equil.hpp>
-#include <opm/parser/eclipse/EclipseState/InitConfig/InitConfig.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/TableContainer.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/RsvdTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/RvvdTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/PbvdTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/PdvdTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/SaltvdTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/SaltpvdTable.hpp>
+#include <opm/input/eclipse/Units/Units.hpp>
+#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/EclipseState/InitConfig/Equil.hpp>
+#include <opm/input/eclipse/EclipseState/InitConfig/InitConfig.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/TableContainer.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/TableManager.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/RsvdTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/RvvdTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/PbvdTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/PdvdTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/SaltvdTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/SaltpvdTable.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <fmt/format.h>
 

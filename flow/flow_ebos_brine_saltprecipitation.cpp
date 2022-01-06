@@ -26,17 +26,17 @@
 namespace Opm {
 namespace Properties {
 namespace TTag {
-struct EclFlowBrineProblem {
+struct EclFlowBrineSaltPrecipitationProblem {
     using InheritsFrom = std::tuple<EclFlowProblem>;
 };
 }
 template<class TypeTag>
-struct EnableBrine<TypeTag, TTag::EclFlowBrineProblem> {
+struct EnableBrine<TypeTag, TTag::EclFlowBrineSaltPrecipitationProblem> {
     static constexpr bool value = true;
 };
 
 template<class TypeTag>
-struct EnableSaltPrecipitation<TypeTag, TTag::EclFlowBrineProblem> {
+struct EnableSaltPrecipitation<TypeTag, TTag::EclFlowBrineSaltPrecipitationProblem> {
     static constexpr bool value = true;
 };
 }}
@@ -47,7 +47,7 @@ void flowEbosBrineSaltPrecipitationSetDeck(double setupTime, std::shared_ptr<Dec
                           std::shared_ptr<Schedule> schedule,
                           std::shared_ptr<SummaryConfig> summaryConfig)
 {
-    using TypeTag = Properties::TTag::EclFlowBrineProblem;
+    using TypeTag = Properties::TTag::EclFlowBrineSaltPrecipitationProblem;
     using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
 
     Vanguard::setExternalSetupTime(setupTime);
@@ -65,14 +65,14 @@ int flowEbosBrineSaltPrecipitationMain(int argc, char** argv, bool outputCout, b
     // with incorrect locale settings.
     resetLocale();
 
-    FlowMainEbos<Properties::TTag::EclFlowBrineProblem>
+    FlowMainEbos<Properties::TTag::EclFlowBrineSaltPrecipitationProblem>
         mainfunc {argc, argv, outputCout, outputFiles};
     return mainfunc.execute();
 }
 
 int flowEbosBrineSaltPrecipitationMainStandalone(int argc, char** argv)
 {
-    using TypeTag = Properties::TTag::EclFlowBrineProblem;
+    using TypeTag = Properties::TTag::EclFlowBrineSaltPrecipitationProblem;
     auto mainObject = Opm::Main(argc, argv);
     return mainObject.runStatic<TypeTag>();
 }
