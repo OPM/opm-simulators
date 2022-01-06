@@ -118,6 +118,7 @@ class BlackOilNewtonMethod : public GetPropType<TypeTag, Properties::DiscNewtonM
     using MICPModule = BlackOilMICPModule<TypeTag>;
 
     static const unsigned numEq = getPropValue<TypeTag, Properties::NumEq>();
+    static constexpr bool enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>();
 
 public:
     BlackOilNewtonMethod(Simulator& simulator) : ParentType(simulator)
@@ -369,8 +370,10 @@ protected:
                 nextValue[pvIdx] = std::max(nextValue[pvIdx], 0.0);
 
             // keep the salt concentration above 0
-            if (enableBrine && pvIdx == Indices::saltConcentrationIdx)
-                nextValue[pvIdx] = std::max(nextValue[pvIdx], 0.0);
+            if (enableBrine && pvIdx == Indices::saltConcentrationIdx) {
+               if (!enableSaltPrecipitation || (enableSaltPrecipitation && currentValue.primaryVarsMeaningBrine() == PrimaryVariables::Cs))
+                   nextValue[pvIdx] = std::max(nextValue[pvIdx], 0.0); 
+            }
 
             // keep the temperature within given values
             if (enableEnergy && pvIdx == Indices::temperatureIdx)
