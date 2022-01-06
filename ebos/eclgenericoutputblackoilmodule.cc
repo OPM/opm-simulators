@@ -75,6 +75,7 @@ EclGenericOutputBlackoilModule(const EclipseState& eclState,
                            bool enablePolymer,
                            bool enableFoam,
                            bool enableBrine,
+                           bool enableSaltPrecipitation,
                            bool enableExtbo,
                            bool enableMICP)
     : eclState_(eclState)
@@ -87,6 +88,7 @@ EclGenericOutputBlackoilModule(const EclipseState& eclState,
     , enablePolymer_(enablePolymer)
     , enableFoam_(enableFoam)
     , enableBrine_(enableBrine)
+    , enableSaltPrecipitation_(enableSaltPrecipitation)
     , enableExtbo_(enableExtbo)
     , enableMICP_(enableMICP)
 {
@@ -655,6 +657,8 @@ assignToSolution(data::Solution& sol)
         {"RV",       UnitSystem::measure::oil_gas_ratio, data::TargetType::RESTART_SOLUTION,  rv_},
         {"RVSAT",    UnitSystem::measure::oil_gas_ratio, data::TargetType::RESTART_AUXILIARY, oilVaporizationFactor_},
         {"SALT",     UnitSystem::measure::salinity,  data::TargetType::RESTART_SOLUTION,      cSalt_},
+        {"SALTP",    UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     pSalt_},
+        {"PERMFACT", UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     permFact_},
         {"SOMAX",    UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      soMax_},
         {"SSOLVENT", UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      sSol_},
         {"SS_X",     UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      extboX_},
@@ -761,6 +765,10 @@ setRestart(const data::Solution& sol,
         cFoam_[elemIdx] = sol.data("FOAM")[globalDofIndex];
     if (!cSalt_.empty() && sol.has("SALT"))
         cSalt_[elemIdx] = sol.data("SALT")[globalDofIndex];
+    if (!pSalt_.empty() && sol.has("SALTP"))
+        pSalt_[elemIdx] = sol.data("SALTP")[globalDofIndex];
+    if (!permFact_.empty() && sol.has("PERMFACT"))
+        permFact_[elemIdx] = sol.data("PERMFACT")[globalDofIndex];
     if (!soMax_.empty() && sol.has("SOMAX"))
         soMax_[elemIdx] = sol.data("SOMAX")[globalDofIndex];
     if (!pcSwMdcOw_.empty() &&sol.has("PCSWM_OW"))
@@ -954,6 +962,10 @@ doAllocBuffers(unsigned bufferSize,
         cFoam_.resize(bufferSize, 0.0);
     if (enableBrine_)
         cSalt_.resize(bufferSize, 0.0);
+    if (enableSaltPrecipitation_) {
+        pSalt_.resize(bufferSize, 0.0);
+        permFact_.resize(bufferSize, 0.0);
+    }
     if (enableExtbo_) {
         extboX_.resize(bufferSize, 0.0);
         extboY_.resize(bufferSize, 0.0);

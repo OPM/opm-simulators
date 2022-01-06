@@ -135,6 +135,7 @@ public:
                    getPropValue<TypeTag, Properties::EnablePolymer>(),
                    getPropValue<TypeTag, Properties::EnableFoam>(),
                    getPropValue<TypeTag, Properties::EnableBrine>(),
+                   getPropValue<TypeTag, Properties::EnableSaltPrecipitation>(),
                    getPropValue<TypeTag, Properties::EnableExtbo>(),
                    getPropValue<TypeTag, Properties::EnableMICP>())
          , simulator_(simulator)
@@ -332,6 +333,14 @@ public:
                 this->cSalt_[globalDofIdx] = fs.saltConcentration().value();
             }
 
+            if (!this->pSalt_.empty()) {
+                this->pSalt_[globalDofIdx] = intQuants.saltSaturation().value();
+            }
+
+            if (!this->permFact_.empty()) {
+                this->permFact_[globalDofIdx] = intQuants.permFactor().value();
+            }
+            
             if (!this->extboX_.empty()) {
                 this->extboX_[globalDofIdx] = intQuants.xVolume().value();
             }
