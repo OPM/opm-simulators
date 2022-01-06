@@ -100,7 +100,7 @@ LhsEval getRvw_(typename std::enable_if<!HasMember_Rvw<FluidState>::value, const
 
 template <class FluidSystem, class FluidState, class LhsEval>
 auto getRvw_(typename std::enable_if<HasMember_Rvw<FluidState>::value, const FluidState&>::type fluidState,
-            unsigned regionIdx OPM_UNUSED)
+            unsigned)
     -> decltype(decay<LhsEval>(fluidState.Rvw()))
 { return decay<LhsEval>(fluidState.Rvw()); }
 
@@ -118,8 +118,8 @@ auto getSaltConcentration_(typename std::enable_if<HasMember_saltConcentration<F
 
 template <class FluidSystem, class FluidState, class LhsEval>
 LhsEval getSaltSaturation_(typename std::enable_if<!HasMember_saltSaturation<FluidState>::value,
-                              const FluidState&>::type fluidState OPM_UNUSED,
-                              unsigned regionIdx OPM_UNUSED)
+                              const FluidState&>::type,
+                              unsigned)
 {return 0.0;}
 
 template <class FluidSystem, class FluidState, class LhsEval>
