@@ -100,6 +100,7 @@ if(OPENCL_FOUND)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/BILU0.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/Reorder.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/ChowPatelIlu.cpp)
+  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/BISAI.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/CPR.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/openclKernels.cpp)
@@ -137,6 +138,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_ecl_output.cc
   tests/test_blackoil_amg.cpp
   tests/test_convergencereport.cpp
+  tests/test_csrToCscOffsetMap.cpp
   tests/test_flexiblesolver.cpp
   tests/test_preconditionerfactory.cpp
   tests/test_graphcoloring.cpp
@@ -203,6 +205,8 @@ list (APPEND TEST_DATA_FILES
   tests/norne_pvt.data
   tests/wells_no_perforation.data
   tests/matr33.txt
+  tests/offset_map_matrix.txt
+  tests/offset_map_matrix_transposed.txt
   tests/rhs3.txt
   tests/matr33rep.txt
   tests/rhs3rep.txt
@@ -255,6 +259,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/bda/cuda_header.hpp
   opm/simulators/linalg/bda/cusparseSolverBackend.hpp
   opm/simulators/linalg/bda/ChowPatelIlu.hpp
+  opm/simulators/linalg/bda/BISAI.hpp
   opm/simulators/linalg/bda/FPGABILU0.hpp
   opm/simulators/linalg/bda/FPGASolverBackend.hpp
   opm/simulators/linalg/bda/FPGAUtils.hpp

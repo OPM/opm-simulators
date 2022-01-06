@@ -31,9 +31,9 @@ namespace Accelerator
 {
 
 using spmv_blocked_kernel_type = cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int,
-                                         cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg>;
+                                         const cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg>;
 using spmv_kernel_type = cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int,
-                                         cl::Buffer&, cl::Buffer&, cl::LocalSpaceArg>;
+                                         const cl::Buffer&, cl::Buffer&, cl::LocalSpaceArg>;
 using residual_blocked_kernel_type = cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int,
                                          cl::Buffer&, const cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg>;
 using residual_kernel_type = cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int,
@@ -52,6 +52,10 @@ using stdwell_apply_no_reorder_kernel_type = cl::KernelFunctor<cl::Buffer&, cl::
                                                              cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg>;
 using ilu_decomp_kernel_type = cl::KernelFunctor<const unsigned int, const unsigned int, cl::Buffer&, cl::Buffer&,
                                                cl::Buffer&, cl::Buffer&, cl::Buffer&, const int, cl::LocalSpaceArg>;
+using isaiL_kernel_type = cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
+                                  cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int>;
+using isaiU_kernel_type = cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
+                                  cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int>;
 
 class OpenclKernels
 {
@@ -71,6 +75,7 @@ private:
     static std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int> > add_coarse_pressure_correction_k;
     static std::unique_ptr<cl::KernelFunctor<const cl::Buffer&, cl::Buffer&, const cl::Buffer&, const unsigned int> > prolongate_vector_k;
     static std::unique_ptr<spmv_blocked_kernel_type> spmv_blocked_k;
+    static std::unique_ptr<spmv_blocked_kernel_type> spmv_blocked_add_k;
     static std::unique_ptr<spmv_kernel_type> spmv_k;
     static std::unique_ptr<spmv_kernel_type> spmv_noreset_k;
     static std::unique_ptr<residual_blocked_kernel_type> residual_blocked_k;
@@ -80,6 +85,8 @@ private:
     static std::unique_ptr<stdwell_apply_kernel_type> stdwell_apply_k;
     static std::unique_ptr<stdwell_apply_no_reorder_kernel_type> stdwell_apply_no_reorder_k;
     static std::unique_ptr<ilu_decomp_kernel_type> ilu_decomp_k;
+    static std::unique_ptr<isaiL_kernel_type> isaiL_k;
+    static std::unique_ptr<isaiU_kernel_type> isaiU_k;
 
     OpenclKernels(){}; // disable instantiation
 
@@ -94,6 +101,7 @@ public:
     static const std::string add_coarse_pressure_correction_str;
     static const std::string prolongate_vector_str;
     static const std::string spmv_blocked_str;
+    static const std::string spmv_blocked_add_str;
     static const std::string spmv_str;
     static const std::string spmv_noreset_str;
     static const std::string residual_blocked_str;
@@ -108,6 +116,8 @@ public:
     static const std::string stdwell_apply_str;
     static const std::string stdwell_apply_no_reorder_str;
     static const std::string ILU_decomp_str;
+    static const std::string isaiL_str;
+    static const std::string isaiU_str;
 
     static void init(cl::Context *context, cl::CommandQueue *queue, std::vector<cl::Device>& devices, int verbosity);
 
@@ -120,7 +130,7 @@ public:
     static void full_to_pressure_restriction(const cl::Buffer& fine_y, cl::Buffer& weights, cl::Buffer& coarse_y, int Nb);
     static void add_coarse_pressure_correction(cl::Buffer& coarse_x, cl::Buffer& fine_x, int pressure_idx, int Nb);
     static void prolongate_vector(const cl::Buffer& in, cl::Buffer& out, const cl::Buffer& cols, int N);
-    static void spmv(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows, cl::Buffer& x, cl::Buffer& b, int Nb, unsigned int block_size, bool reset = true);
+    static void spmv(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows, const cl::Buffer& x, cl::Buffer& b, int Nb, unsigned int block_size, bool reset = true, bool add = false);
     static void residual(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows, cl::Buffer& x, const cl::Buffer& rhs, cl::Buffer& out, int Nb, unsigned int block_size);
 
     static void ILU_apply1(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows, cl::Buffer& diagIndex,
@@ -139,6 +149,13 @@ public:
     static void apply_stdwells_no_reorder(cl::Buffer& d_Cnnzs_ocl, cl::Buffer &d_Dnnzs_ocl, cl::Buffer &d_Bnnzs_ocl,
         cl::Buffer &d_Ccols_ocl, cl::Buffer &d_Bcols_ocl, cl::Buffer &d_x, cl::Buffer &d_y,
         int dim, int dim_wells, cl::Buffer &d_val_pointers_ocl, int num_std_wells);
+
+    static void isaiL(cl::Buffer& diagIndex, cl::Buffer& colPointers, cl::Buffer& mapping, cl::Buffer& nvc,
+            cl::Buffer& luIdxs, cl::Buffer& xxIdxs, cl::Buffer& dxIdxs, cl::Buffer& LUvals, cl::Buffer& invLvals, unsigned int Nb);
+
+    static void isaiU(cl::Buffer& diagIndex, cl::Buffer& colPointers, cl::Buffer& rowIndices, cl::Buffer& mapping,
+            cl::Buffer& nvc, cl::Buffer& luIdxs, cl::Buffer& xxIdxs, cl::Buffer& dxIdxs, cl::Buffer& LUvals,
+            cl::Buffer& invDiagVals, cl::Buffer& invUvals, unsigned int Nb);
 };
 
 } // namespace Accelerator

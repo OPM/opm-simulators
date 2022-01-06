@@ -115,6 +115,16 @@ public:
         return rmat.get();
     }
 
+    std::tuple<std::vector<int>, std::vector<int>, std::vector<int>> get_preconditioner_structure()
+    {
+        return {{LUmat->rowPointers, LUmat->rowPointers + (Nb + 1)}, {LUmat->colIndices, LUmat->colIndices + nnzb}, diagIndex};
+    }
+
+    std::pair<cl::Buffer, cl::Buffer> get_preconditioner_data()
+    {
+        return std::make_pair(s.LUvals, s.invDiagVals);
+    }
+
 };
 
 } // namespace Accelerator

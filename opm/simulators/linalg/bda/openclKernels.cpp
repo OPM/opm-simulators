@@ -52,6 +52,7 @@ std::unique_ptr<cl::KernelFunctor<const cl::Buffer&, cl::Buffer&, cl::Buffer&, c
 std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int> > OpenclKernels::add_coarse_pressure_correction_k;
 std::unique_ptr<cl::KernelFunctor<const cl::Buffer&, cl::Buffer&, const cl::Buffer&, const unsigned int> > OpenclKernels::prolongate_vector_k;
 std::unique_ptr<spmv_blocked_kernel_type> OpenclKernels::spmv_blocked_k;
+std::unique_ptr<spmv_blocked_kernel_type> OpenclKernels::spmv_blocked_add_k;
 std::unique_ptr<spmv_kernel_type> OpenclKernels::spmv_k;
 std::unique_ptr<spmv_kernel_type> OpenclKernels::spmv_noreset_k;
 std::unique_ptr<residual_blocked_kernel_type> OpenclKernels::residual_blocked_k;
@@ -61,7 +62,8 @@ std::unique_ptr<ilu_apply2_kernel_type> OpenclKernels::ILU_apply2_k;
 std::unique_ptr<stdwell_apply_kernel_type> OpenclKernels::stdwell_apply_k;
 std::unique_ptr<stdwell_apply_no_reorder_kernel_type> OpenclKernels::stdwell_apply_no_reorder_k;
 std::unique_ptr<ilu_decomp_kernel_type> OpenclKernels::ilu_decomp_k;
-
+std::unique_ptr<isaiL_kernel_type> OpenclKernels::isaiL_k;
+std::unique_ptr<isaiU_kernel_type> OpenclKernels::isaiU_k;
 
 // divide A by B, and round up: return (int)ceil(A/B)
 unsigned int ceilDivision(const unsigned int A, const unsigned int B)
@@ -90,6 +92,7 @@ void OpenclKernels::init(cl::Context *context, cl::CommandQueue *queue_, std::ve
     sources.emplace_back(add_coarse_pressure_correction_str);
     sources.emplace_back(prolongate_vector_str);
     sources.emplace_back(spmv_blocked_str);
+    sources.emplace_back(spmv_blocked_add_str);
     sources.emplace_back(spmv_str);
     sources.emplace_back(spmv_noreset_str);
     sources.emplace_back(residual_blocked_str);
@@ -104,6 +107,8 @@ void OpenclKernels::init(cl::Context *context, cl::CommandQueue *queue_, std::ve
     sources.emplace_back(stdwell_apply_str);
     sources.emplace_back(stdwell_apply_no_reorder_str);
     sources.emplace_back(ILU_decomp_str);
+    sources.emplace_back(isaiL_str);
+    sources.emplace_back(isaiU_str);
 
     cl::Program program = cl::Program(*context, sources);
     program.build(devices);
@@ -122,6 +127,7 @@ void OpenclKernels::init(cl::Context *context, cl::CommandQueue *queue_, std::ve
     add_coarse_pressure_correction_k.reset(new cl::KernelFunctor<cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int>(cl::Kernel(program, "add_coarse_pressure_correction")));
     prolongate_vector_k.reset(new cl::KernelFunctor<const cl::Buffer&, cl::Buffer&, const cl::Buffer&, const unsigned int>(cl::Kernel(program, "prolongate_vector")));
     spmv_blocked_k.reset(new spmv_blocked_kernel_type(cl::Kernel(program, "spmv_blocked")));
+    spmv_blocked_add_k.reset(new spmv_blocked_kernel_type(cl::Kernel(program, "spmv_blocked_add")));
     spmv_k.reset(new spmv_kernel_type(cl::Kernel(program, "spmv")));
     spmv_noreset_k.reset(new spmv_kernel_type(cl::Kernel(program, "spmv_noreset")));
     residual_blocked_k.reset(new residual_blocked_kernel_type(cl::Kernel(program, "residual_blocked")));
@@ -131,6 +137,8 @@ void OpenclKernels::init(cl::Context *context, cl::CommandQueue *queue_, std::ve
     stdwell_apply_k.reset(new stdwell_apply_kernel_type(cl::Kernel(program, "stdwell_apply")));
     stdwell_apply_no_reorder_k.reset(new stdwell_apply_no_reorder_kernel_type(cl::Kernel(program, "stdwell_apply_no_reorder")));
     ilu_decomp_k.reset(new ilu_decomp_kernel_type(cl::Kernel(program, "ilu_decomp")));
+    isaiL_k.reset(new isaiL_kernel_type(cl::Kernel(program, "isaiL")));
+    isaiU_k.reset(new isaiU_kernel_type(cl::Kernel(program, "isaiU")));
 
     initialized = true;
 } // end get_opencl_kernels()
@@ -311,7 +319,7 @@ void OpenclKernels::prolongate_vector(const cl::Buffer& in, cl::Buffer& out, con
     }
 }
 
-void OpenclKernels::spmv(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows, cl::Buffer& x, cl::Buffer& b, int Nb, unsigned int block_size, bool reset)
+void OpenclKernels::spmv(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows, const cl::Buffer& x, cl::Buffer& b, int Nb, unsigned int block_size, bool reset, bool add)
 {
     const unsigned int work_group_size = 32;
     const unsigned int num_work_groups = ceilDivision(Nb, work_group_size);
@@ -321,7 +329,11 @@ void OpenclKernels::spmv(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows, c
     cl::Event event;
 
     if (block_size > 1) {
-        event = (*spmv_blocked_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), vals, cols, rows, Nb, x, b, block_size, cl::Local(lmem_per_work_group));
+        if (add) {
+            event = (*spmv_blocked_add_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), vals, cols, rows, Nb, x, b, block_size, cl::Local(lmem_per_work_group));
+        } else {
+            event = (*spmv_blocked_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), vals, cols, rows, Nb, x, b, block_size, cl::Local(lmem_per_work_group));
+        }
     } else {
         if (reset) {
             event = (*spmv_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), vals, cols, rows, Nb, x, b, cl::Local(lmem_per_work_group));
@@ -456,6 +468,45 @@ void OpenclKernels::apply_stdwells_no_reorder(cl::Buffer& d_Cnnzs_ocl, cl::Buffe
         event.wait();
         std::ostringstream oss;
         oss << std::scientific << "OpenclKernels apply_stdwells() time: " << t_apply_stdwells.stop() << " s";
+        OpmLog::info(oss.str());
+    }
+}
+
+void OpenclKernels::isaiL(cl::Buffer& diagIndex, cl::Buffer& colPointers, cl::Buffer& mapping, cl::Buffer& nvc,
+    cl::Buffer& luIdxs, cl::Buffer& xxIdxs, cl::Buffer& dxIdxs, cl::Buffer& LUvals, cl::Buffer& invLvals, unsigned int Nb)
+{
+    const unsigned int work_group_size = 256;
+    const unsigned int num_work_groups = ceilDivision(Nb, work_group_size);
+    const unsigned int total_work_items = num_work_groups * work_group_size;
+
+    Timer t_isaiL;
+    cl::Event event = (*isaiL_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)),
+            diagIndex, colPointers, mapping, nvc, luIdxs, xxIdxs, dxIdxs, LUvals, invLvals, Nb);
+
+    if (verbosity >= 4) {
+        event.wait();
+        std::ostringstream oss;
+        oss << std::scientific << "OpenclKernels isaiL() time: " << t_isaiL.stop() << " s";
+        OpmLog::info(oss.str());
+    }
+}
+
+void OpenclKernels::isaiU(cl::Buffer& diagIndex, cl::Buffer& colPointers, cl::Buffer& rowIndices, cl::Buffer& mapping,
+        cl::Buffer& nvc, cl::Buffer& luIdxs, cl::Buffer& xxIdxs, cl::Buffer& dxIdxs, cl::Buffer& LUvals,
+        cl::Buffer& invDiagVals, cl::Buffer& invUvals, unsigned int Nb)
+{
+    const unsigned int work_group_size = 256;
+    const unsigned int num_work_groups = ceilDivision(Nb, work_group_size);
+    const unsigned int total_work_items = num_work_groups * work_group_size;
+
+    Timer t_isaiU;
+    cl::Event event = (*isaiU_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)),
+            diagIndex, colPointers, rowIndices, mapping, nvc, luIdxs, xxIdxs, dxIdxs, LUvals, invDiagVals, invUvals, Nb);
+
+    if (verbosity >= 4) {
+        event.wait();
+        std::ostringstream oss;
+        oss << std::scientific << "OpenclKernels isaiU() time: " << t_isaiU.stop() << " s";
         OpmLog::info(oss.str());
     }
 }
