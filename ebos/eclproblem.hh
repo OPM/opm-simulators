@@ -619,6 +619,7 @@ class EclProblem : public GetPropType<TypeTag, Properties::BaseProblem>
     enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
     enum { enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>() };
     enum { enableBrine = getPropValue<TypeTag, Properties::EnableBrine>() };
+    enum { enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>() };
     enum { enablePolymerMolarWeight = getPropValue<TypeTag, Properties::EnablePolymerMW>() };
     enum { enableFoam = getPropValue<TypeTag, Properties::EnableFoam>() };
     enum { enableExtbo = getPropValue<TypeTag, Properties::EnableExtbo>() };
@@ -1830,8 +1831,14 @@ public:
         if constexpr (enablePolymerMolarWeight)
             values[Indices::polymerMoleWeightIdx]= this->polymerMoleWeight_[globalDofIdx];
 
-        if constexpr (enableBrine)
-            values[Indices::saltConcentrationIdx] = initialFluidStates_[globalDofIdx].saltConcentration();
+        if constexpr (enableBrine) {
+            if (enableSaltPrecipitation && values.primaryVarsMeaningBrine() == PrimaryVariables::Sp) {
+                values[Indices::saltConcentrationIdx] = initialFluidStates_[globalDofIdx].saltSaturation();
+            }
+            else {
+                values[Indices::saltConcentrationIdx] = initialFluidStates_[globalDofIdx].saltConcentration();
+            }
+        }
 
         if constexpr (enableMICP){
             values[Indices::microbialConcentrationIdx]= this->microbialConcentration_[globalDofIdx];
