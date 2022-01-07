@@ -35,13 +35,13 @@
 #include <opm/material/common/IntervalTabulated2DFunction.hpp>
 
 #if HAVE_ECL_INPUT
-#include <opm/parser/eclipse/Deck/Deck.hpp>
-#include <opm/parser/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/PvtwsaltTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/PermfactTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/SaltSolubilityTable.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/TableManager.hpp>
-#include <opm/parser/eclipse/EclipseState/Tables/SimpleTable.hpp>
+#include <opm/input/eclipse/Deck/Deck.hpp>
+#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/PvtwsaltTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/PermfactTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/SaltSolubilityTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/TableManager.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/SimpleTable.hpp>
 #endif
 
 #include <opm/material/common/Valgrind.hpp>
