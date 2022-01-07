@@ -509,12 +509,12 @@ public:
 
     template <typename Value>
     static Value pbubRs(unsigned pvtRegionIdx, const Value& z, const Value& rs) {
-        return PBUB_RS_[pvtRegionIdx].eval(z, rs);
+        return PBUB_RS_[pvtRegionIdx].eval(z, rs, true);
     }
 
     template <typename Value>
     static Value pbubRv(unsigned pvtRegionIdx, const Value& z, const Value& rv) {
-        return PBUB_RV_[pvtRegionIdx].eval(z, rv);
+        return PBUB_RV_[pvtRegionIdx].eval(z, rv, true);
     }
 
     template <typename Value>
@@ -557,12 +557,12 @@ public:
 
     template <typename Value>
     static Value oilCmp(unsigned pvtRegionIdx, const Value& z) {
-        return oilCmp_[pvtRegionIdx].eval(z);
+        return oilCmp_[pvtRegionIdx].eval(z, true);
     }
 
     template <typename Value>
     static Value gasCmp(unsigned pvtRegionIdx, const Value& z) {
-        return gasCmp_[pvtRegionIdx].eval(z);
+        return gasCmp_[pvtRegionIdx].eval(z, true);
     }
 
 private:
