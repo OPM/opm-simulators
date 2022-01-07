@@ -27,6 +27,7 @@
 #include <functional>
 #include <optional>
 #include <vector>
+#include <array>
 
 namespace Opm
 {
@@ -74,6 +75,11 @@ protected:
                                                    const double maxPerfPress,
                                                    const double rho,
                                                    DeferredLogger& deferred_logger) const;
+
+    bool bruteForcingBracket(const std::function<double(const double)>& eq,
+                             const std::array<double, 2>& range,
+                             double& low, double& high,
+                             DeferredLogger& deferred_logger) const;
 
     /// Detect oscillation or stagnation based on the residual measure history
     void detectOscillations(const std::vector<double>& measure_history,

@@ -612,28 +612,8 @@ computeBhpAtThpLimitProd(const std::function<std::vector<double>(const double)>&
 
     if (!finding_bracket) {
         deferred_logger.debug(" trying the brute force way for last attempt ");
-        // resetting the high and low
-        low = controls.bhp_limit;
-        high = bhp_max;
-        const int sample_number = 100;
-        const double interval = (high - low) / sample_number;
-        double eq_low = eq(low);
-        double eq_high;
-        for (int i = 0; i < sample_number + 1; ++i) {
-            high = controls.bhp_limit + interval * i;
-            eq_high = eq(high);
-            if (eq_high * eq_low <= 0.) {
-                finding_bracket = true;
-                break;
-            }
-            low = high;
-            eq_low = eq_high;
-        }
-        if (finding_bracket) {
-            deferred_logger.debug(
-                    " brute force solve found low " + std::to_string(low) + " with eq_low " + std::to_string(eq_low) +
-                    " high " + std::to_string(high) + " with eq_high " + std::to_string(eq_high));
-        }
+        const std::array<double, 2> range {controls.bhp_limit, bhp_max};
+        finding_bracket = this->bruteForcingBracket(eq, range, low, high, deferred_logger);
     }
 
     if (!finding_bracket) {
@@ -654,6 +634,39 @@ computeBhpAtThpLimitProd(const std::function<std::vector<double>(const double)>&
                                 "Robust bhp(thp) solve failed for well " + baseif_.name());
         return std::nullopt;
     }
+}
+
+template<typename Scalar>
+bool
+MultisegmentWellGeneric<Scalar>::
+bruteForcingBracket(const std::function<double(const double)>& eq,
+                    const std::array<double, 2>& range,
+                    double& low, double& high,
+                    DeferredLogger& deferred_logger) const
+{
+    bool finding_bracket = false;
+    low = range[0];
+    high = range[1];
+    const int sample_number = 100;
+    const double interval = (high - low) / sample_number;
+    double eq_low = eq(low);
+    double eq_high;
+    for (int i = 0; i < sample_number + 1; ++i) {
+        high = range[0] + interval * i;
+        eq_high = eq(high);
+        if (eq_high * eq_low <= 0.) {
+            finding_bracket = true;
+            break;
+        }
+        low = high;
+        eq_low = eq_high;
+    }
+    if (finding_bracket) {
+        deferred_logger.debug(
+                " brute force solve found low " + std::to_string(low) + " with eq_low " + std::to_string(eq_low) +
+                " high " + std::to_string(high) + " with eq_high " + std::to_string(eq_high));
+    }
+    return finding_bracket;
 }
 
 template<typename Scalar>
