@@ -480,140 +480,34 @@ computeBhpAtThpLimitProd(const std::function<std::vector<double>(const double)>&
     };
 
     // Find the bhp-point where production becomes nonzero.
-    double bhp_max = 0.0;
-    {
-        auto fflo = [&flo, &frates](double bhp) { return flo(frates(bhp)); };
-        double low = controls.bhp_limit;
-        double high = maxPerfPress + 1.0 * unit::barsa;
-        double f_low = fflo(low);
-        double f_high = fflo(high);
-        deferred_logger.debug("computeBhpAtThpLimitProd(): well = " + baseif_.name() +
-                              "  low = " + std::to_string(low) +
-                              "  high = " + std::to_string(high) +
-                              "  f(low) = " + std::to_string(f_low) +
-                              "  f(high) = " + std::to_string(f_high));
-        int adjustments = 0;
-        const int max_adjustments = 10;
-        const double adjust_amount = 5.0 * unit::barsa;
-        while (f_low * f_high > 0.0 && adjustments < max_adjustments) {
-            // Same sign, adjust high to see if we can flip it.
-            high += adjust_amount;
-            f_high = fflo(high);
-            ++adjustments;
-        }
-        if (f_low * f_high > 0.0) {
-            if (f_low > 0.0) {
-                // Even at the BHP limit, we are injecting.
-                // There will be no solution here, return an
-                // empty optional.
-                deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE_INOPERABLE",
-                                        "Robust bhp(thp) solve failed due to inoperability for well " + baseif_.name());
-                return std::optional<double>();
-            } else {
-                // Still producing, even at high bhp.
-                assert(f_high < 0.0);
-                bhp_max = high;
-            }
-        } else {
-            // Bisect to find a bhp point where we produce, but
-            // not a large amount ('eps' below).
-            const double eps = 0.1 * std::fabs(table.getFloAxis().front());
-            const int maxit = 50;
-            int it = 0;
-            while (std::fabs(f_low) > eps && it < maxit) {
-                const double curr = 0.5*(low + high);
-                const double f_curr = fflo(curr);
-                if (f_curr * f_low > 0.0) {
-                    low = curr;
-                    f_low = f_curr;
-                } else {
-                    high = curr;
-                    f_high = f_curr;
-                }
-                ++it;
-            }
-            bhp_max = low;
-        }
-        deferred_logger.debug("computeBhpAtThpLimitProd(): well = " + baseif_.name() +
-                              "  low = " + std::to_string(low) +
-                              "  high = " + std::to_string(high) +
-                              "  f(low) = " + std::to_string(f_low) +
-                              "  f(high) = " + std::to_string(f_high) +
-                              "  bhp_max = " + std::to_string(bhp_max));
-    }
+    auto fflo = [&flo, &frates](double bhp) { return flo(frates(bhp)); };
+    auto bhp_max = this->bhpMax(fflo, controls.bhp_limit, maxPerfPress, table.getFloAxis().front(), deferred_logger);
 
+    // could not solve for the bhp-point, we could not contrinue to find the bhp
+    if (!bhp_max.has_value()) {
+        return {};
+    }
     // Define the equation we want to solve.
     auto eq = [&fbhp, &frates](double bhp) {
         return fbhp(frates(bhp)) - bhp;
     };
 
     // Find appropriate brackets for the solution.
-    bool finding_bracket = false;
-    double low = controls.bhp_limit;
-    double high = bhp_max;
-    {
-        double eq_high = eq(high);
-        double eq_low = eq(low);
-        const double eq_bhplimit = eq_low;
-        deferred_logger.debug("computeBhpAtThpLimitProd(): well = " + baseif_.name() +
-                              "  low = " + std::to_string(low) +
-                              "  high = " + std::to_string(high) +
-                              "  eq(low) = " + std::to_string(eq_low) +
-                              "  eq(high) = " + std::to_string(eq_high));
-        if (eq_low * eq_high > 0.0) {
-            // Failed to bracket the zero.
-            // If this is due to having two solutions, bisect until bracketed.
-            double abs_low = std::fabs(eq_low);
-            double abs_high = std::fabs(eq_high);
-            int bracket_attempts = 0;
-            const int max_bracket_attempts = 20;
-            double interval = high - low;
-            const double min_interval = 1.0 * unit::barsa;
-            while (eq_low * eq_high > 0.0 && bracket_attempts < max_bracket_attempts && interval > min_interval) {
-                if (abs_high < abs_low) {
-                    low = 0.5 * (low + high);
-                    eq_low = eq(low);
-                    abs_low = std::fabs(eq_low);
-                } else {
-                    high = 0.5 * (low + high);
-                    eq_high = eq(high);
-                    abs_high = std::fabs(eq_high);
-                }
-                ++bracket_attempts;
-            }
+    const std::array<double, 2> range {controls.bhp_limit, *bhp_max};
+    std::optional<double> approximate_solution;
+    double low, high;
+    // trying to use bisect way to locate a bracket
+    bool finding_bracket = this->bisectBracket(eq, range, low, high, approximate_solution, deferred_logger);
 
-            if (eq_low * eq_high <= 0.) {
-                // We have a bracket!
-                finding_bracket = true;
-                // Now, see if (bhplimit, low) is a bracket in addition to (low, high).
-                // If so, that is the bracket we shall use, choosing the solution with the
-                // highest flow.
-                if (eq_low * eq_bhplimit <= 0.0) {
-                    high = low;
-                    low = controls.bhp_limit;
-                }
-            } else { // eq_low * eq_high > 0.0
-                // Still failed bracketing!
-                const double limit = 3.0 * unit::barsa;
-                if (std::min(abs_low, abs_high) < limit) {
-                    // Return the least bad solution if less off than 3 bar.
-                    deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE_BRACKETING_FAILURE",
-                                            "Robust bhp(thp) not solved precisely for well " + baseif_.name());
-                    return abs_low < abs_high ? low : high;
-                } else {
-                    // Return failure.
-                    deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE_BRACKETING_FAILURE",
-                                            "Robust bhp(thp) solve failed due to bracketing failure for well " +
-                                            baseif_.name());
-                }
-            }
-        }
+    // based on the origional design, if an approximate solution is suggested, we use this value directly
+    // in the long run, we might change it
+    if (approximate_solution.has_value()) {
+        return *approximate_solution;
     }
 
     if (!finding_bracket) {
         deferred_logger.debug(" trying the brute force way for last attempt ");
-        const std::array<double, 2> range {controls.bhp_limit, bhp_max};
-        finding_bracket = this->bruteForcingBracket(eq, range, low, high, deferred_logger);
+        finding_bracket = this->bruteForceBracket(eq, range, low, high, deferred_logger);
     }
 
     if (!finding_bracket) {
@@ -637,12 +531,156 @@ computeBhpAtThpLimitProd(const std::function<std::vector<double>(const double)>&
 }
 
 template<typename Scalar>
+std::optional<double>
+MultisegmentWellGeneric<Scalar>::
+bhpMax(const std::function<double(const double)>& fflo,
+       const double bhp_limit,
+       const double maxPerfPress,
+       const double vfp_flo_front,
+       DeferredLogger& deferred_logger) const
+{
+    // Find the bhp-point where production becomes nonzero.
+    double bhp_max = 0.0;
+    double low = bhp_limit;
+    double high = maxPerfPress + 1.0 * unit::barsa;
+    double f_low = fflo(low);
+    double f_high = fflo(high);
+    deferred_logger.debug("computeBhpAtThpLimitProd(): well = " + baseif_.name() +
+                           "  low = " + std::to_string(low) +
+                           "  high = " + std::to_string(high) +
+                           "  f(low) = " + std::to_string(f_low) +
+                           "  f(high) = " + std::to_string(f_high));
+    int adjustments = 0;
+    const int max_adjustments = 10;
+    const double adjust_amount = 5.0 * unit::barsa;
+    while (f_low * f_high > 0.0 && adjustments < max_adjustments) {
+        // Same sign, adjust high to see if we can flip it.
+        high += adjust_amount;
+        f_high = fflo(high);
+        ++adjustments;
+    }
+    if (f_low * f_high > 0.0) {
+        if (f_low > 0.0) {
+            // Even at the BHP limit, we are injecting.
+            // There will be no solution here, return an
+            // empty optional.
+            deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE_INOPERABLE",
+                                    "Robust bhp(thp) solve failed due to inoperability for well " + baseif_.name());
+            return {};
+        } else {
+            // Still producing, even at high bhp.
+            assert(f_high < 0.0);
+            bhp_max = high;
+        }
+    } else {
+        // Bisect to find a bhp point where we produce, but
+        // not a large amount ('eps' below).
+        const double eps = 0.1 * std::fabs(vfp_flo_front);
+        const int maxit = 50;
+        int it = 0;
+        while (std::fabs(f_low) > eps && it < maxit) {
+            const double curr = 0.5*(low + high);
+            const double f_curr = fflo(curr);
+            if (f_curr * f_low > 0.0) {
+                low = curr;
+                f_low = f_curr;
+            } else {
+                high = curr;
+                f_high = f_curr;
+            }
+            ++it;
+        }
+        bhp_max = low;
+    }
+    deferred_logger.debug("computeBhpAtThpLimitProd(): well = " + baseif_.name() +
+                          "  low = " + std::to_string(low) +
+                          "  high = " + std::to_string(high) +
+                          "  f(low) = " + std::to_string(f_low) +
+                          "  f(high) = " + std::to_string(f_high) +
+                          "  bhp_max = " + std::to_string(bhp_max));
+    return bhp_max;
+}
+
+
+template<typename Scalar>
 bool
 MultisegmentWellGeneric<Scalar>::
-bruteForcingBracket(const std::function<double(const double)>& eq,
-                    const std::array<double, 2>& range,
-                    double& low, double& high,
-                    DeferredLogger& deferred_logger) const
+bisectBracket(const std::function<double(const double)>& eq,
+              const std::array<double, 2>& range,
+              double& low, double& high,
+              std::optional<double>& approximate_solution,
+              DeferredLogger& deferred_logger) const
+{
+    bool finding_bracket = false;
+    low = range[0];
+    high = range[1];
+
+    double eq_high = eq(high);
+    double eq_low = eq(low);
+    const double eq_bhplimit = eq_low;
+    deferred_logger.debug("computeBhpAtThpLimitProd(): well = " + baseif_.name() +
+                          "  low = " + std::to_string(low) +
+                          "  high = " + std::to_string(high) +
+                          "  eq(low) = " + std::to_string(eq_low) +
+                          "  eq(high) = " + std::to_string(eq_high));
+    if (eq_low * eq_high > 0.0) {
+        // Failed to bracket the zero.
+        // If this is due to having two solutions, bisect until bracketed.
+        double abs_low = std::fabs(eq_low);
+        double abs_high = std::fabs(eq_high);
+        int bracket_attempts = 0;
+        const int max_bracket_attempts = 20;
+        double interval = high - low;
+        const double min_interval = 1.0 * unit::barsa;
+        while (eq_low * eq_high > 0.0 && bracket_attempts < max_bracket_attempts && interval > min_interval) {
+            if (abs_high < abs_low) {
+                low = 0.5 * (low + high);
+                eq_low = eq(low);
+                abs_low = std::fabs(eq_low);
+            } else {
+                high = 0.5 * (low + high);
+                eq_high = eq(high);
+                abs_high = std::fabs(eq_high);
+            }
+            ++bracket_attempts;
+        }
+
+        if (eq_low * eq_high <= 0.) {
+            // We have a bracket!
+            finding_bracket = true;
+            // Now, see if (bhplimit, low) is a bracket in addition to (low, high).
+            // If so, that is the bracket we shall use, choosing the solution with the
+            // highest flow.
+            if (eq_low * eq_bhplimit <= 0.0) {
+                high = low;
+                low = range[0];
+            }
+        } else { // eq_low * eq_high > 0.0
+            // Still failed bracketing!
+            const double limit = 3.0 * unit::barsa;
+            if (std::min(abs_low, abs_high) < limit) {
+                // Return the least bad solution if less off than 3 bar.
+                deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE_BRACKETING_FAILURE",
+                                        "Robust bhp(thp) not solved precisely for well " + baseif_.name());
+                approximate_solution = abs_low < abs_high ? low : high;
+            } else {
+                    // Return failure.
+                deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE_BRACKETING_FAILURE",
+                                         "Robust bhp(thp) solve failed due to bracketing failure for well " +
+                                         baseif_.name());
+            }
+        }
+    }
+    return finding_bracket;
+}
+
+template<typename Scalar>
+bool
+MultisegmentWellGeneric<Scalar>::
+bruteForceBracket(const std::function<double(const double)>& eq,
+                  const std::array<double, 2>& range,
+                  double& low, double& high,
+                  DeferredLogger& deferred_logger) const
 {
     bool finding_bracket = false;
     low = range[0];
