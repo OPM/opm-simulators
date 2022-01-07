@@ -548,6 +548,7 @@ computeBhpAtThpLimitProd(const std::function<std::vector<double>(const double)>&
     };
 
     // Find appropriate brackets for the solution.
+    bool finding_bracket = false;
     double low = controls.bhp_limit;
     double high = bhp_max;
     {
@@ -580,7 +581,18 @@ computeBhpAtThpLimitProd(const std::function<std::vector<double>(const double)>&
                 }
                 ++bracket_attempts;
             }
-            if (eq_low * eq_high > 0.0) {
+
+            if (eq_low * eq_high <= 0.) {
+                // We have a bracket!
+                finding_bracket = true;
+                // Now, see if (bhplimit, low) is a bracket in addition to (low, high).
+                // If so, that is the bracket we shall use, choosing the solution with the
+                // highest flow.
+                if (eq_low * eq_bhplimit <= 0.0) {
+                    high = low;
+                    low = controls.bhp_limit;
+                }
+            } else { // eq_low * eq_high > 0.0
                 // Still failed bracketing!
                 const double limit = 3.0 * unit::barsa;
                 if (std::min(abs_low, abs_high) < limit) {
@@ -591,19 +603,41 @@ computeBhpAtThpLimitProd(const std::function<std::vector<double>(const double)>&
                 } else {
                     // Return failure.
                     deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE_BRACKETING_FAILURE",
-                                            "Robust bhp(thp) solve failed due to bracketing failure for well " + baseif_.name());
-                    return std::nullopt;
+                                            "Robust bhp(thp) solve failed due to bracketing failure for well " +
+                                            baseif_.name());
                 }
             }
         }
-        // We have a bracket!
-        // Now, see if (bhplimit, low) is a bracket in addition to (low, high).
-        // If so, that is the bracket we shall use, choosing the solution with the
-        // highest flow.
-        if (eq_low * eq_bhplimit <= 0.0) {
-            high = low;
-            low = controls.bhp_limit;
+    }
+
+    if (!finding_bracket) {
+        deferred_logger.debug(" trying the brute force way for last attempt ");
+        // resetting the high and low
+        low = controls.bhp_limit;
+        high = bhp_max;
+        const int sample_number = 100;
+        const double interval = (high - low) / sample_number;
+        double eq_low = eq(low);
+        double eq_high;
+        for (int i = 0; i < sample_number + 1; ++i) {
+            high = controls.bhp_limit + interval * i;
+            eq_high = eq(high);
+            if (eq_high * eq_low <= 0.) {
+                finding_bracket = true;
+                break;
+            }
+            low = high;
+            eq_low = eq_high;
         }
+        if (finding_bracket) {
+            deferred_logger.debug(
+                    " brute force solve found low " + std::to_string(low) + " with eq_low " + std::to_string(eq_low) +
+                    " high " + std::to_string(high) + " with eq_high " + std::to_string(eq_high));
+        }
+    }
+
+    if (!finding_bracket) {
+        return std::nullopt;
     }
 
     // Solve for the proper solution in the given interval.
