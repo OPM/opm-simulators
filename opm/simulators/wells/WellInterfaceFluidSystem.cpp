@@ -635,8 +635,20 @@ checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
     }
 
     if (report.ratio_limit_violated) {
-        assert(report.worst_offending_completion != INVALIDCOMPLETION);
-        assert(report.violation_extent > 1.);
+        // No worst offending completion is found because all the completions are either injecting or
+        // have trivial rates.
+        if(report.worst_offending_completion == INVALIDCOMPLETION) {
+            std::string message = "The well ratio limit is violated but all the completion rates are trivial! " + this->name() + " is kept open";
+            deferred_logger.warning("WECON_INVALIDCOMPLETION", message);
+            report.ratio_limit_violated = false;
+        }
+        // Due to numerical instability there may exist corner cases where the well breaks
+        // the ratio limit but no completion does.
+        else if(report.violation_extent <= 1.) {
+            std::string message = "The well ratio limit is violated but no completion ratio limit is violated! " + this->name() + " is kept open";
+            deferred_logger.warning("WECON_INCONSISTANT_COMPLETION_WELL", message);
+            report.ratio_limit_violated = false;
+        }
     }
 }
 
@@ -836,10 +848,7 @@ checkMaxRatioLimitCompletions(const SingleWellState& ws,
         }
     } // end of for (const auto& completion : completions_)
 
-    assert(max_ratio_completion > max_ratio_limit);
-    assert(worst_offending_completion != INVALIDCOMPLETION);
     const double violation_extent = max_ratio_completion / max_ratio_limit;
-    assert(violation_extent > 1.0);
 
     if (violation_extent > report.violation_extent) {
         report.worst_offending_completion = worst_offending_completion;
