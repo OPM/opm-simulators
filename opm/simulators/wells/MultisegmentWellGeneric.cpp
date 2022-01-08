@@ -505,10 +505,10 @@ computeBhpAtThpLimitProd(const std::function<std::vector<double>(const double)>&
         return *approximate_solution;
     }
 
-    if (!finding_bracket) {
+    /* if (!finding_bracket) {
         deferred_logger.debug(" trying the brute force way for last attempt ");
         finding_bracket = this->bruteForceBracket(eq, range, low, high, deferred_logger);
-    }
+    } */
 
     if (!finding_bracket) {
         return std::nullopt;
