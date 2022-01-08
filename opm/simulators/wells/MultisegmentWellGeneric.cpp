@@ -670,6 +670,8 @@ bisectBracket(const std::function<double(const double)>& eq,
                                          baseif_.name());
             }
         }
+    } else {
+        finding_bracket = true;
     }
     return finding_bracket;
 }
