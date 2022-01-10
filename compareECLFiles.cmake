@@ -1398,6 +1398,15 @@ endif()
                                        REL_TOL ${coarse_rel_tol_parallel}
                                        DIR udq_actionx
                                        TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-6)
+
+  add_test_compare_parallel_simulation(CASENAME 3_a_mpi_multflt_mod2
+                                       FILENAME 3_A_MPI_MULTFLT_SCHED_MODEL2
+                                       SIMULATOR flow
+                                       ABS_TOL ${abs_tol_parallel}
+                                       REL_TOL ${rel_tol_parallel}
+				       DIR model2
+                                       TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
+
 endif()
 
 if(OPM_TESTS_ROOT)
