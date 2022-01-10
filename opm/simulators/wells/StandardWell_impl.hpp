@@ -467,6 +467,14 @@ namespace Opm
         // Update the connection
         this->connectionRates_ = connectionRates;
 
+        // Accumulate dissolved gas and vaporized oil flow rates across all
+        // ranks sharing this well (this->index_of_well_).
+        {
+            const auto& comm = this->parallel_well_info_.communication();
+            ws.dissolved_gas_rate = comm.sum(ws.dissolved_gas_rate);
+            ws.vaporized_oil_rate = comm.sum(ws.vaporized_oil_rate);
+        }
+
         // accumulate resWell_ and invDuneD_ in parallel to get effects of all perforations (might be distributed)
         wellhelpers::sumDistributedWellEntries(this->invDuneD_[0][0], this->resWell_[0],
                                                this->parallel_well_info_.communication());
