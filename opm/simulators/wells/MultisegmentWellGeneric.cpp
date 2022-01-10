@@ -483,9 +483,12 @@ computeBhpAtThpLimitProd(const std::function<std::vector<double>(const double)>&
     auto fflo = [&flo, &frates](double bhp) { return flo(frates(bhp)); };
     auto bhp_max = this->bhpMax(fflo, controls.bhp_limit, maxPerfPress, table.getFloAxis().front(), deferred_logger);
 
-    // could not solve for the bhp-point, we could not contrinue to find the bhp
+    // could not solve for the bhp-point, we could not continue to find the bhp
     if (!bhp_max.has_value()) {
-        return {};
+        deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE_INOPERABLE",
+                                "Robust bhp(thp) solve failed due to not being able to "
+                                "find bhp-point where production becomes non-zero for well " + baseif_.name());
+        return std::nullopt;
     }
     // Define the equation we want to solve.
     auto eq = [&fbhp, &frates](double bhp) {
@@ -506,11 +509,14 @@ computeBhpAtThpLimitProd(const std::function<std::vector<double>(const double)>&
     }
 
     if (!finding_bracket) {
-        deferred_logger.debug(" trying the brute force way for last attempt ");
+        deferred_logger.debug(" Trying the brute force search to bracket the bhp for last attempt ");
         finding_bracket = this->bruteForceBracket(eq, range, low, high, deferred_logger);
     }
 
     if (!finding_bracket) {
+        deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE_INOPERABLE",
+                                "Robust bhp(thp) solve failed due to not being able to "
+                                "bracket the bhp solution with the brute force search for " + baseif_.name());
         return std::nullopt;
     }
 
@@ -566,7 +572,7 @@ bhpMax(const std::function<double(const double)>& fflo,
             // empty optional.
             deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE_INOPERABLE",
                                     "Robust bhp(thp) solve failed due to inoperability for well " + baseif_.name());
-            return {};
+            return std::nullopt;
         } else {
             // Still producing, even at high bhp.
             assert(f_high < 0.0);
@@ -590,7 +596,13 @@ bhpMax(const std::function<double(const double)>& fflo,
             }
             ++it;
         }
-        bhp_max = low;
+        if (it < maxit) {
+            bhp_max = low;
+        } else {
+            deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE_INOPERABLE",
+                                    "Bisect did not find the bhp-point where we produce for well " + baseif_.name());
+            return std::nullopt;
+        }
     }
     deferred_logger.debug("computeBhpAtThpLimitProd(): well = " + baseif_.name() +
                           "  low = " + std::to_string(low) +
