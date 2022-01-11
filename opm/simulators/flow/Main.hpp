@@ -632,10 +632,10 @@ private:
 
     int runBrine(const Phases& phases)
     {
-        if (! phases.active(Phase::WATER)) {
+        if (! phases.active(Phase::WATER) || phases.size() == 2) {
             if (outputCout_)
                 std::cerr << "No valid configuration is found for brine simulation, valid options include "
-                          << "oilwater + brine and blackoil + brine" << std::endl;
+                          << "oilwater + brine, gaswater + brine and blackoil + brine" << std::endl;
 
             return EXIT_FAILURE;
         }
