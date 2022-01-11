@@ -300,7 +300,7 @@ add_test_compareECLFiles(CASENAME spe1_brine
                          REL_TOL ${rel_tol}
                          DIR spe1_brine)
 
-add_test_compareECLFiles(CASENAME spe1_brine
+add_test_compareECLFiles(CASENAME spe1_brine_gaswater
                          FILENAME SPE1CASE2_BRINE_GASWATER
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
