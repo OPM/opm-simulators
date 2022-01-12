@@ -291,7 +291,8 @@ public:
         bool oilPresent = FluidSystem::phaseIsActive(oilPhaseIdx)?(fluidState.saturation(oilPhaseIdx) > 0.0):false;
         static const Scalar thresholdWaterFilledCell = 1.0 - 1e-6;
         bool onlyWater = FluidSystem::phaseIsActive(waterPhaseIdx)?(fluidState.saturation(waterPhaseIdx) > thresholdWaterFilledCell):false;
-        bool precipitatedSaltPresent = enableSaltPrecipitation?(fluidState.saltSaturation() > 0.0):false;
+        const auto& saltSaturation = BlackOil::getSaltSaturation_<FluidSystem, FluidState, Scalar>(fluidState, pvtRegionIdx_);
+        bool precipitatedSaltPresent = enableSaltPrecipitation?(saltSaturation > 0.0):false;
 
         // deal with the primary variables for the energy extension
         EnergyModule::assignPrimaryVars(*this, fluidState);
@@ -374,10 +375,11 @@ public:
 
         if (enableSaltPrecipitation) {
             if (primaryVarsMeaningBrine() == Sp) {
-                (*this)[saltConcentrationIdx] = FsToolbox::value(fluidState.saltSaturation());
+                (*this)[saltConcentrationIdx] = FsToolbox::value(saltSaturation);
             }
             else {
-                (*this)[saltConcentrationIdx] = FsToolbox::value(fluidState.saltConcentration());
+                const auto& saltConcentration = BlackOil::getSaltConcentration_<FluidSystem, FluidState, Scalar>(fluidState, pvtRegionIdx_);
+                (*this)[saltConcentrationIdx] = FsToolbox::value(saltConcentration);
             }
         }
 
