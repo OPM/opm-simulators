@@ -82,7 +82,8 @@ class BlackOilBrineModule
     static constexpr unsigned saltConcentrationIdx = Indices::saltConcentrationIdx;
     static constexpr unsigned contiBrineEqIdx = Indices::contiBrineEqIdx;
     static constexpr unsigned waterPhaseIdx = FluidSystem::waterPhaseIdx;
-
+    static const bool gasEnabled = Indices::gasEnabled;
+    static const bool oilEnabled = Indices::oilEnabled;
     static constexpr unsigned enableBrine = enableBrineV;
     static constexpr unsigned enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>();
 
@@ -265,8 +266,10 @@ public:
         if (!enableBrine)
             return;
 
-        const unsigned contiGasEqIdx = Indices::conti0EqIdx + Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-        const unsigned contiOilEqIdx = Indices::conti0EqIdx + Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
+        static unsigned contiGasEqIdx, contiOilEqIdx;
+        if(gasEnabled) { contiGasEqIdx = Indices::conti0EqIdx + Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx); }
+        if(oilEnabled) { contiOilEqIdx = Indices::conti0EqIdx + Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx); }
+
         const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
         const auto& intQuants = elemCtx.intensiveQuantities(scvfIdx, timeIdx);
 
@@ -282,8 +285,8 @@ public:
 
             if (enableSaltPrecipitation) {
                 // modify gas and oil flux for mobility change
-                flux[contiGasEqIdx] *= intQuants.permFactor();
-                flux[contiOilEqIdx] *= intQuants.permFactor();
+                if(gasEnabled) { flux[contiGasEqIdx] *= intQuants.permFactor(); }
+                if(oilEnabled) { flux[contiOilEqIdx] *= intQuants.permFactor(); }
             }
         }
         else {
@@ -294,8 +297,8 @@ public:
 
             if (enableSaltPrecipitation) {
                 // modify gas and oil flux for mobility change
-                flux[contiGasEqIdx] *= decay<Scalar>(intQuants.permFactor());
-                flux[contiOilEqIdx] *= decay<Scalar>(intQuants.permFactor());
+                if(gasEnabled) { flux[contiGasEqIdx] *= decay<Scalar>(intQuants.permFactor()); }
+                if(oilEnabled) { flux[contiOilEqIdx] *= decay<Scalar>(intQuants.permFactor()); }
             }
         }
     }
