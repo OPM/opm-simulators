@@ -673,6 +673,8 @@ private:
                 setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
             return flowEbosBrineMain(argc_, argv_, outputCout_, outputFiles_);
         }
+
+        return EXIT_FAILURE;
     }
 
     int runSolvent()
