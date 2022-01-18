@@ -244,7 +244,6 @@ bool BILU0<block_size>::create_preconditioner(BlockedMatrix *mat)
     return true;
 } // end create_preconditioner()
 
-
 // kernels are blocking on an NVIDIA GPU, so waiting for events is not needed
 // however, if individual kernel calls are timed, waiting for events is needed
 // behavior on other GPUs is untested
