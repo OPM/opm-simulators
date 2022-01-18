@@ -38,6 +38,10 @@
 #include <opm/input/eclipse/Deck/Deck.hpp>
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/PvtwsaltTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/PermfactTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/SaltSolubilityTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/TableManager.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/SimpleTable.hpp>
 #endif
 
 #include <opm/material/common/Valgrind.hpp>
@@ -78,8 +82,10 @@ class BlackOilBrineModule
     static constexpr unsigned saltConcentrationIdx = Indices::saltConcentrationIdx;
     static constexpr unsigned contiBrineEqIdx = Indices::contiBrineEqIdx;
     static constexpr unsigned waterPhaseIdx = FluidSystem::waterPhaseIdx;
-
+    static const bool gasEnabled = Indices::gasEnabled;
+    static const bool oilEnabled = Indices::oilEnabled;
     static constexpr unsigned enableBrine = enableBrineV;
+    static constexpr unsigned enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>();
 
     static constexpr unsigned numEq = getPropValue<TypeTag, Properties::NumEq>();
     static constexpr unsigned numPhases = FluidSystem::numPhases;
@@ -103,7 +109,6 @@ public:
                                      "contains the BRINE keyword");
         }
 
-
         if (!eclState.runspec().phases().active(Phase::BRINE))
             return; // brine treatment is supposed to be disabled
 
@@ -126,6 +131,25 @@ public:
                 bdensityTable_[pvtRegionIdx].setXYContainers(c, bdensityTable);
             }
         }
+
+        if (enableSaltPrecipitation) {
+            const TableContainer& permfactTables = tableManager.getPermfactTables();
+            permfactTable_.resize(numPvtRegions);
+            for (size_t i = 0; i < permfactTables.size(); ++i) {
+                const PermfactTable& permfactTable = permfactTables.getTable<PermfactTable>(i);
+                permfactTable_[i].setXYContainers(permfactTable.getPorosityChangeColumn(), permfactTable.getPermeabilityMultiplierColumn());
+            }
+
+            const TableContainer& saltsolTables = tableManager.getSaltsolTables();
+            if (!saltsolTables.empty()) {
+                saltsolTable_.resize(numPvtRegions);
+                assert(numPvtRegions == saltsolTables.size());
+                for (unsigned pvtRegionIdx = 0; pvtRegionIdx < numPvtRegions; ++ pvtRegionIdx) {
+                    const SaltsolTable& saltsolTable = saltsolTables.getTable<SaltsolTable>(pvtRegionIdx );
+                    saltsolTable_[pvtRegionIdx] = saltsolTable.getSaltsolColumn().front();
+                }
+            }
+        }
     }
 #endif
 
@@ -138,7 +162,6 @@ public:
             // brine have been disabled at compile time
             return;
     }
-
 
     static bool primaryVarApplies(unsigned pvIdx)
     {
@@ -222,7 +245,16 @@ public:
         const LhsEval massBrine = surfaceVolumeWater
                 * Toolbox::template decay<LhsEval>(fs.saltConcentration());
 
-        storage[contiBrineEqIdx] += massBrine;
+        if (enableSaltPrecipitation){
+            double saltDensity = 2170; // Solid salt density kg/m3
+            const LhsEval solidSalt =
+                          Toolbox::template decay<LhsEval>(intQuants.porosity())
+                          * saltDensity
+                          * Toolbox::template decay<LhsEval>(intQuants.saltSaturation());
+
+            storage[contiBrineEqIdx] += massBrine + solidSalt;
+        }
+        else { storage[contiBrineEqIdx] += massBrine;}
     }
 
     static void computeFlux(RateVector& flux,
@@ -234,7 +266,12 @@ public:
         if (!enableBrine)
             return;
 
+        static unsigned contiGasEqIdx, contiOilEqIdx;
+        if(gasEnabled) { contiGasEqIdx = Indices::conti0EqIdx + Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx); }
+        if(oilEnabled) { contiOilEqIdx = Indices::conti0EqIdx + Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx); }
+
         const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
+        const auto& intQuants = elemCtx.intensiveQuantities(scvfIdx, timeIdx);
 
         const unsigned upIdx = extQuants.upstreamIndex(FluidSystem::waterPhaseIdx);
         const unsigned inIdx = extQuants.interiorIndex();
@@ -245,12 +282,24 @@ public:
                     extQuants.volumeFlux(waterPhaseIdx)
                     *up.fluidState().invB(waterPhaseIdx)
                     *up.fluidState().saltConcentration();
+
+            if (enableSaltPrecipitation) {
+                // modify gas and oil flux for mobility change
+                if(gasEnabled) { flux[contiGasEqIdx] *= intQuants.permFactor(); }
+                if(oilEnabled) { flux[contiOilEqIdx] *= intQuants.permFactor(); }
+            }
         }
         else {
             flux[contiBrineEqIdx] =
                     extQuants.volumeFlux(waterPhaseIdx)
                     *decay<Scalar>(up.fluidState().invB(waterPhaseIdx))
                     *decay<Scalar>(up.fluidState().saltConcentration());
+
+            if (enableSaltPrecipitation) {
+                // modify gas and oil flux for mobility change
+                if(gasEnabled) { flux[contiGasEqIdx] *= decay<Scalar>(intQuants.permFactor()); }
+                if(oilEnabled) { flux[contiOilEqIdx] *= decay<Scalar>(intQuants.permFactor()); }
+            }
         }
     }
 
@@ -310,13 +359,40 @@ public:
         return bdensityTable_[pvtnumRegionIdx];
     }
 
+    static const TabulatedFunction& permfactTable(const ElementContext& elemCtx,
+                                                  unsigned scvIdx,
+                                                  unsigned timeIdx)
+    {
+        unsigned pvtnumRegionIdx = elemCtx.problem().pvtRegionIndex(elemCtx, scvIdx, timeIdx);
+        return permfactTable_[pvtnumRegionIdx];
+    }
+
+    static const Scalar saltsolTable(const ElementContext& elemCtx,
+                                                  unsigned scvIdx,
+                                                  unsigned timeIdx)
+    {
+        unsigned pvtnumRegionIdx = elemCtx.problem().pvtRegionIndex(elemCtx, scvIdx, timeIdx);
+        return saltsolTable_[pvtnumRegionIdx];
+    }
+
     static bool hasBDensityTables()
     {
         return !bdensityTable_.empty();
     }
 
+    static bool hasSaltsolTables()
+    {
+        return !saltsolTable_.empty();
+    }
+
+    static Scalar saltSol(unsigned regionIdx) {
+        return saltsolTable_[regionIdx];
+    }
+
 private:
     static std::vector<TabulatedFunction> bdensityTable_;
+    static std::vector<TabulatedFunction> permfactTable_;
+    static std::vector<Scalar> saltsolTable_;
     static std::vector<Scalar> referencePressure_;
 };
 
@@ -328,6 +404,14 @@ BlackOilBrineModule<TypeTag, enableBrineV>::bdensityTable_;
 template <class TypeTag, bool enableBrineV>
 std::vector<typename BlackOilBrineModule<TypeTag, enableBrineV>::Scalar>
 BlackOilBrineModule<TypeTag, enableBrineV>::referencePressure_;
+
+template <class TypeTag, bool enableBrineV>
+std::vector<typename BlackOilBrineModule<TypeTag, enableBrineV>::Scalar>
+BlackOilBrineModule<TypeTag, enableBrineV>::saltsolTable_;
+
+template <class TypeTag, bool enableBrineV>
+std::vector<typename BlackOilBrineModule<TypeTag, enableBrineV>::TabulatedFunction>
+BlackOilBrineModule<TypeTag, enableBrineV>::permfactTable_;
 
 /*!
  * \ingroup BlackOil
@@ -354,8 +438,10 @@ class BlackOilBrineIntensiveQuantities
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     static constexpr int saltConcentrationIdx = Indices::saltConcentrationIdx;
     static constexpr int waterPhaseIdx = FluidSystem::waterPhaseIdx;
+    static constexpr int gasPhaseIdx = FluidSystem::gasPhaseIdx;
     static constexpr int oilPhaseIdx = FluidSystem::oilPhaseIdx;
     static constexpr unsigned enableBrine = enableBrineV;
+    static constexpr unsigned enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>();
     static constexpr int contiBrineEqIdx = Indices::contiBrineEqIdx;
 
 public:
@@ -372,9 +458,42 @@ public:
         const PrimaryVariables& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
 
         auto& fs = asImp_().fluidState_;
-        // set saltconcentration
-        fs.setSaltConcentration(priVars.makeEvaluation(saltConcentrationIdx, timeIdx));
 
+        if (enableSaltPrecipitation) {
+            const auto& saltsolTable = BrineModule::saltsolTable(elemCtx, dofIdx, timeIdx);
+            saltSolubility_ = saltsolTable;
+
+            if (priVars.primaryVarsMeaningBrine() == PrimaryVariables::Sp) {
+                saltSaturation_ = priVars.makeEvaluation(saltConcentrationIdx, timeIdx);
+                fs.setSaltConcentration(saltSolubility_);
+            }
+            else {
+                saltConcentration_ = priVars.makeEvaluation(saltConcentrationIdx, timeIdx);
+                fs.setSaltConcentration(saltConcentration_);
+                saltSaturation_ = 0.0;
+            }
+        }
+        else {
+            saltConcentration_ = priVars.makeEvaluation(saltConcentrationIdx, timeIdx);
+            fs.setSaltConcentration(saltConcentration_);
+        }
+    }
+
+    void saltPropertiesUpdate_(const ElementContext& elemCtx,
+                                  unsigned dofIdx,
+                                  unsigned timeIdx)
+    {
+        if (enableSaltPrecipitation) {
+            const Evaluation porosityFactor  = 1.0 - saltSaturation(); //phi/phi_0
+
+            const auto& permfactTable = BrineModule::permfactTable(elemCtx, dofIdx, timeIdx);
+
+            permFactor_ = permfactTable.eval(scalarValue(porosityFactor));
+            if (permFactor_ < 1 ) {
+                // adjust mobility for changing permeability
+                asImp_().mobility_[waterPhaseIdx] *= permFactor_;
+            }
+         }
     }
 
     const Evaluation& saltConcentration() const
@@ -383,12 +502,24 @@ public:
     const Evaluation& brineRefDensity() const
     { return refDensity_; }
 
+    const Evaluation& saltSaturation() const
+    { return saltSaturation_; }
+
+    Scalar saltSolubility() const
+    { return saltSolubility_; }
+
+    const Evaluation& permFactor() const
+    { return permFactor_; }
+
 protected:
     Implementation& asImp_()
     { return *static_cast<Implementation*>(this); }
 
     Evaluation saltConcentration_;
     Evaluation refDensity_;
+    Evaluation saltSaturation_;
+    Evaluation permFactor_;
+    Scalar saltSolubility_;
 
 };
 
@@ -405,17 +536,27 @@ public:
                                   unsigned)
     { }
 
+    void saltPropertiesUpdate_(const ElementContext&,
+                                  unsigned,
+                                  unsigned)
+    { }
+
     const Evaluation& saltConcentration() const
     { throw std::runtime_error("saltConcentration() called but brine are disabled"); }
 
     const Evaluation& brineRefDensity() const
     { throw std::runtime_error("brineRefDensity() called but brine are disabled"); }
 
+    const Evaluation& saltSaturation() const
+    { throw std::logic_error("saltSaturation() called but salt precipitation is disabled"); }
+
+    const Scalar saltSolubility() const
+    { throw std::logic_error("saltSolubility() called but salt precipitation is disabled"); }
+
+    const Evaluation& permFactor() const
+    { throw std::logic_error("permFactor() called but salt precipitation is disabled"); }
+
 };
-
-
-
-
 
 } // namespace Ewoms
 
