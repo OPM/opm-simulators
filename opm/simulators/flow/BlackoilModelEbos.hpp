@@ -127,6 +127,10 @@ struct EnableBrine<TypeTag, TTag::EclFlowProblem> {
     static constexpr bool value = false;
 };
 template<class TypeTag>
+struct EnableSaltPrecipitation<TypeTag, TTag::EclFlowProblem> {
+    static constexpr bool value = false;
+};
+template<class TypeTag>
 struct EnableMICP<TypeTag, TTag::EclFlowProblem> {
     static constexpr bool value = false;
 };
