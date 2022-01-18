@@ -138,7 +138,6 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_ecl_output.cc
   tests/test_blackoil_amg.cpp
   tests/test_convergencereport.cpp
-  tests/test_csrToCscOffsetMap.cpp
   tests/test_flexiblesolver.cpp
   tests/test_preconditionerfactory.cpp
   tests/test_graphcoloring.cpp
@@ -171,6 +170,7 @@ endif()
 if(OPENCL_FOUND)
   list(APPEND TEST_SOURCE_FILES tests/test_openclSolver.cpp)
   list(APPEND TEST_SOURCE_FILES tests/test_solvetransposed3x3.cpp)
+  list(APPEND TEST_SOURCE_FILES tests/test_csrToCscOffsetMap.cpp)
 endif()
 
 list (APPEND TEST_DATA_FILES
