@@ -403,6 +403,7 @@ public:
         asImp_().updateEnergyQuantities_(elemCtx, dofIdx, timeIdx, paramCache);
         asImp_().foamPropertiesUpdate_(elemCtx, dofIdx, timeIdx);
         asImp_().MICPPropertiesUpdate_(elemCtx, dofIdx, timeIdx);
+        asImp_().saltPropertiesUpdate_(elemCtx, dofIdx, timeIdx);
 
         // update the quantities which are required by the chosen
         // velocity model

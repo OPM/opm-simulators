@@ -82,6 +82,7 @@ class BlackOilPrimaryVariables : public FvBasePrimaryVariables<TypeTag>
     enum { waterSaturationIdx = Indices::waterSaturationIdx };
     enum { pressureSwitchIdx = Indices::pressureSwitchIdx };
     enum { compositionSwitchIdx = Indices::compositionSwitchIdx };
+    enum { saltConcentrationIdx  = Indices::saltConcentrationIdx };
 
     static const bool compositionSwitchEnabled = Indices::compositionSwitchIdx >= 0;
     static const bool waterEnabled = Indices::waterEnabled;
@@ -101,6 +102,7 @@ class BlackOilPrimaryVariables : public FvBasePrimaryVariables<TypeTag>
     enum { enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>() };
     enum { enableFoam = getPropValue<TypeTag, Properties::EnableFoam>() };
     enum { enableBrine = getPropValue<TypeTag, Properties::EnableBrine>() };
+    enum { enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>() };
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
     enum { enableMICP = getPropValue<TypeTag, Properties::EnableMICP>() };
     enum { gasCompIdx = FluidSystem::gasCompIdx };
@@ -126,6 +128,11 @@ public:
         Sw_po_Rs, // water + oil case
         Sw_pg_Rv, // water + gas case
         OnePhase_p, // onephase case
+    };
+
+    enum PrimaryVarsMeaningBrine {
+        Cs, // salt concentration
+        Sp, // (precipitated) salt saturation
     };
 
     BlackOilPrimaryVariables()
@@ -180,6 +187,17 @@ public:
      */
     void setPrimaryVarsMeaning(PrimaryVarsMeaning newMeaning)
     { primaryVarsMeaning_ = newMeaning; }
+
+    PrimaryVarsMeaningBrine primaryVarsMeaningBrine() const
+    { return primaryVarsMeaningBrine_; }
+
+    /*!
+     * \brief Set the interpretation which should be applied to the switching primary
+     *        variables.
+     */
+
+    void setPrimaryVarsMeaningBrine(PrimaryVarsMeaningBrine newMeaning)
+    { primaryVarsMeaningBrine_ = newMeaning; }
 
     /*!
      * \copydoc ImmisciblePrimaryVariables::assignMassConservative
@@ -273,6 +291,8 @@ public:
         bool oilPresent = FluidSystem::phaseIsActive(oilPhaseIdx)?(fluidState.saturation(oilPhaseIdx) > 0.0):false;
         static const Scalar thresholdWaterFilledCell = 1.0 - 1e-6;
         bool onlyWater = FluidSystem::phaseIsActive(waterPhaseIdx)?(fluidState.saturation(waterPhaseIdx) > thresholdWaterFilledCell):false;
+        const auto& saltSaturation = BlackOil::getSaltSaturation_<FluidSystem, FluidState, Scalar>(fluidState, pvtRegionIdx_);
+        bool precipitatedSaltPresent = enableSaltPrecipitation?(saltSaturation > 0.0):false;
 
         // deal with the primary variables for the energy extension
         EnergyModule::assignPrimaryVars(*this, fluidState);
@@ -304,6 +324,13 @@ public:
                 primaryVarsMeaning_ = Sw_po_Sg;
         }
 
+        if (enableSaltPrecipitation){
+            if (precipitatedSaltPresent)
+                primaryVarsMeaningBrine_ = Sp;
+            else
+                primaryVarsMeaningBrine_ = Cs;
+        }
+
         // assign the actual primary variables
         if (primaryVarsMeaning() == OnePhase_p) {
             if (waterEnabled) {
@@ -311,7 +338,6 @@ public:
             } else {
                 throw std::logic_error("For single-phase runs, only pure water is presently allowed.");
             }
-
         }
         else if (primaryVarsMeaning() == Sw_po_Sg) {
             if (waterEnabled)
@@ -347,6 +373,16 @@ public:
                 (*this)[compositionSwitchIdx] = Rv;
         }
 
+        if (enableSaltPrecipitation) {
+            if (primaryVarsMeaningBrine() == Sp) {
+                (*this)[saltConcentrationIdx] = FsToolbox::value(saltSaturation);
+            }
+            else {
+                const auto& saltConcentration = BlackOil::getSaltConcentration_<FluidSystem, FluidState, Scalar>(fluidState, pvtRegionIdx_);
+                (*this)[saltConcentrationIdx] = FsToolbox::value(saltConcentration);
+            }
+        }
+
         checkDefined();
     }
 
@@ -378,6 +414,24 @@ public:
         Scalar Sw = 0.0;
         if (waterEnabled)
             Sw = (*this)[Indices::waterSaturationIdx];
+
+        if (enableSaltPrecipitation) {
+            Scalar saltSolubility = BrineModule::saltSol(pvtRegionIndex());
+            if (primaryVarsMeaningBrine() == Sp) {
+                Scalar saltSat = (*this)[saltConcentrationIdx];
+                if (saltSat < -eps){ //precipitated salt dissappears
+                    setPrimaryVarsMeaningBrine(Cs);
+                    (*this)[saltConcentrationIdx] = saltSolubility; //set salt concentration to solubility limit
+                }
+            }
+            else if (primaryVarsMeaningBrine() == Cs) {
+                Scalar saltConc = (*this)[saltConcentrationIdx];
+                if (saltConc > saltSolubility + eps){ //salt concentration exceeds solubility limit
+                    setPrimaryVarsMeaningBrine(Sp);
+                    (*this)[saltConcentrationIdx] = 0.0;
+                }
+            }
+         }
 
         if (primaryVarsMeaning() == Sw_po_Sg) {
 
@@ -816,6 +870,7 @@ private:
     }
 
     PrimaryVarsMeaning primaryVarsMeaning_;
+    PrimaryVarsMeaningBrine primaryVarsMeaningBrine_;
     unsigned short pvtRegionIdx_;
 };
 
