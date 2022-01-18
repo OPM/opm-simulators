@@ -87,6 +87,19 @@ auto getSaltConcentration_(typename std::enable_if<!HasMember_saltConcentration<
                                                     const FluidState&>::type)
 { return 0.0; }
 
+OPM_GENERATE_HAS_MEMBER(saltSaturation, ) // Creates 'HasMember_saltSaturation<T>'.
+
+template <class FluidState>
+auto getSaltSaturation_(typename std::enable_if<HasMember_saltSaturation<FluidState>::value,
+                                                    const FluidState&>::type fluidState)
+{ return fluidState.saltSaturation(); }
+
+
+template <class FluidState>
+auto getSaltSaturation_(typename std::enable_if<!HasMember_saltSaturation<FluidState>::value,
+                                                    const FluidState&>::type)
+{ return 0.0; }
+
 /*!
  * \brief Implements a "tailor-made" fluid state class for the black-oil model.
  *
