@@ -556,7 +556,6 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"SKIP", {false, std::nullopt}},
         {"SKIP100", {false, std::nullopt}},
         {"SKIP300", {false, std::nullopt}},
-        {"SALT", {false, std::nullopt}},
         {"SALTNODE", {false, std::nullopt}},
         {"SALTREST", {false, std::nullopt}},
         {"SCALELIM", {false, std::nullopt}},

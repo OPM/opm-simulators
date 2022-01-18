@@ -2552,6 +2552,8 @@ private:
         bool has_rs       = fp.has_double("RS");
         bool has_rv       = fp.has_double("RV");
         bool has_pressure = fp.has_double("PRESSURE");
+        bool has_salt = fp.has_double("SALT");
+        bool has_saltp = fp.has_double("SALTP");
 
         // make sure all required quantities are enables
         if (Indices::numPhases > 1) {
@@ -2571,6 +2573,12 @@ private:
         if (FluidSystem::enableVaporizedOil() && !has_rv)
             throw std::runtime_error("The ECL input file requires the RV keyword to be present if"
                                      " vaporized oil is enabled");
+        if (enableBrine && !has_salt)
+            throw std::runtime_error("The ECL input file requires the SALT keyword to be present if"
+                                     " brine is enabled");
+        if (enableSaltPrecipitation && !has_saltp)
+            throw std::runtime_error("The ECL input file requires the SALTP keyword to be present if"
+                                     " salt precipitation is enabled");
 
         size_t numDof = this->model().numGridDof();
 
@@ -2582,6 +2590,8 @@ private:
         std::vector<double> rsData;
         std::vector<double> rvData;
         std::vector<double> tempiData;
+        std::vector<double> saltData;
+        std::vector<double> saltpData;
 
         if (FluidSystem::phaseIsActive(waterPhaseIdx) && Indices::numPhases > 1)
             waterSaturationData = fp.get_double("SWAT");
@@ -2603,6 +2613,14 @@ private:
         // initial reservoir temperature
         tempiData = fp.get_double("TEMPI");
 
+        // initial salt concentration data
+        if (enableBrine)
+            saltData = fp.get_double("SALT");
+
+         // initial precipitated salt saturation data
+         if (enableSaltPrecipitation)
+            saltpData = fp.get_double("SALTP");
+
         // calculate the initial fluid states
         for (size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
             auto& dofFluidState = initialFluidStates_[dofIdx];
@@ -2616,6 +2634,16 @@ private:
             if (!std::isfinite(temperatureLoc) || temperatureLoc <= 0)
                 temperatureLoc = FluidSystem::surfaceTemperature;
             dofFluidState.setTemperature(temperatureLoc);
+
+            //////
+            // set salt concentration
+            //////
+            dofFluidState.setSaltConcentration(saltData[dofIdx]);
+
+            //////
+            // set precipitated salt saturation
+            //////
+            dofFluidState.setSaltSaturation(saltpData[dofIdx]);
 
             //////
             // set saturations
