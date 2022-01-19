@@ -2638,12 +2638,14 @@ private:
             //////
             // set salt concentration
             //////
-            dofFluidState.setSaltConcentration(saltData[dofIdx]);
+            if (enableBrine)
+                dofFluidState.setSaltConcentration(saltData[dofIdx]);
 
             //////
             // set precipitated salt saturation
             //////
-            dofFluidState.setSaltSaturation(saltpData[dofIdx]);
+            if (enableSaltPrecipitation)
+                dofFluidState.setSaltSaturation(saltpData[dofIdx]);
 
             //////
             // set saturations
