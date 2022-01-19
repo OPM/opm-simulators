@@ -861,7 +861,19 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     maybeDoGasLiftOptimize(DeferredLogger& deferred_logger)
     {
-        const bool do_glift_optimization = true;
+        bool do_glift_optimization = false;
+
+        const double simulation_time = ebosSimulator_.time();
+        const double min_wait = ebosSimulator_.vanguard().schedule().glo(ebosSimulator_.episodeIndex()).min_wait();
+        // We only optimize if a min_wait time has past.
+        // If all_newton is true we still want to optimize several times pr timestep
+        // i.e. we also optimize if check simulation_time == last_glift_opt_time_
+        // that is when the last_glift_opt_time is already updated with the current time step
+        if ( simulation_time == last_glift_opt_time_  || simulation_time >= (last_glift_opt_time_ + min_wait)) {
+            do_glift_optimization = true;
+            last_glift_opt_time_ = simulation_time;
+        }
+
         if (do_glift_optimization) {
             GLiftOptWells glift_wells;
             GLiftProdWells prod_wells;
