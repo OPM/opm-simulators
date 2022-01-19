@@ -460,6 +460,8 @@ protected:
 
     bool glift_debug = false;
 
+    double last_glift_opt_time_ = -1.0;
+
 private:
     WellInterfaceGeneric* getGenWell(const std::string& well_name);
 };
