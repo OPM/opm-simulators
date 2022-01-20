@@ -31,6 +31,8 @@
 
 #include <opm/simulators/wells/VFPHelpers.hpp>
 
+#include <limits>
+
 namespace Opm {
 
 double VFPInjProperties::bhp(int table_id,
@@ -52,7 +54,10 @@ double VFPInjProperties::thp(int table_id,
     const VFPInjTable& table = detail::getTable(m_tables, table_id);
 
     //Find interpolation variables
-    double flo = detail::getFlo(table, aqua, liquid, vapour);
+    const double flo = detail::getFlo(table, aqua, liquid, vapour);
+    if (std::abs(flo) < std::numeric_limits<double>::epsilon()) {
+        return 0.;
+    }
 
     const std::vector<double> thp_array = table.getTHPAxis();
     int nthp = thp_array.size();
