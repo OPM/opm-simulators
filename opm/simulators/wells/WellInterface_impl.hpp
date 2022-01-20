@@ -472,7 +472,7 @@ namespace Opm
 
         // only use inner well iterations for the first newton iterations.
         const int iteration_idx = ebosSimulator.model().newtonMethod().numIterations();
-        if (iteration_idx < param_.max_niter_inner_well_iter_) {
+        if (true) {
             this->operability_status_.solvable = true;
             bool converged = this->iterateWellEquations(ebosSimulator, dt, well_state, group_state, deferred_logger);
 
