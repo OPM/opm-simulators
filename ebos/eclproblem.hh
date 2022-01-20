@@ -1315,7 +1315,7 @@ public:
 
                 const auto& wellpi = this->fetchWellPI(reportStep, *action, schedule, matching_wells);
 
-                auto sim_update = schedule.applyAction(reportStep, *action, actionResult, wellpi);
+                auto sim_update = schedule.applyAction(reportStep, *action, actionResult.wells(), wellpi);
                 this->wellModel_.updateEclWells(reportStep, sim_update.affected_wells, summaryState);
                 if (!sim_update.affected_wells.empty())
                     commit_wellstate = true;
