@@ -586,19 +586,18 @@ namespace Opm
     {
         this->operability_status_.resetOperability();
 
-        bool thp_controled = this->isInjector() ? well_state.well(this->index_of_well_).injection_cmode == Well::InjectorCMode::THP:
-                                              well_state.well(this->index_of_well_).production_cmode == Well::ProducerCMode::THP;
-        bool bhp_controled = this->isInjector() ? well_state.well(this->index_of_well_).injection_cmode == Well::InjectorCMode::BHP:
-                                              well_state.well(this->index_of_well_).production_cmode == Well::ProducerCMode::BHP;
+        const auto& summary_state = ebos_simulator.vanguard().summaryState();
+        const bool has_thp_limit = this->isInjector() ?
+                                   this->well_ecl_.injectionControls(summary_state).hasControl(Well::InjectorCMode::THP) :
+                                   this->well_ecl_.productionControls(summary_state).hasControl(Well::ProducerCMode::THP);
 
-        // Operability checking is not free
-        // Only check wells under BHP and THP control
-        if(bhp_controled || thp_controled) {
-            updateIPR(ebos_simulator, deferred_logger);
-            checkOperabilityUnderBHPLimit(well_state, ebos_simulator, deferred_logger);
-        }
-        // we do some extra checking for wells under THP control.
-        if (thp_controled) {
+
+        // always check the BHP limit, which has to be honored for a operable well
+        updateIPR(ebos_simulator, deferred_logger);
+        checkOperabilityUnderBHPLimit(well_state, ebos_simulator, deferred_logger);
+
+        // we do some extra checking for wells has a THP limit
+        if (has_thp_limit) {
             checkOperabilityUnderTHPLimit(ebos_simulator, well_state, deferred_logger);
         }
     }
