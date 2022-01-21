@@ -842,8 +842,8 @@ namespace Opm {
                                        terminal_output_, grid().comm());
 
         //update guide rates
-        if (guideRateUpdateIsNeeded()) {
-            const int reportStepIdx = ebosSimulator_.episodeIndex();
+        const int reportStepIdx = ebosSimulator_.episodeIndex();
+        if (guideRateUpdateIsNeeded(reportStepIdx)) {
             const double simulationTime = ebosSimulator_.time();
             const auto& comm = ebosSimulator_.vanguard().grid().comm();
             const auto& summaryState = ebosSimulator_.vanguard().summaryState();
