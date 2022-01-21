@@ -13,7 +13,12 @@
 #include <opm/simulators/linalg/bda/BISAI.hpp>
 
 BOOST_AUTO_TEST_CASE(testcsrtocscoffsetmap){
+
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
     using Matrix = Dune::BCRSMatrix<double>;
+#else
+    using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<double,1,1>>;
+#endif
 
     Matrix matrix;
     {
@@ -41,11 +46,9 @@ BOOST_AUTO_TEST_CASE(testcsrtocscoffsetmap){
     Matrix matrix_transposed_copy(matrix_transposed);
 
     std::vector<int> rowPointers, colIndices, map;
-    double* nnzValues;
-    double* nnzValues_transposed;
 
-    nnzValues = &matrix_copy[0][0];
-    nnzValues_transposed = &matrix_transposed_copy[0][0];
+    auto* nnzValues = &matrix_copy[0][0];
+    auto* nnzValues_transposed = &matrix_transposed_copy[0][0];
 
     rowPointers.emplace_back(0);
     for (Matrix::Iterator r = matrix.begin(); r != matrix.end(); ++r) {
