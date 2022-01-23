@@ -46,10 +46,10 @@ GasLiftSingleWellGeneric::GasLiftSingleWellGeneric(
     GasLiftGroupInfo &group_info,
     const Schedule& schedule,
     const int report_step_idx,
-    GLiftSyncGroups &sync_groups
+    GLiftSyncGroups &sync_groups,
+    bool glift_debug
 ) :
-    deferred_logger_{deferred_logger}
-    , well_state_{well_state}
+    GasLiftCommon(well_state, deferred_logger, glift_debug)
     , group_state_{group_state}
     , ecl_well_{ecl_well}
     , summary_state_{summary_state}
@@ -57,7 +57,6 @@ GasLiftSingleWellGeneric::GasLiftSingleWellGeneric(
     , sync_groups_{sync_groups}
     , controls_{ecl_well_.productionControls(summary_state_)}
     , num_phases_{well_state_.numPhases()}
-    , debug_{false}  // extra debugging output
     , debug_limit_increase_decrease_{false}
 {
     this->well_name_ = ecl_well_.name();
@@ -80,7 +79,6 @@ GasLiftSingleWellGeneric::GasLiftSingleWellGeneric(
     //  injection (which seems strange)
     this->eco_grad_ = glo.min_eco_gradient();
     gl_well_ = &glo.well(this->well_name_);
-
 }
 
 /****************************************
@@ -134,7 +132,7 @@ runOptimize(const int iteration_idx)
             //  (either increase or decrease)
             if (state->increase()) {  // ALQ changed..
                 double alq = state->alq();
-                if (this->debug_)
+                if (this->debug)
                     logSuccess_(alq, iteration_idx);
                 this->well_state_.setALQ(this->well_name_, alq);
             }
@@ -232,7 +230,7 @@ checkGroupTargetsViolated(double delta_oil, double delta_gas, double delta_water
             double oil_rate =
                 this->group_info_.oilRate(group_name) + efficiency * delta_oil;
             if (oil_rate > *oil_target_opt) {
-                if (this->debug_) {
+                if (this->debug) {
                     const std::string msg = fmt::format(
                        "Group {} : oil rate {} exceeds oil target {}. Stopping iteration",
                        group_name, oil_rate, *oil_target_opt);
@@ -246,7 +244,7 @@ checkGroupTargetsViolated(double delta_oil, double delta_gas, double delta_water
             double gas_rate =
                 this->group_info_.gasRate(group_name) + efficiency * delta_gas;
             if (gas_rate > *gas_target_opt) {
-                if (this->debug_) {
+                if (this->debug) {
                     const std::string msg = fmt::format(
                        "Group {} : gas rate {} exceeds gas target {}. Stopping iteration",
                        group_name, gas_rate, *gas_target_opt);
@@ -263,7 +261,7 @@ checkGroupTargetsViolated(double delta_oil, double delta_gas, double delta_water
                 this->group_info_.waterRate(group_name) + efficiency * delta_water;
             double liquid_rate = oil_rate + water_rate;
             if (liquid_rate > *liquid_target_opt) {
-                if (this->debug_) {
+                if (this->debug) {
                     const std::string msg = fmt::format(
                        "Group {} : liquid rate {} exceeds liquid target {}. Stopping iteration",
                        group_name, liquid_rate, *liquid_target_opt);
@@ -277,7 +275,7 @@ checkGroupTargetsViolated(double delta_oil, double delta_gas, double delta_water
             double water_rate =
                 this->group_info_.waterRate(group_name) + efficiency * delta_water;
             if (water_rate > *water_target_opt) {
-                if (this->debug_) {
+                if (this->debug) {
                     const std::string msg = fmt::format(
                        "Group {} : water rate {} exceeds water target {}. Stopping iteration",
                        group_name, water_rate, *water_target_opt);
@@ -483,7 +481,7 @@ GasLiftSingleWellGeneric::
 displayDebugMessage_(const std::string& msg) const
 {
 
-    if (this->debug_) {
+    if (this->debug) {
         const std::string message = fmt::format(
             "  GLIFT (DEBUG) : Well {} : {}", this->well_name_, msg);
         this->deferred_logger_.info(message);
@@ -749,7 +747,7 @@ getRateWithGroupLimit_(
             }
          }
       }
-      if (this->debug_ && group_name) {
+      if (this->debug && group_name) {
           const std::string msg = fmt::format(
               "limiting {} rate from {} to {} to meet group target {} "
               "for group {}. Computed group rate was: {}",
@@ -887,7 +885,7 @@ maybeAdjustALQbeforeOptimizeLoop_(
     std::vector<double> &potentials)
 {
     double orig_alq = alq;
-    if (this->debug_) {
+    if (this->debug) {
         const std::string msg = fmt::format("initial ALQ: {}", alq);
         displayDebugMessage_(msg);
     }
@@ -928,7 +926,7 @@ maybeAdjustALQbeforeOptimizeLoop_(
                     oil_is_limited, gas_is_limited, potentials);
         }
     }
-    if (this->debug_ && (orig_alq != alq)) {
+    if (this->debug && (orig_alq != alq)) {
         const std::string msg = fmt::format("adjusted ALQ to: {}", alq);
         displayDebugMessage_(msg);
     }
@@ -1035,7 +1033,7 @@ reduceALQtoWellTarget_(double alq,
     std::tie(gas_rate, gas_is_limited) = getGasRateWithLimit_(potentials);
     std::tie(water_rate, water_is_limited) = getWaterRateWithLimit_(potentials);
 
-    if (this->debug_) {
+    if (this->debug) {
         assert( alq <= orig_alq );
         std::string type;
         double target = 0.0;
@@ -1098,9 +1096,9 @@ runOptimizeLoop_(bool increase)
     double oil_rate, gas_rate, water_rate;
     std::tie(oil_rate, gas_rate, water_rate, oil_is_limited, gas_is_limited, water_is_limited) =
         getInitialRatesWithLimit_(potentials);
-    //if (this->debug_) debugShowBhpAlqTable_();
-    if (this->debug_) debugShowAlqIncreaseDecreaseCounts_();
-    if (this->debug_) debugShowTargets_();
+    //if (this->debug) debugShowBhpAlqTable_();
+    if (this->debug) debugShowAlqIncreaseDecreaseCounts_();
+    if (this->debug) debugShowTargets_();
     bool success = false;  // did we succeed to increase alq?
     auto cur_alq = this->orig_alq_;
     double new_oil_rate, new_gas_rate, new_water_rate, new_alq;
@@ -1143,7 +1141,7 @@ runOptimizeLoop_(bool increase)
     }
 
     auto temp_alq = cur_alq;
-    if (this->debug_) debugShowStartIteration_(temp_alq, increase, oil_rate);
+    if (this->debug) debugShowStartIteration_(temp_alq, increase, oil_rate);
     while (!state.stop_iteration && (++state.it <= this->max_iterations_)) {
         if (!increase && state.checkNegativeOilRate(oil_rate)) break;
         if (state.checkWellRatesViolated(potentials)) break;
@@ -1156,7 +1154,7 @@ runOptimizeLoop_(bool increase)
         delta_alq = *alq_opt - temp_alq;
         if (state.checkGroupALQrateExceeded(delta_alq)) break;
         temp_alq = *alq_opt;
-        if (this->debug_) state.debugShowIterationInfo(temp_alq);
+        if (this->debug) state.debugShowIterationInfo(temp_alq);
         if (!state.computeBhpAtThpLimit(temp_alq)) break;
         // NOTE: if BHP is below limit, we set state.stop_iteration = true
         auto bhp = state.getBhpWithLimit();
@@ -1194,7 +1192,7 @@ runOptimizeLoop_(bool increase)
 */
         auto gradient = state.calcEcoGradient(
             oil_rate, new_oil_rate, gas_rate, new_gas_rate);
-        if (this->debug_)
+        if (this->debug)
             debugCheckNegativeGradient_(
                 gradient, cur_alq, temp_alq, oil_rate, new_oil_rate,
                 gas_rate, new_gas_rate, increase);
@@ -1492,7 +1490,7 @@ checkAlqOutsideLimits(double alq, [[maybe_unused]] double oil_rate)
             }
         }
     }
-    if (this->parent.debug_) {
+    if (this->parent.debug) {
         const std::string msg = ss.str();
         if (!msg.empty())
             this->parent.displayDebugMessage_(msg);
@@ -1512,7 +1510,7 @@ checkGroupALQrateExceeded(double delta_alq)
             double alq =
                 this->parent.group_info_.alqRate(group_name) + efficiency * delta_alq;
             if (alq > *max_alq_opt) {
-                if (this->parent.debug_) {
+                if (this->parent.debug) {
                     const std::string msg = fmt::format(
                         "Group {} : alq {} exceeds max_alq {}. Stopping iteration",
                         group_name, alq, *max_alq_opt);
@@ -1568,30 +1566,30 @@ checkEcoGradient(double gradient)
     std::ostringstream ss;
     bool result = false;
 
-    if (this->parent.debug_) {
+    if (this->parent.debug) {
         ss << "checking gradient: " << gradient;
     }
     if (this->increase) {
-        if (this->parent.debug_) ss << " <= " << this->parent.eco_grad_ << " --> ";
+        if (this->parent.debug) ss << " <= " << this->parent.eco_grad_ << " --> ";
         if (gradient <= this->parent.eco_grad_) {
-            if (this->parent.debug_) ss << "yes, stopping";
+            if (this->parent.debug) ss << "yes, stopping";
             result = true;
         }
         else {
-            if (this->parent.debug_) ss << "no, continue";
+            if (this->parent.debug) ss << "no, continue";
         }
     }
     else {  // decreasing lift gas
-        if (this->parent.debug_) ss << " >= " << this->parent.eco_grad_ << " --> ";
+        if (this->parent.debug) ss << " >= " << this->parent.eco_grad_ << " --> ";
         if (gradient >= this->parent.eco_grad_) {
-            if (this->parent.debug_) ss << "yes, stopping";
+            if (this->parent.debug) ss << "yes, stopping";
             result = true;
         }
         else {
-            if (this->parent.debug_) ss << "no, continue";
+            if (this->parent.debug) ss << "no, continue";
         }
     }
-    if (this->parent.debug_) this->parent.displayDebugMessage_(ss.str());
+    if (this->parent.debug) this->parent.displayDebugMessage_(ss.str());
     return result;
 }
 
@@ -1600,7 +1598,7 @@ GasLiftSingleWellGeneric::OptimizeState::
 checkRate(double rate, double limit, const std::string& rate_str) const
 {
     if (limit < rate) {
-        if (this->parent.debug_) {
+        if (this->parent.debug) {
             const std::string msg = fmt::format(
                 "iteration {} : {} rate {} exceeds target {}. Stopping iteration",
                 this->it, rate_str, rate, limit);

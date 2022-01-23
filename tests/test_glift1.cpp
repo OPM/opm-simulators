@@ -181,11 +181,14 @@ BOOST_AUTO_TEST_CASE(G1)
         well_model.phaseUsage(),
         deferred_logger,
         well_state,
-        simulator->vanguard().grid().comm()
+        simulator->vanguard().grid().comm(),
+        /*glift_debug=*/false
     };
     GLiftSyncGroups sync_groups;
     GasLiftSingleWell glift {*std_well, *(simulator.get()), summary_state,
-        deferred_logger, well_state, group_state, group_info, sync_groups};
+        deferred_logger, well_state, group_state, group_info, sync_groups,
+        /*glift_debug=*/false
+    };
     group_info.initialize();
     auto state = glift.runOptimize(iteration_idx);
     BOOST_CHECK_CLOSE(state->oilRate(), 0.01736111111111111, 1e-8);

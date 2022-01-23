@@ -28,7 +28,8 @@ GasLiftSingleWell(const StdWell &std_well,
                   WellState &well_state,
                   const GroupState &group_state,
                   GasLiftGroupInfo &group_info,
-                  GLiftSyncGroups &sync_groups
+                  GLiftSyncGroups &sync_groups,
+                  bool glift_debug
                  )
     // The parent class GasLiftSingleWellGeneric contains all stuff
     //   that is not dependent on TypeTag
@@ -41,7 +42,8 @@ GasLiftSingleWell(const StdWell &std_well,
         group_info,
         ebos_simulator.vanguard().schedule(),
         ebos_simulator.episodeIndex(),
-        sync_groups
+        sync_groups,
+        glift_debug
     )
    , ebos_simulator_{ebos_simulator}
    , std_well_{std_well}

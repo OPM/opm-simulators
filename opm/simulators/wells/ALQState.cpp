@@ -48,6 +48,19 @@ void ALQState::set(const std::string& wname, double value) {
     this->current_alq_[wname] = value;
 }
 
+int ALQState::get_debug_counter() {
+    return this->debug_counter_;
+}
+
+int ALQState::update_debug_counter() {
+    this->debug_counter_++;
+    return this->debug_counter_;
+}
+
+void ALQState::set_debug_counter(int value) {
+    this->debug_counter_ = value;
+}
+
 namespace {
 
 int get_counter(const std::map<std::string, int>& count_map, const std::string& wname) {

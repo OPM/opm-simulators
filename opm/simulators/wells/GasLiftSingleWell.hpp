@@ -57,7 +57,8 @@ namespace Opm
             WellState &well_state,
             const GroupState& group_state,
             GasLiftGroupInfo &group_info,
-            GLiftSyncGroups &sync_groups
+            GLiftSyncGroups &sync_groups,
+            bool glift_debug
         );
         const WellInterfaceGeneric &getStdWell() const override { return std_well_; }
 

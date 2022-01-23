@@ -32,19 +32,18 @@ GasLiftGroupInfo(
     const PhaseUsage &phase_usage,
     DeferredLogger &deferred_logger,
     WellState &well_state,
-    const Communication &comm
+    const Communication &comm,
+    bool glift_debug
 ) :
-    ecl_wells_{ecl_wells},
-    schedule_{schedule},
-    summary_state_{summary_state},
-    report_step_idx_{report_step_idx},
-    iteration_idx_{iteration_idx},
-    phase_usage_{phase_usage},
-    deferred_logger_{deferred_logger},
-    well_state_{well_state},
-    comm_{comm},
-    glo_{schedule_.glo(report_step_idx_)},
-    debug{false}
+    GasLiftCommon(well_state, deferred_logger, glift_debug)
+    , ecl_wells_{ecl_wells}
+    , schedule_{schedule}
+    , summary_state_{summary_state}
+    , report_step_idx_{report_step_idx}
+    , iteration_idx_{iteration_idx}
+    , phase_usage_{phase_usage}
+    , comm_{comm}
+    , glo_{schedule_.glo(report_step_idx_)}
 {
 
 }
@@ -264,7 +263,7 @@ updateRate(int idx, double oil_rate, double gas_rate, double water_rate, double 
 }
 
 /****************************************
- * Private methods in alphabetical order
+ * Protected methods in alphabetical order
  ****************************************/
 
 
@@ -353,7 +352,7 @@ checkNewtonIterationIdxOk_(const std::string &well_name)
 
 void
 GasLiftGroupInfo::
-displayDebugMessage_(const std::string &msg)
+displayDebugMessage_(const std::string &msg) const
 {
     if (this->debug) {
         const std::string message = fmt::format(

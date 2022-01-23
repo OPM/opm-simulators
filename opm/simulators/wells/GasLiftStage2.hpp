@@ -45,7 +45,7 @@ class Schedule;
 class WellInterfaceGeneric;
 class WellState;
 
-class GasLiftStage2 {
+class GasLiftStage2 : public GasLiftCommon {
     using GasLiftSingleWell = GasLiftSingleWellGeneric;
     using GLiftOptWells = std::map<std::string,std::unique_ptr<GasLiftSingleWell>>;
     using GLiftProdWells = std::map<std::string,const WellInterfaceGeneric*>;
@@ -68,10 +68,11 @@ public:
         WellState& well_state,
         GLiftProdWells& prod_wells,
         GLiftOptWells& glift_wells,
-        GLiftWellStateMap& state_map
+        GLiftWellStateMap& state_map,
+        bool glift_debug
     );
     void runOptimize();
-private:
+protected:
     void addOrRemoveALQincrement_(
         GradMap& grad_map, const std::string& well_name, bool add);
     std::optional<GradInfo> calcIncOrDecGrad_(
@@ -80,7 +81,7 @@ private:
     GradInfo deleteDecGradItem_(const std::string& name);
     GradInfo deleteIncGradItem_(const std::string& name);
     GradInfo deleteGrad_(const std::string& name, bool increase);
-    void displayDebugMessage_(const std::string& msg);
+    void displayDebugMessage_(const std::string& msg) const override;
     void displayDebugMessage2B_(const std::string& msg);
     void displayDebugMessage_(const std::string& msg, const std::string& group_name);
     void displayWarning_(const std::string& msg, const std::string& group_name);
@@ -121,8 +122,6 @@ private:
         std::vector<GradPair>& grads_global) const;
 
 
-    DeferredLogger& deferred_logger_;
-    WellState& well_state_;
     GLiftProdWells& prod_wells_;
     GLiftOptWells& stage1_wells_;
     GLiftWellStateMap& well_state_map_;
@@ -134,7 +133,6 @@ private:
     const Parallel::Communication& comm_;
     GradMap inc_grads_;
     GradMap dec_grads_;
-    bool debug_;
     int max_iterations_ = 1000;
     //int time_step_idx_;
 

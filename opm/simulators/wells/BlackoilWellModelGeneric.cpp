@@ -2233,7 +2233,9 @@ gasLiftOptimizationStage2(DeferredLogger& deferred_logger,
                          this->wellState(),
                          prod_wells,
                          glift_wells,
-                         glift_well_state_map};
+                         glift_well_state_map,
+                         this->glift_debug
+    };
     glift.runOptimize();
 }
 

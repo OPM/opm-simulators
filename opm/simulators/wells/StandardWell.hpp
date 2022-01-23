@@ -211,7 +211,8 @@ namespace Opm
             GLiftOptWells &glift_wells,
             GLiftWellStateMap &state_map,
             GasLiftGroupInfo &group_info,
-            GLiftSyncGroups &sync_groups
+            GLiftSyncGroups &sync_groups,
+            bool glift_debug
         ) const override;
 
         /* returns BHP */
