@@ -2575,10 +2575,10 @@ private:
                                      " vaporized oil is enabled");
         if (enableBrine && !has_salt)
             throw std::runtime_error("The ECL input file requires the SALT keyword to be present if"
-                                     " brine is enabled");
+                                     " brine is enabled and the model is initialized explicitly");
         if (enableSaltPrecipitation && !has_saltp)
             throw std::runtime_error("The ECL input file requires the SALTP keyword to be present if"
-                                     " salt precipitation is enabled");
+                                     " salt precipitation is enabled and the model is initialized explicitly");
 
         size_t numDof = this->model().numGridDof();
 
