@@ -1271,6 +1271,30 @@ public:
     }
 
 
+
+    /*
+      This function is run after applyAction has been completed in the Schedule
+      implementation. The sim_update argument should have members & flags for
+      the simulator properties which need to be updated. This functionality is
+      probably not complete.
+    */
+    void applySimulatorUpdate(int report_step, Parallel::Communication comm, const SimulatorUpdate& sim_update, EclipseState& ecl_state, Schedule& schedule, SummaryState& summary_state, bool& commit_wellstate) {
+        this->wellModel_.updateEclWells(report_step, sim_update.affected_wells, summary_state);
+        if (!sim_update.affected_wells.empty())
+            commit_wellstate = true;
+
+        if (sim_update.tran_update) {
+            const auto& keywords = schedule[report_step].geo_keywords();
+            ecl_state.apply_schedule_keywords( keywords );
+            eclBroadcast(comm, ecl_state.getTransMult() );
+
+            // re-compute transmissibility
+            transmissibilities_.update(true);
+        }
+
+    }
+
+
     void applyActions(int reportStep,
                       double sim_time,
                       Parallel::Communication comm,
@@ -1315,19 +1339,8 @@ public:
 
                 const auto& wellpi = this->fetchWellPI(reportStep, *action, schedule, matching_wells);
 
-                auto sim_update = schedule.applyAction(reportStep, TimeService::from_time_t(simTime), *action, actionResult, wellpi);
-                this->wellModel_.updateEclWells(reportStep, sim_update.affected_wells, summaryState);
-                if (!sim_update.affected_wells.empty())
-                    commit_wellstate = true;
-
-                if (sim_update.tran_update) {
-                    const auto& keywords = schedule[reportStep].geo_keywords();
-                    ecl_state.apply_schedule_keywords( keywords );
-                    eclBroadcast(comm, ecl_state.getTransMult() );
-
-                    // re-compute transmissibility
-                    transmissibilities_.update(true);
-                }
+                auto sim_update = schedule.applyAction(reportStep, *action, actionResult.wells(), wellpi);
+                this->applySimulatorUpdate(reportStep, comm, sim_update, ecl_state, schedule, summaryState, commit_wellstate);
                 actionState.add_run(*action, simTime, std::move(actionResult));
             } else {
                 std::string msg = "The action: " + action->name() + " evaluated to false at " + ts;
