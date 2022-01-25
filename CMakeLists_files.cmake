@@ -317,37 +317,44 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/utils/ParallelRestart.hpp
   opm/simulators/utils/PropsCentroidsDataHandle.hpp
   opm/simulators/utils/VectorVectorDataHandle.hpp
+  opm/simulators/wells/ALQState.hpp
+  opm/simulators/wells/BlackoilWellModel.hpp
+  opm/simulators/wells/BlackoilWellModel_impl.hpp
+  opm/simulators/wells/GasLiftCommon.hpp
+  opm/simulators/wells/GasLiftGroupInfo.hpp
+  opm/simulators/wells/GasLiftSingleWellGeneric.hpp
+  opm/simulators/wells/GasLiftSingleWell.hpp
+  opm/simulators/wells/GasLiftSingleWell_impl.hpp
+  opm/simulators/wells/GasLiftStage2.hpp
+  opm/simulators/wells/GasLiftWellState.hpp
+  opm/simulators/wells/GlobalWellInfo.hpp
+  opm/simulators/wells/GroupState.hpp
+  opm/simulators/wells/MSWellHelpers.hpp
+  opm/simulators/wells/MultisegmentWell.hpp
+  opm/simulators/wells/MultisegmentWell_impl.hpp
+  opm/simulators/wells/ParallelWellInfo.hpp
   opm/simulators/wells/PerfData.hpp
   opm/simulators/wells/PerforationData.hpp
   opm/simulators/wells/RateConverter.hpp
+  opm/simulators/utils/readDeck.hpp
   opm/simulators/wells/RegionAttributeHelpers.hpp
   opm/simulators/wells/RegionAverageCalculator.hpp
-  opm/simulators/utils/readDeck.hpp
   opm/simulators/wells/SingleWellState.hpp
+  opm/simulators/wells/StandardWell.hpp
+  opm/simulators/wells/StandardWell_impl.hpp
   opm/simulators/wells/TargetCalculator.hpp
-  opm/simulators/wells/WellConnectionAuxiliaryModule.hpp
-  opm/simulators/wells/WellState.hpp
-  opm/simulators/wells/GlobalWellInfo.hpp
-  opm/simulators/wells/GroupState.hpp
-  opm/simulators/wells/ALQState.hpp
-  opm/simulators/wells/WGState.hpp
-  opm/simulators/wells/VFPProperties.hpp
   opm/simulators/wells/VFPHelpers.hpp
   opm/simulators/wells/VFPInjProperties.hpp
   opm/simulators/wells/VFPProdProperties.hpp
+  opm/simulators/wells/VFPProperties.hpp
+  opm/simulators/wells/WellConnectionAuxiliaryModule.hpp
   opm/simulators/wells/WellGroupHelpers.hpp
   opm/simulators/wells/WellHelpers.hpp
   opm/simulators/wells/WellInterface.hpp
   opm/simulators/wells/WellInterface_impl.hpp
   opm/simulators/wells/WellProdIndexCalculator.hpp
-  opm/simulators/wells/StandardWell.hpp
-  opm/simulators/wells/StandardWell_impl.hpp
-  opm/simulators/wells/MultisegmentWell.hpp
-  opm/simulators/wells/MultisegmentWell_impl.hpp
-  opm/simulators/wells/MSWellHelpers.hpp
-  opm/simulators/wells/BlackoilWellModel.hpp
-  opm/simulators/wells/BlackoilWellModel_impl.hpp
-  opm/simulators/wells/ParallelWellInfo.hpp
+  opm/simulators/wells/WellState.hpp
+  opm/simulators/wells/WGState.hpp
   )
 
 list (APPEND EXAMPLE_SOURCE_FILES
