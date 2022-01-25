@@ -64,9 +64,8 @@ namespace Opm
 
     private:
         std::optional<double> computeBhpAtThpLimit_(double alq) const override;
-        void computeWellRates_(
-            double bhp, std::vector<double> &potentials, bool debug_output=true) const override;
-
+        BasicRates computeWellRates_(
+            double bhp, bool bhp_is_limited, bool debug_output=true) const override;
         void setAlqMaxRate_(const GasLiftOpt::Well& well);
 
         const Simulator &ebos_simulator_;
