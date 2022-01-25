@@ -41,9 +41,10 @@ protected:
     );
     int debugUpdateGlobalCounter_() const;
     virtual void displayDebugMessage_(const std::string& msg) const = 0;
-    bool debug;
-    DeferredLogger &deferred_logger_;
+
     WellState &well_state_;
+    DeferredLogger &deferred_logger_;
+    bool debug;
 };
 
 } // namespace Opm
