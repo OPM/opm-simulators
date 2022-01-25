@@ -164,6 +164,18 @@ public:
         this->alq_state.set(name, value);
     }
 
+    int gliftGetDebugCounter() {
+        return this->alq_state.get_debug_counter();
+    }
+
+    void gliftSetDebugCounter(int value) {
+        return this->alq_state.set_debug_counter(value);
+    }
+
+    int gliftUpdateDebugCounter() {
+        return this->alq_state.update_debug_counter();
+    }
+
     bool gliftCheckAlqOscillation(const std::string &name) const {
         return this->alq_state.oscillation(name);
     }

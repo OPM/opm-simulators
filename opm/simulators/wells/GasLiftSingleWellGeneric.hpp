@@ -28,6 +28,7 @@
 #include <opm/input/eclipse/Schedule/GasLiftOpt.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/simulators/wells/GasLiftGroupInfo.hpp>
+#include <opm/simulators/wells/GasLiftCommon.hpp>
 
 #include <functional>
 #include <optional>
@@ -47,7 +48,7 @@ class WellInterfaceGeneric;
 class WellState;
 class GroupState;
 
-class GasLiftSingleWellGeneric
+class GasLiftSingleWellGeneric : public GasLiftCommon
 {
 protected:
     static const int Water = BlackoilPhases::Aqua;
@@ -102,7 +103,8 @@ protected:
         GasLiftGroupInfo &group_info,
         const Schedule& schedule,
         const int report_step_idx,
-        GLiftSyncGroups &sync_groups
+        GLiftSyncGroups &sync_groups,
+        bool glift_debug
     );
 
     struct OptimizeState
@@ -174,7 +176,7 @@ protected:
 
     void debugShowTargets_();
 
-    void displayDebugMessage_(const std::string& msg) const;
+    void displayDebugMessage_(const std::string& msg) const override;
     void displayWarning_(const std::string& warning);
 
     std::pair<double, bool> getBhpWithLimit_(double bhp) const;
@@ -249,8 +251,6 @@ protected:
 
     void warnMaxIterationsExceeded_();
 
-    DeferredLogger& deferred_logger_;
-    WellState& well_state_;
     const GroupState& group_state_;
     const Well& ecl_well_;
     const SummaryState& summary_state_;
@@ -279,7 +279,6 @@ protected:
     const GasLiftOpt::Well* gl_well_;
 
     bool optimize_;
-    bool debug_;  // extra debug output
     bool debug_limit_increase_decrease_;
     bool debug_abort_if_decrease_and_oil_is_limited_ = false;
     bool debug_abort_if_increase_and_gas_is_limited_ = false;

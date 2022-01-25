@@ -46,19 +46,18 @@ GasLiftStage2::GasLiftStage2(
     WellState &well_state,
     GLiftProdWells &prod_wells,
     GLiftOptWells &glift_wells,
-    GLiftWellStateMap &state_map
+    GLiftWellStateMap &state_map,
+    bool glift_debug
 ) :
-    deferred_logger_{deferred_logger},
-    well_state_{well_state},
-    prod_wells_{prod_wells},
-    stage1_wells_{glift_wells},
-    well_state_map_{state_map},
-    report_step_idx_{report_step_idx},
-    summary_state_{summary_state},
-    schedule_{schedule},
-    glo_{schedule_.glo(report_step_idx_)},
-    comm_{comm},
-    debug_{false}
+    GasLiftCommon(well_state, deferred_logger, glift_debug)
+    , prod_wells_{prod_wells}
+    , stage1_wells_{glift_wells}
+    , well_state_map_{state_map}
+    , report_step_idx_{report_step_idx}
+    , summary_state_{summary_state}
+    , schedule_{schedule}
+    , glo_{schedule_.glo(report_step_idx_)}
+    , comm_{comm}
 {
 //    this->time_step_idx_
 //        = this->ebos_simulator_.model().newtonMethod().currentTimeStep();
@@ -89,7 +88,7 @@ runOptimize()
 
 
 /********************************************
- * Private methods in alphabetical order
+ * Protected methods in alphabetical order
  ********************************************/
 
 // Update GasLiftWellState and WellState for "well_name" to the
@@ -106,7 +105,7 @@ addOrRemoveALQincrement_(GradMap &grad_map, const std::string& well_name, bool a
 
     GasLiftWellState &state = *(it->second.get());
     const GradInfo &gi = grad_map.at(well_name);
-    if (this->debug_) {
+    if (this->debug) {
         auto new_alq = gi.alq;
         auto old_alq = state.alq();
         const std::string msg = fmt::format("well {} : {} ALQ increment, "
@@ -237,9 +236,9 @@ displayWarning_(const std::string &msg)
 
 void
 GasLiftStage2::
-displayDebugMessage_(const std::string &msg)
+displayDebugMessage_(const std::string &msg) const
 {
-    if (this->debug_) {
+    if (this->debug) {
         const std::string message = fmt::format(
             "  GLIFT2 (DEBUG) : {}", msg);
         this->deferred_logger_.info(message);
@@ -250,7 +249,7 @@ void
 GasLiftStage2::
 displayDebugMessage2B_(const std::string &msg)
 {
-    if (this->debug_) {
+    if (this->debug) {
         const std::string message = fmt::format(
             "Stage 2B : {}", msg);
         displayDebugMessage_(message);
@@ -261,7 +260,7 @@ void
 GasLiftStage2::
 displayDebugMessage_(const std::string &msg, const std::string &group_name)
 {
-    if (this->debug_) {
+    if (this->debug) {
         const std::string message = fmt::format(
             "Group {} : {}", group_name, msg);
         displayDebugMessage_(message);
@@ -275,7 +274,7 @@ getCurrentGroupRates_(const Group &group)
     auto rates = getCurrentGroupRatesRecursive_(group);
     this->comm_.sum(rates.data(), rates.size());
     auto [oil_rate, gas_rate, alq] = rates;
-    if (this->debug_) {
+    if (this->debug) {
         const std::string msg = fmt::format(
             "Current group rates for {} : oil: {}, gas: {}, alq: {}",
             group.name(), oil_rate, gas_rate, alq);
@@ -342,13 +341,13 @@ getCurrentWellRates_(const std::string &well_name, const std::string &group_name
         GasLiftWellState &state = *(this->well_state_map_.at(well_name).get());
         std::tie(oil_rate, gas_rate) = state.getRates();
         success = true;
-        if ( this->debug_) debug_info = "(A)";
+        if ( this->debug) debug_info = "(A)";
     }
     else if (this->prod_wells_.count(well_name) == 1) {
         well_ptr = this->prod_wells_.at(well_name);
         std::tie(oil_rate, gas_rate) = getStdWellRates_(*well_ptr);
         success = true;
-        if ( this->debug_) debug_info = "(B)";
+        if ( this->debug) debug_info = "(B)";
     }
 
     if (well_ptr) {
@@ -362,7 +361,7 @@ getCurrentWellRates_(const std::string &well_name, const std::string &group_name
         assert(well_ptr);
         assert(well_ptr->isProducer());
         alq = this->well_state_.getALQ(well_name);
-        if (this->debug_) {
+        if (this->debug) {
             const std::string msg = fmt::format(
                 "Rates {} for well {} : oil: {}, gas: {}, alq: {}",
                 debug_info, well_name, oil_rate, gas_rate, alq);
@@ -380,7 +379,7 @@ getCurrentWellRates_(const std::string &well_name, const std::string &group_name
         oil_rate *= factor;
         gas_rate *= factor;
         alq *= factor;
-        if (this->debug_ && (factor != 1)) {
+        if (this->debug && (factor != 1)) {
             const std::string msg = fmt::format(
                 "Well {} : efficiency factor {}. New rates : oil: {}, gas: {}, alq: {}",
                 well_name, factor, oil_rate, gas_rate, alq);
@@ -389,7 +388,7 @@ getCurrentWellRates_(const std::string &well_name, const std::string &group_name
     }
     else {
         // NOTE: This happens for wells that are not producers, or not active.
-        if (this->debug_) {
+        if (this->debug) {
             const std::string msg = fmt::format("Could not determine current rates for "
                 "well {}: (not active or injector)", well_name);
             displayDebugMessage_(msg, group_name);
@@ -716,7 +715,7 @@ removeSurplusALQ_(const Group &group,
     auto [oil_rate, gas_rate, alq] = getCurrentGroupRates_(group);
     auto min_eco_grad = this->glo_.min_eco_gradient();
     bool stop_iteration = false;
-    if (this->debug_) {
+    if (this->debug) {
         std::string max_glift_str = "unlimited";
         if (max_glift) max_glift_str = fmt::format("{}", *max_glift);
         const std::string msg = fmt::format("Starting iteration for group: {}. "
@@ -767,7 +766,7 @@ removeSurplusALQ_(const Group &group,
         }
     }
     if (state.it >= 1) {
-        if (this->debug_) {
+        if (this->debug) {
             auto [oil_rate2, gas_rate2, alq2] = getCurrentGroupRates_(group);
             const std::string msg = fmt::format(
                  "Finished after {} iterations for group: {}."
@@ -1002,7 +1001,7 @@ void
 GasLiftStage2::SurplusState::
 addOrRemoveALQincrement(GradMap &grad_map, const std::string& well_name, bool add)
 {
-    if (this->parent.debug_) {
+    if (this->parent.debug) {
         const std::string msg = fmt::format("group: {} : well {} : {} ALQ increment",
             this->group.name(), well_name, (add ? "adding" : "subtracting"));
         this->parent.displayDebugMessage2B_(msg);
@@ -1019,7 +1018,7 @@ checkALQlimit()
         double increment = this->parent.glo_.gaslift_increment();
         double epsilon = 1e-6 * increment;
         if ((max_alq+epsilon) < this->alq  ) {
-            if (this->parent.debug_) {
+            if (this->parent.debug) {
                 const std::string msg = fmt::format("group: {} : "
                     "ALQ rate {} is greater than ALQ limit {}", this->group.name(),
                     this->alq, max_alq);
@@ -1036,7 +1035,7 @@ GasLiftStage2::SurplusState::
 checkEcoGradient(const std::string &well_name, double eco_grad)
 {
     if (eco_grad < this->min_eco_grad) {
-        if (this->parent.debug_) {
+        if (this->parent.debug) {
             const std::string msg = fmt::format("group: {}, well: {} : "
                 "economic gradient {} less than minimum ({})", this->group.name(),
                 well_name, eco_grad, this->min_eco_grad);
@@ -1055,7 +1054,7 @@ checkGasTarget()
 {
     if (this->group.has_control(Group::ProductionCMode::GRAT)) {
         if (this->gas_target < this->gas_rate  ) {
-            if (this->parent.debug_) {
+            if (this->parent.debug) {
                 const std::string msg = fmt::format("group: {} : "
                     "gas rate {} is greater than gas target {}", this->group.name(),
                     this->gas_rate, this->gas_target);
@@ -1073,7 +1072,7 @@ checkOilTarget()
 {
     if (this->group.has_control(Group::ProductionCMode::ORAT)) {
         if (this->oil_target < this->oil_rate  ) {
-            if (this->parent.debug_) {
+            if (this->parent.debug) {
                 const std::string msg = fmt::format("group: {} : "
                     "oil rate {} is greater than oil target {}", this->group.name(),
                     this->oil_rate, this->oil_target);

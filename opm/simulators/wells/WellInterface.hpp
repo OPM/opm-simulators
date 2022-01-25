@@ -168,7 +168,8 @@ public:
         GLiftOptWells& glift_wells,
         GLiftWellStateMap& state_map,
         GasLiftGroupInfo &group_info,
-        GLiftSyncGroups &sync_groups
+        GLiftSyncGroups &sync_groups,
+        bool glift_debug
     ) const = 0;
 
     /// using the solution x to recover the solution xw for wells and applying

@@ -896,7 +896,8 @@ namespace Opm {
                 phase_usage_,
                 deferred_logger,
                 this->wellState(),
-                ebosSimulator_.vanguard().grid().comm()
+                ebosSimulator_.vanguard().grid().comm(),
+                this->glift_debug
             };
             group_info.initialize();
             gasLiftOptimizationStage1(
@@ -951,9 +952,11 @@ namespace Opm {
                     // NOTE: Only the wells in "group_info" needs to be optimized
                     if (group_info.hasWell(well->name())) {
                         well->gasLiftOptimizationStage1(
-                            this->wellState(), this->groupState(), ebosSimulator_, deferred_logger,
+                            this->wellState(), this->groupState(), ebosSimulator_,
+                            deferred_logger,
                             prod_wells, glift_wells, state_map,
-                            group_info, groups_to_sync);
+                            group_info, groups_to_sync, this->glift_debug
+                        );
                     }
                 }
                 num_rates_to_sync = groups_to_sync.size();
@@ -1004,6 +1007,16 @@ namespace Opm {
                     for (int j=0; j<num_rates_to_sync; j++) {
                         group_info.updateRate(group_indexes[j],
                             group_oil_rates[j], group_gas_rates[j], group_water_rates[j], group_alq_rates[j]);
+                    }
+                }
+                if (this->glift_debug) {
+                    int counter = 0;
+                    if (comm.rank() == i) {
+                        counter = this->wellState().gliftGetDebugCounter();
+                    }
+                    counter = comm.sum(counter);
+                    if (comm.rank() != i) {
+                        this->wellState().gliftSetDebugCounter(counter);
                     }
                 }
             }

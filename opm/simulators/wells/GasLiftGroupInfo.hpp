@@ -31,6 +31,7 @@
 #include <opm/input/eclipse/Schedule/Group/Group.hpp>
 #include <opm/input/eclipse/Schedule/GasLiftOpt.hpp>
 #include <opm/input/eclipse/Schedule/SummaryState.hpp>
+#include <opm/simulators/wells/GasLiftCommon.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 
@@ -42,8 +43,9 @@
 
 namespace Opm
 {
-class GasLiftGroupInfo
+class GasLiftGroupInfo : public GasLiftCommon
 {
+protected:
     class GroupRates;
     // NOTE: In the Well2GroupMap below, in the std::vector value we store
     //    pairs of group names and efficiency factors. The efficiency factors
@@ -79,7 +81,9 @@ public:
         const PhaseUsage& phase_usage,
         DeferredLogger& deferred_logger,
         WellState& well_state,
-        const Parallel::Communication& comm);
+        const Parallel::Communication& comm,
+        bool glift_debug
+    );
     std::vector<std::pair<std::string,double>>& getWellGroups(
         const std::string& well_name);
 
@@ -105,10 +109,10 @@ public:
         double delta_oil, double delta_gas, double delta_water, double delta_alq);
     void updateRate(int idx, double oil_rate, double gas_rate, double water_rate, double alq);
     const Well2GroupMap& wellGroupMap() { return well_group_map_; }
-private:
+protected:
+    void displayDebugMessage_(const std::string& msg) const override;
     bool checkDoGasLiftOptimization_(const std::string& well_name);
     bool checkNewtonIterationIdxOk_(const std::string& well_name);
-    void displayDebugMessage_(const std::string& msg);
     void displayDebugMessage_(const std::string& msg, const std::string& well_name);
     std::tuple<double, double, double> getProducerWellRates_(const int index);
     std::tuple<double, double, double, double>
@@ -183,13 +187,10 @@ private:
     const int report_step_idx_;
     const int iteration_idx_;
     const PhaseUsage &phase_usage_;
-    DeferredLogger &deferred_logger_;
-    WellState &well_state_;
     const Parallel::Communication &comm_;
     const GasLiftOpt& glo_;
     GroupRateMap group_rate_map_;
     Well2GroupMap well_group_map_;
-    bool debug;
     GroupIdxMap group_idx_;
     int next_group_idx_ = 0;
     // Optimize only wells under THP control

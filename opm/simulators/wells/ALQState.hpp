@@ -42,12 +42,16 @@ public:
     void reset_count();
     int  get_increment_count(const std::string& wname) const;
     int  get_decrement_count(const std::string& wname) const;
+    void set_debug_counter(int value);
+    int  get_debug_counter();
+    int  update_debug_counter();
 
 private:
     std::map<std::string, double> current_alq_;
     std::map<std::string, double> default_alq_;
     std::map<std::string, int> alq_increase_count_;
     std::map<std::string, int> alq_decrease_count_;
+    int debug_counter_ = 0;
 };
 
 

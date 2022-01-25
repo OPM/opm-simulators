@@ -107,18 +107,6 @@ protected:
                                                           DeferredLogger& deferred_logger,
                                                           double alq_value) const;
 
-    void gliftDebug(const std::string &msg,
-                    DeferredLogger& deferred_logger) const;
-    bool checkGliftNewtonIterationIdxOk(const int report_step_idx,
-                                        const int iteration_idx,
-                                        const Schedule& schedule,
-                                        DeferredLogger& deferred_logger) const;
-    bool doGasLiftOptimize(const WellState &well_state,
-                           const int report_step_idx,
-                           const int iteration_idx,
-                           const Schedule& schedule,
-                           DeferredLogger& deferred_logger) const;
-
     // Base interface reference
     const WellInterfaceGeneric& baseif_;
 
@@ -129,11 +117,6 @@ protected:
     std::vector<double> perf_densities_;
     // pressure drop between different perforations
     std::vector<double> perf_pressure_diffs_;
-
-    // Enable GLIFT debug mode. This will enable output of logging messages.
-    bool glift_debug = false;
-    // Optimize only wells under THP control
-    bool glift_optimize_only_thp_wells = true;
 
     // two off-diagonal matrices
     OffDiagMatWell duneB_;

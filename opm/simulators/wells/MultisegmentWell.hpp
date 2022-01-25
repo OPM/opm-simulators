@@ -108,7 +108,8 @@ namespace Opm
             GLiftOptWells &,
             GLiftWellStateMap &,
             GasLiftGroupInfo &,
-            GLiftSyncGroups &
+            GLiftSyncGroups &,
+            bool
         ) const override {
             // Not implemented yet
         }
