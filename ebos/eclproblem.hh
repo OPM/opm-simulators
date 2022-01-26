@@ -1318,11 +1318,12 @@ public:
             ts = os.str();
         }
 
+        bool commit_wellstate = false;
         for (const auto& pyaction : actions.pending_python()) {
-            pyaction->run(ecl_state, schedule, reportStep, summaryState);
+            auto sim_update = schedule.runPyAction(reportStep, *pyaction, ecl_state, summaryState);
+            this->applySimulatorUpdate(reportStep, comm, sim_update, ecl_state, schedule, summaryState, commit_wellstate);
         }
 
-        bool commit_wellstate = false;
         auto simTime = asTimeT(now);
         for (const auto& action : actions.pending(actionState, simTime)) {
             auto actionResult = action->eval(context);
