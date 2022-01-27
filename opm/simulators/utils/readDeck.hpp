@@ -64,7 +64,8 @@ setupLogging(int                mpi_rank_,
              const std::string& cmdline_output_dir,
              const std::string& cmdline_output,
              bool               output_cout_,
-             const std::string& stdout_log_id);
+             const std::string& stdout_log_id,
+             const bool         allRanksDbgLog);
 
 /// \brief Reads the deck and creates all necessary objects if needed
 ///
