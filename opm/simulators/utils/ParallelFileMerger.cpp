@@ -54,7 +54,7 @@ void ParallelFileMerger::operator()(const fs::path& file)
 
     if ( std::regex_match(filename, matches, fileWarningRegex_) )
     {
-        std::string rank = std::regex_replace(filename, fileWarningRegex_, "\\1");
+        std::string rank = std::regex_replace(filename, fileWarningRegex_, "$1");
 
         if( std::regex_match(filename, logFileRegex_) )
         {
