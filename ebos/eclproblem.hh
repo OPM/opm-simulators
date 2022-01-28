@@ -1319,8 +1319,8 @@ public:
         }
 
         bool commit_wellstate = false;
-        for (const auto& pyaction : actions.pending_python()) {
-            auto sim_update = schedule.runPyAction(reportStep, *pyaction, ecl_state, summaryState);
+        for (const auto& pyaction : actions.pending_python(actionState)) {
+            auto sim_update = schedule.runPyAction(reportStep, *pyaction, actionState, ecl_state, summaryState);
             this->applySimulatorUpdate(reportStep, comm, sim_update, ecl_state, schedule, summaryState, commit_wellstate);
         }
 
