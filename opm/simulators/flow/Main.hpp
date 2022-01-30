@@ -440,11 +440,14 @@ private:
             const bool init_from_restart_file = !EWOMS_GET_PARAM(PreTypeTag, bool, SchedRestart);
             if (outputDir.empty())
                 outputDir = EWOMS_GET_PARAM(PreTypeTag, std::string, OutputDir);
+
+            const bool allRanksDbgPrtLog = EWOMS_GET_PARAM(PreTypeTag, bool,
+                                                      EnableLoggingFalloutWarning);
             outputMode = setupLogging(mpiRank,
                                       deckFilename,
                                       outputDir,
                                       EWOMS_GET_PARAM(PreTypeTag, std::string, OutputMode),
-                                      outputCout_, "STDOUT_LOGGER");
+                                      outputCout_, "STDOUT_LOGGER", allRanksDbgPrtLog);
             auto parseContext =
                 std::make_unique<ParseContext>(std::vector<std::pair<std::string , InputError::Action>>
                                                {{ParseContext::PARSE_RANDOM_SLASH, InputError::IGNORE},
