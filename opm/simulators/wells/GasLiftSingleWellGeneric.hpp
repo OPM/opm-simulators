@@ -309,6 +309,8 @@ protected:
         const LimitedRates& rates, const LimitedRates& new_rates) const;
     void updateWellStateAlqFixedValue_(const GasLiftOpt::Well& well);
     bool useFixedAlq_(const GasLiftOpt::Well& well);
+    void warnGroupInfoGroupRatesExceedTarget(
+        Rate rate_type, const std::string& gr_name, double rate, double target) const;
     void warnMaxIterationsExceeded_();
 
     const GroupState& group_state_;

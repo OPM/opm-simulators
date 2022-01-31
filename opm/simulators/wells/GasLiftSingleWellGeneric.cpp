@@ -737,7 +737,10 @@ getRateWithGroupLimit_(
             double gr_target_temp = *gr_target_opt;
             double gr_rate_temp =
                 this->group_info_.getRate(rate_type, group_name_temp);
-            assert(gr_rate_temp <= gr_target_temp);
+            if (gr_rate_temp > gr_target_temp) {
+                warnGroupInfoGroupRatesExceedTarget(
+                    rate_type, group_name_temp, gr_rate_temp, gr_target_temp);
+            }
             double new_gr_rate_temp = gr_rate_temp + efficiency_temp * delta_rate;
             if (new_gr_rate_temp > gr_target_temp) {
                 double limited_rate_temp =
@@ -1334,6 +1337,20 @@ useFixedAlq_(const GasLiftOpt::Well& well)
         return true;
     }
 }
+
+void
+GasLiftSingleWellGeneric::
+warnGroupInfoGroupRatesExceedTarget(
+    Rate rate_type, const std::string& gr_name, double rate, double target) const
+{
+    double fraction = 100.0*std::fabs(rate-target)/target;
+    const std::string msg = fmt::format("Warning: {} rate for group {} exceeds target: "
+        "rate = {}, target = {}, relative overrun = {}%",
+        GasLiftGroupInfo::rateToString(rate_type),
+        gr_name, rate, target, fraction);
+    displayDebugMessage_(msg);
+}
+
 void
 GasLiftSingleWellGeneric::
 warnMaxIterationsExceeded_()
