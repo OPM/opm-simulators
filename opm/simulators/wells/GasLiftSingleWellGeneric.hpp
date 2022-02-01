@@ -107,6 +107,101 @@ protected:
         bool glift_debug
     );
 
+    struct LimitedRates;
+    struct BasicRates
+    {
+        BasicRates(const BasicRates& rates) :
+            oil{rates.oil},
+            gas{rates.gas},
+            water{rates.water},
+            bhp_is_limited{rates.bhp_is_limited}
+        {}
+        BasicRates(double oil_, double gas_, double water_, bool bhp_is_limited_) :
+            oil{oil_},
+            gas{gas_},
+            water{water_},
+            bhp_is_limited{bhp_is_limited_}
+        {}
+        BasicRates& operator=(const BasicRates& rates) {
+            oil = rates.oil;
+            gas = rates.gas;
+            water = rates.water;
+            bhp_is_limited = rates.bhp_is_limited;
+            return *this;
+        }
+        // This copy constructor cannot be defined inline here since LimitedRates
+        //   has not been defined yet (it is defined below). Instead it is defined in
+        //   in the .cpp file
+        BasicRates(const LimitedRates& rates);
+        double operator[](Rate rate_type) const {
+            switch (rate_type) {
+            case Rate::oil:
+                return this->oil;
+            case Rate::gas:
+                return this->gas;
+            case Rate::water:
+                return this->water;
+            case Rate::liquid:
+                return this->oil + this->water;
+            default:
+                throw std::runtime_error("This should not happen");
+            }
+        }
+
+        double oil, gas, water;
+        bool bhp_is_limited;
+    };
+
+    struct LimitedRates : public BasicRates
+    {
+        enum class LimitType {well, group, none};
+        LimitedRates(
+              double oil_, double gas_, double water_,
+              bool oil_is_limited_, bool gas_is_limited_,
+              bool water_is_limited_, bool bhp_is_limited_,
+              std::optional<Rate> oil_limiting_target_,
+              std::optional<Rate> water_limiting_target_
+        ) :
+            BasicRates(oil_, gas_, water_, bhp_is_limited_),
+            oil_is_limited{oil_is_limited_},
+            gas_is_limited{gas_is_limited_},
+            water_is_limited{water_is_limited_},
+            oil_limiting_target{oil_limiting_target_},
+            water_limiting_target{water_limiting_target_}
+        {
+            set_initial_limit_type_();
+        }
+
+        LimitedRates(
+              const BasicRates& rates,
+              bool oil_is_limited_, bool gas_is_limited_,
+              bool water_is_limited_
+        ) :
+            BasicRates(rates),
+            oil_is_limited{oil_is_limited_},
+            gas_is_limited{gas_is_limited_},
+            water_is_limited{water_is_limited_}
+        {
+            set_initial_limit_type_();
+        }
+
+        bool limited() const {
+            return oil_is_limited || gas_is_limited || water_is_limited;
+        }
+        // For a given ALQ value, were the rates limited due to group targets
+        //   or due to well targets?
+        LimitType limit_type;
+        bool oil_is_limited;
+        bool gas_is_limited;
+        bool water_is_limited;
+        std::optional<Rate> oil_limiting_target;
+        std::optional<Rate> water_limiting_target;
+    private:
+        void set_initial_limit_type_() {
+            limit_type = limited() ? LimitType::well : LimitType::none;
+        }
+    };
+
     struct OptimizeState
     {
         OptimizeState( GasLiftSingleWellGeneric& parent_, bool increase_ ) :
@@ -129,126 +224,93 @@ protected:
         bool checkAlqOutsideLimits(double alq, double oil_rate);
         bool checkEcoGradient(double gradient);
         bool checkGroupALQrateExceeded(double delta_alq);
-        bool checkNegativeOilRate(double oil_rate);
-        bool checkThpControl();
         bool checkOilRateExceedsTarget(double oil_rate);
-        bool checkRate(double rate, double limit, const std::string &rate_str) const;
-        bool checkWellRatesViolated(std::vector<double> &potentials);
-        bool computeBhpAtThpLimit(double alq);
+        bool checkRatesViolated(const LimitedRates& rates) const;
         void debugShowIterationInfo(double alq);
         double getBhpWithLimit();
-        void updateGroupRates(double delta_oil, double delta_gas, double delta_water, double delta_alq);
         void warn_(std::string msg) {parent.displayWarning_(msg);}
     };
 
-    std::pair<std::optional<double>, bool>
-    addOrSubtractAlqIncrement_(double alq, bool increase) const;
-
+    std::pair<std::optional<double>, bool> addOrSubtractAlqIncrement_(
+                            double alq, bool increase) const;
     double calcEcoGradient_(double oil_rate, double new_oil_rate,
                             double gas_rate, double new_gas_rate, bool increase) const;
-
     bool checkALQequal_(double alq1, double alq2) const;
     bool checkGroupTargetsViolated(
-        double delta_oil, double delta_gas, double delta_water) const;
+                      const BasicRates& rates, const BasicRates& new_rates) const;
     bool checkInitialALQmodified_(double alq, double initial_alq) const;
-
-    bool checkWellRatesViolated_(std::vector<double>& potentials,
-                                 const std::function<bool(double, double, const std::string &)>& callback,
-                                 bool increase);
-
+    bool checkThpControl_() const;
     virtual std::optional<double> computeBhpAtThpLimit_(double alq) const = 0;
-    virtual void computeWellRates_(double bhp,
-                                   std::vector<double>& potentials,
-                                   bool debug_output = true) const = 0;
-
-    bool computeInitialWellRates_(std::vector<double>& potentials);
-
+    std::optional<BasicRates> computeInitialWellRates_() const;
+    std::optional<LimitedRates> computeLimitedWellRatesWithALQ_(double alq) const;
+    virtual BasicRates computeWellRates_(double bhp, bool bhp_is_limited,                                                             bool debug_output = true) const = 0;
+    std::optional<BasicRates> computeWellRatesWithALQ_(double alq) const;
     void debugCheckNegativeGradient_(double grad, double alq, double new_alq,
                                      double oil_rate, double new_oil_rate,
                                      double gas_rate, double new_gas_rate,
                                      bool increase) const;
-
     void debugShowAlqIncreaseDecreaseCounts_();
-
     void debugShowBhpAlqTable_();
-
+    void debugShowLimitingTargets_(const LimitedRates& rates) const;
     void debugShowStartIteration_(double alq, bool increase, double oil_rate);
-
     void debugShowTargets_();
-
     void displayDebugMessage_(const std::string& msg) const override;
     void displayWarning_(const std::string& warning);
-
     std::pair<double, bool> getBhpWithLimit_(double bhp) const;
     std::pair<double, bool> getGasRateWithLimit_(
-                           const std::vector<double>& potentials) const;
+                           const BasicRates& rates) const;
     std::pair<double, bool> getGasRateWithGroupLimit_(
                            double new_gas_rate, double gas_rate) const;
-    std::tuple<double,double,double,bool,bool,bool> getInitialRatesWithLimit_(
-                           const std::vector<double>& potentials);
+    std::optional<LimitedRates> getInitialRatesWithLimit_() const;
+    LimitedRates getLimitedRatesFromRates_(const BasicRates& rates) const;
     std::tuple<double,double,bool,bool> getLiquidRateWithGroupLimit_(
                            const double new_oil_rate, const double oil_rate,
                            const double new_water_rate, const double water_rate) const;
     std::pair<double, bool> getOilRateWithGroupLimit_(
                            double new_oil_rate, double oil_rate) const;
-    std::pair<double, bool> getOilRateWithLimit_(
-                           const std::vector<double>& potentials) const;
+    std::pair<double, bool> getOilRateWithLimit_(const BasicRates& rates) const;
+    std::pair<double, std::optional<Rate>> getOilRateWithLimit2_(
+                           const BasicRates& rates) const;
     double getProductionTarget_(Rate rate) const;
-    double getRate_(Rate rate_type, const std::vector<double>& potentials) const;
-    std::pair<double, bool> getRateWithLimit_(
-                           Rate rate_type, const std::vector<double>& potentials) const;
+    double getRate_(Rate rate_type, const BasicRates& rates) const;
+    std::pair<double, std::optional<Rate>> getRateWithLimit_(
+                    Rate rate_type, const BasicRates& rates) const;
     std::tuple<double, const std::string*, double> getRateWithGroupLimit_(
                  Rate rate_type, const double new_rate, const double old_rate) const;
     std::pair<double, bool> getWaterRateWithGroupLimit_(
                            double new_water_rate, double water_rate) const;
-    std::pair<double, bool> getWaterRateWithLimit_(
-                           const std::vector<double>& potentials) const;
+    std::pair<double, bool> getWaterRateWithLimit_(const BasicRates& rates) const;
+    std::pair<double, std::optional<Rate>> getWaterRateWithLimit2_(
+                           const BasicRates& rates) const;
     bool hasProductionControl_(Rate rate) const;
-
-    std::tuple<double,double,bool,bool,double>
-    increaseALQtoPositiveOilRate_(double alq,
-                                  double oil_rate,
-                                  double gas_rate,
-                                  bool oil_is_limited,
-                                  bool gas_is_limited,
-                                  std::vector<double>& potentials);
-
-    std::tuple<double,double,bool,bool,double>
-    increaseALQtoMinALQ_(double alq,
-                         double oil_rate,
-                         double gas_rate,
-                         bool oil_is_limited,
-                         bool gas_is_limited,
-                         std::vector<double>& potentials);
-
+    std::pair<LimitedRates, double> increaseALQtoPositiveOilRate_(
+                           double alq, const LimitedRates& orig_rates) const;
+    std::pair<LimitedRates, double> increaseALQtoMinALQ_(
+                           double alq, const LimitedRates& orig_rates) const;
     void logSuccess_(double alq,
                      const int iteration_idx);
-    std::tuple<double,double,double, double,bool,bool,bool>
-      maybeAdjustALQbeforeOptimizeLoop_(
-          bool increase, double alq, double oil_rate, double gas_rate, double water_rate,
-          bool oil_is_limited, bool gas_is_limited, bool water_is_limited, std::vector<double> &potentials);
-    std::tuple<double,double,double,double>
-      reduceALQtoGroupTarget(double alq, double oil_rate, double gas_rate,
-                             double water_rate, std::vector<double> &potentials) const;
-    std::tuple<double,double,double, bool, bool,bool,double>
-      reduceALQtoWellTarget_(double alq, double oil_rate, double gas_rate,
-                             double water_rate, bool oil_is_limited,
-                             bool gas_is_limited, bool water_is_limited,
-                             std::vector<double> &potentials);
-
+    std::pair<LimitedRates, double> maybeAdjustALQbeforeOptimizeLoop_(
+                        const LimitedRates& rates, double alq, bool increase) const;
+    std::pair<LimitedRates, double> reduceALQtoGroupTarget(
+                        double alq, const LimitedRates& rates) const;
+    std::pair<LimitedRates, double> reduceALQtoWellTarget_(
+                        double alq, const LimitedRates& rates) const;
     std::unique_ptr<GasLiftWellState> runOptimize1_();
     std::unique_ptr<GasLiftWellState> runOptimize2_();
     std::unique_ptr<GasLiftWellState> runOptimizeLoop_(bool increase);
-
     void setAlqMinRate_(const GasLiftOpt::Well& well);
-
     std::unique_ptr<GasLiftWellState> tryIncreaseLiftGas_();
     std::unique_ptr<GasLiftWellState> tryDecreaseLiftGas_();
-
+    void updateGroupRates_(
+        const LimitedRates& rates,
+        const LimitedRates& new_rates,
+        double delta_alq) const;
+    LimitedRates updateRatesToGroupLimits_(
+        const LimitedRates& rates, const LimitedRates& new_rates) const;
     void updateWellStateAlqFixedValue_(const GasLiftOpt::Well& well);
-
     bool useFixedAlq_(const GasLiftOpt::Well& well);
-
+    void warnGroupInfoGroupRatesExceedTarget(
+        Rate rate_type, const std::string& gr_name, double rate, double target) const;
     void warnMaxIterationsExceeded_();
 
     const GroupState& group_state_;

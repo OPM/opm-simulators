@@ -96,6 +96,7 @@ public:
     std::optional<double> getTarget(
         Rate rate_type, const std::string& group_name) const;
     const std::string& groupIdxToName(int group_idx) const;
+    bool hasAnyTarget(const std::string& group_name) const;
     bool hasWell(const std::string& well_name);
     void initialize();
     std::optional<double> liquidTarget(const std::string& group_name) const;
@@ -110,9 +111,9 @@ public:
     void updateRate(int idx, double oil_rate, double gas_rate, double water_rate, double alq);
     const Well2GroupMap& wellGroupMap() { return well_group_map_; }
 protected:
-    void displayDebugMessage_(const std::string& msg) const override;
     bool checkDoGasLiftOptimization_(const std::string& well_name);
     bool checkNewtonIterationIdxOk_(const std::string& well_name);
+    void displayDebugMessage_(const std::string& msg) const override;
     void displayDebugMessage_(const std::string& msg, const std::string& well_name);
     std::tuple<double, double, double> getProducerWellRates_(const int index);
     std::tuple<double, double, double, double>

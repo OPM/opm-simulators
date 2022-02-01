@@ -97,14 +97,11 @@ GasLiftSingleWell(const StdWell &std_well,
  ****************************************/
 
 template<typename TypeTag>
-void
+GasLiftSingleWellGeneric::BasicRates
 GasLiftSingleWell<TypeTag>::
-computeWellRates_(
-    double bhp, std::vector<double> &potentials, bool debug_output) const
+computeWellRates_( double bhp, bool bhp_is_limited, bool debug_output ) const
 {
-    // NOTE: If we do not clear the potentials here, it will accumulate
-    //   the new potentials to the old values..
-    std::fill(potentials.begin(), potentials.end(), 0.0);
+    std::vector<double> potentials(this->num_phases_, 0.0);
     this->std_well_.computeWellRatesWithBhp(
         this->ebos_simulator_, bhp, potentials, this->deferred_logger_);
     if (debug_output) {
@@ -118,6 +115,11 @@ computeWellRates_(
     for (auto& potential : potentials) {
         potential = std::min(0.0, potential);
     }
+    return {-potentials[this->oil_pos_],
+            -potentials[this->gas_pos_],
+            -potentials[this->water_pos_],
+            bhp_is_limited
+    };
 }
 
 template<typename TypeTag>
