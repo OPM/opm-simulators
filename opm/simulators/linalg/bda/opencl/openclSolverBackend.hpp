@@ -20,13 +20,13 @@
 #ifndef OPM_OPENCLSOLVER_BACKEND_HEADER_INCLUDED
 #define OPM_OPENCLSOLVER_BACKEND_HEADER_INCLUDED
 
-#include <opm/simulators/linalg/bda/opencl.hpp>
-#include <opm/simulators/linalg/bda/openclKernels.hpp>
+#include <opm/simulators/linalg/bda/opencl/opencl.hpp>
+#include <opm/simulators/linalg/bda/opencl/openclKernels.hpp>
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
 #include <opm/simulators/linalg/bda/BdaSolver.hpp>
 #include <opm/simulators/linalg/bda/ILUReorder.hpp>
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
-#include <opm/simulators/linalg/bda/BILU0.hpp>
+#include <opm/simulators/linalg/bda/opencl/BILU0.hpp>
 
 #include <opm/simulators/linalg/bda/opencl/Preconditioner.hpp>
 

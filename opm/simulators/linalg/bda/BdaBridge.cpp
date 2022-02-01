@@ -34,8 +34,8 @@
 #endif
 
 #if HAVE_OPENCL
-#include <opm/simulators/linalg/bda/openclSolverBackend.hpp>
-#include <opm/simulators/linalg/bda/openclWellContributions.hpp>
+#include <opm/simulators/linalg/bda/opencl/openclSolverBackend.hpp>
+#include <opm/simulators/linalg/bda/opencl/openclWellContributions.hpp>
 #endif
 
 #if HAVE_FPGA

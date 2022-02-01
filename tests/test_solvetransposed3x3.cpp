@@ -31,7 +31,7 @@
 
 #include <dune/istl/bcrsmatrix.hh>
 
-#include <opm/simulators/linalg/bda/CPR.hpp>
+#include <opm/simulators/linalg/bda/opencl/CPR.hpp>
 
 BOOST_AUTO_TEST_CASE(testsolvetransposed3x3)
 {

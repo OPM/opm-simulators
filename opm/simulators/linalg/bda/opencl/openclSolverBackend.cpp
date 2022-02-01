@@ -25,8 +25,8 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <dune/common/timer.hh>
 
-#include <opm/simulators/linalg/bda/openclSolverBackend.hpp>
-#include <opm/simulators/linalg/bda/openclWellContributions.hpp>
+#include <opm/simulators/linalg/bda/opencl/openclSolverBackend.hpp>
+#include <opm/simulators/linalg/bda/opencl/openclWellContributions.hpp>
 
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
 #include <opm/simulators/linalg/bda/Reorder.hpp>

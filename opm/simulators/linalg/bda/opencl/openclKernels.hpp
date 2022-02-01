@@ -23,7 +23,7 @@
 #include <string>
 #include <memory>
 
-#include <opm/simulators/linalg/bda/opencl.hpp>
+#include <opm/simulators/linalg/bda/opencl/opencl.hpp>
 
 namespace Opm
 {

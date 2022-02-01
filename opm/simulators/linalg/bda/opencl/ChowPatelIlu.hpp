@@ -23,7 +23,7 @@
 
 #include <mutex>
 
-#include <opm/simulators/linalg/bda/opencl.hpp>
+#include <opm/simulators/linalg/bda/opencl/opencl.hpp>
 #include <opm/simulators/linalg/bda/BlockedMatrix.hpp>
 
 // Variables CHOW_PATEL, CHOW_PATEL_GPU and CHOW_PATEL_GPU_PARALLEL are set by CMake

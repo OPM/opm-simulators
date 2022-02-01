@@ -22,8 +22,8 @@
 
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
 
-#include <opm/simulators/linalg/bda/opencl.hpp>
-#include <opm/simulators/linalg/bda/openclKernels.hpp>
+#include <opm/simulators/linalg/bda/opencl/opencl.hpp>
+#include <opm/simulators/linalg/bda/opencl/openclKernels.hpp>
 
 #include <memory>
 #include <vector>

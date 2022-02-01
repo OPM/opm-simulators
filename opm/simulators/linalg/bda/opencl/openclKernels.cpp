@@ -25,8 +25,8 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <dune/common/timer.hh>
 
-#include <opm/simulators/linalg/bda/openclKernels.hpp>
-#include <opm/simulators/linalg/bda/ChowPatelIlu.hpp>  // defines CHOW_PATEL
+#include <opm/simulators/linalg/bda/opencl/openclKernels.hpp>
+#include <opm/simulators/linalg/bda/opencl/ChowPatelIlu.hpp>  // defines CHOW_PATEL
 
 namespace Opm
 {

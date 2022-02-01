@@ -22,7 +22,7 @@
 
 #include <vector>
 
-#include <opm/simulators/linalg/bda/opencl.hpp>
+#include <opm/simulators/linalg/bda/opencl/opencl.hpp>
 
 namespace Opm
 {

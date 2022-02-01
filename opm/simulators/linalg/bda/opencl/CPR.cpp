@@ -30,8 +30,8 @@
 
 #include <opm/simulators/linalg/bda/BdaBridge.hpp>
 #include <opm/simulators/linalg/bda/BlockedMatrix.hpp>
-#include <opm/simulators/linalg/bda/CPR.hpp>
-#include <opm/simulators/linalg/bda/OpenclMatrix.hpp>
+#include <opm/simulators/linalg/bda/opencl/CPR.hpp>
+#include <opm/simulators/linalg/bda/opencl/OpenclMatrix.hpp>
 
 
 namespace Opm

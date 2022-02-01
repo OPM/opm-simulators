@@ -22,7 +22,7 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/ErrorMacros.hpp>
 
-#include <opm/simulators/linalg/bda/OpenclMatrix.hpp>
+#include <opm/simulators/linalg/bda/opencl/OpenclMatrix.hpp>
 #include <opm/simulators/linalg/bda/BlockedMatrix.hpp>
 #include <opm/simulators/linalg/bda/Matrix.hpp>
 
