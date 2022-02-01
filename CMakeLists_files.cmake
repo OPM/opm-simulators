@@ -31,6 +31,7 @@ list (APPEND MAIN_SOURCE_FILES
   ebos/eclgenerictracermodel.cc
   ebos/eclgenericvanguard.cc
   ebos/eclgenericwriter.cc
+  ebos/eclinterregflows.cc
   ebos/ecltransmissibility.cc
   opm/core/props/BlackoilPhases.cpp
   opm/core/props/phaseUsageFromDeck.cpp
@@ -140,6 +141,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_convergencereport.cpp
   tests/test_deferredlogger.cpp
   tests/test_ecl_output.cc
+  tests/test_eclinterregflows.cpp
   tests/test_equil.cc
   tests/test_flexiblesolver.cpp
   tests/test_glift1.cpp
@@ -229,6 +231,7 @@ list (APPEND TEST_DATA_FILES
 # originally generated with the command:
 # find opm -name '*.h*' -a ! -name '*-pch.hpp' -printf '\t%p\n' | sort
 list (APPEND PUBLIC_HEADER_FILES
+  ebos/eclinterregflows.hh
   opm/simulators/flow/countGlobalCells.hpp
   opm/simulators/flow/BlackoilModelEbos.hpp
   opm/simulators/flow/BlackoilModelParametersEbos.hpp
