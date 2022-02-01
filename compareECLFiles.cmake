@@ -1081,6 +1081,7 @@ add_test_compareECLFiles(CASENAME base_wt_tracer
                          DIR tracer
 			 RESTART_STEP 1,3,7)
 
+
 add_test_compareECLFiles(CASENAME min_bhp_1
                          FILENAME MIN_BHP_1
                          SIMULATOR flow
@@ -1164,7 +1165,6 @@ add_test_compareECLFiles(CASENAME max_wgr_1
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR wtest/wecon_wgr_max )
-
 # Restart tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-restart-regressionTest.sh "")
 # Cruder tolerances for the restarted tests
