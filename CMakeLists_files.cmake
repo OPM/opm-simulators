@@ -135,30 +135,30 @@ endif()
 # originally generated with the command:
 # find tests -name '*.cpp' -a ! -wholename '*/not-unit/*' -printf '\t%p\n' | sort
 list (APPEND TEST_SOURCE_FILES
-  tests/test_equil.cc
-  tests/test_ecl_output.cc
+  tests/test_ALQState.cpp
   tests/test_blackoil_amg.cpp
   tests/test_convergencereport.cpp
+  tests/test_deferredlogger.cpp
+  tests/test_ecl_output.cc
+  tests/test_equil.cc
   tests/test_flexiblesolver.cpp
-  tests/test_preconditionerfactory.cpp
+  tests/test_glift1.cpp
   tests/test_graphcoloring.cpp
-  tests/test_vfpproperties.cpp
+  tests/test_GroupState.cpp
+  tests/test_invert.cpp
+  tests/test_keyword_validator.cpp
   tests/test_milu.cpp
   tests/test_multmatrixtransposed.cpp
-  tests/test_wellmodel.cpp
-  tests/test_deferredlogger.cpp
-  tests/test_timer.cpp
-  tests/test_invert.cpp
-  tests/test_stoppedwells.cpp
-  tests/test_relpermdiagnostics.cpp
   tests/test_norne_pvt.cpp
+  tests/test_parallelwellinfo.cpp
+  tests/test_preconditionerfactory.cpp
+  tests/test_relpermdiagnostics.cpp
+  tests/test_stoppedwells.cpp
+  tests/test_timer.cpp
+  tests/test_vfpproperties.cpp
+  tests/test_wellmodel.cpp
   tests/test_wellprodindexcalculator.cpp
   tests/test_wellstate.cpp
-  tests/test_parallelwellinfo.cpp
-  tests/test_glift1.cpp
-  tests/test_keyword_validator.cpp
-  tests/test_GroupState.cpp
-  tests/test_ALQState.cpp
   )
 
 if(MPI_FOUND)
