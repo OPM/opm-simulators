@@ -408,8 +408,8 @@ getStdWellRates_(const WellInterfaceGeneric &well)
     const int well_index = well.indexOfWell();
     const auto& ws = this->well_state_.well(well_index);
     const auto& pu = well.phaseUsage();
-    auto oil_rate = -ws.surface_rates[pu.phase_pos[Oil]];
-    auto gas_rate = -ws.surface_rates[pu.phase_pos[Gas]];
+    auto oil_rate = ws.well_potentials[pu.phase_pos[Oil]];
+    auto gas_rate = ws.well_potentials[pu.phase_pos[Gas]];
     return {oil_rate, gas_rate};
 }
 

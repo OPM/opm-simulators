@@ -387,18 +387,18 @@ getProducerWellRates_(int well_index)
 {
     const auto& pu = this->phase_usage_;
     const auto& ws= this->well_state_.well(well_index);
-    const auto& wrate = ws.surface_rates;
+    const auto& wrate = ws.well_potentials;
 
     const auto oil_rate = pu.phase_used[Oil]
-        ? -wrate[pu.phase_pos[Oil]]
+        ? wrate[pu.phase_pos[Oil]]
         : 0.0;
 
     const auto gas_rate = pu.phase_used[Gas]
-        ? -wrate[pu.phase_pos[Gas]]
+        ? wrate[pu.phase_pos[Gas]]
         : 0.0;
 
     const auto water_rate = pu.phase_used[Water]
-        ? -wrate[pu.phase_pos[Water]]
+        ? wrate[pu.phase_pos[Water]]
         : 0.0;
 
     return {oil_rate, gas_rate, water_rate};
