@@ -1086,84 +1086,84 @@ add_test_compareECLFiles(CASENAME min_bhp_1
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR wtest/bhp_min
+                         DIR wtest/bhp_min )
 
 add_test_compareECLFiles(CASENAME min_bhp_2
                          FILENAME MIN_BHP_2
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR wtest/bhp_min
+                         DIR wtest/bhp_min )
 
 add_test_compareECLFiles(CASENAME min_bhp_3
                          FILENAME MIN_BHP_3
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR wtest/bhp_min
+                         DIR wtest/bhp_min )
 
 add_test_compareECLFiles(CASENAME min_thp_1
                          FILENAME MIN_THP_1
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR wtest/thp_min
+                         DIR wtest/thp_min )
 
 add_test_compareECLFiles(CASENAME max_gor_1
                          FILENAME MAX_GOR_1
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR wtest/wecon_gor_max
+                         DIR wtest/wecon_gor_max )
 
 add_test_compareECLFiles(CASENAME min_gasrate_1
                          FILENAME MIN_GASRATE_1
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR wtest/wecon_qg_min
+                         DIR wtest/wecon_qg_min )
 
 add_test_compareECLFiles(CASENAME min_qoil_1
                          FILENAME MIN_QOIL_1
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR wtest/wecon_qo_min
+                         DIR wtest/wecon_qo_min )
 
 add_test_compareECLFiles(CASENAME max_watercut_1
                          FILENAME MAX_WATERCUT_1
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR wtest/wecon_wct_max
+                         DIR wtest/wecon_wct_max )
 
 add_test_compareECLFiles(CASENAME max_watercut_2
                          FILENAME MAX_WATERCUT_2
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR wtest/wecon_wct_max
+                         DIR wtest/wecon_wct_max )
 
 add_test_compareECLFiles(CASENAME max_watercut_3
                          FILENAME MAX_WATERCUT_3
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR wtest/wecon_wct_max
+                         DIR wtest/wecon_wct_max )
 
 add_test_compareECLFiles(CASENAME max_watercut_4
                          FILENAME MAX_WATERCUT_4
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR wtest/wecon_wct_max
+                         DIR wtest/wecon_wct_max )
 
 add_test_compareECLFiles(CASENAME max_wgr_1
                          FILENAME MAX_WGR_1
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR wtest/wecon_wgr_max
+                         DIR wtest/wecon_wgr_max )
 
 # Restart tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-restart-regressionTest.sh "")
