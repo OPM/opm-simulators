@@ -21,24 +21,17 @@
 #define OPM_OPENCLSOLVER_BACKEND_HEADER_INCLUDED
 
 #include <opm/simulators/linalg/bda/opencl/opencl.hpp>
-#include <opm/simulators/linalg/bda/opencl/openclKernels.hpp>
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
 #include <opm/simulators/linalg/bda/BdaSolver.hpp>
 #include <opm/simulators/linalg/bda/ILUReorder.hpp>
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
-#include <opm/simulators/linalg/bda/opencl/BILU0.hpp>
 
 #include <opm/simulators/linalg/bda/opencl/Preconditioner.hpp>
-
-#include <tuple>
 
 namespace Opm
 {
 namespace Accelerator
 {
-
-template <unsigned int block_size>
-class CPR;
 
 /// This class implements a opencl-based ilu0-bicgstab solver on GPU
 template <unsigned int block_size>
@@ -183,9 +176,9 @@ public:
     /// \param[in] tolerance                  required relative tolerance for openclSolver
     /// \param[in] platformID                 the OpenCL platform to be used
     /// \param[in] deviceID                   the device to be used
-    /// \param[in] opencl_ilu_reorder         select either level_scheduling or graph_coloring, see BILU0.hpp for explanation
+    /// \param[in] opencl_ilu_reorder         select either level_scheduling or graph_coloring, see Reorder.hpp for explanation
     /// \param[in] linsolver                  indicating the preconditioner, equal to the --linsolver cmdline argument
-    ///                                       only ilu0 and cpr_quasiimpes are supported
+    ///                                       only ilu0, cpr_quasiimpes and isai are supported
     openclSolverBackend(int linear_solver_verbosity, int maxit, double tolerance, unsigned int platformID, unsigned int deviceID,
         ILUReorder opencl_ilu_reorder, std::string linsolver);
 

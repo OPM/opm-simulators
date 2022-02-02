@@ -32,6 +32,7 @@
 #include <opm/simulators/linalg/bda/BlockedMatrix.hpp>
 #include <opm/simulators/linalg/bda/opencl/CPR.hpp>
 #include <opm/simulators/linalg/bda/opencl/OpenclMatrix.hpp>
+#include <opm/simulators/linalg/bda/opencl/openclKernels.hpp>
 
 
 namespace Opm

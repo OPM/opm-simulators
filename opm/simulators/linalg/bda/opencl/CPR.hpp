@@ -30,24 +30,19 @@
 #endif
 #include <dune/istl/umfpack.hh>
 
-#include <opm/simulators/linalg/bda/opencl/BILU0.hpp>
 #include <opm/simulators/linalg/bda/opencl/opencl.hpp>
+#include <opm/simulators/linalg/bda/opencl/BILU0.hpp>
 #include <opm/simulators/linalg/bda/Matrix.hpp>
 #include <opm/simulators/linalg/bda/opencl/OpenclMatrix.hpp>
 #include <opm/simulators/linalg/bda/ILUReorder.hpp>
 #include <opm/simulators/linalg/bda/opencl/Preconditioner.hpp>
 
-#include <opm/simulators/linalg/bda/opencl/openclKernels.hpp>
-#include <opm/simulators/linalg/bda/opencl/ChowPatelIlu.hpp>
 #include <opm/simulators/linalg/bda/opencl/openclSolverBackend.hpp>
 
 namespace Opm
 {
 namespace Accelerator
 {
-
-template <unsigned int block_size>
-class openclSolverBackend;
 
 class BlockedMatrix;
 

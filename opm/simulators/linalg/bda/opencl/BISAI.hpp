@@ -22,19 +22,14 @@
 
 #include <mutex>
 
-#include <opm/simulators/linalg/bda/opencl/BILU0.hpp>
 #include <opm/simulators/linalg/bda/opencl/opencl.hpp>
-#include <opm/simulators/linalg/bda/opencl/openclKernels.hpp>
-#include <opm/simulators/linalg/bda/opencl/openclSolverBackend.hpp>
+#include <opm/simulators/linalg/bda/opencl/BILU0.hpp>
 #include <opm/simulators/linalg/bda/opencl/Preconditioner.hpp>
 
 namespace Opm
 {
 namespace Accelerator
 {
-
-template <unsigned int block_size>
-class openclSolverBackend;
 
 class BlockedMatrix;
 

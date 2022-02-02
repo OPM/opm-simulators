@@ -24,6 +24,7 @@
 #include <dune/common/timer.hh>
 #include <opm/simulators/linalg/MatrixBlock.hpp>
 
+#include <opm/simulators/linalg/bda/BlockedMatrix.hpp>
 #include <opm/simulators/linalg/bda/opencl/ChowPatelIlu.hpp>
 
 #if CHOW_PATEL

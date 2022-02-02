@@ -26,7 +26,6 @@
 #include <opm/simulators/linalg/bda/ILUReorder.hpp>
 
 #include <opm/simulators/linalg/bda/opencl/opencl.hpp>
-#include <opm/simulators/linalg/bda/opencl/openclKernels.hpp>
 #include <opm/simulators/linalg/bda/opencl/Preconditioner.hpp>
 #include <opm/simulators/linalg/bda/opencl/ChowPatelIlu.hpp>
 

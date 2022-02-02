@@ -26,8 +26,10 @@
 #include <dune/common/timer.hh>
 
 #include <opm/simulators/linalg/bda/BdaSolver.hpp>
+#include <opm/simulators/linalg/bda/opencl/opencl.hpp>
 #include <opm/simulators/linalg/bda/opencl/BILU0.hpp>
 #include <opm/simulators/linalg/bda/opencl/BISAI.hpp>
+#include <opm/simulators/linalg/bda/opencl/openclKernels.hpp>
 #include <opm/simulators/linalg/bda/Reorder.hpp>
 
 namespace Opm
