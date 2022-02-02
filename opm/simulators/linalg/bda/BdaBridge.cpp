@@ -30,7 +30,7 @@
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
 
 #if HAVE_CUDA
-#include <opm/simulators/linalg/bda/cusparseSolverBackend.hpp>
+#include <opm/simulators/linalg/bda/cuda/cusparseSolverBackend.hpp>
 #endif
 
 #if HAVE_OPENCL

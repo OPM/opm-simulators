@@ -25,10 +25,10 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <dune/common/timer.hh>
 
-#include <opm/simulators/linalg/bda/cusparseSolverBackend.hpp>
-#include <opm/simulators/linalg/bda/cuWellContributions.hpp>
+#include <opm/simulators/linalg/bda/cuda/cusparseSolverBackend.hpp>
+#include <opm/simulators/linalg/bda/cuda/cuWellContributions.hpp>
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
-#include <opm/simulators/linalg/bda/cuda_header.hpp>
+#include <opm/simulators/linalg/bda/cuda/cuda_header.hpp>
 
 #include "cublas_v2.h"
 #include "cusparse_v2.h"

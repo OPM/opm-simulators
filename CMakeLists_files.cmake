@@ -93,8 +93,8 @@ list (APPEND MAIN_SOURCE_FILES
   )
 
 if(CUDA_FOUND)
-  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/cusparseSolverBackend.cu)
-  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/cuWellContributions.cu)
+  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/cuda/cusparseSolverBackend.cu)
+  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/cuda/cuWellContributions.cu)
 endif()
 if(OPENCL_FOUND)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/BlockedMatrix.cpp)
@@ -124,7 +124,7 @@ endif()
 if(HAVE_AMGCL)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/amgclSolverBackend.cpp)
   if(CUDA_FOUND)
-    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/amgclSolverBackend.cu)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/cuda/amgclSolverBackend.cu)
   endif()
 endif()
 if(MPI_FOUND)
@@ -257,8 +257,8 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/bda/opencl/BILU0.hpp
   opm/simulators/linalg/bda/BlockedMatrix.hpp
   opm/simulators/linalg/bda/opencl/CPR.hpp
-  opm/simulators/linalg/bda/cuda_header.hpp
-  opm/simulators/linalg/bda/cusparseSolverBackend.hpp
+  opm/simulators/linalg/bda/cuda/cuda_header.hpp
+  opm/simulators/linalg/bda/cuda/cusparseSolverBackend.hpp
   opm/simulators/linalg/bda/opencl/ChowPatelIlu.hpp
   opm/simulators/linalg/bda/opencl/BISAI.hpp
   opm/simulators/linalg/bda/FPGABILU0.hpp

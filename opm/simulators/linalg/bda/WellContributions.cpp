@@ -30,7 +30,7 @@
 #endif
 
 #ifdef HAVE_CUDA
-#include <opm/simulators/linalg/bda/cuWellContributions.hpp>
+#include <opm/simulators/linalg/bda/cuda/cuWellContributions.hpp>
 #endif
 
 namespace Opm
