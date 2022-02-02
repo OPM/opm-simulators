@@ -533,7 +533,7 @@ void ChowPatelIlu<block_size>::decomposition(
     Timer t_total, t_preprocessing;
 
     // Ut is actually BSC format
-    std::unique_ptr<BlockedMatrix<bs> > Ut = std::make_unique<BlockedMatrix<bs> >(Nb, (nnzbs + Nb) / 2);
+    std::unique_ptr<BlockedMatrix> Ut = std::make_unique<BlockedMatrix>(Nb, (nnzbs + Nb) / 2, bs);
 
     Lmat->rowPointers[0] = 0;
     for (int i = 0; i < Nb+1; i++) {
@@ -990,7 +990,7 @@ void ChowPatelIlu<block_size>::gpu_decomposition(
 #define INSTANTIATE_BDA_FUNCTIONS(n)                                          \
 template void ChowPatelIlu<n>::decomposition(                                 \
     cl::CommandQueue *queue, cl::Context *context,                            \
-    BlockedMatrix<n> *LUmat, BlockedMatrix<n> *Lmat, BlockedMatrix<n> *Umat,  \
+    BlockedMatrix *LUmat, BlockedMatrix *Lmat, BlockedMatrix *Umat,  \
     double *invDiagVals, std::vector<int>& diagIndex,                         \
     cl::Buffer& d_diagIndex, cl::Buffer& d_invDiagVals,                       \
     cl::Buffer& d_Lvals, cl::Buffer& d_Lcols, cl::Buffer& d_Lrows,            \

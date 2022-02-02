@@ -121,7 +121,11 @@ public:
 
     std::pair<cl::Buffer, cl::Buffer> get_preconditioner_data()
     {
+#if CHOW_PATEL
+        return std::make_pair(s.Lvals, s.invDiagVals); // send dummy, BISAI is disabled when ChowPatel is selected
+#else
         return std::make_pair(s.LUvals, s.invDiagVals);
+#endif
     }
 
 };

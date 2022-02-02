@@ -31,6 +31,7 @@
 #include <opm/simulators/linalg/bda/opencl/BISAI.hpp>
 #include <opm/simulators/linalg/bda/opencl/openclKernels.hpp>
 #include <opm/simulators/linalg/bda/Reorder.hpp>
+#include <opm/simulators/linalg/bda/opencl/ChowPatelIlu.hpp> // disable BISAI if ChowPatel is selected
 
 namespace Opm
 {
@@ -44,6 +45,9 @@ template <unsigned int block_size>
 BISAI<block_size>::BISAI(ILUReorder opencl_ilu_reorder_, int verbosity_) :
     Preconditioner<block_size>(verbosity_)
 {
+#if CHOW_PATEL
+    OPM_THROW(std::logic_error, "Error --linsolver=isai cannot be used if ChowPatelIlu is used, probably defined by CMake\n");
+#endif
     bilu0 = std::make_unique<BILU0<block_size> >(opencl_ilu_reorder_, verbosity_);
 }
 
