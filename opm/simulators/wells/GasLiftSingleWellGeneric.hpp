@@ -224,14 +224,14 @@ protected:
                                double gas_rate, double new_gas_rate);
         bool checkAlqOutsideLimits(double alq, double oil_rate);
         bool checkEcoGradient(double gradient);
-        bool checkGroupALQrateExceeded(double delta_alq);
-        bool checkGroupTotalRateExceeded(double delta_alq, double delta_gas_rate);
         bool checkOilRateExceedsTarget(double oil_rate);
         bool checkRatesViolated(const LimitedRates& rates) const;
         void debugShowIterationInfo(double alq);
         double getBhpWithLimit();
         void warn_(std::string msg) {parent.displayWarning_(msg);}
     };
+    bool checkGroupALQrateExceeded(double delta_alq) const;
+    bool checkGroupTotalRateExceeded(double delta_alq, double delta_gas_rate) const;
 
     std::pair<std::optional<double>, bool> addOrSubtractAlqIncrement_(
                             double alq, bool increase) const;
@@ -295,6 +295,8 @@ protected:
                      const int iteration_idx);
     std::pair<LimitedRates, double> maybeAdjustALQbeforeOptimizeLoop_(
                         const LimitedRates& rates, double alq, bool increase) const;
+    std::pair<LimitedRates, double> reduceALQtoGroupAlqLimits_(
+                        double alq, const LimitedRates& rates) const;
     std::pair<LimitedRates, double> reduceALQtoGroupTarget(
                         double alq, const LimitedRates& rates) const;
     std::pair<LimitedRates, double> reduceALQtoWellTarget_(
