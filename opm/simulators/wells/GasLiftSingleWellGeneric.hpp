@@ -95,15 +95,16 @@ public:
 
 protected:
     GasLiftSingleWellGeneric(
-        DeferredLogger &deferred_logger,
-        WellState &well_state,
+        DeferredLogger& deferred_logger,
+        WellState& well_state,
         const GroupState& group_state,
         const Well& ecl_well,
         const SummaryState& summary_state,
-        GasLiftGroupInfo &group_info,
+        GasLiftGroupInfo& group_info,
+        const PhaseUsage& phase_usage,
         const Schedule& schedule,
         const int report_step_idx,
-        GLiftSyncGroups &sync_groups,
+        GLiftSyncGroups& sync_groups,
         bool glift_debug
     );
 
@@ -249,6 +250,7 @@ protected:
                                      double oil_rate, double new_oil_rate,
                                      double gas_rate, double new_gas_rate,
                                      bool increase) const;
+    void debugPrintWellStateRates() const;
     void debugShowAlqIncreaseDecreaseCounts_();
     void debugShowBhpAlqTable_();
     void debugShowLimitingTargets_(const LimitedRates& rates) const;
@@ -282,6 +284,7 @@ protected:
     std::pair<double, bool> getWaterRateWithLimit_(const BasicRates& rates) const;
     std::pair<double, std::optional<Rate>> getWaterRateWithLimit2_(
                            const BasicRates& rates) const;
+    BasicRates getWellStateRates_() const;
     bool hasProductionControl_(Rate rate) const;
     std::pair<LimitedRates, double> increaseALQtoPositiveOilRate_(
                            double alq, const LimitedRates& orig_rates) const;
@@ -306,10 +309,10 @@ protected:
         const LimitedRates& new_rates,
         double delta_alq) const;
     LimitedRates updateRatesToGroupLimits_(
-        const LimitedRates& rates, const LimitedRates& new_rates) const;
+        const BasicRates& rates, const LimitedRates& new_rates) const;
     void updateWellStateAlqFixedValue_(const GasLiftOpt::Well& well);
     bool useFixedAlq_(const GasLiftOpt::Well& well);
-    void warnGroupInfoGroupRatesExceedTarget(
+    void debugInfoGroupRatesExceedTarget(
         Rate rate_type, const std::string& gr_name, double rate, double target) const;
     void warnMaxIterationsExceeded_();
 
@@ -317,6 +320,7 @@ protected:
     const Well& ecl_well_;
     const SummaryState& summary_state_;
     GasLiftGroupInfo& group_info_;
+    const PhaseUsage& phase_usage_;
     GLiftSyncGroups& sync_groups_;
     const Well::ProductionControls controls_;
 
