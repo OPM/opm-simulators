@@ -1129,6 +1129,7 @@ runOptimizeLoop_(bool increase)
         if (!alq_opt) break;
         auto delta_alq = *alq_opt - temp_alq;
         if (state.checkGroupALQrateExceeded(delta_alq)) break;
+
         temp_alq = *alq_opt;
         if (this->debug) state.debugShowIterationInfo(temp_alq);
         rates = new_rates;
@@ -1137,6 +1138,9 @@ runOptimizeLoop_(bool increase)
         if (temp_rates->bhp_is_limited)
             state.stop_iteration = true;
         temp_rates = updateRatesToGroupLimits_(*rates, *temp_rates);
+
+        auto delta_gas_rate = temp_rates->gas - rates->gas;
+        if (state.checkGroupTotalRateExceeded(delta_alq, delta_gas_rate)) break;
 
 /*        if (this->debug_abort_if_increase_and_gas_is_limited_) {
             if (gas_is_limited && increase) {
@@ -1552,6 +1556,33 @@ checkGroupALQrateExceeded(double delta_alq)
     return false;
 }
 
+bool
+GasLiftSingleWellGeneric::OptimizeState::
+checkGroupTotalRateExceeded(double delta_alq, double delta_gas_rate)
+{
+    const auto &pairs =
+        this->parent.group_info_.getWellGroups(this->parent.well_name_);
+    for (const auto &[group_name, efficiency] : pairs) {
+        auto max_total_rate_opt = this->parent.group_info_.maxTotalGasRate(group_name);
+        if (max_total_rate_opt) {
+            double alq =
+                this->parent.group_info_.alqRate(group_name) + efficiency * delta_alq;
+            double gas_rate =
+                this->parent.group_info_.gasRate(group_name) + efficiency * delta_gas_rate;
+
+            if ( (alq + gas_rate) > *max_total_rate_opt) {
+                if (this->parent.debug) {
+                    const std::string msg = fmt::format(
+                        "Group {} : total gas rate {} exceeds max_total_gas_rate {}. Stopping iteration",
+                        group_name, alq + gas_rate, *max_total_rate_opt);
+                    this->parent.displayDebugMessage_(msg);
+                }
+                return true;
+            }
+        }
+    }
+    return false;
+}
 //
 // bool checkEcoGradient(double gradient)
 //

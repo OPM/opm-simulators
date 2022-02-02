@@ -225,6 +225,7 @@ protected:
         bool checkAlqOutsideLimits(double alq, double oil_rate);
         bool checkEcoGradient(double gradient);
         bool checkGroupALQrateExceeded(double delta_alq);
+        bool checkGroupTotalRateExceeded(double delta_alq, double delta_gas_rate);
         bool checkOilRateExceedsTarget(double oil_rate);
         bool checkRatesViolated(const LimitedRates& rates) const;
         void debugShowIterationInfo(double alq);
