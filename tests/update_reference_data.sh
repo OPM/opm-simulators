@@ -277,7 +277,7 @@ fi
 
 # Add potential new files
 git status
-untracked=`git status | sed '1,/Untracked files/d' | tail -n +3 | head -n -2`
+untracked=`git status | sed '1,/Untracked files/d' | tail -n +2 | head -n -2`
 echo "unt: ${untracked}"
 if [ -n "$untracked" ]
 then
