@@ -262,7 +262,7 @@ then
 fi
 
 # Add potential new files
-untracked=`git status | sed '1,/Untracked files/d' | tail -n +3 | head -n -2`
+untracked=`git status --porcelain | awk '$1~/\?/{print $2}'`
 if [ -n "$untracked" ]
 then
   git add $untracked
