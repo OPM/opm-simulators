@@ -25,6 +25,7 @@
 #include <opm/simulators/wells/TargetCalculator.hpp>
 
 #include <dune/common/version.hh>
+#include <limits>
 
 namespace Opm
 {
@@ -951,14 +952,17 @@ namespace Opm
             {
                 auto rates = ws.surface_rates;
                 this->adaptRatesForVFP(rates);
-                double bhp = this->calculateBhpFromThp(well_state, rates, well, summaryState, this->getRefDensity(), deferred_logger);
+                const double total_rate = -std::accumulate(rates.begin(), rates.end(), 0.0);
+                double bhp = controls.bhp_limit;
+                if (total_rate >= std::numeric_limits<double>::epsilon()) {
+                    bhp = this->calculateBhpFromThp(well_state, rates, well, summaryState, this->getRefDensity(), deferred_logger);
+                }
                 ws.bhp = bhp;
 
                 // if the total rates are negative or zero
                 // we try to provide a better intial well rate
                 // using the well potentials
-                double total_rate = -std::accumulate(rates.begin(), rates.end(), 0.0);
-                if (total_rate <= 0.0){
+                if (total_rate <= 0.) {
                     for (int p = 0; p<np; ++p) {
                         ws.surface_rates[p] = -ws.well_potentials[p];
                     }

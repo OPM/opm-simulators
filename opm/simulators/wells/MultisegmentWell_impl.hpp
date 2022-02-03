@@ -298,11 +298,31 @@ namespace Opm
         debug_cost_counter_ = 0;
         // does the well have a THP related constraint?
         const auto& summaryState = ebosSimulator.vanguard().summaryState();
-        if (!Base::wellHasTHPConstraints(summaryState) || bhp_controlled_well) {
+        if (!Base::wellHasTHPConstraints(summaryState)) {
             computeWellRatesAtBhpLimit(ebosSimulator, well_potentials, deferred_logger);
         } else {
-            well_potentials = computeWellPotentialWithTHP(
-                well_state, ebosSimulator, deferred_logger);
+            auto bhp_well_potentials = well_potentials;
+            auto thp_well_potentials = well_potentials;
+            computeWellRatesAtBhpLimit(ebosSimulator, bhp_well_potentials, deferred_logger);
+            // TODO: we probably should check whether converged with BHP wether honor THP limit
+            thp_well_potentials = computeWellPotentialWithTHP(ebosSimulator, deferred_logger);
+            const double sum_bhp_well_potentials = std::abs(std::accumulate(bhp_well_potentials.begin(), bhp_well_potentials.end(), 0.0));
+            const double sum_thp_well_potentials = std::abs(std::accumulate(thp_well_potentials.begin(), thp_well_potentials.end(), 0.0));
+            if (true) {
+                deferred_logger.debug(" well " + this->name() + " sum_bhp_well_potentials " + std::to_string(sum_bhp_well_potentials)
+                                     + " sum_thp_well_potentials " + std::to_string(sum_thp_well_potentials));
+            }
+            if (sum_thp_well_potentials < 1.e-14 || sum_thp_well_potentials > sum_bhp_well_potentials) {
+               well_potentials = bhp_well_potentials;
+               if (true) {
+                   deferred_logger.debug(" well " + this->name() + " get bhp_well_potentials as well potentials ");
+               }
+            } else {
+               well_potentials = thp_well_potentials;
+                if (true) {
+                    deferred_logger.debug(" well " + this->name() + " get thp_well_potentials as well potentials ");
+                }
+            }
         }
         deferred_logger.debug("Cost in iterations of finding well potential for well "
                               + this->name() + ": " + std::to_string(debug_cost_counter_));
