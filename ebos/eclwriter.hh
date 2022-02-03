@@ -39,6 +39,7 @@
 #include <ebos/eclgenericwriter.hh>
 
 #include <string>
+#include <limits>
 
 namespace Opm::Properties {
 
@@ -207,6 +208,27 @@ public:
         // Add TCPU
         if (totalCpuTime != 0.0) {
             miscSummaryData["TCPU"] = totalCpuTime;
+        }
+        if (this->sub_step_report_.total_newton_iterations != 0) {
+            miscSummaryData["NEWTON"] = this->sub_step_report_.total_newton_iterations;
+        }
+        if (this->sub_step_report_.total_linear_iterations != 0) {
+            miscSummaryData["MLINEARS"] = this->sub_step_report_.total_linear_iterations;
+        }
+        if (this->sub_step_report_.total_newton_iterations != 0) {
+            miscSummaryData["NLINEARS"] =  static_cast<float>(this->sub_step_report_.total_linear_iterations) / this->sub_step_report_.total_newton_iterations;
+        }
+        if (this->sub_step_report_.min_linear_iterations != std::numeric_limits<unsigned int>::max()) {
+            miscSummaryData["NLINSMIN"] = this->sub_step_report_.min_linear_iterations;
+        }
+        if (this->sub_step_report_.max_linear_iterations != 0) {
+            miscSummaryData["NLINSMAX"] = this->sub_step_report_.max_linear_iterations;
+        }
+        if (this->simulation_report_.success.total_newton_iterations != 0) {
+            miscSummaryData["MSUMLINS"] = this->simulation_report_.success.total_linear_iterations;
+        }
+        if (this->simulation_report_.success.total_newton_iterations != 0) {
+            miscSummaryData["MSUMNEWT"] = this->simulation_report_.success.total_newton_iterations;
         }
 
         this->evalSummary(reportStepNum, curTime,

@@ -70,6 +70,7 @@
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/ParallelSerialization.hpp>
+#include <opm/simulators/timestepping/SimulatorReport.hpp>
 
 #include <opm/models/utils/pffgridvector.hh>
 #include <opm/models/blackoil/blackoilmodel.hh>
@@ -1969,6 +1970,12 @@ public:
 
     const EclipseIO& eclIO() const
     { return eclWriter_->eclIO(); }
+
+    void setSubStepReport(const SimulatorReportSingle& report)
+    { return eclWriter_->setSubStepReport(report); }
+
+    void setSimulationReport(const SimulatorReport& report)
+    { return eclWriter_->setSimulationReport(report); }
 
     bool nonTrivialBoundaryConditions() const
     { return nonTrivialBoundaryConditions_; }

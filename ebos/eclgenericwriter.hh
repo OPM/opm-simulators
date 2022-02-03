@@ -32,6 +32,7 @@
 #include <ebos/ecltransmissibility.hh>
 
 #include <opm/models/parallel/tasklets.hh>
+#include <opm/simulators/timestepping/SimulatorReport.hpp>
 
 #include <cstddef>
 #include <map>
@@ -81,6 +82,16 @@ public:
         globalTrans_ = globalTrans;
     }
 
+    void setSubStepReport(const SimulatorReportSingle& report)
+    {
+        sub_step_report_ = report;
+    }
+    void setSimulationReport(const SimulatorReport& report)
+    {
+        simulation_report_ = report;
+    }
+
+
 protected:
     const TransmissibilityType& globalTrans() const;
 
@@ -127,6 +138,8 @@ protected:
     const Dune::CartesianIndexMapper<EquilGrid>* equilCartMapper_;
     const EquilGrid* equilGrid_;
     std::vector<std::size_t> wbp_index_list_;
+    SimulatorReportSingle sub_step_report_;
+    SimulatorReport simulation_report_;
 
 private:
     data::Solution computeTrans_(const std::unordered_map<int,int>& cartesianToActive) const;
