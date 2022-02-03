@@ -456,6 +456,9 @@ namespace Opm {
                     // this can be thrown by ISTL's ILU0 in block mode, yet is not an ISTLError
                 }
 
+                //Pass substep to eclwriter for summary output
+                ebosSimulator.problem().setSubStepReport(substepReport);
+
                 report += substepReport;
 
                 bool continue_on_uncoverged_solution = ignoreConvergenceFailure_ && !substepReport.converged && dt <= minTimeStep_;

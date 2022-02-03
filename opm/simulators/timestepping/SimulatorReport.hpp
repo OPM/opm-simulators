@@ -45,6 +45,9 @@ namespace Opm
         unsigned int total_linearizations;
         unsigned int total_newton_iterations;
         unsigned int total_linear_iterations;
+        unsigned int min_linear_iterations;
+        unsigned int max_linear_iterations;
+
 
         bool converged;
         int exit_status;

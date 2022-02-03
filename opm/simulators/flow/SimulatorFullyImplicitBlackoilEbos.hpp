@@ -259,6 +259,8 @@ public:
                 events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE);
             auto stepReport = adaptiveTimeStepping_->step(timer, *solver, event, nullptr);
             report_ += stepReport;
+            //Pass simulation report to eclwriter for summary output
+            ebosSimulator_.problem().setSimulationReport(report_);
         } else {
             // solve for complete report step
             auto stepReport = solver->step(timer);

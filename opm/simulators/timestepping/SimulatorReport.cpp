@@ -27,6 +27,7 @@
 #include <ostream>
 #include <sstream>
 #include <fmt/format.h>
+#include <limits>
 
 namespace Opm
 {
@@ -46,6 +47,8 @@ namespace Opm
           total_linearizations( 0 ),
           total_newton_iterations( 0 ),
           total_linear_iterations( 0 ),
+          min_linear_iterations ( std::numeric_limits<unsigned int>::max() ),
+          max_linear_iterations ( 0 ),
           converged(false),
           exit_status(EXIT_SUCCESS),
           global_time(0),
@@ -70,6 +73,11 @@ namespace Opm
         total_linearizations += sr.total_linearizations;
         total_newton_iterations += sr.total_newton_iterations;
         total_linear_iterations += sr.total_linear_iterations;
+        if (sr.total_linear_iterations > 0) {
+            min_linear_iterations = std::min(min_linear_iterations, sr.total_linear_iterations);
+        }
+        max_linear_iterations = std::max(max_linear_iterations, sr.total_linear_iterations);
+
         // It makes no sense adding time points. Therefore, do not 
         // overwrite the value of global_time which gets set in 
         // NonlinearSolverEbos.hpp by the line:
