@@ -50,9 +50,11 @@ addConnection(const Cell& source,
         };
     }
 
-    if (! (source.isInterior || destination.isInterior)) {
-        // Connection between two cells not on this process.  Unlikely, but
-        // nothing to do here.
+    if (! source.isInterior ||
+        (source.cartesianIndex > destination.cartesianIndex))
+    {
+        // Connection handled in different call.  Don't double-count
+        // contributions.
         return;
     }
 
@@ -64,14 +66,9 @@ addConnection(const Cell& source,
         return;
     }
 
-    if ((source.isInterior && destination.isInterior) ||
-        (source.isInterior && (r1 < r2)) ||
-        (destination.isInterior && (r2 < r1)))
-    {
-        // Inter-region connection internal to an MPI rank or this rank owns
-        // the flow rate across this connection.
-        this->iregFlow_.addConnection(r1, r2, rates);
-    }
+    // Inter-region connection internal to an MPI rank or this rank owns
+    // the flow rate across this connection.
+    this->iregFlow_.addConnection(r1, r2, rates);
 }
 
 void Opm::EclInterRegFlowMapSingleFIP::compress()
@@ -106,4 +103,110 @@ assignGlobalMaxRegionID(const std::size_t regID)
 
     this->maxGlobalRegionID_ = regID;
     return true;
+}
+
+// =====================================================================
+//
+// Implementation of EclInterRegFlowMap (wrapper for multiple arrays)
+//
+// =====================================================================
+
+Opm::EclInterRegFlowMap::
+EclInterRegFlowMap(const std::size_t                numCells,
+                   const std::vector<SingleRegion>& regions)
+{
+    this->regionMaps_.reserve(regions.size());
+    this->names_.reserve(regions.size());
+
+    this->numCells_ = numCells;
+
+    for (const auto& region : regions) {
+        this->regionMaps_.emplace_back(region.definition);
+        this->names_.push_back(region.name);
+    }
+}
+
+void
+Opm::EclInterRegFlowMap::
+addConnection(const Cell& source,
+              const Cell& destination,
+              const data::InterRegFlowMap::FlowRates& rates)
+{
+    for (auto& regionMap : this->regionMaps_) {
+        regionMap.addConnection(source, destination, rates);
+    }
+}
+
+void Opm::EclInterRegFlowMap::compress()
+{
+    for (auto& regionMap : this->regionMaps_) {
+        regionMap.compress();
+    }
+}
+
+void Opm::EclInterRegFlowMap::clear()
+{
+    for (auto& regionMap : this->regionMaps_) {
+        regionMap.clear();
+    }
+
+    this->readIsConsistent_ = true;
+}
+
+const std::vector<std::string>&
+Opm::EclInterRegFlowMap::names() const
+{
+    return this->names_;
+}
+
+std::vector<Opm::data::InterRegFlowMap>
+Opm::EclInterRegFlowMap::getInterRegFlows() const
+{
+    auto maps = std::vector<data::InterRegFlowMap>{};
+    maps.reserve(this->regionMaps_.size());
+
+    for (auto& regionMap : this->regionMaps_) {
+        maps.push_back(regionMap.getInterRegFlows());
+    }
+
+    return maps;
+}
+
+std::vector<std::size_t>
+Opm::EclInterRegFlowMap::getLocalMaxRegionID() const
+{
+    auto maxLocalRegionID = std::vector<std::size_t>{};
+    maxLocalRegionID.reserve(this->regionMaps_.size());
+
+    for (auto& regionMap : this->regionMaps_) {
+        maxLocalRegionID.push_back(regionMap.getLocalMaxRegionID());
+    }
+
+    return maxLocalRegionID;
+}
+
+bool
+Opm::EclInterRegFlowMap::
+assignGlobalMaxRegionID(const std::vector<std::size_t>& regID)
+{
+    if (regID.size() != this->regionMaps_.size()) {
+        return false;
+    }
+
+    auto assignmentOK = true;
+
+    const auto numReg = regID.size();
+    for (auto region = 0*numReg; region < numReg; ++region) {
+        const auto ok = this->regionMaps_[region]
+            .assignGlobalMaxRegionID(regID[region]);
+
+        assignmentOK = assignmentOK && ok;
+    }
+
+    return assignmentOK;
+}
+
+bool Opm::EclInterRegFlowMap::readIsConsistent() const
+{
+    return this->readIsConsistent_;
 }
