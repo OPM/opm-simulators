@@ -23,8 +23,7 @@
 
 #include <mutex>
 
-#include <opm/simulators/linalg/bda/opencl.hpp>
-#include <opm/simulators/linalg/bda/BlockedMatrix.hpp>
+#include <opm/simulators/linalg/bda/opencl/opencl.hpp>
 
 // Variables CHOW_PATEL, CHOW_PATEL_GPU and CHOW_PATEL_GPU_PARALLEL are set by CMake
 // Pass -DUSE_CHOW_PATEL_ILU=1 to cmake to define CHOW_PATEL and use the iterative ILU decomposition
@@ -47,6 +46,7 @@ namespace Opm
 namespace Accelerator
 {
 
+class BlockedMatrix;
 
 // This class implements a blocked version on GPU of the Fine-Grained Parallel ILU (FGPILU) by Chow and Patel 2015:
 //     FINE-GRAINED PARALLEL INCOMPLETE LU FACTORIZATION, E. Chow and A. Patel, SIAM 2015, https://doi.org/10.1137/140968896

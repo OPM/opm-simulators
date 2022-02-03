@@ -21,6 +21,7 @@
 
 #define BOOST_TEST_MODULE SolveTransposed3x3
 #include <boost/test/unit_test.hpp>
+#include <boost/version.hpp>
 
 #if BOOST_VERSION / 100000 == 1 && BOOST_VERSION / 100 % 1000 < 71
 #include <boost/test/floating_point_comparison.hpp>
@@ -30,7 +31,7 @@
 
 #include <dune/istl/bcrsmatrix.hh>
 
-#include <opm/simulators/linalg/bda/CPR.hpp>
+#include <opm/simulators/linalg/bda/opencl/CPR.hpp>
 
 BOOST_AUTO_TEST_CASE(testsolvetransposed3x3)
 {

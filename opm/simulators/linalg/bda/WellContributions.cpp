@@ -26,11 +26,11 @@
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
 
 #ifdef HAVE_OPENCL
-#include <opm/simulators/linalg/bda/openclWellContributions.hpp>
+#include <opm/simulators/linalg/bda/opencl/openclWellContributions.hpp>
 #endif
 
 #ifdef HAVE_CUDA
-#include <opm/simulators/linalg/bda/cuWellContributions.hpp>
+#include <opm/simulators/linalg/bda/cuda/cuWellContributions.hpp>
 #endif
 
 namespace Opm

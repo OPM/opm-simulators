@@ -20,7 +20,7 @@
 #ifndef OPM_PRECONDITIONER_HEADER_INCLUDED
 #define OPM_PRECONDITIONER_HEADER_INCLUDED
 
-#include <opm/simulators/linalg/bda/opencl.hpp>
+#include <opm/simulators/linalg/bda/opencl/opencl.hpp>
 #include <opm/simulators/linalg/bda/ILUReorder.hpp>
 
 namespace Opm

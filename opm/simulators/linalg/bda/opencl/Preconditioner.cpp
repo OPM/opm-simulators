@@ -22,9 +22,9 @@
 
 #include <opm/common/ErrorMacros.hpp>
 
-#include <opm/simulators/linalg/bda/BILU0.hpp>
-#include <opm/simulators/linalg/bda/BISAI.hpp>
-#include <opm/simulators/linalg/bda/CPR.hpp>
+#include <opm/simulators/linalg/bda/opencl/BILU0.hpp>
+#include <opm/simulators/linalg/bda/opencl/BISAI.hpp>
+#include <opm/simulators/linalg/bda/opencl/CPR.hpp>
 #include <opm/simulators/linalg/bda/opencl/Preconditioner.hpp>
 
 namespace Opm

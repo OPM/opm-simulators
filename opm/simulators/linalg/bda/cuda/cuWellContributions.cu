@@ -22,9 +22,9 @@
 #include <cstdlib>
 #include <cstring>
 
-#include "opm/simulators/linalg/bda/cuWellContributions.hpp"
+#include "opm/simulators/linalg/bda/cuda/cuWellContributions.hpp"
 
-#include "opm/simulators/linalg/bda/cuda_header.hpp"
+#include "opm/simulators/linalg/bda/cuda/cuda_header.hpp"
 #include <cuda_runtime.h>
 
 #include <opm/common/OpmLog/OpmLog.hpp>

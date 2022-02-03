@@ -19,7 +19,7 @@
 
 #include <config.h> // CMake
 
-#include <opm/simulators/linalg/bda/openclWellContributions.hpp>
+#include <opm/simulators/linalg/bda/opencl/openclWellContributions.hpp>
 
 #include <cstdlib>
 #include <cstring>

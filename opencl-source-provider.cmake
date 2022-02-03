@@ -14,7 +14,7 @@ endif()
 set(CL_SRC_FILE ${PROJECT_BINARY_DIR}/clSources.cpp)
 file(WRITE ${CL_SRC_FILE} "// This file is auto-generated. Do not edit!\n\n")
 file(APPEND ${CL_SRC_FILE} "#include <config.h>\n\n")
-file(APPEND ${CL_SRC_FILE} "#include <${BDA_DIR}/openclKernels.hpp>\n\n")
+file(APPEND ${CL_SRC_FILE} "#include <${BDA_DIR}/opencl/openclKernels.hpp>\n\n")
 file(APPEND ${CL_SRC_FILE} "namespace Opm\{\n\n")
 file(APPEND ${CL_SRC_FILE} "namespace Accelerator\{\n\n")
 
