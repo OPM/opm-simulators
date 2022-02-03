@@ -65,7 +65,7 @@ struct NewtonMaxRelax<TypeTag, TTag::FlowNonLinearSolver> {
 };
 template<class TypeTag>
 struct FlowNewtonMaxIterations<TypeTag, TTag::FlowNonLinearSolver> {
-    static constexpr int value = 20;
+    static constexpr int value = 8;
 };
 template<class TypeTag>
 struct FlowNewtonMinIterations<TypeTag, TTag::FlowNonLinearSolver> {
