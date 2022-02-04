@@ -101,6 +101,7 @@ public:
     void initialize();
     std::optional<double> liquidTarget(const std::string& group_name) const;
     std::optional<double> maxAlq(const std::string& group_name);
+    std::optional<double> maxTotalGasRate(const std::string& group_name);
     double oilRate(const std::string& group_name) const;
     std::optional<double> oilTarget(const std::string& group_name) const;
     static const std::string rateToString(Rate rate);
@@ -158,6 +159,7 @@ protected:
         std::optional<double> gasTarget() const { return gas_target_; }
         std::optional<double> waterTarget() const { return water_target_; }
         std::optional<double> maxAlq() const { return max_alq_; }
+        std::optional<double> maxTotalGasRate() const { return total_gas_; }
         double oilRate() const { return oil_rate_; }
         std::optional<double> oilTarget() const { return oil_target_; }
         std::optional<double> liquidTarget() const { return liquid_target_; }

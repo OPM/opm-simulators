@@ -932,28 +932,33 @@ maybeAdjustALQbeforeOptimizeLoop_(
         const std::string msg = fmt::format("initial ALQ: {}", alq);
         displayDebugMessage_(msg);
     }
-    if (!increase && orig_rates.limited()) {
-        // NOTE: Try to decrease ALQ down to a value where the well target is
-        //   not exceeded.
-        // NOTE: This may reduce ALQ below the minimum value set in WLIFTOPT
-        //   item 5. However, this is OK since the rate target is met and there
-        //   is no point in using a higher ALQ value then.
-        auto [rates1, alq1] = reduceALQtoWellTarget_(alq, orig_rates);
-        auto [rates2, alq2] = reduceALQtoGroupTarget(alq, orig_rates);
-        if (alq1 < alq2) {
-            alq = alq1;
-            rates = rates1;
-        }
-        else {
-            alq = alq2;
-            rates = rates2;
+    if (!increase) {
+        // NOTE: Try to decrease ALQ down to a value where the groups
+        // maximum alq target and the total gas + alq target is not violated
+        std::tie(rates, alq) = reduceALQtoGroupAlqLimits_(alq, orig_rates);
+        if(orig_rates.limited()) {
+            // NOTE: Try to decrease ALQ down to a value where the well target is
+            //   not exceeded.
+            // NOTE: This may reduce ALQ below the minimum value set in WLIFTOPT
+            //   item 5. However, this is OK since the rate target is met and there
+            //   is no point in using a higher ALQ value then.
+            auto [rates1, alq1] = reduceALQtoWellTarget_(alq, orig_rates);
+            auto [rates2, alq2] = reduceALQtoGroupTarget(alq, orig_rates);
+            if (alq1 < alq2) {
+                alq = alq1;
+                rates = rates1;
+            }
+            else {
+                alq = alq2;
+                rates = rates2;
+            }
         }
     } else {
-        if (increase && orig_rates.oil < 0) {
+        if (orig_rates.oil < 0) {
             // Try to increase ALQ up to a value where oil_rate is positive
             std::tie(rates, alq) = increaseALQtoPositiveOilRate_(alq, rates);
         }
-        if (increase && (this->min_alq_> 0) && (alq < this->min_alq_)) {
+        if ((this->min_alq_> 0) && (alq < this->min_alq_)) {
             // Try to increase ALQ up to the minimum limit without checking
             //   the economic gradient..
             std::tie(rates, alq) = increaseALQtoMinALQ_(alq, rates);
@@ -974,6 +979,39 @@ bool has_control(int controls, Group::InjectionCMode cmode) {
     return ((controls & static_cast<int>(cmode)) != 0);
 }
 
+// Reduce ALQ to the lowest value greater than zero that still makes at
+//   least one rate limited w.r.t. group targets, or reduce ALQ to zero if
+//   such positive ALQ value cannot be found.
+std::pair<GasLiftSingleWellGeneric::LimitedRates, double>
+GasLiftSingleWellGeneric::
+reduceALQtoGroupAlqLimits_(const double orig_alq, const LimitedRates& orig_rates) const
+{
+    bool stop_this_iteration = false;
+    double alq = orig_alq;
+    BasicRates rates{ orig_rates };
+    double temp_alq = orig_alq;
+    while(!stop_this_iteration) {
+        if (temp_alq == 0) break;
+        temp_alq -= this->increment_;
+        if (temp_alq < 0) temp_alq = 0;
+        auto new_rates = computeWellRatesWithALQ_(temp_alq);
+        if (!new_rates) break;
+        auto delta_alq = temp_alq - orig_alq;
+        auto delta_gas_rate = new_rates->gas - orig_rates.gas;
+        if (!checkGroupTotalRateExceeded(delta_alq, delta_gas_rate)) {
+            break;
+        }
+        rates = *new_rates;
+        alq = temp_alq;
+    }
+    if (alq == orig_alq) {
+        return {orig_rates, orig_alq};
+    }
+    else {
+        LimitedRates limited_rates = getLimitedRatesFromRates_(rates);
+        return {limited_rates, alq};
+    }
+}
 // Reduce ALQ to the lowest value greater than zero that still makes at
 //   least one rate limited w.r.t. group targets, or reduce ALQ to zero if
 //   such positive ALQ value cannot be found.
@@ -1128,7 +1166,8 @@ runOptimizeLoop_(bool increase)
         std::tie(alq_opt, alq_is_limited) = state.addOrSubtractAlqIncrement(temp_alq);
         if (!alq_opt) break;
         auto delta_alq = *alq_opt - temp_alq;
-        if (state.checkGroupALQrateExceeded(delta_alq)) break;
+        if (checkGroupALQrateExceeded(delta_alq)) break;
+
         temp_alq = *alq_opt;
         if (this->debug) state.debugShowIterationInfo(temp_alq);
         rates = new_rates;
@@ -1137,6 +1176,9 @@ runOptimizeLoop_(bool increase)
         if (temp_rates->bhp_is_limited)
             state.stop_iteration = true;
         temp_rates = updateRatesToGroupLimits_(*rates, *temp_rates);
+
+        auto delta_gas_rate = temp_rates->gas - rates->gas;
+        if (checkGroupTotalRateExceeded(delta_alq, delta_gas_rate)) break;
 
 /*        if (this->debug_abort_if_increase_and_gas_is_limited_) {
             if (gas_is_limited && increase) {
@@ -1528,22 +1570,22 @@ checkAlqOutsideLimits(double alq, [[maybe_unused]] double oil_rate)
 }
 
 bool
-GasLiftSingleWellGeneric::OptimizeState::
-checkGroupALQrateExceeded(double delta_alq)
+GasLiftSingleWellGeneric::
+checkGroupALQrateExceeded(double delta_alq) const
 {
     const auto &pairs =
-        this->parent.group_info_.getWellGroups(this->parent.well_name_);
+        group_info_.getWellGroups(well_name_);
     for (const auto &[group_name, efficiency] : pairs) {
-        auto max_alq_opt = this->parent.group_info_.maxAlq(group_name);
+        auto max_alq_opt = group_info_.maxAlq(group_name);
         if (max_alq_opt) {
             double alq =
-                this->parent.group_info_.alqRate(group_name) + efficiency * delta_alq;
+                group_info_.alqRate(group_name) + efficiency * delta_alq;
             if (alq > *max_alq_opt) {
-                if (this->parent.debug) {
+                if (debug) {
                     const std::string msg = fmt::format(
                         "Group {} : alq {} exceeds max_alq {}. Stopping iteration",
                         group_name, alq, *max_alq_opt);
-                    this->parent.displayDebugMessage_(msg);
+                    displayDebugMessage_(msg);
                 }
                 return true;
             }
@@ -1552,6 +1594,33 @@ checkGroupALQrateExceeded(double delta_alq)
     return false;
 }
 
+bool
+GasLiftSingleWellGeneric::
+checkGroupTotalRateExceeded(double delta_alq, double delta_gas_rate) const
+{
+    const auto &pairs =
+        group_info_.getWellGroups(well_name_);
+    for (const auto &[group_name, efficiency] : pairs) {
+        auto max_total_rate_opt = group_info_.maxTotalGasRate(group_name);
+        if (max_total_rate_opt) {
+            double alq =
+                group_info_.alqRate(group_name) + efficiency * delta_alq;
+            double gas_rate =
+                group_info_.gasRate(group_name) + efficiency * delta_gas_rate;
+
+            if ( (alq + gas_rate) > *max_total_rate_opt) {
+                if (debug) {
+                    const std::string msg = fmt::format(
+                        "Group {} : total gas rate {} exceeds max_total_gas_rate {}. Stopping iteration",
+                        group_name, alq + gas_rate, *max_total_rate_opt);
+                    displayDebugMessage_(msg);
+                }
+                return true;
+            }
+        }
+    }
+    return false;
+}
 //
 // bool checkEcoGradient(double gradient)
 //
