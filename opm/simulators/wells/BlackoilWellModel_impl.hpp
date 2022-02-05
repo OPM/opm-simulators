@@ -1365,6 +1365,8 @@ namespace Opm {
         // if a well or group change control it affects all wells that are under the same group
         for (const auto& well : well_container_) {
             well->updateWellStateWithTarget(ebosSimulator_, this->groupState(), this->wellState(), deferred_logger);
+            well->updatePrimaryVariables(this->wellState(), deferred_logger);
+            well->initPrimaryVariablesEvaluation();
         }
         updateAndCommunicateGroupData(reportStepIdx, iterationIdx);
     }
@@ -1496,6 +1498,9 @@ namespace Opm {
                 well->initPrimaryVariablesEvaluation();
                 // There is no new well control change input within a report step,
                 // so next time step, the well does not consider to have effective events anymore.
+                well->updatePrimaryVariables(this->wellState(), deferred_logger);
+                well->initPrimaryVariablesEvaluation();
+
                 events.clearEvent(WellState::event_mask);
             }
             // solve the well equation initially to improve the initial solution of the well model

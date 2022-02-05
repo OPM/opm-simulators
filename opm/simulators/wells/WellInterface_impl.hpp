@@ -291,6 +291,7 @@ namespace Opm
             this->well_control_log_.push_back(from);
             updateWellStateWithTarget(ebos_simulator, group_state, well_state, deferred_logger);
             updatePrimaryVariables(well_state, deferred_logger);
+            initPrimaryVariablesEvaluation();
         }
 
         return changed;
@@ -315,6 +316,7 @@ namespace Opm
 
         updateWellStateWithTarget(simulator, group_state, well_state_copy, deferred_logger);
         calculateExplicitQuantities(simulator, well_state_copy, deferred_logger);
+        // TODO: the following two function are called in function already
         updatePrimaryVariables(well_state_copy, deferred_logger);
         initPrimaryVariablesEvaluation();
 
