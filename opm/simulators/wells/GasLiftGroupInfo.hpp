@@ -114,6 +114,18 @@ public:
 protected:
     bool checkDoGasLiftOptimization_(const std::string& well_name);
     bool checkNewtonIterationIdxOk_(const std::string& well_name);
+    void debugDisplayWellContribution_(
+        const std::string& gr_name, const std::string& well_name,
+        double eff_factor,
+        double well_oil_rate, double well_gas_rate, double well_water_rate,
+        double well_alq,
+        double oil_rate, double gas_rate, double water_rate,
+        double alq
+    ) const;
+    void debugDisplayUpdatedGroupRates(const std::string& name,
+        double oil_rate, double gas_rate, double water_rate, double alq) const;
+    void debugEndInitializeGroup(const std::string& name) const;
+    void debugStartInitializeGroup(const std::string& name) const;
     void displayDebugMessage_(const std::string& msg) const override;
     void displayDebugMessage_(const std::string& msg, const std::string& well_name);
     std::tuple<double, double, double> getProducerWellRates_(const int index);

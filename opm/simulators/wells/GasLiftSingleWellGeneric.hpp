@@ -260,6 +260,7 @@ protected:
     void debugShowAlqIncreaseDecreaseCounts_();
     void debugShowBhpAlqTable_();
     void debugShowLimitingTargets_(const LimitedRates& rates) const;
+    void debugShowProducerControlMode() const;
     void debugShowStartIteration_(double alq, bool increase, double oil_rate);
     void debugShowTargets_();
     void displayDebugMessage_(const std::string& msg) const override;

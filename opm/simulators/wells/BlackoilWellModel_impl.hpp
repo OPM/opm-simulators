@@ -956,11 +956,9 @@ namespace Opm {
                 for (const auto& well : well_container_) {
                     // NOTE: Only the wells in "group_info" needs to be optimized
                     if (group_info.hasWell(well->name())) {
-                        well->gasLiftOptimizationStage1(
-                            this->wellState(), this->groupState(), ebosSimulator_,
-                            deferred_logger,
-                            prod_wells, glift_wells, state_map,
-                            group_info, groups_to_sync, this->glift_debug
+                        gasLiftOptimizationStage1SingleWell(
+                            well.get(), deferred_logger, prod_wells, glift_wells,
+                            group_info, state_map, groups_to_sync
                         );
                     }
                 }
@@ -1027,6 +1025,35 @@ namespace Opm {
             }
         }
     }
+
+    // NOTE: this method cannot be const since it passes this->wellState()
+    //   (see below) to the GasLiftSingleWell constructor which accepts WellState
+    //   as a non-const reference..
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    gasLiftOptimizationStage1SingleWell(WellInterface<TypeTag> *well,
+        DeferredLogger& deferred_logger,
+        GLiftProdWells &prod_wells, GLiftOptWells &glift_wells,
+        GasLiftGroupInfo &group_info, GLiftWellStateMap &state_map,
+        GLiftSyncGroups& sync_groups)
+    {
+        const auto& summary_state = ebosSimulator_.vanguard().summaryState();
+        std::unique_ptr<GasLiftSingleWell> glift
+            = std::make_unique<GasLiftSingleWell>(
+                *well, ebosSimulator_, summary_state,
+                deferred_logger, this->wellState(), this->groupState(),
+                group_info, sync_groups, this->glift_debug);
+        auto state = glift->runOptimize(
+            ebosSimulator_.model().newtonMethod().numIterations());
+        if (state) {
+            state_map.insert({well->name(), std::move(state)});
+            glift_wells.insert({well->name(), std::move(glift)});
+            return;
+        }
+        prod_wells.insert({well->name(), well});
+    }
+
 
     template<typename TypeTag>
     void

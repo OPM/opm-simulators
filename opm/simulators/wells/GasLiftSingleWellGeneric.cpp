@@ -285,7 +285,13 @@ checkThpControl_() const
     const int well_index = this->well_state_.index(this->well_name_).value();
     const Well::ProducerCMode& control_mode =
                          this->well_state_.well(well_index).production_cmode;
-    return control_mode == Well::ProducerCMode::THP;
+    bool thp_control = control_mode == Well::ProducerCMode::THP;
+    if (this->debug) {
+        if (!thp_control) {
+            displayDebugMessage_("Well is not under THP control, skipping iteration..");
+        }
+    }
+    return thp_control;
 }
 
 
@@ -429,6 +435,18 @@ debugShowLimitingTargets_(const LimitedRates& rates) const
     else {
         displayDebugMessage_("no rates are currently limited by a target");
     }
+}
+
+void
+GasLiftSingleWellGeneric::
+debugShowProducerControlMode() const
+{
+    const int well_index = this->well_state_.index(this->well_name_).value();
+    const Well::ProducerCMode& control_mode =
+                         this->well_state_.well(well_index).production_cmode;
+    const std::string msg = fmt::format("Current control mode is: {}",
+        Well::ProducerCMode2String(control_mode));
+    displayDebugMessage_(msg);
 }
 
 void
@@ -1139,6 +1157,7 @@ std::unique_ptr<GasLiftWellState>
 GasLiftSingleWellGeneric::
 runOptimizeLoop_(bool increase)
 {
+    if (this->debug) debugShowProducerControlMode();
     std::unique_ptr<GasLiftWellState> ret_value; // nullptr initially
     auto rates = getInitialRatesWithLimit_();
     if (!rates) return ret_value;
@@ -1160,7 +1179,11 @@ runOptimizeLoop_(bool increase)
     }
 
     OptimizeState state {*this, increase};
-    if (!checkThpControl_()) {
+    auto temp_alq = cur_alq;
+    if (checkThpControl_()) {
+        if (this->debug) debugShowStartIteration_(temp_alq, increase, new_rates.oil);
+    }
+    else {
         // If the well is not under THP control, we can still use the previous
         //   initial adjustment of ALQ by using the well's THP limit to calculate
         //   BHP and then well rates from that.
@@ -1169,8 +1192,6 @@ runOptimizeLoop_(bool increase)
         //   Then gaslift can be reduced while still keeping the group target.
         state.stop_iteration = true;
     }
-    auto temp_alq = cur_alq;
-    if (this->debug) debugShowStartIteration_(temp_alq, increase, new_rates.oil);
     while (!state.stop_iteration && (++state.it <= this->max_iterations_)) {
         if (state.checkRatesViolated(new_rates)) break;
         if (state.checkAlqOutsideLimits(temp_alq, new_rates.oil)) break;
@@ -1524,11 +1545,11 @@ checkAlqOutsideLimits(double alq, [[maybe_unused]] double oil_rate)
     else { // we are decreasing lift gas
         if ( alq == 0 ) {
             ss << "ALQ is zero, cannot decrease further. Stopping iteration.";
-            return true;
+            result = true;
         }
         else if ( alq < 0 ) {
             ss << "Negative ALQ: " << alq << ". Stopping iteration.";
-            return true;
+            result = true;
         }
         // NOTE: A negative min_alq_ means: allocate at least enough lift gas
         //  to enable the well to flow, see WLIFTOPT item 5.

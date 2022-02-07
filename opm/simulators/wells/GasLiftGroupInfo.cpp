@@ -367,6 +367,54 @@ checkNewtonIterationIdxOk_(const std::string &well_name)
 
 void
 GasLiftGroupInfo::
+debugDisplayWellContribution_(
+    const std::string& gr_name, const std::string& well_name,
+    double eff_factor,
+    double well_oil_rate, double well_gas_rate, double well_water_rate,
+    double well_alq,
+    double oil_rate, double gas_rate, double water_rate,
+    double alq
+) const
+{
+    const std::string msg = fmt::format("Group rate for {} : Well {} : "
+        "eff_factor = {}, oil_rate = {}, gas_rate = {}, water_rate = {}, "
+        "alq = {}, New group rates:  oil = {}, gas = {}, water = {}, alq = {}",
+        gr_name, well_name, eff_factor, well_oil_rate, well_gas_rate,
+        well_water_rate, well_alq, oil_rate, gas_rate, water_rate, alq);
+    displayDebugMessage_(msg);
+}
+
+void
+GasLiftGroupInfo::
+debugDisplayUpdatedGroupRates(
+      const std::string& name,
+      double oil_rate, double gas_rate, double water_rate, double alq) const
+{
+
+    const std::string msg = fmt::format("Updated group info for {} : "
+        "oil_rate = {}, gas_rate = {}, water_rate = {}, alq = {}",
+        name, oil_rate, gas_rate, water_rate, alq);
+    displayDebugMessage_(msg);
+}
+
+void
+GasLiftGroupInfo::
+debugEndInitializeGroup(const std::string& name) const
+{
+    const std::string msg = fmt::format("Finished with group {} ...", name);
+    displayDebugMessage_(msg);
+}
+
+void
+GasLiftGroupInfo::
+debugStartInitializeGroup(const std::string& name) const
+{
+    const std::string msg = fmt::format("Initializing group {} ...", name);
+    displayDebugMessage_(msg);
+}
+
+void
+GasLiftGroupInfo::
 displayDebugMessage_(const std::string &msg) const
 {
     if (this->debug) {
@@ -417,6 +465,7 @@ GasLiftGroupInfo::
 initializeGroupRatesRecursive_(const Group &group)
 {
     std::array<double,4> rates{};
+    if (this->debug) debugStartInitializeGroup(group.name());
     auto& [oil_rate, water_rate, gas_rate, alq] = rates;
     if (group.wellgroup()) {
         for (const std::string& well_name : group.wells()) {
@@ -439,6 +488,13 @@ initializeGroupRatesRecursive_(const Group &group)
                     gas_rate += (factor * sw_gas_rate);
                     water_rate += (factor * sw_water_rate);
                     alq += (factor * sw_alq);
+                    if (this->debug) {
+                        debugDisplayWellContribution_(
+                            group.name(), well_name, factor,
+                            sw_oil_rate, sw_gas_rate, sw_water_rate, sw_alq,
+                            oil_rate, gas_rate, water_rate, alq
+                        );
+                    }
                 }
             }
         }
@@ -459,6 +515,7 @@ initializeGroupRatesRecursive_(const Group &group)
             alq += (gefac * sg_alq);
         }
     }
+    if (this->debug) debugEndInitializeGroup(group.name());
     std::optional<double> oil_target, gas_target, water_target, liquid_target, max_total_gas, max_alq;
     const auto controls = group.productionControls(this->summary_state_);
     if (group.has_control(Group::ProductionCMode::LRAT)) {
@@ -482,6 +539,10 @@ initializeGroupRatesRecursive_(const Group &group)
         updateGroupIdxMap_(group.name());
         this->group_rate_map_.try_emplace(group.name(),
             oil_rate, gas_rate, water_rate, alq, oil_target, gas_target, water_target, liquid_target, max_total_gas, max_alq);
+        if (this->debug) {
+            debugDisplayUpdatedGroupRates(
+                group.name(), oil_rate, gas_rate, water_rate, alq);
+        }
     }
     return std::make_tuple(oil_rate, gas_rate, water_rate, alq);
 }
