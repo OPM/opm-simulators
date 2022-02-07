@@ -72,8 +72,8 @@ private:
     bool is_root;                                                 // allow for nested solvers, the root solver is called by BdaBridge
     int *toOrder = nullptr, *fromOrder = nullptr;                 // BILU0 reorders rows of the matrix via these mappings
     bool analysis_done = false;
-    std::unique_ptr<BlockedMatrix> mat = nullptr;                 // original matrix
-    std::unique_ptr<BlockedMatrix> jacMat = nullptr;              // matrix for preconditioner
+    std::shared_ptr<BlockedMatrix> mat = nullptr;                 // original matrix
+    std::shared_ptr<BlockedMatrix> jacMat = nullptr;              // matrix for preconditioner
     BlockedMatrix *rmat = nullptr;                                // reordered matrix (or original if no reordering), used for spmv
     ILUReorder opencl_ilu_reorder;                                // reordering strategy
     std::vector<cl::Event> events;
@@ -135,16 +135,10 @@ private:
     void gpu_pbicgstab(WellContributions& wellContribs, BdaResult& res);
 
     /// Initialize GPU and allocate memory
-    /// \param[in] N              number of nonzeroes, divide by dim*dim to get number of blocks
-    /// \param[in] nnz            number of nonzeroes, divide by dim*dim to get number of blocks
-    /// \param[in] dim            size of block
-    /// \param[in] vals           array of nonzeroes, each block is stored row-wise and contiguous, contains nnz values
-    /// \param[in] rows           array of rowPointers, contains N/dim+1 values
-    /// \param[in] cols           array of columnIndices, contains nnz values
-    void initialize(int N, int nnz, int dim, double *vals, int *rows, int *cols);
-
-    void initialize2(int N, int nnz, int dim, double *vals, int *rows, int *cols,
-                     int nnz2, double *vals2, int *rows2, int *cols2);
+    /// \param[in] matrix     matrix A
+    /// \param[in] jacMatrix  matrix for preconditioner
+    void initialize(std::shared_ptr<BlockedMatrix> matrix);
+    void initialize2(std::shared_ptr<BlockedMatrix> matrix, std::shared_ptr<BlockedMatrix> jacMatrix);
 
     /// Clean memory
     void finalize();
@@ -197,25 +191,16 @@ public:
     ~openclSolverBackend();
 
     /// Solve linear system, A*x = b, matrix A must be in blocked-CSR format
-    /// \param[in] N              number of rows, divide by dim to get number of blockrows
-    /// \param[in] nnz            number of nonzeroes, divide by dim*dim to get number of blocks
-    /// \param[in] nnz_prec       number of nonzeroes of matrix for ILU0, divide by dim*dim to get number of blocks
-    /// \param[in] dim            size of block
-    /// \param[in] vals           array of nonzeroes, each block is stored row-wise and contiguous, contains nnz values
-    /// \param[in] rows           array of rowPointers, contains N/dim+1 values
-    /// \param[in] cols           array of columnIndices, contains nnz values
-    /// \param[in] vals_prec      array of nonzeroes for preconditioner
-    /// \param[in] rows_prec      array of rowPointers for preconditioner
-    /// \param[in] cols_prec      array of columnIndices for preconditioner
+    /// \param[in] matrix         matrix A
     /// \param[in] b              input vector, contains N values
     /// \param[in] wellContribs   WellContributions, to apply them separately, instead of adding them to matrix A
     /// \param[inout] res         summary of solver result
     /// \return                   status code
-    SolverStatus solve_system(int N, int nnz, int dim, double *vals, int *rows, int *cols, double *b, WellContributions& wellContribs, BdaResult &res) override;
+    SolverStatus solve_system(std::shared_ptr<BlockedMatrix> matrix, double *b, WellContributions& wellContribs, BdaResult &res) override;
 
-    SolverStatus solve_system2(int N_, int nnz_, int dim, double *vals, int *rows, int *cols, double *b,
-                   int nnz2, double *vals2, int *rows2, int *cols2,
-                   WellContributions& wellContribs, BdaResult &res) override;
+    SolverStatus solve_system2(std::shared_ptr<BlockedMatrix> matrix, double *b,
+                               std::shared_ptr<BlockedMatrix> jacMatrix,
+                               WellContributions& wellContribs, BdaResult &res) override;
 
     /// Solve scalar linear system, for example a coarse system of an AMG preconditioner
     /// Data is already on the GPU

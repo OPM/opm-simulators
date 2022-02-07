@@ -22,6 +22,7 @@
 
 
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
+#include <opm/simulators/linalg/bda/BlockedMatrix.hpp>
 
 #include <string>
 
@@ -85,13 +86,11 @@ namespace Accelerator {
         virtual ~BdaSolver() {};
 
         /// Define as pure virtual functions, so derivedclass must implement them
-        virtual SolverStatus solve_system(int N, int nnz, int dim,
-            double *vals, int *rows, int *cols,
+        virtual SolverStatus solve_system(std::shared_ptr<BlockedMatrix> matrix,
             double *b, WellContributions& wellContribs, BdaResult &res) = 0;
 
-        virtual SolverStatus solve_system2(int N_, int nnz_, int dim,
-                                           double *vals, int *rows, int *cols, double *b,
-                                           int nnz2, double *vals2, int *rows2, int *cols2,
+        virtual SolverStatus solve_system2(std::shared_ptr<BlockedMatrix> matrix, double *b,
+                                           std::shared_ptr<BlockedMatrix> jacMatrix,
                                            WellContributions& wellContribs, BdaResult &res) = 0;
 
         virtual void get_result(double *x) = 0;

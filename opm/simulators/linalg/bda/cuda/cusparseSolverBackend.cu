@@ -188,17 +188,15 @@ void cusparseSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellCon
 
 
 template <unsigned int block_size>
-void cusparseSolverBackend<block_size>::initialize(int N, int nnz, int dim) {
-    this->N = N;
-    this->nnz = nnz;
-    this->nnzb = nnz / block_size / block_size;
-    Nb = (N + dim - 1) / dim;
+void cusparseSolverBackend<block_size>::initialize(int Nb_, int nnzb) {
+    this->Nb = Nb_;
+    this->N = Nb * block_size;
+    this->nnzb = nnzb;
+    this->nnz = nnzb * block_size * block_size;
+
     std::ostringstream out;
-    out << "Initializing GPU, matrix size: " << N << " blocks, nnz: " << nnzb << " blocks";
-    OpmLog::info(out.str());
-    out.str("");
-    out.clear();
-    out << "Maxit: " << maxit << std::scientific << ", tolerance: " << tolerance;
+    out << "Initializing GPU, matrix size: " << Nb << " blockrows, nnz: " << nnzb << " blocks\n";
+    out << "Maxit: " << maxit << std::scientific << ", tolerance: " << tolerance << "\n";
     OpmLog::info(out.str());
 
     cudaSetDevice(deviceID);
@@ -480,12 +478,12 @@ void cusparseSolverBackend<block_size>::get_result(double *x) {
 
 
 template <unsigned int block_size>
-SolverStatus cusparseSolverBackend<block_size>::solve_system(int N, int nnz, int dim, double *vals, int *rows, int *cols, double *b, WellContributions& wellContribs, BdaResult &res) {
+SolverStatus cusparseSolverBackend<block_size>::solve_system(std::shared_ptr<BlockedMatrix> matrix, double *b, WellContributions& wellContribs, BdaResult &res) {
     if (initialized == false) {
-        initialize(N, nnz, dim);
-        copy_system_to_gpu(vals, rows, cols, b);
+        initialize(matrix->Nb, matrix->nnzbs);
+        copy_system_to_gpu(matrix->nnzValues, matrix->rowPointers, matrix->colIndices, b);
     } else {
-        update_system_on_gpu(vals, rows, b);
+        update_system_on_gpu(matrix->nnzValues, matrix->rowPointers, b);
     }
     if (analysis_done == false) {
         if (!analyse_matrix()) {
@@ -500,14 +498,15 @@ SolverStatus cusparseSolverBackend<block_size>::solve_system(int N, int nnz, int
     }
     return SolverStatus::BDA_SOLVER_SUCCESS;
 }
+
 template <unsigned int block_size>
-SolverStatus cusparseSolverBackend<block_size>::solve_system2(int N_, int nnz_, int dim,
-                                           double *vals, int *rows, int *cols, double *b,
-                                           int nnz2, double *vals2, int *rows2, int *cols2,
-                                           WellContributions& wellContribs, BdaResult &res)
+SolverStatus cusparseSolverBackend<block_size>::solve_system2(std::shared_ptr<BlockedMatrix> matrix,
+                                                              double *b,
+                                                              [[maybe_unused]] std::shared_ptr<BlockedMatrix> jacMatrix,
+                                                              WellContributions& wellContribs,
+                                                              BdaResult &res)
 {
-    (void) nnz2; (void) vals2; (void) rows2; (void) cols2;
-    return solve_system(N_, nnz_, dim, vals, rows, cols, b, wellContribs, res);
+    return solve_system(matrix, b, wellContribs, res);
 }
 
 #define INSTANTIATE_BDA_FUNCTIONS(n)                                                       \

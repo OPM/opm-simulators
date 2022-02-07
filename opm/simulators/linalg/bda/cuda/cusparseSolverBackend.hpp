@@ -75,10 +75,9 @@ private:
     void gpu_pbicgstab(WellContributions& wellContribs, BdaResult& res);
 
     /// Initialize GPU and allocate memory
-    /// \param[in] N                number of nonzeroes, divide by dim*dim to get number of blocks
-    /// \param[in] nnz              number of nonzeroes, divide by dim*dim to get number of blocks
-    /// \param[in] dim              size of block
-    void initialize(int N, int nnz, int dim);
+    /// \param[in] Nb               number of blockrows
+    /// \param[in] nnzbs            number of blocks
+    void initialize(int Nb, int nnzbs);
 
     /// Clean memory
     void finalize();
@@ -126,21 +125,15 @@ public:
     ~cusparseSolverBackend();
 
     /// Solve linear system, A*x = b, matrix A must be in blocked-CSR format
-    /// \param[in] N              number of rows, divide by dim to get number of blockrows
-    /// \param[in] nnz            number of nonzeroes, divide by dim*dim to get number of blocks
-    /// \param[in] dim            size of block
-    /// \param[in] vals           array of nonzeroes, each block is stored row-wise and contiguous, contains nnz values
-    /// \param[in] rows           array of rowPointers, contains N/dim+1 values
-    /// \param[in] cols           array of columnIndices, contains nnz values
+    /// \param[in] matrix         matrix A
     /// \param[in] b              input vector, contains N values
     /// \param[in] wellContribs   contains all WellContributions, to apply them separately, instead of adding them to matrix A
     /// \param[inout] res         summary of solver result
     /// \return                   status code
-    SolverStatus solve_system(int N, int nnz, int dim, double *vals, int *rows, int *cols, double *b, WellContributions& wellContribs, BdaResult &res) override;
+    SolverStatus solve_system(std::shared_ptr<BlockedMatrix> matrix, double *b, WellContributions& wellContribs, BdaResult &res) override;
 
-    SolverStatus solve_system2(int N_, int nnz_, int dim,
-                               double *vals, int *rows, int *cols, double *b,
-                               int nnz2, double *vals2, int *rows2, int *cols2,
+    SolverStatus solve_system2(std::shared_ptr<BlockedMatrix> matrix, double *b,
+                               std::shared_ptr<BlockedMatrix> jacMatrix,
                                WellContributions& wellContribs, BdaResult &res) override;
     
     /// Get resulting vector x after linear solve, also includes post processing if necessary

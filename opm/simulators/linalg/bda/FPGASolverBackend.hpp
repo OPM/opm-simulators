@@ -201,13 +201,12 @@ private:
     unsigned short rst_settle_cycles = 0;
 
     /// Allocate host memory
-    /// \param[in] N              number of nonzeroes, divide by dim*dim to get number of blocks
-    /// \param[in] nnz            number of nonzeroes, divide by dim*dim to get number of blocks
-    /// \param[in] dim            size of block
+    /// \param[in] Nb             number of blockrows
+    /// \param[in] nnzbs          number of blocks
     /// \param[in] vals           array of nonzeroes, each block is stored row-wise and contiguous, contains nnz values
     /// \param[in] rows           array of rowPointers, contains N/dim+1 values
     /// \param[in] cols           array of columnIndices, contains nnz values
-    void initialize(int N, int nnz, int dim, double *vals, int *rows, int *cols);
+    void initialize(int Nb, int nnzbs, int dim, double *vals, int *rows, int *cols);
 
     /// Reorder the linear system so it corresponds with the coloring
     /// \param[in] vals           array of nonzeroes, each block is stored row-wise and contiguous, contains nnz values
@@ -243,21 +242,15 @@ public:
     ~FpgaSolverBackend();
 
     /// Solve linear system, A*x = b, matrix A must be in blocked-CSR format
-    /// \param[in] N              number of rows, divide by dim to get number of blockrows
-    /// \param[in] nnz            number of nonzeroes, divide by dim*dim to get number of blocks
-    /// \param[in] dim            size of block
-    /// \param[in] vals           array of nonzeroes, each block is stored row-wise and contiguous, contains nnz values
-    /// \param[in] rows           array of rowPointers, contains N/dim+1 values
-    /// \param[in] cols           array of columnIndices, contains nnz values
+    /// \param[in] matrix         matrix A
     /// \param[in] b              input vector, contains N values
     /// \param[in] wellContribs   WellContributions, not used in FPGA solver because it requires them already added to matrix A
     /// \param[inout] res         summary of solver result
     /// \return                   status code
-    SolverStatus solve_system(int N, int nnz, int dim, double *vals, int *rows, int *cols, double *b, WellContributions& wellContribs, BdaResult &res) override;
+    SolverStatus solve_system(std::shared_ptr<BlockedMatrix> matrix, double *b, WellContributions& wellContribs, BdaResult &res) override;
 
-    SolverStatus solve_system2(int N_, int nnz_, int dim,
-                               double *vals, int *rows, int *cols, double *b,
-                               int nnz2, double *vals2, int *rows2, int *cols2,
+    SolverStatus solve_system2(std::shared_ptr<BlockedMatrix> matrix, double *b,
+                               std::shared_ptr<BlockedMatrix> jacMatrix,
                                WellContributions& wellContribs, BdaResult &res) override;
     
     /// Get result after linear solve, and peform postprocessing if necessary

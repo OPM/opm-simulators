@@ -225,16 +225,16 @@ void FpgaSolverBackend<block_size>::get_result(double *x_)
 
 
 template <unsigned int block_size>
-SolverStatus FpgaSolverBackend<block_size>::solve_system(int N_, int nnz_, int dim, double *vals, int *rows, int *cols, double *b, WellContributions&, BdaResult &res)
+SolverStatus FpgaSolverBackend<block_size>::solve_system(std::shared_ptr<BlockedMatrix> matrix, double *b, WellContributions&, BdaResult &res)
 {
     if (initialized == false) {
-        initialize(N_, nnz_,  dim, vals, rows, cols);
+        initialize(matrix->Nb, matrix->nnzbzs, matrix->nnzValues, matrix->rowPointers, matrix->colIndices);
         if (!analyse_matrix()) {
             return SolverStatus::BDA_SOLVER_ANALYSIS_FAILED;
         }
     }
     perf_call.emplace_back();
-    update_system(vals, b);
+    update_system(matrix->nnzValues, b);
     if (!create_preconditioner()) {
         return SolverStatus::BDA_SOLVER_CREATE_PRECONDITIONER_FAILED;
     }
@@ -251,31 +251,31 @@ SolverStatus FpgaSolverBackend<block_size>::solve_system(int N_, int nnz_, int d
 }
 
 template <unsigned int block_size>
-SolverStatus FpgaSolverBackend<block_size>::solve_system2(int N_, int nnz_, int dim,
-                                           double *vals, int *rows, int *cols, double *b,
-                                           int nnz2, double *vals2, int *rows2, int *cols2,
-                                           WellContributions& wellContribs, BdaResult &res)
+SolverStatus FpgaSolverBackend<block_size>::solve_system2(std::shared_ptr<BlockedMatrix> matrix,
+                                                          double *b,
+                                                          [[maybe_unused]] std::shared_ptr<BlockedMatrix> jacMatrix,
+                                                          WellContributions& wellContribs,
+                                                          BdaResult &res)
 {
-    (void) nnz2; (void) vals2; (void) rows2; (void) cols2;
-    return solve_system(N_, nnz_, dim, vals, rows, cols, b, wellContribs, res);
+    return solve_system(matrix, b, wellContribs, res);
 }
 
 template <unsigned int block_size>
-void FpgaSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, double *vals, int *rows, int *cols)
+void FpgaSolverBackend<block_size>::initialize(int Nb_, int nnzbs, double *vals, int *rows, int *cols)
 {
     double start = second();
-    this->N = N_;
-    this->nnz = nnz_;
-    this->nnzb = nnz_ / block_size / block_size;
-    Nb = (N + dim - 1) / dim;
+    this->Nb = Nb_;
+    this->N = Nb * block_size;
+    this->nnzb = nnzbs;
+    this->nnz = nnzbs * block_size * block_size;
 
     // allocate host memory for matrices and vectors
     // actual data for mat points to std::vector.data() in ISTLSolverEbos, so no alloc/free here
     mat.reset(new BlockedMatrix(N_ / block_size, nnz_ / block_size / block_size, block_size, vals, cols, rows));
 
     std::ostringstream oss;
-    oss << "Initializing FPGA data, matrix size: " << this->N << " blocks, nnz: " << this->nnzb << " blocks, " << \
-        "block size: " << dim << ", total nnz: " << this->nnz << "\n";
+    oss << "Initializing FPGA data, matrix size: " << this->Nb << " blockrows, nnz: " << this->nnzb << " blocks, " << \
+        "block size: " << block_size << ", total nnz: " << this->nnz << "\n";
     oss << "Maxit: " << maxit << std::scientific << ", tolerance: " << tolerance;
     OpmLog::info(oss.str());
 

@@ -205,9 +205,7 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system([[maybe_unu
         result.converged = false;
         const int dim = (*bridgeMat)[0][0].N();
         const int Nb = bridgeMat->N();
-        const int N = Nb * dim;
         const int nnzb = bridgeMat->nonzeroes();
-        const int nnz = nnzb * dim * dim;
 
         if (dim != 3) {
             OpmLog::warning("BdaSolver only accepts blocksize = 3 at this time, will use Dune for the remainder of the program");
@@ -237,10 +235,9 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system([[maybe_unu
         SolverStatus status; 
         if (numJacobiBlocks < 2) {
             // assume that underlying data (nonzeroes) from mat (Dune::BCRSMatrix) are contiguous, if this is not the case, the chosen BdaSolver is expected to perform undefined behaviour
-            status = backend->solve_system(N, nnz, dim, static_cast<double*>(&(((*bridgeMat)[0][0][0][0]))), h_rows.data(), h_cols.data(), static_cast<double*>(&(b[0][0])), wellContribs, result);
+            status = backend->solve_system(matrix, static_cast<double*>(&(b[0][0])), wellContribs, result);
         } else {
             const int jacNnzb = (h_jacRows.empty()) ? jacMat->nonzeroes() : h_jacRows.back();
-            const int jacNnz = jacNnzb * dim * dim;
 
             if (!jacMatrix) {
                 h_jacRows.reserve(Nb+1);
@@ -256,9 +253,7 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system([[maybe_unu
                 out << "Checking zeros for jacMat took: " << t_zeros2.stop() << " s, found " << jacNumZeros << " zeros";
                 OpmLog::info(out.str());
             }
-            status = backend->solve_system2(N, nnz, dim, static_cast<double*>(&(((*bridgeMat)[0][0][0][0]))), h_rows.data(), h_cols.data(), static_cast<double*>(&(b[0][0])),
-                                            jacNnz, static_cast<double*>(&(((*jacMat)[0][0][0][0]))), h_jacRows.data(), h_jacCols.data(),
-                                            wellContribs, result);
+            status = backend->solve_system2(matrix, static_cast<double*>(&(b[0][0])), jacMatrix, wellContribs, result);
         }
 
         switch(status) {

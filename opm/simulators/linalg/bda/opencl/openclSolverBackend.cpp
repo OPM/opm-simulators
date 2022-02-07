@@ -383,14 +383,14 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
 
 
 template <unsigned int block_size>
-void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, double *vals, int *rows, int *cols) {
-    this->N = N_;
-    this->nnz = nnz_;
-    this->nnzb = nnz_ / block_size / block_size;
+void openclSolverBackend<block_size>::initialize(std::shared_ptr<BlockedMatrix> matrix) {
+    this->Nb = matrix->Nb;
+    this->N = Nb * block_size;
+    this->nnzb = matrix->nnzbs;
+    this->nnz = nnzb * block_size * block_size;
 
-    Nb = (N + dim - 1) / dim;
     std::ostringstream out;
-    out << "Initializing GPU, matrix size: " << N << " blocks, nnzb: " << nnzb << "\n";
+    out << "Initializing GPU, matrix size: " << Nb << " blockrows, nnzb: " << nnzb << "\n";
     out << "Maxit: " << maxit << std::scientific << ", tolerance: " << tolerance << "\n";
     out << "PlatformID: " << platformID << ", deviceID: " << deviceID << "\n";
     OpmLog::info(out.str());
@@ -403,7 +403,8 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
 #if COPY_ROW_BY_ROW
         vals_contiguous.resize(nnz);
 #endif
-        mat.reset(new BlockedMatrix(Nb, nnzb, block_size, vals, cols, rows));
+        // mat.reset(new BlockedMatrix(Nb, nnzb, block_size, vals, cols, rows));
+        mat = matrix;
 
         d_x = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * N);
         d_b = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * N);
@@ -442,16 +443,15 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
 } // end initialize()
 
 template <unsigned int block_size>
-void openclSolverBackend<block_size>::initialize2(int N_, int nnz_, int dim, double *vals, int *rows, int *cols,
-                                                  int nnz2, double *vals2, int *rows2, int *cols2) {
-    this->N = N_;
-    this->nnz = nnz_;
-    this->nnzb = nnz_ / block_size / block_size;
+void openclSolverBackend<block_size>::initialize2(std::shared_ptr<BlockedMatrix> matrix, std::shared_ptr<BlockedMatrix> jacMatrix) {
+    this->Nb = matrix->Nb;
+    this->N = Nb * block_size;
+    this->nnzb = matrix->nnzbs;
+    this->nnz = nnzb * block_size * block_size;
 
-    this->jac_nnz = nnz2;
-    this->jac_nnzb = nnz2 / block_size / block_size;
-    
-    Nb = (N + dim - 1) / dim;
+    this->jac_nnz = jacMatrix->nnzbs;
+    this->jac_nnzb = jac_nnz * block_size * block_size;
+
     std::ostringstream out;
     out << "Initializing GPU, matrix size: " << N << " blocks, nnzb: " << nnzb << "\n";
     out << "Blocks in ILU matrix: " << jac_nnzb << "\n";
@@ -467,8 +467,10 @@ void openclSolverBackend<block_size>::initialize2(int N_, int nnz_, int dim, dou
 #if COPY_ROW_BY_ROW
         vals_contiguous = new double[N];
 #endif
-        mat.reset(new BlockedMatrix(Nb, nnzb, block_size, vals, cols, rows));
-        jacMat.reset(new BlockedMatrix(Nb, jac_nnzb, block_size, vals2, cols2, rows2));
+        // mat.reset(new BlockedMatrix(Nb, nnzb, block_size, vals, cols, rows));
+        // jacMat.reset(new BlockedMatrix(Nb, jac_nnzb, block_size, vals2, cols2, rows2));
+        mat = matrix;
+        jacMat = jacMatrix;
 
         d_x = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * N);
         d_b = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * N);
@@ -710,21 +712,21 @@ void openclSolverBackend<block_size>::get_result(double *x) {
 
 
 template <unsigned int block_size>
-SolverStatus openclSolverBackend<block_size>::solve_system(int N_, int nnz_, int dim, double *vals, int *rows, int *cols, double *b, WellContributions& wellContribs, BdaResult &res) {
+SolverStatus openclSolverBackend<block_size>::solve_system(std::shared_ptr<BlockedMatrix> matrix, double *b, WellContributions& wellContribs, BdaResult &res) {
     if (initialized == false) {
-        initialize(N_, nnz_,  dim, vals, rows, cols);
+        initialize(matrix);
         if (analysis_done == false) {
             if (!analyze_matrix()) {
                 return SolverStatus::BDA_SOLVER_ANALYSIS_FAILED;
             }
         }
-        update_system(vals, b, wellContribs);
+        update_system(matrix->nnzValues, b, wellContribs);
         if (!create_preconditioner()) {
             return SolverStatus::BDA_SOLVER_CREATE_PRECONDITIONER_FAILED;
         }
         copy_system_to_gpu();
     } else {
-        update_system(vals, b, wellContribs);
+        update_system(matrix->nnzValues, b, wellContribs);
         if (!create_preconditioner()) {
             return SolverStatus::BDA_SOLVER_CREATE_PRECONDITIONER_FAILED;
         }
@@ -734,25 +736,25 @@ SolverStatus openclSolverBackend<block_size>::solve_system(int N_, int nnz_, int
     return SolverStatus::BDA_SOLVER_SUCCESS;
 }
 template <unsigned int block_size>
-SolverStatus openclSolverBackend<block_size>::solve_system2(int N_, int nnz_, int dim, double *vals, int *rows, int *cols, double *b,
-                           int nnz2, double *vals2, int *rows2, int *cols2,
-                           WellContributions& wellContribs, BdaResult &res)
+SolverStatus openclSolverBackend<block_size>::solve_system2(std::shared_ptr<BlockedMatrix> matrix, double *b,
+                                                            std::shared_ptr<BlockedMatrix> jacMatrix,
+                                                            WellContributions& wellContribs, BdaResult &res)
 {
     if (initialized == false) {
         blockJacVersion = true;
-        initialize2(N_, nnz_,  dim, vals, rows, cols, nnz2, vals2, rows2, cols2);
+        initialize2(matrix, jacMatrix);
         if (analysis_done == false) {
             if (!analyze_matrix()) {
                 return SolverStatus::BDA_SOLVER_ANALYSIS_FAILED;
             }
         }
-        update_system(vals, b, wellContribs);
+        update_system(matrix->nnzValues, b, wellContribs);
         if (!create_preconditioner()) {
             return SolverStatus::BDA_SOLVER_CREATE_PRECONDITIONER_FAILED;
         }
         copy_system_to_gpu();
     } else {
-        update_system(vals, b, wellContribs);
+        update_system(matrix->nnzValues, b, wellContribs);
         if (!create_preconditioner()) {
             return SolverStatus::BDA_SOLVER_CREATE_PRECONDITIONER_FAILED;
         }
