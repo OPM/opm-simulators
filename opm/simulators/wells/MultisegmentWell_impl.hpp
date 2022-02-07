@@ -305,7 +305,7 @@ namespace Opm
             auto thp_well_potentials = well_potentials;
             computeWellRatesAtBhpLimit(ebosSimulator, bhp_well_potentials, deferred_logger);
             // TODO: we probably should check whether converged with BHP wether honor THP limit
-            thp_well_potentials = computeWellPotentialWithTHP(ebosSimulator, deferred_logger);
+            thp_well_potentials = computeWellPotentialWithTHP(well_state, ebosSimulator, deferred_logger);
             const double sum_bhp_well_potentials = std::abs(std::accumulate(bhp_well_potentials.begin(), bhp_well_potentials.end(), 0.0));
             const double sum_thp_well_potentials = std::abs(std::accumulate(thp_well_potentials.begin(), thp_well_potentials.end(), 0.0));
             if (true) {

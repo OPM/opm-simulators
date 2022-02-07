@@ -956,9 +956,9 @@ namespace Opm
                 this->adaptRatesForVFP(rates);
                 const double total_rate = -std::accumulate(rates.begin(), rates.end(), 0.0);
                 double bhp = controls.bhp_limit;
-                if (total_rate >= std::numeric_limits<double>::epsilon()) {
+                /* if (total_rate >= std::numeric_limits<double>::epsilon()) {
                     bhp = this->calculateBhpFromThp(well_state, rates, well, summaryState, this->getRefDensity(), deferred_logger);
-                }
+                } */
                 ws.bhp = bhp;
 
                 // if the total rates are negative or zero
