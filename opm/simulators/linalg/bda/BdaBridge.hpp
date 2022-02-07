@@ -23,6 +23,7 @@
 #include "dune/istl/solver.hh" // for struct InverseOperatorResult
 
 #include <opm/simulators/linalg/bda/BdaSolver.hpp>
+#include <opm/simulators/linalg/bda/BlockedMatrix.hpp>
 #include <opm/simulators/linalg/bda/ILUReorder.hpp>
 
 namespace Opm
@@ -43,6 +44,10 @@ private:
     bool use_fpga = false;
     std::string accelerator_mode;
     std::unique_ptr<Opm::Accelerator::BdaSolver<block_size> > backend;
+    std::shared_ptr<Opm::Accelerator::BlockedMatrix> matrix;  // 'stores' matrix, actually points to h_rows, h_cols and the received BridgeMatrix for the nonzeroes
+    std::shared_ptr<Opm::Accelerator::BlockedMatrix> jacMatrix;  // 'stores' preconditioner matrix, actually points to h_rows, h_cols and the received BridgeMatrix for the nonzeroes
+    std::vector<int> h_rows, h_cols;  // store the sparsity pattern of the matrix
+    std::vector<int> h_jacRows, h_jacCols;  // store the sparsity pattern of the jacMatrix
 
 public:
     /// Construct a BdaBridge
@@ -61,11 +66,13 @@ public:
 
     /// Solve linear system, A*x = b
     /// \warning Values of A might get overwritten!
-    /// \param[in] mat          matrix A, should be of type Dune::BCRSMatrix
-    /// \param[in] b            vector b, should be of type Dune::BlockVector
-    /// \param[in] wellContribs contains all WellContributions, to apply them separately, instead of adding them to matrix A
-    /// \param[inout] result    summary of solver result
-    void solve_system(BridgeMatrix *mat, BridgeMatrix *blockMat, int numJacobiBlocks, BridgeVector &b, WellContributions& wellContribs, InverseOperatorResult &result);
+    /// \param[in] bridgeMat       matrix A, should be of type Dune::BCRSMatrix
+    /// \param[in] jacMat          matrix A, but modified for the preconditioner, should be of type Dune::BCRSMatrix
+    /// \param[in] numJacobiBlocks number of jacobi blocks in jacMat
+    /// \param[in] b               vector b, should be of type Dune::BlockVector
+    /// \param[in] wellContribs    contains all WellContributions, to apply them separately, instead of adding them to matrix A
+    /// \param[inout] result       summary of solver result
+    void solve_system(BridgeMatrix *bridgeMat, BridgeMatrix *jacMat, int numJacobiBlocks, BridgeVector &b, WellContributions& wellContribs, InverseOperatorResult &result);
 
     /// Get the resulting x vector
     /// \param[inout] x    vector x, should be of type Dune::BlockVector
