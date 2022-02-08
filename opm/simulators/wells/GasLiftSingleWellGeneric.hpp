@@ -65,12 +65,15 @@ public:
 
         GradInfo(double grad_, double new_oil_rate_, bool oil_is_limited_,
                  double new_gas_rate_, bool gas_is_limited_,
+                 double new_water_rate_, bool water_is_limited_,
                  double alq_, bool alq_is_limited_) :
             grad{grad_},
             new_oil_rate{new_oil_rate_},
             oil_is_limited{oil_is_limited_},
             new_gas_rate{new_gas_rate_},
             gas_is_limited{gas_is_limited_},
+            new_water_rate{new_water_rate_},
+            water_is_limited{water_is_limited_},
             alq{alq_},
             alq_is_limited{alq_is_limited_} {}
         double grad;
@@ -78,6 +81,8 @@ public:
         bool oil_is_limited;
         double new_gas_rate;
         bool gas_is_limited;
+        double new_water_rate;
+        bool water_is_limited;
         double alq;
         bool alq_is_limited;
     };

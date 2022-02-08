@@ -100,17 +100,19 @@ calcIncOrDecGradient(double oil_rate, double gas_rate, double alq, bool increase
         auto [new_bhp, bhp_is_limited] = getBhpWithLimit_(*bhp);
         // TODO: What to do if BHP is limited?
         auto rates = computeWellRates_(new_bhp, bhp_is_limited);
-        double new_oil_rate, new_gas_rate;
-        bool oil_is_limited, gas_is_limited;
+        double new_oil_rate, new_gas_rate, new_water_rate;
+        bool oil_is_limited, gas_is_limited, water_is_limited;
         std::tie(new_oil_rate, oil_is_limited) = getOilRateWithLimit_(rates);
         std::tie(new_gas_rate, gas_is_limited) = getGasRateWithLimit_(rates);
+        std::tie(new_water_rate, water_is_limited) = getWaterRateWithLimit_(rates);
         if (!increase && new_oil_rate < 0 ) {
             return std::nullopt;
         }
         auto grad = calcEcoGradient_(
             oil_rate, new_oil_rate, gas_rate, new_gas_rate, increase);
         return GradInfo(grad, new_oil_rate, oil_is_limited,
-            new_gas_rate, gas_is_limited, new_alq, alq_is_limited);
+            new_gas_rate, gas_is_limited, new_water_rate, water_is_limited,
+            new_alq, alq_is_limited);
     }
     else {
         return std::nullopt;
@@ -138,6 +140,16 @@ runOptimize(const int iteration_idx)
                 if (this->debug)
                     logSuccess_(alq, iteration_idx);
                 this->well_state_.setALQ(this->well_name_, alq);
+                const auto& pu = this->phase_usage_;
+                std::vector<double> well_pot(pu.num_phases, 0.0);
+                if(pu.phase_used[BlackoilPhases::PhaseIndex::Liquid])
+                    well_pot[pu.phase_pos[BlackoilPhases::PhaseIndex::Liquid]] = state->oilRate();
+                if(pu.phase_used[BlackoilPhases::PhaseIndex::Aqua])
+                    well_pot[pu.phase_pos[BlackoilPhases::PhaseIndex::Aqua]] = state->waterRate();
+                if(pu.phase_used[BlackoilPhases::PhaseIndex::Vapour])
+                    well_pot[pu.phase_pos[BlackoilPhases::PhaseIndex::Vapour]] = state->gasRate();
+
+                this->well_state_[this->well_name_].well_potentials = well_pot;
             }
         }
     }
@@ -1215,7 +1227,7 @@ runOptimizeLoop_(bool increase)
     ret_value = std::make_unique<GasLiftWellState>(
         new_rates.oil, new_rates.oil_is_limited,
         new_rates.gas, new_rates.gas_is_limited,
-        cur_alq, alq_is_limited, increase_opt);
+        cur_alq, alq_is_limited, new_rates.water, increase_opt);
     return ret_value;
 }
 
