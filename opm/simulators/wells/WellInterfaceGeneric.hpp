@@ -184,6 +184,9 @@ public:
                                                          const double alq_value,
                                                          DeferredLogger& deferred_logger
                                                          ) const;
+
+
+
 protected:
     bool getAllowCrossFlow() const;
     double mostStrictBhpFromBhpLimits(const SummaryState& summaryState) const;
@@ -197,6 +200,13 @@ protected:
                                  const double maxPerfPress,
                                  const double vfp_flo_front,
                                  DeferredLogger& deferred_logger) const;
+
+    std::optional<double> computeBhpAtThpLimitCommon(               
+                           const std::function<std::vector<double>(const double)>& frates,
+                           const std::function<double(const std::vector<double>)>& fbhp,
+                           const std::array<double, 2> range,
+                           DeferredLogger& deferred_logger) const;
+
 
     bool bruteForceBracket(const std::function<double(const double)>& eq,
                            const std::array<double, 2>& range,

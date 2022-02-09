@@ -649,13 +649,39 @@ computeBhpAtThpLimitProdCommon(const std::function<std::vector<double>(const dou
                                 "find bhp-point where production becomes non-zero for well " + this->name());
         return std::nullopt;
     }
+    const std::array<double, 2> range {controls.bhp_limit, *bhp_max};
+    return computeBhpAtThpLimitCommon(frates, fbhp, range, deferred_logger);
+}
+
+std::optional<double>
+WellInterfaceGeneric::
+computeBhpAtThpLimitCommon(const std::function<std::vector<double>(const double)>& frates,
+                           const std::function<double(const std::vector<double>)>& fbhp,
+                           const std::array<double, 2> range,
+                           DeferredLogger& deferred_logger) const
+{
+    // Given a VFP function returning bhp as a function of phase
+    // rates and thp:
+    //     fbhp(rates, thp),
+    // a function extracting the particular flow rate used for VFP
+    // lookups:
+    //     flo(rates)
+    // and the inflow function (assuming the reservoir is fixed):
+    //     frates(bhp)
+    // we want to solve the equation:
+    //     fbhp(frates(bhp, thplimit)) - bhp = 0
+    // for bhp.
+    //
+    // This may result in 0, 1 or 2 solutions. If two solutions,
+    // the one corresponding to the lowest bhp (and therefore
+    // highest rate) should be returned.
+
     // Define the equation we want to solve.
     auto eq = [&fbhp, &frates](double bhp) {
         return fbhp(frates(bhp)) - bhp;
     };
 
     // Find appropriate brackets for the solution.
-    const std::array<double, 2> range {controls.bhp_limit, *bhp_max};
     std::optional<double> approximate_solution;
     double low, high;
     // trying to use bisect way to locate a bracket
