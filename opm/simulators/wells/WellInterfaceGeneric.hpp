@@ -177,6 +177,13 @@ public:
     bool changedToOpenThisStep() const {
         return this->changed_to_open_this_step_;
     }
+        std::optional<double> computeBhpAtThpLimitProdCommon(const std::function<std::vector<double>(const double)>& frates,
+                                                         const SummaryState& summary_state,
+                                                         const double maxPerfPress,
+                                                         const double rho,
+                                                         const double alq_value,
+                                                         DeferredLogger& deferred_logger
+                                                         ) const;
 protected:
     bool getAllowCrossFlow() const;
     double mostStrictBhpFromBhpLimits(const SummaryState& summaryState) const;
@@ -184,6 +191,23 @@ protected:
                                      const bool write_message_to_opmlog,
                                      WellTestState& well_test_state,
                                      DeferredLogger& deferred_logger) const;
+
+    std::optional<double> bhpMax(const std::function<double(const double)>& fflo,
+                                 const double bhp_limit,
+                                 const double maxPerfPress,
+                                 const double vfp_flo_front,
+                                 DeferredLogger& deferred_logger) const;
+
+    bool bruteForceBracket(const std::function<double(const double)>& eq,
+                           const std::array<double, 2>& range,
+                           double& low, double& high,
+                           DeferredLogger& deferred_logger) const;
+
+    bool bisectBracket(const std::function<double(const double)>& eq,
+                       const std::array<double, 2>& range,
+                       double& low, double& high,
+                       std::optional<double>& approximate_solution,
+                       DeferredLogger& deferred_logger) const;
 
 
     // definition of the struct OperabilityStatus

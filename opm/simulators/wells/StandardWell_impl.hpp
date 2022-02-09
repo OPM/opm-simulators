@@ -2320,9 +2320,18 @@ namespace Opm
             return rates;
         };
 
+        double max_pressure = 0.0;
+        for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
+            const int cell_idx = this->well_cells_[perf];
+            const auto& int_quants = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
+            const auto& fs = int_quants.fluidState();
+            double pressure_cell = this->getPerfCellPressure(fs).value();
+            max_pressure = std::max(max_pressure, pressure_cell);
+        }
         return this->StandardWellGeneric<Scalar>::computeBhpAtThpLimitProdWithAlq(frates,
                                                                                   summary_state,
                                                                                   deferred_logger,
+                                                                                  max_pressure,
                                                                                   alq_value);
     }
 

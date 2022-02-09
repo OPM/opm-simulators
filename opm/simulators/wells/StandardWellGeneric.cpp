@@ -199,8 +199,13 @@ StandardWellGeneric<Scalar>::
 computeBhpAtThpLimitProdWithAlq(const std::function<std::vector<double>(const double)>& frates,
                                 const SummaryState& summary_state,
                                 DeferredLogger& deferred_logger,
+                                double maxPerfPress,
                                 double alq_value) const
 {
+
+    if (true) {
+        return baseif_.computeBhpAtThpLimitProdCommon(frates, summary_state, maxPerfPress, getRho(), alq_value, deferred_logger);
+    }
     // Given a VFP function returning bhp as a function of phase
     // rates and thp:
     //     fbhp(rates, thp),
