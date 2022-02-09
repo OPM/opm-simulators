@@ -115,8 +115,18 @@ addOrRemoveALQincrement_(GradMap &grad_map, const std::string& well_name, bool a
     }
     state.update(gi.new_oil_rate, gi.oil_is_limited,
         gi.new_gas_rate, gi.gas_is_limited,
-        gi.alq, gi.alq_is_limited, add);
-    this->well_state_.setALQ(well_name, gi.alq);
+        gi.alq, gi.alq_is_limited, gi.new_water_rate, add);
+        this->well_state_.setALQ(well_name, gi.alq);
+        const auto& pu = this->well_state_.phaseUsage();
+        std::vector<double> well_pot(pu.num_phases, 0.0);
+        if(pu.phase_used[BlackoilPhases::PhaseIndex::Liquid])
+            well_pot[pu.phase_pos[BlackoilPhases::PhaseIndex::Liquid]] = gi.new_oil_rate;
+        if(pu.phase_used[BlackoilPhases::PhaseIndex::Aqua])
+            well_pot[pu.phase_pos[BlackoilPhases::PhaseIndex::Aqua]] = gi.new_water_rate;
+        if(pu.phase_used[BlackoilPhases::PhaseIndex::Vapour])
+            well_pot[pu.phase_pos[BlackoilPhases::PhaseIndex::Vapour]] = gi.new_gas_rate;
+
+        this->well_state_[well_name].well_potentials = well_pot;
 }
 
 std::optional<GasLiftStage2::GradInfo>

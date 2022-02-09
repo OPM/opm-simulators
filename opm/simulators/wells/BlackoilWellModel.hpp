@@ -392,7 +392,7 @@ namespace Opm {
 
             void assembleWellEq(const double dt, DeferredLogger& deferred_logger);
 
-            void maybeDoGasLiftOptimize(DeferredLogger& deferred_logger);
+            bool maybeDoGasLiftOptimize(DeferredLogger& deferred_logger);
 
             void gasLiftOptimizationStage1(DeferredLogger& deferred_logger,
                 GLiftProdWells &prod_wells, GLiftOptWells &glift_wells,

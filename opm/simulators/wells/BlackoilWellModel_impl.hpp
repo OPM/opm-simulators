@@ -830,12 +830,13 @@ namespace Opm {
         }
         updateWellControls(local_deferredLogger, /* check group controls */ true);
 
+        bool alq_updated = false;
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         {
             // Set the well primary variables based on the value of well solutions
             initPrimaryVariablesEvaluation();
 
-            maybeDoGasLiftOptimize(local_deferredLogger);
+            alq_updated = maybeDoGasLiftOptimize(local_deferredLogger);
             assembleWellEq(dt, local_deferredLogger);
         }
         OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger, "assemble() failed: ",
@@ -843,7 +844,7 @@ namespace Opm {
 
         //update guide rates
         const int reportStepIdx = ebosSimulator_.episodeIndex();
-        if (guideRateUpdateIsNeeded(reportStepIdx)) {
+        if (alq_updated || guideRateUpdateIsNeeded(reportStepIdx)) {
             const double simulationTime = ebosSimulator_.time();
             const auto& comm = ebosSimulator_.vanguard().grid().comm();
             const auto& summaryState = ebosSimulator_.vanguard().summaryState();
@@ -857,12 +858,12 @@ namespace Opm {
     }
 
     template<typename TypeTag>
-    void
+    bool
     BlackoilWellModel<TypeTag>::
     maybeDoGasLiftOptimize(DeferredLogger& deferred_logger)
     {
         bool do_glift_optimization = false;
-
+        int num_wells_changed = 0;
         const double simulation_time = ebosSimulator_.time();
         const double min_wait = ebosSimulator_.vanguard().schedule().glo(ebosSimulator_.episodeIndex()).min_wait();
         // We only optimize if a min_wait time has past.
@@ -906,7 +907,11 @@ namespace Opm {
                 deferred_logger, prod_wells, glift_wells, state_map,
                 ebosSimulator_.episodeIndex());
             if (this->glift_debug) gliftDebugShowALQ(deferred_logger);
+            num_wells_changed = glift_wells.size();
         }
+        auto comm = ebosSimulator_.vanguard().grid().comm();
+        num_wells_changed = comm.sum(num_wells_changed);
+        return num_wells_changed > 0;
     }
 
     template<typename TypeTag>
