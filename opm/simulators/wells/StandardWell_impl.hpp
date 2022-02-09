@@ -2328,11 +2328,30 @@ namespace Opm
             double pressure_cell = this->getPerfCellPressure(fs).value();
             max_pressure = std::max(max_pressure, pressure_cell);
         }
-        return this->StandardWellGeneric<Scalar>::computeBhpAtThpLimitProdWithAlq(frates,
+        auto bhpAtLimit = this->StandardWellGeneric<Scalar>::computeBhpAtThpLimitProdWithAlq(frates,
                                                                                   summary_state,
                                                                                   deferred_logger,
                                                                                   max_pressure,
                                                                                   alq_value);
+       auto v = frates(*bhpAtLimit);
+       if(bhpAtLimit && std::all_of(v.cbegin(), v.cend(), [](double i){ return i <= 0; }))
+           return bhpAtLimit;
+
+       auto fratesIter = [this, &ebos_simulator, &deferred_logger](const double bhp) {
+           // Solver the well iterations to see if we are
+           // able to get a solution with an update
+           // solution
+           std::vector<double> rates(3);
+           computeWellRatesWithBhpIterations(ebos_simulator, bhp, rates, deferred_logger);
+           return rates;
+       };
+
+       return this->StandardWellGeneric<Scalar>::computeBhpAtThpLimitProdWithAlq(fratesIter,
+                                                                                  summary_state,
+                                                                                  deferred_logger,
+                                                                                  max_pressure,
+                                                                                  alq_value);
+
     }
 
 
