@@ -177,7 +177,7 @@ public:
     bool changedToOpenThisStep() const {
         return this->changed_to_open_this_step_;
     }
-        std::optional<double> computeBhpAtThpLimitProdCommon(const std::function<std::vector<double>(const double)>& frates,
+    std::optional<double> computeBhpAtThpLimitProdCommon(const std::function<std::vector<double>(const double)>& frates,
                                                          const SummaryState& summary_state,
                                                          const double maxPerfPress,
                                                          const double rho,
@@ -201,7 +201,7 @@ protected:
                                  const double vfp_flo_front,
                                  DeferredLogger& deferred_logger) const;
 
-    std::optional<double> computeBhpAtThpLimitCommon(               
+    std::optional<double> computeBhpAtThpLimitCommon(
                            const std::function<std::vector<double>(const double)>& frates,
                            const std::function<double(const std::vector<double>)>& fbhp,
                            const std::array<double, 2> range,
