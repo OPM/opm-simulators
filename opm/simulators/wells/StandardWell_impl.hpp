@@ -2333,25 +2333,30 @@ namespace Opm
                                                                                   deferred_logger,
                                                                                   max_pressure,
                                                                                   alq_value);
-       auto v = frates(*bhpAtLimit);
-       if(bhpAtLimit && std::all_of(v.cbegin(), v.cend(), [](double i){ return i <= 0; }))
-           return bhpAtLimit;
+        auto v = frates(*bhpAtLimit);
+        if(bhpAtLimit && std::all_of(v.cbegin(), v.cend(), [](double i){ return i <= 0; }))
+            return bhpAtLimit;
 
-       auto fratesIter = [this, &ebos_simulator, &deferred_logger](const double bhp) {
-           // Solver the well iterations to see if we are
-           // able to get a solution with an update
-           // solution
-           std::vector<double> rates(3);
-           computeWellRatesWithBhpIterations(ebos_simulator, bhp, rates, deferred_logger);
-           return rates;
-       };
+        auto fratesIter = [this, &ebos_simulator, &deferred_logger](const double bhp) {
+            // Solver the well iterations to see if we are
+            // able to get a solution with an update
+            // solution
+            std::vector<double> rates(3);
+            computeWellRatesWithBhpIterations(ebos_simulator, bhp, rates, deferred_logger);
+            return rates;
+        };
 
-       return this->StandardWellGeneric<Scalar>::computeBhpAtThpLimitProdWithAlq(fratesIter,
-                                                                                  summary_state,
-                                                                                  deferred_logger,
-                                                                                  max_pressure,
-                                                                                  alq_value);
+        bhpAtLimit = this->StandardWellGeneric<Scalar>::computeBhpAtThpLimitProdWithAlq(fratesIter,
+                                                                                        summary_state,
+                                                                                        deferred_logger,
+                                                                                        max_pressure,
+                                                                                        alq_value);
+        v = frates(*bhpAtLimit);
+        if(bhpAtLimit && std::all_of(v.cbegin(), v.cend(), [](double i){ return i <= 0; }))
+            return bhpAtLimit;
 
+        // we still don't get a valied solution.
+        return std::nullopt;
     }
 
 
