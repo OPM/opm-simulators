@@ -41,6 +41,14 @@
 #include <cassert>
 #include <stdexcept>
 #include <string>
+#include <vector>
+
+namespace {
+    std::vector<std::string> toVector(const std::set<std::string>& string_set)
+    {
+        return { string_set.begin(), string_set.end() };
+    }
+}
 
 namespace Opm {
 
@@ -610,7 +618,6 @@ private:
     WellTestState& global_;
 };
 
-
 class PackUnPackAquiferData : public P2PCommunicatorType::DataHandleInterface
 {
     const data::Aquifers& localAquiferData_;
@@ -750,14 +757,56 @@ private:
     }
 };
 
+class PackUnpackInterRegFlows : public P2PCommunicatorType::DataHandleInterface
+{
+    const EclInterRegFlowMap& localInterRegFlows_;
+    EclInterRegFlowMap&       globalInterRegFlows_;
+
+public:
+    PackUnpackInterRegFlows(const EclInterRegFlowMap& localInterRegFlows,
+                            EclInterRegFlowMap&       globalInterRegFlows,
+                            const bool                isIORank)
+        : localInterRegFlows_ (localInterRegFlows)
+        , globalInterRegFlows_(globalInterRegFlows)
+    {
+        if (! isIORank) { return; }
+
+        MessageBufferType buffer;
+        this->pack(0, buffer);
+
+        // pass a dummy_link to satisfy virtual class
+        const int dummyLink = -1;
+        this->unpack(dummyLink, buffer);
+    }
+
+    // pack all data associated with link
+    void pack(int link, MessageBufferType& buffer)
+    {
+        // we should only get one link
+        if (link != 0) {
+            throw std::logic_error {
+                "link in method pack is not 0 as expected"
+            };
+        }
+
+        // write all inter-region flow data
+        this->localInterRegFlows_.write(buffer);
+    }
+
+    // unpack all data associated with link
+    void unpack(int /*link*/, MessageBufferType& buffer)
+    { this->globalInterRegFlows_.read(buffer); }
+};
 
 template <class Grid, class EquilGrid, class GridView>
 CollectDataToIORank<Grid,EquilGrid,GridView>::
 CollectDataToIORank(const Grid& grid, const EquilGrid* equilGrid,
                     const GridView& localGridView,
                     const Dune::CartesianIndexMapper<Grid>& cartMapper,
-                    const Dune::CartesianIndexMapper<EquilGrid>* equilCartMapper)
+                    const Dune::CartesianIndexMapper<EquilGrid>* equilCartMapper,
+                    const std::set<std::string>& fipRegionsInterregFlow)
     : toIORankComm_(grid.comm())
+    , globalInterRegFlows_(EclInterRegFlowMap::createMapFromNames(toVector(fipRegionsInterregFlow)))
 {
     // index maps only have to be build when reordering is needed
     if (!needsReordering && !isParallel())
@@ -878,7 +927,8 @@ collect(const data::Solution& localCellData,
         const data::Wells& localWellData,
         const data::GroupAndNetworkValues& localGroupAndNetworkData,
         const data::Aquifers& localAquiferData,
-        const WellTestState& localWellTestState)
+        const WellTestState& localWellTestState,
+        const EclInterRegFlowMap& localInterRegFlows)
 {
     globalCellData_ = {};
     globalBlockData_.clear();
@@ -887,6 +937,7 @@ collect(const data::Solution& localCellData,
     globalGroupAndNetworkData_.clear();
     globalAquiferData_.clear();
     globalWellTestState_.clear();
+    this->globalInterRegFlows_.clear();
 
     // index maps only have to be build when reordering is needed
     if(!needsReordering && !isParallel())
@@ -943,6 +994,12 @@ collect(const data::Solution& localCellData,
         this->isIORank()
     };
 
+    PackUnpackInterRegFlows packUnpackInterRegFlows {
+        localInterRegFlows,
+        this->globalInterRegFlows_,
+        this->isIORank()
+    };
+
     toIORankComm_.exchange(packUnpackCellData);
     toIORankComm_.exchange(packUnpackWellData);
     toIORankComm_.exchange(packUnpackGroupAndNetworkData);
@@ -950,6 +1007,7 @@ collect(const data::Solution& localCellData,
     toIORankComm_.exchange(packUnpackWBPData);
     toIORankComm_.exchange(packUnpackAquiferData);
     toIORankComm_.exchange(packUnpackWellTestState);
+    toIORankComm_.exchange(packUnpackInterRegFlows);
 
 #ifndef NDEBUG
     // make sure every process is on the same page

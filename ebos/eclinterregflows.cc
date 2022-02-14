@@ -111,6 +111,17 @@ assignGlobalMaxRegionID(const std::size_t regID)
 //
 // =====================================================================
 
+Opm::EclInterRegFlowMap
+Opm::EclInterRegFlowMap::createMapFromNames(std::vector<std::string> names)
+{
+    auto map = EclInterRegFlowMap{};
+
+    map.names_ = std::move(names);
+    map.regionMaps_.resize(map.names_.size(), EclInterRegFlowMapSingleFIP{});
+
+    return map;
+}
+
 Opm::EclInterRegFlowMap::
 EclInterRegFlowMap(const std::size_t                numCells,
                    const std::vector<SingleRegion>& regions)

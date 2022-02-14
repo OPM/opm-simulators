@@ -42,15 +42,23 @@
 
 namespace Opm {
 
-namespace Action { class State; }
 class EclipseIO;
 class EclipseState;
+class EclInterRegFlowMap;
 class Inplace;
 struct NNCdata;
 class Schedule;
 class SummaryConfig;
 class SummaryState;
 class UDQState;
+
+} // namespace Opm
+
+namespace Opm { namespace Action {
+class State;
+}} // namespace Opm::Action
+
+namespace Opm {
 
 template <class Grid, class EquilGrid, class GridView, class ElementMapper, class Scalar>
 class EclGenericWriter
@@ -119,10 +127,11 @@ protected:
                      const std::map<std::pair<std::string, int>, double>& blockData,
                      const std::map<std::string, double>& miscSummaryData,
                      const std::map<std::string, std::vector<double>>& regionData,
-                     SummaryState& summaryState,
-                     UDQState& udqState,
                      const Inplace& inplace,
-                     const Inplace& initialInPlace);
+                     const Inplace& initialInPlace,
+                     const EclInterRegFlowMap& interRegionFlowMap,
+                     SummaryState& summaryState,
+                     UDQState& udqState);
 
     CollectDataToIORankType collectToIORank_;
     const Grid& grid_;

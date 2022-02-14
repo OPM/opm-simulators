@@ -38,6 +38,8 @@
 
 namespace Opm {
 
+    class EclInterRegFlowMap;
+
     /// Form CSR adjacency matrix representation of inter-region flow rate
     /// graph provided as a list of connections between regions on local MPI
     /// rank.  Pertains to a single FIP definition array (e.g., FIPNUM).
@@ -55,6 +57,8 @@ namespace Opm {
             /// Whether or not cell is interior to local rank.
             bool isInterior{true};
         };
+
+        friend class EclInterRegFlowMap;
 
         /// Constructor
         ///
@@ -165,6 +169,9 @@ namespace Opm {
         /// Whether or not this object contains contributions deserialised
         /// from a stream.  For error detection.
         bool isReadFromStream_{false};
+
+        /// Default constructor.
+        EclInterRegFlowMapSingleFIP() = default;
     };
 
     /// Inter-region flow accumulation maps for all region definition arrays
@@ -187,6 +194,15 @@ namespace Opm {
 
         /// Default constructor.
         EclInterRegFlowMap() = default;
+
+        /// Special purpose constructor for global object being collected on
+        /// the I/O rank.
+        ///
+        /// Only knows about the FIP region set names.
+        ///
+        /// \param[in] names Sorted sequence of FIP region names.
+        static EclInterRegFlowMap
+        createMapFromNames(std::vector<std::string> names);
 
         /// Constructor.
         ///

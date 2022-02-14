@@ -28,9 +28,12 @@
 #include <opm/output/data/Solution.hpp>
 #include <opm/output/data/Wells.hpp>
 #include <opm/output/data/Groups.hpp>
+
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
 
 #include <opm/grid/common/p2pcommunicator.hh>
+
+#include <ebos/eclinterregflows.hh>
 
 #include <map>
 #include <utility>
@@ -62,7 +65,8 @@ public:
                         const EquilGrid* equilGrid,
                         const GridView& gridView,
                         const Dune::CartesianIndexMapper<Grid>& cartMapper,
-                        const Dune::CartesianIndexMapper<EquilGrid>* equilCartMapper);
+                        const Dune::CartesianIndexMapper<EquilGrid>* equilCartMapper,
+                        const std::set<std::string>& fipRegionsInterregFlow = {});
 
     // gather solution to rank 0 for EclipseWriter
     void collect(const data::Solution& localCellData,
@@ -71,7 +75,8 @@ public:
                  const data::Wells& localWellData,
                  const data::GroupAndNetworkValues& localGroupAndNetworkData,
                  const data::Aquifers& localAquiferData,
-                 const WellTestState& localWellTestState);
+                 const WellTestState& localWellTestState,
+                 const EclInterRegFlowMap& interRegFlows);
 
     const std::map<std::size_t, double>& globalWBPData() const
     { return this->globalWBPData_; }
@@ -94,6 +99,12 @@ public:
     const data::Aquifers& globalAquiferData() const
     { return globalAquiferData_; }
 
+    EclInterRegFlowMap& globalInterRegFlows()
+    { return this->globalInterRegFlows_; }
+
+    const EclInterRegFlowMap& globalInterRegFlows() const
+    { return this->globalInterRegFlows_; }
+
     bool isIORank() const
     { return toIORankComm_.rank() == ioRank; }
 
@@ -112,6 +123,7 @@ public:
 
 protected:
     P2PCommunicatorType toIORankComm_;
+    EclInterRegFlowMap globalInterRegFlows_;
     IndexMapType globalCartesianIndex_;
     IndexMapType localIndexMap_;
     IndexMapStorageType indexMaps_;
