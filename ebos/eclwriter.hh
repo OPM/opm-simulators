@@ -38,8 +38,11 @@
 
 #include <ebos/eclgenericwriter.hh>
 
-#include <string>
+#include <dune/grid/common/partitionset.hh>
+
+#include <functional>
 #include <limits>
+#include <string>
 
 namespace Opm::Properties {
 
@@ -181,10 +184,11 @@ public:
         const auto localGroupAndNetworkData = simulator_.problem().wellModel()
             .groupAndNetworkData(reportStepNum);
 
-
         const auto localAquiferData = simulator_.problem().aquiferModel().aquiferData();
         const auto localWellTestState = simulator_.problem().wellModel().wellTestState();
         this->prepareLocalCellData(isSubStep, reportStepNum);
+
+        this->captureLocalFluxData();
 
         if (this->collectToIORank_.isParallel())
             this->collectToIORank_.collect({},
@@ -433,6 +437,42 @@ private:
             eclOutputModule_->processElement(elemCtx);
         }
         OPM_END_PARALLEL_TRY_CATCH("EclWriter::prepareLocalCellData() failed: ", simulator_.vanguard().grid().comm())
+    }
+
+    void captureLocalFluxData()
+    {
+        const auto& gridView = this->simulator_.vanguard().gridView();
+        const auto timeIdx = 0u;
+
+        auto elemCtx = ElementContext { this->simulator_ };
+
+        const auto elemMapper = ElementMapper { gridView, Dune::mcmgElementLayout() };
+        const auto activeIndex = [&elemMapper](const Element& e)
+        {
+            return elemMapper.index(e);
+        };
+
+        const auto cartesianIndex = [this](const int elemIndex)
+        {
+            return this->cartMapper_.cartesianIndex(elemIndex);
+        };
+
+        this->eclOutputModule_->initializeFluxData();
+
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
+
+        for (const auto& elem : elements(gridView, Dune::Partitions::interiorBorder)) {
+            elemCtx.updateStencil(elem);
+            elemCtx.updateIntensiveQuantities(timeIdx);
+            elemCtx.updateExtensiveQuantities(timeIdx);
+
+            this->eclOutputModule_->processFluxes(elemCtx, activeIndex, cartesianIndex);
+        }
+
+        OPM_END_PARALLEL_TRY_CATCH("EclWriter::captureLocalFluxData() failed: ",
+                                   this->simulator_.vanguard().grid().comm())
+
+        this->eclOutputModule_->finalizeFluxData();
     }
 
     Simulator& simulator_;

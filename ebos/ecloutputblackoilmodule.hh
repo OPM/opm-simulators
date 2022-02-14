@@ -31,6 +31,8 @@
 #include <numeric>
 #include <optional>
 #include <stdexcept>
+#include <type_traits>
+#include <utility>
 
 #include <opm/models/blackoil/blackoilproperties.hh>
 
@@ -576,6 +578,94 @@ public:
         }
     }
 
+    /*!
+     * \brief Capture connection fluxes, particularly to account for inter-region flows.
+     *
+     * \tparam ActiveIndex Callable type, typically a lambda, that enables
+     *    retrieving the active index, on the local MPI rank, of a
+     *    particular cell/element.  Must support a function call operator of
+     *    the form
+     \code
+        int operator()(const Element& elem) const
+     \endcode
+     *
+     * \tparam CartesianIndex Callable type, typically a lambda, that
+     *    enables retrieving the globally unique Cartesian index of a
+     *    particular cell/element given its active index on the local MPI
+     *    rank.  Must support a function call operator of the form
+     \code
+        int operator()(const int activeIndex) const
+     \endcode
+     *
+     * \param[in] elemCtx Primary lookup structure for per-cell/element
+     *    dynamic information.
+     *
+     * \param[in] activeIndex Mapping from cell/elements to linear indices
+     *    on local MPI rank.
+     *
+     * \param[in] cartesianIndex Mapping from active index on local MPI rank
+     *    to globally unique Cartesian cell/element index.
+     */
+    template <class ActiveIndex, class CartesianIndex>
+    void processFluxes(const ElementContext& elemCtx,
+                       ActiveIndex&&         activeIndex,
+                       CartesianIndex&&      cartesianIndex)
+    {
+        const auto identifyCell = [&activeIndex, &cartesianIndex](const Element& elem)
+            -> EclInterRegFlowMap::Cell
+        {
+            const auto cellIndex = activeIndex(elem);
+
+            return {
+                cellIndex,
+                cartesianIndex(cellIndex),
+                elem.partitionType() == Dune::InteriorEntity
+            };
+        };
+
+        const auto timeIdx = 0u;
+        const auto& stencil = elemCtx.stencil(timeIdx);
+        const auto numInteriorFaces = elemCtx.numInteriorFaces(timeIdx);
+
+        for (auto scvfIdx = 0*numInteriorFaces; scvfIdx < numInteriorFaces; ++scvfIdx) {
+            const auto& face = stencil.interiorFace(scvfIdx);
+            const auto left  = identifyCell(stencil.element(face.interiorIndex()));
+            const auto right = identifyCell(stencil.element(face.exteriorIndex()));
+
+            const auto rates = this->
+                getComponentSurfaceRates(elemCtx, face.area(), scvfIdx, timeIdx);
+
+            this->interRegionFlows_.addConnection(left, right, rates);
+        }
+    }
+
+    /*!
+     * \brief Prepare for capturing connection fluxes, particularly to
+     *    account for inter-region flows.
+     */
+    void initializeFluxData()
+    {
+        // Inter-region flow rates.  Note: ".clear()" prepares to accumulate
+        // contributions per bulk connection between FIP regions.
+        this->interRegionFlows_.clear();
+    }
+
+    /*!
+     * \brief Finalize capturing connection fluxes.
+     */
+    void finalizeFluxData()
+    {
+        this->interRegionFlows_.compress();
+    }
+
+    /*!
+     * \brief Get read-only access to collection of inter-region flows.
+     */
+    const EclInterRegFlowMap& getInterRegFlows() const
+    {
+        return this->interRegionFlows_;
+    }
+
     template <class FluidState>
     void assignToFluidState(FluidState& fs, unsigned elemIdx) const
     {
@@ -770,6 +860,106 @@ private:
             if (elem.partitionType() != Dune::InteriorEntity)
                 region[elemIdx] = 0;
         }
+    }
+
+    /*!
+     * \brief Compute surface level component flow rates across a single
+     *   intersection.
+     *
+     * \param[in] elemCtx Primary lookup structure for per-cell/element
+     *    dynamic information.
+     *
+     * \param[in] scvfIdx Linear index of current interior bulk connection.
+     *
+     * \param[in] timeIdx Historical time-point at which to evaluate dynamic
+     *    quantities (e.g., reciprocal FVF or dissolved gas concentration).
+     *    Zero for the current time.
+     *
+     * \return Surface level component flow rates.
+     */
+    data::InterRegFlowMap::FlowRates
+    getComponentSurfaceRates(const ElementContext& elemCtx,
+                             const Scalar          faceArea,
+                             const std::size_t     scvfIdx,
+                             const std::size_t     timeIdx) const
+    {
+        using Component = data::InterRegFlowMap::Component;
+
+        auto rates = data::InterRegFlowMap::FlowRates{};
+
+        const auto& extQuant = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
+
+        const auto alpha = getValue(extQuant.extrusionFactor()) * faceArea;
+
+        if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
+            const auto& up = elemCtx
+                .intensiveQuantities(extQuant.upstreamIndex(oilPhaseIdx), timeIdx);
+
+            using FluidState = std::remove_cv_t<std::remove_reference_t<
+                decltype(up.fluidState())>>;
+
+            const auto pvtReg = up.pvtRegionIndex();
+
+            const auto bO = getValue(getInvB_<FluidSystem, FluidState, Scalar>
+                                     (up.fluidState(), oilPhaseIdx, pvtReg));
+
+            const auto qO = alpha * bO * getValue(extQuant.volumeFlux(oilPhaseIdx));
+
+            rates[Component::Oil] += qO;
+
+            if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
+                const auto Rs = getValue(
+                    BlackOil::getRs_<FluidSystem, FluidState, Scalar>
+                    (up.fluidState(), pvtReg));
+
+                rates[Component::Gas]    += qO * Rs;
+                rates[Component::Disgas] += qO * Rs;
+            }
+        }
+
+        if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
+            const auto& up = elemCtx
+                .intensiveQuantities(extQuant.upstreamIndex(gasPhaseIdx), timeIdx);
+
+            using FluidState = std::remove_cv_t<std::remove_reference_t<
+                decltype(up.fluidState())>>;
+
+            const auto pvtReg = up.pvtRegionIndex();
+
+            const auto bG = getValue(getInvB_<FluidSystem, FluidState, Scalar>
+                                     (up.fluidState(), gasPhaseIdx, pvtReg));
+
+            const auto qG = alpha * bG * getValue(extQuant.volumeFlux(gasPhaseIdx));
+
+            rates[Component::Gas] += qG;
+
+            if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
+                const auto Rv = getValue(
+                    BlackOil::getRv_<FluidSystem, FluidState, Scalar>
+                    (up.fluidState(), pvtReg));
+
+                rates[Component::Oil]    += qG * Rv;
+                rates[Component::Vapoil] += qG * Rv;
+            }
+        }
+
+        if (FluidSystem::phaseIsActive(waterPhaseIdx)) {
+            const auto& up = elemCtx
+                .intensiveQuantities(extQuant.upstreamIndex(waterPhaseIdx), timeIdx);
+
+            using FluidState = std::remove_cv_t<std::remove_reference_t<
+                decltype(up.fluidState())>>;
+
+            const auto pvtReg = up.pvtRegionIndex();
+
+            const auto bW = getValue(getInvB_<FluidSystem, FluidState, Scalar>
+                                     (up.fluidState(), waterPhaseIdx, pvtReg));
+
+            rates[Component::Water] +=
+                alpha * bW * getValue(extQuant.volumeFlux(waterPhaseIdx));
+        }
+
+        return rates;
     }
 
     const Simulator& simulator_;

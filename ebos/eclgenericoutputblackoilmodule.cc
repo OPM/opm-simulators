@@ -18,6 +18,7 @@
 */
 
 #include <config.h>
+
 #include <ebos/eclgenericoutputblackoilmodule.hh>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
@@ -33,11 +34,16 @@
 #include <opm/input/eclipse/Units/Units.hpp>
 
 #include <cassert>
-#include <fmt/format.h>
+#include <cstddef>
+#include <functional>
 #include <initializer_list>
 #include <iomanip>
 #include <sstream>
 #include <stdexcept>
+#include <string>
+#include <vector>
+
+#include <fmt/format.h>
 
 namespace {
 
@@ -59,6 +65,24 @@ std::string EclString(Opm::Inplace::Phase phase) {
     }
 }
 
+    std::size_t numCells(const Opm::EclipseState& eclState)
+    {
+        return eclState.fieldProps().get_int("FIPNUM").size();
+    }
+
+    std::vector<Opm::EclInterRegFlowMap::SingleRegion>
+    defineInterRegionFlowArrays(const Opm::EclipseState&  eclState,
+                                const Opm::SummaryConfig& summaryConfig)
+    {
+        auto regions = std::vector<Opm::EclInterRegFlowMap::SingleRegion>{};
+
+        const auto& fprops = eclState.fieldProps();
+        for (const auto& arrayName : summaryConfig.fip_regions_interreg_flow()) {
+            regions.push_back({ arrayName, std::cref(fprops.get_int(arrayName)) });
+        }
+
+        return regions;
+    }
 }
 
 namespace Opm {
@@ -82,6 +106,7 @@ EclGenericOutputBlackoilModule(const EclipseState& eclState,
     , schedule_(schedule)
     , summaryConfig_(summaryConfig)
     , summaryState_(summaryState)
+    , interRegionFlows_(numCells(eclState), defineInterRegionFlowArrays(eclState, summaryConfig))
     , enableEnergy_(enableEnergy)
     , enableTemperature_(enableTemperature)
     , enableSolvent_(enableSolvent)

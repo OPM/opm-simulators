@@ -43,6 +43,8 @@
 #endif
 #include <dune/common/parallel/mpihelper.hh>
 
+#include <ebos/eclinterregflows.hh>
+
 namespace Opm {
 
 namespace data { class Solution; }
@@ -370,6 +372,9 @@ protected:
     const Schedule& schedule_;
     const SummaryConfig& summaryConfig_;
     const SummaryState& summaryState_;
+
+    EclInterRegFlowMap interRegionFlows_;
+
     bool enableEnergy_;
     bool enableTemperature_;
 
