@@ -657,7 +657,7 @@ std::optional<double>
 WellInterfaceGeneric::
 computeBhpAtThpLimitCommon(const std::function<std::vector<double>(const double)>& frates,
                            const std::function<double(const std::vector<double>)>& fbhp,
-                           const std::array<double, 2> range,
+                           const std::array<double, 2>& range,
                            DeferredLogger& deferred_logger) const
 {
     // Given a VFP function returning bhp as a function of phase

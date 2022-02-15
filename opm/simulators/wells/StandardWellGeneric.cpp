@@ -202,7 +202,7 @@ computeBhpAtThpLimitProdWithAlq(const std::function<std::vector<double>(const do
                                 double maxPerfPress,
                                 double alq_value) const
 {
-    return baseif_.computeBhpAtThpLimitProdCommon(frates, summary_state, maxPerfPress, getRho(), alq_value, deferred_logger);   
+    return baseif_.computeBhpAtThpLimitProdCommon(frates, summary_state, maxPerfPress, getRho(), alq_value, deferred_logger);
 }
 
 template<class Scalar>
