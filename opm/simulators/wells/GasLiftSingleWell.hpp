@@ -23,16 +23,9 @@
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/parametersystem.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
-
-// NOTE: StandardWell.hpp includes ourself (GasLiftSingleWell.hpp), so we need
-//   to forward declare StandardWell for it to be defined in this file.
-namespace Opm {
-    template<typename TypeTag> class StandardWell;
-}
-#include <opm/simulators/wells/StandardWell.hpp>
 #include <opm/simulators/wells/GasLiftSingleWellGeneric.hpp>
 #include <opm/simulators/wells/GasLiftGroupInfo.hpp>
-
+#include <opm/simulators/wells/WellInterface.hpp>
 
 #include <optional>
 #include <vector>
@@ -45,12 +38,11 @@ namespace Opm
     class GasLiftSingleWell : public GasLiftSingleWellGeneric
     {
         using Simulator = GetPropType<TypeTag, Properties::Simulator>;
-        using StdWell = StandardWell<TypeTag>;
         using GLiftSyncGroups = typename GasLiftSingleWellGeneric::GLiftSyncGroups;
 
     public:
         GasLiftSingleWell(
-            const StdWell &std_well,
+            const WellInterface<TypeTag> &well,
             const Simulator &ebos_simulator,
             const SummaryState &summary_state,
             DeferredLogger &deferred_logger,
@@ -60,7 +52,7 @@ namespace Opm
             GLiftSyncGroups &sync_groups,
             bool glift_debug
         );
-        const WellInterfaceGeneric &getStdWell() const override { return std_well_; }
+        const WellInterfaceGeneric &getWell() const override { return well_; }
 
     private:
         std::optional<double> computeBhpAtThpLimit_(double alq) const override;
@@ -69,7 +61,7 @@ namespace Opm
         void setAlqMaxRate_(const GasLiftOpt::Well& well);
 
         const Simulator &ebos_simulator_;
-        const StdWell &std_well_;
+        const WellInterface<TypeTag> &well_;
     };
 
 } // namespace Opm

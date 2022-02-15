@@ -436,11 +436,13 @@ computeBhpAtThpLimitInj(const std::function<std::vector<double>(const double)>& 
 template<typename Scalar>
 std::optional<double>
 MultisegmentWellGeneric<Scalar>::
-computeBhpAtThpLimitProd(const std::function<std::vector<double>(const double)>& frates,
-                         const SummaryState& summary_state,
-                         const double maxPerfPress,
-                         const double rho,
-                         DeferredLogger& deferred_logger) const
+computeBhpAtThpLimitProdWithAlq(
+                   const std::function<std::vector<double>(const double)>& frates,
+                   const SummaryState& summary_state,
+                   const double maxPerfPress,
+                   const double rho,
+                   DeferredLogger& deferred_logger,
+                   double alq_value) const
 {
     // Given a VFP function returning bhp as a function of phase
     // rates and thp:
@@ -468,10 +470,11 @@ computeBhpAtThpLimitProd(const std::function<std::vector<double>(const double)>&
     const double vfp_ref_depth = table.getDatumDepth();
     const double thp_limit = baseif_.getTHPConstraint(summary_state);
     const double dp = wellhelpers::computeHydrostaticCorrection(baseif_.refDepth(), vfp_ref_depth, rho, baseif_.gravity());
-    auto fbhp = [this, &controls, thp_limit, dp](const std::vector<double>& rates) {
+    auto fbhp = [this, &controls, thp_limit, dp, alq_value](
+                                  const std::vector<double>& rates) {
         assert(rates.size() == 3);
         return baseif_.vfpProperties()->getProd()
-        ->bhp(controls.vfp_table_number, rates[Water], rates[Oil], rates[Gas], thp_limit, controls.alq_value) - dp;
+        ->bhp(controls.vfp_table_number, rates[Water], rates[Oil], rates[Gas], thp_limit, alq_value) - dp;
     };
 
     // Make the flo() function.

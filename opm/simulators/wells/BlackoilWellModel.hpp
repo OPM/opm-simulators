@@ -105,6 +105,7 @@ namespace Opm {
             using RateVector = GetPropType<TypeTag, Properties::RateVector>;
             using GlobalEqVector = GetPropType<TypeTag, Properties::GlobalEqVector>;
             using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
+            using GasLiftSingleWell = typename WellInterface<TypeTag>::GasLiftSingleWell;
             using GLiftOptWells = typename BlackoilWellModelGeneric::GLiftOptWells;
             using GLiftProdWells = typename BlackoilWellModelGeneric::GLiftProdWells;
             using GLiftWellStateMap =
@@ -397,6 +398,13 @@ namespace Opm {
             void gasLiftOptimizationStage1(DeferredLogger& deferred_logger,
                 GLiftProdWells &prod_wells, GLiftOptWells &glift_wells,
                 GasLiftGroupInfo &group_info, GLiftWellStateMap &state_map);
+
+            // cannot be const since it accesses the non-const WellState
+            void gasLiftOptimizationStage1SingleWell(WellInterface<TypeTag> *well,
+                DeferredLogger& deferred_logger,
+                GLiftProdWells &prod_wells, GLiftOptWells &glift_wells,
+                GasLiftGroupInfo &group_info, GLiftWellStateMap &state_map,
+                GLiftSyncGroups& groups_to_sync);
 
             void extractLegacyCellPvtRegionIndex_();
 

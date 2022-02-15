@@ -1815,38 +1815,6 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    gasLiftOptimizationStage1(
-                       WellState& well_state,
-                       const GroupState& group_state,
-                       const Simulator& ebos_simulator,
-                       DeferredLogger& deferred_logger,
-                       GLiftProdWells &prod_wells,
-                       GLiftOptWells &glift_wells,
-                       GLiftWellStateMap &glift_state_map,
-                       GasLiftGroupInfo &group_info,
-                       GLiftSyncGroups &sync_groups,
-                       bool glift_debug
-    ) const
-    {
-        const auto& summary_state = ebos_simulator.vanguard().summaryState();
-        std::unique_ptr<GasLiftSingleWell> glift
-            = std::make_unique<GasLiftSingleWell>(
-                *this, ebos_simulator, summary_state,
-                deferred_logger, well_state, group_state, group_info,
-                sync_groups, glift_debug);
-        auto state = glift->runOptimize(
-            ebos_simulator.model().newtonMethod().numIterations());
-        if (state) {
-            glift_state_map.insert({this->name(), std::move(state)});
-            glift_wells.insert({this->name(), std::move(glift)});
-            return;
-        }
-        prod_wells.insert({this->name(), this});
-    }
-
-    template<typename TypeTag>
-    void
-    StandardWell<TypeTag>::
     computeWellPotentials(const Simulator& ebosSimulator,
                           const WellState& well_state,
                           std::vector<double>& well_potentials,
