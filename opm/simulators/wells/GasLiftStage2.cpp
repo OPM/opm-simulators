@@ -349,7 +349,7 @@ getCurrentWellRates_(const std::string &well_name, const std::string &group_name
     std::string debug_info;
     if (this->stage1_wells_.count(well_name) == 1) {
         GasLiftSingleWell &gs_well = *(this->stage1_wells_.at(well_name).get());
-        const WellInterfaceGeneric &well = gs_well.getStdWell();
+        const WellInterfaceGeneric &well = gs_well.getWell();
         well_ptr = &well;
         GasLiftWellState &state = *(this->well_state_map_.at(well_name).get());
         std::tie(oil_rate, gas_rate) = state.getRates();
@@ -358,7 +358,7 @@ getCurrentWellRates_(const std::string &well_name, const std::string &group_name
     }
     else if (this->prod_wells_.count(well_name) == 1) {
         well_ptr = this->prod_wells_.at(well_name);
-        std::tie(oil_rate, gas_rate) = getStdWellRates_(*well_ptr);
+        std::tie(oil_rate, gas_rate) = getWellRates_(*well_ptr);
         success = true;
         if ( this->debug) debug_info = "(B)";
     }
@@ -413,7 +413,7 @@ getCurrentWellRates_(const std::string &well_name, const std::string &group_name
 
 std::pair<double, double>
 GasLiftStage2::
-getStdWellRates_(const WellInterfaceGeneric &well)
+getWellRates_(const WellInterfaceGeneric &well)
 {
     const int well_index = well.indexOfWell();
     const auto& ws = this->well_state_.well(well_index);
@@ -890,7 +890,7 @@ checkAtLeastTwoWells(std::vector<GasLiftSingleWell *> &wells)
 {
     int numberOfwells = 0;
     for (auto well : wells){
-        int index_of_wells = well->getStdWell().indexOfWell();
+        int index_of_wells = well->getWell().indexOfWell();
         if (!this->parent.well_state_.wellIsOwned(index_of_wells, well->name()))
             continue;
         numberOfwells++;
@@ -1107,7 +1107,7 @@ updateRates(const std::string &well_name)
         const GradInfo &gi = this->parent.dec_grads_.at(well_name);
         GasLiftWellState &state = *(this->parent.well_state_map_.at(well_name).get());
         GasLiftSingleWell &gs_well = *(this->parent.stage1_wells_.at(well_name).get());
-        const WellInterfaceGeneric &well = gs_well.getStdWell();
+        const WellInterfaceGeneric &well = gs_well.getWell();
         // only get deltas for wells owned by this rank
         if (this->parent.well_state_.wellIsOwned(well.indexOfWell(), well_name)) {
             const auto &well_ecl = well.wellEcl();

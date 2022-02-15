@@ -21,7 +21,7 @@ namespace Opm {
 
 template<typename TypeTag>
 GasLiftSingleWell<TypeTag>::
-GasLiftSingleWell(const WellInterface<TypeTag> &std_well,
+GasLiftSingleWell(const WellInterface<TypeTag> &well,
                   const Simulator &ebos_simulator,
                   const SummaryState &summary_state,
                   DeferredLogger &deferred_logger,
@@ -37,17 +37,17 @@ GasLiftSingleWell(const WellInterface<TypeTag> &std_well,
         deferred_logger,
         well_state,
         group_state,
-        std_well.wellEcl(),
+        well.wellEcl(),
         summary_state,
         group_info,
-        std_well.phaseUsage(),
+        well.phaseUsage(),
         ebos_simulator.vanguard().schedule(),
         ebos_simulator.episodeIndex(),
         sync_groups,
         glift_debug
     )
    , ebos_simulator_{ebos_simulator}
-   , std_well_{std_well}
+   , well_{well}
 {
     const auto& gl_well = *gl_well_;
     if(useFixedAlq_(gl_well)) {
@@ -59,7 +59,7 @@ GasLiftSingleWell(const WellInterface<TypeTag> &std_well,
         this->optimize_ = true;
     }
 
-    const auto& pu = std_well_.phaseUsage();
+    const auto& pu = well_.phaseUsage();
     this->oil_pos_ = pu.phase_pos[Oil];
     this->gas_pos_ = pu.phase_pos[Gas];
     this->water_pos_ = pu.phase_pos[Water];
@@ -103,7 +103,7 @@ GasLiftSingleWell<TypeTag>::
 computeWellRates_( double bhp, bool bhp_is_limited, bool debug_output ) const
 {
     std::vector<double> potentials(this->num_phases_, 0.0);
-    this->std_well_.computeWellRatesWithBhp(
+    this->well_.computeWellRatesWithBhp(
         this->ebos_simulator_, bhp, potentials, this->deferred_logger_);
     if (debug_output) {
         const std::string msg = fmt::format("computed well potentials given bhp {}, "
@@ -128,7 +128,7 @@ std::optional<double>
 GasLiftSingleWell<TypeTag>::
 computeBhpAtThpLimit_(double alq) const
 {
-    auto bhp_at_thp_limit = this->std_well_.computeBhpAtThpLimitProdWithAlq(
+    auto bhp_at_thp_limit = this->well_.computeBhpAtThpLimitProdWithAlq(
         this->ebos_simulator_,
         this->summary_state_,
         this->deferred_logger_,
@@ -167,7 +167,7 @@ setAlqMaxRate_(const GasLiftOpt::Well &well)
         // According to the manual for WLIFTOPT, item 3:
         //   The default value should be set to the largest ALQ
         //   value in the well's VFP table
-        const auto& table = std_well_.vfpProperties()->getProd()->getTable(
+        const auto& table = well_.vfpProperties()->getProd()->getTable(
                 this->controls_.vfp_table_number);
         const auto& alq_values = table.getALQAxis();
         // Assume the alq_values are sorted in ascending order, so

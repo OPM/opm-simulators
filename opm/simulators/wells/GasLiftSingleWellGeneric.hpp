@@ -96,7 +96,7 @@ public:
 
     std::unique_ptr<GasLiftWellState> runOptimize(const int iteration_idx);
 
-    virtual const WellInterfaceGeneric& getStdWell() const = 0;
+    virtual const WellInterfaceGeneric& getWell() const = 0;
 
 protected:
     GasLiftSingleWellGeneric(

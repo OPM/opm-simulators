@@ -96,7 +96,7 @@ protected:
         const Group& group);
     void getGroupGliftWellsRecursive_(
         const Group& group, std::vector<GasLiftSingleWell *>& wells);
-    std::pair<double, double> getStdWellRates_(const WellInterfaceGeneric& well);
+    std::pair<double, double> getWellRates_(const WellInterfaceGeneric& well);
     void optimizeGroup_(const Group& group);
     void optimizeGroupsRecursive_(const Group& group);
     void recalculateGradientAndUpdateData_(

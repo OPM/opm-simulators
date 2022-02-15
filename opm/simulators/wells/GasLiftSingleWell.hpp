@@ -42,7 +42,7 @@ namespace Opm
 
     public:
         GasLiftSingleWell(
-            const WellInterface<TypeTag> &std_well,
+            const WellInterface<TypeTag> &well,
             const Simulator &ebos_simulator,
             const SummaryState &summary_state,
             DeferredLogger &deferred_logger,
@@ -52,7 +52,7 @@ namespace Opm
             GLiftSyncGroups &sync_groups,
             bool glift_debug
         );
-        const WellInterfaceGeneric &getStdWell() const override { return std_well_; }
+        const WellInterfaceGeneric &getWell() const override { return well_; }
 
     private:
         std::optional<double> computeBhpAtThpLimit_(double alq) const override;
@@ -61,7 +61,7 @@ namespace Opm
         void setAlqMaxRate_(const GasLiftOpt::Well& well);
 
         const Simulator &ebos_simulator_;
-        const WellInterface<TypeTag> &std_well_;
+        const WellInterface<TypeTag> &well_;
     };
 
 } // namespace Opm
