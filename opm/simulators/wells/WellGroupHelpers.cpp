@@ -1040,7 +1040,8 @@ namespace WellGroupHelpers
                     // We are a group, with default guide rate.
                     // Compute guide rate by accumulating our children's guide rates.
                     const Group& group = schedule_.getGroup(name, report_step_);
-                    return guideRateSum(group, always_included_child);
+                    const double eff = group.getGroupEfficiencyFactor();
+                    return eff * guideRateSum(group, always_included_child);
                 }
             } else {
                 // No group-controlled subordinate wells.
@@ -1164,6 +1165,10 @@ namespace WellGroupHelpers
             return tcalc.calcModeRateFromRates(groupTargetReductions);
         };
 
+        auto localCurrentRate = [&](const std::string& group_name) {
+            const std::vector<double>& groupSurfaceRates = group_state.production_rates(group_name);
+            return tcalc.calcModeRateFromRates(groupSurfaceRates);
+        };
         const double orig_target = tcalc.groupTarget(group.productionControls(summaryState));
         // Assume we have a chain of groups as follows: BOTTOM -> MIDDLE -> TOP.
         // Then ...
@@ -1178,6 +1183,20 @@ namespace WellGroupHelpers
         for (size_t ii = 0; ii < num_ancestors; ++ii) {
             if ((ii == 0) || guideRate->has(chain[ii])) {
                 local_reduction_level = ii;
+            }
+        }
+
+        // check whether guide rate is violated
+        if (local_reduction_level > 0) {
+            const auto& guided_group = chain[local_reduction_level];
+            const double grefficiency
+                            = schedule.getGroup(guided_group, reportStepIdx).getGroupEfficiencyFactor();
+            const double currentRateFraction = grefficiency * localCurrentRate(guided_group) / (localCurrentRate(chain[local_reduction_level-1]));
+            const double guiderateFraction = localFraction(guided_group);
+            // we add a factor here to avoid switching due to numerical instability
+            const double factor = 1.01;
+            if (currentRateFraction > (guiderateFraction * factor)) {
+                return std::make_pair(true, guiderateFraction/currentRateFraction);
             }
         }
 
@@ -1323,6 +1342,11 @@ namespace WellGroupHelpers
             return tcalc.calcModeRateFromRates(groupTargetReductions);
         };
 
+        auto localCurrentRate = [&](const std::string& group_name) {
+            const std::vector<double>& groupSurfaceRates = group_state.injection_surface_rates(group_name);
+            return tcalc.calcModeRateFromRates(groupSurfaceRates);
+        };
+
         const double orig_target = tcalc.groupTarget(group.injectionControls(injectionPhase, summaryState), deferred_logger);
         // Assume we have a chain of groups as follows: BOTTOM -> MIDDLE -> TOP.
         // Then ...
@@ -1339,6 +1363,21 @@ namespace WellGroupHelpers
                 local_reduction_level = ii;
             }
         }
+
+        // check whether guide rate is violated
+        if (local_reduction_level > 0) {
+            const auto& guided_group = chain[local_reduction_level];
+            const double grefficiency
+                            = schedule.getGroup(guided_group, reportStepIdx).getGroupEfficiencyFactor();
+            const double currentRateFraction = grefficiency * localCurrentRate(guided_group) / (localCurrentRate(chain[local_reduction_level-1]));
+            const double guiderateFraction = localFraction(guided_group);
+            // we add a factor here to avoid switching due to numerical instability
+            const double factor = 1.01;
+            if (currentRateFraction > (guiderateFraction * factor)) {
+                return std::make_pair(true, guiderateFraction/currentRateFraction);
+            }
+        }
+
         double target = orig_target;
         for (size_t ii = 0; ii < num_ancestors; ++ii) {
             if ((ii == 0) || guideRate->has(chain[ii], injectionPhase)) {
