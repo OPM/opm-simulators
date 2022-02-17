@@ -900,6 +900,7 @@ namespace Opm
             case Well::ProducerCMode::THP:
             {
                 auto rates = ws.surface_rates;
+                this->adaptRatesForVFP(rates);
                 double bhp = this->calculateBhpFromThp(well_state, rates, well, summaryState, this->getRefDensity(), deferred_logger);
                 ws.bhp = bhp;
 

@@ -59,10 +59,7 @@ GasLiftSingleWell(const WellInterface<TypeTag> &well,
         this->optimize_ = true;
     }
 
-    const auto& pu = well_.phaseUsage();
-    this->oil_pos_ = pu.phase_pos[Oil];
-    this->gas_pos_ = pu.phase_pos[Gas];
-    this->water_pos_ = pu.phase_pos[Water];
+    setupPhaseVariables_();
     // get the alq value used for this well for the previous iteration (a
     //   nonlinear iteration in assemble() in BlackoilWellModel).
     //   If gas lift optimization has not been applied to this well yet, the
@@ -102,7 +99,7 @@ GasLiftSingleWellGeneric::BasicRates
 GasLiftSingleWell<TypeTag>::
 computeWellRates_( double bhp, bool bhp_is_limited, bool debug_output ) const
 {
-    std::vector<double> potentials(this->num_phases_, 0.0);
+    std::vector<double> potentials(NUM_PHASES, 0.0);
     this->well_.computeWellRatesWithBhp(
         this->ebos_simulator_, bhp, potentials, this->deferred_logger_);
     if (debug_output) {
@@ -150,6 +147,36 @@ computeBhpAtThpLimit_(double alq) const
         displayDebugMessage_(msg);
     }
     return bhp_at_thp_limit;
+}
+
+template<typename TypeTag>
+void
+GasLiftSingleWell<TypeTag>::
+setupPhaseVariables_()
+{
+    const auto& pu = this->phase_usage_;
+    bool num_phases_ok = (pu.num_phases == 3);
+    if (pu.num_phases == 2
+        && pu.phase_used[BlackoilPhases::Aqua] == 1
+        && pu.phase_used[BlackoilPhases::Liquid] == 1
+        && pu.phase_used[BlackoilPhases::Vapour] == 0)
+    {
+        // NOTE: We support two-phase oil-water flow, by setting the gas flow rate
+        //   to zero. This is done by initializing the potential vector to zero:
+        //
+        //     std::vector<double> potentials(NUM_PHASES, 0.0);
+        //
+        //  see e.g. runOptimizeLoop_() in GasLiftSingleWellGeneric.cpp
+        //  In addition the VFP calculations, e.g. to calculate BHP from THP
+        //  has been adapted to the two-phase oil-water case, see the comment
+        //  in WellInterfaceGeneric.cpp for the method adaptRatesForVFP() for
+        //  more information.
+        num_phases_ok = true;  // two-phase oil-water is also supported
+    }
+    assert(num_phases_ok);
+    this->oil_pos_ = pu.phase_pos[Oil];
+    this->gas_pos_ = pu.phase_pos[Gas];
+    this->water_pos_ = pu.phase_pos[Water];
 }
 
 template<typename TypeTag>

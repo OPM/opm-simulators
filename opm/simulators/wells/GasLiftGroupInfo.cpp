@@ -291,21 +291,24 @@ checkDoGasLiftOptimization_(const std::string &well_name)
              "further optimization skipped due to oscillation in ALQ", well_name);
         return false;
     }
+    auto itr = this->ecl_wells_.find(well_name);
+    if (itr == this->ecl_wells_.end()) {
+        // well_name is not present in the well_model's well container
+        displayDebugMessage_("Could find well ecl_wells. Skipping.", well_name);
+        return false;
+    }
+    const Well *well = (itr->second).first;
+    //assert(well); // Should never be nullptr
+    if (well->isInjector()) {
+        displayDebugMessage_("Injector well. Skipping", well_name);
+        return false;
+    }
     if (this->optimize_only_thp_wells_) {
-        auto itr = this->ecl_wells_.find(well_name);
-        if (itr != this->ecl_wells_.end()) {
-            //const Well *well = (itr->second).first;
-            //assert(well); // Should never be nullptr
-            const int well_index = (itr->second).second;
-            const auto& ws = this->well_state_.well(well_index);
-            const Well::ProducerCMode& control_mode = ws.production_cmode;
-            if (control_mode != Well::ProducerCMode::THP ) {
-                displayDebugMessage_("Not THP control. Skipping.", well_name);
-                return false;
-            }
-        }
-        else {
-            // well_name is not present in the well_model's well container
+        const int well_index = (itr->second).second;
+        const auto& ws = this->well_state_.well(well_index);
+        const Well::ProducerCMode& control_mode = ws.production_cmode;
+        if (control_mode != Well::ProducerCMode::THP ) {
+            displayDebugMessage_("Not THP control. Skipping.", well_name);
             return false;
         }
     }
@@ -314,7 +317,7 @@ checkDoGasLiftOptimization_(const std::string &well_name)
     }
     if (!this->glo_.has_well(well_name)) {
         displayDebugMessage_(
-             "Gas Lift not activated: WLIFTOPT is probably missing", well_name);
+             "Gas Lift not activated: WLIFTOPT is probably missing. Skipping.", well_name);
         return false;
     }
     auto increment = this->glo_.gaslift_increment();

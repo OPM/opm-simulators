@@ -100,6 +100,25 @@ WellInterfaceGeneric::WellInterfaceGeneric(const Well& well,
     well_control_log_.clear();
 }
 
+// Currently the VFP calculations requires three-phase input data, see
+//  the documentation for keyword VFPPROD and its implementation in
+//  VFPProdProperties.cpp. However, by setting the gas flow rate to a dummy
+//  value in VFPPROD record 5 (GFR values) and supplying a dummy input value
+//  for the gas rate to the methods in VFPProdProperties.cpp, we can extend
+//  the VFP calculations to the two-phase oil-water case.
+void WellInterfaceGeneric::adaptRatesForVFP(std::vector<double>& rates) const
+{
+    const auto& pu = this->phaseUsage();
+    if (pu.num_phases == 2
+        && pu.phase_used[BlackoilPhases::Aqua] == 1
+        && pu.phase_used[BlackoilPhases::Liquid] == 1
+        && pu.phase_used[BlackoilPhases::Vapour] == 0)
+    {
+        assert(rates.size() == 2);
+        rates.push_back(0.0);  // set gas rate to zero
+    }
+}
+
 const std::vector<PerforationData>& WellInterfaceGeneric::perforationData() const
 {
     return *perf_data_;
