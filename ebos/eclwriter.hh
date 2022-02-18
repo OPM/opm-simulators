@@ -28,20 +28,19 @@
 #ifndef EWOMS_ECL_WRITER_HH
 #define EWOMS_ECL_WRITER_HH
 
-#include "collecttoiorank.hh"
-#include "ecloutputblackoilmodule.hh"
+#include <ebos/collecttoiorank.hh>
+#include <ebos/eclgenericwriter.hh>
+#include <ebos/ecloutputblackoilmodule.hh>
+
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+#include <opm/simulators/utils/ParallelRestart.hpp>
 
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
 
-#include <opm/simulators/utils/ParallelRestart.hpp>
-#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
-
-#include <ebos/eclgenericwriter.hh>
-
 #include <dune/grid/common/partitionset.hh>
 
-#include <functional>
 #include <limits>
+#include <stdexcept>
 #include <string>
 
 namespace Opm::Properties {
@@ -190,15 +189,34 @@ public:
 
         this->captureLocalFluxData();
 
-        if (this->collectToIORank_.isParallel())
+        if (this->collectToIORank_.isParallel()) {
+            OPM_BEGIN_PARALLEL_TRY_CATCH()
+
             this->collectToIORank_.collect({},
                                            eclOutputModule_->getBlockData(),
                                            eclOutputModule_->getWBPData(),
                                            localWellData,
                                            localGroupAndNetworkData,
                                            localAquiferData,
-                                           localWellTestState);
+                                           localWellTestState,
+                                           this->eclOutputModule_->getInterRegFlows());
 
+            if (this->collectToIORank_.isIORank()) {
+                auto& iregFlows = this->collectToIORank_.globalInterRegFlows();
+
+                if (! iregFlows.readIsConsistent()) {
+                    throw std::runtime_error {
+                        "Inconsistent inter-region flow "
+                        "region set names in parallel"
+                    };
+                }
+
+                iregFlows.compress();
+            }
+
+            OPM_END_PARALLEL_TRY_CATCH("Collect to I/O rank: ",
+                                       this->simulator_.vanguard().grid().comm());
+        }
 
         std::map<std::string, double> miscSummaryData;
         std::map<std::string, std::vector<double>> regionData;
@@ -246,9 +264,12 @@ public:
                             this->collectToIORank_.globalBlockData() :
                             this->eclOutputModule_->getBlockData(),
                           miscSummaryData, regionData,
-                          summaryState(), udqState(),
                           inplace,
-                          eclOutputModule_->initialInplace());
+                          eclOutputModule_->initialInplace(),
+                          this->collectToIORank_.isParallel()
+                          ? this->collectToIORank_.globalInterRegFlows()
+                          : this->eclOutputModule_->getInterRegFlows(),
+                          summaryState(), udqState());
 
         eclOutputModule_->outputProdLog(reportStepNum, isSubStep, forceDisableProdOutput);
         eclOutputModule_->outputInjLog(reportStepNum, isSubStep, forceDisableInjOutput);
@@ -285,7 +306,8 @@ public:
                                            localWellData,
                                            localGroupAndNetworkData,
                                            localAquiferData,
-                                           localWellTestState);
+                                           localWellTestState,
+                                           {});
         }
 
         if (this->collectToIORank_.isIORank()) {

@@ -34,6 +34,7 @@
 #include <opm/output/eclipse/Summary.hpp>
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 #include <opm/input/eclipse/Schedule/Action/State.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/SummaryState.hpp>
@@ -51,6 +52,12 @@
 #if HAVE_MPI
 #include <mpi.h>
 #endif
+
+#include <array>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
 namespace {
 
@@ -102,6 +109,22 @@ bool directVerticalNeighbors(const std::array<int, 3>& cartDims,
         return false;
 }
 
+std::unordered_map<std::string, Opm::data::InterRegFlowMap>
+getInterRegFlowsAsMap(const Opm::EclInterRegFlowMap& map)
+{
+    auto maps = std::unordered_map<std::string, Opm::data::InterRegFlowMap>{};
+
+    const auto& regionNames = map.names();
+    auto flows = map.getInterRegFlows();
+    const auto nmap = regionNames.size();
+
+    maps.reserve(nmap);
+    for (auto mapID = 0*nmap; mapID < nmap; ++mapID) {
+        maps.emplace(regionNames[mapID], std::move(flows[mapID]));
+    }
+
+    return maps;
+}
 
 struct EclWriteTasklet : public Opm::TaskletInterface
 {
@@ -173,7 +196,8 @@ EclGenericWriter(const Schedule& schedule,
                        equilGrid,
                        gridView,
                        cartMapper,
-                       equilCartMapper)
+                       equilCartMapper,
+                       summaryConfig.fip_regions_interreg_flow())
     , grid_(grid)
     , gridView_(gridView)
     , schedule_(schedule)
@@ -450,8 +474,8 @@ doWriteOutput(const int                     reportStepNum,
 
 template<class Grid, class EquilGrid, class GridView, class ElementMapper, class Scalar>
 void EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>::
-evalSummary(int reportStepNum,
-            Scalar curTime,
+evalSummary(const int reportStepNum,
+            const Scalar curTime,
             const std::map<std::size_t, double>& wbpData,
             const data::Wells& localWellData,
             const data::GroupAndNetworkValues& localGroupAndNetworkData,
@@ -459,10 +483,11 @@ evalSummary(int reportStepNum,
             const std::map<std::pair<std::string, int>, double>& blockData,
             const std::map<std::string, double>& miscSummaryData,
             const std::map<std::string, std::vector<double>>& regionData,
-            SummaryState& summaryState,
-            UDQState& udqState,
             const Inplace& inplace,
-            const Inplace& initialInPlace)
+            const Inplace& initialInPlace,
+            const EclInterRegFlowMap& interRegionFlowMap,
+            SummaryState& summaryState,
+            UDQState& udqState)
 {
     std::vector<char> buffer;
     if (collectToIORank_.isIORank()) {
@@ -495,14 +520,13 @@ evalSummary(int reportStepNum,
                      wbp_calculators,
                      regionData,
                      blockData,
-                     aquiferData);
+                     aquiferData,
+                     getInterRegFlowsAsMap(interRegionFlowMap));
 
-        /*
-          Off-by-one-fun: The reportStepNum argument corresponds to the
-          report step these results will be written to, whereas the argument
-          to UDQ function evaluation corresponds to the report step we are
-          currently on.
-        */
+        // Off-by-one-fun: The reportStepNum argument corresponds to the
+        // report step these results will be written to, whereas the
+        // argument to UDQ function evaluation corresponds to the report
+        // step we are currently on.
         auto udq_step = reportStepNum - 1;
         const auto& udq_config = schedule_.getUDQConfig(udq_step);
         udq_config.eval( udq_step, schedule_.wellMatcher(udq_step), summaryState, udqState);
