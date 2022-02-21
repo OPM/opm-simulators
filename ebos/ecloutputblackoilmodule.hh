@@ -515,8 +515,22 @@ public:
                         val.second = getValue(fs.saturation(gasPhaseIdx));
                     else if ((key.first == "BOSAT") || (key.first == "BSOIL"))
                         val.second = getValue(fs.saturation(oilPhaseIdx));
-                    else if ((key.first == "BPR") || (key.first == "BPRESSUR"))
-                        val.second = getValue(fs.pressure(oilPhaseIdx));
+                    else if ((key.first == "BPR") || (key.first == "BPRESSUR")){
+                        if (FluidSystem::phaseIsActive(oilPhaseIdx)) 
+                            val.second = getValue(fs.pressure(oilPhaseIdx));
+                        else if (FluidSystem::phaseIsActive(gasPhaseIdx)) 
+                            val.second = getValue(fs.pressure(gasPhaseIdx));
+                        else if (FluidSystem::phaseIsActive(waterPhaseIdx)) 
+                            val.second = getValue(fs.pressure(waterPhaseIdx));
+                    }
+                    else if ((key.first == "BTCNFHEA") || (key.first == "BTEMP")){
+                        if (FluidSystem::phaseIsActive(oilPhaseIdx)) 
+                            val.second = getValue(fs.temperature(oilPhaseIdx));
+                        else if (FluidSystem::phaseIsActive(gasPhaseIdx)) 
+                            val.second = getValue(fs.temperature(gasPhaseIdx));
+                        else if (FluidSystem::phaseIsActive(waterPhaseIdx)) 
+                            val.second = getValue(fs.temperature(waterPhaseIdx));
+                    }
                     else if (key.first == "BWKR" || key.first == "BKRW")
                         val.second = getValue(intQuants.relativePermeability(waterPhaseIdx));
                     else if (key.first == "BGKR" || key.first == "BKRG")
