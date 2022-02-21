@@ -515,6 +515,8 @@ public:
                         val.second = getValue(fs.saturation(oilPhaseIdx));
                     else if ((key.first == "BPR") || (key.first == "BPRESSUR"))
                         val.second = getValue(fs.pressure(oilPhaseIdx));
+                    else if ((key.first == "BTCNFHEA") || (key.first == "BTEMP"))
+                        val.second = getValue(fs.temperature(oilPhaseIdx));
                     else if (key.first == "BWKR" || key.first == "BKRW")
                         val.second = getValue(intQuants.relativePermeability(waterPhaseIdx));
                     else if (key.first == "BGKR" || key.first == "BKRG")
