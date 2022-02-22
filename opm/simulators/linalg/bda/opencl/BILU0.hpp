@@ -133,6 +133,10 @@ public:
 #endif
     }
 
+    BlockedMatrix* getRJacMat()
+    {
+        return rJacMat.get();
+    }
 };
 
 } // namespace Accelerator

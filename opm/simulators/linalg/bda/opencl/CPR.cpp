@@ -80,6 +80,10 @@ bool CPR<block_size>::analyze_matrix(BlockedMatrix *mat_) {
     return success;
 }
 
+template <unsigned int block_size>
+bool CPR<block_size>::analyze_matrix(BlockedMatrix *mat_, BlockedMatrix *jacMat) {
+    return analyze_matrix(mat_);
+}
 
 template <unsigned int block_size>
 bool CPR<block_size>::create_preconditioner(BlockedMatrix *mat_) {
@@ -101,6 +105,10 @@ bool CPR<block_size>::create_preconditioner(BlockedMatrix *mat_) {
     return result;
 }
 
+template <unsigned int block_size>
+bool CPR<block_size>::create_preconditioner(BlockedMatrix *mat_, BlockedMatrix *jacMat) {
+    return create_preconditioner(mat_);
+}
 // return the absolute value of the N elements for which the absolute value is highest
 double get_absmax(const double *data, const int N) {
     return std::abs(*std::max_element(data, data + N, [](double a, double b){return std::fabs(a) < std::fabs(b);}));

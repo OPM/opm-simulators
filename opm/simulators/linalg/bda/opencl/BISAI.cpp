@@ -92,6 +92,12 @@ bool BISAI<block_size>::analyze_matrix(BlockedMatrix *mat)
 }
 
 template <unsigned int block_size>
+bool BISAI<block_size>::analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat)
+{
+    return analyze_matrix(mat);
+}
+
+template <unsigned int block_size>
 void BISAI<block_size>::buildLowerSubsystemsStructures(){
     lower.subsystemPointers.assign(Nb + 1, 0);
 
@@ -253,6 +259,11 @@ bool BISAI<block_size>::create_preconditioner(BlockedMatrix *mat)
     }
 
     return true;
+}
+template <unsigned int block_size>
+bool BISAI<block_size>::create_preconditioner(BlockedMatrix *mat, BlockedMatrix *jacMat)
+{
+    return create_preconditioner(mat);
 }
 
 template <unsigned int block_size>

@@ -165,26 +165,26 @@ bool BILU0<block_size>::analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat
     this->nnz_jm = jacMat->nnzbs * block_size * block_size;
     this->nnzbs_jm = jacMat->nnzbs;
 
-    int *CSCRowIndices = nullptr;
-    int *CSCColPointers = nullptr;
+    std::vector<int> CSCRowIndices;
+    std::vector<int> CSCColPointers;
 
     if (opencl_ilu_reorder == ILUReorder::NONE) {
         LUmat = std::make_unique<BlockedMatrix>(*mat);
     } else {
         toOrder.resize(Nb);
         fromOrder.resize(Nb);
-        CSCRowIndices = new int[nnzbs_jm];
-        CSCColPointers = new int[Nb + 1];
+        CSCRowIndices.resize(nnzbs_jm);
+        CSCColPointers.resize(Nb + 1);
         rmat = std::make_shared<BlockedMatrix>(mat->Nb, mat->nnzbs, block_size);
         rJacMat = std::make_shared<BlockedMatrix>(jacMat->Nb, jacMat->nnzbs, block_size);
         LUmat = std::make_unique<BlockedMatrix>(*rJacMat);
-        
+            
         Timer t_convert;
-        csrPatternToCsc(jacMat->colIndices, jacMat->rowPointers, CSCRowIndices, CSCColPointers, jacMat->Nb);
+        csrPatternToCsc(jacMat->colIndices, jacMat->rowPointers, CSCRowIndices.data(), CSCColPointers.data(), jacMat->Nb);
         if(verbosity >= 3){
-        std::ostringstream out;
-        out << "BILU0 convert CSR to CSC: " << t_convert.stop() << " s";
-        OpmLog::info(out.str());
+            std::ostringstream out;
+            out << "BILU0 convert CSR to CSC: " << t_convert.stop() << " s";
+            OpmLog::info(out.str());
         }
     }
 
@@ -192,12 +192,12 @@ bool BILU0<block_size>::analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat
     std::ostringstream out;
     if (opencl_ilu_reorder == ILUReorder::LEVEL_SCHEDULING) {
         out << "BILU0 reordering strategy: " << "level_scheduling\n";
-        findLevelScheduling(jacMat->colIndices, jacMat->rowPointers, CSCRowIndices, CSCColPointers, jacMat->Nb, &numColors, toOrder.data(), fromOrder.data(), rowsPerColor);
+        findLevelScheduling(jacMat->colIndices, jacMat->rowPointers, CSCRowIndices.data(), CSCColPointers.data(), jacMat->Nb, &numColors, toOrder.data(), fromOrder.data(), rowsPerColor);
         for (int iii = 0; iii < numColors; ++iii) { out << "rpc: "<< rowsPerColor[iii] << "\n";} 
         out << "numColors: "<< numColors << "\n";
     } else if (opencl_ilu_reorder == ILUReorder::GRAPH_COLORING) {
         out << "BILU0 reordering strategy: " << "graph_coloring\n";
-        findGraphColoring<block_size>(jacMat->colIndices, jacMat->rowPointers, CSCRowIndices, CSCColPointers, jacMat->Nb, jacMat->Nb, jacMat->Nb, &numColors, toOrder.data(), fromOrder.data(), rowsPerColor);
+        findGraphColoring<block_size>(jacMat->colIndices, jacMat->rowPointers, CSCRowIndices.data(), CSCColPointers.data(), jacMat->Nb, jacMat->Nb, jacMat->Nb, &numColors, toOrder.data(), fromOrder.data(), rowsPerColor);
         for (int iii = 0; iii < numColors; ++iii) { out << "rpc: "<< rowsPerColor[iii] << "\n";} 
         out << "numColors: "<< numColors << "\n";
     } else if (opencl_ilu_reorder == ILUReorder::NONE) {
@@ -214,16 +214,11 @@ bool BILU0<block_size>::analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat
     if(verbosity >= 1){
         out << "BILU0 analysis took: " << t_analysis.stop() << " s, " << numColors << " colors\n";
     }
+
 #if CHOW_PATEL
     out << "BILU0 CHOW_PATEL: " << CHOW_PATEL << ", CHOW_PATEL_GPU: " << CHOW_PATEL_GPU;
 #endif
     OpmLog::info(out.str());
-
-
-    if (opencl_ilu_reorder != ILUReorder::NONE) {
-        delete[] CSCRowIndices;
-        delete[] CSCColPointers;
-    }
 
     diagIndex.resize(mat->Nb);
     invDiagVals.resize(mat->Nb * bs * bs);
@@ -400,11 +395,11 @@ bool BILU0<block_size>::create_preconditioner(BlockedMatrix *mat, BlockedMatrix 
 
 #if CHOW_PATEL
     chowPatelIlu.decomposition(queue, context,
-        LUmat.get(), Lmat.get(), Umat.get(),
-        invDiagVals, diagIndex,
-        s.diagIndex, s.invDiagVals,
-        s.Lvals, s.Lcols, s.Lrows,
-        s.Uvals, s.Ucols, s.Urows);
+                               LUmat.get(), Lmat.get(), Umat.get(),
+                               invDiagVals, diagIndex,
+                               s.diagIndex, s.invDiagVals,
+                               s.Lvals, s.Lcols, s.Lrows,
+                               s.Uvals, s.Ucols, s.Urows);
 #else
     Timer t_copyToGpu;
 
