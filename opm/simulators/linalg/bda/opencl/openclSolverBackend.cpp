@@ -454,6 +454,7 @@ void openclSolverBackend<block_size>::initialize2(int N_, int nnz_, int dim, dou
     Nb = (N + dim - 1) / dim;
     std::ostringstream out;
     out << "Initializing GPU, matrix size: " << N << " blocks, nnzb: " << nnzb << "\n";
+    out << "Blocks in ILU matrix: " << jac_nnzb << "\n";
     out << "Maxit: " << maxit << std::scientific << ", tolerance: " << tolerance << "\n";
     out << "PlatformID: " << platformID << ", deviceID: " << deviceID << "\n";
     OpmLog::info(out.str());

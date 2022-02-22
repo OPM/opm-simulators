@@ -361,9 +361,9 @@ void amgclSolverBackend<block_size>::get_result(double *x_) {
 
 template <unsigned int block_size>
 SolverStatus amgclSolverBackend<block_size>::solve_system2(int N_, int nnz_, int dim,
-							   double *vals, int *rows, int *cols, double *b,
-							   int nnz2, double *vals2, int *rows2, int *cols2,
-							   WellContributions& wellContribs, BdaResult &res)
+                                                           double *vals, int *rows, int *cols, double *b,
+                                                           int nnz2, double *vals2, int *rows2, int *cols2,
+                                                           WellContributions& wellContribs, BdaResult &res)
 {
     (void) nnz2; (void) vals2; (void) rows2; (void) cols2;
     return solve_system(N_, nnz_, dim, vals, rows, cols, b, wellContribs, res);

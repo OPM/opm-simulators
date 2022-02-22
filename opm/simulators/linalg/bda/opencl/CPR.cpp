@@ -82,8 +82,39 @@ bool CPR<block_size>::analyze_matrix(BlockedMatrix *mat_) {
 
 template <unsigned int block_size>
 bool CPR<block_size>::analyze_matrix(BlockedMatrix *mat_, BlockedMatrix *jacMat) {
-    (void) jacMat;
-    return analyze_matrix(mat_);
+    this->Nb = mat_->Nb;
+    this->nnzb = mat_->nnzbs;
+    this->N = Nb * block_size;
+    this->nnz = nnzb * block_size * block_size;
+
+    bool success = bilu0->analyze_matrix(mat_, jacMat);
+
+    if (opencl_ilu_reorder == ILUReorder::NONE) {
+        mat = mat_;
+    } else {
+        mat = bilu0->getRMat();
+    }
+    return success;
+}
+
+template <unsigned int block_size>
+bool CPR<block_size>::create_preconditioner(BlockedMatrix *mat_, BlockedMatrix *jacMat) {
+    Dune::Timer t_bilu0;
+    bool result = bilu0->create_preconditioner(mat_, jacMat);
+    if (verbosity >= 3) {
+        std::ostringstream out;
+        out << "CPR create_preconditioner bilu0(): " << t_bilu0.stop() << " s";
+        OpmLog::info(out.str());
+    }
+
+    Dune::Timer t_amg;
+    create_preconditioner_amg(mat); // already points to bilu0::rmat if needed
+    if (verbosity >= 3) {
+        std::ostringstream out;
+        out << "CPR create_preconditioner_amg(): " << t_amg.stop() << " s";
+        OpmLog::info(out.str());
+    }
+    return result;
 }
 
 template <unsigned int block_size>
@@ -106,11 +137,7 @@ bool CPR<block_size>::create_preconditioner(BlockedMatrix *mat_) {
     return result;
 }
 
-template <unsigned int block_size>
-bool CPR<block_size>::create_preconditioner(BlockedMatrix *mat_, BlockedMatrix *jacMat) {
-    (void) jacMat;
-    return create_preconditioner(mat_);
-}
+
 // return the absolute value of the N elements for which the absolute value is highest
 double get_absmax(const double *data, const int N) {
     return std::abs(*std::max_element(data, data + N, [](double a, double b){return std::fabs(a) < std::fabs(b);}));

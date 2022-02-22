@@ -144,7 +144,7 @@ private:
     void initialize(int N, int nnz, int dim, double *vals, int *rows, int *cols);
 
     void initialize2(int N, int nnz, int dim, double *vals, int *rows, int *cols,
-		     int nnz2, double *vals2, int *rows2, int *cols2);
+                     int nnz2, double *vals2, int *rows2, int *cols2);
 
     /// Clean memory
     void finalize();

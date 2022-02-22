@@ -89,10 +89,10 @@ namespace Accelerator {
             double *vals, int *rows, int *cols,
             double *b, WellContributions& wellContribs, BdaResult &res) = 0;
 
-	virtual SolverStatus solve_system2(int N_, int nnz_, int dim,
-					   double *vals, int *rows, int *cols, double *b,
-					   int nnz2, double *vals2, int *rows2, int *cols2,
-					   WellContributions& wellContribs, BdaResult &res) = 0;
+        virtual SolverStatus solve_system2(int N_, int nnz_, int dim,
+                                           double *vals, int *rows, int *cols, double *b,
+                                           int nnz2, double *vals2, int *rows2, int *cols2,
+                                           WellContributions& wellContribs, BdaResult &res) = 0;
 
         virtual void get_result(double *x) = 0;
 

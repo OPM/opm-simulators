@@ -245,7 +245,7 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system([[maybe_unu
             static std::vector<int> bm_h_cols;
             const int bm_nnzb = (bm_h_rows.empty()) ? blockMat->nonzeroes() : bm_h_rows.back();
             const int bm_nnz = bm_nnzb * dim * dim;
-            
+
             if (bm_h_rows.capacity() == 0) {
                 bm_h_rows.reserve(Nb+1);
                 bm_h_cols.reserve(bm_nnzb);
@@ -258,7 +258,6 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system([[maybe_unu
                 out << "Checking zeros took: " << t_zeros.stop() << " s, found " << numZeros << " zeros";
                 OpmLog::info(out.str());
             }
-            
             status = backend->solve_system2(N, nnz, dim, static_cast<double*>(&(((*mat)[0][0][0][0]))), h_rows.data(), h_cols.data(), static_cast<double*>(&(b[0][0])),
                                             bm_nnz, static_cast<double*>(&(((*blockMat)[0][0][0][0]))), bm_h_rows.data(), bm_h_cols.data(),
                                             wellContribs, result);

@@ -256,9 +256,9 @@ public:
     SolverStatus solve_system(int N, int nnz, int dim, double *vals, int *rows, int *cols, double *b, WellContributions& wellContribs, BdaResult &res) override;
 
     SolverStatus solve_system2(int N_, int nnz_, int dim,
-			       double *vals, int *rows, int *cols, double *b,
-			       int nnz2, double *vals2, int *rows2, int *cols2,
-			       WellContributions& wellContribs, BdaResult &res) override;
+                               double *vals, int *rows, int *cols, double *b,
+                               int nnz2, double *vals2, int *rows2, int *cols2,
+                               WellContributions& wellContribs, BdaResult &res) override;
     
     /// Get result after linear solve, and peform postprocessing if necessary
     /// \param[inout] x           resulting x vector, caller must guarantee that x points to a valid array

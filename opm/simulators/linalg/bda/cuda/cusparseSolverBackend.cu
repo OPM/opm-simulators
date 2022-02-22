@@ -502,9 +502,9 @@ SolverStatus cusparseSolverBackend<block_size>::solve_system(int N, int nnz, int
 }
 template <unsigned int block_size>
 SolverStatus cusparseSolverBackend<block_size>::solve_system2(int N_, int nnz_, int dim,
-					   double *vals, int *rows, int *cols, double *b,
-					   int nnz2, double *vals2, int *rows2, int *cols2,
-					   WellContributions& wellContribs, BdaResult &res)
+                                           double *vals, int *rows, int *cols, double *b,
+                                           int nnz2, double *vals2, int *rows2, int *cols2,
+                                           WellContributions& wellContribs, BdaResult &res)
 {
     (void) nnz2; (void) vals2; (void) rows2; (void) cols2;
     return solve_system(N_, nnz_, dim, vals, rows, cols, b, wellContribs, res);

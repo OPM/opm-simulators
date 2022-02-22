@@ -178,7 +178,7 @@ bool BILU0<block_size>::analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat
         rmat = std::make_shared<BlockedMatrix>(mat->Nb, mat->nnzbs, block_size);
         rJacMat = std::make_shared<BlockedMatrix>(jacMat->Nb, jacMat->nnzbs, block_size);
         LUmat = std::make_unique<BlockedMatrix>(*rJacMat);
-            
+
         Timer t_convert;
         csrPatternToCsc(jacMat->colIndices, jacMat->rowPointers, CSCRowIndices.data(), CSCColPointers.data(), jacMat->Nb);
         if(verbosity >= 3){
@@ -193,20 +193,16 @@ bool BILU0<block_size>::analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat
     if (opencl_ilu_reorder == ILUReorder::LEVEL_SCHEDULING) {
         out << "BILU0 reordering strategy: " << "level_scheduling\n";
         findLevelScheduling(jacMat->colIndices, jacMat->rowPointers, CSCRowIndices.data(), CSCColPointers.data(), jacMat->Nb, &numColors, toOrder.data(), fromOrder.data(), rowsPerColor);
-        for (int iii = 0; iii < numColors; ++iii) { out << "rpc: "<< rowsPerColor[iii] << "\n";} 
-        out << "numColors: "<< numColors << "\n";
     } else if (opencl_ilu_reorder == ILUReorder::GRAPH_COLORING) {
         out << "BILU0 reordering strategy: " << "graph_coloring\n";
         findGraphColoring<block_size>(jacMat->colIndices, jacMat->rowPointers, CSCRowIndices.data(), CSCColPointers.data(), jacMat->Nb, jacMat->Nb, jacMat->Nb, &numColors, toOrder.data(), fromOrder.data(), rowsPerColor);
-        for (int iii = 0; iii < numColors; ++iii) { out << "rpc: "<< rowsPerColor[iii] << "\n";} 
-        out << "numColors: "<< numColors << "\n";
     } else if (opencl_ilu_reorder == ILUReorder::NONE) {
         out << "BILU0 reordering strategy: none\n";
         // numColors = 1;
         // rowsPerColor.emplace_back(Nb);
         numColors = Nb;
         for(int i = 0; i < Nb; ++i){
-        rowsPerColor.emplace_back(1);
+            rowsPerColor.emplace_back(1);
         }
     } else {
         OPM_THROW(std::logic_error, "Error ilu reordering strategy not set correctly\n");
@@ -369,7 +365,6 @@ bool BILU0<block_size>::create_preconditioner(BlockedMatrix *mat, BlockedMatrix 
     auto *jm = jacMat;
 
     if (opencl_ilu_reorder != ILUReorder::NONE) {
-
         jm = rJacMat.get();
         Timer t_reorder;
         reorderBlockedMatrixByPattern(mat, toOrder.data(), fromOrder.data(), rmat.get());
