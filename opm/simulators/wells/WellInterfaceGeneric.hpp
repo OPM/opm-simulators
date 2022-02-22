@@ -88,6 +88,7 @@ public:
 
     // whether the well is operable
     bool isOperableAndSolvable() const;
+    bool vfpExplicit () const;
 
     void initCompletions();
     void closeCompletions(const WellTestState& wellTestState);
@@ -265,6 +266,8 @@ protected:
         bool has_negative_potentials = false;
         //thp limit violated but not switched
         mutable bool thp_limit_violated_but_not_switched = false;
+
+        bool vfpexplicit = false;
     };
 
     OperabilityStatus operability_status_;

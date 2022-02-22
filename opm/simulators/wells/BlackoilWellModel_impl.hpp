@@ -227,7 +227,7 @@ namespace Opm {
             {
                 const auto& sched_state = this->schedule()[timeStepIdx];
                 // update VFP properties
-                vfp_properties_.reset(new VFPProperties( sched_state.vfpinj(), sched_state.vfpprod()) );
+                vfp_properties_.reset(new VFPProperties( sched_state.vfpinj(), sched_state.vfpprod(), this->prevWellState()));
                 this->initializeWellProdIndCalculators();
                 if (sched_state.events().hasEvent(ScheduleEvents::Events::WELL_PRODUCTIVITY_INDEX)) {
                     this->runWellPIScaling(timeStepIdx, local_deferredLogger);

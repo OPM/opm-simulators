@@ -414,6 +414,11 @@ bool WellInterfaceGeneric::isOperableAndSolvable() const
     return operability_status_.isOperableAndSolvable();
 }
 
+bool WellInterfaceGeneric::vfpExplicit() const
+{
+    return operability_status_.vfpexplicit;
+}
+
 double WellInterfaceGeneric::getALQ(const WellState& well_state) const
 {
     return well_state.getALQ(name());
