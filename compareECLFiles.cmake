@@ -1505,6 +1505,13 @@ endif()
 				       DIR model2
                                        TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
 
+  add_test_compare_parallel_simulation(CASENAME rxft
+                                       FILENAME TEST_RXFT
+                                       SIMULATOR flow
+                                       ABS_TOL ${abs_tol_parallel}
+                                       REL_TOL 1.0e-3
+                                       DIR rxft_smry
+                                       TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
 endif()
 
 if(OPM_TESTS_ROOT)
