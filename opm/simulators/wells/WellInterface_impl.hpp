@@ -262,7 +262,7 @@ namespace Opm
         }
         bool changed = false;
         if (iog == IndividualOrGroup::Individual) {
-            changed = this->checkIndividualConstraints(ws, summaryState);
+            changed = this->checkIndividualConstraints(ws, summaryState, deferred_logger);
         } else if (iog == IndividualOrGroup::Group) {
             changed = this->checkGroupConstraints(well_state, group_state, schedule, summaryState, deferred_logger);
         } else {
@@ -600,7 +600,8 @@ namespace Opm
 
         // Operability checking is not free
         // Only check wells under BHP and THP control
-        if(bhp_controled || thp_controled) {
+        bool check_thp = thp_controled || this->operability_status_.thp_limit_violated_but_not_switched;
+        if (check_thp || bhp_controled) {
             updateIPR(ebos_simulator, deferred_logger);
             checkOperabilityUnderBHPLimit(well_state, ebos_simulator, deferred_logger);
         }

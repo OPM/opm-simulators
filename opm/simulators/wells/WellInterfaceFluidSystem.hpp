@@ -83,13 +83,16 @@ protected:
     void calculateReservoirRates(SingleWellState& ws) const;
 
     bool checkIndividualConstraints(SingleWellState& ws,
-                                    const SummaryState& summaryState) const;
+                                    const SummaryState& summaryState,
+                                    DeferredLogger& deferred_logger) const;
 
     Well::InjectorCMode activeInjectionConstraint(const SingleWellState& ws,
-                                                  const SummaryState& summaryState) const;
+                                                  const SummaryState& summaryState,
+                                                  DeferredLogger& deferred_logger) const;
 
     Well::ProducerCMode activeProductionConstraint(const SingleWellState& ws,
-                                                   const SummaryState& summaryState) const;
+                                                   const SummaryState& summaryState,
+                                                   DeferredLogger& deferred_logger) const;
 
     std::pair<bool, double> checkGroupConstraintsInj(const Group& group,
                                                      const WellState& well_state,
