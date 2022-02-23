@@ -127,14 +127,12 @@ public:
     /// Solve linear system, A*x = b, matrix A must be in blocked-CSR format
     /// \param[in] matrix         matrix A
     /// \param[in] b              input vector, contains N values
+    /// \param[in] jacMatrix      matrix for preconditioner
     /// \param[in] wellContribs   contains all WellContributions, to apply them separately, instead of adding them to matrix A
     /// \param[inout] res         summary of solver result
     /// \return                   status code
-    SolverStatus solve_system(std::shared_ptr<BlockedMatrix> matrix, double *b, WellContributions& wellContribs, BdaResult &res) override;
-
-    SolverStatus solve_system2(std::shared_ptr<BlockedMatrix> matrix, double *b,
-                               std::shared_ptr<BlockedMatrix> jacMatrix,
-                               WellContributions& wellContribs, BdaResult &res) override;
+    SolverStatus solve_system(std::shared_ptr<BlockedMatrix> matrix, double *b,
+        std::shared_ptr<BlockedMatrix> jacMatrix, WellContributions& wellContribs, BdaResult &res) override;
     
     /// Get resulting vector x after linear solve, also includes post processing if necessary
     /// \param[inout] x        resulting x vector, caller must guarantee that x points to a valid array

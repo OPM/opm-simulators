@@ -244,14 +244,12 @@ public:
     /// Solve linear system, A*x = b, matrix A must be in blocked-CSR format
     /// \param[in] matrix         matrix A
     /// \param[in] b              input vector, contains N values
+    /// \param[in] jacMatrix      matrix for preconditioner
     /// \param[in] wellContribs   WellContributions, not used in FPGA solver because it requires them already added to matrix A
     /// \param[inout] res         summary of solver result
     /// \return                   status code
-    SolverStatus solve_system(std::shared_ptr<BlockedMatrix> matrix, double *b, WellContributions& wellContribs, BdaResult &res) override;
-
-    SolverStatus solve_system2(std::shared_ptr<BlockedMatrix> matrix, double *b,
-                               std::shared_ptr<BlockedMatrix> jacMatrix,
-                               WellContributions& wellContribs, BdaResult &res) override;
+    SolverStatus solve_system(std::shared_ptr<BlockedMatrix> matrix, double *b,
+        std::shared_ptr<BlockedMatrix> jacMatrix, WellContributions& wellContribs, BdaResult &res) override;
     
     /// Get result after linear solve, and peform postprocessing if necessary
     /// \param[inout] x           resulting x vector, caller must guarantee that x points to a valid array

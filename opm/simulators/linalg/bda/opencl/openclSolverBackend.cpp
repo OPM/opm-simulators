@@ -383,78 +383,26 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
 
 
 template <unsigned int block_size>
-void openclSolverBackend<block_size>::initialize(std::shared_ptr<BlockedMatrix> matrix) {
+void openclSolverBackend<block_size>::initialize(std::shared_ptr<BlockedMatrix> matrix, std::shared_ptr<BlockedMatrix> jacMatrix) {
     this->Nb = matrix->Nb;
     this->N = Nb * block_size;
     this->nnzb = matrix->nnzbs;
     this->nnz = nnzb * block_size * block_size;
 
-    std::ostringstream out;
-    out << "Initializing GPU, matrix size: " << Nb << " blockrows, nnzb: " << nnzb << "\n";
-    out << "Maxit: " << maxit << std::scientific << ", tolerance: " << tolerance << "\n";
-    out << "PlatformID: " << platformID << ", deviceID: " << deviceID << "\n";
-    OpmLog::info(out.str());
-    out.str("");
-    out.clear();
-
-    try {
-        prec->setOpencl(context, queue);
-
-#if COPY_ROW_BY_ROW
-        vals_contiguous.resize(nnz);
-#endif
-        // mat.reset(new BlockedMatrix(Nb, nnzb, block_size, vals, cols, rows));
-        mat = matrix;
-
-        d_x = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * N);
-        d_b = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * N);
-        d_rb = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * N);
-        d_r = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * N);
-        d_rw = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * N);
-        d_p = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * N);
-        d_pw = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * N);
-        d_s = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * N);
-        d_t = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * N);
-        d_v = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * N);
-        d_tmp = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * N);
-
-        d_Avals = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * nnz);
-        d_Acols = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * nnzb);
-        d_Arows = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * (Nb + 1));
-
-        bool reorder = (opencl_ilu_reorder != ILUReorder::NONE);
-        if (reorder) {
-            rb = new double[N];
-            d_toOrder = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * Nb);
-        }
-
-    } catch (const cl::Error& error) {
-        std::ostringstream oss;
-        oss << "OpenCL Error: " << error.what() << "(" << error.err() << ")\n";
-        oss << getErrorString(error.err());
-        // rethrow exception
-        OPM_THROW(std::logic_error, oss.str());
-    } catch (const std::logic_error& error) {
-        // rethrow exception by OPM_THROW in the try{}, without this, a segfault occurs
-        throw error;
+    if (jacMatrix) {
+        useJacMatrix = true;
     }
 
-    initialized = true;
-} // end initialize()
-
-template <unsigned int block_size>
-void openclSolverBackend<block_size>::initialize2(std::shared_ptr<BlockedMatrix> matrix, std::shared_ptr<BlockedMatrix> jacMatrix) {
-    this->Nb = matrix->Nb;
-    this->N = Nb * block_size;
-    this->nnzb = matrix->nnzbs;
-    this->nnz = nnzb * block_size * block_size;
-
-    this->jac_nnz = jacMatrix->nnzbs;
-    this->jac_nnzb = jac_nnz * block_size * block_size;
+    if (useJacMatrix) {
+        this->jac_nnz = jacMatrix->nnzbs;
+        this->jac_nnzb = jac_nnz * block_size * block_size;
+    }
 
     std::ostringstream out;
     out << "Initializing GPU, matrix size: " << N << " blocks, nnzb: " << nnzb << "\n";
-    out << "Blocks in ILU matrix: " << jac_nnzb << "\n";
+    if (useJacMatrix) {
+        out << "Blocks in ILU matrix: " << jac_nnzb << "\n";
+    }
     out << "Maxit: " << maxit << std::scientific << ", tolerance: " << tolerance << "\n";
     out << "PlatformID: " << platformID << ", deviceID: " << deviceID << "\n";
     OpmLog::info(out.str());
@@ -594,7 +542,7 @@ bool openclSolverBackend<block_size>::analyze_matrix() {
     Timer t;
 
     bool success;
-    if (blockJacVersion)
+    if (useJacMatrix)
         success = prec->analyze_matrix(mat.get(), jacMat.get());
     else
         success = prec->analyze_matrix(mat.get());
@@ -649,7 +597,7 @@ bool openclSolverBackend<block_size>::create_preconditioner() {
     Timer t;
 
     bool result;
-    if (blockJacVersion)
+    if (useJacMatrix)
         result = prec->create_preconditioner(mat.get(), jacMat.get());
     else
         result = prec->create_preconditioner(mat.get());
@@ -712,37 +660,14 @@ void openclSolverBackend<block_size>::get_result(double *x) {
 
 
 template <unsigned int block_size>
-SolverStatus openclSolverBackend<block_size>::solve_system(std::shared_ptr<BlockedMatrix> matrix, double *b, WellContributions& wellContribs, BdaResult &res) {
-    if (initialized == false) {
-        initialize(matrix);
-        if (analysis_done == false) {
-            if (!analyze_matrix()) {
-                return SolverStatus::BDA_SOLVER_ANALYSIS_FAILED;
-            }
-        }
-        update_system(matrix->nnzValues, b, wellContribs);
-        if (!create_preconditioner()) {
-            return SolverStatus::BDA_SOLVER_CREATE_PRECONDITIONER_FAILED;
-        }
-        copy_system_to_gpu();
-    } else {
-        update_system(matrix->nnzValues, b, wellContribs);
-        if (!create_preconditioner()) {
-            return SolverStatus::BDA_SOLVER_CREATE_PRECONDITIONER_FAILED;
-        }
-        update_system_on_gpu();
-    }
-    solve_system(wellContribs, res);
-    return SolverStatus::BDA_SOLVER_SUCCESS;
-}
-template <unsigned int block_size>
-SolverStatus openclSolverBackend<block_size>::solve_system2(std::shared_ptr<BlockedMatrix> matrix, double *b,
-                                                            std::shared_ptr<BlockedMatrix> jacMatrix,
-                                                            WellContributions& wellContribs, BdaResult &res)
+SolverStatus openclSolverBackend<block_size>::solve_system(std::shared_ptr<BlockedMatrix> matrix,
+                                                           double *b,
+                                                           std::shared_ptr<BlockedMatrix> jacMatrix,
+                                                           WellContributions& wellContribs,
+                                                           BdaResult &res)
 {
     if (initialized == false) {
-        blockJacVersion = true;
-        initialize2(matrix, jacMatrix);
+        initialize(matrix, jacMatrix);
         if (analysis_done == false) {
             if (!analyze_matrix()) {
                 return SolverStatus::BDA_SOLVER_ANALYSIS_FAILED;
@@ -763,6 +688,7 @@ SolverStatus openclSolverBackend<block_size>::solve_system2(std::shared_ptr<Bloc
     solve_system(wellContribs, res);
     return SolverStatus::BDA_SOLVER_SUCCESS;
 }
+
 
 #define INSTANTIATE_BDA_FUNCTIONS(n)                                        \
 template openclSolverBackend<n>::openclSolverBackend(                       \

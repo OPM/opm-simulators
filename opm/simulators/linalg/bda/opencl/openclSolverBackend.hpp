@@ -65,7 +65,7 @@ private:
 
     int jac_nnz;
     int jac_nnzb;
-    bool blockJacVersion = false;
+    bool useJacMatrix = false;
 
     std::unique_ptr<Preconditioner<block_size> > prec;
                                                                   // can perform blocked ILU0 and AMG on pressure component
@@ -137,8 +137,7 @@ private:
     /// Initialize GPU and allocate memory
     /// \param[in] matrix     matrix A
     /// \param[in] jacMatrix  matrix for preconditioner
-    void initialize(std::shared_ptr<BlockedMatrix> matrix);
-    void initialize2(std::shared_ptr<BlockedMatrix> matrix, std::shared_ptr<BlockedMatrix> jacMatrix);
+    void initialize(std::shared_ptr<BlockedMatrix> matrix, std::shared_ptr<BlockedMatrix> jacMatrix);
 
     /// Clean memory
     void finalize();
@@ -193,14 +192,12 @@ public:
     /// Solve linear system, A*x = b, matrix A must be in blocked-CSR format
     /// \param[in] matrix         matrix A
     /// \param[in] b              input vector, contains N values
+    /// \param[in] jacMatrix      matrix for preconditioner
     /// \param[in] wellContribs   WellContributions, to apply them separately, instead of adding them to matrix A
     /// \param[inout] res         summary of solver result
     /// \return                   status code
-    SolverStatus solve_system(std::shared_ptr<BlockedMatrix> matrix, double *b, WellContributions& wellContribs, BdaResult &res) override;
-
-    SolverStatus solve_system2(std::shared_ptr<BlockedMatrix> matrix, double *b,
-                               std::shared_ptr<BlockedMatrix> jacMatrix,
-                               WellContributions& wellContribs, BdaResult &res) override;
+    SolverStatus solve_system(std::shared_ptr<BlockedMatrix> matrix, double *b,
+        std::shared_ptr<BlockedMatrix> jacMatrix, WellContributions& wellContribs, BdaResult &res) override;
 
     /// Solve scalar linear system, for example a coarse system of an AMG preconditioner
     /// Data is already on the GPU

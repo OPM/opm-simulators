@@ -360,17 +360,12 @@ void amgclSolverBackend<block_size>::get_result(double *x_) {
 
 
 template <unsigned int block_size>
-SolverStatus amgclSolverBackend<block_size>::solve_system2(std::shared_ptr<BlockedMatrix> matrix,
+SolverStatus amgclSolverBackend<block_size>::solve_system(std::shared_ptr<BlockedMatrix> matrix,
                                                            double *b,
                                                            [[maybe_unused]] std::shared_ptr<BlockedMatrix> jacMatrix,
-                                                           WellContributions& wellContribs,
+                                                           [[maybe_unused]] WellContributions& wellContribs,
                                                            BdaResult &res)
 {
-    return solve_system(matrix, b, wellContribs, res);
-}
-    
-template <unsigned int block_size>
-SolverStatus amgclSolverBackend<block_size>::solve_system(std::shared_ptr<BlockedMatrix> matrix, double *b, WellContributions&, BdaResult &res) {
     if (initialized == false) {
         initialize(matrix->Nb, matrix->nnzbs);
         convert_sparsity_pattern(matrix->rowPointers, matrix->colIndices);

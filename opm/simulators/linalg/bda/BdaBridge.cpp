@@ -192,14 +192,13 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::copySparsityPatternFromI
 
 
 template <class BridgeMatrix, class BridgeVector, int block_size>
-void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system([[maybe_unused]] BridgeMatrix* bridgeMat,
-                                                                     [[maybe_unused]] BridgeMatrix* jacMat,
-                                                                     [[maybe_unused]] int numJacobiBlocks,
-                                                                     [[maybe_unused]] BridgeVector& b,
-                                                                     [[maybe_unused]] WellContributions& wellContribs,
-                                                                     [[maybe_unused]] InverseOperatorResult& res)
+void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system(BridgeMatrix* bridgeMat,
+                                                                     BridgeMatrix* jacMat,
+                                                                     int numJacobiBlocks,
+                                                                     BridgeVector& b,
+                                                                     WellContributions& wellContribs,
+                                                                     InverseOperatorResult& res)
 {
-
     if (use_gpu || use_fpga) {
         BdaResult result;
         result.converged = false;
@@ -229,14 +228,7 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system([[maybe_unu
             OpmLog::info(out.str());
         }
 
-
-        /////////////////////////
-        // actually solve
-        SolverStatus status; 
-        if (numJacobiBlocks < 2) {
-            // assume that underlying data (nonzeroes) from mat (Dune::BCRSMatrix) are contiguous, if this is not the case, the chosen BdaSolver is expected to perform undefined behaviour
-            status = backend->solve_system(matrix, static_cast<double*>(&(b[0][0])), wellContribs, result);
-        } else {
+        if (numJacobiBlocks >= 2) {
             const int jacNnzb = (h_jacRows.empty()) ? jacMat->nonzeroes() : h_jacRows.back();
 
             if (!jacMatrix) {
@@ -253,8 +245,12 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system([[maybe_unu
                 out << "Checking zeros for jacMat took: " << t_zeros2.stop() << " s, found " << jacNumZeros << " zeros";
                 OpmLog::info(out.str());
             }
-            status = backend->solve_system2(matrix, static_cast<double*>(&(b[0][0])), jacMatrix, wellContribs, result);
         }
+
+        /////////////////////////
+        // actually solve
+        // assume that underlying data (nonzeroes) from b (Dune::BlockVector) are contiguous, if this is not the case, the chosen BdaSolver is expected to perform undefined behaviour
+        SolverStatus status = backend->solve_system(matrix, static_cast<double*>(&(b[0][0])), jacMatrix, wellContribs, result);
 
         switch(status) {
         case SolverStatus::BDA_SOLVER_SUCCESS:

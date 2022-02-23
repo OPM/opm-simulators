@@ -225,7 +225,11 @@ void FpgaSolverBackend<block_size>::get_result(double *x_)
 
 
 template <unsigned int block_size>
-SolverStatus FpgaSolverBackend<block_size>::solve_system(std::shared_ptr<BlockedMatrix> matrix, double *b, WellContributions&, BdaResult &res)
+SolverStatus FpgaSolverBackend<block_size>::solve_system(std::shared_ptr<BlockedMatrix> matrix,
+                                                         double *b,
+                                                         [[maybe_unused]] std::shared_ptr<BlockedMatrix> jacMatrix,
+                                                         WellContributions&,
+                                                         BdaResult &res)
 {
     if (initialized == false) {
         initialize(matrix->Nb, matrix->nnzbzs, matrix->nnzValues, matrix->rowPointers, matrix->colIndices);
@@ -250,15 +254,6 @@ SolverStatus FpgaSolverBackend<block_size>::solve_system(std::shared_ptr<Blocked
     return SolverStatus::BDA_SOLVER_SUCCESS;
 }
 
-template <unsigned int block_size>
-SolverStatus FpgaSolverBackend<block_size>::solve_system2(std::shared_ptr<BlockedMatrix> matrix,
-                                                          double *b,
-                                                          [[maybe_unused]] std::shared_ptr<BlockedMatrix> jacMatrix,
-                                                          WellContributions& wellContribs,
-                                                          BdaResult &res)
-{
-    return solve_system(matrix, b, wellContribs, res);
-}
 
 template <unsigned int block_size>
 void FpgaSolverBackend<block_size>::initialize(int Nb_, int nnzbs, double *vals, int *rows, int *cols)

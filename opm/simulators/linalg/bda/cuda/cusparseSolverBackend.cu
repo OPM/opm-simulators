@@ -478,7 +478,12 @@ void cusparseSolverBackend<block_size>::get_result(double *x) {
 
 
 template <unsigned int block_size>
-SolverStatus cusparseSolverBackend<block_size>::solve_system(std::shared_ptr<BlockedMatrix> matrix, double *b, WellContributions& wellContribs, BdaResult &res) {
+SolverStatus cusparseSolverBackend<block_size>::solve_system(std::shared_ptr<BlockedMatrix> matrix,
+                                                              double *b,
+                                                              [[maybe_unused]] std::shared_ptr<BlockedMatrix> jacMatrix,
+                                                              WellContributions& wellContribs,
+                                                              BdaResult &res)
+{
     if (initialized == false) {
         initialize(matrix->Nb, matrix->nnzbs);
         copy_system_to_gpu(matrix->nnzValues, matrix->rowPointers, matrix->colIndices, b);
@@ -499,15 +504,6 @@ SolverStatus cusparseSolverBackend<block_size>::solve_system(std::shared_ptr<Blo
     return SolverStatus::BDA_SOLVER_SUCCESS;
 }
 
-template <unsigned int block_size>
-SolverStatus cusparseSolverBackend<block_size>::solve_system2(std::shared_ptr<BlockedMatrix> matrix,
-                                                              double *b,
-                                                              [[maybe_unused]] std::shared_ptr<BlockedMatrix> jacMatrix,
-                                                              WellContributions& wellContribs,
-                                                              BdaResult &res)
-{
-    return solve_system(matrix, b, wellContribs, res);
-}
 
 #define INSTANTIATE_BDA_FUNCTIONS(n)                                                       \
 template cusparseSolverBackend<n>::cusparseSolverBackend(int, int, double, unsigned int);  \
