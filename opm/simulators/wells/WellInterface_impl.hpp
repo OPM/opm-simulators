@@ -418,6 +418,13 @@ namespace Opm
         // keep a copy of the original well state
         const WellState well_state0 = well_state;
         const double dt = ebosSimulator.timeStepSize();
+        const auto& summary_state = ebosSimulator.vanguard().summaryState();
+        const bool has_thp_limit = this->wellHasTHPConstraints(summary_state);
+        if (has_thp_limit)
+            well_state.well(this->indexOfWell()).production_cmode = Well::ProducerCMode::THP;
+        else
+            well_state.well(this->indexOfWell()).production_cmode = Well::ProducerCMode::BHP;
+
         const bool converged = iterateWellEquations(ebosSimulator, dt, well_state, group_state, deferred_logger);
         if (converged) {
             deferred_logger.debug("WellTest: Well equation for well " + this->name() +  " converged");
