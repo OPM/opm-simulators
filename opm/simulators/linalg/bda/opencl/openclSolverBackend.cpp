@@ -399,7 +399,7 @@ void openclSolverBackend<block_size>::initialize(std::shared_ptr<BlockedMatrix> 
     }
 
     std::ostringstream out;
-    out << "Initializing GPU, matrix size: " << N << " blocks, nnzb: " << nnzb << "\n";
+    out << "Initializing GPU, matrix size: " << Nb << " blockrows, nnzb: " << nnzb << "\n";
     if (useJacMatrix) {
         out << "Blocks in ILU matrix: " << jac_nnzb << "\n";
     }

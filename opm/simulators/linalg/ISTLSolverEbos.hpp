@@ -520,10 +520,7 @@ namespace Opm
 
             typedef typename Matrix::size_type size_type;
             size_type numCells = grid.size( 0 );
-            blockJacobiForGPUILU0_.reset(new Matrix(numCells, numCells, Matrix::random));
-
-            std::vector<std::set<size_type>> pattern;
-            pattern.resize(numCells);
+            blockJacobiForGPUILU0_.reset(new Matrix(numCells, numCells, 8, 0.4, Matrix::implicit));
 
             const auto& lid = grid.localIdSet();
             const auto& gridView = grid.leafGridView();
@@ -533,14 +530,14 @@ namespace Opm
             //Loop over cells
             for (; elemIt != elemEndIt; ++elemIt)
             {
-
                 const auto& elem = *elemIt;
                 size_type idx = lid.id(elem);
-                pattern[idx].insert(idx);
+                blockJacobiForGPUILU0_->entry(idx, idx) = 0.0;
 
                 // Add well non-zero connections
-                for (auto wc = wellConnectionsGraph_[idx].begin(); wc!=wellConnectionsGraph_[idx].end(); ++wc)
-                    pattern[idx].insert(*wc);
+                for (auto wc = wellConnectionsGraph_[idx].begin(); wc!=wellConnectionsGraph_[idx].end(); ++wc) {
+                    blockJacobiForGPUILU0_->entry(idx, *wc) = 0.0;
+                }
 
                 int locPart = cell_part[idx];
 
@@ -553,25 +550,13 @@ namespace Opm
                     {
                         size_type nid = lid.id(is->outside());
                         int nabPart = cell_part[nid];
-                        if (locPart == nabPart) 
-                            pattern[idx].insert(nid);
+                        if (locPart == nabPart) {
+                            blockJacobiForGPUILU0_->entry(idx, nid) = 0.0;
+                        }
                     }
-
-                    blockJacobiForGPUILU0_->setrowsize(idx, pattern[idx].size());
                 }
             }
-            blockJacobiForGPUILU0_->endrowsizes();
-            for (size_type dofId = 0; dofId < numCells; ++dofId)
-            {
-                auto nabIdx = pattern[dofId].begin();
-                auto endNab = pattern[dofId].end();
-                for (; nabIdx != endNab; ++nabIdx)
-                {
-                    blockJacobiForGPUILU0_->addindex(dofId, *nabIdx);
-                }
-            }
-
-            blockJacobiForGPUILU0_->endindices();
+            blockJacobiForGPUILU0_->compress();
         }
 
         void copyMatToBlockJac(const Matrix& mat, Matrix& blockJac)
