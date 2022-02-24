@@ -574,13 +574,18 @@ namespace Opm
             blockJacobiForGPUILU0_->endindices();
         }
 
-        void copyMatToBlockJac(Matrix& mat, Matrix& blockJac)
+        void copyMatToBlockJac(const Matrix& mat, Matrix& blockJac)
         {
             auto rbegin = blockJac.begin();
             auto rend = blockJac.end();
-            for (auto row = rbegin; row != rend; ++row) {
+            auto outerRow = mat.begin();
+            for (auto row = rbegin; row != rend; ++row, ++outerRow) {
+                auto outerCol = (*outerRow).begin();
                 for (auto col = (*row).begin(); col != (*row).end(); ++col) {
-                    blockJac[row.index()][col.index()] = mat[row.index()][col.index()];
+                    // outerRow is guaranteed to have all column entries that row has!
+                    while(outerCol.index() < col.index()) ++outerCol;
+                    assert(outerCol.index() == col.index());
+                    *col = *outerCol; // copy nonzero block
                 }
             }
         }
