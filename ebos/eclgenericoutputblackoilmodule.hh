@@ -186,6 +186,11 @@ public:
         return 0;
     }
 
+    bool needInterfaceFluxes([[maybe_unused]] const bool isSubStep) const
+    {
+        return this->interRegionFlows_.wantInterRegflowSummary();
+    }
+
     const std::map<std::size_t, double>& getWBPData() const
     {
         return this->wbpData_;
