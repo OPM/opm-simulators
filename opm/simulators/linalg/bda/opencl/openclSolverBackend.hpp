@@ -63,8 +63,6 @@ private:
 
     std::vector<cl::Device> devices;
 
-    int jac_nnz;
-    int jac_nnzb;
     bool useJacMatrix = false;
 
     std::unique_ptr<Preconditioner<block_size> > prec;

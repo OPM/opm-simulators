@@ -393,15 +393,10 @@ void openclSolverBackend<block_size>::initialize(std::shared_ptr<BlockedMatrix> 
         useJacMatrix = true;
     }
 
-    if (useJacMatrix) {
-        this->jac_nnz = jacMatrix->nnzbs;
-        this->jac_nnzb = jac_nnz * block_size * block_size;
-    }
-
     std::ostringstream out;
     out << "Initializing GPU, matrix size: " << Nb << " blockrows, nnzb: " << nnzb << "\n";
     if (useJacMatrix) {
-        out << "Blocks in ILU matrix: " << jac_nnzb << "\n";
+        out << "Blocks in ILU matrix: " << jacMatrix->nnzbs << "\n";
     }
     out << "Maxit: " << maxit << std::scientific << ", tolerance: " << tolerance << "\n";
     out << "PlatformID: " << platformID << ", deviceID: " << deviceID << "\n";
