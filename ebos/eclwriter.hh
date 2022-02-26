@@ -187,7 +187,9 @@ public:
         const auto localWellTestState = simulator_.problem().wellModel().wellTestState();
         this->prepareLocalCellData(isSubStep, reportStepNum);
 
-        this->captureLocalFluxData();
+        if (this->eclOutputModule_->needInterfaceFluxes(isSubStep)) {
+            this->captureLocalFluxData();
+        }
 
         if (this->collectToIORank_.isParallel()) {
             OPM_BEGIN_PARALLEL_TRY_CATCH()

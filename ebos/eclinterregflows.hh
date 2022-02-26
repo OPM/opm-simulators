@@ -274,6 +274,11 @@ namespace Opm {
         /// Whether or not previous read() operation succeeded.
         bool readIsConsistent() const;
 
+        bool wantInterRegflowSummary() const
+        {
+            return !this->regionMaps_.empty();
+        }
+
         /// Serialise internal representation to MPI message buffer
         ///
         /// \tparam MessageBufferType Linear MPI message buffer.  API should
