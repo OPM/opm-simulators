@@ -93,7 +93,8 @@ public:
     /// Initialize the WellContributions object with opencl context and queue
     /// those must be set before calling BlackOilWellModel::getWellContributions() in ISTL
     /// \param[in] wellContribs   container to hold all WellContributions
-    void initWellContributions(WellContributions& wellContribs);
+    /// \param[in] N              number of rows in scalar vector that wellContribs will be applied on
+    void initWellContributions(WellContributions& wellContribs, unsigned N);
 
     /// Return whether the BdaBridge will use the FPGA or not
     /// return whether the BdaBridge will use the FPGA or not

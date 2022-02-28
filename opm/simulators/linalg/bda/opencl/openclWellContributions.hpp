@@ -35,8 +35,6 @@ namespace Opm
 class WellContributionsOCL : public WellContributions
 {
 public:
-    void setKernel(Opm::Accelerator::stdwell_apply_kernel_type *kernel_,
-                   Opm::Accelerator::stdwell_apply_no_reorder_kernel_type *kernel_no_reorder_);
     void setOpenCLEnv(cl::Context *context_, cl::CommandQueue *queue_);
 
     /// Since the rows of the matrix are reordered, the columnindices of the matrixdata is incorrect
@@ -56,8 +54,6 @@ protected:
 
     cl::Context* context;
     cl::CommandQueue* queue;
-    Opm::Accelerator::stdwell_apply_kernel_type* kernel;
-    Opm::Accelerator::stdwell_apply_no_reorder_kernel_type* kernel_no_reorder;
     std::vector<cl::Event> events;
 
     std::unique_ptr<cl::Buffer> d_Cnnzs_ocl, d_Dnnzs_ocl, d_Bnnzs_ocl;

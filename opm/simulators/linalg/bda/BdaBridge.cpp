@@ -285,7 +285,8 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::get_result([[maybe_unuse
 }
 
 template <class BridgeMatrix, class BridgeVector, int block_size>
-void BdaBridge<BridgeMatrix, BridgeVector, block_size>::initWellContributions([[maybe_unused]] WellContributions& wellContribs) {
+void BdaBridge<BridgeMatrix, BridgeVector, block_size>::initWellContributions([[maybe_unused]] WellContributions& wellContribs,
+                                                                              [[maybe_unused]] unsigned N) {
     if(accelerator_mode.compare("opencl") == 0){
 #if HAVE_OPENCL
         const auto openclBackend = static_cast<const Opm::Accelerator::openclSolverBackend<block_size>*>(backend.get());
@@ -294,6 +295,7 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::initWellContributions([[
         OPM_THROW(std::logic_error, "Error openclSolver was chosen, but OpenCL was not found by CMake");
 #endif
     }
+    wellContribs.setVectorSize(N);
 }
 
 // the tests use Dune::FieldMatrix, Flow uses Opm::MatrixBlock

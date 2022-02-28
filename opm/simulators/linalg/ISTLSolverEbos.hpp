@@ -272,7 +272,7 @@ namespace Opm
             if (use_gpu || use_fpga) {
                 const std::string accelerator_mode = EWOMS_GET_PARAM(TypeTag, std::string, AcceleratorMode);
                 auto wellContribs = WellContributions::create(accelerator_mode, useWellConn_);
-                bdaBridge->initWellContributions(*wellContribs);
+                bdaBridge->initWellContributions(*wellContribs, x.N() * x[0].N());
 
                 // the WellContributions can only be applied separately with CUDA or OpenCL, not with an FPGA or amgcl
 #if HAVE_CUDA || HAVE_OPENCL
