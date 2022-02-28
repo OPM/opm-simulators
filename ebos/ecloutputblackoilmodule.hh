@@ -551,6 +551,10 @@ public:
                         val.second = getValue(fs.pressure(oilPhaseIdx)) - getValue(fs.pressure(waterPhaseIdx));
                     else if (key.first == "BGPC")
                         val.second = getValue(fs.pressure(gasPhaseIdx)) - getValue(fs.pressure(oilPhaseIdx));
+                    else if (key.first == "BWPR")
+                        val.second = getValue(fs.pressure(waterPhaseIdx));
+                    else if (key.first == "BGPR")
+                        val.second = getValue(fs.pressure(gasPhaseIdx));
                     else if (key.first == "BVWAT" || key.first == "BWVIS")
                         val.second = getValue(fs.viscosity(waterPhaseIdx));
                     else if (key.first == "BVGAS" || key.first == "BGVIS")
