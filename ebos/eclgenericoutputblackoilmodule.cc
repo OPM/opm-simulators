@@ -26,6 +26,8 @@
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 #include <opm/material/fluidsystems/BlackOilDefaultIndexTraits.hpp>
 
+#include <opm/grid/common/CommunicationUtils.hpp>
+
 #include <opm/output/data/Solution.hpp>
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
@@ -33,6 +35,7 @@
 #include <opm/input/eclipse/Schedule/SummaryState.hpp>
 #include <opm/input/eclipse/Units/Units.hpp>
 
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <functional>
@@ -41,6 +44,8 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <string_view>
+#include <utility>
 #include <vector>
 
 #include <fmt/format.h>
@@ -1436,70 +1441,78 @@ pressureAverage_(const ScalarBuffer& pressurePvHydrocarbon,
     return fraction;
 }
 
+namespace {
+    template <typename IndexVector, typename IJKString>
+    void logUniqueFailedCells(const std::string& messageTag,
+                              std::string_view   prefix,
+                              const std::size_t  maxNumCellsFaillog,
+                              IndexVector&&      cells,
+                              IJKString&&        ijkString)
+    {
+        if (cells.empty()) {
+            return;
+        }
+
+        std::sort(cells.begin(), cells.end());
+        auto u = std::unique(cells.begin(), cells.end());
+
+        const auto numFailed = static_cast<std::size_t>
+            (std::distance(cells.begin(), u));
+
+        std::ostringstream errlog;
+        errlog << prefix << " failed for " << numFailed << " cell"
+               << ((numFailed != std::size_t{1}) ? "s" : "")
+               << " [" << ijkString(cells[0]);
+
+        const auto maxElems = std::min(maxNumCellsFaillog, numFailed);
+        for (auto i = 1 + 0*maxElems; i < maxElems; ++i) {
+            errlog << ", " << ijkString(cells[i]);
+        }
+
+        if (numFailed > maxNumCellsFaillog) {
+            errlog << ", ...";
+        }
+
+        errlog << ']';
+
+        OpmLog::warning(messageTag, errlog.str());
+    }
+} // Namespace anonymous
+
 template<class FluidSystem,class Scalar>
 void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
 outputErrorLog(const Comm& comm) const
 {
-    const size_t maxNumCellsFaillog = 20;
+    const auto root = 0;
+    auto globalFailedCellsPbub = gatherv(this->failedCellsPb_, comm, root);
+    auto globalFailedCellsPdew = gatherv(this->failedCellsPd_, comm, root);
 
-    int pbSize = failedCellsPb_.size(), pdSize = failedCellsPd_.size();
-    std::vector<int> displPb, displPd, recvLenPb, recvLenPd;
-
-    if (comm.rank() == 0) {
-        displPb.resize(comm.size()+1, 0);
-        displPd.resize(comm.size()+1, 0);
-        recvLenPb.resize(comm.size());
-        recvLenPd.resize(comm.size());
+    if (std::empty(std::get<0>(globalFailedCellsPbub)) &&
+        std::empty(std::get<0>(globalFailedCellsPdew)))
+    {
+        return;
     }
 
-    comm.gather(&pbSize, recvLenPb.data(), 1, 0);
-    comm.gather(&pdSize, recvLenPd.data(), 1, 0);
-    std::partial_sum(recvLenPb.begin(), recvLenPb.end(), displPb.begin()+1);
-    std::partial_sum(recvLenPd.begin(), recvLenPd.end(), displPd.begin()+1);
-    std::vector<int> globalFailedCellsPb, globalFailedCellsPd;
+    auto ijkString = [this](const std::size_t globalIndex)
+    {
+        const auto ijk = this->eclState_.gridDims().getIJK(globalIndex);
 
-    if (comm.rank() == 0) {
-        globalFailedCellsPb.resize(displPb.back());
-        globalFailedCellsPd.resize(displPd.back());
-    }
+        return fmt::format("({},{},{})", ijk[0] + 1, ijk[1] + 1, ijk[2] + 1);
+    };
 
-    comm.gatherv(failedCellsPb_.data(), static_cast<int>(failedCellsPb_.size()),
-                 globalFailedCellsPb.data(), recvLenPb.data(),
-                 displPb.data(), 0);
-    comm.gatherv(failedCellsPd_.data(), static_cast<int>(failedCellsPd_.size()),
-                 globalFailedCellsPd.data(),  recvLenPd.data(),
-                 displPd.data(), 0);
-    std::sort(globalFailedCellsPb.begin(), globalFailedCellsPb.end());
-    std::sort(globalFailedCellsPd.begin(), globalFailedCellsPd.end());
+    const auto maxNumCellsFaillog = static_cast<std::size_t>(20);
 
-    if (!globalFailedCellsPb.empty()) {
-        std::stringstream errlog;
-        errlog << "Finding the bubble point pressure failed for " << globalFailedCellsPb.size() << " cells [";
-        errlog << globalFailedCellsPb[0];
-        const size_t maxElems = std::min(maxNumCellsFaillog, globalFailedCellsPb.size());
-        for (size_t i = 1; i < maxElems; ++i) {
-            errlog << ", " << globalFailedCellsPb[i];
-        }
-        if (globalFailedCellsPb.size() > maxNumCellsFaillog) {
-            errlog << ", ...";
-        }
-        errlog << "]";
-        OpmLog::warning("Bubble point numerical problem", errlog.str());
-    }
-    if (!globalFailedCellsPd.empty()) {
-        std::stringstream errlog;
-        errlog << "Finding the dew point pressure failed for " << globalFailedCellsPd.size() << " cells [";
-        errlog << globalFailedCellsPd[0];
-        const size_t maxElems = std::min(maxNumCellsFaillog, globalFailedCellsPd.size());
-        for (size_t i = 1; i < maxElems; ++i) {
-            errlog << ", " << globalFailedCellsPd[i];
-        }
-        if (globalFailedCellsPd.size() > maxNumCellsFaillog) {
-            errlog << ", ...";
-        }
-        errlog << "]";
-        OpmLog::warning("Dew point numerical problem", errlog.str());
-    }
+    logUniqueFailedCells("Bubble point numerical problem",
+                         "Finding the bubble point pressure",
+                         maxNumCellsFaillog,
+                         std::get<0>(std::move(globalFailedCellsPbub)),
+                         ijkString);
+
+    logUniqueFailedCells("Dew point numerical problem",
+                         "Finding the dew point pressure",
+                         maxNumCellsFaillog,
+                         std::get<0>(std::move(globalFailedCellsPdew)),
+                         ijkString);
 }
 
 template<class FluidSystem,class Scalar>
