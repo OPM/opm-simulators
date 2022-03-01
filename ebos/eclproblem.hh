@@ -2572,6 +2572,7 @@ private:
         bool has_sgas     = fp.has_double("SGAS");
         bool has_rs       = fp.has_double("RS");
         bool has_rv       = fp.has_double("RV");
+        bool has_rvw       = fp.has_double("RVW");
         bool has_pressure = fp.has_double("PRESSURE");
         bool has_salt = fp.has_double("SALT");
         bool has_saltp = fp.has_double("SALTP");
@@ -2594,6 +2595,9 @@ private:
         if (FluidSystem::enableVaporizedOil() && !has_rv)
             throw std::runtime_error("The ECL input file requires the RV keyword to be present if"
                                      " vaporized oil is enabled");
+        if (FluidSystem::enableVaporizedWater() && !has_rvw)
+            throw std::runtime_error("The ECL input file requires the RVW keyword to be present if"
+                                     " vaporized water is enabled");
         if (enableBrine && !has_salt)
             throw std::runtime_error("The ECL input file requires the SALT keyword to be present if"
                                      " brine is enabled and the model is initialized explicitly");
@@ -2610,6 +2614,7 @@ private:
         std::vector<double> pressureData;
         std::vector<double> rsData;
         std::vector<double> rvData;
+        std::vector<double> rvwData;
         std::vector<double> tempiData;
         std::vector<double> saltData;
         std::vector<double> saltpData;
@@ -2630,6 +2635,9 @@ private:
 
         if (FluidSystem::enableVaporizedOil())
             rvData = fp.get_double("RV");
+
+        if (FluidSystem::enableVaporizedWater())
+            rvwData = fp.get_double("RVW");
 
         // initial reservoir temperature
         tempiData = fp.get_double("TEMPI");
@@ -2692,22 +2700,25 @@ private:
                                             - gasSaturationData[dofIdx]);
 
             //////
-            // set phase pressures
+            // set phase pressures 
             //////
-            Scalar oilPressure = pressureData[dofIdx];
+            Scalar pressure = pressureData[dofIdx]; // oil pressure or gas pressure if oil is not enabled
 
             // this assumes that capillary pressures only depend on the phase saturations
             // and possibly on temperature. (this is always the case for ECL problems.)
             Dune::FieldVector<Scalar, numPhases> pc(0.0);
             const auto& matParams = materialLawParams(dofIdx);
             MaterialLaw::capillaryPressures(pc, matParams, dofFluidState);
-            Valgrind::CheckDefined(oilPressure);
+            Valgrind::CheckDefined(pressure);
             Valgrind::CheckDefined(pc);
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 if (!FluidSystem::phaseIsActive(phaseIdx))
                     continue;
 
-                dofFluidState.setPressure(phaseIdx, oilPressure + (pc[phaseIdx] - pc[oilPhaseIdx]));
+                if (Indices::oilEnabled)
+                    dofFluidState.setPressure(phaseIdx, pressure + (pc[phaseIdx] - pc[oilPhaseIdx]));
+                else if (Indices::gasEnabled)
+                    dofFluidState.setPressure(phaseIdx, pressure + (pc[phaseIdx] - pc[gasPhaseIdx]));
             }
 
             if (FluidSystem::enableDissolvedGas())
@@ -2719,6 +2730,11 @@ private:
                 dofFluidState.setRv(rvData[dofIdx]);
             else if (Indices::gasEnabled && Indices::oilEnabled)
                 dofFluidState.setRv(0.0);
+
+            if (FluidSystem::enableVaporizedWater())
+                dofFluidState.setRvw(rvwData[dofIdx]);
+            else if (Indices::gasEnabled && Indices::waterEnabled)
+                dofFluidState.setRvw(0.0);
 
             //////
             // set invB_

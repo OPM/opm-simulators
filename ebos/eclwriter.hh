@@ -344,6 +344,7 @@ public:
             {"SSOLVENT" , UnitSystem::measure::identity, enableSolvent},
             {"RS", UnitSystem::measure::gas_oil_ratio, FluidSystem::enableDissolvedGas()},
             {"RV", UnitSystem::measure::oil_gas_ratio, FluidSystem::enableVaporizedOil()},
+            {"RVW", UnitSystem::measure::oil_gas_ratio, FluidSystem::enableVaporizedWater()},
             {"SOMAX", UnitSystem::measure::identity, simulator_.problem().vapparsActive(simulator_.episodeIndex())},
             {"PCSWM_OW", UnitSystem::measure::identity, enableHysteresis},
             {"KRNSW_OW", UnitSystem::measure::identity, enableHysteresis},

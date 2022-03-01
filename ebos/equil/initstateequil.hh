@@ -1737,6 +1737,7 @@ public:
     const PVec& saturation() const { return sat_; }
     const Vec& rs() const { return rs_; }
     const Vec& rv() const { return rv_; }
+    const Vec& rvw() const { return rvw_; }
 
 private:
 
@@ -1807,6 +1808,7 @@ private:
     PVec sat_;
     Vec rs_;
     Vec rv_;
+    Vec rvw_;
     const CartesianIndexMapper& cartesianIndexMapper_;
     Vec swatInit_;
     Vec cellCenterDepth_;

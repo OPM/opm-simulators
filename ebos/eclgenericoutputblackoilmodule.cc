@@ -681,6 +681,7 @@ assignToSolution(data::Solution& sol)
         {"RSSAT",    UnitSystem::measure::gas_oil_ratio, data::TargetType::RESTART_AUXILIARY, gasDissolutionFactor_},
         {"RV",       UnitSystem::measure::oil_gas_ratio, data::TargetType::RESTART_SOLUTION,  rv_},
         {"RVSAT",    UnitSystem::measure::oil_gas_ratio, data::TargetType::RESTART_AUXILIARY, oilVaporizationFactor_},
+        {"RVW",      UnitSystem::measure::oil_gas_ratio, data::TargetType::RESTART_AUXILIARY, rvw_}, //PJPE check units + add water vap factor
         {"SALT",     UnitSystem::measure::salinity,  data::TargetType::RESTART_SOLUTION,      cSalt_},
         {"SALTP",    UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     pSalt_},
         {"PERMFACT", UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     permFact_},
@@ -784,6 +785,8 @@ setRestart(const data::Solution& sol,
         rs_[elemIdx] = sol.data("RS")[globalDofIndex];
     if (!rv_.empty() && sol.has("RV"))
         rv_[elemIdx] = sol.data("RV")[globalDofIndex];
+    if (!rvw_.empty() && sol.has("RVW"))
+        rvw_[elemIdx] = sol.data("RVW")[globalDofIndex];
     if (!cPolymer_.empty() && sol.has("POLYMER"))
         cPolymer_[elemIdx] = sol.data("POLYMER")[globalDofIndex];
     if (!cFoam_.empty() && sol.has("FOAM"))
@@ -978,7 +981,10 @@ doAllocBuffers(unsigned bufferSize,
         rv_.resize(bufferSize, 0.0);
         rstKeywords["RV"] = 0;
     }
-
+    if (FluidSystem::enableVaporizedWater()) {
+        rvw_.resize(bufferSize, 0.0);
+        rstKeywords["RVW"] = 0;
+    }
     if (enableSolvent_)
         sSol_.resize(bufferSize, 0.0);
     if (enablePolymer_)
