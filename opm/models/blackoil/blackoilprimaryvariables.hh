@@ -129,7 +129,6 @@ public:
         Sw_po_Rs, // water + oil case
         Sw_pg_Rv, // water + gas case
         Rvw_po_Sg, // gas + oil  case
-        //Rvw_pg_Rv, //only gas  + oil-vapor +water-vapor
 
         OnePhase_p, // onephase case
     };
