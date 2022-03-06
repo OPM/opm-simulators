@@ -488,7 +488,8 @@ public:
                                                                                       T,
                                                                                       pg);
                 setPrimaryVarsMeaning(Rvw_po_Sg);
-                //Sw = 0.0; //check
+                (*this)[Indices::waterSaturationIdx] = RvwSat; //primary variable becomes Rvw 
+
                 return true;
             }
 
@@ -607,9 +608,14 @@ public:
             
             Scalar po = (*this)[Indices::pressureSwitchIdx]; 
             Scalar T = asImp_().temperature_();
+            Scalar Sg = 0.0;
+            if (compositionSwitchEnabled)
+                Sg = (*this)[Indices::compositionSwitchIdx];
+
+            Scalar So = 1.0 - Sg - solventSaturation_();
             Scalar pC[numPhases] = { 0.0 };
             const MaterialLawParams& matParams = problem.materialLawParams(globalDofIdx);
-            computeCapillaryPressures_(pC, So, Sg + solventSaturation_(), Sw, matParams);
+            computeCapillaryPressures_(pC, So, Sg + solventSaturation_(), /*Sw=*/ 0.0, matParams);
             Scalar pg = po + (pC[gasPhaseIdx] - pC[oilPhaseIdx]);
             Scalar RvwSat = FluidSystem::gasPvt().saturatedWaterVaporizationFactor(pvtRegionIdx_,
                                                                                    T,
