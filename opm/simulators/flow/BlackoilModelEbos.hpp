@@ -452,7 +452,6 @@ namespace Opm {
         {
             Scalar resultDelta = 0.0;
             Scalar resultDenom = 0.0;
-            //return 0.0;
 
             const auto& elemMapper = ebosSimulator_.model().elementMapper();
             const auto& gridView = ebosSimulator_.gridView();
