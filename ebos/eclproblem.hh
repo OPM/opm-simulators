@@ -2733,8 +2733,6 @@ private:
 
             if (FluidSystem::enableVaporizedWater())
                 dofFluidState.setRvw(rvwData[dofIdx]);
-            else if (Indices::gasEnabled && Indices::waterEnabled)
-                dofFluidState.setRvw(0.0);
 
             //////
             // set invB_

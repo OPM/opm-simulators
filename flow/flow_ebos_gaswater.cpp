@@ -34,6 +34,7 @@ namespace TTag {
 struct EclFlowGasWaterProblem {
     using InheritsFrom = std::tuple<EclFlowProblem>;
 };
+}
 
 //! The indices required by the model
 template<class TypeTag>

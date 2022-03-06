@@ -681,7 +681,7 @@ assignToSolution(data::Solution& sol)
         {"RSSAT",    UnitSystem::measure::gas_oil_ratio, data::TargetType::RESTART_AUXILIARY, gasDissolutionFactor_},
         {"RV",       UnitSystem::measure::oil_gas_ratio, data::TargetType::RESTART_SOLUTION,  rv_},
         {"RVSAT",    UnitSystem::measure::oil_gas_ratio, data::TargetType::RESTART_AUXILIARY, oilVaporizationFactor_},
-        {"RVW",      UnitSystem::measure::oil_gas_ratio, data::TargetType::RESTART_AUXILIARY, rvw_}, //PJPE check units + add water vap factor
+        {"RVW",      UnitSystem::measure::oil_gas_ratio, data::TargetType::RESTART_AUXILIARY, rvw_},
         {"SALT",     UnitSystem::measure::salinity,  data::TargetType::RESTART_SOLUTION,      cSalt_},
         {"SALTP",    UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     pSalt_},
         {"PERMFACT", UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     permFact_},
