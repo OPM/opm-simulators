@@ -266,13 +266,11 @@ public:
                 fluidState_.setRv(0.0);
 
             if (FluidSystem::enableVaporizedWater()) {
-                const Evaluation& RvwSat = FluidSystem::saturatedWaterVaporationFactor(fluidState_,
+                const Evaluation& RvwSat = FluidSystem::saturatedVaporizationFactor(fluidState_,
                                                             gasPhaseIdx,
                                                             pvtRegionIdx);
                 fluidState_.setRvw(RvwSat);
             }
-            else //if (compositionSwitchEnabled)
-                fluidState_.setRvw(0.0);
         }
         else if (priVars.primaryVarsMeaning() == PrimaryVariables::Rvw_po_Sg) {
             // The switching variable is the water-gas ratio Rvw
