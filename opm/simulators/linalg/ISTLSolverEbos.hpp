@@ -161,15 +161,6 @@ namespace Opm
             // Set it up manually
             ElementMapper elemMapper(simulator_.vanguard().gridView(), Dune::mcmgElementLayout());
             detail::findOverlapAndInterior(simulator_.vanguard().grid(), elemMapper, overlapRows_, interiorRows_);
-            numJacobiBlocks_ = EWOMS_GET_PARAM(TypeTag, int, NumJacobiBlocks);
-            useWellConn_ = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
-            if (numJacobiBlocks_ > 1) {
-                const auto wellsForConn = simulator_.vanguard().schedule().getWellsatEnd();
-                detail::setWellConnections(simulator_.vanguard().grid(), wellsForConn, useWellConn_,
-                                           wellConnectionsGraph_, numJacobiBlocks_);
-                std::cout << "Create block-Jacobi pattern" << std::endl;
-                blockJacobiAdjacency();
-            }
             useWellConn_ = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
 #if HAVE_FPGA
             // check usage of MatrixAddWellContributions: for FPGA they must be included
@@ -220,6 +211,17 @@ namespace Opm
                 // to the original one with a deleter that does nothing.
                 // Outch! We need to be able to scale the linear system! Hence const_cast
                 matrix_ = const_cast<Matrix*>(&M.istlMatrix());
+
+                // setup sparsity pattern for jacobi matrix for preconditioner (only used for openclSolver)
+                numJacobiBlocks_ = EWOMS_GET_PARAM(TypeTag, int, NumJacobiBlocks);
+                useWellConn_ = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
+                if (numJacobiBlocks_ > 1) {
+                    const auto wellsForConn = simulator_.vanguard().schedule().getWellsatEnd();
+                    detail::setWellConnections(simulator_.vanguard().grid(), wellsForConn, useWellConn_,
+                                               wellConnectionsGraph_, numJacobiBlocks_);
+                    std::cout << "Create block-Jacobi pattern" << std::endl;
+                    blockJacobiAdjacency();
+                }
             } else {
                 // Pointers should not change
                 if ( &(M.istlMatrix()) != matrix_ ) {
