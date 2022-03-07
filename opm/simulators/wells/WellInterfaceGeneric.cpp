@@ -109,13 +109,18 @@ WellInterfaceGeneric::WellInterfaceGeneric(const Well& well,
 void WellInterfaceGeneric::adaptRatesForVFP(std::vector<double>& rates) const
 {
     const auto& pu = this->phaseUsage();
-    if (pu.num_phases == 2
-        && pu.phase_used[BlackoilPhases::Aqua] == 1
-        && pu.phase_used[BlackoilPhases::Liquid] == 1
-        && pu.phase_used[BlackoilPhases::Vapour] == 0)
-    {
-        assert(rates.size() == 2);
-        rates.push_back(0.0);  // set gas rate to zero
+    if (pu.num_phases == 2) {
+        if (    pu.phase_used[BlackoilPhases::Aqua] == 1
+             && pu.phase_used[BlackoilPhases::Liquid] == 1
+             && pu.phase_used[BlackoilPhases::Vapour] == 0)
+        {
+            assert(rates.size() == 2);
+            rates.push_back(0.0);  // set gas rate to zero
+        }
+        else {
+            throw std::logic_error("Two-phase VFP calculation only "
+                                   "supported for oil and water");
+        }
     }
 }
 
