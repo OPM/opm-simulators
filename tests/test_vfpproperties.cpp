@@ -593,7 +593,7 @@ VFPPROD \n\
     auto units = Opm::UnitSystem::newFIELD();
     Opm::Parser parser;
     auto deck = parser.parseString(table_str);
-    Opm::VFPProdTable table(deck["VFPPROD"].front(), units);
+    Opm::VFPProdTable table(deck["VFPPROD"].front(), false, units);
     Opm::VFPProdProperties properties;
     properties.addTable( table );
 
@@ -653,7 +653,7 @@ BOOST_AUTO_TEST_CASE(ParseInterpolateRealisticVFPPROD)
     BOOST_REQUIRE(deck.hasKeyword("VFPPROD"));
     BOOST_CHECK_EQUAL(deck.count("VFPPROD"), 1);
 
-    Opm::VFPProdTable table(deck["VFPPROD"].front(), units);
+    Opm::VFPProdTable table(deck["VFPPROD"].front(), false, units);
     Opm::VFPProdProperties properties;
     properties.addTable(table);
 
