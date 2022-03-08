@@ -58,7 +58,6 @@ GasLiftSingleWellGeneric::GasLiftSingleWellGeneric(
     , phase_usage_{phase_usage}
     , sync_groups_{sync_groups}
     , controls_{ecl_well_.productionControls(summary_state_)}
-    , num_phases_{well_state_.numPhases()}
     , debug_limit_increase_decrease_{false}
 {
     this->well_name_ = ecl_well_.name();
@@ -388,6 +387,8 @@ debugShowBhpAlqTable_()
     const std::string fmt_fmt2 {"{:>12.5g} {:>12.5g} {:>12.5g} {:>12.5g}"};
     const std::string header = fmt::format(fmt_fmt1, "ALQ", "BHP", "oil", "gas");
     displayDebugMessage_(header);
+    auto max_it = 50;
+    auto it = 1;
     while (alq <= (this->max_alq_+this->increment_)) {
         auto bhp_at_thp_limit = computeBhpAtThpLimit_(alq);
         if (!bhp_at_thp_limit) {
@@ -403,6 +404,13 @@ debugShowBhpAlqTable_()
             displayDebugMessage_(msg);
         }
         alq += this->increment_;
+        if (it > max_it) {
+            const std::string msg = fmt::format(
+                "ALQ table : max iterations {} reached. Stopping iteration.", max_it);
+            displayDebugMessage_(msg);
+            break;
+        }
+        it++;
     }
 }
 
@@ -1161,7 +1169,7 @@ runOptimizeLoop_(bool increase)
     std::unique_ptr<GasLiftWellState> ret_value; // nullptr initially
     auto rates = getInitialRatesWithLimit_();
     if (!rates) return ret_value;
-    //if (this->debug) debugShowBhpAlqTable_();
+    // if (this->debug) debugShowBhpAlqTable_();
     if (this->debug) debugShowAlqIncreaseDecreaseCounts_();
     if (this->debug) debugShowTargets_();
     bool success = false;  // did we succeed to increase alq?
@@ -1440,6 +1448,7 @@ useFixedAlq_(const GasLiftOpt::Well& well)
         return false;
     }
     else {
+        displayDebugMessage_("WLIFTOPT item2 = NO. Skipping optimization.");
         //  auto& max_alq_optional = well.max_rate();
         //  if (max_alq_optional) {
                // According to WLIFTOPT, item 3:

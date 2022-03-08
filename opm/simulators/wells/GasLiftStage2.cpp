@@ -419,7 +419,12 @@ getWellRates_(const WellInterfaceGeneric &well)
     const auto& ws = this->well_state_.well(well_index);
     const auto& pu = well.phaseUsage();
     auto oil_rate = ws.well_potentials[pu.phase_pos[Oil]];
-    auto gas_rate = ws.well_potentials[pu.phase_pos[Gas]];
+    double gas_rate = 0.0;
+    // See comment for setupPhaseVariables_() in GasLiftSingleWell_impl.hpp
+    //  about the two-phase oil-water case.
+    if (pu.phase_used[BlackoilPhases::Vapour]) {
+        gas_rate = ws.well_potentials[pu.phase_pos[Gas]];
+    }
     return {oil_rate, gas_rate};
 }
 

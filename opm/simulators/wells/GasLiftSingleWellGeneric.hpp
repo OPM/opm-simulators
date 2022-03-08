@@ -51,9 +51,10 @@ class GroupState;
 class GasLiftSingleWellGeneric : public GasLiftCommon
 {
 protected:
-    static const int Water = BlackoilPhases::Aqua;
-    static const int Oil = BlackoilPhases::Liquid;
-    static const int Gas = BlackoilPhases::Vapour;
+    static constexpr int Water = BlackoilPhases::Aqua;
+    static constexpr int Oil = BlackoilPhases::Liquid;
+    static constexpr int Gas = BlackoilPhases::Vapour;
+    static constexpr int NUM_PHASES = 3;
     static constexpr double ALQ_EPSILON = 1e-8;
 
 public:
@@ -347,7 +348,6 @@ protected:
     int water_pos_;
 
     int max_iterations_;
-    int num_phases_;
 
     std::string well_name_;
 

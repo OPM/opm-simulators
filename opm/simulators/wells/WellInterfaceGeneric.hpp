@@ -78,6 +78,8 @@ public:
     /// Index of well in the wells struct and wellState
     int indexOfWell() const;
 
+    void adaptRatesForVFP(std::vector<double>& rates) const;
+
     const Well& wellEcl() const;
     const PhaseUsage& phaseUsage() const;
 

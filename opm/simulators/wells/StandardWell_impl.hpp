@@ -1053,6 +1053,7 @@ namespace Opm
                 std::vector<double> well_rates_bhp_limit;
                 computeWellRatesWithBhp(ebos_simulator, bhp_limit, well_rates_bhp_limit, deferred_logger);
 
+                this->adaptRatesForVFP(well_rates_bhp_limit);
                 const double thp = this->calculateThpFromBhp(well_state, well_rates_bhp_limit, bhp_limit, deferred_logger);
                 const double thp_limit = this->getTHPConstraint(summaryState);
                 if ( (this->isProducer() && thp < thp_limit) || (this->isInjector() && thp > thp_limit) ) {
@@ -2317,6 +2318,7 @@ namespace Opm
             // approximation.
             std::vector<double> rates(3);
             computeWellRatesWithBhp(ebos_simulator, bhp, rates, deferred_logger);
+            this->adaptRatesForVFP(rates);
             return rates;
         };
 
