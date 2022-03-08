@@ -515,30 +515,31 @@ namespace Opm
         }
 
         /// Create sparsity pattern for block-Jacobi matrix based on partitioning of grid.
+        /// Do not initialize the values, that is done in copyMatToBlockJac()
         void blockJacobiAdjacency()
         {
             const auto& grid = simulator_.vanguard().grid();
             std::vector<int> cell_part = simulator_.vanguard().cellPartition();
 
             typedef typename Matrix::size_type size_type;
+            typedef typename Matrix::CreateIterator Iter;
             size_type numCells = grid.size( 0 );
-            blockJacobiForGPUILU0_.reset(new Matrix(numCells, numCells, 8, 0.4, Matrix::implicit));
+            blockJacobiForGPUILU0_.reset(new Matrix(numCells, numCells, getMatrix().nonzeroes(), Matrix::row_wise));
 
             const auto& lid = grid.localIdSet();
             const auto& gridView = grid.leafGridView();
-            auto elemIt = gridView.template begin<0>();
-            const auto& elemEndIt = gridView.template end<0>();
+            auto elemIt = gridView.template begin<0>(); // should never overrun, since blockJacobiForGPUILU0_ is initialized with numCells rows
 
             //Loop over cells
-            for (; elemIt != elemEndIt; ++elemIt)
+            for (Iter row = blockJacobiForGPUILU0_->createbegin(); row != blockJacobiForGPUILU0_->createend(); ++elemIt, ++row)
             {
                 const auto& elem = *elemIt;
                 size_type idx = lid.id(elem);
-                blockJacobiForGPUILU0_->entry(idx, idx) = 0.0;
+                row.insert(idx);
 
                 // Add well non-zero connections
                 for (auto wc = wellConnectionsGraph_[idx].begin(); wc!=wellConnectionsGraph_[idx].end(); ++wc) {
-                    blockJacobiForGPUILU0_->entry(idx, *wc) = 0.0;
+                    row.insert(*wc);
                 }
 
                 int locPart = cell_part[idx];
@@ -553,12 +554,11 @@ namespace Opm
                         size_type nid = lid.id(is->outside());
                         int nabPart = cell_part[nid];
                         if (locPart == nabPart) {
-                            blockJacobiForGPUILU0_->entry(idx, nid) = 0.0;
+                            row.insert(nid);
                         }
                     }
                 }
             }
-            blockJacobiForGPUILU0_->compress();
         }
 
         void copyMatToBlockJac(const Matrix& mat, Matrix& blockJac)
