@@ -335,7 +335,7 @@ namespace Opm{
         }
 
         if (krog.front() < 0.0 || krog.back() > 1.0) {
-            const std::string msg = "In SLGOF table SATNUM = " + regionIdx + ", krog shoule be in range [0, 1].";
+            const std::string msg = "In SLGOF table SATNUM = " + regionIdx + ", krog should be in range [0, 1].";
             OpmLog::error(msg);
         }
     }
