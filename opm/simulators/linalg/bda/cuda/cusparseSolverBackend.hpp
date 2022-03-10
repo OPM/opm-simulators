@@ -68,6 +68,9 @@ private:
 
     bool analysis_done = false;
 
+    bool useJacMatrix = false;
+    int nnzbs_prec;             // number of nonzero blocks in the matrix for preconditioner
+                                // could be jacMatrix or matrix
 
     /// Solve linear system using ilu0-bicgstab
     /// \param[in] wellContribs   contains all WellContributions, to apply them separately, instead of adding them to matrix A
@@ -75,28 +78,26 @@ private:
     void gpu_pbicgstab(WellContributions& wellContribs, BdaResult& res);
 
     /// Initialize GPU and allocate memory
-    /// \param[in] Nb               number of blockrows
-    /// \param[in] nnzbs            number of blocks
-    void initialize(int Nb, int nnzbs);
+    /// \param[in] matrix         matrix for spmv
+    /// \param[in] jacMatrix      matrix for preconditioner
+    void initialize(std::shared_ptr<BlockedMatrix> matrix, std::shared_ptr<BlockedMatrix> jacMatrix);
 
     /// Clean memory
     void finalize();
 
     /// Copy linear system to GPU
-    /// \param[in] vals        array of nonzeroes, each block is stored row-wise, contains nnz values
-    /// \param[in] rows        array of rowPointers, contains N/dim+1 values
-    /// \param[in] cols        array of columnIndices, contains nnzb values
-    /// \param[in] b           input vector, contains N values
-    void copy_system_to_gpu(double *vals, int *rows, int *cols, double *b);
+    /// also copy matrix for preconditioner if needed
+    /// \param[in] matrix         matrix for spmv
+    /// \param[in] b              input vector, contains N values
+    /// \param[in] jacMatrix      matrix for preconditioner
+    void copy_system_to_gpu(std::shared_ptr<BlockedMatrix> matrix, double *b, std::shared_ptr<BlockedMatrix> jacMatrix);
 
-    // Update linear system on GPU, don't copy rowpointers and colindices, they stay the same
-    /// \param[in] vals        array of nonzeroes, each block is stored row-wise, contains nnz values
-    /// \param[in] rows        array of rowPointers, contains N/dim+1 values, only used if COPY_ROW_BY_ROW is true
-    /// \param[in] b           input vector, contains N values
-    void update_system_on_gpu(double *vals, int *rows, double *b);
-
-    /// Reset preconditioner on GPU, ilu0-decomposition is done inplace by cusparse
-    void reset_prec_on_gpu();
+    /// Update linear system on GPU, don't copy rowpointers and colindices, they stay the same
+    /// also copy matrix for preconditioner if needed
+    /// \param[in] matrix         matrix for spmv
+    /// \param[in] b              input vector, contains N values
+    /// \param[in] jacMatrix      matrix for preconditioner
+    void update_system_on_gpu(std::shared_ptr<BlockedMatrix> matrix, double *b, std::shared_ptr<BlockedMatrix> jacMatrix);
 
     /// Analyse sparsity pattern to extract parallelism
     /// \return true iff analysis was successful
