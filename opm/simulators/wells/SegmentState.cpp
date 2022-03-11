@@ -60,15 +60,16 @@ std::size_t SegmentState::size() const {
 }
 
 
-void SegmentState::scale_pressure(double bhp) {
+void SegmentState::scale_pressure(const double bhp) {
     if (this->empty())
         throw std::logic_error("Tried to pressure scale empty SegmentState");
 
-    auto scale_factor = bhp / this->pressure[0];
+    const auto pressure_change = bhp - this->pressure[0];
+
     std::transform(this->pressure.begin(),
                    this->pressure.end(),
                    this->pressure.begin(),
-                   [scale_factor] (const double& p) { return p*scale_factor;});
+                   [pressure_change] (const double& p) { return p + pressure_change;});
 }
 
 const std::vector<int>& SegmentState::segment_number() const {
