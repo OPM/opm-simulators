@@ -626,13 +626,20 @@ equil_WOG(const Region& reg, const VSpan& span)
         this->makeOilPressure(ic, reg, span);
     }
 
-    if (this->gasActive()) {
+    if (this->gasActive() && this->oilActive()) {
         // Pcgo = Pg - Po => Pg = Po + Pcgo
         const auto ic = typename GPress::InitCond {
             reg.zgoc(),
             this->oil(reg.zgoc()) + reg.pcgoGoc()
         };
 
+        this->makeGasPressure(ic, reg, span);
+    } else if (this->gasActive() && !this->oilActive()) {
+        // No oil phase set Pg = Pw + Pcgw
+        const auto ic = typename GPress::InitCond {
+            reg.zwoc(), // The WOC is really the GWC for gas/water cases
+            this->water(reg.zwoc()) + reg.pcowWoc() // Pcow(WOC) is really Pcgw(GWC) for gas/water cases
+        };
         this->makeGasPressure(ic, reg, span);
     }
 }
@@ -669,13 +676,20 @@ equil_GOW(const Region& reg, const VSpan& span)
         this->makeOilPressure(ic, reg, span);
     }
 
-    if (this->waterActive()) {
+    if (this->waterActive() && this->oilActive()) {
         // Pcow = Po - Pw => Pw = Po - Pcow
         const auto ic = typename WPress::InitCond {
             reg.zwoc(),
             this->oil(reg.zwoc()) - reg.pcowWoc()
         };
 
+        this->makeWatPressure(ic, reg, span);
+    } else if (this->waterActive() && !this->oilActive()) {
+        // No oil phase set Pw = Pg - Pcgw
+        const auto ic = typename WPress::InitCond {
+            reg.zwoc(), // The WOC is really the GWC for gas/water cases
+            this->gas(reg.zwoc()) - reg.pcowWoc() // Pcow(WOC) is really Pcgw(GWC) for gas/water cases
+        };
         this->makeWatPressure(ic, reg, span);
     }
 }
