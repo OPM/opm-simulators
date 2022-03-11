@@ -29,6 +29,7 @@
 #include <opm/simulators/wells/VFPProperties.hpp>
 #include <opm/simulators/wells/VFPInjProperties.hpp>
 #include <opm/simulators/wells/VFPProdProperties.hpp>
+#include <opm/simulators/wells/WellState.hpp>
 #include <opm/common/utility/TimeService.hpp>
 
 #include <opm/simulators/wells/VFPHelpers.hpp>
@@ -45,6 +46,7 @@ struct Setup
     std::unique_ptr<const Schedule> schedule;
     std::unique_ptr<SummaryState> summary_state;
     std::unique_ptr<VFPProperties> vfp_properties;
+    std::unique_ptr<WellState> well_state;
 
     Setup(const std::string& file)
     {
@@ -60,7 +62,7 @@ struct Setup
         }
         const int step = 0;
         const auto& sched_state = schedule->operator[](step);
-        vfp_properties = std::make_unique<VFPProperties>(sched_state.vfpinj(), sched_state.vfpprod());
+        vfp_properties = std::make_unique<VFPProperties>(sched_state.vfpinj(), sched_state.vfpprod(), *well_state);
     };
 };
 
