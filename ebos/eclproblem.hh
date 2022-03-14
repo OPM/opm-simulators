@@ -2702,7 +2702,7 @@ private:
             //////
             // set phase pressures 
             //////
-            Scalar pressure = pressureData[dofIdx]; // oil pressure or gas pressure if oil is not enabled
+            Scalar pressure = pressureData[dofIdx]; // oil pressure (or gas pressure for water-gas system or water pressure for single phase)
 
             // this assumes that capillary pressures only depend on the phase saturations
             // and possibly on temperature. (this is always the case for ECL problems.)
@@ -2719,6 +2719,9 @@ private:
                     dofFluidState.setPressure(phaseIdx, pressure + (pc[phaseIdx] - pc[oilPhaseIdx]));
                 else if (Indices::gasEnabled)
                     dofFluidState.setPressure(phaseIdx, pressure + (pc[phaseIdx] - pc[gasPhaseIdx]));
+                else if (Indices::waterEnabled)
+                    //single (water) phase
+                    dofFluidState.setPressure(phaseIdx, pressure);
             }
 
             if (FluidSystem::enableDissolvedGas())
