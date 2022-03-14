@@ -106,28 +106,31 @@ scaleSegmentRatesWithWellRates(WellState& well_state) const
     for (int phase = 0; phase < baseif_.numPhases(); ++phase) {
         const double unscaled_top_seg_rate = segment_rates[phase];
         const double well_phase_rate = ws.surface_rates[phase];
-        if (std::abs(unscaled_top_seg_rate) > 1e-12)
-        {
+        if (std::abs(unscaled_top_seg_rate) > 1e-12) {
             for (int seg = 0; seg < numberOfSegments(); ++seg) {
-                segment_rates[baseif_.numPhases()*seg + phase] *= well_phase_rate/unscaled_top_seg_rate;
+                segment_rates[baseif_.numPhases() * seg + phase] *= well_phase_rate / unscaled_top_seg_rate;
             }
         } else {
-            // for newly opened wells, the unscaled rate top segment rate is zero
-            // and we need to initialize the segment rates differently
+            // Due to various reasons, the well/top segment rate can be zero for this phase.
+            // We can not scale this rate directly. The following approach is used to initialize the segment rates.
             double sumTw = 0;
             for (int perf = 0; perf < baseif_.numPerfs(); ++perf) {
                 sumTw += baseif_.wellIndex()[perf];
             }
 
-            std::vector<double> perforation_rates(baseif_.numPhases() * baseif_.numPerfs(),0.0);
+            // only handling this specific phase
+            constexpr double num_single_phase = 1;
+            std::vector<double> perforation_rates(num_single_phase * baseif_.numPerfs(), 0.0);
             const double perf_phaserate_scaled = ws.surface_rates[phase] / sumTw;
             for (int perf = 0; perf < baseif_.numPerfs(); ++perf) {
-                perforation_rates[baseif_.numPhases()* perf + phase] = baseif_.wellIndex()[perf] * perf_phaserate_scaled;
+                perforation_rates[perf] = baseif_.wellIndex()[perf] * perf_phaserate_scaled;
             }
 
             std::vector<double> rates;
-            WellState::calculateSegmentRates(segment_inlets_, segment_perforations_, perforation_rates, baseif_.numPhases(), 0, rates);
-            std::copy(rates.begin(), rates.end(), segment_rates.begin());
+            WellState::calculateSegmentRates(segment_inlets_, segment_perforations_, perforation_rates, num_single_phase, 0, rates);
+            for (int seg = 0; seg < numberOfSegments(); ++seg) {
+                segment_rates[baseif_.numPhases() * seg + phase] = rates[seg];
+            }
         }
     }
 }
