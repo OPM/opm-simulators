@@ -2189,7 +2189,7 @@ BlackoilWellModelGeneric::
 gliftDebug(const std::string& msg,
            DeferredLogger& deferred_logger) const
 {
-    if (this->glift_debug) {
+    if (this->glift_debug && comm_.rank() == 0 ) {
         const std::string message = fmt::format(
             "  GLIFT (DEBUG) : BlackoilWellModel : {}", msg);
         deferred_logger.info(message);

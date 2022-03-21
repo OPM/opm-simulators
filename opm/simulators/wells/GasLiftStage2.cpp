@@ -251,7 +251,7 @@ void
 GasLiftStage2::
 displayDebugMessage_(const std::string &msg) const
 {
-    if (this->debug) {
+    if (this->debug  && this->comm_.rank() == 0) {
         const std::string message = fmt::format(
             "  GLIFT2 (DEBUG) : {}", msg);
         this->deferred_logger_.info(message);

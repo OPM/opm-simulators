@@ -428,7 +428,7 @@ void
 GasLiftGroupInfo::
 displayDebugMessage_(const std::string &msg, const std::string &well_name)
 {
-    if (this->debug) {
+    if (this->debug && this->comm_.rank() == 0) {
         const std::string message = fmt::format(
              "  GLIFT (DEBUG) : Init group info : Well {} : {}",
              well_name, msg);
