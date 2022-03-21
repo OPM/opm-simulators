@@ -23,7 +23,15 @@ target_sources(simulators
 
 target_link_libraries( simulators PRIVATE opmsimulators )
 
-set(PYTHON_PACKAGE_PATH "site-packages")
+execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import site, sys; sys.stdout.write(site.getsitepackages()[-1]);" OUTPUT_VARIABLE PYTHON_SITE_PACKAGES_PATH)
+if (PYTHON_SITE_PACKAGES_PATH MATCHES ".*/dist-packages/?" AND
+      CMAKE_INSTALL_PREFIX MATCHES "^/usr.*")
+  # dist-packages is only used if we install below /usr and python's site packages
+  # path matches dist-packages
+  set(PYTHON_PACKAGE_PATH "dist-packages")
+else()
+  set(PYTHON_PACKAGE_PATH "site-packages")
+endif()
 set(PYTHON_INSTALL_PREFIX "lib/python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}/${PYTHON_PACKAGE_PATH}" CACHE STRING "Subdirectory to install Python modules in")
 
 install(TARGETS simulators DESTINATION ${DEST_PREFIX}${CMAKE_INSTALL_PREFIX}/${PYTHON_INSTALL_PREFIX}/opm)
