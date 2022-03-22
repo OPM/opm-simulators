@@ -2337,10 +2337,43 @@ namespace Opm
             return rates;
         };
 
-        return this->StandardWellGeneric<Scalar>::computeBhpAtThpLimitProdWithAlq(frates,
+        double max_pressure = 0.0;
+        for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
+            const int cell_idx = this->well_cells_[perf];
+            const auto& int_quants = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
+            const auto& fs = int_quants.fluidState();
+            double pressure_cell = this->getPerfCellPressure(fs).value();
+            max_pressure = std::max(max_pressure, pressure_cell);
+        }
+        auto bhpAtLimit = this->StandardWellGeneric<Scalar>::computeBhpAtThpLimitProdWithAlq(frates,
                                                                                   summary_state,
                                                                                   deferred_logger,
+                                                                                  max_pressure,
                                                                                   alq_value);
+        auto v = frates(*bhpAtLimit);
+        if(bhpAtLimit && std::all_of(v.cbegin(), v.cend(), [](double i){ return i <= 0; }))
+            return bhpAtLimit;
+
+        auto fratesIter = [this, &ebos_simulator, &deferred_logger](const double bhp) {
+            // Solver the well iterations to see if we are
+            // able to get a solution with an update
+            // solution
+            std::vector<double> rates(3);
+            computeWellRatesWithBhpIterations(ebos_simulator, bhp, rates, deferred_logger);
+            return rates;
+        };
+
+        bhpAtLimit = this->StandardWellGeneric<Scalar>::computeBhpAtThpLimitProdWithAlq(fratesIter,
+                                                                                        summary_state,
+                                                                                        deferred_logger,
+                                                                                        max_pressure,
+                                                                                        alq_value);
+        v = frates(*bhpAtLimit);
+        if(bhpAtLimit && std::all_of(v.cbegin(), v.cend(), [](double i){ return i <= 0; }))
+            return bhpAtLimit;
+
+        // we still don't get a valied solution.
+        return std::nullopt;
     }
 
 
