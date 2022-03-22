@@ -975,7 +975,10 @@ namespace Opm
             // to taking into consideration the crossflow here.
             if ( (this->isProducer() && pressure_diff < 0.) || (this->isInjector() && pressure_diff > 0.) ) {
                 deferred_logger.debug("CROSSFLOW_IPR",
-                                "cross flow found when updateIPR for well " + name());
+                                "cross flow found when updateIPR for well " + name()
+                                + " . The connection is ignored in IPR calculations");
+                // we ignore these connections for now
+                continue;
             }
 
             // the well index associated with the connection
@@ -1872,7 +1875,19 @@ namespace Opm
         const auto& summaryState = ebosSimulator.vanguard().summaryState();
         if (!Base::wellHasTHPConstraints(summaryState) || bhp_controlled_well) {
             // get the bhp value based on the bhp constraints
-            const double bhp = this->mostStrictBhpFromBhpLimits(summaryState);
+            double bhp = this->mostStrictBhpFromBhpLimits(summaryState);
+
+            // In some very special cases the bhp pressure target are
+            // temporary violated. This may lead to too small or negative potentials
+            // that could lead to premature shutting of wells.
+            // As a remedy the bhp that gives the largest potential is used.
+            // For converged cases, ws.bhp <=bhp for injectors and ws.bhp >= bhp,
+            // and the potentials will be computed using the limit as expected.
+            if (this->isInjector())
+                bhp = std::max(ws.bhp, bhp);
+            else
+                bhp = std::min(ws.bhp, bhp);
+
             assert(std::abs(bhp) != std::numeric_limits<double>::max());
             computeWellRatesWithBhpIterations(ebosSimulator, bhp, well_potentials, deferred_logger);
         } else {
