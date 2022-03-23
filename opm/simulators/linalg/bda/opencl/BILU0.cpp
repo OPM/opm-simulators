@@ -269,7 +269,7 @@ bool BILU0<block_size>::create_preconditioner(BlockedMatrix *mat, BlockedMatrix 
     for (int color = 0; color < numColors; ++color) {
         const unsigned int firstRow = rowsPerColorPrefix[color];
         const unsigned int lastRow = rowsPerColorPrefix[color+1];
-        if (verbosity >= 4) {
+        if (verbosity >= 5) {
             out << "color " << color << ": " << firstRow << " - " << lastRow << " = " << lastRow - firstRow << "\n";
         }
         OpenclKernels::ILU_decomp(firstRow, lastRow, s.LUvals, s.LUcols, s.LUrows, s.diagIndex, s.invDiagVals, Nb, block_size);

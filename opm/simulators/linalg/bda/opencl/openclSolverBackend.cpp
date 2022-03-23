@@ -370,7 +370,7 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
             ", time per iteration: " << res.elapsed / it << ", iterations: " << it;
         OpmLog::info(out.str());
     }
-    if (verbosity >= 4) {
+    if (verbosity >= 3) {
         std::ostringstream out;
         out << "openclSolver::prec_apply:  " << t_prec.elapsed() << " s\n";
         out << "wellContributions::apply:  " << t_well.elapsed() << " s\n";
