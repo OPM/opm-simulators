@@ -47,13 +47,22 @@ namespace Accelerator
 template <unsigned int block_size>
 int colorBlockedNodes(int rows, const int *CSRRowPointers, const int *CSRColIndices, const int *CSCColPointers, const int *CSCRowIndices, std::vector<int>& colors, int maxRowsPerColor, int maxColsPerColor);
 
-/// Reorder the rows of the matrix according to the mapping in toOrder and fromOrder
-/// rMat must be allocated already
-/// \param[in] mat           matrix to be reordered
-/// \param[in] toOrder       reorder pattern that lists for each index in the original order, to which index in the new order it should be moved
-/// \param[in] fromOrder     reorder pattern that lists for each index in the new order, from which index in the original order it was moved
-/// \param[inout] rMat       reordered Matrix
-void reorderBlockedMatrixByPattern(BlockedMatrix *mat, int *toOrder, int *fromOrder, BlockedMatrix *rmat);
+/// Reorder the sparsity pattern of the matrix according to the mapping in toOrder and fromOrder
+/// Also find mapping for nnz blocks
+/// rmat must be allocated already
+/// \param[in] mat                        matrix to be reordered
+/// \param[out] reordermapping_nonzeroes  contains new index for every nnz block
+/// \param[in] toOrder                    reorder pattern that lists for each index in the original order, to which index in the new order it should be moved
+/// \param[in] fromOrder                  reorder pattern that lists for each index in the new order, from which index in the original order it was moved
+/// \param[out] rmat                      reordered Matrix
+void reorderBlockedMatrixByPattern(BlockedMatrix *mat, std::vector<int>& reordermapping_nonzeroes, int *toOrder, int *fromOrder, BlockedMatrix *rmat);
+
+/// Write nnz blocks from mat to rmat, according to the mapping in reordermapping_nonzeroes
+/// rmat must be allocated already
+/// \param[in] mat                       matrix to be reordered
+/// \param[in] reordermapping_nonzeroes  contains old index for every nnz block, so rmat_nnz[i] == mat_nnz[mapping[i]]
+/// \param[inout] rmat                   reordered Matrix
+void reorderNonzeroes(BlockedMatrix *mat, std::vector<int>& reordermapping_nonzeroes, BlockedMatrix *rmat);
 
 /// Compute reorder mapping from the color that each node has received
 /// The toOrder, fromOrder and iters arrays must be allocated already

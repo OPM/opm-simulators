@@ -69,6 +69,9 @@ private:
 
     ILUReorder opencl_ilu_reorder;
 
+    std::vector<int> reordermappingNonzeroes;    // maps nonzero blocks to new location in reordered matrix
+    std::vector<int> jacReordermappingNonzeroes; // same but for jacMatrix
+
     typedef struct {
         cl::Buffer invDiagVals;
         cl::Buffer diagIndex;
@@ -117,6 +120,11 @@ public:
         return rmat.get();
     }
 
+    BlockedMatrix* getRJacMat()
+    {
+        return rJacMat.get();
+    }
+
     std::tuple<std::vector<int>, std::vector<int>, std::vector<int>> get_preconditioner_structure()
     {
         return {{LUmat->rowPointers, LUmat->rowPointers + (Nb + 1)}, {LUmat->colIndices, LUmat->colIndices + nnzb}, diagIndex};
@@ -129,11 +137,6 @@ public:
 #else
         return std::make_pair(s.LUvals, s.invDiagVals);
 #endif
-    }
-
-    BlockedMatrix* getRJacMat()
-    {
-        return rJacMat.get();
     }
 };
 

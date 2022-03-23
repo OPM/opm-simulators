@@ -101,9 +101,17 @@ bool BILU0<block_size>::analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat
     if (opencl_ilu_reorder == ILUReorder::LEVEL_SCHEDULING) {
         out << "BILU0 reordering strategy: " << "level_scheduling\n";
         findLevelScheduling(matToDecompose->colIndices, matToDecompose->rowPointers, CSCRowIndices.data(), CSCColPointers.data(), Nb, &numColors, toOrder.data(), fromOrder.data(), rowsPerColor);
+        reorderBlockedMatrixByPattern(mat, reordermappingNonzeroes, toOrder.data(), fromOrder.data(), rmat.get());
+        if (jacMat) {
+            reorderBlockedMatrixByPattern(jacMat, jacReordermappingNonzeroes, toOrder.data(), fromOrder.data(), rJacMat.get());
+        }
     } else if (opencl_ilu_reorder == ILUReorder::GRAPH_COLORING) {
         out << "BILU0 reordering strategy: " << "graph_coloring\n";
         findGraphColoring<block_size>(matToDecompose->colIndices, matToDecompose->rowPointers, CSCRowIndices.data(), CSCColPointers.data(), Nb, Nb, Nb, &numColors, toOrder.data(), fromOrder.data(), rowsPerColor);
+        reorderBlockedMatrixByPattern(mat, reordermappingNonzeroes, toOrder.data(), fromOrder.data(), rmat.get());
+        if (jacMat) {
+            reorderBlockedMatrixByPattern(jacMat, jacReordermappingNonzeroes, toOrder.data(), fromOrder.data(), rJacMat.get());
+        }
     } else if (opencl_ilu_reorder == ILUReorder::NONE) {
         out << "BILU0 reordering strategy: none\n";
         // numColors = 1;
@@ -187,11 +195,11 @@ bool BILU0<block_size>::create_preconditioner(BlockedMatrix *mat, BlockedMatrix 
         Timer t_reorder;
         if (jacMat) {
             matToDecompose = rJacMat.get();
-            reorderBlockedMatrixByPattern(mat, toOrder.data(), fromOrder.data(), rmat.get());
-            reorderBlockedMatrixByPattern(jacMat, toOrder.data(), fromOrder.data(), rJacMat.get());
+            reorderNonzeroes(mat, reordermappingNonzeroes, rmat.get());
+            reorderNonzeroes(jacMat, jacReordermappingNonzeroes, rJacMat.get());
         } else {
             matToDecompose = rmat.get();
-            reorderBlockedMatrixByPattern(mat, toOrder.data(), fromOrder.data(), rmat.get());
+            reorderNonzeroes(mat, reordermappingNonzeroes, rmat.get());
         }
 
         if (verbosity >= 3){

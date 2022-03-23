@@ -127,13 +127,13 @@ public:
 };
 
 
-/// Sort a row of matrix elements from a blocked CSR-format
-/// \param[inout] colIndices     
-/// \param[inout] data           
+/// Sort a row of matrix elements from a CSR-format, where the nonzeroes are ints
+/// These ints aren't actually nonzeroes, but represent a mapping used later
+/// \param[inout] colIndices     represent keys in sorting
+/// \param[inout] data           sorted according to the colIndices
 /// \param[in] left              lower index of data of row
 /// \param[in] right             upper index of data of row
-/// \param[in] block_size        size of blocks in the row
-void sortBlockedRow(int *colIndices, double *data, int left, int right, unsigned block_size);
+void sortRow(int *colIndices, int *data, int left, int right);
 
 /// Multiply and subtract blocks
 /// a = a - (b * c)

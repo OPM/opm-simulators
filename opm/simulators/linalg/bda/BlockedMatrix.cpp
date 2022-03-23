@@ -37,14 +37,12 @@ namespace Accelerator
 
 using Opm::OpmLog;
 
-/*Sort a row of matrix elements from a blocked CSR-format.*/
 
-void sortBlockedRow(int *colIndices, double *data, int left, int right, unsigned block_size) {
-    const unsigned int bs = block_size;
+
+void sortRow(int *colIndices, int *data, int left, int right) {
     int l = left;
     int r = right;
     int middle = colIndices[(l + r) >> 1];
-    double lDatum[bs * bs];
     do {
         while (colIndices[l] < middle)
             l++;
@@ -54,9 +52,9 @@ void sortBlockedRow(int *colIndices, double *data, int left, int right, unsigned
             int lColIndex = colIndices[l];
             colIndices[l] = colIndices[r];
             colIndices[r] = lColIndex;
-            memcpy(lDatum, data + l * bs * bs, sizeof(double) * bs * bs);
-            memcpy(data + l * bs * bs, data + r * bs * bs, sizeof(double) * bs * bs);
-            memcpy(data + r * bs * bs, lDatum, sizeof(double) * bs * bs);
+            int tmp = data[l];
+            data[l] = data[r];
+            data[r] = tmp;
 
             l++;
             r--;
@@ -64,10 +62,10 @@ void sortBlockedRow(int *colIndices, double *data, int left, int right, unsigned
     } while (l < r);
 
     if (left < r)
-        sortBlockedRow(colIndices, data, left, r, bs);
+        sortRow(colIndices, data, left, r);
 
     if (right > l)
-        sortBlockedRow(colIndices, data, l, right, bs);
+        sortRow(colIndices, data, l, right);
 }
 
 
