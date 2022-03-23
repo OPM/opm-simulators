@@ -51,7 +51,11 @@ namespace Opm
     /// the binary was compiled.
     std::string compileTimestamp()
     {
+#ifdef BUILD_TIMESTAMP
         return BUILD_TIMESTAMP;
+#else
+        return "";
+#endif
     }
 
 } // namespace Opm
