@@ -1013,13 +1013,18 @@ namespace Opm
                 }
             }
         }
-        if (nonzero_rate_index == -1) {
-            // No nonzero rates.
-            return;
-        }
 
         // Calculate the rates that follow from the current primary variables.
         std::vector<double> well_q_s = computeCurrentWellRates(ebosSimulator, deferred_logger);
+
+        if (nonzero_rate_index == -1) {
+            // No nonzero rates.
+            // Use the computed rate directly
+            for (int p = 0; p < this->number_of_phases_; ++p) {
+               ws.surface_rates[p] = well_q_s[this->flowPhaseToEbosCompIdx(p)];
+            }
+            return;
+        }
 
         // Set the currently-zero phase flows to be nonzero in proportion to well_q_s.
         const double initial_nonzero_rate = ws.surface_rates[nonzero_rate_index];
