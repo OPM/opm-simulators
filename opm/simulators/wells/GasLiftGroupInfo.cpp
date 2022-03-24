@@ -293,7 +293,7 @@ checkDoGasLiftOptimization_(const std::string &well_name)
     auto itr = this->ecl_wells_.find(well_name);
     if (itr == this->ecl_wells_.end()) {
         // well_name is not present in the well_model's well container
-        displayDebugMessage_("Could not find well in ecl_wells. Skipping.", well_name);
+        //displayDebugMessage_("Could not find well in ecl_wells. Skipping.", well_name);
         return false;
     }
     const Well *well = (itr->second).first;
