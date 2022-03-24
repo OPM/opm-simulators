@@ -909,8 +909,7 @@ namespace Opm {
             if (this->glift_debug) gliftDebugShowALQ(deferred_logger);
             num_wells_changed = glift_wells.size();
         }
-        auto comm = ebosSimulator_.vanguard().grid().comm();
-        num_wells_changed = comm.sum(num_wells_changed);
+        num_wells_changed = this->comm_.sum(num_wells_changed);
         return num_wells_changed > 0;
     }
 
@@ -1043,7 +1042,7 @@ namespace Opm {
             = std::make_unique<GasLiftSingleWell>(
                 *well, ebosSimulator_, summary_state,
                 deferred_logger, this->wellState(), this->groupState(),
-                group_info, sync_groups, this->glift_debug);
+                group_info, sync_groups, this->comm_, this->glift_debug);
         auto state = glift->runOptimize(
             ebosSimulator_.model().newtonMethod().numIterations());
         if (state) {

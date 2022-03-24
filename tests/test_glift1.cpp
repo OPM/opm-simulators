@@ -172,6 +172,7 @@ BOOST_AUTO_TEST_CASE(G1)
     GLiftEclWells ecl_well_map;
     well_model.initGliftEclWellMap(ecl_well_map);
     const int iteration_idx = simulator->model().newtonMethod().numIterations();
+    const auto& comm = simulator->vanguard().grid().comm();
     GasLiftGroupInfo group_info {
         ecl_well_map,
         schedule,
@@ -181,13 +182,13 @@ BOOST_AUTO_TEST_CASE(G1)
         well_model.phaseUsage(),
         deferred_logger,
         well_state,
-        simulator->vanguard().grid().comm(),
+        comm,
         /*glift_debug=*/false
     };
     GLiftSyncGroups sync_groups;
     GasLiftSingleWell glift {*std_well, *(simulator.get()), summary_state,
         deferred_logger, well_state, group_state, group_info, sync_groups,
-        /*glift_debug=*/false
+        comm, /*glift_debug=*/false
     };
     group_info.initialize();
     auto state = glift.runOptimize(iteration_idx);

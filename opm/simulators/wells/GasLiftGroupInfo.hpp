@@ -202,7 +202,6 @@ protected:
     const int report_step_idx_;
     const int iteration_idx_;
     const PhaseUsage &phase_usage_;
-    const Parallel::Communication &comm_;
     const GasLiftOpt& glo_;
     GroupRateMap group_rate_map_;
     Well2GroupMap well_group_map_;

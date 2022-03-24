@@ -37,14 +37,28 @@ protected:
     GasLiftCommon(
         WellState &well_state,
         DeferredLogger &deferred_logger,
+        const Parallel::Communication& comm,
         bool debug
     );
+    enum class MessageType { INFO, WARNING };
+
     int debugUpdateGlobalCounter_() const;
     virtual void displayDebugMessage_(const std::string& msg) const = 0;
+    void displayDebugMessageOnRank0_(const std::string &msg) const;
+    void logMessage_(
+        const std::string& prefix,
+        const std::string& msg,
+        MessageType msg_type = MessageType::INFO) const;
 
     WellState &well_state_;
     DeferredLogger &deferred_logger_;
+    const Parallel::Communication& comm_;
     bool debug;
+    // By setting this variable to true we restrict some debug output
+    // to only be printed for rank 0. By setting this variable to false we keep
+    // the output on all ranks. This can in some cases be helpful as a debugging
+    // aid to check that the output is in fact identical over all ranks
+    bool debug_output_only_on_rank0 = false;
 };
 
 } // namespace Opm

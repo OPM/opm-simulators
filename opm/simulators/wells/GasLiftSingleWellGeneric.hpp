@@ -111,6 +111,7 @@ protected:
         const Schedule& schedule,
         const int report_step_idx,
         GLiftSyncGroups& sync_groups,
+        const Parallel::Communication& comm,
         bool glift_debug
     );
 

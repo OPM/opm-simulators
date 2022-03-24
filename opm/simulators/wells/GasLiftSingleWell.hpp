@@ -50,6 +50,7 @@ namespace Opm
             const GroupState& group_state,
             GasLiftGroupInfo &group_info,
             GLiftSyncGroups &sync_groups,
+            const Parallel::Communication& comm,
             bool glift_debug
         );
         const WellInterfaceGeneric &getWell() const override { return well_; }
