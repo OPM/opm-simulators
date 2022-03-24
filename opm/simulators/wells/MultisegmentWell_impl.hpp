@@ -422,9 +422,15 @@ namespace Opm
 
         // initialized the well rates with the potentials i.e. the well rates based on bhp
         const int np = this->number_of_phases_;
-        const double sign = well_copy.well_ecl_.isInjector() ? 1.0 : -1.0;
+        bool trivial = true;
         for (int phase = 0; phase < np; ++phase){
-            ws.surface_rates[phase] = sign * ws.well_potentials[phase];
+            trivial = trivial && (ws.well_potentials[phase] == 0.0) ;
+        }
+        if (!trivial) {
+            const double sign = well_copy.well_ecl_.isInjector() ? 1.0 : -1.0;
+            for (int phase = 0; phase < np; ++phase) {
+                ws.surface_rates[phase] = sign * ws.well_potentials[phase];
+            }
         }
         well_copy.scaleSegmentRatesWithWellRates(well_state_copy);
 

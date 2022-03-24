@@ -297,17 +297,6 @@ namespace Opm {
             well->closeCompletions(wellTestState());
         }
 
-        // calculate the well potentials
-        try {
-            updateWellPotentials(reportStepIdx,
-                                 /*onlyAfterEvent*/true,
-                                 ebosSimulator_.vanguard().summaryConfig(),
-                                 local_deferredLogger);
-        } catch ( std::runtime_error& e ) {
-            const std::string msg = "A zero well potential is returned for output purposes. ";
-            local_deferredLogger.warning("WELL_POTENTIAL_CALCULATION_FAILED", msg);
-        }
-
         if (alternative_well_rate_init_) {
             // Update the well rates of well_state_, if only single-phase rates, to
             // have proper multi-phase rates proportional to rates at bhp zero.
@@ -318,6 +307,17 @@ namespace Opm {
                     well->updateWellStateRates(ebosSimulator_, this->wellState(), local_deferredLogger);
                 }
             }
+        }
+
+        // calculate the well potentials
+        try {
+            updateWellPotentials(reportStepIdx,
+                                 /*onlyAfterEvent*/true,
+                                 ebosSimulator_.vanguard().summaryConfig(),
+                                 local_deferredLogger);
+        } catch ( std::runtime_error& e ) {
+            const std::string msg = "A zero well potential is returned for output purposes. ";
+            local_deferredLogger.warning("WELL_POTENTIAL_CALCULATION_FAILED", msg);
         }
 
         //update guide rates
