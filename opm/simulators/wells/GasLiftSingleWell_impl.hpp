@@ -29,6 +29,7 @@ GasLiftSingleWell(const WellInterface<TypeTag> &well,
                   const GroupState &group_state,
                   GasLiftGroupInfo &group_info,
                   GLiftSyncGroups &sync_groups,
+                  const Parallel::Communication& comm,
                   bool glift_debug
                  )
     // The parent class GasLiftSingleWellGeneric contains all stuff
@@ -44,6 +45,7 @@ GasLiftSingleWell(const WellInterface<TypeTag> &well,
         ebos_simulator.vanguard().schedule(),
         ebos_simulator.episodeIndex(),
         sync_groups,
+        comm,
         glift_debug
     )
    , ebos_simulator_{ebos_simulator}

@@ -26,10 +26,12 @@ GasLiftCommon::
 GasLiftCommon(
     WellState &well_state,
     DeferredLogger &deferred_logger,
+    const Parallel::Communication& comm,
     bool glift_debug
 ) :
     well_state_{well_state},
     deferred_logger_{deferred_logger},
+    comm_{comm},
     debug{glift_debug}
 {
 
@@ -49,6 +51,51 @@ debugUpdateGlobalCounter_() const
     return count;
 }
 
+void
+GasLiftCommon::
+displayDebugMessageOnRank0_(const std::string &msg) const
+{
+    // This output should be identical for all ranks.
+
+    if (   (!this->debug_output_only_on_rank0)
+        || (this->debug_output_only_on_rank0 && this->comm_.rank() == 0) ) {
+        displayDebugMessage_(msg);
+    }
+}
+
+void
+GasLiftCommon::
+logMessage_(
+    const std::string& prefix, const std::string& msg, MessageType msg_type) const
+{
+    std::string rank = "";
+    if (this->comm_.size() > 1) {
+        rank = fmt::format(" Rank #{} :", this->comm_.rank());
+    }
+    std::string type_str;
+    switch (msg_type) {
+    case MessageType::INFO:
+        type_str = "DEBUG";
+        break;
+    case MessageType::WARNING:
+        type_str = "WARNING";
+        break;
+    default:
+        throw std::runtime_error("This should not happen");
+    }
+    const std::string message = fmt::format(
+        "  {} ({}) :{} {}", prefix, type_str, rank, msg);
+    switch (msg_type) {
+    case MessageType::INFO:
+        this->deferred_logger_.info(message);
+        break;
+    case MessageType::WARNING:
+        this->deferred_logger_.info(message);
+        break;
+    default:
+        throw std::runtime_error("This should not happen");
+    }
+}
 
 /****************************************
  * Private methods in alphabetical order

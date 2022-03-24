@@ -49,7 +49,7 @@ GasLiftStage2::GasLiftStage2(
     GLiftWellStateMap &state_map,
     bool glift_debug
 ) :
-    GasLiftCommon(well_state, deferred_logger, glift_debug)
+    GasLiftCommon(well_state, deferred_logger, comm, glift_debug)
     , prod_wells_{prod_wells}
     , stage1_wells_{glift_wells}
     , well_state_map_{state_map}
@@ -57,7 +57,6 @@ GasLiftStage2::GasLiftStage2(
     , summary_state_{summary_state}
     , schedule_{schedule}
     , glo_{schedule_.glo(report_step_idx_)}
-    , comm_{comm}
 {
 //    this->time_step_idx_
 //        = this->ebos_simulator_.model().newtonMethod().currentTimeStep();
@@ -233,18 +232,15 @@ void
 GasLiftStage2::
 displayWarning_(const std::string &msg, const std::string &group_name)
 {
-    const std::string message = fmt::format(
-        "GAS LIFT OPTIMIZATION (STAGE2), GROUP: {} : {}", group_name, msg);
-    this->deferred_logger_.warning("WARNING", message);
+    const std::string message = fmt::format("GROUP: {} : {}", group_name, msg);
+    displayWarning_(message);
 }
 
 void
 GasLiftStage2::
 displayWarning_(const std::string &msg)
 {
-    const std::string message = fmt::format(
-        "GAS LIFT OPTIMIZATION (STAGE2) : {}", msg);
-    this->deferred_logger_.warning("WARNING", message);
+    logMessage_(/*prefix=*/"GLIFT2", msg, MessageType::WARNING);
 }
 
 void
@@ -252,9 +248,7 @@ GasLiftStage2::
 displayDebugMessage_(const std::string &msg) const
 {
     if (this->debug) {
-        const std::string message = fmt::format(
-            "  GLIFT2 (DEBUG) : {}", msg);
-        this->deferred_logger_.info(message);
+        logMessage_(/*prefix=*/"GLIFT2", msg);
     }
 }
 
@@ -263,9 +257,7 @@ GasLiftStage2::
 displayDebugMessage2B_(const std::string &msg)
 {
     if (this->debug) {
-        const std::string message = fmt::format(
-            "Stage 2B : {}", msg);
-        displayDebugMessage_(message);
+        logMessage_(/*prefix=*/"GLIFT2B", msg);
     }
 }
 
@@ -291,7 +283,7 @@ getCurrentGroupRates_(const Group &group)
         const std::string msg = fmt::format(
             "Current group rates for {} : oil: {}, gas: {}, alq: {}",
             group.name(), oil_rate, gas_rate, alq);
-        displayDebugMessage2B_(msg);
+        displayDebugMessageOnRank0_(msg);
     }
 
     return {oil_rate, gas_rate, alq};
@@ -722,7 +714,7 @@ removeSurplusALQ_(const Group &group,
     std::vector<GradPair> &inc_grads, std::vector<GradPair> &dec_grads)
 {
     if (dec_grads.empty()) {
-        displayDebugMessage2B_("no wells to remove ALQ from. Skipping");
+        displayDebugMessage_("no wells to remove ALQ from. Skipping");
         return;
     }
     assert(!dec_grads.empty());
@@ -740,7 +732,7 @@ removeSurplusALQ_(const Group &group,
             "oil_rate = {}, oil_target = {}, gas_rate = {}, gas_target = {}, "
             "alq = {}, max_alq = {}", group.name(), oil_rate, controls.oil_target,
             gas_rate, controls.gas_target, alq, max_glift_str);
-        displayDebugMessage2B_(msg);
+        displayDebugMessage_(msg);
     }
     SurplusState state {*this, group, oil_rate, gas_rate, alq,
             min_eco_grad, controls.oil_target, controls.gas_target, max_glift };
@@ -790,11 +782,11 @@ removeSurplusALQ_(const Group &group,
                  "Finished after {} iterations for group: {}."
                  " oil_rate = {}, gas_rate = {}, alq = {}", state.it,
                  group.name(), oil_rate2, gas_rate2, alq2);
-            displayDebugMessage2B_(msg);
+            displayDebugMessage_(msg);
         }
     }
     else {
-        displayDebugMessage2B_("Finished after 0 iterations");
+        displayDebugMessage_("Finished after 0 iterations");
     }
 }
 
@@ -1022,7 +1014,7 @@ addOrRemoveALQincrement(GradMap &grad_map, const std::string& well_name, bool ad
     if (this->parent.debug) {
         const std::string msg = fmt::format("group: {} : well {} : {} ALQ increment",
             this->group.name(), well_name, (add ? "adding" : "subtracting"));
-        this->parent.displayDebugMessage2B_(msg);
+        this->parent.displayDebugMessage_(msg);
     }
     this->parent.addOrRemoveALQincrement_(grad_map, well_name, add);
 }
@@ -1040,7 +1032,7 @@ checkALQlimit()
                 const std::string msg = fmt::format("group: {} : "
                     "ALQ rate {} is greater than ALQ limit {}", this->group.name(),
                     this->alq, max_alq);
-                this->parent.displayDebugMessage2B_(msg);
+                this->parent.displayDebugMessage_(msg);
             }
             return true;
         }
@@ -1057,7 +1049,7 @@ checkEcoGradient(const std::string &well_name, double eco_grad)
             const std::string msg = fmt::format("group: {}, well: {} : "
                 "economic gradient {} less than minimum ({})", this->group.name(),
                 well_name, eco_grad, this->min_eco_grad);
-            this->parent.displayDebugMessage2B_(msg);
+            this->parent.displayDebugMessage_(msg);
         }
         return true;
     }
@@ -1076,7 +1068,7 @@ checkGasTarget()
                 const std::string msg = fmt::format("group: {} : "
                     "gas rate {} is greater than gas target {}", this->group.name(),
                     this->gas_rate, this->gas_target);
-                this->parent.displayDebugMessage2B_(msg);
+                this->parent.displayDebugMessage_(msg);
             }
             return true;
         }
@@ -1094,7 +1086,7 @@ checkOilTarget()
                 const std::string msg = fmt::format("group: {} : "
                     "oil rate {} is greater than oil target {}", this->group.name(),
                     this->oil_rate, this->oil_target);
-                this->parent.displayDebugMessage2B_(msg);
+                this->parent.displayDebugMessage_(msg);
             }
             return true;
         }

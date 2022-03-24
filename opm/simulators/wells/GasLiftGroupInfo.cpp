@@ -35,14 +35,13 @@ GasLiftGroupInfo(
     const Communication &comm,
     bool glift_debug
 ) :
-    GasLiftCommon(well_state, deferred_logger, glift_debug)
+    GasLiftCommon(well_state, deferred_logger, comm, glift_debug)
     , ecl_wells_{ecl_wells}
     , schedule_{schedule}
     , summary_state_{summary_state}
     , report_step_idx_{report_step_idx}
     , iteration_idx_{iteration_idx}
     , phase_usage_{phase_usage}
-    , comm_{comm}
     , glo_{schedule_.glo(report_step_idx_)}
 {
 
@@ -294,7 +293,7 @@ checkDoGasLiftOptimization_(const std::string &well_name)
     auto itr = this->ecl_wells_.find(well_name);
     if (itr == this->ecl_wells_.end()) {
         // well_name is not present in the well_model's well container
-        displayDebugMessage_("Could find well ecl_wells. Skipping.", well_name);
+        displayDebugMessage_("Could not find well in ecl_wells. Skipping.", well_name);
         return false;
     }
     const Well *well = (itr->second).first;
@@ -368,6 +367,8 @@ checkNewtonIterationIdxOk_(const std::string &well_name)
     }
 }
 
+// This is called by each rank, but the value of "well_name" should be unique
+//   across ranks
 void
 GasLiftGroupInfo::
 debugDisplayWellContribution_(
@@ -393,11 +394,10 @@ debugDisplayUpdatedGroupRates(
       const std::string& name,
       double oil_rate, double gas_rate, double water_rate, double alq) const
 {
-
     const std::string msg = fmt::format("Updated group info for {} : "
         "oil_rate = {}, gas_rate = {}, water_rate = {}, alq = {}",
         name, oil_rate, gas_rate, water_rate, alq);
-    displayDebugMessage_(msg);
+    displayDebugMessageOnRank0_(msg);
 }
 
 void
@@ -405,7 +405,7 @@ GasLiftGroupInfo::
 debugEndInitializeGroup(const std::string& name) const
 {
     const std::string msg = fmt::format("Finished with group {} ...", name);
-    displayDebugMessage_(msg);
+    displayDebugMessageOnRank0_(msg);
 }
 
 void
@@ -413,7 +413,7 @@ GasLiftGroupInfo::
 debugStartInitializeGroup(const std::string& name) const
 {
     const std::string msg = fmt::format("Initializing group {} ...", name);
-    displayDebugMessage_(msg);
+    displayDebugMessageOnRank0_(msg);
 }
 
 void
@@ -421,9 +421,8 @@ GasLiftGroupInfo::
 displayDebugMessage_(const std::string &msg) const
 {
     if (this->debug) {
-        const std::string message = fmt::format(
-             "  GLIFT (DEBUG) : Init group info : {}", msg);
-        this->deferred_logger_.info(message);
+        const std::string message = fmt::format("Init group info : {}", msg);
+        logMessage_(/*prefix=*/"GLIFT", message);
     }
 }
 
@@ -432,10 +431,8 @@ GasLiftGroupInfo::
 displayDebugMessage_(const std::string &msg, const std::string &well_name)
 {
     if (this->debug) {
-        const std::string message = fmt::format(
-             "  GLIFT (DEBUG) : Init group info : Well {} : {}",
-             well_name, msg);
-        this->deferred_logger_.info(message);
+        const std::string message = fmt::format("Well {} : {}", well_name, msg);
+        displayDebugMessage_(message);
     }
 }
 

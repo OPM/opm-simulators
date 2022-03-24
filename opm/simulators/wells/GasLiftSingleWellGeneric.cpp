@@ -48,9 +48,10 @@ GasLiftSingleWellGeneric::GasLiftSingleWellGeneric(
     const Schedule& schedule,
     const int report_step_idx,
     GLiftSyncGroups& sync_groups,
+    const Parallel::Communication& comm,
     bool glift_debug
 ) :
-    GasLiftCommon(well_state, deferred_logger, glift_debug)
+    GasLiftCommon(well_state, deferred_logger, comm, glift_debug)
     , group_state_{group_state}
     , ecl_well_{ecl_well}
     , summary_state_{summary_state}
@@ -495,9 +496,8 @@ displayDebugMessage_(const std::string& msg) const
 {
 
     if (this->debug) {
-        const std::string message = fmt::format(
-            "  GLIFT (DEBUG) : Well {} : {}", this->well_name_, msg);
-        this->deferred_logger_.info(message);
+        const std::string message = fmt::format("Well {} : {}", this->well_name_, msg);
+        logMessage_(/*prefix=*/"GLIFT", message);
     }
 }
 
@@ -505,9 +505,8 @@ void
 GasLiftSingleWellGeneric::
 displayWarning_(const std::string& msg)
 {
-    const std::string message = fmt::format(
-        "GAS LIFT OPTIMIZATION, WELL {} : {}", this->well_name_, msg);
-    this->deferred_logger_.warning("WARNING", message);
+    const std::string message = fmt::format("WELL {} : {}", this->well_name_, msg);
+    logMessage_(/*prefix=*/"GLIFT", msg, MessageType::WARNING);
 }
 
 std::pair<double, bool>

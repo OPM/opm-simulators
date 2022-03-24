@@ -130,7 +130,6 @@ protected:
     const SummaryState& summary_state_;
     const Schedule& schedule_;
     const GasLiftOpt& glo_;
-    const Parallel::Communication& comm_;
     GradMap inc_grads_;
     GradMap dec_grads_;
     int max_iterations_ = 1000;
