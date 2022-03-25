@@ -262,6 +262,8 @@ protected:
         bool solvable = true;
         // the well have non positive potentials
         bool has_negative_potentials = false;
+        //thp limit violated but not switched
+        mutable bool thp_limit_violated_but_not_switched = false;
     };
 
     OperabilityStatus operability_status_;

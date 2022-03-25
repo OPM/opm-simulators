@@ -83,7 +83,8 @@ template <typename FluidSystem>
 Well::ProducerCMode
 WellInterfaceFluidSystem<FluidSystem>::
 activeProductionConstraint(const SingleWellState& ws,
-                           const SummaryState& summaryState) const
+                           const SummaryState& summaryState,
+                           DeferredLogger& deferred_logger) const
 {
     const PhaseUsage& pu = this->phaseUsage();
     const auto controls = this->well_ecl_.productionControls(summaryState);
@@ -162,8 +163,26 @@ activeProductionConstraint(const SingleWellState& ws,
     if (controls.hasControl(Well::ProducerCMode::THP) && currentControl != Well::ProducerCMode::THP) {
         const auto& thp = getTHPConstraint(summaryState);
         double current_thp = ws.thp;
-        if (thp > current_thp)
-            return Well::ProducerCMode::THP;
+        if (thp > current_thp) {
+            bool rate_less_than_potential = true;
+            for (int p = 0; p < number_of_phases_; ++p) {
+                // Currently we use the well potentials here computed before the iterations.
+                // We may need to recompute the well potentials to get a more
+                // accurate check here.
+                rate_less_than_potential = rate_less_than_potential && (-ws.surface_rates[p]) <= ws.well_potentials[p];
+            }
+            if(!rate_less_than_potential) {
+                this->operability_status_.thp_limit_violated_but_not_switched = false;
+                return Well::ProducerCMode::THP;
+            } else {
+                this->operability_status_.thp_limit_violated_but_not_switched = true;
+                deferred_logger.debug("NOT_SWITCHING_TO_THP",
+                "The THP limit is violated for producer " +
+                this->name() +
+                ". But the rate will increase if switched to THP. " +
+                "The well is therefore kept at " + Well::ProducerCMode2String(currentControl));
+            }
+        }
     }
 
     return currentControl;
@@ -174,7 +193,8 @@ template <typename FluidSystem>
 Well::InjectorCMode
 WellInterfaceFluidSystem<FluidSystem>::
 activeInjectionConstraint(const SingleWellState& ws,
-                          const SummaryState& summaryState) const
+                          const SummaryState& summaryState,
+                          DeferredLogger& deferred_logger) const
 {
     const PhaseUsage& pu = this->phaseUsage();
 
@@ -238,8 +258,26 @@ activeInjectionConstraint(const SingleWellState& ws,
     {
         const auto& thp = getTHPConstraint(summaryState);
         double current_thp = ws.thp;
-        if (thp < current_thp)
-            return Well::InjectorCMode::THP;
+        if (thp < current_thp) {
+            bool rate_less_than_potential = true;
+            for (int p = 0; p < number_of_phases_; ++p) {
+                // Currently we use the well potentials here computed before the iterations.
+                // We may need to recompute the well potentials to get a more
+                // accurate check here.
+                rate_less_than_potential = rate_less_than_potential && (ws.surface_rates[p]) <= ws.well_potentials[p];
+            }
+            if(!rate_less_than_potential) {
+                this->operability_status_.thp_limit_violated_but_not_switched = false;
+                return Well::InjectorCMode::THP;
+            } else {
+                this->operability_status_.thp_limit_violated_but_not_switched = true;
+                deferred_logger.debug("NOT_SWITCHING_TO_THP",
+                "The THP limit is violated for injector " +
+                this->name() +
+                ". But the rate will increase if switched to THP. " +
+                "The well is therefore kept at " + Well::InjectorCMode2String(currentControl));
+            }
+        }
     }
 
     return currentControl;
@@ -249,10 +287,11 @@ template <typename FluidSystem>
 bool
 WellInterfaceFluidSystem<FluidSystem>::
 checkIndividualConstraints(SingleWellState& ws,
-                           const SummaryState& summaryState) const
+                           const SummaryState& summaryState,
+                           DeferredLogger& deferred_logger) const
 {
     if (this->well_ecl_.isProducer()) {
-        auto new_cmode = this->activeProductionConstraint(ws, summaryState);
+        auto new_cmode = this->activeProductionConstraint(ws, summaryState, deferred_logger);
         if (new_cmode != ws.production_cmode) {
             ws.production_cmode = new_cmode;
             return true;
@@ -260,7 +299,7 @@ checkIndividualConstraints(SingleWellState& ws,
     }
 
     if (this->well_ecl_.isInjector()) {
-        auto new_cmode = this->activeInjectionConstraint(ws, summaryState);
+        auto new_cmode = this->activeInjectionConstraint(ws, summaryState, deferred_logger);
         if (new_cmode != ws.injection_cmode) {
             ws.injection_cmode = new_cmode;
             return true;
@@ -441,7 +480,7 @@ checkConstraints(WellState& well_state,
                  const SummaryState& summaryState,
                  DeferredLogger& deferred_logger) const
 {
-    const bool ind_broken = checkIndividualConstraints(well_state.well(this->index_of_well_), summaryState);
+    const bool ind_broken = checkIndividualConstraints(well_state.well(this->index_of_well_), summaryState, deferred_logger);
     if (ind_broken) {
         return true;
     } else {
