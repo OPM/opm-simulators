@@ -54,6 +54,8 @@
 #include <opm/input/eclipse/Parser/ErrorGuard.hpp>
 #include <opm/input/eclipse/Parser/Parser.hpp>
 
+#include <opm/input/eclipse/Units/UnitSystem.hpp>
+
 #include <opm/simulators/flow/KeywordValidation.hpp>
 #include <opm/simulators/flow/ValidationFunctions.hpp>
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
@@ -332,6 +334,44 @@ namespace {
         }
     }
 #endif
+
+    bool gridHasValidCellGeometry(const Opm::EclipseGrid& inputGrid,
+                                  const Opm::UnitSystem&  usys)
+    {
+        const auto numActive = inputGrid.getNumActive();
+
+        for (auto activeCell = 0*numActive; activeCell < numActive; ++activeCell) {
+            if (inputGrid.isValidCellGeomtry(inputGrid.getGlobalIndex(activeCell), usys)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    bool gridHasValidCellGeometry(Opm::Parallel::Communication comm,
+                                  const Opm::EclipseState&     eclipseState)
+    {
+        bool hasValidCells = false;
+
+        if (comm.rank() == 0) {
+            hasValidCells =
+                gridHasValidCellGeometry(eclipseState.getInputGrid(),
+                                         eclipseState.getDeckUnitSystem());
+        }
+
+#if HAVE_MPI
+        const auto status = comm.broadcast(&hasValidCells, 1, 0);
+
+        if (status != MPI_SUCCESS) {
+            throw std::invalid_argument {
+                "Unable to establish cell geomtry validity across MPI ranks"
+            };
+        }
+#endif  // HAVE_MPI
+
+        return hasValidCells;
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -517,4 +557,17 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
 
         std::exit(EXIT_FAILURE);
     }
+}
+
+void Opm::verifyValidCellGeometry(Parallel::Communication comm,
+                                  const EclipseState&     eclipseState)
+{
+    if (gridHasValidCellGeometry(comm, eclipseState)) {
+        return;
+    }
+
+    throw std::invalid_argument {
+        R"(No active cell in input grid has valid/finite cell geometry
+Please check geometry keywords, especially if grid is imported through GDFILE)"
+    };
 }

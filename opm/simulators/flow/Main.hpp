@@ -472,6 +472,8 @@ private:
                      summaryConfig_, nullptr, python, std::move(parseContext),
                      init_from_restart_file, outputCout_, outputInterval);
 
+            verifyValidCellGeometry(EclGenericVanguard::comm(), *this->eclipseState_);
+
             setupTime_ = externalSetupTimer.elapsed();
             outputFiles_ = (outputMode != FileOutputMode::OUTPUT_NONE);
         }

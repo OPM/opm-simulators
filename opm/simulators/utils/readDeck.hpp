@@ -86,6 +86,9 @@ void readDeck(Parallel::Communication         comm,
               bool                            initFromRestart,
               bool                            checkDeck,
               const std::optional<int>&       outputInterval);
+
+void verifyValidCellGeometry(Parallel::Communication comm,
+                             const EclipseState&     eclipseState);
 } // end namespace Opm
 
 #endif // OPM_READDECK_HEADER_INCLUDED
