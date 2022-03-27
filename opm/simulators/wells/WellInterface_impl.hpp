@@ -332,6 +332,9 @@ namespace Opm
                 return;
             }
 
+            if (this->isProducer()) {
+                gliftBeginTimeStepWellTestUpdateALQ(simulator, well_state_copy, deferred_logger);
+            }
             updateWellOperability(simulator, well_state_copy, deferred_logger);
             if ( !this->isOperableAndSolvable() ) {
                 const auto msg = fmt::format("WTEST: Well {} is not operable (physical)", this->name());
@@ -585,7 +588,49 @@ namespace Opm
         updateWellOperability(ebos_simulator, well_state, deferred_logger);
     }
 
-
+    template<typename TypeTag>
+    void
+    WellInterface<TypeTag>::
+    gliftBeginTimeStepWellTestUpdateALQ(const Simulator& ebos_simulator,
+                          WellState& well_state,
+                          DeferredLogger& deferred_logger)
+    {
+        const auto& summary_state = ebos_simulator.vanguard().summaryState();
+        const auto& well_name = this->name();
+        if (!this->wellHasTHPConstraints(summary_state)) {
+            const std::string msg = fmt::format("GLIFT WTEST: Well {} does not have THP constraints", well_name);
+            deferred_logger.info(msg);
+            return;
+        }
+        const auto& well_ecl = this->wellEcl();
+        const auto& schedule = ebos_simulator.vanguard().schedule();
+        auto report_step_idx = ebos_simulator.episodeIndex();
+        const auto& glo = schedule.glo(report_step_idx);
+        if (!glo.has_well(well_name)) {
+            const std::string msg = fmt::format(
+                "GLIFT WTEST: Well {} : Gas Lift not activated: "
+                "WLIFTOPT is probably missing. Skipping.", well_name);
+            deferred_logger.info(msg);
+            return;
+        }
+        const auto& gl_well = glo.well(well_name);
+        auto& max_alq_optional = gl_well.max_rate();
+        double max_alq;
+        if (max_alq_optional) {
+            max_alq = *max_alq_optional;
+        }
+        else {
+            const auto& controls = well_ecl.productionControls(summary_state);
+            const auto& table = this->vfpProperties()->getProd()->getTable(controls.vfp_table_number);
+            const auto& alq_values = table.getALQAxis();
+            max_alq = alq_values.back();
+        }
+        well_state.setALQ(well_name, max_alq);
+        const std::string msg = fmt::format(
+            "GLIFT WTEST: Well {} : Setting ALQ to max value: {}",
+            well_name, max_alq);
+        deferred_logger.info(msg);
+    }
 
     template<typename TypeTag>
     void

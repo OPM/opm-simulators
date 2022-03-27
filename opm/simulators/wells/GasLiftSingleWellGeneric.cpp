@@ -294,19 +294,38 @@ checkThpControl_() const
     return thp_control;
 }
 
+std::pair<std::optional<double>,double>
+GasLiftSingleWellGeneric::
+computeConvergedBhpAtThpLimitByMaybeIncreasingALQ_() const
+{
+    auto alq = this->orig_alq_;
+    double new_alq = alq;
+    std::optional<double> bhp;
+    while (alq <= (this->max_alq_ + this->increment_)) {
+        if (bhp = computeBhpAtThpLimit_(alq); bhp) {
+            new_alq = alq;
+            break;
+        }
+        alq += this->increment_;
+    }
+    return {bhp, new_alq};
+}
 
-std::optional<GasLiftSingleWellGeneric::BasicRates>
+std::pair<std::optional<GasLiftSingleWellGeneric::BasicRates>,double>
 GasLiftSingleWellGeneric::
 computeInitialWellRates_() const
 {
     std::optional<BasicRates> rates;
-    if (auto bhp = computeBhpAtThpLimit_(this->orig_alq_); bhp) {
+    double initial_alq = this->orig_alq_;
+    //auto alq = initial_alq;
+    //if (auto bhp = computeBhpAtThpLimit_(this->orig_alq_); bhp) {
+    if (auto [bhp, alq] = computeConvergedBhpAtThpLimitByMaybeIncreasingALQ_(); bhp) {
         {
             const std::string msg = fmt::format(
-                "computed initial bhp {} given thp limit and given alq {}",
-                *bhp, this->orig_alq_);
+                "computed initial bhp {} given thp limit and given alq {}", *bhp, alq);
             displayDebugMessage_(msg);
         }
+        initial_alq = alq;
         auto [new_bhp, bhp_is_limited] = getBhpWithLimit_(*bhp);
         rates = computeWellRates_(new_bhp, bhp_is_limited);
         if (rates) {
@@ -320,7 +339,7 @@ computeInitialWellRates_() const
     else {
         displayDebugMessage_("Aborting optimization.");
     }
-    return rates;
+    return {rates, initial_alq};
 }
 
 std::optional<GasLiftSingleWellGeneric::LimitedRates>
@@ -819,12 +838,13 @@ getRateWithGroupLimit_(
 }
 
 
-std::optional<GasLiftSingleWellGeneric::LimitedRates>
+std::pair<std::optional<GasLiftSingleWellGeneric::LimitedRates>, double>
 GasLiftSingleWellGeneric::
 getInitialRatesWithLimit_() const
 {
     std::optional<LimitedRates> limited_rates;
-    if (auto rates = computeInitialWellRates_(); rates) {
+    double initial_alq = this->orig_alq_;
+    if (auto [rates, alq] = computeInitialWellRates_(); rates) {
         if (this->debug) {
             displayDebugMessage_(
                              "Maybe limiting initial rates before optimize loop..");
@@ -832,8 +852,9 @@ getInitialRatesWithLimit_() const
         auto temp_rates = getLimitedRatesFromRates_(*rates);
         BasicRates old_rates = getWellStateRates_();
         limited_rates = updateRatesToGroupLimits_(old_rates, temp_rates);
+        initial_alq = alq;
     }
-    return limited_rates;
+    return {limited_rates, initial_alq};
 }
 
 GasLiftSingleWellGeneric::LimitedRates
@@ -1166,18 +1187,17 @@ runOptimizeLoop_(bool increase)
 {
     if (this->debug) debugShowProducerControlMode();
     std::unique_ptr<GasLiftWellState> ret_value; // nullptr initially
-    auto rates = getInitialRatesWithLimit_();
+    auto [rates, cur_alq] = getInitialRatesWithLimit_();
     if (!rates) return ret_value;
     // if (this->debug) debugShowBhpAlqTable_();
     if (this->debug) debugShowAlqIncreaseDecreaseCounts_();
     if (this->debug) debugShowTargets_();
     bool success = false;  // did we succeed to increase alq?
     bool alq_is_limited = false;
-    auto cur_alq = this->orig_alq_;
     LimitedRates new_rates = *rates;
     auto [temp_rates2, new_alq] = maybeAdjustALQbeforeOptimizeLoop_(
                                                  *rates, cur_alq, increase);
-    if (checkInitialALQmodified_(new_alq, cur_alq)) {
+    if (checkInitialALQmodified_(new_alq, this->orig_alq_)) {
         auto delta_alq = new_alq - cur_alq;
         new_rates = temp_rates2;
         cur_alq = new_alq;
@@ -1591,7 +1611,10 @@ checkAlqOutsideLimits(double alq, [[maybe_unused]] double oil_rate)
                 // NOTE: checking for an upper limit should not be necessary
                 // when decreasing alq.. so this is just to catch an
                 // illegal state at an early point.
-                if (alq >= this->parent.max_alq_) {
+                if (this->parent.checkALQequal_(alq, this->parent.max_alq_)) {
+                    return false;
+                }
+                else if (alq > this->parent.max_alq_) {
                     warn_( "unexpected: alq above upper limit when trying to "
                         "decrease lift gas. aborting iteration.");
                     result = true;
