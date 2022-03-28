@@ -339,7 +339,7 @@ private:
                                  OPM_THROW(std::logic_error, "Pressure index out of bounds. It needs to specified for CPR");
                              }
                              return std::make_shared<OwningTwoLevelPreconditionerWell<O, V, false, Comm>>(
-                                 op, prm, weightsCalculator, comm);
+                                 op, prm, weightsCalculator, pressureIndex, comm);
                          });
             doAddCreator("cprwt",
                          [](const O& op, const P& prm, const std::function<Vector()> weightsCalculator, std::size_t pressureIndex, const C& comm) {
@@ -348,7 +348,7 @@ private:
                                  OPM_THROW(std::logic_error, "Pressure index out of bounds. It needs to specified for CPR");
                              }
                              return std::make_shared<OwningTwoLevelPreconditionerWell<O, V, true, Comm>>(
-                                 op, prm, weightsCalculator, comm);
+                                 op, prm, weightsCalculator, pressureIndex, comm);
                          });
         }
     }
@@ -473,17 +473,17 @@ private:
             });
         }
         if constexpr (std::is_same_v<O, WellModelMatrixAdapter<M, V, V, false>>) {
-            doAddCreator("cprw", [](const O& op, const P& prm, const std::function<Vector()>& weightsCalculator) {
+            doAddCreator("cprw", [](const O& op, const P& prm, const std::function<Vector()>& weightsCalculator, std::size_t pressureIndex) {
                 if (pressureIndex == std::numeric_limits<std::size_t>::max()) {
                     OPM_THROW(std::logic_error, "Pressure index out of bounds. It needs to specified for CPR");
                 }
-                return std::make_shared<OwningTwoLevelPreconditionerWell<O, V, false>>(op, prm, weightsCalculator);
+                return std::make_shared<OwningTwoLevelPreconditionerWell<O, V, false>>(op, prm, weightsCalculator, pressureIndex);
             });
-            doAddCreator("cprwt", [](const O& op, const P& prm, const std::function<Vector()>& weightsCalculator) {
+            doAddCreator("cprwt", [](const O& op, const P& prm, const std::function<Vector()>& weightsCalculator, std::size_t pressureIndex) {
                 if (pressureIndex == std::numeric_limits<std::size_t>::max()) {
                     OPM_THROW(std::logic_error, "Pressure index out of bounds. It needs to specified for CPR");
                 }
-                return std::make_shared<OwningTwoLevelPreconditionerWell<O, V, true>>(op, prm, weightsCalculator);
+                return std::make_shared<OwningTwoLevelPreconditionerWell<O, V, true>>(op, prm, weightsCalculator, pressureIndex);
             });
             }
 

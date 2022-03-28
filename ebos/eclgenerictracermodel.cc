@@ -63,7 +63,7 @@ struct TracerSolverSelector
 {
     using Comm = Dune::OwnerOverlapCopyCommunication<int, int>;
     using TracerOperator = Dune::OverlappingSchwarzOperator<M, V, V, Comm>;
-    using type = Dune::FlexibleSolver<M, V>;
+    using type = Dune::FlexibleSolver<TracerOperator>;
 };
 template<class Vector, class Grid, class Matrix>
 std::tuple<std::unique_ptr<Dune::OverlappingSchwarzOperator<Matrix,Vector,Vector,
@@ -83,7 +83,7 @@ createParallelFlexibleSolver(const Dune::CpGrid& grid, const Matrix& M, const Pr
 {
         using TracerOperator = Dune::OverlappingSchwarzOperator<Matrix,Vector,Vector,
                                                                 Dune::OwnerOverlapCopyCommunication<int,int>>;
-        using TracerSolver = Dune::FlexibleSolver<Matrix, Vector>;
+        using TracerSolver = Dune::FlexibleSolver<TracerOperator>;
         const auto& cellComm = grid.cellCommunication();
         auto op = std::make_unique<TracerOperator>(M, cellComm);
         auto dummyWeights = [](){ return Vector();};

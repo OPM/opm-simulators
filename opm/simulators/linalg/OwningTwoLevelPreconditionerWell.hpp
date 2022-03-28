@@ -80,22 +80,23 @@ template <class OperatorType,
 class OwningTwoLevelPreconditionerWell : public Dune::PreconditionerWithUpdate<VectorType, VectorType>
 {
 public:
-    using pt = boost::property_tree::ptree;
     using MatrixType = typename OperatorType::matrix_type;
     using PrecFactory = Opm::PreconditionerFactory<OperatorType, Communication>;
     using AbstractOperatorType = Dune::AssembledLinearOperator<MatrixType, VectorType, VectorType>;
 
-    OwningTwoLevelPreconditionerWell(const OperatorType& linearoperator, const pt& prm,
-                                 const std::function<VectorType()> weightsCalculator)
+    OwningTwoLevelPreconditionerWell(const OperatorType& linearoperator,
+                                     const Opm::PropertyTree& prm,
+                                     const std::function<VectorType()> weightsCalculator,
+                                     const std::size_t pressureIndex)
         : linear_operator_(linearoperator)
         , finesmoother_(PrecFactory::create(linearoperator,
                                             prm.get_child_optional("finesmoother")?
-                                            prm.get_child("finesmoother"): pt()))
+                                            prm.get_child("finesmoother") : Opm::PropertyTree()))
         , comm_(nullptr)
         , weightsCalculator_(weightsCalculator)
         , weights_(weightsCalculator())
-        , levelTransferPolicy_(dummy_comm_, weights_, prm)//.get<int>("pressure_var_index"))
-        , coarseSolverPolicy_(prm.get_child_optional("coarsesolver")? prm.get_child("coarsesolver") : pt())
+        , levelTransferPolicy_(dummy_comm_, weights_, prm, pressureIndex)
+        , coarseSolverPolicy_(prm.get_child_optional("coarsesolver") ? prm.get_child("coarsesolver") : Opm::PropertyTree())
         , twolevel_method_(linearoperator,
                            finesmoother_,
                            levelTransferPolicy_,
@@ -115,17 +116,19 @@ public:
     }
 
     OwningTwoLevelPreconditionerWell(const OperatorType& linearoperator,
-                                     const pt& prm,
-                                     const std::function<VectorType()> weightsCalculator, const Communication& comm)
+                                     const Opm::PropertyTree& prm,
+                                     const std::function<VectorType()> weightsCalculator,
+                                     const std::size_t pressureIndex,
+                                     const Communication& comm)
         : linear_operator_(linearoperator)
         , finesmoother_(PrecFactory::create(linearoperator,
                                             prm.get_child_optional("finesmoother")?
-                                            prm.get_child("finesmoother"): pt(), comm))
+                                            prm.get_child("finesmoother") : Opm::PropertyTree(), comm))
         , comm_(&comm)
         , weightsCalculator_(weightsCalculator)
         , weights_(weightsCalculator())
-        , levelTransferPolicy_(*comm_, weights_, prm)//.get<int>("pressure_var_index", 1))
-        , coarseSolverPolicy_(prm.get_child_optional("coarsesolver")? prm.get_child("coarsesolver") : pt())
+        , levelTransferPolicy_(*comm_, weights_, prm, pressureIndex)
+        , coarseSolverPolicy_(prm.get_child_optional("coarsesolver") ? prm.get_child("coarsesolver") : Opm::PropertyTree())
         , twolevel_method_(linearoperator,
                            finesmoother_,
                            levelTransferPolicy_,
@@ -194,7 +197,7 @@ private:
         // using ParOperatorType = Dune::OverlappingSchwarzOperator<MatrixType, VectorType, VectorType, Comm>;
         // auto op_prec = std::make_shared<ParOperatorType>(linear_operator_.getmat(), *comm_);
         auto child = prm_.get_child_optional("finesmoother");
-        finesmoother_ = PrecFactory::create(linear_operator_, child ? *child : pt(), *comm_);
+        finesmoother_ = PrecFactory::create(linear_operator_, child ? *child : Opm::PropertyTree(), *comm_);
         twolevel_method_.updatePreconditioner(finesmoother_, coarseSolverPolicy_);
         // linearoperator_for_precond_ = op_prec;
     }
@@ -205,7 +208,7 @@ private:
         // using SeqOperatorType = Dune::MatrixAdapter<MatrixType, VectorType, VectorType>;
         // auto op_prec = std::make_shared<SeqOperatorType>(linear_operator_.getmat());
         auto child = prm_.get_child_optional("finesmoother");
-        finesmoother_ = PrecFactory::create(linear_operator_, child ? *child : pt());
+        finesmoother_ = PrecFactory::create(linear_operator_, child ? *child : Opm::PropertyTree());
         twolevel_method_.updatePreconditioner(finesmoother_, coarseSolverPolicy_);
         // linearoperator_for_precond_ = op_prec;
     }
@@ -218,7 +221,7 @@ private:
     LevelTransferPolicy levelTransferPolicy_;
     CoarseSolverPolicy coarseSolverPolicy_;
     TwoLevelMethod twolevel_method_;
-    boost::property_tree::ptree prm_;
+    Opm::PropertyTree prm_;
     Communication dummy_comm_;
     //std::shared_ptr<AbstractOperatorType> linearoperator_for_precond_;
 };
