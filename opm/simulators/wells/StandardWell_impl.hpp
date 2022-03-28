@@ -2181,8 +2181,8 @@ namespace Opm
         // we need to add the elemenst of CT
         // then we need to ad the quasiimpes type well equation for B D if the well is not
         // BHP contolled
-        const int welldof_ind = duneC_.M() + index_of_well_;
-        for (auto colC = duneC_[0].begin(), endC = duneC_[0].end(); colC != endC; ++colC) {
+        const int welldof_ind = this->duneC_.M() + this->index_of_well_;
+        for (auto colC = this->duneC_[0].begin(), endC = this->duneC_[0].end(); colC != endC; ++colC) {
             const auto row_index = colC.index();
             double matel = 0;
             jacobian.entry(row_index, welldof_ind) = matel;
@@ -2191,7 +2191,7 @@ namespace Opm
         jacobian.entry(welldof_ind, welldof_ind) = 0.0;
 
         // set the matrix elements for well reservoir coupling
-        for (auto colB = duneB_[0].begin(), endB = duneB_[0].end(); colB != endB; ++colB) {
+        for (auto colB = this->duneB_[0].begin(), endB = this->duneB_[0].end(); colB != endB; ++colB) {
             const auto col_index = colB.index();
             double matel = 0;
             jacobian.entry(welldof_ind, col_index) = matel;
@@ -2213,9 +2213,9 @@ namespace Opm
         // then we need to ad the quasiimpes type well equation for B D if the well is not
         // BHP contolled
         int bhp_var_index = Bhp;
-        assert(duneC_.M() == weights.size());
-        const int welldof_ind = duneC_.M() + index_of_well_;
-        for (auto colC = duneC_[0].begin(), endC = duneC_[0].end(); colC != endC; ++colC) {
+        assert(this->duneC_.M() == weights.size());
+        const int welldof_ind = this->duneC_.M() + this->index_of_well_;
+        for (auto colC = this->duneC_[0].begin(), endC = this->duneC_[0].end(); colC != endC; ++colC) {
             const auto row_ind = colC.index();
             const auto& bw = weights[row_ind];
             double matel = 0;
@@ -2227,14 +2227,13 @@ namespace Opm
         }
         // make quasipes weights for bhp it should be trival
         using VectorBlockType = typename BVector::block_type;
-        using MatrixBlockType = DiagMatrixBlockWellType;
         VectorBlockType bweights(0.0);
         double diagElem = 0;
         {
             // const DiagMatrixBlockWellType& invA = invDuneD_[0][0];
             VectorBlockType rhs(0.0);
             rhs[bhp_var_index] = 1.0;
-            MatrixBlockType inv_diag_block = invDuneD_[0][0];
+            auto inv_diag_block = this->invDuneD_[0][0];
             auto inv_diag_block_transpose = Opm::wellhelpers::transposeDenseDynMatrix(inv_diag_block);
             // diag_block_transpose.solve(bweights, rhs);
             inv_diag_block_transpose.mv(rhs, bweights);
@@ -2246,7 +2245,7 @@ namespace Opm
         //
         jacobian[welldof_ind][welldof_ind] = 1.0;
         // set the matrix elements for well reservoir coupling
-        for (auto colB = duneB_[0].begin(), endB = duneB_[0].end(); colB != endB; ++colB) {
+        for (auto colB = this->duneB_[0].begin(), endB = this->duneB_[0].end(); colB != endB; ++colB) {
             const auto col_index = colB.index();
             const auto& bw = bweights;
             double matel = 0;

@@ -294,13 +294,6 @@ namespace Opm {
             WellInterfacePtr getWell(const std::string& well_name) const;
             bool hasWell(const std::string& well_name) const;
 
-            // The number of components in the model.
-            int numComponents() const;
-
-            int numLocalWells() const;
-
-            int numPhases() const;
-
             using PressureMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1>>;
 
             void addWellPressureEquations(PressureMatrix& jacobian, const BVector& weights) const
@@ -409,7 +402,12 @@ namespace Opm {
             void calculateProductivityIndexValues(const WellInterface<TypeTag>* wellPtr,
                                                   DeferredLogger& deferred_logger);
 
-            void assembleWellEq(const std::vector<Scalar>& B_avg, const double dt, Opm::DeferredLogger& deferred_logger);
+            // The number of components in the model.
+            int numComponents() const;
+
+            int reportStepIndex() const;
+
+            void assembleWellEq(const double dt, Opm::DeferredLogger& deferred_logger);
 
             bool maybeDoGasLiftOptimize(DeferredLogger& deferred_logger);
 

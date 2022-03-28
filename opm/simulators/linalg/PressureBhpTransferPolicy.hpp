@@ -78,11 +78,12 @@ namespace Opm
     public:
         PressureBhpTransferPolicy(const Communication& comm,
                                   const FineVectorType& weights,
-                                  const boost::property_tree::ptree& prm)
+                                  const Opm::PropertyTree& prm,
+                                  const std::size_t pressureIndex)
             : communication_(&const_cast<Communication&>(comm))
             , weights_(weights)
             , prm_(prm)
-            , pressure_var_index_(prm_.get<int>("pressure_var_index"))
+            , pressure_var_index_(pressureIndex)
         {
         }
 
@@ -243,11 +244,10 @@ namespace Opm
 private:
     Communication* communication_;
     const FineVectorType& weights_;
-    boost::property_tree::ptree prm_;
+    PropertyTree prm_;
     const int pressure_var_index_;
     std::shared_ptr<Communication> coarseLevelCommunication_;
     std::shared_ptr<typename CoarseOperator::matrix_type> coarseLevelMatrix_;
-    
 };
 
 } // namespace Opm
