@@ -550,7 +550,7 @@ checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
         const double oil_rate = -rates[pu.phase_pos[Oil]];
         const double water_rate = -rates[pu.phase_pos[Water]];
         const double liquid_rate = oil_rate + water_rate;
-        if (liquid_rate == 0.)
+        if (liquid_rate <= 0.)
             return 0.;
         else if (water_rate < 0)
             return 0.;
