@@ -36,7 +36,8 @@
 #include <dune/istl/bvector.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixmarket.hh>
-#include <dune/istl/solver.hh>
+#include <dune/istl/solvers.hh>
+#include <dune/istl/preconditioners.hh>
 
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -48,12 +49,13 @@ public:
 };
 
 template <int bz>
-Dune::BlockVector<Dune::FieldVector<double, bz>>
-testCusparseSolver(const boost::property_tree::ptree& prm, const std::string& matrix_filename, const std::string& rhs_filename)
+using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, bz, bz>>;
+template <int bz>
+using Vector = Dune::BlockVector<Dune::FieldVector<double, bz>>;
+
+template <int bz>
+void readLinearSystem(const std::string& matrix_filename, const std::string& rhs_filename, Matrix<bz>& matrix, Vector<bz>& rhs)
 {
-    using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, bz, bz>>;
-    using Vector = Dune::BlockVector<Dune::FieldVector<double, bz>>;
-    Matrix matrix;
     {
         std::ifstream mfile(matrix_filename);
         if (!mfile) {
@@ -61,7 +63,6 @@ testCusparseSolver(const boost::property_tree::ptree& prm, const std::string& ma
         }
         readMatrixMarket(matrix, mfile);
     }
-    Vector rhs;
     {
         std::ifstream rhsfile(rhs_filename);
         if (!rhsfile) {
@@ -69,6 +70,32 @@ testCusparseSolver(const boost::property_tree::ptree& prm, const std::string& ma
         }
         readMatrixMarket(rhs, rhsfile);
     }
+}
+
+template <int bz>
+Dune::BlockVector<Dune::FieldVector<double, bz>>
+getDuneSolution(Matrix<bz>& matrix, Vector<bz>& rhs)
+{
+    Dune::InverseOperatorResult result;
+
+    Vector<bz> x(rhs.size());
+
+    typedef Dune::MatrixAdapter<Matrix<bz>,Vector<bz>,Vector<bz> > Operator;
+    Operator fop(matrix);
+    double relaxation = 0.9;
+    Dune::SeqILU<Matrix<bz>,Vector<bz>,Vector<bz> > prec(matrix, relaxation);
+    double reduction = 1e-2;
+    int maxit = 10;
+    int verbosity = 0;
+    Dune::BiCGSTABSolver<Vector<bz> > solver(fop, prec, reduction, maxit, verbosity);
+    solver.apply(x, rhs, result);
+    return x;
+}
+
+template <int bz>
+Dune::BlockVector<Dune::FieldVector<double, bz>>
+testCusparseSolver(const boost::property_tree::ptree& prm, Matrix<bz>& matrix, Vector<bz>& rhs)
+{
 
     const int linear_solver_verbosity = prm.get<int>("verbosity");
     const int maxit = prm.get<int>("maxiter");
@@ -81,13 +108,15 @@ testCusparseSolver(const boost::property_tree::ptree& prm, const std::string& ma
     const std::string linsolver("ilu0");
     Dune::InverseOperatorResult result;
 
-    Vector x(rhs.size());
-    auto wellContribs = Opm::WellContributions::create("cusparse", false);
-    std::unique_ptr<Opm::BdaBridge<Matrix, Vector, bz> > bridge;
-    try {
-        bridge = std::make_unique<Opm::BdaBridge<Matrix, Vector, bz> >(accelerator_mode, fpga_bitstream, linear_solver_verbosity, maxit, tolerance, platformID, deviceID, opencl_ilu_reorder, linsolver);
+    Vector<bz> x(rhs.size());
 
-        bridge->solve_system(&matrix, rhs, *wellContribs, result);
+    auto wellContribs = Opm::WellContributions::create("cusparse", false);
+    std::unique_ptr<Opm::BdaBridge<Matrix<bz>, Vector<bz>, bz> > bridge;
+    try {
+        bridge = std::make_unique<Opm::BdaBridge<Matrix<bz>, Vector<bz>, bz> >(accelerator_mode, fpga_bitstream, linear_solver_verbosity, maxit, tolerance, platformID, deviceID, opencl_ilu_reorder, linsolver);
+        auto mat2 = matrix; // deep copy to make sure nnz values are in contiguous memory
+                            // matrix created by readMatrixMarket() did not have contiguous memory
+        bridge->solve_system(&mat2, rhs, *wellContribs, result);
         bridge->get_result(x);
 
         return x;
@@ -105,14 +134,17 @@ namespace pt = boost::property_tree;
 void test3(const pt::ptree& prm)
 {
     const int bz = 3;
-    auto sol = testCusparseSolver<bz>(prm, "matr33.txt", "rhs3.txt");
-    Dune::BlockVector<Dune::FieldVector<double, bz>> expected {{-0.0131626, -3.5826e-6, 1.138362e-9},
-            {-1.25425e-3, -1.4167e-4, -0.0029366},
-                {-4.54355e-4, 1.28682e-5, 4.7644e-6}};
-    BOOST_REQUIRE_EQUAL(sol.size(), expected.size());
+    Matrix<bz> matrix;
+    Vector<bz> rhs;
+    readLinearSystem("matr33.txt", "rhs3.txt", matrix, rhs);
+    Vector<bz> rhs2 = rhs; // deep copy, getDuneSolution() changes values in rhs vector
+    auto duneSolution = getDuneSolution<bz>(matrix, rhs);
+    auto sol = testCusparseSolver<bz>(prm, matrix, rhs2);
+
+    BOOST_REQUIRE_EQUAL(sol.size(), duneSolution.size());
     for (size_t i = 0; i < sol.size(); ++i) {
         for (int row = 0; row < bz; ++row) {
-            BOOST_CHECK_CLOSE(sol[i][row], expected[i][row], 1e-3);
+            BOOST_CHECK_CLOSE(sol[i][row], duneSolution[i][row], 1e-3);
         }
     }
 }
