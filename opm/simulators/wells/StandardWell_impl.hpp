@@ -356,10 +356,14 @@ namespace Opm
                     const double d = 1.0 - getValue(rv) * getValue(rs);
                     // vaporized oil into gas
                     // rv * q_gr * b_g = rv * (q_gs - rs * q_os) / d
-                    perf_vap_oil_rate = getValue(rv) * (getValue(cq_s[gasCompIdx]) - getValue(rs) * getValue(cq_s[oilCompIdx])) / d;
+                    if (d > 0.0) {
+                        perf_vap_oil_rate = getValue(rv) * (getValue(cq_s[gasCompIdx]) - getValue(rs) * getValue(cq_s[oilCompIdx])) / d;
+                    }
                     // dissolved of gas in oil
                     // rs * q_or * b_o = rs * (q_os - rv * q_gs) / d
-                    perf_dis_gas_rate = getValue(rs) * (getValue(cq_s[oilCompIdx]) - getValue(rv) * getValue(cq_s[gasCompIdx])) / d;
+                    if (d > 0.0) {
+                        perf_dis_gas_rate = getValue(rs) * (getValue(cq_s[oilCompIdx]) - getValue(rv) * getValue(cq_s[gasCompIdx])) / d;
+                    }
                 }
             }
         }
@@ -580,8 +584,6 @@ namespace Opm
                     const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
                     // q_os = q_or * b_o + rv * q_gr * b_g
                     // q_gs = q_gr * g_g + rs * q_or * b_o
-                    // d = 1.0 - rs * rv
-                    const EvalWell d = this->extendEval(1.0 - fs.Rv() * fs.Rs());
                     // q_gr = 1 / (b_g * d) * (q_gs - rs * q_os)
                     if(FluidSystem::gasPhaseIdx == phaseIdx)
                         cq_r_thermal = (cq_s[gasCompIdx] - this->extendEval(fs.Rs()) * cq_s[oilCompIdx]) / (d * this->extendEval(fs.invB(phaseIdx)) );

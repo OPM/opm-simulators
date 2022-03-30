@@ -758,10 +758,10 @@ computeSegmentFluidProperties(const EvalWell& temperature,
 
             const EvalWell d = 1.0 - rs * rv;
 
-            if (rs != 0.0) { // rs > 0.0?
+            if (rs > 0.0 && d > 0.0) {
                 mix[gasCompIdx] = (mix_s[gasCompIdx] - mix_s[oilCompIdx] * rs) / d;
             }
-            if (rv != 0.0) { // rv > 0.0?
+            if (rv > 0.0 && d > 0.0) {
                 mix[oilCompIdx] = (mix_s[oilCompIdx] - mix_s[gasCompIdx] * rv) / d;
             }
         }

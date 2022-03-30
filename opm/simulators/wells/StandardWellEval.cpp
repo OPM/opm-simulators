@@ -950,13 +950,14 @@ computeConnectionDensities(const std::vector<double>& perfComponentRates,
             if (!rvmax_perf.empty() && mix[gaspos] > 1e-12) {
                 rv = std::min(mix[oilpos]/mix[gaspos], rvmax_perf[perf]);
             }
-            if (rs != 0.0) {
+            double d = 1.0 - rs*rv;
+            if (rs > 0.0 && d > 0.0) {
                 // Subtract gas in oil from gas mixture
-                x[gaspos] = (mix[gaspos] - mix[oilpos]*rs)/(1.0 - rs*rv);
+                x[gaspos] = (mix[gaspos] - mix[oilpos]*rs)/d;
             }
-            if (rv != 0.0) {
+            if (rv > 0.0 && d > 0.0) {
                 // Subtract oil in gas from oil mixture
-                x[oilpos] = (mix[oilpos] - mix[gaspos]*rv)/(1.0 - rs*rv);;
+                x[oilpos] = (mix[oilpos] - mix[gaspos]*rv)/d;
             }
         }
         double volrat = 0.0;
