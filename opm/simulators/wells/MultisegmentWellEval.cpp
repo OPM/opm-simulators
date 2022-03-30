@@ -1194,9 +1194,10 @@ getSegmentSurfaceVolume(const EvalWell& temperature,
             sstr << "Problematic d value " << d << " obtained for well " << baseif_.name()
                  << " during conversion to surface volume with rs " << rs
                  << ", rv " << rv << " and pressure " << seg_pressure
-                 << " obtaining d " << d;
+                 << " obtaining d " << d
+                 << " Continue without dissolution (rs = 0) and vaporization (rv = 0) "
+                 << " for this connection.";
             OpmLog::debug(sstr.str());
-            OPM_THROW_NOLOG(NumericalIssue, sstr.str());
         }
 
         if (rs > 0.0) { // rs > 0.0?
