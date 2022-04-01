@@ -318,6 +318,11 @@ namespace Opm {
                 return well_container_;
             }
 
+            int  numLocalNonshutWells() const
+            {
+                return well_container_.size();
+            }
+
         protected:
             Simulator& ebosSimulator_;
 
