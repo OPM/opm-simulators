@@ -550,7 +550,7 @@ checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
         const double oil_rate = -rates[pu.phase_pos[Oil]];
         const double water_rate = -rates[pu.phase_pos[Water]];
         const double liquid_rate = oil_rate + water_rate;
-        if (liquid_rate == 0.)
+        if (liquid_rate <= 0.)
             return 0.;
         else if (water_rate < 0)
             return 0.;
@@ -715,8 +715,15 @@ updateWellTestStateEconomic(const SingleWellState& ws,
 
     const auto& quantity_limit = econ_production_limits.quantityLimit();
     if (econ_production_limits.onAnyRateLimit()) {
-        if (quantity_limit == WellEconProductionLimits::QuantityLimit::POTN)
+        if (quantity_limit == WellEconProductionLimits::QuantityLimit::POTN) {
             rate_limit_violated = checkRateEconLimits(econ_production_limits, ws.well_potentials.data(), deferred_logger);
+            // Due to instability of the bhpFromThpLimit code the potentials are sometimes wrong
+            // this can lead to premature shutting of wells due to rate limits of the potentials.
+            // Since rates are supposed to be less or equal to the potentials, we double-check
+            // that also the rate limit is violated before shutting the well.
+            if (rate_limit_violated)
+                rate_limit_violated = checkRateEconLimits(econ_production_limits, ws.surface_rates.data(), deferred_logger);
+        }
         else {
             rate_limit_violated = checkRateEconLimits(econ_production_limits, ws.surface_rates.data(), deferred_logger);
         }
