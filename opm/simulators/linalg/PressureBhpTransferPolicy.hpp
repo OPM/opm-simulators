@@ -183,11 +183,12 @@ namespace Opm
         if (prm_.get<bool>("add_wells")) {
             assert(transpose == false); // not implemented
             fineOperator.addWellPressureEquations(*coarseLevelMatrix_, weights_);
-        }
 #ifndef NDEBUG
-        std::advance(rowCoarse, fineOperator.getNumberOfExtraEquations());
-        assert(rowCoarse == coarseLevelMatrix_->end());
+            std::advance(rowCoarse, fineOperator.getNumberOfExtraEquations());
+            assert(rowCoarse == coarseLevelMatrix_->end());
 #endif
+
+        }
     }
 
     virtual void moveToCoarseLevel(const typename ParentType::FineRangeType& fine) override

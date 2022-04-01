@@ -122,6 +122,7 @@ namespace Opm
         using Eval = typename StdWellEval::Eval;
         using EvalWell = typename StdWellEval::EvalWell;
         using BVectorWell = typename StdWellEval::BVectorWell;
+        using DiagMatrixBlockWellType = typename StdWellEval::DiagMatrixBlockWellType;
 
         StandardWell(const Well& well,
                      const ParallelWellInfo& pw_info,
@@ -183,7 +184,7 @@ namespace Opm
 
         virtual void addWellPressureEquationsStruct(PressureMatrix& mat) const override;
 
-        virtual void addWellPressureEquations(PressureMatrix& mat, const BVector& x) const override;
+        virtual void addWellPressureEquations(PressureMatrix& mat, const BVector& x,const int pressureVarIndex) const override;
 
         // iterate well equations with the specified control until converged
         bool iterateWellEqWithControl(const Simulator& ebosSimulator,

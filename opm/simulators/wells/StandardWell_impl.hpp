@@ -2080,7 +2080,7 @@ namespace Opm
 
     template <typename TypeTag>
     void
-    StandardWell<TypeTag>::addWellPressureEquations(PressureMatrix& jacobian, const BVector& weights) const
+    StandardWell<TypeTag>::addWellPressureEquations(PressureMatrix& jacobian, const BVector& weights,const int pressureVarIndex) const
     {
         // sustem is the pressur variant of
         // We need to change matrx A as follows
@@ -2103,17 +2103,28 @@ namespace Opm
             jacobian[row_ind][welldof_ind] = matel;
         }
         // make quasipes weights for bhp it should be trival
-        using VectorBlockType = typename BVector::block_type;
-        VectorBlockType bweights(0.0);
+        //using VectorBlockType = BVectorWell;
+        //VectorBlockType
+        BVectorWell  bweights(1);
+        size_t blockSz = this->numWellEq_;
+        bweights[0].resize(blockSz);
         double diagElem = 0;
         {
             // const DiagMatrixBlockWellType& invA = invDuneD_[0][0];
-            VectorBlockType rhs(0.0);
-            rhs[bhp_var_index] = 1.0;
-            auto inv_diag_block = this->invDuneD_[0][0];
-            auto inv_diag_block_transpose = Opm::wellhelpers::transposeDenseDynMatrix(inv_diag_block);
+            BVectorWell rhs(1);           
+            rhs[0].resize(blockSz);
+            rhs[0][bhp_var_index] = 1.0;
+            DiagMatrixBlockWellType inv_diag_block = this->invDuneD_[0][0];
+            DiagMatrixBlockWellType inv_diag_block_transpose = Opm::wellhelpers::transposeDenseDynMatrix(inv_diag_block);
             // diag_block_transpose.solve(bweights, rhs);
-            inv_diag_block_transpose.mv(rhs, bweights);
+            //HACK due to template errors
+            for (size_t i = 0; i < blockSz; ++i) {
+                bweights[0][i] = 0;
+                for (size_t j = 0; j < blockSz; ++j) {
+                    bweights[0][i] += inv_diag_block_transpose[i][j]*rhs[0][j];
+                }
+            }
+            //inv_diag_block_transpose.mv(rhs[0], bweights[0]);
             // NB how to scale to make it most symmetric
             // double abs_max = *std::max_element(
             //    bweights.begin(), bweights.end(), [](double a, double b) { return std::fabs(a) < std::fabs(b); });
@@ -2124,10 +2135,11 @@ namespace Opm
         // set the matrix elements for well reservoir coupling
         for (auto colB = this->duneB_[0].begin(), endB = this->duneB_[0].end(); colB != endB; ++colB) {
             const auto col_index = colB.index();
-            const auto& bw = bweights;
+            const auto& bw = bweights[0];
             double matel = 0;
             for (size_t i = 0; i < bw.size(); ++i) {
-                matel += (*colB)[bhp_var_index][i] * bw[i];
+                const double w = bw[i];
+                matel += (*colB)[i][pressureVarIndex] * bw[i];
             }
             jacobian[welldof_ind][col_index] = matel;
         }
