@@ -112,7 +112,7 @@ namespace Opm {
                 typename BlackoilWellModelGeneric::GLiftWellStateMap;
             using GLiftEclWells = typename GasLiftGroupInfo::GLiftEclWells;
             using GLiftSyncGroups = typename GasLiftSingleWellGeneric::GLiftSyncGroups;
-
+            constexpr static std::size_t pressureVarIndex = GetPropType<TypeTag, Properties::Indices>::pressureSwitchIdx;
             typedef typename BaseAuxiliaryModule<TypeTag>::NeighborSet NeighborSet;
 
             static const int numEq = Indices::numEq;
@@ -299,7 +299,7 @@ namespace Opm {
             void addWellPressureEquations(PressureMatrix& jacobian, const BVector& weights) const
             {
                 for (const auto& well : well_container_) {
-                    well->addWellPressureEquations(jacobian, weights);
+                    well->addWellPressureEquations(jacobian, weights, pressureVarIndex);
                 }
             }
 

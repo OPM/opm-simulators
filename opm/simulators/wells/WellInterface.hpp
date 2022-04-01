@@ -230,7 +230,7 @@ public:
     }
 
     virtual void addWellPressureEquations(PressureMatrix&,
-                                          const BVector& x) const
+                                          const BVector& x,const int pressureVarIndex) const
     {
     }
 
