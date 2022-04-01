@@ -37,6 +37,7 @@ namespace Opm
         IndexSet& indset_rw = commRW->indexSet();
         const int max_nw = comm.communicator().max(nw);
         const int num_proc = comm.communicator().size();
+        const int rank = comm.communicator().rank();
         int glo_max = 0;
         size_t loc_max = 0;
         indset_rw.beginResize();
@@ -53,7 +54,7 @@ namespace Opm
         size_t local_ind = loc_max + 1;
         for (int i = 0; i < nw; ++i) {
             // need to set unique global number
-            const size_t v = global_max + max_nw * num_proc + i + 1;
+            const size_t v = global_max + max_nw * rank + i + 1;
             // set to true to not have problems with higher levels if growing of domains is used
             indset_rw.add(v, LocalIndex(local_ind, Dune::OwnerOverlapCopyAttributeSet::owner, true));
             ++local_ind;
@@ -63,6 +64,7 @@ namespace Opm
         // assume same communication pattern
         commRW->remoteIndices().setNeighbours(comm.remoteIndices().getNeighbours());
         commRW->remoteIndices().template rebuild<true>();
+        //commRW->clearInterfaces(); may need this for correct rebuild
     }
 
 
