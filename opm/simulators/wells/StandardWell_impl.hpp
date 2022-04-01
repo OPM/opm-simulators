@@ -2241,20 +2241,27 @@ namespace Opm
             DiagMatrixBlockWellType inv_diag_block_transpose = Opm::wellhelpers::transposeDenseDynMatrix(inv_diag_block);
             // diag_block_transpose.solve(bweights, rhs);
             //HACK due to template errors
+            double abs_max = 0;
             for (size_t i = 0; i < blockSz; ++i) {
                 bweights[0][i] = 0;
                 for (size_t j = 0; j < blockSz; ++j) {
                     bweights[0][i] += inv_diag_block_transpose[i][j]*rhs[0][j];
                 }
+                abs_max = std::max(abs_max, std::fabs(bweights[0][i]));
             }
             //inv_diag_block_transpose.mv(rhs[0], bweights[0]);
             // NB how to scale to make it most symmetric
-            // double abs_max = *std::max_element(
-            //    bweights.begin(), bweights.end(), [](double a, double b) { return std::fabs(a) < std::fabs(b); });
-            // bweights /= std::fabs(abs_max);
+            //double abs_max = *std::max_element(
+            //    bweights[0].begin(), bweights[0].end(), [](double a, double b) { return std::fabs(a) < std::fabs(b); });
+            assert(abs_max>0.0);
+            for (size_t i = 0; i < blockSz; ++i) {
+                bweights[0][i] /= abs_max;
+            }
+            diagElem = 1.0/abs_max;
+            
         }
         //
-        jacobian[welldof_ind][welldof_ind] = 1.0;
+        jacobian[welldof_ind][welldof_ind] = diagElem;
         // set the matrix elements for well reservoir coupling
         for (auto colB = this->duneB_[0].begin(), endB = this->duneB_[0].end(); colB != endB; ++colB) {
             const auto col_index = colB.index();
