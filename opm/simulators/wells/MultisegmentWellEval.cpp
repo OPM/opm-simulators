@@ -639,7 +639,8 @@ void
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 computeSegmentFluidProperties(const EvalWell& temperature,
                               const EvalWell& saltConcentration,
-                              int pvt_region_index)
+                              int pvt_region_index,
+                              DeferredLogger& deferred_logger)
 {
     std::vector<double> surf_dens(baseif_.numComponents());
     // Surface density.
@@ -757,12 +758,22 @@ computeSegmentFluidProperties(const EvalWell& temperature,
             const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
 
             const EvalWell d = 1.0 - rs * rv;
-
-            if (rs > 0.0 && d > 0.0) {
-                mix[gasCompIdx] = (mix_s[gasCompIdx] - mix_s[oilCompIdx] * rs) / d;
-            }
-            if (rv > 0.0 && d > 0.0) {
-                mix[oilCompIdx] = (mix_s[oilCompIdx] - mix_s[gasCompIdx] * rv) / d;
+            if (d <= 0.0) {
+                std::ostringstream sstr;
+                sstr << "Problematic d value " << d << " obtained for well " << baseif_.name()
+                     << " during segment density calculations with rs " << rs
+                     << ", rv " << rv << " and pressure " << seg_pressure
+                     << " obtaining d " << d
+                     << " Continue as if no dissolution (rs = 0) and vaporization (rv = 0) "
+                     << " for this connection.";
+                deferred_logger.debug(sstr.str());
+            } else {
+                if (rs > 0.0) {
+                    mix[gasCompIdx] = (mix_s[gasCompIdx] - mix_s[oilCompIdx] * rs) / d;
+                }
+                if (rv > 0.0) {
+                    mix[oilCompIdx] = (mix_s[oilCompIdx] - mix_s[gasCompIdx] * rv) / d;
+                }
             }
         }
 
@@ -1195,16 +1206,16 @@ getSegmentSurfaceVolume(const EvalWell& temperature,
                  << " during conversion to surface volume with rs " << rs
                  << ", rv " << rv << " and pressure " << seg_pressure
                  << " obtaining d " << d
-                 << " Continue without dissolution (rs = 0) and vaporization (rv = 0) "
+                 << " Continue as if no dissolution (rs = 0) and vaporization (rv = 0) "
                  << " for this connection.";
             OpmLog::debug(sstr.str());
-        }
-
-        if (rs > 0.0) { // rs > 0.0?
-            mix[gasCompIdx] = (mix_s[gasCompIdx] - mix_s[oilCompIdx] * rs) / d;
-        }
-        if (rv > 0.0) { // rv > 0.0?
-            mix[oilCompIdx] = (mix_s[oilCompIdx] - mix_s[gasCompIdx] * rv) / d;
+        } else {
+            if (rs > 0.0) {
+                mix[gasCompIdx] = (mix_s[gasCompIdx] - mix_s[oilCompIdx] * rs) / d;
+            }
+            if (rv > 0.0) {
+                mix[oilCompIdx] = (mix_s[oilCompIdx] - mix_s[gasCompIdx] * rv) / d;
+            }
         }
     }
 

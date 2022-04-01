@@ -312,15 +312,20 @@ namespace Opm
                 // Incorporate RS/RV factors if both oil and gas active
                 const Value d = 1.0 - rv * rs;
 
-                if (getValue(d) == 0.0) {
-                    OPM_DEFLOG_THROW(NumericalIssue, "Zero d value obtained for well " << this->name() << " during flux calcuation"
-                                                  << " with rs " << rs << " and rv " << rv, deferred_logger);
+                if (d <= 0.0) {
+                    std::ostringstream sstr;
+                    sstr << "Problematic d value " << d << " obtained for well " << this->name()
+                         << " during computePerfRate calculations with rs " << rs
+                         << ", rv " << rv << " and pressure " << pressure
+                         << " obtaining d " << d
+                         << " Continue as if no dissolution (rs = 0) and vaporization (rv = 0) "
+                         << " for this connection.";
+                    deferred_logger.debug(sstr.str());
                 }
-
-                const Value tmp_oil = (cmix_s[oilCompIdx] - rv * cmix_s[gasCompIdx]) / d;
+                const Value tmp_oil = d > 0.0? (cmix_s[oilCompIdx] - rv * cmix_s[gasCompIdx]) / d : cmix_s[oilCompIdx];
                 volumeRatio += tmp_oil / b_perfcells_dense[oilCompIdx];
 
-                const Value tmp_gas = (cmix_s[gasCompIdx] - rs * cmix_s[oilCompIdx]) / d;
+                const Value tmp_gas =  d > 0.0? (cmix_s[gasCompIdx] - rs * cmix_s[oilCompIdx]) / d : cmix_s[gasCompIdx];
                 volumeRatio += tmp_gas / b_perfcells_dense[gasCompIdx];
             }
             else {
@@ -354,6 +359,17 @@ namespace Opm
                     // q_gr = 1 / (b_g * d) * (q_gs - rs * q_os)
 
                     const double d = 1.0 - getValue(rv) * getValue(rs);
+
+                    if (d <= 0.0) {
+                    std::ostringstream sstr;
+                    sstr << "Problematic d value " << d << " obtained for well " << this->name()
+                         << " during computePerfRate calculations with rs " << rs
+                         << ", rv " << rv << " and pressure " << pressure
+                         << " obtaining d " << d
+                         << " Continue as if no dissolution (rs = 0) and vaporization (rv = 0) "
+                         << " for this connection.";
+                    deferred_logger.debug(sstr.str());
+                    }
                     // vaporized oil into gas
                     // rv * q_gr * b_g = rv * (q_gs - rs * q_os) / d
                     if (d > 0.0) {
@@ -585,11 +601,28 @@ namespace Opm
                     // q_os = q_or * b_o + rv * q_gr * b_g
                     // q_gs = q_gr * g_g + rs * q_or * b_o
                     // q_gr = 1 / (b_g * d) * (q_gs - rs * q_os)
-                    if(FluidSystem::gasPhaseIdx == phaseIdx)
+                    // d = 1.0 - rs * rv
+                    const EvalWell d = this->extendEval(1.0 - fs.Rv() * fs.Rs());
+                    if (d <= 0.0) {
+                        std::ostringstream sstr;
+                        sstr << "Problematic d value " << d << " obtained for well " << this->name()
+                            << " during calculateSinglePerf with rs " << fs.Rs()
+                            << ", rv " << fs.Rv()
+                            << " obtaining d " << d
+                            << " Continue as if no dissolution (rs = 0) and vaporization (rv = 0) "
+                            << " for this connection.";
+                        deferred_logger.debug(sstr.str());
+                    }
+                    if(FluidSystem::gasPhaseIdx == phaseIdx && d > 0.0) {
                         cq_r_thermal = (cq_s[gasCompIdx] - this->extendEval(fs.Rs()) * cq_s[oilCompIdx]) / (d * this->extendEval(fs.invB(phaseIdx)) );
                     // q_or = 1 / (b_o * d) * (q_os - rv * q_gs)
-                    if(FluidSystem::oilPhaseIdx == phaseIdx)
+                    } else if(FluidSystem::oilPhaseIdx == phaseIdx && d > 0.0) {
                         cq_r_thermal = (cq_s[oilCompIdx] - this->extendEval(fs.Rv()) * cq_s[gasCompIdx]) / (d * this->extendEval(fs.invB(phaseIdx)) );
+                    } else {
+                        assert(d <= 0.0);
+                        // for d <= 0.0 we continue as if rs = 0 and rv = 0
+                        cq_r_thermal = cq_s[activeCompIdx] / this->extendEval(fs.invB(phaseIdx));
+                    }
                 }
 
                 // change temperature for injecting fluids
@@ -1444,7 +1477,8 @@ namespace Opm
                                            const std::vector<double>& b_perf,
                                            const std::vector<double>& rsmax_perf,
                                            const std::vector<double>& rvmax_perf,
-                                           const std::vector<double>& surf_dens_perf)
+                                           const std::vector<double>& surf_dens_perf,
+                                           DeferredLogger& deferred_logger)
     {
         // Compute densities
         const int nperf = this->number_of_perforations_;
@@ -1499,7 +1533,7 @@ namespace Opm
             }
         }
 
-        this->computeConnectionDensities(perfRates, b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
+        this->computeConnectionDensities(perfRates, b_perf, rsmax_perf, rvmax_perf, surf_dens_perf, deferred_logger);
 
         this->computeConnectionPressureDelta();
     }
@@ -1512,7 +1546,8 @@ namespace Opm
     void
     StandardWell<TypeTag>::
     computeWellConnectionPressures(const Simulator& ebosSimulator,
-                                   const WellState& well_state)
+                                   const WellState& well_state,
+                                   DeferredLogger& deferred_logger)
     {
          // 1. Compute properties required by computeConnectionPressureDelta().
          //    Note that some of the complexity of this part is due to the function
@@ -1522,7 +1557,7 @@ namespace Opm
          std::vector<double> rvmax_perf;
          std::vector<double> surf_dens_perf;
          computePropertiesForWellConnectionPressures(ebosSimulator, well_state, b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
-         computeWellConnectionDensitesPressures(ebosSimulator, well_state, b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
+         computeWellConnectionDensitesPressures(ebosSimulator, well_state, b_perf, rsmax_perf, rvmax_perf, surf_dens_perf, deferred_logger);
     }
 
 
@@ -1558,7 +1593,7 @@ namespace Opm
     {
         updatePrimaryVariables(well_state, deferred_logger);
         initPrimaryVariablesEvaluation();
-        computeWellConnectionPressures(ebosSimulator, well_state);
+        computeWellConnectionPressures(ebosSimulator, well_state, deferred_logger);
         this->computeAccumWell();
     }
 
@@ -1727,7 +1762,7 @@ namespace Opm
             deferred_logger.debug(msg);
         }
         well.updatePrimaryVariables(well_state_copy, deferred_logger);
-        well.computeWellConnectionPressures(ebosSimulator, well_state_copy);
+        well.computeWellConnectionPressures(ebosSimulator, well_state_copy, deferred_logger);
         well.initPrimaryVariablesEvaluation();
         well.computeWellRatesWithBhp(ebosSimulator, bhp, well_flux, deferred_logger);
     }
