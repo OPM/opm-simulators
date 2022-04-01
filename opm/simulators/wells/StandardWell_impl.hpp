@@ -568,14 +568,13 @@ namespace Opm
                     continue;
                 }
 
-                const unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
-                // convert to reservoar conditions
+                // convert to reservoir conditions
                 EvalWell cq_r_thermal(this->numWellEq_ + Indices::numEq, 0.);
-                if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-
-                    if(FluidSystem::waterPhaseIdx == phaseIdx)
-                        cq_r_thermal = cq_s[activeCompIdx] / this->extendEval(fs.invB(phaseIdx));
-
+                const unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
+                const bool both_oil_gas = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
+                if ( !both_oil_gas || FluidSystem::waterPhaseIdx == phaseIdx ) {
+                    cq_r_thermal = cq_s[activeCompIdx] / this->extendEval(fs.invB(phaseIdx));
+                } else {
                     // remove dissolved gas and vapporized oil
                     const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
                     const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
@@ -589,9 +588,6 @@ namespace Opm
                     // q_or = 1 / (b_o * d) * (q_os - rv * q_gs)
                     if(FluidSystem::oilPhaseIdx == phaseIdx)
                         cq_r_thermal = (cq_s[oilCompIdx] - this->extendEval(fs.Rv()) * cq_s[gasCompIdx]) / (d * this->extendEval(fs.invB(phaseIdx)) );
-
-                } else {
-                    cq_r_thermal = cq_s[activeCompIdx] / this->extendEval(fs.invB(phaseIdx));
                 }
 
                 // change temperature for injecting fluids
