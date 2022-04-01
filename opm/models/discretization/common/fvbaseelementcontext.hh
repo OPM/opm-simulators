@@ -449,14 +449,6 @@ public:
      * \param timeIdx The index of the solution vector used by the
      *                time discretization.
      */
-    PrimaryVariables& primaryVars(unsigned dofIdx, unsigned timeIdx)
-    {
-        assert(dofIdx < numDof(timeIdx));
-        return dofVars_[dofIdx].priVars[timeIdx];
-    }
-    /*!
-     * \copydoc primaryVars()
-     */
     const PrimaryVariables& primaryVars(unsigned dofIdx, unsigned timeIdx) const
     {
         assert(dofIdx < numDof(timeIdx));
