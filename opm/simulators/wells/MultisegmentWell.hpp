@@ -228,7 +228,8 @@ namespace Opm
 
         // compute the fluid properties, such as densities, viscosities, and so on, in the segments
         // They will be treated implicitly, so they need to be of Evaluation type
-        void computeSegmentFluidProperties(const Simulator& ebosSimulator);
+        void computeSegmentFluidProperties(const Simulator& ebosSimulator,
+                                           DeferredLogger& deferred_logger);
 
         // get the mobility for specific perforation
         void getMobilityEval(const Simulator& ebosSimulator,

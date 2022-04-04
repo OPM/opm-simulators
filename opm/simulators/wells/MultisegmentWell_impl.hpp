@@ -1000,7 +1000,7 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    computeSegmentFluidProperties(const Simulator& ebosSimulator)
+    computeSegmentFluidProperties(const Simulator& ebosSimulator, DeferredLogger& deferred_logger)
     {
         // TODO: the concept of phases and components are rather confusing in this function.
         // needs to be addressed sooner or later.
@@ -1029,7 +1029,8 @@ namespace Opm
 
         this->MSWEval::computeSegmentFluidProperties(temperature,
                                                      saltConcentration,
-                                                     pvt_region_index);
+                                                     pvt_region_index,
+                                                     deferred_logger);
     }
 
 
@@ -1494,7 +1495,7 @@ namespace Opm
         this->updateUpwindingSegments();
 
         // calculate the fluid properties needed.
-        computeSegmentFluidProperties(ebosSimulator);
+        computeSegmentFluidProperties(ebosSimulator, deferred_logger);
 
         // clear all entries
         this->duneB_ = 0.0;

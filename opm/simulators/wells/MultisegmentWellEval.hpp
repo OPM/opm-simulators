@@ -180,7 +180,8 @@ protected:
 
     void computeSegmentFluidProperties(const EvalWell& temperature,
                                        const EvalWell& saltConcentration,
-                                       int pvt_region_index);
+                                       int pvt_region_index,
+                                       DeferredLogger& deferred_logger);
 
     EvalWell getBhp() const;
     EvalWell getFrictionPressureLoss(const int seg) const;

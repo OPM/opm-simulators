@@ -831,7 +831,8 @@ computeConnectionDensities(const std::vector<double>& perfComponentRates,
                            const std::vector<double>& b_perf,
                            const std::vector<double>& rsmax_perf,
                            const std::vector<double>& rvmax_perf,
-                           const std::vector<double>& surf_dens_perf)
+                           const std::vector<double>& surf_dens_perf,
+                           DeferredLogger& deferred_logger)
 {
     // Verify that we have consistent input.
     const int nperf = baseif_.numPerfs();
@@ -950,13 +951,25 @@ computeConnectionDensities(const std::vector<double>& perfComponentRates,
             if (!rvmax_perf.empty() && mix[gaspos] > 1e-12) {
                 rv = std::min(mix[oilpos]/mix[gaspos], rvmax_perf[perf]);
             }
-            if (rs != 0.0) {
-                // Subtract gas in oil from gas mixture
-                x[gaspos] = (mix[gaspos] - mix[oilpos]*rs)/(1.0 - rs*rv);
-            }
-            if (rv != 0.0) {
-                // Subtract oil in gas from oil mixture
-                x[oilpos] = (mix[oilpos] - mix[gaspos]*rv)/(1.0 - rs*rv);;
+            const double d = 1.0 - rs*rv;
+            if (d <= 0.0) {
+                std::ostringstream sstr;
+                sstr << "Problematic d value " << d << " obtained for well " << baseif_.name()
+                     << " during ccomputeConnectionDensities with rs " << rs
+                     << ", rv " << rv
+                     << " obtaining d " << d
+                     << " Continue as if no dissolution (rs = 0) and vaporization (rv = 0) "
+                     << " for this connection.";
+                deferred_logger.debug(sstr.str());
+            } else {
+                if (rs > 0.0) {
+                    // Subtract gas in oil from gas mixture
+                    x[gaspos] = (mix[gaspos] - mix[oilpos]*rs)/d;
+                }
+                if (rv > 0.0) {
+                    // Subtract oil in gas from oil mixture
+                    x[oilpos] = (mix[oilpos] - mix[gaspos]*rv)/d;
+                }
             }
         }
         double volrat = 0.0;

@@ -264,10 +264,12 @@ namespace Opm
                                                     const std::vector<double>& b_perf,
                                                     const std::vector<double>& rsmax_perf,
                                                     const std::vector<double>& rvmax_perf,
-                                                    const std::vector<double>& surf_dens_perf);
+                                                    const std::vector<double>& surf_dens_perf,
+                                                    DeferredLogger& deferred_logger);
 
         void computeWellConnectionPressures(const Simulator& ebosSimulator,
-                                            const WellState& well_state);
+                                            const WellState& well_state,
+                                            DeferredLogger& deferred_logger);
 
         void computePerfRateEval(const IntensiveQuantities& intQuants,
                                  const std::vector<EvalWell>& mob,
