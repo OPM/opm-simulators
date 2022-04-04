@@ -361,23 +361,20 @@ namespace Opm
                     const double d = 1.0 - getValue(rv) * getValue(rs);
 
                     if (d <= 0.0) {
-                    std::ostringstream sstr;
-                    sstr << "Problematic d value " << d << " obtained for well " << this->name()
-                         << " during computePerfRate calculations with rs " << rs
-                         << ", rv " << rv << " and pressure " << pressure
-                         << " obtaining d " << d
-                         << " Continue as if no dissolution (rs = 0) and vaporization (rv = 0) "
-                         << " for this connection.";
-                    deferred_logger.debug(sstr.str());
-                    }
-                    // vaporized oil into gas
-                    // rv * q_gr * b_g = rv * (q_gs - rs * q_os) / d
-                    if (d > 0.0) {
+                        std::ostringstream sstr;
+                        sstr << "Problematic d value " << d << " obtained for well " << this->name()
+                             << " during computePerfRate calculations with rs " << rs
+                            << ", rv " << rv << " and pressure " << pressure
+                            << " obtaining d " << d
+                            << " Continue as if no dissolution (rs = 0) and vaporization (rv = 0) "
+                            << " for this connection.";
+                        deferred_logger.debug(sstr.str());
+                    } else {
+                        // vaporized oil into gas
+                        // rv * q_gr * b_g = rv * (q_gs - rs * q_os) / d
                         perf_vap_oil_rate = getValue(rv) * (getValue(cq_s[gasCompIdx]) - getValue(rs) * getValue(cq_s[oilCompIdx])) / d;
-                    }
-                    // dissolved of gas in oil
-                    // rs * q_or * b_o = rs * (q_os - rv * q_gs) / d
-                    if (d > 0.0) {
+                        // dissolved of gas in oil
+                        // rs * q_or * b_o = rs * (q_os - rv * q_gs) / d
                         perf_dis_gas_rate = getValue(rs) * (getValue(cq_s[oilCompIdx]) - getValue(rv) * getValue(cq_s[gasCompIdx])) / d;
                     }
                 }
@@ -612,16 +609,14 @@ namespace Opm
                             << " Continue as if no dissolution (rs = 0) and vaporization (rv = 0) "
                             << " for this connection.";
                         deferred_logger.debug(sstr.str());
-                    }
-                    if(FluidSystem::gasPhaseIdx == phaseIdx && d > 0.0) {
-                        cq_r_thermal = (cq_s[gasCompIdx] - this->extendEval(fs.Rs()) * cq_s[oilCompIdx]) / (d * this->extendEval(fs.invB(phaseIdx)) );
-                    // q_or = 1 / (b_o * d) * (q_os - rv * q_gs)
-                    } else if(FluidSystem::oilPhaseIdx == phaseIdx && d > 0.0) {
-                        cq_r_thermal = (cq_s[oilCompIdx] - this->extendEval(fs.Rv()) * cq_s[gasCompIdx]) / (d * this->extendEval(fs.invB(phaseIdx)) );
-                    } else {
-                        assert(d <= 0.0);
-                        // for d <= 0.0 we continue as if rs = 0 and rv = 0
                         cq_r_thermal = cq_s[activeCompIdx] / this->extendEval(fs.invB(phaseIdx));
+                    } else {
+                        if(FluidSystem::gasPhaseIdx == phaseIdx) {
+                            cq_r_thermal = (cq_s[gasCompIdx] - this->extendEval(fs.Rs()) * cq_s[oilCompIdx]) / (d * this->extendEval(fs.invB(phaseIdx)) );
+                        } else if(FluidSystem::oilPhaseIdx == phaseIdx) {
+                            // q_or = 1 / (b_o * d) * (q_os - rv * q_gs)
+                            cq_r_thermal = (cq_s[oilCompIdx] - this->extendEval(fs.Rv()) * cq_s[gasCompIdx]) / (d * this->extendEval(fs.invB(phaseIdx)) );
+                        }
                     }
                 }
 
