@@ -870,7 +870,6 @@ namespace Opm {
             return;
         }
 
-
         updatePerforationIntensiveQuantities();
 
         if (iterationIdx == 0) {
@@ -886,7 +885,27 @@ namespace Opm {
             OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger, "assemble() failed (It=0): ",
                                                terminal_output_, grid().comm());
         }
-        updateWellControls(local_deferredLogger, /* check group controls */ true);
+
+        assembleImpl(iterationIdx, dt, 0, local_deferredLogger);
+
+        last_report_.converged = true;
+        last_report_.assemble_time_well += perfTimer.stop();
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    assembleImpl(const int iterationIdx,
+                 const double dt,
+                 const int recursion_level,
+                 DeferredLogger& local_deferredLogger)
+    {
+
+        const bool network_changed = updateWellControls(local_deferredLogger, /* check group controls */ true); 
 
         bool alq_updated = false;
         OPM_BEGIN_PARALLEL_TRY_CATCH();
@@ -911,9 +930,22 @@ namespace Opm {
             WellGroupHelpers::updateGuideRates(fieldGroup, schedule(), summaryState, this->phase_usage_, reportStepIdx, simulationTime,
                                         this->wellState(), this->groupState(), comm, &this->guideRate_, pot, local_deferredLogger);
         }
-        last_report_.converged = true;
-        last_report_.assemble_time_well += perfTimer.stop();
+
+        // Maybe do a recursive call to iterate network and well controls.
+        if (network_changed) {
+            const int max_local_network_iterations = 3;
+            const int last_newton_iteration_to_iterate_network = 2;
+            if (iterationIdx <= last_newton_iteration_to_iterate_network) {
+                if (recursion_level < max_local_network_iterations) {
+                    assembleImpl(iterationIdx, dt, recursion_level + 1, local_deferredLogger);
+                }
+            }
+        }
     }
+
+
+
+
 
     template<typename TypeTag>
     bool
@@ -1433,21 +1465,21 @@ namespace Opm {
 
 
     template<typename TypeTag>
-    void
+    bool
     BlackoilWellModel<TypeTag>::
     updateWellControls(DeferredLogger& deferred_logger, const bool checkGroupControls)
     {
         // Even if there are no wells active locally, we cannot
         // return as the DeferredLogger uses global communication.
         // For no well active globally we simply return.
-        if( !wellsActive() ) return ;
+        if( !wellsActive() ) return false;
 
         const int episodeIdx = ebosSimulator_.episodeIndex();
         const int iterationIdx = ebosSimulator_.model().newtonMethod().numIterations();
         const auto& comm = ebosSimulator_.vanguard().grid().comm();
         updateAndCommunicateGroupData(episodeIdx, iterationIdx);
 
-        updateNetworkPressures(episodeIdx);
+        const bool network_changed = updateNetworkPressures(episodeIdx);
 
         std::set<std::string> switched_wells;
 
@@ -1500,6 +1532,8 @@ namespace Opm {
         // update wsolvent fraction for REIN wells
         const Group& fieldGroup = schedule().getGroup("FIELD", episodeIdx);
         updateWsolvent(fieldGroup, episodeIdx,  this->nupcolWellState());
+
+        return network_changed;
     }
 
 

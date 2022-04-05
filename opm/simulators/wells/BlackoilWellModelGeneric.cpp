@@ -2092,14 +2092,14 @@ inferLocalShutWells()
     }
 }
 
-void
+bool
 BlackoilWellModelGeneric::
 updateNetworkPressures(const int reportStepIdx)
 {
     // Get the network and return if inactive.
     const auto& network = schedule()[reportStepIdx].network();
     if (!network.active()) {
-        return;
+        return false;
     }
     node_pressures_ = WellGroupHelpers::computeNetworkPressures(network,
                                                                 this->wellState(),
@@ -2109,6 +2109,7 @@ updateNetworkPressures(const int reportStepIdx)
                                                                 reportStepIdx);
 
     // Set the thp limits of wells
+    bool active_limit_change = false;
     for (auto& well : well_container_generic_) {
         // Producers only, since we so far only support the
         // "extended" network model (properties defined by
@@ -2118,10 +2119,18 @@ updateNetworkPressures(const int reportStepIdx)
             if (it != node_pressures_.end()) {
                 // The well belongs to a group with has a network pressure constraint,
                 // set the dynamic THP constraint of the well accordingly.
-                well->setDynamicThpLimit(it->second);
+                const double new_limit = it->second;
+                well->setDynamicThpLimit(new_limit);
+                const SingleWellState& ws = this->wellState()[well->indexOfWell()];
+                const bool thp_is_limit = ws.production_cmode == Well::ProducerCMode::THP;
+                const bool will_switch_to_thp = ws.thp < new_limit;
+                if (thp_is_limit || will_switch_to_thp) {
+                    active_limit_change = true;
+                }
             }
         }
     }
+    return active_limit_change;
 }
 
 void
