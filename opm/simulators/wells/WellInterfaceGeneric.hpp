@@ -101,6 +101,7 @@ public:
     void setRepRadiusPerfLength();
     void setWsolvent(const double wsolvent);
     void setDynamicThpLimit(const double thp_limit);
+    std::optional<double> getDynamicThpLimit() const;
     void updatePerforatedCell(std::vector<bool>& is_cell_perforated);
 
     /// Returns true if the well has one or more THP limits/constraints.
