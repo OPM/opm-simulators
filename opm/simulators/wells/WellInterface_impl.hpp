@@ -536,6 +536,9 @@ namespace Opm
     void
     WellInterface<TypeTag>::addCellRates(RateVector& rates, int cellIdx) const
     {
+        if(!this->isOperableAndSolvable())
+            return;
+
         for (int perfIdx = 0; perfIdx < this->number_of_perforations_; ++perfIdx) {
             if (this->cells()[perfIdx] == cellIdx) {
                 for (int i = 0; i < RateVector::dimension; ++i) {

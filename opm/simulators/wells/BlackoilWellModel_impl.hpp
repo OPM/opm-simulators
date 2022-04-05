@@ -1225,6 +1225,11 @@ namespace Opm {
         for (const auto& well : well_container_) {
             if (well->isOperableAndSolvable() ) {
                 local_report += well->getWellConvergence(this->wellState(), B_avg, local_deferredLogger, iterationIdx > param_.strict_outer_iter_wells_ );
+            } else {
+                ConvergenceReport report;
+                using CR = ConvergenceReport;
+                report.setWellFailed({CR::WellFailure::Type::Unsolvable, CR::Severity::Normal, -1, well->name()});
+                local_report += report;
             }
         }
         
