@@ -49,17 +49,14 @@ using Dune::Timer;
 template <unsigned int block_size>
 openclSolverBackend<block_size>::openclSolverBackend(int verbosity_, int maxit_, double tolerance_, unsigned int platformID_, unsigned int deviceID_, ILUReorder opencl_ilu_reorder_, std::string linsolver) : BdaSolver<block_size>(verbosity_, maxit_, tolerance_, platformID_, deviceID_), opencl_ilu_reorder(opencl_ilu_reorder_) {
 
-    bool use_cpr, use_isai;
+    bool use_cpr = false, use_isai = false, use_spai = false;
 
-    if (linsolver.compare("ilu0") == 0) {
-        use_cpr = false;
-        use_isai = false;
-    } else if (linsolver.compare("cpr_quasiimpes") == 0) {
+    if (linsolver.compare("cpr_quasiimpes") == 0) {
         use_cpr = true;
-        use_isai = false;
     } else if (linsolver.compare("isai") == 0) {
-        use_cpr = false;
         use_isai = true;
+    } else if (linsolver.compare("spai") == 0) {
+        use_spai = true;
     } else if (linsolver.compare("cpr_trueimpes") == 0) {
         OPM_THROW(std::logic_error, "Error openclSolver does not support --linsolver=cpr_trueimpes");
     } else {
@@ -71,6 +68,8 @@ openclSolverBackend<block_size>::openclSolverBackend(int verbosity_, int maxit_,
         prec = Preconditioner<block_size>::create(PreconditionerType::CPR, verbosity, opencl_ilu_reorder);
     } else if (use_isai) {
         prec = Preconditioner<block_size>::create(PreconditionerType::BISAI, verbosity, opencl_ilu_reorder);
+    } else if (use_spai) {
+        prec = Preconditioner<block_size>::create(PreconditionerType::BSPAI, verbosity, opencl_ilu_reorder);
     } else {
         prec = Preconditioner<block_size>::create(PreconditionerType::BILU0, verbosity, opencl_ilu_reorder);
     }

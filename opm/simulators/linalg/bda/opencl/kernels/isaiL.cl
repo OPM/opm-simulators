@@ -13,7 +13,7 @@ __kernel void block_sub(__global double *mat1, __global double *mat2, __global d
     }
 }
 
-__kernel void block_mult_sub_isai(__global double *a, __global double *b, __global double *c)
+__kernel void isai_block_mult_sub(__global double *a, __global double *b, __global double *c)
 {
     const unsigned int bs = 3;
     const unsigned int warpsize = 32;
@@ -71,7 +71,7 @@ __kernel void isaiL(__global const int *diagIndex,
             }
 
             for(unsigned int v = nvc[tcol]; v < nvc[tcol + 1]; v++){
-                block_mult_sub_isai(invL + xxIdxs[v] * bs * bs, LU + luIdxs[v] * bs * bs, invL + dxIdxs[v] * bs * bs);
+                isai_block_mult_sub(invL + xxIdxs[v] * bs * bs, LU + luIdxs[v] * bs * bs, invL + dxIdxs[v] * bs * bs);
             }
         }
 

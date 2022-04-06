@@ -55,7 +55,8 @@ public:
     enum PreconditionerType {
         BILU0,
         CPR,
-        BISAI
+        BISAI,
+        BSPAI
     };
 
     static std::unique_ptr<Preconditioner> create(PreconditionerType type, int verbosity, ILUReorder opencl_ilu_reorder);
