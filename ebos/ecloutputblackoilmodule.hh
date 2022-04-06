@@ -515,6 +515,8 @@ public:
                         val.second = getValue(fs.saturation(gasPhaseIdx));
                     else if ((key.first == "BOSAT") || (key.first == "BSOIL"))
                         val.second = getValue(fs.saturation(oilPhaseIdx));
+                    else if (key.first == "BNSAT")
+                        val.second = intQuants.solventSaturation().value();
                     else if ((key.first == "BPR") || (key.first == "BPRESSUR")){
                         if (FluidSystem::phaseIsActive(oilPhaseIdx)) 
                             val.second = getValue(fs.pressure(oilPhaseIdx));
