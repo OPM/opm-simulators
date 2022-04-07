@@ -266,12 +266,7 @@ public:
         if (!enableBrine)
             return;
 
-        static unsigned contiGasEqIdx, contiOilEqIdx;
-        if(gasEnabled) { contiGasEqIdx = Indices::conti0EqIdx + Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx); }
-        if(oilEnabled) { contiOilEqIdx = Indices::conti0EqIdx + Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx); }
-
         const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
-        const auto& intQuants = elemCtx.intensiveQuantities(scvfIdx, timeIdx);
 
         const unsigned upIdx = extQuants.upstreamIndex(FluidSystem::waterPhaseIdx);
         const unsigned inIdx = extQuants.interiorIndex();
@@ -282,24 +277,12 @@ public:
                     extQuants.volumeFlux(waterPhaseIdx)
                     *up.fluidState().invB(waterPhaseIdx)
                     *up.fluidState().saltConcentration();
-
-            if (enableSaltPrecipitation) {
-                // modify gas and oil flux for mobility change
-                if(gasEnabled) { flux[contiGasEqIdx] *= intQuants.permFactor(); }
-                if(oilEnabled) { flux[contiOilEqIdx] *= intQuants.permFactor(); }
-            }
         }
         else {
             flux[contiBrineEqIdx] =
                     extQuants.volumeFlux(waterPhaseIdx)
                     *decay<Scalar>(up.fluidState().invB(waterPhaseIdx))
                     *decay<Scalar>(up.fluidState().saltConcentration());
-
-            if (enableSaltPrecipitation) {
-                // modify gas and oil flux for mobility change
-                if(gasEnabled) { flux[contiGasEqIdx] *= decay<Scalar>(intQuants.permFactor()); }
-                if(oilEnabled) { flux[contiOilEqIdx] *= decay<Scalar>(intQuants.permFactor()); }
-            }
         }
     }
 
@@ -489,11 +472,13 @@ public:
             const auto& permfactTable = BrineModule::permfactTable(elemCtx, dofIdx, timeIdx);
 
             permFactor_ = permfactTable.eval(scalarValue(porosityFactor));
-            if (permFactor_ < 1 ) {
-                // adjust mobility for changing permeability
-                asImp_().mobility_[waterPhaseIdx] *= permFactor_;
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                if (!FluidSystem::phaseIsActive(phaseIdx))
+                    continue;
+
+                asImp_().mobility_[phaseIdx] *= permFactor_;
             }
-         }
+        }
     }
 
     const Evaluation& saltConcentration() const

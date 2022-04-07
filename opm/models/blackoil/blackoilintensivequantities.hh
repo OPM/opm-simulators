@@ -149,7 +149,7 @@ public:
         if (waterEnabled) {
             if (priVars.primaryVarsMeaning() == PrimaryVariables::OnePhase_p) {
                 Sw = 1.0;
-            } else {
+            } else if (priVars.primaryVarsMeaning() != PrimaryVariables::Rvw_po_Sg) {
                 Sw = priVars.makeEvaluation(Indices::waterSaturationIdx, timeIdx);
             }
         }
@@ -236,7 +236,7 @@ public:
                         elemCtx.problem().maxOilSaturation(globalSpaceIdx));
         }
 
-        // take the meaning of the switiching primary variable into account for the gas
+        // take the meaning of the switching primary variable into account for the gas
         // and oil phase compositions
         if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_po_Sg) {
             // in the threephase case, gas and oil phases are potentially present, i.e.,
@@ -264,6 +264,18 @@ public:
             }
             else if (compositionSwitchEnabled)
                 fluidState_.setRv(0.0);
+
+            if (FluidSystem::enableVaporizedWater()) {
+                const Evaluation& RvwSat = FluidSystem::saturatedVaporizationFactor(fluidState_,
+                                                            gasPhaseIdx,
+                                                            pvtRegionIdx);
+                fluidState_.setRvw(RvwSat);
+            }
+        }
+        else if (priVars.primaryVarsMeaning() == PrimaryVariables::Rvw_po_Sg) {
+            // The switching variable is the water-gas ratio Rvw
+            const auto& Rvw = priVars.makeEvaluation(Indices::waterSaturationIdx, timeIdx);
+            fluidState_.setRvw(Rvw);
         }
         else if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_po_Rs) {
             // if the switching variable is the mole fraction of the gas component in the
