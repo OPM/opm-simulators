@@ -264,7 +264,7 @@ protected:
         Scalar deltaSg = 0.0;
         Scalar deltaSs = 0.0;
 
-        if (Indices::waterEnabled && FluidSystem::numActivePhases() > 1) {
+        if (Indices::waterEnabled && FluidSystem::numActivePhases() > 1 && currentValue.primaryVarsMeaning() != PrimaryVariables::Rvw_po_Sg) {
             deltaSw = update[Indices::waterSaturationIdx];
             deltaSo = -deltaSw;
         }
@@ -306,7 +306,13 @@ protected:
             }
             // water saturation delta
             else if (pvIdx == Indices::waterSaturationIdx)
-                delta *= satAlpha;
+                if (currentValue.primaryVarsMeaning() != PrimaryVariables::Rvw_po_Sg)
+                    delta *= satAlpha;
+                else{
+                    //Ensure Rvw factor does not become negative
+                    if (delta > currentValue[ Indices::waterSaturationIdx]) 
+                        delta = currentValue[ Indices::waterSaturationIdx];
+                }
             else if (pvIdx == Indices::compositionSwitchIdx) {
                 // the switching primary variable for composition is tricky because the
                 // "reasonable" value ranges it exhibits vary widely depending on its
@@ -342,6 +348,11 @@ protected:
                 const double sign = delta >= 0. ? 1. : -1.;
                 delta = sign * std::min(std::abs(delta), maxTempChange_);
             }
+            else if (enableBrine && pvIdx == Indices::saltConcentrationIdx && currentValue.primaryVarsMeaningBrine() == PrimaryVariables::Sp) { 
+                const double maxSaltSaturationChange = 0.1;
+                const double sign = delta >= 0. ? 1. : -1.;
+                delta = sign * std::min(std::abs(delta), maxSaltSaturationChange);
+            }
 
             // do the actual update
             nextValue[pvIdx] = currentValue[pvIdx] - delta;
@@ -369,10 +380,13 @@ protected:
             if (enableFoam && pvIdx == Indices::foamConcentrationIdx)
                 nextValue[pvIdx] = std::max(nextValue[pvIdx], 0.0);
 
-            // keep the salt concentration above 0
-            if (enableBrine && pvIdx == Indices::saltConcentrationIdx) {
+            if (enableBrine && pvIdx == Indices::saltConcentrationIdx) { 
+               // keep the salt concentration above 0
                if (!enableSaltPrecipitation || (enableSaltPrecipitation && currentValue.primaryVarsMeaningBrine() == PrimaryVariables::Cs))
                    nextValue[pvIdx] = std::max(nextValue[pvIdx], 0.0); 
+               // keep the salt saturation below upperlimit
+               if ((enableSaltPrecipitation && currentValue.primaryVarsMeaningBrine() == PrimaryVariables::Sp))
+                   nextValue[pvIdx] = std::min(nextValue[pvIdx], 0.9); 
             }
 
             // keep the temperature within given values
