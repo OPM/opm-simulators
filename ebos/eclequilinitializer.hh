@@ -134,6 +134,8 @@ public:
             else if (Indices::gasEnabled)
                 fluidState.setRv(0.0);
 
+            if (FluidSystem::enableVaporizedWater())
+                fluidState.setRvw(initialState.rvw()[elemIdx]);
 
             // set the temperature.
             if (enableTemperature || enableEnergy)

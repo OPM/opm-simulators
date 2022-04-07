@@ -282,6 +282,11 @@ public:
                 Valgrind::CheckDefined(this->rv_[globalDofIdx]);
             }
 
+            if (!this->rvw_.empty()) {
+                this->rvw_[globalDofIdx] = getValue(fs.Rvw());
+                Valgrind::CheckDefined(this->rvw_[globalDofIdx]);
+            }
+
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
                 if (this->invB_[phaseIdx].empty())
                     continue;
@@ -471,6 +476,9 @@ public:
 
                 if (!this->rs_.empty())
                     this->rs_[globalDofIdx] = fsInitial.Rs();
+
+                if (!this->rvw_.empty())
+                    this->rvw_[globalDofIdx] = fsInitial.Rvw();
 
                 // re-compute the volume factors, viscosities and densities if asked for
                 if (!this->density_[oilPhaseIdx].empty())
@@ -719,6 +727,8 @@ public:
            fs.setRs(this->rs_[elemIdx]);
         if (!this->rv_.empty())
            fs.setRv(this->rv_[elemIdx]);
+        if (!this->rvw_.empty())
+           fs.setRvw(this->rvw_[elemIdx]);
     }
 
     void initHysteresisParams(Simulator& simulator, unsigned elemIdx) const
