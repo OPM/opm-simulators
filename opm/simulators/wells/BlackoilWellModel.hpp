@@ -296,15 +296,37 @@ namespace Opm {
 
             using PressureMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1>>;
 
+            int numLocalWellsEnd() const
+            {
+                auto w = schedule().getWellsatEnd();
+                w.erase(std::remove_if(w.begin(), w.end(), not_on_process_), w.end());
+                return w.size();
+            }
+                   
             void addWellPressureEquations(PressureMatrix& jacobian, const BVector& weights) const
             {
+                int nw =  this->numLocalWellsEnd();
+                int rdofs = local_num_cells_;
+                for(int i=0; i < nw; i++){
+                    int wdof = rdofs + i; 
+                    jacobian[wdof][wdof] = 1.0;// better scaling ?
+                }
+
                 for (const auto& well : well_container_) {
                     well->addWellPressureEquations(jacobian, weights, pressureVarIndex);
                 }
             }
 
+            
+            
             void addWellPressureEquationsStruct(PressureMatrix& jacobian) const
             {
+                int nw =  this->numLocalWellsEnd();
+                int rdofs = local_num_cells_;
+                for(int i=0; i < nw; i++){
+                    int wdof = rdofs + i; 
+                    jacobian.entry(wdof,wdof) = 1.0;// better scaling ?
+                }
                 for (const auto& well : well_container_) {
                     well->addWellPressureEquationsStruct(jacobian);
                 }
