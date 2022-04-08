@@ -280,6 +280,7 @@ namespace Opm
                                  std::vector<EvalWell>& cq_s,
                                  double& perf_dis_gas_rate,
                                  double& perf_vap_oil_rate,
+                                 double& perf_vap_wat_rate,
                                  DeferredLogger& deferred_logger) const;
 
         void computePerfRateScalar(const IntensiveQuantities& intQuants,
@@ -297,6 +298,7 @@ namespace Opm
                              const Value& bhp,
                              const Value& rs,
                              const Value& rv,
+                             const Value& rvw,
                              std::vector<Value>& b_perfcells_dense,
                              const double Tw,
                              const int perf,
@@ -306,6 +308,7 @@ namespace Opm
                              std::vector<Value>& cq_s,
                              double& perf_dis_gas_rate,
                              double& perf_vap_oil_rate,
+                             double& perf_vap_wat_rate,
                              DeferredLogger& deferred_logger) const;
 
         void computeWellRatesWithBhpIterations(const Simulator& ebosSimulator,
