@@ -1369,7 +1369,14 @@ namespace Opm
 
         const int max_iter_number = this->param_.max_inner_iter_ms_wells_;
         const WellState well_state0 = well_state;
-        const std::vector<Scalar> residuals0 = this->getWellResiduals(Base::B_avg_, deferred_logger);
+
+        {
+            // getWellFiniteResiduals returns false for nan/inf residuals
+            const auto& [isFinite, residuals] = this->getFiniteWellResiduals(Base::B_avg_, deferred_logger);
+            if(!isFinite)
+                return false;
+        }
+
         std::vector<std::vector<Scalar> > residual_history;
         std::vector<double> measure_history;
         int it = 0;
@@ -1394,12 +1401,20 @@ namespace Opm
                 break;
             }
 
-            residual_history.push_back(this->getWellResiduals(Base::B_avg_, deferred_logger));
-            measure_history.push_back(this->getResidualMeasureValue(well_state,
+            {
+                // getFinteWellResiduals returns false for nan/inf residuals
+                const auto& [isFinite, residuals] = this->getFiniteWellResiduals(Base::B_avg_, deferred_logger);
+                if (!isFinite)
+                    return false;
+
+                residual_history.push_back(residuals);
+                measure_history.push_back(this->getResidualMeasureValue(well_state,
                                                                     residual_history[it],
                                                                     this->param_.tolerance_wells_,
                                                                     this->param_.tolerance_pressure_ms_wells_,
                                                                     deferred_logger) );
+            }
+
 
             bool is_oscillate = false;
             bool is_stagnate = false;
