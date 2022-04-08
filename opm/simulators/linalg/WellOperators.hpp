@@ -102,7 +102,8 @@ public:
     {
         //return wellMod_.numLocalWells();
         //return wellMod_.localNonshutWells().size();
-        return wellMod_.numLocalNonshutWells();
+        //return wellMod_.numLocalNonshutWells();
+        return wellMod_.numLocalWellsEnd();
     }
 
 private:
