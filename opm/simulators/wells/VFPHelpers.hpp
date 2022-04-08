@@ -139,7 +139,7 @@ VFPEvaluation bhp(const VFPProdTable& table,
                   const double alq,
                   const double explicit_wfr,
                   const double explicit_gfr,
-                  const bool vfpexplicit);
+                  const bool   use_vfpexplicit);
 
 VFPEvaluation bhp(const VFPInjTable& table,
                   const double aqua,

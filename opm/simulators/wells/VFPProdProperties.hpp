@@ -66,9 +66,9 @@ public:
                  const EvalWell& vapour,
                  const double& thp,
                  const double& alq,
-                 const double& wfr,
-                 const double& gfr,
-                 const bool expvfp) const;
+                 const double& explicit_wfr,
+                 const double& explicit_gfr,
+                 const bool    use_expvfp) const;
 
     /**
      * Linear interpolation of bhp as a function of the input parameters
@@ -90,7 +90,7 @@ public:
             const double& alq,
             const double& explicit_wfr,
             const double& explicit_gfr,
-            const bool expvfp) const;
+            const bool    use_expvfp) const;
 
     /**
      * Linear interpolation of thp as a function of the input parameters

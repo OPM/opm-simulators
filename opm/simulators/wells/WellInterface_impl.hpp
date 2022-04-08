@@ -614,7 +614,7 @@ namespace Opm
 
         updateWellOperability(ebos_simulator, well_state, deferred_logger);
         if (!this->operability_status_.isOperableAndSolvable()) {
-            this->operability_status_.vfpexplicit = true;
+            this->operability_status_.use_vfpexplicit = true;
             deferred_logger.debug("EXPLICIT_LOOKUP_VFP",
                                 "well not operable, trying with explicit vfp lookup: " + this->name());
             updateWellOperability(ebos_simulator, well_state, deferred_logger);

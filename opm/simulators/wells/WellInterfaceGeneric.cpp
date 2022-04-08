@@ -414,9 +414,10 @@ bool WellInterfaceGeneric::isOperableAndSolvable() const
     return operability_status_.isOperableAndSolvable();
 }
 
-bool WellInterfaceGeneric::vfpExplicit() const
+bool WellInterfaceGeneric::useVfpExplicit() const
 {
-    return operability_status_.vfpexplicit;
+    const auto& wvfpexp = well_ecl_.getWVFPEXP();
+    return (wvfpexp.extrapolate() || operability_status_.use_vfpexplicit);
 }
 
 double WellInterfaceGeneric::getALQ(const WellState& well_state) const
@@ -666,9 +667,9 @@ computeBhpAtThpLimitProdCommon(const std::function<std::vector<double>(const dou
         assert(rates.size() == 3);
         const auto& wfr =  this->vfpProperties()->getExplicitWFR(controls.vfp_table_number, this->indexOfWell());
         const auto& gfr = this->vfpProperties()->getExplicitGFR(controls.vfp_table_number, this->indexOfWell());
-        const bool vfpexp = this->vfpExplicit();
+        const bool use_vfpexp = this->useVfpExplicit();
         return this->vfpProperties()->getProd()
-        ->bhp(controls.vfp_table_number, rates[Water], rates[Oil], rates[Gas], thp_limit, alq_value, wfr, gfr, vfpexp) - dp;
+        ->bhp(controls.vfp_table_number, rates[Water], rates[Oil], rates[Gas], thp_limit, alq_value, wfr, gfr, use_vfpexp) - dp;
     };
 
     // Make the flo() function.

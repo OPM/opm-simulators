@@ -346,15 +346,15 @@ VFPEvaluation bhp(const VFPProdTable& table,
                   const double  vapour,
                   const double  thp,
                   const double  alq,
-                  const double explicit_wfr,
-                  const double explicit_gfr,
-                  const bool vfpexplicit)
+                  const double  explicit_wfr,
+                  const double  explicit_gfr,
+                  const bool    use_vfpexplicit)
 {
     //Find interpolation variables
     double flo = detail::getFlo(table, aqua, liquid, vapour);
     double wfr = detail::getWFR(table, aqua, liquid, vapour);
     double gfr = detail::getGFR(table, aqua, liquid, vapour);
-    if (vfpexplicit) {
+    if (use_vfpexplicit) {
         wfr = explicit_wfr;
         gfr = explicit_gfr;
     }

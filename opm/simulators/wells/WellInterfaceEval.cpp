@@ -495,8 +495,8 @@ calculateBhpFromThp(const WellState& well_state,
          const double dp = wellhelpers::computeHydrostaticCorrection(baseif_.refDepth(), vfp_ref_depth, rho, baseif_.gravity());
          const auto& wfr =  baseif_.vfpProperties()->getExplicitWFR(controls.vfp_table_number, baseif_.indexOfWell());
          const auto& gfr = baseif_.vfpProperties()->getExplicitGFR(controls.vfp_table_number, baseif_.indexOfWell());
-         const bool vfpexp = baseif_.vfpExplicit();
-         return baseif_.vfpProperties()->getProd()->bhp(controls.vfp_table_number, aqua, liquid, vapour, baseif_.getTHPConstraint(summaryState), baseif_.getALQ(well_state), wfr, gfr, vfpexp) - dp;
+         const bool use_vfpexplicit = baseif_.useVfpExplicit();
+         return baseif_.vfpProperties()->getProd()->bhp(controls.vfp_table_number, aqua, liquid, vapour, baseif_.getTHPConstraint(summaryState), baseif_.getALQ(well_state), wfr, gfr, use_vfpexplicit) - dp;
      }
      else {
          OPM_DEFLOG_THROW(std::logic_error, "Expected INJECTOR or PRODUCER for well " + baseif_.name(), deferred_logger);
