@@ -164,14 +164,20 @@ activeProductionConstraint(const SingleWellState& ws,
         const auto& thp = getTHPConstraint(summaryState);
         double current_thp = ws.thp;
         if (thp > current_thp) {
+            // If WVFPEXP item 4 is set to YES1 or YES2
+            // switching to THP is prevented if the well will
+            // produce at a higher rate with THP control
+            const auto& wvfpexp = this->well_ecl_.getWVFPEXP();
             bool rate_less_than_potential = true;
-            for (int p = 0; p < number_of_phases_; ++p) {
-                // Currently we use the well potentials here computed before the iterations.
-                // We may need to recompute the well potentials to get a more
-                // accurate check here.
-                rate_less_than_potential = rate_less_than_potential && (-ws.surface_rates[p]) <= ws.well_potentials[p];
+            if (wvfpexp.prevent()) {
+                for (int p = 0; p < number_of_phases_; ++p) {
+                    // Currently we use the well potentials here computed before the iterations.
+                    // We may need to recompute the well potentials to get a more
+                    // accurate check here.
+                    rate_less_than_potential = rate_less_than_potential && (-ws.surface_rates[p]) <= ws.well_potentials[p];
+                }
             }
-            if(!rate_less_than_potential) {
+            if(!wvfpexp.prevent() || !rate_less_than_potential) {
                 this->operability_status_.thp_limit_violated_but_not_switched = false;
                 return Well::ProducerCMode::THP;
             } else {
