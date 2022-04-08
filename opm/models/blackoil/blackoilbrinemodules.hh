@@ -467,7 +467,7 @@ public:
                                   unsigned timeIdx)
     {
         if (enableSaltPrecipitation) {
-            const Evaluation porosityFactor  = 1.0 - saltSaturation(); //phi/phi_0
+            const Evaluation porosityFactor  = min(1.0 - saltSaturation(), 1.0); //phi/phi_0
 
             const auto& permfactTable = BrineModule::permfactTable(elemCtx, dofIdx, timeIdx);
 
