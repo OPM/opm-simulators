@@ -372,12 +372,9 @@ namespace Opm
                     // s means standard condition, r means reservoir condition
                     // q_os = q_or * b_o + rv * q_gr * b_g
                     // q_gs = q_gr * b_g + rs * q_or * b_o
-                    // q_ws = q_wr * b_w + rvw * q_gr * b_g
                     // d = 1.0 - rs * rv
                     // q_or = 1 / (b_o * d) * (q_os - rv * q_gs)
                     // q_gr = 1 / (b_g * d) * (q_gs - rs * q_os)
-                    // q_wr = 1/b_w * (rvw * q_gr * b_g -q_ws)= 1/b_w * (rvw * 1/d * (q_gs - rs * q_os) - q_ws) =
-                    // 1 / (b_w * d) * (rvw * (q_gs - rs * q_os) - d * q_ws)
 
                     const double d = 1.0 - getValue(rv) * getValue(rs);
 
@@ -403,9 +400,7 @@ namespace Opm
                     const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
                     const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
                     // q_ws = q_wr * b_w + rvw * q_gr * b_g
-                    // d = 1.0 - rs * rv
-                    // q_wr = 1 / (b_w * d) * (rvw * (q_gs - rs * q_os) - d * q_ws)
-
+                    // q_wr = 1/b_w * (rvw * 1/d * (q_gs - rs * q_os) - q_ws) = 1 / (b_w * d) * (rvw * (q_gs - rs * q_os) - d * q_ws)
                     const double d = 1.0 - getValue(rv) * getValue(rs);
                      // vaporized water in gas
                     // rvw * q_gr * b_g = q_ws -q_wr *b_w = q_ws - (rvw * (q_gs - rs * q_os) - d * q_ws)/d = rvw * (q_gs -rs *q_os) / d
@@ -733,6 +728,7 @@ namespace Opm
         if constexpr (has_brine) {
             // TODO: the application of well efficiency factor has not been tested with an example yet
             const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+            // Correction salt rate; evaporated water does not contain salt 
             EvalWell cq_s_sm = cq_s[waterCompIdx] - perf_vap_wat_rate;
             if (this->isInjector()) {
                 cq_s_sm *= this->wsalt();
