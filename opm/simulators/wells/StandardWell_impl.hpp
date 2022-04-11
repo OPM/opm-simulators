@@ -289,6 +289,7 @@ namespace Opm
                     perf_vap_oil_rate = getValue(vap_oil);
                 }
                 if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                    const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
                     const Value vap_wat = rvw * cq_sGas;
                     cq_s[waterCompIdx] += vap_wat;
                     if (this->isProducer())

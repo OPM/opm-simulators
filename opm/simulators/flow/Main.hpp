@@ -35,6 +35,7 @@
 #include <flow/flow_ebos_brine.hpp>
 #include <flow/flow_ebos_brine_saltprecipitation.hpp>
 #include <flow/flow_ebos_gaswater_saltprec_vapwat.hpp>
+#include <flow/flow_ebos_brine_precsalt_vapwat.hpp>
 #include <flow/flow_ebos_oilwater_brine.hpp>
 #include <flow/flow_ebos_gaswater_brine.hpp>
 #include <flow/flow_ebos_energy.hpp>
@@ -685,9 +686,17 @@ private:
             }
         }
         else if (eclipseState_->getSimulationConfig().hasPRECSALT()) {
-            flowEbosBrineSaltPrecipitationSetDeck(
-                setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
-            return flowEbosBrineSaltPrecipitationMain(argc_, argv_, outputCout_, outputFiles_);
+            if (eclipseState_->getSimulationConfig().hasVAPWAT()) {
+                    //case with water vaporization into gas phase and salt precipitation
+                    flowEbosBrinePrecsaltVapwatSetDeck(
+                        setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
+                    return flowEbosBrinePrecsaltVapwatMain(argc_, argv_, outputCout_, outputFiles_);
+            }
+            else {
+                flowEbosBrineSaltPrecipitationSetDeck(
+                    setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
+                return flowEbosBrineSaltPrecipitationMain(argc_, argv_, outputCout_, outputFiles_);
+            }
         }
         else {
             flowEbosBrineSetDeck(
