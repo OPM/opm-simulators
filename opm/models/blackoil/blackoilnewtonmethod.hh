@@ -278,7 +278,7 @@ protected:
         }
 
         if (enableSolvent) {
-            deltaSs = update[Indices::solventSaturationIdx]; 
+            deltaSs = update[Indices::solventSaturationIdx];
             deltaSo -= deltaSs;
         }
 
