@@ -73,11 +73,13 @@ namespace Opm
          const std::vector<double>& /* depth_arg */,
          const double gravity_arg,
          const int /* num_cells */,
-         const std::vector< Scalar >& B_avg)
+         const std::vector< Scalar >& B_avg,
+         const bool changed_to_open_this_step)
     {
         this->phase_usage_ = phase_usage_arg;
         this->gravity_ = gravity_arg;
         B_avg_ = B_avg;
+        this->changed_to_open_this_step_ = changed_to_open_this_step;
     }
 
 

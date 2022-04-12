@@ -147,7 +147,8 @@ public:
                       const std::vector<double>& depth_arg,
                       const double gravity_arg,
                       const int num_cells,
-                      const std::vector< Scalar >& B_avg);
+                      const std::vector< Scalar >& B_avg,
+                      const bool changed_to_open_this_step);
 
     virtual void initPrimaryVariablesEvaluation() const = 0;
 

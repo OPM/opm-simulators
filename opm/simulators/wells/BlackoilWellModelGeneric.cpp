@@ -2358,7 +2358,7 @@ runWellPIScaling(const int timeStepIdx,
         this->createWellContainer(timeStepIdx);
         this->inferLocalShutWells();
 
-        this->initWellContainer();
+        this->initWellContainer(timeStepIdx);
 
         this->calculateProductivityIndexValues(local_deferredLogger);
         this->calculateProductivityIndexValuesShutWells(timeStepIdx, local_deferredLogger);

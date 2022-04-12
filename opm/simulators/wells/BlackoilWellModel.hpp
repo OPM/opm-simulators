@@ -142,7 +142,7 @@ namespace Opm {
             BlackoilWellModel(Simulator& ebosSimulator);
 
             void init();
-            void initWellContainer() override;
+            void initWellContainer(const int reportStepIdx) override;
 
             /////////////
             // <eWoms auxiliary module stuff>

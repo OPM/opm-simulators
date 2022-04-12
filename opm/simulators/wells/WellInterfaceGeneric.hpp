@@ -356,7 +356,7 @@ protected:
 
     std::vector< std::string> well_control_log_;
 
-    bool changed_to_open_this_step_ = false;
+    bool changed_to_open_this_step_ = true;
 };
 
 }
