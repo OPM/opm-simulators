@@ -417,7 +417,7 @@ bool WellInterfaceGeneric::isOperableAndSolvable() const
 bool WellInterfaceGeneric::useVfpExplicit() const
 {
     const auto& wvfpexp = well_ecl_.getWVFPEXP();
-    return ((wvfpexp.extrapolate() && !changedToOpenThisStep())|| operability_status_.use_vfpexplicit);
+    return ((wvfpexp.explicit_lookup() && !changedToOpenThisStep())|| operability_status_.use_vfpexplicit);
 }
 
 double WellInterfaceGeneric::getALQ(const WellState& well_state) const
