@@ -755,6 +755,30 @@ public:
             Scalar pg = (*this)[Indices::pressureSwitchIdx];
             Scalar Sg = 1.0 - Sw - solventSaturation_();
 
+            // special case for cells with almost only water
+            if (Sw >= thresholdWaterFilledCell) {
+                // switch to phase equilibrium mode because the hydrocarbon gas phase
+                // disappears. here we need the capillary pressures to calculate the oil
+                // phase pressure using the gas phase pressure
+                Scalar pC[numPhases] = { 0.0 };
+                const MaterialLawParams& matParams = problem.materialLawParams(globalDofIdx);
+                computeCapillaryPressures_(pC,
+                                           /*So=*/0.0,
+                                           /*Sg=*/Sg + solventSaturation_(),
+                                           Sw,
+                                           matParams);
+                Scalar po = pg + (pC[oilPhaseIdx] - pC[gasPhaseIdx]);
+
+                setPrimaryVarsMeaning(Sw_po_Sg);
+                if (waterEnabled)
+                    (*this)[Indices::waterSaturationIdx] = 1.0;
+
+                (*this)[Indices::pressureSwitchIdx] = po;
+                (*this)[Indices::compositionSwitchIdx] = 0.0; // hydrocarbon gas saturation
+
+                return true;
+            }
+
             //water disappears 
             if(Sw < -eps  && FluidSystem::enableVaporizedWater()) {
                 Scalar RvwSat = FluidSystem::gasPvt().saturatedWaterVaporizationFactor(pvtRegionIdx_,
@@ -765,6 +789,7 @@ public:
 
                 return true;
             }
+            
             // Only the gas and the water phases are present. The oil phase appears as
             // soon as more of the oil component is present in the hydrocarbon gas phase
             // than what saturated gas contains. Note that we use the blackoil specific
