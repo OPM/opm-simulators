@@ -191,7 +191,9 @@ bool BILU0<block_size>::create_preconditioner(BlockedMatrix *mat, BlockedMatrix 
 
     auto *matToDecompose = jacMat;
 
-    if (opencl_ilu_reorder != ILUReorder::NONE) {
+    if (opencl_ilu_reorder == ILUReorder::NONE) { // NONE should only be used in debug
+        matToDecompose = jacMat ? jacMat : mat;
+    } else {
         Timer t_reorder;
         if (jacMat) {
             matToDecompose = rJacMat.get();
