@@ -2067,7 +2067,7 @@ forceShutWellByName(const std::string& wellname,
     // process that owns it.
     int well_was_shut = 0;
     for (const auto& well : well_container_generic_) {
-        if (well->name() == wellname && !well->wellIsStopped()) {
+        if (well->name() == wellname) {
             wellTestState().close_well(wellname, WellTestConfig::Reason::PHYSICAL, simulation_time);
             well_was_shut = 1;
             break;

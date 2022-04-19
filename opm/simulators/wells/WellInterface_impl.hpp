@@ -449,7 +449,7 @@ namespace Opm
                       const GroupState& group_state,
                       DeferredLogger& deferred_logger)
     {
-        if (!this->isOperableAndSolvable())
+        if (!this->isOperableAndSolvable() && !this->wellIsStopped())
             return;
 
         // keep a copy of the original well state
@@ -510,6 +510,7 @@ namespace Opm
         }
         this->changed_to_open_this_step_ = false;
         const bool well_operable = this->operability_status_.isOperableAndSolvable();
+
         if (!well_operable && old_well_operable) {
             if (this->well_ecl_.getAutomaticShutIn()) {
                 deferred_logger.info(" well " + this->name() + " gets SHUT during iteration ");
@@ -539,7 +540,7 @@ namespace Opm
     void
     WellInterface<TypeTag>::addCellRates(RateVector& rates, int cellIdx) const
     {
-        if(!this->isOperableAndSolvable())
+        if(!this->isOperableAndSolvable() && !this->wellIsStopped())
             return;
 
         for (int perfIdx = 0; perfIdx < this->number_of_perforations_; ++perfIdx) {
