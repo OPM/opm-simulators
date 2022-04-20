@@ -2388,6 +2388,7 @@ namespace Opm
             // solution
             std::vector<double> rates(3);
             computeWellRatesWithBhpIterations(ebos_simulator, bhp, rates, deferred_logger);
+            this->adaptRatesForVFP(rates);
             return rates;
         };
 
