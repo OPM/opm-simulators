@@ -250,7 +250,8 @@ protected:
     bool checkInitialALQmodified_(double alq, double initial_alq) const;
     bool checkThpControl_() const;
     virtual std::optional<double> computeBhpAtThpLimit_(double alq) const = 0;
-    std::optional<BasicRates> computeInitialWellRates_() const;
+    std::pair<std::optional<double>,double> computeConvergedBhpAtThpLimitByMaybeIncreasingALQ_() const;
+    std::pair<std::optional<BasicRates>,double> computeInitialWellRates_() const;
     std::optional<LimitedRates> computeLimitedWellRatesWithALQ_(double alq) const;
     virtual BasicRates computeWellRates_(double bhp, bool bhp_is_limited,                                                             bool debug_output = true) const = 0;
     std::optional<BasicRates> computeWellRatesWithALQ_(double alq) const;
@@ -272,7 +273,7 @@ protected:
                            const BasicRates& rates) const;
     std::pair<double, bool> getGasRateWithGroupLimit_(
                            double new_gas_rate, double gas_rate) const;
-    std::optional<LimitedRates> getInitialRatesWithLimit_() const;
+    std::pair<std::optional<LimitedRates>,double> getInitialRatesWithLimit_() const;
     LimitedRates getLimitedRatesFromRates_(const BasicRates& rates) const;
     std::tuple<double,double,bool,bool> getLiquidRateWithGroupLimit_(
                            const double new_oil_rate, const double oil_rate,

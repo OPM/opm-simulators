@@ -248,6 +248,10 @@ public:
 
     void checkWellOperability(const Simulator& ebos_simulator, const WellState& well_state, DeferredLogger& deferred_logger);
 
+    void gliftBeginTimeStepWellTestUpdateALQ(const Simulator& ebos_simulator,
+                                             WellState& well_state,
+                                             DeferredLogger& deferred_logger);
+
     // check whether the well is operable under the current reservoir condition
     // mostly related to BHP limit and THP limit
     void updateWellOperability(const Simulator& ebos_simulator,
