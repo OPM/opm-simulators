@@ -219,9 +219,12 @@ private:
     density(const double depth,
             const double press) const
     {
-        double rs = rs_(depth, press, temp_);
+        double rs = 0.0;
+        if(FluidSystem::enableDissolvedGas())
+            rs = rs_(depth, press, temp_);
+
         double bOil = 0.0;
-        if (!FluidSystem::enableDissolvedGas() || rs >= FluidSystem::oilPvt().saturatedGasDissolutionFactor(pvtRegionIdx_, temp_, press)) {
+        if (rs >= FluidSystem::oilPvt().saturatedGasDissolutionFactor(pvtRegionIdx_, temp_, press)) {
             bOil = FluidSystem::oilPvt().saturatedInverseFormationVolumeFactor(pvtRegionIdx_, temp_, press);
         }
         else {
@@ -267,9 +270,12 @@ private:
     density(const double depth,
             const double press) const
     {
-        double rv = rv_(depth, press, temp_);
+        double rv = 0.0;
+        if (FluidSystem::enableVaporizedOil())
+            rv = rv_(depth, press, temp_);
+
         double bGas = 0.0;
-        if (!FluidSystem::enableVaporizedOil() || rv >= FluidSystem::gasPvt().saturatedOilVaporizationFactor(pvtRegionIdx_, temp_, press)) {
+        if (rv >= FluidSystem::gasPvt().saturatedOilVaporizationFactor(pvtRegionIdx_, temp_, press)) {
             bGas = FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(pvtRegionIdx_, temp_, press);
         }
         else {
