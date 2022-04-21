@@ -173,6 +173,11 @@ double WellInterfaceGeneric::wsolvent() const
     return wsolvent_;
 }
 
+double WellInterfaceGeneric::rsRvInj() const
+{
+    return well_ecl_.getInjectionProperties().rsRvInj;
+}
+
 bool WellInterfaceGeneric::wellHasTHPConstraints(const SummaryState& summaryState) const
 {
     if (dynamic_thp_limit_) {

@@ -76,6 +76,11 @@ namespace Opm
         if constexpr (Base::has_watVapor) {
             OPM_THROW(std::runtime_error, "water evaporation is not supported by multisegment well yet");
         }
+
+        if(this->rsRvInj() > 0) {
+            OPM_THROW(std::runtime_error, "dissolved gas/ vapporized oil in injected oil/gas not supported by multisegment well yet."
+            << " \n See  (WCONINJE item 10 / WCONHIST item 8)");
+        }
     }
 
 

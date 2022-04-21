@@ -718,7 +718,16 @@ namespace Opm
             switch(current) {
             case Well::InjectorCMode::RATE:
             {
-                ws.surface_rates[phasePos] = controls.surface_rate;
+                ws.surface_rates[phasePos] = (1.0 - this->rsRvInj()) * controls.surface_rate;
+                if(this->rsRvInj() > 0) {
+                    if (injectorType == InjectorType::OIL && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                        ws.surface_rates[pu.phase_pos[BlackoilPhases::Vapour]] = controls.surface_rate * this->rsRvInj();
+                    } else if (injectorType == InjectorType::GAS && FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                        ws.surface_rates[pu.phase_pos[BlackoilPhases::Liquid]] = controls.surface_rate * this->rsRvInj();
+                    } else {
+                        OPM_DEFLOG_THROW(std::runtime_error, "Expected OIL or GAS as type for injectors when RS/RV (item 10) is non-zero "  + this->name(), deferred_logger );
+                    }
+                }
                 break;
             }
 

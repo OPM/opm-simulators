@@ -195,12 +195,19 @@ getQs(const int comp_idx) const
             if (Indices::enableSolvent && comp_idx == Indices::contiSolventEqIdx) { // solvent
                 inj_frac = baseif_.wsolvent();
             } else if (comp_idx == int(Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx))) {
-                inj_frac = Indices::enableSolvent ? 1.0 - baseif_.wsolvent() : 1.0;
+                inj_frac = 1.0 - baseif_.rsRvInj();
+                if (Indices::enableSolvent) {
+                    inj_frac -= baseif_.wsolvent();
+                }
+            } else if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && comp_idx == int(Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx))) {
+                inj_frac = baseif_.rsRvInj();
             }
             break;
         case InjectorType::OIL:
             if (comp_idx == int(Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx))) {
-                inj_frac = 1.0;
+                inj_frac = 1.0 - baseif_.rsRvInj();
+            } else if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && comp_idx == int(Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx))) {
+                inj_frac = baseif_.rsRvInj();
             }
             break;
         case InjectorType::MULTI:
@@ -316,9 +323,9 @@ updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_log
                 if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                     auto phase = baseif_.wellEcl().getInjectionProperties().injectorType;
                     if (phase == InjectorType::GAS) {
-                        primary_variables_[GFrac] = 1.0;
+                        primary_variables_[GFrac] = (1.0 - baseif_.rsRvInj());
                         if constexpr (Indices::enableSolvent) {
-                            primary_variables_[GFrac] = 1.0 - baseif_.wsolvent();
+                            primary_variables_[GFrac] = 1.0 - baseif_.rsRvInj() - baseif_.wsolvent();
                             primary_variables_[SFrac] = baseif_.wsolvent();
                         }
                     } else {
