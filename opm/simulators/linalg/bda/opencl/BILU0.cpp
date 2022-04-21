@@ -365,11 +365,11 @@ template <unsigned int block_size>
 bool BILU0<block_size>::create_preconditioner(BlockedMatrix *mat, BlockedMatrix *jacMat)
 {
     const unsigned int bs = block_size;
-    auto *m = mat;
+
     auto *jm = jacMat;
 
     if (opencl_ilu_reorder != ILUReorder::NONE) {
-        m = rmat.get();
+
         jm = rJacMat.get();
         Timer t_reorder;
         reorderBlockedMatrixByPattern(mat, toOrder.data(), fromOrder.data(), rmat.get());

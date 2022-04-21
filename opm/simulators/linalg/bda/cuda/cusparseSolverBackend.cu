@@ -506,7 +506,8 @@ SolverStatus cusparseSolverBackend<block_size>::solve_system2(int N_, int nnz_, 
 					   int nnz2, double *vals2, int *rows2, int *cols2,
 					   WellContributions& wellContribs, BdaResult &res)
 {
-    return SolverStatus::BDA_SOLVER_ANALYSIS_FAILED;
+    (void) nnz2; (void) vals2; (void) rows2; (void) cols2;
+    return solve_system(N_, nnz_, dim, vals, rows, cols, b, wellContribs, res);
 }
 
 #define INSTANTIATE_BDA_FUNCTIONS(n)                                                       \

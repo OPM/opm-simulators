@@ -82,6 +82,7 @@ bool CPR<block_size>::analyze_matrix(BlockedMatrix *mat_) {
 
 template <unsigned int block_size>
 bool CPR<block_size>::analyze_matrix(BlockedMatrix *mat_, BlockedMatrix *jacMat) {
+    (void) jacMat;
     return analyze_matrix(mat_);
 }
 
@@ -107,6 +108,7 @@ bool CPR<block_size>::create_preconditioner(BlockedMatrix *mat_) {
 
 template <unsigned int block_size>
 bool CPR<block_size>::create_preconditioner(BlockedMatrix *mat_, BlockedMatrix *jacMat) {
+    (void) jacMat;
     return create_preconditioner(mat_);
 }
 // return the absolute value of the N elements for which the absolute value is highest

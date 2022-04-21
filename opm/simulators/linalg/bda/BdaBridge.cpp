@@ -211,11 +211,6 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system([[maybe_unu
         const int nnzb = (h_rows.empty()) ? mat->nonzeroes() : h_rows.back();
         const int nnz = nnzb * dim * dim;
 
-        static std::vector<int> bm_h_rows;
-        static std::vector<int> bm_h_cols;
-        const int bm_nnzb = (bm_h_rows.empty()) ? blockMat->nonzeroes() : bm_h_rows.back();
-        const int bm_nnz = bm_nnzb * dim * dim;
-        
         if (dim != 3) {
             OpmLog::warning("BdaSolver only accepts blocksize = 3 at this time, will use Dune for the remainder of the program");
             use_gpu = use_fpga = false;
@@ -228,15 +223,9 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system([[maybe_unu
             copySparsityPatternFromISTL(*mat, h_rows, h_cols);
         }
 
-        if (bm_h_rows.capacity() == 0) {
-            bm_h_rows.reserve(Nb+1);
-            bm_h_cols.reserve(bm_nnzb);
-            copySparsityPatternFromISTL(*blockMat, bm_h_rows, bm_h_cols);
-        }
-
         Dune::Timer t_zeros;
         int numZeros = checkZeroDiagonal(*mat);
-        int bm_numZeros = checkZeroDiagonal(*blockMat);
+
         if (verbosity >= 2) {
             std::ostringstream out;
             out << "Checking zeros took: " << t_zeros.stop() << " s, found " << numZeros << " zeros";
@@ -247,16 +236,34 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system([[maybe_unu
         /////////////////////////
         // actually solve
         SolverStatus status; 
-        if (numJacobiBlocks > 1)
+        if (numJacobiBlocks < 2) {
+            // assume that underlying data (nonzeroes) from mat (Dune::BCRSMatrix) are contiguous, if this is not the case, the chosen BdaSolver is expected to perform undefined behaviour
+            status = backend->solve_system(N, nnz, dim, static_cast<double*>(&(((*mat)[0][0][0][0]))), h_rows.data(), h_cols.data(), static_cast<double*>(&(b[0][0])), wellContribs, result);
+        }
+        else {
+            static std::vector<int> bm_h_rows;
+            static std::vector<int> bm_h_cols;
+            const int bm_nnzb = (bm_h_rows.empty()) ? blockMat->nonzeroes() : bm_h_rows.back();
+            const int bm_nnz = bm_nnzb * dim * dim;
+            
+            if (bm_h_rows.capacity() == 0) {
+                bm_h_rows.reserve(Nb+1);
+                bm_h_cols.reserve(bm_nnzb);
+                copySparsityPatternFromISTL(*blockMat, bm_h_rows, bm_h_cols);
+            }
+
+            int bm_numZeros = checkZeroDiagonal(*blockMat);
+            if (verbosity >= 2) {
+                std::ostringstream out;
+                out << "Checking zeros took: " << t_zeros.stop() << " s, found " << numZeros << " zeros";
+                OpmLog::info(out.str());
+            }
+            
             status = backend->solve_system2(N, nnz, dim, static_cast<double*>(&(((*mat)[0][0][0][0]))), h_rows.data(), h_cols.data(), static_cast<double*>(&(b[0][0])),
                                             bm_nnz, static_cast<double*>(&(((*blockMat)[0][0][0][0]))), bm_h_rows.data(), bm_h_cols.data(),
                                             wellContribs, result);
-        else
-            status = backend->solve_system(N, nnz, dim, static_cast<double*>(&(((*mat)[0][0][0][0]))), h_rows.data(), h_cols.data(), static_cast<double*>(&(b[0][0])), wellContribs, result);
+        }
 
-            
-        // assume that underlying data (nonzeroes) from mat (Dune::BCRSMatrix) are contiguous, if this is not the case, the chosen BdaSolver is expected to perform undefined behaviour
-        //SolverStatus status = backend->solve_system(N, nnz, dim, static_cast<double*>(&(((*mat)[0][0][0][0]))), h_rows.data(), h_cols.data(), static_cast<double*>(&(b[0][0])), wellContribs, result);
         switch(status) {
         case SolverStatus::BDA_SOLVER_SUCCESS:
             //OpmLog::info("BdaSolver converged");

@@ -192,7 +192,6 @@ protected:
     }
 
     std::unique_ptr<TransmissibilityType> globalTrans_;
-    //std::vector<int> cell_part_;
 };
 
 } // namespace Opm

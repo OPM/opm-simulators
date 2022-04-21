@@ -87,7 +87,7 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doLoadBalance_(Dun
 {
     int mpiSize = 1;
     MPI_Comm_size(grid_->comm(), &mpiSize);
-    
+
     if (mpiSize > 1 || numJacobiBlocks > 0) {
         // the CpGrid's loadBalance() method likes to have the transmissibilities as
         // its edge weights. since this is (kind of) a layering violation and
@@ -181,6 +181,7 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doLoadBalance_(Dun
         // cells that exist only on other ranks even in the case of distributed wells
         // But we need all connections to figure out the first cell of a well (e.g. for
         // pressure). Hence this is now skipped. Rank 0 had everything even before.
+
         if (numJacobiBlocks > 0 && mpiSize == 1) {
             const auto wells = schedule.getWellsatEnd();
             cell_part_.resize(grid_->numCells());
