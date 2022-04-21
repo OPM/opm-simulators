@@ -348,7 +348,9 @@ protected:
                 const double sign = delta >= 0. ? 1. : -1.;
                 delta = sign * std::min(std::abs(delta), maxTempChange_);
             }
-            else if (enableBrine && pvIdx == Indices::saltConcentrationIdx && currentValue.primaryVarsMeaningBrine() == PrimaryVariables::Sp) { 
+            else if (enableBrine && pvIdx == Indices::saltConcentrationIdx &&
+                     enableSaltPrecipitation &&
+                     currentValue.primaryVarsMeaningBrine() == PrimaryVariables::Sp) {
                 const double maxSaltSaturationChange = 0.1;
                 const double sign = delta >= 0. ? 1. : -1.;
                 delta = sign * std::min(std::abs(delta), maxSaltSaturationChange);
