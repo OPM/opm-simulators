@@ -441,6 +441,69 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
     initialized = true;
 } // end initialize()
 
+template <unsigned int block_size>
+void openclSolverBackend<block_size>::initialize2(int N_, int nnz_, int dim, double *vals, int *rows, int *cols,
+                                                  int nnz2, double *vals2, int *rows2, int *cols2) {
+    this->N = N_;
+    this->nnz = nnz_;
+    this->nnzb = nnz_ / block_size / block_size;
+
+    this->jac_nnz = nnz2;
+    this->jac_nnzb = nnz2 / block_size / block_size;
+    
+    Nb = (N + dim - 1) / dim;
+    std::ostringstream out;
+    out << "Initializing GPU, matrix size: " << N << " blocks, nnzb: " << nnzb << "\n";
+    out << "Maxit: " << maxit << std::scientific << ", tolerance: " << tolerance << "\n";
+    out << "PlatformID: " << platformID << ", deviceID: " << deviceID << "\n";
+    OpmLog::info(out.str());
+    out.str("");
+    out.clear();
+
+    try {
+        prec->setOpencl(context, queue);
+
+#if COPY_ROW_BY_ROW
+        vals_contiguous = new double[N];
+#endif
+        mat.reset(new BlockedMatrix(Nb, nnzb, block_size, vals, cols, rows));
+        jacMat.reset(new BlockedMatrix(Nb, jac_nnzb, block_size, vals2, cols2, rows2));
+
+        d_x = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * N);
+        d_b = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * N);
+        d_rb = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * N);
+        d_r = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * N);
+        d_rw = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * N);
+        d_p = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * N);
+        d_pw = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * N);
+        d_s = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * N);
+        d_t = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * N);
+        d_v = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * N);
+        d_tmp = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * N);
+
+        d_Avals = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * nnz);
+        d_Acols = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * nnzb);
+        d_Arows = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * (Nb + 1));
+
+        bool reorder = (opencl_ilu_reorder != ILUReorder::NONE);
+        if (reorder) {
+            rb = new double[N];
+            d_toOrder = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * Nb);
+        }
+
+    } catch (const cl::Error& error) {
+        std::ostringstream oss;
+        oss << "OpenCL Error: " << error.what() << "(" << error.err() << ")\n";
+        oss << getErrorString(error.err());
+        // rethrow exception
+        OPM_THROW(std::logic_error, oss.str());
+    } catch (const std::logic_error& error) {
+        // rethrow exception by OPM_THROW in the try{}, without this, a segfault occurs
+        throw error;
+    }
+
+    initialized = true;
+} // end initialize()
 
 template <unsigned int block_size>
 void openclSolverBackend<block_size>::finalize() {
@@ -527,8 +590,7 @@ template <unsigned int block_size>
 bool openclSolverBackend<block_size>::analyze_matrix() {
     Timer t;
 
-    // bool success = bilu0->init(mat.get());
-    bool success = prec->analyze_matrix(mat.get());
+    bool success = prec->analyze_matrix(mat.get(), jacMat.get());
 
     if (opencl_ilu_reorder == ILUReorder::NONE) {
         rmat = mat.get();
@@ -579,7 +641,7 @@ template <unsigned int block_size>
 bool openclSolverBackend<block_size>::create_preconditioner() {
     Timer t;
 
-    bool result = prec->create_preconditioner(mat.get());
+    bool result = prec->create_preconditioner(mat.get(), jacMat.get());
 
     if (verbosity > 2) {
         std::ostringstream out;
@@ -662,7 +724,33 @@ SolverStatus openclSolverBackend<block_size>::solve_system(int N_, int nnz_, int
     solve_system(wellContribs, res);
     return SolverStatus::BDA_SOLVER_SUCCESS;
 }
-
+template <unsigned int block_size>
+SolverStatus openclSolverBackend<block_size>::solve_system2(int N_, int nnz_, int dim, double *vals, int *rows, int *cols, double *b,
+                           int nnz2, double *vals2, int *rows2, int *cols2,
+                           WellContributions& wellContribs, BdaResult &res)
+{
+    if (initialized == false) {
+        initialize2(N_, nnz_,  dim, vals, rows, cols, nnz2, vals2, rows2, cols2);
+        if (analysis_done == false) {
+            if (!analyze_matrix()) {
+                return SolverStatus::BDA_SOLVER_ANALYSIS_FAILED;
+            }
+        }
+        update_system(vals, b, wellContribs);
+        if (!create_preconditioner()) {
+            return SolverStatus::BDA_SOLVER_CREATE_PRECONDITIONER_FAILED;
+        }
+        copy_system_to_gpu();
+    } else {
+        update_system(vals, b, wellContribs);
+        if (!create_preconditioner()) {
+            return SolverStatus::BDA_SOLVER_CREATE_PRECONDITIONER_FAILED;
+        }
+        update_system_on_gpu();
+    }
+    solve_system(wellContribs, res);
+    return SolverStatus::BDA_SOLVER_SUCCESS;
+}
 
 #define INSTANTIATE_BDA_FUNCTIONS(n)                                        \
 template openclSolverBackend<n>::openclSolverBackend(                       \

@@ -500,7 +500,14 @@ SolverStatus cusparseSolverBackend<block_size>::solve_system(int N, int nnz, int
     }
     return SolverStatus::BDA_SOLVER_SUCCESS;
 }
-
+template <unsigned int block_size>
+SolverStatus cusparseSolverBackend<block_size>::solve_system2(int N_, int nnz_, int dim,
+					   double *vals, int *rows, int *cols, double *b,
+					   int nnz2, double *vals2, int *rows2, int *cols2,
+					   WellContributions& wellContribs, BdaResult &res)
+{
+    return SolverStatus::BDA_SOLVER_ANALYSIS_FAILED;
+}
 
 #define INSTANTIATE_BDA_FUNCTIONS(n)                                                       \
 template cusparseSolverBackend<n>::cusparseSolverBackend(int, int, double, unsigned int);  \

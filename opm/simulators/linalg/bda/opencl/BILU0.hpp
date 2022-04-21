@@ -53,8 +53,11 @@ class BILU0 : public Preconditioner<block_size>
     using Base::err;
 
 private:
+    int nnz_jm;     // number of nonzeroes of the matrix (scalar)
+    int nnzbs_jm;   // number of blocks of the matrix
     std::unique_ptr<BlockedMatrix> LUmat = nullptr;
     std::shared_ptr<BlockedMatrix> rmat = nullptr; // only used with PAR_SIM
+    std::shared_ptr<BlockedMatrix> rJacMat = nullptr; 
 #if CHOW_PATEL
     std::unique_ptr<BlockedMatrix> Lmat = nullptr, Umat = nullptr;
 #endif
@@ -92,9 +95,11 @@ public:
 
     // analysis, find reordering if specified
     bool analyze_matrix(BlockedMatrix *mat) override;
+    bool analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat);
 
     // ilu_decomposition
     bool create_preconditioner(BlockedMatrix *mat) override;
+    bool create_preconditioner(BlockedMatrix *mat, BlockedMatrix *jacMat);
 
     // apply preconditioner, x = prec(y)
     void apply(const cl::Buffer& y, cl::Buffer& x) override;

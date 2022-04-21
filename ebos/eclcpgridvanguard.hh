@@ -136,7 +136,7 @@ public:
                              this->serialPartitioning(), this->enableDistributedWells(),
                              this->zoltanImbalanceTol(), this->gridView(),
                              this->schedule(), this->centroids_,
-                             this->eclState(), this->parallelWells_);
+                             this->eclState(), this->parallelWells_, this->numJacobiBlocks());
 #endif
 
         this->updateGridView_();
@@ -192,6 +192,7 @@ protected:
     }
 
     std::unique_ptr<TransmissibilityType> globalTrans_;
+    //std::vector<int> cell_part_;
 };
 
 } // namespace Opm

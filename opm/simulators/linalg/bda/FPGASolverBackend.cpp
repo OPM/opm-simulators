@@ -223,7 +223,6 @@ void FpgaSolverBackend<block_size>::get_result(double *x_)
     }
 } // end get_result()
 
-
 template <unsigned int block_size>
 SolverStatus FpgaSolverBackend<block_size>::solve_system(int N_, int nnz_, int dim, double *vals, int *rows, int *cols, double *b, WellContributions&, BdaResult &res)
 {
@@ -250,6 +249,14 @@ SolverStatus FpgaSolverBackend<block_size>::solve_system(int N_, int nnz_, int d
     return SolverStatus::BDA_SOLVER_SUCCESS;
 }
 
+template <unsigned int block_size>
+SolverStatus FpgaSolverBackend<block_size>::solve_system2(int N_, int nnz_, int dim,
+					   double *vals, int *rows, int *cols, double *b,
+					   int nnz2, double *vals2, int *rows2, int *cols2,
+					   WellContributions& wellContribs, BdaResult &res)
+{
+    return SolverStatus::BDA_SOLVER_ANALYSIS_FAILED;
+}
 
 template <unsigned int block_size>
 void FpgaSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, double *vals, int *rows, int *cols)

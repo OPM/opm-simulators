@@ -63,12 +63,15 @@ private:
 
     std::vector<cl::Device> devices;
 
+    int jac_nnz;
+    int jac_nnzb;
     std::unique_ptr<Preconditioner<block_size> > prec;
                                                                   // can perform blocked ILU0 and AMG on pressure component
     bool is_root;                                                 // allow for nested solvers, the root solver is called by BdaBridge
     int *toOrder = nullptr, *fromOrder = nullptr;                 // BILU0 reorders rows of the matrix via these mappings
     bool analysis_done = false;
     std::unique_ptr<BlockedMatrix> mat = nullptr;                 // original matrix
+    std::unique_ptr<BlockedMatrix> jacMat = nullptr;              // matrix for preconditioner
     BlockedMatrix *rmat = nullptr;                                // reordered matrix (or original if no reordering), used for spmv
     ILUReorder opencl_ilu_reorder;                                // reordering strategy
     std::vector<cl::Event> events;
@@ -138,6 +141,9 @@ private:
     /// \param[in] cols           array of columnIndices, contains nnz values
     void initialize(int N, int nnz, int dim, double *vals, int *rows, int *cols);
 
+    void initialize2(int N, int nnz, int dim, double *vals, int *rows, int *cols,
+		     int nnz2, double *vals2, int *rows2, int *cols2);
+
     /// Clean memory
     void finalize();
 
@@ -205,6 +211,10 @@ public:
     /// \return                   status code
     SolverStatus solve_system(int N, int nnz, int dim, double *vals, int *rows, int *cols, double *b, WellContributions& wellContribs, BdaResult &res) override;
 
+    SolverStatus solve_system2(int N_, int nnz_, int dim, double *vals, int *rows, int *cols, double *b,
+                   int nnz2, double *vals2, int *rows2, int *cols2,
+                   WellContributions& wellContribs, BdaResult &res) override;
+
     /// Solve scalar linear system, for example a coarse system of an AMG preconditioner
     /// Data is already on the GPU
     // SolverStatus solve_system(BdaResult &res);
@@ -218,7 +228,7 @@ public:
     /// \param[in] context   the opencl context to be used
     /// \param[in] queue     the opencl queue to be used
     void setOpencl(std::shared_ptr<cl::Context>& context, std::shared_ptr<cl::CommandQueue>& queue);
-
+    
 }; // end class openclSolverBackend
 
 } // namespace Accelerator

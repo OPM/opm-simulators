@@ -65,7 +65,7 @@ public:
     /// \param[in] b            vector b, should be of type Dune::BlockVector
     /// \param[in] wellContribs contains all WellContributions, to apply them separately, instead of adding them to matrix A
     /// \param[inout] result    summary of solver result
-    void solve_system(BridgeMatrix *mat, BridgeVector &b, WellContributions& wellContribs, InverseOperatorResult &result);
+    void solve_system(BridgeMatrix *mat, BridgeMatrix *blockMat, int numJacobiBlocks, BridgeVector &b, WellContributions& wellContribs, InverseOperatorResult &result);
 
     /// Get the resulting x vector
     /// \param[inout] x    vector x, should be of type Dune::BlockVector

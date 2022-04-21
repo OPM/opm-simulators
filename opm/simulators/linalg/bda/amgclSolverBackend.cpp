@@ -360,6 +360,15 @@ void amgclSolverBackend<block_size>::get_result(double *x_) {
 
 
 template <unsigned int block_size>
+SolverStatus amgclSolverBackend<block_size>::solve_system2(int N_, int nnz_, int dim,
+							   double *vals, int *rows, int *cols, double *b,
+							   int nnz2, double *vals2, int *rows2, int *cols2,
+							   WellContributions& wellContribs, BdaResult &res)
+{
+    return SolverStatus::BDA_SOLVER_ANALYSIS_FAILED;
+}
+    
+template <unsigned int block_size>
 SolverStatus amgclSolverBackend<block_size>::solve_system(int N_, int nnz_, int dim, double *vals, int *rows, int *cols, double *b, WellContributions&, BdaResult &res) {
     if (initialized == false) {
         initialize(N_, nnz_, dim);
@@ -369,6 +378,7 @@ SolverStatus amgclSolverBackend<block_size>::solve_system(int N_, int nnz_, int 
     solve_system(b, res);
     return SolverStatus::BDA_SOLVER_SUCCESS;
 }
+
 
 
 #define INSTANTIATE_BDA_FUNCTIONS(n)                                                                \

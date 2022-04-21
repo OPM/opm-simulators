@@ -161,7 +161,15 @@ namespace Opm
             // Set it up manually
             ElementMapper elemMapper(simulator_.vanguard().gridView(), Dune::mcmgElementLayout());
             detail::findOverlapAndInterior(simulator_.vanguard().grid(), elemMapper, overlapRows_, interiorRows_);
-
+	    numJacobiBlocks_ = EWOMS_GET_PARAM(TypeTag, int, NumJacobiBlocks);
+	    useWellConn_ = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
+	    if (numJacobiBlocks_ > 1) {
+		const auto wellsForConn = simulator_.vanguard().schedule().getWellsatEnd();
+		detail::setWellConnections(simulator_.vanguard().grid(), wellsForConn, useWellConn_,
+					   wellConnectionsGraph_, numJacobiBlocks_);
+		std::cout << "Create block-Jacobi pattern" << std::endl;
+		blockJacobiAdjacency();
+	    }
             useWellConn_ = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
 #if HAVE_FPGA
             // check usage of MatrixAddWellContributions: for FPGA they must be included
@@ -273,8 +281,15 @@ namespace Opm
                 }
 #endif
 
+		if (numJacobiBlocks_ > 1) {
+		    copyMatToBlockJac(getMatrix(), *blockJacobiForGPUILU0_);
                 // Const_cast needed since the CUDA stuff overwrites values for better matrix condition..
-                bdaBridge->solve_system(const_cast<Matrix*>(&getMatrix()), *rhs_, *wellContribs, result);
+		    bdaBridge->solve_system(const_cast<Matrix*>(&getMatrix()), &*blockJacobiForGPUILU0_,
+					    numJacobiBlocks_, *rhs_, *wellContribs, result);
+		}
+		else
+		    bdaBridge->solve_system(const_cast<Matrix*>(&getMatrix()), const_cast<Matrix*>(&getMatrix()),
+					    numJacobiBlocks_, *rhs_, *wellContribs, result);
                 if (result.converged) {
                     // get result vector x from non-Dune backend, iff solve was successful
                     bdaBridge->get_result(x);
@@ -497,6 +512,78 @@ namespace Opm
                 }
         }
 
+	/// Create sparsity pattern for block-Jacobi matrix based on partitioning of grid.
+	void blockJacobiAdjacency()
+	{
+	    const auto& grid = simulator_.vanguard().grid();
+	    std::vector<int> cell_part = simulator_.vanguard().cellPartition();
+
+	    typedef typename Matrix::size_type size_type;
+	    size_type numCells = grid.size( 0 );
+	    blockJacobiForGPUILU0_.reset(new Matrix(numCells, numCells, Matrix::random));
+
+	    std::vector<std::set<size_type>> pattern;
+	    pattern.resize(numCells);
+
+	    const auto& lid = grid.localIdSet();
+	    const auto& gridView = grid.leafGridView();
+	    auto elemIt = gridView.template begin<0>();
+	    const auto& elemEndIt = gridView.template end<0>();
+
+	    //Loop over cells
+	    for (; elemIt != elemEndIt; ++elemIt)
+            {
+
+		const auto& elem = *elemIt;
+		size_type idx = lid.id(elem);
+		pattern[idx].insert(idx);
+
+		// Add well non-zero connections
+		for (auto wc = wellConnectionsGraph_[idx].begin(); wc!=wellConnectionsGraph_[idx].end(); ++wc)
+		    pattern[idx].insert(*wc);
+
+		int locPart = cell_part[idx];
+
+		//Add neighbor if it is on the same part
+		auto isend = gridView.iend(elem);
+		for (auto is = gridView.ibegin(elem); is!=isend; ++is)
+                {
+		    //check if face has neighbor
+		    if (is->neighbor())
+                    {
+			size_type nid = lid.id(is->outside());
+			int nabPart = cell_part[nid];
+			if (locPart == nabPart) 
+			    pattern[idx].insert(nid);
+		    }
+
+		    blockJacobiForGPUILU0_->setrowsize(idx, pattern[idx].size());
+		}
+	    }
+	    blockJacobiForGPUILU0_->endrowsizes();
+	    for (size_type dofId = 0; dofId < numCells; ++dofId)
+	    {
+		auto nabIdx = pattern[dofId].begin();
+		auto endNab = pattern[dofId].end();
+		for (; nabIdx != endNab; ++nabIdx)
+		{
+		    blockJacobiForGPUILU0_->addindex(dofId, *nabIdx);
+		}
+	    }
+
+	    blockJacobiForGPUILU0_->endindices();
+	}
+
+	void copyMatToBlockJac(Matrix& mat, Matrix& blockJac)
+	{
+	    auto rbegin = blockJac.begin();
+	    auto rend = blockJac.end();
+	    for (auto row = rbegin; row != rend; ++row) {
+		for (auto col = (*row).begin(); col != (*row).end(); ++col) {
+		    blockJac[row.index()][col.index()] = mat[row.index()][col.index()];
+		}
+	    }
+	}
 
         Matrix& getMatrix()
         {
@@ -517,6 +604,8 @@ namespace Opm
         Matrix* matrix_;
         Vector *rhs_;
 
+        std::unique_ptr<Matrix> blockJacobiForGPUILU0_;
+
         std::unique_ptr<FlexibleSolverType> flexibleSolver_;
         std::unique_ptr<AbstractOperatorType> linearOperatorForFlexibleSolver_;
         std::unique_ptr<WellModelAsLinearOperator<WellModel, Vector, Vector>> wellOperator_;
@@ -530,6 +619,7 @@ namespace Opm
         FlowLinearSolverParameters parameters_;
         PropertyTree prm_;
         bool scale_variables_;
+	int numJacobiBlocks_;
 
         std::shared_ptr< CommunicationType > comm_;
     }; // end ISTLSolver

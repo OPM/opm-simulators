@@ -250,6 +250,12 @@ public:
     { return edgeWeightsMethod_; }
 
     /*!
+     * \brief Number of blocks in the Block-Jacobi preconditioner.
+     */
+    int numJacobiBlocks() const
+    { return numJacobiBlocks_; }
+
+    /*!
      * \brief Parameter that decide if cells owned by rank are ordered before ghost cells.
      */
     bool ownersFirst() const
@@ -323,6 +329,7 @@ protected:
     std::string caseName_;
     std::string fileName_;
     Dune::EdgeWeightMethod edgeWeightsMethod_;
+    int numJacobiBlocks_;
     bool ownersFirst_;
     bool serialPartitioning_;
     double zoltanImbalanceTol_;
