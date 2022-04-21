@@ -49,6 +49,7 @@ namespace Opm
                      const std::vector<PerforationData>& perf_data)
     : Base(well, pw_info, time_step, param, rate_converter, pvtRegionIdx, num_components, num_phases, index_of_well, perf_data)
     , MSWEval(static_cast<WellInterfaceIndices<FluidSystem,Indices,Scalar>&>(*this))
+    , regularize_(false)
     , segment_fluid_initial_(this->numberOfSegments(), std::vector<double>(this->num_components_, 0.0))
     {
         // not handling solvent or polymer for now with multisegment well
@@ -1392,8 +1393,10 @@ namespace Opm
 
             const BVectorWell dx_well = mswellhelpers::applyUMFPack(this->duneD_, this->duneDSolver_, this->resWell_);
 
-            if (it > this->param_.strict_inner_iter_wells_)
+            if (it > this->param_.strict_inner_iter_wells_) {
                 relax_convergence = true;
+                this->regularize_ = true;
+            }
 
             const auto report = getWellConvergence(well_state, Base::B_avg_, deferred_logger, relax_convergence);
             if (report.converged()) {
@@ -1454,6 +1457,8 @@ namespace Opm
                     sstr << " well " << this->name() << " observes oscillation in inner iteration " << it << "\n";
                 }
                 sstr << " relaxation_factor is " << relaxation_factor << " now\n";
+
+                this->regularize_ = true;
                 deferred_logger.debug(sstr.str());
             }
             updateWellState(dx_well, well_state, deferred_logger, relaxation_factor);
@@ -1543,7 +1548,7 @@ namespace Opm
                 // Add a regularization_factor to increase the accumulation term
                 // This will make the system less stiff and help convergence for
                 // difficult cases
-                const Scalar regularization_factor =  this->param_.regularization_factor_ms_wells_;
+                const Scalar regularization_factor =  this->regularize_? this->param_.regularization_factor_ms_wells_ : 1.0;
                 // for each component
                 for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
                     const EvalWell accumulation_term = regularization_factor * (segment_surface_volume * this->surfaceVolumeFraction(seg, comp_idx)

@@ -162,6 +162,9 @@ namespace Opm
     protected:
         int number_segments_;
 
+        // regularize msw equation
+        bool regularize_;
+
         // components of the pressure drop to be included
         WellSegments::CompPressureDrop compPressureDrop() const;
         // multi-phase flow model
