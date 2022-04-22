@@ -1929,11 +1929,11 @@ namespace Opm
             well_potentials[phase] *= sign;
             total_potential += well_potentials[phase];
         }
-        if (total_potential < 0.0) {
+        if (total_potential < 0.0 && this->param_.check_well_operability_) {
             // wells with negative potentials are not operable
             this->operability_status_.has_negative_potentials = true;
             const std::string msg = std::string("well ") + this->name() + std::string(": has negative potentials and is not operable");
-            deferred_logger.info(msg);
+            deferred_logger.warning("NEGATIVE_POTENTIALS_INOPERABLE", msg);
         }
     }
 
