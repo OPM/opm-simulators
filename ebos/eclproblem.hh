@@ -2119,8 +2119,9 @@ private:
                 Scalar rssat = FluidSystem::oilPvt().saturatedGasDissolutionFactor(fs.pvtRegionIndex(),t,p);
                 Scalar saturatedInvB = FluidSystem::oilPvt().saturatedInverseFormationVolumeFactor(fs.pvtRegionIndex(),t,p);
                 Scalar rsZero = 0.0;
-                Scalar pureInvB = FluidSystem::oilPvt().inverseFormationVolumeFactor(fs.pvtRegionIndex(),t,p,rsZero);
-                Scalar deltaDensity = (saturatedInvB - pureInvB) * FluidSystem::oilPvt().oilReferenceDensity(fs.pvtRegionIndex());
+                Scalar pureDensity = FluidSystem::oilPvt().inverseFormationVolumeFactor(fs.pvtRegionIndex(),t,p,rsZero) * FluidSystem::oilPvt().oilReferenceDensity(fs.pvtRegionIndex());
+                Scalar saturatedDensity = saturatedInvB * (FluidSystem::oilPvt().oilReferenceDensity(fs.pvtRegionIndex()) + rssat * FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, fs.pvtRegionIndex()));
+                Scalar deltaDensity = saturatedDensity - pureDensity;
                 Scalar rs = getValue(fs.Rs());
                 Scalar visc = FluidSystem::oilPvt().viscosity(fs.pvtRegionIndex(),t,p,rs);
                 Scalar poro =  getValue(iq.porosity());
