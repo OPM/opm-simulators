@@ -118,7 +118,7 @@ testOpenclSolver(const boost::property_tree::ptree& prm, Matrix<bz>& matrix, Vec
     }
     auto mat2 = matrix; // deep copy to make sure nnz values are in contiguous memory
                         // matrix created by readMatrixMarket() did not have contiguous memory
-    bridge->solve_system(&mat2, &mat2, 0, rhs, *wellContribs, result);
+    bridge->solve_system(&mat2, &mat2, /*numJacobiBlocks=*/0, rhs, *wellContribs, result);
     bridge->get_result(x);
 
     return x;
