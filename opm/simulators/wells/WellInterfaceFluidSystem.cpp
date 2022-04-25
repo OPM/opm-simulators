@@ -163,7 +163,7 @@ activeProductionConstraint(const SingleWellState& ws,
     if (controls.hasControl(Well::ProducerCMode::THP) && currentControl != Well::ProducerCMode::THP) {
         const auto& thp = getTHPConstraint(summaryState);
         double current_thp = ws.thp;
-        if (thp > current_thp) {
+        if (thp > current_thp && !ws.trivial_target) {
             // If WVFPEXP item 4 is set to YES1 or YES2
             // switching to THP is prevented if the well will
             // produce at a higher rate with THP control
@@ -1120,6 +1120,10 @@ getGroupProductionTargetRate(const Group& group,
     const auto& rates = ws.surface_rates;
     const auto current_rate = -tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
     double scale = 1.0;
+    if (target_rate == 0.0) {
+        return 0.0;
+    }
+
     if (current_rate > 1e-14)
         scale = target_rate/current_rate;
     return scale;

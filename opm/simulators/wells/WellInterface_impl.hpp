@@ -981,6 +981,9 @@ namespace Opm
                     for (int p = 0; p<np; ++p) {
                         ws.surface_rates[p] *= scale;
                     }
+                    ws.trivial_target = false;
+                } else {
+                    ws.trivial_target = true;
                 }
                 break;
             }
