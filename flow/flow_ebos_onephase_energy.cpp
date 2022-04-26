@@ -19,24 +19,28 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "config.h"
+
+#include <flow/flow_ebos_onephase_energy.hpp>
+
 #include <opm/simulators/flow/Main.hpp>
 #include <opm/models/blackoil/blackoilonephaseindices.hh>
+#include <opm/material/common/ResetLocale.hpp>
 
 namespace Opm {
 namespace Properties {
 
 namespace TTag {
-struct EclFlowProblemSimple {
+struct EclFlowProblemWaterOnlyEnergy {
     using InheritsFrom = std::tuple<EclFlowProblem>;
 };
 }
 template<class TypeTag>
-struct EnableEnergy<TypeTag, TTag::EclFlowProblemSimple> {
+struct EnableEnergy<TypeTag, TTag::EclFlowProblemWaterOnlyEnergy> {
     static constexpr bool value = true;
 };
 //! The indices required by the model
 template<class TypeTag>
-struct Indices<TypeTag, TTag::EclFlowProblemSimple>
+struct Indices<TypeTag, TTag::EclFlowProblemWaterOnlyEnergy>
 {
 private:
     // it is unfortunately not possible to simply use 'TypeTag' here because this leads
@@ -60,9 +64,36 @@ public:
 
 } // namespace Opm::Properties
 
-int flowEbosOnephaseEnergyMain(int argc, char** argv)
+void flowEbosWaterOnlyEnergySetDeck(double setupTime, std::shared_ptr<Deck> deck,
+                                    std::shared_ptr<EclipseState> eclState,
+                                    std::shared_ptr<Schedule> schedule,
+                                    std::shared_ptr<SummaryConfig> summaryConfig)
 {
-    using TypeTag = Opm::Properties::TTag::EclFlowProblemSimple;
+    using TypeTag = Properties::TTag::EclFlowProblemWaterOnlyEnergy;
+    using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
+
+    Vanguard::setExternalSetupTime(setupTime);
+    Vanguard::setExternalDeck(std::move(deck));
+    Vanguard::setExternalEclState(std::move(eclState));
+    Vanguard::setExternalSchedule(std::move(schedule));
+    Vanguard::setExternalSummaryConfig(std::move(summaryConfig));
+}
+
+// ----------------- Main program -----------------
+int flowEbosWaterOnlyEnergyMain(int argc, char** argv, bool outputCout, bool outputFiles)
+{
+    // we always want to use the default locale, and thus spare us the trouble
+    // with incorrect locale settings.
+    resetLocale();
+
+    FlowMainEbos<Properties::TTag::EclFlowProblemWaterOnlyEnergy>
+        mainfunc {argc, argv, outputCout, outputFiles};
+    return mainfunc.execute();
+}
+
+int flowEbosWaterOnlyEnergyMainStandalone(int argc, char** argv)
+{
+    using TypeTag = Opm::Properties::TTag::EclFlowProblemWaterOnlyEnergy;
     auto mainObject = Opm::Main(argc, argv);
     return mainObject.runStatic<TypeTag>();
 }
