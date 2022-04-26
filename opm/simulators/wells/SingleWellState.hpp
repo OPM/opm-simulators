@@ -61,6 +61,7 @@ public:
     std::vector<double> surface_rates;
     std::vector<double> reservoir_rates;
     PerfData perf_data;
+    bool trivial_target;
     SegmentState segments;
     Events events;
     Well::InjectorCMode injection_cmode{Well::InjectorCMode::CMODE_UNDEFINED};

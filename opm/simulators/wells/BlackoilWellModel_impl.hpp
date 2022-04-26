@@ -669,7 +669,6 @@ namespace Opm {
                     case Well::ProducerCMode::RESV:
                         zero_rate_control = is_zero(prod_controls.resv_rate);
                         break;
-
                     default:
                         // Might still have zero rate controls, but is pressure controlled.
                         zero_rate_control = false;
