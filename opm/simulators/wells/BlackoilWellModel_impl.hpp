@@ -1496,11 +1496,9 @@ namespace Opm {
                 well->updateWellStateWithTarget(ebosSimulator_, this->groupState(), this->wellState(), deferred_logger);
                 well->updatePrimaryVariables(this->wellState(), deferred_logger);
                 well->initPrimaryVariablesEvaluation();
+
                 // There is no new well control change input within a report step,
                 // so next time step, the well does not consider to have effective events anymore.
-                well->updatePrimaryVariables(this->wellState(), deferred_logger);
-                well->initPrimaryVariablesEvaluation();
-
                 events.clearEvent(WellState::event_mask);
             }
             // solve the well equation initially to improve the initial solution of the well model

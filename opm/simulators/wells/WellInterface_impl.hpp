@@ -25,7 +25,6 @@
 #include <opm/simulators/wells/TargetCalculator.hpp>
 
 #include <dune/common/version.hh>
-#include <limits>
 
 namespace Opm
 {
