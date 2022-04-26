@@ -1056,8 +1056,9 @@ namespace Opm
         // if more than one nonzero rate.
         auto& ws = well_state.well(this->index_of_well_);
         int nonzero_rate_index = -1;
+        const double floating_point_error_epsilon = 1e-14;
         for (int p = 0; p < this->number_of_phases_; ++p) {
-            if (ws.surface_rates[p] != 0.0) {
+            if (std::abs(ws.surface_rates[p]) > floating_point_error_epsilon) {
                 if (nonzero_rate_index == -1) {
                     nonzero_rate_index = p;
                 } else {
