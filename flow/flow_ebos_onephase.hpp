@@ -22,8 +22,27 @@
 #ifndef FLOW_ONEPHASE_HPP
 #define FLOW_ONEPHASE_HPP
 
+#include <memory>
+
 namespace Opm {
-  int flowEbosOnephaseMain(int argc, char** argv);
+
+class Deck;
+class EclipseState;
+template<class TypeTag> class FlowMainEbos;
+class Schedule;
+class SummaryConfig;
+class UDQState;
+class WellTestState;
+namespace Action {
+class State;
+}
+
+void flowEbosWaterOnlySetDeck(double setupTime, std::shared_ptr<Deck> deck,
+                              std::shared_ptr<EclipseState> eclState,
+                              std::shared_ptr<Schedule> schedule,
+                              std::shared_ptr<SummaryConfig> summaryConfig);
+int flowEbosWaterOnlyMain(int argc, char** argv, bool outputCout, bool outputFiles);
+int flowEbosWaterOnlyMainStandalone(int argc, char** argv);
 }
 
 #endif

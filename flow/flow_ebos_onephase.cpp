@@ -27,13 +27,13 @@ namespace Opm {
 namespace Properties {
 
 namespace TTag {
-struct EclFlowProblemSimple {
+struct EclFlowProblemWaterOnly {
     using InheritsFrom = std::tuple<EclFlowProblem>;
 };
 }
 //! The indices required by the model
 template<class TypeTag>
-struct Indices<TypeTag, TTag::EclFlowProblemSimple>
+struct Indices<TypeTag, TTag::EclFlowProblemWaterOnly>
 {
 private:
     // it is unfortunately not possible to simply use 'TypeTag' here because this leads
@@ -57,9 +57,36 @@ public:
 
 } // namespace Opm::Properties
 
-int flowEbosOnephaseMain(int argc, char** argv)
+void flowEbosWaterOnlySetDeck(double setupTime, std::shared_ptr<Deck> deck,
+                              std::shared_ptr<EclipseState> eclState,
+                              std::shared_ptr<Schedule> schedule,
+                              std::shared_ptr<SummaryConfig> summaryConfig)
 {
-    using TypeTag = Opm::Properties::TTag::EclFlowProblemSimple;
+    using TypeTag = Properties::TTag::EclFlowProblemWaterOnly;
+    using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
+
+    Vanguard::setExternalSetupTime(setupTime);
+    Vanguard::setExternalDeck(std::move(deck));
+    Vanguard::setExternalEclState(std::move(eclState));
+    Vanguard::setExternalSchedule(std::move(schedule));
+    Vanguard::setExternalSummaryConfig(std::move(summaryConfig));
+}
+
+// ----------------- Main program -----------------
+int flowEbosWaterOnlyMain(int argc, char** argv, bool outputCout, bool outputFiles)
+{
+    // we always want to use the default locale, and thus spare us the trouble
+    // with incorrect locale settings.
+    resetLocale();
+
+    FlowMainEbos<Properties::TTag::EclFlowProblemWaterOnly>
+        mainfunc {argc, argv, outputCout, outputFiles};
+    return mainfunc.execute();
+}
+
+int flowEbosWaterOnlyMainStandalone(int argc, char** argv)
+{
+    using TypeTag = Opm::Properties::TTag::EclFlowProblemWaterOnly;
     auto mainObject = Opm::Main(argc, argv);
     return mainObject.runStatic<TypeTag>();
 }
