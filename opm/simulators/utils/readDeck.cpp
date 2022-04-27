@@ -365,7 +365,7 @@ namespace {
 
         if (status != MPI_SUCCESS) {
             throw std::invalid_argument {
-                "Unable to establish cell geomtry validity across MPI ranks"
+                "Unable to establish cell geometry validity across MPI ranks"
             };
         }
 #endif  // HAVE_MPI
