@@ -120,6 +120,7 @@ namespace Opm
         explicit ISTLSolverEbos(const Simulator& simulator)
             : simulator_(simulator),
               iterations_( 0 ),
+              calls_( 0 ),
               converged_(false),
               matrix_()
         {
@@ -254,6 +255,7 @@ namespace Opm
         }
 
         bool solve(Vector& x) {
+            calls_ += 1;
             // Write linear system if asked for.
             const int verbosity = prm_.get<int>("verbosity", 0);
             const bool write_matrix = verbosity > 10;
@@ -450,9 +452,19 @@ namespace Opm
                 // Recreate solver if the last solve used more than 10 iterations.
                 return this->iterations() > 10;
             }
-
+            if (this->parameters_.cpr_reuse_setup_ == 3) {
+                // Recreate solver if the last solve used more than 10 iterations.
+                return false;
+            }
+            if (this->parameters_.cpr_reuse_setup_ > 10) {
+                const int newton_iteration = this->simulator_.model().newtonMethod().numIterations();
+                //bool create = newton_iteration == 0;
+                int step = this->parameters_.cpr_reuse_setup_ - 10;
+                bool create = ((calls_%step) == 0);
+                return create;
+            }
             // Otherwise, do not recreate solver.
-            assert(this->parameters_.cpr_reuse_setup_ == 3);
+            assert(false);
 
             return false;
         }
@@ -605,6 +617,7 @@ namespace Opm
 
         const Simulator& simulator_;
         mutable int iterations_;
+        mutable int calls_;
         mutable bool converged_;
         std::any parallelInformation_;
 
