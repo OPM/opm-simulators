@@ -470,7 +470,12 @@ public:
                 }
             }
          }
-
+        //  Primary variable switches possibilities for black-oil (from -> to)
+        //  Sw_po_Sg (3-phase)    -> Rvw_po_Sg, Sw_pg_Rv, Rvw_pg_Rv, Sw_po_Rs
+        //  Sw_pg_Rv (water-gas)  -> Rvw_pg_Rv, Sw_po_Sg, Rvw_po_Sg
+        //  Rvw_po_Sg (gas-oil)   -> Sw_po_Sg, Rvw_pg_Rv 
+        //  Rvw_pg_Rv (gas)       -> Sw_pg_Rv, Rvw_po_Sg
+        //  Sw_po_Rs (water-oil)  -> Sw_po_Sg 
         if (primaryVarsMeaning() == Sw_po_Sg) {
 
             // special case for cells with almost only water
