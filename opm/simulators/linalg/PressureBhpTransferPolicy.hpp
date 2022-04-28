@@ -184,7 +184,8 @@ namespace Opm
         }
         if (prm_.get<bool>("add_wells")) {
             assert(transpose == false); // not implemented
-            fineOperator.addWellPressureEquations(*coarseLevelMatrix_, weights_);
+            bool use_well_weights = prm_.get<bool>("use_well_weights");
+            fineOperator.addWellPressureEquations(*coarseLevelMatrix_, weights_, use_well_weights);
 #ifndef NDEBUG
             std::advance(rowCoarse, fineOperator.getNumberOfExtraEquations());
             assert(rowCoarse == coarseLevelMatrix_->end());

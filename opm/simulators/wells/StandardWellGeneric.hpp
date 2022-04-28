@@ -124,6 +124,7 @@ protected:
     OffDiagMatWell duneC_;
     // diagonal matrix for the well
     DiagMatWell invDuneD_;
+    DiagMatWell duneD_;
 
     // Wrapper for the parallel application of B for distributed wells
     wellhelpers::ParallelStandardWellB<Scalar> parallelB_;

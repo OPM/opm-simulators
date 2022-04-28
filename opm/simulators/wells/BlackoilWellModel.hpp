@@ -303,7 +303,7 @@ namespace Opm {
                 return w.size();
             }
                    
-            void addWellPressureEquations(PressureMatrix& jacobian, const BVector& weights) const
+            void addWellPressureEquations(PressureMatrix& jacobian, const BVector& weights,const bool use_well_weights) const
             {
                 int nw =  this->numLocalWellsEnd();
                 int rdofs = local_num_cells_;
@@ -313,7 +313,7 @@ namespace Opm {
                 }
 
                 for (const auto& well : well_container_) {
-                    well->addWellPressureEquations(jacobian, weights, pressureVarIndex);
+                    well->addWellPressureEquations(jacobian, weights, pressureVarIndex, use_well_weights, this->wellState());
                 }
             }
 
@@ -390,9 +390,9 @@ namespace Opm {
                         jacobian.entry(perfcell, wdof) = 0.0;
                     }
                 }
-                for (const auto& well : well_container_) {
-                    well->addWellPressureEquationsStruct(jacobian);
-                }
+                // for (const auto& well : well_container_) {
+                //     well->addWellPressureEquationsStruct(jacobian);
+                // }
             }
 
 
