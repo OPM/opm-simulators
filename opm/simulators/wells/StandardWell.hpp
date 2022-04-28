@@ -182,9 +182,13 @@ namespace Opm
 
         virtual void addWellContributions(SparseMatrixAdapter& mat) const override;
 
-        virtual void addWellPressureEquationsStruct(PressureMatrix& mat) const override;
+        // virtual void addWellPressureEquationsStruct(PressureMatrix& mat) const override;
 
-        virtual void addWellPressureEquations(PressureMatrix& mat, const BVector& x,const int pressureVarIndex) const override;
+        virtual void addWellPressureEquations(PressureMatrix& mat,
+                                              const BVector& x,
+                                              const int pressureVarIndex,
+                                              const bool use_well_weights,
+                                              const WellState& well_state) const override;
 
         // iterate well equations with the specified control until converged
         bool iterateWellEqWithControl(const Simulator& ebosSimulator,

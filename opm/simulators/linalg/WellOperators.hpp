@@ -50,7 +50,7 @@ class LinearOperatorExtra : public Dune::LinearOperator<X, Y>
 {
 public:
     using PressureMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1>>;
-    virtual void addWellPressureEquations(PressureMatrix& jacobian, const X& weights) const = 0;
+    virtual void addWellPressureEquations(PressureMatrix& jacobian, const X& weights,const bool use_well_weights) const = 0;
     virtual void addWellPressureEquationsStruct(PressureMatrix& jacobian) const = 0;
     virtual int getNumberOfExtraEquations() const = 0;
 };
@@ -90,9 +90,9 @@ public:
     {
         return Dune::SolverCategory::sequential;
     }
-    void addWellPressureEquations(PressureMatrix& jacobian, const X& weights) const override
+    void addWellPressureEquations(PressureMatrix& jacobian, const X& weights,const bool use_well_weights) const override
     {
-        wellMod_.addWellPressureEquations(jacobian, weights);
+        wellMod_.addWellPressureEquations(jacobian, weights, use_well_weights);
     }
     void addWellPressureEquationsStruct(PressureMatrix& jacobian) const override
     {
@@ -179,9 +179,9 @@ public:
 
   virtual const matrix_type& getmat() const override { return A_; }
 
-    void addWellPressureEquations(PressureMatrix& jacobian, const X& weights) const
+    void addWellPressureEquations(PressureMatrix& jacobian, const X& weights,const bool use_well_weights) const
     {
-        wellOper_.addWellPressureEquations(jacobian, weights);
+        wellOper_.addWellPressureEquations(jacobian, weights, use_well_weights);
     }
     void addWellPressureEquationsStruct(PressureMatrix& jacobian) const
     {
@@ -269,9 +269,9 @@ public:
 
     virtual const matrix_type& getmat() const override { return A_; }
 
-    void addWellPressureEquations(PressureMatrix& jacobian, const X& weights) const
+    void addWellPressureEquations(PressureMatrix& jacobian, const X& weights,const bool use_well_weights) const
     {
-        wellOper_.addWellPressureEquations(jacobian, weights);
+        wellOper_.addWellPressureEquations(jacobian, weights, use_well_weights);
     }
     void addWellPressureEquationsStruct(PressureMatrix& jacobian) const
     {
