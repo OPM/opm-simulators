@@ -423,10 +423,21 @@ namespace Opm
         const double dt = ebosSimulator.timeStepSize();
         const auto& summary_state = ebosSimulator.vanguard().summaryState();
         const bool has_thp_limit = this->wellHasTHPConstraints(summary_state);
-        if (has_thp_limit)
-            well_state.well(this->indexOfWell()).production_cmode = Well::ProducerCMode::THP;
-        else
-            well_state.well(this->indexOfWell()).production_cmode = Well::ProducerCMode::BHP;
+        if (has_thp_limit) {
+            if (well_state.well(this->indexOfWell()).production_cmode != Well::ProducerCMode::THP) {
+                well_state.well(this->indexOfWell()).production_cmode = Well::ProducerCMode::THP;
+                updateWellStateWithTarget(ebosSimulator, group_state, well_state, deferred_logger);
+                updatePrimaryVariables(well_state, deferred_logger);
+                initPrimaryVariablesEvaluation();
+            }
+        } else {
+            if (well_state.well(this->indexOfWell()).production_cmode != Well::ProducerCMode::BHP) {
+                well_state.well(this->indexOfWell()).production_cmode = Well::ProducerCMode::BHP;
+                updateWellStateWithTarget(ebosSimulator, group_state, well_state, deferred_logger);
+                updatePrimaryVariables(well_state, deferred_logger);
+                initPrimaryVariablesEvaluation();
+            }
+        }
 
         const bool converged = iterateWellEquations(ebosSimulator, dt, well_state, group_state, deferred_logger);
         if (converged) {
