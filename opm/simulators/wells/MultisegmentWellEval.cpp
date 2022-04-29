@@ -383,10 +383,10 @@ processFractions(const int seg) const
 template<typename FluidSystem, typename Indices, typename Scalar>
 void
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
-updateWellState(const BVectorWell& dwells,
-                const double relaxation_factor,
-                const double dFLimit,
-                const double max_pressure_change) const
+updatePrimaryVariablesNewton(const BVectorWell& dwells,
+                             const double relaxation_factor,
+                             const double dFLimit,
+                             const double max_pressure_change) const
 {
     const std::vector<std::array<double, numWellEq> > old_primary_variables = primary_variables_;
 
