@@ -571,6 +571,14 @@ public:
                         val.second = getValue(fs.viscosity(gasPhaseIdx));
                     else if (key.first == "BVOIL" || key.first == "BOVIS")
                         val.second = getValue(fs.viscosity(oilPhaseIdx));
+                    else if (key.first == "BRPV")
+                        val.second = elemCtx.simulator().model().dofTotalVolume(globalDofIdx)*getValue(intQuants.porosity());
+                    else if (key.first == "BOPV")
+                        val.second = getValue(fs.saturation(oilPhaseIdx))*elemCtx.simulator().model().dofTotalVolume(globalDofIdx)*getValue(intQuants.porosity());
+                    else if (key.first == "BWPV")
+                        val.second = getValue(fs.saturation(waterPhaseIdx))*elemCtx.simulator().model().dofTotalVolume(globalDofIdx)*getValue(intQuants.porosity());
+                    else if (key.first == "BGPV")
+                        val.second = getValue(fs.saturation(gasPhaseIdx))*elemCtx.simulator().model().dofTotalVolume(globalDofIdx)*getValue(intQuants.porosity());
                     else {
                         std::string logstring = "Keyword '";
                         logstring.append(key.first);
