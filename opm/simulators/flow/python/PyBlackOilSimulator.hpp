@@ -44,11 +44,14 @@ public:
         std::shared_ptr<Opm::EclipseState> state,
         std::shared_ptr<Opm::Schedule> schedule,
         std::shared_ptr<Opm::SummaryConfig> summary_config);
+    bool checkSimulationFinished();
     py::array_t<double> getPorosity();
     int run();
     void setPorosity(
          py::array_t<double, py::array::c_style | py::array::forcecast> array);
     int step();
+    void advance(int report_step);
+    int currentStep();
     int stepInit();
     int stepCleanup();
     const Opm::FlowMainEbos<TypeTag>& getFlowMainEbos() const;
@@ -57,7 +60,7 @@ private:
     const std::string deckFilename_;
     bool hasRunInit_ = false;
     bool hasRunCleanup_ = false;
-
+    bool debug_ = false;
     // This *must* be declared before other pointers
     // to simulator objects. This in order to deinitialize
     // MPI at the correct time (ie after the other objects).

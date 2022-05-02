@@ -52,6 +52,11 @@ PyBlackOilSimulator::PyBlackOilSimulator(
 {
 }
 
+bool PyBlackOilSimulator::checkSimulationFinished()
+{
+    return this->mainEbos_->getSimTimer()->done();
+}
+
 const Opm::FlowMainEbos<typename Opm::Pybind::PyBlackOilSimulator::TypeTag>&
          PyBlackOilSimulator::getFlowMainEbos() const
 {
@@ -85,6 +90,13 @@ void PyBlackOilSimulator::setPorosity( py::array_t<double,
     materialState_->setPorosity(poro, size_);
 }
 
+void PyBlackOilSimulator::advance(int report_step)
+{
+    while (currentStep() < report_step) {
+        step();
+    }
+}
+
 int PyBlackOilSimulator::step()
 {
     if (!hasRunInit_) {
@@ -93,8 +105,26 @@ int PyBlackOilSimulator::step()
     if (hasRunCleanup_) {
         throw std::logic_error("step() called after step_cleanup()");
     }
-    return mainEbos_->executeStep();
+    if(checkSimulationFinished()) {
+        throw std::logic_error("step() called, but simulation is done");
+    }
+    //if (this->debug_)
+    //    this->mainEbos_->getSimTimer()->report(std::cout);
+    auto result = mainEbos_->executeStep();
+    return result;
 }
+
+// This returns the report step number that will be executed next time step()
+//   is called.
+int PyBlackOilSimulator::currentStep()
+{
+    return this->mainEbos_->getSimTimer()->currentStepNum();
+    // NOTE: this->ebosSimulator_->episodeIndex() would also return the current
+    // report step number, but this number is always delayed by 1 step relative
+    // to this->mainEbos_->getSimTimer()->currentStepNum()
+    // See details in runStep() in file SimulatorFullyImplicitBlackoilEbos.hpp
+}
+
 
 int PyBlackOilSimulator::stepCleanup()
 {
@@ -153,7 +183,9 @@ void export_PyBlackOilSimulator(py::module& m)
             py::return_value_policy::copy)
         .def("run", &PyBlackOilSimulator::run)
         .def("set_porosity", &PyBlackOilSimulator::setPorosity)
+        .def("current_step", &PyBlackOilSimulator::currentStep)
         .def("step", &PyBlackOilSimulator::step)
+        .def("advance", &PyBlackOilSimulator::advance, py::arg("report_step"))
         .def("step_init", &PyBlackOilSimulator::stepInit)
         .def("step_cleanup", &PyBlackOilSimulator::stepCleanup);
 }

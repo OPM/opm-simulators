@@ -387,6 +387,10 @@ namespace Opm
             return ebosSimulator_.get();
         }
 
+        SimulatorTimer* getSimTimer() {
+            return simtimer_.get();
+        }
+
     private:
         // called by execute() or executeInitStep()
         int execute_(int (FlowMainEbos::* runOrInitFunc)(), bool cleanup)
