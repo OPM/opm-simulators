@@ -234,6 +234,25 @@ class BlackOilDiffusionIntensiveQuantities<TypeTag, /*enableDiffusion=*/true>
     enum { numComponents = FluidSystem::numComponents };
 
 public:
+    BlackOilDiffusionIntensiveQuantities() = default;
+    BlackOilDiffusionIntensiveQuantities(BlackOilDiffusionIntensiveQuantities&&) noexcept = default;
+    BlackOilDiffusionIntensiveQuantities(const BlackOilDiffusionIntensiveQuantities&) = default;
+
+    BlackOilDiffusionIntensiveQuantities& operator=(BlackOilDiffusionIntensiveQuantities&&) noexcept = default;
+
+    BlackOilDiffusionIntensiveQuantities&
+    operator=(const BlackOilDiffusionIntensiveQuantities& rhs)
+    {
+      if (FluidSystem::enableDiffusion()) {
+          std::copy(rhs.tortuosity_, rhs.tortuosity_ + numPhases, tortuosity_);
+          for (size_t i = 0; i < numPhases; ++i) {
+              std::copy(rhs.diffusionCoefficient_[i],
+                        rhs.diffusionCoefficient_[i]+numComponents,
+                        diffusionCoefficient_[i]);
+          }
+      }
+      return *this;
+    }
     /*!
      * \brief Returns the molecular diffusion coefficient for a
      *        component in a phase.
