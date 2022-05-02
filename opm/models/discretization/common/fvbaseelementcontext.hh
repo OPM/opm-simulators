@@ -554,8 +554,8 @@ protected:
             const PrimaryVariables& dofSol = globalSol[globalIdx];
             dofVars_[dofIdx].priVars[timeIdx] = &dofSol;
 
-            dofVars_[dofIdx].thermodynamicHint[timeIdx] =
-                model().thermodynamicHint(globalIdx, timeIdx);
+            dofVars_[dofIdx].thermodynamicHint[timeIdx] = model().thermodynamicHint(globalIdx, timeIdx);
+            dofVars_[dofIdx].thermodynamicHint[1] = model().thermodynamicHint(globalIdx, 1);
 
             const auto *cachedIntQuants = model().cachedIntensiveQuantities(globalIdx, timeIdx);
             if (cachedIntQuants) {

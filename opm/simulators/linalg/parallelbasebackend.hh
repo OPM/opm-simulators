@@ -37,6 +37,8 @@
 #include <opm/simulators/linalg/overlappingoperator.hh>
 #include <opm/simulators/linalg/parallelbasebackend.hh>
 #include <opm/simulators/linalg/istlpreconditionerwrappers.hh>
+//#include <MatrixMarketSpecializations.hpp>
+//#include <dune/istl/matrixmarket.hh>
 
 #include <opm/models/utils/genericguard.hh>
 #include <opm/models/utils/propertysystem.hh>
@@ -261,6 +263,9 @@ public:
         ParallelScalarProduct parScalarProduct(overlappingMatrix_->overlap());
         ParallelOperator parOperator(*overlappingMatrix_);
 
+        //const auto& matrix = parOperator.getMatrix();
+        //Dune::storeMatrixMarket(*overlappingMatrix_, std::string("mymatrix.mm"));
+
         // retrieve the linear solver
         auto solver = asImp_().prepareSolver_(parOperator,
                                               parScalarProduct,
@@ -278,6 +283,7 @@ public:
 
         // copy the result back to the non-overlapping vector
         overlappingx_->assignTo(x);
+        overlappingx_->print();
 
         // return the result of the solver
         return result.first;

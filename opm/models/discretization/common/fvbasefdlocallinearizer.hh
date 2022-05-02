@@ -490,6 +490,8 @@ protected:
                               unsigned pvIdx)
     {
         size_t numDof = elemCtx.numDof(/*timeIdx=*/0);
+        int spatialIdx = elemCtx.globalSpaceIndex(focusDofIdx, /*timeIdx=*/0);
+        std::cout << "Focus cell = " << spatialIdx << std::endl;
         for (unsigned dofIdx = 0; dofIdx < numDof; dofIdx++) {
             for (unsigned eqIdx = 0; eqIdx < numEq; eqIdx++) {
                 // A[dofIdx][focusDofIdx][eqIdx][pvIdx] is the partial derivative of the
@@ -497,6 +499,7 @@ protected:
                 // regard to the primary variable 'pvIdx' of the degree of freedom
                 // 'focusDofIdx'
                 jacobian_[dofIdx][focusDofIdx][eqIdx][pvIdx] = derivResidual_[dofIdx][eqIdx];
+                std::cout << "J[" << dofIdx << "][" << focusDofIdx << "][" << eqIdx << "][" << pvIdx << "] = " << jacobian_[dofIdx][focusDofIdx][eqIdx][pvIdx] << std::endl;
                 Valgrind::CheckDefined(jacobian_[dofIdx][focusDofIdx][eqIdx][pvIdx]);
             }
         }

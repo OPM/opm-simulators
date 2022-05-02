@@ -161,6 +161,8 @@ public:
         assert(residual.size() == elemCtx.numDof(/*timeIdx=*/0));
 
         residual = 0.0;
+        std::cout << "residual from elemtCtx" << std::endl;
+
 
         // evaluate the flux terms
         asImp_().evalFluxes(residual, elemCtx, /*timeIdx=*/0);
@@ -324,8 +326,10 @@ public:
             assert(alpha > 0.0);
             assert(isfinite(alpha));
 
-            for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx)
+            for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx){
                 flux[eqIdx] *= alpha;
+                std::cout << " flux in eqIdx " << eqIdx << " is: " << flux[eqIdx] << std::endl;
+            }
 
             // The balance equation for a finite volume is given by
             //
