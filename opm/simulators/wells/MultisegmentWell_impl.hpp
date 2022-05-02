@@ -801,7 +801,7 @@ namespace Opm
         well_weight /= num_perfs;
         assert(num_perfs>0);
 
-        
+        double diag_ell = 0.0;
         for (size_t rowB = 0; rowB < this->duneB_.N(); ++rowB) {
             //const auto& bw = segment_weights[rowB];
             const auto& bw = well_weight;
@@ -815,31 +815,35 @@ namespace Opm
                         matel += bw[i] *(*colB)[i][pressureVarIndex];
                     }
                     jacobian[welldof_ind][col_index] += matel;
-                }
+                    diag_ell -= matel;
+                }  
             }
         }
 
         
         if(this->isPressureControlled(well_state)){
-            jacobian[welldof_ind][welldof_ind] = 1.0;
+             jacobian[welldof_ind][welldof_ind] = 1.0;
         }else{
-            for (size_t rowD = 0; rowD < this->duneD_.N(); ++rowD) {
-                //const auto& bw = segment_weights[rowD];
-                const auto& bw = well_weight;
-                //const auto row_index = rowD.index();
-                for (auto colD = this->duneD_[rowD].begin(), endD = this->duneD_[rowD].end(); colD != endD; ++colD) {
-                    const auto col_index = colD.index();
-                    if(rowD == col_index){//need?
-                        double matel = 0.0;
-                        for(int i = 0; i< bw.size(); ++i){
-                            matel += bw[i]*(*colD)[i][seg_pressure_var_ind];
-                        }
-                        jacobian[welldof_ind][welldof_ind] += matel;
-                    }
-                }
-            }
-            assert(jacobian[welldof_ind][welldof_ind] != 0);
+            assert(diag_ell > 0.0);
+            jacobian[welldof_ind][welldof_ind] = diag_ell;
         }
+        //     for (size_t rowD = 0; rowD < this->duneD_.N(); ++rowD) {
+        //         //const auto& bw = segment_weights[rowD];
+        //         const auto& bw = well_weight;
+        //         //const auto row_index = rowD.index();
+        //         for (auto colD = this->duneD_[rowD].begin(), endD = this->duneD_[rowD].end(); colD != endD; ++colD) {
+        //             const auto col_index = colD.index();
+        //             if(rowD == col_index){//need?
+        //                 double matel = 0.0;
+        //                 for(int i = 0; i< bw.size(); ++i){
+        //                     matel += bw[i]*(*colD)[i][seg_pressure_var_ind];
+        //                 }
+        //                 jacobian[welldof_ind][welldof_ind] += matel;
+        //             }
+        //         }
+        //     }
+        //     assert(jacobian[welldof_ind][welldof_ind] != 0);
+        // }
         
         
     }
