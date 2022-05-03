@@ -181,7 +181,6 @@ public:
 
         // resize the internal arrays of the linearizer
         resize_(elemCtx);
-        reset_(elemCtx);
 
         // compute the local residual and its Jacobian
         unsigned numPrimaryDof = elemCtx.numPrimaryDof(/*timeIdx=*/0);
