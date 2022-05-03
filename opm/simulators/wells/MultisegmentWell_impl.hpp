@@ -1387,6 +1387,7 @@ namespace Opm
         bool converged = false;
         int stagnate_count = 0;
         bool relax_convergence = false;
+        this->regularize_ = false;
         for (; it < max_iter_number; ++it, ++debug_cost_counter_) {
 
             assembleWellEqWithoutIteration(ebosSimulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
