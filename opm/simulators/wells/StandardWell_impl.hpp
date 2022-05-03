@@ -395,16 +395,18 @@ namespace Opm
                         // rs * q_or * b_o = rs * (q_os - rv * q_gs) / d
                         perf_dis_gas_rate = getValue(rs) * (getValue(cq_s[oilCompIdx]) - getValue(rv) * getValue(cq_s[gasCompIdx])) / d;
                     }
+                    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                        // q_ws = q_wr * b_w + rvw * q_gr * b_g
+                        // q_wr = 1 / b_w * (q_ws - rvw * q_gr * b_g) = 1 / b_w * (q_ws - rvw * 1 / d  (q_gs - rs * q_os))
+                        // vaporized water in gas
+                        // rvw * q_gr * b_g = q_ws -q_wr *b_w = rvw * (q_gs -rs *q_os) / d
+                        perf_vap_wat_rate = getValue(rvw) * (getValue(cq_s[gasCompIdx]) - getValue(rs) * getValue(cq_s[oilCompIdx])) / d;
+                    }
                 }
-                if (/*has_watVapor &&  */ FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                    const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
+                else if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                    //no oil
                     const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-                    // q_ws = q_wr * b_w + rvw * q_gr * b_g
-                    // q_wr = 1/b_w * (rvw * 1/d * (q_gs - rs * q_os) - q_ws) = 1 / (b_w * d) * (rvw * (q_gs - rs * q_os) - d * q_ws)
-                    const double d = 1.0 - getValue(rv) * getValue(rs);
-                     // vaporized water in gas
-                    // rvw * q_gr * b_g = q_ws -q_wr *b_w = q_ws - (rvw * (q_gs - rs * q_os) - d * q_ws)/d = rvw * (q_gs -rs *q_os) / d
-                     perf_vap_wat_rate = getValue(rvw) * (getValue(cq_s[gasCompIdx]) - getValue(rs) * getValue(cq_s[oilCompIdx])) / d;
+                    perf_vap_wat_rate = getValue(rvw) * getValue(cq_s[gasCompIdx]);
                 }
             }
         }
@@ -1282,6 +1284,7 @@ namespace Opm
                                                 std::vector<double>& b_perf,
                                                 std::vector<double>& rsmax_perf,
                                                 std::vector<double>& rvmax_perf,
+                                                std::vector<double>& rvwmax_perf,
                                                 std::vector<double>& surf_dens_perf) const
     {
         const int nperf = this->number_of_perforations_;
@@ -1298,6 +1301,10 @@ namespace Opm
         if (oilPresent && gasPresent) {
             rsmax_perf.resize(nperf);
             rvmax_perf.resize(nperf);
+        }
+          //rvw is only used if both water and gas is present
+        if (waterPresent && gasPresent) {
+            rvwmax_perf.resize(nperf);
         }
 
         // Compute the average pressure in each well block
@@ -1325,7 +1332,35 @@ namespace Opm
                 const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
                 const int gaspos = gasCompIdx + perf * this->num_components_;
 
-                if (oilPresent) {
+                if (oilPresent && waterPresent) {
+                    const double oilrate = std::abs(ws.surface_rates[pu.phase_pos[Oil]]); //in order to handle negative rates in producers
+                    const double waterrate = std::abs(ws.surface_rates[pu.phase_pos[Water]]); //in order to handle negative rates in producers
+                    rvmax_perf[perf] = FluidSystem::gasPvt().saturatedOilVaporizationFactor(fs.pvtRegionIndex(), temperature, p_avg);
+                    rvwmax_perf[perf] = FluidSystem::gasPvt().saturatedWaterVaporizationFactor(fs.pvtRegionIndex(), temperature, p_avg);
+                    double rv = 0.0;
+                    double rvw = 0.0;
+                    if (oilrate > 0) {
+                        const double gasrate = std::abs(ws.surface_rates[pu.phase_pos[Gas]]) - (has_solvent ? ws.sum_solvent_rates() : 0.0);
+                        if (gasrate > 0) {
+                            rv = oilrate / gasrate;
+                        }
+                        rv = std::min(rv, rvmax_perf[perf]);
+                    }
+                    if (waterrate > 0) {
+                        const double gasrate = std::abs(ws.surface_rates[pu.phase_pos[Gas]]) - (has_solvent ? ws.sum_solvent_rates() : 0.0);
+                        if (gasrate > 0) {
+                            rvw = waterrate / gasrate;
+                        }
+                        rvw = std::min(rvw, rvwmax_perf[perf]);
+                    }
+                    if (rv > 0.0 || rvw > 0.0){
+                        b_perf[gaspos] = FluidSystem::gasPvt().inverseFormationVolumeFactor(fs.pvtRegionIndex(), temperature, p_avg, rv, rvw);
+                    }
+                    else {
+                        b_perf[gaspos] = FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(fs.pvtRegionIndex(), temperature, p_avg);
+                    }
+                } else if (oilPresent) {
+                    //no water
                     const double oilrate = std::abs(ws.surface_rates[pu.phase_pos[Oil]]); //in order to handle negative rates in producers
                     rvmax_perf[perf] = FluidSystem::gasPvt().saturatedOilVaporizationFactor(fs.pvtRegionIndex(), temperature, p_avg);
                     if (oilrate > 0) {
@@ -1337,6 +1372,23 @@ namespace Opm
                         rv = std::min(rv, rvmax_perf[perf]);
 
                         b_perf[gaspos] = FluidSystem::gasPvt().inverseFormationVolumeFactor(fs.pvtRegionIndex(), temperature, p_avg, rv, 0.0 /*Rvw*/);
+                    }
+                    else {
+                        b_perf[gaspos] = FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(fs.pvtRegionIndex(), temperature, p_avg);
+                    }
+                } else if (waterPresent) {
+                    //no oil
+                    const double waterrate = std::abs(ws.surface_rates[pu.phase_pos[Water]]); //in order to handle negative rates in producers
+                    rvwmax_perf[perf] = FluidSystem::gasPvt().saturatedWaterVaporizationFactor(fs.pvtRegionIndex(), temperature, p_avg);
+                    if (waterrate > 0) {
+                        const double gasrate = std::abs(ws.surface_rates[pu.phase_pos[Gas]]) - (has_solvent ? ws.sum_solvent_rates() : 0.0);
+                        double rvw = 0.0;
+                        if (gasrate > 0) {
+                            rvw = waterrate / gasrate;
+                        }
+                        rvw = std::min(rvw, rvwmax_perf[perf]);
+
+                        b_perf[gaspos] = FluidSystem::gasPvt().inverseFormationVolumeFactor(fs.pvtRegionIndex(), temperature, p_avg, 0.0 /*Rv*/, rvw);
                     }
                     else {
                         b_perf[gaspos] = FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(fs.pvtRegionIndex(), temperature, p_avg);
@@ -1505,6 +1557,7 @@ namespace Opm
                                            const std::vector<double>& b_perf,
                                            const std::vector<double>& rsmax_perf,
                                            const std::vector<double>& rvmax_perf,
+                                           const std::vector<double>& rvwmax_perf,
                                            const std::vector<double>& surf_dens_perf,
                                            DeferredLogger& deferred_logger)
     {
@@ -1561,7 +1614,7 @@ namespace Opm
             }
         }
 
-        this->computeConnectionDensities(perfRates, b_perf, rsmax_perf, rvmax_perf, surf_dens_perf, deferred_logger);
+        this->computeConnectionDensities(perfRates, b_perf, rsmax_perf, rvmax_perf, rvwmax_perf, surf_dens_perf, deferred_logger);
 
         this->computeConnectionPressureDelta();
     }
@@ -1583,9 +1636,10 @@ namespace Opm
          std::vector<double> b_perf;
          std::vector<double> rsmax_perf;
          std::vector<double> rvmax_perf;
+         std::vector<double> rvwmax_perf;
          std::vector<double> surf_dens_perf;
-         computePropertiesForWellConnectionPressures(ebosSimulator, well_state, b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
-         computeWellConnectionDensitesPressures(ebosSimulator, well_state, b_perf, rsmax_perf, rvmax_perf, surf_dens_perf, deferred_logger);
+         computePropertiesForWellConnectionPressures(ebosSimulator, well_state, b_perf, rsmax_perf, rvmax_perf, rvwmax_perf, surf_dens_perf);
+         computeWellConnectionDensitesPressures(ebosSimulator, well_state, b_perf, rsmax_perf, rvmax_perf, rvwmax_perf, surf_dens_perf, deferred_logger);
     }
 
 

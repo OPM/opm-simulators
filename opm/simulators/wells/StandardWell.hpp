@@ -257,6 +257,7 @@ namespace Opm
                                                          std::vector<double>& b_perf,
                                                          std::vector<double>& rsmax_perf,
                                                          std::vector<double>& rvmax_perf,
+                                                         std::vector<double>& rvwmax_perf,
                                                          std::vector<double>& surf_dens_perf) const;
 
         void computeWellConnectionDensitesPressures(const Simulator& ebosSimulator,
@@ -264,6 +265,7 @@ namespace Opm
                                                     const std::vector<double>& b_perf,
                                                     const std::vector<double>& rsmax_perf,
                                                     const std::vector<double>& rvmax_perf,
+                                                    const std::vector<double>& rvwmax_perf,
                                                     const std::vector<double>& surf_dens_perf,
                                                     DeferredLogger& deferred_logger);
 
