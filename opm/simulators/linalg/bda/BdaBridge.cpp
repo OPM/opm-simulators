@@ -191,6 +191,29 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::copySparsityPatternFromI
 }
 
 
+// check if the nnz values of the matrix are in contiguous memory
+// this is done by checking if the distance between the last value of the last block of row 0 and
+// the first value of the first row of row 1 is equal to 1
+// if the matrix only has 1 row, it is always contiguous
+template <class BridgeMatrix>
+void checkMemoryContiguous(const BridgeMatrix& mat) {
+    auto block_size = mat[0][0].N();
+    auto row = mat.begin();
+    auto last_of_row0 = row->begin();
+
+    // last_of_row0 points to last block, not to row->end()
+    for(auto tmp = row->begin(); tmp != row->end(); ++tmp) {
+        last_of_row0 = tmp;
+    }
+
+    bool isContiguous = mat.N() < 2 || std::distance(&((*last_of_row0)[block_size-1][block_size-1]), &(*mat[1].begin())[0][0]) == 1;
+
+    if (!isContiguous) {
+        OPM_THROW(std::logic_error, "Error memory of Matrix looks not contiguous");
+    }
+}
+
+
 template <class BridgeMatrix, class BridgeVector, int block_size>
 void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system(BridgeMatrix* bridgeMat,
                                                                      BridgeMatrix* jacMat,
@@ -216,7 +239,7 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system(BridgeMatri
             h_rows.reserve(Nb+1);
             h_cols.reserve(nnzb);
             copySparsityPatternFromISTL(*bridgeMat, h_rows, h_cols);
-            // assume that underlying data (nonzeroes) from mat (Dune::BCRSMatrix) are contiguous, if this is not the case, the chosen BdaSolver is expected to perform undefined behaviour
+            checkMemoryContiguous(*bridgeMat);
             matrix = std::make_unique<Opm::Accelerator::BlockedMatrix>(Nb, nnzb, block_size, static_cast<double*>(&(((*bridgeMat)[0][0][0][0]))), h_cols.data(), h_rows.data());
         }
 
@@ -235,6 +258,7 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system(BridgeMatri
                 h_jacRows.reserve(Nb+1);
                 h_jacCols.reserve(jacNnzb);
                 copySparsityPatternFromISTL(*jacMat, h_jacRows, h_jacCols);
+                checkMemoryContiguous(*jacMat);
                 jacMatrix = std::make_unique<Opm::Accelerator::BlockedMatrix>(Nb, jacNnzb, block_size, static_cast<double*>(&(((*jacMat)[0][0][0][0]))), h_jacCols.data(), h_jacRows.data());
             }
 
