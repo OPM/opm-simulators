@@ -1852,15 +1852,20 @@ private:
             const unsigned int elemIdx = elemMapper.index(element);
             cellCenterDepth_[elemIdx] = Details::cellCenterDepth(element);
             const auto cartIx = cartesianIndexMapper_.cartesianIndex(elemIdx);
+            cellZSpan_[elemIdx] = Details::cellZSpan(element);
+            cellZMinMax_[elemIdx] = Details::cellZMinMax(element);
             if (!num_aqu_cells.empty()) {
                 const auto search = num_aqu_cells.find(cartIx);
                 if (search != num_aqu_cells.end()) {
                     const auto* aqu_cell = num_aqu_cells.at(cartIx);
-                    cellCenterDepth_[elemIdx] = aqu_cell->depth;
+                    const double depth_change_num_aqu = aqu_cell->depth - cellCenterDepth_[elemIdx];
+                    cellCenterDepth_[elemIdx] += depth_change_num_aqu;
+                    cellZSpan_[elemIdx].first += depth_change_num_aqu;
+                    cellZSpan_[elemIdx].second += depth_change_num_aqu;
+                    cellZMinMax_[elemIdx].first += depth_change_num_aqu;
+                    cellZMinMax_[elemIdx].second += depth_change_num_aqu;
                 }
             }
-            cellZSpan_[elemIdx] = Details::cellZSpan(element);
-            cellZMinMax_[elemIdx] = Details::cellZMinMax(element);
         }
     }
 
