@@ -100,9 +100,6 @@ public:
     }
     int getNumberOfExtraEquations() const override
     {
-        //return wellMod_.numLocalWells();
-        //return wellMod_.localNonshutWells().size();
-        //return wellMod_.numLocalNonshutWells();
         return wellMod_.numLocalWellsEnd();
     }
 
