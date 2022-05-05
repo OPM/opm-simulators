@@ -501,7 +501,7 @@ namespace Opm
 
         // do the local inversion of D.
         try {
-            this->duneD_ = this->invDuneD_;
+            this->duneD_ = this->invDuneD_; // Not strictly need if not cpr with well contributions is used
             Dune::ISTLUtility::invertMatrix(this->invDuneD_[0][0]);
         } catch( ... ) {
             OPM_DEFLOG_THROW(NumericalIssue,"Error when inverting local well equations for well " + name(), deferred_logger);
@@ -2044,39 +2044,6 @@ namespace Opm
         }
     }
 
-
-
-
-
-    // template <typename TypeTag>
-    // void
-    // StandardWell<TypeTag>::addWellPressureEquationsStruct(PressureMatrix& jacobian) const
-    // {
-    //     // sustem is the pressur variant of
-    //     // We need to change matrx A as follows
-    //     // A CT
-    //     // B D
-    //     // we need to add the elemenst of CT
-    //     // then we need to ad the quasiimpes type well equation for B D if the well is not
-    //     // BHP contolled
-    //     const int welldof_ind = this->duneC_.M() + this->index_of_well_;
-    //     for (auto colC = this->duneC_[0].begin(), endC = this->duneC_[0].end(); colC != endC; ++colC) {
-    //         const auto row_index = colC.index();
-    //         double matel = 0;
-    //         jacobian.entry(row_index, welldof_ind) = matel;
-    //     }
-
-    //     jacobian.entry(welldof_ind, welldof_ind) = 0.0;
-
-    //     // set the matrix elements for well reservoir coupling
-    //     for (auto colB = this->duneB_[0].begin(), endB = this->duneB_[0].end(); colB != endB; ++colB) {
-    //         const auto col_index = colB.index();
-    //         double matel = 0;
-    //         jacobian.entry(welldof_ind, col_index) = matel;
-    //     }
-    // }
-
-
     template <typename TypeTag>
     void
     StandardWell<TypeTag>::addWellPressureEquations(PressureMatrix& jacobian,
@@ -2085,76 +2052,65 @@ namespace Opm
                                                     const bool use_well_weights,
                                                     const WellState& well_state) const
     {
-        // sustem is the pressur variant of
-        // We need to change matrx A as follows
-        // A CT
-        // B D
-        // we need to add the elemenst of CT
-        // then we need to ad the quasiimpes type well equation for B D if the well is not
-        // BHP contolled
+        // Add the well contributions in cpr
+        // use_well_weights is a quasiimpes formulation which is not implemented in multisegment
         int bhp_var_index = Bhp;
         int nperf = 0;
-        auto cell_weights = weights[0]*0.0;
+        auto cell_weights = weights[0]*0.0;// not need for not(use_well_weights)
         assert(this->duneC_.M() == weights.size());
-        const int welldof_ind = this->duneC_.M() + this->index_of_well_;
-        for (auto colC = this->duneC_[0].begin(), endC = this->duneC_[0].end(); colC != endC; ++colC) {
-            const auto row_ind = colC.index();
-            const auto& bw = weights[row_ind];
-            double matel = 0;
-            if(not(this->isPressureControlled(well_state))){
+        // do not assume anything about pressure controlled with use_well_weights (work fine with the assumtion also)
+        if(not(this->isPressureControlled(well_state)) || use_well_weights){
+            // make coupling for reservoir to well
+            const int welldof_ind = this->duneC_.M() + this->index_of_well_;
+            for (auto colC = this->duneC_[0].begin(), endC = this->duneC_[0].end(); colC != endC; ++colC) {
+                const auto row_ind = colC.index();
+                const auto& bw = weights[row_ind];
+                double matel = 0;        
                 assert((*colC).M() == bw.size());
                 for (size_t i = 0; i < bw.size(); ++i) {
                     matel += (*colC)[bhp_var_index][i] * bw[i];
                 }
+                
+                jacobian[row_ind][welldof_ind] = matel;
+                cell_weights += bw;
+                nperf += 1;
             }
-            jacobian[row_ind][welldof_ind] = matel;
-            //if(not(use_well_weights)){
-            cell_weights += bw;
-            nperf += 1;
-                //}
         }
         cell_weights /= nperf;
-        // make quasipes weights for bhp it should be trival
-        //using VectorBlockType = BVectorWell;
-        //VectorBlockType
+        
         BVectorWell  bweights(1);
         size_t blockSz = this->numWellEq_;
         bweights[0].resize(blockSz);
         bweights[0] = 0.0;
         double diagElem = 0;
-        {
-            // const DiagMatrixBlockWellType& invA = invDuneD_[0][0];
-            BVectorWell rhs(1);           
-            rhs[0].resize(blockSz);
-            rhs[0][bhp_var_index] = 1.0;
-            DiagMatrixBlockWellType inv_diag_block = this->invDuneD_[0][0];
-            DiagMatrixBlockWellType inv_diag_block_transpose = Opm::wellhelpers::transposeDenseDynMatrix(inv_diag_block);
-            // diag_block_transpose.solve(bweights, rhs);
-            //HACK due to template errors
+        {            
             if(use_well_weights){
+                // calculate weighs and set diagonal element
+                //NB! use this options without treating pressure controlled separated
+                //NB! calculate quasiimpes well weights NB do not work well with trueimpes reservoir weights
                 double abs_max = 0;
-                if(this->isPressureControlled(well_state)){
-                    // examples run ok without this branch also
-                    bweights[0][blockSz-1] = 1.0;
-                    diagElem = 1.0;// better scaling 
-                }else{
-                    for (size_t i = 0; i < blockSz; ++i) {
-                        bweights[0][i] = 0;
-                        for (size_t j = 0; j < blockSz; ++j) {
-                            bweights[0][i] += inv_diag_block_transpose[i][j]*rhs[0][j];
-                        }
-                        abs_max = std::max(abs_max, std::fabs(bweights[0][i]));
+                BVectorWell rhs(1);           
+                rhs[0].resize(blockSz);
+                rhs[0][bhp_var_index] = 1.0;
+                DiagMatrixBlockWellType inv_diag_block = this->invDuneD_[0][0];
+                DiagMatrixBlockWellType inv_diag_block_transpose = Opm::wellhelpers::transposeDenseDynMatrix(inv_diag_block);
+                for (size_t i = 0; i < blockSz; ++i) {
+                    bweights[0][i] = 0;
+                    for (size_t j = 0; j < blockSz; ++j) {
+                        bweights[0][i] += inv_diag_block_transpose[i][j]*rhs[0][j];
                     }
-                    assert(abs_max>0.0);
-                    for (size_t i = 0; i < blockSz; ++i) {
-                        bweights[0][i] /= abs_max;
-                    }
-                    diagElem = 1.0/abs_max;
+                    abs_max = std::max(abs_max, std::fabs(bweights[0][i]));
                 }
+                assert(abs_max>0.0);
+                for (size_t i = 0; i < blockSz; ++i) {
+                    bweights[0][i] /= abs_max;
+                }
+                diagElem = 1.0/abs_max;
             }else{
+                // set diagonal element
                 if(this->isPressureControlled(well_state)){
                     bweights[0][blockSz-1] = 1.0;
-                    diagElem = 1.0;// better scaling?
+                    diagElem = 1.0;// better scaling could have used the calculation below if weights were calculated
                 }else{
                     for (size_t i = 0; i < cell_weights.size(); ++i) {
                         bweights[0][i] = cell_weights[i];
@@ -2168,26 +2124,20 @@ namespace Opm
                     
                 }                 
             }
-            //inv_diag_block_transpose.mv(rhs[0], bweights[0]);
-            // NB how to scale to make it most symmetric
-            //double abs_max = *std::max_element(
-            //    bweights[0].begin(), bweights[0].end(), [](double a, double b) { return std::fabs(a) < std::fabs(b); });
-            
-            
-            
         }
         //
         jacobian[welldof_ind][welldof_ind] = diagElem;
         // set the matrix elements for well reservoir coupling
-        for (auto colB = this->duneB_[0].begin(), endB = this->duneB_[0].end(); colB != endB; ++colB) {
-            const auto col_index = colB.index();
-            const auto& bw = bweights[0];
-            double matel = 0;
-            for (size_t i = 0; i < bw.size(); ++i) {
-                const double w = bw[i];
-                matel += (*colB)[i][pressureVarIndex] * bw[i];
-            }
-            jacobian[welldof_ind][col_index] = matel;
+        if(not(this->isPressureControlled(well_state)) || use_well_weights){
+            for (auto colB = this->duneB_[0].begin(), endB = this->duneB_[0].end(); colB != endB; ++colB) {
+                const auto col_index = colB.index();
+                const auto& bw = bweights[0];
+                double matel = 0;
+                for (size_t i = 0; i < bw.size(); ++i) {
+                    const double w = bw[i];
+                    matel += (*colB)[i][pressureVarIndex] * bw[i];
+                }
+                jacobian[welldof_ind][col_index] = matel;
         }
     }
 

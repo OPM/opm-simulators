@@ -232,7 +232,8 @@ namespace Opm {
             return cube;
         }
 
-
+        // explicite transpose of  dense matrix due to compilation problems
+        // used for caclulating quasiimpes well weights
         template <class DenseMatrix>
         DenseMatrix transposeDenseDynMatrix(const DenseMatrix& M)
         {
