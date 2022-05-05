@@ -225,47 +225,13 @@ public:
     // Add well contributions to matrix
     virtual void addWellContributions(SparseMatrixAdapter&) const = 0;
 
-    virtual bool isPressureControlled(const WellState& well_state) const
-    {
-        //return false;
-        bool thp_controlled_well = false;
-        bool bhp_controlled_well = false;
-        const auto& ws = well_state.well(this->index_of_well_);
-        if (this->isInjector()) {
-            const Well::InjectorCMode& current = ws.injection_cmode;
-            if (current == Well::InjectorCMode::THP) {
-                thp_controlled_well = true;
-            }
-            if (current == Well::InjectorCMode::BHP) {
-                bhp_controlled_well = true;
-            }
-        } else {
-            const Well::ProducerCMode& current = ws.production_cmode;
-            if (current == Well::ProducerCMode::THP) {
-                thp_controlled_well = true;
-            }
-            if (current == Well::ProducerCMode::BHP) {
-                bhp_controlled_well = true;
-            }
-        }
-        bool ispressureControlled =  (bhp_controlled_well || thp_controlled_well);
-        return ispressureControlled;
-    }
+    virtual bool isPressureControlled(const WellState& well_state) const;
     
-    
-    // virtual void addWellPressureEquationsStruct(PressureMatrix&) const
-    // {
-    //     THROW(std::logic_error, "Not implemented for this welltype ");
-    // }
-
     virtual void addWellPressureEquations(PressureMatrix& mat,
                                           const BVector& x,
                                           const int pressureVarIndex,
                                           const bool use_well_weights,
                                           const WellState& well_state) const = 0;
-//    {
-        //THROW(std::logic_error, "Not implemented for this welltype ");
-//    }
 
     void addCellRates(RateVector& rates, int cellIdx) const;
 

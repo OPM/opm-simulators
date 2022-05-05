@@ -182,8 +182,6 @@ namespace Opm
 
         virtual void addWellContributions(SparseMatrixAdapter& mat) const override;
 
-        // virtual void addWellPressureEquationsStruct(PressureMatrix& mat) const override;
-
         virtual void addWellPressureEquations(PressureMatrix& mat,
                                               const BVector& x,
                                               const int pressureVarIndex,
