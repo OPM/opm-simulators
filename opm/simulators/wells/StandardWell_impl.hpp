@@ -2181,10 +2181,10 @@ namespace Opm
         int nperf = 0;
         auto cell_weights = weights[0]*0.0;// not need for not(use_well_weights)
         assert(this->duneC_.M() == weights.size());
+        const int welldof_ind = this->duneC_.M() + this->index_of_well_;
         // do not assume anything about pressure controlled with use_well_weights (work fine with the assumtion also)
         if(not(this->isPressureControlled(well_state)) || use_well_weights){
-            // make coupling for reservoir to well
-            const int welldof_ind = this->duneC_.M() + this->index_of_well_;
+            // make coupling for reservoir to well            
             for (auto colC = this->duneC_[0].begin(), endC = this->duneC_[0].end(); colC != endC; ++colC) {
                 const auto row_ind = colC.index();
                 const auto& bw = weights[row_ind];
@@ -2261,11 +2261,11 @@ namespace Opm
                     matel += (*colB)[i][pressureVarIndex] * bw[i];
                 }
                 jacobian[welldof_ind][col_index] = matel;
+            }
         }
     }
 
-
-
+    
 
     template<typename TypeTag>
     typename StandardWell<TypeTag>::EvalWell

@@ -1292,14 +1292,6 @@ namespace Opm {
     }
 
     template<typename TypeTag>
-    const std::vector<WellInterfacePtr>&
-    BlackoilWellModel<TypeTag>::
-    localNonshutWells() const;
-    {
-                return well_container_;
-    }
-
-    template<typename TypeTag>
     int
     BlackoilWellModel<TypeTag>::
     numLocalNonshutWells() const
