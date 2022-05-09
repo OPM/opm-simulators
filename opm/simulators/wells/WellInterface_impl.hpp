@@ -531,7 +531,7 @@ namespace Opm
     }
 
     template<typename TypeTag>
-    void
+    bool
     WellInterface<TypeTag>::isPressureControlled(const WellState& well_state) const
     {
          bool thp_controlled_well = false;

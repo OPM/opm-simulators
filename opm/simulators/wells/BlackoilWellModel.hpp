@@ -302,9 +302,12 @@ namespace Opm {
             void initGliftEclWellMap(GLiftEclWells &ecl_well_map);
 
             /// \brief Get list of local nonshut wells
-            const std::vector<WellInterfacePtr>& localNonshutWells() const;
+            const std::vector<WellInterfacePtr>& localNonshutWells() const
+            {
+                return well_container_;
+            }
 
-            int  numLocalNonshutWells() const
+            int numLocalNonshutWells() const;
 
         protected:
             Simulator& ebosSimulator_;

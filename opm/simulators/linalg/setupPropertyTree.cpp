@@ -75,6 +75,14 @@ setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters 
         return setupCPR(conf, p);
     }
 
+    if ((conf == "cprw")) {      
+        if (!LinearSolverMaxIterSet) {
+            // Use our own default unless it was explicitly overridden by user.
+            p.linear_solver_maxiter_ = 20;
+        }      
+        return setupCPRW(conf, p);
+    }
+
     if (conf == "amg") {
         return setupAMG(conf, p);
     }
@@ -95,6 +103,56 @@ setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters 
               << " Please use ilu0, cpr, cpr_trueimpes, cpr_quasiimpes or isai");
 }
 
+PropertyTree
+setupCPRW(const std::string& conf, const FlowLinearSolverParameters& p)
+{
+    using namespace std::string_literals;
+    PropertyTree prm;
+    prm.put("maxiter", p.linear_solver_maxiter_);
+    prm.put("tol", p.linear_solver_reduction_);
+    prm.put("verbosity", p.linear_solver_verbosity_);
+    prm.put("solver", "bicgstab"s);
+    prm.put("preconditioner.type", "cprw"s);
+    if (conf == "cpr_quasiimpes") {
+        prm.put("preconditioner.weight_type", "quasiimpes"s);
+    } else {
+        prm.put("preconditioner.weight_type", "trueimpes"s);
+    }
+    prm.put("preconditioner.finesmoother.post_smooth",1);
+    prm.put("preconditioner.finesmoother.pre_smooth",1);
+    prm.put("preconditioner.finesmoother.use_well_weight", "false"s);
+    prm.put("preconditioner.finesmoother.add_wells", "true"s);
+    prm.put("preconditioner.finesmoother.type", "ParOverILU0"s);
+    prm.put("preconditioner.finesmoother.relaxation", 1.0);
+    prm.put("preconditioner.verbosity", 0);
+    prm.put("preconditioner.coarsesolver.maxiter", 1);
+    prm.put("preconditioner.coarsesolver.tol", 1e-1);
+    prm.put("preconditioner.coarsesolver.solver", "loopsolver"s);
+    prm.put("preconditioner.coarsesolver.verbosity", 0);
+    prm.put("preconditioner.coarsesolver.preconditioner.type", "amg"s);
+    prm.put("preconditioner.coarsesolver.preconditioner.alpha", 0.333333333333);
+    prm.put("preconditioner.coarsesolver.preconditioner.relaxation", 1.0);
+    prm.put("preconditioner.coarsesolver.preconditioner.iterations", p.cpr_max_ell_iter_);
+    prm.put("preconditioner.coarsesolver.preconditioner.coarsenTarget", 1200);
+    prm.put("preconditioner.coarsesolver.preconditioner.pre_smooth", 1);
+    prm.put("preconditioner.coarsesolver.preconditioner.post_smooth", 1);
+    prm.put("preconditioner.coarsesolver.preconditioner.beta", 0.0);
+    prm.put("preconditioner.coarsesolver.preconditioner.smoother", "ILU0"s);
+    prm.put("preconditioner.coarsesolver.preconditioner.verbosity", 0);
+    prm.put("preconditioner.coarsesolver.preconditioner.maxlevel", 15);
+    prm.put("preconditioner.coarsesolver.preconditioner.skip_isolated", 0);
+    // We request to accumulate data to 1 process always as our matrix
+    // graph might be unsymmetric and hence not supported by the PTScotch/ParMetis
+    // calls in DUNE. Accumulating to 1 skips PTScotch/ParMetis
+    prm.put("preconditioner.coarsesolver.preconditioner.accumulate", 1);
+    prm.put("preconditioner.coarsesolver.preconditioner.prolongationdamping", 1.0);
+    prm.put("preconditioner.coarsesolver.preconditioner.maxdistance", 2);
+    prm.put("preconditioner.coarsesolver.preconditioner.maxconnectivity", 15);
+    prm.put("preconditioner.coarsesolver.preconditioner.maxaggsize", 6);
+    prm.put("preconditioner.coarsesolver.preconditioner.minaggsize", 4);
+    return prm;
+}
+    
 PropertyTree
 setupCPR(const std::string& conf, const FlowLinearSolverParameters& p)
 {
