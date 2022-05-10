@@ -456,10 +456,10 @@ namespace Opm
                 // Recreate solver if the last solve used more than 10 iterations.
                 return false;
             }
-            if (this->parameters_.cpr_reuse_setup_ > 10) {
+            if (this->parameters_.cpr_reuse_setup_ == 4) {
                 const int newton_iteration = this->simulator_.model().newtonMethod().numIterations();
                 //bool create = newton_iteration == 0;
-                int step = this->parameters_.cpr_reuse_setup_ - 10;
+                int step = this->parameters_.cpr_reuse_interval_;
                 bool create = ((calls_%step) == 0);
                 return create;
             }
