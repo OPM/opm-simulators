@@ -1859,7 +1859,7 @@ private:
                 if (search != num_aqu_cells.end()) {
                     const auto* aqu_cell = num_aqu_cells.at(cartIx);
                     const double depth_change_num_aqu = aqu_cell->depth - cellCenterDepth_[elemIdx];
-                    cellCenterDepth_[elemIdx] += depth_change_num_aqu;
+                    cellCenterDepth_[elemIdx] = aqu_cell->depth;
                     cellZSpan_[elemIdx].first += depth_change_num_aqu;
                     cellZSpan_[elemIdx].second += depth_change_num_aqu;
                     cellZMinMax_[elemIdx].first += depth_change_num_aqu;
