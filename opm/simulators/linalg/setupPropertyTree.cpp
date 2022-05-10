@@ -113,6 +113,8 @@ setupCPRW(const std::string& conf, const FlowLinearSolverParameters& p)
     prm.put("verbosity", p.linear_solver_verbosity_);
     prm.put("solver", "bicgstab"s);
     prm.put("preconditioner.type", "cprw"s);
+    prm.put("preconditioner.use_well_weights", "false"s);
+    prm.put("preconditioner.add_wells", "true"s);
     if (conf == "cpr_quasiimpes") {
         prm.put("preconditioner.weight_type", "quasiimpes"s);
     } else {
@@ -120,8 +122,6 @@ setupCPRW(const std::string& conf, const FlowLinearSolverParameters& p)
     }
     prm.put("preconditioner.finesmoother.post_smooth",1);
     prm.put("preconditioner.finesmoother.pre_smooth",1);
-    prm.put("preconditioner.finesmoother.use_well_weight", "false"s);
-    prm.put("preconditioner.finesmoother.add_wells", "true"s);
     prm.put("preconditioner.finesmoother.type", "ParOverILU0"s);
     prm.put("preconditioner.finesmoother.relaxation", 1.0);
     prm.put("preconditioner.verbosity", 0);
