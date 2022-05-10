@@ -104,7 +104,7 @@ setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters 
 }
 
 PropertyTree
-setupCPRW(const std::string& conf, const FlowLinearSolverParameters& p)
+setupCPRW(const std::string& /*conf*/, const FlowLinearSolverParameters& p)
 {
     using namespace std::string_literals;
     PropertyTree prm;
@@ -115,11 +115,7 @@ setupCPRW(const std::string& conf, const FlowLinearSolverParameters& p)
     prm.put("preconditioner.type", "cprw"s);
     prm.put("preconditioner.use_well_weights", "false"s);
     prm.put("preconditioner.add_wells", "true"s);
-    if (conf == "cpr_quasiimpes") {
-        prm.put("preconditioner.weight_type", "quasiimpes"s);
-    } else {
-        prm.put("preconditioner.weight_type", "trueimpes"s);
-    }
+    prm.put("preconditioner.weight_type", "trueimpes"s);
     prm.put("preconditioner.finesmoother.post_smooth",1);
     prm.put("preconditioner.finesmoother.pre_smooth",1);
     prm.put("preconditioner.finesmoother.type", "ParOverILU0"s);

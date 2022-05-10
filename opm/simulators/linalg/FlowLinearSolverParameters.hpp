@@ -113,6 +113,12 @@ template<class TypeTag, class MyTypeTag>
 struct CprReuseSetup {
     using type = UndefinedProperty;
 };
+
+template<class TypeTag, class MyTypeTag>
+struct CprReuseInterval {
+    using type = UndefinedProperty;
+};
+    
 template<class TypeTag, class MyTypeTag>
 struct Linsolver {
     using type = UndefinedProperty;
@@ -212,6 +218,12 @@ template<class TypeTag>
 struct CprReuseSetup<TypeTag, TTag::FlowIstlSolverParams> {
     static constexpr int value = 3;
 };
+
+template<class TypeTag>
+struct CprReuseInterval<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr int value = 10;
+};
+    
 template<class TypeTag>
 struct Linsolver<TypeTag, TTag::FlowIstlSolverParams> {
     static constexpr auto value = "ilu0";
@@ -265,6 +277,7 @@ namespace Opm
         int opencl_platform_id_;
         int cpr_max_ell_iter_ = 20;
         int cpr_reuse_setup_ = 0;
+        int cpr_reuse_interval_ = 10;
         std::string opencl_ilu_reorder_;
         std::string fpga_bitstream_;
 
@@ -287,6 +300,7 @@ namespace Opm
             scale_linear_system_ = EWOMS_GET_PARAM(TypeTag, bool, ScaleLinearSystem);
             cpr_max_ell_iter_  =  EWOMS_GET_PARAM(TypeTag, int, CprMaxEllIter);
             cpr_reuse_setup_  =  EWOMS_GET_PARAM(TypeTag, int, CprReuseSetup);
+            cpr_reuse_interval_  =  EWOMS_GET_PARAM(TypeTag, int, CprReuseInterval);
             linsolver_ = EWOMS_GET_PARAM(TypeTag, std::string, Linsolver);
             accelerator_mode_ = EWOMS_GET_PARAM(TypeTag, std::string, AcceleratorMode);
             bda_device_id_ = EWOMS_GET_PARAM(TypeTag, int, BdaDeviceId);
@@ -312,7 +326,8 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, bool, LinearSolverIgnoreConvergenceFailure, "Continue with the simulation like nothing happened after the linear solver did not converge");
             EWOMS_REGISTER_PARAM(TypeTag, bool, ScaleLinearSystem, "Scale linear system according to equation scale and primary variable types");
             EWOMS_REGISTER_PARAM(TypeTag, int, CprMaxEllIter, "MaxIterations of the elliptic pressure part of the cpr solver");
-            EWOMS_REGISTER_PARAM(TypeTag, int, CprReuseSetup, "Reuse preconditioner setup. Valid options are 0: recreate the preconditioner for every linear solve, 1: recreate once every timestep, 2: recreate if last linear solve took more than 10 iterations, 3: never recreate");
+            EWOMS_REGISTER_PARAM(TypeTag, int, CprReuseSetup, "Reuse preconditioner setup. Valid options are 0: recreate the preconditioner for every linear solve, 1: recreate once every timestep, 2: recreate if last linear solve took more than 10 iterations, 3: never recreate, 4: recreated wevery CprReuseInterval");
+            EWOMS_REGISTER_PARAM(TypeTag, int, CprReuseInterval, "Reuse preconditioner interval. used with CprReuseSetup 4");
             EWOMS_REGISTER_PARAM(TypeTag, std::string, Linsolver, "Configuration of solver. Valid options are: ilu0 (default), cpr (an alias for cpr_trueimpes), cpr_quasiimpes, cpr_trueimpes or amg. Alternatively, you can request a configuration to be read from a JSON file by giving the filename here, ending with '.json.'");
             EWOMS_REGISTER_PARAM(TypeTag, std::string, AcceleratorMode, "Use GPU (cusparseSolver or openclSolver) or FPGA (fpgaSolver) as the linear solver, usage: '--accelerator-mode=[none|cusparse|opencl|fpga|amgcl]'");
             EWOMS_REGISTER_PARAM(TypeTag, int, BdaDeviceId, "Choose device ID for cusparseSolver or openclSolver, use 'nvidia-smi' or 'clinfo' to determine valid IDs");
