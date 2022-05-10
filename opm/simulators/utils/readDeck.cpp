@@ -548,7 +548,7 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
 
     if (! parseSuccess) {
         if (comm.rank() == 0) {
-            OpmLog::error("Unrecoverable errors were encountered while loading input");
+            OpmLog::error(fmt::format("Unrecoverable errors while loading input: {}", failureMessage));
         }
 
 #if HAVE_MPI
