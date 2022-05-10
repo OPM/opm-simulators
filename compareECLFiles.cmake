@@ -1479,7 +1479,7 @@ if(MPI_FOUND)
   add_test_compare_parallel_simulation(CASENAME numerical_aquifer_3d_2aqu
                                        FILENAME 3D_2AQU_NUM
                                        SIMULATOR flow
-                                       ABS_TOL 0.12
+                                       ABS_TOL 0.17
                                        REL_TOL ${coarse_rel_tol_parallel}
                                        DIR aquifer-num
                                        TEST_ARGS --tolerance-cnv=0.00003 --time-step-control=pid --linsolver=cpr)
