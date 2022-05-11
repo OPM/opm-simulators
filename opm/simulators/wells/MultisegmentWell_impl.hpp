@@ -71,6 +71,10 @@ namespace Opm
         if constexpr (Base::has_brine) {
             OPM_THROW(std::runtime_error, "brine is not supported by multisegment well yet");
         }
+
+        if constexpr (Base::has_watVapor) {
+            OPM_THROW(std::runtime_error, "water evaporation is not supported by multisegment well yet");
+        }
     }
 
 
