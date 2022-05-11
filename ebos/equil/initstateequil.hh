@@ -1862,8 +1862,8 @@ private:
                     cellCenterDepth_[elemIdx] = aqu_cell->depth;
                     cellZSpan_[elemIdx].first += depth_change_num_aqu;
                     cellZSpan_[elemIdx].second += depth_change_num_aqu;
-                    cellZMinMax_[elemIdx].first += depth_change_num_aqu;
-                    cellZMinMax_[elemIdx].second += depth_change_num_aqu;
+                    /* cellZMinMax_[elemIdx].first += depth_change_num_aqu;
+                    cellZMinMax_[elemIdx].second += depth_change_num_aqu; */
                 }
             }
         }
