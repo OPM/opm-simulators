@@ -565,9 +565,9 @@ bisectBracket(const std::function<double(const double)>& eq,
             }
         } else { // eq_low * eq_high > 0.0
             // Still failed bracketing!
-            const double limit = 3.0 * unit::barsa;
+            const double limit = 0.1 * unit::barsa;
             if (std::min(abs_low, abs_high) < limit) {
-                // Return the least bad solution if less off than 3 bar.
+                // Return the least bad solution if less off than 0.1 bar.
                 deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE_BRACKETING_FAILURE",
                                         "Robust bhp(thp) not solved precisely for well " + this->name());
                 approximate_solution = abs_low < abs_high ? low : high;

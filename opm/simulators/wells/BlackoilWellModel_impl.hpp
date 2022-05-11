@@ -669,7 +669,6 @@ namespace Opm {
                     case Well::ProducerCMode::RESV:
                         zero_rate_control = is_zero(prod_controls.resv_rate);
                         break;
-
                     default:
                         // Might still have zero rate controls, but is pressure controlled.
                         zero_rate_control = false;
@@ -1223,8 +1222,13 @@ namespace Opm {
         ConvergenceReport local_report;
         const int iterationIdx = ebosSimulator_.model().newtonMethod().numIterations();
         for (const auto& well : well_container_) {
-            if (well->isOperableAndSolvable() ) {
+            if (well->isOperableAndSolvable() || well->wellIsStopped()) {
                 local_report += well->getWellConvergence(this->wellState(), B_avg, local_deferredLogger, iterationIdx > param_.strict_outer_iter_wells_ );
+            } else {
+                ConvergenceReport report;
+                using CR = ConvergenceReport;
+                report.setWellFailed({CR::WellFailure::Type::Unsolvable, CR::Severity::Normal, -1, well->name()});
+                local_report += report;
             }
         }
         
@@ -1488,6 +1492,8 @@ namespace Opm {
             auto& events = this->wellState().well(well->indexOfWell()).events;
             if (events.hasEvent(WellState::event_mask)) {
                 well->updateWellStateWithTarget(ebosSimulator_, this->groupState(), this->wellState(), deferred_logger);
+                well->updatePrimaryVariables(this->wellState(), deferred_logger);
+                well->initPrimaryVariablesEvaluation();
                 // There is no new well control change input within a report step,
                 // so next time step, the well does not consider to have effective events anymore.
                 events.clearEvent(WellState::event_mask);

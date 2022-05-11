@@ -173,10 +173,10 @@ protected:
     void updateUpwindingSegments();
 
     // updating the well_state based on well solution dwells
-    void updateWellState(const BVectorWell& dwells,
-                         const double relaxation_factor,
-                         const double DFLimit,
-                         const double max_pressure_change) const;
+    void updatePrimaryVariablesNewton(const BVectorWell& dwells,
+                                      const double relaxation_factor,
+                                      const double DFLimit,
+                                      const double max_pressure_change) const;
 
     void computeSegmentFluidProperties(const EvalWell& temperature,
                                        const EvalWell& saltConcentration,
@@ -199,8 +199,9 @@ protected:
     EvalWell getWQTotal() const;
 
 
-    std::vector<Scalar> getWellResiduals(const std::vector<Scalar>& B_avg,
-                                         DeferredLogger& deferred_logger) const;
+    std::pair<bool, std::vector<Scalar> >
+    getFiniteWellResiduals(const std::vector<Scalar>& B_avg,
+                           DeferredLogger& deferred_logger) const;
 
     double getControlTolerance(const WellState& well_state,
                                const double tolerance_wells,

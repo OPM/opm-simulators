@@ -332,6 +332,9 @@ namespace Opm
                 return;
             }
 
+            if (this->isProducer()) {
+                gliftBeginTimeStepWellTestUpdateALQ(simulator, well_state_copy, deferred_logger);
+            }
             updateWellOperability(simulator, well_state_copy, deferred_logger);
             if ( !this->isOperableAndSolvable() ) {
                 const auto msg = fmt::format("WTEST: Well {} is not operable (physical)", this->name());
@@ -446,7 +449,7 @@ namespace Opm
                       const GroupState& group_state,
                       DeferredLogger& deferred_logger)
     {
-        if (!this->isOperableAndSolvable())
+        if (!this->isOperableAndSolvable() && !this->wellIsStopped())
             return;
 
         // keep a copy of the original well state
@@ -507,6 +510,7 @@ namespace Opm
         }
         this->changed_to_open_this_step_ = false;
         const bool well_operable = this->operability_status_.isOperableAndSolvable();
+
         if (!well_operable && old_well_operable) {
             if (this->well_ecl_.getAutomaticShutIn()) {
                 deferred_logger.info(" well " + this->name() + " gets SHUT during iteration ");
@@ -536,6 +540,9 @@ namespace Opm
     void
     WellInterface<TypeTag>::addCellRates(RateVector& rates, int cellIdx) const
     {
+        if(!this->isOperableAndSolvable() && !this->wellIsStopped())
+            return;
+
         for (int perfIdx = 0; perfIdx < this->number_of_perforations_; ++perfIdx) {
             if (this->cells()[perfIdx] == cellIdx) {
                 for (int i = 0; i < RateVector::dimension; ++i) {
@@ -582,7 +589,49 @@ namespace Opm
         updateWellOperability(ebos_simulator, well_state, deferred_logger);
     }
 
-
+    template<typename TypeTag>
+    void
+    WellInterface<TypeTag>::
+    gliftBeginTimeStepWellTestUpdateALQ(const Simulator& ebos_simulator,
+                          WellState& well_state,
+                          DeferredLogger& deferred_logger)
+    {
+        const auto& summary_state = ebos_simulator.vanguard().summaryState();
+        const auto& well_name = this->name();
+        if (!this->wellHasTHPConstraints(summary_state)) {
+            const std::string msg = fmt::format("GLIFT WTEST: Well {} does not have THP constraints", well_name);
+            deferred_logger.info(msg);
+            return;
+        }
+        const auto& well_ecl = this->wellEcl();
+        const auto& schedule = ebos_simulator.vanguard().schedule();
+        auto report_step_idx = ebos_simulator.episodeIndex();
+        const auto& glo = schedule.glo(report_step_idx);
+        if (!glo.has_well(well_name)) {
+            const std::string msg = fmt::format(
+                "GLIFT WTEST: Well {} : Gas Lift not activated: "
+                "WLIFTOPT is probably missing. Skipping.", well_name);
+            deferred_logger.info(msg);
+            return;
+        }
+        const auto& gl_well = glo.well(well_name);
+        auto& max_alq_optional = gl_well.max_rate();
+        double max_alq;
+        if (max_alq_optional) {
+            max_alq = *max_alq_optional;
+        }
+        else {
+            const auto& controls = well_ecl.productionControls(summary_state);
+            const auto& table = this->vfpProperties()->getProd()->getTable(controls.vfp_table_number);
+            const auto& alq_values = table.getALQAxis();
+            max_alq = alq_values.back();
+        }
+        well_state.setALQ(well_name, max_alq);
+        const std::string msg = fmt::format(
+            "GLIFT WTEST: Well {} : Setting ALQ to max value: {}",
+            well_name, max_alq);
+        deferred_logger.info(msg);
+    }
 
     template<typename TypeTag>
     void
@@ -933,6 +982,9 @@ namespace Opm
                     for (int p = 0; p<np; ++p) {
                         ws.surface_rates[p] *= scale;
                     }
+                    ws.trivial_target = false;
+                } else {
+                    ws.trivial_target = true;
                 }
                 break;
             }
@@ -1004,8 +1056,9 @@ namespace Opm
         // if more than one nonzero rate.
         auto& ws = well_state.well(this->index_of_well_);
         int nonzero_rate_index = -1;
+        const double floating_point_error_epsilon = 1e-14;
         for (int p = 0; p < this->number_of_phases_; ++p) {
-            if (ws.surface_rates[p] != 0.0) {
+            if (std::abs(ws.surface_rates[p]) > floating_point_error_epsilon) {
                 if (nonzero_rate_index == -1) {
                     nonzero_rate_index = p;
                 } else {

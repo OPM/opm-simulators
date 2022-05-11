@@ -363,21 +363,19 @@ add_test_compareECLFiles(CASENAME spe1_metric_vfp1
                          REL_TOL ${rel_tol}
                          DIR vfpprod_spe1)
 
-if(BUILD_FLOW_VARIANTS)
-  add_test_compareECLFiles(CASENAME spe1_water
-                           FILENAME SPE1CASE1_WATER
-                           SIMULATOR flow_onephase
-                           ABS_TOL ${abs_tol}
-                           REL_TOL ${rel_tol}
-                           DIR spe1)
+add_test_compareECLFiles(CASENAME spe1_water
+                         FILENAME SPE1CASE1_WATER
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR spe1)
 
-  add_test_compareECLFiles(CASENAME spe1_thermal_onephase
-                           FILENAME SPE1CASE2_THERMAL_ONEPHASE
-                           SIMULATOR flow_onephase_energy
-                           ABS_TOL ${abs_tol}
-                           REL_TOL ${rel_tol}
-                           DIR spe1)
-endif()
+add_test_compareECLFiles(CASENAME spe1_thermal_onephase
+                         FILENAME SPE1CASE2_THERMAL_ONEPHASE
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR spe1)
 
 add_test_compareECLFiles(CASENAME spe1_spider
                            FILENAME SPIDER_CAKESLICE
@@ -1431,10 +1429,9 @@ if(MPI_FOUND)
                                        DIR spe1
                                        TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
 
-if(BUILD_FLOW_VARIANTS)
   add_test_compare_parallel_simulation(CASENAME spe1_thermal
                                        FILENAME SPE1CASE2_THERMAL_ONEPHASE
-                                       SIMULATOR flow_onephase_energy
+                                       SIMULATOR flow
                                        ABS_TOL ${abs_tol}
                                        REL_TOL ${rel_tol}
                                        DIR spe1
@@ -1442,12 +1439,11 @@ if(BUILD_FLOW_VARIANTS)
 
   add_test_compare_parallel_simulation(CASENAME spe1_water
                                        FILENAME SPE1CASE1_WATER
-                                       SIMULATOR flow_onephase
+                                       SIMULATOR flow
                                        ABS_TOL ${abs_tol}
                                        REL_TOL ${rel_tol}
                                        DIR spe1
                                        TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
-endif()
 
   add_test_compare_parallel_simulation(CASENAME spe1_brine
                                        FILENAME SPE1CASE1_BRINE

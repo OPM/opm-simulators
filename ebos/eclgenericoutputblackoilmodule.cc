@@ -681,6 +681,8 @@ assignToSolution(data::Solution& sol)
         {"PPCW",     UnitSystem::measure::pressure,  data::TargetType::RESTART_SOLUTION,      ppcw_},
         {"PRESROCC", UnitSystem::measure::pressure,  data::TargetType::RESTART_SOLUTION,      minimumOilPressure_},
         {"PRESSURE", UnitSystem::measure::pressure,  data::TargetType::RESTART_SOLUTION,      oilPressure_},
+        {"PCOW",     UnitSystem::measure::pressure,  data::TargetType::RESTART_SOLUTION,      pcow_},
+        {"PCOG",     UnitSystem::measure::pressure,  data::TargetType::RESTART_SOLUTION,      pcog_},
         {"PRES_OVB", UnitSystem::measure::pressure,  data::TargetType::RESTART_SOLUTION,      overburdenPressure_},
         {"RS",       UnitSystem::measure::gas_oil_ratio, data::TargetType::RESTART_SOLUTION,  rs_},
         {"RSSAT",    UnitSystem::measure::gas_oil_ratio, data::TargetType::RESTART_AUXILIARY, gasDissolutionFactor_},
@@ -1092,6 +1094,15 @@ doAllocBuffers(unsigned bufferSize,
     if (FluidSystem::phaseIsActive(gasPhaseIdx) && rstKeywords["KRG"] > 0) {
         rstKeywords["KRG"] = 0;
         relativePermeability_[gasPhaseIdx].resize(bufferSize, 0.0);
+    }
+
+    if (FluidSystem::phaseIsActive(oilPhaseIdx) && FluidSystem::phaseIsActive(waterPhaseIdx) && rstKeywords["PCOW"] > 0) {
+        rstKeywords["PCOW"] = 0;
+        pcow_.resize(bufferSize, 0.0);
+    }
+    if (FluidSystem::phaseIsActive(oilPhaseIdx) && FluidSystem::phaseIsActive(gasPhaseIdx) && rstKeywords["PCOG"] > 0) {
+        rstKeywords["PCOG"] = 0;
+        pcog_.resize(bufferSize, 0.0);
     }
 
     if (rstKeywords["PBPD"] > 0)  {

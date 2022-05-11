@@ -17,6 +17,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <config.h>
 #include <opm/simulators/wells/SingleWellState.hpp>
 #include <opm/simulators/wells/PerforationData.hpp>
 
@@ -39,6 +40,7 @@ SingleWellState::SingleWellState(const std::string& name_,
     , surface_rates(pu_.num_phases)
     , reservoir_rates(pu_.num_phases)
     , perf_data(perf_input.size(), pressure_first_connection, !is_producer, pu_.num_phases)
+    , trivial_target(false)
 {
     for (std::size_t perf = 0; perf < perf_input.size(); perf++) {
         this->perf_data.cell_index[perf] = perf_input[perf].cell_index;

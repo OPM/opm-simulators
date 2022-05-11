@@ -383,10 +383,10 @@ processFractions(const int seg) const
 template<typename FluidSystem, typename Indices, typename Scalar>
 void
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
-updateWellState(const BVectorWell& dwells,
-                const double relaxation_factor,
-                const double dFLimit,
-                const double max_pressure_change) const
+updatePrimaryVariablesNewton(const BVectorWell& dwells,
+                             const double relaxation_factor,
+                             const double dFLimit,
+                             const double max_pressure_change) const
 {
     const std::vector<std::array<double, numWellEq> > old_primary_variables = primary_variables_;
 
@@ -1622,10 +1622,10 @@ assemblePressureEq(const int seg,
 }
 
 template<typename FluidSystem, typename Indices, typename Scalar>
-std::vector<Scalar>
+std::pair<bool, std::vector<Scalar> >
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
-getWellResiduals(const std::vector<Scalar>& B_avg,
-                 DeferredLogger& deferred_logger) const
+getFiniteWellResiduals(const std::vector<Scalar>& B_avg,
+                       DeferredLogger& deferred_logger) const
 {
     assert(int(B_avg.size() ) == baseif_.numComponents());
     std::vector<Scalar> residuals(numWellEq + 1, 0.0);
@@ -1641,8 +1641,9 @@ getWellResiduals(const std::vector<Scalar>& B_avg,
                 }
             }
             if (std::isnan(residual) || std::isinf(residual)) {
-                OPM_DEFLOG_THROW(NumericalIssue, "nan or inf value for residal get for well " << baseif_.name()
-                                                << " segment " << seg << " eq_idx " << eq_idx, deferred_logger);
+                deferred_logger.debug("nan or inf value for residal get for well " + baseif_.name()
+                                      + " segment " + std::to_string(seg) + " eq_idx " + std::to_string(eq_idx));
+                return {false, residuals};
             }
 
             if (residual > residuals[eq_idx]) {
@@ -1655,12 +1656,13 @@ getWellResiduals(const std::vector<Scalar>& B_avg,
     {
         const double control_residual = std::abs(resWell_[0][numWellEq - 1]);
         if (std::isnan(control_residual) || std::isinf(control_residual)) {
-           OPM_DEFLOG_THROW(NumericalIssue, "nan or inf value for control residal get for well " << baseif_.name(), deferred_logger);
+           deferred_logger.debug("nan or inf value for control residal get for well " + baseif_.name());
+           return {false, residuals};
         }
         residuals[numWellEq] = control_residual;
     }
 
-    return residuals;
+    return {true, residuals};
 }
 
 template<typename FluidSystem, typename Indices, typename Scalar>

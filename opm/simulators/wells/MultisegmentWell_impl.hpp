@@ -49,6 +49,7 @@ namespace Opm
                      const std::vector<PerforationData>& perf_data)
     : Base(well, pw_info, time_step, param, rate_converter, pvtRegionIdx, num_components, num_phases, index_of_well, perf_data)
     , MSWEval(static_cast<WellInterfaceIndices<FluidSystem,Indices,Scalar>&>(*this))
+    , regularize_(false)
     , segment_fluid_initial_(this->numberOfSegments(), std::vector<double>(this->num_components_, 0.0))
     {
         // not handling solvent or polymer for now with multisegment well
@@ -316,11 +317,11 @@ namespace Opm
             well_potentials[phase] *= sign;
             total_potential += well_potentials[phase];
         }
-        if (total_potential < 0.0) {
+        if (total_potential < 0.0 && this->param_.check_well_operability_) {
             // wells with negative potentials are not operable
             this->operability_status_.has_negative_potentials = true;
             const std::string msg = std::string("well ") + this->name() + std::string(": has non negative potentials is not operable");
-            deferred_logger.info(msg);
+            deferred_logger.warning("NEGATIVE_POTENTIALS_INOPERABLE", msg);
         }
     }
 
@@ -611,10 +612,10 @@ namespace Opm
 
         const double dFLimit = this->param_.dwell_fraction_max_;
         const double max_pressure_change = this->param_.max_pressure_change_ms_wells_;
-        this->MSWEval::updateWellState(dwells,
-                                       relaxation_factor,
-                                       dFLimit,
-                                       max_pressure_change);
+        this->MSWEval::updatePrimaryVariablesNewton(dwells,
+                                                    relaxation_factor,
+                                                    dFLimit,
+                                                    max_pressure_change);
 
         this->updateWellStateFromPrimaryVariables(well_state, getRefDensity(), deferred_logger);
         Base::calculateReservoirRates(well_state.well(this->index_of_well_));
@@ -1373,7 +1374,14 @@ namespace Opm
 
         const int max_iter_number = this->param_.max_inner_iter_ms_wells_;
         const WellState well_state0 = well_state;
-        const std::vector<Scalar> residuals0 = this->getWellResiduals(Base::B_avg_, deferred_logger);
+
+        {
+            // getWellFiniteResiduals returns false for nan/inf residuals
+            const auto& [isFinite, residuals] = this->getFiniteWellResiduals(Base::B_avg_, deferred_logger);
+            if(!isFinite)
+                return false;
+        }
+
         std::vector<std::vector<Scalar> > residual_history;
         std::vector<double> measure_history;
         int it = 0;
@@ -1383,14 +1391,17 @@ namespace Opm
         bool converged = false;
         int stagnate_count = 0;
         bool relax_convergence = false;
+        this->regularize_ = false;
         for (; it < max_iter_number; ++it, ++debug_cost_counter_) {
 
             assembleWellEqWithoutIteration(ebosSimulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
 
             const BVectorWell dx_well = mswellhelpers::applyUMFPack(this->duneD_, this->duneDSolver_, this->resWell_);
 
-            if (it > this->param_.strict_inner_iter_wells_)
+            if (it > this->param_.strict_inner_iter_wells_) {
                 relax_convergence = true;
+                this->regularize_ = true;
+            }
 
             const auto report = getWellConvergence(well_state, Base::B_avg_, deferred_logger, relax_convergence);
             if (report.converged()) {
@@ -1398,12 +1409,20 @@ namespace Opm
                 break;
             }
 
-            residual_history.push_back(this->getWellResiduals(Base::B_avg_, deferred_logger));
-            measure_history.push_back(this->getResidualMeasureValue(well_state,
+            {
+                // getFinteWellResiduals returns false for nan/inf residuals
+                const auto& [isFinite, residuals] = this->getFiniteWellResiduals(Base::B_avg_, deferred_logger);
+                if (!isFinite)
+                    return false;
+
+                residual_history.push_back(residuals);
+                measure_history.push_back(this->getResidualMeasureValue(well_state,
                                                                     residual_history[it],
                                                                     this->param_.tolerance_wells_,
                                                                     this->param_.tolerance_pressure_ms_wells_,
                                                                     deferred_logger) );
+            }
+
 
             bool is_oscillate = false;
             bool is_stagnate = false;
@@ -1443,6 +1462,8 @@ namespace Opm
                     sstr << " well " << this->name() << " observes oscillation in inner iteration " << it << "\n";
                 }
                 sstr << " relaxation_factor is " << relaxation_factor << " now\n";
+
+                this->regularize_ = true;
                 deferred_logger.debug(sstr.str());
             }
             updateWellState(dx_well, well_state, deferred_logger, relaxation_factor);
@@ -1533,7 +1554,7 @@ namespace Opm
                 // Add a regularization_factor to increase the accumulation term
                 // This will make the system less stiff and help convergence for
                 // difficult cases
-                const Scalar regularization_factor =  this->param_.regularization_factor_ms_wells_;
+                const Scalar regularization_factor =  this->regularize_? this->param_.regularization_factor_ms_wells_ : 1.0;
                 // for each component
                 for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
                     const EvalWell accumulation_term = regularization_factor * (segment_surface_volume * this->surfaceVolumeFraction(seg, comp_idx)

@@ -36,6 +36,8 @@
 #include <flow/flow_ebos_brine_saltprecipitation.hpp>
 #include <flow/flow_ebos_gaswater_saltprec_vapwat.hpp>
 #include <flow/flow_ebos_brine_precsalt_vapwat.hpp>
+#include <flow/flow_ebos_onephase.hpp>
+#include <flow/flow_ebos_onephase_energy.hpp>
 #include <flow/flow_ebos_oilwater_brine.hpp>
 #include <flow/flow_ebos_gaswater_brine.hpp>
 #include <flow/flow_ebos_energy.hpp>
@@ -289,6 +291,16 @@ private:
         // Single-phase case
         if (rspec.micp()) {
             return this->runMICP(phases);
+        }
+
+        // water-only case
+        else if(phases.size() == 1 && phases.active(Phase::WATER) && !eclipseState_->getSimulationConfig().isThermal()) {
+            return this->runWaterOnly(phases);
+        }
+
+        // water-only case with energy
+        else if(phases.size() == 2 && phases.active(Phase::WATER) && eclipseState_->getSimulationConfig().isThermal()) {
+            return this->runWaterOnlyEnergy(phases);
         }
 
         // Twophase cases
@@ -651,6 +663,36 @@ private:
             setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
 
         return flowEbosFoamMain(argc_, argv_, outputCout_, outputFiles_);
+    }
+
+    int runWaterOnly(const Phases& phases)
+    {
+        if (!phases.active(Phase::WATER) || phases.size() != 1) {
+            if (outputCout_)
+                std::cerr << "No valid configuration is found for water-only simulation, valid options include "
+                          << "water, water + thermal" << std::endl;
+
+            return EXIT_FAILURE;
+        }
+        flowEbosWaterOnlySetDeck(
+            setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
+
+        return flowEbosWaterOnlyMain(argc_, argv_, outputCout_, outputFiles_);
+    }
+    
+    int runWaterOnlyEnergy(const Phases& phases)
+    {
+        if (!phases.active(Phase::WATER) || phases.size() != 2) {
+            if (outputCout_)
+                std::cerr << "No valid configuration is found for water-only simulation, valid options include "
+                          << "water, water + thermal" << std::endl;
+
+            return EXIT_FAILURE;
+        }
+        flowEbosWaterOnlyEnergySetDeck(
+            setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
+
+        return flowEbosWaterOnlyEnergyMain(argc_, argv_, outputCout_, outputFiles_);
     }
 
     int runBrine(const Phases& phases)

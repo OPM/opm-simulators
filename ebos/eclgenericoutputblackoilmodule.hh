@@ -450,6 +450,8 @@ protected:
     ScalarBuffer cUrea_;
     ScalarBuffer cBiofilm_;
     ScalarBuffer cCalcite_;
+    ScalarBuffer pcow_;
+    ScalarBuffer pcog_;
 
     std::array<ScalarBuffer, numPhases> saturation_;
     std::array<ScalarBuffer, numPhases> invB_;
