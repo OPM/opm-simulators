@@ -25,10 +25,38 @@ option(BUILD_FLOW_VARIANTS "Build the variants for flow by default?" OFF)
 option(BUILD_FLOW_POLY_GRID "Build flow blackoil with polyhedral grid" OFF)
 option(OPM_ENABLE_PYTHON "Enable python bindings?" OFF)
 option(OPM_ENABLE_PYTHON_TESTS "Enable tests for the python bindings?" ON)
+option(OPM_INSTALL_PYTHON "Install python bindings?" ON)
 option(ENABLE_FPGA "Enable FPGA kernels integration?" OFF)
 option(USE_CHOW_PATEL_ILU "Use the iterative ILU by Chow and Patel?" OFF)
 option(USE_CHOW_PATEL_ILU_GPU "Run iterative ILU decomposition on GPU? Requires USE_CHOW_PATEL_ILU" OFF)
 option(USE_CHOW_PATEL_ILU_GPU_PARALLEL "Try to use more parallelism on the GPU during the iterative ILU decomposition? Requires USE_CHOW_PATEL_ILU_GPU" OFF)
+
+# The following was copied from CMakeLists.txt in opm-common.
+# TODO: factor out the common parts in opm-common and opm-simulator as a cmake module
+if (OPM_ENABLE_PYTHON)
+  # We need to be compatible with older CMake versions
+  # that do not offer FindPython3
+  # e.g. Ubuntu LTS 18.04 uses cmake 3.10
+  if(${CMAKE_VERSION} VERSION_LESS "3.12.0")
+    find_package(PythonInterp REQUIRED)
+    if(PYTHON_VERSION_MAJOR LESS 3)
+      message(SEND_ERROR "OPM requires version 3 of Python but only version ${PYTHON_VERSION_STRING} was found")
+    endif()
+    set(Python3_EXECUTABLE ${PYTHON_EXECUTABLE})
+    set(Python3_LIBRARIES ${PYTHON_LIBRARIES})
+  else()
+    # Be backwards compatible.
+    if(PYTHON_EXECUTABLE AND NOT Python3_EXECUTABLE)
+      set(Python3_EXECUTABLE ${PYTHON_EXECUTABLE})
+    endif()
+    find_package(Python3 REQUIRED COMPONENTS Interpreter)
+  endif()
+
+  # Compatibility settings for PythonInterp and PythonLibs
+  # used e.g. in FindCwrap, pybind11
+  set(PYTHON_EXECUTABLE ${Python3_EXECUTABLE})
+endif()
+
 
 if(SIBLING_SEARCH AND NOT opm-common_DIR)
   # guess the sibling dir

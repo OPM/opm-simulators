@@ -39,17 +39,6 @@ if (PYTHON_SITE_PACKAGES_PATH MATCHES ".*/dist-packages/?" AND
 else()
   set(PYTHON_PACKAGE_PATH "site-packages")
 endif()
-set(PYTHON_INSTALL_PREFIX "lib/python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}/${PYTHON_PACKAGE_PATH}" CACHE STRING "Subdirectory to install Python modules in")
-
-install(TARGETS simulators DESTINATION ${DEST_PREFIX}${CMAKE_INSTALL_PREFIX}/${PYTHON_INSTALL_PREFIX}/opm)
-
-file( COPY ${PROJECT_SOURCE_DIR}/python/test
-      DESTINATION ${PROJECT_BINARY_DIR}/python)
-file( COPY ${PROJECT_SOURCE_DIR}/python/test_data
-      DESTINATION ${PROJECT_BINARY_DIR}/python)
-file( MAKE_DIRECTORY ${PYTHON_OPM_SIMULATORS_PACKAGE_PATH} )
-file( COPY ${PROJECT_SOURCE_DIR}/python/simulators/__init__.py
-      DESTINATION ${PYTHON_OPM_SIMULATORS_PACKAGE_PATH})
 
 if(OPM_ENABLE_PYTHON_TESTS)
   if(Python3_EXECUTABLE AND NOT PYTHON_EXECUTABLE)
@@ -70,4 +59,23 @@ if(OPM_ENABLE_PYTHON_TESTS)
       COMMAND ${CMAKE_COMMAND}
       -E env PYTHONPATH=${PYTHON_PATH} ${PYTHON_EXECUTABLE}
       -m unittest test/test_schedule.py)
+endif()
+
+# NOTE: instead of using file( COPY ...) which copies the files at configure time (not at build time)
+#  we should add copying of the files at build time such that running "make" or "make all" will
+#  update the files if they have been modified. We use the install.py script in opm-common, see also
+#  CMakeLists.txt in opm-common
+add_custom_target(copy_python ALL
+    COMMAND ${PYTHON_EXECUTABLE} ${opm-common_DIR}/python/install.py
+      ${PROJECT_SOURCE_DIR}/python ${PROJECT_BINARY_DIR} 0)
+
+# Since the installation of Python code is nonstandard it is protected by an
+# extra cmake switch, OPM_INSTALL_PYTHON. If you prefer you can still invoke
+# setup.py install manually - optionally with the generated script
+# setup-install.sh - and completely bypass cmake in the installation phase.
+if (OPM_INSTALL_PYTHON)
+  set(PYTHON_INSTALL_PREFIX "lib/python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}/${PYTHON_PACKAGE_PATH}" CACHE STRING "Subdirectory to install Python modules in")
+  install(TARGETS simulators DESTINATION ${DEST_PREFIX}${CMAKE_INSTALL_PREFIX}/${PYTHON_INSTALL_PREFIX}/opm)
+  include(PyInstallPrefix)  # from opm-common
+  install( CODE "execute_process(COMMAND ${PYTHON_EXECUTABLE} ${opm-common_DIR}/python/install.py ${PROJECT_BINARY_DIR}/python/opm2 ${DEST_PREFIX}${CMAKE_INSTALL_PREFIX}/${PYTHON_INSTALL_PREFIX} 1)")
 endif()
