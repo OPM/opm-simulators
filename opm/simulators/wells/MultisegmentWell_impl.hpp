@@ -748,7 +748,7 @@ namespace Opm
     addWellPressureEquations(PressureMatrix& jacobian,
                              const BVector& weights,
                              const int pressureVarIndex,
-                             const bool use_well_weights,
+                             const bool /*use_well_weights*/,
                              const WellState& well_state) const
     {
         // Add the pressure contribution to the cpr system for the well
@@ -763,7 +763,7 @@ namespace Opm
                     const auto& bw = weights[row_index];
                     double matel = 0.0;
                 
-                    for(int i = 0; i< bw.size(); ++i){
+                    for(size_t i = 0; i< bw.size(); ++i){
                         matel += bw[i]*(*colC)[seg_pressure_var_ind][i];
                     }
                     jacobian[row_index][welldof_ind] += matel;
@@ -794,7 +794,7 @@ namespace Opm
                 for (auto colB = this->duneB_[rowB].begin(), endB = this->duneB_[rowB].end(); colB != endB; ++colB) {
                     const auto col_index = colB.index();               
                     double matel = 0.0;
-                    for(int i = 0; i< bw.size(); ++i){
+                    for(size_t i = 0; i< bw.size(); ++i){
                         matel += bw[i] *(*colB)[i][pressureVarIndex];
                     }
                     jacobian[welldof_ind][col_index] += matel;
