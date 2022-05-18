@@ -91,7 +91,6 @@ namespace Opm
         using AbstractOperatorType = Dune::AssembledLinearOperator<Matrix, Vector, Vector>;
         using AbstractPreconditionerType = Dune::PreconditionerWithUpdate<Vector, Vector>;
         using WellModelOperator = WellModelAsLinearOperator<WellModel, Vector, Vector>;
-        using ParOperatorType = WellModelGhostLastMatrixAdapter<Matrix, Vector, Vector, true>;
         using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
         constexpr static std::size_t pressureIndex = GetPropType<TypeTag, Properties::Indices>::pressureSwitchIdx;
 
@@ -457,8 +456,6 @@ namespace Opm
                 return false;
             }
             if (this->parameters_.cpr_reuse_setup_ == 4) {
-                const int newton_iteration = this->simulator_.model().newtonMethod().numIterations();
-                //bool create = newton_iteration == 0;
                 int step = this->parameters_.cpr_reuse_interval_;
                 bool create = ((calls_%step) == 0);
                 return create;

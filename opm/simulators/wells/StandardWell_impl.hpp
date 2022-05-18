@@ -2257,8 +2257,7 @@ namespace Opm
                 const auto& bw = bweights[0];
                 double matel = 0;
                 for (size_t i = 0; i < bw.size(); ++i) {
-                    const double w = bw[i];
-                    matel += (*colB)[i][pressureVarIndex] * bw[i];
+                     matel += (*colB)[i][pressureVarIndex] * bw[i];
                 }
                 jacobian[welldof_ind][col_index] = matel;
             }
