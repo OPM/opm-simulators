@@ -1369,7 +1369,6 @@ namespace Opm
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return true;
 
         const int max_iter_number = this->param_.max_inner_iter_ms_wells_;
-        const WellState well_state0 = well_state;
 
         {
             // getWellFiniteResiduals returns false for nan/inf residuals
