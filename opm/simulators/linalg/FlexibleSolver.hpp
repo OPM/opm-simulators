@@ -101,7 +101,7 @@ private:
 
 } // namespace Dune
 
-#include <opm/simulators/linalg/FlexibleSolver_impl.hpp>
+//#include <opm/simulators/linalg/FlexibleSolver_impl.hpp>
 
 
 #endif // OPM_FLEXIBLE_SOLVER_HEADER_INCLUDED
