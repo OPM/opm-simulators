@@ -52,14 +52,14 @@ amgclSolverBackend<block_size>::~amgclSolverBackend() {}
 
 
 template <unsigned int block_size>
-void amgclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim) {
-    this->N = N_;
-    this->nnz = nnz_;
-    this->nnzb = nnz_ / block_size / block_size;
+void amgclSolverBackend<block_size>::initialize(int Nb_, int nnzbs) {
+    this->Nb = Nb_;
+    this->N = Nb * block_size;
+    this->nnzb = nnzbs;
+    this->nnz = nnzbs * block_size * block_size;
 
-    Nb = (N + dim - 1) / dim;
     std::ostringstream out;
-    out << "Initializing amgclSolverBackend, matrix size: " << N << " blocks, nnzb: " << nnzb << "\n";
+    out << "Initializing amgclSolverBackend, matrix size: " << Nb << " blockrows, nnzb: " << nnzb << " blocks\n";
     out << "Maxit: " << maxit << std::scientific << ", tolerance: " << tolerance << "\n";
     out << "DeviceID: " << deviceID << "\n";
     OpmLog::info(out.str());
@@ -360,12 +360,17 @@ void amgclSolverBackend<block_size>::get_result(double *x_) {
 
 
 template <unsigned int block_size>
-SolverStatus amgclSolverBackend<block_size>::solve_system(int N_, int nnz_, int dim, double *vals, int *rows, int *cols, double *b, WellContributions&, BdaResult &res) {
+SolverStatus amgclSolverBackend<block_size>::solve_system(std::shared_ptr<BlockedMatrix> matrix,
+                                                           double *b,
+                                                           [[maybe_unused]] std::shared_ptr<BlockedMatrix> jacMatrix,
+                                                           [[maybe_unused]] WellContributions& wellContribs,
+                                                           BdaResult &res)
+{
     if (initialized == false) {
-        initialize(N_, nnz_, dim);
-        convert_sparsity_pattern(rows, cols);
+        initialize(matrix->Nb, matrix->nnzbs);
+        convert_sparsity_pattern(matrix->rowPointers, matrix->colIndices);
     }
-    convert_data(vals, rows);
+    convert_data(matrix->nnzValues, matrix->rowPointers);
     solve_system(b, res);
     return SolverStatus::BDA_SOLVER_SUCCESS;
 }

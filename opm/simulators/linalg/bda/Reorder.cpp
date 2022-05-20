@@ -29,6 +29,7 @@
 #include <random>
 #include <sstream>
 #include <vector>
+#include <cstring>
 
 namespace {
 
@@ -176,39 +177,58 @@ int colorBlockedNodes(int rows, const int *CSRRowPointers, const int *CSRColIndi
 
 /* Reorder a matrix by a specified input order.
  * Both a to order array, which contains for every node from the old matrix where it will move in the new matrix,
- * and the from order, which contains for every node in the new matrix where it came from in the old matrix.*/
-void reorderBlockedMatrixByPattern(BlockedMatrix *mat, int *toOrder, int *fromOrder, BlockedMatrix *rmat) {
-    assert(mat->block_size == rmat->block_size);
+ * and the from order, which contains for every node in the new matrix where it came from in the old matrix.
+ * reordermapping_nonzeroes is filled with increasing indices, and reordered using the translated colIndices as keys,
+ * this means the resulting reordermapping_nonzeroes array contains the mapping
+ */
+void reorderBlockedMatrixByPattern(BlockedMatrix *mat, std::vector<int>& reordermapping_nonzeroes, int *toOrder, int *fromOrder, BlockedMatrix *rmat){
 
-    const unsigned int bs = mat->block_size;
     int rIndex = 0;
-    int i, k;
-    unsigned int j;
+    std::vector<int> tmp(mat->nnzbs);
+
+    reordermapping_nonzeroes.resize(mat->nnzbs);
+    for(int i = 0; i < mat->nnzbs; ++i){
+        reordermapping_nonzeroes[i] = i;
+    }
 
     rmat->rowPointers[0] = 0;
-    for (i = 0; i < mat->Nb; i++) {
+    for(int i = 0; i < mat->Nb; i++){
         int thisRow = fromOrder[i];
         // put thisRow from the old matrix into row i of the new matrix
-        rmat->rowPointers[i + 1] = rmat->rowPointers[i] + mat->rowPointers[thisRow + 1] - mat->rowPointers[thisRow];
-        for (k = mat->rowPointers[thisRow]; k < mat->rowPointers[thisRow + 1]; k++) {
-            for (j = 0; j < bs * bs; j++) {
-                rmat->nnzValues[rIndex * bs * bs + j] = mat->nnzValues[k * bs * bs + j];
-            }
+        rmat->rowPointers[i+1] = rmat->rowPointers[i] + mat->rowPointers[thisRow+1] - mat->rowPointers[thisRow];
+        for(int k = mat->rowPointers[thisRow]; k < mat->rowPointers[thisRow+1]; k++){
+            tmp[rIndex] = reordermapping_nonzeroes[k]; // only get 1 entry per block
             rmat->colIndices[rIndex] = mat->colIndices[k];
             rIndex++;
         }
     }
     // re-assign column indices according to the new positions of the nodes referenced by the column indices
-    for (i = 0; i < mat->nnzbs; i++) {
+    for(int i = 0; i < mat->nnzbs; i++){
         rmat->colIndices[i] = toOrder[rmat->colIndices[i]];
     }
     // re-sort the column indices of every row.
-    for (i = 0; i < mat->Nb; i++) {
-        sortBlockedRow(rmat->colIndices, rmat->nnzValues, rmat->rowPointers[i], rmat->rowPointers[i + 1] - 1, bs);
+    for(int i = 0; i < mat->Nb; i++){
+        sortRow(rmat->colIndices, tmp.data(), rmat->rowPointers[i], rmat->rowPointers[i+1]-1);
+    }
+    for(int i = 0; i < mat->nnzbs; i++){
+        reordermapping_nonzeroes[i] = tmp[i];
+    }
+    // std::copy();
+}
+
+/* Reorder an array of nonzero blocks into another array, using a mapping */
+void reorderNonzeroes(BlockedMatrix *mat, std::vector<int>& reordermapping_nonzeroes, BlockedMatrix *rmat){
+    assert(mat->block_size == rmat->block_size);
+
+    const unsigned int bs = mat->block_size;
+
+    for(int i = 0; i < mat->nnzbs; i++){
+        int old_idx = reordermapping_nonzeroes[i];
+        memcpy(rmat->nnzValues+i*bs*bs, mat->nnzValues+old_idx*bs*bs, sizeof(double)*bs*bs); // copy nnz block
     }
 }
 
-/* Reorder a matrix according to the colors that every node of the matrix has received*/
+/* Find a reorder mapping according to the colors that every node of the matrix has received */
 
 void colorsToReordering(int Nb, std::vector<int>& colors, int numColors, int *toOrder, int *fromOrder, std::vector<int>& rowsPerColor) {
     int reordered = 0;

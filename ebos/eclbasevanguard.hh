@@ -85,6 +85,10 @@ struct EdgeWeightsMethod {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
+struct NumJacobiBlocks {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
 struct OwnerCellsFirst {
     using type = UndefinedProperty;
 };
@@ -131,6 +135,10 @@ struct SchedRestart<TypeTag, TTag::EclBaseVanguard> {
 template<class TypeTag>
 struct EdgeWeightsMethod<TypeTag, TTag::EclBaseVanguard> {
     static constexpr int value = 1;
+};
+template<class TypeTag>
+struct NumJacobiBlocks<TypeTag, TTag::EclBaseVanguard> {
+    static constexpr int value = 0;
 };
 template<class TypeTag>
 struct OwnerCellsFirst<TypeTag, TTag::EclBaseVanguard> {
@@ -211,6 +219,8 @@ public:
                              "When restarting: should we try to initialize wells and groups from historical SCHEDULE section.");
         EWOMS_REGISTER_PARAM(TypeTag, int, EdgeWeightsMethod,
                              "Choose edge-weighing strategy: 0=uniform, 1=trans, 2=log(trans).");
+        EWOMS_REGISTER_PARAM(TypeTag, int, NumJacobiBlocks,
+                             "Number of blocks to be created for the Block-Jacobi preconditioner.");
         EWOMS_REGISTER_PARAM(TypeTag, bool, OwnerCellsFirst,
                              "Order cells owned by rank before ghost/overlap cells.");
         EWOMS_REGISTER_PARAM(TypeTag, bool, SerialPartitioning,
@@ -235,6 +245,7 @@ public:
     {
         fileName_ = EWOMS_GET_PARAM(TypeTag, std::string, EclDeckFileName);
         edgeWeightsMethod_   = Dune::EdgeWeightMethod(EWOMS_GET_PARAM(TypeTag, int, EdgeWeightsMethod));
+        numJacobiBlocks_ = EWOMS_GET_PARAM(TypeTag, int, NumJacobiBlocks);
         ownersFirst_ = EWOMS_GET_PARAM(TypeTag, bool, OwnerCellsFirst);
         serialPartitioning_ = EWOMS_GET_PARAM(TypeTag, bool, SerialPartitioning);
         zoltanImbalanceTol_ = EWOMS_GET_PARAM(TypeTag, double, ZoltanImbalanceTol);

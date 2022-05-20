@@ -35,12 +35,6 @@ using Accelerator::OpenclKernels;
 void WellContributionsOCL::setOpenCLEnv(cl::Context* context_, cl::CommandQueue* queue_) {
     this->context = context_;
     this->queue = queue_;
- }
-
-void WellContributionsOCL::setKernel(Accelerator::stdwell_apply_kernel_type* kernel_,
-                                     Accelerator::stdwell_apply_no_reorder_kernel_type* kernel_no_reorder_) {
-    this->kernel = kernel_;
-    this->kernel_no_reorder = kernel_no_reorder_;
 }
 
 void WellContributionsOCL::setReordering(int* h_toOrder_, bool reorder_)

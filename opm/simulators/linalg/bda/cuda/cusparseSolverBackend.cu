@@ -104,10 +104,10 @@ void cusparseSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellCon
 
         // apply ilu0
         cusparseDbsrsv2_solve(cusparseHandle, order, \
-                              operation, Nb, nnzb, &one, \
+                              operation, Nb, nnzbs_prec, &one, \
                               descr_L, d_mVals, d_mRows, d_mCols, block_size, info_L, d_p, d_t, policy, d_buffer);
         cusparseDbsrsv2_solve(cusparseHandle, order, \
-                              operation, Nb, nnzb, &one, \
+                              operation, Nb, nnzbs_prec, &one, \
                               descr_U, d_mVals, d_mRows, d_mCols, block_size, info_U, d_t, d_pw, policy, d_buffer);
 
         // spmv
@@ -135,10 +135,10 @@ void cusparseSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellCon
 
         // apply ilu0
         cusparseDbsrsv2_solve(cusparseHandle, order, \
-                              operation, Nb, nnzb, &one, \
+                              operation, Nb, nnzbs_prec, &one, \
                               descr_L, d_mVals, d_mRows, d_mCols, block_size, info_L, d_r, d_t, policy, d_buffer);
         cusparseDbsrsv2_solve(cusparseHandle, order, \
-                              operation, Nb, nnzb, &one, \
+                              operation, Nb, nnzbs_prec, &one, \
                               descr_U, d_mVals, d_mRows, d_mCols, block_size, info_U, d_t, d_s, policy, d_buffer);
 
         // spmv
@@ -188,17 +188,25 @@ void cusparseSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellCon
 
 
 template <unsigned int block_size>
-void cusparseSolverBackend<block_size>::initialize(int N, int nnz, int dim) {
-    this->N = N;
-    this->nnz = nnz;
-    this->nnzb = nnz / block_size / block_size;
-    Nb = (N + dim - 1) / dim;
+void cusparseSolverBackend<block_size>::initialize(std::shared_ptr<BlockedMatrix> matrix, std::shared_ptr<BlockedMatrix> jacMatrix) {
+    this->Nb = matrix->Nb;
+    this->N = Nb * block_size;
+    this->nnzb = matrix->nnzbs;
+    this->nnz = nnzb * block_size * block_size;
+
+    if (jacMatrix) {
+        useJacMatrix = true;
+        nnzbs_prec = jacMatrix->nnzbs;
+    } else {
+        nnzbs_prec = nnzb;
+    }
+
     std::ostringstream out;
-    out << "Initializing GPU, matrix size: " << N << " blocks, nnz: " << nnzb << " blocks";
-    OpmLog::info(out.str());
-    out.str("");
-    out.clear();
-    out << "Maxit: " << maxit << std::scientific << ", tolerance: " << tolerance;
+    out << "Initializing GPU, matrix size: " << Nb << " blockrows, nnz: " << nnzb << " blocks\n";
+    if (useJacMatrix) {
+        out << "Blocks in ILU matrix: " << nnzbs_prec << "\n";
+    }
+    out << "Maxit: " << maxit << std::scientific << ", tolerance: " << tolerance << "\n";
     OpmLog::info(out.str());
 
     cudaSetDevice(deviceID);
@@ -232,7 +240,15 @@ void cusparseSolverBackend<block_size>::initialize(int N, int nnz, int dim) {
     cudaMalloc((void**)&d_bVals, sizeof(double) * nnz);
     cudaMalloc((void**)&d_bCols, sizeof(int) * nnzb);
     cudaMalloc((void**)&d_bRows, sizeof(int) * (Nb + 1));
-    cudaMalloc((void**)&d_mVals, sizeof(double) * nnz);
+    if (useJacMatrix) {
+        cudaMalloc((void**)&d_mVals, sizeof(double) * nnzbs_prec * block_size * block_size);
+        cudaMalloc((void**)&d_mCols, sizeof(int) * nnzbs_prec);
+        cudaMalloc((void**)&d_mRows, sizeof(int) * (Nb + 1));
+    } else {
+        cudaMalloc((void**)&d_mVals, sizeof(double) * nnz);
+        d_mCols = d_bCols;
+        d_mRows = d_bRows;
+    }
     cudaCheckLastError("Could not allocate enough memory on GPU");
 
     cublasSetStream(cublasHandle, stream);
@@ -261,6 +277,10 @@ void cusparseSolverBackend<block_size>::finalize() {
         cudaFree(d_t);
         cudaFree(d_v);
         cudaFree(d_mVals);
+        if (useJacMatrix) {
+            cudaFree(d_mCols);
+            cudaFree(d_mRows);
+        }
         cudaFree(d_bVals);
         cudaFree(d_bCols);
         cudaFree(d_bRows);
@@ -283,23 +303,32 @@ void cusparseSolverBackend<block_size>::finalize() {
 
 
 template <unsigned int block_size>
-void cusparseSolverBackend<block_size>::copy_system_to_gpu(double *vals, int *rows, int *cols, double *b) {
+void cusparseSolverBackend<block_size>::copy_system_to_gpu(std::shared_ptr<BlockedMatrix> matrix, double *b, std::shared_ptr<BlockedMatrix> jacMatrix) {
     Timer t;
 
 #if COPY_ROW_BY_ROW
     int sum = 0;
     for (int i = 0; i < Nb; ++i) {
-        int size_row = rows[i + 1] - rows[i];
-        memcpy(vals_contiguous + sum, vals + sum, size_row * sizeof(double) * block_size * block_size);
+        int size_row = matrix->rowPointers[i + 1] - matrix->rowPointers[i];
+        memcpy(vals_contiguous + sum, matrix->nnzValues + sum, size_row * sizeof(double) * block_size * block_size);
         sum += size_row * block_size * block_size;
     }
     cudaMemcpyAsync(d_bVals, vals_contiguous, nnz * sizeof(double), cudaMemcpyHostToDevice, stream);
 #else
-    cudaMemcpyAsync(d_bVals, vals, nnz * sizeof(double), cudaMemcpyHostToDevice, stream);
+    cudaMemcpyAsync(d_bVals, matrix->nnzValues, nnz * sizeof(double), cudaMemcpyHostToDevice, stream);
+    if (useJacMatrix) {
+        cudaMemcpyAsync(d_mVals, jacMatrix->nnzValues, nnzbs_prec * block_size * block_size * sizeof(double), cudaMemcpyHostToDevice, stream);
+    } else {
+        cudaMemcpyAsync(d_mVals, d_bVals, nnz  * sizeof(double), cudaMemcpyDeviceToDevice, stream);
+    }
 #endif
 
-    cudaMemcpyAsync(d_bCols, cols, nnzb * sizeof(int), cudaMemcpyHostToDevice, stream);
-    cudaMemcpyAsync(d_bRows, rows, (Nb + 1) * sizeof(int), cudaMemcpyHostToDevice, stream);
+    cudaMemcpyAsync(d_bCols, matrix->colIndices, nnzb * sizeof(int), cudaMemcpyHostToDevice, stream);
+    cudaMemcpyAsync(d_bRows, matrix->rowPointers, (Nb + 1) * sizeof(int), cudaMemcpyHostToDevice, stream);
+    if (useJacMatrix) {
+        cudaMemcpyAsync(d_mCols, jacMatrix->colIndices, nnzbs_prec * sizeof(int), cudaMemcpyHostToDevice, stream);
+        cudaMemcpyAsync(d_mRows, jacMatrix->rowPointers, (Nb + 1) * sizeof(int), cudaMemcpyHostToDevice, stream);
+    }
     cudaMemcpyAsync(d_b, b, N * sizeof(double), cudaMemcpyHostToDevice, stream);
     cudaMemsetAsync(d_x, 0, sizeof(double) * N, stream);
 
@@ -314,19 +343,24 @@ void cusparseSolverBackend<block_size>::copy_system_to_gpu(double *vals, int *ro
 
 // don't copy rowpointers and colindices, they stay the same
 template <unsigned int block_size>
-void cusparseSolverBackend<block_size>::update_system_on_gpu(double *vals, int *rows, double *b) {
+void cusparseSolverBackend<block_size>::update_system_on_gpu(std::shared_ptr<BlockedMatrix> matrix, double *b, std::shared_ptr<BlockedMatrix> jacMatrix) {
     Timer t;
 
 #if COPY_ROW_BY_ROW
     int sum = 0;
     for (int i = 0; i < Nb; ++i) {
-        int size_row = rows[i + 1] - rows[i];
-        memcpy(vals_contiguous + sum, vals + sum, size_row * sizeof(double) * block_size * block_size);
+        int size_row = matrix->rowPointers[i + 1] - matrix->rowPointers[i];
+        memcpy(vals_contiguous + sum, matrix->nnzValues + sum, size_row * sizeof(double) * block_size * block_size);
         sum += size_row * block_size * block_size;
     }
     cudaMemcpyAsync(d_bVals, vals_contiguous, nnz * sizeof(double), cudaMemcpyHostToDevice, stream);
 #else
-    cudaMemcpyAsync(d_bVals, vals, nnz * sizeof(double), cudaMemcpyHostToDevice, stream);
+    cudaMemcpyAsync(d_bVals, matrix->nnzValues, nnz * sizeof(double), cudaMemcpyHostToDevice, stream);
+    if (useJacMatrix) {
+        cudaMemcpyAsync(d_mVals, jacMatrix->nnzValues, nnzbs_prec * block_size * block_size * sizeof(double), cudaMemcpyHostToDevice, stream);
+    } else {
+        cudaMemcpyAsync(d_mVals, d_bVals, nnz  * sizeof(double), cudaMemcpyDeviceToDevice, stream);
+    }
 #endif
 
     cudaMemcpyAsync(d_b, b, N * sizeof(double), cudaMemcpyHostToDevice, stream);
@@ -339,12 +373,6 @@ void cusparseSolverBackend<block_size>::update_system_on_gpu(double *vals, int *
         OpmLog::info(out.str());
     }
 } // end update_system_on_gpu()
-
-
-template <unsigned int block_size>
-void cusparseSolverBackend<block_size>::reset_prec_on_gpu() {
-    cudaMemcpyAsync(d_mVals, d_bVals, nnz  * sizeof(double), cudaMemcpyDeviceToDevice, stream);
-}
 
 
 template <unsigned int block_size>
@@ -380,12 +408,12 @@ bool cusparseSolverBackend<block_size>::analyse_matrix() {
     cusparseCreateBsrsv2Info(&info_U);
     cudaCheckLastError("Could not create analysis info");
 
-    cusparseDbsrilu02_bufferSize(cusparseHandle, order, Nb, nnzb,
-                                 descr_M, d_bVals, d_bRows, d_bCols, block_size, info_M, &d_bufferSize_M);
-    cusparseDbsrsv2_bufferSize(cusparseHandle, order, operation, Nb, nnzb,
-                               descr_L, d_bVals, d_bRows, d_bCols, block_size, info_L, &d_bufferSize_L);
-    cusparseDbsrsv2_bufferSize(cusparseHandle, order, operation, Nb, nnzb,
-                               descr_U, d_bVals, d_bRows, d_bCols, block_size, info_U, &d_bufferSize_U);
+    cusparseDbsrilu02_bufferSize(cusparseHandle, order, Nb, nnzbs_prec,
+                                 descr_M, d_mVals, d_mRows, d_mCols, block_size, info_M, &d_bufferSize_M);
+    cusparseDbsrsv2_bufferSize(cusparseHandle, order, operation, Nb, nnzbs_prec,
+                               descr_L, d_mVals, d_mRows, d_mCols, block_size, info_L, &d_bufferSize_L);
+    cusparseDbsrsv2_bufferSize(cusparseHandle, order, operation, Nb, nnzbs_prec,
+                               descr_U, d_mVals, d_mRows, d_mCols, block_size, info_U, &d_bufferSize_U);
     cudaCheckLastError();
     d_bufferSize = std::max(d_bufferSize_M, std::max(d_bufferSize_L, d_bufferSize_U));
 
@@ -393,7 +421,7 @@ bool cusparseSolverBackend<block_size>::analyse_matrix() {
 
     // analysis of ilu LU decomposition
     cusparseDbsrilu02_analysis(cusparseHandle, order, \
-                               Nb, nnzb, descr_B, d_bVals, d_bRows, d_bCols, \
+                               Nb, nnzbs_prec, descr_B, d_mVals, d_mRows, d_mCols, \
                                block_size, info_M, policy, d_buffer);
 
     int structural_zero;
@@ -404,11 +432,11 @@ bool cusparseSolverBackend<block_size>::analyse_matrix() {
 
     // analysis of ilu apply
     cusparseDbsrsv2_analysis(cusparseHandle, order, operation, \
-                             Nb, nnzb, descr_L, d_bVals, d_bRows, d_bCols, \
+                             Nb, nnzbs_prec, descr_L, d_mVals, d_mRows, d_mCols, \
                              block_size, info_L, policy, d_buffer);
 
     cusparseDbsrsv2_analysis(cusparseHandle, order, operation, \
-                             Nb, nnzb, descr_U, d_bVals, d_bRows, d_bCols, \
+                             Nb, nnzbs_prec, descr_U, d_mVals, d_mRows, d_mCols, \
                              block_size, info_U, policy, d_buffer);
     cudaCheckLastError("Could not analyse level information");
 
@@ -428,10 +456,8 @@ template <unsigned int block_size>
 bool cusparseSolverBackend<block_size>::create_preconditioner() {
     Timer t;
 
-    d_mCols = d_bCols;
-    d_mRows = d_bRows;
     cusparseDbsrilu02(cusparseHandle, order, \
-                      Nb, nnzb, descr_M, d_mVals, d_mRows, d_mCols, \
+                      Nb, nnzbs_prec, descr_M, d_mVals, d_mRows, d_mCols, \
                       block_size, info_M, policy, d_buffer);
     cudaCheckLastError("Could not perform ilu decomposition");
 
@@ -480,19 +506,23 @@ void cusparseSolverBackend<block_size>::get_result(double *x) {
 
 
 template <unsigned int block_size>
-SolverStatus cusparseSolverBackend<block_size>::solve_system(int N, int nnz, int dim, double *vals, int *rows, int *cols, double *b, WellContributions& wellContribs, BdaResult &res) {
+SolverStatus cusparseSolverBackend<block_size>::solve_system(std::shared_ptr<BlockedMatrix> matrix,
+                                                              double *b,
+                                                              std::shared_ptr<BlockedMatrix> jacMatrix,
+                                                              WellContributions& wellContribs,
+                                                              BdaResult &res)
+{
     if (initialized == false) {
-        initialize(N, nnz, dim);
-        copy_system_to_gpu(vals, rows, cols, b);
+        initialize(matrix, jacMatrix);
+        copy_system_to_gpu(matrix, b, jacMatrix);
     } else {
-        update_system_on_gpu(vals, rows, b);
+        update_system_on_gpu(matrix, b, jacMatrix);
     }
     if (analysis_done == false) {
         if (!analyse_matrix()) {
             return SolverStatus::BDA_SOLVER_ANALYSIS_FAILED;
         }
     }
-    reset_prec_on_gpu();
     if (create_preconditioner()) {
         solve_system(wellContribs, res);
     } else {

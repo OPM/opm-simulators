@@ -52,10 +52,21 @@ std::unique_ptr<Preconditioner<block_size> > Preconditioner<block_size>::create(
     }
 }
 
+template <unsigned int block_size>
+bool Preconditioner<block_size>::analyze_matrix(BlockedMatrix *mat, [[maybe_unused]] BlockedMatrix *jacMat) {
+    return analyze_matrix(mat);
+}
+
+template <unsigned int block_size>
+bool Preconditioner<block_size>::create_preconditioner(BlockedMatrix *mat, [[maybe_unused]] BlockedMatrix *jacMat) {
+    return create_preconditioner(mat);
+}
 
 #define INSTANTIATE_BDA_FUNCTIONS(n)  \
-template std::unique_ptr<Preconditioner<n> > Preconditioner<n>::create(PreconditionerType, int, ILUReorder);  \
-template void Preconditioner<n>::setOpencl(std::shared_ptr<cl::Context>&, std::shared_ptr<cl::CommandQueue>&);
+template std::unique_ptr<Preconditioner<n> > Preconditioner<n>::create(PreconditionerType, int, ILUReorder);   \
+template void Preconditioner<n>::setOpencl(std::shared_ptr<cl::Context>&, std::shared_ptr<cl::CommandQueue>&); \
+template bool Preconditioner<n>::analyze_matrix(BlockedMatrix *, BlockedMatrix *);                             \
+template bool Preconditioner<n>::create_preconditioner(BlockedMatrix *, BlockedMatrix *);
 
 INSTANTIATE_BDA_FUNCTIONS(1);
 INSTANTIATE_BDA_FUNCTIONS(2);

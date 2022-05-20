@@ -55,6 +55,7 @@ class BILU0 : public Preconditioner<block_size>
 private:
     std::unique_ptr<BlockedMatrix> LUmat = nullptr;
     std::shared_ptr<BlockedMatrix> rmat = nullptr; // only used with PAR_SIM
+    std::shared_ptr<BlockedMatrix> rJacMat = nullptr; 
 #if CHOW_PATEL
     std::unique_ptr<BlockedMatrix> Lmat = nullptr, Umat = nullptr;
 #endif
@@ -67,6 +68,9 @@ private:
     std::once_flag pattern_uploaded;
 
     ILUReorder opencl_ilu_reorder;
+
+    std::vector<int> reordermappingNonzeroes;    // maps nonzero blocks to new location in reordered matrix
+    std::vector<int> jacReordermappingNonzeroes; // same but for jacMatrix
 
     typedef struct {
         cl::Buffer invDiagVals;
@@ -92,9 +96,11 @@ public:
 
     // analysis, find reordering if specified
     bool analyze_matrix(BlockedMatrix *mat) override;
+    bool analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat) override;
 
     // ilu_decomposition
     bool create_preconditioner(BlockedMatrix *mat) override;
+    bool create_preconditioner(BlockedMatrix *mat, BlockedMatrix *jacMat) override;
 
     // apply preconditioner, x = prec(y)
     void apply(const cl::Buffer& y, cl::Buffer& x) override;
@@ -114,6 +120,11 @@ public:
         return rmat.get();
     }
 
+    BlockedMatrix* getRJacMat()
+    {
+        return rJacMat.get();
+    }
+
     std::tuple<std::vector<int>, std::vector<int>, std::vector<int>> get_preconditioner_structure()
     {
         return {{LUmat->rowPointers, LUmat->rowPointers + (Nb + 1)}, {LUmat->colIndices, LUmat->colIndices + nnzb}, diagIndex};
@@ -127,7 +138,6 @@ public:
         return std::make_pair(s.LUvals, s.invDiagVals);
 #endif
     }
-
 };
 
 } // namespace Accelerator

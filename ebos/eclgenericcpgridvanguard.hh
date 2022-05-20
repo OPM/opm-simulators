@@ -101,6 +101,10 @@ public:
      */
     const CartesianIndexMapper& equilCartesianIndexMapper() const;
 
+    std::vector<int> cellPartition() const
+    {
+        return cell_part_;
+    }
 protected:
     /*!
      * \brief Distribute the simulation grid over multiple processes
@@ -114,7 +118,8 @@ protected:
                         const GridView& gridv, const Schedule& schedule,
                         std::vector<double>& centroids,
                         EclipseState& eclState,
-                        EclGenericVanguard::ParallelWellStruct& parallelWells);
+                        EclGenericVanguard::ParallelWellStruct& parallelWells,
+                        int numJacobiBlocks);
 
     void distributeFieldProps_(EclipseState& eclState);
 #endif
@@ -137,6 +142,7 @@ protected:
     std::unique_ptr<CartesianIndexMapper> equilCartesianIndexMapper_;
 
     int mpiRank;
+    std::vector<int> cell_part_;
 };
 
 } // namespace Opm

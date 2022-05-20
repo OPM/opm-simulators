@@ -101,6 +101,10 @@ void WellContributions::setBlockSize(unsigned int dim_, unsigned int dim_wells_)
     }
 }
 
+void WellContributions::setVectorSize(unsigned N_) {
+    N = N_;
+}
+
 void WellContributions::addNumBlocks(unsigned int numBlocks)
 {
     if (allocated) {

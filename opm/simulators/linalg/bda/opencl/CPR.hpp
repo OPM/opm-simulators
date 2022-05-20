@@ -125,6 +125,7 @@ public:
     CPR(int verbosity, ILUReorder opencl_ilu_reorder);
 
     bool analyze_matrix(BlockedMatrix *mat) override;
+    bool analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat) override;
 
     // set own Opencl variables, but also that of the bilu0 preconditioner
     void setOpencl(std::shared_ptr<cl::Context>& context, std::shared_ptr<cl::CommandQueue>& queue) override;
@@ -134,7 +135,8 @@ public:
     void apply(const cl::Buffer& y, cl::Buffer& x) override;
 
     bool create_preconditioner(BlockedMatrix *mat) override;
-
+    bool create_preconditioner(BlockedMatrix *mat, BlockedMatrix *jacMat) override;
+    
     int* getToOrder() override
     {
         return bilu0->getToOrder();

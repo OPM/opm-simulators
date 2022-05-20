@@ -116,7 +116,7 @@ testCusparseSolver(const boost::property_tree::ptree& prm, Matrix<bz>& matrix, V
         bridge = std::make_unique<Opm::BdaBridge<Matrix<bz>, Vector<bz>, bz> >(accelerator_mode, fpga_bitstream, linear_solver_verbosity, maxit, tolerance, platformID, deviceID, opencl_ilu_reorder, linsolver);
         auto mat2 = matrix; // deep copy to make sure nnz values are in contiguous memory
                             // matrix created by readMatrixMarket() did not have contiguous memory
-        bridge->solve_system(&mat2, rhs, *wellContribs, result);
+        bridge->solve_system(&mat2, &mat2, /*numJacobiBlocks=*/0, rhs, *wellContribs, result);
         bridge->get_result(x);
 
         return x;

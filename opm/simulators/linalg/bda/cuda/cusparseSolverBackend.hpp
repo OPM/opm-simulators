@@ -68,6 +68,9 @@ private:
 
     bool analysis_done = false;
 
+    bool useJacMatrix = false;
+    int nnzbs_prec;             // number of nonzero blocks in the matrix for preconditioner
+                                // could be jacMatrix or matrix
 
     /// Solve linear system using ilu0-bicgstab
     /// \param[in] wellContribs   contains all WellContributions, to apply them separately, instead of adding them to matrix A
@@ -75,29 +78,26 @@ private:
     void gpu_pbicgstab(WellContributions& wellContribs, BdaResult& res);
 
     /// Initialize GPU and allocate memory
-    /// \param[in] N                number of nonzeroes, divide by dim*dim to get number of blocks
-    /// \param[in] nnz              number of nonzeroes, divide by dim*dim to get number of blocks
-    /// \param[in] dim              size of block
-    void initialize(int N, int nnz, int dim);
+    /// \param[in] matrix         matrix for spmv
+    /// \param[in] jacMatrix      matrix for preconditioner
+    void initialize(std::shared_ptr<BlockedMatrix> matrix, std::shared_ptr<BlockedMatrix> jacMatrix);
 
     /// Clean memory
     void finalize();
 
     /// Copy linear system to GPU
-    /// \param[in] vals        array of nonzeroes, each block is stored row-wise, contains nnz values
-    /// \param[in] rows        array of rowPointers, contains N/dim+1 values
-    /// \param[in] cols        array of columnIndices, contains nnzb values
-    /// \param[in] b           input vector, contains N values
-    void copy_system_to_gpu(double *vals, int *rows, int *cols, double *b);
+    /// also copy matrix for preconditioner if needed
+    /// \param[in] matrix         matrix for spmv
+    /// \param[in] b              input vector, contains N values
+    /// \param[in] jacMatrix      matrix for preconditioner
+    void copy_system_to_gpu(std::shared_ptr<BlockedMatrix> matrix, double *b, std::shared_ptr<BlockedMatrix> jacMatrix);
 
-    // Update linear system on GPU, don't copy rowpointers and colindices, they stay the same
-    /// \param[in] vals        array of nonzeroes, each block is stored row-wise, contains nnz values
-    /// \param[in] rows        array of rowPointers, contains N/dim+1 values, only used if COPY_ROW_BY_ROW is true
-    /// \param[in] b           input vector, contains N values
-    void update_system_on_gpu(double *vals, int *rows, double *b);
-
-    /// Reset preconditioner on GPU, ilu0-decomposition is done inplace by cusparse
-    void reset_prec_on_gpu();
+    /// Update linear system on GPU, don't copy rowpointers and colindices, they stay the same
+    /// also copy matrix for preconditioner if needed
+    /// \param[in] matrix         matrix for spmv
+    /// \param[in] b              input vector, contains N values
+    /// \param[in] jacMatrix      matrix for preconditioner
+    void update_system_on_gpu(std::shared_ptr<BlockedMatrix> matrix, double *b, std::shared_ptr<BlockedMatrix> jacMatrix);
 
     /// Analyse sparsity pattern to extract parallelism
     /// \return true iff analysis was successful
@@ -126,18 +126,15 @@ public:
     ~cusparseSolverBackend();
 
     /// Solve linear system, A*x = b, matrix A must be in blocked-CSR format
-    /// \param[in] N              number of rows, divide by dim to get number of blockrows
-    /// \param[in] nnz            number of nonzeroes, divide by dim*dim to get number of blocks
-    /// \param[in] dim            size of block
-    /// \param[in] vals           array of nonzeroes, each block is stored row-wise and contiguous, contains nnz values
-    /// \param[in] rows           array of rowPointers, contains N/dim+1 values
-    /// \param[in] cols           array of columnIndices, contains nnz values
+    /// \param[in] matrix         matrix A
     /// \param[in] b              input vector, contains N values
+    /// \param[in] jacMatrix      matrix for preconditioner
     /// \param[in] wellContribs   contains all WellContributions, to apply them separately, instead of adding them to matrix A
     /// \param[inout] res         summary of solver result
     /// \return                   status code
-    SolverStatus solve_system(int N, int nnz, int dim, double *vals, int *rows, int *cols, double *b, WellContributions& wellContribs, BdaResult &res) override;
-
+    SolverStatus solve_system(std::shared_ptr<BlockedMatrix> matrix, double *b,
+        std::shared_ptr<BlockedMatrix> jacMatrix, WellContributions& wellContribs, BdaResult &res) override;
+    
     /// Get resulting vector x after linear solve, also includes post processing if necessary
     /// \param[inout] x        resulting x vector, caller must guarantee that x points to a valid array
     void get_result(double *x) override;

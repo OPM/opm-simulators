@@ -82,12 +82,13 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doLoadBalance_(Dun
                                                                              const Schedule& schedule,
                                                                              std::vector<double>& centroids,
                                                                              EclipseState& eclState1,
-                                                                             EclGenericVanguard::ParallelWellStruct& parallelWells)
+                                                                             EclGenericVanguard::ParallelWellStruct& parallelWells,
+                                                                             int numJacobiBlocks)
 {
     int mpiSize = 1;
     MPI_Comm_size(grid_->comm(), &mpiSize);
 
-    if (mpiSize > 1) {
+    if (mpiSize > 1 || numJacobiBlocks > 1) {
         // the CpGrid's loadBalance() method likes to have the transmissibilities as
         // its edge weights. since this is (kind of) a layering violation and
         // transmissibilities are relatively expensive to compute, we only do it if
@@ -131,53 +132,61 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doLoadBalance_(Dun
         }
 
         //distribute the grid and switch to the distributed view.
-        {
-            const auto wells = schedule.getWellsatEnd();
-
-            try
+        if (mpiSize > 1) {
             {
-                auto& eclState = dynamic_cast<ParallelEclipseState&>(eclState1);
-                const EclipseGrid* eclGrid = nullptr;
+                const auto wells = schedule.getWellsatEnd();
 
-                if (grid_->comm().rank() == 0)
+                try
                 {
-                    eclGrid = &eclState.getInputGrid();
-                }
+                    auto& eclState = dynamic_cast<ParallelEclipseState&>(eclState1);
+                    const EclipseGrid* eclGrid = nullptr;
 
-                PropsCentroidsDataHandle<Dune::CpGrid> handle(*grid_, eclState, eclGrid, centroids,
-                                                              cartesianIndexMapper());
-                if (loadBalancerSet)
-                {
-                    std::vector<int> parts;
                     if (grid_->comm().rank() == 0)
                     {
-                        parts =  (*externalLoadBalancer)(*grid_);
+                        eclGrid = &eclState.getInputGrid();
                     }
-                    parallelWells = std::get<1>(grid_->loadBalance(handle, parts, &wells, ownersFirst, false, 1));
-                }
-                else
-                {
-                    parallelWells =
-                        std::get<1>(grid_->loadBalance(handle, edgeWeightsMethod, &wells, serialPartitioning,
-                                                       faceTrans.data(), ownersFirst, false, 1, true, zoltanImbalanceTol,
-                                                       enableDistributedWells));
-                }
-            }
-            catch(const std::bad_cast& e)
-            {
-                std::ostringstream message;
-                message << "Parallel simulator setup is incorrect as it does not use ParallelEclipseState ("
-                        << e.what() <<")"<<std::flush;
-                OpmLog::error(message.str());
-                std::rethrow_exception(std::current_exception());
-            }
-        }
-        grid_->switchToDistributedView();
 
+                    PropsCentroidsDataHandle<Dune::CpGrid> handle(*grid_, eclState, eclGrid, centroids,
+                                                                  cartesianIndexMapper());
+                    if (loadBalancerSet)
+                    {
+                        std::vector<int> parts;
+                        if (grid_->comm().rank() == 0)
+                        {
+                         parts =  (*externalLoadBalancer)(*grid_);
+                        }
+                        parallelWells = std::get<1>(grid_->loadBalance(handle, parts, &wells, ownersFirst, false, 1));
+                    }
+                    else
+                    {
+                        parallelWells =
+                            std::get<1>(grid_->loadBalance(handle, edgeWeightsMethod, &wells, serialPartitioning,
+                                                           faceTrans.data(), ownersFirst, false, 1, true, zoltanImbalanceTol,
+                                                           enableDistributedWells));
+                    }
+                }
+                catch(const std::bad_cast& e)
+                {
+                    std::ostringstream message;
+                    message << "Parallel simulator setup is incorrect as it does not use ParallelEclipseState ("
+                            << e.what() <<")"<<std::flush;
+                    OpmLog::error(message.str());
+                    std::rethrow_exception(std::current_exception());
+                }
+            }
+            grid_->switchToDistributedView();
+        }
+        
         // Calling Schedule::filterConnections would remove any perforated
         // cells that exist only on other ranks even in the case of distributed wells
         // But we need all connections to figure out the first cell of a well (e.g. for
         // pressure). Hence this is now skipped. Rank 0 had everything even before.
+
+        if (numJacobiBlocks > 1 && mpiSize == 1) {
+            const auto wells = schedule.getWellsatEnd();
+            cell_part_.resize(grid_->numCells());
+            cell_part_ = grid_->zoltanPartitionWithoutScatter(&wells, faceTrans.data(), numJacobiBlocks, zoltanImbalanceTol);
+        }
     }
 }
 

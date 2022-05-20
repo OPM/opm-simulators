@@ -370,7 +370,7 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
             ", time per iteration: " << res.elapsed / it << ", iterations: " << it;
         OpmLog::info(out.str());
     }
-    if (verbosity >= 4) {
+    if (verbosity >= 3) {
         std::ostringstream out;
         out << "openclSolver::prec_apply:  " << t_prec.elapsed() << " s\n";
         out << "wellContributions::apply:  " << t_well.elapsed() << " s\n";
@@ -383,14 +383,21 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
 
 
 template <unsigned int block_size>
-void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, double *vals, int *rows, int *cols) {
-    this->N = N_;
-    this->nnz = nnz_;
-    this->nnzb = nnz_ / block_size / block_size;
+void openclSolverBackend<block_size>::initialize(std::shared_ptr<BlockedMatrix> matrix, std::shared_ptr<BlockedMatrix> jacMatrix) {
+    this->Nb = matrix->Nb;
+    this->N = Nb * block_size;
+    this->nnzb = matrix->nnzbs;
+    this->nnz = nnzb * block_size * block_size;
 
-    Nb = (N + dim - 1) / dim;
+    if (jacMatrix) {
+        useJacMatrix = true;
+    }
+
     std::ostringstream out;
-    out << "Initializing GPU, matrix size: " << N << " blocks, nnzb: " << nnzb << "\n";
+    out << "Initializing GPU, matrix size: " << Nb << " blockrows, nnzb: " << nnzb << "\n";
+    if (useJacMatrix) {
+        out << "Blocks in ILU matrix: " << jacMatrix->nnzbs << "\n";
+    }
     out << "Maxit: " << maxit << std::scientific << ", tolerance: " << tolerance << "\n";
     out << "PlatformID: " << platformID << ", deviceID: " << deviceID << "\n";
     OpmLog::info(out.str());
@@ -401,9 +408,12 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
         prec->setOpencl(context, queue);
 
 #if COPY_ROW_BY_ROW
-        vals_contiguous.resize(nnz);
+        vals_contiguous = new double[N];
 #endif
-        mat.reset(new BlockedMatrix(Nb, nnzb, block_size, vals, cols, rows));
+        // mat.reset(new BlockedMatrix(Nb, nnzb, block_size, vals, cols, rows));
+        // jacMat.reset(new BlockedMatrix(Nb, jac_nnzb, block_size, vals2, cols2, rows2));
+        mat = matrix;
+        jacMat = jacMatrix;
 
         d_x = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * N);
         d_b = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * N);
@@ -440,7 +450,6 @@ void openclSolverBackend<block_size>::initialize(int N_, int nnz_, int dim, doub
 
     initialized = true;
 } // end initialize()
-
 
 template <unsigned int block_size>
 void openclSolverBackend<block_size>::finalize() {
@@ -527,8 +536,11 @@ template <unsigned int block_size>
 bool openclSolverBackend<block_size>::analyze_matrix() {
     Timer t;
 
-    // bool success = bilu0->init(mat.get());
-    bool success = prec->analyze_matrix(mat.get());
+    bool success;
+    if (useJacMatrix)
+        success = prec->analyze_matrix(mat.get(), jacMat.get());
+    else
+        success = prec->analyze_matrix(mat.get());
 
     if (opencl_ilu_reorder == ILUReorder::NONE) {
         rmat = mat.get();
@@ -579,7 +591,11 @@ template <unsigned int block_size>
 bool openclSolverBackend<block_size>::create_preconditioner() {
     Timer t;
 
-    bool result = prec->create_preconditioner(mat.get());
+    bool result;
+    if (useJacMatrix)
+        result = prec->create_preconditioner(mat.get(), jacMat.get());
+    else
+        result = prec->create_preconditioner(mat.get());
 
     if (verbosity > 2) {
         std::ostringstream out;
@@ -639,21 +655,26 @@ void openclSolverBackend<block_size>::get_result(double *x) {
 
 
 template <unsigned int block_size>
-SolverStatus openclSolverBackend<block_size>::solve_system(int N_, int nnz_, int dim, double *vals, int *rows, int *cols, double *b, WellContributions& wellContribs, BdaResult &res) {
+SolverStatus openclSolverBackend<block_size>::solve_system(std::shared_ptr<BlockedMatrix> matrix,
+                                                           double *b,
+                                                           std::shared_ptr<BlockedMatrix> jacMatrix,
+                                                           WellContributions& wellContribs,
+                                                           BdaResult &res)
+{
     if (initialized == false) {
-        initialize(N_, nnz_,  dim, vals, rows, cols);
+        initialize(matrix, jacMatrix);
         if (analysis_done == false) {
             if (!analyze_matrix()) {
                 return SolverStatus::BDA_SOLVER_ANALYSIS_FAILED;
             }
         }
-        update_system(vals, b, wellContribs);
+        update_system(matrix->nnzValues, b, wellContribs);
         if (!create_preconditioner()) {
             return SolverStatus::BDA_SOLVER_CREATE_PRECONDITIONER_FAILED;
         }
         copy_system_to_gpu();
     } else {
-        update_system(vals, b, wellContribs);
+        update_system(matrix->nnzValues, b, wellContribs);
         if (!create_preconditioner()) {
             return SolverStatus::BDA_SOLVER_CREATE_PRECONDITIONER_FAILED;
         }

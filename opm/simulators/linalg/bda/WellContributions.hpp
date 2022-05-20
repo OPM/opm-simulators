@@ -101,6 +101,10 @@ public:
     /// \param[in] dim_wells   number of rows
     void setBlockSize(unsigned int dim, unsigned int dim_wells);
 
+    /// Set size of vector that the wells are applied to
+    /// \param[in] N          size of vector
+    void setVectorSize(unsigned N);
+
     /// Store a matrix in this object, in blocked csr format, can only be called after alloc() is called
     /// \param[in] type        indicate if C, D or B is sent
     /// \param[in] colIndices  columnindices of blocks in C or B, ignored for D

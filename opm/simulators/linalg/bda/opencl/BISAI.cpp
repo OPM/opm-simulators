@@ -79,16 +79,29 @@ std::vector<int> buildCsrToCscOffsetMap(std::vector<int> colPointers, std::vecto
 template <unsigned int block_size>
 bool BISAI<block_size>::analyze_matrix(BlockedMatrix *mat)
 {
+    return analyze_matrix(mat, nullptr);
+}
+
+template <unsigned int block_size>
+bool BISAI<block_size>::analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat)
+{
     const unsigned int bs = block_size;
+    auto *m = mat;
 
-    this->N = mat->Nb * bs;
-    this->Nb = mat->Nb;
-    this->nnz = mat->nnzbs * bs * bs;
-    this->nnzb = mat->nnzbs;
+    if (jacMat) {
+        m = jacMat;
+    }
 
-    bilu0->analyze_matrix(mat);
+    this->N = m->Nb * bs;
+    this->Nb = m->Nb;
+    this->nnz = m->nnzbs * bs * bs;
+    this->nnzb = m->nnzbs;
 
-    return true;
+    if (jacMat) {
+        return bilu0->analyze_matrix(mat, jacMat);
+    } else {
+        return bilu0->analyze_matrix(mat);
+    }
 }
 
 template <unsigned int block_size>
@@ -162,7 +175,7 @@ void BISAI<block_size>::buildUpperSubsystemsStructures(){
 }
 
 template <unsigned int block_size>
-bool BISAI<block_size>::create_preconditioner(BlockedMatrix *mat)
+bool BISAI<block_size>::create_preconditioner(BlockedMatrix *mat, BlockedMatrix *jacMat)
 {
     const unsigned int bs = block_size;
 
@@ -172,7 +185,11 @@ bool BISAI<block_size>::create_preconditioner(BlockedMatrix *mat)
 
     Dune::Timer t_preconditioner;
 
-    bilu0->create_preconditioner(mat);
+    if (jacMat) {
+        bilu0->create_preconditioner(mat, jacMat);
+    } else {
+        bilu0->create_preconditioner(mat);
+    }
 
     std::call_once(initialize, [&]() {
         std::tie(colPointers, rowIndices, diagIndex) = bilu0->get_preconditioner_structure();
@@ -253,6 +270,12 @@ bool BISAI<block_size>::create_preconditioner(BlockedMatrix *mat)
     }
 
     return true;
+}
+
+template <unsigned int block_size>
+bool BISAI<block_size>::create_preconditioner(BlockedMatrix *mat)
+{
+    return create_preconditioner(mat, nullptr);
 }
 
 template <unsigned int block_size>
