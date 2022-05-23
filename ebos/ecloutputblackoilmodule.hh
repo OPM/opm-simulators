@@ -27,13 +27,6 @@
 #ifndef EWOMS_ECL_OUTPUT_BLACK_OIL_MODULE_HH
 #define EWOMS_ECL_OUTPUT_BLACK_OIL_MODULE_HH
 
-#include <array>
-#include <numeric>
-#include <optional>
-#include <stdexcept>
-#include <type_traits>
-#include <utility>
-
 #include <opm/models/blackoil/blackoilproperties.hh>
 
 #include <opm/models/utils/propertysystem.hh>
@@ -41,18 +34,29 @@
 
 #include <opm/material/common/Valgrind.hpp>
 
-#include <opm/input/eclipse/Units/Units.hpp>
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
+#include <opm/input/eclipse/Units/Units.hpp>
+
 #include <opm/output/data/Cells.hpp>
 #include <opm/output/eclipse/EclipseIO.hpp>
-#include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/output/eclipse/Inplace.hpp>
+
+#include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <ebos/eclgenericoutputblackoilmodule.hh>
 
 #include <dune/common/fvector.hh>
 
+#include <algorithm>
+#include <array>
+#include <cstddef>
+#include <initializer_list>
+#include <numeric>
+#include <optional>
+#include <stdexcept>
+#include <tuple>
 #include <type_traits>
+#include <utility>
 
 namespace Opm::Properties {
 
@@ -81,7 +85,6 @@ template<class TypeTag>
 struct ForceDisableResvFluidInPlaceOutput<TypeTag, TTag::EclOutputBlackOil> {
     static constexpr bool value = false;
 };
-
 
 } // namespace Opm::Properties
 
@@ -123,10 +126,10 @@ class EclOutputBlackOilModule : public EclGenericOutputBlackoilModule<GetPropTyp
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
 
 public:
-    template<class CollectDataToIORankType>
-    EclOutputBlackOilModule(const Simulator& simulator,
+    template <class CollectDataToIORankType>
+    EclOutputBlackOilModule(const Simulator&                simulator,
                             const std::vector<std::size_t>& wbp_index_list,
-                            const CollectDataToIORankType& collectToIORank)
+                            const CollectDataToIORankType&  collectToIORank)
         : BaseType(simulator.vanguard().eclState(),
                    simulator.vanguard().schedule(),
                    simulator.vanguard().summaryConfig(),
@@ -142,27 +145,32 @@ public:
                    getPropValue<TypeTag, Properties::EnableMICP>())
          , simulator_(simulator)
     {
-        const SummaryConfig summaryConfig = simulator_.vanguard().summaryConfig();
+        for (auto& region_pair : this->regions_) {
+            this->createLocalRegion_(region_pair.second);
+        }
 
-        for (auto& region_pair : this->regions_)
-            createLocalRegion_(region_pair.second);
-
-        for (const auto& node: summaryConfig) {
-            if (node.category() == SummaryConfigNode::Category::Block) {
-                if (collectToIORank.isCartIdxOnThisRank(node.number() - 1)) {
-                    std::pair<std::string, int> key = std::make_pair(node.keyword(), node.number());
-                    this->blockData_[key] = 0.0;
-                }
+        for (const auto& node : this->simulator_.vanguard().summaryConfig()) {
+            if ((node.category() == SummaryConfigNode::Category::Block) &&
+                collectToIORank.isCartIdxOnThisRank(node.number() - 1))
+            {
+                this->blockData_.emplace(std::piecewise_construct,
+                                         std::forward_as_tuple(node.keyword(),
+                                                               node.number()),
+                                         std::forward_as_tuple(0.0));
             }
         }
 
         for (const auto& global_index : wbp_index_list) {
-            if (collectToIORank.isCartIdxOnThisRank(global_index - 1))
-                this->wbpData_[global_index] = 0.0;
+            if (collectToIORank.isCartIdxOnThisRank(global_index - 1)) {
+                this->wbpData_.emplace(global_index, 0.0);
+            }
         }
 
-        this->forceDisableFipOutput_ = EWOMS_GET_PARAM(TypeTag, bool, ForceDisableFluidInPlaceOutput);
-        this->forceDisableFipresvOutput_ = EWOMS_GET_PARAM(TypeTag, bool, ForceDisableResvFluidInPlaceOutput);
+        this->forceDisableFipOutput_ =
+            EWOMS_GET_PARAM(TypeTag, bool, ForceDisableFluidInPlaceOutput);
+
+        this->forceDisableFipresvOutput_ =
+            EWOMS_GET_PARAM(TypeTag, bool, ForceDisableResvFluidInPlaceOutput);
     }
 
     /*!
@@ -521,7 +529,7 @@ public:
 
             // Adding block data
             const auto cartesianIdx = elemCtx.simulator().vanguard().grid().globalCell()[globalDofIdx];
-            for (auto& val: this->blockData_) {
+            for (auto& val : this->blockData_) {
                 const auto& key = val.first;
                 int cartesianIdxBlock = key.second - 1;
                 if (cartesianIdx == cartesianIdxBlock) {
@@ -579,14 +587,75 @@ public:
                         val.second = getValue(fs.viscosity(gasPhaseIdx));
                     else if (key.first == "BVOIL" || key.first == "BOVIS")
                         val.second = getValue(fs.viscosity(oilPhaseIdx));
-                    else if (key.first == "BRPV")
-                        val.second = elemCtx.simulator().model().dofTotalVolume(globalDofIdx)*getValue(intQuants.porosity());
-                    else if (key.first == "BOPV")
-                        val.second = getValue(fs.saturation(oilPhaseIdx))*elemCtx.simulator().model().dofTotalVolume(globalDofIdx)*getValue(intQuants.porosity());
-                    else if (key.first == "BWPV")
-                        val.second = getValue(fs.saturation(waterPhaseIdx))*elemCtx.simulator().model().dofTotalVolume(globalDofIdx)*getValue(intQuants.porosity());
-                    else if (key.first == "BGPV")
-                        val.second = getValue(fs.saturation(gasPhaseIdx))*elemCtx.simulator().model().dofTotalVolume(globalDofIdx)*getValue(intQuants.porosity());
+                    else if ((key.first == "BRPV") ||
+                             (key.first == "BOPV") ||
+                             (key.first == "BWPV") ||
+                             (key.first == "BGPV"))
+                    {
+                        if (key.first == "BRPV") {
+                            val.second = 1.0;
+                        }
+                        else if (key.first == "BOPV") {
+                            val.second = getValue(fs.saturation(oilPhaseIdx));
+                        }
+                        else if (key.first == "BWPV") {
+                            val.second = getValue(fs.saturation(waterPhaseIdx));
+                        }
+                        else {
+                            val.second = getValue(fs.saturation(gasPhaseIdx));
+                        }
+
+                        // Include active pore-volume.
+                        val.second *= elemCtx.simulator().model().dofTotalVolume(globalDofIdx)
+                            * getValue(intQuants.porosity());
+                    }
+                    else if (key.first == "BRS")
+                        val.second = getValue(fs.Rs());
+                    else if (key.first == "BRV")
+                        val.second = getValue(fs.Rv());
+                    else if ((key.first == "BOIP") ||
+                             (key.first == "BOIPL") ||
+                             (key.first == "BOIPG") ||
+                             (key.first == "BGIP") ||
+                             (key.first == "BGIPL") ||
+                             (key.first == "BGIPG") ||
+                             (key.first == "BWIP"))
+                    {
+                        if ((key.first == "BOIP") || (key.first == "BOIPL")) {
+                            val.second = getValue(fs.invB(oilPhaseIdx))
+                                * getValue(fs.saturation(oilPhaseIdx));
+
+                            if (key.first == "BOIP") {
+                                val.second += getValue(fs.Rv()) * getValue(fs.invB(gasPhaseIdx))
+                                    * getValue(fs.saturation(gasPhaseIdx));
+                            }
+                        }
+                        else if (key.first == "BOIPG") {
+                            val.second = getValue(fs.Rv()) * getValue(fs.invB(gasPhaseIdx))
+                                * getValue(fs.saturation(gasPhaseIdx));
+                        }
+                        else if ((key.first == "BGIP") || (key.first == "BGIPG")) {
+                            val.second = getValue(fs.invB(gasPhaseIdx))
+                                * getValue(fs.saturation(gasPhaseIdx));
+
+                            if (key.first == "BGIP") {
+                                val.second += getValue(fs.Rs()) * getValue(fs.invB(oilPhaseIdx))
+                                    * getValue(fs.saturation(oilPhaseIdx));
+                            }
+                        }
+                        else if (key.first == "BGIPL") {
+                            val.second = getValue(fs.Rs()) * getValue(fs.invB(oilPhaseIdx))
+                                * getValue(fs.saturation(oilPhaseIdx));
+                        }
+                        else {  // BWIP
+                            val.second = getValue(fs.invB(waterPhaseIdx))
+                                * getValue(fs.saturation(waterPhaseIdx));
+                        }
+
+                        // Include active pore-volume.
+                        val.second *= elemCtx.simulator().model().dofTotalVolume(globalDofIdx)
+                            * getValue(intQuants.porosity());
+                    }
                     else {
                         std::string logstring = "Keyword '";
                         logstring.append(key.first);
