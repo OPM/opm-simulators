@@ -108,6 +108,12 @@ list (APPEND MAIN_SOURCE_FILES
 if(CUDA_FOUND)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/cuda/cusparseSolverBackend.cu)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/cuda/cuWellContributions.cu)
+
+  # CUISTL
+  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/cuistl/CuVector.cu)
+  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/cuistl/CuSparseMatrix.cu)
+  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/cuistl/CuSeqILU0.cu)
+  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/cuistl/CuSparseHandle.cu)
 endif()
 if(OPENCL_FOUND)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/BlockedMatrix.cpp)
