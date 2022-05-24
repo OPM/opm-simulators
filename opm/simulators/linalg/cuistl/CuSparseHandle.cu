@@ -18,10 +18,4 @@ cusparseHandle_t CuSparseHandle::get()
     return handle;
 }
 
-const cusparseHandle_t CuSparseHandle::get() const
-{
-    return handle;
-}
-
-
 }

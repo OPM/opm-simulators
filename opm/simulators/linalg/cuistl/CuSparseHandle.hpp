@@ -12,7 +12,6 @@ public:
     ~CuSparseHandle();
 
     cusparseHandle_t get();
-    const cusparseHandle_t get() const;
 private:
     cusparseHandle_t handle;
 };
