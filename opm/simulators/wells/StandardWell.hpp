@@ -257,6 +257,7 @@ namespace Opm
                                                          std::vector<double>& b_perf,
                                                          std::vector<double>& rsmax_perf,
                                                          std::vector<double>& rvmax_perf,
+                                                         std::vector<double>& rvwmax_perf,
                                                          std::vector<double>& surf_dens_perf) const;
 
         void computeWellConnectionDensitesPressures(const Simulator& ebosSimulator,
@@ -264,6 +265,7 @@ namespace Opm
                                                     const std::vector<double>& b_perf,
                                                     const std::vector<double>& rsmax_perf,
                                                     const std::vector<double>& rvmax_perf,
+                                                    const std::vector<double>& rvwmax_perf,
                                                     const std::vector<double>& surf_dens_perf,
                                                     DeferredLogger& deferred_logger);
 
@@ -280,6 +282,7 @@ namespace Opm
                                  std::vector<EvalWell>& cq_s,
                                  double& perf_dis_gas_rate,
                                  double& perf_vap_oil_rate,
+                                 double& perf_vap_wat_rate,
                                  DeferredLogger& deferred_logger) const;
 
         void computePerfRateScalar(const IntensiveQuantities& intQuants,
@@ -297,6 +300,7 @@ namespace Opm
                              const Value& bhp,
                              const Value& rs,
                              const Value& rv,
+                             const Value& rvw,
                              std::vector<Value>& b_perfcells_dense,
                              const double Tw,
                              const int perf,
@@ -306,6 +310,7 @@ namespace Opm
                              std::vector<Value>& cq_s,
                              double& perf_dis_gas_rate,
                              double& perf_vap_oil_rate,
+                             double& perf_vap_wat_rate,
                              DeferredLogger& deferred_logger) const;
 
         void computeWellRatesWithBhpIterations(const Simulator& ebosSimulator,

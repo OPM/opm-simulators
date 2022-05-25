@@ -94,12 +94,15 @@ namespace Opm
                         std::vector<EvalWell>& cq_s,
                         double& perf_dis_gas_rate,
                         double& perf_vap_oil_rate,
+                        double& perf_vap_wat_rate,
                         DeferredLogger& deferred_logger) const
     {
         const auto& fs = intQuants.fluidState();
         const EvalWell pressure = this->extendEval(this->getPerfCellPressure(fs));
         const EvalWell rs = this->extendEval(fs.Rs());
         const EvalWell rv = this->extendEval(fs.Rv());
+        const EvalWell rvw = this->extendEval(fs.Rvw());
+
         std::vector<EvalWell> b_perfcells_dense(this->num_components_, EvalWell{this->numWellEq_ + Indices::numEq, 0.0});
         for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
@@ -139,6 +142,7 @@ namespace Opm
                         bhp,
                         rs,
                         rv,
+                        rvw,
                         b_perfcells_dense,
                         Tw,
                         perf,
@@ -148,6 +152,7 @@ namespace Opm
                         cq_s,
                         perf_dis_gas_rate,
                         perf_vap_oil_rate,
+                        perf_vap_wat_rate,
                         deferred_logger);
     }
 
@@ -167,6 +172,7 @@ namespace Opm
         const Scalar pressure = this->getPerfCellPressure(fs).value();
         const Scalar rs = fs.Rs().value();
         const Scalar rv = fs.Rv().value();
+        const Scalar rvw = fs.Rvw().value();
         std::vector<Scalar> b_perfcells_dense(this->num_components_, 0.0);
         for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
@@ -197,6 +203,7 @@ namespace Opm
 
         Scalar perf_dis_gas_rate = 0.0;
         Scalar perf_vap_oil_rate = 0.0;
+        Scalar perf_vap_wat_rate = 0.0;
 
         // surface volume fraction of fluids within wellbore
         std::vector<Scalar> cmix_s(this->numComponents(), 0.0);
@@ -209,6 +216,7 @@ namespace Opm
                         bhp,
                         rs,
                         rv,
+                        rvw,
                         b_perfcells_dense,
                         Tw,
                         perf,
@@ -218,6 +226,7 @@ namespace Opm
                         cq_s,
                         perf_dis_gas_rate,
                         perf_vap_oil_rate,
+                        perf_vap_wat_rate,
                         deferred_logger);
     }
 
@@ -230,6 +239,7 @@ namespace Opm
                     const Value& bhp,
                     const Value& rs,
                     const Value& rv,
+                    const Value& rvw,
                     std::vector<Value>& b_perfcells_dense,
                     const double Tw,
                     const int perf,
@@ -239,6 +249,7 @@ namespace Opm
                     std::vector<Value>& cq_s,
                     double& perf_dis_gas_rate,
                     double& perf_vap_oil_rate,
+                    double& perf_vap_wat_rate,
                     DeferredLogger& deferred_logger) const
     {
         // Pressure drawdown (also used to determine direction of flow)
@@ -276,6 +287,13 @@ namespace Opm
                 if (this->isProducer()) {
                     perf_dis_gas_rate = getValue(dis_gas);
                     perf_vap_oil_rate = getValue(vap_oil);
+                }
+                if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                    const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+                    const Value vap_wat = rvw * cq_sGas;
+                    cq_s[waterCompIdx] += vap_wat;
+                    if (this->isProducer())
+                        perf_vap_wat_rate = getValue(vap_wat);
                 }
             }
 
@@ -353,7 +371,7 @@ namespace Opm
                     // TODO: the formulations here remain to be tested with cases with strong crossflow through production wells
                     // s means standard condition, r means reservoir condition
                     // q_os = q_or * b_o + rv * q_gr * b_g
-                    // q_gs = q_gr * g_g + rs * q_or * b_o
+                    // q_gs = q_gr * b_g + rs * q_or * b_o
                     // d = 1.0 - rs * rv
                     // q_or = 1 / (b_o * d) * (q_os - rv * q_gs)
                     // q_gr = 1 / (b_g * d) * (q_gs - rs * q_os)
@@ -377,6 +395,18 @@ namespace Opm
                         // rs * q_or * b_o = rs * (q_os - rv * q_gs) / d
                         perf_dis_gas_rate = getValue(rs) * (getValue(cq_s[oilCompIdx]) - getValue(rv) * getValue(cq_s[gasCompIdx])) / d;
                     }
+                    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                        // q_ws = q_wr * b_w + rvw * q_gr * b_g
+                        // q_wr = 1 / b_w * (q_ws - rvw * q_gr * b_g) = 1 / b_w * (q_ws - rvw * 1 / d  (q_gs - rs * q_os))
+                        // vaporized water in gas
+                        // rvw * q_gr * b_g = q_ws -q_wr *b_w = rvw * (q_gs -rs *q_os) / d
+                        perf_vap_wat_rate = getValue(rvw) * (getValue(cq_s[gasCompIdx]) - getValue(rs) * getValue(cq_s[oilCompIdx])) / d;
+                    }
+                }
+                else if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                    //no oil
+                    const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+                    perf_vap_wat_rate = getValue(rvw) * getValue(cq_s[gasCompIdx]);
                 }
             }
         }
@@ -426,6 +456,7 @@ namespace Opm
 
         ws.vaporized_oil_rate = 0;
         ws.dissolved_gas_rate = 0;
+        ws.vaporized_wat_rate = 0;
 
         const int np = this->number_of_phases_;
 
@@ -490,6 +521,7 @@ namespace Opm
             const auto& comm = this->parallel_well_info_.communication();
             ws.dissolved_gas_rate = comm.sum(ws.dissolved_gas_rate);
             ws.vaporized_oil_rate = comm.sum(ws.vaporized_oil_rate);
+            ws.vaporized_wat_rate = comm.sum(ws.vaporized_wat_rate);
         }
 
         // accumulate resWell_ and invDuneD_ in parallel to get effects of all perforations (might be distributed)
@@ -548,10 +580,11 @@ namespace Opm
 
         double perf_dis_gas_rate = 0.;
         double perf_vap_oil_rate = 0.;
+        double perf_vap_wat_rate = 0.;
         double trans_mult = ebosSimulator.problem().template rockCompTransMultiplier<double>(intQuants,  cell_idx);
         const double Tw = this->well_index_[perf] * trans_mult;
         computePerfRateEval(intQuants, mob, bhp, Tw, perf, allow_cf,
-                            cq_s, perf_dis_gas_rate, perf_vap_oil_rate, deferred_logger);
+                            cq_s, perf_dis_gas_rate, perf_vap_oil_rate, perf_vap_wat_rate, deferred_logger);
 
         auto& ws = well_state.well(this->index_of_well_);
         auto& perf_data = ws.perf_data;
@@ -571,6 +604,7 @@ namespace Opm
         if (this->isProducer()) {
             ws.dissolved_gas_rate += perf_dis_gas_rate;
             ws.vaporized_oil_rate += perf_vap_oil_rate;
+            ws.vaporized_wat_rate += perf_vap_wat_rate;
         }
 
         if constexpr (has_energy) {
@@ -696,7 +730,8 @@ namespace Opm
         if constexpr (has_brine) {
             // TODO: the application of well efficiency factor has not been tested with an example yet
             const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
-            EvalWell cq_s_sm = cq_s[waterCompIdx];
+            // Correction salt rate; evaporated water does not contain salt 
+            EvalWell cq_s_sm = cq_s[waterCompIdx] - perf_vap_wat_rate;
             if (this->isInjector()) {
                 cq_s_sm *= this->wsalt();
             } else {
@@ -1249,6 +1284,7 @@ namespace Opm
                                                 std::vector<double>& b_perf,
                                                 std::vector<double>& rsmax_perf,
                                                 std::vector<double>& rvmax_perf,
+                                                std::vector<double>& rvwmax_perf,
                                                 std::vector<double>& surf_dens_perf) const
     {
         const int nperf = this->number_of_perforations_;
@@ -1265,6 +1301,10 @@ namespace Opm
         if (oilPresent && gasPresent) {
             rsmax_perf.resize(nperf);
             rvmax_perf.resize(nperf);
+        }
+          //rvw is only used if both water and gas is present
+        if (waterPresent && gasPresent) {
+            rvwmax_perf.resize(nperf);
         }
 
         // Compute the average pressure in each well block
@@ -1292,7 +1332,35 @@ namespace Opm
                 const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
                 const int gaspos = gasCompIdx + perf * this->num_components_;
 
-                if (oilPresent) {
+                if (oilPresent && waterPresent) {
+                    const double oilrate = std::abs(ws.surface_rates[pu.phase_pos[Oil]]); //in order to handle negative rates in producers
+                    const double waterrate = std::abs(ws.surface_rates[pu.phase_pos[Water]]); //in order to handle negative rates in producers
+                    rvmax_perf[perf] = FluidSystem::gasPvt().saturatedOilVaporizationFactor(fs.pvtRegionIndex(), temperature, p_avg);
+                    rvwmax_perf[perf] = FluidSystem::gasPvt().saturatedWaterVaporizationFactor(fs.pvtRegionIndex(), temperature, p_avg);
+                    double rv = 0.0;
+                    double rvw = 0.0;
+                    if (oilrate > 0) {
+                        const double gasrate = std::abs(ws.surface_rates[pu.phase_pos[Gas]]) - (has_solvent ? ws.sum_solvent_rates() : 0.0);
+                        if (gasrate > 0) {
+                            rv = oilrate / gasrate;
+                        }
+                        rv = std::min(rv, rvmax_perf[perf]);
+                    }
+                    if (waterrate > 0) {
+                        const double gasrate = std::abs(ws.surface_rates[pu.phase_pos[Gas]]) - (has_solvent ? ws.sum_solvent_rates() : 0.0);
+                        if (gasrate > 0) {
+                            rvw = waterrate / gasrate;
+                        }
+                        rvw = std::min(rvw, rvwmax_perf[perf]);
+                    }
+                    if (rv > 0.0 || rvw > 0.0){
+                        b_perf[gaspos] = FluidSystem::gasPvt().inverseFormationVolumeFactor(fs.pvtRegionIndex(), temperature, p_avg, rv, rvw);
+                    }
+                    else {
+                        b_perf[gaspos] = FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(fs.pvtRegionIndex(), temperature, p_avg);
+                    }
+                } else if (oilPresent) {
+                    //no water
                     const double oilrate = std::abs(ws.surface_rates[pu.phase_pos[Oil]]); //in order to handle negative rates in producers
                     rvmax_perf[perf] = FluidSystem::gasPvt().saturatedOilVaporizationFactor(fs.pvtRegionIndex(), temperature, p_avg);
                     if (oilrate > 0) {
@@ -1303,7 +1371,24 @@ namespace Opm
                         }
                         rv = std::min(rv, rvmax_perf[perf]);
 
-                        b_perf[gaspos] = FluidSystem::gasPvt().inverseFormationVolumeFactor(fs.pvtRegionIndex(), temperature, p_avg, rv);
+                        b_perf[gaspos] = FluidSystem::gasPvt().inverseFormationVolumeFactor(fs.pvtRegionIndex(), temperature, p_avg, rv, 0.0 /*Rvw*/);
+                    }
+                    else {
+                        b_perf[gaspos] = FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(fs.pvtRegionIndex(), temperature, p_avg);
+                    }
+                } else if (waterPresent) {
+                    //no oil
+                    const double waterrate = std::abs(ws.surface_rates[pu.phase_pos[Water]]); //in order to handle negative rates in producers
+                    rvwmax_perf[perf] = FluidSystem::gasPvt().saturatedWaterVaporizationFactor(fs.pvtRegionIndex(), temperature, p_avg);
+                    if (waterrate > 0) {
+                        const double gasrate = std::abs(ws.surface_rates[pu.phase_pos[Gas]]) - (has_solvent ? ws.sum_solvent_rates() : 0.0);
+                        double rvw = 0.0;
+                        if (gasrate > 0) {
+                            rvw = waterrate / gasrate;
+                        }
+                        rvw = std::min(rvw, rvwmax_perf[perf]);
+
+                        b_perf[gaspos] = FluidSystem::gasPvt().inverseFormationVolumeFactor(fs.pvtRegionIndex(), temperature, p_avg, 0.0 /*Rv*/, rvw);
                     }
                     else {
                         b_perf[gaspos] = FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(fs.pvtRegionIndex(), temperature, p_avg);
@@ -1472,6 +1557,7 @@ namespace Opm
                                            const std::vector<double>& b_perf,
                                            const std::vector<double>& rsmax_perf,
                                            const std::vector<double>& rvmax_perf,
+                                           const std::vector<double>& rvwmax_perf,
                                            const std::vector<double>& surf_dens_perf,
                                            DeferredLogger& deferred_logger)
     {
@@ -1528,7 +1614,7 @@ namespace Opm
             }
         }
 
-        this->computeConnectionDensities(perfRates, b_perf, rsmax_perf, rvmax_perf, surf_dens_perf, deferred_logger);
+        this->computeConnectionDensities(perfRates, b_perf, rsmax_perf, rvmax_perf, rvwmax_perf, surf_dens_perf, deferred_logger);
 
         this->computeConnectionPressureDelta();
     }
@@ -1550,9 +1636,10 @@ namespace Opm
          std::vector<double> b_perf;
          std::vector<double> rsmax_perf;
          std::vector<double> rvmax_perf;
+         std::vector<double> rvwmax_perf;
          std::vector<double> surf_dens_perf;
-         computePropertiesForWellConnectionPressures(ebosSimulator, well_state, b_perf, rsmax_perf, rvmax_perf, surf_dens_perf);
-         computeWellConnectionDensitesPressures(ebosSimulator, well_state, b_perf, rsmax_perf, rvmax_perf, surf_dens_perf, deferred_logger);
+         computePropertiesForWellConnectionPressures(ebosSimulator, well_state, b_perf, rsmax_perf, rvmax_perf, rvwmax_perf, surf_dens_perf);
+         computeWellConnectionDensitesPressures(ebosSimulator, well_state, b_perf, rsmax_perf, rvmax_perf, rvwmax_perf, surf_dens_perf, deferred_logger);
     }
 
 
@@ -2017,10 +2104,11 @@ namespace Opm
             std::vector<EvalWell> cq_s(this->num_components_, {this->numWellEq_ + Indices::numEq, 0.});
             double perf_dis_gas_rate = 0.;
             double perf_vap_oil_rate = 0.;
+            double perf_vap_wat_rate = 0.;
             double trans_mult = ebos_simulator.problem().template rockCompTransMultiplier<double>(int_quant, cell_idx);
             const double Tw = this->well_index_[perf] * trans_mult;
             computePerfRateEval(int_quant, mob, bhp, Tw, perf, allow_cf,
-                                cq_s, perf_dis_gas_rate, perf_vap_oil_rate, deferred_logger);
+                                cq_s, perf_dis_gas_rate, perf_vap_oil_rate, perf_vap_wat_rate, deferred_logger);
             // TODO: make area a member
             const double area = 2 * M_PI * this->perf_rep_radius_[perf] * this->perf_length_[perf];
             const auto& material_law_manager = ebos_simulator.problem().materialLawManager();

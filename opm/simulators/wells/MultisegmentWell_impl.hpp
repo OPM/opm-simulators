@@ -72,6 +72,10 @@ namespace Opm
         if constexpr (Base::has_brine) {
             OPM_THROW(std::runtime_error, "brine is not supported by multisegment well yet");
         }
+
+        if constexpr (Base::has_watVapor) {
+            OPM_THROW(std::runtime_error, "water evaporation is not supported by multisegment well yet");
+        }
     }
 
 
@@ -1529,6 +1533,7 @@ namespace Opm
         auto& ws = well_state.well(this->index_of_well_);
         ws.dissolved_gas_rate = 0;
         ws.vaporized_oil_rate = 0;
+        ws.vaporized_wat_rate = 0;
 
         // for the black oil cases, there will be four equations,
         // the first three of them are the mass balance equations, the last one is the pressure equations.

@@ -831,6 +831,7 @@ computeConnectionDensities(const std::vector<double>& perfComponentRates,
                            const std::vector<double>& b_perf,
                            const std::vector<double>& rsmax_perf,
                            const std::vector<double>& rvmax_perf,
+                           const std::vector<double>& rvwmax_perf,
                            const std::vector<double>& surf_dens_perf,
                            DeferredLogger& deferred_logger)
 {
@@ -939,7 +940,7 @@ computeConnectionDensities(const std::vector<double>& perfComponentRates,
         // Compute volume ratio.
         x = mix;
 
-        // Subtract dissolved gas from oil phase and vapporized oil from gas phase
+        // Subtract dissolved gas from oil phase and vapporized oil from gas phase and vaporized water from gas phase
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
             const unsigned gaspos = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
             const unsigned oilpos = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
@@ -971,7 +972,37 @@ computeConnectionDensities(const std::vector<double>& perfComponentRates,
                     x[oilpos] = (mix[oilpos] - mix[gaspos]*rv)/d;
                 }
             }
+            if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                //matrix system: (mix[oilpos] = q_os, x[oilpos] = bo*q_or, etc...)
+                //┌             ┐   ┌                ┐  ┌           ┐
+                //│mix[oilpos]  │   | 1     Rv     0 |  |x[oilpos]  |
+                //│mix[gaspos]  │ = │ Rs    1      0 │  │x[gaspos]  │
+                //│mix[waterpos]│   │ 0     Rvw    1 │  │x[waterpos │
+                //└             ┘   └                ┘  └           ┘
+                const unsigned waterpos = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+                double rvw = 0.0;
+                if (!rvwmax_perf.empty() && mix[gaspos] > 1e-12) {
+                    rvw = std::min(mix[waterpos]/mix[gaspos], rvwmax_perf[perf]);
+                }
+                if (rvw > 0.0) {
+                    // Subtract water in gas from water mixture
+                    x[waterpos] = mix[waterpos] - x[gaspos] * rvw;
+                }
+            }
+        } else if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+            //no oil
+            const unsigned gaspos = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+            const unsigned waterpos = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+            double rvw = 0.0;
+            if (!rvwmax_perf.empty() && mix[gaspos] > 1e-12) {
+                rvw = std::min(mix[waterpos]/mix[gaspos], rvwmax_perf[perf]);
+            }
+            if (rvw > 0.0) {
+               // Subtract water in gas from water mixture
+               x[waterpos] = mix[waterpos] - mix[gaspos] * rvw;
+            }
         }
+
         double volrat = 0.0;
         for (int component = 0; component < num_comp; ++component) {
             volrat += x[component] / b_perf[perf*num_comp+ component];

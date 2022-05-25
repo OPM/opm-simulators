@@ -56,6 +56,7 @@ public:
     double temperature{0};
     double dissolved_gas_rate{0};
     double vaporized_oil_rate{0};
+    double vaporized_wat_rate{0};
     std::vector<double> well_potentials;
     std::vector<double> productivity_index;
     std::vector<double> surface_rates;

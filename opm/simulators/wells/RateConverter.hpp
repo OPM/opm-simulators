@@ -318,7 +318,7 @@ namespace Opm {
                 if (RegionAttributeHelpers::PhaseUsed::gas(pu)) {
                     // q[g]_r = 1/(bg * (1 - rs*rv)) * (q[g]_s - rs*q[o]_s)
 
-                    const double bg  = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rv);
+                    const double bg  = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rv, 0.0 /*=Rvw*/);
                     const double den = bg * detR;
 
                     coeff[ig] += 1.0 / den;
@@ -359,7 +359,7 @@ namespace Opm {
                 }
 
                 if (RegionAttributeHelpers::PhaseUsed::gas(pu)) {
-                    const double bg = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, 0.0);
+                    const double bg = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, 0.0, 0.0);
                     coeff[ig] += 1.0 / bg;
                 }
             }
@@ -447,7 +447,7 @@ namespace Opm {
                 if (RegionAttributeHelpers::PhaseUsed::gas(pu)) {
                     // q[g]_r = 1/(bg * (1 - rs*rv)) * (q[g]_s - rs*q[o]_s)
 
-                    const double bg  = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rv);
+                    const double bg  = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rv, 0.0 /*=Rvw*/);
                     const double den = bg * detR;
 
                     voidage_rates[ig] = surface_rates[ig];

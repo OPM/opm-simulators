@@ -407,6 +407,7 @@ WellState::report(const int* globalCellIdxMap,
 
         well.rates.set(rt::dissolved_gas, ws.dissolved_gas_rate);
         well.rates.set(rt::vaporized_oil, ws.vaporized_oil_rate);
+        well.rates.set(rt::vaporized_water, ws.vaporized_wat_rate);
 
         {
             auto& curr = well.current_control;

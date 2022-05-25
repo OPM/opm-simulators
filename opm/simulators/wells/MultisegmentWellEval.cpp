@@ -677,6 +677,7 @@ computeSegmentFluidProperties(const EvalWell& temperature,
         }
 
         EvalWell rv(0.0);
+        EvalWell rvw(0.0);
         // gas phase
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
             const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
@@ -692,9 +693,9 @@ computeSegmentFluidProperties(const EvalWell& temperature,
                         rv = rvmax;
                     }
                     b[gasCompIdx] =
-                        FluidSystem::gasPvt().inverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure, rv);
+                        FluidSystem::gasPvt().inverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure, rv, rvw);
                     visc[gasCompIdx] =
-                        FluidSystem::gasPvt().viscosity(pvt_region_index, temperature, seg_pressure, rv);
+                        FluidSystem::gasPvt().viscosity(pvt_region_index, temperature, seg_pressure, rv, rvw);
                     phase_densities[gasCompIdx] = b[gasCompIdx] * surf_dens[gasCompIdx]
                                                 + rv * b[gasCompIdx] * surf_dens[oilCompIdx];
                 } else { // no oil exists
@@ -1114,6 +1115,7 @@ getSegmentSurfaceVolume(const EvalWell& temperature,
     }
 
     EvalWell rv(0.0);
+    EvalWell rvw(0.0);
     // gas phase
     if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
         const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
@@ -1137,7 +1139,8 @@ getSegmentSurfaceVolume(const EvalWell& temperature,
                     FluidSystem::gasPvt().inverseFormationVolumeFactor(pvt_region_index,
                                                                        temperature,
                                                                        seg_pressure,
-                                                                       rv);
+                                                                       rv,
+                                                                       rvw);
             } else { // no oil exists
                 b[gasCompIdx] =
                     FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(pvt_region_index,
