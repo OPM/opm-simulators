@@ -264,12 +264,15 @@ protected:
         Scalar deltaSg = 0.0;
         Scalar deltaSs = 0.0;
 
-        if (Indices::waterEnabled && FluidSystem::numActivePhases() > 1 && currentValue.primaryVarsMeaning() != PrimaryVariables::Rvw_po_Sg) {
+        if (Indices::waterEnabled && FluidSystem::numActivePhases() > 1
+            && currentValue.primaryVarsMeaning() != PrimaryVariables::Rvw_po_Sg 
+            && currentValue.primaryVarsMeaning() != PrimaryVariables::Rvw_pg_Rv) {
             deltaSw = update[Indices::waterSaturationIdx];
             deltaSo = -deltaSw;
         }
 
-        if (compositionSwitchEnabled && currentValue.primaryVarsMeaning() == PrimaryVariables::Sw_po_Sg) {
+        if (compositionSwitchEnabled && (currentValue.primaryVarsMeaning() == PrimaryVariables::Sw_po_Sg
+            || currentValue.primaryVarsMeaning() == PrimaryVariables::Rvw_po_Sg)) {
             deltaSg = update[Indices::compositionSwitchIdx];
             deltaSo -= deltaSg;
         }
@@ -306,7 +309,8 @@ protected:
             }
             // water saturation delta
             else if (pvIdx == Indices::waterSaturationIdx)
-                if (currentValue.primaryVarsMeaning() != PrimaryVariables::Rvw_po_Sg)
+                if (currentValue.primaryVarsMeaning() != PrimaryVariables::Rvw_po_Sg 
+                    && currentValue.primaryVarsMeaning() != PrimaryVariables::Rvw_pg_Rv)
                     delta *= satAlpha;
                 else{
                     //Ensure Rvw factor does not become negative
@@ -319,7 +323,8 @@ protected:
                 // interpretation since it can represent Sg, Rs or Rv. For now, we only
                 // limit saturation deltas and ensure that the R factors do not become
                 // negative.
-                if (currentValue.primaryVarsMeaning() == PrimaryVariables::Sw_po_Sg)
+                if (currentValue.primaryVarsMeaning() == PrimaryVariables::Sw_po_Sg 
+                    || currentValue.primaryVarsMeaning() == PrimaryVariables::Rvw_po_Sg)
                     delta *= satAlpha;
                 else {
                     if (delta > currentValue[Indices::compositionSwitchIdx])
