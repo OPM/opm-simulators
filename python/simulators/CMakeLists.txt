@@ -14,7 +14,8 @@ pybind11_add_module(simulators ${PYBIND11_SYSTEM}
   PyBlackOilSimulator.cpp
   Pybind11Exporter.cpp)
 
-set_target_properties( simulators PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/python/opm2 )
+set(PYTHON_OPM_SIMULATORS_PACKAGE_PATH ${PROJECT_BINARY_DIR}/python/opm2/simulators)
+set_target_properties( simulators PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PYTHON_OPM_SIMULATORS_PACKAGE_PATH} )
 
 target_sources(simulators
   PRIVATE
@@ -46,6 +47,9 @@ file( COPY ${PROJECT_SOURCE_DIR}/python/test
       DESTINATION ${PROJECT_BINARY_DIR}/python)
 file( COPY ${PROJECT_SOURCE_DIR}/python/test_data
       DESTINATION ${PROJECT_BINARY_DIR}/python)
+file( MAKE_DIRECTORY ${PYTHON_OPM_SIMULATORS_PACKAGE_PATH} )
+file( COPY ${PROJECT_SOURCE_DIR}/python/simulators/__init__.py
+      DESTINATION ${PYTHON_OPM_SIMULATORS_PACKAGE_PATH})
 
 if(OPM_ENABLE_PYTHON_TESTS)
   if(Python3_EXECUTABLE AND NOT PYTHON_EXECUTABLE)

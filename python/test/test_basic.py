@@ -2,7 +2,7 @@ import os
 import unittest
 from contextlib import contextmanager
 from pathlib import Path
-from opm2.simulators import BlackOilSimulator
+from opm.simulators import BlackOilSimulator
 
 @contextmanager
 def pushd(path):
