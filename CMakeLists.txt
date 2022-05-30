@@ -49,7 +49,7 @@ if (OPM_ENABLE_PYTHON)
     if(PYTHON_EXECUTABLE AND NOT Python3_EXECUTABLE)
       set(Python3_EXECUTABLE ${PYTHON_EXECUTABLE})
     endif()
-    find_package(Python3 REQUIRED COMPONENTS Interpreter)
+    find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
   endif()
 
   # Compatibility settings for PythonInterp and PythonLibs
