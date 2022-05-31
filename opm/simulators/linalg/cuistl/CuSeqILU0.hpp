@@ -20,6 +20,12 @@
 #define OPM_CUSEQILU0_HEADER_INCLUDED
 #include <dune/common/simd.hh>
 #include <dune/istl/preconditioner.hh>
+#include <cusparse.h>
+#include <opm/simulators/linalg/cuistl/CuSparseHandle.hpp>
+#include <opm/simulators/linalg/cuistl/CuSparseResource.hpp>
+#include <opm/simulators/linalg/cuistl/CuSparseMatrix.hpp>
+#include <opm/simulators/linalg/cuistl/CuMatrixDescription.hpp>
+
 
 namespace Opm::cuistl
 {
@@ -56,11 +62,11 @@ public:
        \param w The relaxation factor.
             */
     CuSeqILU0(const M& A, scalar_field_type w)
-        : _w(w)
-        , ILU(A) // copy A
+        : w(w), LU(CuSparseMatrix<field_type>::fromMatrix(A)),
+        descriptionL(createLowerDiagonalDescription()),
+        descriptionU(createUpperDiagonalDescription())
+    {        
 
-    {
-        bilu0_decomposition(ILU);
     }
 
     /*!
@@ -103,9 +109,22 @@ public:
 
 private:
     //! \brief The relaxation factor to use.
-    scalar_field_type _w;
-    //! \brief The ILU0 decomposition of the matrix.
-    matrix_type ILU;
+    scalar_field_type w;
+
+    // This is the storage for the LU composition.
+    // Initially this will have the values of A, but will be
+    // modified in the constructor to be te proper LU decomposition.
+    CuSparseMatrix<field_type> LU;
+
+
+    CuMatrixDescriptionPtr descriptionL;
+    CuMatrixDescriptionPtr descriptionU;
+    CuSparseResource<bsrsv2Info_t> infoL;
+    CuSparseResource<bsrsv2Info_t> infoU;
+
+    std::shared_ptr<CuVector<field_type>> buffer;
+
+
 };
 } // end namespace Opm::cuistl
 

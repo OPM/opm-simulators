@@ -24,6 +24,7 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/simulators/linalg/cuistl/CuSparseHandle.hpp>
 #include <opm/simulators/linalg/cuistl/CuVector.hpp>
+#include <opm/simulators/linalg/cuistl/CuMatrixDescription.hpp>
 #include <vector>
 
 namespace Opm::cuistl
@@ -36,6 +37,9 @@ template <typename T>
 class CuSparseMatrix
 {
 public:
+    // We set this here for easy reference. We do not anticipate this to change
+    // in the foreseeable future.
+    const cusparseIndexBase_t baseType = CUSPARSE_INDEX_BASE_ZERO;
     /// Create the sparse matrix specified by the raw data.
     ///
     /// \note Prefer to use the constructor taking a const reference to a matrix instead.
@@ -118,11 +122,9 @@ private:
     int numberOfNonzeroElements;
     int numberOfRows;
 
-    cusparseMatDescr_t matrixDescription;
+    CuMatrixDescriptionPtr matrixDescription;
 
-    // We set this here for easy reference. We do not anticipate this to change
-    // in the foreseeable future.
-    const cusparseIndexBase_t baseType = CUSPARSE_INDEX_BASE_ZERO;
+
 };
 } // namespace Opm::cuistl
 #endif
