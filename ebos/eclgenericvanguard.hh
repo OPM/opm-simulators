@@ -253,7 +253,13 @@ public:
      * \brief Number of blocks in the Block-Jacobi preconditioner.
      */
     int numJacobiBlocks() const
-    { return numJacobiBlocks_; }
+    {
+#if HAVE_OPENCL
+        return numJacobiBlocks_;
+#else
+        return 0;
+#endif
+    }
 
     /*!
      * \brief Parameter that decide if cells owned by rank are ordered before ghost cells.
@@ -329,7 +335,11 @@ protected:
     std::string caseName_;
     std::string fileName_;
     Dune::EdgeWeightMethod edgeWeightsMethod_;
-    int numJacobiBlocks_;
+
+#if HAVE_OPENCL
+    int numJacobiBlocks_{0};
+#endif  // HAVE_OPENCL
+
     bool ownersFirst_;
     bool serialPartitioning_;
     double zoltanImbalanceTol_;

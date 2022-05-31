@@ -213,7 +213,12 @@ namespace Opm
                 matrix_ = const_cast<Matrix*>(&M.istlMatrix());
 
                 // setup sparsity pattern for jacobi matrix for preconditioner (only used for openclSolver)
-                numJacobiBlocks_ = EWOMS_GET_PARAM(TypeTag, int, NumJacobiBlocks);
+#if HAVE_OPENCL
+                this->numJacobiBlocks_ = EWOMS_GET_PARAM(TypeTag, int, NumJacobiBlocks);
+#else
+                this->numJacobiBlocks_ = 0;
+#endif
+
                 useWellConn_ = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
                 if (numJacobiBlocks_ > 1) {
                     const auto wellsForConn = simulator_.vanguard().schedule().getWellsatEnd();
