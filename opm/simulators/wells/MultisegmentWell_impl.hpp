@@ -1169,12 +1169,13 @@ namespace Opm
         if ( bhp_limit_not_defaulted || !this->wellHasTHPConstraints(summaryState) ) {
             // if the BHP limit is not defaulted or the well does not have a THP limit
             // we need to check the BHP limit
-
-            double ipr_rate = 0;
+            double total_ipr_mass_rate = 0.0;
             for (int p = 0; p < this->number_of_phases_; ++p) {
-                ipr_rate += this->ipr_a_[p] - this->ipr_b_[p] * bhp_limit;
+                const double ipr_rate = this->ipr_a_[p] - this->ipr_b_[p] * bhp_limit;
+                const double rho = FluidSystem::referenceDensity( p, Base::pvtRegionIdx() );
+                total_ipr_mass_rate += ipr_rate * rho;
             }
-            if ( (this->isProducer() && ipr_rate < 0.) || (this->isInjector() && ipr_rate > 0.) ) {
+            if ( (this->isProducer() && total_ipr_mass_rate < 0.) || (this->isInjector() && total_ipr_mass_rate > 0.) ) {
                 this->operability_status_.operable_under_only_bhp_limit = false;
             }
 
