@@ -74,8 +74,16 @@ add_custom_target(copy_python ALL
 # setup.py install manually - optionally with the generated script
 # setup-install.sh - and completely bypass cmake in the installation phase.
 if (OPM_INSTALL_PYTHON)
-  set(PYTHON_INSTALL_PREFIX "lib/python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}/${PYTHON_PACKAGE_PATH}" CACHE STRING "Subdirectory to install Python modules in")
-  install(TARGETS simulators DESTINATION ${DEST_PREFIX}${CMAKE_INSTALL_PREFIX}/${PYTHON_INSTALL_PREFIX}/opm)
   include(PyInstallPrefix)  # from opm-common
-  install( CODE "execute_process(COMMAND ${PYTHON_EXECUTABLE} ${opm-common_DIR}/python/install.py ${PROJECT_BINARY_DIR}/python/opm2 ${DEST_PREFIX}${CMAKE_INSTALL_PREFIX}/${PYTHON_INSTALL_PREFIX} 1)")
+  install(TARGETS simulators DESTINATION ${DEST_PREFIX}${CMAKE_INSTALL_PREFIX}/${PYTHON_INSTALL_PREFIX}/opm)
+  set(_opm_common_dir "${opm-common_DIR}")
+  if (NOT EXISTS "${_opm_common_dir}/python/install.py" )
+    set(_opm_common_dir "${DEST_PREFIX}${CMAKE_INSTALL_PREFIX}/share/opm")
+  endif()
+  install(
+    CODE "execute_process(
+      COMMAND ${PYTHON_EXECUTABLE}
+              ${_opm_common_dir}/python/install.py
+              ${PROJECT_BINARY_DIR}/python/opm2
+              ${DEST_PREFIX}${CMAKE_INSTALL_PREFIX}/${PYTHON_INSTALL_PREFIX} 1)")
 endif()
