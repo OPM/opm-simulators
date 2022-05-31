@@ -101,10 +101,11 @@ public:
      */
     const CartesianIndexMapper& equilCartesianIndexMapper() const;
 
-    std::vector<int> cellPartition() const
+    const std::vector<int>& cellPartition() const
     {
-        return cell_part_;
+        return this->cell_part_;
     }
+
 protected:
     /*!
      * \brief Distribute the simulation grid over multiple processes
@@ -143,7 +144,7 @@ protected:
     std::unique_ptr<CartesianIndexMapper> equilCartesianIndexMapper_;
 
     int mpiRank;
-    std::vector<int> cell_part_;
+    std::vector<int> cell_part_{};
 };
 
 } // namespace Opm
