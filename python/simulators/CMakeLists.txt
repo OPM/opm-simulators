@@ -61,12 +61,19 @@ if(OPM_ENABLE_PYTHON_TESTS)
       -m unittest test/test_schedule.py)
 endif()
 
+
+set(_opm_common_dir "${opm-common_DIR}")
+if (NOT EXISTS "${_opm_common_dir}/python/install.py" )
+  # if the install.py script does not exist, assume that we are building against an installed opm-common
+  set(_opm_common_dir "${DEST_PREFIX}${CMAKE_INSTALL_PREFIX}/share/opm")
+endif()
+
 # NOTE: instead of using file( COPY ...) which copies the files at configure time (not at build time)
 #  we should add copying of the files at build time such that running "make" or "make all" will
 #  update the files if they have been modified. We use the install.py script in opm-common, see also
 #  CMakeLists.txt in opm-common
 add_custom_target(copy_python ALL
-    COMMAND ${PYTHON_EXECUTABLE} ${opm-common_DIR}/python/install.py
+    COMMAND ${PYTHON_EXECUTABLE} ${_opm_common_dir}/python/install.py
       ${PROJECT_SOURCE_DIR}/python ${PROJECT_BINARY_DIR} 0)
 
 # Since the installation of Python code is nonstandard it is protected by an
@@ -76,10 +83,6 @@ add_custom_target(copy_python ALL
 if (OPM_INSTALL_PYTHON)
   include(PyInstallPrefix)  # from opm-common
   install(TARGETS simulators DESTINATION ${DEST_PREFIX}${CMAKE_INSTALL_PREFIX}/${PYTHON_INSTALL_PREFIX}/opm)
-  set(_opm_common_dir "${opm-common_DIR}")
-  if (NOT EXISTS "${_opm_common_dir}/python/install.py" )
-    set(_opm_common_dir "${DEST_PREFIX}${CMAKE_INSTALL_PREFIX}/share/opm")
-  endif()
   install(
     CODE "execute_process(
       COMMAND ${PYTHON_EXECUTABLE}
