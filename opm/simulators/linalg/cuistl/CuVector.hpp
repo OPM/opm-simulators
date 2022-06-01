@@ -18,6 +18,7 @@
 */
 #ifndef OPM_CUVECTOR_HEADER_INCLUDED
 #define OPM_CUVECTOR_HEADER_INCLUDED
+#include <opm/simulators/linalg/cuistl/CuBlasHandle.hpp>
 #include <vector>
 
 namespace Opm::cuistl
@@ -36,9 +37,14 @@ public:
 
     const T* data() const;
     T* data();
+
+
+    CuVector<T>& operator*=(const T& scalar);
+
 private:
     T* dataOnDevice;
     const int numberOfElements;
+    CuBlasHandle& cuBlasHandle;
 };
 
 } // namespace Opm::cuistl

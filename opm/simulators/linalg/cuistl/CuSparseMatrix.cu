@@ -18,41 +18,42 @@ CuSparseMatrix<T>::CuSparseMatrix(const T* nonZeroElements,
     , numberOfNonzeroElements(numberOfNonzeroElements)
     , numberOfRows(numberOfRows)
     , matrixDescription(createMatrixDescription())
+    , _blockSize(blockSize)
 {
 }
 
 template <class T>
 CuSparseMatrix<T>::~CuSparseMatrix()
 {
-    OPM_CUSPARSE_SAFE_CALL(cusparseDestroyMatDescr(matrixDescription));
+    // empty
 }
 
 template <typename T>
 void
 CuSparseMatrix<T>::setUpperTriangular()
 {
-    OPM_CUSPARSE_SAFE_CALL(cusparseSetMatFillMode(matrixDescription.get(), CUSPARSE_FILL_MODE_UPPER));
+    OPM_CUSPARSE_SAFE_CALL(cusparseSetMatFillMode(matrixDescription->get(), CUSPARSE_FILL_MODE_UPPER));
 }
 
 template <typename T>
 void
 CuSparseMatrix<T>::setLowerTriangular()
 {
-    OPM_CUSPARSE_SAFE_CALL(cusparseSetMatFillMode(matrixDescription.get(), CUSPARSE_FILL_MODE_LOWER));
+    OPM_CUSPARSE_SAFE_CALL(cusparseSetMatFillMode(matrixDescription->get(), CUSPARSE_FILL_MODE_LOWER));
 }
 
 template <typename T>
 void
 CuSparseMatrix<T>::setUnitDiagonal()
 {
-    OPM_CUSPARSE_SAFE_CALL(cusparseSetMatDiagType(matrixDescription.get(), CUSPARSE_DIAG_TYPE_UNIT));
+    OPM_CUSPARSE_SAFE_CALL(cusparseSetMatDiagType(matrixDescription->get(), CUSPARSE_DIAG_TYPE_UNIT));
 }
 
 template <typename T>
 void
 CuSparseMatrix<T>::setNonUnitDiagonal()
 {
-    OPM_CUSPARSE_SAFE_CALL(cusparseSetMatDiagType(matrixDescription.get(), CUSPARSE_DIAG_TYPE_NON_UNIT));
+    OPM_CUSPARSE_SAFE_CALL(cusparseSetMatDiagType(matrixDescription->get(), CUSPARSE_DIAG_TYPE_NON_UNIT));
 }
 
 class CuSparseMatrix<float>;

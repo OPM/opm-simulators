@@ -19,6 +19,22 @@ namespace
 
         DeleterType getDeleter()
         {
+            return cusparseDestroyBsrilu02Info;
+        }
+
+        CreatorType getCreator()
+        {
+            return cusparseCreateBsrilu02Info;
+        }
+    };
+
+    template <>
+    struct CuSparseDeleteAndCreate<bsrsv2Info_t> {
+        using DeleterType = typename CuSparseResource<bsrsv2Info_t>::DeleterType;
+        using CreatorType = typename CuSparseResource<bsrsv2Info_t>::CreatorType;
+
+        DeleterType getDeleter()
+        {
             return cusparseDestroyBsrsv2Info;
         }
 
@@ -56,7 +72,8 @@ CuSparseResource<T>::CuSparseResource(CreatorType creator, DeleterType deleter)
 
 template <class T>
 CuSparseResource<T>::CuSparseResource()
-    : CuSparseResource<T>(getCreator<T>(), getDeleter<T>())
+    : CuSparseResource<T>(CuSparseDeleteAndCreate<T>::getCreator(), 
+    CuSparseDeleteAndCreate<T>::getDeleter())
 {
 }
 

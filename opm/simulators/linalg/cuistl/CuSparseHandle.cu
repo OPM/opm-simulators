@@ -18,4 +18,9 @@ cusparseHandle_t CuSparseHandle::get()
     return handle;
 }
 
+CuSparseHandle& CuSparseHandle::getInstance() {
+    static CuSparseHandle instance;
+    return instance;
+}
+
 }

@@ -22,9 +22,9 @@
 #include <dune/istl/preconditioner.hh>
 #include <memory>
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/simulators/linalg/cuistl/CuMatrixDescription.hpp>
 #include <opm/simulators/linalg/cuistl/CuSparseHandle.hpp>
 #include <opm/simulators/linalg/cuistl/CuVector.hpp>
-#include <opm/simulators/linalg/cuistl/CuMatrixDescription.hpp>
 #include <vector>
 
 namespace Opm::cuistl
@@ -37,9 +37,6 @@ template <typename T>
 class CuSparseMatrix
 {
 public:
-    // We set this here for easy reference. We do not anticipate this to change
-    // in the foreseeable future.
-    const cusparseIndexBase_t baseType = CUSPARSE_INDEX_BASE_ZERO;
     /// Create the sparse matrix specified by the raw data.
     ///
     /// \note Prefer to use the constructor taking a const reference to a matrix instead.
@@ -50,8 +47,7 @@ public:
     /// \param[in] numberOfNonzeroElements number of nonzero elements
     /// \param[in] blockSize size of each block matrix (typically 3)
     /// \param[in] numberOfRows the number of rows
-    CuSparseMatrix(
-                   const T* nonZeroElements,
+    CuSparseMatrix(const T* nonZeroElements,
                    const int* rowIndices,
                    const int* columnIndices,
                    int numberOfNonzeroElements,
@@ -93,12 +89,7 @@ public:
         }
 
         return CuSparseMatrix<T>(
-            nonZeroElements,
-            rowIndices.data(),
-            columnIndices.data(),
-            numberOfNonzeroElements,
-            blockSize,
-            numberOfRows);
+            nonZeroElements, rowIndices.data(), columnIndices.data(), numberOfNonzeroElements, blockSize, numberOfRows);
     }
 
     void setUpperTriangular();
@@ -106,7 +97,47 @@ public:
     void setUnitDiagonal();
     void setNonUnitDiagonal();
 
+    size_t N() const
+    {
+        return numberOfRows;
+    }
 
+    size_t nonzeros() const
+    {
+        return numberOfNonzeroElements;
+    }
+
+    CuVector<T>& getNonZeroValues()
+    {
+        return nonZeroElements;
+    }
+    const CuVector<T>& getNonZeroValues() const
+    {
+        return nonZeroElements;
+    }
+
+    CuVector<int>& getRowIndices()
+    {
+        return rowIndices;
+    }
+    const CuVector<int>& getRowIndices() const
+    {
+        return rowIndices;
+    }
+
+    CuVector<int>& getColumnIndices()
+    {
+        return columnIndices;
+    }
+    const CuVector<int>& getColumnIndices() const
+    {
+        return columnIndices;
+    }
+
+    const int blockSize() const
+    {
+        return _blockSize;
+    }
 
 private:
     void initializeMatrix(const double* nonZeroElements,
@@ -119,12 +150,11 @@ private:
     CuVector<T> nonZeroElements;
     CuVector<int> columnIndices;
     CuVector<int> rowIndices;
-    int numberOfNonzeroElements;
-    int numberOfRows;
+    const int numberOfNonzeroElements;
+    const int numberOfRows;
+    const int _blockSize;
 
-    CuMatrixDescriptionPtr matrixDescription;
-
-
+    CuSparseMatrixDescriptionPtr matrixDescription;
 };
 } // namespace Opm::cuistl
 #endif
