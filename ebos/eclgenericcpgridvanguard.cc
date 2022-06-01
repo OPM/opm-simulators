@@ -78,7 +78,6 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doLoadBalance_(Dun
                                                                              bool serialPartitioning,
                                                                              bool enableDistributedWells,
                                                                              double zoltanImbalanceTol,
-                                                                             const GridView& gridv,
                                                                              const Schedule& schedule,
                                                                              std::vector<double>& centroids,
                                                                              EclipseState& eclState1,
@@ -108,7 +107,7 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doLoadBalance_(Dun
         grid_->comm().broadcast(&loadBalancerSet, 1, 0);
         if (!loadBalancerSet){
             faceTrans.resize(numFaces, 0.0);
-            ElementMapper elemMapper(gridv, Dune::mcmgElementLayout());
+            ElementMapper elemMapper(gridView, Dune::mcmgElementLayout());
             auto elemIt = gridView.template begin</*codim=*/0>();
             const auto& elemEndIt = gridView.template end</*codim=*/0>();
             for (; elemIt != elemEndIt; ++ elemIt) {
