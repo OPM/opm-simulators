@@ -398,7 +398,7 @@ namespace Opm {
 
             int reportStepIndex() const;
 
-            void assembleWellEq(const double dt, Opm::DeferredLogger& deferred_logger);
+            void assembleWellEq(const double dt, DeferredLogger& deferred_logger);
 
             bool maybeDoGasLiftOptimize(DeferredLogger& deferred_logger);
 

@@ -384,7 +384,7 @@ namespace Opm
         // clear all entries
         this->duneB_ = 0.0;
         this->duneC_ = 0.0;
-        this->invDuneD_ = 0.0;
+        this->duneD_ = 0.0;
         this->resWell_ = 0.0;
 
         assembleWellEqWithoutIterationImpl(ebosSimulator, dt, well_state, group_state, deferred_logger);
@@ -442,7 +442,7 @@ namespace Opm
                 for (int pvIdx = 0; pvIdx < this->numWellEq_; ++pvIdx) {
                     // also need to consider the efficiency factor when manipulating the jacobians.
                     this->duneC_[0][cell_idx][pvIdx][componentIdx] -= cq_s_effective.derivative(pvIdx+Indices::numEq); // intput in transformed matrix
-                    this->invDuneD_[0][0][componentIdx][pvIdx] += cq_s_effective.derivative(pvIdx+Indices::numEq);
+                    this->duneD_[0][0][componentIdx][pvIdx] += cq_s_effective.derivative(pvIdx+Indices::numEq);
                 }
 
                 for (int pvIdx = 0; pvIdx < Indices::numEq; ++pvIdx) {
@@ -475,8 +475,8 @@ namespace Opm
             ws.vaporized_oil_rate = comm.sum(ws.vaporized_oil_rate);
         }
 
-        // accumulate resWell_ and invDuneD_ in parallel to get effects of all perforations (might be distributed)
-        wellhelpers::sumDistributedWellEntries(this->invDuneD_[0][0], this->resWell_[0],
+        // accumulate resWell_ and duneD_ in parallel to get effects of all perforations (might be distributed)
+        wellhelpers::sumDistributedWellEntries(this->duneD_[0][0], this->resWell_[0],
                                                this->parallel_well_info_.communication());
         // add vol * dF/dt + Q to the well equations;
         for (int componentIdx = 0; componentIdx < numWellConservationEq; ++componentIdx) {
@@ -489,7 +489,7 @@ namespace Opm
             }
             resWell_loc -= this->getQs(componentIdx) * this->well_efficiency_factor_;
             for (int pvIdx = 0; pvIdx < this->numWellEq_; ++pvIdx) {
-                this->invDuneD_[0][0][componentIdx][pvIdx] += resWell_loc.derivative(pvIdx+Indices::numEq);
+                this->duneD_[0][0][componentIdx][pvIdx] += resWell_loc.derivative(pvIdx+Indices::numEq);
             }
             this->resWell_[0][componentIdx] += resWell_loc.value();
         }
@@ -501,7 +501,7 @@ namespace Opm
 
         // do the local inversion of D.
         try {
-            this->duneD_ = this->invDuneD_; // Not strictly need if not cpr with well contributions is used
+            this->invDuneD_ = this->duneD_; // Not strictly need if not cpr with well contributions is used
             Dune::ISTLUtility::invertMatrix(this->invDuneD_[0][0]);
         } catch( ... ) {
             OPM_DEFLOG_THROW(NumericalIssue,"Error when inverting local well equations for well " + name(), deferred_logger);
@@ -2044,6 +2044,7 @@ namespace Opm
         }
     }
 
+    
     template <typename TypeTag>
     void
     StandardWell<TypeTag>::addWellPressureEquations(PressureMatrix& jacobian,
@@ -2052,6 +2053,17 @@ namespace Opm
                                                     const bool use_well_weights,
                                                     const WellState& well_state) const
     {
+        // This adds pressure quation for cpr
+        // For use_well_weights=true
+        //    weights lamda = inv(D)'v  v = 0 v(bhpInd) = 1
+        //    the well equations are summed i lambda' B(:,pressureVarINd) -> B  lambda'*D(:,bhpInd) -> D
+        // For use_well_weights = false
+        //    weights lambda = \sum_i w /n where ths sum is over weights of all perforation cells
+        //    in the case of pressure controlled trivial equations are used and bhp  C=B=0
+        //    then the flow part of the well equations are summed lambda'*B(1:n,pressureVarInd) -> B lambda'*D(1:n,bhpInd) -> D
+        // For bouth
+        //    C -> w'C(:,bhpInd) where w is weights of the perforation cell
+        
         // Add the well contributions in cpr
         // use_well_weights is a quasiimpes formulation which is not implemented in multisegment
         int bhp_var_index = Bhp;
@@ -2060,7 +2072,7 @@ namespace Opm
         assert(this->duneC_.M() == weights.size());
         const int welldof_ind = this->duneC_.M() + this->index_of_well_;
         // do not assume anything about pressure controlled with use_well_weights (work fine with the assumtion also)
-        if(not(this->isPressureControlled(well_state)) || use_well_weights){
+        if( not( this->isPressureControlled(well_state) ) || use_well_weights ){
             // make coupling for reservoir to well            
             for (auto colC = this->duneC_[0].begin(), endC = this->duneC_[0].end(); colC != endC; ++colC) {
                 const auto row_ind = colC.index();
@@ -2084,7 +2096,7 @@ namespace Opm
         bweights[0] = 0.0;
         double diagElem = 0;
         {            
-            if(use_well_weights){
+            if ( use_well_weights ){
                 // calculate weighs and set diagonal element
                 //NB! use this options without treating pressure controlled separated
                 //NB! calculate quasiimpes well weights NB do not work well with trueimpes reservoir weights
@@ -2101,14 +2113,14 @@ namespace Opm
                     }
                     abs_max = std::max(abs_max, std::fabs(bweights[0][i]));
                 }
-                assert(abs_max>0.0);
+                assert( abs_max > 0.0 );
                 for (size_t i = 0; i < blockSz; ++i) {
                     bweights[0][i] /= abs_max;
                 }
                 diagElem = 1.0/abs_max;
             }else{
                 // set diagonal element
-                if(this->isPressureControlled(well_state)){
+                if( this->isPressureControlled(well_state) ){
                     bweights[0][blockSz-1] = 1.0;
                     diagElem = 1.0;// better scaling could have used the calculation below if weights were calculated
                 }else{
@@ -2128,7 +2140,7 @@ namespace Opm
         //
         jacobian[welldof_ind][welldof_ind] = diagElem;
         // set the matrix elements for well reservoir coupling
-        if(not(this->isPressureControlled(well_state)) || use_well_weights){
+        if( not( this->isPressureControlled(well_state) ) || use_well_weights ){
             for (auto colB = this->duneB_[0].begin(), endB = this->duneB_[0].end(); colB != endB; ++colB) {
                 const auto col_index = colB.index();
                 const auto& bw = bweights[0];
@@ -2323,8 +2335,8 @@ namespace Opm
 
         this->resWell_[0][pskin_index] = eq_pskin.value();
         for (int pvIdx = 0; pvIdx < this->numWellEq_; ++pvIdx) {
-            this->invDuneD_[0][0][wat_vel_index][pvIdx] = eq_wat_vel.derivative(pvIdx+Indices::numEq);
-            this->invDuneD_[0][0][pskin_index][pvIdx] = eq_pskin.derivative(pvIdx+Indices::numEq);
+            this->duneD_[0][0][wat_vel_index][pvIdx] = eq_wat_vel.derivative(pvIdx+Indices::numEq);
+            this->duneD_[0][0][pskin_index][pvIdx] = eq_pskin.derivative(pvIdx+Indices::numEq);
         }
 
         // the water velocity is impacted by the reservoir primary varaibles. It needs to enter matrix B

@@ -462,7 +462,6 @@ namespace Opm
                 || preconditionerType == "cprw" || preconditionerType == "cprwt") {
                 const bool transpose = preconditionerType == "cprt" || preconditionerType == "cprwt";
                 const auto weightsType = prm_.get("preconditioner.weight_type"s, "quasiimpes"s);
-                const auto pressureIndex = this->prm_.get("preconditioner.pressure_var_index", 1);
                 if (weightsType == "quasiimpes") {
                     // weights will be created as default in the solver
                     // assignment p = pressureIndex prevent compiler warning about
