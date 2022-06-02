@@ -36,7 +36,6 @@ namespace Opm
         const IndexSet& indset = comm.indexSet();
         IndexSet& indset_rw = commRW->indexSet();
         const int max_nw = comm.communicator().max(nw);
-        const int num_proc = comm.communicator().size();
         const int rank = comm.communicator().rank();
         int glo_max = 0;
         size_t loc_max = 0;
