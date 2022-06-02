@@ -426,7 +426,7 @@ assembleControlEq(const WellState& well_state,
     // TODO: we should use a different index system for the well equations
     this->resWell_[0][Bhp] = control_eq.value();
     for (int pv_idx = 0; pv_idx < numWellEq_; ++pv_idx) {
-        this->invDuneD_[0][0][Bhp][pv_idx] = control_eq.derivative(pv_idx + Indices::numEq);
+        this->duneD_[0][0][Bhp][pv_idx] = control_eq.derivative(pv_idx + Indices::numEq);
     }
 }
 
@@ -1005,16 +1005,16 @@ init(std::vector<double>& perf_depth,
     //[A C^T    [x    =  [ res
     // B D] x_well]      res_well]
     // set the size of the matrices
-    this->invDuneD_.setSize(1, 1, 1);
+    this->duneD_.setSize(1, 1, 1);
     this->duneB_.setSize(1, num_cells, baseif_.numPerfs());
     this->duneC_.setSize(1, num_cells, baseif_.numPerfs());
 
-    for (auto row=this->invDuneD_.createbegin(), end = this->invDuneD_.createend(); row!=end; ++row) {
+    for (auto row=this->duneD_.createbegin(), end = this->duneD_.createend(); row!=end; ++row) {
         // Add nonzeros for diagonal
         row.insert(row.index());
     }
     // the block size is run-time determined now
-    this->invDuneD_[0][0].resize(numWellEq_, numWellEq_);
+    this->duneD_[0][0].resize(numWellEq_, numWellEq_);
 
     for (auto row = this->duneB_.createbegin(), end = this->duneB_.createend(); row!=end; ++row) {
         for (int perf = 0 ; perf < baseif_.numPerfs(); ++perf) {
@@ -1052,8 +1052,8 @@ init(std::vector<double>& perf_depth,
         this->Bx_[i].resize(numWellEq_);
     }
 
-    this->invDrw_.resize( this->invDuneD_.N() );
-    for (unsigned i = 0; i < this->invDuneD_.N(); ++i) {
+    this->invDrw_.resize( this->duneD_.N() );
+    for (unsigned i = 0; i < this->duneD_.N(); ++i) {
         this->invDrw_[i].resize(numWellEq_);
     }
 }
@@ -1088,7 +1088,7 @@ addWellContribution(WellContributions& wellContribs) const
     for (int i = 0; i < numStaticWellEq; ++i)
     {
         for (int j = 0; j < numStaticWellEq; ++j) {
-            nnzValues.emplace_back(this->invDuneD_[0][0][i][j]);
+            nnzValues.emplace_back(this->duneD_[0][0][i][j]);
         }
     }
     wellContribs.addMatrix(WellContributions::MatrixType::D, colIndices.data(), nnzValues.data(), 1);
