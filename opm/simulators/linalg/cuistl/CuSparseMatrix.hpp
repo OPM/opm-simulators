@@ -139,14 +139,12 @@ public:
         return _blockSize;
     }
 
-private:
-    void initializeMatrix(const double* nonZeroElements,
-                          const int* rowIndices,
-                          const int* columnIndices,
-                          int numberOfNonzeroElements,
-                          int blockSize,
-                          int numberOfRows);
+    CuSparseMatrixDescription& getDescription()
+    {
+        return *matrixDescription;
+    }
 
+private:
     CuVector<T> nonZeroElements;
     CuVector<int> columnIndices;
     CuVector<int> rowIndices;

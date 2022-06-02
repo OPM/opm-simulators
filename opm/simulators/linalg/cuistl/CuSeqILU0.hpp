@@ -73,6 +73,8 @@ public:
     {
         auto bufferSize = findBufferSize();
         buffer.reset(new CuVector<field_type>(bufferSize));
+        analyzeMatrix();
+        createILU();
     }
 
     /*!
@@ -176,55 +178,168 @@ private:
     CuSparseMatrixDescriptionPtr descriptionU;
     CuSparseResource<bsrsv2Info_t> infoL;
     CuSparseResource<bsrsv2Info_t> infoU;
+    CuSparseResource<bsrilu02Info_t> infoM;
 
     std::unique_ptr<CuVector<field_type>> buffer;
     CuSparseHandle& cuSparseHandle;
 
-    size_t findBufferSize()
-    {
+    bool analyzisDone = false;
 
+    void analyzeMatrix()
+    {
+        // TODO: Move this method to the .cu file
+        if (!buffer) {
+            OPM_THROW(std::runtime_error,
+                      "Buffer not initialized. Call findBufferSize() then initialize with the appropiate size.");
+        }
+        const auto numberOfRows = LU.N();
+        const auto numberOfNonzeroElements = LU.nonzeroes();
+        const auto blockSize = LU.blockSize();
+
+        auto nonZeroValues = LU.getNonZeroValues().data();
+        auto rowIndices = LU.getRowIndices().data();
+        auto columnIndices = LU.getColumnIndices().data();
+        // analysis of ilu LU decomposition
+        OPM_CUSPARSE_SAFE_CALL(cusparseDbsrilu02_analysis(cuSparseHandle.get(),
+                                                          CUSPARSE_MATRIX_ORDER,
+                                                          numberOfRows,
+                                                          numberOfNonzeroElements,
+                                                          LU.getDescription.get(),
+                                                          nonZeroValues,
+                                                          rowIndices,
+                                                          columnIndices,
+                                                          blockSize,
+                                                          infoM.get(),
+                                                          CUSPARSE_SOLVE_POLICY_USE_LEVEL,
+                                                          buffer->data()));
+
+        int structural_zero;
+        OPM_CUSPARSE_SAFE_CALL(cusparseXbsrilu02_zeroPivot(cuSparseHandle.get(), infoM.get(), &structural_zero));
+
+        // analysis of ilu apply
+        OPM_CUSPARSE_SAFE_CALL(cusparseDbsrsv2_analysis(cuSparseHandle.get(),
+                                                        CUSPARSE_MATRIX_ORDER,
+                                                        CUSPARSE_OPERATION_NON_TRANSPOSE,
+                                                        numberOfRows,
+                                                        numberOfNonzeroElements,
+                                                        descriptionL->get(),
+                                                        nonZeroValues,
+                                                        rowIndices,
+                                                        columnIndices,
+                                                        blockSize,
+                                                        infoL.get(),
+                                                        CUSPARSE_SOLVE_POLICY_USE_LEVEL,
+                                                        buffer->data()));
+
+        OPM_CUSPARSE_SAFE_CALL(cusparseDbsrsv2_analysis(cuSparseHandle.get(),
+                                                        CUSPARSE_MATRIX_ORDER,
+                                                        CUSPARSE_OPERATION_NON_TRANSPOSE,
+                                                        numberOfRows,
+                                                        numberOfNonzeroElements,
+                                                        descriptionU->get(),
+                                                        nonZeroValues,
+                                                        rowIndices,
+                                                        columnIndices,
+                                                        blockSize,
+                                                        infoU.get(),
+                                                        CUSPARSE_SOLVE_POLICY_USE_LEVEL,
+                                                        buffer->data()));
+        analyzisDone = true;
+    }
+    int findBufferSize()
+    {
+        // TODO: Move this method to the .cu file
         // We have three calls that need buffers:
         //   1) LU decomposition
         //   2) solve Lv = y
         //   3) solve Ux = z
         // we combine these buffers into one since it is not used across calls,
         // however, it was used in the Across project.
-        return 1;
-        // cusparseDbsrilu02_bufferSize(cusparseHandle.get(),
-        //                              CUSPARSE_MATRIX_ORDER,
-        //                              Nb,
-        //                              nnzb,
-        //                              descr_M,
-        //                              d_bVals,
-        //                              d_bRows,
-        //                              d_bCols,
-        //                              block_size,
-        //                              info_M,
-        //                              &d_bufferSize_M);
-        // cusparseDbsrsv2_bufferSize(cusparseHandle,
-        //                            CUSPARSE_MATRIX_ORDER,
-        //                            operation,
-        //                            Nb,
-        //                            nnzb,
-        //                            descr_L,
-        //                            d_bVals,
-        //                            d_bRows,
-        //                            d_bCols,
-        //                            block_size,
-        //                            info_L,
-        //                            &d_bufferSize_L);
-        // cusparseDbsrsv2_bufferSize(cusparseHandle,
-        //                            order,
-        //                            operation,
-        //                            Nb,
-        //                            nnzb,
-        //                            descr_U,
-        //                            d_bVals,
-        //                            d_bRows,
-        //                            d_bCols,
-        //                            block_size,
-        //                            info_U,
-        //                            &d_bufferSize_U);
+        const auto numberOfRows = LU.N();
+        const auto numberOfNonzeroElements = LU.nonzeroes();
+        const auto blockSize = LU.blockSize();
+
+        auto nonZeroValues = LU.getNonZeroValues().data();
+        auto rowIndices = LU.getRowIndices().data();
+        auto columnIndices = LU.getColumnIndices().data();
+
+        int bufferSizeM = 0;
+        OPM_CUSPARSE_SAFE_CALL(cusparseDbsrilu02_bufferSize(cuSparseHandle.get(),
+                                                            CUSPARSE_MATRIX_ORDER,
+                                                            numberOfRows,
+                                                            numberOfNonzeroElements,
+                                                            LU.getDescription().get(),
+                                                            nonZeroValues,
+                                                            rowIndices,
+                                                            columnIndices,
+                                                            blockSize,
+                                                            infoM.get(),
+                                                            &bufferSizeM));
+        int bufferSizeL = 0;
+        OPM_CUSPARSE_SAFE_CALL(cusparseDbsrsv2_bufferSize(cuSparseHandle.get(),
+                                                          CUSPARSE_MATRIX_ORDER,
+                                                          CUSPARSE_OPERATION_NON_TRANSPOSE,
+                                                          numberOfRows,
+                                                          numberOfNonzeroElements,
+                                                          descriptionL->get(),
+                                                          nonZeroValues,
+                                                          rowIndices,
+                                                          columnIndices,
+                                                          blockSize,
+                                                          infoL.get(),
+                                                          &bufferSizeL));
+
+        int bufferSizeU = 0;
+        OPM_CUSPARSE_SAFE_CALL(cusparseDbsrsv2_bufferSize(cuSparseHandle.get(),
+                                                          CUSPARSE_MATRIX_ORDER,
+                                                          CUSPARSE_OPERATION_NON_TRANSPOSE,
+                                                          numberOfRows,
+                                                          numberOfNonzeroElements,
+                                                          descriptionL->get(),
+                                                          nonZeroValues,
+                                                          rowIndices,
+                                                          columnIndices,
+                                                          blockSize,
+                                                          infoU.get(),
+                                                          &bufferSizeU));
+
+        return std::max(bufferSizeL, std::max(bufferSizeU, bufferSizeM));
+    }
+
+    void createILU()
+    {
+        // TODO: Move this method to the .cu file
+        if (!buffer) {
+            OPM_THROW(std::runtime_error,
+                      "Buffer not initialized. Call findBufferSize() then initialize with the appropiate size.");
+        }
+        if (!analyzisDone) {
+            OPM_THROW(std::runtime_error, "Analyzis of matrix not done. Call analyzeMatrix() first.");
+        }
+        const auto numberOfRows = LU.N();
+        const auto numberOfNonzeroElements = LU.nonzeroes();
+        const auto blockSize = LU.blockSize();
+
+        auto nonZeroValues = LU.getNonZeroValues().data();
+        auto rowIndices = LU.getRowIndices().data();
+        auto columnIndices = LU.getColumnIndices().data();
+        OPM_CUSPARSE_SAFE_CALL(cusparseDbsrilu02(cuSparseHandle.get(),
+                                                 CUSPARSE_MATRIX_ORDER,
+                                                 numberOfRows,
+                                                 numberOfNonzeroElements,
+                                                 LU.getDescription().get(),
+                                                 nonZeroValues,
+                                                 rowIndices,
+                                                 columnIndices,
+                                                 blockSize,
+                                                 infoM.get(),
+                                                 CUSPARSE_SOLVE_POLICY_USE_LEVEL,
+                                                 buffer->data()));
+
+        // TODO: Do we really need to do this twice?
+        int structural_zero;
+        // cusparseXbsrilu02_zeroPivot() calls cudaDeviceSynchronize()
+        OPM_CUSPARSE_SAFE_CALL(cusparseXbsrilu02_zeroPivot(cuSparseHandle.get(), infoM.get(), &structural_zero));
     }
 };
 } // end namespace Opm::cuistl
