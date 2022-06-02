@@ -1190,12 +1190,12 @@ namespace Opm {
     {
         int nw =  this->numLocalWellsEnd();
         int rdofs = local_num_cells_;
-        for(int i=0; i < nw; i++){
+        for ( int i = 0; i < nw; i++ ){
             int wdof = rdofs + i; 
             jacobian[wdof][wdof] = 1.0;// better scaling ?
         }
         
-        for (const auto& well : well_container_) {
+        for ( const auto& well : well_container_ ) {
             well->addWellPressureEquations(jacobian, weights, pressureVarIndex, use_well_weights, this->wellState());
         }
     }
@@ -1226,7 +1226,7 @@ namespace Opm {
         std::vector<int> cartesianToCompressed(size, -1);
         auto begin = globalCell.begin();
 
-        for ( auto cell = begin, end= globalCell.end(); cell != end; ++cell )
+        for ( auto cell = begin, end = globalCell.end(); cell != end; ++cell )
         {
             cartesianToCompressed[ *cell ] = cell - begin;
         }
@@ -1258,13 +1258,12 @@ namespace Opm {
                 }
             }
 
-            if ( ! compressed_well_perforations.empty() )
-            {
-                std::sort(compressed_well_perforations.begin(),
-                          compressed_well_perforations.end());
+            // also include wells with no perforations in case
+            std::sort(compressed_well_perforations.begin(),
+                      compressed_well_perforations.end());
 
-                wells.push_back(compressed_well_perforations);
-            }
+            wells.push_back(compressed_well_perforations);
+            
         }
         return wells;
     }

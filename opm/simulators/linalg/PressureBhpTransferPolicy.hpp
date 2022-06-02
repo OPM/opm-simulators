@@ -66,13 +66,24 @@ namespace Opm
         commRW->remoteIndices().template rebuild<true>();
         //commRW->clearInterfaces(); may need this for correct rebuild
     }
+    namespace Details {
+        using PressureMatrixType = Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1>>;
+        using PressureVectorType = Dune::BlockVector<Dune::FieldVector<double, 1>>;
+        using SeqCoarseOperatorType = Dune::MatrixAdapter<PressureMatrixType, PressureVectorType, PressureVectorType>;
+        template <class Comm>
+        using ParCoarseOperatorType
+            = Dune::OverlappingSchwarzOperator<PressureMatrixType, PressureVectorType, PressureVectorType, Comm>;
+        template <class Comm>
+        using CoarseOperatorType = std::conditional_t<std::is_same<Comm, Dune::Amg::SequentialInformation>::value,
+                                                      SeqCoarseOperatorType,
+                                                      ParCoarseOperatorType<Comm>>;      
+    }    
 
-
-
-    template <class FineOperator, class CoarseOperator, class Communication, bool transpose = false>
-    class PressureBhpTransferPolicy : public Dune::Amg::LevelTransferPolicyCpr<FineOperator, CoarseOperator>
+    template <class FineOperator, class Communication, bool transpose = false>
+    class PressureBhpTransferPolicy : public Dune::Amg::LevelTransferPolicyCpr<FineOperator, Details::CoarseOperatorType<Communication>>
     {
     public:
+        typedef typename Details::CoarseOperatorType<Communication> CoarseOperator;
         typedef Dune::Amg::LevelTransferPolicyCpr<FineOperator, CoarseOperator> ParentType;
         typedef Communication ParallelInformation;
         typedef typename FineOperator::domain_type FineVectorType;
