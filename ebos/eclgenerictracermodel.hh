@@ -48,7 +48,7 @@ class EclipseState;
 template<class Grid, class GridView, class DofMapper, class Stencil, class Scalar>
 class EclGenericTracerModel {
 public:
-    using TracerMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, 1, 1>>;
+    using TracerMatrix = Dune::BCRSMatrix<Opm::MatrixBlock<Scalar, 1, 1>>;
     using TracerVector = Dune::BlockVector<Dune::FieldVector<Scalar,1>>;
     using CartesianIndexMapper = Dune::CartesianIndexMapper<Grid>;
     static const int dimWorld = Grid::dimensionworld;
