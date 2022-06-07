@@ -1227,14 +1227,20 @@ namespace Opm
         std::fill(this->ipr_b_.begin(), this->ipr_b_.end(), 0.);
 
         const int nseg = this->numberOfSegments();
-        double seg_bhp_press_diff = 0;
-        double ref_depth = this->ref_depth_;
+        const double ref_depth = this->ref_depth_;
+        std::vector<double> seg_dp(nseg, 0.0);
         for (int seg = 0; seg < nseg; ++seg) {
             // calculating the perforation rate for each perforation that belongs to this segment
             const double segment_depth = this->segmentSet()[seg].depth();
-            const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth, segment_depth, this->segment_densities_[seg].value(), this->gravity_);
-            ref_depth = segment_depth;
-            seg_bhp_press_diff += dp;
+            const int outlet_segment_index = this->segmentNumberToIndex(this->segmentSet()[seg].outletSegment());
+            const double segment_depth_outlet = seg == 0? ref_depth : this->segmentSet()[outlet_segment_index].depth();
+            double dp = wellhelpers::computeHydrostaticCorrection(segment_depth_outlet, segment_depth, this->segment_densities_[seg].value(), this->gravity_);
+            // we add the hydrostatic correction from the outlet segment
+            // in order to get the correction all the way to the bhp ref depth.
+            if (seg > 0) {
+                dp += seg_dp[outlet_segment_index];
+            }
+            seg_dp[seg] = dp;
             for (const int perf : this->segment_perforations_[seg]) {
             std::vector<Scalar> mob(this->num_components_, 0.0);
 
@@ -1245,7 +1251,7 @@ namespace Opm
             const auto& int_quantities = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
             const auto& fs = int_quantities.fluidState();
             // the pressure of the reservoir grid block the well connection is in
-                    // pressure difference between the segment and the perforation
+            // pressure difference between the segment and the perforation
             const double perf_seg_press_diff = this->gravity_ * this->segment_densities_[seg].value() * this->perforation_segment_depth_diffs_[perf];
             // pressure difference between the perforation and the grid cell
             const double cell_perf_press_diff = this->cell_perforation_pressure_diffs_[perf];
@@ -1262,7 +1268,7 @@ namespace Opm
             }
 
             // the pressure difference between the connection and BHP
-            const double h_perf = cell_perf_press_diff + perf_seg_press_diff + seg_bhp_press_diff;
+            const double h_perf = cell_perf_press_diff + perf_seg_press_diff + dp;
             const double pressure_diff = pressure_cell - h_perf;
 
             // do not take into consideration the crossflow here.
