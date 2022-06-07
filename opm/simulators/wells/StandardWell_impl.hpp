@@ -1026,6 +1026,9 @@ namespace Opm
                 const unsigned comp_idx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phase));
                 b_perf[comp_idx] = fs.invB(phase).value();
             }
+            if constexpr (has_solvent) {
+                b_perf[Indices::contiSolventEqIdx] = int_quantities.solventInverseFormationVolumeFactor().value();
+            }
 
             // the pressure difference between the connection and BHP
             const double h_perf = this->perf_pressure_diffs_[perf];
@@ -1045,15 +1048,12 @@ namespace Opm
             // the well index associated with the connection
             const double tw_perf = this->well_index_[perf]*ebos_simulator.problem().template rockCompTransMultiplier<double>(int_quantities, cell_idx);
 
-            // TODO: there might be some indices related problems here
-            // phases vs components
-            // ipr values for the perforation
             std::vector<double> ipr_a_perf(this->ipr_a_.size());
             std::vector<double> ipr_b_perf(this->ipr_b_.size());
-            for (int p = 0; p < this->number_of_phases_; ++p) {
-                const double tw_mob = tw_perf * mob[p] * b_perf[p];
-                ipr_a_perf[p] += tw_mob * pressure_diff;
-                ipr_b_perf[p] += tw_mob;
+            for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
+                const double tw_mob = tw_perf * mob[comp_idx] * b_perf[comp_idx];
+                ipr_a_perf[comp_idx] += tw_mob * pressure_diff;
+                ipr_b_perf[comp_idx] += tw_mob;
             }
 
             // we need to handle the rs and rv when both oil and gas are present
@@ -1076,10 +1076,9 @@ namespace Opm
                 ipr_b_perf[oil_comp_idx] += vap_oil_b;
             }
 
-            for (int p = 0; p < this->number_of_phases_; ++p) {
-                // TODO: double check the indices here
-                this->ipr_a_[this->ebosCompIdxToFlowCompIdx(p)] += ipr_a_perf[p];
-                this->ipr_b_[this->ebosCompIdxToFlowCompIdx(p)] += ipr_b_perf[p];
+            for (size_t comp_idx = 0; comp_idx < ipr_a_perf.size(); ++comp_idx) {
+                this->ipr_a_[comp_idx] += ipr_a_perf[comp_idx];
+                this->ipr_b_[comp_idx] += ipr_b_perf[comp_idx];
             }
         }
         this->parallel_well_info_.communication().sum(this->ipr_a_.data(), this->ipr_a_.size());
@@ -1101,9 +1100,16 @@ namespace Opm
             // if the BHP limit is not defaulted or the well does not have a THP limit
             // we need to check the BHP limit
             double total_ipr_mass_rate = 0.0;
-            for (int p = 0; p < this->number_of_phases_; ++p) {
-                const double ipr_rate = this->ipr_a_[p] - this->ipr_b_[p] * bhp_limit;
-                const double rho = FluidSystem::referenceDensity( p, Base::pvtRegionIdx() );
+            for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx)
+            {
+                if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                    continue;
+                }
+
+                const unsigned compIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
+                const double ipr_rate = this->ipr_a_[compIdx] - this->ipr_b_[compIdx] * bhp_limit;
+
+                const double rho = FluidSystem::referenceDensity( phaseIdx, Base::pvtRegionIdx() );
                 total_ipr_mass_rate += ipr_rate * rho;
             }
             if ( (this->isProducer() && total_ipr_mass_rate < 0.) || (this->isInjector() && total_ipr_mass_rate > 0.) ) {
