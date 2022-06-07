@@ -48,6 +48,8 @@ private:
     std::shared_ptr<Opm::Accelerator::BlockedMatrix> jacMatrix;  // 'stores' preconditioner matrix, actually points to h_rows, h_cols and the received BridgeMatrix for the nonzeroes
     std::vector<int> h_rows, h_cols;  // store the sparsity pattern of the matrix
     std::vector<int> h_jacRows, h_jacCols;  // store the sparsity pattern of the jacMatrix
+    std::vector<typename BridgeMatrix::size_type> diagIndices;   // contains offsets of the diagonal blocks wrt start of the row, used for replaceZeroDiagonal()
+    std::vector<typename BridgeMatrix::size_type> jacDiagIndices;   // same but for jacMatrix
 
 public:
     /// Construct a BdaBridge
