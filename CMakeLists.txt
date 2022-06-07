@@ -44,6 +44,8 @@ if (OPM_ENABLE_PYTHON)
     endif()
     set(Python3_EXECUTABLE ${PYTHON_EXECUTABLE})
     set(Python3_LIBRARIES ${PYTHON_LIBRARIES})
+    set(Python3_VERSION "${PYTHON_VERSION_STRING}"})
+    set(Python3_VERSION_MINOR ${PYTHON_VERSION_MINOR})
   else()
     # Be backwards compatible.
     if(PYTHON_EXECUTABLE AND NOT Python3_EXECUTABLE)
@@ -51,7 +53,10 @@ if (OPM_ENABLE_PYTHON)
     endif()
     find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
   endif()
-
+  if(Python3_VERSION_MINOR LESS 3)
+    # Python native namespace packages requires python >= 3.3
+    message(SEND_ERROR "OPM requires python >= 3.3 but only version ${Python3_VERSION} was found")
+  endif()
   # Compatibility settings for PythonInterp and PythonLibs
   # used e.g. in FindCwrap, pybind11
   set(PYTHON_EXECUTABLE ${Python3_EXECUTABLE})
