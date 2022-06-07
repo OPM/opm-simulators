@@ -631,6 +631,12 @@ namespace Opm {
                         this->wellState().shutWell(w);
                         continue;
                     } else {
+                        if (!well_ecl.getAllowCrossFlow()) {
+                            // stopped wells where cross flow is not allowed
+                            // are not added to the well container
+                            this->wellState().shutWell(w);
+                            continue;
+                        }
                         // stopped wells are added to the container but marked as stopped
                         this->wellState().stopWell(w);
                         wellIsStopped = true;
