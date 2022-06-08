@@ -31,6 +31,15 @@
 #include <opm/grid/CpGrid.hpp>
 
 #include <functional>
+#include <optional>
+#include <vector>
+
+namespace Opm {
+    class EclipseState;
+    class Schedule;
+    class Well;
+    class ParallelEclipseState;
+}
 
 namespace Opm {
 
@@ -101,10 +110,11 @@ public:
      */
     const CartesianIndexMapper& equilCartesianIndexMapper() const;
 
-    std::vector<int> cellPartition() const
+    const std::vector<int>& cellPartition() const
     {
-        return cell_part_;
+        return this->cell_part_;
     }
+
 protected:
     /*!
      * \brief Distribute the simulation grid over multiple processes
@@ -112,25 +122,56 @@ protected:
      * (For parallel simulation runs.)
      */
 #if HAVE_MPI
-    void doLoadBalance_(Dune::EdgeWeightMethod edgeWeightsMethod,
-                        bool ownersFirst, bool serialPartitioning,
-                        bool enableDistributedWells, double zoltanImbalanceTol,
-                        const GridView& gridv,
-                        const Schedule& schedule,
-                        std::vector<double>& centroids,
-                        EclipseState& eclState,
+    void doLoadBalance_(const Dune::EdgeWeightMethod            edgeWeightsMethod,
+                        const bool                              ownersFirst,
+                        const bool                              serialPartitioning,
+                        const bool                              enableDistributedWells,
+                        const double                            zoltanImbalanceTol,
+                        const GridView&                         gridView,
+                        const Schedule&                         schedule,
+                        std::vector<double>&                    centroids,
+                        EclipseState&                           eclState,
                         EclGenericVanguard::ParallelWellStruct& parallelWells,
-                        int numJacobiBlocks);
+                        const int                               numJacobiBlocks);
 
     void distributeFieldProps_(EclipseState& eclState);
-#endif
+
+private:
+    std::vector<double> extractFaceTrans(const GridView& gridView) const;
+
+    void distributeGrid(const Dune::EdgeWeightMethod            edgeWeightsMethod,
+                        const bool                              ownersFirst,
+                        const bool                              serialPartitioning,
+                        const bool                              enableDistributedWells,
+                        const double                            zoltanImbalanceTol,
+                        const bool                              loadBalancerSet,
+                        const std::vector<double>&              faceTrans,
+                        const std::vector<Well>&                wells,
+                        std::vector<double>&                    centroids,
+                        EclipseState&                           eclState,
+                        EclGenericVanguard::ParallelWellStruct& parallelWells);
+
+    void distributeGrid(const Dune::EdgeWeightMethod            edgeWeightsMethod,
+                        const bool                              ownersFirst,
+                        const bool                              serialPartitioning,
+                        const bool                              enableDistributedWells,
+                        const double                            zoltanImbalanceTol,
+                        const bool                              loadBalancerSet,
+                        const std::vector<double>&              faceTrans,
+                        const std::vector<Well>&                wells,
+                        std::vector<double>&                    centroids,
+                        ParallelEclipseState*                   eclState,
+                        EclGenericVanguard::ParallelWellStruct& parallelWells);
+
+protected:
+#endif  // HAVE_MPI
 
     void allocCartMapper();
 
     void doCreateGrids_(EclipseState& eclState);
 
     virtual void allocTrans() = 0;
-    virtual double getTransmissibility(unsigned I, unsigned J) = 0;
+    virtual double getTransmissibility(unsigned I, unsigned J) const = 0;
 
     // removing some connection located in inactive grid cells
     void doFilterConnections_(Schedule& schedule);
@@ -143,7 +184,7 @@ protected:
     std::unique_ptr<CartesianIndexMapper> equilCartesianIndexMapper_;
 
     int mpiRank;
-    std::vector<int> cell_part_;
+    std::vector<int> cell_part_{};
 };
 
 } // namespace Opm

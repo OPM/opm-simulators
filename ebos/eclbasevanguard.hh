@@ -84,10 +84,14 @@ template<class TypeTag, class MyTypeTag>
 struct EdgeWeightsMethod {
     using type = UndefinedProperty;
 };
+
+#if HAVE_OPENCL
 template<class TypeTag, class MyTypeTag>
 struct NumJacobiBlocks {
     using type = UndefinedProperty;
 };
+#endif  // HAVE_OPENCL
+
 template<class TypeTag, class MyTypeTag>
 struct OwnerCellsFirst {
     using type = UndefinedProperty;
@@ -136,10 +140,14 @@ template<class TypeTag>
 struct EdgeWeightsMethod<TypeTag, TTag::EclBaseVanguard> {
     static constexpr int value = 1;
 };
+
+#if HAVE_OPENCL
 template<class TypeTag>
 struct NumJacobiBlocks<TypeTag, TTag::EclBaseVanguard> {
     static constexpr int value = 0;
 };
+#endif // HAVE_OPENCL
+
 template<class TypeTag>
 struct OwnerCellsFirst<TypeTag, TTag::EclBaseVanguard> {
     static constexpr bool value = true;
@@ -219,8 +227,12 @@ public:
                              "When restarting: should we try to initialize wells and groups from historical SCHEDULE section.");
         EWOMS_REGISTER_PARAM(TypeTag, int, EdgeWeightsMethod,
                              "Choose edge-weighing strategy: 0=uniform, 1=trans, 2=log(trans).");
+
+#if HAVE_OPENCL
         EWOMS_REGISTER_PARAM(TypeTag, int, NumJacobiBlocks,
                              "Number of blocks to be created for the Block-Jacobi preconditioner.");
+#endif
+
         EWOMS_REGISTER_PARAM(TypeTag, bool, OwnerCellsFirst,
                              "Order cells owned by rank before ghost/overlap cells.");
         EWOMS_REGISTER_PARAM(TypeTag, bool, SerialPartitioning,
@@ -245,7 +257,11 @@ public:
     {
         fileName_ = EWOMS_GET_PARAM(TypeTag, std::string, EclDeckFileName);
         edgeWeightsMethod_   = Dune::EdgeWeightMethod(EWOMS_GET_PARAM(TypeTag, int, EdgeWeightsMethod));
+
+#if HAVE_OPENCL
         numJacobiBlocks_ = EWOMS_GET_PARAM(TypeTag, int, NumJacobiBlocks);
+#endif
+
         ownersFirst_ = EWOMS_GET_PARAM(TypeTag, bool, OwnerCellsFirst);
         serialPartitioning_ = EWOMS_GET_PARAM(TypeTag, bool, SerialPartitioning);
         zoltanImbalanceTol_ = EWOMS_GET_PARAM(TypeTag, double, ZoltanImbalanceTol);

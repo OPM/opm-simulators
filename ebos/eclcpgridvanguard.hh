@@ -180,7 +180,7 @@ protected:
         globalTrans_->update(false);
     }
 
-    double getTransmissibility(unsigned I, unsigned J) override
+    double getTransmissibility(unsigned I, unsigned J) const override
     {
        return globalTrans_->transmissibility(I,J);
     }

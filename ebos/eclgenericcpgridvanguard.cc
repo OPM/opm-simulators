@@ -22,21 +22,27 @@
 */
 
 #include <config.h>
+
 #include <ebos/eclgenericcpgridvanguard.hh>
 
 #if HAVE_MPI
 #include <ebos/eclmpiserializer.hh>
 #endif
 
-#include <opm/common/utility/ActiveGridCells.hpp>
-#include <opm/grid/cpgrid/GridHelpers.hpp>
-#include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
-#include <opm/simulators/utils/PropsCentroidsDataHandle.hpp>
 #include <opm/simulators/utils/ParallelSerialization.hpp>
+#include <opm/simulators/utils/PropsCentroidsDataHandle.hpp>
 
-#include <dune/common/version.hh>
+#include <opm/grid/cpgrid/GridHelpers.hpp>
+
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
+#include <opm/input/eclipse/Schedule/Well/Well.hpp>
+
+#include <opm/common/utility/ActiveGridCells.hpp>
+
 #include <dune/grid/common/mcmgmapper.hh>
+#include <dune/grid/common/partitionset.hh>
+#include <dune/common/version.hh>
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/gridpart/adaptiveleafgridpart.hh>
@@ -44,11 +50,16 @@
 #include <ebos/femcpgridcompat.hh>
 #endif
 
-#include <fmt/format.h>
-
 #include <cassert>
 #include <numeric>
+#include <optional>
 #include <sstream>
+#include <stdexcept>
+#include <string>
+#include <tuple>
+#include <vector>
+
+#include <fmt/format.h>
 
 namespace Opm {
 
@@ -57,163 +68,236 @@ std::optional<std::function<std::vector<int> (const Dune::CpGrid&)>> externalLoa
 template<class ElementMapper, class GridView, class Scalar>
 EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::EclGenericCpGridVanguard()
 {
+    this->mpiRank = 0;
+
 #if HAVE_MPI
-    MPI_Comm_rank(EclGenericVanguard::comm(), &mpiRank);
-#else
-  mpiRank = 0;
-#endif
+    this->mpiRank = EclGenericVanguard::comm().rank();
+#endif  // HAVE_MPI
 }
 
 template<class ElementMapper, class GridView, class Scalar>
 void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::releaseEquilGrid()
 {
-    equilGrid_.reset();
-    equilCartesianIndexMapper_.reset();
+    this->equilGrid_.reset();
+    this->equilCartesianIndexMapper_.reset();
 }
 
 #if HAVE_MPI
 template<class ElementMapper, class GridView, class Scalar>
-void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doLoadBalance_(Dune::EdgeWeightMethod edgeWeightsMethod,
-                                                                             bool ownersFirst,
-                                                                             bool serialPartitioning,
-                                                                             bool enableDistributedWells,
-                                                                             double zoltanImbalanceTol,
-                                                                             const GridView& gridView,
-                                                                             const Schedule& schedule,
-                                                                             std::vector<double>& centroids,
-                                                                             EclipseState& eclState1,
-                                                                             EclGenericVanguard::ParallelWellStruct& parallelWells,
-                                                                             int numJacobiBlocks)
+void EclGenericCpGridVanguard<ElementMapper, GridView, Scalar>::
+doLoadBalance_(const Dune::EdgeWeightMethod            edgeWeightsMethod,
+               const bool                              ownersFirst,
+               const bool                              serialPartitioning,
+               const bool                              enableDistributedWells,
+               const double                            zoltanImbalanceTol,
+               const GridView&                         gridView,
+               const Schedule&                         schedule,
+               std::vector<double>&                    centroids,
+               EclipseState&                           eclState1,
+               EclGenericVanguard::ParallelWellStruct& parallelWells,
+               const int                               numJacobiBlocks)
 {
-    int mpiSize = 1;
-    MPI_Comm_size(grid_->comm(), &mpiSize);
+    const auto mpiSize = this->grid_->comm().size();
 
-    if (mpiSize > 1 || numJacobiBlocks > 1) {
-        // the CpGrid's loadBalance() method likes to have the transmissibilities as
-        // its edge weights. since this is (kind of) a layering violation and
-        // transmissibilities are relatively expensive to compute, we only do it if
-        // more than a single process is involved in the simulation.
-        if (grid_->size(0))
-        {
+    const auto partitionJacobiBlocks =
+        (numJacobiBlocks > 1) && (mpiSize == 1);
+
+    if ((mpiSize > 1) || (numJacobiBlocks > 1)) {
+        if (this->grid_->size(0) > 0) {
+            // Generally needed in parallel runs both when there is and when
+            // there is not an externally defined load-balancing function.
+            // In addition to being used in CpGrid::loadBalance(), the
+            // transmissibilities are also output to the .INIT file.  Thus,
+            // transmissiblity values must exist on the I/O rank for derived
+            // classes such as EclCpGridVanguard<>.
             this->allocTrans();
         }
 
-        // convert to transmissibility for faces
-        // TODO: grid_->numFaces() is not generic. use grid_->size(1) instead? (might
-        // not work)
-        unsigned numFaces = grid_->numFaces();
-        std::vector<double> faceTrans;
-        int loadBalancerSet = externalLoadBalancer.has_value();
-        grid_->comm().broadcast(&loadBalancerSet, 1, 0);
-        if (!loadBalancerSet){
-            faceTrans.resize(numFaces, 0.0);
-            ElementMapper elemMapper(gridView, Dune::mcmgElementLayout());
-            auto elemIt = gridView.template begin</*codim=*/0>();
-            const auto& elemEndIt = gridView.template end</*codim=*/0>();
-            for (; elemIt != elemEndIt; ++ elemIt) {
-                const auto& elem = *elemIt;
-                auto isIt = gridView.ibegin(elem);
-                const auto& isEndIt = gridView.iend(elem);
-                for (; isIt != isEndIt; ++ isIt) {
-                    const auto& is = *isIt;
-                    if (!is.neighbor())
-                        continue;
+        // CpGrid's loadBalance() method uses transmissibilities as edge
+        // weights.  This is arguably a layering violation and extracting
+        // the per-face transmissibilities as a linear array is relatively
+        // expensive.  We therefore extract transmissibility values only if
+        // the values are actually needed.
+        auto loadBalancerSet = static_cast<int>(externalLoadBalancer.has_value());
+        this->grid_->comm().broadcast(&loadBalancerSet, 1, 0);
 
-                    unsigned I = elemMapper.index(is.inside());
-                    unsigned J = elemMapper.index(is.outside());
+        const auto faceTrans = ((loadBalancerSet == 0) || partitionJacobiBlocks)
+            ? this->extractFaceTrans(gridView)
+            : std::vector<double>{};
 
-                    // FIXME (?): this is not portable!
-                    unsigned faceIdx = is.id();
+        const auto wells = ((mpiSize > 1) || partitionJacobiBlocks)
+            ? schedule.getWellsatEnd()
+            : std::vector<Well>{};
 
-                    faceTrans[faceIdx] = this->getTransmissibility(I,J);
-                }
-            }
-        }
-
-        //distribute the grid and switch to the distributed view.
+        // Distribute the grid and switch to the distributed view.
         if (mpiSize > 1) {
-            {
-                const auto wells = schedule.getWellsatEnd();
-
-                try
-                {
-                    auto& eclState = dynamic_cast<ParallelEclipseState&>(eclState1);
-                    const EclipseGrid* eclGrid = nullptr;
-
-                    if (grid_->comm().rank() == 0)
-                    {
-                        eclGrid = &eclState.getInputGrid();
-                    }
-
-                    PropsCentroidsDataHandle<Dune::CpGrid> handle(*grid_, eclState, eclGrid, centroids,
-                                                                  cartesianIndexMapper());
-                    if (loadBalancerSet)
-                    {
-                        std::vector<int> parts;
-                        if (grid_->comm().rank() == 0)
-                        {
-                         parts =  (*externalLoadBalancer)(*grid_);
-                        }
-                        parallelWells = std::get<1>(grid_->loadBalance(handle, parts, &wells, ownersFirst, false, 1));
-                    }
-                    else
-                    {
-                        parallelWells =
-                            std::get<1>(grid_->loadBalance(handle, edgeWeightsMethod, &wells, serialPartitioning,
-                                                           faceTrans.data(), ownersFirst, false, 1, true, zoltanImbalanceTol,
-                                                           enableDistributedWells));
-                    }
-                }
-                catch(const std::bad_cast& e)
-                {
-                    std::ostringstream message;
-                    message << "Parallel simulator setup is incorrect as it does not use ParallelEclipseState ("
-                            << e.what() <<")"<<std::flush;
-                    OpmLog::error(message.str());
-                    std::rethrow_exception(std::current_exception());
-                }
-            }
-            grid_->switchToDistributedView();
+            this->distributeGrid(edgeWeightsMethod, ownersFirst,
+                                 serialPartitioning, enableDistributedWells,
+                                 zoltanImbalanceTol, loadBalancerSet != 0,
+                                 faceTrans, wells, centroids,
+                                 eclState1, parallelWells);
         }
-        
+
         // Calling Schedule::filterConnections would remove any perforated
-        // cells that exist only on other ranks even in the case of distributed wells
-        // But we need all connections to figure out the first cell of a well (e.g. for
-        // pressure). Hence this is now skipped. Rank 0 had everything even before.
+        // cells that exist only on other ranks even in the case of
+        // distributed wells.  But we need all connections to figure out the
+        // first cell of a well (e.g. for pressure).  Hence this is now
+        // skipped.  Rank 0 had everything even before.
 
-        if (numJacobiBlocks > 1 && mpiSize == 1) {
-            const auto wells = schedule.getWellsatEnd();
-            cell_part_.resize(grid_->numCells());
-            cell_part_ = grid_->zoltanPartitionWithoutScatter(&wells, faceTrans.data(), numJacobiBlocks, zoltanImbalanceTol);
+#if HAVE_OPENCL
+        if (partitionJacobiBlocks) {
+            this->cell_part_ = this->grid_->
+                zoltanPartitionWithoutScatter(&wells, faceTrans.data(),
+                                              numJacobiBlocks,
+                                              zoltanImbalanceTol);
         }
+#endif // HAVE_OPENCL
     }
 }
 
 template<class ElementMapper, class GridView, class Scalar>
 void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::distributeFieldProps_(EclipseState& eclState1)
 {
-    int mpiSize = 1;
-    MPI_Comm_size(grid_->comm(), &mpiSize);
+    const auto mpiSize = this->grid_->comm().size();
 
-    if (mpiSize > 1) {
-        try
-        {
-            auto& parallelEclState = dynamic_cast<ParallelEclipseState&>(eclState1);
-            // reset cartesian index mapper for auto creation of field properties
-            parallelEclState.resetCartesianMapper(cartesianIndexMapper_.get());
-            parallelEclState.switchToDistributedProps();
-        }
-        catch(const std::bad_cast& e)
-        {
-            std::ostringstream message;
-            message << "Parallel simulator setup is incorrect as it does not use ParallelEclipseState ("
-                            << e.what() <<")"<<std::flush;
-            OpmLog::error(message.str());
-            std::rethrow_exception(std::current_exception());
-        }
+    if (mpiSize == 1) {
+        return;
+    }
+
+    if (auto* parallelEclState = dynamic_cast<ParallelEclipseState*>(&eclState1);
+        parallelEclState != nullptr)
+    {
+        // Reset Cartesian index mapper for automatic creation of field
+        // properties
+        parallelEclState->resetCartesianMapper(this->cartesianIndexMapper_.get());
+        parallelEclState->switchToDistributedProps();
+    }
+    else {
+        const auto message = std::string {
+            "Parallel simulator setup is incorrect as "
+            "it does not use ParallelEclipseState"
+        };
+
+        OpmLog::error(message);
+
+        throw std::invalid_argument { message };
     }
 }
-#endif
+
+template <class ElementMapper, class GridView, class Scalar>
+std::vector<double>
+EclGenericCpGridVanguard<ElementMapper, GridView, Scalar>::
+extractFaceTrans(const GridView& gridView) const
+{
+    auto faceTrans = std::vector<double>(this->grid_->numFaces(), 0.0);
+
+    const auto elemMapper = ElementMapper { gridView, Dune::mcmgElementLayout() };
+
+    for (const auto& elem : elements(gridView, Dune::Partitions::interiorBorder)) {
+        for (const auto& is : intersections(gridView, elem)) {
+            if (!is.neighbor()) {
+                continue;
+            }
+
+            const auto I = static_cast<unsigned int>(elemMapper.index(is.inside()));
+            const auto J = static_cast<unsigned int>(elemMapper.index(is.outside()));
+
+            faceTrans[is.id()] = this->getTransmissibility(I, J);
+        }
+    }
+
+    return faceTrans;
+}
+
+template <class ElementMapper, class GridView, class Scalar>
+void
+EclGenericCpGridVanguard<ElementMapper, GridView, Scalar>::
+distributeGrid(const Dune::EdgeWeightMethod            edgeWeightsMethod,
+               const bool                              ownersFirst,
+               const bool                              serialPartitioning,
+               const bool                              enableDistributedWells,
+               const double                            zoltanImbalanceTol,
+               const bool                              loadBalancerSet,
+               const std::vector<double>&              faceTrans,
+               const std::vector<Well>&                wells,
+               std::vector<double>&                    centroids,
+               EclipseState&                           eclState1,
+               EclGenericVanguard::ParallelWellStruct& parallelWells)
+{
+    if (auto* eclState = dynamic_cast<ParallelEclipseState*>(&eclState1);
+        eclState != nullptr)
+    {
+        this->distributeGrid(edgeWeightsMethod, ownersFirst,
+                             serialPartitioning, enableDistributedWells,
+                             zoltanImbalanceTol, loadBalancerSet, faceTrans,
+                             wells, centroids, eclState, parallelWells);
+    }
+    else {
+        const auto message = std::string {
+            "Parallel simulator setup is incorrect as "
+            "it does not use ParallelEclipseState"
+        };
+
+        OpmLog::error(message);
+
+        throw std::invalid_argument { message };
+    }
+
+    this->grid_->switchToDistributedView();
+}
+
+template <class ElementMapper, class GridView, class Scalar>
+void
+EclGenericCpGridVanguard<ElementMapper, GridView, Scalar>::
+distributeGrid(const Dune::EdgeWeightMethod            edgeWeightsMethod,
+               const bool                              ownersFirst,
+               const bool                              serialPartitioning,
+               const bool                              enableDistributedWells,
+               const double                            zoltanImbalanceTol,
+               const bool                              loadBalancerSet,
+               const std::vector<double>&              faceTrans,
+               const std::vector<Well>&                wells,
+               std::vector<double>&                    centroids,
+               ParallelEclipseState*                   eclState,
+               EclGenericVanguard::ParallelWellStruct& parallelWells)
+{
+    const auto isIORank = this->grid_->comm().rank() == 0;
+
+    const auto* eclGrid = isIORank
+        ? &eclState->getInputGrid()
+        : nullptr;
+
+    PropsCentroidsDataHandle<Dune::CpGrid> handle {
+        *this->grid_, *eclState, eclGrid, centroids,
+        this->cartesianIndexMapper()
+    };
+
+    const auto addCornerCells = false;
+    const auto overlapLayers = 1;
+
+    if (loadBalancerSet) {
+        auto parts = isIORank
+            ? (*externalLoadBalancer)(*this->grid_)
+            : std::vector<int>{};
+
+        parallelWells =
+            std::get<1>(this->grid_->loadBalance(handle, parts, &wells, ownersFirst,
+                                                 addCornerCells, overlapLayers));
+    }
+    else {
+        const auto useZoltan = true;
+
+        parallelWells =
+            std::get<1>(this->grid_->loadBalance(handle, edgeWeightsMethod,
+                                                 &wells, serialPartitioning,
+                                                 faceTrans.data(), ownersFirst,
+                                                 addCornerCells, overlapLayers,
+                                                 useZoltan, zoltanImbalanceTol,
+                                                 enableDistributedWells));
+    }
+}
+
+#endif  // HAVE_MPI
 
 template<class ElementMapper, class GridView, class Scalar>
 void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(EclipseState& eclState)
@@ -326,45 +410,47 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doFilterConnection
     // is done after load balancing as in the future the other processes
     // will hold an empty partition for the global grid and hence filtering
     // here would remove all well connections.
-    if (equilGrid_)
-    {
+    if (this->equilGrid_ != nullptr) {
         ActiveGridCells activeCells(equilGrid().logicalCartesianSize(),
                                     equilGrid().globalCell().data(),
                                     equilGrid().size(0));
+
         schedule.filterConnections(activeCells);
     }
+
 #if HAVE_MPI
-    try
-    {
+    try {
         // Broadcast another time to remove inactive peforations on
         // slave processors.
         eclBroadcast(EclGenericVanguard::comm(), schedule);
     }
-    catch(const std::exception& broadcast_error)
-    {
+    catch (const std::exception& broadcast_error) {
         OpmLog::error(fmt::format("Distributing properties to all processes failed\n"
                                   "Internal error message: {}", broadcast_error.what()));
         MPI_Finalize();
         std::exit(EXIT_FAILURE);
     }
-#endif
+#endif  // HAVE_MPI
 }
 
 template<class ElementMapper, class GridView, class Scalar>
-const Dune::CpGrid& EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::equilGrid() const
+const Dune::CpGrid&
+EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::equilGrid() const
 {
     assert(mpiRank == 0);
     return *equilGrid_;
 }
 
 template<class ElementMapper, class GridView, class Scalar>
-const Dune::CartesianIndexMapper<Dune::CpGrid>& EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::cartesianIndexMapper() const
+const Dune::CartesianIndexMapper<Dune::CpGrid>&
+EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::cartesianIndexMapper() const
 {
     return *cartesianIndexMapper_;
 }
 
 template<class ElementMapper, class GridView, class Scalar>
-const Dune::CartesianIndexMapper<Dune::CpGrid>& EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::equilCartesianIndexMapper() const
+const Dune::CartesianIndexMapper<Dune::CpGrid>&
+EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::equilCartesianIndexMapper() const
 {
     assert(mpiRank == 0);
     assert(equilCartesianIndexMapper_);
@@ -372,7 +458,9 @@ const Dune::CartesianIndexMapper<Dune::CpGrid>& EclGenericCpGridVanguard<Element
 }
 
 template<class ElementMapper, class GridView, class Scalar>
-Scalar EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::computeCellThickness(const typename GridView::template Codim<0>::Entity& element) const
+Scalar
+EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::
+computeCellThickness(const typename GridView::template Codim<0>::Entity& element) const
 {
     typedef typename Element::Geometry Geometry;
     static constexpr int zCoord = Element::dimension - 1;
@@ -396,30 +484,42 @@ Scalar EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::computeCellThick
 }
 
 #if HAVE_DUNE_FEM
-template class EclGenericCpGridVanguard<Dune::MultipleCodimMultipleGeomTypeMapper<
-                                        Dune::GridView<
-                                        Dune::Fem::GridPart2GridViewTraits<
-                                        Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>>>>,
-                                        Dune::GridView<
-                                        Dune::Fem::GridPart2GridViewTraits<
-                                        Dune::Fem::AdaptiveLeafGridPart<
-                                        Dune::CpGrid, Dune::PartitionIteratorType(4), false>>>,
-                                        double>;
-template class EclGenericCpGridVanguard<Dune::MultipleCodimMultipleGeomTypeMapper<
-                                            Dune::Fem::GridPart2GridViewImpl<
-                                                Dune::Fem::AdaptiveLeafGridPart<
-                                                    Dune::CpGrid,
-                                                    Dune::PartitionIteratorType(4),
-                                                    false>>>,
-                                        Dune::Fem::GridPart2GridViewImpl<
-                                            Dune::Fem::AdaptiveLeafGridPart<
-                                                Dune::CpGrid,
-                                                Dune::PartitionIteratorType(4),
-                                                false> >,
-                                        double>;
+    template class EclGenericCpGridVanguard<
+        Dune::MultipleCodimMultipleGeomTypeMapper<
+            Dune::GridView<
+                Dune::Fem::GridPart2GridViewTraits<
+                    Dune::Fem::AdaptiveLeafGridPart<
+                        Dune::CpGrid,
+                        Dune::PartitionIteratorType(4),
+                        false>>>>,
+        Dune::GridView<
+            Dune::Fem::GridPart2GridViewTraits<
+                Dune::Fem::AdaptiveLeafGridPart<
+                    Dune::CpGrid,
+                    Dune::PartitionIteratorType(4),
+                    false>>>,
+        double>;
+
+    template class EclGenericCpGridVanguard<
+        Dune::MultipleCodimMultipleGeomTypeMapper<
+            Dune::Fem::GridPart2GridViewImpl<
+                Dune::Fem::AdaptiveLeafGridPart<
+                    Dune::CpGrid,
+                    Dune::PartitionIteratorType(4),
+                    false>>>,
+        Dune::Fem::GridPart2GridViewImpl<
+            Dune::Fem::AdaptiveLeafGridPart<
+                Dune::CpGrid,
+                Dune::PartitionIteratorType(4),
+                false> >,
+        double>;
 #else
-template class EclGenericCpGridVanguard<Dune::MultipleCodimMultipleGeomTypeMapper<Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>>,
-                                        Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>,
-                                        double>;
+    template class EclGenericCpGridVanguard<
+        Dune::MultipleCodimMultipleGeomTypeMapper<
+            Dune::GridView<
+                Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>>,
+        Dune::GridView<
+            Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>,
+        double>;
 #endif
 } // namespace Opm
