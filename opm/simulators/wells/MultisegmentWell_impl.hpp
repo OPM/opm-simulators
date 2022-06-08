@@ -1169,12 +1169,20 @@ namespace Opm
         if ( bhp_limit_not_defaulted || !this->wellHasTHPConstraints(summaryState) ) {
             // if the BHP limit is not defaulted or the well does not have a THP limit
             // we need to check the BHP limit
+            double total_ipr_mass_rate = 0.0;
+            for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx)
+            {
+                if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                    continue;
+                }
 
-            double ipr_rate = 0;
-            for (int p = 0; p < this->number_of_phases_; ++p) {
-                ipr_rate += this->ipr_a_[p] - this->ipr_b_[p] * bhp_limit;
+                const unsigned compIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
+                const double ipr_rate = this->ipr_a_[compIdx] - this->ipr_b_[compIdx] * bhp_limit;
+
+                const double rho = FluidSystem::referenceDensity( phaseIdx, Base::pvtRegionIdx() );
+                total_ipr_mass_rate += ipr_rate * rho;
             }
-            if ( (this->isProducer() && ipr_rate < 0.) || (this->isInjector() && ipr_rate > 0.) ) {
+            if ( (this->isProducer() && total_ipr_mass_rate < 0.) || (this->isInjector() && total_ipr_mass_rate > 0.) ) {
                 this->operability_status_.operable_under_only_bhp_limit = false;
             }
 
@@ -1219,14 +1227,20 @@ namespace Opm
         std::fill(this->ipr_b_.begin(), this->ipr_b_.end(), 0.);
 
         const int nseg = this->numberOfSegments();
-        double seg_bhp_press_diff = 0;
-        double ref_depth = this->ref_depth_;
+        const double ref_depth = this->ref_depth_;
+        std::vector<double> seg_dp(nseg, 0.0);
         for (int seg = 0; seg < nseg; ++seg) {
             // calculating the perforation rate for each perforation that belongs to this segment
             const double segment_depth = this->segmentSet()[seg].depth();
-            const double dp = wellhelpers::computeHydrostaticCorrection(ref_depth, segment_depth, this->segment_densities_[seg].value(), this->gravity_);
-            ref_depth = segment_depth;
-            seg_bhp_press_diff += dp;
+            const int outlet_segment_index = this->segmentNumberToIndex(this->segmentSet()[seg].outletSegment());
+            const double segment_depth_outlet = seg == 0? ref_depth : this->segmentSet()[outlet_segment_index].depth();
+            double dp = wellhelpers::computeHydrostaticCorrection(segment_depth_outlet, segment_depth, this->segment_densities_[seg].value(), this->gravity_);
+            // we add the hydrostatic correction from the outlet segment
+            // in order to get the correction all the way to the bhp ref depth.
+            if (seg > 0) {
+                dp += seg_dp[outlet_segment_index];
+            }
+            seg_dp[seg] = dp;
             for (const int perf : this->segment_perforations_[seg]) {
             std::vector<Scalar> mob(this->num_components_, 0.0);
 
@@ -1237,7 +1251,7 @@ namespace Opm
             const auto& int_quantities = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
             const auto& fs = int_quantities.fluidState();
             // the pressure of the reservoir grid block the well connection is in
-                    // pressure difference between the segment and the perforation
+            // pressure difference between the segment and the perforation
             const double perf_seg_press_diff = this->gravity_ * this->segment_densities_[seg].value() * this->perforation_segment_depth_diffs_[perf];
             // pressure difference between the perforation and the grid cell
             const double cell_perf_press_diff = this->cell_perforation_pressure_diffs_[perf];
@@ -1254,7 +1268,7 @@ namespace Opm
             }
 
             // the pressure difference between the connection and BHP
-            const double h_perf = cell_perf_press_diff + perf_seg_press_diff + seg_bhp_press_diff;
+            const double h_perf = cell_perf_press_diff + perf_seg_press_diff + dp;
             const double pressure_diff = pressure_cell - h_perf;
 
             // do not take into consideration the crossflow here.
@@ -1266,15 +1280,12 @@ namespace Opm
             // the well index associated with the connection
             const double tw_perf = this->well_index_[perf]*ebos_simulator.problem().template rockCompTransMultiplier<double>(int_quantities, cell_idx);
 
-            // TODO: there might be some indices related problems here
-            // phases vs components
-            // ipr values for the perforation
             std::vector<double> ipr_a_perf(this->ipr_a_.size());
             std::vector<double> ipr_b_perf(this->ipr_b_.size());
-            for (int p = 0; p < this->number_of_phases_; ++p) {
-                const double tw_mob = tw_perf * mob[p] * b_perf[p];
-                ipr_a_perf[p] += tw_mob * pressure_diff;
-                ipr_b_perf[p] += tw_mob;
+            for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
+                const double tw_mob = tw_perf * mob[comp_idx] * b_perf[comp_idx];
+                ipr_a_perf[comp_idx] += tw_mob * pressure_diff;
+                ipr_b_perf[comp_idx] += tw_mob;
             }
 
             // we need to handle the rs and rv when both oil and gas are present
@@ -1297,10 +1308,9 @@ namespace Opm
                 ipr_b_perf[oil_comp_idx] += vap_oil_b;
             }
 
-            for (int p = 0; p < this->number_of_phases_; ++p) {
-                // TODO: double check the indices here
-                this->ipr_a_[this->ebosCompIdxToFlowCompIdx(p)] += ipr_a_perf[p];
-                this->ipr_b_[this->ebosCompIdxToFlowCompIdx(p)] += ipr_b_perf[p];
+            for (size_t comp_idx = 0; comp_idx < ipr_a_perf.size(); ++comp_idx) {
+                this->ipr_a_[comp_idx] += ipr_a_perf[comp_idx];
+                this->ipr_b_[comp_idx] += ipr_b_perf[comp_idx];
             }
             }
         }

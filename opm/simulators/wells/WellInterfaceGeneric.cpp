@@ -55,8 +55,8 @@ WellInterfaceGeneric::WellInterfaceGeneric(const Well& well,
       , number_of_phases_(num_phases)
       , index_of_well_(index_of_well)
       , perf_data_(&perf_data)
-      , ipr_a_(number_of_phases_)
-      , ipr_b_(number_of_phases_)
+      , ipr_a_(num_components)
+      , ipr_b_(num_components)
 {
     assert(well.name()==pw_info.name());
     assert(std::is_sorted(perf_data.begin(), perf_data.end(),
