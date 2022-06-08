@@ -169,7 +169,10 @@ public:
      * \param phaseIdx The index of the fluid phase
      */
     const Evaluation& volumeFlux(unsigned phaseIdx) const
-    { return volumeFlux_[phaseIdx]; }
+    {
+        throw std::invalid_argument("Should not acces volume flux for eclmoduletpfa");
+        return volumeFlux_[phaseIdx];
+    }
 
 protected:
     /*!
@@ -181,6 +184,7 @@ protected:
      */
     unsigned upstreamIndex_(unsigned phaseIdx) const
     {
+        throw std::invalid_argument("No upstreamIndex");
         assert(phaseIdx < numPhases);
 
         return upIdx_[phaseIdx];
@@ -195,6 +199,7 @@ protected:
      */
     unsigned downstreamIndex_(unsigned phaseIdx) const
     {
+        throw std::invalid_argument("No downstream index");
         assert(phaseIdx < numPhases);
 
         return dnIdx_[phaseIdx];
@@ -207,24 +212,24 @@ protected:
     { asImp_().updateShearMultipliers(elemCtx, scvfIdx, timeIdx); }
 
 
-
+public:
     template<class EvalType>
-    void calculatePhasePressureDiff_(short& upIdx,
-                                     short& dnIdx,
-                                     EvalType& pressureDifference,
-                                     const IntensiveQuantities& intQuantsIn,
-                                     const IntensiveQuantities& intQuantsEx,
-                                     const unsigned scvfIdx,
-                                     const unsigned timeIdx,
-                                     const unsigned phaseIdx,
-                                     const unsigned interiorDofIdx,
-                                     const unsigned exteriorDofIdx,
-                                     const Scalar& Vin,
-                                     const Scalar& Vex,
-                                     const unsigned& globalIndexIn,
-                                     const unsigned& globalIndexEx,
-                                     const Scalar& distZg,
-                                     const Scalar& thpres
+    static void calculatePhasePressureDiff_(short& upIdx,
+                                            short& dnIdx,
+                                            EvalType& pressureDifference,
+                                            const IntensiveQuantities& intQuantsIn,
+                                            const IntensiveQuantities& intQuantsEx,
+                                            const unsigned scvfIdx,
+                                            const unsigned timeIdx,
+                                            const unsigned phaseIdx,
+                                            const unsigned interiorDofIdx,
+                                            const unsigned exteriorDofIdx,
+                                            const Scalar& Vin,
+                                            const Scalar& Vex,
+                                            const unsigned& globalIndexIn,
+                                            const unsigned& globalIndexEx,
+                                            const Scalar& distZg,
+                                            const Scalar& thpres
         )
     {
 
@@ -260,11 +265,11 @@ protected:
         // degree of freedom which is regarded upstream if both pressures are equal
         // is always the same: if the pressure is equal, the DOF with the lower
         // global index is regarded to be the upstream one.
-        if (pressureDifference_[phaseIdx] > 0.0) {
+        if (pressureDifference > 0.0) {
             upIdx = exteriorDofIdx;
             dnIdx = interiorDofIdx;
         }
-        else if (pressureDifference_[phaseIdx] < 0.0) {
+        else if (pressureDifference < 0.0) {
             upIdx = interiorDofIdx;
             dnIdx = exteriorDofIdx;
         }
@@ -310,12 +315,14 @@ protected:
         }
     }
 
-    
+protected:
     /*!
      * \brief Update the required gradients for interior faces
      */
     void calculateGradients_(const ElementContext& elemCtx, unsigned scvfIdx, unsigned timeIdx)
     {
+        throw std::invalid_argument("No calculateGradients_");
+        
         Valgrind::SetUndefined(*this);
 
         const auto& problem = elemCtx.problem();
@@ -414,6 +421,7 @@ protected:
                                      unsigned timeIdx,
                                      const FluidState& exFluidState)
     {
+        throw std::invalid_argument("No calculateGradients for boundary");
         const auto& problem = elemCtx.problem();
 
         bool enableBoundaryMassFlux = problem.nonTrivialBoundaryConditions();
