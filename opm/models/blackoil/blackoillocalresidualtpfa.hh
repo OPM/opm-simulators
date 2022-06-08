@@ -25,8 +25,8 @@
  *
  * \copydoc Opm::BlackOilLocalResidual
  */
-#ifndef EWOMS_BLACK_OIL_LOCAL_RESIDUAL_HH
-#define EWOMS_BLACK_OIL_LOCAL_RESIDUAL_HH
+#ifndef EWOMS_BLACK_OIL_LOCAL_TPFA_RESIDUAL_HH
+#define EWOMS_BLACK_OIL_LOCAL_TPFA_RESIDUAL_HH
 
 #include "blackoilproperties.hh"
 #include "blackoilsolventmodules.hh"
@@ -46,7 +46,7 @@ namespace Opm {
  * \brief Calculates the local residual of the black oil model.
  */
 template <class TypeTag>
-class BlackOilLocalResidual : public GetPropType<TypeTag, Properties::DiscLocalResidual>
+class BlackOilLocalResidualTPFA : public GetPropType<TypeTag, Properties::DiscLocalResidual>
 {
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
     using ExtensiveQuantities = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
