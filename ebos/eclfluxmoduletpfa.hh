@@ -28,8 +28,8 @@
  * This approach to fluxes is very specific to two-point flux approximation and applies
  * what the Eclipse Technical Description calls the "NEWTRAN" transmissibility approach.
  */
-#ifndef EWOMS_ECL_FLUX_MODULE_HH
-#define EWOMS_ECL_FLUX_MODULE_HH
+#ifndef EWOMS_ECL_FLUX_TPFA_MODULE_HH
+#define EWOMS_ECL_FLUX_TPFA_MODULE_HH
 
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
@@ -51,52 +51,52 @@ class EclTransExtensiveQuantities;
 template <class TypeTag>
 class EclTransBaseProblem;
 
-/*!
- * \ingroup EclBlackOilSimulator
- * \brief Specifies a flux module which uses ECL transmissibilities.
- */
-template <class TypeTag>
-struct EclTransFluxModule
-{
-    typedef EclTransIntensiveQuantities<TypeTag> FluxIntensiveQuantities;
-    typedef EclTransExtensiveQuantities<TypeTag> FluxExtensiveQuantities;
-    typedef EclTransBaseProblem<TypeTag> FluxBaseProblem;
+// /*!
+//  * \ingroup EclBlackOilSimulator
+//  * \brief Specifies a flux module which uses ECL transmissibilities.
+//  */
+// template <class TypeTag>
+// struct EclTransFluxModule
+// {
+//     typedef EclTransIntensiveQuantities<TypeTag> FluxIntensiveQuantities;
+//     typedef EclTransExtensiveQuantities<TypeTag> FluxExtensiveQuantities;
+//     typedef EclTransBaseProblem<TypeTag> FluxBaseProblem;
 
-    /*!
-     * \brief Register all run-time parameters for the flux module.
-     */
-    static void registerParameters()
-    { }
-};
+//     /*!
+//      * \brief Register all run-time parameters for the flux module.
+//      */
+//     static void registerParameters()
+//     { }
+// };
 
-/*!
- * \ingroup EclBlackOilSimulator
- * \brief Provides the defaults for the parameters required by the
- *        transmissibility based volume flux calculation.
- */
-template <class TypeTag>
-class EclTransBaseProblem
-{ };
+// /*!
+//  * \ingroup EclBlackOilSimulator
+//  * \brief Provides the defaults for the parameters required by the
+//  *        transmissibility based volume flux calculation.
+//  */
+// template <class TypeTag>
+// class EclTransBaseProblem
+// { };
 
-/*!
- * \ingroup EclBlackOilSimulator
- * \brief Provides the intensive quantities for the ECL flux module
- */
-template <class TypeTag>
-class EclTransIntensiveQuantities
-{
-    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
-protected:
-    void update_(const ElementContext&, unsigned, unsigned)
-    { }
-};
+// /*!
+//  * \ingroup EclBlackOilSimulator
+//  * \brief Provides the intensive quantities for the ECL flux module
+//  */
+// template <class TypeTag>
+// class EclTransIntensiveQuantities
+// {
+//     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+// protected:
+//     void update_(const ElementContext&, unsigned, unsigned)
+//     { }
+// };
 
 /*!
  * \ingroup EclBlackOilSimulator
  * \brief Provides the ECL flux module
  */
 template <class TypeTag>
-class EclTransExtensiveQuantities
+class EclTransExtensiveQuantitiesTPFA
 {
     using Implementation = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
