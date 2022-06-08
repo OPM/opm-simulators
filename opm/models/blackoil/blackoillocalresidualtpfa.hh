@@ -57,13 +57,14 @@ class BlackOilLocalResidualTPFA : public GetPropType<TypeTag, Properties::DiscLo
     using EqVector = GetPropType<TypeTag, Properties::EqVector>;
     using RateVector = GetPropType<TypeTag, Properties::RateVector>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
-    
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
 
     enum { conti0EqIdx = Indices::conti0EqIdx };
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
-
+    
+    enum { dimWorld = GridView::dimensionworld };
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
     enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
     enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
@@ -195,27 +196,117 @@ public:
         assert(timeIdx == 0);
 
         flux = 0.0;
+        // need for dary flux calculation
+        const auto& problem = elemCtx.problem();
+        const auto& stencil = elemCtx.stencil(timeIdx);
+        const auto& scvf = stencil.interiorFace(scvfIdx);
 
-        const ExtensiveQuantities& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
+        unsigned interiorDofIdx = scvf.interiorIndex();
+        unsigned exteriorDofIdx = scvf.exteriorIndex();
+        assert(interiorDofIdx != exteriorDofIdx);
+
+        //unsigned I = stencil.globalSpaceIndex(interiorDofIdx);
+        //unsigned J = stencil.globalSpaceIndex(exteriorDofIdx);
+        Scalar Vin = elemCtx.dofVolume(interiorDofIdx, /*timeIdx=*/0);
+        Scalar Vex = elemCtx.dofVolume(exteriorDofIdx, /*timeIdx=*/0);
+        const auto& globalIndexIn = stencil.globalSpaceIndex(interiorDofIdx);
+        const auto& globalIndexEx = stencil.globalSpaceIndex(exteriorDofIdx);
+        Scalar trans = problem.transmissibility(elemCtx, interiorDofIdx, exteriorDofIdx);
+        Scalar faceArea = scvf.area();
+        Scalar thpres = problem.thresholdPressure(globalIndexIn, globalIndexEx);
+
+        // estimate the gravity correction: for performance reasons we use a simplified
+        // approach for this flux module that assumes that gravity is constant and always
+        // acts into the downwards direction. (i.e., no centrifuge experiments, sorry.)
+        Scalar g = elemCtx.problem().gravity()[dimWorld - 1];
+
+        const auto& intQuantsIn = elemCtx.intensiveQuantities(interiorDofIdx, timeIdx);
+        const auto& intQuantsEx = elemCtx.intensiveQuantities(exteriorDofIdx, timeIdx);
+
+        // this is quite hacky because the dune grid interface does not provide a
+        // cellCenterDepth() method (so we ask the problem to provide it). The "good"
+        // solution would be to take the Z coordinate of the element centroids, but since
+        // ECL seems to like to be inconsistent on that front, it needs to be done like
+        // here...
+        Scalar zIn = problem.dofCenterDepth(elemCtx, interiorDofIdx, timeIdx);
+        Scalar zEx = problem.dofCenterDepth(elemCtx, exteriorDofIdx, timeIdx);
+
+        // the distances from the DOF's depths. (i.e., the additional depth of the
+        // exterior DOF)
+        Scalar distZ = zIn - zEx;
+
+        //
+        //const ExtensiveQuantities& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
         unsigned focusDofIdx = elemCtx.focusDofIndex();
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx))
                 continue;
+            // darcy flux calculation
+            short dnIdx;
+            //
+            short upIdx;
+            Evaluation pressureDifference;
+            ExtensiveQuantities::calculatePhasePressureDiff_(upIdx,
+                                                             dnIdx,
+                                                             pressureDifference,
+                                                             intQuantsIn,
+                                                             intQuantsEx,
+                                                             scvfIdx,//input
+                                                             timeIdx,//input
+                                                             phaseIdx,//input
+                                                             interiorDofIdx,//input
+                                                             exteriorDofIdx,//intput
+                                                             Vin,
+                                                             Vex,
+                                                             globalIndexIn,
+                                                             globalIndexEx,
+                                                             distZ*g,
+                                                             thpres);
             
-            const auto& darcyFlux = extQuants.volumeFlux(phaseIdx);                       
-            unsigned upIdx = static_cast<unsigned>(extQuants.upstreamIndex(phaseIdx));
-            const IntensiveQuantities& up = elemCtx.intensiveQuantities(upIdx, timeIdx);
-            unsigned pvtRegionIdx = up.pvtRegionIndex();
-            using FluidState = typename IntensiveQuantities::FluidState;
-            if (upIdx == focusDofIdx){
-                const auto& invB = getInvB_<FluidSystem, FluidState, Evaluation>(up.fluidState(), phaseIdx, pvtRegionIdx);
-                const auto& surfaceVolumeFlux = invB*darcyFlux;           
-                evalPhaseFluxes_<Evaluation,Evaluation,FluidState>(flux, phaseIdx, pvtRegionIdx, surfaceVolumeFlux, up.fluidState());
-            }else{
-                const auto& invB = getInvB_<FluidSystem, FluidState, Scalar>(up.fluidState(), phaseIdx, pvtRegionIdx);
-                const auto& surfaceVolumeFlux = invB*darcyFlux;               
-                evalPhaseFluxes_<Scalar,Evaluation,FluidState>(flux, phaseIdx, pvtRegionIdx, surfaceVolumeFlux, up.fluidState());
-            }
+            
+            
+            const IntensiveQuantities& up = (upIdx == interiorDofIdx) ? intQuantsIn : intQuantsEx;
+                unsigned globalIndex;
+                if(upIdx == interiorDofIdx){
+                    //up = intQuantsIn;
+                    globalIndex = globalIndexIn;
+                }else{
+                    //up = intQuantsEx;
+                    globalIndex = globalIndexEx;
+                }
+                // TODO: should the rock compaction transmissibility multiplier be upstreamed
+                // or averaged? all fluids should see the same compaction?!
+                //const auto& globalIndex = stencil.globalSpaceIndex(upstreamIdx);
+                const Evaluation& transMult =
+                    problem.template rockCompTransMultiplier<Evaluation>(up, globalIndex);
+                Evaluation darcyFlux;
+                if(pressureDifference == 0){
+                    darcyFlux = 0.0; //NB maybe we could drop calculations
+                }else{
+                    if (upIdx == interiorDofIdx)
+                        darcyFlux =
+                            pressureDifference*up.mobility(phaseIdx)*transMult*(-trans/faceArea);
+                    else
+                        darcyFlux =
+                            pressureDifference*(Toolbox::value(up.mobility(phaseIdx))*Toolbox::value(transMult)*(-trans/faceArea));
+                }
+                //const auto& darcyFlux = extQuants.volumeFlux(phaseIdx);                       
+                //unsigned upIdx = static_cast<unsigned>(extQuants.upstreamIndex(phaseIdx));
+                               
+                //const IntensiveQuantities& up = elemCtx.intensiveQuantities(upIdx, timeIdx);
+                unsigned pvtRegionIdx = up.pvtRegionIndex();
+                using FluidState = typename IntensiveQuantities::FluidState;
+                if (upIdx == focusDofIdx){
+                    const auto& invB = getInvB_<FluidSystem, FluidState, Evaluation>(up.fluidState(), phaseIdx, pvtRegionIdx);
+                    const auto& surfaceVolumeFlux = invB*darcyFlux;           
+                    evalPhaseFluxes_<Evaluation,Evaluation,FluidState>(flux, phaseIdx, pvtRegionIdx, surfaceVolumeFlux, up.fluidState());
+                }else{
+                    const auto& invB = getInvB_<FluidSystem, FluidState, Scalar>(up.fluidState(), phaseIdx, pvtRegionIdx);
+                    const auto& surfaceVolumeFlux = invB*darcyFlux;               
+                    evalPhaseFluxes_<Scalar,Evaluation,FluidState>(flux, phaseIdx, pvtRegionIdx, surfaceVolumeFlux, up.fluidState());
+                }
+            
+            
         }
 
         // deal with solvents (if present)
