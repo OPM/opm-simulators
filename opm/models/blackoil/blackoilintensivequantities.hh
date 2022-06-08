@@ -109,10 +109,11 @@ class BlackOilIntensiveQuantities
     using Toolbox = MathToolbox<Evaluation>;
     using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
     using FluxIntensiveQuantities = typename FluxModule::FluxIntensiveQuantities;
-    using FluidState = BlackOilFluidState<Evaluation, FluidSystem, enableTemperature, enableEnergy, compositionSwitchEnabled,  enableEvaporation, enableBrine, enableSaltPrecipitation, Indices::numPhases >;
+    
     using DiffusionIntensiveQuantities = BlackOilDiffusionIntensiveQuantities<TypeTag, enableDiffusion>;
 
 public:
+    using FluidState = BlackOilFluidState<Evaluation, FluidSystem, enableTemperature, enableEnergy, compositionSwitchEnabled,  enableEvaporation, enableBrine, enableSaltPrecipitation, Indices::numPhases >;
     BlackOilIntensiveQuantities()
     {
         if (compositionSwitchEnabled) {
