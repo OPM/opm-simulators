@@ -78,6 +78,7 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doLoadBalance_(Dun
                                                                              bool serialPartitioning,
                                                                              bool enableDistributedWells,
                                                                              double zoltanImbalanceTol,
+                                                                             const GridView& gridView,
                                                                              const Schedule& schedule,
                                                                              std::vector<double>& centroids,
                                                                              EclipseState& eclState1,
@@ -100,7 +101,6 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doLoadBalance_(Dun
         // convert to transmissibility for faces
         // TODO: grid_->numFaces() is not generic. use grid_->size(1) instead? (might
         // not work)
-        const auto& gridView = grid_->leafGridView();
         unsigned numFaces = grid_->numFaces();
         std::vector<double> faceTrans;
         int loadBalancerSet = externalLoadBalancer.has_value();

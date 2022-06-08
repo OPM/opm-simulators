@@ -134,7 +134,7 @@ public:
 #if HAVE_MPI
         this->doLoadBalance_(this->edgeWeightsMethod(), this->ownersFirst(),
                              this->serialPartitioning(), this->enableDistributedWells(),
-                             this->zoltanImbalanceTol(),
+                             this->zoltanImbalanceTol(), this->gridView(),
                              this->schedule(), this->centroids_,
                              this->eclState(), this->parallelWells_, this->numJacobiBlocks());
 #endif

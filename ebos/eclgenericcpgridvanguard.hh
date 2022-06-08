@@ -115,6 +115,7 @@ protected:
     void doLoadBalance_(Dune::EdgeWeightMethod edgeWeightsMethod,
                         bool ownersFirst, bool serialPartitioning,
                         bool enableDistributedWells, double zoltanImbalanceTol,
+                        const GridView& gridv,
                         const Schedule& schedule,
                         std::vector<double>& centroids,
                         EclipseState& eclState,
