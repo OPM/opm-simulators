@@ -128,17 +128,16 @@ BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string acceler
 
 
 template <class BridgeMatrix>
-int checkZeroDiagonal(BridgeMatrix& mat) {
-    static std::vector<typename BridgeMatrix::size_type> diag_indices;   // contains offsets of the diagonal nnzs
+int replaceZeroDiagonal(BridgeMatrix& mat, std::vector<typename BridgeMatrix::size_type>& diag_indices) {
     int numZeros = 0;
-    const int dim = 3;                    // might be replaced with mat[0][0].N() or BridgeMatrix::block_type::size()
+    const int dim = mat[0][0].N();                    // might be replaced with BridgeMatrix::block_type::size()
     const double zero_replace = 1e-15;
     if (diag_indices.empty()) {
-        int N = mat.N();
-        diag_indices.reserve(N);
+        int Nb = mat.N();
+        diag_indices.reserve(Nb);
         for (typename BridgeMatrix::iterator r = mat.begin(); r != mat.end(); ++r) {
             auto diag = r->find(r.index());  // diag is an iterator
-            assert(diag.index() == r.index());
+            assert(diag.index() == r.index()); // every row must have a diagonal block
             for (int rr = 0; rr < dim; ++rr) {
                 auto& val = (*diag)[rr][rr]; // reference to easily change the value
                 if (val == 0.0) {             // could be replaced by '< 1e-30' or similar
@@ -244,7 +243,7 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system(BridgeMatri
         }
 
         Dune::Timer t_zeros;
-        int numZeros = checkZeroDiagonal(*bridgeMat);
+        int numZeros = replaceZeroDiagonal(*bridgeMat, diagIndices);
         if (verbosity >= 2) {
             std::ostringstream out;
             out << "Checking zeros took: " << t_zeros.stop() << " s, found " << numZeros << " zeros";
@@ -263,7 +262,7 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system(BridgeMatri
             }
 
             Dune::Timer t_zeros2;
-            int jacNumZeros = checkZeroDiagonal(*jacMat);
+            int jacNumZeros = replaceZeroDiagonal(*jacMat, jacDiagIndices);
             if (verbosity >= 2) {
                 std::ostringstream out;
                 out << "Checking zeros for jacMat took: " << t_zeros2.stop() << " s, found " << jacNumZeros << " zeros";
