@@ -20,6 +20,8 @@
 #include <opm/simulators/flow/Main.hpp>
 // modifications from standard
 #include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
+#include <opm/models/discretization/common/fvbaselocalresidualtpfa.hh>
+#include <opm/models/discretization/common/fvbaseadlocallinearizertpfa.hh>
 #include <ebos/eclfluxmoduletpfa.hh>
 namespace Opm {
     namespace Properties {
@@ -36,7 +38,7 @@ namespace Opm {
     namespace Properties {
         template<class TypeTag>
         struct LocalLinearizerSplice<TypeTag, TTag::EclFlowProblemTPFA> {
-            using type = TTag::AutoDiffLocalLinearizer;
+            using type = TTag::AutoDiffLocalLinearizerTPFA;
         };
     }
 }
@@ -44,6 +46,8 @@ namespace Opm {
     namespace Properties {
         template<class TypeTag>
         struct LocalResidual<TypeTag, TTag::EclFlowProblemTPFA> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
+        template<class TypeTag>
+        struct DiscLocalResidual<TypeTag, TTag::EclFlowProblemTPFA> { using type = FvBaseLocalResidualTPFA<TypeTag>; };
     }
 }
 namespace Opm{
