@@ -218,7 +218,8 @@ public:
             ebosSimulator_.setEpisodeIndex(-1);
             ebosSimulator_.setEpisodeLength(0.0);
             ebosSimulator_.setTimeStepSize(0.0);
-
+            // make cach upto date. no nead for updating it in elementCtx
+            ebosSimulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
             wellModel_().beginReportStep(timer.currentStepNum());
             ebosSimulator_.problem().writeOutput();
 
