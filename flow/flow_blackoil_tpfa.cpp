@@ -22,6 +22,7 @@
 #include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
 #include <opm/models/discretization/common/fvbaselocalresidualtpfa.hh>
 #include <opm/models/discretization/common/fvbaseadlocallinearizertpfa.hh>
+#include <opm/models/discretization/common/smallelementcontext.hh>
 #include <ebos/eclfluxmoduletpfa.hh>
 namespace Opm {
     namespace Properties {
@@ -48,6 +49,9 @@ namespace Opm {
         struct LocalResidual<TypeTag, TTag::EclFlowProblemTPFA> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
         template<class TypeTag>
         struct DiscLocalResidual<TypeTag, TTag::EclFlowProblemTPFA> { using type = FvBaseLocalResidualTPFA<TypeTag>; };
+        template<class TypeTag>
+        struct ElementContext<TypeTag, TTag::EclFlowProblemTPFA> { using type = SmallElementContext<TypeTag>; };
+        //struct ElementContext<TypeTag, TTag::EclFlowProblemTPFA> { using type = FvBaseElementContext<TypeTag>; };
     }
 }
 namespace Opm{
