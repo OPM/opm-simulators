@@ -117,6 +117,7 @@ public:
      */
     void updateAll(const Element& elem)
     {
+        throw std::logic_error("Only use update stencil");
         asImp_().updateStencil(elem);
         asImp_().updateAllIntensiveQuantities();
         asImp_().updateAllExtensiveQuantities();
@@ -139,8 +140,8 @@ public:
         stencil_.update(elem);
 
         // resize the arrays containing the flux and the volume variables
-        dofVars_.resize(stencil_.numDof());
-        extensiveQuantities_.resize(stencil_.numInteriorFaces());
+        //dofVars_.resize(stencil_.numDof());
+        //extensiveQuantities_.resize(stencil_.numInteriorFaces());
     }
 
     /*!
@@ -212,7 +213,8 @@ public:
      * \param timeIdx The index of the solution vector used by the time discretization.
      */
     void updatePrimaryIntensiveQuantities(unsigned timeIdx)
-    { //updateIntensiveQuantities_(timeIdx, numPrimaryDof(timeIdx));
+    {
+        updateIntensiveQuantities_(timeIdx, numPrimaryDof(timeIdx));
     }
 
     /*!
@@ -233,7 +235,8 @@ public:
      *        faces of the current element for all time indices.
      */
     void updateAllExtensiveQuantities()
-    { asImp_().updateExtensiveQuantities(/*timeIdx=*/0); }
+    { //asImp_().updateExtensiveQuantities(/*timeIdx=*/0);
+    }
 
     /*!
      * \brief Compute the extensive quantities of all sub-control volume
@@ -244,6 +247,7 @@ public:
      */
     void updateExtensiveQuantities(unsigned timeIdx)
     {
+        throw std::logic_error("Extensive quantities should not be used");
         gradientCalculator_.prepare(/*context=*/asImp_(), timeIdx);
 
         for (unsigned fluxIdx = 0; fluxIdx < numInteriorFaces(timeIdx); fluxIdx++) {
@@ -436,11 +440,11 @@ public:
      * \param dofIdx The local index of the degree of freedom in the current element.
      * \param timeIdx The index of the solution vector used by the time discretization.
      */
-    const IntensiveQuantities *thermodynamicHint(unsigned dofIdx, unsigned timeIdx) const
-    {
-        assert(dofIdx < numDof(timeIdx));
-        return dofVars_[dofIdx].thermodynamicHint[timeIdx];
-    }
+    // const IntensiveQuantities *thermodynamicHint(unsigned dofIdx, unsigned timeIdx) const
+    // {
+    //     assert(dofIdx < numDof(timeIdx));
+    //     return dofVars_[dofIdx].thermodynamicHint[timeIdx];
+    // }
     /*!
      * \copydoc intensiveQuantities()
      */
@@ -460,8 +464,10 @@ public:
      */
     const PrimaryVariables& primaryVars(unsigned dofIdx, unsigned timeIdx) const
     {
-        assert(dofIdx < numDof(timeIdx));
-        return *dofVars_[dofIdx].priVars[timeIdx];
+        //need for compilation with vtk
+        //throw std::logic_error("Cached quantities need to be calcualted before for this element context");
+         assert(dofIdx < numDof(timeIdx));
+         return *dofVars_[dofIdx].priVars[timeIdx];
     }
 
     /*!
@@ -487,33 +493,36 @@ public:
      *
      * \param dofIdx The local index of the degree of freedom in the current element.
      */
-    void stashIntensiveQuantities(unsigned dofIdx)
-    {
-        assert(dofIdx < numDof(/*timeIdx=*/0));
+    // void stashIntensiveQuantities(unsigned dofIdx)
+    // {
+    //     assert(dofIdx < numDof(/*timeIdx=*/0));
 
-        intensiveQuantitiesStashed_ = dofVars_[dofIdx].intensiveQuantities[/*timeIdx=*/0];
-        priVarsStashed_ = *dofVars_[dofIdx].priVars[/*timeIdx=*/0];
-        stashedDofIdx_ = static_cast<int>(dofIdx);
-    }
+    //     intensiveQuantitiesStashed_ = dofVars_[dofIdx].intensiveQuantities[/*timeIdx=*/0];
+    //     priVarsStashed_ = *dofVars_[dofIdx].priVars[/*timeIdx=*/0];
+    //     stashedDofIdx_ = static_cast<int>(dofIdx);
+    // }
 
     /*!
      * \brief Restores the intensive quantities for a degree of freedom from internal memory.
      *
      * \param dofIdx The local index of the degree of freedom in the current element.
      */
-    void restoreIntensiveQuantities(unsigned dofIdx)
-    {
-        dofVars_[dofIdx].priVars[/*timeIdx=*/0] = &priVarsStashed_;
-        dofVars_[dofIdx].intensiveQuantities[/*timeIdx=*/0] = intensiveQuantitiesStashed_;
-        stashedDofIdx_ = -1;
-    }
+    // void restoreIntensiveQuantities(unsigned dofIdx)
+    // {
+    //     dofVars_[dofIdx].priVars[/*timeIdx=*/0] = &priVarsStashed_;
+    //     dofVars_[dofIdx].intensiveQuantities[/*timeIdx=*/0] = intensiveQuantitiesStashed_;
+    //     stashedDofIdx_ = -1;
+    // }
 
     /*!
      * \brief Return a reference to the gradient calculation class of
      *        the chosen spatial discretization.
      */
     const GradientCalculator& gradientCalculator() const
-    { return gradientCalculator_; }
+    {
+        throw std::logic_error("Gradient calculator should not be used");
+        return gradientCalculator_;
+    }
 
     /*!
      * \brief Return a reference to the extensive quantities of a
@@ -524,7 +533,10 @@ public:
      * \param timeIdx The index of the solution vector used by the time discretization.
      */
     const ExtensiveQuantities& extensiveQuantities(unsigned fluxIdx, unsigned) const
-    { return extensiveQuantities_[fluxIdx]; }
+    {
+        throw std::logic_error("Extensive quantiteis shoud not be used");
+        return extensiveQuantities_[fluxIdx];
+    }
 
     /*!
      * \brief Returns true iff the cache for the storage term ought to be used for this context.
@@ -556,7 +568,7 @@ protected:
      */
     void updateIntensiveQuantities_(unsigned timeIdx, size_t numDof)
     {
-        throw std::invalid_argument("Intenisive quantiteis should not be updated for this element context");
+        //throw std::invalid_argument("Intenisive quantiteis should not be updated for this element context");
         // update the intensive quantities for the whole history
         const SolutionVector& globalSol = model().solution(timeIdx);
 
@@ -584,7 +596,7 @@ protected:
 
     void updateSingleIntQuants_(const PrimaryVariables& priVars, unsigned dofIdx, unsigned timeIdx)
     {
-        throw std::invalid_argument("Intenisive quantiteis should not be updated for this element context");
+        //throw std::invalid_argument("Intenisive quantiteis should not be updated for this element context");
 #ifndef NDEBUG
         if (enableStorageCache_ && timeIdx != 0 && problem().recycleFirstIterationStorage())
             throw std::logic_error("If caching of the storage term is enabled, only the intensive quantities "
