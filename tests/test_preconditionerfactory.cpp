@@ -31,6 +31,7 @@
 #include <opm/simulators/linalg/PreconditionerFactory.hpp>
 #include <opm/simulators/linalg/PropertyTree.hpp>
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
+#include <opm/simulators/linalg/getQuasiImpesWeights.hpp>
 
 #include <dune/common/fvector.hh>
 #include <dune/istl/bvector.hh>

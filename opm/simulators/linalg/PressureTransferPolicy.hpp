@@ -23,6 +23,7 @@
 
 
 #include <opm/simulators/linalg/twolevelmethodcpr.hh>
+#include <opm/simulators/linalg/PropertyTree.hpp>
 
 
 namespace Opm
