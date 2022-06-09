@@ -182,17 +182,17 @@ public:
     void updateAllIntensiveQuantities()
     {
         
-        if (!enableStorageCache_) {
-            // if the storage cache is disabled, we need to calculate the storage term
-            // from scratch, i.e. we need the intensive quantities of all of the history.
-            for (unsigned timeIdx = 0; timeIdx < timeDiscHistorySize; ++ timeIdx)
-                asImp_().updateIntensiveQuantities(timeIdx);
-        }
-        else
-            // if the storage cache is enabled, we only need to recalculate the storage
-            // term for the most recent point of history (i.e., for the current iterative
-            // solution)
-            asImp_().updateIntensiveQuantities(/*timeIdx=*/0);
+        // if (!enableStorageCache_) {
+        //     // if the storage cache is disabled, we need to calculate the storage term
+        //     // from scratch, i.e. we need the intensive quantities of all of the history.
+        //     for (unsigned timeIdx = 0; timeIdx < timeDiscHistorySize; ++ timeIdx)
+        //         asImp_().updateIntensiveQuantities(timeIdx);
+        // }
+        // else
+        //     // if the storage cache is enabled, we only need to recalculate the storage
+        //     // term for the most recent point of history (i.e., for the current iterative
+        //     // solution)
+        //     asImp_().updateIntensiveQuantities(/*timeIdx=*/0);
     }
 
     /*!
@@ -202,7 +202,8 @@ public:
      * \param timeIdx The index of the solution vector used by the time discretization.
      */
     void updateIntensiveQuantities(unsigned timeIdx)
-    { updateIntensiveQuantities_(timeIdx, numDof(timeIdx)); }
+    { //updateIntensiveQuantities_(timeIdx, numDof(timeIdx));
+    }
 
     /*!
      * \brief Compute the intensive quantities of all sub-control volumes of the current
@@ -211,7 +212,8 @@ public:
      * \param timeIdx The index of the solution vector used by the time discretization.
      */
     void updatePrimaryIntensiveQuantities(unsigned timeIdx)
-    { updateIntensiveQuantities_(timeIdx, numPrimaryDof(timeIdx)); }
+    { //updateIntensiveQuantities_(timeIdx, numPrimaryDof(timeIdx));
+    }
 
     /*!
      * \brief Compute the intensive quantities of a single sub-control volume of the
@@ -416,8 +418,14 @@ public:
             throw std::logic_error("If caching of the storage term is enabled, only the intensive quantities "
                                    "for the most-recent substep (i.e. time index 0) are available!");
 #endif
-
-        return dofVars_[dofIdx].intensiveQuantities[timeIdx];
+        unsigned globalIdx = globalSpaceIndex(dofIdx, timeIdx);
+    
+        const auto *cachedIntQuants = model().cachedIntensiveQuantities(globalIdx, timeIdx);
+        if(cachedIntQuants){
+            return *model().cachedIntensiveQuantities(globalIdx, timeIdx);//dofVars_[dofIdx].intensiveQuantities[timeIdx];
+        }else{
+            throw std::logic_error("Cached quantities need to be calcualted before for this element context");
+        }
     }
 
     /*!
@@ -436,11 +444,11 @@ public:
     /*!
      * \copydoc intensiveQuantities()
      */
-    IntensiveQuantities& intensiveQuantities(unsigned dofIdx, unsigned timeIdx)
-    {
-        assert(dofIdx < numDof(timeIdx));
-        return dofVars_[dofIdx].intensiveQuantities[timeIdx];
-    }
+    // IntensiveQuantities& intensiveQuantities(unsigned dofIdx, unsigned timeIdx)
+    // {
+    //     assert(dofIdx < numDof(timeIdx));
+    //     return dofVars_[dofIdx].intensiveQuantities[timeIdx];
+    // }
 
     /*!
      * \brief Return the primary variables for a given local index.
@@ -548,6 +556,7 @@ protected:
      */
     void updateIntensiveQuantities_(unsigned timeIdx, size_t numDof)
     {
+        throw std::invalid_argument("Intenisive quantiteis should not be updated for this element context");
         // update the intensive quantities for the whole history
         const SolutionVector& globalSol = model().solution(timeIdx);
 
@@ -575,6 +584,7 @@ protected:
 
     void updateSingleIntQuants_(const PrimaryVariables& priVars, unsigned dofIdx, unsigned timeIdx)
     {
+        throw std::invalid_argument("Intenisive quantiteis should not be updated for this element context");
 #ifndef NDEBUG
         if (enableStorageCache_ && timeIdx != 0 && problem().recycleFirstIterationStorage())
             throw std::logic_error("If caching of the storage term is enabled, only the intensive quantities "
