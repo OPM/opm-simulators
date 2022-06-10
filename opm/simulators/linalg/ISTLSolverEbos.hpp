@@ -456,13 +456,22 @@ namespace Opm
                 return false;
             }
             if (this->parameters_.cpr_reuse_setup_ == 4) {
-                int step = this->parameters_.cpr_reuse_interval_;
-                bool create = ((calls_%step) == 0);
+                // Recreate solver every 'step' solve calls.
+                const int step = this->parameters_.cpr_reuse_interval_;
+                const bool create = ((calls_ % step) == 0);
                 return create;
             }
-            // Otherwise, do not recreate solver.
-            assert(false);
 
+            // If here, we have an invalid parameter.
+            const bool on_io_rank = (simulator_.gridView().comm().rank() == 0);
+            std::string msg = "Invalid value: " + std::to_string(this->parameters_.cpr_reuse_setup_)
+                + " for --cpr-reuse-setup parameter, run with --help to see allowed values.";
+            if (on_io_rank) {
+                OpmLog::error(msg);
+            }
+            throw std::runtime_error(msg);
+
+            // Never reached.
             return false;
         }
 
