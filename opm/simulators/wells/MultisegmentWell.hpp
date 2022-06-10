@@ -74,8 +74,8 @@ namespace Opm
         using MSWEval::GTotal;
         using MSWEval::SPres;
         using MSWEval::numWellEq;
-        using PressureMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1>>;
-        
+        using typename Base::PressureMatrix;
+
         MultisegmentWell(const Well& well,
                          const ParallelWellInfo& pw_info,
                          const int time_step,

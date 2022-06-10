@@ -1194,13 +1194,12 @@ namespace Opm {
             int wdof = rdofs + i; 
             jacobian[wdof][wdof] = 1.0;// better scaling ?
         }
-        
+
         for ( const auto& well : well_container_ ) {
             well->addWellPressureEquations(jacobian, weights, pressureVarIndex, use_well_weights, this->wellState());
         }
     }
 
-    
     template<typename TypeTag>
     int
     BlackoilWellModel<TypeTag>::

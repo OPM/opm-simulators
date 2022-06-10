@@ -65,8 +65,10 @@ namespace Opm
         commRW->remoteIndices().template rebuild<true>();
         //commRW->clearInterfaces(); may need this for correct rebuild
     }
-    namespace Details {
-        using PressureMatrixType = Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1>>;
+
+    namespace Details
+    {
+        using PressureMatrixType = Dune::BCRSMatrix<Opm::MatrixBlock<double, 1, 1>>;
         using PressureVectorType = Dune::BlockVector<Dune::FieldVector<double, 1>>;
         using SeqCoarseOperatorType = Dune::MatrixAdapter<PressureMatrixType, PressureVectorType, PressureVectorType>;
         template <class Comm>
@@ -75,8 +77,8 @@ namespace Opm
         template <class Comm>
         using CoarseOperatorType = std::conditional_t<std::is_same<Comm, Dune::Amg::SequentialInformation>::value,
                                                       SeqCoarseOperatorType,
-                                                      ParCoarseOperatorType<Comm>>;      
-    }    
+                                                      ParCoarseOperatorType<Comm>>;
+    } // namespace Details
 
     template <class FineOperator, class Communication, bool transpose = false>
     class PressureBhpTransferPolicy : public Dune::Amg::LevelTransferPolicyCpr<FineOperator, Details::CoarseOperatorType<Communication>>

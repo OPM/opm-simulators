@@ -94,7 +94,7 @@ namespace Opm
         using PolymerModule =  BlackOilPolymerModule<TypeTag>;
         using FoamModule = BlackOilFoamModule<TypeTag>;
         using BrineModule = BlackOilBrineModule<TypeTag>;
-        using PressureMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1>>;
+        using typename Base::PressureMatrix;
 
         // number of the conservation equations
         static constexpr int numWellConservationEq = Indices::numPhases + Indices::numSolvents;

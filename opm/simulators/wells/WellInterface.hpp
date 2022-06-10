@@ -95,7 +95,7 @@ public:
     using MatrixBlockType = Dune::FieldMatrix<Scalar, Indices::numEq, Indices::numEq>;
     using BVector = Dune::BlockVector<VectorBlockType>;
     using Eval = DenseAd::Evaluation<Scalar, /*size=*/Indices::numEq>;
-    using PressureMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1>>;
+    using PressureMatrix = Dune::BCRSMatrix<Opm::MatrixBlock<double, 1, 1>>;
 
     using RateConverterType =
     typename WellInterfaceFluidSystem<FluidSystem>::RateConverterType;

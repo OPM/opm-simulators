@@ -49,7 +49,7 @@ template <class X, class Y>
 class LinearOperatorExtra : public Dune::LinearOperator<X, Y>
 {
 public:
-    using PressureMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1>>;
+    using PressureMatrix = Dune::BCRSMatrix<Opm::MatrixBlock<double, 1, 1>>;
     virtual void addWellPressureEquations(PressureMatrix& jacobian, const X& weights,const bool use_well_weights) const = 0;
     virtual void addWellPressureEquationsStruct(PressureMatrix& jacobian) const = 0;
     virtual int getNumberOfExtraEquations() const = 0;
@@ -61,7 +61,7 @@ class WellModelAsLinearOperator : public Opm::LinearOperatorExtra<X, Y>
 public:
     using Base = Opm::LinearOperatorExtra<X, Y>;
     using field_type = typename Base::field_type;
-    using PressureMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1>>;
+    using PressureMatrix = typename Base::PressureMatrix;
     explicit WellModelAsLinearOperator(const WellModel& wm)
         : wellMod_(wm)
     {
@@ -126,7 +126,7 @@ public:
   typedef X domain_type;
   typedef Y range_type;
   typedef typename X::field_type field_type;
-  using PressureMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1>>;
+  using PressureMatrix = Dune::BCRSMatrix<Opm::MatrixBlock<double, 1, 1>>;
 #if HAVE_MPI
   typedef Dune::OwnerOverlapCopyCommunication<int,int> communication_type;
 #else
@@ -212,7 +212,7 @@ public:
     typedef X domain_type;
     typedef Y range_type;
     typedef typename X::field_type field_type;
-    using PressureMatrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1>>;
+    using PressureMatrix = Dune::BCRSMatrix<Opm::MatrixBlock<double, 1, 1>>;
 #if HAVE_MPI
     typedef Dune::OwnerOverlapCopyCommunication<int,int> communication_type;
 #else

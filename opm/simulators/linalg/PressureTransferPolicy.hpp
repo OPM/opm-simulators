@@ -24,26 +24,31 @@
 
 #include <opm/simulators/linalg/twolevelmethodcpr.hh>
 #include <opm/simulators/linalg/PropertyTree.hpp>
+#include <opm/simulators/linalg/matrixblock.hh>
 
 
 namespace Opm
 {
 
-namespace Details {
-        using PressureMatrixType = Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1>>;
-        using PressureVectorType = Dune::BlockVector<Dune::FieldVector<double, 1>>;
-        using SeqCoarseOperatorType = Dune::MatrixAdapter<PressureMatrixType, PressureVectorType, PressureVectorType>;
-        template <class Comm>
-        using ParCoarseOperatorType
-            = Dune::OverlappingSchwarzOperator<PressureMatrixType, PressureVectorType, PressureVectorType, Comm>;
-        template <class Comm>
-        using CoarseOperatorType = std::conditional_t<std::is_same<Comm, Dune::Amg::SequentialInformation>::value,
-                                                      SeqCoarseOperatorType,
-                                                      ParCoarseOperatorType<Comm>>;      
-}    
-    
+namespace Details
+{
+    using PressureMatrixType = Dune::BCRSMatrix<Opm::MatrixBlock<double, 1, 1>>;
+    using PressureVectorType = Dune::BlockVector<Dune::FieldVector<double, 1>>;
+    using SeqCoarseOperatorType = Dune::MatrixAdapter<PressureMatrixType, PressureVectorType, PressureVectorType>;
+    template <class Comm>
+    using ParCoarseOperatorType
+        = Dune::OverlappingSchwarzOperator<PressureMatrixType, PressureVectorType, PressureVectorType, Comm>;
+    template <class Comm>
+    using CoarseOperatorType = std::conditional_t<std::is_same<Comm, Dune::Amg::SequentialInformation>::value,
+                                                  SeqCoarseOperatorType,
+                                                  ParCoarseOperatorType<Comm>>;
+} // namespace Details
+
+
+
 template <class FineOperator, class Communication, bool transpose = false>
-class PressureTransferPolicy : public Dune::Amg::LevelTransferPolicyCpr<FineOperator, Details::CoarseOperatorType<Communication>>
+class PressureTransferPolicy
+    : public Dune::Amg::LevelTransferPolicyCpr<FineOperator, Details::CoarseOperatorType<Communication>>
 {
 public:
     typedef typename Details::CoarseOperatorType<Communication> CoarseOperator;
