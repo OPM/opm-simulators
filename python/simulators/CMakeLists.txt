@@ -68,7 +68,12 @@ endif()
 #  CMakeLists.txt in opm-common
 add_custom_target(copy_python ALL
     COMMAND ${PYTHON_EXECUTABLE} "${_opm_common_python_script_dir}/install.py"
-      ${PROJECT_SOURCE_DIR}/python ${PROJECT_BINARY_DIR} 0)
+        ${PROJECT_SOURCE_DIR}/python/opm ${PROJECT_BINARY_DIR}/python 0
+    COMMAND ${PYTHON_EXECUTABLE} "${_opm_common_python_script_dir}/install.py"
+        ${PROJECT_SOURCE_DIR}/python/test ${PROJECT_BINARY_DIR}/python 0
+    COMMAND ${PYTHON_EXECUTABLE} "${_opm_common_python_script_dir}/install.py"
+        ${PROJECT_SOURCE_DIR}/python/test_data ${PROJECT_BINARY_DIR}/python 0
+)
 
 # Since the installation of Python code is nonstandard it is protected by an
 # extra cmake switch, OPM_INSTALL_PYTHON. If you prefer you can still invoke
