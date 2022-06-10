@@ -26,7 +26,7 @@
  * \copydoc Opm::FvBaseElementContext
  */
 #ifndef EWOMS_SMALL_ELEMENT_CONTEXT_HH
-#define EWOMS_SMALL_CONTEXT_HH
+#define EWOMS_SMALL_ELEMENT_CONTEXT_HH
 
 #include "fvbaseproperties.hh"
 
@@ -117,7 +117,7 @@ public:
      */
     void updateAll(const Element& elem)
     {
-        throw std::logic_error("Only use update stencil");
+        //throw std::logic_error("Only use update stencil");
         asImp_().updateStencil(elem);
         asImp_().updateAllIntensiveQuantities();
         asImp_().updateAllExtensiveQuantities();
