@@ -1,6 +1,6 @@
 # Instead of having the pybind11 extension module, e.g.
 #   simulators.cpython-310-x86_64-linux-gnu.so  located
-#   directly in the opm2 directory, we create a package (sub
+#   directly in the opm directory, we create a package (sub
 #   directory) with the same name and place it there.
 #   In this way we can do (if needed in the future)
 #

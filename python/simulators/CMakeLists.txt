@@ -1,7 +1,5 @@
-# NOTE: we assume that add_subdirectory( pybind11 ) is called from the
-#    parent folder's CMakeLists.txt before this CMakeLists.txt is loaded.
-#    Therefore, pybind11's CMakeLists.txt has already run
-#    find_package(PYTHON) to define variables like ${PYTHON_EXECUTABLE}
+#  Note: If the new find_package(Python3) is used in the top level CMakeLists.txt, the variable
+#    ${PYTHON_EXECUTABLE} is set there to ${Python3_EXECUTABLE}
 #
 # NOTE: The variable ${PYBIND11_SYSTEM} is set in python/CMakeLists.txt
 #   to the value "SYSTEM" or unset, depending on the current version of Pybind11.
@@ -14,7 +12,7 @@ pybind11_add_module(simulators ${PYBIND11_SYSTEM}
   PyBlackOilSimulator.cpp
   Pybind11Exporter.cpp)
 
-set(PYTHON_OPM_SIMULATORS_PACKAGE_PATH ${PROJECT_BINARY_DIR}/python/opm2/simulators)
+set(PYTHON_OPM_SIMULATORS_PACKAGE_PATH ${PROJECT_BINARY_DIR}/python/opm/simulators)
 set_target_properties( simulators PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PYTHON_OPM_SIMULATORS_PACKAGE_PATH} )
 
 target_sources(simulators
@@ -41,9 +39,6 @@ else()
 endif()
 
 if(OPM_ENABLE_PYTHON_TESTS)
-  if(Python3_EXECUTABLE AND NOT PYTHON_EXECUTABLE)
-    set(PYTHON_EXECUTABLE ${Python3_EXECUTABLE})
-  endif()
   set(PYTHON_PATH ${PROJECT_BINARY_DIR}/python:${opm-common_DIR}/python:$ENV{PYTHONPATH})
   # NOTE: See comment in test_basic.py for the reason why we are
   #   splitting the python tests into multiple add_test() tests instead
@@ -86,6 +81,6 @@ if (OPM_INSTALL_PYTHON)
     CODE "execute_process(
       COMMAND ${PYTHON_EXECUTABLE}
               ${_opm_common_python_script_dir}/install.py
-              ${PROJECT_BINARY_DIR}/python/opm2
+              ${PROJECT_BINARY_DIR}/python/opm
               ${DEST_PREFIX}${CMAKE_INSTALL_PREFIX}/${PYTHON_INSTALL_PREFIX} 1)")
 endif()
