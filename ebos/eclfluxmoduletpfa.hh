@@ -315,6 +315,100 @@ public:
         }
     }
 
+    static void volumeAndPhasePressureDifferences(short (&upIdx)[numPhases] ,
+                                           Evaluation (&volumeFlux)[numPhases],
+                                           Evaluation (&pressureDifferences)[numPhases],
+                                           const ElementContext& elemCtx, unsigned scvfIdx, unsigned timeIdx)
+    {
+        
+        //Valgrind::SetUndefined(*this);
+
+        const auto& problem = elemCtx.problem();
+        const auto& stencil = elemCtx.stencil(timeIdx);
+        const auto& scvf = stencil.interiorFace(scvfIdx);
+
+        unsigned interiorDofIdx = scvf.interiorIndex();
+        unsigned exteriorDofIdx = scvf.exteriorIndex();
+        assert(interiorDofIdx != exteriorDofIdx);
+
+        //unsigned I = stencil.globalSpaceIndex(interiorDofIdx_);
+        //unsigned J = stencil.globalSpaceIndex(exteriorDofIdx_);
+        Scalar Vin = elemCtx.dofVolume(interiorDofIdx, /*timeIdx=*/0);
+        Scalar Vex = elemCtx.dofVolume(exteriorDofIdx, /*timeIdx=*/0);
+        const auto& globalIndexIn = stencil.globalSpaceIndex(interiorDofIdx);
+        const auto& globalIndexEx = stencil.globalSpaceIndex(exteriorDofIdx);
+        Scalar trans = problem.transmissibility(elemCtx, interiorDofIdx, exteriorDofIdx);
+        Scalar faceArea = scvf.area();
+        Scalar thpres = problem.thresholdPressure(globalIndexIn, globalIndexEx);
+
+        // estimate the gravity correction: for performance reasons we use a simplified
+        // approach for this flux module that assumes that gravity is constant and always
+        // acts into the downwards direction. (i.e., no centrifuge experiments, sorry.)
+        Scalar g = elemCtx.problem().gravity()[dimWorld - 1];
+
+        const auto& intQuantsIn = elemCtx.intensiveQuantities(interiorDofIdx, timeIdx);
+        const auto& intQuantsEx = elemCtx.intensiveQuantities(exteriorDofIdx, timeIdx);
+
+        // this is quite hacky because the dune grid interface does not provide a
+        // cellCenterDepth() method (so we ask the problem to provide it). The "good"
+        // solution would be to take the Z coordinate of the element centroids, but since
+        // ECL seems to like to be inconsistent on that front, it needs to be done like
+        // here...
+        Scalar zIn = problem.dofCenterDepth(elemCtx, interiorDofIdx, timeIdx);
+        Scalar zEx = problem.dofCenterDepth(elemCtx, exteriorDofIdx, timeIdx);
+
+        // the distances from the DOF's depths. (i.e., the additional depth of the
+        // exterior DOF)
+        Scalar distZ = zIn - zEx;
+
+        for (unsigned phaseIdx=0; phaseIdx < numPhases; phaseIdx++) {
+            if (!FluidSystem::phaseIsActive(phaseIdx))
+                continue;
+            short dnIdx;
+            calculatePhasePressureDiff_(upIdx[phaseIdx],
+                                        dnIdx,
+                                        pressureDifferences[phaseIdx],
+                                        intQuantsIn,
+                                        intQuantsEx,
+                                        scvfIdx,//input
+                                        timeIdx,//input
+                                        phaseIdx,//input
+                                        interiorDofIdx,//input
+                                        exteriorDofIdx,//intput
+                                        Vin,
+                                        Vex,
+                                        globalIndexIn,
+                                        globalIndexEx,
+                                        distZ*g,
+                                        thpres);
+            if(pressureDifferences[phaseIdx] == 0){
+                volumeFlux[phaseIdx] = 0.0;
+                continue;
+            }
+            IntensiveQuantities up;
+            unsigned globalIndex;
+            if(upIdx[phaseIdx] == interiorDofIdx){
+                up = intQuantsIn;
+                globalIndex = globalIndexIn;
+            }else{
+                up = intQuantsEx;
+                globalIndex = globalIndexEx;
+            }
+            // TODO: should the rock compaction transmissibility multiplier be upstreamed
+            // or averaged? all fluids should see the same compaction?!
+            //const auto& globalIndex = stencil.globalSpaceIndex(upstreamIdx);
+            const Evaluation& transMult =
+                problem.template rockCompTransMultiplier<Evaluation>(up, globalIndex);
+            
+            if (upIdx[phaseIdx] == interiorDofIdx)
+                volumeFlux[phaseIdx] =
+                    pressureDifferences[phaseIdx]*up.mobility(phaseIdx)*transMult*(-trans/faceArea);
+            else
+                volumeFlux[phaseIdx] =
+                    pressureDifferences[phaseIdx]*(Toolbox::value(up.mobility(phaseIdx))*Toolbox::value(transMult)*(-trans/faceArea));
+            
+        }
+    }
 protected:
     /*!
      * \brief Update the required gradients for interior faces
