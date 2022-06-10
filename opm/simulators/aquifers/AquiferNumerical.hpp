@@ -49,12 +49,14 @@ public:
     using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
 
     enum { dimWorld = GridView::dimensionworld };
-
+    enum { numPhases = FluidSystem::numPhases };
     static const int numEq = BlackoilIndices::numEq;
 
     using Eval =  DenseAd::Evaluation<double, numEq>;
     using Toolbox = MathToolbox<Eval>;
 
+    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
+    using ExtensiveQuantities = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
     // Constructor
     AquiferNumerical(const SingleNumericalAquifer& aquifer,
                      const std::unordered_map<int, int>& cartesian_to_compressed,
@@ -250,6 +252,30 @@ private:
         return sum_pressure_watervolume / sum_watervolume;
     }
 
+    template<class ElemCtx>
+    const double getWaterFlux(ElemCtx& elem_ctx,unsigned face_idx) const{
+        const auto& exQuants = elem_ctx.extensiveQuantities(face_idx, /*timeIdx*/ 0);
+        const double water_flux = Toolbox::value(exQuants.volumeFlux(this->phaseIdx_()));
+        return water_flux;
+    }
+    
+    const double getWaterFlux(SmallElementContext<TypeTag>& elem_ctx,unsigned face_idx) const{
+        short upIdx[numPhases];
+        
+        Eval volumFlux[numPhases];
+        Eval pressureDifferences[numPhases];
+        ExtensiveQuantities::volumeAndPhasePressureDifferences(upIdx ,
+                                                               volumFlux,
+                                                               pressureDifferences,
+                                                               elem_ctx,
+                                                               face_idx,
+                                                               /*timeIdx*/ 0);
+        return Toolbox::value(volumFlux[this->phaseIdx_()]);
+    }
+                
+                
+
+    
     double calculateAquiferFluxRate() const
     {
         double aquifer_flux = 0.0;
@@ -276,9 +302,7 @@ private:
             if (idx != 0) {
                 continue;
             }
-            elem_ctx.updateAllIntensiveQuantities();
-            elem_ctx.updateAllExtensiveQuantities();
-
+    
             const std::size_t num_interior_faces = elem_ctx.numInteriorFaces(/*timeIdx*/ 0);
             // const auto &problem = elem_ctx.problem();
             const auto& stencil = elem_ctx.stencil(0);
@@ -300,9 +324,11 @@ private:
                 if (this->cell_to_aquifer_cell_idx_[J] > 0) {
                     continue;
                 }
-                const auto& exQuants = elem_ctx.extensiveQuantities(face_idx, /*timeIdx*/ 0);
-                const double water_flux = Toolbox::value(exQuants.volumeFlux(this->phaseIdx_()));
+                elem_ctx.updateAllIntensiveQuantities();
+                elem_ctx.updateAllExtensiveQuantities();
 
+                const double water_flux = getWaterFlux(elem_ctx,face_idx);
+                
                 const std::size_t up_id = water_flux >= 0.0 ? i : j;
                 const auto& intQuantsIn = elem_ctx.intensiveQuantities(up_id, 0);
                 const double invB = Toolbox::value(intQuantsIn.fluidState().invB(this->phaseIdx_()));
@@ -316,6 +342,7 @@ private:
 
         return aquifer_flux;
     }
+    
 };
 } // namespace Opm
 #endif
