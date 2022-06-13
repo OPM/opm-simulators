@@ -284,7 +284,7 @@ struct StrictInnerIterWells<TypeTag, TTag::FlowModelParameters> {
 template<class TypeTag>
 struct RegularizationFactorMsw<TypeTag, TTag::FlowModelParameters> {
     using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1;
+    static constexpr type value = 100;
 };
 template<class TypeTag>
 struct EnableWellOperabilityCheck<TypeTag, TTag::FlowModelParameters> {
