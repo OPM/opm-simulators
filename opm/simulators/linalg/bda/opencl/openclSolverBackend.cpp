@@ -279,7 +279,9 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
         OpmLog::info(out.str());
     }
 
-    t_rest.start();
+    if (verbosity >= 3) {
+        t_rest.start();
+    }
     for (it = 0.5; it < maxit; it += 0.5) {
         rhop = rho;
         rho = OpenclKernels::dot(d_rw, d_r, d_tmp, N);
@@ -288,32 +290,47 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
             beta = (rho / rhop) * (alpha / omega);
             OpenclKernels::custom(d_p, d_v, d_r, omega, beta, N);
         }
-        t_rest.stop();
+        if (verbosity >= 3) {
+            queue->finish();
+            t_rest.stop();
+            t_prec.start();
+        }
 
         // pw = prec(p)
-        t_prec.start();
         prec->apply(d_p, d_pw);
-        t_prec.stop();
+        if (verbosity >= 3) {
+            queue->finish();
+            t_prec.stop();
+            t_spmv.start();
+        }
 
         // v = A * pw
-        t_spmv.start();
         OpenclKernels::spmv(d_Avals, d_Acols, d_Arows, d_pw, d_v, Nb, block_size);
-        t_spmv.stop();
+        if (verbosity >= 3) {
+            queue->finish();
+            t_spmv.stop();
+            t_well.start();
+        }
 
         // apply wellContributions
-        t_well.start();
         if(wellContribs.getNumWells() > 0){
             static_cast<WellContributionsOCL&>(wellContribs).apply(d_pw, d_v, d_toOrder);
         }
-        t_well.stop();
+        if(verbosity >= 3) {
+            queue->finish();
+            t_well.stop();
+            t_rest.start();
+        }
 
-        t_rest.start();
         tmp1 = OpenclKernels::dot(d_rw, d_v, d_tmp, N);
         alpha = rho / tmp1;
         OpenclKernels::axpy(d_v, -alpha, d_r, N);      // r = r - alpha * v
         OpenclKernels::axpy(d_pw, alpha, d_x, N);      // x = x + alpha * pw
         norm = OpenclKernels::norm(d_r, d_tmp, N);
-        t_rest.stop();
+        if (verbosity >= 3) {
+            queue->finish();
+            t_rest.stop();
+        }
 
         if (norm < tolerance * norm_0) {
             break;
@@ -322,30 +339,44 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
         it += 0.5;
 
         // s = prec(r)
-        t_prec.start();
+        if (verbosity >= 3) {
+            t_prec.start();
+        }
         prec->apply(d_r, d_s);
-        t_prec.stop();
+        if (verbosity >= 3) {
+            queue->finish();
+            t_prec.stop();
+            t_spmv.start();
+        }
 
         // t = A * s
-        t_spmv.start();
         OpenclKernels::spmv(d_Avals, d_Acols, d_Arows, d_s, d_t, Nb, block_size);
-        t_spmv.stop();
+        if(verbosity >= 3){
+            queue->finish();
+            t_spmv.stop();
+            t_well.start();
+        }
 
         // apply wellContributions
-        t_well.start();
         if(wellContribs.getNumWells() > 0){
             static_cast<WellContributionsOCL&>(wellContribs).apply(d_s, d_t, d_toOrder);
         }
-        t_well.stop();
+        if (verbosity >= 3) {
+            queue->finish();
+            t_well.stop();
+            t_rest.start();
+        }
 
-        t_rest.start();
         tmp1 = OpenclKernels::dot(d_t, d_r, d_tmp, N);
         tmp2 = OpenclKernels::dot(d_t, d_t, d_tmp, N);
         omega = tmp1 / tmp2;
         OpenclKernels::axpy(d_s, omega, d_x, N);     // x = x + omega * s
         OpenclKernels::axpy(d_t, -omega, d_r, N);    // r = r - omega * t
         norm = OpenclKernels::norm(d_r, d_tmp, N);
-        t_rest.stop();
+        if (verbosity >= 3) {
+            queue->finish();
+            t_rest.stop();
+        }
 
         if (norm < tolerance * norm_0) {
             break;
