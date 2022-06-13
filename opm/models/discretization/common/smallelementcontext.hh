@@ -426,7 +426,7 @@ public:
     
         const auto *cachedIntQuants = model().cachedIntensiveQuantities(globalIdx, timeIdx);
         if(cachedIntQuants){
-            return *model().cachedIntensiveQuantities(globalIdx, timeIdx);//dofVars_[dofIdx].intensiveQuantities[timeIdx];
+            return *cachedIntQuants;//dofVars_[dofIdx].intensiveQuantities[timeIdx];
         }else{
             throw std::logic_error("Cached quantities need to be calcualted before for this element context");
         }
