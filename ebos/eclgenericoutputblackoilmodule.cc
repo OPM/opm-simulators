@@ -1731,7 +1731,7 @@ updateSummaryRegionValues(const Inplace& inplace,
         }
 
         if (this->summaryConfig_.hasKeyword("FOE") && this->initialInplace_) {
-            miscSummaryData["FOE"] = inplace.get(Inplace::Phase::OIL)
+            miscSummaryData["FOE"] = (this->initialInplace_.value().get(Inplace::Phase::OIL) - inplace.get(Inplace::Phase::OIL))
                 / this->initialInplace_.value().get(Inplace::Phase::OIL);
         }
 
