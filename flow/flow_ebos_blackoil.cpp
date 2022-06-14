@@ -38,7 +38,7 @@ void flowEbosBlackoilSetDeck(double setupTime, std::shared_ptr<Deck> deck,
     Vanguard::setSetupTime(setupTime);
     Vanguard::setDeck(std::move(deck));
     Vanguard::setEclState(std::move(eclState));
-    Vanguard::setExternalSchedule(std::move(schedule));
+    Vanguard::setSchedule(std::move(schedule));
     Vanguard::setExternalUDQState(std::move(udqState));
     Vanguard::setExternalActionState(std::move(actionState));
     Vanguard::setExternalWTestState(std::move(wtestState));

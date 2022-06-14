@@ -106,7 +106,7 @@ void flowEbosSetDeck(std::shared_ptr<Deck> deck,
 
     Vanguard::setDeck(deck);
     Vanguard::setEclState(eclState);
-    Vanguard::setExternalSchedule(schedule);
+    Vanguard::setSchedule(schedule);
     Vanguard::setExternalSummaryConfig(summaryConfig);
 }
 

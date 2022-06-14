@@ -133,12 +133,9 @@ public:
 
     /*!
      * \brief Set the schedule object.
-     *
-     * The lifetime of this object is not managed by the vanguard, i.e., the object must
-     * stay valid until after the vanguard gets destroyed.
      */
-    static void setExternalSchedule(std::shared_ptr<Schedule> schedule);
-    static void setExternalSchedule(std::unique_ptr<Schedule> schedule);
+    static void setSchedule(std::shared_ptr<Schedule> schedule);
+    static void setSchedule(std::unique_ptr<Schedule> schedule);
 
     /*!
      * \brief Set the summary configuration object.
@@ -315,7 +312,6 @@ protected:
     static std::unique_ptr<ErrorGuard> externalErrorGuard_;
 
     // These variables may be owned by both Python and the simulator
-    static std::shared_ptr<Schedule> externalEclSchedule_;
     static std::shared_ptr<SummaryConfig> externalEclSummaryConfig_;
 
     static std::unique_ptr<UDQState> externalUDQState_;
@@ -359,7 +355,7 @@ protected:
     // These variables may be owned by both Python and the simulator
     static std::shared_ptr<Deck> deck_;
     static std::shared_ptr<EclipseState> eclState_;
-    std::shared_ptr<Schedule> eclSchedule_;
+    static std::shared_ptr<Schedule> eclSchedule_;
     std::shared_ptr<SummaryConfig> eclSummaryConfig_;
 
     /*! \brief Information about wells in parallel

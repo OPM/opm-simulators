@@ -69,7 +69,7 @@ void flowEbosOilWaterSetDeck(double setupTime, std::shared_ptr<Deck> deck,
     Vanguard::setSetupTime(setupTime);
     Vanguard::setDeck(std::move(deck));
     Vanguard::setEclState(std::move(eclState));
-    Vanguard::setExternalSchedule(std::move(schedule));
+    Vanguard::setSchedule(std::move(schedule));
     Vanguard::setExternalSummaryConfig(std::move(summaryConfig));
 }
 
