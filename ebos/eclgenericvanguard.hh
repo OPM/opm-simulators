@@ -120,15 +120,9 @@ public:
     /*!
      * \brief Set the Opm::Deck object which ought to be used when the simulator vanguard
      *        is instantiated.
-     *
-     * This is basically an optimization: In cases where the ECL input deck must be
-     * examined to decide which simulator ought to be used, this avoids having to parse
-     * the input twice. When this method is used, the caller is responsible for lifetime
-     * management of these two objects, i.e., they are not allowed to be deleted as long
-     * as the simulator vanguard object is alive.
      */
-    static void setExternalDeck(std::shared_ptr<Deck> deck);
-    static void setExternalDeck(std::unique_ptr<Deck> deck);
+    static void setDeck(std::shared_ptr<Deck> deck);
+    static void setDeck(std::unique_ptr<Deck> deck);
 
     /*!
      * \brief Set the Opm::EclipseState object which ought to be used when the simulator
@@ -321,12 +315,10 @@ protected:
     static std::unique_ptr<ErrorGuard> externalErrorGuard_;
 
     // These variables may be owned by both Python and the simulator
-    static std::shared_ptr<Deck> externalDeck_;
     static std::shared_ptr<EclipseState> externalEclState_;
     static std::shared_ptr<Schedule> externalEclSchedule_;
     static std::shared_ptr<SummaryConfig> externalEclSummaryConfig_;
 
-    static bool externalDeckSet_;
     static std::unique_ptr<UDQState> externalUDQState_;
     static std::unique_ptr<Action::State> externalActionState_;
     static std::unique_ptr<WellTestState> externalWTestState_;
@@ -366,7 +358,7 @@ protected:
     std::unique_ptr<ErrorGuard> errorGuard_;
     std::shared_ptr<Python> python;
     // These variables may be owned by both Python and the simulator
-    std::shared_ptr<Deck> deck_;
+    static std::shared_ptr<Deck> deck_;
     std::shared_ptr<EclipseState> eclState_;
     std::shared_ptr<Schedule> eclSchedule_;
     std::shared_ptr<SummaryConfig> eclSummaryConfig_;

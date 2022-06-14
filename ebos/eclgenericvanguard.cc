@@ -39,7 +39,6 @@
 #include <opm/input/eclipse/Parser/ErrorGuard.hpp>
 #include <opm/input/eclipse/Parser/ParseContext.hpp>
 #include <opm/input/eclipse/Python/Python.hpp>
-#include <opm/simulators/utils/readDeck.hpp>
 
 #include <dune/common/version.hh>
 #include <dune/common/parallel/mpihelper.hh>
@@ -54,10 +53,9 @@
 namespace Opm {
 
 double EclGenericVanguard::setupTime_ = 0.0;
+std::shared_ptr<Deck> EclGenericVanguard::deck_;
 std::unique_ptr<ParseContext> EclGenericVanguard::externalParseContext_;
 std::unique_ptr<ErrorGuard> EclGenericVanguard::externalErrorGuard_;
-std::shared_ptr<Deck> EclGenericVanguard::externalDeck_;
-bool EclGenericVanguard::externalDeckSet_ = false;
 std::shared_ptr<EclipseState> EclGenericVanguard::externalEclState_;
 std::shared_ptr<Schedule> EclGenericVanguard::externalEclSchedule_;
 std::shared_ptr<SummaryConfig> EclGenericVanguard::externalEclSummaryConfig_;
@@ -105,16 +103,14 @@ void EclGenericVanguard::setExternalSummaryConfig(
     externalEclSummaryConfig_ = std::move(summaryConfig);
 }
 
-void EclGenericVanguard::setExternalDeck(std::shared_ptr<Deck> deck)
+void EclGenericVanguard::setDeck(std::shared_ptr<Deck> deck)
 {
-    externalDeck_ = std::move(deck);
-    externalDeckSet_ = true;
+    deck_ = std::move(deck);
 }
 
-void EclGenericVanguard::setExternalDeck(std::unique_ptr<Deck> deck)
+void EclGenericVanguard::setDeck(std::unique_ptr<Deck> deck)
 {
-    externalDeck_ = std::move(deck);
-    externalDeckSet_ = true;
+    deck_ = std::move(deck);
 }
 
 void EclGenericVanguard::setExternalEclState(std::shared_ptr<EclipseState> eclState)
@@ -266,10 +262,8 @@ void EclGenericVanguard::init()
 
     // Check that we are in one of the known configurations for external variables
     // and move them to internal
-    if (externalDeck_)
+    if (true)
     {
-        deck_ = std::move(externalDeck_);
-
         if (externalParseContext_ && externalErrorGuard_ )
         {
             parseContext_ = std::move(externalParseContext_);
@@ -295,11 +289,6 @@ void EclGenericVanguard::init()
     {
         parseContext_ = createParseContext(ignoredKeywords_, eclStrictParsing_);
     }
-
-    readDeck(EclGenericVanguard::comm(), fileName_, deck_, eclState_, eclSchedule_, udqState_, actionState_, wtestState_,
-             eclSummaryConfig_, std::move(errorGuard), python,
-             std::move(parseContext_), /* initFromRestart = */ false,
-             /* checkDeck = */ enableExperiments_, outputInterval_);
 
     if (EclGenericVanguard::externalUDQState_)
         this->udqState_ = std::move(EclGenericVanguard::externalUDQState_);

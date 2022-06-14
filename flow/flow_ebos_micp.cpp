@@ -70,7 +70,7 @@ void flowEbosMICPSetDeck(double setupTime, std::shared_ptr<Deck> deck,
     using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
 
     Vanguard::setSetupTime(setupTime);
-    Vanguard::setExternalDeck(std::move(deck));
+    Vanguard::setDeck(std::move(deck));
     Vanguard::setExternalEclState(std::move(eclState));
     Vanguard::setExternalSchedule(std::move(schedule));
     Vanguard::setExternalSummaryConfig(std::move(summaryConfig));
