@@ -1671,6 +1671,15 @@ namespace Opm
             // considering the contributions from the inlet segments
             {
                 for (const int inlet : this->segment_inlets_[seg]) {
+
+                    // don't include contribution from shut valves.
+                    if(this->segmentSet()[inlet].segmentType() == Segment::SegmentType::VALVE) {
+                        const Valve& valve = this->segmentSet()[inlet].valve();
+                        if (valve.status() == Opm::ICDStatus::SHUT) {
+                            continue;
+                        }
+                    }
+
                     for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
                         const EvalWell inlet_rate = this->getSegmentRateUpwinding(inlet, comp_idx) * this->well_efficiency_factor_;
 
