@@ -113,11 +113,6 @@ public:
     static void setExternalParseContext(std::unique_ptr<ParseContext> parseContext);
 
     /*!
-     * \brief Set the Opm::ErrorGuard object which ought to be used for parsing the deck and creating the Opm::EclipseState object.
-     */
-    static void setExternalErrorGuard(std::unique_ptr<ErrorGuard> errorGuard);
-
-    /*!
      * \brief Set the Opm::Deck object which ought to be used when the simulator vanguard
      *        is instantiated.
      */
@@ -306,7 +301,6 @@ protected:
 
     static double setupTime_;
     static std::unique_ptr<ParseContext> externalParseContext_;
-    static std::unique_ptr<ErrorGuard> externalErrorGuard_;
 
     // These variables may be owned by both Python and the simulator
     static std::unique_ptr<UDQState> externalUDQState_;
@@ -345,7 +339,6 @@ protected:
     // these attributes point  either to the internal  or to the external version of the
     // parser objects.
     std::unique_ptr<ParseContext> parseContext_;
-    std::unique_ptr<ErrorGuard> errorGuard_;
     std::shared_ptr<Python> python;
     // These variables may be owned by both Python and the simulator
     static std::shared_ptr<Deck> deck_;

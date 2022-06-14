@@ -36,7 +36,6 @@
 #include <opm/input/eclipse/Schedule/SummaryState.hpp>
 #include <opm/input/eclipse/Schedule/UDQ/UDQState.hpp>
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
-#include <opm/input/eclipse/Parser/ErrorGuard.hpp>
 #include <opm/input/eclipse/Parser/ParseContext.hpp>
 #include <opm/input/eclipse/Python/Python.hpp>
 
@@ -55,7 +54,6 @@ namespace Opm {
 double EclGenericVanguard::setupTime_ = 0.0;
 std::shared_ptr<Deck> EclGenericVanguard::deck_;
 std::unique_ptr<ParseContext> EclGenericVanguard::externalParseContext_;
-std::unique_ptr<ErrorGuard> EclGenericVanguard::externalErrorGuard_;
 std::shared_ptr<EclipseState> EclGenericVanguard::eclState_;
 std::shared_ptr<Schedule> EclGenericVanguard::eclSchedule_;
 std::shared_ptr<SummaryConfig> EclGenericVanguard::eclSummaryConfig_;
@@ -74,11 +72,6 @@ EclGenericVanguard::~EclGenericVanguard() = default;
 void EclGenericVanguard::setExternalParseContext(std::unique_ptr<ParseContext> parseContext)
 {
     externalParseContext_ = std::move(parseContext);
-}
-
-void EclGenericVanguard::setExternalErrorGuard(std::unique_ptr<ErrorGuard> errorGuard)
-{
-    externalErrorGuard_ = std::move(errorGuard);
 }
 
 void EclGenericVanguard::setSchedule(std::shared_ptr<Schedule> schedule)
@@ -258,16 +251,13 @@ void EclGenericVanguard::init()
         std::transform(caseName_.begin(), caseName_.end(), caseName_.begin(), ::toupper);
     }
 
-    std::unique_ptr<ErrorGuard> errorGuard = nullptr;
-
     // Check that we are in one of the known configurations for external variables
     // and move them to internal
     if (true)
     {
-        if (externalParseContext_ && externalErrorGuard_ )
+        if (externalParseContext_ )
         {
             parseContext_ = std::move(externalParseContext_);
-            errorGuard = std::move(externalErrorGuard_);
         }
         else
         {
