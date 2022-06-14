@@ -20,6 +20,7 @@
 #include <opm/simulators/flow/Main.hpp>
 // modifications from standard
 #include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
+#include <opm/models/blackoil/blackoilintensivequantitiessimple.hh>
 #include <opm/models/discretization/common/fvbaselocalresidualtpfa.hh>
 #include <opm/models/discretization/common/fvbaseadlocallinearizertpfa.hh>
 #include <opm/models/discretization/common/smallelementcontext.hh>
@@ -76,6 +77,11 @@ namespace Opm {
         struct FluxModule<TypeTag, TTag::EclFlowProblemTPFA> {
             using type = EclTransFluxModuleTPFA<TypeTag>;
         };
+        template<class TypeTag>
+        struct IntensiveQuantities<TypeTag, TTag::EclFlowProblemTPFA> {
+            using type = BlackOilIntensiveQuantitiesSimple<TypeTag>;
+        };
+
     }
 }
 // namespace Opm {

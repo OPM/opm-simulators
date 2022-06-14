@@ -52,6 +52,8 @@
 
 #include <opm/simulators/linalg/ISTLSolverEbos.hpp>
 
+#include <opm/models/blackoil/blackoilintensivequantitiessimple.hh>
+
 #include <dune/istl/owneroverlapcopy.hh>
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
 #include <dune/common/parallel/communication.hh>
@@ -170,6 +172,8 @@ namespace Opm {
         using Indices = GetPropType<TypeTag, Properties::Indices>;
         using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
         using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>;
+        using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
+        using Problem = GetPropType<TypeTag, Properties::Problem>;
 
         typedef double Scalar;
         static const int numEq = Indices::numEq;
@@ -568,11 +572,28 @@ namespace Opm {
             ebosSolver.solve(x);
        }
 
+        template<class IntensiveQuantity> 
+        void updateIntensiveQuantity(const Problem& /*problem*/,
+                                     const SolutionVector& /*solution*/,
+                                     const IntensiveQuantity*)
+        {
+            ebosSimulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
+        }
 
-
+        
+        void updateIntensiveQuantity(const Problem& problem,
+                                     const SolutionVector& solution,
+                                     const BlackOilIntensiveQuantitiesSimple<TypeTag>* /*intensive*/)
+        {
+        ebosSimulator_.model().invalidateAndUpdateIntensiveQuantitiesSimple(problem,
+                                                                           solution,
+                                                                           /*timeIdx*/0);            
+        }
+        
         /// Apply an update to the primary variables.
         void updateSolution(const BVector& dx)
         {
+            auto& problem = ebosSimulator_.problem();
             auto& ebosNewtonMethod = ebosSimulator_.model().newtonMethod();
             SolutionVector& solution = ebosSimulator_.model().solution(/*timeIdx=*/0);
 
@@ -584,7 +605,12 @@ namespace Opm {
                                                     // residual
 
             // if the solution is updated, the intensive quantities need to be recalculated
-            ebosSimulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
+            //ebosSimulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
+            IntensiveQuantities* dummy = NULL;//only for template spesialization
+            this->updateIntensiveQuantity(problem,solution, dummy);
+            //ebosSimulator_.model().invalidateAndUpdateIntensiveQuantitiesSimple<IntensiveQuantities>(problem,
+            //solution,
+            //                                                                    /*timeIdx=*/0);            
         }
 
         /// Return true if output to cout is wanted.
