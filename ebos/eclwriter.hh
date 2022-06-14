@@ -177,7 +177,7 @@ public:
         const Scalar totalCpuTime =
             simulator_.executionTimer().realTimeElapsed() +
             simulator_.setupTimer().realTimeElapsed() +
-            simulator_.vanguard().externalSetupTime();
+            simulator_.vanguard().setupTime();
 
         const auto localWellData            = simulator_.problem().wellModel().wellData();
         const auto localGroupAndNetworkData = simulator_.problem().wellModel()

@@ -53,7 +53,7 @@
 
 namespace Opm {
 
-double EclGenericVanguard::externalSetupTime_ = 0.0;
+double EclGenericVanguard::setupTime_ = 0.0;
 std::unique_ptr<ParseContext> EclGenericVanguard::externalParseContext_;
 std::unique_ptr<ErrorGuard> EclGenericVanguard::externalErrorGuard_;
 std::shared_ptr<Deck> EclGenericVanguard::externalDeck_;

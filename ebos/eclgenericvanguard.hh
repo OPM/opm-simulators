@@ -96,16 +96,16 @@ public:
     /*!
      * \brief Set the wall time which was spend externally to set up the external data structures
      *
-     * i.e., the objects specified via the other setExternal*() methods.
+     * i.e., the objects specified via the other set*() methods.
      */
-    static void setExternalSetupTime(double t)
-    { externalSetupTime_ = t; }
+    static void setSetupTime(double t)
+    { setupTime_ = t; }
 
     /*!
      * \brief Returns the wall time required to set up the simulator before it was born.
      */
-    static double externalSetupTime()
-    { return externalSetupTime_; }
+    static double setupTime()
+    { return setupTime_; }
 
     /*!
      * \brief Set the Opm::ParseContext object which ought to be used for parsing the deck and creating the Opm::EclipseState object.
@@ -316,7 +316,7 @@ protected:
 
     void init();
 
-    static double externalSetupTime_;
+    static double setupTime_;
     static std::unique_ptr<ParseContext> externalParseContext_;
     static std::unique_ptr<ErrorGuard> externalErrorGuard_;
 

@@ -55,7 +55,7 @@ void flowEbosBrinePrecsaltVapwatSetDeck(double setupTime, std::shared_ptr<Deck> 
     using TypeTag = Properties::TTag::EclFlowBrinePrecsaltVapwatProblem;
     using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
 
-    Vanguard::setExternalSetupTime(setupTime);
+    Vanguard::setSetupTime(setupTime);
     Vanguard::setExternalDeck(std::move(deck));
     Vanguard::setExternalEclState(std::move(eclState));
     Vanguard::setExternalSchedule(std::move(schedule));

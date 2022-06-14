@@ -69,7 +69,7 @@ void flowEbosOilWaterBrineSetDeck(double setupTime, std::shared_ptr<Deck> deck,
     using TypeTag = Properties::TTag::EclFlowOilWaterBrineProblem;
     using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
 
-    Vanguard::setExternalSetupTime(setupTime);
+    Vanguard::setSetupTime(setupTime);
     Vanguard::setExternalDeck(std::move(deck));
     Vanguard::setExternalEclState(std::move(eclState));
     Vanguard::setExternalSchedule(std::move(schedule));
