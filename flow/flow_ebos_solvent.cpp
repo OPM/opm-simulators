@@ -37,21 +37,6 @@ struct EnableSolvent<TypeTag, TTag::EclFlowSolventProblem> {
 }}
 
 namespace Opm {
-void flowEbosSolventSetDeck(double setupTime, std::shared_ptr<Deck> deck,
-                            std::shared_ptr<EclipseState> eclState,
-                            std::shared_ptr<Schedule> schedule,
-                            std::shared_ptr<SummaryConfig> summaryConfig)
-{
-    using TypeTag = Properties::TTag::EclFlowSolventProblem;
-    using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
-
-    Vanguard::setSetupTime(setupTime);
-    Vanguard::setDeck(std::move(deck));
-    Vanguard::setEclState(std::move(eclState));
-    Vanguard::setSchedule(std::move(schedule));
-    Vanguard::setSummaryConfig(std::move(summaryConfig));
-}
-
 
 // ----------------- Main program -----------------
 int flowEbosSolventMain(int argc, char** argv, bool outputCout, bool outputFiles)

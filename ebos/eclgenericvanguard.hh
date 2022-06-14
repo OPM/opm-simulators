@@ -88,49 +88,22 @@ public:
     static std::string canonicalDeckPath(const std::string& caseName);
 
     /*!
-     * \brief Set the wall time which was spend externally to set up the external data structures
-     *
-     * i.e., the objects specified via the other set*() methods.
-     */
-    static void setSetupTime(double t)
-    { setupTime_ = t; }
-
-    /*!
      * \brief Returns the wall time required to set up the simulator before it was born.
      */
     static double setupTime()
     { return setupTime_; }
 
     /*!
-     * \brief Set the Opm::Deck object which ought to be used when the simulator vanguard
-     *        is instantiated.
+     * \brief Set the simulation configuration objects.
      */
-    static void setDeck(std::shared_ptr<Deck> deck);
-    static void setDeck(std::unique_ptr<Deck> deck);
-
-    /*!
-     * \brief Set the Opm::EclipseState object which ought to be used when the simulator
-     *        vanguard is instantiated.
-     */
-    static void setEclState(std::shared_ptr<EclipseState> eclState);
-    static void setEclState(std::unique_ptr<EclipseState> eclState);
-
-    /*!
-     * \brief Set the schedule object.
-     */
-    static void setSchedule(std::shared_ptr<Schedule> schedule);
-    static void setSchedule(std::unique_ptr<Schedule> schedule);
-
-    /*!
-     * \brief Set the summary configuration object.
-     */
-    static void setSummaryConfig(std::shared_ptr<SummaryConfig> summaryConfig);
-    static void setSummaryConfig(std::unique_ptr<SummaryConfig> summaryConfig);
-
-    static void setExternalUDQState(std::unique_ptr<UDQState> udqState);
-    static void setExternalActionState(std::unique_ptr<Action::State> actionState);
-    static void setExternalWTestState(std::unique_ptr<WellTestState> wtestState);
-
+    static void setParams(double setupTime,
+                          std::shared_ptr<Deck> deck,
+                          std::shared_ptr<EclipseState> eclState,
+                          std::shared_ptr<Schedule> schedule,
+                          std::unique_ptr<UDQState> udqState,
+                          std::unique_ptr<Action::State> actionState,
+                          std::unique_ptr<WellTestState> wtestState,
+                          std::shared_ptr<SummaryConfig> summaryConfig);
 
     /*!
      * \brief Return a reference to the parsed ECL deck.
@@ -291,9 +264,6 @@ protected:
     static double setupTime_;
 
     // These variables may be owned by both Python and the simulator
-    static std::unique_ptr<UDQState> externalUDQState_;
-    static std::unique_ptr<Action::State> externalActionState_;
-    static std::unique_ptr<WellTestState> externalWTestState_;
     static std::unique_ptr<Parallel::Communication> comm_;
 
     std::string caseName_;
@@ -315,14 +285,14 @@ protected:
     bool enableExperiments_;
 
     std::unique_ptr<SummaryState> summaryState_;
-    std::unique_ptr<UDQState> udqState_;
-    std::unique_ptr<Action::State> actionState_;
+    static std::unique_ptr<UDQState> udqState_;
+    static std::unique_ptr<Action::State> actionState_;
 
     // Observe that this instance is handled differently from the other state
     // variables, it will only be initialized for a restart run. While
     // initializing a restarted run this instance is transferred to the WGState
     // member in the well model.
-    std::unique_ptr<WellTestState> wtestState_;
+    static std::unique_ptr<WellTestState> wtestState_;
 
     // these attributes point  either to the internal  or to the external version of the
     // parser objects.

@@ -61,20 +61,6 @@ public:
 }}
 
 namespace Opm {
-void flowEbosOilWaterPolymerSetDeck(double setupTime, std::shared_ptr<Deck> deck,
-                                    std::shared_ptr<EclipseState> eclState,
-                                    std::shared_ptr<Schedule> schedule,
-                                    std::shared_ptr<SummaryConfig> summaryConfig)
-{
-    using TypeTag = Properties::TTag::EclFlowOilWaterPolymerProblem;
-    using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
-
-    Vanguard::setSetupTime(setupTime);
-    Vanguard::setDeck(std::move(deck));
-    Vanguard::setEclState(std::move(eclState));
-    Vanguard::setSchedule(std::move(schedule));
-    Vanguard::setSummaryConfig(std::move(summaryConfig));
-}
 
 // ----------------- Main program -----------------
 int flowEbosOilWaterPolymerMain(int argc, char** argv, bool outputCout, bool outputFiles)

@@ -17,19 +17,7 @@
 #ifndef FLOW_EBOS_OILWATER_HPP
 #define FLOW_EBOS_OILWATER_HPP
 
-#include <memory>
-
 namespace Opm {
-
-class Deck;
-class EclipseState;
-class Schedule;
-class SummaryConfig;
-
-void flowEbosOilWaterSetDeck(double setupTime, std::shared_ptr<Deck> deck,
-                             std::shared_ptr<EclipseState> eclState,
-                             std::shared_ptr<Schedule> schedule,
-                             std::shared_ptr<SummaryConfig> summaryConfig);
 
 //! \brief Main functon used in main flow binary.
 int flowEbosOilWaterMain(int argc, char** argv, bool outputCout, bool outputFiles);

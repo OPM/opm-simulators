@@ -96,20 +96,6 @@ struct FlowEarlyBird {
 
 namespace Opm {
 
-template <class TypeTag>
-void flowEbosSetDeck(std::shared_ptr<Deck> deck,
-                     std::shared_ptr<EclipseState> eclState,
-                     std::shared_ptr<Schedule> schedule,
-                     std::shared_ptr<SummaryConfig> summaryConfig)
-{
-    using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
-
-    Vanguard::setDeck(deck);
-    Vanguard::setEclState(eclState);
-    Vanguard::setSchedule(schedule);
-    Vanguard::setSummaryConfig(summaryConfig);
-}
-
 // ----------------- Main program -----------------
 template <class TypeTag>
 int flowEbosMain(int argc, char** argv, bool outputCout, bool outputFiles)
@@ -260,7 +246,7 @@ public:
         if (initialize_<Properties::TTag::FlowEarlyBird>(exitCode)) {
             // TODO: check that this deck really represents a blackoil
             // case. E.g. check that number of phases == 3
-            flowEbosBlackoilSetDeck(
+            EclGenericVanguard::setParams(
                 setupTime_,
                 deck_,
                 eclipseState_,
@@ -282,6 +268,15 @@ private:
     {
         const auto& rspec = this->eclipseState_->runspec();
         const auto& phases = rspec.phases();
+
+        EclGenericVanguard::setParams(this->setupTime_,
+                                      this->deck_,
+                                      this->eclipseState_,
+                                      this->schedule_,
+                                      std::move(this->udqState_),
+                                      std::move(this->actionState_),
+                                      std::move(this->wtestState_),
+                                      this->summaryConfig_);
 
         // run the actual simulator
         //
@@ -357,8 +352,14 @@ private:
     template <class TypeTag>
     int dispatchStatic_()
     {
-        flowEbosSetDeck<TypeTag>(
-            deck_, eclipseState_, schedule_, summaryConfig_);
+        EclGenericVanguard::setParams(this->setupTime_,
+                                      this->deck_,
+                                      this->eclipseState_,
+                                      this->schedule_,
+                                      std::move(this->udqState_),
+                                      std::move(this->actionState_),
+                                      std::move(this->wtestState_),
+                                      this->summaryConfig_);
         return flowEbosMain<TypeTag>(argc_, argv_, outputCout_, outputFiles_);
     }
 
@@ -584,12 +585,6 @@ private:
             return EXIT_FAILURE;
         }
 
-        flowEbosMICPSetDeck(this->setupTime_,
-                            this->deck_,
-                            this->eclipseState_,
-                            this->schedule_,
-                            this->summaryConfig_);
-
         return flowEbosMICPMain(this->argc_,
                                 this->argv_,
                                 this->outputCout_,
@@ -600,22 +595,16 @@ private:
     {
         // oil-gas
         if (phases.active( Phase::OIL ) && phases.active( Phase::GAS )) {
-            flowEbosGasOilSetDeck(
-                setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
             return flowEbosGasOilMain(argc_, argv_, outputCout_, outputFiles_);
         }
 
         // oil-water
         else if ( phases.active( Phase::OIL ) && phases.active( Phase::WATER ) ) {
-            flowEbosOilWaterSetDeck(
-                setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
             return flowEbosOilWaterMain(argc_, argv_, outputCout_, outputFiles_);
         }
 
         // gas-water
         else if ( phases.active( Phase::GAS ) && phases.active( Phase::WATER ) ) {
-            flowEbosGasWaterSetDeck(
-                setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
             return flowEbosGasWaterMain(argc_, argv_, outputCout_, outputFiles_);
         }
         else {
@@ -646,22 +635,15 @@ private:
         }
 
         if (phases.size() == 3) { // oil water polymer case
-            flowEbosOilWaterPolymerSetDeck(
-                setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
             return flowEbosOilWaterPolymerMain(argc_, argv_, outputCout_, outputFiles_);
         }
         else {
-            flowEbosPolymerSetDeck(
-                setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
             return flowEbosPolymerMain(argc_, argv_, outputCout_, outputFiles_);
         }
     }
 
     int runFoam()
     {
-        flowEbosFoamSetDeck(
-            setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
-
         return flowEbosFoamMain(argc_, argv_, outputCout_, outputFiles_);
     }
 
@@ -674,8 +656,6 @@ private:
 
             return EXIT_FAILURE;
         }
-        flowEbosWaterOnlySetDeck(
-            setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
 
         return flowEbosWaterOnlyMain(argc_, argv_, outputCout_, outputFiles_);
     }
@@ -689,8 +669,6 @@ private:
 
             return EXIT_FAILURE;
         }
-        flowEbosWaterOnlyEnergySetDeck(
-            setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
 
         return flowEbosWaterOnlyEnergyMain(argc_, argv_, outputCout_, outputFiles_);
     }
@@ -708,21 +686,15 @@ private:
         if (phases.size() == 3) { 
 
             if (phases.active(Phase::OIL)){ // oil water brine case
-                flowEbosOilWaterBrineSetDeck(
-                    setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
                 return flowEbosOilWaterBrineMain(argc_, argv_, outputCout_, outputFiles_);
             }
             if (phases.active(Phase::GAS)){ // gas water brine case
                 if (eclipseState_->getSimulationConfig().hasPRECSALT() &&
                     eclipseState_->getSimulationConfig().hasVAPWAT()) {
                     //case with water vaporization into gas phase and salt precipitation
-                    flowEbosGasWaterSaltprecVapwatSetDeck(
-                        setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
-                    return flowEbosGasWaterSaltprecVapwatMain(argc_, argv_, outputCout_, outputFiles_); 
+                    return flowEbosGasWaterSaltprecVapwatMain(argc_, argv_, outputCout_, outputFiles_);
                 } 
                 else {
-                    flowEbosGasWaterBrineSetDeck(
-                        setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
                     return flowEbosGasWaterBrineMain(argc_, argv_, outputCout_, outputFiles_);
                 }
             }
@@ -730,19 +702,13 @@ private:
         else if (eclipseState_->getSimulationConfig().hasPRECSALT()) {
             if (eclipseState_->getSimulationConfig().hasVAPWAT()) {
                     //case with water vaporization into gas phase and salt precipitation
-                    flowEbosBrinePrecsaltVapwatSetDeck(
-                        setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
                     return flowEbosBrinePrecsaltVapwatMain(argc_, argv_, outputCout_, outputFiles_);
             }
             else {
-                flowEbosBrineSaltPrecipitationSetDeck(
-                    setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
                 return flowEbosBrineSaltPrecipitationMain(argc_, argv_, outputCout_, outputFiles_);
             }
         }
         else {
-            flowEbosBrineSetDeck(
-                setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
             return flowEbosBrineMain(argc_, argv_, outputCout_, outputFiles_);
         }
 
@@ -751,17 +717,11 @@ private:
 
     int runSolvent()
     {
-        flowEbosSolventSetDeck(
-            setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
-
         return flowEbosSolventMain(argc_, argv_, outputCout_, outputFiles_);
     }
 
     int runExtendedBlackOil()
     {
-        flowEbosExtboSetDeck(
-            setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
-
         return flowEbosExtboMain(argc_, argv_, outputCout_, outputFiles_);
     }
 
@@ -769,28 +729,14 @@ private:
     {
         // oil-gas-thermal
         if (!phases.active( Phase::WATER ) && phases.active( Phase::OIL ) && phases.active( Phase::GAS )) {
-            flowEbosGasOilEnergySetDeck(
-                setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
             return flowEbosGasOilEnergyMain(argc_, argv_, outputCout_, outputFiles_);
         }
-
-        flowEbosEnergySetDeck(
-            setupTime_, deck_, eclipseState_, schedule_, summaryConfig_);
 
         return flowEbosEnergyMain(argc_, argv_, outputCout_, outputFiles_);
     }
 
     int runBlackOil()
     {
-        flowEbosBlackoilSetDeck(this->setupTime_,
-                                this->deck_,
-                                this->eclipseState_,
-                                this->schedule_,
-                                std::move(this->udqState_),
-                                std::move(this->actionState_),
-                                std::move(this->wtestState_),
-                                this->summaryConfig_);
-
         return flowEbosBlackoilMain(argc_, argv_, outputCout_, outputFiles_);
     }
 

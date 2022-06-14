@@ -55,9 +55,9 @@ std::shared_ptr<Deck> EclGenericVanguard::deck_;
 std::shared_ptr<EclipseState> EclGenericVanguard::eclState_;
 std::shared_ptr<Schedule> EclGenericVanguard::eclSchedule_;
 std::shared_ptr<SummaryConfig> EclGenericVanguard::eclSummaryConfig_;
-std::unique_ptr<UDQState> EclGenericVanguard::externalUDQState_;
-std::unique_ptr<Action::State> EclGenericVanguard::externalActionState_;
-std::unique_ptr<WellTestState> EclGenericVanguard::externalWTestState_;
+std::unique_ptr<UDQState> EclGenericVanguard::udqState_;
+std::unique_ptr<Action::State> EclGenericVanguard::actionState_;
+std::unique_ptr<WellTestState> EclGenericVanguard::wtestState_;
 std::unique_ptr<Parallel::Communication> EclGenericVanguard::comm_;
 
 EclGenericVanguard::EclGenericVanguard()
@@ -67,61 +67,23 @@ EclGenericVanguard::EclGenericVanguard()
 
 EclGenericVanguard::~EclGenericVanguard() = default;
 
-void EclGenericVanguard::setSchedule(std::shared_ptr<Schedule> schedule)
+void EclGenericVanguard::setParams(double setupTime,
+                                   std::shared_ptr<Deck> deck,
+                                   std::shared_ptr<EclipseState> eclState,
+                                   std::shared_ptr<Schedule> schedule,
+                                   std::unique_ptr<UDQState> udqState,
+                                   std::unique_ptr<Action::State> actionState,
+                                   std::unique_ptr<WellTestState> wtestState,
+                                   std::shared_ptr<SummaryConfig> summaryConfig)
 {
-    eclSchedule_ = std::move(schedule);
-}
-
-void EclGenericVanguard::setSchedule(std::unique_ptr<Schedule> schedule)
-{
-    eclSchedule_ = std::move(schedule);
-}
-
-void EclGenericVanguard::setSummaryConfig(
-    std::shared_ptr<SummaryConfig> summaryConfig)
-{
-    eclSummaryConfig_ = std::move(summaryConfig);
-}
-
-void EclGenericVanguard::setSummaryConfig(
-    std::unique_ptr<SummaryConfig> summaryConfig)
-{
-    eclSummaryConfig_ = std::move(summaryConfig);
-}
-
-void EclGenericVanguard::setDeck(std::shared_ptr<Deck> deck)
-{
-    deck_ = std::move(deck);
-}
-
-void EclGenericVanguard::setDeck(std::unique_ptr<Deck> deck)
-{
-    deck_ = std::move(deck);
-}
-
-void EclGenericVanguard::setEclState(std::shared_ptr<EclipseState> eclState)
-{
-    eclState_ = std::move(eclState);
-}
-
-void EclGenericVanguard::setEclState(std::unique_ptr<EclipseState> eclState)
-{
-    eclState_ = std::move(eclState);
-}
-
-void EclGenericVanguard::setExternalUDQState(std::unique_ptr<UDQState> udqState)
-{
-    externalUDQState_ = std::move(udqState);
-}
-
-void EclGenericVanguard::setExternalActionState(std::unique_ptr<Action::State> actionState)
-{
-    externalActionState_ = std::move(actionState);
-}
-
-void EclGenericVanguard::setExternalWTestState(std::unique_ptr<WellTestState> wtestState)
-{
-    externalWTestState_ = std::move(wtestState);
+    EclGenericVanguard::setupTime_ = setupTime;
+    EclGenericVanguard::deck_ = std::move(deck);
+    EclGenericVanguard::eclState_ = std::move(eclState);
+    EclGenericVanguard::eclSchedule_ = std::move(schedule);
+    EclGenericVanguard::udqState_ = std::move(udqState);
+    EclGenericVanguard::actionState_ = std::move(actionState);
+    EclGenericVanguard::wtestState_ = std::move(wtestState);
+    EclGenericVanguard::eclSummaryConfig_ = std::move(summaryConfig);
 }
 
 std::string EclGenericVanguard::canonicalDeckPath(const std::string& caseName)
@@ -209,21 +171,6 @@ void EclGenericVanguard::init()
         caseName_ = rawCaseName;
         std::transform(caseName_.begin(), caseName_.end(), caseName_.begin(), ::toupper);
     }
-
-    if (EclGenericVanguard::externalUDQState_)
-        this->udqState_ = std::move(EclGenericVanguard::externalUDQState_);
-    else
-        this->udqState_ = std::make_unique<UDQState>( this->eclSchedule_->getUDQConfig(0).params().undefinedValue() );
-
-    if (EclGenericVanguard::externalActionState_)
-        this->actionState_ = std::move(EclGenericVanguard::externalActionState_);
-    else
-        this->actionState_ = std::make_unique<Action::State>();
-
-    if (EclGenericVanguard::externalWTestState_)
-        this->wtestState_ = std::move(EclGenericVanguard::externalWTestState_);
-    else
-        this->wtestState_ = std::make_unique<WellTestState>();
 
     this->summaryState_ = std::make_unique<SummaryState>( TimeService::from_time_t(this->eclSchedule_->getStartTime() ));
 
