@@ -88,12 +88,6 @@ public:
     static std::string canonicalDeckPath(const std::string& caseName);
 
     /*!
-     * \brief Creates an Opm::parseContext object assuming that the parameters are ready.
-     */
-    static std::unique_ptr<ParseContext> createParseContext(const std::string& ignoredKeywords,
-                                                            bool eclStrictParsing);
-
-    /*!
      * \brief Set the wall time which was spend externally to set up the external data structures
      *
      * i.e., the objects specified via the other set*() methods.
@@ -106,11 +100,6 @@ public:
      */
     static double setupTime()
     { return setupTime_; }
-
-    /*!
-     * \brief Set the Opm::ParseContext object which ought to be used for parsing the deck and creating the Opm::EclipseState object.
-     */
-    static void setExternalParseContext(std::unique_ptr<ParseContext> parseContext);
 
     /*!
      * \brief Set the Opm::Deck object which ought to be used when the simulator vanguard
@@ -300,7 +289,6 @@ protected:
     void init();
 
     static double setupTime_;
-    static std::unique_ptr<ParseContext> externalParseContext_;
 
     // These variables may be owned by both Python and the simulator
     static std::unique_ptr<UDQState> externalUDQState_;
@@ -338,7 +326,6 @@ protected:
 
     // these attributes point  either to the internal  or to the external version of the
     // parser objects.
-    std::unique_ptr<ParseContext> parseContext_;
     std::shared_ptr<Python> python;
     // These variables may be owned by both Python and the simulator
     static std::shared_ptr<Deck> deck_;

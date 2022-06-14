@@ -36,7 +36,6 @@
 #include <opm/input/eclipse/Schedule/SummaryState.hpp>
 #include <opm/input/eclipse/Schedule/UDQ/UDQState.hpp>
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
-#include <opm/input/eclipse/Parser/ParseContext.hpp>
 #include <opm/input/eclipse/Python/Python.hpp>
 
 #include <dune/common/version.hh>
@@ -53,7 +52,6 @@ namespace Opm {
 
 double EclGenericVanguard::setupTime_ = 0.0;
 std::shared_ptr<Deck> EclGenericVanguard::deck_;
-std::unique_ptr<ParseContext> EclGenericVanguard::externalParseContext_;
 std::shared_ptr<EclipseState> EclGenericVanguard::eclState_;
 std::shared_ptr<Schedule> EclGenericVanguard::eclSchedule_;
 std::shared_ptr<SummaryConfig> EclGenericVanguard::eclSummaryConfig_;
@@ -68,11 +66,6 @@ EclGenericVanguard::EclGenericVanguard()
 }
 
 EclGenericVanguard::~EclGenericVanguard() = default;
-
-void EclGenericVanguard::setExternalParseContext(std::unique_ptr<ParseContext> parseContext)
-{
-    externalParseContext_ = std::move(parseContext);
-}
 
 void EclGenericVanguard::setSchedule(std::shared_ptr<Schedule> schedule)
 {
@@ -156,40 +149,6 @@ std::string EclGenericVanguard::canonicalDeckPath(const std::string& caseName)
     throw std::invalid_argument("Cannot find input case '"+caseName+"'");
 }
 
-std::unique_ptr<ParseContext> EclGenericVanguard::createParseContext(const std::string& ignoredKeywords,
-                                                                     bool eclStrictParsing)
-{
-    typedef std::pair<std::string, InputError::Action> ParseModePair;
-    typedef std::vector<ParseModePair> ParseModePairs;
-    ParseModePairs tmp;
-    tmp.emplace_back(ParseContext::PARSE_RANDOM_SLASH, InputError::IGNORE);
-    tmp.emplace_back(ParseContext::PARSE_MISSING_DIMS_KEYWORD, InputError::WARN);
-    tmp.emplace_back(ParseContext::SUMMARY_UNKNOWN_WELL, InputError::WARN);
-    tmp.emplace_back(ParseContext::SUMMARY_UNKNOWN_GROUP, InputError::WARN);
-    tmp.emplace_back(ParseContext::PARSE_EXTRA_RECORDS, InputError::WARN);
-
-    auto parseContext = std::make_unique<ParseContext>(tmp);
-
-    if (!ignoredKeywords.empty()) {
-        size_t pos;
-        size_t offset = 0;
-        while (true) {
-            pos = ignoredKeywords.find(':', offset);
-            if (pos == std::string::npos) {
-                parseContext->ignoreKeyword(ignoredKeywords.substr(offset));
-                break;
-            }
-            parseContext->ignoreKeyword(ignoredKeywords.substr(offset, pos - offset));
-            offset = pos + 1;
-        }
-    }
-
-    if (eclStrictParsing)
-        parseContext->update(InputError::DELAYED_EXIT1);
-
-    return parseContext;
-}
-
 void EclGenericVanguard::updateOutputDir_(std::string outputDir,
                                           bool enableEclCompatFile)
 {
@@ -249,29 +208,6 @@ void EclGenericVanguard::init()
         // transform the result to ALL_UPPERCASE
         caseName_ = rawCaseName;
         std::transform(caseName_.begin(), caseName_.end(), caseName_.begin(), ::toupper);
-    }
-
-    // Check that we are in one of the known configurations for external variables
-    // and move them to internal
-    if (true)
-    {
-        if (externalParseContext_ )
-        {
-            parseContext_ = std::move(externalParseContext_);
-        }
-        else
-        {
-            OPM_THROW(std::logic_error, "Either parse context and error guard or ECL state, schedule, and summary config need to be"
-                          << " set externally.");
-        }
-    }
-    else if (externalParseContext_)
-    {
-        parseContext_ = std::move(externalParseContext_);
-    }
-    else
-    {
-        parseContext_ = createParseContext(ignoredKeywords_, eclStrictParsing_);
     }
 
     if (EclGenericVanguard::externalUDQState_)
