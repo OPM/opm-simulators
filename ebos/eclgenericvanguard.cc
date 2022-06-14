@@ -29,6 +29,7 @@
 #include <opm/input/eclipse/Deck/Deck.hpp>
 #include <opm/input/eclipse/EclipseState/Aquifer/NumericalAquifer/NumericalAquiferCell.hpp>
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/Parser/ErrorGuard.hpp>
 #include <opm/input/eclipse/Schedule/Action/State.hpp>
 #include <opm/input/eclipse/Schedule/OilVaporizationProperties.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
@@ -37,9 +38,11 @@
 #include <opm/input/eclipse/Schedule/UDQ/UDQState.hpp>
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 #include <opm/input/eclipse/Python/Python.hpp>
+#include <opm/simulators/utils/readDeck.hpp>
 
 #include <dune/common/version.hh>
 #include <dune/common/parallel/mpihelper.hh>
+#include <dune/common/timer.hh>
 
 #if HAVE_MPI
 #include <mpi.h>
@@ -84,6 +87,39 @@ void EclGenericVanguard::setParams(double setupTime,
     EclGenericVanguard::actionState_ = std::move(actionState);
     EclGenericVanguard::wtestState_ = std::move(wtestState);
     EclGenericVanguard::eclSummaryConfig_ = std::move(summaryConfig);
+}
+
+void EclGenericVanguard::readDeck(const std::string& filename)
+{
+    Dune::Timer setupTimer;
+    setupTimer.start();
+
+    std::shared_ptr<Opm::Deck> deck;
+    std::shared_ptr<Opm::EclipseState> eclipseState;
+    std::shared_ptr<Opm::Schedule> schedule;
+    std::unique_ptr<Opm::UDQState> udqState;
+    std::unique_ptr<Opm::Action::State> actionState;
+    std::unique_ptr<Opm::WellTestState> wtestState;
+    std::shared_ptr<Opm::SummaryConfig> summaryConfig;
+
+    auto parseContext =
+        std::make_unique<ParseContext>(std::vector<std::pair<std::string , InputError::Action>>
+                                            {{ParseContext::PARSE_RANDOM_SLASH, InputError::IGNORE},
+                                             {ParseContext::PARSE_MISSING_DIMS_KEYWORD, InputError::WARN},
+                                             {ParseContext::SUMMARY_UNKNOWN_WELL, InputError::WARN},
+                                             {ParseContext::SUMMARY_UNKNOWN_GROUP, InputError::WARN}});
+
+    Opm::readDeck(EclGenericVanguard::comm(),
+                  filename, deck, eclipseState, schedule, udqState,
+                  actionState, wtestState,
+                  summaryConfig, nullptr, nullptr, std::move(parseContext),
+                  false, false, {});
+
+    EclGenericVanguard::setParams(setupTimer.elapsed(),
+                                  deck, eclipseState, schedule,
+                                  std::move(udqState),
+                                  std::move(actionState),
+                                  std::move(wtestState), summaryConfig);
 }
 
 std::string EclGenericVanguard::canonicalDeckPath(const std::string& caseName)

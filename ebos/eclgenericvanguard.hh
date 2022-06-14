@@ -94,6 +94,12 @@ public:
     { return setupTime_; }
 
     /*!
+     * \brief Read a deck.
+     * \param filename file to read
+     */
+    static void readDeck(const std::string& filename);
+
+    /*!
      * \brief Set the simulation configuration objects.
      */
     static void setParams(double setupTime,
