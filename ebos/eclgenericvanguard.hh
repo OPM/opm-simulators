@@ -128,8 +128,8 @@ public:
      * \brief Set the Opm::EclipseState object which ought to be used when the simulator
      *        vanguard is instantiated.
      */
-    static void setExternalEclState(std::shared_ptr<EclipseState> eclState);
-    static void setExternalEclState(std::unique_ptr<EclipseState> eclState);
+    static void setEclState(std::shared_ptr<EclipseState> eclState);
+    static void setEclState(std::unique_ptr<EclipseState> eclState);
 
     /*!
      * \brief Set the schedule object.
@@ -315,7 +315,6 @@ protected:
     static std::unique_ptr<ErrorGuard> externalErrorGuard_;
 
     // These variables may be owned by both Python and the simulator
-    static std::shared_ptr<EclipseState> externalEclState_;
     static std::shared_ptr<Schedule> externalEclSchedule_;
     static std::shared_ptr<SummaryConfig> externalEclSummaryConfig_;
 
@@ -359,7 +358,7 @@ protected:
     std::shared_ptr<Python> python;
     // These variables may be owned by both Python and the simulator
     static std::shared_ptr<Deck> deck_;
-    std::shared_ptr<EclipseState> eclState_;
+    static std::shared_ptr<EclipseState> eclState_;
     std::shared_ptr<Schedule> eclSchedule_;
     std::shared_ptr<SummaryConfig> eclSummaryConfig_;
 

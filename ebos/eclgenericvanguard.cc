@@ -56,7 +56,7 @@ double EclGenericVanguard::setupTime_ = 0.0;
 std::shared_ptr<Deck> EclGenericVanguard::deck_;
 std::unique_ptr<ParseContext> EclGenericVanguard::externalParseContext_;
 std::unique_ptr<ErrorGuard> EclGenericVanguard::externalErrorGuard_;
-std::shared_ptr<EclipseState> EclGenericVanguard::externalEclState_;
+std::shared_ptr<EclipseState> EclGenericVanguard::eclState_;
 std::shared_ptr<Schedule> EclGenericVanguard::externalEclSchedule_;
 std::shared_ptr<SummaryConfig> EclGenericVanguard::externalEclSummaryConfig_;
 std::unique_ptr<UDQState> EclGenericVanguard::externalUDQState_;
@@ -113,14 +113,14 @@ void EclGenericVanguard::setDeck(std::unique_ptr<Deck> deck)
     deck_ = std::move(deck);
 }
 
-void EclGenericVanguard::setExternalEclState(std::shared_ptr<EclipseState> eclState)
+void EclGenericVanguard::setEclState(std::shared_ptr<EclipseState> eclState)
 {
-    externalEclState_ = std::move(eclState);
+    eclState_ = std::move(eclState);
 }
 
-void EclGenericVanguard::setExternalEclState(std::unique_ptr<EclipseState> eclState)
+void EclGenericVanguard::setEclState(std::unique_ptr<EclipseState> eclState)
 {
-    externalEclState_ = std::move(eclState);
+    eclState_ = std::move(eclState);
 }
 
 void EclGenericVanguard::setExternalUDQState(std::unique_ptr<UDQState> udqState)
@@ -269,9 +269,8 @@ void EclGenericVanguard::init()
             parseContext_ = std::move(externalParseContext_);
             errorGuard = std::move(externalErrorGuard_);
         }
-        else if(externalEclState_ && externalEclSchedule_ && externalEclSummaryConfig_)
+        else if(externalEclSchedule_ && externalEclSummaryConfig_)
         {
-            eclState_ = std::move(externalEclState_);
             eclSchedule_ = std::move(externalEclSchedule_);
             eclSummaryConfig_ = std::move(externalEclSummaryConfig_);
         }
