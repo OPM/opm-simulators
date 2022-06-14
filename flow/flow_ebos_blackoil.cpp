@@ -42,7 +42,7 @@ void flowEbosBlackoilSetDeck(double setupTime, std::shared_ptr<Deck> deck,
     Vanguard::setExternalUDQState(std::move(udqState));
     Vanguard::setExternalActionState(std::move(actionState));
     Vanguard::setExternalWTestState(std::move(wtestState));
-    Vanguard::setExternalSummaryConfig(std::move(summaryConfig));
+    Vanguard::setSummaryConfig(std::move(summaryConfig));
 }
 
 std::unique_ptr<FlowMainEbos<Properties::TTag::EclFlowProblem>>

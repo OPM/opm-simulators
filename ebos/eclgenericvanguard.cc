@@ -58,7 +58,7 @@ std::unique_ptr<ParseContext> EclGenericVanguard::externalParseContext_;
 std::unique_ptr<ErrorGuard> EclGenericVanguard::externalErrorGuard_;
 std::shared_ptr<EclipseState> EclGenericVanguard::eclState_;
 std::shared_ptr<Schedule> EclGenericVanguard::eclSchedule_;
-std::shared_ptr<SummaryConfig> EclGenericVanguard::externalEclSummaryConfig_;
+std::shared_ptr<SummaryConfig> EclGenericVanguard::eclSummaryConfig_;
 std::unique_ptr<UDQState> EclGenericVanguard::externalUDQState_;
 std::unique_ptr<Action::State> EclGenericVanguard::externalActionState_;
 std::unique_ptr<WellTestState> EclGenericVanguard::externalWTestState_;
@@ -91,16 +91,16 @@ void EclGenericVanguard::setSchedule(std::unique_ptr<Schedule> schedule)
     eclSchedule_ = std::move(schedule);
 }
 
-void EclGenericVanguard::setExternalSummaryConfig(
+void EclGenericVanguard::setSummaryConfig(
     std::shared_ptr<SummaryConfig> summaryConfig)
 {
-    externalEclSummaryConfig_ = std::move(summaryConfig);
+    eclSummaryConfig_ = std::move(summaryConfig);
 }
 
-void EclGenericVanguard::setExternalSummaryConfig(
+void EclGenericVanguard::setSummaryConfig(
     std::unique_ptr<SummaryConfig> summaryConfig)
 {
-    externalEclSummaryConfig_ = std::move(summaryConfig);
+    eclSummaryConfig_ = std::move(summaryConfig);
 }
 
 void EclGenericVanguard::setDeck(std::shared_ptr<Deck> deck)
@@ -268,10 +268,6 @@ void EclGenericVanguard::init()
         {
             parseContext_ = std::move(externalParseContext_);
             errorGuard = std::move(externalErrorGuard_);
-        }
-        else if(externalEclSummaryConfig_)
-        {
-            eclSummaryConfig_ = std::move(externalEclSummaryConfig_);
         }
         else
         {

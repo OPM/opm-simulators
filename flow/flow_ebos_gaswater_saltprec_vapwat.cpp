@@ -84,7 +84,7 @@ void flowEbosGasWaterSaltprecVapwatSetDeck(double setupTime, std::shared_ptr<Dec
     Vanguard::setDeck(std::move(deck));
     Vanguard::setEclState(std::move(eclState));
     Vanguard::setSchedule(std::move(schedule));
-    Vanguard::setExternalSummaryConfig(std::move(summaryConfig));
+    Vanguard::setSummaryConfig(std::move(summaryConfig));
 }
 
 // ----------------- Main program -----------------

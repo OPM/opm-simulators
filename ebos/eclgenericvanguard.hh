@@ -139,12 +139,9 @@ public:
 
     /*!
      * \brief Set the summary configuration object.
-     *
-     * The lifetime of this object is not managed by the vanguard, i.e., the object must
-     * stay valid until after the vanguard gets destroyed.
      */
-    static void setExternalSummaryConfig(std::shared_ptr<SummaryConfig> summaryConfig);
-    static void setExternalSummaryConfig(std::unique_ptr<SummaryConfig> summaryConfig);
+    static void setSummaryConfig(std::shared_ptr<SummaryConfig> summaryConfig);
+    static void setSummaryConfig(std::unique_ptr<SummaryConfig> summaryConfig);
 
     static void setExternalUDQState(std::unique_ptr<UDQState> udqState);
     static void setExternalActionState(std::unique_ptr<Action::State> actionState);
@@ -312,8 +309,6 @@ protected:
     static std::unique_ptr<ErrorGuard> externalErrorGuard_;
 
     // These variables may be owned by both Python and the simulator
-    static std::shared_ptr<SummaryConfig> externalEclSummaryConfig_;
-
     static std::unique_ptr<UDQState> externalUDQState_;
     static std::unique_ptr<Action::State> externalActionState_;
     static std::unique_ptr<WellTestState> externalWTestState_;
@@ -356,7 +351,7 @@ protected:
     static std::shared_ptr<Deck> deck_;
     static std::shared_ptr<EclipseState> eclState_;
     static std::shared_ptr<Schedule> eclSchedule_;
-    std::shared_ptr<SummaryConfig> eclSummaryConfig_;
+    static std::shared_ptr<SummaryConfig> eclSummaryConfig_;
 
     /*! \brief Information about wells in parallel
      *
