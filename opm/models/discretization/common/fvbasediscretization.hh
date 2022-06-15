@@ -784,6 +784,16 @@ public:
         }
     }
 
+    void invalidateAndUpdateIntensiveSingleQuantitiesSimple(const Problem& problem,
+                                                      const PrimaryVariables& primaryVar,
+                                                      unsigned dofIdx,
+                                                      unsigned timeIdx) const
+    {
+        //invalidateIntensiveQuantitiesCache(timeIdx);
+        auto& intquant = intensiveQuantityCache_[timeIdx][dofIdx];
+        intquant.update(problem, primaryVar, dofIdx, timeIdx);
+        intensiveQuantityCacheUpToDate_[timeIdx][dofIdx] = true;
+     }
     
     void invalidateAndUpdateIntensiveQuantitiesSimple(const Problem& problem,
                                                       const SolutionVector& primaryVars,

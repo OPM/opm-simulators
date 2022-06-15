@@ -102,6 +102,7 @@ class BlackOilIntensiveQuantitiesSimple
     enum { dimWorld = GridView::dimensionworld };
     enum { compositionSwitchIdx = Indices::compositionSwitchIdx };
 
+    
     static const bool compositionSwitchEnabled = Indices::compositionSwitchIdx >= 0;
     static const bool waterEnabled = Indices::waterEnabled;
     static const bool gasEnabled = Indices::gasEnabled;
@@ -132,10 +133,11 @@ public:
     void update(const Problem& problem,const PrimaryVariables& primaryVars,unsigned globalSpaceIdx, unsigned timeIdx)
     {
         //ParentType::update(elemCtx, dofIdx, timeIdx);//only used for extrusion factor         
-         const auto& materialParams = problem.materialLawParams(globalSpaceIdx);
+        //const auto& materialParams = problem.materialLawParams(globalSpaceIdx);
+         const auto& materialParams = problem.materialLawParams(0);
          Scalar RvMax;
          if (FluidSystem::enableVaporizedOil()) {
-              RvMax =  problem.maxOilVaporizationFactor(timeIdx, globalSpaceIdx);
+             RvMax =  problem.maxOilVaporizationFactor(timeIdx, globalSpaceIdx);
          }else{
              RvMax = 0.0;
          }
@@ -439,7 +441,7 @@ public:
             } else {
                 x = rockCompressibility*(fluidState_.pressure(gasPhaseIdx) - rockRefPressure);
             }
-            porosity_ *= 1.0 + x + 0.5*x*x;
+            porosity_ *= 1.0 + (1 + 0.5*x)*x;
         }
 
         // // deal with water induced rock compaction
