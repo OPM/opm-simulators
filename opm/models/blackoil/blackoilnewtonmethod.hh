@@ -232,7 +232,6 @@ public:
         numPriVarsSwitched_ = comm.sum(numPriVarsSwitched_);
     }
 
-protected:
     /*!
      * \copydoc FvBaseNewtonMethod::updatePrimaryVariables_
      */
