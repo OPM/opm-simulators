@@ -116,8 +116,6 @@ setupCPRW(const std::string& /*conf*/, const FlowLinearSolverParameters& p)
     prm.put("preconditioner.use_well_weights", "false"s);
     prm.put("preconditioner.add_wells", "true"s);
     prm.put("preconditioner.weight_type", "trueimpes"s);
-    prm.put("preconditioner.finesmoother.post_smooth",1);
-    prm.put("preconditioner.finesmoother.pre_smooth",1);
     prm.put("preconditioner.finesmoother.type", "ParOverILU0"s);
     prm.put("preconditioner.finesmoother.relaxation", 1.0);
     prm.put("preconditioner.verbosity", 0);
@@ -148,7 +146,7 @@ setupCPRW(const std::string& /*conf*/, const FlowLinearSolverParameters& p)
     prm.put("preconditioner.coarsesolver.preconditioner.minaggsize", 4);
     return prm;
 }
-    
+
 PropertyTree
 setupCPR(const std::string& conf, const FlowLinearSolverParameters& p)
 {
