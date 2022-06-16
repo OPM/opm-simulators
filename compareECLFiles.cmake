@@ -1482,7 +1482,7 @@ if(MPI_FOUND)
                                        ABS_TOL 0.17
                                        REL_TOL ${coarse_rel_tol_parallel}
                                        DIR aquifer-num
-                                       TEST_ARGS --tolerance-cnv=0.00003 --time-step-control=pid --linsolver=cpr)
+                                       TEST_ARGS --tolerance-cnv=0.000003 --time-step-control=pid --linsolver=cpr)
 
   add_test_compare_parallel_simulation(CASENAME numerical_aquifer_3d_1aqu
                                        FILENAME 3D_1AQU_3CELLS
