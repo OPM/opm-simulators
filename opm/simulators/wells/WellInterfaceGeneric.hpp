@@ -170,6 +170,7 @@ public:
     double getTHPConstraint(const SummaryState& summaryState) const;
     double getALQ(const WellState& well_state) const;
     double wsolvent() const;
+    double rsRvInj() const;
 
     // whether a well is specified with a non-zero and valid VFP table number
     bool isVFPActive(DeferredLogger& deferred_logger) const;
