@@ -30,6 +30,7 @@
 
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
 #include <opm/simulators/linalg/getQuasiImpesWeights.hpp>
+#include <opm/simulators/linalg/matrixblock.hh>
 #include <opm/simulators/linalg/PropertyTree.hpp>
 
 #include <dune/common/fmatrix.hh>
@@ -44,7 +45,7 @@ template <int bz>
 Dune::BlockVector<Dune::FieldVector<double, bz>>
 testSolver(const Opm::PropertyTree& prm, const std::string& matrix_filename, const std::string& rhs_filename)
 {
-    using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, bz, bz>>;
+    using Matrix = Dune::BCRSMatrix<Opm::MatrixBlock<double, bz, bz>>;
     using Vector = Dune::BlockVector<Dune::FieldVector<double, bz>>;
     Matrix matrix;
     {
@@ -52,7 +53,8 @@ testSolver(const Opm::PropertyTree& prm, const std::string& matrix_filename, con
         if (!mfile) {
             throw std::runtime_error("Could not read matrix file");
         }
-        readMatrixMarket(matrix, mfile);
+        using M = Dune::BCRSMatrix<Dune::FieldMatrix<double, bz, bz>>;
+        readMatrixMarket(reinterpret_cast<M&>(matrix), mfile); // Hack to avoid hassle
     }
     Vector rhs;
     {
@@ -74,7 +76,7 @@ testSolver(const Opm::PropertyTree& prm, const std::string& matrix_filename, con
 
     using SeqOperatorType = Dune::MatrixAdapter<Matrix, Vector, Vector>;
     SeqOperatorType op(matrix);
-    Dune::FlexibleSolver<Matrix, Vector> solver(op, prm, wc, 1);
+    Dune::FlexibleSolver<SeqOperatorType> solver(op, prm, wc, 1);
     Vector x(rhs.size());
     Dune::InverseOperatorResult res;
     solver.apply(x, rhs, res);

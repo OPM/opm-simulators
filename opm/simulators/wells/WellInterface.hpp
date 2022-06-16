@@ -95,6 +95,7 @@ public:
     using MatrixBlockType = Dune::FieldMatrix<Scalar, Indices::numEq, Indices::numEq>;
     using BVector = Dune::BlockVector<VectorBlockType>;
     using Eval = DenseAd::Evaluation<Scalar, /*size=*/Indices::numEq>;
+    using PressureMatrix = Dune::BCRSMatrix<Opm::MatrixBlock<double, 1, 1>>;
 
     using RateConverterType =
     typename WellInterfaceFluidSystem<FluidSystem>::RateConverterType;
@@ -223,6 +224,14 @@ public:
 
     // Add well contributions to matrix
     virtual void addWellContributions(SparseMatrixAdapter&) const = 0;
+
+    virtual bool isPressureControlled(const WellState& well_state) const;
+    
+    virtual void addWellPressureEquations(PressureMatrix& mat,
+                                          const BVector& x,
+                                          const int pressureVarIndex,
+                                          const bool use_well_weights,
+                                          const WellState& well_state) const = 0;
 
     void addCellRates(RateVector& rates, int cellIdx) const;
 

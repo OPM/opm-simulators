@@ -534,7 +534,33 @@ namespace Opm
         assembleWellEqWithoutIteration(ebosSimulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
     }
 
-
+    template<typename TypeTag>
+    bool
+    WellInterface<TypeTag>::isPressureControlled(const WellState& well_state) const
+    {
+         bool thp_controlled_well = false;
+        bool bhp_controlled_well = false;
+        const auto& ws = well_state.well(this->index_of_well_);
+        if (this->isInjector()) {
+            const Well::InjectorCMode& current = ws.injection_cmode;
+            if (current == Well::InjectorCMode::THP) {
+                thp_controlled_well = true;
+            }
+            if (current == Well::InjectorCMode::BHP) {
+                bhp_controlled_well = true;
+            }
+        } else {
+            const Well::ProducerCMode& current = ws.production_cmode;
+            if (current == Well::ProducerCMode::THP) {
+                thp_controlled_well = true;
+            }
+            if (current == Well::ProducerCMode::BHP) {
+                bhp_controlled_well = true;
+            }
+        }
+        bool ispressureControlled =  (bhp_controlled_well || thp_controlled_well);
+        return ispressureControlled;
+    }
 
     template<typename TypeTag>
     void

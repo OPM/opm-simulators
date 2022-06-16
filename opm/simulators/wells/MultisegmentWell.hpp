@@ -74,6 +74,7 @@ namespace Opm
         using MSWEval::GTotal;
         using MSWEval::SPres;
         using MSWEval::numWellEq;
+        using typename Base::PressureMatrix;
 
         MultisegmentWell(const Well& well,
                          const ParallelWellInfo& pw_info,
@@ -137,6 +138,12 @@ namespace Opm
                                              DeferredLogger& deferred_logger) const override;
 
         virtual void  addWellContributions(SparseMatrixAdapter& jacobian) const override;
+        
+        virtual void addWellPressureEquations(PressureMatrix& mat,
+                                              const BVector& x,
+                                              const int pressureVarIndex,
+                                              const bool use_well_weights,
+                                              const WellState& well_state) const override;
 
         virtual std::vector<double> computeCurrentWellRates(const Simulator& ebosSimulator,
                                                             DeferredLogger& deferred_logger) const override;

@@ -22,8 +22,6 @@
 
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
 #include <opm/simulators/linalg/PressureSolverPolicy.hpp>
-#include <opm/simulators/linalg/PressureTransferPolicy.hpp>
-#include <opm/simulators/linalg/getQuasiImpesWeights.hpp>
 #include <opm/simulators/linalg/twolevelmethodcpr.hh>
 
 #include <opm/common/ErrorMacros.hpp>
@@ -50,7 +48,7 @@ namespace Dune
 
 
 // Must forward-declare FlexibleSolver as we want to use it as solver for the pressure system.
-template <class MatrixTypeT, class VectorTypeT>
+template <class Operator>
 class FlexibleSolver;
 
 template <typename T, typename A, int i>
@@ -75,13 +73,14 @@ std::ostream& operator<<(std::ostream& out,
 ///   and preconditioner factory.
 template <class OperatorType,
           class VectorType,
-          bool transpose = false,
+          class LevelTransferPolicy,
           class Communication = Dune::Amg::SequentialInformation>
 class OwningTwoLevelPreconditioner : public Dune::PreconditionerWithUpdate<VectorType, VectorType>
 {
 public:
     using MatrixType = typename OperatorType::matrix_type;
     using PrecFactory = Opm::PreconditionerFactory<OperatorType, Communication>;
+    using AbstractOperatorType = Dune::AssembledLinearOperator<MatrixType, VectorType, VectorType>;
 
     OwningTwoLevelPreconditioner(const OperatorType& linearoperator, const Opm::PropertyTree& prm,
                                  const std::function<VectorType()> weightsCalculator,
@@ -94,14 +93,14 @@ public:
         , comm_(nullptr)
         , weightsCalculator_(weightsCalculator)
         , weights_(weightsCalculator())
-        , levelTransferPolicy_(dummy_comm_, weights_, pressureIndex)
-        , coarseSolverPolicy_(prm.get_child_optional("coarsesolver")? prm.get_child("coarsesolver") : Opm::PropertyTree())
+        , levelTransferPolicy_(dummy_comm_, weights_, prm, pressureIndex)
+        , coarseSolverPolicy_(prm.get_child_optional("coarsesolver") ? prm.get_child("coarsesolver") : Opm::PropertyTree())
         , twolevel_method_(linearoperator,
                            finesmoother_,
                            levelTransferPolicy_,
                            coarseSolverPolicy_,
-                           prm.get<int>("pre_smooth", transpose? 1 : 0),
-                           prm.get<int>("post_smooth", transpose? 0 : 1))
+                           prm.get<int>("pre_smooth", 0),
+                           prm.get<int>("post_smooth", 1))
         , prm_(prm)
     {
         if (prm.get<int>("verbosity", 0) > 10) {
@@ -126,14 +125,14 @@ public:
         , comm_(&comm)
         , weightsCalculator_(weightsCalculator)
         , weights_(weightsCalculator())
-        , levelTransferPolicy_(*comm_, weights_, pressureIndex)
-        , coarseSolverPolicy_(prm.get_child_optional("coarsesolver")? prm.get_child("coarsesolver") : Opm::PropertyTree())
+        , levelTransferPolicy_(*comm_, weights_, prm, pressureIndex)
+        , coarseSolverPolicy_(prm.get_child_optional("coarsesolver") ? prm.get_child("coarsesolver") : Opm::PropertyTree())
         , twolevel_method_(linearoperator,
                            finesmoother_,
                            levelTransferPolicy_,
                            coarseSolverPolicy_,
-                           prm.get<int>("pre_smooth", transpose? 1 : 0),
-                           prm.get<int>("post_smooth", transpose? 0 : 1))
+                           prm.get<int>("pre_smooth", 0),
+                           prm.get<int>("post_smooth", 1))
         , prm_(prm)
     {
         if (prm.get<int>("verbosity", 0) > 10 && comm.communicator().rank() == 0) {
@@ -173,17 +172,9 @@ public:
     }
 
 private:
-    using PressureMatrixType = Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1>>;
-    using PressureVectorType = Dune::BlockVector<Dune::FieldVector<double, 1>>;
-    using SeqCoarseOperatorType = Dune::MatrixAdapter<PressureMatrixType, PressureVectorType, PressureVectorType>;
-    using ParCoarseOperatorType
-        = Dune::OverlappingSchwarzOperator<PressureMatrixType, PressureVectorType, PressureVectorType, Communication>;
-    using CoarseOperatorType = std::conditional_t<std::is_same<Communication, Dune::Amg::SequentialInformation>::value,
-                                                  SeqCoarseOperatorType,
-                                                  ParCoarseOperatorType>;
-    using LevelTransferPolicy = Opm::PressureTransferPolicy<OperatorType, CoarseOperatorType, Communication, transpose>;
-    using CoarseSolverPolicy = Dune::Amg::PressureSolverPolicy<CoarseOperatorType,
-                                                               FlexibleSolver<PressureMatrixType, PressureVectorType>,
+    using CoarseOperator = typename LevelTransferPolicy::CoarseOperator;
+    using CoarseSolverPolicy = Dune::Amg::PressureSolverPolicy<CoarseOperator,
+                                                               FlexibleSolver<CoarseOperator>,
                                                                LevelTransferPolicy>;
     using TwoLevelMethod
         = Dune::Amg::TwoLevelMethodCpr<OperatorType, CoarseSolverPolicy, Dune::Preconditioner<VectorType, VectorType>>;

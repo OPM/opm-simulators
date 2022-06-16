@@ -28,9 +28,13 @@
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6) && \
     BOOST_VERSION / 100 % 1000 > 48
 
+#include <opm/simulators/linalg/matrixblock.hh>
+#include <opm/simulators/linalg/ilufirstelement.hh>
+
 #include <opm/simulators/linalg/PreconditionerFactory.hpp>
 #include <opm/simulators/linalg/PropertyTree.hpp>
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
+#include <opm/simulators/linalg/getQuasiImpesWeights.hpp>
 
 #include <dune/common/fvector.hh>
 #include <dune/istl/bvector.hh>
@@ -70,7 +74,7 @@ template <int bz>
 Dune::BlockVector<Dune::FieldVector<double, bz>>
 testPrec(const Opm::PropertyTree& prm, const std::string& matrix_filename, const std::string& rhs_filename)
 {
-    using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, bz, bz>>;
+    using Matrix = Dune::BCRSMatrix<Opm::MatrixBlock<double, bz, bz>>;
     using Vector = Dune::BlockVector<Dune::FieldVector<double, bz>>;
     Matrix matrix;
     {
@@ -78,7 +82,8 @@ testPrec(const Opm::PropertyTree& prm, const std::string& matrix_filename, const
         if (!mfile) {
             throw std::runtime_error("Could not read matrix file");
         }
-        readMatrixMarket(matrix, mfile);
+        using M = Dune::BCRSMatrix<Dune::FieldMatrix<double, bz, bz>>;
+        readMatrixMarket(reinterpret_cast<M&>(matrix), mfile); // Hack to avoid hassle
     }
     Vector rhs;
     {
@@ -161,7 +166,7 @@ BOOST_AUTO_TEST_CASE(TestDefaultPreconditionerFactory)
 
 
 template <int bz>
-using M = Dune::BCRSMatrix<Dune::FieldMatrix<double, bz, bz>>;
+using M = Dune::BCRSMatrix<Opm::MatrixBlock<double, bz, bz>>;
 template <int bz>
 using V = Dune::BlockVector<Dune::FieldVector<double, bz>>;
 template <int bz>
@@ -275,15 +280,16 @@ template <int bz>
 Dune::BlockVector<Dune::FieldVector<double, bz>>
 testPrecRepeating(const Opm::PropertyTree& prm, const std::string& matrix_filename, const std::string& rhs_filename)
 {
-    using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, bz, bz>>;
-    using Vector = Dune::BlockVector<Dune::FieldVector<double, bz>>;
+    using Matrix = M<bz>;
+    using Vector = V<bz>;
     Matrix matrix;
     {
         std::ifstream mfile(matrix_filename);
         if (!mfile) {
             throw std::runtime_error("Could not read matrix file");
         }
-        readMatrixMarket(matrix, mfile);
+        using M = Dune::BCRSMatrix<Dune::FieldMatrix<double, bz, bz>>;
+        readMatrixMarket(reinterpret_cast<M&>(matrix), mfile); // Hack to avoid hassle
     }
     Vector rhs;
     {

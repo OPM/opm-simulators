@@ -45,30 +45,40 @@ namespace Opm
 /// WellModelMatrixAdapter separately for each TypeTag, as it will only
 /// depend on the matrix and vector types involved, which typically are
 /// just one for each block size with block sizes 1-4.
-template <class WellModel, class X, class Y>
-class WellModelAsLinearOperator : public Dune::LinearOperator<X, Y>
+template <class X, class Y>
+class LinearOperatorExtra : public Dune::LinearOperator<X, Y>
 {
 public:
-    using Base = Dune::LinearOperator<X, Y>;
-    using field_type = typename Base::field_type;
+    using PressureMatrix = Dune::BCRSMatrix<Opm::MatrixBlock<double, 1, 1>>;
+    virtual void addWellPressureEquations(PressureMatrix& jacobian, const X& weights,const bool use_well_weights) const = 0;
+    virtual void addWellPressureEquationsStruct(PressureMatrix& jacobian) const = 0;
+    virtual int getNumberOfExtraEquations() const = 0;
+};
 
+template <class WellModel, class X, class Y>
+class WellModelAsLinearOperator : public Opm::LinearOperatorExtra<X, Y>
+{
+public:
+    using Base = Opm::LinearOperatorExtra<X, Y>;
+    using field_type = typename Base::field_type;
+    using PressureMatrix = typename Base::PressureMatrix;
     explicit WellModelAsLinearOperator(const WellModel& wm)
         : wellMod_(wm)
     {
     }
     /*! \brief apply operator to x:  \f$ y = A(x) \f$
-          The input vector is consistent and the output must also be
+       The input vector is consistent and the output must also be
        consistent on the interior+border partition.
      */
-    void apply (const X& x, Y& y) const override
+    void apply(const X& x, Y& y) const override
     {
-        wellMod_.apply(x, y );
+        wellMod_.apply(x, y);
     }
 
     //! apply operator to x, scale and add:  \f$ y = y + \alpha A(x) \f$
-    virtual void applyscaleadd (field_type alpha, const X& x, Y& y) const override
+    virtual void applyscaleadd(field_type alpha, const X& x, Y& y) const override
     {
-        wellMod_.applyScaleAdd( alpha, x, y );
+        wellMod_.applyScaleAdd(alpha, x, y);
     }
 
     /// Category for operator.
@@ -80,6 +90,19 @@ public:
     {
         return Dune::SolverCategory::sequential;
     }
+    void addWellPressureEquations(PressureMatrix& jacobian, const X& weights,const bool use_well_weights) const override
+    {
+        wellMod_.addWellPressureEquations(jacobian, weights, use_well_weights);
+    }
+    void addWellPressureEquationsStruct(PressureMatrix& jacobian) const override
+    {
+        wellMod_.addWellPressureEquationsStruct(jacobian);
+    }
+    int getNumberOfExtraEquations() const override
+    {
+        return wellMod_.numLocalWellsEnd();
+    }
+
 private:
     const WellModel& wellMod_;
 };
@@ -103,7 +126,7 @@ public:
   typedef X domain_type;
   typedef Y range_type;
   typedef typename X::field_type field_type;
-
+  using PressureMatrix = Dune::BCRSMatrix<Opm::MatrixBlock<double, 1, 1>>;
 #if HAVE_MPI
   typedef Dune::OwnerOverlapCopyCommunication<int,int> communication_type;
 #else
@@ -118,7 +141,7 @@ public:
 
   //! constructor: just store a reference to a matrix
   WellModelMatrixAdapter (const M& A,
-                          const Dune::LinearOperator<X, Y>& wellOper,
+                          const Opm::LinearOperatorExtra<X, Y>& wellOper,
                           const std::shared_ptr< communication_type >& comm = std::shared_ptr< communication_type >())
       : A_( A ), wellOper_( wellOper ), comm_(comm)
   {}
@@ -153,9 +176,22 @@ public:
 
   virtual const matrix_type& getmat() const override { return A_; }
 
+    void addWellPressureEquations(PressureMatrix& jacobian, const X& weights,const bool use_well_weights) const
+    {
+        wellOper_.addWellPressureEquations(jacobian, weights, use_well_weights);
+    }
+    void addWellPressureEquationsStruct(PressureMatrix& jacobian) const
+    {
+        wellOper_.addWellPressureEquationsStruct(jacobian);
+    }
+    int getNumberOfExtraEquations() const
+    {
+        return wellOper_.getNumberOfExtraEquations();
+    }
+
 protected:
   const matrix_type& A_ ;
-  const Dune::LinearOperator<X, Y>& wellOper_;
+  const Opm::LinearOperatorExtra<X, Y>& wellOper_;
   std::shared_ptr< communication_type > comm_;
 };
 
@@ -176,7 +212,7 @@ public:
     typedef X domain_type;
     typedef Y range_type;
     typedef typename X::field_type field_type;
-
+    using PressureMatrix = Dune::BCRSMatrix<Opm::MatrixBlock<double, 1, 1>>;
 #if HAVE_MPI
     typedef Dune::OwnerOverlapCopyCommunication<int,int> communication_type;
 #else
@@ -192,7 +228,7 @@ public:
 
     //! constructor: just store a reference to a matrix
     WellModelGhostLastMatrixAdapter (const M& A,
-                                     const Dune::LinearOperator<X, Y>& wellOper,
+                                     const Opm::LinearOperatorExtra<X, Y>& wellOper,
                                      const size_t interiorSize )
         : A_( A ), wellOper_( wellOper ), interiorSize_(interiorSize)
     {}
@@ -230,6 +266,19 @@ public:
 
     virtual const matrix_type& getmat() const override { return A_; }
 
+    void addWellPressureEquations(PressureMatrix& jacobian, const X& weights,const bool use_well_weights) const
+    {
+        wellOper_.addWellPressureEquations(jacobian, weights, use_well_weights);
+    }
+    void addWellPressureEquationsStruct(PressureMatrix& jacobian) const
+    {
+        wellOper_.addWellPressureEquationsStruct(jacobian);
+    }
+    int getNumberOfExtraEquations() const
+    {
+        return wellOper_.getNumberOfExtraEquations();
+    }
+
 protected:
     void ghostLastProject(Y& y) const
     {
@@ -239,7 +288,7 @@ protected:
     }
 
     const matrix_type& A_ ;
-    const Dune::LinearOperator<X, Y>& wellOper_;
+    const Opm::LinearOperatorExtra< X, Y>& wellOper_;
     size_t interiorSize_;
 };
 

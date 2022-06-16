@@ -112,7 +112,7 @@ namespace Opm {
                 typename BlackoilWellModelGeneric::GLiftWellStateMap;
             using GLiftEclWells = typename GasLiftGroupInfo::GLiftEclWells;
             using GLiftSyncGroups = typename GasLiftSingleWellGeneric::GLiftSyncGroups;
-
+            constexpr static std::size_t pressureVarIndex = GetPropType<TypeTag, Properties::Indices>::pressureSwitchIdx;
             typedef typename BaseAuxiliaryModule<TypeTag>::NeighborSet NeighborSet;
 
             static const int numEq = Indices::numEq;
@@ -127,7 +127,7 @@ namespace Opm {
             typedef Dune::FieldVector<Scalar, numEq    > VectorBlockType;
             typedef Dune::BlockVector<VectorBlockType> BVector;
 
-            typedef Dune::FieldMatrix<Scalar, numEq, numEq > MatrixBlockType;
+            // typedef Dune::FieldMatrix<Scalar, numEq, numEq > MatrixBlockType;
 
             typedef BlackOilPolymerModule<TypeTag> PolymerModule;
             typedef BlackOilMICPModule<TypeTag> MICPModule;
@@ -264,12 +264,7 @@ namespace Opm {
 
             const SimulatorReportSingle& lastReport() const;
 
-            void addWellContributions(SparseMatrixAdapter& jacobian) const
-            {
-                for ( const auto& well: well_container_ ) {
-                    well->addWellContributions(jacobian);
-                }
-            }
+            void addWellContributions(SparseMatrixAdapter& jacobian) const;
 
             // called at the beginning of a report step
             void beginReportStep(const int time_step);
@@ -294,13 +289,25 @@ namespace Opm {
             WellInterfacePtr getWell(const std::string& well_name) const;
             bool hasWell(const std::string& well_name) const;
 
+            using PressureMatrix = Dune::BCRSMatrix<Opm::MatrixBlock<double, 1, 1>>;
+
+            int numLocalWellsEnd() const;
+
+            void addWellPressureEquations(PressureMatrix& jacobian, const BVector& weights,const bool use_well_weights) const;
+
+            std::vector<std::vector<int>> getMaxWellConnections() const;
+
+            void addWellPressureEquationsStruct(PressureMatrix& jacobian) const;
+
             void initGliftEclWellMap(GLiftEclWells &ecl_well_map);
 
             /// \brief Get list of local nonshut wells
-            const std::vector<WellInterfacePtr>& localNonshutWells()
+            const std::vector<WellInterfacePtr>& localNonshutWells() const
             {
                 return well_container_;
             }
+
+            int numLocalNonshutWells() const;
 
         protected:
             Simulator& ebosSimulator_;

@@ -28,6 +28,11 @@
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
 #include <opm/simulators/linalg/PropertyTree.hpp>
 #include <opm/simulators/linalg/amgcpr.hh>
+#include <opm/simulators/linalg/WellOperators.hpp>
+
+#include <opm/simulators/linalg/PressureTransferPolicy.hpp>
+#include <opm/simulators/linalg/PressureBhpTransferPolicy.hpp>
+
 
 #include <dune/istl/paamg/amg.hh>
 #include <dune/istl/paamg/kamg.hh>
@@ -318,7 +323,8 @@ private:
             {
                 OPM_THROW(std::logic_error, "Pressure index out of bounds. It needs to specified for CPR");
             }
-            return std::make_shared<OwningTwoLevelPreconditioner<O, V, false, Comm>>(op, prm, weightsCalculator, pressureIndex, comm);
+            using LevelTransferPolicy = Opm::PressureTransferPolicy<O, Comm, false>;
+            return std::make_shared<OwningTwoLevelPreconditioner<O, V, LevelTransferPolicy, Comm>>(op, prm, weightsCalculator, pressureIndex, comm);
         });
         doAddCreator("cprt", [](const O& op, const P& prm, const std::function<Vector()> weightsCalculator, std::size_t pressureIndex, const C& comm) {
             assert(weightsCalculator);
@@ -326,8 +332,22 @@ private:
             {
                 OPM_THROW(std::logic_error, "Pressure index out of bounds. It needs to specified for CPR");
             }
-            return std::make_shared<OwningTwoLevelPreconditioner<O, V, true, Comm>>(op, prm, weightsCalculator, pressureIndex, comm);
+            using LevelTransferPolicy = Opm::PressureTransferPolicy<O, Comm, true>;
+            return std::make_shared<OwningTwoLevelPreconditioner<O, V, LevelTransferPolicy, Comm>>(op, prm, weightsCalculator, pressureIndex, comm);
         });
+
+        if constexpr (std::is_same_v<O, WellModelGhostLastMatrixAdapter<M, V, V, true>>) {
+            doAddCreator("cprw",
+                         [](const O& op, const P& prm, const std::function<Vector()> weightsCalculator, std::size_t pressureIndex, const C& comm) {
+                             assert(weightsCalculator);
+                             if (pressureIndex == std::numeric_limits<std::size_t>::max()) {
+                                 OPM_THROW(std::logic_error, "Pressure index out of bounds. It needs to specified for CPR");
+                             }
+                             using LevelTransferPolicy = Opm::PressureBhpTransferPolicy<O, Comm, false>;
+                             return std::make_shared<OwningTwoLevelPreconditioner<O, V, LevelTransferPolicy, Comm>>(
+                                 op, prm, weightsCalculator, pressureIndex, comm);
+                         });
+        }
     }
 
     // Add a useful default set of preconditioners to the factory.
@@ -449,19 +469,31 @@ private:
                 return wrapPreconditioner<Dune::Amg::FastAMG<O, V>>(op, crit, parms);
             });
         }
+        if constexpr (std::is_same_v<O, WellModelMatrixAdapter<M, V, V, false>>) {
+            doAddCreator("cprw", [](const O& op, const P& prm, const std::function<Vector()>& weightsCalculator, std::size_t pressureIndex) {
+                if (pressureIndex == std::numeric_limits<std::size_t>::max()) {
+                    OPM_THROW(std::logic_error, "Pressure index out of bounds. It needs to specified for CPR");
+                }
+                using LevelTransferPolicy = Opm::PressureBhpTransferPolicy<O, Dune::Amg::SequentialInformation, false>;
+                return std::make_shared<OwningTwoLevelPreconditioner<O, V, LevelTransferPolicy>>(op, prm, weightsCalculator, pressureIndex);
+            });
+            }
+
         doAddCreator("cpr", [](const O& op, const P& prm, const std::function<Vector()>& weightsCalculator, std::size_t pressureIndex) {
                                 if (pressureIndex == std::numeric_limits<std::size_t>::max())
                                 {
                                     OPM_THROW(std::logic_error, "Pressure index out of bounds. It needs to specified for CPR");
                                 }
-                                return std::make_shared<OwningTwoLevelPreconditioner<O, V, false>>(op, prm, weightsCalculator, pressureIndex);
+                                using LevelTransferPolicy = Opm::PressureTransferPolicy<O, Dune::Amg::SequentialInformation, false>;
+                                return std::make_shared<OwningTwoLevelPreconditioner<O, V, LevelTransferPolicy>>(op, prm, weightsCalculator, pressureIndex);
         });
         doAddCreator("cprt", [](const O& op, const P& prm, const std::function<Vector()>& weightsCalculator, std::size_t pressureIndex) {
                                 if (pressureIndex == std::numeric_limits<std::size_t>::max())
                                 {
                                     OPM_THROW(std::logic_error, "Pressure index out of bounds. It needs to specified for CPR");
                                 }
-                                 return std::make_shared<OwningTwoLevelPreconditioner<O, V, true>>(op, prm, weightsCalculator, pressureIndex);
+                                using LevelTransferPolicy = Opm::PressureTransferPolicy<O, Dune::Amg::SequentialInformation, true>;
+                                return std::make_shared<OwningTwoLevelPreconditioner<O, V, LevelTransferPolicy>>(op, prm, weightsCalculator, pressureIndex);
         });
     }
 

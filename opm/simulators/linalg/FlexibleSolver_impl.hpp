@@ -36,9 +36,9 @@
 namespace Dune
 {
     /// Create a sequential solver.
-    template <class MatrixType, class VectorType>
-    FlexibleSolver<MatrixType, VectorType>::
-    FlexibleSolver(AbstractOperatorType& op,
+    template <class Operator>
+    FlexibleSolver<Operator>::
+    FlexibleSolver(Operator& op,
                    const Opm::PropertyTree& prm,
                    const std::function<VectorType()>& weightsCalculator,
                    std::size_t pressureIndex)
@@ -48,10 +48,10 @@ namespace Dune
     }
 
     /// Create a parallel solver (if Comm is e.g. OwnerOverlapCommunication).
-    template <class MatrixType, class VectorType>
+    template <class Operator>
     template <class Comm>
-    FlexibleSolver<MatrixType, VectorType>::
-    FlexibleSolver(AbstractOperatorType& op,
+    FlexibleSolver<Operator>::
+    FlexibleSolver(Operator& op,
                    const Comm& comm,
                    const Opm::PropertyTree& prm,
                    const std::function<VectorType()>& weightsCalculator,
@@ -60,89 +60,83 @@ namespace Dune
         init(op, comm, prm, weightsCalculator, pressureIndex);
     }
 
-    template <class MatrixType, class VectorType>
+    template <class Operator>
     void
-    FlexibleSolver<MatrixType, VectorType>::
+    FlexibleSolver<Operator>::
     apply(VectorType& x, VectorType& rhs, Dune::InverseOperatorResult& res)
     {
         linsolver_->apply(x, rhs, res);
     }
 
-    template <class MatrixType, class VectorType>
+    template <class Operator>
     void
-    FlexibleSolver<MatrixType, VectorType>::
+    FlexibleSolver<Operator>::
     apply(VectorType& x, VectorType& rhs, double reduction, Dune::InverseOperatorResult& res)
     {
         linsolver_->apply(x, rhs, reduction, res);
     }
 
     /// Access the contained preconditioner.
-    template <class MatrixType, class VectorType>
+    template <class Operator>
     auto
-    FlexibleSolver<MatrixType, VectorType>::
+    FlexibleSolver<Operator>::
     preconditioner() -> AbstractPrecondType&
     {
         return *preconditioner_;
     }
 
-    template <class MatrixType, class VectorType>
+    template <class Operator>
     Dune::SolverCategory::Category
-    FlexibleSolver<MatrixType, VectorType>::
+    FlexibleSolver<Operator>::
     category() const
     {
         return linearoperator_for_solver_->category();
     }
 
     // Machinery for making sequential or parallel operators/preconditioners/scalar products.
-    template <class MatrixType, class VectorType>
+    template <class Operator>
     template <class Comm>
     void
-    FlexibleSolver<MatrixType, VectorType>::
-    initOpPrecSp(AbstractOperatorType& op,
+    FlexibleSolver<Operator>::
+    initOpPrecSp(Operator& op,
                  const Opm::PropertyTree& prm,
                  const std::function<VectorType()> weightsCalculator,
                  const Comm& comm,
                  std::size_t pressureIndex)
     {
         // Parallel case.
-        using ParOperatorType = Dune::OverlappingSchwarzOperator<MatrixType, VectorType, VectorType, Comm>;
         linearoperator_for_solver_ = &op;
-        auto op_prec = std::make_shared<ParOperatorType>(op.getmat(), comm);
         auto child = prm.get_child_optional("preconditioner");
-        preconditioner_ = Opm::PreconditionerFactory<ParOperatorType, Comm>::create(*op_prec,
-                                                                                    child ? *child : Opm::PropertyTree(),
-                                                                                    weightsCalculator,
-                                                                                    comm,
-                                                                                    pressureIndex);
+        preconditioner_ = Opm::PreconditionerFactory<Operator, Comm>::create(op,
+                                                                             child ? *child : Opm::PropertyTree(),
+                                                                             weightsCalculator,
+                                                                             comm,
+                                                                             pressureIndex);
         scalarproduct_ = Dune::createScalarProduct<VectorType, Comm>(comm, op.category());
-        linearoperator_for_precond_ = op_prec;
     }
 
-    template <class MatrixType, class VectorType>
+    template <class Operator>
     void
-    FlexibleSolver<MatrixType, VectorType>::
-    initOpPrecSp(AbstractOperatorType& op,
+    FlexibleSolver<Operator>::
+    initOpPrecSp(Operator& op,
                  const Opm::PropertyTree& prm,
                  const std::function<VectorType()> weightsCalculator,
                  const Dune::Amg::SequentialInformation&,
                  std::size_t pressureIndex)
     {
         // Sequential case.
-        using SeqOperatorType = Dune::MatrixAdapter<MatrixType, VectorType, VectorType>;
         linearoperator_for_solver_ = &op;
-        auto op_prec = std::make_shared<SeqOperatorType>(op.getmat());
         auto child = prm.get_child_optional("preconditioner");
-        preconditioner_ = Opm::PreconditionerFactory<SeqOperatorType>::create(*op_prec,
-                                                                              child ? *child : Opm::PropertyTree(),
-                                                                              weightsCalculator,
-                                                                              pressureIndex);
+        preconditioner_ = Opm::PreconditionerFactory<Operator>::create(op,
+                                                                       child ? *child : Opm::PropertyTree(),
+                                                                       weightsCalculator,
+                                                                       pressureIndex);
         scalarproduct_ = std::make_shared<Dune::SeqScalarProduct<VectorType>>();
-        linearoperator_for_precond_ = op_prec;
     }
 
-    template <class MatrixType, class VectorType>
+    template <class Operator>
     void
-    FlexibleSolver<MatrixType, VectorType>::
+    FlexibleSolver<Operator>::
     initSolver(const Opm::PropertyTree& prm, const bool is_iorank)
     {
         const double tol = prm.get<double>("tol", 1e-2);
@@ -175,6 +169,7 @@ namespace Dune
 #if HAVE_SUITESPARSE_UMFPACK
         } else if (solver_type == "umfpack") {
             bool dummy = false;
+            using MatrixType = std::remove_const_t<std::remove_reference_t<decltype(linearoperator_for_solver_->getmat())>>;
             linsolver_.reset(new Dune::UMFPack<MatrixType>(linearoperator_for_solver_->getmat(), verbosity, dummy));
 #endif
         } else {
@@ -185,11 +180,11 @@ namespace Dune
 
     // Main initialization routine.
     // Call with Comm == Dune::Amg::SequentialInformation to get a serial solver.
-    template <class MatrixType, class VectorType>
+    template <class Operator>
     template <class Comm>
     void
-    FlexibleSolver<MatrixType, VectorType>::
-    init(AbstractOperatorType& op,
+    FlexibleSolver<Operator>::
+    init(Operator& op,
          const Comm& comm,
          const Opm::PropertyTree& prm,
          const std::function<VectorType()> weightsCalculator,
@@ -204,42 +199,55 @@ namespace Dune
 
 // Macros to simplify explicit instantiation of FlexibleSolver for various block sizes.
 
+// Vectors and matrices.
 template <int N>
 using BV = Dune::BlockVector<Dune::FieldVector<double, N>>;
 template <int N>
-using BM = Dune::BCRSMatrix<Dune::FieldMatrix<double, N, N>>;
-template <int N>
 using OBM = Dune::BCRSMatrix<Opm::MatrixBlock<double, N, N>>;
+
+// Sequential operators.
+template <int N>
+using SeqOpM = Dune::MatrixAdapter<OBM<N>, BV<N>, BV<N>>;
+template <int N>
+using SeqOpW = Opm::WellModelMatrixAdapter<OBM<N>, BV<N>, BV<N>, false>;
 
 #if HAVE_MPI
 
+// Parallel communicator and operators.
 using Comm = Dune::OwnerOverlapCopyCommunication<int, int>;
+template <int N>
+using ParOpM = Dune::OverlappingSchwarzOperator<OBM<N>, BV<N>, BV<N>, Comm>;
+template <int N>
+using ParOpW = Opm::WellModelGhostLastMatrixAdapter<OBM<N>, BV<N>, BV<N>, true>;
 
 // Note: we must instantiate the constructor that is a template.
 // This is only needed in the parallel case, since otherwise the Comm type is
 // not a template argument but always SequentialInformation.
 
-#define INSTANTIATE_FLEXIBLESOLVER(N)                  \
-template class Dune::FlexibleSolver<BM<N>, BV<N>>;     \
-template class Dune::FlexibleSolver<OBM<N>, BV<N>>;    \
-template Dune::FlexibleSolver<BM<N>, BV<N>>::FlexibleSolver(AbstractOperatorType& op,                         \
-                                                            const Comm& comm,                                 \
-                                                            const Opm::PropertyTree& prm,                     \
-                                                            const std::function<BV<N>()>& weightsCalculator, \
-std::size_t);                                                                 \
-template Dune::FlexibleSolver<OBM<N>, BV<N>>::FlexibleSolver(AbstractOperatorType& op,                        \
-                                                             const Comm& comm,                                \
-                                                             const Opm::PropertyTree& prm,                    \
-                                                             const std::function<BV<N>()>& weightsCalculator, \
-std::size_t);
+#define INSTANTIATE_FLEXIBLESOLVER_OP(Operator)                                                          \
+template class Dune::FlexibleSolver<Operator>;                                                           \
+template Dune::FlexibleSolver<Operator>::FlexibleSolver(Operator& op,                                    \
+                                                        const Comm& comm,                                \
+                                                        const Opm::PropertyTree& prm,                    \
+                                                        const std::function<typename Operator::domain_type()>& weightsCalculator, \
+                                                        std::size_t pressureIndex);
+#define INSTANTIATE_FLEXIBLESOLVER(N)     \
+INSTANTIATE_FLEXIBLESOLVER_OP(SeqOpM<N>); \
+INSTANTIATE_FLEXIBLESOLVER_OP(SeqOpW<N>); \
+INSTANTIATE_FLEXIBLESOLVER_OP(ParOpM<N>); \
+INSTANTIATE_FLEXIBLESOLVER_OP(ParOpW<N>);
 
 #else // HAVE_MPI
 
-#define INSTANTIATE_FLEXIBLESOLVER(N)                  \
-template class Dune::FlexibleSolver<BM<N>, BV<N>>;     \
-template class Dune::FlexibleSolver<OBM<N>, BV<N>>;
+#define INSTANTIATE_FLEXIBLESOLVER_OP(Operator) \
+template class Dune::FlexibleSolver<Operator>;
+
+#define INSTANTIATE_FLEXIBLESOLVER(N)     \
+INSTANTIATE_FLEXIBLESOLVER_OP(SeqOpM<N>); \
+INSTANTIATE_FLEXIBLESOLVER_OP(SeqOpW<N>);
 
 #endif // HAVE_MPI
+
 
 
 #endif // OPM_FLEXIBLE_SOLVER_IMPL_HEADER_INCLUDED

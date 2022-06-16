@@ -1173,10 +1173,130 @@ namespace Opm {
         Ax.axpy( alpha, scaleAddRes_ );
     }
 
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    addWellContributions(SparseMatrixAdapter& jacobian) const
+    {
+        for ( const auto& well: well_container_ ) {
+            well->addWellContributions(jacobian);
+        }
+    }
 
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    addWellPressureEquations(PressureMatrix& jacobian, const BVector& weights,const bool use_well_weights) const
+    {
+        int nw =  this->numLocalWellsEnd();
+        int rdofs = local_num_cells_;
+        for ( int i = 0; i < nw; i++ ){
+            int wdof = rdofs + i; 
+            jacobian[wdof][wdof] = 1.0;// better scaling ?
+        }
 
+        for ( const auto& well : well_container_ ) {
+            well->addWellPressureEquations(jacobian, weights, pressureVarIndex, use_well_weights, this->wellState());
+        }
+    }
 
+    template<typename TypeTag>
+    int
+    BlackoilWellModel<TypeTag>::
+    numLocalWellsEnd() const
+    {
+        auto w = schedule().getWellsatEnd();
+        w.erase(std::remove_if(w.begin(), w.end(), not_on_process_), w.end());
+        return w.size();
+    }
 
+    template<typename TypeTag>
+    std::vector<std::vector<int>>
+    BlackoilWellModel<TypeTag>::
+    getMaxWellConnections() const
+    {
+        std::vector<std::vector<int>> wells;
+        // Create cartesian to compressed mapping
+        const auto& globalCell = grid().globalCell();
+        const auto& cartesianSize = grid().logicalCartesianSize();
+
+        auto size = cartesianSize[0]*cartesianSize[1]*cartesianSize[2];
+
+        std::vector<int> cartesianToCompressed(size, -1);
+        auto begin = globalCell.begin();
+
+        for ( auto cell = begin, end = globalCell.end(); cell != end; ++cell )
+        {
+            cartesianToCompressed[ *cell ] = cell - begin;
+        }
+
+        auto schedule_wells = schedule().getWellsatEnd();
+        schedule_wells.erase(std::remove_if(schedule_wells.begin(), schedule_wells.end(), not_on_process_), schedule_wells.end());
+        wells.reserve(schedule_wells.size());
+
+        // initialize the additional cell connections introduced by wells.
+        for ( const auto& well : schedule_wells )
+        {
+            std::vector<int> compressed_well_perforations;
+            // All possible completions of the well
+            const auto& completionSet = well.getConnections();
+            compressed_well_perforations.reserve(completionSet.size());
+
+            for ( size_t c=0; c < completionSet.size(); c++ )
+            {
+                const auto& completion = completionSet.get(c);
+                int i = completion.getI();
+                int j = completion.getJ();
+                int k = completion.getK();
+                int cart_grid_idx = i + cartesianSize[0]*(j + cartesianSize[1]*k);
+                int compressed_idx = cartesianToCompressed[cart_grid_idx];
+
+                if ( compressed_idx >= 0 ) // Ignore completions in inactive/remote cells.
+                {
+                    compressed_well_perforations.push_back(compressed_idx);
+                }
+            }
+
+            // also include wells with no perforations in case
+            std::sort(compressed_well_perforations.begin(),
+                      compressed_well_perforations.end());
+
+            wells.push_back(compressed_well_perforations);
+            
+        }
+        return wells;
+    }
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    addWellPressureEquationsStruct(PressureMatrix& jacobian) const
+    {
+        int nw =  this->numLocalWellsEnd();
+        int rdofs = local_num_cells_;
+        for(int i=0; i < nw; i++){
+            int wdof = rdofs + i; 
+            jacobian.entry(wdof,wdof) = 1.0;// better scaling ?
+        }
+        std::vector<std::vector<int>> wellconnections = getMaxWellConnections();
+        for(int i=0; i < nw; i++){
+            const auto& perfcells = wellconnections[i];
+            for(int perfcell : perfcells){
+                int wdof = rdofs + i; 
+                jacobian.entry(wdof,perfcell) = 0.0;
+                jacobian.entry(perfcell, wdof) = 0.0;
+            }
+        }
+    }
+
+    template<typename TypeTag>
+    int
+    BlackoilWellModel<TypeTag>::
+    numLocalNonshutWells() const
+    {
+        return well_container_.size();
+    }
+    
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::

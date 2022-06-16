@@ -32,6 +32,7 @@ PropertyTree setupPropertyTree(FlowLinearSolverParameters p,
                                bool LinearSolverMaxIterSet,
                                bool CprMaxEllIterSet);
 
+PropertyTree setupCPRW(const std::string& conf, const FlowLinearSolverParameters& p);    
 PropertyTree setupCPR(const std::string& conf, const FlowLinearSolverParameters& p);
 PropertyTree setupAMG(const std::string& conf, const FlowLinearSolverParameters& p);
 PropertyTree setupILU(const std::string& conf, const FlowLinearSolverParameters& p);

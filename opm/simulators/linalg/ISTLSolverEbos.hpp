@@ -87,8 +87,9 @@ namespace Opm
         using Matrix = typename SparseMatrixAdapter::IstlMatrix;
         using ThreadManager = GetPropType<TypeTag, Properties::ThreadManager>;
         using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
-        using FlexibleSolverType = Dune::FlexibleSolver<Matrix, Vector>;
+        using AbstractSolverType = Dune::InverseOperator<Vector, Vector>;
         using AbstractOperatorType = Dune::AssembledLinearOperator<Matrix, Vector, Vector>;
+        using AbstractPreconditionerType = Dune::PreconditionerWithUpdate<Vector, Vector>;
         using WellModelOperator = WellModelAsLinearOperator<WellModel, Vector, Vector>;
         using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
         constexpr static std::size_t pressureIndex = GetPropType<TypeTag, Properties::Indices>::pressureSwitchIdx;
@@ -118,6 +119,7 @@ namespace Opm
         explicit ISTLSolverEbos(const Simulator& simulator)
             : simulator_(simulator),
               iterations_( 0 ),
+              calls_( 0 ),
               converged_(false),
               matrix_()
         {
@@ -257,6 +259,7 @@ namespace Opm
         }
 
         bool solve(Vector& x) {
+            calls_ += 1;
             // Write linear system if asked for.
             const int verbosity = prm_.get<int>("verbosity", 0);
             const bool write_matrix = verbosity > 10;
@@ -386,35 +389,47 @@ namespace Opm
 #if HAVE_MPI
                     if (useWellConn_) {
                         using ParOperatorType = Dune::OverlappingSchwarzOperator<Matrix, Vector, Vector, Comm>;
-                        linearOperatorForFlexibleSolver_ = std::make_unique<ParOperatorType>(getMatrix(), *comm_);
-                        flexibleSolver_ = std::make_unique<FlexibleSolverType>(*linearOperatorForFlexibleSolver_, *comm_, prm_, weightsCalculator,
-                                                                               pressureIndex);
+                        auto op = std::make_unique<ParOperatorType>(getMatrix(), *comm_);
+                        using FlexibleSolverType = Dune::FlexibleSolver<ParOperatorType>;
+                        auto sol = std::make_unique<FlexibleSolverType>(*op, *comm_, prm_, weightsCalculator, pressureIndex);
+                        preconditionerForFlexibleSolver_ = &(sol->preconditioner());
+                        linearOperatorForFlexibleSolver_ = std::move(op);
+                        flexibleSolver_ = std::move(sol);
                     } else {
                         using ParOperatorType = WellModelGhostLastMatrixAdapter<Matrix, Vector, Vector, true>;
                         wellOperator_ = std::make_unique<WellModelOperator>(simulator_.problem().wellModel());
-                        linearOperatorForFlexibleSolver_ = std::make_unique<ParOperatorType>(getMatrix(), *wellOperator_, interiorCellNum_);
-                        flexibleSolver_ = std::make_unique<FlexibleSolverType>(*linearOperatorForFlexibleSolver_, *comm_, prm_, weightsCalculator,
-                                                                               pressureIndex);
+                        auto op = std::make_unique<ParOperatorType>(getMatrix(), *wellOperator_, interiorCellNum_);
+                        using FlexibleSolverType = Dune::FlexibleSolver<ParOperatorType>;
+                        auto sol = std::make_unique<FlexibleSolverType>(*op, *comm_, prm_, weightsCalculator, pressureIndex);
+                        preconditionerForFlexibleSolver_ = &(sol->preconditioner());
+                        linearOperatorForFlexibleSolver_ = std::move(op);
+                        flexibleSolver_ = std::move(sol);
                     }
 #endif
                 } else {
                     if (useWellConn_) {
                         using SeqOperatorType = Dune::MatrixAdapter<Matrix, Vector, Vector>;
-                        linearOperatorForFlexibleSolver_ = std::make_unique<SeqOperatorType>(getMatrix());
-                        flexibleSolver_ = std::make_unique<FlexibleSolverType>(*linearOperatorForFlexibleSolver_, prm_, weightsCalculator,
-                                                                               pressureIndex);
+                        auto op = std::make_unique<SeqOperatorType>(getMatrix());
+                        using FlexibleSolverType = Dune::FlexibleSolver<SeqOperatorType>;
+                        auto sol = std::make_unique<FlexibleSolverType>(*op, prm_, weightsCalculator, pressureIndex);
+                        preconditionerForFlexibleSolver_ = &(sol->preconditioner());
+                        linearOperatorForFlexibleSolver_ = std::move(op);
+                        flexibleSolver_ = std::move(sol);
                     } else {
                         using SeqOperatorType = WellModelMatrixAdapter<Matrix, Vector, Vector, false>;
                         wellOperator_ = std::make_unique<WellModelOperator>(simulator_.problem().wellModel());
-                        linearOperatorForFlexibleSolver_ = std::make_unique<SeqOperatorType>(getMatrix(), *wellOperator_);
-                        flexibleSolver_ = std::make_unique<FlexibleSolverType>(*linearOperatorForFlexibleSolver_, prm_, weightsCalculator,
-                                                                               pressureIndex);
+                        auto op = std::make_unique<SeqOperatorType>(getMatrix(), *wellOperator_);
+                        using FlexibleSolverType = Dune::FlexibleSolver<SeqOperatorType>;
+                        auto sol = std::make_unique<FlexibleSolverType>(*op, prm_, weightsCalculator, pressureIndex);
+                        preconditionerForFlexibleSolver_ = &(sol->preconditioner());
+                        linearOperatorForFlexibleSolver_ = std::move(op);
+                        flexibleSolver_ = std::move(sol);
                     }
                 }
             }
             else
             {
-                flexibleSolver_->preconditioner().update();
+                preconditionerForFlexibleSolver_->update();
             }
         }
 
@@ -441,10 +456,27 @@ namespace Opm
                 // Recreate solver if the last solve used more than 10 iterations.
                 return this->iterations() > 10;
             }
+            if (this->parameters_.cpr_reuse_setup_ == 3) {
+                // Recreate solver if the last solve used more than 10 iterations.
+                return false;
+            }
+            if (this->parameters_.cpr_reuse_setup_ == 4) {
+                // Recreate solver every 'step' solve calls.
+                const int step = this->parameters_.cpr_reuse_interval_;
+                const bool create = ((calls_ % step) == 0);
+                return create;
+            }
 
-            // Otherwise, do not recreate solver.
-            assert(this->parameters_.cpr_reuse_setup_ == 3);
+            // If here, we have an invalid parameter.
+            const bool on_io_rank = (simulator_.gridView().comm().rank() == 0);
+            std::string msg = "Invalid value: " + std::to_string(this->parameters_.cpr_reuse_setup_)
+                + " for --cpr-reuse-setup parameter, run with --help to see allowed values.";
+            if (on_io_rank) {
+                OpmLog::error(msg);
+            }
+            throw std::runtime_error(msg);
 
+            // Never reached.
             return false;
         }
 
@@ -457,8 +489,9 @@ namespace Opm
             using namespace std::string_literals;
 
             auto preconditionerType = prm_.get("preconditioner.type"s, "cpr"s);
-            if (preconditionerType == "cpr" || preconditionerType == "cprt") {
-                const bool transpose = preconditionerType == "cprt";
+            if (preconditionerType == "cpr" || preconditionerType == "cprt"
+                || preconditionerType == "cprw" || preconditionerType == "cprwt") {
+                const bool transpose = preconditionerType == "cprt" || preconditionerType == "cprwt";
                 const auto weightsType = prm_.get("preconditioner.weight_type"s, "quasiimpes"s);
                 if (weightsType == "quasiimpes") {
                     // weights will be created as default in the solver
@@ -594,6 +627,7 @@ namespace Opm
 
         const Simulator& simulator_;
         mutable int iterations_;
+        mutable int calls_;
         mutable bool converged_;
         std::any parallelInformation_;
 
@@ -603,8 +637,9 @@ namespace Opm
 
         std::unique_ptr<Matrix> blockJacobiForGPUILU0_;
 
-        std::unique_ptr<FlexibleSolverType> flexibleSolver_;
+        std::unique_ptr<AbstractSolverType> flexibleSolver_;
         std::unique_ptr<AbstractOperatorType> linearOperatorForFlexibleSolver_;
+        AbstractPreconditionerType* preconditionerForFlexibleSolver_;
         std::unique_ptr<WellModelAsLinearOperator<WellModel, Vector, Vector>> wellOperator_;
         std::vector<int> overlapRows_;
         std::vector<int> interiorRows_;
