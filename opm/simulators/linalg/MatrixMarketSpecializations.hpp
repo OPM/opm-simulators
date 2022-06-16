@@ -44,19 +44,20 @@ namespace MatrixMarketImpl
         }
     };
 
+    template<class M>
+    struct mm_multipliers;
+
+    template <typename T, int i, int j, typename A>
+    struct mm_multipliers<BCRSMatrix<Opm::MatrixBlock<T,i,j>, A>>
+    {
+        enum {
+            rows = i,
+            cols = j
+        };
+    };
+
 } // namespace MatrixMarketImpl
 
-template<class M>
-struct mm_multipliers;
-
-template <typename T, int i, int j, typename A>
-struct mm_multipliers<BCRSMatrix<Opm::MatrixBlock<T,i,j>, A>>
-{
-    enum {
-        rows = i,
-        cols = j
-    };
-};
 
 } // namespace Dune
 
