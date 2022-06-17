@@ -574,20 +574,54 @@ namespace Opm {
 
         template<class IntensiveQuantity> 
         void updateIntensiveQuantity(const Problem& /*problem*/,
-                                     const SolutionVector& /*solution*/,
+                                     SolutionVector& solution,
+                                     const BVector& dx,
                                      const IntensiveQuantity*)
         {
+            ebosSimulator_.model().newtonMethod().update_(/*nextSolution=*/solution,
+                                                              /*curSolution=*/solution,
+                                                              /*update=*/dx,
+                                                              /*resid=*/dx); // the update routines of the black
+                                                    // oil model do not care about the
+                                                    // residual
             ebosSimulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
         }
 
         
         void updateIntensiveQuantity(const Problem& problem,
-                                     const SolutionVector& solution,
+                                     SolutionVector& solution,
+                                     const BVector& dx,
                                      const BlackOilIntensiveQuantitiesSimple<TypeTag>* /*intensive*/)
         {
-        ebosSimulator_.model().invalidateAndUpdateIntensiveQuantitiesSimple(problem,
-                                                                           solution,
-                                                                           /*timeIdx*/0);            
+            auto& model = ebosSimulator_.model();
+            auto& ebosNewtonMethod = model.newtonMethod();
+            if(false){
+                if (!std::isfinite(dx.one_norm()))
+                    throw NumericalIssue("Non-finite update!");
+                
+                size_t numGridDof = model.numGridDof();
+                for (unsigned dofIdx = 0; dofIdx < numGridDof; ++dofIdx) {
+                    ebosNewtonMethod.updatePrimaryVariables_(dofIdx,
+                                                             solution[dofIdx],
+                                                             solution[dofIdx],
+                                                             dx[dofIdx],
+                                                             dx[dofIdx]);
+                    model.invalidateAndUpdateIntensiveSingleQuantitiesSimple(problem,
+                                                                             solution[dofIdx],
+                                                                             dofIdx,
+                                                                             /*timeIdx*/0);               
+                }
+            }else{
+                ebosNewtonMethod.update_(/*nextSolution*/solution,
+                                         /*curSolution=*/solution,
+                                         /*update=*/dx,
+                                         /*resid=*/dx); // the update routines of the black
+                // oil model do not care about the
+                                                    // residual               
+                model.invalidateAndUpdateIntensiveQuantitiesSimple(problem,
+                                                                   solution,
+                                                                   /*timeIdx*/0);
+            }
         }
         
         /// Apply an update to the primary variables.
@@ -597,17 +631,11 @@ namespace Opm {
             auto& ebosNewtonMethod = ebosSimulator_.model().newtonMethod();
             SolutionVector& solution = ebosSimulator_.model().solution(/*timeIdx=*/0);
 
-            ebosNewtonMethod.update_(/*nextSolution=*/solution,
-                                     /*curSolution=*/solution,
-                                     /*update=*/dx,
-                                     /*resid=*/dx); // the update routines of the black
-                                                    // oil model do not care about the
-                                                    // residual
-
+     
             // if the solution is updated, the intensive quantities need to be recalculated
             //ebosSimulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
             IntensiveQuantities* dummy = NULL;//only for template spesialization
-            this->updateIntensiveQuantity(problem,solution, dummy);
+            this->updateIntensiveQuantity(problem,solution, dx, dummy);
             //ebosSimulator_.model().invalidateAndUpdateIntensiveQuantitiesSimple<IntensiveQuantities>(problem,
             //solution,
             //                                                                    /*timeIdx=*/0);            
