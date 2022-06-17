@@ -25,6 +25,7 @@
 #include <opm/models/discretization/common/fvbaseadlocallinearizertpfa.hh>
 #include <opm/models/discretization/common/smallelementcontext.hh>
 #include <ebos/eclfluxmoduletpfa.hh>
+#include <ebos/eclproblemtpfa.hh>
 namespace Opm {
     namespace Properties {
         namespace TTag {
@@ -32,9 +33,18 @@ namespace Opm {
             using InheritsFrom = std::tuple<EclFlowProblem>;
             };
         }
-    
+   }
+}
+
+namespace Opm {
+    namespace Properties {
+        template<class TypeTag>
+        struct Problem<TypeTag, TTag::EclFlowProblemTPFA> {
+            using type = EclProblemTPFA<TypeTag>; 
+        };
     }
 }
+
 
 namespace Opm {
     namespace Properties {
