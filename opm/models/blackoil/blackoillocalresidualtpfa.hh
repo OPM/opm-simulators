@@ -58,6 +58,7 @@ class BlackOilLocalResidualTPFA : public GetPropType<TypeTag, Properties::DiscLo
     using RateVector = GetPropType<TypeTag, Properties::RateVector>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Problem = GetPropType<TypeTag, Properties::Problem>;
 
     enum { conti0EqIdx = Indices::conti0EqIdx };
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
@@ -188,10 +189,63 @@ public:
     /*!
      * \copydoc FvBaseLocalResidual::computeFlux
      */
-    void computeFlux(RateVector& flux,
-                     const ElementContext& elemCtx,
-                     unsigned scvfIdx,
-                     unsigned timeIdx) const
+        void computeFlux(RateVector& flux,
+                         const Problem& problem,
+                         const unsigned globalFocusDofIdx,
+                         const unsigned globalIndexIn,
+                         const unsigned globalIndexEx,
+                         const IntensiveQuantities& intQuantsIn,
+                         const IntensiveQuantities& intQuantsEx,
+                         const unsigned timeIdx)       
+    {
+        assert(timeIdx == 0);
+        flux = 0.0;
+        Scalar Vin = problem.volume(globalIndexIn, /*timeIdx=*/0);
+        Scalar Vex = problem.volume(globalIndexEx, /*timeIdx=*/0);
+       
+        
+        Scalar trans = problem.transmissibility(globalIndexIn,globalIndexEx);
+        Scalar faceArea = problem.area(globalIndexIn,globalIndexEx);
+        Scalar thpres = problem.thresholdPressure(globalIndexIn, globalIndexEx);
+
+        // estimate the gravity correction: for performance reasons we use a simplified
+        // approach for this flux module that assumes that gravity is constant and always
+        // acts into the downwards direction. (i.e., no centrifuge experiments, sorry.)
+        constexpr Scalar g = 9.8;
+
+ 
+        // this is quite hacky because the dune grid interface does not provide a
+        // cellCenterDepth() method (so we ask the problem to provide it). The "good"
+        // solution would be to take the Z coordinate of the element centroids, but since
+        // ECL seems to like to be inconsistent on that front, it needs to be done like
+        // here...
+        Scalar zIn = problem.dofCenterDepth(globalIndexIn, timeIdx);
+        Scalar zEx = problem.dofCenterDepth(globalIndexEx, timeIdx);
+
+        // the distances from the DOF's depths. (i.e., the additional depth of the
+        // exterior DOF)
+        Scalar distZ = zIn - zEx;
+
+        //
+        //const ExtensiveQuantities& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
+        calculateFluxes_(globalFocusDofIdx,
+                         flux,
+                         intQuantsIn,
+                         intQuantsEx,
+                         timeIdx,//input
+                         Vin,
+                         Vex,
+                         globalIndexIn,
+                         globalIndexEx,
+                         distZ*g,
+                         thpres);
+            
+    }
+    
+    static void computeFlux(RateVector& flux,
+                            const ElementContext& elemCtx,
+                            unsigned scvfIdx,
+                            unsigned timeIdx) //const
     {
         assert(timeIdx == 0);
 
@@ -238,6 +292,40 @@ public:
         //
         //const ExtensiveQuantities& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
         unsigned focusDofIdx = elemCtx.focusDofIndex();
+        const auto& globalFocusDofIdx = stencil.globalSpaceIndex(focusDofIdx);
+        calculateFluxes_(globalFocusDofIdx,
+                         flux,
+                         problem,//only used for trans compressibility
+                         intQuantsIn,
+                         intQuantsEx,
+                         timeIdx,//input
+                         Vin,
+                         Vex,
+                         globalIndexIn,
+                         globalIndexEx,
+                         distZ*g,
+                         thpres,
+                         trans,
+                         faceArea
+            );
+            
+    }
+    
+    static void calculateFluxes_(unsigned globalFocusDofIdx,
+                                 RateVector& flux,
+                                 const Problem& problem, //only used for rockCompressibility which should be moved to intensive quantities
+                                 const IntensiveQuantities& intQuantsIn,
+                                 const IntensiveQuantities& intQuantsEx,
+                                 const unsigned timeIdx,
+                                 const Scalar& Vin,
+                                 const Scalar& Vex,
+                                 const unsigned& globalIndexIn,
+                                 const unsigned& globalIndexEx,
+                                 const Scalar& distZg,
+                                 const Scalar& thpres,
+                                 const Scalar& trans,
+                                 const Scalar& faceArea // may be removed but need for compatibility with volume local assembly
+        ){  
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx))
                 continue;
@@ -245,13 +333,15 @@ public:
             short dnIdx;
             //
             short upIdx;
+            // fake intices should only be used to get upwind anc compatibility with old functions
+            short interiorDofIdx = 0;//NB
+            short exteriorDofIdx = 1;//NB
             Evaluation pressureDifference;
             ExtensiveQuantities::calculatePhasePressureDiff_(upIdx,
                                                              dnIdx,
                                                              pressureDifference,
                                                              intQuantsIn,
                                                              intQuantsEx,
-                                                             scvfIdx,//input
                                                              timeIdx,//input
                                                              phaseIdx,//input
                                                              interiorDofIdx,//input
@@ -260,30 +350,31 @@ public:
                                                              Vex,
                                                              globalIndexIn,
                                                              globalIndexEx,
-                                                             distZ*g,
+                                                             distZg,
                                                              thpres);
             
             
             
             const IntensiveQuantities& up = (upIdx == interiorDofIdx) ? intQuantsIn : intQuantsEx;
-                unsigned globalIndex;
+                unsigned globalUpIndex;
                 if(upIdx == interiorDofIdx){
                     //up = intQuantsIn;
-                    globalIndex = globalIndexIn;
+                    globalUpIndex = globalIndexIn;
                 }else{
                     //up = intQuantsEx;
-                    globalIndex = globalIndexEx;
+                    globalUpIndex = globalIndexEx;
                 }
                 // TODO: should the rock compaction transmissibility multiplier be upstreamed
                 // or averaged? all fluids should see the same compaction?!
                 //const auto& globalIndex = stencil.globalSpaceIndex(upstreamIdx);
                 const Evaluation& transMult =
-                    problem.template rockCompTransMultiplier<Evaluation>(up, globalIndex);
+                    problem.template rockCompTransMultiplier<Evaluation>(up, globalUpIndex);
                 Evaluation darcyFlux;
                 if(pressureDifference == 0){
                     darcyFlux = 0.0; //NB maybe we could drop calculations
                 }else{
-                    if (upIdx == interiorDofIdx)
+                    //if (upIdx == interiorDofIdx)
+                    if(globalUpIndex == globalIndexIn)    
                         darcyFlux =
                             pressureDifference*up.mobility(phaseIdx)*transMult*(-trans/faceArea);
                     else
@@ -296,7 +387,8 @@ public:
                 //const IntensiveQuantities& up = elemCtx.intensiveQuantities(upIdx, timeIdx);
                 unsigned pvtRegionIdx = up.pvtRegionIndex();
                 using FluidState = typename IntensiveQuantities::FluidState;
-                if (upIdx == focusDofIdx){
+                //if (upIdx == globalFocusDofIdx){
+                if (globalUpIndex == globalFocusDofIdx){
                     const auto& invB = getInvB_<FluidSystem, FluidState, Evaluation>(up.fluidState(), phaseIdx, pvtRegionIdx);
                     const auto& surfaceVolumeFlux = invB*darcyFlux;           
                     evalPhaseFluxes_<Evaluation,Evaluation,FluidState>(flux, phaseIdx, pvtRegionIdx, surfaceVolumeFlux, up.fluidState());
@@ -309,30 +401,45 @@ public:
             
         }
 
-        // deal with solvents (if present)
-        SolventModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
+        // // deal with solvents (if present)
+        // SolventModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
-        // deal with zFracton (if present)
-        ExtboModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
+        // // deal with zFracton (if present)
+        // ExtboModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
-        // deal with polymer (if present)
-        PolymerModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
+        // // deal with polymer (if present)
+        // PolymerModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
-        // deal with energy (if present)
-        EnergyModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
+        // // deal with energy (if present)
+        // EnergyModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
-        // deal with foam (if present)
-        FoamModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
+        // // deal with foam (if present)
+        // FoamModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
-        // deal with salt (if present)
-        BrineModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
+        // // deal with salt (if present)
+        // BrineModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
-        // deal with micp (if present)
-        MICPModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
+        // // deal with micp (if present)
+        // MICPModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
-        DiffusionModule::addDiffusiveFlux(flux, elemCtx, scvfIdx, timeIdx);
+        // DiffusionModule::addDiffusiveFlux(flux, elemCtx, scvfIdx, timeIdx);
     }
 
+    void computeSource(RateVector& source,
+                       const Problem& problem,
+                       unsigned globalSpaceIdex,
+                       unsigned timeIdx) const
+    {
+        // retrieve the source term intrinsic to the problem
+        problem.source(source, globalSpaceIdex, timeIdx);
+
+        // // deal with MICP (if present)
+        // MICPModule::addSource(source, elemCtx, dofIdx, timeIdx);
+
+        // scale the source term of the energy equation
+        if (enableEnergy)
+            source[Indices::contiEnergyEqIdx] *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
+    }
     /*!
      * \copydoc FvBaseLocalResidual::computeSource
      */

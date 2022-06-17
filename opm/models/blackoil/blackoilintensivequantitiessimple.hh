@@ -134,7 +134,7 @@ public:
     {
         //ParentType::update(elemCtx, dofIdx, timeIdx);//only used for extrusion factor         
         //const auto& materialParams = problem.materialLawParams(globalSpaceIdx);
-         const auto& materialParams = problem.materialLawParams(0);
+        const auto& materialParams = problem.materialLawParams(0);
          Scalar RvMax;
          if (FluidSystem::enableVaporizedOil()) {
              RvMax =  problem.maxOilVaporizationFactor(timeIdx, globalSpaceIdx);
