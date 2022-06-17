@@ -170,7 +170,6 @@ private:
                                                              pressureDifference,
                                                              intQuantsIn,
                                                              intQuantsEx,
-                                                             scvfIdx,//input
                                                              /*timeIdx*/0,//input
                                                              phaseIdx,//input
                                                              i,//input
