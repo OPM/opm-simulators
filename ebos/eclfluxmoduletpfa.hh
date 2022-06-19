@@ -498,8 +498,9 @@ public:
             // TODO: should the rock compaction transmissibility multiplier be upstreamed
             // or averaged? all fluids should see the same compaction?!
             //const auto& globalIndex = stencil.globalSpaceIndex(upstreamIdx);
-            const Evaluation& transMult =
-                problem.template rockCompTransMultiplier<Evaluation>(up, globalIndex);
+            const Evaluation& transMult = up.rockCompTransMultiplier();
+            //const Evaluation& transMult =
+            //    problem.template rockCompTransMultiplier<Evaluation>(up, globalIndex);
             
             if (upIdx[phaseIdx] == interiorDofIdx)
                 volumeFlux[phaseIdx] =
@@ -593,8 +594,9 @@ protected:
             // or averaged? all fluids should see the same compaction?!
             //const auto& globalIndex = stencil.globalSpaceIndex(upstreamIdx);
             //NB as long as this is upwinded it could be an intensive quantity
-            const Evaluation& transMult =
-                problem.template rockCompTransMultiplier<Evaluation>(up, globalIndex);
+            const Evaluation& transMult = up.rockCompTransMultiplier();
+            // const Evaluation& transMult =
+            //    problem.template rockCompTransMultiplier<Evaluation>(up, globalIndex);
             
             if (upIdx_[phaseIdx] == interiorDofIdx_)
                 volumeFlux_[phaseIdx] =
@@ -690,7 +692,9 @@ protected:
                 const auto& up = elemCtx.intensiveQuantities(upstreamIdx, timeIdx);
 
                 // deal with water induced rock compaction
-                transModified *= problem.template rockCompTransMultiplier<double>(up, stencil.globalSpaceIndex(upstreamIdx));
+                const double transMult = Toolbox::value(up.rockCompTransMultiplier());
+                transModified *= transMult;
+                    //problem.template rockCompTransMultiplier<double>(up, stencil.globalSpaceIndex(upstreamIdx));
 
                 volumeFlux_[phaseIdx] =
                     pressureDifference_[phaseIdx]*up.mobility(phaseIdx)*(-transModified/faceArea);
