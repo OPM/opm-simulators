@@ -110,25 +110,14 @@ public:
                        timeIdx);
     }
     template <class LhsEval>
-    void computeStorage(Dune::FieldVector<LhsEval, numEq>& storage,
+    static void computeStorage(Dune::FieldVector<LhsEval, numEq>& storage,
                         const IntensiveQuantities& intQuants,
-                        unsigned timeIdx) const{   
+                        unsigned timeIdx) {   
         // retrieve the intensive quantities for the SCV at the specified point in time
         const auto& fs = intQuants.fluidState();
         storage = 0.0;
 
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            if (!FluidSystem::phaseIsActive(phaseIdx)) {
-                if (Indices::numPhases == 3) { // add trivial equation for the pseudo phase
-                    unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
-                    if (timeIdx == 0)
-                        storage[conti0EqIdx + activeCompIdx] = variable<LhsEval>(0.0, conti0EqIdx + activeCompIdx);
-                    else
-                        storage[conti0EqIdx + activeCompIdx] = 0.0;
-                }
-                continue;
-            }
-
             unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
             LhsEval surfaceVolume =
                 Toolbox::template decay<LhsEval>(fs.saturation(phaseIdx))
@@ -189,7 +178,8 @@ public:
     /*!
      * \copydoc FvBaseLocalResidual::computeFlux
      */
-        void computeFlux(RateVector& flux,
+    
+     static void computeFlux(RateVector& flux,
                          const Problem& problem,
                          const unsigned globalFocusDofIdx,
                          const unsigned globalIndexIn,
@@ -205,7 +195,8 @@ public:
        
         
         Scalar trans = problem.transmissibility(globalIndexIn,globalIndexEx);
-        Scalar faceArea = problem.area(globalIndexIn,globalIndexEx);
+        //Scalar faceArea = problem.area(globalIndexIn,globalIndexEx);
+        Scalar faceArea = 1.0;//NB need correct calculation local residual
         Scalar thpres = problem.thresholdPressure(globalIndexIn, globalIndexEx);
 
         // estimate the gravity correction: for performance reasons we use a simplified
@@ -230,6 +221,7 @@ public:
         //const ExtensiveQuantities& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
         calculateFluxes_(globalFocusDofIdx,
                          flux,
+                         problem,// should be removed
                          intQuantsIn,
                          intQuantsEx,
                          timeIdx,//input
@@ -238,7 +230,9 @@ public:
                          globalIndexIn,
                          globalIndexEx,
                          distZ*g,
-                         thpres);
+                         thpres,
+                         trans,
+                         faceArea);// should be removed
             
     }
     
@@ -266,14 +260,14 @@ public:
         const auto& globalIndexIn = stencil.globalSpaceIndex(interiorDofIdx);
         const auto& globalIndexEx = stencil.globalSpaceIndex(exteriorDofIdx);
         Scalar trans = problem.transmissibility(elemCtx, interiorDofIdx, exteriorDofIdx);
-        Scalar faceArea = scvf.area();
+        //Scalar faceArea = scvf.area();
+        Scalar faceArea = 1.0;
         Scalar thpres = problem.thresholdPressure(globalIndexIn, globalIndexEx);
 
         // estimate the gravity correction: for performance reasons we use a simplified
         // approach for this flux module that assumes that gravity is constant and always
         // acts into the downwards direction. (i.e., no centrifuge experiments, sorry.)
         Scalar g = problem.gravity()[dimWorld - 1];
-
         const auto& intQuantsIn = elemCtx.intensiveQuantities(interiorDofIdx, timeIdx);
         const auto& intQuantsEx = elemCtx.intensiveQuantities(exteriorDofIdx, timeIdx);
 
@@ -367,8 +361,9 @@ public:
                 // TODO: should the rock compaction transmissibility multiplier be upstreamed
                 // or averaged? all fluids should see the same compaction?!
                 //const auto& globalIndex = stencil.globalSpaceIndex(upstreamIdx);
-                const Evaluation& transMult =
-                    problem.template rockCompTransMultiplier<Evaluation>(up, globalUpIndex);
+                const Evaluation& transMult = up.rockCompTransMultiplier();
+                //const Evaluation& transMult =
+                //    problem.template rockCompTransMultiplier<Evaluation>(up, globalUpIndex);
                 Evaluation darcyFlux;
                 if(pressureDifference == 0){
                     darcyFlux = 0.0; //NB maybe we could drop calculations
@@ -424,11 +419,11 @@ public:
 
         // DiffusionModule::addDiffusiveFlux(flux, elemCtx, scvfIdx, timeIdx);
     }
-
-    void computeSource(RateVector& source,
-                       const Problem& problem,
-                       unsigned globalSpaceIdex,
-                       unsigned timeIdx) const
+    
+    static void computeSource(RateVector& source,
+                              const Problem& problem,
+                              unsigned globalSpaceIdex,
+                              unsigned timeIdx) 
     {
         // retrieve the source term intrinsic to the problem
         problem.source(source, globalSpaceIdex, timeIdx);
