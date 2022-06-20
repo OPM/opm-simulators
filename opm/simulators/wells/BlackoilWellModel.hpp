@@ -127,7 +127,8 @@ namespace Opm {
             typedef Dune::FieldVector<Scalar, numEq    > VectorBlockType;
             typedef Dune::BlockVector<VectorBlockType> BVector;
 
-            typedef Dune::FieldMatrix<Scalar, numEq, numEq > MatrixBlockType;
+            //typedef Dune::FieldMatrix<Scalar, numEq, numEq > MatrixBlockType;
+            typedef Opm::MatrixBlock<Scalar, numEq, numEq > MatrixBlockType;
 
             typedef BlackOilPolymerModule<TypeTag> PolymerModule;
             typedef BlackOilMICPModule<TypeTag> MICPModule;
@@ -274,6 +275,29 @@ namespace Opm {
             {
                 for ( const auto& well: well_container_ ) {
                     well->addWellContributions(jacobian);
+                }
+            }
+
+            void addReseroirSourceTerms(GlobalEqVector& residual,
+                                        SparseMatrixAdapter& jacobian) const
+            {
+                for ( const auto& well: well_container_ ) {
+                    if(!well->isOperableAndSolvable() && !well->wellIsStopped())
+                        return;
+                    
+                    const auto& cells = well->cells();
+                    const auto& rates = well->connectionRates();
+                    for (unsigned perfIdx = 0; perfIdx < rates.size(); ++perfIdx) {
+                        unsigned cellIdx = cells[perfIdx];
+                        auto rate = rates[perfIdx];
+                        Scalar volume =  ebosSimulator_.problem().volume(cellIdx,0);
+                        rate *= -1.0;
+                        VectorBlockType res(0.0);
+                        MatrixBlockType bMat(0.0);
+                        ebosSimulator_.model().linearizer().setResAndJacobi(res,bMat,rate);
+                        residual[cellIdx] += res;
+                        jacobian.addToBlock(cellIdx,cellIdx,bMat); 
+                    }
                 }
             }
 
