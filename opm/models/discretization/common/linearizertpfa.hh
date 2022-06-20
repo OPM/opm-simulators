@@ -432,8 +432,8 @@ private:
         }
     }
 
-
-    void setResAndJacobi(VectorBlock& res,MatrixBlock& bMat,const ADVectorBlock& resid){
+public:
+    void setResAndJacobi(VectorBlock& res,MatrixBlock& bMat,const ADVectorBlock& resid) const{
         for (unsigned eqIdx = 0; eqIdx < numEq; eqIdx++)
             res[eqIdx] = resid[eqIdx].value();
         
@@ -447,9 +447,10 @@ private:
                 }
         }
     }
+private:
     void linearizeGlobalTPFA_()
     {
-        
+        const bool well_local = true;
         resetSystem_();
         unsigned numCells = model_().numTotalDof();
         for(unsigned globI = 0; globI < numCells; globI++){
@@ -476,14 +477,16 @@ private:
             residual_[globI] += res;
             jacobian_->addToBlock(globI, globI, bMat);
             // wells sources for now (should be moved out)
-            res = 0.0;
-            bMat = 0.0;
-            adres = 0.0;
-            LocalResidual::computeSource(adres, problem_(), globI, 0);
-            adres *= -volume;
-            setResAndJacobi(res, bMat, adres);            
-            residual_[globI] += res;
-            jacobian_->addToBlock(globI, globI, bMat);
+            if(well_local){
+                res = 0.0;
+                bMat = 0.0;
+                adres = 0.0;
+                LocalResidual::computeSource(adres, problem_(), globI, 0);
+                adres *= -volume;
+                setResAndJacobi(res, bMat, adres);            
+                residual_[globI] += res;
+                jacobian_->addToBlock(globI, globI, bMat);
+            }
             for(const auto& globJ: neighbours){
                 assert(globJ != globI);
                 res = 0.0;
@@ -507,6 +510,9 @@ private:
                 //residual_[globJ] += res;
                 bMat *= -1.0;
                 jacobian_->addToBlock(globJ, globI, bMat);
+            }
+            if(not(well_local)){
+                problem_().wellModel().addReseroirSourceTerms(residual_,*jacobian_);
             }
         }
 
