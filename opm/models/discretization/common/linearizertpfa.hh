@@ -450,7 +450,7 @@ public:
 private:
     void linearizeGlobalTPFA_()
     {
-        const bool well_local = true;
+        const bool well_local = false;
         resetSystem_();
         unsigned numCells = model_().numTotalDof();
         for(unsigned globI = 0; globI < numCells; globI++){
@@ -511,11 +511,11 @@ private:
                 bMat *= -1.0;
                 jacobian_->addToBlock(globJ, globI, bMat);
             }
-            if(not(well_local)){
-                problem_().wellModel().addReseroirSourceTerms(residual_,*jacobian_);
-            }
+            
         }
-
+        if(not(well_local)){
+                problem_().wellModel().addReseroirSourceTerms(residual_,*jacobian_);
+        }
         // before the first iteration of each time step, we need to update the
         // constraints. (i.e., we assume that constraints can be time dependent, but they
         // can't depend on the solution.)
