@@ -684,7 +684,7 @@ namespace Opm {
                 const auto& fs = intQuants.fluidState();
 
                 const double pvValue = ebosProblem.referencePorosity(cell_idx, /*timeIdx=*/0) * ebosModel.dofTotalVolume( cell_idx );
-                pvSumLocal += pvValue;
+                pvSumLocal += pvValue*(1.0 - fs.saturation(FluidSystem::waterPhaseIdx).value());
 
                 if (isNumericalAquiferCell(gridView.grid(), elem))
                 {
@@ -816,6 +816,8 @@ namespace Opm {
                 elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
                 const unsigned cell_idx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
                 const double pvValue = ebosProblem.referencePorosity(cell_idx, /*timeIdx=*/0) * ebosModel.dofTotalVolume( cell_idx );
+                const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
+                const auto& fs = intQuants.fluidState();
                 const auto& cellResidual = ebosResid[cell_idx];
                 bool cnvViolated = false;
 
@@ -828,7 +830,7 @@ namespace Opm {
 
                 if (cnvViolated)
                 {
-                    errorPV += pvValue;
+                    errorPV += pvValue * (1.0 - fs.saturation(FluidSystem::waterPhaseIdx).value());
                 }
             }
 
