@@ -320,7 +320,8 @@ public:
 #endif
 
             // Scalar alpha = elemCtx.extensiveQuantities(scvfIdx, timeIdx).extrusionFactor();
-            Scalar alpha = face.area();
+            //Scalar alpha = face.area();
+            Scalar alpha = 1.0;//NB tpfa has 
             // Valgrind::CheckDefined(alpha);
             // assert(alpha > 0.0);
             // assert(isfinite(alpha));
@@ -522,16 +523,16 @@ protected:
             // if the model uses extensive quantities in its storage term, and we use
             // automatic differention and current DOF is also not the one we currently
             // focus on, the storage term does not need any derivatives!
-            if (!extensiveStorageTerm &&
-                !std::is_same<Scalar, Evaluation>::value &&
-                dofIdx != elemCtx.focusDofIndex())
-            {
-                asImp_().computeStorage(tmp2, elemCtx, dofIdx, /*timeIdx=*/0);
-                for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx)
-                    tmp[eqIdx] = tmp2[eqIdx];
-            }
-            else
-                asImp_().computeStorage(tmp, elemCtx, dofIdx, /*timeIdx=*/0);
+            // if (!extensiveStorageTerm &&
+            //     !std::is_same<Scalar, Evaluation>::value &&
+            //     dofIdx != elemCtx.focusDofIndex())
+            // {
+            //     asImp_().computeStorage(tmp2, elemCtx, dofIdx, /*timeIdx=*/0);
+            //     for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx)
+            //         tmp[eqIdx] = tmp2[eqIdx];
+            // }
+            // else
+            asImp_().computeStorage(tmp, elemCtx, dofIdx, /*timeIdx=*/0);
 
 #ifndef NDEBUG
             Valgrind::CheckDefined(tmp);

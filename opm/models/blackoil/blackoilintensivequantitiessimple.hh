@@ -153,7 +153,7 @@ public:
 //         Scalar rockCompressibility = problem.rockCompressibility(elemCtx, dofIdx, timeIdx);
 //         Scalar rockRefPressure = problem.rockReferencePressure(elemCtx, dofIdx, timeIdx);
          Scalar rockCompressibility = problem.rockCompressibility(globalSpaceIdx, timeIdx);
-         Scalar rockRefPressure = problem.rockReferencePressure(globalSpaceIdx, timeIdx);
+         Scalar rockRefPressure = problem.rockReferencePressure(globalSpaceIdx, timeIdx);        
          //Scalar rockCompressibility = 0.0;//problem.rockCompressibility(elemCtx, dofIdx, timeIdx);
          //Scalar rockRefPressure = 0.0;//problem.rockReferencePressure(elemCtx, dofIdx, timeIdx);
          update_simple(//dofIdx,
@@ -169,6 +169,7 @@ public:
                        RsMax,
                        RvMax
              );
+         rockCompTransMultiplier_ = problem.template rockCompTransMultiplier<Evaluation>(*this, globalSpaceIdx);
     }
     void update_simple(//const unsigned timeIdx,
                        const unsigned timeIdx,
@@ -443,7 +444,6 @@ public:
             }
             porosity_ *= 1.0 + (1 + 0.5*x)*x;
         }
-
         // // deal with water induced rock compaction
         // porosity_ *= problem.template rockCompPoroMultiplier<Evaluation>(*this, globalSpaceIdx);
 
@@ -520,6 +520,8 @@ public:
     const Evaluation& porosity() const
     { return porosity_; }
 
+    const Evaluation& rockCompTransMultiplier() const
+    { return rockCompTransMultiplier_;}
     /*!
      * \brief Returns the index of the PVT region used to calculate the thermodynamic
      *        quantities.
@@ -571,6 +573,7 @@ private:
     FluidState fluidState_;
     Scalar referencePorosity_;
     Evaluation porosity_;
+    Evaluation rockCompTransMultiplier_;
     Evaluation mobility_[numPhases];
 };
 
