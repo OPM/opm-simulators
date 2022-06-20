@@ -2191,7 +2191,8 @@ namespace Opm
         // use_well_weights is a quasiimpes formulation which is not implemented in multisegment
         int bhp_var_index = Bhp;
         int nperf = 0;
-        auto cell_weights = weights[0]*0.0;// not need for not(use_well_weights)
+        auto cell_weights = weights[0];// not need for not(use_well_weights)
+        cell_weights = 0.0;
         assert(this->duneC_.M() == weights.size());
         const int welldof_ind = this->duneC_.M() + this->index_of_well_;
         // do not assume anything about pressure controlled with use_well_weights (work fine with the assumtion also)

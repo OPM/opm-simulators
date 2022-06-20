@@ -9,6 +9,7 @@
 #ifndef OPM_MATRIXMARKETSPECIALIZATIONS_HEADER_INCLUDED
 #define OPM_MATRIXMARKETSPECIALIZATIONS_HEADER_INCLUDED
 
+#include <dune/common/version.hh>
 #include <dune/istl/matrixmarket.hh>
 
 namespace Opm
@@ -43,10 +44,12 @@ namespace MatrixMarketImpl
             os << i << " " << j << std::endl;
         }
     };
+} // namespace MatrixMarketImpl
 
-    template<class M>
-    struct mm_multipliers;
-
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
+namespace MatrixMarketImpl
+{
+#endif
     template <typename T, int i, int j, typename A>
     struct mm_multipliers<BCRSMatrix<Opm::MatrixBlock<T,i,j>, A>>
     {
@@ -55,9 +58,9 @@ namespace MatrixMarketImpl
             cols = j
         };
     };
-
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
 } // namespace MatrixMarketImpl
-
+#endif
 
 } // namespace Dune
 

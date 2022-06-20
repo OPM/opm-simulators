@@ -783,7 +783,8 @@ namespace Opm
         }
         // make cpr weights for well by pure avarage of reservoir weights of the perforations
         if(not(this->isPressureControlled(well_state))){        
-            auto well_weight = weights[0]*0.0;
+            auto well_weight = weights[0];
+            well_weight = 0.0;
             int num_perfs = 0;
             for (size_t rowB = 0; rowB < this->duneB_.N(); ++rowB) {
                 for (auto colB = this->duneB_[rowB].begin(), endB = this->duneB_[rowB].end(); colB != endB; ++colB) {
