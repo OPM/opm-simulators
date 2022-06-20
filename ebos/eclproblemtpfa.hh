@@ -1930,7 +1930,6 @@ public:
             aquiferModel_.initialSolutionApplied();
     }
 
-    template <class Context>
     void source(RateVector& rate,
                 unsigned globalSpaceIdx,
                 unsigned timeIdx) const
@@ -2104,6 +2103,9 @@ public:
         return limitNextTimeStepSize_(newtonMethod.suggestTimeStepSize(simulator.timeStepSize()));
     }
 
+    Scalar volume(unsigned dofIdx,unsigned /*timidx*/) const{
+        return  this->simulator().model().dofTotalVolume(dofIdx);
+    }
     /*!
      * \brief Calculate the porosity multiplier due to water induced rock compaction.
      *
@@ -2152,34 +2154,35 @@ public:
     template <class LhsEval>
     LhsEval rockCompTransMultiplier(const IntensiveQuantities& intQuants, unsigned elementIdx) const
     {
-        if (this->rockCompTransMult_.empty() && this->rockCompTransMultWc_.empty())
-            return 1.0;
+        return 1.0;
+        // if (this->rockCompTransMult_.empty() && this->rockCompTransMultWc_.empty())
+        //     return 1.0;
 
-        unsigned tableIdx = 0;
-        if (!this->rockTableIdx_.empty())
-            tableIdx = this->rockTableIdx_[elementIdx];
+        // unsigned tableIdx = 0;
+        // if (!this->rockTableIdx_.empty())
+        //     tableIdx = this->rockTableIdx_[elementIdx];
 
-        const auto& fs = intQuants.fluidState();
-        LhsEval effectiveOilPressure = decay<LhsEval>(fs.pressure(oilPhaseIdx));
+        // const auto& fs = intQuants.fluidState();
+        // LhsEval effectiveOilPressure = decay<LhsEval>(fs.pressure(oilPhaseIdx));
 
-        if (!this->minOilPressure_.empty())
-            // The pore space change is irreversible
-            effectiveOilPressure =
-                min(decay<LhsEval>(fs.pressure(oilPhaseIdx)),
-                    this->minOilPressure_[elementIdx]);
+        // if (!this->minOilPressure_.empty())
+        //     // The pore space change is irreversible
+        //     effectiveOilPressure =
+        //         min(decay<LhsEval>(fs.pressure(oilPhaseIdx)),
+        //             this->minOilPressure_[elementIdx]);
 
-        if (!this->overburdenPressure_.empty())
-            effectiveOilPressure -= this->overburdenPressure_[elementIdx];
+        // if (!this->overburdenPressure_.empty())
+        //     effectiveOilPressure -= this->overburdenPressure_[elementIdx];
 
-        if (!this->rockCompTransMult_.empty())
-            return this->rockCompTransMult_[tableIdx].eval(effectiveOilPressure, /*extrapolation=*/true);
+        // if (!this->rockCompTransMult_.empty())
+        //     return this->rockCompTransMult_[tableIdx].eval(effectiveOilPressure, /*extrapolation=*/true);
 
-        // water compaction
-        assert(!this->rockCompTransMultWc_.empty());
-        LhsEval SwMax = max(decay<LhsEval>(fs.saturation(waterPhaseIdx)), this->maxWaterSaturation_[elementIdx]);
-        LhsEval SwDeltaMax = SwMax - initialFluidStates_[elementIdx].saturation(waterPhaseIdx);
+        // // water compaction
+        // assert(!this->rockCompTransMultWc_.empty());
+        // LhsEval SwMax = max(decay<LhsEval>(fs.saturation(waterPhaseIdx)), this->maxWaterSaturation_[elementIdx]);
+        // LhsEval SwDeltaMax = SwMax - initialFluidStates_[elementIdx].saturation(waterPhaseIdx);
 
-        return this->rockCompTransMultWc_[tableIdx].eval(effectiveOilPressure, SwDeltaMax, /*extrapolation=*/true);
+        // return this->rockCompTransMultWc_[tableIdx].eval(effectiveOilPressure, SwDeltaMax, /*extrapolation=*/true);
     }
 
 private:
