@@ -383,8 +383,16 @@ namespace Opm
         {
 
             std::function<Vector()> weightsCalculator = getWeightsCalculator();
+            const int newton_iteration = this->simulator_.model().newtonMethod().numIterations();
 
-            if (shouldCreateSolver()) {
+            // solve linear system more accuratly when newton iterations > 8
+            if (newton_iteration == 8 || newton_iteration == 0 || shouldCreateSolver()) {
+                if (newton_iteration == 8) {
+                    prm_.put("tol", this->parameters_.linear_solver_reduction_/10);
+                } else if (newton_iteration == 0) {
+                    prm_.put("tol", this->parameters_.linear_solver_reduction_);
+                }
+
                 if (isParallel()) {
 #if HAVE_MPI
                     if (useWellConn_) {
