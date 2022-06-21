@@ -453,6 +453,9 @@ private:
         const bool well_local = false;
         resetSystem_();
         unsigned numCells = model_().numTotalDof();
+#ifdef _OPENMP
+#pragma omp parallel
+#endif        
         for(unsigned globI = 0; globI < numCells; globI++){
             const auto& neighbours = neighbours_[globI];// this is a set but should maybe be changed
             // accumulation term
@@ -507,7 +510,6 @@ private:
                 setResAndJacobi(res, bMat, adres);    
                 residual_[globI] += res;
                 jacobian_->addToBlock(globI, globI, bMat);
-                //residual_[globJ] += res;
                 bMat *= -1.0;
                 jacobian_->addToBlock(globJ, globI, bMat);
             }
