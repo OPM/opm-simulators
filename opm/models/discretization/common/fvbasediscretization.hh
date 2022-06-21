@@ -801,11 +801,15 @@ public:
     {
         //invalidateIntensiveQuantitiesCache(timeIdx);
         size_t numGridDof = primaryVars.size();
+#ifdef _OPENMP
+#pragma omp parallel
+#endif                
         for (unsigned dofIdx = 0; dofIdx < numGridDof; ++dofIdx) {
             const auto& primaryVar = primaryVars[dofIdx];
             auto& intquant = intensiveQuantityCache_[timeIdx][dofIdx];
             intquant.update(problem, primaryVar, dofIdx, timeIdx);
         }
+        
         std::fill(intensiveQuantityCacheUpToDate_[timeIdx].begin(),
                       intensiveQuantityCacheUpToDate_[timeIdx].end(),
                   /*value=*/true);
