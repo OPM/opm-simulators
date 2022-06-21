@@ -487,13 +487,13 @@ public:
                 continue;
             }
             IntensiveQuantities up;
-            unsigned globalIndex;
+            //unsigned globalIndex;
             if(upIdx[phaseIdx] == interiorDofIdx){
                 up = intQuantsIn;
-                globalIndex = globalIndexIn;
+                //    globalIndex = globalIndexIn;
             }else{
                 up = intQuantsEx;
-                globalIndex = globalIndexEx;
+                //globalIndex = globalIndexEx;
             }
             // TODO: should the rock compaction transmissibility multiplier be upstreamed
             // or averaged? all fluids should see the same compaction?!

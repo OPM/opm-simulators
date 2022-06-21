@@ -275,9 +275,12 @@ namespace Opm {
             void addReseroirSourceTerms(GlobalEqVector& residual,
                                         SparseMatrixAdapter& jacobian) const
             {
+#ifdef _OPENMP
+#pragma omp parallel
+#endif                        
                 for ( const auto& well: well_container_ ) {
                     if(!well->isOperableAndSolvable() && !well->wellIsStopped())
-                        return;
+                        continue;
                     
                     const auto& cells = well->cells();
                     const auto& rates = well->connectionRates();
