@@ -1544,14 +1544,14 @@ public:
 
     Scalar rockCompressibility(unsigned globalSpaceIdx, unsigned timeIdx) const
     {
-        // if (this->rockParams_.empty())
-        //     return 0.0;
+        if (this->rockParams_.empty())
+            return 0.0;
 
-        // unsigned tableIdx = 0;
-        // if (!this->rockTableIdx_.empty()) {
-        //     tableIdx = this->rockTableIdx_[globalSpaceIdx];
-        // }
         unsigned tableIdx = 0;
+        if (!this->rockTableIdx_.empty()) {
+            tableIdx = this->rockTableIdx_[globalSpaceIdx];
+        }
+        //unsigned tableIdx = 0;// faster but not genneral
         return this->rockParams_[tableIdx].compressibility;
     }
 
@@ -1574,14 +1574,14 @@ public:
 
     Scalar rockReferencePressure(unsigned globalSpaceIdx, unsigned timeIdx) const
     {
-        // if (this->rockParams_.empty())
-        //     return 1e5;
+        if (this->rockParams_.empty())
+            return 1e5;
 
-        // unsigned tableIdx = 0;
-        // if (!this->rockTableIdx_.empty()) {
-        //     tableIdx = this->rockTableIdx_[globalSpaceIdx];
-        // }
-        unsigned tableIdx = 0;//this->rockTableIdx_[globalSpaceIdx];
+        unsigned tableIdx = 0;
+        if (!this->rockTableIdx_.empty()) {
+            tableIdx = this->rockTableIdx_[globalSpaceIdx];
+        }
+        //unsigned tableIdx = 0;//faster but not genneral this->rockTableIdx_[globalSpaceIdx];
         return this->rockParams_[tableIdx].referencePressure;
     }
     /*!
@@ -2154,35 +2154,34 @@ public:
     template <class LhsEval>
     LhsEval rockCompTransMultiplier(const IntensiveQuantities& intQuants, unsigned elementIdx) const
     {
-        return 1.0;
-        // if (this->rockCompTransMult_.empty() && this->rockCompTransMultWc_.empty())
-        //     return 1.0;
+        if (this->rockCompTransMult_.empty() && this->rockCompTransMultWc_.empty())
+            return 1.0;
 
-        // unsigned tableIdx = 0;
-        // if (!this->rockTableIdx_.empty())
-        //     tableIdx = this->rockTableIdx_[elementIdx];
+        unsigned tableIdx = 0;
+        if (!this->rockTableIdx_.empty())
+            tableIdx = this->rockTableIdx_[elementIdx];
 
-        // const auto& fs = intQuants.fluidState();
-        // LhsEval effectiveOilPressure = decay<LhsEval>(fs.pressure(oilPhaseIdx));
+        const auto& fs = intQuants.fluidState();
+        LhsEval effectiveOilPressure = decay<LhsEval>(fs.pressure(oilPhaseIdx));
 
-        // if (!this->minOilPressure_.empty())
-        //     // The pore space change is irreversible
-        //     effectiveOilPressure =
-        //         min(decay<LhsEval>(fs.pressure(oilPhaseIdx)),
-        //             this->minOilPressure_[elementIdx]);
+        if (!this->minOilPressure_.empty())
+            // The pore space change is irreversible
+            effectiveOilPressure =
+                min(decay<LhsEval>(fs.pressure(oilPhaseIdx)),
+                    this->minOilPressure_[elementIdx]);
 
-        // if (!this->overburdenPressure_.empty())
-        //     effectiveOilPressure -= this->overburdenPressure_[elementIdx];
+        if (!this->overburdenPressure_.empty())
+            effectiveOilPressure -= this->overburdenPressure_[elementIdx];
 
-        // if (!this->rockCompTransMult_.empty())
-        //     return this->rockCompTransMult_[tableIdx].eval(effectiveOilPressure, /*extrapolation=*/true);
+        if (!this->rockCompTransMult_.empty())
+            return this->rockCompTransMult_[tableIdx].eval(effectiveOilPressure, /*extrapolation=*/true);
 
-        // // water compaction
-        // assert(!this->rockCompTransMultWc_.empty());
-        // LhsEval SwMax = max(decay<LhsEval>(fs.saturation(waterPhaseIdx)), this->maxWaterSaturation_[elementIdx]);
-        // LhsEval SwDeltaMax = SwMax - initialFluidStates_[elementIdx].saturation(waterPhaseIdx);
+        // water compaction
+        assert(!this->rockCompTransMultWc_.empty());
+        LhsEval SwMax = max(decay<LhsEval>(fs.saturation(waterPhaseIdx)), this->maxWaterSaturation_[elementIdx]);
+        LhsEval SwDeltaMax = SwMax - initialFluidStates_[elementIdx].saturation(waterPhaseIdx);
 
-        // return this->rockCompTransMultWc_[tableIdx].eval(effectiveOilPressure, SwDeltaMax, /*extrapolation=*/true);
+        return this->rockCompTransMultWc_[tableIdx].eval(effectiveOilPressure, SwDeltaMax, /*extrapolation=*/true);
     }
 
 private:
