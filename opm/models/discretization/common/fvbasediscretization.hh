@@ -402,7 +402,6 @@ class FvBaseDiscretization
     using DiscreteFunction = Dune::Fem::ISTLBlockVectorDiscreteFunction<DiscreteFunctionSpace, PrimaryVariables>;
 
     // problem restriction and prolongation operator for adaptation
-    using Problem = GetPropType<TypeTag, Properties::Problem>;
     using ProblemRestrictProlongOperator = typename Problem :: RestrictProlongOperator ;
 
     // discrete function restriction and prolongation operator for adaptation
