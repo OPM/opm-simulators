@@ -276,10 +276,12 @@ namespace Opm {
             void addReseroirSourceTerms(GlobalEqVector& residual,
                                         SparseMatrixAdapter& jacobian) const
             {
+                // NB this loop may write to same element if a cell has more than one perforation   
 #ifdef _OPENMP
-#pragma omp parallel
+#pragma omp parallel for
 #endif                        
-                for ( const auto& well: well_container_ ) {
+                for(size_t i = 0; i < well_container_.size(); i++){// to be sure open understand
+                    const auto& well = well_container_[i];
                     if(!well->isOperableAndSolvable() && !well->wellIsStopped())
                         continue;
                     
@@ -288,7 +290,7 @@ namespace Opm {
                     for (unsigned perfIdx = 0; perfIdx < rates.size(); ++perfIdx) {
                         unsigned cellIdx = cells[perfIdx];
                         auto rate = rates[perfIdx];
-                        Scalar volume =  ebosSimulator_.problem().volume(cellIdx,0);
+                        // Scalar volume =  ebosSimulator_.problem().volume(cellIdx,0);
                         rate *= -1.0;
                         VectorBlockType res(0.0);
                         MatrixBlockType bMat(0.0);
