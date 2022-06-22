@@ -267,7 +267,6 @@ bool BILU0<block_size>::create_preconditioner(BlockedMatrix *mat, BlockedMatrix 
 
     Timer t_decomposition;
     std::ostringstream out;
-    cl::Event event;
     for (int color = 0; color < numColors; ++color) {
         const unsigned int firstRow = rowsPerColorPrefix[color];
         const unsigned int lastRow = rowsPerColorPrefix[color+1];
@@ -278,6 +277,7 @@ bool BILU0<block_size>::create_preconditioner(BlockedMatrix *mat, BlockedMatrix 
     }
 
     if (verbosity >= 3) {
+        queue->finish();
         out << "BILU0 decomposition: " << t_decomposition.stop() << " s";
         OpmLog::info(out.str());
     }
