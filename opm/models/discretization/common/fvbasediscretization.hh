@@ -800,6 +800,10 @@ public:
     {
         //invalidateIntensiveQuantitiesCache(timeIdx);
         size_t numGridDof = primaryVars.size();
+          omp_sched_t kind;
+          int chunk;
+          //omp_get_schedule(&kind, &chunk);
+          //printf("%d %d\n", kind, chunk);
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif                
