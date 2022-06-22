@@ -801,7 +801,7 @@ public:
         //invalidateIntensiveQuantitiesCache(timeIdx);
         size_t numGridDof = primaryVars.size();
 #ifdef _OPENMP
-#pragma omp parallel
+#pragma omp parallel for
 #endif                
         for (unsigned dofIdx = 0; dofIdx < numGridDof; ++dofIdx) {
             const auto& primaryVar = primaryVars[dofIdx];
