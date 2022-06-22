@@ -91,6 +91,7 @@ namespace Opm
         using AbstractOperatorType = Dune::AssembledLinearOperator<Matrix, Vector, Vector>;
         using WellModelOperator = WellModelAsLinearOperator<WellModel, Vector, Vector>;
         using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
+        using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
         constexpr static std::size_t pressureIndex = GetPropType<TypeTag, Properties::Indices>::pressureSwitchIdx;
 
 #if HAVE_CUDA || HAVE_OPENCL || HAVE_FPGA || HAVE_AMGCL
@@ -449,7 +450,8 @@ namespace Opm
                     // assignment p = pressureIndex prevent compiler warning about
                     // capturing variable with non-automatic storage duration
                     weightsCalculator = [this, p = pressureIndex]() {
-                        return this->getTrueImpesWeights(p);
+                                            ElementContext elemCtx(this->simulator_);
+                                            return this->getTrueImpesWeights(p, elemCtx);
                     };
                 } else {
                     OPM_THROW(std::invalid_argument,
@@ -464,13 +466,21 @@ namespace Opm
         // Weights to make approximate pressure equations.
         // Calculated from the storage terms (only) of the
         // conservation equations, ignoring all other terms.
-        Vector getTrueImpesWeights(int pressureVarIndex) const
+        template<class ElemCtx>
+        Vector getTrueImpesWeights(int pressureVarIndex,ElemCtx& elemCtx) const
         {
             Vector weights(rhs_->size());
-            ElementContext elemCtx(simulator_);
             Amg::getTrueImpesWeights(pressureVarIndex, weights, simulator_.vanguard().gridView(),
                                      elemCtx, simulator_.model(),
                                      ThreadManager::threadId());
+            return weights;
+        }
+
+                
+        Vector getTrueImpesWeights(int pressureVarIndex,SmallElementContext<TypeTag>& /*elemCtx*/) const
+        {
+            Vector weights(rhs_->size());
+            Amg::getTrueImpesWeights<Evaluation>(pressureVarIndex, weights, simulator_.model());
             return weights;
         }
 

@@ -23,7 +23,6 @@
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
 #include <opm/simulators/linalg/PressureSolverPolicy.hpp>
 #include <opm/simulators/linalg/PressureTransferPolicy.hpp>
-#include <opm/simulators/linalg/getQuasiImpesWeights.hpp>
 #include <opm/simulators/linalg/twolevelmethodcpr.hh>
 
 #include <opm/common/ErrorMacros.hpp>

@@ -87,7 +87,7 @@ namespace Amg
         return weights;
     }
 
-    template<class Vector, class GridView, class ElementContext, class Model>
+    template<class Evaluation, class Vector, class GridView, class ElementContext, class Model>
     void getTrueImpesWeights(int pressureVarIndex, Vector& weights, const GridView& gridView,
                              ElementContext& elemCtx, const Model& model, std::size_t threadId)
     {
@@ -95,8 +95,8 @@ namespace Amg
         using Matrix = typename std::decay_t<decltype(model.linearizer().jacobian())>;
         using MatrixBlockType = typename Matrix::MatrixBlock;
         constexpr int numEq = VectorBlockType::size();
-        using Evaluation = typename std::decay_t<decltype(model.localLinearizer(threadId).localResidual().residual(0))>
-            ::block_type;
+//        using Evaluation = typename std::decay_t<decltype(model.localLinearizer(threadId).localResidual().residual(0))>
+//            ::block_type;
         VectorBlockType rhs(0.0);
         rhs[pressureVarIndex] = 1.0;
         int index = 0;
@@ -131,7 +131,7 @@ namespace Amg
         OPM_END_PARALLEL_TRY_CATCH("getTrueImpesWeights() failed: ", elemCtx.simulator().vanguard().grid().comm());
     }
 
-    template<class Vector, class Model, class Evaluation>
+    template<class Evaluation, class Vector, class Model>
     void getTrueImpesWeights(int pressureVarIndex, Vector& weights, const Model& model)
     {
         using VectorBlockType = typename Vector::block_type;
@@ -150,7 +150,7 @@ namespace Amg
             const auto* intQuantsInP = model.cachedIntensiveQuantities(globI, /*timeIdx*/0);
             assert(intQuantsInP);
             const auto& intQuantsIn = *intQuantsInP;
-            //NB !!!!! LocalResidual::computeStorage(storage,intQuantsIn, 0);           
+            Model::LocalResidual::computeStorage(storage,intQuantsIn, 0);           
             double scvVolume = model.dofTotalVolume(globI);
             double dt = 3600*24;
             auto storage_scale = scvVolume / dt;
