@@ -136,8 +136,8 @@ bool BILU0<block_size>::analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat
     invDiagVals.resize(mat->Nb * bs * bs);
 
 #if CHOW_PATEL
-    Lmat = std::make_unique<BlockedMatrix<block_size> >(mat->Nb, (mat->nnzbs - mat->Nb) / 2);
-    Umat = std::make_unique<BlockedMatrix<block_size> >(mat->Nb, (mat->nnzbs - mat->Nb) / 2);
+    Lmat = std::make_unique<BlockedMatrix>(mat->Nb, (mat->nnzbs - mat->Nb) / 2, block_size);
+    Umat = std::make_unique<BlockedMatrix>(mat->Nb, (mat->nnzbs - mat->Nb) / 2, block_size);
 #endif
 
     s.invDiagVals = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * bs * bs * mat->Nb);
@@ -223,9 +223,9 @@ bool BILU0<block_size>::create_preconditioner(BlockedMatrix *mat, BlockedMatrix 
     }
 
 #if CHOW_PATEL
-    chowPatelIlu.decomposition(queue, context,
+    chowPatelIlu.decomposition(queue.get(), context.get(),
                                LUmat.get(), Lmat.get(), Umat.get(),
-                               invDiagVals, diagIndex,
+                               invDiagVals.data(), diagIndex,
                                s.diagIndex, s.invDiagVals,
                                s.Lvals, s.Lcols, s.Lrows,
                                s.Uvals, s.Ucols, s.Urows);
