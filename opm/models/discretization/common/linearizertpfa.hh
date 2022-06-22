@@ -42,6 +42,8 @@
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
 
+#include <opm/grid/utility/SparseTable.hpp>
+
 #include <type_traits>
 #include <iostream>
 #include <vector>
@@ -363,6 +365,7 @@ private:
 
         // add the additional neighbors and degrees of freedom caused by the auxiliary
         // equations
+        auto reservoirSparsityPattern = sparsityPattern; 
         size_t numAuxMod = model.numAuxiliaryModules();
         for (unsigned auxModIdx = 0; auxModIdx < numAuxMod; ++auxModIdx)
             model.auxiliaryModule(auxModIdx)->addNeighbors(sparsityPattern);
@@ -372,9 +375,25 @@ private:
 
         // create matrix structure based on sparsity pattern
         jacobian_->reserve(sparsityPattern);
-        neighbours_ = sparsityPattern;
+        //neighbours_ = sparsityPattern;
         for(unsigned globI= 0; globI < model.numTotalDof(); globI++){
-            neighbours_[globI].erase(globI);
+            reservoirSparsityPattern[globI].erase(globI);
+        }
+        unsigned numCells = model.numTotalDof();
+        neighbours_.reserve(numCells,6*numCells);
+        trans_.reserve(numCells,6*numCells);
+        std::vector<double> loctrans;
+        for(unsigned globI= 0; globI < numCells; globI++){
+            const auto&  cells = reservoirSparsityPattern[globI];
+            neighbours_.appendRow(cells.begin(),cells.end());
+            unsigned n = cells.size();
+            loctrans.resize(n);
+            short loc = 0;
+            for(const int& cell : cells){
+                loctrans[loc] = problem_().transmissibility(globI, cell); 
+                loc ++;
+            }
+            trans_.appendRow(loctrans.begin(),loctrans.end());
         }
     }
 
@@ -454,13 +473,13 @@ private:
         resetSystem_();
         unsigned numCells = model_().numTotalDof();
 #ifdef _OPENMP
-#pragma omp parallel
+#pragma omp parallel for
 #endif        
         for(unsigned globI = 0; globI < numCells; globI++){
             const auto& neighbours = neighbours_[globI];// this is a set but should maybe be changed
             // accumulation term
             double dt = simulator_().timeStepSize();
-            double volume = model_().dofTotalVolume(globI);;
+            double volume = model_().dofTotalVolume(globI);
             Scalar storefac = volume/dt;           
             ADVectorBlock adres(0.0);
             const IntensiveQuantities* intQuantsInP = model_().cachedIntensiveQuantities(globI, /*timeIdx*/0);
@@ -490,6 +509,7 @@ private:
                 residual_[globI] += res;
                 jacobian_->addToBlock(globI, globI, bMat);
             }
+            short loc = 0;
             for(const auto& globJ: neighbours){
                 assert(globJ != globI);
                 res = 0.0;
@@ -506,12 +526,14 @@ private:
                                            globJ,
                                            intQuantsIn,
                                            intQuantsEx,
-                                           0);       
+                                           0);
+                adres *= trans_[globI][loc];
                 setResAndJacobi(res, bMat, adres);    
                 residual_[globI] += res;
                 jacobian_->addToBlock(globI, globI, bMat);
                 bMat *= -1.0;
                 jacobian_->addToBlock(globJ, globI, bMat);
+                loc ++;
             }
             
         }
@@ -695,8 +717,11 @@ private:
     LinearizationType linearizationType_;
 
     std::mutex globalMatrixMutex_;
-    using NeighborSet = std::set< unsigned >;
-    std::vector<NeighborSet> neighbours_;
+    //using NeighborSet = std::set< unsigned >;
+    //std::vector< std::vector<int>>
+    SparseTable<unsigned> neighbours_;
+    //std::vector< std::vector<double>> trans_;
+    SparseTable<double> trans_;
 };
 
 } // namespace Opm

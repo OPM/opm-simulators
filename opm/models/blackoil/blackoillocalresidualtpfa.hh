@@ -194,7 +194,7 @@ public:
         Scalar Vex = problem.volume(globalIndexEx, /*timeIdx=*/0);
        
         
-        Scalar trans = problem.transmissibility(globalIndexIn,globalIndexEx);
+        Scalar trans = 1.0;//problem.transmissibility(globalIndexIn,globalIndexEx);
         //Scalar faceArea = problem.area(globalIndexIn,globalIndexEx);
         Scalar faceArea = 1.0;//NB need correct calculation local residual
         Scalar thpres = problem.thresholdPressure(globalIndexIn, globalIndexEx);
@@ -215,7 +215,7 @@ public:
 
         // the distances from the DOF's depths. (i.e., the additional depth of the
         // exterior DOF)
-        Scalar distZ = zIn - zEx;
+        Scalar distZ = zIn - zEx;// NB could be precalculated
 
         //
         //const ExtensiveQuantities& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
