@@ -41,6 +41,7 @@ int OpenclKernels::verbosity;
 cl::CommandQueue *OpenclKernels::queue;
 std::vector<double> OpenclKernels::tmp;
 bool OpenclKernels::initialized = false;
+size_t OpenclKernels::preferred_workgroup_size = 0;
 
 std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg> > OpenclKernels::dot_k;
 std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg> > OpenclKernels::norm_k;
@@ -139,6 +140,11 @@ void OpenclKernels::init(cl::Context *context, cl::CommandQueue *queue_, std::ve
     ilu_decomp_k.reset(new ilu_decomp_kernel_type(cl::Kernel(program, "ilu_decomp")));
     isaiL_k.reset(new isaiL_kernel_type(cl::Kernel(program, "isaiL")));
     isaiU_k.reset(new isaiU_kernel_type(cl::Kernel(program, "isaiU")));
+
+    // testing shows all kernels have the same preferred_workgroup_size_multiple
+    // 32 for NVIDIA
+    // 64 for AMD
+    cl::Kernel(program, "ILU_apply1").getWorkGroupInfo(devices[0], CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE, &preferred_workgroup_size_multiple);
 
     initialized = true;
 } // end get_opencl_kernels()
@@ -388,10 +394,10 @@ void OpenclKernels::ILU_apply1(cl::Buffer& vals, cl::Buffer& cols,
                                cl::Buffer& rows, cl::Buffer& diagIndex,
                                const cl::Buffer& y, cl::Buffer& x,
                                cl::Buffer& rowsPerColor, int color,
-                               int Nb, unsigned int block_size)
+                               int rowsThisColor, unsigned int block_size)
 {
-    const unsigned int work_group_size = 32;
-    const unsigned int num_work_groups = ceilDivision(Nb, work_group_size);
+    const unsigned int work_group_size = preferred_workgroup_size_multiple;
+    const unsigned int num_work_groups = rowsThisColor;
     const unsigned int total_work_items = num_work_groups * work_group_size;
     const unsigned int lmem_per_work_group = sizeof(double) * work_group_size;
     Timer t_ilu_apply1;
@@ -413,10 +419,10 @@ void OpenclKernels::ILU_apply2(cl::Buffer& vals, cl::Buffer& cols,
                                cl::Buffer& rows, cl::Buffer& diagIndex,
                                cl::Buffer& invDiagVals, cl::Buffer& x,
                                cl::Buffer& rowsPerColor, int color,
-                               int Nb, unsigned int block_size)
+                               int rowsThisColor, unsigned int block_size)
 {
-    const unsigned int work_group_size = 32;
-    const unsigned int num_work_groups = ceilDivision(Nb, work_group_size);
+    const unsigned int work_group_size = preferred_workgroup_size_multiple;
+    const unsigned int num_work_groups = rowsThisColor;
     const unsigned int total_work_items = num_work_groups * work_group_size;
     const unsigned int lmem_per_work_group = sizeof(double) * work_group_size;
     Timer t_ilu_apply2;
@@ -437,19 +443,19 @@ void OpenclKernels::ILU_apply2(cl::Buffer& vals, cl::Buffer& cols,
 void OpenclKernels::ILU_decomp(int firstRow, int lastRow,
                                cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows,
                                cl::Buffer& diagIndex, cl::Buffer& invDiagVals,
-                               int Nb, unsigned int block_size)
+                               int rowsThisColor, unsigned int block_size)
 {
-    const unsigned int work_group_size2 = 128;
-    const unsigned int num_work_groups2 = 1024;
-    const unsigned int total_work_items2 = num_work_groups2 * work_group_size2;
-    const unsigned int num_hwarps_per_group = work_group_size2 / 16;
-    const unsigned int lmem_per_work_group2 = num_hwarps_per_group * block_size * block_size * sizeof(double);           // each block needs a pivot
+    const unsigned int work_group_size = 128;
+    const unsigned int num_work_groups = rowsThisColor;
+    const unsigned int total_work_items = num_work_groups * work_group_size;
+    const unsigned int num_hwarps_per_group = work_group_size / 16;
+    const unsigned int lmem_per_work_group = num_hwarps_per_group * block_size * block_size * sizeof(double);           // each block needs a pivot
     Timer t_ilu_decomp;
 
-    cl::Event event = (*ilu_decomp_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items2), cl::NDRange(work_group_size2)),
+    cl::Event event = (*ilu_decomp_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)),
                           firstRow, lastRow, vals, cols, rows,
-                          invDiagVals, diagIndex, Nb,
-                          cl::Local(lmem_per_work_group2));
+                          invDiagVals, diagIndex, rowsThisColor,
+                          cl::Local(lmem_per_work_group));
 
     if (verbosity >= 4) {
         event.wait();
