@@ -15,6 +15,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "config.h"
+//#define USE_OPM_CHECK_PARAM_FINALIZED
 #include <opm/material/common/ResetLocale.hpp>
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp>
 #include <opm/simulators/flow/Main.hpp>
@@ -97,6 +98,24 @@ namespace Opm {
 
     }
 }
+// template<class TypeTag>
+// struct MaterialLaw<TypeTag, TTag::EclBaseProblem>
+// {
+// private:
+//     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+//     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+
+//     using Traits = ThreePhaseMaterialTraits<Scalar,
+//                                             /*wettingPhaseIdx=*/FluidSystem::waterPhaseIdx,
+//                                             /*nonWettingPhaseIdx=*/FluidSystem::oilPhaseIdx,
+//                                             /*gasPhaseIdx=*/FluidSystem::gasPhaseIdx>;
+
+// public:
+//     using EclMaterialLawManager = ::Opm::EclMaterialLawManager<Traits>;
+//     //using EclMaterialLawManager = ::Opm::DefaultMaterial<Traits>;
+//     using type = ::Opm::EclDefaultMaterial<Traits>;
+// };
+
 // namespace Opm {
 //     namespace Properties {
 //         template<class TypeTag>
