@@ -250,6 +250,8 @@ namespace Opm
 
 
     protected:
+        bool regularize_;
+
         // xw = inv(D)*(rw - C*x)
         void recoverSolutionWell(const BVector& x, BVectorWell& xw) const;
 
