@@ -117,6 +117,7 @@ public:
         const auto& extQuants = context.extensiveQuantities(spaceIdx, timeIdx);
         const auto& fluidStateI = context.intensiveQuantities(extQuants.interiorIndex(), timeIdx).fluidState();
         const auto& fluidStateJ = context.intensiveQuantities(extQuants.exteriorIndex(), timeIdx).fluidState();
+        unsigned pvtRegionIndex = fluidStateI.pvtRegionIndex();
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
                 continue;
@@ -135,22 +136,47 @@ public:
             // phase not present, skip
             if(bSAvg < 1.0e-6)
                 continue;
+            Evaluation convFactor = 1.0;
+            Evaluation diffR = 0.0;
+            if (FluidSystem::enableDissolvedGas() && phaseIdx == FluidSystem::oilPhaseIdx) {
+                Evaluation rsAvg = (fluidStateI.Rs() + Toolbox::value(fluidStateJ.Rs())) / 2;
+                convFactor = 1.0 / (fraction(pvtRegionIndex) + rsAvg);
+                diffR = fluidStateI.Rs() - Toolbox::value(fluidStateJ.Rs());
+            }
+            if (FluidSystem::enableVaporizedOil() && phaseIdx == FluidSystem::gasPhaseIdx) {
+                Evaluation rvAvg = (fluidStateI.Rv() + Toolbox::value(fluidStateJ.Rv())) / 2;
+                convFactor = fraction(pvtRegionIndex) / (1.0 + rvAvg*fraction(pvtRegionIndex));
+                diffR = fluidStateI.Rv() - Toolbox::value(fluidStateJ.Rv());
+            }
 
             // mass flux of solvent component (oil in oil or gas in gas)
             unsigned solventCompIdx = FluidSystem::solventComponentIndex(phaseIdx);
             unsigned activeSolventCompIdx = Indices::canonicalToActiveComponentIndex(solventCompIdx);
             flux[conti0EqIdx + activeSolventCompIdx] +=
-                    -bSAvg
-                    * extQuants.moleFractionGradientNormal(phaseIdx, solventCompIdx)
+                    - bSAvg
+                    * convFactor
+                    * diffR
+                    * extQuants.diffusivity()
                     * extQuants.effectiveDiffusionCoefficient(phaseIdx, solventCompIdx);
             // mass flux of solute component (gas in oil or oil in gas)
             unsigned soluteCompIdx = FluidSystem::soluteComponentIndex(phaseIdx);
             unsigned activeSoluteCompIdx = Indices::canonicalToActiveComponentIndex(soluteCompIdx);
             flux[conti0EqIdx + activeSoluteCompIdx] +=
-                    -bSAvg
-                    * extQuants.moleFractionGradientNormal(phaseIdx, soluteCompIdx)
+                    bSAvg
+                    * diffR
+                    * convFactor
+                    * extQuants.diffusivity()
                     * extQuants.effectiveDiffusionCoefficient(phaseIdx, soluteCompIdx);
         }
+    }
+
+private:
+    static Scalar fraction (unsigned regionIdx) {
+        Scalar mMOil = FluidSystem::molarMass(FluidSystem::oilCompIdx, regionIdx);
+        Scalar rhoO = FluidSystem::referenceDensity(FluidSystem::oilPhaseIdx, regionIdx);
+        Scalar mMGas = FluidSystem::molarMass(FluidSystem::gasCompIdx, regionIdx);
+        Scalar rhoG = FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, regionIdx);
+        return rhoO * mMGas / (rhoG * mMOil);
     }
 };
 
@@ -272,7 +298,15 @@ public:
      *        the porous medium for a component in a phase.
      */
     Evaluation effectiveDiffusionCoefficient(unsigned phaseIdx, unsigned compIdx) const
-    { return tortuosity_[phaseIdx] * diffusionCoefficient_[phaseIdx][compIdx]; }
+    {
+        // For the blackoil model tortuosity is disabled.
+        // TODO add a run-time parameter to enable tortuosity
+        static bool enableTortuosity = false;
+        if (enableTortuosity)
+            return tortuosity_[phaseIdx] * diffusionCoefficient_[phaseIdx][compIdx];
+
+        return diffusionCoefficient_[phaseIdx][compIdx];
+    }
 
 protected:
     /*!
@@ -364,15 +398,12 @@ protected:
 
 public:
     /*!
-     * \brief The the gradient of the mole fraction times the face normal.
+     * \brief The diffusivity the face.
      *
-     * \copydoc Doxygen::phaseIdxParam
-     * \copydoc Doxygen::compIdxParam
      */
-    const Evaluation& moleFractionGradientNormal(unsigned,
-                                                 unsigned) const
+    const Scalar& diffusivity() const
     {
-        throw std::logic_error("The method moleFractionGradient() does not "
+        throw std::logic_error("The method diffusivity() does not "
                                "make sense if diffusion is disabled.");
     }
 
@@ -402,6 +433,7 @@ class BlackOilDiffusionExtensiveQuantities<TypeTag, /*enableDiffusion=*/true>
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using Toolbox = MathToolbox<Evaluation>;
 
     enum { dimWorld = GridView::dimensionworld };
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
@@ -429,6 +461,9 @@ protected:
 
         const Scalar diffusivity = elemCtx.problem().diffusivity(elemCtx, face.interiorIndex(), face.exteriorIndex());
         const Scalar faceArea = face.area();
+        diffusivity_ = diffusivity / faceArea; //opm-models expects pr area flux
+        Valgrind::CheckDefined(diffusivity_);
+
 
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
@@ -439,13 +474,6 @@ protected:
                 continue;
             }
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
-                moleFractionGradientNormal_[phaseIdx][compIdx] =
-                    (intQuantsOutside.fluidState().moleFraction(phaseIdx, compIdx)
-                     -
-                     intQuantsInside.fluidState().moleFraction(phaseIdx, compIdx))
-                    * diffusivity / faceArea; //opm-models expects pr area flux
-                Valgrind::CheckDefined(moleFractionGradientNormal_[phaseIdx][compIdx]);
-
                 // use the arithmetic average for the effective
                 // diffusion coefficients.
                 effectiveDiffusionCoefficient_[phaseIdx][compIdx] =
@@ -470,13 +498,13 @@ protected:
 
 public:
     /*!
-     * \brief The the gradient of the mole fraction times the face normal.
+     * \brief The diffusivity of the face.
      *
      * \copydoc Doxygen::phaseIdxParam
      * \copydoc Doxygen::compIdxParam
      */
-    const Evaluation& moleFractionGradientNormal(unsigned phaseIdx, unsigned compIdx) const
-    { return moleFractionGradientNormal_[phaseIdx][compIdx]; }
+    const Scalar& diffusivity() const
+    { return diffusivity_; }
 
     /*!
      * \brief The effective diffusion coeffcient of a component in a
@@ -489,7 +517,7 @@ public:
     { return effectiveDiffusionCoefficient_[phaseIdx][compIdx]; }
 
 private:
-    Evaluation moleFractionGradientNormal_[numPhases][numComponents];
+    Scalar diffusivity_;
     Evaluation effectiveDiffusionCoefficient_[numPhases][numComponents];
 };
 
