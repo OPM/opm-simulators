@@ -251,7 +251,8 @@ void OpenclKernels::vmul(const double alpha, cl::Buffer& in1, cl::Buffer& in2, c
     }
 }
 
-void OpenclKernels::custom(cl::Buffer& p, cl::Buffer& v, cl::Buffer& r, const double omega, const double beta, int N)
+void OpenclKernels::custom(cl::Buffer& p, cl::Buffer& v, cl::Buffer& r,
+                           const double omega, const double beta, int N)
 {
     const unsigned int work_group_size = 32;
     const unsigned int num_work_groups = ceilDivision(N, work_group_size);
@@ -319,7 +320,9 @@ void OpenclKernels::prolongate_vector(const cl::Buffer& in, cl::Buffer& out, con
     }
 }
 
-void OpenclKernels::spmv(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows, const cl::Buffer& x, cl::Buffer& b, int Nb, unsigned int block_size, bool reset, bool add)
+void OpenclKernels::spmv(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows,
+                         const cl::Buffer& x, cl::Buffer& b, int Nb,
+                         unsigned int block_size, bool reset, bool add)
 {
     const unsigned int work_group_size = 32;
     const unsigned int num_work_groups = ceilDivision(Nb, work_group_size);
@@ -330,15 +333,19 @@ void OpenclKernels::spmv(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows, c
 
     if (block_size > 1) {
         if (add) {
-            event = (*spmv_blocked_add_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), vals, cols, rows, Nb, x, b, block_size, cl::Local(lmem_per_work_group));
+            event = (*spmv_blocked_add_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)),
+                        vals, cols, rows, Nb, x, b, block_size, cl::Local(lmem_per_work_group));
         } else {
-            event = (*spmv_blocked_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), vals, cols, rows, Nb, x, b, block_size, cl::Local(lmem_per_work_group));
+            event = (*spmv_blocked_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)),
+                        vals, cols, rows, Nb, x, b, block_size, cl::Local(lmem_per_work_group));
         }
     } else {
         if (reset) {
-            event = (*spmv_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), vals, cols, rows, Nb, x, b, cl::Local(lmem_per_work_group));
+            event = (*spmv_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)),
+                        vals, cols, rows, Nb, x, b, cl::Local(lmem_per_work_group));
         } else {
-            event = (*spmv_noreset_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), vals, cols, rows, Nb, x, b, cl::Local(lmem_per_work_group));
+            event = (*spmv_noreset_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)),
+                        vals, cols, rows, Nb, x, b, cl::Local(lmem_per_work_group));
         }
     }
 
@@ -350,7 +357,9 @@ void OpenclKernels::spmv(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows, c
     }
 }
 
-void OpenclKernels::residual(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows, cl::Buffer& x, const cl::Buffer& rhs, cl::Buffer& out, int Nb, unsigned int block_size)
+void OpenclKernels::residual(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows,
+                            cl::Buffer& x, const cl::Buffer& rhs,
+                            cl::Buffer& out, int Nb, unsigned int block_size)
 {
     const unsigned int work_group_size = 32;
     const unsigned int num_work_groups = ceilDivision(Nb, work_group_size);
@@ -360,9 +369,11 @@ void OpenclKernels::residual(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& row
     cl::Event event;
 
     if (block_size > 1) {
-        event = (*residual_blocked_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), vals, cols, rows, Nb, x, rhs, out, block_size, cl::Local(lmem_per_work_group));
+        event = (*residual_blocked_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)),
+                    vals, cols, rows, Nb, x, rhs, out, block_size, cl::Local(lmem_per_work_group));
     } else {
-        event = (*residual_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), vals, cols, rows, Nb, x, rhs, out, cl::Local(lmem_per_work_group));
+        event = (*residual_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)),
+                    vals, cols, rows, Nb, x, rhs, out, cl::Local(lmem_per_work_group));
     }
 
     if (verbosity >= 4) {
@@ -373,7 +384,11 @@ void OpenclKernels::residual(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& row
     }
 }
 
-void OpenclKernels::ILU_apply1(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows, cl::Buffer& diagIndex, const cl::Buffer& y, cl::Buffer& x, cl::Buffer& rowsPerColor, int color, int Nb, unsigned int block_size)
+void OpenclKernels::ILU_apply1(cl::Buffer& vals, cl::Buffer& cols,
+                               cl::Buffer& rows, cl::Buffer& diagIndex,
+                               const cl::Buffer& y, cl::Buffer& x,
+                               cl::Buffer& rowsPerColor, int color,
+                               int Nb, unsigned int block_size)
 {
     const unsigned int work_group_size = 32;
     const unsigned int num_work_groups = ceilDivision(Nb, work_group_size);
@@ -381,7 +396,10 @@ void OpenclKernels::ILU_apply1(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& r
     const unsigned int lmem_per_work_group = sizeof(double) * work_group_size;
     Timer t_ilu_apply1;
 
-    cl::Event event = (*ILU_apply1_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), vals, cols, rows, diagIndex, y, x, rowsPerColor, color, block_size, cl::Local(lmem_per_work_group));
+    cl::Event event = (*ILU_apply1_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)),
+                          vals, cols, rows, diagIndex, y, x,
+                          rowsPerColor, color, block_size,
+                          cl::Local(lmem_per_work_group));
 
     if (verbosity >= 5) {
         event.wait();
@@ -391,7 +409,11 @@ void OpenclKernels::ILU_apply1(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& r
     }
 }
 
-void OpenclKernels::ILU_apply2(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows, cl::Buffer& diagIndex, cl::Buffer& invDiagVals, cl::Buffer& x, cl::Buffer& rowsPerColor, int color, int Nb, unsigned int block_size)
+void OpenclKernels::ILU_apply2(cl::Buffer& vals, cl::Buffer& cols,
+                               cl::Buffer& rows, cl::Buffer& diagIndex,
+                               cl::Buffer& invDiagVals, cl::Buffer& x,
+                               cl::Buffer& rowsPerColor, int color,
+                               int Nb, unsigned int block_size)
 {
     const unsigned int work_group_size = 32;
     const unsigned int num_work_groups = ceilDivision(Nb, work_group_size);
@@ -399,7 +421,10 @@ void OpenclKernels::ILU_apply2(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& r
     const unsigned int lmem_per_work_group = sizeof(double) * work_group_size;
     Timer t_ilu_apply2;
 
-    cl::Event event = (*ILU_apply2_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), vals, cols, rows, diagIndex, invDiagVals, x, rowsPerColor, color, block_size, cl::Local(lmem_per_work_group));
+    cl::Event event = (*ILU_apply2_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)),
+                          vals, cols, rows, diagIndex, invDiagVals,
+                          x, rowsPerColor, color, block_size,
+                          cl::Local(lmem_per_work_group));
 
     if (verbosity >= 5) {
         event.wait();
@@ -409,7 +434,10 @@ void OpenclKernels::ILU_apply2(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& r
     }
 }
 
-void OpenclKernels::ILU_decomp(int firstRow, int lastRow, cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows, cl::Buffer& diagIndex, cl::Buffer& invDiagVals, int Nb, unsigned int block_size)
+void OpenclKernels::ILU_decomp(int firstRow, int lastRow,
+                               cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows,
+                               cl::Buffer& diagIndex, cl::Buffer& invDiagVals,
+                               int Nb, unsigned int block_size)
 {
     const unsigned int work_group_size2 = 128;
     const unsigned int num_work_groups2 = 1024;
@@ -418,7 +446,10 @@ void OpenclKernels::ILU_decomp(int firstRow, int lastRow, cl::Buffer& vals, cl::
     const unsigned int lmem_per_work_group2 = num_hwarps_per_group * block_size * block_size * sizeof(double);           // each block needs a pivot
     Timer t_ilu_decomp;
 
-    cl::Event event = (*ilu_decomp_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items2), cl::NDRange(work_group_size2)), firstRow, lastRow, vals, cols, rows, invDiagVals, diagIndex, Nb, cl::Local(lmem_per_work_group2));
+    cl::Event event = (*ilu_decomp_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items2), cl::NDRange(work_group_size2)),
+                          firstRow, lastRow, vals, cols, rows,
+                          invDiagVals, diagIndex, Nb,
+                          cl::Local(lmem_per_work_group2));
 
     if (verbosity >= 4) {
         event.wait();
