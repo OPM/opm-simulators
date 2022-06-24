@@ -188,6 +188,7 @@ tests[max_watercut_3]="flow wtest/wecon_wct_max MAX_WATERCUT_3"
 tests[max_watercut_4]="flow wtest/wecon_wct_max MAX_WATERCUT_4"
 tests[max_wgr_1]="flow wtest/wecon_wgr_max MAX_WGR_1"
 tests[rxft_smry]="flow rxft_smry TEST_RXFT"
+tests[bo_diffusion]="flow diffusion BO_DIFFUSE_CASE1"
 
 changed_tests=""
 
