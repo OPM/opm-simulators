@@ -26,6 +26,7 @@
 //#include <opm/models/discretization/common/fvbaselocalresidualtpfa.hh>
 //#include <opm/models/discretization/common/fvbaseadlocallinearizertpfa.hh>
 #include <opm/models/discretization/common/smallelementcontext.hh>
+#include <opm/models/discretization/common/tpfalinearizer.hh>
 #include <ebos/eclfluxmoduletpfa.hh>
 #include <ebos/eclproblemtpfa.hh>
 
@@ -51,12 +52,12 @@ namespace Opm {
 
 namespace Opm {
     namespace Properties {
-        // template<class TypeTag>
-        // struct Linearizer<TypeTag, TTag::EclFlowProblemTPFA> { using type = LinearizerTPFA<TypeTag>; };
-
-        // Override default: use the TPFA linearizer.
         template<class TypeTag>
-        struct UseTpfaLinearizer<TypeTag, TTag::EclFlowProblemTPFA> { static constexpr bool value = true; };
+        struct Linearizer<TypeTag, TTag::EclFlowProblemTPFA> { using type = TpfaLinearizer<TypeTag>; };
+
+        // // Override default: use the TPFA linearizer.
+        // template<class TypeTag>
+        // struct UseTpfaLinearizer<TypeTag, TTag::EclFlowProblemTPFA> { static constexpr bool value = true; };
 
         // template<class TypeTag>
         // struct LocalLinearizerSplice<TypeTag, TTag::EclFlowProblemTPFA> {
