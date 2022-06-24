@@ -14,7 +14,9 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+
 #include "config.h"
+
 #include <opm/material/common/ResetLocale.hpp>
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp>
 #include <opm/simulators/flow/Main.hpp>
@@ -24,9 +26,9 @@
 #include <opm/models/discretization/common/fvbaselocalresidualtpfa.hh>
 #include <opm/models/discretization/common/fvbaseadlocallinearizertpfa.hh>
 #include <opm/models/discretization/common/smallelementcontext.hh>
-#include <opm/models/discretization/common/linearizertpfa.hh>
 #include <ebos/eclfluxmoduletpfa.hh>
 #include <ebos/eclproblemtpfa.hh>
+
 namespace Opm {
     namespace Properties {
         namespace TTag {
@@ -41,7 +43,7 @@ namespace Opm {
     namespace Properties {
         template<class TypeTag>
         struct Problem<TypeTag, TTag::EclFlowProblemTPFA> {
-            using type = EclProblemTPFA<TypeTag>; 
+            using type = EclProblemTPFA<TypeTag>;
         };
     }
 }
@@ -51,6 +53,11 @@ namespace Opm {
     namespace Properties {
         // template<class TypeTag>
         // struct Linearizer<TypeTag, TTag::EclFlowProblemTPFA> { using type = LinearizerTPFA<TypeTag>; };
+
+        // Override default: use the TPFA linearizer.
+        template<class TypeTag>
+        struct UseTpfaLinearizer<TypeTag, TTag::EclFlowProblemTPFA> { static constexpr bool value = true; };
+
         template<class TypeTag>
         struct LocalLinearizerSplice<TypeTag, TTag::EclFlowProblemTPFA> {
             using type = TTag::AutoDiffLocalLinearizerTPFA;
@@ -75,7 +82,7 @@ namespace Opm{
         typedef EclTransIntensiveQuantities<TypeTag> FluxIntensiveQuantities;
         typedef EclTransExtensiveQuantitiesTPFA<TypeTag> FluxExtensiveQuantities;
         typedef EclTransBaseProblem<TypeTag> FluxBaseProblem;
-        
+
         /*!
          * \brief Register all run-time parameters for the flux module.
          */
@@ -97,24 +104,6 @@ namespace Opm {
 
     }
 }
-// namespace Opm {
-//     namespace Properties {
-//         template<class TypeTag>
-//         struct Linearizer<TypeTag, TTag::EclFlowProblemTPFA> {
-//             using type = TTag::AutoDiffLocalLinearizer;
-//         };
-//     }
-// }
-
-
-// namespace Opm {
-//     namespace Properties {
-//         template<class TypeTag>
-//         struct FluxModule<TypeTag, TTag::EclFlowProblemTPFA> {
-//             using type = TTag::EclTransFluxMudule;
-//         };
-//     }
-// }
 
 int main(int argc, char** argv)
 {
