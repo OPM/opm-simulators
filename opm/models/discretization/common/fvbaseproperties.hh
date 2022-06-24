@@ -113,9 +113,6 @@ struct LocalLinearizer { using type = UndefinedProperty; };
 //! skipped
 template<class TypeTag, class MyTypeTag>
 struct LinearizeNonLocalElements { using type = UndefinedProperty; };
-//! Specify if the specialized TPFA linearizer should be used.
-template<class TypeTag, class MyTypeTag>
-struct UseTpfaLinearizer { using type = UndefinedProperty; };
 
 //! Linearizes the global non-linear system of equations
 template<class TypeTag, class MyTypeTag>

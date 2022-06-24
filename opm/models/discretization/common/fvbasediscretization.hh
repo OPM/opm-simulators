@@ -321,10 +321,6 @@ struct UseVolumetricResidual<TypeTag, TTag::FvBaseDiscretization> { static const
 template<class TypeTag>
 struct EnableExperiments<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = true; };
 
-//! Default to not using the specialized TPFA linearizer.
-template<class TypeTag>
-struct UseTpfaLinearizer<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = false; };
-
 } // namespace Opm::Properties
 
 namespace Opm {

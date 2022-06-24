@@ -25,8 +25,8 @@
  *
  * \copydoc Opm::FvBaseLinearizer
  */
-#ifndef EWOMS_FV_BASE_LINEARIZER_HH
-#define EWOMS_FV_BASE_LINEARIZER_HH
+#ifndef TPFA_LINEARIZER_HH
+#define TPFA_LINEARIZER_HH
 
 #include "fvbaseproperties.hh"
 #include "linearizationtype.hh"
@@ -51,6 +51,7 @@
 #include <exception>   // current_exception, rethrow_exception
 #include <mutex>
 
+
 namespace Opm {
 // forward declarations
 template<class TypeTag>
@@ -66,7 +67,7 @@ class EcfvDiscretization;
  * scheme for time discretization.
  */
 template<class TypeTag>
-class FvBaseLinearizer
+class TpfaLinearizer
 {
 //! \cond SKIP_THIS
     using Model = GetPropType<TypeTag, Properties::Model>;
@@ -112,17 +113,17 @@ class FvBaseLinearizer
     static const bool linearizeNonLocalElements = getPropValue<TypeTag, Properties::LinearizeNonLocalElements>();
 
     // copying the linearizer is not a good idea
-    FvBaseLinearizer(const FvBaseLinearizer&);
+    TpfaLinearizer(const TpfaLinearizer&);
 //! \endcond
 
 public:
-    FvBaseLinearizer()
+    TpfaLinearizer()
         : jacobian_()
     {
         simulatorPtr_ = 0;
     }
 
-    ~FvBaseLinearizer()
+    ~TpfaLinearizer()
     {
         auto it = elementCtx_.begin();
         const auto& endIt = elementCtx_.end();
@@ -449,10 +450,101 @@ private:
         }
     }
 
+public:
+    void setResAndJacobi(VectorBlock& res, MatrixBlock& bMat, const ADVectorBlock& resid) const
+    {
+        for (unsigned eqIdx = 0; eqIdx < numEq; eqIdx++)
+            res[eqIdx] = resid[eqIdx].value();
+
+        for (unsigned eqIdx = 0; eqIdx < numEq; eqIdx++) {
+            for (unsigned pvIdx = 0; pvIdx < numEq; pvIdx++) {
+                // A[dofIdx][focusDofIdx][eqIdx][pvIdx] is the partial derivative of
+                // the residual function 'eqIdx' for the degree of freedom 'dofIdx'
+                // with regard to the focus variable 'pvIdx' of the degree of freedom
+                // 'focusDofIdx'
+                bMat[eqIdx][pvIdx] = resid[eqIdx].derivative(pvIdx);
+            }
+        }
+    }
+
+private:
+    void linearizeGlobalTPFA_()
+    {
+        const bool well_local = false;
+        resetSystem_();
+        unsigned numCells = model_().numTotalDof();
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+        for (unsigned globI = 0; globI < numCells; globI++) {
+            const auto& neighbours = neighbours_[globI]; // this is a set but should maybe be changed
+            // accumulation term
+            double dt = simulator_().timeStepSize();
+            double volume = model_().dofTotalVolume(globI);
+            Scalar storefac = volume / dt;
+            ADVectorBlock adres(0.0);
+            const IntensiveQuantities* intQuantsInP = model_().cachedIntensiveQuantities(globI, /*timeIdx*/ 0);
+            assert(intQuantsInP);
+            const IntensiveQuantities& intQuantsIn = *intQuantsInP;
+            // intensiveQuantity(globI, 0);
+            LocalResidual::computeStorage(adres, intQuantsIn, 0);
+            adres *= storefac;
+            VectorBlock res(0.0);
+            MatrixBlock bMat(0.0);
+            setResAndJacobi(res, bMat, adres);
+            // first we use it as storage cache
+            if (model_().newtonMethod().numIterations() == 0) {
+                model_().updateCachedStorage(globI, /*timeIdx=*/1, res);
+            }
+            residual_[globI] -= model_().cachedStorage(globI, 1); //*storefac;
+            residual_[globI] += res;
+            jacobian_->addToBlock(globI, globI, bMat);
+            // wells sources for now (should be moved out)
+            if (well_local) {
+                res = 0.0;
+                bMat = 0.0;
+                adres = 0.0;
+                LocalResidual::computeSource(adres, problem_(), globI, 0);
+                adres *= -volume;
+                setResAndJacobi(res, bMat, adres);
+                residual_[globI] += res;
+                jacobian_->addToBlock(globI, globI, bMat);
+            }
+            short loc = 0;
+            for (const auto& globJ : neighbours) {
+                assert(globJ != globI);
+                res = 0.0;
+                bMat = 0.0;
+                adres = 0.0;
+                const IntensiveQuantities* intQuantsExP = model_().cachedIntensiveQuantities(globJ, /*timeIdx*/ 0);
+                assert(intQuantsExP);
+                const IntensiveQuantities& intQuantsEx = *intQuantsExP;
+                unsigned globalFocusDofIdx = globI;
+                LocalResidual::computeFlux(
+                    adres, problem_(), globalFocusDofIdx, globI, globJ, intQuantsIn, intQuantsEx, 0);
+                adres *= trans_[globI][loc];
+                setResAndJacobi(res, bMat, adres);
+                residual_[globI] += res;
+                jacobian_->addToBlock(globI, globI, bMat);
+                bMat *= -1.0;
+                jacobian_->addToBlock(globJ, globI, bMat);
+                loc++;
+            }
+        }
+        if (not(well_local)) {
+            problem_().wellModel().addReseroirSourceTerms(residual_, *jacobian_);
+        }
+        // before the first iteration of each time step, we need to update the
+        // constraints. (i.e., we assume that constraints can be time dependent, but they
+        // can't depend on the solution.)
+    }
 
     // linearize the whole system
     void linearize_()
     {
+        linearizeGlobalTPFA_();
+        return;
+
         resetSystem_();
 
         // before the first iteration of each time step, we need to update the
@@ -628,4 +720,4 @@ private:
 
 } // namespace Opm
 
-#endif
+#endif // TPFA_LINEARIZER
