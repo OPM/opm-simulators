@@ -1139,7 +1139,7 @@ addWellContribution(WellContributions& wellContribs) const
     for (int i = 0; i < numStaticWellEq; ++i)
     {
         for (int j = 0; j < numStaticWellEq; ++j) {
-            nnzValues.emplace_back(this->duneD_[0][0][i][j]);
+            nnzValues.emplace_back(this->invDuneD_[0][0][i][j]);
         }
     }
     wellContribs.addMatrix(WellContributions::MatrixType::D, colIndices.data(), nnzValues.data(), 1);
