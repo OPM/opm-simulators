@@ -49,8 +49,8 @@ namespace Opm {
 
 namespace Opm {
     namespace Properties {
-        template<class TypeTag>
-        struct Linearizer<TypeTag, TTag::EclFlowProblemTPFA> { using type = LinearizerTPFA<TypeTag>; };
+        // template<class TypeTag>
+        // struct Linearizer<TypeTag, TTag::EclFlowProblemTPFA> { using type = LinearizerTPFA<TypeTag>; };
         template<class TypeTag>
         struct LocalLinearizerSplice<TypeTag, TTag::EclFlowProblemTPFA> {
             using type = TTag::AutoDiffLocalLinearizerTPFA;
