@@ -24,7 +24,7 @@
 #include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
 #include <opm/models/blackoil/blackoilintensivequantitiessimple.hh>
 #include <opm/models/discretization/common/fvbaselocalresidualtpfa.hh>
-#include <opm/models/discretization/common/fvbaseadlocallinearizertpfa.hh>
+//#include <opm/models/discretization/common/fvbaseadlocallinearizertpfa.hh>
 #include <opm/models/discretization/common/smallelementcontext.hh>
 #include <ebos/eclfluxmoduletpfa.hh>
 #include <ebos/eclproblemtpfa.hh>
@@ -58,10 +58,10 @@ namespace Opm {
         template<class TypeTag>
         struct UseTpfaLinearizer<TypeTag, TTag::EclFlowProblemTPFA> { static constexpr bool value = true; };
 
-        template<class TypeTag>
-        struct LocalLinearizerSplice<TypeTag, TTag::EclFlowProblemTPFA> {
-            using type = TTag::AutoDiffLocalLinearizerTPFA;
-        };
+        // template<class TypeTag>
+        // struct LocalLinearizerSplice<TypeTag, TTag::EclFlowProblemTPFA> {
+        //     using type = TTag::AutoDiffLocalLinearizerTPFA;
+        // };
     }
 }
 namespace Opm {
