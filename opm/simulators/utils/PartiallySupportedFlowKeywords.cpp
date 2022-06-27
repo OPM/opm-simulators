@@ -83,6 +83,14 @@ partiallySupported()
             },
          },
          {
+             "FAULTS",
+             {
+                 {1, {false, [](const std::string& val){ return val.size()<=8;},
+                      "FAULTS(FLTNAME): Only names of faults up to 8 characters are supported. Will ignore excess characters."
+                     }
+                 },},
+         },
+         {
             "GCONINJE",
             {
                {10,{true, allow_values<std::string> {"RATE", "NETV", "RESV", "VOID"}, "GCONINJE(GUIPHASE): only RATE/NETV/RESV/VOID are supported - will STOP"}}, // GUIDE_RATE_DEF
@@ -122,6 +130,15 @@ partiallySupported()
             {
                {3,{false, allow_values<std::string> {"NONE"}, "MISCIBLE(MISOPT): only option NONE is supported – value ignored"}}, // TWOPOINT
             },
+         },
+         {
+             "MULTFLT",
+             {
+                 {1, {false, [](const std::string& val){ return val.size()<=8;},
+                      "MLTFLT(FLTNAME): Only names of faults up to 8 characters are supported. Will ignore excess characters."
+                     }
+                 },
+             },
          },
          {
             "MULTIREG",
@@ -197,6 +214,15 @@ partiallySupported()
                {20,{false, allow_values<std::string> {}, "TABDIMS(NOTUSED): should be defaulted (1*) - ignored as not used"}}, // ITEM20_NOT_USED
                {25,{false, allow_values<std::string> {}, "TABDIMS(RESVED): should be defaulted (1*) - ignored as not used"}}, // RESERVED
             },
+         },
+         {
+             "THPRESFT",
+             {
+                 {1, {false, [](const std::string& val){ return val.size()<=8;},
+                      "THPRESFT(FLTNAME): Only names of faults up to 8 characters are supported. Will ignore excess characters."
+                     }
+                 },
+             },
          },
          {
             "TRACER",
