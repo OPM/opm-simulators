@@ -2390,14 +2390,14 @@ guideRateUpdateIsNeeded(const int reportStepIdx) const {
     });
     if (!need_update && this->report_step_starts_) {
         const auto& events = this->schedule()[reportStepIdx].wellgroup_events();
-        const auto effective_events_mask = ScheduleEvents::WELL_STATUS_CHANGE
+        constexpr auto effective_events_mask = ScheduleEvents::WELL_STATUS_CHANGE
             + ScheduleEvents::INJECTION_TYPE_CHANGED
             + ScheduleEvents::WELL_SWITCHED_INJECTOR_PRODUCER
             + ScheduleEvents::NEW_WELL;
 
         need_update = std::any_of(this->well_container_generic_.begin(),
                               this->well_container_generic_.end(),
-            [&events, effective_events_mask](const WellInterfaceGeneric* well)
+            [&events](const WellInterfaceGeneric* well)
         {
             return events.hasEvent(well->name(), effective_events_mask);
         });
