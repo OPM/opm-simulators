@@ -88,77 +88,28 @@ public:
     static std::string canonicalDeckPath(const std::string& caseName);
 
     /*!
-     * \brief Creates an Opm::parseContext object assuming that the parameters are ready.
-     */
-    static std::unique_ptr<ParseContext> createParseContext(const std::string& ignoredKeywords,
-                                                            bool eclStrictParsing);
-
-    /*!
-     * \brief Set the wall time which was spend externally to set up the external data structures
-     *
-     * i.e., the objects specified via the other setExternal*() methods.
-     */
-    static void setExternalSetupTime(double t)
-    { externalSetupTime_ = t; }
-
-    /*!
      * \brief Returns the wall time required to set up the simulator before it was born.
      */
-    static double externalSetupTime()
-    { return externalSetupTime_; }
+    static double setupTime()
+    { return setupTime_; }
 
     /*!
-     * \brief Set the Opm::ParseContext object which ought to be used for parsing the deck and creating the Opm::EclipseState object.
+     * \brief Read a deck.
+     * \param filename file to read
      */
-    static void setExternalParseContext(std::unique_ptr<ParseContext> parseContext);
+    static void readDeck(const std::string& filename);
 
     /*!
-     * \brief Set the Opm::ErrorGuard object which ought to be used for parsing the deck and creating the Opm::EclipseState object.
+     * \brief Set the simulation configuration objects.
      */
-    static void setExternalErrorGuard(std::unique_ptr<ErrorGuard> errorGuard);
-
-    /*!
-     * \brief Set the Opm::Deck object which ought to be used when the simulator vanguard
-     *        is instantiated.
-     *
-     * This is basically an optimization: In cases where the ECL input deck must be
-     * examined to decide which simulator ought to be used, this avoids having to parse
-     * the input twice. When this method is used, the caller is responsible for lifetime
-     * management of these two objects, i.e., they are not allowed to be deleted as long
-     * as the simulator vanguard object is alive.
-     */
-    static void setExternalDeck(std::shared_ptr<Deck> deck);
-    static void setExternalDeck(std::unique_ptr<Deck> deck);
-
-    /*!
-     * \brief Set the Opm::EclipseState object which ought to be used when the simulator
-     *        vanguard is instantiated.
-     */
-    static void setExternalEclState(std::shared_ptr<EclipseState> eclState);
-    static void setExternalEclState(std::unique_ptr<EclipseState> eclState);
-
-    /*!
-     * \brief Set the schedule object.
-     *
-     * The lifetime of this object is not managed by the vanguard, i.e., the object must
-     * stay valid until after the vanguard gets destroyed.
-     */
-    static void setExternalSchedule(std::shared_ptr<Schedule> schedule);
-    static void setExternalSchedule(std::unique_ptr<Schedule> schedule);
-
-    /*!
-     * \brief Set the summary configuration object.
-     *
-     * The lifetime of this object is not managed by the vanguard, i.e., the object must
-     * stay valid until after the vanguard gets destroyed.
-     */
-    static void setExternalSummaryConfig(std::shared_ptr<SummaryConfig> summaryConfig);
-    static void setExternalSummaryConfig(std::unique_ptr<SummaryConfig> summaryConfig);
-
-    static void setExternalUDQState(std::unique_ptr<UDQState> udqState);
-    static void setExternalActionState(std::unique_ptr<Action::State> actionState);
-    static void setExternalWTestState(std::unique_ptr<WellTestState> wtestState);
-
+    static void setParams(double setupTime,
+                          std::shared_ptr<Deck> deck,
+                          std::shared_ptr<EclipseState> eclState,
+                          std::shared_ptr<Schedule> schedule,
+                          std::unique_ptr<UDQState> udqState,
+                          std::unique_ptr<Action::State> actionState,
+                          std::unique_ptr<WellTestState> wtestState,
+                          std::shared_ptr<SummaryConfig> summaryConfig);
 
     /*!
      * \brief Return a reference to the parsed ECL deck.
@@ -316,20 +267,9 @@ protected:
 
     void init();
 
-    static double externalSetupTime_;
-    static std::unique_ptr<ParseContext> externalParseContext_;
-    static std::unique_ptr<ErrorGuard> externalErrorGuard_;
+    static double setupTime_;
 
     // These variables may be owned by both Python and the simulator
-    static std::shared_ptr<Deck> externalDeck_;
-    static std::shared_ptr<EclipseState> externalEclState_;
-    static std::shared_ptr<Schedule> externalEclSchedule_;
-    static std::shared_ptr<SummaryConfig> externalEclSummaryConfig_;
-
-    static bool externalDeckSet_;
-    static std::unique_ptr<UDQState> externalUDQState_;
-    static std::unique_ptr<Action::State> externalActionState_;
-    static std::unique_ptr<WellTestState> externalWTestState_;
     static std::unique_ptr<Parallel::Communication> comm_;
 
     std::string caseName_;
@@ -351,25 +291,23 @@ protected:
     bool enableExperiments_;
 
     std::unique_ptr<SummaryState> summaryState_;
-    std::unique_ptr<UDQState> udqState_;
-    std::unique_ptr<Action::State> actionState_;
+    static std::unique_ptr<UDQState> udqState_;
+    static std::unique_ptr<Action::State> actionState_;
 
     // Observe that this instance is handled differently from the other state
     // variables, it will only be initialized for a restart run. While
     // initializing a restarted run this instance is transferred to the WGState
     // member in the well model.
-    std::unique_ptr<WellTestState> wtestState_;
+    static std::unique_ptr<WellTestState> wtestState_;
 
     // these attributes point  either to the internal  or to the external version of the
     // parser objects.
-    std::unique_ptr<ParseContext> parseContext_;
-    std::unique_ptr<ErrorGuard> errorGuard_;
     std::shared_ptr<Python> python;
     // These variables may be owned by both Python and the simulator
-    std::shared_ptr<Deck> deck_;
-    std::shared_ptr<EclipseState> eclState_;
-    std::shared_ptr<Schedule> eclSchedule_;
-    std::shared_ptr<SummaryConfig> eclSummaryConfig_;
+    static std::shared_ptr<Deck> deck_;
+    static std::shared_ptr<EclipseState> eclState_;
+    static std::shared_ptr<Schedule> eclSchedule_;
+    static std::shared_ptr<SummaryConfig> eclSummaryConfig_;
 
     /*! \brief Information about wells in parallel
      *

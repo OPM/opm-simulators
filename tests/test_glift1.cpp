@@ -90,7 +90,9 @@ initSimulator(const char *filename)
 
     Opm::setupParameters_<TypeTag>(/*argc=*/sizeof(argv)/sizeof(argv[0]), argv, /*registerParams=*/true);
 
-    return std::unique_ptr<Simulator>(new Simulator);
+    Opm::EclGenericVanguard::readDeck(filename);
+
+    return std::make_unique<Simulator>();
 }
 
 

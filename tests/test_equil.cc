@@ -26,15 +26,17 @@
 
 #include <ebos/equil/equilibrationhelpers.hh>
 #include <ebos/eclproblem.hh>
-#include <opm/models/utils/start.hh>
-
-#include <opm/simulators/wells/BlackoilWellModel.hpp>
-#include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
+#include <ebos/eclgenericvanguard.hh>
 
 #include <opm/grid/UnstructuredGrid.h>
 #include <opm/grid/GridManager.hpp>
 
 #include <opm/input/eclipse/Units/Units.hpp>
+
+#include <opm/models/utils/start.hh>
+
+#include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
+#include <opm/simulators/wells/BlackoilWellModel.hpp>
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/misc/mpimanager.hh>
@@ -103,7 +105,9 @@ initSimulator(const char *filename)
 
     Opm::setupParameters_<TypeTag>(/*argc=*/sizeof(argv)/sizeof(argv[0]), argv, /*registerParams=*/false);
 
-    return std::unique_ptr<Simulator>(new Simulator);
+    Opm::EclGenericVanguard::readDeck(filename);
+
+    return std::make_unique<Simulator>();
 }
 
 template <class GridView>

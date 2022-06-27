@@ -61,20 +61,6 @@ public:
 }}
 
 namespace Opm {
-void flowEbosMICPSetDeck(double setupTime, std::shared_ptr<Deck> deck,
-                                    std::shared_ptr<EclipseState> eclState,
-                                    std::shared_ptr<Schedule> schedule,
-                                    std::shared_ptr<SummaryConfig> summaryConfig)
-{
-    using TypeTag = Properties::TTag::EclFlowMICPProblem;
-    using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
-
-    Vanguard::setExternalSetupTime(setupTime);
-    Vanguard::setExternalDeck(std::move(deck));
-    Vanguard::setExternalEclState(std::move(eclState));
-    Vanguard::setExternalSchedule(std::move(schedule));
-    Vanguard::setExternalSummaryConfig(std::move(summaryConfig));
-}
 
 // ----------------- Main program -----------------
 int flowEbosMICPMain(int argc, char** argv, bool outputCout, bool outputFiles)

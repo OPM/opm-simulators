@@ -29,6 +29,7 @@
 #include <opm/input/eclipse/Deck/Deck.hpp>
 #include <opm/input/eclipse/EclipseState/Aquifer/NumericalAquifer/NumericalAquiferCell.hpp>
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/Parser/ErrorGuard.hpp>
 #include <opm/input/eclipse/Schedule/Action/State.hpp>
 #include <opm/input/eclipse/Schedule/OilVaporizationProperties.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
@@ -36,13 +37,12 @@
 #include <opm/input/eclipse/Schedule/SummaryState.hpp>
 #include <opm/input/eclipse/Schedule/UDQ/UDQState.hpp>
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
-#include <opm/input/eclipse/Parser/ErrorGuard.hpp>
-#include <opm/input/eclipse/Parser/ParseContext.hpp>
 #include <opm/input/eclipse/Python/Python.hpp>
 #include <opm/simulators/utils/readDeck.hpp>
 
 #include <dune/common/version.hh>
 #include <dune/common/parallel/mpihelper.hh>
+#include <dune/common/timer.hh>
 
 #if HAVE_MPI
 #include <mpi.h>
@@ -53,17 +53,14 @@
 
 namespace Opm {
 
-double EclGenericVanguard::externalSetupTime_ = 0.0;
-std::unique_ptr<ParseContext> EclGenericVanguard::externalParseContext_;
-std::unique_ptr<ErrorGuard> EclGenericVanguard::externalErrorGuard_;
-std::shared_ptr<Deck> EclGenericVanguard::externalDeck_;
-bool EclGenericVanguard::externalDeckSet_ = false;
-std::shared_ptr<EclipseState> EclGenericVanguard::externalEclState_;
-std::shared_ptr<Schedule> EclGenericVanguard::externalEclSchedule_;
-std::shared_ptr<SummaryConfig> EclGenericVanguard::externalEclSummaryConfig_;
-std::unique_ptr<UDQState> EclGenericVanguard::externalUDQState_;
-std::unique_ptr<Action::State> EclGenericVanguard::externalActionState_;
-std::unique_ptr<WellTestState> EclGenericVanguard::externalWTestState_;
+double EclGenericVanguard::setupTime_ = 0.0;
+std::shared_ptr<Deck> EclGenericVanguard::deck_;
+std::shared_ptr<EclipseState> EclGenericVanguard::eclState_;
+std::shared_ptr<Schedule> EclGenericVanguard::eclSchedule_;
+std::shared_ptr<SummaryConfig> EclGenericVanguard::eclSummaryConfig_;
+std::unique_ptr<UDQState> EclGenericVanguard::udqState_;
+std::unique_ptr<Action::State> EclGenericVanguard::actionState_;
+std::unique_ptr<WellTestState> EclGenericVanguard::wtestState_;
 std::unique_ptr<Parallel::Communication> EclGenericVanguard::comm_;
 
 EclGenericVanguard::EclGenericVanguard()
@@ -73,73 +70,56 @@ EclGenericVanguard::EclGenericVanguard()
 
 EclGenericVanguard::~EclGenericVanguard() = default;
 
-void EclGenericVanguard::setExternalParseContext(std::unique_ptr<ParseContext> parseContext)
+void EclGenericVanguard::setParams(double setupTime,
+                                   std::shared_ptr<Deck> deck,
+                                   std::shared_ptr<EclipseState> eclState,
+                                   std::shared_ptr<Schedule> schedule,
+                                   std::unique_ptr<UDQState> udqState,
+                                   std::unique_ptr<Action::State> actionState,
+                                   std::unique_ptr<WellTestState> wtestState,
+                                   std::shared_ptr<SummaryConfig> summaryConfig)
 {
-    externalParseContext_ = std::move(parseContext);
+    EclGenericVanguard::setupTime_ = setupTime;
+    EclGenericVanguard::deck_ = std::move(deck);
+    EclGenericVanguard::eclState_ = std::move(eclState);
+    EclGenericVanguard::eclSchedule_ = std::move(schedule);
+    EclGenericVanguard::udqState_ = std::move(udqState);
+    EclGenericVanguard::actionState_ = std::move(actionState);
+    EclGenericVanguard::wtestState_ = std::move(wtestState);
+    EclGenericVanguard::eclSummaryConfig_ = std::move(summaryConfig);
 }
 
-void EclGenericVanguard::setExternalErrorGuard(std::unique_ptr<ErrorGuard> errorGuard)
+void EclGenericVanguard::readDeck(const std::string& filename)
 {
-    externalErrorGuard_ = std::move(errorGuard);
-}
+    Dune::Timer setupTimer;
+    setupTimer.start();
 
-void EclGenericVanguard::setExternalSchedule(std::shared_ptr<Schedule> schedule)
-{
-    externalEclSchedule_ = std::move(schedule);
-}
+    std::shared_ptr<Opm::Deck> deck;
+    std::shared_ptr<Opm::EclipseState> eclipseState;
+    std::shared_ptr<Opm::Schedule> schedule;
+    std::unique_ptr<Opm::UDQState> udqState;
+    std::unique_ptr<Opm::Action::State> actionState;
+    std::unique_ptr<Opm::WellTestState> wtestState;
+    std::shared_ptr<Opm::SummaryConfig> summaryConfig;
 
-void EclGenericVanguard::setExternalSchedule(std::unique_ptr<Schedule> schedule)
-{
-    externalEclSchedule_ = std::move(schedule);
-}
+    auto parseContext =
+        std::make_unique<ParseContext>(std::vector<std::pair<std::string , InputError::Action>>
+                                            {{ParseContext::PARSE_RANDOM_SLASH, InputError::IGNORE},
+                                             {ParseContext::PARSE_MISSING_DIMS_KEYWORD, InputError::WARN},
+                                             {ParseContext::SUMMARY_UNKNOWN_WELL, InputError::WARN},
+                                             {ParseContext::SUMMARY_UNKNOWN_GROUP, InputError::WARN}});
 
-void EclGenericVanguard::setExternalSummaryConfig(
-    std::shared_ptr<SummaryConfig> summaryConfig)
-{
-    externalEclSummaryConfig_ = std::move(summaryConfig);
-}
+    Opm::readDeck(EclGenericVanguard::comm(),
+                  filename, deck, eclipseState, schedule, udqState,
+                  actionState, wtestState,
+                  summaryConfig, nullptr, nullptr, std::move(parseContext),
+                  false, false, {});
 
-void EclGenericVanguard::setExternalSummaryConfig(
-    std::unique_ptr<SummaryConfig> summaryConfig)
-{
-    externalEclSummaryConfig_ = std::move(summaryConfig);
-}
-
-void EclGenericVanguard::setExternalDeck(std::shared_ptr<Deck> deck)
-{
-    externalDeck_ = std::move(deck);
-    externalDeckSet_ = true;
-}
-
-void EclGenericVanguard::setExternalDeck(std::unique_ptr<Deck> deck)
-{
-    externalDeck_ = std::move(deck);
-    externalDeckSet_ = true;
-}
-
-void EclGenericVanguard::setExternalEclState(std::shared_ptr<EclipseState> eclState)
-{
-    externalEclState_ = std::move(eclState);
-}
-
-void EclGenericVanguard::setExternalEclState(std::unique_ptr<EclipseState> eclState)
-{
-    externalEclState_ = std::move(eclState);
-}
-
-void EclGenericVanguard::setExternalUDQState(std::unique_ptr<UDQState> udqState)
-{
-    externalUDQState_ = std::move(udqState);
-}
-
-void EclGenericVanguard::setExternalActionState(std::unique_ptr<Action::State> actionState)
-{
-    externalActionState_ = std::move(actionState);
-}
-
-void EclGenericVanguard::setExternalWTestState(std::unique_ptr<WellTestState> wtestState)
-{
-    externalWTestState_ = std::move(wtestState);
+    EclGenericVanguard::setParams(setupTimer.elapsed(),
+                                  deck, eclipseState, schedule,
+                                  std::move(udqState),
+                                  std::move(actionState),
+                                  std::move(wtestState), summaryConfig);
 }
 
 std::string EclGenericVanguard::canonicalDeckPath(const std::string& caseName)
@@ -165,40 +145,6 @@ std::string EclGenericVanguard::canonicalDeckPath(const std::string& caseName)
     }
 
     throw std::invalid_argument("Cannot find input case '"+caseName+"'");
-}
-
-std::unique_ptr<ParseContext> EclGenericVanguard::createParseContext(const std::string& ignoredKeywords,
-                                                                     bool eclStrictParsing)
-{
-    typedef std::pair<std::string, InputError::Action> ParseModePair;
-    typedef std::vector<ParseModePair> ParseModePairs;
-    ParseModePairs tmp;
-    tmp.emplace_back(ParseContext::PARSE_RANDOM_SLASH, InputError::IGNORE);
-    tmp.emplace_back(ParseContext::PARSE_MISSING_DIMS_KEYWORD, InputError::WARN);
-    tmp.emplace_back(ParseContext::SUMMARY_UNKNOWN_WELL, InputError::WARN);
-    tmp.emplace_back(ParseContext::SUMMARY_UNKNOWN_GROUP, InputError::WARN);
-    tmp.emplace_back(ParseContext::PARSE_EXTRA_RECORDS, InputError::WARN);
-
-    auto parseContext = std::make_unique<ParseContext>(tmp);
-
-    if (!ignoredKeywords.empty()) {
-        size_t pos;
-        size_t offset = 0;
-        while (true) {
-            pos = ignoredKeywords.find(':', offset);
-            if (pos == std::string::npos) {
-                parseContext->ignoreKeyword(ignoredKeywords.substr(offset));
-                break;
-            }
-            parseContext->ignoreKeyword(ignoredKeywords.substr(offset, pos - offset));
-            offset = pos + 1;
-        }
-    }
-
-    if (eclStrictParsing)
-        parseContext->update(InputError::DELAYED_EXIT1);
-
-    return parseContext;
 }
 
 void EclGenericVanguard::updateOutputDir_(std::string outputDir,
@@ -261,60 +207,6 @@ void EclGenericVanguard::init()
         caseName_ = rawCaseName;
         std::transform(caseName_.begin(), caseName_.end(), caseName_.begin(), ::toupper);
     }
-
-    std::unique_ptr<ErrorGuard> errorGuard = nullptr;
-
-    // Check that we are in one of the known configurations for external variables
-    // and move them to internal
-    if (externalDeck_)
-    {
-        deck_ = std::move(externalDeck_);
-
-        if (externalParseContext_ && externalErrorGuard_ )
-        {
-            parseContext_ = std::move(externalParseContext_);
-            errorGuard = std::move(externalErrorGuard_);
-        }
-        else if(externalEclState_ && externalEclSchedule_ && externalEclSummaryConfig_)
-        {
-            eclState_ = std::move(externalEclState_);
-            eclSchedule_ = std::move(externalEclSchedule_);
-            eclSummaryConfig_ = std::move(externalEclSummaryConfig_);
-        }
-        else
-        {
-            OPM_THROW(std::logic_error, "Either parse context and error guard or ECL state, schedule, and summary config need to be"
-                          << " set externally.");
-        }
-    }
-    else if (externalParseContext_)
-    {
-        parseContext_ = std::move(externalParseContext_);
-    }
-    else
-    {
-        parseContext_ = createParseContext(ignoredKeywords_, eclStrictParsing_);
-    }
-
-    readDeck(EclGenericVanguard::comm(), fileName_, deck_, eclState_, eclSchedule_, udqState_, actionState_, wtestState_,
-             eclSummaryConfig_, std::move(errorGuard), python,
-             std::move(parseContext_), /* initFromRestart = */ false,
-             /* checkDeck = */ enableExperiments_, outputInterval_);
-
-    if (EclGenericVanguard::externalUDQState_)
-        this->udqState_ = std::move(EclGenericVanguard::externalUDQState_);
-    else
-        this->udqState_ = std::make_unique<UDQState>( this->eclSchedule_->getUDQConfig(0).params().undefinedValue() );
-
-    if (EclGenericVanguard::externalActionState_)
-        this->actionState_ = std::move(EclGenericVanguard::externalActionState_);
-    else
-        this->actionState_ = std::make_unique<Action::State>();
-
-    if (EclGenericVanguard::externalWTestState_)
-        this->wtestState_ = std::move(EclGenericVanguard::externalWTestState_);
-    else
-        this->wtestState_ = std::make_unique<WellTestState>();
 
     this->summaryState_ = std::make_unique<SummaryState>( TimeService::from_time_t(this->eclSchedule_->getStartTime() ));
 

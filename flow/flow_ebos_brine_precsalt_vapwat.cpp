@@ -47,21 +47,6 @@ struct EnableEvaporation<TypeTag, TTag::EclFlowBrinePrecsaltVapwatProblem> {
 }}
 
 namespace Opm {
-void flowEbosBrinePrecsaltVapwatSetDeck(double setupTime, std::shared_ptr<Deck> deck,
-                          std::shared_ptr<EclipseState> eclState,
-                          std::shared_ptr<Schedule> schedule,
-                          std::shared_ptr<SummaryConfig> summaryConfig)
-{
-    using TypeTag = Properties::TTag::EclFlowBrinePrecsaltVapwatProblem;
-    using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
-
-    Vanguard::setExternalSetupTime(setupTime);
-    Vanguard::setExternalDeck(std::move(deck));
-    Vanguard::setExternalEclState(std::move(eclState));
-    Vanguard::setExternalSchedule(std::move(schedule));
-    Vanguard::setExternalSummaryConfig(std::move(summaryConfig));
-}
-
 
 // ----------------- Main program -----------------
 int flowEbosBrinePrecsaltVapwatMain(int argc, char** argv, bool outputCout, bool outputFiles)

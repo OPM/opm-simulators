@@ -24,27 +24,6 @@
 
 namespace Opm {
 
-void flowEbosBlackoilSetDeck(double setupTime, std::shared_ptr<Deck> deck,
-                             std::shared_ptr<EclipseState> eclState,
-                             std::shared_ptr<Schedule> schedule,
-                             std::unique_ptr<UDQState> udqState,
-                             std::unique_ptr<Action::State> actionState,
-                             std::unique_ptr<WellTestState> wtestState,
-                             std::shared_ptr<SummaryConfig> summaryConfig)
-{
-    using TypeTag = Properties::TTag::EclFlowProblem;
-    using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
-
-    Vanguard::setExternalSetupTime(setupTime);
-    Vanguard::setExternalDeck(std::move(deck));
-    Vanguard::setExternalEclState(std::move(eclState));
-    Vanguard::setExternalSchedule(std::move(schedule));
-    Vanguard::setExternalUDQState(std::move(udqState));
-    Vanguard::setExternalActionState(std::move(actionState));
-    Vanguard::setExternalWTestState(std::move(wtestState));
-    Vanguard::setExternalSummaryConfig(std::move(summaryConfig));
-}
-
 std::unique_ptr<FlowMainEbos<Properties::TTag::EclFlowProblem>>
 flowEbosBlackoilMainInit(int argc, char** argv, bool outputCout, bool outputFiles)
 {
