@@ -1114,7 +1114,7 @@ namespace Opm {
 
         template<class G, class T>
         typename std::enable_if<!std::is_same<G,Dune::CpGrid>::value, bool>::type
-        isNumericalAquiferCell(const G& grid, const T& elem)
+        isNumericalAquiferCell(const G&, const T&)
         {
             return false;
         }
