@@ -289,7 +289,10 @@ testPrecRepeating(const Opm::PropertyTree& prm, const std::string& matrix_filena
             throw std::runtime_error("Could not read matrix file");
         }
         using M = Dune::BCRSMatrix<Dune::FieldMatrix<double, bz, bz>>;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
         readMatrixMarket(reinterpret_cast<M&>(matrix), mfile); // Hack to avoid hassle
+#pragma GCC diagnostic pop
     }
     Vector rhs;
     {
