@@ -60,6 +60,8 @@ public:
 
     static std::unique_ptr<Preconditioner> create(PreconditionerType type, int verbosity, ILUReorder opencl_ilu_reorder);
 
+    virtual ~Preconditioner() = default;
+
     // nested Preconditioners might need to override this
     virtual void setOpencl(std::shared_ptr<cl::Context>& context, std::shared_ptr<cl::CommandQueue>& queue);
 
