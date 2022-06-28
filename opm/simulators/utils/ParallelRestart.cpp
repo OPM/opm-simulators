@@ -34,6 +34,7 @@
 #include <opm/output/data/GuideRateValue.hpp>
 #include <opm/output/data/Solution.hpp>
 #include <opm/output/data/Wells.hpp>
+#include <opm/input/eclipse/EclipseState/Util/OrderedMap.hpp>
 #include <opm/output/eclipse/EclipseIO.hpp>
 #include <opm/output/eclipse/RestartValue.hpp>
 #include <opm/input/eclipse/Schedule/SummaryState.hpp>
@@ -1090,6 +1091,8 @@ INSTANTIATE_PACK(std::map<std::string,double>)
 INSTANTIATE_PACK(std::map<int,int>)
 INSTANTIATE_PACK(std::map<int,data::AquiferData>)
 INSTANTIATE_PACK(std::unordered_map<std::string,size_t>)
+INSTANTIATE_PACK(std::unordered_map<std::string,size_t,Opm::OrderedMapDetail::TruncatedStringHash<std::string::npos>, Opm::OrderedMapDetail::TruncatedStringEquals<std::string::npos>>)
+INSTANTIATE_PACK(std::unordered_map<std::string,size_t,Opm::OrderedMapDetail::TruncatedStringHash<8>, Opm::OrderedMapDetail::TruncatedStringEquals<8>>)
 INSTANTIATE_PACK(std::unordered_map<std::string,std::string>)
 INSTANTIATE_PACK(std::unordered_set<std::string>)
 INSTANTIATE_PACK(std::set<std::string>)
