@@ -470,7 +470,7 @@ namespace Opm
         Vector getTrueImpesWeights(int pressureVarIndex,ElemCtx& elemCtx) const
         {
             Vector weights(rhs_->size());
-            Amg::getTrueImpesWeights(pressureVarIndex, weights, simulator_.vanguard().gridView(),
+            Amg::getTrueImpesWeights<Evaluation>(pressureVarIndex, weights, simulator_.vanguard().gridView(),
                                      elemCtx, simulator_.model(),
                                      ThreadManager::threadId());
             return weights;
