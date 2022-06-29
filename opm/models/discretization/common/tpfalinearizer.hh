@@ -31,9 +31,6 @@
 #include "fvbaseproperties.hh"
 #include "linearizationtype.hh"
 
-#include <opm/models/parallel/gridcommhandles.hh>
-#include <opm/models/parallel/threadmanager.hh>
-#include <opm/models/parallel/threadedentityiterator.hh>
 #include <opm/models/discretization/common/baseauxiliarymodule.hh>
 
 #include <opm/material/common/Exceptions.hpp>
@@ -71,15 +68,11 @@ class TpfaLinearizer
 {
 //! \cond SKIP_THIS
     using Model = GetPropType<TypeTag, Properties::Model>;
-    using Discretization = GetPropType<TypeTag, Properties::Discretization>;
     using Problem = GetPropType<TypeTag, Properties::Problem>;
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
-    using DofMapper = GetPropType<TypeTag, Properties::DofMapper>;
-    using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
-    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
     using SolutionVector = GetPropType<TypeTag, Properties::SolutionVector>;
     using GlobalEqVector = GetPropType<TypeTag, Properties::GlobalEqVector>;
@@ -87,20 +80,13 @@ class TpfaLinearizer
     using EqVector = GetPropType<TypeTag, Properties::EqVector>;
     using Constraints = GetPropType<TypeTag, Properties::Constraints>;
     using Stencil = GetPropType<TypeTag, Properties::Stencil>;
-    using ThreadManager = GetPropType<TypeTag, Properties::ThreadManager>;
     using LocalResidual = GetPropType<TypeTag, Properties::LocalResidual>;
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
-
-    using GridCommHandleFactory = GetPropType<TypeTag, Properties::GridCommHandleFactory>;
-
-    using Toolbox = MathToolbox<Evaluation>;
 
     using Element = typename GridView::template Codim<0>::Entity;
     using ElementIterator = typename GridView::template Codim<0>::Iterator;
 
     using Vector = GlobalEqVector;
-
-    using IstlMatrix = typename SparseMatrixAdapter::IstlMatrix;
 
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { historySize = getPropValue<TypeTag, Properties::TimeDiscHistorySize>() };
@@ -108,7 +94,6 @@ class TpfaLinearizer
     using MatrixBlock = typename SparseMatrixAdapter::MatrixBlock;
     using VectorBlock = Dune::FieldVector<Scalar, numEq>;
     using ADVectorBlock = GetPropType<TypeTag, Properties::RateVector>;
-
 
     static const bool linearizeNonLocalElements = getPropValue<TypeTag, Properties::LinearizeNonLocalElements>();
 
@@ -125,10 +110,6 @@ public:
 
     ~TpfaLinearizer()
     {
-        auto it = elementCtx_.begin();
-        const auto& endIt = elementCtx_.end();
-        for (; it != endIt; ++it)
-            delete *it;
     }
 
     /*!
@@ -150,12 +131,6 @@ public:
     {
         simulatorPtr_ = &simulator;
         eraseMatrix();
-        auto it = elementCtx_.begin();
-        const auto& endIt = elementCtx_.end();
-        for (; it != endIt; ++it){
-            delete *it;
-        }
-        elementCtx_.resize(0);
     }
 
     /*!
@@ -293,8 +268,8 @@ public:
      *
      * (This object is only non-empty if the EnableConstraints property is true.)
      */
-    const std::map<unsigned, Constraints>& constraintsMap() const
-    { return constraintsMap_; }
+    const std::map<unsigned, Constraints> constraintsMap() const
+    { return {}; }
 
 private:
     Simulator& simulator_()
@@ -315,12 +290,6 @@ private:
     const GridView& gridView_() const
     { return problem_().gridView(); }
 
-    const ElementMapper& elementMapper_() const
-    { return model_().elementMapper(); }
-
-    const DofMapper& dofMapper_() const
-    { return model_().dofMapper(); }
-
     void initFirstIteration_()
     {
         // initialize the BCRS matrix for the Jacobian of the residual function
@@ -329,11 +298,6 @@ private:
         // initialize the Jacobian matrix and the vector for the residual function
         residual_.resize(model_().numTotalDof());
         resetSystem_();
-
-        // create the per-thread context objects
-        elementCtx_.resize(ThreadManager::maxThreads());
-        for (unsigned threadId = 0; threadId != ThreadManager::maxThreads(); ++ threadId)
-            elementCtx_[threadId] = new ElementContext(simulator_());
     }
 
     // Construct the BCRS matrix for the Jacobian of the residual function
@@ -363,6 +327,9 @@ private:
             }
         }
 
+        // Do not include auxiliary connections in the linearization sparsity pattern.
+        auto reservoirSparsityPattern = sparsityPattern;
+
         // add the additional neighbors and degrees of freedom caused by the auxiliary
         // equations
         size_t numAuxMod = model.numAuxiliaryModules();
@@ -375,15 +342,17 @@ private:
         // create matrix structure based on sparsity pattern
         jacobian_->reserve(sparsityPattern);
 
+        // Now generate the neighbours_ and trans_ structures for the linearization loop.
+        // Those should not include an entry for the cell itself.
         for (unsigned globI = 0; globI < model.numTotalDof(); globI++) {
-            sparsityPattern[globI].erase(globI);
+            reservoirSparsityPattern[globI].erase(globI);
         }
         unsigned numCells = model.numTotalDof();
         neighbours_.reserve(numCells, 6 * numCells);
         trans_.reserve(numCells, 6 * numCells);
         std::vector<double> loctrans;
         for (unsigned globI = 0; globI < numCells; globI++) {
-            const auto& cells = sparsityPattern[globI];
+            const auto& cells = reservoirSparsityPattern[globI];
             neighbours_.appendRow(cells.begin(), cells.end());
             unsigned n = cells.size();
             loctrans.resize(n);
@@ -404,52 +373,6 @@ private:
         jacobian_->clear();
     }
 
-    // query the problem for all constraint degrees of freedom. note that this method is
-    // quite involved and is thus relatively slow.
-    void updateConstraintsMap_()
-    {
-        if (!enableConstraints_())
-            // constraints are not explictly enabled, so we don't need to consider them!
-            return;
-
-        constraintsMap_.clear();
-
-        // loop over all elements...
-        ThreadedEntityIterator<GridView, /*codim=*/0> threadedElemIt(gridView_());
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-        {
-            unsigned threadId = ThreadManager::threadId();
-            ElementIterator elemIt = threadedElemIt.beginParallel();
-            for (; !threadedElemIt.isFinished(elemIt); elemIt = threadedElemIt.increment()) {
-                // create an element context (the solution-based quantities are not
-                // available here!)
-                const Element& elem = *elemIt;
-                ElementContext& elemCtx = *elementCtx_[threadId];
-                elemCtx.updateStencil(elem);
-
-                // check if the problem wants to constrain any degree of the current
-                // element's freedom. if yes, add the constraint to the map.
-                for (unsigned primaryDofIdx = 0;
-                     primaryDofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0);
-                     ++ primaryDofIdx)
-                {
-                    Constraints constraints;
-                    elemCtx.problem().constraints(constraints,
-                                                  elemCtx,
-                                                  primaryDofIdx,
-                                                  /*timeIdx=*/0);
-                    if (constraints.isActive()) {
-                        unsigned globI = elemCtx.globalSpaceIndex(primaryDofIdx, /*timeIdx=*/0);
-                        constraintsMap_[globI] = constraints;
-                        continue;
-                    }
-                }
-            }
-        }
-    }
-
 public:
     void setResAndJacobi(VectorBlock& res, MatrixBlock& bMat, const ADVectorBlock& resid) const
     {
@@ -468,7 +391,7 @@ public:
     }
 
 private:
-    void linearizeGlobalTPFA_()
+    void linearize_()
     {
         const bool well_local = false;
         resetSystem_();
@@ -492,6 +415,7 @@ private:
             VectorBlock res(0.0);
             MatrixBlock bMat(0.0);
             setResAndJacobi(res, bMat, adres);
+            // TODO: check recycleFirst etc.
             // first we use it as storage cache
             if (model_().newtonMethod().numIterations() == 0) {
                 model_().updateCachedStorage(globI, /*timeIdx=*/1, res);
@@ -539,170 +463,7 @@ private:
         // can't depend on the solution.)
     }
 
-    // linearize the whole system
-    void linearize_()
-    {
-        linearizeGlobalTPFA_();
-        return;
-
-        resetSystem_();
-
-        // before the first iteration of each time step, we need to update the
-        // constraints. (i.e., we assume that constraints can be time dependent, but they
-        // can't depend on the solution.)
-        if (model_().newtonMethod().numIterations() == 0)
-            updateConstraintsMap_();
-
-        applyConstraintsToSolution_();
-
-        // to avoid a race condition if two threads handle an exception at the same time,
-        // we use an explicit lock to control access to the exception storage object
-        // amongst thread-local handlers
-        std::mutex exceptionLock;
-
-        // storage to any exception that needs to be bridged out of the
-        // parallel block below. initialized to null to indicate no exception
-        std::exception_ptr exceptionPtr = nullptr;
-
-        // relinearize the elements...
-        ThreadedEntityIterator<GridView, /*codim=*/0> threadedElemIt(gridView_());
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-        {
-            ElementIterator elemIt = threadedElemIt.beginParallel();
-            ElementIterator nextElemIt = elemIt;
-            try {
-                for (; !threadedElemIt.isFinished(elemIt); elemIt = nextElemIt) {
-                    // give the model and the problem a chance to prefetch the data required
-                    // to linearize the next element, but only if we need to consider it
-                    nextElemIt = threadedElemIt.increment();
-                    if (!threadedElemIt.isFinished(nextElemIt)) {
-                        const auto& nextElem = *nextElemIt;
-                        if (linearizeNonLocalElements
-                            || nextElem.partitionType() == Dune::InteriorEntity)
-                        {
-                            model_().prefetch(nextElem);
-                            problem_().prefetch(nextElem);
-                        }
-                    }
-
-                    const Element& elem = *elemIt;
-                    if (!linearizeNonLocalElements && elem.partitionType() != Dune::InteriorEntity)
-                        continue;
-
-                    linearizeElement_(elem);
-                }
-            }
-            // If an exception occurs in the parallel block, it won't escape the
-            // block; terminate() is called instead of a handler outside!  hence, we
-            // tuck any exceptions that occur away in the pointer. If an exception
-            // occurs in more than one thread at the same time, we must pick one of
-            // them to be rethrown as we cannot have two active exceptions at the
-            // same time. This solution essentially picks one at random. This will
-            // only be a problem if two different kinds of exceptions are thrown, for
-            // instance if one thread experiences a (recoverable) numerical issue
-            // while another is out of memory.
-            catch(...) {
-                std::lock_guard<std::mutex> take(exceptionLock);
-                exceptionPtr = std::current_exception();
-                threadedElemIt.setFinished();
-            }
-        }  // parallel block
-
-        // after reduction from the parallel block, exceptionPtr will point to
-        // a valid exception if one occurred in one of the threads; rethrow
-        // it here to let the outer handler take care of it properly
-        if(exceptionPtr) {
-            std::rethrow_exception(exceptionPtr);
-        }
-
-        applyConstraintsToLinearization_();
-    }
-
-    // linearize an element in the interior of the process' grid partition
-    void linearizeElement_(const Element& elem)
-    {
-        unsigned threadId = ThreadManager::threadId();
-
-        ElementContext *elementCtx = elementCtx_[threadId];
-        auto& localLinearizer = model_().localLinearizer(threadId);
-
-        // the actual work of linearization is done by the local linearizer class
-        localLinearizer.linearize(*elementCtx, elem);
-
-        // update the right hand side and the Jacobian matrix
-        if (getPropValue<TypeTag, Properties::UseLinearizationLock>())
-            globalMatrixMutex_.lock();
-
-        size_t numPrimaryDof = elementCtx->numPrimaryDof(/*timeIdx=*/0);
-        for (unsigned primaryDofIdx = 0; primaryDofIdx < numPrimaryDof; ++ primaryDofIdx) {
-            unsigned globI = elementCtx->globalSpaceIndex(/*spaceIdx=*/primaryDofIdx, /*timeIdx=*/0);
-
-            // update the right hand side
-            residual_[globI] += localLinearizer.residual(primaryDofIdx);
-
-            // update the global Jacobian matrix
-            for (unsigned dofIdx = 0; dofIdx < elementCtx->numDof(/*timeIdx=*/0); ++ dofIdx) {
-                unsigned globJ = elementCtx->globalSpaceIndex(/*spaceIdx=*/dofIdx, /*timeIdx=*/0);
-
-                jacobian_->addToBlock(globJ, globI, localLinearizer.jacobian(dofIdx, primaryDofIdx));
-            }
-        }
-
-        if (getPropValue<TypeTag, Properties::UseLinearizationLock>())
-            globalMatrixMutex_.unlock();
-    }
-
-    // apply the constraints to the solution. (i.e., the solution of constraint degrees
-    // of freedom is set to the value of the constraint.)
-    void applyConstraintsToSolution_()
-    {
-        if (!enableConstraints_())
-            return;
-
-        // TODO: assuming a history size of 2 only works for Euler time discretizations!
-        auto& sol = model_().solution(/*timeIdx=*/0);
-        auto& oldSol = model_().solution(/*timeIdx=*/1);
-
-        auto it = constraintsMap_.begin();
-        const auto& endIt = constraintsMap_.end();
-        for (; it != endIt; ++it) {
-            sol[it->first] = it->second;
-            oldSol[it->first] = it->second;
-        }
-    }
-
-    // apply the constraints to the linearization. (i.e., for constrain degrees of
-    // freedom the Jacobian matrix maps to identity and the residual is zero)
-    void applyConstraintsToLinearization_()
-    {
-        if (!enableConstraints_())
-            return;
-
-        auto it = constraintsMap_.begin();
-        const auto& endIt = constraintsMap_.end();
-        for (; it != endIt; ++it) {
-            unsigned constraintDofIdx = it->first;
-
-            // reset the column of the Jacobian matrix
-            // put an identity matrix on the main diagonal of the Jacobian
-            jacobian_->clearRow(constraintDofIdx, Scalar(1.0));
-
-            // make the right-hand side of constraint DOFs zero
-            residual_[constraintDofIdx] = 0.0;
-        }
-    }
-
-    static bool enableConstraints_()
-    { return getPropValue<TypeTag, Properties::EnableConstraints>(); }
-
     Simulator *simulatorPtr_;
-    std::vector<ElementContext*> elementCtx_;
-
-    // The constraint equations (only non-empty if the
-    // EnableConstraints property is true)
-    std::map<unsigned, Constraints> constraintsMap_;
 
     // the jacobian matrix
     std::unique_ptr<SparseMatrixAdapter> jacobian_;
@@ -711,8 +472,6 @@ private:
     GlobalEqVector residual_;
 
     LinearizationType linearizationType_;
-
-    std::mutex globalMatrixMutex_;
 
     SparseTable<unsigned> neighbours_;
     SparseTable<double> trans_;
