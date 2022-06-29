@@ -451,8 +451,8 @@ namespace Opm
                                        DeferredLogger& deferred_logger)
     {
         // try to regularize equation if the well does not converge
-        const Scalar regularization_factor =  this->regularize_? this->param_.regularization_factor_ms_wells_ : 1.0;
-        const double volume = 0.002831684659200 * regularization_factor; // 0.1 cu ft;
+        const Scalar regularization_factor =  this->regularize_? this->param_.regularization_factor_wells_ : 1.0;
+        const double volume = 0.1 * unit::cubic(unit::feet) * regularization_factor;
 
         auto& ws = well_state.well(this->index_of_well_);
 

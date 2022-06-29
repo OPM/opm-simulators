@@ -141,7 +141,7 @@ struct RelaxedPressureTolMsw {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
-struct RegularizationFactorMsw {
+struct RegularizationFactorWells {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
@@ -282,7 +282,7 @@ struct StrictInnerIterWells<TypeTag, TTag::FlowModelParameters> {
     static constexpr int value = 40;
 };
 template<class TypeTag>
-struct RegularizationFactorMsw<TypeTag, TTag::FlowModelParameters> {
+struct RegularizationFactorWells<TypeTag, TTag::FlowModelParameters> {
     using type = GetPropType<TypeTag, Scalar>;
     static constexpr type value = 100;
 };
@@ -369,8 +369,8 @@ namespace Opm
         /// Newton iteration where wells are stricly convergent
         int strict_outer_iter_wells_;
 
-        /// Regularization factor for ms wells
-        int regularization_factor_ms_wells_;
+        /// Regularization factor for wells
+        int regularization_factor_wells_;
 
         /// Maximum newton iterations with inner well iterations
         int max_niter_inner_well_iter_;
@@ -444,7 +444,7 @@ namespace Opm
             max_inner_iter_ms_wells_ = EWOMS_GET_PARAM(TypeTag, int, MaxInnerIterMsWells);
             strict_inner_iter_wells_ = EWOMS_GET_PARAM(TypeTag, int, StrictInnerIterWells);
             strict_outer_iter_wells_ = EWOMS_GET_PARAM(TypeTag, int, StrictOuterIterWells);
-            regularization_factor_ms_wells_ = EWOMS_GET_PARAM(TypeTag, Scalar, RegularizationFactorMsw);
+            regularization_factor_wells_ = EWOMS_GET_PARAM(TypeTag, Scalar, RegularizationFactorWells);
             max_niter_inner_well_iter_ = EWOMS_GET_PARAM(TypeTag, int, MaxNewtonIterationsWithInnerWellIterations);
             shut_unsolvable_wells_ = EWOMS_GET_PARAM(TypeTag, bool, ShutUnsolvableWells);
             max_inner_iter_wells_ = EWOMS_GET_PARAM(TypeTag, int, MaxInnerIterWells);
@@ -485,7 +485,7 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, bool, ShutUnsolvableWells, "Shut unsolvable wells");
             EWOMS_REGISTER_PARAM(TypeTag, int, MaxInnerIterWells, "Maximum number of inner iterations for standard wells");
             EWOMS_REGISTER_PARAM(TypeTag, bool, AlternativeWellRateInit, "Use alternative well rate initialization procedure");
-            EWOMS_REGISTER_PARAM(TypeTag, Scalar, RegularizationFactorMsw, "Regularization factor for ms wells");
+            EWOMS_REGISTER_PARAM(TypeTag, Scalar, RegularizationFactorWells, "Regularization factor for wells");
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, MaxSinglePrecisionDays, "Maximum time step size where single precision floating point arithmetic can be used solving for the linear systems of equations");
             EWOMS_REGISTER_PARAM(TypeTag, int, MaxStrictIter, "Maximum number of Newton iterations before relaxed tolerances are used for the CNV convergence criterion");
             EWOMS_REGISTER_PARAM(TypeTag, bool, SolveWelleqInitially, "Fully solve the well equations before each iteration of the reservoir model");
