@@ -1184,6 +1184,13 @@ add_test_compareECLFiles(CASENAME rxft_smry
                          REL_TOL ${rel_tol}
                          DIR rxft_smry )
 
+add_test_compareECLFiles(CASENAME bo_diffusion
+                         FILENAME BO_DIFFUSE_CASE1
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR diffusion )
+
 # Restart tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-restart-regressionTest.sh "")
 # Cruder tolerances for the restarted tests
