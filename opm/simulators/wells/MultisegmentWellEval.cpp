@@ -1554,6 +1554,18 @@ assembleICDPressureEq(const int seg,
     // top segment can not be a spiral ICD device
     assert(seg != 0);
 
+    if(this->segmentSet()[seg].segmentType() == Segment::SegmentType::VALVE) {
+        const Valve& valve = this->segmentSet()[seg].valve();
+        if (valve.status() == Opm::ICDStatus::SHUT) { // we switch here to be a zero rate equation
+            resWell_[seg][SPres] = this->primary_variables_evaluation_[seg][GTotal].value();
+            duneD_[seg][seg][SPres][GTotal] = 1.;
+
+            auto& ws = well_state.well(baseif_.indexOfWell());
+            ws.segments.pressure_drop_friction[seg] = 0.;
+            return;
+        }
+    }
+
     // the pressure equation is something like
     // p_seg - deltaP - p_outlet = 0.
     // the major part is how to calculate the deltaP
