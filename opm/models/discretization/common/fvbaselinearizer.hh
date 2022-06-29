@@ -37,7 +37,6 @@
 #include <opm/models/discretization/common/baseauxiliarymodule.hh>
 
 #include <opm/material/common/Exceptions.hpp>
-#include <opm/grid/utility/SparseTable.hpp>
 
 #include <dune/common/version.hh>
 #include <dune/common/fvector.hh>
@@ -87,8 +86,6 @@ class FvBaseLinearizer
     using Constraints = GetPropType<TypeTag, Properties::Constraints>;
     using Stencil = GetPropType<TypeTag, Properties::Stencil>;
     using ThreadManager = GetPropType<TypeTag, Properties::ThreadManager>;
-    using LocalResidual = GetPropType<TypeTag, Properties::LocalResidual>;
-    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
 
     using GridCommHandleFactory = GetPropType<TypeTag, Properties::GridCommHandleFactory>;
 
@@ -106,8 +103,6 @@ class FvBaseLinearizer
 
     using MatrixBlock = typename SparseMatrixAdapter::MatrixBlock;
     using VectorBlock = Dune::FieldVector<Scalar, numEq>;
-    using ADVectorBlock = GetPropType<TypeTag, Properties::RateVector>;
-
 
     static const bool linearizeNonLocalElements = getPropValue<TypeTag, Properties::LinearizeNonLocalElements>();
 
@@ -373,26 +368,6 @@ private:
 
         // create matrix structure based on sparsity pattern
         jacobian_->reserve(sparsityPattern);
-
-        for (unsigned globI = 0; globI < model.numTotalDof(); globI++) {
-            sparsityPattern[globI].erase(globI);
-        }
-        unsigned numCells = model.numTotalDof();
-        neighbours_.reserve(numCells, 6 * numCells);
-        trans_.reserve(numCells, 6 * numCells);
-        std::vector<double> loctrans;
-        for (unsigned globI = 0; globI < numCells; globI++) {
-            const auto& cells = sparsityPattern[globI];
-            neighbours_.appendRow(cells.begin(), cells.end());
-            unsigned n = cells.size();
-            loctrans.resize(n);
-            short loc = 0;
-            for (const int& cell : cells) {
-                loctrans[loc] = problem_().transmissibility(globI, cell);
-                loc++;
-            }
-            trans_.appendRow(loctrans.begin(), loctrans.end());
-        }
     }
 
     // reset the global linear system of equations.
@@ -448,7 +423,6 @@ private:
             }
         }
     }
-
 
     // linearize the whole system
     void linearize_()
@@ -621,9 +595,6 @@ private:
     LinearizationType linearizationType_;
 
     std::mutex globalMatrixMutex_;
-
-    SparseTable<unsigned> neighbours_;
-    SparseTable<double> trans_;
 };
 
 } // namespace Opm
