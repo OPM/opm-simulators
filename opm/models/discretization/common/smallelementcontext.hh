@@ -117,10 +117,10 @@ public:
      */
     void updateAll(const Element& elem)
     {
-        //throw std::logic_error("Only use update stencil");
-        asImp_().updateStencil(elem);
-        asImp_().updateAllIntensiveQuantities();
-        asImp_().updateAllExtensiveQuantities();
+        throw std::logic_error("Only use update stencil");
+        // asImp_().updateStencil(elem);
+        // asImp_().updateAllIntensiveQuantities();
+        // asImp_().updateAllExtensiveQuantities();
     }
 
     /*!
@@ -248,13 +248,13 @@ public:
     void updateExtensiveQuantities(unsigned timeIdx)
     {
         throw std::logic_error("Extensive quantities should not be used");
-        gradientCalculator_.prepare(/*context=*/asImp_(), timeIdx);
+        // gradientCalculator_.prepare(/*context=*/asImp_(), timeIdx);
 
-        for (unsigned fluxIdx = 0; fluxIdx < numInteriorFaces(timeIdx); fluxIdx++) {
-            extensiveQuantities_[fluxIdx].update(/*context=*/asImp_(),
-                                                 /*localIndex=*/fluxIdx,
-                                                 timeIdx);
-        }
+        // for (unsigned fluxIdx = 0; fluxIdx < numInteriorFaces(timeIdx); fluxIdx++) {
+        //     extensiveQuantities_[fluxIdx].update(/*context=*/asImp_(),
+        //                                          /*localIndex=*/fluxIdx,
+        //                                          timeIdx);
+        // }
     }
 
     /*!
@@ -466,8 +466,8 @@ public:
     {
         //need for compilation with vtk
         //throw std::logic_error("Cached quantities need to be calcualted before for this element context");
-         assert(dofIdx < numDof(timeIdx));
-         return *dofVars_[dofIdx].priVars[timeIdx];
+        assert(dofIdx < numDof(timeIdx));
+        return *dofVars_[dofIdx].priVars[timeIdx];
     }
 
     /*!
@@ -521,7 +521,7 @@ public:
     const GradientCalculator& gradientCalculator() const
     {
         throw std::logic_error("Gradient calculator should not be used");
-        return gradientCalculator_;
+        // return gradientCalculator_;
     }
 
     /*!
@@ -535,7 +535,7 @@ public:
     const ExtensiveQuantities& extensiveQuantities(unsigned fluxIdx, unsigned) const
     {
         throw std::logic_error("Extensive quantiteis shoud not be used");
-        return extensiveQuantities_[fluxIdx];
+        // return extensiveQuantities_[fluxIdx];
     }
 
     /*!
@@ -607,13 +607,13 @@ protected:
         dofVars_[dofIdx].intensiveQuantities[timeIdx].update(/*context=*/asImp_(), dofIdx, timeIdx);
     }
 
-    IntensiveQuantities intensiveQuantitiesStashed_;
-    PrimaryVariables priVarsStashed_;
+    //IntensiveQuantities intensiveQuantitiesStashed_;
+    //PrimaryVariables priVarsStashed_;
 
-    GradientCalculator gradientCalculator_;
+    //GradientCalculator gradientCalculator_;
 
     std::vector<DofStore_, aligned_allocator<DofStore_, alignof(DofStore_)> > dofVars_;
-    std::vector<ExtensiveQuantities, aligned_allocator<ExtensiveQuantities, alignof(ExtensiveQuantities)> > extensiveQuantities_;
+    //std::vector<ExtensiveQuantities, aligned_allocator<ExtensiveQuantities, alignof(ExtensiveQuantities)> > extensiveQuantities_;
 
     const Simulator *simulatorPtr_;
     const Element *elemPtr_;
