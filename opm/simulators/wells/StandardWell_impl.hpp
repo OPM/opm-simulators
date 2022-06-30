@@ -46,6 +46,7 @@ namespace Opm
                  const std::vector<PerforationData>& perf_data)
     : Base(well, pw_info, time_step, param, rate_converter, pvtRegionIdx, num_components, num_phases, index_of_well, perf_data)
     , StdWellEval(static_cast<const WellInterfaceIndices<FluidSystem,Indices,Scalar>&>(*this))
+    , regularize_(false)
     {
         assert(this->num_components_ == numWellConservationEq);
     }
@@ -449,9 +450,10 @@ namespace Opm
                                        const GroupState& group_state,
                                        DeferredLogger& deferred_logger)
     {
+        // try to regularize equation if the well does not converge
+        const Scalar regularization_factor =  this->regularize_? this->param_.regularization_factor_wells_ : 1.0;
+        const double volume = 0.1 * unit::cubic(unit::feet) * regularization_factor;
 
-        // TODO: it probably can be static member for StandardWell
-        const double volume = 0.002831684659200; // 0.1 cu ft;
         auto& ws = well_state.well(this->index_of_well_);
 
         ws.vaporized_oil_rate = 0;
@@ -2653,10 +2655,17 @@ namespace Opm
         const int max_iter = this->param_.max_inner_iter_wells_;
         int it = 0;
         bool converged;
+        bool relax_convergence = false;
+        this->regularize_ = false;
         do {
             assembleWellEqWithoutIteration(ebosSimulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
 
-            auto report = getWellConvergence(well_state, Base::B_avg_, deferred_logger);
+            if (it > this->param_.strict_inner_iter_wells_) {
+                relax_convergence = true;
+                this->regularize_ = true;
+            }
+
+            auto report = getWellConvergence(well_state, Base::B_avg_, deferred_logger, relax_convergence);
 
             converged = report.converged();
             if (converged) {

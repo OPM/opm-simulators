@@ -1636,7 +1636,7 @@ namespace Opm
                 // Add a regularization_factor to increase the accumulation term
                 // This will make the system less stiff and help convergence for
                 // difficult cases
-                const Scalar regularization_factor =  this->regularize_? this->param_.regularization_factor_ms_wells_ : 1.0;
+                const Scalar regularization_factor =  this->regularize_? this->param_.regularization_factor_wells_ : 1.0;
                 // for each component
                 for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
                     const EvalWell accumulation_term = regularization_factor * (segment_surface_volume * this->surfaceVolumeFraction(seg, comp_idx)
