@@ -300,7 +300,9 @@ class BlackOilModel
 public:
     BlackOilModel(Simulator& simulator)
         : ParentType(simulator)
-    {}
+    {
+        eqWeights_.resize(numEq, 1.0);
+    }
 
     /*!
      * \brief Register all run-time parameters for the immiscible model.
@@ -440,41 +442,11 @@ public:
         if (globalDofIdx >= this->numGridDof())
             return 1.0;
 
-        // we do not care much about water, so it gets de-prioritized by a factor of 100
-        static constexpr Scalar waterPriority = 1e-2;
+        return eqWeights_[eqIdx];
+    }
 
-        if constexpr (getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>()) {
-            // Roughly convert the surface volume of the fluids from m^3 to kg. (in this
-            // context, it does not really matter if the actual densities are off by a
-            // factor of two or three.)
-            switch (eqIdx) {
-            case Indices::conti0EqIdx + FluidSystem::waterCompIdx:
-                return 1000.0*waterPriority;
-
-            case Indices::conti0EqIdx + FluidSystem::gasCompIdx:
-                return 1.0;
-
-            case Indices::conti0EqIdx + FluidSystem::oilCompIdx:
-                return 650.0;
-            }
-        }
-
-        if (SolventModule::eqApplies(eqIdx))
-            return SolventModule::eqWeight(eqIdx);
-
-        if (ExtboModule::eqApplies(eqIdx))
-            return ExtboModule::eqWeight(eqIdx);
-
-        else if (PolymerModule::eqApplies(eqIdx))
-            return PolymerModule::eqWeight(eqIdx);
-
-        else if (EnergyModule::eqApplies(eqIdx))
-            return EnergyModule::eqWeight(eqIdx);
-
-        // it is said that all kilograms are born equal (except water)!
-        if (eqIdx == Indices::conti0EqIdx + FluidSystem::waterCompIdx)
-            return waterPriority;
-        return 1.0;
+    void setEqWeight(unsigned eqIdx, Scalar value) {
+        eqWeights_[eqIdx] = value;
     }
 
     /*!
@@ -615,6 +587,8 @@ protected:
     }
 
 private:
+
+    std::vector<Scalar> eqWeights_;
     Implementation& asImp_()
     { return *static_cast<Implementation*>(this); }
     const Implementation& asImp_() const
