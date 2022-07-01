@@ -132,7 +132,8 @@ public:
 
     void update(const Problem& problem,const PrimaryVariables& primaryVars,unsigned globalSpaceIdx, unsigned timeIdx)
     {
-        //ParentType::update(elemCtx, dofIdx, timeIdx);//only used for extrusion factor         
+        ParentType::update(problem, primaryVars, globalSpaceIdx, timeIdx);
+
         const auto& materialParams = problem.materialLawParams(globalSpaceIdx);
         //const auto& materialParams = problem.materialLawParams(0);//NB improve speed
          Scalar RvMax;
@@ -170,6 +171,7 @@ public:
                        RvMax
              );
          rockCompTransMultiplier_ = problem.template rockCompTransMultiplier<Evaluation>(*this, globalSpaceIdx);
+         porosity_ *= problem.template rockCompPoroMultiplier<Evaluation>(*this, globalSpaceIdx);
     }
     void update_simple(//const unsigned timeIdx,
                        const unsigned timeIdx,
