@@ -1384,11 +1384,6 @@ public:
     /*!
      * \copydoc EclTransmissiblity::transmissibility
      */
-    Scalar transmissibility(unsigned globalCenterElemIdx,unsigned globalElemIdx) const
-    {
-        return transmissibilities_.transmissibility(globalCenterElemIdx, globalElemIdx);
-    }
-    
     template <class Context>
     Scalar transmissibility(const Context& context,
                             [[maybe_unused]] unsigned fromDofLocalIdx,
@@ -1396,6 +1391,11 @@ public:
     {
         assert(fromDofLocalIdx == 0);
         return pffDofData_.get(context.element(), toDofLocalIdx).transmissibility;
+    }
+
+    Scalar transmissibility(unsigned globalCenterElemIdx, unsigned globalElemIdx) const
+    {
+        return transmissibilities_.transmissibility(globalCenterElemIdx, globalElemIdx);
     }
 
     /*!
@@ -1494,16 +1494,14 @@ public:
     Scalar porosity(const Context& context, unsigned spaceIdx, unsigned timeIdx) const
     {
         unsigned globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
-        return this->referencePorosity_[timeIdx][globalSpaceIdx];
+        return this->porosity(globalSpaceIdx, timeIdx);
     }
 
     Scalar porosity(unsigned globalSpaceIdx, unsigned timeIdx) const
     {
-        //unsigned globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
         return this->referencePorosity_[timeIdx][globalSpaceIdx];
     }
-    
-    
+
     /*!
      * \brief Returns the depth of an degree of freedom [m]
      *
@@ -1514,14 +1512,14 @@ public:
     Scalar dofCenterDepth(const Context& context, unsigned spaceIdx, unsigned timeIdx) const
     {
         unsigned globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
-        return this->simulator().vanguard().cellCenterDepth(globalSpaceIdx);
+        return this->dofCenterDepth(globalSpaceIdx);
     }
 
-    Scalar dofCenterDepth(unsigned globalSpaceIdx, unsigned timeIdx) const
+    Scalar dofCenterDepth(unsigned globalSpaceIdx) const
     {
         return this->simulator().vanguard().cellCenterDepth(globalSpaceIdx);
     }
-    
+
 
     /*!
      * \copydoc BlackoilProblem::rockCompressibility
@@ -1542,7 +1540,7 @@ public:
     }
 
 
-    Scalar rockCompressibility(unsigned globalSpaceIdx, unsigned timeIdx) const
+    Scalar rockCompressibility(unsigned globalSpaceIdx) const
     {
         if (this->rockParams_.empty())
             return 0.0;
@@ -1551,7 +1549,6 @@ public:
         if (!this->rockTableIdx_.empty()) {
             tableIdx = this->rockTableIdx_[globalSpaceIdx];
         }
-        //unsigned tableIdx = 0;// faster but not genneral
         return this->rockParams_[tableIdx].compressibility;
     }
 
@@ -1572,7 +1569,7 @@ public:
         return this->rockParams_[tableIdx].referencePressure;
     }
 
-    Scalar rockReferencePressure(unsigned globalSpaceIdx, unsigned timeIdx) const
+    Scalar rockReferencePressure(unsigned globalSpaceIdx) const
     {
         if (this->rockParams_.empty())
             return 1e5;
@@ -1581,9 +1578,9 @@ public:
         if (!this->rockTableIdx_.empty()) {
             tableIdx = this->rockTableIdx_[globalSpaceIdx];
         }
-        //unsigned tableIdx = 0;//faster but not genneral this->rockTableIdx_[globalSpaceIdx];
         return this->rockParams_[tableIdx].referencePressure;
     }
+
     /*!
      * \copydoc FvBaseMultiPhaseProblem::materialLawParams
      */
@@ -1592,7 +1589,7 @@ public:
                                                unsigned spaceIdx, unsigned timeIdx) const
     {
         unsigned globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
-        return materialLawParams(globalSpaceIdx);
+        return this->materialLawParams(globalSpaceIdx);
     }
 
     const MaterialLawParams& materialLawParams(unsigned globalDofIdx) const
@@ -1811,7 +1808,6 @@ public:
      */
     Scalar maxGasDissolutionFactor(unsigned timeIdx, unsigned globalDofIdx) const
     {
-        
         int pvtRegionIdx = this->pvtRegionIndex(globalDofIdx);
         int episodeIdx = this->episodeIndex();
         if (!this->drsdtActive_(episodeIdx) || this->maxDRs_[pvtRegionIdx] < 0.0)
@@ -1930,60 +1926,6 @@ public:
             aquiferModel_.initialSolutionApplied();
     }
 
-    void source(RateVector& rate,
-                unsigned globalSpaceIdx,
-                unsigned timeIdx) const
-    {
-        rate = 0.0;
-
-        wellModel_.computeTotalRatesForDof(rate, globalSpaceIdx, timeIdx);
-
-        // convert the source term from the total mass rate of the
-        // cell to the one per unit of volume as used by the model.
-        
-        for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx) {
-            rate[eqIdx] /= this->model().dofTotalVolume(globalSpaceIdx);
-
-            Valgrind::CheckDefined(rate[eqIdx]);
-            assert(isfinite(rate[eqIdx]));
-        }
-
-        // if (enableAquifers_)
-        //     aquiferModel_.addToSource(rate, context, spaceIdx, timeIdx);
-
-        // if requested, compensate systematic mass loss for cells which were "well
-        // behaved" in the last time step
-        // if (enableDriftCompensation_) {
-        //     const auto& intQuants = context.intensiveQuantities(spaceIdx, timeIdx);
-        //     const auto& simulator = this->simulator();
-        //     const auto& model = this->model();
-
-        //     // we need a higher maxCompensation than the Newton tolerance because the
-        //     // current time step might be shorter than the last one
-        //     Scalar maxCompensation = 10.0*model.newtonMethod().tolerance();
-
-        //     Scalar poro = intQuants.referencePorosity();
-        //     Scalar dt = simulator.timeStepSize();
-
-        //     EqVector dofDriftRate = drift_[globalDofIdx];
-        //     dofDriftRate /= dt*context.dofTotalVolume(spaceIdx, timeIdx);
-
-        //     // compute the weighted total drift rate
-        //     Scalar totalDriftRate = 0.0;
-        //     for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx)
-        //         totalDriftRate +=
-        //             std::abs(dofDriftRate[eqIdx])*dt*model.eqWeight(globalDofIdx, eqIdx)/poro;
-
-        //     // make sure that we do not exceed the maximum rate of drift compensation
-        //     if (totalDriftRate > maxCompensation)
-        //         dofDriftRate *= maxCompensation/totalDriftRate;
-
-        //     for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx)
-        //         rate[eqIdx] -= dofDriftRate[eqIdx];
-        // }
-    }
-
-    
     /*!
      * \copydoc FvBaseProblem::source
      *
@@ -1995,13 +1937,20 @@ public:
                 unsigned spaceIdx,
                 unsigned timeIdx) const
     {
+        const unsigned globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+        source(rate, globalDofIdx, timeIdx);
+    }
+
+    void source(RateVector& rate,
+                unsigned globalDofIdx,
+                unsigned timeIdx) const
+    {
         rate = 0.0;
 
-        wellModel_.computeTotalRatesForDof(rate, context, spaceIdx, timeIdx);
+        wellModel_.computeTotalRatesForDof(rate, globalDofIdx, timeIdx);
 
         // convert the source term from the total mass rate of the
         // cell to the one per unit of volume as used by the model.
-        const unsigned globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
         for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx) {
             rate[eqIdx] /= this->model().dofTotalVolume(globalDofIdx);
 
@@ -2010,12 +1959,11 @@ public:
         }
 
         if (enableAquifers_)
-            aquiferModel_.addToSource(rate, context, spaceIdx, timeIdx);
+            aquiferModel_.addToSource(rate, globalDofIdx, timeIdx);
 
         // if requested, compensate systematic mass loss for cells which were "well
         // behaved" in the last time step
         if (enableDriftCompensation_) {
-            const auto& intQuants = context.intensiveQuantities(spaceIdx, timeIdx);
             const auto& simulator = this->simulator();
             const auto& model = this->model();
 
@@ -2023,11 +1971,11 @@ public:
             // current time step might be shorter than the last one
             Scalar maxCompensation = 10.0*model.newtonMethod().tolerance();
 
-            Scalar poro = intQuants.referencePorosity();
+            Scalar poro = this->porosity(globalDofIdx, timeIdx);
             Scalar dt = simulator.timeStepSize();
 
             EqVector dofDriftRate = drift_[globalDofIdx];
-            dofDriftRate /= dt*context.dofTotalVolume(spaceIdx, timeIdx);
+            dofDriftRate /= dt*model.dofTotalVolume(globalDofIdx);
 
             // compute the weighted total drift rate
             Scalar totalDriftRate = 0.0;
@@ -2103,9 +2051,6 @@ public:
         return limitNextTimeStepSize_(newtonMethod.suggestTimeStepSize(simulator.timeStepSize()));
     }
 
-    Scalar volume(unsigned dofIdx,unsigned /*timidx*/) const{
-        return  this->simulator().model().dofTotalVolume(dofIdx);
-    }
     /*!
      * \brief Calculate the porosity multiplier due to water induced rock compaction.
      *
