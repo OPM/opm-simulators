@@ -95,6 +95,7 @@ public:
     // add the water rate due to aquifers to the source term.
     template <class Context>
     void addToSource(RateVector& rates, const Context& context, unsigned spaceIdx, unsigned timeIdx) const;
+    void addToSource(RateVector& rates, unsigned globalSpaceIdx, unsigned timeIdx) const;
     void endIteration();
     void endTimeStep();
     void endEpisode();
