@@ -143,24 +143,31 @@ public:
                      const unsigned timeIdx)
     {
         const unsigned cellIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+        addToSource(rates, cellIdx, timeIdx);
+    }
+
+    void addToSource(RateVector& rates,
+                     const unsigned cellIdx,
+                     const unsigned timeIdx)
+    {
+        const auto& model = ebos_simulator_.model();
 
         const int idx = this->cellToConnectionIdx_[cellIdx];
         if (idx < 0)
             return;
 
-        // We are dereferencing the value of IntensiveQuantities because
-        // cachedIntensiveQuantities return a const pointer to
-        // IntensiveQuantities of that particular cell_id
-        const auto& intQuants = context.intensiveQuantities(spaceIdx, timeIdx);
+        const auto* intQuantsPtr = model.cachedIntensiveQuantities(cellIdx, timeIdx);
+        if (intQuantsPtr == nullptr) {
+            throw std::logic_error("Invalid intensive quantities cache detected in AquiferInterface::addToSource()");
+        }
 
         // This is the pressure at td + dt
-        this->updateCellPressure(this->pressure_current_, idx, intQuants);
-        this->calculateInflowRate(idx, context.simulator());
+        this->updateCellPressure(this->pressure_current_, idx, *intQuantsPtr);
+        this->calculateInflowRate(idx, ebos_simulator_);
 
         rates[BlackoilIndices::conti0EqIdx + compIdx_()]
-            += this->Qai_[idx] / context.dofVolume(spaceIdx, timeIdx);
+            += this->Qai_[idx] / model.dofTotalVolume(cellIdx);
     }
-
     std::size_t size() const {
         return this->connections_.size();
     }
