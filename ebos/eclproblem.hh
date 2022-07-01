@@ -2223,6 +2223,8 @@ private:
         // the PLMIX region numbers (polymer model)
         this->updatePlmixnum_();
 
+        // directional relative permeabilities
+        this->updateKrnum_();
         ////////////////////////////////
         // porosity
         updateReferencePorosity_();
