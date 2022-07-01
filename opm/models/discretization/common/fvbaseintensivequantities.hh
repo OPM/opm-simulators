@@ -46,6 +46,8 @@ class FvBaseIntensiveQuantities
     using Implementation = GetPropType<TypeTag, Properties::IntensiveQuantities>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using Problem = GetPropType<TypeTag, Properties::Problem>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
 
 public:
     // default constructor
@@ -68,6 +70,15 @@ public:
                 unsigned dofIdx,
                 unsigned timeIdx)
     { extrusionFactor_ = elemCtx.problem().extrusionFactor(elemCtx, dofIdx, timeIdx); }
+
+    /*!
+     * \brief Update all quantities for a given control volume.
+     */
+    void update(const Problem& problem,
+                const PrimaryVariables& /* primaryVars */,
+                unsigned /* globalSpaceIdx */,
+                unsigned /* timeIdx */)
+    { extrusionFactor_ = problem.extrusionFactor(); }
 
     /*!
      * \brief Return how much a given sub-control volume is extruded.
