@@ -220,7 +220,7 @@ public:
         const auto& materialParams = problem.materialLawParams(elemCtx, dofIdx, timeIdx);
         MaterialLaw::capillaryPressures(pC, materialParams, fluidState_);
 
-        //oil is the reference phase for pressure 
+        // oil is the reference phase for pressure
         if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_pg_Rv || priVars.primaryVarsMeaning() == PrimaryVariables::Rvw_pg_Rv) {
             const Evaluation& pg = priVars.makeEvaluation(Indices::pressureSwitchIdx, timeIdx);
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
@@ -324,7 +324,7 @@ public:
                                                             SoMax);
 
                 fluidState_.setRs(min(RsMax, RsSat));
-            } 
+            }
             else {
                 fluidState_.setRs(0.0);
             }
