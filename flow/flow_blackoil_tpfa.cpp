@@ -40,6 +40,8 @@ namespace Opm {
    }
 }
 
+
+
 namespace Opm {
     namespace Properties {
         template<class TypeTag>
@@ -54,15 +56,6 @@ namespace Opm {
     namespace Properties {
         template<class TypeTag>
         struct Linearizer<TypeTag, TTag::EclFlowProblemTPFA> { using type = TpfaLinearizer<TypeTag>; };
-
-        // // Override default: use the TPFA linearizer.
-        // template<class TypeTag>
-        // struct UseTpfaLinearizer<TypeTag, TTag::EclFlowProblemTPFA> { static constexpr bool value = true; };
-
-        // template<class TypeTag>
-        // struct LocalLinearizerSplice<TypeTag, TTag::EclFlowProblemTPFA> {
-        //     using type = TTag::AutoDiffLocalLinearizerTPFA;
-        // };
     }
 }
 namespace Opm {
@@ -70,27 +63,25 @@ namespace Opm {
         template<class TypeTag>
         struct LocalResidual<TypeTag, TTag::EclFlowProblemTPFA> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
         template<class TypeTag>
-        // struct DiscLocalResidual<TypeTag, TTag::EclFlowProblemTPFA> { using type = FvBaseLocalResidualTPFA<TypeTag>; };
-        // template<class TypeTag>
-        struct ElementContext<TypeTag, TTag::EclFlowProblemTPFA> { using type = SmallElementContext<TypeTag>; };
-        //struct ElementContext<TypeTag, TTag::EclFlowProblemTPFA> { using type = FvBaseElementContext<TypeTag>; };
+        //struct ElementContext<TypeTag, TTag::EclFlowProblemTPFA> { using type = SmallElementContext<TypeTag>; };
+        struct ElementContext<TypeTag, TTag::EclFlowProblemTPFA> { using type = FvBaseElementContext<TypeTag>; };
     }
 }
 namespace Opm{
     template <class TypeTag>
-        struct EclTransFluxModuleTPFA
+    struct EclTransFluxModuleTPFA
     {
         typedef EclTransIntensiveQuantities<TypeTag> FluxIntensiveQuantities;
         typedef EclTransExtensiveQuantitiesTPFA<TypeTag> FluxExtensiveQuantities;
         typedef EclTransBaseProblem<TypeTag> FluxBaseProblem;
 
-        /*!
-         * \brief Register all run-time parameters for the flux module.
-         */
+        /// \brief Register all run-time parameters for the flux module.
         static void registerParameters()
         { }
     };
 }
+
+
 namespace Opm {
     namespace Properties {
 
