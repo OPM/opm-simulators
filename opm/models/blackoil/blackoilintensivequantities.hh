@@ -109,10 +109,20 @@ class BlackOilIntensiveQuantities
     using Toolbox = MathToolbox<Evaluation>;
     using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
     using FluxIntensiveQuantities = typename FluxModule::FluxIntensiveQuantities;
-    using FluidState = BlackOilFluidState<Evaluation, FluidSystem, enableTemperature, enableEnergy, compositionSwitchEnabled,  enableEvaporation, enableBrine, enableSaltPrecipitation, Indices::numPhases >;
     using DiffusionIntensiveQuantities = BlackOilDiffusionIntensiveQuantities<TypeTag, enableDiffusion>;
 
 public:
+    using FluidState = BlackOilFluidState<Evaluation,
+                                          FluidSystem,
+                                          enableTemperature,
+                                          enableEnergy,
+                                          compositionSwitchEnabled,
+                                          enableEvaporation,
+                                          enableBrine,
+                                          enableSaltPrecipitation,
+                                          Indices::numPhases>;
+    using Problem = GetPropType<TypeTag, Properties::Problem>;
+
     BlackOilIntensiveQuantities()
     {
         if (compositionSwitchEnabled) {
@@ -528,6 +538,12 @@ public:
     { return porosity_; }
 
     /*!
+     * The pressure-dependent transmissibility multiplier due to rock compressibility.
+     */
+    const Evaluation& rockCompTransMultiplier() const
+    { return rockCompTransMultiplier_; }
+
+    /*!
      * \brief Returns the index of the PVT region used to calculate the thermodynamic
      *        quantities.
      *
@@ -578,6 +594,7 @@ private:
     FluidState fluidState_;
     Scalar referencePorosity_;
     Evaluation porosity_;
+    Evaluation rockCompTransMultiplier_;
     Evaluation mobility_[numPhases];
 };
 
