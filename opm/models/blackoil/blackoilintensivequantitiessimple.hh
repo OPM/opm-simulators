@@ -144,6 +144,7 @@ public:
 
         const auto& materialParams = problem.materialLawParams(globalSpaceIdx);
         //const auto& materialParams = problem.materialLawParams(0);//NB improve speed
+        const auto linearizationType = problem.model().linearizer().getLinearizationType();
          Scalar RvMax;
          if (FluidSystem::enableVaporizedOil()) {
              RvMax =  problem.maxOilVaporizationFactor(timeIdx, globalSpaceIdx);
@@ -170,7 +171,7 @@ public:
                        //globalSpaceIdx,
                        primaryVars,
                        materialParams,
-                       //linearizationType,
+                       linearizationType,
                        refPorosity,
                        rockCompressibility,
                        rockRefPressure,
@@ -186,7 +187,7 @@ public:
                        //const unsigned globalIdx,
                        const PrimaryVariables& priVars,
                        const MaterialParams& materialParams,
-                       //const LinarizationType& linearizationType,
+                       const LinearizationType& linearizationType,
                        const Scalar& refPorosity,
                        const Scalar& rockCompressibility,
                        const Scalar& rockRefPressure,
@@ -450,12 +451,12 @@ public:
 
             //const auto& mu = FluidSystem::viscosity(fluidState_, paramCache, phaseIdx);
             const auto& mu = FluidSystem::viscosity(fluidState_, phaseIdx ,pvtRegionIdx);
-            // if (enableExtbo && phaseIdx == oilPhaseIdx)
-            //   mobility_[phaseIdx] /= asImp_().oilViscosity();
-            // else if (enableExtbo && phaseIdx == gasPhaseIdx)
-            //   mobility_[phaseIdx] /= asImp_().gasViscosity();
-            // else
-            mobility_[phaseIdx] /= mu;
+            if (enableExtbo && phaseIdx == oilPhaseIdx)
+              mobility_[phaseIdx] /= asImp_().oilViscosity();
+            else if (enableExtbo && phaseIdx == gasPhaseIdx)
+              mobility_[phaseIdx] /= asImp_().gasViscosity();
+            else
+              mobility_[phaseIdx] /= mu;
         }
         Valgrind::CheckDefined(mobility_);
 
@@ -475,6 +476,12 @@ public:
                     fluidState_.invB(gasPhaseIdx) *
                     fluidState_.Rv() *
                     FluidSystem::referenceDensity(oilPhaseIdx, pvtRegionIdx);
+            }
+            if (FluidSystem::enableVaporizedWater()) {
+                rho +=
+                    fluidState_.invB(gasPhaseIdx) *
+                    fluidState_.Rvw() *
+                    FluidSystem::referenceDensity(waterPhaseIdx, pvtRegionIdx);
             }
             fluidState_.setDensity(gasPhaseIdx, rho);
         }
@@ -508,17 +515,24 @@ public:
             } else {
                 x = rockCompressibility*(fluidState_.pressure(gasPhaseIdx) - rockRefPressure);
             }
+            //porosity_ *= 1.0 + x + 0.5*x*x;
             porosity_ *= 1.0 + (1 + 0.5*x)*x;
         }
         // // deal with water induced rock compaction
         // porosity_ *= problem.template rockCompPoroMultiplier<Evaluation>(*this, globalSpaceIdx);
 
         // the MICP processes change the porosity
-        // if (enableMICP){
-        //   Evaluation biofilm_ = priVars.makeEvaluation(Indices::biofilmConcentrationIdx, timeIdx, linearizationType);
-        //   Evaluation calcite_ = priVars.makeEvaluation(Indices::calciteConcentrationIdx, timeIdx, linearizationType);
-        //   porosity_ += - biofilm_ - calcite_;
-        // }
+        if (enableMICP){
+          Evaluation biofilm_ = priVars.makeEvaluation(Indices::biofilmConcentrationIdx, timeIdx, linearizationType);
+          Evaluation calcite_ = priVars.makeEvaluation(Indices::calciteConcentrationIdx, timeIdx, linearizationType);
+          porosity_ += - biofilm_ - calcite_;
+        }
+
+        // deal with salt-precipitation
+        if (enableSaltPrecipitation && priVars.primaryVarsMeaningBrine() == PrimaryVariables::Sp) {
+            Evaluation Sp = priVars.makeEvaluation(Indices::saltConcentrationIdx, timeIdx);
+            porosity_ *= (1.0 - Sp);
+        }
 
         // asImp_().solventPvtUpdate_(elemCtx, dofIdx, timeIdx);
         // asImp_().zPvtUpdate_();
