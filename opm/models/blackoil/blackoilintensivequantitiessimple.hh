@@ -515,8 +515,7 @@ public:
             } else {
                 x = rockCompressibility*(fluidState_.pressure(gasPhaseIdx) - rockRefPressure);
             }
-            //porosity_ *= 1.0 + x + 0.5*x*x;
-            porosity_ *= 1.0 + (1 + 0.5*x)*x;
+            porosity_ *= 1.0 + x + 0.5*x*x;
         }
         // // deal with water induced rock compaction
         // porosity_ *= problem.template rockCompPoroMultiplier<Evaluation>(*this, globalSpaceIdx);
