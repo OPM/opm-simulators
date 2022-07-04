@@ -77,8 +77,7 @@ class BlackOilIntensiveQuantitiesSimple
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
     using FluxModule = GetPropType<TypeTag, Properties::FluxModule>;
-    using Problem = GetPropType<TypeTag, Properties::Problem>;
-    
+
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
     enum { enableExtbo = getPropValue<TypeTag, Properties::EnableExtbo>() };
@@ -102,7 +101,6 @@ class BlackOilIntensiveQuantitiesSimple
     enum { dimWorld = GridView::dimensionworld };
     enum { compositionSwitchIdx = Indices::compositionSwitchIdx };
 
-    
     static const bool compositionSwitchEnabled = Indices::compositionSwitchIdx >= 0;
     static const bool waterEnabled = Indices::waterEnabled;
     static const bool gasEnabled = Indices::gasEnabled;
@@ -115,7 +113,17 @@ class BlackOilIntensiveQuantitiesSimple
     using DiffusionIntensiveQuantities = BlackOilDiffusionIntensiveQuantities<TypeTag, enableDiffusion>;
 
 public:
-    using FluidState = BlackOilFluidState<Evaluation, FluidSystem, enableTemperature, enableEnergy, compositionSwitchEnabled,  enableEvaporation, enableBrine, enableSaltPrecipitation, Indices::numPhases >;
+    using FluidState = BlackOilFluidState<Evaluation,
+                                          FluidSystem,
+                                          enableTemperature,
+                                          enableEnergy,
+                                          compositionSwitchEnabled,
+                                          enableEvaporation,
+                                          enableBrine,
+                                          enableSaltPrecipitation,
+                                          Indices::numPhases>;
+    using Problem = GetPropType<TypeTag, Properties::Problem>;
+
     BlackOilIntensiveQuantitiesSimple()
     {
         if (compositionSwitchEnabled) {
@@ -148,13 +156,13 @@ public:
          }else{
              RsMax = 0.0;
          }
-         Scalar SoMax_org = problem.maxOilSaturation(globalSpaceIdx);         
+         Scalar SoMax_org = problem.maxOilSaturation(globalSpaceIdx);
          //Scalar refPorosity =  problem.porosity(elemCtx, dofIdx, timeIdx);
          Scalar refPorosity =  problem.porosity(globalSpaceIdx, timeIdx);
 //         Scalar rockCompressibility = problem.rockCompressibility(elemCtx, dofIdx, timeIdx);
 //         Scalar rockRefPressure = problem.rockReferencePressure(elemCtx, dofIdx, timeIdx);
-         Scalar rockCompressibility = problem.rockCompressibility(globalSpaceIdx, timeIdx);
-         Scalar rockRefPressure = problem.rockReferencePressure(globalSpaceIdx, timeIdx);        
+         Scalar rockCompressibility = problem.rockCompressibility(globalSpaceIdx);
+         Scalar rockRefPressure = problem.rockReferencePressure(globalSpaceIdx);
          //Scalar rockCompressibility = 0.0;//problem.rockCompressibility(elemCtx, dofIdx, timeIdx);
          //Scalar rockRefPressure = 0.0;//problem.rockReferencePressure(elemCtx, dofIdx, timeIdx);
          update_simple(//dofIdx,
@@ -522,8 +530,12 @@ public:
     const Evaluation& porosity() const
     { return porosity_; }
 
+    /*!
+     * The pressure-dependent transmissibility multiplier due to rock compressibility.
+     */
     const Evaluation& rockCompTransMultiplier() const
-    { return rockCompTransMultiplier_;}
+    { return rockCompTransMultiplier_; }
+
     /*!
      * \brief Returns the index of the PVT region used to calculate the thermodynamic
      *        quantities.
