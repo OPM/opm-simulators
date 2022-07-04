@@ -190,8 +190,8 @@ public:
     {
         assert(timeIdx == 0);
         flux = 0.0;
-        Scalar Vin = problem.volume(globalIndexIn, /*timeIdx=*/0);
-        Scalar Vex = problem.volume(globalIndexEx, /*timeIdx=*/0);
+        Scalar Vin = problem.model().dofTotalVolume(globalIndexIn);
+        Scalar Vex = problem.model().dofTotalVolume(globalIndexEx);
        
         
         Scalar trans = 1.0;//problem.transmissibility(globalIndexIn,globalIndexEx);
@@ -210,8 +210,8 @@ public:
         // solution would be to take the Z coordinate of the element centroids, but since
         // ECL seems to like to be inconsistent on that front, it needs to be done like
         // here...
-        Scalar zIn = problem.dofCenterDepth(globalIndexIn, timeIdx);
-        Scalar zEx = problem.dofCenterDepth(globalIndexEx, timeIdx);
+        Scalar zIn = problem.dofCenterDepth(globalIndexIn);
+        Scalar zEx = problem.dofCenterDepth(globalIndexEx);
 
         // the distances from the DOF's depths. (i.e., the additional depth of the
         // exterior DOF)
