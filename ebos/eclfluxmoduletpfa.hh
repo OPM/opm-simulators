@@ -429,7 +429,7 @@ protected:
         const auto& stencil = elemCtx.stencil(timeIdx);
         const auto& scvf = stencil.boundaryFace(scvfIdx);
 
-        interiorDofIdx_ = scvf.interiorIndex();
+        unsigned interiorDofIdx = scvf.interiorIndex();
 
         Scalar trans = problem.transmissibilityBoundary(elemCtx, scvfIdx);
         Scalar faceArea = scvf.area();
@@ -439,14 +439,14 @@ protected:
         // acts into the downwards direction. (i.e., no centrifuge experiments, sorry.)
         Scalar g = elemCtx.problem().gravity()[dimWorld - 1];
 
-        const auto& intQuantsIn = elemCtx.intensiveQuantities(interiorDofIdx_, timeIdx);
+        const auto& intQuantsIn = elemCtx.intensiveQuantities(interiorDofIdx, timeIdx);
 
         // this is quite hacky because the dune grid interface does not provide a
         // cellCenterDepth() method (so we ask the problem to provide it). The "good"
         // solution would be to take the Z coordinate of the element centroids, but since
         // ECL seems to like to be inconsistent on that front, it needs to be done like
         // here...
-        Scalar zIn = problem.dofCenterDepth(elemCtx, interiorDofIdx_, timeIdx);
+        Scalar zIn = problem.dofCenterDepth(elemCtx, interiorDofIdx, timeIdx);
         Scalar zEx = scvf.integrationPos()[dimWorld - 1];
 
         // the distances from the DOF's depths. (i.e., the additional depth of the
@@ -475,17 +475,17 @@ protected:
             // global index is regarded to be the upstream one.
             if (pressureDifference_[phaseIdx] > 0.0) {
                 upIdx_[phaseIdx] = -1;
-                dnIdx_[phaseIdx] = interiorDofIdx_;
+                dnIdx_[phaseIdx] = interiorDofIdx;
             }
             else {
-                upIdx_[phaseIdx] = interiorDofIdx_;
+                upIdx_[phaseIdx] = interiorDofIdx;
                 dnIdx_[phaseIdx] = -1;
             }
 
             Evaluation transModified = trans;
 
             short upstreamIdx = upstreamIndex_(phaseIdx);
-            if (upstreamIdx == interiorDofIdx_) {
+            if (upstreamIdx == interiorDofIdx) {
 
                 // this is slightly hacky because in the automatic differentiation case, it
                 // only works for the element centered finite volume method. for ebos this
@@ -507,7 +507,7 @@ protected:
                 // interior element. TODO: this could probably be done more efficiently
                 const auto& matParams =
                     elemCtx.problem().materialLawParams(elemCtx,
-                                                        interiorDofIdx_,
+                                                        interiorDofIdx,
                                                         /*timeIdx=*/0);
                 typename FluidState::Scalar kr[numPhases];
                 MaterialLaw::relativePermeabilities(kr, matParams, exFluidState);
@@ -547,8 +547,6 @@ private:
     Evaluation pressureDifference_[numPhases];
 
     // the local indices of the interior and exterior degrees of freedom
-    unsigned short interiorDofIdx_;
-    unsigned short exteriorDofIdx_;
     short upIdx_[numPhases];
     short dnIdx_[numPhases];
 };
