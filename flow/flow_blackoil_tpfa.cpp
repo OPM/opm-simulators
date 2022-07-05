@@ -23,12 +23,10 @@
 // modifications from standard
 #include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
 #include <opm/models/blackoil/blackoilintensivequantitiessimple.hh>
-//#include <opm/models/discretization/common/fvbaselocalresidualtpfa.hh>
-//#include <opm/models/discretization/common/fvbaseadlocallinearizertpfa.hh>
 #include <opm/models/discretization/common/smallelementcontext.hh>
 #include <opm/models/discretization/common/tpfalinearizer.hh>
 #include <ebos/eclfluxmoduletpfa.hh>
-#include <ebos/eclproblemtpfa.hh>
+#include <ebos/eclproblem.hh>
 
 namespace Opm {
     namespace Properties {
@@ -40,16 +38,6 @@ namespace Opm {
    }
 }
 
-
-
-namespace Opm {
-    namespace Properties {
-        template<class TypeTag>
-        struct Problem<TypeTag, TTag::EclFlowProblemTPFA> {
-            using type = EclProblemTPFA<TypeTag>;
-        };
-    }
-}
 
 
 namespace Opm {
