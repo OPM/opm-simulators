@@ -170,7 +170,7 @@ public:
      */
     const Evaluation& volumeFlux(unsigned phaseIdx) const
     {
-        throw std::invalid_argument("Should not acces volume flux for eclmoduletpfa");
+        //throw std::invalid_argument("Should not acces volume flux for eclmoduletpfa");
         return volumeFlux_[phaseIdx];
     }
 
@@ -184,7 +184,7 @@ protected:
      */
     unsigned upstreamIndex_(unsigned phaseIdx) const
     {
-        throw std::invalid_argument("No upstreamIndex");
+        //throw std::invalid_argument("No upstreamIndex");
         assert(phaseIdx < numPhases);
 
         return upIdx_[phaseIdx];
@@ -199,7 +199,7 @@ protected:
      */
     unsigned downstreamIndex_(unsigned phaseIdx) const
     {
-        throw std::invalid_argument("No downstream index");
+        //throw std::invalid_argument("No downstream index");
         assert(phaseIdx < numPhases);
 
         return dnIdx_[phaseIdx];
@@ -517,8 +517,8 @@ protected:
      */
     void calculateGradients_(const ElementContext& elemCtx, unsigned scvfIdx, unsigned timeIdx)
     {
-        throw std::invalid_argument("No calculateGradients_");
-        
+        //throw std::invalid_argument("No calculateGradients_");
+
         Valgrind::SetUndefined(*this);
 
         const auto& problem = elemCtx.problem();
@@ -529,15 +529,12 @@ protected:
         exteriorDofIdx_ = scvf.exteriorIndex();
         assert(interiorDofIdx_ != exteriorDofIdx_);
 
-        //unsigned I = stencil.globalSpaceIndex(interiorDofIdx_);
-        //unsigned J = stencil.globalSpaceIndex(exteriorDofIdx_);
-        Scalar Vin = elemCtx.dofVolume(interiorDofIdx_, /*timeIdx=*/0);
-        Scalar Vex = elemCtx.dofVolume(exteriorDofIdx_, /*timeIdx=*/0);
-        const auto& globalIndexIn = stencil.globalSpaceIndex(interiorDofIdx_);
-        const auto& globalIndexEx = stencil.globalSpaceIndex(exteriorDofIdx_);
+        unsigned I = stencil.globalSpaceIndex(interiorDofIdx_);
+        unsigned J = stencil.globalSpaceIndex(exteriorDofIdx_);
+
         Scalar trans = problem.transmissibility(elemCtx, interiorDofIdx_, exteriorDofIdx_);
         Scalar faceArea = scvf.area();
-        Scalar thpres = problem.thresholdPressure(globalIndexIn, globalIndexEx);
+        Scalar thpres = problem.thresholdPressure(I, J);
 
         // estimate the gravity correction: for performance reasons we use a simplified
         // approach for this flux module that assumes that gravity is constant and always
@@ -559,37 +556,40 @@ protected:
         // exterior DOF)
         Scalar distZ = zIn - zEx;
 
-        for (unsigned phaseIdx=0; phaseIdx < numPhases; phaseIdx++) {
+        Scalar Vin = elemCtx.dofVolume(interiorDofIdx_, /*timeIdx=*/0);
+        Scalar Vex = elemCtx.dofVolume(exteriorDofIdx_, /*timeIdx=*/0);
+
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; phaseIdx++) {
             if (!FluidSystem::phaseIsActive(phaseIdx))
-                continue;                        
+                continue;
             calculatePhasePressureDiff_(upIdx_[phaseIdx],
                                         dnIdx_[phaseIdx],
                                         pressureDifference_[phaseIdx],
                                         intQuantsIn,
                                         intQuantsEx,
-                                        timeIdx,//input
-                                        phaseIdx,//input
-                                        interiorDofIdx_,//input
-                                        exteriorDofIdx_,//intput
+                                        timeIdx, // input
+                                        phaseIdx, // input
+                                        interiorDofIdx_, // input
+                                        exteriorDofIdx_, // intput
                                         Vin,
                                         Vex,
-                                        globalIndexIn,
-                                        globalIndexEx,
-                                        distZ*g,
+                                        I,
+                                        J,
+                                        distZ * g,
                                         thpres);
-            if(pressureDifference_[phaseIdx] == 0){
+            if (pressureDifference_[phaseIdx] == 0) {
                 volumeFlux_[phaseIdx] = 0.0;
                 continue;
             }
-            IntensiveQuantities up;
+            const IntensiveQuantities& up = (upIdx_[phaseIdx] == interiorDofIdx_) ? intQuantsIn : intQuantsEx;
             //unsigned globalIndex;
-            if(upIdx_[phaseIdx] == interiorDofIdx_){
-                up = intQuantsIn;
-                //globalIndex = globalIndexIn;
-            }else{
-                up = intQuantsEx;
-                //globalIndex = globalIndexEx;
-            }
+            // if(upIdx_[phaseIdx] == interiorDofIdx_){
+            //     up = intQuantsIn;
+            //     //globalIndex = I;
+            // }else{
+            //     up = intQuantsEx;
+            //     //globalIndex = J;
+            // }
             // TODO: should the rock compaction transmissibility multiplier be upstreamed
             // or averaged? all fluids should see the same compaction?!
             //const auto& globalIndex = stencil.globalSpaceIndex(upstreamIdx);
@@ -597,18 +597,17 @@ protected:
             const Evaluation& transMult = up.rockCompTransMultiplier();
             // const Evaluation& transMult =
             //    problem.template rockCompTransMultiplier<Evaluation>(up, globalIndex);
-            
+
             if (upIdx_[phaseIdx] == interiorDofIdx_)
                 volumeFlux_[phaseIdx] =
                     pressureDifference_[phaseIdx]*up.mobility(phaseIdx)*transMult*(-trans/faceArea);
             else
                 volumeFlux_[phaseIdx] =
                     pressureDifference_[phaseIdx]*(Toolbox::value(up.mobility(phaseIdx))*Toolbox::value(transMult)*(-trans/faceArea));
-            
         }
     }
 
-    
+
     /*!
      * \brief Update the required gradients for boundary faces
      */
