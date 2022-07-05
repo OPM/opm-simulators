@@ -486,6 +486,8 @@ public:
             porosity_ *= (1.0 - Sp);
         }
 
+        rockCompTransMultiplier_ = problem.template rockCompTransMultiplier<Evaluation>(*this, globalSpaceIdx);
+
         asImp_().solventPvtUpdate_(elemCtx, dofIdx, timeIdx);
         asImp_().zPvtUpdate_();
         asImp_().polymerPropertiesUpdate_(elemCtx, dofIdx, timeIdx);
