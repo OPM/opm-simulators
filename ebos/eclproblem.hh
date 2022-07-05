@@ -1394,6 +1394,14 @@ public:
     }
 
     /*!
+     * \brief Direct access to the transmissibility between two elements.
+     */
+    Scalar transmissibility(unsigned globalCenterElemIdx, unsigned globalElemIdx) const
+    {
+        return transmissibilities_.transmissibility(globalCenterElemIdx, globalElemIdx);
+    }
+
+    /*!
      * \copydoc EclTransmissiblity::diffusivity
      */
     template <class Context>
@@ -1489,6 +1497,19 @@ public:
     Scalar porosity(const Context& context, unsigned spaceIdx, unsigned timeIdx) const
     {
         unsigned globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+        return this->porosity(globalSpaceIdx, timeIdx);
+    }
+
+    /*!
+     * \brief Direct indexed access to the porosity.
+     *
+     * For the EclProblem, this method is identical to referencePorosity(). The intensive
+     * quantities object may apply various multipliers (e.g. ones which model rock
+     * compressibility and water induced rock compaction) to it which depend on the
+     * current physical conditions.
+     */
+    Scalar porosity(unsigned globalSpaceIdx, unsigned timeIdx) const
+    {
         return this->referencePorosity_[timeIdx][globalSpaceIdx];
     }
 
@@ -1502,9 +1523,19 @@ public:
     Scalar dofCenterDepth(const Context& context, unsigned spaceIdx, unsigned timeIdx) const
     {
         unsigned globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
-        return this->simulator().vanguard().cellCenterDepth(globalSpaceIdx);
+        return this->dofCenterDepth(globalSpaceIdx);
     }
 
+    /*!
+     * \brief Direct indexed acces to the depth of an degree of freedom [m]
+     *
+     * For ECL problems this is defined as the average of the depth of an element and is
+     * thus slightly different from the depth of an element's centroid.
+     */
+    Scalar dofCenterDepth(unsigned globalSpaceIdx) const
+    {
+        return this->simulator().vanguard().cellCenterDepth(globalSpaceIdx);
+    }
 
     /*!
      * \copydoc BlackoilProblem::rockCompressibility
@@ -1521,6 +1552,25 @@ public:
             tableIdx = this->rockTableIdx_[globalSpaceIdx];
         }
 
+        return this->rockParams_[tableIdx].compressibility;
+    }
+
+    /*!
+     * Direct access to rock compressibility.
+     *
+     * While the above overload could be implemented in terms of this method,
+     * that would require always looking up the global space index, which
+     * is not always needed.
+     */
+    Scalar rockCompressibility(unsigned globalSpaceIdx) const
+    {
+        if (this->rockParams_.empty())
+            return 0.0;
+
+        unsigned tableIdx = 0;
+        if (!this->rockTableIdx_.empty()) {
+            tableIdx = this->rockTableIdx_[globalSpaceIdx];
+        }
         return this->rockParams_[tableIdx].compressibility;
     }
 
@@ -1543,6 +1593,25 @@ public:
     }
 
     /*!
+     * Direct access to rock reference pressure.
+     *
+     * While the above overload could be implemented in terms of this method,
+     * that would require always looking up the global space index, which
+     * is not always needed.
+     */
+    Scalar rockReferencePressure(unsigned globalSpaceIdx) const
+    {
+        if (this->rockParams_.empty())
+            return 1e5;
+
+        unsigned tableIdx = 0;
+        if (!this->rockTableIdx_.empty()) {
+            tableIdx = this->rockTableIdx_[globalSpaceIdx];
+        }
+        return this->rockParams_[tableIdx].referencePressure;
+    }
+
+    /*!
      * \copydoc FvBaseMultiPhaseProblem::materialLawParams
      */
     template <class Context>
@@ -1550,11 +1619,13 @@ public:
                                                unsigned spaceIdx, unsigned timeIdx) const
     {
         unsigned globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
-        return materialLawParams(globalSpaceIdx);
+        return this->materialLawParams(globalSpaceIdx);
     }
 
     const MaterialLawParams& materialLawParams(unsigned globalDofIdx) const
-    { return materialLawManager_->materialLawParams(globalDofIdx); }
+    {
+        return materialLawManager_->materialLawParams(globalDofIdx);
+    }
 
     /*!
      * \brief Return the parameters for the energy storage law of the rock
@@ -1898,13 +1969,20 @@ public:
                 unsigned spaceIdx,
                 unsigned timeIdx) const
     {
+        const unsigned globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+        source(rate, globalDofIdx, timeIdx);
+    }
+
+    void source(RateVector& rate,
+                unsigned globalDofIdx,
+                unsigned timeIdx) const
+    {
         rate = 0.0;
 
-        wellModel_.computeTotalRatesForDof(rate, context, spaceIdx, timeIdx);
+        wellModel_.computeTotalRatesForDof(rate, globalDofIdx, timeIdx);
 
         // convert the source term from the total mass rate of the
         // cell to the one per unit of volume as used by the model.
-        const unsigned globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
         for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx) {
             rate[eqIdx] /= this->model().dofTotalVolume(globalDofIdx);
 
@@ -1913,12 +1991,11 @@ public:
         }
 
         if (enableAquifers_)
-            aquiferModel_.addToSource(rate, context, spaceIdx, timeIdx);
+            aquiferModel_.addToSource(rate, globalDofIdx, timeIdx);
 
         // if requested, compensate systematic mass loss for cells which were "well
         // behaved" in the last time step
         if (enableDriftCompensation_) {
-            const auto& intQuants = context.intensiveQuantities(spaceIdx, timeIdx);
             const auto& simulator = this->simulator();
             const auto& model = this->model();
 
@@ -1926,11 +2003,11 @@ public:
             // current time step might be shorter than the last one
             Scalar maxCompensation = 10.0*model.newtonMethod().tolerance();
 
-            Scalar poro = intQuants.referencePorosity();
+            Scalar poro = this->porosity(globalDofIdx, timeIdx);
             Scalar dt = simulator.timeStepSize();
 
             EqVector dofDriftRate = drift_[globalDofIdx];
-            dofDriftRate /= dt*context.dofTotalVolume(spaceIdx, timeIdx);
+            dofDriftRate /= dt*model.dofTotalVolume(globalDofIdx);
 
             // compute the weighted total drift rate
             Scalar totalDriftRate = 0.0;
