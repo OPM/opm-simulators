@@ -144,11 +144,18 @@ public:
 
         const auto& problem = elemCtx.problem();
         const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
-        const auto& linearizationType = elemCtx.linearizationType();
+
+        const auto& linearizationType = problem.model().linearizer().getLinearizationType();
+        unsigned globalSpaceIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
+        Scalar RvMax = FluidSystem::enableVaporizedOil()
+            ? problem.maxOilVaporizationFactor(timeIdx, globalSpaceIdx)
+            : 0.0;
+        Scalar RsMax = FluidSystem::enableDissolvedGas()
+            ? problem.maxGasDissolutionFactor(timeIdx, globalSpaceIdx)
+            : 0.0;
 
         asImp_().updateTemperature_(elemCtx, dofIdx, timeIdx);
 
-        unsigned globalSpaceIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
         unsigned pvtRegionIdx = priVars.pvtRegionIndex();
         fluidState_.setPvtRegionIndex(pvtRegionIdx);
 
@@ -217,7 +224,7 @@ public:
 
         // now we compute all phase pressures
         Evaluation pC[numPhases];
-        const auto& materialParams = problem.materialLawParams(elemCtx, dofIdx, timeIdx);
+        const auto& materialParams = problem.materialLawParams(globalSpaceIdx);
         MaterialLaw::capillaryPressures(pC, materialParams, fluidState_);
 
         // oil is the reference phase for pressure
@@ -249,7 +256,7 @@ public:
         Evaluation SoMax = 0.0;
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
             SoMax = max(fluidState_.saturation(oilPhaseIdx),
-                        elemCtx.problem().maxOilSaturation(globalSpaceIdx));
+                        problem.maxOilSaturation(globalSpaceIdx));
         }
 
         // take the meaning of the switching primary variable into account for the gas
@@ -258,7 +265,6 @@ public:
             // in the threephase case, gas and oil phases are potentially present, i.e.,
             // we use the compositions of the gas-saturated oil and oil-saturated gas.
             if (FluidSystem::enableDissolvedGas()) {
-                Scalar RsMax = elemCtx.problem().maxGasDissolutionFactor(timeIdx, globalSpaceIdx);
                 const Evaluation& RsSat = enableExtbo ? asImp_().rs() :
                     FluidSystem::saturatedDissolutionFactor(fluidState_,
                                                             oilPhaseIdx,
@@ -270,7 +276,6 @@ public:
                 fluidState_.setRs(0.0);
 
             if (FluidSystem::enableVaporizedOil()) {
-                Scalar RvMax = elemCtx.problem().maxOilVaporizationFactor(timeIdx, globalSpaceIdx);
                 const Evaluation& RvSat = enableExtbo ? asImp_().rv() :
                     FluidSystem::saturatedDissolutionFactor(fluidState_,
                                                             gasPhaseIdx,
@@ -294,7 +299,6 @@ public:
             fluidState_.setRvw(Rvw);
 
             if (FluidSystem::enableVaporizedOil()) {
-                Scalar RvMax = elemCtx.problem().maxOilVaporizationFactor(timeIdx, globalSpaceIdx);
                 const Evaluation& RvSat = enableExtbo ? asImp_().rv() :
                     FluidSystem::saturatedDissolutionFactor(fluidState_,
                                                             gasPhaseIdx,
@@ -316,7 +320,6 @@ public:
             if (FluidSystem::enableDissolvedGas()) {
                 // the oil phase is not present, but we need to compute its "composition" for
                 // the gravity correction anyway
-                Scalar RsMax = elemCtx.problem().maxGasDissolutionFactor(timeIdx, globalSpaceIdx);
                 const auto& RsSat = enableExtbo ? asImp_().rs() :
                     FluidSystem::saturatedDissolutionFactor(fluidState_,
                                                             oilPhaseIdx,
@@ -331,8 +334,6 @@ public:
         }
         else if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_po_Rs) {
             // if the switching variable is the mole fraction of the gas component in the
-            Scalar RsMax = elemCtx.problem().maxGasDissolutionFactor(timeIdx, globalSpaceIdx);
-
             // oil phase, we can directly set the composition of the oil phase
             const auto& Rs = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx);
             fluidState_.setRs(min(RsMax, Rs));
@@ -340,7 +341,6 @@ public:
             if (FluidSystem::enableVaporizedOil()) {
                 // the gas phase is not present, but we need to compute its "composition"
                 // for the gravity correction anyway
-                Scalar RvMax = elemCtx.problem().maxOilVaporizationFactor(timeIdx, globalSpaceIdx);
                 const auto& RvSat = enableExtbo ? asImp_().rv() :
                     FluidSystem::saturatedDissolutionFactor(fluidState_,
                                                             gasPhaseIdx,
@@ -366,7 +366,6 @@ public:
             if (FluidSystem::enableDissolvedGas()) {
                 // the oil phase is not present, but we need to compute its "composition" for
                 // the gravity correction anyway
-                Scalar RsMax = elemCtx.problem().maxGasDissolutionFactor(timeIdx, globalSpaceIdx);
                 const auto& RsSat = enableExtbo ? asImp_().rs() :
                     FluidSystem::saturatedDissolutionFactor(fluidState_,
                                                             oilPhaseIdx,
@@ -390,7 +389,7 @@ public:
 
         typename FluidSystem::template ParameterCache<Evaluation> paramCache;
         paramCache.setRegionIndex(pvtRegionIdx);
-        if(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)){
+        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
             paramCache.setMaxOilSat(SoMax);
         }
         paramCache.updateAll(fluidState_);
@@ -452,14 +451,14 @@ public:
         }
 
         // retrieve the porosity from the problem
-        referencePorosity_ = problem.porosity(elemCtx, dofIdx, timeIdx);
+        referencePorosity_ = problem.porosity(globalSpaceIdx, timeIdx);
         porosity_ = referencePorosity_;
 
         // the porosity must be modified by the compressibility of the
         // rock...
-        Scalar rockCompressibility = problem.rockCompressibility(elemCtx, dofIdx, timeIdx);
+        Scalar rockCompressibility = problem.rockCompressibility(globalSpaceIdx);
         if (rockCompressibility > 0.0) {
-            Scalar rockRefPressure = problem.rockReferencePressure(elemCtx, dofIdx, timeIdx);
+            Scalar rockRefPressure = problem.rockReferencePressure(globalSpaceIdx);
             Evaluation x;
             if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
                 x = rockCompressibility*(fluidState_.pressure(oilPhaseIdx) - rockRefPressure);
