@@ -109,7 +109,6 @@ class BlackOilIntensiveQuantitiesSimple
     using Toolbox = MathToolbox<Evaluation>;
     using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
     using FluxIntensiveQuantities = typename FluxModule::FluxIntensiveQuantities;
-    using MaterialParams = typename MaterialLaw::Params;
     using DiffusionIntensiveQuantities = BlackOilDiffusionIntensiveQuantities<TypeTag, enableDiffusion>;
 
 public:
@@ -136,67 +135,31 @@ public:
 
     BlackOilIntensiveQuantitiesSimple& operator=(const BlackOilIntensiveQuantitiesSimple& other) = default;
 
-
-
-    void update(const Problem& problem,const PrimaryVariables& primaryVars,unsigned globalSpaceIdx, unsigned timeIdx)
+    /*!
+     * \copydoc IntensiveQuantities::update
+     */
+    void update(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx)
     {
-        ParentType::update(problem, primaryVars, globalSpaceIdx, timeIdx);
-
-        const auto& materialParams = problem.materialLawParams(globalSpaceIdx);
-        //const auto& materialParams = problem.materialLawParams(0);//NB improve speed
-        const auto linearizationType = problem.model().linearizer().getLinearizationType();
-         Scalar RvMax;
-         if (FluidSystem::enableVaporizedOil()) {
-             RvMax =  problem.maxOilVaporizationFactor(timeIdx, globalSpaceIdx);
-         }else{
-             RvMax = 0.0;
-         }
-         Scalar RsMax;
-         if (FluidSystem::enableDissolvedGas()) {
-             RsMax = problem.maxGasDissolutionFactor(timeIdx, globalSpaceIdx);
-         }else{
-             RsMax = 0.0;
-         }
-         Scalar SoMax_org = problem.maxOilSaturation(globalSpaceIdx);
-         //Scalar refPorosity =  problem.porosity(elemCtx, dofIdx, timeIdx);
-         Scalar refPorosity =  problem.porosity(globalSpaceIdx, timeIdx);
-//         Scalar rockCompressibility = problem.rockCompressibility(elemCtx, dofIdx, timeIdx);
-//         Scalar rockRefPressure = problem.rockReferencePressure(elemCtx, dofIdx, timeIdx);
-         Scalar rockCompressibility = problem.rockCompressibility(globalSpaceIdx);
-         Scalar rockRefPressure = problem.rockReferencePressure(globalSpaceIdx);
-         //Scalar rockCompressibility = 0.0;//problem.rockCompressibility(elemCtx, dofIdx, timeIdx);
-         //Scalar rockRefPressure = 0.0;//problem.rockReferencePressure(elemCtx, dofIdx, timeIdx);
-         update_simple(//dofIdx,
-                       timeIdx,
-                       //globalSpaceIdx,
-                       primaryVars,
-                       materialParams,
-                       linearizationType,
-                       refPorosity,
-                       rockCompressibility,
-                       rockRefPressure,
-                       SoMax_org,
-                       RsMax,
-                       RvMax
-             );
-         rockCompTransMultiplier_ = problem.template rockCompTransMultiplier<Evaluation>(*this, globalSpaceIdx);
-         porosity_ *= problem.template rockCompPoroMultiplier<Evaluation>(*this, globalSpaceIdx);
+         const auto& problem = elemCtx.problem();
+         const PrimaryVariables& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
+         unsigned globalSpaceIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
+         update(problem, priVars, globalSpaceIdx, timeIdx);
     }
-    void update_simple(//const unsigned timeIdx,
-                       const unsigned timeIdx,
-                       //const unsigned globalIdx,
-                       const PrimaryVariables& priVars,
-                       const MaterialParams& materialParams,
-                       const LinearizationType& linearizationType,
-                       const Scalar& refPorosity,
-                       const Scalar& rockCompressibility,
-                       const Scalar& rockRefPressure,
-                       const Scalar& SoMax_org,
-                       const Scalar& RsMax,
-                       const Scalar& RvMax
-         )
+
+    void update(const Problem& problem,const PrimaryVariables& priVars, unsigned globalSpaceIdx, unsigned timeIdx)
     {
-        //asImp_().updateTemperature_(elemCtx, dofIdx, timeIdx);
+        ParentType::update(problem, priVars, globalSpaceIdx, timeIdx);
+
+        const auto& linearizationType = problem.model().linearizer().getLinearizationType();
+        Scalar RvMax = FluidSystem::enableVaporizedOil()
+            ? problem.maxOilVaporizationFactor(timeIdx, globalSpaceIdx)
+            : 0.0;
+        Scalar RsMax = FluidSystem::enableDissolvedGas()
+            ? problem.maxGasDissolutionFactor(timeIdx, globalSpaceIdx)
+            : 0.0;
+
+        // asImp_().updateTemperature_(elemCtx, dofIdx, timeIdx);
+
         unsigned pvtRegionIdx = priVars.pvtRegionIndex();
         fluidState_.setPvtRegionIndex(pvtRegionIdx);
 
@@ -265,6 +228,8 @@ public:
 
         // now we compute all phase pressures
         Evaluation pC[numPhases];
+        const auto& materialParams = problem.materialLawParams(globalSpaceIdx);
+        //const auto& materialParams = problem.materialLawParams(0);//NB improve speed
         MaterialLaw::capillaryPressures(pC, materialParams, fluidState_);
 
         // oil is the reference phase for pressure
@@ -293,9 +258,10 @@ public:
         // update extBO parameters
         //asImp_().zFractionUpdate_(elemCtx, dofIdx, timeIdx);
 
-        Evaluation SoMax = SoMax_org;
+        Evaluation SoMax = 0.0;
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-            SoMax = max(fluidState_.saturation(oilPhaseIdx),SoMax);
+            SoMax = max(fluidState_.saturation(oilPhaseIdx),
+                        problem.maxOilSaturation(globalSpaceIdx));
         }
 
         // take the meaning of the switching primary variable into account for the gas
@@ -304,7 +270,6 @@ public:
             // in the threephase case, gas and oil phases are potentially present, i.e.,
             // we use the compositions of the gas-saturated oil and oil-saturated gas.
             if (FluidSystem::enableDissolvedGas()) {
-                //Scalar Scalar RsMax = elemCtx.problem().maxGasDissolutionFactor(timeIdx, globalSpaceIdx);
                 const Evaluation& RsSat = enableExtbo ? asImp_().rs() :
                     FluidSystem::saturatedDissolutionFactor(fluidState_,
                                                             oilPhaseIdx,
@@ -316,7 +281,6 @@ public:
                 fluidState_.setRs(0.0);
 
             if (FluidSystem::enableVaporizedOil()) {
-                //Scalar RvMax =  elemCtx.problem().maxOilVaporizationFactor(timeIdx, globalSpaceIdx);
                 const Evaluation& RvSat = enableExtbo ? asImp_().rv() :
                     FluidSystem::saturatedDissolutionFactor(fluidState_,
                                                             gasPhaseIdx,
@@ -340,7 +304,6 @@ public:
             fluidState_.setRvw(Rvw);
 
             if (FluidSystem::enableVaporizedOil()) {
-                //Scalar RvMax = problem.maxOilVaporizationFactor(timeIdx, globalSpaceIdx);
                 const Evaluation& RvSat = enableExtbo ? asImp_().rv() :
                     FluidSystem::saturatedDissolutionFactor(fluidState_,
                                                             gasPhaseIdx,
@@ -362,7 +325,6 @@ public:
             if (FluidSystem::enableDissolvedGas()) {
                 // the oil phase is not present, but we need to compute its "composition" for
                 // the gravity correction anyway
-                //Scalar RsMax = elemCtx.problem().maxGasDissolutionFactor(timeIdx, globalSpaceIdx);
                 const auto& RsSat = enableExtbo ? asImp_().rs() :
                     FluidSystem::saturatedDissolutionFactor(fluidState_,
                                                             oilPhaseIdx,
@@ -377,8 +339,6 @@ public:
         }
         else if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_po_Rs) {
             // if the switching variable is the mole fraction of the gas component in the
-            //Scalar RsMax = elemCtx.problem().maxGasDissolutionFactor(timeIdx, globalSpaceIdx);
-
             // oil phase, we can directly set the composition of the oil phase
             const auto& Rs = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx);
             fluidState_.setRs(min(RsMax, Rs));
@@ -386,7 +346,6 @@ public:
             if (FluidSystem::enableVaporizedOil()) {
                 // the gas phase is not present, but we need to compute its "composition"
                 // for the gravity correction anyway
-                //Scalar RvMax = elemCtx.problem().maxOilVaporizationFactor(timeIdx, globalSpaceIdx);
                 const auto& RvSat = enableExtbo ? asImp_().rv() :
                     FluidSystem::saturatedDissolutionFactor(fluidState_,
                                                             gasPhaseIdx,
@@ -412,7 +371,6 @@ public:
             if (FluidSystem::enableDissolvedGas()) {
                 // the oil phase is not present, but we need to compute its "composition" for
                 // the gravity correction anyway
-                //Scalar RsMax = elemCtx.problem().maxGasDissolutionFactor(timeIdx, globalSpaceIdx);
                 const auto& RsSat = enableExtbo ? asImp_().rs() :
                     FluidSystem::saturatedDissolutionFactor(fluidState_,
                                                             oilPhaseIdx,
@@ -434,12 +392,12 @@ public:
             assert(priVars.primaryVarsMeaning() == PrimaryVariables::OnePhase_p);
         }
 
-        // typename FluidSystem::template ParameterCache<Evaluation> paramCache;
-        // paramCache.setRegionIndex(pvtRegionIdx);
-        // if(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)){
-        //     paramCache.setMaxOilSat(SoMax);
-        // }
-        // paramCache.updateAll(fluidState_);
+        typename FluidSystem::template ParameterCache<Evaluation> paramCache;
+        paramCache.setRegionIndex(pvtRegionIdx);
+        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+            paramCache.setMaxOilSat(SoMax);
+        }
+        paramCache.updateAll(fluidState_);
 
         // compute the phase densities and transform the phase permeabilities into mobilities
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
@@ -449,8 +407,7 @@ public:
             const auto& b = FluidSystem::inverseFormationVolumeFactor(fluidState_, phaseIdx, pvtRegionIdx);
             fluidState_.setInvB(phaseIdx, b);
 
-            //const auto& mu = FluidSystem::viscosity(fluidState_, paramCache, phaseIdx);
-            const auto& mu = FluidSystem::viscosity(fluidState_, phaseIdx ,pvtRegionIdx);
+            const auto& mu = FluidSystem::viscosity(fluidState_, paramCache, phaseIdx);
             if (enableExtbo && phaseIdx == oilPhaseIdx)
               mobility_[phaseIdx] /= asImp_().oilViscosity();
             else if (enableExtbo && phaseIdx == gasPhaseIdx)
@@ -499,14 +456,14 @@ public:
         }
 
         // retrieve the porosity from the problem
-        referencePorosity_ = refPorosity; //problem.porosity(elemCtx, dofIdx, timeIdx);
+        referencePorosity_ = problem.porosity(globalSpaceIdx, timeIdx);
         porosity_ = referencePorosity_;
 
         // the porosity must be modified by the compressibility of the
         // rock...
-        //Scalar rockCompressibility = problem.rockCompressibility(elemCtx, dofIdx, timeIdx);
+        Scalar rockCompressibility = problem.rockCompressibility(globalSpaceIdx);
         if (rockCompressibility > 0.0) {
-            //Scalar rockRefPressure = problem.rockReferencePressure(elemCtx, dofIdx, timeIdx);
+            Scalar rockRefPressure = problem.rockReferencePressure(globalSpaceIdx);
             Evaluation x;
             if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
                 x = rockCompressibility*(fluidState_.pressure(oilPhaseIdx) - rockRefPressure);
@@ -517,8 +474,9 @@ public:
             }
             porosity_ *= 1.0 + x + 0.5*x*x;
         }
-        // // deal with water induced rock compaction
-        // porosity_ *= problem.template rockCompPoroMultiplier<Evaluation>(*this, globalSpaceIdx);
+
+        // deal with water induced rock compaction
+        porosity_ *= problem.template rockCompPoroMultiplier<Evaluation>(*this, globalSpaceIdx);
 
         // the MICP processes change the porosity
         if (enableMICP){
@@ -532,6 +490,8 @@ public:
             Evaluation Sp = priVars.makeEvaluation(Indices::saltConcentrationIdx, timeIdx);
             porosity_ *= (1.0 - Sp);
         }
+
+        rockCompTransMultiplier_ = problem.template rockCompTransMultiplier<Evaluation>(*this, globalSpaceIdx);
 
         // asImp_().solventPvtUpdate_(elemCtx, dofIdx, timeIdx);
         // asImp_().zPvtUpdate_();
@@ -564,22 +524,6 @@ public:
         assert(isfinite(fluidState_.Rv()));
 #endif
     }
-
-    /*!
-     * \copydoc IntensiveQuantities::update
-     */
-    
-    void update(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx)
-    {
-        //ParentType::update(elemCtx, dofIdx, timeIdx);//only used for extrusion factor
-         const auto& problem = elemCtx.problem();
-         const PrimaryVariables& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
-         //const auto& linearizationType = elemCtx.linearizationType();
-         unsigned globalSpaceIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
-         //const auto& materialParams = problem.materialLawParams(elemCtx, dofIdx, timeIdx);
-         update(problem, priVars, globalSpaceIdx, timeIdx);
-    }
-   
 
     /*!
      * \copydoc ImmiscibleIntensiveQuantities::fluidState
