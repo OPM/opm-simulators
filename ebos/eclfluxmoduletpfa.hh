@@ -339,7 +339,7 @@ public:
         // estimate the gravity correction: for performance reasons we use a simplified
         // approach for this flux module that assumes that gravity is constant and always
         // acts into the downwards direction. (i.e., no centrifuge experiments, sorry.)
-        constexpr Scalar g = 9.8;
+        Scalar g = elemCtx.problem().gravity()[dimWorld - 1];
 
         const auto& intQuantsIn = elemCtx.intensiveQuantities(interiorDofIdx, timeIdx);
         const auto& intQuantsEx = elemCtx.intensiveQuantities(exteriorDofIdx, timeIdx);
