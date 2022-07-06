@@ -675,8 +675,15 @@ public:
             if (this->gasConnectionSaturations_.count(cartesianIdx) > 0) {
                 this->gasConnectionSaturations_[cartesianIdx] = getValue(fs.saturation(gasPhaseIdx));
             }
-            if (this->wbpData_.count(cartesianIdx) > 0)
-                this->wbpData_[cartesianIdx] = getValue(fs.pressure(oilPhaseIdx));
+            if (this->wbpData_.count(cartesianIdx) > 0) {
+                if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
+                    this->wbpData_[cartesianIdx] = getValue(fs.pressure(oilPhaseIdx));
+                } else if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
+                    this->wbpData_[cartesianIdx] = getValue(fs.pressure(gasPhaseIdx));
+                } else if (FluidSystem::phaseIsActive(waterPhaseIdx)) {
+                    this->wbpData_[cartesianIdx] = getValue(fs.pressure(waterPhaseIdx));
+                }
+            }
 
             // tracers
             const auto& tracerModel = simulator_.problem().tracerModel();
