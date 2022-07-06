@@ -100,6 +100,7 @@ class EclTransExtensiveQuantities
 {
     using Implementation = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
 
+    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
@@ -206,25 +207,26 @@ protected:
     void updatePolymer(const ElementContext& elemCtx, unsigned scvfIdx, unsigned timeIdx)
     { asImp_().updateShearMultipliers(elemCtx, scvfIdx, timeIdx); }
 
-    /*!
-     * \brief Update the required gradients for interior faces
-     */
-    void calculateGradients_(const ElementContext& elemCtx, unsigned scvfIdx, unsigned timeIdx)
+    static void volumeAndPhasePressureDifferences(short (&upIdx)[numPhases],
+                                                  short (&dnIdx)[numPhases],
+                                                  Evaluation (&volumeFlux)[numPhases],
+                                                  Evaluation (&pressureDifferences)[numPhases],
+                                                  const ElementContext& elemCtx,
+                                                  unsigned scvfIdx,
+                                                  unsigned timeIdx)
     {
-        Valgrind::SetUndefined(*this);
-
         const auto& problem = elemCtx.problem();
         const auto& stencil = elemCtx.stencil(timeIdx);
         const auto& scvf = stencil.interiorFace(scvfIdx);
+        unsigned interiorDofIdx = scvf.interiorIndex();
+        unsigned exteriorDofIdx = scvf.exteriorIndex();
 
-        interiorDofIdx_ = scvf.interiorIndex();
-        exteriorDofIdx_ = scvf.exteriorIndex();
-        assert(interiorDofIdx_ != exteriorDofIdx_);
+        assert(interiorDofIdx != exteriorDofIdx);
 
-        unsigned I = stencil.globalSpaceIndex(interiorDofIdx_);
-        unsigned J = stencil.globalSpaceIndex(exteriorDofIdx_);
+        unsigned I = stencil.globalSpaceIndex(interiorDofIdx);
+        unsigned J = stencil.globalSpaceIndex(exteriorDofIdx);
 
-        Scalar trans = problem.transmissibility(elemCtx, interiorDofIdx_, exteriorDofIdx_);
+        Scalar trans = problem.transmissibility(elemCtx, interiorDofIdx, exteriorDofIdx);
         Scalar faceArea = scvf.area();
         Scalar thpres = problem.thresholdPressure(I, J);
 
@@ -233,127 +235,169 @@ protected:
         // acts into the downwards direction. (i.e., no centrifuge experiments, sorry.)
         Scalar g = elemCtx.problem().gravity()[dimWorld - 1];
 
-        const auto& intQuantsIn = elemCtx.intensiveQuantities(interiorDofIdx_, timeIdx);
-        const auto& intQuantsEx = elemCtx.intensiveQuantities(exteriorDofIdx_, timeIdx);
+        const auto& intQuantsIn = elemCtx.intensiveQuantities(interiorDofIdx, timeIdx);
+        const auto& intQuantsEx = elemCtx.intensiveQuantities(exteriorDofIdx, timeIdx);
 
         // this is quite hacky because the dune grid interface does not provide a
         // cellCenterDepth() method (so we ask the problem to provide it). The "good"
         // solution would be to take the Z coordinate of the element centroids, but since
         // ECL seems to like to be inconsistent on that front, it needs to be done like
         // here...
-        Scalar zIn = problem.dofCenterDepth(elemCtx, interiorDofIdx_, timeIdx);
-        Scalar zEx = problem.dofCenterDepth(elemCtx, exteriorDofIdx_, timeIdx);
+        Scalar zIn = problem.dofCenterDepth(elemCtx, interiorDofIdx, timeIdx);
+        Scalar zEx = problem.dofCenterDepth(elemCtx, exteriorDofIdx, timeIdx);
 
         // the distances from the DOF's depths. (i.e., the additional depth of the
         // exterior DOF)
         Scalar distZ = zIn - zEx;
 
+        Scalar Vin = elemCtx.dofVolume(interiorDofIdx, /*timeIdx=*/0);
+        Scalar Vex = elemCtx.dofVolume(exteriorDofIdx, /*timeIdx=*/0);
+
         for (unsigned phaseIdx=0; phaseIdx < numPhases; phaseIdx++) {
             if (!FluidSystem::phaseIsActive(phaseIdx))
                 continue;
-
-            // check shortcut: if the mobility of the phase is zero in the interior as
-            // well as the exterior DOF, we can skip looking at the phase.
-            if (intQuantsIn.mobility(phaseIdx) <= 0.0 &&
-                intQuantsEx.mobility(phaseIdx) <= 0.0)
-            {
-                upIdx_[phaseIdx] = interiorDofIdx_;
-                dnIdx_[phaseIdx] = exteriorDofIdx_;
-                pressureDifference_[phaseIdx] = 0.0;
-                volumeFlux_[phaseIdx] = 0.0;
+            calculatePhasePressureDiff_(upIdx[phaseIdx],
+                                        dnIdx[phaseIdx],
+                                        pressureDifferences[phaseIdx],
+                                        intQuantsIn,
+                                        intQuantsEx,
+                                        timeIdx,//input
+                                        phaseIdx,//input
+                                        interiorDofIdx,//input
+                                        exteriorDofIdx,//intput
+                                        Vin,
+                                        Vex,
+                                        I,
+                                        J,
+                                        distZ*g,
+                                        thpres);
+            if (pressureDifferences[phaseIdx] == 0) {
+                volumeFlux[phaseIdx] = 0.0;
                 continue;
             }
 
-            // do the gravity correction: compute the hydrostatic pressure for the
-            // external at the depth of the internal one
-            const Evaluation& rhoIn = intQuantsIn.fluidState().density(phaseIdx);
-            Scalar rhoEx = Toolbox::value(intQuantsEx.fluidState().density(phaseIdx));
-            Evaluation rhoAvg = (rhoIn + rhoEx)/2;
-
-            const Evaluation& pressureInterior = intQuantsIn.fluidState().pressure(phaseIdx);
-            Evaluation pressureExterior = Toolbox::value(intQuantsEx.fluidState().pressure(phaseIdx));
-            if (enableExtbo) // added stability; particulary useful for solvent migrating in pure water
-                             // where the solvent fraction displays a 0/1 behaviour ...
-                pressureExterior += Toolbox::value(rhoAvg)*(distZ*g);
-            else
-                pressureExterior += rhoAvg*(distZ*g);
-
-            pressureDifference_[phaseIdx] = pressureExterior - pressureInterior;
-
-            // decide the upstream index for the phase. for this we make sure that the
-            // degree of freedom which is regarded upstream if both pressures are equal
-            // is always the same: if the pressure is equal, the DOF with the lower
-            // global index is regarded to be the upstream one.
-            if (pressureDifference_[phaseIdx] > 0.0) {
-                upIdx_[phaseIdx] = exteriorDofIdx_;
-                dnIdx_[phaseIdx] = interiorDofIdx_;
-            }
-            else if (pressureDifference_[phaseIdx] < 0.0) {
-                upIdx_[phaseIdx] = interiorDofIdx_;
-                dnIdx_[phaseIdx] = exteriorDofIdx_;
-            }
-            else {
-                // if the pressure difference is zero, we chose the DOF which has the
-                // larger volume associated to it as upstream DOF
-                Scalar Vin = elemCtx.dofVolume(interiorDofIdx_, /*timeIdx=*/0);
-                Scalar Vex = elemCtx.dofVolume(exteriorDofIdx_, /*timeIdx=*/0);
-                if (Vin > Vex) {
-                    upIdx_[phaseIdx] = interiorDofIdx_;
-                    dnIdx_[phaseIdx] = exteriorDofIdx_;
-                }
-                else if (Vin < Vex) {
-                    upIdx_[phaseIdx] = exteriorDofIdx_;
-                    dnIdx_[phaseIdx] = interiorDofIdx_;
-                }
-                else {
-                    assert(Vin == Vex);
-                    // if the volumes are also equal, we pick the DOF which exhibits the
-                    // smaller global index
-                    if (I < J) {
-                        upIdx_[phaseIdx] = interiorDofIdx_;
-                        dnIdx_[phaseIdx] = exteriorDofIdx_;
-                    }
-                    else {
-                        upIdx_[phaseIdx] = exteriorDofIdx_;
-                        dnIdx_[phaseIdx] = interiorDofIdx_;
-                    }
-                }
-            }
-
-            // apply the threshold pressure for the intersection. note that the concept
-            // of threshold pressure is a quite big hack that only makes sense for ECL
-            // datasets. (and even there, its physical justification is quite
-            // questionable IMO.)
-            if (std::abs(Toolbox::value(pressureDifference_[phaseIdx])) > thpres) {
-                if (pressureDifference_[phaseIdx] < 0.0)
-                    pressureDifference_[phaseIdx] += thpres;
-                else
-                    pressureDifference_[phaseIdx] -= thpres;
-            }
-            else {
-                pressureDifference_[phaseIdx] = 0.0;
-                volumeFlux_[phaseIdx] = 0.0;
-                continue;
-            }
-
-            // this is slightly hacky because in the automatic differentiation case, it
-            // only works for the element centered finite volume method. for ebos this
-            // does not matter, though.
-            unsigned upstreamIdx = upstreamIndex_(phaseIdx);
-            const auto& up = elemCtx.intensiveQuantities(upstreamIdx, timeIdx);
-
+            const IntensiveQuantities& up = (upIdx[phaseIdx] == interiorDofIdx) ? intQuantsIn : intQuantsEx;
             // TODO: should the rock compaction transmissibility multiplier be upstreamed
             // or averaged? all fluids should see the same compaction?!
-            const Evaluation& transMult =
-                problem.template rockCompTransMultiplier<Evaluation>(up, stencil.globalSpaceIndex(upstreamIdx));
+            const Evaluation& transMult = up.rockCompTransMultiplier();
 
-            if (upstreamIdx == interiorDofIdx_)
-                volumeFlux_[phaseIdx] =
-                    pressureDifference_[phaseIdx]*up.mobility(phaseIdx)*transMult*(-trans/faceArea);
+            if (upIdx[phaseIdx] == interiorDofIdx)
+                volumeFlux[phaseIdx] =
+                    pressureDifferences[phaseIdx]*up.mobility(phaseIdx)*transMult*(-trans/faceArea);
             else
-                volumeFlux_[phaseIdx] =
-                    pressureDifference_[phaseIdx]*(Toolbox::value(up.mobility(phaseIdx))*Toolbox::value(transMult)*(-trans/faceArea));
+                volumeFlux[phaseIdx] =
+                    pressureDifferences[phaseIdx]*(Toolbox::value(up.mobility(phaseIdx))*Toolbox::value(transMult)*(-trans/faceArea));
         }
+    }
+
+    template<class EvalType>
+    static void calculatePhasePressureDiff_(short& upIdx,
+                                            short& dnIdx,
+                                            EvalType& pressureDifference,
+                                            const IntensiveQuantities& intQuantsIn,
+                                            const IntensiveQuantities& intQuantsEx,
+                                            const unsigned timeIdx,
+                                            const unsigned phaseIdx,
+                                            const unsigned interiorDofIdx,
+                                            const unsigned exteriorDofIdx,
+                                            const Scalar Vin,
+                                            const Scalar Vex,
+                                            const unsigned globalIndexIn,
+                                            const unsigned globalIndexEx,
+                                            const Scalar distZg,
+                                            const Scalar thpres
+        )
+    {
+
+        // check shortcut: if the mobility of the phase is zero in the interior as
+        // well as the exterior DOF, we can skip looking at the phase.
+        if (intQuantsIn.mobility(phaseIdx) <= 0.0 &&
+            intQuantsEx.mobility(phaseIdx) <= 0.0)
+        {
+            upIdx = interiorDofIdx;
+            dnIdx = exteriorDofIdx;
+            pressureDifference = 0.0;
+            return;
+        }
+
+        // do the gravity correction: compute the hydrostatic pressure for the
+        // external at the depth of the internal one
+        const Evaluation& rhoIn = intQuantsIn.fluidState().density(phaseIdx);
+        Scalar rhoEx = Toolbox::value(intQuantsEx.fluidState().density(phaseIdx));
+        Evaluation rhoAvg = (rhoIn + rhoEx)/2;
+
+        const Evaluation& pressureInterior = intQuantsIn.fluidState().pressure(phaseIdx);
+        Evaluation pressureExterior = Toolbox::value(intQuantsEx.fluidState().pressure(phaseIdx));
+        if (enableExtbo) // added stability; particulary useful for solvent migrating in pure water
+                         // where the solvent fraction displays a 0/1 behaviour ...
+            pressureExterior += Toolbox::value(rhoAvg)*(distZg);
+        else
+            pressureExterior += rhoAvg*(distZg);
+
+        pressureDifference = pressureExterior - pressureInterior;
+
+        // decide the upstream index for the phase. for this we make sure that the
+        // degree of freedom which is regarded upstream if both pressures are equal
+        // is always the same: if the pressure is equal, the DOF with the lower
+        // global index is regarded to be the upstream one.
+        if (pressureDifference > 0.0) {
+            upIdx = exteriorDofIdx;
+            dnIdx = interiorDofIdx;
+        }
+        else if (pressureDifference < 0.0) {
+            upIdx = interiorDofIdx;
+            dnIdx = exteriorDofIdx;
+        }
+        else {
+            // if the pressure difference is zero, we chose the DOF which has the
+            // larger volume associated to it as upstream DOF
+            if (Vin > Vex) {
+                upIdx = interiorDofIdx;
+                dnIdx = exteriorDofIdx;
+            }
+            else if (Vin < Vex) {
+                upIdx = exteriorDofIdx;
+                dnIdx = interiorDofIdx;
+            }
+            else {
+                assert(Vin == Vex);
+                // if the volumes are also equal, we pick the DOF which exhibits the
+                // smaller global index
+                if (globalIndexIn < globalIndexEx) {
+                    upIdx = interiorDofIdx;
+                    dnIdx = exteriorDofIdx;
+                }
+                else {
+                    upIdx  = exteriorDofIdx;
+                    dnIdx = interiorDofIdx;
+                }
+            }
+        }
+
+        // apply the threshold pressure for the intersection. note that the concept
+        // of threshold pressure is a quite big hack that only makes sense for ECL
+        // datasets. (and even there, its physical justification is quite
+        // questionable IMO.)
+        if (std::abs(Toolbox::value(pressureDifference)) > thpres) {
+            if (pressureDifference < 0.0)
+                pressureDifference += thpres;
+            else
+                pressureDifference -= thpres;
+        }
+        else {
+            pressureDifference = 0.0;
+        }
+    }
+
+protected:
+    /*!
+     * \brief Update the required gradients for interior faces
+     */
+    void calculateGradients_(const ElementContext& elemCtx, unsigned scvfIdx, unsigned timeIdx)
+    {
+        Valgrind::SetUndefined(*this);
+
+        volumeAndPhasePressureDifferences(upIdx_ , dnIdx_, volumeFlux_, pressureDifference_, elemCtx, scvfIdx, timeIdx);
     }
 
     /*!
@@ -374,7 +418,7 @@ protected:
         const auto& stencil = elemCtx.stencil(timeIdx);
         const auto& scvf = stencil.boundaryFace(scvfIdx);
 
-        interiorDofIdx_ = scvf.interiorIndex();
+        unsigned interiorDofIdx = scvf.interiorIndex();
 
         Scalar trans = problem.transmissibilityBoundary(elemCtx, scvfIdx);
         Scalar faceArea = scvf.area();
@@ -384,14 +428,14 @@ protected:
         // acts into the downwards direction. (i.e., no centrifuge experiments, sorry.)
         Scalar g = elemCtx.problem().gravity()[dimWorld - 1];
 
-        const auto& intQuantsIn = elemCtx.intensiveQuantities(interiorDofIdx_, timeIdx);
+        const auto& intQuantsIn = elemCtx.intensiveQuantities(interiorDofIdx, timeIdx);
 
         // this is quite hacky because the dune grid interface does not provide a
         // cellCenterDepth() method (so we ask the problem to provide it). The "good"
         // solution would be to take the Z coordinate of the element centroids, but since
         // ECL seems to like to be inconsistent on that front, it needs to be done like
         // here...
-        Scalar zIn = problem.dofCenterDepth(elemCtx, interiorDofIdx_, timeIdx);
+        Scalar zIn = problem.dofCenterDepth(elemCtx, interiorDofIdx, timeIdx);
         Scalar zEx = scvf.integrationPos()[dimWorld - 1];
 
         // the distances from the DOF's depths. (i.e., the additional depth of the
@@ -420,17 +464,17 @@ protected:
             // global index is regarded to be the upstream one.
             if (pressureDifference_[phaseIdx] > 0.0) {
                 upIdx_[phaseIdx] = -1;
-                dnIdx_[phaseIdx] = interiorDofIdx_;
+                dnIdx_[phaseIdx] = interiorDofIdx;
             }
             else {
-                upIdx_[phaseIdx] = interiorDofIdx_;
+                upIdx_[phaseIdx] = interiorDofIdx;
                 dnIdx_[phaseIdx] = -1;
             }
 
             Evaluation transModified = trans;
 
             short upstreamIdx = upstreamIndex_(phaseIdx);
-            if (upstreamIdx == interiorDofIdx_) {
+            if (upstreamIdx == interiorDofIdx) {
 
                 // this is slightly hacky because in the automatic differentiation case, it
                 // only works for the element centered finite volume method. for ebos this
@@ -438,7 +482,8 @@ protected:
                 const auto& up = elemCtx.intensiveQuantities(upstreamIdx, timeIdx);
 
                 // deal with water induced rock compaction
-                transModified *= problem.template rockCompTransMultiplier<double>(up, stencil.globalSpaceIndex(upstreamIdx));
+                const double transMult = Toolbox::value(up.rockCompTransMultiplier());
+                transModified *= transMult;
 
                 volumeFlux_[phaseIdx] =
                     pressureDifference_[phaseIdx]*up.mobility(phaseIdx)*(-transModified/faceArea);
@@ -451,7 +496,7 @@ protected:
                 // interior element. TODO: this could probably be done more efficiently
                 const auto& matParams =
                     elemCtx.problem().materialLawParams(elemCtx,
-                                                        interiorDofIdx_,
+                                                        interiorDofIdx,
                                                         /*timeIdx=*/0);
                 typename FluidState::Scalar kr[numPhases];
                 MaterialLaw::relativePermeabilities(kr, matParams, exFluidState);
@@ -491,8 +536,6 @@ private:
     Evaluation pressureDifference_[numPhases];
 
     // the local indices of the interior and exterior degrees of freedom
-    unsigned short interiorDofIdx_;
-    unsigned short exteriorDofIdx_;
     short upIdx_[numPhases];
     short dnIdx_[numPhases];
 };
