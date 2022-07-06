@@ -443,9 +443,8 @@ private:
                 const IntensiveQuantities* intQuantsExP = model_().cachedIntensiveQuantities(globJ, /*timeIdx*/ 0);
                 assert(intQuantsExP);
                 const IntensiveQuantities& intQuantsEx = *intQuantsExP;
-                unsigned globalFocusDofIdx = globI;
                 LocalResidual::computeFlux(
-                    adres, problem_(), globalFocusDofIdx, globI, globJ, intQuantsIn, intQuantsEx, 0);
+                    adres, problem_(), globI, globJ, intQuantsIn, intQuantsEx, 0);
                 adres *= trans_[globI][loc];
                 setResAndJacobi(res, bMat, adres);
                 residual_[globI] += res;
