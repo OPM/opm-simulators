@@ -247,9 +247,11 @@ protected:
                        unsigned scvfIdx
         ){                       
         short upIdxV[numPhases];
+        short dnIdxV[numPhases];
         Eval volumFlux[numPhases];
         Eval pressureDifferences[numPhases];
-        ExtensiveQuantities::volumeAndPhasePressureDifferences(upIdxV ,
+        ExtensiveQuantities::volumeAndPhasePressureDifferences(upIdxV,
+                                                               dnIdxV,
                                                                volumFlux,
                                                                pressureDifferences,
                                                                elemCtx,

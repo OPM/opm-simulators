@@ -261,10 +261,11 @@ private:
     
     const double getWaterFlux(SmallElementContext<TypeTag>& elem_ctx,unsigned face_idx) const{
         short upIdx[numPhases];
-        
+        short dnIdx[numPhases];
         Eval volumFlux[numPhases];
         Eval pressureDifferences[numPhases];
-        ExtensiveQuantities::volumeAndPhasePressureDifferences(upIdx ,
+        ExtensiveQuantities::volumeAndPhasePressureDifferences(upIdx,
+                                                               dnIdx,
                                                                volumFlux,
                                                                pressureDifferences,
                                                                elem_ctx,
