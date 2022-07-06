@@ -99,7 +99,7 @@ public:
     static void computeStorage(Dune::FieldVector<LhsEval, numEq>& storage,
                                const ElementContext& elemCtx,
                                unsigned dofIdx,
-                               unsigned timeIdx) const
+                               unsigned timeIdx)
     {
         // retrieve the intensive quantities for the SCV at the specified point in time
         const IntensiveQuantities& intQuants = elemCtx.intensiveQuantities(dofIdx, timeIdx);
