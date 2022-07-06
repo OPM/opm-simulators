@@ -207,6 +207,8 @@ protected:
     void updatePolymer(const ElementContext& elemCtx, unsigned scvfIdx, unsigned timeIdx)
     { asImp_().updateShearMultipliers(elemCtx, scvfIdx, timeIdx); }
 
+public:
+
     static void volumeAndPhasePressureDifferences(short (&upIdx)[numPhases],
                                                   short (&dnIdx)[numPhases],
                                                   Evaluation (&volumeFlux)[numPhases],
