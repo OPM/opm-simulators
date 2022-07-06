@@ -25,8 +25,6 @@
 #include <opm/models/blackoil/blackoilintensivequantitiessimple.hh>
 #include <opm/models/discretization/common/smallelementcontext.hh>
 #include <opm/models/discretization/common/tpfalinearizer.hh>
-#include <ebos/eclfluxmoduletpfa.hh>
-#include <ebos/eclproblem.hh>
 
 namespace Opm {
     namespace Properties {
@@ -38,48 +36,23 @@ namespace Opm {
    }
 }
 
-
-
 namespace Opm {
     namespace Properties {
+
         template<class TypeTag>
         struct Linearizer<TypeTag, TTag::EclFlowProblemTPFA> { using type = TpfaLinearizer<TypeTag>; };
-    }
-}
-namespace Opm {
-    namespace Properties {
+
         template<class TypeTag>
         struct LocalResidual<TypeTag, TTag::EclFlowProblemTPFA> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
+
         template<class TypeTag>
         //struct ElementContext<TypeTag, TTag::EclFlowProblemTPFA> { using type = SmallElementContext<TypeTag>; };
         struct ElementContext<TypeTag, TTag::EclFlowProblemTPFA> { using type = FvBaseElementContext<TypeTag>; };
-    }
-}
-namespace Opm{
-    template <class TypeTag>
-    struct EclTransFluxModuleTPFA
-    {
-        typedef EclTransIntensiveQuantities<TypeTag> FluxIntensiveQuantities;
-        typedef EclTransExtensiveQuantitiesTPFA<TypeTag> FluxExtensiveQuantities;
-        typedef EclTransBaseProblem<TypeTag> FluxBaseProblem;
 
-        /// \brief Register all run-time parameters for the flux module.
-        static void registerParameters()
-        { }
-    };
-}
-
-
-namespace Opm {
-    namespace Properties {
-
-        template<class TypeTag>
-        struct FluxModule<TypeTag, TTag::EclFlowProblemTPFA> {
-            using type = EclTransFluxModuleTPFA<TypeTag>;
-        };
         template<class TypeTag>
         struct IntensiveQuantities<TypeTag, TTag::EclFlowProblemTPFA> {
-            using type = BlackOilIntensiveQuantitiesSimple<TypeTag>;
+            //using type = BlackOilIntensiveQuantitiesSimple<TypeTag>;
+            using type = BlackOilIntensiveQuantities<TypeTag>;
         };
 
     }
