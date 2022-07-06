@@ -311,6 +311,10 @@ private:
         using NeighborSet = std::set< unsigned >;
         std::vector<NeighborSet> sparsityPattern(model.numTotalDof());
 
+        unsigned numCells = model.numTotalDof();
+        neighborInfo_.reserve(numCells, 6 * numCells);
+        std::vector<NeighborInfo> loc_nbinfo;
+
         ElementIterator elemIt = gridView_().template begin<0>();
         const ElementIterator elemEndIt = gridView_().template end<0>();
         for (; elemIt != elemEndIt; ++elemIt) {
@@ -319,16 +323,23 @@ private:
 
             for (unsigned primaryDofIdx = 0; primaryDofIdx < stencil.numPrimaryDof(); ++primaryDofIdx) {
                 unsigned myIdx = stencil.globalSpaceIndex(primaryDofIdx);
+                loc_nbinfo.resize(stencil.numDof() - 1); // Do not include the primary dof.
 
                 for (unsigned dofIdx = 0; dofIdx < stencil.numDof(); ++dofIdx) {
                     unsigned neighborIdx = stencil.globalSpaceIndex(dofIdx);
                     sparsityPattern[myIdx].insert(neighborIdx);
+                    if (dofIdx > 0) {
+                        const double trans = problem_().transmissibility(myIdx, neighborIdx);
+                        const double area = stencil.interiorFace(dofIdx - 1).area();
+                        loc_nbinfo[dofIdx - 1] = NeighborInfo{neighborIdx, trans, area};
+                    }
                 }
+                neighborInfo_.appendRow(loc_nbinfo.begin(), loc_nbinfo.end());
             }
         }
 
         // Do not include auxiliary connections in the linearization sparsity pattern.
-        auto reservoirSparsityPattern = sparsityPattern;
+        // auto reservoirSparsityPattern = sparsityPattern;
 
         // add the additional neighbors and degrees of freedom caused by the auxiliary
         // equations
@@ -344,25 +355,26 @@ private:
 
         // Now generate the neighbours_ and trans_ structures for the linearization loop.
         // Those should not include an entry for the cell itself.
-        for (unsigned globI = 0; globI < model.numTotalDof(); globI++) {
-            reservoirSparsityPattern[globI].erase(globI);
-        }
-        unsigned numCells = model.numTotalDof();
-        neighbours_.reserve(numCells, 6 * numCells);
-        trans_.reserve(numCells, 6 * numCells);
-        std::vector<double> loctrans;
-        for (unsigned globI = 0; globI < numCells; globI++) {
-            const auto& cells = reservoirSparsityPattern[globI];
-            neighbours_.appendRow(cells.begin(), cells.end());
-            unsigned n = cells.size();
-            loctrans.resize(n);
-            short loc = 0;
-            for (const int& cell : cells) {
-                loctrans[loc] = problem_().transmissibility(globI, cell);
-                loc++;
-            }
-            trans_.appendRow(loctrans.begin(), loctrans.end());
-        }
+        // for (unsigned globI = 0; globI < model.numTotalDof(); globI++) {
+        //     reservoirSparsityPattern[globI].erase(globI);
+        // }
+        // unsigned numCells = model.numTotalDof();
+        // neighbours_.reserve(numCells, 6 * numCells);
+        // trans_.reserve(numCells, 6 * numCells);
+        // faceArea_.reserve(numCells, 6 * numCells);
+        // std::vector<double> loctrans;
+        // for (unsigned globI = 0; globI < numCells; globI++) {
+        //     const auto& cells = reservoirSparsityPattern[globI];
+        //     neighbours_.appendRow(cells.begin(), cells.end());
+        //     unsigned n = cells.size();
+        //     loctrans.resize(n);
+        //     short loc = 0;
+        //     for (const int& cell : cells) {
+        //         loctrans[loc] = problem_().transmissibility(globI, cell);
+        //         loc++;
+        //     }
+        //     trans_.appendRow(loctrans.begin(), loctrans.end());
+        // }
     }
 
     // reset the global linear system of equations.
@@ -400,7 +412,7 @@ private:
 #pragma omp parallel for
 #endif
         for (unsigned globI = 0; globI < numCells; globI++) {
-            const auto& neighbours = neighbours_[globI]; // this is a set but should maybe be changed
+            const auto& nbInfos = neighborInfo_[globI]; // this is a set but should maybe be changed
             // accumulation term
             double dt = simulator_().timeStepSize();
             double volume = model_().dofTotalVolume(globI);
@@ -435,7 +447,8 @@ private:
                 jacobian_->addToBlock(globI, globI, bMat);
             }
             short loc = 0;
-            for (const auto& globJ : neighbours) {
+            for (const auto& nbInfo : nbInfos) {
+                unsigned globJ = nbInfo.neighbor;
                 assert(globJ != globI);
                 res = 0.0;
                 bMat = 0.0;
@@ -444,14 +457,14 @@ private:
                 assert(intQuantsExP);
                 const IntensiveQuantities& intQuantsEx = *intQuantsExP;
                 LocalResidual::computeFlux(
-                    adres, problem_(), globI, globJ, intQuantsIn, intQuantsEx, 0);
-                adres *= trans_[globI][loc];
+                    adres, problem_(), globI, globJ, intQuantsIn, intQuantsEx, 0, nbInfo.trans, nbInfo.faceArea);
+                adres *= nbInfo.faceArea;
                 setResAndJacobi(res, bMat, adres);
                 residual_[globI] += res;
                 jacobian_->addToBlock(globI, globI, bMat);
                 bMat *= -1.0;
                 jacobian_->addToBlock(globJ, globI, bMat);
-                loc++;
+                ++loc;
             }
         }
         if (not(well_local)) {
@@ -472,8 +485,13 @@ private:
 
     LinearizationType linearizationType_;
 
-    SparseTable<unsigned> neighbours_;
-    SparseTable<double> trans_;
+    struct NeighborInfo
+    {
+        unsigned int neighbor;
+        double trans;
+        double faceArea;
+    };
+    SparseTable<NeighborInfo> neighborInfo_;
 };
 
 } // namespace Opm

@@ -176,26 +176,28 @@ public:
     }
 
     /*!
-     * \copydoc FvBaseLocalResidual::computeFlux
+     * This function works like the ElementContext-based version with [two] one
+     * main differences:
+     *   - The darcy flux is calculated here, not read from the extensive quantities of the element context.
+     *   [- The flux is not per area (a velocity), i.e. it is in [m^3/s], not [m/s].]
      */
-
     static void computeFlux(RateVector& flux,
                             const Problem& problem,
                             const unsigned globalIndexIn,
                             const unsigned globalIndexEx,
                             const IntensiveQuantities& intQuantsIn,
                             const IntensiveQuantities& intQuantsEx,
-                            const unsigned timeIdx)
+                            const unsigned timeIdx,
+                            const Scalar trans,
+                            const Scalar faceArea)
     {
         assert(timeIdx == 0);
         flux = 0.0;
         Scalar Vin = problem.model().dofTotalVolume(globalIndexIn);
         Scalar Vex = problem.model().dofTotalVolume(globalIndexEx);
 
+        //Scalar faceArea = 1.0; // This makes the 'flux' a volume flux not a velocity.
 
-        Scalar trans = 1.0; // problem.transmissibility(globalIndexIn,globalIndexEx);
-        // Scalar faceArea = problem.area(globalIndexIn,globalIndexEx);
-        Scalar faceArea = 1.0; // NB need correct calculation local residual
         Scalar thpres = problem.thresholdPressure(globalIndexIn, globalIndexEx);
 
         // estimate the gravity correction: for performance reasons we use a simplified
@@ -215,8 +217,6 @@ public:
         // exterior DOF)
         Scalar distZ = zIn - zEx; // NB could be precalculated
 
-        //
-        // const ExtensiveQuantities& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
         calculateFluxes_(flux,
                          problem, // should be removed
                          intQuantsIn,
