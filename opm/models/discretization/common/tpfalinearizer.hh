@@ -413,39 +413,14 @@ private:
 #endif
         for (unsigned globI = 0; globI < numCells; globI++) {
             const auto& nbInfos = neighborInfo_[globI]; // this is a set but should maybe be changed
-            // accumulation term
-            double dt = simulator_().timeStepSize();
-            double volume = model_().dofTotalVolume(globI);
-            Scalar storefac = volume / dt;
+            VectorBlock res(0.0);
+            MatrixBlock bMat(0.0);
             ADVectorBlock adres(0.0);
             const IntensiveQuantities* intQuantsInP = model_().cachedIntensiveQuantities(globI, /*timeIdx*/ 0);
             assert(intQuantsInP);
             const IntensiveQuantities& intQuantsIn = *intQuantsInP;
-            // intensiveQuantity(globI, 0);
-            LocalResidual::computeStorage(adres, intQuantsIn, 0);
-            adres *= storefac;
-            VectorBlock res(0.0);
-            MatrixBlock bMat(0.0);
-            setResAndJacobi(res, bMat, adres);
-            // TODO: check recycleFirst etc.
-            // first we use it as storage cache
-            if (model_().newtonMethod().numIterations() == 0) {
-                model_().updateCachedStorage(globI, /*timeIdx=*/1, res);
-            }
-            residual_[globI] -= model_().cachedStorage(globI, 1); //*storefac;
-            residual_[globI] += res;
-            jacobian_->addToBlock(globI, globI, bMat);
-            // wells sources for now (should be moved out)
-            if (well_local) {
-                res = 0.0;
-                bMat = 0.0;
-                adres = 0.0;
-                LocalResidual::computeSource(adres, problem_(), globI, 0);
-                adres *= -volume;
-                setResAndJacobi(res, bMat, adres);
-                residual_[globI] += res;
-                jacobian_->addToBlock(globI, globI, bMat);
-            }
+
+            // Flux term.
             short loc = 0;
             for (const auto& nbInfo : nbInfos) {
                 unsigned globJ = nbInfo.neighbor;
@@ -465,6 +440,34 @@ private:
                 bMat *= -1.0;
                 jacobian_->addToBlock(globJ, globI, bMat);
                 ++loc;
+            }
+
+            // Accumulation term.
+            double dt = simulator_().timeStepSize();
+            double volume = model_().dofTotalVolume(globI);
+            Scalar storefac = volume / dt;
+            adres = 0.0;
+            LocalResidual::computeStorage(adres, intQuantsIn, 0);
+            adres *= storefac;
+            setResAndJacobi(res, bMat, adres);
+            // TODO: check recycleFirst etc.
+            // first we use it as storage cache
+            if (model_().newtonMethod().numIterations() == 0) {
+                model_().updateCachedStorage(globI, /*timeIdx=*/1, res);
+            }
+            residual_[globI] -= model_().cachedStorage(globI, 1); //*storefac;
+            residual_[globI] += res;
+            jacobian_->addToBlock(globI, globI, bMat);
+            // wells sources for now (should be moved out)
+            if (well_local) {
+                res = 0.0;
+                bMat = 0.0;
+                adres = 0.0;
+                LocalResidual::computeSource(adres, problem_(), globI, 0);
+                adres *= -volume;
+                setResAndJacobi(res, bMat, adres);
+                residual_[globI] += res;
+                jacobian_->addToBlock(globI, globI, bMat);
             }
         }
         if (not(well_local)) {
