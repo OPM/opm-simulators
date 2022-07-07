@@ -473,7 +473,7 @@ private:
             }
         }
         if (not(well_local)) {
-            problem_().wellModel().addReseroirSourceTerms(residual_, *jacobian_);
+            problem_().wellModel().addReservoirSourceTerms(residual_, *jacobian_);
         }
         // before the first iteration of each time step, we need to update the
         // constraints. (i.e., we assume that constraints can be time dependent, but they
