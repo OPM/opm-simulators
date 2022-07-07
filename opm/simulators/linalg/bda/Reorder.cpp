@@ -332,6 +332,7 @@ void findLevelScheduling(int *CSRColIndices, int *CSRRowPointers, int *CSCRowInd
                 nextActiveRowIndex++;
             }
         }
+        rowsToStart.clear();
         colorEnd = nextActiveRowIndex;
         rowsPerColor.emplace_back(nextActiveRowIndex - activeRowIndex);
     }
