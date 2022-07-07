@@ -14,7 +14,7 @@ __kernel void ILU_apply1(
     const unsigned int block_size,
     __local double *tmp)
 {
-    const unsigned int warpsize = get_local_size(0);
+    const unsigned int warpsize = 32;
     const unsigned int bs = block_size;
     const unsigned int idx_t = get_local_id(0);
     const unsigned int num_active_threads = (warpsize/bs/bs)*bs*bs;

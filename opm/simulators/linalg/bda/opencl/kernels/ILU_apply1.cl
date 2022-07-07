@@ -1,7 +1,6 @@
 /// ILU apply part 1: forward substitution.
 /// Solves L*x=y where L is a lower triangular sparse blocked matrix.
 /// Here, L is it's own BSR matrix.
-/// Only used with ChowPatelIlu.
 __kernel void ILU_apply1(
     __global const double *LUvals,
     __global const unsigned int *LUcols,
