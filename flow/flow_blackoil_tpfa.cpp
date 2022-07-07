@@ -46,14 +46,10 @@ namespace Opm {
         struct LocalResidual<TypeTag, TTag::EclFlowProblemTPFA> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
 
         template<class TypeTag>
-        //struct ElementContext<TypeTag, TTag::EclFlowProblemTPFA> { using type = SmallElementContext<TypeTag>; };
-        struct ElementContext<TypeTag, TTag::EclFlowProblemTPFA> { using type = FvBaseElementContext<TypeTag>; };
+        struct ElementContext<TypeTag, TTag::EclFlowProblemTPFA> { using type = SmallElementContext<TypeTag>; };
 
         template<class TypeTag>
-        struct IntensiveQuantities<TypeTag, TTag::EclFlowProblemTPFA> {
-            //using type = BlackOilIntensiveQuantitiesSimple<TypeTag>;
-            using type = BlackOilIntensiveQuantities<TypeTag>;
-        };
+        struct IntensiveQuantities<TypeTag, TTag::EclFlowProblemTPFA> { using type = BlackOilIntensiveQuantitiesSimple<TypeTag>; };
 
     }
 }
