@@ -1205,6 +1205,36 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
+    addReservoirSourceTerms(GlobalEqVector& residual,
+                            SparseMatrixAdapter& jacobian) const
+    {
+        // NB this loop may write to same element if a cell has more than one perforation
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+        for (size_t i = 0; i < well_container_.size(); i++) {
+            const auto& well = well_container_[i];
+            if (!well->isOperableAndSolvable() && !well->wellIsStopped())
+                continue;
+            const auto& cells = well->cells();
+            const auto& rates = well->connectionRates();
+            for (unsigned perfIdx = 0; perfIdx < rates.size(); ++perfIdx) {
+                unsigned cellIdx = cells[perfIdx];
+                auto rate = rates[perfIdx];
+                // Scalar volume = ebosSimulator_.model().dofTotalVolume(cellIdx);
+                rate *= -1.0;
+                VectorBlockType res(0.0);
+                MatrixBlockType bMat(0.0);
+                ebosSimulator_.model().linearizer().setResAndJacobi(res, bMat, rate);
+                residual[cellIdx] += res;
+                jacobian.addToBlock(cellIdx, cellIdx, bMat);
+            }
+        }
+    }
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
     addWellPressureEquations(PressureMatrix& jacobian, const BVector& weights,const bool use_well_weights) const
     {
         int nw =  this->numLocalWellsEnd();
