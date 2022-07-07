@@ -405,7 +405,7 @@ public:
 private:
     void linearize_()
     {
-        const bool well_local = false;
+        const bool well_local = true;
         resetSystem_();
         unsigned numCells = model_().numTotalDof();
 #ifdef _OPENMP
@@ -448,14 +448,16 @@ private:
             Scalar storefac = volume / dt;
             adres = 0.0;
             LocalResidual::computeStorage(adres, intQuantsIn, 0);
-            adres *= storefac;
             setResAndJacobi(res, bMat, adres);
             // TODO: check recycleFirst etc.
             // first we use it as storage cache
             if (model_().newtonMethod().numIterations() == 0) {
                 model_().updateCachedStorage(globI, /*timeIdx=*/1, res);
             }
-            residual_[globI] -= model_().cachedStorage(globI, 1); //*storefac;
+            res -= model_().cachedStorage(globI, 1);
+            res *= storefac;
+            bMat *= storefac;
+            // residual_[globI] -= model_().cachedStorage(globI, 1); //*storefac;
             residual_[globI] += res;
             jacobian_->addToBlock(globI, globI, bMat);
             // wells sources for now (should be moved out)
