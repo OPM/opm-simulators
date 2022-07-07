@@ -64,7 +64,6 @@ private:
     static cl::CommandQueue *queue;
     static std::vector<double> tmp;     // used as tmp CPU buffer for dot() and norm()
     static bool initialized;
-    static size_t preferred_workgroup_size; // stores CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE
 
     static std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg> > dot_k;
     static std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg> > norm_k;
