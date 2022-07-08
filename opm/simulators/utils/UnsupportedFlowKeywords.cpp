@@ -623,7 +623,6 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"TEMP", {false, std::nullopt}},
         {"TEMPNODE", {false, std::nullopt}},
         {"TEMPTVD", {false, std::nullopt}},
-        {"TEMPVD", {false, std::nullopt}},
         {"TIGHTEN", {false, std::nullopt}},
         {"TIGHTENP", {false, std::nullopt}},
         {"TIME", {false, std::nullopt}},
