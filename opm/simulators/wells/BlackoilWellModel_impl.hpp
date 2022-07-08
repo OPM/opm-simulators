@@ -22,7 +22,7 @@
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
-
+#include <opm/grid/utility/cartesianToCompressed.hpp>
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
 
 #include <opm/simulators/wells/VFPProperties.hpp>
@@ -1218,17 +1218,9 @@ namespace Opm {
         std::vector<std::vector<int>> wells;
         // Create cartesian to compressed mapping
         const auto& globalCell = grid().globalCell();
-        const auto& cartesianSize = grid().logicalCartesianSize();
 
-        auto size = cartesianSize[0]*cartesianSize[1]*cartesianSize[2];
-
-        std::vector<int> cartesianToCompressed(size, -1);
-        auto begin = globalCell.begin();
-
-        for ( auto cell = begin, end = globalCell.end(); cell != end; ++cell )
-        {
-            cartesianToCompressed[ *cell ] = cell - begin;
-        }
+        auto cartMap = cartesianToCompressed(grid().size(0),
+                                             globalCell.data());
 
         auto schedule_wells = schedule().getWellsatEnd();
         schedule_wells.erase(std::remove_if(schedule_wells.begin(), schedule_wells.end(), not_on_process_), schedule_wells.end());
@@ -1242,15 +1234,14 @@ namespace Opm {
             const auto& completionSet = well.getConnections();
             compressed_well_perforations.reserve(completionSet.size());
 
-            for ( size_t c=0; c < completionSet.size(); c++ )
+            for (const auto& connection: well.getConnections())
             {
-                const auto& completion = completionSet.get(c);
-                int i = completion.getI();
-                int j = completion.getJ();
-                int k = completion.getK();
-                int cart_grid_idx = i + cartesianSize[0]*(j + cartesianSize[1]*k);
-                int compressed_idx = cartesianToCompressed[cart_grid_idx];
+                const size_t i = size_t(connection.getI());
+                const size_t j = size_t(connection.getJ());
+                const size_t k = size_t(connection.getK());
 
+                const size_t index = this->eclState_.gridDims().getGlobalIndex(i, j, k);
+                int compressed_idx = cartMap[index];
                 if ( compressed_idx >= 0 ) // Ignore completions in inactive/remote cells.
                 {
                     compressed_well_perforations.push_back(compressed_idx);
@@ -1262,7 +1253,6 @@ namespace Opm {
                       compressed_well_perforations.end());
 
             wells.push_back(compressed_well_perforations);
-            
         }
         return wells;
     }
