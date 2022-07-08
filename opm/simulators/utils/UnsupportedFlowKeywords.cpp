@@ -550,7 +550,6 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"RSCONST", {false, std::nullopt}},
         {"RSCONSTT", {false, std::nullopt}},
         {"RSSPEC", {false, std::nullopt}},
-        {"RTEMPA", {false, std::nullopt}},
         {"RWGSALT", {false, std::nullopt}},
         {"SAMG", {false, std::nullopt}},
         {"SAVE", {false, std::nullopt}},
