@@ -405,7 +405,7 @@ public:
 private:
     void linearize_()
     {
-        const bool well_local = false;
+        const bool well_local = true;
         resetSystem_();
         unsigned numCells = model_().numTotalDof();
 #ifdef _OPENMP
