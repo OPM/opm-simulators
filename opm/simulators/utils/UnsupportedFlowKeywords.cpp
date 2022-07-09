@@ -380,7 +380,6 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"MESSOPTS", {false, std::nullopt}},
         {"MESSSRVC", {false, std::nullopt}},
         {"MINNNCT", {false, std::nullopt}},
-        {"MINPORV", {false, std::nullopt}},
         {"MLANG", {false, std::nullopt}},
         {"MLANGSLV", {false, std::nullopt}},
         {"MONITOR", {false, std::nullopt}},
