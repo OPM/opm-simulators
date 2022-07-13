@@ -1474,6 +1474,11 @@ namespace Opm
             for (int perf = 0; perf < nperf; ++perf) {
                 total_tw += this->well_index_[perf];
             }
+            const auto& comm = this->parallel_well_info_.communication();
+            if (comm.size() > 1)
+            {
+                total_tw = comm.sum(total_tw);
+            }
             for (int perf = 0; perf < nperf; ++perf) {
                 const int cell_idx = this->well_cells_[perf];
                 const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
