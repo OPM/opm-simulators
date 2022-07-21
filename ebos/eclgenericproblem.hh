@@ -135,6 +135,11 @@ public:
     Scalar solventSaturation(unsigned elemIdx) const;
 
     /*!
+     * \brief Returns the dynamic drsdt convective mixing value
+     */
+    Scalar drsdtcon(unsigned elemIdx, int episodeIdx) const;
+
+    /*!
      * \brief Returns the initial polymer concentration for a given a cell index
      */
     Scalar  polymerConcentration(unsigned elemIdx) const;

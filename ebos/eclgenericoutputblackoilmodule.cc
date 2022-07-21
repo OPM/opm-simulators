@@ -693,6 +693,7 @@ assignToSolution(data::Solution& sol)
         {"SALTP",    UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     pSalt_},
         {"PERMFACT", UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     permFact_},
         {"SOMAX",    UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      soMax_},
+        {"DRSDTCON", UnitSystem::measure::gas_oil_ratio_rate,  data::TargetType::RESTART_AUXILIARY,     drsdtcon_},
         {"SSOLVENT", UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      sSol_},
         {"SS_X",     UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      extboX_},
         {"SS_Y",     UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      extboY_},
@@ -992,6 +993,9 @@ doAllocBuffers(unsigned bufferSize,
         rvw_.resize(bufferSize, 0.0);
         rstKeywords["RVW"] = 0;
     }
+
+    if (schedule_[reportStepNum].oilvap().drsdtConvective())
+        drsdtcon_.resize(bufferSize, 0.0);
     if (enableSolvent_)
         sSol_.resize(bufferSize, 0.0);
     if (enablePolymer_)
