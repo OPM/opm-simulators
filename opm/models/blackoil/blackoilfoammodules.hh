@@ -36,7 +36,6 @@
 //#include <opm/material/common/IntervalTabulated2DFunction.hpp>
 
 #if HAVE_ECL_INPUT
-#include <opm/input/eclipse/Deck/Deck.hpp>
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/FoamadsTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/FoammobTable.hpp>
