@@ -25,7 +25,6 @@
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/simulators/flow/python/Pybind11Exporter.hpp>
 #include <opm/simulators/flow/python/PyMaterialState.hpp>
-#include <opm/input/eclipse/Deck/Deck.hpp>
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
