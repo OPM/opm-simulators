@@ -44,7 +44,7 @@ if (OPM_ENABLE_PYTHON)
     endif()
     set(Python3_EXECUTABLE ${PYTHON_EXECUTABLE})
     set(Python3_LIBRARIES ${PYTHON_LIBRARIES})
-    set(Python3_VERSION "${PYTHON_VERSION_STRING}"})
+    set(Python3_VERSION "${PYTHON_VERSION_STRING}")
     set(Python3_VERSION_MINOR ${PYTHON_VERSION_MINOR})
   else()
     # Be backwards compatible.
