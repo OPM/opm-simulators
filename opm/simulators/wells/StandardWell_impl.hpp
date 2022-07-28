@@ -1607,7 +1607,6 @@ namespace Opm
             for (int perf = 0; perf < nperf; ++perf) {
                 total_tw += this->well_index_[perf];
             }
-            const auto& comm = this->parallel_well_info_.communication();
             if (comm.size() > 1)
             {
                 total_tw = comm.sum(total_tw);
