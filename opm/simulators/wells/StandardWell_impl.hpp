@@ -1596,12 +1596,17 @@ namespace Opm
         // approximate the perforation mixture using the mobility ratio
         // and weight the perforations using the well transmissibility.
         bool all_zero = std::all_of(perfRates.begin(), perfRates.end(), [](double val) { return val == 0.0; });
+        const auto& comm = this->parallel_well_info_.communication();
+        if (comm.size() > 1)
+        {
+            all_zero =  (comm.min(all_zero ? 1 : 0) == 1);
+        }
+
         if ( all_zero && this->isProducer() ) {
             double total_tw = 0;
             for (int perf = 0; perf < nperf; ++perf) {
                 total_tw += this->well_index_[perf];
             }
-            const auto& comm = this->parallel_well_info_.communication();
             if (comm.size() > 1)
             {
                 total_tw = comm.sum(total_tw);

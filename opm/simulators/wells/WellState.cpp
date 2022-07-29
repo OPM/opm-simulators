@@ -63,9 +63,10 @@ void WellState::initSingleProducer(const Well& well,
     const double temp = 273.15 + 15.56;
 
     auto& ws = this->wells_.add(well.name(), SingleWellState{well.name(), well_info, true, pressure_first_connection, well_perf_data, pu, temp});
-    if ( ws.perf_data.empty())
-        return;
 
+    // the rest of the code needs to executed even if ws.perf_data is empty
+    // as this does not say anything for the whole well if it is distributed.
+    // Hence never ever return here!
     if (well.getStatus() == Well::Status::OPEN) {
         ws.status = Well::Status::OPEN;
     }
@@ -85,9 +86,10 @@ void WellState::initSingleInjector(const Well& well,
     const double temp = inj_controls.temperature;
 
     auto& ws = this->wells_.add(well.name(), SingleWellState{well.name(), well_info, false, pressure_first_connection, well_perf_data, pu, temp});
-    if ( ws.perf_data.empty())
-        return;
 
+    // the rest of the code needs to executed even if ws.perf_data is empty
+    // as this does not say anything for the whole well if it is distributed.
+    // Hence never ever return here!
     if (well.getStatus() == Well::Status::OPEN) {
         ws.status = Well::Status::OPEN;
     }
