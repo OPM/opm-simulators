@@ -429,7 +429,9 @@ private:
                 bMat = 0.0;
                 adres = 0.0;
                 const IntensiveQuantities* intQuantsExP = model_().cachedIntensiveQuantities(globJ, /*timeIdx*/ 0);
-                assert(intQuantsExP);
+                if (intQuantsExP == nullptr) {
+                    throw std::logic_error("Missing updated intensive quantities for cell " + std::to_string(globJ));
+                }
                 const IntensiveQuantities& intQuantsEx = *intQuantsExP;
                 LocalResidual::computeFlux(
                     adres, problem_(), globI, globJ, intQuantsIn, intQuantsEx, 0, nbInfo.trans, nbInfo.faceArea);
