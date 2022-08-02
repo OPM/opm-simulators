@@ -32,9 +32,6 @@
 #include <opm/models/utils/signum.hh>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
-
-#include <opm/material/common/Unused.hpp>
-
 namespace Opm::Properties {
 
 template<class TypeTag, class MyTypeTag>

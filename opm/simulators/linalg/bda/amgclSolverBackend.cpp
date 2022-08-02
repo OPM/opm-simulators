@@ -23,7 +23,6 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <dune/common/timer.hh>
-#include <opm/material/common/Unused.hpp>
 
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
 #include <opm/simulators/linalg/bda/amgclSolverBackend.hpp>
