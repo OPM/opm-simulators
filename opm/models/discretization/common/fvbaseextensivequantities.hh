@@ -33,7 +33,6 @@
 #include <opm/models/common/multiphasebaseproperties.hh>
 
 #include <opm/material/common/Valgrind.hpp>
-#include <opm/material/common/Unused.hpp>
 
 namespace Opm {
 /*!

@@ -36,7 +36,6 @@
 #include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/EffToAbsLaw.hpp>
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
-#include <opm/material/common/Unused.hpp>
 
 #include <dune/grid/yaspgrid.hh>
 #include <dune/grid/io/file/dgfparser/dgfyasp.hh>
@@ -302,7 +301,7 @@ public:
     Scalar temperature(const Context& context, unsigned spaceIdx, unsigned timeIdx) const
     { return temperature(context.globalSpaceIndex(spaceIdx, timeIdx), timeIdx); }
 
-    Scalar temperature(unsigned globalSpaceIdx OPM_UNUSED, unsigned timeIdx OPM_UNUSED) const
+    Scalar temperature(unsigned /*globalSpaceIdx*/, unsigned /*timeIdx*/) const
     { return 273.15 + 10; } // -> 10°C
 
     /*!
@@ -323,9 +322,9 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::porosity
      */
     template <class Context>
-    Scalar porosity(const Context& context OPM_UNUSED,
-                    unsigned spaceIdx OPM_UNUSED,
-                    unsigned timeIdx OPM_UNUSED) const
+    Scalar porosity(const Context& /*context*/,
+                    unsigned /*spaceIdx*/,
+                    unsigned /*timeIdx*/) const
     { return 0.4; }
 
     /*!
@@ -341,7 +340,7 @@ public:
     }
 
     const MaterialLawParams& materialLawParams(unsigned globalSpaceIdx,
-                                               unsigned timeIdx OPM_UNUSED) const
+                                               unsigned /*timeIdx*/) const
     {
         if (dofIsInLens_[globalSpaceIdx])
             return lensMaterialParams_;
@@ -361,8 +360,8 @@ public:
 
     // the Richards model does not have an element context available at all places
     // where the reference pressure is required...
-    Scalar referencePressure(unsigned globalSpaceIdx OPM_UNUSED,
-                             unsigned timeIdx OPM_UNUSED) const
+    Scalar referencePressure(unsigned /*globalSpaceIdx*/,
+                             unsigned /*timeIdx*/) const
     { return pnRef_; }
 
     //! \}
@@ -454,9 +453,9 @@ public:
      */
     template <class Context>
     void source(RateVector& rate,
-                const Context& context OPM_UNUSED,
-                unsigned spaceIdx OPM_UNUSED,
-                unsigned timeIdx OPM_UNUSED) const
+                const Context& /*context*/,
+                unsigned /*spaceIdx*/,
+                unsigned /*timeIdx*/) const
     { rate = Scalar(0.0); }
 
     //! \}

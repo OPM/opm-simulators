@@ -31,7 +31,6 @@
 #include "richardsproperties.hh"
 
 #include <opm/material/fluidstates/ImmiscibleFluidState.hpp>
-#include <opm/material/common/Unused.hpp>
 
 #include <dune/common/fvector.hh>
 

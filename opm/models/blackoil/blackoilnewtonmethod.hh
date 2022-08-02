@@ -34,8 +34,6 @@
 #include <opm/models/nonlinear/newtonmethod.hh>
 #include "blackoilmicpmodules.hh"
 
-#include <opm/material/common/Unused.hpp>
-
 namespace Opm::Properties {
 
 template <class TypeTag, class MyTypeTag>

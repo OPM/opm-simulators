@@ -56,7 +56,6 @@
 #include <opm/models/io/vtkdiffusionmodule.hh>
 
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
-#include <opm/material/common/Unused.hpp>
 
 #include <sstream>
 #include <string>

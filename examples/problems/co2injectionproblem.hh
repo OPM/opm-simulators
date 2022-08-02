@@ -44,7 +44,6 @@
 #include <opm/material/thermal/ConstantSolidHeatCapLaw.hpp>
 #include <opm/material/binarycoefficients/Brine_CO2.hpp>
 #include <opm/material/common/UniformTabulated2DFunction.hpp>
-#include <opm/material/common/Unused.hpp>
 
 #include <dune/grid/yaspgrid.hh>
 #include <dune/grid/io/file/dgfparser/dgfyasp.hh>
@@ -505,9 +504,9 @@ public:
      */
     template <class Context>
     const SolidEnergyLawParams&
-    solidEnergyLawParams(const Context& context OPM_UNUSED,
-                         unsigned spaceIdx OPM_UNUSED,
-                         unsigned timeIdx OPM_UNUSED) const
+    solidEnergyLawParams(const Context& /*context*/,
+                         unsigned /*spaceIdx*/,
+                         unsigned /*timeIdx*/) const
     { return solidEnergyLawParams_; }
 
     /*!
@@ -604,9 +603,9 @@ public:
      */
     template <class Context>
     void source(RateVector& rate,
-                const Context& context OPM_UNUSED,
-                unsigned spaceIdx OPM_UNUSED,
-                unsigned timeIdx OPM_UNUSED) const
+                const Context& /*context*/,
+                unsigned /*spaceIdx*/,
+                unsigned /*timeIdx*/) const
     { rate = Scalar(0.0); }
 
     //! \}

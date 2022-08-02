@@ -59,7 +59,6 @@
 
 #include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/common/Valgrind.hpp>
-#include <opm/material/common/Unused.hpp>
 #include <opm/material/common/Exceptions.hpp>
 
 #include <dune/common/version.hh>
@@ -1004,7 +1003,8 @@ public:
      * This method is purely intented for debugging purposes. If the program is compiled
      * with optimizations enabled, it becomes a no-op.
      */
-    void checkConservativeness(Scalar OPM_OPTIM_UNUSED tolerance = -1, bool OPM_OPTIM_UNUSED verbose=false) const
+    void checkConservativeness([[maybe_unused]] Scalar tolerance = -1,
+                               [[maybe_unused]] bool verbose=false) const
     {
 #ifndef NDEBUG
         Scalar totalBoundaryArea(0.0);

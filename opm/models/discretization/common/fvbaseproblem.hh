@@ -34,7 +34,6 @@
 #include <opm/models/io/restart.hh>
 #include <opm/models/discretization/common/restrictprolong.hh>
 
-#include <opm/material/common/Unused.hpp>
 #include <dune/common/fvector.hh>
 
 #include <iostream>

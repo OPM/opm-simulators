@@ -38,7 +38,6 @@
 #include <opm/material/fluidsystems/blackoilpvt/DryGasPvt.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/LiveOilPvt.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/ConstantCompressibilityWaterPvt.hpp>
-#include <opm/material/common/Unused.hpp>
 
 #include <dune/grid/yaspgrid.hh>
 #include <dune/grid/io/file/dgfparser/dgfyasp.hh>
@@ -532,9 +531,9 @@ public:
      * will need it one day?
      */
     template <class Context>
-    Scalar temperature(const Context& context OPM_UNUSED,
-                       unsigned spaceIdx OPM_UNUSED,
-                       unsigned timeIdx OPM_UNUSED) const
+    Scalar temperature(const Context& /*context*/,
+                       unsigned /*spaceIdx*/,
+                       unsigned /*timeIdx*/) const
     { return temperature_; }
 
     // \}
@@ -552,9 +551,9 @@ public:
      */
     template <class Context>
     void boundary(BoundaryRateVector& values,
-                  const Context& context OPM_UNUSED,
-                  unsigned spaceIdx OPM_UNUSED,
-                  unsigned timeIdx OPM_UNUSED) const
+                  const Context& /*context*/,
+                  unsigned /*spaceIdx*/,
+                  unsigned /*timeIdx*/) const
     {
         // no flow on top and bottom
         values.setNoFlow();
@@ -575,9 +574,9 @@ public:
      */
     template <class Context>
     void initial(PrimaryVariables& values,
-                 const Context& context OPM_UNUSED,
-                 unsigned spaceIdx OPM_UNUSED,
-                 unsigned timeIdx OPM_UNUSED) const
+                 const Context& /*context*/,
+                 unsigned /*spaceIdx*/,
+                 unsigned /*timeIdx*/) const
     {
         values.assignNaive(initialFluidState_);
 
@@ -622,9 +621,9 @@ public:
      */
     template <class Context>
     void source(RateVector& rate,
-                const Context& context OPM_UNUSED,
-                unsigned spaceIdx OPM_UNUSED,
-                unsigned timeIdx OPM_UNUSED) const
+                const Context& /*context*/,
+                unsigned /*spaceIdx*/,
+                unsigned /*timeIdx*/) const
     { rate = Scalar(0.0); }
 
     //! \}

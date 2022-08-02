@@ -36,7 +36,6 @@
 #include <opm/simulators/linalg/linalgproperties.hh>
 
 #include <opm/material/densead/Math.hpp>
-#include <opm/material/common/Unused.hpp>
 
 #include <opm/material/common/Exceptions.hpp>
 

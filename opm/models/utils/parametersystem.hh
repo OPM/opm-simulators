@@ -34,8 +34,6 @@
 
 #include <opm/models/utils/propertysystem.hh>
 
-#include <opm/material/common/Unused.hpp>
-
 #if HAVE_QUAD
 #include <opm/material/common/quad.hpp>
 #endif // HAVE_QUAD
@@ -985,8 +983,8 @@ public:
     }
 
     template <class ParamType>
-    static bool isSet(const char *propTagName OPM_OPTIM_UNUSED,
-                      const char *paramName OPM_OPTIM_UNUSED,
+    static bool isSet([[maybe_unused]] const char* propTagName,
+                      [[maybe_unused]] const char* paramName,
                       bool errorIfNotRegistered = true)
     {
 
@@ -1063,7 +1061,7 @@ private:
     }
 
     template <class ParamType>
-    static ParamType retrieve_(const char OPM_OPTIM_UNUSED *propTagName,
+    static ParamType retrieve_([[maybe_unused]] const char* propTagName,
                                const char *paramName,
                                const ParamType& defaultValue,
                                bool errorIfNotRegistered = true)
