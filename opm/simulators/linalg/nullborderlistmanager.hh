@@ -29,8 +29,6 @@
 
 #include "overlaptypes.hh"
 
-#include <opm/material/common/Unused.hpp>
-
 #include <dune/grid/common/datahandleif.hh>
 #include <dune/grid/common/gridenums.hh>
 #include <dune/istl/bcrsmatrix.hh>

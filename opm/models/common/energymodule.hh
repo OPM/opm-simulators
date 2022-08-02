@@ -33,7 +33,6 @@
 #include <opm/models/common/quantitycallbacks.hh>
 
 #include <opm/material/common/Valgrind.hpp>
-#include <opm/material/common/Unused.hpp>
 
 #include <dune/common/fvector.hh>
 

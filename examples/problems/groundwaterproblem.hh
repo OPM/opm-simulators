@@ -34,7 +34,6 @@
 #include <opm/material/components/SimpleH2O.hpp>
 #include <opm/material/fluidstates/ImmiscibleFluidState.hpp>
 #include <opm/material/fluidsystems/LiquidPhase.hpp>
-#include <opm/material/common/Unused.hpp>
 
 #include <dune/grid/yaspgrid.hh>
 #include <dune/grid/io/file/dgfparser/dgfyasp.hh>
@@ -334,18 +333,18 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::temperature
      */
     template <class Context>
-    Scalar temperature(const Context& context OPM_UNUSED,
-                       unsigned spaceIdx OPM_UNUSED,
-                       unsigned timeIdx OPM_UNUSED) const
+    Scalar temperature(const Context& /*context*/,
+                       unsigned /*spaceIdx*/,
+                       unsigned /*timeIdx*/) const
     { return 273.15 + 10; } // 10C
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::porosity
      */
     template <class Context>
-    Scalar porosity(const Context& context OPM_UNUSED,
-                    unsigned spaceIdx OPM_UNUSED,
-                    unsigned timeIdx OPM_UNUSED) const
+    Scalar porosity(const Context& /*context*/,
+                    unsigned /*spaceIdx*/,
+                    unsigned /*timeIdx*/) const
     { return 0.4; }
 
     /*!
@@ -419,9 +418,9 @@ public:
      */
     template <class Context>
     void initial(PrimaryVariables& values,
-                 const Context& context OPM_UNUSED,
-                 unsigned spaceIdx OPM_UNUSED,
-                 unsigned timeIdx OPM_UNUSED) const
+                 const Context& /*context*/,
+                 unsigned /*spaceIdx*/,
+                 unsigned /*timeIdx*/) const
     {
         // const GlobalPosition& globalPos = context.pos(spaceIdx, timeIdx);
         values[pressure0Idx] = 1.0e+5; // + 9.81*1.23*(20-globalPos[dim-1]);
@@ -432,9 +431,9 @@ public:
      */
     template <class Context>
     void source(RateVector& rate,
-                const Context& context OPM_UNUSED,
-                unsigned spaceIdx OPM_UNUSED,
-                unsigned timeIdx OPM_UNUSED) const
+                const Context& /*context*/,
+                unsigned /*spaceIdx*/,
+                unsigned /*timeIdx*/) const
     { rate = Scalar(0.0); }
 
     //! \}

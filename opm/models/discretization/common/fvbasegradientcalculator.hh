@@ -30,8 +30,6 @@
 
 #include "fvbaseproperties.hh"
 
-#include <opm/material/common/Unused.hpp>
-
 #include <dune/common/fvector.hh>
 
 namespace Opm {

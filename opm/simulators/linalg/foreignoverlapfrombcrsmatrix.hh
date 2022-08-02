@@ -32,8 +32,6 @@
 
 #include <opm/models/parallel/mpibuffer.hh>
 
-#include <opm/material/common/Unused.hpp>
-
 #include <dune/grid/common/datahandleif.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/scalarproducts.hh>

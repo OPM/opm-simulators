@@ -31,7 +31,6 @@
 #include "fvbaseproperties.hh"
 
 #include <opm/material/common/Valgrind.hpp>
-#include <opm/material/common/Unused.hpp>
 
 namespace Opm {
 

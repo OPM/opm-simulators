@@ -29,8 +29,6 @@
 
 #include "convergencecriterion.hh"
 
-#include <opm/material/common/Unused.hpp>
-
 #include <dune/istl/scalarproducts.hh>
 
 namespace Opm {
