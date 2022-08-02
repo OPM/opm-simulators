@@ -32,8 +32,6 @@
 
 #include <opm/models/common/multiphasebaseproblem.hh>
 
-#include <opm/material/common/Unused.hpp>
-
 namespace Opm {
 
 /*!

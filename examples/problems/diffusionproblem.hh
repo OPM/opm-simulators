@@ -37,7 +37,6 @@
 #include <opm/material/fluidsystems/H2ON2FluidSystem.hpp>
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 #include <opm/material/constraintsolvers/ComputeFromReferencePhase.hpp>
-#include <opm/material/common/Unused.hpp>
 
 #include <dune/grid/yaspgrid.hh>
 #include <dune/common/version.hh>
@@ -275,18 +274,18 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::intrinsicPermeability
      */
     template <class Context>
-    const DimMatrix& intrinsicPermeability(const Context& context OPM_UNUSED,
-                                           unsigned spaceIdx OPM_UNUSED,
-                                           unsigned timeIdx OPM_UNUSED) const
+    const DimMatrix& intrinsicPermeability(const Context& /*context*/,
+                                           unsigned /*spaceIdx*/,
+                                           unsigned /*timeIdx*/) const
     { return K_; }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::porosity
      */
     template <class Context>
-    Scalar porosity(const Context& context OPM_UNUSED,
-                    unsigned spaceIdx OPM_UNUSED,
-                    unsigned timeIdx OPM_UNUSED) const
+    Scalar porosity(const Context& /*context*/,
+                    unsigned /*spaceIdx*/,
+                    unsigned /*timeIdx*/) const
     { return 0.35; }
 
     /*!
@@ -294,18 +293,18 @@ public:
      */
     template <class Context>
     const MaterialLawParams&
-    materialLawParams(const Context& context OPM_UNUSED,
-                      unsigned spaceIdx OPM_UNUSED,
-                      unsigned timeIdx OPM_UNUSED) const
+    materialLawParams(const Context& /*context*/,
+                      unsigned /*spaceIdx*/,
+                      unsigned /*timeIdx*/) const
     { return materialParams_; }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::temperature
      */
     template <class Context>
-    Scalar temperature(const Context& context OPM_UNUSED,
-                       unsigned spaceIdx OPM_UNUSED,
-                       unsigned timeIdx OPM_UNUSED) const
+    Scalar temperature(const Context& /*context*/,
+                       unsigned /*spaceIdx*/,
+                       unsigned /*timeIdx*/) const
     { return temperature_; }
 
     //! \}
@@ -322,9 +321,9 @@ public:
      */
     template <class Context>
     void boundary(BoundaryRateVector& values,
-                  const Context& context OPM_UNUSED,
-                  unsigned spaceIdx OPM_UNUSED,
-                  unsigned timeIdx OPM_UNUSED) const
+                  const Context& /*context*/,
+                  unsigned /*spaceIdx*/,
+                  unsigned /*timeIdx*/) const
     { values.setNoFlow(); }
 
     //! \}
@@ -358,9 +357,9 @@ public:
      */
     template <class Context>
     void source(RateVector& rate,
-                const Context& context OPM_UNUSED,
-                unsigned spaceIdx OPM_UNUSED,
-                unsigned timeIdx OPM_UNUSED) const
+                const Context& /*context*/,
+                unsigned /*spaceIdx*/,
+                unsigned /*timeIdx*/) const
     { rate = Scalar(0.0); }
 
     //! \}

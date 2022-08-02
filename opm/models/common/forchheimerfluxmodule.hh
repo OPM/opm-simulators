@@ -35,7 +35,6 @@
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 
 #include <opm/material/common/Valgrind.hpp>
-#include <opm/material/common/Unused.hpp>
 #include <opm/material/common/Exceptions.hpp>
 
 #include <dune/common/fvector.hh>

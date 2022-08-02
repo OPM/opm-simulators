@@ -40,7 +40,6 @@
 #include <opm/material/constraintsolvers/MiscibleMultiPhaseComposition.hpp>
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 #include <opm/material/common/Valgrind.hpp>
-#include <opm/material/common/Unused.hpp>
 
 #include <dune/grid/yaspgrid.hh>
 #include <dune/grid/io/file/dgfparser/dgfyasp.hh>
@@ -353,9 +352,9 @@ public:
      * \copydoc FvBaseMultiPhaseProblem::temperature
      */
     template <class Context>
-    Scalar temperature(const Context& context OPM_UNUSED,
-                       unsigned spaceIdx OPM_UNUSED,
-                       unsigned timeIdx OPM_UNUSED) const
+    Scalar temperature(const Context& /*context*/,
+                       unsigned /*spaceIdx*/,
+                       unsigned /*timeIdx*/) const
     { return 293.15; /* [K] */ }
 
     /*!
@@ -403,9 +402,9 @@ public:
      */
     template <class Context>
     const ThermalConductionLawParams &
-    thermalConductionParams(const Context& context OPM_UNUSED,
-                         unsigned spaceIdx OPM_UNUSED,
-                         unsigned timeIdx OPM_UNUSED) const
+    thermalConductionParams(const Context& /*context*/,
+                         unsigned /*spaceIdx*/,
+                         unsigned /*timeIdx*/) const
     { return thermalCondParams_; }
 
     //! \}
@@ -487,9 +486,9 @@ public:
      */
     template <class Context>
     void source(RateVector& rate,
-                const Context& context OPM_UNUSED,
-                unsigned spaceIdx OPM_UNUSED,
-                unsigned timeIdx OPM_UNUSED) const
+                const Context& /*context*/,
+                unsigned /*spaceIdx*/,
+                unsigned /*timeIdx*/) const
     { rate = Scalar(0.0); }
 
     //! \}

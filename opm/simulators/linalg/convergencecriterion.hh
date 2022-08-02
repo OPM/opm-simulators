@@ -27,8 +27,6 @@
 #ifndef EWOMS_ISTL_CONVERGENCE_CRITERION_HH
 #define EWOMS_ISTL_CONVERGENCE_CRITERION_HH
 
-#include <opm/material/common/Unused.hpp>
-
 #include <dune/common/version.hh>
 #include <dune/common/fvector.hh>
 

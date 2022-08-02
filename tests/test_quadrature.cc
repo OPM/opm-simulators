@@ -41,14 +41,6 @@
 
 #include <opm/models/discretization/vcfv/vcfvstencil.hh>
 
-#include <opm/material/common/Unused.hpp>
-
-#if HAVE_DUNE_ALUGRID
-#define EWOMS_NO_ALUGRID_UNUSED
-#else
-#define EWOMS_NO_ALUGRID_UNUSED  OPM_UNUSED
-#endif
-
 const unsigned dim = 3;
 using Scalar = double;
 using QuadratureGeom = Opm::QuadrialteralQuadratureGeometry<Scalar, dim>;
@@ -110,7 +102,7 @@ void testIdenityMapping()
 }
 
 template <class Grid>
-void writeTetrahedronSubControlVolumes(const Grid& EWOMS_NO_ALUGRID_UNUSED grid)
+void writeTetrahedronSubControlVolumes([[maybe_unused]] const Grid& grid)
 {
 #if HAVE_DUNE_ALUGRID
     using GridView = typename Grid::LeafGridView;
@@ -196,7 +188,7 @@ void testTetrahedron()
 }
 
 template <class Grid>
-void writeCubeSubControlVolumes(const Grid& EWOMS_NO_ALUGRID_UNUSED grid)
+void writeCubeSubControlVolumes([[maybe_unused]] const Grid& grid)
 {
 #if HAVE_DUNE_ALUGRID
     using GridView = typename Grid::LeafGridView;

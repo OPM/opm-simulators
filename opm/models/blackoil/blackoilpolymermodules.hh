@@ -47,7 +47,6 @@
 #endif
 
 #include <opm/material/common/Valgrind.hpp>
-#include <opm/material/common/Unused.hpp>
 
 #include <dune/common/fvector.hh>
 
@@ -548,7 +547,7 @@ public:
         }
     }
 
-    static Scalar primaryVarWeight(unsigned pvIdx OPM_OPTIM_UNUSED)
+    static Scalar primaryVarWeight([[maybe_unused]] unsigned pvIdx)
     {
         assert(primaryVarApplies(pvIdx));
 
@@ -578,7 +577,7 @@ public:
             return "conti^polymer_molecularweight";
     }
 
-    static Scalar eqWeight(unsigned eqIdx OPM_OPTIM_UNUSED)
+    static Scalar eqWeight([[maybe_unused]] unsigned eqIdx)
     {
         assert(eqApplies(eqIdx));
 

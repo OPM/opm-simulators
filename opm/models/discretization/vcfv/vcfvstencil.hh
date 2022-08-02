@@ -30,7 +30,6 @@
 
 #include <opm/models/utils/quadraturegeometries.hh>
 
-#include <opm/material/common/Unused.hpp>
 #include <opm/material/common/Exceptions.hpp>
 
 #include <dune/grid/common/intersectioniterator.hh>

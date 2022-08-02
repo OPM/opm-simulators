@@ -43,7 +43,6 @@
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 #include <opm/material/thermal/NullThermalConductionLaw.hpp>
 #include <opm/material/thermal/NullSolidEnergyLaw.hpp>
-#include <opm/material/common/Unused.hpp>
 
 namespace Opm {
 template <class TypeTag>
