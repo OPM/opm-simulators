@@ -23,7 +23,6 @@
 #include <cstring>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
-#include <opm/material/common/Unused.hpp>
 #include <opm/common/ErrorMacros.hpp>
 
 #include <opm/simulators/linalg/bda/FPGASolverBackend.hpp>

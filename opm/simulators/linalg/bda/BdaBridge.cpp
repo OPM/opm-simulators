@@ -24,7 +24,6 @@
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/material/common/Unused.hpp>
 
 #include <opm/simulators/linalg/bda/BdaBridge.hpp>
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
