@@ -48,7 +48,6 @@
 #endif
 
 #include <opm/material/common/Valgrind.hpp>
-#include <opm/material/common/Unused.hpp>
 #include <opm/material/common/Exceptions.hpp>
 
 #include <dune/common/fvector.hh>
@@ -499,14 +498,14 @@ public:
         return pvIdx == solventSaturationIdx;
     }
 
-    static std::string primaryVarName(unsigned pvIdx OPM_OPTIM_UNUSED)
+    static std::string primaryVarName([[maybe_unused]] unsigned pvIdx)
     {
         assert(primaryVarApplies(pvIdx));
 
         return "saturation_solvent";
     }
 
-    static Scalar primaryVarWeight(unsigned pvIdx OPM_OPTIM_UNUSED)
+    static Scalar primaryVarWeight([[maybe_unused]] unsigned pvIdx)
     {
         assert(primaryVarApplies(pvIdx));
 
@@ -522,14 +521,14 @@ public:
         return eqIdx == contiSolventEqIdx;
     }
 
-    static std::string eqName(unsigned eqIdx OPM_OPTIM_UNUSED)
+    static std::string eqName([[maybe_unused]] unsigned eqIdx)
     {
         assert(eqApplies(eqIdx));
 
         return "conti^solvent";
     }
 
-    static Scalar eqWeight(unsigned eqIdx OPM_OPTIM_UNUSED)
+    static Scalar eqWeight([[maybe_unused]] unsigned eqIdx)
     {
         assert(eqApplies(eqIdx));
 

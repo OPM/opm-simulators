@@ -33,8 +33,6 @@
 #include <opm/models/discretization/common/linearizationtype.hh>
 #include <opm/models/utils/alignedallocator.hh>
 
-#include <opm/material/common/Unused.hpp>
-
 #include <dune/common/fvector.hh>
 
 #include <vector>

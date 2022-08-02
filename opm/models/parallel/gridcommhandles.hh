@@ -29,8 +29,6 @@
 #ifndef EWOMS_GRID_COMM_HANDLES_HH
 #define EWOMS_GRID_COMM_HANDLES_HH
 
-#include <opm/material/common/Unused.hpp>
-
 #include <dune/grid/common/datahandleif.hh>
 #include <dune/common/version.hh>
 

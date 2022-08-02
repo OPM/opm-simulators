@@ -30,8 +30,6 @@
 
 #include <opm/models/utils/propertysystem.hh>
 
-#include <opm/material/common/Unused.hpp>
-
 namespace Opm::Properties {
 
 template <class TypeTag, class MyTypeTag>

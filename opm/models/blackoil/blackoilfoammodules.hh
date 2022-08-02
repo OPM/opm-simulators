@@ -42,7 +42,6 @@
 #endif
 
 #include <opm/material/common/Valgrind.hpp>
-#include <opm/material/common/Unused.hpp>
 
 #include <dune/common/fvector.hh>
 
@@ -258,13 +257,13 @@ public:
         }
     }
 
-    static std::string primaryVarName(unsigned pvIdx OPM_OPTIM_UNUSED)
+    static std::string primaryVarName([[maybe_unused]] unsigned pvIdx)
     {
         assert(primaryVarApplies(pvIdx));
         return "foam_concentration";
     }
 
-    static Scalar primaryVarWeight(unsigned pvIdx OPM_OPTIM_UNUSED)
+    static Scalar primaryVarWeight([[maybe_unused]] unsigned pvIdx)
     {
        assert(primaryVarApplies(pvIdx));
 
@@ -281,14 +280,14 @@ public:
 
     }
 
-    static std::string eqName(unsigned eqIdx OPM_OPTIM_UNUSED)
+    static std::string eqName([[maybe_unused]] unsigned eqIdx)
     {
         assert(eqApplies(eqIdx));
 
         return "conti^foam";
     }
 
-    static Scalar eqWeight(unsigned eqIdx OPM_OPTIM_UNUSED)
+    static Scalar eqWeight([[maybe_unused]] unsigned eqIdx)
     {
        assert(eqApplies(eqIdx));
 

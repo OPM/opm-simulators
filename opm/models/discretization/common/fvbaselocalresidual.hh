@@ -34,7 +34,6 @@
 #include <opm/models/utils/alignedallocator.hh>
 
 #include <opm/material/common/Valgrind.hpp>
-#include <opm/material/common/Unused.hpp>
 
 #include <dune/istl/bvector.hh>
 #include <dune/grid/common/geometry.hh>

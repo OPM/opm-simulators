@@ -31,7 +31,6 @@
 
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 #include <opm/material/fluidsystems/H2ON2LiquidPhaseFluidSystem.hpp>
-#include <opm/material/common/Unused.hpp>
 
 #include <dune/grid/yaspgrid.hh>
 #include <dune/grid/io/file/dgfparser/dgfyasp.hh>
@@ -217,9 +216,9 @@ public:
      * This problem assumes a temperature.
      */
     template <class Context>
-    Scalar temperature(const Context& context OPM_UNUSED,
-                       unsigned spaceIdx OPM_UNUSED,
-                       unsigned timeIdx OPM_UNUSED) const
+    Scalar temperature(const Context& /*context*/,
+                       unsigned /*spaceIdx*/,
+                       unsigned /*timeIdx*/) const
     { return temperature_; } // in [K]
 
     /*!
@@ -228,9 +227,9 @@ public:
      * This problem uses a constant intrinsic permeability.
      */
     template <class Context>
-    const DimMatrix& intrinsicPermeability(const Context& context OPM_UNUSED,
-                                           unsigned spaceIdx OPM_UNUSED,
-                                           unsigned timeIdx OPM_UNUSED) const
+    const DimMatrix& intrinsicPermeability(const Context& /*context*/,
+                                           unsigned /*spaceIdx*/,
+                                           unsigned /*timeIdx*/) const
     { return perm_; }
 
     /*!
@@ -239,9 +238,9 @@ public:
      * This problem uses a constant porosity.
      */
     template <class Context>
-    Scalar porosity(const Context& context OPM_UNUSED,
-                    unsigned spaceIdx OPM_UNUSED,
-                    unsigned timeIdx OPM_UNUSED) const
+    Scalar porosity(const Context& /*context*/,
+                    unsigned /*spaceIdx*/,
+                    unsigned /*timeIdx*/) const
     { return porosity_; }
 
 #if 0
@@ -342,9 +341,9 @@ public:
      */
     template <class Context>
     void source(RateVector& rate,
-                const Context& context OPM_UNUSED,
-                unsigned spaceIdx OPM_UNUSED,
-                unsigned timeIdx OPM_UNUSED) const
+                const Context& /*context*/,
+                unsigned /*spaceIdx*/,
+                unsigned /*timeIdx*/) const
     { rate = Scalar(0.0); }
 
     //! \}
