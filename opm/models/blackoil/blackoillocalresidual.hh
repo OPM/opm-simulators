@@ -96,28 +96,29 @@ public:
      * \copydoc FvBaseLocalResidual::computeStorage
      */
     template <class LhsEval>
-    static void computeStorage(Dune::FieldVector<LhsEval, numEq>& storage,
-                               const ElementContext& elemCtx,
-                               unsigned dofIdx,
-                               unsigned timeIdx)
+    void computeStorage(Dune::FieldVector<LhsEval, numEq>& storage,
+                        const ElementContext& elemCtx,
+                        unsigned dofIdx,
+                        unsigned timeIdx) const
     {
         // retrieve the intensive quantities for the SCV at the specified point in time
         const IntensiveQuantities& intQuants = elemCtx.intensiveQuantities(dofIdx, timeIdx);
-        computeStorage(storage,
-                       intQuants);
-    }
+        const auto& fs = intQuants.fluidState();
 
-    /*!
-     * Compute storage term without using the element context.
-     */
-    template <class LhsEval>
-    static void computeStorage(Dune::FieldVector<LhsEval, numEq>& storage,
-                               const IntensiveQuantities& intQuants)
-    {
         storage = 0.0;
 
-        const auto& fs = intQuants.fluidState();
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                if (Indices::numPhases == 3) { // add trivial equation for the pseudo phase
+                    unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
+                    if (timeIdx == 0)
+                        storage[conti0EqIdx + activeCompIdx] = variable<LhsEval>(0.0, conti0EqIdx + activeCompIdx);
+                    else
+                        storage[conti0EqIdx + activeCompIdx] = 0.0;
+                }
+                continue;
+            }
+
             unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
             LhsEval surfaceVolume =
                 Toolbox::template decay<LhsEval>(fs.saturation(phaseIdx))
