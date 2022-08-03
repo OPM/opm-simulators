@@ -51,6 +51,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/material/fluidsystems/blackoilpvt/GasPvtThermal.cpp
   opm/material/fluidsystems/blackoilpvt/LiveOilPvt.cpp
   opm/material/fluidsystems/blackoilpvt/OilPvtMultiplexer.cpp
+  opm/material/fluidsystems/blackoilpvt/OilPvtThermal.cpp
   opm/simulators/timestepping/SimulatorReport.cpp
   opm/simulators/flow/countGlobalCells.cpp
   opm/simulators/flow/KeywordValidation.cpp
