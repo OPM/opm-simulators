@@ -56,6 +56,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/material/fluidsystems/blackoilpvt/WaterPvtMultiplexer.cpp
   opm/material/fluidsystems/blackoilpvt/WaterPvtThermal.cpp
   opm/material/fluidsystems/blackoilpvt/WetGasPvt.cpp
+  opm/material/fluidsystems/blackoilpvt/WetHumidGasPvt.cpp
   opm/simulators/timestepping/SimulatorReport.cpp
   opm/simulators/flow/countGlobalCells.cpp
   opm/simulators/flow/KeywordValidation.cpp
