@@ -128,8 +128,6 @@ namespace Opm {
             typedef Dune::FieldVector<Scalar, numEq    > VectorBlockType;
             typedef Dune::BlockVector<VectorBlockType> BVector;
 
-            typedef Opm::MatrixBlock<Scalar, numEq, numEq > MatrixBlockType;
-
             typedef BlackOilPolymerModule<TypeTag> PolymerModule;
             typedef BlackOilMICPModule<TypeTag> MICPModule;
 
@@ -210,13 +208,11 @@ namespace Opm {
             {
                 endReportStep();
             }
-            
-      
+
             void computeTotalRatesForDof(RateVector& rate,
                                          unsigned globalIdx,
                                          unsigned timeIdx) const;
 
-            
             template <class Context>
             void computeTotalRatesForDof(RateVector& rate,
                                          const Context& context,
@@ -272,9 +268,6 @@ namespace Opm {
             const SimulatorReportSingle& lastReport() const;
 
             void addWellContributions(SparseMatrixAdapter& jacobian) const;
-
-            // void addReservoirSourceTerms(GlobalEqVector& residual,
-            //                              SparseMatrixAdapter& jacobian) const;
 
             // called at the beginning of a report step
             void beginReportStep(const int time_step);
