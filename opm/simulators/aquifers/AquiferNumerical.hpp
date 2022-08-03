@@ -252,31 +252,14 @@ private:
         return sum_pressure_watervolume / sum_watervolume;
     }
 
-    template<class ElemCtx>
-    const double getWaterFlux(ElemCtx& elem_ctx,unsigned face_idx) const{
+    template <class ElemCtx>
+    const double getWaterFlux(ElemCtx& elem_ctx, unsigned face_idx) const
+    {
         const auto& exQuants = elem_ctx.extensiveQuantities(face_idx, /*timeIdx*/ 0);
         const double water_flux = Toolbox::value(exQuants.volumeFlux(this->phaseIdx_()));
         return water_flux;
     }
-    
-    const double getWaterFlux(SmallElementContext<TypeTag>& elem_ctx,unsigned face_idx) const{
-        short upIdx[numPhases];
-        short dnIdx[numPhases];
-        Eval volumFlux[numPhases];
-        Eval pressureDifferences[numPhases];
-        ExtensiveQuantities::volumeAndPhasePressureDifferences(upIdx,
-                                                               dnIdx,
-                                                               volumFlux,
-                                                               pressureDifferences,
-                                                               elem_ctx,
-                                                               face_idx,
-                                                               /*timeIdx*/ 0);
-        return Toolbox::value(volumFlux[this->phaseIdx_()]);
-    }
-                
-                
 
-    
     double calculateAquiferFluxRate() const
     {
         double aquifer_flux = 0.0;

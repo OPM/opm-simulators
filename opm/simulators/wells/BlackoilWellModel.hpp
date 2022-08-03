@@ -273,8 +273,8 @@ namespace Opm {
 
             void addWellContributions(SparseMatrixAdapter& jacobian) const;
 
-            void addReservoirSourceTerms(GlobalEqVector& residual,
-                                         SparseMatrixAdapter& jacobian) const;
+            // void addReservoirSourceTerms(GlobalEqVector& residual,
+            //                              SparseMatrixAdapter& jacobian) const;
 
             // called at the beginning of a report step
             void beginReportStep(const int time_step);

@@ -39,7 +39,6 @@
 #include <algorithm>
 #include <vector>
 
-#include <opm/models/discretization/common/smallelementcontext.hh>
 namespace Opm {
 
 /*!
@@ -100,10 +99,16 @@ public:
     }
 
 private:
-    template<class Face,class Stencil,class ElemCtx>
-    double calculateMaxDp(Face& face, Stencil& stencil,
-                          ElemCtx& elemCtx,const unsigned& scvfIdx,
-                          const unsigned& i,const unsigned& j,const unsigned& insideElemIdx,const unsigned& outsideElemIdx){
+    template <class Face, class Stencil, class ElemCtx>
+    double calculateMaxDp(Face& face,
+                          Stencil& stencil,
+                          ElemCtx& elemCtx,
+                          const unsigned& scvfIdx,
+                          const unsigned& i,
+                          const unsigned& j,
+                          const unsigned& insideElemIdx,
+                          const unsigned& outsideElemIdx)
+    {
         typedef MathToolbox<Evaluation> Toolbox;
         elemCtx.updateIntensiveQuantities(/*timeIdx=*/0);
         elemCtx.updateExtensiveQuantities(/*timeIdx=*/0);
@@ -114,7 +119,7 @@ private:
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             unsigned upIdx = extQuants.upstreamIndex(phaseIdx);
             const auto& up = elemCtx.intensiveQuantities(upIdx, /*timeIdx=*/0);
-            
+
             if (up.mobility(phaseIdx) > 0.0) {
                 Scalar phaseVal = Toolbox::value(extQuants.pressureDifference(phaseIdx));
                 pth = std::max(pth, std::abs(phaseVal));
@@ -122,72 +127,8 @@ private:
         }
         return pth;
     }
-    
-    template<class Face,class Stencil>
-    double calculateMaxDp(Face& face, Stencil& stencil,
-                          SmallElementContext<TypeTag>& elemCtx,const unsigned& scvfIdx,
-                          const unsigned& i,const unsigned& j,
-                          const unsigned& insideElemIdx,const unsigned& outsideElemIdx){        
-        typedef MathToolbox<Evaluation> Toolbox;
-        // determine the maximum difference of the pressure of any phase over the
-        // intersection
-        Scalar pth = 0.0;
-        //const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, /*timeIdx=*/0);
-        
-        Scalar Vin = elemCtx.dofVolume(i, /*timeIdx=*/0);
-        Scalar Vex = elemCtx.dofVolume(j, /*timeIdx=*/0);
-        
-        Scalar thpres = 0.0;//NB ??problem.thresholdPressure(globalIndexIn, globalIndexEx);
-        
-        // estimate the gravity correction: for performance reasons we use a simplified
-        // approach for this flux module that assumes that gravity is constant and always
-        // acts into the downwards direction. (i.e., no centrifuge experiments, sorry.)
-        const auto& problem = elemCtx.problem();
-        Scalar g = problem.gravity()[dimWorld - 1];
-        
-        const auto& intQuantsIn = elemCtx.intensiveQuantities(i, /*timeIdx*/0);
-        const auto& intQuantsEx = elemCtx.intensiveQuantities(j, /*timeIdx*/0);
-        
-        // this is quite hacky because the dune grid interface does not provide a
-        // cellCenterDepth() method (so we ask the problem to provide it). The "good"
-        // solution would be to take the Z coordinate of the element centroids, but since
-        // ECL seems to like to be inconsistent on that front, it needs to be done like
-        // here...
-        Scalar zIn = problem.dofCenterDepth(elemCtx, i, /*timeIdx*/0);
-        Scalar zEx = problem.dofCenterDepth(elemCtx, j, /*timeIdx*/0);
-        
-        // the distances from the DOF's depths. (i.e., the additional depth of the
-        // exterior DOF)
-        Scalar distZ = zIn - zEx;
-        
-        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            short dnIdx;
-            //
-            short upIdx;
-            Evaluation pressureDifference;
-            ExtensiveQuantities::calculatePhasePressureDiff_(upIdx,
-                                                             dnIdx,
-                                                             pressureDifference,
-                                                             intQuantsIn,
-                                                             intQuantsEx,
-                                                             /*timeIdx*/0,//input
-                                                             phaseIdx,//input
-                                                             i,//input
-                                                             j,//intput
-                                                             Vin,
-                                                             Vex,
-                                                             insideElemIdx,
-                                                             outsideElemIdx,
-                                                             distZ*g,
-                                                             thpres);
-            const IntensiveQuantities& up = (upIdx == i) ? intQuantsIn : intQuantsEx;
-            if (up.mobility(phaseIdx) > 0.0) {
-                Scalar phaseVal = Toolbox::value(pressureDifference);
-                pth = std::max(pth, std::abs(phaseVal));
-            }
-        }
-        return pth;
-    }
+
+
     // compute the defaults of the threshold pressures using the initial condition
     void computeDefaultThresholdPressures_()
     {
@@ -208,13 +149,9 @@ private:
                 continue;
 
             elemCtx.updateStencil(elem);
-            //
-            
             const auto& stencil = elemCtx.stencil(/*timeIdx=*/0);
-            
 
             for (unsigned scvfIdx = 0; scvfIdx < stencil.numInteriorFaces(); ++ scvfIdx) {
-                
                 const auto& face = stencil.interiorFace(scvfIdx);
 
                 unsigned i = face.interiorIndex();
@@ -225,7 +162,6 @@ private:
 
                 unsigned equilRegionInside = this->elemEquilRegion_[insideElemIdx];
                 unsigned equilRegionOutside = this->elemEquilRegion_[outsideElemIdx];
-                
                 if (equilRegionInside == equilRegionOutside)
                     // the current face is not at the boundary between EQUIL regions!
                     continue;
@@ -235,7 +171,6 @@ private:
                 Scalar faceArea = face.area();
                 if (std::abs(faceArea*getValue(trans)) < 1e-18)
                     continue;
-                
                 double pth = calculateMaxDp(face, stencil, elemCtx, scvfIdx,
                                             i, j,
                                             insideElemIdx, outsideElemIdx);

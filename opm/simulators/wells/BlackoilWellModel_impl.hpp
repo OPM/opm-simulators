@@ -1202,6 +1202,7 @@ namespace Opm {
         }
     }
 
+#if 0
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
@@ -1231,6 +1232,7 @@ namespace Opm {
             }
         }
     }
+#endif
 
     template<typename TypeTag>
     void

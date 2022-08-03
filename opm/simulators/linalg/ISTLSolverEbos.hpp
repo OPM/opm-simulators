@@ -532,14 +532,14 @@ namespace Opm
             return weights;
         }
 
-                
+#if 0
         Vector getTrueImpesWeights(int pressureVarIndex,SmallElementContext<TypeTag>& /*elemCtx*/) const
         {
             Vector weights(rhs_->size());
             Amg::getTrueImpesWeights<Evaluation>(pressureVarIndex, weights, simulator_.model());
             return weights;
         }
-
+#endif
 
         /// Zero out off-diagonal blocks on rows corresponding to overlap cells
         /// Diagonal blocks on ovelap rows are set to diag(1.0).
