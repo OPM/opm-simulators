@@ -46,6 +46,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/material/fluidsystems/blackoilpvt/ConstantCompressibilityWaterPvt.cpp
   opm/material/fluidsystems/blackoilpvt/DeadOilPvt.cpp
   opm/material/fluidsystems/blackoilpvt/DryGasPvt.cpp
+  opm/material/fluidsystems/blackoilpvt/DryHumidGasPvt.cpp
   opm/simulators/timestepping/SimulatorReport.cpp
   opm/simulators/flow/countGlobalCells.cpp
   opm/simulators/flow/KeywordValidation.cpp
