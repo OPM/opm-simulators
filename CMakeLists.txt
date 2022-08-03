@@ -26,6 +26,7 @@ option(BUILD_FLOW_POLY_GRID "Build flow blackoil with polyhedral grid" OFF)
 option(OPM_ENABLE_PYTHON "Enable python bindings?" OFF)
 option(OPM_ENABLE_PYTHON_TESTS "Enable tests for the python bindings?" ON)
 option(OPM_INSTALL_PYTHON "Install python bindings?" ON)
+option(USE_PRIVATE_TEMPLATES "Use private templates (speeds up compilation, slows down binaries)" OFF)
 option(ENABLE_FPGA "Enable FPGA kernels integration?" OFF)
 option(USE_CHOW_PATEL_ILU "Use the iterative ILU by Chow and Patel?" OFF)
 option(USE_CHOW_PATEL_ILU_GPU "Run iterative ILU decomposition on GPU? Requires USE_CHOW_PATEL_ILU" OFF)
@@ -91,6 +92,10 @@ if(opm-common_DIR AND NOT IS_DIRECTORY ${opm-common_DIR})
 endif()
 
 find_package(opm-common REQUIRED)
+
+if(USE_PRIVATE_TEMPLATES)
+  set(OPM_USE_PRIVATE_TEMPLATES 1)
+endif()
 
 include(OpmInit)
 OpmSetPolicies()
