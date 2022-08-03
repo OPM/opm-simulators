@@ -41,6 +41,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/core/props/satfunc/RelpermDiagnostics.cpp
   opm/material/fluidsystems/blackoilpvt/BrineCo2Pvt.cpp
   opm/material/fluidsystems/blackoilpvt/Co2GasPvt.cpp
+  opm/material/fluidsystems/blackoilpvt/ConstantCompressibilityBrinePvt.cpp
   opm/simulators/timestepping/SimulatorReport.cpp
   opm/simulators/flow/countGlobalCells.cpp
   opm/simulators/flow/KeywordValidation.cpp
