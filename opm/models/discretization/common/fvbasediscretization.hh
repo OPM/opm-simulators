@@ -363,7 +363,7 @@ class FvBaseDiscretization
 
     using LocalLinearizer = GetPropType<TypeTag, Properties::LocalLinearizer>;
     using LocalResidual = GetPropType<TypeTag, Properties::LocalResidual>;
-    using Problem = GetPropType<TypeTag, Properties::Problem>;
+
     enum {
         numEq = getPropValue<TypeTag, Properties::NumEq>(),
         historySize = getPropValue<TypeTag, Properties::TimeDiscHistorySize>(),
@@ -402,6 +402,7 @@ class FvBaseDiscretization
     using DiscreteFunction = Dune::Fem::ISTLBlockVectorDiscreteFunction<DiscreteFunctionSpace, PrimaryVariables>;
 
     // problem restriction and prolongation operator for adaptation
+    using Problem = GetPropType<TypeTag, Properties::Problem>  ;
     using ProblemRestrictProlongOperator = typename Problem :: RestrictProlongOperator ;
 
     // discrete function restriction and prolongation operator for adaptation
@@ -783,43 +784,6 @@ public:
         }
     }
 
-    void invalidateAndUpdateIntensiveSingleQuantitiesSimple(const Problem& problem,
-                                                      const PrimaryVariables& primaryVar,
-                                                      unsigned dofIdx,
-                                                      unsigned timeIdx) const
-    {
-        //invalidateIntensiveQuantitiesCache(timeIdx);
-        auto& intquant = intensiveQuantityCache_[timeIdx][dofIdx];
-        intquant.update(problem, primaryVar, dofIdx, timeIdx);
-        intensiveQuantityCacheUpToDate_[timeIdx][dofIdx] = true;
-     }
-    
-    void invalidateAndUpdateIntensiveQuantitiesSimple(const Problem& problem,
-                                                      const SolutionVector& primaryVars,
-                                                      unsigned timeIdx) const
-    {
-        //invalidateIntensiveQuantitiesCache(timeIdx);
-        size_t numGridDof = primaryVars.size();
-          // omp_sched_t kind;
-          // int chunk;
-          //omp_get_schedule(&kind, &chunk);
-          //printf("%d %d\n", kind, chunk);
-#ifdef _OPENMP
-#pragma omp parallel for
-#endif                
-        for (unsigned dofIdx = 0; dofIdx < numGridDof; ++dofIdx) {
-            const auto& primaryVar = primaryVars[dofIdx];
-            auto& intquant = intensiveQuantityCache_[timeIdx][dofIdx];
-            intquant.update(problem, primaryVar, dofIdx, timeIdx);
-        }
-        
-        std::fill(intensiveQuantityCacheUpToDate_[timeIdx].begin(),
-                      intensiveQuantityCacheUpToDate_[timeIdx].end(),
-                  /*value=*/true);
-        // loop over all elements...
-        
-    }
-    
     /*!
      * \brief Move the intensive quantities for a given time index to the back.
      *
