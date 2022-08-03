@@ -42,6 +42,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/material/fluidsystems/blackoilpvt/BrineCo2Pvt.cpp
   opm/material/fluidsystems/blackoilpvt/Co2GasPvt.cpp
   opm/material/fluidsystems/blackoilpvt/ConstantCompressibilityBrinePvt.cpp
+  opm/material/fluidsystems/blackoilpvt/ConstantCompressibilityOilPvt.cpp
   opm/simulators/timestepping/SimulatorReport.cpp
   opm/simulators/flow/countGlobalCells.cpp
   opm/simulators/flow/KeywordValidation.cpp
