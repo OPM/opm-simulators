@@ -64,7 +64,7 @@ class BlackOilLocalResidualTPFA : public GetPropType<TypeTag, Properties::DiscLo
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
-    
+
     enum { dimWorld = GridView::dimensionworld };
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
     enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
@@ -109,10 +109,12 @@ public:
                        intQuants,
                        timeIdx);
     }
+
     template <class LhsEval>
     static void computeStorage(Dune::FieldVector<LhsEval, numEq>& storage,
-                        const IntensiveQuantities& intQuants,
-                        unsigned timeIdx) {   
+                               const IntensiveQuantities& intQuants,
+                               unsigned timeIdx)
+    {
         // retrieve the intensive quantities for the SCV at the specified point in time
         const auto& fs = intQuants.fluidState();
         storage = 0.0;
@@ -176,10 +178,9 @@ public:
     }
 
     /*!
-     * This function works like the ElementContext-based version with [two] one
-     * main differences:
-     *   - The darcy flux is calculated here, not read from the extensive quantities of the element context.
-     *   [- The flux is not per area (a velocity), i.e. it is in [m^3/s], not [m/s].]
+     * This function works like the ElementContext-based version with
+     * one main difference: The darcy flux is calculated here, not
+     * read from the extensive quantities of the element context.
      */
     static void computeFlux(RateVector& flux,
                             const Problem& problem,
@@ -195,8 +196,6 @@ public:
         flux = 0.0;
         Scalar Vin = problem.model().dofTotalVolume(globalIndexIn);
         Scalar Vex = problem.model().dofTotalVolume(globalIndexEx);
-
-        //Scalar faceArea = 1.0; // This makes the 'flux' a volume flux not a velocity.
 
         Scalar thpres = problem.thresholdPressure(globalIndexIn, globalIndexEx);
 
@@ -218,7 +217,6 @@ public:
         Scalar distZ = zIn - zEx; // NB could be precalculated
 
         calculateFluxes_(flux,
-                         problem, // should be removed
                          intQuantsIn,
                          intQuantsEx,
                          timeIdx, // input
@@ -229,7 +227,7 @@ public:
                          distZ * g,
                          thpres,
                          trans,
-                         faceArea); // should be removed
+                         faceArea);
     }
 
     // This function demonstrates compatibility with the ElementContext-based interface.
@@ -282,7 +280,6 @@ public:
         Scalar distZ = zIn - zEx;
 
         calculateFluxes_(flux,
-                         problem, // only used for trans compressibility
                          intQuantsIn,
                          intQuantsEx,
                          timeIdx, // input
@@ -296,21 +293,18 @@ public:
                          faceArea);
     }
 
-    static void calculateFluxes_(
-        RateVector& flux,
-        const Problem& problem, // only used for rockCompressibility which should be moved to intensive quantities
-        const IntensiveQuantities& intQuantsIn,
-        const IntensiveQuantities& intQuantsEx,
-        const unsigned timeIdx,
-        const Scalar& Vin,
-        const Scalar& Vex,
-        const unsigned& globalIndexIn,
-        const unsigned& globalIndexEx,
-        const Scalar& distZg,
-        const Scalar& thpres,
-        const Scalar& trans,
-        const Scalar& faceArea
-    )
+    static void calculateFluxes_(RateVector& flux,
+                                 const IntensiveQuantities& intQuantsIn,
+                                 const IntensiveQuantities& intQuantsEx,
+                                 const unsigned timeIdx,
+                                 const Scalar& Vin,
+                                 const Scalar& Vex,
+                                 const unsigned& globalIndexIn,
+                                 const unsigned& globalIndexEx,
+                                 const Scalar& distZg,
+                                 const Scalar& thpres,
+                                 const Scalar& trans,
+                                 const Scalar& faceArea)
     {
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx))
@@ -342,34 +336,18 @@ public:
 
 
             const IntensiveQuantities& up = (upIdx == interiorDofIdx) ? intQuantsIn : intQuantsEx;
-            unsigned globalUpIndex;
-            if (upIdx == interiorDofIdx) {
-                // up = intQuantsIn;
-                globalUpIndex = globalIndexIn;
-            } else {
-                // up = intQuantsEx;
-                globalUpIndex = globalIndexEx;
-            }
-            // TODO: should the rock compaction transmissibility multiplier be upstreamed
-            // or averaged? all fluids should see the same compaction?!
-            // const auto& globalIndex = stencil.globalSpaceIndex(upstreamIdx);
+            unsigned globalUpIndex = (upIdx == interiorDofIdx) ? globalIndexIn : globalIndexEx;
             const Evaluation& transMult = up.rockCompTransMultiplier();
-            // const Evaluation& transMult =
-            //    problem.template rockCompTransMultiplier<Evaluation>(up, globalUpIndex);
             Evaluation darcyFlux;
             if (pressureDifference == 0) {
                 darcyFlux = 0.0; // NB maybe we could drop calculations
             } else {
-                // if (upIdx == interiorDofIdx)
                 if (globalUpIndex == globalIndexIn)
                     darcyFlux = pressureDifference * up.mobility(phaseIdx) * transMult * (-trans / faceArea);
                 else
                     darcyFlux = pressureDifference * (Toolbox::value(up.mobility(phaseIdx)) * Toolbox::value(transMult) * (-trans / faceArea));
             }
-            // const auto& darcyFlux = extQuants.volumeFlux(phaseIdx);
-            // unsigned upIdx = static_cast<unsigned>(extQuants.upstreamIndex(phaseIdx));
 
-            // const IntensiveQuantities& up = elemCtx.intensiveQuantities(upIdx, timeIdx);
             unsigned pvtRegionIdx = up.pvtRegionIndex();
             using FluidState = typename IntensiveQuantities::FluidState;
             // if (upIdx == globalFocusDofIdx){
@@ -426,6 +404,7 @@ public:
         if (enableEnergy)
             source[Indices::contiEnergyEqIdx] *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
     }
+
     /*!
      * \copydoc FvBaseLocalResidual::computeSource
      */
@@ -450,17 +429,14 @@ public:
                                  unsigned phaseIdx,
                                  unsigned pvtRegionIdx,
                                  const ExtensiveQuantities& extQuants,
-                                 const FluidState& upFs){
-        
+                                 const FluidState& upFs)
+    {
+
         const auto& invB = getInvB_<FluidSystem, FluidState, UpEval>(upFs, phaseIdx, pvtRegionIdx);
-        const auto& surfaceVolumeFlux = invB*extQuants.volumeFlux(phaseIdx);           
-        evalPhaseFluxes_<UpEval>(flux,
-                         phaseIdx,
-                         pvtRegionIdx,
-                         surfaceVolumeFlux,
-                         upFs);
-    
+        const auto& surfaceVolumeFlux = invB * extQuants.volumeFlux(phaseIdx);
+        evalPhaseFluxes_<UpEval>(flux, phaseIdx, pvtRegionIdx, surfaceVolumeFlux, upFs);
     }
+
     /*!
      * \brief Helper function to calculate the flux of mass in terms of conservation
      *        quantities via specific fluid phase over a face.
@@ -469,11 +445,9 @@ public:
     static void evalPhaseFluxes_(RateVector& flux,
                                  unsigned phaseIdx,
                                  unsigned pvtRegionIdx,
-                                 const Eval& surfaceVolumeFlux,//value of RateVector
+                                 const Eval& surfaceVolumeFlux,
                                  const FluidState& upFs)
     {
-        //const auto& invB = getInvB_<FluidSystem, FluidState, UpEval>(upFs, phaseIdx, pvtRegionIdx);
-        //const auto& surfaceVolumeFlux = invB*extQuants.volumeFlux(phaseIdx);
         unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
 
         if (blackoilConserveSurfaceVolume)
