@@ -323,7 +323,7 @@ private:
 
             for (unsigned primaryDofIdx = 0; primaryDofIdx < stencil.numPrimaryDof(); ++primaryDofIdx) {
                 unsigned myIdx = stencil.globalSpaceIndex(primaryDofIdx);
-                loc_nbinfo.resize(stencil.numDof() - 1); // Do not include the primary dof.
+                loc_nbinfo.resize(stencil.numDof() - 1); // Do not include the primary dof in neighborInfo_
 
                 for (unsigned dofIdx = 0; dofIdx < stencil.numDof(); ++dofIdx) {
                     unsigned neighborIdx = stencil.globalSpaceIndex(dofIdx);
@@ -338,9 +338,6 @@ private:
             }
         }
 
-        // Do not include auxiliary connections in the linearization sparsity pattern.
-        // auto reservoirSparsityPattern = sparsityPattern;
-
         // add the additional neighbors and degrees of freedom caused by the auxiliary
         // equations
         size_t numAuxMod = model.numAuxiliaryModules();
@@ -352,29 +349,6 @@ private:
 
         // create matrix structure based on sparsity pattern
         jacobian_->reserve(sparsityPattern);
-
-        // Now generate the neighbours_ and trans_ structures for the linearization loop.
-        // Those should not include an entry for the cell itself.
-        // for (unsigned globI = 0; globI < model.numTotalDof(); globI++) {
-        //     reservoirSparsityPattern[globI].erase(globI);
-        // }
-        // unsigned numCells = model.numTotalDof();
-        // neighbours_.reserve(numCells, 6 * numCells);
-        // trans_.reserve(numCells, 6 * numCells);
-        // faceArea_.reserve(numCells, 6 * numCells);
-        // std::vector<double> loctrans;
-        // for (unsigned globI = 0; globI < numCells; globI++) {
-        //     const auto& cells = reservoirSparsityPattern[globI];
-        //     neighbours_.appendRow(cells.begin(), cells.end());
-        //     unsigned n = cells.size();
-        //     loctrans.resize(n);
-        //     short loc = 0;
-        //     for (const int& cell : cells) {
-        //         loctrans[loc] = problem_().transmissibility(globI, cell);
-        //         loc++;
-        //     }
-        //     trans_.appendRow(loctrans.begin(), loctrans.end());
-        // }
     }
 
     // reset the global linear system of equations.
@@ -474,12 +448,6 @@ private:
                 jacobian_->addToBlock(globI, globI, bMat);
             }
         }
-        if (not(well_local)) {
-            problem_().wellModel().addReservoirSourceTerms(residual_, *jacobian_);
-        }
-        // before the first iteration of each time step, we need to update the
-        // constraints. (i.e., we assume that constraints can be time dependent, but they
-        // can't depend on the solution.)
     }
 
     Simulator *simulatorPtr_;
