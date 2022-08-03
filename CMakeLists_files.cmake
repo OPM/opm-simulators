@@ -39,6 +39,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/core/props/BlackoilPhases.cpp
   opm/core/props/phaseUsageFromDeck.cpp
   opm/core/props/satfunc/RelpermDiagnostics.cpp
+  opm/material/fluidsystems/blackoilpvt/BrineCo2Pvt.cpp
   opm/simulators/timestepping/SimulatorReport.cpp
   opm/simulators/flow/countGlobalCells.cpp
   opm/simulators/flow/KeywordValidation.cpp
