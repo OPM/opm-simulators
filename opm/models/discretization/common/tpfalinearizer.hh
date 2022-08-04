@@ -391,7 +391,9 @@ private:
             MatrixBlock bMat(0.0);
             ADVectorBlock adres(0.0);
             const IntensiveQuantities* intQuantsInP = model_().cachedIntensiveQuantities(globI, /*timeIdx*/ 0);
-            assert(intQuantsInP);
+            if (intQuantsInP == nullptr) {
+                throw std::logic_error("Missing updated intensive quantities for cell " + std::to_string(globI));
+            }
             const IntensiveQuantities& intQuantsIn = *intQuantsInP;
 
             // Flux term.
@@ -404,7 +406,7 @@ private:
                 adres = 0.0;
                 const IntensiveQuantities* intQuantsExP = model_().cachedIntensiveQuantities(globJ, /*timeIdx*/ 0);
                 if (intQuantsExP == nullptr) {
-                    throw std::logic_error("Missing updated intensive quantities for cell " + std::to_string(globJ));
+                    throw std::logic_error("Missing updated intensive quantities for cell " + std::to_string(globJ) + " when assembling fluxes for cell " + std::to_string(globI));
                 }
                 const IntensiveQuantities& intQuantsEx = *intQuantsExP;
                 LocalResidual::computeFlux(
