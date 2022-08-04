@@ -45,12 +45,6 @@
 
 #include <vector>
 
-#ifdef HAVE_DUNE_LOCALFUNCTIONS
-#define EWOMS_NO_LOCALFUNCTIONS_UNUSED
-#else
-#define EWOMS_NO_LOCALFUNCTIONS_UNUSED  OPM_UNUSED
-#endif
-
 namespace Opm {
 /*!
  * \ingroup FiniteElementDiscretizations
@@ -96,8 +90,8 @@ public:
      * \param elemCtx The current execution context
      */
     template <bool prepareValues = true, bool prepareGradients = true>
-    void prepare(const ElementContext& elemCtx EWOMS_NO_LOCALFUNCTIONS_UNUSED,
-                 unsigned timeIdx EWOMS_NO_LOCALFUNCTIONS_UNUSED)
+    void prepare([[maybe_unused]] const ElementContext& elemCtx,
+                 [[maybe_unused]] unsigned timeIdx)
     {
         if (getPropValue<TypeTag, Properties::UseP1FiniteElementGradients>()) {
 #if !HAVE_DUNE_LOCALFUNCTIONS
@@ -156,9 +150,9 @@ public:
      *               freedom
      */
     template <class QuantityCallback>
-    auto calculateScalarValue(const ElementContext& elemCtx EWOMS_NO_LOCALFUNCTIONS_UNUSED,
-                              unsigned fapIdx EWOMS_NO_LOCALFUNCTIONS_UNUSED,
-                              const QuantityCallback& quantityCallback EWOMS_NO_LOCALFUNCTIONS_UNUSED) const
+    auto calculateScalarValue([[maybe_unused]] const ElementContext& elemCtx,
+                              [[maybe_unused]] unsigned fapIdx,
+                              [[maybe_unused]] const QuantityCallback& quantityCallback) const
         ->  typename std::remove_reference<typename QuantityCallback::ResultType>::type
     {
         if (getPropValue<TypeTag, Properties::UseP1FiniteElementGradients>()) {
@@ -201,9 +195,9 @@ public:
      *               freedom
      */
     template <class QuantityCallback>
-    auto calculateVectorValue(const ElementContext& elemCtx EWOMS_NO_LOCALFUNCTIONS_UNUSED,
-                              unsigned fapIdx EWOMS_NO_LOCALFUNCTIONS_UNUSED,
-                              const QuantityCallback& quantityCallback EWOMS_NO_LOCALFUNCTIONS_UNUSED) const
+    auto calculateVectorValue([[maybe_unused]] const ElementContext& elemCtx,
+                              [[maybe_unused]] unsigned fapIdx,
+                              [[maybe_unused]] const QuantityCallback& quantityCallback) const
         ->  typename std::remove_reference<typename QuantityCallback::ResultType>::type
     {
         if (getPropValue<TypeTag, Properties::UseP1FiniteElementGradients>()) {
@@ -257,10 +251,10 @@ public:
      *               freedom
      */
     template <class QuantityCallback, class EvalDimVector>
-    void calculateGradient(EvalDimVector& quantityGrad EWOMS_NO_LOCALFUNCTIONS_UNUSED,
-                           const ElementContext& elemCtx EWOMS_NO_LOCALFUNCTIONS_UNUSED,
-                           unsigned fapIdx EWOMS_NO_LOCALFUNCTIONS_UNUSED,
-                           const QuantityCallback& quantityCallback EWOMS_NO_LOCALFUNCTIONS_UNUSED) const
+    void calculateGradient([[maybe_unused]] EvalDimVector& quantityGrad,
+                           [[maybe_unused]] const ElementContext& elemCtx,
+                           [[maybe_unused]] unsigned fapIdx,
+                           [[maybe_unused]] const QuantityCallback& quantityCallback) const
     {
         if (getPropValue<TypeTag, Properties::UseP1FiniteElementGradients>()) {
 #if !HAVE_DUNE_LOCALFUNCTIONS
@@ -359,7 +353,5 @@ typename P1FeGradientCalculator<TypeTag>::LocalFiniteElementCache
 P1FeGradientCalculator<TypeTag>::feCache_;
 #endif
 } // namespace Opm
-
-#undef EWOMS_NO_LOCALFUNCTIONS_UNUSED
 
 #endif
