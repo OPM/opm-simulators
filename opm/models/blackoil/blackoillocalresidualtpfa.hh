@@ -81,10 +81,16 @@ class BlackOilLocalResidualTPFA : public GetPropType<TypeTag, Properties::DiscLo
     static const bool compositionSwitchEnabled = (compositionSwitchIdx >= 0);
 
     static constexpr bool blackoilConserveSurfaceVolume = getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>();
-    static constexpr bool enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>();
-    static constexpr bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
 
-    using Toolbox = MathToolbox<Evaluation>;
+    static constexpr bool enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>();
+    static constexpr bool enableExtbo = getPropValue<TypeTag, Properties::EnableExtbo>();
+    static constexpr bool enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>();
+    static constexpr bool enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>();
+    static constexpr bool enableFoam = getPropValue<TypeTag, Properties::EnableFoam>();
+    static constexpr bool enableBrine = getPropValue<TypeTag, Properties::EnableBrine>();
+    static constexpr bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
+    static constexpr bool enableMICP = getPropValue<TypeTag, Properties::EnableMICP>();
+
     using SolventModule = BlackOilSolventModule<TypeTag>;
     using ExtboModule = BlackOilExtboModule<TypeTag>;
     using PolymerModule = BlackOilPolymerModule<TypeTag>;
@@ -93,6 +99,8 @@ class BlackOilLocalResidualTPFA : public GetPropType<TypeTag, Properties::DiscLo
     using BrineModule = BlackOilBrineModule<TypeTag>;
     using DiffusionModule = BlackOilDiffusionModule<TypeTag, enableDiffusion>;
     using MICPModule = BlackOilMICPModule<TypeTag>;
+
+    using Toolbox = MathToolbox<Evaluation>;
 
 public:
     /*!
@@ -365,39 +373,51 @@ public:
             }
         }
 
-        // // deal with solvents (if present)
+        // deal with solvents (if present)
+        static_assert(!enableSolvent, "Relevant computeFlux() method must be implemented for this module before enabling.");
         // SolventModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
-        // // deal with zFracton (if present)
+        // deal with zFracton (if present)
+        static_assert(!enableExtbo, "Relevant computeFlux() method must be implemented for this module before enabling.");
         // ExtboModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
-        // // deal with polymer (if present)
+        // deal with polymer (if present)
+        static_assert(!enablePolymer, "Relevant computeFlux() method must be implemented for this module before enabling.");
         // PolymerModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
-        // // deal with energy (if present)
+        // deal with energy (if present)
+        static_assert(!enableEnergy, "Relevant computeFlux() method must be implemented for this module before enabling.");
         // EnergyModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
-        // // deal with foam (if present)
+        // deal with foam (if present)
+        static_assert(!enableFoam, "Relevant computeFlux() method must be implemented for this module before enabling.");
         // FoamModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
-        // // deal with salt (if present)
+        // deal with salt (if present)
+        static_assert(!enableBrine, "Relevant computeFlux() method must be implemented for this module before enabling.");
         // BrineModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
-        // // deal with micp (if present)
+        // deal with diffusion (if present)
+        static_assert(!enableDiffusion, "Relevant computeFlux() method must be implemented for this module before enabling.");
+        // DiffusionModule::addDiffusiveFlux(flux, elemCtx, scvfIdx, timeIdx);
+
+        // deal with micp (if present)
+        static_assert(!enableMICP, "Relevant computeFlux() method must be implemented for this module before enabling.");
         // MICPModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
-        // DiffusionModule::addDiffusiveFlux(flux, elemCtx, scvfIdx, timeIdx);
     }
 
     static void computeSource(RateVector& source,
                               const Problem& problem,
                               unsigned globalSpaceIdex,
-                              unsigned timeIdx) 
+                              unsigned timeIdx)
     {
         // retrieve the source term intrinsic to the problem
         problem.source(source, globalSpaceIdex, timeIdx);
 
-        // // deal with MICP (if present)
+        // deal with MICP (if present)
+        // deal with micp (if present)
+        static_assert(!enableMICP, "Relevant addSource() method must be implemented for this module before enabling.");
         // MICPModule::addSource(source, elemCtx, dofIdx, timeIdx);
 
         // scale the source term of the energy equation
