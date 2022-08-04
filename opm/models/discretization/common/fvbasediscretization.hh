@@ -1411,7 +1411,7 @@ public:
         // previous time step so that we can start the next
         // update at a physically meaningful solution.
         solution(/*timeIdx=*/0) = solution(/*timeIdx=*/1);
-        invalidateIntensiveQuantitiesCache(/*timeIdx=*/0);
+        invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
 
 #ifndef NDEBUG
         for (unsigned timeIdx = 0; timeIdx < historySize; ++timeIdx) {
