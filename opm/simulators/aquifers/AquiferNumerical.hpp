@@ -253,7 +253,7 @@ private:
     }
 
     template <class ElemCtx>
-    const double getWaterFlux(ElemCtx& elem_ctx, unsigned face_idx) const
+    const double getWaterFlux(const ElemCtx& elem_ctx, unsigned face_idx) const
     {
         const auto& exQuants = elem_ctx.extensiveQuantities(face_idx, /*timeIdx*/ 0);
         const double water_flux = Toolbox::value(exQuants.volumeFlux(this->phaseIdx_()));
@@ -286,7 +286,7 @@ private:
             if (idx != 0) {
                 continue;
             }
-    
+
             const std::size_t num_interior_faces = elem_ctx.numInteriorFaces(/*timeIdx*/ 0);
             // const auto &problem = elem_ctx.problem();
             const auto& stencil = elem_ctx.stencil(0);
@@ -312,7 +312,6 @@ private:
                 elem_ctx.updateAllExtensiveQuantities();
 
                 const double water_flux = getWaterFlux(elem_ctx,face_idx);
-                
                 const std::size_t up_id = water_flux >= 0.0 ? i : j;
                 const auto& intQuantsIn = elem_ctx.intensiveQuantities(up_id, 0);
                 const double invB = Toolbox::value(intQuantsIn.fluidState().invB(this->phaseIdx_()));
@@ -326,7 +325,6 @@ private:
 
         return aquifer_flux;
     }
-    
 };
 } // namespace Opm
 #endif
