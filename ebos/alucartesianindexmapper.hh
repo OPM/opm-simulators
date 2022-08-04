@@ -30,6 +30,11 @@
 
 #include <dune/grid/common/datahandleif.hh>
 #include <dune/grid/utility/persistentcontainer.hh>
+#if HAVE_DUNE_ALUGRID
+#include <dune/alugrid/grid.hh>
+#include <dune/alugrid/3d/gridview.hh>
+#endif // HAVE_DUNE_ALUGRID
+#include <opm/grid/common/CartesianIndexMapper.hpp>
 
 #include <array>
 #include <memory>
@@ -37,16 +42,24 @@
 #include <vector>
 #include <cassert>
 
-namespace Opm {
+namespace Dune {
 
 /*!
  * \brief Interface class to access the logical Cartesian grid as used in industry
  *        standard simulator decks.
  */
-template <class Grid>
-class AluCartesianIndexMapper
+//#if HAVE_MPI
+    template <>
+    class CartesianIndexMapper<Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming>>
 {
 public:
+
+#if HAVE_MPI
+    using Grid = Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming, Dune::ALUGridMPIComm>; 
+#else    
+    using Grid = Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming, Dune::ALUGridNoComm>;
+#endif //HAVE_MPI
+    
     // data handle for communicating global ids during load balance and communication
     template <class GridView>
     class GlobalIndexDataHandle : public Dune::CommDataHandleIF<GlobalIndexDataHandle<GridView>, int>
@@ -93,10 +106,10 @@ public:
         ~GlobalIndexDataHandle()
         { finalize(); }
 
-        bool contains(int dim, int codim) const
+        bool contains(int /* dim */, int codim) const
         { return codim == 0; }
 
-        bool fixedsize(int dim, int codim) const
+        bool fixedsize(int /* dim */, int /* codim */) const
         { return true; }
 
         //! \brief loop over all internal data handlers and call gather for
@@ -111,7 +124,7 @@ public:
         //! \brief loop over all internal data handlers and call scatter for
         //! given entity
         template<class MessageBufferImp, class EntityType>
-        void scatter(MessageBufferImp& buff, const EntityType& element, size_t n)
+        void scatter(MessageBufferImp& buff, const EntityType& element, size_t /* n */)
         {
             int globalIdx = -1;
             buff.read(globalIdx);
@@ -125,7 +138,7 @@ public:
         //! \brief loop over all internal data handlers and return sum of data
         //! size of given entity
         template<class EntityType>
-        size_t size(const EntityType& en) const
+        size_t size(const EntityType& /* en */) const
         { return 1; }
 
     protected:
@@ -164,9 +177,9 @@ public:
     static const int dimension = Grid::dimension ;
 
     /** \brief constructor taking grid */
-    AluCartesianIndexMapper(const Grid& grid,
-                             const std::array<int, dimension>& cartDims,
-                             const std::vector<int>& cartesianIndex)
+    CartesianIndexMapper(const Grid& grid,
+                         const std::array<int, dimension>& cartDims,
+                         const std::vector<int>& cartesianIndex)
         : grid_(grid)
         , cartesianDimensions_(cartDims)
         , cartesianIndex_(cartesianIndex)
@@ -248,6 +261,6 @@ protected:
     const int cartesianSize_ ;
 };
 
-} // end namespace Opm
+} // end namespace Dune
 
 #endif

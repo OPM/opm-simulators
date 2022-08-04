@@ -195,6 +195,7 @@ public:
     {
         return this->cellCentroids_(this->cartesianIndexMapper());
     }
+
 protected:
     void createGrids_()
     {

@@ -35,7 +35,14 @@
 #include <dune/fem/gridpart/adaptiveleafgridpart.hh>
 #include <dune/fem/gridpart/common/gridpart2gridview.hh>
 #include <ebos/femcpgridcompat.hh>
-#endif
+#endif // HAVE_DUNE_FEM
+
+#if HAVE_DUNE_ALUGRID
+#include <dune/alugrid/grid.hh>
+#include <dune/alugrid/3d/gridview.hh>
+#include "alucartesianindexmapper.hh"
+#endif // HAVE_DUNE_ALUGRID
+
 
 #include <algorithm>
 #include <cassert>
@@ -817,7 +824,8 @@ CollectDataToIORank(const Grid& grid, const EquilGrid* equilGrid,
     {
         std::set<int> send, recv;
         using EquilGridView = typename EquilGrid::LeafGridView;
-
+        typename std::is_same<Grid, EquilGrid>::type isSameGrid;
+        
         typedef Dune::MultipleCodimMultipleGeomTypeMapper<GridView> ElementMapper;
         ElementMapper elemMapper(localGridView, Dune::mcmgElementLayout());
         sortedCartesianIdx_.reserve(localGridView.size(0));
@@ -843,10 +851,12 @@ CollectDataToIORank(const Grid& grid, const EquilGrid* equilGrid,
             using EquilElementMapper = Dune::MultipleCodimMultipleGeomTypeMapper<EquilGridView>;
             EquilElementMapper equilElemMapper(equilGridView, Dune::mcmgElementLayout());
 
-            // Scatter the global index to local index for lookup during restart
-            ElementIndexScatterHandle<EquilElementMapper,ElementMapper> handle(equilElemMapper, elemMapper, localIdxToGlobalIdx_);
-            grid.scatterData(handle);
-
+           // Scatter the global index to local index for lookup during restart
+           if constexpr (isSameGrid) {
+             ElementIndexScatterHandle<EquilElementMapper,ElementMapper> handle(equilElemMapper, elemMapper, localIdxToGlobalIdx_);
+             grid.scatterData(handle);
+           }
+            
             // loop over all elements (global grid) and store Cartesian index
             auto elemIt = equilGrid->leafGridView().template begin<0>();
             const auto& elemEndIt = equilGrid->leafGridView().template end<0>();
@@ -869,15 +879,19 @@ CollectDataToIORank(const Grid& grid, const EquilGrid* equilGrid,
             // Scatter the global index to local index for lookup during restart
             // This is a bit hacky since the type differs from the iorank.
             // But should work since we only receive, i.e. use the second parameter.
-            ElementIndexScatterHandle<ElementMapper, ElementMapper> handle(elemMapper, elemMapper,
-                                                                           localIdxToGlobalIdx_);
-            grid.scatterData(handle);
+            if constexpr (isSameGrid) {
+              ElementIndexScatterHandle<ElementMapper, ElementMapper> handle(elemMapper, elemMapper, localIdxToGlobalIdx_);
+              grid.scatterData(handle);
+            }
         }
 
         // Sync the global element indices
-        ElementIndexHandle<ElementMapper> handle(elemMapper, localIdxToGlobalIdx_);
-        grid.communicate(handle, Dune::InteriorBorder_All_Interface,
+        if constexpr (isSameGrid) {
+          ElementIndexHandle<ElementMapper> handle(elemMapper, localIdxToGlobalIdx_);
+          grid.communicate(handle, Dune::InteriorBorder_All_Interface,
                            Dune::ForwardCommunication);
+        }
+                         
         localIndexMap_.clear();
         const size_t gridSize = grid.size(0);
         localIndexMap_.reserve(gridSize);
@@ -1056,11 +1070,45 @@ template class CollectDataToIORank<Dune::CpGrid,
                                            Dune::CpGrid,
                                            Dune::PartitionIteratorType(4),
                                            false> > >;
+
+#ifdef HAVE_DUNE_ALUGRID
+#if HAVE_MPI
+    using ALUGrid3CN = Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming, Dune::ALUGridMPIComm>;
 #else
+    using ALUGrid3CN = Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming, Dune::ALUGridNoComm>;
+#endif //HAVE_MPI
+
+template class CollectDataToIORank<ALUGrid3CN,
+                                   Dune::CpGrid,
+                                   Dune::GridView<Dune::Fem::GridPart2GridViewTraits<Dune::Fem::AdaptiveLeafGridPart<ALUGrid3CN, Dune::PartitionIteratorType(4), false>>>>;
+
+template class CollectDataToIORank<ALUGrid3CN,
+                                   Dune::CpGrid,
+                                   Dune::Fem::GridPart2GridViewImpl<
+                                       Dune::Fem::AdaptiveLeafGridPart<
+                                           ALUGrid3CN,
+                                           Dune::PartitionIteratorType(4),
+                                           false>>>;
+
+#endif //HAVE_DUNE_ALUGRID
+
+#else // ! HAVE_DUNE_FEM
 template class CollectDataToIORank<Dune::CpGrid,
                                    Dune::CpGrid,
                                    Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>>;
-#endif
+
+#ifdef HAVE_DUNE_ALUGRID
+#if HAVE_MPI
+    using ALUGrid3CN = Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming, Dune::ALUGridMPIComm>;
+#else
+    using ALUGrid3CN = Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming, Dune::ALUGridNoComm>;
+#endif //HAVE_MPI
+template class CollectDataToIORank<ALUGrid3CN,
+                                   Dune::CpGrid,
+                                   Dune::GridView<Dune::ALU3dLeafGridViewTraits<const ALUGrid3CN,Dune::PartitionIteratorType(4)>>>;
+
+#endif //HAVE_DUNE_ALUGRID
+#endif // ! HAVE_DUNE_FEM
 template class CollectDataToIORank<Dune::PolyhedralGrid<3,3,double>,
                                    Dune::PolyhedralGrid<3,3,double>,
                                    Dune::GridView<Dune::PolyhedralGridViewTraits<3,3,double,Dune::PartitionIteratorType(4)>>>;

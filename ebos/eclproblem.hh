@@ -28,24 +28,19 @@
 #ifndef EWOMS_ECL_PROBLEM_HH
 #define EWOMS_ECL_PROBLEM_HH
 
-//#define DISABLE_ALUGRID_SFC_ORDERING 1
-//#define EBOS_USE_ALUGRID 1
-
-// make sure that the EBOS_USE_ALUGRID macro. using the preprocessor for this is slightly
-// hacky...
-#if EBOS_USE_ALUGRID
-//#define DISABLE_ALUGRID_SFC_ORDERING 1
+#if USE_ALUGRID
+#define DISABLE_ALUGRID_SFC_ORDERING 1
 #if !HAVE_DUNE_ALUGRID
 #warning "ALUGrid was indicated to be used for the ECL black oil simulator, but this "
 #warning "requires the presence of dune-alugrid >= 2.4. Falling back to Dune::CpGrid"
-#undef EBOS_USE_ALUGRID
-#define EBOS_USE_ALUGRID 0
+#undef USE_ALUGRID
+#define USE_ALUGRID 0
 #endif
 #else
-#define EBOS_USE_ALUGRID 0
+#define USE_ALUGRID 0
 #endif
 
-#if EBOS_USE_ALUGRID
+#if USE_ALUGRID
 #include "eclalugridvanguard.hh"
 #elif USE_POLYHEDRALGRID
 #include "eclpolyhedralgridvanguard.hh"
@@ -110,6 +105,7 @@
 #include <vector>
 #include <string>
 #include <algorithm>
+#include<functional>
 
 namespace Opm {
 template <class TypeTag>
@@ -120,7 +116,7 @@ namespace Opm::Properties {
 
 namespace TTag {
 
-#if EBOS_USE_ALUGRID
+#if USE_ALUGRID
 struct EclBaseProblem {
   using InheritsFrom = std::tuple<VtkEclTracer, EclOutputBlackOil, EclAluGridVanguard>;
 };
@@ -867,7 +863,19 @@ public:
         this->readRockParameters_(simulator.vanguard().cellCenterDepths());
         readMaterialParameters_();
         readThermalParameters_();
-        transmissibilities_.finishInit();
+        
+        // Re-ordering in case of ALUGrid
+        std::function<unsigned int(unsigned int)> gridToEquilGrid;
+        #ifdef HAVE_DUNE_ALUGRID
+        using Grid = GetPropType<TypeTag, Properties::Grid>;
+        typename std::is_same<Grid, Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming>>::type isAlugrid;
+        if (isAlugrid) {
+          gridToEquilGrid = [&simulator](unsigned int i) {
+          return simulator.vanguard().gridIdxToEquilGridIdx(i);
+          };
+        }
+        #endif // HAVE_DUNE_ALUGRID
+        transmissibilities_.finishInit(gridToEquilGrid);
 
         const auto& initconfig = eclState.getInitConfig();
         tracerModel_.init(initconfig.restartRequested());
@@ -937,7 +945,16 @@ public:
             } else
                 eclWriter_->setTransmissibilities(&simulator.problem().eclTransmissibilities());
 
-            eclWriter_->writeInit();
+            // Re-ordering in case of ALUGrid
+            std::function<unsigned int(unsigned int)> equilGridToGrid;
+            #ifdef HAVE_DUNE_ALUGRID
+            if (isAlugrid) {
+              equilGridToGrid = [&simulator](unsigned int i) {
+                  return simulator.vanguard().gridEquilIdxToGridIdx(i);
+              };
+            }
+            #endif // HAVE_DUNE_ALUGRID
+            eclWriter_->writeInit(equilGridToGrid);
         }
 
         simulator.vanguard().releaseGlobalTransmissibilities();
@@ -1023,8 +1040,21 @@ public:
             eclState.apply_schedule_keywords( miniDeck );
             eclBroadcast(cc, eclState.getTransMult() );
 
+            // Re-ordering in case of ALUGrid
+            std::function<unsigned int(unsigned int)> equilGridToGrid;
+            #ifdef HAVE_DUNE_ALUGRID
+            using Grid = GetPropType<TypeTag, Properties::Grid>;
+            typename std::is_same<Grid, Dune::ALUGrid<3, 3, Dune::cube,
+            Dune::nonconforming>>::type isAlugrid;
+            if (isAlugrid) {
+              equilGridToGrid = [&simulator](unsigned int i) {
+              return simulator.vanguard().gridEquilIdxToGridIdx(i);
+              };
+            }
+            #endif // HAVE_DUNE_ALUGRID
+
             // re-compute all quantities which may possibly be affected.
-            transmissibilities_.update(true);
+            transmissibilities_.update(true, equilGridToGrid);
             this->referencePorosity_[1] = this->referencePorosity_[0];
             updateReferencePorosity_();
             updatePffDofData_();
@@ -1161,13 +1191,27 @@ public:
         auto& schedule = simulator.vanguard().schedule();
         auto& ecl_state = simulator.vanguard().eclState();
         int episodeIdx = this->episodeIndex();
+
+        // Re-ordering in case of Alugrid
+        std::function<unsigned int(unsigned int)> gridToEquilGrid;
+        #ifdef HAVE_DUNE_ALUGRID
+        using Grid = GetPropType<TypeTag, Properties::Grid>;
+        typename std::is_same<Grid, Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming>>::type isAlugrid;
+        if (isAlugrid) {
+          gridToEquilGrid = [&simulator](unsigned int i) {
+          return simulator.vanguard().gridIdxToEquilGridIdx(i);
+          };
+        }
+        #endif // HAVE_DUNE_ALUGRID
+
         this->applyActions(episodeIdx,
                            simulator.time() + simulator.timeStepSize(),
                            simulator.vanguard().grid().comm(),
                            ecl_state,
                            schedule,
                            simulator.vanguard().actionState(),
-                           simulator.vanguard().summaryState());
+                           simulator.vanguard().summaryState(),
+                           gridToEquilGrid);
 
         // deal with "clogging" for the MICP model
         if constexpr (enableMICP){
@@ -1279,7 +1323,7 @@ public:
       the simulator properties which need to be updated. This functionality is
       probably not complete.
     */
-    void applySimulatorUpdate(int report_step, Parallel::Communication comm, const SimulatorUpdate& sim_update, EclipseState& ecl_state, Schedule& schedule, SummaryState& summary_state, bool& commit_wellstate) {
+    void applySimulatorUpdate(int report_step, Parallel::Communication comm, const SimulatorUpdate& sim_update, EclipseState& ecl_state, Schedule& schedule, SummaryState& summary_state, bool& commit_wellstate, const std::function<unsigned int(unsigned int)>& map = {}) {
         this->wellModel_.updateEclWells(report_step, sim_update.affected_wells, summary_state);
         if (!sim_update.affected_wells.empty())
             commit_wellstate = true;
@@ -1290,7 +1334,7 @@ public:
             eclBroadcast(comm, ecl_state.getTransMult() );
 
             // re-compute transmissibility
-            transmissibilities_.update(true);
+            transmissibilities_.update(true,map);
         }
 
     }
@@ -1302,7 +1346,8 @@ public:
                       EclipseState& ecl_state,
                       Schedule& schedule,
                       Action::State& actionState,
-                      SummaryState& summaryState) {
+                      SummaryState& summaryState,
+                      const std::function<unsigned int(unsigned int)>& map = {}) {
         const auto& actions = schedule[reportStep].actions();
         if (actions.empty())
             return;
@@ -1322,7 +1367,7 @@ public:
         bool commit_wellstate = false;
         for (const auto& pyaction : actions.pending_python(actionState)) {
             auto sim_update = schedule.runPyAction(reportStep, *pyaction, actionState, ecl_state, summaryState);
-            this->applySimulatorUpdate(reportStep, comm, sim_update, ecl_state, schedule, summaryState, commit_wellstate);
+            this->applySimulatorUpdate(reportStep, comm, sim_update, ecl_state, schedule, summaryState, commit_wellstate, map);
         }
 
         auto simTime = asTimeT(now);
@@ -1342,7 +1387,7 @@ public:
                 const auto& wellpi = this->fetchWellPI(reportStep, *action, schedule, matching_wells);
 
                 auto sim_update = schedule.applyAction(reportStep, *action, actionResult.wells(), wellpi);
-                this->applySimulatorUpdate(reportStep, comm, sim_update, ecl_state, schedule, summaryState, commit_wellstate);
+                this->applySimulatorUpdate(reportStep, comm, sim_update, ecl_state, schedule, summaryState, commit_wellstate, map);
                 actionState.add_run(*action, simTime, std::move(actionResult));
             } else {
                 std::string msg = "The action: " + action->name() + " evaluated to false at " + ts;
@@ -1502,6 +1547,17 @@ public:
     Scalar dofCenterDepth(const Context& context, unsigned spaceIdx, unsigned timeIdx) const
     {
         unsigned globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+        return dofCenterDepth(globalSpaceIdx);
+    }
+
+    /*!
+     * \brief Returns the depth of an degree of freedom [m]
+     *
+     * For ECL problems this is defined as the average of the depth of an element and is
+     * thus slightly different from the depth of an element's centroid.
+     */
+    Scalar dofCenterDepth(unsigned globalSpaceIdx) const
+    {
         return this->simulator().vanguard().cellCenterDepth(globalSpaceIdx);
     }
 

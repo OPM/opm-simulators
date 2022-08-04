@@ -33,6 +33,12 @@
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
 
+#if HAVE_DUNE_ALUGRID
+#include <dune/alugrid/grid.hh>
+#include <dune/alugrid/3d/gridview.hh>
+#include "alucartesianindexmapper.hh"
+#endif // HAVE_DUNE_ALUGRID
+
 #include <array>
 #include <map>
 #include <tuple>
@@ -46,7 +52,7 @@ class EclipseState;
 struct NNCdata;
 class TransMult;
 
-template<class Grid, class GridView, class ElementMapper, class Scalar>
+template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 class EclTransmissibility {
     // Grid and world dimension
     enum { dimWorld = GridView::dimensionworld };
@@ -57,7 +63,7 @@ public:
 
     EclTransmissibility(const EclipseState& eclState,
                         const GridView& gridView,
-                        const Dune::CartesianIndexMapper<Grid>& cartMapper,
+                        const CartesianIndexMapper& cartMapper,
                         const Grid& grid,
                         std::function<std::array<double,dimWorld>(int)> centroids,
                         bool enableEnergy,
@@ -116,8 +122,8 @@ public:
      * permeabilities. This approach is probably not always correct
      * either but at least it seems to be much better.
      */
-    void finishInit()
-    { update(true); }
+    void finishInit(const std::function<unsigned int(unsigned int)>& map = {})
+    { update(true,map); }
 
     /*!
      * \brief Compute all transmissibilities
@@ -125,7 +131,7 @@ public:
      * \param global If true, update is called on all processes
      * Also, this updates the "thermal half transmissibilities" if energy is enabled.
      */
-    void update(bool global);
+    void update(bool global, const std::function<unsigned int(unsigned int)>& map = {});
 
 protected:
     void updateFromEclState_(bool global);
@@ -201,7 +207,9 @@ protected:
     void applyEditNncToGridTrans_(const std::unordered_map<std::size_t,int>& globalToLocal);
 
     void extractPermeability_();
-
+        
+    void extractPermeability_(const std::function<unsigned int(unsigned int)>& map);
+    
     void extractPorosity_();
 
     void computeHalfTrans_(Scalar& halfTrans,
@@ -235,7 +243,7 @@ protected:
     std::unordered_map<std::uint64_t, Scalar> trans_;
     const EclipseState& eclState_;
     const GridView& gridView_;
-    const Dune::CartesianIndexMapper<Grid>& cartMapper_;
+    const CartesianIndexMapper& cartMapper_;
     const Grid& grid_;
     std::function<std::array<double,dimWorld>(int)> centroids_;
     Scalar transmissibilityThreshold_;

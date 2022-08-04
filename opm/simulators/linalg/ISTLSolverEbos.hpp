@@ -159,7 +159,7 @@ namespace Opm
             extractParallelGridInformationToISTL(simulator_.vanguard().grid(), parallelInformation_);
 
             // For some reason simulator_.model().elementMapper() is not initialized at this stage
-            // Hence const auto& elemMapper = simulator_.model().elementMapper(); does not work.
+            //const auto& elemMapper = simulator_.model().elementMapper(); //does not work.
             // Set it up manually
             ElementMapper elemMapper(simulator_.vanguard().gridView(), Dune::mcmgElementLayout());
             detail::findOverlapAndInterior(simulator_.vanguard().grid(), elemMapper, overlapRows_, interiorRows_);
@@ -224,7 +224,8 @@ namespace Opm
                 useWellConn_ = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
                 if (numJacobiBlocks_ > 1) {
                     const auto wellsForConn = simulator_.vanguard().schedule().getWellsatEnd();
-                    detail::setWellConnections(simulator_.vanguard().grid(), wellsForConn, useWellConn_,
+                    const auto& cartMapper = simulator_.vanguard().cartesianIndexMapper();
+                    detail::setWellConnections(simulator_.vanguard().grid(), cartMapper, wellsForConn, useWellConn_,
                                                wellConnectionsGraph_, numJacobiBlocks_);
                     std::cout << "Create block-Jacobi pattern" << std::endl;
                     blockJacobiAdjacency();

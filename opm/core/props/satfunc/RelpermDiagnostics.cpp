@@ -38,7 +38,10 @@
 
 #include <opm/grid/CpGrid.hpp>
 #include <opm/grid/polyhedralgrid.hh>
-
+#ifdef HAVE_DUNE_ALUGRID
+#include <dune/alugrid/grid.hh>
+#include <dune/alugrid/3d/gridview.hh>
+#endif // HAVE_DUNE_ALUGRID
 namespace Opm{
 
     bool RelpermDiagnostics::phaseCheck_(const EclipseState& es)
@@ -809,4 +812,11 @@ namespace Opm{
 
     INSTANCE_DIAGNOSIS(Dune::CpGrid)
     INSTANCE_DIAGNOSIS(Dune::PolyhedralGrid<3,3>)
+#if HAVE_DUNE_ALUGRID
+#if HAVE_MPI
+    INSTANCE_DIAGNOSIS(Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming, Dune::ALUGridMPIComm>)
+#else    
+    INSTANCE_DIAGNOSIS(Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming, Dune::ALUGridNoComm>)
+#endif //HAVE_MPI
+#endif //HAVE_DUNE_ALUGRID
 } //namespace Opm

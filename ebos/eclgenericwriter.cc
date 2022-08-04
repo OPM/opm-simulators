@@ -28,6 +28,11 @@
 #include <opm/grid/cpgrid/GridHelpers.hpp>
 #include <opm/grid/polyhedralgrid.hh>
 #include <opm/grid/utility/cartesianToCompressed.hpp>
+#if HAVE_DUNE_ALUGRID
+#include "eclalugridvanguard.hh"
+#include <dune/alugrid/grid.hh>
+#include <dune/alugrid/3d/gridview.hh>
+#endif // HAVE_DUNE_ALUGRID
 
 #include <opm/output/eclipse/EclipseIO.hpp>
 #include <opm/output/eclipse/RestartValue.hpp>
@@ -47,7 +52,7 @@
 #include <dune/fem/gridpart/adaptiveleafgridpart.hh>
 #include <dune/fem/gridpart/common/gridpart2gridview.hh>
 #include <ebos/femcpgridcompat.hh>
-#endif
+#endif // HAVE_DUNE_FEM
 
 #if HAVE_MPI
 #include <mpi.h>
@@ -242,21 +247,20 @@ eclIO() const
 
 template<class Grid, class EquilGrid, class GridView, class ElementMapper, class Scalar>
 void EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>::
-writeInit()
+writeInit(const std::function<unsigned int(unsigned int)>& map)
 {
     if (collectToIORank_.isIORank()) {
         std::map<std::string, std::vector<int> > integerVectors;
         if (collectToIORank_.isParallel())
             integerVectors.emplace("MPI_RANK", collectToIORank_.globalRanks());
-        auto cartMap = cartesianToCompressed(equilGrid_->size(0),
-                                             UgGridHelpers::globalCell(*equilGrid_));
-        eclIO_->writeInitial(computeTrans_(cartMap), integerVectors, exportNncStructure_(cartMap));
+        auto cartMap = cartesianToCompressed(equilGrid_->size(0), UgGridHelpers::globalCell(*equilGrid_));
+        eclIO_->writeInitial(computeTrans_(cartMap, map), integerVectors, exportNncStructure_(cartMap, map));
     }
 }
 
 template<class Grid, class EquilGrid, class GridView, class ElementMapper, class Scalar>
 data::Solution EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>::
-computeTrans_(const std::unordered_map<int,int>& cartesianToActive) const
+computeTrans_(const std::unordered_map<int,int>& cartesianToActive, const std::function<unsigned int(unsigned int)>& map) const
 {
     const auto& cartMapper = *equilCartMapper_;
     const auto& cartDims = cartMapper.cartesianDimensions();
@@ -304,6 +308,12 @@ computeTrans_(const std::unordered_map<int,int>& cartesianToActive) const
             int gc1 = std::min(cartIdx1, cartIdx2);
             int gc2 = std::max(cartIdx1, cartIdx2);
 
+            // Re-ordering in case of non-empty mapping between equilGrid to grid
+            if (map) {
+                c1 = map(c1); // equilGridToGrid map
+                c2 = map(c2);
+            }
+
             if (gc2 - gc1 == 1 && cartDims[0] > 1 ) {
                 tranx.data[gc1] = globalTrans().transmissibility(c1, c2);
                 continue; // skip other if clauses as they are false, last one needs some computation
@@ -327,7 +337,7 @@ computeTrans_(const std::unordered_map<int,int>& cartesianToActive) const
 
 template<class Grid, class EquilGrid, class GridView, class ElementMapper, class Scalar>
 std::vector<NNCdata> EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>::
-exportNncStructure_(const std::unordered_map<int,int>& cartesianToActive) const
+exportNncStructure_(const std::unordered_map<int,int>& cartesianToActive, const std::function<unsigned int(unsigned int)>& map) const
 {
     std::size_t nx = eclState_.getInputGrid().getNX();
     std::size_t ny = eclState_.getInputGrid().getNY();
@@ -378,13 +388,19 @@ exportNncStructure_(const std::unordered_map<int,int>& cartesianToActive) const
             if (c1 > c2)
                 continue; // we only need to handle each connection once, thank you.
 
-            std::size_t cc1 = equilCartMapper.cartesianIndex( c1 ); //globalIOGrid_.globalCell()[c1];
-            std::size_t cc2 = equilCartMapper.cartesianIndex( c2 ); //globalIOGrid_.globalCell()[c2];
+            std::size_t cc1 = equilCartMapper.cartesianIndex( c1 );
+            std::size_t cc2 = equilCartMapper.cartesianIndex( c2 );
 
             if ( cc2 < cc1 )
                 std::swap(cc1, cc2);
 
             auto cellDiff = cc2 - cc1;
+
+            // Re-ordering in case of non-empty mapping between equilGrid to grid
+            if (map) {
+                c1 = map(c1); // equilGridToGrid map
+                c2 = map(c2);
+            }
 
             if (cellDiff != 1 &&
                 cellDiff != nx &&
@@ -430,9 +446,10 @@ doWriteOutput(const int                     reportStepNum,
               bool doublePrecision)
 {
     const auto isParallel = this->collectToIORank_.isParallel();
+    const bool needsReordering = this->collectToIORank_.doesNeedReordering();
 
     RestartValue restartValue {
-        isParallel ? this->collectToIORank_.globalCellData()
+        (isParallel || needsReordering) ? this->collectToIORank_.globalCellData()
                    : std::move(localCellData),
 
         isParallel ? this->collectToIORank_.globalWellData()
@@ -561,8 +578,7 @@ globalTrans() const
 #if HAVE_DUNE_FEM
 template class EclGenericWriter<Dune::CpGrid,
                                 Dune::CpGrid,
-                                Dune::GridView<Dune::Fem::GridPart2GridViewTraits<Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>>>,
-                                Dune::MultipleCodimMultipleGeomTypeMapper<Dune::GridView<Dune::Fem::GridPart2GridViewTraits<Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>>>>,
+                                Dune::GridView<Dune::Fem::GridPart2GridViewTraits<Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>>>, Dune::MultipleCodimMultipleGeomTypeMapper<Dune::GridView<Dune::Fem::GridPart2GridViewTraits<Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>>>>,
                                 double>;
 template class EclGenericWriter<Dune::CpGrid,
                                 Dune::CpGrid,
@@ -578,18 +594,59 @@ template class EclGenericWriter<Dune::CpGrid,
                                             Dune::PartitionIteratorType(4),
                                             false>>>,
                                 double>;
+
+
+#ifdef HAVE_DUNE_ALUGRID
+#if HAVE_MPI
+    using ALUGrid3CN = Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming, Dune::ALUGridMPIComm>;
 #else
+    using ALUGrid3CN = Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming, Dune::ALUGridNoComm>;
+#endif //HAVE_MPI
+                                                               
+template class EclGenericWriter<ALUGrid3CN,
+                                Dune::CpGrid,
+                                Dune::GridView<Dune::Fem::GridPart2GridViewTraits<Dune::Fem::AdaptiveLeafGridPart<ALUGrid3CN, Dune::PartitionIteratorType(4), false>>>, Dune::MultipleCodimMultipleGeomTypeMapper<Dune::GridView<Dune::Fem::GridPart2GridViewTraits<Dune::Fem::AdaptiveLeafGridPart<ALUGrid3CN, Dune::PartitionIteratorType(4), false>>>>,
+                                double>;
+                                
+template class EclGenericWriter<ALUGrid3CN,
+                                Dune::CpGrid,
+                                Dune::Fem::GridPart2GridViewImpl<
+                                    Dune::Fem::AdaptiveLeafGridPart<
+                                        ALUGrid3CN,
+                                        Dune::PartitionIteratorType(4),
+                                        false>>,
+                                Dune::MultipleCodimMultipleGeomTypeMapper<
+                                    Dune::Fem::GridPart2GridViewImpl<
+                                        Dune::Fem::AdaptiveLeafGridPart<
+                                            ALUGrid3CN,
+                                            Dune::PartitionIteratorType(4),
+                                            false>>>,
+                                double>;                                
+#endif // HAVE_DUNE_ALUGRID
+
+#else // !HAVE_DUNE_FEM
 template class EclGenericWriter<Dune::CpGrid,
                                 Dune::CpGrid,
                                 Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>,
                                 Dune::MultipleCodimMultipleGeomTypeMapper<Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>>,
                                 double>;
-#endif
+#if HAVE_DUNE_ALUGRID
+#if HAVE_MPI
+    using ALUGrid3CN = Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming, Dune::ALUGridMPIComm>;
+#else
+    using ALUGrid3CN = Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming, Dune::ALUGridNoComm>;
+#endif //HAVE_MPI
+template class EclGenericWriter<ALUGrid3CN,
+                                Dune::CpGrid,
+                                Dune::GridView<Dune::ALU3dLeafGridViewTraits<const ALUGrid3CN,Dune::PartitionIteratorType(4)>>,  Dune::MultipleCodimMultipleGeomTypeMapper<Dune::GridView<Dune::ALU3dLeafGridViewTraits<const ALUGrid3CN, Dune::PartitionIteratorType(4)>>>,
+                                double>;
+
+#endif // HAVE_DUNE_ALUGRID
+#endif // !HAVE_DUNE_FEM
 
 template class EclGenericWriter<Dune::PolyhedralGrid<3,3,double>,
                                 Dune::PolyhedralGrid<3,3,double>,
-                                Dune::GridView<Dune::PolyhedralGridViewTraits<3, 3, double, Dune::PartitionIteratorType(4)>>,
-                                Dune::MultipleCodimMultipleGeomTypeMapper<Dune::GridView<Dune::PolyhedralGridViewTraits<3,3,double,Dune::PartitionIteratorType(4)>>>,
+                                Dune::GridView<Dune::PolyhedralGridViewTraits<3, 3, double, Dune::PartitionIteratorType(4)>>,                              Dune::MultipleCodimMultipleGeomTypeMapper<Dune::GridView<Dune::PolyhedralGridViewTraits<3,3,double,Dune::PartitionIteratorType(4)>>>,
                                 double>;
-
+                                                                  
 } // namespace Opm

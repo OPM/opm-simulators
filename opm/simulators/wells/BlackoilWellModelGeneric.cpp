@@ -639,7 +639,7 @@ initFromRestartFile(const RestartValue& restartValues,
     this->local_parallel_well_info_ = createLocalParallelWellInfo(wells_ecl_);
 
     this->initializeWellProdIndCalculators();
-    this->initializeWellPerfData();
+    initializeWellPerfData();
 
     if (! this->wells_ecl_.empty()) {
         handle_ms_well &= anyMSWellOpenLocal();

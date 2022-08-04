@@ -28,9 +28,7 @@
 #include <opm/output/data/Solution.hpp>
 #include <opm/output/data/Wells.hpp>
 #include <opm/output/data/Groups.hpp>
-
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
-
 #include <opm/grid/common/p2pcommunicator.hh>
 
 #include <ebos/eclinterregflows.hh>
@@ -112,6 +110,9 @@ public:
     { return toIORankComm_.size() > 1; }
 
     int localIdxToGlobalIdx(unsigned localIdx) const;
+   
+    bool doesNeedReordering() const
+    { return needsReordering;}
 
     size_t numCells () const
     { return globalCartesianIndex_.size(); }

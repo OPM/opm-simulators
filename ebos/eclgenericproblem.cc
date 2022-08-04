@@ -34,12 +34,17 @@
 
 #include <opm/grid/CpGrid.hpp>
 #include <opm/grid/polyhedralgrid.hh>
+#if HAVE_DUNE_ALUGRID
+#include <dune/alugrid/grid.hh>
+#include <dune/alugrid/3d/gridview.hh>
+#include "alucartesianindexmapper.hh"
+#endif // HAVE_DUNE_ALUGRID
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/gridpart/adaptiveleafgridpart.hh>
 #include <dune/fem/gridpart/common/gridpart2gridview.hh>
 #include <ebos/femcpgridcompat.hh>
-#endif
+#endif // HAVE_DUNE_FEM
 
 #include <boost/date_time.hpp>
 
@@ -729,12 +734,46 @@ template class EclGenericProblem<Dune::Fem::GridPart2GridViewImpl<
                                  Opm::BlackOilFluidSystem<
                                      double,
                                      Opm::BlackOilDefaultIndexTraits>,
+                                                        double>;
+#if HAVE_DUNE_ALUGRID
+
+#if HAVE_MPI
+    using ALUGrid3CN = Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming, Dune::ALUGridMPIComm>;
+#else
+    using ALUGrid3CN = Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming, Dune::ALUGridNoComm>;
+#endif //HAVE_MPI
+
+template class EclGenericProblem<Dune::GridView<Dune::Fem::GridPart2GridViewTraits<Dune::Fem::AdaptiveLeafGridPart<ALUGrid3CN, Dune::PartitionIteratorType(4), false>>>,
+                                 BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,
                                  double>;
+template class EclGenericProblem<Dune::Fem::GridPart2GridViewImpl<
+                                     Dune::Fem::AdaptiveLeafGridPart<
+                                        ALUGrid3CN,
+                                         Dune::PartitionIteratorType(4),
+                                         false>>,
+                                 Opm::BlackOilFluidSystem<
+                                     double,
+                                     Opm::BlackOilDefaultIndexTraits>,
+                                                        double>;
+
+#endif //HAVE_DUNE_ALUGRID                              
 #else
 template class EclGenericProblem<Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>,
                                  BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,
                                  double>;
-#endif
+#if HAVE_DUNE_ALUGRID
+#if HAVE_MPI
+    using ALUGrid3CN = const Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming, Dune::ALUGridMPIComm>;
+#else
+    using ALUGrid3CN = const Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming, Dune::ALUGridNoComm>;
+#endif //HAVE_MPI
+
+template class EclGenericProblem<Dune::GridView<Dune::ALU3dLeafGridViewTraits<ALUGrid3CN, Dune::PartitionIteratorType(4)>>,
+                                 BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,
+                                 double>;
+
+#endif //HAVE_DUNE_ALUGRID
+#endif //HAVE_DUNE_FEM
 
 template class EclGenericProblem<Dune::GridView<Dune::PolyhedralGridViewTraits<3,3,double,Dune::PartitionIteratorType(4)>>,
                                  BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,

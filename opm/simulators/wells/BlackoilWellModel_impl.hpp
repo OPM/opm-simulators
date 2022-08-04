@@ -51,14 +51,17 @@ namespace Opm {
         // Number of cells the global grid view
         global_num_cells_ = ebosSimulator_.vanguard().globalNumCells();
 
-        // Set up parallel wells
-        auto& parallel_wells = ebosSimulator.vanguard().parallelWells();
+        // Set up cartesian mapping.
+        {
+           // this->setupCartesianToCompressed_();
+            auto& parallel_wells = ebosSimulator.vanguard().parallelWells();
 
         this->parallel_well_info_.reserve(parallel_wells.size());
         for( const auto& name_bool: parallel_wells)
         {
             this->parallel_well_info_.emplace_back(name_bool,
-                                                   ebosSimulator_.gridView().comm());
+                                                   grid().comm());
+        }
         }
 
         this->alternative_well_rate_init_ =
@@ -125,7 +128,7 @@ namespace Opm {
             for ( size_t c=0; c < connectionSet.size(); c++ )
             {
                 const auto& connection = connectionSet.get(c);
-                int compressed_idx = compressedIndexForInterior(connection.global_index());
+                int compressed_idx = cartesian_to_compressed_.at(connection.global_index());
 
                 if ( compressed_idx >= 0 ) { // Ignore connections in inactive/remote cells.
                     wellCells.push_back(compressed_idx);
@@ -1217,7 +1220,8 @@ namespace Opm {
     {
         std::vector<std::vector<int>> wells;
         // Create cartesian to compressed mapping
-        const auto& globalCell = grid().globalCell();
+        const EquilGrid& equilGrid = ebosSimulator_.vanguard().equilGrid();
+        const auto& globalCell = equilGrid.globalCell();
 
         auto cartMap = cartesianToCompressed(grid().size(0),
                                              globalCell.data());
@@ -1627,9 +1631,6 @@ namespace Opm {
         updatePrimaryVariables(deferred_logger);
     }
 
-
-
-
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
@@ -1727,12 +1728,10 @@ namespace Opm {
     void
     BlackoilWellModel<TypeTag>::extractLegacyDepth_()
     {
-        const auto& grid = ebosSimulator_.vanguard().grid();
-        const unsigned numCells = grid.size(/*codim=*/0);
-
-        depth_.resize(numCells);
-        for (unsigned cellIdx = 0; cellIdx < numCells; ++cellIdx) {
-            depth_[cellIdx] = UgGridHelpers::cellCenterDepth( grid, cellIdx );
+        const auto& eclProblem = ebosSimulator_.problem();
+        depth_.resize(local_num_cells_);
+        for (unsigned cellIdx = 0; cellIdx < local_num_cells_; ++cellIdx) {
+            depth_[cellIdx] = eclProblem.dofCenterDepth(cellIdx);
         }
     }
 

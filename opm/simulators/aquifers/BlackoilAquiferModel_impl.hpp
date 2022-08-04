@@ -187,7 +187,6 @@ BlackoilAquiferModel<TypeTag>::init()
         return;
     }
 
-
     const auto& connections = aquifer.connections();
     for (const auto& aq : aquifer.ct()) {
         aquifers_CarterTracy.emplace_back(connections[aq.aquiferID],
@@ -201,9 +200,8 @@ BlackoilAquiferModel<TypeTag>::init()
 
     if (aquifer.hasNumericalAquifer()) {
         const auto& num_aquifers = aquifer.numericalAquifers().aquifers();
-        const auto& ugrid = simulator_.vanguard().grid();
         const int number_of_cells = simulator_.gridView().size(0);
-        const int* global_cell = UgGridHelpers::globalCell(ugrid);
+        const int* global_cell = this->simulator_.vanguard().globalCell().data();
         const std::unordered_map<int, int> cartesian_to_compressed = cartesianToCompressed(number_of_cells,
                                                                                            global_cell);
         for ([[maybe_unused]]const auto& [id, aqu] : num_aquifers) {

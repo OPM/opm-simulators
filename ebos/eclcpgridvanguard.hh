@@ -87,13 +87,13 @@ class EclCpGridVanguard : public EclBaseVanguard<TypeTag>
 
 public:
     using Grid = GetPropType<TypeTag, Properties::Grid>;
+    using CartesianIndexMapper = Dune::CartesianIndexMapper<Grid>;
     using EquilGrid = GetPropType<TypeTag, Properties::EquilGrid>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
-    using TransmissibilityType = EclTransmissibility<Grid, GridView, ElementMapper, Scalar>;
+    using TransmissibilityType = EclTransmissibility<Grid, GridView, ElementMapper, CartesianIndexMapper, Scalar>;
     static const int dimensionworld = Grid::dimensionworld;
 
 private:
-    typedef Dune::CartesianIndexMapper<Grid> CartesianIndexMapper;
     using Element = typename GridView::template Codim<0>::Entity;
 
 public:
@@ -149,6 +149,13 @@ public:
 #endif
     }
 
+    unsigned int gridEquilIdxToGridIdx(unsigned int elemIndex) const {
+         return elemIndex;
+     }
+ 
+    unsigned int gridIdxToEquilGridIdx(unsigned int elemIndex) const {
+        return elemIndex;
+    }
     /*!
      * \brief Get function to query cell centroids for a distributed grid.
      *
@@ -160,6 +167,11 @@ public:
     cellCentroids() const
     {
         return this->cellCentroids_(this->cartesianIndexMapper());
+    }
+
+    const std::vector<int>& globalCell()
+    {
+        return this->grid().globalCell();
     }
 
 protected:
