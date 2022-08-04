@@ -44,6 +44,9 @@ namespace Opm {
         template<class TypeTag>
         struct LocalResidual<TypeTag, TTag::EclFlowProblemTPFA> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
 
+        template<class TypeTag>
+        struct EnableDiffusion<TypeTag, TTag::EclFlowProblemTPFA> { static constexpr bool value = false; };
+
     }
 }
 
