@@ -501,7 +501,6 @@ protected:
         cellCenterDepth_.resize(numCells);
 
         ElementMapper elemMapper(this->gridView(), Dune::mcmgElementLayout());
-        auto elemIt = this->gridView().template begin</*codim=*/0>();
         const auto& elemEndIt = this->gridView().template end</*codim=*/0>();
 
         const auto num_aqu_cells = this->allAquiferCells();
