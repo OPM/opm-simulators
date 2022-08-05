@@ -352,8 +352,7 @@ operator()(double s) const
     fluidState.setSaturation(FluidSystem::gasPhaseIdx, 0.0);
     fluidState.setSaturation(phase_, s);
 
-    double pc[FluidSystem::numPhases];
-    std::fill(pc, pc + FluidSystem::numPhases, 0.0);
+    std::array<double, FluidSystem::numPhases> pc{0.0};
     using MaterialLaw = typename MaterialLawManager::MaterialLaw;
     MaterialLaw::capillaryPressures(pc, matParams, fluidState);
     double sign = (phase_ == FluidSystem::waterPhaseIdx)? -1.0 : 1.0;
@@ -388,8 +387,7 @@ operator()(double s) const
     fluidState.setSaturation(phase1_, s);
     fluidState.setSaturation(phase2_, 1.0 - s);
 
-    double pc[FluidSystem::numPhases];
-    std::fill(pc, pc + FluidSystem::numPhases, 0.0);
+    std::array<double, FluidSystem::numPhases> pc {0.0};
 
     using MaterialLaw = typename MaterialLawManager::MaterialLaw;
     MaterialLaw::capillaryPressures(pc, matParams, fluidState);
