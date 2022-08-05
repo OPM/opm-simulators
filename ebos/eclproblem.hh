@@ -2625,7 +2625,7 @@ private:
 
             // this assumes that capillary pressures only depend on the phase saturations
             // and possibly on temperature. (this is always the case for ECL problems.)
-            Dune::FieldVector<Scalar, numPhases> pc(0.0);
+            Scalar pc[numPhases] = {0};
             const auto& matParams = materialLawParams(dofIdx);
             MaterialLaw::capillaryPressures(pc, matParams, dofFluidState);
             Valgrind::CheckDefined(pressure);

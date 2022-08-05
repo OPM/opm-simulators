@@ -783,7 +783,7 @@ computeMaterialLawCapPress()
     const auto& matParams = this->matLawMgr_
         .materialLawParams(this->evalPt_.position->cell);
 
-    this->matLawCapPress_.fill(0.0);
+    std::fill(this->matLawCapPress_, this->matLawCapPress_ + FluidSystem::numPhases, 0.0);
     MaterialLaw::capillaryPressures(this->matLawCapPress_,
                                     matParams, this->fluidState_);
 }

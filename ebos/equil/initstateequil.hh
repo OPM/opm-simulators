@@ -483,7 +483,7 @@ private:
     FluidState fluidState_;
 
     /// Evaluated capillary pressures from current set of material laws.
-    std::array<double, FluidSystem::numPhases> matLawCapPress_;
+    double matLawCapPress_[FluidSystem::numPhases];
 
     /// Capture the input evaluation point information in internal state.
     ///
