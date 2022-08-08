@@ -1544,7 +1544,7 @@ outputFipLogImpl(const Inplace& inplace) const
         Scalar fieldHydroCarbonPoreVolumeAveragedPressure = pressureAverage_(inplace.get(Inplace::Phase::PressureHydroCarbonPV),
                                                                              inplace.get(Inplace::Phase::HydroCarbonPV),
                                                                              inplace.get(Inplace::Phase::PressurePV),
-                                                                             inplace.get(Inplace::Phase::PoreVolume),
+                                                                             inplace.get(Inplace::Phase::DynamicPoreVolume),
                                                                              true);
 
         std::unordered_map<Inplace::Phase, Scalar> initial_values;
@@ -1586,7 +1586,7 @@ outputFipLogImpl(const Inplace& inplace) const
                 = pressureAverage_(inplace.get("FIPNUM", Inplace::Phase::PressureHydroCarbonPV, reg),
                                    inplace.get("FIPNUM", Inplace::Phase::HydroCarbonPV, reg),
                                    inplace.get("FIPNUM", Inplace::Phase::PressurePV, reg),
-                                   inplace.get("FIPNUM", Inplace::Phase::PoreVolume, reg),
+                                   inplace.get("FIPNUM", Inplace::Phase::DynamicPoreVolume, reg),
                                    true);
         pressureUnitConvert_(regHydroCarbonPoreVolumeAveragedPressure);
         outputRegionFluidInPlace_(std::move(initial_values),
@@ -1744,7 +1744,7 @@ updateSummaryRegionValues(const Inplace& inplace,
                 pressureAverage_(inplace.get(Inplace::Phase::PressureHydroCarbonPV),
                                  inplace.get(Inplace::Phase::HydroCarbonPV),
                                  inplace.get(Inplace::Phase::PressurePV),
-                                 inplace.get(Inplace::Phase::PoreVolume),
+                                 inplace.get(Inplace::Phase::DynamicPoreVolume),
                                  true);
         }
 
@@ -1753,7 +1753,7 @@ updateSummaryRegionValues(const Inplace& inplace,
                 pressureAverage_(inplace.get(Inplace::Phase::PressureHydroCarbonPV),
                                  inplace.get(Inplace::Phase::HydroCarbonPV),
                                  inplace.get(Inplace::Phase::PressurePV),
-                                 inplace.get(Inplace::Phase::PoreVolume),
+                                 inplace.get(Inplace::Phase::DynamicPoreVolume),
                                  false);
         }
 
@@ -1779,7 +1779,7 @@ updateSummaryRegionValues(const Inplace& inplace,
             pressureAverage_(get_vector(node, Inplace::Phase::PressureHydroCarbonPV),
                              get_vector(node, Inplace::Phase::HydroCarbonPV),
                              get_vector(node, Inplace::Phase::PressurePV),
-                             get_vector(node, Inplace::Phase::PoreVolume),
+                             get_vector(node, Inplace::Phase::DynamicPoreVolume),
                              true);
         }
 
@@ -1788,7 +1788,7 @@ updateSummaryRegionValues(const Inplace& inplace,
             pressureAverage_(get_vector(node, Inplace::Phase::PressureHydroCarbonPV),
                              get_vector(node, Inplace::Phase::HydroCarbonPV),
                              get_vector(node, Inplace::Phase::PressurePV),
-                             get_vector(node, Inplace::Phase::PoreVolume),
+                             get_vector(node, Inplace::Phase::DynamicPoreVolume),
                              false);
         }
     }
