@@ -225,11 +225,6 @@ public:
      */
     static void registerParameters()
     {
-        if (!enableFoam)
-            // foam has been disabled at compile time
-            return;
-
-        //VtkBlackOilFoamModule<TypeTag>::registerParameters();
     }
 
     /*!
@@ -238,23 +233,20 @@ public:
     static void registerOutputModules(Model&,
                                       Simulator&)
     {
-        if (!enableFoam)
-            // foam have been disabled at compile time
-            return;
-
-        if (enableVtkOutput) {
-            OpmLog::warning("VTK output requested, currently unsupported by the foam module.");
+        if constexpr (enableFoam) {
+            if (enableVtkOutput) {
+                OpmLog::warning("VTK output requested, currently unsupported by the foam module.");
+            }
         }
         //model.addOutputModule(new VtkBlackOilFoamModule<TypeTag>(simulator));
     }
 
     static bool primaryVarApplies(unsigned pvIdx)
     {
-        if (!enableFoam) {
-            return false;
-        } else {
+        if constexpr (enableFoam)
             return pvIdx == foamConcentrationIdx;
-        }
+        else
+            return false;
     }
 
     static std::string primaryVarName([[maybe_unused]] unsigned pvIdx)
@@ -273,10 +265,10 @@ public:
 
     static bool eqApplies(unsigned eqIdx)
     {
-        if (!enableFoam)
+        if constexpr (enableFoam)
+            return eqIdx == contiFoamEqIdx;
+        else
             return false;
-
-        return eqIdx == contiFoamEqIdx;
 
     }
 
@@ -300,63 +292,59 @@ public:
     static void addStorage(Dune::FieldVector<LhsEval, numEq>& storage,
                            const IntensiveQuantities& intQuants)
     {
-        if (!enableFoam)
-            return;
+        if constexpr (enableFoam) {
+            const auto& fs = intQuants.fluidState();
 
-        const auto& fs = intQuants.fluidState();
+            LhsEval surfaceVolumeFreeGas =
+                Toolbox::template decay<LhsEval>(fs.saturation(gasPhaseIdx))
+                * Toolbox::template decay<LhsEval>(fs.invB(gasPhaseIdx))
+                * Toolbox::template decay<LhsEval>(intQuants.porosity());
 
-        LhsEval surfaceVolumeFreeGas =
-            Toolbox::template decay<LhsEval>(fs.saturation(gasPhaseIdx))
-            * Toolbox::template decay<LhsEval>(fs.invB(gasPhaseIdx))
-            * Toolbox::template decay<LhsEval>(intQuants.porosity());
+            // Avoid singular matrix if no gas is present.
+            surfaceVolumeFreeGas = max(surfaceVolumeFreeGas, 1e-10);
 
-        // Avoid singular matrix if no gas is present.
-        surfaceVolumeFreeGas = max(surfaceVolumeFreeGas, 1e-10);
+            // Foam/surfactant in gas phase.
+            const LhsEval gasFoam = surfaceVolumeFreeGas
+                * Toolbox::template decay<LhsEval>(intQuants.foamConcentration());
 
-        // Foam/surfactant in gas phase.
-        const LhsEval gasFoam = surfaceVolumeFreeGas
-            * Toolbox::template decay<LhsEval>(intQuants.foamConcentration());
+            // Adsorbed foam/surfactant.
+            const LhsEval adsorbedFoam =
+                Toolbox::template decay<LhsEval>(1.0 - intQuants.porosity())
+                * Toolbox::template decay<LhsEval>(intQuants.foamRockDensity())
+                * Toolbox::template decay<LhsEval>(intQuants.foamAdsorbed());
 
-        // Adsorbed foam/surfactant.
-        const LhsEval adsorbedFoam =
-            Toolbox::template decay<LhsEval>(1.0 - intQuants.porosity())
-            * Toolbox::template decay<LhsEval>(intQuants.foamRockDensity())
-            * Toolbox::template decay<LhsEval>(intQuants.foamAdsorbed());
-
-        LhsEval accumulationFoam = gasFoam + adsorbedFoam;
-        storage[contiFoamEqIdx] += accumulationFoam;
+            LhsEval accumulationFoam = gasFoam + adsorbedFoam;
+            storage[contiFoamEqIdx] += accumulationFoam;
+        }
     }
 
-    static void computeFlux(RateVector& flux,
-                            const ElementContext& elemCtx,
-                            unsigned scvfIdx,
-                            unsigned timeIdx)
+    static void computeFlux([[maybe_unused]] RateVector& flux,
+                            [[maybe_unused]] const ElementContext& elemCtx,
+                            [[maybe_unused]] unsigned scvfIdx,
+                            [[maybe_unused]] unsigned timeIdx)
 
     {
-        if (!enableFoam) {
-            return;
+        if constexpr (enableFoam) {
+            const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
+            const unsigned upIdx = extQuants.upstreamIndex(FluidSystem::gasPhaseIdx);
+            const unsigned inIdx = extQuants.interiorIndex();
+            const auto& up = elemCtx.intensiveQuantities(upIdx, timeIdx);
+
+            // The effect of the gas mobility reduction factor is
+            // incorporated in the mobility, so the oil (if vaporized oil
+            // is active) and gas fluxes do not need modification here.
+            if (upIdx == inIdx) {
+                flux[contiFoamEqIdx] =
+                    extQuants.volumeFlux(gasPhaseIdx)
+                    *up.fluidState().invB(gasPhaseIdx)
+                    *up.foamConcentration();
+            } else {
+                flux[contiFoamEqIdx] =
+                    extQuants.volumeFlux(gasPhaseIdx)
+                    *decay<Scalar>(up.fluidState().invB(gasPhaseIdx))
+                    *decay<Scalar>(up.foamConcentration());
+            }
         }
-
-        const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
-        const unsigned upIdx = extQuants.upstreamIndex(FluidSystem::gasPhaseIdx);
-        const unsigned inIdx = extQuants.interiorIndex();
-        const auto& up = elemCtx.intensiveQuantities(upIdx, timeIdx);
-
-        // The effect of the gas mobility reduction factor is
-        // incorporated in the mobility, so the oil (if vaporized oil
-        // is active) and gas fluxes do not need modification here.
-        if (upIdx == inIdx) {
-            flux[contiFoamEqIdx] =
-                extQuants.volumeFlux(gasPhaseIdx)
-                *up.fluidState().invB(gasPhaseIdx)
-                *up.foamConcentration();
-        } else {
-            flux[contiFoamEqIdx] =
-                extQuants.volumeFlux(gasPhaseIdx)
-                *decay<Scalar>(up.fluidState().invB(gasPhaseIdx))
-                *decay<Scalar>(up.foamConcentration());
-        }
-
     }
 
     /*!
@@ -371,30 +359,32 @@ public:
     }
 
     template <class DofEntity>
-    static void serializeEntity(const Model& model, std::ostream& outstream, const DofEntity& dof)
+    static void serializeEntity([[maybe_unused]] const Model& model,
+                                [[maybe_unused]] std::ostream& outstream,
+                                [[maybe_unused]] const DofEntity& dof)
     {
-        if (!enableFoam)
-            return;
-
-        unsigned dofIdx = model.dofMapper().index(dof);
-        const PrimaryVariables& priVars = model.solution(/*timeIdx=*/0)[dofIdx];
-        outstream << priVars[foamConcentrationIdx];
+        if constexpr (enableFoam) {
+            unsigned dofIdx = model.dofMapper().index(dof);
+            const PrimaryVariables& priVars = model.solution(/*timeIdx=*/0)[dofIdx];
+            outstream << priVars[foamConcentrationIdx];
+        }
     }
 
     template <class DofEntity>
-    static void deserializeEntity(Model& model, std::istream& instream, const DofEntity& dof)
+    static void deserializeEntity([[maybe_unused]] Model& model,
+                                  [[maybe_unused]] std::istream& instream,
+                                  [[maybe_unused]] const DofEntity& dof)
     {
-        if (!enableFoam)
-            return;
+        if constexpr (enableFoam) {
+            unsigned dofIdx = model.dofMapper().index(dof);
+            PrimaryVariables& priVars0 = model.solution(/*timeIdx=*/0)[dofIdx];
+            PrimaryVariables& priVars1 = model.solution(/*timeIdx=*/1)[dofIdx];
 
-        unsigned dofIdx = model.dofMapper().index(dof);
-        PrimaryVariables& priVars0 = model.solution(/*timeIdx=*/0)[dofIdx];
-        PrimaryVariables& priVars1 = model.solution(/*timeIdx=*/1)[dofIdx];
+            instream >> priVars0[foamConcentrationIdx];
 
-        instream >> priVars0[foamConcentrationIdx];
-
-        // set the primary variables for the beginning of the current time step.
-        priVars1[foamConcentrationIdx] = priVars0[foamConcentrationIdx];
+            // set the primary variables for the beginning of the current time step.
+            priVars1[foamConcentrationIdx] = priVars0[foamConcentrationIdx];
+        }
     }
 
     static const Scalar foamRockDensity(const ElementContext& elemCtx,
