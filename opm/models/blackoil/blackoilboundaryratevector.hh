@@ -138,7 +138,7 @@ public:
                 (*this)[i] += tmp[i];
 
             // energy conservation
-            if (enableEnergy) {
+            if constexpr (enableEnergy) {
                 Evaluation density;
                 Evaluation specificEnthalpy;
                 if (pBoundary > pInside) {
@@ -165,7 +165,7 @@ public:
             }
         }
 
-        if (enableSolvent) {
+        if constexpr (enableSolvent) {
             (*this)[Indices::contiSolventEqIdx] = extQuants.solventVolumeFlux();
             if (blackoilConserveSurfaceVolume)
                 (*this)[Indices::contiSolventEqIdx] *= insideIntQuants.solventInverseFormationVolumeFactor();
@@ -174,11 +174,11 @@ public:
 
         }
 
-        if (enablePolymer) {
+        if constexpr (enablePolymer) {
             (*this)[Indices::contiPolymerEqIdx] = extQuants.volumeFlux(FluidSystem::waterPhaseIdx) * insideIntQuants.polymerConcentration();
         }
 
-        if (enableMICP) {
+        if constexpr (enableMICP) {
             (*this)[Indices::contiMicrobialEqIdx] = extQuants.volumeFlux(FluidSystem::waterPhaseIdx) * insideIntQuants.microbialConcentration();
             (*this)[Indices::contiOxygenEqIdx] = extQuants.volumeFlux(FluidSystem::waterPhaseIdx) * insideIntQuants.oxygenConcentration();
             (*this)[Indices::contiUreaEqIdx] = extQuants.volumeFlux(FluidSystem::waterPhaseIdx) * insideIntQuants.ureaConcentration();
@@ -188,7 +188,7 @@ public:
         LocalResidual::adaptMassConservationQuantities_(*this, insideIntQuants.pvtRegionIndex());
 
         // heat conduction
-        if (enableEnergy)
+        if constexpr (enableEnergy)
             EnergyModule::addToEnthalpyRate(*this, extQuants.energyFlux());
 
 #ifndef NDEBUG
@@ -259,20 +259,19 @@ public:
         // set the mass no-flow condition
         setNoFlow();
 
-        if (!enableEnergy)
-            // if we do not conserve energy there is nothing we should do in addition
-            return;
+        // if we do not conserve energy there is nothing we should do in addition
+        if constexpr (enableEnergy) {
+            ExtensiveQuantities extQuants;
+            extQuants.updateBoundary(context, bfIdx, timeIdx, boundaryFluidState);
 
-        ExtensiveQuantities extQuants;
-        extQuants.updateBoundary(context, bfIdx, timeIdx, boundaryFluidState);
-
-        (*this)[contiEnergyEqIdx] += extQuants.energyFlux();
+            (*this)[contiEnergyEqIdx] += extQuants.energyFlux();
 
 #ifndef NDEBUG
-        for (unsigned i = 0; i < numEq; ++i)
-            Valgrind::CheckDefined((*this)[i]);
-        Valgrind::CheckDefined(*this);
+            for (unsigned i = 0; i < numEq; ++i)
+                Valgrind::CheckDefined((*this)[i]);
+            Valgrind::CheckDefined(*this);
 #endif
+        }
     }
 };
 

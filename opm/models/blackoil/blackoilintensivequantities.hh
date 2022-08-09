@@ -101,10 +101,10 @@ class BlackOilIntensiveQuantities
     enum { dimWorld = GridView::dimensionworld };
     enum { compositionSwitchIdx = Indices::compositionSwitchIdx };
 
-    static const bool compositionSwitchEnabled = Indices::compositionSwitchIdx >= 0;
-    static const bool waterEnabled = Indices::waterEnabled;
-    static const bool gasEnabled = Indices::gasEnabled;
-    static const bool oilEnabled = Indices::oilEnabled;
+    static constexpr bool compositionSwitchEnabled = Indices::compositionSwitchIdx >= 0;
+    static constexpr bool waterEnabled = Indices::waterEnabled;
+    static constexpr bool gasEnabled = Indices::gasEnabled;
+    static constexpr bool oilEnabled = Indices::oilEnabled;
 
     using Toolbox = MathToolbox<Evaluation>;
     using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
@@ -146,7 +146,7 @@ public:
 
         // extract the water and the gas saturations for convenience
         Evaluation Sw = 0.0;
-        if (waterEnabled) {
+        if constexpr (waterEnabled) {
             if (priVars.primaryVarsMeaning() == PrimaryVariables::OnePhase_p) {
                 Sw = 1.0;
             } else if (priVars.primaryVarsMeaning() != PrimaryVariables::Rvw_po_Sg && priVars.primaryVarsMeaning() != PrimaryVariables::Rvw_pg_Rv) {
@@ -154,7 +154,7 @@ public:
             }
         }
         Evaluation Sg = 0.0;
-        if (compositionSwitchEnabled)
+        if constexpr (compositionSwitchEnabled)
         {
             if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_po_Sg) {
                 // -> threephase case
@@ -181,7 +181,7 @@ public:
                 Sg = 0.0;
             }
         }
-        if (gasEnabled && waterEnabled && !oilEnabled) {
+        if constexpr (gasEnabled && waterEnabled && !oilEnabled) {
             Sg = 1.0 - Sw;
         }
 
@@ -191,7 +191,7 @@ public:
         Evaluation So = 1.0 - Sw - Sg;
 
         // deal with solvent
-        if (enableSolvent)
+        if constexpr (enableSolvent)
             So -= priVars.makeEvaluation(Indices::solventSaturationIdx, timeIdx);
 
         if (FluidSystem::phaseIsActive(waterPhaseIdx))
@@ -256,7 +256,7 @@ public:
                                                             SoMax);
                 fluidState_.setRs(min(RsMax, RsSat));
             }
-            else if (compositionSwitchEnabled)
+            else if constexpr (compositionSwitchEnabled)
                 fluidState_.setRs(0.0);
 
             if (FluidSystem::enableVaporizedOil()) {
@@ -268,7 +268,7 @@ public:
                                                             SoMax);
                 fluidState_.setRv(min(RvMax, RvSat));
             }
-            else if (compositionSwitchEnabled)
+            else if constexpr (compositionSwitchEnabled)
                 fluidState_.setRv(0.0);
 
             if (FluidSystem::enableVaporizedWater()) {
@@ -292,7 +292,7 @@ public:
                                                             SoMax);
                 fluidState_.setRv(min(RvMax, RvSat));
             }
-            else if (compositionSwitchEnabled)
+            else if constexpr (compositionSwitchEnabled)
                 fluidState_.setRv(0.0);
         }
         else if (priVars.primaryVarsMeaning() == PrimaryVariables::Rvw_pg_Rv) {
@@ -465,7 +465,7 @@ public:
         porosity_ *= problem.template rockCompPoroMultiplier<Evaluation>(*this, globalSpaceIdx);
 
         // the MICP processes change the porosity
-        if (enableMICP){
+        if constexpr (enableMICP){
           Evaluation biofilm_ = priVars.makeEvaluation(Indices::biofilmConcentrationIdx, timeIdx, linearizationType);
           Evaluation calcite_ = priVars.makeEvaluation(Indices::calciteConcentrationIdx, timeIdx, linearizationType);
           porosity_ += - biofilm_ - calcite_;
