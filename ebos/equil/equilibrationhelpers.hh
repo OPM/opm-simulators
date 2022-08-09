@@ -29,19 +29,13 @@
 #ifndef EWOMS_EQUILIBRATIONHELPERS_HH
 #define EWOMS_EQUILIBRATIONHELPERS_HH
 
-#include <fmt/format.h>
-
 #include <opm/material/common/Tabulated1DFunction.hpp>
-#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
-#include <opm/material/fluidstates/SimpleModularFluidState.hpp>
-#include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
 
 #include <opm/input/eclipse/EclipseState/InitConfig/Equil.hpp>
-#include <opm/common/utility/numeric/RootFinders.hpp>
 
 #include <cmath>
 #include <memory>
-
+#include <vector>
 
 /*
   ---- synopsis of EquilibrationHelpers.hpp ----
@@ -62,16 +56,16 @@
   class EquilReg;
 
 
-  template <class FluidSystem,  class MaterialLaw, class MaterialLawManager>
+  template <class FluidSystem, class MaterialLawManager>
   struct PcEq;
 
-  template <class FluidSystem, class MaterialLaw, class MaterialLawManager>
+  template <class FluidSystem, class MaterialLawManager>
   double satFromPc(const MaterialLawManager& materialLawManager,
   const int phase,
   const int cell,
   const double targetPc,
   const bool increasing = false)
-  template <class FluidSystem, class MaterialLaw, class MaterialLawManager>
+  template <class FluidSystem, class MaterialLawManager>
   double satFromSumOfPcs(const MaterialLawManager& materialLawManager,
   const int phase1,
   const int phase2,
@@ -82,7 +76,9 @@
 
   ---- end of synopsis of EquilibrationHelpers.hpp ----
 */
+
 namespace Opm {
+
 /**
  * Types and routines that collectively implement a basic
  * ECLIPSE-style equilibration-based initialisation scheme.
@@ -91,23 +87,6 @@ namespace Opm {
  * with other parts of OPM.
  */
 namespace EQUIL {
-
-
-using FluidSystemSimple = BlackOilFluidSystem<double>;
-
-// Adjust oil pressure according to gas saturation and cap pressure
-using SatOnlyFluidState = SimpleModularFluidState<double,
-                                                  /*numPhases=*/3,
-                                                  /*numComponents=*/3,
-                                                  FluidSystemSimple,
-                                                  /*storePressure=*/false,
-                                                  /*storeTemperature=*/false,
-                                                  /*storeComposition=*/false,
-                                                  /*storeFugacity=*/false,
-                                                  /*storeSaturation=*/true,
-                                                  /*storeDensity=*/false,
-                                                  /*storeViscosity=*/false,
-                                                  /*storeEnthalpy=*/false>;
 
 /**
  * Types and routines relating to phase mixing in
@@ -198,10 +177,7 @@ public:
      */
     RsVD(const int pvtRegionIdx,
          const std::vector<double>& depth,
-         const std::vector<double>& rs)
-        : pvtRegionIdx_(pvtRegionIdx)
-        , rsVsDepth_(depth, rs)
-    {}
+         const std::vector<double>& rs);
 
     virtual ~RsVD() = default;
 
@@ -223,19 +199,7 @@ public:
     double operator()(const double depth,
                       const double press,
                       const double temp,
-                      const double satGas = 0.0) const
-    {
-        if (satGas > 0.0) {
-            return satRs(press, temp);
-        }
-        else {
-            if (rsVsDepth_.xMin() > depth)
-                return rsVsDepth_.valueAt(0);
-            else if (rsVsDepth_.xMax() < depth)
-                return rsVsDepth_.valueAt(rsVsDepth_.numSamples() - 1);
-            return std::min(satRs(press, temp), rsVsDepth_.eval(depth, /*extrapolate=*/false));
-        }
-    }
+                      const double satGas = 0.0) const;
 
 private:
     using RsVsDepthFunc = Tabulated1DFunction<double>;
@@ -243,11 +207,9 @@ private:
     const int pvtRegionIdx_;
     RsVsDepthFunc rsVsDepth_;
 
-    double satRs(const double press, const double temp) const
-    {
-        return FluidSystem::oilPvt().saturatedGasDissolutionFactor(pvtRegionIdx_, temp, press);
-    }
+    double satRs(const double press, const double temp) const;
 };
+
 
 /**
  * Type that implements "dissolved gas-oil ratio"
@@ -267,10 +229,7 @@ public:
      */
     PBVD(const int pvtRegionIdx,
          const std::vector<double>& depth,
-         const std::vector<double>& pbub)
-        : pvtRegionIdx_(pvtRegionIdx)
-        , pbubVsDepth_(depth, pbub)
-    {}
+         const std::vector<double>& pbub);
 
     virtual ~PBVD() = default;
 
@@ -291,19 +250,7 @@ public:
     double operator()(const double depth,
                       const double cellPress,
                       const double temp,
-                      const double satGas = 0.0) const
-    {
-        double press = cellPress;
-        if (satGas <= 0.0) {
-            if (pbubVsDepth_.xMin() > depth)
-                press = pbubVsDepth_.valueAt(0);
-            else if (pbubVsDepth_.xMax() < depth)
-                press = pbubVsDepth_.valueAt(pbubVsDepth_.numSamples() - 1);
-            else
-                press = pbubVsDepth_.eval(depth, /*extrapolate=*/false);
-        }
-        return satRs(std::min(press, cellPress), temp);
-    }
+                      const double satGas = 0.0) const;
 
 private:
     using PbubVsDepthFunc = Tabulated1DFunction<double>;
@@ -311,11 +258,9 @@ private:
     const int pvtRegionIdx_;
     PbubVsDepthFunc pbubVsDepth_;
 
-    double satRs(const double press, const double temp) const
-    {
-        return FluidSystem::oilPvt().saturatedGasDissolutionFactor(pvtRegionIdx_, temp, press);
-    }
+    double satRs(const double press, const double temp) const;
 };
+
 
 /**
  * Type that implements "vaporized oil-gas ratio"
@@ -335,10 +280,7 @@ public:
      */
     PDVD(const int pvtRegionIdx,
          const std::vector<double>& depth,
-         const std::vector<double>& pdew)
-        : pvtRegionIdx_(pvtRegionIdx)
-        , pdewVsDepth_(depth, pdew)
-    {}
+         const std::vector<double>& pdew);
 
     virtual ~PDVD() = default;
 
@@ -359,19 +301,7 @@ public:
     double operator()(const double depth,
                       const double cellPress,
                       const double temp,
-                      const double satOil = 0.0) const
-    {
-        double press = cellPress;
-        if (satOil <= 0.0) {
-            if (pdewVsDepth_.xMin() > depth)
-                press = pdewVsDepth_.valueAt(0);
-            else if (pdewVsDepth_.xMax() < depth)
-                press = pdewVsDepth_.valueAt(pdewVsDepth_.numSamples() - 1);
-            else
-                press = pdewVsDepth_.eval(depth, /*extrapolate=*/false);
-        }
-        return satRv(std::min(press, cellPress), temp);
-    }
+                      const double satOil = 0.0) const;
 
 private:
     using PdewVsDepthFunc = Tabulated1DFunction<double>;
@@ -379,10 +309,7 @@ private:
     const int pvtRegionIdx_;
     PdewVsDepthFunc pdewVsDepth_;
 
-    double satRv(const double press, const double temp) const
-    {
-        return FluidSystem::gasPvt().saturatedOilVaporizationFactor(pvtRegionIdx_, temp, press);
-    }
+    double satRv(const double press, const double temp) const;
 };
 
 
@@ -404,10 +331,7 @@ public:
      */
     RvVD(const int pvtRegionIdx,
          const std::vector<double>& depth,
-         const std::vector<double>& rv)
-        : pvtRegionIdx_(pvtRegionIdx)
-        , rvVsDepth_(depth, rv)
-    {}
+         const std::vector<double>& rv);
 
     /**
      * Function call.
@@ -427,19 +351,7 @@ public:
     double operator()(const double depth,
                       const double press,
                       const double temp,
-                      const double satOil = 0.0) const
-    {
-        if (std::abs(satOil) > 1e-16) {
-            return satRv(press, temp);
-        }
-        else {
-            if (rvVsDepth_.xMin() > depth)
-                return rvVsDepth_.valueAt(0);
-            else if (rvVsDepth_.xMax() < depth)
-                return rvVsDepth_.valueAt(rvVsDepth_.numSamples() - 1);
-            return std::min(satRv(press, temp), rvVsDepth_.eval(depth, /*extrapolate=*/false));
-        }
-    }
+                      const double satOil = 0.0) const;
 
 private:
     using RvVsDepthFunc = Tabulated1DFunction<double>;
@@ -447,10 +359,7 @@ private:
     const int pvtRegionIdx_;
     RvVsDepthFunc rvVsDepth_;
 
-    double satRv(const double press, const double temp) const
-    {
-        return FluidSystem::gasPvt().saturatedOilVaporizationFactor(pvtRegionIdx_, temp, press);
-    }
+    double satRv(const double press, const double temp) const;
 };
 
 
@@ -479,11 +388,7 @@ public:
      * \param[in] pContact  oil pressure at the contact
      * \param[in] T_contact  temperature at the contact
      */
-    RsSatAtContact(const int pvtRegionIdx, const double pContact,  const double T_contact)
-        : pvtRegionIdx_(pvtRegionIdx)
-    {
-        rsSatContact_ = satRs(pContact, T_contact);
-    }
+    RsSatAtContact(const int pvtRegionIdx, const double pContact,  const double T_contact);
 
     /**
      * Function call.
@@ -503,24 +408,13 @@ public:
     double operator()(const double /* depth */,
                       const double press,
                       const double temp,
-                      const double satGas = 0.0) const
-    {
-        if (satGas > 0.0) {
-            return satRs(press, temp);
-        }
-        else {
-            return std::min(satRs(press, temp), rsSatContact_);
-        }
-    }
+                      const double satGas = 0.0) const;
 
 private:
     const int pvtRegionIdx_;
     double rsSatContact_;
 
-    double satRs(const double press, const double temp) const
-    {
-        return FluidSystem::oilPvt().saturatedGasDissolutionFactor(pvtRegionIdx_, temp, press);
-    }
+    double satRs(const double press, const double temp) const;
 };
 
 
@@ -549,11 +443,7 @@ public:
      * \param[in] pContact  oil pressure at the contact
      * \param[in] T_contact  temperature at the contact
      */
-    RvSatAtContact(const int pvtRegionIdx, const double pContact, const double T_contact)
-        :pvtRegionIdx_(pvtRegionIdx)
-    {
-        rvSatContact_ = satRv(pContact, T_contact);
-    }
+    RvSatAtContact(const int pvtRegionIdx, const double pContact, const double T_contact);
 
     /**
      * Function call.
@@ -573,24 +463,13 @@ public:
     double operator()(const double /*depth*/,
                       const double press,
                       const double temp,
-                      const double satOil = 0.0) const
-    {
-        if (satOil > 0.0) {
-            return satRv(press, temp);
-        }
-        else {
-            return std::min(satRv(press, temp), rvSatContact_);
-        }
-    }
+                      const double satOil = 0.0) const;
 
 private:
     const int pvtRegionIdx_;
     double rvSatContact_;
 
-    double satRv(const double press, const double temp) const
-    {
-        return FluidSystem::gasPvt().saturatedOilVaporizationFactor(pvtRegionIdx_, temp, press);;
-    }
+    double satRv(const double press, const double temp) const;
 };
 
 } // namespace Miscibility
@@ -631,57 +510,51 @@ public:
              std::shared_ptr<Miscibility::RsFunction> rs,
              std::shared_ptr<Miscibility::RsFunction> rv,
              const TabulatedFunction& saltVdTable,
-             const int pvtIdx)
-        : rec_    (rec)
-        , rs_     (rs)
-        , rv_     (rv)
-        , saltVdTable_ (saltVdTable)
-        , pvtIdx_ (pvtIdx)
-    {}
+             const int pvtIdx);
 
     /**
      * Type of dissolved gas-oil ratio calculator.
      */
-    typedef Miscibility::RsFunction CalcDissolution;
+    using CalcDissolution = Miscibility::RsFunction;
 
     /**
      * Type of vapourised oil-gas ratio calculator.
      */
-    typedef Miscibility::RsFunction CalcEvaporation;
+    using CalcEvaporation = Miscibility::RsFunction;
 
     /**
      * Datum depth in current region
      */
-    double datum()    const { return this->rec_.datumDepth(); }
+    double datum() const;
 
     /**
      * Pressure at datum depth in current region.
      */
-    double pressure() const { return this->rec_.datumDepthPressure(); }
+    double pressure() const;
 
     /**
      * Depth of water-oil contact.
      */
-    double zwoc()     const { return this->rec_.waterOilContactDepth(); }
+    double zwoc() const;
 
     /**
      * water-oil capillary pressure at water-oil contact.
      *
      * \return P_o - P_w at WOC.
      */
-    double pcowWoc() const { return this->rec_.waterOilContactCapillaryPressure(); }
+    double pcowWoc() const;
 
     /**
      * Depth of gas-oil contact.
      */
-    double zgoc()     const { return this->rec_.gasOilContactDepth(); }
+    double zgoc() const;
 
     /**
      * Gas-oil capillary pressure at gas-oil contact.
      *
      * \return P_g - P_o at GOC.
      */
-    double pcgoGoc() const { return this->rec_.gasOilContactCapillaryPressure(); }
+    double pcgoGoc() const;
 
     /**
      * Accuracy/strategy for initial fluid-in-place calculation.
@@ -690,31 +563,25 @@ public:
      *   horizontal subdivision method with 2*(-N) intervals, and positive
      *   (N>0) for the tilted subdivision method with 2*N intervals.
      */
-    int equilibrationAccuracy() const
-    {
-        return this->rec_.initializationTargetAccuracy();
-    }
+    int equilibrationAccuracy() const;
 
     /**
      * Retrieve dissolved gas-oil ratio calculator of current
      * region.
      */
-    const CalcDissolution&
-    dissolutionCalculator() const { return *this->rs_; }
+    const CalcDissolution& dissolutionCalculator() const;
 
     /**
      * Retrieve vapourised oil-gas ratio calculator of current
      * region.
      */
-    const CalcEvaporation&
-    evaporationCalculator() const { return *this->rv_; }
+    const CalcEvaporation& evaporationCalculator() const;
 
-    const TabulatedFunction&
-    saltVdTable() const { return saltVdTable_;}
+    const TabulatedFunction& saltVdTable() const;
     /**
      * Retrieve pvtIdx of the region.
      */
-    int pvtIdx() const { return this->pvtIdx_; }
+    int pvtIdx() const;
 
 private:
     EquilRecord rec_;     /**< Equilibration data */
@@ -729,35 +596,16 @@ private:
 /// Functor for inverting capillary pressure function.
 /// Function represented is
 ///   f(s) = pc(s) - targetPc
-template <class FluidSystem,  class MaterialLaw, class MaterialLawManager>
+template <class FluidSystem, class MaterialLawManager>
 struct PcEq
 {
     PcEq(const MaterialLawManager& materialLawManager,
          const int phase,
          const int cell,
-         const double targetPc)
-        : materialLawManager_(materialLawManager),
-          phase_(phase),
-          cell_(cell),
-          targetPc_(targetPc)
-    {}
+         const double targetPc);
 
-    double operator()(double s) const
-    {
-        const auto& matParams = materialLawManager_.materialLawParams(cell_);
-        SatOnlyFluidState fluidState;
-        fluidState.setSaturation(FluidSystem::waterPhaseIdx, 0.0);
-        fluidState.setSaturation(FluidSystem::oilPhaseIdx, 0.0);
-        fluidState.setSaturation(FluidSystem::gasPhaseIdx, 0.0);
-        fluidState.setSaturation(phase_, s);
+    double operator()(double s) const;
 
-        double pc[FluidSystem::numPhases];
-        std::fill(pc, pc + FluidSystem::numPhases, 0.0);
-        MaterialLaw::capillaryPressures(pc, matParams, fluidState);
-        double sign = (phase_ == FluidSystem::waterPhaseIdx)? -1.0 : 1.0;
-        double pcPhase = pc[FluidSystem::oilPhaseIdx] + sign *  pc[phase_];
-        return pcPhase - targetPc_;
-    }
 private:
     const MaterialLawManager& materialLawManager_;
     const int phase_;
@@ -766,124 +614,36 @@ private:
 };
 
 template <class FluidSystem, class MaterialLawManager>
-double minSaturations(const MaterialLawManager& materialLawManager, const int phase, const int cell)
-{
-    const auto& scaledDrainageInfo =
-        materialLawManager.oilWaterScaledEpsInfoDrainage(cell);
-
-    // Find minimum and maximum saturations.
-    switch(phase) {
-    case FluidSystem::waterPhaseIdx:
-        return scaledDrainageInfo.Swl;
-
-    case FluidSystem::gasPhaseIdx:
-        return scaledDrainageInfo.Sgl;
-
-    case FluidSystem::oilPhaseIdx:
-        throw std::runtime_error("Min saturation not implemented for oil phase.");
-
-    default:
-        throw std::runtime_error("Unknown phaseIdx .");
-    }
-    return -1.0;
-}
+double minSaturations(const MaterialLawManager& materialLawManager,
+                      const int phase, const int cell);
 
 template <class FluidSystem, class MaterialLawManager>
-double maxSaturations(const MaterialLawManager& materialLawManager, const int phase, const int cell)
-{
-    const auto& scaledDrainageInfo =
-        materialLawManager.oilWaterScaledEpsInfoDrainage(cell);
-
-    // Find minimum and maximum saturations.
-    switch(phase) {
-    case FluidSystem::waterPhaseIdx:
-        return scaledDrainageInfo.Swu;
-
-    case FluidSystem::gasPhaseIdx:
-        return scaledDrainageInfo.Sgu;
-
-    case FluidSystem::oilPhaseIdx:
-        throw std::runtime_error("Max saturation not implemented for oil phase.");
-
-    default:
-        throw std::runtime_error("Unknown phaseIdx .");
-    }
-    return -1.0;
-}
-
+double maxSaturations(const MaterialLawManager& materialLawManager,
+                      const int phase, const int cell);
 
 /// Compute saturation of some phase corresponding to a given
 /// capillary pressure.
-template <class FluidSystem, class MaterialLaw, class MaterialLawManager>
+template <class FluidSystem, class MaterialLawManager>
 double satFromPc(const MaterialLawManager& materialLawManager,
                  const int phase,
                  const int cell,
                  const double targetPc,
-                 const bool increasing = false)
-{
-    // Find minimum and maximum saturations.
-    double s0 = increasing ? maxSaturations<FluidSystem>(materialLawManager, phase, cell) : minSaturations<FluidSystem>(materialLawManager, phase, cell);
-    double s1 = increasing ? minSaturations<FluidSystem>(materialLawManager, phase, cell) : maxSaturations<FluidSystem>(materialLawManager, phase, cell);
-
-    // Create the equation f(s) = pc(s) - targetPc
-    const PcEq<FluidSystem, MaterialLaw, MaterialLawManager> f(materialLawManager, phase, cell, targetPc);
-    double f0 = f(s0);
-    double f1 = f(s1);
-    if (!std::isfinite(f0 + f1))
-        throw std::logic_error(fmt::format("The capillary pressure values {} and {} are not finite", f0, f1));
-
-    if (f0 <= 0.0)
-        return s0;
-    else if (f1 >= 0.0)
-        return s1;
-
-    const double tol = 1e-10;
-    // should at least converge in 2 times bisection but some safety here:
-    const int maxIter = -2*static_cast<int>(std::log2(tol)) + 10;
-    int usedIterations = -1;
-    const double root = RegulaFalsiBisection<ThrowOnError>::solve(f, s0, s1, maxIter, tol, usedIterations);
-    return root;
-}
-
+                 const bool increasing = false);
 
 /// Functor for inverting a sum of capillary pressure functions.
 /// Function represented is
 ///   f(s) = pc1(s) + pc2(1 - s) - targetPc
-template <class FluidSystem, class MaterialLaw, class MaterialLawManager>
+template <class FluidSystem, class MaterialLawManager>
 struct PcEqSum
 {
     PcEqSum(const MaterialLawManager& materialLawManager,
             const int phase1,
             const int phase2,
             const int cell,
-            const double targetPc)
-        : materialLawManager_(materialLawManager),
-          phase1_(phase1),
-          phase2_(phase2),
-          cell_(cell),
-          targetPc_(targetPc)
-    {}
+            const double targetPc);
 
-    double operator()(double s) const
-    {
-        const auto& matParams = materialLawManager_.materialLawParams(cell_);
-        SatOnlyFluidState fluidState;
-        fluidState.setSaturation(FluidSystem::waterPhaseIdx, 0.0);
-        fluidState.setSaturation(FluidSystem::oilPhaseIdx, 0.0);
-        fluidState.setSaturation(FluidSystem::gasPhaseIdx, 0.0);
-        fluidState.setSaturation(phase1_, s);
-        fluidState.setSaturation(phase2_, 1.0 - s);
+    double operator()(double s) const;
 
-        double pc[FluidSystem::numPhases];
-        std::fill(pc, pc + FluidSystem::numPhases, 0.0);
-
-        MaterialLaw::capillaryPressures(pc, matParams, fluidState);
-        double sign1 = (phase1_ == FluidSystem::waterPhaseIdx)? -1.0 : 1.0;
-        double pc1 = pc[FluidSystem::oilPhaseIdx] + sign1 *  pc[phase1_];
-        double sign2 = (phase2_ == FluidSystem::waterPhaseIdx)? -1.0 : 1.0;
-        double pc2 = pc[FluidSystem::oilPhaseIdx] + sign2 *  pc[phase2_];
-        return pc1 + pc2 - targetPc_;
-    }
 private:
     const MaterialLawManager& materialLawManager_;
     const int phase1_;
@@ -892,74 +652,30 @@ private:
     const double targetPc_;
 };
 
-
-
-
 /// Compute saturation of some phase corresponding to a given
 /// capillary pressure, where the capillary pressure function
 /// is given as a sum of two other functions.
-template <class FluidSystem, class MaterialLaw, class MaterialLawManager>
+template <class FluidSystem, class MaterialLawManager>
 double satFromSumOfPcs(const MaterialLawManager& materialLawManager,
                        const int phase1,
                        const int phase2,
                        const int cell,
-                       const double targetPc)
-{
-    // Find minimum and maximum saturations.
-    double s0 = minSaturations<FluidSystem>(materialLawManager, phase1, cell);
-    double s1 = maxSaturations<FluidSystem>(materialLawManager, phase1, cell);
-
-    // Create the equation f(s) = pc1(s) + pc2(1-s) - targetPc
-    const PcEqSum<FluidSystem, MaterialLaw, MaterialLawManager> f(materialLawManager, phase1, phase2, cell, targetPc);
-    double f0 = f(s0);
-    double f1 = f(s1);
-    if (f0 <= 0.0)
-        return s0;
-    else if (f1 >= 0.0)
-        return s1;
-
-    assert(f0 > 0.0 && f1 < 0.0);
-    const double tol = 1e-10;
-    // should at least converge in 2 times bisection but some safety here:
-    const int maxIter = -2*static_cast<int>(std::log2(tol)) + 10;
-    int usedIterations = -1;
-    const double root = RegulaFalsiBisection<ThrowOnError>::solve(f, s0, s1, maxIter, tol, usedIterations);
-    return root;
-}
+                       const double targetPc);
 
 /// Compute saturation from depth. Used for constant capillary pressure function
-template <class FluidSystem, class MaterialLaw, class MaterialLawManager>
+template <class FluidSystem, class MaterialLawManager>
 double satFromDepth(const MaterialLawManager& materialLawManager,
                     const double cellDepth,
                     const double contactDepth,
                     const int phase,
                     const int cell,
-                    const bool increasing = false)
-{
-    const double s0 = increasing ? maxSaturations<FluidSystem>(materialLawManager, phase, cell) : minSaturations<FluidSystem>(materialLawManager, phase, cell);
-    const double s1 = increasing ? minSaturations<FluidSystem>(materialLawManager, phase, cell) : maxSaturations<FluidSystem>(materialLawManager, phase, cell);
-
-    if (cellDepth < contactDepth) {
-        return s0;
-    }
-    else {
-        return s1;
-    }
-
-}
+                    const bool increasing = false);
 
 /// Return true if capillary pressure function is constant
-template <class FluidSystem, class MaterialLaw, class MaterialLawManager>
+template <class FluidSystem, class MaterialLawManager>
 bool isConstPc(const MaterialLawManager& materialLawManager,
                const int phase,
-               const int cell)
-{
-    // Create the equation f(s) = pc(s);
-    const PcEq<FluidSystem, MaterialLaw, MaterialLawManager> f(materialLawManager, phase, cell, 0);
-    const double f0 = f(minSaturations<FluidSystem>(materialLawManager, phase, cell));
-    const double f1 = f(maxSaturations<FluidSystem>(materialLawManager, phase, cell));
-    return std::abs(f0 - f1) < std::numeric_limits<double>::epsilon();
-}
+               const int cell);
 
 } // namespace Equil
 } // namespace Opm

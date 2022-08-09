@@ -537,8 +537,6 @@ BOOST_AUTO_TEST_CASE(CapillaryInversion)
     // Test setup.
     using TypeTag = Opm::Properties::TTag::TestEquilTypeTag;
     using FluidSystem = Opm::GetPropType<TypeTag, Opm::Properties::FluidSystem>;
-    using MaterialLaw = Opm::GetPropType<TypeTag, Opm::Properties::MaterialLaw>;
-    using MaterialLawManager = typename Opm::GetProp<TypeTag, Opm::Properties::MaterialLaw>::EclMaterialLawManager;
 
     auto simulator = initSimulator<TypeTag>("equil_capillary.DATA");
 
@@ -552,7 +550,7 @@ BOOST_AUTO_TEST_CASE(CapillaryInversion)
         const std::vector<double> s = { 0.2, 0.2, 0.2, 0.466666666666, 0.733333333333, 1.0, 1.0, 1.0, 1.0 };
         BOOST_REQUIRE_EQUAL(pc.size(), s.size());
         for (size_t i = 0; i < pc.size(); ++i) {
-            const double s_computed = Opm::EQUIL::satFromPc<FluidSystem, MaterialLaw, MaterialLawManager>(*simulator->problem().materialLawManager(), phase, cell, pc[i], increasing);
+            const double s_computed = Opm::EQUIL::satFromPc<FluidSystem>(*simulator->problem().materialLawManager(), phase, cell, pc[i], increasing);
             BOOST_CHECK_CLOSE(s_computed, s[i], reltol);
         }
     }
@@ -565,7 +563,7 @@ BOOST_AUTO_TEST_CASE(CapillaryInversion)
         const std::vector<double> s = { 0.8, 0.8, 0.8, 0.533333333333, 0.266666666666, 0.0, 0.0, 0.0, 0.0 };
         BOOST_REQUIRE_EQUAL(pc.size(), s.size());
         for (size_t i = 0; i < pc.size(); ++i) {
-            const double s_computed = Opm::EQUIL::satFromPc<FluidSystem, MaterialLaw, MaterialLawManager>(*simulator->problem().materialLawManager(), phase, cell, pc[i], increasing);
+            const double s_computed = Opm::EQUIL::satFromPc<FluidSystem>(*simulator->problem().materialLawManager(), phase, cell, pc[i], increasing);
             BOOST_CHECK_CLOSE(s_computed, s[i], reltol);
         }
     }
@@ -578,7 +576,7 @@ BOOST_AUTO_TEST_CASE(CapillaryInversion)
         const std::vector<double> s = { 0.2, 0.333333333333, 0.6, 0.866666666666, 1.0 };
         BOOST_REQUIRE_EQUAL(pc.size(), s.size());
         for (size_t i = 0; i < pc.size(); ++i) {
-            const double s_computed = Opm::EQUIL::satFromSumOfPcs<FluidSystem, MaterialLaw, MaterialLawManager>(*simulator->problem().materialLawManager(), water, gas, cell, pc[i]);
+            const double s_computed = Opm::EQUIL::satFromSumOfPcs<FluidSystem>(*simulator->problem().materialLawManager(), water, gas, cell, pc[i]);
             BOOST_CHECK_CLOSE(s_computed, s[i], reltol);
         }
     }
