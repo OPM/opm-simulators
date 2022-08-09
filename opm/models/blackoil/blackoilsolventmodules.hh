@@ -469,11 +469,8 @@ public:
      */
     static void registerParameters()
     {
-        if (!enableSolvent)
-            // solvents have disabled at compile time
-            return;
-
-        VtkBlackOilSolventModule<TypeTag>::registerParameters();
+        if constexpr (enableSolvent)
+            VtkBlackOilSolventModule<TypeTag>::registerParameters();
     }
 
     /*!
@@ -482,20 +479,16 @@ public:
     static void registerOutputModules(Model& model,
                                       Simulator& simulator)
     {
-        if (!enableSolvent)
-            // solvents have disabled at compile time
-            return;
-
-        model.addOutputModule(new VtkBlackOilSolventModule<TypeTag>(simulator));
+        if constexpr (enableSolvent)
+            model.addOutputModule(new VtkBlackOilSolventModule<TypeTag>(simulator));
     }
 
     static bool primaryVarApplies(unsigned pvIdx)
     {
-        if (!enableSolvent)
-            // solvents have disabled at compile time
+        if constexpr (enableSolvent)
+            return pvIdx == solventSaturationIdx;
+        else
             return false;
-
-        return pvIdx == solventSaturationIdx;
     }
 
     static std::string primaryVarName([[maybe_unused]] unsigned pvIdx)
@@ -515,10 +508,10 @@ public:
 
     static bool eqApplies(unsigned eqIdx)
     {
-        if (!enableSolvent)
+        if constexpr (enableSolvent)
+            return eqIdx == contiSolventEqIdx;
+        else
             return false;
-
-        return eqIdx == contiSolventEqIdx;
     }
 
     static std::string eqName([[maybe_unused]] unsigned eqIdx)
@@ -540,57 +533,55 @@ public:
     static void addStorage(Dune::FieldVector<LhsEval, numEq>& storage,
                            const IntensiveQuantities& intQuants)
     {
-        if (!enableSolvent)
-            return;
-
-        if (blackoilConserveSurfaceVolume) {
-            storage[contiSolventEqIdx] +=
-                    Toolbox::template decay<LhsEval>(intQuants.porosity())
-                    * Toolbox::template decay<LhsEval>(intQuants.solventSaturation())
-                    * Toolbox::template decay<LhsEval>(intQuants.solventInverseFormationVolumeFactor());
-        }
-        else {
-            storage[contiSolventEqIdx] +=
-                    Toolbox::template decay<LhsEval>(intQuants.porosity())
-                    * Toolbox::template decay<LhsEval>(intQuants.solventSaturation())
-                    * Toolbox::template decay<LhsEval>(intQuants.solventDensity());
+        if constexpr (enableSolvent) {
+            if constexpr (blackoilConserveSurfaceVolume) {
+                storage[contiSolventEqIdx] +=
+                        Toolbox::template decay<LhsEval>(intQuants.porosity())
+                        * Toolbox::template decay<LhsEval>(intQuants.solventSaturation())
+                        * Toolbox::template decay<LhsEval>(intQuants.solventInverseFormationVolumeFactor());
+            }
+            else {
+                storage[contiSolventEqIdx] +=
+                        Toolbox::template decay<LhsEval>(intQuants.porosity())
+                        * Toolbox::template decay<LhsEval>(intQuants.solventSaturation())
+                        * Toolbox::template decay<LhsEval>(intQuants.solventDensity());
+            }
         }
     }
 
-    static void computeFlux(RateVector& flux,
-                            const ElementContext& elemCtx,
-                            unsigned scvfIdx,
-                            unsigned timeIdx)
+    static void computeFlux([[maybe_unused]] RateVector& flux,
+                            [[maybe_unused]] const ElementContext& elemCtx,
+                            [[maybe_unused]] unsigned scvfIdx,
+                            [[maybe_unused]] unsigned timeIdx)
 
     {
-        if (!enableSolvent)
-            return;
+        if constexpr (enableSolvent) {
+            const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
 
-        const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
+            unsigned upIdx = extQuants.solventUpstreamIndex();
+            unsigned inIdx = extQuants.interiorIndex();
+            const auto& up = elemCtx.intensiveQuantities(upIdx, timeIdx);
 
-        unsigned upIdx = extQuants.solventUpstreamIndex();
-        unsigned inIdx = extQuants.interiorIndex();
-        const auto& up = elemCtx.intensiveQuantities(upIdx, timeIdx);
-
-        if (blackoilConserveSurfaceVolume) {
-            if (upIdx == inIdx)
-                flux[contiSolventEqIdx] =
-                        extQuants.solventVolumeFlux()
-                        *up.solventInverseFormationVolumeFactor();
-            else
-                flux[contiSolventEqIdx] =
-                        extQuants.solventVolumeFlux()
-                        *decay<Scalar>(up.solventInverseFormationVolumeFactor());
-        }
-        else {
-            if (upIdx == inIdx)
-                flux[contiSolventEqIdx] =
-                        extQuants.solventVolumeFlux()
-                        *up.solventDensity();
-            else
-                flux[contiSolventEqIdx] =
-                        extQuants.solventVolumeFlux()
-                        *decay<Scalar>(up.solventDensity());
+            if constexpr (blackoilConserveSurfaceVolume) {
+                if (upIdx == inIdx)
+                    flux[contiSolventEqIdx] =
+                            extQuants.solventVolumeFlux()
+                            *up.solventInverseFormationVolumeFactor();
+                else
+                    flux[contiSolventEqIdx] =
+                            extQuants.solventVolumeFlux()
+                            *decay<Scalar>(up.solventInverseFormationVolumeFactor());
+            }
+            else {
+                if (upIdx == inIdx)
+                    flux[contiSolventEqIdx] =
+                            extQuants.solventVolumeFlux()
+                            *up.solventDensity();
+                else
+                    flux[contiSolventEqIdx] =
+                            extQuants.solventVolumeFlux()
+                            *decay<Scalar>(up.solventDensity());
+            }
         }
     }
 
@@ -600,10 +591,8 @@ public:
     static void assignPrimaryVars(PrimaryVariables& priVars,
                                   Scalar solventSaturation)
     {
-        if (!enableSolvent)
-            return;
-
-        priVars[solventSaturationIdx] = solventSaturation;
+        if constexpr (enableSolvent)
+            priVars[solventSaturationIdx] = solventSaturation;
     }
 
     /*!
@@ -613,11 +602,9 @@ public:
                                   const PrimaryVariables& oldPv,
                                   const EqVector& delta)
     {
-        if (!enableSolvent)
-            return;
-
-        // do a plain unchopped Newton update
-        newPv[solventSaturationIdx] = oldPv[solventSaturationIdx] - delta[solventSaturationIdx];
+        if constexpr (enableSolvent)
+            // do a plain unchopped Newton update
+            newPv[solventSaturationIdx] = oldPv[solventSaturationIdx] - delta[solventSaturationIdx];
     }
 
     /*!
@@ -644,30 +631,28 @@ public:
     template <class DofEntity>
     static void serializeEntity(const Model& model, std::ostream& outstream, const DofEntity& dof)
     {
-        if (!enableSolvent)
-            return;
+        if constexpr (enableSolvent) {
+            unsigned dofIdx = model.dofMapper().index(dof);
 
-        unsigned dofIdx = model.dofMapper().index(dof);
-
-        const PrimaryVariables& priVars = model.solution(/*timeIdx=*/0)[dofIdx];
-        outstream << priVars[solventSaturationIdx];
+            const PrimaryVariables& priVars = model.solution(/*timeIdx=*/0)[dofIdx];
+            outstream << priVars[solventSaturationIdx];
+        }
     }
 
     template <class DofEntity>
     static void deserializeEntity(Model& model, std::istream& instream, const DofEntity& dof)
     {
-        if (!enableSolvent)
-            return;
+        if constexpr (enableSolvent) {
+            unsigned dofIdx = model.dofMapper().index(dof);
 
-        unsigned dofIdx = model.dofMapper().index(dof);
+            PrimaryVariables& priVars0 = model.solution(/*timeIdx=*/0)[dofIdx];
+            PrimaryVariables& priVars1 = model.solution(/*timeIdx=*/1)[dofIdx];
 
-        PrimaryVariables& priVars0 = model.solution(/*timeIdx=*/0)[dofIdx];
-        PrimaryVariables& priVars1 = model.solution(/*timeIdx=*/1)[dofIdx];
+            instream >> priVars0[solventSaturationIdx];
 
-        instream >> priVars0[solventSaturationIdx];
-
-        // set the primary variables for the beginning of the current time step.
-        priVars1 = priVars0[solventSaturationIdx];
+            // set the primary variables for the beginning of the current time step.
+            priVars1 = priVars0[solventSaturationIdx];
+        }
     }
 
     static const SolventPvt& solventPvt()

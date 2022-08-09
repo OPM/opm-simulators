@@ -287,8 +287,8 @@ class BlackOilModel
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
 
-    static const bool compositionSwitchEnabled = Indices::compositionSwitchIdx >= 0;
-    static const bool waterEnabled = Indices::waterEnabled;
+    static constexpr bool compositionSwitchEnabled = Indices::compositionSwitchIdx >= 0;
+    static constexpr bool waterEnabled = Indices::waterEnabled;
 
     using SolventModule = BlackOilSolventModule<TypeTag>;
     using ExtboModule = BlackOilExtboModule<TypeTag>;
@@ -320,7 +320,7 @@ public:
         VtkBlackOilModule<TypeTag>::registerParameters();
         VtkCompositionModule<TypeTag>::registerParameters();
 
-        if (enableDiffusion)
+        if constexpr (enableDiffusion)
             VtkDiffusionModule<TypeTag>::registerParameters();
     }
 
@@ -443,7 +443,7 @@ public:
         // we do not care much about water, so it gets de-prioritized by a factor of 100
         static constexpr Scalar waterPriority = 1e-2;
 
-        if (getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>()) {
+        if constexpr (getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>()) {
             // Roughly convert the surface volume of the fluids from m^3 to kg. (in this
             // context, it does not really matter if the actual densities are off by a
             // factor of two or three.)
@@ -610,7 +610,7 @@ protected:
         this->addOutputModule(new VtkBlackOilModule<TypeTag>(this->simulator_));
         this->addOutputModule(new VtkCompositionModule<TypeTag>(this->simulator_));
 
-        if (enableDiffusion)
+        if constexpr (enableDiffusion)
             this->addOutputModule(new VtkDiffusionModule<TypeTag>(this->simulator_));
     }
 
