@@ -87,7 +87,7 @@ namespace Amg
         return weights;
     }
 
-    template<class Evaluation, class Vector, class GridView, class ElementContext, class Model>
+    template<class Vector, class GridView, class ElementContext, class Model>
     void getTrueImpesWeights(int pressureVarIndex, Vector& weights, const GridView& gridView,
                              ElementContext& elemCtx, const Model& model, std::size_t threadId)
     {
@@ -95,8 +95,8 @@ namespace Amg
         using Matrix = typename std::decay_t<decltype(model.linearizer().jacobian())>;
         using MatrixBlockType = typename Matrix::MatrixBlock;
         constexpr int numEq = VectorBlockType::size();
-//        using Evaluation = typename std::decay_t<decltype(model.localLinearizer(threadId).localResidual().residual(0))>
-//            ::block_type;
+        using Evaluation = typename std::decay_t<decltype(model.localLinearizer(threadId).localResidual().residual(0))>
+            ::block_type;
         VectorBlockType rhs(0.0);
         rhs[pressureVarIndex] = 1.0;
         int index = 0;
@@ -108,8 +108,8 @@ namespace Amg
             elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
             Dune::FieldVector<Evaluation, numEq> storage;
             model.localLinearizer(threadId).localResidual().computeStorage(storage,elemCtx,/*spaceIdx=*/0, /*timeIdx=*/0);
-            //auto extrusionFactor = elemCtx.intensiveQuantities(0, /*timeIdx=*/0).extrusionFactor();
-            auto scvVolume = elemCtx.stencil(/*timeIdx=*/0).subControlVolume(0).volume();// * extrusionFactor;
+            auto extrusionFactor = elemCtx.intensiveQuantities(0, /*timeIdx=*/0).extrusionFactor();
+            auto scvVolume = elemCtx.stencil(/*timeIdx=*/0).subControlVolume(0).volume() * extrusionFactor;
             auto storage_scale = scvVolume / elemCtx.simulator().timeStepSize();
             MatrixBlockType block;
             double pressure_scale = 50e5;
@@ -130,49 +130,6 @@ namespace Amg
         }
         OPM_END_PARALLEL_TRY_CATCH("getTrueImpesWeights() failed: ", elemCtx.simulator().vanguard().grid().comm());
     }
-
-    template<class Evaluation, class Vector, class Model>
-    void getTrueImpesWeights(int pressureVarIndex, Vector& weights, const Model& model)
-    {
-        using VectorBlockType = typename Vector::block_type;
-        using Matrix = typename std::decay_t<decltype(model.linearizer().jacobian())>;
-        using MatrixBlockType = typename Matrix::MatrixBlock;
-        constexpr int numEq = VectorBlockType::size();
-        unsigned numCells = model.numTotalDof();
-        VectorBlockType rhs(0.0);
-        rhs[pressureVarIndex] = 1.0;
-        //NB !!OPM_BEGIN_PARALLEL_TRY_CATCH();
-#ifdef _OPENMP        
-#pragma omp parallel for
-#endif        
-        for(unsigned globI = 0; globI < numCells; globI++){
-            Dune::FieldVector<Evaluation, numEq> storage;
-            const auto* intQuantsInP = model.cachedIntensiveQuantities(globI, /*timeIdx*/0);
-            assert(intQuantsInP);
-            const auto& intQuantsIn = *intQuantsInP;
-            Model::LocalResidual::computeStorage(storage,intQuantsIn, 0);           
-            double scvVolume = model.dofTotalVolume(globI);
-            double dt = 3600*24;
-            auto storage_scale = scvVolume / dt;
-            MatrixBlockType block;
-            double pressure_scale = 50e5;
-            for (int ii = 0; ii < numEq; ++ii) {
-                for (int jj = 0; jj < numEq; ++jj) {
-                    block[ii][jj] = storage[ii].derivative(jj)/storage_scale;
-                    if (jj == pressureVarIndex) {
-                        block[ii][jj] *= pressure_scale;
-                    }
-                }
-            }
-            VectorBlockType bweights;
-            MatrixBlockType block_transpose = Details::transposeDenseMatrix(block);
-            block_transpose.solve(bweights, rhs);
-            bweights /= 1000.0; // given normal densities this scales weights to about 1.
-            weights[globI] = bweights;
-        }
-        //NB!! OPM_END_PARALLEL_TRY_CATCH("getTrueImpesWeights() failed: ", elemCtx.simulator().vanguard().grid().comm());
-    }
-
 } // namespace Amg
 
 } // namespace Opm

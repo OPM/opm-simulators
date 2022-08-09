@@ -92,7 +92,6 @@ namespace Opm
         using AbstractPreconditionerType = Dune::PreconditionerWithUpdate<Vector, Vector>;
         using WellModelOperator = WellModelAsLinearOperator<WellModel, Vector, Vector>;
         using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
-        using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
         constexpr static std::size_t pressureIndex = GetPropType<TypeTag, Properties::Indices>::pressureSwitchIdx;
 
 #if HAVE_CUDA || HAVE_OPENCL || HAVE_FPGA || HAVE_AMGCL
@@ -506,8 +505,7 @@ namespace Opm
                     // assignment p = pressureIndex prevent compiler warning about
                     // capturing variable with non-automatic storage duration
                     weightsCalculator = [this, p = pressureIndex]() {
-                                            ElementContext elemCtx(this->simulator_);
-                                            return this->getTrueImpesWeights(p, elemCtx);
+                        return this->getTrueImpesWeights(p);
                     };
                 } else {
                     OPM_THROW(std::invalid_argument,
@@ -522,24 +520,16 @@ namespace Opm
         // Weights to make approximate pressure equations.
         // Calculated from the storage terms (only) of the
         // conservation equations, ignoring all other terms.
-        template<class ElemCtx>
-        Vector getTrueImpesWeights(int pressureVarIndex,ElemCtx& elemCtx) const
+        Vector getTrueImpesWeights(int pressureVarIndex) const
         {
             Vector weights(rhs_->size());
-            Amg::getTrueImpesWeights<Evaluation>(pressureVarIndex, weights, simulator_.vanguard().gridView(),
-                                                 elemCtx, simulator_.model(),
-                                                 ThreadManager::threadId());
+            ElementContext elemCtx(simulator_);
+            Amg::getTrueImpesWeights(pressureVarIndex, weights, simulator_.vanguard().gridView(),
+                                     elemCtx, simulator_.model(),
+                                     ThreadManager::threadId());
             return weights;
         }
 
-#if 0
-        Vector getTrueImpesWeights(int pressureVarIndex,SmallElementContext<TypeTag>& /*elemCtx*/) const
-        {
-            Vector weights(rhs_->size());
-            Amg::getTrueImpesWeights<Evaluation>(pressureVarIndex, weights, simulator_.model());
-            return weights;
-        }
-#endif
 
         /// Zero out off-diagonal blocks on rows corresponding to overlap cells
         /// Diagonal blocks on ovelap rows are set to diag(1.0).
