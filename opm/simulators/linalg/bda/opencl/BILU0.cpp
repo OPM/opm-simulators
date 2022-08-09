@@ -275,7 +275,7 @@ bool BILU0<block_size>::create_preconditioner(BlockedMatrix *mat, BlockedMatrix 
         }
         OpenclKernels::ILU_decomp(firstRow, lastRow,
                                   s.LUvals, s.LUcols, s.LUrows, s.diagIndex,
-                                  s.invDiagVals, Nb, block_size);
+                                  s.invDiagVals, rowsPerColor[color], block_size);
     }
 
     if (verbosity >= 3) {
@@ -303,11 +303,11 @@ void BILU0<block_size>::apply(const cl::Buffer& y, cl::Buffer& x)
 #if CHOW_PATEL
         OpenclKernels::ILU_apply1(s.Lvals, s.Lcols, s.Lrows,
                                   s.diagIndex, y, x, s.rowsPerColor,
-                                  color, Nb, block_size);
+                                  color, rowsPerColor[color], block_size);
 #else
         OpenclKernels::ILU_apply1(s.LUvals, s.LUcols, s.LUrows,
                                   s.diagIndex, y, x, s.rowsPerColor,
-                                  color, Nb, block_size);
+                                  color, rowsPerColor[color], block_size);
 #endif
     }
 
@@ -315,11 +315,11 @@ void BILU0<block_size>::apply(const cl::Buffer& y, cl::Buffer& x)
 #if CHOW_PATEL
         OpenclKernels::ILU_apply2(s.Uvals, s.Ucols, s.Urows,
                                   s.diagIndex, s.invDiagVals, x, s.rowsPerColor,
-                                  color, Nb, block_size);
+                                  color, rowsPerColor[color], block_size);
 #else
         OpenclKernels::ILU_apply2(s.LUvals, s.LUcols, s.LUrows,
                                   s.diagIndex, s.invDiagVals, x, s.rowsPerColor,
-                                  color, Nb, block_size);
+                                  color, rowsPerColor[color], block_size);
 #endif
     }
 
