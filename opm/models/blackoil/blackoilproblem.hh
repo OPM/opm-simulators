@@ -131,12 +131,24 @@ public:
     { return 0.0; }
 
     /*!
+     * \brief Returns the compressibility of the porous medium of a cell
+     */
+    Scalar rockCompressibility(unsigned) const
+    { return 0.0; }
+
+    /*!
      * \brief Returns the reference pressure for rock the compressibility of a cell
      */
     template <class Context>
     Scalar rockReferencePressure(const Context&,
                                  unsigned,
                                  unsigned) const
+    { return 1e5; }
+
+    /*!
+     * \brief Returns the reference pressure for rock the compressibility of a cell
+     */
+    Scalar rockReferencePressure(unsigned) const
     { return 1e5; }
 
     /*!
@@ -157,6 +169,11 @@ public:
     template <class Evaluation>
     Scalar rockCompPoroMultiplier(const IntensiveQuantities&,
                                   unsigned) const
+    { return 1.0; }
+
+    template <class LhsEval>
+    LhsEval rockCompTransMultiplier(const IntensiveQuantities&,
+                                    unsigned) const
     { return 1.0; }
 
 private:

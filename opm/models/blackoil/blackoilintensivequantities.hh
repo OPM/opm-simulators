@@ -451,7 +451,7 @@ public:
         }
 
         // retrieve the porosity from the problem
-        referencePorosity_ = problem.porosity(globalSpaceIdx, timeIdx);
+        referencePorosity_ = problem.porosity(elemCtx, dofIdx, timeIdx);
         porosity_ = referencePorosity_;
 
         // the porosity must be modified by the compressibility of the
