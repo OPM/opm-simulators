@@ -75,11 +75,8 @@ public:
      */
     static void registerParameters()
     {
-        if (!enableEnergy)
-            // energys have been disabled at compile time
-            return;
-
-        VtkBlackOilEnergyModule<TypeTag>::registerParameters();
+        if constexpr (enableEnergy)
+            VtkBlackOilEnergyModule<TypeTag>::registerParameters();
     }
 
     /*!
@@ -88,20 +85,17 @@ public:
     static void registerOutputModules(Model& model,
                                       Simulator& simulator)
     {
-        if (!enableEnergy)
-            // energys have been disabled at compile time
-            return;
-
-        model.addOutputModule(new VtkBlackOilEnergyModule<TypeTag>(simulator));
+        if constexpr (enableEnergy)
+            model.addOutputModule(new VtkBlackOilEnergyModule<TypeTag>(simulator));
     }
 
     static bool primaryVarApplies(unsigned pvIdx)
     {
-        if (!enableEnergy)
-            // energys have been disabled at compile time
+        if constexpr (enableEnergy)
+            return pvIdx == temperatureIdx;
+        else
             return false;
 
-        return pvIdx == temperatureIdx;
     }
 
     static std::string primaryVarName([[maybe_unused]] unsigned pvIdx)
@@ -121,10 +115,10 @@ public:
 
     static bool eqApplies(unsigned eqIdx)
     {
-        if (!enableEnergy)
+        if constexpr (enableEnergy)
+            return eqIdx == contiEnergyEqIdx;
+        else
             return false;
-
-        return eqIdx == contiEnergyEqIdx;
     }
 
     static std::string eqName([[maybe_unused]] unsigned eqIdx)
@@ -146,57 +140,55 @@ public:
     static void addStorage(Dune::FieldVector<LhsEval, numEq>& storage,
                            const IntensiveQuantities& intQuants)
     {
-        if (!enableEnergy)
-            return;
+        if constexpr (enableEnergy) {
+            const auto& poro = decay<LhsEval>(intQuants.porosity());
 
-        const auto& poro = decay<LhsEval>(intQuants.porosity());
+            // accumulate the internal energy of the fluids
+            const auto& fs = intQuants.fluidState();
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+                if (!FluidSystem::phaseIsActive(phaseIdx))
+                    continue;
 
-        // accumulate the internal energy of the fluids
-        const auto& fs = intQuants.fluidState();
-        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-            if (!FluidSystem::phaseIsActive(phaseIdx))
-                continue;
+                const auto& u = decay<LhsEval>(fs.internalEnergy(phaseIdx));
+                const auto& S = decay<LhsEval>(fs.saturation(phaseIdx));
+                const auto& rho = decay<LhsEval>(fs.density(phaseIdx));
 
-            const auto& u = decay<LhsEval>(fs.internalEnergy(phaseIdx));
-            const auto& S = decay<LhsEval>(fs.saturation(phaseIdx));
-            const auto& rho = decay<LhsEval>(fs.density(phaseIdx));
+                storage[contiEnergyEqIdx] += poro*S*u*rho;
+            }
 
-            storage[contiEnergyEqIdx] += poro*S*u*rho;
+            // add the internal energy of the rock
+            Scalar refPoro = intQuants.referencePorosity();
+            const auto& uRock = decay<LhsEval>(intQuants.rockInternalEnergy());
+            storage[contiEnergyEqIdx] += (1.0 - refPoro)*uRock;
+            storage[contiEnergyEqIdx] *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
         }
-
-        // add the internal energy of the rock
-        Scalar refPoro = intQuants.referencePorosity();
-        const auto& uRock = decay<LhsEval>(intQuants.rockInternalEnergy());
-        storage[contiEnergyEqIdx] += (1.0 - refPoro)*uRock;
-        storage[contiEnergyEqIdx] *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
     }
 
-    static void computeFlux(RateVector& flux,
-                            const ElementContext& elemCtx,
-                            unsigned scvfIdx,
-                            unsigned timeIdx)
+    static void computeFlux([[maybe_unused]] RateVector& flux,
+                            [[maybe_unused]] const ElementContext& elemCtx,
+                            [[maybe_unused]] unsigned scvfIdx,
+                            [[maybe_unused]] unsigned timeIdx)
     {
-        if (!enableEnergy)
-            return;
+        if constexpr (enableEnergy) {
+            flux[contiEnergyEqIdx] = 0.0;
 
-        flux[contiEnergyEqIdx] = 0.0;
+            const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
+            unsigned focusIdx = elemCtx.focusDofIndex();
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                if (!FluidSystem::phaseIsActive(phaseIdx))
+                    continue;
 
-        const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
-        unsigned focusIdx = elemCtx.focusDofIndex();
-        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            if (!FluidSystem::phaseIsActive(phaseIdx))
-                continue;
+                unsigned upIdx = extQuants.upstreamIndex(phaseIdx);
+                if (upIdx == focusIdx)
+                    addPhaseEnthalpyFlux_<Evaluation>(flux, phaseIdx, elemCtx, scvfIdx, timeIdx);
+                else
+                    addPhaseEnthalpyFlux_<Scalar>(flux, phaseIdx, elemCtx, scvfIdx, timeIdx);
+            }
 
-            unsigned upIdx = extQuants.upstreamIndex(phaseIdx);
-            if (upIdx == focusIdx)
-                addPhaseEnthalpyFlux_<Evaluation>(flux, phaseIdx, elemCtx, scvfIdx, timeIdx);
-            else
-                addPhaseEnthalpyFlux_<Scalar>(flux, phaseIdx, elemCtx, scvfIdx, timeIdx);
+            // diffusive energy flux
+            flux[contiEnergyEqIdx] += extQuants.energyFlux();
+            flux[contiEnergyEqIdx] *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
         }
-
-        // diffusive energy flux
-        flux[contiEnergyEqIdx] += extQuants.energyFlux();
-        flux[contiEnergyEqIdx] *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
     }
 
     template <class UpstreamEval>
@@ -221,10 +213,8 @@ public:
     static void addToEnthalpyRate(RateVector& flux,
                                   const Evaluation& hRate)
     {
-        if (!enableEnergy)
-            return;
-
-        flux[contiEnergyEqIdx] += hRate;
+        if constexpr (enableEnergy)
+            flux[contiEnergyEqIdx] += hRate;
     }
 
     /*!
@@ -233,10 +223,8 @@ public:
     static void assignPrimaryVars(PrimaryVariables& priVars,
                                   Scalar)
     {
-        if (!enableEnergy)
-            return;
-
-        priVars[temperatureIdx] = temperatureIdx;
+        if constexpr (enableEnergy)
+            priVars[temperatureIdx] = temperatureIdx;
     }
 
     /*!
@@ -246,10 +234,8 @@ public:
     static void assignPrimaryVars(PrimaryVariables& priVars,
                                   const FluidState& fluidState)
     {
-        if (!enableEnergy)
-            return;
-
-        priVars[temperatureIdx] = fluidState.temperature(/*phaseIdx=*/0);
+        if constexpr (enableEnergy)
+            priVars[temperatureIdx] = fluidState.temperature(/*phaseIdx=*/0);
     }
 
     /*!
@@ -259,11 +245,9 @@ public:
                                   const PrimaryVariables& oldPv,
                                   const EqVector& delta)
     {
-        if (!enableEnergy)
-            return;
-
-        // do a plain unchopped Newton update
-        newPv[temperatureIdx] = oldPv[temperatureIdx] - delta[temperatureIdx];
+        if constexpr (enableEnergy)
+            // do a plain unchopped Newton update
+            newPv[temperatureIdx] = oldPv[temperatureIdx] - delta[temperatureIdx];
     }
 
     /*!
@@ -290,28 +274,26 @@ public:
     template <class DofEntity>
     static void serializeEntity(const Model& model, std::ostream& outstream, const DofEntity& dof)
     {
-        if (!enableEnergy)
-            return;
-
-        unsigned dofIdx = model.dofMapper().index(dof);
-        const PrimaryVariables& priVars = model.solution(/*timeIdx=*/0)[dofIdx];
-        outstream << priVars[temperatureIdx];
+        if constexpr (enableEnergy) {
+            unsigned dofIdx = model.dofMapper().index(dof);
+            const PrimaryVariables& priVars = model.solution(/*timeIdx=*/0)[dofIdx];
+            outstream << priVars[temperatureIdx];
+        }
     }
 
     template <class DofEntity>
     static void deserializeEntity(Model& model, std::istream& instream, const DofEntity& dof)
     {
-        if (!enableEnergy)
-            return;
+        if constexpr (enableEnergy) {
+            unsigned dofIdx = model.dofMapper().index(dof);
+            PrimaryVariables& priVars0 = model.solution(/*timeIdx=*/0)[dofIdx];
+            PrimaryVariables& priVars1 = model.solution(/*timeIdx=*/1)[dofIdx];
 
-        unsigned dofIdx = model.dofMapper().index(dof);
-        PrimaryVariables& priVars0 = model.solution(/*timeIdx=*/0)[dofIdx];
-        PrimaryVariables& priVars1 = model.solution(/*timeIdx=*/1)[dofIdx];
+            instream >> priVars0[temperatureIdx];
 
-        instream >> priVars0[temperatureIdx];
-
-        // set the primary variables for the beginning of the current time step.
-        priVars1 = priVars0[temperatureIdx];
+            // set the primary variables for the beginning of the current time step.
+            priVars1 = priVars0[temperatureIdx];
+        }
     }
 };
 
@@ -415,11 +397,11 @@ class BlackOilEnergyIntensiveQuantities<TypeTag, false>
     static constexpr bool enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>();
 
 public:
-    void updateTemperature_(const ElementContext& elemCtx,
-                            unsigned dofIdx,
-                            unsigned timeIdx)
+    void updateTemperature_([[maybe_unused]] const ElementContext& elemCtx,
+                            [[maybe_unused]] unsigned dofIdx,
+                            [[maybe_unused]] unsigned timeIdx)
     {
-        if (enableTemperature) {
+        if constexpr (enableTemperature) {
             // even if energy is conserved, the temperature can vary over the spatial
             // domain if the EnableTemperature property is set to true
             auto& fs = asImp_().fluidState_;
