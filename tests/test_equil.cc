@@ -220,7 +220,6 @@ struct EquilFixture {
         Dune::MPIHelper::instance(argc, argv);
 #endif
         Opm::EclGenericVanguard::setCommunication(std::make_unique<Opm::Parallel::Communication>());
-        using TypeTag = Opm::Properties::TTag::TestEquilTypeTag;
         Opm::BlackoilModelParametersEbos<TypeTag>::registerParameters();
         Opm::Parameters::registerParam<TypeTag, bool>("EnableTerminalOutput",
                                                       "EnableTerminalOutput",
@@ -228,6 +227,18 @@ struct EquilFixture {
                                                       "Dummy added for the well model to compile.");
         Opm::registerAllParameters_<TypeTag>();
     }
+
+    using TypeTag = Opm::Properties::TTag::TestEquilTypeTag;
+    using FluidSystem = Opm::GetPropType<TypeTag, Opm::Properties::FluidSystem>;
+    using Grid = Opm::GetPropType<TypeTag, Opm::Properties::Grid>;
+    using GridView = Opm::GetPropType<TypeTag, Opm::Properties::GridView>;
+    using ElementMapper = Opm::GetPropType<TypeTag, Opm::Properties::ElementMapper>;
+    using CartesianIndexMapper = Dune::CartesianIndexMapper<Grid>;
+    using Initializer = Opm::EQUIL::DeckDependent::InitialStateComputer<FluidSystem,
+                                                                        Grid,
+                                                                        GridView,
+                                                                        ElementMapper,
+                                                                        CartesianIndexMapper>;
 };
 
 }
@@ -501,10 +512,11 @@ BOOST_AUTO_TEST_CASE(DeckAllDead)
     const auto& eclipseState = simulator->vanguard().eclState();
     Opm::GridManager gm(eclipseState.getInputGrid());
     const UnstructuredGrid& grid = *(gm.c_grid());
-
-    Opm::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(),
-                                                                  eclipseState, simulator->vanguard(),
-                                                                  simulator->vanguard().cartesianMapper(), 10.0);
+    EquilFixture::Initializer comp(*simulator->problem().materialLawManager(),
+                                    eclipseState, 
+                                    simulator->vanguard().grid(),
+                                    simulator->vanguard().gridView(),
+                                    simulator->vanguard().cartesianMapper(), 10.0);
     const auto& pressures = comp.press();
     BOOST_REQUIRE_EQUAL(pressures.size(), 3U);
     BOOST_REQUIRE_EQUAL(int(pressures[0].size()), grid.number_of_cells);
@@ -581,9 +593,11 @@ BOOST_AUTO_TEST_CASE(DeckWithCapillary)
     Opm::GridManager gm(eclipseState.getInputGrid());
     const UnstructuredGrid& grid = *(gm.c_grid());
 
-    Opm::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(),
-                                                                  eclipseState, simulator->vanguard(),
-                                                                  simulator->vanguard().cartesianMapper(), 10.0);
+    EquilFixture::Initializer comp(*simulator->problem().materialLawManager(),
+                                   eclipseState, 
+                                   simulator->vanguard().grid(),
+                                   simulator->vanguard().gridView(),
+                                   simulator->vanguard().cartesianMapper(), 10.0);
 
     const auto& pressures = comp.press();
     BOOST_REQUIRE_EQUAL(pressures.size(), 3U);
@@ -621,9 +635,11 @@ BOOST_AUTO_TEST_CASE(DeckWithCapillaryOverlap)
     Opm::GridManager gm(eclipseState.getInputGrid());
     const UnstructuredGrid& grid = *(gm.c_grid());
 
-    Opm::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(),
-                                                                  eclipseState, simulator->vanguard(),
-                                                                  simulator->vanguard().cartesianMapper(), 9.80665);
+    EquilFixture::Initializer comp(*simulator->problem().materialLawManager(),
+                                   eclipseState,
+                                   simulator->vanguard().grid(),
+                                   simulator->vanguard().gridView(),
+                                   simulator->vanguard().cartesianMapper(), 9.80665);
     const auto& pressures = comp.press();
     BOOST_REQUIRE_EQUAL(pressures.size(), 3U);
     BOOST_REQUIRE_EQUAL(int(pressures[0].size()), grid.number_of_cells);
@@ -682,9 +698,11 @@ BOOST_AUTO_TEST_CASE(DeckWithLiveOil)
     const UnstructuredGrid& grid = *(gm.c_grid());
 
     // Initialize the fluid system
-    Opm::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(),
-                                                                  eclipseState, simulator->vanguard(),
-                                                                  simulator->vanguard().cartesianMapper(), 9.80665);
+    EquilFixture::Initializer comp(*simulator->problem().materialLawManager(),
+                                   eclipseState,
+                                   simulator->vanguard().grid(),
+                                   simulator->vanguard().gridView(),
+                                   simulator->vanguard().cartesianMapper(), 9.80665);
     const auto& pressures = comp.press();
     BOOST_REQUIRE_EQUAL(pressures.size(), 3U);
     BOOST_REQUIRE_EQUAL(int(pressures[0].size()), grid.number_of_cells);
@@ -759,9 +777,11 @@ BOOST_AUTO_TEST_CASE(DeckWithLiveGas)
     Opm::GridManager gm(eclipseState.getInputGrid());
     const UnstructuredGrid& grid = *(gm.c_grid());
 
-    Opm::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(),
-                                                                  eclipseState, simulator->vanguard(),
-                                                                  simulator->vanguard().cartesianMapper(), 9.80665);
+    EquilFixture::Initializer comp(*simulator->problem().materialLawManager(),
+                                   eclipseState,
+                                   simulator->vanguard().grid(),
+                                   simulator->vanguard().gridView(),
+                                   simulator->vanguard().cartesianMapper(), 9.80665);
     const auto& pressures = comp.press();
     BOOST_REQUIRE_EQUAL(pressures.size(), 3U);
     BOOST_REQUIRE_EQUAL(int(pressures[0].size()), grid.number_of_cells);
@@ -839,9 +859,11 @@ BOOST_AUTO_TEST_CASE(DeckWithRSVDAndRVVD)
     Opm::GridManager gm(eclipseState.getInputGrid());
     const UnstructuredGrid& grid = *(gm.c_grid());
 
-    Opm::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(),
-                                                                  eclipseState, simulator->vanguard(),
-                                                                  simulator->vanguard().cartesianMapper(), 9.80665);
+    EquilFixture::Initializer comp(*simulator->problem().materialLawManager(),
+                                   eclipseState,
+                                   simulator->vanguard().grid(),
+                                   simulator->vanguard().gridView(),
+                                   simulator->vanguard().cartesianMapper(), 9.80665);
     const auto& pressures = comp.press();
     BOOST_REQUIRE_EQUAL(pressures.size(), 3U);
     BOOST_REQUIRE_EQUAL(int(pressures[0].size()), grid.number_of_cells);
@@ -939,9 +961,11 @@ BOOST_AUTO_TEST_CASE(DeckWithPBVDAndPDVD)
     Opm::GridManager gm(eclipseState.getInputGrid());
     const UnstructuredGrid& grid = *(gm.c_grid());
 
-    Opm::EQUIL::DeckDependent::InitialStateComputer<TypeTag> comp(*simulator->problem().materialLawManager(),
-                                                                  eclipseState, simulator->vanguard(),
-                                                                  simulator->vanguard().cartesianMapper(), 9.80665);
+    EquilFixture::Initializer comp(*simulator->problem().materialLawManager(),
+                                   eclipseState,
+                                   simulator->vanguard().grid(),
+                                   simulator->vanguard().gridView(),
+                                   simulator->vanguard().cartesianMapper(), 9.80665);
     const auto& pressures = comp.press();
     BOOST_REQUIRE_EQUAL(pressures.size(), 3U);
     BOOST_REQUIRE_EQUAL(int(pressures[0].size()), grid.number_of_cells);
