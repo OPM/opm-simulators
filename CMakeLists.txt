@@ -423,7 +423,7 @@ set(FLOW_MODELS blackoil brine energy extbo foam gasoil gaswater
                 oilwater oilwater_brine gaswater_brine oilwater_polymer
                 oilwater_polymer_injectivity micp polymer solvent
                 gasoil_energy brine_saltprecipitation gaswater_saltprec_vapwat brine_precsalt_vapwat)
-set(FLOW_VARIANT_MODELS brine_energy onephase onephase_energy)
+set(FLOW_VARIANT_MODELS brine_energy onephase onephase_energy blackoil_tpfa)
 
 set(FLOW_TGTS)
 foreach(OBJ ${COMMON_MODELS} ${FLOW_MODELS} ${FLOW_VARIANT_MODELS})
@@ -477,18 +477,6 @@ opm_add_test(flow_poly
   $<TARGET_OBJECTS:flow_libblackoil_poly>
   $<TARGET_OBJECTS:moduleVersion>)
 target_compile_definitions(flow_poly PRIVATE USE_POLYHEDRALGRID)
-
-opm_add_test(flow_blackoil_tpfa
-  ONLY_COMPILE
-  ALWAYS_ENABLE
-  DEFAULT_ENABLE_IF ${FLOW_POLY_ONLY_DEFAULT_ENABLE_IF}
-  DEPENDS opmsimulators
-  LIBRARIES opmsimulators
-  SOURCES
-  flow/flow_blackoil_tpfa.cpp
- # $<TARGET_OBJECTS:flow_libblackoil_tpfa>
-  $<TARGET_OBJECTS:moduleVersion>)
-#target_compile_definitions(flow_blackoil_tpfa PRIVATE USE_POLYHEDRALGRID)
 
 opm_add_test(flow_distribute_z
   ONLY_COMPILE
