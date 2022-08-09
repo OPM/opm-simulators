@@ -86,9 +86,6 @@ class EclTracerModel : public EclGenericTracerModel<GetPropType<TypeTag, Propert
     enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
 
-    using Eval =  DenseAd::Evaluation<double, numEq>;
-    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
-    using ExtensiveQuantities = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
 public:
     EclTracerModel(Simulator& simulator)
         : BaseType(simulator.vanguard().gridView(),
@@ -228,17 +225,6 @@ protected:
 
     }
 
-    void getVolumeFlux(unsigned& upIdx,
-                       Scalar& v,
-                       const FvBaseElementContext<TypeTag>& elemCtx,
-                       const int tracerPhaseIdx,
-                       unsigned scvfIdx)
-    {
-        const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, /*timeIdx*/ 0);
-        upIdx = extQuants.upstreamIndex(tracerPhaseIdx);
-        v = decay<Scalar>(extQuants.volumeFlux(tracerPhaseIdx));
-    }
-
     // evaluate the flux(es) over one face
     void computeFlux_(TracerEvaluation & freeFlux,
                       bool & isUpFree,
@@ -250,17 +236,17 @@ protected:
     {
         const auto& stencil = elemCtx.stencil(timeIdx);
         const auto& scvf = stencil.interiorFace(scvfIdx);
-        unsigned inIdx  = scvf.interiorIndex();
-        unsigned upIdx;
-        Scalar v;
-        getVolumeFlux(upIdx,
-                      v,
-                      elemCtx,
-                      tracerPhaseIdx,
-                      scvfIdx);
+
+        const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, timeIdx);
+        unsigned inIdx = extQuants.interiorIndex();
+
+        unsigned upIdx = extQuants.upstreamIndex(tracerPhaseIdx);
+
         const auto& intQuants = elemCtx.intensiveQuantities(upIdx, timeIdx);
         const auto& fs = intQuants.fluidState();
+
         Scalar A = scvf.area();
+        Scalar v = decay<Scalar>(extQuants.volumeFlux(tracerPhaseIdx));
         Scalar b = decay<Scalar>(fs.invB(tracerPhaseIdx));
 
         if (inIdx == upIdx) {
@@ -411,8 +397,7 @@ protected:
         auto elemIt = simulator_.gridView().template begin</*codim=*/0>();
         auto elemEndIt = simulator_.gridView().template end</*codim=*/0>();
         for (; elemIt != elemEndIt; ++ elemIt) {
-            elemCtx.updatePrimaryStencil(*elemIt);
-            elemCtx.updatePrimaryIntensiveQuantities(/*timIdx*/ 0.0);
+            elemCtx.updateAll(*elemIt);
             int globalDofIdx = elemCtx.globalSpaceIndex(0, /*timIdx=*/0);
             Scalar fVolume;
             computeVolume_(fVolume, tr.phaseIdx_, elemCtx, 0, /*timIdx=*/0);

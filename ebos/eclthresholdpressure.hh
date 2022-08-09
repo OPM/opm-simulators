@@ -61,15 +61,11 @@ class EclThresholdPressure : public EclGenericThresholdPressure<GetPropType<Type
                                                  GetPropType<TypeTag, Properties::GridView>,
                                                  GetPropType<TypeTag, Properties::ElementMapper>,
                                                  GetPropType<TypeTag, Properties::Scalar>>;
-    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
-    using ExtensiveQuantities = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
-    using GridView = GetPropType<TypeTag, Properties::GridView>;
-    enum { dimWorld = GridView::dimensionworld };
 
     enum { enableExperiments = getPropValue<TypeTag, Properties::EnableExperiments>() };
     enum { numPhases = FluidSystem::numPhases };
@@ -99,36 +95,6 @@ public:
     }
 
 private:
-    template <class Face, class Stencil, class ElemCtx>
-    double calculateMaxDp(Face& face,
-                          Stencil& stencil,
-                          ElemCtx& elemCtx,
-                          const unsigned& scvfIdx,
-                          const unsigned& i,
-                          const unsigned& j,
-                          const unsigned& insideElemIdx,
-                          const unsigned& outsideElemIdx)
-    {
-        typedef MathToolbox<Evaluation> Toolbox;
-        elemCtx.updateIntensiveQuantities(/*timeIdx=*/0);
-        elemCtx.updateExtensiveQuantities(/*timeIdx=*/0);
-        // determine the maximum difference of the pressure of any phase over the
-        // intersection
-        Scalar pth = 0.0;
-        const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, /*timeIdx=*/0);
-        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            unsigned upIdx = extQuants.upstreamIndex(phaseIdx);
-            const auto& up = elemCtx.intensiveQuantities(upIdx, /*timeIdx=*/0);
-
-            if (up.mobility(phaseIdx) > 0.0) {
-                Scalar phaseVal = Toolbox::value(extQuants.pressureDifference(phaseIdx));
-                pth = std::max(pth, std::abs(phaseVal));
-            }
-        }
-        return pth;
-    }
-
-
     // compute the defaults of the threshold pressures using the initial condition
     void computeDefaultThresholdPressures_()
     {
@@ -141,14 +107,13 @@ private:
         auto elemIt = gridView.template begin</*codim=*/ 0>();
         const auto& elemEndIt = gridView.template end</*codim=*/ 0>();
         ElementContext elemCtx(simulator_);
-        simulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
         for (; elemIt != elemEndIt; ++elemIt) {
 
             const auto& elem = *elemIt;
             if (elem.partitionType() != Dune::InteriorEntity)
                 continue;
 
-            elemCtx.updateStencil(elem);
+            elemCtx.updateAll(elem);
             const auto& stencil = elemCtx.stencil(/*timeIdx=*/0);
 
             for (unsigned scvfIdx = 0; scvfIdx < stencil.numInteriorFaces(); ++ scvfIdx) {
@@ -162,19 +127,30 @@ private:
 
                 unsigned equilRegionInside = this->elemEquilRegion_[insideElemIdx];
                 unsigned equilRegionOutside = this->elemEquilRegion_[outsideElemIdx];
+
                 if (equilRegionInside == equilRegionOutside)
                     // the current face is not at the boundary between EQUIL regions!
                     continue;
-                const auto& problem = elemCtx.problem();
+
                 // don't include connections with negligible flow
-                const Evaluation& trans = problem.transmissibility(elemCtx, i, j);
+                const Evaluation& trans = simulator_.problem().transmissibility(elemCtx, i, j);
                 Scalar faceArea = face.area();
                 if (std::abs(faceArea*getValue(trans)) < 1e-18)
                     continue;
-                double pth = calculateMaxDp(face, stencil, elemCtx, scvfIdx,
-                                            i, j,
-                                            insideElemIdx, outsideElemIdx);
-                // don't include connections with negligible flow
+
+                // determine the maximum difference of the pressure of any phase over the
+                // intersection
+                Scalar pth = 0.0;
+                const auto& extQuants = elemCtx.extensiveQuantities(scvfIdx, /*timeIdx=*/0);
+                for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                    unsigned upIdx = extQuants.upstreamIndex(phaseIdx);
+                    const auto& up = elemCtx.intensiveQuantities(upIdx, /*timeIdx=*/0);
+
+                    if (up.mobility(phaseIdx) > 0.0) {
+                        Scalar phaseVal = Toolbox::value(extQuants.pressureDifference(phaseIdx));
+                        pth = std::max(pth, std::abs(phaseVal));
+                    }
+                }
 
                 int offset1 = equilRegionInside*this->numEquilRegions_ + equilRegionOutside;
                 int offset2 = equilRegionOutside*this->numEquilRegions_ + equilRegionInside;
