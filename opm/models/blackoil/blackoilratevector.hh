@@ -94,7 +94,7 @@ public:
         ParentType::operator=(value);
 
         // convert to "surface volume" if requested
-        if (getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>()) {
+        if constexpr (getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>()) {
             if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                 (*this)[Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx)] /=
                         FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, pvtRegionIdx);
@@ -107,7 +107,7 @@ public:
                 (*this)[Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx)] /=
                         FluidSystem::referenceDensity(FluidSystem::waterPhaseIdx, pvtRegionIdx);
             }
-            if (enableSolvent) {
+            if constexpr (enableSolvent) {
                 const auto& solventPvt = SolventModule::solventPvt();
                 (*this)[Indices::contiSolventEqIdx] /=
                         solventPvt.referenceDensity(pvtRegionIdx);
@@ -131,27 +131,27 @@ public:
         const auto& solventPvt = SolventModule::solventPvt();
         (*this)[Indices::contiSolventEqIdx] *= solventPvt.molarMass(pvtRegionIdx);
 
-        if ( enablePolymer ) {
-            if (enablePolymerMolarWeight )
+        if constexpr (enablePolymer) {
+            if constexpr (enablePolymerMolarWeight )
                 throw std::logic_error("Set molar rate with polymer weight tracking not implemented");
 
             (*this)[Indices::contiPolymerEqIdx] *= PolymerModule::molarMass(pvtRegionIdx);
         }
 
-        if ( enableFoam ) {
+        if constexpr (enableFoam) {
             throw std::logic_error("setMolarRate() not implemented for foam");
         }
 
-        if ( enableBrine ) {
+        if constexpr (enableBrine) {
             throw std::logic_error("setMolarRate() not implemented for salt water");
         }
 
-        if ( enableMICP ) {
+        if constexpr (enableMICP) {
             throw std::logic_error("setMolarRate() not implemented for MICP");
         }
 
         // convert to "surface volume" if requested
-        if (getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>()) {
+        if constexpr (getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>()) {
             if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                 (*this)[Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx)] /=
                         FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, pvtRegionIdx);
@@ -164,7 +164,7 @@ public:
                 (*this)[Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx)] /=
                         FluidSystem::referenceDensity(FluidSystem::waterPhaseIdx, pvtRegionIdx);
             }
-            if (enableSolvent) {
+            if constexpr (enableSolvent) {
                 (*this)[Indices::contiSolventEqIdx] /=
                         solventPvt.referenceDensity(pvtRegionIdx);
             }
