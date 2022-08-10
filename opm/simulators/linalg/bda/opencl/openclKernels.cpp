@@ -41,7 +41,7 @@ int OpenclKernels::verbosity;
 cl::CommandQueue *OpenclKernels::queue;
 std::vector<double> OpenclKernels::tmp;
 bool OpenclKernels::initialized = false;
-size_t OpenclKernels::preferred_workgroup_size_multiple = 0;
+std::size_t OpenclKernels::preferred_workgroup_size_multiple = 0;
 
 std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg> > OpenclKernels::dot_k;
 std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg> > OpenclKernels::norm_k;
