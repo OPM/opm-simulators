@@ -114,14 +114,12 @@ public:
     {
         const IntensiveQuantities& intQuants = elemCtx.intensiveQuantities(dofIdx, timeIdx);
         computeStorage(storage,
-                       intQuants,
-                       timeIdx);
+                       intQuants);
     }
 
     template <class LhsEval>
     static void computeStorage(Dune::FieldVector<LhsEval, numEq>& storage,
-                               const IntensiveQuantities& intQuants,
-                               unsigned timeIdx)
+                               const IntensiveQuantities& intQuants)
     {
         // retrieve the intensive quantities for the SCV at the specified point in time
         const auto& fs = intQuants.fluidState();
@@ -196,11 +194,9 @@ public:
                             const unsigned globalIndexEx,
                             const IntensiveQuantities& intQuantsIn,
                             const IntensiveQuantities& intQuantsEx,
-                            const unsigned timeIdx,
                             const Scalar trans,
                             const Scalar faceArea)
     {
-        assert(timeIdx == 0);
         flux = 0.0;
         Scalar Vin = problem.model().dofTotalVolume(globalIndexIn);
         Scalar Vex = problem.model().dofTotalVolume(globalIndexEx);
@@ -227,7 +223,6 @@ public:
         calculateFluxes_(flux,
                          intQuantsIn,
                          intQuantsEx,
-                         timeIdx, // input
                          Vin,
                          Vex,
                          globalIndexIn,
@@ -290,7 +285,6 @@ public:
         calculateFluxes_(flux,
                          intQuantsIn,
                          intQuantsEx,
-                         timeIdx, // input
                          Vin,
                          Vex,
                          globalIndexIn,
@@ -304,7 +298,6 @@ public:
     static void calculateFluxes_(RateVector& flux,
                                  const IntensiveQuantities& intQuantsIn,
                                  const IntensiveQuantities& intQuantsEx,
-                                 const unsigned timeIdx,
                                  const Scalar& Vin,
                                  const Scalar& Vex,
                                  const unsigned& globalIndexIn,
@@ -330,7 +323,6 @@ public:
                                                              pressureDifference,
                                                              intQuantsIn,
                                                              intQuantsEx,
-                                                             timeIdx, // input
                                                              phaseIdx, // input
                                                              interiorDofIdx, // input
                                                              exteriorDofIdx, // intput
