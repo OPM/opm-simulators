@@ -1225,7 +1225,7 @@ add_test_compare_restarted_simulation(CASENAME spe9
                                       ABS_TOL ${abs_tol_restart}
                                       REL_TOL ${rel_tol_restart}
                                       RESTART_STEP 15
-                                      TEST_ARGS --sched-restart=false)
+                                      TEST_ARGS --sched-restart=false  --tolerance-mb=1e-7)
 
 add_test_compare_restarted_simulation(CASENAME ctaquifer_2d_oilwater
                                       FILENAME 2D_OW_CTAQUIFER
@@ -1248,8 +1248,8 @@ add_test_compare_restarted_simulation(CASENAME fetkovich_2d
 add_test_compare_restarted_simulation(CASENAME numerical_aquifer_3d_1aqu
                                       FILENAME 3D_1AQU_3CELLS
                                       SIMULATOR flow
-                                      ABS_TOL ${abs_tol_restart}
-                                      REL_TOL ${rel_tol_restart}
+                                      ABS_TOL 0.4
+                                      REL_TOL 4.0e-3
                                       RESTART_STEP 3
                                       DIR aquifer-num
                                       TEST_ARGS --sched-restart=true --enable-tuning=true)
