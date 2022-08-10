@@ -37,7 +37,7 @@ class AquiferFetkovich : public AquiferInterface<TypeTag>
 {
 
 public:
-    typedef AquiferInterface<TypeTag> Base;
+    using Base = AquiferInterface<TypeTag>;
 
     using typename Base::BlackoilIndices;
     using typename Base::ElementContext;
@@ -171,5 +171,7 @@ protected:
         return this->aqufetp_data_.datum_depth;
     }
 }; // Class AquiferFetkovich
+
 } // namespace Opm
+
 #endif

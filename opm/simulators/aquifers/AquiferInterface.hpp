@@ -62,21 +62,20 @@ public:
     enum { enableEvaporation = getPropValue<TypeTag, Properties::EnableEvaporation>() };
     enum { enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>() };
 
-    static const int numEq = BlackoilIndices::numEq;
-    typedef double Scalar;
+    static constexpr int numEq = BlackoilIndices::numEq;
+    using Scalar = double;
 
-    typedef DenseAd::Evaluation<double, /*size=*/numEq> Eval;
+    using Eval = DenseAd::Evaluation<double, /*size=*/numEq>;
 
-    typedef BlackOilFluidState<Eval,
-                               FluidSystem,
-                               enableTemperature,
-                               enableEnergy,
-                               BlackoilIndices::gasEnabled,
-                               enableEvaporation,
-                               enableBrine,
-                               enableSaltPrecipitation,
-                               BlackoilIndices::numPhases>
-        FluidState;
+    using FluidState = BlackOilFluidState<Eval,
+                                          FluidSystem,
+                                          enableTemperature,
+                                          enableEnergy,
+                                          BlackoilIndices::gasEnabled,
+                                          enableEvaporation,
+                                          enableBrine,
+                                          enableSaltPrecipitation,
+                                          BlackoilIndices::numPhases>;
 
     // Constructor
     AquiferInterface(int aqID,

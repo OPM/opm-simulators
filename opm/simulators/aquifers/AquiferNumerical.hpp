@@ -50,7 +50,7 @@ public:
 
     enum { dimWorld = GridView::dimensionworld };
     enum { numPhases = FluidSystem::numPhases };
-    static const int numEq = BlackoilIndices::numEq;
+    static constexpr int numEq = BlackoilIndices::numEq;
 
     using Eval =  DenseAd::Evaluation<double, numEq>;
     using Toolbox = MathToolbox<Eval>;

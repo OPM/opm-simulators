@@ -37,7 +37,7 @@ template <typename TypeTag>
 class AquiferCarterTracy : public AquiferInterface<TypeTag>
 {
 public:
-    typedef AquiferInterface<TypeTag> Base;
+    using Base = AquiferInterface<TypeTag>;
 
     using typename Base::BlackoilIndices;
     using typename Base::ElementContext;
@@ -236,6 +236,7 @@ protected:
         return this->aquct_data_.datum_depth;
     }
 }; // class AquiferCarterTracy
+
 } // namespace Opm
 
 #endif
