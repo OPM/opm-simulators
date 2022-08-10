@@ -113,28 +113,17 @@ protected:
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
-    typedef AquiferCarterTracy<TypeTag> AquiferCarterTracy_object;
-    typedef AquiferFetkovich<TypeTag> AquiferFetkovich_object;
-
     Simulator& simulator_;
 
-    // TODO: probably we can use one variable to store both types of aquifers, because
-    // they share the base class
-    mutable std::vector<AquiferCarterTracy_object> aquifers_CarterTracy;
-    mutable std::vector<AquiferFetkovich_object> aquifers_Fetkovich;
-    std::vector<AquiferNumerical<TypeTag>> aquifers_numerical;
+    std::vector<std::unique_ptr<AquiferInterface<TypeTag>>> aquifers;
 
     // This initialization function is used to connect the parser objects with the ones needed by AquiferCarterTracy
     void init();
-
-    bool aquiferActive() const;
-    bool aquiferCarterTracyActive() const;
-    bool aquiferFetkovichActive() const;
-    bool aquiferNumericalActive() const;
 };
 
 
 } // namespace Opm
 
 #include "BlackoilAquiferModel_impl.hpp"
+
 #endif
