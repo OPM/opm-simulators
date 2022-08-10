@@ -58,9 +58,9 @@ class EclTransBaseProblem;
 template <class TypeTag>
 struct EclTransFluxModule
 {
-    typedef EclTransIntensiveQuantities<TypeTag> FluxIntensiveQuantities;
-    typedef EclTransExtensiveQuantities<TypeTag> FluxExtensiveQuantities;
-    typedef EclTransBaseProblem<TypeTag> FluxBaseProblem;
+    using FluxIntensiveQuantities = EclTransIntensiveQuantities<TypeTag>;
+    using FluxExtensiveQuantities = EclTransExtensiveQuantities<TypeTag>;
+    using FluxBaseProblem = EclTransBaseProblem<TypeTag>;
 
     /*!
      * \brief Register all run-time parameters for the flux module.
@@ -114,10 +114,10 @@ class EclTransExtensiveQuantities
     enum { enableExtbo = getPropValue<TypeTag, Properties::EnableExtbo>() };
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
 
-    typedef MathToolbox<Evaluation> Toolbox;
-    typedef Dune::FieldVector<Scalar, dimWorld> DimVector;
-    typedef Dune::FieldVector<Evaluation, dimWorld> EvalDimVector;
-    typedef Dune::FieldMatrix<Scalar, dimWorld, dimWorld> DimMatrix;
+    using Toolbox = MathToolbox<Evaluation>;
+    using DimVector = Dune::FieldVector<Scalar, dimWorld>;
+    using EvalDimVector = Dune::FieldVector<Evaluation, dimWorld>;
+    using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
 
 public:
     /*!
