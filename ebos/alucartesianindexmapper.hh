@@ -85,7 +85,7 @@ public:
             int idx_;
         };
 
-        typedef typename Dune::PersistentContainer<Grid, GlobalCellIndex> GlobalIndexContainer;
+        using GlobalIndexContainer = typename Dune::PersistentContainer<Grid, GlobalCellIndex>;
 
     public:
         // constructor copying cartesian index to persistent container
@@ -174,7 +174,7 @@ public:
 
 public:
     /** \brief dimension of the grid */
-    static const int dimension = Grid::dimension ;
+    static constexpr int dimension = Grid::dimension ;
 
     /** \brief constructor taking grid */
     CartesianIndexMapper(const Grid& grid,
@@ -222,17 +222,17 @@ public:
     void cartesianCoordinate(const int compressedElementIndex, std::array<int, dimension>& coords) const
     {
         int gc = cartesianIndex(compressedElementIndex);
-        if (dimension == 3) {
+        if constexpr (dimension == 3) {
             coords[0] = gc % cartesianDimensions()[0];
             gc /= cartesianDimensions()[0];
             coords[1] = gc % cartesianDimensions()[1];
             coords[2] = gc / cartesianDimensions()[1];
         }
-        else if (dimension == 2) {
+        else if constexpr (dimension == 2) {
             coords[0] = gc % cartesianDimensions()[0];
             coords[1] = gc / cartesianDimensions()[0];
         }
-        else if (dimension == 1)
+        else if constexpr (dimension == 1)
             coords[0] = gc ;
         else
             throw std::invalid_argument("cartesianCoordinate not implemented for dimension " + std::to_string(dimension));
@@ -241,7 +241,7 @@ public:
     template <class GridView>
     std::unique_ptr<GlobalIndexDataHandle<GridView> > dataHandle(const GridView& gridView)
     {
-        typedef GlobalIndexDataHandle<GridView> DataHandle ;
+        using DataHandle = GlobalIndexDataHandle<GridView>;
         assert(&grid_ == &gridView.grid());
         return std::make_unique<DataHandle>(gridView, cartesianIndex_);
     }
