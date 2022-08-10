@@ -156,11 +156,11 @@ public:
             }
 
             // set the salt concentration
-            if (enableBrine)
+            if constexpr (enableBrine)
                 fluidState.setSaltConcentration(initialState.saltConcentration()[elemIdx]);
                 
             //set the (solid) salt saturation
-            if (enableSaltPrecipitation)
+            if constexpr (enableSaltPrecipitation)
                 fluidState.setSaltSaturation(initialState.saltSaturation()[elemIdx]);
         }
     }
