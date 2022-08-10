@@ -57,8 +57,8 @@ namespace Fem {
 template<int codim>
 struct GridEntityAccess<Dune::cpgrid::Entity<codim> >
 {
-    typedef Dune::cpgrid::Entity<codim> EntityType;
-    typedef EntityType GridEntityType;
+    using EntityType = Dune::cpgrid::Entity<codim>;
+    using GridEntityType = EntityType;
 
     static const GridEntityType& gridEntity(const EntityType& entity)
     { return entity; }
