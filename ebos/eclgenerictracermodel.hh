@@ -51,7 +51,7 @@ public:
     using TracerMatrix = Dune::BCRSMatrix<Opm::MatrixBlock<Scalar, 1, 1>>;
     using TracerVector = Dune::BlockVector<Dune::FieldVector<Scalar,1>>;
     using CartesianIndexMapper = Dune::CartesianIndexMapper<Grid>;
-    static const int dimWorld = Grid::dimensionworld;
+    static constexpr int dimWorld = Grid::dimensionworld;
     /*!
      * \brief Return the number of tracers considered by the tracerModel.
      */
