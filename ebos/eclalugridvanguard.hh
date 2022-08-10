@@ -85,7 +85,7 @@ template <class TypeTag>
 class EclAluGridVanguard : public EclBaseVanguard<TypeTag>
 {
     friend class EclBaseVanguard<TypeTag>;
-    typedef EclBaseVanguard<TypeTag> ParentType;
+    using ParentType = EclBaseVanguard<TypeTag>;
 
     using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
@@ -95,13 +95,13 @@ public:
     using Grid = GetPropType<TypeTag, Properties::Grid>;
     using EquilGrid = GetPropType<TypeTag, Properties::EquilGrid>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;        
-    typedef Dune::CartesianIndexMapper<Grid> CartesianIndexMapper;
-    typedef Dune::CartesianIndexMapper<EquilGrid> EquilCartesianIndexMapper;
+    using CartesianIndexMapper = Dune::CartesianIndexMapper<Grid>;
+    using EquilCartesianIndexMapper = Dune::CartesianIndexMapper<EquilGrid>;
     using TransmissibilityType = EclTransmissibility<Grid, GridView, ElementMapper, CartesianIndexMapper, Scalar>;
-    typedef Dune::FromToGridFactory<Grid> Factory;
+    using Factory = Dune::FromToGridFactory<Grid>;
 
-    static const int dimension = Grid::dimension;
-    static const int dimensionworld = Grid::dimensionworld;
+    static constexpr int dimension = Grid::dimension;
+    static constexpr int dimensionworld = Grid::dimensionworld;
 public:
     EclAluGridVanguard(Simulator& simulator)
         : EclBaseVanguard<TypeTag>(simulator)
@@ -146,10 +146,10 @@ public:
     void releaseEquilGrid()
     {
         delete equilCartesianIndexMapper_;
-        equilCartesianIndexMapper_ = 0;
+        equilCartesianIndexMapper_ = nullptr;
 
         delete equilGrid_;
-        equilGrid_ = 0;
+        equilGrid_ = nullptr;
     }
 
     /*!
@@ -170,17 +170,17 @@ public:
 
        if (grid().size(0))
        {
-        globalTrans_.reset(new TransmissibilityType(this->eclState(),
-                                                    this->gridView(),
-                                                    this->cartesianIndexMapper(),
-                                                    this->grid(),
-                                                    this->cellCentroids(),
-                                                    getPropValue<TypeTag,
-                                                    Properties::EnableEnergy>(),
-                                                    getPropValue<TypeTag,
-                                                    Properties::EnableDiffusion>()));
-        // Re-ordering  for ALUGrid
-        globalTrans_->update(false, [&](unsigned int i) { return gridEquilIdxToGridIdx(i);});
+           globalTrans_ = std::make_unique<TransmissibilityType>(this->eclState(),
+                                                                 this->gridView(),
+                                                                 this->cartesianIndexMapper(),
+                                                                 this->grid(),
+                                                                 this->cellCentroids(),
+                                                                 getPropValue<TypeTag,
+                                                                 Properties::EnableEnergy>(),
+                                                                 getPropValue<TypeTag,
+                                                                 Properties::EnableDiffusion>());
+            // Re-ordering  for ALUGrid
+            globalTrans_->update(false, [&](unsigned int i) { return gridEquilIdxToGridIdx(i);});
         }
         
     }
@@ -293,7 +293,7 @@ protected:
           }
 
         this->equilGrid_ = std::make_unique<Dune::CpGrid>(EclGenericVanguard::comm());
-     // Note: removed_cells is guaranteed to be empty on ranks other than 0.
+        // Note: removed_cells is guaranteed to be empty on ranks other than 0.
         auto removed_cells =
             this->equilGrid_->processEclipseFormat(input_grid,
                                                    &this->eclState(),
