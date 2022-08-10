@@ -298,6 +298,9 @@ class BlackOilModel
     using MICPModule = BlackOilMICPModule<TypeTag>;
 
 public:
+
+    using LocalResidual = GetPropType<TypeTag, Properties::LocalResidual>;
+
     BlackOilModel(Simulator& simulator)
         : ParentType(simulator)
     {}
