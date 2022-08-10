@@ -22,6 +22,7 @@
 
 #include <string>
 #include <memory>
+#include <cstddef>
 
 #include <opm/simulators/linalg/bda/opencl/opencl.hpp>
 
@@ -64,6 +65,7 @@ private:
     static cl::CommandQueue *queue;
     static std::vector<double> tmp;     // used as tmp CPU buffer for dot() and norm()
     static bool initialized;
+    static std::size_t preferred_workgroup_size_multiple; // stores CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE
 
     static std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg> > dot_k;
     static std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg> > norm_k;
