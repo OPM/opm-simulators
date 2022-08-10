@@ -65,9 +65,9 @@ namespace Opm {
 
 template <class Grid, class EquilGrid, class GridView, class ElementMapper, class Scalar>
 class EclGenericWriter
-{ 
-    typedef Dune::CartesianIndexMapper<Grid> CartesianIndexMapper;
-    typedef Dune::CartesianIndexMapper<EquilGrid> EquilCartesianIndexMapper; 
+{
+    using CartesianIndexMapper = Dune::CartesianIndexMapper<Grid>;
+    using EquilCartesianIndexMapper = Dune::CartesianIndexMapper<EquilGrid>;
     using CollectDataToIORankType = CollectDataToIORank<Grid,EquilGrid,GridView>;
     using TransmissibilityType = EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>;
 
@@ -103,7 +103,7 @@ public:
     {
         simulation_report_ = report;
     }
-   
+
 protected:
     const TransmissibilityType& globalTrans() const;
     unsigned int gridEquilIdxToGridIdx(unsigned int elemIndex) const;

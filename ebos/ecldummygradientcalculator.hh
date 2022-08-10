@@ -52,7 +52,7 @@ class EclDummyGradientCalculator
 
     enum { dimWorld = GridView::dimensionworld };
 
-    typedef Dune::FieldVector<Scalar, dimWorld> DimVector;
+    using DimVector = Dune::FieldVector<Scalar, dimWorld>;
 
 public:
     static void registerParameters()

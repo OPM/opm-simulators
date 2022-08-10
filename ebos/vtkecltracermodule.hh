@@ -70,7 +70,7 @@ namespace Opm {
     template <class TypeTag>
     class VtkEclTracerModule : public BaseOutputModule<TypeTag>
     {
-        typedef BaseOutputModule<TypeTag> ParentType;
+        using ParentType = BaseOutputModule<TypeTag>;
 
         using Simulator = GetPropType<TypeTag, Properties::Simulator>;
         using Scalar = GetPropType<TypeTag, Properties::Scalar>;
@@ -80,11 +80,11 @@ namespace Opm {
         using GridView = GetPropType<TypeTag, Properties::GridView>;
         using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
-        static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
-        typedef ::Opm::VtkMultiWriter<GridView, vtkFormat> VtkMultiWriter;
+        static constexpr int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
+        using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkFormat>;
 
 
-        typedef typename ParentType::ScalarBuffer ScalarBuffer;
+        using ScalarBuffer = typename ParentType::ScalarBuffer;
 
     public:
         VtkEclTracerModule(const Simulator& simulator)

@@ -52,7 +52,7 @@ public:
     using IndexMapType = std::vector<int>;
     using IndexMapStorageType = std::vector<IndexMapType>;
 
-    static const int dimension = Grid::dimension;
+    static constexpr int dimension = Grid::dimension;
 
     enum { ioRank = 0 };
 

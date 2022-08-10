@@ -65,7 +65,7 @@ namespace Opm {
 template <class TypeTag>
 class EclNewtonMethod : public BlackOilNewtonMethod<TypeTag>
 {
-    typedef BlackOilNewtonMethod<TypeTag> ParentType;
+    using ParentType = BlackOilNewtonMethod<TypeTag>;
     using DiscNewtonMethod = GetPropType<TypeTag, Properties::DiscNewtonMethod>;
 
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
@@ -79,7 +79,7 @@ class EclNewtonMethod : public BlackOilNewtonMethod<TypeTag>
     using Linearizer = GetPropType<TypeTag, Properties::Linearizer>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
-    static const unsigned numEq = getPropValue<TypeTag, Properties::NumEq>();
+    static constexpr unsigned numEq = getPropValue<TypeTag, Properties::NumEq>();
 
     static constexpr int contiSolventEqIdx = Indices::contiSolventEqIdx;
     static constexpr int contiPolymerEqIdx = Indices::contiPolymerEqIdx;

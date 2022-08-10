@@ -79,7 +79,7 @@ class EclCpGridVanguard : public EclBaseVanguard<TypeTag>
                                                           GetPropType<TypeTag, Properties::Scalar>>
 {
     friend class EclBaseVanguard<TypeTag>;
-    typedef EclBaseVanguard<TypeTag> ParentType;
+    using ParentType = EclBaseVanguard<TypeTag>;
 
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
@@ -91,7 +91,7 @@ public:
     using EquilGrid = GetPropType<TypeTag, Properties::EquilGrid>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
     using TransmissibilityType = EclTransmissibility<Grid, GridView, ElementMapper, CartesianIndexMapper, Scalar>;
-    static const int dimensionworld = Grid::dimensionworld;
+    static constexpr int dimensionworld = Grid::dimensionworld;
 
 private:
     using Element = typename GridView::template Codim<0>::Entity;
