@@ -410,7 +410,7 @@ private:
                 }
                 const IntensiveQuantities& intQuantsEx = *intQuantsExP;
                 LocalResidual::computeFlux(
-                    adres, problem_(), globI, globJ, intQuantsIn, intQuantsEx, 0, nbInfo.trans, nbInfo.faceArea);
+                    adres, problem_(), globI, globJ, intQuantsIn, intQuantsEx, nbInfo.trans, nbInfo.faceArea);
                 adres *= nbInfo.faceArea;
                 setResAndJacobi(res, bMat, adres);
                 residual_[globI] += res;
@@ -425,7 +425,7 @@ private:
             double volume = model_().dofTotalVolume(globI);
             Scalar storefac = volume / dt;
             adres = 0.0;
-            LocalResidual::computeStorage(adres, intQuantsIn, 0);
+            LocalResidual::computeStorage(adres, intQuantsIn);
             setResAndJacobi(res, bMat, adres);
             // TODO: check recycleFirst etc.
             // first we use it as storage cache
