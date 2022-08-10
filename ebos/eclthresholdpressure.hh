@@ -101,7 +101,7 @@ private:
         const auto& vanguard = simulator_.vanguard();
         const auto& gridView = vanguard.gridView();
 
-        typedef MathToolbox<Evaluation> Toolbox;
+        using Toolbox = MathToolbox<Evaluation>;
         // loop over the whole grid and compute the maximum gravity adjusted pressure
         // difference between two EQUIL regions.
         auto elemIt = gridView.template begin</*codim=*/ 0>();
