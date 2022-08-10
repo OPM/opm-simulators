@@ -210,8 +210,7 @@ namespace Opm {
             }
 
             void computeTotalRatesForDof(RateVector& rate,
-                                         unsigned globalIdx,
-                                         unsigned timeIdx) const;
+                                         unsigned globalIdx) const;
 
             template <class Context>
             void computeTotalRatesForDof(RateVector& rate,

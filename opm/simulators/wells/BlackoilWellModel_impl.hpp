@@ -499,15 +499,15 @@ namespace Opm {
         this->computeWellTemperature();
     }
 
+
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
     computeTotalRatesForDof(RateVector& rate,
-                            unsigned elemIdx,
-                            unsigned timeIdx) const
+                            unsigned elemIdx) const
     {
         rate = 0;
-        
+
         if (!is_cell_perforated_[elemIdx])
             return;
 
@@ -515,7 +515,7 @@ namespace Opm {
             well->addCellRates(rate, elemIdx);
     }
 
-    
+
     template<typename TypeTag>
     template <class Context>
     void

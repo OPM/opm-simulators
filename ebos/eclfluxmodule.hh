@@ -263,7 +263,6 @@ public:
                                         pressureDifferences[phaseIdx],
                                         intQuantsIn,
                                         intQuantsEx,
-                                        timeIdx,//input
                                         phaseIdx,//input
                                         interiorDofIdx,//input
                                         exteriorDofIdx,//intput
@@ -278,12 +277,13 @@ public:
                 continue;
             }
 
-            const IntensiveQuantities& up = (upIdx[phaseIdx] == interiorDofIdx) ? intQuantsIn : intQuantsEx;
+            const bool upwindIsInterior = (static_cast<unsigned>(upIdx[phaseIdx]) == interiorDofIdx);
+            const IntensiveQuantities& up = upwindIsInterior ? intQuantsIn : intQuantsEx;
             // TODO: should the rock compaction transmissibility multiplier be upstreamed
             // or averaged? all fluids should see the same compaction?!
             const Evaluation& transMult = up.rockCompTransMultiplier();
 
-            if (upIdx[phaseIdx] == interiorDofIdx)
+            if (upwindIsInterior)
                 volumeFlux[phaseIdx] =
                     pressureDifferences[phaseIdx]*up.mobility(phaseIdx)*transMult*(-trans/faceArea);
             else
@@ -298,7 +298,6 @@ public:
                                             EvalType& pressureDifference,
                                             const IntensiveQuantities& intQuantsIn,
                                             const IntensiveQuantities& intQuantsEx,
-                                            const unsigned timeIdx,
                                             const unsigned phaseIdx,
                                             const unsigned interiorDofIdx,
                                             const unsigned exteriorDofIdx,
@@ -475,7 +474,7 @@ protected:
 
             Evaluation transModified = trans;
 
-            short upstreamIdx = upstreamIndex_(phaseIdx);
+            unsigned upstreamIdx = upstreamIndex_(phaseIdx);
             if (upstreamIdx == interiorDofIdx) {
 
                 // this is slightly hacky because in the automatic differentiation case, it

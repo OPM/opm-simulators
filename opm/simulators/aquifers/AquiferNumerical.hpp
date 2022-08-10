@@ -253,7 +253,7 @@ private:
     }
 
     template <class ElemCtx>
-    const double getWaterFlux(const ElemCtx& elem_ctx, unsigned face_idx) const
+    double getWaterFlux(const ElemCtx& elem_ctx, unsigned face_idx) const
     {
         const auto& exQuants = elem_ctx.extensiveQuantities(face_idx, /*timeIdx*/ 0);
         const double water_flux = Toolbox::value(exQuants.volumeFlux(this->phaseIdx_()));

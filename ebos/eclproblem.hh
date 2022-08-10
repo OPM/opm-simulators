@@ -2024,7 +2024,7 @@ public:
     {
         rate = 0.0;
 
-        wellModel_.computeTotalRatesForDof(rate, globalDofIdx, timeIdx);
+        wellModel_.computeTotalRatesForDof(rate, globalDofIdx);
 
         // convert the source term from the total mass rate of the
         // cell to the one per unit of volume as used by the model.
