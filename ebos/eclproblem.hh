@@ -869,10 +869,10 @@ public:
         #ifdef HAVE_DUNE_ALUGRID
         using Grid = GetPropType<TypeTag, Properties::Grid>;
         typename std::is_same<Grid, Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming>>::type isAlugrid;
-        if (isAlugrid) {
-          gridToEquilGrid = [&simulator](unsigned int i) {
-          return simulator.vanguard().gridIdxToEquilGridIdx(i);
-          };
+        if constexpr (isAlugrid) {
+            gridToEquilGrid = [&simulator](unsigned int i) {
+                return simulator.vanguard().gridIdxToEquilGridIdx(i);
+            };
         }
         #endif // HAVE_DUNE_ALUGRID
         transmissibilities_.finishInit(gridToEquilGrid);
@@ -1046,10 +1046,10 @@ public:
             using Grid = GetPropType<TypeTag, Properties::Grid>;
             typename std::is_same<Grid, Dune::ALUGrid<3, 3, Dune::cube,
             Dune::nonconforming>>::type isAlugrid;
-            if (isAlugrid) {
-              equilGridToGrid = [&simulator](unsigned int i) {
-              return simulator.vanguard().gridEquilIdxToGridIdx(i);
-              };
+            if constexpr (isAlugrid) {
+                  equilGridToGrid = [&simulator](unsigned int i) {
+                      return simulator.vanguard().gridEquilIdxToGridIdx(i);
+                  };
             }
             #endif // HAVE_DUNE_ALUGRID
 
@@ -1197,10 +1197,10 @@ public:
         #ifdef HAVE_DUNE_ALUGRID
         using Grid = GetPropType<TypeTag, Properties::Grid>;
         typename std::is_same<Grid, Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming>>::type isAlugrid;
-        if (isAlugrid) {
-          gridToEquilGrid = [&simulator](unsigned int i) {
-          return simulator.vanguard().gridIdxToEquilGridIdx(i);
-          };
+        if constexpr (isAlugrid) {
+            gridToEquilGrid = [&simulator](unsigned int i) {
+                return simulator.vanguard().gridIdxToEquilGridIdx(i);
+            };
         }
         #endif // HAVE_DUNE_ALUGRID
 
@@ -2700,11 +2700,11 @@ private:
         tempiData = fp.get_double("TEMPI");
 
         // initial salt concentration data
-        if (enableBrine)
+        if constexpr (enableBrine)
             saltData = fp.get_double("SALT");
 
          // initial precipitated salt saturation data
-         if (enableSaltPrecipitation)
+         if constexpr (enableSaltPrecipitation)
             saltpData = fp.get_double("SALTP");
 
         // calculate the initial fluid states
@@ -2724,13 +2724,13 @@ private:
             //////
             // set salt concentration
             //////
-            if (enableBrine)
+            if constexpr (enableBrine)
                 dofFluidState.setSaltConcentration(saltData[dofIdx]);
 
             //////
             // set precipitated salt saturation
             //////
-            if (enableSaltPrecipitation)
+            if constexpr (enableSaltPrecipitation)
                 dofFluidState.setSaltSaturation(saltpData[dofIdx]);
 
             //////
