@@ -128,8 +128,6 @@ namespace Opm {
             typedef Dune::FieldVector<Scalar, numEq    > VectorBlockType;
             typedef Dune::BlockVector<VectorBlockType> BVector;
 
-            // typedef Dune::FieldMatrix<Scalar, numEq, numEq > MatrixBlockType;
-
             typedef BlackOilPolymerModule<TypeTag> PolymerModule;
             typedef BlackOilMICPModule<TypeTag> MICPModule;
 
@@ -210,6 +208,9 @@ namespace Opm {
             {
                 endReportStep();
             }
+
+            void computeTotalRatesForDof(RateVector& rate,
+                                         unsigned globalIdx) const;
 
             template <class Context>
             void computeTotalRatesForDof(RateVector& rate,

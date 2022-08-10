@@ -128,6 +128,24 @@ BlackoilAquiferModel<TypeTag>::addToSource(RateVector& rates,
 
 template <typename TypeTag>
 void
+BlackoilAquiferModel<TypeTag>::addToSource(RateVector& rates,
+                                           unsigned globalSpaceIdx,
+                                           unsigned timeIdx) const
+{
+    if (aquiferCarterTracyActive()) {
+        for (auto& aquifer : aquifers_CarterTracy) {
+            aquifer.addToSource(rates, globalSpaceIdx, timeIdx);
+        }
+    }
+    if (aquiferFetkovichActive()) {
+        for (auto& aquifer : aquifers_Fetkovich) {
+            aquifer.addToSource(rates, globalSpaceIdx, timeIdx);
+        }
+    }
+}
+
+template <typename TypeTag>
+void
 BlackoilAquiferModel<TypeTag>::endIteration()
 {}
 
