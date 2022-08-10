@@ -76,7 +76,7 @@ template <class TypeTag>
 class EclPolyhedralGridVanguard : public EclBaseVanguard<TypeTag>
 {
     friend class EclBaseVanguard<TypeTag>;
-    typedef EclBaseVanguard<TypeTag> ParentType;
+    using ParentType = EclBaseVanguard<TypeTag>;
 
     using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
@@ -89,10 +89,10 @@ public:
     using TransmissibilityType = EclTransmissibility<Grid, GridView, ElementMapper, Scalar>;
 
 private:
-    typedef Grid* GridPointer;
-    typedef EquilGrid* EquilGridPointer;
-    typedef Dune::CartesianIndexMapper<Grid> CartesianIndexMapper;
-    typedef std::unique_ptr<CartesianIndexMapper> CartesianIndexMapperPointer;
+    using GridPointer = Grid*;
+    using EquilGridPointer = EquilGrid*;
+    using CartesianIndexMapper = Dune::CartesianIndexMapper<Grid>;
+    using CartesianIndexMapperPointer = std::unique_ptr<CartesianIndexMapper>;
 
 public:
     EclPolyhedralGridVanguard(Simulator& simulator)
