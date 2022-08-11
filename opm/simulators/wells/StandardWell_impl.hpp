@@ -20,7 +20,6 @@
 */
 
 #include <opm/common/utility/numeric/RootFinders.hpp>
-#include <opm/input/eclipse/Schedule/Well/WellInjectionProperties.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/linalg/MatrixBlock.hpp>
 #include <opm/simulators/wells/VFPHelpers.hpp>
