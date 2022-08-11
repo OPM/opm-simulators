@@ -340,6 +340,10 @@ public:
                 Valgrind::CheckDefined(this->relativePermeability_[phaseIdx][globalDofIdx]);
             }
 
+            if (!this->drsdtcon_.empty()) {
+                this->drsdtcon_[globalDofIdx] = problem.drsdtcon(globalDofIdx, elemCtx.simulator().episodeIndex());
+            }
+
             if (!this->sSol_.empty()) {
                 this->sSol_[globalDofIdx] = intQuants.solventSaturation().value();
             }

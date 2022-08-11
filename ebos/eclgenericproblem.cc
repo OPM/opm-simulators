@@ -579,6 +579,21 @@ solventSaturation(unsigned elemIdx) const
 
 template<class GridView, class FluidSystem, class Scalar>
 Scalar EclGenericProblem<GridView,FluidSystem,Scalar>::
+drsdtcon(unsigned elemIdx, int episodeIdx) const
+{
+    if (convectiveDrs_.empty())
+        return 0;
+
+    // The episode index is set to -1 in the initialization phase.
+    // Output drsdt value for index 0
+    episodeIdx = std::max(episodeIdx, 0);
+    const auto& oilVaporizationControl = schedule_[episodeIdx].oilvap();
+    int pvtRegionIdx = pvtRegionIndex(elemIdx);
+    return oilVaporizationControl.getMaxDRSDT(pvtRegionIdx)*convectiveDrs_[elemIdx];
+}
+
+template<class GridView, class FluidSystem, class Scalar>
+Scalar EclGenericProblem<GridView,FluidSystem,Scalar>::
 polymerConcentration(unsigned elemIdx) const
 {
     if (polymerConcentration_.empty())

@@ -418,6 +418,7 @@ protected:
     ScalarBuffer rvw_;
     ScalarBuffer overburdenPressure_;
     ScalarBuffer oilSaturationPressure_;
+    ScalarBuffer drsdtcon_;
     ScalarBuffer sSol_;
     ScalarBuffer cPolymer_;
     ScalarBuffer cFoam_;
