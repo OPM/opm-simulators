@@ -22,6 +22,8 @@
 #ifndef OPM_AQUIFERANALYTICAL_HEADER_INCLUDED
 #define OPM_AQUIFERANALYTICAL_HEADER_INCLUDED
 
+#include <opm/simulators/aquifers/AquiferInterface.hpp>
+
 #include <opm/common/utility/numeric/linearInterpolation.hpp>
 #include <opm/input/eclipse/EclipseState/Aquifer/Aquancon.hpp>
 
@@ -45,7 +47,7 @@
 namespace Opm
 {
 template <typename TypeTag>
-class AquiferAnalytical
+class AquiferAnalytical : public AquiferInterface<TypeTag>
 {
 public:
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
@@ -81,9 +83,8 @@ public:
     AquiferAnalytical(int aqID,
                      const std::vector<Aquancon::AquancCell>& connections,
                      const Simulator& ebosSimulator)
-        : aquiferID_(aqID)
+        : AquiferInterface<TypeTag>(aqID, ebosSimulator)
         , connections_(connections)
-        , ebos_simulator_(ebosSimulator)
     {
     }
 
@@ -92,7 +93,7 @@ public:
     {
     }
 
-    void initFromRestart(const data::Aquifers& aquiferSoln)
+    void initFromRestart(const data::Aquifers& aquiferSoln) override
     {
         auto xaqPos = aquiferSoln.find(this->aquiferID());
         if (xaqPos == aquiferSoln.end())
@@ -105,16 +106,16 @@ public:
         this->solution_set_from_restart_ = true;
     }
 
-    void initialSolutionApplied()
+    void initialSolutionApplied() override
     {
         initQuantities();
     }
 
-    void beginTimeStep()
+    void beginTimeStep() override
     {
-        ElementContext elemCtx(ebos_simulator_);
-        auto elemIt = ebos_simulator_.gridView().template begin<0>();
-        const auto& elemEndIt = ebos_simulator_.gridView().template end<0>();
+        ElementContext elemCtx(this->ebos_simulator_);
+        auto elemIt = this->ebos_simulator_.gridView().template begin<0>();
+        const auto& elemEndIt = this->ebos_simulator_.gridView().template end<0>();
         OPM_BEGIN_PARALLEL_TRY_CATCH();
 
         for (; elemIt != elemEndIt; ++elemIt) {
@@ -129,27 +130,18 @@ public:
 
             elemCtx.updateIntensiveQuantities(0);
             const auto& iq = elemCtx.intensiveQuantities(0, 0);
-            pressure_previous_[idx] = getValue(iq.fluidState().pressure(phaseIdx_()));
+            pressure_previous_[idx] = getValue(iq.fluidState().pressure(this->phaseIdx_()));
         }
 
-        OPM_END_PARALLEL_TRY_CATCH("AquiferAnalytical::beginTimeStep() failed: ", ebos_simulator_.vanguard().grid().comm());
-    }
-
-    template <class Context>
-    void addToSource(RateVector& rates,
-                     const Context& context,
-                     const unsigned spaceIdx,
-                     const unsigned timeIdx)
-    {
-        const unsigned cellIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
-        addToSource(rates, cellIdx, timeIdx);
+        OPM_END_PARALLEL_TRY_CATCH("AquiferAnalytical::beginTimeStep() failed: ",
+                                   this->ebos_simulator_.vanguard().grid().comm());
     }
 
     void addToSource(RateVector& rates,
                      const unsigned cellIdx,
-                     const unsigned timeIdx)
+                     const unsigned timeIdx) override
     {
-        const auto& model = ebos_simulator_.model();
+        const auto& model = this->ebos_simulator_.model();
 
         const int idx = this->cellToConnectionIdx_[cellIdx];
         if (idx < 0)
@@ -162,46 +154,39 @@ public:
 
         // This is the pressure at td + dt
         this->updateCellPressure(this->pressure_current_, idx, *intQuantsPtr);
-        this->calculateInflowRate(idx, ebos_simulator_);
+        this->calculateInflowRate(idx, this->ebos_simulator_);
 
         rates[BlackoilIndices::conti0EqIdx + compIdx_()]
             += this->Qai_[idx] / model.dofTotalVolume(cellIdx);
     }
-    std::size_t size() const {
+
+    std::size_t size() const
+    {
         return this->connections_.size();
     }
 
-    int aquiferID() const { return this->aquiferID_; }
-
 protected:
-    inline Scalar gravity_() const
+    virtual void assignRestartData(const data::AquiferData& xaq) = 0;
+    virtual void calculateInflowRate(int idx, const Simulator& simulator) = 0;
+    virtual void calculateAquiferCondition() = 0;
+    virtual void calculateAquiferConstants() = 0;
+    virtual Scalar aquiferDepth() const = 0;
+
+    Scalar gravity_() const
     {
-        return ebos_simulator_.problem().gravity()[2];
+        return this->ebos_simulator_.problem().gravity()[2];
     }
 
-    inline bool co2store_() const
+    int compIdx_() const
     {
-        return ebos_simulator_.vanguard().eclState().runspec().co2Storage();
-    }
-
-    inline int phaseIdx_() const
-    {
-        if(co2store_())
-            return FluidSystem::oilPhaseIdx;
-
-        return FluidSystem::waterPhaseIdx;
-    }
-
-    inline int compIdx_() const
-    {
-        if(co2store_())
+        if (this->co2store_())
             return FluidSystem::oilCompIdx;
 
         return FluidSystem::waterCompIdx;
     }
 
 
-    inline void initQuantities()
+    void initQuantities()
     {
         // We reset the cumulative flux at the start of any simulation, so, W_flux = 0
         if (!this->solution_set_from_restart_) {
@@ -219,44 +204,21 @@ protected:
         Qai_.resize(this->connections_.size(), Scalar{0});
     }
 
-    inline void
-    updateCellPressure(std::vector<Eval>& pressure_water, const int idx, const IntensiveQuantities& intQuants)
+    void updateCellPressure(std::vector<Eval>& pressure_water,
+                            const int idx,
+                            const IntensiveQuantities& intQuants)
     {
         const auto& fs = intQuants.fluidState();
-        pressure_water.at(idx) = fs.pressure(phaseIdx_());
+        pressure_water.at(idx) = fs.pressure(this->phaseIdx_());
     }
 
-    inline void
-    updateCellPressure(std::vector<Scalar>& pressure_water, const int idx, const IntensiveQuantities& intQuants)
+    void updateCellPressure(std::vector<Scalar>& pressure_water,
+                            const int idx,
+                            const IntensiveQuantities& intQuants)
     {
         const auto& fs = intQuants.fluidState();
-        pressure_water.at(idx) = fs.pressure(phaseIdx_()).value();
+        pressure_water.at(idx) = fs.pressure(this->phaseIdx_()).value();
     }
-
-    virtual void endTimeStep() = 0;
-
-    const int aquiferID_{};
-    const std::vector<Aquancon::AquancCell> connections_;
-    const Simulator& ebos_simulator_;
-
-    // Grid variables
-    std::vector<Scalar> faceArea_connected_;
-    std::vector<int> cellToConnectionIdx_;
-
-    // Quantities at each grid id
-    std::vector<Scalar> cell_depth_;
-    std::vector<Scalar> pressure_previous_;
-    std::vector<Eval> pressure_current_;
-    std::vector<Eval> Qai_;
-    std::vector<Scalar> alphai_;
-
-    Scalar Tc_{}; // Time constant
-    Scalar pa0_{}; // initial aquifer pressure
-    Scalar rhow_{};
-
-    Eval W_flux_;
-
-    bool solution_set_from_restart_ {false};
 
     void initializeConnections()
     {
@@ -381,18 +343,8 @@ protected:
         this->W_flux_ *= this_area / tot_area;
     }
 
-    virtual void assignRestartData(const data::AquiferData& xaq) = 0;
-
-    virtual void calculateInflowRate(int idx, const Simulator& simulator) = 0;
-
-    virtual void calculateAquiferCondition() = 0;
-
-    virtual void calculateAquiferConstants() = 0;
-
-    virtual Scalar aquiferDepth() const = 0;
-
     // This function is for calculating the aquifer properties from equilibrium state with the reservoir
-    virtual Scalar calculateReservoirEquilibrium()
+    Scalar calculateReservoirEquilibrium()
     {
         // Since the global_indices are the reservoir index, we just need to extract the fluidstate at those indices
         std::vector<Scalar> pw_aquifer;
@@ -415,8 +367,8 @@ protected:
             const auto& iq0 = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
             const auto& fs = iq0.fluidState();
 
-            water_pressure_reservoir = fs.pressure(phaseIdx_()).value();
-            const auto water_density = fs.density(phaseIdx_());
+            water_pressure_reservoir = fs.pressure(this->phaseIdx_()).value();
+            const auto water_density = fs.density(this->phaseIdx_());
 
             const auto gdz =
                 this->gravity_() * (this->cell_depth_[idx] - this->aquiferDepth());
@@ -426,7 +378,7 @@ protected:
         }
 
         // We take the average of the calculated equilibrium pressures.
-        const auto& comm = ebos_simulator_.vanguard().grid().comm();
+        const auto& comm = this->ebos_simulator_.vanguard().grid().comm();
 
         Scalar vals[2];
         vals[0] = std::accumulate(this->alphai_.begin(), this->alphai_.end(), Scalar{0});
@@ -437,7 +389,26 @@ protected:
         return vals[1] / vals[0];
     }
 
-    // This function is used to initialize and calculate the alpha_i for each grid connection to the aquifer
+    const std::vector<Aquancon::AquancCell> connections_;
+
+    // Grid variables
+    std::vector<Scalar> faceArea_connected_;
+    std::vector<int> cellToConnectionIdx_;
+
+    // Quantities at each grid id
+    std::vector<Scalar> cell_depth_;
+    std::vector<Scalar> pressure_previous_;
+    std::vector<Eval> pressure_current_;
+    std::vector<Eval> Qai_;
+    std::vector<Scalar> alphai_;
+
+    Scalar Tc_{}; // Time constant
+    Scalar pa0_{}; // initial aquifer pressure
+    Scalar rhow_{};
+
+    Eval W_flux_;
+
+    bool solution_set_from_restart_ {false};
 };
 
 } // namespace Opm
