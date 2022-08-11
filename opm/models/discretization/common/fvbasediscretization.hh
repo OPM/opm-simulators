@@ -730,7 +730,7 @@ public:
             return;
 
         intensiveQuantityCache_[timeIdx][globalIdx] = intQuants;
-        intensiveQuantityCacheUpToDate_[timeIdx][globalIdx] = true;
+        intensiveQuantityCacheUpToDate_[timeIdx][globalIdx] = 1;
     }
 
     /*!
@@ -747,7 +747,7 @@ public:
         if (!storeIntensiveQuantities())
             return;
 
-        intensiveQuantityCacheUpToDate_[timeIdx][globalIdx] = newValue;
+        intensiveQuantityCacheUpToDate_[timeIdx][globalIdx] = newValue ? 1 : 0;
     }
 
     /*!
@@ -760,7 +760,7 @@ public:
         if (storeIntensiveQuantities()) {
             std::fill(intensiveQuantityCacheUpToDate_[timeIdx].begin(),
                       intensiveQuantityCacheUpToDate_[timeIdx].end(),
-                      /*value=*/false);
+                      /*value=*/0);
         }
     }
 
@@ -1960,7 +1960,8 @@ protected:
     // cur is the current iterative solution, prev the converged
     // solution of the previous time step
     mutable IntensiveQuantitiesVector intensiveQuantityCache_[historySize];
-    mutable std::vector<bool> intensiveQuantityCacheUpToDate_[historySize];
+    // while these are logically bools, concurrent writes to vector<bool> are not thread safe.
+    mutable std::vector<unsigned char> intensiveQuantityCacheUpToDate_[historySize];
 
     DiscreteFunctionSpace space_;
     mutable std::array< std::unique_ptr< DiscreteFunction >, historySize > solution_;
