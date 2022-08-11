@@ -247,9 +247,10 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/timestepping/SimulatorReport.hpp
   opm/simulators/wells/SegmentState.hpp
   opm/simulators/wells/WellContainer.hpp
-  opm/simulators/aquifers/AquiferInterface.hpp
+  opm/simulators/aquifers/AquiferAnalytical.hpp
   opm/simulators/aquifers/AquiferCarterTracy.hpp
   opm/simulators/aquifers/AquiferFetkovich.hpp
+  opm/simulators/aquifers/AquiferInterface.hpp
   opm/simulators/aquifers/AquiferNumerical.hpp
   opm/simulators/aquifers/BlackoilAquiferModel.hpp
   opm/simulators/aquifers/BlackoilAquiferModel_impl.hpp

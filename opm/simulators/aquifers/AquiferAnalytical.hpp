@@ -19,8 +19,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_AQUIFERINTERFACE_HEADER_INCLUDED
-#define OPM_AQUIFERINTERFACE_HEADER_INCLUDED
+#ifndef OPM_AQUIFERANALYTICAL_HEADER_INCLUDED
+#define OPM_AQUIFERANALYTICAL_HEADER_INCLUDED
 
 #include <opm/common/utility/numeric/linearInterpolation.hpp>
 #include <opm/input/eclipse/EclipseState/Aquifer/Aquancon.hpp>
@@ -45,7 +45,7 @@
 namespace Opm
 {
 template <typename TypeTag>
-class AquiferInterface
+class AquiferAnalytical
 {
 public:
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
@@ -78,7 +78,7 @@ public:
                                           BlackoilIndices::numPhases>;
 
     // Constructor
-    AquiferInterface(int aqID,
+    AquiferAnalytical(int aqID,
                      const std::vector<Aquancon::AquancCell>& connections,
                      const Simulator& ebosSimulator)
         : aquiferID_(aqID)
@@ -88,7 +88,7 @@ public:
     }
 
     // Destructor
-    virtual ~AquiferInterface()
+    virtual ~AquiferAnalytical()
     {
     }
 
@@ -132,7 +132,7 @@ public:
             pressure_previous_[idx] = getValue(iq.fluidState().pressure(phaseIdx_()));
         }
 
-        OPM_END_PARALLEL_TRY_CATCH("AquiferInterface::beginTimeStep() failed: ", ebos_simulator_.vanguard().grid().comm());
+        OPM_END_PARALLEL_TRY_CATCH("AquiferAnalytical::beginTimeStep() failed: ", ebos_simulator_.vanguard().grid().comm());
     }
 
     template <class Context>
@@ -157,7 +157,7 @@ public:
 
         const auto* intQuantsPtr = model.cachedIntensiveQuantities(cellIdx, timeIdx);
         if (intQuantsPtr == nullptr) {
-            throw std::logic_error("Invalid intensive quantities cache detected in AquiferInterface::addToSource()");
+            throw std::logic_error("Invalid intensive quantities cache detected in AquiferAnalytical::addToSource()");
         }
 
         // This is the pressure at td + dt
@@ -439,5 +439,7 @@ protected:
 
     // This function is used to initialize and calculate the alpha_i for each grid connection to the aquifer
 };
+
 } // namespace Opm
+
 #endif
