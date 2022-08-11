@@ -100,12 +100,21 @@ public:
         const auto& eclState = vanguard.eclState();
 
         unsigned numElems = vanguard.grid().size(0);
+        using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
+        using Grid = GetPropType<TypeTag, Properties::Grid>;
+        using CartesianIndexMapper = Dune::CartesianIndexMapper<Grid>;
+        using Initializer = EQUIL::DeckDependent::InitialStateComputer<FluidSystem,
+                                                                       Grid,
+                                                                       GridView,
+                                                                       ElementMapper,
+                                                                       CartesianIndexMapper>;
 
-        EQUIL::DeckDependent::InitialStateComputer<TypeTag> initialState(materialLawManager,
-                                                                         eclState,
-                                                                         vanguard,
-                                                                         vanguard.cartesianMapper(),
-                                                                         simulator.problem().gravity()[dimWorld - 1]);
+        Initializer initialState(materialLawManager,
+                                 eclState,
+                                 vanguard.grid(),
+                                 vanguard.gridView(),
+                                 vanguard.cartesianMapper(),
+                                 simulator.problem().gravity()[dimWorld - 1]);
 
         // copy the result into the array of initial fluid states
         initialFluidStates_.resize(numElems);

@@ -33,6 +33,8 @@ list (APPEND MAIN_SOURCE_FILES
   ebos/eclgenericwriter.cc
   ebos/eclinterregflows.cc
   ebos/ecltransmissibility.cc
+  ebos/equil/equilibrationhelpers.cc
+  ebos/equil/initstateequil.cc
   opm/core/props/BlackoilPhases.cpp
   opm/core/props/phaseUsageFromDeck.cpp
   opm/core/props/satfunc/RelpermDiagnostics.cpp
