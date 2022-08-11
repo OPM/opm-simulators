@@ -21,7 +21,7 @@
 #ifndef OPM_AQUIFERCT_HEADER_INCLUDED
 #define OPM_AQUIFERCT_HEADER_INCLUDED
 
-#include <opm/simulators/aquifers/AquiferInterface.hpp>
+#include <opm/simulators/aquifers/AquiferAnalytical.hpp>
 
 #include <opm/output/data/Aquifer.hpp>
 
@@ -34,10 +34,10 @@ namespace Opm
 {
 
 template <typename TypeTag>
-class AquiferCarterTracy : public AquiferInterface<TypeTag>
+class AquiferCarterTracy : public AquiferAnalytical<TypeTag>
 {
 public:
-    typedef AquiferInterface<TypeTag> Base;
+    using Base = AquiferAnalytical<TypeTag>;
 
     using typename Base::BlackoilIndices;
     using typename Base::ElementContext;
@@ -236,6 +236,7 @@ protected:
         return this->aquct_data_.datum_depth;
     }
 }; // class AquiferCarterTracy
+
 } // namespace Opm
 
 #endif

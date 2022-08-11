@@ -19,7 +19,6 @@
 */
 
 #include <opm/grid/utility/cartesianToCompressed.hpp>
-#include "BlackoilAquiferModel.hpp"
 
 namespace Opm
 {
@@ -39,45 +38,16 @@ template <typename TypeTag>
 void
 BlackoilAquiferModel<TypeTag>::initialSolutionApplied()
 {
-    if (aquiferCarterTracyActive()) {
-        for (auto& aquifer : aquifers_CarterTracy) {
-            aquifer.initialSolutionApplied();
-        }
-    }
-    if (aquiferFetkovichActive()) {
-        for (auto& aquifer : aquifers_Fetkovich) {
-            aquifer.initialSolutionApplied();
-        }
-    }
-
-    if (this->aquiferNumericalActive()) {
-        for (auto& aquifer : this->aquifers_numerical) {
-            aquifer.initialSolutionApplied();
-        }
-    }
+    for (auto& aquifer : aquifers)
+        aquifer->initialSolutionApplied();
 }
 
 template <typename TypeTag>
 void
 BlackoilAquiferModel<TypeTag>::initFromRestart(const data::Aquifers& aquiferSoln)
 {
-    if (this->aquiferCarterTracyActive()) {
-        for (auto& aquifer : this->aquifers_CarterTracy) {
-            aquifer.initFromRestart(aquiferSoln);
-        }
-    }
-
-    if (this->aquiferFetkovichActive()) {
-        for (auto& aquifer : this->aquifers_Fetkovich) {
-            aquifer.initFromRestart(aquiferSoln);
-        }
-    }
-
-    if (this->aquiferNumericalActive()) {
-        for (auto& aquifer : this->aquifers_numerical) {
-            aquifer.initFromRestart(aquiferSoln);
-        }
-    }
+    for (auto& aquifer : this->aquifers)
+        aquifer->initFromRestart(aquiferSoln);
 }
 
 template <typename TypeTag>
@@ -94,16 +64,8 @@ template <typename TypeTag>
 void
 BlackoilAquiferModel<TypeTag>::beginTimeStep()
 {
-    if (aquiferCarterTracyActive()) {
-        for (auto& aquifer : aquifers_CarterTracy) {
-            aquifer.beginTimeStep();
-        }
-    }
-    if (aquiferFetkovichActive()) {
-        for (auto& aquifer : aquifers_Fetkovich) {
-            aquifer.beginTimeStep();
-        }
-    }
+    for (auto& aquifer : aquifers)
+        aquifer->beginTimeStep();
 }
 
 template <typename TypeTag>
@@ -114,16 +76,8 @@ BlackoilAquiferModel<TypeTag>::addToSource(RateVector& rates,
                                            unsigned spaceIdx,
                                            unsigned timeIdx) const
 {
-    if (aquiferCarterTracyActive()) {
-        for (auto& aquifer : aquifers_CarterTracy) {
-            aquifer.addToSource(rates, context, spaceIdx, timeIdx);
-        }
-    }
-    if (aquiferFetkovichActive()) {
-        for (auto& aquifer : aquifers_Fetkovich) {
-            aquifer.addToSource(rates, context, spaceIdx, timeIdx);
-        }
-    }
+    for (auto& aquifer : aquifers)
+        aquifer->addToSource(rates, context, spaceIdx, timeIdx);
 }
 
 template <typename TypeTag>
@@ -132,16 +86,8 @@ BlackoilAquiferModel<TypeTag>::addToSource(RateVector& rates,
                                            unsigned globalSpaceIdx,
                                            unsigned timeIdx) const
 {
-    if (aquiferCarterTracyActive()) {
-        for (auto& aquifer : aquifers_CarterTracy) {
-            aquifer.addToSource(rates, globalSpaceIdx, timeIdx);
-        }
-    }
-    if (aquiferFetkovichActive()) {
-        for (auto& aquifer : aquifers_Fetkovich) {
-            aquifer.addToSource(rates, globalSpaceIdx, timeIdx);
-        }
-    }
+    for (auto& aquifer : aquifers)
+        aquifer->addToSource(rates, globalSpaceIdx, timeIdx);
 }
 
 template <typename TypeTag>
@@ -153,21 +99,12 @@ template <typename TypeTag>
 void
 BlackoilAquiferModel<TypeTag>::endTimeStep()
 {
-    if (aquiferCarterTracyActive()) {
-        for (auto& aquifer : aquifers_CarterTracy) {
-            aquifer.endTimeStep();
-        }
-    }
-    if (aquiferFetkovichActive()) {
-        for (auto& aquifer : aquifers_Fetkovich) {
-            aquifer.endTimeStep();
-        }
-    }
-    if (aquiferNumericalActive()) {
-        for (auto& aquifer : this->aquifers_numerical) {
-            aquifer.endTimeStep();
+    for (auto& aquifer : aquifers) {
+        aquifer->endTimeStep();
+        using NumAq = AquiferNumerical<TypeTag>;
+        NumAq* num = dynamic_cast<NumAq*>(aquifer.get());
+        if (num)
             this->simulator_.vanguard().grid().comm().barrier();
-        }
     }
 }
 
@@ -207,13 +144,15 @@ BlackoilAquiferModel<TypeTag>::init()
 
     const auto& connections = aquifer.connections();
     for (const auto& aq : aquifer.ct()) {
-        aquifers_CarterTracy.emplace_back(connections[aq.aquiferID],
-                                          this->simulator_, aq);
+        auto aqf = std::make_unique<AquiferCarterTracy<TypeTag>>(connections[aq.aquiferID],
+                                                                 this->simulator_, aq);
+        aquifers.push_back(std::move(aqf));
     }
 
     for (const auto& aq : aquifer.fetp()) {
-        aquifers_Fetkovich.emplace_back(connections[aq.aquiferID],
-                                        this->simulator_, aq);
+        auto aqf = std::make_unique<AquiferFetkovich<TypeTag>>(connections[aq.aquiferID],
+                                                               this->simulator_, aq);
+        aquifers.push_back(std::move(aqf));
     }
 
     if (aquifer.hasNumericalAquifer()) {
@@ -223,55 +162,23 @@ BlackoilAquiferModel<TypeTag>::init()
         const std::unordered_map<int, int> cartesian_to_compressed = cartesianToCompressed(number_of_cells,
                                                                                            global_cell);
         for ([[maybe_unused]]const auto& [id, aqu] : num_aquifers) {
-            this->aquifers_numerical.emplace_back(aqu,
-                  cartesian_to_compressed, this->simulator_, global_cell);
+            auto aqf = std::make_unique<AquiferNumerical<TypeTag>>(aqu,
+                                                                   cartesian_to_compressed,
+                                                                   this->simulator_,
+                                                                   global_cell);
+            aquifers.push_back(std::move(aqf));
         }
     }
-}
-
-template <typename TypeTag>
-bool
-BlackoilAquiferModel<TypeTag>::aquiferCarterTracyActive() const
-{
-    return !aquifers_CarterTracy.empty();
-}
-
-template <typename TypeTag>
-bool
-BlackoilAquiferModel<TypeTag>::aquiferFetkovichActive() const
-{
-    return !aquifers_Fetkovich.empty();
-}
-
-template<typename TypeTag>
-bool
-BlackoilAquiferModel<TypeTag>::aquiferNumericalActive() const
-{
-    return !(this->aquifers_numerical.empty());
 }
 
 template<typename TypeTag>
 data::Aquifers BlackoilAquiferModel<TypeTag>::aquiferData() const
 {
     data::Aquifers data;
-    if (this->aquiferCarterTracyActive()) {
-        for (const auto& aqu : this->aquifers_CarterTracy) {
-            data.insert_or_assign(aqu.aquiferID(), aqu.aquiferData());
-        }
-    }
-
-    if (this->aquiferFetkovichActive()) {
-        for (const auto& aqu : this->aquifers_Fetkovich) {
-            data.insert_or_assign(aqu.aquiferID(), aqu.aquiferData());
-        }
-    }
-
-    if (this->aquiferNumericalActive()) {
-        for (const auto& aqu : this->aquifers_numerical) {
-            data.insert_or_assign(aqu.aquiferID(), aqu.aquiferData());
-        }
-    }
+    for (const auto& aqu : this->aquifers)
+        data.insert_or_assign(aqu->aquiferID(), aqu->aquiferData());
 
     return data;
 }
+
 } // namespace Opm

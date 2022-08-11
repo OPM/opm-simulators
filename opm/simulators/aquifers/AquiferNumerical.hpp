@@ -25,6 +25,7 @@
 
 #include <opm/input/eclipse/EclipseState/Aquifer/NumericalAquifer/SingleNumericalAquifer.hpp>
 
+#include <opm/simulators/aquifers/AquiferInterface.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
 #include <algorithm>
@@ -37,33 +38,33 @@
 namespace Opm
 {
 template <typename TypeTag>
-class AquiferNumerical
+class AquiferNumerical : public AquiferInterface<TypeTag>
 {
 public:
-    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
-    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
-    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using BlackoilIndices = GetPropType<TypeTag, Properties::Indices>;
-
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using ExtensiveQuantities = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
     using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
 
     enum { dimWorld = GridView::dimensionworld };
     enum { numPhases = FluidSystem::numPhases };
-    static const int numEq = BlackoilIndices::numEq;
+    static constexpr int numEq = BlackoilIndices::numEq;
 
     using Eval =  DenseAd::Evaluation<double, numEq>;
     using Toolbox = MathToolbox<Eval>;
 
-    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
-    using ExtensiveQuantities = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
+    using typename AquiferInterface<TypeTag>::RateVector;
+
     // Constructor
     AquiferNumerical(const SingleNumericalAquifer& aquifer,
                      const std::unordered_map<int, int>& cartesian_to_compressed,
                      const Simulator& ebos_simulator,
                      const int* global_cell)
-        : id_             (aquifer.id())
-        , ebos_simulator_ (ebos_simulator)
+        : AquiferInterface<TypeTag>(aquifer.id(), ebos_simulator)
         , flux_rate_      (0.0)
         , cumulative_flux_(0.0)
         , global_cell_    (global_cell)
@@ -88,7 +89,7 @@ public:
         }
     }
 
-    void initFromRestart(const data::Aquifers& aquiferSoln)
+    void initFromRestart(const data::Aquifers& aquiferSoln) override
     {
         auto xaqPos = aquiferSoln.find(this->aquiferID());
         if (xaqPos == aquiferSoln.end())
@@ -107,14 +108,17 @@ public:
         this->solution_set_from_restart_ = true;
     }
 
-    void endTimeStep()
+    void beginTimeStep() override {}
+    void addToSource(RateVector&, const unsigned, const unsigned) override {}
+
+    void endTimeStep() override
     {
         this->pressure_ = this->calculateAquiferPressure();
         this->flux_rate_ = this->calculateAquiferFluxRate();
         this->cumulative_flux_ += this->flux_rate_ * this->ebos_simulator_.timeStepSize();
     }
 
-    data::AquiferData aquiferData() const
+    data::AquiferData aquiferData() const override
     {
         data::AquiferData data;
         data.aquiferID = this->aquiferID();
@@ -128,7 +132,7 @@ public:
         return data;
     }
 
-    void initialSolutionApplied()
+    void initialSolutionApplied() override
     {
         if (this->solution_set_from_restart_) {
             return;
@@ -139,38 +143,7 @@ public:
         this->cumulative_flux_ = 0.;
     }
 
-    int aquiferID() const
-    {
-        return static_cast<int>(this->id_);
-    }
-
 private:
-    const std::size_t id_;
-    const Simulator& ebos_simulator_;
-    double flux_rate_; // aquifer influx rate
-    double cumulative_flux_; // cumulative aquifer influx
-    const int* global_cell_; // mapping to global index
-    std::vector<double> init_pressure_{};
-    double pressure_; // aquifer pressure
-    bool solution_set_from_restart_ {false};
-    bool connects_to_reservoir_ {false};
-
-    // TODO: maybe unordered_map can also do the work to save memory?
-    std::vector<int> cell_to_aquifer_cell_idx_;
-
-    inline bool co2store_() const
-    {
-        return ebos_simulator_.vanguard().eclState().runspec().co2Storage();
-    }
-
-    inline int phaseIdx_() const
-    {
-        if(co2store_())
-            return FluidSystem::oilPhaseIdx;
-
-        return FluidSystem::waterPhaseIdx;
-    }
-
     void checkConnectsToReservoir()
     {
         ElementContext elem_ctx(this->ebos_simulator_);
@@ -325,6 +298,19 @@ private:
 
         return aquifer_flux;
     }
+
+    double flux_rate_; // aquifer influx rate
+    double cumulative_flux_; // cumulative aquifer influx
+    const int* global_cell_; // mapping to global index
+    std::vector<double> init_pressure_{};
+    double pressure_; // aquifer pressure
+    bool solution_set_from_restart_ {false};
+    bool connects_to_reservoir_ {false};
+
+    // TODO: maybe unordered_map can also do the work to save memory?
+    std::vector<int> cell_to_aquifer_cell_idx_;
 };
+
 } // namespace Opm
+
 #endif

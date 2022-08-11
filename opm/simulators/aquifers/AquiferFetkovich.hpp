@@ -21,7 +21,7 @@ along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef OPM_AQUIFETP_HEADER_INCLUDED
 #define OPM_AQUIFETP_HEADER_INCLUDED
 
-#include <opm/simulators/aquifers/AquiferInterface.hpp>
+#include <opm/simulators/aquifers/AquiferAnalytical.hpp>
 
 #include <opm/output/data/Aquifer.hpp>
 
@@ -33,11 +33,11 @@ namespace Opm
 {
 
 template <typename TypeTag>
-class AquiferFetkovich : public AquiferInterface<TypeTag>
+class AquiferFetkovich : public AquiferAnalytical<TypeTag>
 {
 
 public:
-    typedef AquiferInterface<TypeTag> Base;
+    using Base = AquiferAnalytical<TypeTag>;
 
     using typename Base::BlackoilIndices;
     using typename Base::ElementContext;
@@ -171,5 +171,7 @@ protected:
         return this->aqufetp_data_.datum_depth;
     }
 }; // Class AquiferFetkovich
+
 } // namespace Opm
+
 #endif
