@@ -102,7 +102,7 @@
 #include <vector>
 #include <string>
 #include <algorithm>
-#include<functional>
+#include <functional>
 
 namespace Opm {
 template <class TypeTag>
@@ -654,7 +654,7 @@ class EclProblem : public GetPropType<TypeTag, Properties::BaseProblem>
     using FoamModule = BlackOilFoamModule<TypeTag>;
     using BrineModule = BlackOilBrineModule<TypeTag>;
     using ExtboModule = BlackOilExtboModule<TypeTag>;
-    using MICPModule= BlackOilMICPModule<TypeTag>;
+    using MICPModule = BlackOilMICPModule<TypeTag>;
 
     using InitialFluidState = typename EclEquilInitializer<TypeTag>::ScalarFluidState;
 
