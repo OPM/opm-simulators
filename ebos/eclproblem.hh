@@ -1840,7 +1840,13 @@ public:
 
         // if requested, compensate systematic mass loss for cells which were "well
         // behaved" in the last time step
-        if (enableDriftCompensation_) {
+        // Note that we don't allow for drift compensation if there is
+        // no source terms i.e. no wells and no aquifers.
+        const auto& schedule = this->simulator().vanguard().schedule();
+        int episodeIdx = this->simulator().episodeIndex();
+        const auto& aquifer = this->simulator().vanguard().eclState().aquifer();
+        bool compensateDrift =  schedule.numWells(episodeIdx) > 0 && aquifer.active();
+        if (enableDriftCompensation_ && compensateDrift) {
             const auto& simulator = this->simulator();
             const auto& model = this->model();
 
