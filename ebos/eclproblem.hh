@@ -711,11 +711,6 @@ public:
 
     }
 
-    /*!
-     * \copydoc FvBaseProblem::prepareOutputDir
-     */
-    std::string prepareOutputDir() const
-    { return this->simulator().vanguard().eclState().getIOConfig().getOutputDir(); }
 
     /*!
      * \copydoc FvBaseProblem::handlePositionalParameter
