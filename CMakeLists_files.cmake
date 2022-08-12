@@ -24,6 +24,7 @@
 # find opm -name '*.c*' -printf '\t%p\n' | sort
 list (APPEND MAIN_SOURCE_FILES
   ebos/collecttoiorank.cc
+  ebos/eclactionhandler.cc
   ebos/eclgenericcpgridvanguard.cc
   ebos/eclgenericoutputblackoilmodule.cc
   ebos/eclgenericproblem.cc
