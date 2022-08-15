@@ -675,6 +675,9 @@ public:
     using EclGenericProblem<GridView,FluidSystem,Scalar>::shouldWriteRestartFile;
     using EclGenericProblem<GridView,FluidSystem,Scalar>::maxTimeIntegrationFailures;
     using EclGenericProblem<GridView,FluidSystem,Scalar>::minTimeStepSize;
+    using EclGenericProblem<GridView,FluidSystem,Scalar>::rockCompressibility;
+    using EclGenericProblem<GridView,FluidSystem,Scalar>::rockReferencePressure;
+    using EclGenericProblem<GridView,FluidSystem,Scalar>::porosity;
 
     /*!
      * \copydoc FvBaseProblem::registerParameters
@@ -1546,19 +1549,6 @@ public:
     }
 
     /*!
-     * \brief Direct indexed access to the porosity.
-     *
-     * For the EclProblem, this method is identical to referencePorosity(). The intensive
-     * quantities object may apply various multipliers (e.g. ones which model rock
-     * compressibility and water induced rock compaction) to it which depend on the
-     * current physical conditions.
-     */
-    Scalar porosity(unsigned globalSpaceIdx, unsigned timeIdx) const
-    {
-        return this->referencePorosity_[timeIdx][globalSpaceIdx];
-    }
-
-    /*!
      * \brief Returns the depth of an degree of freedom [m]
      *
      * For ECL problems this is defined as the average of the depth of an element and is
@@ -1588,35 +1578,8 @@ public:
     template <class Context>
     Scalar rockCompressibility(const Context& context, unsigned spaceIdx, unsigned timeIdx) const
     {
-        if (this->rockParams_.empty())
-            return 0.0;
-
-        unsigned tableIdx = 0;
-        if (!this->rockTableIdx_.empty()) {
-            unsigned globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
-            tableIdx = this->rockTableIdx_[globalSpaceIdx];
-        }
-
-        return this->rockParams_[tableIdx].compressibility;
-    }
-
-    /*!
-     * Direct access to rock compressibility.
-     *
-     * While the above overload could be implemented in terms of this method,
-     * that would require always looking up the global space index, which
-     * is not always needed.
-     */
-    Scalar rockCompressibility(unsigned globalSpaceIdx) const
-    {
-        if (this->rockParams_.empty())
-            return 0.0;
-
-        unsigned tableIdx = 0;
-        if (!this->rockTableIdx_.empty()) {
-            tableIdx = this->rockTableIdx_[globalSpaceIdx];
-        }
-        return this->rockParams_[tableIdx].compressibility;
+        unsigned globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+        return this->rockCompressibility(globalSpaceIdx);
     }
 
     /*!
@@ -1625,35 +1588,8 @@ public:
     template <class Context>
     Scalar rockReferencePressure(const Context& context, unsigned spaceIdx, unsigned timeIdx) const
     {
-        if (this->rockParams_.empty())
-            return 1e5;
-
-        unsigned tableIdx = 0;
-        if (!this->rockTableIdx_.empty()) {
-            unsigned globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
-            tableIdx = this->rockTableIdx_[globalSpaceIdx];
-        }
-
-        return this->rockParams_[tableIdx].referencePressure;
-    }
-
-    /*!
-     * Direct access to rock reference pressure.
-     *
-     * While the above overload could be implemented in terms of this method,
-     * that would require always looking up the global space index, which
-     * is not always needed.
-     */
-    Scalar rockReferencePressure(unsigned globalSpaceIdx) const
-    {
-        if (this->rockParams_.empty())
-            return 1e5;
-
-        unsigned tableIdx = 0;
-        if (!this->rockTableIdx_.empty()) {
-            tableIdx = this->rockTableIdx_[globalSpaceIdx];
-        }
-        return this->rockParams_[tableIdx].referencePressure;
+        unsigned globalSpaceIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+        return this->rockReferencePressure(globalSpaceIdx);
     }
 
     /*!

@@ -243,6 +243,41 @@ readRockCompactionParameters_()
 }
 
 template<class GridView, class FluidSystem, class Scalar>
+Scalar EclGenericProblem<GridView,FluidSystem,Scalar>::
+rockCompressibility(unsigned globalSpaceIdx) const
+{
+    if (this->rockParams_.empty())
+        return 0.0;
+
+    unsigned tableIdx = 0;
+    if (!this->rockTableIdx_.empty()) {
+        tableIdx = this->rockTableIdx_[globalSpaceIdx];
+    }
+    return this->rockParams_[tableIdx].compressibility;
+}
+
+template<class GridView, class FluidSystem, class Scalar>
+Scalar EclGenericProblem<GridView,FluidSystem,Scalar>::
+rockReferencePressure(unsigned globalSpaceIdx) const
+{
+    if (this->rockParams_.empty())
+        return 1e5;
+
+    unsigned tableIdx = 0;
+    if (!this->rockTableIdx_.empty()) {
+        tableIdx = this->rockTableIdx_[globalSpaceIdx];
+    }
+    return this->rockParams_[tableIdx].referencePressure;
+}
+
+template<class GridView, class FluidSystem, class Scalar>
+Scalar EclGenericProblem<GridView,FluidSystem,Scalar>::
+porosity(unsigned globalSpaceIdx, unsigned timeIdx) const
+{
+    return this->referencePorosity_[timeIdx][globalSpaceIdx];
+}
+
+template<class GridView, class FluidSystem, class Scalar>
 template<class T>
 void EclGenericProblem<GridView,FluidSystem,Scalar>::
 updateNum(const std::string& name, std::vector<T>& numbers)
