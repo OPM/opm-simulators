@@ -204,6 +204,34 @@ public:
     Scalar maxPolymerAdsorption(unsigned elemIdx) const;
 
     /*!
+     * Direct access to rock compressibility.
+     *
+     * While the above overload could be implemented in terms of this method,
+     * that would require always looking up the global space index, which
+     * is not always needed.
+     */
+    Scalar rockCompressibility(unsigned globalSpaceIdx) const;
+
+    /*!
+     * Direct access to rock reference pressure.
+     *
+     * While the above overload could be implemented in terms of this method,
+     * that would require always looking up the global space index, which
+     * is not always needed.
+     */
+    Scalar rockReferencePressure(unsigned globalSpaceIdx) const;
+
+    /*!
+     * \brief Direct indexed access to the porosity.
+     *
+     * For the EclProblem, this method is identical to referencePorosity(). The intensive
+     * quantities object may apply various multipliers (e.g. ones which model rock
+     * compressibility and water induced rock compaction) to it which depend on the
+     * current physical conditions.
+     */
+    Scalar porosity(unsigned globalSpaceIdx, unsigned timeIdx) const;
+
+    /*!
      * \brief Returns the minimum allowable size of a time step.
      */
     Scalar minTimeStepSize() const
