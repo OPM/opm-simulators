@@ -39,6 +39,8 @@
 #include <iomanip>
 #include <sstream>
 
+#include <fmt/format.h>
+
 namespace Opm {
 
 EclActionHandler::EclActionHandler(EclipseState& ecl_state,
@@ -89,12 +91,14 @@ void EclActionHandler::applyActions(int reportStep,
         if (actionResult) {
             std::string wells_string;
             const auto& matching_wells = actionResult.wells();
-            if (!matching_wells.empty()) {
-                for (std::size_t iw = 0; iw < matching_wells.size() - 1; iw++)
-                    wells_string += matching_wells[iw] + ", ";
-                wells_string += matching_wells.back();
-            }
-            std::string msg = "The action: " + action->name() + " evaluated to true at " + ts + " wells: " + wells_string;
+            std::string wmsg;
+            if (!matching_wells.empty())
+                wmsg = fmt::format(" Well{}: {}",
+                                   matching_wells.size() != 1 ? "s" : "",
+                                   fmt::join(matching_wells, ", "));
+            const auto msg =
+                    fmt::format("The action {} evaluated to true at {}.{}",
+                                action->name(), ts, wmsg);
             OpmLog::info(msg);
 
             const auto& wellpi = this->fetchWellPI(reportStep, *action, matching_wells);
@@ -104,7 +108,9 @@ void EclActionHandler::applyActions(int reportStep,
             this->applySimulatorUpdate(reportStep, sim_update,  commit_wellstate, transUp);
             actionState_.add_run(*action, simTime, std::move(actionResult));
         } else {
-            std::string msg = "The action: " + action->name() + " evaluated to false at " + ts;
+            const auto msg =
+                    fmt::format("The action {} evaluated to false at {}.",
+                                action->name(), ts);
             OpmLog::info(msg);
         }
     }
