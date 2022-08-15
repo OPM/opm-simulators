@@ -1793,7 +1793,7 @@ using GridView = Dune::Fem::GridPart2GridViewImpl<
                                      Dune::Fem::AdaptiveLeafGridPart<
                                          Dune::CpGrid,
                                          Dune::PartitionIteratorType(4),
-                                         false>;
+                                         false>>;
 #else
 using GridView = Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>;
 #endif
