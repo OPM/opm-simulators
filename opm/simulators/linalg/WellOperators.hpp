@@ -24,7 +24,6 @@
 
 #include <dune/istl/operators.hh>
 
-
 namespace Opm
 {
 
