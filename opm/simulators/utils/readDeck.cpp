@@ -465,7 +465,11 @@ Opm::setupLogging(const int          mpi_rank_,
     if (mpi_rank_ == 0) {
         std::shared_ptr<Opm::StreamLog> streamLog = std::make_shared<Opm::StreamLog>(std::cout, Opm::Log::StdoutMessageTypes);
         Opm::OpmLog::addBackend(stdout_log_id, streamLog);
-
+        // Set a tag limit of 10 (no category limit). Will later in
+        // the run be replaced by calling setupMessageLimiter(), after
+        // the deck is read and the (possibly user-set) category
+        // limits are known.
+        streamLog->setMessageLimiter(std::make_shared<Opm::MessageLimiter>(10));
         bool use_color_coding = OpmLog::stdoutIsTerminal();
         streamLog->setMessageFormatter(std::make_shared<Opm::SimpleMessageFormatter>(use_color_coding));
     }
