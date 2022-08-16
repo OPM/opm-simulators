@@ -223,7 +223,7 @@ public:
         asImp_().solventPreSatFuncUpdate_(elemCtx, dofIdx, timeIdx);
 
         // now we compute all phase pressures
-        Evaluation pC[numPhases];
+        std::array<Evaluation, numPhases> pC;
         const auto& materialParams = problem.materialLawParams(globalSpaceIdx);
         MaterialLaw::capillaryPressures(pC, materialParams, fluidState_);
 

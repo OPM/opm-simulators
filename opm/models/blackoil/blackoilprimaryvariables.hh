@@ -502,7 +502,7 @@ public:
             if(Sw < -eps && So3 > 0.0 && Sg > 0.0  && FluidSystem::enableVaporizedWater()) {
                 Scalar po = (*this)[Indices::pressureSwitchIdx];
                 Scalar T = asImp_().temperature_();
-                Scalar pC[numPhases] = { 0.0 };
+                std::array<Scalar, numPhases> pC = { 0.0 };
                 const MaterialLawParams& matParams = problem.materialLawParams(globalDofIdx);
                 computeCapillaryPressures_(pC, So3, Sg + solventSaturation_(), /*Sw=*/ 0.0, matParams);
                 Scalar pg = po + (pC[gasPhaseIdx] - pC[oilPhaseIdx]);
@@ -518,7 +518,7 @@ public:
             if(Sw < -eps && So3 <-eps && Sg > 0.0 && FluidSystem::enableVaporizedWater() && FluidSystem::enableVaporizedOil()) {
                 Scalar po = (*this)[Indices::pressureSwitchIdx];
                 Scalar T = asImp_().temperature_();
-                Scalar pC[numPhases] = { 0.0 };
+                std::array<Scalar, numPhases> pC = { 0.0 };
                 const MaterialLawParams& matParams = problem.materialLawParams(globalDofIdx);
                 computeCapillaryPressures_(pC, /*So*/ 0.0, Sg + solventSaturation_(), /*Sw=*/ 0.0, matParams);
                 Scalar pg = po + (pC[gasPhaseIdx] - pC[oilPhaseIdx]);
@@ -584,7 +584,7 @@ public:
 
                 // we only have the oil pressure readily available, but we need the gas
                 // pressure, i.e. we must determine capillary pressure
-                Scalar pC[numPhases] = { 0.0 };
+                std::array<Scalar, numPhases> pC = { 0.0 };
                 const MaterialLawParams& matParams = problem.materialLawParams(globalDofIdx);
                 computeCapillaryPressures_(pC, /*So=*/0.0, Sg2 + solventSaturation_(), Sw, matParams);
                 Scalar pg = po + (pC[gasPhaseIdx] - pC[oilPhaseIdx]);
@@ -666,7 +666,7 @@ public:
                 Sg = (*this)[Indices::compositionSwitchIdx];
 
             Scalar So = 1.0 - Sg - solventSaturation_();
-            Scalar pC[numPhases] = { 0.0 };
+            std::array<Scalar, numPhases> pC = { 0.0 };
             const MaterialLawParams& matParams = problem.materialLawParams(globalDofIdx);
             computeCapillaryPressures_(pC, So, Sg + solventSaturation_(), /*Sw=*/ 0.0, matParams);
             Scalar pg = po + (pC[gasPhaseIdx] - pC[oilPhaseIdx]);
@@ -737,7 +737,7 @@ public:
                 // switch to phase equilibrium mode because the oil phase appears. here
                 // we also need the capillary pressures to calculate the oil phase
                 // pressure using the gas phase pressure
-                Scalar pC[numPhases] = { 0.0 };
+                std::array<Scalar, numPhases> pC = { 0.0 };
                 const MaterialLawParams& matParams = problem.materialLawParams(globalDofIdx);
                 computeCapillaryPressures_(pC,
                                            /*So=*/0.0,
@@ -767,7 +767,7 @@ public:
                 // switch to phase equilibrium mode because the hydrocarbon gas phase
                 // disappears. here we need the capillary pressures to calculate the oil
                 // phase pressure using the gas phase pressure
-                Scalar pC[numPhases] = { 0.0 };
+                std::array<Scalar, numPhases> pC = { 0.0 };
                 const MaterialLawParams& matParams = problem.materialLawParams(globalDofIdx);
                 computeCapillaryPressures_(pC,
                                            /*So=*/0.0,
@@ -817,7 +817,7 @@ public:
                 // switch to phase equilibrium mode because the oil phase appears. here
                 // we also need the capillary pressures to calculate the oil phase
                 // pressure using the gas phase pressure
-                Scalar pC[numPhases] = { 0.0 };
+                std::array<Scalar, numPhases> pC = { 0.0 };
                 const MaterialLawParams& matParams = problem.materialLawParams(globalDofIdx);
                 computeCapillaryPressures_(pC,
                                            /*So=*/0.0,

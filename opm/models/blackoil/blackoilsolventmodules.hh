@@ -924,7 +924,7 @@ public:
             const auto& problem = elemCtx.problem();
             const PrimaryVariables& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
             Evaluation pgMisc = 0.0;
-            Evaluation pC[numPhases];
+            std::array<Evaluation, numPhases> pC;
             const auto& materialParams = problem.materialLawParams(elemCtx, dofIdx, timeIdx);
             MaterialLaw::capillaryPressures(pC, materialParams, fs);
 
