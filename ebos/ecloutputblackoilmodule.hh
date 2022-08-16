@@ -804,7 +804,7 @@ public:
         if (!this->oilPressure_.empty()) {
             // this assumes that capillary pressures only depend on the phase saturations
             // and possibly on temperature. (this is always the case for ECL problems.)
-            Dune::FieldVector< Scalar, numPhases > pc(0);
+            std::array<Scalar, numPhases> pc = {0};
             const MaterialLawParams& matParams = simulator_.problem().materialLawParams(elemIdx);
             MaterialLaw::capillaryPressures(pc, matParams, fs);
             Valgrind::CheckDefined(this->oilPressure_[elemIdx]);
