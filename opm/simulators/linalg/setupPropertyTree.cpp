@@ -21,6 +21,10 @@
 
 #include <opm/simulators/linalg/setupPropertyTree.hpp>
 
+#include <opm/common/ErrorMacros.hpp>
+
+#include <opm/simulators/linalg/FlowLinearSolverParameters.hpp>
+
 #include <filesystem>
 #include <boost/version.hpp>
 

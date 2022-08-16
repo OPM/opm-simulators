@@ -26,8 +26,10 @@
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/simulators/linalg/ExtractParallelGridInformationToISTL.hpp>
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
+#include <opm/simulators/linalg/FlowLinearSolverParameters.hpp>
 #include <opm/simulators/linalg/MatrixBlock.hpp>
 #include <opm/simulators/linalg/ParallelIstlInformation.hpp>
+#include <opm/simulators/linalg/ParallelOverlappingILU0.hpp>
 #include <opm/simulators/linalg/WellOperators.hpp>
 #include <opm/simulators/linalg/WriteSystemMatrixHelper.hpp>
 #include <opm/simulators/linalg/findOverlapRowsAndColumns.hpp>

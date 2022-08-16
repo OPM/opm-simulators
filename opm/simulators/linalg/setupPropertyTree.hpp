@@ -20,13 +20,14 @@
 #ifndef OPM_SETUPPROPERTYTREE_HEADER_INCLUDED
 #define OPM_SETUPPROPERTYTREE_HEADER_INCLUDED
 
-#include <opm/simulators/linalg/FlowLinearSolverParameters.hpp>
 #include <opm/simulators/linalg/PropertyTree.hpp>
 
 #include <string>
 
 namespace Opm
 {
+
+class FlowLinearSolverParameters;
 
 PropertyTree setupPropertyTree(FlowLinearSolverParameters p,
                                bool LinearSolverMaxIterSet,
