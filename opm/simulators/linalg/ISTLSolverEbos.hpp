@@ -22,24 +22,37 @@
 #ifndef OPM_ISTLSOLVER_EBOS_HEADER_INCLUDED
 #define OPM_ISTLSOLVER_EBOS_HEADER_INCLUDED
 
+#include <dune/istl/owneroverlapcopy.hh>
+
+#include <ebos/eclbasevanguard.hh>
+
+#include <opm/common/ErrorMacros.hpp>
+
+#include <opm/models/discretization/common/fvbaseproperties.hh>
+#include <opm/models/common/multiphasebaseproperties.hh>
 #include <opm/models/utils/parametersystem.hh>
 #include <opm/models/utils/propertysystem.hh>
+#include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
 #include <opm/simulators/linalg/ExtractParallelGridInformationToISTL.hpp>
-#include <opm/simulators/linalg/FlexibleSolver.hpp>
 #include <opm/simulators/linalg/FlowLinearSolverParameters.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>
-#include <opm/simulators/linalg/ParallelIstlInformation.hpp>
-#include <opm/simulators/linalg/ParallelOverlappingILU0.hpp>
+#include <opm/simulators/linalg/istlsparsematrixadapter.hh>
+#include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
 #include <opm/simulators/linalg/WellOperators.hpp>
 #include <opm/simulators/linalg/WriteSystemMatrixHelper.hpp>
 #include <opm/simulators/linalg/findOverlapRowsAndColumns.hpp>
 #include <opm/simulators/linalg/getQuasiImpesWeights.hpp>
 #include <opm/simulators/linalg/setupPropertyTree.hpp>
 
-#if HAVE_CUDA || HAVE_OPENCL || HAVE_FPGA || HAVE_AMGCL
-#include <opm/simulators/linalg/bda/BdaBridge.hpp>
-#include <opm/simulators/linalg/bda/WellContributions.hpp>
-#endif
+#include <any>
+#include <cstddef>
+#include <functional>
+#include <memory>
+#include <set>
+#include <sstream>
+#include <string>
+#include <tuple>
+#include <vector>
 
 namespace Opm::Properties {
 
@@ -60,16 +73,120 @@ struct SparseMatrixAdapter<TypeTag, TTag::FlowIstlSolver>
 private:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
-    typedef MatrixBlock<Scalar, numEq, numEq> Block;
+    using Block = MatrixBlock<Scalar, numEq, numEq>;
 
 public:
-    typedef typename Linear::IstlSparseMatrixAdapter<Block> type;
+    using type = typename Linear::IstlSparseMatrixAdapter<Block>;
 };
 
 } // namespace Opm::Properties
 
 namespace Opm
 {
+
+#if HAVE_CUDA || HAVE_OPENCL || HAVE_FPGA || HAVE_AMGCL
+template<class Matrix, class Vector, int block_size> class BdaBridge;
+class WellContributions;
+#endif
+
+namespace detail
+{
+
+template<class Matrix, class Vector, class Comm>
+struct FlexibleSolverInfo
+{
+    using AbstractSolverType = Dune::InverseOperator<Vector, Vector>;
+    using AbstractOperatorType = Dune::AssembledLinearOperator<Matrix, Vector, Vector>;
+    using AbstractPreconditionerType = Dune::PreconditionerWithUpdate<Vector, Vector>;
+
+    void create(const Matrix& matrix,
+                bool parallel,
+                const PropertyTree& prm,
+                size_t pressureIndex,
+                std::function<Vector()> trueFunc,
+                Comm& comm);
+
+    std::unique_ptr<AbstractSolverType> solver_;
+    std::unique_ptr<AbstractOperatorType> op_;
+    std::unique_ptr<LinearOperatorExtra<Vector,Vector>> wellOperator_;
+    AbstractPreconditionerType* pre_ = nullptr;
+    size_t interiorCellNum_ = 0;
+};
+
+#if HAVE_CUDA || HAVE_OPENCL || HAVE_FPGA || HAVE_AMGCL
+template<class Matrix, class Vector>
+struct BdaSolverInfo
+{
+  using WellContribFunc = std::function<void(WellContributions&)>;
+  using Bridge = BdaBridge<Matrix,Vector,Matrix::block_type::rows>;
+
+  BdaSolverInfo(const std::string& accelerator_mode,
+                const std::string& fpga_bitstream,
+                const int linear_solver_verbosity,
+                const int maxit,
+                const double tolerance,
+                const int platformID,
+                const int deviceID,
+                const std::string& opencl_ilu_reorder,
+                const std::string& linsolver);
+
+  ~BdaSolverInfo();
+
+  template<class Grid>
+  void prepare(const Grid& grid,
+               const Dune::CartesianIndexMapper<Grid>& cartMapper,
+               const std::vector<Well>& wellsForConn,
+               const std::vector<int>& cellPartition,
+               const size_t nonzeroes,
+               const bool useWellConn);
+
+  bool apply(Vector& rhs,
+             const bool useWellConn,
+             WellContribFunc getContribs,
+             const int rank,
+             Matrix& matrix,
+             Vector& x,
+             Dune::InverseOperatorResult& result);
+
+  int numJacobiBlocks_ = 0;
+
+private:
+  /// Create sparsity pattern for block-Jacobi matrix based on partitioning of grid.
+  /// Do not initialize the values, that is done in copyMatToBlockJac()
+  template<class Grid>
+  void blockJacobiAdjacency(const Grid& grid,
+                            const std::vector<int>& cell_part,
+                            size_t nonzeroes);
+
+  void copyMatToBlockJac(const Matrix& mat, Matrix& blockJac);
+
+  std::unique_ptr<Bridge> bridge_;
+  std::string accelerator_mode_;
+  std::unique_ptr<Matrix> blockJacobiForGPUILU0_;
+  std::vector<std::set<int>> wellConnectionsGraph_;
+};
+#endif
+
+#ifdef HAVE_MPI
+/// Copy values in parallel.
+void copyParValues(std::any& parallelInformation, size_t size,
+                   Dune::OwnerOverlapCopyCommunication<int,int>& comm);
+#endif
+
+/// Zero out off-diagonal blocks on rows corresponding to overlap cells
+/// Diagonal blocks on ovelap rows are set to diag(1.0).
+template<class Matrix>
+void makeOverlapRowsInvalid(Matrix& matrix,
+                            const std::vector<int>& overlapRows);
+
+/// Create sparsity pattern for block-Jacobi matrix based on partitioning of grid.
+/// Do not initialize the values, that is done in copyMatToBlockJac()
+template<class Matrix, class Grid>
+std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
+                                             const std::vector<int>& cell_part,
+                                             size_t nonzeroes,
+                                             const std::vector<std::set<int>>& wellConnectionsGraph);
+}
 
     /// This class solves the fully implicit black-oil system by
     /// solving the reduced system (after eliminating well variables)
@@ -96,15 +213,10 @@ namespace Opm
         using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
         constexpr static std::size_t pressureIndex = GetPropType<TypeTag, Properties::Indices>::pressureSwitchIdx;
 
-#if HAVE_CUDA || HAVE_OPENCL || HAVE_FPGA || HAVE_AMGCL
-        static const unsigned int block_size = Matrix::block_type::rows;
-        std::unique_ptr<BdaBridge<Matrix, Vector, block_size>> bdaBridge;
-#endif
-
 #if HAVE_MPI
         using CommunicationType = Dune::OwnerOverlapCopyCommunication<int,int>;
 #else
-        using CommunicationType = Dune::CollectiveCommunication< int >;
+        using CommunicationType = Dune::CollectiveCommunication<int>;
 #endif
 
     public:
@@ -151,7 +263,15 @@ namespace Opm
                 const int linear_solver_verbosity = parameters_.linear_solver_verbosity_;
                 std::string fpga_bitstream = EWOMS_GET_PARAM(TypeTag, std::string, FpgaBitstream);
                 std::string linsolver = EWOMS_GET_PARAM(TypeTag, std::string, Linsolver);
-                bdaBridge.reset(new BdaBridge<Matrix, Vector, block_size>(accelerator_mode, fpga_bitstream, linear_solver_verbosity, maxit, tolerance, platformID, deviceID, opencl_ilu_reorder, linsolver));
+                bdaBridge = std::make_unique<detail::BdaSolverInfo<Matrix,Vector>>(accelerator_mode,
+                                                                                   fpga_bitstream,
+                                                                                   linear_solver_verbosity,
+                                                                                   maxit,
+                                                                                   tolerance,
+                                                                                   platformID,
+                                                                                   deviceID,
+                                                                                   opencl_ilu_reorder,
+                                                                                   linsolver);
             }
 #else
             if (EWOMS_GET_PARAM(TypeTag, std::string, AcceleratorMode) != "none") {
@@ -181,7 +301,7 @@ namespace Opm
                 OPM_THROW_NOLOG(std::runtime_error, msg);
             }
 
-            interiorCellNum_ = detail::numMatrixRowsToUseInSolver(simulator_.vanguard().grid(), true);
+            flexibleSolver_.interiorCellNum_ = detail::numMatrixRowsToUseInSolver(simulator_.vanguard().grid(), true);
 
             // Print parameters to PRT/DBG logs.
             if (on_io_rank) {
@@ -193,19 +313,17 @@ namespace Opm
         }
 
         // nothing to clean here
-        void eraseMatrix() {
+        void eraseMatrix()
+        {
         }
 
         void prepare(const SparseMatrixAdapter& M, Vector& b)
         {
             static bool firstcall = true;
 #if HAVE_MPI
-            if (firstcall && parallelInformation_.type() == typeid(ParallelISTLInformation)) {
-                // Parallel case.
-                const ParallelISTLInformation* parinfo = std::any_cast<ParallelISTLInformation>(&parallelInformation_);
-                assert(parinfo);
+            if (firstcall) {
                 const size_t size = M.istlMatrix().N();
-                parinfo->copyValuesTo(comm_->indexSet(), comm_->remoteIndices(), size, 1);
+                detail::copyParValues(parallelInformation_, size, *comm_);
             }
 #endif
 
@@ -216,22 +334,16 @@ namespace Opm
                 // Outch! We need to be able to scale the linear system! Hence const_cast
                 matrix_ = const_cast<Matrix*>(&M.istlMatrix());
 
+                useWellConn_ = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
                 // setup sparsity pattern for jacobi matrix for preconditioner (only used for openclSolver)
 #if HAVE_OPENCL
-                this->numJacobiBlocks_ = EWOMS_GET_PARAM(TypeTag, int, NumJacobiBlocks);
-#else
-                this->numJacobiBlocks_ = 0;
+                bdaBridge->numJacobiBlocks_ = EWOMS_GET_PARAM(TypeTag, int, NumJacobiBlocks);
+                bdaBridge->prepare(simulator_.vanguard().grid(),
+                                   simulator_.vanguard().cartesianIndexMapper(),
+                                   simulator_.vanguard().schedule().getWellsatEnd(),
+                                   simulator_.vanguard().cellPartition(),
+                                   getMatrix().nonzeroes(), useWellConn_);
 #endif
-
-                useWellConn_ = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
-                if (numJacobiBlocks_ > 1) {
-                    const auto wellsForConn = simulator_.vanguard().schedule().getWellsatEnd();
-                    const auto& cartMapper = simulator_.vanguard().cartesianIndexMapper();
-                    detail::setWellConnections(simulator_.vanguard().grid(), cartMapper, wellsForConn, useWellConn_,
-                                               wellConnectionsGraph_, numJacobiBlocks_);
-                    std::cout << "Create block-Jacobi pattern" << std::endl;
-                    blockJacobiAdjacency();
-                }
             } else {
                 // Pointers should not change
                 if ( &(M.istlMatrix()) != matrix_ ) {
@@ -242,26 +354,30 @@ namespace Opm
             rhs_ = &b;
 
             if (isParallel() && prm_.get<std::string>("preconditioner.type") != "ParOverILU0") {
-                makeOverlapRowsInvalid(getMatrix());
+                detail::makeOverlapRowsInvalid(getMatrix(), overlapRows_);
             }
             prepareFlexibleSolver();
             firstcall = false;
         }
 
 
-        void setResidual(Vector& /* b */) {
+        void setResidual(Vector& /* b */)
+        {
             // rhs_ = &b; // Must be handled in prepare() instead.
         }
 
-        void getResidual(Vector& b) const {
+        void getResidual(Vector& b) const
+        {
             b = *rhs_;
         }
 
-        void setMatrix(const SparseMatrixAdapter& /* M */) {
+        void setMatrix(const SparseMatrixAdapter& /* M */)
+        {
             // matrix_ = &M.istlMatrix(); // Must be handled in prepare() instead.
         }
 
-        bool solve(Vector& x) {
+        bool solve(Vector& x)
+        {
             calls_ += 1;
             // Write linear system if asked for.
             const int verbosity = prm_.get<int>("verbosity", 0);
@@ -275,54 +391,23 @@ namespace Opm
 
             // Solve system.
             Dune::InverseOperatorResult result;
-            bool accelerator_was_used = false;
 
             // Use GPU if: available, chosen by user, and successful.
             // Use FPGA if: support compiled, chosen by user, and successful.
 #if HAVE_CUDA || HAVE_OPENCL || HAVE_FPGA || HAVE_AMGCL
-            bool use_gpu = bdaBridge->getUseGpu();
-            bool use_fpga = bdaBridge->getUseFpga();
-            if (use_gpu || use_fpga) {
-                const std::string accelerator_mode = EWOMS_GET_PARAM(TypeTag, std::string, AcceleratorMode);
-                auto wellContribs = WellContributions::create(accelerator_mode, useWellConn_);
-                bdaBridge->initWellContributions(*wellContribs, x.N() * x[0].N());
-
-                // the WellContributions can only be applied separately with CUDA or OpenCL, not with an FPGA or amgcl
-#if HAVE_CUDA || HAVE_OPENCL
-                if (!useWellConn_) {
-                    simulator_.problem().wellModel().getWellContributions(*wellContribs);
-                }
+            std::function<void(WellContributions&)> getContribs =
+                [this](WellContributions& w)
+                {
+                    this->simulator_.problem().wellModel().getWellContributions(w);
+                };
+            if (!bdaBridge->apply(*rhs_, useWellConn_, getContribs,
+                                  simulator_.gridView().comm().rank(),
+                                  const_cast<Matrix&>(this->getMatrix()),
+                                  x, result))
 #endif
-
-                if (numJacobiBlocks_ > 1) {
-                    copyMatToBlockJac(getMatrix(), *blockJacobiForGPUILU0_);
-                // Const_cast needed since the CUDA stuff overwrites values for better matrix condition..
-                    bdaBridge->solve_system(const_cast<Matrix*>(&getMatrix()), &*blockJacobiForGPUILU0_,
-                                            numJacobiBlocks_, *rhs_, *wellContribs, result);
-                }
-                else
-                    bdaBridge->solve_system(const_cast<Matrix*>(&getMatrix()), const_cast<Matrix*>(&getMatrix()),
-                                            numJacobiBlocks_, *rhs_, *wellContribs, result);
-                if (result.converged) {
-                    // get result vector x from non-Dune backend, iff solve was successful
-                    bdaBridge->get_result(x);
-                    accelerator_was_used = true;
-                } else {
-                    // warn about CPU fallback
-                    // BdaBridge might have disabled its BdaSolver for this simulation due to some error
-                    // in that case the BdaBridge is disabled and flexibleSolver is always used
-                    // or maybe the BdaSolver did not converge in time, then it will be used next linear solve
-                    if (simulator_.gridView().comm().rank() == 0) {
-                        OpmLog::warning(bdaBridge->getAccleratorName() + " did not converge, now trying Dune to solve current linear system...");
-                    }
-                }
-            }
-#endif
-
-            // Otherwise, use flexible istl solver.
-            if (!accelerator_was_used) {
-                assert(flexibleSolver_);
-                flexibleSolver_->apply(x, *rhs_, result);
+            {
+                assert(flexibleSolver_.solver_);
+                flexibleSolver_.solver_->apply(x, *rhs_, result);
             }
 
             // Check convergence, iterations etc.
@@ -346,10 +431,7 @@ namespace Opm
 
     protected:
 #if HAVE_MPI
-        typedef Dune::OwnerOverlapCopyCommunication<int, int> Comm;
-        // 3x3 matrix block inversion was unstable from at least 2.3 until and
-        // including 2.5.0
-        typedef ParallelOverlappingILU0<Matrix,Vector,Vector,Comm> ParPreconditioner;
+        using Comm = Dune::OwnerOverlapCopyCommunication<int, int>;
 #endif
 
         void checkConvergence( const Dune::InverseOperatorResult& result ) const
@@ -377,54 +459,28 @@ namespace Opm
         void prepareFlexibleSolver()
         {
 
-            std::function<Vector()> weightsCalculator = getWeightsCalculator();
-
             if (shouldCreateSolver()) {
-                if (isParallel()) {
-#if HAVE_MPI
-                    if (useWellConn_) {
-                        using ParOperatorType = Dune::OverlappingSchwarzOperator<Matrix, Vector, Vector, Comm>;
-                        auto op = std::make_unique<ParOperatorType>(getMatrix(), *comm_);
-                        using FlexibleSolverType = Dune::FlexibleSolver<ParOperatorType>;
-                        auto sol = std::make_unique<FlexibleSolverType>(*op, *comm_, prm_, weightsCalculator, pressureIndex);
-                        preconditionerForFlexibleSolver_ = &(sol->preconditioner());
-                        linearOperatorForFlexibleSolver_ = std::move(op);
-                        flexibleSolver_ = std::move(sol);
-                    } else {
-                        using ParOperatorType = WellModelGhostLastMatrixAdapter<Matrix, Vector, Vector, true>;
-                        wellOperator_ = std::make_unique<WellModelOperator>(simulator_.problem().wellModel());
-                        auto op = std::make_unique<ParOperatorType>(getMatrix(), *wellOperator_, interiorCellNum_);
-                        using FlexibleSolverType = Dune::FlexibleSolver<ParOperatorType>;
-                        auto sol = std::make_unique<FlexibleSolverType>(*op, *comm_, prm_, weightsCalculator, pressureIndex);
-                        preconditionerForFlexibleSolver_ = &(sol->preconditioner());
-                        linearOperatorForFlexibleSolver_ = std::move(op);
-                        flexibleSolver_ = std::move(sol);
-                    }
-#endif
-                } else {
-                    if (useWellConn_) {
-                        using SeqOperatorType = Dune::MatrixAdapter<Matrix, Vector, Vector>;
-                        auto op = std::make_unique<SeqOperatorType>(getMatrix());
-                        using FlexibleSolverType = Dune::FlexibleSolver<SeqOperatorType>;
-                        auto sol = std::make_unique<FlexibleSolverType>(*op, prm_, weightsCalculator, pressureIndex);
-                        preconditionerForFlexibleSolver_ = &(sol->preconditioner());
-                        linearOperatorForFlexibleSolver_ = std::move(op);
-                        flexibleSolver_ = std::move(sol);
-                    } else {
-                        using SeqOperatorType = WellModelMatrixAdapter<Matrix, Vector, Vector, false>;
-                        wellOperator_ = std::make_unique<WellModelOperator>(simulator_.problem().wellModel());
-                        auto op = std::make_unique<SeqOperatorType>(getMatrix(), *wellOperator_);
-                        using FlexibleSolverType = Dune::FlexibleSolver<SeqOperatorType>;
-                        auto sol = std::make_unique<FlexibleSolverType>(*op, prm_, weightsCalculator, pressureIndex);
-                        preconditionerForFlexibleSolver_ = &(sol->preconditioner());
-                        linearOperatorForFlexibleSolver_ = std::move(op);
-                        flexibleSolver_ = std::move(sol);
-                    }
+                std::function<Vector()> trueFunc =
+                    [this]
+                    {
+                        return this->getTrueImpesWeights(pressureIndex);
+                    };
+
+                if (!useWellConn_) {
+                    auto wellOp = std::make_unique<WellModelOperator>(simulator_.problem().wellModel());
+                    flexibleSolver_.wellOperator_ = std::move(wellOp);
                 }
+
+                flexibleSolver_.create(getMatrix(),
+                                       isParallel(),
+                                       prm_,
+                                       pressureIndex,
+                                       trueFunc,
+                                       *comm_);
             }
             else
             {
-                preconditionerForFlexibleSolver_->update();
+                flexibleSolver_.pre_->update();
             }
         }
 
@@ -435,7 +491,7 @@ namespace Opm
         {
             // Decide if we should recreate the solver or just do
             // a minimal preconditioner update.
-            if (!flexibleSolver_) {
+            if (!flexibleSolver_.solver_) {
                 return true;
             }
             if (this->parameters_.cpr_reuse_setup_ == 0) {
@@ -476,41 +532,6 @@ namespace Opm
         }
 
 
-        /// Return an appropriate weight function if a cpr preconditioner is asked for.
-        std::function<Vector()> getWeightsCalculator() const
-        {
-            std::function<Vector()> weightsCalculator;
-
-            using namespace std::string_literals;
-
-            auto preconditionerType = prm_.get("preconditioner.type"s, "cpr"s);
-            if (preconditionerType == "cpr" || preconditionerType == "cprt"
-                || preconditionerType == "cprw" || preconditionerType == "cprwt") {
-                const bool transpose = preconditionerType == "cprt" || preconditionerType == "cprwt";
-                const auto weightsType = prm_.get("preconditioner.weight_type"s, "quasiimpes"s);
-                if (weightsType == "quasiimpes") {
-                    // weights will be created as default in the solver
-                    // assignment p = pressureIndex prevent compiler warning about
-                    // capturing variable with non-automatic storage duration
-                    weightsCalculator = [this, transpose, p = pressureIndex]() {
-                        return Amg::getQuasiImpesWeights<Matrix, Vector>(this->getMatrix(), p, transpose);
-                    };
-                } else if (weightsType == "trueimpes") {
-                    // assignment p = pressureIndex prevent compiler warning about
-                    // capturing variable with non-automatic storage duration
-                    weightsCalculator = [this, p = pressureIndex]() {
-                        return this->getTrueImpesWeights(p);
-                    };
-                } else {
-                    OPM_THROW(std::invalid_argument,
-                              "Weights type " << weightsType << "not implemented for cpr."
-                              << " Please use quasiimpes or trueimpes.");
-                }
-            }
-            return weightsCalculator;
-        }
-
-
         // Weights to make approximate pressure equations.
         // Calculated from the storage terms (only) of the
         // conservation equations, ignoring all other terms.
@@ -518,96 +539,11 @@ namespace Opm
         {
             Vector weights(rhs_->size());
             ElementContext elemCtx(simulator_);
-            Amg::getTrueImpesWeights(pressureVarIndex, weights, simulator_.vanguard().gridView(),
+            Amg::getTrueImpesWeights(pressureVarIndex, weights,
+                                     simulator_.vanguard().gridView(),
                                      elemCtx, simulator_.model(),
                                      ThreadManager::threadId());
             return weights;
-        }
-
-
-        /// Zero out off-diagonal blocks on rows corresponding to overlap cells
-        /// Diagonal blocks on ovelap rows are set to diag(1.0).
-        void makeOverlapRowsInvalid(Matrix& matrix) const
-        {
-            //value to set on diagonal
-            const int numEq = Matrix::block_type::rows;
-            typename Matrix::block_type diag_block(0.0);
-            for (int eq = 0; eq < numEq; ++eq)
-                diag_block[eq][eq] = 1.0;
-
-            //loop over precalculated overlap rows and columns
-            for (auto row = overlapRows_.begin(); row != overlapRows_.end(); row++ )
-                {
-                    int lcell = *row;
-                    // Zero out row.
-                    matrix[lcell] = 0.0;
-
-                    //diagonal block set to diag(1.0).
-                    matrix[lcell][lcell] = diag_block;
-                }
-        }
-
-        /// Create sparsity pattern for block-Jacobi matrix based on partitioning of grid.
-        /// Do not initialize the values, that is done in copyMatToBlockJac()
-        void blockJacobiAdjacency()
-        {
-            const auto& grid = simulator_.vanguard().grid();
-            std::vector<int> cell_part = simulator_.vanguard().cellPartition();
-
-            typedef typename Matrix::size_type size_type;
-            typedef typename Matrix::CreateIterator Iter;
-            size_type numCells = grid.size( 0 );
-            blockJacobiForGPUILU0_.reset(new Matrix(numCells, numCells, getMatrix().nonzeroes(), Matrix::row_wise));
-
-            const auto& lid = grid.localIdSet();
-            const auto& gridView = grid.leafGridView();
-            auto elemIt = gridView.template begin<0>(); // should never overrun, since blockJacobiForGPUILU0_ is initialized with numCells rows
-
-            //Loop over cells
-            for (Iter row = blockJacobiForGPUILU0_->createbegin(); row != blockJacobiForGPUILU0_->createend(); ++elemIt, ++row)
-            {
-                const auto& elem = *elemIt;
-                size_type idx = lid.id(elem);
-                row.insert(idx);
-
-                // Add well non-zero connections
-                for (auto wc = wellConnectionsGraph_[idx].begin(); wc!=wellConnectionsGraph_[idx].end(); ++wc) {
-                    row.insert(*wc);
-                }
-
-                int locPart = cell_part[idx];
-
-                //Add neighbor if it is on the same part
-                auto isend = gridView.iend(elem);
-                for (auto is = gridView.ibegin(elem); is!=isend; ++is)
-                {
-                    //check if face has neighbor
-                    if (is->neighbor())
-                    {
-                        size_type nid = lid.id(is->outside());
-                        int nabPart = cell_part[nid];
-                        if (locPart == nabPart) {
-                            row.insert(nid);
-                        }
-                    }
-                }
-            }
-        }
-
-        void copyMatToBlockJac(const Matrix& mat, Matrix& blockJac)
-        {
-            auto rbegin = blockJac.begin();
-            auto rend = blockJac.end();
-            auto outerRow = mat.begin();
-            for (auto row = rbegin; row != rend; ++row, ++outerRow) {
-                auto outerCol = (*outerRow).begin();
-                for (auto col = (*row).begin(); col != (*row).end(); ++col) {
-                    // outerRow is guaranteed to have all column entries that row has!
-                    while(outerCol.index() < col.index()) ++outerCol;
-                    assert(outerCol.index() == col.index());
-                    *col = *outerCol; // copy nonzero block
-                }
-            }
         }
 
         Matrix& getMatrix()
@@ -630,23 +566,18 @@ namespace Opm
         Matrix* matrix_;
         Vector *rhs_;
 
-        std::unique_ptr<Matrix> blockJacobiForGPUILU0_;
+#if HAVE_CUDA || HAVE_OPENCL || HAVE_FPGA || HAVE_AMGCL
+        std::unique_ptr<detail::BdaSolverInfo<Matrix, Vector>> bdaBridge;
+#endif
 
-        std::unique_ptr<AbstractSolverType> flexibleSolver_;
-        std::unique_ptr<AbstractOperatorType> linearOperatorForFlexibleSolver_;
-        AbstractPreconditionerType* preconditionerForFlexibleSolver_;
-        std::unique_ptr<WellModelAsLinearOperator<WellModel, Vector, Vector>> wellOperator_;
+        detail::FlexibleSolverInfo<Matrix,Vector,CommunicationType> flexibleSolver_;
         std::vector<int> overlapRows_;
         std::vector<int> interiorRows_;
-        std::vector<std::set<int>> wellConnectionsGraph_;
 
         bool useWellConn_;
-        size_t interiorCellNum_;
 
         FlowLinearSolverParameters parameters_;
         PropertyTree prm_;
-        bool scale_variables_;
-        int numJacobiBlocks_;
 
         std::shared_ptr< CommunicationType > comm_;
     }; // end ISTLSolver

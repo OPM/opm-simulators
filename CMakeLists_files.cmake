@@ -51,6 +51,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/linalg/FlexibleSolver4.cpp
   opm/simulators/linalg/FlexibleSolver5.cpp
   opm/simulators/linalg/FlexibleSolver6.cpp
+  opm/simulators/linalg/ISTLSolverEbos.cpp
   opm/simulators/linalg/MILU.cpp
   opm/simulators/linalg/ParallelIstlInformation.cpp
   opm/simulators/linalg/ParallelOverlappingILU0.cpp

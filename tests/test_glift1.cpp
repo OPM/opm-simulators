@@ -40,10 +40,7 @@
 #include <opm/simulators/wells/GasLiftSingleWell.hpp>
 #include <opm/simulators/wells/GasLiftSingleWellGeneric.hpp>
 #include <opm/simulators/wells/GasLiftGroupInfo.hpp>
-//#include <opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp>
-//#include <flow/flow_ebos_blackoil.hpp>
 #include <opm/simulators/wells/WellState.hpp>
-/// #include <opm/simulators/flow/Main.hpp>
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/misc/mpimanager.hh>
