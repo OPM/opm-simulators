@@ -24,7 +24,6 @@
 #ifndef OPM_COUNTGLOBALCELLS_HEADER_INCLUDED
 #define OPM_COUNTGLOBALCELLS_HEADER_INCLUDED
 
-#include <opm/simulators/linalg/ParallelIstlInformation.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 
 #include <dune/grid/common/gridview.hh>
