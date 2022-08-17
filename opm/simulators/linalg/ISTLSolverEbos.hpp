@@ -351,7 +351,7 @@ namespace Opm
         typedef ParallelOverlappingILU0<Dune::BCRSMatrix<Dune::MatrixBlock<typename Matrix::field_type,
                                                                             Matrix::block_type::rows,
                                                                             Matrix::block_type::cols> >,
-                                                                            Vector, Vector> SeqPreconditioner;
+                                                                            Vector, Vector, Dune::Amg::SequentialInformation> SeqPreconditioner;
 
 #if HAVE_MPI
         typedef Dune::OwnerOverlapCopyCommunication<int, int> Comm;

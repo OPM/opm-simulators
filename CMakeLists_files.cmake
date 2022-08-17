@@ -53,6 +53,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/linalg/FlexibleSolver6.cpp
   opm/simulators/linalg/MILU.cpp
   opm/simulators/linalg/ParallelIstlInformation.cpp
+  opm/simulators/linalg/ParallelOverlappingILU0.cpp
   opm/simulators/linalg/PreconditionerFactory1.cpp
   opm/simulators/linalg/PreconditionerFactory2.cpp
   opm/simulators/linalg/PreconditionerFactory3.cpp

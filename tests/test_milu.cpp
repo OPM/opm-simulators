@@ -11,6 +11,8 @@
 #include<dune/common/fvector.hh>
 #include<opm/simulators/linalg/ParallelOverlappingILU0.hpp>
 
+#include <opm/common/ErrorMacros.hpp>
+
 #include <boost/test/unit_test.hpp>
 #include <boost/version.hpp>
 #if BOOST_VERSION / 100000 == 1 && BOOST_VERSION / 100 % 1000 < 71
