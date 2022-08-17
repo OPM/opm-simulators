@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include <opm/simulators/linalg/matrixblock.hh>
 #include <opm/simulators/linalg/twolevelmethodcpr.hh>
 #include <dune/istl/paamg/pinfo.hh>
 
