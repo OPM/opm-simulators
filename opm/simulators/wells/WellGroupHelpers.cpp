@@ -95,15 +95,15 @@ namespace {
             if (res_rates) {
                 const auto& well_rates = ws.reservoir_rates;
                 if (injector)
-                    rate += factor * well_rates[phasePos];
+                    rate += factor * std::max(0.0, well_rates[phasePos]);
                 else
-                    rate -= factor * well_rates[phasePos];
+                    rate -= factor * std::min(0.0, well_rates[phasePos]);
             } else {
                 const auto& well_rates = ws.surface_rates;
                 if (injector)
-                    rate += factor * well_rates[phasePos];
+                    rate += factor * std::max(0.0, well_rates[phasePos]);
                 else
-                    rate -= factor * well_rates[phasePos];
+                    rate -= factor * std::min(0.0, well_rates[phasePos]);
             }
         }
         return rate;
