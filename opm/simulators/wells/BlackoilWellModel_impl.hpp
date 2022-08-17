@@ -1235,12 +1235,6 @@ namespace Opm {
     getMaxWellConnections() const
     {
         std::vector<std::vector<int>> wells;
-        // Create cartesian to compressed mapping
-        const EquilGrid& equilGrid = ebosSimulator_.vanguard().equilGrid();
-        const auto& globalCell = equilGrid.globalCell();
-
-        auto cartMap = cartesianToCompressed(grid().size(0),
-                                             globalCell.data());
 
         auto schedule_wells = schedule().getWellsatEnd();
         schedule_wells.erase(std::remove_if(schedule_wells.begin(), schedule_wells.end(), not_on_process_), schedule_wells.end());
@@ -1256,12 +1250,7 @@ namespace Opm {
 
             for (const auto& connection: well.getConnections())
             {
-                const size_t i = size_t(connection.getI());
-                const size_t j = size_t(connection.getJ());
-                const size_t k = size_t(connection.getK());
-
-                const size_t index = this->eclState_.gridDims().getGlobalIndex(i, j, k);
-                int compressed_idx = cartMap[index];
+                const int compressed_idx = compressedIndexForInterior(connection.global_index());
                 if ( compressed_idx >= 0 ) // Ignore completions in inactive/remote cells.
                 {
                     compressed_well_perforations.push_back(compressed_idx);
