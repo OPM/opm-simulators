@@ -1850,8 +1850,9 @@ public:
             const auto& simulator = this->simulator();
             const auto& model = this->model();
 
-            // we need a higher maxCompensation than the Newton tolerance because the
-            // current time step might be shorter than the last one
+            // we use a lower tolerance for the compensation too
+            // assure the added drift from the last step does not 
+            // cause convergence issues on the current step 
             Scalar maxCompensation = model.newtonMethod().tolerance()/10;
             Scalar poro = this->porosity(globalDofIdx, timeIdx);
             Scalar dt = simulator.timeStepSize();
@@ -2953,13 +2954,7 @@ private:
         std::vector<Scalar> sumInvB(numPhases, 0.0);
         const auto& gridView = this->gridView();
         ElementContext elemCtx(this->simulator());
-        auto elemIt = gridView.template begin</*codim=*/0>();
-        const auto& elemEndIt = gridView.template end</*codim=*/0>();
-        for (; elemIt != elemEndIt; ++elemIt) {
-            const auto& elem = *elemIt;
-            if (elem.partitionType() != Dune::InteriorEntity)
-                continue;
-
+        for(const auto& elem: elements(gridView, Dune::Partitions::interior)) {
             elemCtx.updatePrimaryStencil(elem);
             int elemIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
             const auto& dofFluidState = initialFluidStates_[elemIdx];
