@@ -31,7 +31,7 @@
 #include <opm/simulators/linalg/matrixblock.hh>
 #include <opm/simulators/linalg/ilufirstelement.hh>
 
-#include <opm/simulators/linalg/PreconditionerFactory.hpp>
+#include <opm/simulators/linalg/PreconditionerFactory_impl.hpp>
 #include <opm/simulators/linalg/PropertyTree.hpp>
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
 #include <opm/simulators/linalg/getQuasiImpesWeights.hpp>
@@ -95,7 +95,7 @@ testPrec(const Opm::PropertyTree& prm, const std::string& matrix_filename, const
     }
     using Operator = Dune::MatrixAdapter<Matrix, Vector, Vector>;
     Operator op(matrix);
-    using PrecFactory = Opm::PreconditionerFactory<Operator>;
+    using PrecFactory = Opm::PreconditionerFactory<Operator,Dune::Amg::SequentialInformation>;
     bool transpose = false;
 
     if(prm.get<std::string>("preconditioner.type") == "cprt"){
@@ -172,7 +172,7 @@ using V = Dune::BlockVector<Dune::FieldVector<double, bz>>;
 template <int bz>
 using O = Dune::MatrixAdapter<M<bz>, V<bz>, V<bz>>;
 template <int bz>
-using PF = Opm::PreconditionerFactory<O<bz>>;
+using PF = Opm::PreconditionerFactory<O<bz>,Dune::Amg::SequentialInformation>;
 
 
 BOOST_AUTO_TEST_CASE(TestAddingPreconditioner)
@@ -304,7 +304,7 @@ testPrecRepeating(const Opm::PropertyTree& prm, const std::string& matrix_filena
     }
     using Operator = RepeatingOperator<Matrix, Vector>;
     Operator op(matrix, 2);
-    using PrecFactory = Opm::PreconditionerFactory<Operator>;
+    using PrecFactory = Opm::PreconditionerFactory<Operator,Dune::Amg::SequentialInformation>;
 
     // Add no-oppreconditioner to factory for block size 1.
     PrecFactory::addCreator("nothing", [](const Operator&, const Opm::PropertyTree&, const std::function<Vector()>&,

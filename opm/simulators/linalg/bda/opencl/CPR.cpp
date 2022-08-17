@@ -324,7 +324,7 @@ void CPR<block_size>::create_preconditioner_amg(BlockedMatrix *mat_) {
             // using Criterion = Dune::Amg::CoarsenCriterion<Dune::Amg::UnSymmetricCriterion<DuneMat, Dune::Amg::FirstDiagonal> >;
             using CriterionBase = Dune::Amg::AggregationCriterion<Dune::Amg::SymmetricDependency<DuneMat, Dune::Amg::FirstDiagonal>>;
             using Criterion = Dune::Amg::CoarsenCriterion<CriterionBase>;
-            const Criterion c = Opm::PreconditionerFactory<MatrixOperator, Dune::Amg::SequentialInformation>::amgCriterion(property_tree);
+            const Criterion c = Opm::AMGHelper<MatrixOperator,Dune::Amg::SequentialInformation,DuneMat,DuneVec>::criterion(property_tree);
             num_pre_smooth_steps = c.getNoPreSmoothSteps();
             num_post_smooth_steps = c.getNoPostSmoothSteps();
 
