@@ -333,7 +333,8 @@ add_test_compareECLFiles(CASENAME joule_thomson
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR joule_thomson)
+                         DIR joule_thomson
+                         TEST_ARGS --solver-max-time-step-in-days=0.2)
 
 add_test_compareECLFiles(CASENAME spe1_rockcomp
                          FILENAME SPE1CASE2_ROCK2DTR
