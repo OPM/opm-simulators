@@ -2951,9 +2951,18 @@ private:
 
     void computeAndSetEqWeights_() {
         std::vector<Scalar> sumInvB(numPhases, 0.0);
-        size_t numDof = this->model().numGridDof();
-        for (size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
-            const auto& dofFluidState = initialFluidStates_[dofIdx];
+        const auto& gridView = this->gridView();
+        ElementContext elemCtx(this->simulator());
+        auto elemIt = gridView.template begin</*codim=*/0>();
+        const auto& elemEndIt = gridView.template end</*codim=*/0>();
+        for (; elemIt != elemEndIt; ++elemIt) {
+            const auto& elem = *elemIt;
+            if (elem.partitionType() != Dune::InteriorEntity)
+                continue;
+
+            elemCtx.updatePrimaryStencil(elem);
+            int elemIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+            const auto& dofFluidState = initialFluidStates_[elemIdx];
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 if (!FluidSystem::phaseIsActive(phaseIdx))
                     continue;
@@ -2961,6 +2970,8 @@ private:
                 sumInvB[phaseIdx] += dofFluidState.invB(phaseIdx);
             }
         }
+
+        size_t numDof = this->model().numGridDof();
         const auto& comm = this->simulator().vanguard().grid().comm();
         comm.sum(sumInvB.data(),sumInvB.size());
         Scalar numTotalDof = comm.sum(numDof);
