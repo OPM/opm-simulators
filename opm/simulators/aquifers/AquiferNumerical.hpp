@@ -61,13 +61,10 @@ public:
 
     // Constructor
     AquiferNumerical(const SingleNumericalAquifer& aquifer,
-                     const std::unordered_map<int, int>& cartesian_to_compressed,
-                     const Simulator& ebos_simulator,
-                     const int* global_cell)
+                     const Simulator& ebos_simulator)
         : AquiferInterface<TypeTag>(aquifer.id(), ebos_simulator)
         , flux_rate_      (0.0)
         , cumulative_flux_(0.0)
-        , global_cell_    (global_cell)
         , init_pressure_  (aquifer.numCells(), 0.0)
     {
         this->cell_to_aquifer_cell_idx_.resize(this->ebos_simulator_.gridView().size(/*codim=*/0), -1);
@@ -77,9 +74,9 @@ public:
             const auto* cell = aquifer.getCellPrt(idx);
 
             // Due to parallelisation, the cell might not exist in the current process
-            auto search = cartesian_to_compressed.find(cell->global_index);
-            if (search != cartesian_to_compressed.end()) {
-                this->cell_to_aquifer_cell_idx_[search->second] = idx;
+            const int compressed_idx = ebos_simulator.vanguard().compressedIndexForInterior(cell->global_index);
+            if (compressed_idx >= 0) {
+                this->cell_to_aquifer_cell_idx_[compressed_idx] = idx;
                 aquifer_on_process = true;
             }
         }
@@ -301,7 +298,6 @@ private:
 
     double flux_rate_; // aquifer influx rate
     double cumulative_flux_; // cumulative aquifer influx
-    const int* global_cell_; // mapping to global index
     std::vector<double> init_pressure_{};
     double pressure_; // aquifer pressure
     bool solution_set_from_restart_ {false};
