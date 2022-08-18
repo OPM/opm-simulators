@@ -21,9 +21,12 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <config.h>
+
 #include "countGlobalCells.hpp"
 
 #include <cassert>
+#include <numeric>
 
 namespace Opm {
 namespace detail {

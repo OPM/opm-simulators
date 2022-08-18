@@ -22,7 +22,6 @@
 
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/simulators/wells/RegionAttributeHelpers.hpp>
-#include <opm/simulators/linalg/ParallelIstlInformation.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
 #include <dune/grid/common/gridenums.hh>
