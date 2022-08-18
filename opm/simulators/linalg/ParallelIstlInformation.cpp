@@ -350,6 +350,6 @@ INSTANCE(int)
 INSTANCE(float)
 INSTANCE(std::size_t)
 
-#endif
+} // namespace Opm
 
-}
+#endif // HAVE_MPI && HAVE_DUNE_ISTL
