@@ -39,10 +39,17 @@
 #include "blackoilmicpmodules.hh"
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
 #include <opm/material/common/Valgrind.hpp>
+#include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
+
+#include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
+
 #include <dune/common/fmatrix.hh>
 
 #include <cstring>
 #include <utility>
+
+#include <fmt/format.h>
 
 namespace Opm {
 /*!
@@ -77,6 +84,8 @@ class BlackOilIntensiveQuantities
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
     using FluxModule = GetPropType<TypeTag, Properties::FluxModule>;
+    using EclMaterialLawManager = typename GetProp<TypeTag, Properties::MaterialLaw>::EclMaterialLawManager;
+    using MaterialLawParams = typename EclMaterialLawManager::MaterialLawParams;
 
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
@@ -144,7 +153,6 @@ public:
 
         const auto& problem = elemCtx.problem();
         const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
-
         const auto& linearizationType = problem.model().linearizer().getLinearizationType();
         unsigned globalSpaceIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
         Scalar RvMax = FluidSystem::enableVaporizedOil()
@@ -226,6 +234,7 @@ public:
         std::array<Evaluation, numPhases> pC;
         const auto& materialParams = problem.materialLawParams(globalSpaceIdx);
         MaterialLaw::capillaryPressures(pC, materialParams, fluidState_);
+        updateRelperms(problem, materialParams, globalSpaceIdx);
 
         // oil is the reference phase for pressure
         if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_pg_Rv || priVars.primaryVarsMeaning() == PrimaryVariables::Rvw_pg_Rv) {
@@ -241,11 +250,6 @@ public:
                 if (FluidSystem::phaseIsActive(phaseIdx))
                     fluidState_.setPressure(phaseIdx, po + (pC[phaseIdx] - pC[oilPhaseIdx]));
         }
-
-        // calculate relative permeabilities. note that we store the result into the
-        // mobility_ class attribute. the division by the phase viscosity happens later.
-        MaterialLaw::relativePermeabilities(mobility_, materialParams, fluidState_);
-        Valgrind::CheckDefined(mobility_);
 
         // update the Saturation functions for the blackoil solvent module.
         asImp_().solventPostSatFuncUpdate_(elemCtx, dofIdx, timeIdx);
@@ -395,20 +399,26 @@ public:
         paramCache.updateAll(fluidState_);
 
         // compute the phase densities and transform the phase permeabilities into mobilities
+        constexpr int nmobilities = 4;
+        std::array<std::array<Evaluation,numPhases>*,nmobilities> mobilities
+           = {&mobility_, &mobilityX_, &mobilityY_, &mobilityZ_};
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx))
                 continue;
-
             const auto& b = FluidSystem::inverseFormationVolumeFactor(fluidState_, phaseIdx, pvtRegionIdx);
             fluidState_.setInvB(phaseIdx, b);
-
             const auto& mu = FluidSystem::viscosity(fluidState_, paramCache, phaseIdx);
-            if (enableExtbo && phaseIdx == oilPhaseIdx)
-              mobility_[phaseIdx] /= asImp_().oilViscosity();
-            else if (enableExtbo && phaseIdx == gasPhaseIdx)
-              mobility_[phaseIdx] /= asImp_().gasViscosity();
-            else
-              mobility_[phaseIdx] /= mu;
+            for (int i = 0; i<nmobilities; i++) {
+                if (enableExtbo && phaseIdx == oilPhaseIdx) {
+                    (*mobilities[i])[phaseIdx] /= asImp_().oilViscosity();
+                }
+                else if (enableExtbo && phaseIdx == gasPhaseIdx) {
+                    (*mobilities[i])[phaseIdx] /= asImp_().gasViscosity();
+                }
+                else {
+                    (*mobilities[i])[phaseIdx] /= mu;
+                }
+            }
         }
         Valgrind::CheckDefined(mobility_);
 
@@ -532,6 +542,21 @@ public:
     const Evaluation& mobility(unsigned phaseIdx) const
     { return mobility_[phaseIdx]; }
 
+    const Evaluation& mobility(unsigned phaseIdx, FaceDir::DirEnum facedir) const
+    {
+        using Dir = FaceDir::DirEnum;
+        switch(facedir) {
+            case Dir::XPlus:
+                return mobilityX_[phaseIdx];
+            case Dir::YPlus:
+                return mobilityY_[phaseIdx];
+            case Dir::ZPlus:
+                return mobilityZ_[phaseIdx];
+            default:
+                throw std::runtime_error("Unexpected face direction");
+        }
+    }
+
     /*!
      * \copydoc ImmiscibleIntensiveQuantities::porosity
      */
@@ -588,6 +613,36 @@ private:
     friend BlackOilBrineIntensiveQuantities<TypeTag>;
     friend BlackOilMICPIntensiveQuantities<TypeTag>;
 
+    void updateRelperms(const Problem& problem, const MaterialLawParams& materialParams, unsigned globalSpaceIdx)
+    {
+        // calculate relative permeabilities. note that we store the result into the
+        // mobility_ class attribute. the division by the phase viscosity happens later.
+        MaterialLaw::relativePermeabilities(mobility_, materialParams, fluidState_);
+        Valgrind::CheckDefined(mobility_);
+        const auto& materialLawManager = problem.materialLawManager();
+        auto satnumIdx = materialLawManager->satnumRegionIdx(globalSpaceIdx);
+        using Dir = FaceDir::DirEnum;
+        constexpr int ndim = 3;
+        std::array<std::array<Evaluation, numPhases>*,ndim> relperms = {&mobilityX_, &mobilityY_, &mobilityZ_};
+        Dir facedirs[ndim] = {Dir::XPlus, Dir::YPlus, Dir::ZPlus};
+        for (int i = 0; i<ndim; i++) {
+            auto krnumSatIdx = materialLawManager->getKrnumSatIdx(globalSpaceIdx, facedirs[i]);
+            if (krnumSatIdx != satnumIdx) {
+                // This hack is also used by StandardWell_impl.hpp:getMobilityEval() to temporarily use a different
+                // satnum index for a cell
+                const auto& paramsCell = materialLawManager->connectionMaterialLawParams(krnumSatIdx, globalSpaceIdx);
+                MaterialLaw::relativePermeabilities(*relperms[i], paramsCell, fluidState_);
+                // reset the cell's satnum index back to the original
+                materialLawManager->connectionMaterialLawParams(satnumIdx, globalSpaceIdx);
+            }
+            else {
+                // Copy the default (non-directional dependent) mobility
+                for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                    (*relperms[i])[phaseIdx] = mobility_[phaseIdx];
+                }
+            }
+        }
+    }
 
     Implementation& asImp_()
     { return *static_cast<Implementation*>(this); }
@@ -597,6 +652,9 @@ private:
     Evaluation porosity_;
     Evaluation rockCompTransMultiplier_;
     std::array<Evaluation,numPhases> mobility_;
+    std::array<Evaluation,numPhases> mobilityX_;
+    std::array<Evaluation,numPhases> mobilityY_;
+    std::array<Evaluation,numPhases> mobilityZ_;
 };
 
 } // namespace Opm
