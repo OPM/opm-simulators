@@ -884,6 +884,7 @@ public:
             readEclRestartSolution_();
         else
             readInitialCondition_();
+
         tracerModel_.prepareTracerBatches();
 
         updatePffDofData_();
@@ -896,6 +897,9 @@ public:
         }
 
         readBoundaryConditions_();
+
+        // compute and set eq weights based on initial b values
+        computeAndSetEqWeights_();
 
         if (enableDriftCompensation_) {
             drift_.resize(this->model().numGridDof());
@@ -1836,29 +1840,32 @@ public:
 
         // if requested, compensate systematic mass loss for cells which were "well
         // behaved" in the last time step
-        if (enableDriftCompensation_) {
+        // Note that we don't allow for drift compensation if there is
+        // no source terms i.e. no wells and no aquifers.
+        const auto& schedule = this->simulator().vanguard().schedule();
+        int episodeIdx = this->simulator().episodeIndex();
+        const auto& aquifer = this->simulator().vanguard().eclState().aquifer();
+        bool compensateDrift =  schedule.numWells(episodeIdx) > 0 && aquifer.active();
+        if (enableDriftCompensation_ && compensateDrift) {
             const auto& simulator = this->simulator();
             const auto& model = this->model();
 
-            // we need a higher maxCompensation than the Newton tolerance because the
-            // current time step might be shorter than the last one
-            Scalar maxCompensation = 10.0*model.newtonMethod().tolerance();
-
+            // we use a lower tolerance for the compensation too
+            // assure the added drift from the last step does not 
+            // cause convergence issues on the current step 
+            Scalar maxCompensation = model.newtonMethod().tolerance()/10;
             Scalar poro = this->porosity(globalDofIdx, timeIdx);
             Scalar dt = simulator.timeStepSize();
-
             EqVector dofDriftRate = drift_[globalDofIdx];
             dofDriftRate /= dt*model.dofTotalVolume(globalDofIdx);
 
-            // compute the weighted total drift rate
-            Scalar totalDriftRate = 0.0;
-            for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx)
-                totalDriftRate +=
-                    std::abs(dofDriftRate[eqIdx])*dt*model.eqWeight(globalDofIdx, eqIdx)/poro;
-
-            // make sure that we do not exceed the maximum rate of drift compensation
-            if (totalDriftRate > maxCompensation)
-                dofDriftRate *= maxCompensation/totalDriftRate;
+            // restrict drift compensation to the CNV tolerance
+            for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx) {
+                Scalar cnv = std::abs(dofDriftRate[eqIdx])*dt*model.eqWeight(globalDofIdx, eqIdx)/poro;
+                if (cnv > maxCompensation) {
+                    dofDriftRate[eqIdx] *= maxCompensation/cnv;
+                }
+            }
 
             for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx)
                 rate[eqIdx] -= dofDriftRate[eqIdx];
@@ -2941,6 +2948,38 @@ private:
         }
 
         return dtNext;
+    }
+
+    void computeAndSetEqWeights_() {
+        std::vector<Scalar> sumInvB(numPhases, 0.0);
+        const auto& gridView = this->gridView();
+        ElementContext elemCtx(this->simulator());
+        for(const auto& elem: elements(gridView, Dune::Partitions::interior)) {
+            elemCtx.updatePrimaryStencil(elem);
+            int elemIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+            const auto& dofFluidState = initialFluidStates_[elemIdx];
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                if (!FluidSystem::phaseIsActive(phaseIdx))
+                    continue;
+
+                sumInvB[phaseIdx] += dofFluidState.invB(phaseIdx);
+            }
+        }
+
+        size_t numDof = this->model().numGridDof();
+        const auto& comm = this->simulator().vanguard().grid().comm();
+        comm.sum(sumInvB.data(),sumInvB.size());
+        Scalar numTotalDof = comm.sum(numDof);
+
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            if (!FluidSystem::phaseIsActive(phaseIdx))
+                    continue;
+
+            Scalar avgB = numTotalDof / sumInvB[phaseIdx];
+            unsigned solventCompIdx = FluidSystem::solventComponentIndex(phaseIdx);
+            unsigned activeSolventCompIdx = Indices::canonicalToActiveComponentIndex(solventCompIdx);
+            this->model().setEqWeight(activeSolventCompIdx, avgB);
+        }
     }
 
     typename Vanguard::TransmissibilityType transmissibilities_;
