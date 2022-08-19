@@ -22,42 +22,29 @@
 #ifndef OPM_PRECONDITIONERFACTORY_HEADER
 #define OPM_PRECONDITIONERFACTORY_HEADER
 
+#include <opm/simulators/linalg/OwningBlockPreconditioner.hpp>
+#include <opm/simulators/linalg/OwningTwoLevelPreconditioner.hpp>
+#include <opm/simulators/linalg/ParallelOverlappingILU0.hpp>
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
+#include <opm/simulators/linalg/PropertyTree.hpp>
+#include <opm/simulators/linalg/amgcpr.hh>
+#include <opm/simulators/linalg/WellOperators.hpp>
 
-#include <dune/common/version.hh>
-#include <dune/istl/paamg/aggregates.hh>
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
-#include <dune/istl/paamg/matrixhierarchy.hh>
-#else
-#include <dune/istl/paamg/hierarchy.hh>
-#endif
+#include <opm/simulators/linalg/PressureTransferPolicy.hpp>
+#include <opm/simulators/linalg/PressureBhpTransferPolicy.hpp>
 
-#include <cstddef>
+
+#include <dune/istl/paamg/amg.hh>
+#include <dune/istl/paamg/kamg.hh>
+#include <dune/istl/paamg/fastamg.hh>
+#include <dune/istl/preconditioners.hh>
+
 #include <map>
 #include <memory>
 #include <limits>
-#include <string>
 
 namespace Opm
 {
-
-class PropertyTree;
-
-template <class Operator, class Comm, class Matrix, class Vector>
-struct AMGHelper
-{
-    using PrecPtr = std::shared_ptr<Dune::PreconditionerWithUpdate<Vector, Vector>>;
-    using CriterionBase
-        = Dune::Amg::AggregationCriterion<Dune::Amg::SymmetricDependency<Matrix, Dune::Amg::FirstDiagonal>>;
-    using Criterion = Dune::Amg::CoarsenCriterion<CriterionBase>;
-
-    static Criterion criterion(const PropertyTree& prm);
-
-    template <class Smoother>
-    static PrecPtr makeAmgPreconditioner(const Operator& op,
-                                         const PropertyTree& prm,
-                                         bool useKamg = false);
-};
 
 /// This is an object factory for creating preconditioners.  The
 /// user need only interact with the factory through the static
@@ -88,7 +75,10 @@ public:
     /// \return      (smart) pointer to the created preconditioner.
     static PrecPtr create(const Operator& op, const PropertyTree& prm,
                           const std::function<Vector()>& weightsCalculator = {},
-                          std::size_t pressureIndex = std::numeric_limits<std::size_t>::max());
+                          std::size_t pressureIndex = std::numeric_limits<std::size_t>::max())
+    {
+        return instance().doCreate(op, prm, weightsCalculator, pressureIndex);
+    }
 
     /// Create a new parallel preconditioner and return a pointer to it.
     /// \param op    operator to be preconditioned.
@@ -98,7 +88,10 @@ public:
     /// \return      (smart) pointer to the created preconditioner.
     static PrecPtr create(const Operator& op, const PropertyTree& prm,
                           const std::function<Vector()>& weightsCalculator, const Comm& comm,
-                          std::size_t pressureIndex = std::numeric_limits<std::size_t>::max());
+                          std::size_t pressureIndex = std::numeric_limits<std::size_t>::max())
+    {
+        return instance().doCreate(op, prm, weightsCalculator, pressureIndex, comm);
+    }
 
     /// Create a new parallel preconditioner and return a pointer to it.
     /// \param op    operator to be preconditioned.
@@ -106,8 +99,10 @@ public:
     /// \param comm  communication object (typically OwnerOverlapCopyCommunication).
     /// \return      (smart) pointer to the created preconditioner.
     static PrecPtr create(const Operator& op, const PropertyTree& prm, const Comm& comm,
-                          std::size_t pressureIndex = std::numeric_limits<std::size_t>::max());
-
+                          std::size_t pressureIndex = std::numeric_limits<std::size_t>::max())
+    {
+        return instance().doCreate(op, prm, std::function<Vector()>(), pressureIndex, comm);
+    }
     /// Add a creator for a serial preconditioner to the PreconditionerFactory.
     /// After the call, the user may obtain a preconditioner by
     /// calling create() with the given type string as a parameter
@@ -115,7 +110,10 @@ public:
     /// \param type     the type string we want the PreconditionerFactory to
     ///                 associate with the preconditioner.
     /// \param creator  a function or lambda creating a preconditioner.
-    static void addCreator(const std::string& type, Creator creator);
+    static void addCreator(const std::string& type, Creator creator)
+    {
+        instance().doAddCreator(type, creator);
+    }
 
     /// Add a creator for a parallel preconditioner to the PreconditionerFactory.
     /// After the call, the user may obtain a preconditioner by
@@ -124,40 +122,450 @@ public:
     /// \param type     the type string we want the PreconditionerFactory to
     ///                 associate with the preconditioner.
     /// \param creator  a function or lambda creating a preconditioner.
-    static void addCreator(const std::string& type, ParCreator creator);
+    static void addCreator(const std::string& type, ParCreator creator)
+    {
+        instance().doAddCreator(type, creator);
+    }
 
     using CriterionBase
         = Dune::Amg::AggregationCriterion<Dune::Amg::SymmetricDependency<Matrix, Dune::Amg::FirstDiagonal>>;
     using Criterion = Dune::Amg::CoarsenCriterion<CriterionBase>;
 
-
+    // Helpers for creation of AMG preconditioner.
+    static Criterion amgCriterion(const PropertyTree& prm)
+    {
+        Criterion criterion(15, prm.get<int>("coarsenTarget", 1200));
+        criterion.setDefaultValuesIsotropic(2);
+        criterion.setAlpha(prm.get<double>("alpha", 0.33));
+        criterion.setBeta(prm.get<double>("beta", 1e-5));
+        criterion.setMaxLevel(prm.get<int>("maxlevel", 15));
+        criterion.setSkipIsolated(prm.get<bool>("skip_isolated", false));
+        criterion.setNoPreSmoothSteps(prm.get<int>("pre_smooth", 1));
+        criterion.setNoPostSmoothSteps(prm.get<int>("post_smooth", 1));
+        criterion.setDebugLevel(prm.get<int>("verbosity", 0));
+        // As the default we request to accumulate data to 1 process always as our matrix
+        // graph might be unsymmetric and hence not supported by the PTScotch/ParMetis
+        // calls in DUNE. Accumulating to 1 skips PTScotch/ParMetis
+        criterion.setAccumulate(static_cast<Dune::Amg::AccumulationMode>(prm.get<int>("accumulate", 1)));
+        criterion.setProlongationDampingFactor(prm.get<double>("prolongationdamping", 1.6));
+        criterion.setMaxDistance(prm.get<int>("maxdistance", 2));
+        criterion.setMaxConnectivity(prm.get<int>("maxconnectivity", 15));
+        criterion.setMaxAggregateSize(prm.get<int>("maxaggsize", 6));
+        criterion.setMinAggregateSize(prm.get<int>("minaggsize", 4));
+        return criterion;
+    }
 private:
+
+    /// Helper struct to explicitly overload amgSmootherArgs() version for
+    /// ParallelOverlappingILU0, since in-class specialization is not allowed.
+    template <typename X> struct Id { using Type = X; };
+
+    template <typename Smoother>
+    static auto amgSmootherArgs(const PropertyTree& prm)
+    {
+        return amgSmootherArgs(prm, Id<Smoother>());
+    }
+
+    template <typename Smoother>
+    static auto amgSmootherArgs(const PropertyTree& prm,
+                                Id<Smoother>)
+    {
+        using SmootherArgs = typename Dune::Amg::SmootherTraits<Smoother>::Arguments;
+        SmootherArgs smootherArgs;
+        smootherArgs.iterations = prm.get<int>("iterations", 1);
+        // smootherArgs.overlap=SmootherArgs::vertex;
+        // smootherArgs.overlap=SmootherArgs::none;
+        // smootherArgs.overlap=SmootherArgs::aggregate;
+        smootherArgs.relaxationFactor = prm.get<double>("relaxation", 1.0);
+        return smootherArgs;
+    }
+
+    static auto amgSmootherArgs(const PropertyTree& prm,
+                                Id<Opm::ParallelOverlappingILU0<Matrix, Vector, Vector, Comm>>)
+    {
+        using Smoother = Opm::ParallelOverlappingILU0<Matrix, Vector, Vector, Comm>;
+        using SmootherArgs = typename Dune::Amg::SmootherTraits<Smoother>::Arguments;
+        SmootherArgs smootherArgs;
+        smootherArgs.iterations = prm.get<int>("iterations", 1);
+        const int iluwitdh = prm.get<int>("iluwidth", 0);
+        smootherArgs.setN(iluwitdh);
+        const MILU_VARIANT milu = convertString2Milu(prm.get<std::string>("milutype", std::string("ilu")));
+        smootherArgs.setMilu(milu);
+        // smootherArgs.overlap=SmootherArgs::vertex;
+        // smootherArgs.overlap=SmootherArgs::none;
+        // smootherArgs.overlap=SmootherArgs::aggregate;
+        smootherArgs.relaxationFactor = prm.get<double>("relaxation", 1.0);
+        return smootherArgs;
+    }
+
+    template <class Smoother>
+    static PrecPtr makeAmgPreconditioner(const Operator& op, const PropertyTree& prm, bool useKamg = false)
+    {
+        auto crit = amgCriterion(prm);
+        auto sargs = amgSmootherArgs<Smoother>(prm);
+	if(useKamg){
+	    return std::make_shared<
+		Dune::DummyUpdatePreconditioner<
+		    Dune::Amg::KAMG< Operator, Vector, Smoother>
+		    >
+		>(op, crit, sargs,
+		  prm.get<size_t>("max_krylov", 1),
+		  prm.get<double>("min_reduction", 1e-1)  );
+	}else{
+            return std::make_shared<Dune::Amg::AMGCPR<Operator, Vector, Smoother>>(op, crit, sargs);
+        }
+    }
+
+    /// Helper method to determine if the local partitioning has the
+    /// K interior cells from [0, K-1] and ghost cells from [K, N-1].
+    /// Returns K if true, otherwise returns N. This is motivated by
+    /// usage in the ParallelOverlappingILU0 preconditiner.
+    template <class CommArg>
+    static size_t interiorIfGhostLast(const CommArg& comm)
+    {
+        size_t interior_count = 0;
+        size_t highest_interior_index = 0;
+        const auto& is = comm.indexSet();
+        for (const auto& ind : is) {
+            if (CommArg::OwnerSet::contains(ind.local().attribute())) {
+                ++interior_count;
+                highest_interior_index = std::max(highest_interior_index, ind.local().local());
+            }
+        }
+        if (highest_interior_index + 1 == interior_count) {
+            return interior_count;
+        } else {
+            return is.size();
+        }
+    }
+
+    static PrecPtr
+    createParILU(const Operator& op, const PropertyTree& prm, const Comm& comm, const int ilulevel)
+    {
+        const double w = prm.get<double>("relaxation", 1.0);
+        const bool redblack = prm.get<bool>("redblack", false);
+        const bool reorder_spheres = prm.get<bool>("reorder_spheres", false);
+        // Already a parallel preconditioner. Need to pass comm, but no need to wrap it in a BlockPreconditioner.
+        if (ilulevel == 0) {
+            const size_t num_interior = interiorIfGhostLast(comm);
+            return std::make_shared<Opm::ParallelOverlappingILU0<Matrix, Vector, Vector, Comm>>(
+                op.getmat(), comm, w, Opm::MILU_VARIANT::ILU, num_interior, redblack, reorder_spheres);
+        } else {
+            return std::make_shared<Opm::ParallelOverlappingILU0<Matrix, Vector, Vector, Comm>>(
+                op.getmat(), comm, ilulevel, w, Opm::MILU_VARIANT::ILU, redblack, reorder_spheres);
+        }
+    }
+
+    // Add a useful default set of preconditioners to the factory.
+    // This is the default template, used for parallel preconditioners.
+    // (Serial specialization below).
+    template <class CommArg>
+    void addStandardPreconditioners(const CommArg*)
+    {
+        using namespace Dune;
+        using O = Operator;
+        using M = Matrix;
+        using V = Vector;
+        using P = PropertyTree;
+        using C = Comm;
+        doAddCreator("ILU0", [](const O& op, const P& prm, const std::function<Vector()>&, std::size_t, const C& comm) {
+            return createParILU(op, prm, comm, 0);
+        });
+        doAddCreator("ParOverILU0", [](const O& op, const P& prm, const std::function<Vector()>&, std::size_t, const C& comm) {
+            return createParILU(op, prm, comm, prm.get<int>("ilulevel", 0));
+        });
+        doAddCreator("ILUn", [](const O& op, const P& prm, const std::function<Vector()>&, std::size_t, const C& comm) {
+            return createParILU(op, prm, comm, prm.get<int>("ilulevel", 0));
+        });
+        doAddCreator("Jac", [](const O& op, const P& prm, const std::function<Vector()>&,
+                               std::size_t, const C& comm) {
+            const int n = prm.get<int>("repeats", 1);
+            const double w = prm.get<double>("relaxation", 1.0);
+            return wrapBlockPreconditioner<DummyUpdatePreconditioner<SeqJac<M, V, V>>>(comm, op.getmat(), n, w);
+        });
+        doAddCreator("GS", [](const O& op, const P& prm, const std::function<Vector()>&, std::size_t, const C& comm) {
+            const int n = prm.get<int>("repeats", 1);
+            const double w = prm.get<double>("relaxation", 1.0);
+            return wrapBlockPreconditioner<DummyUpdatePreconditioner<SeqGS<M, V, V>>>(comm, op.getmat(), n, w);
+        });
+        doAddCreator("SOR", [](const O& op, const P& prm, const std::function<Vector()>&, std::size_t, const C& comm) {
+            const int n = prm.get<int>("repeats", 1);
+            const double w = prm.get<double>("relaxation", 1.0);
+            return wrapBlockPreconditioner<DummyUpdatePreconditioner<SeqSOR<M, V, V>>>(comm, op.getmat(), n, w);
+        });
+        doAddCreator("SSOR", [](const O& op, const P& prm, const std::function<Vector()>&, std::size_t, const C& comm) {
+            const int n = prm.get<int>("repeats", 1);
+            const double w = prm.get<double>("relaxation", 1.0);
+            return wrapBlockPreconditioner<DummyUpdatePreconditioner<SeqSSOR<M, V, V>>>(comm, op.getmat(), n, w);
+        });
+
+        // Only add AMG preconditioners to the factory if the operator
+        // is the overlapping schwarz operator. This could be extended
+        // later, but at this point no other operators are compatible
+        // with the AMG hierarchy construction.
+        if constexpr (std::is_same_v<O, Dune::OverlappingSchwarzOperator<M, V, V, C>>) {
+            doAddCreator("amg", [](const O& op, const P& prm, const std::function<Vector()>&, std::size_t, const C& comm) {
+                const std::string smoother = prm.get<std::string>("smoother", "ParOverILU0");
+                if (smoother == "ILU0" || smoother == "ParOverILU0") {
+                    using Smoother = Opm::ParallelOverlappingILU0<M, V, V, C>;
+                    auto crit = amgCriterion(prm);
+                    auto sargs = amgSmootherArgs<Smoother>(prm);
+                    return std::make_shared<Dune::Amg::AMGCPR<O, V, Smoother, C>>(op, crit, sargs, comm);
+                } else {
+                    OPM_THROW(std::invalid_argument, "Properties: No smoother with name " << smoother << ".");
+                }
+            });
+        }
+
+        doAddCreator("cpr", [](const O& op, const P& prm, const std::function<Vector()> weightsCalculator, std::size_t pressureIndex, const C& comm) {
+            assert(weightsCalculator);
+            if (pressureIndex == std::numeric_limits<std::size_t>::max())
+            {
+                OPM_THROW(std::logic_error, "Pressure index out of bounds. It needs to specified for CPR");
+            }
+            using LevelTransferPolicy = Opm::PressureTransferPolicy<O, Comm, false>;
+            return std::make_shared<OwningTwoLevelPreconditioner<O, V, LevelTransferPolicy, Comm>>(op, prm, weightsCalculator, pressureIndex, comm);
+        });
+        doAddCreator("cprt", [](const O& op, const P& prm, const std::function<Vector()> weightsCalculator, std::size_t pressureIndex, const C& comm) {
+            assert(weightsCalculator);
+            if (pressureIndex == std::numeric_limits<std::size_t>::max())
+            {
+                OPM_THROW(std::logic_error, "Pressure index out of bounds. It needs to specified for CPR");
+            }
+            using LevelTransferPolicy = Opm::PressureTransferPolicy<O, Comm, true>;
+            return std::make_shared<OwningTwoLevelPreconditioner<O, V, LevelTransferPolicy, Comm>>(op, prm, weightsCalculator, pressureIndex, comm);
+        });
+
+        if constexpr (std::is_same_v<O, WellModelGhostLastMatrixAdapter<M, V, V, true>>) {
+            doAddCreator("cprw",
+                         [](const O& op, const P& prm, const std::function<Vector()> weightsCalculator, std::size_t pressureIndex, const C& comm) {
+                             assert(weightsCalculator);
+                             if (pressureIndex == std::numeric_limits<std::size_t>::max()) {
+                                 OPM_THROW(std::logic_error, "Pressure index out of bounds. It needs to specified for CPR");
+                             }
+                             using LevelTransferPolicy = Opm::PressureBhpTransferPolicy<O, Comm, false>;
+                             return std::make_shared<OwningTwoLevelPreconditioner<O, V, LevelTransferPolicy, Comm>>(
+                                 op, prm, weightsCalculator, pressureIndex, comm);
+                         });
+        }
+    }
+
+    // Add a useful default set of preconditioners to the factory.
+    // This is the specialization for the serial case.
+    void addStandardPreconditioners(const Dune::Amg::SequentialInformation*)
+    {
+        using namespace Dune;
+        using O = Operator;
+        using M = Matrix;
+        using V = Vector;
+        using P = PropertyTree;
+        doAddCreator("ILU0", [](const O& op, const P& prm, const std::function<Vector()>&, std::size_t) {
+            const double w = prm.get<double>("relaxation", 1.0);
+            return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V>>(
+                op.getmat(), 0, w, Opm::MILU_VARIANT::ILU);
+        });
+        doAddCreator("ParOverILU0", [](const O& op, const P& prm, const std::function<Vector()>&, std::size_t) {
+            const double w = prm.get<double>("relaxation", 1.0);
+            const int n = prm.get<int>("ilulevel", 0);
+            return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V>>(
+                op.getmat(), n, w, Opm::MILU_VARIANT::ILU);
+        });
+        doAddCreator("ILUn", [](const O& op, const P& prm, const std::function<Vector()>&, std::size_t) {
+            const int n = prm.get<int>("ilulevel", 0);
+            const double w = prm.get<double>("relaxation", 1.0);
+            return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V>>(
+                op.getmat(), n, w, Opm::MILU_VARIANT::ILU);
+        });
+        doAddCreator("Jac", [](const O& op, const P& prm, const std::function<Vector()>&, std::size_t) {
+            const int n = prm.get<int>("repeats", 1);
+            const double w = prm.get<double>("relaxation", 1.0);
+            return wrapPreconditioner<SeqJac<M, V, V>>(op.getmat(), n, w);
+        });
+        doAddCreator("GS", [](const O& op, const P& prm, const std::function<Vector()>&, std::size_t) {
+            const int n = prm.get<int>("repeats", 1);
+            const double w = prm.get<double>("relaxation", 1.0);
+            return wrapPreconditioner<SeqGS<M, V, V>>(op.getmat(), n, w);
+        });
+        doAddCreator("SOR", [](const O& op, const P& prm, const std::function<Vector()>&, std::size_t) {
+            const int n = prm.get<int>("repeats", 1);
+            const double w = prm.get<double>("relaxation", 1.0);
+            return wrapPreconditioner<SeqSOR<M, V, V>>(op.getmat(), n, w);
+        });
+        doAddCreator("SSOR", [](const O& op, const P& prm, const std::function<Vector()>&, std::size_t) {
+            const int n = prm.get<int>("repeats", 1);
+            const double w = prm.get<double>("relaxation", 1.0);
+            return wrapPreconditioner<SeqSSOR<M, V, V>>(op.getmat(), n, w);
+        });
+
+        // Only add AMG preconditioners to the factory if the operator
+        // is an actual matrix operator.
+        if constexpr (std::is_same_v<O, Dune::MatrixAdapter<M, V, V>>) {
+            doAddCreator("amg", [](const O& op, const P& prm, const std::function<Vector()>&, std::size_t) {
+                const std::string smoother = prm.get<std::string>("smoother", "ParOverILU0");
+                if (smoother == "ILU0" || smoother == "ParOverILU0") {
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
+                    using Smoother = SeqILU<M, V, V>;
+#else
+                    using Smoother = SeqILU0<M, V, V>;
+#endif
+                    return makeAmgPreconditioner<Smoother>(op, prm);
+                } else if (smoother == "Jac") {
+                    using Smoother = SeqJac<M, V, V>;
+                    return makeAmgPreconditioner<Smoother>(op, prm);
+                } else if (smoother == "SOR") {
+                    using Smoother = SeqSOR<M, V, V>;
+                    return makeAmgPreconditioner<Smoother>(op, prm);
+                } else if (smoother == "SSOR") {
+                    using Smoother = SeqSSOR<M, V, V>;
+                    return makeAmgPreconditioner<Smoother>(op, prm);
+                } else if (smoother == "ILUn") {
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
+                    using Smoother = SeqILU<M, V, V>;
+#else
+                            using Smoother = SeqILUn<M, V, V>;
+#endif
+                    return makeAmgPreconditioner<Smoother>(op, prm);
+                } else {
+                    OPM_THROW(std::invalid_argument, "Properties: No smoother with name " << smoother << ".");
+                }
+            });
+            doAddCreator("kamg", [](const O& op, const P& prm, const std::function<Vector()>&, std::size_t) {
+                const std::string smoother = prm.get<std::string>("smoother", "ParOverILU0");
+                if (smoother == "ILU0" || smoother == "ParOverILU0") {
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
+                    using Smoother = SeqILU<M, V, V>;
+#else
+                        using Smoother = SeqILU0<M, V, V>;
+#endif
+                    return makeAmgPreconditioner<Smoother>(op, prm, true);
+                } else if (smoother == "Jac") {
+                    using Smoother = SeqJac<M, V, V>;
+                    return makeAmgPreconditioner<Smoother>(op, prm, true);
+                } else if (smoother == "SOR") {
+                    using Smoother = SeqSOR<M, V, V>;
+                    return makeAmgPreconditioner<Smoother>(op, prm, true);
+                    // } else if (smoother == "GS") {
+                    //     using Smoother = SeqGS<M, V, V>;
+                    //     return makeAmgPreconditioner<Smoother>(op, prm, true);
+                } else if (smoother == "SSOR") {
+                    using Smoother = SeqSSOR<M, V, V>;
+                    return makeAmgPreconditioner<Smoother>(op, prm, true);
+                } else if (smoother == "ILUn") {
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
+                    using Smoother = SeqILU<M, V, V>;
+#else
+                        using Smoother = SeqILUn<M, V, V>;
+#endif
+                    return makeAmgPreconditioner<Smoother>(op, prm, true);
+                } else {
+                    OPM_THROW(std::invalid_argument, "Properties: No smoother with name " << smoother << ".");
+                }
+            });
+            doAddCreator("famg", [](const O& op, const P& prm, const std::function<Vector()>&, std::size_t) {
+                auto crit = amgCriterion(prm);
+                Dune::Amg::Parameters parms;
+                parms.setNoPreSmoothSteps(1);
+                parms.setNoPostSmoothSteps(1);
+                return wrapPreconditioner<Dune::Amg::FastAMG<O, V>>(op, crit, parms);
+            });
+        }
+        if constexpr (std::is_same_v<O, WellModelMatrixAdapter<M, V, V, false>>) {
+            doAddCreator("cprw", [](const O& op, const P& prm, const std::function<Vector()>& weightsCalculator, std::size_t pressureIndex) {
+                if (pressureIndex == std::numeric_limits<std::size_t>::max()) {
+                    OPM_THROW(std::logic_error, "Pressure index out of bounds. It needs to specified for CPR");
+                }
+                using LevelTransferPolicy = Opm::PressureBhpTransferPolicy<O, Dune::Amg::SequentialInformation, false>;
+                return std::make_shared<OwningTwoLevelPreconditioner<O, V, LevelTransferPolicy>>(op, prm, weightsCalculator, pressureIndex);
+            });
+            }
+
+        doAddCreator("cpr", [](const O& op, const P& prm, const std::function<Vector()>& weightsCalculator, std::size_t pressureIndex) {
+                                if (pressureIndex == std::numeric_limits<std::size_t>::max())
+                                {
+                                    OPM_THROW(std::logic_error, "Pressure index out of bounds. It needs to specified for CPR");
+                                }
+                                using LevelTransferPolicy = Opm::PressureTransferPolicy<O, Dune::Amg::SequentialInformation, false>;
+                                return std::make_shared<OwningTwoLevelPreconditioner<O, V, LevelTransferPolicy>>(op, prm, weightsCalculator, pressureIndex);
+        });
+        doAddCreator("cprt", [](const O& op, const P& prm, const std::function<Vector()>& weightsCalculator, std::size_t pressureIndex) {
+                                if (pressureIndex == std::numeric_limits<std::size_t>::max())
+                                {
+                                    OPM_THROW(std::logic_error, "Pressure index out of bounds. It needs to specified for CPR");
+                                }
+                                using LevelTransferPolicy = Opm::PressureTransferPolicy<O, Dune::Amg::SequentialInformation, true>;
+                                return std::make_shared<OwningTwoLevelPreconditioner<O, V, LevelTransferPolicy>>(op, prm, weightsCalculator, pressureIndex);
+        });
+    }
+
+
     // The method that implements the singleton pattern,
     // using the Meyers singleton technique.
-    static PreconditionerFactory& instance();
+    static PreconditionerFactory& instance()
+    {
+        static PreconditionerFactory singleton;
+        return singleton;
+    }
 
     // Private constructor, to keep users from creating a PreconditionerFactory.
-    PreconditionerFactory();
+    PreconditionerFactory()
+    {
+        Comm* dummy = nullptr;
+        addStandardPreconditioners(dummy);
+    }
 
     // Actually creates the product object.
     PrecPtr doCreate(const Operator& op, const PropertyTree& prm,
                      const std::function<Vector()> weightsCalculator,
-                     std::size_t pressureIndex);
+                     std::size_t pressureIndex)
+    {
+        const std::string& type = prm.get<std::string>("type", "ParOverILU0");
+        auto it = creators_.find(type);
+        if (it == creators_.end()) {
+            std::ostringstream msg;
+            msg << "Preconditioner type " << type << " is not registered in the factory. Available types are: ";
+            for (const auto& prec : creators_) {
+                msg << prec.first << ' ';
+            }
+            msg << std::endl;
+            OPM_THROW(std::invalid_argument, msg.str());
+        }
+        return it->second(op, prm, weightsCalculator, pressureIndex);
+    }
 
     PrecPtr doCreate(const Operator& op, const PropertyTree& prm,
                      const std::function<Vector()> weightsCalculator,
-                     std::size_t pressureIndex, const Comm& comm);
+                     std::size_t pressureIndex, const Comm& comm)
+    {
+        const std::string& type = prm.get<std::string>("type", "ParOverILU0");
+        auto it = parallel_creators_.find(type);
+        if (it == parallel_creators_.end()) {
+            std::ostringstream msg;
+            msg << "Parallel preconditioner type " << type
+                << " is not registered in the factory. Available types are: ";
+            for (const auto& prec : parallel_creators_) {
+                msg << prec.first << ' ';
+            }
+            msg << std::endl;
+            OPM_THROW(std::invalid_argument, msg.str());
+        }
+        return it->second(op, prm, weightsCalculator, pressureIndex, comm);
+    }
 
     // Actually adds the creator.
-    void doAddCreator(const std::string& type, Creator c);
+    void doAddCreator(const std::string& type, Creator c)
+    {
+        creators_[type] = c;
+    }
 
     // Actually adds the creator.
-    void doAddCreator(const std::string& type, ParCreator c);
+    void doAddCreator(const std::string& type, ParCreator c)
+    {
+        parallel_creators_[type] = c;
+    }
 
     // This map contains the whole factory, i.e. all the Creators.
     std::map<std::string, Creator> creators_;
     std::map<std::string, ParCreator> parallel_creators_;
-    bool defAdded_= false; //!< True if defaults creators have been added
 };
 
 } // namespace Dune

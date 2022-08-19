@@ -53,12 +53,6 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/linalg/FlexibleSolver6.cpp
   opm/simulators/linalg/MILU.cpp
   opm/simulators/linalg/ParallelIstlInformation.cpp
-  opm/simulators/linalg/PreconditionerFactory1.cpp
-  opm/simulators/linalg/PreconditionerFactory2.cpp
-  opm/simulators/linalg/PreconditionerFactory3.cpp
-  opm/simulators/linalg/PreconditionerFactory4.cpp
-  opm/simulators/linalg/PreconditionerFactory5.cpp
-  opm/simulators/linalg/PreconditionerFactory6.cpp
   opm/simulators/linalg/PropertyTree.cpp
   opm/simulators/linalg/setupPropertyTree.cpp
   opm/simulators/utils/PartiallySupportedFlowKeywords.cpp
