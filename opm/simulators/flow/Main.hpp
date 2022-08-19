@@ -23,6 +23,7 @@
 #define OPM_MAIN_HEADER_INCLUDED
 
 #include <flow/flow_ebos_blackoil.hpp>
+#include <flow/flow_ebos_blackoil_tpfa.hpp>
 
 #include <flow/flow_ebos_gasoil.hpp>
 #include <flow/flow_ebos_gasoil_energy.hpp>
@@ -117,9 +118,6 @@ int flowEbosMain(int argc, char** argv, bool outputCout, bool outputFiles)
 //   usage scenarios, we refactored the original run() in flow.cpp into this class.
 class Main
 {
-private:
-    using FlowMainEbosType = FlowMainEbos<Properties::TTag::EclFlowProblem>;
-
 public:
     Main(int argc, char** argv) : argc_(argc), argv_(argv)  { initMPI();  }
 
@@ -236,6 +234,7 @@ public:
         return exitCode;
     }
 
+    using FlowMainEbosType = FlowMainEbos<Properties::TTag::EclFlowProblem>;
     // To be called from the Python interface code. Only do the
     // initialization and then return a pointer to the FlowEbosMain
     // object that can later be accessed directly from the Python interface
@@ -737,7 +736,7 @@ private:
 
     int runBlackOil()
     {
-        return flowEbosBlackoilMain(argc_, argv_, outputCout_, outputFiles_);
+        return flowEbosBlackoilTpfaMain(argc_, argv_, outputCout_, outputFiles_);
     }
 
     int argc_{0};
