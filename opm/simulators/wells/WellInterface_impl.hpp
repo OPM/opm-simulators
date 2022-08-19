@@ -689,7 +689,7 @@ namespace Opm
             checkOperabilityUnderBHPLimit(well_state, ebos_simulator, deferred_logger);
         }
         // we do some extra checking for wells under THP control.
-        if (thp_controled) {
+        if (check_thp) {
             checkOperabilityUnderTHPLimit(ebos_simulator, well_state, deferred_logger);
         }
     }
