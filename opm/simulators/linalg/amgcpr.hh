@@ -9,6 +9,8 @@
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
 
 #include <dune/common/exceptions.hh>
+#include <dune/common/version.hh>
+#include <dune/istl/paamg/amg.hh>
 #include <dune/istl/paamg/smoother.hh>
 #include <dune/istl/paamg/transfer.hh>
 #include <dune/istl/paamg/hierarchy.hh>

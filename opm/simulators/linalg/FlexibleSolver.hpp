@@ -23,10 +23,14 @@
 #define OPM_FLEXIBLE_SOLVER_HEADER_INCLUDED
 
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
-#include <opm/simulators/linalg/PropertyTree.hpp>
 
 #include <dune/istl/solver.hh>
 #include <dune/istl/paamg/pinfo.hh>
+
+namespace Opm
+{
+class PropertyTree;
+}
 
 namespace Dune
 {
