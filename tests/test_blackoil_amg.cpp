@@ -23,7 +23,6 @@
 #include <boost/test/unit_test.hpp>
 #include <opm/simulators/linalg/PreconditionerFactory.hpp>
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
-#include <opm/simulators/linalg/PropertyTree.hpp>
 #include <opm/simulators/linalg/getQuasiImpesWeights.hpp>
 
 #include <dune/common/parallel/mpihelper.hh>

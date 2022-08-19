@@ -23,7 +23,6 @@
 #define OPM_WELLOPERATORS_HEADER_INCLUDED
 
 #include <dune/istl/operators.hh>
-#include <opm/simulators/linalg/matrixblock.hh>
 
 namespace Opm
 {

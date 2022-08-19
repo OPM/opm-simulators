@@ -21,14 +21,10 @@
 #ifndef OPM_FLEXIBLE_SOLVER_IMPL_HEADER_INCLUDED
 #define OPM_FLEXIBLE_SOLVER_IMPL_HEADER_INCLUDED
 
-#include <opm/common/ErrorMacros.hpp>
-
 #include <opm/simulators/linalg/matrixblock.hh>
 #include <opm/simulators/linalg/ilufirstelement.hh>
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
 #include <opm/simulators/linalg/PreconditionerFactory.hpp>
-#include <opm/simulators/linalg/PropertyTree.hpp>
-#include <opm/simulators/linalg/WellOperators.hpp>
 
 #include <dune/common/fmatrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
@@ -131,7 +127,7 @@ namespace Dune
         // Sequential case.
         linearoperator_for_solver_ = &op;
         auto child = prm.get_child_optional("preconditioner");
-        preconditioner_ = Opm::PreconditionerFactory<Operator,Dune::Amg::SequentialInformation>::create(op,
+        preconditioner_ = Opm::PreconditionerFactory<Operator>::create(op,
                                                                        child ? *child : Opm::PropertyTree(),
                                                                        weightsCalculator,
                                                                        pressureIndex);
