@@ -144,13 +144,25 @@ BlackoilAquiferModel<TypeTag>::init()
 
     const auto& connections = aquifer.connections();
     for (const auto& aq : aquifer.ct()) {
-        auto aqf = std::make_unique<AquiferCarterTracy<TypeTag>>(connections[aq.aquiferID],
+        if (!connections.hasAquiferConnections(aq.aquiferID)) {
+            auto msg = fmt::format("No valid connections for Carter-Tracy aquifer {}, aquifer {} will be ignored.",
+                                   aq.aquiferID, aq.aquiferID);
+            OpmLog::warning(msg);
+            continue;
+        }
+        auto aqf = std::make_unique<AquiferCarterTracy<TypeTag>>(connections.getConnections(aq.aquiferID),
                                                                  this->simulator_, aq);
         aquifers.push_back(std::move(aqf));
     }
 
     for (const auto& aq : aquifer.fetp()) {
-        auto aqf = std::make_unique<AquiferFetkovich<TypeTag>>(connections[aq.aquiferID],
+        if (!connections.hasAquiferConnections(aq.aquiferID)) {
+            auto msg = fmt::format("No valid connections for Fetkovich aquifer {}, aquifer {} will be ignored.",
+                                   aq.aquiferID, aq.aquiferID);
+            OpmLog::warning(msg);
+            continue;
+        }
+        auto aqf = std::make_unique<AquiferFetkovich<TypeTag>>(connections.getConnections(aq.aquiferID),
                                                                this->simulator_, aq);
         aquifers.push_back(std::move(aqf));
     }
