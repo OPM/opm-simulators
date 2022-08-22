@@ -1,5 +1,5 @@
 /*
-  Copyright 2015 Dr. Blatt - HPC-Simulation-Software & Services
+  Copyright 2015, 2022 Dr. Blatt - HPC-Simulation-Software & Services
   Copyright 2015 Statoil AS
 
   This file is part of the Open Porous Media project (OPM).
@@ -442,16 +442,16 @@ update()
                 detail::milu0_decomposition ( *ILU);
                 break;
             case MILU_VARIANT::MILU_2:
-                detail::milu0_decomposition ( *ILU, detail::IdentityFunctor(),
-                                              detail::SignFunctor() );
+                detail::milu0_decomposition ( *ILU, detail::identityFunctor<typename Matrix::field_type>,
+                                              detail::signFunctor<typename Matrix::field_type> );
                 break;
             case MILU_VARIANT::MILU_3:
-                detail::milu0_decomposition ( *ILU, detail::AbsFunctor(),
-                                              detail::SignFunctor() );
+                detail::milu0_decomposition ( *ILU, detail::absFunctor<typename Matrix::field_type>,
+                                              detail::signFunctor<typename Matrix::field_type> );
                 break;
             case MILU_VARIANT::MILU_4:
-                detail::milu0_decomposition ( *ILU, detail::IdentityFunctor(),
-                                              detail::IsPositiveFunctor() );
+                detail::milu0_decomposition ( *ILU, detail::identityFunctor<typename Matrix::field_type>,
+                                              detail::isPositiveFunctor<typename Matrix::field_type> );
                 break;
             default:
                 if (interiorSize_ == A_->N())
