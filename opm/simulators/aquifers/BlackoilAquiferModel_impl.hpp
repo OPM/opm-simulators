@@ -18,8 +18,6 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <opm/grid/utility/cartesianToCompressed.hpp>
-
 namespace Opm
 {
 
@@ -157,15 +155,8 @@ BlackoilAquiferModel<TypeTag>::init()
 
     if (aquifer.hasNumericalAquifer()) {
         const auto& num_aquifers = aquifer.numericalAquifers().aquifers();
-        const int number_of_cells = simulator_.gridView().size(0);
-        const int* global_cell = this->simulator_.vanguard().globalCell().data();
-        const std::unordered_map<int, int> cartesian_to_compressed = cartesianToCompressed(number_of_cells,
-                                                                                           global_cell);
         for ([[maybe_unused]]const auto& [id, aqu] : num_aquifers) {
-            auto aqf = std::make_unique<AquiferNumerical<TypeTag>>(aqu,
-                                                                   cartesian_to_compressed,
-                                                                   this->simulator_,
-                                                                   global_cell);
+            auto aqf = std::make_unique<AquiferNumerical<TypeTag>>(aqu, this->simulator_);
             aquifers.push_back(std::move(aqf));
         }
     }
