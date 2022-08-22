@@ -243,7 +243,7 @@ struct StandardPreconditioners
     /// Helper method to determine if the local partitioning has the
     /// K interior cells from [0, K-1] and ghost cells from [K, N-1].
     /// Returns K if true, otherwise returns N. This is motivated by
-    /// usage in the ParallelOverlappingILU0 preconditiner.
+    /// usage in the ParallelOverlappingILU0 preconditioner.
     static size_t interiorIfGhostLast(const Comm& comm)
     {
         size_t interior_count = 0;
@@ -278,19 +278,19 @@ struct StandardPreconditioners<Operator,Dune::Amg::SequentialInformation>
         using P = PropertyTree;
         F::addCreator("ILU0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             const double w = prm.get<double>("relaxation", 1.0);
-            return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V>>(
+            return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V, C>>(
                 op.getmat(), 0, w, Opm::MILU_VARIANT::ILU);
         });
         F::addCreator("ParOverILU0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             const double w = prm.get<double>("relaxation", 1.0);
             const int n = prm.get<int>("ilulevel", 0);
-            return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V>>(
+            return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V, C>>(
                 op.getmat(), n, w, Opm::MILU_VARIANT::ILU);
         });
         F::addCreator("ILUn", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             const int n = prm.get<int>("ilulevel", 0);
             const double w = prm.get<double>("relaxation", 1.0);
-            return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V>>(
+            return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V, C>>(
                 op.getmat(), n, w, Opm::MILU_VARIANT::ILU);
         });
         F::addCreator("Jac", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
