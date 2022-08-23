@@ -503,17 +503,19 @@ public:
             if(Sw < -eps && FluidSystem::enableVaporizedWater()) {
                 Scalar pg = 0.0;
                 Scalar T = asImp_().temperature_();
-                if (waterEnabled && gasEnabled && !oilEnabled) {
+                if constexpr (waterEnabled && gasEnabled && !oilEnabled) {
                     // twophase water-gas system
                     pg = (*this)[Indices::pressureSwitchIdx];
                 }
-                else if (So3 > 0.0 && Sg > 0.0) {
-                    // threephase case
-                    std::array<Scalar, numPhases> pC = { 0.0 };
-                    const MaterialLawParams& matParams = problem.materialLawParams(globalDofIdx);
-                    computeCapillaryPressures_(pC, So3, Sg + solventSaturation_(), /*Sw=*/ 0.0, matParams);
-                    Scalar po = (*this)[Indices::pressureSwitchIdx];
-                    pg = po + (pC[gasPhaseIdx] - pC[oilPhaseIdx]);
+                else { 
+                    if (So3 > 0.0 && Sg > 0.0) {
+                        // threephase case
+                        std::array<Scalar, numPhases> pC = { 0.0 };
+                        const MaterialLawParams& matParams = problem.materialLawParams(globalDofIdx);
+                        computeCapillaryPressures_(pC, So3, Sg + solventSaturation_(), /*Sw=*/ 0.0, matParams);
+                        Scalar po = (*this)[Indices::pressureSwitchIdx];
+                        pg = po + (pC[gasPhaseIdx] - pC[oilPhaseIdx]);
+                    }
                 }
                 Scalar RvwSat = FluidSystem::gasPvt().saturatedWaterVaporizationFactor(pvtRegionIdx_,
                                                                                       T,
