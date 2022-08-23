@@ -503,7 +503,7 @@ public:
             if(Sw < -eps && FluidSystem::enableVaporizedWater()) {
                 Scalar pg = 0.0;
                 Scalar T = asImp_().temperature_();
-                if constexpr (waterEnabled && gasEnabled && !oilEnabled) {
+                if (waterEnabled && gasEnabled && !oilEnabled) {
                     // twophase water-gas system
                     pg = (*this)[Indices::pressureSwitchIdx];
                 }
