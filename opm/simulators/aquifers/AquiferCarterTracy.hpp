@@ -67,7 +67,7 @@ public:
         comm.sum(&this->fluxValue_, 1);
     }
 
-    data::AquiferData aquiferData() const
+    data::AquiferData aquiferData() const override
     {
         data::AquiferData data;
         data.aquiferID = this->aquiferID();
