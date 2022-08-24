@@ -67,6 +67,7 @@ struct NodeData;
 struct NumericAquiferData;
 class Rates;
 struct Segment;
+class SegmentPressures;
 class Solution;
 struct Well;
 class Wells;
@@ -346,6 +347,7 @@ ADD_PACK_PROTOTYPES(data::CurrentControl)
 ADD_PACK_PROTOTYPES(data::FetkovichData)
 ADD_PACK_PROTOTYPES(data::Rates)
 ADD_PACK_PROTOTYPES(data::Segment)
+ADD_PACK_PROTOTYPES(data::SegmentPressures)
 ADD_PACK_PROTOTYPES(data::Solution)
 ADD_PACK_PROTOTYPES(data::GuideRateValue)
 ADD_PACK_PROTOTYPES(data::GroupConstraints)
