@@ -21,7 +21,7 @@
 
 #include <opm/common/utility/numeric/RootFinders.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
-#include <opm/simulators/linalg/SmallDenseMatrixUtils.hpp>
+#include <opm/simulators/linalg/MatrixBlock.hpp>
 #include <opm/simulators/wells/VFPHelpers.hpp>
 
 #include <algorithm>
@@ -552,7 +552,7 @@ namespace Opm
         // do the local inversion of D.
         try {
             this->invDuneD_ = this->duneD_; // Not strictly need if not cpr with well contributions is used
-            detail::invertMatrix(this->invDuneD_[0][0]);
+            Dune::ISTLUtility::invertMatrix(this->invDuneD_[0][0]);
         } catch( ... ) {
             OPM_DEFLOG_THROW(NumericalIssue,"Error when inverting local well equations for well " + name(), deferred_logger);
         }
@@ -2171,8 +2171,8 @@ namespace Opm
 
             for ( auto colB = this->duneB_[0].begin(), endB = this->duneB_[0].end(); colB != endB; ++colB )
             {
-                detail::multMatrix(this->invDuneD_[0][0],  (*colB), tmp);
-                detail::negativeMultMatrixTransposed((*colC), tmp, tmpMat);
+                Detail::multMatrix(this->invDuneD_[0][0],  (*colB), tmp);
+                Detail::negativeMultMatrixTransposed((*colC), tmp, tmpMat);
                 jacobian.addToBlock( row_index, colB.index(), tmpMat );
             }
         }

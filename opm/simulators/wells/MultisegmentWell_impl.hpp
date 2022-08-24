@@ -741,9 +741,9 @@ namespace Opm
                     for (auto colB = this->duneB_[rowB].begin(), endB = this->duneB_[rowB].end(); colB != endB; ++colB) {
                         const auto col_index = colB.index();
                         OffDiagMatrixBlockWellType tmp1;
-                        detail::multMatrixImpl(invDuneD[rowC][rowB], (*colB), tmp1, std::true_type());
+                        Detail::multMatrixImpl(invDuneD[rowC][rowB], (*colB), tmp1, std::true_type());
                         typename SparseMatrixAdapter::MatrixBlock tmp2;
-                        detail::multMatrixTransposedImpl((*colC), tmp1, tmp2, std::false_type());
+                        Detail::multMatrixTransposedImpl((*colC), tmp1, tmp2, std::false_type());
                         jacobian.addToBlock(row_index, col_index, tmp2);
                     }
                 }
