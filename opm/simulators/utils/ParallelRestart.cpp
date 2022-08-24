@@ -124,7 +124,7 @@ std::size_t packSize(const std::vector<T,A>& data, Opm::Parallel::MPIComm comm)
 template<class A>
 std::size_t packSize(const std::vector<bool,A>& data, Opm::Parallel::MPIComm comm)
 {
-    bool entry;
+    bool entry = false;
     return packSize(data.size(), comm) + data.size()*packSize(entry,comm);
 }
 
@@ -221,13 +221,193 @@ std::size_t packSize(const std::array<T,N>& data, Opm::Parallel::MPIComm comm)
 }
 
 HANDLE_AS_POD(data::CarterTracyData)
-HANDLE_AS_POD(data::Connection)
 HANDLE_AS_POD(data::CurrentControl)
 HANDLE_AS_POD(data::FetkovichData)
 HANDLE_AS_POD(data::GroupConstraints)
 HANDLE_AS_POD(data::NodeData)
-HANDLE_AS_POD(data::Rates)
-HANDLE_AS_POD(data::Segment)
+
+template <class T>
+struct Packing
+{
+};
+
+template <>
+struct Packing<data::Rates>
+{
+    static std::size_t packSize(const data::Rates& data, Opm::Parallel::MPIComm comm)
+    {
+        std::size_t totalSize = 0;
+        totalSize += Mpi::packSize(data.mask, comm);
+        totalSize += Mpi::packSize(data.wat, comm);
+        totalSize += Mpi::packSize(data.oil, comm);
+        totalSize += Mpi::packSize(data.gas, comm);
+        totalSize += Mpi::packSize(data.polymer, comm);
+        totalSize += Mpi::packSize(data.solvent, comm);
+        totalSize += Mpi::packSize(data.energy, comm);
+        totalSize += Mpi::packSize(data.dissolved_gas, comm);
+        totalSize += Mpi::packSize(data.vaporized_oil, comm);
+        totalSize += Mpi::packSize(data.reservoir_water, comm);
+        totalSize += Mpi::packSize(data.reservoir_oil, comm);
+        totalSize += Mpi::packSize(data.reservoir_gas, comm);
+        totalSize += Mpi::packSize(data.productivity_index_water, comm);
+        totalSize += Mpi::packSize(data.productivity_index_oil, comm);
+        totalSize += Mpi::packSize(data.productivity_index_gas, comm);
+        totalSize += Mpi::packSize(data.well_potential_water, comm);
+        totalSize += Mpi::packSize(data.well_potential_oil, comm);
+        totalSize += Mpi::packSize(data.well_potential_gas, comm);
+        totalSize += Mpi::packSize(data.brine, comm);
+        totalSize += Mpi::packSize(data.alq, comm);
+        totalSize += Mpi::packSize(data.tracer, comm);
+        totalSize += Mpi::packSize(data.micp, comm);
+        totalSize += Mpi::packSize(data.vaporized_water, comm);
+        return totalSize;
+    }
+
+    static void pack(const data::Rates& data, std::vector<char>& buffer, int& position, Opm::Parallel::MPIComm comm)
+    {
+        Mpi::pack(data.mask, buffer, position, comm);
+        Mpi::pack(data.wat, buffer, position, comm);
+        Mpi::pack(data.oil, buffer, position, comm);
+        Mpi::pack(data.gas, buffer, position, comm);
+        Mpi::pack(data.polymer, buffer, position, comm);
+        Mpi::pack(data.solvent, buffer, position, comm);
+        Mpi::pack(data.energy, buffer, position, comm);
+        Mpi::pack(data.dissolved_gas, buffer, position, comm);
+        Mpi::pack(data.vaporized_oil, buffer, position, comm);
+        Mpi::pack(data.reservoir_water, buffer, position, comm);
+        Mpi::pack(data.reservoir_oil, buffer, position, comm);
+        Mpi::pack(data.reservoir_gas, buffer, position, comm);
+        Mpi::pack(data.productivity_index_water, buffer, position, comm);
+        Mpi::pack(data.productivity_index_oil, buffer, position, comm);
+        Mpi::pack(data.productivity_index_gas, buffer, position, comm);
+        Mpi::pack(data.well_potential_water, buffer, position, comm);
+        Mpi::pack(data.well_potential_oil, buffer, position, comm);
+        Mpi::pack(data.well_potential_gas, buffer, position, comm);
+        Mpi::pack(data.brine, buffer, position, comm);
+        Mpi::pack(data.alq, buffer, position, comm);
+        Mpi::pack(data.tracer, buffer, position, comm);
+        Mpi::pack(data.micp, buffer, position, comm);
+        Mpi::pack(data.vaporized_water, buffer, position, comm);
+    }
+
+    static void unpack(data::Rates& data, std::vector<char>& buffer, int& position, Opm::Parallel::MPIComm comm)
+    {
+        Mpi::unpack(data.mask, buffer, position, comm);
+        Mpi::unpack(data.wat, buffer, position, comm);
+        Mpi::unpack(data.oil, buffer, position, comm);
+        Mpi::unpack(data.gas, buffer, position, comm);
+        Mpi::unpack(data.polymer, buffer, position, comm);
+        Mpi::unpack(data.solvent, buffer, position, comm);
+        Mpi::unpack(data.energy, buffer, position, comm);
+        Mpi::unpack(data.dissolved_gas, buffer, position, comm);
+        Mpi::unpack(data.vaporized_oil, buffer, position, comm);
+        Mpi::unpack(data.reservoir_water, buffer, position, comm);
+        Mpi::unpack(data.reservoir_oil, buffer, position, comm);
+        Mpi::unpack(data.reservoir_gas, buffer, position, comm);
+        Mpi::unpack(data.productivity_index_water, buffer, position, comm);
+        Mpi::unpack(data.productivity_index_oil, buffer, position, comm);
+        Mpi::unpack(data.productivity_index_gas, buffer, position, comm);
+        Mpi::unpack(data.well_potential_water, buffer, position, comm);
+        Mpi::unpack(data.well_potential_oil, buffer, position, comm);
+        Mpi::unpack(data.well_potential_gas, buffer, position, comm);
+        Mpi::unpack(data.brine, buffer, position, comm);
+        Mpi::unpack(data.alq, buffer, position, comm);
+        Mpi::unpack(data.tracer, buffer, position, comm);
+        Mpi::unpack(data.micp, buffer, position, comm);
+        Mpi::unpack(data.vaporized_water, buffer, position, comm);
+    }
+};
+
+template <>
+struct Packing<data::Connection>
+{
+    static std::size_t packSize(const data::Connection& data, Opm::Parallel::MPIComm comm)
+    {
+        std::size_t totalSize = 0;
+        totalSize += Mpi::packSize(data.index, comm);
+        totalSize += Mpi::packSize(data.rates, comm);
+        totalSize += Mpi::packSize(data.pressure, comm);
+        totalSize += Mpi::packSize(data.reservoir_rate, comm);
+        totalSize += Mpi::packSize(data.cell_pressure, comm);
+        totalSize += Mpi::packSize(data.cell_saturation_water, comm);
+        totalSize += Mpi::packSize(data.cell_saturation_gas, comm);
+        totalSize += Mpi::packSize(data.effective_Kh, comm);
+        totalSize += Mpi::packSize(data.trans_factor, comm);
+        return totalSize;
+    }
+
+    static void pack(const data::Connection& data, std::vector<char>& buffer, int& position, Opm::Parallel::MPIComm comm)
+    {
+        Mpi::pack(data.index, buffer, position, comm);
+        Mpi::pack(data.rates, buffer, position, comm);
+        Mpi::pack(data.pressure, buffer, position, comm);
+        Mpi::pack(data.reservoir_rate, buffer, position, comm);
+        Mpi::pack(data.cell_pressure, buffer, position, comm);
+        Mpi::pack(data.cell_saturation_water, buffer, position, comm);
+        Mpi::pack(data.cell_saturation_gas, buffer, position, comm);
+        Mpi::pack(data.effective_Kh, buffer, position, comm);
+        Mpi::pack(data.trans_factor, buffer, position, comm);
+    }
+
+    static void unpack(data::Connection& data, std::vector<char>& buffer, int& position, Opm::Parallel::MPIComm comm)
+    {
+        Mpi::unpack(data.index, buffer, position, comm);
+        Mpi::unpack(data.rates, buffer, position, comm);
+        Mpi::unpack(data.pressure, buffer, position, comm);
+        Mpi::unpack(data.reservoir_rate, buffer, position, comm);
+        Mpi::unpack(data.cell_pressure, buffer, position, comm);
+        Mpi::unpack(data.cell_saturation_water, buffer, position, comm);
+        Mpi::unpack(data.cell_saturation_gas, buffer, position, comm);
+        Mpi::unpack(data.effective_Kh, buffer, position, comm);
+        Mpi::unpack(data.trans_factor, buffer, position, comm);
+    }
+};
+
+template <>
+struct Packing<data::SegmentPressures>
+{
+    static std::size_t packSize(const data::SegmentPressures& data, Opm::Parallel::MPIComm comm)
+    {
+        return Mpi::packSize(data.values_, comm);
+    }
+
+    static void pack(const data::SegmentPressures& data, std::vector<char>& buffer, int& position, Opm::Parallel::MPIComm comm)
+    {
+        Mpi::pack(data.values_, buffer, position, comm);
+    }
+
+    static void unpack(data::SegmentPressures& data, std::vector<char>& buffer, int& position, Opm::Parallel::MPIComm comm)
+    {
+        Mpi::unpack(data.values_, buffer, position, comm);
+    }
+};
+
+template <>
+struct Packing<data::Segment>
+{
+    static std::size_t packSize(const data::Segment& data, Opm::Parallel::MPIComm comm)
+    {
+        std::size_t totalSize = 0;
+        totalSize += Mpi::packSize(data.rates, comm);
+        totalSize += Mpi::packSize(data.pressures, comm);
+        totalSize += Mpi::packSize(data.segNumber, comm);
+        return totalSize;
+    }
+
+    static void pack(const data::Segment& data, std::vector<char>& buffer, int& position, Opm::Parallel::MPIComm comm)
+    {
+        Mpi::pack(data.rates, buffer, position, comm);
+        Mpi::pack(data.pressures, buffer, position, comm);
+        Mpi::pack(data.segNumber, buffer, position, comm);
+    }
+
+    static void unpack(data::Segment& data, std::vector<char>& buffer, int& position, Opm::Parallel::MPIComm comm)
+    {
+        Mpi::unpack(data.rates, buffer, position, comm);
+        Mpi::unpack(data.pressures, buffer, position, comm);
+        Mpi::unpack(data.segNumber, buffer, position, comm);
+    }
+};
 
 std::size_t packSize(const data::NumericAquiferData& data, Opm::Parallel::MPIComm comm)
 {
@@ -298,6 +478,26 @@ std::size_t packSize(const data::Well& data, Opm::Parallel::MPIComm comm)
     return size;
 }
 
+std::size_t packSize(const data::Rates& data, Opm::Parallel::MPIComm comm)
+{
+    return Packing<data::Rates>::packSize(data, comm);
+}
+
+std::size_t packSize(const data::Connection& data, Opm::Parallel::MPIComm comm)
+{
+    return Packing<data::Connection>::packSize(data, comm);
+}
+
+std::size_t packSize(const data::SegmentPressures& data, Opm::Parallel::MPIComm comm)
+{
+    return Packing<data::SegmentPressures>::packSize(data, comm);
+}
+
+std::size_t packSize(const data::Segment& data, Opm::Parallel::MPIComm comm)
+{
+    return Packing<data::Segment>::packSize(data, comm);
+}
+
 std::size_t packSize(const data::CellData& data, Opm::Parallel::MPIComm comm)
 {
     return packSize(data.dim, comm) + packSize(data.data, comm) + packSize(data.target, comm);
@@ -339,7 +539,7 @@ std::size_t packSize(const RestartValue& data, Opm::Parallel::MPIComm comm)
 
 std::size_t packSize(const Opm::time_point&, Opm::Parallel::MPIComm comm)
 {
-    std::time_t tp;
+    std::time_t tp = 0;
     return packSize(tp, comm);
 }
 
@@ -653,6 +853,30 @@ void pack(const data::Wells& data, std::vector<char>& buffer, int& position,
          buffer, position, comm);
 }
 
+void pack(const data::Rates& data, std::vector<char>& buffer, int& position,
+          Opm::Parallel::MPIComm comm)
+{
+    Packing<data::Rates>::pack(data, buffer, position, comm);
+}
+
+void pack(const data::Connection& data, std::vector<char>& buffer, int& position,
+          Opm::Parallel::MPIComm comm)
+{
+    Packing<data::Connection>::pack(data, buffer, position, comm);
+}
+
+void pack(const data::SegmentPressures& data, std::vector<char>& buffer, int& position,
+          Opm::Parallel::MPIComm comm)
+{
+    Packing<data::SegmentPressures>::pack(data, buffer, position, comm);
+}
+
+void pack(const data::Segment& data, std::vector<char>& buffer, int& position,
+          Opm::Parallel::MPIComm comm)
+{
+    Packing<data::Segment>::pack(data, buffer, position, comm);
+}
+
 void pack(const data::GroupAndNetworkValues& data, std::vector<char>& buffer, int& position,
           Opm::Parallel::MPIComm comm)
 {
@@ -677,7 +901,7 @@ void pack(const Opm::time_point& data, std::vector<char>& buffer, int& position,
 }
 
 
-/// unpack routines
+/// Mpi::unpack routines
 
 template<class T>
 void unpack(T*, const std::size_t&, std::vector<char>&, int&,
@@ -996,6 +1220,30 @@ void unpack(data::Wells& data, std::vector<char>& buffer, int& position,
     // to prevent throwing.
     unpack(static_cast<std::map< std::string, data::Well>&>(data),
            buffer, position, comm);
+}
+
+void unpack(data::Rates& data, std::vector<char>& buffer, int& position,
+            Opm::Parallel::MPIComm comm)
+{
+    Packing<data::Rates>::unpack(data, buffer, position, comm);
+}
+
+void unpack(data::Connection& data, std::vector<char>& buffer, int& position,
+            Opm::Parallel::MPIComm comm)
+{
+    Packing<data::Connection>::unpack(data, buffer, position, comm);
+}
+
+void unpack(data::SegmentPressures& data, std::vector<char>& buffer, int& position,
+            Opm::Parallel::MPIComm comm)
+{
+    Packing<data::SegmentPressures>::unpack(data, buffer, position, comm);
+}
+
+void unpack(data::Segment& data, std::vector<char>& buffer, int& position,
+            Opm::Parallel::MPIComm comm)
+{
+    Packing<data::Segment>::unpack(data, buffer, position, comm);
 }
 
 void unpack(data::GroupAndNetworkValues& data, std::vector<char>& buffer, int& position,
