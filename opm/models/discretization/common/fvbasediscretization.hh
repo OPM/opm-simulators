@@ -55,6 +55,7 @@
 #include <opm/models/utils/timer.hh>
 #include <opm/models/utils/timerguard.hh>
 #include <opm/models/io/vtkprimaryvarsmodule.hh>
+#include <opm/simulators/linalg/matrixblock.hh>
 
 #include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/common/Valgrind.hpp>
