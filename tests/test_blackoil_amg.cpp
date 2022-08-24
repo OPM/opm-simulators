@@ -128,9 +128,8 @@ void setupPattern(int N, M& mat, Dune::ParallelIndexSet<G,L,s>& indices, int ove
 }
 
 template<class M, class T>
-void fillValues(int N, M& mat, int overlapStart, int overlapEnd, int start, int end, T eps)
+void fillValues([[maybe_unused]] int N, M& mat, int overlapStart, int overlapEnd, int start, int end, T eps)
 {
-    DUNE_UNUSED_PARAMETER(N);
     typedef typename M::block_type Block;
     Block dval(0), bone(0), bmone(0), beps(0);
 
@@ -319,8 +318,7 @@ bool init_unit_test_func()
 
 int main(int argc, char** argv)
 {
-    const auto& helper = Dune::MPIHelper::instance(argc, argv);
-    DUNE_UNUSED_PARAMETER(helper);
+    [[maybe_unused]] const auto& helper = Dune::MPIHelper::instance(argc, argv);
     boost::unit_test::unit_test_main(&init_unit_test_func,
                                      argc, argv);
 }
