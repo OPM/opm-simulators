@@ -66,7 +66,7 @@ public:
         aquifer_pressure_ = aquiferPressure();
     }
 
-    data::AquiferData aquiferData() const
+    data::AquiferData aquiferData() const override
     {
         // TODO: how to unify the two functions?
         auto data = data::AquiferData{};
