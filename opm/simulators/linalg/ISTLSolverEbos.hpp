@@ -27,7 +27,7 @@
 #include <opm/simulators/linalg/ExtractParallelGridInformationToISTL.hpp>
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
 #include <opm/simulators/linalg/FlowLinearSolverParameters.hpp>
-#include <opm/simulators/linalg/MatrixBlock.hpp>
+#include <opm/simulators/linalg/matrixblock.hh>
 #include <opm/simulators/linalg/ParallelIstlInformation.hpp>
 #include <opm/simulators/linalg/ParallelOverlappingILU0.hpp>
 #include <opm/simulators/linalg/WellOperators.hpp>
@@ -345,14 +345,6 @@ namespace Opm
         const std::any& parallelInformation() const { return parallelInformation_; }
 
     protected:
-        // 3x3 matrix block inversion was unstable at least 2.3 until and including
-        // 2.5.0. There may still be some issue with the 4x4 matrix block inversion
-        // we therefore still use the block inversion in OPM
-        typedef ParallelOverlappingILU0<Dune::BCRSMatrix<Dune::MatrixBlock<typename Matrix::field_type,
-                                                                            Matrix::block_type::rows,
-                                                                            Matrix::block_type::cols> >,
-                                                                            Vector, Vector, Dune::Amg::SequentialInformation> SeqPreconditioner;
-
 #if HAVE_MPI
         typedef Dune::OwnerOverlapCopyCommunication<int, int> Comm;
         // 3x3 matrix block inversion was unstable from at least 2.3 until and
