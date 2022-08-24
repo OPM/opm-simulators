@@ -22,7 +22,6 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <dune/common/timer.hh>
-#include <opm/simulators/linalg/MatrixBlock.hpp>
 
 #include <opm/simulators/linalg/bda/BlockedMatrix.hpp>
 #include <opm/simulators/linalg/bda/opencl/ChowPatelIlu.hpp>
