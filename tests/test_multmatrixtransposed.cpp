@@ -21,10 +21,12 @@
 
 #define BOOST_TEST_MODULE MultMatrixTransposed
 #include <boost/test/unit_test.hpp>
-#include <opm/simulators/linalg/MatrixBlock.hpp>
+#include <opm/simulators/linalg/SmallDenseMatrixUtils.hpp>
+
+#include <dune/common/fmatrix.hh>
 
 using namespace Dune;
-using namespace Opm::Detail;
+using namespace Opm::detail;
 
 BOOST_AUTO_TEST_CASE(testmultmatrixtrans)
 {
