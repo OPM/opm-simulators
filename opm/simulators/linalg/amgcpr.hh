@@ -966,9 +966,8 @@ namespace Dune
 
     /** \copydoc Preconditioner::post */
     template<class M, class X, class S, class PI, class A>
-    void AMGCPR<M,X,S,PI,A>::post(Domain& x)
+    void AMGCPR<M,X,S,PI,A>::post([[maybe_unused]] Domain& x)
     {
-      DUNE_UNUSED_PARAMETER(x);
       // Postprocess all smoothers
       typedef typename Hierarchy<Smoother,A>::Iterator Iterator;
       typedef typename Hierarchy<Domain,A>::Iterator DIterator;
