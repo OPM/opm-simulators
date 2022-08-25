@@ -148,6 +148,8 @@ public:
     SimulatorReport run(SimulatorTimer& timer)
     {
         init(timer);
+        // Make cache up to date. No need for updating it in elementCtx.
+        ebosSimulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
         // Main simulation loop.
         while (!timer.done()) {
             bool continue_looping = runStep(timer);
@@ -218,8 +220,6 @@ public:
             ebosSimulator_.setEpisodeIndex(-1);
             ebosSimulator_.setEpisodeLength(0.0);
             ebosSimulator_.setTimeStepSize(0.0);
-            // Make cache up to date. No need for updating it in elementCtx.
-            ebosSimulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
             wellModel_().beginReportStep(timer.currentStepNum());
             ebosSimulator_.problem().writeOutput();
 
