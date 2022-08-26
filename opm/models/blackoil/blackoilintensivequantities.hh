@@ -596,7 +596,7 @@ private:
     Scalar referencePorosity_;
     Evaluation porosity_;
     Evaluation rockCompTransMultiplier_;
-    Evaluation mobility_[numPhases];
+    std::array<Evaluation,numPhases> mobility_;
 };
 
 } // namespace Opm

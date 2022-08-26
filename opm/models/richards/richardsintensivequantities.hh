@@ -189,8 +189,8 @@ public:
 private:
     FluidState fluidState_;
     DimMatrix intrinsicPerm_;
-    Evaluation relativePermeability_[numPhases];
-    Evaluation mobility_[numPhases];
+    std::array<Evaluation,numPhases> relativePermeability_;
+    std::array<Evaluation,numPhases> mobility_;
     Evaluation porosity_;
 };
 

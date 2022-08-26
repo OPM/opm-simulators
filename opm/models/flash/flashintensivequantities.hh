@@ -208,8 +208,8 @@ private:
     DimMatrix intrinsicPerm_;
     FluidState fluidState_;
     Evaluation porosity_;
-    Evaluation relativePermeability_[numPhases];
-    Evaluation mobility_[numPhases];
+    std::array<Evaluation,numPhases> relativePermeability_;
+    std::array<Evaluation,numPhases> mobility_;
 };
 
 } // namespace Opm
