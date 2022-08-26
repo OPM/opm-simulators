@@ -340,22 +340,18 @@ protected:
 
     bool checkGroupHigherConstraints(const Group& group,
                                      DeferredLogger& deferred_logger,
-                                     const int reportStepIdx,
-                                     std::set<std::string>& switched_groups);
+                                     const int reportStepIdx);
 
     bool updateGroupIndividualControl(const Group& group,
                                       DeferredLogger& deferred_logger,
-                                      const int reportStepIdx,
-                                      std::set<std::string>& switched_groups);
+                                      const int reportStepIdx);
 
     bool updateGroupIndividualControls(DeferredLogger& deferred_logger,
-                                       std::set<std::string>& switched_groups,
                                        const int reportStepIdx,
                                        const int iterationIdx);
 
     bool updateGroupHigherControls(DeferredLogger& deferred_logger,
-                                   const int reportStepIdx,
-                                   std::set<std::string>& switched_groups);
+                                   const int reportStepIdx);
 
     void actionOnBrokenConstraints(const Group& group,
                                    const Group::ExceedAction& exceed_action,
@@ -461,6 +457,10 @@ protected:
     bool glift_debug = false;
 
     double last_glift_opt_time_ = -1.0;
+
+    std::map<std::string, std::string> switched_prod_groups_;
+    std::map<std::pair<std::string, Opm::Phase>, std::string> switched_inj_groups_;
+
 
 private:
     WellInterfaceGeneric* getGenWell(const std::string& well_name);

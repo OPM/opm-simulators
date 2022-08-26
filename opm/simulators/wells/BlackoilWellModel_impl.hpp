@@ -249,6 +249,8 @@ namespace Opm {
         updatePerforationIntensiveQuantities();
         updateAverageFormationFactor();
         DeferredLogger local_deferredLogger;
+        switched_prod_groups_.clear();
+        switched_inj_groups_.clear();
 
         this->resetWGState();
         const int reportStepIdx = ebosSimulator_.episodeIndex();
@@ -461,6 +463,34 @@ namespace Opm {
         // report well switching
         for (const auto& well : well_container_) {
             well->reportWellSwitching(this->wellState().well(well->indexOfWell()), local_deferredLogger);
+        }
+        // report group switching
+        if (terminal_output_) {
+
+            for (const auto& [name, to] : switched_prod_groups_) {
+                std::string msg = "    Production Group " + name
+                + " control mode changed from ";
+                const Group::ProductionCMode& oldControl = this->prevWGState().group_state.production_control(name);
+                std::string from = Group::ProductionCMode2String(oldControl);
+                msg += from;
+                msg += " to " + to;
+                if (to != from) {
+                    local_deferredLogger.info(msg);
+                }
+            }
+            for (const auto& [key, to] : switched_inj_groups_) {
+                const std::string& name = key.first;
+                const Opm::Phase& phase = key.second;
+                std::string msg = "    Injection Group " + name
+                + " control mode changed from ";
+                const Group::InjectionCMode& oldControl = this->prevWGState().group_state.injection_control(name, phase);
+                std::string from = Group::InjectionCMode2String(oldControl);
+                msg += from;
+                msg += " to " + to;
+                if (to != from) {
+                    local_deferredLogger.info(msg);
+                }
+            }
         }
 
         // update the rate converter with current averages pressures etc in
@@ -1423,11 +1453,10 @@ namespace Opm {
         updateNetworkPressures(episodeIdx);
 
         std::set<std::string> switched_wells;
-        std::set<std::string> switched_groups;
 
         if (checkGroupControls) {
             // Check group individual constraints.
-            bool changed_individual = updateGroupIndividualControls(deferred_logger, switched_groups,
+            bool changed_individual = updateGroupIndividualControls(deferred_logger,
                                                         episodeIdx, iterationIdx);
 
             if (changed_individual)
@@ -1435,8 +1464,7 @@ namespace Opm {
 
             // Check group's constraints from higher levels.
             bool changed_higher = updateGroupHigherControls(deferred_logger,
-                                                            episodeIdx,
-                                                            switched_groups);
+                                                            episodeIdx);
 
             if (changed_higher)
                 updateAndCommunicate(episodeIdx, iterationIdx, deferred_logger);
