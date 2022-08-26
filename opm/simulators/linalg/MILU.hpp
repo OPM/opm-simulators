@@ -1,5 +1,5 @@
 /*
-  Copyright 2015 Dr. Blatt - HPC-Simulation-Software & Services
+  Copyright 2015, 2022 Dr. Blatt - HPC-Simulation-Software & Services
   Copyright 2015 Statoil AS
 
   This file is part of the Open Porous Media project (OPM).
@@ -22,8 +22,11 @@
 
 #include <cmath>
 #include <cstddef>
+#include <functional>
 #include <string>
 #include <vector>
+
+
 
 namespace Opm
 {
@@ -43,8 +46,25 @@ enum class MILU_VARIANT{
 
 MILU_VARIANT convertString2Milu(const std::string& milu);
 
+
 namespace detail
 {
+
+template <typename T>
+T identityFunctor(const T&);
+
+template <typename T>
+T oneFunctor(const T&);
+
+template <typename T>
+T signFunctor(const T&);
+
+template <typename T>
+T isPositiveFunctor(const T&);
+
+template <typename T>
+T absFunctor(const T&);
+
 
 struct Reorderer
 {
@@ -72,74 +92,21 @@ struct RealReorderer : public Reorderer
     const std::vector<std::size_t>* ordering_;
 };
 
-struct IdentityFunctor
-{
-    template<class T>
-    T operator()(const T& t)
-    {
-        return t;
-    }
-};
 
-struct OneFunctor
-{
-    template<class T>
-    T operator()(const T&)
-    {
-        return 1.0;
-    }
-};
-struct SignFunctor
-{
-    template<class T>
-    double operator()(const T& t)
-    {
-        if (t < 0.0)
-        {
-            return -1;
-        }
-        else
-        {
-            return 1.0;
-        }
-    }
-};
+template<class M>
+using FieldFunct = std::function<typename M::field_type(const typename M::field_type&)>;
 
-struct IsPositiveFunctor
-{
-    template<class T>
-    double operator()(const T& t)
-    {
-        if (t < 0.0)
-        {
-            return 0;
-        }
-        else
-        {
-            return 1;
-        }
-    }
-};
-struct AbsFunctor
-{
-    template<class T>
-    T operator()(const T& t)
-    {
-        return std::abs(t);
-    }
-};
-
-template<class M, class F1=IdentityFunctor, class F2=OneFunctor >
-void milu0_decomposition(M& A, F1 absFunctor = F1(), F2 signFunctor = F2(),
+template <typename M>
+void milu0_decomposition(M& A, FieldFunct<M> absFunctor = signFunctor<typename M::field_type>,
+                         FieldFunct<M> signFunctor = oneFunctor<typename M::field_type>,
                          std::vector<typename M::block_type>* diagonal = nullptr);
 
 template<class M>
-void milu0_decomposition(M& A,
-                         std::vector<typename M::block_type>* diagonal)
+void  milu0_decomposition(M& A, std::vector<typename M::block_type>* diagonal)
 {
-    milu0_decomposition(A, detail::IdentityFunctor(), detail::OneFunctor(),
-                        diagonal);
-}
+    milu0_decomposition(A, identityFunctor<typename M::field_type>, oneFunctor<typename M::field_type>, diagonal);
+};
+
 
 template<class M>
 void milun_decomposition(const M& A, int n, MILU_VARIANT milu, M& ILU,

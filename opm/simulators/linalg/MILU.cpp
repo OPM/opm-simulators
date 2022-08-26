@@ -1,5 +1,5 @@
 /*
-  Copyright 2015 Dr. Blatt - HPC-Simulation-Software & Services
+  Copyright 2015, 2022 Dr. Blatt - HPC-Simulation-Software & Services
   Copyright 2015 Statoil AS
 
   This file is part of the Open Porous Media project (OPM).
@@ -32,6 +32,21 @@
 
 #include <array>
 
+template <typename T>
+T Opm::detail::identityFunctor(const T& t){return t;};
+
+template <typename T>
+T Opm::detail::oneFunctor(const T&){return 1.0;};
+
+template <typename T>
+T Opm::detail::signFunctor(const T& t){if (t< 0){return -1;} else{return 1;}};
+
+template <typename T>
+T Opm::detail::isPositiveFunctor(const T& t){if (t<0){return 0;} else{return 1;}};
+
+template <typename T>
+T Opm::detail::absFunctor(const T& t){return std::abs(t);};
+
 namespace Opm
 {
 
@@ -55,8 +70,8 @@ MILU_VARIANT convertString2Milu(const std::string& milu)
 namespace detail
 {
 
-template<class M, class F1, class F2>
-void milu0_decomposition(M& A, F1 absFunctor, F2 signFunctor,
+template<class M>
+void milu0_decomposition(M& A, FieldFunct<M> absFunctor, FieldFunct<M> signFunctor,
                          std::vector<typename M::block_type>* diagonal)
 {
     if( diagonal )
@@ -217,16 +232,17 @@ void milun_decomposition(const M& A, int n, MILU_VARIANT milu, M& ILU,
         detail::milu0_decomposition ( ILU);
         break;
     case MILU_VARIANT::MILU_2:
-        detail::milu0_decomposition ( ILU, detail::IdentityFunctor(),
-                                      detail::SignFunctor() );
+        detail::milu0_decomposition ( ILU, identityFunctor<typename M::field_type>,
+                                      signFunctor<typename M::field_type>);
+
         break;
     case MILU_VARIANT::MILU_3:
-        detail::milu0_decomposition ( ILU, detail::AbsFunctor(),
-                                      detail::SignFunctor() );
+        detail::milu0_decomposition ( ILU, absFunctor<typename M::field_type>,
+                                      signFunctor<typename M::field_type>);
         break;
     case MILU_VARIANT::MILU_4:
-        detail::milu0_decomposition ( ILU, detail::IdentityFunctor(),
-                                      detail::IsPositiveFunctor() );
+        detail::milu0_decomposition ( ILU, identityFunctor<typename M::field_type> ,
+                                      isPositiveFunctor<typename M::field_type>);
         break;
     default:
 #if DUNE_VERSION_LT(DUNE_GRID, 2, 8)
@@ -238,26 +254,30 @@ void milun_decomposition(const M& A, int n, MILU_VARIANT milu, M& ILU,
     }
 }
 
-#define INSTANCE(F1,F2,...) \
-    template void milu0_decomposition<__VA_ARGS__, F1, F2> \
-                                     (__VA_ARGS__&, F1, F2, \
-                                      std::vector<typename __VA_ARGS__::block_type>*);
 
-#define INSTANCE_ILUN(...) \
+template double Opm::detail::identityFunctor(const double&);
+template double Opm::detail::oneFunctor(const double&);
+template double Opm::detail::signFunctor(const double&);
+template double Opm::detail::isPositiveFunctor(const double&);
+template double Opm::detail::absFunctor(const double&);
+
+#define INSTANCE(...)                                                   \
+    template void milu0_decomposition<__VA_ARGS__>                      \
+    (__VA_ARGS__&,std::function<double(const double&)>, std::function<double(const double&)>, \
+     std::vector<typename __VA_ARGS__::block_type>*);
+
+#define INSTANCE_ILUN(...)                                              \
     template void milun_decomposition(const __VA_ARGS__&, int, MILU_VARIANT, \
                                       __VA_ARGS__&,Reorderer&,Reorderer&);
 
-#define INSTANCE_FULL(...) \
-    INSTANCE(AbsFunctor,SignFunctor,__VA_ARGS__) \
-    INSTANCE(IdentityFunctor,IsPositiveFunctor,__VA_ARGS__) \
-    INSTANCE(IdentityFunctor,OneFunctor,__VA_ARGS__) \
-    INSTANCE(IdentityFunctor,SignFunctor,__VA_ARGS__) \
+#define INSTANCE_FULL(...)                      \
+    INSTANCE(__VA_ARGS__)                       \
     INSTANCE_ILUN(__VA_ARGS__)
 
-#define INSTANCE_BLOCK(Dim) \
+#define INSTANCE_BLOCK(Dim)                                             \
     INSTANCE_FULL(Dune::BCRSMatrix<MatrixBlock<double,Dim,Dim>>)
 
-#define INSTANCE_FM(Dim) \
+#define INSTANCE_FM(Dim)                                                \
     INSTANCE_FULL(Dune::BCRSMatrix<Dune::FieldMatrix<double,Dim,Dim>>)
 
 INSTANCE_FM(1)
