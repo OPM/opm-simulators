@@ -34,6 +34,7 @@
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/RsvdTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/RvvdTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/RvwvdTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/PbvdTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/PdvdTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/SaltvdTable.hpp>
@@ -324,6 +325,7 @@ density(const double depth,
     return rho;
 }
 
+// TODO: add RVW
 template<class FluidSystem, class RV>
 Gas<FluidSystem,RV>::
 Gas(const double temp,
@@ -1203,6 +1205,7 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
            std::vector<double>(grid.size(/*codim=*/0))),
       rs_(grid.size(/*codim=*/0)),
       rv_(grid.size(/*codim=*/0)),
+      rvw_(grid.size(/*codim=*/0)),
       cartesianIndexMapper_(cartMapper)
 {
     //Check for presence of kw SWATINIT
@@ -1321,6 +1324,54 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
             rvFunc_.push_back(std::make_shared<Miscibility::NoMixing>());
         }
     }
+
+ rvwFunc_.reserve(rec.size());
+    if (FluidSystem::enableVaporizedWater()) {
+        for (size_t i = 0; i < rec.size(); ++i) {
+            if (eqlmap.cells(i).empty()) {
+                rvwFunc_.push_back(std::shared_ptr<Miscibility::RvwVD<FluidSystem>>());
+                continue;
+            }
+            const int pvtIdx = regionPvtIdx_[i];
+            if (!rec[i].wetGasInitConstantRv()) {
+                const TableContainer& rvwvdTables = tables.getRvwvdTables();
+                //const TableContainer& pdvdTables = tables.getPdvdTables();
+
+                if (rvwvdTables.size() > 0) {
+                    const RvwvdTable& rvwvdTable = rvwvdTables.getTable<RvwvdTable>(i);
+                    std::vector<double> depthColumn = rvwvdTable.getColumn("DEPTH").vectorCopy();
+                    std::vector<double> rvwvdColumn = rvwvdTable.getColumn("RVWVD").vectorCopy();
+                    rvwFunc_.push_back(std::make_shared<Miscibility::RvwVD<FluidSystem>>(pvtIdx,
+                                                                                       depthColumn, rvwvdColumn));
+                // } else if (pdvdTables.size() > 0) {
+                //     const PdvdTable& pdvdTable = pdvdTables.getTable<PdvdTable>(i);
+                //     std::vector<double> depthColumn = pdvdTable.getColumn("DEPTH").vectorCopy();
+                //     std::vector<double> pdewColumn = pdvdTable.getColumn("PDEW").vectorCopy();
+                //     rvFunc_.push_back(std::make_shared<Miscibility::PDVD<FluidSystem>>(pvtIdx,
+                //                                                                        depthColumn, pdewColumn));
+                } else {
+                    throw std::runtime_error("Cannot initialise: RVWVD table not available.");
+                }
+            }
+            // else {
+            //     if (rec[i].gasOilContactDepth() != rec[i].datumDepth()) {
+            //         throw std::runtime_error(
+            //                   "Cannot initialise: when no explicit RVVD table is given, \n"
+            //                   "datum depth must be at the gas-oil-contact. "
+            //                   "In EQUIL region "+std::to_string(i + 1)+" (counting from 1), this does not hold.");
+            //     }
+            //     const double pContact = rec[i].datumDepthPressure() + rec[i].gasOilContactCapillaryPressure();
+            //     const double TContact = 273.15 + 20; // standard temperature for now
+            //     rvFunc_.push_back(std::make_shared<Miscibility::RvSatAtContact<FluidSystem>>(pvtIdx,pContact, TContact));
+            // }
+        }
+    }
+    else {
+        for (size_t i = 0; i < rec.size(); ++i) {
+            rvwFunc_.push_back(std::make_shared<Miscibility::NoMixing>());
+        }
+    }
+
 
     // EXTRACT the initial temperature
     updateInitialTemperature_(eclipseState);
@@ -1603,7 +1654,7 @@ calcPressSatRsRv(const RMap& reg,
         }
 
         const auto eqreg = EquilReg {
-            rec[r], this->rsFunc_[r], this->rvFunc_[r], this->saltVdTable_[r], this->regionPvtIdx_[r]
+            rec[r], this->rsFunc_[r], this->rvFunc_[r], this->rvwFunc_[r], this->saltVdTable_[r], this->regionPvtIdx_[r]
         };
 
         // Ensure gas/oil and oil/water contacts are within the span for the
@@ -1664,9 +1715,10 @@ cellLoop(const CellRange&      cells,
     auto saturations = Details::PhaseQuantityValue{};
     auto Rs          = 0.0;
     auto Rv          = 0.0;
+    auto Rvw         = 0.0;
 
     for (const auto& cell : cells) {
-        eqmethod(cell, pressures, saturations, Rs, Rv);
+        eqmethod(cell, pressures, saturations, Rs, Rv, Rvw);
 
         if (oilActive) {
             this->pp_ [oilPos][cell] = pressures.oil;
@@ -1686,6 +1738,10 @@ cellLoop(const CellRange&      cells,
         if (oilActive && gasActive) {
             this->rs_[cell] = Rs;
             this->rv_[cell] = Rv;
+        }
+        
+        if (watActive && gasActive) {
+            this->rvw_[cell] = Rvw;
         }
     }
 }
@@ -1714,7 +1770,8 @@ equilibrateCellCentres(const CellRange&         cells,
          Details::PhaseQuantityValue& pressures,
          Details::PhaseQuantityValue& saturations,
          double&                      Rs,
-         double&                      Rv) -> void
+         double&                      Rv,
+         double&                      Rvw) -> void
     {
         const auto pos = CellPos {
             cell, cellCenterDepth_[cell]
@@ -1730,6 +1787,9 @@ equilibrateCellCentres(const CellRange&         cells,
 
         Rv = eqreg.evaporationCalculator()
             (pos.depth, pressures.gas, temp, saturations.oil);
+
+        Rvw = eqreg.waterEvaporationCalculator()
+            (pos.depth, pressures.gas, temp, saturations.water);
     });
 }
 
@@ -1759,7 +1819,8 @@ equilibrateHorizontal(const CellRange&  cells,
          Details::PhaseQuantityValue& pressures,
          Details::PhaseQuantityValue& saturations,
          double&                      Rs,
-         double&                      Rv) -> void
+         double&                      Rv,
+         double&                      Rvw) -> void
     {
         pressures  .reset();
         saturations.reset();
@@ -1785,6 +1846,9 @@ equilibrateHorizontal(const CellRange&  cells,
 
         Rv = eqreg.evaporationCalculator()
             (cz, pressures.gas, temp, saturations.oil);
+        
+        Rvw = eqreg.waterEvaporationCalculator()
+            (cz, pressures.gas, temp, saturations.water);
     });
 }
 

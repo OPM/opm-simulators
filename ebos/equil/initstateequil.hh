@@ -128,6 +128,7 @@ private:
                    const double press) const;
 };
 
+//TODO:add argument rvw
 template <class FluidSystem, class RV>
 class Gas
 {
@@ -741,6 +742,7 @@ private:
 
     std::vector< std::shared_ptr<Miscibility::RsFunction> > rsFunc_;
     std::vector< std::shared_ptr<Miscibility::RsFunction> > rvFunc_;
+    std::vector< std::shared_ptr<Miscibility::RsFunction> > rvwFunc_;
     using TabulatedFunction = Tabulated1DFunction<double>;
     std::vector<TabulatedFunction> saltVdTable_;
     std::vector<TabulatedFunction> saltpVdTable_;
