@@ -1215,34 +1215,31 @@ checkGroupHigherConstraints(const Group& group,
         }
         const Phase all[] = { Phase::WATER, Phase::OIL, Phase::GAS };
         for (Phase phase : all) {
-            const bool skip = switched_inj_groups_.count({group.name(), phase});
-            if (!skip) {
-                // Check higher up only if under individual (not FLD) control.
-                auto currentControl = this->groupState().injection_control(group.name(), phase);
-                if (currentControl != Group::InjectionCMode::FLD && group.injectionGroupControlAvailable(phase)) {
-                    const Group& parentGroup = schedule().getGroup(group.parent(), reportStepIdx);
-                    const std::pair<bool, double> changed_this = WellGroupHelpers::checkGroupConstraintsInj(
-                    group.name(),
-                    group.parent(),
-                    parentGroup,
-                    this->wellState(),
-                    this->groupState(),
-                    reportStepIdx,
-                    &guideRate_,
-                    rates.data(),
-                    phase,
-                    phase_usage_,
-                    group.getGroupEfficiencyFactor(),
-                    schedule(),
-                    summaryState_,
-                    resv_coeff_inj,
-                    deferred_logger);
-                    if (changed_this.first) {
-                        switched_inj_groups_.insert({ {group.name(), phase}, Group::InjectionCMode2String(Group::InjectionCMode::FLD)});
-                        actionOnBrokenConstraints(group, Group::InjectionCMode::FLD, phase, deferred_logger);
-                        WellGroupHelpers::updateWellRatesFromGroupTargetScale(changed_this.second, group, schedule(), reportStepIdx, /* isInjector */ true, this->groupState(), this->wellState());
-                        changed = true;
-                    }
+            // Check higher up only if under individual (not FLD) control.
+            auto currentControl = this->groupState().injection_control(group.name(), phase);
+            if (currentControl != Group::InjectionCMode::FLD && group.injectionGroupControlAvailable(phase)) {
+                const Group& parentGroup = schedule().getGroup(group.parent(), reportStepIdx);
+                const std::pair<bool, double> changed_this = WellGroupHelpers::checkGroupConstraintsInj(
+                group.name(),
+                group.parent(),
+                parentGroup,
+                this->wellState(),
+                this->groupState(),
+                reportStepIdx,
+                &guideRate_,
+                rates.data(),
+                phase,
+                phase_usage_,
+                group.getGroupEfficiencyFactor(),
+                schedule(),
+                summaryState_,
+                resv_coeff_inj,
+                deferred_logger);
+                if (changed_this.first) {
+                    switched_inj_groups_.insert({ {group.name(), phase}, Group::InjectionCMode2String(Group::InjectionCMode::FLD)});
+                    actionOnBrokenConstraints(group, Group::InjectionCMode::FLD, phase, deferred_logger);
+                    WellGroupHelpers::updateWellRatesFromGroupTargetScale(changed_this.second, group, schedule(), reportStepIdx, /* isInjector */ true, this->groupState(), this->wellState());
+                    changed = true;
                 }
             }
         }
@@ -1250,43 +1247,41 @@ checkGroupHigherConstraints(const Group& group,
 
     if (!isField && group.isProductionGroup()) {
         // Obtain rates for group.
-        const bool skip = switched_prod_groups_.count(group.name());
-        if (!skip) {
-            for (int phasePos = 0; phasePos < phase_usage_.num_phases; ++phasePos) {
-                const double local_current_rate = WellGroupHelpers::sumWellSurfaceRates(group, schedule(), this->wellState(), reportStepIdx, phasePos, /* isInjector */ false);
-                // Sum over all processes
-                rates[phasePos] = -comm_.sum(local_current_rate);
-            }
-            std::vector<double> resv_coeff(phase_usage_.num_phases, 0.0);
-            calcRates(fipnum, pvtreg, resv_coeff);
-            // Check higher up only if under individual (not FLD) control.
-            const Group::ProductionCMode& currentControl = this->groupState().production_control(group.name());
-            if (currentControl != Group::ProductionCMode::FLD && group.productionGroupControlAvailable()) {
-                const Group& parentGroup = schedule().getGroup(group.parent(), reportStepIdx);
-                const std::pair<bool, double> changed_this = WellGroupHelpers::checkGroupConstraintsProd(
-                    group.name(),
-                    group.parent(),
-                    parentGroup,
-                    this->wellState(),
-                    this->groupState(),
-                    reportStepIdx,
-                    &guideRate_,
-                    rates.data(),
-                    phase_usage_,
-                    group.getGroupEfficiencyFactor(),
-                    schedule(),
-                    summaryState_,
-                    resv_coeff,
-                    deferred_logger);
-                if (changed_this.first) {
-                    switched_prod_groups_.insert({group.name(), Group::ProductionCMode2String(Group::ProductionCMode::FLD)});
-                    const auto exceed_action = group.productionControls(summaryState_).exceed_action;
-                    actionOnBrokenConstraints(group, exceed_action, Group::ProductionCMode::FLD, deferred_logger);
-                    WellGroupHelpers::updateWellRatesFromGroupTargetScale(changed_this.second, group, schedule(), reportStepIdx, /* isInjector */ false, this->groupState(), this->wellState());
-                    changed = true;
-                }
+        for (int phasePos = 0; phasePos < phase_usage_.num_phases; ++phasePos) {
+            const double local_current_rate = WellGroupHelpers::sumWellSurfaceRates(group, schedule(), this->wellState(), reportStepIdx, phasePos, /* isInjector */ false);
+            // Sum over all processes
+            rates[phasePos] = -comm_.sum(local_current_rate);
+        }
+        std::vector<double> resv_coeff(phase_usage_.num_phases, 0.0);
+        calcRates(fipnum, pvtreg, resv_coeff);
+        // Check higher up only if under individual (not FLD) control.
+        const Group::ProductionCMode& currentControl = this->groupState().production_control(group.name());
+        if (currentControl != Group::ProductionCMode::FLD && group.productionGroupControlAvailable()) {
+            const Group& parentGroup = schedule().getGroup(group.parent(), reportStepIdx);
+            const std::pair<bool, double> changed_this = WellGroupHelpers::checkGroupConstraintsProd(
+                group.name(),
+                group.parent(),
+                parentGroup,
+                this->wellState(),
+                this->groupState(),
+                reportStepIdx,
+                &guideRate_,
+                rates.data(),
+                phase_usage_,
+                group.getGroupEfficiencyFactor(),
+                schedule(),
+                summaryState_,
+                resv_coeff,
+                deferred_logger);
+            if (changed_this.first) {
+                switched_prod_groups_.insert({group.name(), Group::ProductionCMode2String(Group::ProductionCMode::FLD)});
+                const auto exceed_action = group.productionControls(summaryState_).exceed_action;
+                actionOnBrokenConstraints(group, exceed_action, Group::ProductionCMode::FLD, deferred_logger);
+                WellGroupHelpers::updateWellRatesFromGroupTargetScale(changed_this.second, group, schedule(), reportStepIdx, /* isInjector */ false, this->groupState(), this->wellState());
+                changed = true;
             }
         }
+        
     }
 
     // call recursively down the group hiearchy
@@ -1312,11 +1307,6 @@ updateGroupIndividualControl(const Group& group,
             if (!group.hasInjectionControl(phase)) {
                 continue;
             }
-            const bool skip = switched_inj_groups_.count({group.name(), phase});
-            if (skip) {
-                continue;
-            }
-
             const auto& changed_this = checkGroupInjectionConstraints(group, reportStepIdx, phase);
             if (changed_this.first != Group::InjectionCMode::NONE)
             {
@@ -1328,17 +1318,14 @@ updateGroupIndividualControl(const Group& group,
         }
     }
     if (group.isProductionGroup()) {
-        const bool skip = switched_prod_groups_.count(group.name());
-        if (!skip) {
-            const auto& changed_this = checkGroupProductionConstraints(group, reportStepIdx, deferred_logger);
-            const auto controls = group.productionControls(summaryState_);
-            if (changed_this.first != Group::ProductionCMode::NONE)
-            {
-                switched_prod_groups_.insert({group.name(), Group::ProductionCMode2String(changed_this.first)});
-                actionOnBrokenConstraints(group, controls.exceed_action, changed_this.first, deferred_logger);
-                WellGroupHelpers::updateWellRatesFromGroupTargetScale(changed_this.second, group, schedule(), reportStepIdx, /* isInjector */ false, this->groupState(), this->wellState());
-                changed = true;
-            }
+        const auto& changed_this = checkGroupProductionConstraints(group, reportStepIdx, deferred_logger);
+        const auto controls = group.productionControls(summaryState_);
+        if (changed_this.first != Group::ProductionCMode::NONE)
+        {
+            switched_prod_groups_.insert({group.name(), Group::ProductionCMode2String(changed_this.first)});
+            actionOnBrokenConstraints(group, controls.exceed_action, changed_this.first, deferred_logger);
+            WellGroupHelpers::updateWellRatesFromGroupTargetScale(changed_this.second, group, schedule(), reportStepIdx, /* isInjector */ false, this->groupState(), this->wellState());
+            changed = true;
         }
     }
 
