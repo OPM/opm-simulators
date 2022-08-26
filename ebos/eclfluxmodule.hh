@@ -499,7 +499,7 @@ protected:
                     elemCtx.problem().materialLawParams(elemCtx,
                                                         interiorDofIdx,
                                                         /*timeIdx=*/0);
-                typename FluidState::Scalar kr[numPhases];
+                std::array<typename FluidState::Scalar,numPhases> kr;
                 MaterialLaw::relativePermeabilities(kr, matParams, exFluidState);
 
                 const auto& mob = kr[phaseIdx]/exFluidState.viscosity(phaseIdx);
