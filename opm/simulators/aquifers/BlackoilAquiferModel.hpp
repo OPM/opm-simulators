@@ -37,7 +37,9 @@
 #include <opm/simulators/aquifers/AquiferNumerical.hpp>
 
 #include <opm/grid/CpGrid.hpp>
+#ifdef USE_POLYHEDRALGRID
 #include <opm/grid/polyhedralgrid.hh>
+#endif
 #if HAVE_DUNE_ALUGRID
 #include <dune/alugrid/grid.hh>
 #endif
@@ -62,10 +64,12 @@ class SupportsFaceTag<Dune::CpGrid>
 {};
 
 
+#ifdef USE_POLYHEDRALGRID
 template<>
 class SupportsFaceTag<Dune::PolyhedralGrid<3, 3>>
     : public std::bool_constant<true>
 {};
+#endif
 
 #if HAVE_DUNE_ALUGRID
 template<>
