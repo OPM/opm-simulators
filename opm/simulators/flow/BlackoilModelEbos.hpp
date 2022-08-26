@@ -45,7 +45,6 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/input/eclipse/Units/Units.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
-#include <opm/common/utility/parameters/ParameterGroup.hpp>
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/TableManager.hpp>
 
