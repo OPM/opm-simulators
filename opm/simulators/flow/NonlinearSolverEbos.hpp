@@ -22,7 +22,6 @@
 #define OPM_NON_LINEAR_SOLVER_EBOS_HPP
 
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
-#include <opm/common/utility/parameters/ParameterGroup.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/simulators/timestepping/SimulatorTimerInterface.hpp>
 
