@@ -1148,7 +1148,7 @@ namespace Opm
         } else {
 
             const auto& paramsCell = materialLawManager->connectionMaterialLawParams(satid, cell_idx);
-            Eval relativePerms[3] = { 0.0, 0.0, 0.0 };
+            std::array<Eval,3> relativePerms = { 0.0, 0.0, 0.0 };
             MaterialLaw::relativePermeabilities(relativePerms, paramsCell, intQuants.fluidState());
 
             // reset the satnumvalue back to original
@@ -1200,7 +1200,7 @@ namespace Opm
         } else {
 
             const auto& paramsCell = materialLawManager->connectionMaterialLawParams(satid, cell_idx);
-            Scalar relativePerms[3] = { 0.0, 0.0, 0.0 };
+            std::array<Scalar,3> relativePerms = { 0.0, 0.0, 0.0 };
             MaterialLaw::relativePermeabilities(relativePerms, paramsCell, intQuants.fluidState());
 
             // reset the satnumvalue back to original
