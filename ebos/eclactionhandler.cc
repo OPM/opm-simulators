@@ -26,20 +26,84 @@
 #include <ebos/eclactionhandler.hh>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/common/utility/TimeService.hpp>
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Action/ActionContext.hpp>
 #include <opm/input/eclipse/Schedule/Action/ActionX.hpp>
 #include <opm/input/eclipse/Schedule/Action/State.hpp>
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
 
-#include <opm/simulators/utils/ParallelSerialization.hpp>
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
+#include <opm/simulators/utils/ParallelSerialization.hpp>
 
-#include <iomanip>
-#include <sstream>
+#include <chrono>
+#include <cstddef>
+#include <ctime>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
+#include <fmt/chrono.h>
 #include <fmt/format.h>
+
+namespace {
+    std::string formatActionDate(const Opm::TimeStampUTC& timePoint,
+                                 const int                reportStep)
+    {
+        auto time_point = std::tm{};
+
+        time_point.tm_year = timePoint.year()  - 1900;
+        time_point.tm_mon  = timePoint.month() -    1;
+        time_point.tm_mday = timePoint.day();
+
+        time_point.tm_hour = timePoint.hour();
+        time_point.tm_min  = timePoint.minutes();
+        time_point.tm_sec  = timePoint.seconds();
+
+        return fmt::format("{:%d-%b-%Y %H:%M:%S} (report interval {} to {})",
+                           time_point, reportStep, reportStep + 1);
+    }
+
+    void logActiveAction(const std::string&              actionName,
+                         const std::vector<std::string>& matchingWells,
+                         const std::string&              timeString)
+    {
+        const auto wellString = matchingWells.empty()
+            ? std::string{}
+            : fmt::format(" Well{}: {}",
+                          matchingWells.size() != 1 ? "s" : "",
+                          fmt::join(matchingWells, ", "));
+
+        const auto message =
+            fmt::format("Action {} triggered at {}.{}",
+                        actionName, timeString, wellString);
+
+        Opm::OpmLog::info("ACTION_TRIGGERED", message);
+    }
+
+    void logInactiveAction(const std::string& actionName,
+                           const std::string& timeString)
+    {
+        const auto message =
+            fmt::format("Action {} NOT triggered at {}.",
+                        actionName, timeString);
+
+        Opm::OpmLog::debug("NAMED_ACTION_NOT_TRIGGERED", message);
+    }
+
+    void logInactiveActions(const int          numInactive,
+                            const std::string& timeString)
+    {
+        const auto message =
+            fmt::format("{} action{} NOT triggered at {}.",
+                        numInactive,
+                        (numInactive != 1) ? "s" : "",
+                        timeString);
+
+        Opm::OpmLog::info("ACTION_NOT_TRIGGERED", message);
+    }
+} // Anonymous namespace
 
 namespace Opm {
 
@@ -55,28 +119,21 @@ EclActionHandler::EclActionHandler(EclipseState& ecl_state,
     , summaryState_(summaryState)
     , wellModel_(wellModel)
     , comm_(comm)
-{
-}
+{}
 
-void EclActionHandler::applyActions(int reportStep,
-                                    double sim_time,
+void EclActionHandler::applyActions(const int reportStep,
+                                    const double sim_time,
                                     const TransFunc& transUp)
 {
     const auto& actions = schedule_[reportStep].actions();
-    if (actions.empty())
+    if (actions.empty()) {
         return;
-
-    Action::Context context( summaryState_, schedule_[reportStep].wlist_manager() );
-    auto now = TimeStampUTC( schedule_.getStartTime() ) + std::chrono::duration<double>(sim_time);
-    std::string ts;
-    {
-        std::ostringstream os;
-        os << std::setw(4) <<                      std::to_string(now.year())  << '/'
-           << std::setw(2) << std::setfill('0') << std::to_string(now.month()) << '/'
-           << std::setw(2) << std::setfill('0') << std::to_string(now.day()) << "  report:" << std::to_string(reportStep);
-
-        ts = os.str();
     }
+
+    const Action::Context context{ summaryState_, schedule_[reportStep].wlist_manager() };
+
+    const auto now = TimeStampUTC{ schedule_.getStartTime() } + std::chrono::duration<double>(sim_time);
+    const auto ts  = formatActionDate(now, reportStep);
 
     bool commit_wellstate = false;
     for (const auto& pyaction : actions.pending_python(actionState_)) {
@@ -85,46 +142,43 @@ void EclActionHandler::applyActions(int reportStep,
         this->applySimulatorUpdate(reportStep, sim_update, commit_wellstate, transUp);
     }
 
-    auto simTime = asTimeT(now);
+    auto non_triggered = 0;
+    const auto simTime = asTimeT(now);
     for (const auto& action : actions.pending(actionState_, simTime)) {
-        auto actionResult = action->eval(context);
-        if (actionResult) {
-            std::string wells_string;
-            const auto& matching_wells = actionResult.wells();
-            std::string wmsg;
-            if (!matching_wells.empty())
-                wmsg = fmt::format(" Well{}: {}",
-                                   matching_wells.size() != 1 ? "s" : "",
-                                   fmt::join(matching_wells, ", "));
-            const auto msg =
-                    fmt::format("The action {} evaluated to true at {}.{}",
-                                action->name(), ts, wmsg);
-            OpmLog::info(msg);
-
-            const auto& wellpi = this->fetchWellPI(reportStep, *action, matching_wells);
-
-            auto sim_update = schedule_.applyAction(reportStep, *action,
-                                                    actionResult.wells(), wellpi);
-            this->applySimulatorUpdate(reportStep, sim_update,  commit_wellstate, transUp);
-            actionState_.add_run(*action, simTime, std::move(actionResult));
-        } else {
-            const auto msg =
-                    fmt::format("The action {} evaluated to false at {}.",
-                                action->name(), ts);
-            OpmLog::info(msg);
+        const auto actionResult = action->eval(context);
+        if (! actionResult) {
+            ++non_triggered;
+            logInactiveAction(action->name(), ts);
+            continue;
         }
+
+        const auto& matching_wells = actionResult.wells();
+
+        logActiveAction(action->name(), matching_wells, ts);
+
+        const auto wellpi = this->fetchWellPI(reportStep, *action, matching_wells);
+
+        const auto sim_update = this->schedule_
+            .applyAction(reportStep, *action, matching_wells, wellpi);
+
+        this->applySimulatorUpdate(reportStep, sim_update, commit_wellstate, transUp);
+        actionState_.add_run(*action, simTime, std::move(actionResult));
     }
-    /*
-      The well state has been stored in a previous object when the time step
-      has completed successfully, the action process might have modified the
-      well state, and to be certain that is not overwritten when starting
-      the next timestep we must commit it.
-    */
-    if (commit_wellstate)
+
+    if (non_triggered > 0) {
+        logInactiveActions(non_triggered, ts);
+    }
+
+    // The well state has been stored in a previous object when the time
+    // step has completed successfully, the action process might have
+    // modified the well state, and to be certain that is not overwritten
+    // when starting the next timestep we must commit it.
+    if (commit_wellstate) {
         this->wellModel_.commitWGState();
+    }
 }
 
-void EclActionHandler::applySimulatorUpdate(int report_step,
+void EclActionHandler::applySimulatorUpdate(const int report_step,
                                             const SimulatorUpdate& sim_update,
                                             bool& commit_wellstate,
                                             const TransFunc& updateTrans)
@@ -144,7 +198,7 @@ void EclActionHandler::applySimulatorUpdate(int report_step,
   }
 
 std::unordered_map<std::string, double>
-EclActionHandler::fetchWellPI(int reportStep,
+EclActionHandler::fetchWellPI(const int reportStep,
                               const Action::ActionX& action,
                               const std::vector<std::string>& matching_wells)
 {
