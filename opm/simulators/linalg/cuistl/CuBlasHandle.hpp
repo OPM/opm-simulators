@@ -1,6 +1,6 @@
 #ifndef CUBLASHANDLE_HPP
 #define CUBLASHANDLE_HPP
-#include <cublas.h>
+#include <cublas_v2.h>
 #include <memory>
 
 namespace Opm::cuistl

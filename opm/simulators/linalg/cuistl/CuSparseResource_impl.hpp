@@ -17,12 +17,12 @@ namespace
         using DeleterType = typename CuSparseResource<bsrilu02Info_t>::DeleterType;
         using CreatorType = typename CuSparseResource<bsrilu02Info_t>::CreatorType;
 
-        DeleterType getDeleter()
+        static DeleterType getDeleter()
         {
             return cusparseDestroyBsrilu02Info;
         }
 
-        CreatorType getCreator()
+        static CreatorType getCreator()
         {
             return cusparseCreateBsrilu02Info;
         }
@@ -33,12 +33,12 @@ namespace
         using DeleterType = typename CuSparseResource<bsrsv2Info_t>::DeleterType;
         using CreatorType = typename CuSparseResource<bsrsv2Info_t>::CreatorType;
 
-        DeleterType getDeleter()
+        static DeleterType getDeleter()
         {
             return cusparseDestroyBsrsv2Info;
         }
 
-        CreatorType getCreator()
+        static CreatorType getCreator()
         {
             return cusparseCreateBsrsv2Info;
         }
@@ -49,12 +49,12 @@ namespace
         using DeleterType = typename CuSparseResource<cusparseMatDescr_t>::DeleterType;
         using CreatorType = typename CuSparseResource<cusparseMatDescr_t>::CreatorType;
 
-        DeleterType getDeleter()
+        static DeleterType getDeleter()
         {
             return cusparseDestroyMatDescr;
         }
 
-        CreatorType getCreator()
+        static CreatorType getCreator()
         {
             return cusparseCreateMatDescr;
         }
@@ -72,8 +72,7 @@ CuSparseResource<T>::CuSparseResource(CreatorType creator, DeleterType deleter)
 
 template <class T>
 CuSparseResource<T>::CuSparseResource()
-    : CuSparseResource<T>(CuSparseDeleteAndCreate<T>::getCreator(), 
-    CuSparseDeleteAndCreate<T>::getDeleter())
+    : CuSparseResource<T>(CuSparseDeleteAndCreate<T>::getCreator(), CuSparseDeleteAndCreate<T>::getDeleter())
 {
 }
 

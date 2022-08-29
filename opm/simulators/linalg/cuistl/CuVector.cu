@@ -1,4 +1,4 @@
-#include <cublas.h>
+#include <cublas_v2.h>
 #include <cuda.h>
 #include <opm/simulators/linalg/cuistl/CuVector.hpp>
 #include <opm/simulators/linalg/cuistl/cublas_safe_call.hpp>
@@ -47,6 +47,20 @@ CuVector<T>::operator*=(const T& scalar)
 {
     OPM_CUBLAS_SAFE_CALL(cublasDscal(cuBlasHandle.get(), numberOfElements, scalar, data(), 1));
     return *this;
+}
+
+template <class T>
+void
+CuVector<T>::copyFromHost(const T* dataPointer, int numberOfElements)
+{
+    CUDA_SAFE_CALL(cudaMemcpy(data(), dataPointer, numberOfElements * sizeof(T), cudaMemcpyHostToDevice));
+}
+
+template <class T>
+void
+CuVector<T>::copyToHost(T* dataPointer, int numberOfElements) const
+{
+    CUDA_SAFE_CALL(cudaMemcpy(dataPointer, data(), numberOfElements * sizeof(T), cudaMemcpyDeviceToHost));
 }
 class CuVector<double>;
 } // namespace Opm::cuistl

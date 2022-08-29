@@ -16,8 +16,8 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef OPM_CUSEQILU0_HEADER_INCLUDED
-#define OPM_CUSEQILU0_HEADER_INCLUDED
+#ifndef OPM_PRECONDITIONERADAPTER_HEADER_INCLUDED
+#define OPM_PRECONDITIONERADAPTER_HEADER_INCLUDED
 #include <cusparse.h>
 #include <dune/common/simd.hh>
 #include <dune/istl/preconditioner.hh>
@@ -53,8 +53,8 @@ public:
        \param A The matrix to operate on.
        \param w The relaxation factor.
             */
-    PreconditionerAdapter(CudaPreconditionerType&& preconditioner)
-        preconditioner(preconditioner)
+    PreconditionerAdapter(std::shared_ptr<CudaPreconditionerType> preconditioner_)
+        : underlyingPeconditioner(preconditioner_)
     {
 
     }
@@ -77,9 +77,13 @@ public:
         */
     virtual void apply(X& v, const Y& d)
     {
-        inputBuffer.copyFrom(d);
-        preconditioner.apply(inputBuffer, outputBuffer);
-        outputBuffer.copyTo(v);
+        if (!inputBuffer) {
+            inputBuffer.reset(new CuVector<field_type>(v.dim() * v.N()));
+            outputBuffer.reset(new CuVector<field_type>(v.dim() * v.N()));
+        }
+        inputBuffer->copyFrom(d);
+        underlyingPeconditioner->apply(*inputBuffer, *outputBuffer);
+        outputBuffer->copyTo(v);
     }
 
     /*!
@@ -100,10 +104,10 @@ public:
 
 private:
     //! \brief the underlying preconditioner to use
-    CudaPreconditionerType preconditioner;
+    std::shared_ptr<CudaPreconditionerType> underlyingPeconditioner;
 
-    CuVector<field_type> inputBuffer;
-    CuVector<field_type> outputBuffer;
+    std::unique_ptr<CuVector<field_type>> inputBuffer;
+    std::unique_ptr<CuVector<field_type>> outputBuffer;
 };
 } // end namespace Opm::cuistl
 

@@ -66,13 +66,13 @@ public:
     CuSeqILU0(const M& A, scalar_field_type w)
         : w(w)
         , LU(CuSparseMatrix<field_type>::fromMatrix(A))
-        , temporaryStorage(LU.numberOfRows() * LU.blockSize())
+        , temporaryStorage(LU.N() * LU.dim())
         , descriptionL(createLowerDiagonalDescription())
         , descriptionU(createUpperDiagonalDescription())
         , cuSparseHandle(CuSparseHandle::getInstance())
     {
         auto bufferSize = findBufferSize();
-        buffer.reset(new CuVector<field_type>(bufferSize));
+        buffer.reset(new CuVector<field_type>(bufferSize / sizeof(field_type)));
         analyzeMatrix();
         createILU();
     }
@@ -100,7 +100,7 @@ public:
         const double one = 1.0;
 
         const auto numberOfRows = LU.N();
-        const auto numberOfNonzeroElements = LU.nonzeroes();
+        const auto numberOfNonzeroElements = LU.nonzeros();
         const auto blockSize = LU.blockSize();
 
         auto nonZeroValues = LU.getNonZeroValues().data();
@@ -123,7 +123,7 @@ public:
                                                      d.data(),
                                                      temporaryStorage.data(),
                                                      CUSPARSE_SOLVE_POLICY_USE_LEVEL,
-                                                     buffer.data()));
+                                                     buffer->data()));
 
         // Solve U v = temporaryStorage
         OPM_CUSPARSE_SAFE_CALL(cusparseDbsrsv2_solve(cuSparseHandle.get(),
@@ -141,7 +141,7 @@ public:
                                                      temporaryStorage.data(),
                                                      v.data(),
                                                      CUSPARSE_SOLVE_POLICY_USE_LEVEL,
-                                                     buffer.data()));
+                                                     buffer->data()));
 
         v *= w;
     }
@@ -193,7 +193,7 @@ private:
                       "Buffer not initialized. Call findBufferSize() then initialize with the appropiate size.");
         }
         const auto numberOfRows = LU.N();
-        const auto numberOfNonzeroElements = LU.nonzeroes();
+        const auto numberOfNonzeroElements = LU.nonzeros();
         const auto blockSize = LU.blockSize();
 
         auto nonZeroValues = LU.getNonZeroValues().data();
@@ -204,7 +204,7 @@ private:
                                                           CUSPARSE_MATRIX_ORDER,
                                                           numberOfRows,
                                                           numberOfNonzeroElements,
-                                                          LU.getDescription.get(),
+                                                          LU.getDescription().get(),
                                                           nonZeroValues,
                                                           rowIndices,
                                                           columnIndices,
@@ -256,7 +256,7 @@ private:
         // we combine these buffers into one since it is not used across calls,
         // however, it was used in the Across project.
         const auto numberOfRows = LU.N();
-        const auto numberOfNonzeroElements = LU.nonzeroes();
+        const auto numberOfNonzeroElements = LU.nonzeros();
         const auto blockSize = LU.blockSize();
 
         auto nonZeroValues = LU.getNonZeroValues().data();
@@ -317,7 +317,7 @@ private:
             OPM_THROW(std::runtime_error, "Analyzis of matrix not done. Call analyzeMatrix() first.");
         }
         const auto numberOfRows = LU.N();
-        const auto numberOfNonzeroElements = LU.nonzeroes();
+        const auto numberOfNonzeroElements = LU.nonzeros();
         const auto blockSize = LU.blockSize();
 
         auto nonZeroValues = LU.getNonZeroValues().data();

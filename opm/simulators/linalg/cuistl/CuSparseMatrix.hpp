@@ -60,7 +60,7 @@ public:
     static CuSparseMatrix<T> fromMatrix(const MatrixType& matrix)
     {
         // TODO: Do we need the static_cast? Do we need more paranthesis than a normal Lisp codebase?
-        const T* nonZeroElements = static_cast<double*>(&((matrix[0][0][0][0])));
+        const T* nonZeroElements = static_cast<const T*>(&((matrix[0][0][0][0])));
 
         // TODO: Do we need this intermediate storage? Or this shuffling of data?
         std::vector<int> columnIndices;
@@ -75,8 +75,8 @@ public:
 
         columnIndices.reserve(numberOfNonzeroBlocks);
         rowIndices.reserve(numberOfRows + 1);
-        for (const auto& row : matrix) {
-            for (const auto& column : row) {
+        for (auto& row : matrix) {
+            for (auto& column : row) {
                 columnIndices.push_back(column.index());
             }
             rowIndices.push_back(columnIndices.size());
@@ -134,6 +134,10 @@ public:
         return columnIndices;
     }
 
+    const int dim() const
+    {
+        return _blockSize;
+    }
     const int blockSize() const
     {
         return _blockSize;

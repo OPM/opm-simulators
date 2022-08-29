@@ -1,6 +1,6 @@
 #ifndef CUBLAS_SAFE_CALL_HPP
 #define CUBLAS_SAFE_CALL_HPP
-#include <cublas.h>
+#include <cublas_v2.h>
 #include <exception>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/OpmLog/Logger.hpp>
