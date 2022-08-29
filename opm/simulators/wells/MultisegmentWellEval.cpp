@@ -21,6 +21,8 @@
 #include <config.h>
 #include <opm/simulators/wells/MultisegmentWellEval.hpp>
 
+#include <dune/istl/umfpack.hh>
+
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
 #include <opm/models/blackoil/blackoilindices.hh>
