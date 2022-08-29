@@ -51,19 +51,13 @@ public:
       ownerAbove = 3,
       overlapAbove = 4
     };
-    using MPIComm = typename Dune::MPIHelper::MPICommunicator;
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
-    using Communication = Dune::Communication<MPIComm>;
-#else
-    using Communication = Dune::CollectiveCommunication<MPIComm>;
-#endif
     using LocalIndex = Dune::ParallelLocalIndex<Attribute>;
     using IndexSet = Dune::ParallelIndexSet<int,LocalIndex,50>;
 #if HAVE_MPI
     using RI = Dune::RemoteIndices<IndexSet>;
 #endif
    
-    explicit CommunicateAboveBelow(const Communication& comm);
+    explicit CommunicateAboveBelow(const Parallel::Communication& comm);
     /// \brief Adds information about original index of the perforations in ECL Schedule.
     ///
     /// \warning Theses indices need to be push in the same order as they
@@ -175,8 +169,9 @@ public:
     const IndexSet& getIndexSet() const;
 
     int numLocalPerfs() const;
+
 private:
-    Communication comm_;
+    Parallel::Communication comm_;
     /// \brief Mapping of the local well index to ecl index
     IndexSet current_indices_;
 #if HAVE_MPI
@@ -198,19 +193,14 @@ private:
 class GlobalPerfContainerFactory
 {
 public:
-    using MPIComm = typename Dune::MPIHelper::MPICommunicator;
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
-    using Communication = Dune::Communication<MPIComm>;
-#else
-    using Communication = Dune::CollectiveCommunication<MPIComm>;
-#endif
     using IndexSet = CommunicateAboveBelow::IndexSet;
     using Attribute = CommunicateAboveBelow::Attribute;
     using GlobalIndex = typename IndexSet::IndexPair::GlobalIndex;
 
     /// \brief Constructor
     /// \param local_indices completely set up index set for map ecl index to local index
-    GlobalPerfContainerFactory(const IndexSet& local_indices, const Communication comm,
+    GlobalPerfContainerFactory(const IndexSet& local_indices,
+                               const Parallel::Communication comm,
                                int num_local_perfs);
 
     /// \brief Creates a container that holds values for all perforations
@@ -229,9 +219,10 @@ public:
                            std::size_t num_components) const;
 
     int numGlobalPerfs() const;
+
 private:
     const IndexSet& local_indices_;
-    Communication comm_;
+    Parallel::Communication comm_;
     int num_global_perfs_;
     /// \brief sizes for allgatherv
     std::vector<int> sizes_;
@@ -251,13 +242,6 @@ private:
 class ParallelWellInfo
 {
 public:
-    using MPIComm = typename Dune::MPIHelper::MPICommunicator;
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
-    using Communication = Dune::Communication<MPIComm>;
-#else
-    using Communication = Dune::CollectiveCommunication<MPIComm>;
-#endif
- 
     static constexpr int INVALID_ECL_INDEX = -1;
 
     /// \brief Constructs object using MPI_COMM_SELF
@@ -271,9 +255,9 @@ public:
     /// \param allComm The communication object with all MPI ranks active in the simulation.
     ///                Default is the one with all ranks available.
     ParallelWellInfo(const std::pair<std::string,bool>& well_info,
-                     Communication allComm);
+                     Parallel::Communication allComm);
 
-    const Communication& communication() const
+    const Parallel::Communication& communication() const
     {
         return *comm_;
     }
@@ -399,12 +383,13 @@ public:
     /// it is stored. Container is ordered via ascendings index of the perforations
     /// in the ECL schedule.
     const GlobalPerfContainerFactory& getGlobalPerfContainerFactory() const;
+
 private:
 
     /// \brief Deleter that also frees custom MPI communicators
     struct DestroyComm
     {
-        void operator()(Communication* comm);
+        void operator()(Parallel::Communication* comm);
     };
 
 
@@ -419,7 +404,7 @@ private:
     /// \brief Communication object for the well
     ///
     /// Contains only ranks where this well will perforate local cells.
-    std::unique_ptr<Communication, DestroyComm> comm_;
+    std::unique_ptr<Parallel::Communication, DestroyComm> comm_;
 
     /// \brief used to communicate the values for the perforation above.
     std::unique_ptr<CommunicateAboveBelow> commAboveBelow_;
@@ -443,6 +428,7 @@ public:
     void connectionFound(std::size_t index);
 
     bool checkAllConnectionsFound();
+
 private:
     std::vector<std::size_t> foundConnections_;
     const Well& well_;

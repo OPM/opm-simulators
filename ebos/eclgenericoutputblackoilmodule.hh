@@ -35,13 +35,7 @@
 #include <opm/input/eclipse/Schedule/SummaryState.hpp>
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
-#include <dune/common/version.hh>
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
-#include <dune/common/parallel/communication.hh>
-#else
-#include <dune/common/parallel/collectivecommunication.hh>
-#endif
-#include <dune/common/parallel/mpihelper.hh>
+#include <opm/simulators/utils/ParallelCommunication.hpp>
 
 #include <ebos/eclinterregflows.hh>
 
@@ -53,8 +47,6 @@ class EclipseState;
 template<class FluidSystem, class Scalar>
 class EclGenericOutputBlackoilModule {
 public:
-    using Comm = Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator>;
-
     // write cumulative production and injection reports to output
     void outputCumLog(size_t reportStepNum,
                       const bool substep,
@@ -74,17 +66,17 @@ public:
     Inplace outputFipLog(std::map<std::string, double>& miscSummaryData,
                          std::map<std::string, std::vector<double>>& regionData,
                          const bool substep,
-                         const Comm& comm);
+                         const Parallel::Communication& comm);
 
     // write Reservoir Volumes to output log
     Inplace outputFipresvLog(std::map<std::string, double>& miscSummaryData,
                          std::map<std::string, std::vector<double>>& regionData,
                          const bool substep,
-                         const Comm& comm);
+                         const Parallel::Communication& comm);
 
 
 
-    void outputErrorLog(const Comm& comm) const;
+    void outputErrorLog(const Parallel::Communication& comm) const;
 
     void addRftDataToWells(data::Wells& wellDatas,
                            size_t reportStepNum);
@@ -333,9 +325,9 @@ protected:
 
     void makeRegionSum(Inplace& inplace,
                        const std::string& region_name,
-                       const Comm& comm) const;
+                       const Parallel::Communication& comm) const;
 
-    Inplace accumulateRegionSums(const Comm& comm);
+    Inplace accumulateRegionSums(const Parallel::Communication& comm);
 
     void updateSummaryRegionValues(const Inplace& inplace,
                                    std::map<std::string, double>& miscSummaryData,
@@ -358,10 +350,10 @@ protected:
     static ScalarBuffer regionSum(const ScalarBuffer& property,
                                   const std::vector<int>& regionId,
                                   const std::size_t maxNumberOfRegions,
-                                  const Comm& comm);
+                                  const Parallel::Communication& comm);
 
     static int regionMax(const std::vector<int>& region,
-                         const Comm& comm);
+                         const Parallel::Communication& comm);
 
     static void update(Inplace& inplace,
                        const std::string& region_name,

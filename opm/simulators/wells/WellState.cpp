@@ -26,6 +26,8 @@
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 
+#include <opm/simulators/utils/ParallelCommunication.hpp>
+
 #include <algorithm>
 #include <cassert>
 #include <numeric>
@@ -825,8 +827,8 @@ WellState::parallelWellInfo(std::size_t well_index) const
     return ws.parallel_info;
 }
 
-template void WellState::updateGlobalIsGrup<ParallelWellInfo::Communication>(const ParallelWellInfo::Communication& comm);
-template void WellState::communicateGroupRates<ParallelWellInfo::Communication>(const ParallelWellInfo::Communication& comm);
+template void WellState::updateGlobalIsGrup<Parallel::Communication>(const Parallel::Communication& comm);
+template void WellState::communicateGroupRates<Parallel::Communication>(const Parallel::Communication& comm);
 } // namespace Opm
 
 

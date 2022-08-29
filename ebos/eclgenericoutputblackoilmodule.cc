@@ -553,7 +553,7 @@ Inplace EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
 outputFipLog(std::map<std::string, double>& miscSummaryData,
              std::map<std::string, std::vector<double>>& regionData,
              const bool substep,
-             const Comm& comm)
+             const Parallel::Communication& comm)
 {
     auto inplace = this->accumulateRegionSums(comm);
     if (comm.rank() != 0)
@@ -574,7 +574,7 @@ Inplace EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
 outputFipresvLog(std::map<std::string, double>& miscSummaryData,
              std::map<std::string, std::vector<double>>& regionData,
              const bool substep,
-             const Comm& comm)
+             const Parallel::Communication& comm)
 {
     auto inplace = this->accumulateRegionSums(comm);
     if (comm.rank() != 0)
@@ -835,7 +835,7 @@ EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
 regionSum(const ScalarBuffer& property,
           const std::vector<int>& regionId,
           size_t maxNumberOfRegions,
-          const Comm& comm)
+          const Parallel::Communication& comm)
 {
         ScalarBuffer totals(maxNumberOfRegions, 0.0);
 
@@ -1502,7 +1502,7 @@ namespace {
 
 template<class FluidSystem,class Scalar>
 void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
-outputErrorLog(const Comm& comm) const
+outputErrorLog(const Parallel::Communication& comm) const
 {
     const auto root = 0;
     auto globalFailedCellsPbub = gatherv(this->failedCellsPb_, comm, root);
@@ -1626,7 +1626,7 @@ outputFipresvLogImpl(const Inplace& inplace) const
 template<class FluidSystem,class Scalar>
 int EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
 regionMax(const std::vector<int>& region,
-          const Comm& comm)
+          const Parallel::Communication& comm)
 {
     const auto max_value = region.empty() ? 0 : *std::max_element(region.begin(), region.end());
     return comm.max(max_value);
@@ -1653,7 +1653,7 @@ template<class FluidSystem,class Scalar>
 void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
 makeRegionSum(Inplace& inplace,
               const std::string& region_name,
-              const Comm& comm) const
+              const Parallel::Communication& comm) const
 {
     const auto& region = this->regions_.at(region_name);
     const std::size_t ntFip = this->regionMax(region, comm);
@@ -1689,7 +1689,7 @@ makeRegionSum(Inplace& inplace,
 
 template<class FluidSystem,class Scalar>
 Inplace EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
-accumulateRegionSums(const Comm& comm)
+accumulateRegionSums(const Parallel::Communication& comm)
 {
     Inplace inplace;
 

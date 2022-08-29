@@ -142,7 +142,7 @@ private:
 
     std::shared_ptr<ParallelIndexSet> indexSet_;
     std::shared_ptr<RemoteIndices> remoteIndices_;
-    Dune::CollectiveCommunication<MPI_Comm> communicator_;
+    Parallel::Communication communicator_;
     mutable std::vector<double> ownerMask_;
 };
 
