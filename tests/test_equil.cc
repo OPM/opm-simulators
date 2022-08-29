@@ -30,6 +30,7 @@
 
 #include <opm/grid/UnstructuredGrid.h>
 #include <opm/grid/GridManager.hpp>
+#include <opm/grid/cpgrid/GridHelpers.hpp>
 
 #include <opm/input/eclipse/Units/Units.hpp>
 
