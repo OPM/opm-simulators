@@ -32,65 +32,65 @@ namespace Opm {
 
 class ParallelWellInfo;
 
-    namespace wellhelpers
-    {
+namespace wellhelpers {
 
-        /// \brief A wrapper around the B matrix for distributed wells
-        ///
-        /// For standard wells the B matrix, is basically a multiplication
-        /// of the equation of the perforated cells followed by a reduction
-        /// (summation) of these to the well equations.
-        ///
-        /// This class does that in the functions mv and mmv (from the DUNE
-        /// matrix interface.
-        ///
-        /// \tparam Scalar The scalar used for the computation.
-        template<typename Scalar>
-        class ParallelStandardWellB
-        {
-        public:
-            using Block = Dune::DynamicMatrix<Scalar>;
-            using Matrix = Dune::BCRSMatrix<Block>;
+/// \brief A wrapper around the B matrix for distributed wells
+///
+/// For standard wells the B matrix, is basically a multiplication
+/// of the equation of the perforated cells followed by a reduction
+/// (summation) of these to the well equations.
+///
+/// This class does that in the functions mv and mmv (from the DUNE
+/// matrix interface.
+///
+/// \tparam Scalar The scalar used for the computation.
+template<typename Scalar>
+class ParallelStandardWellB
+{
+public:
+    using Block = Dune::DynamicMatrix<Scalar>;
+    using Matrix = Dune::BCRSMatrix<Block>;
 
-            ParallelStandardWellB(const Matrix& B, const ParallelWellInfo& parallel_well_info);
+    ParallelStandardWellB(const Matrix& B, const ParallelWellInfo& parallel_well_info);
 
-            //! y = A x
-            template<class X, class Y>
-            void mv (const X& x, Y& y) const;
+    //! y = A x
+    template<class X, class Y>
+    void mv (const X& x, Y& y) const;
 
-            //! y = A x
-            template<class X, class Y>
-            void mmv (const X& x, Y& y) const;
+    //! y = A x
+    template<class X, class Y>
+    void mmv (const X& x, Y& y) const;
 
-        private:
-            const Matrix* B_;
-            const ParallelWellInfo* parallel_well_info_;
-        };
+private:
+    const Matrix* B_;
+    const ParallelWellInfo* parallel_well_info_;
+};
 
-        double computeHydrostaticCorrection(const double well_ref_depth,
-                                            const double vfp_ref_depth,
-                                            const double rho, const double gravity);
-
-
-        /// \brief Sums entries of the diagonal Matrix for distributed wells
-        template<typename Scalar, typename Comm>
-        void sumDistributedWellEntries(Dune::DynamicMatrix<Scalar>& mat, Dune::DynamicVector<Scalar>& vec,
-                                       const Comm& comm);
+double computeHydrostaticCorrection(const double well_ref_depth,
+                                    const double vfp_ref_depth,
+                                    const double rho, const double gravity);
 
 
+/// \brief Sums entries of the diagonal Matrix for distributed wells
+template<typename Scalar, typename Comm>
+void sumDistributedWellEntries(Dune::DynamicMatrix<Scalar>& mat,
+                               Dune::DynamicVector<Scalar>& vec,
+                               const Comm& comm);
 
-        template <int dim, class C2F, class FC>
-        std::array<double, dim>
-        getCubeDim(const C2F& c2f,
-                   FC         begin_face_centroids,
-                   int        cell);
 
-        // explicit transpose of a dense matrix due to compilation problems
-        // used for calculating quasiimpes well weights
-        template <class DenseMatrix>
-        DenseMatrix transposeDenseDynMatrix(const DenseMatrix& M);
 
-    } // namespace wellhelpers
-}
+template <int dim, class C2F, class FC>
+std::array<double, dim>
+getCubeDim(const C2F& c2f,
+           FC         begin_face_centroids,
+           int        cell);
+
+// explicit transpose of a dense matrix due to compilation problems
+// used for calculating quasiimpes well weights
+template <class DenseMatrix>
+DenseMatrix transposeDenseDynMatrix(const DenseMatrix& M);
+
+} // namespace wellhelpers
+} // namespace Opm
 
 #endif
