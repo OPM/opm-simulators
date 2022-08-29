@@ -35,6 +35,7 @@
 #include <opm/simulators/wells/WellInterfaceIndices.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
+#include <numeric>
 #include <sstream>
 
 namespace Opm
