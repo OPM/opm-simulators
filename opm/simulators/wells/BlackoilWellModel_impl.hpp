@@ -1854,8 +1854,8 @@ namespace Opm {
                 connpos += well_perf_data_[i].size();
             }
             connpos *= np;
-            double weighted_temperature = 0.0;
-            double total_weight = 0.0;
+            std::array<double,2> weighted{0.0,0.0};
+            auto& [weighted_temperature, total_weight] = weighted;
 
             auto& well_info = local_parallel_well_info_[wellID].get();
             const int num_perf_this_well = well_info.communication().sum(well_perf_data_[wellID].size());
@@ -1886,8 +1886,7 @@ namespace Opm {
                 total_weight += weight_factor;
                 weighted_temperature += weight_factor * cellTemperatures;
             }
-            weighted_temperature = well_info.communication().sum(weighted_temperature);
-            total_weight = well_info.communication().sum(total_weight);
+            well_info.communication().sum(weighted.data(), 2);
             this->wellState().well(wellID).temperature = weighted_temperature/total_weight;
         }
     }
