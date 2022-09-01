@@ -22,11 +22,6 @@
 #define OPM_WELLGROUPHELPERS_HEADER_INCLUDED
 
 #include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
-#include <opm/input/eclipse/Schedule/Group/GPMaint.hpp>
-#include <opm/input/eclipse/Schedule/Schedule.hpp>
-#include <opm/simulators/wells/GroupState.hpp>
-#include <opm/simulators/wells/WellState.hpp>
-#include <opm/input/eclipse/Schedule/Group/Group.hpp>
 
 #include <map>
 #include <string>
@@ -43,9 +38,6 @@ struct PhaseUsage;
 class Schedule;
 class VFPProdProperties;
 class WellState;
-
-template <typename>
-class WellContainer;
 
 namespace Network { class ExtNetwork; }
 
@@ -194,77 +186,8 @@ namespace WellGroupHelpers
                                       const int reportStepIdx,
                                       const double dt,
                                       const WellState& well_state,
-                                      GroupState& group_state)
-    {
-        for (const std::string& groupName : group.groups()) {
-            const Group& groupTmp = schedule.getGroup(groupName, reportStepIdx);
-            updateGpMaintTargetForGroups(groupTmp, schedule, regional_values, reportStepIdx, dt, well_state, group_state);
-        }
-        const auto& gpm = group.gpmaint();
-        if(!gpm)
-            return;
+                                      GroupState& group_state);
 
-        const auto [name, number] = *gpm->region();
-        const double error = gpm->pressure_target() - regional_values.pressure(number);
-        double current_rate = 0.0;
-        const auto& pu = well_state.phaseUsage();
-        double sign = 1.0;
-        switch (gpm->flow_target()) {
-            case Opm::GPMaint::FlowTarget::RESV_PROD:
-            {
-                current_rate = -group_state.injection_vrep_rate(group.name());
-                sign = -1.0;
-                break;
-            }
-            case Opm::GPMaint::FlowTarget::RESV_OINJ:
-            {
-                if (pu.phase_used[BlackoilPhases::Liquid])
-                    current_rate = group_state.injection_reservoir_rates(group.name())[pu.phase_pos[BlackoilPhases::Liquid]];
-
-                break;
-            }
-            case Opm::GPMaint::FlowTarget::RESV_WINJ:
-            {
-                if (pu.phase_used[BlackoilPhases::Aqua])
-                    current_rate = group_state.injection_reservoir_rates(group.name())[pu.phase_pos[BlackoilPhases::Aqua]];
-
-                break;
-            }
-            case Opm::GPMaint::FlowTarget::RESV_GINJ:
-            {
-                if (pu.phase_used[BlackoilPhases::Vapour])
-                    current_rate = group_state.injection_reservoir_rates(group.name())[pu.phase_pos[BlackoilPhases::Vapour]];
-                break;
-            }
-            case Opm::GPMaint::FlowTarget::SURF_OINJ:
-            {
-                if (pu.phase_used[BlackoilPhases::Liquid])
-                    current_rate = group_state.injection_surface_rates(group.name())[pu.phase_pos[BlackoilPhases::Liquid]];
-
-                break;
-            }
-            case Opm::GPMaint::FlowTarget::SURF_WINJ:
-            {
-                if (pu.phase_used[BlackoilPhases::Aqua])
-                    current_rate = group_state.injection_surface_rates(group.name())[pu.phase_pos[BlackoilPhases::Aqua]];
-
-                break;
-            }
-            case Opm::GPMaint::FlowTarget::SURF_GINJ:
-            {
-                if (pu.phase_used[BlackoilPhases::Vapour])
-                    current_rate = group_state.injection_surface_rates(group.name())[pu.phase_pos[BlackoilPhases::Vapour]];
-
-                break;
-            }
-            default:
-                throw std::invalid_argument("Invalid Flow target type in GPMAINT");
-        }
-
-        auto& gpmaint_state = group_state.gpmaint(group.name());
-        double rate = gpm->rate(gpmaint_state, current_rate, error, dt);
-        group_state.update_gpmaint_target(group.name(), std::max(0.0, sign * rate));
-    }
     std::map<std::string, double>
     computeNetworkPressures(const Opm::Network::ExtNetwork& network,
                             const WellState& well_state,

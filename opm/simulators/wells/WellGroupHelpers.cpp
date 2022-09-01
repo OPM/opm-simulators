@@ -21,19 +21,28 @@
 #include <config.h>
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
 
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Group/GConSump.hpp>
 #include <opm/input/eclipse/Schedule/Group/GConSale.hpp>
+#include <opm/input/eclipse/Schedule/Group/GPMaint.hpp>
+#include <opm/input/eclipse/Schedule/Group/Group.hpp>
+
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+
+#include <opm/simulators/wells/GroupState.hpp>
+#include <opm/simulators/wells/RegionAverageCalculator.hpp>
 #include <opm/simulators/wells/TargetCalculator.hpp>
 #include <opm/simulators/wells/VFPProdProperties.hpp>
 #include <opm/simulators/wells/WellState.hpp>
-#include <opm/simulators/wells/WellContainer.hpp>
 
 #include <algorithm>
 #include <cassert>
 #include <set>
 #include <stack>
+#include <stdexcept>
 
 namespace {
     Opm::GuideRate::RateVector
@@ -652,6 +661,86 @@ namespace WellGroupHelpers
         }
 
         group_state.update_injection_rein_rates(group.name(), rein);
+    }
+
+
+    template <class RegionalValues>
+    void updateGpMaintTargetForGroups(const Group& group,
+                                      const Schedule& schedule,
+                                      const RegionalValues& regional_values,
+                                      const int reportStepIdx,
+                                      const double dt,
+                                      const WellState& well_state,
+                                      GroupState& group_state)
+    {
+        for (const std::string& groupName : group.groups()) {
+            const Group& groupTmp = schedule.getGroup(groupName, reportStepIdx);
+            updateGpMaintTargetForGroups(groupTmp, schedule, regional_values, reportStepIdx, dt, well_state, group_state);
+        }
+        const auto& gpm = group.gpmaint();
+        if (!gpm)
+            return;
+
+        const auto [name, number] = *gpm->region();
+        const double error = gpm->pressure_target() - regional_values.pressure(number);
+        double current_rate = 0.0;
+        const auto& pu = well_state.phaseUsage();
+        double sign = 1.0;
+        switch (gpm->flow_target()) {
+            case GPMaint::FlowTarget::RESV_PROD:
+            {
+                current_rate = -group_state.injection_vrep_rate(group.name());
+                sign = -1.0;
+                break;
+            }
+            case GPMaint::FlowTarget::RESV_OINJ:
+            {
+                if (pu.phase_used[BlackoilPhases::Liquid])
+                    current_rate = group_state.injection_reservoir_rates(group.name())[pu.phase_pos[BlackoilPhases::Liquid]];
+
+                break;
+            }
+            case GPMaint::FlowTarget::RESV_WINJ:
+            {
+                if (pu.phase_used[BlackoilPhases::Aqua])
+                    current_rate = group_state.injection_reservoir_rates(group.name())[pu.phase_pos[BlackoilPhases::Aqua]];
+
+                break;
+            }
+            case GPMaint::FlowTarget::RESV_GINJ:
+            {
+                if (pu.phase_used[BlackoilPhases::Vapour])
+                    current_rate = group_state.injection_reservoir_rates(group.name())[pu.phase_pos[BlackoilPhases::Vapour]];
+                break;
+            }
+            case GPMaint::FlowTarget::SURF_OINJ:
+            {
+                if (pu.phase_used[BlackoilPhases::Liquid])
+                    current_rate = group_state.injection_surface_rates(group.name())[pu.phase_pos[BlackoilPhases::Liquid]];
+
+                break;
+            }
+            case GPMaint::FlowTarget::SURF_WINJ:
+            {
+                if (pu.phase_used[BlackoilPhases::Aqua])
+                    current_rate = group_state.injection_surface_rates(group.name())[pu.phase_pos[BlackoilPhases::Aqua]];
+
+                break;
+            }
+            case GPMaint::FlowTarget::SURF_GINJ:
+            {
+                if (pu.phase_used[BlackoilPhases::Vapour])
+                    current_rate = group_state.injection_surface_rates(group.name())[pu.phase_pos[BlackoilPhases::Vapour]];
+
+                break;
+            }
+            default:
+                throw std::invalid_argument("Invalid Flow target type in GPMAINT");
+        }
+
+        auto& gpmaint_state = group_state.gpmaint(group.name());
+        double rate = gpm->rate(gpmaint_state, current_rate, error, dt);
+        group_state.update_gpmaint_target(group.name(), std::max(0.0, sign * rate));
     }
 
 
@@ -1584,6 +1673,15 @@ namespace WellGroupHelpers
             guideRate->compute(well.name(), reportStepIdx, simTime, oilpot, gaspot, waterpot);
         }
     }
+
+ using AvgP = RegionAverageCalculator::AverageRegionalPressure<BlackOilFluidSystem<double>,std::vector<int>>;
+ template void WellGroupHelpers::updateGpMaintTargetForGroups<AvgP>(const Group&,
+                                                                    const Schedule&,
+                                                                    const AvgP&,
+                                                                    int,
+                                                                    double,
+                                                                    const WellState&,
+                                                                    GroupState&);
 
  #define INSTANCE_WELLGROUP_HELPERS(...) \
     template \
