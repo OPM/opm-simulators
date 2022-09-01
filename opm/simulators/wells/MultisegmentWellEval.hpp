@@ -32,10 +32,13 @@
 #include <dune/common/fvector.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/bvector.hh>
-#include <dune/istl/umfpack.hh>
 
 #include <array>
 #include <memory>
+
+namespace Dune {
+template<class Matrix> class UMFPack;
+}
 
 namespace Opm
 {
