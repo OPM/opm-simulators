@@ -46,7 +46,8 @@ struct CommPolicy<double*>
 namespace Opm
 {
 
-GlobalPerfContainerFactory::GlobalPerfContainerFactory(const IndexSet& local_indices, const Communication comm,
+GlobalPerfContainerFactory::GlobalPerfContainerFactory(const IndexSet& local_indices,
+                                                       const Parallel::Communication comm,
                                                        const int num_local_perfs)
     : local_indices_(local_indices), comm_(comm)
 {
@@ -182,7 +183,7 @@ int GlobalPerfContainerFactory::numGlobalPerfs() const
 }
 
 
-CommunicateAboveBelow::CommunicateAboveBelow([[maybe_unused]] const Communication& comm)
+CommunicateAboveBelow::CommunicateAboveBelow([[maybe_unused]] const Parallel::Communication& comm)
 #if HAVE_MPI
     : comm_(comm), interface_(comm_)
 #endif
@@ -319,7 +320,7 @@ void CommunicateAboveBelow::pushBackEclIndex([[maybe_unused]] int above,
 }
 
 
-void ParallelWellInfo::DestroyComm::operator()(Communication* comm)
+void ParallelWellInfo::DestroyComm::operator()(Parallel::Communication* comm)
 {
 #if HAVE_MPI
     // Only delete custom communicators.
@@ -353,13 +354,13 @@ ParallelWellInfo::ParallelWellInfo(const std::string& name,
                                    bool hasLocalCells)
     : name_(name), hasLocalCells_ (hasLocalCells),
       isOwner_(true), rankWithFirstPerf_(-1),
-      comm_(new Communication(Dune::MPIHelper::getLocalCommunicator())),
+      comm_(new Parallel::Communication(Dune::MPIHelper::getLocalCommunicator())),
       commAboveBelow_(new CommunicateAboveBelow(*comm_))
 {}
 
 
 ParallelWellInfo::ParallelWellInfo(const std::pair<std::string, bool>& well_info,
-                                   [[maybe_unused]] Communication allComm)
+                                   [[maybe_unused]] Parallel::Communication allComm)
     : name_(well_info.first), hasLocalCells_(well_info.second),
       rankWithFirstPerf_(-1)
 {
@@ -367,9 +368,9 @@ ParallelWellInfo::ParallelWellInfo(const std::pair<std::string, bool>& well_info
     MPI_Comm newComm;
     int color = hasLocalCells_ ? 1 : MPI_UNDEFINED;
     MPI_Comm_split(allComm, color, allComm.rank(), &newComm);
-    comm_.reset(new Communication(newComm));
+    comm_.reset(new Parallel::Communication(newComm));
 #else
-    comm_.reset(new Communication(Dune::MPIHelper::getLocalCommunicator()));
+    comm_.reset(new Parallel::Communication(Dune::MPIHelper::getLocalCommunicator()));
 #endif
     commAboveBelow_.reset(new CommunicateAboveBelow(*comm_));
     isOwner_ = (comm_->rank() == 0);

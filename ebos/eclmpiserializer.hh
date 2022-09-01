@@ -21,7 +21,7 @@
 #ifndef ECL_MPI_SERIALIZER_HH
 #define ECL_MPI_SERIALIZER_HH
 
-#include <dune/common/version.hh>
+#include <opm/simulators/utils/ParallelCommunication.hpp>
 #include <opm/simulators/utils/ParallelRestart.hpp>
 
 #include <optional>
@@ -550,7 +550,7 @@ protected:
             data->serializeOp(*this);
     }
 
-    Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator> m_comm; //!< Communicator to broadcast using
+    Parallel::Communication m_comm; //!< Communicator to broadcast using
 
     Operation m_op = Operation::PACKSIZE; //!< Current operation
     size_t m_packSize = 0; //!< Required buffer size after PACKSIZE has been done
