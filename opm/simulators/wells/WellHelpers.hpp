@@ -78,13 +78,6 @@ void sumDistributedWellEntries(Dune::DynamicMatrix<Scalar>& mat,
                                const Comm& comm);
 
 
-
-template <int dim, class C2F, class FC>
-std::array<double, dim>
-getCubeDim(const C2F& c2f,
-           FC         begin_face_centroids,
-           int        cell);
-
 // explicit transpose of a dense matrix due to compilation problems
 // used for calculating quasiimpes well weights
 template <class DenseMatrix>

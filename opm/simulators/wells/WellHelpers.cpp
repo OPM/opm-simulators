@@ -25,8 +25,6 @@
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 
-#include <opm/grid/cpgrid/GridHelpers.hpp>
-
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 
 #include <vector>
@@ -157,47 +155,6 @@ void sumDistributedWellEntries(Dune::DynamicMatrix<Scalar>& mat,
     }
     assert(std::size_t(allEntries.end() - pos) == vec.size());
     std::copy(pos, allEntries.end(), &(vec[0]));
-}
-
-template <int dim, class C2F, class FC>
-std::array<double, dim>
-getCubeDim(const C2F& c2f,
-           FC         begin_face_centroids,
-           int        cell)
-{
-    std::array<std::vector<double>, dim> X;
-    {
-        const std::vector<double>::size_type
-            nf = std::distance(c2f[cell].begin(),
-                               c2f[cell].end  ());
-
-        for (int d = 0; d < dim; ++d) {
-            X[d].reserve(nf);
-        }
-    }
-
-    for (const auto& f : c2f[cell]) {
-        using Opm::UgGridHelpers::increment;
-        using Opm::UgGridHelpers::getCoordinate;
-
-        const FC& fc = increment(begin_face_centroids, f, dim);
-
-        for (int d = 0; d < dim; ++d) {
-            X[d].push_back(getCoordinate(fc, d));
-        }
-    }
-
-    std::array<double, dim> cube;
-    for (int d = 0; d < dim; ++d) {
-        using VI = std::vector<double>::iterator;
-        using PVI = std::pair<VI,VI>;
-
-        const PVI m = std::minmax_element(X[d].begin(), X[d].end());
-
-        cube[d] = *m.second - *m.first;
-    }
-
-    return cube;
 }
 
 template <class DenseMatrix>
