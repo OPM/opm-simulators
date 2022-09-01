@@ -27,6 +27,7 @@
 
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 
+#include <fmt/format.h>
 #include <vector>
 
 namespace Opm {
@@ -65,10 +66,8 @@ mv (const X& x, Y& y) const
             if (parallel_well_info_.communication().rank() == 0)
             {
                 //only one process per well logs, might not be 0 of MPI_COMM_WORLD, though
-                std::string msg = std::string("Fatal Error: Not all ranks are computing for the same well")
-                              + " well should be " + parallel_well_info_.name() + " but is "
-                    + name;
-                OpmLog::debug(msg);
+                OpmLog::error(fmt::format("Not all ranks are computing for the same well,"
+                                          " should be {} but is {},", parallel_well_info_.name(), name));
             }
             consistentWells = false;
             break;
