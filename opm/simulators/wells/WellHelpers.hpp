@@ -62,8 +62,8 @@ public:
     void mmv (const X& x, Y& y) const;
 
 private:
-    const Matrix* B_;
-    const ParallelWellInfo* parallel_well_info_;
+    const Matrix& B_;
+    const ParallelWellInfo& parallel_well_info_;
 };
 
 double computeHydrostaticCorrection(const double well_ref_depth,

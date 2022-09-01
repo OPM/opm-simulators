@@ -35,7 +35,7 @@ namespace wellhelpers {
 template<typename Scalar>
 ParallelStandardWellB<Scalar>::
 ParallelStandardWellB(const Matrix& B, const ParallelWellInfo& parallel_well_info)
-    : B_(&B), parallel_well_info_(&parallel_well_info)
+    : B_(B), parallel_well_info_(parallel_well_info)
 {}
 
 template<typename Scalar>
@@ -46,27 +46,27 @@ mv (const X& x, Y& y) const
 #if !defined(NDEBUG) && HAVE_MPI
     // We need to make sure that all ranks are actually computing
     // for the same well. Doing this by checking the name of the well.
-    int cstring_size = parallel_well_info_->name().size()+1;
-    std::vector<int> sizes(parallel_well_info_->communication().size());
-    parallel_well_info_->communication().allgather(&cstring_size, 1, sizes.data());
+    int cstring_size = parallel_well_info_.name().size()+1;
+    std::vector<int> sizes(parallel_well_info_.communication().size());
+    parallel_well_info_.communication().allgather(&cstring_size, 1, sizes.data());
     std::vector<int> offsets(sizes.size()+1, 0); //last entry will be accumulated size
     std::partial_sum(sizes.begin(), sizes.end(), offsets.begin() + 1);
     std::vector<char> cstrings(offsets[sizes.size()]);
     bool consistentWells = true;
-    char* send = const_cast<char*>(parallel_well_info_->name().c_str());
-    parallel_well_info_->communication().allgatherv(send, cstring_size,
-                                       cstrings.data(), sizes.data(),
-                                       offsets.data());
+    char* send = const_cast<char*>(parallel_well_info_.name().c_str());
+    parallel_well_info_.communication().allgatherv(send, cstring_size,
+                                                   cstrings.data(), sizes.data(),
+                                                   offsets.data());
     for(std::size_t i = 0; i < sizes.size(); ++i)
     {
         std::string name(cstrings.data()+offsets[i]);
-        if (name != parallel_well_info_->name())
+        if (name != parallel_well_info_.name())
         {
-            if (parallel_well_info_->communication().rank() == 0)
+            if (parallel_well_info_.communication().rank() == 0)
             {
                 //only one process per well logs, might not be 0 of MPI_COMM_WORLD, though
                 std::string msg = std::string("Fatal Error: Not all ranks are computing for the same well")
-                              + " well should be " + parallel_well_info_->name() + " but is "
+                              + " well should be " + parallel_well_info_.name() + " but is "
                     + name;
                 OpmLog::debug(msg);
             }
@@ -74,16 +74,16 @@ mv (const X& x, Y& y) const
             break;
         }
     }
-    parallel_well_info_->communication().barrier();
+    parallel_well_info_.communication().barrier();
     // As not all processes are involved here we need to use MPI_Abort and hope MPI kills them all
     if (!consistentWells)
     {
         MPI_Abort(MPI_COMM_WORLD, 1);
     }
 #endif
-    B_->mv(x, y);
+    B_.mv(x, y);
 
-    if (this->parallel_well_info_->communication().size() > 1)
+    if (this->parallel_well_info_.communication().size() > 1)
     {
         // Only do communication if we must.
         // The B matrix is basically a component-wise multiplication
@@ -92,8 +92,8 @@ mv (const X& x, Y& y) const
         // broadcast when applying C^T.
         using YField = typename Y::block_type::value_type;
         assert(y.size() == 1);
-        this->parallel_well_info_->communication().template allreduce<std::plus<YField>>(y[0].container().data(),
-                                                                                         y[0].container().size());
+        this->parallel_well_info_.communication().template allreduce<std::plus<YField>>(y[0].container().data(),
+                                                                                        y[0].container().size());
     }
 }
 
@@ -102,12 +102,12 @@ template<class X, class Y>
 void ParallelStandardWellB<Scalar>::
 mmv (const X& x, Y& y) const
 {
-    if (this->parallel_well_info_->communication().size() == 1)
+    if (this->parallel_well_info_.communication().size() == 1)
     {
         // Do the same thing as before. The else branch
         // produces different rounding errors and results
         // slightly different iteration counts / well curves
-        B_->mmv(x, y);
+        B_.mmv(x, y);
     }
     else
     {
