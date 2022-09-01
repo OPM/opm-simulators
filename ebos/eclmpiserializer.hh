@@ -29,6 +29,38 @@
 #include <utility>
 #include <variant>
 
+namespace detail
+{
+
+template<typename ...Ts>
+struct MakeVariantImpl
+{
+
+template<std::size_t Index, typename, typename ...Rest>
+static decltype(auto) make_variant(std::size_t index)
+{
+  if(Index == index)
+    return std::variant<Ts...>{std::in_place_index_t<Index>{}};
+
+  if constexpr(sizeof...(Rest) != 0)
+    return make_variant<Index + 1, Rest...>(index);
+  else
+    throw std::runtime_error("Invalid variant index");
+}
+
+};
+
+template<typename ...Ts>
+decltype(auto) make_variant(std::size_t index)
+{
+  return detail::MakeVariantImpl<Ts...>::template make_variant<0, Ts...>(index);
+}
+
+template<class T>
+using remove_cvr_t = std::remove_const_t<std::remove_reference_t<T>>;
+
+} // namespace detail
+
 namespace Opm {
 
 /*! \brief Class for (de-)serializing and broadcasting data in parallel.
@@ -134,101 +166,31 @@ public:
         }
     }
 
-    //! \brief Handler for std::variant<> with four types
-
-    /*
-      The std::variant<> serialization is a first attempt and *not* particularly
-      general. In particular that implies:
-
-        1. It is hardcoded to hold exactly four alternative types T0, T1, T2 and
-           T3.
-
-        2. All the four types T0, T1, T2 and T3 must implement the ::serializeOp( )
-           method. This implies that a variant with a fundamental type like e.g.
-           std::variant<int, double, Opm::Well, Opm::Group> will *not* work in the
-           current implementation.
-    */
-    template<class T0, class T1, class T2, class T3>
-    void variant(const std::variant<T0,T1,T2,T3>& _data)
+    //! \brief Handler for std::variant.
+    //! \param data The variant to (de-)serialize
+    template<class... Args>
+    void variant(const std::variant<Args...>& data)
     {
-        auto handle = [&](auto& d) {
-            d.serializeOp(*this);
+        auto visitor = [&](auto& d)
+        {
+            if constexpr (has_serializeOp<detail::remove_cvr_t<decltype(d)>>::value)
+                const_cast<detail::remove_cvr_t<decltype(d)>&>(d).serializeOp(*this);
+            else
+                (*this)(d);
         };
-
-        std::variant<T0,T1,T2,T3>& data = const_cast<std::variant<T0,T1,T2,T3>&>(_data);
         if (m_op == Operation::PACKSIZE) {
             m_packSize += Mpi::packSize(data.index(), m_comm);
-            std::visit( [&] (auto& arg) { handle(arg); }, data);
+            std::visit(visitor, data);
         } else if (m_op == Operation::PACK) {
             Mpi::pack(data.index(), m_buffer, m_position, m_comm);
-            std::visit([&](auto& arg) { handle(arg); }, data);
+            std::visit(visitor, data);
         } else if (m_op == Operation::UNPACK) {
             size_t index;
             Mpi::unpack(index, m_buffer, m_position, m_comm);
-
-            if (index == 0) {
-                data = T0();
-                handle(std::get<0>(data));
-            } else if (index == 1) {
-                data = T1();
-                handle(std::get<1>(data));
-            } else if (index == 2) {
-                data = T2();
-                handle(std::get<2>(data));
-            } else if (index == 3) {
-                data = T3();
-                handle(std::get<3>(data));
-            } else
-                std::logic_error("Internal meltdown in std::variant<T0,T1,T2,T3> unpack");
+            auto& data_mut = const_cast<std::variant<Args...>&>(data);
+            data_mut = detail::make_variant<Args...>(index);
+            std::visit(visitor, data_mut);
         }
-    }
-
-
-    //! \brief Handler for std::variant<> with two fundamental types
-
-    /*
-      This std::variant serialization is highly specialized:
-
-        1. It is hardcoded to take exactly two types T0 and T1.
-
-        2. Both T0 and T1 must be basic types where Mpi::pack(T, ...) overloads
-           must exist.
-
-    */
-    template<class T0, class T1>
-    void variant(const std::variant<T0,T1>& data)
-    {
-        auto pack_size = [&](auto& d) {
-                             m_packSize += Mpi::packSize(d, m_comm);
-                         };
-
-        auto packer = [&](auto& d) {
-                          Mpi::pack(d, m_buffer, m_position, m_comm);
-                      };
-
-        if (m_op == Operation::PACKSIZE) {
-            m_packSize += Mpi::packSize(data.index(), m_comm);
-            std::visit( [&] (auto& arg) { pack_size(arg); }, data);
-        } else if (m_op == Operation::PACK) {
-            Mpi::pack(data.index(), m_buffer, m_position, m_comm);
-            std::visit([&](auto& arg) { packer(arg); }, data);
-        } else if (m_op == Operation::UNPACK) {
-            size_t index;
-            std::variant<T0,T1>& mutable_data = const_cast<std::variant<T0,T1>&>(data);
-            Mpi::unpack(index, m_buffer, m_position, m_comm);
-
-            if (index == 0) {
-                T0 t0;
-                Mpi::unpack(t0, m_buffer, m_position, m_comm);
-                mutable_data = t0;
-            } else if (index == 1) {
-                T1 t1;
-                Mpi::unpack(t1, m_buffer, m_position, m_comm);
-                mutable_data = t1;
-            } else
-                throw std::logic_error("Internal meltdown in std::variant<T0,T1> unpack loaded index=" + std::to_string(index) + " allowed range: [0,1]");
-        }
-
     }
 
     //! \brief Handler for std::optional.
