@@ -101,7 +101,7 @@ namespace {
                         (numInactive != 1) ? "s" : "",
                         timeString);
 
-        Opm::OpmLog::info("ACTION_NOT_TRIGGERED", message);
+        Opm::OpmLog::debug("ACTION_NOT_TRIGGERED", message);
     }
 } // Anonymous namespace
 
