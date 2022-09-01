@@ -21,19 +21,29 @@
 #include <config.h>
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
 
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Group/GConSump.hpp>
 #include <opm/input/eclipse/Schedule/Group/GConSale.hpp>
+#include <opm/input/eclipse/Schedule/Group/GPMaint.hpp>
+#include <opm/input/eclipse/Schedule/Group/Group.hpp>
+
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+#include <opm/simulators/utils/ParallelCommunication.hpp>
+
+#include <opm/simulators/wells/GroupState.hpp>
+#include <opm/simulators/wells/RegionAverageCalculator.hpp>
 #include <opm/simulators/wells/TargetCalculator.hpp>
 #include <opm/simulators/wells/VFPProdProperties.hpp>
 #include <opm/simulators/wells/WellState.hpp>
-#include <opm/simulators/wells/WellContainer.hpp>
 
 #include <algorithm>
 #include <cassert>
 #include <set>
 #include <stack>
+#include <stdexcept>
 
 namespace {
     Opm::GuideRate::RateVector
@@ -652,6 +662,86 @@ namespace WellGroupHelpers
         }
 
         group_state.update_injection_rein_rates(group.name(), rein);
+    }
+
+
+    template <class RegionalValues>
+    void updateGpMaintTargetForGroups(const Group& group,
+                                      const Schedule& schedule,
+                                      const RegionalValues& regional_values,
+                                      const int reportStepIdx,
+                                      const double dt,
+                                      const WellState& well_state,
+                                      GroupState& group_state)
+    {
+        for (const std::string& groupName : group.groups()) {
+            const Group& groupTmp = schedule.getGroup(groupName, reportStepIdx);
+            updateGpMaintTargetForGroups(groupTmp, schedule, regional_values, reportStepIdx, dt, well_state, group_state);
+        }
+        const auto& gpm = group.gpmaint();
+        if (!gpm)
+            return;
+
+        const auto [name, number] = *gpm->region();
+        const double error = gpm->pressure_target() - regional_values.pressure(number);
+        double current_rate = 0.0;
+        const auto& pu = well_state.phaseUsage();
+        double sign = 1.0;
+        switch (gpm->flow_target()) {
+            case GPMaint::FlowTarget::RESV_PROD:
+            {
+                current_rate = -group_state.injection_vrep_rate(group.name());
+                sign = -1.0;
+                break;
+            }
+            case GPMaint::FlowTarget::RESV_OINJ:
+            {
+                if (pu.phase_used[BlackoilPhases::Liquid])
+                    current_rate = group_state.injection_reservoir_rates(group.name())[pu.phase_pos[BlackoilPhases::Liquid]];
+
+                break;
+            }
+            case GPMaint::FlowTarget::RESV_WINJ:
+            {
+                if (pu.phase_used[BlackoilPhases::Aqua])
+                    current_rate = group_state.injection_reservoir_rates(group.name())[pu.phase_pos[BlackoilPhases::Aqua]];
+
+                break;
+            }
+            case GPMaint::FlowTarget::RESV_GINJ:
+            {
+                if (pu.phase_used[BlackoilPhases::Vapour])
+                    current_rate = group_state.injection_reservoir_rates(group.name())[pu.phase_pos[BlackoilPhases::Vapour]];
+                break;
+            }
+            case GPMaint::FlowTarget::SURF_OINJ:
+            {
+                if (pu.phase_used[BlackoilPhases::Liquid])
+                    current_rate = group_state.injection_surface_rates(group.name())[pu.phase_pos[BlackoilPhases::Liquid]];
+
+                break;
+            }
+            case GPMaint::FlowTarget::SURF_WINJ:
+            {
+                if (pu.phase_used[BlackoilPhases::Aqua])
+                    current_rate = group_state.injection_surface_rates(group.name())[pu.phase_pos[BlackoilPhases::Aqua]];
+
+                break;
+            }
+            case GPMaint::FlowTarget::SURF_GINJ:
+            {
+                if (pu.phase_used[BlackoilPhases::Vapour])
+                    current_rate = group_state.injection_surface_rates(group.name())[pu.phase_pos[BlackoilPhases::Vapour]];
+
+                break;
+            }
+            default:
+                throw std::invalid_argument("Invalid Flow target type in GPMAINT");
+        }
+
+        auto& gpmaint_state = group_state.gpmaint(group.name());
+        double rate = gpm->rate(gpmaint_state, current_rate, error, dt);
+        group_state.update_gpmaint_target(group.name(), std::max(0.0, sign * rate));
     }
 
 
@@ -1585,45 +1675,47 @@ namespace WellGroupHelpers
         }
     }
 
- #define INSTANCE_WELLGROUP_HELPERS(...) \
-    template \
-    void updateGuideRateForProductionGroups<Dune::CollectiveCommunication<__VA_ARGS__>>(const Group& group,\
-                                                              const Schedule& schedule, \
-                                                              const PhaseUsage& pu, \
-                                                              const int reportStepIdx, \
-                                                              const double& simTime, \
-                                                              WellState& wellState, \
-                                                              const GroupState& group_state, \
-                                                              const Dune::CollectiveCommunication<__VA_ARGS__>& comm, \
-                                                              GuideRate* guideRate, \
-                                                              std::vector<double>& pot); \
-    template \
-    void updateGuideRatesForWells<Dune::CollectiveCommunication<__VA_ARGS__>>(const Schedule& schedule, \
-                                                              const PhaseUsage& pu, \
-                                                              const int reportStepIdx, \
-                                                              const double& simTime, \
-                                                              const WellState& wellState, \
-                                                              const Dune::CollectiveCommunication<__VA_ARGS__>& comm, \
-                                                              GuideRate* guideRate); \
-    template \
-    void updateGuideRates<Dune::CollectiveCommunication<__VA_ARGS__>>(const Group& group, \
-                                                                      const Schedule& schedule, \
-                                                                      const SummaryState& summary_state, \
-                                                                      const PhaseUsage& pu, \
-                                                                      const int report_step, \
-                                                                      const double sim_time, \
-                                                                      WellState& well_state, \
-                                                                      const GroupState& group_state, \
-                                                                      const Dune::CollectiveCommunication<__VA_ARGS__>& comm,\
-                                                                      GuideRate* guide_rate, \
-                                                                      std::vector<double>& pot,\
-                                                                      Opm::DeferredLogger& deferred_logger);
+ using AvgP = RegionAverageCalculator::AverageRegionalPressure<BlackOilFluidSystem<double>,std::vector<int>>;
+ template void WellGroupHelpers::updateGpMaintTargetForGroups<AvgP>(const Group&,
+                                                                    const Schedule&,
+                                                                    const AvgP&,
+                                                                    int,
+                                                                    double,
+                                                                    const WellState&,
+                                                                    GroupState&);
 
-#if HAVE_MPI
-    INSTANCE_WELLGROUP_HELPERS(MPI_Comm)
-#else
-    INSTANCE_WELLGROUP_HELPERS(Dune::No_Comm)
-#endif
+template
+void updateGuideRateForProductionGroups<Parallel::Communication>(const Group& group,
+                                                                 const Schedule& schedule,
+                                                                 const PhaseUsage& pu,
+                                                                 const int reportStepIdx,
+                                                                 const double& simTime,
+                                                                 WellState& wellState,
+                                                                 const GroupState& group_state,
+                                                                 const Parallel::Communication& comm,
+                                                                 GuideRate* guideRate,
+                                                                 std::vector<double>& pot);
+template
+void updateGuideRatesForWells<Parallel::Communication>(const Schedule& schedule,
+                                                       const PhaseUsage& pu,
+                                                       const int reportStepIdx,
+                                                       const double& simTime,
+                                                       const WellState& wellState,
+                                                       const Parallel::Communication& comm,
+                                                       GuideRate* guideRate);
+template
+void updateGuideRates<Parallel::Communication>(const Group& group,
+                                               const Schedule& schedule,
+                                               const SummaryState& summary_state,
+                                               const PhaseUsage& pu,
+                                               const int report_step,
+                                               const double sim_time,
+                                               WellState& well_state,
+                                               const GroupState& group_state,
+                                               const Parallel::Communication& comm,
+                                               GuideRate* guide_rate,
+                                               std::vector<double>& pot,
+                                               DeferredLogger&);
 
 } // namespace WellGroupHelpers
 
