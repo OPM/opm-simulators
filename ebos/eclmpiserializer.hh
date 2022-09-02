@@ -233,9 +233,8 @@ public:
 
     //! \brief Handler for maps.
     //! \tparam Map map type
-    //! \tparam complexType Whether or not Data in map is a complex type
     //! \param map The map to (de-)serialize
-    template<class Map, bool complexType = true>
+    template<class Map>
     void map(Map& data)
     {
         using Key = typename Map::key_type;
@@ -247,7 +246,7 @@ public:
                 this->vector(d);
             else if constexpr (is_ptr<Data>::value)
                 this->ptr(d);
-            else if constexpr (complexType)
+            else if constexpr (has_serializeOp<Data>::value)
                 d.serializeOp(*this);
             else
                 (*this)(d);
@@ -257,6 +256,8 @@ public:
         {
               if constexpr (is_pair<Key>::value)
                   pair(d);
+              else if constexpr (has_serializeOp<Key>::value)
+                  d.serializeOp(*this);
               else
                   (*this)(d);
         };
