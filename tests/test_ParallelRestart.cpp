@@ -354,7 +354,7 @@ std::tuple<T,int,int> PackUnpack2(T& in)
     BOOST_CHECK_MESSAGE(val1 == std::get<0>(val2), "Deserialized " #TYPE_NAME " differ");
 
 
-BOOST_AUTO_TEST_CASE(Solution)
+BOOST_AUTO_TEST_CASE(Solution_)
 {
     Opm::data::Solution val1 = getSolution();
     auto val2 = PackUnpack(val1);
@@ -574,6 +574,7 @@ TEST_FOR_TYPE(Connection)
 TEST_FOR_TYPE_NAMED(data::CellData, CellData)
 TEST_FOR_TYPE_NAMED(data::GroupConstraints, GroupConstraints)
 TEST_FOR_TYPE_NAMED(data::NodeData, NodeData)
+TEST_FOR_TYPE_NAMED(data::Solution, Solution)
 TEST_FOR_TYPE(Deck)
 TEST_FOR_TYPE(DeckItem)
 TEST_FOR_TYPE(DeckKeyword)
