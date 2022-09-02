@@ -1369,6 +1369,7 @@ INSTANTIATE_PACK(unsigned long long int)
 INSTANTIATE_PACK(std::array<short,3>)
 INSTANTIATE_PACK(std::array<bool,3>)
 INSTANTIATE_PACK(std::array<int,3>)
+INSTANTIATE_PACK(std::array<double,4>)
 INSTANTIATE_PACK(std::map<std::pair<int,int>,std::pair<bool,double>>)
 INSTANTIATE_PACK(std::optional<double>)
 INSTANTIATE_PACK(std::optional<std::string>)
@@ -1386,6 +1387,8 @@ INSTANTIATE_PACK(std::unordered_map<std::string,size_t,Opm::OrderedMapDetail::Tr
 INSTANTIATE_PACK(std::unordered_map<std::string,std::string>)
 INSTANTIATE_PACK(std::unordered_set<std::string>)
 INSTANTIATE_PACK(std::set<std::string>)
+INSTANTIATE_PACK(std::bitset<4>)
+
 
 #undef INSTANTIATE_PACK
 
