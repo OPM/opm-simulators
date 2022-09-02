@@ -516,7 +516,7 @@ BOOST_AUTO_TEST_CASE(RestartKey_)
 }
 
 
-BOOST_AUTO_TEST_CASE(RestartValue)
+BOOST_AUTO_TEST_CASE(RestartValue_)
 {
     auto wells1 = Opm::data::Wells {{
         { "test_well", getWell() },
@@ -635,6 +635,7 @@ TEST_FOR_TYPE(PvtwsaltTable)
 TEST_FOR_TYPE(PvtwTable)
 TEST_FOR_TYPE(Regdims)
 TEST_FOR_TYPE(RestartKey)
+TEST_FOR_TYPE(RestartValue)
 TEST_FOR_TYPE(RSTConfig)
 TEST_FOR_TYPE(RFTConfig)
 TEST_FOR_TYPE(RockConfig)
