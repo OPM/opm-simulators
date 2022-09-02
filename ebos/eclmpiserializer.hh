@@ -135,7 +135,7 @@ public:
         }
     }
 
-    template <class Array, bool complexType = true>
+    template <class Array>
     void array(Array& data)
     {
         using T = typename Array::value_type;
@@ -146,10 +146,10 @@ public:
                     pair(it);
                 else if constexpr (is_ptr<T>::value)
                     ptr(it);
-                else if constexpr (!complexType)
-                    (*this)(it);
-                else
+                else if constexpr (has_serializeOp<T>::value)
                     it.serializeOp(*this);
+                else
+                    (*this)(it);
             }
         };
 
