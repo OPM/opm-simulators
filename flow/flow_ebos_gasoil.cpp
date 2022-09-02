@@ -25,6 +25,9 @@
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp>
 #include <opm/simulators/flow/Main.hpp>
 
+#include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
+#include <opm/models/discretization/common/tpfalinearizer.hh>
+
 namespace Opm {
 namespace Properties {
 namespace TTag {
@@ -32,6 +35,15 @@ struct EclFlowGasOilProblem {
     using InheritsFrom = std::tuple<EclFlowProblem>;
 };
 }
+
+template<class TypeTag>
+struct Linearizer<TypeTag, TTag::EclFlowGasOilProblem> { using type = TpfaLinearizer<TypeTag>; };
+
+template<class TypeTag>
+struct LocalResidual<TypeTag, TTag::EclFlowGasOilProblem> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
+
+template<class TypeTag>
+struct EnableDiffusion<TypeTag, TTag::EclFlowGasOilProblem> { static constexpr bool value = false; };
 
 //! The indices required by the model
 template<class TypeTag>

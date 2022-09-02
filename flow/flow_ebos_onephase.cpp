@@ -22,6 +22,8 @@
 #include <opm/simulators/flow/Main.hpp>
 #include <opm/models/blackoil/blackoilonephaseindices.hh>
 
+#include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
+#include <opm/models/discretization/common/tpfalinearizer.hh>
 
 namespace Opm {
 namespace Properties {
@@ -31,6 +33,16 @@ struct EclFlowProblemWaterOnly {
     using InheritsFrom = std::tuple<EclFlowProblem>;
 };
 }
+
+template<class TypeTag>
+struct Linearizer<TypeTag, TTag::EclFlowProblemWaterOnly> { using type = TpfaLinearizer<TypeTag>; };
+
+template<class TypeTag>
+struct LocalResidual<TypeTag, TTag::EclFlowProblemWaterOnly> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
+
+template<class TypeTag>
+struct EnableDiffusion<TypeTag, TTag::EclFlowProblemWaterOnly> { static constexpr bool value = false; };
+
 //! The indices required by the model
 template<class TypeTag>
 struct Indices<TypeTag, TTag::EclFlowProblemWaterOnly>
