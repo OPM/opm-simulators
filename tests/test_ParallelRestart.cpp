@@ -508,7 +508,7 @@ BOOST_AUTO_TEST_CASE(CellData_)
 }
 
 
-BOOST_AUTO_TEST_CASE(RestartKey)
+BOOST_AUTO_TEST_CASE(RestartKey_)
 {
     Opm::RestartKey val1("key", Opm::UnitSystem::measure::length, true);
     auto val2 = PackUnpack(val1);
@@ -619,6 +619,7 @@ TEST_FOR_TYPE(PvtoTable)
 TEST_FOR_TYPE(PvtwsaltTable)
 TEST_FOR_TYPE(PvtwTable)
 TEST_FOR_TYPE(Regdims)
+TEST_FOR_TYPE(RestartKey)
 TEST_FOR_TYPE(RSTConfig)
 TEST_FOR_TYPE(RFTConfig)
 TEST_FOR_TYPE(RockConfig)
