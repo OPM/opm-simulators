@@ -480,20 +480,18 @@ protected:
     > : public std::true_type {};
 
     //! \brief Handler for pairs.
-    //! \details If data is POD or a string, we pass it to the underlying serializer,
-    //!          if not we assume a complex type.
     template<class T1, class T2>
     void pair(const std::pair<T1,T2>& data)
     {
-        if constexpr (std::is_pod<T1>::value || std::is_same<T1,std::string>::value)
+        if constexpr (has_serializeOp<T1>::value)
+            const_cast<T1&>(data.first).serializeOp(*this);
+        else
             (*this)(data.first);
-        else
-            data.first.serializeOp(*this);
 
-        if constexpr (std::is_pod<T2>::value || std::is_same<T2,std::string>::value)
-            (*this)(data.second);
-        else
+        if constexpr (has_serializeOp<T2>::value)
             const_cast<T2&>(data.second).serializeOp(*this);
+        else
+            (*this)(data.second);
     }
 
     //! \brief Handler for smart pointers.
