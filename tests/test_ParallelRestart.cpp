@@ -497,7 +497,7 @@ BOOST_AUTO_TEST_CASE(dataNodeData)
     DO_CHECKS(data::NodeData)
 }
 
-BOOST_AUTO_TEST_CASE(CellData)
+BOOST_AUTO_TEST_CASE(CellData_)
 {
     Opm::data::CellData val1;
     val1.dim = Opm::UnitSystem::measure::length;
@@ -571,6 +571,7 @@ TEST_FOR_TYPE(BCConfig)
 TEST_FOR_TYPE(BrineDensityTable)
 TEST_FOR_TYPE(ColumnSchema)
 TEST_FOR_TYPE(Connection)
+TEST_FOR_TYPE_NAMED(data::CellData, CellData)
 TEST_FOR_TYPE(Deck)
 TEST_FOR_TYPE(DeckItem)
 TEST_FOR_TYPE(DeckKeyword)
