@@ -102,9 +102,8 @@ public:
 
     //! \brief Handler for vectors.
     //! \tparam T Type for vector elements
-    //! \tparam complexType Whether or not T is a complex type
     //! \param data The vector to (de-)serialize
-    template <typename T, bool complexType = true>
+    template <typename T>
     void vector(std::vector<T>& data)
     {
         auto handle = [&](auto& d)
@@ -114,10 +113,10 @@ public:
                   pair(it);
               else if constexpr (is_ptr<T>::value)
                   ptr(it);
-              else if constexpr (!complexType)
-                  (*this)(it);
-              else
+              else if constexpr (has_serializeOp<T>::value)
                   it.serializeOp(*this);
+              else
+                  (*this)(it);
             }
         };
 
@@ -245,9 +244,9 @@ public:
         auto handle = [&](auto& d)
         {
             if constexpr (is_vector<Data>::value)
-                this->template vector<typename Data::value_type,complexType>(d);
+                this->vector(d);
             else if constexpr (is_ptr<Data>::value)
-                ptr(d);
+                this->ptr(d);
             else if constexpr (complexType)
                 d.serializeOp(*this);
             else
@@ -295,7 +294,7 @@ public:
         auto handle = [&](auto& d)
         {
             if constexpr (is_vector<Data>::value)
-                this->template vector<typename Data::value_type,complexType>(d);
+                this->vector(d);
             else if constexpr (is_ptr<Data>::value)
                 ptr(d);
             else if constexpr (complexType)
