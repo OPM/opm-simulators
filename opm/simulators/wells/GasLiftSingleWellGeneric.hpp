@@ -248,7 +248,7 @@ protected:
     bool checkGroupTargetsViolated(
                       const BasicRates& rates, const BasicRates& new_rates) const;
     bool checkInitialALQmodified_(double alq, double initial_alq) const;
-    bool checkThpControl_() const;
+    virtual bool checkThpControl_() const = 0;
     virtual std::optional<double> computeBhpAtThpLimit_(double alq) const = 0;
     std::pair<std::optional<double>,double> computeConvergedBhpAtThpLimitByMaybeIncreasingALQ_() const;
     std::pair<std::optional<BasicRates>,double> computeInitialWellRates_() const;

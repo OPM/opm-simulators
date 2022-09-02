@@ -420,6 +420,11 @@ bool WellInterfaceGeneric::useVfpExplicit() const
     return ((wvfpexp.explicit_lookup() && !changedToOpenThisStep())|| operability_status_.use_vfpexplicit);
 }
 
+bool WellInterfaceGeneric::thpLimitViolatedButNotSwitched() const
+{
+    return operability_status_.thp_limit_violated_but_not_switched;
+}
+
 double WellInterfaceGeneric::getALQ(const WellState& well_state) const
 {
     return well_state.getALQ(name());

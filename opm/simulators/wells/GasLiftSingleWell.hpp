@@ -61,6 +61,8 @@ namespace Opm
             double bhp, bool bhp_is_limited, bool debug_output=true) const override;
         void setAlqMaxRate_(const GasLiftOpt::Well& well);
         void setupPhaseVariables_();
+        bool checkThpControl_() const override;
+
 
         const Simulator &ebos_simulator_;
         const WellInterface<TypeTag> &well_;

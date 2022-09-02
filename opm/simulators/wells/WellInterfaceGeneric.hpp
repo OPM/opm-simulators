@@ -91,6 +91,7 @@ public:
     // whether the well is operable
     bool isOperableAndSolvable() const;
     bool useVfpExplicit () const;
+    bool thpLimitViolatedButNotSwitched() const;
 
     void initCompletions();
     void closeCompletions(const WellTestState& wellTestState);
