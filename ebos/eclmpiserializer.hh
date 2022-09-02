@@ -497,8 +497,6 @@ protected:
     }
 
     //! \brief Handler for smart pointers.
-    //! \details If data is POD or a string, we pass it to the underlying serializer,
-    //!          if not we assume a complex type.
     template<class PtrType>
     void ptr(const PtrType& data)
     {
@@ -508,8 +506,12 @@ protected:
         if (m_op == Operation::UNPACK && value) {
             const_cast<PtrType&>(data).reset(new T1);
         }
-        if (data)
-            data->serializeOp(*this);
+        if (data) {
+            if constexpr (has_serializeOp<T1>::value)
+                data->serializeOp(*this);
+            else
+                (*this)(*data);
+        }
     }
 
     Parallel::Communication m_comm; //!< Communicator to broadcast using
