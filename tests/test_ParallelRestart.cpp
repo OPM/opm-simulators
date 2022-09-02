@@ -543,21 +543,16 @@ BOOST_AUTO_TEST_CASE(RestartValue)
     DO_CHECKS(RestartValue)
 }
 
-#define TEST_FOR_TYPE(TYPE) \
-BOOST_AUTO_TEST_CASE(TYPE) \
+#define TEST_FOR_TYPE_NAMED(TYPE, NAME) \
+BOOST_AUTO_TEST_CASE(NAME) \
 { \
     auto val1 = Opm::TYPE::serializeObject(); \
     auto val2 = PackUnpack2(val1); \
     DO_CHECKS(TYPE) \
 }
 
-#define TEST_FOR_TYPE2(TYPE1, TYPE2) \
-BOOST_AUTO_TEST_CASE(TYPE2) \
-{ \
-    auto val1 = Opm::TYPE1::TYPE2::serializeObject(); \
-    auto val2 = PackUnpack2(val1); \
-    DO_CHECKS(TYPE1::TYPE2) \
-}
+#define TEST_FOR_TYPE(TYPE) \
+    TEST_FOR_TYPE_NAMED(TYPE, TYPE)
 
 
 TEST_FOR_TYPE(Actdims)
@@ -567,11 +562,11 @@ TEST_FOR_TYPE(AquiferConfig)
 TEST_FOR_TYPE(AquiferCT)
 TEST_FOR_TYPE(Aquifetp)
 TEST_FOR_TYPE(AutoICD)
-TEST_FOR_TYPE2(Action, Actions)
-TEST_FOR_TYPE2(Action, ActionX)
-TEST_FOR_TYPE2(Action, AST)
-TEST_FOR_TYPE2(Action, ASTNode)
-TEST_FOR_TYPE2(Action, State)
+TEST_FOR_TYPE_NAMED(Action::Actions, Actions)
+TEST_FOR_TYPE_NAMED(Action::ActionX, ActionX)
+TEST_FOR_TYPE_NAMED(Action::AST, ActionAST)
+TEST_FOR_TYPE_NAMED(Action::ASTNode, ActionASTNode)
+TEST_FOR_TYPE_NAMED(Action::State, ActionState)
 TEST_FOR_TYPE(BCConfig)
 TEST_FOR_TYPE(BrineDensityTable)
 TEST_FOR_TYPE(ColumnSchema)
@@ -599,8 +594,8 @@ TEST_FOR_TYPE(GConSale)
 TEST_FOR_TYPE(GConSump)
 TEST_FOR_TYPE(GridDims)
 TEST_FOR_TYPE(Group)
-TEST_FOR_TYPE2(Group, GroupInjectionProperties)
-TEST_FOR_TYPE2(Group, GroupProductionProperties)
+TEST_FOR_TYPE_NAMED(Group::GroupInjectionProperties, GroupInjectionProperties)
+TEST_FOR_TYPE_NAMED(Group::GroupProductionProperties, GroupProductionProperties)
 TEST_FOR_TYPE(GuideRateConfig)
 TEST_FOR_TYPE(GuideRateModel)
 TEST_FOR_TYPE(InitConfig)
@@ -610,7 +605,7 @@ TEST_FOR_TYPE(KeywordLocation)
 TEST_FOR_TYPE(MessageLimits)
 TEST_FOR_TYPE(MULTREGTScanner)
 TEST_FOR_TYPE(NNC)
-TEST_FOR_TYPE2(Network, Node)
+TEST_FOR_TYPE_NAMED(Network::Node, NetworkNode)
 TEST_FOR_TYPE(OilVaporizationProperties)
 TEST_FOR_TYPE(PAvg)
 TEST_FOR_TYPE(Phases)
@@ -671,10 +666,10 @@ TEST_FOR_TYPE(WellBrineProperties)
 TEST_FOR_TYPE(WellConnections)
 TEST_FOR_TYPE(WellEconProductionLimits)
 TEST_FOR_TYPE(WellFoamProperties)
-TEST_FOR_TYPE2(Well, WellGuideRate)
-TEST_FOR_TYPE2(Well, WellInjectionProperties)
+TEST_FOR_TYPE_NAMED(Well::WellGuideRate, WellGuideRate)
+TEST_FOR_TYPE_NAMED(Well::WellInjectionProperties, WellInjectionProperties)
 TEST_FOR_TYPE(WellPolymerProperties)
-TEST_FOR_TYPE2(Well, WellProductionProperties)
+TEST_FOR_TYPE_NAMED(Well::WellProductionProperties, WellProductionProperties)
 TEST_FOR_TYPE(WellTracerProperties)
 TEST_FOR_TYPE(WellSegmentDims)
 TEST_FOR_TYPE(WellSegments)
