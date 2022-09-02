@@ -1270,82 +1270,46 @@ namespace WellGroupHelpers
         const size_t num_ancestors = chain.size() - 1;
         // we need to find out the level where the current well is applied to the local reduction 
         size_t local_reduction_level = 0;
-        for (size_t ii = 0; ii < num_ancestors; ++ii) {
-            if ((ii == 0) || guideRate->has(chain[ii])) {
+        for (size_t ii = 1; ii < num_ancestors; ++ii) {
+            const int num_gr_ctrl = groupControlledWells(schedule,
+                                                         wellState,
+                                                         group_state,
+                                                         reportStepIdx,
+                                                         chain[ii],
+                                                         "",
+                                                         /*is_producer*/ true,
+                                                         /*injectionPhaseNotUsed*/ Phase::OIL);
+            if (guideRate->has(chain[ii]) && num_gr_ctrl > 0) {
                 local_reduction_level = ii;
             }
         }
-
         // check whether guide rate is violated
-        if (local_reduction_level > 0) {
-            const auto& guided_group = chain[local_reduction_level];
-            const double grefficiency
+        for (size_t ii = 1; ii < num_ancestors; ++ii) {
+            if (guideRate->has(chain[ii])) {
+                const auto& guided_group = chain[ii];
+                const double grefficiency
                             = schedule.getGroup(guided_group, reportStepIdx).getGroupEfficiencyFactor();
-            const double currentRateFraction = grefficiency * localCurrentRate(guided_group) / (localCurrentRate(chain[local_reduction_level-1]));
-            const double guiderateFraction = localFraction(guided_group);
-            // we add a factor here to avoid switching due to numerical instability
-            const double factor = 1.01;
-            if (currentRateFraction > (guiderateFraction * factor)) {
-                return std::make_pair(true, guiderateFraction/currentRateFraction);
+                const double currentRateFraction = grefficiency * localCurrentRate(guided_group) / (localCurrentRate(chain[ii-1]));
+                const double guiderateFraction = localFraction(guided_group);
+                // we add a factor here to avoid switching due to numerical instability
+                const double factor = 1.01;
+                if (currentRateFraction > (guiderateFraction * factor)) {
+                    return std::make_pair(true, guiderateFraction/currentRateFraction);
+                }
             }
         }
-
         double target = orig_target;
         for (size_t ii = 0; ii < num_ancestors; ++ii) {
             if ((ii == 0) || guideRate->has(chain[ii])) {
                 // Apply local reductions only at the control level
                 // (top) and for levels where we have a specified
                 // group guide rate.
-                target -= localReduction(chain[ii]);
-
+                if (local_reduction_level >= ii ) {
+                    target -= localReduction(chain[ii]);
+                }
                 // Add my reduction back at the level where it is included in the local reduction
-                if (local_reduction_level == ii )
+                if (local_reduction_level == ii ) {
                     target += current_rate * efficiencyFactor;
-
-                for (size_t iii = ii + 1; iii < num_ancestors; ++iii) {
-                    // Not final level. Add sub-level reduction back, if
-                    // it was not under individual control and nonzero due to having no group-controlled
-                    // wells. We may need to look several levels down the hierarchy to find groups without
-                    // group control wells
-                    const Group::ProductionCMode& subGroupControl = group_state.production_control(chain[iii]);
-                    const bool individual_control = (subGroupControl != Group::ProductionCMode::FLD
-                                                     && subGroupControl != Group::ProductionCMode::NONE);
-                    // The sub group is on individual control. No adjustments needed.
-                    if (individual_control) {
-                        break;
-                    }
-
-                    // Note that we make this call without setting
-                    // the current well to be always included, because we
-                    // want to know the situation that applied to the
-                    // calculation of reductions.
-                    const int num_gr_ctrl = groupControlledWells(schedule,
-                                                                 wellState,
-                                                                 group_state,
-                                                                 reportStepIdx,
-                                                                 chain[iii],
-                                                                 "",
-                                                                 /*is_producer*/ true,
-                                                                 /*injectionPhaseNotUsed*/ Phase::OIL);
-                    if (num_gr_ctrl == 0) {
-                        // We found a sub wells with no group controlled wells. We now need to adapt the reduction rate
-                        // to reflect what would have happen if the current well under consideration would have been
-                        // under group control. I.e. we first remove the efficient sub_rate from the reduction rate
-                        // (since the reduction rate is removed already from the target we need to add it to the target)
-                        const double sub_efficiency
-                            = schedule.getGroup(chain[iii], reportStepIdx).getGroupEfficiencyFactor();
-                        const double sub_rate = tcalc.calcModeRateFromRates(group_state.production_rates(chain[iii]));
-                        target += sub_efficiency * sub_rate;
-                        // than we remove the local reduction from the target if it does not have a guide rate
-                        if (!guideRate->has(chain[iii])) {
-                            target -= sub_efficiency * localReduction(chain[iii]);
-                            // this local reduction rate may also need adjustments since it may be computed based on the
-                            // assumption that its subgroup dont have a group control wells. I.e we need to move down the
-                            // hierarchy.
-                        } else {
-                            break;
-                        }
-                    }
                 }
             }
             target *= localFraction(chain[ii + 1]);
@@ -1448,23 +1412,33 @@ namespace WellGroupHelpers
         const size_t num_ancestors = chain.size() - 1;
         // we need to find out the level where the current well is applied to the local reduction
         size_t local_reduction_level = 0;
-        for (size_t ii = 0; ii < num_ancestors; ++ii) {
-            if ((ii == 0) || guideRate->has(chain[ii], injectionPhase)) {
+        for (size_t ii = 1; ii < num_ancestors; ++ii) {
+            const int num_gr_ctrl = groupControlledWells(schedule,
+                                                         wellState,
+                                                                 group_state,
+                                                                 reportStepIdx,
+                                                                 chain[ii],
+                                                                 "",
+                                                                 /*is_producer*/ false,
+                                                                 injectionPhase);
+            if (guideRate->has(chain[ii], injectionPhase) && num_gr_ctrl > 0) {
                 local_reduction_level = ii;
             }
         }
 
         // check whether guide rate is violated
-        if (local_reduction_level > 0) {
-            const auto& guided_group = chain[local_reduction_level];
-            const double grefficiency
+        for (size_t ii = 1; ii < num_ancestors; ++ii) {
+            if (guideRate->has(chain[ii], injectionPhase)) {
+                const auto& guided_group = chain[ii];
+                const double grefficiency
                             = schedule.getGroup(guided_group, reportStepIdx).getGroupEfficiencyFactor();
-            const double currentRateFraction = grefficiency * localCurrentRate(guided_group) / (localCurrentRate(chain[local_reduction_level-1]));
-            const double guiderateFraction = localFraction(guided_group);
-            // we add a factor here to avoid switching due to numerical instability
-            const double factor = 1.01;
-            if (currentRateFraction > (guiderateFraction * factor)) {
-                return std::make_pair(true, guiderateFraction/currentRateFraction);
+                const double currentRateFraction = grefficiency * localCurrentRate(guided_group) / (localCurrentRate(chain[ii-1]));
+                const double guiderateFraction = localFraction(guided_group);
+                // we add a factor here to avoid switching due to numerical instability
+                const double factor = 1.01;
+                if (currentRateFraction > (guiderateFraction * factor)) {
+                    return std::make_pair(true, guiderateFraction/currentRateFraction);
+                }
             }
         }
 
@@ -1474,57 +1448,13 @@ namespace WellGroupHelpers
                 // Apply local reductions only at the control level
                 // (top) and for levels where we have a specified
                 // group guide rate.
-                target -= localReduction(chain[ii]);
+                if (local_reduction_level >= ii ) {
+                    target -= localReduction(chain[ii]);
+                }
 
                 // Add my reduction back at the level where it is included in the local reduction
-                if (local_reduction_level == ii )
+                if (local_reduction_level == ii ) {
                     target += current_rate * efficiencyFactor;
-
-                for (size_t iii = ii + 1; iii < num_ancestors; ++iii) {
-                    // Not final level. Add sub-level reduction back, if
-                    // it was not under individual control and nonzero due to having no group-controlled
-                    // wells. We may need to look several levels down the hierarchy to find groups without
-                    // group control wells
-                    const Group::InjectionCMode& subGroupControl = group_state.injection_control(chain[iii], injectionPhase);
-                    const bool individual_control = (subGroupControl != Group::InjectionCMode::FLD
-                                                     && subGroupControl != Group::InjectionCMode::NONE);
-                    // The sub group is on individual control. No adjustments needed.
-                    if (individual_control) {
-                        break;
-                    }
-
-                    // Note that we make this call without setting
-                    // the current well to be always included, because we
-                    // want to know the situation that applied to the
-                    // calculation of reductions.
-                    const int num_gr_ctrl = groupControlledWells(schedule,
-                                                                 wellState,
-                                                                 group_state,
-                                                                 reportStepIdx,
-                                                                 chain[iii],
-                                                                 "",
-                                                                 /*is_producer*/ false,
-                                                                 injectionPhase);
-                    if (num_gr_ctrl == 0) {
-                        // We found a sub wells with no group controlled wells. We now need to adapt the reduction rate
-                        // to reflect what would have happen if the well under consideration would have been
-                        // under group control. I.e. we first remove the efficient sub_rate from the reduction rate
-                        // (since the reduction rate is removed already from the target we need to add it to the target)
-                        const double sub_efficiency
-                            = schedule.getGroup(chain[iii], reportStepIdx).getGroupEfficiencyFactor();
-                        const double sub_rate
-                            = tcalc.calcModeRateFromRates(group_state.injection_surface_rates(chain[iii]));
-                        target += sub_efficiency * sub_rate;
-                        // than we remove the local reduction from the target if it does not have a guide rate
-                        if (!guideRate->has(chain[iii], injectionPhase)) {
-                            target -= sub_efficiency * localReduction(chain[iii]);
-                            // this local reduction rate may also need adjustments since it may be computed based on the
-                            // assumption that its subgroup dont have group control wells. I.e we need to move down the
-                            // hierarchy.
-                        } else {
-                            break;
-                        }
-                    }
                 }
             }
             target *= localFraction(chain[ii + 1]);
