@@ -439,8 +439,6 @@ protected:
     std::vector<std::reference_wrapper<ParallelWellInfo>> local_parallel_well_info_;
 
     std::vector<WellProdIndexCalculator> prod_index_calc_;
-    
-    std::vector<int> cartesian_to_compressed_;
 
     std::vector<int> pvt_region_idx_;
 
