@@ -409,6 +409,27 @@ struct Packing<data::Segment>
     }
 };
 
+template <std::size_t Size>
+struct Packing<std::bitset<Size>>
+{
+    static std::size_t packSize(const std::bitset<Size>& data, Opm::Parallel::MPIComm comm)
+    {
+        return Mpi::packSize(data.to_ullong(), comm);
+    }
+
+    static void pack(const std::bitset<Size>& data, std::vector<char>& buffer, int& position, Opm::Parallel::MPIComm comm)
+    {
+        Mpi::pack(data.to_ullong(), buffer, position, comm);
+    }
+
+    static void unpack(std::bitset<Size>& data, std::vector<char>& buffer, int& position, Opm::Parallel::MPIComm comm)
+    {
+        unsigned long long d;
+        Mpi::unpack(d, buffer, position, comm);
+        data = std::bitset<Size>(d);
+    }
+};
+
 std::size_t packSize(const data::NumericAquiferData& data, Opm::Parallel::MPIComm comm)
 {
     return packSize(data.initPressure, comm);
@@ -496,6 +517,12 @@ std::size_t packSize(const data::SegmentPressures& data, Opm::Parallel::MPIComm 
 std::size_t packSize(const data::Segment& data, Opm::Parallel::MPIComm comm)
 {
     return Packing<data::Segment>::packSize(data, comm);
+}
+
+template<std::size_t Size>
+std::size_t packSize(const std::bitset<Size>& data, Opm::Parallel::MPIComm comm)
+{
+    return Packing<std::bitset<Size>>::packSize(data, comm);
 }
 
 std::size_t packSize(const data::CellData& data, Opm::Parallel::MPIComm comm)
@@ -877,6 +904,13 @@ void pack(const data::Segment& data, std::vector<char>& buffer, int& position,
     Packing<data::Segment>::pack(data, buffer, position, comm);
 }
 
+template<std::size_t Size>
+void pack(const std::bitset<Size>& data, std::vector<char>& buffer,
+          int& position, Opm::Parallel::MPIComm comm)
+{
+    Packing<std::bitset<Size>>::pack(data, buffer, position, comm);
+}
+
 void pack(const data::GroupAndNetworkValues& data, std::vector<char>& buffer, int& position,
           Opm::Parallel::MPIComm comm)
 {
@@ -1244,6 +1278,13 @@ void unpack(data::Segment& data, std::vector<char>& buffer, int& position,
             Opm::Parallel::MPIComm comm)
 {
     Packing<data::Segment>::unpack(data, buffer, position, comm);
+}
+
+template<std::size_t Size>
+void unpack(std::bitset<Size>& data, std::vector<char>& buffer, int& position,
+            Opm::Parallel::MPIComm comm)
+{
+    Packing<std::bitset<Size>>::unpack(data, buffer, position, comm);
 }
 
 void unpack(data::GroupAndNetworkValues& data, std::vector<char>& buffer, int& position,
