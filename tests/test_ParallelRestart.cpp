@@ -441,7 +441,7 @@ BOOST_AUTO_TEST_CASE(dataCurrentControl)
 }
 
 
-BOOST_AUTO_TEST_CASE(dataSegment)
+BOOST_AUTO_TEST_CASE(dataSegment_)
 {
     Opm::data::Segment val1 = getSegment();
     auto val2 = PackUnpack(val1);
@@ -581,6 +581,7 @@ TEST_FOR_TYPE_NAMED(data::GroupGuideRates, GroupGuideRates)
 TEST_FOR_TYPE_NAMED(data::GuideRateValue, GuideRateValue)
 TEST_FOR_TYPE_NAMED(data::NodeData, NodeData)
 TEST_FOR_TYPE_NAMED(data::Rates, Rates)
+TEST_FOR_TYPE_NAMED(data::Segment, dataSegment)
 TEST_FOR_TYPE_NAMED(data::SegmentPressures, SegmentPressures)
 TEST_FOR_TYPE_NAMED(data::Solution, Solution)
 TEST_FOR_TYPE(Deck)
