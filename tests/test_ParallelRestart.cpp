@@ -362,7 +362,7 @@ BOOST_AUTO_TEST_CASE(Solution_)
 }
 
 
-BOOST_AUTO_TEST_CASE(Rates)
+BOOST_AUTO_TEST_CASE(Rates_)
 {
     Opm::data::Rates val1 = getRates();
     auto val2 = PackUnpack(val1);
@@ -575,6 +575,7 @@ TEST_FOR_TYPE_NAMED(data::CellData, CellData)
 TEST_FOR_TYPE_NAMED(data::GroupConstraints, GroupConstraints)
 TEST_FOR_TYPE_NAMED(data::GuideRateValue, GuideRateValue)
 TEST_FOR_TYPE_NAMED(data::NodeData, NodeData)
+TEST_FOR_TYPE_NAMED(data::Rates, Rates)
 TEST_FOR_TYPE_NAMED(data::Solution, Solution)
 TEST_FOR_TYPE(Deck)
 TEST_FOR_TYPE(DeckItem)
