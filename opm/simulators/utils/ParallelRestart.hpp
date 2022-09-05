@@ -31,7 +31,9 @@
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
+#include <bitset>
 #include <chrono>
+#include <cstddef>
 #include <optional>
 #include <map>
 #include <set>
@@ -153,6 +155,9 @@ std::size_t packSize(const std::map<T1,T2,C,A>& data, Opm::Parallel::MPIComm com
 template<class T1, class T2, class H, class P, class A>
 std::size_t packSize(const std::unordered_map<T1,T2,H,P,A>& data, Opm::Parallel::MPIComm comm);
 
+template<std::size_t Size>
+std::size_t packSize(const std::bitset<Size>& data, Opm::Parallel::MPIComm comm);
+
 ////// pack routines
 
 template<class T>
@@ -239,6 +244,10 @@ void pack(const std::unordered_map<T1,T2,H,P,A>& data, std::vector<char>& buffer
           Opm::Parallel::MPIComm comm);
 
 void pack(const char* str, std::vector<char>& buffer, int& position,
+          Opm::Parallel::MPIComm comm);
+
+template<size_t Size>
+void pack(const std::bitset<Size>& data, std::vector<char>& buffer, int& position,
           Opm::Parallel::MPIComm comm);
 
 /// unpack routines
@@ -328,6 +337,10 @@ void unpack(std::unordered_map<T1,T2,H,P,A>& data, std::vector<char>& buffer, in
             Opm::Parallel::MPIComm comm);
 
 void unpack(char* str, std::size_t length, std::vector<char>& buffer, int& position,
+            Opm::Parallel::MPIComm comm);
+
+template<size_t Size>
+void unpack(std::bitset<Size>& data, std::vector<char>& buffer, int& position,
             Opm::Parallel::MPIComm comm);
 
 /// prototypes for complex types
