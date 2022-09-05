@@ -316,9 +316,6 @@ namespace Opm {
 
             // a vector of all the wells.
             std::vector<WellInterfacePtr > well_container_{};
- 
-            // map from logically cartesian cell indices to compressed ones
-            std::vector<int> cartesian_to_compressed_;
 
             std::vector<bool> is_cell_perforated_{};
 
