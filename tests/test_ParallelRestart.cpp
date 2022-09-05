@@ -425,7 +425,7 @@ BOOST_AUTO_TEST_CASE(dataGuideRateValue)
     DO_CHECKS(data::GuideRateValue)
 }
 
-BOOST_AUTO_TEST_CASE(dataConnection)
+BOOST_AUTO_TEST_CASE(dataConnection_)
 {
     Opm::data::Connection val1 = getConnection();
     auto val2 = PackUnpack(val1);
@@ -572,6 +572,7 @@ TEST_FOR_TYPE(BrineDensityTable)
 TEST_FOR_TYPE(ColumnSchema)
 TEST_FOR_TYPE(Connection)
 TEST_FOR_TYPE_NAMED(data::CellData, CellData)
+TEST_FOR_TYPE_NAMED(data::Connection, dataConnection)
 TEST_FOR_TYPE_NAMED(data::CurrentControl, CurrentControl)
 TEST_FOR_TYPE_NAMED(data::GroupConstraints, GroupConstraints)
 TEST_FOR_TYPE_NAMED(data::GroupData, GroupData)
