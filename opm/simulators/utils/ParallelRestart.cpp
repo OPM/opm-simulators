@@ -27,7 +27,9 @@
 #include <cstring>
 #include <ctime>
 #include <memory>
+
 #include <dune/common/parallel/mpitraits.hh>
+#include <ebos/eclmpiserializer.hh>
 #include <opm/output/data/Aquifer.hpp>
 #include <opm/output/data/Cells.hpp>
 #include <opm/output/data/Groups.hpp>
@@ -1407,30 +1409,11 @@ RestartValue loadParallelRestart(const EclipseIO* eclIO, Action::State& actionSt
     {
         assert(comm.rank() == 0);
         restartValues = eclIO->loadRestart(actionState, summaryState, solutionKeys, extraKeys);
-        int packedSize = Mpi::packSize(restartValues, comm);
-        std::vector<char> buffer(packedSize);
-        int position=0;
-        Mpi::pack(restartValues, buffer, position, comm);
-        comm.broadcast(&position, 1, 0);
-        comm.broadcast(buffer.data(), position, 0);
-        std::vector<char> buf2 = summaryState.serialize();
-        int size = buf2.size();
-        comm.broadcast(&size, 1, 0);
-        comm.broadcast(buf2.data(), size, 0);
     }
-    else
-    {
-        int bufferSize{};
-        comm.broadcast(&bufferSize, 1, 0);
-        std::vector<char> buffer(bufferSize);
-        comm.broadcast(buffer.data(), bufferSize, 0);
-        int position{};
-        Mpi::unpack(restartValues, buffer, position, comm);
-        comm.broadcast(&bufferSize, 1, 0);
-        buffer.resize(bufferSize);
-        comm.broadcast(buffer.data(), bufferSize, 0);
-        summaryState.deserialize(buffer);
-    }
+
+    EclMpiSerializer ser(comm);
+    ser.broadcast(restartValues);
+    ser.broadcast(summaryState);
     return restartValues;
 #else
     (void) comm;
