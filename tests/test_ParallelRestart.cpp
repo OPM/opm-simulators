@@ -457,7 +457,7 @@ BOOST_AUTO_TEST_CASE(dataWell_)
 }
 
 
-BOOST_AUTO_TEST_CASE(Wells)
+BOOST_AUTO_TEST_CASE(Wells_)
 {
     Opm::data::Wells val1;
     val1.insert({"test_well", getWell()});
@@ -594,6 +594,7 @@ TEST_FOR_TYPE_NAMED(data::Segment, dataSegment)
 TEST_FOR_TYPE_NAMED(data::SegmentPressures, SegmentPressures)
 TEST_FOR_TYPE_NAMED(data::Solution, Solution)
 TEST_FOR_TYPE_NAMED(data::Well, dataWell)
+TEST_FOR_TYPE_NAMED(data::Wells, Wells)
 TEST_FOR_TYPE(Deck)
 TEST_FOR_TYPE(DeckItem)
 TEST_FOR_TYPE(DeckKeyword)
