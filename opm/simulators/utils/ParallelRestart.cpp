@@ -29,7 +29,9 @@
 #include <memory>
 
 #include <dune/common/parallel/mpitraits.hh>
+#if HAVE_MPI
 #include <ebos/eclmpiserializer.hh>
+#endif
 #include <opm/output/data/Aquifer.hpp>
 #include <opm/output/data/Cells.hpp>
 #include <opm/output/data/Groups.hpp>
