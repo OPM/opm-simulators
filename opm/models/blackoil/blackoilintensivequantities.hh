@@ -120,6 +120,28 @@ class BlackOilIntensiveQuantities
     using FluxIntensiveQuantities = typename FluxModule::FluxIntensiveQuantities;
     using DiffusionIntensiveQuantities = BlackOilDiffusionIntensiveQuantities<TypeTag, enableDiffusion>;
 
+    struct DirectionalMobility {
+        using array_type = std::array<Evaluation,numPhases>;
+        DirectionalMobility(const array_type& mX, const array_type& mY, const array_type& mZ) 
+            : mobilityX_{mX}, mobilityY_{mY}, mobilityZ_{mZ} {}
+        DirectionalMobility() : mobilityX_{}, mobilityY_{}, mobilityZ_{} {}
+        array_type& getArray(int index) {
+            switch(index) {
+                case 0:
+                    return mobilityX_;
+                case 1:
+                    return mobilityY_;
+                case 2:
+                    return mobilityZ_;
+                default:
+                    throw std::runtime_error("Unexpected mobility array index00");
+            }
+        }
+        array_type mobilityX_;
+        array_type mobilityY_;
+        array_type mobilityZ_;
+    };
+
 public:
     using FluidState = BlackOilFluidState<Evaluation,
                                           FluidSystem,
@@ -399,9 +421,14 @@ public:
         paramCache.updateAll(fluidState_);
 
         // compute the phase densities and transform the phase permeabilities into mobilities
-        constexpr int nmobilities = 4;
-        std::array<std::array<Evaluation,numPhases>*,nmobilities> mobilities
-           = {&mobility_, &mobilityX_, &mobilityY_, &mobilityZ_};
+        int nmobilities = 1;
+        std::vector<std::array<Evaluation,numPhases>*> mobilities = {&mobility_};
+        if (dirMob_) {
+            for (int i=0; i<3; i++) {
+                nmobilities += 1;
+                mobilities.push_back(&(dirMob_->getArray(i)));
+            }
+        }
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx))
                 continue;
@@ -545,16 +572,22 @@ public:
     const Evaluation& mobility(unsigned phaseIdx, FaceDir::DirEnum facedir) const
     {
         using Dir = FaceDir::DirEnum;
-        switch(facedir) {
-            case Dir::XPlus:
-                return mobilityX_[phaseIdx];
-            case Dir::YPlus:
-                return mobilityY_[phaseIdx];
-            case Dir::ZPlus:
-                return mobilityZ_[phaseIdx];
-            default:
-                throw std::runtime_error("Unexpected face direction");
+        if (dirMob_) {
+            switch(facedir) {
+                case Dir::XPlus:
+                    return dirMob_->mobilityX_[phaseIdx];
+                case Dir::YPlus:
+                    return dirMob_->mobilityY_[phaseIdx];
+                case Dir::ZPlus:
+                    return dirMob_->mobilityZ_[phaseIdx];
+                default:
+                    throw std::runtime_error("Unexpected face direction");
+            }
         }
+        else {
+            return mobility_[phaseIdx];
+        }
+
     }
 
     /*!
@@ -620,25 +653,28 @@ private:
         MaterialLaw::relativePermeabilities(mobility_, materialParams, fluidState_);
         Valgrind::CheckDefined(mobility_);
         const auto& materialLawManager = problem.materialLawManager();
-        auto satnumIdx = materialLawManager->satnumRegionIdx(globalSpaceIdx);
-        using Dir = FaceDir::DirEnum;
-        constexpr int ndim = 3;
-        std::array<std::array<Evaluation, numPhases>*,ndim> relperms = {&mobilityX_, &mobilityY_, &mobilityZ_};
-        Dir facedirs[ndim] = {Dir::XPlus, Dir::YPlus, Dir::ZPlus};
-        for (int i = 0; i<ndim; i++) {
-            auto krnumSatIdx = materialLawManager->getKrnumSatIdx(globalSpaceIdx, facedirs[i]);
-            if (krnumSatIdx != satnumIdx) {
-                // This hack is also used by StandardWell_impl.hpp:getMobilityEval() to temporarily use a different
-                // satnum index for a cell
-                const auto& paramsCell = materialLawManager->connectionMaterialLawParams(krnumSatIdx, globalSpaceIdx);
-                MaterialLaw::relativePermeabilities(*relperms[i], paramsCell, fluidState_);
-                // reset the cell's satnum index back to the original
-                materialLawManager->connectionMaterialLawParams(satnumIdx, globalSpaceIdx);
-            }
-            else {
-                // Copy the default (non-directional dependent) mobility
-                for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                    (*relperms[i])[phaseIdx] = mobility_[phaseIdx];
+        if (materialLawManager->hasDirectionalRelperms()) {
+            auto satnumIdx = materialLawManager->satnumRegionIdx(globalSpaceIdx);
+            using Dir = FaceDir::DirEnum;
+            constexpr int ndim = 3;
+            dirMob_ = std::make_unique<DirectionalMobility>();
+            Dir facedirs[ndim] = {Dir::XPlus, Dir::YPlus, Dir::ZPlus};
+            for (int i = 0; i<ndim; i++) {
+                auto krnumSatIdx = materialLawManager->getKrnumSatIdx(globalSpaceIdx, facedirs[i]);
+                auto& mob_array = dirMob_->getArray(i);
+                if (krnumSatIdx != satnumIdx) {
+                    // This hack is also used by StandardWell_impl.hpp:getMobilityEval() to temporarily use a different
+                    // satnum index for a cell
+                    const auto& paramsCell = materialLawManager->connectionMaterialLawParams(krnumSatIdx, globalSpaceIdx);
+                    MaterialLaw::relativePermeabilities(mob_array, paramsCell, fluidState_);
+                    // reset the cell's satnum index back to the original
+                    materialLawManager->connectionMaterialLawParams(satnumIdx, globalSpaceIdx);
+                }
+                else {
+                    // Copy the default (non-directional dependent) mobility
+                    for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                        mob_array[phaseIdx] = mobility_[phaseIdx];
+                    }
                 }
             }
         }
@@ -652,9 +688,7 @@ private:
     Evaluation porosity_;
     Evaluation rockCompTransMultiplier_;
     std::array<Evaluation,numPhases> mobility_;
-    std::array<Evaluation,numPhases> mobilityX_;
-    std::array<Evaluation,numPhases> mobilityY_;
-    std::array<Evaluation,numPhases> mobilityZ_;
+    std::shared_ptr<DirectionalMobility> dirMob_;
 };
 
 } // namespace Opm
