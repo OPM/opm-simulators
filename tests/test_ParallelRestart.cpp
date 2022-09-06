@@ -449,7 +449,7 @@ BOOST_AUTO_TEST_CASE(dataSegment_)
 }
 
 
-BOOST_AUTO_TEST_CASE(dataWell)
+BOOST_AUTO_TEST_CASE(dataWell_)
 {
     Opm::data::Well val1 = getWell();
     auto val2 = PackUnpack(val1);
@@ -587,6 +587,7 @@ TEST_FOR_TYPE_NAMED(data::Rates, Rates)
 TEST_FOR_TYPE_NAMED(data::Segment, dataSegment)
 TEST_FOR_TYPE_NAMED(data::SegmentPressures, SegmentPressures)
 TEST_FOR_TYPE_NAMED(data::Solution, Solution)
+TEST_FOR_TYPE_NAMED(data::Well, dataWell)
 TEST_FOR_TYPE(Deck)
 TEST_FOR_TYPE(DeckItem)
 TEST_FOR_TYPE(DeckKeyword)
