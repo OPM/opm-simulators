@@ -48,6 +48,10 @@
 
 #include <dune/grid/common/mcmgmapper.hh>
 
+#if HAVE_MPI
+#include <ebos/eclmpiserializer.hh>
+#endif
+
 #if HAVE_DUNE_FEM
 #include <dune/fem/gridpart/adaptiveleafgridpart.hh>
 #include <dune/fem/gridpart/common/gridpart2gridview.hh>
@@ -506,7 +510,6 @@ evalSummary(const int reportStepNum,
             SummaryState& summaryState,
             UDQState& udqState)
 {
-    std::vector<char> buffer;
     if (collectToIORank_.isIORank()) {
         const auto& summary = eclIO_->summary();
         auto wbp_calculators = summary.wbp_calculators(reportStepNum);
@@ -547,23 +550,13 @@ evalSummary(const int reportStepNum,
         auto udq_step = reportStepNum - 1;
         const auto& udq_config = schedule_.getUDQConfig(udq_step);
         udq_config.eval( udq_step, schedule_.wellMatcher(udq_step), summaryState, udqState);
-
-        buffer = summaryState.serialize();
     }
+#if HAVE_MPI
     if (collectToIORank_.isParallel()) {
-#ifdef HAVE_MPI
-        unsigned long buffer_size = buffer.size();
-        grid_.comm().broadcast(&buffer_size, 1, collectToIORank_.ioRank);
-        if (!collectToIORank_.isIORank())
-            buffer.resize( buffer_size );
-
-        grid_.comm().broadcast(buffer.data(), buffer_size, collectToIORank_.ioRank);
-        if (!collectToIORank_.isIORank()) {
-            SummaryState& st = summaryState;
-            st.deserialize(buffer);
-        }
-#endif
+        EclMpiSerializer ser(grid_.comm());
+        ser.append(summaryState);
     }
+#endif
 }
 
 template<class Grid, class EquilGrid, class GridView, class ElementMapper, class Scalar>
