@@ -246,6 +246,8 @@ public:
                 this->vector(d);
             else if constexpr (is_ptr<Data>::value)
                 this->ptr(d);
+            else if constexpr (is_map<Data>::value)
+                this->map(d);
             else if constexpr (has_serializeOp<Data>::value)
                 d.serializeOp(*this);
             else
@@ -461,6 +463,22 @@ protected:
 
     template<class T1>
     struct is_optional<std::optional<T1>> {
+        constexpr static bool value = true;
+    };
+
+    //! \brief Predicate for maps
+    template<class T>
+    struct is_map {
+        constexpr static bool value = false;
+    };
+
+    template<class Key, class T, class Compare, class Allocator>
+    struct is_map<std::map<Key,T,Compare,Allocator>> {
+        constexpr static bool value = true;
+    };
+
+    template<class Key, class T, class Hash, class KeyEqual, class Allocator>
+    struct is_map<std::unordered_map<Key,T,Hash,KeyEqual,Allocator>> {
         constexpr static bool value = true;
     };
 
