@@ -230,7 +230,6 @@ public:
 
         unsigned I = stencil.globalSpaceIndex(interiorDofIdx);
         unsigned J = stencil.globalSpaceIndex(exteriorDofIdx);
-        auto facedir = scvf.dirId();  // direction (X, Y, or Z) of the face
         Scalar trans = problem.transmissibility(elemCtx, interiorDofIdx, exteriorDofIdx);
         Scalar faceArea = scvf.area();
         Scalar thpres = problem.thresholdPressure(I, J);
@@ -286,13 +285,22 @@ public:
             // or averaged? all fluids should see the same compaction?!
             const Evaluation& transMult = up.rockCompTransMultiplier();
 
+            const auto& materialLawManager = problem.materialLawManager();
+            const Evaluation *mob = nullptr;
+            if (materialLawManager->hasDirectionalRelperms()) {
+                auto facedir = scvf.dirId();  // direction (X, Y, or Z) of the face
+                mob = &(up.mobility(phaseIdx, facedir));
+            }
+            else {
+                mob = &(up.mobility(phaseIdx));
+            }
             if (upwindIsInterior)
                 volumeFlux[phaseIdx] =
-                    pressureDifferences[phaseIdx]*up.mobility(phaseIdx, facedir)*transMult*(-trans/faceArea);
+                    pressureDifferences[phaseIdx]*(*mob)*transMult*(-trans/faceArea);
             else
                 volumeFlux[phaseIdx] =
                     pressureDifferences[phaseIdx]*
-                        (Toolbox::value(up.mobility(phaseIdx, facedir))*Toolbox::value(transMult)*(-trans/faceArea));
+                        (Toolbox::value(*mob)*Toolbox::value(transMult)*(-trans/faceArea));
         }
     }
 
