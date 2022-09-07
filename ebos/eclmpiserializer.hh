@@ -107,11 +107,11 @@ public:
           const_cast<T&>(data).serializeOp(*this);
         } else {
           if (m_op == Operation::PACKSIZE)
-              m_packSize += Mpi::packSize(data, m_comm);
+              m_packSize += Mpi::Packer::packSize(data, m_comm);
           else if (m_op == Operation::PACK)
-              Mpi::pack(data, m_buffer, m_position, m_comm);
+              Mpi::Packer::pack(data, m_buffer, m_position, m_comm);
           else if (m_op == Operation::UNPACK)
-              Mpi::unpack(const_cast<T&>(data), m_buffer, m_position, m_comm);
+              Mpi::Packer::unpack(const_cast<T&>(data), m_buffer, m_position, m_comm);
         }
     }
 
@@ -138,14 +138,14 @@ public:
         };
 
         if (m_op == Operation::PACKSIZE) {
-            m_packSize += Mpi::packSize(data.size(), m_comm);
+            m_packSize += Mpi::Packer::packSize(data.size(), m_comm);
             handle(data);
         } else if (m_op == Operation::PACK) {
-            Mpi::pack(data.size(), m_buffer, m_position, m_comm);
+            Mpi::packer::pack(data.size(), m_buffer, m_position, m_comm);
             handle(data);
         } else if (m_op == Operation::UNPACK) {
             size_t size;
-            Mpi::unpack(size, m_buffer, m_position, m_comm);
+            Mpi::Packer::unpack(size, m_buffer, m_position, m_comm);
             data.resize(size);
             handle(data);
         }
@@ -156,8 +156,8 @@ public:
     void vector(std::vector<bool>& data)
     {
         if (m_op == Operation::PACKSIZE) {
-            m_packSize += Mpi::packSize(data.size(), m_comm);
-            m_packSize += data.size()*Mpi::packSize(bool(), m_comm);
+            m_packSize += Mpi::Packer::packSize(data.size(), m_comm);
+            m_packSize += data.size()*Mpi::Packer::packSize(bool(), m_comm);
         } else if (m_op == Operation::PACK) {
             (*this)(data.size());
             for (const auto entry : data) { // Not a reference: vector<bool> range
@@ -198,14 +198,14 @@ public:
         };
 
         if (m_op == Operation::PACKSIZE) {
-            m_packSize += Mpi::packSize(data.size(), m_comm);
+            m_packSize += Mpi::Packer::packSize(data.size(), m_comm);
             handle(data);
         } else if (m_op == Operation::PACK) {
-            Mpi::pack(data.size(), m_buffer, m_position, m_comm);
+            Mpi::Packer::pack(data.size(), m_buffer, m_position, m_comm);
             handle(data);
         } else if (m_op == Operation::UNPACK) {
             size_t size;
-            Mpi::unpack(size, m_buffer, m_position, m_comm);
+            Mpi::Packer::unpack(size, m_buffer, m_position, m_comm);
             handle(data);
         }
     }
@@ -223,14 +223,14 @@ public:
                 (*this)(d);
         };
         if (m_op == Operation::PACKSIZE) {
-            m_packSize += Mpi::packSize(data.index(), m_comm);
+            m_packSize += Mpi::Packer::packSize(data.index(), m_comm);
             std::visit(visitor, data);
         } else if (m_op == Operation::PACK) {
-            Mpi::pack(data.index(), m_buffer, m_position, m_comm);
+            Mpi::Packer::pack(data.index(), m_buffer, m_position, m_comm);
             std::visit(visitor, data);
         } else if (m_op == Operation::UNPACK) {
             size_t index;
-            Mpi::unpack(index, m_buffer, m_position, m_comm);
+            Mpi::Packer::unpack(index, m_buffer, m_position, m_comm);
             auto& data_mut = const_cast<std::variant<Args...>&>(data);
             data_mut = detail::make_variant<Args...>(index);
             std::visit(visitor, data_mut);
@@ -244,18 +244,18 @@ public:
     void optional(const std::optional<T>& data)
     {
         if (m_op == Operation::PACKSIZE) {
-            m_packSize += Mpi::packSize(data.has_value(), m_comm);
+            m_packSize += Mpi::Packer::packSize(data.has_value(), m_comm);
             if (data.has_value()) {
                 (*this)(*data);
             }
         } else if (m_op == Operation::PACK) {
-            Mpi::pack(data.has_value(), m_buffer, m_position, m_comm);
+            Mpi::Packer::pack(data.has_value(), m_buffer, m_position, m_comm);
             if (data.has_value()) {
                 (*this)(*data);
             }
         } else if (m_op == Operation::UNPACK) {
             bool has;
-            Mpi::unpack(has, m_buffer, m_position, m_comm);
+            Mpi::Packer::unpack(has, m_buffer, m_position, m_comm);
             if (has) {
                 T res;
                 (*this)(res);
@@ -306,20 +306,20 @@ public:
         };
 
         if (m_op == Operation::PACKSIZE) {
-            m_packSize += Mpi::packSize(data.size(), m_comm);
+            m_packSize += Mpi::Packer::packSize(data.size(), m_comm);
             for (auto& it : data) {
                 keyHandle(it.first);
                 handle(it.second);
             }
         } else if (m_op == Operation::PACK) {
-            Mpi::pack(data.size(), m_buffer, m_position, m_comm);
+            Mpi::Packer::pack(data.size(), m_buffer, m_position, m_comm);
             for (auto& it : data) {
                 keyHandle(it.first);
                 handle(it.second);
             }
         } else if (m_op == Operation::UNPACK) {
             size_t size;
-            Mpi::unpack(size, m_buffer, m_position, m_comm);
+            Mpi::Packer::unpack(size, m_buffer, m_position, m_comm);
             for (size_t i = 0; i < size; ++i) {
                 Key key;
                 keyHandle(key);
@@ -351,18 +351,18 @@ public:
         };
 
         if (m_op == Operation::PACKSIZE) {
-            m_packSize += Mpi::packSize(data.size(), m_comm);
+            m_packSize += Mpi::Packer::packSize(data.size(), m_comm);
             for (auto& it : data) {
                 handle(it);
             }
         } else if (m_op == Operation::PACK) {
-            Mpi::pack(data.size(), m_buffer, m_position, m_comm);
+            Mpi::Packer::pack(data.size(), m_buffer, m_position, m_comm);
             for (auto& it : data) {
                 handle(it);
             }
         } else if (m_op == Operation::UNPACK) {
             size_t size;
-            Mpi::unpack(size, m_buffer, m_position, m_comm);
+            Mpi::Packer::unpack(size, m_buffer, m_position, m_comm);
             for (size_t i = 0; i < size; ++i) {
                 Data entry;
                 handle(entry);

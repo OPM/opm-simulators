@@ -19,179 +19,248 @@
 #ifndef MPI_SERIALIZER_HPP
 #define MPI_SERIALIZER_HPP
 
-#include <opm/common/ErrorMacros.hpp>
 #include <opm/common/utility/TimeService.hpp>
-
 #include <opm/simulators/utils/ParallelCommunication.hpp>
+
+#include <dune/common/parallel/mpitraits.hh>
 
 #include <bitset>
 #include <cstddef>
 #include <string>
-#include <typeinfo>
 
-namespace Opm
+namespace Opm {
+namespace Mpi {
+namespace detail {
+
+//! \brief Abstract struct for packing which is (partially) specialized for specific types.
+template <bool pod, class T>
+struct Packing
 {
+    static std::size_t packSize(const T&, Parallel::MPIComm);
+    static void pack(const T&, std::vector<char>&, int&, Parallel::MPIComm);
+    static void unpack(T&, std::vector<char>&, int&, Parallel::MPIComm);
+};
 
-namespace Mpi
+//! \brief Packaging for pod data.
+template<class T>
+struct Packing<true,T>
 {
-template<class T>
-std::size_t packSize(const T*, std::size_t, Opm::Parallel::MPIComm,
-                     std::integral_constant<bool, false>);
+    //! \brief Calculates the pack size for a POD.
+    //! \param data The data to pack
+    //! \param comm The communicator to use
+    static std::size_t packSize(const T& data, Parallel::MPIComm comm)
+    {
+        return packSize(&data, 1, comm);
+    }
 
-template<class T>
-std::size_t packSize(const T*, std::size_t l, Opm::Parallel::MPIComm comm,
-                     std::integral_constant<bool, true>);
+    //! \brief Calculates the pack size for an array of POD.
+    //! \param data The array to pack
+    //! \param n Length of array
+    //! \param comm The communicator to use
+    static std::size_t packSize(const T*, std::size_t n, Parallel::MPIComm comm)
+    {
+        int size = 0;
+        MPI_Pack_size(n, Dune::MPITraits<T>::getType(), comm, &size);
+        return size;
+    }
 
-template<class T>
-std::size_t packSize(const T* data, std::size_t l, Opm::Parallel::MPIComm comm);
+    //! \brief Pack a POD.
+    //! \param data The variable to pack
+    //! \param buffer Buffer to pack into
+    //! \param position Position in buffer to use
+    //! \param comm The communicator to use
+    static void pack(const T& data,
+                     std::vector<char>& buffer,
+                     int& position,
+                     Parallel::MPIComm comm)
+    {
+        pack(&data, 1, buffer, position, comm);
+    }
 
+    //! \brief Pack an array of POD.
+    //! \param data The array to pack
+    //! \param n Length of array
+    //! \param buffer Buffer to pack into
+    //! \param position Position in buffer to use
+    //! \param comm The communicator to use
+    static void pack(const T* data,
+                     std::size_t n,
+                     std::vector<char>& buffer,
+                     int& position,
+                     Parallel::MPIComm comm)
+    {
+        MPI_Pack(data, n, Dune::MPITraits<T>::getType(), buffer.data(),
+                 buffer.size(), &position, comm);
+    }
+
+    //! \brief Unpack a POD.
+    //! \param data The variable to unpack
+    //! \param buffer Buffer to unpack from
+    //! \param position Position in buffer to use
+    //! \param comm The communicator to use
+    static void unpack(T& data,
+                       std::vector<char>& buffer,
+                       int& position,
+                       Parallel::MPIComm comm)
+    {
+        unpack(&data, 1, buffer, position, comm);
+    }
+
+    //! \brief Unpack an array of POD.
+    //! \param data The array to unpack
+    //! \param n Length of array
+    //! \param buffer Buffer to unpack from
+    //! \param position Position in buffer to use
+    //! \param comm The communicator to use
+    static void unpack(T* data,
+                       std::size_t n,
+                       std::vector<char>& buffer,
+                       int& position,
+                       Parallel::MPIComm comm)
+    {
+        MPI_Unpack(buffer.data(), buffer.size(), &position, data, n,
+                   Dune::MPITraits<T>::getType(), comm);
+    }
+};
+
+//! \brief Default handling for unsupported types.
 template<class T>
-std::size_t packSize(const T&, Opm::Parallel::MPIComm,
-                     std::integral_constant<bool, false>)
+struct Packing<false,T>
 {
-    std::string msg = std::string{"Packing not (yet) supported for non-pod type: "} + typeid(T).name();
-    OPM_THROW(std::logic_error, msg);
+    static std::size_t packSize(const T&, Parallel::MPIComm)
+    {
+        static_assert(!std::is_same_v<T,T>, "Packing not supported for type");
+        return 0;
+    }
+
+    static void pack(const T&, std::vector<char>&, int&,
+                     Parallel::MPIComm)
+    {
+      static_assert(!std::is_same_v<T,T>, "Packing not supported for type");
+    }
+
+    static void unpack(T&, std::vector<char>&, int&,
+                       Parallel::MPIComm)
+    {
+        static_assert(!std::is_same_v<T,T>, "Packing not supported for type");
+    }
+};
+
+//! \brief Specialization for std::bitset
+template <std::size_t Size>
+struct Packing<false,std::bitset<Size>>
+{
+    static std::size_t packSize(const std::bitset<Size>&, Opm::Parallel::MPIComm);
+    static void pack(const std::bitset<Size>&, std::vector<char>&, int&, Opm::Parallel::MPIComm);
+    static void unpack(std::bitset<Size>&, std::vector<char>&, int&, Opm::Parallel::MPIComm);
+};
+
+#define ADD_PACK_SPECIALIZATION(T) \
+    template<> \
+    struct Packing<false,T> \
+    { \
+        static std::size_t packSize(const T&, Parallel::MPIComm); \
+        static void pack(const T&, std::vector<char>&, int&, Parallel::MPIComm); \
+        static void unpack(T&, std::vector<char>&, int&, Parallel::MPIComm); \
+    };
+
+ADD_PACK_SPECIALIZATION(std::string)
+ADD_PACK_SPECIALIZATION(time_point)
+
 }
 
-template<class T>
-std::size_t packSize(const T&, Opm::Parallel::MPIComm comm,
-                     std::integral_constant<bool, true>)
-{
-#if HAVE_MPI
-    int size{};
-    MPI_Pack_size(1, Dune::MPITraits<T>::getType(), comm, &size);
-    return size;
-#else
-    (void) comm;
-    return 0;
-#endif
-}
+//! \brief Struct handling packing of serialization for MPI communication.
+struct Packer {
+    //! \brief Calculates the pack size for a variable.
+    //! \tparam T The type of the data to be packed
+    //! \param data The data to pack
+    //! \param comm The communicator to use
+    template<class T>
+    static std::size_t packSize(const T& data, Parallel::MPIComm comm)
+    {
+        return detail::Packing<std::is_pod_v<T>,T>::packSize(data,comm);
+    }
 
-template<class T>
-std::size_t packSize(const T& data, Opm::Parallel::MPIComm comm)
-{
-    return packSize(data, comm, typename std::is_pod<T>::type());
-}
+    //! \brief Calculates the pack size for an array.
+    //! \tparam T The type of the data to be packed
+    //! \param data The array to pack
+    //! \param n Length of array
+    //! \param comm The communicator to use
+    template<class T>
+    static std::size_t packSize(const T* data, std::size_t n, Parallel::MPIComm comm)
+    {
+        static_assert(std::is_pod_v<T>, "Array packing not supported for non-pod data");
+        return detail::Packing<true,T>::packSize(data,n,comm);
+    }
 
-std::size_t packSize(const char* str, Opm::Parallel::MPIComm comm);
+    //! \brief Pack a variable.
+    //! \tparam T The type of the data to be packed
+    //! \param data The variable to pack
+    //! \param buffer Buffer to pack into
+    //! \param position Position in buffer to use
+    //! \param comm The communicator to use
+    template<class T>
+    static void pack(const T& data,
+                     std::vector<char>& buffer,
+                     int& position,
+                     Parallel::MPIComm comm)
+    {
+        detail::Packing<std::is_pod_v<T>,T>::pack(data, buffer, position, comm);
+    }
 
-template<std::size_t Size>
-std::size_t packSize(const std::bitset<Size>& data, Opm::Parallel::MPIComm comm);
+    //! \brief Pack an array.
+    //! \tparam T The type of the data to be packed
+    //! \param data The array to pack
+    //! \param n Length of array
+    //! \param buffer Buffer to pack into
+    //! \param position Position in buffer to use
+    //! \param comm The communicator to use
+    template<class T>
+    static void pack(const T* data,
+                     std::size_t n,
+                     std::vector<char>& buffer,
+                     int& position,
+                     Parallel::MPIComm comm)
+    {
+        static_assert(std::is_pod_v<T>, "Array packing not supported for non-pod data");
+        detail::Packing<true,T>::pack(data, n, buffer, position, comm);
+    }
 
-////// pack routines
+    //! \brief Unpack a variable.
+    //! \tparam T The type of the data to be unpacked
+    //! \param data The variable to unpack
+    //! \param buffer Buffer to unpack from
+    //! \param position Position in buffer to use
+    //! \param comm The communicator to use
+    template<class T>
+    static void unpack(T& data,
+                       std::vector<char>& buffer,
+                       int& position,
+                       Parallel::MPIComm comm)
+    {
+        detail::Packing<std::is_pod_v<T>,T>::unpack(data, buffer, position, comm);
+    }
 
-template<class T>
-void pack(const T*, std::size_t, std::vector<char>&, int&,
-          Opm::Parallel::MPIComm, std::integral_constant<bool, false>);
-
-template<class T>
-void pack(const T* data, std::size_t l, std::vector<char>& buffer, int& position,
-          Opm::Parallel::MPIComm comm, std::integral_constant<bool, true>);
-
-template<class T>
-void pack(const T* data, std::size_t l, std::vector<char>& buffer, int& position,
-          Opm::Parallel::MPIComm comm);
-
-template<class T>
-void pack(const T&, std::vector<char>&, int&,
-          Opm::Parallel::MPIComm, std::integral_constant<bool, false>)
-{
-    OPM_THROW(std::logic_error, "Packing not (yet) supported for this non-pod type.");
-}
-
-template<class T>
-void pack(const T& data, std::vector<char>& buffer, int& position,
-          Opm::Parallel::MPIComm comm, std::integral_constant<bool, true>)
-{
-#if HAVE_MPI
-    MPI_Pack(&data, 1, Dune::MPITraits<T>::getType(), buffer.data(),
-             buffer.size(), &position, comm);
-#else
-    (void) data;
-    (void) comm;
-    (void) buffer;
-    (void) position;
-#endif
-}
-
-template<class T>
-void pack(const T& data, std::vector<char>& buffer, int& position,
-          Opm::Parallel::MPIComm comm)
-{
-    pack(data, buffer, position, comm, typename std::is_pod<T>::type());
-}
-
-void pack(const char* str, std::vector<char>& buffer, int& position,
-          Opm::Parallel::MPIComm comm);
-
-template<std::size_t Size>
-void pack(const std::bitset<Size>& data, std::vector<char>& buffer, int& position,
-          Opm::Parallel::MPIComm comm);
-
-/// unpack routines
-
-template<class T>
-void unpack(T*, const std::size_t&, std::vector<char>&, int&,
-            Opm::Parallel::MPIComm, std::integral_constant<bool, false>);
-
-template<class T>
-void unpack(T* data, const std::size_t& l, std::vector<char>& buffer, int& position,
-            Opm::Parallel::MPIComm comm,
-            std::integral_constant<bool, true>);
-
-template<class T>
-void unpack(T* data, const std::size_t& l, std::vector<char>& buffer, int& position,
-            Opm::Parallel::MPIComm comm);
-
-template<class T>
-void unpack(T&, std::vector<char>&, int&,
-            Opm::Parallel::MPIComm, std::integral_constant<bool, false>)
-{
-    OPM_THROW(std::logic_error, "Packing not (yet) supported for this non-pod type.");
-}
-
-template<class T>
-void unpack(T& data, std::vector<char>& buffer, int& position,
-            Opm::Parallel::MPIComm comm, std::integral_constant<bool, true>)
-{
-#if HAVE_MPI
-    MPI_Unpack(buffer.data(), buffer.size(), &position, &data, 1,
-               Dune::MPITraits<T>::getType(), comm);
-#else
-    (void) data;
-    (void) comm;
-    (void) buffer;
-    (void) position;
-#endif
-}
-
-template<class T>
-void unpack(T& data, std::vector<char>& buffer, int& position,
-            Opm::Parallel::MPIComm comm)
-{
-    unpack(data, buffer, position, comm, typename std::is_pod<T>::type());
-}
-
-void unpack(char* str, std::size_t length, std::vector<char>& buffer, int& position,
-            Opm::Parallel::MPIComm comm);
-
-template<std::size_t Size>
-void unpack(std::bitset<Size>& data, std::vector<char>& buffer, int& position,
-            Opm::Parallel::MPIComm comm);
-
-/// prototypes for complex types
-
-#define ADD_PACK_PROTOTYPES(T) \
-  std::size_t packSize(const T& data, Opm::Parallel::MPIComm comm); \
-  void pack(const T& data, std::vector<char>& buffer, int& position, \
-          Opm::Parallel::MPIComm comm); \
-  void unpack(T& data, std::vector<char>& buffer, int& position, \
-              Opm::Parallel::MPIComm comm);
-
-ADD_PACK_PROTOTYPES(std::string)
-ADD_PACK_PROTOTYPES(time_point)
+    //! \brief Unpack an array.
+    //! \tparam T The type of the data to be unpacked
+    //! \param data The array to unpack
+    //! \param n Length of array
+    //! \param buffer Buffer to unpack from
+    //! \param position Position in buffer to use
+    //! \param comm The communicator to use
+    template<class T>
+    static void unpack(T* data,
+                       std::size_t n,
+                       std::vector<char>& buffer,
+                       int& position,
+                       Parallel::MPIComm comm)
+    {
+        static_assert(std::is_pod_v<T>, "Array packing not supported for non-pod data");
+        detail::Packing<true,T>::unpack(data, n, buffer, position, comm);
+    }
+};
 
 } // end namespace Mpi
-
 } // end namespace Opm
+
 #endif // MPI_SERIALIZER_HPP

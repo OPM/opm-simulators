@@ -19,276 +19,117 @@
 #include <config.h>
 #include "MPIPacker.hpp"
 
+#include <bitset>
 #include <cstdint>
-#include <cstring>
 #include <ctime>
+#include <string>
+#include <type_traits>
 
-#include <dune/common/parallel/mpitraits.hh>
-#if HAVE_MPI
-#include <ebos/eclmpiserializer.hh>
-#endif
+#include <opm/common/utility/TimeService.hpp>
 
-namespace Opm
+namespace Opm {
+namespace Mpi {
+namespace detail {
+
+template<std::size_t Size>
+std::size_t Packing<false,std::bitset<Size>>::
+packSize(const std::bitset<Size>& data,
+         Parallel::MPIComm comm)
 {
-namespace Mpi
-{
-template<class T>
-std::size_t packSize(const T*, std::size_t, Opm::Parallel::MPIComm,
-                     std::integral_constant<bool, false>)
-{
-    OPM_THROW(std::logic_error, "Packing not (yet) supported for this non-pod type.");
+    return Packing<true,unsigned long long>::packSize(data.to_ullong(), comm);
 }
 
-template<class T>
-std::size_t packSize(const T*, std::size_t l, Opm::Parallel::MPIComm comm,
-                     std::integral_constant<bool, true>)
+template<std::size_t Size>
+void Packing<false,std::bitset<Size>>::
+pack(const std::bitset<Size>& data,
+     std::vector<char>& buffer,
+     int& position,
+     Parallel::MPIComm comm)
 {
-#if HAVE_MPI
-    int size;
-    MPI_Pack_size(1, Dune::MPITraits<std::size_t>::getType(), comm, &size);
-    std::size_t totalSize = size;
-    MPI_Pack_size(l, Dune::MPITraits<T>::getType(), comm, &size);
-    return totalSize + size;
-#else
-    (void) comm;
-    return l-l;
-#endif
+    Packing<true,unsigned long long>::pack(data.to_ullong(), buffer, position, comm);
 }
 
-template<class T>
-std::size_t packSize(const T* data, std::size_t l, Opm::Parallel::MPIComm comm)
+template<std::size_t Size>
+void Packing<false,std::bitset<Size>>::
+unpack(std::bitset<Size>& data,
+       std::vector<char>& buffer,
+       int& position,
+       Parallel::MPIComm comm)
 {
-    return packSize(data, l, comm, typename std::is_pod<T>::type());
+    unsigned long long d;
+    Packing<true,unsigned long long>::unpack(d, buffer, position, comm);
+    data = std::bitset<Size>(d);
 }
 
-std::size_t packSize(const char* str, Opm::Parallel::MPIComm comm)
+std::size_t Packing<false,std::string>::
+packSize(const std::string& data, Parallel::MPIComm comm)
 {
-#if HAVE_MPI
     int size;
     MPI_Pack_size(1, Dune::MPITraits<std::size_t>::getType(), comm, &size);
     int totalSize = size;
-    MPI_Pack_size(strlen(str)+1, MPI_CHAR, comm, &size);
+    MPI_Pack_size(strlen(data.c_str()), MPI_CHAR, comm, &size);
     return totalSize + size;
-#else
-    (void) str;
-    (void) comm;
-    return 0;
-#endif
 }
 
-std::size_t packSize(const std::string& str, Opm::Parallel::MPIComm comm)
+void Packing<false,std::string>::
+pack(const std::string& data,
+     std::vector<char>& buffer,
+     int& position,
+     Parallel::MPIComm comm)
 {
-    return packSize(str.c_str(), comm);
-}
-
-template <class T>
-struct Packing
-{
-};
-
-template <std::size_t Size>
-struct Packing<std::bitset<Size>>
-{
-    static std::size_t packSize(const std::bitset<Size>& data, Opm::Parallel::MPIComm comm)
-    {
-        return Mpi::packSize(data.to_ullong(), comm);
-    }
-
-    static void pack(const std::bitset<Size>& data, std::vector<char>& buffer, int& position, Opm::Parallel::MPIComm comm)
-    {
-        Mpi::pack(data.to_ullong(), buffer, position, comm);
-    }
-
-    static void unpack(std::bitset<Size>& data, std::vector<char>& buffer, int& position, Opm::Parallel::MPIComm comm)
-    {
-        unsigned long long d;
-        Mpi::unpack(d, buffer, position, comm);
-        data = std::bitset<Size>(d);
-    }
-};
-
-template<std::size_t Size>
-std::size_t packSize(const std::bitset<Size>& data, Opm::Parallel::MPIComm comm)
-{
-    return Packing<std::bitset<Size>>::packSize(data, comm);
-}
-
-std::size_t packSize(const Opm::time_point&, Opm::Parallel::MPIComm comm)
-{
-    std::time_t tp = 0;
-    return packSize(tp, comm);
-}
-
-
-////// pack routines
-
-template<class T>
-void pack(const T*, std::size_t, std::vector<char>&, int&,
-          Opm::Parallel::MPIComm, std::integral_constant<bool, false>)
-{
-    OPM_THROW(std::logic_error, "Packing not (yet) supported for this non-pod type.");
-}
-
-template<class T>
-void pack(const T* data, std::size_t l, std::vector<char>& buffer, int& position,
-          Opm::Parallel::MPIComm comm,
-          std::integral_constant<bool, true>)
-{
-#if HAVE_MPI
-    MPI_Pack(&l, 1, Dune::MPITraits<std::size_t>::getType(), buffer.data(),
-             buffer.size(), &position, comm);
-    MPI_Pack(data, l, Dune::MPITraits<T>::getType(), buffer.data(),
-             buffer.size(), &position, comm);
-#else
-    (void) data;
-    (void) comm;
-    (void) l;
-    (void) buffer;
-    (void) position;
-#endif
-}
-
-template<class T>
-void pack(const T* data, std::size_t l, std::vector<char>& buffer, int& position,
-          Opm::Parallel::MPIComm comm)
-{
-    pack(data, l, buffer, position, comm, typename std::is_pod<T>::type());
-}
-
-void pack(const char* str, std::vector<char>& buffer, int& position,
-          Opm::Parallel::MPIComm comm)
-{
-#if HAVE_MPI
-    std::size_t length = strlen(str)+1;
+    std::size_t length = strlen(data.c_str());
     MPI_Pack(&length, 1, Dune::MPITraits<std::size_t>::getType(), buffer.data(),
-        buffer.size(), &position, comm);
-    MPI_Pack(str, strlen(str)+1, MPI_CHAR, buffer.data(), buffer.size(),
-         &position, comm);
-#else
-    (void) str;
-    (void) comm;
-    (void) buffer;
-    (void) position;
-#endif
+             buffer.size(), &position, comm);
+    MPI_Pack(data.c_str(), length, MPI_CHAR, buffer.data(), buffer.size(),
+             &position, comm);
 }
 
-void pack(const std::string& str, std::vector<char>& buffer, int& position,
-          Opm::Parallel::MPIComm comm)
+void Packing<false,std::string>::
+unpack(std::string& data,
+       std::vector<char>& buffer,
+       int& position,
+       Opm::Parallel::MPIComm comm)
 {
-    pack(str.c_str(), buffer, position, comm);
+    std::size_t length = 0;
+    MPI_Unpack(buffer.data(), buffer.size(), &position, &length, 1,
+               Dune::MPITraits<std::size_t>::getType(), comm);
+    std::vector<char> cStr(length+1, '\0');
+    MPI_Unpack(buffer.data(), buffer.size(), &position, cStr.data(), length,
+               MPI_CHAR, comm);
+    data.clear();
+    data.append(cStr.data());
 }
 
-template<std::size_t Size>
-void pack(const std::bitset<Size>& data, std::vector<char>& buffer,
-          int& position, Opm::Parallel::MPIComm comm)
+std::size_t Packing<false,time_point>::
+packSize(const time_point&, Opm::Parallel::MPIComm comm)
 {
-    Packing<std::bitset<Size>>::pack(data, buffer, position, comm);
+    return Packing<true,std::time_t>::packSize(std::time_t(), comm);
 }
 
-void pack(const Opm::time_point& data, std::vector<char>& buffer, int& position,
-          Opm::Parallel::MPIComm comm)
+void Packing<false,time_point>::
+pack(const time_point& data,
+     std::vector<char>& buffer,
+     int& position,
+     Parallel::MPIComm comm)
 {
-    pack(Opm::TimeService::to_time_t(data), buffer, position, comm);
+    Packing<true,std::time_t>::pack(TimeService::to_time_t(data),
+                                    buffer, position, comm);
 }
 
-
-/// Mpi::unpack routines
-
-template<class T>
-void unpack(T*, const std::size_t&, std::vector<char>&, int&,
-            Opm::Parallel::MPIComm, std::integral_constant<bool, false>)
+void Packing<false,time_point>::
+unpack(time_point& data,
+       std::vector<char>& buffer,
+       int& position,
+       Parallel::MPIComm comm)
 {
-    OPM_THROW(std::logic_error, "Packing not (yet) supported for this non-pod type.");
+    std::time_t res;
+    Packing<true,std::time_t>::unpack(res, buffer, position, comm);
+    data = TimeService::from_time_t(res);
 }
 
-template<class T>
-void unpack(T* data, const std::size_t& l, std::vector<char>& buffer, int& position,
-            Opm::Parallel::MPIComm comm,
-            std::integral_constant<bool, true>)
-{
-#if HAVE_MPI
-    MPI_Unpack(buffer.data(), buffer.size(), &position, data, l,
-               Dune::MPITraits<T>::getType(), comm);
-#else
-    (void) data;
-    (void) comm;
-    (void) l;
-    (void) buffer;
-    (void) position;
-#endif
+template struct Packing<false,std::bitset<4>>;
+
 }
-
-template<class T>
-void unpack(T* data, const std::size_t& l, std::vector<char>& buffer, int& position,
-            Opm::Parallel::MPIComm comm)
-{
-    unpack(data, l, buffer, position, comm, typename std::is_pod<T>::type());
-}
-
-void unpack(char* str, std::size_t length, std::vector<char>& buffer, int& position,
-            Opm::Parallel::MPIComm comm)
-{
-#if HAVE_MPI
-    MPI_Unpack(buffer.data(), buffer.size(), &position, const_cast<char*>(str), length, MPI_CHAR, comm);
-#else
-    (void) str;
-    (void) comm;
-    (void) length;
-    (void) buffer;
-    (void) position;
-#endif
-}
-
-void unpack(std::string& str, std::vector<char>& buffer, int& position,
-            Opm::Parallel::MPIComm comm)
-{
-    std::size_t length=0;
-    unpack(length, buffer, position, comm);
-    std::vector<char> cStr(length, '\0');
-    unpack(cStr.data(), length, buffer, position, comm);
-    str.clear();
-    str.append(cStr.data());
-}
-
-template<std::size_t Size>
-void unpack(std::bitset<Size>& data, std::vector<char>& buffer, int& position,
-            Opm::Parallel::MPIComm comm)
-{
-    Packing<std::bitset<Size>>::unpack(data, buffer, position, comm);
-}
-
-void unpack([[maybe_unused]] Opm::time_point& data, std::vector<char>& buffer, int& position,
-            Opm::Parallel::MPIComm comm)
-{
-    std::time_t tp;
-    unpack(tp, buffer, position, comm);
-#if HAVE_MPI
-    data = Opm::TimeService::from_time_t(tp);
-#endif
-}
-
-#define INSTANTIATE_PACK(...) \
-template std::size_t packSize(const __VA_ARGS__& data, \
-                              Opm::Parallel::MPIComm comm); \
-template void pack(const __VA_ARGS__& data, \
-                   std::vector<char>& buffer, int& position, \
-                   Opm::Parallel::MPIComm comm); \
-template void unpack(__VA_ARGS__& data, \
-                     std::vector<char>& buffer, int& position, \
-                     Opm::Parallel::MPIComm comm);
-
-INSTANTIATE_PACK(float)
-INSTANTIATE_PACK(double)
-INSTANTIATE_PACK(bool)
-INSTANTIATE_PACK(int)
-INSTANTIATE_PACK(unsigned char)
-INSTANTIATE_PACK(unsigned int)
-INSTANTIATE_PACK(unsigned long int)
-INSTANTIATE_PACK(unsigned long long int)
-INSTANTIATE_PACK(std::bitset<4>)
-
-
-#undef INSTANTIATE_PACK
 
 } // end namespace Mpi
 
