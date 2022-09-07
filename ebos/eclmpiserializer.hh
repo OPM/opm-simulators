@@ -145,6 +145,32 @@ public:
         }
     }
 
+    //! \brief Handler for bool vectors.
+    //! \param data The vector to (de-)serialize
+    void vector(std::vector<bool>& data)
+    {
+        if (m_op == Operation::PACKSIZE) {
+            m_packSize += Mpi::packSize(data.size(), m_comm);
+            m_packSize += data.size()*Mpi::packSize(bool(), m_comm);
+        } else if (m_op == Operation::PACK) {
+            (*this)(data.size());
+            for (const auto entry : data) { // Not a reference: vector<bool> range
+                bool b = entry;
+                (*this)(b);
+            }
+        } else if (m_op == Operation::UNPACK) {
+            size_t size;
+            (*this)(size);
+            data.clear();
+            data.reserve(size);
+            for (size_t i = 0; i < size; ++i) {
+                bool entry;
+                (*this)(entry);
+                data.push_back(entry);
+            }
+        }
+    }
+
     template <class Array>
     void array(Array& data)
     {
