@@ -19,7 +19,7 @@
 
 #include <config.h>
 
-#define BOOST_TEST_MODULE TestParallelRestart
+#define BOOST_TEST_MODULE TestParallelSerialization
 #define BOOST_TEST_NO_MAIN
 
 #include <boost/test/unit_test.hpp>

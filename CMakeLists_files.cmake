@@ -180,7 +180,7 @@ list (APPEND TEST_SOURCE_FILES
 
 if(MPI_FOUND)
   list(APPEND TEST_SOURCE_FILES tests/test_parallelistlinformation.cpp
-                                tests/test_ParallelRestart.cpp)
+                                tests/test_ParallelSerialization.cpp)
 endif()
 if(CUDA_FOUND)
   list(APPEND TEST_SOURCE_FILES tests/test_cusparseSolver.cpp)
