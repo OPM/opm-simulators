@@ -92,6 +92,8 @@ public:
             optional(data);
         } else if constexpr (is_map<T>::value) {
             map(const_cast<T&>(data));
+        } else if constexpr (is_array<T>::value) {
+            array(const_cast<T&>(data));
         } else {
           if (m_op == Operation::PACKSIZE)
               m_packSize += Mpi::packSize(data, m_comm);
@@ -500,6 +502,17 @@ protected:
 
     template<class Key, class T, class Hash, class KeyEqual, class Allocator>
     struct is_map<std::unordered_map<Key,T,Hash,KeyEqual,Allocator>> {
+        constexpr static bool value = true;
+    };
+
+    //! \brief Predicate for arrays
+    template<class T>
+    struct is_array {
+        constexpr static bool value = false;
+    };
+
+    template<class T, std::size_t N>
+    struct is_array<std::array<T,N>> {
         constexpr static bool value = true;
     };
 

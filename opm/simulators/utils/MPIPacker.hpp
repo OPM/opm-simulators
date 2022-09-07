@@ -97,9 +97,6 @@ std::size_t packSize(const std::vector<bool,A>& data, Opm::Parallel::MPIComm com
 template<class... Ts>
 std::size_t packSize(const std::tuple<Ts...>& data, Opm::Parallel::MPIComm comm);
 
-template<class T, std::size_t N>
-std::size_t packSize(const std::array<T,N>& data, Opm::Parallel::MPIComm comm);
-
 std::size_t packSize(const char* str, Opm::Parallel::MPIComm comm);
 
 template<std::size_t Size>
@@ -172,10 +169,6 @@ void pack(const std::set<K,C,A>& data,
 template<class T, class H, class KE, class A>
 void pack(const std::unordered_set<T,H,KE,A>& data,
           std::vector<char>& buffer, int& position,
-          Opm::Parallel::MPIComm comm);
-
-template<class T, size_t N>
-void pack(const std::array<T,N>& data, std::vector<char>& buffer, int& position,
           Opm::Parallel::MPIComm comm);
 
 void pack(const char* str, std::vector<char>& buffer, int& position,
@@ -254,10 +247,6 @@ template<class T, class H, class KE, class A>
 void unpack(std::unordered_set<T,H,KE,A>& data,
             std::vector<char>& buffer, int& position,
             Opm::Parallel::MPIComm comm);
-
-template<class T, size_t N>
-void unpack(std::array<T,N>& data, std::vector<char>& buffer, int& position,
-          Opm::Parallel::MPIComm comm);
 
 void unpack(char* str, std::size_t length, std::vector<char>& buffer, int& position,
             Opm::Parallel::MPIComm comm);
