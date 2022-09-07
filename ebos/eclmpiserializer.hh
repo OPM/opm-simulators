@@ -93,6 +93,8 @@ public:
             pair(data);
         } else if constexpr (is_variant<T>::value) {
             variant(data);
+        } else if constexpr (is_tuple<T>::value) {
+            tuple(data);
         } else if constexpr (is_optional<T>::value) {
             optional(data);
         } else if constexpr (is_vector<T>::value) {
@@ -177,6 +179,8 @@ public:
         }
     }
 
+    //! \brief Handler for arrays.
+    //! \param data The array to (de-)serialize
     template <class Array>
     void array(Array& data)
     {
@@ -260,7 +264,26 @@ public:
                 const_cast<std::optional<T>&>(data) = res;
             }
         }
+    }
 
+    //! \brief Handler for std::tuple.
+    //! \param data The tuple to (de-)serialize
+    template<class... Args>
+    void tuple(const std::tuple<Args...>& data)
+    {
+        if (m_op == Operation::PACKSIZE) {
+            m_op = Operation::PACKSIZE;
+            m_packSize = 0;
+            tuple_call(data);
+        } else if (m_op == Operation::PACK) {
+            m_position = 0;
+            m_buffer.resize(m_packSize);
+            tuple_call(data);
+        } else if (m_op == Operation::UNPACK) {
+            m_position = 0;
+            m_op = Operation::UNPACK;
+            tuple_call(data);
+        }
     }
 
     //! \brief Handler for maps.
@@ -321,6 +344,9 @@ public:
         }
     }
 
+    //! \brief Handler for sets.
+    //! \tparam Set set type
+    //! \param data The set to (de-)serialize
     template<class Set>
     void set(Set& data)
     {
@@ -498,6 +524,20 @@ protected:
           variadic_call(std::forward<Args>(args)...);
     }
 
+    template<std::size_t I = 0, typename Tuple>
+    typename std::enable_if<I == std::tuple_size<Tuple>::value, void>::type
+    tuple_call(const Tuple&)
+    {
+    }
+
+    template<std::size_t I = 0, typename Tuple>
+    typename std::enable_if<I != std::tuple_size<Tuple>::value, void>::type
+    tuple_call(const Tuple& tuple)
+    {
+        (*this)(std::get<I>(tuple));
+        tuple_call<I+1>(tuple);
+    }
+
     //! \brief Enumeration of operations.
     enum class Operation {
         PACKSIZE, //!< Calculating serialization buffer size
@@ -535,6 +575,17 @@ protected:
 
     template<class... Ts>
     struct is_variant<std::variant<Ts...>> {
+        constexpr static bool value = true;
+    };
+
+    //! \brief Predicate for detecting tuples.
+    template<class T>
+    struct is_tuple {
+        constexpr static bool value = false;
+    };
+
+    template<class... Ts>
+    struct is_tuple<std::tuple<Ts...>> {
         constexpr static bool value = true;
     };
 
