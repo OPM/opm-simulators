@@ -109,30 +109,6 @@ std::size_t packSize(const std::tuple<Ts...>& data, Opm::Parallel::MPIComm comm)
     return pack_size_tuple_entry(data, comm);
 }
 
-template<class T, class H, class KE, class A>
-std::size_t packSize(const std::unordered_set<T,H,KE,A>& data,
-                     Opm::Parallel::MPIComm comm)
-{
-    std::size_t totalSize = packSize(data.size(), comm);
-    for (const auto& entry : data)
-    {
-        totalSize += packSize(entry, comm);
-    }
-    return totalSize;
-}
-
-template<class K, class C, class A>
-std::size_t packSize(const std::set<K,C,A>& data,
-                     Opm::Parallel::MPIComm comm)
-{
-    std::size_t totalSize = packSize(data.size(), comm);
-    for (const auto& entry : data)
-    {
-        totalSize += packSize(entry, comm);
-    }
-    return totalSize;
-}
-
 std::size_t packSize(const char* str, Opm::Parallel::MPIComm comm)
 {
 #if HAVE_MPI
@@ -250,32 +226,6 @@ void pack(const std::vector<T, A>& data, std::vector<char>& buffer, int& positio
 
     for (const auto& entry: data)
         pack(entry, buffer, position, comm);
-}
-
-template<class K, class C, class A>
-void pack(const std::set<K,C,A>& data,
-          std::vector<char>& buffer, int& position,
-          Opm::Parallel::MPIComm comm)
-{
-    pack(data.size(), buffer, position, comm);
-
-    for (const auto& entry : data)
-    {
-        pack(entry, buffer, position, comm);
-    }
-}
-
-template<class T, class H, class KE, class A>
-void pack(const std::unordered_set<T,H,KE,A>& data,
-          std::vector<char>& buffer, int& position,
-          Opm::Parallel::MPIComm comm)
-{
-    pack(data.size(), buffer, position, comm);
-
-    for (const auto& entry : data)
-    {
-        pack(entry, buffer, position, comm);
-    }
 }
 
 template<class A>
@@ -446,38 +396,6 @@ void unpack(std::tuple<Ts...>& data, std::vector<char>& buffer,
     unpack_tuple_entry(data, buffer, position, comm);
 }
 
-template<class K, class C, class A>
-void unpack(std::set<K,C,A>& data,
-            std::vector<char>& buffer, int& position,
-            Opm::Parallel::MPIComm comm)
-{
-    std::size_t size = 0;
-    unpack(size, buffer, position, comm);
-
-    for (;size>0; size--)
-    {
-        K entry;
-        unpack(entry, buffer, position, comm);
-        data.insert(entry);
-    }
-}
-
-template<class T, class H, class KE, class A>
-void unpack(std::unordered_set<T,H,KE,A>& data,
-            std::vector<char>& buffer, int& position,
-            Opm::Parallel::MPIComm comm)
-{
-    std::size_t size=0;
-    unpack(size, buffer, position, comm);
-
-    for (;size>0; size--)
-    {
-        T entry;
-        unpack(entry, buffer, position, comm);
-        data.insert(entry);
-    }
-}
-
 void unpack(char* str, std::size_t length, std::vector<char>& buffer, int& position,
             Opm::Parallel::MPIComm comm)
 {
@@ -571,8 +489,6 @@ INSTANTIATE_PACK(unsigned int)
 INSTANTIATE_PACK(unsigned long int)
 INSTANTIATE_PACK(unsigned long long int)
 INSTANTIATE_PACK(std::pair<double, double>)
-INSTANTIATE_PACK(std::unordered_set<std::string>)
-INSTANTIATE_PACK(std::set<std::string>)
 INSTANTIATE_PACK(std::bitset<4>)
 
 
