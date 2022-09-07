@@ -386,6 +386,25 @@ public:
         }
     }
 
+    //! \brief Serialize and broadcast on root process, de-serialize and append on
+    //! others.
+    //!
+    //! \tparam T Type of class to broadcast
+    //! \param data Class to broadcast
+    template<class T>
+    void append(T& data)
+    {
+        if (m_comm.size() == 1)
+            return;
+
+        T tmp;
+        T& bcast = m_comm.rank() == 0 ? data : tmp;
+        broadcast(bcast);
+
+        if (m_comm.rank() != 0)
+            data.append(tmp);
+    }
+
     //! \brief Returns current position in buffer.
     size_t position() const
     {
