@@ -25,7 +25,7 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include <opm/simulators/utils/ParallelRestart.hpp>
+#include <opm/simulators/utils/MPIPacker.hpp>
 #include <dune/common/parallel/mpihelper.hh>
 
 #include <numeric>

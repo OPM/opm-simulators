@@ -21,8 +21,8 @@
 #ifndef ECL_MPI_SERIALIZER_HH
 #define ECL_MPI_SERIALIZER_HH
 
+#include <opm/simulators/utils/MPIPacker.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
-#include <opm/simulators/utils/ParallelRestart.hpp>
 
 #include <optional>
 #include <type_traits>
