@@ -52,29 +52,6 @@ class SummaryState;
 class RestartKey;
 class RestartValue;
 
-namespace data
-{
-struct AquiferData;
-struct CarterTracyData;
-struct CellData;
-struct Connection;
-struct CurrentControl;
-struct FetkovichData;
-class GroupAndNetworkValues;
-struct GroupConstraints;
-struct GroupData;
-struct GroupGuideRates;
-class GuideRateValue;
-struct NodeData;
-struct NumericAquiferData;
-class Rates;
-struct Segment;
-class SegmentPressures;
-class Solution;
-struct Well;
-class Wells;
-}
-
 namespace Action
 {
 class State;
@@ -352,27 +329,6 @@ void unpack(std::bitset<Size>& data, std::vector<char>& buffer, int& position,
   void unpack(T& data, std::vector<char>& buffer, int& position, \
               Opm::Parallel::MPIComm comm);
 
-ADD_PACK_PROTOTYPES(data::AquiferData)
-ADD_PACK_PROTOTYPES(data::CarterTracyData)
-ADD_PACK_PROTOTYPES(data::CellData)
-ADD_PACK_PROTOTYPES(data::Connection)
-ADD_PACK_PROTOTYPES(data::CurrentControl)
-ADD_PACK_PROTOTYPES(data::FetkovichData)
-ADD_PACK_PROTOTYPES(data::Rates)
-ADD_PACK_PROTOTYPES(data::Segment)
-ADD_PACK_PROTOTYPES(data::SegmentPressures)
-ADD_PACK_PROTOTYPES(data::Solution)
-ADD_PACK_PROTOTYPES(data::GuideRateValue)
-ADD_PACK_PROTOTYPES(data::GroupConstraints)
-ADD_PACK_PROTOTYPES(data::GroupGuideRates)
-ADD_PACK_PROTOTYPES(data::GroupData)
-ADD_PACK_PROTOTYPES(data::NodeData)
-ADD_PACK_PROTOTYPES(data::GroupAndNetworkValues)
-ADD_PACK_PROTOTYPES(data::NumericAquiferData)
-ADD_PACK_PROTOTYPES(data::Well)
-ADD_PACK_PROTOTYPES(data::Wells)
-ADD_PACK_PROTOTYPES(RestartKey)
-ADD_PACK_PROTOTYPES(RestartValue)
 ADD_PACK_PROTOTYPES(std::string)
 ADD_PACK_PROTOTYPES(time_point)
 
