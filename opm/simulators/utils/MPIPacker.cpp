@@ -68,17 +68,6 @@ std::size_t packSize(const std::pair<T1,T2>& data, Opm::Parallel::MPIComm comm)
     return packSize(data.first, comm) + packSize(data.second, comm);
 }
 
-template<class T>
-std::size_t packSize(const std::optional<T>& data, Opm::Parallel::MPIComm comm)
-{
-    bool has_value = data.has_value();
-    std::size_t pack_size = packSize(has_value, comm);
-    if (has_value)
-        pack_size += packSize(*data, comm);
-    return pack_size;
-}
-
-
 template<class T, class A>
 std::size_t packSize(const std::vector<T,A>& data, Opm::Parallel::MPIComm comm)
 {
@@ -275,17 +264,6 @@ void pack(const std::pair<T1,T2>& data, std::vector<char>& buffer, int& position
     pack(data.second, buffer, position, comm);
 }
 
-template<class T>
-void pack(const std::optional<T>& data, std::vector<char>& buffer, int& position,
-    Opm::Parallel::MPIComm comm)
-{
-    bool has_value = data.has_value();
-    pack(has_value, buffer, position, comm);
-    if (has_value)
-        pack(*data, buffer, position, comm);
-}
-
-
 template<class T, class A>
 void pack(const std::vector<T, A>& data, std::vector<char>& buffer, int& position,
           Opm::Parallel::MPIComm comm)
@@ -472,21 +450,6 @@ void unpack(std::pair<T1,T2>& data, std::vector<char>& buffer, int& position,
     unpack(data.first, buffer, position, comm);
     unpack(data.second, buffer, position, comm);
 }
-
-template<class T>
-void unpack(std::optional<T>&data, std::vector<char>& buffer, int& position,
-            Opm::Parallel::MPIComm comm)
-{
-    bool has_value;
-    unpack(has_value, buffer, position, comm);
-    if (has_value) {
-        T val;
-        unpack(val, buffer, position, comm);
-        data = std::optional<T>(val);
-    } else
-        data.reset();
-}
-
 
 template<class T, class A>
 void unpack(std::vector<T,A>& data, std::vector<char>& buffer, int& position,
@@ -714,10 +677,7 @@ INSTANTIATE_PACK(std::array<int,3>)
 INSTANTIATE_PACK(std::array<double,4>)
 INSTANTIATE_PACK(std::array<double,5>)
 INSTANTIATE_PACK(std::map<std::pair<int,int>,std::pair<bool,double>>)
-INSTANTIATE_PACK(std::optional<double>)
-INSTANTIATE_PACK(std::optional<std::string>)
 INSTANTIATE_PACK(std::pair<double, double>)
-INSTANTIATE_PACK(std::optional<std::pair<double,double>>)
 INSTANTIATE_PACK(std::map<std::string,std::vector<int>>)
 INSTANTIATE_PACK(std::map<std::string,std::map<std::pair<int,int>,int>>)
 INSTANTIATE_PACK(std::map<std::string,int>)
