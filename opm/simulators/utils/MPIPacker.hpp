@@ -74,9 +74,6 @@ std::size_t packSize(const T& data, Opm::Parallel::MPIComm comm)
     return packSize(data, comm, typename std::is_pod<T>::type());
 }
 
-template<class T1, class T2>
-std::size_t packSize(const std::pair<T1,T2>& data, Opm::Parallel::MPIComm comm);
-
 template<class... Ts>
 std::size_t packSize(const std::tuple<Ts...>& data, Opm::Parallel::MPIComm comm);
 
@@ -127,10 +124,6 @@ void pack(const T& data, std::vector<char>& buffer, int& position,
 {
     pack(data, buffer, position, comm, typename std::is_pod<T>::type());
 }
-
-template<class T1, class T2>
-void pack(const std::pair<T1,T2>& data, std::vector<char>& buffer, int& position,
-          Opm::Parallel::MPIComm comm);
 
 template<class... Ts>
 void pack(const std::tuple<Ts...>& data, std::vector<char>& buffer,
@@ -186,10 +179,6 @@ void unpack(T& data, std::vector<char>& buffer, int& position,
 {
     unpack(data, buffer, position, comm, typename std::is_pod<T>::type());
 }
-
-template<class T1, class T2>
-void unpack(std::pair<T1,T2>& data, std::vector<char>& buffer, int& position,
-            Opm::Parallel::MPIComm comm);
 
 template<class... Ts>
 void unpack(std::tuple<Ts...>& data, std::vector<char>& buffer,
