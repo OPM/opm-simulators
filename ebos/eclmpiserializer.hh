@@ -89,7 +89,9 @@ public:
         } else if constexpr (is_variant<T>::value) {
             variant(data);
         } else if constexpr (is_optional<T>::value) {
-          optional(data);
+            optional(data);
+        } else if constexpr (is_map<T>::value) {
+            map(const_cast<T&>(data));
         } else {
           if (m_op == Operation::PACKSIZE)
               m_packSize += Mpi::packSize(data, m_comm);
@@ -243,11 +245,11 @@ public:
         auto handle = [&](auto& d)
         {
             if constexpr (is_vector<Data>::value)
-                this->vector(d);
+                vector(d);
             else if constexpr (is_ptr<Data>::value)
-                this->ptr(d);
+                ptr(d);
             else if constexpr (is_map<Data>::value)
-                this->map(d);
+                map(d);
             else if constexpr (has_serializeOp<Data>::value)
                 d.serializeOp(*this);
             else
