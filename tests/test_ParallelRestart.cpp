@@ -44,6 +44,7 @@
 #include <opm/input/eclipse/EclipseState/Grid/FaultFace.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/MULTREGTScanner.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/NNC.hpp>
+#include <opm/input/eclipse/EclipseState/Grid/TranCalculator.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/TransMult.hpp>
 #include <opm/input/eclipse/EclipseState/InitConfig/Equil.hpp>
 #include <opm/input/eclipse/EclipseState/InitConfig/FoamConfig.hpp>
@@ -213,6 +214,7 @@ TEST_FOR_TYPE(Events)
 TEST_FOR_TYPE(Fault)
 TEST_FOR_TYPE(FaultCollection)
 TEST_FOR_TYPE(FaultFace)
+TEST_FOR_TYPE_NAMED(Fieldprops::TranCalculator, TranCalculator)
 TEST_FOR_TYPE(FoamConfig)
 TEST_FOR_TYPE(FoamData)
 TEST_FOR_TYPE(GConSale)

@@ -203,11 +203,6 @@ bool ParallelFieldPropsManager::has_int(const std::string& keyword) const
     return it != m_intProps.end();
 }
 
-void ParallelFieldPropsManager::deserialize_tran(const std::vector<char>& buffer)
-{
-    Opm::deserialize_tran(m_tran, buffer);
-}
-
 bool ParallelFieldPropsManager::has_double(const std::string& keyword) const
 {
     auto it = m_doubleProps.find(keyword);

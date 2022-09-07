@@ -108,8 +108,6 @@ public:
 
     void apply_tran(const std::string& keyword, std::vector<double>& trans) const override;
 
-    void deserialize_tran(const std::vector<char>& buffer) override;
-
     void copyTran(const FieldPropsManager& from)
     {
         m_tran = from.getTran();
