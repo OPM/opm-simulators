@@ -95,12 +95,16 @@ public:
             variant(data);
         } else if constexpr (is_optional<T>::value) {
             optional(data);
+        } else if constexpr (is_vector<T>::value) {
+            vector(const_cast<T&>(data));
         } else if constexpr (is_map<T>::value) {
             map(const_cast<T&>(data));
         } else if constexpr (is_array<T>::value) {
             array(const_cast<T&>(data));
         } else if constexpr (is_set<T>::value) {
             set(const_cast<T&>(data));
+        } else if constexpr (has_serializeOp<detail::remove_cvr_t<T>>::value) {
+          const_cast<T&>(data).serializeOp(*this);
         } else {
           if (m_op == Operation::PACKSIZE)
               m_packSize += Mpi::packSize(data, m_comm);
@@ -124,6 +128,8 @@ public:
                   pair(it);
               else if constexpr (is_ptr<T>::value)
                   ptr(it);
+              else if constexpr (is_vector<T>::value)
+                vector(it);
               else if constexpr (has_serializeOp<T>::value)
                   it.serializeOp(*this);
               else
@@ -238,30 +244,19 @@ public:
         if (m_op == Operation::PACKSIZE) {
             m_packSize += Mpi::packSize(data.has_value(), m_comm);
             if (data.has_value()) {
-                if constexpr (has_serializeOp<T>::value) {
-                    const_cast<T&>(*data).serializeOp(*this);
-                } else
-                    m_packSize += Mpi::packSize(*data, m_comm);
+                (*this)(*data);
             }
         } else if (m_op == Operation::PACK) {
             Mpi::pack(data.has_value(), m_buffer, m_position, m_comm);
             if (data.has_value()) {
-                if constexpr (has_serializeOp<T>::value) {
-                    const_cast<T&>(*data).serializeOp(*this);
-                } else {
-                    Mpi::pack(*data, m_buffer, m_position, m_comm);
-                }
+                (*this)(*data);
             }
         } else if (m_op == Operation::UNPACK) {
             bool has;
             Mpi::unpack(has, m_buffer, m_position, m_comm);
             if (has) {
                 T res;
-                if constexpr (has_serializeOp<T>::value) {
-                    res.serializeOp(*this);
-                } else {
-                    Mpi::unpack(res, m_buffer, m_position, m_comm);
-                }
+                (*this)(res);
                 const_cast<std::optional<T>&>(data) = res;
             }
         }
@@ -334,7 +329,7 @@ public:
         auto handle = [&](auto& d)
         {
             if constexpr (is_vector<Data>::value)
-                this->vector(d);
+                vector(d);
             else if constexpr (is_ptr<Data>::value)
                 ptr(d);
             else if constexpr (has_serializeOp<Data>::value)

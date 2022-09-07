@@ -29,7 +29,6 @@
 #include <string>
 #include <tuple>
 #include <typeinfo>
-#include <vector>
 
 namespace Opm
 {
@@ -77,12 +76,6 @@ std::size_t packSize(const T& data, Opm::Parallel::MPIComm comm)
 
 template<class T1, class T2>
 std::size_t packSize(const std::pair<T1,T2>& data, Opm::Parallel::MPIComm comm);
-
-template<class T, class A>
-std::size_t packSize(const std::vector<T,A>& data, Opm::Parallel::MPIComm comm);
-
-template<class A>
-std::size_t packSize(const std::vector<bool,A>& data, Opm::Parallel::MPIComm comm);
 
 template<class... Ts>
 std::size_t packSize(const std::tuple<Ts...>& data, Opm::Parallel::MPIComm comm);
@@ -137,14 +130,6 @@ void pack(const T& data, std::vector<char>& buffer, int& position,
 
 template<class T1, class T2>
 void pack(const std::pair<T1,T2>& data, std::vector<char>& buffer, int& position,
-          Opm::Parallel::MPIComm comm);
-
-template<class T, class A>
-void pack(const std::vector<T,A>& data, std::vector<char>& buffer, int& position,
-          Opm::Parallel::MPIComm comm);
-
-template<class A>
-void pack(const std::vector<bool,A>& data, std::vector<char>& buffer, int& position,
           Opm::Parallel::MPIComm comm);
 
 template<class... Ts>
@@ -205,14 +190,6 @@ void unpack(T& data, std::vector<char>& buffer, int& position,
 template<class T1, class T2>
 void unpack(std::pair<T1,T2>& data, std::vector<char>& buffer, int& position,
             Opm::Parallel::MPIComm comm);
-
-template<class T, class A>
-void unpack(std::vector<T,A>& data, std::vector<char>& buffer, int& position,
-            Opm::Parallel::MPIComm comm);
-
-template<class A>
-void unpack(std::vector<bool,A>& data, std::vector<char>& buffer, int& position,
-          Opm::Parallel::MPIComm comm);
 
 template<class... Ts>
 void unpack(std::tuple<Ts...>& data, std::vector<char>& buffer,
