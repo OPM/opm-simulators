@@ -369,30 +369,31 @@ public:
     //!
     //! \tparam T Type of class to broadcast
     //! \param data Class to broadcast
+    //! \param root Process to broadcast from
     template<class T>
-    void broadcast(T& data)
+    void broadcast(T& data, int root = 0)
     {
         if (m_comm.size() == 1)
             return;
 
-        if (m_comm.rank() == 0) {
+        if (m_comm.rank() == root) {
             try {
                 pack(data);
                 m_packSize = m_position;
-                m_comm.broadcast(&m_packSize, 1, 0);
-                m_comm.broadcast(m_buffer.data(), m_position, 0);
+                m_comm.broadcast(&m_packSize, 1, root);
+                m_comm.broadcast(m_buffer.data(), m_position, root);
             } catch (...) {
                 m_packSize = std::numeric_limits<size_t>::max();
-                m_comm.broadcast(&m_packSize, 1, 0);
+                m_comm.broadcast(&m_packSize, 1, root);
                 throw;
             }
         } else {
-            m_comm.broadcast(&m_packSize, 1, 0);
+            m_comm.broadcast(&m_packSize, 1, root);
             if (m_packSize == std::numeric_limits<size_t>::max()) {
                 throw std::runtime_error("Error detected in parallel serialization");
             }
             m_buffer.resize(m_packSize);
-            m_comm.broadcast(m_buffer.data(), m_packSize, 0);
+            m_comm.broadcast(m_buffer.data(), m_packSize, root);
             unpack(data);
         }
     }
@@ -402,17 +403,18 @@ public:
     //!
     //! \tparam T Type of class to broadcast
     //! \param data Class to broadcast
+    //! \param root Process to broadcast from
     template<class T>
-    void append(T& data)
+    void append(T& data, int root = 0)
     {
         if (m_comm.size() == 1)
             return;
 
         T tmp;
-        T& bcast = m_comm.rank() == 0 ? data : tmp;
+        T& bcast = m_comm.rank() == root ? data : tmp;
         broadcast(bcast);
 
-        if (m_comm.rank() != 0)
+        if (m_comm.rank() != root)
             data.append(tmp);
     }
 
