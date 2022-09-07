@@ -65,44 +65,34 @@ public:
                              const EclipseGrid* eclGridOnRoot,
                              std::vector<double>& centroids,
                              const typename Dune::CartesianIndexMapper<Grid>& cartMapper)
-        : m_grid(grid), m_distributed_fieldProps(eclState.m_fieldProps),
+        : m_grid(grid),
+          m_distributed_fieldProps(eclState.m_fieldProps),
           m_centroids(centroids)
     {
         // Scatter the keys
         const Parallel::Communication comm = m_grid.comm();
         if (comm.rank() == 0)
         {
-            const auto& globalProps = eclState.globalFieldProps();
+            const FieldPropsManager& globalProps = eclState.globalFieldProps();
             m_intKeys = globalProps.keys<int>();
             m_doubleKeys = globalProps.keys<double>();
-            std::size_t packSize = Mpi::packSize(m_intKeys, comm) +
-                Mpi::packSize(m_doubleKeys,comm);
-            std::vector<char> buffer(packSize);
-            int position = 0;
-            Mpi::pack(m_intKeys, buffer, position, comm);
-            Mpi::pack(m_doubleKeys, buffer, position, comm);
-            int calcStart = position;
-            {
-                std::vector<char> tran_buffer = globalProps.serialize_tran();
-                position += tran_buffer.size();
-                buffer.insert(buffer.end(), std::make_move_iterator(tran_buffer.begin()), std::make_move_iterator(tran_buffer.end()));
-            }
-            comm.broadcast(&position, 1, 0);
-            comm.broadcast(buffer.data(), position, 0);
+            m_distributed_fieldProps.copyTran(globalProps);
+        }
 
-            // Unpack Calculator as we need it here, too.
-            m_distributed_fieldProps.deserialize_tran( std::vector<char>(buffer.begin() + calcStart, buffer.end()) );
+        EclMpiSerializer ser(comm);
+        ser.broadcast(*this);
 
-            // copy data to persistent map based on local id
-            m_no_data = m_intKeys.size() + m_doubleKeys.size() +
-                Grid::dimensionworld;
+        m_no_data = m_intKeys.size() + m_doubleKeys.size() + Grid::dimensionworld;
+
+        if (comm.rank() == 0) {
+            const FieldPropsManager& globalProps = eclState.globalFieldProps();
             const auto& idSet = m_grid.localIdSet();
             const auto& gridView = m_grid.levelGridView(0);
             using ElementMapper =
                 Dune::MultipleCodimMultipleGeomTypeMapper<typename Grid::LevelGridView>;
             ElementMapper elemMapper(gridView, Dune::mcmgElementLayout());
 
-            for( const auto &element : elements( gridView, Dune::Partitions::interiorBorder ) )
+            for (const auto &element : elements(gridView, Dune::Partitions::interiorBorder))
             {
                 const auto& id = idSet.id(element);
                 auto index = elemMapper.index(element);
@@ -132,31 +122,18 @@ public:
                     data.emplace_back(center[dim], '1'); // write garbage for value_status
             }
         }
-        else
-        {
-            int bufferSize;
-            comm.broadcast(&bufferSize, 1, 0);
-            std::vector<char> buffer(bufferSize);
-            comm.broadcast(buffer.data(), bufferSize, 0);
-            int position{};
-            Mpi::unpack(m_intKeys, buffer, position, comm);
-            Mpi::unpack(m_doubleKeys, buffer, position, comm);
-            m_distributed_fieldProps.deserialize_tran( std::vector<char>(buffer.begin() + position, buffer.end()) );
-            m_no_data = m_intKeys.size() + m_doubleKeys.size() +
-                Grid::dimensionworld;
-        }
     }
 
     ~PropsCentroidsDataHandle()
     {
         // distributed grid is now correctly set up.
-        for(const auto& intKey : m_intKeys)
+        for (const auto& intKey : m_intKeys)
         {
             m_distributed_fieldProps.m_intProps[intKey].data.resize(m_grid.size(0));
             m_distributed_fieldProps.m_intProps[intKey].value_status.resize(m_grid.size(0));
         }
 
-        for(const auto& doubleKey : m_doubleKeys)
+        for (const auto& doubleKey : m_doubleKeys)
         {
             m_distributed_fieldProps.m_doubleProps[doubleKey].data.resize(m_grid.size(0));
             m_distributed_fieldProps.m_doubleProps[doubleKey].value_status.resize(m_grid.size(0));
@@ -171,7 +148,7 @@ public:
             Dune::MultipleCodimMultipleGeomTypeMapper<typename Grid::LevelGridView>;
         ElementMapper elemMapper(gridView, Dune::mcmgElementLayout());
 
-        for( const auto &element : elements( gridView, Dune::Partitions::all ) )
+        for (const auto &element : elements( gridView, Dune::Partitions::all))
         {
             std::size_t counter{};
             const auto& id = idSet.id(element);
@@ -179,14 +156,14 @@ public:
             auto data = elementData_.find(id);
             assert(data != elementData_.end());
 
-            for(const auto& intKey : m_intKeys)
+            for (const auto& intKey : m_intKeys)
             {
                 const auto& pair = data->second[counter++];
                 m_distributed_fieldProps.m_intProps[intKey].data[index] = static_cast<int>(pair.first);
                 m_distributed_fieldProps.m_intProps[intKey].value_status[index] = static_cast<value::status>(pair.second);
             }
 
-            for(const auto& doubleKey : m_doubleKeys)
+            for (const auto& doubleKey : m_doubleKeys)
             {
                 const auto& pair = data->second[counter++];
                 m_distributed_fieldProps.m_doubleProps[doubleKey].data[index] = pair.first;
@@ -225,7 +202,7 @@ public:
     {
         auto iter = elementData_.find(m_grid.localIdSet().id(e));
         assert(iter != elementData_.end());
-        for(const auto& data : iter->second)
+        for (const auto& data : iter->second)
         {
             buffer.write(data);
         }
@@ -237,10 +214,18 @@ public:
         assert(n == m_no_data);
         auto& array = elementData_[m_grid.localIdSet().id(e)];
         array.resize(n);
-        for(auto& data: array)
+        for (auto& data : array)
         {
             buffer.read(data);
         }
+    }
+
+    template<class Serializer>
+    void serializeOp(Serializer& serializer)
+    {
+        serializer(m_intKeys);
+        serializer(m_doubleKeys);
+        m_distributed_fieldProps.serializeOp(serializer);
     }
 
 private:
