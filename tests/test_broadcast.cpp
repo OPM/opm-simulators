@@ -26,6 +26,7 @@
 #include <boost/test/unit_test.hpp>
 
 #include <opm/simulators/utils/MPIPacker.hpp>
+#include <ebos/eclmpiserializer.hh>
 #include <dune/common/parallel/mpihelper.hh>
 
 #include <numeric>
@@ -70,7 +71,8 @@ BOOST_AUTO_TEST_CASE(BroadCast)
     double d1 = cc.rank() == 0 ? 7.0 : 0.0;
     size_t i1 = cc.rank() == 0 ? 8 : 0;
 
-    Opm::Mpi::broadcast(cc, 0, d, i, d1, i1);
+    Opm::EclMpiSerializer ser(cc);
+    ser.broadcast(0, d, i, d1, i1);
 
     for (size_t c = 0; c < 3; ++c) {
         BOOST_CHECK_EQUAL(d[c], 1.0+c);

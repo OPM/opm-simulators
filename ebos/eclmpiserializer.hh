@@ -34,6 +34,8 @@
 #include <variant>
 #include <vector>
 
+namespace Opm {
+
 namespace detail
 {
 
@@ -65,8 +67,6 @@ template<class T>
 using remove_cvr_t = std::remove_const_t<std::remove_reference_t<T>>;
 
 } // namespace detail
-
-namespace Opm {
 
 /*! \brief Class for (de-)serializing and broadcasting data in parallel.
  *!  \details If the class has a serializeOp member this is used,
@@ -418,9 +418,46 @@ public:
             if (m_packSize == std::numeric_limits<size_t>::max()) {
                 throw std::runtime_error("Error detected in parallel serialization");
             }
+
             m_buffer.resize(m_packSize);
             m_comm.broadcast(m_buffer.data(), m_packSize, root);
             unpack(data);
+        }
+    }
+
+    template<typename... Args>
+    void broadcast(int root, Args&&... args)
+    {
+        if (m_comm.size() == 1)
+            return;
+
+        if (m_comm.rank() == root) {
+            try {
+                m_op = Operation::PACKSIZE;
+                m_packSize = 0;
+                variadic_call(args...);
+                m_position = 0;
+                m_buffer.resize(m_packSize);
+                m_op = Operation::PACK;
+                variadic_call(args...);
+                m_packSize = m_position;
+                m_comm.broadcast(&m_packSize, 1, 0);
+                m_comm.broadcast(m_buffer.data(), m_position, 0);
+            } catch (...) {
+                m_packSize = std::numeric_limits<size_t>::max();
+                m_comm.broadcast(&m_packSize, 1, 0);
+                throw;
+            }
+        } else {
+            m_comm.broadcast(&m_packSize, 1, 0);
+            if (m_packSize == std::numeric_limits<size_t>::max()) {
+                throw std::runtime_error("Error detected in parallel serialization");
+            }
+            m_buffer.resize(m_packSize);
+            m_comm.broadcast(m_buffer.data(), m_packSize, 0);
+            m_position = 0;
+            m_op = Operation::UNPACK;
+            variadic_call(std::forward<Args>(args)...);
         }
     }
 
@@ -457,6 +494,15 @@ public:
     }
 
 protected:
+    template<typename T, typename... Args>
+    void variadic_call(T& first,
+                       Args&&... args)
+    {
+      (*this)(first);
+      if constexpr (sizeof...(args) > 0)
+          variadic_call(std::forward<Args>(args)...);
+    }
+
     //! \brief Enumeration of operations.
     enum class Operation {
         PACKSIZE, //!< Calculating serialization buffer size

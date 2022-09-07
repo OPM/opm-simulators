@@ -42,7 +42,6 @@
 
 namespace Opm {
 
-
 void eclStateBroadcast(Parallel::Communication comm, EclipseState& eclState, Schedule& schedule,
                        SummaryConfig& summaryConfig,
                        UDQState& udqState,
@@ -50,12 +49,7 @@ void eclStateBroadcast(Parallel::Communication comm, EclipseState& eclState, Sch
                        WellTestState&  wtestState)
 {
     Opm::EclMpiSerializer ser(comm);
-    ser.broadcast(eclState);
-    ser.broadcast(schedule);
-    ser.broadcast(summaryConfig);
-    ser.broadcast(udqState);
-    ser.broadcast(actionState);
-    ser.broadcast(wtestState);
+    ser.broadcast(0, eclState, schedule, summaryConfig, udqState, actionState, wtestState);
 }
 
 template <class T>
@@ -64,7 +58,6 @@ void eclBroadcast(Parallel::Communication comm, T& data)
     Opm::EclMpiSerializer ser(comm);
     ser.broadcast(data);
 }
-
 
 template void eclBroadcast<TransMult>(Parallel::Communication, TransMult&);
 template void eclBroadcast<Schedule>(Parallel::Communication, Schedule&);
