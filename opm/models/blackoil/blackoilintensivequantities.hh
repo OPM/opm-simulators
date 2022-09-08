@@ -134,7 +134,7 @@ class BlackOilIntensiveQuantities
                 case 2:
                     return mobilityZ_;
                 default:
-                    throw std::runtime_error("Unexpected mobility array index00");
+                    throw std::runtime_error("Unexpected mobility array index");
             }
         }
         array_type mobilityX_;
