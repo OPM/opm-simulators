@@ -205,7 +205,7 @@ public:
         EWOMS_HIDE_PARAM(TypeTag, MaxNewtonIterationsWithInnerWellIterations);
         EWOMS_HIDE_PARAM(TypeTag, MaxInnerIterWells);
         EWOMS_HIDE_PARAM(TypeTag, MaxSinglePrecisionDays);
-        EWOMS_HIDE_PARAM(TypeTag, MaxStrictIter);
+        EWOMS_HIDE_PARAM(TypeTag, MinStrictCnvIter);
         EWOMS_HIDE_PARAM(TypeTag, SolveWelleqInitially);
         EWOMS_HIDE_PARAM(TypeTag, UpdateEquationsScaling);
         EWOMS_HIDE_PARAM(TypeTag, UseUpdateStabilization);

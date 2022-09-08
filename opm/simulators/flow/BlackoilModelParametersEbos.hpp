@@ -84,7 +84,7 @@ struct MaxSinglePrecisionDays {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
-struct MaxStrictIter {
+struct MinStrictCnvIter {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
@@ -224,7 +224,7 @@ struct MaxSinglePrecisionDays<TypeTag, TTag::FlowModelParameters> {
     static constexpr type value = 20.0;
 };
 template<class TypeTag>
-struct MaxStrictIter<TypeTag, TTag::FlowModelParameters> {
+struct MinStrictCnvIter<TypeTag, TTag::FlowModelParameters> {
     static constexpr int value = 0;
 };
 template<class TypeTag>
@@ -342,7 +342,7 @@ namespace Opm
         double tolerance_mb_;
         /// Local convergence tolerance (max of local saturation errors).
         double tolerance_cnv_;
-        /// Relaxed local convergence tolerance (used when iter >= max_strict_iter_).
+        /// Relaxed local convergence tolerance (can be used when iter >= min_strict_cnv_iter_ && cnvViolatedPV < relaxed_max_pv_fraction_).
         double tolerance_cnv_relaxed_;
         /// Well convergence tolerance.
         double tolerance_wells_;
@@ -388,8 +388,8 @@ namespace Opm
         /// for solving for the Jacobian
         double maxSinglePrecisionTimeStep_;
 
-        /// Maximum number of Newton iterations before we give up on the CNV convergence criterion
-        int max_strict_iter_;
+        /// Minimum number of Newton iterations before we can use relaxed CNV convergence criterion
+        int min_strict_cnv_iter_;
 
         /// Solve well equation initially
         bool solve_welleq_initially_;
@@ -449,7 +449,7 @@ namespace Opm
             shut_unsolvable_wells_ = EWOMS_GET_PARAM(TypeTag, bool, ShutUnsolvableWells);
             max_inner_iter_wells_ = EWOMS_GET_PARAM(TypeTag, int, MaxInnerIterWells);
             maxSinglePrecisionTimeStep_ = EWOMS_GET_PARAM(TypeTag, Scalar, MaxSinglePrecisionDays) *24*60*60;
-            max_strict_iter_ = EWOMS_GET_PARAM(TypeTag, int, MaxStrictIter);
+            min_strict_cnv_iter_ = EWOMS_GET_PARAM(TypeTag, int, MinStrictCnvIter);
             solve_welleq_initially_ = EWOMS_GET_PARAM(TypeTag, bool, SolveWelleqInitially);
             update_equations_scaling_ = EWOMS_GET_PARAM(TypeTag, bool, UpdateEquationsScaling);
             use_update_stabilization_ = EWOMS_GET_PARAM(TypeTag, bool, UseUpdateStabilization);
@@ -487,7 +487,7 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, bool, AlternativeWellRateInit, "Use alternative well rate initialization procedure");
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, RegularizationFactorWells, "Regularization factor for wells");
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, MaxSinglePrecisionDays, "Maximum time step size where single precision floating point arithmetic can be used solving for the linear systems of equations");
-            EWOMS_REGISTER_PARAM(TypeTag, int, MaxStrictIter, "Maximum number of Newton iterations before relaxed tolerances are used for the CNV convergence criterion");
+            EWOMS_REGISTER_PARAM(TypeTag, int, MinStrictCnvIter, "Minimum number of Newton iterations before relaxed tolerances can be used for the CNV convergence criterion");
             EWOMS_REGISTER_PARAM(TypeTag, bool, SolveWelleqInitially, "Fully solve the well equations before each iteration of the reservoir model");
             EWOMS_REGISTER_PARAM(TypeTag, bool, UpdateEquationsScaling, "Update scaling factors for mass balance equations during the run");
             EWOMS_REGISTER_PARAM(TypeTag, bool, UseUpdateStabilization, "Try to detect and correct oscillations or stagnation during the Newton method");
