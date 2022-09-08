@@ -383,8 +383,6 @@ namespace Opm {
             // setting the well_solutions_ based on well_state.
             void updatePrimaryVariables(DeferredLogger& deferred_logger);
 
-            void setupCartesianToCompressed_();
-
             void updateAverageFormationFactor();
 
             void computePotentials(const std::size_t widx,

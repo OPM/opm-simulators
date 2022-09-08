@@ -51,17 +51,13 @@ namespace Opm {
         // Number of cells the global grid view
         global_num_cells_ = ebosSimulator_.vanguard().globalNumCells();
 
-        // Set up cartesian mapping.
         {
-           // this->setupCartesianToCompressed_();
             auto& parallel_wells = ebosSimulator.vanguard().parallelWells();
 
-        this->parallel_well_info_.reserve(parallel_wells.size());
-        for( const auto& name_bool: parallel_wells)
-        {
-            this->parallel_well_info_.emplace_back(name_bool,
-                                                   grid().comm());
-        }
+            this->parallel_well_info_.reserve(parallel_wells.size());
+            for( const auto& name_bool : parallel_wells) {
+                this->parallel_well_info_.emplace_back(name_bool, grid().comm());
+            }
         }
 
         this->alternative_well_rate_init_ =
