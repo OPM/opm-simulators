@@ -24,6 +24,8 @@
 #include <opm/simulators/utils/MPIPacker.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
+#include <algorithm>
+#include <functional>
 #include <map>
 #include <optional>
 #include <set>
@@ -35,9 +37,7 @@
 #include <vector>
 
 namespace Opm {
-
-namespace detail
-{
+namespace detail {
 
 template<typename ...Ts>
 struct MakeVariantImpl
@@ -81,9 +81,7 @@ public:
         m_comm(comm)
     {}
 
-    //! \brief (De-)serialization for simple types.
-    //! \details The data handled by this depends on the underlying serialization used.
-    //!          Currently you can call this for scalars, and stl containers with scalars.
+    //! \brief Applies current serialization op to the passed data.
     template<class T>
     void operator()(const T& data)
     {
@@ -104,14 +102,14 @@ public:
         } else if constexpr (is_set<T>::value) {
             set(const_cast<T&>(data));
         } else if constexpr (has_serializeOp<detail::remove_cvr_t<T>>::value) {
-          const_cast<T&>(data).serializeOp(*this);
+            const_cast<T&>(data).serializeOp(*this);
         } else {
-          if (m_op == Operation::PACKSIZE)
-              m_packSize += Mpi::Packer::packSize(data, m_comm);
-          else if (m_op == Operation::PACK)
-              Mpi::Packer::pack(data, m_buffer, m_position, m_comm);
-          else if (m_op == Operation::UNPACK)
-              Mpi::Packer::unpack(const_cast<T&>(data), m_buffer, m_position, m_comm);
+            if (m_op == Operation::PACKSIZE)
+                m_packSize += Mpi::Packer::packSize(data, m_comm);
+            else if (m_op == Operation::PACK)
+                Mpi::Packer::pack(data, m_buffer, m_position, m_comm);
+            else if (m_op == Operation::UNPACK)
+                Mpi::Packer::unpack(const_cast<T&>(data), m_buffer, m_position, m_comm);
         }
     }
 
@@ -121,42 +119,29 @@ public:
     template <typename T>
     void vector(std::vector<T>& data)
     {
-        [[maybe_unused]] auto handle = [&](auto& d)
-        {
-            for (auto& it : d) {
-              if constexpr (is_pair_or_tuple<T>::value)
-                  tuple(it);
-              else if constexpr (is_ptr<T>::value)
-                  ptr(it);
-              else if constexpr (is_vector<T>::value)
-                vector(it);
-              else if constexpr (has_serializeOp<T>::value)
-                  it.serializeOp(*this);
-              else
-                  (*this)(it);
+        if constexpr (std::is_pod_v<T>) {
+          if (m_op == Operation::PACKSIZE) {
+              (*this)(data.size());
+              m_packSize += Mpi::Packer::packSize(data.data(), data.size(), m_comm);
+          } else if (m_op == Operation::PACK) {
+              (*this)(data.size());
+              Mpi::Packer::pack(data.data(), data.size(), m_buffer, m_position, m_comm);
+          } else if (m_op == Operation::UNPACK) {
+              std::size_t size = 0;
+              (*this)(size);
+              data.resize(size);
+              Mpi::Packer::unpack(data.data(), size, m_buffer, m_position, m_comm);
+          }
+        } else {
+            if (m_op == Operation::UNPACK) {
+                std::size_t size = 0;
+                (*this)(size);
+                data.resize(size);
+                std::for_each(data.begin(), data.end(), std::ref(*this));
+            } else {
+                (*this)(data.size());
+                std::for_each(data.begin(), data.end(), std::ref(*this));
             }
-        };
-
-        if (m_op == Operation::PACKSIZE) {
-            m_packSize += Mpi::Packer::packSize(data.size(), m_comm);
-            if constexpr (std::is_pod_v<T>)
-                m_packSize += Mpi::Packer::packSize(data.data(), data.size(), m_comm);
-            else
-                handle(data);
-        } else if (m_op == Operation::PACK) {
-            Mpi::Packer::pack(data.size(), m_buffer, m_position, m_comm);
-            if constexpr (std::is_pod_v<T>)
-                Mpi::Packer::pack(data.data(), data.size(), m_buffer, m_position, m_comm);
-            else
-                handle(data);
-        } else if (m_op == Operation::UNPACK) {
-            size_t size;
-            Mpi::Packer::unpack(size, m_buffer, m_position, m_comm);
-            data.resize(size);
-            if constexpr (std::is_pod_v<T>)
-                Mpi::Packer::unpack(data.data(), size, m_buffer, m_position, m_comm);
-            else
-                handle(data);
         }
     }
 
@@ -164,24 +149,21 @@ public:
     //! \param data The vector to (de-)serialize
     void vector(std::vector<bool>& data)
     {
-        if (m_op == Operation::PACKSIZE) {
-            m_packSize += Mpi::Packer::packSize(data.size(), m_comm);
-            m_packSize += data.size()*Mpi::Packer::packSize(bool(), m_comm);
-        } else if (m_op == Operation::PACK) {
-            (*this)(data.size());
-            for (const auto entry : data) { // Not a reference: vector<bool> range
-                bool b = entry;
-                (*this)(b);
-            }
-        } else if (m_op == Operation::UNPACK) {
-            size_t size;
+        if (m_op == Operation::UNPACK) {
+            std::size_t size = 0;
             (*this)(size);
             data.clear();
             data.reserve(size);
             for (size_t i = 0; i < size; ++i) {
-                bool entry;
+                bool entry = false;
                 (*this)(entry);
                 data.push_back(entry);
+            }
+        } else {
+            (*this)(data.size());
+            for (const auto entry : data) { // Not a reference: vector<bool> range
+                bool b = entry;
+                (*this)(b);
             }
         }
     }
@@ -193,34 +175,15 @@ public:
     {
         using T = typename Array::value_type;
 
-        [[maybe_unused]] auto handle = [&](auto& d) {
-            for (auto& it : d) {
-                if constexpr (is_pair_or_tuple<T>::value)
-                    tuple(it);
-                else if constexpr (is_ptr<T>::value)
-                    ptr(it);
-                else if constexpr (has_serializeOp<T>::value)
-                    it.serializeOp(*this);
-                else
-                    (*this)(it);
-            }
-        };
-
-        if (m_op == Operation::PACKSIZE) {
-            if constexpr (std::is_pod_v<T>)
+        if constexpr (std::is_pod_v<T>) {
+            if (m_op == Operation::PACKSIZE)
                 m_packSize += Mpi::Packer::packSize(data.data(), data.size(), m_comm);
-            else
-                handle(data);
-        } else if (m_op == Operation::PACK) {
-            if constexpr (std::is_pod_v<T>)
+            else if (m_op == Operation::PACK)
                 Mpi::Packer::pack(data.data(), data.size(), m_buffer, m_position, m_comm);
-            else
-                handle(data);
-        } else if (m_op == Operation::UNPACK) {
-            if constexpr (std::is_pod_v<T>)
+            else if (m_op == Operation::UNPACK)
                 Mpi::Packer::unpack(data.data(), data.size(), m_buffer, m_position, m_comm);
-            else
-                handle(data);
+        } else {
+            std::for_each(data.begin(), data.end(), std::ref(*this));
         }
     }
 
@@ -229,25 +192,15 @@ public:
     template<class... Args>
     void variant(const std::variant<Args...>& data)
     {
-        auto visitor = [&](auto& d)
-        {
-            if constexpr (has_serializeOp<detail::remove_cvr_t<decltype(d)>>::value)
-                const_cast<detail::remove_cvr_t<decltype(d)>&>(d).serializeOp(*this);
-            else
-                (*this)(d);
-        };
-        if (m_op == Operation::PACKSIZE) {
-            m_packSize += Mpi::Packer::packSize(data.index(), m_comm);
-            std::visit(visitor, data);
-        } else if (m_op == Operation::PACK) {
-            Mpi::Packer::pack(data.index(), m_buffer, m_position, m_comm);
-            std::visit(visitor, data);
-        } else if (m_op == Operation::UNPACK) {
-            size_t index;
-            Mpi::Packer::unpack(index, m_buffer, m_position, m_comm);
+        if (m_op == Operation::UNPACK) {
+            std::size_t index = 0;
+            (*this)(index);
             auto& data_mut = const_cast<std::variant<Args...>&>(data);
             data_mut = detail::make_variant<Args...>(index);
-            std::visit(visitor, data_mut);
+            std::visit(std::ref(*this), data_mut);
+        } else {
+            (*this)(data.index());
+            std::visit(std::ref(*this), data);
         }
     }
 
@@ -257,23 +210,18 @@ public:
     template<class T>
     void optional(const std::optional<T>& data)
     {
-        if (m_op == Operation::PACKSIZE) {
-            m_packSize += Mpi::Packer::packSize(data.has_value(), m_comm);
-            if (data.has_value()) {
-                (*this)(*data);
-            }
-        } else if (m_op == Operation::PACK) {
-            Mpi::Packer::pack(data.has_value(), m_buffer, m_position, m_comm);
-            if (data.has_value()) {
-                (*this)(*data);
-            }
-        } else if (m_op == Operation::UNPACK) {
-            bool has;
-            Mpi::Packer::unpack(has, m_buffer, m_position, m_comm);
+        if (m_op == Operation::UNPACK) {
+            bool has = false;
+            (*this)(has);
             if (has) {
                 T res;
                 (*this)(res);
                 const_cast<std::optional<T>&>(data) = res;
+            }
+        } else {
+            (*this)(data.has_value());
+            if (data.has_value()) {
+                (*this)(*data);
             }
         }
     }
@@ -292,55 +240,17 @@ public:
     template<class Map>
     void map(Map& data)
     {
-        using Key = typename Map::key_type;
-        using Data = typename Map::mapped_type;
-
-        auto handle = [&](auto& d)
-        {
-            if constexpr (is_vector<Data>::value)
-                vector(d);
-            else if constexpr (is_ptr<Data>::value)
-                ptr(d);
-            else if constexpr (is_map<Data>::value)
-                map(d);
-            else if constexpr (has_serializeOp<Data>::value)
-                d.serializeOp(*this);
-            else
-                (*this)(d);
-        };
-
-        auto keyHandle = [&](auto& d)
-        {
-              if constexpr (is_pair_or_tuple<Key>::value)
-                  tuple(d);
-              else if constexpr (has_serializeOp<Key>::value)
-                  d.serializeOp(*this);
-              else
-                  (*this)(d);
-        };
-
-        if (m_op == Operation::PACKSIZE) {
-            m_packSize += Mpi::Packer::packSize(data.size(), m_comm);
-            for (auto& it : data) {
-                keyHandle(it.first);
-                handle(it.second);
-            }
-        } else if (m_op == Operation::PACK) {
-            Mpi::Packer::pack(data.size(), m_buffer, m_position, m_comm);
-            for (auto& it : data) {
-                keyHandle(it.first);
-                handle(it.second);
-            }
-        } else if (m_op == Operation::UNPACK) {
-            size_t size;
-            Mpi::Packer::unpack(size, m_buffer, m_position, m_comm);
+        if (m_op == Operation::UNPACK) {
+            std::size_t size = 0;
+            (*this)(size);
             for (size_t i = 0; i < size; ++i) {
-                Key key;
-                keyHandle(key);
-                Data entry;
-                handle(entry);
-                data.insert(std::make_pair(key, entry));
+                typename Map::value_type entry;
+                (*this)(entry);
+                data.insert(entry);
             }
+        } else {
+            (*this)(data.size());
+            std::for_each(data.begin(), data.end(), std::ref(*this));
         }
     }
 
@@ -350,38 +260,17 @@ public:
     template<class Set>
     void set(Set& data)
     {
-        using Data = typename Set::value_type;
-
-        auto handle = [&](auto& d)
-        {
-            if constexpr (is_vector<Data>::value)
-                vector(d);
-            else if constexpr (is_ptr<Data>::value)
-                ptr(d);
-            else if constexpr (has_serializeOp<Data>::value)
-                d.serializeOp(*this);
-            else
-                (*this)(d);
-        };
-
-        if (m_op == Operation::PACKSIZE) {
-            m_packSize += Mpi::Packer::packSize(data.size(), m_comm);
-            for (auto& it : data) {
-                handle(it);
-            }
-        } else if (m_op == Operation::PACK) {
-            Mpi::Packer::pack(data.size(), m_buffer, m_position, m_comm);
-            for (auto& it : data) {
-                handle(it);
-            }
-        } else if (m_op == Operation::UNPACK) {
-            size_t size;
-            Mpi::Packer::unpack(size, m_buffer, m_position, m_comm);
+        if (m_op == Operation::UNPACK) {
+            std::size_t size = 0;
+            (*this)(size);
             for (size_t i = 0; i < size; ++i) {
-                Data entry;
-                handle(entry);
+                typename Set::value_type entry;
+                (*this)(entry);
                 data.insert(entry);
             }
+        } else {
+            (*this)(data.size());
+            std::for_each(data.begin(), data.end(), std::ref(*this));
         }
     }
 
@@ -393,11 +282,11 @@ public:
     {
         m_op = Operation::PACKSIZE;
         m_packSize = 0;
-        data.serializeOp(*this);
+        (*this)(data);
         m_position = 0;
         m_buffer.resize(m_packSize);
         m_op = Operation::PACK;
-        data.serializeOp(*this);
+        (*this)(data);
     }
 
     //! \brief Call this to de-serialize data.
@@ -408,7 +297,7 @@ public:
     {
         m_position = 0;
         m_op = Operation::UNPACK;
-        data.serializeOp(*this);
+        (*this)(data);
     }
 
     //! \brief Serialize and broadcast on root process, de-serialize on
@@ -679,10 +568,7 @@ protected:
             const_cast<PtrType&>(data).reset(new T1);
         }
         if (data) {
-            if constexpr (has_serializeOp<T1>::value)
-                data->serializeOp(*this);
-            else
-                (*this)(*data);
+            (*this)(*data);
         }
     }
 
