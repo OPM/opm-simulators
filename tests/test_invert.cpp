@@ -43,7 +43,6 @@ BOOST_AUTO_TEST_CASE(Invert4x4)
 {
     typedef Dune::FieldMatrix<double, 4, 4>  BaseType;
     BaseType matrix;
-    BaseType eye;
     BaseType inverse;
 
     for (int i = 0; i < 4; ++i) {
