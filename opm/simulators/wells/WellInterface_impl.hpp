@@ -230,7 +230,7 @@ namespace Opm
                       const GroupState& group_state,
                       DeferredLogger& deferred_logger) /* const */
     {
-        if (this->wellIsStopped()) {
+        if (!this->isOperableAndSolvable() || this->wellIsStopped()) {
             return false;
         }
 

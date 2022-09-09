@@ -982,7 +982,7 @@ namespace Opm {
             // Get convergence reports for reservoir and wells.
             std::vector<Scalar> B_avg(numEq, 0.0);
             auto report = getReservoirConvergence(timer.currentStepLength(), iteration, B_avg, residual_norms);
-            report += wellModel().getWellConvergence(B_avg);
+            report += wellModel().getWellConvergence(B_avg, /*checkWellGroupControls*/report.converged());
 
             return report;
         }
