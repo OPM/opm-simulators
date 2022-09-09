@@ -27,7 +27,7 @@
 namespace Opm
 {
 
-class FlowLinearSolverParameters;
+struct FlowLinearSolverParameters;
 
 PropertyTree setupPropertyTree(FlowLinearSolverParameters p,
                                bool LinearSolverMaxIterSet,

@@ -148,11 +148,6 @@ void WellState::init(const std::vector<double>& cellPressures,
     const auto& pu = this->phaseUsage();
     const int np = pu.num_phases;
 
-    int nperf = 0;
-    for (const auto& wpd : well_perf_data) {
-        nperf += wpd.size();
-    }
-
     {
         const auto& wg_events = schedule[report_step].wellgroup_events();
         for (const auto& ecl_well : wells_ecl) {

@@ -134,12 +134,10 @@ std::shared_ptr<MyMatrix> create1DLaplacian(I& indexset, int N, int start, int e
             continue;
         }
 
-        double dval=0;
         if(row>0)
         {
             mm->colIndex[nnz]=localRow-1;
             mm->data[nnz++]=-1;
-            dval+=1;
         }
         mm->colIndex[nnz]=localRow;
         mm->data[nnz++]=2;//dval+(row<N-1);
@@ -147,7 +145,6 @@ std::shared_ptr<MyMatrix> create1DLaplacian(I& indexset, int N, int start, int e
         {
             mm->colIndex[nnz]=localRow+1;
             mm->data[nnz++]=-1;
-            dval+=1;
         }
         mm->rowStart[localRow+1]=nnz;
         indexset.add(row, LocalIndex(localRow, GridAttributes::owner, true));
