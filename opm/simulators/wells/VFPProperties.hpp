@@ -22,6 +22,8 @@
 
 #include <opm/simulators/wells/VFPInjProperties.hpp>
 #include <opm/simulators/wells/VFPProdProperties.hpp>
+#include <opm/simulators/wells/WellState.hpp>
+#include <opm/simulators/wells/VFPHelpers.hpp>
 
 #include <map>
 
@@ -47,7 +49,9 @@ public:
      */
 
     VFPProperties(const std::vector<std::reference_wrapper<const VFPInjTable>>& inj_tables,
-                  const std::vector<std::reference_wrapper<const VFPProdTable>>& prod_tables)
+                  const std::vector<std::reference_wrapper<const VFPProdTable>>& prod_tables,
+                  const WellState& well_state)
+                  :well_state_(well_state)
     {
         for (const auto& vfpinj : inj_tables)
             this->m_inj.addTable( vfpinj );
@@ -70,9 +74,33 @@ public:
         return &m_prod;
     }
 
+    double getExplicitWFR(const int table_id, const size_t well_index) const {
+        const auto& rates = well_state_.well(well_index).surface_rates;
+        assert(rates.size() == 3);
+        const auto& pu = well_state_.phaseUsage();
+        const auto& aqua = rates[pu.phase_pos[BlackoilPhases::Aqua]];
+        const auto& liquid = rates[pu.phase_pos[BlackoilPhases::Liquid]];
+        const auto& vapour = rates[pu.phase_pos[BlackoilPhases::Vapour]];
+        const VFPProdTable& table = this->m_prod.getTable(table_id);
+        return detail::getWFR(table, aqua, liquid, vapour);
+    }
+
+    double getExplicitGFR(const int table_id, const size_t well_index) const {
+        const auto& rates = well_state_.well(well_index).surface_rates;
+        assert(rates.size() == 3);
+        const auto& pu = well_state_.phaseUsage();
+        const auto& aqua = rates[pu.phase_pos[BlackoilPhases::Aqua]];
+        const auto& liquid = rates[pu.phase_pos[BlackoilPhases::Liquid]];
+        const auto& vapour = rates[pu.phase_pos[BlackoilPhases::Vapour]];
+        const VFPProdTable& table = this->m_prod.getTable(table_id);
+        return detail::getGFR(table, aqua, liquid, vapour);
+    }
+
 private:
     VFPInjProperties m_inj;
     VFPProdProperties m_prod;
+    const WellState& well_state_;
+
 };
 
 

@@ -61,9 +61,10 @@ namespace Opm
          const std::vector<double>& depth_arg,
          const double gravity_arg,
          const int num_cells,
-         const std::vector< Scalar >& B_avg)
+         const std::vector< Scalar >& B_avg,
+         const bool changed_to_open_this_step)
     {
-        Base::init(phase_usage_arg, depth_arg, gravity_arg, num_cells, B_avg);
+        Base::init(phase_usage_arg, depth_arg, gravity_arg, num_cells, B_avg, changed_to_open_this_step);
         this->StdWellEval::init(this->perf_depth_, depth_arg, num_cells, Base::has_polymermw);
     }
 

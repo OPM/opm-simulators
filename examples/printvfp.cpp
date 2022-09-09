@@ -29,9 +29,11 @@
 #include <opm/simulators/wells/VFPProperties.hpp>
 #include <opm/simulators/wells/VFPInjProperties.hpp>
 #include <opm/simulators/wells/VFPProdProperties.hpp>
+#include <opm/simulators/wells/WellState.hpp>
 #include <opm/common/utility/TimeService.hpp>
 
 #include <opm/simulators/wells/VFPHelpers.hpp>
+#include <opm/core/props/phaseUsageFromDeck.hpp>
 
 #include <iostream>
 #include <iomanip>
@@ -51,16 +53,17 @@ struct Setup
         Parser parser;
         auto deck = parser.parseFile(file);
         ecl_state.reset(new EclipseState(deck) );
-        {
-          const TableManager table( deck );
-          const Runspec runspec(deck);
-          python = std::make_shared<Python>();
-          schedule.reset( new Schedule(deck, *ecl_state, python));
-          summary_state.reset( new SummaryState(TimeService::from_time_t(schedule->getStartTime())));
-        }
+
+        const TableManager table( deck );
+        const Runspec runspec(deck);
+        python = std::make_shared<Python>();
+        schedule.reset( new Schedule(deck, *ecl_state, python));
+        summary_state.reset( new SummaryState(TimeService::from_time_t(schedule->getStartTime())));
+
         const int step = 0;
         const auto& sched_state = schedule->operator[](step);
-        vfp_properties = std::make_unique<VFPProperties>(sched_state.vfpinj(), sched_state.vfpprod());
+        WellState well_state(phaseUsage(runspec.phases()));
+        vfp_properties = std::make_unique<VFPProperties>(sched_state.vfpinj(), sched_state.vfpprod(), well_state);
     };
 };
 

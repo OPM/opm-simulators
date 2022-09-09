@@ -400,7 +400,7 @@ protected:
 
     // create the well container
     virtual void createWellContainer(const int time_step) = 0;
-    virtual void initWellContainer() = 0;
+    virtual void initWellContainer(const int reportStepIdx) = 0;
 
     virtual void calculateProductivityIndexValuesShutWells(const int reportStepIdx,
                                                            DeferredLogger& deferred_logger) = 0;

@@ -270,7 +270,7 @@ BOOST_AUTO_TEST_CASE(InterpolateZero)
                         const double v = m / static_cast<double>(n-1);
 
                         //Note order of arguments!
-                        sum += properties->bhp(1, v, x, y, z, u);
+                        sum += properties->bhp(1, v, x, y, z, u, 0.0, 0.0, false);
                     }
                 }
             }
@@ -305,7 +305,7 @@ BOOST_AUTO_TEST_CASE(InterpolateOne)
                         const double v = m / static_cast<double>(n-1);
 
                         //Note order of arguments!
-                        const double value = properties->bhp(1, v, x, y, z, u);
+                        const double value = properties->bhp(1, v, x, y, z, u, 0, 0, false);
 
                         sum += value;
                     }
@@ -527,7 +527,7 @@ BOOST_AUTO_TEST_CASE(THPToBHPAndBackPlane)
     double thp = 0.5;
     double alq = 32.9;
 
-    double bhp_val = properties->bhp(1, aqua, liquid, vapour, thp, alq);
+    double bhp_val = properties->bhp(1, aqua, liquid, vapour, thp, alq, 0, 0 , false);
     double thp_val = properties->thp(1, aqua, liquid, vapour, bhp_val, alq);
 
     BOOST_CHECK_CLOSE(thp_val, thp, max_d_tol);
@@ -546,13 +546,30 @@ BOOST_AUTO_TEST_CASE(THPToBHPAndBackNonTrivial)
     double thp = 0.5;
     double alq = 32.9;
 
-    double bhp_val = properties->bhp(1, aqua, liquid, vapour, thp, alq);
+    double bhp_val = properties->bhp(1, aqua, liquid, vapour, thp, alq, 0, 0, false);
     double thp_val = properties->thp(1, aqua, liquid, vapour, bhp_val, alq);
 
     BOOST_CHECK_CLOSE(thp_val, thp, max_d_tol);
 }
 
+BOOST_AUTO_TEST_CASE(ExplicitBhpLookup)
+{
+    fillDataRandom();
+    initProperties();
 
+    double aqua = -0.5;
+    double liquid = -0.9;
+    double vapour = -0.1;
+    double thp = 0.5;
+    double alq = 32.9;
+
+    double wfr = Opm::detail::getWFR(*table, aqua, liquid, vapour);
+    double gfr = Opm::detail::getGFR(*table, aqua, liquid, vapour);
+
+    double bhp_val = properties->bhp(1, aqua, liquid, vapour, thp, alq, wfr, gfr, false);
+    double bhp_val_explicit = properties->bhp(1, 2*aqua, liquid, 3*vapour, thp, alq, wfr, gfr, true);
+    BOOST_CHECK_CLOSE(bhp_val, bhp_val_explicit, max_d_tol);
+}
 
 
 BOOST_AUTO_TEST_SUITE_END() // Trivial tests
@@ -614,7 +631,7 @@ VFPPROD \n\
                         double thp = t * 456.78;
                         double alq = a * 42.24;
 
-                        double bhp_interp = properties.bhp(42, aqua, liquid, vapour, thp, alq);
+                        double bhp_interp = properties.bhp(42, aqua, liquid, vapour, thp, alq, 0, 0, false);
                         double bhp_ref = thp;
                         double thp_interp = properties.thp(42, aqua, liquid, vapour, bhp_ref, alq);
                         double thp_ref = thp;
@@ -711,7 +728,7 @@ BOOST_AUTO_TEST_CASE(ParseInterpolateRealisticVFPPROD)
                         }
                         else {
                             //Value given as pascal, convert to barsa for comparison with reference
-                            double value_i = properties.bhp(32, aqua, liquid, vapour, t_i, a_i) * 10.0e-6;
+                            double value_i = properties.bhp(32, aqua, liquid, vapour, t_i, a_i, 0, 0, false) * 10.0e-6;
 
                             double abs_diff = std::abs(value_i - reference[i]);
                             sad += abs_diff;

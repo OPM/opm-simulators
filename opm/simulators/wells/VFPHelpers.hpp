@@ -136,7 +136,10 @@ VFPEvaluation bhp(const VFPProdTable& table,
                   const double liquid,
                   const double vapour,
                   const double thp,
-                  const double alq);
+                  const double alq,
+                  const double explicit_wfr,
+                  const double explicit_gfr,
+                  const bool   use_vfpexplicit);
 
 VFPEvaluation bhp(const VFPInjTable& table,
                   const double aqua,

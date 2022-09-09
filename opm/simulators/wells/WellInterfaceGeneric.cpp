@@ -414,6 +414,12 @@ bool WellInterfaceGeneric::isOperableAndSolvable() const
     return operability_status_.isOperableAndSolvable();
 }
 
+bool WellInterfaceGeneric::useVfpExplicit() const
+{
+    const auto& wvfpexp = well_ecl_.getWVFPEXP();
+    return ((wvfpexp.explicit_lookup() && !changedToOpenThisStep())|| operability_status_.use_vfpexplicit);
+}
+
 double WellInterfaceGeneric::getALQ(const WellState& well_state) const
 {
     return well_state.getALQ(name());
@@ -656,10 +662,14 @@ computeBhpAtThpLimitProdCommon(const std::function<std::vector<double>(const dou
     const double vfp_ref_depth = table.getDatumDepth();
     const double thp_limit = this->getTHPConstraint(summary_state);
     const double dp = wellhelpers::computeHydrostaticCorrection(this->refDepth(), vfp_ref_depth, rho, this->gravity());
+
     auto fbhp = [this, &controls, thp_limit, dp, alq_value](const std::vector<double>& rates) {
         assert(rates.size() == 3);
+        const auto& wfr =  this->vfpProperties()->getExplicitWFR(controls.vfp_table_number, this->indexOfWell());
+        const auto& gfr = this->vfpProperties()->getExplicitGFR(controls.vfp_table_number, this->indexOfWell());
+        const bool use_vfpexp = this->useVfpExplicit();
         return this->vfpProperties()->getProd()
-        ->bhp(controls.vfp_table_number, rates[Water], rates[Oil], rates[Gas], thp_limit, alq_value) - dp;
+        ->bhp(controls.vfp_table_number, rates[Water], rates[Oil], rates[Gas], thp_limit, alq_value, wfr, gfr, use_vfpexp) - dp;
     };
 
     // Make the flo() function.

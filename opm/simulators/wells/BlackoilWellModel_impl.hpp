@@ -93,11 +93,15 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    initWellContainer()
+    initWellContainer(const int reportStepIdx)
     {
+        const uint64_t effective_events_mask = ScheduleEvents::WELL_STATUS_CHANGE
+                        + ScheduleEvents::NEW_WELL;
+        const auto& events = schedule()[reportStepIdx].wellgroup_events();
         for (auto& wellPtr : this->well_container_) {
+            const bool well_opened_this_step = report_step_starts_ && events.hasEvent(wellPtr->name(), effective_events_mask);
             wellPtr->init(&this->phase_usage_, this->depth_, this->gravity_,
-                          this->local_num_cells_, this->B_avg_);
+                          this->local_num_cells_, this->B_avg_, well_opened_this_step);
         }
     }
 
@@ -222,7 +226,7 @@ namespace Opm {
             {
                 const auto& sched_state = this->schedule()[timeStepIdx];
                 // update VFP properties
-                vfp_properties_.reset(new VFPProperties( sched_state.vfpinj(), sched_state.vfpprod()) );
+                vfp_properties_.reset(new VFPProperties( sched_state.vfpinj(), sched_state.vfpprod(), this->prevWellState()));
                 this->initializeWellProdIndCalculators();
                 if (sched_state.events().hasEvent(ScheduleEvents::Events::WELL_PRODUCTIVITY_INDEX)) {
                     this->runWellPIScaling(timeStepIdx, local_deferredLogger);
@@ -263,7 +267,7 @@ namespace Opm {
             // do the initialization for all the wells
             // TODO: to see whether we can postpone of the intialization of the well containers to
             // optimize the usage of the following several member variables
-            this->initWellContainer();
+            this->initWellContainer(reportStepIdx);
 
             // update the updated cell flag
             std::fill(is_cell_perforated_.begin(), is_cell_perforated_.end(), false);
@@ -390,7 +394,7 @@ namespace Opm {
 
                 WellInterfacePtr well = createWellForWellTest(well_name, timeStepIdx, deferred_logger);
                 // some preparation before the well can be used
-                well->init(&phase_usage_, depth_, gravity_, local_num_cells_, B_avg_);
+                well->init(&phase_usage_, depth_, gravity_, local_num_cells_, B_avg_, true);
 
                 double well_efficiency_factor = wellEcl.getEfficiencyFactor();
                 WellGroupHelpers::accumulateGroupEfficiencyFactor(schedule().getGroup(wellEcl.groupName(), timeStepIdx),
@@ -1577,7 +1581,7 @@ namespace Opm {
                 <StandardWell<TypeTag>>(shutWell, reportStepIdx);
 
             wellPtr->init(&this->phase_usage_, this->depth_, this->gravity_,
-                          this->local_num_cells_, this->B_avg_);
+                          this->local_num_cells_, this->B_avg_, true);
 
             this->calculateProductivityIndexValues(wellPtr.get(), deferred_logger);
         }
