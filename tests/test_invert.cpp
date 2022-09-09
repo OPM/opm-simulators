@@ -21,7 +21,7 @@
 
 #define BOOST_TEST_MODULE InvertSpecializationTest
 #include <boost/test/unit_test.hpp>
-#include <opm/simulators/linalg/MatrixBlock.hpp>
+#include <opm/simulators/linalg/matrixblock.hh>
 
 
 void checkIdentity(Dune::FieldMatrix<double, 4, 4> M) {
@@ -41,7 +41,7 @@ void checkIdentity(Dune::FieldMatrix<double, 4, 4> M) {
 
 BOOST_AUTO_TEST_CASE(Invert4x4)
 {
-    typedef Dune::FieldMatrix<double, 4, 4>  BaseType;
+    using BaseType = Dune::FieldMatrix<double, 4, 4>;
     BaseType matrix;
     BaseType inverse;
 
@@ -55,19 +55,13 @@ BOOST_AUTO_TEST_CASE(Invert4x4)
     matrix[3][0] = 5;
     matrix[0][3] = 14;
 
-    double det = Dune::FMatrixHelp::invertMatrix(matrix, inverse);
+    double det = Opm::detail::invertMatrix4<Opm::detail::FMat4>(matrix, inverse);
     BOOST_CHECK_CLOSE(4, det, 1e-14);
 
     // check matrix * inverse close to identiy
     checkIdentity(matrix.rightmultiply(inverse));
 
-    // check return identity matrix if singular matrix
-    inverse = 0.0;
-    double det2 = Dune::FMatrixHelp::invertMatrix(matrix_sing, inverse);
-    BOOST_CHECK_CLOSE(1.0, det2, 1e-14);
-    checkIdentity(inverse);
+    // check singular matrix
+    BOOST_CHECK_THROW(Opm::detail::invertMatrix4<Opm::detail::FMat4>(matrix_sing, inverse),
+                      Opm::NumericalProblem);
 }
-
-
-
-

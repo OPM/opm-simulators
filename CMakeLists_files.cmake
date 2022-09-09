@@ -301,7 +301,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/FlowLinearSolverParameters.hpp
   opm/simulators/linalg/GraphColoring.hpp
   opm/simulators/linalg/ISTLSolverEbos.hpp
-  opm/simulators/linalg/MatrixBlock.hpp
   opm/simulators/linalg/MatrixMarketSpecializations.hpp
   opm/simulators/linalg/OwningBlockPreconditioner.hpp
   opm/simulators/linalg/OwningTwoLevelPreconditioner.hpp
@@ -313,6 +312,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/PreconditionerFactory.hpp
   opm/simulators/linalg/PreconditionerWithUpdate.hpp
   opm/simulators/linalg/PropertyTree.hpp
+  opm/simulators/linalg/SmallDenseMatrixUtils.hpp
   opm/simulators/linalg/WellOperators.hpp
   opm/simulators/linalg/WriteSystemMatrixHelper.hpp
   opm/simulators/linalg/findOverlapRowsAndColumns.hpp
