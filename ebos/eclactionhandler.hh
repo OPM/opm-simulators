@@ -41,7 +41,7 @@ class State;
 class BlackoilWellModelGeneric;
 class EclipseState;
 class Schedule;
-class SimulatorUpdate;
+struct SimulatorUpdate;
 class SummaryState;
 
 //! \brief Class handling Action support in simulator
