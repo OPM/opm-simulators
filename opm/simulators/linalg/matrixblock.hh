@@ -23,190 +23,208 @@
 #ifndef EWOMS_MATRIX_BLOCK_HH
 #define EWOMS_MATRIX_BLOCK_HH
 
-#include <dune/istl/scalarproducts.hh>
-#include <dune/istl/operators.hh>
-#include <dune/istl/solvers.hh>
-#include <dune/istl/owneroverlapcopy.hh>
-#include <dune/istl/superlu.hh>
-#include <dune/istl/umfpack.hh>
-
-
+#include <dune/common/dynmatrix.hh>
 #include <dune/common/fmatrix.hh>
+#include <dune/common/version.hh>
 #include <dune/common/typetraits.hh>
 
+#include <dune/istl/superlu.hh>
+#include <dune/istl/umfpack.hh>
+#include <dune/istl/matrixutils.hh>
+
+#include <opm/common/Exceptions.hpp>
+
+#include <limits>
+
 namespace Opm {
-namespace MatrixBlockHelp {
+namespace detail {
 
 template <typename K, int m, int n>
-static inline void invertMatrix(Dune::FieldMatrix<K, m, n>& matrix)
-{ matrix.invert(); }
-
-template <typename K>
-static inline void invertMatrix(Dune::FieldMatrix<K, 1, 1>& matrix)
+static inline void invertMatrix(Dune::FieldMatrix<K,m,n>& matrix)
 {
-    matrix[0][0] = 1.0/matrix[0][0];
+    matrix.invert();
 }
 
 template <typename K>
-static inline void invertMatrix(Dune::FieldMatrix<K, 2, 2>& matrix)
+static inline void invertMatrix(Dune::FieldMatrix<K,1,1>& matrix)
 {
-    Dune::FieldMatrix<K, 2, 2> tmp(matrix);
-    Dune::FMatrixHelp::invertMatrix(tmp, matrix);
+    Dune::FieldMatrix<K,1,1> tmp(matrix);
+    Dune::FMatrixHelp::invertMatrix(tmp,matrix);
 }
 
 template <typename K>
-static inline void invertMatrix(Dune::FieldMatrix<K, 3, 3>& matrix)
+static inline void invertMatrix(Dune::FieldMatrix<K,2,2>& matrix)
 {
-    Dune::FieldMatrix<K, 3, 3> tmp(matrix);
-    Dune::FMatrixHelp::invertMatrix(tmp, matrix);
+    Dune::FieldMatrix<K,2,2> tmp(matrix);
+    Dune::FMatrixHelp::invertMatrix(tmp,matrix);
 }
 
 template <typename K>
-static inline void invertMatrix(Dune::FieldMatrix<K, 4, 4>& matrix)
+static inline void invertMatrix(Dune::FieldMatrix<K,3,3>& matrix)
 {
-    Dune::FieldMatrix<K, 4, 4> tmp(matrix);
+    Dune::FieldMatrix<K,3,3> tmp(matrix);
+    Dune::FMatrixHelp::invertMatrix(tmp,matrix);
+}
 
-    matrix[0][0] =
-        tmp[1][1]*tmp[2][2]*tmp[3][3] -
-        tmp[1][1]*tmp[2][3]*tmp[3][2] -
-        tmp[2][1]*tmp[1][2]*tmp[3][3] +
-        tmp[2][1]*tmp[1][3]*tmp[3][2] +
-        tmp[3][1]*tmp[1][2]*tmp[2][3] -
-        tmp[3][1]*tmp[1][3]*tmp[2][2];
+//! invert 4x4 Matrix without changing the original matrix
+template <template<class K> class Matrix, typename K>
+static inline K invertMatrix4(const Matrix<K>& matrix, Matrix<K>& inverse)
+{
+    inverse[0][0] = matrix[1][1] * matrix[2][2] * matrix[3][3] -
+            matrix[1][1] * matrix[2][3] * matrix[3][2] -
+            matrix[2][1] * matrix[1][2] * matrix[3][3] +
+            matrix[2][1] * matrix[1][3] * matrix[3][2] +
+            matrix[3][1] * matrix[1][2] * matrix[2][3] -
+            matrix[3][1] * matrix[1][3] * matrix[2][2];
 
-    matrix[1][0] =
-       -tmp[1][0]*tmp[2][2]*tmp[3][3] +
-        tmp[1][0]*tmp[2][3]*tmp[3][2] +
-        tmp[2][0]*tmp[1][2]*tmp[3][3] -
-        tmp[2][0]*tmp[1][3]*tmp[3][2] -
-        tmp[3][0]*tmp[1][2]*tmp[2][3] +
-        tmp[3][0]*tmp[1][3]*tmp[2][2];
+    inverse[1][0] = -matrix[1][0] * matrix[2][2] * matrix[3][3] +
+            matrix[1][0] * matrix[2][3] * matrix[3][2] +
+            matrix[2][0] * matrix[1][2] * matrix[3][3] -
+            matrix[2][0] * matrix[1][3] * matrix[3][2] -
+            matrix[3][0] * matrix[1][2] * matrix[2][3] +
+            matrix[3][0] * matrix[1][3] * matrix[2][2];
 
-    matrix[2][0] =
-        tmp[1][0]*tmp[2][1]*tmp[3][3] -
-        tmp[1][0]*tmp[2][3]*tmp[3][1] -
-        tmp[2][0]*tmp[1][1]*tmp[3][3] +
-        tmp[2][0]*tmp[1][3]*tmp[3][1] +
-        tmp[3][0]*tmp[1][1]*tmp[2][3] -
-        tmp[3][0]*tmp[1][3]*tmp[2][1];
+    inverse[2][0] = matrix[1][0] * matrix[2][1] * matrix[3][3] -
+            matrix[1][0] * matrix[2][3] * matrix[3][1] -
+            matrix[2][0] * matrix[1][1] * matrix[3][3] +
+            matrix[2][0] * matrix[1][3] * matrix[3][1] +
+            matrix[3][0] * matrix[1][1] * matrix[2][3] -
+            matrix[3][0] * matrix[1][3] * matrix[2][1];
 
-    matrix[3][0] =
-       -tmp[1][0]*tmp[2][1]*tmp[3][2] +
-        tmp[1][0]*tmp[2][2]*tmp[3][1] +
-        tmp[2][0]*tmp[1][1]*tmp[3][2] -
-        tmp[2][0]*tmp[1][2]*tmp[3][1] -
-        tmp[3][0]*tmp[1][1]*tmp[2][2] +
-        tmp[3][0]*tmp[1][2]*tmp[2][1];
+    inverse[3][0] = -matrix[1][0] * matrix[2][1] * matrix[3][2] +
+            matrix[1][0] * matrix[2][2] * matrix[3][1] +
+            matrix[2][0] * matrix[1][1] * matrix[3][2] -
+            matrix[2][0] * matrix[1][2] * matrix[3][1] -
+            matrix[3][0] * matrix[1][1] * matrix[2][2] +
+            matrix[3][0] * matrix[1][2] * matrix[2][1];
 
-    matrix[0][1] =
-       -tmp[0][1]*tmp[2][2]*tmp[3][3] +
-        tmp[0][1]*tmp[2][3]*tmp[3][2] +
-        tmp[2][1]*tmp[0][2]*tmp[3][3] -
-        tmp[2][1]*tmp[0][3]*tmp[3][2] -
-        tmp[3][1]*tmp[0][2]*tmp[2][3] +
-        tmp[3][1]*tmp[0][3]*tmp[2][2];
+    inverse[0][1]= -matrix[0][1]  * matrix[2][2] * matrix[3][3] +
+            matrix[0][1] * matrix[2][3] * matrix[3][2] +
+            matrix[2][1] * matrix[0][2] * matrix[3][3] -
+            matrix[2][1] * matrix[0][3] * matrix[3][2] -
+            matrix[3][1] * matrix[0][2] * matrix[2][3] +
+            matrix[3][1] * matrix[0][3] * matrix[2][2];
 
-    matrix[1][1] =
-        tmp[0][0]*tmp[2][2]*tmp[3][3] -
-        tmp[0][0]*tmp[2][3]*tmp[3][2] -
-        tmp[2][0]*tmp[0][2]*tmp[3][3] +
-        tmp[2][0]*tmp[0][3]*tmp[3][2] +
-        tmp[3][0]*tmp[0][2]*tmp[2][3] -
-        tmp[3][0]*tmp[0][3]*tmp[2][2];
+    inverse[1][1] = matrix[0][0] * matrix[2][2] * matrix[3][3] -
+            matrix[0][0] * matrix[2][3] * matrix[3][2] -
+            matrix[2][0] * matrix[0][2] * matrix[3][3] +
+            matrix[2][0] * matrix[0][3] * matrix[3][2] +
+            matrix[3][0] * matrix[0][2] * matrix[2][3] -
+            matrix[3][0] * matrix[0][3] * matrix[2][2];
 
-    matrix[2][1] =
-       -tmp[0][0]*tmp[2][1]*tmp[3][3] +
-        tmp[0][0]*tmp[2][3]*tmp[3][1] +
-        tmp[2][0]*tmp[0][1]*tmp[3][3] -
-        tmp[2][0]*tmp[0][3]*tmp[3][1] -
-        tmp[3][0]*tmp[0][1]*tmp[2][3] +
-        tmp[3][0]*tmp[0][3]*tmp[2][1];
+    inverse[2][1] = -matrix[0][0] * matrix[2][1] * matrix[3][3] +
+            matrix[0][0] * matrix[2][3] * matrix[3][1] +
+            matrix[2][0] * matrix[0][1] * matrix[3][3] -
+            matrix[2][0] * matrix[0][3] * matrix[3][1] -
+            matrix[3][0] * matrix[0][1] * matrix[2][3] +
+            matrix[3][0] * matrix[0][3] * matrix[2][1];
 
-    matrix[3][1] =
-        tmp[0][0]*tmp[2][1]*tmp[3][2] -
-        tmp[0][0]*tmp[2][2]*tmp[3][1] -
-        tmp[2][0]*tmp[0][1]*tmp[3][2] +
-        tmp[2][0]*tmp[0][2]*tmp[3][1] +
-        tmp[3][0]*tmp[0][1]*tmp[2][2] -
-        tmp[3][0]*tmp[0][2]*tmp[2][1];
+    inverse[3][1] = matrix[0][0] * matrix[2][1] * matrix[3][2] -
+            matrix[0][0] * matrix[2][2] * matrix[3][1] -
+            matrix[2][0] * matrix[0][1] * matrix[3][2] +
+            matrix[2][0] * matrix[0][2] * matrix[3][1] +
+            matrix[3][0] * matrix[0][1] * matrix[2][2] -
+            matrix[3][0] * matrix[0][2] * matrix[2][1];
 
-    matrix[0][2] =
-        tmp[0][1]*tmp[1][2]*tmp[3][3] -
-        tmp[0][1]*tmp[1][3]*tmp[3][2] -
-        tmp[1][1]*tmp[0][2]*tmp[3][3] +
-        tmp[1][1]*tmp[0][3]*tmp[3][2] +
-        tmp[3][1]*tmp[0][2]*tmp[1][3] -
-        tmp[3][1]*tmp[0][3]*tmp[1][2];
+    inverse[0][2] = matrix[0][1] * matrix[1][2] * matrix[3][3] -
+            matrix[0][1] * matrix[1][3] * matrix[3][2] -
+            matrix[1][1] * matrix[0][2] * matrix[3][3] +
+            matrix[1][1] * matrix[0][3] * matrix[3][2] +
+            matrix[3][1] * matrix[0][2] * matrix[1][3] -
+            matrix[3][1] * matrix[0][3] * matrix[1][2];
 
-    matrix[1][2] =
-       -tmp[0][0] *tmp[1][2]*tmp[3][3] +
-        tmp[0][0]*tmp[1][3]*tmp[3][2] +
-        tmp[1][0]*tmp[0][2]*tmp[3][3] -
-        tmp[1][0]*tmp[0][3]*tmp[3][2] -
-        tmp[3][0]*tmp[0][2]*tmp[1][3] +
-        tmp[3][0]*tmp[0][3]*tmp[1][2];
+    inverse[1][2] = -matrix[0][0]  * matrix[1][2] * matrix[3][3] +
+            matrix[0][0] * matrix[1][3] * matrix[3][2] +
+            matrix[1][0] * matrix[0][2] * matrix[3][3] -
+            matrix[1][0] * matrix[0][3] * matrix[3][2] -
+            matrix[3][0] * matrix[0][2] * matrix[1][3] +
+            matrix[3][0] * matrix[0][3] * matrix[1][2];
 
-    matrix[2][2] =
-        tmp[0][0]*tmp[1][1]*tmp[3][3] -
-        tmp[0][0]*tmp[1][3]*tmp[3][1] -
-        tmp[1][0]*tmp[0][1]*tmp[3][3] +
-        tmp[1][0]*tmp[0][3]*tmp[3][1] +
-        tmp[3][0]*tmp[0][1]*tmp[1][3] -
-        tmp[3][0]*tmp[0][3]*tmp[1][1];
+    inverse[2][2] = matrix[0][0] * matrix[1][1] * matrix[3][3] -
+            matrix[0][0] * matrix[1][3] * matrix[3][1] -
+            matrix[1][0] * matrix[0][1] * matrix[3][3] +
+            matrix[1][0] * matrix[0][3] * matrix[3][1] +
+            matrix[3][0] * matrix[0][1] * matrix[1][3] -
+            matrix[3][0] * matrix[0][3] * matrix[1][1];
 
-    matrix[3][2] =
-       -tmp[0][0]*tmp[1][1]*tmp[3][2] +
-        tmp[0][0]*tmp[1][2]*tmp[3][1] +
-        tmp[1][0]*tmp[0][1]*tmp[3][2] -
-        tmp[1][0]*tmp[0][2]*tmp[3][1] -
-        tmp[3][0]*tmp[0][1]*tmp[1][2] +
-        tmp[3][0]*tmp[0][2]*tmp[1][1];
+    inverse[3][2] = -matrix[0][0] * matrix[1][1] * matrix[3][2] +
+            matrix[0][0] * matrix[1][2] * matrix[3][1] +
+            matrix[1][0] * matrix[0][1] * matrix[3][2] -
+            matrix[1][0] * matrix[0][2] * matrix[3][1] -
+            matrix[3][0] * matrix[0][1] * matrix[1][2] +
+            matrix[3][0] * matrix[0][2] * matrix[1][1];
 
-    matrix[0][3] =
-       -tmp[0][1]*tmp[1][2]*tmp[2][3] +
-        tmp[0][1]*tmp[1][3]*tmp[2][2] +
-        tmp[1][1]*tmp[0][2]*tmp[2][3] -
-        tmp[1][1]*tmp[0][3]*tmp[2][2] -
-        tmp[2][1]*tmp[0][2]*tmp[1][3] +
-        tmp[2][1]*tmp[0][3]*tmp[1][2];
+    inverse[0][3] = -matrix[0][1] * matrix[1][2] * matrix[2][3] +
+            matrix[0][1] * matrix[1][3] * matrix[2][2] +
+            matrix[1][1] * matrix[0][2] * matrix[2][3] -
+            matrix[1][1] * matrix[0][3] * matrix[2][2] -
+            matrix[2][1] * matrix[0][2] * matrix[1][3] +
+            matrix[2][1] * matrix[0][3] * matrix[1][2];
 
-    matrix[1][3] =
-        tmp[0][0]*tmp[1][2]*tmp[2][3] -
-        tmp[0][0]*tmp[1][3]*tmp[2][2] -
-        tmp[1][0]*tmp[0][2]*tmp[2][3] +
-        tmp[1][0]*tmp[0][3]*tmp[2][2] +
-        tmp[2][0]*tmp[0][2]*tmp[1][3] -
-        tmp[2][0]*tmp[0][3]*tmp[1][2];
+    inverse[1][3] = matrix[0][0] * matrix[1][2] * matrix[2][3] -
+            matrix[0][0] * matrix[1][3] * matrix[2][2] -
+            matrix[1][0] * matrix[0][2] * matrix[2][3] +
+            matrix[1][0] * matrix[0][3] * matrix[2][2] +
+            matrix[2][0] * matrix[0][2] * matrix[1][3] -
+            matrix[2][0] * matrix[0][3] * matrix[1][2];
 
-    matrix[2][3] =
-       -tmp[0][0]*tmp[1][1]*tmp[2][3] +
-        tmp[0][0]*tmp[1][3]*tmp[2][1] +
-        tmp[1][0]*tmp[0][1]*tmp[2][3] -
-        tmp[1][0]*tmp[0][3]*tmp[2][1] -
-        tmp[2][0]*tmp[0][1]*tmp[1][3] +
-        tmp[2][0]*tmp[0][3]*tmp[1][1];
+    inverse[2][3] = -matrix[0][0] * matrix[1][1] * matrix[2][3] +
+            matrix[0][0] * matrix[1][3] * matrix[2][1] +
+            matrix[1][0] * matrix[0][1] * matrix[2][3] -
+            matrix[1][0] * matrix[0][3] * matrix[2][1] -
+            matrix[2][0] * matrix[0][1] * matrix[1][3] +
+            matrix[2][0] * matrix[0][3] * matrix[1][1];
 
-    matrix[3][3] =
-        tmp[0][0]*tmp[1][1]*tmp[2][2] -
-        tmp[0][0]*tmp[1][2]*tmp[2][1] -
-        tmp[1][0]*tmp[0][1]*tmp[2][2] +
-        tmp[1][0]*tmp[0][2]*tmp[2][1] +
-        tmp[2][0]*tmp[0][1]*tmp[1][2] -
-        tmp[2][0]*tmp[0][2]*tmp[1][1];
+    inverse[3][3] = matrix[0][0] * matrix[1][1] * matrix[2][2] -
+            matrix[0][0] * matrix[1][2] * matrix[2][1] -
+            matrix[1][0] * matrix[0][1] * matrix[2][2] +
+            matrix[1][0] * matrix[0][2] * matrix[2][1] +
+            matrix[2][0] * matrix[0][1] * matrix[1][2] -
+            matrix[2][0] * matrix[0][2] * matrix[1][1];
 
-    K det =
-        tmp[0][0]*matrix[0][0] +
-        tmp[0][1]*matrix[1][0] +
-        tmp[0][2]*matrix[2][0] +
-        tmp[0][3]*matrix[3][0];
+    K det = matrix[0][0] * inverse[0][0] + matrix[0][1] * inverse[1][0] +
+            matrix[0][2] * inverse[2][0] + matrix[0][3] * inverse[3][0];
 
     // return identity for singular or nearly singular matrices.
-    if (std::abs(det) < 1e-40)
-        matrix = std::numeric_limits<K>::quiet_NaN();
-    else
-        matrix *= 1.0/det;
+    if (std::abs(det) < 1e-40) {
+        inverse = std::numeric_limits<K>::quiet_NaN();
+        throw NumericalProblem("Singular matrix");
+    } else
+      inverse *= 1.0 / det;
+
+    return det;
 }
-} // namespace MatrixBlockHelp
+
+template<class K> using FMat4 = Dune::FieldMatrix<K,4,4>;
+
+template <typename K>
+static inline void invertMatrix(Dune::FieldMatrix<K,4,4>& matrix)
+{
+    FMat4<K> tmp(matrix);
+    invertMatrix4<FMat4>(tmp, matrix);
+}
+
+template <typename K>
+static inline void invertMatrix(Dune::DynamicMatrix<K>& matrix)
+{
+    // this function is only for 4 X 4 matrix
+    // for 4 X 4 matrix, using the invertMatrix() function above
+    // it is for temporary usage, mainly to reduce the huge burden of testing
+    // what algorithm should be used to invert 4 X 4 matrix will be handled
+    // as a seperate issue
+    if (matrix.rows() == 4) {
+         Dune::DynamicMatrix<K> A = matrix;
+         invertMatrix4(A, matrix);
+         return;
+     }
+
+#if ! DUNE_VERSION_NEWER( DUNE_COMMON, 2, 7 )
+     Dune::FMatrixPrecision<K>::set_singular_limit(1.e-30);
+#endif
+     matrix.invert();
+}
+
+} // namespace detail
 
 template <class Scalar, int n, int m>
 class MatrixBlock : public Dune::FieldMatrix<Scalar, n, m>
@@ -227,7 +245,7 @@ public:
     {}
 
     void invert()
-    { Opm::MatrixBlockHelp::invertMatrix(asBase()); }
+    { detail::invertMatrix(asBase()); }
 
     const BaseType& asBase() const
     { return static_cast<const BaseType&>(*this); }
