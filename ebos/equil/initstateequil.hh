@@ -129,12 +129,13 @@ private:
 };
 
 //TODO:add argument rvw
-template <class FluidSystem, class RV>
+template <class FluidSystem, class RV, class RVW>
 class Gas
 {
 public:
     Gas(const double temp,
         const RV& rv,
+        const RVW& rvw,
         const int pvtRegionIdx,
         const double normGrav);
 
@@ -144,6 +145,7 @@ public:
 private:
     const double temp_;
     const RV& rv_;
+    const RVW& rvw_;
     const int pvtRegionIdx_;
     const double g_;
 
@@ -277,7 +279,7 @@ private:
     >;
 
     using GasPressODE = PhasePressODE::Gas<
-        FluidSystem, typename Region::CalcEvaporation
+        FluidSystem, typename Region::CalcEvaporation, typename Region::CalcWaterEvaporation
     >;
 
     using WatPressODE = PhasePressODE::Water<FluidSystem>;

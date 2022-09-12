@@ -325,30 +325,31 @@ density(const double depth,
     return rho;
 }
 
-// TODO: add RVW
-template<class FluidSystem, class RV>
-Gas<FluidSystem,RV>::
+template<class FluidSystem, class RV, class RVW>
+Gas<FluidSystem,RV,RVW>::
 Gas(const double temp,
         const RV& rv,
+        const RVW& rvw,
         const int pvtRegionIdx,
         const double normGrav)
         : temp_(temp)
         , rv_(rv)
+        , rvw_(rvw)
         , pvtRegionIdx_(pvtRegionIdx)
         , g_(normGrav)
 {
 }
 
-template<class FluidSystem, class RV>
-double Gas<FluidSystem,RV>::
+template<class FluidSystem, class RV, class RVW>
+double Gas<FluidSystem,RV,RVW>::
 operator()(const double depth,
            const double press) const
 {
     return this->density(depth, press) * g_;
 }
 
-template<class FluidSystem, class RV>
-double Gas<FluidSystem,RV>::
+template<class FluidSystem, class RV, class RVW>
+double Gas<FluidSystem,RV,RVW>::
 density(const double depth,
         const double press) const
 {
@@ -356,17 +357,52 @@ density(const double depth,
     if (FluidSystem::enableVaporizedOil())
         rv = rv_(depth, press, temp_);
 
+    double rvw = 0.0;
+    if (FluidSystem::enableVaporizedWater())
+        rvw = rvw_(depth, press, temp_);
+
     double bGas = 0.0;
-    if (rv >= FluidSystem::gasPvt().saturatedOilVaporizationFactor(pvtRegionIdx_, temp_, press)) {
-        bGas = FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(pvtRegionIdx_, temp_, press);
+
+    if (FluidSystem::enableVaporizedOil() && FluidSystem::enableVaporizedWater()) {
+        if (rv >= FluidSystem::gasPvt().saturatedOilVaporizationFactor(pvtRegionIdx_, temp_, press)
+            && rvw >= FluidSystem::gasPvt().saturatedWaterVaporizationFactor(pvtRegionIdx_, temp_, press))
+        {
+            bGas = FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(pvtRegionIdx_, temp_, press);
+        } else {
+            bGas = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx_, temp_, press, rv, rvw);
+        }
+        double rho = bGas * FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, pvtRegionIdx_);
+        rho += rv * bGas * FluidSystem::referenceDensity(FluidSystem::oilPhaseIdx, pvtRegionIdx_)
+               + rvw * bGas * FluidSystem::referenceDensity(FluidSystem::waterPhaseIdx, pvtRegionIdx_);
+        return rho;
     }
-    else {
-        bGas = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx_, temp_, press, rv, 0.0/*=Rvw*/);
-    }
-    double rho = bGas * FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, pvtRegionIdx_);
-    if (FluidSystem::enableVaporizedOil()) {
+
+    if (FluidSystem::enableVaporizedOil()){
+        if (rv >= FluidSystem::gasPvt().saturatedOilVaporizationFactor(pvtRegionIdx_, temp_, press)) {
+            bGas = FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(pvtRegionIdx_, temp_, press);
+        } else {
+            bGas = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx_, temp_, press, rv, 0.0/*=rvw*/);
+        }
+        double rho = bGas * FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, pvtRegionIdx_);
         rho += rv * bGas * FluidSystem::referenceDensity(FluidSystem::oilPhaseIdx, pvtRegionIdx_);
+        return rho;
+     }
+
+    if (FluidSystem::enableVaporizedWater()){
+        if (rvw >= FluidSystem::gasPvt().saturatedWaterVaporizationFactor(pvtRegionIdx_, temp_, press)) {
+            bGas = FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(pvtRegionIdx_, temp_, press);
+        }
+        else {
+            bGas = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx_, temp_, press, 0.0/*=rv*/, rvw);
+        }
+        double rho = bGas * FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, pvtRegionIdx_);
+        rho += rvw * bGas * FluidSystem::referenceDensity(FluidSystem::waterPhaseIdx, pvtRegionIdx_);
+        return rho;
     }
+
+    // immiscible gas
+    bGas = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx_, temp_, press, 0.0/*=rv*/, 0.0/*=rvw*/);
+    double rho = bGas * FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, pvtRegionIdx_);
 
     return rho;
 }
@@ -1126,7 +1162,7 @@ makeGasPressure(const typename GPress::InitCond& ic,
                 const VSpan&                     span)
 {
     const auto drho = GasPressODE {
-        this->temperature_, reg.evaporationCalculator(),
+        this->temperature_, reg.evaporationCalculator(), reg.waterEvaporationCalculator(),
         reg.pvtIdx(), this->gravity_
     };
 
