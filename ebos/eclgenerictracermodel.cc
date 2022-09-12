@@ -33,7 +33,6 @@
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/Runspec.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/TracerVdTable.hpp>
-#include <opm/simulators/linalg/FlexibleSolver.hpp>
 
 #include <dune/istl/operators.hh>
 #include <dune/istl/solvers.hh>
