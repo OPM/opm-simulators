@@ -1503,6 +1503,7 @@ namespace Opm {
         const bool network_changed = comm.sum(local_network_changed);
         const double network_imbalance = comm.max(local_network_imbalance);
 
+<<<<<<< HEAD
         std::set<std::string> switched_wells;
 <<<<<<< HEAD
 
@@ -1526,6 +1527,8 @@ namespace Opm {
                     changed_well_group = changed_well || changed_well_group;
                 }
 =======
+=======
+>>>>>>> always check individual controls
         bool changed = false;
         // Check group individual constraints.
         bool changed_individual = updateGroupIndividualControls(deferred_logger,
@@ -1552,7 +1555,6 @@ namespace Opm {
             const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Group;
             const bool changed_well = well->updateWellControl(ebosSimulator_, mode, this->wellState(), this->groupState(), deferred_logger);
             if (changed_well) {
-                switched_wells.insert(well->name());
                 changed_well_group = changed_well || changed_well_group;
 >>>>>>> check controls in getWellConvergence
             }
@@ -1566,9 +1568,6 @@ namespace Opm {
         // Check individual well constraints and communicate.
         bool changed_well_individual = false;
         for (const auto& well : well_container_) {
-            if (switched_wells.count(well->name())) {
-                continue;
-            }
             const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Individual;
             const bool changed_well = well->updateWellControl(ebosSimulator_, mode, this->wellState(), this->groupState(), deferred_logger);
             if (changed_well) {
@@ -1580,7 +1579,6 @@ namespace Opm {
             updateAndCommunicate(episodeIdx, iterationIdx, deferred_logger);
             changed = true;
         }
-
 
         // update wsolvent fraction for REIN wells
         const Group& fieldGroup = schedule().getGroup("FIELD", episodeIdx);
