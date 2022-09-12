@@ -158,6 +158,25 @@ public:
 
         rates[BlackoilIndices::conti0EqIdx + compIdx_()]
             += this->Qai_[idx] / model.dofTotalVolume(cellIdx);
+
+        if constexpr (enableEnergy) {
+            auto fs = intQuantsPtr->fluidState();
+            if (this->Ta0_.has_value() && this->Qai_[idx] > 0)
+            {
+                fs.setTemperature(this->Ta0_.value());
+                typedef typename std::decay<decltype(fs)>::type::Scalar FsScalar;
+                typename FluidSystem::template ParameterCache<FsScalar> paramCache;
+                const unsigned pvtRegionIdx = intQuantsPtr->pvtRegionIndex();
+                paramCache.setRegionIndex(pvtRegionIdx);
+                paramCache.setMaxOilSat(this->ebos_simulator_.problem().maxOilSaturation(cellIdx));
+                paramCache.updatePhase(fs, this->phaseIdx_());
+                const auto& h = FluidSystem::enthalpy(fs, paramCache, this->phaseIdx_());
+                fs.setEnthalpy(this->phaseIdx_(), h);
+            }
+            rates[BlackoilIndices::contiEnergyEqIdx]
+            += this->Qai_[idx] *fs.enthalpy(this->phaseIdx_()) * FluidSystem::referenceDensity( this->phaseIdx_(), intQuantsPtr->pvtRegionIndex()) / model.dofTotalVolume(cellIdx);
+
+        }
     }
 
     std::size_t size() const
@@ -404,6 +423,7 @@ protected:
 
     Scalar Tc_{}; // Time constant
     Scalar pa0_{}; // initial aquifer pressure
+    std::optional<Scalar> Ta0_{}; // initial aquifer temperature
     Scalar rhow_{};
 
     Eval W_flux_;

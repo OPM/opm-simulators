@@ -163,6 +163,8 @@ protected:
 
         this->rhow_ = this->aqufetp_data_.waterDensity();
         this->pa0_ = this->aqufetp_data_.initial_pressure.value();
+        if (this->aqufetp_data_.initial_temperature.has_value())
+            this->Ta0_ = this->aqufetp_data_.initial_temperature.value();
         this->aquifer_pressure_ = this->pa0_;
     }
 

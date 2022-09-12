@@ -215,6 +215,9 @@ protected:
         }
 
         this->pa0_ = this->aquct_data_.initial_pressure.value();
+        if (this->aquct_data_.initial_temperature.has_value())
+            this->Ta0_ = this->aquct_data_.initial_temperature.value();
+
         if(this->co2store_()) {
              const auto press = this->aquct_data_.initial_pressure.value();
 
