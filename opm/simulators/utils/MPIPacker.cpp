@@ -153,12 +153,6 @@ std::size_t packSize(const std::string& str, Opm::Parallel::MPIComm comm)
     return packSize(str.c_str(), comm);
 }
 
-template<class T, std::size_t N>
-std::size_t packSize(const std::array<T,N>& data, Opm::Parallel::MPIComm comm)
-{
-    return N*packSize(data[0], comm);
-}
-
 template <class T>
 struct Packing
 {
@@ -282,14 +276,6 @@ void pack(const std::unordered_set<T,H,KE,A>& data,
     {
         pack(entry, buffer, position, comm);
     }
-}
-
-template<class T, size_t N>
-void pack(const std::array<T,N>& data, std::vector<char>& buffer, int& position,
-          Opm::Parallel::MPIComm comm)
-{
-    for (const T& entry : data)
-        pack(entry, buffer, position, comm);
 }
 
 template<class A>
@@ -492,14 +478,6 @@ void unpack(std::unordered_set<T,H,KE,A>& data,
     }
 }
 
-template<class T, size_t N>
-void unpack(std::array<T,N>& data, std::vector<char>& buffer, int& position,
-          Opm::Parallel::MPIComm comm)
-{
-    for (T& entry : data)
-        unpack(entry, buffer, position, comm);
-}
-
 void unpack(char* str, std::size_t length, std::vector<char>& buffer, int& position,
             Opm::Parallel::MPIComm comm)
 {
@@ -564,7 +542,6 @@ INSTANTIATE_PACK_VECTOR(unsigned int)
 INSTANTIATE_PACK_VECTOR(unsigned long int)
 INSTANTIATE_PACK_VECTOR(unsigned long long int)
 INSTANTIATE_PACK_VECTOR(std::time_t)
-INSTANTIATE_PACK_VECTOR(std::array<double, 3>)
 INSTANTIATE_PACK_VECTOR(std::pair<bool,double>)
 INSTANTIATE_PACK_VECTOR(std::pair<std::string,std::vector<size_t>>)
 INSTANTIATE_PACK_VECTOR(std::pair<int,std::vector<int>>)
@@ -593,11 +570,6 @@ INSTANTIATE_PACK(unsigned char)
 INSTANTIATE_PACK(unsigned int)
 INSTANTIATE_PACK(unsigned long int)
 INSTANTIATE_PACK(unsigned long long int)
-INSTANTIATE_PACK(std::array<short,3>)
-INSTANTIATE_PACK(std::array<bool,3>)
-INSTANTIATE_PACK(std::array<int,3>)
-INSTANTIATE_PACK(std::array<double,4>)
-INSTANTIATE_PACK(std::array<double,5>)
 INSTANTIATE_PACK(std::pair<double, double>)
 INSTANTIATE_PACK(std::unordered_set<std::string>)
 INSTANTIATE_PACK(std::set<std::string>)
