@@ -404,15 +404,15 @@ protected:
             // concentration (the urea concentration has been scaled by 10). For
             // the biofilm and calcite, we set this value equal to the porosity minus the clogging tolerance.
             if (enableMICP && pvIdx == Indices::microbialConcentrationIdx)
-                nextValue[pvIdx] = std::clamp(nextValue[pvIdx], 0.0, MICPModule::MICPparaDensityBiofilm());
+                nextValue[pvIdx] = std::clamp(nextValue[pvIdx], 0.0, MICPModule::densityBiofilm());
             if (enableMICP && pvIdx == Indices::oxygenConcentrationIdx)
-                nextValue[pvIdx] = std::clamp(nextValue[pvIdx], 0.0, MICPModule::MICPparaMaximumOxygenConcentration());
+                nextValue[pvIdx] = std::clamp(nextValue[pvIdx], 0.0, MICPModule::maximumOxygenConcentration());
             if (enableMICP && pvIdx == Indices::ureaConcentrationIdx)
-                nextValue[pvIdx] = std::clamp(nextValue[pvIdx], 0.0, MICPModule::MICPparaMaximumUreaConcentration());
+                nextValue[pvIdx] = std::clamp(nextValue[pvIdx], 0.0, MICPModule::maximumUreaConcentration());
             if (enableMICP && pvIdx == Indices::biofilmConcentrationIdx)
-                nextValue[pvIdx] = std::clamp(nextValue[pvIdx], 0.0, MICPModule::phi()[globalDofIdx] - MICPModule::MICPparaToleranceBeforeClogging());
+                nextValue[pvIdx] = std::clamp(nextValue[pvIdx], 0.0, MICPModule::phi()[globalDofIdx] - MICPModule::toleranceBeforeClogging());
             if (enableMICP && pvIdx == Indices::calciteConcentrationIdx)
-                nextValue[pvIdx] = std::clamp(nextValue[pvIdx], 0.0, MICPModule::phi()[globalDofIdx] - MICPModule::MICPparaToleranceBeforeClogging());
+                nextValue[pvIdx] = std::clamp(nextValue[pvIdx], 0.0, MICPModule::phi()[globalDofIdx] - MICPModule::toleranceBeforeClogging());
         }
 
         // switch the new primary variables to something which is physically meaningful.
