@@ -64,7 +64,7 @@ decltype(auto) make_variant(std::size_t index)
 }
 
 template<class T>
-using remove_cvr_t = std::remove_const_t<std::remove_reference_t<T>>;
+using remove_cvr_t = std::remove_cv_t<std::remove_reference_t<T>>;
 
 } // namespace detail
 
