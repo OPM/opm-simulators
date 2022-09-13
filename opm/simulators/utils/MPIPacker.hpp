@@ -29,7 +29,6 @@
 #include <string>
 #include <tuple>
 #include <typeinfo>
-#include <vector>
 
 namespace Opm
 {
@@ -77,12 +76,6 @@ std::size_t packSize(const T& data, Opm::Parallel::MPIComm comm)
 
 template<class T1, class T2>
 std::size_t packSize(const std::pair<T1,T2>& data, Opm::Parallel::MPIComm comm);
-
-template<class T, class A>
-std::size_t packSize(const std::vector<T,A>& data, Opm::Parallel::MPIComm comm);
-
-template<class A>
-std::size_t packSize(const std::vector<bool,A>& data, Opm::Parallel::MPIComm comm);
 
 template<class... Ts>
 std::size_t packSize(const std::tuple<Ts...>& data, Opm::Parallel::MPIComm comm);
@@ -137,14 +130,6 @@ void pack(const T& data, std::vector<char>& buffer, int& position,
 
 template<class T1, class T2>
 void pack(const std::pair<T1,T2>& data, std::vector<char>& buffer, int& position,
-          Opm::Parallel::MPIComm comm);
-
-template<class T, class A>
-void pack(const std::vector<T,A>& data, std::vector<char>& buffer, int& position,
-          Opm::Parallel::MPIComm comm);
-
-template<class A>
-void pack(const std::vector<bool,A>& data, std::vector<char>& buffer, int& position,
           Opm::Parallel::MPIComm comm);
 
 template<class... Ts>
@@ -206,14 +191,6 @@ template<class T1, class T2>
 void unpack(std::pair<T1,T2>& data, std::vector<char>& buffer, int& position,
             Opm::Parallel::MPIComm comm);
 
-template<class T, class A>
-void unpack(std::vector<T,A>& data, std::vector<char>& buffer, int& position,
-            Opm::Parallel::MPIComm comm);
-
-template<class A>
-void unpack(std::vector<bool,A>& data, std::vector<char>& buffer, int& position,
-          Opm::Parallel::MPIComm comm);
-
 template<class... Ts>
 void unpack(std::tuple<Ts...>& data, std::vector<char>& buffer,
             int& position, Opm::Parallel::MPIComm comm);
@@ -236,59 +213,6 @@ void unpack(std::bitset<Size>& data, std::vector<char>& buffer, int& position,
 
 ADD_PACK_PROTOTYPES(std::string)
 ADD_PACK_PROTOTYPES(time_point)
-
-template<typename T, typename... Args>
-void variadic_packsize(size_t& size, Parallel::Communication comm, T& first, Args&&... args)
-{
-  size += packSize(first, comm);
-  if constexpr (sizeof...(args) > 0)
-      variadic_packsize(size, comm, std::forward<Args>(args)...);
-}
-
-template<typename T, typename... Args>
-void variadic_pack(int& pos, std::vector<char>& buffer, Parallel::Communication comm, T& first, Args&&... args)
-{
-  pack(first, buffer, pos, comm);
-  if constexpr (sizeof...(args) > 0)
-      variadic_pack(pos, buffer, comm, std::forward<Args>(args)...);
-}
-
-template<typename T, typename... Args>
-void variadic_unpack(int& pos, std::vector<char>& buffer, Parallel::Communication comm, T& first, Args&&... args)
-{
-  unpack(first, buffer, pos, comm);
-  if constexpr (sizeof...(args) > 0)
-      variadic_unpack(pos, buffer, comm, std::forward<Args>(args)...);
-}
-
-#if HAVE_MPI
-template<typename... Args>
-void broadcast(Parallel::Communication comm, int root, Args&&... args)
-{
-  if (comm.size() == 1)
-      return;
-
-  size_t size = 0;
-  if (comm.rank() == root)
-      variadic_packsize(size, comm, args...);
-
-  comm.broadcast(&size, 1, root);
-  std::vector<char> buffer(size);
-  if (comm.rank() == root) {
-      int pos = 0;
-      variadic_pack(pos, buffer, comm, args...);
-  }
-  comm.broadcast(buffer.data(), size, root);
-  if (comm.rank() != root) {
-      int pos = 0;
-      variadic_unpack(pos, buffer, comm, std::forward<Args>(args)...);
-  }
-}
-#else
-template<typename... Args>
-void broadcast(Parallel::Communication, int, Args&&...)
-{}
-#endif
 
 } // end namespace Mpi
 

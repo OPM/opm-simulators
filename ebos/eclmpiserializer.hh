@@ -34,6 +34,8 @@
 #include <variant>
 #include <vector>
 
+namespace Opm {
+
 namespace detail
 {
 
@@ -62,11 +64,9 @@ decltype(auto) make_variant(std::size_t index)
 }
 
 template<class T>
-using remove_cvr_t = std::remove_const_t<std::remove_reference_t<T>>;
+using remove_cvr_t = std::remove_cv_t<std::remove_reference_t<T>>;
 
 } // namespace detail
-
-namespace Opm {
 
 /*! \brief Class for (de-)serializing and broadcasting data in parallel.
  *!  \details If the class has a serializeOp member this is used,
@@ -95,12 +95,16 @@ public:
             variant(data);
         } else if constexpr (is_optional<T>::value) {
             optional(data);
+        } else if constexpr (is_vector<T>::value) {
+            vector(const_cast<T&>(data));
         } else if constexpr (is_map<T>::value) {
             map(const_cast<T&>(data));
         } else if constexpr (is_array<T>::value) {
             array(const_cast<T&>(data));
         } else if constexpr (is_set<T>::value) {
             set(const_cast<T&>(data));
+        } else if constexpr (has_serializeOp<detail::remove_cvr_t<T>>::value) {
+          const_cast<T&>(data).serializeOp(*this);
         } else {
           if (m_op == Operation::PACKSIZE)
               m_packSize += Mpi::packSize(data, m_comm);
@@ -124,6 +128,8 @@ public:
                   pair(it);
               else if constexpr (is_ptr<T>::value)
                   ptr(it);
+              else if constexpr (is_vector<T>::value)
+                vector(it);
               else if constexpr (has_serializeOp<T>::value)
                   it.serializeOp(*this);
               else
@@ -142,6 +148,32 @@ public:
             Mpi::unpack(size, m_buffer, m_position, m_comm);
             data.resize(size);
             handle(data);
+        }
+    }
+
+    //! \brief Handler for bool vectors.
+    //! \param data The vector to (de-)serialize
+    void vector(std::vector<bool>& data)
+    {
+        if (m_op == Operation::PACKSIZE) {
+            m_packSize += Mpi::packSize(data.size(), m_comm);
+            m_packSize += data.size()*Mpi::packSize(bool(), m_comm);
+        } else if (m_op == Operation::PACK) {
+            (*this)(data.size());
+            for (const auto entry : data) { // Not a reference: vector<bool> range
+                bool b = entry;
+                (*this)(b);
+            }
+        } else if (m_op == Operation::UNPACK) {
+            size_t size;
+            (*this)(size);
+            data.clear();
+            data.reserve(size);
+            for (size_t i = 0; i < size; ++i) {
+                bool entry;
+                (*this)(entry);
+                data.push_back(entry);
+            }
         }
     }
 
@@ -212,30 +244,19 @@ public:
         if (m_op == Operation::PACKSIZE) {
             m_packSize += Mpi::packSize(data.has_value(), m_comm);
             if (data.has_value()) {
-                if constexpr (has_serializeOp<T>::value) {
-                    const_cast<T&>(*data).serializeOp(*this);
-                } else
-                    m_packSize += Mpi::packSize(*data, m_comm);
+                (*this)(*data);
             }
         } else if (m_op == Operation::PACK) {
             Mpi::pack(data.has_value(), m_buffer, m_position, m_comm);
             if (data.has_value()) {
-                if constexpr (has_serializeOp<T>::value) {
-                    const_cast<T&>(*data).serializeOp(*this);
-                } else {
-                    Mpi::pack(*data, m_buffer, m_position, m_comm);
-                }
+                (*this)(*data);
             }
         } else if (m_op == Operation::UNPACK) {
             bool has;
             Mpi::unpack(has, m_buffer, m_position, m_comm);
             if (has) {
                 T res;
-                if constexpr (has_serializeOp<T>::value) {
-                    res.serializeOp(*this);
-                } else {
-                    Mpi::unpack(res, m_buffer, m_position, m_comm);
-                }
+                (*this)(res);
                 const_cast<std::optional<T>&>(data) = res;
             }
         }
@@ -308,7 +329,7 @@ public:
         auto handle = [&](auto& d)
         {
             if constexpr (is_vector<Data>::value)
-                this->vector(d);
+                vector(d);
             else if constexpr (is_ptr<Data>::value)
                 ptr(d);
             else if constexpr (has_serializeOp<Data>::value)
@@ -369,15 +390,51 @@ public:
     //!
     //! \tparam T Type of class to broadcast
     //! \param data Class to broadcast
+    //! \param root Process to broadcast from
     template<class T>
-    void broadcast(T& data)
+    void broadcast(T& data, int root = 0)
     {
         if (m_comm.size() == 1)
             return;
 
-        if (m_comm.rank() == 0) {
+        if (m_comm.rank() == root) {
             try {
                 pack(data);
+                m_packSize = m_position;
+                m_comm.broadcast(&m_packSize, 1, root);
+                m_comm.broadcast(m_buffer.data(), m_position, root);
+            } catch (...) {
+                m_packSize = std::numeric_limits<size_t>::max();
+                m_comm.broadcast(&m_packSize, 1, root);
+                throw;
+            }
+        } else {
+            m_comm.broadcast(&m_packSize, 1, root);
+            if (m_packSize == std::numeric_limits<size_t>::max()) {
+                throw std::runtime_error("Error detected in parallel serialization");
+            }
+
+            m_buffer.resize(m_packSize);
+            m_comm.broadcast(m_buffer.data(), m_packSize, root);
+            unpack(data);
+        }
+    }
+
+    template<typename... Args>
+    void broadcast(int root, Args&&... args)
+    {
+        if (m_comm.size() == 1)
+            return;
+
+        if (m_comm.rank() == root) {
+            try {
+                m_op = Operation::PACKSIZE;
+                m_packSize = 0;
+                variadic_call(args...);
+                m_position = 0;
+                m_buffer.resize(m_packSize);
+                m_op = Operation::PACK;
+                variadic_call(args...);
                 m_packSize = m_position;
                 m_comm.broadcast(&m_packSize, 1, 0);
                 m_comm.broadcast(m_buffer.data(), m_position, 0);
@@ -393,7 +450,9 @@ public:
             }
             m_buffer.resize(m_packSize);
             m_comm.broadcast(m_buffer.data(), m_packSize, 0);
-            unpack(data);
+            m_position = 0;
+            m_op = Operation::UNPACK;
+            variadic_call(std::forward<Args>(args)...);
         }
     }
 
@@ -402,17 +461,18 @@ public:
     //!
     //! \tparam T Type of class to broadcast
     //! \param data Class to broadcast
+    //! \param root Process to broadcast from
     template<class T>
-    void append(T& data)
+    void append(T& data, int root = 0)
     {
         if (m_comm.size() == 1)
             return;
 
         T tmp;
-        T& bcast = m_comm.rank() == 0 ? data : tmp;
+        T& bcast = m_comm.rank() == root ? data : tmp;
         broadcast(bcast);
 
-        if (m_comm.rank() != 0)
+        if (m_comm.rank() != root)
             data.append(tmp);
     }
 
@@ -429,6 +489,15 @@ public:
     }
 
 protected:
+    template<typename T, typename... Args>
+    void variadic_call(T& first,
+                       Args&&... args)
+    {
+      (*this)(first);
+      if constexpr (sizeof...(args) > 0)
+          variadic_call(std::forward<Args>(args)...);
+    }
+
     //! \brief Enumeration of operations.
     enum class Operation {
         PACKSIZE, //!< Calculating serialization buffer size

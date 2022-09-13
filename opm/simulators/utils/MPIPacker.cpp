@@ -67,28 +67,6 @@ std::size_t packSize(const std::pair<T1,T2>& data, Opm::Parallel::MPIComm comm)
     return packSize(data.first, comm) + packSize(data.second, comm);
 }
 
-template<class T, class A>
-std::size_t packSize(const std::vector<T,A>& data, Opm::Parallel::MPIComm comm)
-{
-    if (std::is_pod<T>::value)
-        // size written automatically
-        return packSize(data.data(), data.size(), comm);
-
-    std::size_t size = packSize(data.size(), comm);
-
-    for (const auto& entry: data)
-        size += packSize(entry, comm);
-
-    return size;
-}
-
-template<class A>
-std::size_t packSize(const std::vector<bool,A>& data, Opm::Parallel::MPIComm comm)
-{
-    bool entry = false;
-    return packSize(data.size(), comm) + data.size()*packSize(entry,comm);
-}
-
 template<std::size_t I = 0, typename Tuple>
 typename std::enable_if<I == std::tuple_size<Tuple>::value, std::size_t>::type
 pack_size_tuple_entry(const Tuple&, Opm::Parallel::MPIComm)
@@ -211,34 +189,6 @@ void pack(const std::pair<T1,T2>& data, std::vector<char>& buffer, int& position
     pack(data.second, buffer, position, comm);
 }
 
-template<class T, class A>
-void pack(const std::vector<T, A>& data, std::vector<char>& buffer, int& position,
-          Opm::Parallel::MPIComm comm)
-{
-    if (std::is_pod<T>::value)
-    {
-        // size written automatically
-        pack(data.data(), data.size(), buffer, position, comm);
-        return;
-    }
-
-    pack(data.size(), buffer, position, comm);
-
-    for (const auto& entry: data)
-        pack(entry, buffer, position, comm);
-}
-
-template<class A>
-void pack(const std::vector<bool,A>& data, std::vector<char>& buffer, int& position,
-          Opm::Parallel::MPIComm comm)
-{
-    pack(data.size(), buffer, position, comm);
-    for (const auto entry : data) { // Not a reference: vector<bool> range
-        bool b = entry;
-        pack(b, buffer, position, comm);
-    }
-}
-
 template<std::size_t I = 0, typename Tuple>
 typename std::enable_if<I == std::tuple_size<Tuple>::value, void>::type
 pack_tuple_entry(const Tuple&, std::vector<char>&, int&,
@@ -340,39 +290,6 @@ void unpack(std::pair<T1,T2>& data, std::vector<char>& buffer, int& position,
     unpack(data.second, buffer, position, comm);
 }
 
-template<class T, class A>
-void unpack(std::vector<T,A>& data, std::vector<char>& buffer, int& position,
-            Opm::Parallel::MPIComm comm)
-{
-    std::size_t length = 0;
-    unpack(length, buffer, position, comm);
-    data.resize(length);
-
-    if (std::is_pod<T>::value)
-    {
-        unpack(data.data(), data.size(), buffer, position, comm);
-        return;
-    }
-
-    for (auto& entry: data)
-        unpack(entry, buffer, position, comm);
-}
-
-template<class A>
-void unpack(std::vector<bool,A>& data, std::vector<char>& buffer, int& position,
-            Opm::Parallel::MPIComm comm)
-{
-    size_t size;
-    unpack(size, buffer, position, comm);
-    data.clear();
-    data.reserve(size);
-    for (size_t i = 0; i < size; ++i) {
-        bool entry;
-        unpack(entry, buffer, position, comm);
-        data.push_back(entry);
-    }
-}
-
 template<std::size_t I = 0, typename Tuple>
 typename std::enable_if<I == std::tuple_size<Tuple>::value, void>::type
 unpack_tuple_entry(Tuple&, std::vector<char>&, int&,
@@ -437,38 +354,6 @@ void unpack([[maybe_unused]] Opm::time_point& data, std::vector<char>& buffer, i
     data = Opm::TimeService::from_time_t(tp);
 #endif
 }
-
-
-#define INSTANTIATE_PACK_VECTOR(...) \
-template std::size_t packSize(const std::vector<__VA_ARGS__>& data, \
-                              Opm::Parallel::MPIComm comm); \
-template void pack(const std::vector<__VA_ARGS__>& data, \
-                   std::vector<char>& buffer, int& position, \
-                   Opm::Parallel::MPIComm comm); \
-template void unpack(std::vector<__VA_ARGS__>& data, \
-                     std::vector<char>& buffer, int& position, \
-                     Opm::Parallel::MPIComm comm);
-
-INSTANTIATE_PACK_VECTOR(float)
-INSTANTIATE_PACK_VECTOR(double)
-INSTANTIATE_PACK_VECTOR(std::vector<double>)
-INSTANTIATE_PACK_VECTOR(bool)
-INSTANTIATE_PACK_VECTOR(char)
-INSTANTIATE_PACK_VECTOR(int)
-INSTANTIATE_PACK_VECTOR(unsigned char)
-INSTANTIATE_PACK_VECTOR(unsigned int)
-INSTANTIATE_PACK_VECTOR(unsigned long int)
-INSTANTIATE_PACK_VECTOR(unsigned long long int)
-INSTANTIATE_PACK_VECTOR(std::time_t)
-INSTANTIATE_PACK_VECTOR(std::pair<bool,double>)
-INSTANTIATE_PACK_VECTOR(std::pair<std::string,std::vector<size_t>>)
-INSTANTIATE_PACK_VECTOR(std::pair<int,std::vector<int>>)
-INSTANTIATE_PACK_VECTOR(std::pair<int,std::vector<size_t>>)
-INSTANTIATE_PACK_VECTOR(std::string)
-
-#undef INSTANTIATE_PACK_VECTOR
-
-#undef INSTANTIATE_PACK_SET
 
 #define INSTANTIATE_PACK(...) \
 template std::size_t packSize(const __VA_ARGS__& data, \
