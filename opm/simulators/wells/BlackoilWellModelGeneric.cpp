@@ -1219,7 +1219,7 @@ checkGroupHigherConstraints(const Group& group,
             auto currentControl = this->groupState().injection_control(group.name(), phase);
             if (currentControl != Group::InjectionCMode::FLD && group.injectionGroupControlAvailable(phase)) {
                 const Group& parentGroup = schedule().getGroup(group.parent(), reportStepIdx);
-                const std::pair<bool, double> changed_this = WellGroupHelpers::checkGroupConstraintsInj(
+                const auto [is_changed, scaling_factor] = WellGroupHelpers::checkGroupConstraintsInj(
                 group.name(),
                 group.parent(),
                 parentGroup,
@@ -1235,10 +1235,10 @@ checkGroupHigherConstraints(const Group& group,
                 summaryState_,
                 resv_coeff_inj,
                 deferred_logger);
-                if (changed_this.first) {
+                if (is_changed) {
                     switched_inj_groups_.insert({ {group.name(), phase}, Group::InjectionCMode2String(Group::InjectionCMode::FLD)});
                     actionOnBrokenConstraints(group, Group::InjectionCMode::FLD, phase, deferred_logger);
-                    WellGroupHelpers::updateWellRatesFromGroupTargetScale(changed_this.second, group, schedule(), reportStepIdx, /* isInjector */ true, this->groupState(), this->wellState());
+                    WellGroupHelpers::updateWellRatesFromGroupTargetScale(scaling_factor, group, schedule(), reportStepIdx, /* isInjector */ true, this->groupState(), this->wellState());
                     changed = true;
                 }
             }
@@ -1258,7 +1258,7 @@ checkGroupHigherConstraints(const Group& group,
         const Group::ProductionCMode& currentControl = this->groupState().production_control(group.name());
         if (currentControl != Group::ProductionCMode::FLD && group.productionGroupControlAvailable()) {
             const Group& parentGroup = schedule().getGroup(group.parent(), reportStepIdx);
-            const std::pair<bool, double> changed_this = WellGroupHelpers::checkGroupConstraintsProd(
+            const auto [is_changed, scaling_factor] = WellGroupHelpers::checkGroupConstraintsProd(
                 group.name(),
                 group.parent(),
                 parentGroup,
@@ -1273,11 +1273,11 @@ checkGroupHigherConstraints(const Group& group,
                 summaryState_,
                 resv_coeff,
                 deferred_logger);
-            if (changed_this.first) {
+            if (is_changed) {
                 switched_prod_groups_.insert({group.name(), Group::ProductionCMode2String(Group::ProductionCMode::FLD)});
                 const auto exceed_action = group.productionControls(summaryState_).exceed_action;
                 actionOnBrokenConstraints(group, exceed_action, Group::ProductionCMode::FLD, deferred_logger);
-                WellGroupHelpers::updateWellRatesFromGroupTargetScale(changed_this.second, group, schedule(), reportStepIdx, /* isInjector */ false, this->groupState(), this->wellState());
+                WellGroupHelpers::updateWellRatesFromGroupTargetScale(scaling_factor, group, schedule(), reportStepIdx, /* isInjector */ false, this->groupState(), this->wellState());
                 changed = true;
             }
         }

@@ -468,26 +468,27 @@ namespace Opm {
         if (terminal_output_) {
 
             for (const auto& [name, to] : switched_prod_groups_) {
-                std::string msg = "    Production Group " + name
-                + " control mode changed from ";
                 const Group::ProductionCMode& oldControl = this->prevWGState().group_state.production_control(name);
                 std::string from = Group::ProductionCMode2String(oldControl);
-                msg += from;
-                msg += " to " + to;
                 if (to != from) {
+                    std::string msg = "    Production Group " + name
+                    + " control mode changed from ";
+                    msg += from;
+                    msg += " to " + to;
                     local_deferredLogger.info(msg);
                 }
             }
             for (const auto& [key, to] : switched_inj_groups_) {
                 const std::string& name = key.first;
                 const Opm::Phase& phase = key.second;
-                std::string msg = "    Injection Group " + name
-                + " control mode changed from ";
+
                 const Group::InjectionCMode& oldControl = this->prevWGState().group_state.injection_control(name, phase);
                 std::string from = Group::InjectionCMode2String(oldControl);
-                msg += from;
-                msg += " to " + to;
                 if (to != from) {
+                    std::string msg = "    Injection Group " + name
+                    + " control mode changed from ";
+                    msg += from;
+                    msg += " to " + to;
                     local_deferredLogger.info(msg);
                 }
             }
