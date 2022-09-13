@@ -198,11 +198,6 @@ namespace Opm {
             this->initializeWellPerfData();
             this->initializeWellState(timeStepIdx, summaryState);
 
-            // Wells are active if they are active wells on at least
-            // one process.
-            wells_active_ = localWellsActive() ? 1 : 0;
-            wells_active_ = grid.comm().max(wells_active_);
-
             // handling MS well related
             if (param_.use_multisegment_well_&& anyMSWellOpenLocal()) { // if we use MultisegmentWell model
                 this->wellState().initWellStateMSWell(wells_ecl_, &this->prevWellState());
@@ -263,6 +258,11 @@ namespace Opm {
 
             // create the well container
             createWellContainer(reportStepIdx);
+
+            // Wells are active if they are active wells on at least one process.
+            const Grid& grid = ebosSimulator_.vanguard().grid();
+            wells_active_ = !this->well_container_.empty();
+            wells_active_ = grid.comm().max(wells_active_);
 
             // do the initialization for all the wells
             // TODO: to see whether we can postpone of the intialization of the well containers to
