@@ -29,19 +29,16 @@
 #define EWOMS_BLACK_OIL_FOAM_MODULE_HH
 
 #include "blackoilproperties.hh"
-//#include <opm/models/io/vtkblackoilfoammodule.hh>
-#include <opm/models/common/quantitycallbacks.hh>
+
+#include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/material/common/Tabulated1DFunction.hpp>
-//#include <opm/material/common/IntervalTabulated2DFunction.hpp>
 
 #if HAVE_ECL_INPUT
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/FoamadsTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/FoammobTable.hpp>
 #endif
-
-#include <opm/material/common/Valgrind.hpp>
 
 #include <dune/common/fvector.hh>
 
