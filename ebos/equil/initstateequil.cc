@@ -1369,9 +1369,8 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
                 continue;
             }
             const int pvtIdx = regionPvtIdx_[i];
-            if (!rec[i].wetGasInitConstantRv()) {
+            if (!rec[i].humidGasInitConstantRvw()) {
                 const TableContainer& rvwvdTables = tables.getRvwvdTables();
-                //const TableContainer& pdvdTables = tables.getPdvdTables();
 
                 if (rvwvdTables.size() > 0) {
                     const RvwvdTable& rvwvdTable = rvwvdTables.getTable<RvwvdTable>(i);
@@ -1379,27 +1378,21 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
                     std::vector<double> rvwvdColumn = rvwvdTable.getColumn("RVWVD").vectorCopy();
                     rvwFunc_.push_back(std::make_shared<Miscibility::RvwVD<FluidSystem>>(pvtIdx,
                                                                                        depthColumn, rvwvdColumn));
-                // } else if (pdvdTables.size() > 0) {
-                //     const PdvdTable& pdvdTable = pdvdTables.getTable<PdvdTable>(i);
-                //     std::vector<double> depthColumn = pdvdTable.getColumn("DEPTH").vectorCopy();
-                //     std::vector<double> pdewColumn = pdvdTable.getColumn("PDEW").vectorCopy();
-                //     rvFunc_.push_back(std::make_shared<Miscibility::PDVD<FluidSystem>>(pvtIdx,
-                //                                                                        depthColumn, pdewColumn));
                 } else {
                     throw std::runtime_error("Cannot initialise: RVWVD table not available.");
                 }
             }
-            // else {
-            //     if (rec[i].gasOilContactDepth() != rec[i].datumDepth()) {
-            //         throw std::runtime_error(
-            //                   "Cannot initialise: when no explicit RVVD table is given, \n"
-            //                   "datum depth must be at the gas-oil-contact. "
-            //                   "In EQUIL region "+std::to_string(i + 1)+" (counting from 1), this does not hold.");
-            //     }
-            //     const double pContact = rec[i].datumDepthPressure() + rec[i].gasOilContactCapillaryPressure();
-            //     const double TContact = 273.15 + 20; // standard temperature for now
-            //     rvFunc_.push_back(std::make_shared<Miscibility::RvSatAtContact<FluidSystem>>(pvtIdx,pContact, TContact));
-            // }
+            else {
+                if (rec[i].gasOilContactDepth() != rec[i].datumDepth()) {
+                    throw std::runtime_error(
+                              "Cannot initialise: when no explicit RVWVD table is given, \n"
+                              "datum depth must be at the gas-oil-contact. "
+                              "In EQUIL region "+std::to_string(i + 1)+" (counting from 1), this does not hold.");
+                }
+                const double pContact = rec[i].datumDepthPressure() + rec[i].gasOilContactCapillaryPressure();
+                const double TContact = 273.15 + 20; // standard temperature for now
+                rvwFunc_.push_back(std::make_shared<Miscibility::RvwSatAtContact<FluidSystem>>(pvtIdx,pContact, TContact));
+            }
         }
     }
     else {
