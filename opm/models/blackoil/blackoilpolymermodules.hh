@@ -30,7 +30,6 @@
 
 #include "blackoilproperties.hh"
 #include <opm/models/io/vtkblackoilpolymermodule.hh>
-#include <opm/models/common/quantitycallbacks.hh>
 
 #include <opm/material/common/Tabulated1DFunction.hpp>
 #include <opm/material/common/IntervalTabulated2DFunction.hpp>
@@ -46,10 +45,10 @@
 #include <opm/input/eclipse/EclipseState/Tables/PlyviscTable.hpp>
 #endif
 
-#include <opm/material/common/Valgrind.hpp>
-
 #include <dune/common/fvector.hh>
 
+#include <cmath>
+#include <stdexcept>
 #include <string>
 
 namespace Opm {
