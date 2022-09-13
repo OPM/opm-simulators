@@ -27,7 +27,9 @@
 
 #include <opm/simulators/wells/VFPProperties.hpp>
 #include <opm/simulators/utils/MPIPacker.hpp>
+#if HAVE_MPI
 #include <ebos/eclmpiserializer.hh>
+#endif
 
 #include <algorithm>
 #include <utility>
@@ -1059,9 +1061,11 @@ namespace Opm {
                 //   data if they are going to check the group rates in stage1
                 //   Another similar idea is to only communicate the rates to
                 //   process j = i + 1
+#if HAVE_MPI
                 EclMpiSerializer ser(comm);
                 ser.broadcast(i, group_indexes, group_oil_rates,
                               group_gas_rates, group_water_rates, group_alq_rates);
+#endif
                 if (comm.rank() != i) {
                     for (int j=0; j<num_rates_to_sync; j++) {
                         group_info.updateRate(group_indexes[j],
