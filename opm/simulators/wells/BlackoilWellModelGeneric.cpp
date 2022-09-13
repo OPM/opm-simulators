@@ -670,13 +670,6 @@ initFromRestartFile(const RestartValue& restartValues,
     initial_step_ = false;
 }
 
-void
-BlackoilWellModelGeneric::
-setWellsActive(const bool wells_active)
-{
-    wells_active_ = wells_active;
-}
-
 std::vector<Well>
 BlackoilWellModelGeneric::
 getLocalWells(const int timeStepIdx) const

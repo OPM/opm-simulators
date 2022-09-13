@@ -143,8 +143,6 @@ public:
                              const size_t numCells,
                              bool handle_ms_well);
 
-    void setWellsActive(const bool wells_active);
-
     /*
       Will assign the internal member last_valid_well_state_ to the
       current value of the this->active_well_state_. The state stored
