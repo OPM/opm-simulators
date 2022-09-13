@@ -1717,7 +1717,13 @@ namespace Opm {
     int
     BlackoilWellModel<TypeTag>::numComponents() const
     {
-        if (wellsActive()  && numPhases() < 3) {
+        // The numComponents here does not reflect the actual number of the components in the system.
+        // It more or less reflects the number of mass conservation equations for the well equations.
+        // For example, in the current formulation, we do not have the polymer conservation equation
+        // in the well equations. As a result, for an oil-water-polymer system, this function will return 2.
+        // In some way, it makes this function appear to be confusing from its name, and we need
+        // to revisit/revise this function again when extending the variants of system that flow can simulate.
+        if (numPhases() < 3) {
             return numPhases();
         }
         int numComp = FluidSystem::numComponents;
