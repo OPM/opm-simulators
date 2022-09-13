@@ -34,10 +34,9 @@
 
 #include "blackoilproperties.hh"
 
-//#include <opm/models/io/vtkBlackOilExtboModule.hh> //TODO: Missing ...
+#include <opm/models/blackoil/blackoilextboparams.hh>
 
-#include <opm/material/common/Tabulated1DFunction.hpp>
-#include <opm/material/common/UniformXTabulated2DFunction.hpp>
+//#include <opm/models/io/vtkBlackOilExtboModule.hh> //TODO: Missing ...
 
 #if HAVE_ECL_INPUT
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
@@ -59,6 +58,7 @@
 #include <vector>
 
 namespace Opm {
+
 /*!
  * \ingroup BlackOil
  * \brief Contains the high level supplements required to extend the black oil
@@ -82,8 +82,8 @@ class BlackOilExtboModule
 
     using Toolbox = MathToolbox<Evaluation>;
 
-    using TabulatedFunction = Tabulated1DFunction<Scalar>;
-    using Tabulated2DFunction = UniformXTabulated2DFunction<Scalar>;
+    using TabulatedFunction = typename BlackOilExtboParams<Scalar>::TabulatedFunction;
+    using Tabulated2DFunction = typename BlackOilExtboParams<Scalar>::Tabulated2DFunction;
 
     static constexpr unsigned zFractionIdx = Indices::zFractionIdx;
     static constexpr unsigned contiZfracEqIdx = Indices::contiZfracEqIdx;
@@ -121,23 +121,23 @@ public:
 
         size_t numPvtRegions = pvtsolTables.size();
 
-        BO_.resize(numPvtRegions, Tabulated2DFunction{Tabulated2DFunction::InterpolationPolicy::LeftExtreme});
-        BG_.resize(numPvtRegions, Tabulated2DFunction{Tabulated2DFunction::InterpolationPolicy::LeftExtreme});
-        RS_.resize(numPvtRegions, Tabulated2DFunction{Tabulated2DFunction::InterpolationPolicy::LeftExtreme});
-        RV_.resize(numPvtRegions, Tabulated2DFunction{Tabulated2DFunction::InterpolationPolicy::LeftExtreme});
-        X_.resize(numPvtRegions, Tabulated2DFunction{Tabulated2DFunction::InterpolationPolicy::LeftExtreme});
-        Y_.resize(numPvtRegions, Tabulated2DFunction{Tabulated2DFunction::InterpolationPolicy::LeftExtreme});
-        VISCO_.resize(numPvtRegions, Tabulated2DFunction{Tabulated2DFunction::InterpolationPolicy::LeftExtreme});
-        VISCG_.resize(numPvtRegions, Tabulated2DFunction{Tabulated2DFunction::InterpolationPolicy::LeftExtreme});
+        params_.BO_.resize(numPvtRegions, Tabulated2DFunction{Tabulated2DFunction::InterpolationPolicy::LeftExtreme});
+        params_.BG_.resize(numPvtRegions, Tabulated2DFunction{Tabulated2DFunction::InterpolationPolicy::LeftExtreme});
+        params_.RS_.resize(numPvtRegions, Tabulated2DFunction{Tabulated2DFunction::InterpolationPolicy::LeftExtreme});
+        params_.RV_.resize(numPvtRegions, Tabulated2DFunction{Tabulated2DFunction::InterpolationPolicy::LeftExtreme});
+        params_.X_.resize(numPvtRegions, Tabulated2DFunction{Tabulated2DFunction::InterpolationPolicy::LeftExtreme});
+        params_.Y_.resize(numPvtRegions, Tabulated2DFunction{Tabulated2DFunction::InterpolationPolicy::LeftExtreme});
+        params_.VISCO_.resize(numPvtRegions, Tabulated2DFunction{Tabulated2DFunction::InterpolationPolicy::LeftExtreme});
+        params_.VISCG_.resize(numPvtRegions, Tabulated2DFunction{Tabulated2DFunction::InterpolationPolicy::LeftExtreme});
 
-        PBUB_RS_.resize(numPvtRegions, Tabulated2DFunction{Tabulated2DFunction::InterpolationPolicy::LeftExtreme});
-        PBUB_RV_.resize(numPvtRegions, Tabulated2DFunction{Tabulated2DFunction::InterpolationPolicy::LeftExtreme});
+        params_.PBUB_RS_.resize(numPvtRegions, Tabulated2DFunction{Tabulated2DFunction::InterpolationPolicy::LeftExtreme});
+        params_.PBUB_RV_.resize(numPvtRegions, Tabulated2DFunction{Tabulated2DFunction::InterpolationPolicy::LeftExtreme});
 
-        zLim_.resize(numPvtRegions);
+        params_.zLim_.resize(numPvtRegions);
 
         const bool extractCmpFromPvt = true; //<false>: Default values used in [*]
-        oilCmp_.resize(numPvtRegions);
-        gasCmp_.resize(numPvtRegions);
+        params_.oilCmp_.resize(numPvtRegions);
+        params_.gasCmp_.resize(numPvtRegions);
 
         for (unsigned regionIdx = 0; regionIdx < numPvtRegions; ++ regionIdx) {
           const auto& pvtsolTable = pvtsolTables[regionIdx];
@@ -147,7 +147,7 @@ public:
 
           std::vector<Scalar> oilCmp(saturatedTable.numRows(), -4.0e-9); //Default values used in [*]
           std::vector<Scalar> gasCmp(saturatedTable.numRows(), -0.08);   //-------------"-------------
-          zLim_[regionIdx] = 0.7;                                        //-------------"-------------
+          params_.zLim_[regionIdx] = 0.7;                                //-------------"-------------
           std::vector<Scalar> zArg(saturatedTable.numRows(), 0.0);
 
           for (unsigned outerIdx = 0; outerIdx < saturatedTable.numRows(); ++ outerIdx) {
@@ -155,20 +155,20 @@ public:
 
             zArg[outerIdx] = ZCO2;
 
-            BO_[regionIdx].appendXPos(ZCO2);
-            BG_[regionIdx].appendXPos(ZCO2);
+            params_.BO_[regionIdx].appendXPos(ZCO2);
+            params_.BG_[regionIdx].appendXPos(ZCO2);
 
-            RS_[regionIdx].appendXPos(ZCO2);
-            RV_[regionIdx].appendXPos(ZCO2);
+            params_.RS_[regionIdx].appendXPos(ZCO2);
+            params_.RV_[regionIdx].appendXPos(ZCO2);
 
-            X_[regionIdx].appendXPos(ZCO2);
-            Y_[regionIdx].appendXPos(ZCO2);
+            params_.X_[regionIdx].appendXPos(ZCO2);
+            params_.Y_[regionIdx].appendXPos(ZCO2);
 
-            VISCO_[regionIdx].appendXPos(ZCO2);
-            VISCG_[regionIdx].appendXPos(ZCO2);
+            params_.VISCO_[regionIdx].appendXPos(ZCO2);
+            params_.VISCG_[regionIdx].appendXPos(ZCO2);
 
-            PBUB_RS_[regionIdx].appendXPos(ZCO2);
-            PBUB_RV_[regionIdx].appendXPos(ZCO2);
+            params_.PBUB_RS_[regionIdx].appendXPos(ZCO2);
+            params_.PBUB_RV_[regionIdx].appendXPos(ZCO2);
 
             const auto& underSaturatedTable = pvtsolTable.getUnderSaturatedTable(outerIdx);
             size_t numRows = underSaturatedTable.numRows();
@@ -191,7 +191,7 @@ public:
                   if (extractCmpFromPvt) {
                       Scalar cmpFactor = (bo-bo0)/(po-po0);
                       oilCmp[outerIdx] = cmpFactor;
-                      zLim_[regionIdx] = ZCO2;
+                      params_.zLim_[regionIdx] = ZCO2;
                       //std::cout << "### cmpFactorOil: " << cmpFactor << "  zLim: " << zLim_[regionIdx] << std::endl;
                   }
                   break;
@@ -205,49 +205,49 @@ public:
                     //std::cout << "### cmpFactorGas: " << cmpFactor << "  zLim: " << zLim_[regionIdx] << std::endl;
                   }
 
-                  BO_[regionIdx].appendSamplePoint(outerIdx,po,bo);
-                  BG_[regionIdx].appendSamplePoint(outerIdx,po,bg);
-                  RS_[regionIdx].appendSamplePoint(outerIdx,po,rs);
-                  RV_[regionIdx].appendSamplePoint(outerIdx,po,rv);
-                  X_[regionIdx].appendSamplePoint(outerIdx,po,xv);
-                  Y_[regionIdx].appendSamplePoint(outerIdx,po,yv);
-                  VISCO_[regionIdx].appendSamplePoint(outerIdx,po,mo);
-                  VISCG_[regionIdx].appendSamplePoint(outerIdx,po,mg);
+                  params_.BO_[regionIdx].appendSamplePoint(outerIdx,po,bo);
+                  params_.BG_[regionIdx].appendSamplePoint(outerIdx,po,bg);
+                  params_.RS_[regionIdx].appendSamplePoint(outerIdx,po,rs);
+                  params_.RV_[regionIdx].appendSamplePoint(outerIdx,po,rv);
+                  params_.X_[regionIdx].appendSamplePoint(outerIdx,po,xv);
+                  params_.Y_[regionIdx].appendSamplePoint(outerIdx,po,yv);
+                  params_.VISCO_[regionIdx].appendSamplePoint(outerIdx,po,mo);
+                  params_.VISCG_[regionIdx].appendSamplePoint(outerIdx,po,mg);
                   break;
               }
 
               bo0=bo;
               po0=po;
 
-              BO_[regionIdx].appendSamplePoint(outerIdx,po,bo);
-              BG_[regionIdx].appendSamplePoint(outerIdx,po,bg);
+              params_.BO_[regionIdx].appendSamplePoint(outerIdx,po,bo);
+              params_.BG_[regionIdx].appendSamplePoint(outerIdx,po,bg);
 
-              RS_[regionIdx].appendSamplePoint(outerIdx,po,rs);
-              RV_[regionIdx].appendSamplePoint(outerIdx,po,rv);
+              params_.RS_[regionIdx].appendSamplePoint(outerIdx,po,rs);
+              params_.RV_[regionIdx].appendSamplePoint(outerIdx,po,rv);
 
-              X_[regionIdx].appendSamplePoint(outerIdx,po,xv);
-              Y_[regionIdx].appendSamplePoint(outerIdx,po,yv);
+              params_.X_[regionIdx].appendSamplePoint(outerIdx,po,xv);
+              params_.Y_[regionIdx].appendSamplePoint(outerIdx,po,yv);
 
-              VISCO_[regionIdx].appendSamplePoint(outerIdx,po,mo);
-              VISCG_[regionIdx].appendSamplePoint(outerIdx,po,mg);
+              params_.VISCO_[regionIdx].appendSamplePoint(outerIdx,po,mo);
+              params_.VISCG_[regionIdx].appendSamplePoint(outerIdx,po,mg);
 
               // rs,rv -> pressure
-              PBUB_RS_[regionIdx].appendSamplePoint(outerIdx, rs, po);
-              PBUB_RV_[regionIdx].appendSamplePoint(outerIdx, rv, po);
+              params_.PBUB_RS_[regionIdx].appendSamplePoint(outerIdx, rs, po);
+              params_.PBUB_RV_[regionIdx].appendSamplePoint(outerIdx, rv, po);
 
             }
           }
-          oilCmp_[regionIdx].setXYContainers(zArg, oilCmp, /*sortInput=*/false);
-          gasCmp_[regionIdx].setXYContainers(zArg, gasCmp, /*sortInput=*/false);
+          params_.oilCmp_[regionIdx].setXYContainers(zArg, oilCmp, /*sortInput=*/false);
+          params_.gasCmp_[regionIdx].setXYContainers(zArg, gasCmp, /*sortInput=*/false);
         }
 
         // Reference density for pure z-component taken from kw SDENSITY
         const auto& sdensityTables = eclState.getTableManager().getSolventDensityTables();
         if (sdensityTables.size() == numPvtRegions) {
-           zReferenceDensity_.resize(numPvtRegions);
+           params_.zReferenceDensity_.resize(numPvtRegions);
            for (unsigned regionIdx = 0; regionIdx < numPvtRegions; ++ regionIdx) {
              Scalar rhoRefS = sdensityTables[regionIdx].getSolventDensityColumn().front();
-             zReferenceDensity_[regionIdx]=rhoRefS;
+             params_.zReferenceDensity_[regionIdx]=rhoRefS;
            }
         }
         else
@@ -476,146 +476,79 @@ public:
 
     template <typename Value>
     static Value xVolume(unsigned pvtRegionIdx, const Value& pressure, const Value& z) {
-        return X_[pvtRegionIdx].eval(z, pressure, true);
+        return params_.X_[pvtRegionIdx].eval(z, pressure, true);
     }
 
     template <typename Value>
     static Value yVolume(unsigned pvtRegionIdx, const Value& pressure, const Value& z) {
-        return Y_[pvtRegionIdx].eval(z, pressure, true);
+        return params_.Y_[pvtRegionIdx].eval(z, pressure, true);
     }
 
     template <typename Value>
     static Value pbubRs(unsigned pvtRegionIdx, const Value& z, const Value& rs) {
-        return PBUB_RS_[pvtRegionIdx].eval(z, rs, true);
+        return params_.PBUB_RS_[pvtRegionIdx].eval(z, rs, true);
     }
 
     template <typename Value>
     static Value pbubRv(unsigned pvtRegionIdx, const Value& z, const Value& rv) {
-        return PBUB_RV_[pvtRegionIdx].eval(z, rv, true);
+        return params_.PBUB_RV_[pvtRegionIdx].eval(z, rv, true);
     }
 
     template <typename Value>
     static Value oilViscosity(unsigned pvtRegionIdx, const Value& pressure, const Value& z) {
-        return VISCO_[pvtRegionIdx].eval(z, pressure, true);
+        return params_.VISCO_[pvtRegionIdx].eval(z, pressure, true);
     }
 
     template <typename Value>
     static Value gasViscosity(unsigned pvtRegionIdx, const Value& pressure, const Value& z) {
-        return VISCG_[pvtRegionIdx].eval(z, pressure, true);
+        return params_.VISCG_[pvtRegionIdx].eval(z, pressure, true);
     }
 
     template <typename Value>
     static Value bo(unsigned pvtRegionIdx, const Value& pressure, const Value& z) {
-        return BO_[pvtRegionIdx].eval(z, pressure, true);
+        return params_.BO_[pvtRegionIdx].eval(z, pressure, true);
     }
 
     template <typename Value>
     static Value bg(unsigned pvtRegionIdx, const Value& pressure, const Value& z) {
-        return BG_[pvtRegionIdx].eval(z, pressure, true);
+        return params_.BG_[pvtRegionIdx].eval(z, pressure, true);
     }
 
     template <typename Value>
     static Value rs(unsigned pvtRegionIdx, const Value& pressure, const Value& z) {
-        return RS_[pvtRegionIdx].eval(z, pressure, true);
+        return params_.RS_[pvtRegionIdx].eval(z, pressure, true);
     }
 
     template <typename Value>
     static Value rv(unsigned pvtRegionIdx, const Value& pressure, const Value& z) {
-        return RV_[pvtRegionIdx].eval(z, pressure, true);
+        return params_.RV_[pvtRegionIdx].eval(z, pressure, true);
     }
 
     static Scalar referenceDensity(unsigned regionIdx) {
-        return zReferenceDensity_[regionIdx];
+        return params_.zReferenceDensity_[regionIdx];
     }
 
     static Scalar zLim(unsigned regionIdx) {
-        return zLim_[regionIdx];
+        return params_.zLim_[regionIdx];
     }
 
     template <typename Value>
     static Value oilCmp(unsigned pvtRegionIdx, const Value& z) {
-        return oilCmp_[pvtRegionIdx].eval(z, true);
+        return params_.oilCmp_[pvtRegionIdx].eval(z, true);
     }
 
     template <typename Value>
     static Value gasCmp(unsigned pvtRegionIdx, const Value& z) {
-        return gasCmp_[pvtRegionIdx].eval(z, true);
+        return params_.gasCmp_[pvtRegionIdx].eval(z, true);
     }
 
 private:
-    static std::vector<Tabulated2DFunction> X_;
-    static std::vector<Tabulated2DFunction> Y_;
-    static std::vector<Tabulated2DFunction> PBUB_RS_;
-    static std::vector<Tabulated2DFunction> PBUB_RV_;
-    static std::vector<Tabulated2DFunction> VISCO_;
-    static std::vector<Tabulated2DFunction> VISCG_;
-    static std::vector<Tabulated2DFunction> BO_;
-    static std::vector<Tabulated2DFunction> BG_;
-    static std::vector<Tabulated2DFunction> RS_;
-    static std::vector<Tabulated2DFunction> RV_;
-
-    static std::vector<Scalar> zReferenceDensity_;
-
-    static std::vector<Scalar> zLim_;
-    static std::vector<TabulatedFunction> oilCmp_;
-    static std::vector<TabulatedFunction> gasCmp_;
+    static BlackOilExtboParams<Scalar> params_;
 };
 
 template <class TypeTag, bool enableExtboV>
-std::vector<typename BlackOilExtboModule<TypeTag, enableExtboV>::Tabulated2DFunction>
-BlackOilExtboModule<TypeTag, enableExtboV>::X_;
-
-template <class TypeTag, bool enableExtboV>
-std::vector<typename BlackOilExtboModule<TypeTag, enableExtboV>::Tabulated2DFunction>
-BlackOilExtboModule<TypeTag, enableExtboV>::Y_;
-
-template <class TypeTag, bool enableExtboV>
-std::vector<typename BlackOilExtboModule<TypeTag, enableExtboV>::Tabulated2DFunction>
-BlackOilExtboModule<TypeTag, enableExtboV>::PBUB_RS_;
-
-template <class TypeTag, bool enableExtboV>
-std::vector<typename BlackOilExtboModule<TypeTag, enableExtboV>::Tabulated2DFunction>
-BlackOilExtboModule<TypeTag, enableExtboV>::PBUB_RV_;
-
-template <class TypeTag, bool enableExtboV>
-std::vector<typename BlackOilExtboModule<TypeTag, enableExtboV>::Tabulated2DFunction>
-BlackOilExtboModule<TypeTag, enableExtboV>::VISCO_;
-
-template <class TypeTag, bool enableExtboV>
-std::vector<typename BlackOilExtboModule<TypeTag, enableExtboV>::Tabulated2DFunction>
-BlackOilExtboModule<TypeTag, enableExtboV>::VISCG_;
-
-template <class TypeTag, bool enableExtboV>
-std::vector<typename BlackOilExtboModule<TypeTag, enableExtboV>::Tabulated2DFunction>
-BlackOilExtboModule<TypeTag, enableExtboV>::BO_;
-
-template <class TypeTag, bool enableExtboV>
-std::vector<typename BlackOilExtboModule<TypeTag, enableExtboV>::Tabulated2DFunction>
-BlackOilExtboModule<TypeTag, enableExtboV>::BG_;
-
-template <class TypeTag, bool enableExtboV>
-std::vector<typename BlackOilExtboModule<TypeTag, enableExtboV>::Tabulated2DFunction>
-BlackOilExtboModule<TypeTag, enableExtboV>::RS_;
-
-template <class TypeTag, bool enableExtboV>
-std::vector<typename BlackOilExtboModule<TypeTag, enableExtboV>::Tabulated2DFunction>
-BlackOilExtboModule<TypeTag, enableExtboV>::RV_;
-
-template <class TypeTag, bool enableExtboV>
-std::vector<typename BlackOilExtboModule<TypeTag, enableExtboV>::Scalar>
-BlackOilExtboModule<TypeTag, enableExtboV>::zReferenceDensity_;
-
-template <class TypeTag, bool enableExtboV>
-std::vector<typename BlackOilExtboModule<TypeTag, enableExtboV>::Scalar>
-BlackOilExtboModule<TypeTag, enableExtboV>::zLim_;
-
-template <class TypeTag, bool enableExtboV>
-std::vector<typename BlackOilExtboModule<TypeTag, enableExtboV>::TabulatedFunction>
-BlackOilExtboModule<TypeTag, enableExtboV>::oilCmp_;
-
-template <class TypeTag, bool enableExtboV>
-std::vector<typename BlackOilExtboModule<TypeTag, enableExtboV>::TabulatedFunction>
-BlackOilExtboModule<TypeTag, enableExtboV>::gasCmp_;
+BlackOilExtboParams<typename BlackOilExtboModule<TypeTag, enableExtboV>::Scalar>
+BlackOilExtboModule<TypeTag, enableExtboV>::params_;
 
 /*!
  * \ingroup BlackOil
