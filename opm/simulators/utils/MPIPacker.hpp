@@ -347,13 +347,13 @@ void broadcast(Parallel::Communication comm, int root, Args&&... args)
 
   size_t size = 0;
   if (comm.rank() == root)
-      variadic_packsize(size, comm, std::forward<Args>(args)...);
+      variadic_packsize(size, comm, args...);
 
   comm.broadcast(&size, 1, root);
   std::vector<char> buffer(size);
   if (comm.rank() == root) {
       int pos = 0;
-      variadic_pack(pos, buffer, comm, std::forward<Args>(args)...);
+      variadic_pack(pos, buffer, comm, args...);
   }
   comm.broadcast(buffer.data(), size, root);
   if (comm.rank() != root) {
