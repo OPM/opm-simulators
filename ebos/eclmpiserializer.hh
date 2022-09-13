@@ -442,8 +442,8 @@ protected:
         constexpr static bool value = false;
     };
 
-    template<class T1>
-    struct is_vector<std::vector<T1>> {
+    template<class T1, class Allocator>
+    struct is_vector<std::vector<T1,Allocator>> {
         constexpr static bool value = true;
     };
 
