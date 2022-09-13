@@ -36,8 +36,6 @@
 
 //#include <opm/models/io/vtkBlackOilExtboModule.hh> //TODO: Missing ...
 
-#include <opm/models/common/quantitycallbacks.hh>
-
 #include <opm/material/common/Tabulated1DFunction.hpp>
 #include <opm/material/common/UniformXTabulated2DFunction.hpp>
 
@@ -53,12 +51,12 @@
 #include <opm/input/eclipse/EclipseState/Tables/TlpmixpaTable.hpp>
 #endif
 
-#include <opm/material/common/Valgrind.hpp>
-#include <opm/material/common/Exceptions.hpp>
-
 #include <dune/common/fvector.hh>
 
+#include <cmath>
+#include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace Opm {
 /*!
