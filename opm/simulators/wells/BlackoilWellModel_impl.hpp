@@ -26,6 +26,7 @@
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
 
 #include <opm/simulators/wells/VFPProperties.hpp>
+#include <opm/simulators/utils/MPIPacker.hpp>
 
 #include <algorithm>
 #include <utility>

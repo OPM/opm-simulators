@@ -74,6 +74,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/timestepping/gatherConvergenceReport.cpp
   opm/simulators/utils/DeferredLogger.cpp
   opm/simulators/utils/gatherDeferredLogger.cpp
+  opm/simulators/utils/MPIPacker.cpp
   opm/simulators/utils/ParallelFileMerger.cpp
   opm/simulators/utils/ParallelRestart.cpp
   opm/simulators/wells/ALQState.cpp
@@ -180,7 +181,7 @@ list (APPEND TEST_SOURCE_FILES
 
 if(MPI_FOUND)
   list(APPEND TEST_SOURCE_FILES tests/test_parallelistlinformation.cpp
-                                tests/test_ParallelRestart.cpp)
+                                tests/test_ParallelSerialization.cpp)
 endif()
 if(CUDA_FOUND)
   list(APPEND TEST_SOURCE_FILES tests/test_cusparseSolver.cpp)
