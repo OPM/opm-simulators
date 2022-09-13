@@ -139,7 +139,7 @@ public:
     static void checkCloggingMICP(const Model& model, const Scalar phi, unsigned dofIdx)
     {
         const PrimaryVariables& priVars = model.solution(/*timeIdx=*/1)[dofIdx];
-        if (phi - priVars[biofilmConcentrationIdx] - priVars[calciteConcentrationIdx] < MICPparaToleranceBeforeClogging())
+        if (phi - priVars[biofilmConcentrationIdx] - priVars[calciteConcentrationIdx] < toleranceBeforeClogging())
             throw std::logic_error("Clogging has been (almost) reached in at least one cell\n");
     }
 
@@ -148,41 +148,41 @@ public:
      *
      * The index of specified here must be in range [0, numSatRegions)
      */
-    static void setMICPpara(const Scalar& MICPparaDensityBiofilm,
-                            const Scalar& MICPparaDensityCalcite,
-                            const Scalar& MICPparaDetachmentRate,
-                            const Scalar& MICPparaCriticalPorosity,
-                            const Scalar& MICPparaFittingFactor,
-                            const Scalar& MICPparaHalfVelocityOxygen,
-                            const Scalar& MICPparaHalfVelocityUrea,
-                            const Scalar& MICPparaMaximumGrowthRate,
-                            const Scalar& MICPparaMaximumUreaUtilization,
-                            const Scalar& MICPparaMicrobialAttachmentRate,
-                            const Scalar& MICPparaMicrobialDeathRate,
-                            const Scalar& MICPparaMinimumPermeability,
-                            const Scalar& MICPparaOxygenConsumptionFactor,
-                            const Scalar& MICPparaYieldGrowthCoefficient,
-                            const Scalar& MICPparaMaximumOxygenConcentration,
-                            const Scalar& MICPparaMaximumUreaConcentration,
-                            const Scalar& MICPparaToleranceBeforeClogging)
+    static void setMICPpara(const Scalar& densityBiofilm,
+                            const Scalar& densityCalcite,
+                            const Scalar& detachmentRate,
+                            const Scalar& criticalPorosity,
+                            const Scalar& fittingFactor,
+                            const Scalar& halfVelocityOxygen,
+                            const Scalar& halfVelocityUrea,
+                            const Scalar& maximumGrowthRate,
+                            const Scalar& maximumUreaUtilization,
+                            const Scalar& microbialAttachmentRate,
+                            const Scalar& microbialDeathRate,
+                            const Scalar& minimumPermeability,
+                            const Scalar& oxygenConsumptionFactor,
+                            const Scalar& yieldGrowthCoefficient,
+                            const Scalar& maximumOxygenConcentration,
+                            const Scalar& maximumUreaConcentration,
+                            const Scalar& toleranceBeforeClogging)
     {
-        MICPparaDensityBiofilm_ = MICPparaDensityBiofilm;
-        MICPparaDensityCalcite_ = MICPparaDensityCalcite;
-        MICPparaDetachmentRate_ = MICPparaDetachmentRate;
-        MICPparaCriticalPorosity_ = MICPparaCriticalPorosity;
-        MICPparaFittingFactor_ = MICPparaFittingFactor;
-        MICPparaHalfVelocityOxygen_ = MICPparaHalfVelocityOxygen;
-        MICPparaHalfVelocityUrea_ = MICPparaHalfVelocityUrea;
-        MICPparaMaximumGrowthRate_ = MICPparaMaximumGrowthRate;
-        MICPparaMaximumUreaUtilization_ = MICPparaMaximumUreaUtilization;
-        MICPparaMicrobialAttachmentRate_ = MICPparaMicrobialAttachmentRate;
-        MICPparaMicrobialDeathRate_ = MICPparaMicrobialDeathRate;
-        MICPparaMinimumPermeability_ = MICPparaMinimumPermeability;
-        MICPparaOxygenConsumptionFactor_ = MICPparaOxygenConsumptionFactor;
-        MICPparaYieldGrowthCoefficient_ = MICPparaYieldGrowthCoefficient;
-        MICPparaMaximumOxygenConcentration_ = MICPparaMaximumOxygenConcentration;
-        MICPparaMaximumUreaConcentration_ = MICPparaMaximumUreaConcentration;
-        MICPparaToleranceBeforeClogging_ = MICPparaToleranceBeforeClogging;
+        densityBiofilm_ = densityBiofilm;
+        densityCalcite_ = densityCalcite;
+        detachmentRate_ = detachmentRate;
+        criticalPorosity_ = criticalPorosity;
+        fittingFactor_ = fittingFactor;
+        halfVelocityOxygen_ = halfVelocityOxygen;
+        halfVelocityUrea_ = halfVelocityUrea;
+        maximumGrowthRate_ = maximumGrowthRate;
+        maximumUreaUtilization_ = maximumUreaUtilization;
+        microbialAttachmentRate_ = microbialAttachmentRate;
+        microbialDeathRate_ = microbialDeathRate;
+        minimumPermeability_ = minimumPermeability;
+        oxygenConsumptionFactor_ = oxygenConsumptionFactor;
+        yieldGrowthCoefficient_ = yieldGrowthCoefficient;
+        maximumOxygenConcentration_ = maximumOxygenConcentration;
+        maximumUreaConcentration_ = maximumUreaConcentration;
+        toleranceBeforeClogging_ = toleranceBeforeClogging;
     }
 
     /*!
@@ -315,17 +315,17 @@ public:
         }
 
         // get the model parameters
-        Scalar k_a = MICPparaMicrobialAttachmentRate();
-        Scalar k_d = MICPparaMicrobialDeathRate();
-        Scalar rho_b = MICPparaDensityBiofilm();
-        Scalar rho_c = MICPparaDensityCalcite();
-        Scalar k_str = MICPparaDetachmentRate();
-        Scalar k_o = MICPparaHalfVelocityOxygen();
-        Scalar k_u = MICPparaHalfVelocityUrea() / 10.0;//Dividing by scaling factor 10 (see WellInterface_impl.hpp)
-        Scalar mu = MICPparaMaximumGrowthRate();
-        Scalar mu_u = MICPparaMaximumUreaUtilization() / 10.0;//Dividing by scaling factor 10 (see WellInterface_impl.hpp)
-        Scalar Y_sb = MICPparaYieldGrowthCoefficient();
-        Scalar F = MICPparaOxygenConsumptionFactor();
+        Scalar k_a = microbialAttachmentRate();
+        Scalar k_d = microbialDeathRate();
+        Scalar rho_b = densityBiofilm();
+        Scalar rho_c = densityCalcite();
+        Scalar k_str = detachmentRate();
+        Scalar k_o = halfVelocityOxygen();
+        Scalar k_u = halfVelocityUrea() / 10.0;//Dividing by scaling factor 10 (see WellInterface_impl.hpp)
+        Scalar mu = maximumGrowthRate();
+        Scalar mu_u = maximumUreaUtilization() / 10.0;//Dividing by scaling factor 10 (see WellInterface_impl.hpp)
+        Scalar Y_sb = yieldGrowthCoefficient();
+        Scalar F = oxygenConsumptionFactor();
         Scalar Y_uc = 1.67 * 10; //Multiplying by scaling factor 10 (see WellInterface_impl.hpp)
 
         // compute the processes
@@ -346,89 +346,89 @@ public:
         source[Indices::contiCalciteEqIdx] += (rho_b / rho_c) * intQuants.biofilmConcentration() * Y_uc * mu_u * intQuants.ureaConcentration() / (k_u + intQuants.ureaConcentration());
     }
 
-    static const Scalar MICPparaDensityBiofilm()
+    static const Scalar densityBiofilm()
     {
-        return MICPparaDensityBiofilm_;
+        return densityBiofilm_;
     }
 
-    static const Scalar MICPparaDensityCalcite()
+    static const Scalar densityCalcite()
     {
-        return MICPparaDensityCalcite_;
+        return densityCalcite_;
     }
 
-    static const Scalar MICPparaDetachmentRate()
+    static const Scalar detachmentRate()
     {
-        return MICPparaDetachmentRate_;
+        return detachmentRate_;
     }
 
-    static const Scalar MICPparaCriticalPorosity()
+    static const Scalar criticalPorosity()
     {
-        return MICPparaCriticalPorosity_;
+        return criticalPorosity_;
     }
 
-    static const Scalar MICPparaFittingFactor()
+    static const Scalar fittingFactor()
     {
-        return MICPparaFittingFactor_;
+        return fittingFactor_;
     }
 
-    static const Scalar MICPparaHalfVelocityOxygen()
+    static const Scalar halfVelocityOxygen()
     {
-        return MICPparaHalfVelocityOxygen_;
+        return halfVelocityOxygen_;
     }
 
-    static const Scalar MICPparaHalfVelocityUrea()
+    static const Scalar halfVelocityUrea()
     {
-        return MICPparaHalfVelocityUrea_;
+        return halfVelocityUrea_;
     }
 
-    static const Scalar MICPparaMaximumGrowthRate()
+    static const Scalar maximumGrowthRate()
     {
-        return MICPparaMaximumGrowthRate_;
+        return maximumGrowthRate_;
     }
 
-    static const Scalar MICPparaMaximumOxygenConcentration()
+    static const Scalar maximumOxygenConcentration()
     {
-        return MICPparaMaximumOxygenConcentration_;
+        return maximumOxygenConcentration_;
     }
 
-    static const Scalar MICPparaMaximumUreaConcentration()
+    static const Scalar maximumUreaConcentration()
     {
-        return MICPparaMaximumUreaConcentration_ / 10.0;//Dividing by scaling factor 10 (see WellInterface_impl.hpp);
+        return maximumUreaConcentration_ / 10.0;//Dividing by scaling factor 10 (see WellInterface_impl.hpp);
     }
 
-    static const Scalar MICPparaMaximumUreaUtilization()
+    static const Scalar maximumUreaUtilization()
     {
-        return MICPparaMaximumUreaUtilization_;
+        return maximumUreaUtilization_;
     }
 
-    static const Scalar MICPparaMicrobialAttachmentRate()
+    static const Scalar microbialAttachmentRate()
     {
-        return MICPparaMicrobialAttachmentRate_;
+        return microbialAttachmentRate_;
     }
 
-    static const Scalar MICPparaMicrobialDeathRate()
+    static const Scalar microbialDeathRate()
     {
-        return MICPparaMicrobialDeathRate_;
+        return microbialDeathRate_;
     }
 
-    static const Scalar MICPparaMinimumPermeability()
+    static const Scalar minimumPermeability()
     {
-        return MICPparaMinimumPermeability_;
+        return minimumPermeability_;
     }
 
-    static const Scalar MICPparaOxygenConsumptionFactor()
+    static const Scalar oxygenConsumptionFactor()
     {
-        return MICPparaOxygenConsumptionFactor_;
+        return oxygenConsumptionFactor_;
     }
 
-    static const Scalar MICPparaToleranceBeforeClogging()
+    static const Scalar toleranceBeforeClogging()
     {
-        return MICPparaToleranceBeforeClogging_;
+        return toleranceBeforeClogging_;
     }
 
-    static const Scalar MICPparaYieldGrowthCoefficient()
+    static const Scalar yieldGrowthCoefficient()
     {
-        return MICPparaYieldGrowthCoefficient_;
+        return yieldGrowthCoefficient_;
     }
 
     static const std::vector<Scalar> phi()
@@ -437,94 +437,94 @@ public:
     }
 
 private:
-    static Scalar MICPparaDensityBiofilm_;
-    static Scalar MICPparaDensityCalcite_;
-    static Scalar MICPparaDetachmentRate_;
-    static Scalar MICPparaCriticalPorosity_;
-    static Scalar MICPparaFittingFactor_;
-    static Scalar MICPparaHalfVelocityOxygen_;
-    static Scalar MICPparaHalfVelocityUrea_;
-    static Scalar MICPparaMaximumGrowthRate_;
-    static Scalar MICPparaMaximumUreaUtilization_;
-    static Scalar MICPparaMicrobialAttachmentRate_;
-    static Scalar MICPparaMicrobialDeathRate_;
-    static Scalar MICPparaMinimumPermeability_;
-    static Scalar MICPparaOxygenConsumptionFactor_;
-    static Scalar MICPparaYieldGrowthCoefficient_;
-    static Scalar MICPparaMaximumOxygenConcentration_;
-    static Scalar MICPparaMaximumUreaConcentration_;
-    static Scalar MICPparaToleranceBeforeClogging_;
+    static Scalar densityBiofilm_;
+    static Scalar densityCalcite_;
+    static Scalar detachmentRate_;
+    static Scalar criticalPorosity_;
+    static Scalar fittingFactor_;
+    static Scalar halfVelocityOxygen_;
+    static Scalar halfVelocityUrea_;
+    static Scalar maximumGrowthRate_;
+    static Scalar maximumUreaUtilization_;
+    static Scalar microbialAttachmentRate_;
+    static Scalar microbialDeathRate_;
+    static Scalar minimumPermeability_;
+    static Scalar oxygenConsumptionFactor_;
+    static Scalar yieldGrowthCoefficient_;
+    static Scalar maximumOxygenConcentration_;
+    static Scalar maximumUreaConcentration_;
+    static Scalar toleranceBeforeClogging_;
     static std::vector<Scalar> phi_;
 };
 
 
 template <class TypeTag, bool enableMICPV>
 typename BlackOilMICPModule<TypeTag, enableMICPV>::Scalar
-BlackOilMICPModule<TypeTag, enableMICPV>::MICPparaDensityBiofilm_;
+BlackOilMICPModule<TypeTag, enableMICPV>::densityBiofilm_;
 
 template <class TypeTag, bool enableMICPV>
 typename BlackOilMICPModule<TypeTag, enableMICPV>::Scalar
-BlackOilMICPModule<TypeTag, enableMICPV>::MICPparaDensityCalcite_;
+BlackOilMICPModule<TypeTag, enableMICPV>::densityCalcite_;
 
 template <class TypeTag, bool enableMICPV>
 typename BlackOilMICPModule<TypeTag, enableMICPV>::Scalar
-BlackOilMICPModule<TypeTag, enableMICPV>::MICPparaDetachmentRate_;
+BlackOilMICPModule<TypeTag, enableMICPV>::detachmentRate_;
 
 template <class TypeTag, bool enableMICPV>
 typename BlackOilMICPModule<TypeTag, enableMICPV>::Scalar
-BlackOilMICPModule<TypeTag, enableMICPV>::MICPparaCriticalPorosity_;
+BlackOilMICPModule<TypeTag, enableMICPV>::criticalPorosity_;
 
 template <class TypeTag, bool enableMICPV>
 typename BlackOilMICPModule<TypeTag, enableMICPV>::Scalar
-BlackOilMICPModule<TypeTag, enableMICPV>::MICPparaFittingFactor_;
+BlackOilMICPModule<TypeTag, enableMICPV>::fittingFactor_;
 
 template <class TypeTag, bool enableMICPV>
 typename BlackOilMICPModule<TypeTag, enableMICPV>::Scalar
-BlackOilMICPModule<TypeTag, enableMICPV>::MICPparaHalfVelocityOxygen_;
+BlackOilMICPModule<TypeTag, enableMICPV>::halfVelocityOxygen_;
 
 template <class TypeTag, bool enableMICPV>
 typename BlackOilMICPModule<TypeTag, enableMICPV>::Scalar
-BlackOilMICPModule<TypeTag, enableMICPV>::MICPparaHalfVelocityUrea_;
+BlackOilMICPModule<TypeTag, enableMICPV>::halfVelocityUrea_;
 
 template <class TypeTag, bool enableMICPV>
 typename BlackOilMICPModule<TypeTag, enableMICPV>::Scalar
-BlackOilMICPModule<TypeTag, enableMICPV>::MICPparaMaximumGrowthRate_;
+BlackOilMICPModule<TypeTag, enableMICPV>::maximumGrowthRate_;
 
 template <class TypeTag, bool enableMICPV>
 typename BlackOilMICPModule<TypeTag, enableMICPV>::Scalar
-BlackOilMICPModule<TypeTag, enableMICPV>::MICPparaMaximumUreaUtilization_;
+BlackOilMICPModule<TypeTag, enableMICPV>::maximumUreaUtilization_;
 
 template <class TypeTag, bool enableMICPV>
 typename BlackOilMICPModule<TypeTag, enableMICPV>::Scalar
-BlackOilMICPModule<TypeTag, enableMICPV>::MICPparaMicrobialAttachmentRate_;
+BlackOilMICPModule<TypeTag, enableMICPV>::microbialAttachmentRate_;
 
 template <class TypeTag, bool enableMICPV>
 typename BlackOilMICPModule<TypeTag, enableMICPV>::Scalar
-BlackOilMICPModule<TypeTag, enableMICPV>::MICPparaMicrobialDeathRate_;
+BlackOilMICPModule<TypeTag, enableMICPV>::microbialDeathRate_;
 
 template <class TypeTag, bool enableMICPV>
 typename BlackOilMICPModule<TypeTag, enableMICPV>::Scalar
-BlackOilMICPModule<TypeTag, enableMICPV>::MICPparaMinimumPermeability_;
+BlackOilMICPModule<TypeTag, enableMICPV>::minimumPermeability_;
 
 template <class TypeTag, bool enableMICPV>
 typename BlackOilMICPModule<TypeTag, enableMICPV>::Scalar
-BlackOilMICPModule<TypeTag, enableMICPV>::MICPparaOxygenConsumptionFactor_;
+BlackOilMICPModule<TypeTag, enableMICPV>::oxygenConsumptionFactor_;
 
 template <class TypeTag, bool enableMICPV>
 typename BlackOilMICPModule<TypeTag, enableMICPV>::Scalar
-BlackOilMICPModule<TypeTag, enableMICPV>::MICPparaYieldGrowthCoefficient_;
+BlackOilMICPModule<TypeTag, enableMICPV>::yieldGrowthCoefficient_;
 
 template <class TypeTag, bool enableMICPV>
 typename BlackOilMICPModule<TypeTag, enableMICPV>::Scalar
-BlackOilMICPModule<TypeTag, enableMICPV>::MICPparaMaximumOxygenConcentration_;
+BlackOilMICPModule<TypeTag, enableMICPV>::maximumOxygenConcentration_;
 
 template <class TypeTag, bool enableMICPV>
 typename BlackOilMICPModule<TypeTag, enableMICPV>::Scalar
-BlackOilMICPModule<TypeTag, enableMICPV>::MICPparaMaximumUreaConcentration_;
+BlackOilMICPModule<TypeTag, enableMICPV>::maximumUreaConcentration_;
 
 template <class TypeTag, bool enableMICPV>
 typename BlackOilMICPModule<TypeTag, enableMICPV>::Scalar
-BlackOilMICPModule<TypeTag, enableMICPV>::MICPparaToleranceBeforeClogging_;
+BlackOilMICPModule<TypeTag, enableMICPV>::toleranceBeforeClogging_;
 
 template <class TypeTag, bool enableMICPV>
 std::vector<typename BlackOilMICPModule<TypeTag, enableMICPV>::Scalar>
@@ -576,9 +576,9 @@ public:
         const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, timeIdx);
         const auto& K = elemCtx.problem().intrinsicPermeability(elemCtx, dofIdx, timeIdx);
         Scalar referencePorosity_ = elemCtx.problem().porosity(elemCtx, dofIdx, timeIdx);
-        Scalar eta = MICPModule::MICPparaFittingFactor();
-        Scalar k_min = MICPModule::MICPparaMinimumPermeability();
-        Scalar phi_crit = MICPModule::MICPparaCriticalPorosity();
+        Scalar eta = MICPModule::fittingFactor();
+        Scalar k_min = MICPModule::minimumPermeability();
+        Scalar phi_crit = MICPModule::criticalPorosity();
 
         microbialConcentration_ = priVars.makeEvaluation(microbialConcentrationIdx, timeIdx, linearizationType);
         oxygenConcentration_ = priVars.makeEvaluation(oxygenConcentrationIdx, timeIdx, linearizationType);
