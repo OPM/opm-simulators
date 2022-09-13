@@ -29,7 +29,6 @@
 #define EWOMS_BLACK_OIL_BRINE_MODULE_HH
 
 #include "blackoilproperties.hh"
-#include <opm/models/common/quantitycallbacks.hh>
 
 #include <opm/material/common/Tabulated1DFunction.hpp>
 #include <opm/material/common/IntervalTabulated2DFunction.hpp>
@@ -42,8 +41,6 @@
 #include <opm/input/eclipse/EclipseState/Tables/TableManager.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/SimpleTable.hpp>
 #endif
-
-#include <opm/material/common/Valgrind.hpp>
 
 #include <dune/common/fvector.hh>
 
