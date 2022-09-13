@@ -30,7 +30,6 @@
 
 #include "blackoilproperties.hh"
 #include <opm/models/io/vtkblackoilmicpmodule.hh>
-#include <opm/models/common/quantitycallbacks.hh>
 
 #if HAVE_ECL_INPUT
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
@@ -39,6 +38,9 @@
 
 #include <dune/common/fvector.hh>
 
+#include <cmath>
+#include <cstddef>
+#include <stdexcept>
 #include <string>
 
 namespace Opm {
