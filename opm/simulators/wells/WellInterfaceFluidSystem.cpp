@@ -182,7 +182,7 @@ activeProductionConstraint(const SingleWellState& ws,
                 return Well::ProducerCMode::THP;
             } else {
                 this->operability_status_.thp_limit_violated_but_not_switched = true;
-                deferred_logger.debug("NOT_SWITCHING_TO_THP",
+                deferred_logger.info("NOT_SWITCHING_TO_THP",
                 "The THP limit is violated for producer " +
                 this->name() +
                 ". But the rate will increase if switched to THP. " +
