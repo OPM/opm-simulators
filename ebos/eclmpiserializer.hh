@@ -24,10 +24,15 @@
 #include <opm/simulators/utils/MPIPacker.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
+#include <map>
 #include <optional>
+#include <set>
 #include <type_traits>
 #include <utility>
+#include <unordered_map>
+#include <unordered_set>
 #include <variant>
+#include <vector>
 
 namespace detail
 {
@@ -94,6 +99,8 @@ public:
             map(const_cast<T&>(data));
         } else if constexpr (is_array<T>::value) {
             array(const_cast<T&>(data));
+        } else if constexpr (is_set<T>::value) {
+            set(const_cast<T&>(data));
         } else {
           if (m_op == Operation::PACKSIZE)
               m_packSize += Mpi::packSize(data, m_comm);
@@ -502,6 +509,22 @@ protected:
 
     template<class Key, class T, class Hash, class KeyEqual, class Allocator>
     struct is_map<std::unordered_map<Key,T,Hash,KeyEqual,Allocator>> {
+        constexpr static bool value = true;
+    };
+
+    //! \brief Predicate for sets
+    template<class T>
+    struct is_set {
+        constexpr static bool value = false;
+    };
+
+    template<class Key, class Compare, class Allocator>
+    struct is_set<std::set<Key,Compare,Allocator>> {
+        constexpr static bool value = true;
+    };
+
+    template<class Key, class Hash, class KeyEqual, class Allocator>
+    struct is_set<std::unordered_set<Key,Hash,KeyEqual,Allocator>> {
         constexpr static bool value = true;
     };
 

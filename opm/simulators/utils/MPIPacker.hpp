@@ -26,11 +26,9 @@
 
 #include <bitset>
 #include <cstddef>
-#include <set>
 #include <string>
 #include <tuple>
 #include <typeinfo>
-#include <unordered_set>
 #include <vector>
 
 namespace Opm
@@ -82,14 +80,6 @@ std::size_t packSize(const std::pair<T1,T2>& data, Opm::Parallel::MPIComm comm);
 
 template<class T, class A>
 std::size_t packSize(const std::vector<T,A>& data, Opm::Parallel::MPIComm comm);
-
-template<class K, class C, class A>
-std::size_t packSize(const std::set<K,C,A>& data,
-                     Opm::Parallel::MPIComm comm);
-
-template<class T, class H, class KE, class A>
-std::size_t packSize(const std::unordered_set<T,H,KE,A>& data,
-                     Opm::Parallel::MPIComm comm);
 
 template<class A>
 std::size_t packSize(const std::vector<bool,A>& data, Opm::Parallel::MPIComm comm);
@@ -161,16 +151,6 @@ template<class... Ts>
 void pack(const std::tuple<Ts...>& data, std::vector<char>& buffer,
           int& position, Opm::Parallel::MPIComm comm);
 
-template<class K, class C, class A>
-void pack(const std::set<K,C,A>& data,
-          std::vector<char>& buffer, int& position,
-          Opm::Parallel::MPIComm comm);
-
-template<class T, class H, class KE, class A>
-void pack(const std::unordered_set<T,H,KE,A>& data,
-          std::vector<char>& buffer, int& position,
-          Opm::Parallel::MPIComm comm);
-
 void pack(const char* str, std::vector<char>& buffer, int& position,
           Opm::Parallel::MPIComm comm);
 
@@ -237,16 +217,6 @@ void unpack(std::vector<bool,A>& data, std::vector<char>& buffer, int& position,
 template<class... Ts>
 void unpack(std::tuple<Ts...>& data, std::vector<char>& buffer,
             int& position, Opm::Parallel::MPIComm comm);
-
-template<class K, class C, class A>
-void unpack(std::set<K,C,A>& data,
-            std::vector<char>& buffer, int& position,
-            Opm::Parallel::MPIComm comm);
-
-template<class T, class H, class KE, class A>
-void unpack(std::unordered_set<T,H,KE,A>& data,
-            std::vector<char>& buffer, int& position,
-            Opm::Parallel::MPIComm comm);
 
 void unpack(char* str, std::size_t length, std::vector<char>& buffer, int& position,
             Opm::Parallel::MPIComm comm);
