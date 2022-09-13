@@ -302,6 +302,12 @@ partiallySupported()
                {3,{false, allow_values<std::string> {"E", "P", "EP", "PE", ""}, "WTEST(TEST): only the E (economic) option is currently supported – will continue"}}, // REASON
             },
          },
+         {
+            "WVFPEXP",
+            {
+               {5,{false, allow_values<std::string> {"WG"}, "WVFPEXP(EXTRAPOLATION_CONTROL): only support linear extrapolation – will continue"}}, // EXTRAPOLATION_CONTROL
+            },
+         },
    };
 
    return partially_supported_keywords_strings;
