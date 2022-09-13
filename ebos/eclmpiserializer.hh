@@ -121,7 +121,7 @@ public:
     template <typename T>
     void vector(std::vector<T>& data)
     {
-        auto handle = [&](auto& d)
+        [[maybe_unused]] auto handle = [&](auto& d)
         {
             for (auto& it : d) {
               if constexpr (is_pair_or_tuple<T>::value)
@@ -139,15 +139,24 @@ public:
 
         if (m_op == Operation::PACKSIZE) {
             m_packSize += Mpi::Packer::packSize(data.size(), m_comm);
-            handle(data);
+            if constexpr (std::is_pod_v<T>)
+                m_packSize += Mpi::Packer::packSize(data.data(), data.size(), m_comm);
+            else
+                handle(data);
         } else if (m_op == Operation::PACK) {
-            Mpi::packer::pack(data.size(), m_buffer, m_position, m_comm);
-            handle(data);
+            Mpi::Packer::pack(data.size(), m_buffer, m_position, m_comm);
+            if constexpr (std::is_pod_v<T>)
+                Mpi::Packer::pack(data.data(), data.size(), m_buffer, m_position, m_comm);
+            else
+                handle(data);
         } else if (m_op == Operation::UNPACK) {
             size_t size;
             Mpi::Packer::unpack(size, m_buffer, m_position, m_comm);
             data.resize(size);
-            handle(data);
+            if constexpr (std::is_pod_v<T>)
+                Mpi::Packer::unpack(data.data(), size, m_buffer, m_position, m_comm);
+            else
+                handle(data);
         }
     }
 
@@ -184,7 +193,7 @@ public:
     {
         using T = typename Array::value_type;
 
-        auto handle = [&](auto& d) {
+        [[maybe_unused]] auto handle = [&](auto& d) {
             for (auto& it : d) {
                 if constexpr (is_pair_or_tuple<T>::value)
                     tuple(it);
@@ -198,15 +207,20 @@ public:
         };
 
         if (m_op == Operation::PACKSIZE) {
-            m_packSize += Mpi::Packer::packSize(data.size(), m_comm);
-            handle(data);
+            if constexpr (std::is_pod_v<T>)
+                m_packSize += Mpi::Packer::packSize(data.data(), data.size(), m_comm);
+            else
+                handle(data);
         } else if (m_op == Operation::PACK) {
-            Mpi::Packer::pack(data.size(), m_buffer, m_position, m_comm);
-            handle(data);
+            if constexpr (std::is_pod_v<T>)
+                Mpi::Packer::pack(data.data(), data.size(), m_buffer, m_position, m_comm);
+            else
+                handle(data);
         } else if (m_op == Operation::UNPACK) {
-            size_t size;
-            Mpi::Packer::unpack(size, m_buffer, m_position, m_comm);
-            handle(data);
+            if constexpr (std::is_pod_v<T>)
+                Mpi::Packer::unpack(data.data(), data.size(), m_buffer, m_position, m_comm);
+            else
+                handle(data);
         }
     }
 
