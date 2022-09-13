@@ -27,7 +27,6 @@
 #if HAVE_MPI
 #include <ebos/eclmpiserializer.hh>
 #endif
-#include <opm/input/eclipse/EclipseState/Util/OrderedMap.hpp>
 
 namespace Opm
 {
@@ -152,28 +151,6 @@ std::size_t packSize(const char* str, Opm::Parallel::MPIComm comm)
 std::size_t packSize(const std::string& str, Opm::Parallel::MPIComm comm)
 {
     return packSize(str.c_str(), comm);
-}
-
-template<class T1, class T2, class C, class A>
-std::size_t packSize(const std::map<T1,T2,C,A>& data, Opm::Parallel::MPIComm comm)
-{
-    std::size_t totalSize = packSize(data.size(), comm);
-    for (const auto& entry: data)
-    {
-        totalSize += packSize(entry, comm);
-    }
-    return totalSize;
-}
-
-template<class T1, class T2, class H, class P, class A>
-std::size_t packSize(const std::unordered_map<T1,T2,H,P,A>& data, Opm::Parallel::MPIComm comm)
-{
-    std::size_t totalSize = packSize(data.size(), comm);
-    for (const auto& entry: data)
-    {
-        totalSize += packSize(entry, comm);
-    }
-    return totalSize;
 }
 
 template<class T, std::size_t N>
@@ -372,30 +349,6 @@ void pack(const std::string& str, std::vector<char>& buffer, int& position,
     pack(str.c_str(), buffer, position, comm);
 }
 
-template<class T1, class T2, class C, class A>
-void pack(const std::map<T1,T2,C,A>& data, std::vector<char>& buffer, int& position,
-          Opm::Parallel::MPIComm comm)
-{
-    pack(data.size(), buffer, position, comm);
-
-    for (const auto& entry: data)
-    {
-        pack(entry, buffer, position, comm);
-    }
-}
-
-template<class T1, class T2, class H, class P, class A>
-void pack(const std::unordered_map<T1,T2,H,P,A>& data, std::vector<char>& buffer, int& position,
-          Opm::Parallel::MPIComm comm)
-{
-    pack(data.size(), buffer, position, comm);
-
-    for (const auto& entry: data)
-    {
-        pack(entry, buffer, position, comm);
-    }
-}
-
 template<std::size_t Size>
 void pack(const std::bitset<Size>& data, std::vector<char>& buffer,
           int& position, Opm::Parallel::MPIComm comm)
@@ -572,36 +525,6 @@ void unpack(std::string& str, std::vector<char>& buffer, int& position,
     str.append(cStr.data());
 }
 
-template<class T1, class T2, class C, class A>
-void unpack(std::map<T1,T2,C,A>& data, std::vector<char>& buffer, int& position,
-            Opm::Parallel::MPIComm comm)
-{
-    std::size_t size=0;
-    unpack(size, buffer, position, comm);
-
-    for (;size>0; size--)
-    {
-        std::pair<T1,T2> entry;
-        unpack(entry, buffer, position, comm);
-        data.insert(entry);
-    }
-}
-
-template<class T1, class T2, class H, class P, class A>
-void unpack(std::unordered_map<T1,T2,H,P,A>& data, std::vector<char>& buffer, int& position,
-            Opm::Parallel::MPIComm comm)
-{
-    std::size_t size=0;
-    unpack(size, buffer, position, comm);
-
-    for (;size>0; size--)
-    {
-        std::pair<T1,T2> entry;
-        unpack(entry, buffer, position, comm);
-        data.insert(entry);
-    }
-}
-
 template<std::size_t Size>
 void unpack(std::bitset<Size>& data, std::vector<char>& buffer, int& position,
             Opm::Parallel::MPIComm comm)
@@ -643,7 +566,6 @@ INSTANTIATE_PACK_VECTOR(unsigned long long int)
 INSTANTIATE_PACK_VECTOR(std::time_t)
 INSTANTIATE_PACK_VECTOR(std::array<double, 3>)
 INSTANTIATE_PACK_VECTOR(std::pair<bool,double>)
-INSTANTIATE_PACK_VECTOR(std::map<std::string,int>)
 INSTANTIATE_PACK_VECTOR(std::pair<std::string,std::vector<size_t>>)
 INSTANTIATE_PACK_VECTOR(std::pair<int,std::vector<int>>)
 INSTANTIATE_PACK_VECTOR(std::pair<int,std::vector<size_t>>)
@@ -676,17 +598,7 @@ INSTANTIATE_PACK(std::array<bool,3>)
 INSTANTIATE_PACK(std::array<int,3>)
 INSTANTIATE_PACK(std::array<double,4>)
 INSTANTIATE_PACK(std::array<double,5>)
-INSTANTIATE_PACK(std::map<std::pair<int,int>,std::pair<bool,double>>)
 INSTANTIATE_PACK(std::pair<double, double>)
-INSTANTIATE_PACK(std::map<std::string,std::vector<int>>)
-INSTANTIATE_PACK(std::map<std::string,std::map<std::pair<int,int>,int>>)
-INSTANTIATE_PACK(std::map<std::string,int>)
-INSTANTIATE_PACK(std::map<std::string,double>)
-INSTANTIATE_PACK(std::map<int,int>)
-INSTANTIATE_PACK(std::unordered_map<std::string,size_t>)
-INSTANTIATE_PACK(std::unordered_map<std::string,size_t,Opm::OrderedMapDetail::TruncatedStringHash<std::string::npos>, Opm::OrderedMapDetail::TruncatedStringEquals<std::string::npos>>)
-INSTANTIATE_PACK(std::unordered_map<std::string,size_t,Opm::OrderedMapDetail::TruncatedStringHash<8>, Opm::OrderedMapDetail::TruncatedStringEquals<8>>)
-INSTANTIATE_PACK(std::unordered_map<std::string,std::string>)
 INSTANTIATE_PACK(std::unordered_set<std::string>)
 INSTANTIATE_PACK(std::set<std::string>)
 INSTANTIATE_PACK(std::bitset<4>)
