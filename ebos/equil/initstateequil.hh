@@ -128,12 +128,13 @@ private:
                    const double press) const;
 };
 
-template <class FluidSystem, class RV>
+template <class FluidSystem, class RV, class RVW>
 class Gas
 {
 public:
     Gas(const double temp,
         const RV& rv,
+        const RVW& rvw,
         const int pvtRegionIdx,
         const double normGrav);
 
@@ -143,6 +144,7 @@ public:
 private:
     const double temp_;
     const RV& rv_;
+    const RVW& rvw_;
     const int pvtRegionIdx_;
     const double g_;
 
@@ -276,7 +278,7 @@ private:
     >;
 
     using GasPressODE = PhasePressODE::Gas<
-        FluidSystem, typename Region::CalcEvaporation
+        FluidSystem, typename Region::CalcEvaporation, typename Region::CalcWaterEvaporation
     >;
 
     using WatPressODE = PhasePressODE::Water<FluidSystem>;
@@ -741,6 +743,7 @@ private:
 
     std::vector< std::shared_ptr<Miscibility::RsFunction> > rsFunc_;
     std::vector< std::shared_ptr<Miscibility::RsFunction> > rvFunc_;
+    std::vector< std::shared_ptr<Miscibility::RsFunction> > rvwFunc_;
     using TabulatedFunction = Tabulated1DFunction<double>;
     std::vector<TabulatedFunction> saltVdTable_;
     std::vector<TabulatedFunction> saltpVdTable_;

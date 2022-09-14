@@ -364,6 +364,56 @@ private:
 
 
 /**
+ * Type that implements "vaporized water-gas ratio"
+ * tabulated as a function of depth policy.  Data
+ * typically taken from keyword 'RVWVD'.
+ */
+template <class FluidSystem>
+class RvwVD : public RsFunction
+{
+public:
+    /**
+     * Constructor.
+     *
+     * \param[in] pvtRegionIdx The pvt region index
+     * \param[in] depth Depth nodes.
+     * \param[in] rvw Evaporized water-gasl ratio at @c depth.
+     */
+    RvwVD(const int pvtRegionIdx,
+         const std::vector<double>& depth,
+         const std::vector<double>& rvw);
+
+    /**
+     * Function call.
+     *
+     * \param[in] depth Depth at which to calculate RVW
+     * value.
+     *
+     * \param[in] press Pressure at which to calculate RVW
+     * value.
+     *
+     * \param[in] temp Temperature at which to calculate RVW
+     * value.
+     *
+     * \return Vaporized water-gas ratio (RVW) at depth @c
+     * depth and pressure @c press.
+     */
+    double operator()(const double depth,
+                      const double press,
+                      const double temp,
+                      const double satWat = 0.0) const;
+
+private:
+    using RvwVsDepthFunc = Tabulated1DFunction<double>;
+
+    const int pvtRegionIdx_;
+    RvwVsDepthFunc rvwVsDepth_;
+
+    double satRvw(const double press, const double temp) const;
+};
+
+
+/**
  * Class that implements "dissolved gas-oil ratio" (Rs)
  * as function of depth and pressure as follows:
  *
@@ -472,6 +522,60 @@ private:
     double satRv(const double press, const double temp) const;
 };
 
+/**
+ * Class that implements "vaporized water-gas ratio" (Rvw)
+ * as function of depth and pressure as follows:
+ *
+ *   1. The Rvw at the gas-water contact is equal to the
+ *      saturated Rv value, RvwSatContact.
+ *
+ *   2. The Rvw elsewhere is equal to RvwSatContact, but
+ *      constrained to the saturated value as given by the
+ *      local pressure.
+ *
+ * This should yield Rvw-values that are constant below the
+ * contact, and decreasing above the contact.
+ */
+template <class FluidSystem>
+class RvwSatAtContact : public RsFunction
+{
+public:
+    /**
+     * Constructor.
+     *
+     * \param[in] pvtRegionIdx The pvt region index
+     * \param[in] pContact  oil pressure at the contact
+     * \param[in] T_contact  temperature at the contact
+     */
+    RvwSatAtContact(const int pvtRegionIdx, const double pContact, const double T_contact);
+
+    /**
+     * Function call.
+     *
+     * \param[in] depth Depth at which to calculate RVW
+     * value.
+     *
+     * \param[in] press Pressure at which to calculate RVW
+     * value.
+     *
+     * \param[in] temp Temperature at which to calculate RVW
+     * value.
+     *
+     * \return Dissolved water-gas ratio (RVW) at depth @c
+     * depth and pressure @c press.
+     */
+    double operator()(const double /*depth*/,
+                      const double press,
+                      const double temp,
+                      const double satWat = 0.0) const;
+
+private:
+    const int pvtRegionIdx_;
+    double rvwSatContact_;
+
+    double satRvw(const double press, const double temp) const;
+};
+
 } // namespace Miscibility
 
 /**
@@ -504,11 +608,13 @@ public:
      * \param[in] rec     Equilibration data of current region.
      * \param[in] rs      Calculator of dissolved gas-oil ratio.
      * \param[in] rv      Calculator of vapourised oil-gas ratio.
+     * \param[in] rvw     Calculator of vapourised water-gas ratio.
      * \param[in] pvtRegionIdx The pvt region index
      */
     EquilReg(const EquilRecord& rec,
              std::shared_ptr<Miscibility::RsFunction> rs,
              std::shared_ptr<Miscibility::RsFunction> rv,
+             std::shared_ptr<Miscibility::RsFunction> rvw,
              const TabulatedFunction& saltVdTable,
              const int pvtIdx);
 
@@ -521,6 +627,12 @@ public:
      * Type of vapourised oil-gas ratio calculator.
      */
     using CalcEvaporation = Miscibility::RsFunction;
+
+     /**
+     * Type of vapourised water-gas ratio calculator.
+     */
+    using CalcWaterEvaporation = Miscibility::RsFunction;
+
 
     /**
      * Datum depth in current region
@@ -577,6 +689,12 @@ public:
      */
     const CalcEvaporation& evaporationCalculator() const;
 
+     /**
+     * Retrieve vapourised water-gas ratio calculator of current
+     * region.
+     */
+    const CalcWaterEvaporation& waterEvaporationCalculator() const;
+
     const TabulatedFunction& saltVdTable() const;
     /**
      * Retrieve pvtIdx of the region.
@@ -587,6 +705,7 @@ private:
     EquilRecord rec_;     /**< Equilibration data */
     std::shared_ptr<Miscibility::RsFunction> rs_;      /**< RS calculator */
     std::shared_ptr<Miscibility::RsFunction> rv_;      /**< RV calculator */
+    std::shared_ptr<Miscibility::RsFunction> rvw_;      /**< RVW calculator */
     const TabulatedFunction& saltVdTable_;
     const int pvtIdx_;
 };

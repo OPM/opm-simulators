@@ -200,7 +200,7 @@ static Opm::EquilRecord mkEquilRecord( double datd, double datp,
                                        double zwoc, double pcow_woc,
                                        double zgoc, double pcgo_goc )
 {
-    return Opm::EquilRecord( datd, datp, zwoc, pcow_woc, zgoc, pcgo_goc, true, true, 0);
+    return Opm::EquilRecord( datd, datp, zwoc, pcow_woc, zgoc, pcgo_goc, true, true, 0, true);
 }
 
 template <typename Simulator>
@@ -264,6 +264,7 @@ BOOST_AUTO_TEST_CASE(PhasePressure)
         record,
         std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
         std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
+        std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
         trivialSaltVdTable,
         0
     };
@@ -320,22 +321,26 @@ BOOST_AUTO_TEST_CASE(CellSubset)
         Opm::EQUIL::EquilReg(record[0],
         std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
         std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
+        std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
         trivialSaltVdTable,
         0)
         ,
         Opm::EQUIL::EquilReg(record[0],
         std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
         std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
+        std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
         trivialSaltVdTable,
         0)
         ,
         Opm::EQUIL::EquilReg(record[1],
         std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
         std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
+        std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
         trivialSaltVdTable,
         0)
         ,
         Opm::EQUIL::EquilReg(record[1],
+        std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
         std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
         std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
         trivialSaltVdTable,
@@ -423,22 +428,26 @@ BOOST_AUTO_TEST_CASE(RegMapping)
         Opm::EQUIL::EquilReg(record[0],
         std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
         std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
+        std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
         trivialSaltVdTable,
         0)
         ,
         Opm::EQUIL::EquilReg(record[0],
         std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
         std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
+        std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
         trivialSaltVdTable,
         0)
         ,
         Opm::EQUIL::EquilReg(record[1],
         std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
         std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
+        std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
         trivialSaltVdTable,
         0)
         ,
         Opm::EQUIL::EquilReg(record[1],
+        std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
         std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
         std::make_shared<Opm::EQUIL::Miscibility::NoMixing>(),
         trivialSaltVdTable,

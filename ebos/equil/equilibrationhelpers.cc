@@ -196,6 +196,42 @@ satRv(const double press, const double temp) const
 
 
 template<class FluidSystem>
+RvwVD<FluidSystem>::RvwVD(const int pvtRegionIdx,
+                        const std::vector<double>& depth,
+                        const std::vector<double>& rvw)
+    : pvtRegionIdx_(pvtRegionIdx)
+    , rvwVsDepth_(depth, rvw)
+{
+}
+
+template<class FluidSystem>
+double RvwVD<FluidSystem>::
+operator()(const double depth,
+           const double press,
+           const double temp,
+           const double satWat) const
+{
+    if (std::abs(satWat) > 1e-16) {
+        return satRvw(press, temp); //saturated Rvw
+    }
+    else {
+        if (rvwVsDepth_.xMin() > depth)
+            return rvwVsDepth_.valueAt(0);
+        else if (rvwVsDepth_.xMax() < depth)
+            return rvwVsDepth_.valueAt(rvwVsDepth_.numSamples() - 1);
+        return std::min(satRvw(press, temp), rvwVsDepth_.eval(depth, /*extrapolate=*/false));
+    }
+}
+
+template<class FluidSystem>
+double RvwVD<FluidSystem>::
+satRvw(const double press, const double temp) const
+{
+    return FluidSystem::gasPvt().saturatedWaterVaporizationFactor(pvtRegionIdx_, temp, press);
+}
+
+
+template<class FluidSystem>
 RsSatAtContact<FluidSystem>::
 RsSatAtContact(const int pvtRegionIdx, const double pContact,  const double T_contact)
     : pvtRegionIdx_(pvtRegionIdx)
@@ -255,16 +291,48 @@ satRv(const double press, const double temp) const
     return FluidSystem::gasPvt().saturatedOilVaporizationFactor(pvtRegionIdx_, temp, press);;
 }
 
+template<class FluidSystem>
+RvwSatAtContact<FluidSystem>::
+RvwSatAtContact(const int pvtRegionIdx, const double pContact, const double T_contact)
+    : pvtRegionIdx_(pvtRegionIdx)
+{
+    rvwSatContact_ = satRvw(pContact, T_contact);
+}
+
+template<class FluidSystem>
+double RvwSatAtContact<FluidSystem>::
+operator()(const double /*depth*/,
+           const double press,
+           const double temp,
+           const double satWat) const
+{
+    if (satWat > 0.0) {
+        return satRvw(press, temp);
+    }
+    else {
+        return std::min(satRvw(press, temp), rvwSatContact_);
+    }
+}
+
+template<class FluidSystem>
+double RvwSatAtContact<FluidSystem>::
+satRvw(const double press, const double temp) const
+{
+    return FluidSystem::gasPvt().saturatedWaterVaporizationFactor(pvtRegionIdx_, temp, press);;
+}
+
 } // namespace Miscibility
 
 EquilReg::EquilReg(const EquilRecord& rec,
                    std::shared_ptr<Miscibility::RsFunction> rs,
                    std::shared_ptr<Miscibility::RsFunction> rv,
+                   std::shared_ptr<Miscibility::RsFunction> rvw,
                    const TabulatedFunction& saltVdTable,
                    const int pvtIdx)
     : rec_    (rec)
     , rs_     (rs)
     , rv_     (rv)
+    , rvw_     (rvw)
     , saltVdTable_ (saltVdTable)
     , pvtIdx_ (pvtIdx)
 {
@@ -315,6 +383,12 @@ const EquilReg::CalcEvaporation&
 EquilReg::evaporationCalculator() const
 {
     return *this->rv_;
+}
+
+const EquilReg::CalcWaterEvaporation&
+EquilReg::waterEvaporationCalculator() const
+{
+    return *this->rvw_;
 }
 
 const EquilReg::TabulatedFunction&
@@ -556,7 +630,9 @@ namespace Miscibility {
     template class RsVD<FS>;
     template class RsSatAtContact<FS>;
     template class RvSatAtContact<FS>;
+    template class RvwSatAtContact<FS>;
     template class RvVD<FS>;
+    template class RvwVD<FS>;
 }
 
 } // namespace Equil
