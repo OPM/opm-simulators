@@ -200,7 +200,7 @@ static Opm::EquilRecord mkEquilRecord( double datd, double datp,
                                        double zwoc, double pcow_woc,
                                        double zgoc, double pcgo_goc )
 {
-    return Opm::EquilRecord( datd, datp, zwoc, pcow_woc, zgoc, pcgo_goc, true, true, 0);
+    return Opm::EquilRecord( datd, datp, zwoc, pcow_woc, zgoc, pcgo_goc, true, true, 0, true);
 }
 
 template <typename Simulator>
