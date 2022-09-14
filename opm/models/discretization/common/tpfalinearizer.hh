@@ -83,6 +83,7 @@ class TpfaLinearizer
     using Stencil = GetPropType<TypeTag, Properties::Stencil>;
     using LocalResidual = GetPropType<TypeTag, Properties::LocalResidual>;
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
+    using FluidState = typename IntensiveQuantities::FluidState;
 
     using Element = typename GridView::template Codim<0>::Entity;
     using ElementIterator = typename GridView::template Codim<0>::Iterator;
@@ -458,6 +459,22 @@ private:
                 residual_[globI] += res;
                 jacobian_->addToBlock(globI, globI, bMat);
             }
+        } // end of loop for cell globI.
+
+        // Boundary terms. Only looping over cells with nontrivial bcs.
+        for (const auto& bdyInfo : boundaryInfo_) {
+            VectorBlock res(0.0);
+            MatrixBlock bMat(0.0);
+            ADVectorBlock adres(0.0);
+            const unsigned globI = bdyInfo.cell;
+            const IntensiveQuantities* insideIntQuants = model_().cachedIntensiveQuantities(globI, /*timeIdx*/ 0);
+            if (insideIntQuants == nullptr) {
+                throw std::logic_error("Missing updated intensive quantities for cell " + std::to_string(globI));
+            }
+            LocalResidual::computeBoundaryFlux(adres, problem_(), bdyInfo.bcdata, *insideIntQuants, globI, 0);
+            setResAndJacobi(res, bMat, adres);
+            residual_[globI] += res;
+            jacobian_->addToBlock(globI, globI, bMat);
         }
     }
 
@@ -479,6 +496,23 @@ private:
         FaceDir::DirEnum faceDirection;
     };
     SparseTable<NeighborInfo> neighborInfo_;
+
+    struct BoundaryConditionData
+    {
+        BCType type;
+        VectorBlock massRate;
+        unsigned pvtRegionIdx;
+        unsigned boundaryFaceIndex;
+        double faceArea;
+        double faceZCoord;
+        FluidState exFluidState;
+    };
+    struct BoundaryInfo
+    {
+        unsigned int cell;
+        BoundaryConditionData bcdata;
+    };
+    std::vector<BoundaryInfo> boundaryInfo_;
 };
 
 } // namespace Opm
