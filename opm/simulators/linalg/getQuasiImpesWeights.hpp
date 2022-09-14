@@ -23,7 +23,7 @@
 #include <dune/common/fvector.hh>
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
-
+#include <opm/material/common/MathToolbox.hpp>
 #include <algorithm>
 #include <cmath>
 
