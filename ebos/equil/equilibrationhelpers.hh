@@ -522,7 +522,6 @@ private:
     double satRv(const double press, const double temp) const;
 };
 
-//TODO: check if needed
 /**
  * Class that implements "vaporized water-gas ratio" (Rvw)
  * as function of depth and pressure as follows:
