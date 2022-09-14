@@ -271,16 +271,19 @@ template<class TypeTag >
 class BlackOilModel
     : public MultiPhaseBaseModel<TypeTag>
 {
+public:
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+private:
     using Implementation = GetPropType<TypeTag, Properties::Model>;
     using ParentType = MultiPhaseBaseModel<TypeTag>;
 
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-    using Indices = GetPropType<TypeTag, Properties::Indices>;
-    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using Discretization = GetPropType<TypeTag, Properties::Discretization>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
-    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+
 
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { numComponents = FluidSystem::numComponents };
@@ -296,7 +299,7 @@ class BlackOilModel
     using EnergyModule = BlackOilEnergyModule<TypeTag>;
     using DiffusionModule = BlackOilDiffusionModule<TypeTag, enableDiffusion>;
     using MICPModule = BlackOilMICPModule<TypeTag>;
-
+    
 public:
 
     using LocalResidual = GetPropType<TypeTag, Properties::LocalResidual>;
