@@ -436,20 +436,20 @@ public:
                 m_op = Operation::PACK;
                 variadic_call(args...);
                 m_packSize = m_position;
-                m_comm.broadcast(&m_packSize, 1, 0);
-                m_comm.broadcast(m_buffer.data(), m_position, 0);
+                m_comm.broadcast(&m_packSize, 1, root);
+                m_comm.broadcast(m_buffer.data(), m_position, root);
             } catch (...) {
                 m_packSize = std::numeric_limits<size_t>::max();
-                m_comm.broadcast(&m_packSize, 1, 0);
+                m_comm.broadcast(&m_packSize, 1, root);
                 throw;
             }
         } else {
-            m_comm.broadcast(&m_packSize, 1, 0);
+            m_comm.broadcast(&m_packSize, 1, root);
             if (m_packSize == std::numeric_limits<size_t>::max()) {
                 throw std::runtime_error("Error detected in parallel serialization");
             }
             m_buffer.resize(m_packSize);
-            m_comm.broadcast(m_buffer.data(), m_packSize, 0);
+            m_comm.broadcast(m_buffer.data(), m_packSize, root);
             m_position = 0;
             m_op = Operation::UNPACK;
             variadic_call(std::forward<Args>(args)...);
