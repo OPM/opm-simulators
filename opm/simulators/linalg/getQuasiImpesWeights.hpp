@@ -88,6 +88,95 @@ namespace Amg
     }
 
     template<class Vector, class GridView, class ElementContext, class Model>
+    void getTrueImpesWeightsAnalytic(int pressureVarIndex, Vector& weights, const GridView& gridView,
+                                     ElementContext& elemCtx, const Model& model, std::size_t threadId)
+    {
+      // The sequential residual is a linear combination of the
+      // mass balance residuals, with coefficients equal to (for
+      // water, oil, gas):
+      //    1/bw,
+      //    (1/bo - rs/bg)/(1-rs*rv)
+      //    (1/bg - rv/bo)/(1-rs*rv)
+      // These coefficients must be applied for both the residual and
+      // Jacobian.
+        using FluidSystem = typename Model::FluidSystem;
+        //using Evaluation =  typename FluidSystem::Evaluation; // maybe better than decay_t but requite making it public
+        using LhsEval = double;
+        using Indices = typename Model::Indices;
+        
+        using PrimaryVariables = typename Model::PrimaryVariables;
+        using VectorBlockType = typename Vector::block_type;
+        constexpr int numEq = VectorBlockType::size();
+        using Evaluation = typename std::decay_t<decltype(model.localLinearizer(threadId).localResidual().residual(0))>
+            ::block_type;
+        using Toolbox = MathToolbox<Evaluation>;
+        VectorBlockType rhs(0.0);
+        const auto& solution= model.solution(/*timeIdx*/0);
+        auto elemIt = gridView.template begin</*codim=*/0>();
+        const auto& elemEndIt = gridView.template end</*codim=*/0>();
+        for (; elemIt != elemEndIt; ++elemIt) {
+            elemCtx.updatePrimaryStencil(*elemIt);
+            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+            const auto& index = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+            const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
+            const auto& fs = intQuants.fluidState();
+            VectorBlockType bweights;
+           
+            
+            if(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)){
+                unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(
+                    FluidSystem::solventComponentIndex(FluidSystem::waterCompIdx)
+                    );
+                bweights[FluidSystem::waterPhaseIdx]= Toolbox::template decay<LhsEval>(1/fs.invB(FluidSystem::waterPhaseIdx));
+            }
+            double denominator=1.0;
+            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
+                FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) ){
+                denominator =  Toolbox::template decay<LhsEval>(1 - fs.Rs()*fs.Rv());
+            }
+            
+            if( not(denominator>0)){
+                std::cout << "Probably negative compressibility" << std::endl;
+            }
+            if( FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) ){
+                unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(
+                    FluidSystem::solventComponentIndex(FluidSystem::oilCompIdx)
+                    );
+                bweights[activeCompIdx]= Toolbox::template decay<LhsEval>(
+                    (1/fs.invB(FluidSystem::oilPhaseIdx)-fs.Rs()
+                    /fs.invB(FluidSystem::gasPhaseIdx))/denominator);
+            }
+            if(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)){
+                 unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(
+                        FluidSystem::solventComponentIndex(FluidSystem::gasCompIdx)
+                        );
+                 bweights[activeCompIdx]= Toolbox::template decay<LhsEval>(
+                     (1/fs.invB(FluidSystem::gasPhaseIdx)-fs.Rv()
+                      /fs.invB(FluidSystem::oilPhaseIdx))/denominator);
+            }
+            const auto& meaning =  solution[index].primaryVarsMeaning();
+            if( (meaning == PrimaryVariables::Sw_pg_Rv) && (meaning == PrimaryVariables::Sw_po_Rs)){
+                unsigned activeCompIdx = -10;
+                if( meaning == PrimaryVariables::Sw_pg_Rv){
+                    activeCompIdx = Indices::canonicalToActiveComponentIndex(
+                        FluidSystem::solventComponentIndex(FluidSystem::oilCompIdx)
+                        );
+                }
+                if( meaning == PrimaryVariables::Sw_po_Rs){
+                    activeCompIdx = Indices::canonicalToActiveComponentIndex(
+                        FluidSystem::solventComponentIndex(FluidSystem::gasCompIdx)
+                        );
+                }
+                bweights[activeCompIdx] = 0.0;
+            }
+            
+            weights[index] = bweights;
+        }
+    }
+
+
+    
+    template<class Vector, class GridView, class ElementContext, class Model>
     void getTrueImpesWeights(int pressureVarIndex, Vector& weights, const GridView& gridView,
                              ElementContext& elemCtx, const Model& model, std::size_t threadId)
     {

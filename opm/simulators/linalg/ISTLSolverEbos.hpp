@@ -453,7 +453,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                 std::function<Vector()> trueFunc =
                     [this]
                     {
-                        return this->getTrueImpesWeights(pressureIndex);
+                        return this->getWeightsCalculator();
                     };
 
                 if (!useWellConn_) {
@@ -522,6 +522,46 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         }
 
 
+        /// Return an appropriate weight function if a cpr preconditioner is asked for.
+        std::function<Vector()> getWeightsCalculator() const
+        {
+            std::function<Vector()> weightsCalculator;
+
+            using namespace std::string_literals;
+
+            auto preconditionerType = prm_.get("preconditioner.type"s, "cpr"s);
+            if (preconditionerType == "cpr" || preconditionerType == "cprt") {
+                const bool transpose = preconditionerType == "cprt";
+                const auto weightsType = prm_.get("preconditioner.weight_type"s, "quasiimpes"s);
+                if (weightsType == "quasiimpes") {
+                    // weights will be created as default in the solver
+                    // assignment p = pressureIndex prevent compiler warning about
+                    // capturing variable with non-automatic storage duration
+                    weightsCalculator = [this, transpose, p = pressureIndex]() {
+                        return Amg::getQuasiImpesWeights<Matrix, Vector>(this->getMatrix(), p, transpose);
+                    };
+                } else if (weightsType == "trueimpes") {
+                    // assignment p = pressureIndex prevent compiler warning about
+                    // capturing variable with non-automatic storage duration
+                    weightsCalculator = [this, p = pressureIndex]() {
+                        return this->getTrueImpesWeights(p);
+                    };
+                } else if (weightsType == "trueimpesanalytic") {
+                    // assignment p = pressureIndex prevent compiler warning about
+                    // capturing variable with non-automatic storage duration
+                    weightsCalculator = [this, p = pressureIndex]() {
+                        return this->getTrueImpesWeightsAnalytic(p);
+                    };    
+                } else {
+                    OPM_THROW(std::invalid_argument,
+                              "Weights type " << weightsType << "not implemented for cpr."
+                              << " Please use quasiimpes or trueimpes.");
+                }
+            }
+            return weightsCalculator;
+        }
+
+
         // Weights to make approximate pressure equations.
         // Calculated from the storage terms (only) of the
         // conservation equations, ignoring all other terms.
@@ -535,6 +575,40 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                                      ThreadManager::threadId());
             return weights;
         }
+
+        Vector getTrueImpesWeightsAnalytic(int pressureVarIndex) const
+        {
+            Vector weights(rhs_->size());
+            ElementContext elemCtx(simulator_);
+            Amg::getTrueImpesWeightsAnalytic(pressureVarIndex, weights, simulator_.vanguard().gridView(),
+                                             elemCtx, simulator_.model(),
+                                             ThreadManager::threadId());
+            return weights;
+        }
+
+
+        /// Zero out off-diagonal blocks on rows corresponding to overlap cells
+        /// Diagonal blocks on ovelap rows are set to diag(1.0).
+        void makeOverlapRowsInvalid(Matrix& matrix) const
+        {
+            //value to set on diagonal
+            const int numEq = Matrix::block_type::rows;
+            typename Matrix::block_type diag_block(0.0);
+            for (int eq = 0; eq < numEq; ++eq)
+                diag_block[eq][eq] = 1.0;
+
+            //loop over precalculated overlap rows and columns
+            for (auto row = overlapRows_.begin(); row != overlapRows_.end(); row++ )
+                {
+                    int lcell = *row;
+                    // Zero out row.
+                    matrix[lcell] = 0.0;
+
+                    //diagonal block set to diag(1.0).
+                    matrix[lcell][lcell] = diag_block;
+                }
+        }
+
 
         Matrix& getMatrix()
         {
