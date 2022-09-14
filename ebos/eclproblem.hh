@@ -1341,6 +1341,15 @@ public:
     }
 
     /*!
+     * \brief Direct access to a boundary transmissibility.
+     */
+    Scalar transmissibilityBoundary(const unsigned globalSpaceIdx,
+                                    const unsigned boundaryFaceIdx) const
+    {
+        return transmissibilities_.transmissibilityBoundary(globalSpaceIdx, boundaryFaceIdx);
+    }
+
+    /*!
      * \copydoc EclTransmissiblity::thermalHalfTransmissibility
      */
     template <class Context>
