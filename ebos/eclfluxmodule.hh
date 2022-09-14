@@ -286,21 +286,17 @@ public:
             const Evaluation& transMult = up.rockCompTransMultiplier();
 
             const auto& materialLawManager = problem.materialLawManager();
-            const Evaluation *mob = nullptr;
+            FaceDir::DirEnum facedir = FaceDir::DirEnum::Unknown;
             if (materialLawManager->hasDirectionalRelperms()) {
-                auto facedir = scvf.dirId();  // direction (X, Y, or Z) of the face
-                mob = &(up.mobility(phaseIdx, facedir));
-            }
-            else {
-                mob = &(up.mobility(phaseIdx));
+                facedir = scvf.dirId();  // direction (X, Y, or Z) of the face
             }
             if (upwindIsInterior)
                 volumeFlux[phaseIdx] =
-                    pressureDifferences[phaseIdx]*(*mob)*transMult*(-trans/faceArea);
+                    pressureDifferences[phaseIdx]*up.mobility(phaseIdx, facedir)*transMult*(-trans/faceArea);
             else
                 volumeFlux[phaseIdx] =
                     pressureDifferences[phaseIdx]*
-                        (Toolbox::value(*mob)*Toolbox::value(transMult)*(-trans/faceArea));
+                        (Toolbox::value(up.mobility(phaseIdx, facedir))*Toolbox::value(transMult)*(-trans/faceArea));
         }
     }
 
