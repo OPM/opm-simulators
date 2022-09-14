@@ -16,8 +16,8 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef MPI_SERIALIZER_HPP
-#define MPI_SERIALIZER_HPP
+#ifndef MPI_PACKER_HPP
+#define MPI_PACKER_HPP
 
 #include <opm/common/utility/TimeService.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
@@ -167,30 +167,36 @@ struct Packing<false,std::bitset<Size>>
 ADD_PACK_SPECIALIZATION(std::string)
 ADD_PACK_SPECIALIZATION(time_point)
 
+#undef ADD_PACK_SPECIALIZATION
+
 }
 
 //! \brief Struct handling packing of serialization for MPI communication.
 struct Packer {
+    //! \brief Constructor.
+    //! \param comm The communicator to use
+    Packer(Parallel::Communication comm)
+        : m_comm(comm)
+    {}
+
     //! \brief Calculates the pack size for a variable.
     //! \tparam T The type of the data to be packed
     //! \param data The data to pack
-    //! \param comm The communicator to use
     template<class T>
-    static std::size_t packSize(const T& data, Parallel::MPIComm comm)
+    std::size_t packSize(const T& data) const
     {
-        return detail::Packing<std::is_pod_v<T>,T>::packSize(data,comm);
+        return detail::Packing<std::is_pod_v<T>,T>::packSize(data, m_comm);
     }
 
     //! \brief Calculates the pack size for an array.
     //! \tparam T The type of the data to be packed
     //! \param data The array to pack
     //! \param n Length of array
-    //! \param comm The communicator to use
     template<class T>
-    static std::size_t packSize(const T* data, std::size_t n, Parallel::MPIComm comm)
+    std::size_t packSize(const T* data, std::size_t n) const
     {
         static_assert(std::is_pod_v<T>, "Array packing not supported for non-pod data");
-        return detail::Packing<true,T>::packSize(data,n,comm);
+        return detail::Packing<true,T>::packSize(data, n, m_comm);
     }
 
     //! \brief Pack a variable.
@@ -198,14 +204,12 @@ struct Packer {
     //! \param data The variable to pack
     //! \param buffer Buffer to pack into
     //! \param position Position in buffer to use
-    //! \param comm The communicator to use
     template<class T>
-    static void pack(const T& data,
-                     std::vector<char>& buffer,
-                     int& position,
-                     Parallel::MPIComm comm)
+    void pack(const T& data,
+              std::vector<char>& buffer,
+              int& position) const
     {
-        detail::Packing<std::is_pod_v<T>,T>::pack(data, buffer, position, comm);
+        detail::Packing<std::is_pod_v<T>,T>::pack(data, buffer, position, m_comm);
     }
 
     //! \brief Pack an array.
@@ -214,16 +218,14 @@ struct Packer {
     //! \param n Length of array
     //! \param buffer Buffer to pack into
     //! \param position Position in buffer to use
-    //! \param comm The communicator to use
     template<class T>
-    static void pack(const T* data,
-                     std::size_t n,
-                     std::vector<char>& buffer,
-                     int& position,
-                     Parallel::MPIComm comm)
+    void pack(const T* data,
+              std::size_t n,
+              std::vector<char>& buffer,
+              int& position) const
     {
         static_assert(std::is_pod_v<T>, "Array packing not supported for non-pod data");
-        detail::Packing<true,T>::pack(data, n, buffer, position, comm);
+        detail::Packing<true,T>::pack(data, n, buffer, position, m_comm);
     }
 
     //! \brief Unpack a variable.
@@ -231,14 +233,12 @@ struct Packer {
     //! \param data The variable to unpack
     //! \param buffer Buffer to unpack from
     //! \param position Position in buffer to use
-    //! \param comm The communicator to use
     template<class T>
-    static void unpack(T& data,
-                       std::vector<char>& buffer,
-                       int& position,
-                       Parallel::MPIComm comm)
+    void unpack(T& data,
+                std::vector<char>& buffer,
+                int& position) const
     {
-        detail::Packing<std::is_pod_v<T>,T>::unpack(data, buffer, position, comm);
+        detail::Packing<std::is_pod_v<T>,T>::unpack(data, buffer, position, m_comm);
     }
 
     //! \brief Unpack an array.
@@ -247,20 +247,21 @@ struct Packer {
     //! \param n Length of array
     //! \param buffer Buffer to unpack from
     //! \param position Position in buffer to use
-    //! \param comm The communicator to use
     template<class T>
-    static void unpack(T* data,
-                       std::size_t n,
-                       std::vector<char>& buffer,
-                       int& position,
-                       Parallel::MPIComm comm)
+    void unpack(T* data,
+                std::size_t n,
+                std::vector<char>& buffer,
+                int& position) const
     {
         static_assert(std::is_pod_v<T>, "Array packing not supported for non-pod data");
-        detail::Packing<true,T>::unpack(data, n, buffer, position, comm);
+        detail::Packing<true,T>::unpack(data, n, buffer, position, m_comm);
     }
+
+private:
+    Parallel::Communication m_comm; //!< Communicator to use
 };
 
 } // end namespace Mpi
 } // end namespace Opm
 
-#endif // MPI_SERIALIZER_HPP
+#endif // MPI_PACKER_HPP

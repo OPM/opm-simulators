@@ -68,17 +68,18 @@ using remove_cvr_t = std::remove_cv_t<std::remove_reference_t<T>>;
 
 } // namespace detail
 
-/*! \brief Class for (de-)serializing and broadcasting data in parallel.
+/*! \brief Class for (de-)serializing.
  *!  \details If the class has a serializeOp member this is used,
- *            if not it is passed on to the underlying primitive serializer.
+ *            if not it is passed on to the underlying packer.
 */
 
-class EclMpiSerializer {
+template<class Packer>
+class Serializer {
 public:
     //! \brief Constructor.
-    //! \param comm The global communicator to broadcast using
-    explicit EclMpiSerializer(Opm::Parallel::Communication comm) :
-        m_comm(comm)
+    //! \param packer Packer to use
+    explicit Serializer(const Packer& packer) :
+        m_packer(packer)
     {}
 
     //! \brief Applies current serialization op to the passed data.
@@ -105,11 +106,11 @@ public:
             const_cast<T&>(data).serializeOp(*this);
         } else {
             if (m_op == Operation::PACKSIZE)
-                m_packSize += Mpi::Packer::packSize(data, m_comm);
+                m_packSize += m_packer.packSize(data);
             else if (m_op == Operation::PACK)
-                Mpi::Packer::pack(data, m_buffer, m_position, m_comm);
+                m_packer.pack(data, m_buffer, m_position);
             else if (m_op == Operation::UNPACK)
-                Mpi::Packer::unpack(const_cast<T&>(data), m_buffer, m_position, m_comm);
+                m_packer.unpack(const_cast<T&>(data), m_buffer, m_position);
         }
     }
 
@@ -128,6 +129,21 @@ public:
         (*this)(data);
     }
 
+    //! \brief Call this to serialize data.
+    //! \tparam T Type of class to serialize
+    //! \param data Class to serialize
+    template<class... Args>
+    void pack(const Args&... data)
+    {
+        m_op = Operation::PACKSIZE;
+        m_packSize = 0;
+        variadic_call(data...);
+        m_position = 0;
+        m_buffer.resize(m_packSize);
+        m_op = Operation::PACK;
+        variadic_call(data...);
+    }
+
     //! \brief Call this to de-serialize data.
     //! \tparam T Type of class to de-serialize
     //! \param data Class to de-serialize
@@ -139,95 +155,15 @@ public:
         (*this)(data);
     }
 
-    //! \brief Serialize and broadcast on root process, de-serialize on
-    //! others.
-    //!
-    //! \tparam T Type of class to broadcast
-    //! \param data Class to broadcast
-    //! \param root Process to broadcast from
-    template<class T>
-    void broadcast(T& data, int root = 0)
+    //! \brief Call this to de-serialize data.
+    //! \tparam T Type of class to de-serialize
+    //! \param data Class to de-serialize
+    template<class... Args>
+    void unpack(Args&... data)
     {
-        if (m_comm.size() == 1)
-            return;
-
-        if (m_comm.rank() == root) {
-            try {
-                pack(data);
-                m_packSize = m_position;
-                m_comm.broadcast(&m_packSize, 1, root);
-                m_comm.broadcast(m_buffer.data(), m_position, root);
-            } catch (...) {
-                m_packSize = std::numeric_limits<size_t>::max();
-                m_comm.broadcast(&m_packSize, 1, root);
-                throw;
-            }
-        } else {
-            m_comm.broadcast(&m_packSize, 1, root);
-            if (m_packSize == std::numeric_limits<size_t>::max()) {
-                throw std::runtime_error("Error detected in parallel serialization");
-            }
-
-            m_buffer.resize(m_packSize);
-            m_comm.broadcast(m_buffer.data(), m_packSize, root);
-            unpack(data);
-        }
-    }
-
-    template<typename... Args>
-    void broadcast(int root, Args&&... args)
-    {
-        if (m_comm.size() == 1)
-            return;
-
-        if (m_comm.rank() == root) {
-            try {
-                m_op = Operation::PACKSIZE;
-                m_packSize = 0;
-                variadic_call(args...);
-                m_position = 0;
-                m_buffer.resize(m_packSize);
-                m_op = Operation::PACK;
-                variadic_call(args...);
-                m_packSize = m_position;
-                m_comm.broadcast(&m_packSize, 1, root);
-                m_comm.broadcast(m_buffer.data(), m_position, root);
-            } catch (...) {
-                m_packSize = std::numeric_limits<size_t>::max();
-                m_comm.broadcast(&m_packSize, 1, root);
-                throw;
-            }
-        } else {
-            m_comm.broadcast(&m_packSize, 1, root);
-            if (m_packSize == std::numeric_limits<size_t>::max()) {
-                throw std::runtime_error("Error detected in parallel serialization");
-            }
-            m_buffer.resize(m_packSize);
-            m_comm.broadcast(m_buffer.data(), m_packSize, root);
-            m_position = 0;
-            m_op = Operation::UNPACK;
-            variadic_call(std::forward<Args>(args)...);
-        }
-    }
-
-    //! \brief Serialize and broadcast on root process, de-serialize and append on
-    //! others.
-    //!
-    //! \tparam T Type of class to broadcast
-    //! \param data Class to broadcast
-    //! \param root Process to broadcast from
-    template<class T>
-    void append(T& data, int root = 0)
-    {
-        if (m_comm.size() == 1)
-            return;
-
-        T tmp;
-        T& bcast = m_comm.rank() == root ? data : tmp;
-        broadcast(bcast);
-
-        if (m_comm.rank() != root)
-            data.append(tmp);
+        m_position = 0;
+        m_op = Operation::UNPACK;
+        variadic_call(data...);
     }
 
     //! \brief Returns current position in buffer.
@@ -252,16 +188,16 @@ protected:
         if constexpr (std::is_pod_v<T>) {
           if (m_op == Operation::PACKSIZE) {
               (*this)(data.size());
-              m_packSize += Mpi::Packer::packSize(data.data(), data.size(), m_comm);
+              m_packSize += m_packer.packSize(data.data(), data.size());
           } else if (m_op == Operation::PACK) {
               (*this)(data.size());
-              Mpi::Packer::pack(data.data(), data.size(), m_buffer, m_position, m_comm);
+              m_packer.pack(data.data(), data.size(), m_buffer, m_position);
           } else if (m_op == Operation::UNPACK) {
               std::size_t size = 0;
               (*this)(size);
               auto& data_mut = const_cast<std::vector<T>&>(data);
               data_mut.resize(size);
-              Mpi::Packer::unpack(data_mut.data(), size, m_buffer, m_position, m_comm);
+              m_packer.unpack(data_mut.data(), size, m_buffer, m_position);
           }
         } else {
             if (m_op == Operation::UNPACK) {
@@ -310,12 +246,12 @@ protected:
 
         if constexpr (std::is_pod_v<T>) {
             if (m_op == Operation::PACKSIZE)
-                m_packSize += Mpi::Packer::packSize(data.data(), data.size(), m_comm);
+                m_packSize += m_packer.packSize(data.data(), data.size());
             else if (m_op == Operation::PACK)
-                Mpi::Packer::pack(data.data(), data.size(), m_buffer, m_position, m_comm);
+                m_packer.pack(data.data(), data.size(), m_buffer, m_position);
             else if (m_op == Operation::UNPACK) {
                 auto& data_mut = const_cast<Array&>(data);
-                Mpi::Packer::unpack(data_mut.data(), data_mut.size(), m_buffer, m_position, m_comm);
+                m_packer.unpack(data_mut.data(), data_mut.size(), m_buffer, m_position);
             }
         } else {
             std::for_each(data.begin(), data.end(), std::ref(*this));
@@ -561,7 +497,7 @@ protected:
     //! function)
     template <typename T>
     struct has_serializeOp<
-        T, std::void_t<decltype(std::declval<T>().serializeOp(std::declval<EclMpiSerializer&>()))>
+        T, std::void_t<decltype(std::declval<T>().serializeOp(std::declval<Serializer<Packer>&>()))>
     > : public std::true_type {};
 
     //! \brief Handler for smart pointers.
@@ -579,12 +515,105 @@ protected:
         }
     }
 
-    Parallel::Communication m_comm; //!< Communicator to broadcast using
-
+    const Packer& m_packer; //!< Packer to use
     Operation m_op = Operation::PACKSIZE; //!< Current operation
     size_t m_packSize = 0; //!< Required buffer size after PACKSIZE has been done
     int m_position = 0; //!< Current position in buffer
     std::vector<char> m_buffer; //!< Buffer for serialized data
+};
+
+class EclMpiSerializer : public Serializer<Mpi::Packer> {
+public:
+    EclMpiSerializer(Parallel::Communication comm)
+        : Serializer<Mpi::Packer>(m_packer)
+        , m_packer(comm)
+        , m_comm(comm)
+    {}
+
+    //! \brief Serialize and broadcast on root process, de-serialize on
+    //! others.
+    //!
+    //! \tparam T Type of class to broadcast
+    //! \param data Class to broadcast
+    //! \param root Process to broadcast from
+    template<class T>
+    void broadcast(T& data, int root = 0)
+    {
+        if (m_comm.size() == 1)
+            return;
+
+        if (m_comm.rank() == root) {
+            try {
+                this->pack(data);
+                m_comm.broadcast(&m_packSize, 1, root);
+                m_comm.broadcast(m_buffer.data(), m_packSize, root);
+            } catch (...) {
+                m_packSize = std::numeric_limits<size_t>::max();
+                m_comm.broadcast(&m_packSize, 1, root);
+                throw;
+            }
+        } else {
+            m_comm.broadcast(&m_packSize, 1, root);
+            if (m_packSize == std::numeric_limits<size_t>::max()) {
+                throw std::runtime_error("Error detected in parallel serialization");
+            }
+
+            m_buffer.resize(m_packSize);
+            m_comm.broadcast(m_buffer.data(), m_packSize, root);
+            this->unpack(data);
+        }
+    }
+
+    template<typename... Args>
+    void broadcast(int root, Args&&... args)
+    {
+        if (m_comm.size() == 1)
+            return;
+
+        if (m_comm.rank() == root) {
+            try {
+                this->pack(std::forward<Args>(args)...);
+                m_comm.broadcast(&m_packSize, 1, root);
+                m_comm.broadcast(m_buffer.data(), m_packSize, root);
+            } catch (...) {
+                m_packSize = std::numeric_limits<size_t>::max();
+                m_comm.broadcast(&m_packSize, 1, root);
+                throw;
+            }
+        } else {
+            m_comm.broadcast(&m_packSize, 1, root);
+            if (m_packSize == std::numeric_limits<size_t>::max()) {
+                throw std::runtime_error("Error detected in parallel serialization");
+            }
+            m_buffer.resize(m_packSize);
+            m_comm.broadcast(m_buffer.data(), m_packSize, root);
+            this->unpack(std::forward<Args>(args)...);
+        }
+    }
+
+    //! \brief Serialize and broadcast on root process, de-serialize and append on
+    //! others.
+    //!
+    //! \tparam T Type of class to broadcast
+    //! \param data Class to broadcast
+    //! \param root Process to broadcast from
+    template<class T>
+    void append(T& data, int root = 0)
+    {
+        if (m_comm.size() == 1)
+            return;
+
+        T tmp;
+        T& bcast = m_comm.rank() == root ? data : tmp;
+        broadcast(bcast, root);
+
+        if (m_comm.rank() != root)
+            data.append(tmp);
+    }
+
+private:
+    const Mpi::Packer m_packer; //!< Packer instance
+    Parallel::Communication m_comm; //!< Communicator to use
 };
 
 }
