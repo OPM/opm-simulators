@@ -61,18 +61,18 @@ BOOST_AUTO_TEST_CASE(BroadCast)
     auto cc = Dune::MPIHelper::getCollectiveCommunication();
 
     std::vector<double> d(3);
-    if (cc.rank() == 0)
+    if (cc.rank() == 1)
         std::iota(d.begin(), d.end(), 1.0);
 
     std::vector<int> i(3);
-    if (cc.rank() == 0)
+    if (cc.rank() == 1)
         std::iota(i.begin(), i.end(), 4);
 
-    double d1 = cc.rank() == 0 ? 7.0 : 0.0;
-    size_t i1 = cc.rank() == 0 ? 8 : 0;
+    double d1 = cc.rank() == 1 ? 7.0 : 0.0;
+    size_t i1 = cc.rank() == 1 ? 8 : 0;
 
     Opm::EclMpiSerializer ser(cc);
-    ser.broadcast(0, d, i, d1, i1);
+    ser.broadcast(1, d, i, d1, i1);
 
     for (size_t c = 0; c < 3; ++c) {
         BOOST_CHECK_EQUAL(d[c], 1.0+c);
