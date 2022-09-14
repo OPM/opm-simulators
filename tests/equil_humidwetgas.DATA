@@ -5,6 +5,7 @@ RUNSPEC   ======
 WATER
 OIL
 GAS
+VAPWAT
 VAPOIL
 
 TABDIMS
@@ -78,7 +79,15 @@ PVDO
 /
 
 PVTG
---  Pg     Rv        Bg       Vg
+--  Pg     Rv        Bg         mug
+   100   0.0001       0.010      0.1
+         0.0          0.0104     0.1 /
+   200   0.0004       0.005      0.2
+         0.0          0.0054     0.2 /
+/
+
+PVTGW
+--  Pg     Rvw        Bg         mug
    100   0.0001       0.010      0.1
          0.0          0.0104     0.1 /
    200   0.0004       0.005      0.2
@@ -109,13 +118,12 @@ DENSITY
 /
 
 SOLUTION  ======
-
 EQUIL
-45 150 50 0.25 45 0.35 1* 1* 0
+   45    150   45  0.25 45  0.35 1* 1* 0 1* 1* 1*
 /
 
 RPTSOL
-'PRES' 'PGAS' 'PWAT' 'SOIL' 'SWAT' 'SGAS' 'RS' 'RESTART=2' /
+'PRES' 'PGAS' 'PWAT' 'SOIL' 'SWAT' 'SGAS' 'RV' 'RVW' 'RESTART=2' /
 
 SUMMARY   ======
 RUNSUM
@@ -128,7 +136,7 @@ TSTEP
 1 /
 
 RPTSCHED
-'PRES' 'PGAS' 'PWAT' 'SOIL' 'SWAT' 'SGAS' 'RS' 'RESTART=3' 'NEWTON=2' /
+'PRES' 'PGAS' 'PWAT' 'SOIL' 'SWAT' 'SGAS' 'RV' 'RVW' 'RESTART=3' 'NEWTON=2' /
 
 
 END

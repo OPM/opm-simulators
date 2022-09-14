@@ -776,11 +776,11 @@ BOOST_AUTO_TEST_CASE(DeckWithLiveOil)
     }
 }
 
-BOOST_AUTO_TEST_CASE(DeckWithLiveGas)
+BOOST_AUTO_TEST_CASE(DeckWithWetGas)
 {
     using TypeTag = Opm::Properties::TTag::TestEquilTypeTag;
     using FluidSystem = Opm::GetPropType<TypeTag, Opm::Properties::FluidSystem>;
-    auto simulator = initSimulator<TypeTag>("equil_livegas.DATA");
+    auto simulator = initSimulator<TypeTag>("equil_wetgas.DATA");
     const auto& eclipseState = simulator->vanguard().eclState();
     Opm::GridManager gm(eclipseState.getInputGrid());
     const UnstructuredGrid& grid = *(gm.c_grid());
@@ -855,6 +855,68 @@ BOOST_AUTO_TEST_CASE(DeckWithLiveGas)
     for (size_t i = 0; i < rv_opm.size(); ++i) {
         BOOST_CHECK_CLOSE(rv[i], rv_opm[i], reltol);
         BOOST_CHECK_CLOSE(rv[i], rv_ecl[i], reltol_ecl);
+    }
+}
+
+//TODO Find corret values
+BOOST_AUTO_TEST_CASE(DeckWithHumidWetGas)
+{
+    using TypeTag = Opm::Properties::TTag::TestEquilTypeTag;
+    using FluidSystem = Opm::GetPropType<TypeTag, Opm::Properties::FluidSystem>;
+    auto simulator = initSimulator<TypeTag>("equil_humidawetgas.DATA");
+    const auto& eclipseState = simulator->vanguard().eclState();
+    Opm::GridManager gm(eclipseState.getInputGrid());
+    const UnstructuredGrid& grid = *(gm.c_grid());
+
+    EquilFixture::Initializer comp(*simulator->problem().materialLawManager(),
+                                   eclipseState,
+                                   simulator->vanguard().grid(),
+                                   simulator->vanguard().gridView(),
+                                   simulator->vanguard().cartesianMapper(), 9.80665);
+    const auto& pressures = comp.press();
+    BOOST_REQUIRE_EQUAL(pressures.size(), 3U);
+    BOOST_REQUIRE_EQUAL(int(pressures[0].size()), grid.number_of_cells);
+
+    const int first = 0, last = grid.number_of_cells - 1;
+    const double reltol = 1.0e-1;
+
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first], 1.482150311e7, reltol);  
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last],  1.547988347e7, reltol);
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][first], 1.491150311e7, reltol);
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][last],  1.548988347e7, reltol);
+
+    const auto& sats = comp.saturation();
+ 
+    std::vector<double> s_opm[3]; 
+    s_opm[FluidSystem::waterPhaseIdx] = { 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.24310545, 0.5388, 0.78458,    0.91540, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+    s_opm[FluidSystem::oilPhaseIdx] =   { 0,   0,   0,   0,   0,   0,   0,   0,          0,      0.18288667, 0.0846,  0, 0, 0, 0, 0, 0, 0, 0, 0 };
+    s_opm[FluidSystem::gasPhaseIdx] =   { 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.75689455, 0.4612, 0.03253333, 0,       0, 0, 0, 0, 0, 0, 0, 0, 0 };
+    for (int phase = 0; phase < 3; ++phase) {
+        BOOST_REQUIRE_EQUAL(sats[phase].size(), s_opm[phase].size());
+        for (size_t i = 0; i < s_opm[phase].size(); ++i) {
+            BOOST_CHECK_CLOSE(sats[phase][i], s_opm[phase][i], 100.*reltol);
+        }
+        std::cout << std::endl;
+    }
+
+    const auto& rv = comp.rv();
+    const auto& rvw = comp.rvw();
+    const std::vector<double> rv_opm { 
+        2.4884509e-4, 2.4910378e-4, 2.4936267e-4, 2.4962174e-4,
+        2.4988100e-4, 2.5014044e-4, 2.5040008e-4, 2.5065990e-4,
+        2.5091992e-4, 2.5118012e-4, 2.5223082e-4, 2.5105e-4,
+        2.5105e-4,    2.5105e-4,    2.5105e-4,    2.5105e-4,
+        2.5105e-4,    2.5105e-4,    2.5105e-4,    2.5105e-4};
+    const std::vector<double> rvw_opm { 
+        2.4884509e-4, 2.4910378e-4, 2.4936267e-4, 2.4962174e-4,
+        2.4988100e-4, 2.5014044e-4, 2.5040008e-4, 2.5065990e-4,
+        2.5091992e-4, 2.5118012e-4, 2.5223082e-4, 2.5105e-4,
+        2.5105e-4,    2.5105e-4,    2.5105e-4,    2.5105e-4,
+        2.5105e-4,    2.5105e-4,    2.5105e-4,    2.5105e-4};
+
+    for (size_t i = 0; i < rv_opm.size(); ++i) {
+        BOOST_CHECK_CLOSE(rv[i], rv_opm[i], reltol);
+        BOOST_CHECK_CLOSE(rvw[i], rvw_opm[i], reltol);
     }
 }
 
@@ -1053,6 +1115,71 @@ BOOST_AUTO_TEST_CASE(DeckWithPBVDAndPDVD)
         BOOST_CHECK_CLOSE(rv[i], rv_opm[i], reltol);
     }
 }
+
+BOOST_AUTO_TEST_CASE(DeckWithRVVDAndRVWVD)
+{
+    using TypeTag = Opm::Properties::TTag::TestEquilTypeTag;
+    using FluidSystem = Opm::GetPropType<TypeTag, Opm::Properties::FluidSystem>;
+    auto simulator = initSimulator<TypeTag>("equil_rvvd_and_rvwvd.DATA");
+    const auto& eclipseState = simulator->vanguard().eclState();
+    Opm::GridManager gm(eclipseState.getInputGrid());
+    const UnstructuredGrid& grid = *(gm.c_grid());
+
+    EquilFixture::Initializer comp(*simulator->problem().materialLawManager(),
+                                   eclipseState,
+                                   simulator->vanguard().grid(),
+                                   simulator->vanguard().gridView(),
+                                   simulator->vanguard().cartesianMapper(), 9.80665);
+    const auto& pressures = comp.press();
+    BOOST_REQUIRE_EQUAL(pressures.size(), 3U);
+    BOOST_REQUIRE_EQUAL(int(pressures[0].size()), grid.number_of_cells);
+
+    const int first = 0, last = grid.number_of_cells - 1;
+    const double reltol = 1.0e-4;
+
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first], 1.483499660e7, reltol);  // opm
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last],  1.547924516e7, reltol);
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][first], 1.492499660e7, reltol);
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][last],  1.548924516e7, reltol);
+
+    const auto& sats = comp.saturation();   
+    
+    std::vector<double> s_opm[3]; 
+    s_opm[FluidSystem::waterPhaseIdx] = { 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2223045711692897, 0.52882298575945874, 0.78152142505479982, 0.91816512259416283, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+    s_opm[FluidSystem::oilPhaseIdx]   = { 0,   0,   0,   0,   0,   0,   0,   0,          0, 0.19637607881498206, 0.08183487740583717, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+    s_opm[FluidSystem::gasPhaseIdx]   = { 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.7776954288307103, 0.47117701424054126, 0.02210249613021811,    0,          0, 0, 0, 0, 0, 0, 0, 0, 0 };
+
+    for (int phase = 0; phase < 3; ++phase) {
+        BOOST_REQUIRE_EQUAL(sats[phase].size(), s_opm[phase].size());
+        for (size_t i = 0; i < s_opm[phase].size(); ++i) {
+            BOOST_CHECK_CLOSE(sats[phase][i], s_opm[phase][i], reltol);
+        }
+        std::cout << std::endl;
+    }
+
+    const auto& rvw = comp.rvw();
+    const std::vector<double> rvw_opm { 
+        74.62498302, 74.65959041, 74.69438035, 74.72935336,
+        74.76450995, 74.79985061, 74.83537588, 74.87527065,
+        74.96863769, 75.08891765, 52.5,        57.5,
+        62.5,        67.5,        72.5,        76.45954841,
+        76.70621045, 76.95287736, 77.19954913, 77.44622578};
+
+    const auto& rv = comp.rv();
+    const std::vector<double> rv_opm { 
+        2.50e-6, 7.50e-6,       1.25e-5,       1.75e-5,
+        2.25e-5, 2.75e-5,       3.25e-5,       3.75e-5,
+        4.25e-5, 2.51158386e-4, 2.52203372e-4, 5.75e-5,
+        6.25e-5, 6.75e-5,       7.25e-5,       7.75e-5,
+        8.25e-5, 8.75e-5,       9.25e-5,       9.75e-5};
+
+    for (size_t i = 0; i < rv_opm.size(); ++i) {
+        BOOST_CHECK_CLOSE(rvw[i], rvw_opm[i], reltol);
+        BOOST_CHECK_CLOSE(rv[i], rv_opm[i], reltol);
+    }
+}
+
+//Both equil cases with TODO RS, RV and RVW
 
 BOOST_AUTO_TEST_CASE(DeckWithSwatinit)
 {

@@ -210,9 +210,11 @@ list (APPEND TEST_DATA_FILES
   tests/capillary_overlap.DATA
   tests/capillarySwatinit.DATA
   tests/deadfluids.DATA
-  tests/equil_livegas.DATA
+  tests/equil_wetgas.DATA
   tests/equil_liveoil.DATA
   tests/equil_rsvd_and_rvvd.DATA
+  tests/equil_rvvd_and_rvwvd.DATA
+  tests/equil_humidwetgas.DATA
   tests/wetgas.DATA
   tests/satfuncEPS_B.DATA
   tests/wells_manager_data.data
