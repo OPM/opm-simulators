@@ -35,6 +35,7 @@
 
 #include <opm/material/common/Exceptions.hpp>
 #include <opm/grid/utility/SparseTable.hpp>
+#include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
 
 #include <dune/common/version.hh>
 #include <dune/common/fvector.hh>
@@ -314,7 +315,8 @@ private:
         unsigned numCells = model.numTotalDof();
         neighborInfo_.reserve(numCells, 6 * numCells);
         std::vector<NeighborInfo> loc_nbinfo;
-
+        const auto& materialLawManager = problem_().materialLawManager();
+        using FaceDirection = FaceDir::DirEnum;
         ElementIterator elemIt = gridView_().template begin<0>();
         const ElementIterator elemEndIt = gridView_().template end<0>();
         for (; elemIt != elemEndIt; ++elemIt) {
@@ -330,8 +332,14 @@ private:
                     sparsityPattern[myIdx].insert(neighborIdx);
                     if (dofIdx > 0) {
                         const double trans = problem_().transmissibility(myIdx, neighborIdx);
-                        const double area = stencil.interiorFace(dofIdx - 1).area();
-                        loc_nbinfo[dofIdx - 1] = NeighborInfo{neighborIdx, trans, area};
+                        const auto scvfIdx = dofIdx - 1;
+                        const auto& scvf = stencil.interiorFace(scvfIdx);
+                        const double area = scvf.area();
+                        FaceDirection dirId = FaceDirection::Unknown;
+                        if (materialLawManager->hasDirectionalRelperms()) {
+                            dirId = scvf.dirId();
+                        }
+                        loc_nbinfo[dofIdx - 1] = NeighborInfo{neighborIdx, trans, area, dirId};
                     }
                 }
                 neighborInfo_.appendRow(loc_nbinfo.begin(), loc_nbinfo.end());
@@ -410,7 +418,8 @@ private:
                 }
                 const IntensiveQuantities& intQuantsEx = *intQuantsExP;
                 LocalResidual::computeFlux(
-                    adres, problem_(), globI, globJ, intQuantsIn, intQuantsEx, nbInfo.trans, nbInfo.faceArea);
+                       adres, problem_(), globI, globJ, intQuantsIn, intQuantsEx,
+                           nbInfo.trans, nbInfo.faceArea, nbInfo.faceDirection);
                 adres *= nbInfo.faceArea;
                 setResAndJacobi(res, bMat, adres);
                 residual_[globI] += res;
@@ -467,6 +476,7 @@ private:
         unsigned int neighbor;
         double trans;
         double faceArea;
+        FaceDir::DirEnum faceDirection;
     };
     SparseTable<NeighborInfo> neighborInfo_;
 };
