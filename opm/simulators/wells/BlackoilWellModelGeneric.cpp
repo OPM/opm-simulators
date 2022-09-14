@@ -388,13 +388,6 @@ wellsActive() const
 
 bool
 BlackoilWellModelGeneric::
-localWellsActive() const
-{
-    return numLocalWells() > 0;
-}
-
-bool
-BlackoilWellModelGeneric::
 anyMSWellOpenLocal() const
 {
     for (const auto& well : wells_ecl_) {
@@ -2140,10 +2133,6 @@ void
 BlackoilWellModelGeneric::
 calculateEfficiencyFactors(const int reportStepIdx)
 {
-    if ( !localWellsActive() ) {
-        return;
-    }
-
     for (auto& well : well_container_generic_) {
         const Well& wellEcl = well->wellEcl();
         double well_efficiency_factor = wellEcl.getEfficiencyFactor();

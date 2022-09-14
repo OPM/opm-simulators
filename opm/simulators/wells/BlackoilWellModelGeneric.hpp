@@ -90,8 +90,7 @@ public:
     /// return true if wells are available in the reservoir
     bool wellsActive() const;
     bool hasWell(const std::string& wname);
-    /// return true if wells are available on this process
-    bool localWellsActive() const;
+
     // whether there exists any multisegment well open on this process
     bool anyMSWellOpenLocal() const;
 

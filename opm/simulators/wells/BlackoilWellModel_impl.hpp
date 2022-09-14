@@ -1104,10 +1104,6 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     apply( BVector& r) const
     {
-        if ( ! localWellsActive() ) {
-            return;
-        }
-
         for (auto& well : well_container_) {
             well->apply(r);
         }
@@ -1120,11 +1116,6 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     apply(const BVector& x, BVector& Ax) const
     {
-        // TODO: do we still need localWellsActive()?
-        if ( ! localWellsActive() ) {
-            return;
-        }
-
         for (auto& well : well_container_) {
             well->apply(x, Ax);
         }
@@ -1176,7 +1167,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     applyScaleAdd(const Scalar alpha, const BVector& x, BVector& Ax) const
     {
-        if ( ! localWellsActive() ) {
+        if (this->well_container_.empty()) {
             return;
         }
 
@@ -1304,10 +1295,8 @@ namespace Opm {
         DeferredLogger local_deferredLogger;
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         {
-            if (localWellsActive()) {
-                for (auto& well : well_container_) {
-                    well->recoverWellSolutionAndUpdateWellState(x, this->wellState(), local_deferredLogger);
-                }
+            for (auto& well : well_container_) {
+                well->recoverWellSolutionAndUpdateWellState(x, this->wellState(), local_deferredLogger);
             }
 
         }
