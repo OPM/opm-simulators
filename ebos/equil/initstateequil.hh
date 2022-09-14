@@ -128,7 +128,6 @@ private:
                    const double press) const;
 };
 
-//TODO:add argument rvw
 template <class FluidSystem, class RV, class RVW>
 class Gas
 {
