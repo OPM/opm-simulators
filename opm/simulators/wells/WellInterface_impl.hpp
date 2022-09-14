@@ -813,6 +813,7 @@ namespace Opm
                 auto rates = ws.surface_rates;
                 double bhp = this->calculateBhpFromThp(well_state, rates, well, summaryState, this->getRefDensity(), deferred_logger);
                 ws.bhp = bhp;
+                ws.thp = this->getTHPConstraint(summaryState);
 
                 // if the total rates are negative or zero
                 // we try to provide a better intial well rate
@@ -1037,6 +1038,7 @@ namespace Opm
                 this->adaptRatesForVFP(rates);
                 double bhp = this->calculateBhpFromThp(well_state, rates, well, summaryState, this->getRefDensity(), deferred_logger);
                 ws.bhp = bhp;
+                ws.thp = this->getTHPConstraint(summaryState);
 
                 // if the total rates are negative or zero
                 // we try to provide a better intial well rate
