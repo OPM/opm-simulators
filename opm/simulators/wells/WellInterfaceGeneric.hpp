@@ -51,6 +51,8 @@ class Schedule;
 class WellInterfaceGeneric {
 public:
 
+    static constexpr bool extraBhpAtThpLimitProdOutput = false;
+
     WellInterfaceGeneric(const Well& well,
                          const ParallelWellInfo& parallel_well_info,
                          const int time_step,

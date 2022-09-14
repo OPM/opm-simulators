@@ -459,11 +459,13 @@ bhpMax(const std::function<double(const double)>& fflo,
     double high = maxPerfPress + 1.0 * unit::barsa;
     double f_low = fflo(low);
     double f_high = fflo(high);
-    deferred_logger.debug("computeBhpAtThpLimitProd(): well = " + this->name() +
-                           "  low = " + std::to_string(low) +
-                           "  high = " + std::to_string(high) +
-                           "  f(low) = " + std::to_string(f_low) +
-                           "  f(high) = " + std::to_string(f_high));
+    if constexpr (extraBhpAtThpLimitProdOutput) {
+        deferred_logger.debug("computeBhpAtThpLimitProd(): well = " + this->name() +
+                              "  low = " + std::to_string(low) +
+                              "  high = " + std::to_string(high) +
+                              "  f(low) = " + std::to_string(f_low) +
+                              "  f(high) = " + std::to_string(f_high));
+    }
     int adjustments = 0;
     const int max_adjustments = 10;
     const double adjust_amount = 5.0 * unit::barsa;
@@ -512,12 +514,14 @@ bhpMax(const std::function<double(const double)>& fflo,
             return std::nullopt;
         }
     }
-    deferred_logger.debug("computeBhpAtThpLimitProd(): well = " + this->name() +
-                          "  low = " + std::to_string(low) +
-                          "  high = " + std::to_string(high) +
-                          "  f(low) = " + std::to_string(f_low) +
-                          "  f(high) = " + std::to_string(f_high) +
-                          "  bhp_max = " + std::to_string(bhp_max));
+    if constexpr (extraBhpAtThpLimitProdOutput) {
+        deferred_logger.debug("computeBhpAtThpLimitProd(): well = " + this->name() +
+                              "  low = " + std::to_string(low) +
+                              "  high = " + std::to_string(high) +
+                              "  f(low) = " + std::to_string(f_low) +
+                              "  f(high) = " + std::to_string(f_high) +
+                              "  bhp_max = " + std::to_string(bhp_max));
+    }
     return bhp_max;
 }
 
@@ -537,11 +541,13 @@ bisectBracket(const std::function<double(const double)>& eq,
     double eq_high = eq(high);
     double eq_low = eq(low);
     const double eq_bhplimit = eq_low;
-    deferred_logger.debug("computeBhpAtThpLimitProd(): well = " + this->name() +
-                          "  low = " + std::to_string(low) +
-                          "  high = " + std::to_string(high) +
-                          "  eq(low) = " + std::to_string(eq_low) +
-                          "  eq(high) = " + std::to_string(eq_high));
+    if constexpr (extraBhpAtThpLimitProdOutput) {
+        deferred_logger.debug("computeBhpAtThpLimitProd(): well = " + this->name() +
+                              "  low = " + std::to_string(low) +
+                              "  high = " + std::to_string(high) +
+                              "  eq(low) = " + std::to_string(eq_low) +
+                              "  eq(high) = " + std::to_string(eq_high));
+    }
     if (eq_low * eq_high > 0.0) {
         // Failed to bracket the zero.
         // If this is due to having two solutions, bisect until bracketed.
