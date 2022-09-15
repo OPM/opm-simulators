@@ -450,12 +450,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         {
 
             if (shouldCreateSolver()) {
-                std::function<Vector()> trueFunc = getWeigthsCalculator();
-                    // [this]
-                    // {
-                    //     return this->getWeightsCalculator();
-                    // };
-
+                std::function<Vector()> trueFunc = getWeightsCalculator();
                 if (!useWellConn_) {
                     auto wellOp = std::make_unique<WellModelOperator>(simulator_.problem().wellModel());
                     flexibleSolver_.wellOperator_ = std::move(wellOp);
