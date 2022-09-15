@@ -48,10 +48,6 @@ class FvBaseIntensiveQuantities
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
 public:
-    // default constructor
-    FvBaseIntensiveQuantities()
-    { }
-
     /*!
      * \brief Register all run-time parameters for the intensive quantities.
      */
