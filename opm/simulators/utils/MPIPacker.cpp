@@ -61,26 +61,6 @@ std::size_t packSize(const T* data, std::size_t l, Opm::Parallel::MPIComm comm)
     return packSize(data, l, comm, typename std::is_pod<T>::type());
 }
 
-template<std::size_t I = 0, typename Tuple>
-typename std::enable_if<I == std::tuple_size<Tuple>::value, std::size_t>::type
-pack_size_tuple_entry(const Tuple&, Opm::Parallel::MPIComm)
-{
-    return 0;
-}
-
-template<std::size_t I = 0, typename Tuple>
-typename std::enable_if<I != std::tuple_size<Tuple>::value, std::size_t>::type
-pack_size_tuple_entry(const Tuple& tuple, Opm::Parallel::MPIComm comm)
-{
-    return packSize(std::get<I>(tuple), comm) + pack_size_tuple_entry<I+1>(tuple, comm);
-}
-
-template<class... Ts>
-std::size_t packSize(const std::tuple<Ts...>& data, Opm::Parallel::MPIComm comm)
-{
-    return pack_size_tuple_entry(data, comm);
-}
-
 std::size_t packSize(const char* str, Opm::Parallel::MPIComm comm)
 {
 #if HAVE_MPI
@@ -175,29 +155,6 @@ void pack(const T* data, std::size_t l, std::vector<char>& buffer, int& position
     pack(data, l, buffer, position, comm, typename std::is_pod<T>::type());
 }
 
-template<std::size_t I = 0, typename Tuple>
-typename std::enable_if<I == std::tuple_size<Tuple>::value, void>::type
-pack_tuple_entry(const Tuple&, std::vector<char>&, int&,
-                      Opm::Parallel::MPIComm)
-{
-}
-
-template<std::size_t I = 0, typename Tuple>
-typename std::enable_if<I != std::tuple_size<Tuple>::value, void>::type
-pack_tuple_entry(const Tuple& tuple, std::vector<char>& buffer,
-                 int& position, Opm::Parallel::MPIComm comm)
-{
-    pack(std::get<I>(tuple), buffer, position, comm);
-    pack_tuple_entry<I+1>(tuple, buffer, position, comm);
-}
-
-template<class... Ts>
-void pack(const std::tuple<Ts...>& data, std::vector<char>& buffer,
-          int& position, Opm::Parallel::MPIComm comm)
-{
-    pack_tuple_entry(data, buffer, position, comm);
-}
-
 void pack(const char* str, std::vector<char>& buffer, int& position,
           Opm::Parallel::MPIComm comm)
 {
@@ -266,29 +223,6 @@ void unpack(T* data, const std::size_t& l, std::vector<char>& buffer, int& posit
             Opm::Parallel::MPIComm comm)
 {
     unpack(data, l, buffer, position, comm, typename std::is_pod<T>::type());
-}
-
-template<std::size_t I = 0, typename Tuple>
-typename std::enable_if<I == std::tuple_size<Tuple>::value, void>::type
-unpack_tuple_entry(Tuple&, std::vector<char>&, int&,
-                   Opm::Parallel::MPIComm)
-{
-}
-
-template<std::size_t I = 0, typename Tuple>
-typename std::enable_if<I != std::tuple_size<Tuple>::value, void>::type
-unpack_tuple_entry(Tuple& tuple, std::vector<char>& buffer,
-                   int& position, Opm::Parallel::MPIComm comm)
-{
-    unpack(std::get<I>(tuple), buffer, position, comm);
-    unpack_tuple_entry<I+1>(tuple, buffer, position, comm);
-}
-
-template<class... Ts>
-void unpack(std::tuple<Ts...>& data, std::vector<char>& buffer,
-            int& position, Opm::Parallel::MPIComm comm)
-{
-    unpack_tuple_entry(data, buffer, position, comm);
 }
 
 void unpack(char* str, std::size_t length, std::vector<char>& buffer, int& position,

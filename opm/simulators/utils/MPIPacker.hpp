@@ -27,7 +27,6 @@
 #include <bitset>
 #include <cstddef>
 #include <string>
-#include <tuple>
 #include <typeinfo>
 
 namespace Opm
@@ -73,9 +72,6 @@ std::size_t packSize(const T& data, Opm::Parallel::MPIComm comm)
 {
     return packSize(data, comm, typename std::is_pod<T>::type());
 }
-
-template<class... Ts>
-std::size_t packSize(const std::tuple<Ts...>& data, Opm::Parallel::MPIComm comm);
 
 std::size_t packSize(const char* str, Opm::Parallel::MPIComm comm);
 
@@ -124,10 +120,6 @@ void pack(const T& data, std::vector<char>& buffer, int& position,
 {
     pack(data, buffer, position, comm, typename std::is_pod<T>::type());
 }
-
-template<class... Ts>
-void pack(const std::tuple<Ts...>& data, std::vector<char>& buffer,
-          int& position, Opm::Parallel::MPIComm comm);
 
 void pack(const char* str, std::vector<char>& buffer, int& position,
           Opm::Parallel::MPIComm comm);
@@ -179,10 +171,6 @@ void unpack(T& data, std::vector<char>& buffer, int& position,
 {
     unpack(data, buffer, position, comm, typename std::is_pod<T>::type());
 }
-
-template<class... Ts>
-void unpack(std::tuple<Ts...>& data, std::vector<char>& buffer,
-            int& position, Opm::Parallel::MPIComm comm);
 
 void unpack(char* str, std::size_t length, std::vector<char>& buffer, int& position,
             Opm::Parallel::MPIComm comm);

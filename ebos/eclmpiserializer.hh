@@ -89,8 +89,8 @@ public:
     {
         if constexpr (is_ptr<T>::value) {
             ptr(data);
-        } else if constexpr (is_pair<T>::value) {
-            pair(data);
+        } else if constexpr (is_pair_or_tuple<T>::value) {
+            tuple(data);
         } else if constexpr (is_variant<T>::value) {
             variant(data);
         } else if constexpr (is_optional<T>::value) {
@@ -124,8 +124,8 @@ public:
         auto handle = [&](auto& d)
         {
             for (auto& it : d) {
-              if constexpr (is_pair<T>::value)
-                  pair(it);
+              if constexpr (is_pair_or_tuple<T>::value)
+                  tuple(it);
               else if constexpr (is_ptr<T>::value)
                   ptr(it);
               else if constexpr (is_vector<T>::value)
@@ -177,6 +177,8 @@ public:
         }
     }
 
+    //! \brief Handler for arrays.
+    //! \param data The array to (de-)serialize
     template <class Array>
     void array(Array& data)
     {
@@ -184,8 +186,8 @@ public:
 
         auto handle = [&](auto& d) {
             for (auto& it : d) {
-                if constexpr (is_pair<T>::value)
-                    pair(it);
+                if constexpr (is_pair_or_tuple<T>::value)
+                    tuple(it);
                 else if constexpr (is_ptr<T>::value)
                     ptr(it);
                 else if constexpr (has_serializeOp<T>::value)
@@ -260,7 +262,14 @@ public:
                 const_cast<std::optional<T>&>(data) = res;
             }
         }
+    }
 
+    //! \brief Handler for std::tuple.
+    //! \param data The tuple to (de-)serialize
+    template<class Tuple>
+    void tuple(const Tuple& data)
+    {
+        tuple_call(data);
     }
 
     //! \brief Handler for maps.
@@ -288,8 +297,8 @@ public:
 
         auto keyHandle = [&](auto& d)
         {
-              if constexpr (is_pair<Key>::value)
-                  pair(d);
+              if constexpr (is_pair_or_tuple<Key>::value)
+                  tuple(d);
               else if constexpr (has_serializeOp<Key>::value)
                   d.serializeOp(*this);
               else
@@ -321,6 +330,9 @@ public:
         }
     }
 
+    //! \brief Handler for sets.
+    //! \tparam Set set type
+    //! \param data The set to (de-)serialize
     template<class Set>
     void set(Set& data)
     {
@@ -498,22 +510,25 @@ protected:
           variadic_call(std::forward<Args>(args)...);
     }
 
+    template<std::size_t I = 0, typename Tuple>
+    typename std::enable_if<I == std::tuple_size<Tuple>::value, void>::type
+    tuple_call(const Tuple&)
+    {
+    }
+
+    template<std::size_t I = 0, typename Tuple>
+    typename std::enable_if<I != std::tuple_size<Tuple>::value, void>::type
+    tuple_call(const Tuple& tuple)
+    {
+        (*this)(std::get<I>(tuple));
+        tuple_call<I+1>(tuple);
+    }
+
     //! \brief Enumeration of operations.
     enum class Operation {
         PACKSIZE, //!< Calculating serialization buffer size
         PACK,     //!< Performing serialization
         UNPACK    //!< Performing de-serialization
-    };
-
-    //! \brief Predicate for detecting pairs.
-    template<class T>
-    struct is_pair {
-        constexpr static bool value = false;
-    };
-
-    template<class T1, class T2>
-    struct is_pair<std::pair<T1,T2>> {
-        constexpr static bool value = true;
     };
 
     //! \brief Predicate for detecting vectors.
@@ -535,6 +550,22 @@ protected:
 
     template<class... Ts>
     struct is_variant<std::variant<Ts...>> {
+        constexpr static bool value = true;
+    };
+
+    //! \brief Predicate for detecting pairs and tuples.
+    template<class T>
+    struct is_pair_or_tuple {
+        constexpr static bool value = false;
+    };
+
+    template<class... Ts>
+    struct is_pair_or_tuple<std::tuple<Ts...>> {
+        constexpr static bool value = true;
+    };
+
+    template<class T1, class T2>
+    struct is_pair_or_tuple<std::pair<T1,T2>> {
         constexpr static bool value = true;
     };
 
@@ -622,21 +653,6 @@ protected:
     struct has_serializeOp<
         T, std::void_t<decltype(std::declval<T>().serializeOp(std::declval<EclMpiSerializer&>()))>
     > : public std::true_type {};
-
-    //! \brief Handler for pairs.
-    template<class T1, class T2>
-    void pair(const std::pair<T1,T2>& data)
-    {
-        if constexpr (has_serializeOp<T1>::value)
-            const_cast<T1&>(data.first).serializeOp(*this);
-        else
-            (*this)(data.first);
-
-        if constexpr (has_serializeOp<T2>::value)
-            const_cast<T2&>(data.second).serializeOp(*this);
-        else
-            (*this)(data.second);
-    }
 
     //! \brief Handler for smart pointers.
     template<class PtrType>
