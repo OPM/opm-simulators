@@ -284,7 +284,6 @@ private:
     using Discretization = GetPropType<TypeTag, Properties::Discretization>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 
-
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { numComponents = FluidSystem::numComponents };
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
@@ -299,7 +298,7 @@ private:
     using EnergyModule = BlackOilEnergyModule<TypeTag>;
     using DiffusionModule = BlackOilDiffusionModule<TypeTag, enableDiffusion>;
     using MICPModule = BlackOilMICPModule<TypeTag>;
-    
+
 public:
 
     using LocalResidual = GetPropType<TypeTag, Properties::LocalResidual>;
