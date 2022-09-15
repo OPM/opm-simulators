@@ -74,7 +74,6 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/timestepping/gatherConvergenceReport.cpp
   opm/simulators/utils/DeferredLogger.cpp
   opm/simulators/utils/gatherDeferredLogger.cpp
-  opm/simulators/utils/MPIPacker.cpp
   opm/simulators/utils/ParallelFileMerger.cpp
   opm/simulators/utils/ParallelRestart.cpp
   opm/simulators/wells/ALQState.cpp
@@ -146,7 +145,8 @@ if(HAVE_AMGCL)
 endif()
 if(MPI_FOUND)
   list(APPEND MAIN_SOURCE_FILES opm/simulators/utils/ParallelEclipseState.cpp
-                                opm/simulators/utils/ParallelSerialization.cpp)
+                                opm/simulators/utils/ParallelSerialization.cpp
+                                opm/simulators/utils/MPIPacker.cpp)
 endif()
 
 # originally generated with the command:
