@@ -463,6 +463,13 @@ updatePrimaryVariables(const WellState& well_state) const
             total_seg_rate += baseif_.scalingFactor(p) * segment_rates[baseif_.numPhases() * seg + p];
         }
 
+        if (seg == 0) {
+            if (baseif_.isInjector()) {
+                total_seg_rate = std::max(total_seg_rate, 0.);
+            } else {
+                total_seg_rate = std::min(total_seg_rate, 0.);
+            }
+        }
         primary_variables_[seg][GTotal] = total_seg_rate;
         if (std::abs(total_seg_rate) > 0.) {
             if (has_wfrac_variable) {
