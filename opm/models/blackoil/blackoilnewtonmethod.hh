@@ -391,7 +391,7 @@ protected:
                    nextValue[pvIdx] = std::max(nextValue[pvIdx], 0.0); 
                // keep the salt saturation below upperlimit
                if ((enableSaltPrecipitation && currentValue.primaryVarsMeaningBrine() == PrimaryVariables::Sp))
-                   nextValue[pvIdx] = std::min(nextValue[pvIdx], 0.9); 
+                   nextValue[pvIdx] = std::min(nextValue[pvIdx], 1.0-1.e-8); 
             }
 
             // keep the temperature within given values

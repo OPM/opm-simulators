@@ -239,6 +239,7 @@ public:
                 double saltDensity = 2170; // Solid salt density kg/m3
                 const LhsEval solidSalt =
                               Toolbox::template decay<LhsEval>(intQuants.porosity())
+                              / (1.0 - Toolbox::template decay<LhsEval>(intQuants.saltSaturation()) + 1.e-8)
                               * saltDensity
                               * Toolbox::template decay<LhsEval>(intQuants.saltSaturation());
 
@@ -459,7 +460,7 @@ public:
 
             const auto& permfactTable = BrineModule::permfactTable(elemCtx, dofIdx, timeIdx);
 
-            permFactor_ = permfactTable.eval(scalarValue(porosityFactor));
+            permFactor_ = permfactTable.eval(porosityFactor);
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 if (!FluidSystem::phaseIsActive(phaseIdx))
                     continue;
