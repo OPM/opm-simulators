@@ -2851,6 +2851,8 @@ private:
                     case FaceDir::ZPlus:
                         data = &massratebcZ_;
                         break;
+                    case FaceDir::Unknown:
+                        throw std::runtime_error("Unexpected unknown face direction");
                     }
 
                     const Evaluation rate = bcface.rate;
@@ -2885,6 +2887,8 @@ private:
                     case FaceDir::ZPlus:
                         data = &freebcZ_;
                         break;
+                    case FaceDir::Unknown:
+                        throw std::runtime_error("Unexpected unknown face direction");
                     }
 
                     for (int i = bcface.i1; i <= bcface.i2; ++i) {
