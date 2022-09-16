@@ -162,9 +162,46 @@ public:
         }
     }
 
-    BlackOilIntensiveQuantities(const BlackOilIntensiveQuantities& other) = default;
+    BlackOilIntensiveQuantities(const BlackOilIntensiveQuantities& other) {
+        if (other.dirMob_) {
+            dirMob_ = std::make_unique<DirectionalMobility>(
+                other.dirMob_->mobilityX_,
+                other.dirMob_->mobilityY_,
+                other.dirMob_->mobilityY_
+            );
+        }
+    };
 
-    BlackOilIntensiveQuantities& operator=(const BlackOilIntensiveQuantities& other) = default;
+    BlackOilIntensiveQuantities& operator=(const BlackOilIntensiveQuantities& other) {
+        fluidState_ = other.fluidState_;
+        referencePorosity_ = other.referencePorosity_;
+        porosity_ = other.porosity_;
+        rockCompTransMultiplier_ = other.rockCompTransMultiplier_;
+        mobility_ = other.mobility_;
+        if (other.dirMob_) {
+            dirMob_ = std::make_unique<DirectionalMobility>(
+                other.dirMob_->mobilityX_,
+                other.dirMob_->mobilityY_,
+                other.dirMob_->mobilityY_
+            );
+        }
+        else {
+            dirMob_.release(); // release any memory, and assign nullptr
+        }
+        // call assignment operators in the parent classes
+        GetPropType<TypeTag, Properties::DiscIntensiveQuantities>::operator=(other);
+        GetPropType<TypeTag, Properties::FluxModule>::FluxIntensiveQuantities::operator=(other);
+        BlackOilDiffusionIntensiveQuantities<TypeTag, getPropValue<TypeTag, Properties::EnableDiffusion>() >::operator=(other);
+        BlackOilSolventIntensiveQuantities<TypeTag>::operator=(other);
+        BlackOilExtboIntensiveQuantities<TypeTag>::operator=(other);
+        BlackOilPolymerIntensiveQuantities<TypeTag>::operator=(other);
+        BlackOilFoamIntensiveQuantities<TypeTag>::operator=(other);
+        BlackOilBrineIntensiveQuantities<TypeTag>::operator=(other);
+        BlackOilEnergyIntensiveQuantities<TypeTag>::operator=(other);
+        BlackOilMICPIntensiveQuantities<TypeTag>::operator=(other);
+
+        return *this;
+    };
 
     /*!
      * \copydoc IntensiveQuantities::update
@@ -688,7 +725,7 @@ private:
     Evaluation porosity_;
     Evaluation rockCompTransMultiplier_;
     std::array<Evaluation,numPhases> mobility_;
-    std::shared_ptr<DirectionalMobility> dirMob_;
+    std::unique_ptr<DirectionalMobility> dirMob_;
 };
 
 } // namespace Opm
