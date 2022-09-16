@@ -251,7 +251,12 @@ public:
         EWOMS_REGISTER_PARAM(TypeTag, double, ZoltanImbalanceTol,
                              "Tolerable imbalance of the loadbalancing provided by Zoltan (default: 1.1).");
         EWOMS_REGISTER_PARAM(TypeTag, std::string, ZoltanParams,
-                             "Configuration of Zoltan partitioner. Valid options are: graph (default)), hypergrah or scotch. Alternatively, you can request a configuration to be read from a JSON file by giving the filename here, ending with '.json.'");
+                             "Configuration of Zoltan partitioner. "
+                             "Valid options are: graph, hypergraph or scotch. "
+                             "Alternatively, you can request a configuration to be read "
+                             "from a JSON file by giving the filename here, ending with '.json.' "
+                             "See https://sandialabs.github.io/Zoltan/ug_html/ug.html "
+                             "for available Zoltan options.");
 #endif
         EWOMS_REGISTER_PARAM(TypeTag, bool, AllowDistributedWells,
                              "Allow the perforations of a well to be distributed to interior of multiple processes");
