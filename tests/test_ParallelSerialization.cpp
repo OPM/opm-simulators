@@ -125,9 +125,7 @@
 #include <opm/input/eclipse/EclipseState/Tables/TableSchema.hpp>
 #include <opm/output/data/Aquifer.hpp>
 #include <opm/output/eclipse/RestartValue.hpp>
-#include <opm/simulators/utils/ParallelRestart.hpp>
 #include <ebos/eclmpiserializer.hh>
-
 
 template<class T>
 std::tuple<T,int,int> PackUnpack(T& in)
