@@ -212,7 +212,15 @@ public:
         /*!
          * \brief Returns the direction of the face
          */
-        FaceDir::DirEnum dirId() const
+        int dirId() const
+        {
+            return dirId_;
+        }
+
+        /*!
+         * \brief Returns the direction of the face
+         */
+        FaceDir::DirEnum faceDirFromDirId() const
         {
             if (dirId_ == -1) {
                 OPM_THROW(std::runtime_error, "NNC faces does not have a face id");
