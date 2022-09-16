@@ -32,6 +32,7 @@
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
 #include <opm/simulators/utils/ParallelSerialization.hpp>
 #include <opm/simulators/utils/PropsCentroidsDataHandle.hpp>
+#include <opm/simulators/utils/SetupZoltanParams.hpp>
 
 #include <opm/grid/cpgrid/GridHelpers.hpp>
 
@@ -97,6 +98,9 @@ doLoadBalance_(const Dune::EdgeWeightMethod            edgeWeightsMethod,
                EclGenericVanguard::ParallelWellStruct& parallelWells,
                const int                               numJacobiBlocks)
 {
+    if (!this->zoltanParams().empty())
+        this->grid_->setZoltanParams(setupZoltanParams(this->zoltanParams()));
+
     const auto mpiSize = this->grid_->comm().size();
 
     const auto partitionJacobiBlocks =

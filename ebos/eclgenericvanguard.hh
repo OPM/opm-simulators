@@ -218,6 +218,7 @@ public:
     bool ownersFirst() const
     { return ownersFirst_; }
 
+#if HAVE_MPI
     /*!
      * \brief Parameter that decides if partitioning for parallel runs
      *        should be performed on a single process only.
@@ -230,6 +231,7 @@ public:
      */
     double zoltanImbalanceTol() const
     { return zoltanImbalanceTol_; }
+#endif
 
     /*!
      * \brief Whether perforations of a well might be distributed.
@@ -281,8 +283,11 @@ protected:
 #endif  // HAVE_OPENCL
 
     bool ownersFirst_;
+#if HAVE_MPI
     bool serialPartitioning_;
     double zoltanImbalanceTol_;
+    std::string zoltanParams_;
+#endif
     bool enableDistributedWells_;
     std::string ignoredKeywords_;
     bool eclStrictParsing_;

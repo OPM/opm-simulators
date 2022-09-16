@@ -164,6 +164,8 @@ private:
                         EclGenericVanguard::ParallelWellStruct& parallelWells);
 
 protected:
+    virtual const std::string& zoltanParams() const = 0;
+
 #endif  // HAVE_MPI
 
     void allocCartMapper();
