@@ -288,7 +288,7 @@ public:
             const auto& materialLawManager = problem.materialLawManager();
             FaceDir::DirEnum facedir = FaceDir::DirEnum::Unknown;
             if (materialLawManager->hasDirectionalRelperms()) {
-                facedir = scvf.dirId();  // direction (X, Y, or Z) of the face
+                facedir = scvf.faceDirFromDirId();  // direction (X, Y, or Z) of the face
             }
             if (upwindIsInterior)
                 volumeFlux[phaseIdx] =
