@@ -116,7 +116,7 @@ public:
     template<class Serializer>
     void serializeOp(Serializer& serializer)
     {
-        serializer.map(m_tran);
+        serializer(m_tran);
     }
 
 protected:
