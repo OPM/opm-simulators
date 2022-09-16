@@ -83,7 +83,6 @@ class TpfaLinearizer
     using Stencil = GetPropType<TypeTag, Properties::Stencil>;
     using LocalResidual = GetPropType<TypeTag, Properties::LocalResidual>;
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
-    using FluidState = typename IntensiveQuantities::FluidState;
 
     using Element = typename GridView::template Codim<0>::Entity;
     using ElementIterator = typename GridView::template Codim<0>::Iterator;
@@ -92,6 +91,7 @@ class TpfaLinearizer
 
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { historySize = getPropValue<TypeTag, Properties::TimeDiscHistorySize>() };
+    enum { dimWorld = GridView::dimensionworld };
 
     using MatrixBlock = typename SparseMatrixAdapter::MatrixBlock;
     using VectorBlock = Dune::FieldVector<Scalar, numEq>;
@@ -344,6 +344,28 @@ private:
                     }
                 }
                 neighborInfo_.appendRow(loc_nbinfo.begin(), loc_nbinfo.end());
+                for (size_t bfIndex = 0; bfIndex < stencil.numBoundaryFaces(); ++bfIndex) {
+                    const auto& bf = stencil.boundaryFace(bfIndex);
+                    const int dir_id = bf.dirId();
+                    const auto [free, massrateAD] = problem_().boundaryCondition(myIdx, dir_id);
+                    // Strip the unnecessary (and zero anyway) derivatives off massrate.
+                    VectorBlock massrate(0.0);
+                    for (int ii = 0; ii < massrate.size(); ++ii) {
+                        massrate[ii] = massrateAD[ii].value();
+                    }
+                    const bool nonzero_massrate = massrate != VectorBlock(0.0);
+                    if (free || nonzero_massrate) {
+                        const auto& exFluidState = problem_().initialFluidState(myIdx);
+                        BoundaryConditionData bcdata{free ? BCType::FREE : BCType::RATE,
+                                                     massrate,
+                                                     exFluidState.pvtRegionIndex(),
+                                                     bfIndex,
+                                                     bf.area(),
+                                                     bf.integrationPos()[dimWorld - 1],
+                                                     exFluidState};
+                        boundaryInfo_.push_back({myIdx, bcdata});
+                    }
+                }
             }
         }
 
@@ -472,6 +494,7 @@ private:
                 throw std::logic_error("Missing updated intensive quantities for cell " + std::to_string(globI));
             }
             LocalResidual::computeBoundaryFlux(adres, problem_(), bdyInfo.bcdata, *insideIntQuants, globI, 0);
+            adres *= bdyInfo.bcdata.faceArea;
             setResAndJacobi(res, bMat, adres);
             residual_[globI] += res;
             jacobian_->addToBlock(globI, globI, bMat);
@@ -497,6 +520,7 @@ private:
     };
     SparseTable<NeighborInfo> neighborInfo_;
 
+    using ScalarFluidState = typename IntensiveQuantities::ScalarFluidState;
     struct BoundaryConditionData
     {
         BCType type;
@@ -505,7 +529,7 @@ private:
         unsigned boundaryFaceIndex;
         double faceArea;
         double faceZCoord;
-        FluidState exFluidState;
+        ScalarFluidState exFluidState;
     };
     struct BoundaryInfo
     {
