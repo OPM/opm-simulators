@@ -197,6 +197,13 @@ protected:
        return globalTrans_->transmissibility(I,J);
     }
 
+#if HAVE_MPI
+    const std::string& zoltanParams() const override
+    {
+        return this->zoltanParams_;
+    }
+#endif
+
     // removing some connection located in inactive grid cells
     void filterConnections_()
     {

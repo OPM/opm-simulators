@@ -108,6 +108,11 @@ struct ZoltanImbalanceTol {
 };
 
 template<class TypeTag, class MyTypeTag>
+struct ZoltanParams {
+    using type = UndefinedProperty;
+};
+
+template<class TypeTag, class MyTypeTag>
 struct AllowDistributedWells {
     using type = UndefinedProperty;
 };
@@ -160,6 +165,11 @@ struct SerialPartitioning<TypeTag, TTag::EclBaseVanguard> {
 template<class TypeTag>
 struct ZoltanImbalanceTol<TypeTag, TTag::EclBaseVanguard> {
     static constexpr double value = 1.1;
+};
+
+template<class TypeTag>
+struct ZoltanParams<TypeTag,TTag::EclBaseVanguard> {
+    static constexpr auto value = "graph";
 };
 
 template<class TypeTag>
@@ -235,10 +245,14 @@ public:
 
         EWOMS_REGISTER_PARAM(TypeTag, bool, OwnerCellsFirst,
                              "Order cells owned by rank before ghost/overlap cells.");
+#if HAVE_MPI
         EWOMS_REGISTER_PARAM(TypeTag, bool, SerialPartitioning,
                              "Perform partitioning for parallel runs on a single process.");
         EWOMS_REGISTER_PARAM(TypeTag, double, ZoltanImbalanceTol,
                              "Tolerable imbalance of the loadbalancing provided by Zoltan (default: 1.1).");
+        EWOMS_REGISTER_PARAM(TypeTag, std::string, ZoltanParams,
+                             "Configuration of Zoltan partitioner. Valid options are: graph (default)), hypergrah or scotch. Alternatively, you can request a configuration to be read from a JSON file by giving the filename here, ending with '.json.'");
+#endif
         EWOMS_REGISTER_PARAM(TypeTag, bool, AllowDistributedWells,
                              "Allow the perforations of a well to be distributed to interior of multiple processes");
         // register here for the use in the tests without BlackoildModelParametersEbos
@@ -263,8 +277,11 @@ public:
 #endif
 
         ownersFirst_ = EWOMS_GET_PARAM(TypeTag, bool, OwnerCellsFirst);
+#if HAVE_MPI
         serialPartitioning_ = EWOMS_GET_PARAM(TypeTag, bool, SerialPartitioning);
         zoltanImbalanceTol_ = EWOMS_GET_PARAM(TypeTag, double, ZoltanImbalanceTol);
+        zoltanParams_ = EWOMS_GET_PARAM(TypeTag, std::string, ZoltanParams);
+#endif
         enableDistributedWells_ = EWOMS_GET_PARAM(TypeTag, bool, AllowDistributedWells);
         ignoredKeywords_ = EWOMS_GET_PARAM(TypeTag, std::string, IgnoreKeywords);
         eclStrictParsing_ = EWOMS_GET_PARAM(TypeTag, bool, EclStrictParsing);
