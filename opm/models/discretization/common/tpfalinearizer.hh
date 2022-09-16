@@ -337,7 +337,7 @@ private:
                         const double area = scvf.area();
                         FaceDirection dirId = FaceDirection::Unknown;
                         if (materialLawManager->hasDirectionalRelperms()) {
-                            dirId = scvf.dirId();
+                            dirId = scvf.faceDirFromDirId();
                         }
                         loc_nbinfo[dofIdx - 1] = NeighborInfo{neighborIdx, trans, area, dirId};
                     }

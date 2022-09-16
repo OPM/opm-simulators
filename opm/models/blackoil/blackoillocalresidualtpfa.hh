@@ -271,7 +271,7 @@ public:
         const auto& materialLawManager = problem.materialLawManager();
         FaceDir::DirEnum facedir = FaceDir::DirEnum::Unknown; // Use an arbitrary
         if (materialLawManager->hasDirectionalRelperms()) {
-            facedir = scvf.dirId();
+            facedir = scvf.faceDirFromDirId();
         }
         Scalar thpres = problem.thresholdPressure(globalIndexIn, globalIndexEx);
 
