@@ -131,6 +131,15 @@ public:
                                           enableBrine,
                                           enableSaltPrecipitation,
                                           Indices::numPhases>;
+    using ScalarFluidState = BlackOilFluidState<Scalar,
+                                                FluidSystem,
+                                                enableTemperature,
+                                                enableEnergy,
+                                                compositionSwitchEnabled,
+                                                enableEvaporation,
+                                                enableBrine,
+                                                enableSaltPrecipitation,
+                                                Indices::numPhases>;
     using Problem = GetPropType<TypeTag, Properties::Problem>;
 
     BlackOilIntensiveQuantities()
