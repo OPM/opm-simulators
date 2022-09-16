@@ -474,32 +474,35 @@ public:
             }
             const auto& pBoundary = bdyInfo.exFluidState.pressure(phaseIdx);
             const Evaluation& pInside = insideIntQuants.fluidState().pressure(phaseIdx);
-
-            Evaluation surfaceVolumeFlux;// = invB * volumeFlux[SOME_INDEX];
+            const unsigned pvtRegionIdx = insideIntQuants.pvtRegionIndex();
 
             RateVector tmp;
 
             // mass conservation
-            if (pBoundary < pInside)
+            if (pBoundary < pInside) {
                 // outflux
+                const auto& invB = getInvB_<FluidSystem, FluidState, Evaluation>(insideIntQuants.fluidState(), phaseIdx, pvtRegionIdx);
+                Evaluation surfaceVolumeFlux = invB * volumeFlux[phaseIdx];
                 evalPhaseFluxes_<Evaluation>(tmp,
                                              phaseIdx,
                                              insideIntQuants.pvtRegionIndex(),
                                              surfaceVolumeFlux,
                                              insideIntQuants.fluidState());
-            else if (pBoundary > pInside) {
-                using RhsEval = typename std::conditional<std::is_same<typename FluidState::Scalar, Evaluation>::value,
-                                                          Evaluation, Scalar>::type;
+            } else if (pBoundary > pInside) {
                 // influx
-                evalPhaseFluxes_<RhsEval>(tmp,
-                                          phaseIdx,
-                                          insideIntQuants.pvtRegionIndex(),
-                                          surfaceVolumeFlux,
-                                          bdyInfo.exFluidState);
+                using ScalarFluidState = decltype(bdyInfo.exFluidState);
+                const auto& invB = getInvB_<FluidSystem, ScalarFluidState, Scalar>(bdyInfo.exFluidState, phaseIdx, pvtRegionIdx);
+                Evaluation surfaceVolumeFlux = invB * volumeFlux[phaseIdx];
+                evalPhaseFluxes_<Scalar>(tmp,
+                                         phaseIdx,
+                                         insideIntQuants.pvtRegionIndex(),
+                                         surfaceVolumeFlux,
+                                         bdyInfo.exFluidState);
             }
 
-            for (unsigned i = 0; i < tmp.size(); ++i)
+            for (unsigned i = 0; i < tmp.size(); ++i) {
                 bdyFlux[i] += tmp[i];
+            }
 
             static_assert(!enableEnergy, "Relevant treatment of boundary conditions must be implemented before enabling.");
             // Add energy flux treatment per phase here.
