@@ -1,12 +1,12 @@
-NOECHO
+NNOECHO
 
 RUNSPEC   ======
 
 WATER
 OIL
 GAS
-VAPWAT
 VAPOIL
+VAPWAT
 
 TABDIMS
   1    1   40   20    1   20  /
@@ -79,7 +79,7 @@ PVDO
 /
 
 PVTG
---  Pg     Rv        Bg         mug
+--  Pg     Rv        Bg       Vg
    100   0.0001       0.010      0.1
          0.0          0.0104     0.1 /
    200   0.0004       0.005      0.2
@@ -87,7 +87,7 @@ PVTG
 /
 
 PVTGW
---  Pg     Rvw        Bg         mug
+--  Pg     Rvw        Bg       Vg
    100   0.0001       0.010      0.1
          0.0          0.0104     0.1 /
    200   0.0004       0.005      0.2
@@ -118,8 +118,9 @@ DENSITY
 /
 
 SOLUTION  ======
+
 EQUIL
-   45    150   45  0.25 45  0.35 1* 1* 0 1* 1* 1*
+45 150 50 0.25 45 0.35 1* 1* 0
 /
 
 RPTSOL
