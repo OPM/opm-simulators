@@ -828,6 +828,13 @@ namespace Opm
             }
 
             }
+            // for wells with zero injection rate, if we assign exactly zero rate,
+            // we will have to assume some trivial composition in the wellbore.
+            // here, we use some small value (about 0.01 m^3/day ~= 1.e-7) to initialize
+            // the zero rate target, then we can use to retain the composition information
+            // within the wellbore from the previous result, and hopefully it is a good
+            // initial guess for the zero rate target.
+            ws.surface_rates[phasePos] = std::max(1.e-7, ws.surface_rates[phasePos]);
         }
         //Producer
         else
