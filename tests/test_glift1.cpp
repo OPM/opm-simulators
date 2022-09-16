@@ -192,7 +192,7 @@ BOOST_AUTO_TEST_CASE(G1)
     group_info.initialize();
     auto state = glift.runOptimize(iteration_idx);
     BOOST_CHECK_CLOSE(state->oilRate(), 0.01736111111111111, 1e-8);
-    BOOST_CHECK_CLOSE(state->gasRate(), 1.6464646999768586, 1e-8);
+    BOOST_CHECK_CLOSE(state->gasRate(), 1.6464, 1e-3);
     BOOST_CHECK(state->oilIsLimited());
     BOOST_CHECK(!state->gasIsLimited());
     BOOST_CHECK(!state->alqIsLimited());
