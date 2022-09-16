@@ -38,9 +38,6 @@ class VFPProdTable;
  */
 class VFPProperties {
 public:
-    VFPProperties() = default;
-
-
     /**
      * Constructor
      * Takes *no* ownership of data.
