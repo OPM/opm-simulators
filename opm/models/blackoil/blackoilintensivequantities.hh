@@ -293,7 +293,7 @@ public:
         std::array<Evaluation, numPhases> pC;
         const auto& materialParams = problem.materialLawParams(globalSpaceIdx);
         MaterialLaw::capillaryPressures(pC, materialParams, fluidState_);
-        updateRelperms(problem, materialParams, globalSpaceIdx);
+        BlackOilIntensiveQuantities::updateRelperms(mobility_, dirMob_, fluidState_, problem, materialParams, globalSpaceIdx);
 
         // oil is the reference phase for pressure
         if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_pg_Rv || priVars.primaryVarsMeaning() == PrimaryVariables::Rvw_pg_Rv) {
@@ -683,34 +683,40 @@ private:
     friend BlackOilBrineIntensiveQuantities<TypeTag>;
     friend BlackOilMICPIntensiveQuantities<TypeTag>;
 
-    void updateRelperms(const Problem& problem, const MaterialLawParams& materialParams, unsigned globalSpaceIdx)
+    static void updateRelperms(
+        std::array<Evaluation,numPhases> &mobility,
+        std::unique_ptr<DirectionalMobility> &dirMob,
+        FluidState &fluidState,
+        const Problem& problem,
+        const MaterialLawParams& materialParams,
+        unsigned globalSpaceIdx)
     {
         // calculate relative permeabilities. note that we store the result into the
         // mobility_ class attribute. the division by the phase viscosity happens later.
-        MaterialLaw::relativePermeabilities(mobility_, materialParams, fluidState_);
-        Valgrind::CheckDefined(mobility_);
+        MaterialLaw::relativePermeabilities(mobility, materialParams, fluidState);
+        Valgrind::CheckDefined(mobility);
         const auto& materialLawManager = problem.materialLawManager();
         if (materialLawManager->hasDirectionalRelperms()) {
             auto satnumIdx = materialLawManager->satnumRegionIdx(globalSpaceIdx);
             using Dir = FaceDir::DirEnum;
             constexpr int ndim = 3;
-            dirMob_ = std::make_unique<DirectionalMobility>();
+            dirMob = std::make_unique<DirectionalMobility>();
             Dir facedirs[ndim] = {Dir::XPlus, Dir::YPlus, Dir::ZPlus};
             for (int i = 0; i<ndim; i++) {
                 auto krnumSatIdx = materialLawManager->getKrnumSatIdx(globalSpaceIdx, facedirs[i]);
-                auto& mob_array = dirMob_->getArray(i);
+                auto& mob_array = dirMob->getArray(i);
                 if (krnumSatIdx != satnumIdx) {
                     // This hack is also used by StandardWell_impl.hpp:getMobilityEval() to temporarily use a different
                     // satnum index for a cell
                     const auto& paramsCell = materialLawManager->connectionMaterialLawParams(krnumSatIdx, globalSpaceIdx);
-                    MaterialLaw::relativePermeabilities(mob_array, paramsCell, fluidState_);
+                    MaterialLaw::relativePermeabilities(mob_array, paramsCell, fluidState);
                     // reset the cell's satnum index back to the original
                     materialLawManager->connectionMaterialLawParams(satnumIdx, globalSpaceIdx);
                 }
                 else {
                     // Copy the default (non-directional dependent) mobility
                     for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                        mob_array[phaseIdx] = mobility_[phaseIdx];
+                        mob_array[phaseIdx] = mobility[phaseIdx];
                     }
                 }
             }
