@@ -2061,6 +2061,43 @@ public:
         return this->rockCompTransMultWc_[tableIdx].eval(effectiveOilPressure, SwDeltaMax, /*extrapolation=*/true);
     }
 
+    std::pair<bool, RateVector> boundaryCondition(const unsigned int globalSpaceIdx, const int directionId)
+    {
+        if (!nonTrivialBoundaryConditions_ || directionId == -1) {
+            return std::make_pair(false, RateVector(0.0));
+        }
+        const std::vector<bool>* flag = nullptr;
+        const std::vector<RateVector>* massrate = nullptr;
+        switch (directionId) {
+        case 0:
+            flag = &freebcXMinus_;
+            massrate = &massratebcXMinus_;
+            break;
+        case 1:
+            flag = &freebcX_;
+            massrate = &massratebcX_;
+            break;
+        case 2:
+            flag = &freebcYMinus_;
+            massrate = &massratebcYMinus_;
+            break;
+        case 3:
+            flag = &freebcY_;
+            massrate = &massratebcY_;
+            break;
+        case 4:
+            flag = &freebcZMinus_;
+            massrate = &massratebcZMinus_;
+            break;
+        case 5:
+            flag = &freebcZ_;
+            massrate = &massratebcZ_;
+            break;
+        }
+        const bool free = (*flag)[globalSpaceIdx];
+        return { free, (*massrate)[globalSpaceIdx] };
+    }
+
 private:
     // update the parameters needed for DRSDT and DRVDT
     void updateCompositionChangeLimits_()
