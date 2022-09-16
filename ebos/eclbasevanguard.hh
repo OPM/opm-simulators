@@ -257,6 +257,7 @@ public:
                              "from a JSON file by giving the filename here, ending with '.json.' "
                              "See https://sandialabs.github.io/Zoltan/ug_html/ug.html "
                              "for available Zoltan options.");
+        EWOMS_HIDE_PARAM(TypeTag, ZoltanParams);
 #endif
         EWOMS_REGISTER_PARAM(TypeTag, bool, AllowDistributedWells,
                              "Allow the perforations of a well to be distributed to interior of multiple processes");
