@@ -122,7 +122,9 @@ class BlackOilIntensiveQuantities
 
     struct DirectionalMobility {
         using array_type = std::array<Evaluation,numPhases>;
-        DirectionalMobility(const array_type& mX, const array_type& mY, const array_type& mZ) 
+        DirectionalMobility(const DirectionalMobility& other)
+            : mobilityX_{other.mobilityX_}, mobilityY_{other.mobilityY_}, mobilityZ_{other.mobilityZ_} {}
+        DirectionalMobility(const array_type& mX, const array_type& mY, const array_type& mZ)
             : mobilityX_{mX}, mobilityY_{mY}, mobilityZ_{mZ} {}
         DirectionalMobility() : mobilityX_{}, mobilityY_{}, mobilityZ_{} {}
         array_type& getArray(int index) {
@@ -140,6 +142,59 @@ class BlackOilIntensiveQuantities
         array_type mobilityX_;
         array_type mobilityY_;
         array_type mobilityZ_;
+    };
+
+    // Instead of writing a custom copy constructor and a custom assignment operator just to handle
+    // the dirMob_ unique ptr member variable when copying BlackOilIntensiveQuantites (see for example
+    // updateIntensitiveQuantities_() in fvbaseelementcontext.hh for a copy example) we write the below
+    // custom wrapper class CopyablePtr which wraps the unique ptr and makes it copyable.
+    //
+    // The advantage of this approach is that we avoid having to call all the base class copy constructors and
+    // assignment operators explicitly (which is needed when writing the custom copy constructor and assignment
+    // operators) which could become maintenance burden. For example, when adding a new base class (if that should
+    // be needed sometime in the future) to BlackOilIntensiveQuantites we could forget to update the copy
+    // constructor and assignment operators.
+    //
+    // We want each copy of the BlackOilIntensiveQuantites to be unique, (TODO: why?) so we have to make a copy
+    // of the unique_ptr each time we copy construct or assign to it from another BlackOilIntensiveQuantites.
+    // (On the other hand, if a copy could share the ptr with the original, a shared_ptr could be used instead and the
+    // wrapper would not be needed)
+    template <class T>
+    class CopyablePtr {
+    public:
+        CopyablePtr() : ptr_(nullptr) {}
+        CopyablePtr(const CopyablePtr& other) {
+            if (other) { // other does not contain a nullptr
+                ptr_ = std::make_unique<T>(other.get());
+            }
+            // else {ptr_ = nullptr;} // this is the default construction value
+        }
+        // assignment operator
+        CopyablePtr<T>& operator=(const CopyablePtr<T>& other) {
+            if (other) {
+                ptr_ = std::make_unique<T>(other.get());
+            }
+            else {
+                ptr_ = nullptr;
+            }
+            return *this;
+        }
+        // assign directly from a unique_ptr
+        CopyablePtr<T>& operator=(std::unique_ptr<T>&& uptr) {
+            ptr_ = std::move(uptr);
+            return *this;
+        }
+        // member access operator
+        T* operator->() const {return ptr_.get(); }
+        // boolean context operator
+        explicit operator bool() const noexcept {
+            return ptr_ ? true : false;
+        }
+        // get a reference to the stored value
+        T& get() const {return *ptr_;}
+        T* release() const {return ptr_.release();}
+    private:
+        std::unique_ptr<T> ptr_;
     };
 
 public:
@@ -161,47 +216,9 @@ public:
             fluidState_.setRv(0.0);
         }
     }
+    BlackOilIntensiveQuantities(const BlackOilIntensiveQuantities& other) = default;
 
-    BlackOilIntensiveQuantities(const BlackOilIntensiveQuantities& other) {
-        if (other.dirMob_) {
-            dirMob_ = std::make_unique<DirectionalMobility>(
-                other.dirMob_->mobilityX_,
-                other.dirMob_->mobilityY_,
-                other.dirMob_->mobilityY_
-            );
-        }
-    };
-
-    BlackOilIntensiveQuantities& operator=(const BlackOilIntensiveQuantities& other) {
-        fluidState_ = other.fluidState_;
-        referencePorosity_ = other.referencePorosity_;
-        porosity_ = other.porosity_;
-        rockCompTransMultiplier_ = other.rockCompTransMultiplier_;
-        mobility_ = other.mobility_;
-        if (other.dirMob_) {
-            dirMob_ = std::make_unique<DirectionalMobility>(
-                other.dirMob_->mobilityX_,
-                other.dirMob_->mobilityY_,
-                other.dirMob_->mobilityY_
-            );
-        }
-        else {
-            dirMob_.release(); // release any memory, and assign nullptr
-        }
-        // call assignment operators in the parent classes
-        GetPropType<TypeTag, Properties::DiscIntensiveQuantities>::operator=(other);
-        GetPropType<TypeTag, Properties::FluxModule>::FluxIntensiveQuantities::operator=(other);
-        BlackOilDiffusionIntensiveQuantities<TypeTag, getPropValue<TypeTag, Properties::EnableDiffusion>() >::operator=(other);
-        BlackOilSolventIntensiveQuantities<TypeTag>::operator=(other);
-        BlackOilExtboIntensiveQuantities<TypeTag>::operator=(other);
-        BlackOilPolymerIntensiveQuantities<TypeTag>::operator=(other);
-        BlackOilFoamIntensiveQuantities<TypeTag>::operator=(other);
-        BlackOilBrineIntensiveQuantities<TypeTag>::operator=(other);
-        BlackOilEnergyIntensiveQuantities<TypeTag>::operator=(other);
-        BlackOilMICPIntensiveQuantities<TypeTag>::operator=(other);
-
-        return *this;
-    };
+    BlackOilIntensiveQuantities& operator=(const BlackOilIntensiveQuantities& other) = default;
 
     /*!
      * \copydoc IntensiveQuantities::update
@@ -685,7 +702,7 @@ private:
 
     static void updateRelperms(
         std::array<Evaluation,numPhases> &mobility,
-        std::unique_ptr<DirectionalMobility> &dirMob,
+        CopyablePtr<DirectionalMobility> &dirMob,
         FluidState &fluidState,
         const Problem& problem,
         const MaterialLawParams& materialParams,
@@ -731,7 +748,7 @@ private:
     Evaluation porosity_;
     Evaluation rockCompTransMultiplier_;
     std::array<Evaluation,numPhases> mobility_;
-    std::unique_ptr<DirectionalMobility> dirMob_;
+    CopyablePtr<DirectionalMobility> dirMob_;
 };
 
 } // namespace Opm
