@@ -202,11 +202,6 @@ namespace Opm {
             this->initializeWellPerfData();
             this->initializeWellState(timeStepIdx, summaryState);
 
-            // Wells are active if they are active wells on at least
-            // one process.
-            wells_active_ = localWellsActive() ? 1 : 0;
-            wells_active_ = grid.comm().max(wells_active_);
-
             // handling MS well related
             if (param_.use_multisegment_well_&& anyMSWellOpenLocal()) { // if we use MultisegmentWell model
                 this->wellState().initWellStateMSWell(wells_ecl_, &this->prevWellState());
@@ -269,6 +264,11 @@ namespace Opm {
 
             // create the well container
             createWellContainer(reportStepIdx);
+
+            // Wells are active if they are active wells on at least one process.
+            const Grid& grid = ebosSimulator_.vanguard().grid();
+            wells_active_ = !this->well_container_.empty();
+            wells_active_ = grid.comm().max(wells_active_);
 
             // do the initialization for all the wells
             // TODO: to see whether we can postpone of the intialization of the well containers to
@@ -1142,10 +1142,6 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     apply( BVector& r) const
     {
-        if ( ! localWellsActive() ) {
-            return;
-        }
-
         for (auto& well : well_container_) {
             well->apply(r);
         }
@@ -1158,11 +1154,6 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     apply(const BVector& x, BVector& Ax) const
     {
-        // TODO: do we still need localWellsActive()?
-        if ( ! localWellsActive() ) {
-            return;
-        }
-
         for (auto& well : well_container_) {
             well->apply(x, Ax);
         }
@@ -1214,7 +1205,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     applyScaleAdd(const Scalar alpha, const BVector& x, BVector& Ax) const
     {
-        if ( ! localWellsActive() ) {
+        if (this->well_container_.empty()) {
             return;
         }
 
@@ -1342,10 +1333,8 @@ namespace Opm {
         DeferredLogger local_deferredLogger;
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         {
-            if (localWellsActive()) {
-                for (auto& well : well_container_) {
-                    well->recoverWellSolutionAndUpdateWellState(x, this->wellState(), local_deferredLogger);
-                }
+            for (auto& well : well_container_) {
+                well->recoverWellSolutionAndUpdateWellState(x, this->wellState(), local_deferredLogger);
             }
 
         }
@@ -1753,7 +1742,13 @@ namespace Opm {
     int
     BlackoilWellModel<TypeTag>::numComponents() const
     {
-        if (wellsActive()  && numPhases() < 3) {
+        // The numComponents here does not reflect the actual number of the components in the system.
+        // It more or less reflects the number of mass conservation equations for the well equations.
+        // For example, in the current formulation, we do not have the polymer conservation equation
+        // in the well equations. As a result, for an oil-water-polymer system, this function will return 2.
+        // In some way, it makes this function appear to be confusing from its name, and we need
+        // to revisit/revise this function again when extending the variants of system that flow can simulate.
+        if (numPhases() < 3) {
             return numPhases();
         }
         int numComp = FluidSystem::numComponents;

@@ -388,13 +388,6 @@ wellsActive() const
 
 bool
 BlackoilWellModelGeneric::
-localWellsActive() const
-{
-    return numLocalWells() > 0;
-}
-
-bool
-BlackoilWellModelGeneric::
 anyMSWellOpenLocal() const
 {
     for (const auto& well : wells_ecl_) {
@@ -668,13 +661,6 @@ initFromRestartFile(const RestartValue& restartValues,
     this->active_wgstate_.wtest_state(std::move(wtestState));
     this->commitWGState();
     initial_step_ = false;
-}
-
-void
-BlackoilWellModelGeneric::
-setWellsActive(const bool wells_active)
-{
-    wells_active_ = wells_active;
 }
 
 std::vector<Well>
@@ -2142,10 +2128,6 @@ void
 BlackoilWellModelGeneric::
 calculateEfficiencyFactors(const int reportStepIdx)
 {
-    if ( !localWellsActive() ) {
-        return;
-    }
-
     for (auto& well : well_container_generic_) {
         const Well& wellEcl = well->wellEcl();
         double well_efficiency_factor = wellEcl.getEfficiencyFactor();
