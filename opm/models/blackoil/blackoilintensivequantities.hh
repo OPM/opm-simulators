@@ -43,6 +43,7 @@
 
 #include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/utility/CopyablePtr.hpp>
 
 #include <dune/common/fmatrix.hh>
 
@@ -143,61 +144,8 @@ class BlackOilIntensiveQuantities
         array_type mobilityY_;
         array_type mobilityZ_;
     };
+    using DirectionalMobilityPtr = Opm::Utility::CopyablePtr<DirectionalMobility>;
 
-    // Instead of writing a custom copy constructor and a custom assignment operator just to handle
-    // the dirMob_ unique ptr member variable when copying BlackOilIntensiveQuantites (see for example
-    // updateIntensitiveQuantities_() in fvbaseelementcontext.hh for a copy example) we write the below
-    // custom wrapper class CopyablePtr which wraps the unique ptr and makes it copyable.
-    //
-    // The advantage of this approach is that we avoid having to call all the base class copy constructors and
-    // assignment operators explicitly (which is needed when writing the custom copy constructor and assignment
-    // operators) which could become maintenance burden. For example, when adding a new base class (if that should
-    // be needed sometime in the future) to BlackOilIntensiveQuantites we could forget to update the copy
-    // constructor and assignment operators.
-    //
-    // We want each copy of the BlackOilIntensiveQuantites to be unique, (TODO: why?) so we have to make a copy
-    // of the unique_ptr each time we copy construct or assign to it from another BlackOilIntensiveQuantites.
-    // (On the other hand, if a copy could share the ptr with the original, a shared_ptr could be used instead and the
-    // wrapper would not be needed)
-    template <class T>
-    class CopyablePtr {
-    public:
-        CopyablePtr() : ptr_(nullptr) {}
-        CopyablePtr(const CopyablePtr& other) {
-            if (other) { // other does not contain a nullptr
-                ptr_ = std::make_unique<T>(*other.get());
-            }
-            else {
-                ptr_ = nullptr;
-            }
-        }
-        // assignment operator
-        CopyablePtr<T>& operator=(const CopyablePtr<T>& other) {
-            if (other) {
-                ptr_ = std::make_unique<T>(*other.get());
-            }
-            else {
-                ptr_ = nullptr;
-            }
-            return *this;
-        }
-        // assign directly from a unique_ptr
-        CopyablePtr<T>& operator=(std::unique_ptr<T>&& uptr) {
-            ptr_ = std::move(uptr);
-            return *this;
-        }
-        // member access operator
-        T* operator->() const {return ptr_.get(); }
-        // boolean context operator
-        explicit operator bool() const noexcept {
-            return ptr_ ? true : false;
-        }
-        // get a reference to the stored value
-        T* get() const {return ptr_.get();}
-        T* release() const {return ptr_.release();}
-    private:
-        std::unique_ptr<T> ptr_;
-    };
 
 public:
     using FluidState = BlackOilFluidState<Evaluation,
@@ -704,7 +652,7 @@ private:
 
     static void updateRelperms(
         std::array<Evaluation,numPhases> &mobility,
-        CopyablePtr<DirectionalMobility> &dirMob,
+        DirectionalMobilityPtr &dirMob,
         FluidState &fluidState,
         const Problem& problem,
         const MaterialLawParams& materialParams,
@@ -750,7 +698,23 @@ private:
     Evaluation porosity_;
     Evaluation rockCompTransMultiplier_;
     std::array<Evaluation,numPhases> mobility_;
-    CopyablePtr<DirectionalMobility> dirMob_;
+
+    // Instead of writing a custom copy constructor and a custom assignment operator just to handle
+    // the dirMob_ unique ptr member variable when copying BlackOilIntensiveQuantites (see for example
+    // updateIntensitiveQuantities_() in fvbaseelementcontext.hh for a copy example) we write the below
+    // custom wrapper class CopyablePtr which wraps the unique ptr and makes it copyable.
+    //
+    // The advantage of this approach is that we avoid having to call all the base class copy constructors and
+    // assignment operators explicitly (which is needed when writing the custom copy constructor and assignment
+    // operators) which could become a maintenance burden. For example, when adding a new base class (if that should
+    // be needed sometime in the future) to BlackOilIntensiveQuantites we could forget to update the copy
+    // constructor and assignment operators.
+    //
+    // We want each copy of the BlackOilIntensiveQuantites to be unique, (TODO: why?) so we have to make a copy
+    // of the unique_ptr each time we copy construct or assign to it from another BlackOilIntensiveQuantites.
+    // (On the other hand, if a copy could share the ptr with the original, a shared_ptr could be used instead and the
+    // wrapper would not be needed)
+    DirectionalMobilityPtr dirMob_;
 };
 
 } // namespace Opm
