@@ -1409,15 +1409,16 @@ namespace Opm {
 
         const Opm::Parallel::Communication comm = grid().comm();
         DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger, comm);
-        if (terminal_output_) {
-            global_deferredLogger.logMessages();
-        }
+
 
         ConvergenceReport report = gatherConvergenceReport(local_report, comm);
 
         if (report.converged() && checkWellGroupControls) {
-            bool violated = updateWellControls(local_deferredLogger);
-            report.setGroupConverged(!violated);
+            bool violated = updateWellControls(global_deferredLogger);
+            report.setWellGroupTargetsViolated(violated);
+        }
+        if (terminal_output_) {
+            global_deferredLogger.logMessages();
         }
         // Log debug messages for NaN or too large residuals.
         if (terminal_output_) {
