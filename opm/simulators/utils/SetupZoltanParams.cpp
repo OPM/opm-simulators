@@ -20,9 +20,13 @@
 #include <config.h>
 #include <opm/simulators/utils/SetupZoltanParams.hpp>
 
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <boost/property_tree/json_parser.hpp>
+#include <boost/version.hpp>
+
+#include <filesystem>
 
 namespace Opm
 {
@@ -40,7 +44,11 @@ std::map<std::string,std::string> setupZoltanParams(const std::string& conf)
     } else if (conf == "graph") {
         result.emplace("LB_METHOD", "GRAPH");
         result.emplace("GRAPH_PACKAGE", "PHG");
-    } else { // json file
+    } else if (conf.size() > 5 && conf.substr(conf.size() - 5, 5) == ".json") {
+#if BOOST_VERSION / 100 % 1000 > 48
+        if ( !std::filesystem::exists(conf) ) {
+            OPM_THROW(std::invalid_argument, "JSON file " << conf << " does not exist.");
+        }
         boost::property_tree::ptree tree;
         try {
             boost::property_tree::read_json(conf, tree);
@@ -52,6 +60,16 @@ std::map<std::string,std::string> setupZoltanParams(const std::string& conf)
             if (value)
               result.insert_or_assign(node.first, *value);
         }
+#else
+        OPM_THROW(std::invalid_argument,
+                  "--zoltan-params=file.json not supported with "
+                      << "boost version. Needs version > 1.48.");
+#endif
+    } else {
+        // No valid configuration option found.
+        OPM_THROW(std::invalid_argument,
+                  conf << " is not a valid setting for --zoltan-params."
+                  << " Please use graph, hypergraph or scotch");
     }
 
     return result;
