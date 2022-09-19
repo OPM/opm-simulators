@@ -525,7 +525,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             using namespace std::string_literals;
 
             auto preconditionerType = prm_.get("preconditioner.type"s, "cpr"s);
-            if (preconditionerType == "cpr" || preconditionerType == "cprt") {
+            if (preconditionerType == "cpr" || preconditionerType == "cprt" || preconditionerType == "cprw") {
                 const bool transpose = preconditionerType == "cprt";
                 const auto weightsType = prm_.get("preconditioner.weight_type"s, "quasiimpes"s);
                 if (weightsType == "quasiimpes") {

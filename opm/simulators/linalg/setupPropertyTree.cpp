@@ -63,7 +63,8 @@ setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters 
     }
 
     // Use CPR configuration.
-    if ((conf == "cpr") || (conf == "cpr_trueimpes") || (conf == "cpr_quasiimpes") || (conf == "cpr_trueimpesanalytic") ) {
+    if ((conf == "cpr") || (conf == "cpr_trueimpes") || (conf == "cpr_quasiimpes")
+        || (conf == "cpr_trueimpesanalytic")) {
         if (conf == "cpr") {
             // Treat "cpr" as short cut for the true IMPES variant.
             conf = "cpr_trueimpes";
@@ -182,7 +183,7 @@ setupCPR(const std::string& conf, const FlowLinearSolverParameters& p)
     prm.put("preconditioner.type", "cpr"s);
     if (conf == "cpr_quasiimpes") {
         prm.put("preconditioner.weight_type", "quasiimpes"s);
-    }else if (conf == "cpr_quasiimpesanalytic") {
+    } else if (conf == "cpr_quasiimpesanalytic") {
         prm.put("preconditioner.weight_type", "trueimpesanalytic"s);
     } else {
         prm.put("preconditioner.weight_type", "trueimpes"s);
