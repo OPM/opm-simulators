@@ -37,6 +37,7 @@
 #include <dune/geometry/type.hh>
 #include <dune/common/fvector.hh>
 #include <dune/common/version.hh>
+#include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
 
 #include <vector>
 
@@ -222,19 +223,20 @@ public:
          */
         FaceDir::DirEnum faceDirFromDirId() const
         {
+            using Dir = FaceDir::DirEnum;
             if (dirId_ == -1) {
                 OPM_THROW(std::runtime_error, "NNC faces does not have a face id");
             }
             switch(dirId_) {
                 case 0:
                 case 1:
-                    return FaceDir::XPlus;
+                    return Dir::XPlus;
                 case 2:
                 case 3:
-                    return FaceDir::YPlus;
+                    return Dir::YPlus;
                 case 4:
                 case 5:
-                    return FaceDir::ZPlus;
+                    return Dir::ZPlus;
                 default:
                     OPM_THROW(std::runtime_error, "Unexpected face id" << dirId_);
             }
