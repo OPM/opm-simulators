@@ -167,7 +167,9 @@ class BlackOilIntensiveQuantities
             if (other) { // other does not contain a nullptr
                 ptr_ = std::make_unique<T>(*other.get());
             }
-            // else {ptr_ = nullptr;} // this is the default construction value
+            else {
+                ptr_ = nullptr;
+            }
         }
         // assignment operator
         CopyablePtr<T>& operator=(const CopyablePtr<T>& other) {
