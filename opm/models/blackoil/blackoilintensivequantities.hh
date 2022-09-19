@@ -165,14 +165,14 @@ class BlackOilIntensiveQuantities
         CopyablePtr() : ptr_(nullptr) {}
         CopyablePtr(const CopyablePtr& other) {
             if (other) { // other does not contain a nullptr
-                ptr_ = std::make_unique<T>(other.get());
+                ptr_ = std::make_unique<T>(*other.get());
             }
             // else {ptr_ = nullptr;} // this is the default construction value
         }
         // assignment operator
         CopyablePtr<T>& operator=(const CopyablePtr<T>& other) {
             if (other) {
-                ptr_ = std::make_unique<T>(other.get());
+                ptr_ = std::make_unique<T>(*other.get());
             }
             else {
                 ptr_ = nullptr;
@@ -191,7 +191,7 @@ class BlackOilIntensiveQuantities
             return ptr_ ? true : false;
         }
         // get a reference to the stored value
-        T& get() const {return *ptr_;}
+        T* get() const {return ptr_.get();}
         T* release() const {return ptr_.release();}
     private:
         std::unique_ptr<T> ptr_;
