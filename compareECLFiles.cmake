@@ -76,7 +76,7 @@ function(add_test_compareECLFiles)
   if(PARAM_RESTART_SCHED)
    list(APPEND DRIVER_ARGS -h ${PARAM_RESTART_SCHED})
   endif()
-  opm_add_test(${PARAM_PREFIX}_${PARAM_SIMULATOR}+${PARAM_FILENAME}+${PARAM_CASENAME} NO_COMPILE
+  opm_add_test(${PARAM_PREFIX}_${PARAM_SIMULATOR}+${PARAM_FILENAME} NO_COMPILE
                EXE_NAME ${PARAM_SIMULATOR}
                DRIVER_ARGS ${DRIVER_ARGS}
                TEST_ARGS ${TEST_ARGS})
@@ -258,6 +258,7 @@ add_test_runSimulator(CASENAME norne_parallel
 
 include (${CMAKE_CURRENT_SOURCE_DIR}/regressionTests.cmake)
 include (${CMAKE_CURRENT_SOURCE_DIR}/restartTests.cmake)
+
 
 # PORV test
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-porv-acceptanceTest.sh "")
