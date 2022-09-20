@@ -85,8 +85,6 @@ class BlackOilIntensiveQuantities
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
     using FluxModule = GetPropType<TypeTag, Properties::FluxModule>;
-    using EclMaterialLawManager = typename GetProp<TypeTag, Properties::MaterialLaw>::EclMaterialLawManager;
-    using MaterialLawParams = typename EclMaterialLawManager::MaterialLawParams;
 
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
@@ -650,6 +648,7 @@ private:
     friend BlackOilBrineIntensiveQuantities<TypeTag>;
     friend BlackOilMICPIntensiveQuantities<TypeTag>;
 
+    template <class MaterialLawParams>
     static void updateRelperms(
         std::array<Evaluation,numPhases> &mobility,
         DirectionalMobilityPtr &dirMob,
