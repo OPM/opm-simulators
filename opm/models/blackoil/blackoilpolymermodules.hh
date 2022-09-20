@@ -29,11 +29,9 @@
 #define EWOMS_BLACK_OIL_POLYMER_MODULE_HH
 
 #include "blackoilproperties.hh"
-#include <opm/models/io/vtkblackoilpolymermodule.hh>
-#include <opm/models/common/quantitycallbacks.hh>
 
-#include <opm/material/common/Tabulated1DFunction.hpp>
-#include <opm/material/common/IntervalTabulated2DFunction.hpp>
+#include <opm/models/blackoil/blackoilpolymerparams.hh>
+#include <opm/models/io/vtkblackoilpolymermodule.hh>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 
@@ -46,10 +44,10 @@
 #include <opm/input/eclipse/EclipseState/Tables/PlyviscTable.hpp>
 #endif
 
-#include <opm/material/common/Valgrind.hpp>
-
 #include <dune/common/fvector.hh>
 
+#include <cmath>
+#include <stdexcept>
 #include <string>
 
 namespace Opm {
@@ -76,8 +74,8 @@ class BlackOilPolymerModule
 
     using Toolbox = MathToolbox<Evaluation>;
 
-    using TabulatedFunction = Tabulated1DFunction<Scalar>;
-    using TabulatedTwoDFunction = IntervalTabulated2DFunction<Scalar>;
+    using TabulatedFunction = typename BlackOilPolymerParams<Scalar>::TabulatedFunction;
+    using TabulatedTwoDFunction = typename BlackOilPolymerParams<Scalar>::TabulatedTwoDFunction;
 
     static constexpr unsigned polymerConcentrationIdx = Indices::polymerConcentrationIdx;
     static constexpr unsigned polymerMoleWeightIdx = Indices::polymerMoleWeightIdx;
@@ -92,24 +90,7 @@ class BlackOilPolymerModule
     static constexpr unsigned numEq = getPropValue<TypeTag, Properties::NumEq>();
     static constexpr unsigned numPhases = FluidSystem::numPhases;
 
-    struct SkprpolyTable {
-        double refConcentration;
-        TabulatedTwoDFunction table_func;
-    };
-
 public:
-    enum AdsorptionBehaviour { Desorption = 1, NoDesorption = 2 };
-
-    // a struct containing the constants to calculate polymer viscosity
-    // based on Mark-Houwink equation and Huggins equation, the constants are provided
-    // by the keyword PLYVMH
-    struct PlyvmhCoefficients {
-        Scalar k_mh;
-        Scalar a_mh;
-        Scalar gamma;
-        Scalar kappa;
-    };
-
 #if HAVE_ECL_INPUT
     /*!
      * \brief Initialize all internal data structures needed by the polymer module
@@ -147,7 +128,7 @@ public:
         const auto& tableManager = eclState.getTableManager();
 
         unsigned numSatRegions = tableManager.getTabdims().getNumSatTables();
-        setNumSatRegions(numSatRegions);
+        params_.setNumSatRegions(numSatRegions);
 
         // initialize the objects which deal with the PLYROCK keyword
         const auto& plyrockTables = tableManager.getPlyrockTables();
@@ -155,12 +136,12 @@ public:
             assert(numSatRegions == plyrockTables.size());
             for (unsigned satRegionIdx = 0; satRegionIdx < numSatRegions; ++ satRegionIdx) {
                 const auto& plyrockTable = plyrockTables.template getTable<PlyrockTable>(satRegionIdx);
-                setPlyrock(satRegionIdx,
-                           plyrockTable.getDeadPoreVolumeColumn()[0],
-                           plyrockTable.getResidualResistanceFactorColumn()[0],
-                           plyrockTable.getRockDensityFactorColumn()[0],
-                           static_cast<AdsorptionBehaviour>(plyrockTable.getAdsorbtionIndexColumn()[0]),
-                           plyrockTable.getMaxAdsorbtionColumn()[0]);
+                params_.setPlyrock(satRegionIdx,
+                                   plyrockTable.getDeadPoreVolumeColumn()[0],
+                                   plyrockTable.getResidualResistanceFactorColumn()[0],
+                                   plyrockTable.getRockDensityFactorColumn()[0],
+                                   static_cast<typename BlackOilPolymerParams<Scalar>::AdsorptionBehaviour>(plyrockTable.getAdsorbtionIndexColumn()[0]),
+                                   plyrockTable.getMaxAdsorbtionColumn()[0]);
             }
         }
         else {
@@ -176,7 +157,7 @@ public:
                 // Copy data
                 const auto& c = plyadsTable.getPolymerConcentrationColumn();
                 const auto& ads = plyadsTable.getAdsorbedPolymerColumn();
-                plyadsAdsorbedPolymer_[satRegionIdx].setXYContainers(c, ads);
+                params_.plyadsAdsorbedPolymer_[satRegionIdx].setXYContainers(c, ads);
             }
         }
         else {
@@ -185,7 +166,7 @@ public:
 
 
         unsigned numPvtRegions = tableManager.getTabdims().getNumPVTTables();
-        setNumPvtRegions(numPvtRegions);
+        params_.plyviscViscosityMultiplierTable_.resize(numPvtRegions);
 
         // initialize the objects which deal with the PLYVISC keyword
         const auto& plyviscTables = tableManager.getPlyviscTables();
@@ -196,14 +177,13 @@ public:
                                      "it will have no effect. A viscosity model based on PLYVMH is used instead.\n");
             }
             else {
-
                 assert(numPvtRegions == plyviscTables.size());
                 for (unsigned pvtRegionIdx = 0; pvtRegionIdx < numPvtRegions; ++ pvtRegionIdx) {
                     const auto& plyadsTable = plyviscTables.template getTable<PlyviscTable>(pvtRegionIdx);
                     // Copy data
                     const auto& c = plyadsTable.getPolymerConcentrationColumn();
                     const auto& visc = plyadsTable.getViscosityMultiplierColumn();
-                    plyviscViscosityMultiplierTable_[pvtRegionIdx].setXYContainers(c, visc);
+                    params_.plyviscViscosityMultiplierTable_[pvtRegionIdx].setXYContainers(c, visc);
                 }
             }
         }
@@ -214,11 +194,11 @@ public:
         // initialize the objects which deal with the PLYMAX keyword
         const auto& plymaxTables = tableManager.getPlymaxTables();
         const unsigned numMixRegions = plymaxTables.size();
-        setNumMixRegions(numMixRegions);
+        params_.setNumMixRegions(numMixRegions, enablePolymerMolarWeight);
         if (!plymaxTables.empty()) {
             for (unsigned mixRegionIdx = 0; mixRegionIdx < numMixRegions; ++ mixRegionIdx) {
                 const auto& plymaxTable = plymaxTables.template getTable<PlymaxTable>(mixRegionIdx);
-                setPlymax(mixRegionIdx, plymaxTable.getPolymerConcentrationColumn()[0]);
+                params_.plymaxMaxConcentration_[mixRegionIdx] = plymaxTable.getPolymerConcentrationColumn()[0];
             }
         }
         else {
@@ -233,7 +213,7 @@ public:
                 const auto& plmixparTable = eclState.getTableManager().getPlmixparTable();
                 // initialize the objects which deal with the PLMIXPAR keyword
                 for (unsigned mixRegionIdx = 0; mixRegionIdx < numMixRegions; ++ mixRegionIdx) {
-                    setPlmixpar(mixRegionIdx, plmixparTable[mixRegionIdx].todd_langstaff);
+                    params_.plymixparToddLongstaff_[mixRegionIdx] = plmixparTable[mixRegionIdx].todd_langstaff;
                 }
             }
         }
@@ -241,18 +221,18 @@ public:
             throw std::runtime_error("PLMIXPAR must be specified in POLYMER runs\n");
         }
 
-        hasPlyshlog_ = eclState.getTableManager().hasTables("PLYSHLOG");
-        hasShrate_ = eclState.getTableManager().useShrate();
+        params_.hasPlyshlog_ = eclState.getTableManager().hasTables("PLYSHLOG");
+        params_.hasShrate_ = eclState.getTableManager().useShrate();
 
-        if ((hasPlyshlog_ || hasShrate_) && enablePolymerMolarWeight) {
+        if ((params_.hasPlyshlog_ || params_.hasShrate_) && enablePolymerMolarWeight) {
             OpmLog::warning("PLYSHLOG and SHRATE should not be used in POLYMW runs, they will have no effect.\n");
         }
 
-        if (hasPlyshlog_ && !enablePolymerMolarWeight) {
+        if (params_.hasPlyshlog_ && !enablePolymerMolarWeight) {
             const auto& plyshlogTables = tableManager.getPlyshlogTables();
             assert(numPvtRegions == plyshlogTables.size());
-            plyshlogShearEffectRefMultiplier_.resize(numPvtRegions);
-            plyshlogShearEffectRefLogVelocity_.resize(numPvtRegions);
+            params_.plyshlogShearEffectRefMultiplier_.resize(numPvtRegions);
+            params_.plyshlogShearEffectRefLogVelocity_.resize(numPvtRegions);
             for (unsigned pvtRegionIdx = 0; pvtRegionIdx < numPvtRegions; ++ pvtRegionIdx) {
                 const auto& plyshlogTable = plyshlogTables.template getTable<PlyshlogTable>(pvtRegionIdx);
 
@@ -262,7 +242,7 @@ public:
 
                 // do the unit version here for the waterVelocity
                 UnitSystem unitSystem = eclState.getDeckUnitSystem();
-                double siFactor = hasShrate_? unitSystem.parse("1/Time").getSIScaling() : unitSystem.parse("Length/Time").getSIScaling();
+                double siFactor = params_.hasShrate_? unitSystem.parse("1/Time").getSIScaling() : unitSystem.parse("Length/Time").getSIScaling();
                 for (size_t i = 0; i < waterVelocity.size(); ++i) {
                     waterVelocity[i] *= siFactor;
                     // for plyshlog the input must be stored as logarithms
@@ -270,7 +250,7 @@ public:
                     waterVelocity[i] = std::log(waterVelocity[i]);
                 }
 
-                Scalar refViscMult = plyviscViscosityMultiplierTable_[pvtRegionIdx].eval(plyshlogRefPolymerConcentration, /*extrapolate=*/true);
+                Scalar refViscMult = params_.plyviscViscosityMultiplierTable_[pvtRegionIdx].eval(plyshlogRefPolymerConcentration, /*extrapolate=*/true);
                 // convert the table using referece conditions
                 for (size_t i = 0; i < waterVelocity.size(); ++i) {
                     shearMultiplier[i] *= refViscMult;
@@ -278,28 +258,28 @@ public:
                     shearMultiplier[i] /= (refViscMult - 1);
                     shearMultiplier[i] = shearMultiplier[i];
                 }
-                plyshlogShearEffectRefMultiplier_[pvtRegionIdx].resize(waterVelocity.size());
-                plyshlogShearEffectRefLogVelocity_[pvtRegionIdx].resize(waterVelocity.size());
+                params_.plyshlogShearEffectRefMultiplier_[pvtRegionIdx].resize(waterVelocity.size());
+                params_.plyshlogShearEffectRefLogVelocity_[pvtRegionIdx].resize(waterVelocity.size());
 
                 for (size_t i = 0; i < waterVelocity.size(); ++i) {
-                    plyshlogShearEffectRefMultiplier_[pvtRegionIdx][i] = shearMultiplier[i];
-                    plyshlogShearEffectRefLogVelocity_[pvtRegionIdx][i] = waterVelocity[i];
+                    params_.plyshlogShearEffectRefMultiplier_[pvtRegionIdx][i] = shearMultiplier[i];
+                    params_.plyshlogShearEffectRefLogVelocity_[pvtRegionIdx][i] = waterVelocity[i];
                 }
             }
         }
 
-        if (hasShrate_ && !enablePolymerMolarWeight) {
-            if(!hasPlyshlog_) {
+        if (params_.hasShrate_ && !enablePolymerMolarWeight) {
+            if (!params_.hasPlyshlog_) {
                 throw std::runtime_error("PLYSHLOG must be specified if SHRATE is used in POLYMER runs\n");
             }
             const auto& shrateTable = eclState.getTableManager().getShrateTable();
-            shrate_.resize(numPvtRegions);
+            params_.shrate_.resize(numPvtRegions);
             for (unsigned pvtRegionIdx = 0; pvtRegionIdx < numPvtRegions; ++ pvtRegionIdx) {
                 if (shrateTable.empty()) {
-                    shrate_[pvtRegionIdx] = 4.8; //default;
+                    params_.shrate_[pvtRegionIdx] = 4.8; //default;
                 }
                 else if (shrateTable.size() == numPvtRegions) {
-                    shrate_[pvtRegionIdx] = shrateTable[pvtRegionIdx].rate;
+                    params_.shrate_[pvtRegionIdx] = shrateTable[pvtRegionIdx].rate;
                 }
                 else {
                     throw std::runtime_error("SHRATE must either have 0 or number of NUMPVT entries\n");
@@ -312,10 +292,10 @@ public:
             if (!plyvmhTable.empty()) {
                 assert(plyvmhTable.size() == numMixRegions);
                 for (size_t regionIdx = 0; regionIdx < numMixRegions; ++regionIdx) {
-                    plyvmhCoefficients_[regionIdx].k_mh = plyvmhTable[regionIdx].k_mh;
-                    plyvmhCoefficients_[regionIdx].a_mh = plyvmhTable[regionIdx].a_mh;
-                    plyvmhCoefficients_[regionIdx].gamma = plyvmhTable[regionIdx].gamma;
-                    plyvmhCoefficients_[regionIdx].kappa = plyvmhTable[regionIdx].kappa;
+                    params_.plyvmhCoefficients_[regionIdx].k_mh = plyvmhTable[regionIdx].k_mh;
+                    params_.plyvmhCoefficients_[regionIdx].a_mh = plyvmhTable[regionIdx].a_mh;
+                    params_.plyvmhCoefficients_[regionIdx].gamma = plyvmhTable[regionIdx].gamma;
+                    params_.plyvmhCoefficients_[regionIdx].kappa = plyvmhTable[regionIdx].kappa;
                 }
             }
             else {
@@ -331,7 +311,7 @@ public:
                 const std::vector<double>& watervelocity = plymwinjtable.getVelocities();
                 const std::vector<std::vector<double>>& molecularweight = plymwinjtable.getMoleWeights();
                 TabulatedTwoDFunction tablefunc(throughput, watervelocity, molecularweight, true, false);
-                plymwinjTables_[tableNumber] = std::move(tablefunc);
+                params_.plymwinjTables_[tableNumber] = std::move(tablefunc);
             }
 
             // handling SKPRWAT keyword
@@ -343,7 +323,7 @@ public:
                 const std::vector<double>& watervelocity = skprwattable.getVelocities();
                 const std::vector<std::vector<double>>& skinpressure = skprwattable.getSkinPressures();
                 TabulatedTwoDFunction tablefunc(throughput, watervelocity, skinpressure, true, false);
-                skprwatTables_[tableNumber] = std::move(tablefunc);
+                params_.skprwatTables_[tableNumber] = std::move(tablefunc);
             }
 
             // handling SKPRPOLY keyword
@@ -355,113 +335,22 @@ public:
                 const std::vector<double>& watervelocity = skprpolytable.getVelocities();
                 const std::vector<std::vector<double>>& skinpressure = skprpolytable.getSkinPressures();
                 const double refPolymerConcentration = skprpolytable.referenceConcentration();
-                SkprpolyTable tablefunc = {refPolymerConcentration,
-                                           TabulatedTwoDFunction(throughput, watervelocity, skinpressure, true, false)};
-                skprpolyTables_[tableNumber] = std::move(tablefunc);
+                typename BlackOilPolymerParams<Scalar>::SkprpolyTable tablefunc =
+                    {refPolymerConcentration,
+                     TabulatedTwoDFunction(throughput, watervelocity, skinpressure, true, false)};
+                params_.skprpolyTables_[tableNumber] = std::move(tablefunc);
             }
         }
     }
 #endif
 
     /*!
-     * \brief Specify the number of satuation regions.
-     *
-     * This must be called before setting the PLYROCK and PLYADS of any region.
-     */
-    static void setNumSatRegions(unsigned numRegions)
-    {
-        plyrockDeadPoreVolume_.resize(numRegions);
-        plyrockResidualResistanceFactor_.resize(numRegions);
-        plyrockRockDensityFactor_.resize(numRegions);
-        plyrockAdsorbtionIndex_.resize(numRegions);
-        plyrockMaxAdsorbtion_.resize(numRegions);
-        plyadsAdsorbedPolymer_.resize(numRegions);
-    }
-
-    /*!
-     * \brief Specify the polymer rock properties a single region.
-     *
-     * The index of specified here must be in range [0, numSatRegions)
-     */
-    static void setPlyrock(unsigned satRegionIdx,
-                           const Scalar& plyrockDeadPoreVolume,
-                           const Scalar& plyrockResidualResistanceFactor,
-                           const Scalar& plyrockRockDensityFactor,
-                           const Scalar& plyrockAdsorbtionIndex,
-                           const Scalar& plyrockMaxAdsorbtion)
-    {
-        plyrockDeadPoreVolume_[satRegionIdx] = plyrockDeadPoreVolume;
-        plyrockResidualResistanceFactor_[satRegionIdx] = plyrockResidualResistanceFactor;
-        plyrockRockDensityFactor_[satRegionIdx] = plyrockRockDensityFactor;
-        plyrockAdsorbtionIndex_[satRegionIdx] = plyrockAdsorbtionIndex;
-        plyrockMaxAdsorbtion_[satRegionIdx] = plyrockMaxAdsorbtion;
-    }
-
-    /*!
-     * \brief Specify the number of pvt regions.
-     *
-     * This must be called before setting the PLYVISC of any region.
-     */
-    static void setNumPvtRegions(unsigned numRegions)
-    {
-        plyviscViscosityMultiplierTable_.resize(numRegions);
-    }
-
-    /*!
-     * \brief Specify the polymer viscosity a single region.
-     *
-     * The index of specified here must be in range [0, numSatRegions)
-     */
-    static void setPlyvisc(unsigned satRegionIdx,
-                           const TabulatedFunction& plyviscViscosityMultiplierTable)
-    {
-        plyviscViscosityMultiplierTable_[satRegionIdx] = plyviscViscosityMultiplierTable;
-    }
-
-    /*!
-     * \brief Specify the number of mix regions.
-     *
-     * This must be called before setting the PLYMAC and PLMIXPAR of any region.
-     */
-    static void setNumMixRegions(unsigned numRegions)
-    {
-        plymaxMaxConcentration_.resize(numRegions);
-        plymixparToddLongstaff_.resize(numRegions);
-
-        if constexpr (enablePolymerMolarWeight) {
-            plyvmhCoefficients_.resize(numRegions);
-        }
-    }
-
-    /*!
-     * \brief Specify the maximum polymer concentration a single region.
-     *
-     * The index of specified here must be in range [0, numMixRegionIdx)
-     */
-    static void setPlymax(unsigned mixRegionIdx,
-                          const Scalar& plymaxMaxConcentration)
-    {
-        plymaxMaxConcentration_[mixRegionIdx] = plymaxMaxConcentration;
-    }
-
-    /*!
-     * \brief Specify the maximum polymer concentration a single region.
-     *
-     * The index of specified here must be in range [0, numMixRegionIdx)
-     */
-    static void setPlmixpar(unsigned mixRegionIdx,
-                            const Scalar& plymixparToddLongstaff)
-    {
-        plymixparToddLongstaff_[mixRegionIdx] = plymixparToddLongstaff;
-    }
-
-    /*!
     * \brief get the PLYMWINJ table
     */
     static TabulatedTwoDFunction& getPlymwinjTable(const int tableNumber)
     {
-        const auto iterTable = plymwinjTables_.find(tableNumber);
-        if (iterTable != plymwinjTables_.end()) {
+        const auto iterTable = params_.plymwinjTables_.find(tableNumber);
+        if (iterTable != params_.plymwinjTables_.end()) {
             return iterTable->second;
         }
         else {
@@ -474,8 +363,8 @@ public:
     */
     static TabulatedTwoDFunction& getSkprwatTable(const int tableNumber)
     {
-        const auto iterTable = skprwatTables_.find(tableNumber);
-        if (iterTable != skprwatTables_.end()) {
+        const auto iterTable = params_.skprwatTables_.find(tableNumber);
+        if (iterTable != params_.skprwatTables_.end()) {
             return iterTable->second;
         }
         else {
@@ -486,10 +375,11 @@ public:
     /*!
     * \brief get the SKPRPOLY table
     */
-    static SkprpolyTable& getSkprpolyTable(const int tableNumber)
+    static typename BlackOilPolymerParams<Scalar>::SkprpolyTable&
+    getSkprpolyTable(const int tableNumber)
     {
-        const auto iterTable = skprpolyTables_.find(tableNumber);
-        if (iterTable != skprpolyTables_.end()) {
+        const auto iterTable = params_.skprpolyTables_.find(tableNumber);
+        if (iterTable != params_.skprpolyTables_.end()) {
             return iterTable->second;
         }
         else {
@@ -715,7 +605,7 @@ public:
                                               unsigned timeIdx)
     {
         unsigned satnumRegionIdx = elemCtx.problem().satnumRegionIndex(elemCtx, scvIdx, timeIdx);
-        return plyrockDeadPoreVolume_[satnumRegionIdx];
+        return params_.plyrockDeadPoreVolume_[satnumRegionIdx];
     }
 
     static const Scalar plyrockResidualResistanceFactor(const ElementContext& elemCtx,
@@ -723,7 +613,7 @@ public:
                                                         unsigned timeIdx)
     {
         unsigned satnumRegionIdx = elemCtx.problem().satnumRegionIndex(elemCtx, scvIdx, timeIdx);
-        return plyrockResidualResistanceFactor_[satnumRegionIdx];
+        return params_.plyrockResidualResistanceFactor_[satnumRegionIdx];
     }
 
     static const Scalar plyrockRockDensityFactor(const ElementContext& elemCtx,
@@ -731,7 +621,7 @@ public:
                                                  unsigned timeIdx)
     {
         unsigned satnumRegionIdx = elemCtx.problem().satnumRegionIndex(elemCtx, scvIdx, timeIdx);
-        return plyrockRockDensityFactor_[satnumRegionIdx];
+        return params_.plyrockRockDensityFactor_[satnumRegionIdx];
     }
 
     static const Scalar plyrockAdsorbtionIndex(const ElementContext& elemCtx,
@@ -739,7 +629,7 @@ public:
                                                unsigned timeIdx)
     {
         unsigned satnumRegionIdx = elemCtx.problem().satnumRegionIndex(elemCtx, scvIdx, timeIdx);
-        return plyrockAdsorbtionIndex_[satnumRegionIdx];
+        return params_.plyrockAdsorbtionIndex_[satnumRegionIdx];
     }
 
     static const Scalar plyrockMaxAdsorbtion(const ElementContext& elemCtx,
@@ -747,7 +637,7 @@ public:
                                              unsigned timeIdx)
     {
         unsigned satnumRegionIdx = elemCtx.problem().satnumRegionIndex(elemCtx, scvIdx, timeIdx);
-        return plyrockMaxAdsorbtion_[satnumRegionIdx];
+        return params_.plyrockMaxAdsorbtion_[satnumRegionIdx];
     }
 
     static const TabulatedFunction& plyadsAdsorbedPolymer(const ElementContext& elemCtx,
@@ -755,7 +645,7 @@ public:
                                                           unsigned timeIdx)
     {
         unsigned satnumRegionIdx = elemCtx.problem().satnumRegionIndex(elemCtx, scvIdx, timeIdx);
-        return plyadsAdsorbedPolymer_[satnumRegionIdx];
+        return params_.plyadsAdsorbedPolymer_[satnumRegionIdx];
     }
 
     static const TabulatedFunction& plyviscViscosityMultiplierTable(const ElementContext& elemCtx,
@@ -763,12 +653,12 @@ public:
                                                                     unsigned timeIdx)
     {
         unsigned pvtnumRegionIdx = elemCtx.problem().pvtRegionIndex(elemCtx, scvIdx, timeIdx);
-        return plyviscViscosityMultiplierTable_[pvtnumRegionIdx];
+        return params_.plyviscViscosityMultiplierTable_[pvtnumRegionIdx];
     }
 
     static const TabulatedFunction& plyviscViscosityMultiplierTable(unsigned pvtnumRegionIdx)
     {
-        return plyviscViscosityMultiplierTable_[pvtnumRegionIdx];
+        return params_.plyviscViscosityMultiplierTable_[pvtnumRegionIdx];
     }
 
     static const Scalar plymaxMaxConcentration(const ElementContext& elemCtx,
@@ -776,7 +666,7 @@ public:
                                                unsigned timeIdx)
     {
         unsigned polymerMixRegionIdx = elemCtx.problem().plmixnumRegionIndex(elemCtx, scvIdx, timeIdx);
-        return plymaxMaxConcentration_[polymerMixRegionIdx];
+        return params_.plymaxMaxConcentration_[polymerMixRegionIdx];
     }
 
     static const Scalar plymixparToddLongstaff(const ElementContext& elemCtx,
@@ -784,30 +674,31 @@ public:
                                                unsigned timeIdx)
     {
         unsigned polymerMixRegionIdx = elemCtx.problem().plmixnumRegionIndex(elemCtx, scvIdx, timeIdx);
-        return plymixparToddLongstaff_[polymerMixRegionIdx];
+        return params_.plymixparToddLongstaff_[polymerMixRegionIdx];
     }
 
-    static const PlyvmhCoefficients& plyvmhCoefficients(const ElementContext& elemCtx,
-                                                        const unsigned scvIdx,
-                                                        const unsigned timeIdx)
+    static const typename BlackOilPolymerParams<Scalar>::PlyvmhCoefficients&
+    plyvmhCoefficients(const ElementContext& elemCtx,
+                       const unsigned scvIdx,
+                       const unsigned timeIdx)
     {
         const unsigned polymerMixRegionIdx = elemCtx.problem().plmixnumRegionIndex(elemCtx, scvIdx, timeIdx);
-        return plyvmhCoefficients_[polymerMixRegionIdx];
+        return params_.plyvmhCoefficients_[polymerMixRegionIdx];
     }
 
     static bool hasPlyshlog()
     {
-        return hasPlyshlog_;
+        return params_.hasPlyshlog_;
     }
 
     static bool hasShrate()
     {
-        return hasShrate_;
+        return params_.hasShrate_;
     }
 
     static const Scalar shrate(unsigned pvtnumRegionIdx)
     {
-        return shrate_[pvtnumRegionIdx];
+        return params_.shrate_[pvtnumRegionIdx];
     }
 
     /*!
@@ -823,7 +714,7 @@ public:
     {
         using ToolboxLocal = MathToolbox<Evaluation>;
 
-        const auto& viscosityMultiplierTable = plyviscViscosityMultiplierTable_[pvtnumRegionIdx];
+        const auto& viscosityMultiplierTable = params_.plyviscViscosityMultiplierTable_[pvtnumRegionIdx];
         Scalar viscosityMultiplier = viscosityMultiplierTable.eval(scalarValue(polymerConcentration), /*extrapolate=*/true);
 
         const Scalar eps = 1e-14;
@@ -831,7 +722,7 @@ public:
         if (std::abs((viscosityMultiplier - 1.0)) < eps)
             return ToolboxLocal::createConstant(v0, 1.0);
 
-        const std::vector<Scalar>& shearEffectRefLogVelocity = plyshlogShearEffectRefLogVelocity_[pvtnumRegionIdx];
+        const std::vector<Scalar>& shearEffectRefLogVelocity = params_.plyshlogShearEffectRefLogVelocity_[pvtnumRegionIdx];
         auto v0AbsLog = log(abs(v0));
         // return 1.0 if the velocity /sharte is smaller than the first velocity entry.
         if (v0AbsLog < shearEffectRefLogVelocity[0])
@@ -841,7 +732,7 @@ public:
         // Z = (1 + (P - 1) * M(v)) / P
         // where M(v) is computed from user input
         // and P = viscosityMultiplier
-        const std::vector<Scalar>& shearEffectRefMultiplier = plyshlogShearEffectRefMultiplier_[pvtnumRegionIdx];
+        const std::vector<Scalar>& shearEffectRefMultiplier = params_.plyshlogShearEffectRefMultiplier_[pvtnumRegionIdx];
         size_t numTableEntries = shearEffectRefLogVelocity.size();
         assert(shearEffectRefMultiplier.size() == numTableEntries);
 
@@ -896,101 +787,13 @@ public:
     }
 
 private:
-    static std::vector<Scalar> plyrockDeadPoreVolume_;
-    static std::vector<Scalar> plyrockResidualResistanceFactor_;
-    static std::vector<Scalar> plyrockRockDensityFactor_;
-    static std::vector<Scalar> plyrockAdsorbtionIndex_;
-    static std::vector<Scalar> plyrockMaxAdsorbtion_;
-    static std::vector<TabulatedFunction> plyadsAdsorbedPolymer_;
-    static std::vector<TabulatedFunction> plyviscViscosityMultiplierTable_;
-    static std::vector<Scalar> plymaxMaxConcentration_;
-    static std::vector<Scalar> plymixparToddLongstaff_;
-    static std::vector<std::vector<Scalar>> plyshlogShearEffectRefMultiplier_;
-    static std::vector<std::vector<Scalar>> plyshlogShearEffectRefLogVelocity_;
-    static std::vector<Scalar> shrate_;
-    static bool hasShrate_;
-    static bool hasPlyshlog_;
-
-    static std::vector<PlyvmhCoefficients> plyvmhCoefficients_;
-    static std::map<int, TabulatedTwoDFunction> plymwinjTables_;
-    static std::map<int, TabulatedTwoDFunction> skprwatTables_;
-
-    static std::map<int, SkprpolyTable> skprpolyTables_;
+    static BlackOilPolymerParams<Scalar> params_;
 };
 
 
-
 template <class TypeTag, bool enablePolymerV>
-std::vector<typename BlackOilPolymerModule<TypeTag, enablePolymerV>::Scalar>
-BlackOilPolymerModule<TypeTag, enablePolymerV>::plyrockDeadPoreVolume_;
-
-template <class TypeTag, bool enablePolymerV>
-std::vector<typename BlackOilPolymerModule<TypeTag, enablePolymerV>::Scalar>
-BlackOilPolymerModule<TypeTag, enablePolymerV>::plyrockResidualResistanceFactor_;
-
-template <class TypeTag, bool enablePolymerV>
-std::vector<typename BlackOilPolymerModule<TypeTag, enablePolymerV>::Scalar>
-BlackOilPolymerModule<TypeTag, enablePolymerV>::plyrockRockDensityFactor_;
-
-template <class TypeTag, bool enablePolymerV>
-std::vector<typename BlackOilPolymerModule<TypeTag, enablePolymerV>::Scalar>
-BlackOilPolymerModule<TypeTag, enablePolymerV>::plyrockAdsorbtionIndex_;
-
-template <class TypeTag, bool enablePolymerV>
-std::vector<typename BlackOilPolymerModule<TypeTag, enablePolymerV>::Scalar>
-BlackOilPolymerModule<TypeTag, enablePolymerV>::plyrockMaxAdsorbtion_;
-
-template <class TypeTag, bool enablePolymerV>
-std::vector<typename BlackOilPolymerModule<TypeTag, enablePolymerV>::TabulatedFunction>
-BlackOilPolymerModule<TypeTag, enablePolymerV>::plyadsAdsorbedPolymer_;
-
-template <class TypeTag, bool enablePolymerV>
-std::vector<typename BlackOilPolymerModule<TypeTag, enablePolymerV>::TabulatedFunction>
-BlackOilPolymerModule<TypeTag, enablePolymerV>::plyviscViscosityMultiplierTable_;
-
-template <class TypeTag, bool enablePolymerV>
-std::vector<typename BlackOilPolymerModule<TypeTag, enablePolymerV>::Scalar>
-BlackOilPolymerModule<TypeTag, enablePolymerV>::plymaxMaxConcentration_;
-
-template <class TypeTag, bool enablePolymerV>
-std::vector<typename BlackOilPolymerModule<TypeTag, enablePolymerV>::Scalar>
-BlackOilPolymerModule<TypeTag, enablePolymerV>::plymixparToddLongstaff_;
-
-template <class TypeTag, bool enablePolymerV>
-std::vector<std::vector<typename BlackOilPolymerModule<TypeTag, enablePolymerV>::Scalar>>
-BlackOilPolymerModule<TypeTag, enablePolymerV>::plyshlogShearEffectRefMultiplier_;
-
-template <class TypeTag, bool enablePolymerV>
-std::vector<std::vector<typename BlackOilPolymerModule<TypeTag, enablePolymerV>::Scalar>>
-BlackOilPolymerModule<TypeTag, enablePolymerV>::plyshlogShearEffectRefLogVelocity_;
-
-template <class TypeTag, bool enablePolymerV>
-std::vector<typename BlackOilPolymerModule<TypeTag, enablePolymerV>::Scalar>
-BlackOilPolymerModule<TypeTag, enablePolymerV>::shrate_;
-
-template <class TypeTag, bool enablePolymerV>
-bool
-BlackOilPolymerModule<TypeTag, enablePolymerV>::hasShrate_;
-
-template <class TypeTag, bool enablePolymerV>
-bool
-BlackOilPolymerModule<TypeTag, enablePolymerV>::hasPlyshlog_;
-
-template <class TypeTag, bool enablePolymerV>
-std::vector<typename BlackOilPolymerModule<TypeTag, enablePolymerV>::PlyvmhCoefficients>
-BlackOilPolymerModule<TypeTag, enablePolymerV>::plyvmhCoefficients_;
-
-template <class TypeTag, bool enablePolymerV>
-std::map<int, typename BlackOilPolymerModule<TypeTag, enablePolymerV>::TabulatedTwoDFunction>
-BlackOilPolymerModule<TypeTag, enablePolymerV>::plymwinjTables_;
-
-template <class TypeTag, bool enablePolymerV>
-std::map<int, typename BlackOilPolymerModule<TypeTag, enablePolymerV>::TabulatedTwoDFunction>
-BlackOilPolymerModule<TypeTag, enablePolymerV>::skprwatTables_;
-
-template <class TypeTag, bool enablePolymerV>
-std::map<int, typename BlackOilPolymerModule<TypeTag, enablePolymerV>::SkprpolyTable>
-BlackOilPolymerModule<TypeTag, enablePolymerV>::skprpolyTables_;
+BlackOilPolymerParams<typename BlackOilPolymerModule<TypeTag, enablePolymerV>::Scalar>
+BlackOilPolymerModule<TypeTag, enablePolymerV>::params_;
 
 /*!
  * \ingroup BlackOil
@@ -1043,7 +846,7 @@ public:
         const Scalar& maxAdsorbtion = PolymerModule::plyrockMaxAdsorbtion(elemCtx, dofIdx, timeIdx);
         const auto& plyadsAdsorbedPolymer = PolymerModule::plyadsAdsorbedPolymer(elemCtx, dofIdx, timeIdx);
         polymerAdsorption_ = plyadsAdsorbedPolymer.eval(polymerConcentration_, /*extrapolate=*/true);
-        if (PolymerModule::plyrockAdsorbtionIndex(elemCtx, dofIdx, timeIdx) == PolymerModule::NoDesorption) {
+        if (PolymerModule::plyrockAdsorbtionIndex(elemCtx, dofIdx, timeIdx) == BlackOilPolymerParams<Scalar>::NoDesorption) {
             const Scalar& maxPolymerAdsorption = elemCtx.problem().maxPolymerAdsorption(elemCtx, dofIdx, timeIdx);
             polymerAdsorption_ = std::max(Evaluation(maxPolymerAdsorption) , polymerAdsorption_);
         }
