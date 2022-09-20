@@ -59,6 +59,7 @@ function(add_test_compareECLFiles)
   if(NOT PARAM_PREFIX)
     set(PARAM_PREFIX compareECLFiles)
   endif()
+
   set(RESULT_PATH ${BASE_RESULT_PATH}${PARAM_DIR_PREFIX}/${PARAM_SIMULATOR}+${PARAM_CASENAME})
   set(TEST_ARGS ${PARAM_TEST_ARGS})
   set(DRIVER_ARGS -i ${OPM_TESTS_ROOT}/${PARAM_DIR}
@@ -75,7 +76,7 @@ function(add_test_compareECLFiles)
   if(PARAM_RESTART_SCHED)
    list(APPEND DRIVER_ARGS -h ${PARAM_RESTART_SCHED})
   endif()
-  opm_add_test(${PARAM_PREFIX}_${PARAM_SIMULATOR}+${PARAM_FILENAME} NO_COMPILE
+  opm_add_test(${PARAM_PREFIX}_${PARAM_SIMULATOR}+${PARAM_FILENAME}+${PARAM_CASENAME} NO_COMPILE
                EXE_NAME ${PARAM_SIMULATOR}
                DRIVER_ARGS ${DRIVER_ARGS}
                TEST_ARGS ${TEST_ARGS})
