@@ -29,11 +29,12 @@
 #define EWOMS_BLACK_OIL_SOLVENT_MODULE_HH
 
 #include "blackoilproperties.hh"
+
+#include <opm/models/blackoil/blackoilsolventparams.hh>
 #include <opm/models/io/vtkblackoilsolventmodule.hh>
 #include <opm/models/common/quantitycallbacks.hh>
 
 #include <opm/material/fluidsystems/blackoilpvt/SolventPvt.hpp>
-#include <opm/material/common/Tabulated1DFunction.hpp>
 
 #if HAVE_ECL_INPUT
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
@@ -55,6 +56,7 @@
 #include <string>
 
 namespace Opm {
+
 /*!
  * \ingroup BlackOil
  * \brief Contains the high level supplements required to extend the black oil
@@ -77,9 +79,9 @@ class BlackOilSolventModule
     using Indices = GetPropType<TypeTag, Properties::Indices>;
 
     using Toolbox = MathToolbox<Evaluation>;
-    using SolventPvt = ::Opm::SolventPvt<Scalar>;
+    using SolventPvt = typename BlackOilSolventParams<Scalar>::SolventPvt;
 
-    using TabulatedFunction = Tabulated1DFunction<Scalar>;
+    using TabulatedFunction = typename BlackOilSolventParams<Scalar>::TabulatedFunction;
 
     static constexpr unsigned solventSaturationIdx = Indices::solventSaturationIdx;
     static constexpr unsigned contiSolventEqIdx = Indices::contiSolventEqIdx;
@@ -108,72 +110,67 @@ public:
         if (!eclState.runspec().phases().active(Phase::SOLVENT))
             return; // solvent treatment is supposed to be disabled
 
-        solventPvt_.initFromState(eclState, schedule);
+        params_.solventPvt_.initFromState(eclState, schedule);
 
         const auto& tableManager = eclState.getTableManager();
         // initialize the objects which deal with the SSFN keyword
         const auto& ssfnTables = tableManager.getSsfnTables();
         unsigned numSatRegions = tableManager.getTabdims().getNumSatTables();
-        setNumSatRegions(numSatRegions);
+        params_.setNumSatRegions(numSatRegions);
         for (unsigned satRegionIdx = 0; satRegionIdx < numSatRegions; ++ satRegionIdx) {
             const auto& ssfnTable = ssfnTables.template getTable<SsfnTable>(satRegionIdx);
-            ssfnKrg_[satRegionIdx].setXYContainers(ssfnTable.getSolventFractionColumn(),
-                                                   ssfnTable.getGasRelPermMultiplierColumn(),
-                                                   /*sortInput=*/true);
-            ssfnKrs_[satRegionIdx].setXYContainers(ssfnTable.getSolventFractionColumn(),
-                                                   ssfnTable.getSolventRelPermMultiplierColumn(),
-                                                   /*sortInput=*/true);
+            params_.ssfnKrg_[satRegionIdx].setXYContainers(ssfnTable.getSolventFractionColumn(),
+                                                           ssfnTable.getGasRelPermMultiplierColumn(),
+                                                           /*sortInput=*/true);
+            params_.ssfnKrs_[satRegionIdx].setXYContainers(ssfnTable.getSolventFractionColumn(),
+                                                           ssfnTable.getSolventRelPermMultiplierColumn(),
+                                                           /*sortInput=*/true);
         }
 
         // initialize the objects needed for miscible solvent and oil simulations
-        isMiscible_ = false;
+        params_.isMiscible_ = false;
         if (!eclState.getTableManager().getMiscTables().empty()) {
-            isMiscible_ = true;
+            params_.isMiscible_ = true;
 
             unsigned numMiscRegions = 1;
 
             // misicible hydrocabon relative permeability wrt water
             const auto& sof2Tables = tableManager.getSof2Tables();
             if (!sof2Tables.empty()) {
-
                 // resize the attributes of the object
-                sof2Krn_.resize(numSatRegions);
+                params_.sof2Krn_.resize(numSatRegions);
                 for (unsigned satRegionIdx = 0; satRegionIdx < numSatRegions; ++ satRegionIdx) {
                     const auto& sof2Table = sof2Tables.template getTable<Sof2Table>(satRegionIdx);
-                    sof2Krn_[satRegionIdx].setXYContainers(sof2Table.getSoColumn(),
-                                                       sof2Table.getKroColumn(),
-                                                       /*sortInput=*/true);
+                    params_.sof2Krn_[satRegionIdx].setXYContainers(sof2Table.getSoColumn(),
+                                                                   sof2Table.getKroColumn(),
+                                                                   /*sortInput=*/true);
                 }
-
             }
             else
                 throw std::runtime_error("SOF2 must be specified in MISCIBLE (SOLVENT) runs\n");
 
             const auto& miscTables = tableManager.getMiscTables();
             if (!miscTables.empty()) {
-
                 assert(numMiscRegions == miscTables.size());
 
                 // resize the attributes of the object
-                misc_.resize(numMiscRegions);
+                params_.misc_.resize(numMiscRegions);
                 for (unsigned miscRegionIdx = 0; miscRegionIdx < numMiscRegions; ++miscRegionIdx) {
                     const auto& miscTable = miscTables.template getTable<MiscTable>(miscRegionIdx);
 
                     // solventFraction = Ss / (Ss + Sg);
                     const auto& solventFraction = miscTable.getSolventFractionColumn();
                     const auto& misc = miscTable.getMiscibilityColumn();
-                    misc_[miscRegionIdx].setXYContainers(solventFraction, misc);
-
+                    params_.misc_[miscRegionIdx].setXYContainers(solventFraction, misc);
                 }
             }
             else
                 throw std::runtime_error("MISC must be specified in MISCIBLE (SOLVENT) runs\n");
 
             // resize the attributes of the object
-            pmisc_.resize(numMiscRegions);
+            params_.pmisc_.resize(numMiscRegions);
             const auto& pmiscTables = tableManager.getPmiscTables();
             if (!pmiscTables.empty()) {
-
                 assert(numMiscRegions == pmiscTables.size());
 
                 for (unsigned regionIdx = 0; regionIdx < numMiscRegions; ++regionIdx) {
@@ -183,8 +180,7 @@ public:
                     const auto& po = pmiscTable.getOilPhasePressureColumn();
                     const auto& pmisc = pmiscTable.getMiscibilityColumn();
 
-                    pmisc_[regionIdx].setXYContainers(po, pmisc);
-
+                    params_.pmisc_[regionIdx].setXYContainers(po, pmisc);
                 }
             }
             else {
@@ -192,19 +188,16 @@ public:
                 std::vector<double> y = {1.0,1.0};
                 TabulatedFunction constant = TabulatedFunction(2, x, y);
                 for (unsigned regionIdx = 0; regionIdx < numMiscRegions; ++regionIdx) {
-                    setPmisc(regionIdx, constant);
+                    params_.pmisc_[regionIdx] = constant;
                 }
-
             }
 
             // miscible relative permeability multipleiers
-            msfnKrsg_.resize(numSatRegions);
-            msfnKro_.resize(numSatRegions);
+            params_.msfnKrsg_.resize(numSatRegions);
+            params_.msfnKro_.resize(numSatRegions);
             const auto& msfnTables = tableManager.getMsfnTables();
             if (!msfnTables.empty()) {
-
                 assert(numSatRegions == msfnTables.size());
-
 
                 for (unsigned regionIdx = 0; regionIdx < numSatRegions; ++regionIdx) {
                     const MsfnTable& msfnTable = msfnTables.template getTable<MsfnTable>(regionIdx);
@@ -215,9 +208,8 @@ public:
                     const auto& krsg = msfnTable.getGasSolventRelpermMultiplierColumn();
                     const auto& kro = msfnTable.getOilRelpermMultiplierColumn();
 
-                    msfnKrsg_[regionIdx].setXYContainers(Ssg, krsg);
-                    msfnKro_[regionIdx].setXYContainers(Ssg, kro);
-
+                    params_.msfnKrsg_[regionIdx].setXYContainers(Ssg, krsg);
+                    params_.msfnKro_[regionIdx].setXYContainers(Ssg, kro);
                 }
             }
             else {
@@ -227,11 +219,11 @@ public:
                 TabulatedFunction invUnit = TabulatedFunction(2, x, y);
 
                 for (unsigned regionIdx = 0; regionIdx < numSatRegions; ++regionIdx) {
-                    setMsfn(regionIdx, unit, invUnit);
+                    params_.setMsfn(regionIdx, unit, invUnit);
                 }
             }
             // resize the attributes of the object
-            sorwmis_.resize(numMiscRegions);
+            params_.sorwmis_.resize(numMiscRegions);
             const auto& sorwmisTables = tableManager.getSorwmisTables();
             if (!sorwmisTables.empty()) {
                 assert(numMiscRegions == sorwmisTables.size());
@@ -243,7 +235,7 @@ public:
                     const auto& sw = sorwmisTable.getWaterSaturationColumn();
                     const auto& sorwmis = sorwmisTable.getMiscibleResidualOilColumn();
 
-                    sorwmis_[regionIdx].setXYContainers(sw, sorwmis);
+                    params_.sorwmis_[regionIdx].setXYContainers(sw, sorwmis);
                 }
             }
             else {
@@ -252,16 +244,15 @@ public:
                 std::vector<double> y = {0.0,0.0};
                 TabulatedFunction zero = TabulatedFunction(2, x, y);
                 for (unsigned regionIdx = 0; regionIdx < numMiscRegions; ++regionIdx) {
-                    setSorwmis(regionIdx, zero);
+                    params_.sorwmis_[regionIdx] = zero;
                 }
             }
 
             // resize the attributes of the object
-            sgcwmis_.resize(numMiscRegions);
+            params_.sgcwmis_.resize(numMiscRegions);
             const auto& sgcwmisTables = tableManager.getSgcwmisTables();
             if (!sgcwmisTables.empty()) {
-
-                assert(numMiscRegions ==sgcwmisTables.size());
+                assert(numMiscRegions == sgcwmisTables.size());
 
                 for (unsigned regionIdx = 0; regionIdx < numMiscRegions; ++regionIdx) {
                     const auto& sgcwmisTable = sgcwmisTables.template getTable<SgcwmisTable>(regionIdx);
@@ -270,7 +261,7 @@ public:
                     const auto& sw = sgcwmisTable.getWaterSaturationColumn();
                     const auto& sgcwmis = sgcwmisTable.getMiscibleResidualGasColumn();
 
-                    sgcwmis_[regionIdx].setXYContainers(sw, sgcwmis);
+                    params_.sgcwmis_[regionIdx].setXYContainers(sw, sgcwmis);
                 }
             }
             else {
@@ -279,31 +270,30 @@ public:
                 std::vector<double> y = {0.0,0.0};
                 TabulatedFunction zero = TabulatedFunction(2, x, y);
                 for (unsigned regionIdx = 0; regionIdx < numMiscRegions; ++regionIdx)
-                    setSgcmis(regionIdx, zero);
+                    params_.sgcwmis_[regionIdx] = zero;
             }
 
             const auto& tlmixpar = eclState.getTableManager().getTLMixpar();
             if (!tlmixpar.empty()) {
                 // resize the attributes of the object
-                tlMixParamViscosity_.resize(numMiscRegions);
-                tlMixParamDensity_.resize(numMiscRegions);
+                params_.tlMixParamViscosity_.resize(numMiscRegions);
+                params_.tlMixParamDensity_.resize(numMiscRegions);
 
                 assert(numMiscRegions == tlmixpar.size());
                 for (unsigned regionIdx = 0; regionIdx < numMiscRegions; ++regionIdx) {
                     const auto& tlp = tlmixpar[regionIdx];
-                    tlMixParamViscosity_[regionIdx] = tlp.viscosity_parameter;
-                    tlMixParamDensity_[regionIdx] = tlp.density_parameter;
+                    params_.tlMixParamViscosity_[regionIdx] = tlp.viscosity_parameter;
+                    params_.tlMixParamDensity_[regionIdx] = tlp.density_parameter;
                 }
             }
             else
                 throw std::runtime_error("TLMIXPAR must be specified in MISCIBLE (SOLVENT) runs\n");
 
             // resize the attributes of the object
-            tlPMixTable_.resize(numMiscRegions);
+            params_.tlPMixTable_.resize(numMiscRegions);
             if (!eclState.getTableManager().getTlpmixpaTables().empty()) {
                 const auto& tlpmixparTables = tableManager.getTlpmixpaTables();
                 if (!tlpmixparTables.empty()) {
-
                     assert(numMiscRegions == tlpmixparTables.size());
                     for (unsigned regionIdx = 0; regionIdx < numMiscRegions; ++regionIdx) {
                         const auto& tlpmixparTable = tlpmixparTables.template getTable<TlpmixpaTable>(regionIdx);
@@ -312,14 +302,13 @@ public:
                         const auto& po = tlpmixparTable.getOilPhasePressureColumn();
                         const auto& tlpmixpa = tlpmixparTable.getMiscibilityColumn();
 
-                        tlPMixTable_[regionIdx].setXYContainers(po, tlpmixpa);
-
+                        params_.tlPMixTable_[regionIdx].setXYContainers(po, tlpmixpa);
                     }
                 }
                 else {
                     // if empty keyword. Try to use the pmisc table as default.
-                    if (pmisc_.size() > 0)
-                        tlPMixTable_ = pmisc_;
+                    if (params_.pmisc_.size() > 0)
+                        params_.tlPMixTable_ = params_.pmisc_;
                     else
                         throw std::invalid_argument("If the pressure dependent TL values in "
                                                     "TLPMIXPA is defaulted (no entries), then "
@@ -332,137 +321,21 @@ public:
                 std::vector<double> y = {1.0,1.0};
                 TabulatedFunction ones = TabulatedFunction(2, x, y);
                 for (unsigned regionIdx = 0; regionIdx < numMiscRegions; ++regionIdx)
-                    setTlpmixpa(regionIdx, ones);
+                    params_.tlPMixTable_[regionIdx] = ones;
             }
         }
     }
 #endif
 
     /*!
-     * \brief Specify the number of satuation regions.
-     *
-     * This must be called before setting the SSFN of any region.
-     */
-    static void setNumSatRegions(unsigned numRegions)
-    {
-        ssfnKrg_.resize(numRegions);
-        ssfnKrs_.resize(numRegions);
-    }
-
-    /*!
-     * \brief Specify the solvent saturation functions of a single region.
-     *
-     * The index of specified here must be in range [0, numSatRegions)
-     */
-    static void setSsfn(unsigned satRegionIdx,
-                        const TabulatedFunction& ssfnKrg,
-                        const TabulatedFunction& ssfnKrs)
-    {
-        ssfnKrg_[satRegionIdx] = ssfnKrg;
-        ssfnKrs_[satRegionIdx] = ssfnKrs;
-    }
-
-    /*!
-     * \brief Specify misicible hydrocabon relative permeability wrt water of a single region.
-     *
-     * The index of specified here must be in range [0, numSatRegions)
-     */
-    static void setSof2(unsigned satRegionIdx,
-                        const TabulatedFunction& sof2Krn)
-    {
-        sof2Krn_[satRegionIdx] = sof2Krn;
-    }
-
-    /*!
-     * \brief Misicibility function wrt solvent fraction of a single region.
-     *
-     * The index of specified here must be in range [0, numMiscRegions)
-     */
-    static void setMisc(unsigned miscRegionIdx,
-                        const TabulatedFunction& misc)
-    {
-        misc_[miscRegionIdx] = misc;
-    }
-
-    /*!
-     * \brief Misicibility function wrt pressure of a single region.
-     *
-     * The index of specified here must be in range [0, numMiscRegions)
-     */
-    static void setPmisc(unsigned miscRegionIdx,
-                        const TabulatedFunction& pmisc)
-    {
-        pmisc_[miscRegionIdx] = pmisc;
-    }
-
-    /*!
-     * \brief Specify misicible relative permeability multipliers of a single region.
-     *
-     * The index of specified here must be in range [0, numSatRegions)
-     */
-    static void setMsfn(unsigned satRegionIdx,
-                        const TabulatedFunction& msfnKrsg,
-                        const TabulatedFunction& msfnKro)
-    {
-        msfnKrsg_[satRegionIdx] = msfnKrsg;
-        msfnKro_[satRegionIdx] = msfnKro;
-    }
-
-    /*!
-     * \brief Misicibe residual oil saturation function wrt water saturation of a single region.
-     *
-     * The index of specified here must be in range [0, numMiscRegions)
-     */
-    static void setSorwmis(unsigned miscRegionIdx,
-                        const TabulatedFunction& sorwmis)
-    {
-        sorwmis_[miscRegionIdx] = sorwmis;
-    }
-
-    /*!
-     * \brief Misicibe critical gas saturation function wrt water saturation of a single region.
-     *
-     * The index of specified here must be in range [0, numMiscRegions)
-     */
-    static void setSgcmis(unsigned miscRegionIdx,
-                        const TabulatedFunction& sgcwmis)
-    {
-        sgcwmis_[miscRegionIdx] = sgcwmis;
-    }
-
-    /*!
-     * \brief Todd-Longstaff mixing parameters of a single region.
-     *
-     * The index of specified here must be in range [0, numMiscRegions)
-     */
-    static void setTlmixpar(unsigned miscRegionIdx,
-                        const Scalar& tlMixParamViscosity,
-                            const Scalar& tlMixParamDensity)
-    {
-        tlMixParamViscosity_[miscRegionIdx] = tlMixParamViscosity;
-        tlMixParamDensity_[miscRegionIdx] = tlMixParamDensity;
-    }
-
-    /*!
-     * \brief Todd-Longstaff mixing parameter multiplier wrt pressure of a single region.
-     *
-     * The index of specified here must be in range [0, numMiscRegions)
-     */
-    static void setTlpmixpa(unsigned miscRegionIdx,
-                        const TabulatedFunction& tlPMixTable)
-    {
-        tlPMixTable_[miscRegionIdx] = tlPMixTable;
-    }
-
-    /*!
      * \brief Specify the solvent PVT of a all PVT regions.
      */
     static void setSolventPvt(const SolventPvt& value)
-    { solventPvt_ = value; }
+    { params_.solventPvt_ = value; }
 
 
     static void setIsMiscible(const bool isMiscible)
-    { isMiscible_ = isMiscible; }
+    { params_.isMiscible_ = isMiscible; }
 
     /*!
      * \brief Register all run-time parameters for the black-oil solvent module.
@@ -656,14 +529,14 @@ public:
     }
 
     static const SolventPvt& solventPvt()
-    { return solventPvt_; }
+    { return params_.solventPvt_; }
 
     static const TabulatedFunction& ssfnKrg(const ElementContext& elemCtx,
                                             unsigned scvIdx,
                                             unsigned timeIdx)
     {
         unsigned satnumRegionIdx = elemCtx.problem().satnumRegionIndex(elemCtx, scvIdx, timeIdx);
-        return ssfnKrg_[satnumRegionIdx];
+        return params_.ssfnKrg_[satnumRegionIdx];
     }
 
     static const TabulatedFunction& ssfnKrs(const ElementContext& elemCtx,
@@ -671,7 +544,7 @@ public:
                                             unsigned timeIdx)
     {
         unsigned satnumRegionIdx = elemCtx.problem().satnumRegionIndex(elemCtx, scvIdx, timeIdx);
-        return ssfnKrs_[satnumRegionIdx];
+        return params_.ssfnKrs_[satnumRegionIdx];
     }
 
     static const TabulatedFunction& sof2Krn(const ElementContext& elemCtx,
@@ -679,7 +552,7 @@ public:
                                             unsigned timeIdx)
     {
         unsigned satnumRegionIdx = elemCtx.problem().satnumRegionIndex(elemCtx, scvIdx, timeIdx);
-        return sof2Krn_[satnumRegionIdx];
+        return params_.sof2Krn_[satnumRegionIdx];
     }
 
     static const TabulatedFunction& misc(const ElementContext& elemCtx,
@@ -687,7 +560,7 @@ public:
                                          unsigned timeIdx)
     {
         unsigned miscnumRegionIdx = elemCtx.problem().miscnumRegionIndex(elemCtx, scvIdx, timeIdx);
-        return misc_[miscnumRegionIdx];
+        return params_.misc_[miscnumRegionIdx];
     }
 
     static const TabulatedFunction& pmisc(const ElementContext& elemCtx,
@@ -695,7 +568,7 @@ public:
                                           unsigned timeIdx)
     {
         unsigned miscnumRegionIdx = elemCtx.problem().miscnumRegionIndex(elemCtx, scvIdx, timeIdx);
-        return pmisc_[miscnumRegionIdx];
+        return params_.pmisc_[miscnumRegionIdx];
     }
 
     static const TabulatedFunction& msfnKrsg(const ElementContext& elemCtx,
@@ -703,7 +576,7 @@ public:
                                              unsigned timeIdx)
     {
         unsigned satnumRegionIdx = elemCtx.problem().satnumRegionIndex(elemCtx, scvIdx, timeIdx);
-        return msfnKrsg_[satnumRegionIdx];
+        return params_.msfnKrsg_[satnumRegionIdx];
     }
 
     static const TabulatedFunction& msfnKro(const ElementContext& elemCtx,
@@ -711,7 +584,7 @@ public:
                                             unsigned timeIdx)
     {
         unsigned satnumRegionIdx = elemCtx.problem().satnumRegionIndex(elemCtx, scvIdx, timeIdx);
-        return msfnKro_[satnumRegionIdx];
+        return params_.msfnKro_[satnumRegionIdx];
     }
 
     static const TabulatedFunction& sorwmis(const ElementContext& elemCtx,
@@ -719,7 +592,7 @@ public:
                                             unsigned timeIdx)
     {
         unsigned miscnumRegionIdx = elemCtx.problem().miscnumRegionIndex(elemCtx, scvIdx, timeIdx);
-        return sorwmis_[miscnumRegionIdx];
+        return params_.sorwmis_[miscnumRegionIdx];
     }
 
     static const TabulatedFunction& sgcwmis(const ElementContext& elemCtx,
@@ -727,7 +600,7 @@ public:
                                             unsigned timeIdx)
     {
         unsigned miscnumRegionIdx = elemCtx.problem().miscnumRegionIndex(elemCtx, scvIdx, timeIdx);
-        return sgcwmis_[miscnumRegionIdx];
+        return params_.sgcwmis_[miscnumRegionIdx];
     }
 
     static const TabulatedFunction& tlPMixTable(const ElementContext& elemCtx,
@@ -735,7 +608,7 @@ public:
                                             unsigned timeIdx)
     {
         unsigned miscnumRegionIdx = elemCtx.problem().miscnumRegionIndex(elemCtx, scvIdx, timeIdx);
-        return tlPMixTable_[miscnumRegionIdx];
+        return params_.tlPMixTable_[miscnumRegionIdx];
     }
 
     static const Scalar& tlMixParamViscosity(const ElementContext& elemCtx,
@@ -743,7 +616,7 @@ public:
                                              unsigned timeIdx)
     {
         unsigned miscnumRegionIdx = elemCtx.problem().miscnumRegionIndex(elemCtx, scvIdx, timeIdx);
-        return tlMixParamViscosity_[miscnumRegionIdx];
+        return params_.tlMixParamViscosity_[miscnumRegionIdx];
     }
 
     static const Scalar& tlMixParamDensity(const ElementContext& elemCtx,
@@ -751,91 +624,21 @@ public:
                                            unsigned timeIdx)
     {
         unsigned miscnumRegionIdx = elemCtx.problem().miscnumRegionIndex(elemCtx, scvIdx, timeIdx);
-        return tlMixParamDensity_[miscnumRegionIdx];
+        return params_.tlMixParamDensity_[miscnumRegionIdx];
     }
 
     static bool isMiscible()
     {
-        return isMiscible_;
+        return params_.isMiscible_;
     }
 
 private:
-    static SolventPvt solventPvt_;
-
-    static std::vector<TabulatedFunction> ssfnKrg_; // the krg(Fs) column of the SSFN table
-    static std::vector<TabulatedFunction> ssfnKrs_; // the krs(Fs) column of the SSFN table
-    static std::vector<TabulatedFunction> sof2Krn_; // the krn(Sn) column of the SOF2 table
-    static std::vector<TabulatedFunction> misc_;    // the misc(Ss) column of the MISC table
-    static std::vector<TabulatedFunction> pmisc_;   // the pmisc(pg) column of the PMISC table
-    static std::vector<TabulatedFunction> msfnKrsg_; // the krsg(Ssg) column of the MSFN table
-    static std::vector<TabulatedFunction> msfnKro_; // the kro(Ssg) column of the MSFN table
-    static std::vector<TabulatedFunction> sorwmis_; // the sorwmis(Sw) column of the SORWMIS table
-    static std::vector<TabulatedFunction> sgcwmis_; // the sgcwmis(Sw) column of the SGCWMIS table
-
-    static std::vector<Scalar> tlMixParamViscosity_; // Todd-Longstaff mixing parameter for viscosity
-    static std::vector<Scalar> tlMixParamDensity_;   //  Todd-Longstaff mixing parameter for density
-    static std::vector<TabulatedFunction> tlPMixTable_; // the tlpmixpa(Po) column of the TLPMIXPA table
-
-    static bool isMiscible_;
+    static BlackOilSolventParams<Scalar> params_; // the krg(Fs) column of the SSFN table
 };
 
 template <class TypeTag, bool enableSolventV>
-typename BlackOilSolventModule<TypeTag, enableSolventV>::SolventPvt
-BlackOilSolventModule<TypeTag, enableSolventV>::solventPvt_;
-
-template <class TypeTag, bool enableSolventV>
-std::vector<typename BlackOilSolventModule<TypeTag, enableSolventV>::TabulatedFunction>
-BlackOilSolventModule<TypeTag, enableSolventV>::ssfnKrg_;
-
-template <class TypeTag, bool enableSolventV>
-std::vector<typename BlackOilSolventModule<TypeTag, enableSolventV>::TabulatedFunction>
-BlackOilSolventModule<TypeTag, enableSolventV>::ssfnKrs_;
-
-template <class TypeTag, bool enableSolventV>
-std::vector<typename BlackOilSolventModule<TypeTag, enableSolventV>::TabulatedFunction>
-BlackOilSolventModule<TypeTag, enableSolventV>::sof2Krn_;
-
-template <class TypeTag, bool enableSolventV>
-std::vector<typename BlackOilSolventModule<TypeTag, enableSolventV>::TabulatedFunction>
-BlackOilSolventModule<TypeTag, enableSolventV>::misc_;
-
-template <class TypeTag, bool enableSolventV>
-std::vector<typename BlackOilSolventModule<TypeTag, enableSolventV>::TabulatedFunction>
-BlackOilSolventModule<TypeTag, enableSolventV>::pmisc_;
-
-template <class TypeTag, bool enableSolventV>
-std::vector<typename BlackOilSolventModule<TypeTag, enableSolventV>::TabulatedFunction>
-BlackOilSolventModule<TypeTag, enableSolventV>::msfnKrsg_;
-
-template <class TypeTag, bool enableSolventV>
-std::vector<typename BlackOilSolventModule<TypeTag, enableSolventV>::TabulatedFunction>
-BlackOilSolventModule<TypeTag, enableSolventV>::msfnKro_;
-
-template <class TypeTag, bool enableSolventV>
-std::vector<typename BlackOilSolventModule<TypeTag, enableSolventV>::TabulatedFunction>
-BlackOilSolventModule<TypeTag, enableSolventV>::sorwmis_;
-
-template <class TypeTag, bool enableSolventV>
-std::vector<typename BlackOilSolventModule<TypeTag, enableSolventV>::TabulatedFunction>
-BlackOilSolventModule<TypeTag, enableSolventV>::sgcwmis_;
-
-template <class TypeTag, bool enableSolventV>
-std::vector<typename BlackOilSolventModule<TypeTag, enableSolventV>::Scalar>
-BlackOilSolventModule<TypeTag, enableSolventV>::tlMixParamViscosity_;
-
-template <class TypeTag, bool enableSolventV>
-std::vector<typename BlackOilSolventModule<TypeTag, enableSolventV>::Scalar>
-BlackOilSolventModule<TypeTag, enableSolventV>::tlMixParamDensity_;
-
-
-template <class TypeTag, bool enableSolventV>
-std::vector<typename BlackOilSolventModule<TypeTag, enableSolventV>::TabulatedFunction>
-BlackOilSolventModule<TypeTag, enableSolventV>::tlPMixTable_;
-
-template <class TypeTag, bool enableSolventV>
-bool
-BlackOilSolventModule<TypeTag, enableSolventV>::isMiscible_;
-
+BlackOilSolventParams<typename BlackOilSolventModule<TypeTag, enableSolventV>::Scalar>
+BlackOilSolventModule<TypeTag, enableSolventV>::params_;
 
 /*!
  * \ingroup BlackOil
