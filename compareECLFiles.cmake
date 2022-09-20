@@ -260,6 +260,7 @@ include (${CMAKE_CURRENT_SOURCE_DIR}/regressionTests.cmake)
 include (${CMAKE_CURRENT_SOURCE_DIR}/restartTests.cmake)
 
 
+
 # PORV test
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-porv-acceptanceTest.sh "")
 add_test_compareECLFiles(CASENAME norne
