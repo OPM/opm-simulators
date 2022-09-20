@@ -25,6 +25,7 @@
 list (APPEND MAIN_SOURCE_FILES
   ebos/collecttoiorank.cc
   ebos/eclactionhandler.cc
+  ebos/eclblackoilmoduleinit.cc
   ebos/eclgenericcpgridvanguard.cc
   ebos/eclgenericoutputblackoilmodule.cc
   ebos/eclgenericproblem.cc
