@@ -37,6 +37,7 @@
 #include <dune/geometry/type.hh>
 #include <dune/common/fvector.hh>
 #include <dune/common/version.hh>
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
 
 #include <vector>
