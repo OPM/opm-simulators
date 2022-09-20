@@ -51,6 +51,7 @@
 #include <opm/models/blackoil/blackoilfoamparams.hh>
 #include <opm/models/blackoil/blackoilmicpparams.hh>
 #include <opm/models/blackoil/blackoilpolymerparams.hh>
+#include <opm/models/blackoil/blackoilsolventparams.hh>
 
 #include <cassert>
 #include <stdexcept>
@@ -670,6 +671,244 @@ BlackOilPolymerParams<Scalar> setupPolymerParams(bool enablePolymer,
     return params;
 }
 
+template<class Scalar>
+BlackOilSolventParams<Scalar> setupSolventParams(bool enableSolvent,
+                                                 const EclipseState& eclState,
+                                                 const Schedule& schedule)
+{
+    BlackOilSolventParams<Scalar> params;
+    // some sanity checks: if solvents are enabled, the SOLVENT keyword must be
+    // present, if solvents are disabled the keyword must not be present.
+    if (enableSolvent && !eclState.runspec().phases().active(Phase::SOLVENT))
+        throw std::runtime_error("Non-trivial solvent treatment requested at compile "
+                                 "time, but the deck does not contain the SOLVENT keyword");
+    else if (!enableSolvent && eclState.runspec().phases().active(Phase::SOLVENT))
+        throw std::runtime_error("Solvent treatment disabled at compile time, but the deck "
+                                 "contains the SOLVENT keyword");
+
+    if (!eclState.runspec().phases().active(Phase::SOLVENT))
+        return params; // solvent treatment is supposed to be disabled
+
+    params.solventPvt_.initFromState(eclState, schedule);
+
+    const auto& tableManager = eclState.getTableManager();
+    // initialize the objects which deal with the SSFN keyword
+    const auto& ssfnTables = tableManager.getSsfnTables();
+    unsigned numSatRegions = tableManager.getTabdims().getNumSatTables();
+    params.setNumSatRegions(numSatRegions);
+    for (unsigned satRegionIdx = 0; satRegionIdx < numSatRegions; ++ satRegionIdx) {
+        const auto& ssfnTable = ssfnTables.template getTable<SsfnTable>(satRegionIdx);
+        params.ssfnKrg_[satRegionIdx].setXYContainers(ssfnTable.getSolventFractionColumn(),
+                                                      ssfnTable.getGasRelPermMultiplierColumn(),
+                                                      /*sortInput=*/true);
+        params.ssfnKrs_[satRegionIdx].setXYContainers(ssfnTable.getSolventFractionColumn(),
+                                                      ssfnTable.getSolventRelPermMultiplierColumn(),
+                                                      /*sortInput=*/true);
+    }
+
+    // initialize the objects needed for miscible solvent and oil simulations
+    params.isMiscible_ = false;
+    if (!eclState.getTableManager().getMiscTables().empty()) {
+        params.isMiscible_ = true;
+
+        unsigned numMiscRegions = 1;
+
+        // misicible hydrocabon relative permeability wrt water
+        const auto& sof2Tables = tableManager.getSof2Tables();
+        if (!sof2Tables.empty()) {
+            // resize the attributes of the object
+            params.sof2Krn_.resize(numSatRegions);
+            for (unsigned satRegionIdx = 0; satRegionIdx < numSatRegions; ++ satRegionIdx) {
+                const auto& sof2Table = sof2Tables.template getTable<Sof2Table>(satRegionIdx);
+                params.sof2Krn_[satRegionIdx].setXYContainers(sof2Table.getSoColumn(),
+                                                              sof2Table.getKroColumn(),
+                                                              /*sortInput=*/true);
+            }
+        }
+        else
+            throw std::runtime_error("SOF2 must be specified in MISCIBLE (SOLVENT) runs\n");
+
+        const auto& miscTables = tableManager.getMiscTables();
+        if (!miscTables.empty()) {
+            assert(numMiscRegions == miscTables.size());
+
+            // resize the attributes of the object
+            params.misc_.resize(numMiscRegions);
+            for (unsigned miscRegionIdx = 0; miscRegionIdx < numMiscRegions; ++miscRegionIdx) {
+                const auto& miscTable = miscTables.template getTable<MiscTable>(miscRegionIdx);
+
+                // solventFraction = Ss / (Ss + Sg);
+                const auto& solventFraction = miscTable.getSolventFractionColumn();
+                const auto& misc = miscTable.getMiscibilityColumn();
+                params.misc_[miscRegionIdx].setXYContainers(solventFraction, misc);
+            }
+        }
+        else
+            throw std::runtime_error("MISC must be specified in MISCIBLE (SOLVENT) runs\n");
+
+        using TabulatedFunction = typename BlackOilSolventParams<Scalar>::TabulatedFunction;
+
+        // resize the attributes of the object
+        params.pmisc_.resize(numMiscRegions);
+        const auto& pmiscTables = tableManager.getPmiscTables();
+        if (!pmiscTables.empty()) {
+            assert(numMiscRegions == pmiscTables.size());
+
+            for (unsigned regionIdx = 0; regionIdx < numMiscRegions; ++regionIdx) {
+                const auto& pmiscTable = pmiscTables.template getTable<PmiscTable>(regionIdx);
+
+                // Copy data
+                const auto& po = pmiscTable.getOilPhasePressureColumn();
+                const auto& pmisc = pmiscTable.getMiscibilityColumn();
+
+                params.pmisc_[regionIdx].setXYContainers(po, pmisc);
+            }
+        }
+        else {
+            std::vector<double> x = {0.0,1.0e20};
+            std::vector<double> y = {1.0,1.0};
+            TabulatedFunction constant = TabulatedFunction(2, x, y);
+            for (unsigned regionIdx = 0; regionIdx < numMiscRegions; ++regionIdx) {
+                params.pmisc_[regionIdx] = constant;
+            }
+        }
+
+        // miscible relative permeability multipleiers
+        params.msfnKrsg_.resize(numSatRegions);
+        params.msfnKro_.resize(numSatRegions);
+        const auto& msfnTables = tableManager.getMsfnTables();
+        if (!msfnTables.empty()) {
+            assert(numSatRegions == msfnTables.size());
+
+            for (unsigned regionIdx = 0; regionIdx < numSatRegions; ++regionIdx) {
+                const MsfnTable& msfnTable = msfnTables.template getTable<MsfnTable>(regionIdx);
+
+                // Copy data
+                // Ssg = Ss + Sg;
+                const auto& Ssg = msfnTable.getGasPhaseFractionColumn();
+                const auto& krsg = msfnTable.getGasSolventRelpermMultiplierColumn();
+                const auto& kro = msfnTable.getOilRelpermMultiplierColumn();
+
+                params.msfnKrsg_[regionIdx].setXYContainers(Ssg, krsg);
+                params.msfnKro_[regionIdx].setXYContainers(Ssg, kro);
+            }
+        }
+        else {
+            std::vector<double> x = {0.0,1.0};
+            std::vector<double> y = {1.0,0.0};
+            TabulatedFunction unit = TabulatedFunction(2, x, x);
+            TabulatedFunction invUnit = TabulatedFunction(2, x, y);
+
+            for (unsigned regionIdx = 0; regionIdx < numSatRegions; ++regionIdx) {
+                params.setMsfn(regionIdx, unit, invUnit);
+            }
+        }
+        // resize the attributes of the object
+        params.sorwmis_.resize(numMiscRegions);
+        const auto& sorwmisTables = tableManager.getSorwmisTables();
+        if (!sorwmisTables.empty()) {
+            assert(numMiscRegions == sorwmisTables.size());
+
+            for (unsigned regionIdx = 0; regionIdx < numMiscRegions; ++regionIdx) {
+                const auto& sorwmisTable = sorwmisTables.template getTable<SorwmisTable>(regionIdx);
+
+                // Copy data
+                const auto& sw = sorwmisTable.getWaterSaturationColumn();
+                const auto& sorwmis = sorwmisTable.getMiscibleResidualOilColumn();
+
+                params.sorwmis_[regionIdx].setXYContainers(sw, sorwmis);
+            }
+        }
+        else {
+            // default
+            std::vector<double> x = {0.0,1.0};
+            std::vector<double> y = {0.0,0.0};
+            TabulatedFunction zero = TabulatedFunction(2, x, y);
+            for (unsigned regionIdx = 0; regionIdx < numMiscRegions; ++regionIdx) {
+                params.sorwmis_[regionIdx] = zero;
+            }
+        }
+
+        // resize the attributes of the object
+        params.sgcwmis_.resize(numMiscRegions);
+        const auto& sgcwmisTables = tableManager.getSgcwmisTables();
+        if (!sgcwmisTables.empty()) {
+            assert(numMiscRegions == sgcwmisTables.size());
+
+            for (unsigned regionIdx = 0; regionIdx < numMiscRegions; ++regionIdx) {
+                const auto& sgcwmisTable = sgcwmisTables.template getTable<SgcwmisTable>(regionIdx);
+
+                // Copy data
+                const auto& sw = sgcwmisTable.getWaterSaturationColumn();
+                const auto& sgcwmis = sgcwmisTable.getMiscibleResidualGasColumn();
+
+                params.sgcwmis_[regionIdx].setXYContainers(sw, sgcwmis);
+            }
+        }
+        else {
+            // default
+            std::vector<double> x = {0.0,1.0};
+            std::vector<double> y = {0.0,0.0};
+            TabulatedFunction zero = TabulatedFunction(2, x, y);
+            for (unsigned regionIdx = 0; regionIdx < numMiscRegions; ++regionIdx)
+                params.sgcwmis_[regionIdx] = zero;
+        }
+
+        const auto& tlmixpar = eclState.getTableManager().getTLMixpar();
+        if (!tlmixpar.empty()) {
+            // resize the attributes of the object
+            params.tlMixParamViscosity_.resize(numMiscRegions);
+            params.tlMixParamDensity_.resize(numMiscRegions);
+
+            assert(numMiscRegions == tlmixpar.size());
+            for (unsigned regionIdx = 0; regionIdx < numMiscRegions; ++regionIdx) {
+                const auto& tlp = tlmixpar[regionIdx];
+                params.tlMixParamViscosity_[regionIdx] = tlp.viscosity_parameter;
+                params.tlMixParamDensity_[regionIdx] = tlp.density_parameter;
+            }
+        }
+        else
+            throw std::runtime_error("TLMIXPAR must be specified in MISCIBLE (SOLVENT) runs\n");
+
+        // resize the attributes of the object
+        params.tlPMixTable_.resize(numMiscRegions);
+        if (!eclState.getTableManager().getTlpmixpaTables().empty()) {
+            const auto& tlpmixparTables = tableManager.getTlpmixpaTables();
+            if (!tlpmixparTables.empty()) {
+                assert(numMiscRegions == tlpmixparTables.size());
+                for (unsigned regionIdx = 0; regionIdx < numMiscRegions; ++regionIdx) {
+                    const auto& tlpmixparTable = tlpmixparTables.template getTable<TlpmixpaTable>(regionIdx);
+
+                    // Copy data
+                    const auto& po = tlpmixparTable.getOilPhasePressureColumn();
+                    const auto& tlpmixpa = tlpmixparTable.getMiscibilityColumn();
+
+                    params.tlPMixTable_[regionIdx].setXYContainers(po, tlpmixpa);
+                }
+            }
+            else {
+                // if empty keyword. Try to use the pmisc table as default.
+                if (params.pmisc_.size() > 0)
+                    params.tlPMixTable_ = params.pmisc_;
+                else
+                    throw std::invalid_argument("If the pressure dependent TL values in "
+                                                "TLPMIXPA is defaulted (no entries), then "
+                                                "the PMISC tables must be specified.");
+            }
+        }
+        else {
+            // default
+            std::vector<double> x = {0.0,1.0e20};
+            std::vector<double> y = {1.0,1.0};
+            TabulatedFunction ones = TabulatedFunction(2, x, y);
+            for (unsigned regionIdx = 0; regionIdx < numMiscRegions; ++regionIdx)
+                params.tlPMixTable_[regionIdx] = ones;
+        }
+    }
+
+    return params;
+}
+
 template BlackOilBrineParams<double>
 setupBrineParams<false,double>(bool, const EclipseState&);
 template BlackOilBrineParams<double>
@@ -688,5 +927,8 @@ template BlackOilPolymerParams<double>
 setupPolymerParams<false,double>(bool, const EclipseState&);
 template BlackOilPolymerParams<double>
 setupPolymerParams<true,double>(bool, const EclipseState&);
+
+template BlackOilSolventParams<double>
+setupSolventParams<double>(bool, const EclipseState&, const Schedule&);
 
 }

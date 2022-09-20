@@ -791,7 +791,9 @@ public:
         MICPModule::setParams(setupMICPParams<Scalar>(enableMICP, vanguard.eclState()));
         PolymerModule::setParams(setupPolymerParams<enablePolymerMolarWeight,Scalar>(enablePolymer,
                                                                                      vanguard.eclState()));
-        SolventModule::initFromState(vanguard.eclState(), vanguard.schedule());
+        SolventModule::setParams(setupSolventParams<Scalar>(enableSolvent,
+                                                            vanguard.eclState(),
+                                                            vanguard.schedule()));
 
         // create the ECL writer
         eclWriter_.reset(new EclWriterType(simulator));

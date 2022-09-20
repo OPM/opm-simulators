@@ -25,11 +25,13 @@
 namespace Opm {
 
 class EclipseState;
+class Schedule;
 template<class Scalar> struct BlackOilBrineParams;
 template<class Scalar> struct BlackOilExtboParams;
 template<class Scalar> struct BlackOilFoamParams;
 template<class Scalar> struct BlackOilMICPParams;
 template<class Scalar> struct BlackOilPolymerParams;
+template<class Scalar> struct BlackOilSolventParams;
 
 //! \brief Setup parameters for brine module from an EclipseState.
 template<bool enableSaltPrecipitation, class Scalar>
@@ -55,6 +57,12 @@ BlackOilMICPParams<Scalar> setupMICPParams(bool enableMICP,
 template<bool enablePolymerMolarWeight, class Scalar>
 BlackOilPolymerParams<Scalar> setupPolymerParams(bool enablePolymer,
                                                  const EclipseState& eclState);
+
+//! \brief Setup parameters for solvent module from an EclipseState.
+template<class Scalar>
+BlackOilSolventParams<Scalar> setupSolventParams(bool enableSolvent,
+                                                 const EclipseState& eclState,
+                                                 const Schedule& schedule);
 
 }
 
