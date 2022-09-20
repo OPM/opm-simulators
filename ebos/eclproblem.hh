@@ -789,8 +789,9 @@ public:
         ExtboModule::setParams(setupExtboParams<Scalar>(enableExtbo, vanguard.eclState()));
         FoamModule::setParams(setupFoamParams<Scalar>(enableFoam, vanguard.eclState()));
         MICPModule::setParams(setupMICPParams<Scalar>(enableMICP, vanguard.eclState()));
+        PolymerModule::setParams(setupPolymerParams<enablePolymerMolarWeight,Scalar>(enablePolymer,
+                                                                                     vanguard.eclState()));
         SolventModule::initFromState(vanguard.eclState(), vanguard.schedule());
-        PolymerModule::initFromState(vanguard.eclState());
 
         // create the ECL writer
         eclWriter_.reset(new EclWriterType(simulator));

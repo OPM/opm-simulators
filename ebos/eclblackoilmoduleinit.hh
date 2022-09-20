@@ -29,6 +29,7 @@ template<class Scalar> struct BlackOilBrineParams;
 template<class Scalar> struct BlackOilExtboParams;
 template<class Scalar> struct BlackOilFoamParams;
 template<class Scalar> struct BlackOilMICPParams;
+template<class Scalar> struct BlackOilPolymerParams;
 
 //! \brief Setup parameters for brine module from an EclipseState.
 template<bool enableSaltPrecipitation, class Scalar>
@@ -49,6 +50,11 @@ BlackOilFoamParams<Scalar> setupFoamParams(bool enableFoam,
 template<class Scalar>
 BlackOilMICPParams<Scalar> setupMICPParams(bool enableMICP,
                                            const EclipseState& eclState);
+
+//! \brief Setup parameters for polymer module from an EclipseState.
+template<bool enablePolymerMolarWeight, class Scalar>
+BlackOilPolymerParams<Scalar> setupPolymerParams(bool enablePolymer,
+                                                 const EclipseState& eclState);
 
 }
 
