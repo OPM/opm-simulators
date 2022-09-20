@@ -29,10 +29,8 @@
 #define EWOMS_BLACK_OIL_BRINE_MODULE_HH
 
 #include "blackoilproperties.hh"
-#include <opm/models/common/quantitycallbacks.hh>
 
-#include <opm/material/common/Tabulated1DFunction.hpp>
-#include <opm/material/common/IntervalTabulated2DFunction.hpp>
+#include <opm/models/blackoil/blackoilbrineparams.hh>
 
 #if HAVE_ECL_INPUT
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
@@ -42,8 +40,6 @@
 #include <opm/input/eclipse/EclipseState/Tables/TableManager.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/SimpleTable.hpp>
 #endif
-
-#include <opm/material/common/Valgrind.hpp>
 
 #include <dune/common/fvector.hh>
 
@@ -74,8 +70,7 @@ class BlackOilBrineModule
 
     using Toolbox = MathToolbox<Evaluation>;
 
-    using TabulatedFunction = Tabulated1DFunction<Scalar>;
-    using TabulatedTwoDFunction = IntervalTabulated2DFunction<Scalar>;
+    using TabulatedFunction = typename BlackOilBrineParams<Scalar>::TabulatedFunction;
 
     static constexpr unsigned saltConcentrationIdx = Indices::saltConcentrationIdx;
     static constexpr unsigned contiBrineEqIdx = Indices::contiBrineEqIdx;
@@ -113,38 +108,38 @@ public:
         const auto& tableManager = eclState.getTableManager();
 
         unsigned numPvtRegions = tableManager.getTabdims().getNumPVTTables();
-        referencePressure_.resize(numPvtRegions);
+        params_.referencePressure_.resize(numPvtRegions);
 
         const auto& pvtwsaltTables = tableManager.getPvtwSaltTables();
 
         // initialize the objects which deal with the BDENSITY keyword
         const auto& bdensityTables = tableManager.getBrineDensityTables();
         if (!bdensityTables.empty()) {
-            bdensityTable_.resize(numPvtRegions);
+            params_.bdensityTable_.resize(numPvtRegions);
             assert(numPvtRegions == bdensityTables.size());
             for (unsigned pvtRegionIdx = 0; pvtRegionIdx < numPvtRegions; ++ pvtRegionIdx) {
                 const auto& bdensityTable = bdensityTables[pvtRegionIdx];
                 const auto& pvtwsaltTable = pvtwsaltTables[pvtRegionIdx];
                 const auto& c = pvtwsaltTable.getSaltConcentrationColumn();
-                bdensityTable_[pvtRegionIdx].setXYContainers(c, bdensityTable);
+                params_.bdensityTable_[pvtRegionIdx].setXYContainers(c, bdensityTable);
             }
         }
 
         if constexpr (enableSaltPrecipitation) {
             const TableContainer& permfactTables = tableManager.getPermfactTables();
-            permfactTable_.resize(numPvtRegions);
+            params_.permfactTable_.resize(numPvtRegions);
             for (size_t i = 0; i < permfactTables.size(); ++i) {
                 const PermfactTable& permfactTable = permfactTables.getTable<PermfactTable>(i);
-                permfactTable_[i].setXYContainers(permfactTable.getPorosityChangeColumn(), permfactTable.getPermeabilityMultiplierColumn());
+                params_.permfactTable_[i].setXYContainers(permfactTable.getPorosityChangeColumn(), permfactTable.getPermeabilityMultiplierColumn());
             }
 
             const TableContainer& saltsolTables = tableManager.getSaltsolTables();
             if (!saltsolTables.empty()) {
-                saltsolTable_.resize(numPvtRegions);
+                params_.saltsolTable_.resize(numPvtRegions);
                 assert(numPvtRegions == saltsolTables.size());
                 for (unsigned pvtRegionIdx = 0; pvtRegionIdx < numPvtRegions; ++ pvtRegionIdx) {
                     const SaltsolTable& saltsolTable = saltsolTables.getTable<SaltsolTable>(pvtRegionIdx );
-                    saltsolTable_[pvtRegionIdx] = saltsolTable.getSaltsolColumn().front();
+                    params_.saltsolTable_[pvtRegionIdx] = saltsolTable.getSaltsolColumn().front();
                 }
             }
         }
@@ -319,7 +314,7 @@ public:
                                            unsigned timeIdx)
     {
         unsigned pvtnumRegionIdx = elemCtx.problem().pvtRegionIndex(elemCtx, scvIdx, timeIdx);
-        return referencePressure_[pvtnumRegionIdx];
+        return params_.referencePressure_[pvtnumRegionIdx];
     }
 
 
@@ -328,7 +323,7 @@ public:
                                                   unsigned timeIdx)
     {
         unsigned pvtnumRegionIdx = elemCtx.problem().pvtRegionIndex(elemCtx, scvIdx, timeIdx);
-        return bdensityTable_[pvtnumRegionIdx];
+        return params_.bdensityTable_[pvtnumRegionIdx];
     }
 
     static const TabulatedFunction& permfactTable(const ElementContext& elemCtx,
@@ -336,7 +331,7 @@ public:
                                                   unsigned timeIdx)
     {
         unsigned pvtnumRegionIdx = elemCtx.problem().pvtRegionIndex(elemCtx, scvIdx, timeIdx);
-        return permfactTable_[pvtnumRegionIdx];
+        return params_.permfactTable_[pvtnumRegionIdx];
     }
 
     static const Scalar saltsolTable(const ElementContext& elemCtx,
@@ -344,46 +339,31 @@ public:
                                                   unsigned timeIdx)
     {
         unsigned pvtnumRegionIdx = elemCtx.problem().pvtRegionIndex(elemCtx, scvIdx, timeIdx);
-        return saltsolTable_[pvtnumRegionIdx];
+        return params_.saltsolTable_[pvtnumRegionIdx];
     }
 
     static bool hasBDensityTables()
     {
-        return !bdensityTable_.empty();
+        return !params_.bdensityTable_.empty();
     }
 
     static bool hasSaltsolTables()
     {
-        return !saltsolTable_.empty();
+        return !params_.saltsolTable_.empty();
     }
 
     static Scalar saltSol(unsigned regionIdx) {
-        return saltsolTable_[regionIdx];
+        return params_.saltsolTable_[regionIdx];
     }
 
 private:
-    static std::vector<TabulatedFunction> bdensityTable_;
-    static std::vector<TabulatedFunction> permfactTable_;
-    static std::vector<Scalar> saltsolTable_;
-    static std::vector<Scalar> referencePressure_;
+    static BlackOilBrineParams<Scalar> params_;
 };
 
 
 template <class TypeTag, bool enableBrineV>
-std::vector<typename BlackOilBrineModule<TypeTag, enableBrineV>::TabulatedFunction>
-BlackOilBrineModule<TypeTag, enableBrineV>::bdensityTable_;
-
-template <class TypeTag, bool enableBrineV>
-std::vector<typename BlackOilBrineModule<TypeTag, enableBrineV>::Scalar>
-BlackOilBrineModule<TypeTag, enableBrineV>::referencePressure_;
-
-template <class TypeTag, bool enableBrineV>
-std::vector<typename BlackOilBrineModule<TypeTag, enableBrineV>::Scalar>
-BlackOilBrineModule<TypeTag, enableBrineV>::saltsolTable_;
-
-template <class TypeTag, bool enableBrineV>
-std::vector<typename BlackOilBrineModule<TypeTag, enableBrineV>::TabulatedFunction>
-BlackOilBrineModule<TypeTag, enableBrineV>::permfactTable_;
+BlackOilBrineParams<typename BlackOilBrineModule<TypeTag, enableBrineV>::Scalar>
+BlackOilBrineModule<TypeTag, enableBrineV>::params_;
 
 /*!
  * \ingroup BlackOil
