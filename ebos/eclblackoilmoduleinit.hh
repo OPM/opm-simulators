@@ -27,6 +27,7 @@ namespace Opm {
 class EclipseState;
 template<class Scalar> struct BlackOilBrineParams;
 template<class Scalar> struct BlackOilExtboParams;
+template<class Scalar> struct BlackOilFoamParams;
 
 //! \brief Setup parameters for brine module from an EclipseState.
 template<bool enableSaltPrecipitation, class Scalar>
@@ -37,6 +38,12 @@ BlackOilBrineParams<Scalar> setupBrineParams(bool enableBrine,
 template<class Scalar>
 BlackOilExtboParams<Scalar> setupExtboParams(bool enableExtbo,
                                              const EclipseState& eclState);
+
+//! \brief Setup parameters for foam module from an EclipseState.
+template<class Scalar>
+BlackOilFoamParams<Scalar> setupFoamParams(bool enableFoam,
+                                           const EclipseState& eclState);
+
 }
 
 #endif
