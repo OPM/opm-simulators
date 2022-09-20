@@ -933,9 +933,11 @@ namespace Opm {
 
         // Maybe do a recursive call to iterate network and well controls.
         if (network_changed) {
-            const int max_local_network_iterations = 3;
-            const int last_newton_iteration_to_iterate_network = 2;
-            if (iterationIdx <= last_newton_iteration_to_iterate_network) {
+            // Only re-solve network for the first nupcol newton iterations.
+            const int nupcol = schedule()[reportStepIdx].nupcol();
+            if (iterationIdx <= nupcol) {
+                // Limit the number of iterations in the network re-solve.
+                const int max_local_network_iterations = 3;
                 if (recursion_level < max_local_network_iterations) {
                     assembleImpl(iterationIdx, dt, recursion_level + 1, local_deferredLogger);
                 }
