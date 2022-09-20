@@ -75,8 +75,8 @@ class BlackOilBrineModule
     static constexpr unsigned saltConcentrationIdx = Indices::saltConcentrationIdx;
     static constexpr unsigned contiBrineEqIdx = Indices::contiBrineEqIdx;
     static constexpr unsigned waterPhaseIdx = FluidSystem::waterPhaseIdx;
-    static const bool gasEnabled = Indices::gasEnabled;
-    static const bool oilEnabled = Indices::oilEnabled;
+    static constexpr bool gasEnabled = Indices::gasEnabled;
+    static constexpr bool oilEnabled = Indices::oilEnabled;
     static constexpr unsigned enableBrine = enableBrineV;
     static constexpr unsigned enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>();
 
