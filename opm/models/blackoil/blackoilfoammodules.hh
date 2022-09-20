@@ -29,11 +29,10 @@
 #define EWOMS_BLACK_OIL_FOAM_MODULE_HH
 
 #include "blackoilproperties.hh"
-//#include <opm/models/io/vtkblackoilfoammodule.hh>
-#include <opm/models/common/quantitycallbacks.hh>
 
-#include <opm/material/common/Tabulated1DFunction.hpp>
-//#include <opm/material/common/IntervalTabulated2DFunction.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
+
+#include <opm/models/blackoil/blackoilfoamparams.hh>
 
 #if HAVE_ECL_INPUT
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
@@ -41,14 +40,13 @@
 #include <opm/input/eclipse/EclipseState/Tables/FoammobTable.hpp>
 #endif
 
-#include <opm/material/common/Valgrind.hpp>
-
 #include <dune/common/fvector.hh>
 
 #include <string>
 #include <math.h>
 
 namespace Opm {
+
 /*!
  * \ingroup BlackOil
  * \brief Contains the high level supplements required to extend the black oil
@@ -72,7 +70,7 @@ class BlackOilFoamModule
 
     using Toolbox = MathToolbox<Evaluation>;
 
-    using TabulatedFunction = Tabulated1DFunction<Scalar>;
+    using TabulatedFunction = typename BlackOilFoamParams<Scalar>::TabulatedFunction;
 
     static constexpr unsigned foamConcentrationIdx = Indices::foamConcentrationIdx;
     static constexpr unsigned contiFoamEqIdx = Indices::contiFoamEqIdx;
@@ -85,29 +83,6 @@ class BlackOilFoamModule
     static constexpr unsigned numPhases = FluidSystem::numPhases;
 
 public:
-    // a struct containing constants to calculate change to relative permeability,
-    // based on model (1-9) in Table 1 of
-    // Kun Ma, Guangwei Ren, Khalid Mateen, Danielle Morel, and Philippe Cordelier:
-    // "Modeling techniques for foam flow in porous media", SPE Journal, 20(03):453–470, jun 2015.
-    // The constants are provided by various deck keywords as shown in the comments below.
-    struct FoamCoefficients {
-        Scalar fm_min = 1e-20;   // FOAMFSC
-        Scalar fm_mob = 1.0;     // FOAMFRM
-
-        Scalar fm_surf = 1.0;    // FOAMFSC
-        Scalar ep_surf = 1.0;    // FOAMFSC
-
-        Scalar fm_oil = 1.0;     // FOAMFSO
-        Scalar fl_oil = 0.0;     // FOAMFSO
-        Scalar ep_oil = 0.0;     // FOAMFSO
-
-        Scalar fm_cap = 1.0;     // FOAMFCN
-        Scalar ep_cap = 0.0;     // FOAMFCN
-
-        Scalar fm_dry = 1.0;     // FOAMFSW
-        Scalar ep_dry = 0.0;     // FOAMFSW
-    };
-
 #if HAVE_ECL_INPUT
     /*!
      * \brief Initialize all internal data structures needed by the foam module
@@ -140,9 +115,9 @@ public:
 
         const auto& tableManager = eclState.getTableManager();
         const unsigned int numSatRegions = tableManager.getTabdims().getNumSatTables();
-        setNumSatRegions(numSatRegions);
+        params_.setNumSatRegions(numSatRegions);
         const unsigned int numPvtRegions = tableManager.getTabdims().getNumPVTTables();
-        setNumPvtRegions(numPvtRegions);
+        params_.gasMobilityMultiplierTable_.resize(numPvtRegions);
 
         // Get and check FOAMROCK data.
         const FoamConfig& foamConf = eclState.getInitConfig().getFoamConfig();
@@ -164,16 +139,16 @@ public:
         // Set data that vary with saturation region.
         for (std::size_t satReg = 0; satReg < numSatRegions; ++satReg) {
             const auto& rec = foamConf.getRecord(satReg);
-            foamCoefficients_[satReg] = FoamCoefficients();
-            foamCoefficients_[satReg].fm_min = rec.minimumSurfactantConcentration();
-            foamCoefficients_[satReg].fm_surf = rec.referenceSurfactantConcentration();
-            foamCoefficients_[satReg].ep_surf = rec.exponent();
-            foamRockDensity_[satReg] = rec.rockDensity();
-            foamAllowDesorption_[satReg] = rec.allowDesorption();
+            params_.foamCoefficients_[satReg] = typename BlackOilFoamParams<Scalar>::FoamCoefficients();
+            params_.foamCoefficients_[satReg].fm_min = rec.minimumSurfactantConcentration();
+            params_.foamCoefficients_[satReg].fm_surf = rec.referenceSurfactantConcentration();
+            params_.foamCoefficients_[satReg].ep_surf = rec.exponent();
+            params_.foamRockDensity_[satReg] = rec.rockDensity();
+            params_.foamAllowDesorption_[satReg] = rec.allowDesorption();
             const auto& foamadsTable = foamadsTables.template getTable<FoamadsTable>(satReg);
             const auto& conc = foamadsTable.getFoamConcentrationColumn();
             const auto& ads = foamadsTable.getAdsorbedFoamColumn();
-            adsorbedFoamTable_[satReg].setXYContainers(conc, ads);
+            params_.adsorbedFoamTable_[satReg].setXYContainers(conc, ads);
         }
 
         // Get and check FOAMMOB data.
@@ -194,31 +169,10 @@ public:
             const auto& foammobTable = foammobTables.template getTable<FoammobTable>(pvtReg);
             const auto& conc = foammobTable.getFoamConcentrationColumn();
             const auto& mobMult = foammobTable.getMobilityMultiplierColumn();
-            gasMobilityMultiplierTable_[pvtReg].setXYContainers(conc, mobMult);
+            params_.gasMobilityMultiplierTable_[pvtReg].setXYContainers(conc, mobMult);
         }
     }
 #endif
-
-    /*!
-     * \brief Specify the number of saturation regions.
-     */
-    static void setNumSatRegions(unsigned numRegions)
-    {
-        foamCoefficients_.resize(numRegions);
-        foamRockDensity_.resize(numRegions);
-        foamAllowDesorption_.resize(numRegions);
-        adsorbedFoamTable_.resize(numRegions);
-    }
-
-
-    /*!
-     * \brief Specify the number of PVT regions.
-     */
-    static void setNumPvtRegions(unsigned numRegions)
-    {
-        gasMobilityMultiplierTable_.resize(numRegions);
-    }
-
 
     /*!
      * \brief Register all run-time parameters for the black-oil foam module.
@@ -392,7 +346,7 @@ public:
                                         unsigned timeIdx)
     {
         unsigned satnumRegionIdx = elemCtx.problem().satnumRegionIndex(elemCtx, scvIdx, timeIdx);
-        return foamRockDensity_[satnumRegionIdx];
+        return params_.foamRockDensity_[satnumRegionIdx];
     }
 
     static bool foamAllowDesorption(const ElementContext& elemCtx,
@@ -400,7 +354,7 @@ public:
                                     unsigned timeIdx)
     {
         unsigned satnumRegionIdx = elemCtx.problem().satnumRegionIndex(elemCtx, scvIdx, timeIdx);
-        return foamAllowDesorption_[satnumRegionIdx];
+        return params_.foamAllowDesorption_[satnumRegionIdx];
     }
 
     static const TabulatedFunction& adsorbedFoamTable(const ElementContext& elemCtx,
@@ -408,7 +362,7 @@ public:
                                                       unsigned timeIdx)
     {
        unsigned satnumRegionIdx = elemCtx.problem().satnumRegionIndex(elemCtx, scvIdx, timeIdx);
-       return adsorbedFoamTable_[satnumRegionIdx];
+       return params_.adsorbedFoamTable_[satnumRegionIdx];
     }
 
     static const TabulatedFunction& gasMobilityMultiplierTable(const ElementContext& elemCtx,
@@ -416,47 +370,25 @@ public:
                                                                unsigned timeIdx)
     {
        unsigned pvtnumRegionIdx = elemCtx.problem().pvtRegionIndex(elemCtx, scvIdx, timeIdx);
-       return gasMobilityMultiplierTable_[pvtnumRegionIdx];
+       return params_.gasMobilityMultiplierTable_[pvtnumRegionIdx];
     }
 
-    static const FoamCoefficients& foamCoefficients(const ElementContext& elemCtx,
-                                                    const unsigned scvIdx,
-                                                    const unsigned timeIdx)
+    static const typename BlackOilFoamParams<Scalar>::FoamCoefficients&
+    foamCoefficients(const ElementContext& elemCtx,
+                     const unsigned scvIdx,
+                     const unsigned timeIdx)
     {
         unsigned satnumRegionIdx = elemCtx.problem().satnumRegionIndex(elemCtx, scvIdx, timeIdx);
-        return foamCoefficients_[satnumRegionIdx];
+        return params_.foamCoefficients_[satnumRegionIdx];
     }
 
 private:
-    static std::vector<Scalar> foamRockDensity_;
-    static std::vector<bool> foamAllowDesorption_;
-    static std::vector<FoamCoefficients> foamCoefficients_;
-    static std::vector<TabulatedFunction> adsorbedFoamTable_;
-    static std::vector<TabulatedFunction> gasMobilityMultiplierTable_;
+    static BlackOilFoamParams<Scalar> params_;
 };
 
-
-
 template <class TypeTag, bool enableFoam>
-std::vector<typename BlackOilFoamModule<TypeTag, enableFoam>::Scalar>
-BlackOilFoamModule<TypeTag, enableFoam>::foamRockDensity_;
-
-template <class TypeTag, bool enableFoam>
-std::vector<bool>
-BlackOilFoamModule<TypeTag, enableFoam>::foamAllowDesorption_;
-
-template <class TypeTag, bool enableFoam>
-std::vector<typename BlackOilFoamModule<TypeTag, enableFoam>::FoamCoefficients>
-BlackOilFoamModule<TypeTag, enableFoam>::foamCoefficients_;
-
-template <class TypeTag, bool enableFoam>
-std::vector<typename BlackOilFoamModule<TypeTag, enableFoam>::TabulatedFunction>
-BlackOilFoamModule<TypeTag, enableFoam>::adsorbedFoamTable_;
-
-template <class TypeTag, bool enableFoam>
-std::vector<typename BlackOilFoamModule<TypeTag, enableFoam>::TabulatedFunction>
-BlackOilFoamModule<TypeTag, enableFoam>::gasMobilityMultiplierTable_;
-
+BlackOilFoamParams<typename BlackOilFoamModule<TypeTag, enableFoam>::Scalar>
+BlackOilFoamModule<TypeTag, enableFoam>::params_;
 
 /*!
  * \ingroup BlackOil
@@ -596,7 +528,6 @@ public:
     Scalar foamAdsorbed() const
     { throw std::runtime_error("foamAdsorbed() called but foam is disabled"); }
 };
-
 
 } // namespace Opm
 
