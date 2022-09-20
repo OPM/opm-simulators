@@ -34,6 +34,27 @@ __kernel void block_mult_isai(__global double *mat1, __global double *mat2, __gl
     }
 }
 
+__kernel void block_mult_sub_isai(__global double *a, __global double *b, __global double *c)
+{
+    const unsigned int bs = 3;
+    const unsigned int warpsize = 32;
+    const unsigned int num_active_threads = (warpsize / bs / bs) * bs * bs;
+    const unsigned int idx_t = get_local_id(0);
+    const unsigned int lane = idx_t % warpsize;
+
+    if(lane < num_active_threads){
+        const unsigned int row = lane % bs;
+        const unsigned int col = (lane / bs) % bs;
+        double temp = 0.0;
+
+        for (unsigned int k = 0; k < bs; k++) {
+            temp += b[bs * row + k] * c[bs * k + col];
+        }
+
+        a[bs * row + col] -= temp;
+    }
+}
+
 __kernel void isaiU(__global const int *diagIndex,
                     __global const int *colPtr,
                     __global const int *rowIndices,

@@ -24,6 +24,7 @@
 
 #include <opm/simulators/linalg/bda/opencl/BILU0.hpp>
 #include <opm/simulators/linalg/bda/opencl/BISAI.hpp>
+#include <opm/simulators/linalg/bda/opencl/BSPAI.hpp>
 #include <opm/simulators/linalg/bda/opencl/CPR.hpp>
 #include <opm/simulators/linalg/bda/opencl/Preconditioner.hpp>
 
@@ -47,6 +48,8 @@ std::unique_ptr<Preconditioner<block_size> > Preconditioner<block_size>::create(
         return std::make_unique<Opm::Accelerator::CPR<block_size> >(verbosity, opencl_ilu_reorder);
     } else if (type == PreconditionerType::BISAI) {
         return std::make_unique<Opm::Accelerator::BISAI<block_size> >(opencl_ilu_reorder, verbosity);
+    } else if (type == PreconditionerType::BSPAI) {
+        return std::make_unique<Opm::Accelerator::BSPAI<block_size> >(opencl_ilu_reorder, verbosity);
     } else {
         OPM_THROW(std::logic_error, "Invalid PreconditionerType");
     }

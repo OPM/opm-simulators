@@ -38,6 +38,7 @@ PropertyTree setupCPR(const std::string& conf, const FlowLinearSolverParameters&
 PropertyTree setupAMG(const std::string& conf, const FlowLinearSolverParameters& p);
 PropertyTree setupILU(const std::string& conf, const FlowLinearSolverParameters& p);
 PropertyTree setupISAI(const std::string& conf, const FlowLinearSolverParameters& p);
+PropertyTree setupSPAI(const std::string& conf, const FlowLinearSolverParameters& p);
 
 } // namespace Opm
 

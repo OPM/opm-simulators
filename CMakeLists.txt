@@ -297,7 +297,6 @@ if(OpenCL_FOUND)
   endif()
 endif()
 
-
 # read the list of components from this file (in the project directory);
 # it should set various lists with the names of the files to include
 include (CMakeLists_files.cmake)

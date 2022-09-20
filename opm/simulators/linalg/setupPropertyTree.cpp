@@ -101,6 +101,11 @@ setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters 
         return setupISAI(conf, p);
     }
 
+    // Same configuration as ILU0.
+    if (conf == "spai") {
+        return setupSPAI(conf, p);
+    }
+
     // No valid configuration option found.
     OPM_THROW(std::invalid_argument,
               conf << " is not a valid setting for --linear-solver-configuration."
@@ -263,5 +268,19 @@ setupISAI([[maybe_unused]] const std::string& conf, const FlowLinearSolverParame
     return prm;
 }
 
+PropertyTree
+setupSPAI([[maybe_unused]] const std::string& conf, const FlowLinearSolverParameters& p)
+{
+    using namespace std::string_literals;
+    PropertyTree prm;
+    prm.put("tol", p.linear_solver_reduction_);
+    prm.put("maxiter", p.linear_solver_maxiter_);
+    prm.put("verbosity", p.linear_solver_verbosity_);
+    prm.put("solver", "bicgstab"s);
+    prm.put("preconditioner.type", "ParOverILU0"s);
+    prm.put("preconditioner.relaxation", p.ilu_relaxation_);
+    prm.put("preconditioner.ilulevel", p.ilu_fillin_level_);
+    return prm;
+}
 
 } // namespace Opm

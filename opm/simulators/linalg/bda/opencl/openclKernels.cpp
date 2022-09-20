@@ -65,6 +65,7 @@ std::unique_ptr<stdwell_apply_no_reorder_kernel_type> OpenclKernels::stdwell_app
 std::unique_ptr<ilu_decomp_kernel_type> OpenclKernels::ilu_decomp_k;
 std::unique_ptr<isaiL_kernel_type> OpenclKernels::isaiL_k;
 std::unique_ptr<isaiU_kernel_type> OpenclKernels::isaiU_k;
+std::unique_ptr<csc_spmv_blocked_kernel_type> OpenclKernels::csc_spmv_blocked_k;
 
 // divide A by B, and round up: return (int)ceil(A/B)
 unsigned int ceilDivision(const unsigned int A, const unsigned int B)
@@ -110,6 +111,7 @@ void OpenclKernels::init(cl::Context *context, cl::CommandQueue *queue_, std::ve
     sources.emplace_back(ILU_decomp_str);
     sources.emplace_back(isaiL_str);
     sources.emplace_back(isaiU_str);
+    sources.emplace_back(csc_spmv_blocked_str);
 
     cl::Program program = cl::Program(*context, sources);
     program.build(devices);
@@ -140,6 +142,7 @@ void OpenclKernels::init(cl::Context *context, cl::CommandQueue *queue_, std::ve
     ilu_decomp_k.reset(new ilu_decomp_kernel_type(cl::Kernel(program, "ilu_decomp")));
     isaiL_k.reset(new isaiL_kernel_type(cl::Kernel(program, "isaiL")));
     isaiU_k.reset(new isaiU_kernel_type(cl::Kernel(program, "isaiU")));
+    csc_spmv_blocked_k.reset(new csc_spmv_blocked_kernel_type(cl::Kernel(program, "csc_spmv_blocked")));
 
     // testing shows all kernels have the same preferred_workgroup_size_multiple
     // 32 for NVIDIA
@@ -544,6 +547,27 @@ void OpenclKernels::isaiU(cl::Buffer& diagIndex, cl::Buffer& colPointers, cl::Bu
         event.wait();
         std::ostringstream oss;
         oss << std::scientific << "OpenclKernels isaiU() time: " << t_isaiU.stop() << " s";
+        OpmLog::info(oss.str());
+    }
+}
+
+void OpenclKernels::csc_spmv_blocked(cl::Buffer& vals, cl::Buffer& spai_cptrs, cl::Buffer& spai_rinds, const cl::Buffer& in, cl::Buffer& out, int Nb, unsigned int block_size)
+{
+    const unsigned int work_group_size = 32;
+    const unsigned int num_work_groups = ceilDivision(Nb, work_group_size);
+    const unsigned int total_work_items = num_work_groups * work_group_size;
+    const unsigned int lmem_per_work_group = sizeof(double) * (work_group_size / block_size / block_size) * block_size * block_size;
+
+    cl::Event event;
+
+    Timer t_csc_spmv;
+    event = (*csc_spmv_blocked_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)),
+                                  vals, spai_cptrs, spai_rinds, in, out, cl::Local(lmem_per_work_group), Nb, block_size);
+
+    if (verbosity >= 4) {
+        event.wait();
+        std::ostringstream oss;
+        oss << std::scientific << "OpenclKernels csc_spmv_blocked time: " << t_csc_spmv.stop() << " s";
         OpmLog::info(oss.str());
     }
 }

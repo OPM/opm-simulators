@@ -57,6 +57,7 @@ using isaiL_kernel_type = cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer
                                   cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int>;
 using isaiU_kernel_type = cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
                                   cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int>;
+using csc_spmv_blocked_kernel_type = cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const cl::Buffer&, cl::Buffer&, cl::LocalSpaceArg, const int, const int>;
 
 class OpenclKernels
 {
@@ -89,6 +90,7 @@ private:
     static std::unique_ptr<ilu_decomp_kernel_type> ilu_decomp_k;
     static std::unique_ptr<isaiL_kernel_type> isaiL_k;
     static std::unique_ptr<isaiU_kernel_type> isaiU_k;
+    static std::unique_ptr<csc_spmv_blocked_kernel_type> csc_spmv_blocked_k;
 
     OpenclKernels(){}; // disable instantiation
 
@@ -120,6 +122,7 @@ public:
     static const std::string ILU_decomp_str;
     static const std::string isaiL_str;
     static const std::string isaiU_str;
+    static const std::string csc_spmv_blocked_str;
 
     static void init(cl::Context *context, cl::CommandQueue *queue, std::vector<cl::Device>& devices, int verbosity);
 
@@ -158,6 +161,8 @@ public:
     static void isaiU(cl::Buffer& diagIndex, cl::Buffer& colPointers, cl::Buffer& rowIndices, cl::Buffer& mapping,
             cl::Buffer& nvc, cl::Buffer& luIdxs, cl::Buffer& xxIdxs, cl::Buffer& dxIdxs, cl::Buffer& LUvals,
             cl::Buffer& invDiagVals, cl::Buffer& invUvals, unsigned int Nb);
+
+    static void csc_spmv_blocked(cl::Buffer& vals, cl::Buffer& spai_cptrs, cl::Buffer& spai_rinds, const cl::Buffer& in, cl::Buffer& out, int Nb, unsigned int block_size);
 };
 
 } // namespace Accelerator

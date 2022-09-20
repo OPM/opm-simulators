@@ -12,12 +12,14 @@ set (opm-simulators_CONFIG_VAR
   HAVE_AMGCL
   HAVE_VEXCL
   HAVE_SUITESPARSE_UMFPACK_H
+  HAVE_SUITESPARSE_SPQR_H
   HAVE_DUNE_ISTL
   DUNE_ISTL_WITH_CHECKING
   DUNE_ISTL_VERSION_MAJOR
   DUNE_ISTL_VERSION_MINOR
   DUNE_ISTL_VERSION_REVISION
   HAVE_SUITESPARSE_UMFPACK
+  HAVE_SUITESPARSE_SPQR
   )
 
 # dependencies
@@ -36,7 +38,7 @@ set (opm-simulators_DEPS
   # Look for MPI support
   "MPI"
   # Tim Davis' SuiteSparse archive
-  "SuiteSparse REQUIRED COMPONENTS umfpack"
+  "SuiteSparse REQUIRED COMPONENTS umfpack spqr"
   # SuperLU direct solver
   "SuperLU"
   # OPM dependency
