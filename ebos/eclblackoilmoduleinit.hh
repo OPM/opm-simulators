@@ -26,10 +26,16 @@ namespace Opm {
 
 class EclipseState;
 template<class Scalar> struct BlackOilBrineParams;
+template<class Scalar> struct BlackOilExtboParams;
 
 //! \brief Setup parameters for brine module from an EclipseState.
 template<bool enableSaltPrecipitation, class Scalar>
 BlackOilBrineParams<Scalar> setupBrineParams(bool enableBrine,
+                                             const EclipseState& eclState);
+
+//! \brief Setup parameters for extbo module from an EclipseState.
+template<class Scalar>
+BlackOilExtboParams<Scalar> setupExtboParams(bool enableExtbo,
                                              const EclipseState& eclState);
 }
 

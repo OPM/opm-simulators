@@ -786,10 +786,10 @@ public:
         const auto& vanguard = simulator.vanguard();
         BrineModule::setParams(setupBrineParams<enableSaltPrecipitation,Scalar>(enableBrine,
                                                                                 vanguard.eclState()));
+        ExtboModule::setParams(setupExtboParams<Scalar>(enableExtbo, vanguard.eclState()));
         SolventModule::initFromState(vanguard.eclState(), vanguard.schedule());
         PolymerModule::initFromState(vanguard.eclState());
         FoamModule::initFromState(vanguard.eclState());
-        ExtboModule::initFromState(vanguard.eclState());
         MICPModule::initFromState(vanguard.eclState());
 
         // create the ECL writer
