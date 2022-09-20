@@ -28,6 +28,7 @@ class EclipseState;
 template<class Scalar> struct BlackOilBrineParams;
 template<class Scalar> struct BlackOilExtboParams;
 template<class Scalar> struct BlackOilFoamParams;
+template<class Scalar> struct BlackOilMICPParams;
 
 //! \brief Setup parameters for brine module from an EclipseState.
 template<bool enableSaltPrecipitation, class Scalar>
@@ -42,6 +43,11 @@ BlackOilExtboParams<Scalar> setupExtboParams(bool enableExtbo,
 //! \brief Setup parameters for foam module from an EclipseState.
 template<class Scalar>
 BlackOilFoamParams<Scalar> setupFoamParams(bool enableFoam,
+                                           const EclipseState& eclState);
+
+//! \brief Setup parameters for foam module from an EclipseState.
+template<class Scalar>
+BlackOilMICPParams<Scalar> setupMICPParams(bool enableMICP,
                                            const EclipseState& eclState);
 
 }

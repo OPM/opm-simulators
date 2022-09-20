@@ -42,6 +42,7 @@
 #include <opm/models/blackoil/blackoilbrineparams.hh>
 #include <opm/models/blackoil/blackoilextboparams.hh>
 #include <opm/models/blackoil/blackoilfoamparams.hh>
+#include <opm/models/blackoil/blackoilmicpparams.hh>
 
 #include <cassert>
 #include <stdexcept>
@@ -362,6 +363,50 @@ BlackOilFoamParams<Scalar> setupFoamParams(bool enableFoam,
     return params;
 }
 
+template<class Scalar>
+BlackOilMICPParams<Scalar> setupMICPParams(bool enableMICP,
+                                           const EclipseState& eclState)
+{
+    BlackOilMICPParams<Scalar> params;
+    // some sanity checks: if MICP is enabled, the MICP keyword must be
+    // present, if MICP is disabled the keyword must not be present.
+    if (enableMICP && !eclState.runspec().micp()) {
+        throw std::runtime_error("Non-trivial MICP treatment requested at compile time, but "
+                                 "the deck does not contain the MICP keyword");
+    }
+    else if (!enableMICP && eclState.runspec().micp()) {
+        throw std::runtime_error("MICP treatment disabled at compile time, but the deck "
+                                 "contains the MICP keyword");
+    }
+
+    if (!eclState.runspec().micp())
+        return params; // MICP treatment is supposed to be disabled*/
+
+    // initialize the objects which deal with the MICPpara keyword
+    const auto& mp = eclState.getMICPpara();
+    params.densityBiofilm_ = mp.getDensityBiofilm();
+    params.densityCalcite_ = mp.getDensityCalcite();
+    params.detachmentRate_ = mp.getDetachmentRate();
+    params.criticalPorosity_ = mp.getCriticalPorosity();
+    params.fittingFactor_ = mp.getFittingFactor();
+    params.halfVelocityOxygen_ = mp.getHalfVelocityOxygen();
+    params.halfVelocityUrea_ = mp.getHalfVelocityUrea();
+    params.maximumGrowthRate_ = mp.getMaximumGrowthRate();
+    params.maximumUreaUtilization_ = mp.getMaximumUreaUtilization();
+    params.microbialAttachmentRate_ = mp.getMicrobialAttachmentRate();
+    params.microbialDeathRate_ = mp.getMicrobialDeathRate();
+    params.minimumPermeability_ = mp.getMinimumPermeability();
+    params.oxygenConsumptionFactor_ = mp.getOxygenConsumptionFactor();
+    params.yieldGrowthCoefficient_ = mp.getYieldGrowthCoefficient();
+    params.maximumOxygenConcentration_ = mp.getMaximumOxygenConcentration();
+    params.maximumUreaConcentration_ = mp.getMaximumUreaConcentration();
+    params.toleranceBeforeClogging_ = mp.getToleranceBeforeClogging();
+    // obtain the porosity for the clamp in the blackoilnewtonmethod
+    params.phi_ = eclState.fieldProps().get_double("PORO");
+
+    return params;
+}
+
 template BlackOilBrineParams<double>
 setupBrineParams<false,double>(bool, const EclipseState&);
 template BlackOilBrineParams<double>
@@ -372,5 +417,8 @@ setupExtboParams<double>(bool, const EclipseState&);
 
 template BlackOilFoamParams<double>
 setupFoamParams<double>(bool, const EclipseState&);
+
+template BlackOilMICPParams<double>
+setupMICPParams<double>(bool, const EclipseState&);
 
 }
