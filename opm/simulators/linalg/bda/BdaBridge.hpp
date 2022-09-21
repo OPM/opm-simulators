@@ -61,7 +61,7 @@ public:
     /// \param[in] platformID                 the OpenCL platform ID to be used
     /// \param[in] deviceID                   the device ID to be used by the cusparse- and openclSolvers, too high values could cause runtime errors
     /// \param[in] opencl_ilu_reorder         select either level_scheduling or graph_coloring, see ILUReorder.hpp for explanation
-    /// \param[in] linsolver                  copy of cmdline argument --linsolver
+    /// \param[in] linsolver                  copy of cmdline argument --linear-solver
     BdaBridge(std::string accelerator_mode, std::string fpga_bitstream, int linear_solver_verbosity, int maxit, double tolerance,
         unsigned int platformID, unsigned int deviceID, std::string opencl_ilu_reorder, std::string linsolver);
 

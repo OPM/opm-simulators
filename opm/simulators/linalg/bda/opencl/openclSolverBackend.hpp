@@ -176,7 +176,7 @@ public:
     /// \param[in] platformID                 the OpenCL platform to be used
     /// \param[in] deviceID                   the device to be used
     /// \param[in] opencl_ilu_reorder         select either level_scheduling or graph_coloring, see Reorder.hpp for explanation
-    /// \param[in] linsolver                  indicating the preconditioner, equal to the --linsolver cmdline argument
+    /// \param[in] linsolver                  indicating the preconditioner, equal to the --linear-solver cmdline argument
     ///                                       only ilu0, cpr_quasiimpes and isai are supported
     openclSolverBackend(int linear_solver_verbosity, int maxit, double tolerance, unsigned int platformID, unsigned int deviceID,
         ILUReorder opencl_ilu_reorder, std::string linsolver);
