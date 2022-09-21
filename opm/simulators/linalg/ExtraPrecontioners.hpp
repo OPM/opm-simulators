@@ -1,12 +1,13 @@
 #ifndef OPM_EXTRAPRECONTIONERS_HPP
 #define OPM_EXTRAPRECONTIONERS_HPP
 
-#include <dune/istl/preconditioner.hh>
 #include <dune/common/unused.hh>
 #include <dune/istl/matrixutils.hh>
+#include <dune/istl/preconditioner.hh>
 #include <vector>
 
-namespace Dune {
+namespace Dune
+{
 
 /*! \brief The sequential jacobian preconditioner.
  * It is a reimplementation to prepare for the SPAI0 smoother
@@ -19,8 +20,9 @@ namespace Dune {
    \tparam Y Type of the defect
    \tparam l The block level to invert. Default is 1
  */
-template<class M, class X, class Y, int l=1>
-class SeqJacNew : public Preconditioner<X,Y> {
+template <class M, class X, class Y, int l = 1>
+class SeqJacNew : public Preconditioner<X, Y>
+{
 public:
     //! \brief The matrix type the preconditioner is for.
     typedef M matrix_type;
@@ -31,11 +33,11 @@ public:
     //! \brief The field type of the preconditioner.
     typedef typename X::field_type field_type;
     //! \brief scalar type underlying the field_type
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)    
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
     typedef Simd::Scalar<field_type> scalar_field_type;
-#else    
+#else
     typedef SimdScalar<field_type> scalar_field_type;
-#endif    
+#endif
 
     /*! \brief Constructor.
 
@@ -44,10 +46,12 @@ public:
        \param n The number of iterations to perform.
        \param w The relaxation factor.
      */
-    SeqJacNew (const M& A, int n, scalar_field_type w)
-        : _A_(A), _n(n), _w(w)
+    SeqJacNew(const M& A, int n, scalar_field_type w)
+        : _A_(A)
+        , _n(n)
+        , _w(w)
     {
-        CheckIfDiagonalPresent<M,l>::check(_A_);
+        CheckIfDiagonalPresent<M, l>::check(_A_);
         // we build the inverseD matrix
         _invD_.resize(_A_.N());
         for (size_t i = 0; i < _A_.N(); ++i) {
@@ -61,7 +65,7 @@ public:
 
        \copydoc Preconditioner::pre(X&,Y&)
      */
-    virtual void pre (X& x, Y& b)
+    virtual void pre(X& x, Y& b)
     {
         DUNE_UNUSED_PARAMETER(x);
         DUNE_UNUSED_PARAMETER(b);
@@ -72,7 +76,7 @@ public:
 
        \copydoc Preconditioner::apply(X&,const Y&)
      */
-    virtual void apply (X& v, const Y& d)
+    virtual void apply(X& v, const Y& d)
     {
         // we need to update the defect there
         Y dd(d);
@@ -87,7 +91,7 @@ public:
             // update dd for next iteration
             // dd -= invD_* (_w * vv); or
             // dd = d - A_ * v;
-            if (i < _n -1 ) {
+            if (i < _n - 1) {
                 dd = d;
                 _A_.mmv(v, dd);
             }
@@ -99,7 +103,7 @@ public:
 
        \copydoc Preconditioner::post(X&)
      */
-    virtual void post (X& x)
+    virtual void post(X& x)
     {
         DUNE_UNUSED_PARAMETER(x);
     }
@@ -126,8 +130,9 @@ private:
 
 
 
-template<class M, class X, class Y, int l=1>
-class SeqSpai0 : public Preconditioner<X,Y> {
+template <class M, class X, class Y, int l = 1>
+class SeqSpai0 : public Preconditioner<X, Y>
+{
 public:
     //! \brief The matrix type the preconditioner is for.
     typedef M matrix_type;
@@ -138,9 +143,9 @@ public:
     //! \brief The field type of the preconditioner.
     typedef typename X::field_type field_type;
     //! \brief scalar type underlying the field_type
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)    
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
     typedef Simd::Scalar<field_type> scalar_field_type;
-#else    
+#else
     typedef SimdScalar<field_type> scalar_field_type;
 #endif
 
@@ -152,10 +157,12 @@ public:
        \param w The relaxation factor.
      */
     SeqSpai0(const M& A, int n, scalar_field_type w)
-        : _A_(A), _n(n), _w(w)
+        : _A_(A)
+        , _n(n)
+        , _w(w)
     {
-	//EASY_FUNCTION();
-        CheckIfDiagonalPresent<M,l>::check(_A_);
+        // EASY_FUNCTION();
+        CheckIfDiagonalPresent<M, l>::check(_A_);
         // we build the scaling matrix, for SPAI0, it is a diagonal matrix
         _M_.resize(_A_.N());
 
@@ -180,7 +187,7 @@ public:
 
        \copydoc Preconditioner::pre(X&,Y&)
      */
-    virtual void pre (X& x, Y& b)
+    virtual void pre(X& x, Y& b)
     {
         DUNE_UNUSED_PARAMETER(x);
         DUNE_UNUSED_PARAMETER(b);
@@ -191,10 +198,10 @@ public:
 
        \copydoc Preconditioner::apply(X&,const Y&)
      */
-    virtual void apply (X& v, const Y& d)
+    virtual void apply(X& v, const Y& d)
     {
-        //EASY_FUNCTION(profiler::colors::Magenta);
-        if (_n == 1 ) {
+        // EASY_FUNCTION(profiler::colors::Magenta);
+        if (_n == 1) {
             this->applyOnce_(v, d);
         } else {
             this->applyMultiple_(v, d);
@@ -206,7 +213,7 @@ public:
 
        \copydoc Preconditioner::post(X&)
      */
-    virtual void post (X& x)
+    virtual void post(X& x)
     {
         DUNE_UNUSED_PARAMETER(x);
     }
@@ -218,7 +225,6 @@ public:
     }
 
 private:
-
     //! \brief The matrix we operate on.
     const M& _A_;
     //! \brief the diagnal matrix handling the scaling
@@ -261,6 +267,6 @@ private:
 };
 
 
-} // end of the namespace Dune
+} // namespace Dune
 
 #endif // OPM_EXTRAPRECONTIONERS_HPP

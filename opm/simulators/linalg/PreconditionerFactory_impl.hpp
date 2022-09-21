@@ -138,15 +138,18 @@ struct StandardPreconditioners
         using M = typename F::Matrix;
         using V = typename F::Vector;
         using P = PropertyTree;
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)        
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
         F::addCreator("ILU", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
-                                  using Smoother = SeqILU<M, V, V>;
-          const ilulevel = prm.get<int>("ilulevel", 0)                        
-          const double w = prm.get<double>("relaxation", 1.0);
-          const bool resort = prm.get<bool>("resort", 1.0);
-          return wrapBlockPreconditioner<DummyUpdatePreconditioner<Smoother>>>(comm, op.getmat(), ilulevel, w, resort);
+            using Smoother = SeqILU<M, V, V>;
+            const int ilulevel = prm.get<int>("ilulevel", 0);
+            const double w = prm.get<double>("relaxation", 1.0);
+            const bool resort = prm.get<bool>("resort", 1.0);
+            return wrapBlockPreconditioner<DummyUpdatePreconditioner<Smoother>>(comm, op.getmat(), ilulevel, w, resort);
         });
-#endif        
+#endif
+        F::addCreator("ILU0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
+          return createParILU(op, prm, comm, prm.get<int>("ilulevel", 0));
+        });
         F::addCreator("ParOverILU0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
           return createParILU(op, prm, comm, prm.get<int>("ilulevel", 0));
         });
@@ -192,29 +195,31 @@ struct StandardPreconditioners
         // later, but at this point no other operators are compatible
         // with the AMG hierarchy construction.
         if constexpr (std::is_same_v<O, Dune::OverlappingSchwarzOperator<M, V, V, C>>) {
-          F::addCreator("amg", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
-            const std::string smoother = prm.get<std::string>("smoother", "ParOverILU0");
-            if (smoother == "ILU0" || smoother == "ParOverILU0") {
-              using Smoother = Opm::ParallelOverlappingILU0<M, V, V, C>;
-              auto crit = AMGHelper<O,C,M,V>::criterion(prm);
-              auto sargs = AMGSmootherArgsHelper<Smoother>::args(prm);
-              return std::make_shared<Dune::Amg::AMGCPR<O, V, Smoother, C>>(op, crit, sargs, comm);
-            }else if (smoother == "SPAI0") {
-                using Smoother = Dune::BlockPreconditioner<V, V, C, Dune::SeqSpai0<M, V, V>>;
-                auto crit = amgCriterion(prm);
-                auto sargs = amgSmootherArgs<Smoother>(prm);
-                ptr_base = std::make_shared<Dune::Amg::AMGCPR<O, V, Smoother,  C>>(op, crit, sargs, comm);
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)                        
-            }else if (smoother == "ILU") {
-                using Smoother = Dune::BlockPreconditioner<V, V, C, Dune::SeqILU<M, V, V>>;
-                auto crit = amgCriterion(prm);
-                auto sargs = amgSmootherArgs<Smoother>(prm);
-                ptr_base = std::make_shared<Dune::Amg::AMGCPR<O, V, Smoother,  C>>(op, crit, sargs, comm);
+            F::addCreator("amg", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
+                const std::string smoother = prm.get<std::string>("smoother", "ParOverILU0");
+                std::shared_ptr<Dune::PreconditionerWithUpdate<V, V>> ptr_base;
+                if (smoother == "ILU0" || smoother == "ParOverILU0") {
+                    using Smoother = Opm::ParallelOverlappingILU0<M, V, V, C>;
+                    auto crit = AMGHelper<O, C, M, V>::criterion(prm);
+                    auto sargs = AMGSmootherArgsHelper<Smoother>::args(prm);
+                    ptr_base = std::make_shared<Dune::Amg::AMGCPR<O, V, Smoother, C>>(op, crit, sargs, comm);
+                } else if (smoother == "SPAI0") {
+                    using Smoother = Dune::BlockPreconditioner<V, V, C, Dune::SeqSpai0<M, V, V>>;
+                    auto crit = AMGHelper<O, C, M, V>::criterion(prm);
+                    auto sargs = AMGSmootherArgsHelper<Smoother>::args(prm);
+                    ptr_base = std::make_shared<Dune::Amg::AMGCPR<O, V, Smoother, C>>(op, crit, sargs, comm);
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
+                } else if (smoother == "ILU") {
+                    using Smoother = Dune::BlockPreconditioner<V, V, C, Dune::SeqILU<M, V, V>>;
+                    auto crit = AMGHelper<O, C, M, V>::criterion(prm);
+                    auto sargs = AMGSmootherArgsHelper<Smoother>::args(prm);
+                    ptr_base = std::make_shared<Dune::Amg::AMGCPR<O, V, Smoother, C>>(op, crit, sargs, comm);
 #endif
-            } else {
-              OPM_THROW(std::invalid_argument, "Properties: No smoother with name " << smoother << ".");
-            }
-          });
+                } else {
+                    OPM_THROW(std::invalid_argument, "Properties: No smoother with name " << smoother << ".");
+                }
+                return ptr_base;
+            });
         }
 
         F::addCreator("cpr", [](const O& op, const P& prm, const std::function<V()> weightsCalculator, std::size_t pressureIndex, const C& comm) {
@@ -308,14 +313,21 @@ struct StandardPreconditioners<Operator,Dune::Amg::SequentialInformation>
         using V = typename F::Vector;
         using P = PropertyTree;
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)        
-        F::addCreator("ILU", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
+        F::addCreator("ILU", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
           using Smoother = SeqILU<M, V, V>;
-          const ilulevel = prm.get<int>("ilulevel", 0)                        
+          const int ilulevel = prm.get<int>("ilulevel", 0);
           const double w = prm.get<double>("relaxation", 1.0);
           const bool resort = prm.get<bool>("resort", true);
-          return return std::make_shared<Smoother>(op.getmat(), ilulevel, w, resort);
+          return wrapPreconditioner<Smoother>(op.getmat(), ilulevel, w, resort);
         });
-#endif        
+#endif
+        F::addCreator("ILU0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
+            const double w = prm.get<double>("relaxation", 1.0);
+            const int n = prm.get<int>("ilulevel", 0);
+            return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V, C>>(
+                op.getmat(), n, w, Opm::MILU_VARIANT::ILU);
+        });
+
         F::addCreator("ParOverILU0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             const double w = prm.get<double>("relaxation", 1.0);
             const int n = prm.get<int>("ilulevel", 0);
