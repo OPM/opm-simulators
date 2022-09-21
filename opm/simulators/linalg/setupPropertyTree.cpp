@@ -79,11 +79,11 @@ setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters 
         return setupCPR(conf, p);
     }
 
-    if ((conf == "cprw")) {      
+    if ((conf == "cprw")) {
         if (!LinearSolverMaxIterSet) {
             // Use our own default unless it was explicitly overridden by user.
             p.linear_solver_maxiter_ = 20;
-        }      
+        }
         return setupCPRW(conf, p);
     }
 
@@ -96,9 +96,12 @@ setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters 
         return setupILU(conf, p);
     }
 
-    // Same configuration as ILU0.
+    // At this point, the only separate ISAI implementation is with the OpenCL code, and
+    // it will check this argument to see if it should be using ISAI. The parameter tree
+    // will be ignored, so this is just a dummy configuration to avoid the throw below.
+    // If we are using CPU dune-istl solvers, this will just make "isai" an alias of "ilu".
     if (conf == "isai") {
-        return setupISAI(conf, p);
+        return setupILU(conf, p);
     }
 
     // No valid configuration option found.
@@ -234,22 +237,6 @@ setupAMG([[maybe_unused]] const std::string& conf, const FlowLinearSolverParamet
 
 PropertyTree
 setupILU([[maybe_unused]] const std::string& conf, const FlowLinearSolverParameters& p)
-{
-    using namespace std::string_literals;
-    PropertyTree prm;
-    prm.put("tol", p.linear_solver_reduction_);
-    prm.put("maxiter", p.linear_solver_maxiter_);
-    prm.put("verbosity", p.linear_solver_verbosity_);
-    prm.put("solver", "bicgstab"s);
-    prm.put("preconditioner.type", "ParOverILU0"s);
-    prm.put("preconditioner.relaxation", p.ilu_relaxation_);
-    prm.put("preconditioner.ilulevel", p.ilu_fillin_level_);
-    return prm;
-}
-
-
-PropertyTree
-setupISAI([[maybe_unused]] const std::string& conf, const FlowLinearSolverParameters& p)
 {
     using namespace std::string_literals;
     PropertyTree prm;
