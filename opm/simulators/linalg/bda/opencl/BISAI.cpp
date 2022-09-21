@@ -46,7 +46,7 @@ BISAI<block_size>::BISAI(ILUReorder opencl_ilu_reorder_, int verbosity_) :
     Preconditioner<block_size>(verbosity_)
 {
 #if CHOW_PATEL
-    OPM_THROW(std::logic_error, "Error --linsolver=isai cannot be used if ChowPatelIlu is used, probably defined by CMake\n");
+    OPM_THROW(std::logic_error, "Error --linear-solver=isai cannot be used if ChowPatelIlu is used, probably defined by CMake\n");
 #endif
     bilu0 = std::make_unique<BILU0<block_size> >(opencl_ilu_reorder_, verbosity_);
 }

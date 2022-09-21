@@ -262,7 +262,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                 const std::string opencl_ilu_reorder = EWOMS_GET_PARAM(TypeTag, std::string, OpenclIluReorder);
                 const int linear_solver_verbosity = parameters_.linear_solver_verbosity_;
                 std::string fpga_bitstream = EWOMS_GET_PARAM(TypeTag, std::string, FpgaBitstream);
-                std::string linsolver = EWOMS_GET_PARAM(TypeTag, std::string, Linsolver);
+                std::string linsolver = EWOMS_GET_PARAM(TypeTag, std::string, LinearSolver);
                 bdaBridge = std::make_unique<detail::BdaSolverInfo<Matrix,Vector>>(accelerator_mode,
                                                                                    fpga_bitstream,
                                                                                    linear_solver_verbosity,

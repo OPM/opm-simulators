@@ -61,9 +61,9 @@ openclSolverBackend<block_size>::openclSolverBackend(int verbosity_, int maxit_,
         use_cpr = false;
         use_isai = true;
     } else if (linsolver.compare("cpr_trueimpes") == 0) {
-        OPM_THROW(std::logic_error, "Error openclSolver does not support --linsolver=cpr_trueimpes");
+        OPM_THROW(std::logic_error, "Error openclSolver does not support --linerar-solver=cpr_trueimpes");
     } else {
-        OPM_THROW(std::logic_error, "Error unknown value for argument --linsolver, " + linsolver);
+        OPM_THROW(std::logic_error, "Error unknown value for argument --linear-solver, " + linsolver);
     }
 
     using PreconditionerType = typename Preconditioner<block_size>::PreconditionerType;
