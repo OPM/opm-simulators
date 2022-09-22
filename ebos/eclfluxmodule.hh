@@ -43,6 +43,8 @@
 #include <dune/common/fmatrix.hh>
 #include <fmt/format.h>
 
+#include <array>
+
 namespace Opm {
 
 template <class TypeTag>
@@ -212,8 +214,8 @@ protected:
 
 public:
 
-    static void volumeAndPhasePressureDifferences(short (&upIdx)[numPhases],
-                                                  short (&dnIdx)[numPhases],
+    static void volumeAndPhasePressureDifferences(std::array<short, numPhases>& upIdx,
+                                                  std::array<short, numPhases>& dnIdx,
                                                   Evaluation (&volumeFlux)[numPhases],
                                                   Evaluation (&pressureDifferences)[numPhases],
                                                   const ElementContext& elemCtx,
@@ -449,8 +451,8 @@ public:
                                             const double faceArea,
                                             const double zEx,
                                             const FluidState& exFluidState,
-                                            short (&upIdx)[numPhases],
-                                            short (&dnIdx)[numPhases],
+                                            std::array<short, numPhases>& upIdx,
+                                            std::array<short, numPhases>& dnIdx,
                                             EvaluationContainer& volumeFlux,
                                             EvaluationContainer& pressureDifference)
     {
@@ -572,9 +574,9 @@ private:
     Evaluation pressureDifference_[numPhases];
 
     // the local indices of the interior and exterior degrees of freedom
-    short upIdx_[numPhases];
-    short dnIdx_[numPhases];
-};
+    std::array<short, numPhases> upIdx_;
+    std::array<short, numPhases> dnIdx_;
+ };
 
 } // namespace Opm
 
