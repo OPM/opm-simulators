@@ -2063,39 +2063,25 @@ public:
 
     std::pair<bool, RateVector> boundaryCondition(const unsigned int globalSpaceIdx, const int directionId)
     {
-        if (!nonTrivialBoundaryConditions_ || directionId == -1) {
-            return std::make_pair(false, RateVector(0.0));
+        if (!nonTrivialBoundaryConditions_) {
+            return { false, RateVector(0.0) };
         }
-        const std::vector<bool>* flag = nullptr;
-        const std::vector<RateVector>* massrate = nullptr;
         switch (directionId) {
         case 0:
-            flag = &freebcXMinus_;
-            massrate = &massratebcXMinus_;
-            break;
+            return { freebcXMinus_[globalSpaceIdx], massratebcXMinus_[globalSpaceIdx] };
         case 1:
-            flag = &freebcX_;
-            massrate = &massratebcX_;
-            break;
+            return { freebcX_[globalSpaceIdx], massratebcX_[globalSpaceIdx] };
         case 2:
-            flag = &freebcYMinus_;
-            massrate = &massratebcYMinus_;
-            break;
+            return { freebcYMinus_[globalSpaceIdx], massratebcYMinus_[globalSpaceIdx] };
         case 3:
-            flag = &freebcY_;
-            massrate = &massratebcY_;
-            break;
+            return { freebcY_[globalSpaceIdx], massratebcY_[globalSpaceIdx] };
         case 4:
-            flag = &freebcZMinus_;
-            massrate = &massratebcZMinus_;
-            break;
+            return { freebcZMinus_[globalSpaceIdx], massratebcZMinus_[globalSpaceIdx] };
         case 5:
-            flag = &freebcZ_;
-            massrate = &massratebcZ_;
-            break;
+            return { freebcZ_[globalSpaceIdx], massratebcZ_[globalSpaceIdx] };
+        default:
+            return { false, RateVector(0.0) };
         }
-        const bool free = (*flag)[globalSpaceIdx];
-        return { free, (*massrate)[globalSpaceIdx] };
     }
 
 private:
