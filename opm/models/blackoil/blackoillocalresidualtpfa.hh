@@ -447,8 +447,8 @@ public:
                                         unsigned globalSpaceIdx,
                                         unsigned timeIdx)
     {
-        short upIdx[numPhases];
-        short dnIdx[numPhases];
+        std::array<short, numPhases> upIdx;
+        std::array<short, numPhases> dnIdx;
         RateVector volumeFlux;
         RateVector pressureDifference;
         ExtensiveQuantities::calculateBoundaryGradients_(problem,
