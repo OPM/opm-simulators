@@ -1505,6 +1505,12 @@ public:
     std::shared_ptr<const EclMaterialLawManager> materialLawManager() const
     { return materialLawManager_; }
 
+    // TODO: See discussion in multiphasebaseproblem.hh for the reason why we need this method
+    const EclMaterialLawManager* materialLawManagerPtr() const
+    {
+        return materialLawManager_.get();
+    }
+
     /*!
      * \copydoc materialLawManager()
      */
