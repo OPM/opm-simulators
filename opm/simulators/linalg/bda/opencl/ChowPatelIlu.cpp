@@ -756,9 +756,7 @@ void ChowPatelIlu<block_size>::decomposition(
     for(int i = 0; i < Nb; ++i) {
         for(int k = Ut->rowPointers[i]; k < Ut->rowPointers[i+1]; ++k) {
             int j = Ut->colIndices[k];
-            if (j == i) {
-                inverter(Ut->nnzValues + k * bs * bs, invDiagVals + i * bs * bs);
-            } else {
+            if (j != i) {
                 ++ptr[j+1];
             }
         }
