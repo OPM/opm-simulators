@@ -73,56 +73,6 @@ private:
     std::vector<cl::Event> events;
     cl_int err;
 
-    /// Divide A by B, and round up: return (int)ceil(A/B)
-    /// \param[in] A    dividend
-    /// \param[in] B    divisor
-    /// \return         rounded division result
-    unsigned int ceilDivision(const unsigned int A, const unsigned int B);
-
-    /// Calculate dot product between in1 and in2, partial sums are stored in out, which are summed on CPU
-    /// \param[in] in1           input vector 1
-    /// \param[in] in2           input vector 2
-    /// \param[out] out          output vector containing partial sums
-    /// \return                  dot product
-    double dot_w(cl::Buffer in1, cl::Buffer in2, cl::Buffer out);
-
-    /// Calculate the norm of in, partial sums are stored in out, which are summed on the CPU
-    /// Equal to Dune::DenseVector::two_norm()
-    /// \param[in] in          input vector
-    /// \param[out] out        output vector containing partial sums
-    /// \return                norm
-    double norm_w(cl::Buffer in, cl::Buffer out);
-
-    /// Perform axpy: out += a * in
-    /// \param[in] in         input vector
-    /// \param[in] a          scalar value to multiply input vector
-    /// \param[inout] out     output vector
-    void axpy_w(cl::Buffer in, const double a, cl::Buffer out);
-
-    /// Perform scale: vec *= a
-    /// \param[inout] vec     vector to scale
-    /// \param[in] a          scalar value to multiply vector
-    void scale_w(cl::Buffer vec, const double a);
-
-    /// Custom function that combines scale, axpy and add functions in bicgstab
-    /// p = (p - omega * v) * beta + r
-    /// \param[inout] p      output vector
-    /// \param[in] v         input vector
-    /// \param[in] r         input vector
-    /// \param[in] omega     scalar value
-    /// \param[in] beta      scalar value
-    void custom_w(cl::Buffer p, cl::Buffer v, cl::Buffer r, const double omega, const double beta);
-
-    /// Sparse matrix-vector multiply, spmv
-    /// b = A * x
-    /// Matrix A, must be in BCRS format
-    /// \param[in] vals     nnzs of matrix A
-    /// \param[in] cols     columnindices of matrix A
-    /// \param[in] rows     rowpointers of matrix A
-    /// \param[in] x        input vector
-    /// \param[out] b       output vector
-    void spmv_blocked_w(cl::Buffer vals, cl::Buffer cols, cl::Buffer rows, cl::Buffer x, cl::Buffer b);
-
     /// Solve linear system using ilu0-bicgstab
     /// \param[in] wellContribs   WellContributions, to apply them separately, instead of adding them to matrix A
     /// \param[inout] res         summary of solver result
@@ -133,15 +83,12 @@ private:
     /// \param[in] jacMatrix  matrix for preconditioner
     void initialize(std::shared_ptr<BlockedMatrix> matrix, std::shared_ptr<BlockedMatrix> jacMatrix);
 
-    /// Clean memory
-    void finalize();
-
     /// Copy linear system to GPU
     void copy_system_to_gpu();
 
     /// Reassign pointers, in case the addresses of the Dune variables have changed
     /// \param[in] vals           array of nonzeroes, each block is stored row-wise and contiguous, contains nnz values
-    /// \param[in] b              input vectors, contains N values
+    /// \param[in] b              input vector b, contains N values
     void update_system(double *vals, double *b);
 
     /// Update linear system on GPU, don't copy rowpointers and colindices, they stay the same
