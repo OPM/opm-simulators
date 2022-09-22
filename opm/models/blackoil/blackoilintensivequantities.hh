@@ -661,8 +661,8 @@ private:
         // mobility_ class attribute. the division by the phase viscosity happens later.
         MaterialLaw::relativePermeabilities(mobility, materialParams, fluidState);
         Valgrind::CheckDefined(mobility);
-        const auto& materialLawManager = problem.materialLawManager();
-        if (materialLawManager->hasDirectionalRelperms()) {
+        const auto* materialLawManager = problem.materialLawManagerPtr();
+        if (materialLawManager && materialLawManager->hasDirectionalRelperms()) {
             auto satnumIdx = materialLawManager->satnumRegionIdx(globalSpaceIdx);
             using Dir = FaceDir::DirEnum;
             constexpr int ndim = 3;
