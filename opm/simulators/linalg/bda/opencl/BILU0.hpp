@@ -54,8 +54,6 @@ class BILU0 : public Preconditioner<block_size>
 
 private:
     std::unique_ptr<BlockedMatrix> LUmat = nullptr;
-    std::shared_ptr<BlockedMatrix> rmat = nullptr; // only used with PAR_SIM
-    std::shared_ptr<BlockedMatrix> rJacMat = nullptr; 
 #if CHOW_PATEL
     std::unique_ptr<BlockedMatrix> Lmat = nullptr, Umat = nullptr;
 #endif
@@ -76,6 +74,7 @@ private:
         cl::Buffer invDiagVals;
         cl::Buffer diagIndex;
         cl::Buffer rowsPerColor;
+        cl::Buffer rowIndices;
 #if CHOW_PATEL
         cl::Buffer Lvals, Lcols, Lrows;
         cl::Buffer Uvals, Ucols, Urows;
@@ -117,12 +116,7 @@ public:
 
     BlockedMatrix* getRMat() override
     {
-        return rmat.get();
-    }
-
-    BlockedMatrix* getRJacMat()
-    {
-        return rJacMat.get();
+        return LUmat.get();
     }
 
     std::tuple<std::vector<int>, std::vector<int>, std::vector<int>> get_preconditioner_structure()

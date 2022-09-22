@@ -3,6 +3,7 @@
 /// Here, L is it's own BSR matrix.
 /// Only used with ChowPatelIlu.
 __kernel void ILU_apply1(
+    __global const unsigned *rowIndices,
     __global const double *LUvals,
     __global const unsigned int *LUcols,
     __global const unsigned int *LUrows,
@@ -30,14 +31,16 @@ __kernel void ILU_apply1(
     target_block_row += nodesPerColorPrefix[color];
 
     while(target_block_row < nodesPerColorPrefix[color+1]){
-        const unsigned int first_block = LUrows[target_block_row];
-        const unsigned int last_block = LUrows[target_block_row+1];
+        unsigned row_idx = rowIndices[target_block_row];
+
+        const unsigned int first_block = LUrows[row_idx];
+        const unsigned int last_block = LUrows[row_idx+1];
         unsigned int block = first_block + lane / (bs*bs);
         double local_out = 0.0;
 
         if(lane < num_active_threads){
             if(lane < bs){
-                local_out = y[target_block_row*bs+lane];
+                local_out = y[row_idx*bs+lane];
             }
             for(; block < last_block; block += num_blocks_per_warp){
                 const double x_elem = x[LUcols[block]*bs + c];
@@ -60,7 +63,7 @@ __kernel void ILU_apply1(
         }
 
         if(lane < bs){
-            const unsigned int row = target_block_row*bs + lane;
+            const unsigned int row = row_idx*bs + lane;
             x[row] = tmp[lane];
         }
 

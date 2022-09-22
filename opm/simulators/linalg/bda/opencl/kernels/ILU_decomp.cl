@@ -68,6 +68,7 @@ __kernel void inverter(__global double *matrix, __global double *inverse)
 /// The kernel takes a full BSR matrix and performs inplace ILU decomposition
 __kernel void ilu_decomp(const unsigned int firstRow,
                          const unsigned int lastRow,
+                         __global const unsigned *rowIndices,
                          __global double *LUvals,
                          __global const int *LUcols,
                          __global const int *LUrows,
@@ -91,14 +92,15 @@ __kernel void ilu_decomp(const unsigned int firstRow,
     // go through all rows
     for (int i = firstRow + work_group_id * hwarps_per_group + hwarp_id_in_group; i < lastRow; i += num_groups * hwarps_per_group)
     {
-        int iRowStart = LUrows[i];
-        int iRowEnd = LUrows[i + 1];
+        const unsigned row = rowIndices[i];
+        int iRowStart = LUrows[row];
+        int iRowEnd = LUrows[row + 1];
 
         // go through all elements of the row
         for (int ij = iRowStart; ij < iRowEnd; ij++) {
             int j = LUcols[ij];
 
-            if (j < i) {
+            if (j < row) {
                 // calculate the pivot of this row
                 block_mult(LUvals + ij * bs * bs, invDiagVals + j * bs * bs, pivot + lmem_offset);
 
@@ -127,11 +129,11 @@ __kernel void ilu_decomp(const unsigned int firstRow,
         }
 
         // store the inverse in the diagonal
-        inverter(LUvals + diagIndex[i] * bs * bs, invDiagVals + i * bs * bs);
+        inverter(LUvals + diagIndex[row] * bs * bs, invDiagVals + row * bs * bs);
 
         // copy inverse
         if (thread_id_in_hwarp < bs * bs) {
-            LUvals[diagIndex[i] * bs * bs + thread_id_in_hwarp] = invDiagVals[i * bs * bs + thread_id_in_hwarp];
+            LUvals[diagIndex[row] * bs * bs + thread_id_in_hwarp] = invDiagVals[row * bs * bs + thread_id_in_hwarp];
         }
     }
 }

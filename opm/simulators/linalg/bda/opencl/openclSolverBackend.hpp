@@ -51,7 +51,7 @@ class openclSolverBackend : public BdaSolver<block_size>
     using Base::initialized;
 
 private:
-    double *rb = nullptr;                 // reordered b vector, if the matrix is reordered, rb is newly allocated, otherwise it just points to b
+    double *h_b = nullptr;                // b vector, on host
     std::vector<double> vals_contiguous;  // only used if COPY_ROW_BY_ROW is true in openclSolverBackend.cpp
 
     // OpenCL variables must be reusable, they are initialized in initialize()
@@ -183,9 +183,6 @@ public:
 
     /// For the CPR coarse solver
     openclSolverBackend(int linear_solver_verbosity, int maxit, double tolerance, ILUReorder opencl_ilu_reorder);
-
-    /// Destroy a openclSolver, and free memory
-    ~openclSolverBackend();
 
     /// Solve linear system, A*x = b, matrix A must be in blocked-CSR format
     /// \param[in] matrix         matrix A

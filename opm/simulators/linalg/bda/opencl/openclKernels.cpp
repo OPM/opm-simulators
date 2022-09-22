@@ -390,7 +390,7 @@ void OpenclKernels::residual(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& row
     }
 }
 
-void OpenclKernels::ILU_apply1(cl::Buffer& vals, cl::Buffer& cols,
+void OpenclKernels::ILU_apply1(cl::Buffer& rowIndices, cl::Buffer& vals, cl::Buffer& cols,
                                cl::Buffer& rows, cl::Buffer& diagIndex,
                                const cl::Buffer& y, cl::Buffer& x,
                                cl::Buffer& rowsPerColor, int color,
@@ -403,8 +403,8 @@ void OpenclKernels::ILU_apply1(cl::Buffer& vals, cl::Buffer& cols,
     Timer t_ilu_apply1;
 
     cl::Event event = (*ILU_apply1_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)),
-                          vals, cols, rows, diagIndex, y, x,
-                          rowsPerColor, color, block_size,
+                          rowIndices, vals, cols, rows, diagIndex,
+                          y, x, rowsPerColor, color, block_size,
                           cl::Local(lmem_per_work_group));
 
     if (verbosity >= 5) {
@@ -415,7 +415,7 @@ void OpenclKernels::ILU_apply1(cl::Buffer& vals, cl::Buffer& cols,
     }
 }
 
-void OpenclKernels::ILU_apply2(cl::Buffer& vals, cl::Buffer& cols,
+void OpenclKernels::ILU_apply2(cl::Buffer& rowIndices, cl::Buffer& vals, cl::Buffer& cols,
                                cl::Buffer& rows, cl::Buffer& diagIndex,
                                cl::Buffer& invDiagVals, cl::Buffer& x,
                                cl::Buffer& rowsPerColor, int color,
@@ -428,8 +428,8 @@ void OpenclKernels::ILU_apply2(cl::Buffer& vals, cl::Buffer& cols,
     Timer t_ilu_apply2;
 
     cl::Event event = (*ILU_apply2_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)),
-                          vals, cols, rows, diagIndex, invDiagVals,
-                          x, rowsPerColor, color, block_size,
+                          rowIndices, vals, cols, rows, diagIndex,
+                          invDiagVals, x, rowsPerColor, color, block_size,
                           cl::Local(lmem_per_work_group));
 
     if (verbosity >= 5) {
@@ -440,7 +440,7 @@ void OpenclKernels::ILU_apply2(cl::Buffer& vals, cl::Buffer& cols,
     }
 }
 
-void OpenclKernels::ILU_decomp(int firstRow, int lastRow,
+void OpenclKernels::ILU_decomp(int firstRow, int lastRow, cl::Buffer& rowIndices,
                                cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows,
                                cl::Buffer& diagIndex, cl::Buffer& invDiagVals,
                                int rowsThisColor, unsigned int block_size)
@@ -453,7 +453,8 @@ void OpenclKernels::ILU_decomp(int firstRow, int lastRow,
     Timer t_ilu_decomp;
 
     cl::Event event = (*ilu_decomp_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)),
-                          firstRow, lastRow, vals, cols, rows,
+                          firstRow, lastRow, rowIndices,
+                          vals, cols, rows,
                           invDiagVals, diagIndex, rowsThisColor,
                           cl::Local(lmem_per_work_group));
 

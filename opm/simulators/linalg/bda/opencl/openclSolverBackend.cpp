@@ -232,12 +232,6 @@ void openclSolverBackend<block_size>::setOpencl(std::shared_ptr<cl::Context>& co
     queue = queue_;
 }
 
-template <unsigned int block_size>
-openclSolverBackend<block_size>::~openclSolverBackend() {
-    finalize();
-}
-
-
 
 template <unsigned int block_size>
 void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContribs, BdaResult& res) {
@@ -464,7 +458,6 @@ void openclSolverBackend<block_size>::initialize(std::shared_ptr<BlockedMatrix> 
 
         bool reorder = (opencl_ilu_reorder != ILUReorder::NONE);
         if (reorder) {
-            rb = new double[N];
             d_toOrder = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * Nb);
         }
 
@@ -481,13 +474,6 @@ void openclSolverBackend<block_size>::initialize(std::shared_ptr<BlockedMatrix> 
 
     initialized = true;
 } // end initialize()
-
-template <unsigned int block_size>
-void openclSolverBackend<block_size>::finalize() {
-    if (opencl_ilu_reorder != ILUReorder::NONE) {
-        delete[] rb;
-    }
-} // end finalize()
 
 template <unsigned int block_size>
 void openclSolverBackend<block_size>::copy_system_to_gpu() {
@@ -508,7 +494,7 @@ void openclSolverBackend<block_size>::copy_system_to_gpu() {
 
     err |= queue->enqueueWriteBuffer(d_Acols, CL_TRUE, 0, sizeof(int) * nnzb, rmat->colIndices, nullptr, &events[1]);
     err |= queue->enqueueWriteBuffer(d_Arows, CL_TRUE, 0, sizeof(int) * (Nb + 1), rmat->rowPointers, nullptr, &events[2]);
-    err |= queue->enqueueWriteBuffer(d_b, CL_TRUE, 0, sizeof(double) * N, rb, nullptr, &events[3]);
+    err |= queue->enqueueWriteBuffer(d_b, CL_TRUE, 0, sizeof(double) * N, h_b, nullptr, &events[3]);
     err |= queue->enqueueFillBuffer(d_x, 0, 0, sizeof(double) * N, nullptr, &events[4]);
     if (opencl_ilu_reorder != ILUReorder::NONE) {
         events.resize(6);
@@ -546,7 +532,7 @@ void openclSolverBackend<block_size>::update_system_on_gpu() {
     err = queue->enqueueWriteBuffer(d_Avals, CL_TRUE, 0, sizeof(double) * nnz, rmat->nnzValues, nullptr, &events[0]);
 #endif
 
-    err |= queue->enqueueWriteBuffer(d_b, CL_TRUE, 0, sizeof(double) * N, rb, nullptr, &events[1]);
+    err |= queue->enqueueWriteBuffer(d_b, CL_TRUE, 0, sizeof(double) * N, h_b, nullptr, &events[1]);
     err |= queue->enqueueFillBuffer(d_x, 0, 0, sizeof(double) * N, nullptr, &events[2]);
     cl::WaitForEvents(events);
     events.clear();
@@ -602,13 +588,8 @@ void openclSolverBackend<block_size>::update_system(double *vals, double *b, Wel
     Timer t;
 
     mat->nnzValues = vals;
-    if (opencl_ilu_reorder != ILUReorder::NONE) {
-        reorderBlockedVectorByPattern<block_size>(mat->Nb, b, fromOrder, rb);
-        static_cast<WellContributionsOCL&>(wellContribs).setReordering(toOrder, true);
-    } else {
-        rb = b;
-        static_cast<WellContributionsOCL&>(wellContribs).setReordering(nullptr, false);
-    }
+    h_b = b;
+    static_cast<WellContributionsOCL&>(wellContribs).setReordering(nullptr, false);
 
     if (verbosity > 2) {
         std::ostringstream out;
@@ -670,12 +651,7 @@ template <unsigned int block_size>
 void openclSolverBackend<block_size>::get_result(double *x) {
     Timer t;
 
-    if (opencl_ilu_reorder != ILUReorder::NONE) {
-        queue->enqueueReadBuffer(d_x, CL_TRUE, 0, sizeof(double) * N, rb);
-        reorderBlockedVectorByPattern<block_size>(mat->Nb, rb, toOrder, x);
-    } else {
-        queue->enqueueReadBuffer(d_x, CL_TRUE, 0, sizeof(double) * N, x);
-    }
+    queue->enqueueReadBuffer(d_x, CL_TRUE, 0, sizeof(double) * N, x);
 
     if (verbosity > 2) {
         std::ostringstream out;

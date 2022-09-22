@@ -93,16 +93,16 @@ void reorderBlockedVectorByPattern(int Nb, double *vector, int *fromOrder, doubl
 bool canBeStarted(const int rowIndex, const  int *rowPointers, const  int *colIndices, const std::vector<bool>& doneRows);
 
 /// Find a level scheduling reordering for an input matrix
-/// The toOrder and fromOrder   arrays must be allocated already
+/// The toOrder and fromOrder arrays must be allocated already
 /// \param[in] CSRColIndices    column indices array, obtained from storing the input matrix in the CSR format
 /// \param[in] CSRRowPointers   row pointers array, obtained from storing the input matrix in the CSR format
 /// \param[in] CSCRowIndices    row indices array, obtained from storing the input matrix in the CSC format
 /// \param[in] CSCColPointers   column pointers array, obtained from storing the input matrix in the CSC format
 /// \param[in] Nb               number of blockrows in the matrix
 /// \param[out] numColors       a pointer to the number of colors needed for the level scheduling
-/// \param[inout] toOrder       the reorder pattern that was found, which lists for each index in the original order, to which index in the new order it should be moved
-/// \param[inout] fromOrder     the reorder pattern that was found, which lists for each index in the new order, from which index in the original order it was moved
-/// \param[inout] rowsPerColor  for each used color, the number of rows assigned to that color, this function uses emplace_back() to fill
+/// \param[out] toOrder         the reorder pattern that was found, which lists for each index in the original order, to which index in the new order it should be moved
+/// \param[out] fromOrder       the reorder pattern that was found, which lists for each index in the new order, from which index in the original order it was moved
+/// \param[out] rowsPerColor    for each color, an array of all rowIndices in that color, this function uses emplace_back() to fill
 void findLevelScheduling(int *CSRColIndices, int *CSRRowPointers, int *CSCRowIndices, int *CSCColPointers, int Nb, int *numColors, int *toOrder, int* fromOrder, std::vector<int>& rowsPerColor);
 
 /// Find a graph coloring reordering for an input matrix
