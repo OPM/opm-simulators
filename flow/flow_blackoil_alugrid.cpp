@@ -30,7 +30,7 @@ namespace Opm::Properties {
 // by default use the dummy aquifer "model"
 template<class TypeTag>
 struct EclAquiferModel<TypeTag, TTag::EclFlowProblemAlugrid> {
-    using type = Opm::BlackoilAquiferModel<TypeTag>;
+    using type = Opm::EclBaseAquiferModel<TypeTag>;
 };
 // Enable aquifers by default in experimental mode
 template<class TypeTag>
