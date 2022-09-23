@@ -1864,8 +1864,18 @@ equilibrateHorizontal(const CellRange&  cells,
             totfrac += frac;
         }
 
-        saturations /= totfrac;
-        pressures   /= totfrac;
+        if (totfrac > 0.) {
+            saturations /= totfrac;
+            pressures /= totfrac;
+        } else {
+            // Fall back to centre point method for zero-thickness cells.
+            const auto pos = CellPos {
+                    cell, cellCenterDepth_[cell]
+            };
+
+            saturations = psat.deriveSaturations(pos, eqreg, ptable);
+            pressures   = psat.correctedPhasePressures();
+        }
 
         const auto temp = this->temperature_[cell];
         const auto cz   = cellCenterDepth_[cell];
