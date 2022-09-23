@@ -421,12 +421,15 @@ protected:
                                      const FluidState& exFluidState)
     {
         const auto& scvf = elemCtx.stencil(timeIdx).boundaryFace(scvfIdx);
-        Scalar faceArea = scvf.area();
-        Scalar zEx = scvf.integrationPos()[dimWorld - 1];
+        const Scalar faceArea = scvf.area();
+        const Scalar zEx = scvf.integrationPos()[dimWorld - 1];
         const auto& problem = elemCtx.problem();
+        const unsigned globalSpaceIdx = elemCtx.globalSpaceIndex(0, timeIdx);
+        const auto& intQuantsIn = elemCtx.intensiveQuantities(0, timeIdx);
+
         calculateBoundaryGradients_(problem,
-                                    elemCtx.globalSpaceIndex(0, timeIdx),
-                                    elemCtx.intensiveQuantities(0, timeIdx),
+                                    globalSpaceIdx,
+                                    intQuantsIn,
                                     scvfIdx,
                                     timeIdx,
                                     faceArea,
@@ -436,6 +439,20 @@ protected:
                                     dnIdx_,
                                     volumeFlux_,
                                     pressureDifference_);
+
+        // Treating solvent here and not in the static method, since that would require more
+        // extensive refactoring. It means that the TpfaLinearizer will not support bcs for solvent until this is
+        // addressed.
+        if constexpr (enableSolvent) {
+            if (upIdx_[gasPhaseIdx] == 0) {
+                const Scalar trans = problem.transmissibilityBoundary(globalSpaceIdx, scvfIdx);
+                const Scalar transModified = trans * Toolbox::value(intQuantsIn.rockCompTransMultiplier());
+                const auto solventFlux = pressureDifference_[gasPhaseIdx] * intQuantsIn.mobility(gasPhaseIdx) * (-transModified/faceArea);
+                asImp_().setSolventVolumeFlux(solventFlux);
+            } else {
+                asImp_().setSolventVolumeFlux(0.0);
+            }
+        }
     }
 
 public:
@@ -460,7 +477,6 @@ public:
         bool enableBoundaryMassFlux = problem.nonTrivialBoundaryConditions();
         if (!enableBoundaryMassFlux)
             return;
-
 
         Scalar trans = problem.transmissibilityBoundary(globalSpaceIdx, bfIdx);
 
@@ -520,15 +536,11 @@ public:
                 const auto& up = intQuantsIn;
 
                 // deal with water induced rock compaction
-                const double transMult = Toolbox::value(up.rockCompTransMultiplier());
+                const Scalar transMult = Toolbox::value(up.rockCompTransMultiplier());
                 transModified *= transMult;
 
                 volumeFlux[phaseIdx] =
                     pressureDifference[phaseIdx]*up.mobility(phaseIdx)*(-transModified/faceArea);
-
-                // TODO: Figure out if this did have any effect. It should?
-                // if (enableSolvent && phaseIdx == gasPhaseIdx)
-                //     asImp_().setSolventVolumeFlux( pressureDifference[phaseIdx]*up.solventMobility()*(-transModified/faceArea));
             }
             else {
                 // compute the phase mobility using the material law parameters of the
@@ -540,10 +552,6 @@ public:
                 const auto& mob = kr[phaseIdx]/exFluidState.viscosity(phaseIdx);
                 volumeFlux[phaseIdx] =
                     pressureDifference[phaseIdx]*mob*(-transModified/faceArea);
-
-                // Solvent inflow is not yet supported
-                // if (enableSolvent && phaseIdx == gasPhaseIdx)
-                //     asImp_().setSolventVolumeFlux(0.0);
             }
         }
     }
