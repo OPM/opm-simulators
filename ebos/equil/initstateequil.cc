@@ -58,6 +58,11 @@
 #include <ebos/femcpgridcompat.hh>
 #endif
 
+#if HAVE_DUNE_ALUGRID
+#include <dune/alugrid/grid.hh>
+#include <dune/alugrid/3d/gridview.hh>
+#endif // HAVE_DUNE_ALUGRID
+
 namespace Opm {
 namespace EQUIL {
 
@@ -1901,12 +1906,29 @@ using GridView = Dune::Fem::GridPart2GridViewImpl<
 using GridView = Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>;
 #endif
 
+#if HAVE_DUNE_ALUGRID
+
+#if HAVE_MPI
+    using ALUGrid3CN = Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming, Dune::ALUGridMPIComm>;
+#else
+    using ALUGrid3CN = Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming, Dune::ALUGridNoComm>;
+#endif //HAVE_MPI
+#endif //HAVE_DUNE_ALUGRID
 using Mapper = Dune::MultipleCodimMultipleGeomTypeMapper<GridView>;
 template class InitialStateComputer<BlackOilFluidSystem<double>,
                                     Dune::CpGrid,
                                     GridView,
                                     Mapper,
                                     Dune::CartesianIndexMapper<Dune::CpGrid>>;
+#if HAVE_DUNE_ALUGRID
+using ALUGridView = Dune::GridView<Dune::ALU3dLeafGridViewTraits<const ALUGrid3CN, Dune::PartitionIteratorType(4)>>;
+using ALUGridMapper = Dune::MultipleCodimMultipleGeomTypeMapper<ALUGridView>;
+template class InitialStateComputer<BlackOilFluidSystem<double>,
+                                    ALUGrid3CN,
+                                    ALUGridView,
+                                    ALUGridMapper,
+                                    Dune::CartesianIndexMapper<ALUGrid3CN>>;
+#endif //HAVE_DUNE_ALUGRID
 
 using MatLaw = EclMaterialLawManager<ThreePhaseMaterialTraits<double,0,1,2>>;
 template InitialStateComputer<BlackOilFluidSystem<double>,
@@ -1922,7 +1944,20 @@ template InitialStateComputer<BlackOilFluidSystem<double>,
                          const double,
                          const bool);
 
-
+#if HAVE_DUNE_ALUGRID
+template InitialStateComputer<BlackOilFluidSystem<double>,
+                              ALUGrid3CN,
+                              ALUGridView,
+                              ALUGridMapper,
+                              Dune::CartesianIndexMapper<ALUGrid3CN>>::
+    InitialStateComputer(MatLaw&,
+                         const EclipseState&,
+                         const ALUGrid3CN&,
+                         const ALUGridView&,
+                         const Dune::CartesianIndexMapper<ALUGrid3CN>&,
+                         const double,
+                         const bool);
+#endif //HAVE_DUNE_ALUGRID
 } // namespace DeckDependent
 
 namespace Details {
