@@ -1932,7 +1932,7 @@ using ALUGridComm = Dune::ALUGridMPIComm;
 #else
 using ALUGridComm = Dune::ALUGridNoComm;
 #endif //HAVE_MPI
-using ALUGrid3CN = Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming, Dune::ALUGridMPIComm>;
+using ALUGrid3CN = Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming, ALUGridComm>;
 using ALUGridView = Dune::GridView<Dune::ALU3dLeafGridViewTraits<const ALUGrid3CN, Dune::PartitionIteratorType(4)>>;
 using ALUGridMapper = Dune::MultipleCodimMultipleGeomTypeMapper<ALUGridView>;
 template class InitialStateComputer<BlackOilFluidSystem<double>,
