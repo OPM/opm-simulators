@@ -58,7 +58,7 @@ struct LinearSolverRestart {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
-struct FlowLinearSolverVerbosity {
+struct LinearSolverVerbosity {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
@@ -156,7 +156,7 @@ struct LinearSolverRestart<TypeTag, TTag::FlowIstlSolverParams> {
     static constexpr int value = 40;
 };
 template<class TypeTag>
-struct FlowLinearSolverVerbosity<TypeTag, TTag::FlowIstlSolverParams> {
+struct LinearSolverVerbosity<TypeTag, TTag::FlowIstlSolverParams> {
     static constexpr int value = 0;
 };
 template<class TypeTag>
@@ -280,7 +280,7 @@ namespace Opm
             ilu_relaxation_ = EWOMS_GET_PARAM(TypeTag, double, IluRelaxation);
             linear_solver_maxiter_ = EWOMS_GET_PARAM(TypeTag, int, LinearSolverMaxIter);
             linear_solver_restart_ = EWOMS_GET_PARAM(TypeTag, int, LinearSolverRestart);
-            linear_solver_verbosity_ = EWOMS_GET_PARAM(TypeTag, int, FlowLinearSolverVerbosity);
+            linear_solver_verbosity_ = EWOMS_GET_PARAM(TypeTag, int, LinearSolverVerbosity);
             ilu_fillin_level_ = EWOMS_GET_PARAM(TypeTag, int, IluFillinLevel);
             ilu_milu_ = convertString2Milu(EWOMS_GET_PARAM(TypeTag, std::string, MiluVariant));
             ilu_redblack_ = EWOMS_GET_PARAM(TypeTag, bool, IluRedblack);
@@ -307,7 +307,7 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, double, IluRelaxation, "The relaxation factor of the linear solver's ILU preconditioner");
             EWOMS_REGISTER_PARAM(TypeTag, int, LinearSolverMaxIter, "The maximum number of iterations of the linear solver");
             EWOMS_REGISTER_PARAM(TypeTag, int, LinearSolverRestart, "The number of iterations after which GMRES is restarted");
-            EWOMS_REGISTER_PARAM(TypeTag, int, FlowLinearSolverVerbosity, "The verbosity level of the linear solver (0: off, 2: all)");
+            EWOMS_REGISTER_PARAM(TypeTag, int, LinearSolverVerbosity, "The verbosity level of the linear solver (0: off, 2: all)");
             EWOMS_REGISTER_PARAM(TypeTag, int, IluFillinLevel, "The fill-in level of the linear solver's ILU preconditioner");
             EWOMS_REGISTER_PARAM(TypeTag, std::string, MiluVariant, "Specify which variant of the modified-ILU preconditioner ought to be used. Possible variants are: ILU (default, plain ILU), MILU_1 (lump diagonal with dropped row entries), MILU_2 (lump diagonal with the sum of the absolute values of the dropped row  entries), MILU_3 (if diagonal is positive add sum of dropped row entrires. Otherwise subtract them), MILU_4 (if diagonal is positive add sum of dropped row entrires. Otherwise do nothing");
             EWOMS_REGISTER_PARAM(TypeTag, bool, IluRedblack, "Use red-black partitioning for the ILU preconditioner");
