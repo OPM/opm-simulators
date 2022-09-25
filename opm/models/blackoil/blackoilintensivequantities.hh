@@ -128,6 +128,9 @@ public:
         if (compositionSwitchEnabled) {
             fluidState_.setRs(0.0);
             fluidState_.setRv(0.0);
+        }        
+        if (enableEvaporation) { 
+            fluidState_.setRvw(0.0);
         }
     }
 
