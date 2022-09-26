@@ -19,26 +19,19 @@
 #include "config.h"
 #include <opm/simulators/flow/Main.hpp>
 
-namespace Opm::Properties {
-    namespace TTag {
-        struct EclFlowProblemAlugrid {
-            using InheritsFrom = std::tuple<EclFlowProblem>;
-        };
-    }
-
-
-// by default use the dummy aquifer "model"
-template<class TypeTag>
-struct EclAquiferModel<TypeTag, TTag::EclFlowProblemAlugrid> {
-    using type = Opm::EclBaseAquiferModel<TypeTag>;
+namespace Opm {
+namespace Properties {
+namespace TTag {
+struct EclFlowProblemAlugrid {
+    using InheritsFrom = std::tuple<EclFlowProblem>;
 };
-// Enable aquifers by default in experimental mode
+}
 template<class TypeTag>
 struct EclEnableAquifers<TypeTag, TTag::EclFlowProblemAlugrid> {
     static constexpr bool value = false;
 };
 }
-
+}
 int main(int argc, char** argv)
 {
     using TypeTag = Opm::Properties::TTag::EclFlowProblemAlugrid;

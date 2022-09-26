@@ -109,15 +109,6 @@ public:
     { }
 
     /*!
-     * \brief Add the water which enters or leaves the reservoir due to aquifiers.
-     */
-    template <class Context>
-    void addToSource(RateVector&,
-                     const Context&,
-                     unsigned) const
-    { }
-
-    /*!
      * \brief This method is called after each Newton-Raphson successful iteration.
      *
      * I.e., no exceptions were thrown during the linearization and linear solution
