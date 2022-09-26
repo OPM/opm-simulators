@@ -40,7 +40,13 @@
 #include <dune/common/fmatrix.hh>
 
 namespace Opm {
-
+// TODO: This hack is used to be able compile blackoilintensitivequantities.hh (see the function updateRelperms()) when
+//   the problem is not an EclProblem. For example if the problem is a ReservoirBlackOilVcfvProblem, the problem will not
+//   have a materialLawManager pointer (as the EclProblem has). Since this class MuitPhaseBaseProblem (see below) is a parent
+//   class for both those problem types, we can solve this problem by forward declaring EclMaterialLawManager<Traits> here
+//   and defining a method materialLawManagerPtr() here that returns a nullptr, but is overridden in EclProblem to
+//   return the real EclMaterialManager pointer.
+template <class TraitsT> class EclMaterialLawManager;
 /*!
  * \ingroup Discretization
  *
@@ -244,6 +250,13 @@ public:
     {
         static MaterialLawParams dummy;
         return dummy;
+    }
+
+    // TODO: See the comment at the top of this file for the reason why we need this method
+    template <class TraitsT>
+    const ::Opm::EclMaterialLawManager<TraitsT>* materialLawManagerPtr() const
+    {
+        return nullptr;
     }
 
     /*!

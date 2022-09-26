@@ -39,10 +39,18 @@
 #include "blackoilmicpmodules.hh"
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
 #include <opm/material/common/Valgrind.hpp>
+#include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
+
+#include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/utility/CopyablePtr.hpp>
+
 #include <dune/common/fmatrix.hh>
 
 #include <cstring>
 #include <utility>
+
+#include <fmt/format.h>
 
 namespace Opm {
 /*!
@@ -111,6 +119,32 @@ class BlackOilIntensiveQuantities
     using FluxIntensiveQuantities = typename FluxModule::FluxIntensiveQuantities;
     using DiffusionIntensiveQuantities = BlackOilDiffusionIntensiveQuantities<TypeTag, enableDiffusion>;
 
+    struct DirectionalMobility {
+        using array_type = std::array<Evaluation,numPhases>;
+        DirectionalMobility(const DirectionalMobility& other)
+            : mobilityX_{other.mobilityX_}, mobilityY_{other.mobilityY_}, mobilityZ_{other.mobilityZ_} {}
+        DirectionalMobility(const array_type& mX, const array_type& mY, const array_type& mZ)
+            : mobilityX_{mX}, mobilityY_{mY}, mobilityZ_{mZ} {}
+        DirectionalMobility() : mobilityX_{}, mobilityY_{}, mobilityZ_{} {}
+        array_type& getArray(int index) {
+            switch(index) {
+                case 0:
+                    return mobilityX_;
+                case 1:
+                    return mobilityY_;
+                case 2:
+                    return mobilityZ_;
+                default:
+                    throw std::runtime_error("Unexpected mobility array index");
+            }
+        }
+        array_type mobilityX_;
+        array_type mobilityY_;
+        array_type mobilityZ_;
+    };
+    using DirectionalMobilityPtr = Opm::Utility::CopyablePtr<DirectionalMobility>;
+
+
 public:
     using FluidState = BlackOilFluidState<Evaluation,
                                           FluidSystem,
@@ -130,7 +164,6 @@ public:
             fluidState_.setRv(0.0);
         }
     }
-
     BlackOilIntensiveQuantities(const BlackOilIntensiveQuantities& other) = default;
 
     BlackOilIntensiveQuantities& operator=(const BlackOilIntensiveQuantities& other) = default;
@@ -144,7 +177,6 @@ public:
 
         const auto& problem = elemCtx.problem();
         const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
-
         const auto& linearizationType = problem.model().linearizer().getLinearizationType();
         unsigned globalSpaceIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
         Scalar RvMax = FluidSystem::enableVaporizedOil()
@@ -226,6 +258,7 @@ public:
         std::array<Evaluation, numPhases> pC;
         const auto& materialParams = problem.materialLawParams(globalSpaceIdx);
         MaterialLaw::capillaryPressures(pC, materialParams, fluidState_);
+        BlackOilIntensiveQuantities::updateRelperms(mobility_, dirMob_, fluidState_, problem, materialParams, globalSpaceIdx);
 
         // oil is the reference phase for pressure
         if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_pg_Rv || priVars.primaryVarsMeaning() == PrimaryVariables::Rvw_pg_Rv) {
@@ -241,11 +274,6 @@ public:
                 if (FluidSystem::phaseIsActive(phaseIdx))
                     fluidState_.setPressure(phaseIdx, po + (pC[phaseIdx] - pC[oilPhaseIdx]));
         }
-
-        // calculate relative permeabilities. note that we store the result into the
-        // mobility_ class attribute. the division by the phase viscosity happens later.
-        MaterialLaw::relativePermeabilities(mobility_, materialParams, fluidState_);
-        Valgrind::CheckDefined(mobility_);
 
         // update the Saturation functions for the blackoil solvent module.
         asImp_().solventPostSatFuncUpdate_(elemCtx, dofIdx, timeIdx);
@@ -395,20 +423,31 @@ public:
         paramCache.updateAll(fluidState_);
 
         // compute the phase densities and transform the phase permeabilities into mobilities
+        int nmobilities = 1;
+        std::vector<std::array<Evaluation,numPhases>*> mobilities = {&mobility_};
+        if (dirMob_) {
+            for (int i=0; i<3; i++) {
+                nmobilities += 1;
+                mobilities.push_back(&(dirMob_->getArray(i)));
+            }
+        }
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx))
                 continue;
-
             const auto& b = FluidSystem::inverseFormationVolumeFactor(fluidState_, phaseIdx, pvtRegionIdx);
             fluidState_.setInvB(phaseIdx, b);
-
             const auto& mu = FluidSystem::viscosity(fluidState_, paramCache, phaseIdx);
-            if (enableExtbo && phaseIdx == oilPhaseIdx)
-              mobility_[phaseIdx] /= asImp_().oilViscosity();
-            else if (enableExtbo && phaseIdx == gasPhaseIdx)
-              mobility_[phaseIdx] /= asImp_().gasViscosity();
-            else
-              mobility_[phaseIdx] /= mu;
+            for (int i = 0; i<nmobilities; i++) {
+                if (enableExtbo && phaseIdx == oilPhaseIdx) {
+                    (*mobilities[i])[phaseIdx] /= asImp_().oilViscosity();
+                }
+                else if (enableExtbo && phaseIdx == gasPhaseIdx) {
+                    (*mobilities[i])[phaseIdx] /= asImp_().gasViscosity();
+                }
+                else {
+                    (*mobilities[i])[phaseIdx] /= mu;
+                }
+            }
         }
         Valgrind::CheckDefined(mobility_);
 
@@ -532,6 +571,27 @@ public:
     const Evaluation& mobility(unsigned phaseIdx) const
     { return mobility_[phaseIdx]; }
 
+    const Evaluation& mobility(unsigned phaseIdx, FaceDir::DirEnum facedir) const
+    {
+        using Dir = FaceDir::DirEnum;
+        if (dirMob_) {
+            switch(facedir) {
+                case Dir::XPlus:
+                    return dirMob_->mobilityX_[phaseIdx];
+                case Dir::YPlus:
+                    return dirMob_->mobilityY_[phaseIdx];
+                case Dir::ZPlus:
+                    return dirMob_->mobilityZ_[phaseIdx];
+                default:
+                    throw std::runtime_error("Unexpected face direction");
+            }
+        }
+        else {
+            return mobility_[phaseIdx];
+        }
+
+    }
+
     /*!
      * \copydoc ImmiscibleIntensiveQuantities::porosity
      */
@@ -588,6 +648,46 @@ private:
     friend BlackOilBrineIntensiveQuantities<TypeTag>;
     friend BlackOilMICPIntensiveQuantities<TypeTag>;
 
+    template <class MaterialLawParams>
+    static void updateRelperms(
+        std::array<Evaluation,numPhases> &mobility,
+        DirectionalMobilityPtr &dirMob,
+        FluidState &fluidState,
+        const Problem& problem,
+        const MaterialLawParams& materialParams,
+        unsigned globalSpaceIdx)
+    {
+        // calculate relative permeabilities. note that we store the result into the
+        // mobility_ class attribute. the division by the phase viscosity happens later.
+        MaterialLaw::relativePermeabilities(mobility, materialParams, fluidState);
+        Valgrind::CheckDefined(mobility);
+        const auto* materialLawManager = problem.materialLawManagerPtr();
+        if (materialLawManager && materialLawManager->hasDirectionalRelperms()) {
+            auto satnumIdx = materialLawManager->satnumRegionIdx(globalSpaceIdx);
+            using Dir = FaceDir::DirEnum;
+            constexpr int ndim = 3;
+            dirMob = std::make_unique<DirectionalMobility>();
+            Dir facedirs[ndim] = {Dir::XPlus, Dir::YPlus, Dir::ZPlus};
+            for (int i = 0; i<ndim; i++) {
+                auto krnumSatIdx = materialLawManager->getKrnumSatIdx(globalSpaceIdx, facedirs[i]);
+                auto& mob_array = dirMob->getArray(i);
+                if (krnumSatIdx != satnumIdx) {
+                    // This hack is also used by StandardWell_impl.hpp:getMobilityEval() to temporarily use a different
+                    // satnum index for a cell
+                    const auto& paramsCell = materialLawManager->connectionMaterialLawParams(krnumSatIdx, globalSpaceIdx);
+                    MaterialLaw::relativePermeabilities(mob_array, paramsCell, fluidState);
+                    // reset the cell's satnum index back to the original
+                    materialLawManager->connectionMaterialLawParams(satnumIdx, globalSpaceIdx);
+                }
+                else {
+                    // Copy the default (non-directional dependent) mobility
+                    for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                        mob_array[phaseIdx] = mobility[phaseIdx];
+                    }
+                }
+            }
+        }
+    }
 
     Implementation& asImp_()
     { return *static_cast<Implementation*>(this); }
@@ -597,6 +697,23 @@ private:
     Evaluation porosity_;
     Evaluation rockCompTransMultiplier_;
     std::array<Evaluation,numPhases> mobility_;
+
+    // Instead of writing a custom copy constructor and a custom assignment operator just to handle
+    // the dirMob_ unique ptr member variable when copying BlackOilIntensiveQuantites (see for example
+    // updateIntensitiveQuantities_() in fvbaseelementcontext.hh for a copy example) we write the below
+    // custom wrapper class CopyablePtr which wraps the unique ptr and makes it copyable.
+    //
+    // The advantage of this approach is that we avoid having to call all the base class copy constructors and
+    // assignment operators explicitly (which is needed when writing the custom copy constructor and assignment
+    // operators) which could become a maintenance burden. For example, when adding a new base class (if that should
+    // be needed sometime in the future) to BlackOilIntensiveQuantites we could forget to update the copy
+    // constructor and assignment operators.
+    //
+    // We want each copy of the BlackOilIntensiveQuantites to be unique, (TODO: why?) so we have to make a copy
+    // of the unique_ptr each time we copy construct or assign to it from another BlackOilIntensiveQuantites.
+    // (On the other hand, if a copy could share the ptr with the original, a shared_ptr could be used instead and the
+    // wrapper would not be needed)
+    DirectionalMobilityPtr dirMob_;
 };
 
 } // namespace Opm

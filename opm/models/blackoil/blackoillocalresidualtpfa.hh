@@ -38,6 +38,8 @@
 #include "blackoildiffusionmodule.hh"
 #include "blackoilmicpmodules.hh"
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
+#include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
+
 
 namespace Opm {
 /*!
@@ -198,7 +200,8 @@ public:
                             const IntensiveQuantities& intQuantsIn,
                             const IntensiveQuantities& intQuantsEx,
                             const Scalar trans,
-                            const Scalar faceArea)
+                            const Scalar faceArea,
+                            const FaceDir::DirEnum facedir)
     {
         flux = 0.0;
         Scalar Vin = problem.model().dofTotalVolume(globalIndexIn);
@@ -233,7 +236,8 @@ public:
                          distZ * g,
                          thpres,
                          trans,
-                         faceArea);
+                         faceArea,
+                         facedir);
     }
 
     // This function demonstrates compatibility with the ElementContext-based interface.
@@ -264,6 +268,11 @@ public:
         const auto& globalIndexEx = stencil.globalSpaceIndex(exteriorDofIdx);
         Scalar trans = problem.transmissibility(elemCtx, interiorDofIdx, exteriorDofIdx);
         Scalar faceArea = scvf.area();
+        const auto& materialLawManager = problem.materialLawManager();
+        FaceDir::DirEnum facedir = FaceDir::DirEnum::Unknown; // Use an arbitrary
+        if (materialLawManager->hasDirectionalRelperms()) {
+            facedir = scvf.faceDirFromDirId();
+        }
         Scalar thpres = problem.thresholdPressure(globalIndexIn, globalIndexEx);
 
         // estimate the gravity correction: for performance reasons we use a simplified
@@ -295,7 +304,8 @@ public:
                          distZ * g,
                          thpres,
                          trans,
-                         faceArea);
+                         faceArea,
+                         facedir);
     }
 
     static void calculateFluxes_(RateVector& flux,
@@ -308,7 +318,8 @@ public:
                                  const Scalar& distZg,
                                  const Scalar& thpres,
                                  const Scalar& trans,
-                                 const Scalar& faceArea)
+                                 const Scalar& faceArea,
+                                 const FaceDir::DirEnum facedir)
     {
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx))
@@ -346,9 +357,10 @@ public:
                 darcyFlux = 0.0; // NB maybe we could drop calculations
             } else {
                 if (globalUpIndex == globalIndexIn)
-                    darcyFlux = pressureDifference * up.mobility(phaseIdx) * transMult * (-trans / faceArea);
+                    darcyFlux = pressureDifference * up.mobility(phaseIdx, facedir) * transMult * (-trans / faceArea);
                 else
-                    darcyFlux = pressureDifference * (Toolbox::value(up.mobility(phaseIdx)) * Toolbox::value(transMult) * (-trans / faceArea));
+                    darcyFlux = pressureDifference *
+                       (Toolbox::value(up.mobility(phaseIdx, facedir)) * Toolbox::value(transMult) * (-trans / faceArea));
             }
 
             unsigned pvtRegionIdx = up.pvtRegionIndex();
