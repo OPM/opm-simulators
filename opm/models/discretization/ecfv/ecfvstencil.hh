@@ -37,6 +37,8 @@
 #include <dune/geometry/type.hh>
 #include <dune/common/fvector.hh>
 #include <dune/common/version.hh>
+#include <opm/common/ErrorMacros.hpp>
+#include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
 
 #include <vector>
 
@@ -157,11 +159,15 @@ public:
 
             if (needNormal)
                 (*normal_) = intersection.centerUnitOuterNormal();
-
             const auto& geometry = intersection.geometry();
             if (needIntegrationPos)
                 (*integrationPos_) = geometry.center();
             area_ = geometry.volume();
+            // TODO: facedir_ = intersection.boundaryId();  // This did not compile for some reason
+            // using indexInInside() as in ecltransmissibility.cc instead
+            // Note that indexInInside() returns -1 for NNC faces, that's the reason we
+            // cannot convert directly to a FaceDir::DirEnum (see FaceDir.hpp)
+            dirId_  = intersection.indexInInside(); // Legal values: -1, 0, 1, 2, 3, 4, 5
         }
 
         /*!
@@ -205,10 +211,43 @@ public:
         Scalar area() const
         { return area_; }
 
+        /*!
+         * \brief Returns the direction of the face
+         */
+        int dirId() const
+        {
+            return dirId_;
+        }
+
+        /*!
+         * \brief Returns the direction of the face
+         */
+        FaceDir::DirEnum faceDirFromDirId() const
+        {
+            using Dir = FaceDir::DirEnum;
+            if (dirId_ == -1) {
+                OPM_THROW(std::runtime_error, "NNC faces does not have a face id");
+            }
+            switch(dirId_) {
+                case 0:
+                case 1:
+                    return Dir::XPlus;
+                case 2:
+                case 3:
+                    return Dir::YPlus;
+                case 4:
+                case 5:
+                    return Dir::ZPlus;
+                default:
+                    OPM_THROW(std::runtime_error, "Unexpected face id" << dirId_);
+            }
+        }
+
     private:
         ConditionalStorage<needIntegrationPos, GlobalPosition> integrationPos_;
         ConditionalStorage<needNormal, WorldVector> normal_;
         Scalar area_;
+        int dirId_;
 
         unsigned short exteriorIdx_;
     };
