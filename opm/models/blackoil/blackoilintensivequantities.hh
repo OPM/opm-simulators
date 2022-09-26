@@ -234,7 +234,7 @@ public:
         std::array<Evaluation, numPhases> pC;
         const auto& materialParams = problem.materialLawParams(globalSpaceIdx);
         MaterialLaw::capillaryPressures(pC, materialParams, fluidState_);
-        problem.template updateRelperms<FluidState>(mobility_, dirMob_, fluidState_, globalSpaceIdx);
+        problem.updateRelperms(mobility_, dirMob_, fluidState_, globalSpaceIdx);
 
         // oil is the reference phase for pressure
         if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_pg_Rv || priVars.primaryVarsMeaning() == PrimaryVariables::Rvw_pg_Rv) {
