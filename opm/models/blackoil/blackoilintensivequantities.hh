@@ -39,7 +39,6 @@
 #include "blackoilmicpmodules.hh"
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
 #include <opm/material/common/Valgrind.hpp>
-#include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
 
 #include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
@@ -119,30 +118,7 @@ class BlackOilIntensiveQuantities
     using FluxIntensiveQuantities = typename FluxModule::FluxIntensiveQuantities;
     using DiffusionIntensiveQuantities = BlackOilDiffusionIntensiveQuantities<TypeTag, enableDiffusion>;
 
-    struct DirectionalMobility {
-        using array_type = std::array<Evaluation,numPhases>;
-        DirectionalMobility(const DirectionalMobility& other)
-            : mobilityX_{other.mobilityX_}, mobilityY_{other.mobilityY_}, mobilityZ_{other.mobilityZ_} {}
-        DirectionalMobility(const array_type& mX, const array_type& mY, const array_type& mZ)
-            : mobilityX_{mX}, mobilityY_{mY}, mobilityZ_{mZ} {}
-        DirectionalMobility() : mobilityX_{}, mobilityY_{}, mobilityZ_{} {}
-        array_type& getArray(int index) {
-            switch(index) {
-                case 0:
-                    return mobilityX_;
-                case 1:
-                    return mobilityY_;
-                case 2:
-                    return mobilityZ_;
-                default:
-                    throw std::runtime_error("Unexpected mobility array index");
-            }
-        }
-        array_type mobilityX_;
-        array_type mobilityY_;
-        array_type mobilityZ_;
-    };
-    using DirectionalMobilityPtr = Opm::Utility::CopyablePtr<DirectionalMobility>;
+    using DirectionalMobilityPtr = Opm::Utility::CopyablePtr<DirectionalMobility<TypeTag, Evaluation>>;
 
 
 public:
@@ -258,7 +234,7 @@ public:
         std::array<Evaluation, numPhases> pC;
         const auto& materialParams = problem.materialLawParams(globalSpaceIdx);
         MaterialLaw::capillaryPressures(pC, materialParams, fluidState_);
-        BlackOilIntensiveQuantities::updateRelperms(mobility_, dirMob_, fluidState_, problem, materialParams, globalSpaceIdx);
+        problem.template updateRelperms<FluidState>(mobility_, dirMob_, fluidState_, globalSpaceIdx);
 
         // oil is the reference phase for pressure
         if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_pg_Rv || priVars.primaryVarsMeaning() == PrimaryVariables::Rvw_pg_Rv) {
@@ -647,47 +623,6 @@ private:
     friend BlackOilFoamIntensiveQuantities<TypeTag>;
     friend BlackOilBrineIntensiveQuantities<TypeTag>;
     friend BlackOilMICPIntensiveQuantities<TypeTag>;
-
-    template <class MaterialLawParams>
-    static void updateRelperms(
-        std::array<Evaluation,numPhases> &mobility,
-        DirectionalMobilityPtr &dirMob,
-        FluidState &fluidState,
-        const Problem& problem,
-        const MaterialLawParams& materialParams,
-        unsigned globalSpaceIdx)
-    {
-        // calculate relative permeabilities. note that we store the result into the
-        // mobility_ class attribute. the division by the phase viscosity happens later.
-        MaterialLaw::relativePermeabilities(mobility, materialParams, fluidState);
-        Valgrind::CheckDefined(mobility);
-        const auto* materialLawManager = problem.materialLawManagerPtr();
-        if (materialLawManager && materialLawManager->hasDirectionalRelperms()) {
-            auto satnumIdx = materialLawManager->satnumRegionIdx(globalSpaceIdx);
-            using Dir = FaceDir::DirEnum;
-            constexpr int ndim = 3;
-            dirMob = std::make_unique<DirectionalMobility>();
-            Dir facedirs[ndim] = {Dir::XPlus, Dir::YPlus, Dir::ZPlus};
-            for (int i = 0; i<ndim; i++) {
-                auto krnumSatIdx = materialLawManager->getKrnumSatIdx(globalSpaceIdx, facedirs[i]);
-                auto& mob_array = dirMob->getArray(i);
-                if (krnumSatIdx != satnumIdx) {
-                    // This hack is also used by StandardWell_impl.hpp:getMobilityEval() to temporarily use a different
-                    // satnum index for a cell
-                    const auto& paramsCell = materialLawManager->connectionMaterialLawParams(krnumSatIdx, globalSpaceIdx);
-                    MaterialLaw::relativePermeabilities(mob_array, paramsCell, fluidState);
-                    // reset the cell's satnum index back to the original
-                    materialLawManager->connectionMaterialLawParams(satnumIdx, globalSpaceIdx);
-                }
-                else {
-                    // Copy the default (non-directional dependent) mobility
-                    for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                        mob_array[phaseIdx] = mobility[phaseIdx];
-                    }
-                }
-            }
-        }
-    }
 
     Implementation& asImp_()
     { return *static_cast<Implementation*>(this); }

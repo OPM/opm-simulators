@@ -30,23 +30,20 @@
 
 #include "multiphasebaseproperties.hh"
 
+#include <opm/models/common/directionalmobility.hh>
 #include <opm/models/discretization/common/fvbaseproblem.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 
 #include <opm/material/fluidmatrixinteractions/NullMaterial.hpp>
 #include <opm/material/common/Means.hpp>
+#include <opm/material/densead/Evaluation.hpp>
+
+#include <opm/utility/CopyablePtr.hpp>
 
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
 
 namespace Opm {
-// TODO: This hack is used to be able compile blackoilintensitivequantities.hh (see the function updateRelperms()) when
-//   the problem is not an EclProblem. For example if the problem is a ReservoirBlackOilVcfvProblem, the problem will not
-//   have a materialLawManager pointer (as the EclProblem has). Since this class MuitPhaseBaseProblem (see below) is a parent
-//   class for both those problem types, we can solve this problem by forward declaring EclMaterialLawManager<Traits> here
-//   and defining a method materialLawManagerPtr() here that returns a nullptr, but is overridden in EclProblem to
-//   return the real EclMaterialManager pointer.
-template <class TraitsT> class EclMaterialLawManager;
 /*!
  * \ingroup Discretization
  *
@@ -70,6 +67,7 @@ class MultiPhaseBaseProblem
     using SolidEnergyLawParams = GetPropType<TypeTag, Properties::SolidEnergyLawParams>;
     using ThermalConductionLawParams = GetPropType<TypeTag, Properties::ThermalConductionLawParams>;
     using MaterialLawParams = typename GetPropType<TypeTag, Properties::MaterialLaw>::Params;
+    using DirectionalMobilityPtr = Opm::Utility::CopyablePtr<DirectionalMobility<TypeTag, Evaluation>>;
 
     enum { dimWorld = GridView::dimensionworld };
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
@@ -251,12 +249,14 @@ public:
         static MaterialLawParams dummy;
         return dummy;
     }
-
-    // TODO: See the comment at the top of this file for the reason why we need this method
-    template <class TraitsT>
-    const ::Opm::EclMaterialLawManager<TraitsT>* materialLawManagerPtr() const
+    template <class FluidState>
+    void updateRelperms(
+        std::array<Evaluation,numPhases> &mobility,
+        DirectionalMobilityPtr &dirMob,
+        FluidState &fluidState,
+        unsigned globalSpaceIdx) const
     {
-        return nullptr;
+        return;
     }
 
     /*!
