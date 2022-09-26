@@ -68,12 +68,14 @@
 #include <opm/simulators/utils/ParallelSerialization.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 
+#include <opm/models/common/directionalmobility.hh>
 #include <opm/models/utils/pffgridvector.hh>
 #include <opm/models/blackoil/blackoilmodel.hh>
 #include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
 
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
 #include <opm/material/thermal/EclThermalLawManager.hpp>
+#include <opm/material/densead/Evaluation.hpp>
 
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
@@ -88,6 +90,7 @@
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/common/utility/TimeService.hpp>
+#include <opm/utility/CopyablePtr.hpp>
 #include <opm/material/common/ConditionalStorage.hpp>
 
 #include <dune/common/version.hh>
@@ -664,6 +667,7 @@ class EclProblem : public GetPropType<TypeTag, Properties::BaseProblem>
     using EclWriterType = EclWriter<TypeTag>;
 
     using TracerModel = EclTracerModel<TypeTag>;
+    using DirectionalMobilityPtr = Opm::Utility::CopyablePtr<DirectionalMobility<TypeTag, Evaluation>>;
 
 public:
     using EclGenericProblem<GridView,FluidSystem,Scalar>::briefDescription;
@@ -1505,10 +1509,43 @@ public:
     std::shared_ptr<const EclMaterialLawManager> materialLawManager() const
     { return materialLawManager_; }
 
-    // TODO: See discussion in multiphasebaseproblem.hh for the reason why we need this method
-    const EclMaterialLawManager* materialLawManagerPtr() const
+    template <class FluidState>
+    void updateRelperms(
+        std::array<Evaluation,numPhases> &mobility,
+        DirectionalMobilityPtr &dirMob,
+        FluidState &fluidState,
+        unsigned globalSpaceIdx) const
     {
-        return materialLawManager_.get();
+        // calculate relative permeabilities. note that we store the result into the
+        // mobility_ class attribute. the division by the phase viscosity happens later.
+        const auto& materialParams = materialLawParams(globalSpaceIdx);
+        MaterialLaw::relativePermeabilities(mobility, materialParams, fluidState);
+        Valgrind::CheckDefined(mobility);
+        if (materialLawManager_->hasDirectionalRelperms()) {
+            auto satnumIdx = materialLawManager_->satnumRegionIdx(globalSpaceIdx);
+            using Dir = FaceDir::DirEnum;
+            constexpr int ndim = 3;
+            dirMob = std::make_unique<DirectionalMobility<TypeTag, Evaluation>>();
+            Dir facedirs[ndim] = {Dir::XPlus, Dir::YPlus, Dir::ZPlus};
+            for (int i = 0; i<ndim; i++) {
+                auto krnumSatIdx = materialLawManager_->getKrnumSatIdx(globalSpaceIdx, facedirs[i]);
+                auto& mob_array = dirMob->getArray(i);
+                if (krnumSatIdx != satnumIdx) {
+                    // This hack is also used by StandardWell_impl.hpp:getMobilityEval() to temporarily use a different
+                    // satnum index for a cell
+                    const auto& paramsCell = materialLawManager_->connectionMaterialLawParams(krnumSatIdx, globalSpaceIdx);
+                    MaterialLaw::relativePermeabilities(mob_array, paramsCell, fluidState);
+                    // reset the cell's satnum index back to the original
+                    materialLawManager_->connectionMaterialLawParams(satnumIdx, globalSpaceIdx);
+                }
+                else {
+                    // Copy the default (non-directional dependent) mobility
+                    for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                        mob_array[phaseIdx] = mobility[phaseIdx];
+                    }
+                }
+            }
+        }
     }
 
     /*!
