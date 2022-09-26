@@ -36,9 +36,12 @@
 #include <opm/models/utils/signum.hh>
 
 #include <opm/material/common/Valgrind.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
 
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
+#include <fmt/format.h>
 
 namespace Opm {
 
@@ -227,7 +230,6 @@ public:
 
         unsigned I = stencil.globalSpaceIndex(interiorDofIdx);
         unsigned J = stencil.globalSpaceIndex(exteriorDofIdx);
-
         Scalar trans = problem.transmissibility(elemCtx, interiorDofIdx, exteriorDofIdx);
         Scalar faceArea = scvf.area();
         Scalar thpres = problem.thresholdPressure(I, J);
@@ -265,7 +267,7 @@ public:
                                         intQuantsEx,
                                         phaseIdx,//input
                                         interiorDofIdx,//input
-                                        exteriorDofIdx,//intput
+                                        exteriorDofIdx,//input
                                         Vin,
                                         Vex,
                                         I,
@@ -283,12 +285,18 @@ public:
             // or averaged? all fluids should see the same compaction?!
             const Evaluation& transMult = up.rockCompTransMultiplier();
 
+            const auto& materialLawManager = problem.materialLawManager();
+            FaceDir::DirEnum facedir = FaceDir::DirEnum::Unknown;
+            if (materialLawManager->hasDirectionalRelperms()) {
+                facedir = scvf.faceDirFromDirId();  // direction (X, Y, or Z) of the face
+            }
             if (upwindIsInterior)
                 volumeFlux[phaseIdx] =
-                    pressureDifferences[phaseIdx]*up.mobility(phaseIdx)*transMult*(-trans/faceArea);
+                    pressureDifferences[phaseIdx]*up.mobility(phaseIdx, facedir)*transMult*(-trans/faceArea);
             else
                 volumeFlux[phaseIdx] =
-                    pressureDifferences[phaseIdx]*(Toolbox::value(up.mobility(phaseIdx))*Toolbox::value(transMult)*(-trans/faceArea));
+                    pressureDifferences[phaseIdx]*
+                        (Toolbox::value(up.mobility(phaseIdx, facedir))*Toolbox::value(transMult)*(-trans/faceArea));
         }
     }
 

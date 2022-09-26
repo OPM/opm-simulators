@@ -306,6 +306,7 @@ protected:
     void updateSatnum_();
     void updateMiscnum_();
     void updatePlmixnum_();
+    void updateKrnum_();
 
     const EclipseState& eclState_;
     const Schedule& schedule_;
@@ -318,6 +319,9 @@ protected:
     std::vector<unsigned short> satnum_;
     std::vector<unsigned short> miscnum_;
     std::vector<unsigned short> plmixnum_;
+    std::vector<unsigned short> krnumx_;
+    std::vector<unsigned short> krnumy_;
+    std::vector<unsigned short> krnumz_;
 
     std::vector<RockParams> rockParams_;
     std::vector<unsigned short> rockTableIdx_;

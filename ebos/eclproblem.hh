@@ -1505,6 +1505,12 @@ public:
     std::shared_ptr<const EclMaterialLawManager> materialLawManager() const
     { return materialLawManager_; }
 
+    // TODO: See discussion in multiphasebaseproblem.hh for the reason why we need this method
+    const EclMaterialLawManager* materialLawManagerPtr() const
+    {
+        return materialLawManager_.get();
+    }
+
     /*!
      * \copydoc materialLawManager()
      */
@@ -2223,6 +2229,8 @@ private:
         // the PLMIX region numbers (polymer model)
         this->updatePlmixnum_();
 
+        // directional relative permeabilities
+        this->updateKrnum_();
         ////////////////////////////////
         // porosity
         updateReferencePorosity_();
@@ -2849,6 +2857,8 @@ private:
                     case FaceDir::ZPlus:
                         data = &massratebcZ_;
                         break;
+                    case FaceDir::Unknown:
+                        throw std::runtime_error("Unexpected unknown face direction");
                     }
 
                     const Evaluation rate = bcface.rate;
@@ -2883,6 +2893,8 @@ private:
                     case FaceDir::ZPlus:
                         data = &freebcZ_;
                         break;
+                    case FaceDir::Unknown:
+                        throw std::runtime_error("Unexpected unknown face direction");
                     }
 
                     for (int i = bcface.i1; i <= bcface.i2; ++i) {

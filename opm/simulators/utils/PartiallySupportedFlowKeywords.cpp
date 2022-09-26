@@ -196,7 +196,6 @@ partiallySupported()
          {
             "SATOPTS",
             {
-               {1,{false, allow_values<std::string> {"HYSTER"}, "SATOPTS(DIRECT): directional relative permeability assignment option not supported - value ignored"}}, // options
                {2,{false, allow_values<std::string> {"HYSTER"}, "SATOPTS(IRREVERS): reversible directional relative permeability option not supported – value ignored"}}, // IRREVERS
                {3,{false, allow_values<std::string> {"HYSTER"}, "SATOPTS(HYSTER): hysteresis directional relative permeability option not supported - value ignored"}}, // HYSTER
                {4,{false, allow_values<std::string> {"HYSTER"}, "SATOPTS(SURFTENS): capillary pressure surface tension pressure dependency option not supported – value ignored"}}, // SURFTENS
