@@ -97,7 +97,7 @@ private:
     unsigned num_post_smooth_steps;             // number of Jacobi smooth steps after prolongation
 
     std::unique_ptr<openclSolverBackend<1> > coarse_solver; // coarse solver is scalar
-    bool opencl_ilu_parallel;                          // reordering strategy for ILU0 in coarse solver
+    bool opencl_ilu_parallel;                   // whether ILU0 operation should be parallelized
 
     // Analyze the AMG hierarchy build by Dune
     void analyzeHierarchy();
@@ -135,21 +135,6 @@ public:
 
     bool create_preconditioner(BlockedMatrix *mat) override;
     bool create_preconditioner(BlockedMatrix *mat, BlockedMatrix *jacMat) override;
-    
-    int* getToOrder() override
-    {
-        return bilu0->getToOrder();
-    }
-
-    int* getFromOrder() override
-    {
-        return bilu0->getFromOrder();
-    }
-
-    BlockedMatrix* getRMat() override
-    {
-        return bilu0->getRMat();
-    }
 };
 
 // solve A^T * x = b

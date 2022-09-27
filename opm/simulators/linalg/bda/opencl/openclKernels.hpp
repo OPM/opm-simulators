@@ -44,10 +44,6 @@ using ilu_apply1_kernel_type = cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::B
 using ilu_apply2_kernel_type = cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
                                                cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int, cl::LocalSpaceArg>;
 using stdwell_apply_kernel_type = cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
-                                                  cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
-                                                  const unsigned int, const unsigned int, cl::Buffer&,
-                                                  cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg>;
-using stdwell_apply_no_reorder_kernel_type = cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
                                                              cl::Buffer&, cl::Buffer&, cl::Buffer&,
                                                              const unsigned int, const unsigned int, cl::Buffer&,
                                                              cl::LocalSpaceArg, cl::LocalSpaceArg, cl::LocalSpaceArg>;
@@ -85,7 +81,6 @@ private:
     static std::unique_ptr<ilu_apply1_kernel_type> ILU_apply1_k;
     static std::unique_ptr<ilu_apply2_kernel_type> ILU_apply2_k;
     static std::unique_ptr<stdwell_apply_kernel_type> stdwell_apply_k;
-    static std::unique_ptr<stdwell_apply_no_reorder_kernel_type> stdwell_apply_no_reorder_k;
     static std::unique_ptr<ilu_decomp_kernel_type> ilu_decomp_k;
     static std::unique_ptr<isaiL_kernel_type> isaiL_k;
     static std::unique_ptr<isaiU_kernel_type> isaiU_k;
@@ -116,7 +111,6 @@ public:
     static const std::string ILU_apply2_fm_str;
 #endif
     static const std::string stdwell_apply_str;
-    static const std::string stdwell_apply_no_reorder_str;
     static const std::string ILU_decomp_str;
     static const std::string isaiL_str;
     static const std::string isaiU_str;
@@ -144,11 +138,7 @@ public:
     static void ILU_decomp(int firstRow, int lastRow, cl::Buffer& rowIndices, cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows,
         cl::Buffer& diagIndex, cl::Buffer& invDiagVals, int Nb, unsigned int block_size);
 
-    static void apply_stdwells_reorder(cl::Buffer& d_Cnnzs_ocl, cl::Buffer &d_Dnnzs_ocl, cl::Buffer &d_Bnnzs_ocl,
-        cl::Buffer &d_Ccols_ocl, cl::Buffer &d_Bcols_ocl, cl::Buffer &d_x, cl::Buffer &d_y,
-        cl::Buffer &d_toOrder, int dim, int dim_wells, cl::Buffer &d_val_pointers_ocl, int num_std_wells);
-
-    static void apply_stdwells_no_reorder(cl::Buffer& d_Cnnzs_ocl, cl::Buffer &d_Dnnzs_ocl, cl::Buffer &d_Bnnzs_ocl,
+    static void apply_stdwells(cl::Buffer& d_Cnnzs_ocl, cl::Buffer &d_Dnnzs_ocl, cl::Buffer &d_Bnnzs_ocl,
         cl::Buffer &d_Ccols_ocl, cl::Buffer &d_Bcols_ocl, cl::Buffer &d_x, cl::Buffer &d_y,
         int dim, int dim_wells, cl::Buffer &d_val_pointers_ocl, int num_std_wells);
 

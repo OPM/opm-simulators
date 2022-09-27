@@ -54,11 +54,10 @@ private:
     std::vector<double> vals_contiguous;  // only used if COPY_ROW_BY_ROW is true in openclSolverBackend.cpp
 
     // OpenCL variables must be reusable, they are initialized in initialize()
-    cl::Buffer d_Avals, d_Acols, d_Arows;        // (reordered) matrix in BSR format on GPU
+    cl::Buffer d_Avals, d_Acols, d_Arows;        // matrix in BSR format on GPU
     cl::Buffer d_x, d_b, d_rb, d_r, d_rw, d_p;   // vectors, used during linear solve
     cl::Buffer d_pw, d_s, d_t, d_v;              // vectors, used during linear solve
     cl::Buffer d_tmp;                            // used as tmp GPU buffer for dot() and norm()
-    cl::Buffer d_toOrder;                        // only used when reordering is used
 
     std::vector<cl::Device> devices;
 
@@ -67,12 +66,10 @@ private:
     std::unique_ptr<Preconditioner<block_size> > prec;
                                                                   // can perform blocked ILU0 and AMG on pressure component
     bool is_root;                                                 // allow for nested solvers, the root solver is called by BdaBridge
-    int *toOrder = nullptr, *fromOrder = nullptr;                 // BILU0 reorders rows of the matrix via these mappings
     bool analysis_done = false;
     std::shared_ptr<BlockedMatrix> mat = nullptr;                 // original matrix
     std::shared_ptr<BlockedMatrix> jacMat = nullptr;              // matrix for preconditioner
-    BlockedMatrix *rmat = nullptr;                                // reordered matrix (or original if no reordering), used for spmv
-    bool opencl_ilu_parallel;                                // reordering strategy
+    bool opencl_ilu_parallel;                                     // parallelize ILU operations (with level_scheduling)
     std::vector<cl::Event> events;
     cl_int err;
 
@@ -142,11 +139,10 @@ private:
     /// Copy linear system to GPU
     void copy_system_to_gpu();
 
-    /// Reorder the linear system so it corresponds with the coloring
+    /// Reassign pointers, in case the addresses of the Dune variables have changed
     /// \param[in] vals           array of nonzeroes, each block is stored row-wise and contiguous, contains nnz values
     /// \param[in] b              input vectors, contains N values
-    /// \param[out] wellContribs  WellContributions, to set reordering
-    void update_system(double *vals, double *b, WellContributions &wellContribs);
+    void update_system(double *vals, double *b);
 
     /// Update linear system on GPU, don't copy rowpointers and colindices, they stay the same
     void update_system_on_gpu();
@@ -155,12 +151,13 @@ private:
     /// \return true iff analysis was successful
     bool analyze_matrix();
 
-    /// Perform ilu0-decomposition
+    /// Create the preconditioner, only done once per linear solve
     /// \return true iff decomposition was successful
     bool create_preconditioner();
 
     /// Solve linear system
     /// \param[in] wellContribs   WellContributions, to apply them separately, instead of adding them to matrix A
+    ///                           could be empty
     /// \param[inout] res         summary of solver result
     void solve_system(WellContributions &wellContribs, BdaResult &res);
 
@@ -174,7 +171,7 @@ public:
     /// \param[in] tolerance                  required relative tolerance for openclSolver
     /// \param[in] platformID                 the OpenCL platform to be used
     /// \param[in] deviceID                   the device to be used
-    /// \param[in] opencl_ilu_parallel        whether to parallelize the ILU decomposition and application in OpenCL
+    /// \param[in] opencl_ilu_parallel        whether to parallelize the ILU decomposition and application in OpenCL with level_scheduling
     /// \param[in] linsolver                  indicating the preconditioner, equal to the --linear-solver cmdline argument
     ///                                       only ilu0, cpr_quasiimpes and isai are supported
     openclSolverBackend(int linear_solver_verbosity, int maxit, double tolerance, unsigned int platformID, unsigned int deviceID,

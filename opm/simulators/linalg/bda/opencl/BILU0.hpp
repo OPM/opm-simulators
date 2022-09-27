@@ -35,7 +35,8 @@ namespace Accelerator
 {
 
 /// This class implements a Blocked ILU0 preconditioner
-/// The decomposition is done on CPU, and reorders the rows of the matrix
+/// The decomposition is done on GPU, using exact decomposition, or ChowPatel decomposition
+/// The preconditioner is applied via two exact triangular solves
 template <unsigned int block_size>
 class BILU0 : public Preconditioner<block_size>
 {
@@ -66,9 +67,6 @@ private:
 
     bool opencl_ilu_parallel;
 
-    std::vector<int> reordermappingNonzeroes;    // maps nonzero blocks to new location in reordered matrix
-    std::vector<int> jacReordermappingNonzeroes; // same but for jacMatrix
-
     typedef struct {
         cl::Buffer invDiagVals;
         cl::Buffer diagIndex;
@@ -92,7 +90,7 @@ public:
 
     BILU0(bool opencl_ilu_parallel, int verbosity);
 
-    // analysis, find reordering if specified
+    // analysis, extract parallelism if specified
     bool analyze_matrix(BlockedMatrix *mat) override;
     bool analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat) override;
 
@@ -101,22 +99,9 @@ public:
     bool create_preconditioner(BlockedMatrix *mat, BlockedMatrix *jacMat) override;
 
     // apply preconditioner, x = prec(y)
+    // via Lz = y
+    // and Ux = z
     void apply(const cl::Buffer& y, cl::Buffer& x) override;
-
-    int* getToOrder() override
-    {
-        return toOrder.data();
-    }
-
-    int* getFromOrder() override
-    {
-        return fromOrder.data();
-    }
-
-    BlockedMatrix* getRMat() override
-    {
-        return LUmat.get();
-    }
 
     std::tuple<std::vector<int>, std::vector<int>, std::vector<int>> get_preconditioner_structure()
     {

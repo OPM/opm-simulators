@@ -184,7 +184,6 @@ bool BILU0<block_size>::create_preconditioner(BlockedMatrix *mat, BlockedMatrix 
     auto *matToDecompose = jacMat ? jacMat : mat;
 
     // TODO: remove this copy by replacing inplace ilu decomp by out-of-place ilu decomp
-    // this copy can have mat or rmat ->nnzValues as origin, depending on the reorder strategy
     Timer t_copy;
     memcpy(LUmat->nnzValues, matToDecompose->nnzValues, sizeof(double) * bs * bs * matToDecompose->nnzbs);
 
@@ -209,7 +208,6 @@ bool BILU0<block_size>::create_preconditioner(BlockedMatrix *mat, BlockedMatrix 
 
     std::call_once(pattern_uploaded, [&](){
         // find the positions of each diagonal block
-        // must be done after reordering
         for (int row = 0; row < Nb; ++row) {
             int rowStart = LUmat->rowPointers[row];
             int rowEnd = LUmat->rowPointers[row+1];

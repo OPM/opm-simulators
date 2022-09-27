@@ -797,7 +797,6 @@ void ChowPatelIlu<block_size>::decomposition(
 
     std::call_once(pattern_uploaded, [&](){
         // find the positions of each diagonal block
-        // must be done after reordering
         for (int row = 0; row < Nb; ++row) {
             int rowStart = LUmat->rowPointers[row];
             int rowEnd = LUmat->rowPointers[row+1];

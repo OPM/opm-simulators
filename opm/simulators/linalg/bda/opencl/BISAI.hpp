@@ -115,7 +115,7 @@ public:
     // set own Opencl variables, but also that of the bilu0 preconditioner
     void setOpencl(std::shared_ptr<cl::Context>& context, std::shared_ptr<cl::CommandQueue>& queue) override;
 
-    // analysis, find reordering if specified
+    // analysis, extract parallelism
     bool analyze_matrix(BlockedMatrix *mat) override;
     bool analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat) override;
 
@@ -125,21 +125,6 @@ public:
 
     // apply preconditioner, x = prec(y)
     void apply(const cl::Buffer& y, cl::Buffer& x) override;
-
-    int* getToOrder() override
-    {
-        return bilu0->getToOrder();
-    }
-
-    int* getFromOrder() override
-    {
-        return bilu0->getFromOrder();
-    }
-
-    BlockedMatrix* getRMat() override
-    {
-        return bilu0->getRMat();
-    }
 };
 
 /// Similar function to csrPatternToCsc. It gives an offset map from CSR to CSC instead of the full CSR to CSC conversion.

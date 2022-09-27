@@ -77,13 +77,6 @@ public:
     // the version with two params can be overloaded, if not, it will default to using the one param version
     virtual bool create_preconditioner(BlockedMatrix *mat) = 0;
     virtual bool create_preconditioner(BlockedMatrix *mat, BlockedMatrix *jacMat);
-
-    // get reordering mappings
-    virtual int* getToOrder() = 0;
-    virtual int* getFromOrder() = 0;
-
-    // get reordered matrix
-    virtual BlockedMatrix* getRMat() = 0;
 };
 
 } //namespace Accelerator

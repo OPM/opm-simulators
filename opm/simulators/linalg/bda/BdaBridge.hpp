@@ -57,7 +57,7 @@ public:
     /// \param[in] tolerance                  required relative tolerance for BdaSolver
     /// \param[in] platformID                 the OpenCL platform ID to be used
     /// \param[in] deviceID                   the device ID to be used by the cusparse- and openclSolvers, too high values could cause runtime errors
-    /// \param[in] opencl_ilu_parallel        whether to parallelize the ILU decomposition and application in OpenCL
+    /// \param[in] opencl_ilu_parallel        whether to parallelize the ILU decomposition and application in OpenCL with level_scheduling
     /// \param[in] linsolver                  indicating the preconditioner, equal to the --linear-solver cmdline argument
     BdaBridge(std::string accelerator_mode, std::string fpga_bitstream, int linear_solver_verbosity, int maxit, double tolerance,
         unsigned int platformID, unsigned int deviceID, bool opencl_ilu_parallel, std::string linsolver);

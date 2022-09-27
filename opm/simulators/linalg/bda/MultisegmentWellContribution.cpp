@@ -77,7 +77,7 @@ void MultisegmentWellContribution::apply(double *h_x, double *h_y)
     for (unsigned int row = 0; row < Mb; ++row) {
         // for every block in the row
         for (unsigned int blockID = Brows[row]; blockID < Brows[row + 1]; ++blockID) {
-            unsigned int colIdx = getColIdx(Bcols[blockID]);
+            unsigned int colIdx = Bcols[blockID];
             for (unsigned int j = 0; j < dim_wells; ++j) {
                 double temp = 0.0;
                 for (unsigned int k = 0; k < dim; ++k) {
@@ -97,7 +97,7 @@ void MultisegmentWellContribution::apply(double *h_x, double *h_y)
     for (unsigned int row = 0; row < Mb; ++row) {
         // for every block in the row
         for (unsigned int blockID = Brows[row]; blockID < Brows[row + 1]; ++blockID) {
-            unsigned int colIdx = getColIdx(Bcols[blockID]);
+            unsigned int colIdx = Bcols[blockID];
             for (unsigned int j = 0; j < dim; ++j) {
                 double temp = 0.0;
                 for (unsigned int k = 0; k < dim_wells; ++k) {
@@ -115,21 +115,6 @@ void MultisegmentWellContribution::setCudaStream(cudaStream_t stream_)
     stream = stream_;
 }
 #endif
-
-unsigned int MultisegmentWellContribution::getColIdx(unsigned int idx)
-{
-    if (reorder) {
-        return toOrder[idx];
-    } else {
-        return idx;
-    }
-}
-
-void MultisegmentWellContribution::setReordering(int *toOrder_, bool reorder_)
-{
-    this->toOrder = toOrder_;
-    this->reorder = reorder_;
-}
 
 } //namespace Opm
 

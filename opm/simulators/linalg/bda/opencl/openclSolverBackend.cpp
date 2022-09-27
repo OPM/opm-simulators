@@ -31,7 +31,6 @@
 #include <opm/simulators/linalg/bda/opencl/openclWellContributions.hpp>
 
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
-#include <opm/simulators/linalg/bda/Reorder.hpp>
 
 
 // iff true, the nonzeroes of the matrix are copied row-by-row into a contiguous, pinned memory array, then a single GPU memcpy is done
@@ -308,7 +307,7 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
 
         // apply wellContributions
         if(wellContribs.getNumWells() > 0){
-            static_cast<WellContributionsOCL&>(wellContribs).apply(d_pw, d_v, d_toOrder);
+            static_cast<WellContributionsOCL&>(wellContribs).apply(d_pw, d_v);
         }
         if(verbosity >= 3) {
             queue->finish();
@@ -353,7 +352,7 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
 
         // apply wellContributions
         if(wellContribs.getNumWells() > 0){
-            static_cast<WellContributionsOCL&>(wellContribs).apply(d_s, d_t, d_toOrder);
+            static_cast<WellContributionsOCL&>(wellContribs).apply(d_s, d_t);
         }
         if (verbosity >= 3) {
             queue->finish();
@@ -435,8 +434,6 @@ void openclSolverBackend<block_size>::initialize(std::shared_ptr<BlockedMatrix> 
 #if COPY_ROW_BY_ROW
         vals_contiguous = new double[N];
 #endif
-        // mat.reset(new BlockedMatrix(Nb, nnzb, block_size, vals, cols, rows));
-        // jacMat.reset(new BlockedMatrix(Nb, jac_nnzb, block_size, vals2, cols2, rows2));
         mat = matrix;
         jacMat = jacMatrix;
 
@@ -455,10 +452,6 @@ void openclSolverBackend<block_size>::initialize(std::shared_ptr<BlockedMatrix> 
         d_Avals = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * nnz);
         d_Acols = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * nnzb);
         d_Arows = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * (Nb + 1));
-
-        if (opencl_ilu_parallel) {
-            d_toOrder = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * Nb);
-        }
 
     } catch (const cl::Error& error) {
         std::ostringstream oss;
@@ -482,23 +475,20 @@ void openclSolverBackend<block_size>::copy_system_to_gpu() {
 #if COPY_ROW_BY_ROW
     int sum = 0;
     for (int i = 0; i < Nb; ++i) {
-        int size_row = rmat->rowPointers[i + 1] - rmat->rowPointers[i];
-        memcpy(vals_contiguous.data() + sum, reinterpret_cast<double*>(rmat->nnzValues) + sum, size_row * sizeof(double) * block_size * block_size);
+        int size_row = mat->rowPointers[i + 1] - mat->rowPointers[i];
+        memcpy(vals_contiguous.data() + sum, reinterpret_cast<double*>(mat->nnzValues) + sum, size_row * sizeof(double) * block_size * block_size);
         sum += size_row * block_size * block_size;
     }
     err = queue->enqueueWriteBuffer(d_Avals, CL_TRUE, 0, sizeof(double) * nnz, vals_contiguous.data(), nullptr, &events[0]);
 #else
-    err = queue->enqueueWriteBuffer(d_Avals, CL_TRUE, 0, sizeof(double) * nnz, rmat->nnzValues, nullptr, &events[0]);
+    err = queue->enqueueWriteBuffer(d_Avals, CL_TRUE, 0, sizeof(double) * nnz, mat->nnzValues, nullptr, &events[0]);
 #endif
 
-    err |= queue->enqueueWriteBuffer(d_Acols, CL_TRUE, 0, sizeof(int) * nnzb, rmat->colIndices, nullptr, &events[1]);
-    err |= queue->enqueueWriteBuffer(d_Arows, CL_TRUE, 0, sizeof(int) * (Nb + 1), rmat->rowPointers, nullptr, &events[2]);
+    err |= queue->enqueueWriteBuffer(d_Acols, CL_TRUE, 0, sizeof(int) * nnzb, mat->colIndices, nullptr, &events[1]);
+    err |= queue->enqueueWriteBuffer(d_Arows, CL_TRUE, 0, sizeof(int) * (Nb + 1), mat->rowPointers, nullptr, &events[2]);
     err |= queue->enqueueWriteBuffer(d_b, CL_TRUE, 0, sizeof(double) * N, h_b, nullptr, &events[3]);
     err |= queue->enqueueFillBuffer(d_x, 0, 0, sizeof(double) * N, nullptr, &events[4]);
-    if (opencl_ilu_parallel) {
-        events.resize(6);
-        queue->enqueueWriteBuffer(d_toOrder, CL_TRUE, 0, sizeof(int) * Nb, toOrder, nullptr, &events[5]);
-    }
+
     cl::WaitForEvents(events);
     events.clear();
     if (err != CL_SUCCESS) {
@@ -522,17 +512,18 @@ void openclSolverBackend<block_size>::update_system_on_gpu() {
 #if COPY_ROW_BY_ROW
     int sum = 0;
     for (int i = 0; i < Nb; ++i) {
-        int size_row = rmat->rowPointers[i + 1] - rmat->rowPointers[i];
-        memcpy(vals_contiguous.data() + sum, reinterpret_cast<double*>(rmat->nnzValues) + sum, size_row * sizeof(double) * block_size * block_size);
+        int size_row = mat->rowPointers[i + 1] - mat->rowPointers[i];
+        memcpy(vals_contiguous.data() + sum, reinterpret_cast<double*>(mat->nnzValues) + sum, size_row * sizeof(double) * block_size * block_size);
         sum += size_row * block_size * block_size;
     }
     err = queue->enqueueWriteBuffer(d_Avals, CL_TRUE, 0, sizeof(double) * nnz, vals_contiguous.data(), nullptr, &events[0]);
 #else
-    err = queue->enqueueWriteBuffer(d_Avals, CL_TRUE, 0, sizeof(double) * nnz, rmat->nnzValues, nullptr, &events[0]);
+    err = queue->enqueueWriteBuffer(d_Avals, CL_TRUE, 0, sizeof(double) * nnz, mat->nnzValues, nullptr, &events[0]);
 #endif
 
     err |= queue->enqueueWriteBuffer(d_b, CL_TRUE, 0, sizeof(double) * N, h_b, nullptr, &events[1]);
     err |= queue->enqueueFillBuffer(d_x, 0, 0, sizeof(double) * N, nullptr, &events[2]);
+
     cl::WaitForEvents(events);
     events.clear();
     if (err != CL_SUCCESS) {
@@ -558,18 +549,6 @@ bool openclSolverBackend<block_size>::analyze_matrix() {
     else
         success = prec->analyze_matrix(mat.get());
 
-    if (opencl_ilu_parallel) {
-        // toOrder = bilu0->getToOrder();
-        // fromOrder = bilu0->getFromOrder();
-        // rmat = bilu0->getRMat();
-        toOrder = prec->getToOrder();
-        fromOrder = prec->getFromOrder();
-        rmat = prec->getRMat();
-    } else {
-        rmat = mat.get();
-    }
-
-
     if (verbosity > 2) {
         std::ostringstream out;
         out << "openclSolver::analyze_matrix(): " << t.stop() << " s";
@@ -583,12 +562,11 @@ bool openclSolverBackend<block_size>::analyze_matrix() {
 
 
 template <unsigned int block_size>
-void openclSolverBackend<block_size>::update_system(double *vals, double *b, WellContributions &wellContribs) {
+void openclSolverBackend<block_size>::update_system(double *vals, double *b) {
     Timer t;
 
     mat->nnzValues = vals;
     h_b = b;
-    static_cast<WellContributionsOCL&>(wellContribs).setReordering(nullptr, false);
 
     if (verbosity > 2) {
         std::ostringstream out;
@@ -674,13 +652,13 @@ SolverStatus openclSolverBackend<block_size>::solve_system(std::shared_ptr<Block
                 return SolverStatus::BDA_SOLVER_ANALYSIS_FAILED;
             }
         }
-        update_system(matrix->nnzValues, b, wellContribs);
+        update_system(matrix->nnzValues, b);
         if (!create_preconditioner()) {
             return SolverStatus::BDA_SOLVER_CREATE_PRECONDITIONER_FAILED;
         }
         copy_system_to_gpu();
     } else {
-        update_system(matrix->nnzValues, b, wellContribs);
+        update_system(matrix->nnzValues, b);
         if (!create_preconditioner()) {
             return SolverStatus::BDA_SOLVER_CREATE_PRECONDITIONER_FAILED;
         }

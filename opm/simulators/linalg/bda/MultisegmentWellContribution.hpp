@@ -68,9 +68,6 @@ private:
     std::vector<double> z2;          // z2 = D^-1 * B * x
     void *UMFPACK_Symbolic, *UMFPACK_Numeric;
 
-    int *toOrder = nullptr;
-    bool reorder = false;
-
     /// Translate the columnIndex if needed
     /// Some preconditioners reorder the rows of the matrix, this means the columnIndices of the wellcontributions need to be reordered as well
     unsigned int getColIdx(unsigned int idx);
@@ -117,12 +114,6 @@ public:
     /// \param[in] h_x          vector x, must be on CPU
     /// \param[inout] h_y       vector y, must be on CPU
     void apply(double *h_x, double *h_y);
-
-    /// Since the rows of the matrix are reordered, the columnindices of the matrixdata is incorrect
-    /// Those indices need to be mapped via toOrder
-    /// \param[in] toOrder    array with mappings
-    /// \param[in] reorder    whether reordering is actually used or not
-    void setReordering(int *toOrder, bool reorder);
 };
 
 } //namespace Opm
