@@ -127,7 +127,7 @@ struct BdaSolverInfo
                 const double tolerance,
                 const int platformID,
                 const int deviceID,
-                const std::string& opencl_ilu_reorder,
+                const bool opencl_ilu_parallel,
                 const std::string& linsolver);
 
   ~BdaSolverInfo();
@@ -259,7 +259,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                 const int deviceID = EWOMS_GET_PARAM(TypeTag, int, BdaDeviceId);
                 const int maxit = EWOMS_GET_PARAM(TypeTag, int, LinearSolverMaxIter);
                 const double tolerance = EWOMS_GET_PARAM(TypeTag, double, LinearSolverReduction);
-                const std::string opencl_ilu_reorder = EWOMS_GET_PARAM(TypeTag, std::string, OpenclIluReorder);
+                const bool opencl_ilu_parallel = EWOMS_GET_PARAM(TypeTag, bool, OpenclIluParallel);
                 const int linear_solver_verbosity = parameters_.linear_solver_verbosity_;
                 std::string fpga_bitstream = EWOMS_GET_PARAM(TypeTag, std::string, FpgaBitstream);
                 std::string linsolver = EWOMS_GET_PARAM(TypeTag, std::string, LinearSolver);
@@ -270,7 +270,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                                                                                    tolerance,
                                                                                    platformID,
                                                                                    deviceID,
-                                                                                   opencl_ilu_reorder,
+                                                                                   opencl_ilu_parallel,
                                                                                    linsolver);
             }
 #else

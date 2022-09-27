@@ -23,8 +23,6 @@
 #include "dune/istl/solver.hh" // for struct InverseOperatorResult
 
 #include <opm/simulators/linalg/bda/BdaSolver.hpp>
-#include <opm/simulators/linalg/bda/BlockedMatrix.hpp>
-#include <opm/simulators/linalg/bda/ILUReorder.hpp>
 
 namespace Opm
 {
@@ -32,7 +30,6 @@ namespace Opm
 class WellContributions;
 
 typedef Dune::InverseOperatorResult InverseOperatorResult;
-using Opm::Accelerator::ILUReorder;
 
 /// BdaBridge acts as interface between opm-simulators with the BdaSolvers
 template <class BridgeMatrix, class BridgeVector, int block_size>
@@ -60,10 +57,10 @@ public:
     /// \param[in] tolerance                  required relative tolerance for BdaSolver
     /// \param[in] platformID                 the OpenCL platform ID to be used
     /// \param[in] deviceID                   the device ID to be used by the cusparse- and openclSolvers, too high values could cause runtime errors
-    /// \param[in] opencl_ilu_reorder         select either level_scheduling or graph_coloring, see ILUReorder.hpp for explanation
-    /// \param[in] linsolver                  copy of cmdline argument --linear-solver
+    /// \param[in] opencl_ilu_parallel        whether to parallelize the ILU decomposition and application in OpenCL
+    /// \param[in] linsolver                  indicating the preconditioner, equal to the --linear-solver cmdline argument
     BdaBridge(std::string accelerator_mode, std::string fpga_bitstream, int linear_solver_verbosity, int maxit, double tolerance,
-        unsigned int platformID, unsigned int deviceID, std::string opencl_ilu_reorder, std::string linsolver);
+        unsigned int platformID, unsigned int deviceID, bool opencl_ilu_parallel, std::string linsolver);
 
 
     /// Solve linear system, A*x = b

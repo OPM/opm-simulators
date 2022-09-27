@@ -70,7 +70,7 @@ private:
     cl::Buffer d_invUvals;
     cl::Buffer d_invL_x;
 
-    ILUReorder opencl_ilu_reorder;
+    bool opencl_ilu_parallel;
     std::unique_ptr<BILU0<block_size> > bilu0;
 
     /// Struct that holds the structure of the small subsystems for each column
@@ -110,7 +110,7 @@ private:
     void buildUpperSubsystemsStructures();
 
 public:
-    BISAI(ILUReorder opencl_ilu_reorder, int verbosity);
+    BISAI(bool opencl_ilu_parallel, int verbosity);
 
     // set own Opencl variables, but also that of the bilu0 preconditioner
     void setOpencl(std::shared_ptr<cl::Context>& context, std::shared_ptr<cl::CommandQueue>& queue) override;

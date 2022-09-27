@@ -99,7 +99,7 @@ testOpenclSolver(const boost::property_tree::ptree& prm, Matrix<bz>& matrix, Vec
     const int linear_solver_verbosity = prm.get<int>("verbosity");
     const int maxit = prm.get<int>("maxiter");
     const double tolerance = prm.get<double>("tol");
-    const std::string opencl_ilu_reorder("none");
+    const bool opencl_ilu_parallel(true);
     const int platformID = 0;
     const int deviceID = 0;
     const std::string accelerator_mode("opencl");
@@ -111,7 +111,7 @@ testOpenclSolver(const boost::property_tree::ptree& prm, Matrix<bz>& matrix, Vec
     auto wellContribs = Opm::WellContributions::create("opencl", false);
     std::unique_ptr<Opm::BdaBridge<Matrix<bz>, Vector<bz>, bz> > bridge;
     try {
-        bridge = std::make_unique<Opm::BdaBridge<Matrix<bz>, Vector<bz>, bz> >(accelerator_mode, fpga_bitstream, linear_solver_verbosity, maxit, tolerance, platformID, deviceID, opencl_ilu_reorder, linsolver);
+        bridge = std::make_unique<Opm::BdaBridge<Matrix<bz>, Vector<bz>, bz> >(accelerator_mode, fpga_bitstream, linear_solver_verbosity, maxit, tolerance, platformID, deviceID, opencl_ilu_parallel, linsolver);
     } catch (const std::logic_error& error) {
         BOOST_WARN_MESSAGE(true, error.what());
         throw PlatformInitException(error.what());

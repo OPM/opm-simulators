@@ -23,7 +23,6 @@
 #include <mutex>
 
 #include <opm/simulators/linalg/bda/BlockedMatrix.hpp>
-#include <opm/simulators/linalg/bda/ILUReorder.hpp>
 
 #include <opm/simulators/linalg/bda/opencl/opencl.hpp>
 #include <opm/simulators/linalg/bda/opencl/Preconditioner.hpp>
@@ -65,7 +64,7 @@ private:
     int numColors;
     std::once_flag pattern_uploaded;
 
-    ILUReorder opencl_ilu_reorder;
+    bool opencl_ilu_parallel;
 
     std::vector<int> reordermappingNonzeroes;    // maps nonzero blocks to new location in reordered matrix
     std::vector<int> jacReordermappingNonzeroes; // same but for jacMatrix
@@ -91,7 +90,7 @@ private:
 
 public:
 
-    BILU0(ILUReorder opencl_ilu_reorder, int verbosity);
+    BILU0(bool opencl_ilu_parallel, int verbosity);
 
     // analysis, find reordering if specified
     bool analyze_matrix(BlockedMatrix *mat) override;

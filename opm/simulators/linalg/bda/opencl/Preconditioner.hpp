@@ -21,7 +21,6 @@
 #define OPM_PRECONDITIONER_HEADER_INCLUDED
 
 #include <opm/simulators/linalg/bda/opencl/opencl.hpp>
-#include <opm/simulators/linalg/bda/ILUReorder.hpp>
 
 namespace Opm
 {
@@ -58,7 +57,7 @@ public:
         BISAI
     };
 
-    static std::unique_ptr<Preconditioner> create(PreconditionerType type, int verbosity, ILUReorder opencl_ilu_reorder);
+    static std::unique_ptr<Preconditioner> create(PreconditionerType type, int verbosity, bool opencl_ilu_parallel);
 
     virtual ~Preconditioner() = default;
 

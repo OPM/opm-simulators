@@ -23,7 +23,6 @@
 #include <opm/simulators/linalg/bda/opencl/opencl.hpp>
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
 #include <opm/simulators/linalg/bda/BdaSolver.hpp>
-#include <opm/simulators/linalg/bda/ILUReorder.hpp>
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
 
 #include <opm/simulators/linalg/bda/opencl/Preconditioner.hpp>
@@ -73,7 +72,7 @@ private:
     std::shared_ptr<BlockedMatrix> mat = nullptr;                 // original matrix
     std::shared_ptr<BlockedMatrix> jacMat = nullptr;              // matrix for preconditioner
     BlockedMatrix *rmat = nullptr;                                // reordered matrix (or original if no reordering), used for spmv
-    ILUReorder opencl_ilu_reorder;                                // reordering strategy
+    bool opencl_ilu_parallel;                                // reordering strategy
     std::vector<cl::Event> events;
     cl_int err;
 
@@ -175,14 +174,14 @@ public:
     /// \param[in] tolerance                  required relative tolerance for openclSolver
     /// \param[in] platformID                 the OpenCL platform to be used
     /// \param[in] deviceID                   the device to be used
-    /// \param[in] opencl_ilu_reorder         select either level_scheduling or graph_coloring, see Reorder.hpp for explanation
+    /// \param[in] opencl_ilu_parallel        whether to parallelize the ILU decomposition and application in OpenCL
     /// \param[in] linsolver                  indicating the preconditioner, equal to the --linear-solver cmdline argument
     ///                                       only ilu0, cpr_quasiimpes and isai are supported
     openclSolverBackend(int linear_solver_verbosity, int maxit, double tolerance, unsigned int platformID, unsigned int deviceID,
-        ILUReorder opencl_ilu_reorder, std::string linsolver);
+        bool opencl_ilu_parallel, std::string linsolver);
 
     /// For the CPR coarse solver
-    openclSolverBackend(int linear_solver_verbosity, int maxit, double tolerance, ILUReorder opencl_ilu_reorder);
+    openclSolverBackend(int linear_solver_verbosity, int maxit, double tolerance, bool opencl_ilu_parallel);
 
     /// Solve linear system, A*x = b, matrix A must be in blocked-CSR format
     /// \param[in] matrix         matrix A

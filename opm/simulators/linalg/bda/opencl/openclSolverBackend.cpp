@@ -47,7 +47,7 @@ using Opm::OpmLog;
 using Dune::Timer;
 
 template <unsigned int block_size>
-openclSolverBackend<block_size>::openclSolverBackend(int verbosity_, int maxit_, double tolerance_, unsigned int platformID_, unsigned int deviceID_, ILUReorder opencl_ilu_reorder_, std::string linsolver) : BdaSolver<block_size>(verbosity_, maxit_, tolerance_, platformID_, deviceID_), opencl_ilu_reorder(opencl_ilu_reorder_) {
+openclSolverBackend<block_size>::openclSolverBackend(int verbosity_, int maxit_, double tolerance_, unsigned int platformID_, unsigned int deviceID_, bool opencl_ilu_parallel_, std::string linsolver) : BdaSolver<block_size>(verbosity_, maxit_, tolerance_, platformID_, deviceID_), opencl_ilu_parallel(opencl_ilu_parallel_) {
 
     bool use_cpr, use_isai;
 
@@ -68,11 +68,11 @@ openclSolverBackend<block_size>::openclSolverBackend(int verbosity_, int maxit_,
 
     using PreconditionerType = typename Preconditioner<block_size>::PreconditionerType;
     if (use_cpr) {
-        prec = Preconditioner<block_size>::create(PreconditionerType::CPR, verbosity, opencl_ilu_reorder);
+        prec = Preconditioner<block_size>::create(PreconditionerType::CPR, verbosity, opencl_ilu_parallel);
     } else if (use_isai) {
-        prec = Preconditioner<block_size>::create(PreconditionerType::BISAI, verbosity, opencl_ilu_reorder);
+        prec = Preconditioner<block_size>::create(PreconditionerType::BISAI, verbosity, opencl_ilu_parallel);
     } else {
-        prec = Preconditioner<block_size>::create(PreconditionerType::BILU0, verbosity, opencl_ilu_reorder);
+        prec = Preconditioner<block_size>::create(PreconditionerType::BILU0, verbosity, opencl_ilu_parallel);
     }
 
     std::ostringstream out;
@@ -219,11 +219,11 @@ openclSolverBackend<block_size>::openclSolverBackend(int verbosity_, int maxit_,
 }
 
 template <unsigned int block_size>
-openclSolverBackend<block_size>::openclSolverBackend(int verbosity_, int maxit_, double tolerance_, ILUReorder opencl_ilu_reorder_) :
-    BdaSolver<block_size>(verbosity_, maxit_, tolerance_), opencl_ilu_reorder(opencl_ilu_reorder_)
+openclSolverBackend<block_size>::openclSolverBackend(int verbosity_, int maxit_, double tolerance_, bool opencl_ilu_parallel_) :
+    BdaSolver<block_size>(verbosity_, maxit_, tolerance_), opencl_ilu_parallel(opencl_ilu_parallel_)
 {
-    // prec = std::make_unique<BILU0<block_size> >(opencl_ilu_reorder, verbosity_);
-    // cpr = std::make_unique<CPR<block_size> >(verbosity_, opencl_ilu_reorder, /*use_amg=*/false);
+    // prec = std::make_unique<BILU0<block_size> >(opencl_ilu_parallel, verbosity_);
+    // cpr = std::make_unique<CPR<block_size> >(verbosity_, opencl_ilu_parallel, /*use_amg=*/false);
 }
 
 template <unsigned int block_size>
@@ -456,8 +456,7 @@ void openclSolverBackend<block_size>::initialize(std::shared_ptr<BlockedMatrix> 
         d_Acols = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * nnzb);
         d_Arows = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * (Nb + 1));
 
-        bool reorder = (opencl_ilu_reorder != ILUReorder::NONE);
-        if (reorder) {
+        if (opencl_ilu_parallel) {
             d_toOrder = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * Nb);
         }
 
@@ -496,7 +495,7 @@ void openclSolverBackend<block_size>::copy_system_to_gpu() {
     err |= queue->enqueueWriteBuffer(d_Arows, CL_TRUE, 0, sizeof(int) * (Nb + 1), rmat->rowPointers, nullptr, &events[2]);
     err |= queue->enqueueWriteBuffer(d_b, CL_TRUE, 0, sizeof(double) * N, h_b, nullptr, &events[3]);
     err |= queue->enqueueFillBuffer(d_x, 0, 0, sizeof(double) * N, nullptr, &events[4]);
-    if (opencl_ilu_reorder != ILUReorder::NONE) {
+    if (opencl_ilu_parallel) {
         events.resize(6);
         queue->enqueueWriteBuffer(d_toOrder, CL_TRUE, 0, sizeof(int) * Nb, toOrder, nullptr, &events[5]);
     }
@@ -559,15 +558,15 @@ bool openclSolverBackend<block_size>::analyze_matrix() {
     else
         success = prec->analyze_matrix(mat.get());
 
-    if (opencl_ilu_reorder == ILUReorder::NONE) {
-        rmat = mat.get();
-    } else {
+    if (opencl_ilu_parallel) {
         // toOrder = bilu0->getToOrder();
         // fromOrder = bilu0->getFromOrder();
         // rmat = bilu0->getRMat();
         toOrder = prec->getToOrder();
         fromOrder = prec->getFromOrder();
         rmat = prec->getRMat();
+    } else {
+        rmat = mat.get();
     }
 
 
@@ -694,8 +693,8 @@ SolverStatus openclSolverBackend<block_size>::solve_system(std::shared_ptr<Block
 
 #define INSTANTIATE_BDA_FUNCTIONS(n)                                        \
 template openclSolverBackend<n>::openclSolverBackend(                       \
-    int, int, double, unsigned int, unsigned int, ILUReorder, std::string); \
-template openclSolverBackend<n>::openclSolverBackend(int, int, double, ILUReorder); \
+    int, int, double, unsigned int, unsigned int, bool, std::string); \
+template openclSolverBackend<n>::openclSolverBackend(int, int, double, bool); \
 template void openclSolverBackend<n>::setOpencl(std::shared_ptr<cl::Context>&, std::shared_ptr<cl::CommandQueue>&);
 
 INSTANTIATE_BDA_FUNCTIONS(1);

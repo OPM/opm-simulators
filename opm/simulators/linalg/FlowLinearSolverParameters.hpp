@@ -130,7 +130,7 @@ struct OpenclPlatformId {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
-struct OpenclIluReorder {
+struct OpenclIluParallel {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
@@ -232,8 +232,8 @@ struct OpenclPlatformId<TypeTag, TTag::FlowIstlSolverParams> {
     static constexpr int value = 0;
 };
 template<class TypeTag>
-struct OpenclIluReorder<TypeTag, TTag::FlowIstlSolverParams> {
-    static constexpr auto value = ""; // note: default value is chosen depending on the solver used
+struct OpenclIluParallel<TypeTag, TTag::FlowIstlSolverParams> {
+    static constexpr bool value = true; // note: false should only be used in debug
 };
 template<class TypeTag>
 struct FpgaBitstream<TypeTag, TTag::FlowIstlSolverParams> {
@@ -269,7 +269,7 @@ namespace Opm
         int cpr_max_ell_iter_;
         int cpr_reuse_setup_;
         int cpr_reuse_interval_;
-        std::string opencl_ilu_reorder_;
+        bool opencl_ilu_parallel_;
         std::string fpga_bitstream_;
 
         template <class TypeTag>
@@ -296,7 +296,7 @@ namespace Opm
             accelerator_mode_ = EWOMS_GET_PARAM(TypeTag, std::string, AcceleratorMode);
             bda_device_id_ = EWOMS_GET_PARAM(TypeTag, int, BdaDeviceId);
             opencl_platform_id_ = EWOMS_GET_PARAM(TypeTag, int, OpenclPlatformId);
-            opencl_ilu_reorder_ = EWOMS_GET_PARAM(TypeTag, std::string, OpenclIluReorder);
+            opencl_ilu_parallel_ = EWOMS_GET_PARAM(TypeTag, bool, OpenclIluParallel);
             fpga_bitstream_ = EWOMS_GET_PARAM(TypeTag, std::string, FpgaBitstream);
         }
 
@@ -323,7 +323,7 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, std::string, AcceleratorMode, "Use GPU (cusparseSolver or openclSolver) or FPGA (fpgaSolver) as the linear solver, usage: '--accelerator-mode=[none|cusparse|opencl|fpga|amgcl]'");
             EWOMS_REGISTER_PARAM(TypeTag, int, BdaDeviceId, "Choose device ID for cusparseSolver or openclSolver, use 'nvidia-smi' or 'clinfo' to determine valid IDs");
             EWOMS_REGISTER_PARAM(TypeTag, int, OpenclPlatformId, "Choose platform ID for openclSolver, use 'clinfo' to determine valid platform IDs");
-            EWOMS_REGISTER_PARAM(TypeTag, std::string, OpenclIluReorder, "Choose the reordering strategy for ILU for openclSolver and fpgaSolver, usage: '--opencl-ilu-reorder=[level_scheduling|graph_coloring], level_scheduling behaves like Dune and cusparse, graph_coloring is more aggressive and likely to be faster, but is random-based and generally increases the number of linear solves and linear iterations significantly.");
+            EWOMS_REGISTER_PARAM(TypeTag, bool, OpenclIluParallel, "Parallelize ILU decomposition and application on GPU. Default: true");
             EWOMS_REGISTER_PARAM(TypeTag, std::string, FpgaBitstream, "Specify the bitstream file for fpgaSolver (including path), usage: '--fpga-bitstream=<filename>'");
         }
 
@@ -347,7 +347,7 @@ namespace Opm
             accelerator_mode_         = "none";
             bda_device_id_            = 0;
             opencl_platform_id_       = 0;
-            opencl_ilu_reorder_       = "";  // note: the default value is chosen depending on the solver used
+            opencl_ilu_parallel_      = true;
             fpga_bitstream_           = "";
         }
     };

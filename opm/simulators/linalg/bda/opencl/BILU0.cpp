@@ -40,8 +40,8 @@ using Opm::OpmLog;
 using Dune::Timer;
 
 template <unsigned int block_size>
-BILU0<block_size>::BILU0(ILUReorder opencl_ilu_reorder_, int verbosity_) :
-    Preconditioner<block_size>(verbosity_), opencl_ilu_reorder(opencl_ilu_reorder_)
+BILU0<block_size>::BILU0(bool opencl_ilu_parallel_, int verbosity_) :
+    Preconditioner<block_size>(verbosity_), opencl_ilu_parallel(opencl_ilu_parallel_)
 {
 #if CHOW_PATEL
     chowPatelIlu.setVerbosity(verbosity);
@@ -71,9 +71,7 @@ bool BILU0<block_size>::analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat
 
     auto *matToDecompose = jacMat ? jacMat : mat; // decompose jacMat if valid, otherwise decompose mat
 
-    if (opencl_ilu_reorder == ILUReorder::NONE) {
-        LUmat = std::make_unique<BlockedMatrix>(*mat);
-    } else {
+    if (opencl_ilu_parallel) {
         toOrder.resize(Nb);
         fromOrder.resize(Nb);
         CSCRowIndices.resize(matToDecompose->nnzbs);
@@ -88,28 +86,26 @@ bool BILU0<block_size>::analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat
             out << "BILU0 convert CSR to CSC: " << t_convert.stop() << " s";
             OpmLog::info(out.str());
         }
+    } else {
+        LUmat = std::make_unique<BlockedMatrix>(*matToDecompose);
     }
 
     Timer t_analysis;
     std::ostringstream out;
-    if (opencl_ilu_reorder == ILUReorder::LEVEL_SCHEDULING) {
-        out << "BILU0 reordering strategy: " << "level_scheduling\n";
+    if (opencl_ilu_parallel) {
+        out << "opencl_ilu_parallel: true (level_scheduling)\n";
         findLevelScheduling(matToDecompose->colIndices, matToDecompose->rowPointers, CSCRowIndices.data(), CSCColPointers.data(), Nb, &numColors, toOrder.data(), fromOrder.data(), rowsPerColor);
-    } else if (opencl_ilu_reorder == ILUReorder::GRAPH_COLORING) {
-        out << "BILU0 reordering strategy: " << "graph_coloring\n";
-        findGraphColoring<block_size>(matToDecompose->colIndices, matToDecompose->rowPointers, CSCRowIndices.data(), CSCColPointers.data(), Nb, Nb, Nb, &numColors, toOrder.data(), fromOrder.data(), rowsPerColor);
-    } else if (opencl_ilu_reorder == ILUReorder::NONE) {
-        out << "BILU0 reordering strategy: none\n";
+    } else {
+        out << "opencl_ilu_parallel: false\n";
         // numColors = 1;
         // rowsPerColor.emplace_back(Nb);
         numColors = Nb;
         for(int i = 0; i < Nb; ++i){
             rowsPerColor.emplace_back(1);
         }
-    } else {
-        OPM_THROW(std::logic_error, "Error ilu reordering strategy not set correctly\n");
     }
-    if(verbosity >= 1){
+
+    if (verbosity >= 1) {
         out << "BILU0 analysis took: " << t_analysis.stop() << " s, " << numColors << " colors\n";
     }
 
@@ -152,7 +148,14 @@ bool BILU0<block_size>::analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat
     }
 
     err |= queue->enqueueWriteBuffer(s.rowsPerColor, CL_FALSE, 0, (numColors + 1) * sizeof(int), rowsPerColorPrefix.data(), nullptr, &events[1]);
-    err |= queue->enqueueWriteBuffer(s.rowIndices, CL_FALSE, 0, Nb * sizeof(unsigned), fromOrder.data(), nullptr, &events[2]);
+
+    if (opencl_ilu_parallel) {
+        err |= queue->enqueueWriteBuffer(s.rowIndices, CL_FALSE, 0, Nb * sizeof(unsigned), fromOrder.data(), nullptr, &events[2]);
+    } else {
+        // rowsPerColorPrefix is misused here
+        // s.rowIndices[i] == i must hold
+        err |= queue->enqueueWriteBuffer(s.rowIndices, CL_FALSE, 0, Nb * sizeof(unsigned), rowsPerColorPrefix.data(), nullptr, &events[2]);
+    }
 
     cl::WaitForEvents(events);
     events.clear();

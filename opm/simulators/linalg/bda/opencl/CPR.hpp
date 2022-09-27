@@ -34,7 +34,6 @@
 #include <opm/simulators/linalg/bda/opencl/BILU0.hpp>
 #include <opm/simulators/linalg/bda/Matrix.hpp>
 #include <opm/simulators/linalg/bda/opencl/OpenclMatrix.hpp>
-#include <opm/simulators/linalg/bda/ILUReorder.hpp>
 #include <opm/simulators/linalg/bda/opencl/Preconditioner.hpp>
 
 #include <opm/simulators/linalg/bda/opencl/openclSolverBackend.hpp>
@@ -98,7 +97,7 @@ private:
     unsigned num_post_smooth_steps;             // number of Jacobi smooth steps after prolongation
 
     std::unique_ptr<openclSolverBackend<1> > coarse_solver; // coarse solver is scalar
-    ILUReorder opencl_ilu_reorder;                          // reordering strategy for ILU0 in coarse solver
+    bool opencl_ilu_parallel;                          // reordering strategy for ILU0 in coarse solver
 
     // Analyze the AMG hierarchy build by Dune
     void analyzeHierarchy();
@@ -122,7 +121,7 @@ private:
 
 public:
 
-    CPR(int verbosity, ILUReorder opencl_ilu_reorder);
+    CPR(int verbosity, bool opencl_ilu_parallel);
 
     bool analyze_matrix(BlockedMatrix *mat) override;
     bool analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat) override;
