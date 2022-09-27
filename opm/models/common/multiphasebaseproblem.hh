@@ -249,15 +249,13 @@ public:
         static MaterialLawParams dummy;
         return dummy;
     }
+
     template <class FluidState>
-    void updateRelperms(
-        std::array<Evaluation,numPhases> &mobility,
-        DirectionalMobilityPtr &dirMob,
-        FluidState &fluidState,
-        unsigned globalSpaceIdx) const
-    {
-        return;
-    }
+    void updateRelperms([[maybe_unused]] std::array<Evaluation,numPhases>& mobility,
+                        [[maybe_unused]] DirectionalMobilityPtr& dirMob,
+                        [[maybe_unused]] FluidState& fluidState,
+                        [[maybe_unused]] unsigned globalSpaceIdx) const
+    {}
 
     /*!
      * \brief Returns the temperature \f$\mathrm{[K]}\f$ within a control volume.
