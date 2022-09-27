@@ -21,6 +21,51 @@ namespace Details
 
         return tmp;
     }
+    template <class DenseMatrix>
+    DenseMatrix inverMatrix()
+    {
+        // copied from dune::common::densmatrix
+        using std::swap;
+        using MAT = DenseMatrix;
+        AutonomousValue<MAT> A(asImp());
+        std::vector<simd_index_type> pivot(rows());
+        Simd::Mask<typename FieldTraits<value_type>::real_type> nonsingularLanes(true);
+        AutonomousValue<MAT>::luDecomposition(A, ElimPivot(pivot), nonsingularLanes, true, doPivoting);
+        auto& L = A;
+        auto& U = A;
+
+        // initialize inverse
+        *this = field_type();
+
+        for (size_type i = 0; i < rows(); ++i)
+            (*this)[i][i] = 1;
+
+        // L Y = I; multiple right hand sides
+        for (size_type i = 0; i < rows(); i++)
+            for (size_type j = 0; j < i; j++)
+                for (size_type k = 0; k < rows(); k++)
+                    (*this)[i][k] -= L[i][j] * (*this)[j][k];
+
+        // U A^{-1} = Y
+        for (size_type i = rows(); i > 0;) {
+            --i;
+            for (size_type k = 0; k < rows(); k++) {
+                for (size_type j = i + 1; j < rows(); j++)
+                    (*this)[i][k] -= U[i][j] * (*this)[j][k];
+                (*this)[i][k] /= U[i][i];
+            }
+        }
+
+        for (size_type i = rows(); i > 0;) {
+            --i;
+            for (std::size_t l = 0; l < Simd::lanes((*this)[0][0]); ++l) {
+                std::size_t pi = Simd::lane(l, pivot[i]);
+                if (i != pi)
+                    for (size_type j = 0; j < rows(); ++j)
+                        swap(Simd::lane(l, (*this)[j][pi]), Simd::lane(l, (*this)[j][i]));
+            }
+        }
+    }
 } // namespace Details
 
 /*! \brief The sequential jacobian preconditioner.
@@ -187,7 +232,8 @@ public:
         // FIXME: without considering the block size
         // Assuming the block size to be 1
         
-        if constexpr (sz == 1){
+        if constexpr (sz == 0){
+             OPM_THROW(std::invalid_argument, "Now allways use invert branch ");    
                   //scalar case             
             for (auto row = _A_.begin(); row != _A_.end(); ++row) {
                 double den = 0.;
@@ -205,20 +251,35 @@ public:
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
             // block matrix case
             for (auto row = _A_.begin(); row != _A_.end(); ++row) {
-                dune_matrix den(0.0);
-                dune_matrix v(0.0);
+                matrix_block_type den(0.0);
+                matrix_block_type vt(0.0);
                 for (auto col = (*row).begin(); col != (*row).end(); ++col) {
-                    const dune_matrix tempv = (*col);
-                    const dune_matrix tempvt = Details::transposeDenseMatrix(tempv);
-                    den += tempv.template leftmultiplyany<sz>(tempvt);//tempvt * tempv;
+                    const matrix_block_type tempv = (*col);
+                    const matrix_block_type tempvt = Details::transposeDenseMatrix(tempv);
                     if (col.index() == row.index()) {
-                        v = tempv;
+                        den += tempv.template rightmultiplyany<sz>(tempvt);//tempv * tempvt;
+                        vt = tempvt;
                     }
                 }
                 //NB better with LU factorization
-                //dune_matrix invden =
-                den.invert();
-                _M_[row.index()] = v.template rightmultiplyany<sz>(den);// v* den.invert()
+                matrix_block_type invden = den;
+                invden.invert();
+                //v.invert();
+                matrix_block_type temp1, temp2;
+                //if(true){
+                    temp1 = vt.template rightmultiplyany<sz>(invden);// vt* den.invert()
+                    _M_[row.index()] = vt.template rightmultiplyany<sz>(den);// vt* den.invert()
+                    //}else{
+                    matrix_block_type v = Details::transposeDenseMatrix(vt);
+                    v.invert();
+                    //matrix_block_type den1 = v.template rightmultiplyany<sz>(vt);
+                    //den1.invert();
+                    //matrix_block_type val = vt.template rightmultiplyany<sz>(vt);
+                    temp2 = v;
+                    //_M_[row.index()] = v; 
+                    //}
+                    
+                
             }
 #else
             OPM_THROW(std::invalid_argument, "Spai0 with blocksize>0 not suppoted for dune<=2.7 ");
