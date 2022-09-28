@@ -382,6 +382,12 @@ partiallySupported()
             },
          },
          {
+            "NETBALAN",
+            {
+               {5,{false, allow_values<int> {10}, "NETBALAN(THPMXITE): option is not supported – will continue"}}, // MAX_ITER_THP
+            },
+         },
+         {
             "NETWORK",
             {
                {3,{false, allow_values<int> {20}, "NETWORK(NBCMAX): option is not used and should be defaulted– value ignored"}}, // NBCMAX
@@ -577,6 +583,16 @@ partiallySupported()
             "MULTFLT",
             {
                {3,{false, allow_values<double> {}, "MULTFLT(FLT-DIF): the diffusivity multiplier option is not supported – will continue"}}, // NOT_DEFINED
+            },
+         },
+         {
+            "NETBALAN",
+            {
+               {1,{true, [](const double value) { return value <= 0.0; }, "NETBALAN(NSTEP): only negative values or 0 supported – will stop"}}, // TIME_INTERVAL
+               {4,{false, allow_values<double> {0.01}, "NETBALAN(GRPCNV): not supported – will continue"}}, // THP_CONVERGENCE_LIMIT
+               {6,{false, allow_values<double> {1e20}, "NETBALAN(NTRGERR): not supported – will continue"}}, // TARGET_BALANCE_ERROR
+               {7,{false, allow_values<double> {1e20}, "NETBALAN(NMAXERR): not supported – will continue"}}, // MAX_BALANCE_ERROR
+               {8,{false, allow_values<double> {}, "NETBALAN(NTSMIN): not supported – will continue"}}, // MIN_TIME_STEP
             },
          },
          {
