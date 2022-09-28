@@ -1396,7 +1396,7 @@ if(MPI_FOUND)
                                        SIMULATOR flow
                                        ABS_TOL ${abs_tol_parallel}
                                        REL_TOL ${rel_tol_parallel}
-                                       TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
+                                       TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --ecl-enable-drift-compensation=false)
 
   add_test_compare_parallel_simulation(CASENAME spe1_gaswater
                                        FILENAME SPE1CASE2_GASWATER
@@ -1411,7 +1411,7 @@ if(MPI_FOUND)
                                        SIMULATOR flow
                                        ABS_TOL ${abs_tol_parallel}
                                        REL_TOL ${rel_tol_parallel}
-                                       TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
+                                       TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --ecl-enable-drift-compensation=false)
 
   # A test for distributed standard wells. We load distribute only along the z-axis
   add_test_compare_parallel_simulation(CASENAME spe9
@@ -1419,7 +1419,7 @@ if(MPI_FOUND)
                                        SIMULATOR flow_distribute_z
                                        ABS_TOL ${abs_tol_parallel}
                                        REL_TOL ${rel_tol_parallel}
-                                       TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
+                                       TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --ecl-enable-drift-compensation=false)
 
   add_test_compare_parallel_simulation(CASENAME spe9group
                                        FILENAME SPE9_CP_GROUP
@@ -1540,7 +1540,7 @@ if(MPI_FOUND)
                                        ABS_TOL ${abs_tol_parallel}
                                        REL_TOL ${rel_tol_parallel}
 				       DIR model2
-                                       TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
+                                       TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --ecl-enable-drift-compensation=false)
 
   add_test_compare_parallel_simulation(CASENAME rxft
                                        FILENAME TEST_RXFT
@@ -1548,7 +1548,7 @@ if(MPI_FOUND)
                                        ABS_TOL ${abs_tol_parallel}
                                        REL_TOL 1.0e-3
                                        DIR rxft_smry
-                                       TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
+                                       TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --ecl-enable-drift-compensation=false)
 endif()
 
 if(OPM_TESTS_ROOT)
