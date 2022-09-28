@@ -901,11 +901,11 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     assembleImpl(const int iterationIdx,
                  const double dt,
-                 const int recursion_level,
+                 const std::size_t recursion_level,
                  DeferredLogger& local_deferredLogger)
     {
 
-        const bool network_changed = updateWellControls(local_deferredLogger, /* check group controls */ true); 
+        const auto [network_changed, network_imbalance] = updateWellControls(local_deferredLogger, /* check group controls */ true);
 
         bool alq_updated = false;
         OPM_BEGIN_PARALLEL_TRY_CATCH();
@@ -933,12 +933,10 @@ namespace Opm {
 
         // Maybe do a recursive call to iterate network and well controls.
         if (network_changed) {
-            // Only re-solve network for the first nupcol newton iterations.
-            const int nupcol = schedule()[reportStepIdx].nupcol();
-            if (iterationIdx <= nupcol) {
-                // Limit the number of iterations in the network re-solve.
-                const int max_local_network_iterations = 3;
-                if (recursion_level < max_local_network_iterations) {
+            if (shouldBalanceNetwork(reportStepIdx, iterationIdx)) {
+                const auto& balance = schedule()[reportStepIdx].network_balance();
+                // Iterate if not converged, and number of iterations is not yet max (NETBALAN item 3).
+                if (recursion_level < balance.pressure_max_iter() && network_imbalance > balance.pressure_tolerance()) {
                     assembleImpl(iterationIdx, dt, recursion_level + 1, local_deferredLogger);
                 }
             }
@@ -1469,20 +1467,47 @@ namespace Opm {
     template<typename TypeTag>
     bool
     BlackoilWellModel<TypeTag>::
+    shouldBalanceNetwork(const int reportStepIdx, const int iterationIdx) const
+    {
+        const auto& balance = schedule()[reportStepIdx].network_balance();
+        if (balance.mode() == Network::Balance::CalcMode::TimeStepStart) {
+            return iterationIdx == 0;
+        } else if (balance.mode() == Network::Balance::CalcMode::NUPCOL) {
+            const int nupcol = schedule()[reportStepIdx].nupcol();
+            return iterationIdx < nupcol;
+        } else {
+            // We do not support any other rebalancing modes,
+            // i.e. TimeInterval based rebalancing is not available.
+            // This should be warned about elsewhere, so we choose to
+            // avoid spamming with a warning here.
+            return false;
+        }
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    std::pair<bool, double>
+    BlackoilWellModel<TypeTag>::
     updateWellControls(DeferredLogger& deferred_logger, const bool checkGroupControls)
     {
         // Even if there are no wells active locally, we cannot
         // return as the DeferredLogger uses global communication.
         // For no well active globally we simply return.
-        if( !wellsActive() ) return false;
+        if( !wellsActive() ) return { false, 0.0 };
 
         const int episodeIdx = ebosSimulator_.episodeIndex();
         const int iterationIdx = ebosSimulator_.model().newtonMethod().numIterations();
         const auto& comm = ebosSimulator_.vanguard().grid().comm();
         updateAndCommunicateGroupData(episodeIdx, iterationIdx);
 
-        const bool local_network_changed = updateNetworkPressures(episodeIdx);
+        const auto [local_network_changed, local_network_imbalance]
+            = shouldBalanceNetwork(episodeIdx, iterationIdx) ?
+            updateNetworkPressures(episodeIdx) : std::make_pair(false, 0.0);
         const bool network_changed = comm.sum(local_network_changed);
+        const double network_imbalance = comm.max(local_network_imbalance);
 
         std::set<std::string> switched_wells;
 
@@ -1536,7 +1561,7 @@ namespace Opm {
         const Group& fieldGroup = schedule().getGroup("FIELD", episodeIdx);
         updateWsolvent(fieldGroup, episodeIdx,  this->nupcolWellState());
 
-        return network_changed;
+        return { network_changed, network_imbalance };
     }
 
 

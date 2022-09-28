@@ -2092,14 +2092,14 @@ inferLocalShutWells()
     }
 }
 
-bool
+std::pair<bool, double>
 BlackoilWellModelGeneric::
 updateNetworkPressures(const int reportStepIdx)
 {
     // Get the network and return if inactive.
     const auto& network = schedule()[reportStepIdx].network();
     if (!network.active()) {
-        return false;
+        return { false, 0.0 };
     }
     node_pressures_ = WellGroupHelpers::computeNetworkPressures(network,
                                                                 this->wellState(),
@@ -2110,6 +2110,7 @@ updateNetworkPressures(const int reportStepIdx)
 
     // Set the thp limits of wells
     bool active_limit_change = false;
+    double network_imbalance = 0.0;
     for (auto& well : well_container_generic_) {
         // Producers only, since we so far only support the
         // "extended" network model (properties defined by
@@ -2126,11 +2127,12 @@ updateNetworkPressures(const int reportStepIdx)
                 const bool will_switch_to_thp = ws.thp < new_limit;
                 if (thp_is_limit || will_switch_to_thp) {
                     active_limit_change = true;
+                    network_imbalance = std::max(network_imbalance, std::fabs(new_limit - ws.thp));
                 }
             }
         }
     }
-    return active_limit_change;
+    return { active_limit_change, network_imbalance };
 }
 
 void
