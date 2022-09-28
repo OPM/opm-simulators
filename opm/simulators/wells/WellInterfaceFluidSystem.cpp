@@ -118,7 +118,16 @@ activeProductionConstraint(const SingleWellState& ws,
     if (controls.hasControl(Well::ProducerCMode::LRAT) && currentControl != Well::ProducerCMode::LRAT) {
         double current_rate = -ws.surface_rates[pu.phase_pos[BlackoilPhases::Liquid]];
         current_rate -= ws.surface_rates[pu.phase_pos[BlackoilPhases::Aqua]];
-        if (controls.liquid_rate < current_rate)
+
+        bool skip = false;
+        if (controls.liquid_rate == controls.oil_rate) {
+            const double current_water_rate = ws.surface_rates[pu.phase_pos[BlackoilPhases::Aqua]];
+            if (std::abs(current_water_rate) < 1e-12) {
+                skip = true;
+                deferred_logger.debug("LRAT_ORAT_WELL", "Well " + this->name() + " The LRAT target is equal the ORAT target and the water rate is zero, skip checking LRAT");
+            }
+        }
+        if (!skip && controls.liquid_rate < current_rate)
             return Well::ProducerCMode::LRAT;
     }
 
