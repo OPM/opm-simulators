@@ -493,7 +493,7 @@ private:
             if (insideIntQuants == nullptr) {
                 throw std::logic_error("Missing updated intensive quantities for cell " + std::to_string(globI));
             }
-            LocalResidual::computeBoundaryFlux(adres, problem_(), bdyInfo.bcdata, *insideIntQuants, globI, 0);
+            LocalResidual::computeBoundaryFlux(adres, problem_(), bdyInfo.bcdata, *insideIntQuants, globI);
             adres *= bdyInfo.bcdata.faceArea;
             setResAndJacobi(res, bMat, adres);
             residual_[globI] += res;

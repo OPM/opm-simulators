@@ -420,13 +420,12 @@ public:
                                     const Problem& problem,
                                     const BoundaryConditionData& bdyInfo,
                                     const IntensiveQuantities& insideIntQuants,
-                                    unsigned globalSpaceIdx,
-                                    unsigned timeIdx)
+                                    unsigned globalSpaceIdx)
     {
         if (bdyInfo.type == BCType::RATE) {
             computeBoundaryFluxRate(bdyFlux, bdyInfo);
         } else if (bdyInfo.type == BCType::FREE) {
-            computeBoundaryFluxFree(problem, bdyFlux, bdyInfo, insideIntQuants, globalSpaceIdx, timeIdx);
+            computeBoundaryFluxFree(problem, bdyFlux, bdyInfo, insideIntQuants, globalSpaceIdx);
         } else {
             throw std::logic_error("Unknown boundary condition type " + std::to_string(static_cast<int>(bdyInfo.type)) + " in computeBoundaryFlux()." );
         }
@@ -444,8 +443,7 @@ public:
                                         RateVector& bdyFlux,
                                         const BoundaryConditionData& bdyInfo,
                                         const IntensiveQuantities& insideIntQuants,
-                                        unsigned globalSpaceIdx,
-                                        unsigned timeIdx)
+                                        unsigned globalSpaceIdx)
     {
         std::array<short, numPhases> upIdx;
         std::array<short, numPhases> dnIdx;
@@ -455,7 +453,6 @@ public:
                                                          globalSpaceIdx,
                                                          insideIntQuants,
                                                          bdyInfo.boundaryFaceIndex,
-                                                         timeIdx,
                                                          bdyInfo.faceArea,
                                                          bdyInfo.faceZCoord,
                                                          bdyInfo.exFluidState,
