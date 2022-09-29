@@ -43,6 +43,8 @@
 #include <dune/common/fmatrix.hh>
 #include <fmt/format.h>
 
+#include <array>
+
 namespace Opm {
 
 template <class TypeTag>
@@ -212,8 +214,8 @@ protected:
 
 public:
 
-    static void volumeAndPhasePressureDifferences(short (&upIdx)[numPhases],
-                                                  short (&dnIdx)[numPhases],
+    static void volumeAndPhasePressureDifferences(std::array<short, numPhases>& upIdx,
+                                                  std::array<short, numPhases>& dnIdx,
                                                   Evaluation (&volumeFlux)[numPhases],
                                                   Evaluation (&pressureDifferences)[numPhases],
                                                   const ElementContext& elemCtx,
@@ -418,34 +420,75 @@ protected:
                                      unsigned timeIdx,
                                      const FluidState& exFluidState)
     {
+        const auto& scvf = elemCtx.stencil(timeIdx).boundaryFace(scvfIdx);
+        const Scalar faceArea = scvf.area();
+        const Scalar zEx = scvf.integrationPos()[dimWorld - 1];
         const auto& problem = elemCtx.problem();
+        const unsigned globalSpaceIdx = elemCtx.globalSpaceIndex(0, timeIdx);
+        const auto& intQuantsIn = elemCtx.intensiveQuantities(0, timeIdx);
+
+        calculateBoundaryGradients_(problem,
+                                    globalSpaceIdx,
+                                    intQuantsIn,
+                                    scvfIdx,
+                                    faceArea,
+                                    zEx,
+                                    exFluidState,
+                                    upIdx_,
+                                    dnIdx_,
+                                    volumeFlux_,
+                                    pressureDifference_);
+
+        // Treating solvent here and not in the static method, since that would require more
+        // extensive refactoring. It means that the TpfaLinearizer will not support bcs for solvent until this is
+        // addressed.
+        if constexpr (enableSolvent) {
+            if (upIdx_[gasPhaseIdx] == 0) {
+                const Scalar trans = problem.transmissibilityBoundary(globalSpaceIdx, scvfIdx);
+                const Scalar transModified = trans * Toolbox::value(intQuantsIn.rockCompTransMultiplier());
+                const auto solventFlux = pressureDifference_[gasPhaseIdx] * intQuantsIn.mobility(gasPhaseIdx) * (-transModified/faceArea);
+                asImp_().setSolventVolumeFlux(solventFlux);
+            } else {
+                asImp_().setSolventVolumeFlux(0.0);
+            }
+        }
+    }
+
+public:
+    /*!
+     * \brief Update the required gradients for boundary faces
+     */
+    template <class Problem, class FluidState, class EvaluationContainer>
+    static void calculateBoundaryGradients_(const Problem& problem,
+                                            const unsigned globalSpaceIdx,
+                                            const IntensiveQuantities& intQuantsIn,
+                                            const unsigned bfIdx,
+                                            const double faceArea,
+                                            const double zEx,
+                                            const FluidState& exFluidState,
+                                            std::array<short, numPhases>& upIdx,
+                                            std::array<short, numPhases>& dnIdx,
+                                            EvaluationContainer& volumeFlux,
+                                            EvaluationContainer& pressureDifference)
+    {
 
         bool enableBoundaryMassFlux = problem.nonTrivialBoundaryConditions();
         if (!enableBoundaryMassFlux)
             return;
 
-        const auto& stencil = elemCtx.stencil(timeIdx);
-        const auto& scvf = stencil.boundaryFace(scvfIdx);
-
-        unsigned interiorDofIdx = scvf.interiorIndex();
-
-        Scalar trans = problem.transmissibilityBoundary(elemCtx, scvfIdx);
-        Scalar faceArea = scvf.area();
+        Scalar trans = problem.transmissibilityBoundary(globalSpaceIdx, bfIdx);
 
         // estimate the gravity correction: for performance reasons we use a simplified
         // approach for this flux module that assumes that gravity is constant and always
         // acts into the downwards direction. (i.e., no centrifuge experiments, sorry.)
-        Scalar g = elemCtx.problem().gravity()[dimWorld - 1];
-
-        const auto& intQuantsIn = elemCtx.intensiveQuantities(interiorDofIdx, timeIdx);
+        Scalar g = problem.gravity()[dimWorld - 1];
 
         // this is quite hacky because the dune grid interface does not provide a
         // cellCenterDepth() method (so we ask the problem to provide it). The "good"
         // solution would be to take the Z coordinate of the element centroids, but since
         // ECL seems to like to be inconsistent on that front, it needs to be done like
         // here...
-        Scalar zIn = problem.dofCenterDepth(elemCtx, interiorDofIdx, timeIdx);
-        Scalar zEx = scvf.integrationPos()[dimWorld - 1];
+        Scalar zIn = problem.dofCenterDepth(globalSpaceIdx);
 
         // the distances from the DOF's depths. (i.e., the additional depth of the
         // exterior DOF)
@@ -465,61 +508,53 @@ protected:
             Evaluation pressureExterior = exFluidState.pressure(phaseIdx);
             pressureExterior += rhoAvg*(distZ*g);
 
-            pressureDifference_[phaseIdx] = pressureExterior - pressureInterior;
+            pressureDifference[phaseIdx] = pressureExterior - pressureInterior;
 
             // decide the upstream index for the phase. for this we make sure that the
             // degree of freedom which is regarded upstream if both pressures are equal
             // is always the same: if the pressure is equal, the DOF with the lower
             // global index is regarded to be the upstream one.
-            if (pressureDifference_[phaseIdx] > 0.0) {
-                upIdx_[phaseIdx] = -1;
-                dnIdx_[phaseIdx] = interiorDofIdx;
+            const unsigned interiorDofIdx = 0; // Valid only for cell-centered FV.
+            if (pressureDifference[phaseIdx] > 0.0) {
+                upIdx[phaseIdx] = -1;
+                dnIdx[phaseIdx] = interiorDofIdx;
             }
             else {
-                upIdx_[phaseIdx] = interiorDofIdx;
-                dnIdx_[phaseIdx] = -1;
+                upIdx[phaseIdx] = interiorDofIdx;
+                dnIdx[phaseIdx] = -1;
             }
 
             Evaluation transModified = trans;
 
-            unsigned upstreamIdx = upstreamIndex_(phaseIdx);
-            if (upstreamIdx == interiorDofIdx) {
+            if (upIdx[phaseIdx] == interiorDofIdx) {
 
                 // this is slightly hacky because in the automatic differentiation case, it
                 // only works for the element centered finite volume method. for ebos this
                 // does not matter, though.
-                const auto& up = elemCtx.intensiveQuantities(upstreamIdx, timeIdx);
+                const auto& up = intQuantsIn;
 
                 // deal with water induced rock compaction
-                const double transMult = Toolbox::value(up.rockCompTransMultiplier());
+                const Scalar transMult = Toolbox::value(up.rockCompTransMultiplier());
                 transModified *= transMult;
 
-                volumeFlux_[phaseIdx] =
-                    pressureDifference_[phaseIdx]*up.mobility(phaseIdx)*(-transModified/faceArea);
-
-                if (enableSolvent && phaseIdx == gasPhaseIdx)
-                    asImp_().setSolventVolumeFlux( pressureDifference_[phaseIdx]*up.solventMobility()*(-transModified/faceArea));
+                volumeFlux[phaseIdx] =
+                    pressureDifference[phaseIdx]*up.mobility(phaseIdx)*(-transModified/faceArea);
             }
             else {
                 // compute the phase mobility using the material law parameters of the
                 // interior element. TODO: this could probably be done more efficiently
-                const auto& matParams =
-                    elemCtx.problem().materialLawParams(elemCtx,
-                                                        interiorDofIdx,
-                                                        /*timeIdx=*/0);
+                const auto& matParams = problem.materialLawParams(globalSpaceIdx);
                 std::array<typename FluidState::Scalar,numPhases> kr;
                 MaterialLaw::relativePermeabilities(kr, matParams, exFluidState);
 
                 const auto& mob = kr[phaseIdx]/exFluidState.viscosity(phaseIdx);
-                volumeFlux_[phaseIdx] =
-                    pressureDifference_[phaseIdx]*mob*(-transModified/faceArea);
-
-                // Solvent inflow is not yet supported
-                if (enableSolvent && phaseIdx == gasPhaseIdx)
-                    asImp_().setSolventVolumeFlux(0.0);
+                volumeFlux[phaseIdx] =
+                    pressureDifference[phaseIdx]*mob*(-transModified/faceArea);
             }
         }
     }
+
+protected:
 
     /*!
      * \brief Update the volumetric fluxes for all fluid phases on the interior faces of the context
@@ -545,9 +580,9 @@ private:
     Evaluation pressureDifference_[numPhases];
 
     // the local indices of the interior and exterior degrees of freedom
-    short upIdx_[numPhases];
-    short dnIdx_[numPhases];
-};
+    std::array<short, numPhases> upIdx_;
+    std::array<short, numPhases> dnIdx_;
+ };
 
 } // namespace Opm
 

@@ -1341,6 +1341,15 @@ public:
     }
 
     /*!
+     * \brief Direct access to a boundary transmissibility.
+     */
+    Scalar transmissibilityBoundary(const unsigned globalSpaceIdx,
+                                    const unsigned boundaryFaceIdx) const
+    {
+        return transmissibilities_.transmissibilityBoundary(globalSpaceIdx, boundaryFaceIdx);
+    }
+
+    /*!
      * \copydoc EclTransmissiblity::thermalHalfTransmissibility
      */
     template <class Context>
@@ -2046,6 +2055,29 @@ public:
         LhsEval SwDeltaMax = SwMax - initialFluidStates_[elementIdx].saturation(waterPhaseIdx);
 
         return this->rockCompTransMultWc_[tableIdx].eval(effectiveOilPressure, SwDeltaMax, /*extrapolation=*/true);
+    }
+
+    std::pair<bool, RateVector> boundaryCondition(const unsigned int globalSpaceIdx, const int directionId)
+    {
+        if (!nonTrivialBoundaryConditions_) {
+            return { false, RateVector(0.0) };
+        }
+        switch (directionId) {
+        case 0:
+            return { freebcXMinus_[globalSpaceIdx], massratebcXMinus_[globalSpaceIdx] };
+        case 1:
+            return { freebcX_[globalSpaceIdx], massratebcX_[globalSpaceIdx] };
+        case 2:
+            return { freebcYMinus_[globalSpaceIdx], massratebcYMinus_[globalSpaceIdx] };
+        case 3:
+            return { freebcY_[globalSpaceIdx], massratebcY_[globalSpaceIdx] };
+        case 4:
+            return { freebcZMinus_[globalSpaceIdx], massratebcZMinus_[globalSpaceIdx] };
+        case 5:
+            return { freebcZ_[globalSpaceIdx], massratebcZ_[globalSpaceIdx] };
+        default:
+            return { false, RateVector(0.0) };
+        }
     }
 
 private:
