@@ -343,13 +343,6 @@ protected:
                                       DeferredLogger& deferred_logger,
                                       const int reportStepIdx);
 
-    bool updateGroupIndividualControls(DeferredLogger& deferred_logger,
-                                       const int reportStepIdx,
-                                       const int iterationIdx);
-
-    bool updateGroupHigherControls(DeferredLogger& deferred_logger,
-                                   const int reportStepIdx);
-
     void actionOnBrokenConstraints(const Group& group,
                                    const Group::ExceedAction& exceed_action,
                                    const Group::ProductionCMode& newControl,

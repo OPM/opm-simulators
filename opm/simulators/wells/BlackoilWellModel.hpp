@@ -288,6 +288,11 @@ namespace Opm {
                                       const int iterationIdx,
                                       DeferredLogger& deferred_logger);
 
+            bool updateGroupControls(const Group& group,
+                                    DeferredLogger& deferred_logger,
+                                    const int reportStepIdx,
+                                    const int iterationIdx);
+
             WellInterfacePtr getWell(const std::string& well_name) const;
             bool hasWell(const std::string& well_name) const;
 
