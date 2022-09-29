@@ -57,12 +57,9 @@ template<class TypeTag, class MyTypeTag>
 struct LinearSolverRestart {
     using type = UndefinedProperty;
 };
-// Previously Defined iin opm-models (to be deleted here) 
 //
-// template<class TypeTag, class MyTypeTag>
-// struct LinearSolverVerbosity {
-//     using type = UndefinedProperty;
-// };
+// LinearSolverVerbosity defined in opm-models
+//
 template<class TypeTag, class MyTypeTag>
 struct IluFillinLevel {
     using type = UndefinedProperty;
