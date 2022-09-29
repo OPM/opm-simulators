@@ -432,7 +432,7 @@ void openclSolverBackend<block_size>::initialize(std::shared_ptr<BlockedMatrix> 
         prec->setOpencl(context, queue);
 
 #if COPY_ROW_BY_ROW
-        vals_contiguous = new double[N];
+        vals_contiguous.resize(nnz);
 #endif
         mat = matrix;
         jacMat = jacMatrix;
