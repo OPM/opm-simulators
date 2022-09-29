@@ -344,13 +344,13 @@ private:
                     }
                 }
                 neighborInfo_.appendRow(loc_nbinfo.begin(), loc_nbinfo.end());
-                for (size_t bfIndex = 0; bfIndex < stencil.numBoundaryFaces(); ++bfIndex) {
+                for (unsigned bfIndex = 0; bfIndex < stencil.numBoundaryFaces(); ++bfIndex) {
                     const auto& bf = stencil.boundaryFace(bfIndex);
                     const int dir_id = bf.dirId();
                     const auto [free, massrateAD] = problem_().boundaryCondition(myIdx, dir_id);
                     // Strip the unnecessary (and zero anyway) derivatives off massrate.
                     VectorBlock massrate(0.0);
-                    for (int ii = 0; ii < massrate.size(); ++ii) {
+                    for (size_t ii = 0; ii < massrate.size(); ++ii) {
                         massrate[ii] = massrateAD[ii].value();
                     }
                     const bool nonzero_massrate = massrate != VectorBlock(0.0);

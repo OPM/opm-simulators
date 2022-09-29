@@ -428,7 +428,7 @@ public:
         } else if (bdyInfo.type == BCType::FREE) {
             computeBoundaryFluxFree(problem, bdyFlux, bdyInfo, insideIntQuants, globalSpaceIdx, timeIdx);
         } else {
-            throw std::logic_error("Unknown boundary condition type in computeBoundaryFlux().");
+            throw std::logic_error("Unknown boundary condition type " + std::to_string(static_cast<int>(bdyInfo.type)) + " in computeBoundaryFlux()." );
         }
     }
 
