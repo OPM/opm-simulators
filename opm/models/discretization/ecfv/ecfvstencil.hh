@@ -212,7 +212,10 @@ public:
         { return area_; }
 
         /*!
-         * \brief Returns the direction of the face
+         * \brief Returns the direction id of the face w.r.t the cell.
+         *
+         * For corner point grids, this is 0-5 for I-, I+, J-, J+, K- and K+ faces,
+         * and -1 for NNC faces.
          */
         int dirId() const
         {

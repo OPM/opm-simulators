@@ -61,6 +61,7 @@ class BlackOilLocalResidualTPFA : public GetPropType<TypeTag, Properties::DiscLo
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
     using Problem = GetPropType<TypeTag, Properties::Problem>;
+    using FluidState = typename IntensiveQuantities::FluidState;
 
     enum { conti0EqIdx = Indices::conti0EqIdx };
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
@@ -412,6 +413,114 @@ public:
         static_assert(!enableMICP, "Relevant computeFlux() method must be implemented for this module before enabling.");
         // MICPModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
+    }
+
+    template <class BoundaryConditionData>
+    static void computeBoundaryFlux(RateVector& bdyFlux,
+                                    const Problem& problem,
+                                    const BoundaryConditionData& bdyInfo,
+                                    const IntensiveQuantities& insideIntQuants,
+                                    unsigned globalSpaceIdx)
+    {
+        if (bdyInfo.type == BCType::RATE) {
+            computeBoundaryFluxRate(bdyFlux, bdyInfo);
+        } else if (bdyInfo.type == BCType::FREE) {
+            computeBoundaryFluxFree(problem, bdyFlux, bdyInfo, insideIntQuants, globalSpaceIdx);
+        } else {
+            throw std::logic_error("Unknown boundary condition type " + std::to_string(static_cast<int>(bdyInfo.type)) + " in computeBoundaryFlux()." );
+        }
+    }
+
+    template <class BoundaryConditionData>
+    static void computeBoundaryFluxRate(RateVector& bdyFlux,
+                                        const BoundaryConditionData& bdyInfo)
+    {
+        bdyFlux.setMassRate(bdyInfo.massRate, bdyInfo.pvtRegionIdx);
+    }
+
+    template <class BoundaryConditionData>
+    static void computeBoundaryFluxFree(const Problem& problem,
+                                        RateVector& bdyFlux,
+                                        const BoundaryConditionData& bdyInfo,
+                                        const IntensiveQuantities& insideIntQuants,
+                                        unsigned globalSpaceIdx)
+    {
+        std::array<short, numPhases> upIdx;
+        std::array<short, numPhases> dnIdx;
+        RateVector volumeFlux;
+        RateVector pressureDifference;
+        ExtensiveQuantities::calculateBoundaryGradients_(problem,
+                                                         globalSpaceIdx,
+                                                         insideIntQuants,
+                                                         bdyInfo.boundaryFaceIndex,
+                                                         bdyInfo.faceArea,
+                                                         bdyInfo.faceZCoord,
+                                                         bdyInfo.exFluidState,
+                                                         upIdx,
+                                                         dnIdx,
+                                                         volumeFlux,
+                                                         pressureDifference);
+
+        ////////
+        // advective fluxes of all components in all phases
+        ////////
+        bdyFlux = 0.0;
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+            if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                continue;
+            }
+            const auto& pBoundary = bdyInfo.exFluidState.pressure(phaseIdx);
+            const Evaluation& pInside = insideIntQuants.fluidState().pressure(phaseIdx);
+            const unsigned pvtRegionIdx = insideIntQuants.pvtRegionIndex();
+
+            RateVector tmp;
+
+            // mass conservation
+            if (pBoundary < pInside) {
+                // outflux
+                const auto& invB = getInvB_<FluidSystem, FluidState, Evaluation>(insideIntQuants.fluidState(), phaseIdx, pvtRegionIdx);
+                Evaluation surfaceVolumeFlux = invB * volumeFlux[phaseIdx];
+                evalPhaseFluxes_<Evaluation>(tmp,
+                                             phaseIdx,
+                                             insideIntQuants.pvtRegionIndex(),
+                                             surfaceVolumeFlux,
+                                             insideIntQuants.fluidState());
+            } else if (pBoundary > pInside) {
+                // influx
+                using ScalarFluidState = decltype(bdyInfo.exFluidState);
+                const auto& invB = getInvB_<FluidSystem, ScalarFluidState, Scalar>(bdyInfo.exFluidState, phaseIdx, pvtRegionIdx);
+                Evaluation surfaceVolumeFlux = invB * volumeFlux[phaseIdx];
+                evalPhaseFluxes_<Scalar>(tmp,
+                                         phaseIdx,
+                                         insideIntQuants.pvtRegionIndex(),
+                                         surfaceVolumeFlux,
+                                         bdyInfo.exFluidState);
+            }
+
+            for (unsigned i = 0; i < tmp.size(); ++i) {
+                bdyFlux[i] += tmp[i];
+            }
+
+            static_assert(!enableEnergy, "Relevant treatment of boundary conditions must be implemented before enabling.");
+            // Add energy flux treatment per phase here.
+        }
+
+        static_assert(!enableSolvent, "Relevant treatment of boundary conditions must be implemented before enabling.");
+        static_assert(!enablePolymer, "Relevant treatment of boundary conditions must be implemented before enabling.");
+        static_assert(!enableMICP, "Relevant treatment of boundary conditions must be implemented before enabling.");
+
+        // make sure that the right mass conservation quantities are used
+        adaptMassConservationQuantities_(bdyFlux, insideIntQuants.pvtRegionIndex());
+
+        // heat conduction
+        static_assert(!enableEnergy, "Relevant treatment of boundary conditions must be implemented before enabling.");
+
+#ifndef NDEBUG
+        for (unsigned i = 0; i < numEq; ++i) {
+            Valgrind::CheckDefined(bdyFlux[i]);
+        }
+        Valgrind::CheckDefined(bdyFlux);
+#endif
     }
 
     static void computeSource(RateVector& source,
