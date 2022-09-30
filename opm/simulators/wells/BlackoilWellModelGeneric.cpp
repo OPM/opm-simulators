@@ -709,53 +709,53 @@ initializeWellPerfData()
     well_perf_data_.resize(wells_ecl_.size());
     int well_index = 0;
     for (const auto& well : wells_ecl_) {
-        int completion_index = 0;
+        int connection_index = 0;
         // INVALID_ECL_INDEX marks no above perf available
-        int completion_index_above = ParallelWellInfo::INVALID_ECL_INDEX;
+        int connection_index_above = ParallelWellInfo::INVALID_ECL_INDEX;
         well_perf_data_[well_index].clear();
         well_perf_data_[well_index].reserve(well.getConnections().size());
         CheckDistributedWellConnections checker(well, local_parallel_well_info_[well_index].get());
-        bool hasFirstPerforation = false;
-        bool firstOpenCompletion = true;
+        bool hasFirstConnection = false;
+        bool firstOpenConnection = true;
         auto& parallelWellInfo = this->local_parallel_well_info_[well_index].get();
         parallelWellInfo.beginReset();
 
-        for (const auto& completion : well.getConnections()) {
-            const int active_index = compressedIndexForInterior(completion.global_index());
-            if (completion.state() == Connection::State::OPEN) {
+        for (const auto& connection : well.getConnections()) {
+            const int active_index = compressedIndexForInterior(connection.global_index());
+            if (connection.state() == Connection::State::OPEN) {
                 if (active_index >= 0) {
-                    if (firstOpenCompletion)
+                    if (firstOpenConnection)
                     {
-                        hasFirstPerforation = true;
+                        hasFirstConnection = true;
                     }
-                    checker.connectionFound(completion_index);
+                    checker.connectionFound(connection_index);
                     PerforationData pd;
                     pd.cell_index = active_index;
-                    pd.connection_transmissibility_factor = completion.CF();
-                    pd.satnum_id = completion.satTableId();
-                    pd.ecl_index = completion_index;
+                    pd.connection_transmissibility_factor = connection.CF();
+                    pd.satnum_id = connection.satTableId();
+                    pd.ecl_index = connection_index;
                     well_perf_data_[well_index].push_back(pd);
-                    parallelWellInfo.pushBackEclIndex(completion_index_above,
-                                                      completion_index);
+                    parallelWellInfo.pushBackEclIndex(connection_index_above,
+                                                      connection_index);
                 }
-                firstOpenCompletion = false;
-                // Next time this index is the one above as each open completion is
+                firstOpenConnection = false;
+                // Next time this index is the one above as each open connection is
                 // is stored somehwere.
-                completion_index_above = completion_index;
+                connection_index_above = connection_index;
             } else {
-                checker.connectionFound(completion_index);
-                if (completion.state() != Connection::State::SHUT) {
+                checker.connectionFound(connection_index);
+                if (connection.state() != Connection::State::SHUT) {
                     OPM_THROW(std::runtime_error,
-                              "Completion state: " << Connection::State2String(completion.state()) << " not handled");
+                              "Connection state: " << Connection::State2String(connection.state()) << " not handled");
                 }
             }
             // Note: we rely on the connections being filtered! I.e. there are only connections
             // to active cells in the global grid.
-            ++completion_index;
+            ++connection_index;
         }
         parallelWellInfo.endReset();
         checker.checkAllConnectionsFound();
-        parallelWellInfo.communicateFirstPerforation(hasFirstPerforation);
+        parallelWellInfo.communicateFirstPerforation(hasFirstConnection);
         ++well_index;
     }
 }
