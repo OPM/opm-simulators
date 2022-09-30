@@ -28,13 +28,14 @@ setDevice(int mpiRank, [[maybe_unused]] int numberOfMpiRanks)
 {
 
     int deviceCount = -1;
-    OPM_CUDA_SAFE_CALL(cudaGetDeviceCount(&deviceCount));
+    cudaGetDeviceCount(&deviceCount);
 
-    if (deviceCount == 0) {
+    if (deviceCount <= 0) {
         // If they have CUDA enabled (ie. using a component that needs CUDA, eg. cubicgstab or CUILU0), this will fail
         // later down the line. At this point in the simulator, we can not determine if CUDA is enabled, so we can only
         // issue a warning.
         OpmLog::warning("Could not find any CUDA devices.");
+        return;
     }
 
     // Now do a round robin kind of assignment
