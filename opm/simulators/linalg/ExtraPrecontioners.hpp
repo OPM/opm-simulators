@@ -330,7 +330,7 @@ public:
         // FIXME: without considering the block size
         // Assuming the block size to be 1
         
-        if constexpr (sz == 0){
+        if constexpr (sz == 1){
              OPM_THROW(std::invalid_argument, "Now allways use invert branch ");    
                   //scalar case             
             for (auto row = _A_.begin(); row != _A_.end(); ++row) {
@@ -359,13 +359,13 @@ public:
                 for (auto col = (*row).begin(); col != (*row).end(); ++col) {
                     const matrix_block_type tempv = (*col);
                     const matrix_block_type tempvt = Details::transposeDenseMatrix(tempv);
+		    if(_left_precond){
+		      den += tempv.template rightmultiplyany<sz>(tempvt);//tempv * tempvt;
+		    }else{
+		      den += tempvt.template rightmultiplyany<sz>(tempv);//tempvt * tempv;
+		    }
                     if (col.index() == row.index()) {
 		      // if SPA >0 has to be extended to an matrix matrix multiplication
-		      if(_left_precond){
-                        den += tempv.template rightmultiplyany<sz>(tempvt);//tempv * tempvt;
-		      }else{
-			den += tempvt.template rightmultiplyany<sz>(tempv);//tempvt * tempv;
-		      }
 		      vt = tempvt;
                     }
                 }
