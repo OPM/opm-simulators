@@ -40,6 +40,15 @@
 #include <dune/istl/paamg/kamg.hh>
 #include <dune/istl/paamg/fastamg.hh>
 
+#if HAVE_CUDA
+#include <opm/simulators/linalg/cuistl/PreconditionerAdapter.hpp>
+#include <opm/simulators/linalg/cuistl/RemakeUpdatePreconditioner.hpp>
+#include <opm/simulators/linalg/cuistl/CuSeqILU0.hpp>
+#include <opm/simulators/linalg/cuistl/PreconditionerConvertToFloatAdapter.hpp>
+#include <opm/simulators/linalg/cuistl/CuOwnerOverlapCopy.hpp>
+#include <opm/simulators/linalg/cuistl/CuBlockPreconditioner.hpp>
+#endif
+
 namespace Opm {
 
 template<class Smoother>
@@ -216,6 +225,20 @@ struct StandardPreconditioners
             return std::make_shared<OwningTwoLevelPreconditioner<O, V, LevelTransferPolicy, Comm>>(op, prm, weightsCalculator, pressureIndex, comm);
           });
         }
+
+        #if HAVE_CUDA
+        F::addCreator("CUILU0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
+            const double w = prm.get<double>("relaxation", 1.0);
+            static constexpr auto block_size = V::block_type::dimension;
+            using field_type = typename V::field_type;
+            using CuILU0 = typename Opm::cuistl::CuSeqILU0<M, Opm::cuistl::CuVector<field_type>, Opm::cuistl::CuVector<field_type>>;
+            auto cuILU0 = std::make_shared<CuILU0>(op.getmat(), w);
+
+            auto adapted = std::make_shared<Opm::cuistl::PreconditionerAdapter<V, V, CuILU0>>(cuILU0);
+            auto wrapped = std::make_shared<Opm::cuistl::CuBlockPreconditioner<V, V, Comm>>(adapted, comm);
+            return wrapped;
+        });
+        #endif
     }
 
 
@@ -414,6 +437,31 @@ struct StandardPreconditioners<Operator,Dune::Amg::SequentialInformation>
                                 using LevelTransferPolicy = Opm::PressureTransferPolicy<O, Dune::Amg::SequentialInformation, true>;
                                 return std::make_shared<OwningTwoLevelPreconditioner<O, V, LevelTransferPolicy>>(op, prm, weightsCalculator, pressureIndex);
         });
+
+        #if HAVE_CUDA
+        F::addCreator("CUILU0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
+            const double w = prm.get<double>("relaxation", 1.0);
+            using field_type = typename V::field_type;
+            using CuILU0 = typename Opm::cuistl::CuSeqILU0<M, Opm::cuistl::CuVector<field_type>, Opm::cuistl::CuVector<field_type>>;
+            return std::make_shared<Opm::cuistl::PreconditionerAdapter<V, V, CuILU0>>(std::make_shared<CuILU0>(op.getmat(), w));
+        });
+
+        F::addCreator("CUILU0Float", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
+            const double w = prm.get<double>("relaxation", 1.0);
+            using field_type = typename V::field_type;
+            using block_type = typename V::block_type;
+            using VTo=Dune::BlockVector<Dune::FieldVector<float, block_type::dimension>>;
+            using matrix_type_to = typename Dune::BCRSMatrix<Dune::FieldMatrix<float, block_type::dimension, block_type::dimension>>;
+            using CuILU0 = typename Opm::cuistl::CuSeqILU0<matrix_type_to, Opm::cuistl::CuVector<float>, Opm::cuistl::CuVector<float>>;
+            using Adapter = typename Opm::cuistl::PreconditionerAdapter<VTo, VTo, CuILU0>;
+            using Converter = typename Opm::cuistl::PreconditionerConvertToFloatAdapter<Adapter, M, V, V>;
+            auto converted = std::make_shared<Converter>(op.getmat());
+            auto adapted = std::make_shared<Adapter>(std::make_shared<CuILU0>(converted->getConvertedMatrix(), w));
+            converted->setUnderlyingPreconditioner(adapted);
+            return converted;
+            
+        });
+        #endif
     }
 };
 

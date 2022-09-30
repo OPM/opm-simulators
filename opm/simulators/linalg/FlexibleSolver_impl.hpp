@@ -29,6 +29,9 @@
 #include <opm/simulators/linalg/PreconditionerFactory.hpp>
 #include <opm/simulators/linalg/PropertyTree.hpp>
 #include <opm/simulators/linalg/WellOperators.hpp>
+#if HAVE_CUDA
+#include <opm/simulators/linalg/cuistl/SolverAdapter.hpp>
+#endif
 
 #include <dune/common/fmatrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
@@ -175,6 +178,16 @@ namespace Dune
             bool dummy = false;
             using MatrixType = std::remove_const_t<std::remove_reference_t<decltype(linearoperator_for_solver_->getmat())>>;
             linsolver_.reset(new Dune::UMFPack<MatrixType>(linearoperator_for_solver_->getmat(), verbosity, dummy));
+#endif
+#if HAVE_CUDA
+        } else if (solver_type == "cubicgstab") {
+            linsolver_.reset(new Opm::cuistl::SolverAdapter<Operator, Dune::BiCGSTABSolver, VectorType>(
+                                                                  *linearoperator_for_solver_,
+                                                                  scalarproduct_,
+                                                                  preconditioner_,
+                                                                  tol, // desired residual reduction factor
+                                                                  maxiter, // maximum number of iterations
+                                                                  verbosity));
 #endif
         } else {
             OPM_THROW(std::invalid_argument,
