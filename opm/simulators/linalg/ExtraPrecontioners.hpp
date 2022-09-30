@@ -380,7 +380,7 @@ public:
 		  //matrix_block_type Mtrans = den.solve(v);
 		  //_M_[row.index()] = transposeDenseMatrix(Mtrans);// vt* den.invert()
 		}else{
-		  _M_[row.index()] = invden.template leftmultiplyany<sz>(vt);// inv(vt*v) *vt
+		  _M_[row.index()] = invden.template rightmultiplyany<sz>(vt);// inv(vt*v) *vt
 		  //Best code probably
 		  //_M_[row.index()] = den.solve(vt);// vt* den.invert()
 		}
