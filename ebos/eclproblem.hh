@@ -29,7 +29,7 @@
 #define EWOMS_ECL_PROBLEM_HH
 
 #if USE_ALUGRID
-#define DISABLE_ALUGRID_SFC_ORDERING 1
+// #define DISABLE_ALUGRID_SFC_ORDERING 1
 #if !HAVE_DUNE_ALUGRID
 #warning "ALUGrid was indicated to be used for the ECL black oil simulator, but this "
 #warning "requires the presence of dune-alugrid >= 2.4. Falling back to Dune::CpGrid"
@@ -2257,7 +2257,7 @@ private:
             // we define the porosity as the accumulated pore volume divided by the
             // geometric volume of the element. Note that -- in pathetic cases -- it can
             // be larger than 1.0!
-            Scalar dofVolume = simulator.model().dofTotalVolume(dofIdx);
+            Scalar dofVolume = simulator.model().dofTotalVolume(vanguard.gridEquilIdxToGridIdx(dofIdx));
             assert(dofVolume > 0.0);
             this->referencePorosity_[/*timeIdx=*/0][dofIdx] = poreVolume/dofVolume;
         }
