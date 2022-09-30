@@ -59,6 +59,22 @@ struct AMGSmootherArgsHelper
     }
 };
 
+  template<class M, class V, int l>
+  struct AMGSmootherArgsHelper<Dune::SeqSpai0<M,V,V, l>>
+{
+    static auto args(const PropertyTree& prm)
+    {
+        using Smoother = Dune::SeqSpai0<M, V, V, l>;
+        using SmootherArgs = typename Dune::Amg::SmootherTraits<Smoother>::Arguments;
+        SmootherArgs smootherArgs;
+	smootherArgs.iterations = prm.get<int>("iterations", 1);
+        smootherArgs.relaxationFactor = prm.get<double>("relaxation", 1.0);
+	smootherArgs.leftPrecond = prm.get<bool>("left_precond", true);       
+        return smootherArgs;
+    }
+};
+
+  
 template<class M, class V, class C>
 struct AMGSmootherArgsHelper<Opm::ParallelOverlappingILU0<M,V,V,C>>
 {
@@ -172,7 +188,8 @@ struct StandardPreconditioners
                      std::size_t, const C& comm) {
           const int n = prm.get<int>("repeats", 1);
           const double w = prm.get<double>("relaxation", 1.0);
-          return wrapBlockPreconditioner<DummyUpdatePreconditioner<SeqSpai0<M, V, V>>>(comm, op.getmat(), n, w);
+	  const bool left_precond = prm.get<bool>("left_precond", true);
+          return wrapBlockPreconditioner<DummyUpdatePreconditioner<SeqSpai0<M, V, V>>>(comm, op.getmat(), n, w, left_precond);
         });
         F::addCreator("GS", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
           const int n = prm.get<int>("repeats", 1);
@@ -348,7 +365,8 @@ struct StandardPreconditioners<Operator,Dune::Amg::SequentialInformation>
         F::addCreator("Spai0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             const int n = prm.get<int>("repeats", 1);
             const double w = prm.get<double>("relaxation", 1.0);
-            return wrapPreconditioner<SeqSpai0<M, V, V>>(op.getmat(), n, w);
+	    const bool left_precond = prm.get<bool>("left_precond", true);
+            return wrapPreconditioner<SeqSpai0<M, V, V>>(op.getmat(), n, w,left_precond);
         });
         F::addCreator("JacNew", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             const int n = prm.get<int>("repeats", 1);

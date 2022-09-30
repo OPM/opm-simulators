@@ -6,7 +6,7 @@
 #include <dune/istl/matrixutils.hh>
 #include <dune/istl/preconditioner.hh>
 #include <vector>
-
+#include <dune/common/densematrix.hh>
 namespace Dune
 {
 namespace Details
@@ -21,50 +21,147 @@ namespace Details
 
         return tmp;
     }
-    template <class DenseMatrix>
-    DenseMatrix inverMatrix()
+
+    struct ElimPivot {
+        using simd_index_type = std::size_t;
+        using size_type = std::size_t;
+        // ElimPivot(std::vector<simd_index_type> & pivot) : pivot_(pivot)
+        ElimPivot(std::vector<std::size_t>& pivot)
+            : pivot_(pivot)
+        {
+            // typedef typename std::vector<size_type>::size_type size_type;
+            for (size_type i = 0; i < pivot_.size(); ++i)
+                pivot_[i] = i;
+        }
+
+        void swap(std::size_t i, simd_index_type j)
+        {
+            pivot_[i] = Simd::cond(Simd::Scalar<simd_index_type>(i) == j, pivot_[i], j);
+        }
+
+        template <typename T>
+        void operator()(const T&, int, int)
+        {
+        }
+
+        std::vector<simd_index_type>& pivot_;
+    };
+    // template<typename MAT>
+    // template<typename Func, class Mask>
+    template <class DenseMatrix, typename Func, class Mask>
+    inline void luDecomposition(DenseMatrix& A, Func func, Mask& nonsingularLanes, bool throwEarly, bool doPivoting)
     {
+        using std::max;
+        using std::swap;
+
+        //typedef typename FieldTraits<value_type>::real_type real_type;
+        using real_type = double;
+	using size_type = std::size_t;
+	using simd_index_type = std::size_t;
+	using field_type = double;
+        // LU decomposition of A in A
+        for (size_type i = 0; i < A.N(); i++) // loop over all rows
+        {
+            real_type pivmax = fvmeta::absreal(A[i][i]);
+
+            if (doPivoting) {
+                // compute maximum of column
+                simd_index_type imax = i;
+                for (size_type k = i + 1; k < A.N(); k++) {
+                    auto abs = fvmeta::absreal(A[k][i]);
+                    auto mask = abs > pivmax;
+                    pivmax = Simd::cond(mask, abs, pivmax);
+                    imax = Simd::cond(mask, simd_index_type(k), imax);
+                }
+                // swap rows
+                for (size_type j = 0; j < A.N(); j++) {
+                    // This is a swap operation where the second operand is scattered,
+                    // and on top of that is also extracted from deep within a
+                    // moderately complicated data structure (a DenseMatrix), where we
+                    // can't assume much on the memory layout.  On intel processors,
+                    // the only instruction that might help us here is vgather, but it
+                    // is unclear whether that is even faster than a software
+                    // implementation, and we would also need vscatter which does not
+                    // exist.  So break vectorization here and do it manually.
+                    for (std::size_t l = 0; l < Simd::lanes(A[i][j]); ++l)
+                        swap(Simd::lane(l, A[i][j]), Simd::lane(l, A[Simd::lane(l, imax)][j]));
+                }
+                func.swap(i, imax); // swap the pivot or rhs
+            }
+
+            // singular ?
+            nonsingularLanes = nonsingularLanes && (pivmax != real_type(0));
+            if (throwEarly) {
+                if (!Simd::allTrue(nonsingularLanes))
+                    DUNE_THROW(FMatrixError, "matrix is singular");
+            } else { // !throwEarly
+                if (!Simd::anyTrue(nonsingularLanes))
+                    return;
+            }
+
+            // eliminate
+            for (size_type k = i + 1; k < A.N(); k++) {
+                // in the simd case, A[i][i] may be close to zero in some lanes.  Pray
+                // that the result is no worse than a quiet NaN.
+                field_type factor = A[k][i] / A[i][i];
+                A[k][i] = factor;
+                for (size_type j = i + 1; j < A.N(); j++)
+                    A[k][j] -= factor * A[i][j];
+                func(factor, k, i);
+            }
+        }
+    }
+
+    template <class DenseMatrix>
+    DenseMatrix invertMatrix(DenseMatrix AIN, bool doPivoting)
+    {
+        using size_type = std::size_t;
+        using simd_index_type = std::size_t;
         // copied from dune::common::densmatrix
         using std::swap;
         using MAT = DenseMatrix;
-        AutonomousValue<MAT> A(asImp());
-        std::vector<simd_index_type> pivot(rows());
-        Simd::Mask<typename FieldTraits<value_type>::real_type> nonsingularLanes(true);
-        AutonomousValue<MAT>::luDecomposition(A, ElimPivot(pivot), nonsingularLanes, true, doPivoting);
+        AutonomousValue<MAT> A(AIN);
+        MAT AOUT(AIN);
+        std::vector<simd_index_type> pivot(AIN.N());
+        // Simd::Mask<typename FieldTraits<value_type>::real_type> nonsingularLanes(true);
+        Simd::Mask<double> nonsingularLanes(true);
+        Dune::Details::luDecomposition(A, Dune::Details::ElimPivot(pivot), nonsingularLanes, true, doPivoting);
         auto& L = A;
         auto& U = A;
 
         // initialize inverse
-        *this = field_type();
+        AOUT = 0.0; // field_type();
 
-        for (size_type i = 0; i < rows(); ++i)
-            (*this)[i][i] = 1;
+        for (size_type i = 0; i < A.N(); ++i)
+            AOUT[i][i] = 1;
 
         // L Y = I; multiple right hand sides
-        for (size_type i = 0; i < rows(); i++)
+        for (size_type i = 0; i < A.N(); i++)
             for (size_type j = 0; j < i; j++)
-                for (size_type k = 0; k < rows(); k++)
-                    (*this)[i][k] -= L[i][j] * (*this)[j][k];
+                for (size_type k = 0; k < A.N(); k++)
+                    AOUT[i][k] -= L[i][j] * AOUT[j][k];
 
         // U A^{-1} = Y
-        for (size_type i = rows(); i > 0;) {
+        for (size_type i = A.N(); i > 0;) {
             --i;
-            for (size_type k = 0; k < rows(); k++) {
-                for (size_type j = i + 1; j < rows(); j++)
-                    (*this)[i][k] -= U[i][j] * (*this)[j][k];
-                (*this)[i][k] /= U[i][i];
+            for (size_type k = 0; k < A.N(); k++) {
+                for (size_type j = i + 1; j < A.N(); j++)
+                    AOUT[i][k] -= U[i][j] * AOUT[j][k];
+                AOUT[i][k] /= U[i][i];
             }
         }
 
-        for (size_type i = rows(); i > 0;) {
+        for (size_type i = A.N(); i > 0;) {
             --i;
-            for (std::size_t l = 0; l < Simd::lanes((*this)[0][0]); ++l) {
+            for (std::size_t l = 0; l < Simd::lanes(A[0][0]); ++l) {
                 std::size_t pi = Simd::lane(l, pivot[i]);
                 if (i != pi)
-                    for (size_type j = 0; j < rows(); ++j)
-                        swap(Simd::lane(l, (*this)[j][pi]), Simd::lane(l, (*this)[j][i]));
+                    for (size_type j = 0; j < A.N(); ++j)
+                        swap(Simd::lane(l, AOUT[j][pi]),
+			     Simd::lane(l, AOUT[j][i]));
             }
         }
+        return AOUT;
     }
 } // namespace Details
 
@@ -217,10 +314,11 @@ public:
        \param n The number of iterations to perform.
        \param w The relaxation factor.
      */
-    SeqSpai0(const M& A, int n, scalar_field_type w)
+  SeqSpai0(const M& A, int n, scalar_field_type w, bool left_precond = true)
         : _A_(A)
         , _n(n)
         , _w(w)
+	, _left_precond(left_precond)  
     {
         // EASY_FUNCTION();
         CheckIfDiagonalPresent<M, l>::check(_A_);
@@ -228,7 +326,7 @@ public:
         _M_.resize(_A_.N());
         matrix_block_type temp;
         constexpr int sz = matrix_block_type::rows;
-        using dune_matrix = Dune::FieldMatrix<double,sz,sz>;
+        //using dune_matrix = Dune::FieldMatrix<double,sz,sz>;
         // FIXME: without considering the block size
         // Assuming the block size to be 1
         
@@ -249,38 +347,46 @@ public:
             }
         }else{
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
-            // block matrix case
+	  // code based on f(M) = min || A M -Y ||
+	  // f'(M) = A' (A M -Y)  W = (A'*A) \A' *Y(would give sparse right invers)  
+	  // code based on g(M) = min || M A  -Y ||
+          // g(M') = A (A' M' - Y') M' =(A*A')\ A*Y' -> M = Y*A'/(A*A')
+	  // with blackoil matrices left is more stable.
             for (auto row = _A_.begin(); row != _A_.end(); ++row) {
                 matrix_block_type den(0.0);
                 matrix_block_type vt(0.0);
+		//matrix_block_type v(0.0);
                 for (auto col = (*row).begin(); col != (*row).end(); ++col) {
                     const matrix_block_type tempv = (*col);
                     const matrix_block_type tempvt = Details::transposeDenseMatrix(tempv);
                     if (col.index() == row.index()) {
+		      // if SPA >0 has to be extended to an matrix matrix multiplication
+		      if(_left_precond){
                         den += tempv.template rightmultiplyany<sz>(tempvt);//tempv * tempvt;
-                        vt = tempvt;
+		      }else{
+			den += tempvt.template rightmultiplyany<sz>(tempv);//tempvt * tempv;
+		      }
+		      vt = tempvt;
                     }
                 }
                 //NB better with LU factorization
-                matrix_block_type invden = den;
-                invden.invert();
-                //v.invert();
-                matrix_block_type temp1, temp2;
-                //if(true){
-                    temp1 = vt.template rightmultiplyany<sz>(invden);// vt* den.invert()
-                    _M_[row.index()] = vt.template rightmultiplyany<sz>(den);// vt* den.invert()
-                    //}else{
-                    matrix_block_type v = Details::transposeDenseMatrix(vt);
-                    v.invert();
-                    //matrix_block_type den1 = v.template rightmultiplyany<sz>(vt);
-                    //den1.invert();
-                    //matrix_block_type val = vt.template rightmultiplyany<sz>(vt);
-                    temp2 = v;
-                    //_M_[row.index()] = v; 
-                    //}
-                    
-                
-            }
+                //matrix_block_type invden = den;
+		//invden.invert();
+		//LU for robustenes
+		matrix_block_type invden = Dune::Details::invertMatrix(den,true);
+		if(_left_precond){		  
+		  _M_[row.index()] = vt.template rightmultiplyany<sz>(invden);// vt* inv(v*vt)
+		  
+		  //matrix_block_type Mtrans = den.solve(v);
+		  //_M_[row.index()] = transposeDenseMatrix(Mtrans);// vt* den.invert()
+		}else{
+		  _M_[row.index()] = invden.template leftmultiplyany<sz>(vt);// inv(vt*v) *vt
+		  //Best code probably
+		  //_M_[row.index()] = den.solve(vt);// vt* den.invert()
+		}
+		// IF SPAI> 0 should be implemented more indexing
+		
+	     }
 #else
             OPM_THROW(std::invalid_argument, "Spai0 with blocksize>0 not suppoted for dune<=2.7 ");
 #endif
@@ -341,6 +447,7 @@ private:
     int _n;
     //! \brief The relaxation parameter to use.
     scalar_field_type _w;
+    bool _left_precond;
 
     void applyOnce_(X& v, const Y& d)
     {
