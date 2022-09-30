@@ -26,6 +26,7 @@
 #include <flow/flow_ebos_blackoil_tpfa.hpp>
 
 #include <flow/flow_ebos_gasoil.hpp>
+#include <flow/flow_ebos_gasoildiffuse.hpp>
 #include <flow/flow_ebos_gasoil_energy.hpp>
 #include <flow/flow_ebos_oilwater.hpp>
 #include <flow/flow_ebos_gaswater.hpp>
@@ -281,6 +282,7 @@ private:
         //
         // TODO: make sure that no illegal combinations like thermal and
         //       twophase are requested.
+        const bool thermal = eclipseState_->getSimulationConfig().isThermal();
 
         // Single-phase case
         if (rspec.micp()) {
@@ -288,17 +290,17 @@ private:
         }
 
         // water-only case
-        else if(phases.size() == 1 && phases.active(Phase::WATER) && !eclipseState_->getSimulationConfig().isThermal()) {
+        else if(phases.size() == 1 && phases.active(Phase::WATER) && !thermal) {
             return this->runWaterOnly(phases);
         }
 
         // water-only case with energy
-        else if(phases.size() == 2 && phases.active(Phase::WATER) && eclipseState_->getSimulationConfig().isThermal()) {
+        else if(phases.size() == 2 && phases.active(Phase::WATER) && thermal) {
             return this->runWaterOnlyEnergy(phases);
         }
 
         // Twophase cases
-        else if (phases.size() == 2 && !eclipseState_->getSimulationConfig().isThermal()) {
+        else if (phases.size() == 2 && !thermal) {
             return this->runTwoPhase(phases);
         }
 
@@ -328,7 +330,7 @@ private:
         }
 
         // Energy case
-        else if (eclipseState_->getSimulationConfig().isThermal()) {
+        else if (thermal) {
             return this->runThermal(phases);
         }
 
@@ -592,18 +594,36 @@ private:
 
     int runTwoPhase(const Phases& phases)
     {
+        const bool diffusive = eclipseState_->getSimulationConfig().isDiffusive();
+
         // oil-gas
         if (phases.active( Phase::OIL ) && phases.active( Phase::GAS )) {
-            return flowEbosGasOilMain(argc_, argv_, outputCout_, outputFiles_);
+            if (diffusive) {
+                return flowEbosGasOilDiffuseMain(argc_, argv_, outputCout_, outputFiles_);
+            } else {
+                return flowEbosGasOilMain(argc_, argv_, outputCout_, outputFiles_);
+            }
         }
 
         // oil-water
         else if ( phases.active( Phase::OIL ) && phases.active( Phase::WATER ) ) {
+            if (diffusive) {
+                if (outputCout_) {
+                    std::cerr << "The DIFFUSE option is not available for the two-phase water/oil model." << std::endl;
+                }
+                return EXIT_FAILURE;
+            }
             return flowEbosOilWaterMain(argc_, argv_, outputCout_, outputFiles_);
         }
 
         // gas-water
         else if ( phases.active( Phase::GAS ) && phases.active( Phase::WATER ) ) {
+            if (diffusive) {
+                if (outputCout_) {
+                    std::cerr << "The DIFFUSE option is not available for the two-phase gas/water model." << std::endl;
+                }
+                return EXIT_FAILURE;
+            }
             return flowEbosGasWaterMain(argc_, argv_, outputCout_, outputFiles_);
         }
         else {
@@ -736,7 +756,14 @@ private:
 
     int runBlackOil()
     {
-        return flowEbosBlackoilTpfaMain(argc_, argv_, outputCout_, outputFiles_);
+        const bool diffusive = eclipseState_->getSimulationConfig().isDiffusive();
+        if (diffusive) {
+            // Use the traditional linearizer, as the TpfaLinearizer does not
+            // support the diffusion module yet.
+            return flowEbosBlackoilMain(argc_, argv_, outputCout_, outputFiles_);
+        } else {
+            return flowEbosBlackoilTpfaMain(argc_, argv_, outputCout_, outputFiles_);
+        }
     }
 
     int argc_{0};
