@@ -49,7 +49,7 @@ struct FlowNewtonMaxIterations {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
-struct FlowNewtonMinIterations{
+struct NewtonMinIterations{
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
@@ -67,7 +67,7 @@ struct FlowNewtonMaxIterations<TypeTag, TTag::FlowNonLinearSolver> {
     static constexpr int value = 20;
 };
 template<class TypeTag>
-struct FlowNewtonMinIterations<TypeTag, TTag::FlowNonLinearSolver> {
+struct NewtonMinIterations<TypeTag, TTag::FlowNonLinearSolver> {
     static constexpr int value = 1;
 };
 template<class TypeTag>
@@ -113,7 +113,7 @@ class WellState;
                 // overload with given parameters
                 relaxMax_ = EWOMS_GET_PARAM(TypeTag, Scalar, NewtonMaxRelax);
                 maxIter_ = EWOMS_GET_PARAM(TypeTag, int, FlowNewtonMaxIterations);
-                minIter_ = EWOMS_GET_PARAM(TypeTag, int, FlowNewtonMinIterations);
+                minIter_ = EWOMS_GET_PARAM(TypeTag, int, NewtonMinIterations);
 
                 const auto& relaxationTypeString = EWOMS_GET_PARAM(TypeTag, std::string, NewtonRelaxationType);
                 if (relaxationTypeString == "dampen") {
@@ -129,7 +129,7 @@ class WellState;
             {
                 EWOMS_REGISTER_PARAM(TypeTag, Scalar, NewtonMaxRelax, "The maximum relaxation factor of a Newton iteration used by flow");
                 EWOMS_REGISTER_PARAM(TypeTag, int, FlowNewtonMaxIterations, "The maximum number of Newton iterations per time step used by flow");
-                EWOMS_REGISTER_PARAM(TypeTag, int, FlowNewtonMinIterations, "The minimum number of Newton iterations per time step used by flow");
+                EWOMS_REGISTER_PARAM(TypeTag, int, NewtonMinIterations, "The minimum number of Newton iterations per time step used by flow");
                 EWOMS_REGISTER_PARAM(TypeTag, std::string, NewtonRelaxationType, "The type of relaxation used by flow's Newton method");
             }
 
