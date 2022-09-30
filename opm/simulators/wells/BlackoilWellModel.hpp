@@ -282,7 +282,8 @@ namespace Opm {
             // at the beginning of each time step (Not report step)
             void prepareTimeStep(DeferredLogger& deferred_logger);
             void initPrimaryVariablesEvaluation() const;
-            void updateWellControls(DeferredLogger& deferred_logger, const bool checkGroupControls);
+            bool shouldBalanceNetwork(const int reportStepIndex, const int iterationIdx) const;
+            std::pair<bool, double> updateWellControls(DeferredLogger& deferred_logger, const bool checkGroupControls);
 
             void updateAndCommunicate(const int reportStepIdx,
                                       const int iterationIdx,
@@ -369,6 +370,10 @@ namespace Opm {
             // and in the well equations.
             void assemble(const int iterationIdx,
                           const double dt);
+            void assembleImpl(const int iterationIdx,
+                              const double dt,
+                              const std::size_t recursion_level,
+                              DeferredLogger& local_deferredLogger);
 
             // called at the end of a time step
             void timeStepSucceeded(const double& simulationTime, const double dt);

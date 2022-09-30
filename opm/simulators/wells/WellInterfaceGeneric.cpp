@@ -347,6 +347,11 @@ void WellInterfaceGeneric::setDynamicThpLimit(const double thp_limit)
     dynamic_thp_limit_ = thp_limit;
 }
 
+std::optional<double> WellInterfaceGeneric::getDynamicThpLimit() const
+{
+    return dynamic_thp_limit_;
+}
+
 void WellInterfaceGeneric::updatePerforatedCell(std::vector<bool>& is_cell_perforated)
 {
 
