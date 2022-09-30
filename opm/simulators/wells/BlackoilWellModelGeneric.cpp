@@ -996,7 +996,17 @@ checkGroupProductionConstraints(const Group& group,
             // sum over all nodes
             current_rate = comm_.sum(current_rate);
 
-            if (controls.liquid_target < current_rate  ) {
+            bool skip = false;
+            if (controls.liquid_target == controls.oil_target) {
+                double current_water_rate = WellGroupHelpers::sumWellSurfaceRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Aqua], false);
+                current_water_rate = comm_.sum(current_water_rate);
+                if (std::abs(current_water_rate) < 1e-12) {
+                    skip = true;
+                    deferred_logger.debug("LRAT_ORAT_GROUP", "GROUP " + group.name() + " The LRAT target is equal the ORAT target and the water rate is zero, skip checking LRAT");
+                }
+            }
+
+            if (!skip && controls.liquid_target < current_rate ) {
                 double scale = 1.0;
                 if (current_rate > 1e-12)
                     scale = controls.liquid_target / current_rate;
