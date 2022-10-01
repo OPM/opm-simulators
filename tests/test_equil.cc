@@ -81,13 +81,27 @@ namespace TTag {
 struct TestEquilTypeTag {
     using InheritsFrom = std::tuple<FlowModelParameters, EclBaseProblem, BlackOilModel>;
 };
+struct TestEquilVapwatTypeTag {
+    using InheritsFrom = std::tuple<FlowModelParameters, EclBaseProblem, BlackOilModel>;
+};
 }
 
 template<class TypeTag>
 struct EclWellModel<TypeTag, TTag::TestEquilTypeTag> {
     using type = BlackoilWellModel<TypeTag>;
 };
-
+template<class TypeTag>
+struct EnableEvaporation<TypeTag, TTag::TestEquilTypeTag> {
+    static constexpr bool value = true;
+};
+template<class TypeTag>
+struct EclWellModel<TypeTag, TTag::TestEquilVapwatTypeTag> {
+    using type = BlackoilWellModel<TypeTag>;
+};
+template<class TypeTag>
+struct EnableEvaporation<TypeTag, TTag::TestEquilVapwatTypeTag> {
+    static constexpr bool value = true;
+};
 } // namespace Opm::Properties
 
 template <class TypeTag>
@@ -862,6 +876,7 @@ BOOST_AUTO_TEST_CASE(DeckWithHumidWetGas)
 {
     using TypeTag = Opm::Properties::TTag::TestEquilTypeTag;
     using FluidSystem = Opm::GetPropType<TypeTag, Opm::Properties::FluidSystem>;
+    FluidSystem::setEnableVaporizedWater(true);
     auto simulator = initSimulator<TypeTag>("equil_humidwetgas.DATA");
     const auto& eclipseState = simulator->vanguard().eclState();
     Opm::GridManager gm(eclipseState.getInputGrid());
@@ -878,16 +893,16 @@ BOOST_AUTO_TEST_CASE(DeckWithHumidWetGas)
 
     const int first = 0, last = grid.number_of_cells - 1;
     const double reltol = 1.0e-1;
-    BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first], 1.482150311e7, reltol);  
-    BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last],  1.547988347e7, reltol);
-    BOOST_CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][first], 1.491150311e7, reltol);
-    BOOST_CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][last],  1.548988347e7, reltol);
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first], 1.480599988e7, reltol);  
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last],  1.549297524e7, reltol);
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][first], 1.489599988e7, reltol);
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][last],  1.550297524e7, reltol);
 
     const auto& sats = comp.saturation();
     std::vector<double> s_opm[3]; 
-    s_opm[FluidSystem::waterPhaseIdx] = { 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.24310545, 0.5388, 0.78458,    0.91540, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
-    s_opm[FluidSystem::oilPhaseIdx] =   { 0,   0,   0,   0,   0,   0,   0,   0,          0,      0.18288667, 0.0846,  0, 0, 0, 0, 0, 0, 0, 0, 0 };
-    s_opm[FluidSystem::gasPhaseIdx] =   { 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.75689455, 0.4612, 0.03253333, 0,       0, 0, 0, 0, 0, 0, 0, 0, 0 };
+    s_opm[FluidSystem::waterPhaseIdx] = { 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.35838026, 0.64069098, 0.9154626,    1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+    s_opm[FluidSystem::oilPhaseIdx] =   { 0,   0,   0,   0,   0,   0,   0,   0,          0,      0.02738364, 0,  0, 0, 0, 0, 0, 0, 0, 0, 0 };
+    s_opm[FluidSystem::gasPhaseIdx] =   { 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.64161973, 0.359309012, 0.057153701, 0,       0, 0, 0, 0, 0, 0, 0, 0, 0 };
     for (int phase = 0; phase < 3; ++phase) {
         BOOST_REQUIRE_EQUAL(sats[phase].size(), s_opm[phase].size());
         for (size_t i = 0; i < s_opm[phase].size(); ++i) {
@@ -898,19 +913,19 @@ BOOST_AUTO_TEST_CASE(DeckWithHumidWetGas)
 
     const auto& rv = comp.rv();
     const std::vector<double> rv_opm { 
-        2.4884509e-4, 2.4910378e-4, 2.4936267e-4, 2.4962174e-4,
-        2.4988100e-4, 2.5014044e-4, 2.5040008e-4, 2.5065990e-4,
-        2.5091992e-4, 2.5118012e-4, 2.5223082e-4, 2.5105e-4,
-        2.5105e-4,    2.5105e-4,    2.5105e-4,    2.5105e-4,
-        2.5105e-4,    2.5105e-4,    2.5105e-4,    2.5105e-4};
+        0.00024837999651755729, 0.00024869285236692635, 0.00024900604366769004, 0.00024931957094322978,
+        0.00024963343471801471, 0.00024994763551760586, 0.00025026217386865733, 0.00025057705029892072,
+        0.00025089226533724643, 0.00025120780158539152, 0.00025105, 0.00025105,
+        0.00025105, 0.00025105, 0.00025105, 0.00025105,
+        0.00025105, 0.00025105, 0.00025105, 0.00025105};
 
     const auto& rvw = comp.rvw();
     const std::vector<double> rvw_opm {  
-        2.4884509e-4, 2.4910378e-4, 2.4936267e-4, 2.4962174e-4,
-        2.4988100e-4, 2.5014044e-4, 2.5040008e-4, 2.5065990e-4,
-        2.5091992e-4, 2.5118012e-4, 2.5223082e-4, 2.5105e-4,
-        2.5105e-4,    2.5105e-4,    2.5105e-4,    2.5105e-4,
-        2.5105e-4,    2.5105e-4,    2.5105e-4,    2.5105e-4};
+        0.00024837999651755729, 0.00024869285236692635, 0.00024900604366769004, 0.00024931957094322978,
+        0.00024963343471801471, 0.00024994763551760586, 0.00025026217386865733, 0.00025057705029892072,
+        0.00025089226533724643, 0.00025120780158539152, 0.00025236969680655122, 0.00025384953117447344,
+        0.00025532939474124625, 0.00025680928750801825, 0.00025828920947593858, 0.00025976916064615645,
+        0.00026124914101982041, 0.00026272915059807997, 0.0002642091893820838, 0.00026568925737298143};
 
     for (size_t i = 0; i < rv_opm.size(); ++i) {
         BOOST_CHECK_CLOSE(rv[i], rv_opm[i], reltol);
@@ -1118,6 +1133,7 @@ BOOST_AUTO_TEST_CASE(DeckWithRSVDAndRVVDAndRVWVD)
 {
     using TypeTag = Opm::Properties::TTag::TestEquilTypeTag;
     using FluidSystem = Opm::GetPropType<TypeTag, Opm::Properties::FluidSystem>;
+    FluidSystem::setEnableVaporizedWater(true);
     auto simulator = initSimulator<TypeTag>("equil_rsvd_and_rvvd_and_rvwvd.DATA");
     const auto& eclipseState = simulator->vanguard().eclState();
     Opm::GridManager gm(eclipseState.getInputGrid());
@@ -1134,16 +1150,16 @@ BOOST_AUTO_TEST_CASE(DeckWithRSVDAndRVVDAndRVWVD)
 
     const int first = 0, last = grid.number_of_cells - 1;
     const double reltol = 1.0e-4;
-    BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first], 1.483499660e7, reltol);  
-    BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last],  1.547924516e7, reltol);
-    BOOST_CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][first], 1.492499660e7, reltol);
-    BOOST_CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][last],  1.548924516e7, reltol);
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][first], 1.483359963e7, reltol);  
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::waterPhaseIdx][last],  1.549297524e7, reltol);
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][first], 1.492359963e7, reltol);
+    BOOST_CHECK_CLOSE(pressures[FluidSystem::oilPhaseIdx][last],  1.550297524e7, reltol);
 
     const auto& sats = comp.saturation();
     std::vector<double> s_opm[3]; 
-    s_opm[FluidSystem::waterPhaseIdx] = { 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2223045711692897, 0.52882298575945874, 0.78152142505479982, 0.91816512259416283, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
-    s_opm[FluidSystem::oilPhaseIdx]   = { 0,   0,   0,   0,   0,   0,   0,   0,          0, 0.19637607881498206, 0.08183487740583717, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-    s_opm[FluidSystem::gasPhaseIdx]   = { 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.7776954288307103, 0.47117701424054126, 0.02210249613021811,    0,          0, 0, 0, 0, 0, 0, 0, 0, 0 };
+    s_opm[FluidSystem::waterPhaseIdx] = { 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.32527877578987319, 0.62976875867666171, 0.918795223850500588, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+    s_opm[FluidSystem::oilPhaseIdx]   = { 0,   0,   0,   0,   0,   0,   0,   0,          0, 0.054786199472198836, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+    s_opm[FluidSystem::gasPhaseIdx]   = { 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.674721224210102681, 0.37023124132333829, 0.026418562022795279,    0,          0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
     for (int phase = 0; phase < 3; ++phase) {
         BOOST_REQUIRE_EQUAL(sats[phase].size(), s_opm[phase].size());
@@ -1155,27 +1171,27 @@ BOOST_AUTO_TEST_CASE(DeckWithRSVDAndRVVDAndRVWVD)
 
     const auto& rs = comp.rs();
     const std::vector<double> rs_opm { // opm
-        74.62498302, 74.65959041, 74.69438035, 74.72935336,
-        74.76450995, 74.79985061, 74.83537588, 74.87527065,
-        74.96863769, 75.08891765, 52.5,        57.5,
-        62.5,        67.5,        72.5,        76.45954841,
-        76.70621045, 76.95287736, 77.19954913, 77.44622578};
+        74.617998198796087,74.652774471604374, 74.687905898686935, 74.723393674854691,
+        74.759238999357947, 74.795443075905553, 74.832007112684167, 74.892422092838459, 
+        74.986801564438935, 75.088917653469338, 52.5, 57.5, 
+        62.5, 67.5, 72.5, 76.528193441026076,
+        76.774856836636729, 77.021525099679991, 77.268198230347295, 77.514876228830232};
 
     const auto& rv = comp.rv();
     const std::vector<double> rv_opm { 
-        2.50e-6, 7.50e-6,       1.25e-5,       1.75e-5,
-        2.25e-5, 2.75e-5,       3.25e-5,       3.75e-5,
-        4.25e-5, 2.51158386e-4, 2.52203372e-4, 5.75e-5,
-        6.25e-5, 6.75e-5,       7.25e-5,       7.75e-5,
-        8.25e-5, 8.75e-5,       9.25e-5,       9.75e-5};
+        2.5000000000000002e-06, 7.5000000000000002e-06, 1.2500000000000001e-05, 1.7500000000000002e-05,
+        2.2500000000000001e-05, 2.7500000000000004e-05, 3.2500000000000004e-05, 3.7500000000000003e-05,
+        4.2500000000000003e-05, 0.00025116322680309166, 5.2500000000000002e-05, 5.7500000000000002e-05,
+        6.2500000000000001e-05, 6.7500000000000001e-05, 7.25e-05, 7.75e-05,
+        8.25e-05, 8.7500000000000013e-05, 9.2500000000000012e-05, 9.7499999999999998e-05};
 
     const auto& rvw = comp.rvw();
     const std::vector<double> rvw_opm {  
-        2.50e-6, 7.50e-6,       1.25e-5,       1.75e-5,
-        2.25e-5, 2.75e-5,       3.25e-5,       3.75e-5,
-        4.25e-5, 2.51158386e-4, 2.52203372e-4, 5.75e-5,
-        6.25e-5, 6.75e-5,       7.25e-5,       7.75e-5,
-        8.25e-5, 8.75e-5,       9.25e-5,       9.75e-5};
+        0.00024920798919277656, 0.00024941664682962629, 0.00024962743539212165, 0.00024984036204912818,
+        0.00025005543399614773, 0.00025027265845543336, 0.000250492042676105, 0.00025071359393426718,
+        0.00025093731953312241, 0.00025116322680309166, 0.00025236969680655122, 0.00025384953117447344,
+        0.00025532939474124625, 0.00025680928750801825, 0.00025828920947593858, 0.00025976916064615645,
+        0.00026124914101982041, 0.00026272915059807997, 0.0002642091893820838, 0.00026568925737298143};
 
     for (size_t i = 0; i < rv_opm.size(); ++i) {
         BOOST_CHECK_CLOSE(rs[i], rs_opm[i], reltol);
