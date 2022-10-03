@@ -134,13 +134,6 @@ InterpData findInterpData(const double value_in, const std::vector<double>& valu
         }
     }
 
-    // Disallow extrapolation with higher factor than 3.0.
-    // The factor 3.0 has been chosen because it works well
-    // with certain testcases, and may not be optimal.
-    if (retval.factor_ > 3.0) {
-        retval.factor_ = 3.0;
-    }
-
     return retval;
 }
 
