@@ -14,17 +14,30 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef FLOW_EBOS_BLACKOIL_TPFA_HPP
-#define FLOW_EBOS_BLACKOIL_TPFA_HPP
+#ifndef FLOW_EBOS_BLACKOIL_HPP
+#define FLOW_EBOS_BLACKOIL_HPP
+
+#include <memory>
 
 namespace Opm {
 
-//! \brief Main function used in flow binary.
-int flowEbosBlackoilTpfaMain(int argc, char** argv, bool outputCout, bool outputFiles);
+template<class TypeTag> class FlowMainEbos;
 
-//! \brief Main function used in flow_brine binary.
-int flowEbosBlackoilTpfaMainStandalone(int argc, char** argv);
+namespace Action {
+class State;
+}
+namespace Properties { namespace TTag { struct EclFlowProblem; } }
+
+//! \brief Main function used in flow binary.
+int flowEbosBlackoilMain(int argc, char** argv, bool outputCout, bool outputFiles);
+
+//! \brief Initialization function used in flow binary and python simulator.
+std::unique_ptr<FlowMainEbos<Properties::TTag::EclFlowProblem>>
+    flowEbosBlackoilMainInit(int argc, char** argv, bool outputCout, bool outputFiles);
+
+//! \brief Main function used in flow_blackoil binary.
+int flowEbosBlackoilMainStandalone(int argc, char** argv);
 
 }
 
-#endif // FLOW_EBOS_BLACKOIL_TPFA_HPP
+#endif // FLOW_EBOS_BLACKOIL_HPP

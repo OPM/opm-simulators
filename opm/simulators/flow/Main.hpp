@@ -23,7 +23,7 @@
 #define OPM_MAIN_HEADER_INCLUDED
 
 #include <flow/flow_ebos_blackoil.hpp>
-#include <flow/flow_ebos_blackoil_tpfa.hpp>
+#include <flow/flow_ebos_blackoil_legacyassembly.hpp>
 
 #include <flow/flow_ebos_gasoil.hpp>
 #include <flow/flow_ebos_gasoildiffuse.hpp>

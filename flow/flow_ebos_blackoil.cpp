@@ -19,34 +19,59 @@
 #include <flow/flow_ebos_blackoil.hpp>
 
 #include <opm/material/common/ResetLocale.hpp>
+#include <opm/grid/CpGrid.hpp>
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp>
 #include <opm/simulators/flow/Main.hpp>
 
-namespace Opm {
+#include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
+#include <opm/models/discretization/common/tpfalinearizer.hh>
 
-std::unique_ptr<FlowMainEbos<Properties::TTag::EclFlowProblem>>
-flowEbosBlackoilMainInit(int argc, char** argv, bool outputCout, bool outputFiles)
+namespace Opm {
+    namespace Properties {
+        namespace TTag {
+            struct EclFlowProblemTPFA {
+            using InheritsFrom = std::tuple<EclFlowProblem>;
+            };
+        }
+   }
+}
+
+namespace Opm {
+    namespace Properties {
+
+        template<class TypeTag>
+        struct Linearizer<TypeTag, TTag::EclFlowProblemTPFA> { using type = TpfaLinearizer<TypeTag>; };
+
+        template<class TypeTag>
+        struct LocalResidual<TypeTag, TTag::EclFlowProblemTPFA> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
+
+        template<class TypeTag>
+        struct EnableDiffusion<TypeTag, TTag::EclFlowProblemTPFA> { static constexpr bool value = false; };
+
+    }
+}
+
+
+namespace Opm
+{
+
+// ----------------- Main program -----------------
+int flowEbosBlackoilTpfaMain(int argc, char** argv, bool outputCout, bool outputFiles)
 {
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
     resetLocale();
 
-    return std::make_unique<FlowMainEbos<Properties::TTag::EclFlowProblem>>(
-        argc, argv, outputCout, outputFiles);
+    FlowMainEbos<Properties::TTag::EclFlowProblemTPFA>
+        mainfunc {argc, argv, outputCout, outputFiles};
+    return mainfunc.execute();
 }
 
-// ----------------- Main program -----------------
-int flowEbosBlackoilMain(int argc, char** argv, bool outputCout, bool outputFiles)
+int flowEbosBlackoilTpfaMainStandalone(int argc, char** argv)
 {
-    auto mainfunc = flowEbosBlackoilMainInit(argc, argv, outputCout, outputFiles);
-    return mainfunc->execute();
-}
-
-int flowEbosBlackoilMainStandalone(int argc, char** argv)
-{
-    using TypeTag = Properties::TTag::EclFlowProblem;
+    using TypeTag = Properties::TTag::EclFlowProblemTPFA;
     auto mainObject = Opm::Main(argc, argv);
     return mainObject.runStatic<TypeTag>();
 }
 
-}
+} // namespace Opm
