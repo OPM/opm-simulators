@@ -1512,20 +1512,15 @@ namespace Opm {
         std::set<std::string> switched_wells;
 
         if (checkGroupControls) {
+
             // Check group individual constraints.
-            bool changed_individual = updateGroupIndividualControls(deferred_logger,
-                                                        episodeIdx, iterationIdx);
-
-            if (changed_individual)
-                updateAndCommunicate(episodeIdx, iterationIdx, deferred_logger);
-
-            // Check group's constraints from higher levels.
-            bool changed_higher = updateGroupHigherControls(deferred_logger,
-                                                            episodeIdx);
-
-            if (changed_higher)
-                updateAndCommunicate(episodeIdx, iterationIdx, deferred_logger);
-
+            const int nupcol = schedule()[episodeIdx].nupcol();
+            // don't switch group control when iterationIdx > nupcol
+            // to avoid oscilations between group controls
+            if (iterationIdx <= nupcol) {
+                const Group& fieldGroup = schedule().getGroup("FIELD", episodeIdx);
+                updateGroupControls(fieldGroup, deferred_logger, episodeIdx, iterationIdx);
+            }
             // Check wells' group constraints and communicate.
             bool changed_well_group = false;
             for (const auto& well : well_container_) {
@@ -1578,6 +1573,33 @@ namespace Opm {
             well->updateWellStateWithTarget(ebosSimulator_, this->groupState(), this->wellState(), deferred_logger);
         }
         updateAndCommunicateGroupData(reportStepIdx, iterationIdx);
+    }
+
+    template<typename TypeTag>
+    bool
+    BlackoilWellModel<TypeTag>::
+    updateGroupControls(const Group& group,
+                        DeferredLogger& deferred_logger,
+                        const int reportStepIdx,
+                        const int iterationIdx)
+    {
+        bool changed = false;
+        bool changed_hc = checkGroupHigherConstraints( group, deferred_logger, reportStepIdx);
+        if (changed_hc) {
+            changed = true;
+            updateAndCommunicate(reportStepIdx, iterationIdx, deferred_logger);
+        }
+        bool changed_individual =  updateGroupIndividualControl( group, deferred_logger, reportStepIdx);
+        if (changed_individual) {
+            changed = true;
+            updateAndCommunicate(reportStepIdx, iterationIdx, deferred_logger);
+        }
+        // call recursively down the group hierarchy
+        for (const std::string& groupName : group.groups()) {
+            bool changed_this = updateGroupControls( schedule().getGroup(groupName, reportStepIdx), deferred_logger, reportStepIdx,iterationIdx);
+            changed = changed || changed_this;
+        }
+        return changed;
     }
 
     template<typename TypeTag>

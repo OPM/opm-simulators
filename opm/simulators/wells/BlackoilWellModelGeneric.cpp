@@ -1280,12 +1280,6 @@ checkGroupHigherConstraints(const Group& group,
         
     }
 
-    // call recursively down the group hiearchy
-    for (const std::string& groupName : group.groups()) {
-        bool changed_this = checkGroupHigherConstraints( schedule().getGroup(groupName, reportStepIdx), deferred_logger, reportStepIdx);
-        changed = changed || changed_this;
-    }
-
     return changed;
 }
 
@@ -1325,39 +1319,7 @@ updateGroupIndividualControl(const Group& group,
         }
     }
 
-    // call recursively down the group hiearchy
-    for (const std::string& groupName : group.groups()) {
-        bool changed_this = updateGroupIndividualControl( schedule().getGroup(groupName, reportStepIdx), deferred_logger, reportStepIdx);
-        changed = changed || changed_this;
-    }
-
     return changed;
-}
-
-bool
-BlackoilWellModelGeneric::
-updateGroupIndividualControls(DeferredLogger& deferred_logger,
-                              const int reportStepIdx,
-                              const int iterationIdx)
-{
-    const int nupcol = schedule()[reportStepIdx].nupcol();
-    // don't switch group control when iterationIdx > nupcol
-    // to avoid oscilations between group controls
-    if (iterationIdx > nupcol)
-        return false;
-
-    const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
-    return updateGroupIndividualControl(fieldGroup, deferred_logger,
-                                        reportStepIdx);
-}
-
-bool
-BlackoilWellModelGeneric::
-updateGroupHigherControls(DeferredLogger& deferred_logger,
-                          const int reportStepIdx)
-{
-    const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
-    return checkGroupHigherConstraints(fieldGroup, deferred_logger, reportStepIdx);
 }
 
 void
