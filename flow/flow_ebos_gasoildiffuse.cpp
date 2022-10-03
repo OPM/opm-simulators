@@ -16,10 +16,7 @@
 */
 #include "config.h"
 
-// Define making clear that the simulator supports AMG
-#define FLOW_SUPPORT_AMG 1
-
-#include <flow/flow_ebos_gaswater.hpp>
+#include <flow/flow_ebos_gasoil.hpp>
 
 #include <opm/material/common/ResetLocale.hpp>
 #include <opm/models/blackoil/blackoiltwophaseindices.hh>
@@ -28,29 +25,21 @@
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp>
 #include <opm/simulators/flow/Main.hpp>
 
-#include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
-#include <opm/models/discretization/common/tpfalinearizer.hh>
-
 namespace Opm {
 namespace Properties {
 namespace TTag {
-struct EclFlowGasWaterProblem {
+struct EclFlowGasOilDiffuseProblem {
     using InheritsFrom = std::tuple<EclFlowProblem>;
 };
 }
 
-template<class TypeTag>
-struct Linearizer<TypeTag, TTag::EclFlowGasWaterProblem> { using type = TpfaLinearizer<TypeTag>; };
 
 template<class TypeTag>
-struct LocalResidual<TypeTag, TTag::EclFlowGasWaterProblem> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
-
-template<class TypeTag>
-struct EnableDiffusion<TypeTag, TTag::EclFlowGasWaterProblem> { static constexpr bool value = false; };
+struct EnableDiffusion<TypeTag, TTag::EclFlowGasOilDiffuseProblem> { static constexpr bool value = true; };
 
 //! The indices required by the model
 template<class TypeTag>
-struct Indices<TypeTag, TTag::EclFlowGasWaterProblem>
+struct Indices<TypeTag, TTag::EclFlowGasOilDiffuseProblem>
 {
 private:
     // it is unfortunately not possible to simply use 'TypeTag' here because this leads
@@ -60,36 +49,35 @@ private:
     using FluidSystem = GetPropType<BaseTypeTag, Properties::FluidSystem>;
 
 public:
-    typedef BlackOilTwoPhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
-                                    getPropValue<TypeTag, Properties::EnableExtbo>(),
-                                    getPropValue<TypeTag, Properties::EnablePolymer>(),
-                                    getPropValue<TypeTag, Properties::EnableEnergy>(),
-                                    getPropValue<TypeTag, Properties::EnableFoam>(),
-                                    getPropValue<TypeTag, Properties::EnableBrine>(),
-                                    /*PVOffset=*/0,
-                                    /*disabledCompIdx=*/FluidSystem::oilCompIdx,
-                                    getPropValue<TypeTag, Properties::EnableMICP>()> type;
+  typedef BlackOilTwoPhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
+                                  getPropValue<TypeTag, Properties::EnableExtbo>(),
+                                  getPropValue<TypeTag, Properties::EnablePolymer>(),
+                                  getPropValue<TypeTag, Properties::EnableEnergy>(),
+                                  getPropValue<TypeTag, Properties::EnableFoam>(),
+                                  getPropValue<TypeTag, Properties::EnableBrine>(),
+                                  /*PVOffset=*/0,
+                                  /*disabledCompIdx=*/FluidSystem::waterCompIdx,
+                                  getPropValue<TypeTag, Properties::EnableMICP>()> type;
 };
 }}
 
 namespace Opm {
 
-
 // ----------------- Main program -----------------
-int flowEbosGasWaterMain(int argc, char** argv, bool outputCout, bool outputFiles)
+int flowEbosGasOilDiffuseMain(int argc, char** argv, bool outputCout, bool outputFiles)
 {
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
     resetLocale();
 
-    FlowMainEbos<Properties::TTag::EclFlowGasWaterProblem>
+    FlowMainEbos<Properties::TTag::EclFlowGasOilDiffuseProblem>
         mainfunc {argc, argv, outputCout, outputFiles} ;
     return mainfunc.execute();
 }
 
-int flowEbosGasWaterMainStandalone(int argc, char** argv)
+int flowEbosGasOilDiffuseMainStandalone(int argc, char** argv)
 {
-    using TypeTag = Properties::TTag::EclFlowGasWaterProblem;
+    using TypeTag = Properties::TTag::EclFlowGasOilDiffuseProblem;
     auto mainObject = Opm::Main(argc, argv);
     return mainObject.runStatic<TypeTag>();
 }

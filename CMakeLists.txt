@@ -422,8 +422,10 @@ add_dependencies(moduleVersion opmsimulators)
 set(FLOW_MODELS blackoil brine energy extbo foam gasoil gaswater
                 oilwater oilwater_brine gaswater_brine oilwater_polymer
                 oilwater_polymer_injectivity micp polymer solvent
-                gasoil_energy brine_saltprecipitation gaswater_saltprec_vapwat brine_precsalt_vapwat)
-set(FLOW_VARIANT_MODELS brine_energy onephase onephase_energy blackoil_tpfa)
+                gasoil_energy brine_saltprecipitation
+                gaswater_saltprec_vapwat brine_precsalt_vapwat
+                blackoil_tpfa gasoildiffuse)
+set(FLOW_VARIANT_MODELS brine_energy onephase onephase_energy)
 
 set(FLOW_TGTS)
 foreach(OBJ ${COMMON_MODELS} ${FLOW_MODELS} ${FLOW_VARIANT_MODELS})

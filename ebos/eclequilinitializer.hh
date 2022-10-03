@@ -73,6 +73,7 @@ class EclEquilInitializer
     enum { dimWorld = GridView::dimensionworld };
     enum { enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>() };
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    enum { enableDissolution = Indices::compositionSwitchIdx >= 0 };
     enum { enableBrine = getPropValue<TypeTag, Properties::EnableBrine>() };
     enum { enableEvaporation = getPropValue<TypeTag, Properties::EnableEvaporation>() };
     enum { enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>() };
@@ -84,7 +85,7 @@ public:
                                                 FluidSystem,
                                                 enableTemperature,
                                                 enableEnergy,
-                                                Indices::gasEnabled,
+                                                enableDissolution,
                                                 enableEvaporation,
                                                 enableBrine,
                                                 enableSaltPrecipitation,
