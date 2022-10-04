@@ -152,7 +152,7 @@ BOOST_AUTO_TEST_CASE(NAME) \
 }
 
 #define TEST_FOR_TYPE_NAMED(TYPE, NAME) \
-    TEST_FOR_TYPE_NAMED_OBJ(TYPE, NAME, serializeObject)
+    TEST_FOR_TYPE_NAMED_OBJ(TYPE, NAME, serializationTestObject)
 
 #define TEST_FOR_TYPE(TYPE) \
     TEST_FOR_TYPE_NAMED(TYPE, TYPE)
@@ -174,9 +174,9 @@ TEST_FOR_TYPE(BCConfig)
 TEST_FOR_TYPE(BrineDensityTable)
 TEST_FOR_TYPE(ColumnSchema)
 TEST_FOR_TYPE(Connection)
-TEST_FOR_TYPE_NAMED_OBJ(data::AquiferData, AquiferData_CarterTracy, serializeObjectC)
-TEST_FOR_TYPE_NAMED_OBJ(data::AquiferData, AquiferData_Fetkovich, serializeObjectF)
-TEST_FOR_TYPE_NAMED_OBJ(data::AquiferData, AquiferData_Numeric, serializeObjectN)
+TEST_FOR_TYPE_NAMED_OBJ(data::AquiferData, AquiferData_CarterTracy, serializationTestObjectC)
+TEST_FOR_TYPE_NAMED_OBJ(data::AquiferData, AquiferData_Fetkovich, serializationTestObjectF)
+TEST_FOR_TYPE_NAMED_OBJ(data::AquiferData, AquiferData_Numeric, serializationTestObjectN)
 TEST_FOR_TYPE_NAMED(data::CarterTracyData, CarterTracyData)
 TEST_FOR_TYPE_NAMED(data::CellData, CellData)
 TEST_FOR_TYPE_NAMED(data::Connection, dataConnection)
