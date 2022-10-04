@@ -17,10 +17,33 @@
 #ifndef FLOW_EBOS_BLACKOIL_TPFA_HPP
 #define FLOW_EBOS_BLACKOIL_TPFA_HPP
 
+#include <memory>
+
 namespace Opm {
+    namespace Properties {
+        namespace TTag {
+
+            struct EclFlowProblem;
+
+            struct EclFlowProblemTPFA {
+            using InheritsFrom = std::tuple<EclFlowProblem>;
+            };
+
+        }
+   }
+}
+
+namespace Opm {
+
 
 //! \brief Main function used in flow binary.
 int flowEbosBlackoilTpfaMain(int argc, char** argv, bool outputCout, bool outputFiles);
+
+template<class TypeTag> class FlowMainEbos;
+
+//! \brief Initialization function used in flow binary and python simulator.
+std::unique_ptr<FlowMainEbos<Properties::TTag::EclFlowProblemTPFA>>
+    flowEbosBlackoilTpfaMainInit(int argc, char** argv, bool outputCout, bool outputFiles);
 
 //! \brief Main function used in flow_brine binary.
 int flowEbosBlackoilTpfaMainStandalone(int argc, char** argv);

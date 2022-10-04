@@ -28,16 +28,6 @@
 
 namespace Opm {
     namespace Properties {
-        namespace TTag {
-            struct EclFlowProblemTPFA {
-            using InheritsFrom = std::tuple<EclFlowProblem>;
-            };
-        }
-   }
-}
-
-namespace Opm {
-    namespace Properties {
 
         template<class TypeTag>
         struct Linearizer<TypeTag, TTag::EclFlowProblemTPFA> { using type = TpfaLinearizer<TypeTag>; };
@@ -54,6 +44,16 @@ namespace Opm {
 
 namespace Opm
 {
+std::unique_ptr<FlowMainEbos<Properties::TTag::EclFlowProblemTPFA>>
+flowEbosBlackoilTpfaMainInit(int argc, char** argv, bool outputCout, bool outputFiles)
+{
+    // we always want to use the default locale, and thus spare us the trouble
+    // with incorrect locale settings.
+    resetLocale();
+
+    return std::make_unique<FlowMainEbos<Properties::TTag::EclFlowProblemTPFA>>(
+        argc, argv, outputCout, outputFiles);
+}
 
 // ----------------- Main program -----------------
 int flowEbosBlackoilTpfaMain(int argc, char** argv, bool outputCout, bool outputFiles)
