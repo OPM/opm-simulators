@@ -14,11 +14,12 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include "config.h"
-#include <flow/flow_ebos_blackoil.hpp>
 
+#include "config.h"
+
+#include <flow/flow_ebos_blackoil.hpp>
 
 int main(int argc, char** argv)
 {
-    return Opm::flowEbosBlackoilMainStandalone(argc, argv);
+    return Opm::flowEbosBlackoilTpfaMainStandalone(argc, argv);
 }

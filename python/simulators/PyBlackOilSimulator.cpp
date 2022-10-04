@@ -24,6 +24,7 @@
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 #include <opm/simulators/flow/Main.hpp>
 #include <opm/simulators/flow/FlowMainEbos.hpp>
+#include <flow/flow_ebos_blackoil.hpp>
 // NOTE: EXIT_SUCCESS, EXIT_FAILURE is defined in cstdlib
 #include <cstdlib>
 #include <iostream>
@@ -79,7 +80,7 @@ py::array_t<double> PyBlackOilSimulator::getPorosity()
 int PyBlackOilSimulator::run()
 {
     auto mainObject = Opm::Main( deckFilename_ );
-    return mainObject.runStatic<Opm::Properties::TTag::EclFlowProblem>();
+    return mainObject.runStatic<Opm::Properties::TTag::EclFlowProblemTPFA>();
 }
 
 void PyBlackOilSimulator::setPorosity( py::array_t<double,

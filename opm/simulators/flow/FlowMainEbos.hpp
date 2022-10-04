@@ -29,6 +29,7 @@
 #include <opm/simulators/utils/ParallelFileMerger.hpp>
 #include <opm/simulators/utils/moduleVersion.hpp>
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
+#include <flow/flow_ebos_blackoil.hpp>
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/IOConfig/IOConfig.hpp>

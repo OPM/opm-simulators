@@ -14,17 +14,11 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef FLOW_EBOS_BLACKOIL_TPFA_HPP
-#define FLOW_EBOS_BLACKOIL_TPFA_HPP
+#include "config.h"
+#include <flow/flow_ebos_blackoil_legacyassembly.hpp>
 
-namespace Opm {
 
-//! \brief Main function used in flow binary.
-int flowEbosBlackoilTpfaMain(int argc, char** argv, bool outputCout, bool outputFiles);
-
-//! \brief Main function used in flow_brine binary.
-int flowEbosBlackoilTpfaMainStandalone(int argc, char** argv);
-
+int main(int argc, char** argv)
+{
+    return Opm::flowEbosBlackoilMainStandalone(argc, argv);
 }
-
-#endif // FLOW_EBOS_BLACKOIL_TPFA_HPP

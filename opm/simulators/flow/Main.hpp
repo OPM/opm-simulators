@@ -23,7 +23,7 @@
 #define OPM_MAIN_HEADER_INCLUDED
 
 #include <flow/flow_ebos_blackoil.hpp>
-#include <flow/flow_ebos_blackoil_tpfa.hpp>
+#include <flow/flow_ebos_blackoil_legacyassembly.hpp>
 
 #include <flow/flow_ebos_gasoil.hpp>
 #include <flow/flow_ebos_gasoildiffuse.hpp>
@@ -235,7 +235,7 @@ public:
         return exitCode;
     }
 
-    using FlowMainEbosType = FlowMainEbos<Properties::TTag::EclFlowProblem>;
+    using FlowMainEbosType = FlowMainEbos<Properties::TTag::EclFlowProblemTPFA>;
     // To be called from the Python interface code. Only do the
     // initialization and then return a pointer to the FlowEbosMain
     // object that can later be accessed directly from the Python interface
@@ -255,7 +255,7 @@ public:
                 std::move(this->actionState_),
                 std::move(this->wtestState_),
                 summaryConfig_);
-            return flowEbosBlackoilMainInit(
+            return flowEbosBlackoilTpfaMainInit(
                 argc_, argv_, outputCout_, outputFiles_);
         } else {
             //NOTE: exitCode was set by initialize_() above;
