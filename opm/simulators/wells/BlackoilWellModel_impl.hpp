@@ -899,7 +899,7 @@ namespace Opm {
                  DeferredLogger& local_deferredLogger)
     {
 
-        const auto [network_changed, network_imbalance] = updateWellControls(local_deferredLogger);
+        const auto [group_well_changed, network_changed, network_imbalance] = updateWellControls(local_deferredLogger);
 
         bool alq_updated = false;
         OPM_BEGIN_PARALLEL_TRY_CATCH();
@@ -1414,8 +1414,8 @@ namespace Opm {
         ConvergenceReport report = gatherConvergenceReport(local_report, comm);
 
         if (report.converged() && checkWellGroupControls) {
-            bool violated = updateWellControls(global_deferredLogger);
-            report.setWellGroupTargetsViolated(violated);
+            const auto [group_well_changed, network_changed, network_imbalance] = updateWellControls(global_deferredLogger);
+            report.setWellGroupTargetsViolated(group_well_changed);
         }
         if (terminal_output_) {
             global_deferredLogger.logMessages();
@@ -1454,7 +1454,6 @@ namespace Opm {
 
     template<typename TypeTag>
     bool
-<<<<<<< HEAD
     BlackoilWellModel<TypeTag>::
     shouldBalanceNetwork(const int reportStepIdx, const int iterationIdx) const
     {
@@ -1478,20 +1477,14 @@ namespace Opm {
 
 
     template<typename TypeTag>
-    std::pair<bool, double>
-=======
->>>>>>> check controls in getWellConvergence
+    std::tuple<bool, bool, double>
     BlackoilWellModel<TypeTag>::
     updateWellControls(DeferredLogger& deferred_logger)
     {
         // Even if there are no wells active locally, we cannot
         // return as the DeferredLogger uses global communication.
         // For no well active globally we simply return.
-<<<<<<< HEAD
-        if( !wellsActive() ) return { false, 0.0 };
-=======
-        if( !wellsActive() ) return false ;
->>>>>>> check controls in getWellConvergence
+        if( !wellsActive() ) return { false, false, 0.0 };
 
         const int episodeIdx = ebosSimulator_.episodeIndex();
         const int iterationIdx = ebosSimulator_.model().newtonMethod().numIterations();
@@ -1504,66 +1497,29 @@ namespace Opm {
         const bool network_changed = comm.sum(local_network_changed);
         const double network_imbalance = comm.max(local_network_imbalance);
 
-<<<<<<< HEAD
-        std::set<std::string> switched_wells;
-<<<<<<< HEAD
-
-        if (checkGroupControls) {
-
-            // Check group individual constraints.
-            const int nupcol = schedule()[episodeIdx].nupcol();
-            // don't switch group control when iterationIdx > nupcol
-            // to avoid oscilations between group controls
-            if (iterationIdx <= nupcol) {
-                const Group& fieldGroup = schedule().getGroup("FIELD", episodeIdx);
-                updateGroupControls(fieldGroup, deferred_logger, episodeIdx, iterationIdx);
-            }
-            // Check wells' group constraints and communicate.
-            bool changed_well_group = false;
-            for (const auto& well : well_container_) {
-                const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Group;
-                const bool changed_well = well->updateWellControl(ebosSimulator_, mode, this->wellState(), this->groupState(), deferred_logger);
-                if (changed_well) {
-                    switched_wells.insert(well->name());
-                    changed_well_group = changed_well || changed_well_group;
-                }
-=======
-=======
->>>>>>> always check individual controls
-        bool changed = false;
-        // Check group individual constraints.
-        bool changed_individual = updateGroupIndividualControls(deferred_logger,
-                                                        episodeIdx, iterationIdx);
-
-        if (changed_individual) {
-            updateAndCommunicate(episodeIdx, iterationIdx, deferred_logger);
-            changed = true;
-        }
-
-        // Check group's constraints from higher levels.
-        bool changed_higher = updateGroupHigherControls(deferred_logger,
-                                                        episodeIdx);
-
-        if (changed_higher) {
-            updateAndCommunicate(episodeIdx, iterationIdx, deferred_logger);
-            changed = true;
-        }
-
-
-        // Check wells' group constraints and communicate.
         bool changed_well_group = false;
+        // Check group individual constraints.
+        const int nupcol = schedule()[episodeIdx].nupcol();
+        // don't switch group control when iterationIdx > nupcol
+        // to avoid oscilations between group controls
+        if (iterationIdx <= nupcol) {
+            const Group& fieldGroup = schedule().getGroup("FIELD", episodeIdx);
+            changed_well_group = updateGroupControls(fieldGroup, deferred_logger, episodeIdx, iterationIdx);
+        }
+        // Check wells' group constraints and communicate.
+        bool changed_well_to_group = false;
         for (const auto& well : well_container_) {
             const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Group;
             const bool changed_well = well->updateWellControl(ebosSimulator_, mode, this->wellState(), this->groupState(), deferred_logger);
             if (changed_well) {
-                changed_well_group = changed_well || changed_well_group;
->>>>>>> check controls in getWellConvergence
+                changed_well_to_group = changed_well || changed_well_to_group;
             }
         }
-        changed_well_group = comm.sum(changed_well_group);
-        if (changed_well_group) {
+
+        changed_well_to_group = comm.sum(changed_well_to_group);
+        if (changed_well_to_group) {
             updateAndCommunicate(episodeIdx, iterationIdx, deferred_logger);
-            changed = true;
+            changed_well_group = true;
         }
 
         // Check individual well constraints and communicate.
@@ -1578,18 +1534,14 @@ namespace Opm {
         changed_well_individual = comm.sum(changed_well_individual);
         if (changed_well_individual) {
             updateAndCommunicate(episodeIdx, iterationIdx, deferred_logger);
-            changed = true;
+            changed_well_group = true;
         }
 
         // update wsolvent fraction for REIN wells
         const Group& fieldGroup = schedule().getGroup("FIELD", episodeIdx);
         updateWsolvent(fieldGroup, episodeIdx,  this->nupcolWellState());
 
-<<<<<<< HEAD
-        return { network_changed, network_imbalance };
-=======
-        return changed;
->>>>>>> check controls in getWellConvergence
+        return { changed_well_group, network_changed, network_imbalance };
     }
 
 

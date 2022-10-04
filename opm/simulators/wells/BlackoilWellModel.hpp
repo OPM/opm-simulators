@@ -280,12 +280,8 @@ namespace Opm {
             // at the beginning of each time step (Not report step)
             void prepareTimeStep(DeferredLogger& deferred_logger);
             void initPrimaryVariablesEvaluation() const;
-<<<<<<< HEAD
             bool shouldBalanceNetwork(const int reportStepIndex, const int iterationIdx) const;
-            std::pair<bool, double> updateWellControls(DeferredLogger& deferred_logger, const bool checkGroupControls);
-=======
-            bool updateWellControls(DeferredLogger& deferred_logger);
->>>>>>> check controls in getWellConvergence
+            std::tuple<bool, bool, double> updateWellControls(DeferredLogger& deferred_logger);
 
             void updateAndCommunicate(const int reportStepIdx,
                                       const int iterationIdx,
