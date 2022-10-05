@@ -156,8 +156,14 @@ double SingleWellState::sum_solvent_rates() const {
 void SingleWellState::update_producer_targets(const Well& ecl_well, const SummaryState& st) {
     const double bhp_safety_factor = 0.99;
     const auto& prod_controls = ecl_well.productionControls(st);
-    if (prod_controls.hasControl(Well::ProducerCMode::THP))
+    if (prod_controls.hasControl(Well::ProducerCMode::THP)) {
         this->thp = prod_controls.thp_limit;
+        // For THP controlled wells we initialize with some non-zero rates
+        // to get a more resonable starting point for the lookup in the vpf table.
+        for (int p = 0; p < pu.num_phases; ++p) {
+            this->surface_rates[p] = -1.0;
+        }
+    }
 
 
     auto cmode_is_bhp = (prod_controls.cmode == Well::ProducerCMode::BHP);
