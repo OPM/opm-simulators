@@ -2081,139 +2081,109 @@ public:
     }
 
 private:
+    template<class UpdateFunc>
+    void updateProperty_(const std::string& failureMsg,
+                         UpdateFunc func)
+    {
+        ElementContext elemCtx(this->simulator());
+        const auto& vanguard = this->simulator().vanguard();
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
+        for (const auto& elem : elements(vanguard.gridView())) {
+            elemCtx.updatePrimaryStencil(elem);
+            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+
+            unsigned compressedDofIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+            const auto& iq = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
+            func(compressedDofIdx, iq);
+        }
+        OPM_END_PARALLEL_TRY_CATCH(failureMsg, vanguard.grid().comm());
+    }
+
     // update the parameters needed for DRSDT and DRVDT
     void updateCompositionChangeLimits_()
     {
         // update the "last Rs" values for all elements, including the ones in the ghost
         // and overlap regions
-        const auto& simulator = this->simulator();
         int episodeIdx = this->episodeIndex();
+        std::array<bool,3> active{this->drsdtConvective_(episodeIdx),
+                                  this->drsdtActive_(episodeIdx),
+                                  this->drvdtActive_(episodeIdx)};
+        if (!active[0] && !active[1] && !active[2])
+          return;
 
-        OPM_BEGIN_PARALLEL_TRY_CATCH();
-        if (this->drsdtConvective_(episodeIdx)) {
-            // This implements the convective DRSDT as described in
-            // Sandve et al. "Convective dissolution in field scale CO2 storage simulations using the OPM Flow simulator"
-            // Submitted to TCCS 11, 2021
-            Scalar g = this->gravity_[dim - 1];
-            ElementContext elemCtx(simulator);
-            const auto& vanguard = simulator.vanguard();
-            auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
-            const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
-            for (; elemIt != elemEndIt; ++elemIt) {
-                const Element& elem = *elemIt;
-                elemCtx.updatePrimaryStencil(elem);
-                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-                unsigned compressedDofIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-                const DimMatrix& perm = intrinsicPermeability(compressedDofIdx);
-                const Scalar permz = perm[dim - 1][dim - 1]; // The Z permeability
-                Scalar distZ = vanguard.cellThickness(compressedDofIdx);
-                const auto& iq = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
-                const auto& fs = iq.fluidState();
-                Scalar t = getValue(fs.temperature(FluidSystem::oilPhaseIdx));
-                Scalar p = getValue(fs.pressure(FluidSystem::oilPhaseIdx));
-                Scalar so = getValue(fs.saturation(FluidSystem::oilPhaseIdx));
-                Scalar rssat = FluidSystem::oilPvt().saturatedGasDissolutionFactor(fs.pvtRegionIndex(),t,p);
-                Scalar saturatedInvB = FluidSystem::oilPvt().saturatedInverseFormationVolumeFactor(fs.pvtRegionIndex(),t,p);
-                Scalar rsZero = 0.0;
-                Scalar pureDensity = FluidSystem::oilPvt().inverseFormationVolumeFactor(fs.pvtRegionIndex(),t,p,rsZero) * FluidSystem::oilPvt().oilReferenceDensity(fs.pvtRegionIndex());
-                Scalar saturatedDensity = saturatedInvB * (FluidSystem::oilPvt().oilReferenceDensity(fs.pvtRegionIndex()) + rssat * FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, fs.pvtRegionIndex()));
-                Scalar deltaDensity = saturatedDensity - pureDensity;
-                Scalar rs = getValue(fs.Rs());
-                Scalar visc = FluidSystem::oilPvt().viscosity(fs.pvtRegionIndex(),t,p,rs);
-                Scalar poro =  getValue(iq.porosity());
-                // Note that for so = 0 this gives no limits (inf) for the dissolution rate
-                // Also we restrict the effect of convective mixing to positive density differences
-                // i.e. we only allow for fingers moving downward
-                this->convectiveDrs_[compressedDofIdx] = permz * rssat * max(0.0, deltaDensity) * g / ( so * visc * distZ * poro);
-            }
-        }
+        this->updateProperty_("EclProblem::updateCompositionChangeLimits_()) failed:",
+                              [this,episodeIdx,active](unsigned compressedDofIdx, const IntensiveQuantities& iq)
+                              {
+                                  auto& simulator = this->simulator();
+                                  auto& vanguard = simulator.vanguard();
+                                  if (active[0]) {
+                                      // This implements the convective DRSDT as described in
+                                      // Sandve et al. "Convective dissolution in field scale CO2 storage simulations using the OPM Flow simulator"
+                                      // Submitted to TCCS 11, 2021
+                                      const Scalar g = this->gravity_[dim - 1];
+                                      const DimMatrix& perm = intrinsicPermeability(compressedDofIdx);
+                                      const Scalar permz = perm[dim - 1][dim - 1]; // The Z permeability
+                                      const Scalar distZ = vanguard.cellThickness(compressedDofIdx);
+                                      const auto& fs = iq.fluidState();
+                                      const Scalar t = getValue(fs.temperature(FluidSystem::oilPhaseIdx));
+                                      const Scalar p = getValue(fs.pressure(FluidSystem::oilPhaseIdx));
+                                      const Scalar so = getValue(fs.saturation(FluidSystem::oilPhaseIdx));
+                                      const Scalar rssat = FluidSystem::oilPvt().saturatedGasDissolutionFactor(fs.pvtRegionIndex(),t,p);
+                                      const Scalar saturatedInvB = FluidSystem::oilPvt().saturatedInverseFormationVolumeFactor(fs.pvtRegionIndex(),t,p);
+                                      const Scalar rsZero = 0.0;
+                                      const Scalar pureDensity = FluidSystem::oilPvt().inverseFormationVolumeFactor(fs.pvtRegionIndex(),t,p,rsZero) * FluidSystem::oilPvt().oilReferenceDensity(fs.pvtRegionIndex());
+                                      const Scalar saturatedDensity = saturatedInvB * (FluidSystem::oilPvt().oilReferenceDensity(fs.pvtRegionIndex()) + rssat * FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, fs.pvtRegionIndex()));
+                                      const Scalar deltaDensity = saturatedDensity - pureDensity;
+                                      const Scalar rs = getValue(fs.Rs());
+                                      const Scalar visc = FluidSystem::oilPvt().viscosity(fs.pvtRegionIndex(),t,p,rs);
+                                      const Scalar poro =  getValue(iq.porosity());
+                                      // Note that for so = 0 this gives no limits (inf) for the dissolution rate
+                                      // Also we restrict the effect of convective mixing to positive density differences
+                                      // i.e. we only allow for fingers moving downward
+                                      this->convectiveDrs_[compressedDofIdx] = permz * rssat * max(0.0, deltaDensity) * g / ( so * visc * distZ * poro);
+                                  }
 
-        if (this->drsdtActive_(episodeIdx)) {
-            ElementContext elemCtx(simulator);
-            const auto& vanguard = simulator.vanguard();
-            auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
-            const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
-            for (; elemIt != elemEndIt; ++elemIt) {
-                const Element& elem = *elemIt;
+                                  if (active[1]) {
+                                      const auto& fs = iq.fluidState();
 
-                elemCtx.updatePrimaryStencil(elem);
-                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+                                      using FluidState = typename std::decay<decltype(fs)>::type;
 
-                unsigned compressedDofIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-                const auto& iq = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
-                const auto& fs = iq.fluidState();
+                                      int pvtRegionIdx = this->pvtRegionIndex(compressedDofIdx);
+                                      const auto& oilVaporizationControl = vanguard.schedule()[episodeIdx].oilvap();
+                                      if (oilVaporizationControl.getOption(pvtRegionIdx) || fs.saturation(gasPhaseIdx) > freeGasMinSaturation_)
+                                          this->lastRs_[compressedDofIdx] =
+                                            BlackOil::template getRs_<FluidSystem,
+                                                                      FluidState,
+                                                                      Scalar>(fs, iq.pvtRegionIndex());
+                                      else
+                                        this->lastRs_[compressedDofIdx] = std::numeric_limits<Scalar>::infinity();
+                                  }
 
-                using FluidState = typename std::decay<decltype(fs)>::type;
-
-                int pvtRegionIdx = this->pvtRegionIndex(compressedDofIdx);
-                const auto& oilVaporizationControl = simulator.vanguard().schedule()[episodeIdx].oilvap();
-                if (oilVaporizationControl.getOption(pvtRegionIdx) || fs.saturation(gasPhaseIdx) > freeGasMinSaturation_)
-                    this->lastRs_[compressedDofIdx] =
-                        BlackOil::template getRs_<FluidSystem,
-                                                  FluidState,
-                                                 Scalar>(fs, iq.pvtRegionIndex());
-                else
-                    this->lastRs_[compressedDofIdx] = std::numeric_limits<Scalar>::infinity();
-            }
-        }
-
-        // update the "last Rv" values for all elements, including the ones in the ghost
-        // and overlap regions
-        if (this->drvdtActive_(episodeIdx)) {
-            ElementContext elemCtx(simulator);
-            const auto& vanguard = simulator.vanguard();
-            auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
-            const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
-            for (; elemIt != elemEndIt; ++elemIt) {
-                const Element& elem = *elemIt;
-
-                elemCtx.updatePrimaryStencil(elem);
-                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-
-                unsigned compressedDofIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-                const auto& iq = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
-                const auto& fs = iq.fluidState();
-
-                using FluidState = typename std::decay<decltype(fs)>::type;
-
-                this->lastRv_[compressedDofIdx] =
-                    BlackOil::template getRv_<FluidSystem,
-                                              FluidState,
-                                              Scalar>(fs, iq.pvtRegionIndex());
-            }
-        }
-        OPM_END_PARALLEL_TRY_CATCH("EclProblem::_updateCompositionLayers() failed: ", this->simulator().vanguard().grid().comm());
+                                  if (active[2]) {
+                                      const auto& fs = iq.fluidState();
+                                      using FluidState = typename std::decay<decltype(fs)>::type;
+                                      this->lastRv_[compressedDofIdx] =
+                                          BlackOil::template getRv_<FluidSystem,
+                                                                    FluidState,
+                                                                    Scalar>(fs, iq.pvtRegionIndex());
+                                  }
+                              });
     }
 
     bool updateMaxOilSaturation_()
     {
-        const auto& simulator = this->simulator();
         int episodeIdx = this->episodeIndex();
 
         // we use VAPPARS
         if (this->vapparsActive(episodeIdx)) {
-            ElementContext elemCtx(simulator);
-            const auto& vanguard = simulator.vanguard();
-            auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
-            const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
-            OPM_BEGIN_PARALLEL_TRY_CATCH();
-            for (; elemIt != elemEndIt; ++elemIt) {
-                const Element& elem = *elemIt;
-
-                elemCtx.updatePrimaryStencil(elem);
-                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-
-                unsigned compressedDofIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-                const auto& iq = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
-                const auto& fs = iq.fluidState();
-
-                Scalar So = decay<Scalar>(fs.saturation(oilPhaseIdx));
-
-                this->maxOilSaturation_[compressedDofIdx] = std::max(this->maxOilSaturation_[compressedDofIdx], So);
-            }
-            OPM_END_PARALLEL_TRY_CATCH("EclProblem::updateMayOilSaturation() failed:", vanguard.grid().comm());
-            // we need to invalidate the intensive quantities cache here because the
-            // derivatives of Rs and Rv will most likely have changed
+            this->updateProperty_("EclProblem::updateMaxOilSaturation_() failed:",
+                                 [this](unsigned compressedDofIdx, const IntensiveQuantities& iq)
+                                 {
+                                     const auto& fs = iq.fluidState();
+                                     const Scalar So = decay<Scalar>(fs.saturation(oilPhaseIdx));
+                                     auto& mos = this->maxOilSaturation_;
+                                     mos[compressedDofIdx] = std::max(mos[compressedDofIdx], So);
+                                 });
             return true;
         }
 
@@ -2227,26 +2197,14 @@ private:
             return false;
 
         this->maxWaterSaturation_[/*timeIdx=*/1] = this->maxWaterSaturation_[/*timeIdx=*/0];
-        ElementContext elemCtx(this->simulator());
-        const auto& vanguard = this->simulator().vanguard();
-        auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
-        const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
-        OPM_BEGIN_PARALLEL_TRY_CATCH();
-        for (; elemIt != elemEndIt; ++elemIt) {
-            const Element& elem = *elemIt;
-
-            elemCtx.updatePrimaryStencil(elem);
-            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-
-            unsigned compressedDofIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-            const auto& iq = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
-            const auto& fs = iq.fluidState();
-
-            Scalar Sw = decay<Scalar>(fs.saturation(waterPhaseIdx));
-            this->maxWaterSaturation_[compressedDofIdx] = std::max(this->maxWaterSaturation_[compressedDofIdx], Sw);
-        }
-        OPM_END_PARALLEL_TRY_CATCH("EclProblem::updateMayWaterSaturation() failed: ", vanguard.grid().comm());
-
+        this->updateProperty_("EclProblem::updateMaxWaterSaturation_() failed:",
+                              [this](unsigned compressedDofIdx, const IntensiveQuantities& iq)
+                              {
+                                  const auto& fs = iq.fluidState();
+                                  const Scalar Sw = decay<Scalar>(fs.saturation(waterPhaseIdx));
+                                  auto& mow = this->maxWaterSaturation_;
+                                  mow[compressedDofIdx] = std::max(mow[compressedDofIdx], Sw);
+                               });
         return true;
     }
 
@@ -2256,26 +2214,14 @@ private:
         if (this->minOilPressure_.empty())
             return false;
 
-        OPM_BEGIN_PARALLEL_TRY_CATCH();
-        ElementContext elemCtx(this->simulator());
-        const auto& vanguard = this->simulator().vanguard();
-        auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
-        const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
-        for (; elemIt != elemEndIt; ++elemIt) {
-            const Element& elem = *elemIt;
-
-            elemCtx.updatePrimaryStencil(elem);
-            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-
-            unsigned compressedDofIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-            const auto& iq = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
-            const auto& fs = iq.fluidState();
-
-            this->minOilPressure_[compressedDofIdx] =
-                std::min(this->minOilPressure_[compressedDofIdx],
-                         getValue(fs.pressure(oilPhaseIdx)));
-        }
-        OPM_END_PARALLEL_TRY_CATCH("EclProblem::updateMinPressure_() failed: ", this->simulator().vanguard().grid().comm());
+        this->updateProperty_("EclProblem::updateMinPressure_() failed:",
+                              [this](unsigned compressedDofIdx, const IntensiveQuantities& iq)
+                              {
+                                const auto& fs = iq.fluidState();
+                                const Scalar mo = getValue(fs.pressure(oilPhaseIdx));
+                                auto& mos = this->minOilPressure_;
+                                mos[compressedDofIdx] = std::min(mos[compressedDofIdx], mo);
+                              });
         return true;
     }
 
@@ -2761,48 +2707,24 @@ private:
 
         // we need to update the hysteresis data for _all_ elements (i.e., not just the
         // interior ones) to avoid desynchronization of the processes in the parallel case!
-        const auto& simulator = this->simulator();
-        ElementContext elemCtx(simulator);
-        const auto& vanguard = simulator.vanguard();
-        auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
-        const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
-        OPM_BEGIN_PARALLEL_TRY_CATCH();
-        for (; elemIt != elemEndIt; ++elemIt) {
-            const Element& elem = *elemIt;
-
-            elemCtx.updatePrimaryStencil(elem);
-            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-
-            unsigned compressedDofIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-            const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
-            materialLawManager_->updateHysteresis(intQuants.fluidState(), compressedDofIdx);
-        }
-        OPM_END_PARALLEL_TRY_CATCH("EclProblem::updateHyteresis_(): ", vanguard.grid().comm());
+        this->updateProperty_("EclProblem::updateHysteresis_() failed:",
+                              [this](unsigned compressedDofIdx, const IntensiveQuantities& iq)
+                              {
+                                  materialLawManager_->updateHysteresis(iq.fluidState(), compressedDofIdx);
+                              });
         return true;
     }
 
     void updateMaxPolymerAdsorption_()
     {
         // we need to update the max polymer adsoption data for all elements
-        const auto& simulator = this->simulator();
-        ElementContext elemCtx(simulator);
-        const auto& vanguard = simulator.vanguard();
-        auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
-        const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
-        OPM_BEGIN_PARALLEL_TRY_CATCH();
-        for (; elemIt != elemEndIt; ++elemIt) {
-            const Element& elem = *elemIt;
-
-            elemCtx.updatePrimaryStencil(elem);
-            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-
-            unsigned compressedDofIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-            const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
-
-            this->maxPolymerAdsorption_[compressedDofIdx] = std::max(this->maxPolymerAdsorption_[compressedDofIdx],
-                                                                     scalarValue(intQuants.polymerAdsorption()));
-        }
-        OPM_END_PARALLEL_TRY_CATCH("EclProblem::updateMaxPolymerAdsorption_(): ", vanguard.grid().comm());
+        this->updateProperty_("EclProblem::updateMaxPolymerAdsorption_() failed:",
+                              [this](unsigned compressedDofIdx, const IntensiveQuantities& iq)
+                              {
+                                  const Scalar pa = scalarValue(iq.polymerAdsorption());
+                                  auto& mpa = this->maxPolymerAdsorption_;
+                                  mpa[compressedDofIdx] = std::max(mpa[compressedDofIdx], pa);
+                              });
     }
 
     struct PffDofData_
