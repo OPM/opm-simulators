@@ -397,7 +397,8 @@ protected:
         auto elemIt = simulator_.gridView().template begin</*codim=*/0>();
         auto elemEndIt = simulator_.gridView().template end</*codim=*/0>();
         for (; elemIt != elemEndIt; ++ elemIt) {
-            elemCtx.updateAll(*elemIt);
+            elemCtx.updatePrimaryStencil(*elemIt);
+            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
             int globalDofIdx = elemCtx.globalSpaceIndex(0, /*timIdx=*/0);
             Scalar fVolume;
             computeVolume_(fVolume, tr.phaseIdx_, elemCtx, 0, /*timIdx=*/0);
