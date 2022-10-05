@@ -394,15 +394,13 @@ protected:
         tr.concentrationInitial_ = tr.concentration_;
 
         ElementContext elemCtx(simulator_);
-        auto elemIt = simulator_.gridView().template begin</*codim=*/0>();
-        auto elemEndIt = simulator_.gridView().template end</*codim=*/0>();
-        for (; elemIt != elemEndIt; ++ elemIt) {
-            elemCtx.updatePrimaryStencil(*elemIt);
+        for (const auto& elem : elements(simulator_.gridView())) {
+            elemCtx.updatePrimaryStencil(elem);
             elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-            int globalDofIdx = elemCtx.globalSpaceIndex(0, /*timIdx=*/0);
+            int globalDofIdx = elemCtx.globalSpaceIndex(0, /*timeIdx=*/0);
             Scalar fVolume;
-            computeVolume_(fVolume, tr.phaseIdx_, elemCtx, 0, /*timIdx=*/0);
-            for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
+            computeVolume_(fVolume, tr.phaseIdx_, elemCtx, 0, /*timeIdx=*/0);
+            for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
                 tr.storageOfTimeIndex1_[tIdx][globalDofIdx] = fVolume*tr.concentrationInitial_[tIdx][globalDofIdx];
             }
         }
