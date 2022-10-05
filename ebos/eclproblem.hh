@@ -2744,23 +2744,11 @@ private:
 
         // we need to update the hysteresis data for _all_ elements (i.e., not just the
         // interior ones) to avoid desynchronization of the processes in the parallel case!
-        const auto& simulator = this->simulator();
-        ElementContext elemCtx(simulator);
-        const auto& vanguard = simulator.vanguard();
-        auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
-        const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
-        OPM_BEGIN_PARALLEL_TRY_CATCH();
-        for (; elemIt != elemEndIt; ++elemIt) {
-            const Element& elem = *elemIt;
-
-            elemCtx.updatePrimaryStencil(elem);
-            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-
-            unsigned compressedDofIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-            const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
-            materialLawManager_->updateHysteresis(intQuants.fluidState(), compressedDofIdx);
-        }
-        OPM_END_PARALLEL_TRY_CATCH("EclProblem::updateHyteresis_(): ", vanguard.grid().comm());
+        this->updateProperty_("EclProblem::updateHysteresis_() failed:",
+                              [this](unsigned compressedDofIdx, const IntensiveQuantities& iq)
+                              {
+                                  materialLawManager_->updateHysteresis(iq.fluidState(), compressedDofIdx);
+                              });
         return true;
     }
 
