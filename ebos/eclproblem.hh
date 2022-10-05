@@ -2081,6 +2081,28 @@ public:
     }
 
 private:
+    template<class UpdateFunc>
+    void updateProperty_(const std::string& failureMsg,
+                         UpdateFunc func)
+    {
+        ElementContext elemCtx(this->simulator());
+        const auto& vanguard = this->simulator().vanguard();
+        auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
+        const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
+        for (; elemIt != elemEndIt; ++elemIt) {
+            const Element& elem = *elemIt;
+
+            elemCtx.updatePrimaryStencil(elem);
+            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+
+            unsigned compressedDofIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+            const auto& iq = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
+            func(compressedDofIdx, iq);
+        }
+        OPM_END_PARALLEL_TRY_CATCH(failureMsg, vanguard.grid().comm());
+    }
+
     // update the parameters needed for DRSDT and DRVDT
     void updateCompositionChangeLimits_()
     {
