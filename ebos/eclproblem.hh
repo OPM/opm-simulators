@@ -2251,26 +2251,14 @@ private:
         if (this->minOilPressure_.empty())
             return false;
 
-        OPM_BEGIN_PARALLEL_TRY_CATCH();
-        ElementContext elemCtx(this->simulator());
-        const auto& vanguard = this->simulator().vanguard();
-        auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
-        const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
-        for (; elemIt != elemEndIt; ++elemIt) {
-            const Element& elem = *elemIt;
-
-            elemCtx.updatePrimaryStencil(elem);
-            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-
-            unsigned compressedDofIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-            const auto& iq = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
-            const auto& fs = iq.fluidState();
-
-            this->minOilPressure_[compressedDofIdx] =
-                std::min(this->minOilPressure_[compressedDofIdx],
-                         getValue(fs.pressure(oilPhaseIdx)));
-        }
-        OPM_END_PARALLEL_TRY_CATCH("EclProblem::updateMinPressure_() failed: ", this->simulator().vanguard().grid().comm());
+        this->updateProperty_("EclProblem::updateMinPressure_() failed:",
+                              [this](unsigned compressedDofIdx, const IntensiveQuantities& iq)
+                              {
+                                const auto& fs = iq.fluidState();
+                                const Scalar mo = getValue(fs.pressure(oilPhaseIdx));
+                                auto& mos = this->minOilPressure_;
+                                mos[compressedDofIdx] = std::min(mos[compressedDofIdx], mo);
+                              });
         return true;
     }
 
