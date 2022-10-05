@@ -2755,25 +2755,13 @@ private:
     void updateMaxPolymerAdsorption_()
     {
         // we need to update the max polymer adsoption data for all elements
-        const auto& simulator = this->simulator();
-        ElementContext elemCtx(simulator);
-        const auto& vanguard = simulator.vanguard();
-        auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
-        const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
-        OPM_BEGIN_PARALLEL_TRY_CATCH();
-        for (; elemIt != elemEndIt; ++elemIt) {
-            const Element& elem = *elemIt;
-
-            elemCtx.updatePrimaryStencil(elem);
-            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-
-            unsigned compressedDofIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-            const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
-
-            this->maxPolymerAdsorption_[compressedDofIdx] = std::max(this->maxPolymerAdsorption_[compressedDofIdx],
-                                                                     scalarValue(intQuants.polymerAdsorption()));
-        }
-        OPM_END_PARALLEL_TRY_CATCH("EclProblem::updateMaxPolymerAdsorption_(): ", vanguard.grid().comm());
+        this->updateProperty_("EclProblem::updateMaxPolymerAdsorption_() failed:",
+                              [this](unsigned compressedDofIdx, const IntensiveQuantities& iq)
+                              {
+                                  const Scalar pa = scalarValue(iq.polymerAdsorption());
+                                  auto& mpa = this->maxPolymerAdsorption_;
+                                  mpa[compressedDofIdx] = std::max(mpa[compressedDofIdx], pa);
+                              });
     }
 
     struct PffDofData_
