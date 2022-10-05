@@ -2087,12 +2087,8 @@ private:
     {
         ElementContext elemCtx(this->simulator());
         const auto& vanguard = this->simulator().vanguard();
-        auto elemIt = vanguard.gridView().template begin</*codim=*/0>();
-        const auto& elemEndIt = vanguard.gridView().template end</*codim=*/0>();
         OPM_BEGIN_PARALLEL_TRY_CATCH();
-        for (; elemIt != elemEndIt; ++elemIt) {
-            const Element& elem = *elemIt;
-
+        for (const auto& elem : elements(vanguard.gridView())) {
             elemCtx.updatePrimaryStencil(elem);
             elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 
