@@ -254,6 +254,42 @@ protected:
         }
     }
 
+    template<class TrRe>
+    void assembleTracerEquationVolume(TrRe& tr,
+                                      const ElementContext& elemCtx,
+                                      const Scalar scvVolume,
+                                      const Scalar dt,
+                                      unsigned I,
+                                      unsigned I1)
+
+    {
+        if (tr.numTracer() == 0)
+            return;
+
+        std::vector<Scalar> storageOfTimeIndex1(tr.numTracer());
+        if (elemCtx.enableStorageCache()) {
+            for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
+                storageOfTimeIndex1[tIdx] = tr.storageOfTimeIndex1_[tIdx][I];
+            }
+        }
+        else {
+            Scalar fVolume1;
+            computeVolume_(fVolume1, tr.phaseIdx_, elemCtx, 0, /*timeIdx=*/1);
+            for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
+                storageOfTimeIndex1[tIdx] = fVolume1*tr.concentrationInitial_[tIdx][I1];
+            }
+        }
+
+        TracerEvaluation fVolume;
+        computeVolume_(fVolume, tr.phaseIdx_, elemCtx, 0, /*timeIdx=*/0);
+        for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
+            Scalar storageOfTimeIndex0 = fVolume.value()*tr.concentration_[tIdx][I];
+            Scalar localStorage = (storageOfTimeIndex0 - storageOfTimeIndex1[tIdx]) * scvVolume/dt;
+            tr.residual_[tIdx][I][0] += localStorage; //residual + flux
+        }
+        (*this->tracerMatrix_)[I][I][0][0] += fVolume.derivative(0) * scvVolume/dt;
+    }
+
     template <class TrRe>
     void assembleTracerEquations_(TrRe & tr)
     {
@@ -295,28 +331,7 @@ protected:
 
             size_t I1 = elemCtx.globalSpaceIndex(/*dofIdx=*/ 0, /*timIdx=*/1);
 
-            std::vector<Scalar> storageOfTimeIndex1(tr.numTracer());
-            if (elemCtx.enableStorageCache()) {
-                for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
-                    storageOfTimeIndex1[tIdx] = tr.storageOfTimeIndex1_[tIdx][I];
-                }
-            }
-            else {
-                Scalar fVolume1;
-                computeVolume_(fVolume1, tr.phaseIdx_, elemCtx, 0, /*timIdx=*/1);
-                for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
-                    storageOfTimeIndex1[tIdx] = fVolume1*tr.concentrationInitial_[tIdx][I1];
-                }
-            }
-
-            TracerEvaluation fVolume;
-            computeVolume_(fVolume, tr.phaseIdx_, elemCtx, 0, /*timIdx=*/0);
-            for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
-                Scalar storageOfTimeIndex0 = fVolume.value()*tr.concentration_[tIdx][I];
-                Scalar localStorage = (storageOfTimeIndex0 - storageOfTimeIndex1[tIdx]) * scvVolume/dt;
-                tr.residual_[tIdx][I][0] += localStorage; //residual + flux
-            }
-            (*this->tracerMatrix_)[I][I][0][0] += fVolume.derivative(0) * scvVolume/dt;
+            this->assembleTracerEquationVolume(tr, elemCtx, scvVolume, dt, I, I1);
 
             size_t numInteriorFaces = elemCtx.numInteriorFaces(/*timIdx=*/0);
             for (unsigned scvfIdx = 0; scvfIdx < numInteriorFaces; scvfIdx++) {
