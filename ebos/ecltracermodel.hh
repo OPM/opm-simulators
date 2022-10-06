@@ -290,6 +290,26 @@ protected:
         (*this->tracerMatrix_)[I][I][0][0] += fVolume.derivative(0) * scvVolume/dt;
     }
 
+    template<class TrRe>
+    void assembleTracerEquationFlux(TrRe& tr,
+                                    const ElementContext& elemCtx,
+                                    unsigned scvfIdx,
+                                    unsigned I,
+                                    unsigned J)
+    {
+        TracerEvaluation flux;
+        bool isUpF;
+        computeFlux_(flux, isUpF, tr.phaseIdx_, elemCtx, scvfIdx, 0);
+        int globalUpIdx = isUpF ? I : J;
+        for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
+            tr.residual_[tIdx][I][0] += flux.value()*tr.concentration_[tIdx][globalUpIdx]; //residual + flux
+        }
+        if (isUpF) {
+            (*this->tracerMatrix_)[J][I][0][0] = -flux.derivative(0);
+            (*this->tracerMatrix_)[I][I][0][0] += flux.derivative(0);
+        }
+    }
+
     template <class TrRe>
     void assembleTracerEquations_(TrRe & tr)
     {
@@ -335,22 +355,11 @@ protected:
 
             size_t numInteriorFaces = elemCtx.numInteriorFaces(/*timIdx=*/0);
             for (unsigned scvfIdx = 0; scvfIdx < numInteriorFaces; scvfIdx++) {
-                TracerEvaluation flux;
                 const auto& face = elemCtx.stencil(0).interiorFace(scvfIdx);
                 unsigned j = face.exteriorIndex();
                 unsigned J = elemCtx.globalSpaceIndex(/*dofIdx=*/ j, /*timIdx=*/0);
-                bool isUpF;
-                computeFlux_(flux, isUpF, tr.phaseIdx_, elemCtx, scvfIdx, 0);
-                int globalUpIdx = isUpF ? I : J;
-                for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
-                    tr.residual_[tIdx][I][0] += flux.value()*tr.concentration_[tIdx][globalUpIdx]; //residual + flux
-                }
-                if (isUpF) {
-                    (*this->tracerMatrix_)[J][I][0][0] = -flux.derivative(0);
-                    (*this->tracerMatrix_)[I][I][0][0] += flux.derivative(0);
-                }
+                this->assembleTracerEquationFlux(tr, elemCtx, scvfIdx, I, J);
             }
-
         }
 
         // Wells  terms
