@@ -19,6 +19,8 @@
 
 #include <config.h>
 
+#define XSD_CXX11_TEMPLATE_ALIAS 1
+
 #include <damaris/model/ModifyModel.hpp>
 #include <opm/simulators/utils/DamarisOutputModule.hpp>
 #include <opm/simulators/utils/DamarisKeywords.hpp>
