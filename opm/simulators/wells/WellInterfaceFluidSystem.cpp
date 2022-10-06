@@ -725,6 +725,11 @@ updateWellTestStateEconomic(const SingleWellState& ws,
         return;
     }
 
+    if (this->isInjector()) {
+        deferred_logger.warning("ECON_LIMITS_INJECTOR_" + this->name(), this->name() + " is an injector, the production economic limits for this well will be ignored.\n");
+        return;
+    }
+
     // flag to check if the mim oil/gas rate limit is violated
     bool rate_limit_violated = false;
 
