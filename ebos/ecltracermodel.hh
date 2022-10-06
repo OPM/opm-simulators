@@ -161,9 +161,7 @@ public:
         if (this->numTracers()==0)
             return;
 
-        updateStorageCache(wat_);
-        updateStorageCache(oil_);
-        updateStorageCache(gas_);
+        updateStorageCache();
     }
 
     /*!
@@ -384,23 +382,26 @@ protected:
                                           Dune::ForwardCommunication);
     }
 
-    template <class TrRe>
-    void updateStorageCache(TrRe & tr)
+    void updateStorageCache()
     {
-        if (tr.numTracer() == 0)
-            return;
-
-        tr.concentrationInitial_ = tr.concentration_;
+        for (auto& tr : tbatch) {
+            if (tr.numTracer() != 0)
+                tr.concentrationInitial_ = tr.concentration_;
+        }
 
         ElementContext elemCtx(simulator_);
         for (const auto& elem : elements(simulator_.gridView())) {
             elemCtx.updatePrimaryStencil(elem);
             elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
             int globalDofIdx = elemCtx.globalSpaceIndex(0, /*timeIdx=*/0);
-            Scalar fVolume;
-            computeVolume_(fVolume, tr.phaseIdx_, elemCtx, 0, /*timeIdx=*/0);
-            for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
-                tr.storageOfTimeIndex1_[tIdx][globalDofIdx] = fVolume*tr.concentrationInitial_[tIdx][globalDofIdx];
+            for (auto& tr : tbatch) {
+                if (tr.numTracer() == 0)
+                    continue;
+                Scalar fVolume;
+                computeVolume_(fVolume, tr.phaseIdx_, elemCtx, 0, /*timeIdx=*/0);
+                for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
+                    tr.storageOfTimeIndex1_[tIdx][globalDofIdx] = fVolume*tr.concentrationInitial_[tIdx][globalDofIdx];
+                }
             }
         }
     }
