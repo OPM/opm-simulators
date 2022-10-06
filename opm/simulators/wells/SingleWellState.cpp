@@ -156,9 +156,6 @@ double SingleWellState::sum_solvent_rates() const {
 void SingleWellState::update_producer_targets(const Well& ecl_well, const SummaryState& st) {
     const double bhp_safety_factor = 0.99;
     const auto& prod_controls = ecl_well.productionControls(st);
-    if (prod_controls.hasControl(Well::ProducerCMode::THP))
-        this->thp = prod_controls.thp_limit;
-
 
     auto cmode_is_bhp = (prod_controls.cmode == Well::ProducerCMode::BHP);
     auto bhp_limit = prod_controls.bhp_limit;
@@ -169,11 +166,6 @@ void SingleWellState::update_producer_targets(const Well& ecl_well, const Summar
         else
             this->bhp = this->perf_data.pressure_first_connection;
 
-        return;
-    }
-
-    if (prod_controls.cmode == Well::ProducerCMode::GRUP) {
-        this->bhp = this->perf_data.pressure_first_connection * bhp_safety_factor;
         return;
     }
 
@@ -190,9 +182,27 @@ void SingleWellState::update_producer_targets(const Well& ecl_well, const Summar
         assert(this->pu.phase_used[BlackoilPhases::Vapour]);
         this->surface_rates[pu.phase_pos[BlackoilPhases::Vapour]] = -prod_controls.gas_rate;
         break;
+    case Well::ProducerCMode::GRUP:
+    case Well::ProducerCMode::THP:
+    case Well::ProducerCMode::BHP:
+        if (this->pu.phase_used[BlackoilPhases::Liquid]) {
+            this->surface_rates[pu.phase_pos[BlackoilPhases::Liquid]] = -1000.0 * Opm::unit::cubic(Opm::unit::meter) / Opm::unit::day;
+        }
+        if (this->pu.phase_used[BlackoilPhases::Aqua]) {
+            this->surface_rates[pu.phase_pos[BlackoilPhases::Aqua]] = -1000.0 * Opm::unit::cubic(Opm::unit::meter) / Opm::unit::day;
+        }
+        if (this->pu.phase_used[BlackoilPhases::Vapour]){
+            this->surface_rates[pu.phase_pos[BlackoilPhases::Vapour]] = -100000.0 * Opm::unit::cubic(Opm::unit::meter) / Opm::unit::day;
+        }
+        break;
+
     default:
         // Keep zero init.
         break;
+    }
+
+    if (prod_controls.cmode == Well::ProducerCMode::THP) {
+        this->thp = prod_controls.thp_limit;
     }
 
     if (cmode_is_bhp)

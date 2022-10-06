@@ -287,7 +287,7 @@ namespace Opm
                 bhp_controlled_well = true;
             }
         }
-        if (thp_controlled_well || bhp_controlled_well) {
+        if (!this->changed_to_open_this_step_ && (thp_controlled_well || bhp_controlled_well)) {
 
             double total_rate = 0.0;
             const double sign = this->isInjector() ? 1.0:-1.0;
