@@ -310,6 +310,39 @@ protected:
         }
     }
 
+    template<class TrRe, class Well>
+    void assembleTracerEquationWell(TrRe& tr,
+                                    const Well& well)
+    {
+        const auto& eclWell = well.wellEcl();
+        for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
+            this->wellTracerRate_[std::make_pair(eclWell.name(), this->name(tr.idx_[tIdx]))] = 0.0;
+        }
+
+        std::vector<double> wtracer(tr.numTracer());
+        for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
+            wtracer[tIdx] = eclWell.getTracerProperties().getConcentration(this->name(tr.idx_[tIdx]));
+        }
+
+        for (auto& perfData : well.perforationData()) {
+            const auto I = perfData.cell_index;
+            Scalar rate = well.volumetricSurfaceRateForConnection(I, tr.phaseIdx_);
+            if (rate > 0) {
+                for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
+                    tr.residual_[tIdx][I][0] -= rate*wtracer[tIdx];
+                    // Store _injector_ tracer rate for reporting
+                    this->wellTracerRate_.at(std::make_pair(eclWell.name(),this->name(tr.idx_[tIdx]))) += rate*wtracer[tIdx];
+                }
+            }
+            else if (rate < 0) {
+                for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
+                    tr.residual_[tIdx][I][0] -= rate*tr.concentration_[tIdx][I];
+                }
+                (*this->tracerMatrix_)[I][I][0][0] -= rate*variable<TracerEvaluation>(1.0, 0).derivative(0);
+            }
+        }
+    }
+
     template <class TrRe>
     void assembleTracerEquations_(TrRe & tr)
     {
@@ -362,37 +395,10 @@ protected:
             }
         }
 
-        // Wells  terms
+        // Well terms
         const auto& wellPtrs = simulator_.problem().wellModel().localNonshutWells();
         for (const auto& wellPtr : wellPtrs) {
-            const auto& well = wellPtr->wellEcl();
-
-            for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
-                this->wellTracerRate_[std::make_pair(well.name(), this->name(tr.idx_[tIdx]))] = 0.0;
-            }
-
-            std::vector<double> wtracer(tr.numTracer());
-            for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
-                wtracer[tIdx] = well.getTracerProperties().getConcentration(this->name(tr.idx_[tIdx]));
-            }
-
-            for (auto& perfData : wellPtr->perforationData()) {
-                auto I = perfData.cell_index;
-                Scalar rate = wellPtr->volumetricSurfaceRateForConnection(I, tr.phaseIdx_);
-                if (rate > 0) {
-                    for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
-                        tr.residual_[tIdx][I][0] -= rate*wtracer[tIdx];
-                        // Store _injector_ tracer rate for reporting
-                        this->wellTracerRate_.at(std::make_pair(well.name(),this->name(tr.idx_[tIdx]))) += rate*wtracer[tIdx];
-                    }
-                }
-                else if (rate < 0) {
-                    for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
-                        tr.residual_[tIdx][I][0] -= rate*tr.concentration_[tIdx][I];
-                    }
-                    (*this->tracerMatrix_)[I][I][0][0] -= rate*variable<TracerEvaluation>(1.0, 0).derivative(0);
-                }
-            }
+            this->assembleTracerEquationWell(tr, *wellPtr);
         }
 
         // Communicate overlap using grid Communication
