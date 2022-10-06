@@ -51,8 +51,6 @@ namespace Opm {
  * \ingroup EclBlackOilSimulator
  *
  * \brief A class which handles tracers as specified in by ECL
- *
- * TODO: MPI parallelism.
  */
 template <class TypeTag>
 class EclTracerModel : public EclGenericTracerModel<GetPropType<TypeTag, Properties::Grid>,
@@ -94,9 +92,10 @@ public:
                    simulator.model().dofMapper(),
                    simulator.vanguard().cellCentroids())
         , simulator_(simulator)
-        , wat_(TracerBatch<TracerVector>(waterPhaseIdx))
-        , oil_(TracerBatch<TracerVector>(oilPhaseIdx))
-        , gas_(TracerBatch<TracerVector>(gasPhaseIdx))
+        , tbatch({waterPhaseIdx, oilPhaseIdx, gasPhaseIdx})
+        , wat_(tbatch[0])
+        , oil_(tbatch[1])
+        , gas_(tbatch[2])
     { }
 
 
@@ -478,11 +477,11 @@ protected:
     Simulator& simulator_;
 
     // This struct collects tracers of the same type (i.e, transported in same phase).
-    // The idea beeing that, under the assumption of linearity, tracers of same type can
+    // The idea being that, under the assumption of linearity, tracers of same type can
     // be solved in concert, having a common system matrix but separate right-hand-sides.
 
     // Since oil or gas tracers appears in dual compositions when VAPOIL respectively DISGAS
-    // is active, the template argument is intended to support future extension to these 
+    // is active, the template argument is intended to support future extension to these
     // scenarios by supplying an extended vector type.
 
     template <typename TV>
@@ -509,9 +508,10 @@ protected:
       }
     };
 
-    TracerBatch<TracerVector> wat_;
-    TracerBatch<TracerVector> oil_;
-    TracerBatch<TracerVector> gas_;
+    std::array<TracerBatch<TracerVector>,3> tbatch;
+    TracerBatch<TracerVector>& wat_;
+    TracerBatch<TracerVector>& oil_;
+    TracerBatch<TracerVector>& gas_;
 };
 
 } // namespace Opm
