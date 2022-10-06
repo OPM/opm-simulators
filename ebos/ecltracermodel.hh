@@ -76,6 +76,7 @@ class EclTracerModel : public EclGenericTracerModel<GetPropType<TypeTag, Propert
 
     using TracerEvaluation = DenseAd::Evaluation<Scalar,1>;
 
+    using TracerMatrix = typename BaseType::TracerMatrix;
     using TracerVector = typename BaseType::TracerVector;
 
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
@@ -154,11 +155,22 @@ public:
                 gas_.addTracer(tracerIdx, this->tracerConcentration_[tracerIdx]);
             }
         }
+
+        // will be valid after we move out of tracerMatrix_
+        TracerMatrix* base = this->tracerMatrix_.get();
+        for (auto& tr : this->tbatch) {
+            if (tr.numTracer() != 0) {
+                if (this->tracerMatrix_)
+                    tr.mat = std::move(this->tracerMatrix_);
+                else
+                    tr.mat = std::make_unique<TracerMatrix>(*base);
+            }
+        }
     }
 
     void beginTimeStep()
     {
-        if (this->numTracers()==0)
+        if (this->numTracers() == 0)
             return;
 
         updateStorageCache();
@@ -169,7 +181,7 @@ public:
      */
     void endTimeStep()
     {
-        if (this->numTracers()==0)
+        if (this->numTracers() == 0)
             return;
 
         advanceTracerFields();
@@ -287,7 +299,7 @@ protected:
             Scalar localStorage = (storageOfTimeIndex0 - storageOfTimeIndex1[tIdx]) * scvVolume/dt;
             tr.residual_[tIdx][I][0] += localStorage; //residual + flux
         }
-        (*this->tracerMatrix_)[I][I][0][0] += fVolume.derivative(0) * scvVolume/dt;
+        (*tr.mat)[I][I][0][0] += fVolume.derivative(0) * scvVolume/dt;
     }
 
     template<class TrRe>
@@ -297,6 +309,9 @@ protected:
                                     unsigned I,
                                     unsigned J)
     {
+        if (tr.numTracer() == 0)
+            return;
+
         TracerEvaluation flux;
         bool isUpF;
         computeFlux_(flux, isUpF, tr.phaseIdx_, elemCtx, scvfIdx, 0);
@@ -305,8 +320,8 @@ protected:
             tr.residual_[tIdx][I][0] += flux.value()*tr.concentration_[tIdx][globalUpIdx]; //residual + flux
         }
         if (isUpF) {
-            (*this->tracerMatrix_)[J][I][0][0] = -flux.derivative(0);
-            (*this->tracerMatrix_)[I][I][0][0] += flux.derivative(0);
+            (*tr.mat)[J][I][0][0] = -flux.derivative(0);
+            (*tr.mat)[I][I][0][0] += flux.derivative(0);
         }
     }
 
@@ -314,6 +329,9 @@ protected:
     void assembleTracerEquationWell(TrRe& tr,
                                     const Well& well)
     {
+        if (tr.numTracer() == 0)
+            return;
+
         const auto& eclWell = well.wellEcl();
         for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
             this->wellTracerRate_[std::make_pair(eclWell.name(), this->name(tr.idx_[tIdx]))] = 0.0;
@@ -338,37 +356,40 @@ protected:
                 for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
                     tr.residual_[tIdx][I][0] -= rate*tr.concentration_[tIdx][I];
                 }
-                (*this->tracerMatrix_)[I][I][0][0] -= rate*variable<TracerEvaluation>(1.0, 0).derivative(0);
+                (*tr.mat)[I][I][0][0] -= rate*variable<TracerEvaluation>(1.0, 0).derivative(0);
             }
         }
     }
 
-    template <class TrRe>
-    void assembleTracerEquations_(TrRe & tr)
+    void assembleTracerEquations_()
     {
-        if (tr.numTracer() == 0)
-            return;
-
         // Note that we formulate the equations in terms of a concentration update
         // (compared to previous time step) and not absolute concentration.
         // This implies that current concentration (tr.concentration_[][]) contributes
         // to the rhs both through storrage and flux terms.
         // Compare also advanceTracerFields(...) below.
 
-        (*this->tracerMatrix_) = 0.0;
-        for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx)
-            tr.residual_[tIdx] = 0.0;
+        for (auto& tr : tbatch) {
+            if (tr.numTracer() != 0) {
+                (*tr.mat) = 0.0;
+                for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx)
+                    tr.residual_[tIdx] = 0.0;
+            }
+        }
 
         ElementContext elemCtx(simulator_);
         for (const auto& elem : elements(simulator_.gridView())) {
             elemCtx.updateStencil(elem);
 
-            size_t I = elemCtx.globalSpaceIndex(/*dofIdx=*/ 0, /*timIdx=*/0);
+            size_t I = elemCtx.globalSpaceIndex(/*dofIdx=*/ 0, /*timeIdx=*/0);
 
             if (elem.partitionType() != Dune::InteriorEntity)
             {
                 // Dirichlet boundary conditions needed for the parallel matrix
-                (*this->tracerMatrix_)[I][I][0][0] = 1.;
+                for (auto& tr : tbatch) {
+                    if (tr.numTracer() != 0)
+                        (*tr.mat)[I][I][0][0] = 1.;
+                }
                 continue;
             }
             elemCtx.updateAllIntensiveQuantities();
@@ -384,30 +405,40 @@ protected:
                     * extrusionFactor;
             Scalar dt = elemCtx.simulator().timeStepSize();
 
-            size_t I1 = elemCtx.globalSpaceIndex(/*dofIdx=*/ 0, /*timIdx=*/1);
+            size_t I1 = elemCtx.globalSpaceIndex(/*dofIdx=*/ 0, /*timeIdx=*/1);
 
-            this->assembleTracerEquationVolume(tr, elemCtx, scvVolume, dt, I, I1);
+            for (auto& tr : tbatch) {
+                this->assembleTracerEquationVolume(tr, elemCtx, scvVolume, dt, I, I1);
+            }
 
             size_t numInteriorFaces = elemCtx.numInteriorFaces(/*timIdx=*/0);
             for (unsigned scvfIdx = 0; scvfIdx < numInteriorFaces; scvfIdx++) {
                 const auto& face = elemCtx.stencil(0).interiorFace(scvfIdx);
                 unsigned j = face.exteriorIndex();
                 unsigned J = elemCtx.globalSpaceIndex(/*dofIdx=*/ j, /*timIdx=*/0);
-                this->assembleTracerEquationFlux(tr, elemCtx, scvfIdx, I, J);
+                for (auto& tr : tbatch) {
+                    this->assembleTracerEquationFlux(tr, elemCtx, scvfIdx, I, J);
+                }
             }
         }
 
         // Well terms
         const auto& wellPtrs = simulator_.problem().wellModel().localNonshutWells();
         for (const auto& wellPtr : wellPtrs) {
-            this->assembleTracerEquationWell(tr, *wellPtr);
+            for (auto& tr : tbatch) {
+                this->assembleTracerEquationWell(tr, *wellPtr);
+            }
         }
 
         // Communicate overlap using grid Communication
-        auto handle = VectorVectorDataHandle<GridView, std::vector<TracerVector>>(tr.residual_,
-                                                                                  simulator_.gridView());
-        simulator_.gridView().communicate(handle, Dune::InteriorBorder_All_Interface,
-                                          Dune::ForwardCommunication);
+        for (auto& tr : tbatch) {
+            if (tr.numTracer() == 0)
+                continue;
+            auto handle = VectorVectorDataHandle<GridView, std::vector<TracerVector>>(tr.residual_,
+                                                                                      simulator_.gridView());
+            simulator_.gridView().communicate(handle, Dune::InteriorBorder_All_Interface,
+                                              Dune::ForwardCommunication);
+        }
     }
 
     void updateStorageCache()
@@ -436,6 +467,8 @@ protected:
 
     void advanceTracerFields()
     {
+        assembleTracerEquations_();
+
         for (auto& tr : tbatch) {
             if (tr.numTracer() == 0)
                 continue;
@@ -446,9 +479,7 @@ protected:
             for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx)
                 dx[tIdx] = 0.0;
 
-            assembleTracerEquations_(tr);
-
-            bool converged = this->linearSolveBatchwise_(*this->tracerMatrix_, dx, tr.residual_);
+            bool converged = this->linearSolveBatchwise_(*tr.mat, dx, tr.residual_);
             if (!converged)
                 std::cout << "### Tracer model: Warning, linear solver did not converge. ###" << std::endl;
 
@@ -522,6 +553,7 @@ protected:
       std::vector<TV> concentration_;
       std::vector<TV> storageOfTimeIndex1_;
       std::vector<TV> residual_;
+      std::unique_ptr<TracerMatrix> mat;
 
       TracerBatch(int phaseIdx) : phaseIdx_(phaseIdx) {}
 

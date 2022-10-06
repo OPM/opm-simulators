@@ -103,7 +103,7 @@ protected:
 
     std::vector<int> tracerPhaseIdx_;
     std::vector<Dune::BlockVector<Dune::FieldVector<Scalar, 1>>> tracerConcentration_;
-    TracerMatrix *tracerMatrix_;
+    std::unique_ptr<TracerMatrix> tracerMatrix_;
     TracerVector tracerResidual_;
     std::vector<int> cartToGlobal_;
     std::vector<Dune::BlockVector<Dune::FieldVector<Scalar, 1>>> storageOfTimeIndex1_;
