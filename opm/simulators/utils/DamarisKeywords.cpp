@@ -23,41 +23,41 @@
 
 /*
     Below is the Damaris Keywords supported by Damaris to be filled
-    in the built-in XML file. 
+    in the built-in XML file.
 
-    The entries in the map below will be filled by the corresponding 
-    Damaris Keywords. Yet, only output directory and FileMode are to 
+    The entries in the map below will be filled by the corresponding
+    Damaris Keywords. Yet, only output directory and FileMode are to
     be chosen by the user
 */
 
 namespace Opm::DamarisOutput
 {
-std::map<std::string,std::string> DamarisKeywords(std::string OutputDir, bool enableAsyncDamarisOutput) {
-  if (enableAsyncDamarisOutput) {
-     std::map<std::string,std::string> damaris_keywords = {
-                {"_SHMEM_BUFFER_BYTES_REGEX_","536870912"},
-                {"_DC_REGEX_","1"},
-                {"_DN_REGEX_","0"},
-                {"_File_Mode", "Collective"},
-                {"_MORE_VARIABLES_REGEX_",""},
-                {"_PATH_REGEX_", OutputDir},
-                {"_MYSTORE_OR_EMPTY_REGEX_","MyStore"},
-     };
-     return damaris_keywords;
-   }
-   else {
-        std::map<std::string,std::string> damaris_keywords = {
-                {"_SHMEM_BUFFER_BYTES_REGEX_","536870912"},
-                {"_DC_REGEX_","1"},
-                {"_DN_REGEX_","0"},
-                {"_File_Mode", "FilePerCore"},
-                {"_MORE_VARIABLES_REGEX_",""},
-                {"_File_Mode", OutputDir},
-                {"_MYSTORE_OR_EMPTY_REGEX_","MyStore"},
-         };
-         return damaris_keywords;
-     
-     }      
+std::map<std::string, std::string>
+DamarisKeywords(std::string OutputDir, bool enableAsyncDamarisOutput)
+{
+    if (enableAsyncDamarisOutput) {
+        std::map<std::string, std::string> damaris_keywords = {
+            {"_SHMEM_BUFFER_BYTES_REGEX_", "536870912"},
+            {"_DC_REGEX_", "1"},
+            {"_DN_REGEX_", "0"},
+            {"_File_Mode", "Collective"},
+            {"_MORE_VARIABLES_REGEX_", ""},
+            {"_PATH_REGEX_", OutputDir},
+            {"_MYSTORE_OR_EMPTY_REGEX_", "MyStore"},
+        };
+        return damaris_keywords;
+    } else {
+        std::map<std::string, std::string> damaris_keywords = {
+            {"_SHMEM_BUFFER_BYTES_REGEX_", "536870912"},
+            {"_DC_REGEX_", "1"},
+            {"_DN_REGEX_", "0"},
+            {"_File_Mode", "FilePerCore"},
+            {"_MORE_VARIABLES_REGEX_", ""},
+            {"_PATH_REGEX_", OutputDir},
+            {"_MYSTORE_OR_EMPTY_REGEX_", "MyStore"},
+        };
+        return damaris_keywords;
+    }
 }
 
-}
+} // namespace Opm::DamarisOutput
