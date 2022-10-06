@@ -28,6 +28,10 @@
  * \author Markus Blatt, OPM-OP AS
  */
 
+#include <dune/grid/common/datahandleif.hh>
+
+#include <cstddef>
+
 namespace Opm
 {
 
@@ -86,7 +90,8 @@ public:
   }
 
   template<class BufferType, class EntityType>
-  void scatter(BufferType& buffer, const EntityType& e, std::size_t n)
+  void scatter(BufferType& buffer, const EntityType& e,
+               [[maybe_unused]] std::size_t n)
   {
     assert(n == data_.size());
     for(auto& vec: data_)
