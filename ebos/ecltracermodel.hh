@@ -172,9 +172,7 @@ public:
         if (this->numTracers()==0)
             return;
 
-        advanceTracerFields(wat_);
-        advanceTracerFields(oil_);
-        advanceTracerFields(gas_);
+        advanceTracerFields();
     }
 
     /*!
@@ -404,69 +402,70 @@ protected:
         }
     }
 
-    template <class TrRe>
-    void advanceTracerFields(TrRe & tr)
+    void advanceTracerFields()
     {
-        if (tr.numTracer() == 0)
-            return;
-
-        // Note that we solve for a concentration update (compared to previous time step)
-        // Confer also assembleTracerEquations_(...) above.
-        std::vector<TracerVector> dx(tr.concentration_);
-        for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx)
-            dx[tIdx] = 0.0;
-
-        assembleTracerEquations_(tr);
-
-        bool converged = this->linearSolveBatchwise_(*this->tracerMatrix_, dx, tr.residual_);
-        if (!converged)
-            std::cout << "### Tracer model: Warning, linear solver did not converge. ###" << std::endl;
-
-        for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
-            tr.concentration_[tIdx] -= dx[tIdx];
-            // Tracer concentrations for restart report
-            this->tracerConcentration_[tr.idx_[tIdx]] = tr.concentration_[tIdx];
-        }
-
-        // Store _producer_ tracer rate for reporting
-        const auto& wellPtrs = simulator_.problem().wellModel().localNonshutWells();
-        for (const auto& wellPtr : wellPtrs) {
-            const auto& well = wellPtr->wellEcl();
-
-            if (!well.isProducer()) //Injection rates already reported during assembly
+        for (auto& tr : tbatch) {
+            if (tr.numTracer() == 0)
                 continue;
 
-            Scalar rateWellPos = 0.0;
-            Scalar rateWellNeg = 0.0;
-            for (auto& perfData : wellPtr->perforationData()) {
-                const int I = perfData.cell_index;
-                Scalar rate = wellPtr->volumetricSurfaceRateForConnection(I, tr.phaseIdx_);
-                if (rate < 0) {
-                    rateWellNeg += rate;
-                    for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
-                        this->wellTracerRate_.at(std::make_pair(well.name(),this->name(tr.idx_[tIdx]))) += rate*tr.concentration_[tIdx][I];
-                    }
-                }
-                else {
-                    rateWellPos += rate;
-                }
+            // Note that we solve for a concentration update (compared to previous time step)
+            // Confer also assembleTracerEquations_(...) above.
+            std::vector<TracerVector> dx(tr.concentration_);
+            for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx)
+                dx[tIdx] = 0.0;
+
+            assembleTracerEquations_(tr);
+
+            bool converged = this->linearSolveBatchwise_(*this->tracerMatrix_, dx, tr.residual_);
+            if (!converged)
+                std::cout << "### Tracer model: Warning, linear solver did not converge. ###" << std::endl;
+
+            for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
+                tr.concentration_[tIdx] -= dx[tIdx];
+                // Tracer concentrations for restart report
+                this->tracerConcentration_[tr.idx_[tIdx]] = tr.concentration_[tIdx];
             }
 
-            Scalar rateWellTotal = rateWellNeg + rateWellPos;
+            // Store _producer_ tracer rate for reporting
+            const auto& wellPtrs = simulator_.problem().wellModel().localNonshutWells();
+            for (const auto& wellPtr : wellPtrs) {
+                const auto& well = wellPtr->wellEcl();
 
-            // TODO: Some inconsistencies here that perhaps should be clarified. The "offical" rate as reported below is
-            //  occasionally significant different from the sum over connections (as calculated above). Only observed
-            //  for small values, neglible for the rate itself, but matters when used to calculate tracer concentrations.
-            std::size_t well_index = simulator_.problem().wellModel().wellState().index(well.name()).value();
-            Scalar official_well_rate_total = simulator_.problem().wellModel().wellState().well(well_index).surface_rates[tr.phaseIdx_];
+                if (!well.isProducer()) //Injection rates already reported during assembly
+                    continue;
 
-            rateWellTotal = official_well_rate_total;
+                Scalar rateWellPos = 0.0;
+                Scalar rateWellNeg = 0.0;
+                for (auto& perfData : wellPtr->perforationData()) {
+                    const int I = perfData.cell_index;
+                    Scalar rate = wellPtr->volumetricSurfaceRateForConnection(I, tr.phaseIdx_);
+                    if (rate < 0) {
+                        rateWellNeg += rate;
+                        for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
+                            this->wellTracerRate_.at(std::make_pair(well.name(),this->name(tr.idx_[tIdx]))) += rate*tr.concentration_[tIdx][I];
+                        }
+                    }
+                    else {
+                        rateWellPos += rate;
+                    }
+                }
 
-            if (rateWellTotal > rateWellNeg) { // Cross flow
-                const Scalar bucketPrDay = 10.0/(1000.*3600.*24.); // ... keeps (some) trouble away
-                const Scalar factor = (rateWellTotal < -bucketPrDay) ? rateWellTotal/rateWellNeg : 0.0;
-                for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
-                    this->wellTracerRate_.at(std::make_pair(well.name(),this->name(tr.idx_[tIdx]))) *= factor;
+                Scalar rateWellTotal = rateWellNeg + rateWellPos;
+
+                // TODO: Some inconsistencies here that perhaps should be clarified. The "offical" rate as reported below is
+                //  occasionally significant different from the sum over connections (as calculated above). Only observed
+                //  for small values, neglible for the rate itself, but matters when used to calculate tracer concentrations.
+                std::size_t well_index = simulator_.problem().wellModel().wellState().index(well.name()).value();
+                Scalar official_well_rate_total = simulator_.problem().wellModel().wellState().well(well_index).surface_rates[tr.phaseIdx_];
+
+                rateWellTotal = official_well_rate_total;
+
+                if (rateWellTotal > rateWellNeg) { // Cross flow
+                    const Scalar bucketPrDay = 10.0/(1000.*3600.*24.); // ... keeps (some) trouble away
+                    const Scalar factor = (rateWellTotal < -bucketPrDay) ? rateWellTotal/rateWellNeg : 0.0;
+                    for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
+                        this->wellTracerRate_.at(std::make_pair(well.name(),this->name(tr.idx_[tIdx]))) *= factor;
+                    }
                 }
             }
         }
