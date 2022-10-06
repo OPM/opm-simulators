@@ -193,6 +193,7 @@ tests[rxft_smry]="flow rxft_smry TEST_RXFT"
 tests[bo_diffusion]="flow diffusion BO_DIFFUSE_CASE1"
 tests[fpr_nonhc]="flow water-1ph WATER2F"
 tests[actionx_wpimult]="flow actionx ACTIONX_WPIMULT"
+tests[wvfpexp_02]="flow wvfpexp WVFPEXP-02"
 
 changed_tests=""
 
