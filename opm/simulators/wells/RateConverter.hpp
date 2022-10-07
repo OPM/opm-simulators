@@ -131,7 +131,7 @@ namespace Opm {
                     const auto& fs = intQuants.fluidState();
                     // use pore volume weighted averages.
                     const double pv_cell =
-                            simulator.model().dofTotalVolume(cellIdx)
+                            simulator.model().dofTotalVolume(simulator.vanguard().gridEquilIdxToGridIdx(cellIdx))
                             * intQuants.porosity().value();
 
                     // only count oil and gas filled parts of the domain

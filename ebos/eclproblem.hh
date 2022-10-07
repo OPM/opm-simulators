@@ -2259,7 +2259,7 @@ private:
             // be larger than 1.0!
             Scalar dofVolume = simulator.model().dofTotalVolume(vanguard.gridEquilIdxToGridIdx(dofIdx));
             assert(dofVolume > 0.0);
-            this->referencePorosity_[/*timeIdx=*/0][dofIdx] = poreVolume/dofVolume;
+            this->referencePorosity_[/*timeIdx=*/0][vanguard.gridEquilIdxToGridIdx(dofIdx)] = poreVolume/dofVolume;
         }
     }
 
