@@ -25,64 +25,19 @@
 #include <opm/simulators/utils/DamarisOutputModule.hpp>
 #include <opm/simulators/utils/DamarisKeywords.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
-/*
-    Below is the XML file for Damaris that is supported by Damaris.
-
-    The entries in the map below will be filled by corresponding Damaris 
-    Keywords.
-*/
 
 namespace Opm::DamarisOutput
 {
 
-std::string initDamarisXmlFile() 
-{
-    std::string init_damaris = R"V0G0N(<?xml version="1.0"?>
-<simulation name="opm-flow" language="c" 
-	xmlns="http://damaris.gforge.inria.fr/damaris/model">
-	<architecture>
-		<domains count="1"/>
-		<dedicated cores="_DC_REGEX_" nodes="_DN_REGEX_"/>
-		<buffer name="buffer" size="_SHMEM_BUFFER_BYTES_REGEX_" />
-		<placement />
-		<queue  name="queue" size="300" />
-	</architecture>
-	<data>
-    
-     <parameter name="n_elements_total"     type="int" value="1" /> 
-     <parameter name="n_elements_local"     type="int" value="1" />
-     <parameter name="n"     type="int" value="1" />
-     
-     <layout   name="zonal_layout_usmesh"             type="double" dimensions="n_elements_local"   global="n_elements_total"   comment="For the field data e.g. Pressure"  />
-     <variable name="PRESSURE"    layout="zonal_layout_usmesh"     type="scalar"  visualizable="false"     unit="Pa"   centering="zonal"  store="_MYSTORE_OR_EMPTY_REGEX_" /> 
-     _MORE_VARIABLES_REGEX_
-	</data>
-    
-     <storage>
-      <store name="MyStore" type="HDF5">
-         <option key="FileMode">_File_Mode</option>
-         <option key="XDMFMode">NoIteration</option>
-         <option key="FilesPath">./</option>
-      </store>
-      </storage>
-      
-      
-	<actions>
-	</actions>
+std::string initDamarisXmlFile(); // Defined in initDamarisXMLFile.cpp, to avoid messing up this file.
 
-      <log FileName="_PATH_REGEX_/damaris_log/exa_dbg" RotationSize="5" LogFormat="[%TimeStamp%]: %Message%"  Flush="True"  LogLevel="debug" />
 
-</simulation>)V0G0N";
-
-    return init_damaris;
-}
-
-void initializeDamaris(MPI_Comm comm, int mpiRank, std::string OutputDir, bool enableAsyncDamarisOutput) 
+void initializeDamaris(MPI_Comm comm, int mpiRank, std::string OutputDir, bool enableAsyncDamarisOutput)
 {
     // Prepare the XML file
     std::string damaris_config_xml = initDamarisXmlFile();
-    damaris::model::ModifyModel myMod = damaris::model::ModifyModel(damaris_config_xml);  
-    // The map will make it precise the output directory and FileMode (either FilePerCore or Collective storage) 
+    damaris::model::ModifyModel myMod = damaris::model::ModifyModel(damaris_config_xml);
+    // The map will make it precise the output directory and FileMode (either FilePerCore or Collective storage)
     // The map file find all occurences of the string in position 1 and repalce it/them with string in position 2
     std::map<std::string,std::string> find_replace_map = DamarisKeywords(OutputDir, enableAsyncDamarisOutput);
     myMod.RepalceWithRegEx(find_replace_map);
@@ -115,7 +70,7 @@ void initializeDamaris(MPI_Comm comm, int mpiRank, std::string OutputDir, bool e
 
 }
 
-void setupDamarisWritingPars(Parallel::Communication comm, const int n_elements_local_grid) 
+void setupDamarisWritingPars(Parallel::Communication comm, const int n_elements_local_grid)
 {
     int damaris_err = DAMARIS_OK;
 
@@ -139,7 +94,7 @@ void setupDamarisWritingPars(Parallel::Communication comm, const int n_elements_
     }
 
     // find the global/total size
-    unsigned long long n_elements_global_max  = elements_rank_offsets[nranks-1] ; 
+    unsigned long long n_elements_global_max  = elements_rank_offsets[nranks-1] ;
     n_elements_global_max += elements_rank_sizes[nranks-1] ; // add the last ranks size to the already accumulated offset values
 
     if (rank == 0 ) {
