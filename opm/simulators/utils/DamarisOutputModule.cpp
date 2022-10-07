@@ -60,7 +60,7 @@ std::string initDamarisXmlFile()
     
      <storage>
       <store name="MyStore" type="HDF5">
-         <option key="FileMode">"_File_Mode"</option>
+         <option key="FileMode">_File_Mode</option>
          <option key="XDMFMode">NoIteration</option>
          <option key="FilesPath">./</option>
       </store>
