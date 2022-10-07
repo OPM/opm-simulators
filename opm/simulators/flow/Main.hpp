@@ -435,6 +435,7 @@ private:
             deckFilename = EWOMS_GET_PARAM(PreTypeTag, std::string, EclDeckFileName);
             outputDir = EWOMS_GET_PARAM(PreTypeTag, std::string, OutputDir);
         }
+        ensureOutputDirExists(outputDir);
 
 #if HAVE_DAMARIS
         enableDamarisOutput_ = EWOMS_GET_PARAM(PreTypeTag, bool, EnableDamarisOutput);
