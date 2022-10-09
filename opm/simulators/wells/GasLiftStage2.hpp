@@ -92,6 +92,8 @@ protected:
         const Group& group);
     std::tuple<double, double, double> getCurrentWellRates_(
         const std::string& well_name, const std::string& group_name);
+    std::optional<double> getGroupMaxALQ_(const Group &group);
+    std::optional<double> getGroupMaxTotalGas_(const Group &group);
     std::vector<GasLiftSingleWell *> getGroupGliftWells_(
         const Group& group);
     void getGroupGliftWellsRecursive_(

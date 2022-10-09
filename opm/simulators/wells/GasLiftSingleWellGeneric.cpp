@@ -765,7 +765,7 @@ getRateWithGroupLimit_(
     const double delta_rate = new_rate - old_rate;
     if (delta_rate > 0) {
       // It is required that the production rate for a given group is
-      // is less than or equal to its target rate, see assert() below.
+      // is less than or equal to its target rate.
       // Then it only makes sense to check if the group target is exceeded
       //  if delta_rate > 0
       const auto &pairs =

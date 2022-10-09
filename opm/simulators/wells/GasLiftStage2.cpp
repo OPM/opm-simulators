@@ -403,6 +403,26 @@ getCurrentWellRates_(const std::string &well_name, const std::string &group_name
     return std::make_tuple(oil_rate, gas_rate, alq);
 }
 
+std::optional<double>
+GasLiftStage2::getGroupMaxALQ_(const Group &group)
+{
+    if (this->glo_.has_group(group.name())) {
+        const auto &gl_group = this->glo_.group(group.name());
+        return gl_group.max_lift_gas();
+    }
+    return std::nullopt; // If GLIFTOPT is missing from schedule, assume unlimited alq
+}
+
+std::optional<double>
+GasLiftStage2::getGroupMaxTotalGas_(const Group &group)
+{
+    if (this->glo_.has_group(group.name())) {
+        const auto &gl_group = this->glo_.group(group.name());
+        return gl_group.max_total_gas();
+    }
+    return std::nullopt; // If GLIFTOPT is missing from schedule, assume unlimited alq
+}
+
 std::pair<double, double>
 GasLiftStage2::
 getWellRates_(const WellInterfaceGeneric &well)
@@ -517,9 +537,8 @@ void
 GasLiftStage2::
 optimizeGroup_(const Group &group)
 {
-    const auto &gl_group = this->glo_.group(group.name());
-    const auto &max_glift = gl_group.max_lift_gas();
-    const auto &max_total_gas = gl_group.max_total_gas();
+    const auto max_glift = getGroupMaxALQ_(group);
+    const auto max_total_gas = getGroupMaxTotalGas_(group);
     if (group.has_control(Group::ProductionCMode::ORAT)
                        || max_glift || max_total_gas)
     {
@@ -546,16 +565,7 @@ optimizeGroupsRecursive_(const Group &group)
             group_name, this->report_step_idx_);
         optimizeGroupsRecursive_(sub_group);
     }
-    // TODO: should we also optimize groups that do not have GLIFTOPT defined?
-    //   (i.e. glo_.has_group(name) returns false)
-    //   IF GLIFTOPT is not specified for the group or if item 2 of GLIFTOPT
-    //   is defaulted, there is no maximum lift gas supply for the group.
-    //   But even if there is no limit on the liftgas supply it can still
-    //   be desireable to use as little ALQ as possible to achieve a
-    //   group oil rate limit or gas rate limit.
-    if (this->glo_.has_group(group.name())) // only optimize if GLIFTOPT is given
-        optimizeGroup_(group);
-
+    optimizeGroup_(group);
 }
 
 void
@@ -718,8 +728,7 @@ removeSurplusALQ_(const Group &group,
         return;
     }
     assert(!dec_grads.empty());
-    const auto &gl_group = this->glo_.group(group.name());
-    const auto &max_glift = gl_group.max_lift_gas();
+    const auto max_glift = getGroupMaxALQ_(group);
     const auto controls = group.productionControls(this->summary_state_);
     //const auto &max_total_gas = gl_group.max_total_gas();
     auto [oil_rate, gas_rate, alq] = getCurrentGroupRates_(group);
