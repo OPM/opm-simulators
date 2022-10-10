@@ -272,38 +272,40 @@ displayDebugMessage_(const std::string &msg, const std::string &group_name)
     }
 }
 
-std::tuple<double, double, double>
+std::tuple<double, double, double, double>
 GasLiftStage2::
 getCurrentGroupRates_(const Group &group)
 {
     auto rates = getCurrentGroupRatesRecursive_(group);
     this->comm_.sum(rates.data(), rates.size());
-    auto [oil_rate, gas_rate, alq] = rates;
+    auto [oil_rate, gas_rate, water_rate, alq] = rates;
     if (this->debug) {
         const std::string msg = fmt::format(
-            "Current group rates for {} : oil: {}, gas: {}, alq: {}",
-            group.name(), oil_rate, gas_rate, alq);
+            "Current group rates for {} : oil: {}, gas: {}, water: {}, alq: {}",
+            group.name(), oil_rate, gas_rate, water_rate, alq);
         displayDebugMessageOnRank0_(msg);
     }
 
-    return {oil_rate, gas_rate, alq};
+    return {oil_rate, gas_rate, water_rate, alq};
 }
 
 
-std::array <double, 3>
+std::array <double, 4>
 GasLiftStage2::
 getCurrentGroupRatesRecursive_(const Group &group)
 {
     double oil_rate = 0.0;
     double gas_rate = 0.0;
+    double water_rate = 0.0;
     double alq = 0.0;
     // NOTE: A group can either contain wells or groups, but not both
     if (group.wellgroup()) {
         for (const std::string& well_name : group.wells()) {
-            auto [sw_oil_rate, sw_gas_rate, sw_alq] =
+            auto [sw_oil_rate, sw_gas_rate, sw_water_rate, sw_alq] =
                 getCurrentWellRates_(well_name, group.name());
             oil_rate += sw_oil_rate;
             gas_rate += sw_gas_rate;
+            water_rate += sw_water_rate;
             alq += sw_alq;
         }
 
@@ -321,21 +323,22 @@ getCurrentGroupRatesRecursive_(const Group &group)
                 // parent group.
                 const auto gefac = sub_group.getGroupEfficiencyFactor();
                 auto rates = getCurrentGroupRatesRecursive_(sub_group);
-                auto [sg_oil_rate, sg_gas_rate, sg_alq] = rates;
+                auto [sg_oil_rate, sg_gas_rate, sg_water_rate, sg_alq] = rates;
                 oil_rate += (gefac * sg_oil_rate);
                 gas_rate += (gefac * sg_gas_rate);
+                water_rate += (gefac * sg_water_rate);
                 alq += (gefac * sg_alq);
             }
         }
     }
-    return {oil_rate, gas_rate, alq};
+    return {oil_rate, gas_rate, water_rate, alq};
 }
 
-std::tuple<double, double, double>
+std::tuple<double, double, double, double>
 GasLiftStage2::
 getCurrentWellRates_(const std::string &well_name, const std::string &group_name)
 {
-    double oil_rate, gas_rate, alq;
+    double oil_rate, gas_rate, water_rate, alq;
     bool success = false;
     const WellInterfaceGeneric *well_ptr = nullptr;
     std::string debug_info;
@@ -345,12 +348,13 @@ getCurrentWellRates_(const std::string &well_name, const std::string &group_name
         well_ptr = &well;
         GasLiftWellState &state = *(this->well_state_map_.at(well_name).get());
         std::tie(oil_rate, gas_rate) = state.getRates();
+        water_rate = state.waterRate();
         success = true;
         if ( this->debug) debug_info = "(A)";
     }
     else if (this->prod_wells_.count(well_name) == 1) {
         well_ptr = this->prod_wells_.at(well_name);
-        std::tie(oil_rate, gas_rate) = getWellRates_(*well_ptr);
+        std::tie(oil_rate, gas_rate, water_rate) = getWellRates_(*well_ptr);
         success = true;
         if ( this->debug) debug_info = "(B)";
     }
@@ -368,8 +372,8 @@ getCurrentWellRates_(const std::string &well_name, const std::string &group_name
         alq = this->well_state_.getALQ(well_name);
         if (this->debug) {
             const std::string msg = fmt::format(
-                "Rates {} for well {} : oil: {}, gas: {}, alq: {}",
-                debug_info, well_name, oil_rate, gas_rate, alq);
+                "Rates {} for well {} : oil: {}, gas: {}, water: {}, alq: {}",
+                debug_info, well_name, oil_rate, gas_rate, water_rate, alq);
             displayDebugMessage_(msg, group_name);
         }
         // If wells have efficiency factors to take account of regular
@@ -383,11 +387,12 @@ getCurrentWellRates_(const std::string &well_name, const std::string &group_name
         double factor = well_ecl.getEfficiencyFactor();
         oil_rate *= factor;
         gas_rate *= factor;
+        water_rate *= factor;
         alq *= factor;
         if (this->debug && (factor != 1)) {
             const std::string msg = fmt::format(
-                "Well {} : efficiency factor {}. New rates : oil: {}, gas: {}, alq: {}",
-                well_name, factor, oil_rate, gas_rate, alq);
+                "Well {} : efficiency factor {}. New rates : oil: {}, gas: {}, water: {}, alq: {}",
+                well_name, factor, oil_rate, gas_rate, water_rate, alq);
             displayDebugMessage_(msg, group_name);
         }
     }
@@ -398,9 +403,9 @@ getCurrentWellRates_(const std::string &well_name, const std::string &group_name
                 "well {}: (not active or injector)", well_name);
             displayDebugMessage_(msg, group_name);
         }
-        oil_rate = 0.0; gas_rate = 0.0; alq = 0.0;
+        oil_rate = 0.0; gas_rate = 0.0; water_rate = 0.0; alq = 0.0;
     }
-    return std::make_tuple(oil_rate, gas_rate, alq);
+    return std::make_tuple(oil_rate, gas_rate, water_rate, alq);
 }
 
 std::optional<double>
@@ -423,7 +428,7 @@ GasLiftStage2::getGroupMaxTotalGas_(const Group &group)
     return std::nullopt; // If GLIFTOPT is missing from schedule, assume unlimited alq
 }
 
-std::pair<double, double>
+std::tuple<double, double, double>
 GasLiftStage2::
 getWellRates_(const WellInterfaceGeneric &well)
 {
@@ -431,13 +436,14 @@ getWellRates_(const WellInterfaceGeneric &well)
     const auto& ws = this->well_state_.well(well_index);
     const auto& pu = well.phaseUsage();
     auto oil_rate = ws.well_potentials[pu.phase_pos[Oil]];
+    auto water_rate = ws.well_potentials[pu.phase_pos[Water]];
     double gas_rate = 0.0;
     // See comment for setupPhaseVariables_() in GasLiftSingleWell_impl.hpp
     //  about the two-phase oil-water case.
     if (pu.phase_used[BlackoilPhases::Vapour]) {
         gas_rate = ws.well_potentials[pu.phase_pos[Gas]];
     }
-    return {oil_rate, gas_rate};
+    return {oil_rate, gas_rate, water_rate};
 }
 
 // Find all subordinate wells of a given group.
@@ -539,7 +545,7 @@ optimizeGroup_(const Group &group)
 {
     const auto max_glift = getGroupMaxALQ_(group);
     const auto max_total_gas = getGroupMaxTotalGas_(group);
-    if (group.has_control(Group::ProductionCMode::ORAT)
+    if (group.has_control(Group::ProductionCMode::ORAT) || group.has_control(Group::ProductionCMode::LRAT)
                        || max_glift || max_total_gas)
     {
         displayDebugMessage_("optimizing", group.name());
@@ -731,7 +737,7 @@ removeSurplusALQ_(const Group &group,
     const auto max_glift = getGroupMaxALQ_(group);
     const auto controls = group.productionControls(this->summary_state_);
     //const auto &max_total_gas = gl_group.max_total_gas();
-    auto [oil_rate, gas_rate, alq] = getCurrentGroupRates_(group);
+    auto [oil_rate, gas_rate, water_rate, alq] = getCurrentGroupRates_(group);
     auto min_eco_grad = this->glo_.min_eco_gradient();
     bool stop_iteration = false;
     if (this->debug) {
@@ -739,12 +745,15 @@ removeSurplusALQ_(const Group &group,
         if (max_glift) max_glift_str = fmt::format("{}", *max_glift);
         const std::string msg = fmt::format("Starting iteration for group: {}. "
             "oil_rate = {}, oil_target = {}, gas_rate = {}, gas_target = {}, "
-            "alq = {}, max_alq = {}", group.name(), oil_rate, controls.oil_target,
-            gas_rate, controls.gas_target, alq, max_glift_str);
+            "water_rate = {}, liquid_target = {}, alq = {}, max_alq = {}",
+            group.name(), oil_rate, controls.oil_target,
+            gas_rate, controls.gas_target, water_rate, controls.liquid_target,
+            alq, max_glift_str);
         displayDebugMessage_(msg);
     }
-    SurplusState state {*this, group, oil_rate, gas_rate, alq,
-            min_eco_grad, controls.oil_target, controls.gas_target, max_glift };
+    SurplusState state {*this, group, oil_rate, gas_rate, water_rate, alq,
+            min_eco_grad, controls.oil_target, controls.gas_target,
+            controls.liquid_target, max_glift };
 
     while (!stop_iteration) {
         if (dec_grads.size() >= 2) {
@@ -754,7 +763,9 @@ removeSurplusALQ_(const Group &group,
         const auto well_name = dec_grad_itr->first;
         auto eco_grad = dec_grad_itr->second;
         bool remove = false;
-        if (state.checkOilTarget() || state.checkGasTarget() || state.checkALQlimit()) {
+        if (state.checkOilTarget() || state.checkGasTarget() 
+              || state.checkLiquidTarget() || state.checkALQlimit()) 
+        {
             remove = true;
         }
         else {
@@ -786,11 +797,11 @@ removeSurplusALQ_(const Group &group,
     }
     if (state.it >= 1) {
         if (this->debug) {
-            auto [oil_rate2, gas_rate2, alq2] = getCurrentGroupRates_(group);
+            auto [oil_rate2, gas_rate2, water_rate2, alq2] = getCurrentGroupRates_(group);
             const std::string msg = fmt::format(
                  "Finished after {} iterations for group: {}."
-                 " oil_rate = {}, gas_rate = {}, alq = {}", state.it,
-                 group.name(), oil_rate2, gas_rate2, alq2);
+                 " oil_rate = {}, gas_rate = {}, water_rate = {}, alq = {}", state.it,
+                 group.name(), oil_rate2, gas_rate2, water_rate2, alq2);
             displayDebugMessage_(msg);
         }
     }
@@ -1084,6 +1095,24 @@ checkGasTarget()
     }
     return false;
 }
+bool
+GasLiftStage2::SurplusState::
+checkLiquidTarget()
+{
+    if (this->group.has_control(Group::ProductionCMode::LRAT)) {
+        auto liquid_rate = this->oil_rate + this->water_rate;
+        if (this->liquid_target < liquid_rate ) {
+            if (this->parent.debug) {
+                const std::string msg = fmt::format("group: {} : "
+                    "liquid rate {} is greater than liquid target {}", this->group.name(),
+                    liquid_rate, this->liquid_target);
+                this->parent.displayDebugMessage_(msg);
+            }
+            return true;
+        }
+    }
+    return false;
+}
 
 bool
 GasLiftStage2::SurplusState::
@@ -1107,7 +1136,7 @@ void
 GasLiftStage2::SurplusState::
 updateRates(const std::string &well_name)
 {
-    std::array<double, 3> delta = {0.0,0.0,0.0};
+    std::array<double, 4> delta = {0.0, 0.0, 0.0, 0.0};
     // compute the delta on wells on own rank
     if (this->parent.well_state_map_.count(well_name) > 0) {
         const GradInfo &gi = this->parent.dec_grads_.at(well_name);
@@ -1118,10 +1147,11 @@ updateRates(const std::string &well_name)
         if (this->parent.well_state_.wellIsOwned(well.indexOfWell(), well_name)) {
             const auto &well_ecl = well.wellEcl();
             double factor = well_ecl.getEfficiencyFactor();
-            auto& [delta_oil, delta_gas, delta_alq] = delta;
-                    delta_oil = factor * (gi.new_oil_rate - state.oilRate());
-                    delta_gas = factor * (gi.new_gas_rate - state.gasRate());
-                    delta_alq = factor * (gi.alq - state.alq());
+            auto& [delta_oil, delta_gas, delta_water, delta_alq] = delta;
+            delta_oil = factor * (gi.new_oil_rate - state.oilRate());
+            delta_gas = factor * (gi.new_gas_rate - state.gasRate());
+            delta_water = factor * (gi.new_water_rate - state.waterRate());
+            delta_alq = factor * (gi.alq - state.alq());
         }
     }
 
@@ -1129,9 +1159,10 @@ updateRates(const std::string &well_name)
     this->parent.comm_.sum(delta.data(), delta.size());
 
     // and update
-    const auto& [delta_oil, delta_gas, delta_alq] = delta;
+    const auto& [delta_oil, delta_gas, delta_water, delta_alq] = delta;
     this->oil_rate += delta_oil;
     this->gas_rate += delta_gas;
+    this->water_rate += delta_water;
     this->alq += delta_alq;
 }
 
