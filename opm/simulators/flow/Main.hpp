@@ -440,14 +440,14 @@ private:
 #if HAVE_DAMARIS
         enableDamarisOutput_ = EWOMS_GET_PARAM(PreTypeTag, bool, EnableDamarisOutput);
         if (enableDamarisOutput_) {
-            // By default EnableAsyncDamarisOutput is false so FilePerCore Mode is used in Damaris so  all the
-            // simulation results in each node are aggregated by dedicated cores and stored asynchronously at the end of
-            // each iteration.
-            const bool enableAsyncDamarisOutput = EWOMS_GET_PARAM(PreTypeTag, bool, EnableAsyncDamarisOutput);
-            // Using the ModifyModel class to set the XML file for Damaris.
-            // If EnableAsyncDamarisOutput is enabled, all simulation results will
+            // By default EnableDamarisOutputCollective is true so all simulation results will
             // be written into one single file for each iteration using Parallel HDF5.
-            DamarisOutput::initializeDamaris(EclGenericVanguard::comm(), EclGenericVanguard::comm().rank(), outputDir, enableAsyncDamarisOutput);
+            // It set to false, FilePerCore mode is used in Damaris, then simulation results in each
+            // node are aggregated by dedicated Damaris cores and stored to separate files per Damaris core.
+            // Irrespective of mode, output is written asynchronously at the end of each timestep.
+            const bool enableDamarisOutputCollective = EWOMS_GET_PARAM(PreTypeTag, bool, EnableDamarisOutputCollective);
+            // Using the ModifyModel class to set the XML file for Damaris.
+            DamarisOutput::initializeDamaris(EclGenericVanguard::comm(), EclGenericVanguard::comm().rank(), outputDir, enableDamarisOutputCollective);
             int is_client;
             MPI_Comm new_comm;
             int err = damaris_start(&is_client);

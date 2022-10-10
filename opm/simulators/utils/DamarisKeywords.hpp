@@ -26,7 +26,7 @@
 /*
     Below is the std::map with the keywords that are supported by Damaris.
 
-    Most entries in the map below are not critical ('static') and will not 
+    Most entries in the map below are not critical ('static') and will not
     be changed. We only allow changing FileMode together with output directory
 */
 
@@ -34,7 +34,7 @@
 namespace Opm::DamarisOutput
 {
 
-std::map<std::string,std::string> DamarisKeywords(std::string OutputDir, bool enableAsyncDamarisOutput);
+std::map<std::string,std::string> DamarisKeywords(std::string outputDir, bool enableDamarisOutputCollective);
 
 } // namespace Opm::DamarisOutput
 

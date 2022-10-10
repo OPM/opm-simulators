@@ -63,7 +63,7 @@ struct EnableDamarisOutput {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
-struct EnableAsyncDamarisOutput {
+struct EnableDamarisOutputCollective {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
@@ -124,8 +124,8 @@ public:
 
         EWOMS_REGISTER_PARAM(TypeTag, bool, EnableAsyncEclOutput,
                              "Write the ECL-formated results in a non-blocking way (i.e., using a separate thread).");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, EnableAsyncDamarisOutput,
-                             "Write specific variable in parallel using Damaris (i.e., using parallel HDF5).");                     
+        EWOMS_REGISTER_PARAM(TypeTag, bool, EnableDamarisOutputCollective,
+                             "Write output via Damaris using parallel HDF5 to get single file per timestep instead of one per Damaris core.");
         EWOMS_REGISTER_PARAM(TypeTag, bool, EnableEsmry,
                              "Write ESMRY file for fast loading of summary data.");
     }
@@ -319,7 +319,7 @@ public:
               }
           }
        }
-#else
+#endif
         // output using eclWriter if enabled
         auto localWellData = simulator_.problem().wellModel().wellData();
         auto localGroupAndNetworkData = simulator_.problem().wellModel()
@@ -363,7 +363,6 @@ public:
                                 curTime, nextStepSize,
                                 EWOMS_GET_PARAM(TypeTag, bool, EclOutputDoublePrecision));
         }
-#endif
     }
 
     void beginRestart()

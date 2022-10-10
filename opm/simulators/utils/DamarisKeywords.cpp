@@ -33,9 +33,9 @@
 namespace Opm::DamarisOutput
 {
 std::map<std::string, std::string>
-DamarisKeywords(std::string OutputDir, bool enableAsyncDamarisOutput)
+DamarisKeywords(std::string OutputDir, bool enableDamarisOutputCollective)
 {
-    if (enableAsyncDamarisOutput) {
+    if (enableDamarisOutputCollective) {
         std::map<std::string, std::string> damaris_keywords = {
             {"_SHMEM_BUFFER_BYTES_REGEX_", "536870912"},
             {"_DC_REGEX_", "1"},

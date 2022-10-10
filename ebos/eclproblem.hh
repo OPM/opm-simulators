@@ -434,23 +434,22 @@ struct EnableEclOutput<TypeTag,TTag::EclBaseProblem> {
 
 //! Enable the Damaris output by default
 template<class TypeTag>
-struct EnableDamarisOutput<TypeTag, TTag::EclBaseProblem> { 
-    static constexpr bool value = false; };
+struct EnableDamarisOutput<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = false;
+};
 
-//! By default, write the Damaris output using separate core
-//!
-//! This has only an effect if EnableVtkOutput is true
+// If Damaris is available, write specific variable output in parallel
+template<class TypeTag>
+struct EnableDamarisOutputCollective<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = true;
+};
+
 // If available, write the ECL output in a non-blocking manner
 template<class TypeTag>
 struct EnableAsyncEclOutput<TypeTag, TTag::EclBaseProblem> {
     static constexpr bool value = true;
 };
 
-// If Damaris is available, write specific variable output in parallel
-template<class TypeTag>
-struct EnableAsyncDamarisOutput<TypeTag, TTag::EclBaseProblem> {
-    static constexpr bool value = false;
-};
 // Write ESMRY file for fast loading of summary data
 template<class TypeTag>
 struct EnableEsmry<TypeTag, TTag::EclBaseProblem> {

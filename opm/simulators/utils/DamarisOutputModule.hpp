@@ -24,7 +24,7 @@
 /*
     Below is the XML file for Damaris that is supported by Damaris.
 
-    The entries in the map below will be filled by corresponding Damaris 
+    The entries in the map below will be filled by corresponding Damaris
     Keywords.
 */
 
@@ -34,7 +34,7 @@ namespace Opm::DamarisOutput
  // Initialize an XML file
  std::string initDamarisXmlFile();
  // Initialize Damaris by filling in th XML file and stroring it in the chosed directory
- void initializeDamaris(MPI_Comm comm, int mpiRank, std::string OutputDir, bool enableAsyncDamarisOutput);
+ void initializeDamaris(MPI_Comm comm, int mpiRank, std::string OutputDir, bool enableDamarisOutputCollective);
  // Setup Damaris Parameters for writing e.g., grid size and communicator to output "PRESSURE" field
  void setupDamarisWritingPars(Parallel::Communication comm, const int n_elements_local_grid);
 
