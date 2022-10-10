@@ -294,20 +294,18 @@ public:
 
     void writeOutput(bool isSubStep)
     {
-        
         const int reportStepNum = simulator_.episodeIndex() + 1;
         this->prepareLocalCellData(isSubStep, reportStepNum);
         this->eclOutputModule_->outputErrorLog(simulator_.gridView().comm());
-        
-#ifdef HAVE_DAMARIS  
-       if (EWOMS_GET_PARAM(TypeTag, bool, EnableDamarisOutput)) {    
-       /* N.B. damarisUpdate should be set to true if at any time the model geometry changes */                         
+#ifdef HAVE_DAMARIS
+       if (EWOMS_GET_PARAM(TypeTag, bool, EnableDamarisOutput)) {
+       /* N.B. damarisUpdate should be set to true if at any time the model geometry changes */
           if (this->damarisUpdate == true)
           {
               const auto& gridView = simulator_.gridView();
               const int numElements = gridView.size(/*codim=*/0);  // I think this might be the full model size? No, it is the local ranks model size
               Opm::DamarisOutput::setupDamarisWritingPars(simulator_.vanguard().grid().comm(), numElements);
-              // By defauls we assume static grid                         
+              // By defauls we assume static grid
               this->damarisUpdate = false;
           }
 
@@ -321,7 +319,7 @@ public:
               }
           }
        }
-#else           
+#else
         // output using eclWriter if enabled
         auto localWellData = simulator_.problem().wellModel().wellData();
         auto localGroupAndNetworkData = simulator_.problem().wellModel()
@@ -337,7 +335,7 @@ public:
             // add cell data to perforations for Rft output
             this->eclOutputModule_->addRftDataToWells(localWellData, reportStepNum);
         }
-        
+
         if (this->collectToIORank_.isParallel()|| this->collectToIORank_.doesNeedReordering()) {
             this->collectToIORank_.collect(localCellData,
                                            eclOutputModule_->getBlockData(),
@@ -365,7 +363,7 @@ public:
                                 curTime, nextStepSize,
                                 EWOMS_GET_PARAM(TypeTag, bool, EclOutputDoublePrecision));
         }
-#endif         
+#endif
     }
 
     void beginRestart()
