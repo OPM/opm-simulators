@@ -47,9 +47,24 @@
 #include <string>
 #include <memory>
 
-#define EWOMS_CATCH_PARALLEL_EXCEPTIONS_FATAL(code)                      \
+namespace Opm
+{
+namespace detail
+{
+inline auto getMPIHelperCommunication()
+{
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
+    return Dune::MPIHelper::getCommunication();
+#else
+    return Dune::MPIHelper::getCollectiveCommunication();
+#endif
+}
+} // end namespace detail
+} // end namespace Opm
+
+#define EWOMS_CATCH_PARALLEL_EXCEPTIONS_FATAL(code)                     \
     {                                                                   \
-        const auto& comm = Dune::MPIHelper::getCollectiveCommunication(); \
+        const auto& comm = ::Opm::detail::getMPIHelperCommunication();  \
         bool exceptionThrown = false;                                   \
         try { code; }                                                   \
         catch (const Dune::Exception& e) {                              \
