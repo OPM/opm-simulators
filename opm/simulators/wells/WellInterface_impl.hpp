@@ -346,7 +346,6 @@ namespace Opm
                 deferred_logger.debug(msg);
                 return;
             }
-
             std::vector<double> potentials;
             try {
                 computeWellPotentials(simulator, well_state_copy, potentials, deferred_logger);

@@ -86,11 +86,9 @@ protected:
     void displayDebugMessage_(const std::string& msg, const std::string& group_name);
     void displayWarning_(const std::string& msg, const std::string& group_name);
     void displayWarning_(const std::string& msg);
-    std::tuple<double, double, double> getCurrentGroupRates_(
-        const Group& group);
-    std::array<double,3> getCurrentGroupRatesRecursive_(
-        const Group& group);
-    std::tuple<double, double, double> getCurrentWellRates_(
+    std::tuple<double, double, double, double> getCurrentGroupRates_(const Group& group);
+    std::array<double,4> getCurrentGroupRatesRecursive_(const Group& group);
+    std::tuple<double, double, double, double> getCurrentWellRates_(
         const std::string& well_name, const std::string& group_name);
     std::optional<double> getGroupMaxALQ_(const Group &group);
     std::optional<double> getGroupMaxTotalGas_(const Group &group);
@@ -98,7 +96,7 @@ protected:
         const Group& group);
     void getGroupGliftWellsRecursive_(
         const Group& group, std::vector<GasLiftSingleWell *>& wells);
-    std::pair<double, double> getWellRates_(const WellInterfaceGeneric& well);
+    std::tuple<double, double, double> getWellRates_(const WellInterfaceGeneric& well);
     void optimizeGroup_(const Group& group);
     void optimizeGroupsRecursive_(const Group& group);
     void recalculateGradientAndUpdateData_(
@@ -171,17 +169,20 @@ protected:
 
     struct SurplusState {
         SurplusState( GasLiftStage2& parent_, const Group& group_,
-            double oil_rate_, double gas_rate_, double alq_, double min_eco_grad_,
-            double oil_target_, double gas_target_,
-            std::optional<double> max_glift_) :
+              double oil_rate_, double gas_rate_, double water_rate_, double alq_,
+              double min_eco_grad_,
+              double oil_target_, double gas_target_, double liquid_target_,
+              std::optional<double> max_glift_) :
             parent{parent_},
             group{group_},
             oil_rate{oil_rate_},
             gas_rate{gas_rate_},
+            water_rate{water_rate_},
             alq{alq_},
             min_eco_grad{min_eco_grad_},
             oil_target{oil_target_},
             gas_target{gas_target_},
+            liquid_target{liquid_target_},
             max_glift{max_glift_},
             it{0}
         {}
@@ -189,10 +190,12 @@ protected:
         const Group &group;
         double oil_rate;
         double gas_rate;
+        double water_rate;
         double alq;
         const double min_eco_grad;
         const double oil_target;
         const double gas_target;
+        const double liquid_target;
         std::optional<double> max_glift;
         int it;
 
@@ -201,6 +204,7 @@ protected:
         bool checkALQlimit();
         bool checkEcoGradient(const std::string& well_name, double eco_grad);
         bool checkGasTarget();
+        bool checkLiquidTarget();
         bool checkOilTarget();
         void updateRates(const std::string& name);
     };

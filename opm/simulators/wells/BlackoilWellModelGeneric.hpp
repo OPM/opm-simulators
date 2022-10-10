@@ -380,7 +380,7 @@ protected:
     WGState last_valid_wgstate_;
     WGState nupcol_wgstate_;
 
-    bool glift_debug = false;
+    bool glift_debug = true;
 
     double last_glift_opt_time_ = -1.0;
 
