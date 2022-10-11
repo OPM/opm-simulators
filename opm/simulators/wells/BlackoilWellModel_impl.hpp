@@ -1280,7 +1280,7 @@ namespace Opm {
     }
 
     template <typename TypeTag>
-    void BlackoilWellModel<TypeTag>::void
+    void BlackoilWellModel<TypeTag>::
     addReseroirSourceTerms(GlobalEqVector& residual, SparseMatrixAdapter& jacobian) const
     {
         // NB this loop may write to same element if a cell has more than one perforation

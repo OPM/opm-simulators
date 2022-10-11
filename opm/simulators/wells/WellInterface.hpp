@@ -288,7 +288,8 @@ public:
                            WellState& well_state,
                            const GroupState& group_state,
                            DeferredLogger& deferred_logger);
-
+  
+  const std::vector<RateVector>& connectionRates() const {return connectionRates_;}
 protected:
 
     // simulation parameters
