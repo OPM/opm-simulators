@@ -25,6 +25,9 @@
 #include <opm/simulators/utils/DamarisKeywords.hpp>
 #include <opm/simulators/utils/DamarisOutputModule.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
+
+#include <fmt/format.h>
 
 namespace Opm::DamarisOutput
 {
@@ -83,7 +86,8 @@ setupDamarisWritingPars(Parallel::Communication comm, const int n_elements_local
     // n_elements_local_grid should be the full model size
     const unsigned long long n_elements_local = n_elements_local_grid;
 
-    std::cout << "INFO (" << rank << "): n_elements_local_grid   = " << n_elements_local_grid << std::endl;
+    // Left in for debugging, but commented out to avoid spamming the terminal from non-output ranks.
+    // std::cout << "INFO (" << rank << "): n_elements_local_grid   = " << n_elements_local_grid << std::endl;
 
     // This gets the n_elements_local from all ranks and copies them to a std::vector of all the values on all ranks
     // (elements_rank_sizes[]).
@@ -100,7 +104,7 @@ setupDamarisWritingPars(Parallel::Communication comm, const int n_elements_local
     n_elements_global_max += elements_rank_sizes[nranks - 1]; // add the last ranks size to the already accumulated offset values
 
     if (rank == 0) {
-        std::cout << "INFO (" << rank << "): n_elements_global_max = " << n_elements_global_max << std::endl;
+        OpmLog::debug(fmt::format("In setupDamarisWritingPars(): n_elements_global_max = {}", n_elements_global_max));
     }
 
     // Set the paramater so that the Damaris servers can allocate the correct amount of memory for the variabe
@@ -108,19 +112,17 @@ setupDamarisWritingPars(Parallel::Communication comm, const int n_elements_local
     // ToDo: Do we need to check that local ranks are 0 based ?
     int temp_int = static_cast<int>(elements_rank_sizes[rank]);
     damaris_err = damaris_parameter_set("n_elements_local", &temp_int, sizeof(int));
-    if (damaris_err != DAMARIS_OK) {
-        std::cerr << "ERROR: Damaris library produced an error result for "
-                     "damaris_parameter_set(\"n_elements_local\", &temp_int, sizeof(int));"
-                  << std::endl;
+    if (damaris_err != DAMARIS_OK && rank == 0) {
+        OpmLog::error("Damaris library produced an error result for "
+                      "damaris_parameter_set(\"n_elements_local\", &temp_int, sizeof(int));");
     }
     // Damaris parameters only support int data types. This will limit models to be under size of 2^32-1 elements
     // ToDo: Do we need to check that n_elements_global_max will fit in a C int type (INT_MAX)
     temp_int = static_cast<int>(n_elements_global_max);
     damaris_err = damaris_parameter_set("n_elements_total", &temp_int, sizeof(int));
-    if (damaris_err != DAMARIS_OK) {
-        std::cerr << "ERROR: Damaris library produced an error result for "
-                     "damaris_parameter_set(\"n_elements_local\", &temp_int, sizeof(int));"
-                  << std::endl;
+    if (damaris_err != DAMARIS_OK && rank == 0) {
+        OpmLog::error("Damaris library produced an error result for "
+                      "damaris_parameter_set(\"n_elements_total\", &temp_int, sizeof(int));");
     }
 
     // Use damaris_set_position to set the offset in the global size of the array.
@@ -128,10 +130,9 @@ setupDamarisWritingPars(Parallel::Communication comm, const int n_elements_local
     int64_t temp_int64_t[1];
     temp_int64_t[0] = static_cast<int64_t>(elements_rank_offsets[rank]);
     damaris_err = damaris_set_position("PRESSURE", temp_int64_t);
-    if (damaris_err != DAMARIS_OK) {
-        std::cerr << "ERROR: Damaris library produced an error result for "
-                     "damaris_set_position(\"PRESSURE\", temp_int64_t);"
-                  << std::endl;
+    if (damaris_err != DAMARIS_OK && rank == 0) {
+        OpmLog::error("Damaris library produced an error result for "
+                      "damaris_set_position(\"PRESSURE\", temp_int64_t);");
     }
 }
 } // namespace Opm::DamarisOutput
