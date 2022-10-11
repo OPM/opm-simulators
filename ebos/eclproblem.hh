@@ -1785,6 +1785,7 @@ public:
         OPM_TIMEBLOCK_LOCAL(eclProblemSource);
         rate = 0.0;
 
+        // Add well contribution to source here.
         wellModel_.computeTotalRatesForDof(rate, globalDofIdx);
 
         // convert the source term from the total mass rate of the
@@ -1796,6 +1797,14 @@ public:
             assert(isfinite(rate[eqIdx]));
         }
 
+        // Add non-well sources.
+        addToSourceDense(rate, globalDofIdx, timeIdx);
+    }
+
+    void addToSourceDense(RateVector& rate,
+                          unsigned globalDofIdx,
+                          unsigned timeIdx) const
+    {
         if (enableAquifers_)
             aquiferModel_.addToSource(rate, globalDofIdx, timeIdx);
 
