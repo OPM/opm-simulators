@@ -518,7 +518,6 @@ checkConvergencePolyMW(const std::vector<double>& res,
 }
 
 
-#if HAVE_CUDA || HAVE_OPENCL
 template<class Scalar>
 void
 StandardWellGeneric<Scalar>::
@@ -526,7 +525,6 @@ getNumBlocks(unsigned int& numBlocks) const
 {
     numBlocks = duneB_.nonzeroes();
 }
-#endif
 
 template class StandardWellGeneric<double>;
 

@@ -34,13 +34,11 @@
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/WellInterfaceIndices.hpp>
 #include <opm/simulators/wells/WellState.hpp>
+#include <opm/simulators/linalg/bda/WellContributions.hpp>
 
 #include <cassert>
 #include <cmath>
 
-#if HAVE_CUDA || HAVE_OPENCL
-#include <opm/simulators/linalg/bda/WellContributions.hpp>
-#endif
 
 
 namespace Opm
@@ -1109,7 +1107,6 @@ init(std::vector<double>& perf_depth,
     }
 }
 
-#if HAVE_CUDA || HAVE_OPENCL
 template<class FluidSystem, class Indices, class Scalar>
 void
 StandardWellEval<FluidSystem,Indices,Scalar>::
@@ -1158,7 +1155,6 @@ addWellContribution(WellContributions& wellContribs) const
     }
     wellContribs.addMatrix(WellContributions::MatrixType::B, colIndices.data(), nnzValues.data(), this->duneB_.nonzeroes());
 }
-#endif
 
 #define INSTANCE(A,...) \
 template class StandardWellEval<BlackOilFluidSystem<double,A>,__VA_ARGS__,double>;

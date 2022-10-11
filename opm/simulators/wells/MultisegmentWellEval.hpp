@@ -54,10 +54,8 @@ template<typename FluidSystem, typename Indices, typename Scalar>
 class MultisegmentWellEval : public MultisegmentWellGeneric<Scalar>
 {
 public:
-#if HAVE_CUDA || HAVE_OPENCL
         /// add the contribution (C, D, B matrices) of this Well to the WellContributions object
         void addWellContribution(WellContributions& wellContribs) const;
-#endif
 
 protected:
     // TODO: for now, not considering the polymer, solvent and so on to simplify the development process.

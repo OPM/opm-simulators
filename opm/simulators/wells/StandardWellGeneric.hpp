@@ -65,10 +65,8 @@ protected:
     using OffDiagMatWell = Dune::BCRSMatrix<OffDiagMatrixBlockWellType>;
 
 public:
-#if HAVE_CUDA || HAVE_OPENCL
     /// get the number of blocks of the C and B matrices, used to allocate memory in a WellContributions object
     void getNumBlocks(unsigned int& _nnzs) const;
-#endif
 
 protected:
     StandardWellGeneric(int Bhp,

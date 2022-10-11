@@ -1815,7 +1815,6 @@ updateUpwindingSegments()
     }
 }
 
-#if HAVE_CUDA || HAVE_OPENCL
 template<typename FluidSystem, typename Indices, typename Scalar>
 void
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
@@ -1883,7 +1882,6 @@ addWellContribution(WellContributions& wellContribs) const
                                                  Drows,
                                                  Cvals);
 }
-#endif
 
 #define INSTANCE(A,...) \
 template class MultisegmentWellEval<BlackOilFluidSystem<double,A>,__VA_ARGS__,double>;

@@ -96,10 +96,8 @@ public:
     using Eval = DenseAd::Evaluation<Scalar, Indices::numEq>;
     using BVectorWell = typename StandardWellGeneric<Scalar>::BVectorWell;
 
-#if HAVE_CUDA || HAVE_OPENCL
         /// add the contribution (C, D^-1, B matrices) of this Well to the WellContributions object
         void addWellContribution(WellContributions& wellContribs) const;
-#endif
 
 protected:
     StandardWellEval(const WellInterfaceIndices<FluidSystem,Indices,Scalar>& baseif);
