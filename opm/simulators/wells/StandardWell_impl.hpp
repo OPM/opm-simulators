@@ -897,9 +897,64 @@ namespace Opm
                     }
                 } else {
                     updateWaterMobilityWithPolymer(ebosSimulator, perf, mob, deferred_logger);
-                }
+	        }
             }
         }
+
+        // checking whether the well has WINJMULT setup
+        const auto perf_ecl_index = this->perforationData()[perf].ecl_index;
+        if (this->well_ecl_.getConnections()[perf_ecl_index].injmult().active()) {
+            const double mulipler = this->getInjMult(perf, deferred_logger);
+            for (size_t i = 0; i < mob.size(); ++i) {
+                mob[i] *= mulipler;
+            }
+        }
+    }
+
+    
+
+    template<typename TypeTag>
+    double
+    StandardWell<TypeTag>::
+    getInjMult(const int perf,
+               DeferredLogger& deferred_logger) const {
+        const auto perf_ecl_index = this->perforationData()[perf].ecl_index;
+        double multipler = 1.;
+        assert(!this->isProducer());
+        switch (this->well_ecl_.getConnections()[perf_ecl_index].injmult().mode) {
+            // TODO: for WREV, we should only need to calculate once
+            // TODO: since all the connections should enjoy the same multipler
+            case Connection::InjMultMode::WREV: {
+                const auto& injmult = this->well_ecl_.getConnections()[perf_ecl_index].injmult();
+                const auto& frac_press = injmult.fracture_pressure;
+                const auto& gradient = injmult.multiplier_gradient;
+                const auto& bhp = Opm::getValue(this->getBhp());
+                if (bhp > frac_press) {
+                    multipler += (bhp - frac_press) * gradient;
+                }
+                break;
+            }
+            case Connection::InjMultMode::CREV: {
+                const auto& injmult = this->well_ecl_.getConnections()[perf_ecl_index].injmult();
+                const auto& frac_press = injmult.fracture_pressure;
+                const auto& gradient = injmult.multiplier_gradient;
+                const auto& connection_pressure = Opm::getValue(this->getBhp()) + this->perf_pressure_diffs_[perf];
+                if (connection_pressure > frac_press) {
+                    multipler += (connection_pressure - frac_press) * gradient;
+                }
+                break;
+            }
+            case Connection::InjMultMode::CIRR: {
+                const auto msg = fmt::format("Not supporting InjMultMode CIRR for well {} yet\n", this->name());
+                deferred_logger.warning("NOT_SUPPORT_CIRR", msg);
+                break;
+            }
+            default: {
+                const auto msg = fmt::format("Well {} has unvalid InjMultMode \n", this->name());
+                OPM_DEFLOG_THROW(std::runtime_error, msg, deferred_logger);
+            }
+        }
+        return multipler;
     }
 
 
