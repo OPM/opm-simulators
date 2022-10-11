@@ -51,8 +51,16 @@
 #include <exception>   // current_exception, rethrow_exception
 #include <mutex>
 
+namespace Opm::Properties {
+    template<class TypeTag, class MyTypeTag>
+    struct SeparateSparseSourceTerms {
+        using type = bool;
+        static constexpr type value = true;
+    };
+}
 
 namespace Opm {
+
 // forward declarations
 template<class TypeTag>
 class EcfvDiscretization;
@@ -110,6 +118,7 @@ public:
         : jacobian_()
     {
         simulatorPtr_ = 0;
+        separateSparseSourceTerms_ = EWOMS_GET_PARAM(TypeTag, bool, SeparateSparseSourceTerms);
     }
 
     ~TpfaLinearizer()
@@ -120,7 +129,10 @@ public:
      * \brief Register all run-time parameters for the Jacobian linearizer.
      */
     static void registerParameters()
-    { }
+    {
+        EWOMS_REGISTER_PARAM(TypeTag, bool, SeparateSparseSourceTerms,
+                             "Treat well source terms all in one go, instead of on a cell by cell basis.");
+    }
 
     /*!
      * \brief Initialize the linearizer.
@@ -520,8 +532,11 @@ public:
 private:
     void linearize_()
     {
+<<<<<<< HEAD
         OPM_TIMEBLOCK(linearize);
         const bool well_local = true;
+=======
+>>>>>>> 54ab7ee7c (add option to make well assembly based on only wells)
         resetSystem_();
         unsigned numCells = model_().numTotalDof();
         const bool& enableFlows = simulator_().problem().eclWriter()->eclOutputModule().hasFlows();
@@ -606,20 +621,28 @@ private:
             residual_[globI] += res;
             //SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
             *diagMatAddress_[globI] += bMat;
-            // wells sources for now (should be moved out)
-            if (well_local) {
-                OPM_TIMEBLOCK_LOCAL(localWellAssembly);
-                res = 0.0;
-                bMat = 0.0;
-                adres = 0.0;
+
+            // Cell-wise source terms.
+            // This will include well sources if SeparateSparseSourceTerms is false.
+            res = 0.0;
+            bMat = 0.0;
+            adres = 0.0;
+            if (separateSparseSourceTerms_) {
+                LocalResidual::computeSourceDense(adres, problem_(), globI, 0);
+            } else {
                 LocalResidual::computeSource(adres, problem_(), globI, 0);
-                adres *= -volume;
-                setResAndJacobi(res, bMat, adres);
-                residual_[globI] += res;
-                //SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
-                 *diagMatAddress_[globI] += bMat;
             }
+            adres *= -volume;
+            setResAndJacobi(res, bMat, adres);
+            residual_[globI] += res;
+            //SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
+            *diagMatAddress_[globI] += bMat;
         } // end of loop for cell globI.
+
+        // Add sparse source terms. For now only wells.
+        if (separateSparseSourceTerms_) {
+            problem_().wellModel().addReservoirSourceTerms(residual_, *jacobian_);
+        }
 
         // Boundary terms. Only looping over cells with nontrivial bcs.
         for (const auto& bdyInfo : boundaryInfo_) {
@@ -709,6 +732,7 @@ private:
         BoundaryConditionData bcdata;
     };
     std::vector<BoundaryInfo> boundaryInfo_;
+    bool separateSparseSourceTerms_ = false;
 };
 
 } // namespace Opm

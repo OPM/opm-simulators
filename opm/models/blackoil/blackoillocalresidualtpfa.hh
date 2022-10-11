@@ -562,6 +562,24 @@ public:
             source[Indices::contiEnergyEqIdx] *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
     }
 
+    static void computeSourceDense(RateVector& source,
+                                   const Problem& problem,
+                                   unsigned globalSpaceIdex,
+                                   unsigned timeIdx)
+    {
+        source = 0.0;
+        problem.addToSourceDense(source, globalSpaceIdex, timeIdx);
+
+        // deal with MICP (if present)
+        // deal with micp (if present)
+        static_assert(!enableMICP, "Relevant addSource() method must be implemented for this module before enabling.");
+        // MICPModule::addSource(source, elemCtx, dofIdx, timeIdx);
+
+        // scale the source term of the energy equation
+        if (enableEnergy)
+            source[Indices::contiEnergyEqIdx] *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
+    }
+
     /*!
      * \copydoc FvBaseLocalResidual::computeSource
      */
