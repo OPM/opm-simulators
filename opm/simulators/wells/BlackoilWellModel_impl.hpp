@@ -295,7 +295,15 @@ namespace Opm {
             well->setGuideRate(&guideRate_);
         }
 
-        // Close completions due to economical reasons
+        // initialize the WINJMULT related
+        for (auto& well : well_container_) {
+            if (well->isInjector()) {
+                auto& ws = this->wellState().well(well->indexOfWell());
+                well->setInjMult(ws.perf_data.inj_multipler);
+            }
+        }
+
+        // Close completions due to economic reasons
         for (auto& well : well_container_) {
             well->closeCompletions(wellTestState());
         }
@@ -453,6 +461,9 @@ namespace Opm {
         for (const auto& well : well_container_) {
             if (getPropValue<TypeTag, Properties::EnablePolymerMW>() && well->isInjector()) {
                 well->updateWaterThroughput(dt, this->wellState());
+            }
+            if (well->isInjector()) {
+                well->updateInjMult(this->wellState().well(well->indexOfWell()));
             }
         }
         // report well switching

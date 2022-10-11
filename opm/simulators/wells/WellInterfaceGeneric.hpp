@@ -178,6 +178,11 @@ public:
     double wsolvent() const;
     double rsRvInj() const;
 
+    void setInjMult(const std::vector<double>& inj_mult);
+
+    // update the InjMult information in the well state
+    void updateInjMult(SingleWellState& ws) const;
+
     // whether a well is specified with a non-zero and valid VFP table number
     bool isVFPActive(DeferredLogger& deferred_logger) const;
 
@@ -339,6 +344,9 @@ protected:
     double gravity_;
     double wsolvent_;
     std::optional<double> dynamic_thp_limit_;
+
+    // recording the multiplier from the keyword WINJMULT
+    mutable std::vector<double> inj_multiplier_;
 
     double well_efficiency_factor_;
     const VFPProperties* vfp_properties_;

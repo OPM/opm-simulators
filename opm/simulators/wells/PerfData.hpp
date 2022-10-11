@@ -76,6 +76,8 @@ public:
 
     std::vector<std::size_t> cell_index;
     std::vector<double> connection_transmissibility_factor;
+    // for keyword WINJMULT, only useful for injectors with CIRR mode
+    std::vector<double> inj_multipler;
     std::vector<int> satnum_id;
     std::vector<std::size_t> ecl_index;
 

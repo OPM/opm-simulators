@@ -190,6 +190,19 @@ double WellInterfaceGeneric::rsRvInj() const
     return well_ecl_.getInjectionProperties().rsRvInj;
 }
 
+void WellInterfaceGeneric::setInjMult(const std::vector<double>& inj_mult)
+{
+    this->inj_multiplier_ = inj_mult;
+}
+
+void WellInterfaceGeneric::updateInjMult(SingleWellState& ws) const
+{
+    ws.perf_data.inj_multipler = this->inj_multiplier_;
+    for (size_t i = 0; i < ws.perf_data.inj_multipler.size(); ++i) {
+        ws.perf_data.inj_multipler[i] = std::max(ws.perf_data.inj_multipler[i], this->inj_multiplier_[i]);
+    }
+}
+
 bool WellInterfaceGeneric::wellHasTHPConstraints(const SummaryState& summaryState) const
 {
     // only wells under prediction mode can have THP constraint

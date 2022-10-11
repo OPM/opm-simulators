@@ -926,9 +926,9 @@ namespace Opm
             // TODO: since all the connections should enjoy the same multipler
             case Connection::InjMultMode::WREV: {
                 const auto& injmult = this->well_ecl_.getConnections()[perf_ecl_index].injmult();
-                const auto& frac_press = injmult.fracture_pressure;
-                const auto& gradient = injmult.multiplier_gradient;
-                const auto& bhp = Opm::getValue(this->getBhp());
+                const auto frac_press = injmult.fracture_pressure;
+                const auto gradient = injmult.multiplier_gradient;
+                const auto bhp = Opm::getValue(this->getBhp());
                 if (bhp > frac_press) {
                     multipler += (bhp - frac_press) * gradient;
                 }
@@ -936,17 +936,32 @@ namespace Opm
             }
             case Connection::InjMultMode::CREV: {
                 const auto& injmult = this->well_ecl_.getConnections()[perf_ecl_index].injmult();
-                const auto& frac_press = injmult.fracture_pressure;
-                const auto& gradient = injmult.multiplier_gradient;
-                const auto& connection_pressure = Opm::getValue(this->getBhp()) + this->perf_pressure_diffs_[perf];
+                const auto frac_press = injmult.fracture_pressure;
+                const auto gradient = injmult.multiplier_gradient;
+                const auto connection_pressure = Opm::getValue(this->getBhp()) + this->perf_pressure_diffs_[perf];
                 if (connection_pressure > frac_press) {
                     multipler += (connection_pressure - frac_press) * gradient;
                 }
                 break;
             }
             case Connection::InjMultMode::CIRR: {
-                const auto msg = fmt::format("Not supporting InjMultMode CIRR for well {} yet\n", this->name());
-                deferred_logger.warning("NOT_SUPPORT_CIRR", msg);
+                const auto& injmult = this->well_ecl_.getConnections()[perf_ecl_index].injmult();
+                const auto frac_press = injmult.fracture_pressure;
+                const auto gradient = injmult.multiplier_gradient;
+                const auto connection_pressure = Opm::getValue(this->getBhp()) + this->perf_pressure_diffs_[perf];
+                // double calc_mult = 1.0;
+                // const double old_mult =  this->inj_multiplier_[perf_ecl_index];
+                if (connection_pressure > frac_press) {
+                    multipler += (connection_pressure - frac_press) * gradient;
+                    // calc_mult = multipler;
+                }
+                this->inj_multiplier_[perf_ecl_index] = multipler;
+                multipler = this->inj_multiplier_[perf_ecl_index];
+                /* const auto msg = fmt::format("perf {} bhp {} connection pressure {} calculated multplier "
+                                             " {} and the old mulplitier {} and the returned multplier {} \n",
+                                             perf, Opm::getValue(this->getBhp())/1.e5, connection_pressure/1.e5, calc_mult, old_mult, multipler); */
+                // std::cout << msg;
+                std::cout << " perf " << perf << " multipler " << multipler << std::endl;
                 break;
             }
             default: {
