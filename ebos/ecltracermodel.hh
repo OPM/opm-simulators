@@ -273,14 +273,12 @@ protected:
             tr.residual_[tIdx] = 0.0;
 
         ElementContext elemCtx(simulator_);
-        auto elemIt = simulator_.gridView().template begin</*codim=*/0>();
-        auto elemEndIt = simulator_.gridView().template end</*codim=*/0>();
-        for (; elemIt != elemEndIt; ++ elemIt) {
-            elemCtx.updateAll(*elemIt);
+        for (const auto& elem : elements(simulator_.gridView())) {
+            elemCtx.updateAll(elem);
 
             size_t I = elemCtx.globalSpaceIndex(/*dofIdx=*/ 0, /*timIdx=*/0);
 
-            if (elemIt->partitionType() != Dune::InteriorEntity)
+            if (elem.partitionType() != Dune::InteriorEntity)
             {
                 // Dirichlet boundary conditions needed for the parallel matrix
                 (*this->tracerMatrix_)[I][I][0][0] = 1.;
