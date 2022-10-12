@@ -452,7 +452,7 @@ private:
             MPI_Comm new_comm;
             int err = damaris_start(&is_client);
             isSimulationRank_ = (is_client > 0);
-            if (isSimulationRank_) {
+            if (isSimulationRank_  && (err == DAMARIS_OK || err == DAMARIS_NO_SERVER)) {
                 damaris_client_comm_get(&new_comm);
                 EclGenericVanguard::setCommunication(std::make_unique<Parallel::Communication>(new_comm));
             } else {
