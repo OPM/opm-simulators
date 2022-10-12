@@ -361,7 +361,7 @@ protected:
 
         ElementContext elemCtx(simulator_);
         for (const auto& elem : elements(simulator_.gridView())) {
-            elemCtx.updateAll(elem);
+            elemCtx.updateStencil(elem);
 
             size_t I = elemCtx.globalSpaceIndex(/*dofIdx=*/ 0, /*timIdx=*/0);
 
@@ -371,6 +371,8 @@ protected:
                 (*this->tracerMatrix_)[I][I][0][0] = 1.;
                 continue;
             }
+            elemCtx.updateAllIntensiveQuantities();
+            elemCtx.updateAllExtensiveQuantities();
 
             Scalar extrusionFactor =
                     elemCtx.intensiveQuantities(/*dofIdx=*/ 0, /*timeIdx=*/0).extrusionFactor();
