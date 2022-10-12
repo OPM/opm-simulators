@@ -17,6 +17,9 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif // HAVE_CONFIG_H
 
 #include <opm/input/eclipse/Deck/Deck.hpp>
 #include <opm/simulators/flow/KeywordValidation.hpp>
