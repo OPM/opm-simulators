@@ -50,8 +50,8 @@ partiallySupported()
          {
             "EHYSTR",
             {
-               {5,{true, allow_values<std::string> {"KR"}, "EHYSTR(HYSTOPT): only the KR relative permeability hysteresis option is supported – will STOP"}}, // limiting_hyst_flag
-               {6,{false, allow_values<std::string> {}, "EHYSTR(HYSTSCAN): Killough’s option not supported and is ignored"}}, // shape_cap_press_flag
+               {5,{true, allow_values<std::string> {"KR", "PC", "BOTH"}, "EHYSTR(HYSTOPT): relative permeability hysteresis option should equal BOTH, KR, or PC – will STOP"}}, // limiting_hyst_flag
+               {6,{true, allow_values<std::string> {"RETR"}, "EHYSTR(HYSTSCAN): only RETR supported – will STOP"}}, // shape_cap_press_flag
                {7,{false, allow_values<std::string> {}, "EHYSTR(HYSTMOB): mobility option not supported and is ignored"}}, // init_fluid_mob_flag
                {8,{false, allow_values<std::string> {"OIL"}, "EHYSTR(HYSTWET): only OIL supported value is ignored"}}, // wetting_phase_flag
                {9,{false, allow_values<std::string> {"NO"}, "EHYSTR(HYBAKOIL): not used and is ignored"}}, // baker_flag_oil
@@ -329,7 +329,7 @@ partiallySupported()
          {
             "EHYSTR",
             {
-               {2,{false, allow_values<double> {0, 1}, "EHYSTR(HYSTMOD): only Carlson Hysteresis Models supported (0 or 1)"}}, // relative_perm_hyst
+               {2,{false, allow_values<int> {0, 1, 2, 3}, "EHYSTR(HYSTMOD): only Carlson or Killough Hysteresis Models supported (0,1 or 2,3)"}}, // relative_perm_hyst
                {13,{false, allow_values<int> {0}, "EHYSTR(HYSWETRP): Killough’s option not supported and is ignored"}}, // FLAG_SOMETHING
             },
          },
@@ -544,9 +544,7 @@ partiallySupported()
          {
             "EHYSTR",
             {
-               {1,{false, allow_values<double> {0.1}, "EHYSTR(HYSTRCP): option is not supported – value ignored"}}, // curvature_capillary_pressure_hyst
                {3,{false, allow_values<double> {1.0}, "EHYSTR(HYSTREL): Killough’s option not supported and is ignored"}}, // curvature_param_killough_wetting
-               {4,{false, allow_values<double> {0.1}, "EHYSTR(HYSTSGR): Killough’s option not supported and is ignored"}}, // mod_param_trapped
                {12,{false, allow_values<double> {0}, "EHYSTR(HYTHRESH): Killough’s option not supported and is ignored"}}, // threshold_saturation
             },
          },
