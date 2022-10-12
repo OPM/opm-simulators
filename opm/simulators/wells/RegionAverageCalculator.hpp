@@ -25,6 +25,7 @@
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
 #include <dune/grid/common/gridenums.hh>
+#include <dune/grid/common/rangegenerators.hh>
 #include <algorithm>
 #include <cmath>
 #include <memory>
@@ -116,18 +117,9 @@ namespace Opm {
                 }
 
                 ElementContext elemCtx( simulator );
-                const auto& elemEndIt = gridView.template end</*codim=*/0>();
+
                 OPM_BEGIN_PARALLEL_TRY_CATCH();
-
-                for (auto elemIt = gridView.template begin</*codim=*/0>();
-                     elemIt != elemEndIt;
-                     ++elemIt)
-                {
-
-                    const auto& elem = *elemIt;
-                    if (elem.partitionType() != Dune::InteriorEntity)
-                        continue;
-
+                for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
                     elemCtx.updatePrimaryStencil(elem);
                     elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
                     const unsigned cellIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
