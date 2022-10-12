@@ -978,14 +978,11 @@ private:
 
     void createLocalRegion_(std::vector<int>& region)
     {
-        ElementContext elemCtx(simulator_);
-        ElementIterator elemIt = simulator_.gridView().template begin</*codim=*/0>();
-        const ElementIterator& elemEndIt = simulator_.gridView().template end</*codim=*/0>();
         size_t elemIdx = 0;
-        for (; elemIt != elemEndIt; ++elemIt, ++elemIdx) {
-            const Element& elem = *elemIt;
+        for (const auto& elem : elements(simulator_.gridView())) {
             if (elem.partitionType() != Dune::InteriorEntity)
                 region[elemIdx] = 0;
+            ++elemIdx;
         }
     }
 
