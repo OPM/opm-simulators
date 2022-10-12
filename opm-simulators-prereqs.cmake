@@ -18,7 +18,20 @@ set (opm-simulators_CONFIG_VAR
   DUNE_ISTL_VERSION_MINOR
   DUNE_ISTL_VERSION_REVISION
   HAVE_SUITESPARSE_UMFPACK
+  AMG_REPART_ON_COMM_GRAPH
   )
+
+# the sparsity pattern of our matrix might be unsymmetric due to
+# not storing offdiagonals for the ghost rows. DUNE assumes a
+# symmetric sparsity pattern to prepare the graph for
+# PTScotch/ParMETIS. Hence our approach breaks the assumption and
+# PTScotch/ParMETIS might deadlock or MPI will error out
+# in some MPI_Allgatherv calls.
+# We define AMG_REPART_ON_COMM_GRAPH to instruct AMG to use
+# the graph of the communication patter (one vertex for each
+# MPI rank and edge between v and w exists if these exchange
+# messages)
+set(AMG_REPART_ON_COMM_GRAPH 1)
 
 # dependencies
 set (opm-simulators_DEPS
