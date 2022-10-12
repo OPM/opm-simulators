@@ -173,11 +173,7 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map)
     for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx)
         axisCentroids[dimIdx].resize(numElements);
 
-    auto elemIt = gridView_.template begin</*codim=*/ 0>();
-    const auto& elemEndIt = gridView_.template end</*codim=*/ 0>();
-    size_t centroidIdx = 0;
-    for (; elemIt != elemEndIt; ++elemIt, ++centroidIdx) {
-        const auto& elem = *elemIt;
+    for (const auto& elem : elements(gridView_)) {
         unsigned elemIdx = elemMapper.index(elem);
 
         // compute the axis specific "centroids" used for the transmissibilities. for
@@ -227,9 +223,7 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map)
     }
 
     // compute the transmissibilities for all intersections
-    elemIt = gridView_.template begin</*codim=*/ 0>();
-    for (; elemIt != elemEndIt; ++elemIt) {
-        const auto& elem = *elemIt;
+    for (const auto& elem : elements(gridView_)) {
         unsigned elemIdx = elemMapper.index(elem);
 
         auto isIt = gridView_.ibegin(elem);
@@ -476,10 +470,8 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map)
     std::unordered_map<std::size_t,int> globalToLocal;
 
     // loop over all elements (global grid) and store Cartesian index
-    elemIt = grid_.leafGridView().template begin<0>();
-
-    for (; elemIt != elemEndIt; ++elemIt) {
-        int elemIdx = elemMapper.index(*elemIt);
+    for (const auto& elem : elements(grid_.leafGridView())) {
+        int elemIdx = elemMapper.index(elem);
         int cartElemIdx = cartMapper_.cartesianIndex(elemIdx);
         globalToLocal[cartElemIdx] = elemIdx;
     }
@@ -700,16 +692,9 @@ createTransmissibilityArrays_(const std::array<bool,3>& is_tran)
           std::vector<double>(is_tran[2] ? numElem : 0, 0)};
 
     // compute the transmissibilities for all intersections
-    auto elemIt = gridView_.template begin</*codim=*/ 0>();
-    const auto& elemEndIt = gridView_.template end</*codim=*/ 0>();
-
-    for (; elemIt != elemEndIt; ++elemIt) {
-        const auto& elem = *elemIt;
-        auto isIt = gridView_.ibegin(elem);
-        const auto& isEndIt = gridView_.iend(elem);
-        for (; isIt != isEndIt; ++ isIt) {
+    for (const auto& elem : elements(gridView_)) {
+        for (const auto& intersection : intersections(gridView_, elem)) {
             // store intersection, this might be costly
-            const auto& intersection = *isIt;
             if (!intersection.neighbor())
                 continue; // intersection is on the domain boundary
 
@@ -761,16 +746,8 @@ resetTransmissibilityFromArrays_(const std::array<bool,3>& is_tran,
     ElementMapper elemMapper(gridView_, Dune::mcmgElementLayout());
 
     // compute the transmissibilities for all intersections
-    auto elemIt = gridView_.template begin</*codim=*/ 0>();
-    const auto& elemEndIt = gridView_.template end</*codim=*/ 0>();
-
-    for (; elemIt != elemEndIt; ++elemIt) {
-        const auto& elem = *elemIt;
-        auto isIt = gridView_.ibegin(elem);
-        const auto& isEndIt = gridView_.iend(elem);
-        for (; isIt != isEndIt; ++ isIt) {
-            // store intersection, this might be costly
-            const auto& intersection = *isIt;
+    for (const auto& elem : elements(gridView_)) {
+        for (const auto& intersection : intersections(gridView_, elem)) {
             if (!intersection.neighbor())
                 continue; // intersection is on the domain boundary
 
