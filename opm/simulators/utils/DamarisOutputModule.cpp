@@ -38,6 +38,9 @@ std::string initDamarisXmlFile(); // Defined in initDamarisXMLFile.cpp, to avoid
 void
 initializeDamaris(MPI_Comm comm, int mpiRank, std::string outputDir, bool enableDamarisOutputCollective)
 {
+    if (outputDir.empty()) {
+        outputDir = ".";
+    }
     // Prepare the XML file
     std::string damaris_config_xml = initDamarisXmlFile();
     damaris::model::ModifyModel myMod = damaris::model::ModifyModel(damaris_config_xml);

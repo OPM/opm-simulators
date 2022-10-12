@@ -62,6 +62,7 @@ template<class TypeTag, class MyTypeTag>
 struct EclOutputDoublePrecision {
     using type = UndefinedProperty;
 };
+#ifdef HAVE_DAMARIS
 template<class TypeTag, class MyTypeTag>
 struct EnableDamarisOutput {
     using type = UndefinedProperty;
@@ -70,6 +71,7 @@ template<class TypeTag, class MyTypeTag>
 struct EnableDamarisOutputCollective {
     using type = UndefinedProperty;
 };
+#endif
 template<class TypeTag, class MyTypeTag>
 struct EnableEsmry {
     using type = UndefinedProperty;
@@ -128,8 +130,10 @@ public:
 
         EWOMS_REGISTER_PARAM(TypeTag, bool, EnableAsyncEclOutput,
                              "Write the ECL-formated results in a non-blocking way (i.e., using a separate thread).");
+#ifdef HAVE_DAMARIS
         EWOMS_REGISTER_PARAM(TypeTag, bool, EnableDamarisOutputCollective,
                              "Write output via Damaris using parallel HDF5 to get single file per timestep instead of one per Damaris core.");
+#endif
         EWOMS_REGISTER_PARAM(TypeTag, bool, EnableEsmry,
                              "Write ESMRY file for fast loading of summary data.");
     }
@@ -459,10 +463,10 @@ public:
 private:
     static bool enableEclOutput_()
     { return EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput); }
-
+#ifdef HAVE_DAMARIS
     static bool enableDamarisOutput_()
     { return EWOMS_GET_PARAM(TypeTag, bool, EnableDamarisOutput); }
-
+#endif
     const EclipseState& eclState() const
     { return simulator_.vanguard().eclState(); }
 

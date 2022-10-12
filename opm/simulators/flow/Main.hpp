@@ -435,11 +435,13 @@ private:
             deckFilename = EWOMS_GET_PARAM(PreTypeTag, std::string, EclDeckFileName);
             outputDir = EWOMS_GET_PARAM(PreTypeTag, std::string, OutputDir);
         }
-        ensureOutputDirExists(outputDir);
 
 #if HAVE_DAMARIS
         enableDamarisOutput_ = EWOMS_GET_PARAM(PreTypeTag, bool, EnableDamarisOutput);
         if (enableDamarisOutput_) {
+            if (!outputDir.empty()) {
+                ensureOutputDirExists(outputDir);
+            }
             // By default EnableDamarisOutputCollective is true so all simulation results will
             // be written into one single file for each iteration using Parallel HDF5.
             // It set to false, FilePerCore mode is used in Damaris, then simulation results in each
@@ -452,7 +454,7 @@ private:
             MPI_Comm new_comm;
             int err = damaris_start(&is_client);
             isSimulationRank_ = (is_client > 0);
-            if (isSimulationRank_  && (err == DAMARIS_OK || err == DAMARIS_NO_SERVER)) {
+            if (isSimulationRank_ && err == DAMARIS_OK) {
                 damaris_client_comm_get(&new_comm);
                 EclGenericVanguard::setCommunication(std::make_unique<Parallel::Communication>(new_comm));
             } else {
@@ -827,8 +829,9 @@ private:
     // To demonstrate run with non_world_comm
     bool test_split_comm_ = false;
     bool isSimulationRank_ = true;
-
+#if HAVE_DAMARIS
     bool enableDamarisOutput_ = false;
+#endif
 };
 
 } // namespace Opm
