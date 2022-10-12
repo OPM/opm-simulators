@@ -114,13 +114,9 @@ public:
     void beginTimeStep() override
     {
         ElementContext elemCtx(this->ebos_simulator_);
-        auto elemIt = this->ebos_simulator_.gridView().template begin<0>();
-        const auto& elemEndIt = this->ebos_simulator_.gridView().template end<0>();
         OPM_BEGIN_PARALLEL_TRY_CATCH();
 
-        for (; elemIt != elemEndIt; ++elemIt) {
-            const auto& elem = *elemIt;
-
+        for (const auto& elem : elements(this->ebos_simulator_.gridView())) {
             elemCtx.updatePrimaryStencil(elem);
 
             const int cellIdx = elemCtx.globalSpaceIndex(0, 0);
@@ -272,10 +268,7 @@ protected:
         }
         // get areas for all connections
         ElementMapper elemMapper(gridView, Dune::mcmgElementLayout());
-        auto elemIt = gridView.template begin</*codim=*/ 0>();
-        const auto& elemEndIt = gridView.template end</*codim=*/ 0>();
-        for (; elemIt != elemEndIt; ++elemIt) {
-            const auto& elem = *elemIt;
+        for (const auto& elem : elements(gridView)) {
             unsigned cell_index = elemMapper.index(elem);
             int idx = this->cellToConnectionIdx_[cell_index];
 
@@ -283,12 +276,7 @@ protected:
             if( idx < 0)
                 continue;
 
-            auto isIt = gridView.ibegin(elem);
-            const auto& isEndIt = gridView.iend(elem);
-            for (; isIt != isEndIt; ++ isIt) {
-                // store intersection, this might be costly
-                const auto& intersection = *isIt;
-
+            for (const auto& intersection : intersections(gridView, elem)) {
                 // only deal with grid boundaries
                 if (!intersection.boundary())
                     continue;
@@ -371,10 +359,7 @@ protected:
 
         ElementContext elemCtx(this->ebos_simulator_);
         const auto& gridView = this->ebos_simulator_.gridView();
-        auto elemIt = gridView.template begin</*codim=*/0>();
-        const auto& elemEndIt = gridView.template end</*codim=*/0>();
-        for (; elemIt != elemEndIt; ++elemIt) {
-            const auto& elem = *elemIt;
+        for (const auto& elem : elements(gridView)) {
             elemCtx.updatePrimaryStencil(elem);
 
             const auto cellIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
