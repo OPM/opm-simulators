@@ -431,12 +431,25 @@ template<class TypeTag>
 struct EnableEclOutput<TypeTag,TTag::EclBaseProblem> {
     static constexpr bool value = true;
 };
+#ifdef HAVE_DAMARIS
+//! Enable the Damaris output by default
+template<class TypeTag>
+struct EnableDamarisOutput<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = false;
+};
 
+// If Damaris is available, write specific variable output in parallel
+template<class TypeTag>
+struct EnableDamarisOutputCollective<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = true;
+};
+#endif
 // If available, write the ECL output in a non-blocking manner
 template<class TypeTag>
 struct EnableAsyncEclOutput<TypeTag, TTag::EclBaseProblem> {
     static constexpr bool value = true;
 };
+
 // Write ESMRY file for fast loading of summary data
 template<class TypeTag>
 struct EnableEsmry<TypeTag, TTag::EclBaseProblem> {
@@ -695,6 +708,10 @@ public:
         EWOMS_REGISTER_PARAM(TypeTag, bool, EnableEclOutput,
                              "Write binary output which is compatible with the commercial "
                              "Eclipse simulator");
+#ifdef HAVE_DAMARIS
+        EWOMS_REGISTER_PARAM(TypeTag, bool, EnableDamarisOutput,
+                             "Write a specific variable using Damaris in a separate core");
+#endif
         EWOMS_REGISTER_PARAM(TypeTag, bool, EclOutputDoublePrecision,
                              "Tell the output writer to use double precision. Useful for 'perfect' restarts");
         EWOMS_REGISTER_PARAM(TypeTag, unsigned, RestartWritingInterval,

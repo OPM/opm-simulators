@@ -108,6 +108,11 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/WGState.cpp
   )
 
+if (DAMARIS_FOUND)
+  list (APPEND MAIN_SOURCE_FILES opm/simulators/utils/DamarisOutputModule.cpp) 
+  list (APPEND MAIN_SOURCE_FILES opm/simulators/utils/DamarisKeywords.cpp)
+  list (APPEND MAIN_SOURCE_FILES opm/simulators/utils/initDamarisXmlFile.cpp)
+endif()
 if(CUDA_FOUND)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/cuda/cusparseSolverBackend.cu)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/cuda/cuWellContributions.cu)

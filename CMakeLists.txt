@@ -31,6 +31,7 @@ option(USE_CHOW_PATEL_ILU "Use the iterative ILU by Chow and Patel?" OFF)
 option(USE_CHOW_PATEL_ILU_GPU "Run iterative ILU decomposition on GPU? Requires USE_CHOW_PATEL_ILU" OFF)
 option(USE_CHOW_PATEL_ILU_GPU_PARALLEL "Try to use more parallelism on the GPU during the iterative ILU decomposition? Requires USE_CHOW_PATEL_ILU_GPU" OFF)
 option(BUILD_FLOW_ALU_GRID "Build flow blackoil with alu grid" OFF)
+option(USE_DAMARIS_LIB "Use the Damaris library for asynchronous I/O?" OFF)
 
 # The following was copied from CMakeLists.txt in opm-common.
 # TODO: factor out the common parts in opm-common and opm-simulator as a cmake module
@@ -62,7 +63,6 @@ if (OPM_ENABLE_PYTHON)
   # used e.g. in FindCwrap, pybind11
   set(PYTHON_EXECUTABLE ${Python3_EXECUTABLE})
 endif()
-
 
 if(SIBLING_SEARCH AND NOT opm-common_DIR)
   # guess the sibling dir
@@ -297,7 +297,6 @@ if(OpenCL_FOUND)
   endif()
 endif()
 
-
 # read the list of components from this file (in the project directory);
 # it should set various lists with the names of the files to include
 include (CMakeLists_files.cmake)
@@ -315,6 +314,8 @@ macro (config_hook)
     list(APPEND EXTRA_INCLUDES SYSTEM ${PROJECT_SOURCE_DIR}/external/fmtlib/include)
   endif()
   include_directories(${EXTRA_INCLUDES})
+
+  include(UseDamaris)
 endmacro (config_hook)
 
 macro (prereqs_hook)
@@ -335,7 +336,8 @@ endmacro (files_hook)
 
 macro (tests_hook)
 endmacro (tests_hook)
-
+ 
+    
 # all setup common to the OPM library modules is done here
 include (OpmLibMain)
 
@@ -544,6 +546,11 @@ if(HAVE_FPGA)
   ExternalProject_Get_Property(FPGA_library binary_dir)
   target_link_libraries(opmsimulators PUBLIC ${binary_dir}/fpga_lib_alveo_u280.a)
 endif()
+if(Damaris_FOUND)
+  target_link_libraries(opmsimulators PUBLIC damaris)
+endif()
 
 install(DIRECTORY doc/man1 DESTINATION ${CMAKE_INSTALL_MANDIR}
   FILES_MATCHING PATTERN "*.1")
+
+

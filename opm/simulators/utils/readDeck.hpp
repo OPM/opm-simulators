@@ -57,6 +57,10 @@ enum class FileOutputMode {
     OUTPUT_ALL = 3,
 };
 
+// Ensure that a directory exists, creating it if it does not.
+void
+ensureOutputDirExists(const std::string& cmdline_output_dir);
+
 // Setup the OpmLog backends
 FileOutputMode
 setupLogging(int                mpi_rank_,

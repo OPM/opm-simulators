@@ -93,23 +93,6 @@ namespace {
             ->setMessageLimiter(std::make_shared<Opm::MessageLimiter>(10, limits));
     }
 
-    void ensureOutputDirExists_(const std::string& cmdline_output_dir)
-    {
-        namespace fs = std::filesystem;
-
-        if (! fs::is_directory(cmdline_output_dir)) {
-            try {
-                fs::create_directories(cmdline_output_dir);
-            }
-            catch (...) {
-                throw std::runtime_error {
-                    fmt::format("Creation of output directory '{}' failed",
-                                cmdline_output_dir)
-                };
-            }
-        }
-    }
-
     void loadObjectsFromRestart(const Opm::Deck&                     deck,
                                 const Opm::Parser&                   parser,
                                 const Opm::ParseContext&             parseContext,
@@ -376,6 +359,24 @@ namespace {
 
 // ---------------------------------------------------------------------------
 
+
+void Opm::ensureOutputDirExists(const std::string& cmdline_output_dir)
+{
+    namespace fs = std::filesystem;
+
+    if (! fs::is_directory(cmdline_output_dir)) {
+        try {
+            fs::create_directories(cmdline_output_dir);
+        }
+        catch (...) {
+            throw std::runtime_error {
+                fmt::format("Creation of output directory '{}' failed",
+                            cmdline_output_dir)
+                    };
+        }
+    }
+}
+
 // Setup the OpmLog backends
 Opm::FileOutputMode
 Opm::setupLogging(const int          mpi_rank_,
@@ -387,7 +388,7 @@ Opm::setupLogging(const int          mpi_rank_,
                   const bool         allRanksDbgLog)
 {
     if (!cmdline_output_dir.empty()) {
-        ensureOutputDirExists_(cmdline_output_dir);
+        ensureOutputDirExists(cmdline_output_dir);
     }
 
     // create logFile

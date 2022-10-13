@@ -74,6 +74,10 @@
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
 #endif
 
+#if HAVE_DAMARIS
+#include <opm/simulators/utils/DamarisOutputModule.hpp>
+#endif
+
 #include <cassert>
 #include <cstdlib>
 #include <filesystem>
@@ -165,6 +169,22 @@ public:
 #endif // HAVE_MPI
 
         EclGenericVanguard::setCommunication(nullptr);
+
+#if HAVE_DAMARIS
+        if (enableDamarisOutput_) {
+            int err;
+            if (isSimulationRank_) {
+                err = damaris_stop();
+                if (err != DAMARIS_OK) {
+                    std::cerr << "ERROR: Damaris library produced an error result for damaris_stop()" << std::endl;
+                }
+            }
+            err = damaris_finalize();
+            if (err != DAMARIS_OK) {
+                std::cerr << "ERROR: Damaris library produced an error result for damaris_finalize()" << std::endl;
+            }
+        }
+#endif // HAVE_DAMARIS
 
 #if HAVE_MPI && !HAVE_DUNE_FEM
         MPI_Finalize();
@@ -377,11 +397,6 @@ private:
         externalSetupTimer.start();
 
         handleVersionCmdLine_(argc_, argv_);
-#if HAVE_DUNE_FEM
-        int mpiRank = Dune::Fem::MPIManager::rank();
-#else
-        int mpiRank = EclGenericVanguard::comm().rank();
-#endif
 
         // we always want to use the default locale, and thus spare us the trouble
         // with incorrect locale settings.
@@ -410,11 +425,6 @@ private:
             return false; //  Whether to run the simulator
         }
 
-        FileOutputMode outputMode = FileOutputMode::OUTPUT_NONE;
-        outputCout_ = false;
-        if (mpiRank == 0)
-            outputCout_ = EWOMS_GET_PARAM(PreTypeTag, bool, EnableTerminalOutput);
-
         std::string deckFilename;
         std::string outputDir;
         if ( eclipseState_ ) {
@@ -423,7 +433,42 @@ private:
         }
         else {
             deckFilename = EWOMS_GET_PARAM(PreTypeTag, std::string, EclDeckFileName);
+            outputDir = EWOMS_GET_PARAM(PreTypeTag, std::string, OutputDir);
         }
+
+#if HAVE_DAMARIS
+        enableDamarisOutput_ = EWOMS_GET_PARAM(PreTypeTag, bool, EnableDamarisOutput);
+        if (enableDamarisOutput_) {
+            if (!outputDir.empty()) {
+                ensureOutputDirExists(outputDir);
+            }
+            // By default EnableDamarisOutputCollective is true so all simulation results will
+            // be written into one single file for each iteration using Parallel HDF5.
+            // It set to false, FilePerCore mode is used in Damaris, then simulation results in each
+            // node are aggregated by dedicated Damaris cores and stored to separate files per Damaris core.
+            // Irrespective of mode, output is written asynchronously at the end of each timestep.
+            const bool enableDamarisOutputCollective = EWOMS_GET_PARAM(PreTypeTag, bool, EnableDamarisOutputCollective);
+            // Using the ModifyModel class to set the XML file for Damaris.
+            DamarisOutput::initializeDamaris(EclGenericVanguard::comm(), EclGenericVanguard::comm().rank(), outputDir, enableDamarisOutputCollective);
+            int is_client;
+            MPI_Comm new_comm;
+            int err = damaris_start(&is_client);
+            isSimulationRank_ = (is_client > 0);
+            if (isSimulationRank_ && err == DAMARIS_OK) {
+                damaris_client_comm_get(&new_comm);
+                EclGenericVanguard::setCommunication(std::make_unique<Parallel::Communication>(new_comm));
+            } else {
+                return false;
+            }
+        }
+#endif // HAVE_DAMARIS
+
+        int mpiRank = EclGenericVanguard::comm().rank();
+        FileOutputMode outputMode = FileOutputMode::OUTPUT_NONE;
+        outputCout_ = false;
+        if (mpiRank == 0)
+            outputCout_ = EWOMS_GET_PARAM(PreTypeTag, bool, EnableTerminalOutput);
+
 
         if (deckFilename.empty()) {
             if (mpiRank == 0) {
@@ -454,9 +499,6 @@ private:
         try {
             auto python = std::make_shared<Python>();
             const bool init_from_restart_file = !EWOMS_GET_PARAM(PreTypeTag, bool, SchedRestart);
-            if (outputDir.empty())
-                outputDir = EWOMS_GET_PARAM(PreTypeTag, std::string, OutputDir);
-
             const bool allRanksDbgPrtLog = EWOMS_GET_PARAM(PreTypeTag, bool,
                                                       EnableLoggingFalloutWarning);
             outputMode = setupLogging(mpiRank,
@@ -787,6 +829,9 @@ private:
     // To demonstrate run with non_world_comm
     bool test_split_comm_ = false;
     bool isSimulationRank_ = true;
+#if HAVE_DAMARIS
+    bool enableDamarisOutput_ = false;
+#endif
 };
 
 } // namespace Opm
