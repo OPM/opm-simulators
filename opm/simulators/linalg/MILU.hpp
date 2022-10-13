@@ -105,7 +105,7 @@ template<class M>
 void  milu0_decomposition(M& A, std::vector<typename M::block_type>* diagonal)
 {
     milu0_decomposition(A, identityFunctor<typename M::field_type>, oneFunctor<typename M::field_type>, diagonal);
-};
+}
 
 
 template<class M>
