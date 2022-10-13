@@ -476,7 +476,7 @@ void openclSolverBackend<block_size>::copy_system_to_gpu() {
     int sum = 0;
     for (int i = 0; i < Nb; ++i) {
         int size_row = mat->rowPointers[i + 1] - mat->rowPointers[i];
-        memcpy(vals_contiguous.data() + sum, reinterpret_cast<double*>(mat->nnzValues) + sum, size_row * sizeof(double) * block_size * block_size);
+        memcpy(vals_contiguous.data() + sum, mat->nnzValues + sum, size_row * sizeof(double) * block_size * block_size);
         sum += size_row * block_size * block_size;
     }
     err = queue->enqueueWriteBuffer(d_Avals, CL_TRUE, 0, sizeof(double) * nnz, vals_contiguous.data(), nullptr, &events[0]);
@@ -513,7 +513,7 @@ void openclSolverBackend<block_size>::update_system_on_gpu() {
     int sum = 0;
     for (int i = 0; i < Nb; ++i) {
         int size_row = mat->rowPointers[i + 1] - mat->rowPointers[i];
-        memcpy(vals_contiguous.data() + sum, reinterpret_cast<double*>(mat->nnzValues) + sum, size_row * sizeof(double) * block_size * block_size);
+        memcpy(vals_contiguous.data() + sum, mat->nnzValues + sum, size_row * sizeof(double) * block_size * block_size);
         sum += size_row * block_size * block_size;
     }
     err = queue->enqueueWriteBuffer(d_Avals, CL_TRUE, 0, sizeof(double) * nnz, vals_contiguous.data(), nullptr, &events[0]);

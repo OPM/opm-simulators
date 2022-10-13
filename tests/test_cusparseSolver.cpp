@@ -113,7 +113,15 @@ testCusparseSolver(const boost::property_tree::ptree& prm, Matrix<bz>& matrix, V
     auto wellContribs = Opm::WellContributions::create("cusparse", false);
     std::unique_ptr<Opm::BdaBridge<Matrix<bz>, Vector<bz>, bz> > bridge;
     try {
-        bridge = std::make_unique<Opm::BdaBridge<Matrix<bz>, Vector<bz>, bz> >(accelerator_mode, fpga_bitstream, linear_solver_verbosity, maxit, tolerance, platformID, deviceID, opencl_ilu_parallel, linsolver);
+        bridge = std::make_unique<Opm::BdaBridge<Matrix<bz>, Vector<bz>, bz> >(accelerator_mode,
+                                                                               fpga_bitstream,
+                                                                               linear_solver_verbosity,
+                                                                               maxit,
+                                                                               tolerance,
+                                                                               platformID,
+                                                                               deviceID,
+                                                                               opencl_ilu_parallel,
+                                                                               linsolver);
         auto mat2 = matrix; // deep copy to make sure nnz values are in contiguous memory
                             // matrix created by readMatrixMarket() did not have contiguous memory
         bridge->solve_system(&mat2, &mat2, /*numJacobiBlocks=*/0, rhs, *wellContribs, result);

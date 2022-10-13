@@ -68,10 +68,12 @@ private:
     bool opencl_ilu_parallel;
 
     typedef struct {
-        cl::Buffer invDiagVals;
-        cl::Buffer diagIndex;
-        cl::Buffer rowsPerColor;
-        cl::Buffer rowIndices;
+        cl::Buffer invDiagVals;    // nnz values of diagonal blocks of the matrix, inverted
+        cl::Buffer diagIndex;      // index of diagonal block of each row, used to differentiate between lower and upper triangular part
+        cl::Buffer rowsPerColor;   // number of rows for every color
+        cl::Buffer rowIndices;     // mapping every row to another index
+                                   // after mapping, all rows that are processed in parallel are contiguous
+                                   // equal to the contents of fromOrder
 #if CHOW_PATEL
         cl::Buffer Lvals, Lcols, Lrows;
         cl::Buffer Uvals, Ucols, Urows;

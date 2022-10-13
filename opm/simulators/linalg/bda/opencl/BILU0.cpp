@@ -24,7 +24,6 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <dune/common/timer.hh>
 
-#include <opm/simulators/linalg/bda/BdaSolver.hpp>
 #include <opm/simulators/linalg/bda/opencl/BILU0.hpp>
 #include <opm/simulators/linalg/bda/opencl/ChowPatelIlu.hpp>
 #include <opm/simulators/linalg/bda/opencl/openclKernels.hpp>
@@ -152,8 +151,9 @@ bool BILU0<block_size>::analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat
     if (opencl_ilu_parallel) {
         err |= queue->enqueueWriteBuffer(s.rowIndices, CL_FALSE, 0, Nb * sizeof(unsigned), fromOrder.data(), nullptr, &events[2]);
     } else {
-        // rowsPerColorPrefix is misused here
-        // s.rowIndices[i] == i must hold
+        // fromOrder is not initialized, so use something else to fill s.rowIndices
+        // s.rowIndices[i] == i must hold, since every rowidx is mapped to itself (i.e. no actual mapping)
+        // rowsPerColorPrefix is misused here, it contains an increasing sequence (0, 1, 2, ...)
         err |= queue->enqueueWriteBuffer(s.rowIndices, CL_FALSE, 0, Nb * sizeof(unsigned), rowsPerColorPrefix.data(), nullptr, &events[2]);
     }
 
