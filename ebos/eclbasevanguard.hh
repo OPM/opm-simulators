@@ -551,12 +551,9 @@ protected:
         int numElements = this->gridView().size(/*codim=*/0);
         cellThickness_.resize(numElements);
 
-        auto elemIt = this->gridView().template begin</*codim=*/0>();
-        const auto& elemEndIt = this->gridView().template end</*codim=*/0>();
-        for (; elemIt != elemEndIt; ++elemIt) {
-            const auto& element = *elemIt;
-            const unsigned int elemIdx = elemMapper.index(element);
-            cellThickness_[elemIdx] = computeCellThickness(element);
+        for (const auto& elem : elements(this->gridView())) {
+            const unsigned int elemIdx = elemMapper.index(elem);
+            cellThickness_[elemIdx] = computeCellThickness(elem);
         }
     }
 

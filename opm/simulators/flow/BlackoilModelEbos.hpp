@@ -453,13 +453,7 @@ namespace Opm {
 
             const auto& elemMapper = ebosSimulator_.model().elementMapper();
             const auto& gridView = ebosSimulator_.gridView();
-            auto elemIt = gridView.template begin</*codim=*/0>();
-            const auto& elemEndIt = gridView.template end</*codim=*/0>();
-            for (; elemIt != elemEndIt; ++elemIt) {
-                const auto& elem = *elemIt;
-                if (elem.partitionType() != Dune::InteriorEntity)
-                    continue;
-
+            for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
                 unsigned globalElemIdx = elemMapper.index(elem);
                 const auto& priVarsNew = ebosSimulator_.model().solution(/*timeIdx=*/0)[globalElemIdx];
 
@@ -667,14 +661,8 @@ namespace Opm {
 
             ElementContext elemCtx(ebosSimulator_);
             const auto& gridView = ebosSimulator().gridView();
-            const auto& elemEndIt = gridView.template end</*codim=*/0, Dune::Interior_Partition>();
             OPM_BEGIN_PARALLEL_TRY_CATCH();
-
-            for (auto elemIt = gridView.template begin</*codim=*/0, Dune::Interior_Partition>();
-                 elemIt != elemEndIt;
-                 ++elemIt)
-            {
-                const auto& elem = *elemIt;
+            for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
                 elemCtx.updatePrimaryStencil(elem);
                 elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
                 const unsigned cell_idx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
@@ -803,7 +791,7 @@ namespace Opm {
 
             OPM_BEGIN_PARALLEL_TRY_CATCH();
 
-            for (const auto& elem: elements(gridView, Dune::Partitions::interiorBorder))
+            for (const auto& elem : elements(gridView, Dune::Partitions::interiorBorder))
             {
                 // Skip cells of numerical Aquifer
                 if (isNumericalAquiferCell(gridView.grid(), elem))

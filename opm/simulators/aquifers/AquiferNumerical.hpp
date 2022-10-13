@@ -176,15 +176,9 @@ private:
 
         ElementContext  elem_ctx(this->ebos_simulator_);
         const auto& gridView = this->ebos_simulator_.gridView();
-        auto elemIt = gridView.template begin</*codim=*/0>();
-        const auto& elemEndIt = gridView.template end</*codim=*/0>();
         OPM_BEGIN_PARALLEL_TRY_CATCH();
 
-        for (; elemIt != elemEndIt; ++elemIt) {
-            const auto& elem = *elemIt;
-            if (elem.partitionType() != Dune::InteriorEntity) {
-                continue;
-            }
+        for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
             elem_ctx.updatePrimaryStencil(elem);
 
             const size_t cell_index = elem_ctx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
@@ -240,13 +234,7 @@ private:
 
         ElementContext elem_ctx(this->ebos_simulator_);
         const auto& gridView = this->ebos_simulator_.gridView();
-        auto elemIt = gridView.template begin</*codim=*/0>();
-        const auto& elemEndIt = gridView.template end</*codim=*/0>();
-        for (; elemIt != elemEndIt; ++elemIt) {
-            const auto& elem = *elemIt;
-            if (elem.partitionType() != Dune::InteriorEntity) {
-                continue;
-            }
+        for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
             // elem_ctx.updatePrimaryStencil(elem);
             elem_ctx.updateStencil(elem);
 

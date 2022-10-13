@@ -221,10 +221,7 @@ doInit(bool rst, size_t numGridDof,
     std::vector<NeighborSet> neighbors(numGridDof);
 
     Stencil stencil(gridView_, dofMapper_);
-    auto elemIt = gridView_.template begin<0>();
-    const auto elemEndIt = gridView_.template end<0>();
-    for (; elemIt != elemEndIt; ++elemIt) {
-        const auto& elem = *elemIt;
+    for (const auto& elem : elements(gridView_)) {
         stencil.update(elem);
 
         for (unsigned primaryDofIdx = 0; primaryDofIdx < stencil.numPrimaryDof(); ++primaryDofIdx) {

@@ -163,19 +163,8 @@ applyExplicitThresholdPressures_()
 
     // set the threshold pressures for all EQUIL region boundaries which have a
     // intersection in the grid
-    auto elemIt = gridView_.template begin</*codim=*/ 0>();
-    const auto& elemEndIt = gridView_.template end</*codim=*/ 0>();
-    for (; elemIt != elemEndIt; ++elemIt) {
-        const auto& elem = *elemIt;
-        if (elem.partitionType() != Dune::InteriorEntity)
-            continue;
-
-        auto isIt = gridView_.ibegin(elem);
-        const auto& isEndIt = gridView_.iend(elem);
-        for (; isIt != isEndIt; ++ isIt) {
-            // store intersection, this might be costly
-            const auto& intersection = *isIt;
-
+    for (const auto& elem : elements(gridView_, Dune::Partitions::interior)) {
+        for (const auto& intersection : intersections(gridView_, elem)) {
             if (intersection.boundary())
                 continue; // ignore boundary intersections for now (TODO?)
             else if (!intersection.neighbor()) //processor boundary but not domain boundary

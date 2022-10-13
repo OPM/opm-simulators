@@ -104,15 +104,8 @@ private:
         using Toolbox = MathToolbox<Evaluation>;
         // loop over the whole grid and compute the maximum gravity adjusted pressure
         // difference between two EQUIL regions.
-        auto elemIt = gridView.template begin</*codim=*/ 0>();
-        const auto& elemEndIt = gridView.template end</*codim=*/ 0>();
         ElementContext elemCtx(simulator_);
-        for (; elemIt != elemEndIt; ++elemIt) {
-
-            const auto& elem = *elemIt;
-            if (elem.partitionType() != Dune::InteriorEntity)
-                continue;
-
+        for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
             elemCtx.updateAll(elem);
             const auto& stencil = elemCtx.stencil(/*timeIdx=*/0);
 

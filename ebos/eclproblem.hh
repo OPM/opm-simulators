@@ -2467,13 +2467,7 @@ private:
         auto& sol = this->model().solution(/*timeIdx=*/0);
         const auto& gridView = this->gridView();
         ElementContext elemCtx(simulator);
-        auto elemIt = gridView.template begin</*codim=*/0>();
-        const auto& elemEndIt = gridView.template end</*codim=*/0>();
-        for (; elemIt != elemEndIt; ++elemIt) {
-            const auto& elem = *elemIt;
-            if (elem.partitionType() != Dune::InteriorEntity)
-                continue;
-
+        for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
             elemCtx.updatePrimaryStencil(elem);
             int elemIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
             initial(sol[elemIdx], elemCtx, /*spaceIdx=*/0, /*timeIdx=*/0);

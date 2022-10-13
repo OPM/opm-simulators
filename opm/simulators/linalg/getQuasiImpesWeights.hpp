@@ -100,11 +100,9 @@ namespace Amg
         VectorBlockType rhs(0.0);
         rhs[pressureVarIndex] = 1.0;
         int index = 0;
-        auto elemIt = gridView.template begin</*codim=*/0>();
-        const auto& elemEndIt = gridView.template end</*codim=*/0>();
         OPM_BEGIN_PARALLEL_TRY_CATCH();
-        for (; elemIt != elemEndIt; ++elemIt) {
-            elemCtx.updatePrimaryStencil(*elemIt);
+        for (const auto& elem : elements(gridView)) {
+            elemCtx.updatePrimaryStencil(elem);
             elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
             Dune::FieldVector<Evaluation, numEq> storage;
             model.localLinearizer(threadId).localResidual().computeStorage(storage,elemCtx,/*spaceIdx=*/0, /*timeIdx=*/0);

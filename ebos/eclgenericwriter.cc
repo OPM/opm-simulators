@@ -285,16 +285,8 @@ computeTrans_(const std::unordered_map<int,int>& cartesianToActive, const std::f
     using GlobElementMapper = Dune::MultipleCodimMultipleGeomTypeMapper<GlobalGridView>;
     GlobElementMapper globalElemMapper(globalGridView, Dune::mcmgElementLayout());
 
-    auto elemIt = globalGridView.template begin</*codim=*/0>();
-    const auto& elemEndIt = globalGridView.template end</*codim=*/0>();
-    for (; elemIt != elemEndIt; ++ elemIt) {
-        const auto& elem = *elemIt;
-
-        auto isIt = globalGridView.ibegin(elem);
-        const auto& isEndIt = globalGridView.iend(elem);
-        for (; isIt != isEndIt; ++ isIt) {
-            const auto& is = *isIt;
-
+    for (const auto& elem : elements(globalGridView)) {
+        for (const auto& is : intersections(globalGridView, elem)) {
             if (!is.neighbor())
                 continue; // intersection is on the domain boundary
 
@@ -373,16 +365,8 @@ exportNncStructure_(const std::unordered_map<int,int>& cartesianToActive, const 
     // Cartesian index mapper for the serial I/O grid
     const auto& equilCartMapper =  *equilCartMapper_;
     const auto& cartDims = cartMapper_.cartesianDimensions();
-    auto elemIt = globalGridView.template begin</*codim=*/0>();
-    const auto& elemEndIt = globalGridView.template end</*codim=*/0>();
-    for (; elemIt != elemEndIt; ++ elemIt) {
-        const auto& elem = *elemIt;
-
-        auto isIt = globalGridView.ibegin(elem);
-        const auto& isEndIt = globalGridView.iend(elem);
-        for (; isIt != isEndIt; ++ isIt) {
-            const auto& is = *isIt;
-
+    for (const auto& elem : elements(globalGridView)) {
+        for (const auto& is : intersections(globalGridView, elem)) {
             if (!is.neighbor())
                 continue; // intersection is on the domain boundary
 

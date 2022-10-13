@@ -581,18 +581,10 @@ namespace Opm {
         ElementContext elemCtx(ebosSimulator_);
 
         const auto& gridView = ebosSimulator_.vanguard().gridView();
-        const auto& elemEndIt = gridView.template end</*codim=*/0>();
+
         OPM_BEGIN_PARALLEL_TRY_CATCH();
-
-        for (auto elemIt = gridView.template begin</*codim=*/0>();
-             elemIt != elemEndIt;
-             ++elemIt)
-        {
-            if (elemIt->partitionType() != Dune::InteriorEntity) {
-                continue;
-            }
-
-            elemCtx.updatePrimaryStencil(*elemIt);
+        for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
+            elemCtx.updatePrimaryStencil(elem);
             elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 
             const auto& fs = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0).fluidState();
@@ -1753,13 +1745,10 @@ namespace Opm {
         const auto& grid = ebosSimulator_.vanguard().grid();
         const auto& gridView = grid.leafGridView();
         ElementContext elemCtx(ebosSimulator_);
-        const auto& elemEndIt = gridView.template end</*codim=*/0, Dune::Interior_Partition>();
-        OPM_BEGIN_PARALLEL_TRY_CATCH();
 
-        for (auto elemIt = gridView.template begin</*codim=*/0, Dune::Interior_Partition>();
-             elemIt != elemEndIt; ++elemIt)
-        {
-            elemCtx.updatePrimaryStencil(*elemIt);
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
+        for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
+            elemCtx.updatePrimaryStencil(elem);
             elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 
             const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
@@ -1785,9 +1774,9 @@ namespace Opm {
 
         // compute global average
         grid.comm().sum(B_avg.data(), B_avg.size());
-        for(auto& bval: B_avg)
+        for (auto& bval : B_avg)
         {
-            bval/=global_num_cells_;
+            bval /= global_num_cells_;
         }
         B_avg_ = B_avg;
     }
@@ -1857,17 +1846,14 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    updatePerforationIntensiveQuantities() {
+    updatePerforationIntensiveQuantities()
+    {
         ElementContext elemCtx(ebosSimulator_);
         const auto& gridView = ebosSimulator_.gridView();
-        const auto& elemEndIt = gridView.template end</*codim=*/0, Dune::Interior_Partition>();
-        OPM_BEGIN_PARALLEL_TRY_CATCH();
-        for (auto elemIt = gridView.template begin</*codim=*/0, Dune::Interior_Partition>();
-             elemIt != elemEndIt;
-             ++elemIt)
-        {
 
-            elemCtx.updatePrimaryStencil(*elemIt);
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
+        for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
+            elemCtx.updatePrimaryStencil(elem);
             int elemIdx = elemCtx.globalSpaceIndex(0, 0);
 
             if (!is_cell_perforated_[elemIdx]) {

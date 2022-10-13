@@ -830,7 +830,7 @@ CollectDataToIORank(const Grid& grid, const EquilGrid* equilGrid,
         ElementMapper elemMapper(localGridView, Dune::mcmgElementLayout());
         sortedCartesianIdx_.reserve(localGridView.size(0));
 
-        for(const auto& elem: elements(localGridView))
+        for (const auto& elem : elements(localGridView))
         {
             auto idx = elemMapper.index(elem);
             sortedCartesianIdx_.push_back(cartMapper.cartesianIndex(idx));
@@ -858,10 +858,8 @@ CollectDataToIORank(const Grid& grid, const EquilGrid* equilGrid,
            }
             
             // loop over all elements (global grid) and store Cartesian index
-            auto elemIt = equilGrid->leafGridView().template begin<0>();
-            const auto& elemEndIt = equilGrid->leafGridView().template end<0>();
-            for (; elemIt != elemEndIt; ++elemIt) {
-                int elemIdx = equilElemMapper.index(*elemIt);
+            for (const auto& elem : elements(equilGrid->leafGridView())) {
+                int elemIdx = equilElemMapper.index(elem);
                 int cartElemIdx = equilCartMapper->cartesianIndex(elemIdx);
                 globalCartesianIndex_[elemIdx] = cartElemIdx;
             }
@@ -901,11 +899,8 @@ CollectDataToIORank(const Grid& grid, const EquilGrid* equilGrid,
         distributedCartesianIndex.resize(gridSize, -1);
 
         // A mapping for the whole grid (including the ghosts) is needed for restarts
-        auto eIt = localGridView.template begin<0>();
-        const auto& eEndIt = localGridView.template end<0>();
-        for (; eIt != eEndIt; ++eIt) {
-            const auto element = *eIt;
-            int elemIdx = elemMapper.index(element);
+        for (const auto& elem : elements(localGridView)) {
+            int elemIdx = elemMapper.index(elem);
             distributedCartesianIndex[elemIdx] = cartMapper.cartesianIndex(elemIdx);
 
             // only store interior element for collection

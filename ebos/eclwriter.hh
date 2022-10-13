@@ -493,13 +493,8 @@ private:
                                       isSubStep, log, /*isRestart*/ false);
 
         ElementContext elemCtx(simulator_);
-        ElementIterator elemIt = gridView.template begin</*codim=*/0>();
-
-        const ElementIterator& elemEndIt = gridView.template end</*codim=*/0>();
         OPM_BEGIN_PARALLEL_TRY_CATCH();
-        for (; elemIt != elemEndIt; ++elemIt) {
-            const Element& elem = *elemIt;
-
+        for (const auto& elem : elements(gridView)) {
             elemCtx.updatePrimaryStencil(elem);
             elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 

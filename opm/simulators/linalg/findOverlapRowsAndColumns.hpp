@@ -95,13 +95,9 @@ namespace detail
         {
             //Numbering of cells
             const auto& gridView = grid.leafGridView();
-            auto elemIt = gridView.template begin<0>();
-            const auto& elemEndIt = gridView.template end<0>();
-
             //loop over cells in mesh
-            for (; elemIt != elemEndIt; ++elemIt)
+            for (const auto& elem : elements(gridView))
             {
-                const auto& elem = *elemIt;
                 int lcell = mapper.index(elem);
 
                 if (elem.partitionType() != Dune::InteriorEntity)
@@ -127,17 +123,10 @@ namespace detail
         if (!ownerFirst || grid.comm().size()==1)
             return grid.leafGridView().size(0);
         const auto& gridView = grid.leafGridView();
-        auto elemIt = gridView.template begin<0>();
-        const auto& elemEndIt = gridView.template end<0>();
 
         // loop over cells in mesh
-        for (; elemIt != elemEndIt; ++elemIt) {
-
-            // Count only the interior cells.
-            if (elemIt->partitionType() == Dune::InteriorEntity) {
-                numInterior++;
-            }
-        }
+        const auto& range = elements(gridView, Dune::Partitions::interior);
+        numInterior = std::distance(range.begin(), range.end());
 
         return numInterior;
     }
