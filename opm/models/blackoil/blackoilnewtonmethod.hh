@@ -83,13 +83,13 @@ template<class TypeTag>
 struct TemperatureMax<TypeTag, TTag::NewtonMethod>
 {
     using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 400; //Kelvin
+    static constexpr type value = 1e9; //Kelvin
 };
 template<class TypeTag>
 struct TemperatureMin<TypeTag, TTag::NewtonMethod>
 {
     using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 280; //Kelvin
+    static constexpr type value = 0.0; //Kelvin
 };
 } // namespace Opm::Properties
 
