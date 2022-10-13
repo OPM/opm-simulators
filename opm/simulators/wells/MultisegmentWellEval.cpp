@@ -417,14 +417,14 @@ updatePrimaryVariablesNewton(const BVectorWell& dwells,
 
         // update the total rate // TODO: should we have a limitation of the total rate change?
         {
-            primary_variables_[seg][GTotal] = old_primary_variables[seg][GTotal] - relaxation_factor * dwells[seg][GTotal];
+            primary_variables_[seg][WQTotal] = old_primary_variables[seg][WQTotal] - relaxation_factor * dwells[seg][WQTotal];
 
             // make sure that no injector produce and no producer inject
             if (seg == 0) {
                 if (baseif_.isInjector()) {
-                    primary_variables_[seg][GTotal] = std::max( primary_variables_[seg][GTotal], 0.0);
+                    primary_variables_[seg][WQTotal] = std::max( primary_variables_[seg][WQTotal], 0.0);
                 } else {
-                    primary_variables_[seg][GTotal] = std::min( primary_variables_[seg][GTotal], 0.0);
+                    primary_variables_[seg][WQTotal] = std::min( primary_variables_[seg][WQTotal], 0.0);
                 }
             }
         }
@@ -470,7 +470,7 @@ updatePrimaryVariables(const WellState& well_state) const
                 total_seg_rate = std::min(total_seg_rate, 0.);
             }
         }
-        primary_variables_[seg][GTotal] = total_seg_rate;
+        primary_variables_[seg][WQTotal] = total_seg_rate;
         if (std::abs(total_seg_rate) > 0.) {
             if (has_wfrac_variable) {
                 const int water_pos = pu.phase_pos[Water];
@@ -597,7 +597,7 @@ getSegmentRateUpwinding(const int seg,
                         const size_t comp_idx) const
 {
     const int seg_upwind = upwinding_segments_[seg];
-    // the result will contain the derivative with resepct to GTotal in segment seg,
+    // the result will contain the derivative with respect to WQTotal in segment seg,
     // and the derivatives with respect to WFrac GFrac in segment seg_upwind.
     // the derivative with respect to SPres should be zero.
     if (seg == 0 && baseif_.isInjector()) {
@@ -607,23 +607,23 @@ getSegmentRateUpwinding(const int seg,
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)
                 && Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx) == comp_idx
                 && phase == InjectorType::WATER)
-            return primary_variables_evaluation_[seg][GTotal] / baseif_.scalingFactor(baseif_.ebosCompIdxToFlowCompIdx(comp_idx));
+            return primary_variables_evaluation_[seg][WQTotal] / baseif_.scalingFactor(baseif_.ebosCompIdxToFlowCompIdx(comp_idx));
 
 
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)
                 && Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx) == comp_idx
                 && phase == InjectorType::OIL)
-            return primary_variables_evaluation_[seg][GTotal] / baseif_.scalingFactor(baseif_.ebosCompIdxToFlowCompIdx(comp_idx));
+            return primary_variables_evaluation_[seg][WQTotal] / baseif_.scalingFactor(baseif_.ebosCompIdxToFlowCompIdx(comp_idx));
 
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)
                 && Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx) == comp_idx
                 && phase == InjectorType::GAS)
-            return primary_variables_evaluation_[seg][GTotal] / baseif_.scalingFactor(baseif_.ebosCompIdxToFlowCompIdx(comp_idx));
+            return primary_variables_evaluation_[seg][WQTotal] / baseif_.scalingFactor(baseif_.ebosCompIdxToFlowCompIdx(comp_idx));
 
         return 0.0;
     }
 
-    const EvalWell segment_rate = primary_variables_evaluation_[seg][GTotal] * volumeFractionScaled(seg_upwind, comp_idx);
+    const EvalWell segment_rate = primary_variables_evaluation_[seg][WQTotal] * volumeFractionScaled(seg_upwind, comp_idx);
 
     assert(segment_rate.derivative(SPres + Indices::numEq) == 0.);
 
@@ -838,7 +838,7 @@ MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 getSegmentRate(const int seg,
                const int comp_idx) const
 {
-    return primary_variables_evaluation_[seg][GTotal] * volumeFractionScaled(seg, comp_idx);
+    return primary_variables_evaluation_[seg][WQTotal] * volumeFractionScaled(seg, comp_idx);
 }
 
 template<typename FluidSystem, typename Indices, typename Scalar>
@@ -852,9 +852,9 @@ getQs(const int comp_idx) const
 template<typename FluidSystem, typename Indices, typename Scalar>
 typename MultisegmentWellEval<FluidSystem,Indices,Scalar>::EvalWell
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
-getSegmentGTotal(const int seg) const
+getSegmentWQTotal(const int seg) const
 {
-    return primary_variables_evaluation_[seg][GTotal];
+    return primary_variables_evaluation_[seg][WQTotal];
 }
 
 template<typename FluidSystem, typename Indices, typename Scalar>
@@ -862,7 +862,7 @@ typename MultisegmentWellEval<FluidSystem,Indices,Scalar>::EvalWell
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 getWQTotal() const
 {
-    return getSegmentGTotal(0);
+    return getSegmentWQTotal(0);
 }
 
 template<typename FluidSystem, typename Indices, typename Scalar>
@@ -1424,7 +1424,7 @@ handleAccelerationPressureLoss(const int seg,
 
     resWell_[seg][SPres] -= accelerationPressureLoss.value();
     duneD_[seg][seg][SPres][SPres] -= accelerationPressureLoss.derivative(SPres + Indices::numEq);
-    duneD_[seg][seg][SPres][GTotal] -= accelerationPressureLoss.derivative(GTotal + Indices::numEq);
+    duneD_[seg][seg][SPres][WQTotal] -= accelerationPressureLoss.derivative(WQTotal + Indices::numEq);
     if (has_wfrac_variable) {
         duneD_[seg][seg_upwind][SPres][WFrac] -= accelerationPressureLoss.derivative(WFrac + Indices::numEq);
     }
@@ -1463,7 +1463,7 @@ assembleDefaultPressureEq(const int seg,
     resWell_[seg][SPres] = pressure_equation.value();
     const int seg_upwind = upwinding_segments_[seg];
     duneD_[seg][seg][SPres][SPres] += pressure_equation.derivative(SPres + Indices::numEq);
-    duneD_[seg][seg][SPres][GTotal] += pressure_equation.derivative(GTotal + Indices::numEq);
+    duneD_[seg][seg][SPres][WQTotal] += pressure_equation.derivative(WQTotal + Indices::numEq);
     if (has_wfrac_variable) {
         duneD_[seg][seg_upwind][SPres][WFrac] += pressure_equation.derivative(WFrac + Indices::numEq);
     }
@@ -1533,7 +1533,7 @@ updateWellStateFromPrimaryVariables(WellState& well_state,
         }
 
         // calculate the phase rates based on the primary variables
-        const double g_total = primary_variables_[seg][GTotal];
+        const double g_total = primary_variables_[seg][WQTotal];
         for (int p = 0; p < baseif_.numPhases(); ++p) {
             const double phase_rate = g_total * fractions[p];
             segment_rates[seg*baseif_.numPhases() + p] = phase_rate;
@@ -1566,8 +1566,8 @@ assembleICDPressureEq(const int seg,
     if (const auto& segment = this->segmentSet()[seg];
        (segment.segmentType() == Segment::SegmentType::VALVE) &&
        (segment.valve().status() == Opm::ICDStatus::SHUT) ) { // we use a zero rate equation to handle SHUT valve
-        resWell_[seg][SPres] = this->primary_variables_evaluation_[seg][GTotal].value();
-        duneD_[seg][seg][SPres][GTotal] = 1.;
+        resWell_[seg][SPres] = this->primary_variables_evaluation_[seg][WQTotal].value();
+        duneD_[seg][seg][SPres][WQTotal] = 1.;
 
         auto& ws = well_state.well(baseif_.indexOfWell());
         ws.segments.pressure_drop_friction[seg] = 0.;
@@ -1603,7 +1603,7 @@ assembleICDPressureEq(const int seg,
     const int seg_upwind = upwinding_segments_[seg];
     resWell_[seg][SPres] = pressure_equation.value();
     duneD_[seg][seg][SPres][SPres] += pressure_equation.derivative(SPres + Indices::numEq);
-    duneD_[seg][seg][SPres][GTotal] += pressure_equation.derivative(GTotal + Indices::numEq);
+    duneD_[seg][seg][SPres][WQTotal] += pressure_equation.derivative(WQTotal + Indices::numEq);
     if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
         duneD_[seg][seg_upwind][SPres][WFrac] += pressure_equation.derivative(WFrac + Indices::numEq);
     }
@@ -1799,14 +1799,14 @@ updateUpwindingSegments()
         // special treatment is needed for segment 0
         if (seg == 0) {
             // we are not supposed to have injecting producers and producing injectors
-            assert( ! (baseif_.isProducer() && primary_variables_evaluation_[seg][GTotal] > 0.) );
-            assert( ! (baseif_.isInjector() && primary_variables_evaluation_[seg][GTotal] < 0.) );
+            assert( ! (baseif_.isProducer() && primary_variables_evaluation_[seg][WQTotal] > 0.) );
+            assert( ! (baseif_.isInjector() && primary_variables_evaluation_[seg][WQTotal] < 0.) );
             upwinding_segments_[seg] = seg;
             continue;
         }
 
         // for other normal segments
-        if (primary_variables_evaluation_[seg][GTotal] <= 0.) {
+        if (primary_variables_evaluation_[seg][WQTotal] <= 0.) {
             upwinding_segments_[seg] = seg;
         } else {
             const int outlet_segment_index = this->segmentNumberToIndex(this->segmentSet()[seg].outletSegment());

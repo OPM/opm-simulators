@@ -71,7 +71,7 @@ protected:
     // Table showing the primary variable indices, depending on what phases are present:
     //
     //         WOG     OG     WG     WO    W/O/G (single phase)
-    // GTotal    0      0      0      0                       0
+    // WQTotal   0      0      0      0                       0
     // WFrac     1  -1000     -1000   1                   -1000
     // GFrac     2      1      1  -1000                   -1000
     // Spres     3      2      2      2                       1
