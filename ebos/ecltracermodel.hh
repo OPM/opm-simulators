@@ -51,8 +51,6 @@ namespace Opm {
  * \ingroup EclBlackOilSimulator
  *
  * \brief A class which handles tracers as specified in by ECL
- *
- * TODO: MPI parallelism.
  */
 template <class TypeTag>
 class EclTracerModel : public EclGenericTracerModel<GetPropType<TypeTag, Properties::Grid>,
@@ -94,9 +92,10 @@ public:
                    simulator.model().dofMapper(),
                    simulator.vanguard().cellCentroids())
         , simulator_(simulator)
-        , wat_(TracerBatch<TracerVector>(waterPhaseIdx))
-        , oil_(TracerBatch<TracerVector>(oilPhaseIdx))
-        , gas_(TracerBatch<TracerVector>(gasPhaseIdx))
+        , tbatch({waterPhaseIdx, oilPhaseIdx, gasPhaseIdx})
+        , wat_(tbatch[0])
+        , oil_(tbatch[1])
+        , gas_(tbatch[2])
     { }
 
 
@@ -162,9 +161,7 @@ public:
         if (this->numTracers()==0)
             return;
 
-        updateStorageCache(wat_);
-        updateStorageCache(oil_);
-        updateStorageCache(gas_);
+        updateStorageCache();
     }
 
     /*!
@@ -385,24 +382,26 @@ protected:
                                           Dune::ForwardCommunication);
     }
 
-    template <class TrRe>
-    void updateStorageCache(TrRe & tr)
+    void updateStorageCache()
     {
-        if (tr.numTracer() == 0)
-            return;
-
-        tr.concentrationInitial_ = tr.concentration_;
+        for (auto& tr : tbatch) {
+            if (tr.numTracer() != 0)
+                tr.concentrationInitial_ = tr.concentration_;
+        }
 
         ElementContext elemCtx(simulator_);
-        auto elemIt = simulator_.gridView().template begin</*codim=*/0>();
-        auto elemEndIt = simulator_.gridView().template end</*codim=*/0>();
-        for (; elemIt != elemEndIt; ++ elemIt) {
-            elemCtx.updateAll(*elemIt);
-            int globalDofIdx = elemCtx.globalSpaceIndex(0, /*timIdx=*/0);
-            Scalar fVolume;
-            computeVolume_(fVolume, tr.phaseIdx_, elemCtx, 0, /*timIdx=*/0);
-            for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
-                tr.storageOfTimeIndex1_[tIdx][globalDofIdx] = fVolume*tr.concentrationInitial_[tIdx][globalDofIdx];
+        for (const auto& elem : elements(simulator_.gridView())) {
+            elemCtx.updatePrimaryStencil(elem);
+            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+            int globalDofIdx = elemCtx.globalSpaceIndex(0, /*timeIdx=*/0);
+            for (auto& tr : tbatch) {
+                if (tr.numTracer() == 0)
+                    continue;
+                Scalar fVolume;
+                computeVolume_(fVolume, tr.phaseIdx_, elemCtx, 0, /*timeIdx=*/0);
+                for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
+                    tr.storageOfTimeIndex1_[tIdx][globalDofIdx] = fVolume*tr.concentrationInitial_[tIdx][globalDofIdx];
+                }
             }
         }
     }
@@ -479,11 +478,11 @@ protected:
     Simulator& simulator_;
 
     // This struct collects tracers of the same type (i.e, transported in same phase).
-    // The idea beeing that, under the assumption of linearity, tracers of same type can
+    // The idea being that, under the assumption of linearity, tracers of same type can
     // be solved in concert, having a common system matrix but separate right-hand-sides.
 
     // Since oil or gas tracers appears in dual compositions when VAPOIL respectively DISGAS
-    // is active, the template argument is intended to support future extension to these 
+    // is active, the template argument is intended to support future extension to these
     // scenarios by supplying an extended vector type.
 
     template <typename TV>
@@ -510,9 +509,10 @@ protected:
       }
     };
 
-    TracerBatch<TracerVector> wat_;
-    TracerBatch<TracerVector> oil_;
-    TracerBatch<TracerVector> gas_;
+    std::array<TracerBatch<TracerVector>,3> tbatch;
+    TracerBatch<TracerVector>& wat_;
+    TracerBatch<TracerVector>& oil_;
+    TracerBatch<TracerVector>& gas_;
 };
 
 } // namespace Opm
