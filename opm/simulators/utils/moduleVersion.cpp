@@ -17,6 +17,11 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif // HAVE_CONFIG_H
+
+
 #include <opm/simulators/utils/moduleVersion.hpp>
 #include "project-timestamp.h"
 #include "project-version.h"

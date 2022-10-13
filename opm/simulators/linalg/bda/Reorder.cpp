@@ -17,6 +17,10 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif // HAVE_CONFIG_H
+
 #include <opm/simulators/linalg/bda/Reorder.hpp>
 
 #include <opm/simulators/linalg/bda/BlockedMatrix.hpp>
