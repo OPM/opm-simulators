@@ -1655,10 +1655,10 @@ namespace Opm
                     const EvalWell segment_rate = this->getSegmentRateUpwinding(seg, comp_idx) * this->well_efficiency_factor_;
 
                     const int seg_upwind = this->upwinding_segments_[seg];
-                    // segment_rate contains the derivatives with respect to GTotal in seg,
+                    // segment_rate contains the derivatives with respect to WQTotal in seg,
                     // and WFrac and GFrac in seg_upwind
                     this->resWell_[seg][comp_idx] -= segment_rate.value();
-                    this->duneD_[seg][seg][comp_idx][GTotal] -= segment_rate.derivative(GTotal + Indices::numEq);
+                    this->duneD_[seg][seg][comp_idx][WQTotal] -= segment_rate.derivative(WQTotal + Indices::numEq);
                     if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                         this->duneD_[seg][seg_upwind][comp_idx][WFrac] -= segment_rate.derivative(WFrac + Indices::numEq);
                     }
@@ -1676,10 +1676,10 @@ namespace Opm
                         const EvalWell inlet_rate = this->getSegmentRateUpwinding(inlet, comp_idx) * this->well_efficiency_factor_;
 
                         const int inlet_upwind = this->upwinding_segments_[inlet];
-                        // inlet_rate contains the derivatives with respect to GTotal in inlet,
+                        // inlet_rate contains the derivatives with respect to WQTotal in inlet,
                         // and WFrac and GFrac in inlet_upwind
                         this->resWell_[seg][comp_idx] += inlet_rate.value();
-                        this->duneD_[seg][inlet][comp_idx][GTotal] += inlet_rate.derivative(GTotal + Indices::numEq);
+                        this->duneD_[seg][inlet][comp_idx][WQTotal] += inlet_rate.derivative(WQTotal + Indices::numEq);
                         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                             this->duneD_[seg][inlet_upwind][comp_idx][WFrac] += inlet_rate.derivative(WFrac + Indices::numEq);
                         }

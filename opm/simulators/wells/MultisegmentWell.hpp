@@ -71,7 +71,7 @@ namespace Opm
         using typename MSWEval::OffDiagMatrixBlockWellType;
         using MSWEval::GFrac;
         using MSWEval::WFrac;
-        using MSWEval::GTotal;
+        using MSWEval::WQTotal;
         using MSWEval::SPres;
         using MSWEval::numWellEq;
         using typename Base::PressureMatrix;

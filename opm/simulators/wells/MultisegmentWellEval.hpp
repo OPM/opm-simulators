@@ -68,7 +68,7 @@ protected:
     // Table showing the primary variable indices, depending on what phases are present:
     //
     //         WOG     OG     WG     WO    W/O/G (single phase)
-    // GTotal    0      0      0      0                       0
+    // WQTotal   0      0      0      0                       0
     // WFrac     1  -1000      1      1                   -1000
     // GFrac     2      1  -1000  -1000                   -1000
     // Spres     3      2      2      2                       1
@@ -83,7 +83,7 @@ protected:
     static constexpr bool has_wfrac_variable = has_water && Indices::numPhases > 1;
     static constexpr bool has_gfrac_variable = has_gas && has_oil;
 
-    static constexpr int GTotal = 0;
+    static constexpr int WQTotal = 0;
     static constexpr int WFrac = has_wfrac_variable ? 1 : -1000;
     static constexpr int GFrac = has_gfrac_variable ? has_wfrac_variable + 1 : -1000;
     static constexpr int SPres = has_wfrac_variable + has_gfrac_variable + 1;
@@ -190,7 +190,7 @@ protected:
     EvalWell getFrictionPressureLoss(const int seg) const;
     EvalWell getHydroPressureLoss(const int seg) const;
     EvalWell getQs(const int comp_idx) const;
-    EvalWell getSegmentGTotal(const int seg) const;
+    EvalWell getSegmentWQTotal(const int seg) const;
     EvalWell getSegmentPressure(const int seg) const;
     EvalWell getSegmentRate(const int seg, const int comp_idx) const;
     EvalWell getSegmentRateUpwinding(const int seg,
