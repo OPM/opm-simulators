@@ -314,6 +314,17 @@ public:
             const auto& Rvw = priVars.makeEvaluation(Indices::waterSaturationIdx, timeIdx);
             fluidState_.setRvw(Rvw);
 
+            if (FluidSystem::enableDissolvedGas()) {
+                const Evaluation& RsSat = enableExtbo ? asImp_().rs() :
+                    FluidSystem::saturatedDissolutionFactor(fluidState_,
+                                                            oilPhaseIdx,
+                                                            pvtRegionIdx,
+                                                            SoMax);
+                fluidState_.setRs(min(RsMax, RsSat));
+            }
+            else if constexpr (compositionSwitchEnabled)
+                fluidState_.setRs(0.0);
+
             if (FluidSystem::enableVaporizedOil()) {
                 const Evaluation& RvSat = enableExtbo ? asImp_().rv() :
                     FluidSystem::saturatedDissolutionFactor(fluidState_,
