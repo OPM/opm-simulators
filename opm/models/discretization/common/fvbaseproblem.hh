@@ -206,7 +206,7 @@ public:
         std::string outputDir = EWOMS_GET_PARAM(TypeTag, std::string, OutputDir);
 
         if (outputDir == "")
-            throw std::runtime_error("No directory for output specified");
+            outputDir = ".";
 
         // TODO: replace this by std::filesystem once we require c++-2017
         struct stat st;
