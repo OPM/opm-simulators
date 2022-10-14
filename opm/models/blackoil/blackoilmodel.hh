@@ -326,9 +326,7 @@ public:
         // register runtime parameters of the VTK output modules
         VtkBlackOilModule<TypeTag>::registerParameters();
         VtkCompositionModule<TypeTag>::registerParameters();
-
-        if constexpr (enableDiffusion)
-            VtkDiffusionModule<TypeTag>::registerParameters();
+        VtkDiffusionModule<TypeTag>::registerParameters();
     }
 
     /*!
