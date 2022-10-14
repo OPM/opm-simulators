@@ -127,6 +127,7 @@ unpack(time_point& data,
     data = TimeService::from_time_t(res);
 }
 
+template struct Packing<false,std::bitset<3>>;
 template struct Packing<false,std::bitset<4>>;
 template struct Packing<false,std::bitset<10>>;
 
