@@ -193,7 +193,7 @@ namespace Opm
                 EWOMS_HIDE_PARAM(TypeTag, VtkWriteSaturations);
                 EWOMS_HIDE_PARAM(TypeTag, VtkWriteTemperature);
                 EWOMS_HIDE_PARAM(TypeTag, VtkWriteViscosities);
-                EWOMS_HIDE_PARAM(TypeTag, VtkWriteWaterFormationVolumeFactor);                
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteWaterFormationVolumeFactor);
                 EWOMS_HIDE_PARAM(TypeTag, VtkWriteGasDissolutionFactor);
                 EWOMS_HIDE_PARAM(TypeTag, VtkWriteGasFormationVolumeFactor);
                 EWOMS_HIDE_PARAM(TypeTag, VtkWriteGasSaturationPressure);
@@ -205,7 +205,7 @@ namespace Opm
                 EWOMS_HIDE_PARAM(TypeTag, VtkWriteDofIndex);
                 EWOMS_HIDE_PARAM(TypeTag, VtkWriteMobilities);
                 //}
-            EWOMS_HIDE_PARAM(TypeTag, VtkWriteAverageMolarMasses);           
+            EWOMS_HIDE_PARAM(TypeTag, VtkWriteAverageMolarMasses);
             EWOMS_HIDE_PARAM(TypeTag, VtkWriteFugacities);
             EWOMS_HIDE_PARAM(TypeTag, VtkWriteFugacityCoeffs);
             EWOMS_HIDE_PARAM(TypeTag, VtkWriteMassFractions);
@@ -213,7 +213,11 @@ namespace Opm
             EWOMS_HIDE_PARAM(TypeTag, VtkWriteMoleFractions);
             EWOMS_HIDE_PARAM(TypeTag, VtkWriteTotalMassFractions);
             EWOMS_HIDE_PARAM(TypeTag, VtkWriteTotalMoleFractions);
-            
+
+            EWOMS_HIDE_PARAM(TypeTag, VtkWriteTortuosities);
+            EWOMS_HIDE_PARAM(TypeTag, VtkWriteDiffusionCoefficients);
+            EWOMS_HIDE_PARAM(TypeTag, VtkWriteEffectiveDiffusionCoefficients);
+
             EWOMS_END_PARAM_REGISTRATION(TypeTag);
 
             int mpiRank = comm.rank();
