@@ -81,8 +81,11 @@ void initLogger(std::ostringstream& log_stream) {
 
 BOOST_AUTO_TEST_CASE(NoMessages)
 {
-    auto cc = Dune::MPIHelper::getCollectiveCommunication();
-
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
+    const auto& cc = Dune::MPIHelper::getCommunication();
+#else
+   const  auto& cc = Dune::MPIHelper::getCollectiveCommunication();
+#endif
     std::ostringstream log_stream;
     initLogger(log_stream);
 
@@ -104,7 +107,11 @@ BOOST_AUTO_TEST_CASE(NoMessages)
 
 BOOST_AUTO_TEST_CASE(VariableNumberOfMessages)
 {
-    const Opm::Parallel::Communication& cc = Dune::MPIHelper::getCollectiveCommunication();
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
+    const auto& cc = Dune::MPIHelper::getCommunication();
+#else
+    const auto& cc = Dune::MPIHelper::getCollectiveCommunication();
+#endif
 
     std::ostringstream log_stream;
     initLogger(log_stream);
@@ -142,7 +149,11 @@ BOOST_AUTO_TEST_CASE(VariableNumberOfMessages)
 
 BOOST_AUTO_TEST_CASE(AllHaveOneMessage)
 {
-    const Opm::Parallel::Communication& cc = Dune::MPIHelper::getCollectiveCommunication();
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
+    const auto& cc = Dune::MPIHelper::getCommunication();
+#else
+    const auto& cc = Dune::MPIHelper::getCollectiveCommunication();
+#endif
 
     std::ostringstream log_stream;
     initLogger(log_stream);
