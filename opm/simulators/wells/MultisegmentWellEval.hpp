@@ -181,6 +181,15 @@ protected:
                                       const double DFLimit,
                                       const double max_pressure_change) const;
 
+    double relaxationFactorFractionsProducers(const std::vector<std::array<double, numWellEq>>& primary_variables,
+                                              const BVectorWell& dwells) const;
+
+    double relaxationFactorRate(const std::vector<std::array<double, numWellEq>>& primary_variables,
+                                const BVectorWell& dwells) const;
+
+    double relaxationFactorFraction(const double old_value,
+                                    const double dx) const;
+
     void computeSegmentFluidProperties(const EvalWell& temperature,
                                        const EvalWell& saltConcentration,
                                        int pvt_region_index,

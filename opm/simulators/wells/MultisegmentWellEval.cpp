@@ -386,11 +386,19 @@ template<typename FluidSystem, typename Indices, typename Scalar>
 void
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 updatePrimaryVariablesNewton(const BVectorWell& dwells,
-                             const double relaxation_factor,
+                             const double newton_relaxation_factor,
                              const double dFLimit,
                              const double max_pressure_change) const
 {
     const std::vector<std::array<double, numWellEq> > old_primary_variables = primary_variables_;
+
+    // the relaxation factor based on fractions
+    const double relaxation_factor_fractions = (baseif_.isProducer()) ?
+            relaxationFactorFractionsProducers(old_primary_variables, dwells) : 1.0;
+    // the relaxation factor based on rate direction
+    const double relaxation_factor_rates = relaxationFactorRate(old_primary_variables, dwells);
+    // the final relaxation factor will be used
+    const double relaxation_factor = std::min(std::min(newton_relaxation_factor, relaxation_factor_fractions), relaxation_factor_rates);
 
     for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
         if (has_wfrac_variable) {
@@ -406,6 +414,7 @@ updatePrimaryVariablesNewton(const BVectorWell& dwells,
         }
 
         // handling the overshooting or undershooting of the fractions
+        // TODO: with the above relaxation, this might not be needed anymore
         processFractions(seg);
 
         // update the segment pressure
@@ -420,6 +429,7 @@ updatePrimaryVariablesNewton(const BVectorWell& dwells,
             primary_variables_[seg][WQTotal] = old_primary_variables[seg][WQTotal] - relaxation_factor * dwells[seg][WQTotal];
 
             // make sure that no injector produce and no producer inject
+            // TODO: with the above relaxation, this might not happen
             if (seg == 0) {
                 if (baseif_.isInjector()) {
                     primary_variables_[seg][WQTotal] = std::max( primary_variables_[seg][WQTotal], 0.0);
@@ -1883,6 +1893,109 @@ addWellContribution(WellContributions& wellContribs) const
                                                  Drows,
                                                  Cvals);
 }
+
+template<typename FluidSystem, typename Indices, typename Scalar>
+double MultisegmentWellEval<FluidSystem, Indices, Scalar>::
+relaxationFactorFractionsProducers(const std::vector<std::array<double, numWellEq>>& primary_variables,
+                                   const MultisegmentWellEval::BVectorWell& dwells) const
+{
+    // NOT sure whether we should use the same relaxation factors for different segments or different relaxation factors
+    double relaxation_factor = 1.0;
+    if (FluidSystem::numActivePhases() > 1) {
+        if constexpr (has_wfrac_variable) {
+            double relaxation_factor_w = 1.;
+            for (int seg = 0; seg < 1; ++seg) {
+                relaxation_factor_w = std::min(relaxation_factor_w,
+                            this->relaxationFactorFraction(primary_variables[seg][WFrac], dwells[seg][WFrac]));
+            }
+            relaxation_factor = std::min(relaxation_factor, relaxation_factor_w);
+        }
+
+        if constexpr (has_gfrac_variable) {
+            double relaxation_factor_g = 1.;
+            for (int seg = 0; seg < 1; ++seg) {
+                relaxation_factor_g = std::min(relaxation_factor_g,
+                            this->relaxationFactorFraction(primary_variables[seg][GFrac], dwells[seg][GFrac]));
+            }
+            relaxation_factor = std::min(relaxation_factor, relaxation_factor_g);
+        }
+
+        if constexpr (has_wfrac_variable && has_gfrac_variable) {
+            double further_relaxation_factor = 1.;
+//             for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
+            for (int seg = 0; seg < 1; ++seg) {
+                const double original_sum = primary_variables[seg][WFrac] + primary_variables[seg][GFrac];
+                const double relaxed_update = (dwells[seg][WFrac] + dwells[seg][GFrac]) * relaxation_factor;
+                const double possible_update_sum = original_sum - relaxed_update;
+
+                constexpr double epsilon = 0.00001;
+                if (possible_update_sum > 1. + epsilon) {
+                    // TODO: should try to avoid using assert
+                    assert(relaxed_update != 0.);
+                    further_relaxation_factor =  std::min(further_relaxation_factor, std::abs((1. - original_sum) / relaxed_update) * 0.95);
+                }
+            }
+            relaxation_factor *= further_relaxation_factor;
+        }
+        assert(relaxation_factor >= 0.0 && relaxation_factor <= 1.0);
+    }
+    return relaxation_factor;
+}
+
+
+template<typename FluidSystem, typename Indices, typename Scalar>
+double MultisegmentWellEval<FluidSystem, Indices, Scalar>::
+relaxationFactorRate(const std::vector<std::array<double, numWellEq>>& primary_variables,
+                     const MultisegmentWellEval::BVectorWell& dwells) const
+{
+    double relaxation_factor = 1.0;
+    static constexpr int WQTotal = 0;
+
+    // For injector, we only check the total rates to avoid sign change of rates
+    const double original_total_rate = primary_variables[0][WQTotal];
+    const double newton_update = dwells[0][WQTotal];
+    const double possible_update_total_rate = primary_variables[0][WQTotal] - newton_update;
+
+    // 0.8 here is a experimental value, which remains to be optimized
+    // if the original rate is zero or possible_update_total_rate is zero, relaxation_factor will
+    // always be 1.0, more thoughts might be needed.
+    if (original_total_rate * possible_update_total_rate < 0.) { // sign changed
+        relaxation_factor = std::abs(original_total_rate / newton_update) * 0.8;
+    }
+
+    assert(relaxation_factor >= 0.0 && relaxation_factor <= 1.0);
+
+    return relaxation_factor;
+}
+
+
+
+template<typename FluidSystem, typename Indices, typename Scalar>
+double MultisegmentWellEval<FluidSystem, Indices, Scalar>::
+relaxationFactorFraction(const double old_value,
+                         const double dx) const
+{
+    assert(old_value >= 0. && old_value <= 1.0);
+
+    double relaxation_factor = 1.;
+
+    // updated values without relaxation factor
+    const double possible_updated_value = old_value - dx;
+
+    // 0.95 is an experimental value remains to be optimized
+    if (possible_updated_value < 0.0) {
+        relaxation_factor = std::abs(old_value / dx) * 0.95;
+    } else if (possible_updated_value > 1.0) {
+        relaxation_factor = std::abs((1. - old_value) / dx) * 0.95;
+    }
+    // if possible_updated_value is between 0. and 1.0, then relaxation_factor
+    // remains to be one
+
+    assert(relaxation_factor >= 0. && relaxation_factor <= 1.);
+
+    return relaxation_factor;
+}
+
 #endif
 
 #define INSTANCE(A,...) \
