@@ -316,8 +316,6 @@ public:
             }
 
             if (!isSubStep) {
-                data::Solution localCellData = {};
-                this->eclOutputModule_->assignToSolution(localCellData);
                 // Output the PRESSURE field
                 if (this->eclOutputModule_->getPRESSURE_ptr() != nullptr) {
                     damaris_write("PRESSURE", (void*)this->eclOutputModule_->getPRESSURE_ptr());
