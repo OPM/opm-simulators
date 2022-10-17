@@ -93,6 +93,7 @@ public:
     const std::string& name() const { return well_name_; }
 
     std::optional<GradInfo> calcIncOrDecGradient(double oil_rate, double gas_rate,
+                                                 double water_rate,
                                                  double alq, bool increase) const;
 
     std::unique_ptr<GasLiftWellState> runOptimize(const int iteration_idx);

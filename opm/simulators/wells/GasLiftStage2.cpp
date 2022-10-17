@@ -157,7 +157,7 @@ calcIncOrDecGrad_(
     else {
         auto [oil_rate, gas_rate] = state.getRates();
         auto alq = state.alq();
-        auto grad = gs_well.calcIncOrDecGradient(oil_rate, gas_rate, alq, increase);
+        auto grad = gs_well.calcIncOrDecGradient(oil_rate, gas_rate, state.waterRate(), alq, increase);
         if (grad) {
             const std::string msg = fmt::format(
               "well {} : adding {} gradient = {}",
