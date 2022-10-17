@@ -880,9 +880,11 @@ namespace Opm {
                                                terminal_output_, grid().comm());
         }
 
-        assembleImpl(iterationIdx, dt, 0, local_deferredLogger);
+        const bool well_group_control_changed = assembleImpl(iterationIdx, dt, 0, local_deferredLogger);
 
-        last_report_.converged = true;
+        // if group or well control changes we don't consider the
+        // case converged
+        last_report_.well_group_control_changed = well_group_control_changed;
         last_report_.assemble_time_well += perfTimer.stop();
     }
 
@@ -891,7 +893,7 @@ namespace Opm {
 
 
     template<typename TypeTag>
-    void
+    bool
     BlackoilWellModel<TypeTag>::
     assembleImpl(const int iterationIdx,
                  const double dt,
@@ -899,7 +901,7 @@ namespace Opm {
                  DeferredLogger& local_deferredLogger)
     {
 
-        const auto [group_well_changed, network_changed, network_imbalance] = updateWellControls(local_deferredLogger);
+        auto [well_group_control_changed, network_changed, network_imbalance] = updateWellControls(local_deferredLogger);
 
         bool alq_updated = false;
         OPM_BEGIN_PARALLEL_TRY_CATCH();
@@ -931,10 +933,11 @@ namespace Opm {
                 const auto& balance = schedule()[reportStepIdx].network_balance();
                 // Iterate if not converged, and number of iterations is not yet max (NETBALAN item 3).
                 if (recursion_level < balance.pressure_max_iter() && network_imbalance > balance.pressure_tolerance()) {
-                    assembleImpl(iterationIdx, dt, recursion_level + 1, local_deferredLogger);
+                    well_group_control_changed = assembleImpl(iterationIdx, dt, recursion_level + 1, local_deferredLogger);
                 }
             }
         }
+        return well_group_control_changed;
     }
 
 
@@ -1389,7 +1392,7 @@ namespace Opm {
     template<typename TypeTag>
     ConvergenceReport
     BlackoilWellModel<TypeTag>::
-    getWellConvergence(const std::vector<Scalar>& B_avg, bool checkWellGroupControls)
+    getWellConvergence(const std::vector<Scalar>& B_avg, bool checkWellGroupControls) const
     {
 
         DeferredLogger local_deferredLogger;
@@ -1409,14 +1412,13 @@ namespace Opm {
 
         const Opm::Parallel::Communication comm = grid().comm();
         DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger, comm);
-
-
         ConvergenceReport report = gatherConvergenceReport(local_report, comm);
 
-        if (report.converged() && checkWellGroupControls) {
-            const auto [group_well_changed, network_changed, network_imbalance] = updateWellControls(global_deferredLogger);
-            report.setWellGroupTargetsViolated(group_well_changed);
+        // the well_group_control_changed info is already communicated
+        if (checkWellGroupControls) {
+            report.setWellGroupTargetsViolated(this->lastReport().well_group_control_changed);
         }
+
         if (terminal_output_) {
             global_deferredLogger.logMessages();
         }

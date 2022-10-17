@@ -1363,10 +1363,10 @@ updateThp(WellState& well_state,
         ws.thp = 0;
         return;
     }
-    // For THP controled wells, we know the thp value
-    bool thp_controled = baseif_.isInjector() ? ws.injection_cmode == Well::InjectorCMode::THP:
+    // For THP controlled wells, we know the thp value
+    bool thp_controlled = baseif_.isInjector() ? ws.injection_cmode == Well::InjectorCMode::THP:
                                               ws.production_cmode == Well::ProducerCMode::THP;
-    if (thp_controled) {
+    if (thp_controlled) {
         return;
     }
 

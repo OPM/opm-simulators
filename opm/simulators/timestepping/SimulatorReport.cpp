@@ -50,6 +50,7 @@ namespace Opm
           min_linear_iterations ( std::numeric_limits<unsigned int>::max() ),
           max_linear_iterations ( 0 ),
           converged(false),
+          well_group_control_changed(false),
           exit_status(EXIT_SUCCESS),
           global_time(0),
           timestep_length(0.0)

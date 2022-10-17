@@ -260,7 +260,7 @@ namespace Opm {
             void applyScaleAdd(const Scalar alpha, const BVector& x, BVector& Ax) const;
 
             // Check if well equations is converged.
-            ConvergenceReport getWellConvergence(const std::vector<Scalar>& B_avg, const bool checkWellGroupControls = false);
+            ConvergenceReport getWellConvergence(const std::vector<Scalar>& B_avg, const bool checkWellGroupControls = false) const;
 
             const SimulatorReportSingle& lastReport() const;
 
@@ -373,7 +373,7 @@ namespace Opm {
             // and in the well equations.
             void assemble(const int iterationIdx,
                           const double dt);
-            void assembleImpl(const int iterationIdx,
+            bool assembleImpl(const int iterationIdx,
                               const double dt,
                               const std::size_t recursion_level,
                               DeferredLogger& local_deferredLogger);
