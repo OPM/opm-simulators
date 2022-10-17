@@ -276,8 +276,6 @@ void runBlackoilAmgLaplace()
     typedef int GlobalId;
     typedef Dune::OwnerOverlapCopyCommunication<GlobalId> Communication;
     typedef Dune::OverlappingSchwarzOperator<BCRSMat,Vector,Vector,Communication> Operator;
-    int argc;
-    char** argv;
 
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
     const auto& ccomm = Dune::MPIHelper::getCommunication();
