@@ -247,10 +247,8 @@ public:
 
         // determine which degrees of freedom are in the lens
         Stencil stencil(this->gridView(), this->simulator().model().dofMapper() );
-        auto elemIt = this->gridView().template begin</*codim=*/0>();
-        auto elemEndIt = this->gridView().template end</*codim=*/0>();
-        for (; elemIt != elemEndIt; ++elemIt) {
-            stencil.update(*elemIt);
+        for (const auto& elem : elements(this->gridView())) {
+            stencil.update(elem);
             for (unsigned dofIdx = 0; dofIdx < stencil.numPrimaryDof(); ++ dofIdx) {
                 unsigned globalDofIdx = stencil.globalSpaceIndex(dofIdx);
                 const auto& dofPos = stencil.subControlVolume(dofIdx).center();

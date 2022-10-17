@@ -522,10 +522,7 @@ public:
         gridTotalVolume_ = 0.0;
 
         // iterate through the grid and evaluate the initial condition
-        ElementIterator elemIt = gridView_.template begin</*codim=*/0>();
-        const ElementIterator& elemEndIt = gridView_.template end</*codim=*/0>();
-        for (; elemIt != elemEndIt; ++elemIt) {
-            const Element& elem = *elemIt;
+        for (const auto& elem : elements(gridView_)) {
             const bool isInteriorElement = elem.partitionType() == Dune::InteriorEntity;
             // ignore everything which is not in the interior if the
             // current process' piece of the grid
@@ -599,10 +596,7 @@ public:
         ElementContext elemCtx(simulator_);
 
         // iterate through the grid and evaluate the initial condition
-        ElementIterator elemIt = gridView_.template begin</*codim=*/0>();
-        const ElementIterator& elemEndIt = gridView_.template end</*codim=*/0>();
-        for (; elemIt != elemEndIt; ++elemIt) {
-            const Element& elem = *elemIt;
+        for (const auto& elem : elements(gridView_)) {
             // ignore everything which is not in the interior if the
             // current process' piece of the grid
             if (elem.partitionType() != Dune::InteriorEntity)
