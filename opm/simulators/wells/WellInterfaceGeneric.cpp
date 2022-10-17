@@ -440,19 +440,19 @@ void WellInterfaceGeneric::reportWellSwitching(const SingleWellState& ws, Deferr
     if (well_control_log_.empty())
         return;
 
-    std::string msg = "    Well " + name()
-        + " control mode changed from ";
-    for (const std::string& from : well_control_log_) {
-        msg += from + "->";
-    }
+    std::string from = well_control_log_[0];
     std::string to;
     if (isInjector()) {
         to = Well::InjectorCMode2String(ws.injection_cmode);
     } else {
         to = Well::ProducerCMode2String(ws.production_cmode);
     }
-    msg += to;
-    deferred_logger.info(msg);
+    // only report the final switching
+    if (from != to) {
+        std::string msg = "    Well " + name()
+        + " control mode changed from " + from + " to " + to;
+        deferred_logger.info(msg);
+    }
 }
 
 std::optional<double>
