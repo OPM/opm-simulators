@@ -411,8 +411,8 @@ updatePrimaryVariablesNewton(const BVectorWell& dwells,
         // update the segment pressure
         {
             const int sign = dwells[seg][SPres] > 0.? 1 : -1;
-            const double dx_limited = sign * std::min(std::abs(dwells[seg][SPres]) * relaxation_factor, max_pressure_change);
-            primary_variables_[seg][SPres] = std::max( old_primary_variables[seg][SPres] - dx_limited, 1e5);
+            const double dx_limited = sign * std::min(std::abs(dwells[seg][SPres]) * relaxation_factor, max_pressure_change/bhp_scaling_);
+            primary_variables_[seg][SPres] = std::max( old_primary_variables[seg][SPres] - dx_limited, 1e5/bhp_scaling_);
         }
 
         // update the total rate // TODO: should we have a limitation of the total rate change?
@@ -456,7 +456,7 @@ updatePrimaryVariables(const WellState& well_state) const
         // calculate the total rate for each segment
         double total_seg_rate = 0.0;
         // the segment pressure
-        primary_variables_[seg][SPres] = segment_pressure[seg];
+        primary_variables_[seg][SPres] = segment_pressure[seg]/bhp_scaling_;
         // TODO: under what kind of circustances, the following will be wrong?
         // the definition of g makes the gas phase is always the last phase
         for (int p = 0; p < baseif_.numPhases(); p++) {
@@ -470,7 +470,7 @@ updatePrimaryVariables(const WellState& well_state) const
                 total_seg_rate = std::min(total_seg_rate, 0.);
             }
         }
-        primary_variables_[seg][WQTotal] = total_seg_rate;
+        primary_variables_[seg][WQTotal] = total_seg_rate/rate_scaling_;
         if (std::abs(total_seg_rate) > 0.) {
             if (has_wfrac_variable) {
                 const int water_pos = pu.phase_pos[Water];
@@ -607,18 +607,18 @@ getSegmentRateUpwinding(const int seg,
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)
                 && Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx) == comp_idx
                 && phase == InjectorType::WATER)
-            return primary_variables_evaluation_[seg][WQTotal] / baseif_.scalingFactor(baseif_.ebosCompIdxToFlowCompIdx(comp_idx));
+            return primary_variables_evaluation_[seg][WQTotal]*rate_scaling_ / baseif_.scalingFactor(baseif_.ebosCompIdxToFlowCompIdx(comp_idx));
 
 
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)
                 && Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx) == comp_idx
                 && phase == InjectorType::OIL)
-            return primary_variables_evaluation_[seg][WQTotal] / baseif_.scalingFactor(baseif_.ebosCompIdxToFlowCompIdx(comp_idx));
+            return primary_variables_evaluation_[seg][WQTotal]*rate_scaling_ / baseif_.scalingFactor(baseif_.ebosCompIdxToFlowCompIdx(comp_idx));
 
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)
                 && Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx) == comp_idx
                 && phase == InjectorType::GAS)
-            return primary_variables_evaluation_[seg][WQTotal] / baseif_.scalingFactor(baseif_.ebosCompIdxToFlowCompIdx(comp_idx));
+            return primary_variables_evaluation_[seg][WQTotal]*rate_scaling_ / baseif_.scalingFactor(baseif_.ebosCompIdxToFlowCompIdx(comp_idx));
 
         return 0.0;
     }
@@ -627,7 +627,7 @@ getSegmentRateUpwinding(const int seg,
 
     assert(segment_rate.derivative(SPres + Indices::numEq) == 0.);
 
-    return segment_rate;
+    return segment_rate*rate_scaling_;
 }
 
 template<typename FluidSystem, typename Indices, typename Scalar>
@@ -821,7 +821,7 @@ typename MultisegmentWellEval<FluidSystem,Indices,Scalar>::EvalWell
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 getSegmentPressure(const int seg) const
 {
-    return primary_variables_evaluation_[seg][SPres];
+    return primary_variables_evaluation_[seg][SPres]*bhp_scaling_;
 }
 
 template<typename FluidSystem, typename Indices, typename Scalar>
@@ -838,7 +838,7 @@ MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 getSegmentRate(const int seg,
                const int comp_idx) const
 {
-    return primary_variables_evaluation_[seg][WQTotal] * volumeFractionScaled(seg, comp_idx);
+    return primary_variables_evaluation_[seg][WQTotal] * volumeFractionScaled(seg, comp_idx)*rate_scaling_;
 }
 
 template<typename FluidSystem, typename Indices, typename Scalar>
@@ -1549,9 +1549,9 @@ updateWellStateFromPrimaryVariables(WellState& well_state,
         }
 
         // update the segment pressure
-        segment_pressure[seg] = primary_variables_[seg][SPres];
+        segment_pressure[seg] = primary_variables_[seg][SPres]*bhp_scaling_;
         if (seg == 0) { // top segment
-            ws.bhp = segment_pressure[seg];
+            ws.bhp = segment_pressure[seg]*bhp_scaling_;
         }
     }
     updateThp(well_state, rho, deferred_logger);
