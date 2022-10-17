@@ -27,6 +27,8 @@
 
 #include <opm/simulators/wells/VFPProperties.hpp>
 #include <opm/simulators/utils/MPIPacker.hpp>
+#include <opm/simulators/linalg/bda/WellContributions.hpp>
+
 #if HAVE_MPI
 #include <ebos/eclmpiserializer.hh>
 #endif
@@ -1183,7 +1185,6 @@ namespace Opm {
         }
     }
 
-#if HAVE_CUDA || HAVE_OPENCL
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
@@ -1221,7 +1222,6 @@ namespace Opm {
             }
         }
     }
-#endif
 
     // Ax = Ax - alpha * C D^-1 B x
     template<typename TypeTag>
