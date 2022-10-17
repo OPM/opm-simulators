@@ -86,8 +86,8 @@ GasLiftSingleWellGeneric::GasLiftSingleWellGeneric(DeferredLogger& deferred_logg
  ****************************************/
 // NOTE: Used from GasLiftStage2
 std::optional<GasLiftSingleWellGeneric::GradInfo>
-GasLiftSingleWellGeneric::
-calcIncOrDecGradient(double oil_rate, double gas_rate, double alq, bool increase) const
+GasLiftSingleWellGeneric::calcIncOrDecGradient(
+    double oil_rate, double gas_rate, double water_rate, double alq, bool increase) const
 {
     auto [new_alq_opt, alq_is_limited] = addOrSubtractAlqIncrement_(alq, increase);
     // TODO: What to do if ALQ is limited and new_alq != alq?
@@ -98,21 +98,29 @@ calcIncOrDecGradient(double oil_rate, double gas_rate, double alq, bool increase
         auto [new_bhp, bhp_is_limited] = getBhpWithLimit_(*bhp);
         // TODO: What to do if BHP is limited?
         auto rates = computeWellRates_(new_bhp, bhp_is_limited);
-        double new_oil_rate, new_gas_rate, new_water_rate;
-        bool oil_is_limited, gas_is_limited, water_is_limited;
-        std::tie(new_oil_rate, oil_is_limited) = getOilRateWithLimit_(rates);
-        std::tie(new_gas_rate, gas_is_limited) = getGasRateWithLimit_(rates);
-        std::tie(new_water_rate, water_is_limited) = getWaterRateWithLimit_(rates);
-        if (!increase && new_oil_rate < 0 ) {
+        // double new_oil_rate, new_gas_rate, new_water_rate;
+        // bool oil_is_limited, gas_is_limited, water_is_limited;
+        // std::tie(new_oil_rate, oil_is_limited) = getOilRateWithLimit_(rates);
+        // std::tie(new_gas_rate, gas_is_limited) = getGasRateWithLimit_(rates);
+        // std::tie(new_water_rate, water_is_limited) = getWaterRateWithLimit_(rates);
+        const auto ratesLimited = getLimitedRatesFromRates_(rates);
+        BasicRates oldrates = {oil_rate, gas_rate, water_rate, false};
+        const auto new_rates = updateRatesToGroupLimits_(oldrates, ratesLimited);
+
+        if (!increase && new_rates.oil < 0) {
             return std::nullopt;
         }
-        auto grad = calcEcoGradient_(
-            oil_rate, new_oil_rate, gas_rate, new_gas_rate, increase);
-        return GradInfo(grad, new_oil_rate, oil_is_limited,
-            new_gas_rate, gas_is_limited, new_water_rate, water_is_limited,
-            new_alq, alq_is_limited);
-    }
-    else {
+        auto grad = calcEcoGradient_(oil_rate, new_rates.oil, gas_rate, new_rates.gas, increase);
+        return GradInfo(grad,
+                        new_rates.oil,
+                        new_rates.oil_is_limited,
+                        new_rates.gas,
+                        new_rates.gas_is_limited,
+                        new_rates.water,
+                        new_rates.water_is_limited,
+                        new_alq,
+                        alq_is_limited);
+    } else {
         return std::nullopt;
     }
 }
