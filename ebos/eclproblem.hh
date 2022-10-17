@@ -2776,7 +2776,6 @@ private:
 
     void readBoundaryConditions_()
     {
-        nonTrivialBoundaryConditions_ = false;
         const auto& simulator = this->simulator();
         const auto& vanguard = simulator.vanguard();
         const auto& bcconfig = vanguard.eclState().getSimulationConfig().bcconfig();
@@ -3028,7 +3027,7 @@ private:
     std::vector<bool> freebcZ_;
     std::vector<bool> freebcZMinus_;
 
-    bool nonTrivialBoundaryConditions_;
+    bool nonTrivialBoundaryConditions_ = false;
     BCData<RateVector> massratebc_;
 };
 
