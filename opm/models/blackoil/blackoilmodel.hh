@@ -542,10 +542,8 @@ public:
         // them into the restart file and re-reading them, but it is better to calculate
         // them from scratch because the input could have been changed in this regard...
         ElementContext elemCtx(this->simulator_);
-        auto elemIt = this->gridView().template begin</*codim=*/0>();
-        auto elemEndIt = this->gridView().template end</*codim=*/0>();
-        for (; elemIt != elemEndIt; ++ elemIt) {
-            elemCtx.updateStencil(*elemIt);
+        for (const auto& elem : elements(this->gridView())) {
+            elemCtx.updateStencil(elem);
             for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timIdx=*/0); ++dofIdx) {
                 unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timIdx=*/0);
                 updatePvtRegionIndex_(this->solution(/*timeIdx=*/0)[globalDofIdx],
