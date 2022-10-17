@@ -1649,7 +1649,7 @@ public:
                   unsigned spaceIdx,
                   unsigned timeIdx) const
     {
-        if(!context.intersection(spaceIdx).boundary())
+        if (!context.intersection(spaceIdx).boundary())
             return;
 
         if constexpr (!enableEnergy || !enableThermalFluxBoundaries)
@@ -1675,37 +1675,37 @@ public:
                 if (freebcXMinus_[globalDofIdx])
                     values.setFreeFlow(context, spaceIdx, timeIdx, initialFluidStates_[globalDofIdx]);
                 else
-                    values.setMassRate(massratebcXMinus_[globalDofIdx], pvtRegionIdx);
+                    values.setMassRate(massratebc_.data[1][globalDofIdx], pvtRegionIdx);
                 break;
             case 1:
                 if (freebcX_[globalDofIdx])
                     values.setFreeFlow(context, spaceIdx, timeIdx, initialFluidStates_[globalDofIdx]);
                 else
-                    values.setMassRate(massratebcX_[globalDofIdx], pvtRegionIdx);
+                    values.setMassRate(massratebc_.data[0][globalDofIdx], pvtRegionIdx);
                 break;
             case 2:
                 if (freebcYMinus_[globalDofIdx])
                     values.setFreeFlow(context, spaceIdx, timeIdx, initialFluidStates_[globalDofIdx]);
                 else
-                    values.setMassRate(massratebcYMinus_[globalDofIdx], pvtRegionIdx);
+                    values.setMassRate(massratebc_.data[3][globalDofIdx], pvtRegionIdx);
                 break;
             case 3:
                 if (freebcY_[globalDofIdx])
                     values.setFreeFlow(context, spaceIdx, timeIdx, initialFluidStates_[globalDofIdx]);
                 else
-                    values.setMassRate(massratebcY_[globalDofIdx], pvtRegionIdx);
+                    values.setMassRate(massratebc_.data[2][globalDofIdx], pvtRegionIdx);
                 break;
             case 4:
                 if (freebcZMinus_[globalDofIdx])
                     values.setFreeFlow(context, spaceIdx, timeIdx, initialFluidStates_[globalDofIdx]);
                 else
-                    values.setMassRate(massratebcZMinus_[globalDofIdx], pvtRegionIdx);
+                    values.setMassRate(massratebc_.data[5][globalDofIdx], pvtRegionIdx);
                 break;
             case 5:
                 if (freebcZ_[globalDofIdx])
                     values.setFreeFlow(context, spaceIdx, timeIdx, initialFluidStates_[globalDofIdx]);
                 else
-                    values.setMassRate(massratebcZ_[globalDofIdx], pvtRegionIdx);
+                    values.setMassRate(massratebc_.data[4][globalDofIdx], pvtRegionIdx);
                 break;
             default:
                 throw std::logic_error("invalid face index for boundary condition");
@@ -2081,17 +2081,17 @@ public:
         }
         switch (directionId) {
         case 0:
-            return { freebcXMinus_[globalSpaceIdx], massratebcXMinus_[globalSpaceIdx] };
+            return { freebcXMinus_[globalSpaceIdx], massratebc_.data[1][globalSpaceIdx] };
         case 1:
-            return { freebcX_[globalSpaceIdx], massratebcX_[globalSpaceIdx] };
+            return { freebcX_[globalSpaceIdx], massratebc_.data[0][globalSpaceIdx] };
         case 2:
-            return { freebcYMinus_[globalSpaceIdx], massratebcYMinus_[globalSpaceIdx] };
+            return { freebcYMinus_[globalSpaceIdx], massratebc_.data[3][globalSpaceIdx] };
         case 3:
-            return { freebcY_[globalSpaceIdx], massratebcY_[globalSpaceIdx] };
+            return { freebcY_[globalSpaceIdx], massratebc_.data[2][globalSpaceIdx] };
         case 4:
-            return { freebcZMinus_[globalSpaceIdx], massratebcZMinus_[globalSpaceIdx] };
+            return { freebcZMinus_[globalSpaceIdx], massratebc_.data[5][globalSpaceIdx] };
         case 5:
-            return { freebcZ_[globalSpaceIdx], massratebcZ_[globalSpaceIdx] };
+            return { freebcZ_[globalSpaceIdx], massratebc_.data[4][globalSpaceIdx] };
         default:
             return { false, RateVector(0.0) };
         }
@@ -2790,12 +2790,7 @@ private:
             for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx)
                 cartesianToCompressedElemIdx[vanguard.cartesianIndex(elemIdx)] = elemIdx;
 
-            massratebcXMinus_.resize(numElems, 0.0);
-            massratebcX_.resize(numElems, 0.0);
-            massratebcYMinus_.resize(numElems, 0.0);
-            massratebcY_.resize(numElems, 0.0);
-            massratebcZMinus_.resize(numElems, 0.0);
-            massratebcZ_.resize(numElems, 0.0);
+            massratebc_.resize(numElems, 0.0);
             freebcX_.resize(numElems, false);
             freebcXMinus_.resize(numElems, false);
             freebcY_.resize(numElems, false);
@@ -2835,29 +2830,7 @@ private:
                         break;
                     }
 
-                    std::vector<RateVector>* data = nullptr;
-                    switch (bcface.dir) {
-                    case FaceDir::XMinus:
-                        data = &massratebcXMinus_;
-                        break;
-                    case FaceDir::XPlus:
-                        data = &massratebcX_;
-                        break;
-                    case FaceDir::YMinus:
-                        data = &massratebcYMinus_;
-                        break;
-                    case FaceDir::YPlus:
-                        data = &massratebcY_;
-                        break;
-                    case FaceDir::ZMinus:
-                        data = &massratebcZMinus_;
-                        break;
-                    case FaceDir::ZPlus:
-                        data = &massratebcZ_;
-                        break;
-                    case FaceDir::Unknown:
-                        throw std::runtime_error("Unexpected unknown face direction");
-                    }
+                    std::vector<RateVector>& data = massratebc_(bcface.dir);
 
                     const Evaluation rate = bcface.rate;
                     for (int i = bcface.i1; i <= bcface.i2; ++i) {
@@ -2866,7 +2839,7 @@ private:
                                 std::array<int, 3> tmp = {i,j,k};
                                 auto elemIdx = cartesianToCompressedElemIdx[vanguard.cartesianIndex(tmp)];
                                 if (elemIdx >= 0)
-                                    (*data)[elemIdx][compIdx] = rate;
+                                    data[elemIdx][compIdx] = rate;
                             }
                         }
                     }
@@ -2960,7 +2933,8 @@ private:
         return dtNext;
     }
 
-    void computeAndSetEqWeights_() {
+    void computeAndSetEqWeights_()
+    {
         std::vector<Scalar> sumInvB(numPhases, 0.0);
         const auto& gridView = this->gridView();
         ElementContext elemCtx(this->simulator());
@@ -3018,6 +2992,35 @@ private:
 
     EclActionHandler actionHandler_;
 
+    template<class T>
+    struct BCData
+    {
+        std::array<std::vector<T>,6> data;
+
+        void resize(size_t size, T defVal)
+        {
+            for (auto& d : data)
+                d.resize(size, defVal);
+        }
+
+        const std::vector<T>& operator()(FaceDir::DirEnum dir) const
+        {
+            if (dir == FaceDir::DirEnum::Unknown)
+                throw std::runtime_error("Tried to acess BC data for the 'Unknown' direction");
+            int idx = 0;
+            int div = static_cast<int>(dir);
+            while ((div /= 2) >= 1)
+              ++idx;
+            assert(idx >= 0 && idx <= 5);
+            return data[idx];
+        }
+
+        std::vector<T>& operator()(FaceDir::DirEnum dir)
+        {
+            return const_cast<std::vector<T>&>(std::as_const(*this)(dir));
+        }
+    };
+
     std::vector<bool> freebcX_;
     std::vector<bool> freebcXMinus_;
     std::vector<bool> freebcY_;
@@ -3026,12 +3029,7 @@ private:
     std::vector<bool> freebcZMinus_;
 
     bool nonTrivialBoundaryConditions_;
-    std::vector<RateVector> massratebcX_;
-    std::vector<RateVector> massratebcXMinus_;
-    std::vector<RateVector> massratebcY_;
-    std::vector<RateVector> massratebcYMinus_;
-    std::vector<RateVector> massratebcZ_;
-    std::vector<RateVector> massratebcZMinus_;
+    BCData<RateVector> massratebc_;
 };
 
 } // namespace Opm
