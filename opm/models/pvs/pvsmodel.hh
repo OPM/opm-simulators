@@ -498,12 +498,7 @@ public:
             std::vector<bool> visited(this->numGridDof(), false);
             ElementContext elemCtx(this->simulator_);
 
-            ElementIterator elemIt = this->gridView_.template begin<0>();
-            ElementIterator elemEndIt = this->gridView_.template end<0>();
-            for (; elemIt != elemEndIt; ++elemIt) {
-                const Element& elem = *elemIt;
-                if (elem.partitionType() != Dune::InteriorEntity)
-                    continue;
+            for (const auto& elem : elements(this->gridView_, Dune::Partitions::interior)) {
                 elemCtx.updateStencil(elem);
 
                 size_t numLocalDof = elemCtx.stencil(/*timeIdx=*/0).numPrimaryDof();
