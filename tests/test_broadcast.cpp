@@ -58,7 +58,11 @@ init_unit_test_func()
 
 BOOST_AUTO_TEST_CASE(BroadCast)
 {
-    auto cc = Dune::MPIHelper::getCollectiveCommunication();
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
+    const auto& cc = Dune::MPIHelper::getCommunication();
+#else
+    const auto& cc = Dune::MPIHelper::getCollectiveCommunication();
+#endif
 
     std::vector<double> d(3);
     if (cc.rank() == 1)

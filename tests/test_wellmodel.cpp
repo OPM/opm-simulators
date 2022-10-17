@@ -102,7 +102,11 @@ struct GlobalFixture {
         Dune::MPIHelper::instance(argcDummy, argvDummy);
 #endif
 
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
+        Opm::FlowMainEbos<Opm::Properties::TTag::EclFlowProblem>::setupParameters_(argcDummy, argvDummy, Dune::MPIHelper::getCommunication());
+#else
         Opm::FlowMainEbos<Opm::Properties::TTag::EclFlowProblem>::setupParameters_(argcDummy, argvDummy, Dune::MPIHelper::getCollectiveCommunication());
+#endif
     }
 };
 

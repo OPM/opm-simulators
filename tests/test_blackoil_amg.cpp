@@ -75,7 +75,7 @@ void fillValues(int N, M& mat, int overlapStart, int overlapEnd, int start, int 
 
 template<class M, class G, class L, class C, int n>
 M setupAnisotropic2d(int N, Dune::ParallelIndexSet<G,L,n>& indices,
-                     const Dune::CollectiveCommunication<C>& p, int *nout, typename M::block_type::value_type eps=1.0);
+                     const C& p, int *nout, typename M::block_type::value_type eps=1.0);
 
 
 template<class M, class G, class L, int s>
@@ -218,7 +218,7 @@ void setBoundary(V& lhs, V& rhs, const G& N)
 }
 
 template<class M, class G, class L, class C, int s>
-M setupAnisotropic2d(int N, Dune::ParallelIndexSet<G,L,s>& indices, const Dune::CollectiveCommunication<C>& p, int *nout, typename M::block_type::value_type eps)
+M setupAnisotropic2d(int N, Dune::ParallelIndexSet<G,L,s>& indices, const C& p, int *nout, typename M::block_type::value_type eps)
 {
     int procs=p.size(), rank=p.rank();
 
@@ -278,7 +278,12 @@ void runBlackoilAmgLaplace()
     typedef Dune::OverlappingSchwarzOperator<BCRSMat,Vector,Vector,Communication> Operator;
     int argc;
     char** argv;
-    const auto& ccomm = Dune::MPIHelper::instance(argc, argv).getCollectiveCommunication();
+
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
+    const auto& ccomm = Dune::MPIHelper::getCommunication();
+#else
+    const auto& ccomm = Dune::MPIHelper::getCollectiveCommunication();
+#endif
 
     Communication comm(ccomm);
     int n=0;
