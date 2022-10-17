@@ -44,6 +44,9 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/KeywordValidation.cpp
   opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.cpp
   opm/simulators/flow/ValidationFunctions.cpp
+  opm/simulators/linalg/bda/WellContributions.cpp
+  opm/simulators/linalg/bda/Matrix.cpp
+  opm/simulators/linalg/bda/MultisegmentWellContribution.cpp
   opm/simulators/linalg/ExtractParallelGridInformationToISTL.cpp
   opm/simulators/linalg/FlexibleSolver1.cpp
   opm/simulators/linalg/FlexibleSolver2.cpp
@@ -132,9 +135,6 @@ if(OPENCL_FOUND)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/openclWellContributions.cpp)
 endif()
 if(CUDA_FOUND OR OPENCL_FOUND OR HAVE_FPGA OR HAVE_AMGCL)
-  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/WellContributions.cpp)
-  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/Matrix.cpp)
-  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/MultisegmentWellContribution.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/BdaBridge.cpp)
 endif()
 if(HAVE_FPGA)
