@@ -341,10 +341,7 @@ private:
         using NeighborSet = std::set< unsigned >;
         std::vector<NeighborSet> sparsityPattern(model.numTotalDof());
 
-        ElementIterator elemIt = gridView_().template begin<0>();
-        const ElementIterator elemEndIt = gridView_().template end<0>();
-        for (; elemIt != elemEndIt; ++elemIt) {
-            const Element& elem = *elemIt;
+        for (const auto& elem : elements(gridView_())) {
             stencil.update(elem);
 
             for (unsigned primaryDofIdx = 0; primaryDofIdx < stencil.numPrimaryDof(); ++primaryDofIdx) {
