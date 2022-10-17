@@ -1670,47 +1670,11 @@ public:
             unsigned interiorDofIdx = context.interiorScvIndex(spaceIdx, timeIdx);
             unsigned globalDofIdx = context.globalSpaceIndex(interiorDofIdx, timeIdx);
             unsigned pvtRegionIdx = pvtRegionIndex(context, spaceIdx, timeIdx);
-            switch (indexInInside) {
-            case 0:
-                if (freebcXMinus_[globalDofIdx])
-                    values.setFreeFlow(context, spaceIdx, timeIdx, initialFluidStates_[globalDofIdx]);
-                else
-                    values.setMassRate(massratebc_.data[1][globalDofIdx], pvtRegionIdx);
-                break;
-            case 1:
-                if (freebcX_[globalDofIdx])
-                    values.setFreeFlow(context, spaceIdx, timeIdx, initialFluidStates_[globalDofIdx]);
-                else
-                    values.setMassRate(massratebc_.data[0][globalDofIdx], pvtRegionIdx);
-                break;
-            case 2:
-                if (freebcYMinus_[globalDofIdx])
-                    values.setFreeFlow(context, spaceIdx, timeIdx, initialFluidStates_[globalDofIdx]);
-                else
-                    values.setMassRate(massratebc_.data[3][globalDofIdx], pvtRegionIdx);
-                break;
-            case 3:
-                if (freebcY_[globalDofIdx])
-                    values.setFreeFlow(context, spaceIdx, timeIdx, initialFluidStates_[globalDofIdx]);
-                else
-                    values.setMassRate(massratebc_.data[2][globalDofIdx], pvtRegionIdx);
-                break;
-            case 4:
-                if (freebcZMinus_[globalDofIdx])
-                    values.setFreeFlow(context, spaceIdx, timeIdx, initialFluidStates_[globalDofIdx]);
-                else
-                    values.setMassRate(massratebc_.data[5][globalDofIdx], pvtRegionIdx);
-                break;
-            case 5:
-                if (freebcZ_[globalDofIdx])
-                    values.setFreeFlow(context, spaceIdx, timeIdx, initialFluidStates_[globalDofIdx]);
-                else
-                    values.setMassRate(massratebc_.data[4][globalDofIdx], pvtRegionIdx);
-                break;
-            default:
-                throw std::logic_error("invalid face index for boundary condition");
-
-            }
+            FaceDir::DirEnum dir = FaceDir::FromIntersectionIndex(indexInInside);
+            if (freebc_(dir)[globalDofIdx])
+                values.setFreeFlow(context, spaceIdx, timeIdx, initialFluidStates_[globalDofIdx]);
+            else
+                values.setMassRate(massratebc_(dir)[globalDofIdx], pvtRegionIdx);
         }
     }
 
@@ -2079,22 +2043,8 @@ public:
         if (!nonTrivialBoundaryConditions_) {
             return { false, RateVector(0.0) };
         }
-        switch (directionId) {
-        case 0:
-            return { freebcXMinus_[globalSpaceIdx], massratebc_.data[1][globalSpaceIdx] };
-        case 1:
-            return { freebcX_[globalSpaceIdx], massratebc_.data[0][globalSpaceIdx] };
-        case 2:
-            return { freebcYMinus_[globalSpaceIdx], massratebc_.data[3][globalSpaceIdx] };
-        case 3:
-            return { freebcY_[globalSpaceIdx], massratebc_.data[2][globalSpaceIdx] };
-        case 4:
-            return { freebcZMinus_[globalSpaceIdx], massratebc_.data[5][globalSpaceIdx] };
-        case 5:
-            return { freebcZ_[globalSpaceIdx], massratebc_.data[4][globalSpaceIdx] };
-        default:
-            return { false, RateVector(0.0) };
-        }
+        FaceDir::DirEnum dir = FaceDir::FromIntersectionIndex(directionId);
+        return { freebc_(dir)[globalSpaceIdx], massratebc_(dir)[globalSpaceIdx] };
     }
 
 private:
@@ -2790,12 +2740,23 @@ private:
                 cartesianToCompressedElemIdx[vanguard.cartesianIndex(elemIdx)] = elemIdx;
 
             massratebc_.resize(numElems, 0.0);
-            freebcX_.resize(numElems, false);
-            freebcXMinus_.resize(numElems, false);
-            freebcY_.resize(numElems, false);
-            freebcYMinus_.resize(numElems, false);
-            freebcZ_.resize(numElems, false);
-            freebcZMinus_.resize(numElems, false);
+            freebc_.resize(numElems, false);
+
+            auto loopAndApply = [&cartesianToCompressedElemIdx,
+                                 &vanguard](const auto& bcface,
+                                            auto apply)
+            {
+                for (int i = bcface.i1; i <= bcface.i2; ++i) {
+                    for (int j = bcface.j1; j <= bcface.j2; ++j) {
+                        for (int k = bcface.k1; k <= bcface.k2; ++k) {
+                            std::array<int, 3> tmp = {i,j,k};
+                            auto elemIdx = cartesianToCompressedElemIdx[vanguard.cartesianIndex(tmp)];
+                            if (elemIdx >= 0)
+                                apply(elemIdx);
+                        }
+                    }
+                }
+            };
 
             for (const auto& bcface : bcconfig) {
                 const auto& type = bcface.bctype;
@@ -2832,51 +2793,13 @@ private:
                     std::vector<RateVector>& data = massratebc_(bcface.dir);
 
                     const Evaluation rate = bcface.rate;
-                    for (int i = bcface.i1; i <= bcface.i2; ++i) {
-                        for (int j = bcface.j1; j <= bcface.j2; ++j) {
-                            for (int k = bcface.k1; k <= bcface.k2; ++k) {
-                                std::array<int, 3> tmp = {i,j,k};
-                                auto elemIdx = cartesianToCompressedElemIdx[vanguard.cartesianIndex(tmp)];
-                                if (elemIdx >= 0)
-                                    data[elemIdx][compIdx] = rate;
-                            }
-                        }
-                    }
+                    loopAndApply(bcface,
+                                 [&data,compIdx,rate](int elemIdx)
+                                 { data[elemIdx][compIdx] = rate; });
                 } else if (type == BCType::FREE) {
-                    std::vector<bool>* data = nullptr;
-                    switch (bcface.dir) {
-                    case FaceDir::XMinus:
-                        data = &freebcXMinus_;
-                        break;
-                    case FaceDir::XPlus:
-                        data = &freebcX_;
-                        break;
-                    case FaceDir::YMinus:
-                        data = &freebcYMinus_;
-                        break;
-                    case FaceDir::YPlus:
-                        data = &freebcY_;
-                        break;
-                    case FaceDir::ZMinus:
-                        data = &freebcZMinus_;
-                        break;
-                    case FaceDir::ZPlus:
-                        data = &freebcZ_;
-                        break;
-                    case FaceDir::Unknown:
-                        throw std::runtime_error("Unexpected unknown face direction");
-                    }
-
-                    for (int i = bcface.i1; i <= bcface.i2; ++i) {
-                        for (int j = bcface.j1; j <= bcface.j2; ++j) {
-                            for (int k = bcface.k1; k <= bcface.k2; ++k) {
-                                std::array<int, 3> tmp = {i,j,k};
-                                auto elemIdx = cartesianToCompressedElemIdx[vanguard.cartesianIndex(tmp)];
-                                if (elemIdx >= 0)
-                                    (*data)[elemIdx] = true;
-                            }
-                        }
-                    }
+                    std::vector<bool>& data = freebc_(bcface.dir);
+                    loopAndApply(bcface,
+                                 [&data](int elemIdx) { data[elemIdx] = true; });
 
                     // TODO: either the real initial solution needs to be computed or read from the restart file
                     const auto& eclState = simulator.vanguard().eclState();
@@ -3020,15 +2943,9 @@ private:
         }
     };
 
-    std::vector<bool> freebcX_;
-    std::vector<bool> freebcXMinus_;
-    std::vector<bool> freebcY_;
-    std::vector<bool> freebcYMinus_;
-    std::vector<bool> freebcZ_;
-    std::vector<bool> freebcZMinus_;
-
-    bool nonTrivialBoundaryConditions_ = false;
+    BCData<bool> freebc_;
     BCData<RateVector> massratebc_;
+    bool nonTrivialBoundaryConditions_ = false;
 };
 
 } // namespace Opm
