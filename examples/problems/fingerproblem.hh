@@ -380,11 +380,8 @@ public:
         // update the history of the hysteresis law
         ElementContext elemCtx(this->simulator());
 
-        auto elemIt = this->gridView().template begin<0>();
-        const auto& elemEndIt = this->gridView().template end<0>();
-        for (; elemIt != elemEndIt; ++elemIt) {
-            const auto& elem = *elemIt;
-            elemCtx.updateAll( elem );
+        for (const auto& elem : elements(this->gridView())) {
+            elemCtx.updateAll(elem);
             size_t numDofs = elemCtx.numDof(/*timeIdx=*/0);
             for (unsigned scvIdx = 0; scvIdx < numDofs; ++scvIdx)
             {

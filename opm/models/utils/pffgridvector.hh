@@ -71,11 +71,8 @@ public:
         // whole grid and update a stencil for each element
         Data *curElemDataPtr = &data_[0];
         Stencil stencil(gridView_, dofMapper_);
-        auto elemIt = gridView_.template begin</*codim=*/0>();
-        const auto& elemEndIt = gridView_.template end</*codim=*/0>();
-        for (; elemIt != elemEndIt; ++elemIt) {
+        for (const auto& elem : elements(gridView_)) {
             // set the DOF data pointer for the current element
-            const auto& elem = *elemIt;
             unsigned elemIdx = elementMapper_.index(elem);
             elemData_[elemIdx] = curElemDataPtr;
 
@@ -112,10 +109,8 @@ private:
 
         // loop over the whole grid and sum up the number of local DOFs of all Stencils
         Stencil stencil(gridView_, dofMapper_);
-        auto elemIt = gridView_.template begin</*codim=*/0>();
-        const auto& elemEndIt = gridView_.template end</*codim=*/0>();
-        for (; elemIt != elemEndIt; ++elemIt) {
-            stencil.update(*elemIt);
+        for (const auto& elem : elements(gridView_)) {
+            stencil.update(elem);
             result += stencil.numDof();
         }
 

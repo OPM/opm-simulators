@@ -32,6 +32,7 @@
 
 #include <dune/grid/common/datahandleif.hh>
 #include <dune/grid/common/gridenums.hh>
+#include <dune/grid/common/partitionset.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/scalarproducts.hh>
 #include <dune/istl/operators.hh>
@@ -68,11 +69,9 @@ class ElementBorderListFromGrid
             , blackList_(blackList)
             , borderList_(borderList)
         {
-            auto elemIt = gridView_.template begin<0>();
-            const auto& elemEndIt = gridView_.template end<0>();
-            for (; elemIt != elemEndIt; ++elemIt) {
-                if (elemIt->partitionType() != Dune::InteriorEntity) {
-                    Index elemIdx = static_cast<Index>(map_.index(*elemIt));
+            for (const auto& elem : elements(gridView_)) {
+                if (elem.partitionType() != Dune::InteriorEntity) {
+                    Index elemIdx = static_cast<Index>(map_.index(elem));
                     blackList_.addIndex(elemIdx);
                 }
             }
