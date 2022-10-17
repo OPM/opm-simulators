@@ -210,4 +210,23 @@ setAlqMaxRate_(const GasLiftOpt::Well &well)
     }
 }
 
+template<typename TypeTag>
+bool
+GasLiftSingleWell<TypeTag>::
+checkThpControl_() const
+{
+    const int well_index = this->well_state_.index(this->well_name_).value();
+    const Well::ProducerCMode& control_mode =
+                         this->well_state_.well(well_index).production_cmode;
+    bool thp_control = control_mode == Well::ProducerCMode::THP;
+    const WellInterfaceGeneric &well = getWell();
+    thp_control = thp_control || well.thpLimitViolatedButNotSwitched();
+    if (this->debug) {
+        if (!thp_control) {
+            displayDebugMessage_("Well is not under THP control, skipping iteration..");
+        }
+    }
+    return thp_control;
+}
+
 }

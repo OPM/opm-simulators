@@ -278,22 +278,6 @@ checkInitialALQmodified_(double alq, double initial_alq) const
     }
 }
 
-bool
-GasLiftSingleWellGeneric::
-checkThpControl_() const
-{
-    const int well_index = this->well_state_.index(this->well_name_).value();
-    const Well::ProducerCMode& control_mode =
-                         this->well_state_.well(well_index).production_cmode;
-    bool thp_control = control_mode == Well::ProducerCMode::THP;
-    if (this->debug) {
-        if (!thp_control) {
-            displayDebugMessage_("Well is not under THP control, skipping iteration..");
-        }
-    }
-    return thp_control;
-}
-
 std::pair<std::optional<double>,double>
 GasLiftSingleWellGeneric::
 computeConvergedBhpAtThpLimitByMaybeIncreasingALQ_() const
