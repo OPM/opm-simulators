@@ -1373,8 +1373,13 @@ public:
 
                 // if the grid has potentially changed, we need to re-create the
                 // supporting data structures.
+#if DUNE_VERSION_NEWER(DUNE_GRID, 2, 8)
+                elementMapper_.update(gridView_);
+                vertexMapper_.update(gridView_);
+#else
                 elementMapper_.update();
                 vertexMapper_.update();
+#endif
                 resetLinearizer();
 
                 // this is a bit hacky because it supposes that Problem::finishInit()

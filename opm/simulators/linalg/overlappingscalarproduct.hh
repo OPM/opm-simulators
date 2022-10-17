@@ -43,8 +43,12 @@ class OverlappingScalarProduct
 {
 public:
     using field_type = typename OverlappingBlockVector::field_type;
-    using CollectiveCommunication = typename Dune::CollectiveCommunication<typename Dune::MPIHelper::MPICommunicator>;
 
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
+    using CollectiveCommunication = typename Dune::Communication<typename Dune::MPIHelper::MPICommunicator>;
+#else
+    using CollectiveCommunication = typename Dune::CollectiveCommunication<typename Dune::MPIHelper::MPICommunicator>;
+#endif
     using real_type = typename Dune::ScalarProduct<OverlappingBlockVector>::real_type;
 
     //! the kind of computations supported by the operator. Either overlapping or non-overlapping
@@ -52,7 +56,12 @@ public:
     { return Dune::SolverCategory::overlapping; }
 
     OverlappingScalarProduct(const Overlap& overlap)
-        : overlap_(overlap), comm_( Dune::MPIHelper::getCollectiveCommunication() )
+        : overlap_(overlap),
+#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
+          comm_( Dune::MPIHelper::getCommunication() )
+#else
+          comm_( Dune::MPIHelper::getCollectiveCommunication() )
+#endif
     {}
 
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2,7)

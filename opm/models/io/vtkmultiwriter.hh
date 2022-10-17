@@ -163,8 +163,13 @@ public:
      */
     void gridChanged()
     {
+#if DUNE_VERSION_NEWER(DUNE_GRID, 2, 8)
+        elementMapper_.update(gridView_);
+        vertexMapper_.update(gridView_);
+#else
         elementMapper_.update();
         vertexMapper_.update();
+#endif
     }
 
     /*!
