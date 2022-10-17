@@ -321,12 +321,8 @@ public:
         ElementContext elemCtx( this->simulator() );
         auto gridView = this->simulator().vanguard().gridView();
         auto& grid = this->simulator().vanguard().grid();
-        auto elemIt = gridView.template begin</*codim=*/0, Dune::Interior_Partition>();
-        auto elemEndIt = gridView.template end</*codim=*/0, Dune::Interior_Partition>();
-        for (; elemIt != elemEndIt; ++elemIt)
-        {
-            const auto& element = *elemIt ;
-            elemCtx.updateAll( element );
+        for (const auto& element : elements(gridView, Dune::Partitions::interior)) {
+            elemCtx.updateAll(element);
 
             // HACK: this should better be part of an AdaptionCriterion class
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
