@@ -214,7 +214,7 @@ doInit(bool rst, size_t numGridDof,
     tracerResidual_.resize(numGridDof);
 
     // allocate matrix for storing the Jacobian of the tracer residual
-    tracerMatrix_ = new TracerMatrix(numGridDof, numGridDof, TracerMatrix::random);
+    tracerMatrix_ = std::make_unique<TracerMatrix>(numGridDof, numGridDof, TracerMatrix::random);
 
     // find the sparsity pattern of the tracer matrix
     using NeighborSet = std::set<unsigned>;

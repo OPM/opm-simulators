@@ -76,6 +76,7 @@ class EclTracerModel : public EclGenericTracerModel<GetPropType<TypeTag, Propert
 
     using TracerEvaluation = DenseAd::Evaluation<Scalar,1>;
 
+    using TracerMatrix = typename BaseType::TracerMatrix;
     using TracerVector = typename BaseType::TracerVector;
 
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
@@ -154,11 +155,22 @@ public:
                 gas_.addTracer(tracerIdx, this->tracerConcentration_[tracerIdx]);
             }
         }
+
+        // will be valid after we move out of tracerMatrix_
+        TracerMatrix* base = this->tracerMatrix_.get();
+        for (auto& tr : this->tbatch) {
+            if (tr.numTracer() != 0) {
+                if (this->tracerMatrix_)
+                    tr.mat = std::move(this->tracerMatrix_);
+                else
+                    tr.mat = std::make_unique<TracerMatrix>(*base);
+            }
+        }
     }
 
     void beginTimeStep()
     {
-        if (this->numTracers()==0)
+        if (this->numTracers() == 0)
             return;
 
         updateStorageCache();
@@ -169,12 +181,10 @@ public:
      */
     void endTimeStep()
     {
-        if (this->numTracers()==0)
+        if (this->numTracers() == 0)
             return;
 
-        advanceTracerFields(wat_);
-        advanceTracerFields(oil_);
-        advanceTracerFields(gas_);
+        advanceTracerFields();
     }
 
     /*!
@@ -256,34 +266,134 @@ protected:
         }
     }
 
-    template <class TrRe>
-    void assembleTracerEquations_(TrRe & tr)
+    template<class TrRe>
+    void assembleTracerEquationVolume(TrRe& tr,
+                                      const ElementContext& elemCtx,
+                                      const Scalar scvVolume,
+                                      const Scalar dt,
+                                      unsigned I,
+                                      unsigned I1)
+
     {
         if (tr.numTracer() == 0)
             return;
 
+        std::vector<Scalar> storageOfTimeIndex1(tr.numTracer());
+        if (elemCtx.enableStorageCache()) {
+            for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
+                storageOfTimeIndex1[tIdx] = tr.storageOfTimeIndex1_[tIdx][I];
+            }
+        }
+        else {
+            Scalar fVolume1;
+            computeVolume_(fVolume1, tr.phaseIdx_, elemCtx, 0, /*timeIdx=*/1);
+            for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
+                storageOfTimeIndex1[tIdx] = fVolume1*tr.concentrationInitial_[tIdx][I1];
+            }
+        }
+
+        TracerEvaluation fVolume;
+        computeVolume_(fVolume, tr.phaseIdx_, elemCtx, 0, /*timeIdx=*/0);
+        for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
+            Scalar storageOfTimeIndex0 = fVolume.value()*tr.concentration_[tIdx][I];
+            Scalar localStorage = (storageOfTimeIndex0 - storageOfTimeIndex1[tIdx]) * scvVolume/dt;
+            tr.residual_[tIdx][I][0] += localStorage; //residual + flux
+        }
+        (*tr.mat)[I][I][0][0] += fVolume.derivative(0) * scvVolume/dt;
+    }
+
+    template<class TrRe>
+    void assembleTracerEquationFlux(TrRe& tr,
+                                    const ElementContext& elemCtx,
+                                    unsigned scvfIdx,
+                                    unsigned I,
+                                    unsigned J)
+    {
+        if (tr.numTracer() == 0)
+            return;
+
+        TracerEvaluation flux;
+        bool isUpF;
+        computeFlux_(flux, isUpF, tr.phaseIdx_, elemCtx, scvfIdx, 0);
+        int globalUpIdx = isUpF ? I : J;
+        for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
+            tr.residual_[tIdx][I][0] += flux.value()*tr.concentration_[tIdx][globalUpIdx]; //residual + flux
+        }
+        if (isUpF) {
+            (*tr.mat)[J][I][0][0] = -flux.derivative(0);
+            (*tr.mat)[I][I][0][0] += flux.derivative(0);
+        }
+    }
+
+    template<class TrRe, class Well>
+    void assembleTracerEquationWell(TrRe& tr,
+                                    const Well& well)
+    {
+        if (tr.numTracer() == 0)
+            return;
+
+        const auto& eclWell = well.wellEcl();
+        for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
+            this->wellTracerRate_[std::make_pair(eclWell.name(), this->name(tr.idx_[tIdx]))] = 0.0;
+        }
+
+        std::vector<double> wtracer(tr.numTracer());
+        for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
+            wtracer[tIdx] = eclWell.getTracerProperties().getConcentration(this->name(tr.idx_[tIdx]));
+        }
+
+        for (auto& perfData : well.perforationData()) {
+            const auto I = perfData.cell_index;
+            Scalar rate = well.volumetricSurfaceRateForConnection(I, tr.phaseIdx_);
+            if (rate > 0) {
+                for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
+                    tr.residual_[tIdx][I][0] -= rate*wtracer[tIdx];
+                    // Store _injector_ tracer rate for reporting
+                    this->wellTracerRate_.at(std::make_pair(eclWell.name(),this->name(tr.idx_[tIdx]))) += rate*wtracer[tIdx];
+                }
+            }
+            else if (rate < 0) {
+                for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
+                    tr.residual_[tIdx][I][0] -= rate*tr.concentration_[tIdx][I];
+                }
+                (*tr.mat)[I][I][0][0] -= rate*variable<TracerEvaluation>(1.0, 0).derivative(0);
+            }
+        }
+    }
+
+    void assembleTracerEquations_()
+    {
         // Note that we formulate the equations in terms of a concentration update
         // (compared to previous time step) and not absolute concentration.
         // This implies that current concentration (tr.concentration_[][]) contributes
         // to the rhs both through storrage and flux terms.
         // Compare also advanceTracerFields(...) below.
 
-        (*this->tracerMatrix_) = 0.0;
-        for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx)
-            tr.residual_[tIdx] = 0.0;
+        for (auto& tr : tbatch) {
+            if (tr.numTracer() != 0) {
+                (*tr.mat) = 0.0;
+                for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx)
+                    tr.residual_[tIdx] = 0.0;
+            }
+        }
 
         ElementContext elemCtx(simulator_);
         for (const auto& elem : elements(simulator_.gridView())) {
-            elemCtx.updateAll(elem);
+            elemCtx.updateStencil(elem);
 
-            size_t I = elemCtx.globalSpaceIndex(/*dofIdx=*/ 0, /*timIdx=*/0);
+            size_t I = elemCtx.globalSpaceIndex(/*dofIdx=*/ 0, /*timeIdx=*/0);
 
             if (elem.partitionType() != Dune::InteriorEntity)
             {
                 // Dirichlet boundary conditions needed for the parallel matrix
-                (*this->tracerMatrix_)[I][I][0][0] = 1.;
+                for (auto& tr : tbatch) {
+                    if (tr.numTracer() != 0)
+                        (*tr.mat)[I][I][0][0] = 1.;
+                }
                 continue;
             }
+            elemCtx.updateAllIntensiveQuantities();
+            elemCtx.updateAllExtensiveQuantities();
 
             Scalar extrusionFactor =
                     elemCtx.intensiveQuantities(/*dofIdx=*/ 0, /*timeIdx=*/0).extrusionFactor();
@@ -295,89 +405,40 @@ protected:
                     * extrusionFactor;
             Scalar dt = elemCtx.simulator().timeStepSize();
 
-            size_t I1 = elemCtx.globalSpaceIndex(/*dofIdx=*/ 0, /*timIdx=*/1);
+            size_t I1 = elemCtx.globalSpaceIndex(/*dofIdx=*/ 0, /*timeIdx=*/1);
 
-            std::vector<Scalar> storageOfTimeIndex1(tr.numTracer());
-            if (elemCtx.enableStorageCache()) {
-                for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
-                    storageOfTimeIndex1[tIdx] = tr.storageOfTimeIndex1_[tIdx][I];
-                }
+            for (auto& tr : tbatch) {
+                this->assembleTracerEquationVolume(tr, elemCtx, scvVolume, dt, I, I1);
             }
-            else {
-                Scalar fVolume1;
-                computeVolume_(fVolume1, tr.phaseIdx_, elemCtx, 0, /*timIdx=*/1);
-                for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
-                    storageOfTimeIndex1[tIdx] = fVolume1*tr.concentrationInitial_[tIdx][I1];
-                }
-            }
-
-            TracerEvaluation fVolume;
-            computeVolume_(fVolume, tr.phaseIdx_, elemCtx, 0, /*timIdx=*/0);
-            for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
-                Scalar storageOfTimeIndex0 = fVolume.value()*tr.concentration_[tIdx][I];
-                Scalar localStorage = (storageOfTimeIndex0 - storageOfTimeIndex1[tIdx]) * scvVolume/dt;
-                tr.residual_[tIdx][I][0] += localStorage; //residual + flux
-            }
-            (*this->tracerMatrix_)[I][I][0][0] += fVolume.derivative(0) * scvVolume/dt;
 
             size_t numInteriorFaces = elemCtx.numInteriorFaces(/*timIdx=*/0);
             for (unsigned scvfIdx = 0; scvfIdx < numInteriorFaces; scvfIdx++) {
-                TracerEvaluation flux;
                 const auto& face = elemCtx.stencil(0).interiorFace(scvfIdx);
                 unsigned j = face.exteriorIndex();
                 unsigned J = elemCtx.globalSpaceIndex(/*dofIdx=*/ j, /*timIdx=*/0);
-                bool isUpF;
-                computeFlux_(flux, isUpF, tr.phaseIdx_, elemCtx, scvfIdx, 0);
-                int globalUpIdx = isUpF ? I : J;
-                for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
-                    tr.residual_[tIdx][I][0] += flux.value()*tr.concentration_[tIdx][globalUpIdx]; //residual + flux
-                }
-                if (isUpF) {
-                    (*this->tracerMatrix_)[J][I][0][0] = -flux.derivative(0);
-                    (*this->tracerMatrix_)[I][I][0][0] += flux.derivative(0);
+                for (auto& tr : tbatch) {
+                    this->assembleTracerEquationFlux(tr, elemCtx, scvfIdx, I, J);
                 }
             }
-
         }
 
-        // Wells  terms
+        // Well terms
         const auto& wellPtrs = simulator_.problem().wellModel().localNonshutWells();
         for (const auto& wellPtr : wellPtrs) {
-            const auto& well = wellPtr->wellEcl();
-
-            for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
-                this->wellTracerRate_[std::make_pair(well.name(), this->name(tr.idx_[tIdx]))] = 0.0;
-            }
-
-            std::vector<double> wtracer(tr.numTracer());
-            for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
-                wtracer[tIdx] = well.getTracerProperties().getConcentration(this->name(tr.idx_[tIdx]));
-            }
-
-            for (auto& perfData : wellPtr->perforationData()) {
-                auto I = perfData.cell_index;
-                Scalar rate = wellPtr->volumetricSurfaceRateForConnection(I, tr.phaseIdx_);
-                if (rate > 0) {
-                    for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
-                        tr.residual_[tIdx][I][0] -= rate*wtracer[tIdx];
-                        // Store _injector_ tracer rate for reporting
-                        this->wellTracerRate_.at(std::make_pair(well.name(),this->name(tr.idx_[tIdx]))) += rate*wtracer[tIdx];
-                    }
-                }
-                else if (rate < 0) {
-                    for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
-                        tr.residual_[tIdx][I][0] -= rate*tr.concentration_[tIdx][I];
-                    }
-                    (*this->tracerMatrix_)[I][I][0][0] -= rate*variable<TracerEvaluation>(1.0, 0).derivative(0);
-                }
+            for (auto& tr : tbatch) {
+                this->assembleTracerEquationWell(tr, *wellPtr);
             }
         }
 
         // Communicate overlap using grid Communication
-        auto handle = VectorVectorDataHandle<GridView, std::vector<TracerVector>>(tr.residual_,
-                                                                                  simulator_.gridView());
-        simulator_.gridView().communicate(handle, Dune::InteriorBorder_All_Interface,
-                                          Dune::ForwardCommunication);
+        for (auto& tr : tbatch) {
+            if (tr.numTracer() == 0)
+                continue;
+            auto handle = VectorVectorDataHandle<GridView, std::vector<TracerVector>>(tr.residual_,
+                                                                                      simulator_.gridView());
+            simulator_.gridView().communicate(handle, Dune::InteriorBorder_All_Interface,
+                                              Dune::ForwardCommunication);
+        }
     }
 
     void updateStorageCache()
@@ -404,69 +465,70 @@ protected:
         }
     }
 
-    template <class TrRe>
-    void advanceTracerFields(TrRe & tr)
+    void advanceTracerFields()
     {
-        if (tr.numTracer() == 0)
-            return;
+        assembleTracerEquations_();
 
-        // Note that we solve for a concentration update (compared to previous time step)
-        // Confer also assembleTracerEquations_(...) above.
-        std::vector<TracerVector> dx(tr.concentration_);
-        for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx)
-            dx[tIdx] = 0.0;
-
-        assembleTracerEquations_(tr);
-
-        bool converged = this->linearSolveBatchwise_(*this->tracerMatrix_, dx, tr.residual_);
-        if (!converged)
-            std::cout << "### Tracer model: Warning, linear solver did not converge. ###" << std::endl;
-
-        for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
-            tr.concentration_[tIdx] -= dx[tIdx];
-            // Tracer concentrations for restart report
-            this->tracerConcentration_[tr.idx_[tIdx]] = tr.concentration_[tIdx];
-        }
-
-        // Store _producer_ tracer rate for reporting
-        const auto& wellPtrs = simulator_.problem().wellModel().localNonshutWells();
-        for (const auto& wellPtr : wellPtrs) {
-            const auto& well = wellPtr->wellEcl();
-
-            if (!well.isProducer()) //Injection rates already reported during assembly
+        for (auto& tr : tbatch) {
+            if (tr.numTracer() == 0)
                 continue;
 
-            Scalar rateWellPos = 0.0;
-            Scalar rateWellNeg = 0.0;
-            for (auto& perfData : wellPtr->perforationData()) {
-                const int I = perfData.cell_index;
-                Scalar rate = wellPtr->volumetricSurfaceRateForConnection(I, tr.phaseIdx_);
-                if (rate < 0) {
-                    rateWellNeg += rate;
-                    for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
-                        this->wellTracerRate_.at(std::make_pair(well.name(),this->name(tr.idx_[tIdx]))) += rate*tr.concentration_[tIdx][I];
-                    }
-                }
-                else {
-                    rateWellPos += rate;
-                }
+            // Note that we solve for a concentration update (compared to previous time step)
+            // Confer also assembleTracerEquations_(...) above.
+            std::vector<TracerVector> dx(tr.concentration_);
+            for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx)
+                dx[tIdx] = 0.0;
+
+            bool converged = this->linearSolveBatchwise_(*tr.mat, dx, tr.residual_);
+            if (!converged)
+                std::cout << "### Tracer model: Warning, linear solver did not converge. ###" << std::endl;
+
+            for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
+                tr.concentration_[tIdx] -= dx[tIdx];
+                // Tracer concentrations for restart report
+                this->tracerConcentration_[tr.idx_[tIdx]] = tr.concentration_[tIdx];
             }
 
-            Scalar rateWellTotal = rateWellNeg + rateWellPos;
+            // Store _producer_ tracer rate for reporting
+            const auto& wellPtrs = simulator_.problem().wellModel().localNonshutWells();
+            for (const auto& wellPtr : wellPtrs) {
+                const auto& well = wellPtr->wellEcl();
 
-            // TODO: Some inconsistencies here that perhaps should be clarified. The "offical" rate as reported below is
-            //  occasionally significant different from the sum over connections (as calculated above). Only observed
-            //  for small values, neglible for the rate itself, but matters when used to calculate tracer concentrations.
-            std::size_t well_index = simulator_.problem().wellModel().wellState().index(well.name()).value();
-            Scalar official_well_rate_total = simulator_.problem().wellModel().wellState().well(well_index).surface_rates[tr.phaseIdx_];
+                if (!well.isProducer()) //Injection rates already reported during assembly
+                    continue;
 
-            rateWellTotal = official_well_rate_total;
+                Scalar rateWellPos = 0.0;
+                Scalar rateWellNeg = 0.0;
+                for (auto& perfData : wellPtr->perforationData()) {
+                    const int I = perfData.cell_index;
+                    Scalar rate = wellPtr->volumetricSurfaceRateForConnection(I, tr.phaseIdx_);
+                    if (rate < 0) {
+                        rateWellNeg += rate;
+                        for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
+                            this->wellTracerRate_.at(std::make_pair(well.name(),this->name(tr.idx_[tIdx]))) += rate*tr.concentration_[tIdx][I];
+                        }
+                    }
+                    else {
+                        rateWellPos += rate;
+                    }
+                }
 
-            if (rateWellTotal > rateWellNeg) { // Cross flow
-                const Scalar bucketPrDay = 10.0/(1000.*3600.*24.); // ... keeps (some) trouble away
-                const Scalar factor = (rateWellTotal < -bucketPrDay) ? rateWellTotal/rateWellNeg : 0.0;
-                for (int tIdx =0; tIdx < tr.numTracer(); ++tIdx) {
-                    this->wellTracerRate_.at(std::make_pair(well.name(),this->name(tr.idx_[tIdx]))) *= factor;
+                Scalar rateWellTotal = rateWellNeg + rateWellPos;
+
+                // TODO: Some inconsistencies here that perhaps should be clarified. The "offical" rate as reported below is
+                //  occasionally significant different from the sum over connections (as calculated above). Only observed
+                //  for small values, neglible for the rate itself, but matters when used to calculate tracer concentrations.
+                std::size_t well_index = simulator_.problem().wellModel().wellState().index(well.name()).value();
+                Scalar official_well_rate_total = simulator_.problem().wellModel().wellState().well(well_index).surface_rates[tr.phaseIdx_];
+
+                rateWellTotal = official_well_rate_total;
+
+                if (rateWellTotal > rateWellNeg) { // Cross flow
+                    const Scalar bucketPrDay = 10.0/(1000.*3600.*24.); // ... keeps (some) trouble away
+                    const Scalar factor = (rateWellTotal < -bucketPrDay) ? rateWellTotal/rateWellNeg : 0.0;
+                    for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
+                        this->wellTracerRate_.at(std::make_pair(well.name(),this->name(tr.idx_[tIdx]))) *= factor;
+                    }
                 }
             }
         }
@@ -491,6 +553,7 @@ protected:
       std::vector<TV> concentration_;
       std::vector<TV> storageOfTimeIndex1_;
       std::vector<TV> residual_;
+      std::unique_ptr<TracerMatrix> mat;
 
       TracerBatch(int phaseIdx) : phaseIdx_(phaseIdx) {}
 
