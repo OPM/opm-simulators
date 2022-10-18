@@ -104,10 +104,6 @@ WellInterfaceGeneric::WellInterfaceGeneric(const Well& well,
     well_control_log_.clear();
 }
 
-void WellInterfaceGeneric::setScalings(double bhp_scaling, double rate_scaling){
-    bhp_scaling_ = bhp_scaling;
-    rate_scaling_ = rate_scaling;
-}
 // Currently the VFP calculations requires three-phase input data, see
 //  the documentation for keyword VFPPROD and its implementation in
 //  VFPProdProperties.cpp. However, by setting the gas flow rate to a dummy

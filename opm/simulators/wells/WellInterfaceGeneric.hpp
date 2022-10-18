@@ -62,7 +62,7 @@ public:
                          const int index_of_well,
                          const std::vector<PerforationData>& perf_data);
 
-    void setScalings(double bhp_scaling, double rate_scaling);
+    void setScalings(double bhp_scaling, double rate_scaling) = 0;
     /// \brief Get the perforations of the well
     const std::vector<PerforationData>& perforationData() const;
 
@@ -362,9 +362,6 @@ protected:
 
     bool changed_to_open_this_step_ = true;
     
-    double bhp_scaling_;
-    double rate_scaling_;
-
 };
 
 }

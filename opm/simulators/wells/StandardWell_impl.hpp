@@ -52,7 +52,7 @@ namespace Opm
 
 
 
-
+  
 
     template<typename TypeTag>
     void
@@ -2081,7 +2081,11 @@ namespace Opm
         }
     }
 
-
+    template<typename TypeTag>
+    void StandardWell<TypeTag>::setScalings(double bhp_scaling, double rate_scaling){
+      bhp_scaling_ = bhp_scaling;
+      rate_scaling_ = rate_scaling;
+    }
 
 
     template<typename TypeTag>
