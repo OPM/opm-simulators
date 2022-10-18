@@ -168,7 +168,7 @@ namespace Opm
             double alq_value) const override;
       
         void setScalings(double bhp_scaling, double rate_scaling, double bhp_control_scaling);
-        double bhpControlScalings(){return this->bhp_control_scaling_;}
+        double bhpControlScaling() const{return this->bhp_control_scaling_;}
     protected:
         int number_segments_;
 

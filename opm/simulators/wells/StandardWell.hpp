@@ -249,8 +249,8 @@ namespace Opm
                                     double* connII,
                                     DeferredLogger& deferred_logger) const;
 
-        void setScalings(double bhp_scaling, double rate_scaling,, double bhp_control_scaling);
-        double bhpControlScalings(){return this->bhp_control_scaling_;}
+        void setScalings(double bhp_scaling, double rate_scaling, double bhp_control_scaling);
+        double bhpControlScaling() const {return this->bhp_control_scaling_;}
     protected:
         bool regularize_;
 
