@@ -1363,6 +1363,12 @@ updateThp(WellState& well_state,
         ws.thp = 0;
         return;
     }
+    // For THP controlled wells, we know the thp value
+    bool thp_controlled = baseif_.isInjector() ? ws.injection_cmode == Well::InjectorCMode::THP:
+                                              ws.production_cmode == Well::ProducerCMode::THP;
+    if (thp_controlled) {
+        return;
+    }
 
     // the well is under other control types, we calculate the thp based on bhp and rates
     std::vector<double> rates(3, 0.0);

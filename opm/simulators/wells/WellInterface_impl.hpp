@@ -710,15 +710,15 @@ namespace Opm
     {
         this->operability_status_.resetOperability();
 
-        bool thp_controled = this->isInjector() ? well_state.well(this->index_of_well_).injection_cmode == Well::InjectorCMode::THP:
+        bool thp_controlled = this->isInjector() ? well_state.well(this->index_of_well_).injection_cmode == Well::InjectorCMode::THP:
                                               well_state.well(this->index_of_well_).production_cmode == Well::ProducerCMode::THP;
-        bool bhp_controled = this->isInjector() ? well_state.well(this->index_of_well_).injection_cmode == Well::InjectorCMode::BHP:
+        bool bhp_controlled = this->isInjector() ? well_state.well(this->index_of_well_).injection_cmode == Well::InjectorCMode::BHP:
                                               well_state.well(this->index_of_well_).production_cmode == Well::ProducerCMode::BHP;
 
         // Operability checking is not free
         // Only check wells under BHP and THP control
-        bool check_thp = thp_controled || this->operability_status_.thp_limit_violated_but_not_switched;
-        if (check_thp || bhp_controled) {
+        bool check_thp = thp_controlled || this->operability_status_.thp_limit_violated_but_not_switched;
+        if (check_thp || bhp_controlled) {
             updateIPR(ebos_simulator, deferred_logger);
             checkOperabilityUnderBHPLimit(well_state, ebos_simulator, deferred_logger);
         }
@@ -813,6 +813,7 @@ namespace Opm
                 auto rates = ws.surface_rates;
                 double bhp = this->calculateBhpFromThp(well_state, rates, well, summaryState, this->getRefDensity(), deferred_logger);
                 ws.bhp = bhp;
+                ws.thp = this->getTHPConstraint(summaryState);
 
                 // if the total rates are negative or zero
                 // we try to provide a better intial well rate
@@ -1037,6 +1038,7 @@ namespace Opm
                 this->adaptRatesForVFP(rates);
                 double bhp = this->calculateBhpFromThp(well_state, rates, well, summaryState, this->getRefDensity(), deferred_logger);
                 ws.bhp = bhp;
+                ws.thp = this->getTHPConstraint(summaryState);
 
                 // if the total rates are negative or zero
                 // we try to provide a better intial well rate

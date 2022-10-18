@@ -50,6 +50,7 @@ namespace Opm
 
 
         bool converged;
+        bool well_group_control_changed;
         int exit_status;
 
         double global_time;

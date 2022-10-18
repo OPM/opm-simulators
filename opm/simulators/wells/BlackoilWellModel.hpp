@@ -260,7 +260,7 @@ namespace Opm {
             void applyScaleAdd(const Scalar alpha, const BVector& x, BVector& Ax) const;
 
             // Check if well equations is converged.
-            ConvergenceReport getWellConvergence(const std::vector<Scalar>& B_avg, const bool checkGroupConvergence = false) const;
+            ConvergenceReport getWellConvergence(const std::vector<Scalar>& B_avg, const bool checkWellGroupControls = false) const;
 
             const SimulatorReportSingle& lastReport() const;
 
@@ -281,7 +281,7 @@ namespace Opm {
             void prepareTimeStep(DeferredLogger& deferred_logger);
             void initPrimaryVariablesEvaluation() const;
             bool shouldBalanceNetwork(const int reportStepIndex, const int iterationIdx) const;
-            std::pair<bool, double> updateWellControls(DeferredLogger& deferred_logger, const bool checkGroupControls);
+            std::tuple<bool, bool, double> updateWellControls(DeferredLogger& deferred_logger);
 
             void updateAndCommunicate(const int reportStepIdx,
                                       const int iterationIdx,
@@ -373,7 +373,7 @@ namespace Opm {
             // and in the well equations.
             void assemble(const int iterationIdx,
                           const double dt);
-            void assembleImpl(const int iterationIdx,
+            bool assembleImpl(const int iterationIdx,
                               const double dt,
                               const std::size_t recursion_level,
                               DeferredLogger& local_deferredLogger);
