@@ -482,6 +482,17 @@ namespace Opm {
                 }
             }
 
+            template <class Rates>
+            std::pair<double, double>
+            inferDissolvedVaporisedRatio(const double rsMax,
+                                         const double rvMax,
+                                         const Rates& surface_rates) const
+            {
+                const auto io = RegionAttributeHelpers::PhasePos::oil(this->phaseUsage_);
+                const auto ig = RegionAttributeHelpers::PhasePos::gas(this->phaseUsage_);
+                return this->dissolvedVaporisedRatio(io, ig, rsMax, rvMax, surface_rates);
+            }
+
             /**
              * Compute coefficients for surface-to-reservoir voidage
              * conversion for solvent.
