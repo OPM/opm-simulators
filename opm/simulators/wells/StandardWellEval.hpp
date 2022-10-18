@@ -106,14 +106,14 @@ protected:
 
     void initPrimaryVariablesEvaluation() const;
 
-    const EvalWell& getBhp() const
+    const EvalWell getBhp() const
     {
-        return primary_variables_evaluation_[Bhp];
+        return primary_variables_evaluation_[Bhp]*this->bhp_scaling_;
     }
 
-    const EvalWell& getWQTotal() const
+    const EvalWell getWQTotal() const
     {
-        return primary_variables_evaluation_[WQTotal];
+        return primary_variables_evaluation_[WQTotal]*this->rate_scaling_;
     }
 
     EvalWell extendEval(const Eval& in) const;
