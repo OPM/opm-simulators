@@ -134,7 +134,10 @@ if(OPENCL_FOUND)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/openclSolverBackend.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/openclWellContributions.cpp)
 endif()
-if(CUDA_FOUND OR OPENCL_FOUND OR HAVE_FPGA OR HAVE_AMGCL)
+if(HAVE_ROCALUTION)
+  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/rocalutionSolverBackend.cpp)
+endif()
+if(CUDA_FOUND OR OPENCL_FOUND OR HAVE_FPGA OR HAVE_AMGCL OR HAVE_ROCALUTION)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/BdaBridge.cpp)
 endif()
 if(HAVE_FPGA)
@@ -301,6 +304,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/bda/opencl/openclWellContributions.hpp
   opm/simulators/linalg/bda/Matrix.hpp
   opm/simulators/linalg/bda/MultisegmentWellContribution.hpp
+  opm/simulators/linalg/bda/rocalutionSolverBackend.hpp
   opm/simulators/linalg/bda/WellContributions.hpp
   opm/simulators/linalg/amgcpr.hh
   opm/simulators/linalg/twolevelmethodcpr.hh
