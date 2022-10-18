@@ -89,7 +89,8 @@ namespace Opm {
 	// this parameters is registered in BlackoilModelParamtersEbos.hpp
 	// but no need of putting them in to the parameters.
 	bhp_scaling_ = EWOMS_GET_PARAM(TypeTag, double, WellBhpScaling);
-	rate_scaling_ = EWOMS_GET_PARAM(TypeTag, double, WellRateScaling);  
+	rate_scaling_ = EWOMS_GET_PARAM(TypeTag, double, WellRateScaling);
+        bhp_control_scaling_ = EWOMS_GET_PARAM(TypeTag, double, BhpControlScaling);  
         initial_step_ = true;
 
         // add the eWoms auxiliary module for the wells to the list
@@ -111,7 +112,7 @@ namespace Opm {
             const bool well_opened_this_step = report_step_starts_ && events.hasEvent(wellPtr->name(), effective_events_mask);
             wellPtr->init(&this->phase_usage_, this->depth_, this->gravity_,
                           this->local_num_cells_, this->B_avg_, well_opened_this_step);
-	    wellPtr->setScalings(bhp_scaling_,rate_scaling_);
+	    wellPtr->setScalings(bhp_scaling_,rate_scaling_,bhp_control_scaling_);
         }
     }
 

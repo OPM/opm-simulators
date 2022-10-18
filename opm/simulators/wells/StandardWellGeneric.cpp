@@ -55,7 +55,8 @@ StandardWellGeneric(int Bhp,
     , parallelB_(duneB_, baseif_.parallelWellInfo())
     , Bhp_(Bhp)
     , bhp_scaling_(1.0)
-    , rate_scaling_(1.0)	
+    , rate_scaling_(1.0)
+    , bhp_control_scaling_(1.0)  
   
 {
     duneB_.setBuildMode(OffDiagMatWell::row_wise);
@@ -470,7 +471,7 @@ checkConvergenceControlEq(const WellState& well_state,
         }
     }
 
-    const double well_control_residual = std::abs(this->resWell_[0][Bhp_]);
+    const double well_control_residual = std::abs(this->resWell_[0][Bhp_])/baseif_.bhpControlScaling();
     const int dummy_component = -1;
     if (std::isnan(well_control_residual)) {
         report.setWellFailed({ctrltype, CR::Severity::NotANumber, dummy_component, baseif_.name()});
