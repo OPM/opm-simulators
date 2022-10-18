@@ -166,7 +166,8 @@ namespace Opm
             const SummaryState& summary_state,
             DeferredLogger& deferred_logger,
             double alq_value) const override;
-
+      
+        void setScalings(double bhp_scaling, double rate_scaling);
     protected:
         int number_segments_;
 

@@ -249,7 +249,7 @@ namespace Opm
                                     double* connII,
                                     DeferredLogger& deferred_logger) const;
 
-
+        void setScalings(double bhp_scaling, double rate_scaling) == 0;
     protected:
         bool regularize_;
 
