@@ -459,7 +459,39 @@ namespace Opm
         // keep a copy of the original well state
         const WellState well_state0 = well_state;
         const double dt = ebosSimulator.timeStepSize();
-        const bool converged = iterateWellEquations(ebosSimulator, dt, well_state, group_state, deferred_logger);
+        bool converged = iterateWellEquations(ebosSimulator, dt, well_state, group_state, deferred_logger);
+
+        // Newly opened wells with THP control sometimes struggles to
+        // converge due to bad initial guess. Or due to the simple fact
+        // that the well needs to change to another control.
+        // We therefore try to solve the well with BHP control to get
+        // an better initial guess.
+        // If the well is supposed to operate under THP control
+        // "updateWellControl" will switch it back to THP later.
+        if (!converged) {
+            auto& ws = well_state.well(this->indexOfWell());
+            bool thp_control = false;
+            if (this->well_ecl_.isInjector()) {
+                thp_control = ws.injection_cmode == Well::InjectorCMode::THP;
+                if (thp_control) {
+                    ws.injection_cmode = Well::InjectorCMode::BHP;
+                    this->well_control_log_.push_back(Well::InjectorCMode2String(Well::InjectorCMode::THP));
+                }
+            } else {
+                thp_control = ws.production_cmode == Well::ProducerCMode::THP;
+                if (thp_control) {
+                    ws.production_cmode = Well::ProducerCMode::BHP;
+                    this->well_control_log_.push_back(Well::ProducerCMode2String(Well::ProducerCMode::THP));
+                }
+            }
+            if (thp_control) {
+                const std::string msg = std::string("The newly opened well ") + this->name()
+                    + std::string(" with THP control did not converge during inner iterations, we try again with bhp control");
+                deferred_logger.debug(msg);
+                converged = this->iterateWellEquations(ebosSimulator, dt, well_state, group_state, deferred_logger);
+            }
+        }
+
         if (!converged) {
             const int max_iter = param_.max_welleq_iter_;
             deferred_logger.debug("Compute initial well solution for well " + this->name() + ". Failed to converge in "
