@@ -328,6 +328,14 @@ add_test_compareECLFiles(CASENAME spe1_thermal_watvisc
                          REL_TOL ${rel_tol}
                          DIR spe1)
 
+add_test_compareECLFiles(CASENAME joule_thomson
+                         FILENAME JOULETHOMSON_EXPERIMENT
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR joule_thomson
+                         TEST_ARGS --solver-max-time-step-in-days=0.2)
+
 add_test_compareECLFiles(CASENAME spe1_rockcomp
                          FILENAME SPE1CASE2_ROCK2DTR
                          SIMULATOR flow
