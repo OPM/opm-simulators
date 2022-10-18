@@ -47,7 +47,7 @@ namespace Opm
 template<class FluidSystem>
 WellInterfaceEval<FluidSystem>::
 WellInterfaceEval(const WellInterfaceFluidSystem<FluidSystem>& baseif)
-  : baseif_(baseif), bhp_scaling_(1.0), rate_scaling_(1.0)
+  : baseif_(baseif)
 {}
 
 template<class FluidSystem>

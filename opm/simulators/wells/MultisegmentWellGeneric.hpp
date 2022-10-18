@@ -126,6 +126,8 @@ protected:
     // or in another way, the depth difference between the perforation and
     // the segment the perforation belongs to
     std::vector<double> perforation_segment_depth_diffs_;
+    double bhp_scaling_;
+    double rate_scaling_;
 };
 
 }

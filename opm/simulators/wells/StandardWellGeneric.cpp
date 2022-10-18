@@ -54,6 +54,9 @@ StandardWellGeneric(int Bhp,
     , perf_pressure_diffs_(baseif_.numPerfs())
     , parallelB_(duneB_, baseif_.parallelWellInfo())
     , Bhp_(Bhp)
+    , bhp_scaling_(1.0)
+    , rate_scaling_(1.0)	
+  
 {
     duneB_.setBuildMode(OffDiagMatWell::row_wise);
     duneC_.setBuildMode(OffDiagMatWell::row_wise);
