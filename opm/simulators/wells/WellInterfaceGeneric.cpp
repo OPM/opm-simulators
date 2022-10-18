@@ -57,8 +57,6 @@ WellInterfaceGeneric::WellInterfaceGeneric(const Well& well,
       , perf_data_(&perf_data)
       , ipr_a_(num_components)
       , ipr_b_(num_components)
-      , bhp_scaling_(1.0)
-      , rate_scaling_(1.0)	
 {
     assert(well.name()==pw_info.name());
     assert(std::is_sorted(perf_data.begin(), perf_data.end(),
