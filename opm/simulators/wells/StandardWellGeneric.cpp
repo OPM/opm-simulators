@@ -71,12 +71,13 @@ relaxationFactorRate(const std::vector<double>& primary_variables,
                      const BVectorWell& dwells)
 {
     double relaxation_factor = 1.0;
-    static constexpr int WQTotal = 0;
+    static constexpr int WQTotal = 0;//NB this may be inconsiten with other definitions
 
     // For injector, we only check the total rates to avoid sign change of rates
-    const double original_total_rate = primary_variables[WQTotal];
+    // we only need scaled rates
+    const double original_total_rate = primary_variables[WQTotal];//*this->rate_scaling_;
     const double newton_update = dwells[0][WQTotal];
-    const double possible_update_total_rate = primary_variables[WQTotal] - newton_update;
+    const double possible_update_total_rate = (primary_variables[WQTotal] - newton_update);;//*this->rate_scaling_;
 
     // 0.8 here is a experimental value, which remains to be optimized
     // if the original rate is zero or possible_update_total_rate is zero, relaxation_factor will
