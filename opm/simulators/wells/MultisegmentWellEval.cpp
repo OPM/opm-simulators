@@ -214,7 +214,7 @@ checkConvergenceControlEq(const WellState& well_state,
         }
     }
 
-    const double well_control_residual = std::abs(resWell_[0][SPres])/this->bhpControlScaling();
+    const double well_control_residual = std::abs(resWell_[0][SPres])/this->bhp_control_scaling_;
     const int dummy_component = -1;
     if (std::isnan(well_control_residual)) {
         report.setWellFailed({ctrltype, CR::Severity::NotANumber, dummy_component, baseif_.name()});
