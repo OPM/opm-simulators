@@ -111,7 +111,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/WGState.cpp
   )
 
-if (DAMARIS_FOUND)
+if (DAMARIS_FOUND AND MPI_Found)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/utils/DamarisOutputModule.cpp) 
   list (APPEND MAIN_SOURCE_FILES opm/simulators/utils/DamarisKeywords.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/utils/initDamarisXmlFile.cpp)
