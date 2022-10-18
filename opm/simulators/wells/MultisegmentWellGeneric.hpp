@@ -128,6 +128,7 @@ protected:
     std::vector<double> perforation_segment_depth_diffs_;
     double bhp_scaling_;
     double rate_scaling_;
+    double bhp_control_scaling_;
 };
 
 }

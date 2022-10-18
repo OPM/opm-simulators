@@ -176,7 +176,13 @@ template<class TypeTag, class MyTypeTag>
 struct WellRateScaling {
   using type = double;
   static constexpr type value = 1.0;
-};  
+};
+
+template<class TypeTag, class MyTypeTag>
+struct BhpControlScaling {
+  using type = double;
+  static constexpr type value = 1.0;
+};    
   
 template<class TypeTag>
 struct DbhpMaxRel<TypeTag, TTag::FlowModelParameters> {
@@ -510,6 +516,7 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, int, MaximumNumberOfWellSwitches, "Maximum number of times a well can switch to the same control");
 	    EWOMS_REGISTER_PARAM(TypeTag, double, WellBhpScaling, "Scaling of the Bhp variable");
 	    EWOMS_REGISTER_PARAM(TypeTag, double, WellRateScaling, "Scaling of the Rate variable");
+            EWOMS_REGISTER_PARAM(TypeTag, double, BhpControlScaling, "Scaling of bhp control equation");
         }
     };
 } // namespace Opm

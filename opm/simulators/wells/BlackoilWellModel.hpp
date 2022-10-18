@@ -352,6 +352,7 @@ namespace Opm {
             bool alternative_well_rate_init_{};
 	    double bhp_scaling_;
 	    double rate_scaling_;
+            double bhp_control_scaling_;
             std::unique_ptr<RateConverterType> rateConverter_{};
             std::unique_ptr<AverageRegionalPressureType> regionalAveragePressureCalculator_{};
 
