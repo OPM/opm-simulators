@@ -2602,13 +2602,14 @@ namespace Opm
             double pressure_cell = this->getPerfCellPressure(fs).value();
             max_pressure = std::max(max_pressure, pressure_cell);
         }
-        auto bhpAtLimit = this->StandardWellGeneric<Scalar>::computeBhpAtThpLimitProdWithAlq(frates,
-                                                                                  summary_state,
-                                                                                  deferred_logger,
-                                                                                  max_pressure,
-                                                                                  alq_value);
+        auto bhpAtLimit = WellBhpThpCalculator(*this).computeBhpAtThpLimitProd(frates,
+                                                                               summary_state,
+                                                                               max_pressure,
+                                                                               this->getRho(),
+                                                                               alq_value,
+                                                                               deferred_logger);
         auto v = frates(*bhpAtLimit);
-        if(bhpAtLimit && std::all_of(v.cbegin(), v.cend(), [](double i){ return i <= 0; }))
+        if (bhpAtLimit && std::all_of(v.cbegin(), v.cend(), [](double i){ return i <= 0; }))
             return bhpAtLimit;
 
         auto fratesIter = [this, &ebos_simulator, &deferred_logger](const double bhp) {
@@ -2621,11 +2622,12 @@ namespace Opm
             return rates;
         };
 
-        bhpAtLimit = this->StandardWellGeneric<Scalar>::computeBhpAtThpLimitProdWithAlq(fratesIter,
-                                                                                        summary_state,
-                                                                                        deferred_logger,
-                                                                                        max_pressure,
-                                                                                        alq_value);
+        bhpAtLimit = WellBhpThpCalculator(*this).computeBhpAtThpLimitProd(fratesIter,
+                                                                          summary_state,
+                                                                          max_pressure,
+                                                                          this->getRho(),
+                                                                          alq_value,
+                                                                          deferred_logger);
         v = frates(*bhpAtLimit);
         if(bhpAtLimit && std::all_of(v.cbegin(), v.cend(), [](double i){ return i <= 0; }))
             return bhpAtLimit;

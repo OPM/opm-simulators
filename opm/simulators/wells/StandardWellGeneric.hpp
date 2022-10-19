@@ -81,12 +81,6 @@ protected:
 
     void computeConnectionPressureDelta();
 
-    std::optional<double> computeBhpAtThpLimitProdWithAlq(const std::function<std::vector<double>(const double)>& frates,
-                                                          const SummaryState& summary_state,
-                                                          DeferredLogger& deferred_logger,
-                                                          double maxPerfPress,
-                                                          double alq_value) const;
-
     // Base interface reference
     const WellInterfaceGeneric& baseif_;
 
