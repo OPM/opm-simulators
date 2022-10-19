@@ -34,6 +34,7 @@
 #include <opm/simulators/wells/RateConverter.hpp>
 #include <opm/simulators/wells/SingleWellState.hpp>
 #include <opm/simulators/wells/TargetCalculator.hpp>
+#include <opm/simulators/wells/WellConstraints.hpp>
 #include <opm/simulators/wells/WellGroupConstraints.hpp>
 #include <opm/simulators/wells/WellGroupControls.hpp>
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
@@ -80,132 +81,6 @@ calculateReservoirRates(SingleWellState& ws) const
     rateConverter_.calcReservoirVoidageRates(fipreg, pvtRegionIdx_, surface_rates, voidage_rates);
     ws.reservoir_rates = voidage_rates;
 }
-
-
-template <typename FluidSystem>
-Well::ProducerCMode
-WellInterfaceFluidSystem<FluidSystem>::
-activeProductionConstraint(const SingleWellState& ws,
-                           const SummaryState& summaryState,
-                           DeferredLogger& deferred_logger) const
-{
-    const PhaseUsage& pu = this->phaseUsage();
-    const auto controls = this->well_ecl_.productionControls(summaryState);
-    const auto currentControl = ws.production_cmode;
-
-    if (controls.hasControl(Well::ProducerCMode::BHP) && currentControl != Well::ProducerCMode::BHP) {
-        const double bhp_limit = controls.bhp_limit;
-        double current_bhp = ws.bhp;
-        if (bhp_limit > current_bhp)
-            return Well::ProducerCMode::BHP;
-    }
-
-    if (controls.hasControl(Well::ProducerCMode::ORAT) && currentControl != Well::ProducerCMode::ORAT) {
-        double current_rate = -ws.surface_rates[pu.phase_pos[BlackoilPhases::Liquid]];
-        if (controls.oil_rate < current_rate)
-            return Well::ProducerCMode::ORAT;
-    }
-
-    if (controls.hasControl(Well::ProducerCMode::WRAT) && currentControl != Well::ProducerCMode::WRAT) {
-        double current_rate = -ws.surface_rates[pu.phase_pos[BlackoilPhases::Aqua]];
-        if (controls.water_rate < current_rate)
-            return Well::ProducerCMode::WRAT;
-    }
-
-    if (controls.hasControl(Well::ProducerCMode::GRAT) && currentControl != Well::ProducerCMode::GRAT) {
-        double current_rate = -ws.surface_rates[pu.phase_pos[BlackoilPhases::Vapour]];
-        if (controls.gas_rate < current_rate)
-            return Well::ProducerCMode::GRAT;
-    }
-
-    if (controls.hasControl(Well::ProducerCMode::LRAT) && currentControl != Well::ProducerCMode::LRAT) {
-        double current_rate = -ws.surface_rates[pu.phase_pos[BlackoilPhases::Liquid]];
-        current_rate -= ws.surface_rates[pu.phase_pos[BlackoilPhases::Aqua]];
-
-        bool skip = false;
-        if (controls.liquid_rate == controls.oil_rate) {
-            const double current_water_rate = ws.surface_rates[pu.phase_pos[BlackoilPhases::Aqua]];
-            if (std::abs(current_water_rate) < 1e-12) {
-                skip = true;
-                deferred_logger.debug("LRAT_ORAT_WELL", "Well " + this->name() + " The LRAT target is equal the ORAT target and the water rate is zero, skip checking LRAT");
-            }
-        }
-        if (!skip && controls.liquid_rate < current_rate)
-            return Well::ProducerCMode::LRAT;
-    }
-
-    if (controls.hasControl(Well::ProducerCMode::RESV) && currentControl != Well::ProducerCMode::RESV) {
-        double current_rate = 0.0;
-        if (pu.phase_used[BlackoilPhases::Aqua])
-            current_rate -= ws.reservoir_rates[pu.phase_pos[BlackoilPhases::Aqua]];
-
-        if (pu.phase_used[BlackoilPhases::Liquid])
-            current_rate -= ws.reservoir_rates[pu.phase_pos[BlackoilPhases::Liquid]];
-
-        if (pu.phase_used[BlackoilPhases::Vapour])
-            current_rate -= ws.reservoir_rates[pu.phase_pos[BlackoilPhases::Vapour]];
-
-        if (controls.prediction_mode && controls.resv_rate < current_rate)
-            return Well::ProducerCMode::RESV;
-
-        if (!controls.prediction_mode) {
-            const int fipreg = 0; // not considering the region for now
-            const int np = number_of_phases_;
-
-            std::vector<double> surface_rates(np, 0.0);
-            if (pu.phase_used[BlackoilPhases::Aqua])
-                surface_rates[pu.phase_pos[BlackoilPhases::Aqua]] = controls.water_rate;
-            if (pu.phase_used[BlackoilPhases::Liquid])
-                surface_rates[pu.phase_pos[BlackoilPhases::Liquid]] = controls.oil_rate;
-            if (pu.phase_used[BlackoilPhases::Vapour])
-                surface_rates[pu.phase_pos[BlackoilPhases::Vapour]] = controls.gas_rate;
-
-            std::vector<double> voidage_rates(np, 0.0);
-            rateConverter_.calcReservoirVoidageRates(fipreg, pvtRegionIdx_, surface_rates, voidage_rates);
-
-            double resv_rate = 0.0;
-            for (int p = 0; p < np; ++p)
-                resv_rate += voidage_rates[p];
-
-            if (resv_rate < current_rate)
-                return Well::ProducerCMode::RESV;
-        }
-    }
-
-    if (controls.hasControl(Well::ProducerCMode::THP) && currentControl != Well::ProducerCMode::THP) {
-        const auto& thp = getTHPConstraint(summaryState);
-        double current_thp = ws.thp;
-        if (thp > current_thp && !ws.trivial_target) {
-            // If WVFPEXP item 4 is set to YES1 or YES2
-            // switching to THP is prevented if the well will
-            // produce at a higher rate with THP control
-            const auto& wvfpexp = this->well_ecl_.getWVFPEXP();
-            bool rate_less_than_potential = true;
-            if (wvfpexp.prevent()) {
-                for (int p = 0; p < number_of_phases_; ++p) {
-                    // Currently we use the well potentials here computed before the iterations.
-                    // We may need to recompute the well potentials to get a more
-                    // accurate check here.
-                    rate_less_than_potential = rate_less_than_potential && (-ws.surface_rates[p]) <= ws.well_potentials[p];
-                }
-            }
-            if(!wvfpexp.prevent() || !rate_less_than_potential) {
-                this->operability_status_.thp_limit_violated_but_not_switched = false;
-                return Well::ProducerCMode::THP;
-            } else {
-                this->operability_status_.thp_limit_violated_but_not_switched = true;
-                deferred_logger.info("NOT_SWITCHING_TO_THP",
-                "The THP limit is violated for producer " +
-                this->name() +
-                ". But the rate will increase if switched to THP. " +
-                "The well is therefore kept at " + Well::ProducerCMode2String(currentControl));
-            }
-        }
-    }
-
-    return currentControl;
-}
-
 
 template <typename FluidSystem>
 Well::InjectorCMode
@@ -308,8 +183,20 @@ checkIndividualConstraints(SingleWellState& ws,
                            const SummaryState& summaryState,
                            DeferredLogger& deferred_logger) const
 {
+    auto rRates = [this](const int fipreg,
+                         const int pvtRegion,
+                         const std::vector<double>& surface_rates,
+                         std::vector<double>& voidage_rates)
+    {
+        return rateConverter_.calcReservoirVoidageRates(fipreg, pvtRegion,
+                                                        surface_rates, voidage_rates);
+    };
+
     if (this->well_ecl_.isProducer()) {
-        auto new_cmode = this->activeProductionConstraint(ws, summaryState, deferred_logger);
+        auto new_cmode = WellConstraints(*this).activeProductionConstraint(ws, summaryState,
+                                                                           rRates,
+                                                                           this->operability_status_.thp_limit_violated_but_not_switched,
+                                                                           deferred_logger);
         if (new_cmode != ws.production_cmode) {
             ws.production_cmode = new_cmode;
             return true;
