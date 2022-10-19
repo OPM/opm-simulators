@@ -62,6 +62,18 @@ public:
                                   EvalWell& control_eq,
                                   DeferredLogger& deferred_logger) const;
 
+    template<class EvalWell>
+    void getGroupProductionControl(const Group& group,
+                                   const WellState& well_state,
+                                   const GroupState& group_state,
+                                   const Schedule& schedule,
+                                   const SummaryState& summaryState,
+                                   const EvalWell& bhp,
+                                   const std::vector<EvalWell>& rates,
+                                   const RateConvFunc& rateConverter,
+                                   double efficiencyFactor,
+                                   EvalWell& control_eq) const;
+
 private:
     const WellInterfaceGeneric& well_; //!< Reference to well interface
 };
