@@ -100,7 +100,7 @@ testCusparseSolver(const boost::property_tree::ptree& prm, Matrix<bz>& matrix, V
     const int linear_solver_verbosity = prm.get<int>("verbosity");
     const int maxit = prm.get<int>("maxiter");
     const double tolerance = prm.get<double>("tol");
-    const std::string opencl_ilu_reorder("none"); // unused
+    const bool opencl_ilu_parallel(true); // unused
     const int platformID = 0;                     // unused
     const int deviceID = 0;
     const std::string accelerator_mode("cusparse");
@@ -113,7 +113,15 @@ testCusparseSolver(const boost::property_tree::ptree& prm, Matrix<bz>& matrix, V
     auto wellContribs = Opm::WellContributions::create("cusparse", false);
     std::unique_ptr<Opm::BdaBridge<Matrix<bz>, Vector<bz>, bz> > bridge;
     try {
-        bridge = std::make_unique<Opm::BdaBridge<Matrix<bz>, Vector<bz>, bz> >(accelerator_mode, fpga_bitstream, linear_solver_verbosity, maxit, tolerance, platformID, deviceID, opencl_ilu_reorder, linsolver);
+        bridge = std::make_unique<Opm::BdaBridge<Matrix<bz>, Vector<bz>, bz> >(accelerator_mode,
+                                                                               fpga_bitstream,
+                                                                               linear_solver_verbosity,
+                                                                               maxit,
+                                                                               tolerance,
+                                                                               platformID,
+                                                                               deviceID,
+                                                                               opencl_ilu_parallel,
+                                                                               linsolver);
         auto mat2 = matrix; // deep copy to make sure nnz values are in contiguous memory
                             // matrix created by readMatrixMarket() did not have contiguous memory
         bridge->solve_system(&mat2, &mat2, /*numJacobiBlocks=*/0, rhs, *wellContribs, result);

@@ -53,7 +53,6 @@ namespace Opm
     using Opm::Accelerator::BdaResult;
     using Opm::Accelerator::BdaSolver;
     using Opm::Accelerator::SolverStatus;
-    using Opm::Accelerator::ILUReorder;
 
 template <class BridgeMatrix, class BridgeVector, int block_size>
 BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string accelerator_mode_,
@@ -62,7 +61,7 @@ BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string acceler
                                                              double tolerance,
                                                              [[maybe_unused]] unsigned int platformID,
                                                              unsigned int deviceID,
-                                                             [[maybe_unused]] std::string opencl_ilu_reorder,
+                                                             [[maybe_unused]] bool opencl_ilu_parallel,
                                                              [[maybe_unused]] std::string linsolver)
 : verbosity(linear_solver_verbosity), accelerator_mode(accelerator_mode_)
 {
@@ -76,36 +75,14 @@ BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string acceler
     } else if (accelerator_mode.compare("opencl") == 0) {
 #if HAVE_OPENCL
         use_gpu = true;
-        ILUReorder ilu_reorder;
-        if (opencl_ilu_reorder == "") {
-            ilu_reorder = Opm::Accelerator::ILUReorder::GRAPH_COLORING;  // default when not selected by user
-        } else if (opencl_ilu_reorder == "level_scheduling") {
-            ilu_reorder = Opm::Accelerator::ILUReorder::LEVEL_SCHEDULING;
-        } else if (opencl_ilu_reorder == "graph_coloring") {
-            ilu_reorder = Opm::Accelerator::ILUReorder::GRAPH_COLORING;
-        } else if (opencl_ilu_reorder == "none") {
-            ilu_reorder = Opm::Accelerator::ILUReorder::NONE;
-        } else {
-            OPM_THROW(std::logic_error, "Error invalid argument for --opencl-ilu-reorder, usage: '--opencl-ilu-reorder=[level_scheduling|graph_coloring]'");
-        }
-        backend.reset(new Opm::Accelerator::openclSolverBackend<block_size>(linear_solver_verbosity, maxit, tolerance, platformID, deviceID, ilu_reorder, linsolver));
+        backend.reset(new Opm::Accelerator::openclSolverBackend<block_size>(linear_solver_verbosity, maxit, tolerance, platformID, deviceID, opencl_ilu_parallel, linsolver));
 #else
         OPM_THROW(std::logic_error, "Error openclSolver was chosen, but OpenCL was not found by CMake");
 #endif
     } else if (accelerator_mode.compare("fpga") == 0) {
 #if HAVE_FPGA
         use_fpga = true;
-        ILUReorder ilu_reorder;
-        if (opencl_ilu_reorder == "") {
-            ilu_reorder = Opm::Accelerator::ILUReorder::LEVEL_SCHEDULING;  // default when not selected by user
-        } else if (opencl_ilu_reorder == "level_scheduling") {
-            ilu_reorder = Opm::Accelerator::ILUReorder::LEVEL_SCHEDULING;
-        } else if (opencl_ilu_reorder == "graph_coloring") {
-            ilu_reorder = Opm::Accelerator::ILUReorder::GRAPH_COLORING;
-        } else {
-            OPM_THROW(std::logic_error, "Error invalid argument for --opencl-ilu-reorder, usage: '--opencl-ilu-reorder=[level_scheduling|graph_coloring]'");
-        }
-        backend.reset(new Opm::Accelerator::FpgaSolverBackend<block_size>(fpga_bitstream, linear_solver_verbosity, maxit, tolerance, ilu_reorder));
+        backend.reset(new Opm::Accelerator::FpgaSolverBackend<block_size>(fpga_bitstream, linear_solver_verbosity, maxit, tolerance, opencl_ilu_parallel));
 #else
         OPM_THROW(std::logic_error, "Error fpgaSolver was chosen, but FPGA was not enabled by CMake");
 #endif

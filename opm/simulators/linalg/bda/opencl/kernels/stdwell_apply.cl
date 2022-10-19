@@ -1,5 +1,4 @@
-/// In this kernel there is reordering: the B/Ccols do not correspond with the x/y vector
-/// the x/y vector is reordered, using toOrder to address that
+/// Applies sdtwells
 __kernel void stdwell_apply(
             __global const double *Cnnzs,
             __global const double *Dnnzs,
@@ -8,7 +7,6 @@ __kernel void stdwell_apply(
             __global const int *Bcols,
             __global const double *x,
             __global double *y,
-            __global const int *toOrder,
             const unsigned int dim,
             const unsigned int dim_wells,
             __global const unsigned int *val_pointers,
@@ -32,7 +30,7 @@ __kernel void stdwell_apply(
     if(wiId < numActiveWorkItems){
         int b = wiId/valsPerBlock + val_pointers[wgId];
         while(b < valSize + val_pointers[wgId]){
-            int colIdx = toOrder[Bcols[b]];
+            int colIdx = Bcols[b];
             localSum[wiId] += Bnnzs[b*dim*dim_wells + r*dim + c]*x[colIdx*dim + c];
             b += numBlocksPerWarp;
         }
@@ -78,7 +76,7 @@ __kernel void stdwell_apply(
             temp += Cnnzs[bb*dim*dim_wells + j*dim + c]*z2[j];
         }
 
-        int colIdx = toOrder[Ccols[bb]];
+        int colIdx = Ccols[bb];
         y[colIdx*dim + c] -= temp;
     }
 }

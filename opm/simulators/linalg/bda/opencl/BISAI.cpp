@@ -42,13 +42,13 @@ using Opm::OpmLog;
 using Dune::Timer;
 
 template <unsigned int block_size>
-BISAI<block_size>::BISAI(ILUReorder opencl_ilu_reorder_, int verbosity_) :
+BISAI<block_size>::BISAI(bool opencl_ilu_parallel_, int verbosity_) :
     Preconditioner<block_size>(verbosity_)
 {
 #if CHOW_PATEL
     OPM_THROW(std::logic_error, "Error --linear-solver=isai cannot be used if ChowPatelIlu is used, probably defined by CMake\n");
 #endif
-    bilu0 = std::make_unique<BILU0<block_size> >(opencl_ilu_reorder_, verbosity_);
+    bilu0 = std::make_unique<BILU0<block_size> >(opencl_ilu_parallel_, verbosity_);
 }
 
 template <unsigned int block_size>

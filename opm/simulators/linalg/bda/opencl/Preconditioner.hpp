@@ -21,7 +21,6 @@
 #define OPM_PRECONDITIONER_HEADER_INCLUDED
 
 #include <opm/simulators/linalg/bda/opencl/opencl.hpp>
-#include <opm/simulators/linalg/bda/ILUReorder.hpp>
 
 namespace Opm
 {
@@ -58,7 +57,7 @@ public:
         BISAI
     };
 
-    static std::unique_ptr<Preconditioner> create(PreconditionerType type, int verbosity, ILUReorder opencl_ilu_reorder);
+    static std::unique_ptr<Preconditioner> create(PreconditionerType type, int verbosity, bool opencl_ilu_parallel);
 
     virtual ~Preconditioner() = default;
 
@@ -78,13 +77,6 @@ public:
     // the version with two params can be overloaded, if not, it will default to using the one param version
     virtual bool create_preconditioner(BlockedMatrix *mat) = 0;
     virtual bool create_preconditioner(BlockedMatrix *mat, BlockedMatrix *jacMat);
-
-    // get reordering mappings
-    virtual int* getToOrder() = 0;
-    virtual int* getFromOrder() = 0;
-
-    // get reordered matrix
-    virtual BlockedMatrix* getRMat() = 0;
 };
 
 } //namespace Accelerator

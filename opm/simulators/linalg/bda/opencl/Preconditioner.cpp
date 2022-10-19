@@ -40,13 +40,13 @@ void Preconditioner<block_size>::setOpencl(std::shared_ptr<cl::Context>& context
 }
 
 template <unsigned int block_size>
-std::unique_ptr<Preconditioner<block_size> > Preconditioner<block_size>::create(PreconditionerType type, int verbosity, ILUReorder opencl_ilu_reorder) {
+std::unique_ptr<Preconditioner<block_size> > Preconditioner<block_size>::create(PreconditionerType type, int verbosity, bool opencl_ilu_parallel) {
     if (type == PreconditionerType::BILU0) {
-        return std::make_unique<Opm::Accelerator::BILU0<block_size> >(opencl_ilu_reorder, verbosity);
+        return std::make_unique<Opm::Accelerator::BILU0<block_size> >(opencl_ilu_parallel, verbosity);
     } else if (type == PreconditionerType::CPR) {
-        return std::make_unique<Opm::Accelerator::CPR<block_size> >(verbosity, opencl_ilu_reorder);
+        return std::make_unique<Opm::Accelerator::CPR<block_size> >(verbosity, opencl_ilu_parallel);
     } else if (type == PreconditionerType::BISAI) {
-        return std::make_unique<Opm::Accelerator::BISAI<block_size> >(opencl_ilu_reorder, verbosity);
+        return std::make_unique<Opm::Accelerator::BISAI<block_size> >(opencl_ilu_parallel, verbosity);
     } else {
         OPM_THROW(std::logic_error, "Invalid PreconditionerType");
     }
@@ -63,10 +63,11 @@ bool Preconditioner<block_size>::create_preconditioner(BlockedMatrix *mat, [[may
 }
 
 #define INSTANTIATE_BDA_FUNCTIONS(n)  \
-template std::unique_ptr<Preconditioner<n> > Preconditioner<n>::create(PreconditionerType, int, ILUReorder);   \
+template std::unique_ptr<Preconditioner<n> > Preconditioner<n>::create(PreconditionerType, int, bool);         \
 template void Preconditioner<n>::setOpencl(std::shared_ptr<cl::Context>&, std::shared_ptr<cl::CommandQueue>&); \
 template bool Preconditioner<n>::analyze_matrix(BlockedMatrix *, BlockedMatrix *);                             \
 template bool Preconditioner<n>::create_preconditioner(BlockedMatrix *, BlockedMatrix *);
+
 
 INSTANTIATE_BDA_FUNCTIONS(1);
 INSTANTIATE_BDA_FUNCTIONS(2);

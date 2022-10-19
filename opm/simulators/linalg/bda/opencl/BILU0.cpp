@@ -24,7 +24,6 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <dune/common/timer.hh>
 
-#include <opm/simulators/linalg/bda/BdaSolver.hpp>
 #include <opm/simulators/linalg/bda/opencl/BILU0.hpp>
 #include <opm/simulators/linalg/bda/opencl/ChowPatelIlu.hpp>
 #include <opm/simulators/linalg/bda/opencl/openclKernels.hpp>
@@ -40,8 +39,8 @@ using Opm::OpmLog;
 using Dune::Timer;
 
 template <unsigned int block_size>
-BILU0<block_size>::BILU0(ILUReorder opencl_ilu_reorder_, int verbosity_) :
-    Preconditioner<block_size>(verbosity_), opencl_ilu_reorder(opencl_ilu_reorder_)
+BILU0<block_size>::BILU0(bool opencl_ilu_parallel_, int verbosity_) :
+    Preconditioner<block_size>(verbosity_), opencl_ilu_parallel(opencl_ilu_parallel_)
 {
 #if CHOW_PATEL
     chowPatelIlu.setVerbosity(verbosity);
@@ -71,21 +70,13 @@ bool BILU0<block_size>::analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat
 
     auto *matToDecompose = jacMat ? jacMat : mat; // decompose jacMat if valid, otherwise decompose mat
 
-    if (opencl_ilu_reorder == ILUReorder::NONE) {
-        LUmat = std::make_unique<BlockedMatrix>(*mat);
-    } else {
+    if (opencl_ilu_parallel) {
         toOrder.resize(Nb);
         fromOrder.resize(Nb);
         CSCRowIndices.resize(matToDecompose->nnzbs);
         CSCColPointers.resize(Nb + 1);
-        rmat = std::make_shared<BlockedMatrix>(mat->Nb, mat->nnzbs, block_size);
 
-        if (jacMat) {
-            rJacMat = std::make_shared<BlockedMatrix>(jacMat->Nb, jacMat->nnzbs, block_size);
-            LUmat = std::make_unique<BlockedMatrix>(*rJacMat);
-        } else {
-            LUmat = std::make_unique<BlockedMatrix>(*rmat);
-        }
+        LUmat = std::make_unique<BlockedMatrix>(*matToDecompose);
 
         Timer t_convert;
         csrPatternToCsc(matToDecompose->colIndices, matToDecompose->rowPointers, CSCRowIndices.data(), CSCColPointers.data(), Nb);
@@ -94,36 +85,26 @@ bool BILU0<block_size>::analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat
             out << "BILU0 convert CSR to CSC: " << t_convert.stop() << " s";
             OpmLog::info(out.str());
         }
+    } else {
+        LUmat = std::make_unique<BlockedMatrix>(*matToDecompose);
     }
 
     Timer t_analysis;
     std::ostringstream out;
-    if (opencl_ilu_reorder == ILUReorder::LEVEL_SCHEDULING) {
-        out << "BILU0 reordering strategy: " << "level_scheduling\n";
+    if (opencl_ilu_parallel) {
+        out << "opencl_ilu_parallel: true (level_scheduling)\n";
         findLevelScheduling(matToDecompose->colIndices, matToDecompose->rowPointers, CSCRowIndices.data(), CSCColPointers.data(), Nb, &numColors, toOrder.data(), fromOrder.data(), rowsPerColor);
-        reorderBlockedMatrixByPattern(mat, reordermappingNonzeroes, toOrder.data(), fromOrder.data(), rmat.get());
-        if (jacMat) {
-            reorderBlockedMatrixByPattern(jacMat, jacReordermappingNonzeroes, toOrder.data(), fromOrder.data(), rJacMat.get());
-        }
-    } else if (opencl_ilu_reorder == ILUReorder::GRAPH_COLORING) {
-        out << "BILU0 reordering strategy: " << "graph_coloring\n";
-        findGraphColoring<block_size>(matToDecompose->colIndices, matToDecompose->rowPointers, CSCRowIndices.data(), CSCColPointers.data(), Nb, Nb, Nb, &numColors, toOrder.data(), fromOrder.data(), rowsPerColor);
-        reorderBlockedMatrixByPattern(mat, reordermappingNonzeroes, toOrder.data(), fromOrder.data(), rmat.get());
-        if (jacMat) {
-            reorderBlockedMatrixByPattern(jacMat, jacReordermappingNonzeroes, toOrder.data(), fromOrder.data(), rJacMat.get());
-        }
-    } else if (opencl_ilu_reorder == ILUReorder::NONE) {
-        out << "BILU0 reordering strategy: none\n";
+    } else {
+        out << "opencl_ilu_parallel: false\n";
         // numColors = 1;
         // rowsPerColor.emplace_back(Nb);
         numColors = Nb;
         for(int i = 0; i < Nb; ++i){
             rowsPerColor.emplace_back(1);
         }
-    } else {
-        OPM_THROW(std::logic_error, "Error ilu reordering strategy not set correctly\n");
     }
-    if(verbosity >= 1){
+
+    if (verbosity >= 1) {
         out << "BILU0 analysis took: " << t_analysis.stop() << " s, " << numColors << " colors\n";
     }
 
@@ -143,6 +124,7 @@ bool BILU0<block_size>::analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat
     s.invDiagVals = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * bs * bs * mat->Nb);
     s.rowsPerColor = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * (numColors + 1));
     s.diagIndex = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * LUmat->Nb);
+    s.rowIndices = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(unsigned) * LUmat->Nb);
 #if CHOW_PATEL
     s.Lvals = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * bs * bs * Lmat->nnzbs);
     s.Lcols = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * Lmat->nnzbs);
@@ -156,14 +138,24 @@ bool BILU0<block_size>::analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat
     s.LUrows = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * (LUmat->Nb + 1));
 #endif
 
-    events.resize(2);
+    events.resize(3);
     err = queue->enqueueWriteBuffer(s.invDiagVals, CL_FALSE, 0, mat->Nb * sizeof(double) * bs * bs, invDiagVals.data(), nullptr, &events[0]);
 
     rowsPerColorPrefix.resize(numColors + 1); // resize initializes value 0.0
     for (int i = 0; i < numColors; ++i) {
-        rowsPerColorPrefix[i+1] = rowsPerColorPrefix[i] + rowsPerColor[i];
+        rowsPerColorPrefix[i + 1] = rowsPerColorPrefix[i] + rowsPerColor[i];
     }
+
     err |= queue->enqueueWriteBuffer(s.rowsPerColor, CL_FALSE, 0, (numColors + 1) * sizeof(int), rowsPerColorPrefix.data(), nullptr, &events[1]);
+
+    if (opencl_ilu_parallel) {
+        err |= queue->enqueueWriteBuffer(s.rowIndices, CL_FALSE, 0, Nb * sizeof(unsigned), fromOrder.data(), nullptr, &events[2]);
+    } else {
+        // fromOrder is not initialized, so use something else to fill s.rowIndices
+        // s.rowIndices[i] == i must hold, since every rowidx is mapped to itself (i.e. no actual mapping)
+        // rowsPerColorPrefix is misused here, it contains an increasing sequence (0, 1, 2, ...)
+        err |= queue->enqueueWriteBuffer(s.rowIndices, CL_FALSE, 0, Nb * sizeof(unsigned), rowsPerColorPrefix.data(), nullptr, &events[2]);
+    }
 
     cl::WaitForEvents(events);
     events.clear();
@@ -189,30 +181,9 @@ bool BILU0<block_size>::create_preconditioner(BlockedMatrix *mat, BlockedMatrix 
 {
     const unsigned int bs = block_size;
 
-    auto *matToDecompose = jacMat;
-
-    if (opencl_ilu_reorder == ILUReorder::NONE) { // NONE should only be used in debug
-        matToDecompose = jacMat ? jacMat : mat;
-    } else {
-        Timer t_reorder;
-        if (jacMat) {
-            matToDecompose = rJacMat.get();
-            reorderNonzeroes(mat, reordermappingNonzeroes, rmat.get());
-            reorderNonzeroes(jacMat, jacReordermappingNonzeroes, rJacMat.get());
-        } else {
-            matToDecompose = rmat.get();
-            reorderNonzeroes(mat, reordermappingNonzeroes, rmat.get());
-        }
-
-        if (verbosity >= 3){
-            std::ostringstream out;
-            out << "BILU0 reorder matrix: " << t_reorder.stop() << " s";
-            OpmLog::info(out.str());
-        }
-    }
+    auto *matToDecompose = jacMat ? jacMat : mat;
 
     // TODO: remove this copy by replacing inplace ilu decomp by out-of-place ilu decomp
-    // this copy can have mat or rmat ->nnzValues as origin, depending on the reorder strategy
     Timer t_copy;
     memcpy(LUmat->nnzValues, matToDecompose->nnzValues, sizeof(double) * bs * bs * matToDecompose->nnzbs);
 
@@ -237,7 +208,6 @@ bool BILU0<block_size>::create_preconditioner(BlockedMatrix *mat, BlockedMatrix 
 
     std::call_once(pattern_uploaded, [&](){
         // find the positions of each diagonal block
-        // must be done after reordering
         for (int row = 0; row < Nb; ++row) {
             int rowStart = LUmat->rowPointers[row];
             int rowEnd = LUmat->rowPointers[row+1];
@@ -269,11 +239,11 @@ bool BILU0<block_size>::create_preconditioner(BlockedMatrix *mat, BlockedMatrix 
     std::ostringstream out;
     for (int color = 0; color < numColors; ++color) {
         const unsigned int firstRow = rowsPerColorPrefix[color];
-        const unsigned int lastRow = rowsPerColorPrefix[color+1];
+        const unsigned int lastRow = rowsPerColorPrefix[color + 1];
         if (verbosity >= 5) {
             out << "color " << color << ": " << firstRow << " - " << lastRow << " = " << lastRow - firstRow << "\n";
         }
-        OpenclKernels::ILU_decomp(firstRow, lastRow,
+        OpenclKernels::ILU_decomp(firstRow, lastRow, s.rowIndices,
                                   s.LUvals, s.LUcols, s.LUrows, s.diagIndex,
                                   s.invDiagVals, rowsPerColor[color], block_size);
     }
@@ -301,11 +271,11 @@ void BILU0<block_size>::apply(const cl::Buffer& y, cl::Buffer& x)
 
     for (int color = 0; color < numColors; ++color) {
 #if CHOW_PATEL
-        OpenclKernels::ILU_apply1(s.Lvals, s.Lcols, s.Lrows,
+        OpenclKernels::ILU_apply1(s.rowIndices, s.Lvals, s.Lcols, s.Lrows,
                                   s.diagIndex, y, x, s.rowsPerColor,
                                   color, rowsPerColor[color], block_size);
 #else
-        OpenclKernels::ILU_apply1(s.LUvals, s.LUcols, s.LUrows,
+        OpenclKernels::ILU_apply1(s.rowIndices, s.LUvals, s.LUcols, s.LUrows,
                                   s.diagIndex, y, x, s.rowsPerColor,
                                   color, rowsPerColor[color], block_size);
 #endif
@@ -313,11 +283,11 @@ void BILU0<block_size>::apply(const cl::Buffer& y, cl::Buffer& x)
 
     for (int color = numColors - 1; color >= 0; --color) {
 #if CHOW_PATEL
-        OpenclKernels::ILU_apply2(s.Uvals, s.Ucols, s.Urows,
+        OpenclKernels::ILU_apply2(s.rowIndices, s.Uvals, s.Ucols, s.Urows,
                                   s.diagIndex, s.invDiagVals, x, s.rowsPerColor,
                                   color, rowsPerColor[color], block_size);
 #else
-        OpenclKernels::ILU_apply2(s.LUvals, s.LUcols, s.LUrows,
+        OpenclKernels::ILU_apply2(s.rowIndices, s.LUvals, s.LUcols, s.LUrows,
                                   s.diagIndex, s.invDiagVals, x, s.rowsPerColor,
                                   color, rowsPerColor[color], block_size);
 #endif

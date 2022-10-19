@@ -293,7 +293,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/bda/FPGASolverBackend.hpp
   opm/simulators/linalg/bda/FPGAUtils.hpp
   opm/simulators/linalg/bda/Reorder.hpp
-  opm/simulators/linalg/bda/ILUReorder.hpp
   opm/simulators/linalg/bda/opencl/opencl.hpp
   opm/simulators/linalg/bda/opencl/openclKernels.hpp
   opm/simulators/linalg/bda/opencl/OpenclMatrix.hpp

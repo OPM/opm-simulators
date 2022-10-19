@@ -44,10 +44,10 @@ using Opm::OpmLog;
 using Dune::Timer;
 
 template <unsigned int block_size>
-CPR<block_size>::CPR(int verbosity_, ILUReorder opencl_ilu_reorder_) :
-    Preconditioner<block_size>(verbosity_), opencl_ilu_reorder(opencl_ilu_reorder_)
+CPR<block_size>::CPR(int verbosity_, bool opencl_ilu_parallel_) :
+    Preconditioner<block_size>(verbosity_), opencl_ilu_parallel(opencl_ilu_parallel_)
 {
-    bilu0 = std::make_unique<BILU0<block_size> >(opencl_ilu_reorder, verbosity_);
+    bilu0 = std::make_unique<BILU0<block_size> >(opencl_ilu_parallel, verbosity_);
     diagIndices.resize(1);
 }
 
@@ -71,12 +71,7 @@ bool CPR<block_size>::analyze_matrix(BlockedMatrix *mat_) {
     this->nnz = nnzb * block_size * block_size;
 
     bool success = bilu0->analyze_matrix(mat_);
-
-    if (opencl_ilu_reorder == ILUReorder::NONE) {
-        mat = mat_;
-    } else {
-        mat = bilu0->getRMat();
-    }
+    mat = mat_;
     return success;
 }
 
@@ -88,12 +83,8 @@ bool CPR<block_size>::analyze_matrix(BlockedMatrix *mat_, BlockedMatrix *jacMat)
     this->nnz = nnzb * block_size * block_size;
 
     bool success = bilu0->analyze_matrix(mat_, jacMat);
+    mat = mat_;
 
-    if (opencl_ilu_reorder == ILUReorder::NONE) {
-        mat = mat_;
-    } else {
-        mat = bilu0->getRMat();
-    }
     return success;
 }
 

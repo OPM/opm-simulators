@@ -37,20 +37,10 @@ void WellContributionsOCL::setOpenCLEnv(cl::Context* context_, cl::CommandQueue*
     this->queue = queue_;
 }
 
-void WellContributionsOCL::setReordering(int* h_toOrder_, bool reorder_)
-{
-    this->h_toOrder = h_toOrder_;
-    this->reorder = reorder_;
-}
 
-void WellContributionsOCL::apply_stdwells(cl::Buffer d_x, cl::Buffer d_y, cl::Buffer d_toOrder){
-    if (reorder) {
-        OpenclKernels::apply_stdwells_reorder(*d_Cnnzs_ocl, *d_Dnnzs_ocl, *d_Bnnzs_ocl, *d_Ccols_ocl, *d_Bcols_ocl,
-            d_x, d_y, d_toOrder, dim, dim_wells, *d_val_pointers_ocl, num_std_wells);
-    } else {
-        OpenclKernels::apply_stdwells_no_reorder(*d_Cnnzs_ocl, *d_Dnnzs_ocl, *d_Bnnzs_ocl, *d_Ccols_ocl, *d_Bcols_ocl,
-            d_x, d_y, dim, dim_wells, *d_val_pointers_ocl, num_std_wells);
-    }
+void WellContributionsOCL::apply_stdwells(cl::Buffer d_x, cl::Buffer d_y){
+    OpenclKernels::apply_stdwells(*d_Cnnzs_ocl, *d_Dnnzs_ocl, *d_Bnnzs_ocl, *d_Ccols_ocl, *d_Bcols_ocl,
+        d_x, d_y, dim, dim_wells, *d_val_pointers_ocl, num_std_wells);
 }
 
 void WellContributionsOCL::apply_mswells(cl::Buffer d_x, cl::Buffer d_y){
@@ -67,7 +57,6 @@ void WellContributionsOCL::apply_mswells(cl::Buffer d_x, cl::Buffer d_y){
 
     // actually apply MultisegmentWells
     for (auto& well : multisegments) {
-        well->setReordering(h_toOrder, reorder);
         well->apply(h_x.data(), h_y.data());
     }
 
@@ -78,9 +67,9 @@ void WellContributionsOCL::apply_mswells(cl::Buffer d_x, cl::Buffer d_y){
     events.clear();
 }
 
-void WellContributionsOCL::apply(cl::Buffer d_x, cl::Buffer d_y, cl::Buffer d_toOrder){
+void WellContributionsOCL::apply(cl::Buffer d_x, cl::Buffer d_y){
     if(num_std_wells > 0){
-        apply_stdwells(d_x, d_y, d_toOrder);
+        apply_stdwells(d_x, d_y);
     }
 
     if(num_ms_wells > 0){

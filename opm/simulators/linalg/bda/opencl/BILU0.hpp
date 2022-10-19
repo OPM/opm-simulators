@@ -23,7 +23,6 @@
 #include <mutex>
 
 #include <opm/simulators/linalg/bda/BlockedMatrix.hpp>
-#include <opm/simulators/linalg/bda/ILUReorder.hpp>
 
 #include <opm/simulators/linalg/bda/opencl/opencl.hpp>
 #include <opm/simulators/linalg/bda/opencl/Preconditioner.hpp>
@@ -36,7 +35,8 @@ namespace Accelerator
 {
 
 /// This class implements a Blocked ILU0 preconditioner
-/// The decomposition is done on CPU, and reorders the rows of the matrix
+/// The decomposition is done on GPU, using exact decomposition, or ChowPatel decomposition
+/// The preconditioner is applied via two exact triangular solves
 template <unsigned int block_size>
 class BILU0 : public Preconditioner<block_size>
 {
@@ -54,8 +54,6 @@ class BILU0 : public Preconditioner<block_size>
 
 private:
     std::unique_ptr<BlockedMatrix> LUmat = nullptr;
-    std::shared_ptr<BlockedMatrix> rmat = nullptr; // only used with PAR_SIM
-    std::shared_ptr<BlockedMatrix> rJacMat = nullptr; 
 #if CHOW_PATEL
     std::unique_ptr<BlockedMatrix> Lmat = nullptr, Umat = nullptr;
 #endif
@@ -67,15 +65,15 @@ private:
     int numColors;
     std::once_flag pattern_uploaded;
 
-    ILUReorder opencl_ilu_reorder;
-
-    std::vector<int> reordermappingNonzeroes;    // maps nonzero blocks to new location in reordered matrix
-    std::vector<int> jacReordermappingNonzeroes; // same but for jacMatrix
+    bool opencl_ilu_parallel;
 
     typedef struct {
-        cl::Buffer invDiagVals;
-        cl::Buffer diagIndex;
-        cl::Buffer rowsPerColor;
+        cl::Buffer invDiagVals;    // nnz values of diagonal blocks of the matrix, inverted
+        cl::Buffer diagIndex;      // index of diagonal block of each row, used to differentiate between lower and upper triangular part
+        cl::Buffer rowsPerColor;   // number of rows for every color
+        cl::Buffer rowIndices;     // mapping every row to another index
+                                   // after mapping, all rows that are processed in parallel are contiguous
+                                   // equal to the contents of fromOrder
 #if CHOW_PATEL
         cl::Buffer Lvals, Lcols, Lrows;
         cl::Buffer Uvals, Ucols, Urows;
@@ -92,9 +90,9 @@ private:
 
 public:
 
-    BILU0(ILUReorder opencl_ilu_reorder, int verbosity);
+    BILU0(bool opencl_ilu_parallel, int verbosity);
 
-    // analysis, find reordering if specified
+    // analysis, extract parallelism if specified
     bool analyze_matrix(BlockedMatrix *mat) override;
     bool analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat) override;
 
@@ -103,27 +101,9 @@ public:
     bool create_preconditioner(BlockedMatrix *mat, BlockedMatrix *jacMat) override;
 
     // apply preconditioner, x = prec(y)
+    // via Lz = y
+    // and Ux = z
     void apply(const cl::Buffer& y, cl::Buffer& x) override;
-
-    int* getToOrder() override
-    {
-        return toOrder.data();
-    }
-
-    int* getFromOrder() override
-    {
-        return fromOrder.data();
-    }
-
-    BlockedMatrix* getRMat() override
-    {
-        return rmat.get();
-    }
-
-    BlockedMatrix* getRJacMat()
-    {
-        return rJacMat.get();
-    }
 
     std::tuple<std::vector<int>, std::vector<int>, std::vector<int>> get_preconditioner_structure()
     {

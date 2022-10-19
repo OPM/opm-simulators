@@ -181,12 +181,12 @@ BdaSolverInfo(const std::string& accelerator_mode,
               const double tolerance,
               const int platformID,
               const int deviceID,
-              const std::string& opencl_ilu_reorder,
+              const bool opencl_ilu_parallel,
               const std::string& linsolver)
     : bridge_(std::make_unique<Bridge>(accelerator_mode, fpga_bitstream,
                                        linear_solver_verbosity, maxit,
                                        tolerance, platformID, deviceID,
-                                       opencl_ilu_reorder, linsolver))
+                                       opencl_ilu_parallel, linsolver))
     , accelerator_mode_(accelerator_mode)
 {}
 

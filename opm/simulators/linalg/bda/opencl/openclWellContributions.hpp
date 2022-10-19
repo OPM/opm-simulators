@@ -37,14 +37,9 @@ class WellContributionsOCL : public WellContributions
 public:
     void setOpenCLEnv(cl::Context *context_, cl::CommandQueue *queue_);
 
-    /// Since the rows of the matrix are reordered, the columnindices of the matrixdata is incorrect
-    /// Those indices need to be mapped via toOrder
-    /// \param[in] toOrder    array with mappings
-    /// \param[in] reorder    whether reordering is actually used or not
-    void setReordering(int* toOrder, bool reorder);
-    void apply_stdwells(cl::Buffer d_x, cl::Buffer d_y, cl::Buffer d_toOrder);
+    void apply_stdwells(cl::Buffer d_x, cl::Buffer d_y);
     void apply_mswells(cl::Buffer d_x, cl::Buffer d_y);
-    void apply(cl::Buffer d_x, cl::Buffer d_y, cl::Buffer d_toOrder);
+    void apply(cl::Buffer d_x, cl::Buffer d_y);
 
 protected:
     /// Allocate memory for the StandardWells
@@ -60,8 +55,6 @@ protected:
     std::unique_ptr<cl::Buffer> d_Ccols_ocl, d_Bcols_ocl;
     std::unique_ptr<cl::Buffer> d_val_pointers_ocl;
 
-    bool reorder = false;
-    int *h_toOrder = nullptr;
     std::vector<double> h_x;
     std::vector<double> h_y;
 };

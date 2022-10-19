@@ -3,6 +3,7 @@
 /// Here, U is it's own BSR matrix.
 /// Only used with ChowPatelIlu.
 __kernel void ILU_apply2(
+    __global const unsigned *rowIndices,
     __global const double *LUvals,
     __global const int *LUcols,
     __global const int *LUrows,
@@ -29,14 +30,15 @@ __kernel void ILU_apply2(
     const unsigned int r = lane % bs;
 
     while(target_block_row < nodesPerColorPrefix[color+1]){
-        const unsigned int first_block = LUrows[target_block_row];
-        const unsigned int last_block = LUrows[target_block_row+1];
+        unsigned row_idx = rowIndices[target_block_row];
+        const unsigned int first_block = LUrows[row_idx];
+        const unsigned int last_block = LUrows[row_idx+1];
         unsigned int block = first_block + lane / (bs*bs);
         double local_out = 0.0;
 
         if(lane < num_active_threads){
             if(lane < bs){
-                const unsigned int row = target_block_row*bs+lane;
+                const unsigned int row = row_idx*bs+lane;
                 local_out = x[row];
             }
             for(; block < last_block; block += num_blocks_per_warp){
@@ -64,10 +66,10 @@ __kernel void ILU_apply2(
             tmp[lane + bs*idx_t/warpsize] = local_out;
             double sum = 0.0;
             for(int i = 0; i < bs; ++i){
-                sum += invDiagVals[target_block_row*bs*bs + i + lane*bs] * tmp[i + bs*idx_t/warpsize];
+                sum += invDiagVals[row_idx*bs*bs + i + lane*bs] * tmp[i + bs*idx_t/warpsize];
             }
 
-            const unsigned int row = target_block_row*bs + lane;
+            const unsigned int row = row_idx*bs + lane;
             x[row] = sum;
         }
 

@@ -61,7 +61,6 @@ std::unique_ptr<residual_kernel_type> OpenclKernels::residual_k;
 std::unique_ptr<ilu_apply1_kernel_type> OpenclKernels::ILU_apply1_k;
 std::unique_ptr<ilu_apply2_kernel_type> OpenclKernels::ILU_apply2_k;
 std::unique_ptr<stdwell_apply_kernel_type> OpenclKernels::stdwell_apply_k;
-std::unique_ptr<stdwell_apply_no_reorder_kernel_type> OpenclKernels::stdwell_apply_no_reorder_k;
 std::unique_ptr<ilu_decomp_kernel_type> OpenclKernels::ilu_decomp_k;
 std::unique_ptr<isaiL_kernel_type> OpenclKernels::isaiL_k;
 std::unique_ptr<isaiU_kernel_type> OpenclKernels::isaiU_k;
@@ -106,7 +105,6 @@ void OpenclKernels::init(cl::Context *context, cl::CommandQueue *queue_, std::ve
     sources.emplace_back(ILU_apply2_fm_str);
 #endif
     sources.emplace_back(stdwell_apply_str);
-    sources.emplace_back(stdwell_apply_no_reorder_str);
     sources.emplace_back(ILU_decomp_str);
     sources.emplace_back(isaiL_str);
     sources.emplace_back(isaiU_str);
@@ -136,7 +134,6 @@ void OpenclKernels::init(cl::Context *context, cl::CommandQueue *queue_, std::ve
     ILU_apply1_k.reset(new ilu_apply1_kernel_type(cl::Kernel(program, "ILU_apply1")));
     ILU_apply2_k.reset(new ilu_apply2_kernel_type(cl::Kernel(program, "ILU_apply2")));
     stdwell_apply_k.reset(new stdwell_apply_kernel_type(cl::Kernel(program, "stdwell_apply")));
-    stdwell_apply_no_reorder_k.reset(new stdwell_apply_no_reorder_kernel_type(cl::Kernel(program, "stdwell_apply_no_reorder")));
     ilu_decomp_k.reset(new ilu_decomp_kernel_type(cl::Kernel(program, "ilu_decomp")));
     isaiL_k.reset(new isaiL_kernel_type(cl::Kernel(program, "isaiL")));
     isaiU_k.reset(new isaiU_kernel_type(cl::Kernel(program, "isaiU")));
@@ -390,7 +387,7 @@ void OpenclKernels::residual(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& row
     }
 }
 
-void OpenclKernels::ILU_apply1(cl::Buffer& vals, cl::Buffer& cols,
+void OpenclKernels::ILU_apply1(cl::Buffer& rowIndices, cl::Buffer& vals, cl::Buffer& cols,
                                cl::Buffer& rows, cl::Buffer& diagIndex,
                                const cl::Buffer& y, cl::Buffer& x,
                                cl::Buffer& rowsPerColor, int color,
@@ -403,8 +400,8 @@ void OpenclKernels::ILU_apply1(cl::Buffer& vals, cl::Buffer& cols,
     Timer t_ilu_apply1;
 
     cl::Event event = (*ILU_apply1_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)),
-                          vals, cols, rows, diagIndex, y, x,
-                          rowsPerColor, color, block_size,
+                          rowIndices, vals, cols, rows, diagIndex,
+                          y, x, rowsPerColor, color, block_size,
                           cl::Local(lmem_per_work_group));
 
     if (verbosity >= 5) {
@@ -415,7 +412,7 @@ void OpenclKernels::ILU_apply1(cl::Buffer& vals, cl::Buffer& cols,
     }
 }
 
-void OpenclKernels::ILU_apply2(cl::Buffer& vals, cl::Buffer& cols,
+void OpenclKernels::ILU_apply2(cl::Buffer& rowIndices, cl::Buffer& vals, cl::Buffer& cols,
                                cl::Buffer& rows, cl::Buffer& diagIndex,
                                cl::Buffer& invDiagVals, cl::Buffer& x,
                                cl::Buffer& rowsPerColor, int color,
@@ -428,8 +425,8 @@ void OpenclKernels::ILU_apply2(cl::Buffer& vals, cl::Buffer& cols,
     Timer t_ilu_apply2;
 
     cl::Event event = (*ILU_apply2_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)),
-                          vals, cols, rows, diagIndex, invDiagVals,
-                          x, rowsPerColor, color, block_size,
+                          rowIndices, vals, cols, rows, diagIndex,
+                          invDiagVals, x, rowsPerColor, color, block_size,
                           cl::Local(lmem_per_work_group));
 
     if (verbosity >= 5) {
@@ -440,7 +437,7 @@ void OpenclKernels::ILU_apply2(cl::Buffer& vals, cl::Buffer& cols,
     }
 }
 
-void OpenclKernels::ILU_decomp(int firstRow, int lastRow,
+void OpenclKernels::ILU_decomp(int firstRow, int lastRow, cl::Buffer& rowIndices,
                                cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows,
                                cl::Buffer& diagIndex, cl::Buffer& invDiagVals,
                                int rowsThisColor, unsigned int block_size)
@@ -453,7 +450,8 @@ void OpenclKernels::ILU_decomp(int firstRow, int lastRow,
     Timer t_ilu_decomp;
 
     cl::Event event = (*ilu_decomp_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)),
-                          firstRow, lastRow, vals, cols, rows,
+                          firstRow, lastRow, rowIndices,
+                          vals, cols, rows,
                           invDiagVals, diagIndex, rowsThisColor,
                           cl::Local(lmem_per_work_group));
 
@@ -465,29 +463,7 @@ void OpenclKernels::ILU_decomp(int firstRow, int lastRow,
     }
 }
 
-void OpenclKernels::apply_stdwells_reorder(cl::Buffer& d_Cnnzs_ocl, cl::Buffer &d_Dnnzs_ocl, cl::Buffer &d_Bnnzs_ocl,
-    cl::Buffer &d_Ccols_ocl, cl::Buffer &d_Bcols_ocl, cl::Buffer &d_x, cl::Buffer &d_y,
-    cl::Buffer &d_toOrder, int dim, int dim_wells, cl::Buffer &d_val_pointers_ocl, int num_std_wells)
-{
-    const unsigned int work_group_size = 32;
-    const unsigned int total_work_items = num_std_wells * work_group_size;
-    const unsigned int lmem1 = sizeof(double) * work_group_size;
-    const unsigned int lmem2 = sizeof(double) * dim_wells;
-    Timer t_apply_stdwells;
-
-    cl::Event event = (*stdwell_apply_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)),
-                          d_Cnnzs_ocl, d_Dnnzs_ocl, d_Bnnzs_ocl, d_Ccols_ocl, d_Bcols_ocl, d_x, d_y, d_toOrder, dim, dim_wells, d_val_pointers_ocl,
-                          cl::Local(lmem1), cl::Local(lmem2), cl::Local(lmem2));
-
-    if (verbosity >= 4) {
-        event.wait();
-        std::ostringstream oss;
-        oss << std::scientific << "OpenclKernels apply_stdwells() time: " << t_apply_stdwells.stop() << " s";
-        OpmLog::info(oss.str());
-    }
-}
-
-void OpenclKernels::apply_stdwells_no_reorder(cl::Buffer& d_Cnnzs_ocl, cl::Buffer &d_Dnnzs_ocl, cl::Buffer &d_Bnnzs_ocl,
+void OpenclKernels::apply_stdwells(cl::Buffer& d_Cnnzs_ocl, cl::Buffer &d_Dnnzs_ocl, cl::Buffer &d_Bnnzs_ocl,
     cl::Buffer &d_Ccols_ocl, cl::Buffer &d_Bcols_ocl, cl::Buffer &d_x, cl::Buffer &d_y,
     int dim, int dim_wells, cl::Buffer &d_val_pointers_ocl, int num_std_wells)
 {
@@ -497,7 +473,7 @@ void OpenclKernels::apply_stdwells_no_reorder(cl::Buffer& d_Cnnzs_ocl, cl::Buffe
     const unsigned int lmem2 = sizeof(double) * dim_wells;
     Timer t_apply_stdwells;
 
-    cl::Event event = (*stdwell_apply_no_reorder_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)),
+    cl::Event event = (*stdwell_apply_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)),
                           d_Cnnzs_ocl, d_Dnnzs_ocl, d_Bnnzs_ocl, d_Ccols_ocl, d_Bcols_ocl, d_x, d_y, dim, dim_wells, d_val_pointers_ocl,
                           cl::Local(lmem1), cl::Local(lmem2), cl::Local(lmem2));
 
