@@ -23,6 +23,7 @@
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/TargetCalculator.hpp>
+#include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 
 #include <dune/common/version.hh>
 
@@ -811,7 +812,12 @@ namespace Opm
             case Well::InjectorCMode::THP:
             {
                 auto rates = ws.surface_rates;
-                double bhp = this->calculateBhpFromThp(well_state, rates, well, summaryState, this->getRefDensity(), deferred_logger);
+                double bhp = WellBhpThpCalculator(*this).calculateBhpFromThp(well_state,
+                                                                             rates,
+                                                                             well,
+                                                                             summaryState,
+                                                                             this->getRefDensity(),
+                                                                             deferred_logger);
                 ws.bhp = bhp;
                 ws.thp = this->getTHPConstraint(summaryState);
 
@@ -1036,7 +1042,12 @@ namespace Opm
             {
                 auto rates = ws.surface_rates;
                 this->adaptRatesForVFP(rates);
-                double bhp = this->calculateBhpFromThp(well_state, rates, well, summaryState, this->getRefDensity(), deferred_logger);
+                double bhp = WellBhpThpCalculator(*this).calculateBhpFromThp(well_state,
+                                                                             rates,
+                                                                             well,
+                                                                             summaryState,
+                                                                             this->getRefDensity(),
+                                                                             deferred_logger);
                 ws.bhp = bhp;
                 ws.thp = this->getTHPConstraint(summaryState);
 

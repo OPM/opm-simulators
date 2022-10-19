@@ -394,7 +394,12 @@ assembleControlEq(const WellState& well_state,
         // Setup function for evaluation of BHP from THP (used only if needed).
         auto bhp_from_thp = [&]() {
             const auto rates = getRates();
-            return baseif_.calculateBhpFromThp(well_state, rates, well, summaryState, this->getRho(), deferred_logger);
+            return WellBhpThpCalculator(baseif_).calculateBhpFromThp(well_state,
+                                                                     rates,
+                                                                     well,
+                                                                     summaryState,
+                                                                     this->getRho(),
+                                                                     deferred_logger);
         };
         // Call generic implementation.
         const auto& inj_controls = well.injectionControls(summaryState);
@@ -413,7 +418,12 @@ assembleControlEq(const WellState& well_state,
         const auto rates = getRates();
         // Setup function for evaluation of BHP from THP (used only if needed).
         auto bhp_from_thp = [&]() {
-             return baseif_.calculateBhpFromThp(well_state, rates, well, summaryState, this->getRho(), deferred_logger);
+             return WellBhpThpCalculator(baseif_).calculateBhpFromThp(well_state,
+                                                                      rates,
+                                                                      well,
+                                                                      summaryState,
+                                                                      this->getRho(),
+                                                                      deferred_logger);
         };
         // Call generic implementation.
         const auto& prod_controls = well.productionControls(summaryState);

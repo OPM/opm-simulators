@@ -29,6 +29,8 @@
 #include <opm/input/eclipse/Schedule/VFPInjTable.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 
+#include <opm/material/densead/Evaluation.hpp>
+
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
 #include <opm/simulators/wells/VFPProperties.hpp>
@@ -257,6 +259,58 @@ void WellBhpThpCalculator::updateThp(const double rho,
     }
 
     ws.thp = this->calculateThpFromBhp(rates, ws.bhp, rho, alq_value(), deferred_logger);
+}
+
+template<class EvalWell>
+EvalWell WellBhpThpCalculator::
+calculateBhpFromThp(const WellState& well_state,
+                    const std::vector<EvalWell>& rates,
+                    const Well& well,
+                    const SummaryState& summaryState,
+                    const double rho,
+                    DeferredLogger& deferred_logger) const
+{
+    // TODO: when well is under THP control, the BHP is dependent on the rates,
+    // the well rates is also dependent on the BHP, so it might need to do some iteration.
+    // However, when group control is involved, change of the rates might impacts other wells
+    // so iterations on a higher level will be required. Some investigation might be needed when
+    // we face problems under THP control.
+
+    assert(int(rates.size()) == 3); // the vfp related only supports three phases now.
+
+    static constexpr int Gas = BlackoilPhases::Vapour;
+    static constexpr int Oil = BlackoilPhases::Liquid;
+    static constexpr int Water = BlackoilPhases::Aqua;
+
+    const EvalWell aqua = rates[Water];
+    const EvalWell liquid = rates[Oil];
+    const EvalWell vapour = rates[Gas];
+
+    // pick the reference density
+    // typically the reference in the top layer
+    if (well_.isInjector() )
+    {
+        const auto& controls = well.injectionControls(summaryState);
+        const double vfp_ref_depth = well_.vfpProperties()->getInj()->getTable(controls.vfp_table_number).getDatumDepth();
+        const double dp = wellhelpers::computeHydrostaticCorrection(well_.refDepth(), vfp_ref_depth, rho, well_.gravity());
+        return well_.vfpProperties()->getInj()->bhp(controls.vfp_table_number, aqua, liquid, vapour, well_.getTHPConstraint(summaryState)) - dp;
+     }
+     else if (well_.isProducer()) {
+         const auto& controls = well.productionControls(summaryState);
+         const double vfp_ref_depth = well_.vfpProperties()->getProd()->getTable(controls.vfp_table_number).getDatumDepth();
+         const double dp = wellhelpers::computeHydrostaticCorrection(well_.refDepth(), vfp_ref_depth, rho, well_.gravity());
+         const auto& wfr =  well_.vfpProperties()->getExplicitWFR(controls.vfp_table_number, well_.indexOfWell());
+         const auto& gfr = well_.vfpProperties()->getExplicitGFR(controls.vfp_table_number, well_.indexOfWell());
+         const bool use_vfpexplicit = well_.useVfpExplicit();
+         return well_.vfpProperties()->getProd()->bhp(controls.vfp_table_number,
+                                                      aqua, liquid, vapour,
+                                                      well_.getTHPConstraint(summaryState),
+                                                      well_.getALQ(well_state),
+                                                      wfr, gfr, use_vfpexplicit) - dp;
+     }
+     else {
+         OPM_DEFLOG_THROW(std::logic_error, "Expected INJECTOR or PRODUCER for well " + well_.name(), deferred_logger);
+     }
 }
 
 template<class ErrorPolicy>
@@ -703,5 +757,30 @@ bruteForceBracket(const std::function<double(const double)>& eq,
     }
     return finding_bracket;
 }
+
+#define INSTANCE(...) \
+template __VA_ARGS__ WellBhpThpCalculator:: \
+calculateBhpFromThp<__VA_ARGS__>(const WellState&, \
+                                 const std::vector<__VA_ARGS__>&, \
+                                 const Well&, \
+                                 const SummaryState&, \
+                                 const double, \
+                                 DeferredLogger&) const;
+
+INSTANCE(double)
+INSTANCE(DenseAd::Evaluation<double,3,0u>)
+INSTANCE(DenseAd::Evaluation<double,4,0u>)
+INSTANCE(DenseAd::Evaluation<double,5,0u>)
+INSTANCE(DenseAd::Evaluation<double,6,0u>)
+INSTANCE(DenseAd::Evaluation<double,7,0u>)
+INSTANCE(DenseAd::Evaluation<double,8,0u>)
+INSTANCE(DenseAd::Evaluation<double,9,0u>)
+INSTANCE(DenseAd::Evaluation<double,-1,4u>)
+INSTANCE(DenseAd::Evaluation<double,-1,5u>)
+INSTANCE(DenseAd::Evaluation<double,-1,6u>)
+INSTANCE(DenseAd::Evaluation<double,-1,7u>)
+INSTANCE(DenseAd::Evaluation<double,-1,8u>)
+INSTANCE(DenseAd::Evaluation<double,-1,9u>)
+INSTANCE(DenseAd::Evaluation<double,-1,10u>)
 
 } // namespace Opm

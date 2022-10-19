@@ -34,6 +34,7 @@ namespace Opm
 
 class DeferredLogger;
 class SummaryState;
+class Well;
 class WellInterfaceGeneric;
 class WellState;
 
@@ -84,6 +85,14 @@ public:
                    const std::array<unsigned,3>& active,
                    WellState& well_state,
                    DeferredLogger& deferred_logger) const;
+
+  template<class EvalWell>
+  EvalWell calculateBhpFromThp(const WellState& well_state,
+                               const std::vector<EvalWell>& rates,
+                               const Well& well,
+                               const SummaryState& summaryState,
+                               const double rho,
+                               DeferredLogger& deferred_logger) const;
 
 private:
     //! \brief Compute BHP from THP limit for an injector - implementation.
