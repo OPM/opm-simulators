@@ -1929,7 +1929,7 @@ namespace Opm
     {
         double bhp;
         auto bhp_at_thp_limit = computeBhpAtThpLimitProdWithAlq(
-                              ebos_simulator, summary_state, deferred_logger, alq);
+                              ebos_simulator, summary_state, alq, deferred_logger);
         if (bhp_at_thp_limit) {
             const auto& controls = this->well_ecl_.productionControls(summary_state);
             bhp = std::max(*bhp_at_thp_limit, controls.bhp_limit);
@@ -2569,8 +2569,8 @@ namespace Opm
     {
         return computeBhpAtThpLimitProdWithAlq(ebos_simulator,
                                                summary_state,
-                                               deferred_logger,
-                                               this->getALQ(well_state));
+                                               this->getALQ(well_state),
+                                               deferred_logger);
     }
 
     template<typename TypeTag>
@@ -2578,8 +2578,8 @@ namespace Opm
     StandardWell<TypeTag>::
     computeBhpAtThpLimitProdWithAlq(const Simulator& ebos_simulator,
                                     const SummaryState& summary_state,
-                                    DeferredLogger& deferred_logger,
-                                    double alq_value) const
+                                    const double alq_value,
+                                    DeferredLogger& deferred_logger) const
     {
         // Make the frates() function.
         auto frates = [this, &ebos_simulator, &deferred_logger](const double bhp) {

@@ -1875,8 +1875,8 @@ namespace Opm
         return this->MultisegmentWell<TypeTag>::computeBhpAtThpLimitProdWithAlq(
                                                ebos_simulator,
                                                summary_state,
-                                               deferred_logger,
-                                               this->getALQ(well_state));
+                                               this->getALQ(well_state),
+                                               deferred_logger);
     }
 
 
@@ -1886,8 +1886,8 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     computeBhpAtThpLimitProdWithAlq(const Simulator& ebos_simulator,
                                     const SummaryState& summary_state,
-                                    DeferredLogger& deferred_logger,
-                                    double alq_value) const
+                                    const double alq_value,
+                                    DeferredLogger& deferred_logger) const
     {
         // Make the frates() function.
         auto frates = [this, &ebos_simulator, &deferred_logger](const double bhp) {
