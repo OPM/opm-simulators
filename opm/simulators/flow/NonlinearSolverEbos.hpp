@@ -28,6 +28,7 @@
 #include <opm/models/utils/parametersystem.hh>
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/basicproperties.hh>
+#include <opm/models/nonlinear/newtonmethodproperties.hh>
 #include <opm/common/Exceptions.hpp>
 
 #include <dune/common/fmatrix.hh>
@@ -44,10 +45,10 @@ template<class TypeTag, class MyTypeTag>
 struct NewtonMaxRelax {
     using type = UndefinedProperty;
 };
-template<class TypeTag, class MyTypeTag>
-struct FlowNewtonMaxIterations {
-    using type = UndefinedProperty;
-};
+
+// we are reusing NewtonMaxIterations from opm-models
+// See opm/models/nonlinear/newtonmethodproperties.hh
+
 template<class TypeTag, class MyTypeTag>
 struct NewtonMinIterations{
     using type = UndefinedProperty;
@@ -63,7 +64,7 @@ struct NewtonMaxRelax<TypeTag, TTag::FlowNonLinearSolver> {
     static constexpr type value = 0.5;
 };
 template<class TypeTag>
-struct FlowNewtonMaxIterations<TypeTag, TTag::FlowNonLinearSolver> {
+struct NewtonMaxIterations<TypeTag, TTag::FlowNonLinearSolver> {
     static constexpr int value = 20;
 };
 template<class TypeTag>
@@ -112,7 +113,7 @@ class WellState;
 
                 // overload with given parameters
                 relaxMax_ = EWOMS_GET_PARAM(TypeTag, Scalar, NewtonMaxRelax);
-                maxIter_ = EWOMS_GET_PARAM(TypeTag, int, FlowNewtonMaxIterations);
+                maxIter_ = EWOMS_GET_PARAM(TypeTag, int, NewtonMaxIterations);
                 minIter_ = EWOMS_GET_PARAM(TypeTag, int, NewtonMinIterations);
 
                 const auto& relaxationTypeString = EWOMS_GET_PARAM(TypeTag, std::string, NewtonRelaxationType);
@@ -128,7 +129,7 @@ class WellState;
             static void registerParameters()
             {
                 EWOMS_REGISTER_PARAM(TypeTag, Scalar, NewtonMaxRelax, "The maximum relaxation factor of a Newton iteration used by flow");
-                EWOMS_REGISTER_PARAM(TypeTag, int, FlowNewtonMaxIterations, "The maximum number of Newton iterations per time step used by flow");
+                EWOMS_REGISTER_PARAM(TypeTag, int, NewtonMaxIterations, "The maximum number of Newton iterations per time step used by flow");
                 EWOMS_REGISTER_PARAM(TypeTag, int, NewtonMinIterations, "The minimum number of Newton iterations per time step used by flow");
                 EWOMS_REGISTER_PARAM(TypeTag, std::string, NewtonRelaxationType, "The type of relaxation used by flow's Newton method");
             }
