@@ -29,6 +29,7 @@
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/VFPHelpers.hpp>
 #include <opm/simulators/wells/VFPProperties.hpp>
+#include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 #include <opm/simulators/wells/WellHelpers.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 #include <opm/simulators/wells/WellTest.hpp>
@@ -185,20 +186,7 @@ bool WellInterfaceGeneric::wellHasTHPConstraints(const SummaryState& summaryStat
         return true;
     }
 
-    if (well_ecl_.isInjector()) {
-        const auto controls = well_ecl_.injectionControls(summaryState);
-        if (controls.hasControl(Well::InjectorCMode::THP))
-            return true;
-    }
-
-    if (well_ecl_.isProducer( )) {
-        const auto controls = well_ecl_.productionControls(summaryState);
-        if (controls.hasControl(Well::ProducerCMode::THP))
-            return true;
-    }
-
-    return false;
-
+    return WellBhpThpCalculator(*this).wellHasTHPConstraints(summaryState);
 }
 
 double WellInterfaceGeneric::mostStrictBhpFromBhpLimits(const SummaryState& summaryState) const
