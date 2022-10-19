@@ -205,7 +205,6 @@ public:
 
 protected:
     bool getAllowCrossFlow() const;
-    double mostStrictBhpFromBhpLimits(const SummaryState& summaryState) const;
 
     std::optional<double> bhpMax(const std::function<double(const double)>& fflo,
                                  const double bhp_limit,

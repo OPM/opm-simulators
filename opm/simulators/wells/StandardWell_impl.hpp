@@ -23,6 +23,7 @@
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/linalg/SmallDenseMatrixUtils.hpp>
 #include <opm/simulators/wells/VFPHelpers.hpp>
+#include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 #include <opm/simulators/wells/WellConvergence.hpp>
 
 #include <algorithm>
@@ -1102,7 +1103,7 @@ namespace Opm
     checkOperabilityUnderBHPLimit(const WellState& well_state, const Simulator& ebos_simulator, DeferredLogger& deferred_logger)
     {
         const auto& summaryState = ebos_simulator.vanguard().summaryState();
-        const double bhp_limit = this->mostStrictBhpFromBhpLimits(summaryState);
+        const double bhp_limit = WellBhpThpCalculator(*this).mostStrictBhpFromBhpLimits(summaryState);
         // Crude but works: default is one atmosphere.
         // TODO: a better way to detect whether the BHP is defaulted or not
         const bool bhp_limit_not_defaulted = bhp_limit > 1.5 * unit::barsa;
@@ -1170,7 +1171,7 @@ namespace Opm
         if (obtain_bhp) {
             this->operability_status_.can_obtain_bhp_with_thp_limit = true;
 
-            const double  bhp_limit = this->mostStrictBhpFromBhpLimits(summaryState);
+            const double  bhp_limit = WellBhpThpCalculator(*this).mostStrictBhpFromBhpLimits(summaryState);
             this->operability_status_.obey_bhp_limit_with_thp_limit = (*obtain_bhp >= bhp_limit);
 
             const double thp_limit = this->getTHPConstraint(summaryState);
@@ -2017,7 +2018,7 @@ namespace Opm
         const auto& summaryState = ebosSimulator.vanguard().summaryState();
         if (!Base::wellHasTHPConstraints(summaryState) || bhp_controlled_well) {
             // get the bhp value based on the bhp constraints
-            double bhp = this->mostStrictBhpFromBhpLimits(summaryState);
+            double bhp = WellBhpThpCalculator(*this).mostStrictBhpFromBhpLimits(summaryState);
 
             // In some very special cases the bhp pressure target are
             // temporary violated. This may lead to too small or negative potentials

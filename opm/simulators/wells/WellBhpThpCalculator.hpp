@@ -47,6 +47,9 @@ public:
     //! \brief Get THP constraint for well.
     double getTHPConstraint(const SummaryState& summaryState) const;
 
+    //! \brief Obtain the most strict BHP from BHP limits.
+    double mostStrictBhpFromBhpLimits(const SummaryState& summaryState) const;
+
 private:
     const WellInterfaceGeneric& well_; //!< Reference to well interface
 };
