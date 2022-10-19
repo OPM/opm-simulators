@@ -1901,15 +1901,15 @@ namespace Opm
             return rates;
         };
 
-        auto bhpAtLimit = this->MultisegmentWellGeneric<Scalar>::
-               computeBhpAtThpLimitProdWithAlq(frates,
+        auto bhpAtLimit = WellBhpThpCalculator(*this).
+               computeBhpAtThpLimitProd(frates,
                                         summary_state,
-                                        maxPerfPress(ebos_simulator),
-                                        getRefDensity(),
-                                        deferred_logger,
-                                        alq_value);
+                                        this->maxPerfPress(ebos_simulator),
+                                        this->getRefDensity(),
+                                        alq_value,
+                                        deferred_logger);
 
-       if(bhpAtLimit)
+       if (bhpAtLimit)
            return bhpAtLimit;
 
        auto fratesIter = [this, &ebos_simulator, &deferred_logger](const double bhp) {
@@ -1921,18 +1921,14 @@ namespace Opm
            return rates;
        };
 
-       return this->MultisegmentWellGeneric<Scalar>::
-              computeBhpAtThpLimitProdWithAlq(fratesIter,
+       return WellBhpThpCalculator(*this).
+              computeBhpAtThpLimitProd(fratesIter,
                                        summary_state,
-                                       maxPerfPress(ebos_simulator),
-                                       getRefDensity(),
-                                       deferred_logger,
-                                       alq_value);
-
+                                       this->maxPerfPress(ebos_simulator),
+                                       this->getRefDensity(),
+                                       alq_value,
+                                       deferred_logger);
     }
-
-
-
 
     template<typename TypeTag>
     std::optional<double>

@@ -208,25 +208,6 @@ detectOscillations(const std::vector<double>& measure_history,
 }
 
 template<typename Scalar>
-std::optional<double>
-MultisegmentWellGeneric<Scalar>::
-computeBhpAtThpLimitProdWithAlq(
-                   const std::function<std::vector<double>(const double)>& frates,
-                   const SummaryState& summary_state,
-                   const double maxPerfPress,
-                   const double rho,
-                   DeferredLogger& deferred_logger,
-                   double alq_value) const
-{
-   return WellBhpThpCalculator(baseif_).computeBhpAtThpLimitProd(frates,
-                                                                 summary_state,
-                                                                 maxPerfPress,
-                                                                 rho,
-                                                                 alq_value,
-                                                                 deferred_logger);
-}
-
-template<typename Scalar>
 bool
 MultisegmentWellGeneric<Scalar>::
 frictionalPressureLossConsidered() const

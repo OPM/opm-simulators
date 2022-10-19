@@ -60,14 +60,6 @@ protected:
     /// number of segments for this well
     int numberOfSegments() const;
 
-    std::optional<double> computeBhpAtThpLimitProdWithAlq(
-        const std::function<std::vector<double>(const double)>& frates,
-        const SummaryState& summary_state,
-        const double maxPerfPress,
-        const double rho,
-        DeferredLogger& deferred_logger,
-        double alq_value) const;
-
     /// Detect oscillation or stagnation based on the residual measure history
     void detectOscillations(const std::vector<double>& measure_history,
                             const int it,
