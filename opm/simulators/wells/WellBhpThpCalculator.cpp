@@ -48,4 +48,20 @@ WellBhpThpCalculator::wellHasTHPConstraints(const SummaryState& summaryState) co
     return false;
 }
 
+double WellBhpThpCalculator::getTHPConstraint(const SummaryState& summaryState) const
+{
+    const auto& well_ecl = well_.wellEcl();
+    if (well_ecl.isInjector()) {
+        const auto& controls = well_ecl.injectionControls(summaryState);
+        return controls.thp_limit;
+    }
+
+    if (well_ecl.isProducer( )) {
+        const auto& controls = well_ecl.productionControls(summaryState);
+        return controls.thp_limit;
+    }
+
+    return 0.0;
+}
+
 } // namespace Opm

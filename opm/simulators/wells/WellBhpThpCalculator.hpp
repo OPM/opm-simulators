@@ -44,6 +44,9 @@ public:
     //! \brief Checks if well has THP constraints.
     bool wellHasTHPConstraints(const SummaryState& summaryState) const;
 
+    //! \brief Get THP constraint for well.
+    double getTHPConstraint(const SummaryState& summaryState) const;
+
 private:
     const WellInterfaceGeneric& well_; //!< Reference to well interface
 };

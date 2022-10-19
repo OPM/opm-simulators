@@ -227,17 +227,8 @@ double WellInterfaceGeneric::getTHPConstraint(const SummaryState& summaryState) 
     if (dynamic_thp_limit_) {
         return *dynamic_thp_limit_;
     }
-    if (well_ecl_.isInjector()) {
-        const auto& controls = well_ecl_.injectionControls(summaryState);
-        return controls.thp_limit;
-    }
 
-    if (well_ecl_.isProducer( )) {
-        const auto& controls = well_ecl_.productionControls(summaryState);
-        return controls.thp_limit;
-    }
-
-    return 0.0;
+    return WellBhpThpCalculator(*this).getTHPConstraint(summaryState);
 }
 
 bool WellInterfaceGeneric::underPredictionMode() const
