@@ -531,96 +531,16 @@ getGroupInjectionTargetRate(const Group& group,
                             double efficiencyFactor,
                             DeferredLogger& deferred_logger) const
 {
-    // Setting some defaults to silence warnings below.
-    // Will be overwritten in the switch statement.
-    Phase injectionPhase = Phase::WATER;
-    switch (injectorType) {
-    case InjectorType::WATER:
+    auto rCoeff = [this](const int id, const int region, std::vector<double>& coeff)
     {
-        injectionPhase = Phase::WATER;
-        break;
-    }
-    case InjectorType::OIL:
-    {
-        injectionPhase = Phase::OIL;
-        break;
-    }
-    case InjectorType::GAS:
-    {
-        injectionPhase = Phase::GAS;
-        break;
-    }
-    default:
-        // Should not be here.
-        assert(false);
-    }
-
-    auto currentGroupControl = group_state.injection_control(group.name(), injectionPhase);
-    if (currentGroupControl == Group::InjectionCMode::FLD ||
-        currentGroupControl == Group::InjectionCMode::NONE) {
-        if (!group.injectionGroupControlAvailable(injectionPhase)) {
-            // We cannot go any further up the hierarchy. This could
-            // be the FIELD group, or any group for which this has
-            // been set in GCONINJE or GCONPROD. If we are here
-            // anyway, it is likely that the deck set inconsistent
-            // requirements, such as GRUP control mode on a well with
-            // no appropriate controls defined on any of its
-            // containing groups. We will therefore use the wells' bhp
-            // limit equation as a fallback.
-            return std::nullopt;
-        } else {
-            // Inject share of parents control
-            const auto& parent = schedule.getGroup( group.parent(), currentStep());
-            efficiencyFactor *= group.getGroupEfficiencyFactor();
-            return getGroupInjectionTargetRate(parent, well_state, group_state, schedule, summaryState, injectorType, efficiencyFactor, deferred_logger);
-        }
-    }
-
-    const auto pu = phaseUsage();
-
-    if (!group.isInjectionGroup()) {
-        return std::nullopt;
-    }
-
-    // If we are here, we are at the topmost group to be visited in the recursion.
-    // This is the group containing the control we will check against.
-
-    // Make conversion factors for RESV <-> surface rates.
-    std::vector<double> resv_coeff(pu.num_phases, 1.0);
-    rateConverter_.calcCoeff(0, pvtRegionIdx(), resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
-
-    double sales_target = 0;
-    if (schedule[currentStep()].gconsale().has(group.name())) {
-        const auto& gconsale = schedule[currentStep()].gconsale().get(group.name(), summaryState);
-        sales_target = gconsale.sales_target;
-    }
-    WellGroupHelpers::InjectionTargetCalculator tcalc(currentGroupControl, pu, resv_coeff, group.name(), sales_target, group_state, injectionPhase, group.has_gpmaint_control(injectionPhase, currentGroupControl), deferred_logger);
-    WellGroupHelpers::FractionCalculator fcalc(schedule, well_state, group_state, currentStep(), guideRate(), tcalc.guideTargetMode(), pu, false, injectionPhase);
-
-    auto localFraction = [&](const std::string& child) {
-        return fcalc.localFraction(child, child); //Note child needs to be passed to always include since the global isGrup map is not updated yet.
+        this->rateConverter().calcCoeff(id, region, coeff);
     };
 
-    auto localReduction = [&](const std::string& group_name) {
-        const std::vector<double>& groupTargetReductions = group_state.injection_reduction_rates(group_name);
-        return tcalc.calcModeRateFromRates(groupTargetReductions);
-    };
-
-    const double orig_target = tcalc.groupTarget(group.injectionControls(injectionPhase, summaryState), deferred_logger);
-    const auto chain = WellGroupHelpers::groupChainTopBot(name(), group.name(), schedule, currentStep());
-    // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
-    const size_t num_ancestors = chain.size() - 1;
-    double target = orig_target;
-    for (size_t ii = 0; ii < num_ancestors; ++ii) {
-        if ((ii == 0) || guideRate()->has(chain[ii], injectionPhase)) {
-            // Apply local reductions only at the control level
-            // (top) and for levels where we have a specified
-            // group guide rate.
-            target -= localReduction(chain[ii]);
-        }
-        target *= localFraction(chain[ii+1]);
-    }
-    return std::max(0.0, target / efficiencyFactor);
+    return WellGroupControls(*this).getGroupInjectionTargetRate(group, well_state,
+                                                                group_state, schedule,
+                                                                summaryState, injectorType,
+                                                                rCoeff, efficiencyFactor,
+                                                                deferred_logger);
 }
 template<typename FluidSystem>
 double

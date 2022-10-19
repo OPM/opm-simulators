@@ -25,6 +25,7 @@
 #define OPM_WELL_GROUP_CONTROLS_HEADER_INCLUDED
 
 #include <functional>
+#include <optional>
 #include <vector>
 
 namespace Opm
@@ -61,6 +62,17 @@ public:
                                   double efficiencyFactor,
                                   EvalWell& control_eq,
                                   DeferredLogger& deferred_logger) const;
+
+    std::optional<double>
+    getGroupInjectionTargetRate(const Group& group,
+                                const WellState& well_state,
+                                const GroupState& group_state,
+                                const Schedule& schedule,
+                                const SummaryState& summaryState,
+                                const InjectorType& injectorType,
+                                const RateConvFunc& rateConverter,
+                                double efficiencyFactor,
+                                DeferredLogger& deferred_logger) const;
 
     template<class EvalWell>
     void getGroupProductionControl(const Group& group,
