@@ -94,7 +94,7 @@ struct NewtonMaxError<TypeTag, TTag::NewtonMethod>
 template<class TypeTag>
 struct NewtonTargetIterations<TypeTag, TTag::NewtonMethod> { static constexpr int value = 10; };
 template<class TypeTag>
-struct NewtonMaxIterations<TypeTag, TTag::NewtonMethod> { static constexpr int value = 18; };
+struct NewtonMaxIterations<TypeTag, TTag::NewtonMethod> { static constexpr int value = 20; };
 
 } // namespace Opm::Properties
 
