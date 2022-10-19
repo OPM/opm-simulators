@@ -57,20 +57,6 @@ public:
                                  const double rho,
                                  DeferredLogger& deferred_logger) const;
     template<class EvalWell>
-    void getGroupInjectionControl(const Group& group,
-                                  const WellState& well_state,
-                                  const GroupState& group_state,
-                                  const Schedule& schedule,
-                                  const SummaryState& summaryState,
-                                  const InjectorType& injectorType,
-                                  const EvalWell& bhp,
-                                  const EvalWell& injection_rate,
-                                  EvalWell& control_eq,
-                                  double efficiencyFactor,
-                                  DeferredLogger& deferred_logger) const;
-
-
-    template<class EvalWell>
     void getGroupProductionControl(const Group& group,
                                    const WellState& well_state,
                                    const GroupState& group_state,
