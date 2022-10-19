@@ -73,23 +73,6 @@ protected:
         DeferredLogger& deferred_logger,
         double alq_value) const;
 
-    std::optional<double> bhpMax(const std::function<double(const double)>& fflo,
-                                 const double bhp_limit,
-                                 const double maxPerfPress,
-                                 const double vfp_flo_front,
-                                 DeferredLogger& deferred_logger) const;
-
-    bool bruteForceBracket(const std::function<double(const double)>& eq,
-                           const std::array<double, 2>& range,
-                           double& low, double& high,
-                           DeferredLogger& deferred_logger) const;
-
-    bool bisectBracket(const std::function<double(const double)>& eq,
-                       const std::array<double, 2>& range,
-                       double& low, double& high,
-                       std::optional<double>& approximate_solution,
-                       DeferredLogger& deferred_logger) const;
-
     /// Detect oscillation or stagnation based on the residual measure history
     void detectOscillations(const std::vector<double>& measure_history,
                             const int it,

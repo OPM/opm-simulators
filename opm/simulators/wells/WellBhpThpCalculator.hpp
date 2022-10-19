@@ -58,7 +58,44 @@ public:
                                const double alq,
                                DeferredLogger& deferred_logger) const;
 
+    //! \brief Compute BHP from THP limit for a producer.
+    std::optional<double>
+    computeBhpAtThpLimitProd(const std::function<std::vector<double>(const double)>& frates,
+                             const SummaryState& summary_state,
+                             const double maxPerfPress,
+                             const double rho,
+                             const double alq_value,
+                             DeferredLogger& deferred_logger) const;
+
 private:
+    //! \brief Calculate max BHP.
+    std::optional<double>
+    bhpMax(const std::function<double(const double)>& fflo,
+           const double bhp_limit,
+           const double maxPerfPress,
+           const double vfp_flo_front,
+           DeferredLogger& deferred_logger) const;
+
+    //! \brief Common code for finding BHP from THP limit for producers/injectors.
+    std::optional<double>
+    computeBhpAtThpLimit(const std::function<std::vector<double>(const double)>& frates,
+                         const std::function<double(const std::vector<double>)>& fbhp,
+                         const std::array<double, 2>& range,
+                         DeferredLogger& deferred_logger) const;
+
+    //! \brief Find limits using bisection.
+    bool bisectBracket(const std::function<double(const double)>& eq,
+                       const std::array<double, 2>& range,
+                       double& low, double& high,
+                       std::optional<double>& approximate_solution,
+                       DeferredLogger& deferred_logger) const;
+
+    //! \brief Find limits using brute-force solver.
+    static bool bruteForceBracket(const std::function<double(const double)>& eq,
+                                  const std::array<double, 2>& range,
+                                  double& low, double& high,
+                                  DeferredLogger& deferred_logger);
+
     const WellInterfaceGeneric& well_; //!< Reference to well interface
 };
 

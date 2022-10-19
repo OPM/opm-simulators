@@ -28,6 +28,7 @@
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/VFPHelpers.hpp>
 #include <opm/simulators/wells/VFPProperties.hpp>
+#include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 #include <opm/simulators/wells/WellHelpers.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 #include <opm/simulators/wells/WellState.hpp>
@@ -406,7 +407,12 @@ computeBhpAtThpLimitProdWithAlq(
                    DeferredLogger& deferred_logger,
                    double alq_value) const
 {
-   return baseif_.computeBhpAtThpLimitProdCommon(frates, summary_state, maxPerfPress, rho, alq_value, deferred_logger);
+   return WellBhpThpCalculator(baseif_).computeBhpAtThpLimitProd(frates,
+                                                                 summary_state,
+                                                                 maxPerfPress,
+                                                                 rho,
+                                                                 alq_value,
+                                                                 deferred_logger);
 }
 
 template<typename Scalar>
