@@ -108,6 +108,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/WellInterfaceIndices.cpp
   opm/simulators/wells/WellProdIndexCalculator.cpp
   opm/simulators/wells/WellState.cpp
+  opm/simulators/wells/WellTest.cpp
   opm/simulators/wells/WGState.cpp
   )
 
@@ -381,6 +382,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/WellInterface_impl.hpp
   opm/simulators/wells/WellProdIndexCalculator.hpp
   opm/simulators/wells/WellState.hpp
+  opm/simulators/wells/WellTest.hpp
   opm/simulators/wells/WGState.hpp
   )
 

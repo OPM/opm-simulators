@@ -182,11 +182,6 @@ private:
                                        const double max_ratio_limit,
                                        const RatioFunc& ratioFunc,
                                        RatioLimitCheckReport& report) const;
-
-    template<typename RatioFunc>
-    bool checkMaxRatioLimitWell(const SingleWellState& well_state,
-                                const double max_ratio_limit,
-                                const RatioFunc& ratioFunc) const;
 };
 
 }

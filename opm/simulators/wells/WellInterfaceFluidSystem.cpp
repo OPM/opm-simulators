@@ -28,13 +28,14 @@
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
-#include <opm/simulators/wells/RateConverter.hpp>
+#include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
+#include <opm/simulators/wells/RateConverter.hpp>
+#include <opm/simulators/wells/SingleWellState.hpp>
+#include <opm/simulators/wells/TargetCalculator.hpp>
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
 #include <opm/simulators/wells/WellState.hpp>
-#include <opm/simulators/wells/SingleWellState.hpp>
-#include <opm/simulators/wells/GroupState.hpp>
-#include <opm/simulators/wells/TargetCalculator.hpp>
+#include <opm/simulators/wells/WellTest.hpp>
 
 #include <cassert>
 #include <cmath>
@@ -579,7 +580,8 @@ checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
     const double max_water_cut_limit = econ_production_limits.maxWaterCut();
     assert(max_water_cut_limit > 0.);
 
-    const bool watercut_limit_violated = checkMaxRatioLimitWell(ws, max_water_cut_limit, waterCut);
+    const bool watercut_limit_violated =
+        WellTest(*this).checkMaxRatioLimitWell(ws, max_water_cut_limit, waterCut);
 
     if (watercut_limit_violated) {
         report.ratio_limit_violated = true;
@@ -613,7 +615,7 @@ checkMaxGORLimit(const WellEconProductionLimits& econ_production_limits,
     const double max_gor_limit = econ_production_limits.maxGasOilRatio();
     assert(max_gor_limit > 0.);
 
-    const bool gor_limit_violated = checkMaxRatioLimitWell(ws, max_gor_limit, gor);
+    const bool gor_limit_violated = WellTest(*this).checkMaxRatioLimitWell(ws, max_gor_limit, gor);
 
     if (gor_limit_violated) {
         report.ratio_limit_violated = true;
@@ -648,7 +650,7 @@ checkMaxWGRLimit(const WellEconProductionLimits& econ_production_limits,
     const double max_wgr_limit = econ_production_limits.maxWaterGasRatio();
     assert(max_wgr_limit > 0.);
 
-    const bool wgr_limit_violated = checkMaxRatioLimitWell(ws, max_wgr_limit, wgr);
+    const bool wgr_limit_violated = WellTest(*this).checkMaxRatioLimitWell(ws, max_wgr_limit, wgr);
 
     if (wgr_limit_violated) {
         report.ratio_limit_violated = true;
@@ -920,24 +922,6 @@ checkMaxRatioLimitCompletions(const SingleWellState& ws,
         report.worst_offending_completion = worst_offending_completion;
         report.violation_extent = violation_extent;
     }
-}
-
-template<typename FluidSystem>
-template<typename RatioFunc>
-bool WellInterfaceFluidSystem<FluidSystem>::
-checkMaxRatioLimitWell(const SingleWellState& ws,
-                       const double max_ratio_limit,
-                       const RatioFunc& ratioFunc) const
-{
-    const int np = number_of_phases_;
-
-    std::vector<double> well_rates(np, 0.0);
-    for (int p = 0; p < np; ++p) {
-        well_rates[p] = ws.surface_rates[p];
-    }
-
-    const double well_ratio = ratioFunc(well_rates, phaseUsage());
-    return (well_ratio > max_ratio_limit);
 }
 
 template<typename FluidSystem>
