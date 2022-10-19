@@ -33,6 +33,7 @@
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/MSWellHelpers.hpp>
+#include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 #include <opm/simulators/wells/WellConvergence.hpp>
 #include <opm/simulators/wells/WellInterfaceIndices.hpp>
 #include <opm/simulators/wells/WellState.hpp>
@@ -1306,7 +1307,11 @@ updateThp(WellState& well_state,
         rates[ Gas ] = ws.surface_rates[pu.phase_pos[ Gas ] ];
     }
 
-    ws.thp = this->calculateThpFromBhp(rates, ws.bhp, rho, deferred_logger);
+    ws.thp = WellBhpThpCalculator(baseif_).calculateThpFromBhp(rates,
+                                                               ws.bhp,
+                                                               rho,
+                                                               baseif_.wellEcl().alq_value(),
+                                                               deferred_logger);
 }
 
 template<typename FluidSystem, typename Indices, typename Scalar>

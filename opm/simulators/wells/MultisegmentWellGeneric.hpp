@@ -60,11 +60,6 @@ protected:
     /// number of segments for this well
     int numberOfSegments() const;
 
-    double calculateThpFromBhp(const std::vector<double>& rates,
-                               const double bhp,
-                               const double rho,
-                               DeferredLogger& deferred_logger) const;
-
     std::optional<double> computeBhpAtThpLimitInj(const std::function<std::vector<double>(const double)>& frates,
                                                   const SummaryState& summary_state,
                                                   const double rho,

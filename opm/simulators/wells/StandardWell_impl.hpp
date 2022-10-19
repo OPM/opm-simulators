@@ -1136,7 +1136,11 @@ namespace Opm
                 computeWellRatesWithBhp(ebos_simulator, bhp_limit, well_rates_bhp_limit, deferred_logger);
 
                 this->adaptRatesForVFP(well_rates_bhp_limit);
-                const double thp = this->calculateThpFromBhp(well_state, well_rates_bhp_limit, bhp_limit, deferred_logger);
+                const double thp = WellBhpThpCalculator(*this).calculateThpFromBhp(well_rates_bhp_limit,
+                                                                                   bhp_limit,
+                                                                                   this->getRho(),
+                                                                                   this->getALQ(well_state),
+                                                                                   deferred_logger);
                 const double thp_limit = this->getTHPConstraint(summaryState);
                 if ( (this->isProducer() && thp < thp_limit) || (this->isInjector() && thp > thp_limit) ) {
                     this->operability_status_.obey_thp_limit_under_bhp_limit = false;

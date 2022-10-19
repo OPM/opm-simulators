@@ -22,9 +22,18 @@
 #include <config.h>
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 
+#include <opm/core/props/BlackoilPhases.hpp>
+
+#include <opm/input/eclipse/Schedule/VFPInjTable.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+
+#include <opm/simulators/wells/VFPProperties.hpp>
+#include <opm/simulators/wells/WellHelpers.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
+
+#include <cassert>
 
 namespace Opm
 {
@@ -78,6 +87,45 @@ double WellBhpThpCalculator::mostStrictBhpFromBhpLimits(const SummaryState& summ
     }
 
     return 0.0;
+}
+
+double WellBhpThpCalculator::calculateThpFromBhp(const std::vector<double>& rates,
+                                                 const double bhp,
+                                                 const double rho,
+                                                 const double alq,
+                                                 DeferredLogger& deferred_logger) const
+{
+    assert(int(rates.size()) == 3); // the vfp related only supports three phases now.
+
+    static constexpr int Water = BlackoilPhases::Aqua;
+    static constexpr int Oil = BlackoilPhases::Liquid;
+    static constexpr int Gas = BlackoilPhases::Vapour;
+
+    const double aqua = rates[Water];
+    const double liquid = rates[Oil];
+    const double vapour = rates[Gas];
+
+    // pick the density in the top layer
+    double thp = 0.0;
+    if (well_.isInjector()) {
+        const int table_id = well_.wellEcl().vfp_table_number();
+        const double vfp_ref_depth = well_.vfpProperties()->getInj()->getTable(table_id).getDatumDepth();
+        const double dp = wellhelpers::computeHydrostaticCorrection(well_.refDepth(), vfp_ref_depth, rho, well_.gravity());
+
+        thp = well_.vfpProperties()->getInj()->thp(table_id, aqua, liquid, vapour, bhp + dp);
+    }
+    else if (well_.isProducer()) {
+        const int table_id = well_.wellEcl().vfp_table_number();
+        const double vfp_ref_depth = well_.vfpProperties()->getProd()->getTable(table_id).getDatumDepth();
+        const double dp = wellhelpers::computeHydrostaticCorrection(well_.refDepth(), vfp_ref_depth, rho, well_.gravity());
+
+        thp = well_.vfpProperties()->getProd()->thp(table_id, aqua, liquid, vapour, bhp + dp, alq);
+    }
+    else {
+        OPM_DEFLOG_THROW(std::logic_error, "Expected INJECTOR or PRODUCER well", deferred_logger);
+    }
+
+    return thp;
 }
 
 } // namespace Opm

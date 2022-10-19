@@ -32,6 +32,7 @@
 namespace Opm
 {
 
+class DeferredLogger;
 class SummaryState;
 class WellInterfaceGeneric;
 
@@ -49,6 +50,13 @@ public:
 
     //! \brief Obtain the most strict BHP from BHP limits.
     double mostStrictBhpFromBhpLimits(const SummaryState& summaryState) const;
+
+    //! \brief Calculates THP from BHP.
+    double calculateThpFromBhp(const std::vector<double>& rates,
+                               const double bhp,
+                               const double rho,
+                               const double alq,
+                               DeferredLogger& deferred_logger) const;
 
 private:
     const WellInterfaceGeneric& well_; //!< Reference to well interface

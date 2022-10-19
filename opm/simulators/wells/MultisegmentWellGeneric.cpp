@@ -179,47 +179,6 @@ segmentNumberToIndex(const int segment_number) const
 }
 
 template<typename Scalar>
-double
-MultisegmentWellGeneric<Scalar>::
-calculateThpFromBhp(const std::vector<double>& rates,
-                    const double bhp,
-                    const double rho,
-                    DeferredLogger& deferred_logger) const
-{
-    assert(int(rates.size()) == 3); // the vfp related only supports three phases now.
-
-    static constexpr int Water = BlackoilPhases::Aqua;
-    static constexpr int Oil = BlackoilPhases::Liquid;
-    static constexpr int Gas = BlackoilPhases::Vapour;
-
-    const double aqua = rates[Water];
-    const double liquid = rates[Oil];
-    const double vapour = rates[Gas];
-
-    double thp = 0.0;
-    if (baseif_.isInjector()) {
-        const int table_id = baseif_.wellEcl().vfp_table_number();
-        const double vfp_ref_depth = baseif_.vfpProperties()->getInj()->getTable(table_id).getDatumDepth();
-        const double dp = wellhelpers::computeHydrostaticCorrection(baseif_.refDepth(), vfp_ref_depth, rho, baseif_.gravity());
-
-        thp = baseif_.vfpProperties()->getInj()->thp(table_id, aqua, liquid, vapour, bhp + dp);
-    }
-    else if (baseif_.isProducer()) {
-        const int table_id = baseif_.wellEcl().vfp_table_number();
-        const double alq = baseif_.wellEcl().alq_value();
-        const double vfp_ref_depth = baseif_.vfpProperties()->getProd()->getTable(table_id).getDatumDepth();
-        const double dp = wellhelpers::computeHydrostaticCorrection(baseif_.refDepth(), vfp_ref_depth, rho, baseif_.gravity());
-
-        thp = baseif_.vfpProperties()->getProd()->thp(table_id, aqua, liquid, vapour, bhp + dp, alq);
-    }
-    else {
-        OPM_DEFLOG_THROW(std::logic_error, "Expected INJECTOR or PRODUCER well", deferred_logger);
-    }
-
-    return thp;
-}
-
-template<typename Scalar>
 void
 MultisegmentWellGeneric<Scalar>::
 detectOscillations(const std::vector<double>& measure_history,
