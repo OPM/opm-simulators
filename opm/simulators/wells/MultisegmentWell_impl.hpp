@@ -1953,13 +1953,16 @@ namespace Opm
             return rates;
         };
 
-        auto bhpAtLimit = this->MultisegmentWellGeneric<Scalar>::
+        auto bhpAtLimit = WellBhpThpCalculator(*this).
                 computeBhpAtThpLimitInj(frates,
                                         summary_state,
-                                        getRefDensity(),
+                                        this->getRefDensity(),
+                                        0.05,
+                                        100,
+                                        false,
                                         deferred_logger);
 
-        if(bhpAtLimit)
+        if (bhpAtLimit)
             return bhpAtLimit;
 
        auto fratesIter = [this, &ebos_simulator, &deferred_logger](const double bhp) {
@@ -1971,8 +1974,14 @@ namespace Opm
            return rates;
        };
 
-        return this->MultisegmentWellGeneric<Scalar>::
-               computeBhpAtThpLimitInj(fratesIter, summary_state, getRefDensity(), deferred_logger);
+        return WellBhpThpCalculator(*this).
+               computeBhpAtThpLimitInj(fratesIter,
+                                       summary_state,
+                                       this->getRefDensity(),
+                                       0.05,
+                                       100,
+                                       false,
+                                       deferred_logger);
     }
 
 

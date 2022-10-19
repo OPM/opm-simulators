@@ -81,9 +81,6 @@ protected:
 
     void computeConnectionPressureDelta();
 
-    std::optional<double> computeBhpAtThpLimitInj(const std::function<std::vector<double>(const double)>& frates,
-                                                  const SummaryState& summary_state,
-                                                  DeferredLogger& deferred_logger) const;
     std::optional<double> computeBhpAtThpLimitProdWithAlq(const std::function<std::vector<double>(const double)>& frates,
                                                           const SummaryState& summary_state,
                                                           DeferredLogger& deferred_logger,

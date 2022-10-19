@@ -67,7 +67,27 @@ public:
                              const double alq_value,
                              DeferredLogger& deferred_logger) const;
 
+    //! \brief Compute BHP from THP limit for an injector.
+    std::optional<double>
+    computeBhpAtThpLimitInj(const std::function<std::vector<double>(const double)>& frates,
+                            const SummaryState& summary_state,
+                            const double rho,
+                            const double flo_rel_tol,
+                            const int max_iteration,
+                            const bool throwOnError,
+                            DeferredLogger& deferred_logger) const;
+
 private:
+    //! \brief Compute BHP from THP limit for an injector - implementation.
+    template<class ErrorPolicy>
+    std::optional<double>
+    computeBhpAtThpLimitInjImpl(const std::function<std::vector<double>(const double)>& frates,
+                                const SummaryState& summary_state,
+                                const double rho,
+                                const double flo_rel_tol,
+                                const int max_iteration,
+                                DeferredLogger& deferred_logger) const;
+
     //! \brief Calculate max BHP.
     std::optional<double>
     bhpMax(const std::function<double(const double)>& fflo,
