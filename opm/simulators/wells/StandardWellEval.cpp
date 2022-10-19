@@ -557,52 +557,6 @@ processFractions() const
     }
 }
 
-
-template<class FluidSystem, class Indices, class Scalar>
-void
-StandardWellEval<FluidSystem,Indices,Scalar>::
-updateThp(WellState& well_state,
-          DeferredLogger& deferred_logger) const
-{
-    static constexpr int Gas = WellInterfaceIndices<FluidSystem,Indices,Scalar>::Gas;
-    static constexpr int Oil = WellInterfaceIndices<FluidSystem,Indices,Scalar>::Oil;
-    static constexpr int Water = WellInterfaceIndices<FluidSystem,Indices,Scalar>::Water;
-    auto& ws = well_state.well(baseif_.indexOfWell());
-
-    // When there is no vaild VFP table provided, we set the thp to be zero.
-    if (!baseif_.isVFPActive(deferred_logger) || baseif_.wellIsStopped()) {
-        ws.thp = 0;
-        return;
-    }
-
-    // For THP controlled wells, we know the thp value
-    bool thp_controlled = baseif_.isInjector() ? ws.injection_cmode == Well::InjectorCMode::THP:
-                                              ws.production_cmode == Well::ProducerCMode::THP;
-    if (thp_controlled) {
-        return;
-    }
-
-    // the well is under other control types, we calculate the thp based on bhp and rates
-    std::vector<double> rates(3, 0.0);
-
-    const PhaseUsage& pu = baseif_.phaseUsage();
-    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-        rates[ Water ] = ws.surface_rates[pu.phase_pos[ Water ] ];
-    }
-    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-        rates[ Oil ] = ws.surface_rates[pu.phase_pos[ Oil ] ];
-    }
-    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-        rates[ Gas ] = ws.surface_rates[pu.phase_pos[ Gas ] ];
-    }
-
-    ws.thp = WellBhpThpCalculator(this->baseif_).calculateThpFromBhp(rates,
-                                                                     ws.bhp,
-                                                                     this->getRho(),
-                                                                     this->baseif_.getALQ(well_state),
-                                                                     deferred_logger);
-}
-
 template<class FluidSystem, class Indices, class Scalar>
 void
 StandardWellEval<FluidSystem,Indices,Scalar>::
@@ -704,7 +658,13 @@ updateWellStateFromPrimaryVariables(WellState& well_state,
         }
     }
 
-    updateThp(well_state, deferred_logger);
+    WellBhpThpCalculator(baseif_).
+            updateThp(this->getRho(),
+                      [this,&well_state]() { return this->baseif_.getALQ(well_state); },
+                      {FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx),
+                       FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx),
+                       FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)},
+                      well_state, deferred_logger);
 }
 
 template<class FluidSystem, class Indices, class Scalar>

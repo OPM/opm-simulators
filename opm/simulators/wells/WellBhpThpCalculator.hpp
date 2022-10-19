@@ -35,6 +35,7 @@ namespace Opm
 class DeferredLogger;
 class SummaryState;
 class WellInterfaceGeneric;
+class WellState;
 
 //! \brief Class for computing BHP limits.
 class WellBhpThpCalculator {
@@ -76,6 +77,13 @@ public:
                             const int max_iteration,
                             const bool throwOnError,
                             DeferredLogger& deferred_logger) const;
+
+    //! \brief Update THP.
+    void updateThp(const double rho,
+                   const std::function<double()>& alq_value,
+                   const std::array<unsigned,3>& active,
+                   WellState& well_state,
+                   DeferredLogger& deferred_logger) const;
 
 private:
     //! \brief Compute BHP from THP limit for an injector - implementation.

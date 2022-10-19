@@ -219,6 +219,46 @@ computeBhpAtThpLimitInj(const std::function<std::vector<double>(const double)>& 
     }
 }
 
+void WellBhpThpCalculator::updateThp(const double rho,
+                                     const std::function<double()>& alq_value,
+                                     const std::array<unsigned,3>& active,
+                                     WellState& well_state,
+                                     DeferredLogger& deferred_logger) const
+{
+    static constexpr int Gas = BlackoilPhases::Vapour;
+    static constexpr int Oil = BlackoilPhases::Liquid;
+    static constexpr int Water = BlackoilPhases::Aqua;
+    auto& ws = well_state.well(well_.indexOfWell());
+
+    // When there is no vaild VFP table provided, we set the thp to be zero.
+    if (!well_.isVFPActive(deferred_logger) || well_.wellIsStopped()) {
+        ws.thp = 0;
+        return;
+    }
+    // For THP controlled wells, we know the thp value
+    bool thp_controlled = well_.isInjector() ? ws.injection_cmode == Well::InjectorCMode::THP:
+                                               ws.production_cmode == Well::ProducerCMode::THP;
+    if (thp_controlled) {
+        return;
+    }
+
+    // the well is under other control types, we calculate the thp based on bhp and rates
+    std::vector<double> rates(3, 0.0);
+
+    const PhaseUsage& pu = well_.phaseUsage();
+    if (active[Water]) {
+        rates[ Water ] = ws.surface_rates[pu.phase_pos[ Water ] ];
+    }
+    if (active[Oil]) {
+        rates[ Oil ] = ws.surface_rates[pu.phase_pos[ Oil ] ];
+    }
+    if (active[Gas]) {
+        rates[ Gas ] = ws.surface_rates[pu.phase_pos[ Gas ] ];
+    }
+
+    ws.thp = this->calculateThpFromBhp(rates, ws.bhp, rho, alq_value(), deferred_logger);
+}
+
 template<class ErrorPolicy>
 std::optional<double>
 WellBhpThpCalculator::

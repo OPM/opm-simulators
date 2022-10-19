@@ -221,10 +221,6 @@ protected:
     // pressure drop for sub-critical valve (WSEGVALV)
     EvalWell pressureDropValve(const int seg) const;
 
-    void updateThp(WellState& well_state,
-                   const double rho,
-                   DeferredLogger& deferred_logger) const;
-
     void updateWellStateFromPrimaryVariables(WellState& well_state,
                                              const double rho,
                                              DeferredLogger& deferred_logger) const;
