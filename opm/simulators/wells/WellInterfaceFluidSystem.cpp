@@ -22,9 +22,11 @@
 #include <config.h>
 #include <opm/simulators/wells/WellInterfaceFluidSystem.hpp>
 
-#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+#include <opm/grid/utility/RegionMapping.hpp>
 
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
+
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
@@ -32,6 +34,7 @@
 #include <opm/simulators/wells/RateConverter.hpp>
 #include <opm/simulators/wells/SingleWellState.hpp>
 #include <opm/simulators/wells/TargetCalculator.hpp>
+#include <opm/simulators/wells/WellGroupConstraints.hpp>
 #include <opm/simulators/wells/WellGroupControls.hpp>
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
 #include <opm/simulators/wells/WellState.hpp>
@@ -327,64 +330,6 @@ checkIndividualConstraints(SingleWellState& ws,
 template <typename FluidSystem>
 std::pair<bool, double>
 WellInterfaceFluidSystem<FluidSystem>::
-checkGroupConstraintsInj(const Group& group,
-                         const WellState& well_state,
-                         const GroupState& group_state,
-                         const double efficiencyFactor,
-                         const Schedule& schedule,
-                         const SummaryState& summaryState,
-                         DeferredLogger& deferred_logger) const
-{
-    // Translate injector type from control to Phase.
-    const auto& well_controls = this->well_ecl_.injectionControls(summaryState);
-    auto injectorType = well_controls.injector_type;
-    Phase injectionPhase;
-    switch (injectorType) {
-    case InjectorType::WATER:
-    {
-        injectionPhase = Phase::WATER;
-        break;
-    }
-    case InjectorType::OIL:
-    {
-        injectionPhase = Phase::OIL;
-        break;
-    }
-    case InjectorType::GAS:
-    {
-        injectionPhase = Phase::GAS;
-        break;
-    }
-    default:
-        throw("Expected WATER, OIL or GAS as type for injector " + name());
-    }
-
-    // Make conversion factors for RESV <-> surface rates.
-    std::vector<double> resv_coeff(phaseUsage().num_phases, 1.0);
-    rateConverter_.calcInjCoeff(0, pvtRegionIdx_, resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
-
-    const auto& ws = well_state.well(this->index_of_well_);
-    // Call check for the well's injection phase.
-    return WellGroupHelpers::checkGroupConstraintsInj(name(),
-                                                      well_ecl_.groupName(),
-                                                      group,
-                                                      well_state,
-                                                      group_state,
-                                                      current_step_,
-                                                      guide_rate_,
-                                                      ws.surface_rates.data(),
-                                                      injectionPhase,
-                                                      phaseUsage(),
-                                                      efficiencyFactor,
-                                                      schedule,
-                                                      summaryState,
-                                                      resv_coeff,
-                                                      deferred_logger);
-}
-
-template <typename FluidSystem>
-std::pair<bool, double>
-WellInterfaceFluidSystem<FluidSystem>::
 checkGroupConstraintsProd(const Group& group,
                           const WellState& well_state,
                           const GroupState& group_state,
@@ -427,6 +372,11 @@ checkGroupConstraints(WellState& well_state,
     const int well_index = index_of_well_;
     auto& ws = well_state.well(well_index);
 
+    auto rCoeff = [this](const int id, const int region, std::vector<double>& coeff)
+    {
+        this->rateConverter().calcCoeff(id, region, coeff);
+    };
+
     if (well.isInjector()) {
         const auto currentControl = ws.injection_cmode;
 
@@ -440,8 +390,15 @@ checkGroupConstraints(WellState& well_state,
             const auto& group = schedule.getGroup( well.groupName(), current_step_ );
             const double efficiencyFactor = well.getEfficiencyFactor();
             const std::pair<bool, double> group_constraint =
-                checkGroupConstraintsInj(group, well_state, group_state, efficiencyFactor,
-                                         schedule, summaryState, deferred_logger);
+                WellGroupConstraints(*this).
+                    checkGroupConstraintsInj(group,
+                                             well_state,
+                                             group_state,
+                                             efficiencyFactor,
+                                             schedule,
+                                             summaryState,
+                                             rCoeff,
+                                             deferred_logger);
             // If a group constraint was broken, we set the current well control to
             // be GRUP.
             if (group_constraint.first) {

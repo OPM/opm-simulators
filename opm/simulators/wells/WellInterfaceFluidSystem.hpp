@@ -89,14 +89,6 @@ protected:
                                                    const SummaryState& summaryState,
                                                    DeferredLogger& deferred_logger) const;
 
-    std::pair<bool, double> checkGroupConstraintsInj(const Group& group,
-                                                     const WellState& well_state,
-                                                     const GroupState& group_state,
-                                                     const double efficiencyFactor,
-                                                     const Schedule& schedule,
-                                                     const SummaryState& summaryState,
-                                                     DeferredLogger& deferred_logger) const;
-
     std::pair<bool, double> checkGroupConstraintsProd(const Group& group,
                                                       const WellState& well_state,
                                                       const GroupState& group_state,
