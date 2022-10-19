@@ -44,3 +44,4 @@ if(MPI_FOUND)
                                                  RESTART_STEP 3
                                                  DIR aquifer-num
                                                  TEST_ARGS --enable-tuning=true --tolerance-cnv=0.00003 --time-step-control=pid --linear-solver=cpr)
+endif()

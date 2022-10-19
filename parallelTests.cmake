@@ -1,3 +1,4 @@
+if(MPI_FOUND)
   opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-parallel-regressionTest.sh "")
 
   # Different tolerances for these tests
@@ -163,3 +164,4 @@
                                        REL_TOL 1.0e-3
                                        DIR rxft_smry
                                        TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --ecl-enable-drift-compensation=false)
+endif()

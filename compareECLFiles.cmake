@@ -287,6 +287,7 @@ add_test(NAME NORNE_RESTART
 
 include (${CMAKE_CURRENT_SOURCE_DIR}/parallelRestartTests.cmake)
 
+if(MPI_FOUND)
 # Single test to verify that we treat custom communicators correctly.
   opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-split-comm-test.sh "")
   add_test_split_comm(CASENAME spe1
@@ -294,10 +295,11 @@ include (${CMAKE_CURRENT_SOURCE_DIR}/parallelRestartTests.cmake)
                       SIMULATOR flow
                       ABS_TOL 0.0
                       REL_TOL 0.0)
+endif()
 
 include (${CMAKE_CURRENT_SOURCE_DIR}/parallelTests.cmake)
 
-endif()
+
 
 if(OPM_TESTS_ROOT)
   add_custom_target(update_data
