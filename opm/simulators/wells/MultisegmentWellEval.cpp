@@ -1249,8 +1249,6 @@ assembleControlEq(const WellState& well_state,
                   const GroupState& group_state,
                   const Schedule& schedule,
                   const SummaryState& summaryState,
-                  const Well::InjectionControls& inj_controls,
-                  const Well::ProductionControls& prod_controls,
                   const double rho,
                   DeferredLogger& deferred_logger)
 {
@@ -1280,6 +1278,7 @@ assembleControlEq(const WellState& well_state,
         control_eq = getWQTotal();
     } else if (baseif_.isInjector() ) {
         // Find scaling factor to get injection rate,
+        const auto& inj_controls = well.injectionControls(summaryState);
         const InjectorType injectorType = inj_controls.injector_type;
         double scaling = 1.0;
         const auto& pu = baseif_.phaseUsage();
@@ -1327,6 +1326,7 @@ assembleControlEq(const WellState& well_state,
             return baseif_.calculateBhpFromThp(well_state, rates, well, summaryState, rho, deferred_logger);
         };
         // Call generic implementation.
+        const auto& prod_controls = well.productionControls(summaryState);
         baseif_.assembleControlEqProd(well_state,
                                       group_state,
                                       schedule,

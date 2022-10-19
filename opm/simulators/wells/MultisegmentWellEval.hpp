@@ -123,8 +123,6 @@ protected:
                            const GroupState& group_state,
                            const Schedule& schedule,
                            const SummaryState& summaryState,
-                           const Well::InjectionControls& inj_controls,
-                           const Well::ProductionControls& prod_controls,
                            const double rho,
                            DeferredLogger& deferred_logger);
 

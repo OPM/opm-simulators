@@ -192,8 +192,6 @@ namespace Opm
         // iterate well equations with the specified control until converged
         bool iterateWellEqWithControl(const Simulator& ebosSimulator,
                                       const double dt,
-                                      const Well::InjectionControls& inj_controls,
-                                      const Well::ProductionControls& prod_controls,
                                       WellState& well_state,
                                       const GroupState& group_state,
                                       DeferredLogger& deferred_logger) override;
@@ -367,8 +365,6 @@ namespace Opm
 
         virtual void assembleWellEqWithoutIteration(const Simulator& ebosSimulator,
                                                     const double dt,
-                                                    const Well::InjectionControls& inj_controls,
-                                                    const Well::ProductionControls& prod_controls,
                                                     WellState& well_state,
                                                     const GroupState& group_state,
                                                     DeferredLogger& deferred_logger) override;

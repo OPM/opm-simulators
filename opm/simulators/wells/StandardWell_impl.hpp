@@ -419,8 +419,6 @@ namespace Opm
     StandardWell<TypeTag>::
     assembleWellEqWithoutIteration(const Simulator& ebosSimulator,
                                    const double dt,
-                                   const Well::InjectionControls& /*inj_controls*/,
-                                   const Well::ProductionControls& /*prod_controls*/,
                                    WellState& well_state,
                                    const GroupState& group_state,
                                    DeferredLogger& deferred_logger)
@@ -2662,8 +2660,6 @@ namespace Opm
     StandardWell<TypeTag>::
     iterateWellEqWithControl(const Simulator& ebosSimulator,
                              const double dt,
-                             const Well::InjectionControls& inj_controls,
-                             const Well::ProductionControls& prod_controls,
                              WellState& well_state,
                              const GroupState& group_state,
                              DeferredLogger& deferred_logger)
@@ -2674,7 +2670,7 @@ namespace Opm
         bool relax_convergence = false;
         this->regularize_ = false;
         do {
-            assembleWellEqWithoutIteration(ebosSimulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
+            assembleWellEqWithoutIteration(ebosSimulator, dt, well_state, group_state, deferred_logger);
 
             if (it > this->param_.strict_inner_iter_wells_) {
                 relax_convergence = true;
