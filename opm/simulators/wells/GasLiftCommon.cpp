@@ -25,11 +25,13 @@ namespace Opm {
 GasLiftCommon::
 GasLiftCommon(
     WellState &well_state,
+    const GroupState &group_state,
     DeferredLogger &deferred_logger,
     const Parallel::Communication& comm,
     bool glift_debug
 ) :
     well_state_{well_state},
+    group_state_{group_state},
     deferred_logger_{deferred_logger},
     comm_{comm},
     debug{glift_debug}

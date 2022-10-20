@@ -33,6 +33,7 @@
 #include <opm/input/eclipse/Schedule/SummaryState.hpp>
 #include <opm/simulators/wells/GasLiftCommon.hpp>
 #include <opm/simulators/wells/WellState.hpp>
+#include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 
 #include <algorithm>
@@ -81,6 +82,7 @@ public:
         const PhaseUsage& phase_usage,
         DeferredLogger& deferred_logger,
         WellState& well_state,
+        const GroupState& group_state,
         const Parallel::Communication& comm,
         bool glift_debug
     );

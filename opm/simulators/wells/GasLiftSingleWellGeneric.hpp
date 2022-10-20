@@ -29,6 +29,7 @@
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/simulators/wells/GasLiftGroupInfo.hpp>
 #include <opm/simulators/wells/GasLiftCommon.hpp>
+#include <opm/simulators/wells/GroupState.hpp>
 
 #include <functional>
 #include <optional>
@@ -329,7 +330,6 @@ protected:
         Rate rate_type, const std::string& gr_name, double rate, double target) const;
     void warnMaxIterationsExceeded_();
 
-    const GroupState& group_state_;
     const Well& ecl_well_;
     const SummaryState& summary_state_;
     GasLiftGroupInfo& group_info_;

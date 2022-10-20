@@ -32,10 +32,11 @@ GasLiftGroupInfo(
     const PhaseUsage &phase_usage,
     DeferredLogger &deferred_logger,
     WellState &well_state,
+    const GroupState &group_state,
     const Communication &comm,
     bool glift_debug
 ) :
-    GasLiftCommon(well_state, deferred_logger, comm, glift_debug)
+    GasLiftCommon(well_state, group_state, deferred_logger, comm, glift_debug)
     , ecl_wells_{ecl_wells}
     , schedule_{schedule}
     , summary_state_{summary_state}
