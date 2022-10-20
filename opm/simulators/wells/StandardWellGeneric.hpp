@@ -106,7 +106,10 @@ protected:
     mutable BVectorWell Bx_;
     mutable BVectorWell invDrw_;
 
-    double getRho() const { return perf_densities_[0]; }
+    double getRho() const
+    {
+        return this->perf_densities_.empty() ? 0.0 : perf_densities_[0];
+    }
 };
 
 }
