@@ -31,7 +31,7 @@
 #include <opm/simulators/linalg/ParallelIstlInformation.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
-#if HAVE_CUDA || HAVE_OPENCL || HAVE_FPGA || HAVE_AMGCL
+#if HAVE_CUDA || HAVE_OPENCL || HAVE_FPGA || HAVE_AMGCL || HAVE_ROCALUTION
 #include <opm/simulators/linalg/bda/BdaBridge.hpp>
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
 #include <iostream>
@@ -171,7 +171,7 @@ void FlexibleSolverInfo<Matrix,Vector,Comm>::create(const Matrix& matrix,
     }
 }
 
-#if HAVE_CUDA || HAVE_OPENCL || HAVE_FPGA || HAVE_AMGCL
+#if HAVE_CUDA || HAVE_OPENCL || HAVE_FPGA || HAVE_AMGCL || HAVE_ROCALUTION
 template<class Matrix, class Vector>
 BdaSolverInfo<Matrix,Vector>::
 BdaSolverInfo(const std::string& accelerator_mode,
@@ -229,7 +229,7 @@ apply(Vector& rhs,
         auto wellContribs = WellContributions::create(accelerator_mode_, useWellConn);
         bridge_->initWellContributions(*wellContribs, x.N() * x[0].N());
 
-        // the WellContributions can only be applied separately with CUDA or OpenCL, not with an FPGA or amgcl
+        // the WellContributions can only be applied separately with CUDA or OpenCL, not with an FPGA, amgcl or rocalution
 #if HAVE_CUDA || HAVE_OPENCL
         if (!useWellConn) {
             getContribs(*wellContribs);
@@ -345,7 +345,7 @@ using CommunicationType = Dune::CollectiveCommunication<int>;
     template void makeOverlapRowsInvalid<BM<Dim>>(BM<Dim>&, const std::vector<int>&); \
     template struct FlexibleSolverInfo<BM<Dim>,BV<Dim>,CommunicationType>;
 
-#if HAVE_CUDA || HAVE_OPENCL || HAVE_FPGA || HAVE_AMGCL
+#if HAVE_CUDA || HAVE_OPENCL || HAVE_FPGA || HAVE_AMGCL || HAVE_ROCALUTION
 #define INSTANCE(Dim) \
     template struct BdaSolverInfo<BM<Dim>,BV<Dim>>; \
     template void BdaSolverInfo<BM<Dim>,BV<Dim>>:: \
