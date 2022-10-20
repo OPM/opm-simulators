@@ -292,7 +292,8 @@ namespace Opm {
             // at the beginning of each time step (Not report step)
             void prepareTimeStep(DeferredLogger& deferred_logger);
             void initPrimaryVariablesEvaluation() const;
-            std::tuple<bool, bool, double> updateWellControls(DeferredLogger& deferred_logger);
+
+            std::pair<bool, bool> updateWellControls(DeferredLogger& deferred_logger, const std::size_t network_update_it = 0);
 
             void updateAndCommunicate(const int reportStepIdx,
                                       const int iterationIdx,
@@ -384,10 +385,15 @@ namespace Opm {
             // and in the well equations.
             void assemble(const int iterationIdx,
                           const double dt);
-            bool assembleImpl(const int iterationIdx,
-                              const double dt,
-                              const std::size_t recursion_level,
-                              DeferredLogger& local_deferredLogger);
+
+            // the function handles one itearation of updating well controls and also network related.
+            // it is possible to decouple the update of well controls and network related further
+            // the returned two booleans are {continue_due_to_network, well_group_control_changed}, respectively
+            std::pair<bool, bool> updateWellControlsAndNetworkIteration(const double dt,
+                                                                        const std::size_t network_update_iteration,
+                                                                        DeferredLogger& local_deferredLogger);
+
+            bool updateWellControlsAndNetwork(const double dt, DeferredLogger& local_deferredLogger);
 
             // called at the end of a time step
             void timeStepSucceeded(const double& simulationTime, const double dt);
@@ -423,6 +429,11 @@ namespace Opm {
             int reportStepIndex() const;
 
             void assembleWellEq(const double dt, DeferredLogger& deferred_logger);
+
+            void prepareWellsBeforeAssembling(const double dt, DeferredLogger& deferred_logger);
+
+            // TODO: finding a better naming
+            void assembleWellEqWithoutIteration(const double dt, DeferredLogger& deferred_logger);
 
             bool maybeDoGasLiftOptimize(DeferredLogger& deferred_logger);
 

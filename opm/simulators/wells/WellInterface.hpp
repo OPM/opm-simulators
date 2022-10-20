@@ -166,6 +166,20 @@ public:
                         const GroupState& group_state,
                         DeferredLogger& deferred_logger);
 
+    void assembleWellEqWithoutIteration(const Simulator& ebosSimulator,
+                                        const double dt,
+                                        WellState& well_state,
+                                        const GroupState& group_state,
+                                        DeferredLogger& deferred_logger);
+
+    // TODO: better name or further refactoring the function to make it more clear
+    void prepareWellBeforeAssembling(const Simulator& ebosSimulator,
+                                     const double dt,
+                                     WellState& well_state,
+                                     const GroupState& group_state,
+                                     DeferredLogger& deferred_logger);
+
+
     virtual void computeWellRatesWithBhp(
         const Simulator& ebosSimulator,
         const double& bhp,
