@@ -544,8 +544,6 @@ void
 GasLiftStage2::
 optimizeGroup_(const Group &group)
 {
-    const auto max_glift = getGroupMaxALQ_(group);
-    const auto max_total_gas = getGroupMaxTotalGas_(group);
     const auto& group_name = group.name();
     const auto prod_control = this->group_state_.production_control(group_name);
     //if (group.has_control(Group::ProductionCMode::ORAT) || group.has_control(Group::ProductionCMode::LRAT)
