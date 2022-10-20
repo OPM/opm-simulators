@@ -94,7 +94,7 @@ testRocalutionSolver(const boost::property_tree::ptree& prm, Matrix<bz>& matrix,
     const int linear_solver_verbosity = prm.get<int>("verbosity");
     const int maxit = prm.get<int>("maxiter");
     const double tolerance = prm.get<double>("tol");
-    const std::string opencl_ilu_reorder("none");
+    const bool opencl_ilu_parallel(true);
     const int platformID = 0;
     const int deviceID = 0;
     const std::string accelerator_mode("rocalution");
@@ -113,7 +113,7 @@ testRocalutionSolver(const boost::property_tree::ptree& prm, Matrix<bz>& matrix,
                                                                                tolerance,
                                                                                platformID,
                                                                                deviceID,
-                                                                               opencl_ilu_reorder,
+                                                                               opencl_ilu_parallel,
                                                                                linsolver);
     } catch (const std::logic_error& error) {
         BOOST_WARN_MESSAGE(true, error.what());
