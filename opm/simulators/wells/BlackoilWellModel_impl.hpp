@@ -901,10 +901,10 @@ namespace Opm {
             // easier to compare with the original code.
             // And also, there is a lot of things done in the function assembleWellEq, some work needs to be done to
             // split it. For the moment, not touching that direction.
-            // assembleWellEq(dt, local_deferredLogger);
-            for (auto& well : well_container_) {
+            assembleWellEq(dt, local_deferredLogger);
+            /* for (auto& well : well_container_) {
                 well->solveWellEquation(ebosSimulator_, this->wellState(), this->groupState(), local_deferredLogger);
-            }
+            } */
         }
         OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger, "solveWellControlsAndNetwork() failed: ",
                                        terminal_output_, grid().comm());
