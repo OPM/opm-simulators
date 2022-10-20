@@ -24,7 +24,12 @@
 #include <opm/simulators/linalg/bda/BdaSolver.hpp>
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
 
-#include <rocalution.hpp>
+namespace rocalution {
+template<class Matrix, class Vector, class Scalar> class BiCGStab;
+template<class Matrix, class Vector, class Scalar> class ILU;
+template<class Scalar> class LocalMatrix;
+template<class Scalar> class LocalVector;
+}
 
 namespace Opm
 {

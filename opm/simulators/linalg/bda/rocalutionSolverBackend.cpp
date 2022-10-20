@@ -27,6 +27,8 @@
 
 #include <opm/simulators/linalg/bda/rocalutionSolverBackend.hpp>
 
+#include <rocalution.hpp>
+
 namespace Opm
 {
 namespace Accelerator
