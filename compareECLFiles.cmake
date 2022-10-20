@@ -285,20 +285,20 @@ add_test_compareECLFiles(CASENAME norne
 add_test(NAME NORNE_RESTART
          COMMAND flow --output-dir=${BASE_RESULT_PATH}/norne-restart ${OPM_TESTS_ROOT}/norne/NORNE_ATW2013_RESTART.DATA)
 
-include (${CMAKE_CURRENT_SOURCE_DIR}/parallelRestartTests.cmake)
 
 if(MPI_FOUND)
-# Single test to verify that we treat custom communicators correctly.
+  include (${CMAKE_CURRENT_SOURCE_DIR}/parallelRestartTests.cmake)
+
+  # Single test to verify that we treat custom communicators correctly.
   opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-split-comm-test.sh "")
   add_test_split_comm(CASENAME spe1
                       FILENAME SPE1CASE2
                       SIMULATOR flow
                       ABS_TOL 0.0
                       REL_TOL 0.0)
+
+  include (${CMAKE_CURRENT_SOURCE_DIR}/parallelTests.cmake)
 endif()
-
-include (${CMAKE_CURRENT_SOURCE_DIR}/parallelTests.cmake)
-
 
 
 if(OPM_TESTS_ROOT)
