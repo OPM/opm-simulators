@@ -22,6 +22,7 @@
 
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/simulators/wells/GasLiftSingleWellGeneric.hpp>
+#include <opm/simulators/wells/GroupState.hpp>
 
 #include <dune/common/version.hh>
 #include <dune/common/parallel/mpihelper.hh>
@@ -66,6 +67,7 @@ public:
         const SummaryState& summary_state,
         DeferredLogger& deferred_logger,
         WellState& well_state,
+        const GroupState& group_state,
         GLiftProdWells& prod_wells,
         GLiftOptWells& glift_wells,
         GLiftWellStateMap& state_map,

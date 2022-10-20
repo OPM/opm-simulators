@@ -49,8 +49,7 @@ GasLiftSingleWellGeneric::GasLiftSingleWellGeneric(DeferredLogger& deferred_logg
                                                    GLiftSyncGroups& sync_groups,
                                                    const Parallel::Communication& comm,
                                                    bool glift_debug)
-    : GasLiftCommon(well_state, deferred_logger, comm, glift_debug)
-    , group_state_ {group_state}
+    : GasLiftCommon(well_state, group_state, deferred_logger, comm, glift_debug)
     , ecl_well_ {ecl_well}
     , summary_state_ {summary_state}
     , group_info_ {group_info}

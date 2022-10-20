@@ -984,6 +984,7 @@ namespace Opm {
                 phase_usage_,
                 deferred_logger,
                 this->wellState(),
+                this->groupState(),
                 ebosSimulator_.vanguard().grid().comm(),
                 this->glift_debug
             };

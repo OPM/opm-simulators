@@ -44,12 +44,13 @@ GasLiftStage2::GasLiftStage2(
     const SummaryState& summary_state,
     DeferredLogger &deferred_logger,
     WellState &well_state,
+    const GroupState &group_state,
     GLiftProdWells &prod_wells,
     GLiftOptWells &glift_wells,
     GLiftWellStateMap &state_map,
     bool glift_debug
 ) :
-    GasLiftCommon(well_state, deferred_logger, comm, glift_debug)
+    GasLiftCommon(well_state, group_state, deferred_logger, comm, glift_debug)
     , prod_wells_{prod_wells}
     , stage1_wells_{glift_wells}
     , well_state_map_{state_map}
@@ -545,10 +546,16 @@ optimizeGroup_(const Group &group)
 {
     const auto max_glift = getGroupMaxALQ_(group);
     const auto max_total_gas = getGroupMaxTotalGas_(group);
-    if (group.has_control(Group::ProductionCMode::ORAT) || group.has_control(Group::ProductionCMode::LRAT)
-                       || max_glift || max_total_gas)
+    const auto& group_name = group.name();
+    const auto prod_control = this->group_state_.production_control(group_name);
+    //if (group.has_control(Group::ProductionCMode::ORAT) || group.has_control(Group::ProductionCMode::LRAT)
+    //                   || max_glift || max_total_gas)
+    // NOTE: it only makes sense to try to optimize the distribution of the gaslift if the amount
+    //   of gaslift is constrained either by the maximum allowed gaslift or total gas
+    //   or the group is under individual control
+    if ((prod_control != Group::ProductionCMode::NONE) && (prod_control != Group::ProductionCMode::FLD))
     {
-        displayDebugMessage_("optimizing", group.name());
+        displayDebugMessage_("optimizing", group_name);
         auto wells = getGroupGliftWells_(group);
         std::vector<GradPair> inc_grads;
         std::vector<GradPair> dec_grads;
@@ -556,7 +563,7 @@ optimizeGroup_(const Group &group)
         removeSurplusALQ_(group, inc_grads, dec_grads);
     }
     else {
-        displayDebugMessage_("skipping", group.name());
+        displayDebugMessage_("skipping", group_name);
     }
 }
 
