@@ -33,6 +33,7 @@
 #include <opm/simulators/wells/TargetCalculator.hpp>
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
+#include <opm/simulators/wells/WellState.hpp>
 
 #include <algorithm>
 #include <cassert>
@@ -389,6 +390,95 @@ void WellGroupControls::getGroupProductionControl(const Group& group,
     const double target_rate = std::max(0.0, target / efficiencyFactor);
     const auto current_rate = -tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
     control_eq = current_rate - target_rate;
+}
+
+double WellGroupControls::
+getGroupProductionTargetRate(const Group& group,
+                             const WellState& well_state,
+                             const GroupState& group_state,
+                             const Schedule& schedule,
+                             const SummaryState& summaryState,
+                             const RateConvFunc& rateConverter,
+                             double efficiencyFactor) const
+{
+    const Group::ProductionCMode& currentGroupControl = group_state.production_control(group.name());
+    if (currentGroupControl == Group::ProductionCMode::FLD ||
+        currentGroupControl == Group::ProductionCMode::NONE) {
+        if (!group.productionGroupControlAvailable()) {
+            return 1.0;
+        } else {
+            // Produce share of parents control
+            const auto& parent = schedule.getGroup(group.parent(), well_.currentStep());
+            efficiencyFactor *= group.getGroupEfficiencyFactor();
+            return getGroupProductionTargetRate(parent, well_state, group_state,
+                                                schedule, summaryState,
+                                                rateConverter, efficiencyFactor);
+        }
+    }
+
+    const auto pu = well_.phaseUsage();
+
+    if (!group.isProductionGroup()) {
+        return 1.0;
+    }
+
+    // If we are here, we are at the topmost group to be visited in the recursion.
+    // This is the group containing the control we will check against.
+
+    // Make conversion factors for RESV <-> surface rates.
+    std::vector<double> resv_coeff(well_.phaseUsage().num_phases, 1.0);
+    rateConverter(0, well_.pvtRegionIdx(), resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
+
+    // gconsale may adjust the grat target.
+    // the adjusted rates is send to the targetCalculator
+    double gratTargetFromSales = 0.0;
+    if (group_state.has_grat_sales_target(group.name()))
+        gratTargetFromSales = group_state.grat_sales_target(group.name());
+
+    WellGroupHelpers::TargetCalculator tcalc(currentGroupControl, pu, resv_coeff, gratTargetFromSales, group.name(), group_state, group.has_gpmaint_control(currentGroupControl));
+    WellGroupHelpers::FractionCalculator fcalc(schedule, well_state, group_state,
+                                               well_.currentStep(),
+                                               well_.guideRate(),
+                                               tcalc.guideTargetMode(),
+                                               pu, true, Phase::OIL);
+
+    auto localFraction = [&](const std::string& child) {
+        return fcalc.localFraction(child, child); //Note child needs to be passed to always include since the global isGrup map is not updated yet.
+    };
+
+    auto localReduction = [&](const std::string& group_name) {
+        const std::vector<double>& groupTargetReductions = group_state.production_reduction_rates(group_name);
+        return tcalc.calcModeRateFromRates(groupTargetReductions);
+    };
+
+    const double orig_target = tcalc.groupTarget(group.productionControls(summaryState));
+    const auto chain = WellGroupHelpers::groupChainTopBot(well_.name(), group.name(),
+                                                          schedule, well_.currentStep());
+    // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
+    const size_t num_ancestors = chain.size() - 1;
+    double target = orig_target;
+    for (size_t ii = 0; ii < num_ancestors; ++ii) {
+        if ((ii == 0) || well_.guideRate()->has(chain[ii])) {
+            // Apply local reductions only at the control level
+            // (top) and for levels where we have a specified
+            // group guide rate.
+            target -= localReduction(chain[ii]);
+        }
+        target *= localFraction(chain[ii+1]);
+    }
+    // Avoid negative target rates coming from too large local reductions.
+    const double target_rate = std::max(0.0, target / efficiencyFactor);
+    const auto& ws = well_state.well(well_.indexOfWell());
+    const auto& rates = ws.surface_rates;
+    const auto current_rate = -tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
+    double scale = 1.0;
+    if (target_rate == 0.0) {
+        return 0.0;
+    }
+
+    if (current_rate > 1e-14)
+        scale = target_rate/current_rate;
+    return scale;
 }
 
 #define INSTANCE(...) \
