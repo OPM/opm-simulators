@@ -233,6 +233,12 @@ namespace Opm
         if (this->wellIsStopped()) {
             return false;
         }
+        // const std::set<std::string> well_names = {"S-P3", "S-P4", "S-P6"};
+        // const std::set<std::string> well_names = {"S-P6"};
+        // const std::set<std::string> well_names = {"S-P2", "S-P3", "S-P4", "S-P6"};
+        const std::set<std::string> well_names = {"S-P2", "S-P3", "S-P4", "S-P6", "PROD1", "PROD2", "PROD3"};
+        const bool output_for_well = well_names.count(this->name()) > 0;
+        if (output_for_well) std::cout << " well " + this->name() + " in updateWellControl " << std::endl;
 
         const auto& summaryState = ebos_simulator.vanguard().summaryState();
         const auto& schedule = ebos_simulator.vanguard().schedule();
@@ -294,6 +300,8 @@ namespace Opm
             updatePrimaryVariables(well_state, deferred_logger);
         }
 
+        if (output_for_well) std::cout << " well " + this->name() + " is getting OUT of updateWellControl " << std::endl;
+
         return changed;
     }
 
@@ -310,6 +318,13 @@ namespace Opm
                 DeferredLogger& deferred_logger)
     {
         deferred_logger.info(" well " + this->name() + " is being tested");
+
+        // const std::set<std::string> well_names = {"S-P3", "S-P4", "S-P6"};
+        // const std::set<std::string> well_names = {"S-P6"};
+        // const std::set<std::string> well_names = {"S-P2", "S-P3", "S-P4", "S-P6"};
+        const std::set<std::string> well_names = {"S-P2", "S-P3", "S-P4", "S-P6", "PROD1", "PROD2", "PROD3"};
+        const bool output_for_well = well_names.count(this->name()) > 0;
+        if (output_for_well) std::cout << " well " + this->name() + " is being tested " << std::endl;
 
         WellState well_state_copy = well_state;
         auto& ws = well_state_copy.well(this->indexOfWell());
@@ -387,6 +402,7 @@ namespace Opm
             ws.open();
             well_state = well_state_copy;
         }
+        if (output_for_well) std::cout << " well " + this->name() + " is LEAVING wellTesting " << std::endl;
     }
 
 
@@ -747,6 +763,24 @@ namespace Opm
         const auto& summaryState = ebos_simulator.vanguard().summaryState();
         const auto& schedule = ebos_simulator.vanguard().schedule();
 
+        // const std::set<std::string> well_names = {"S-P3", "S-P4", "S-P6"};
+        // const std::set<std::string> well_names = {"S-P6"};
+        // const std::set<std::string> well_names = {"S-P2", "S-P3", "S-P4", "S-P6"};
+        const std::set<std::string> well_names = {"S-P2", "S-P3", "S-P4", "S-P6", "PROD1", "PROD2", "PROD3"};
+        const bool output_for_well = well_names.count(this->name()) > 0;
+        if (output_for_well) {
+            std::cout << " well " << this->name() << " entering updateWellStateWithTarget and the well state is :" << std::endl;
+            std::cout << " well rates are ";
+            for (const auto val : ws.surface_rates) {
+                std::cout << " " << val * 86400.;
+            }
+            std::cout << " bhp " << ws.bhp/1.e5 << " thp " << ws.thp/1.e5;
+            if (this->getDynamicThpLimit()) {
+                std::cout << " dynamic thp limit " << *(this->getDynamicThpLimit()) / 1.e5;
+            }
+            std::cout << std::endl;
+        }
+
         if (this->wellIsStopped()) {
             for (int p = 0; p<np; ++p) {
                 ws.surface_rates[p] = 0;
@@ -1082,6 +1116,19 @@ namespace Opm
 
                 break;
             } // end of switch
+        }
+
+        if (output_for_well) {
+            std::cout << " well state for well " << this->name() << " after updateWellStateWithTarget " << std::endl;
+            std::cout << " well rates are ";
+            for (const auto val : ws.surface_rates) {
+                std::cout << " " << val * 86400.;
+            }
+            std::cout << " bhp " << ws.bhp/1.e5 << " thp " << ws.thp/1.e5;
+            if (this->getDynamicThpLimit()) {
+                std::cout << " dynamic thp limit " << *(this->getDynamicThpLimit()) / 1.e5;
+            }
+            std::cout << std::endl;
         }
     }
 

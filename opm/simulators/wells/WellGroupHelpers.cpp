@@ -860,13 +860,18 @@ namespace WellGroupHelpers
                                                               0.0, //explicit_wfr
                                                               0.0, //explicit_gfr
                                                               false); //use_expvfp we dont support explicit lookup
-#define EXTRA_DEBUG_NETWORK 0
+#define EXTRA_DEBUG_NETWORK 1
 #if EXTRA_DEBUG_NETWORK
-                    std::ostringstream oss;
-                    oss << "parent: " << (*upbranch).uptree_node() << "  child: " << node
-                        << "  rates = [ " << rates[0]*86400 << ", " << rates[1]*86400 << ", " << rates[2]*86400 << " ]"
-                        << "  p(parent) = " << up_press/1e5 << "  p(child) = " << node_pressures[node]/1e5 << std::endl;
-                    OpmLog::debug(oss.str());
+                    if (node == "S1") {
+                        std::ostringstream oss;
+                        oss << "parent: " << (*upbranch).uptree_node() << "  child: " << node
+                            << "  rates = [ " << rates[0] * 86400 << ", " << rates[1] * 86400 << ", "
+                            << rates[2] * 86400 << " ]"
+                            << "  p(parent) = " << up_press / 1e5 << "  p(child) = " << node_pressures[node] / 1e5
+                            << " liquid rate " << (rates[0]+rates[1])*86400. << std::endl;
+                        std::cout << oss.str();
+                        OpmLog::debug(oss.str());
+                    }
 #endif
                 } else {
                     // Table number specified as 9999 in the deck, no pressure loss.

@@ -668,6 +668,8 @@ computeBhpAtThpLimitProdCommon(const std::function<std::vector<double>(const dou
     // the one corresponding to the lowest bhp (and therefore
     // highest rate) should be returned.
 
+    // const std::set<std::string> well_names = {"S-P3", "S-P4", "S-P6"};
+
     static constexpr int Water = BlackoilPhases::Aqua;
     static constexpr int Oil = BlackoilPhases::Liquid;
     static constexpr int Gas = BlackoilPhases::Vapour;
@@ -679,6 +681,13 @@ computeBhpAtThpLimitProdCommon(const std::function<std::vector<double>(const dou
     const double thp_limit = this->getTHPConstraint(summary_state);
     const double dp = wellhelpers::computeHydrostaticCorrection(this->refDepth(), vfp_ref_depth, rho, this->gravity());
 
+    // const std::set<std::string> well_names = {"S-P6"};
+    // const std::set<std::string> well_names = {"S-P2", "S-P3", "S-P4", "S-P6"};
+    const std::set<std::string> well_names = {"S-P2", "S-P3", "S-P4", "S-P6", "PROD1", "PROD2", "PROD3"};
+    const bool output_for_well = well_names.count(this->name()) > 0;
+    if (output_for_well) {
+        std::cout << " well " << this->name() << " in function computeBhpAtThpLimitProdCommon with thp_limit " << thp_limit/1.e5 << " dp " << dp/1.e5 << std::endl;
+    }
     auto fbhp = [this, &controls, thp_limit, dp, alq_value](const std::vector<double>& rates) {
         assert(rates.size() == 3);
         const auto& wfr =  this->vfpProperties()->getExplicitWFR(controls.vfp_table_number, this->indexOfWell());

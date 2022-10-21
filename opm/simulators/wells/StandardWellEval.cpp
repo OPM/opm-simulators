@@ -352,6 +352,16 @@ updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_log
 
     // BHP
     primary_variables_[Bhp] = ws.bhp;
+
+    // const std::set<std::string> well_names = {"S-P3", "S-P4", "S-P6"};
+    // const std::set<std::string> well_names = {"S-P2", "S-P3", "S-P4", "S-P6"};
+    const std::set<std::string> well_names = {"S-P2", "S-P3", "S-P4", "S-P6", "PROD1", "PROD2", "PROD3"};
+    // const std::set<std::string> well_names = {"S-P6"};
+    if (well_names.count(baseif_.name()) > 0) {
+        std::cout << " outputting the primary variables for well " << baseif_.name() << " after updatePrimaryVariables " << std::endl;
+        std::cout << " primary_variables_ : " << primary_variables_[WQTotal]*86400. << " " << primary_variables_[WFrac] << " " << primary_variables_[GFrac]
+                  << " " << primary_variables_[Bhp]/1.e5 << std::endl;
+    }
 }
 
 template<class FluidSystem, class Indices, class Scalar>
@@ -702,6 +712,22 @@ updateWellStateFromPrimaryVariables(WellState& well_state,
     }
 
     updateThp(well_state, deferred_logger);
+    // const std::set<std::string> well_names = {"S-P3", "S-P4", "S-P6"};
+    // const std::set<std::string> well_names = {"S-P6"};
+    // const std::set<std::string> well_names = {"S-P2", "S-P3", "S-P4", "S-P6"};
+    const std::set<std::string> well_names = {"S-P2", "S-P3", "S-P4", "S-P6", "PROD1", "PROD2", "PROD3"};
+    if (well_names.count(baseif_.name()) > 0) {
+        std::cout << " outputting the well state after updateWellStateFromPrimaryVariables for well " << baseif_.name() << std::endl;
+        std::cout << " well rates are ";
+        for (const auto val : ws.surface_rates) {
+            std::cout << " " << val * 86400.;
+        }
+        std::cout << " bhp " << ws.bhp/1.e5 << " thp " << ws.thp/1.e5;
+        if (baseif_.getDynamicThpLimit()) {
+            std::cout << " dynamic thp limit " << *(baseif_.getDynamicThpLimit()) / 1.e5;
+        }
+        std::cout << std::endl;
+    }
 }
 
 template<class FluidSystem, class Indices, class Scalar>
@@ -780,6 +806,14 @@ updatePrimaryVariablesNewton(const BVectorWell& dwells,
         // 1e5 to make sure bhp will not be below 1bar
         primary_variables_[Bhp] = std::max(old_primary_variables[Bhp] - dx1_limited, 1e5);
     }
+    // const std::set<std::string> well_names = {"S-P2", "S-P3", "S-P4", "S-P6"};
+    const std::set<std::string> well_names = {"S-P2", "S-P3", "S-P4", "S-P6", "PROD1", "PROD2", "PROD3"};
+    // const std::set<std::string> well_names = {"S-P6"};
+    if (well_names.count(baseif_.name()) > 0) {
+        std::cout << " outputting the primary variables for well " << baseif_.name() << " after updatePrimaryVariablesNewton " << std::endl;
+        std::cout << " primary_variables_ : " << primary_variables_[WQTotal]*86400. << " " << primary_variables_[WFrac] << " " << primary_variables_[GFrac]
+                  << " " << primary_variables_[Bhp]/1.e5 << std::endl;
+    }
 }
 
 template<class FluidSystem, class Indices, class Scalar>
@@ -794,6 +828,10 @@ getWellConvergence(const WellState& well_state,
                    std::vector<double>& res,
                    DeferredLogger& deferred_logger) const
 {
+    // const std::set<std::string> well_names = {"S-P3", "S-P4", "S-P6"};
+    // const std::set<std::string> well_names = {"S-P6"};
+    // const std::set<std::string> well_names = {"S-P2", "S-P3", "S-P4", "S-P6"};
+    const std::set<std::string> well_names = {"S-P2", "S-P3", "S-P4", "S-P6", "PROD1", "PROD2", "PROD3"};
     res.resize(numWellEq_);
     for (int eq_idx = 0; eq_idx < numWellEq_; ++eq_idx) {
         // magnitude of the residual matters
@@ -807,7 +845,18 @@ getWellConvergence(const WellState& well_state,
     {
         well_flux_residual[compIdx] = B_avg[compIdx] * res[compIdx];
     }
-
+    if (well_names.count(baseif_.name()) > 0) {
+        std::cout << " well " << baseif_.name() << " residuals ";
+        for (const auto val : well_flux_residual) {
+            std::cout << " " << val;
+        }
+        std::cout << " flux_tolerance ";
+        if (relax_tolerance) {
+            std::cout << relaxed_tolerance_flow;
+        } else {
+            std::cout << tol_wells;
+        }
+    }
     ConvergenceReport report;
     using CR = ConvergenceReport;
     CR::WellFailure::Type type = CR::WellFailure::Type::MassBalance;
@@ -832,6 +881,15 @@ getWellConvergence(const WellState& well_state,
     }
 
     this->checkConvergenceControlEq(well_state, report, deferred_logger, maxResidualAllowed);
+    if (well_names.count(baseif_.name()) > 0) {
+        std::cout << " converged ? ";
+        if (report.converged()) {
+            std::cout << " YES ";
+        } else {
+            std::cout << " NO ";
+        }
+        std::cout << std::endl;
+    }
 
     return report;
 }

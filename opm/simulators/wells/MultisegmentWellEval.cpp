@@ -1309,6 +1309,7 @@ assembleControlEq(const WellState& well_state,
             return baseif_.calculateBhpFromThp(well_state, rates, well, summaryState, rho, deferred_logger);
         };
         // Call generic implementation.
+
         baseif_.assembleControlEqInj(well_state,
                                      group_state,
                                      schedule,

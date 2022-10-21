@@ -405,6 +405,11 @@ checkConvergenceControlEq(const WellState& well_state,
     using CR = ConvergenceReport;
     CR::WellFailure::Type ctrltype = CR::WellFailure::Type::Invalid;
 
+    // const std::set<std::string> well_names = {"S-P3", "S-P4", "S-P6"};
+    // const std::set<std::string> well_names = {"S-P6"};
+    const std::set<std::string> well_names = {"S-P2", "S-P3", "S-P4", "S-P6", "PROD1", "PROD2", "PROD3"};
+    const bool output_for_well = well_names.count(baseif_.name())> 0;
+
     const int well_index = baseif_.indexOfWell();
     const auto& ws = well_state.well(well_index);
     if (baseif_.wellIsStopped()) {
@@ -443,10 +448,12 @@ checkConvergenceControlEq(const WellState& well_state,
         case Well::ProducerCMode::THP:
             ctrltype = CR::WellFailure::Type::ControlTHP;
             control_tolerance = 1.e4; // 0.1 bar
+            if (output_for_well) std::cout << " THP control ";
             break;
         case Well::ProducerCMode::BHP:
             ctrltype = CR::WellFailure::Type::ControlBHP;
             control_tolerance = 1.e3; // 0.01 bar
+            if (output_for_well) std::cout << " BHP control ";
             break;
         case Well::ProducerCMode::ORAT:
         case Well::ProducerCMode::WRAT:
@@ -456,10 +463,12 @@ checkConvergenceControlEq(const WellState& well_state,
         case Well::ProducerCMode::CRAT:
             ctrltype = CR::WellFailure::Type::ControlRate;
             control_tolerance = 1.e-4; // smaller tolerance for rate control
+            if (output_for_well) std::cout << " RATE control ";
             break;
         case Well::ProducerCMode::GRUP:
             ctrltype = CR::WellFailure::Type::ControlRate;
             control_tolerance = 1.e-6; // smaller tolerance for rate control
+            if (output_for_well) std::cout << " GRUP control ";
             break;
         default:
             OPM_DEFLOG_THROW(std::runtime_error, "Unknown well control control types for well " << baseif_.name(), deferred_logger);
@@ -467,6 +476,9 @@ checkConvergenceControlEq(const WellState& well_state,
     }
 
     const double well_control_residual = std::abs(this->resWell_[0][Bhp_]);
+    if (well_names.count(baseif_.name())> 0) {
+        std::cout << "   well_control_residual " << well_control_residual << " control tolerance is " << control_tolerance;
+    }
     const int dummy_component = -1;
     if (std::isnan(well_control_residual)) {
         report.setWellFailed({ctrltype, CR::Severity::NotANumber, dummy_component, baseif_.name()});

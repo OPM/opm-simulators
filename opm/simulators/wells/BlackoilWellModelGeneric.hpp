@@ -250,7 +250,7 @@ protected:
 
     bool wasDynamicallyShutThisTimeStep(const int well_index) const;
 
-    std::pair<bool, double> updateNetworkPressures(const int reportStepIdx);
+    std::pair<bool, double> updateNetworkPressures(const int reportStepIdx, const bool solve_welleq = false);
 
     void updateWsolvent(const Group& group,
                         const int reportStepIdx,

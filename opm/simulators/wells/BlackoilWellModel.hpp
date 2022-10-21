@@ -355,6 +355,10 @@ namespace Opm {
 
             SimulatorReportSingle last_report_{};
 
+            // Looking for a better name, basically, we solve the well equations, including the groups and networks.
+            // without updating the reservoir here
+            void solveWellEq(DeferredLogger& deferred_logger);
+
             // used to better efficiency of calcuation
             mutable BVector scaleAddRes_{};
 

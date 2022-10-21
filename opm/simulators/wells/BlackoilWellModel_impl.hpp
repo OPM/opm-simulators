@@ -759,6 +759,37 @@ namespace Opm {
         well_container_generic_.clear();
         for (auto& w : well_container_)
           well_container_generic_.push_back(w.get());
+
+        const auto& network = schedule()[time_step].network();
+        if (network.active()) {
+            for (auto& well: well_container_generic_) {
+                // Producers only, since we so far only support the
+                // "extended" network model (properties defined by
+                // BRANPROP and NODEPROP) which only applies to producers.
+
+                const std::set<std::string> well_names = {"S-P2", "S-P3", "S-P4", "S-P6", "PROD1", "PROD2", "PROD3"};
+                // const std::set<std::string> well_names = {"S-P6"};
+                const bool output_for_well = well_names.count(well->name()) > 0;
+
+                if (this->node_pressures_.empty()) {
+                    // there is no existing node pressures
+                    break;
+                }
+                if (well->isProducer()) {
+                    const auto it = node_pressures_.find(well->wellEcl().groupName());
+                    if (it != node_pressures_.end()) {
+                        // The well belongs to a group which has a network nodal pressure,
+                        // set the dynamic THP constraint based on the network nodal pressure
+                        const double nodal_pressure = it->second;
+                        well->setDynamicThpLimit(nodal_pressure);
+                        if (output_for_well) {
+                            std::cout << " well " << well->name() << " set dyanmic thp limit " << nodal_pressure / 1.e5
+                                      << " bar " << std::endl;
+                        }
+                    }
+                }
+            }
+        }
     }
 
 
@@ -839,6 +870,55 @@ namespace Opm {
         return this->createWellPointer(index_well_ecl, report_step);
     }
 
+
+
+
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    solveWellEq(DeferredLogger& deferred_logger) {
+        const double dt = this->ebosSimulator_.timeStepSize();
+        // updatePerforationIntensiveQuantities();
+        // TODO: should we also have the group and network backed-up here?
+        auto& well_state = this->wellState();
+        // B_avg is updated in the beginTimeStep();
+        const int max_iter = 100;
+        bool converged = false;
+        size_t iter = 0;
+        bool update_network_more = true;
+        bool changed_well_group = false;
+        do {
+            update_network_more = updateWellControlsAndNetwork(deferred_logger);
+            assembleImpl(dt, deferred_logger);
+            converged = this->getWellConvergence(this->B_avg_, true).converged();
+            std::cout << " solveWellEq " << " iteration " << iter << " converged ?";
+            if (converged) {
+                std::cout << " YES ";
+            } else {
+                std::cout << " NO ";
+            }
+            // std::cout << " network_imbalance " << network_imbalance/1.e5 << std::endl;
+            // if (converged && network_imbalance < 0.05e5) {
+            if (converged && !update_network_more) {
+                break;
+            }
+            ++iter;
+            for (auto& well : this->well_container_) {
+                well->solveEqAndUpdateWellState(well_state, deferred_logger);
+            }
+            // std::tie(changed_well_group, should_update_network, network_imbalance)= updateWellControls(deferred_logger, true);
+            for (auto& well : this->well_container_) {
+                this->initPrimaryVariablesEvaluation();
+            }
+        } while (iter < max_iter);
+
+        if (!converged) {
+            std::cout << " solveWellEq not converged with " << max_iter << " iterations !" << std::endl;
+        } else {
+            std::cout << " solveWellEq gets converged after " << iter << " iterations " << std::endl;
+        }
+    }
 
 
 
@@ -1503,6 +1583,7 @@ namespace Opm {
             return iterationIdx == 0;
         } else if (balance.mode() == Network::Balance::CalcMode::NUPCOL) {
             const int nupcol = schedule()[reportStepIdx].nupcol();
+            // const int nupcol = 4;
             return iterationIdx < nupcol;
         } else {
             // We do not support any other rebalancing modes,
@@ -1757,6 +1838,28 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     prepareTimeStep(DeferredLogger& deferred_logger)
     {
+        bool network_rebalance_necessary = false;
+        std::cout << " I am in function prepareTimeStep() " << std::endl;
+        const int reportStepIdx = ebosSimulator_.episodeIndex();
+        const auto& network = schedule()[reportStepIdx].network();
+        // TODO: without considering more complicated situation, it should only apply to the first time step within the
+        // TODO: report step?
+        if (network.active()) {
+            // TODO: with this approach, we will not be able to detect a well is `closed` or `shut`, because those wells
+            // TODO: are not in the well container anymore
+            // TODO: at the current stage, we only detect the well update or the group related opening or shutting yet.
+            for (const auto& well : well_container_) {
+                auto& events = this->wellState().well(well->indexOfWell()).events;
+                // TODO: it is possible the event should be more selective to the ones we want
+                // if (events.hasEvent(WellState::event_mask) &&
+                if (events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE) &&
+                    network.has_node(well->wellEcl().groupName())) {
+                    std::cout << " well " << well->name() << " made the network_rebalance necessary " << std::endl;
+                    network_rebalance_necessary = true;
+                    break;
+                }
+            }
+        }
         for (const auto& well : well_container_) {
             auto& events = this->wellState().well(well->indexOfWell()).events;
             if (events.hasEvent(WellState::event_mask)) {
@@ -1778,6 +1881,12 @@ namespace Opm {
             }
         }
         updatePrimaryVariables(deferred_logger);
+        // TODO: how to do the network balancing?
+        // TODO: basically, we will update
+        if (network_rebalance_necessary) {
+            // this is to obtain good network solution
+            solveWellEq(deferred_logger);
+        }
     }
 
     template<typename TypeTag>

@@ -1972,6 +1972,15 @@ namespace Opm
             return;
         }
 
+        // const std::set<std::string> well_names = {"S-P3", "S-P4", "S-P6"};
+        // const std::set<std::string> well_names = {"S-P2", "S-P3", "S-P4", "S-P6"};
+        const std::set<std::string> well_names = {"S-P2", "S-P3", "S-P4", "S-P6", "PROD1", "PROD2", "PROD3"};
+        // const std::set<std::string> well_names = {"S-P6"};
+        const bool output_for_well = well_names.count(this->name()) > 0;
+        if (output_for_well) {
+            std::cout << " calculating well potentials for well " << this->name() << std::endl;
+        }
+
         this->operability_status_.has_negative_potentials = false;
         // If the well is pressure controlled the potential equals the rate.
         bool thp_controlled_well = false;
@@ -1988,13 +1997,30 @@ namespace Opm
         } else {
             const Well::ProducerCMode& current = ws.production_cmode;
             if (current == Well::ProducerCMode::THP) {
+                if (output_for_well) {
+                    std::cout << " well " << this->name() << " is under THP control " << std::endl;
+                }
                 thp_controlled_well = true;
             }
             if (current == Well::ProducerCMode::BHP) {
+                if (output_for_well) {
+                    std::cout << " well " << this->name() << " is under BHP control " << std::endl;
+                }
                 bhp_controlled_well = true;
             }
         }
         if (!this->changed_to_open_this_step_ && (thp_controlled_well || bhp_controlled_well)) {
+            if (output_for_well) {
+                std::cout << " well rates are ";
+                for (const auto val: ws.surface_rates) {
+                    std::cout << " " << val * 86400.;
+                }
+                std::cout << " bhp " << ws.bhp / 1.e5 << " thp " << ws.thp / 1.e5;
+                if (this->getDynamicThpLimit()) {
+                    std::cout << " dynamic thp limit " << *(this->getDynamicThpLimit()) / 1.e5;
+                }
+                std::cout << std::endl;
+            }
 
             double total_rate = 0.0;
             const double sign = this->isInjector() ? 1.0:-1.0;
@@ -2030,9 +2056,15 @@ namespace Opm
                 bhp = std::min(ws.bhp, bhp);
 
             assert(std::abs(bhp) != std::numeric_limits<double>::max());
+            if (output_for_well) {
+                std::cout << " calculating well potentials based on BHP for well " << this->name() << std::endl;
+            }
             computeWellRatesWithBhpIterations(ebosSimulator, bhp, well_potentials, deferred_logger);
         } else {
             // the well has a THP related constraint
+            if (output_for_well) {
+                std::cout << " calculating well potentials based on THP for well " << this->name() << std::endl;
+            }
             well_potentials = computeWellPotentialWithTHP(ebosSimulator, deferred_logger, well_state);
         }
 
