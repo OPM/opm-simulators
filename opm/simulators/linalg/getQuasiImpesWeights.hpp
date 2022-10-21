@@ -122,7 +122,11 @@ namespace Amg
             VectorBlockType bweights;
             MatrixBlockType block_transpose = Details::transposeDenseMatrix(block);
             block_transpose.solve(bweights, rhs);
-            bweights /= 1000.0; // given normal densities this scales weights to about 1.
+            double abs_max = *std::max_element(
+                bweights.begin(), bweights.end(), [](double a, double b) { return std::fabs(a) < std::fabs(b); });
+            // probably a scaling which could give approximately total compressibility would be better
+            bweights /=  std::fabs(abs_max); // given normal densities this scales weights to about 1.
+           
             weights[index] = bweights;
             ++index;
         }
