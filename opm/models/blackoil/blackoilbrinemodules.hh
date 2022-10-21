@@ -233,7 +233,7 @@ public:
                     * Toolbox::template decay<LhsEval>(fs.saltConcentration());
 
             if (enableSaltPrecipitation){
-                double saltDensity = intQuants.saltDensity(); // 2170; // Solid salt density kg/m3
+                double saltDensity = intQuants.saltDensity(); // Solid salt density kg/m3
                 const LhsEval solidSalt =
                               Toolbox::template decay<LhsEval>(intQuants.porosity())
                               / (1.0 - Toolbox::template decay<LhsEval>(intQuants.saltSaturation()) + 1.e-8)
