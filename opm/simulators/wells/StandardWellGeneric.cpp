@@ -412,6 +412,7 @@ checkConvergenceControlEq(const WellState& well_state,
 
     const int well_index = baseif_.indexOfWell();
     const auto& ws = well_state.well(well_index);
+    double residual_scaling = 1.;
     if (baseif_.wellIsStopped()) {
         ctrltype = CR::WellFailure::Type::ControlRate;
         control_tolerance = 1.e-6; // use smaller tolerance for zero control?
@@ -423,10 +424,12 @@ checkConvergenceControlEq(const WellState& well_state,
         case Well::InjectorCMode::THP:
             ctrltype = CR::WellFailure::Type::ControlTHP;
             control_tolerance = 1.e4; // 0.1 bar
+            residual_scaling = this->bhp_control_scaling_;
             break;
         case Well::InjectorCMode::BHP:
             ctrltype = CR::WellFailure::Type::ControlBHP;
             control_tolerance = 1.e3; // 0.01 bar
+            residual_scaling = this->bhp_control_scaling_;
             break;
         case Well::InjectorCMode::RATE:
         case Well::InjectorCMode::RESV:
@@ -448,10 +451,12 @@ checkConvergenceControlEq(const WellState& well_state,
         case Well::ProducerCMode::THP:
             ctrltype = CR::WellFailure::Type::ControlTHP;
             control_tolerance = 1.e4; // 0.1 bar
+            residual_scaling = this->bhp_control_scaling_;
             break;
         case Well::ProducerCMode::BHP:
             ctrltype = CR::WellFailure::Type::ControlBHP;
             control_tolerance = 1.e3; // 0.01 bar
+            residual_scaling = this->bhp_control_scaling_;
             break;
         case Well::ProducerCMode::ORAT:
         case Well::ProducerCMode::WRAT:
@@ -471,7 +476,7 @@ checkConvergenceControlEq(const WellState& well_state,
         }
     }
 
-    const double well_control_residual = std::abs(this->resWell_[0][Bhp_])/this->bhp_control_scaling_;
+    const double well_control_residual = std::abs(this->resWell_[0][Bhp_])  / residual_scaling;
     const int dummy_component = -1;
     if (std::isnan(well_control_residual)) {
         report.setWellFailed({ctrltype, CR::Severity::NotANumber, dummy_component, baseif_.name()});
