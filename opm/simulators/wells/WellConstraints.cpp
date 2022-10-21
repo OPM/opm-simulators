@@ -32,6 +32,37 @@
 namespace Opm
 {
 
+bool WellConstraints::
+checkIndividualConstraints(SingleWellState& ws,
+                           const SummaryState& summaryState,
+                           const RateConvFunc& calcReservoirVoidageRates,
+                           bool& thp_limit_violated_but_not_switched,
+                           DeferredLogger& deferred_logger) const
+{
+    if (well_.isProducer()) {
+        auto new_cmode = this->activeProductionConstraint(ws, summaryState,
+                                                          calcReservoirVoidageRates,
+                                                          thp_limit_violated_but_not_switched,
+                                                          deferred_logger);
+        if (new_cmode != ws.production_cmode) {
+            ws.production_cmode = new_cmode;
+            return true;
+        }
+    }
+
+    if (well_.isInjector()) {
+        auto new_cmode = this->activeInjectionConstraint(ws, summaryState,
+                                                        thp_limit_violated_but_not_switched,
+                                                        deferred_logger);
+        if (new_cmode != ws.injection_cmode) {
+            ws.injection_cmode = new_cmode;
+            return true;
+        }
+    }
+
+    return false;
+}
+
 Well::InjectorCMode WellConstraints::
 activeInjectionConstraint(const SingleWellState& ws,
                           const SummaryState& summaryState,

@@ -98,29 +98,10 @@ checkIndividualConstraints(SingleWellState& ws,
                                                         surface_rates, voidage_rates);
     };
 
-    if (this->well_ecl_.isProducer()) {
-        auto new_cmode = WellConstraints(*this).activeProductionConstraint(ws, summaryState,
-                                                                           rRates,
-                                                                           this->operability_status_.thp_limit_violated_but_not_switched,
-                                                                           deferred_logger);
-        if (new_cmode != ws.production_cmode) {
-            ws.production_cmode = new_cmode;
-            return true;
-        }
-    }
-
-    if (this->well_ecl_.isInjector()) {
-        auto new_cmode = WellConstraints(*this).
-                activeInjectionConstraint(ws, summaryState,
-                                          this->operability_status_.thp_limit_violated_but_not_switched,
-                                          deferred_logger);
-        if (new_cmode != ws.injection_cmode) {
-            ws.injection_cmode = new_cmode;
-            return true;
-        }
-    }
-
-    return false;
+    return WellConstraints(*this).
+            checkIndividualConstraints(ws, summaryState, rRates,
+                                       this->operability_status_.thp_limit_violated_but_not_switched,
+                                       deferred_logger);
 }
 
 template <typename FluidSystem>

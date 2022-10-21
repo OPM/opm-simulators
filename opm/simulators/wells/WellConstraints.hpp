@@ -49,6 +49,14 @@ public:
                                             const std::vector<double>&,
                                             std::vector<double>&)>;
 
+    bool
+    checkIndividualConstraints(SingleWellState& ws,
+                               const SummaryState& summaryState,
+                               const RateConvFunc& calcReservoirVoidageRates,
+                               bool& thp_limit_violated_but_not_switched,
+                               DeferredLogger& deferred_logger) const;
+
+private:
     Well::InjectorCMode
     activeInjectionConstraint(const SingleWellState& ws,
                               const SummaryState& summaryState,
@@ -62,7 +70,6 @@ public:
                                bool& thp_limit_violated_but_not_switched,
                                DeferredLogger& deferred_logger) const;
 
-private:
     const WellInterfaceGeneric& well_; //!< Reference to well interface
 };
 
