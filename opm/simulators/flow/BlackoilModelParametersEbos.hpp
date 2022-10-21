@@ -170,18 +170,18 @@ struct MaximumNumberOfWellSwitches {
 template<class TypeTag, class MyTypeTag>
 struct WellBhpScaling {
   using type = double;
-  static constexpr type value = 1.0;
+  static constexpr type value = 1.0e5;
 };
 template<class TypeTag, class MyTypeTag>
 struct WellRateScaling {
   using type = double;
-  static constexpr type value = 1.0;
+  static constexpr type value = 1.0-3;
 };
 
 template<class TypeTag, class MyTypeTag>
 struct BhpControlScaling {
   using type = double;
-  static constexpr type value = 1.0;
+  static constexpr type value = 1.e-7;
 };    
   
 template<class TypeTag>
