@@ -49,6 +49,12 @@ public:
                                             const std::vector<double>&,
                                             std::vector<double>&)>;
 
+    Well::InjectorCMode
+    activeInjectionConstraint(const SingleWellState& ws,
+                              const SummaryState& summaryState,
+                              bool& thp_limit_violated_but_not_switched,
+                              DeferredLogger& deferred_logger) const;
+
     Well::ProducerCMode
     activeProductionConstraint(const SingleWellState& ws,
                                const SummaryState& summaryState,

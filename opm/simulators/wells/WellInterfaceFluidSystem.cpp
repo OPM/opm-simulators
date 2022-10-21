@@ -83,100 +83,6 @@ calculateReservoirRates(SingleWellState& ws) const
 }
 
 template <typename FluidSystem>
-Well::InjectorCMode
-WellInterfaceFluidSystem<FluidSystem>::
-activeInjectionConstraint(const SingleWellState& ws,
-                          const SummaryState& summaryState,
-                          DeferredLogger& deferred_logger) const
-{
-    const PhaseUsage& pu = this->phaseUsage();
-
-    const auto controls = this->well_ecl_.injectionControls(summaryState);
-    const auto currentControl = ws.injection_cmode;
-
-    if (controls.hasControl(Well::InjectorCMode::BHP) && currentControl != Well::InjectorCMode::BHP)
-    {
-        const auto& bhp = controls.bhp_limit;
-        double current_bhp = ws.bhp;
-        if (bhp < current_bhp)
-            return Well::InjectorCMode::BHP;
-    }
-
-    if (controls.hasControl(Well::InjectorCMode::RATE) && currentControl != Well::InjectorCMode::RATE)
-    {
-        InjectorType injectorType = controls.injector_type;
-        double current_rate = 0.0;
-
-        switch (injectorType) {
-        case InjectorType::WATER:
-        {
-            current_rate = ws.surface_rates[ pu.phase_pos[BlackoilPhases::Aqua] ];
-            break;
-        }
-        case InjectorType::OIL:
-        {
-            current_rate = ws.surface_rates[ pu.phase_pos[BlackoilPhases::Liquid] ];
-            break;
-        }
-        case InjectorType::GAS:
-        {
-            current_rate = ws.surface_rates[  pu.phase_pos[BlackoilPhases::Vapour] ];
-            break;
-        }
-        default:
-            throw("Expected WATER, OIL or GAS as type for injectors " + this->well_ecl_.name());
-        }
-
-        if (controls.surface_rate < current_rate)
-            return Well::InjectorCMode::RATE;
-    }
-
-    if (controls.hasControl(Well::InjectorCMode::RESV) && currentControl != Well::InjectorCMode::RESV)
-    {
-        double current_rate = 0.0;
-        if( pu.phase_used[BlackoilPhases::Aqua] )
-            current_rate += ws.reservoir_rates[ pu.phase_pos[BlackoilPhases::Aqua] ];
-
-        if( pu.phase_used[BlackoilPhases::Liquid] )
-            current_rate += ws.reservoir_rates[ pu.phase_pos[BlackoilPhases::Liquid] ];
-
-        if( pu.phase_used[BlackoilPhases::Vapour] )
-            current_rate += ws.reservoir_rates[ pu.phase_pos[BlackoilPhases::Vapour] ];
-
-        if (controls.reservoir_rate < current_rate)
-            return Well::InjectorCMode::RESV;
-    }
-
-    if (controls.hasControl(Well::InjectorCMode::THP) && currentControl != Well::InjectorCMode::THP)
-    {
-        const auto& thp = getTHPConstraint(summaryState);
-        double current_thp = ws.thp;
-        if (thp < current_thp) {
-            bool rate_less_than_potential = true;
-            for (int p = 0; p < number_of_phases_; ++p) {
-                // Currently we use the well potentials here computed before the iterations.
-                // We may need to recompute the well potentials to get a more
-                // accurate check here.
-                rate_less_than_potential = rate_less_than_potential && (ws.surface_rates[p]) <= ws.well_potentials[p];
-            }
-            if(!rate_less_than_potential) {
-                this->operability_status_.thp_limit_violated_but_not_switched = false;
-                return Well::InjectorCMode::THP;
-            } else {
-                this->operability_status_.thp_limit_violated_but_not_switched = true;
-                deferred_logger.debug("NOT_SWITCHING_TO_THP",
-                "The THP limit is violated for injector " +
-                this->name() +
-                ". But the rate will increase if switched to THP. " +
-                "The well is therefore kept at " + Well::InjectorCMode2String(currentControl));
-            }
-        }
-    }
-
-    return currentControl;
-}
-
-template <typename FluidSystem>
 bool
 WellInterfaceFluidSystem<FluidSystem>::
 checkIndividualConstraints(SingleWellState& ws,
@@ -204,7 +110,10 @@ checkIndividualConstraints(SingleWellState& ws,
     }
 
     if (this->well_ecl_.isInjector()) {
-        auto new_cmode = this->activeInjectionConstraint(ws, summaryState, deferred_logger);
+        auto new_cmode = WellConstraints(*this).
+                activeInjectionConstraint(ws, summaryState,
+                                          this->operability_status_.thp_limit_violated_but_not_switched,
+                                          deferred_logger);
         if (new_cmode != ws.injection_cmode) {
             ws.injection_cmode = new_cmode;
             return true;
