@@ -281,7 +281,7 @@ namespace Opm {
             void prepareTimeStep(DeferredLogger& deferred_logger);
             void initPrimaryVariablesEvaluation() const;
             bool shouldBalanceNetwork(const int reportStepIndex, const int iterationIdx) const;
-            std::pair<bool, bool> updateWellControls(DeferredLogger& deferred_logger, const int network_update_it = 0);
+            std::pair<bool, bool> updateWellControls(DeferredLogger& deferred_logger, const size_t network_update_it = 0);
 
             void updateAndCommunicate(const int reportStepIdx,
                                       const int iterationIdx,
@@ -373,17 +373,16 @@ namespace Opm {
             // and in the well equations.
             void assemble(const int iterationIdx,
                           const double dt);
-            bool assembleImpl(const int iterationIdx,
-                              const double dt,
-                              const std::size_t recursion_level,
-                              DeferredLogger& local_deferredLogger);
+            void assembleImpl(const double dt, DeferredLogger& local_deferredLogger);
 
             // making the function that handle the update well controls and also network related
             // to avoid calling the assembleImpl in recursive manner
             // the name is temporary, and will rename when the refactoring is finished.
             // the returned two booleans are {continue_due_to_network, well_group_control_changed}
-            std::pair<bool, bool> solveWellControlsAndNetwork(const int network_update_iteration, const double dt,
-                                                              DeferredLogger& local_deferredLogger);
+            std::pair<bool, bool> updateWellControlsAndNetworkIteration(const size_t network_update_iteration,
+                                                                        DeferredLogger& local_deferredLogger);
+
+            bool updateWellControlsAndNetwork(DeferredLogger& local_deferredLogger);
 
             // called at the end of a time step
             void timeStepSucceeded(const double& simulationTime, const double dt);

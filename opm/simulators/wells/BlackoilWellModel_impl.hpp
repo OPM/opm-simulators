@@ -880,7 +880,10 @@ namespace Opm {
                                                terminal_output_, grid().comm());
         }
 
-        const bool well_group_control_changed = assembleImpl(iterationIdx, dt, 0, local_deferredLogger);
+        const bool well_group_control_changed = updateWellControlsAndNetwork(local_deferredLogger);
+
+        // TODO: assembleImpl function can be removed, it does not do much than assembleWellEq
+        assembleImpl(dt, local_deferredLogger);
 
         // if group or well control changes we don't consider the
         // case converged
@@ -892,11 +895,30 @@ namespace Opm {
 
 
     template<typename TypeTag>
+    bool
+    BlackoilWellModel<TypeTag>::
+    updateWellControlsAndNetwork(DeferredLogger& local_deferredLogger)
+    {
+        // not necessarily that we always need to update once of the network solutions
+        bool do_network_update = true;
+        bool well_group_control_changed = false;
+        size_t network_update_iteration = 0;
+        while (do_network_update) {
+            std::tie(do_network_update, well_group_control_changed) =
+                    updateWellControlsAndNetworkIteration(network_update_iteration, local_deferredLogger);
+            ++network_update_iteration;
+        }
+        return well_group_control_changed;
+    }
+
+
+
+
+    template<typename TypeTag>
     std::pair<bool, bool>
     BlackoilWellModel<TypeTag>::
-    solveWellControlsAndNetwork(const int network_update_iteration,
-                                const double dt,
-                                DeferredLogger& local_deferredLogger)
+    updateWellControlsAndNetworkIteration(const size_t network_update_iteration,
+                                          DeferredLogger& local_deferredLogger)
     {
         auto [well_group_control_changed, more_network_update] = updateWellControls(local_deferredLogger, network_update_iteration);
 
@@ -911,12 +933,12 @@ namespace Opm {
             // easier to compare with the original code.
             // And also, there is a lot of things done in the function assembleWellEq, some work needs to be done to
             // split it. For the moment, not touching that direction.
-            assembleWellEq(dt, local_deferredLogger);
-            /* for (auto& well : well_container_) {
+            // assembleWellEq(dt, local_deferredLogger);
+            for (auto& well : well_container_) {
                 well->solveWellEquation(ebosSimulator_, this->wellState(), this->groupState(), local_deferredLogger);
-            } */
+            }
         }
-        OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger, "solveWellControlsAndNetwork() failed: ",
+        OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger, "updateWellControlsAndNetworkIteration() failed: ",
                                        terminal_output_, grid().comm());
 
         //update guide rates
@@ -939,33 +961,18 @@ namespace Opm {
 
 
     template<typename TypeTag>
-    bool
+    void
     BlackoilWellModel<TypeTag>::
-    assembleImpl(const int iterationIdx,
-                 const double dt,
-                 const std::size_t recursion_level,
-                 DeferredLogger& local_deferredLogger)
+    assembleImpl(const double dt, DeferredLogger& local_deferredLogger)
     {
-        // not necessarily that we always need to update once of the network solutions
-        bool do_network_update = true;
-        bool well_group_control_changed = false;
-        int network_update_iteration = 0;
-        while (do_network_update) {
-            std::tie(do_network_update, well_group_control_changed) =
-                    solveWellControlsAndNetwork(network_update_iteration, dt, local_deferredLogger);
-            ++network_update_iteration;
-        }
-
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         {
             // Set the well primary variables based on the value of well solutions
             initPrimaryVariablesEvaluation();
             assembleWellEq(dt, local_deferredLogger);
         }
-        OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger, "assemble() failed: ",
+        OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger, "assembleImpl() failed: ",
                                        terminal_output_, grid().comm());
-
-        return well_group_control_changed;
     }
 
 
@@ -1486,6 +1493,11 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     shouldBalanceNetwork(const int reportStepIdx, const int iterationIdx) const
     {
+        const auto& network = schedule()[reportStepIdx].network();
+        if (!network.active()) {
+            return false;
+        }
+
         const auto& balance = schedule()[reportStepIdx].network_balance();
         if (balance.mode() == Network::Balance::CalcMode::TimeStepStart) {
             return iterationIdx == 0;
@@ -1509,7 +1521,7 @@ namespace Opm {
     std::pair<bool, bool>
     BlackoilWellModel<TypeTag>::
     updateWellControls(DeferredLogger& deferred_logger,
-                       const int network_update_it)
+                       const size_t network_update_it)
     {
         // Even if there are no wells active locally, we cannot
         // return as the DeferredLogger uses global communication.
