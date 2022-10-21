@@ -374,6 +374,23 @@ SolverStatus amgclSolverBackend<block_size>::solve_system(std::shared_ptr<Blocke
     return SolverStatus::BDA_SOLVER_SUCCESS;
 }
 
+template <>
+SolverStatus amgclSolverBackend<1>::solve_system(std::shared_ptr<BlockedMatrix> matrix,
+                                                           double *b,
+                                                           [[maybe_unused]] std::shared_ptr<BlockedMatrix> jacMatrix,
+                                                           [[maybe_unused]] WellContributions& wellContribs,
+                                                           BdaResult &res)
+{
+    OPM_THROW(std::logic_error, "amgclSolverBackend not implemented for sz 1");
+ //    if (initialized == false) {
+//         initialize(matrix->Nb, matrix->nnzbs);
+//         convert_sparsity_pattern(matrix->rowPointers, matrix->colIndices);
+//     }
+//     convert_data(matrix->nnzValues, matrix->rowPointers);
+//     solve_system(b, res);
+//     return SolverStatus::BDA_SOLVER_SUCCESS;
+}
+
 
 #define INSTANTIATE_BDA_FUNCTIONS(n)                                                                \
 template amgclSolverBackend<n>::amgclSolverBackend(int, int, double, unsigned int, unsigned int);   \
