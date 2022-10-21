@@ -214,9 +214,9 @@ getQs(const int comp_idx) const
             //                         "Multi phase injectors are not supported, requested for well " + name());
             break;
         }
-        return inj_frac * primary_variables_evaluation_[WQTotal];
+        return inj_frac * this->getWQTotal();//primary_variables_evaluation_[WQTotal]*this->rate_scaling_;
     } else { // producers
-        return primary_variables_evaluation_[WQTotal] * wellVolumeFractionScaled(comp_idx);
+        return this->getWQTotal() * wellVolumeFractionScaled(comp_idx);
     }
 }
 
@@ -275,13 +275,13 @@ updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_log
     if (baseif_.isInjector()) {
         switch (baseif_.wellEcl().injectorType()) {
         case InjectorType::WATER:
-            primary_variables_[WQTotal] = ws.surface_rates[pu.phase_pos[Water]];
+            primary_variables_[WQTotal] = ws.surface_rates[pu.phase_pos[Water]]/this->rate_scaling_;
             break;
         case InjectorType::GAS:
-            primary_variables_[WQTotal] = ws.surface_rates[pu.phase_pos[Gas]];
+            primary_variables_[WQTotal] = ws.surface_rates[pu.phase_pos[Gas]]/this->rate_scaling_;
             break;
         case InjectorType::OIL:
-            primary_variables_[WQTotal] = ws.surface_rates[pu.phase_pos[Oil]];
+            primary_variables_[WQTotal] = ws.surface_rates[pu.phase_pos[Oil]]/this->rate_scaling_;
             break;
         case InjectorType::MULTI:
             // Not supported.
@@ -290,7 +290,7 @@ updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_log
             break;
         }
     } else {
-            primary_variables_[WQTotal] = total_well_rate;
+            primary_variables_[WQTotal] = total_well_rate/this->rate_scaling_;
     }
 
     if (std::abs(total_well_rate) > 0.) {
@@ -351,7 +351,7 @@ updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_log
 
 
     // BHP
-    primary_variables_[Bhp] = ws.bhp;
+    primary_variables_[Bhp] = ws.bhp/this->bhp_scaling_;
 }
 
 template<class FluidSystem, class Indices, class Scalar>
@@ -670,12 +670,12 @@ updateWellStateFromPrimaryVariables(WellState& well_state,
     }
 
     auto& ws = well_state.well(baseif_.indexOfWell());
-    ws.bhp = primary_variables_[Bhp];
+    ws.bhp = primary_variables_[Bhp]*this->bhp_scaling_;
 
     // calculate the phase rates based on the primary variables
     // for producers, this is not a problem, while not sure for injectors here
     if (baseif_.isProducer()) {
-        const double g_total = primary_variables_[WQTotal];
+        const double g_total = primary_variables_[WQTotal]*this->rate_scaling_;
         for (int p = 0; p < baseif_.numPhases(); ++p) {
             ws.surface_rates[p] = g_total * F[p];
         }
@@ -685,13 +685,13 @@ updateWellStateFromPrimaryVariables(WellState& well_state,
         }
         switch (baseif_.wellEcl().injectorType()) {
         case InjectorType::WATER:
-            ws.surface_rates[pu.phase_pos[Water]] = primary_variables_[WQTotal];
+            ws.surface_rates[pu.phase_pos[Water]] = primary_variables_[WQTotal]*this->rate_scaling_;
             break;
         case InjectorType::GAS:
-            ws.surface_rates[pu.phase_pos[Gas]] = primary_variables_[WQTotal];
+            ws.surface_rates[pu.phase_pos[Gas]] = primary_variables_[WQTotal]*this->rate_scaling_;
             break;
         case InjectorType::OIL:
-            ws.surface_rates[pu.phase_pos[Oil]] = primary_variables_[WQTotal];
+            ws.surface_rates[pu.phase_pos[Oil]] = primary_variables_[WQTotal]*this->rate_scaling_;
             break;
         case InjectorType::MULTI:
             // Not supported.
@@ -776,9 +776,9 @@ updatePrimaryVariablesNewton(const BVectorWell& dwells,
     // updating the bottom hole pressure
     {
         const int sign1 = dwells[0][Bhp] > 0 ? 1: -1;
-        const double dx1_limited = sign1 * std::min(std::abs(dwells[0][Bhp]), std::abs(old_primary_variables[Bhp]) * dBHPLimit);
+        const double dx1_limited = sign1 * std::min(std::abs(dwells[0][Bhp]), std::abs(old_primary_variables[Bhp]) * dBHPLimit);//NB dBHPLims ser param_.dbhp_max_rel_
         // 1e5 to make sure bhp will not be below 1bar
-        primary_variables_[Bhp] = std::max(old_primary_variables[Bhp] - dx1_limited, 1e5);
+        primary_variables_[Bhp] = std::max(old_primary_variables[Bhp] - dx1_limited, 1e5/this->bhp_scaling_);
     }
 }
 

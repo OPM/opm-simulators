@@ -32,7 +32,6 @@
 
 #include <optional>
 #include <vector>
-
 namespace Opm
 {
 
@@ -135,6 +134,11 @@ protected:
 
 private:
     int Bhp_; // index of Bhp
+protected:
+     double bhp_scaling_;
+     double rate_scaling_;
+     double bhp_control_scaling_;
+
 };
 
 }
