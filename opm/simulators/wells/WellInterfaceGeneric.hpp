@@ -197,7 +197,11 @@ public:
                                                          DeferredLogger& deferred_logger
                                                          ) const;
 
-
+    void updateWellTestState(const SingleWellState& ws,
+                             const double& simulationTime,
+                             const bool& writeMessageToOPMLog,
+                             WellTestState& wellTestState,
+                             DeferredLogger& deferred_logger) const;
 
 protected:
     bool getAllowCrossFlow() const;

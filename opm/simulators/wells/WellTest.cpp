@@ -455,5 +455,4 @@ void WellTest::updateWellTestStatePhysical(const double simulation_time,
     }
 }
 
-
 } // namespace Opm

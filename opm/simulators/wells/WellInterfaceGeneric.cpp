@@ -27,10 +27,11 @@
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/PerforationData.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
-#include <opm/simulators/wells/VFPProperties.hpp>
-#include <opm/simulators/wells/WellState.hpp>
-#include <opm/simulators/wells/WellHelpers.hpp>
 #include <opm/simulators/wells/VFPHelpers.hpp>
+#include <opm/simulators/wells/VFPProperties.hpp>
+#include <opm/simulators/wells/WellHelpers.hpp>
+#include <opm/simulators/wells/WellState.hpp>
+#include <opm/simulators/wells/WellTest.hpp>
 #include <cassert>
 #include <cmath>
 #include <cstddef>
@@ -214,6 +215,24 @@ double WellInterfaceGeneric::mostStrictBhpFromBhpLimits(const SummaryState& summ
 
     return 0.0;
 }
+
+void WellInterfaceGeneric::updateWellTestState(const SingleWellState& ws,
+                                               const double& simulationTime,
+                                               const bool& writeMessageToOPMLog,
+                                               WellTestState& wellTestState,
+                                               DeferredLogger& deferred_logger) const
+{
+    // updating well test state based on Economic limits for operable wells
+    if (this->isOperableAndSolvable()) {
+        WellTest(*this).updateWellTestStateEconomic(ws, simulationTime, writeMessageToOPMLog, wellTestState, deferred_logger);
+    } else {
+        // updating well test state based on physical (THP/BHP) limits.
+        WellTest(*this).updateWellTestStatePhysical(simulationTime, writeMessageToOPMLog, wellTestState, deferred_logger);
+    }
+
+    // TODO: well can be shut/closed due to other reasons
+}
+
 
 double WellInterfaceGeneric::getTHPConstraint(const SummaryState& summaryState) const
 {

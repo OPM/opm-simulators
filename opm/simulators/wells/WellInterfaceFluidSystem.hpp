@@ -52,12 +52,6 @@ protected:
     static constexpr int INVALIDCOMPLETION = std::numeric_limits<int>::max();
 
 public:
-    void updateWellTestState(const SingleWellState& ws,
-                             const double& simulationTime,
-                             const bool& writeMessageToOPMLog,
-                             WellTestState& wellTestState,
-                             DeferredLogger& deferred_logger) const;
-
     int flowPhaseToEbosPhaseIdx(const int phaseIdx) const;
 
     static constexpr int Water = BlackoilPhases::Aqua;
