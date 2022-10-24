@@ -336,86 +336,14 @@ checkGroupConstraints(WellState& well_state,
                       const SummaryState& summaryState,
                       DeferredLogger& deferred_logger) const
 {
-    const auto& well = well_ecl_;
-    const int well_index = index_of_well_;
-    auto& ws = well_state.well(well_index);
-
     auto rCoeff = [this](const int id, const int region, std::vector<double>& coeff)
     {
         this->rateConverter().calcCoeff(id, region, coeff);
     };
 
-    if (well.isInjector()) {
-        const auto currentControl = ws.injection_cmode;
-
-        if (currentControl != Well::InjectorCMode::GRUP) {
-            // This checks only the first encountered group limit,
-            // in theory there could be several, and then we should
-            // test all but the one currently applied. At that point,
-            // this if-statement should be removed and we should always
-            // check, skipping over only the single group parent whose
-            // control is the active one for the well (if any).
-            const auto& group = schedule.getGroup( well.groupName(), current_step_ );
-            const double efficiencyFactor = well.getEfficiencyFactor();
-            const std::pair<bool, double> group_constraint =
-                WellGroupConstraints(*this).
-                    checkGroupConstraintsInj(group,
-                                             well_state,
-                                             group_state,
-                                             efficiencyFactor,
-                                             schedule,
-                                             summaryState,
-                                             rCoeff,
-                                             deferred_logger);
-            // If a group constraint was broken, we set the current well control to
-            // be GRUP.
-            if (group_constraint.first) {
-                ws.injection_cmode = Well::InjectorCMode::GRUP;
-                const int np = well_state.numPhases();
-                for (int p = 0; p<np; ++p) {
-                    ws.surface_rates[p] *= group_constraint.second;
-                }
-            }
-            return group_constraint.first;
-        }
-    }
-
-    if (well.isProducer( )) {
-        const auto currentControl = ws.production_cmode;
-
-        if (currentControl != Well::ProducerCMode::GRUP) {
-            // This checks only the first encountered group limit,
-            // in theory there could be several, and then we should
-            // test all but the one currently applied. At that point,
-            // this if-statement should be removed and we should always
-            // check, skipping over only the single group parent whose
-            // control is the active one for the well (if any).
-            const auto& group = schedule.getGroup( well.groupName(), current_step_ );
-            const double efficiencyFactor = well.getEfficiencyFactor();
-            const std::pair<bool, double> group_constraint =
-                WellGroupConstraints(*this).
-                    checkGroupConstraintsProd(group,
-                                              well_state,
-                                              group_state,
-                                              efficiencyFactor,
-                                              schedule,
-                                              summaryState,
-                                              rCoeff,
-                                              deferred_logger);
-            // If a group constraint was broken, we set the current well control to
-            // be GRUP.
-            if (group_constraint.first) {
-                ws.production_cmode = Well::ProducerCMode::GRUP;
-                const int np = well_state.numPhases();
-                for (int p = 0; p<np; ++p) {
-                    ws.surface_rates[p] *= group_constraint.second;
-                }
-            }
-            return group_constraint.first;
-        }
-    }
-
-    return false;
+    return WellGroupConstraints(*this).checkGroupConstraints(well_state, group_state,
+                                                             schedule, summaryState,
+                                                             rCoeff, deferred_logger);
 }
 
 template <typename FluidSystem>

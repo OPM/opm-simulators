@@ -49,6 +49,14 @@ public:
 
     using RateConvFunc = std::function<void(const RegionId, const int, std::vector<double>&)>;
 
+    bool checkGroupConstraints(WellState& well_state,
+                               const GroupState& group_state,
+                               const Schedule& schedule,
+                               const SummaryState& summaryState,
+                               const RateConvFunc& rateConverter,
+                               DeferredLogger& deferred_logger) const;
+
+private:
     std::pair<bool, double>
     checkGroupConstraintsInj(const Group& group,
                              const WellState& well_state,
@@ -69,7 +77,6 @@ public:
                               const RateConvFunc& rateConverter,
                               DeferredLogger& deferred_logger) const;
 
-private:
     const WellInterfaceGeneric& well_; //!< Reference to well interface
 };
 
