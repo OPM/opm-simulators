@@ -540,44 +540,6 @@ initializeWellPerfData()
     }
 }
 
-bool
-BlackoilWellModelGeneric::
-checkGroupConstraints(const Group& group,
-                      const int reportStepIdx,
-                      DeferredLogger& deferred_logger) const
-{
-    if (group.isInjectionGroup()) {
-        const Phase all[] = {Phase::WATER, Phase::OIL, Phase::GAS};
-        for (Phase phase : all) {
-            if (!group.hasInjectionControl(phase)) {
-                continue;
-            }
-            const auto& check =
-                BlackoilWellModelConstraints(*this).
-                    checkGroupInjectionConstraints(group, reportStepIdx,  phase);
-            if (check.first != Group::InjectionCMode::NONE) {
-                return true;
-            }
-        }
-    }
-    if (group.isProductionGroup()) {
-        const auto& check =
-            BlackoilWellModelConstraints(*this).
-                checkGroupProductionConstraints(group, reportStepIdx, deferred_logger);
-        if (check.first != Group::ProductionCMode::NONE)
-        {
-            return true;
-        }
-    }
-
-    // call recursively down the group hiearchy
-    bool violated = false;
-    for (const std::string& groupName : group.groups()) {
-        violated = violated || checkGroupConstraints( schedule().getGroup(groupName, reportStepIdx), reportStepIdx, deferred_logger);
-    }
-    return violated;
-}
-
 void
 BlackoilWellModelGeneric::
 checkGconsaleLimits(const Group& group,

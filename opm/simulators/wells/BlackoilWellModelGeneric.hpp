@@ -293,10 +293,6 @@ protected:
 
     void calculateEfficiencyFactors(const int reportStepIdx);
 
-    bool checkGroupConstraints(const Group& group,
-                               const int reportStepIdx,
-                               DeferredLogger& deferred_logger) const;
-
     void checkGconsaleLimits(const Group& group,
                              WellState& well_state,
                              const int reportStepIdx,

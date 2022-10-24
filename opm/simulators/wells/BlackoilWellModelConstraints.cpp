@@ -337,4 +337,41 @@ checkGroupProductionConstraints(const Group& group,
     return std::make_pair(Group::ProductionCMode::NONE, 1.0);
 }
 
+bool BlackoilWellModelConstraints::
+checkGroupConstraints(const Group& group,
+                      const int reportStepIdx,
+                      DeferredLogger& deferred_logger) const
+{
+    if (group.isInjectionGroup()) {
+        const Phase all[] = {Phase::WATER, Phase::OIL, Phase::GAS};
+        for (Phase phase : all) {
+            if (!group.hasInjectionControl(phase)) {
+                continue;
+            }
+            const auto& check = this->checkGroupInjectionConstraints(group,
+                                                                     reportStepIdx,  phase);
+            if (check.first != Group::InjectionCMode::NONE) {
+                return true;
+            }
+        }
+    }
+    if (group.isProductionGroup()) {
+        const auto& check = this->checkGroupProductionConstraints(group,
+                                                                  reportStepIdx,
+                                                                  deferred_logger);
+        if (check.first != Group::ProductionCMode::NONE)
+        {
+            return true;
+        }
+    }
+
+    // call recursively down the group hierarchy
+    bool violated = false;
+    for (const std::string& groupName : group.groups()) {
+        const auto& grp = wellModel_.schedule().getGroup(groupName, reportStepIdx);
+        violated = violated || this->checkGroupConstraints(grp, reportStepIdx, deferred_logger);
+    }
+    return violated;
+}
+
 }

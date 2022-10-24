@@ -57,6 +57,11 @@ public:
                                     const int reportStepIdx,
                                     DeferredLogger& deferred_logger) const;
 
+    //! \brief Check the constraints of a well group.
+    bool checkGroupConstraints(const Group& group,
+                               const int reportStepIdx,
+                               DeferredLogger& deferred_logger) const;
+
 private:
     const BlackoilWellModelGeneric& wellModel_; //!< Reference to well model
 };
