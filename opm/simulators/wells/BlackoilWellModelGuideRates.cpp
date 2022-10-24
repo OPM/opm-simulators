@@ -58,4 +58,32 @@ getGuideRateValues(const GuideRate::RateVector& qs,
     }
 }
 
+data::GuideRateValue
+BlackoilWellModelGuideRates::
+getGuideRateValues(const Well& well) const
+{
+    auto grval = data::GuideRateValue{};
+
+    const auto& wname = well.name();
+    if (!wellModel_.wellState().has(wname)) {
+        // No flow rates for 'wname' -- might be before well comes
+        // online (e.g., for the initial condition before simulation
+        // starts).
+        return grval;
+    }
+
+    if (!wellModel_.guideRate().has(wname)) {
+        // No guiderates exist for 'wname'.
+        return grval;
+    }
+
+    const auto qs = WellGroupHelpers::
+        getWellRateVector(wellModel_.wellState(), wellModel_.phaseUsage(), wname);
+
+    this->getGuideRateValues(qs, well.isInjector(), wname, grval);
+
+    return grval;
+}
+
+
 }

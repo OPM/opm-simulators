@@ -32,6 +32,7 @@ namespace Opm {
 class BlackoilWellModelGeneric;
 namespace data { class GuideRateValue; }
 class Group;
+class Well;
 
 /// Class for handling the guide rates in the blackoil well model.
 class BlackoilWellModelGuideRates
@@ -47,6 +48,9 @@ public:
                             const bool                   is_inj,
                             const std::string&           wgname,
                             data::GuideRateValue&        grval) const;
+
+    //! \brief Obtain guide rate values for well.
+    data::GuideRateValue getGuideRateValues(const Well& well) const;
 
 private:
     const BlackoilWellModelGeneric& wellModel_; //!< Reference to well model

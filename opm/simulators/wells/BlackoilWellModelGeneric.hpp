@@ -272,7 +272,6 @@ protected:
                            std::vector<double>& resv_coeff) = 0;
 
     data::GuideRateValue getGuideRateValues(const Group& group) const;
-    data::GuideRateValue getGuideRateValues(const Well& well) const;
     data::GuideRateValue getGuideRateInjectionGroupValues(const Group& group) const;
 
     void assignWellGuideRates(data::Wells& wsrpt,
