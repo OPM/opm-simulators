@@ -585,7 +585,8 @@ checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
 
     if (watercut_limit_violated) {
         report.ratio_limit_violated = true;
-        checkMaxRatioLimitCompletions(ws, max_water_cut_limit, waterCut, report);
+        WellTest(*this).checkMaxRatioLimitCompletions(ws, max_water_cut_limit,
+                                                      waterCut, report);
     }
 }
 
@@ -619,7 +620,7 @@ checkMaxGORLimit(const WellEconProductionLimits& econ_production_limits,
 
     if (gor_limit_violated) {
         report.ratio_limit_violated = true;
-        checkMaxRatioLimitCompletions(ws, max_gor_limit, gor, report);
+        WellTest(*this).checkMaxRatioLimitCompletions(ws, max_gor_limit, gor, report);
     }
 }
 
@@ -654,7 +655,7 @@ checkMaxWGRLimit(const WellEconProductionLimits& econ_production_limits,
 
     if (wgr_limit_violated) {
         report.ratio_limit_violated = true;
-        checkMaxRatioLimitCompletions(ws, max_wgr_limit, wgr, report);
+        WellTest(*this).checkMaxRatioLimitCompletions(ws, max_wgr_limit, wgr, report);
     }
 }
 
@@ -875,53 +876,6 @@ updateWellTestState(const SingleWellState& ws,
         updateWellTestStateEconomic(ws, simulationTime, writeMessageToOPMLog, wellTestState, deferred_logger);
 
     // TODO: well can be shut/closed due to other reasons
-}
-
-template<typename FluidSystem>
-template <typename RatioFunc>
-void WellInterfaceFluidSystem<FluidSystem>::
-checkMaxRatioLimitCompletions(const SingleWellState& ws,
-                              const double max_ratio_limit,
-                              const RatioFunc& ratioFunc,
-                              RatioLimitCheckReport& report) const
-{
-    int worst_offending_completion = INVALIDCOMPLETION;
-
-    // the maximum water cut value of the completions
-    // it is used to identify the most offending completion
-    double max_ratio_completion = 0;
-    const int np = number_of_phases_;
-
-    const auto& perf_data = ws.perf_data;
-    const auto& perf_phase_rates = perf_data.phase_rates;
-    // look for the worst_offending_completion
-    for (const auto& completion : completions_) {
-        std::vector<double> completion_rates(np, 0.0);
-
-        // looping through the connections associated with the completion
-        const std::vector<int>& conns = completion.second;
-        for (const int c : conns) {
-            for (int p = 0; p < np; ++p) {
-                const double connection_rate = perf_phase_rates[c * np + p];
-                completion_rates[p] += connection_rate;
-            }
-        } // end of for (const int c : conns)
-
-        parallel_well_info_.communication().sum(completion_rates.data(), completion_rates.size());
-        const double ratio_completion = ratioFunc(completion_rates, phaseUsage());
-
-        if (ratio_completion > max_ratio_completion) {
-            worst_offending_completion = completion.first;
-            max_ratio_completion = ratio_completion;
-        }
-    } // end of for (const auto& completion : completions_)
-
-    const double violation_extent = max_ratio_completion / max_ratio_limit;
-
-    if (violation_extent > report.violation_extent) {
-        report.worst_offending_completion = worst_offending_completion;
-        report.violation_extent = violation_extent;
-    }
 }
 
 template<typename FluidSystem>

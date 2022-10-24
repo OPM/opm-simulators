@@ -43,4 +43,48 @@ bool WellTest::checkMaxRatioLimitWell(const SingleWellState& ws,
     return (well_ratio > max_ratio_limit);
 }
 
+void WellTest::checkMaxRatioLimitCompletions(const SingleWellState& ws,
+                                             const double max_ratio_limit,
+                                             const RatioFunc& ratioFunc,
+                                             RatioLimitCheckReport& report) const
+{
+    int worst_offending_completion = RatioLimitCheckReport::INVALIDCOMPLETION;
+
+    // the maximum water cut value of the completions
+    // it is used to identify the most offending completion
+    double max_ratio_completion = 0;
+    const int np = well_.numPhases();
+
+    const auto& perf_data = ws.perf_data;
+    const auto& perf_phase_rates = perf_data.phase_rates;
+    // look for the worst_offending_completion
+    for (const auto& completion : well_.getCompletions()) {
+        std::vector<double> completion_rates(np, 0.0);
+
+        // looping through the connections associated with the completion
+        const std::vector<int>& conns = completion.second;
+        for (const int c : conns) {
+            for (int p = 0; p < np; ++p) {
+                const double connection_rate = perf_phase_rates[c * np + p];
+                completion_rates[p] += connection_rate;
+            }
+        } // end of for (const int c : conns)
+
+        well_.parallelWellInfo().communication().sum(completion_rates.data(), completion_rates.size());
+        const double ratio_completion = ratioFunc(completion_rates, well_.phaseUsage());
+
+        if (ratio_completion > max_ratio_completion) {
+            worst_offending_completion = completion.first;
+            max_ratio_completion = ratio_completion;
+        }
+    } // end of for (const auto& completion : completions_)
+
+    const double violation_extent = max_ratio_completion / max_ratio_limit;
+
+    if (violation_extent > report.violation_extent) {
+        report.worst_offending_completion = worst_offending_completion;
+        report.violation_extent = violation_extent;
+    }
+}
+
 } // namespace Opm

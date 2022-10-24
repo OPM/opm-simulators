@@ -25,6 +25,7 @@
 #define OPM_WELL_TEST_HEADER_INCLUDED
 
 #include <functional>
+#include <limits>
 #include <vector>
 
 namespace Opm
@@ -33,6 +34,13 @@ namespace Opm
 class PhaseUsage;
 class SingleWellState;
 class WellInterfaceGeneric;
+
+struct RatioLimitCheckReport {
+    static constexpr int INVALIDCOMPLETION = std::numeric_limits<int>::max();
+    bool ratio_limit_violated = false;
+    int worst_offending_completion = INVALIDCOMPLETION;
+    double violation_extent = 0.0;
+};
 
 //! \brief Class for performing well tests.
 class WellTest {
@@ -47,6 +55,10 @@ public:
                                 const double max_ratio_limit,
                                 const RatioFunc& ratioFunc) const;
 
+    void checkMaxRatioLimitCompletions(const SingleWellState& ws,
+                                       const double max_ratio_limit,
+                                       const RatioFunc& ratioFunc,
+                                       RatioLimitCheckReport& report) const;
 private:
     const WellInterfaceGeneric& well_; //!< Reference to well interface
 };
