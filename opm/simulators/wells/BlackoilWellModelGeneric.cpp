@@ -417,40 +417,6 @@ getWellEcl(const std::string& well_name) const
 
 void
 BlackoilWellModelGeneric::
-loadRestartWellData(const std::string&                   well_name,
-                    const bool                           handle_ms_well,
-                    const std::vector<data::Rates::opt>& phs,
-                    const data::Well&                    rst_well,
-                    const std::vector<PerforationData>&  old_perf_data,
-                    SingleWellState&                     ws)
-{
-    const auto np = phs.size();
-
-    ws.bhp = rst_well.bhp;
-    ws.thp = rst_well.thp;
-    ws.temperature = rst_well.temperature;
-
-    if (rst_well.current_control.isProducer) {
-        ws.production_cmode = rst_well.current_control.prod;
-    }
-    else {
-        ws.injection_cmode = rst_well.current_control.inj;
-    }
-
-    for (auto i = 0*np; i < np; ++i) {
-        assert( rst_well.rates.has( phs[ i ] ) );
-        ws.surface_rates[i] = rst_well.rates.get(phs[i]);
-    }
-
-    BlackoilWellModelRestart(*this).loadRestartConnectionData(phs, rst_well, old_perf_data, ws);
-
-    if (handle_ms_well && !rst_well.segments.empty()) {
-        BlackoilWellModelRestart(*this).loadRestartSegmentData(well_name, phs, rst_well, ws);
-    }
-}
-
-void
-BlackoilWellModelGeneric::
 loadRestartGroupData(const std::string&     group,
                      const data::GroupData& value)
 {
@@ -545,10 +511,11 @@ loadRestartData(const data::Wells&                 rst_wells,
     {
         const auto& well_name = well_state.name(well_index);
 
-        this->loadRestartWellData(well_name, handle_ms_well, phs,
-                                  rst_wells.at(well_name),
-                                  this->well_perf_data_[well_index],
-                                  well_state.well(well_index));
+        BlackoilWellModelRestart(*this).
+                loadRestartWellData(well_name, handle_ms_well, phs,
+                                    rst_wells.at(well_name),
+                                    this->well_perf_data_[well_index],
+                                    well_state.well(well_index));
     }
 
     for (const auto& [group, value] : grpNwrkValues.groupData) {

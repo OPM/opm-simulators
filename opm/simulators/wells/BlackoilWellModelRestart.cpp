@@ -84,4 +84,38 @@ loadRestartSegmentData(const std::string&                   well_name,
     }
 }
 
+void BlackoilWellModelRestart::
+loadRestartWellData(const std::string&                   well_name,
+                    const bool                           handle_ms_well,
+                    const std::vector<data::Rates::opt>& phs,
+                    const data::Well&                    rst_well,
+                    const std::vector<PerforationData>&  old_perf_data,
+                    SingleWellState&                     ws) const
+{
+    const auto np = phs.size();
+
+    ws.bhp = rst_well.bhp;
+    ws.thp = rst_well.thp;
+    ws.temperature = rst_well.temperature;
+
+    if (rst_well.current_control.isProducer) {
+        ws.production_cmode = rst_well.current_control.prod;
+    }
+    else {
+        ws.injection_cmode = rst_well.current_control.inj;
+    }
+
+    for (auto i = 0*np; i < np; ++i) {
+        assert( rst_well.rates.has( phs[ i ] ) );
+        ws.surface_rates[i] = rst_well.rates.get(phs[i]);
+    }
+
+    this->loadRestartConnectionData(phs, rst_well, old_perf_data, ws);
+
+    if (handle_ms_well && !rst_well.segments.empty()) {
+        this->loadRestartSegmentData(well_name, phs, rst_well, ws);
+    }
+}
+
+
 } // namespace Opm

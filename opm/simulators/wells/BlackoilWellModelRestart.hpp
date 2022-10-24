@@ -42,6 +42,15 @@ public:
         : wellModel_(wellModel)
     {}
 
+    //! \brief Loads per-well data from restart structures.
+    void loadRestartWellData(const std::string&                   well_name,
+                             const bool                           handle_ms_well,
+                             const std::vector<data::Rates::opt>& phs,
+                             const data::Well&                    rst_well,
+                             const std::vector<PerforationData>&  old_perf_data,
+                             SingleWellState&                     ws) const;
+
+private:
     //! \brief Loads per-connection data from restart structures.
     void loadRestartConnectionData(const std::vector<data::Rates::opt>& phs,
                                    const data::Well&                    rst_well,
@@ -54,7 +63,6 @@ public:
                                 const data::Well&                    rst_well,
                                 SingleWellState&                     ws) const;
 
-private:
     const BlackoilWellModelGeneric& wellModel_; //!< Reference to well model
 };
 
