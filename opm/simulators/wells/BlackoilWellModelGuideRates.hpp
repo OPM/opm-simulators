@@ -52,6 +52,9 @@ public:
     //! \brief Obtain guide rate values for well.
     data::GuideRateValue getGuideRateValues(const Well& well) const;
 
+    //! \brief Obtain guide rate values for group.
+    data::GuideRateValue getGuideRateValues(const Group& group) const;
+
 private:
     const BlackoilWellModelGeneric& wellModel_; //!< Reference to well model
 };

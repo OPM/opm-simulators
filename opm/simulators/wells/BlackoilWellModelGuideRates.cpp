@@ -85,5 +85,32 @@ getGuideRateValues(const Well& well) const
     return grval;
 }
 
+data::GuideRateValue
+BlackoilWellModelGuideRates::
+getGuideRateValues(const Group& group) const
+{
+    auto grval = data::GuideRateValue{};
+    const auto& gname = group.name();
+
+    if (!wellModel_.groupState().has_production_rates(gname)) {
+        // No flow rates for production group 'gname' -- might be before
+        // group comes online (e.g., for the initial condition before
+        // simulation starts).
+        return grval;
+    }
+
+    if (!wellModel_.guideRate().has(gname)) {
+        // No guiderates exist for 'gname'.
+        return grval;
+    }
+
+    const auto qs = WellGroupHelpers::
+        getProductionGroupRateVector(wellModel_.groupState(), wellModel_.phaseUsage(), gname);
+
+    const auto is_inj = false; // This procedure only applies to G*PGR.
+    this->getGuideRateValues(qs, is_inj, gname, grval);
+
+    return grval;
+}
 
 }

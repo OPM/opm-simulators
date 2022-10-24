@@ -931,34 +931,6 @@ setWsolvent(const Group& group,
 
 data::GuideRateValue
 BlackoilWellModelGeneric::
-getGuideRateValues(const Group& group) const
-{
-    auto grval = data::GuideRateValue{};
-    const auto& gname = group.name();
-
-    if (!this->groupState().has_production_rates(gname)) {
-        // No flow rates for production group 'gname' -- might be before
-        // group comes online (e.g., for the initial condition before
-        // simulation starts).
-        return grval;
-    }
-
-    if (!this->guideRate_.has(gname)) {
-        // No guiderates exist for 'gname'.
-        return grval;
-    }
-
-    const auto qs = WellGroupHelpers::
-        getProductionGroupRateVector(this->groupState(), this->phase_usage_, gname);
-
-    const auto is_inj = false; // This procedure only applies to G*PGR.
-    BlackoilWellModelGuideRates(*this).getGuideRateValues(qs, is_inj, gname, grval);
-
-    return grval;
-}
-
-data::GuideRateValue
-BlackoilWellModelGeneric::
 getGuideRateInjectionGroupValues(const Group& group) const
 {
     auto grval = data::GuideRateValue{};
@@ -1136,7 +1108,7 @@ calculateAllGroupGuiderates(const int reportStepIdx) const
         if (gname == "FIELD") { return; }
 
         if (this->guideRate_.has(gname)) {
-            gr[gname].production = this->getGuideRateValues(group);
+            gr[gname].production = BlackoilWellModelGuideRates(*this).getGuideRateValues(group);
         }
 
         if (this->guideRate_.has(gname, Phase::WATER) ||

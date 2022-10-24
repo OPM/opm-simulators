@@ -271,7 +271,6 @@ protected:
                            const int pvtreg,
                            std::vector<double>& resv_coeff) = 0;
 
-    data::GuideRateValue getGuideRateValues(const Group& group) const;
     data::GuideRateValue getGuideRateInjectionGroupValues(const Group& group) const;
 
     void assignWellGuideRates(data::Wells& wsrpt,
