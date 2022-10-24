@@ -99,6 +99,8 @@ public:
     const Schedule& schedule() const { return schedule_; }
     const PhaseUsage& phaseUsage() const { return phase_usage_; }
     const GroupState& groupState() const { return this->active_wgstate_.group_state; }
+    std::vector<const WellInterfaceGeneric*> genericWells() const
+    { return {well_container_generic_.begin(), well_container_generic_.end()}; }
 
     /*
       Immutable version of the currently active wellstate.
@@ -156,9 +158,12 @@ public:
     bool forceShutWellByName(const std::string& wellname,
                              const double simulation_time);
 
-
     const std::vector<PerforationData>& perfData(const int well_idx) const
     { return well_perf_data_[well_idx]; }
+
+    const Parallel::Communication& comm() const { return comm_; }
+
+    const SummaryState& summaryState() const { return summaryState_; }
 
 protected:
 

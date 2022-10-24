@@ -36,6 +36,7 @@
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
+#include <opm/simulators/wells/BlackoilWellModelConstraints.hpp>
 #include <opm/simulators/wells/BlackoilWellModelRestart.hpp>
 #include <opm/simulators/wells/GasLiftStage2.hpp>
 #include <opm/simulators/wells/VFPProperties.hpp>
@@ -1780,13 +1781,7 @@ bool
 BlackoilWellModelGeneric::
 hasTHPConstraints() const
 {
-    int local_result = false;
-    for (const auto& well : well_container_generic_) {
-        if (well->wellHasTHPConstraints(summaryState_)) {
-            local_result=true;
-        }
-    }
-    return comm_.max(local_result);
+    return BlackoilWellModelConstraints(*this).hasTHPConstraints();
 }
 
 bool
