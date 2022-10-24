@@ -26,11 +26,13 @@
 #include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
 
 #include <string>
+#include <unordered_map>
 
 namespace Opm {
 
 class BlackoilWellModelGeneric;
 namespace data {
+class GroupGuideRates;
 class GuideRateValue;
 class Wells;
 }
@@ -46,6 +48,15 @@ public:
         : wellModel_(wellModel)
     {}
 
+    //! \brief Assign well guide rates.
+    void assignWellGuideRates(data::Wells& wsrpt,
+                              const int    reportStepIdx) const;
+
+    //! \brief Calculates guide rate for all groups.
+    std::unordered_map<std::string, data::GroupGuideRates>
+    calculateAllGroupGuideRates(const int reportStepIdx) const;
+
+private:
     //! \brief Obtain guide rate values.
     void getGuideRateValues(const GuideRate::RateVector& qs,
                             const bool                   is_inj,
@@ -61,11 +72,6 @@ public:
     //! \brief Obtain guide rate values for injection group.
     data::GuideRateValue getGuideRateInjectionGroupValues(const Group& group) const;
 
-    //! \brief Assign guide rates for a well.
-    void assignWellGuideRates(data::Wells& wsrpt,
-                              const int    reportStepIdx) const;
-
-private:
     const BlackoilWellModelGeneric& wellModel_; //!< Reference to well model
 };
 

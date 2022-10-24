@@ -282,9 +282,6 @@ protected:
                            std::map<std::string, data::GroupData>& gvalues) const;
     void assignNodeValues(std::map<std::string, data::NodeData>& nodevalues) const;
 
-    std::unordered_map<std::string, data::GroupGuideRates>
-    calculateAllGroupGuiderates(const int reportStepIdx) const;
-
     void calculateEfficiencyFactors(const int reportStepIdx);
 
     void checkGconsaleLimits(const Group& group,

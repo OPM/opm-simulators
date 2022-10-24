@@ -26,6 +26,7 @@
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Group/Group.hpp>
 
+#include <opm/output/data/Groups.hpp>
 #include <opm/output/data/GuideRateValue.hpp>
 
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
@@ -123,6 +124,7 @@ public:
     }
 
     void traversePreOrder();
+    void traversePostOrder();
 
 private:
     using NodeOp = void (GroupTreeWalker::*)(std::string_view) const;
@@ -159,6 +161,14 @@ void GroupTreeWalker::traversePreOrder()
 {
     this->preFinish_ = nullptr;
     this->postDiscover_ = &GroupTreeWalker::visitGroup;
+
+    this->traverse();
+}
+
+void GroupTreeWalker::traversePostOrder()
+{
+    this->preFinish_ = &GroupTreeWalker::visitGroup;
+    this->postDiscover_ = nullptr;
 
     this->traverse();
 }
@@ -470,6 +480,66 @@ assignWellGuideRates(data::Wells& wsrpt,
 
         xwPos->second.guide_rates = grPos->second;
     }
+}
+
+std::unordered_map<std::string, data::GroupGuideRates>
+BlackoilWellModelGuideRates::
+calculateAllGroupGuideRates(const int reportStepIdx) const
+{
+    auto gr = std::unordered_map<std::string, data::GroupGuideRates>{};
+
+    auto walker = GroupTreeWalker{wellModel_.schedule(), reportStepIdx};
+
+    // Populates 'gr'.
+    walker.groupOp([this, &gr](const Group& group)
+    {
+        const auto& gname = group.name();
+
+        if (gname == "FIELD") { return; }
+
+        if (wellModel_.guideRate().has(gname)) {
+            gr[gname].production = this->getGuideRateValues(group);
+        }
+
+        if (wellModel_.guideRate().has(gname, Phase::WATER) ||
+            wellModel_.guideRate().has(gname, Phase::GAS))
+        {
+            gr[gname].injection = this->getGuideRateInjectionGroupValues(group);
+        }
+
+        const auto parent = group.parent();
+        if (parent == "FIELD") { return; }
+
+        gr[parent].injection  += gr[gname].injection;
+        gr[parent].production += gr[gname].production;
+    });
+
+    // Populates 'gr'.
+    walker.wellOp([this, &gr](const Well& well)
+    {
+        if (! (wellModel_.guideRate().has(well.name()) ||
+               wellModel_.guideRate().hasPotentials(well.name())))
+        {
+            return;
+        }
+
+        const auto& gname = well.groupName();
+
+        auto& grval = well.isInjector()
+            ? gr[gname].injection
+            : gr[gname].production;
+
+        grval += this->getGuideRateValues(well);
+    });
+
+    // Visit wells and groups before their parents, meaning no group is
+    // visited until all of its children down to the leaves of the group
+    // tree have been visited.  Upon completion, 'gr' contains guide rate
+    // values for all groups reachable from 'FIELD' at this time/report
+    // step.
+    walker.traversePostOrder();
+
+    return gr;
 }
 
 } // namespace Opm
