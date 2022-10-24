@@ -73,22 +73,20 @@ public:
 
     double getExplicitWFR(const int table_id, const size_t well_index) const {
         const auto& rates = well_state_.well(well_index).surface_rates;
-        assert(rates.size() == 3);
         const auto& pu = well_state_.phaseUsage();
-        const auto& aqua = rates[pu.phase_pos[BlackoilPhases::Aqua]];
-        const auto& liquid = rates[pu.phase_pos[BlackoilPhases::Liquid]];
-        const auto& vapour = rates[pu.phase_pos[BlackoilPhases::Vapour]];
+        const auto& aqua = pu.phase_used[BlackoilPhases::Aqua]? rates[pu.phase_pos[BlackoilPhases::Aqua]]:0.0;
+        const auto& liquid = pu.phase_used[BlackoilPhases::Liquid]? rates[pu.phase_pos[BlackoilPhases::Liquid]]:0.0;
+        const auto& vapour = pu.phase_used[BlackoilPhases::Vapour]? rates[pu.phase_pos[BlackoilPhases::Vapour]]:0.0;
         const VFPProdTable& table = this->m_prod.getTable(table_id);
         return detail::getWFR(table, aqua, liquid, vapour);
     }
 
     double getExplicitGFR(const int table_id, const size_t well_index) const {
         const auto& rates = well_state_.well(well_index).surface_rates;
-        assert(rates.size() == 3);
         const auto& pu = well_state_.phaseUsage();
-        const auto& aqua = rates[pu.phase_pos[BlackoilPhases::Aqua]];
-        const auto& liquid = rates[pu.phase_pos[BlackoilPhases::Liquid]];
-        const auto& vapour = rates[pu.phase_pos[BlackoilPhases::Vapour]];
+        const auto& aqua = pu.phase_used[BlackoilPhases::Aqua]? rates[pu.phase_pos[BlackoilPhases::Aqua]]:0.0;
+        const auto& liquid = pu.phase_used[BlackoilPhases::Liquid]? rates[pu.phase_pos[BlackoilPhases::Liquid]]:0.0;
+        const auto& vapour = pu.phase_used[BlackoilPhases::Vapour]? rates[pu.phase_pos[BlackoilPhases::Vapour]]:0.0;
         const VFPProdTable& table = this->m_prod.getTable(table_id);
         return detail::getGFR(table, aqua, liquid, vapour);
     }
