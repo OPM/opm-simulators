@@ -772,34 +772,6 @@ assignGroupControl(const Group& group,
 
 void
 BlackoilWellModelGeneric::
-assignGroupGuideRates(const Group& group,
-                      const std::unordered_map<std::string, data::GroupGuideRates>& groupGuideRates,
-                      data::GroupData& gdata) const
-{
-    auto& prod = gdata.guideRates.production;  prod.clear();
-    auto& inj  = gdata.guideRates.injection;   inj .clear();
-
-    auto xgrPos = groupGuideRates.find(group.name());
-    if (xgrPos == groupGuideRates.end()) {
-        // No guiderates defined for this group.
-        return;
-    }
-
-    const auto& xgr = xgrPos->second;
-
-    if (this->guideRate_.has(group.name())) {
-        prod = xgr.production;
-    }
-
-    if (this->guideRate_.has(group.name(), Phase::WATER) ||
-        this->guideRate_.has(group.name(), Phase::GAS))
-    {
-        inj = xgr.injection;
-    }
-}
-
-void
-BlackoilWellModelGeneric::
 assignGroupValues(const int                               reportStepIdx,
                   std::map<std::string, data::GroupData>& gvalues) const
 {
@@ -811,7 +783,7 @@ assignGroupValues(const int                               reportStepIdx,
 
         auto& gdata = gvalues[gname];
         this->assignGroupControl(grup, gdata);
-        this->assignGroupGuideRates(grup, groupGuideRates, gdata);
+        BlackoilWellModelGuideRates(*this).assignGroupGuideRates(grup, groupGuideRates, gdata);
     }
 }
 

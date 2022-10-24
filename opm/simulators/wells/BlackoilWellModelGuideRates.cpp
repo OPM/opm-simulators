@@ -542,4 +542,32 @@ calculateAllGroupGuideRates(const int reportStepIdx) const
     return gr;
 }
 
+void BlackoilWellModelGuideRates::
+assignGroupGuideRates(const Group& group,
+                      const std::unordered_map<std::string, data::GroupGuideRates>& groupGuideRates,
+                      data::GroupData& gdata) const
+{
+    auto& prod = gdata.guideRates.production;  prod.clear();
+    auto& inj  = gdata.guideRates.injection;   inj .clear();
+
+    auto xgrPos = groupGuideRates.find(group.name());
+    if (xgrPos == groupGuideRates.end()) {
+        // No guiderates defined for this group.
+        return;
+    }
+
+    const auto& xgr = xgrPos->second;
+
+    if (wellModel_.guideRate().has(group.name())) {
+        prod = xgr.production;
+    }
+
+    if (wellModel_.guideRate().has(group.name(), Phase::WATER) ||
+        wellModel_.guideRate().has(group.name(), Phase::GAS))
+    {
+        inj = xgr.injection;
+    }
+}
+
+
 } // namespace Opm

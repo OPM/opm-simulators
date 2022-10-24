@@ -275,9 +275,6 @@ protected:
                                const int reportStepIndex) const;
     void assignGroupControl(const Group& group,
                             data::GroupData& gdata) const;
-    void assignGroupGuideRates(const Group& group,
-                               const std::unordered_map<std::string, data::GroupGuideRates>& groupGuideRates,
-                               data::GroupData& gdata) const;
     void assignGroupValues(const int reportStepIdx,
                            std::map<std::string, data::GroupData>& gvalues) const;
     void assignNodeValues(std::map<std::string, data::NodeData>& nodevalues) const;

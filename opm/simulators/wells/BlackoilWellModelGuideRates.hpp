@@ -32,6 +32,7 @@ namespace Opm {
 
 class BlackoilWellModelGeneric;
 namespace data {
+struct GroupData;
 class GroupGuideRates;
 class GuideRateValue;
 class Wells;
@@ -55,6 +56,11 @@ public:
     //! \brief Calculates guide rate for all groups.
     std::unordered_map<std::string, data::GroupGuideRates>
     calculateAllGroupGuideRates(const int reportStepIdx) const;
+
+    //! \brief Assign group guide rates.
+    void assignGroupGuideRates(const Group& group,
+                               const std::unordered_map<std::string, data::GroupGuideRates>& groupGuideRates,
+                               data::GroupData& gdata) const;
 
 private:
     //! \brief Obtain guide rate values.
