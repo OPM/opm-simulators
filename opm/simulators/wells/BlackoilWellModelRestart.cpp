@@ -23,6 +23,8 @@
 #include <config.h>
 #include <opm/simulators/wells/BlackoilWellModelRestart.hpp>
 
+#include <opm/input/eclipse/Schedule/Group/GuideRateConfig.hpp>
+
 #include <opm/output/data/Groups.hpp>
 
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
@@ -189,6 +191,29 @@ loadRestartGuideRates(const int                    report_step,
 
         guide_rate.init_grvalue_SI(report_step, well_name,
                                    makeGuideRateValue(rst_well.guide_rates, target));
+    }
+}
+
+void BlackoilWellModelRestart::
+loadRestartGuideRates(const int                                     report_step,
+                      const GuideRateConfig&                        config,
+                      const std::map<std::string, data::GroupData>& rst_groups,
+                      GuideRate&                                    guide_rate) const
+{
+    const auto target = config.model().target();
+
+    for (const auto& [group_name, rst_group] : rst_groups) {
+        if (!config.has_production_group(group_name)) {
+            continue;
+        }
+
+        const auto& group = config.production_group(group_name);
+        if ((group.guide_rate > 0.0) || (group.target != Group::GuideRateProdTarget::FORM)) {
+            continue;
+        }
+
+        guide_rate.init_grvalue_SI(report_step, group_name,
+                                   makeGuideRateValue(rst_group.guideRates.production, target));
     }
 }
 

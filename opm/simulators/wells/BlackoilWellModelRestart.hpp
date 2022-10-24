@@ -36,6 +36,7 @@ class GroupData;
 }
 class GroupState;
 class GuideRate;
+class GuideRateConfig;
 struct PerforationData;
 class SingleWellState;
 
@@ -66,6 +67,12 @@ public:
                                const GuideRateModel::Target target,
                                const data::Wells&           rst_wells,
                                GuideRate&                   guide_rate) const;
+
+    //! \brief Loads guide rates from restart structures.
+    void loadRestartGuideRates(const int                                     report_step,
+                               const GuideRateConfig&                        config,
+                               const std::map<std::string, data::GroupData>& rst_groups,
+                               GuideRate&                                    guide_rate) const;
 
 private:
     //! \brief Loads per-connection data from restart structures.

@@ -286,10 +286,6 @@ protected:
                            std::map<std::string, data::GroupData>& gvalues) const;
     void assignNodeValues(std::map<std::string, data::NodeData>& nodevalues) const;
 
-    void loadRestartGuideRates(const int                                     report_step,
-                               const GuideRateConfig&                        config,
-                               const std::map<std::string, data::GroupData>& rst_groups);
-
     std::unordered_map<std::string, data::GroupGuideRates>
     calculateAllGroupGuiderates(const int reportStepIdx) const;
 

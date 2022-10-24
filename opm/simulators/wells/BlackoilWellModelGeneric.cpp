@@ -57,36 +57,6 @@
 #include <fmt/format.h>
 
 namespace {
-    Opm::data::GuideRateValue::Item
-    guideRateRestartItem(const Opm::GuideRateModel::Target target)
-    {
-        using Item = Opm::data::GuideRateValue::Item;
-        using Target = Opm::GuideRateModel::Target;
-
-        static const auto items = std::unordered_map<Target, Item> {
-            { Target::OIL, Item::Oil   },
-            { Target::GAS, Item::Gas   },
-            { Target::WAT, Item::Water },
-            { Target::RES, Item::ResV  },
-        };
-
-        auto i = items.find(target);
-        return (i == items.end()) ? Item::NumItems : i->second;
-    }
-
-    Opm::GuideRate::GuideRateValue
-    makeGuideRateValue(const Opm::data::GuideRateValue&  restart,
-                       const Opm::GuideRateModel::Target target)
-    {
-        const auto item = guideRateRestartItem(target);
-
-        if (! restart.has(item)) {
-            return {};
-        }
-
-        return { 0.0, restart.get(item), target };
-    }
-
     struct RetrieveWellGuideRate
     {
         RetrieveWellGuideRate() = default;
@@ -417,29 +387,6 @@ getWellEcl(const std::string& well_name) const
 
 void
 BlackoilWellModelGeneric::
-loadRestartGuideRates(const int                                     report_step,
-                      const GuideRateConfig&                        config,
-                      const std::map<std::string, data::GroupData>& rst_groups)
-{
-    const auto target = config.model().target();
-
-    for (const auto& [group_name, rst_group] : rst_groups) {
-        if (! config.has_production_group(group_name)) {
-            continue;
-        }
-
-        const auto& group = config.production_group(group_name);
-        if ((group.guide_rate > 0.0) || (group.target != Group::GuideRateProdTarget::FORM)) {
-            continue;
-        }
-
-        this->guideRate_.init_grvalue_SI(report_step, group_name,
-                                         makeGuideRateValue(rst_group.guideRates.production, target));
-    }
-}
-
-void
-BlackoilWellModelGeneric::
 loadRestartData(const data::Wells&                 rst_wells,
                 const data::GroupAndNetworkValues& grpNwrkValues,
                 const PhaseUsage&                  phases,
@@ -521,11 +468,13 @@ initFromRestartFile(const RestartValue& restartValues,
     }
 
     if (config.has_model()) {
-        this->loadRestartGuideRates(report_step, config, restartValues.grp_nwrk.groupData);
+        BlackoilWellModelRestart(*this).loadRestartGuideRates(report_step,
+                                                              config,
+                                                              restartValues.grp_nwrk.groupData,
+                                                              this->guideRate_);
 
         this->guideRate_.updateGuideRateExpiration(this->schedule().seconds(report_step), report_step);
     }
-
 
     this->active_wgstate_.wtest_state(std::move(wtestState));
     this->commitWGState();
@@ -1146,7 +1095,6 @@ checkGroupHigherConstraints(const Group& group,
                 changed = true;
             }
         }
-        
     }
 
     return changed;
