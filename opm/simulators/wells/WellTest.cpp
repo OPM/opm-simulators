@@ -22,6 +22,7 @@
 #include <config.h>
 #include <opm/simulators/wells/WellTest.hpp>
 
+#include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/SingleWellState.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
@@ -188,6 +189,49 @@ void WellTest::checkMaxWaterCutLimit(const WellEconProductionLimits& econ_produc
         this->checkMaxRatioLimitCompletions(ws, max_water_cut_limit,
                                             waterCut, report);
     }
+}
+
+bool WellTest::checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
+                                   const std::vector<double>& rates_or_potentials,
+                                   DeferredLogger& deferred_logger) const
+{
+    static constexpr int Gas = BlackoilPhases::Vapour;
+    static constexpr int Oil = BlackoilPhases::Liquid;
+    static constexpr int Water = BlackoilPhases::Aqua;
+
+    const PhaseUsage& pu = well_.phaseUsage();
+
+    if (econ_production_limits.onMinOilRate()) {
+        const double oil_rate = rates_or_potentials[pu.phase_pos[Oil]];
+        const double min_oil_rate = econ_production_limits.minOilRate();
+        if (std::abs(oil_rate) < min_oil_rate) {
+            return true;
+        }
+    }
+
+    if (econ_production_limits.onMinGasRate() ) {
+        const double gas_rate = rates_or_potentials[pu.phase_pos[Gas]];
+        const double min_gas_rate = econ_production_limits.minGasRate();
+        if (std::abs(gas_rate) < min_gas_rate) {
+            return true;
+        }
+    }
+
+    if (econ_production_limits.onMinLiquidRate() ) {
+        const double oil_rate = rates_or_potentials[pu.phase_pos[Oil]];
+        const double water_rate = rates_or_potentials[pu.phase_pos[Water]];
+        const double liquid_rate = oil_rate + water_rate;
+        const double min_liquid_rate = econ_production_limits.minLiquidRate();
+        if (std::abs(liquid_rate) < min_liquid_rate) {
+            return true;
+        }
+    }
+
+    if (econ_production_limits.onMinReservoirFluidRate()) {
+        deferred_logger.warning("NOT_SUPPORTING_MIN_RESERVOIR_FLUID_RATE", "Minimum reservoir fluid production rate limit is not supported yet");
+    }
+
+    return false;
 }
 
 } // namespace Opm

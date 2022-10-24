@@ -30,6 +30,7 @@
 namespace Opm
 {
 
+class DeferredLogger;
 class PhaseUsage;
 class SingleWellState;
 class WellEconProductionLimits;
@@ -59,6 +60,10 @@ public:
     void checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
                                const SingleWellState& ws,
                                RatioLimitCheckReport& report) const;
+
+    bool checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
+                             const std::vector<double>& rates_or_potentials,
+                             DeferredLogger& deferred_logger) const;
 
 private:
     template<class RatioFunc>

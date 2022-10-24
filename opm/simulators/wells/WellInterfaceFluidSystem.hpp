@@ -123,10 +123,6 @@ protected:
                           const SummaryState& summaryState,
                           DeferredLogger& deferred_logger) const;
 
-    bool checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
-                             const double* rates_or_potentials,
-                             Opm::DeferredLogger& deferred_logger) const;
-
     void checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
                               const SingleWellState& ws,
                               RatioLimitCheckReport& report,

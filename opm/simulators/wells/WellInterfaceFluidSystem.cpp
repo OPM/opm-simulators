@@ -505,52 +505,6 @@ checkConstraints(WellState& well_state,
 }
 
 template<typename FluidSystem>
-bool
-WellInterfaceFluidSystem<FluidSystem>::
-checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
-                    const double* rates_or_potentials,
-                    DeferredLogger& deferred_logger) const
-{
-    const PhaseUsage& pu = phaseUsage();
-
-    if (econ_production_limits.onMinOilRate()) {
-        assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
-        const double oil_rate = rates_or_potentials[pu.phase_pos[ Oil ] ];
-        const double min_oil_rate = econ_production_limits.minOilRate();
-        if (std::abs(oil_rate) < min_oil_rate) {
-            return true;
-        }
-    }
-
-    if (econ_production_limits.onMinGasRate() ) {
-        assert(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx));
-        const double gas_rate = rates_or_potentials[pu.phase_pos[ Gas ] ];
-        const double min_gas_rate = econ_production_limits.minGasRate();
-        if (std::abs(gas_rate) < min_gas_rate) {
-            return true;
-        }
-    }
-
-    if (econ_production_limits.onMinLiquidRate() ) {
-        assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
-        assert(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx));
-        const double oil_rate = rates_or_potentials[pu.phase_pos[ Oil ] ];
-        const double water_rate = rates_or_potentials[pu.phase_pos[ Water ] ];
-        const double liquid_rate = oil_rate + water_rate;
-        const double min_liquid_rate = econ_production_limits.minLiquidRate();
-        if (std::abs(liquid_rate) < min_liquid_rate) {
-            return true;
-        }
-    }
-
-    if (econ_production_limits.onMinReservoirFluidRate()) {
-        deferred_logger.warning("NOT_SUPPORTING_MIN_RESERVOIR_FLUID_RATE", "Minimum reservoir fluid production rate limit is not supported yet");
-    }
-
-    return false;
-}
-
-template<typename FluidSystem>
 void
 WellInterfaceFluidSystem<FluidSystem>::
 checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
@@ -636,16 +590,22 @@ updateWellTestStateEconomic(const SingleWellState& ws,
     const auto& quantity_limit = econ_production_limits.quantityLimit();
     if (econ_production_limits.onAnyRateLimit()) {
         if (quantity_limit == WellEconProductionLimits::QuantityLimit::POTN) {
-            rate_limit_violated = checkRateEconLimits(econ_production_limits, ws.well_potentials.data(), deferred_logger);
+            rate_limit_violated = WellTest(*this).checkRateEconLimits(econ_production_limits,
+                                                                      ws.well_potentials,
+                                                                      deferred_logger);
             // Due to instability of the bhpFromThpLimit code the potentials are sometimes wrong
             // this can lead to premature shutting of wells due to rate limits of the potentials.
             // Since rates are supposed to be less or equal to the potentials, we double-check
             // that also the rate limit is violated before shutting the well.
             if (rate_limit_violated)
-                rate_limit_violated = checkRateEconLimits(econ_production_limits, ws.surface_rates.data(), deferred_logger);
+                rate_limit_violated = WellTest(*this).checkRateEconLimits(econ_production_limits,
+                                                                          ws.surface_rates,
+                                                                          deferred_logger);
         }
         else {
-            rate_limit_violated = checkRateEconLimits(econ_production_limits, ws.surface_rates.data(), deferred_logger);
+            rate_limit_violated = WellTest(*this).checkRateEconLimits(econ_production_limits,
+                                                                      ws.surface_rates,
+                                                                      deferred_logger);
         }
     }
 
