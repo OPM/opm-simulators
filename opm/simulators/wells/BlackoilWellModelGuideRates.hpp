@@ -30,7 +30,10 @@
 namespace Opm {
 
 class BlackoilWellModelGeneric;
-namespace data { class GuideRateValue; }
+namespace data {
+class GuideRateValue;
+class Wells;
+}
 class Group;
 class Well;
 
@@ -57,6 +60,10 @@ public:
 
     //! \brief Obtain guide rate values for injection group.
     data::GuideRateValue getGuideRateInjectionGroupValues(const Group& group) const;
+
+    //! \brief Assign guide rates for a well.
+    void assignWellGuideRates(data::Wells& wsrpt,
+                              const int    reportStepIdx) const;
 
 private:
     const BlackoilWellModelGeneric& wellModel_; //!< Reference to well model
