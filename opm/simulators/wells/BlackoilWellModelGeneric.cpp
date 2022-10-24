@@ -1191,33 +1191,4 @@ runWellPIScaling(const int timeStepIdx,
     this->last_run_wellpi_ = timeStepIdx;
 }
 
-
-bool
-BlackoilWellModelGeneric::
-guideRateUpdateIsNeeded(const int reportStepIdx) const {
-    auto need_update =
-    std::any_of(this->well_container_generic_.begin(),
-                this->well_container_generic_.end(),
-    [](const WellInterfaceGeneric* well)
-    {
-        return well->changedToOpenThisStep();
-    });
-    if (!need_update && this->report_step_starts_) {
-        const auto& events = this->schedule()[reportStepIdx].wellgroup_events();
-        constexpr auto effective_events_mask = ScheduleEvents::WELL_STATUS_CHANGE
-            + ScheduleEvents::INJECTION_TYPE_CHANGED
-            + ScheduleEvents::WELL_SWITCHED_INJECTOR_PRODUCER
-            + ScheduleEvents::NEW_WELL;
-
-        need_update = std::any_of(this->well_container_generic_.begin(),
-                              this->well_container_generic_.end(),
-            [&events](const WellInterfaceGeneric* well)
-        {
-            return events.hasEvent(well->name(), effective_events_mask);
-        });
-    }
-    return this->comm_.max(static_cast<int>(need_update));
-}
-
-
 }

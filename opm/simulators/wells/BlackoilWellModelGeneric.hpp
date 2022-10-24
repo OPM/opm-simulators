@@ -320,8 +320,6 @@ protected:
                               const SummaryConfig& summaryConfig,
                               DeferredLogger& deferred_logger);
 
-    bool guideRateUpdateIsNeeded(const int reportStepIdx) const;
-
     // create the well container
     virtual void createWellContainer(const int time_step) = 0;
     virtual void initWellContainer(const int reportStepIdx) = 0;

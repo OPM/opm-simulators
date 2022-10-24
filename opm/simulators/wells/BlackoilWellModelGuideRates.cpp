@@ -569,5 +569,30 @@ assignGroupGuideRates(const Group& group,
     }
 }
 
+bool BlackoilWellModelGuideRates::
+guideRateUpdateIsNeeded(const int reportStepIdx) const
+{
+    const auto& genWells = wellModel_.genericWells();
+    auto need_update =
+    std::any_of(genWells.begin(), genWells.end(),
+    [](const WellInterfaceGeneric* well)
+    {
+        return well->changedToOpenThisStep();
+    });
+    if (!need_update && wellModel_.reportStepStarts()) {
+        const auto& events = wellModel_.schedule()[reportStepIdx].wellgroup_events();
+        constexpr auto effective_events_mask = ScheduleEvents::WELL_STATUS_CHANGE
+            + ScheduleEvents::INJECTION_TYPE_CHANGED
+            + ScheduleEvents::WELL_SWITCHED_INJECTOR_PRODUCER
+            + ScheduleEvents::NEW_WELL;
+
+        need_update = std::any_of(genWells.begin(), genWells.end(),
+            [&events](const WellInterfaceGeneric* well)
+        {
+            return events.hasEvent(well->name(), effective_events_mask);
+        });
+    }
+    return wellModel_.comm().max(static_cast<int>(need_update));
+}
 
 } // namespace Opm

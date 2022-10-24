@@ -62,6 +62,9 @@ public:
                                const std::unordered_map<std::string, data::GroupGuideRates>& groupGuideRates,
                                data::GroupData& gdata) const;
 
+    //! \brief Check if a guide rate update is needed.
+    bool guideRateUpdateIsNeeded(const int reportStepIdx) const;
+
 private:
     //! \brief Obtain guide rate values.
     void getGuideRateValues(const GuideRate::RateVector& qs,
