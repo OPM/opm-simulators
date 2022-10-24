@@ -24,7 +24,6 @@
 #ifndef OPM_WELL_TEST_HEADER_INCLUDED
 #define OPM_WELL_TEST_HEADER_INCLUDED
 
-#include <functional>
 #include <limits>
 #include <vector>
 
@@ -49,18 +48,6 @@ public:
     //! \brief Constructor sets reference to well.
     WellTest(const WellInterfaceGeneric& well) : well_(well) {}
 
-    using RatioFunc = std::function<double(const std::vector<double>& rates,
-                                           const PhaseUsage& pu)>;
-
-    bool checkMaxRatioLimitWell(const SingleWellState& ws,
-                                const double max_ratio_limit,
-                                const RatioFunc& ratioFunc) const;
-
-    void checkMaxRatioLimitCompletions(const SingleWellState& ws,
-                                       const double max_ratio_limit,
-                                       const RatioFunc& ratioFunc,
-                                       RatioLimitCheckReport& report) const;
-
     void checkMaxGORLimit(const WellEconProductionLimits& econ_production_limits,
                           const SingleWellState& ws,
                           RatioLimitCheckReport& report) const;
@@ -69,7 +56,22 @@ public:
                           const SingleWellState& ws,
                           RatioLimitCheckReport& report) const;
 
+    void checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
+                               const SingleWellState& ws,
+                               RatioLimitCheckReport& report) const;
+
 private:
+    template<class RatioFunc>
+    bool checkMaxRatioLimitWell(const SingleWellState& ws,
+                                const double max_ratio_limit,
+                                const RatioFunc& ratioFunc) const;
+
+    template<class RatioFunc>
+    void checkMaxRatioLimitCompletions(const SingleWellState& ws,
+                                       const double max_ratio_limit,
+                                       const RatioFunc& ratioFunc,
+                                       RatioLimitCheckReport& report) const;
+
     const WellInterfaceGeneric& well_; //!< Reference to well interface
 };
 

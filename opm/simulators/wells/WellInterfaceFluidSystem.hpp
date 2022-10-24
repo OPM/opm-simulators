@@ -127,10 +127,6 @@ protected:
                              const double* rates_or_potentials,
                              Opm::DeferredLogger& deferred_logger) const;
 
-    void checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
-                               const SingleWellState& ws,
-                               RatioLimitCheckReport& report) const;
-
     void checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
                               const SingleWellState& ws,
                               RatioLimitCheckReport& report,

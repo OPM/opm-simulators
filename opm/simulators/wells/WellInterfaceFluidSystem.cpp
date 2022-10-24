@@ -553,46 +553,6 @@ checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
 template<typename FluidSystem>
 void
 WellInterfaceFluidSystem<FluidSystem>::
-checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
-                      const SingleWellState& ws,
-                      RatioLimitCheckReport& report) const
-{
-    assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
-    assert(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx));
-
-    // function to calculate water cut based on rates
-    auto waterCut = [](const std::vector<double>& rates,
-                       const PhaseUsage& pu) {
-        const double oil_rate = -rates[pu.phase_pos[Oil]];
-        const double water_rate = -rates[pu.phase_pos[Water]];
-        const double liquid_rate = oil_rate + water_rate;
-        if (liquid_rate <= 0.)
-            return 0.;
-        else if (water_rate < 0)
-            return 0.;
-        else if (oil_rate < 0)
-            return 1.;
-        else
-            return (water_rate / liquid_rate);
-
-    };
-
-    const double max_water_cut_limit = econ_production_limits.maxWaterCut();
-    assert(max_water_cut_limit > 0.);
-
-    const bool watercut_limit_violated =
-        WellTest(*this).checkMaxRatioLimitWell(ws, max_water_cut_limit, waterCut);
-
-    if (watercut_limit_violated) {
-        report.ratio_limit_violated = true;
-        WellTest(*this).checkMaxRatioLimitCompletions(ws, max_water_cut_limit,
-                                                      waterCut, report);
-    }
-}
-
-template<typename FluidSystem>
-void
-WellInterfaceFluidSystem<FluidSystem>::
 checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
                      const SingleWellState& ws,
                      RatioLimitCheckReport& report,
@@ -607,7 +567,9 @@ checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
     //       extent.
 
     if (econ_production_limits.onMaxWaterCut()) {
-        checkMaxWaterCutLimit(econ_production_limits, ws, report);
+        assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
+        assert(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx));
+        WellTest(*this).checkMaxWaterCutLimit(econ_production_limits, ws, report);
     }
 
     if (econ_production_limits.onMaxGasOilRatio()) {
