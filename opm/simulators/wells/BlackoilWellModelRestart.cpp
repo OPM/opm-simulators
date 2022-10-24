@@ -23,6 +23,7 @@
 #include <config.h>
 #include <opm/simulators/wells/BlackoilWellModelRestart.hpp>
 
+#include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
 #include <opm/simulators/wells/PerforationData.hpp>
 #include <opm/simulators/wells/SingleWellState.hpp>
 
@@ -48,6 +49,37 @@ loadRestartConnectionData(const std::vector<data::Rates::opt>& phs,
         for (const auto& phase : phs) {
             *perf_phase_rates = rst_connection.rates.get(phase);
             ++perf_phase_rates;
+        }
+    }
+}
+
+void BlackoilWellModelRestart::
+loadRestartSegmentData(const std::string&                   well_name,
+                       const std::vector<data::Rates::opt>& phs,
+                       const data::Well&                    rst_well,
+                       SingleWellState&                     ws) const
+{
+    const auto& segment_set = wellModel_.getWellEcl(well_name).getSegments();
+    const auto& rst_segments = rst_well.segments;
+
+    // \Note: Eventually we need to handle the situations that some segments are shut
+    assert(0u + segment_set.size() == rst_segments.size());
+
+    const auto np = phs.size();
+    const auto pres_idx = data::SegmentPressures::Value::Pressure;
+
+    auto& segments = ws.segments;
+    auto& segment_pressure = segments.pressure;
+    auto& segment_rates = segments.rates;
+    for (const auto& [segNum, rst_segment] : rst_segments) {
+        const int segment_index = segment_set.segmentNumberToIndex(segNum);
+
+        // Recovering segment rates and pressure from the restart values
+        segment_pressure[segment_index] = rst_segment.pressures[pres_idx];
+
+        const auto& rst_segment_rates = rst_segment.rates;
+        for (auto p = 0*np; p < np; ++p) {
+            segment_rates[segment_index*np + p] = rst_segment_rates.get(phs[p]);
         }
     }
 }

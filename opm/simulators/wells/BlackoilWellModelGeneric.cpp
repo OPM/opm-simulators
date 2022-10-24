@@ -417,38 +417,6 @@ getWellEcl(const std::string& well_name) const
 
 void
 BlackoilWellModelGeneric::
-loadRestartSegmentData(const std::string&                   well_name,
-                       const std::vector<data::Rates::opt>& phs,
-                       const data::Well&                    rst_well,
-                       SingleWellState&                     ws)
-{
-    const auto& segment_set = this->getWellEcl(well_name).getSegments();
-    const auto& rst_segments = rst_well.segments;
-
-    // \Note: Eventually we need to handle the situations that some segments are shut
-    assert(0u + segment_set.size() == rst_segments.size());
-
-    const auto np = phs.size();
-    const auto pres_idx = data::SegmentPressures::Value::Pressure;
-
-    auto& segments = ws.segments;
-    auto& segment_pressure = segments.pressure;
-    auto& segment_rates = segments.rates;
-    for (const auto& [segNum, rst_segment] : rst_segments) {
-        const int segment_index = segment_set.segmentNumberToIndex(segNum);
-
-        // Recovering segment rates and pressure from the restart values
-        segment_pressure[segment_index] = rst_segment.pressures[pres_idx];
-
-        const auto& rst_segment_rates = rst_segment.rates;
-        for (auto p = 0*np; p < np; ++p) {
-            segment_rates[segment_index*np + p] = rst_segment_rates.get(phs[p]);
-        }
-    }
-}
-
-void
-BlackoilWellModelGeneric::
 loadRestartWellData(const std::string&                   well_name,
                     const bool                           handle_ms_well,
                     const std::vector<data::Rates::opt>& phs,
@@ -477,7 +445,7 @@ loadRestartWellData(const std::string&                   well_name,
     BlackoilWellModelRestart(*this).loadRestartConnectionData(phs, rst_well, old_perf_data, ws);
 
     if (handle_ms_well && !rst_well.segments.empty()) {
-        this->loadRestartSegmentData(well_name, phs, rst_well, ws);
+        BlackoilWellModelRestart(*this).loadRestartSegmentData(well_name, phs, rst_well, ws);
     }
 }
 

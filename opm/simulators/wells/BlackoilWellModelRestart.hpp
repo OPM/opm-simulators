@@ -48,6 +48,12 @@ public:
                                    const std::vector<PerforationData>&  old_perf_data,
                                    SingleWellState&                     ws) const;
 
+    //! \brief Loads per-segment data from restart structures.
+    void loadRestartSegmentData(const std::string&                   well_name,
+                                const std::vector<data::Rates::opt>& phs,
+                                const data::Well&                    rst_well,
+                                SingleWellState&                     ws) const;
+
 private:
     const BlackoilWellModelGeneric& wellModel_; //!< Reference to well model
 };

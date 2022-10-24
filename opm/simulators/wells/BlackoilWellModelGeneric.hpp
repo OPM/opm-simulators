@@ -286,11 +286,6 @@ protected:
                            std::map<std::string, data::GroupData>& gvalues) const;
     void assignNodeValues(std::map<std::string, data::NodeData>& nodevalues) const;
 
-    void loadRestartSegmentData(const std::string&                   well_name,
-                                const std::vector<data::Rates::opt>& phs,
-                                const data::Well&                    rst_well,
-                                SingleWellState&                     ws);
-
     void loadRestartWellData(const std::string&                   well_name,
                              const bool                           handle_ms_well,
                              const std::vector<data::Rates::opt>& phs,
