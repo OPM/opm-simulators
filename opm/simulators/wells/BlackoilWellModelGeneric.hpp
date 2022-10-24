@@ -89,7 +89,7 @@ public:
 
     /// return true if wells are available in the reservoir
     bool wellsActive() const;
-    bool hasWell(const std::string& wname);
+    bool hasWell(const std::string& wname) const;
 
     // whether there exists any multisegment well open on this process
     bool anyMSWellOpenLocal() const;
@@ -285,10 +285,6 @@ protected:
     void assignGroupValues(const int reportStepIdx,
                            std::map<std::string, data::GroupData>& gvalues) const;
     void assignNodeValues(std::map<std::string, data::NodeData>& nodevalues) const;
-
-    void loadRestartGuideRates(const int                    report_step,
-                               const GuideRateModel::Target target,
-                               const data::Wells&           rst_wells);
 
     void loadRestartGuideRates(const int                                     report_step,
                                const GuideRateConfig&                        config,

@@ -371,7 +371,7 @@ numPhases() const
 
 bool
 BlackoilWellModelGeneric::
-hasWell(const std::string& wname)
+hasWell(const std::string& wname) const
 {
     return std::any_of(this->wells_ecl_.begin(), this->wells_ecl_.end(),
         [&wname](const Well& well)
@@ -413,22 +413,6 @@ getWellEcl(const std::string& well_name) const
     assert(well_ecl != wells_ecl_.end());
 
     return *well_ecl;
-}
-
-void
-BlackoilWellModelGeneric::
-loadRestartGuideRates(const int                    report_step,
-                      const GuideRateModel::Target target,
-                      const data::Wells&           rst_wells)
-{
-    for (const auto& [well_name, rst_well] : rst_wells) {
-        if (! this->hasWell(well_name) || this->getWellEcl(well_name).isInjector()) {
-            continue;
-        }
-
-        this->guideRate_.init_grvalue_SI(report_step, well_name,
-                                         makeGuideRateValue(rst_well.guide_rates, target));
-    }
 }
 
 void
@@ -529,9 +513,10 @@ initFromRestartFile(const RestartValue& restartValues,
                         this->phase_usage_, handle_ms_well, this->wellState());
 
         if (config.has_model()) {
-            this->loadRestartGuideRates(report_step,
-                                        config.model().target(),
-                                        restartValues.wells);
+            BlackoilWellModelRestart(*this).loadRestartGuideRates(report_step,
+                                                                  config.model().target(),
+                                                                  restartValues.wells,
+                                                                  this->guideRate_);
         }
     }
 

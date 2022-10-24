@@ -23,6 +23,7 @@
 #ifndef OPM_BLACKOILWELLMODEL_RESTART_HEADER_INCLUDED
 #define OPM_BLACKOILWELLMODEL_RESTART_HEADER_INCLUDED
 
+#include <opm/input/eclipse/Schedule/Group/GuideRateModel.hpp>
 #include <opm/output/data/Wells.hpp>
 
 #include <vector>
@@ -34,6 +35,7 @@ namespace data {
 class GroupData;
 }
 class GroupState;
+class GuideRate;
 struct PerforationData;
 class SingleWellState;
 
@@ -58,6 +60,12 @@ public:
     void loadRestartGroupData(const std::string&     group,
                               const data::GroupData& value,
                               GroupState& grpState) const;
+
+    //! \brief Loads guide rates from restart structures.
+    void loadRestartGuideRates(const int                    report_step,
+                               const GuideRateModel::Target target,
+                               const data::Wells&           rst_wells,
+                               GuideRate&                   guide_rate) const;
 
 private:
     //! \brief Loads per-connection data from restart structures.

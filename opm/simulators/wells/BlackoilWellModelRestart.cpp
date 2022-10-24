@@ -29,6 +29,38 @@
 #include <opm/simulators/wells/PerforationData.hpp>
 #include <opm/simulators/wells/SingleWellState.hpp>
 
+namespace {
+    Opm::data::GuideRateValue::Item
+    guideRateRestartItem(const Opm::GuideRateModel::Target target)
+    {
+        using Item = Opm::data::GuideRateValue::Item;
+        using Target = Opm::GuideRateModel::Target;
+
+        static const auto items = std::unordered_map<Target, Item> {
+            { Target::OIL, Item::Oil   },
+            { Target::GAS, Item::Gas   },
+            { Target::WAT, Item::Water },
+            { Target::RES, Item::ResV  },
+        };
+
+        auto i = items.find(target);
+        return (i == items.end()) ? Item::NumItems : i->second;
+    }
+
+    Opm::GuideRate::GuideRateValue
+    makeGuideRateValue(const Opm::data::GuideRateValue&  restart,
+                       const Opm::GuideRateModel::Target target)
+    {
+        const auto item = guideRateRestartItem(target);
+
+        if (! restart.has(item)) {
+            return {};
+        }
+
+        return { 0.0, restart.get(item), target };
+    }
+} // Anonymous
+
 namespace Opm {
 
 void BlackoilWellModelRestart::
@@ -144,6 +176,20 @@ loadRestartGroupData(const std::string&     group,
     }
 }
 
+void BlackoilWellModelRestart::
+loadRestartGuideRates(const int                    report_step,
+                      const GuideRateModel::Target target,
+                      const data::Wells&           rst_wells,
+                      GuideRate&                   guide_rate) const
+{
+    for (const auto& [well_name, rst_well] : rst_wells) {
+        if (!wellModel_.hasWell(well_name) || wellModel_.getWellEcl(well_name).isInjector()) {
+            continue;
+        }
 
+        guide_rate.init_grvalue_SI(report_step, well_name,
+                                   makeGuideRateValue(rst_well.guide_rates, target));
+    }
+}
 
 } // namespace Opm
