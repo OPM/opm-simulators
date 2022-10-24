@@ -59,6 +59,16 @@ public:
                              const RateConvFunc& rateConverter,
                              DeferredLogger& deferred_logger) const;
 
+    std::pair<bool, double>
+    checkGroupConstraintsProd(const Group& group,
+                              const WellState& well_state,
+                              const GroupState& group_state,
+                              const double efficiencyFactor,
+                              const Schedule& schedule,
+                              const SummaryState& summaryState,
+                              const RateConvFunc& rateConverter,
+                              DeferredLogger& deferred_logger) const;
+
 private:
     const WellInterfaceGeneric& well_; //!< Reference to well interface
 };

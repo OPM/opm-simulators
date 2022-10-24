@@ -91,4 +91,36 @@ checkGroupConstraintsInj(const Group& group,
                                                       deferred_logger);
 }
 
+std::pair<bool, double>
+WellGroupConstraints::
+checkGroupConstraintsProd(const Group& group,
+                          const WellState& well_state,
+                          const GroupState& group_state,
+                          const double efficiencyFactor,
+                          const Schedule& schedule,
+                          const SummaryState& summaryState,
+                          const RateConvFunc& rateConverter,
+                          DeferredLogger& deferred_logger) const
+{
+    // Make conversion factors for RESV <-> surface rates.
+    std::vector<double> resv_coeff(well_.phaseUsage().num_phases, 1.0);
+    rateConverter(0, well_.pvtRegionIdx(), resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
+
+    const auto& ws = well_state.well(well_.indexOfWell());
+    return WellGroupHelpers::checkGroupConstraintsProd(well_.name(),
+                                                       well_.wellEcl().groupName(),
+                                                       group,
+                                                       well_state,
+                                                       group_state,
+                                                       well_.currentStep(),
+                                                       well_.guideRate(),
+                                                       ws.surface_rates.data(),
+                                                       well_.phaseUsage(),
+                                                       efficiencyFactor,
+                                                       schedule,
+                                                       summaryState,
+                                                       resv_coeff,
+                                                       deferred_logger);
+}
+
 } // namespace Opm

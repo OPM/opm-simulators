@@ -328,38 +328,6 @@ checkIndividualConstraints(SingleWellState& ws,
 }
 
 template <typename FluidSystem>
-std::pair<bool, double>
-WellInterfaceFluidSystem<FluidSystem>::
-checkGroupConstraintsProd(const Group& group,
-                          const WellState& well_state,
-                          const GroupState& group_state,
-                          const double efficiencyFactor,
-                          const Schedule& schedule,
-                          const SummaryState& summaryState,
-                          DeferredLogger& deferred_logger) const
-{
-    // Make conversion factors for RESV <-> surface rates.
-    std::vector<double> resv_coeff(this->phaseUsage().num_phases, 1.0);
-    rateConverter_.calcCoeff(0, pvtRegionIdx_, resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
-
-    const auto& ws = well_state.well(this->index_of_well_);
-    return WellGroupHelpers::checkGroupConstraintsProd(name(),
-                                                       well_ecl_.groupName(),
-                                                       group,
-                                                       well_state,
-                                                       group_state,
-                                                       current_step_,
-                                                       guide_rate_,
-                                                       ws.surface_rates.data(),
-                                                       phaseUsage(),
-                                                       efficiencyFactor,
-                                                       schedule,
-                                                       summaryState,
-                                                       resv_coeff,
-                                                       deferred_logger);
-}
-
-template <typename FluidSystem>
 bool
 WellInterfaceFluidSystem<FluidSystem>::
 checkGroupConstraints(WellState& well_state,
@@ -425,8 +393,15 @@ checkGroupConstraints(WellState& well_state,
             const auto& group = schedule.getGroup( well.groupName(), current_step_ );
             const double efficiencyFactor = well.getEfficiencyFactor();
             const std::pair<bool, double> group_constraint =
-                checkGroupConstraintsProd(group, well_state, group_state, efficiencyFactor,
-                                          schedule, summaryState, deferred_logger);
+                WellGroupConstraints(*this).
+                    checkGroupConstraintsProd(group,
+                                              well_state,
+                                              group_state,
+                                              efficiencyFactor,
+                                              schedule,
+                                              summaryState,
+                                              rCoeff,
+                                              deferred_logger);
             // If a group constraint was broken, we set the current well control to
             // be GRUP.
             if (group_constraint.first) {
