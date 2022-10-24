@@ -22,6 +22,8 @@
 #include <config.h>
 #include <opm/simulators/wells/WellTest.hpp>
 
+#include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
+
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/SingleWellState.hpp>
@@ -234,7 +236,7 @@ bool WellTest::checkRateEconLimits(const WellEconProductionLimits& econ_producti
     return false;
 }
 
-RatioLimitCheckReport WellTest::
+WellTest::RatioLimitCheckReport WellTest::
 checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
                      const SingleWellState& ws,
                      DeferredLogger& deferred_logger) const
@@ -284,5 +286,155 @@ checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
     return report;
 }
 
+void WellTest::updateWellTestStateEconomic(const SingleWellState& ws,
+                                           const double simulation_time,
+                                           const bool write_message_to_opmlog,
+                                           WellTestState& well_test_state,
+                                           DeferredLogger& deferred_logger) const
+{
+    if (well_.wellIsStopped())
+        return;
+
+    const WellEconProductionLimits& econ_production_limits = well_.wellEcl().getEconLimits();
+
+    // if no limit is effective here, then continue to the next well
+    if (!econ_production_limits.onAnyEffectiveLimit()) {
+        return;
+    }
+
+    if (well_.isInjector()) {
+        deferred_logger.warning("ECON_LIMITS_INJECTOR_" + well_.name(), well_.name() + " is an injector, the production economic limits for this well will be ignored.\n");
+        return;
+    }
+
+    // flag to check if the mim oil/gas rate limit is violated
+    bool rate_limit_violated = false;
+
+    const auto& quantity_limit = econ_production_limits.quantityLimit();
+    if (econ_production_limits.onAnyRateLimit()) {
+        if (quantity_limit == WellEconProductionLimits::QuantityLimit::POTN) {
+            rate_limit_violated = this->checkRateEconLimits(econ_production_limits,
+                                                            ws.well_potentials,
+                                                            deferred_logger);
+            // Due to instability of the bhpFromThpLimit code the potentials are sometimes wrong
+            // this can lead to premature shutting of wells due to rate limits of the potentials.
+            // Since rates are supposed to be less or equal to the potentials, we double-check
+            // that also the rate limit is violated before shutting the well.
+            if (rate_limit_violated)
+                rate_limit_violated = this->checkRateEconLimits(econ_production_limits,
+                                                                ws.surface_rates,
+                                                                deferred_logger);
+        }
+        else {
+            rate_limit_violated = this->checkRateEconLimits(econ_production_limits,
+                                                            ws.surface_rates,
+                                                            deferred_logger);
+        }
+    }
+
+    if (rate_limit_violated) {
+        if (econ_production_limits.endRun()) {
+            const std::string warning_message = std::string("ending run after well closed due to economic limits")
+                                              + std::string("is not supported yet \n")
+                                              + std::string("the program will keep running after ") + well_.name()
+                                              + std::string(" is closed");
+            deferred_logger.warning("NOT_SUPPORTING_ENDRUN", warning_message);
+        }
+
+        if (econ_production_limits.validFollowonWell()) {
+            deferred_logger.warning("NOT_SUPPORTING_FOLLOWONWELL", "opening following on well after well closed is not supported yet");
+        }
+
+        well_test_state.close_well(well_.name(), WellTestConfig::Reason::ECONOMIC, simulation_time);
+        if (write_message_to_opmlog) {
+            if (well_.wellEcl().getAutomaticShutIn()) {
+                const std::string msg = std::string("well ") + well_.name() + std::string(" will be shut due to rate economic limit");
+                deferred_logger.info(msg);
+            } else {
+                const std::string msg = std::string("well ") + well_.name() + std::string(" will be stopped due to rate economic limit");
+                deferred_logger.info(msg);
+            }
+        }
+        // the well is closed, not need to check other limits
+        return;
+    }
+
+    if ( !econ_production_limits.onAnyRatioLimit() ) {
+        // there is no need to check the ratio limits
+        return;
+    }
+
+    // checking for ratio related limits, mostly all kinds of ratio.
+    RatioLimitCheckReport ratio_report =
+        this->checkRatioEconLimits(econ_production_limits, ws, deferred_logger);
+
+    if (ratio_report.ratio_limit_violated) {
+        const auto workover = econ_production_limits.workover();
+        switch (workover) {
+        case WellEconProductionLimits::EconWorkover::CON:
+            {
+                const int worst_offending_completion = ratio_report.worst_offending_completion;
+
+                well_test_state.close_completion(well_.name(), worst_offending_completion, simulation_time);
+                if (write_message_to_opmlog) {
+                    if (worst_offending_completion < 0) {
+                        const std::string msg = std::string("Connection ") + std::to_string(- worst_offending_completion)
+                                + std::string(" for well ") + well_.name() + std::string(" will be closed due to economic limit");
+                        deferred_logger.info(msg);
+                    } else {
+                        const std::string msg = std::string("Completion ") + std::to_string(worst_offending_completion)
+                                + std::string(" for well ") + well_.name() + std::string(" will be closed due to economic limit");
+                        deferred_logger.info(msg);
+                    }
+                }
+
+                bool allCompletionsClosed = true;
+                const auto& connections = well_.wellEcl().getConnections();
+                for (const auto& connection : connections) {
+                    if (connection.state() == Connection::State::OPEN
+                        && !well_test_state.completion_is_closed(well_.name(), connection.complnum())) {
+                        allCompletionsClosed = false;
+                    }
+                }
+
+                if (allCompletionsClosed) {
+                    well_test_state.close_well(well_.name(), WellTestConfig::Reason::ECONOMIC, simulation_time);
+                    if (write_message_to_opmlog) {
+                        if (well_.wellEcl().getAutomaticShutIn()) {
+                            const std::string msg = well_.name() + std::string(" will be shut due to last completion closed");
+                            deferred_logger.info(msg);
+                        } else {
+                            const std::string msg = well_.name() + std::string(" will be stopped due to last completion closed");
+                            deferred_logger.info(msg);
+                        }
+                    }
+                }
+                break;
+            }
+        case WellEconProductionLimits::EconWorkover::WELL:
+            {
+            well_test_state.close_well(well_.name(), WellTestConfig::Reason::ECONOMIC, simulation_time);
+            if (write_message_to_opmlog) {
+                if (well_.wellEcl().getAutomaticShutIn()) {
+                    // tell the control that the well is closed
+                    const std::string msg = well_.name() + std::string(" will be shut due to ratio economic limit");
+                    deferred_logger.info(msg);
+                } else {
+                    const std::string msg = well_.name() + std::string(" will be stopped due to ratio economic limit");
+                    deferred_logger.info(msg);
+                }
+            }
+                break;
+            }
+        case WellEconProductionLimits::EconWorkover::NONE:
+            break;
+            default:
+            {
+                deferred_logger.warning("NOT_SUPPORTED_WORKOVER_TYPE",
+                                        "not supporting workover type " + WellEconProductionLimits::EconWorkover2String(workover));
+            }
+        }
+    }
+}
 
 } // namespace Opm

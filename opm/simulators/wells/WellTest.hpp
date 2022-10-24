@@ -35,13 +35,7 @@ class PhaseUsage;
 class SingleWellState;
 class WellEconProductionLimits;
 class WellInterfaceGeneric;
-
-struct RatioLimitCheckReport {
-    static constexpr int INVALIDCOMPLETION = std::numeric_limits<int>::max();
-    bool ratio_limit_violated = false;
-    int worst_offending_completion = INVALIDCOMPLETION;
-    double violation_extent = 0.0;
-};
+class WellTestState;
 
 //! \brief Class for performing well tests.
 class WellTest {
@@ -49,16 +43,20 @@ public:
     //! \brief Constructor sets reference to well.
     WellTest(const WellInterfaceGeneric& well) : well_(well) {}
 
-    bool checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
-                             const std::vector<double>& rates_or_potentials,
-                             DeferredLogger& deferred_logger) const;
-
-    RatioLimitCheckReport
-    checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
-                         const SingleWellState& ws,
-                         DeferredLogger& deferred_logger) const;
+    void updateWellTestStateEconomic(const SingleWellState& ws,
+                                     const double simulation_time,
+                                     const bool write_message_to_opmlog,
+                                     WellTestState& well_test_state,
+                                     DeferredLogger& deferred_logger) const;
 
 private:
+    struct RatioLimitCheckReport {
+        static constexpr int INVALIDCOMPLETION = std::numeric_limits<int>::max();
+        bool ratio_limit_violated = false;
+        int worst_offending_completion = INVALIDCOMPLETION;
+        double violation_extent = 0.0;
+    };
+
     void checkMaxGORLimit(const WellEconProductionLimits& econ_production_limits,
                           const SingleWellState& ws,
                           RatioLimitCheckReport& report) const;
@@ -81,6 +79,16 @@ private:
                                        const double max_ratio_limit,
                                        const RatioFunc& ratioFunc,
                                        RatioLimitCheckReport& report) const;
+
+    bool checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
+                             const std::vector<double>& rates_or_potentials,
+                             DeferredLogger& deferred_logger) const;
+
+    RatioLimitCheckReport
+    checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
+                         const SingleWellState& ws,
+                         DeferredLogger& deferred_logger) const;
+
 
     const WellInterfaceGeneric& well_; //!< Reference to well interface
 };
