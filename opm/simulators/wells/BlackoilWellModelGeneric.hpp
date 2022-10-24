@@ -297,13 +297,6 @@ protected:
                                const int reportStepIdx,
                                DeferredLogger& deferred_logger) const;
 
-    std::pair<Group::InjectionCMode, double> checkGroupInjectionConstraints(const Group& group,
-                                                         const int reportStepIdx,
-                                                         const Phase& phase) const;
-    std::pair<Group::ProductionCMode, double> checkGroupProductionConstraints(const Group& group,
-                                                           const int reportStepIdx,
-                                                           DeferredLogger& deferred_logger) const;
-
     void checkGconsaleLimits(const Group& group,
                              WellState& well_state,
                              const int reportStepIdx,

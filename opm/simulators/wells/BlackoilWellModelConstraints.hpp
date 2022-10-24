@@ -23,10 +23,14 @@
 #ifndef OPM_BLACKOILWELLMODEL_CONSTRAINTS_HEADER_INCLUDED
 #define OPM_BLACKOILWELLMODEL_CONSTRAINTS_HEADER_INCLUDED
 
+#include <opm/input/eclipse/Schedule/Group/Group.hpp>
+
+#include <utility>
 
 namespace Opm {
 
 class BlackoilWellModelGeneric;
+class DeferredLogger;
 class SummaryState;
 
 /// Class for handling constraints for the blackoil well model.
@@ -37,8 +41,21 @@ public:
     BlackoilWellModelConstraints(const BlackoilWellModelGeneric& wellModel)
         : wellModel_(wellModel)
     {}
+
     /// Return true if any well has a THP constraint.
     bool hasTHPConstraints() const;
+
+    //! \brief Check and return value and type of constraints for an injection well group.
+    std::pair<Group::InjectionCMode, double>
+    checkGroupInjectionConstraints(const Group& group,
+                                   const int reportStepIdx,
+                                   const Phase& phase) const;
+
+    //! \brief Check and return value and type of constraints for a production well group.
+    std::pair<Group::ProductionCMode, double>
+    checkGroupProductionConstraints(const Group& group,
+                                    const int reportStepIdx,
+                                    DeferredLogger& deferred_logger) const;
 
 private:
     const BlackoilWellModelGeneric& wellModel_; //!< Reference to well model

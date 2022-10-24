@@ -21,11 +21,15 @@
 */
 
 #include <config.h>
-
 #include <opm/simulators/wells/BlackoilWellModelConstraints.hpp>
 
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
+
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
+#include <opm/simulators/wells/WellGroupHelpers.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
+
+#include <stdexcept>
 
 namespace Opm {
 
@@ -39,6 +43,298 @@ hasTHPConstraints() const
         }
     }
     return wellModel_.comm().max(local_result);
+}
+
+std::pair<Group::InjectionCMode, double>
+BlackoilWellModelConstraints::
+checkGroupInjectionConstraints(const Group& group,
+                               const int reportStepIdx,
+                               const Phase& phase) const
+{
+    const auto& well_state = wellModel_.wellState();
+    const auto& pu = wellModel_.phaseUsage();
+
+    int phasePos;
+    if (phase == Phase::GAS && pu.phase_used[BlackoilPhases::Vapour] )
+        phasePos = pu.phase_pos[BlackoilPhases::Vapour];
+    else if (phase == Phase::OIL && pu.phase_used[BlackoilPhases::Liquid])
+        phasePos = pu.phase_pos[BlackoilPhases::Liquid];
+    else if (phase == Phase::WATER && pu.phase_used[BlackoilPhases::Aqua] )
+        phasePos = pu.phase_pos[BlackoilPhases::Aqua];
+    else
+        OPM_THROW(std::runtime_error, "Unknown phase" );
+
+    auto currentControl = wellModel_.groupState().injection_control(group.name(), phase);
+    if (group.has_control(phase, Group::InjectionCMode::RATE))
+    {
+        if (currentControl != Group::InjectionCMode::RATE)
+        {
+            double current_rate = 0.0;
+            current_rate += WellGroupHelpers::sumWellSurfaceRates(group, wellModel_.schedule(), well_state, reportStepIdx, phasePos, /*isInjector*/true);
+
+            // sum over all nodes
+            current_rate = wellModel_.comm().sum(current_rate);
+
+            const auto& controls = group.injectionControls(phase, wellModel_.summaryState());
+            double target = controls.surface_max_rate;
+
+            if (group.has_gpmaint_control(phase, Group::InjectionCMode::RATE))
+                target = wellModel_.groupState().gpmaint_target(group.name());
+
+            if (target < current_rate) {
+                double scale = 1.0;
+                if (current_rate > 1e-12)
+                    scale = target / current_rate;
+                return std::make_pair(Group::InjectionCMode::RATE, scale);
+            }
+        }
+    }
+    if (group.has_control(phase, Group::InjectionCMode::RESV))
+    {
+        if (currentControl != Group::InjectionCMode::RESV)
+        {
+            double current_rate = 0.0;
+            current_rate += WellGroupHelpers::sumWellResRates(group, wellModel_.schedule(), well_state, reportStepIdx, phasePos, /*isInjector*/true);
+            // sum over all nodes
+            current_rate = wellModel_.comm().sum(current_rate);
+
+            const auto& controls = group.injectionControls(phase, wellModel_.summaryState());
+            double target = controls.resv_max_rate;
+
+            if (group.has_gpmaint_control(phase, Group::InjectionCMode::RESV))
+                target = wellModel_.groupState().gpmaint_target(group.name());
+
+            if (target < current_rate) {
+                double scale = 1.0;
+                if (current_rate > 1e-12)
+                    scale = target / current_rate;
+                return std::make_pair(Group::InjectionCMode::RESV, scale);
+            }
+        }
+    }
+    if (group.has_control(phase, Group::InjectionCMode::REIN))
+    {
+        if (currentControl != Group::InjectionCMode::REIN)
+        {
+            double production_Rate = 0.0;
+            const auto& controls = group.injectionControls(phase, wellModel_.summaryState());
+            const Group& groupRein = wellModel_.schedule().getGroup(controls.reinj_group, reportStepIdx);
+            production_Rate += WellGroupHelpers::sumWellSurfaceRates(groupRein, wellModel_.schedule(),
+                                                                     well_state, reportStepIdx,
+                                                                     phasePos, /*isInjector*/false);
+
+            // sum over all nodes
+            production_Rate = wellModel_.comm().sum(production_Rate);
+
+            double current_rate = 0.0;
+            current_rate += WellGroupHelpers::sumWellSurfaceRates(group, wellModel_.schedule(),
+                                                                  well_state, reportStepIdx,
+                                                                  phasePos, /*isInjector*/true);
+
+            // sum over all nodes
+            current_rate = wellModel_.comm().sum(current_rate);
+
+            if (controls.target_reinj_fraction*production_Rate < current_rate) {
+                double scale = 1.0;
+                if (current_rate > 1e-12)
+                    scale = controls.target_reinj_fraction*production_Rate / current_rate;
+                return std::make_pair(Group::InjectionCMode::REIN, scale);
+            }
+        }
+    }
+    if (group.has_control(phase, Group::InjectionCMode::VREP))
+    {
+        if (currentControl != Group::InjectionCMode::VREP)
+        {
+            double voidage_rate = 0.0;
+            const auto& controls = group.injectionControls(phase, wellModel_.summaryState());
+            const Group& groupVoidage = wellModel_.schedule().getGroup(controls.voidage_group, reportStepIdx);
+            voidage_rate += WellGroupHelpers::sumWellResRates(groupVoidage, wellModel_.schedule(),
+                                                              well_state, reportStepIdx,
+                                                              pu.phase_pos[BlackoilPhases::Aqua], false);
+            voidage_rate += WellGroupHelpers::sumWellResRates(groupVoidage, wellModel_.schedule(),
+                                                              well_state, reportStepIdx,
+                                                              pu.phase_pos[BlackoilPhases::Liquid], false);
+            voidage_rate += WellGroupHelpers::sumWellResRates(groupVoidage, wellModel_.schedule(),
+                                                              well_state, reportStepIdx,
+                                                              pu.phase_pos[BlackoilPhases::Vapour], false);
+
+            // sum over all nodes
+            voidage_rate = wellModel_.comm().sum(voidage_rate);
+
+            double total_rate = 0.0;
+            total_rate += WellGroupHelpers::sumWellResRates(group, wellModel_.schedule(),
+                                                            well_state, reportStepIdx,
+                                                            pu.phase_pos[BlackoilPhases::Aqua], true);
+            total_rate += WellGroupHelpers::sumWellResRates(group, wellModel_.schedule(),
+                                                            well_state, reportStepIdx,
+                                                            pu.phase_pos[BlackoilPhases::Liquid], true);
+            total_rate += WellGroupHelpers::sumWellResRates(group, wellModel_.schedule(),
+                                                            well_state, reportStepIdx,
+                                                            pu.phase_pos[BlackoilPhases::Vapour], true);
+
+            // sum over all nodes
+            total_rate = wellModel_.comm().sum(total_rate);
+
+            if (controls.target_void_fraction*voidage_rate < total_rate) {
+                double scale = 1.0;
+                if (total_rate > 1e-12)
+                    scale = controls.target_void_fraction*voidage_rate / total_rate;
+                return std::make_pair(Group::InjectionCMode::VREP, scale);
+            }
+        }
+    }
+    return std::make_pair(Group::InjectionCMode::NONE, 1.0);
+}
+
+std::pair<Group::ProductionCMode, double>
+BlackoilWellModelConstraints::
+checkGroupProductionConstraints(const Group& group,
+                                const int reportStepIdx,
+                                DeferredLogger& deferred_logger) const
+{
+    const auto& well_state = wellModel_.wellState();
+    const auto& pu = wellModel_.phaseUsage();
+
+    const auto controls = group.productionControls(wellModel_.summaryState());
+    const Group::ProductionCMode& currentControl = wellModel_.groupState().production_control(group.name());
+
+    if (group.has_control(Group::ProductionCMode::ORAT))
+    {
+        if (currentControl != Group::ProductionCMode::ORAT)
+        {
+            double current_rate = 0.0;
+            current_rate += WellGroupHelpers::sumWellSurfaceRates(group, wellModel_.schedule(),
+                                                                  well_state, reportStepIdx,
+                                                                  pu.phase_pos[BlackoilPhases::Liquid], false);
+
+            // sum over all nodes
+            current_rate = wellModel_.comm().sum(current_rate);
+
+            if (controls.oil_target < current_rate  ) {
+                double scale = 1.0;
+                if (current_rate > 1e-12)
+                    scale = controls.oil_target / current_rate;
+                return std::make_pair(Group::ProductionCMode::ORAT, scale);
+            }
+        }
+    }
+
+    if (group.has_control(Group::ProductionCMode::WRAT))
+    {
+        if (currentControl != Group::ProductionCMode::WRAT)
+        {
+
+            double current_rate = 0.0;
+            current_rate += WellGroupHelpers::sumWellSurfaceRates(group, wellModel_.schedule(),
+                                                                  well_state, reportStepIdx,
+                                                                  pu.phase_pos[BlackoilPhases::Aqua], false);
+
+            // sum over all nodes
+            current_rate = wellModel_.comm().sum(current_rate);
+
+            if (controls.water_target < current_rate  ) {
+                double scale = 1.0;
+                if (current_rate > 1e-12)
+                    scale = controls.water_target / current_rate;
+                return std::make_pair(Group::ProductionCMode::WRAT, scale);
+            }
+        }
+    }
+    if (group.has_control(Group::ProductionCMode::GRAT))
+    {
+        if (currentControl != Group::ProductionCMode::GRAT)
+        {
+            double current_rate = 0.0;
+            current_rate += WellGroupHelpers::sumWellSurfaceRates(group, wellModel_.schedule(),
+                                                                  well_state, reportStepIdx,
+                                                                  pu.phase_pos[BlackoilPhases::Vapour], false);
+
+            // sum over all nodes
+            current_rate = wellModel_.comm().sum(current_rate);
+            if (controls.gas_target < current_rate  ) {
+                double scale = 1.0;
+                if (current_rate > 1e-12)
+                    scale = controls.gas_target / current_rate;
+                return std::make_pair(Group::ProductionCMode::GRAT, scale);
+            }
+        }
+    }
+    if (group.has_control(Group::ProductionCMode::LRAT))
+    {
+        if (currentControl != Group::ProductionCMode::LRAT)
+        {
+            double current_rate = 0.0;
+            current_rate += WellGroupHelpers::sumWellSurfaceRates(group, wellModel_.schedule(),
+                                                                  well_state, reportStepIdx,
+                                                                  pu.phase_pos[BlackoilPhases::Liquid], false);
+            current_rate += WellGroupHelpers::sumWellSurfaceRates(group, wellModel_.schedule(),
+                                                                  well_state, reportStepIdx,
+                                                                  pu.phase_pos[BlackoilPhases::Aqua], false);
+
+            // sum over all nodes
+            current_rate = wellModel_.comm().sum(current_rate);
+
+            bool skip = false;
+            if (controls.liquid_target == controls.oil_target) {
+                double current_water_rate = WellGroupHelpers::sumWellSurfaceRates(group, wellModel_.schedule(),
+                                                                                  well_state, reportStepIdx,
+                                                                                  pu.phase_pos[BlackoilPhases::Aqua], false);
+                current_water_rate = wellModel_.comm().sum(current_water_rate);
+                if (std::abs(current_water_rate) < 1e-12) {
+                    skip = true;
+                    deferred_logger.debug("LRAT_ORAT_GROUP", "GROUP " + group.name() + " The LRAT target is equal the ORAT target and the water rate is zero, skip checking LRAT");
+                }
+            }
+
+            if (!skip && controls.liquid_target < current_rate ) {
+                double scale = 1.0;
+                if (current_rate > 1e-12)
+                    scale = controls.liquid_target / current_rate;
+                return std::make_pair(Group::ProductionCMode::LRAT, scale);
+            }
+        }
+    }
+
+    if (group.has_control(Group::ProductionCMode::CRAT))
+    {
+        OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + "CRAT control for production groups not implemented" , deferred_logger);
+    }
+    if (group.has_control(Group::ProductionCMode::RESV))
+    {
+        if (currentControl != Group::ProductionCMode::RESV)
+        {
+            double current_rate = 0.0;
+            current_rate += WellGroupHelpers::sumWellResRates(group, wellModel_.schedule(),
+                                                              well_state, reportStepIdx,
+                                                              pu.phase_pos[BlackoilPhases::Aqua], true);
+            current_rate += WellGroupHelpers::sumWellResRates(group, wellModel_.schedule(),
+                                                              well_state, reportStepIdx,
+                                                              pu.phase_pos[BlackoilPhases::Liquid], true);
+            current_rate += WellGroupHelpers::sumWellResRates(group, wellModel_.schedule(),
+                                                              well_state, reportStepIdx,
+                                                              pu.phase_pos[BlackoilPhases::Vapour], true);
+
+            // sum over all nodes
+            current_rate = wellModel_.comm().sum(current_rate);
+
+            double target = controls.resv_target;
+            if (group.has_gpmaint_control(Group::ProductionCMode::RESV))
+                target = wellModel_.groupState().gpmaint_target(group.name());
+
+            if ( target < current_rate ) {
+                double scale = 1.0;
+                if (current_rate > 1e-12)
+                    scale = target / current_rate;
+                return std::make_pair(Group::ProductionCMode::RESV, scale);
+            }
+        }
+    }
+    if (group.has_control(Group::ProductionCMode::PRBL))
+    {
+        OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + "PRBL control for production groups not implemented", deferred_logger);
+    }
+    return std::make_pair(Group::ProductionCMode::NONE, 1.0);
 }
 
 }
