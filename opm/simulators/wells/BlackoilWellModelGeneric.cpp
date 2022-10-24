@@ -723,7 +723,10 @@ checkGroupHigherConstraints(const Group& group,
                 deferred_logger);
                 if (is_changed) {
                     switched_inj_groups_.insert({ {group.name(), phase}, Group::InjectionCMode2String(Group::InjectionCMode::FLD)});
-                    actionOnBrokenConstraints(group, Group::InjectionCMode::FLD, phase, deferred_logger);
+                    BlackoilWellModelConstraints(*this).
+                        actionOnBrokenConstraints(group, Group::InjectionCMode::FLD,
+                                                  phase, this->groupState(),
+                                                  deferred_logger);
                     WellGroupHelpers::updateWellRatesFromGroupTargetScale(scaling_factor, group, schedule(), reportStepIdx, /* isInjector */ true, this->groupState(), this->wellState());
                     changed = true;
                 }
@@ -762,7 +765,11 @@ checkGroupHigherConstraints(const Group& group,
             if (is_changed) {
                 switched_prod_groups_.insert({group.name(), Group::ProductionCMode2String(Group::ProductionCMode::FLD)});
                 const auto exceed_action = group.productionControls(summaryState_).exceed_action;
-                actionOnBrokenConstraints(group, exceed_action, Group::ProductionCMode::FLD, deferred_logger);
+                BlackoilWellModelConstraints(*this).
+                        actionOnBrokenConstraints(group, exceed_action,
+                                                  Group::ProductionCMode::FLD,
+                                                  this->groupState(),
+                                                  deferred_logger);
                 WellGroupHelpers::updateWellRatesFromGroupTargetScale(scaling_factor, group, schedule(), reportStepIdx, /* isInjector */ false, this->groupState(), this->wellState());
                 changed = true;
             }
@@ -792,7 +799,9 @@ updateGroupIndividualControl(const Group& group,
             if (changed_this.first != Group::InjectionCMode::NONE)
             {
                 switched_inj_groups_.insert({{group.name(), phase}, Group::InjectionCMode2String(changed_this.first)});
-                actionOnBrokenConstraints(group, changed_this.first, phase, deferred_logger);
+                BlackoilWellModelConstraints(*this).
+                actionOnBrokenConstraints(group, changed_this.first, phase,
+                                          this->groupState(), deferred_logger);
                 WellGroupHelpers::updateWellRatesFromGroupTargetScale(changed_this.second, group, schedule(), reportStepIdx, /* isInjector */ false, this->groupState(), this->wellState());
                 changed = true;
             }
@@ -806,88 +815,16 @@ updateGroupIndividualControl(const Group& group,
         if (changed_this.first != Group::ProductionCMode::NONE)
         {
             switched_prod_groups_.insert({group.name(), Group::ProductionCMode2String(changed_this.first)});
-            actionOnBrokenConstraints(group, controls.exceed_action, changed_this.first, deferred_logger);
+            BlackoilWellModelConstraints(*this).
+                actionOnBrokenConstraints(group, controls.exceed_action,
+                                          changed_this.first,
+                                          this->groupState(), deferred_logger);
             WellGroupHelpers::updateWellRatesFromGroupTargetScale(changed_this.second, group, schedule(), reportStepIdx, /* isInjector */ false, this->groupState(), this->wellState());
             changed = true;
         }
     }
 
     return changed;
-}
-
-void
-BlackoilWellModelGeneric::
-actionOnBrokenConstraints(const Group& group,
-                          const Group::ExceedAction& exceed_action,
-                          const Group::ProductionCMode& newControl,
-                          DeferredLogger& deferred_logger)
-{
-    const Group::ProductionCMode oldControl = this->groupState().production_control(group.name());
-
-    std::ostringstream ss;
-
-    switch(exceed_action) {
-    case Group::ExceedAction::NONE: {
-        if (oldControl != newControl && oldControl != Group::ProductionCMode::NONE) {
-            ss << "Group production exceed action is NONE for group " + group.name() + ". Nothing happens.";
-        }
-        break;
-    }
-    case Group::ExceedAction::CON: {
-        OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + "GroupProductionExceedLimit CON not implemented", deferred_logger);
-        break;
-    }
-    case Group::ExceedAction::CON_PLUS: {
-        OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + "GroupProductionExceedLimit CON_PLUS not implemented", deferred_logger);
-        break;
-    }
-    case Group::ExceedAction::WELL: {
-        OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + "GroupProductionExceedLimit WELL not implemented", deferred_logger);
-        break;
-    }
-    case Group::ExceedAction::PLUG: {
-        OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + "GroupProductionExceedLimit PLUG not implemented", deferred_logger);
-        break;
-    }
-    case Group::ExceedAction::RATE: {
-        if (oldControl != newControl) {
-            this->groupState().production_control(group.name(), newControl);
-            ss << "Switching production control mode for group "<< group.name()
-               << " from " << Group::ProductionCMode2String(oldControl)
-               << " to " << Group::ProductionCMode2String(newControl);
-        }
-        break;
-    }
-    default:
-        throw("Invalid procedure for maximum rate limit selected for group" + group.name());
-    }
-
-    Parallel::Communication cc = comm_;
-    if (!ss.str().empty() && cc.rank() == 0)
-        deferred_logger.debug(ss.str());
-}
-
-void
-BlackoilWellModelGeneric::
-actionOnBrokenConstraints(const Group& group,
-                          const Group::InjectionCMode& newControl,
-                          const Phase& controlPhase,
-                          DeferredLogger& deferred_logger)
-{
-    auto oldControl = this->groupState().injection_control(group.name(), controlPhase);
-
-    std::ostringstream ss;
-    if (oldControl != newControl) {
-        const std::string from = Group::InjectionCMode2String(oldControl);
-        ss << "Switching injection control mode for group "<< group.name()
-           << " from " << Group::InjectionCMode2String(oldControl)
-           << " to " << Group::InjectionCMode2String(newControl);
-        this->groupState().injection_control(group.name(), controlPhase, newControl);
-    }
-
-    Parallel::Communication cc = comm_;
-    if (!ss.str().empty() && cc.rank() == 0)
-        deferred_logger.info(ss.str());
 }
 
 void

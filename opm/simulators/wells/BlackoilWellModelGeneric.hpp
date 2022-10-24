@@ -306,15 +306,6 @@ protected:
                                       DeferredLogger& deferred_logger,
                                       const int reportStepIdx);
 
-    void actionOnBrokenConstraints(const Group& group,
-                                   const Group::ExceedAction& exceed_action,
-                                   const Group::ProductionCMode& newControl,
-                                   DeferredLogger& deferred_logger);
-    void actionOnBrokenConstraints(const Group& group,
-                                   const Group::InjectionCMode& newControl,
-                                   const Phase& controlPhase,
-                                   DeferredLogger& deferred_logger);
-
     void updateAndCommunicateGroupData(const int reportStepIdx,
                                        const int iterationIdx);
 

@@ -31,6 +31,7 @@ namespace Opm {
 
 class BlackoilWellModelGeneric;
 class DeferredLogger;
+class GroupState;
 class SummaryState;
 
 /// Class for handling constraints for the blackoil well model.
@@ -61,6 +62,20 @@ public:
     bool checkGroupConstraints(const Group& group,
                                const int reportStepIdx,
                                DeferredLogger& deferred_logger) const;
+
+    //! \brief Execute action for broken constraint for an injection well group.
+    void actionOnBrokenConstraints(const Group& group,
+                                   const Group::InjectionCMode& newControl,
+                                   const Phase& controlPhase,
+                                   GroupState& group_state,
+                                   DeferredLogger& deferred_logger) const;
+
+    //! \brief Execute action on broken constraint for a production well group.
+    void actionOnBrokenConstraints(const Group& group,
+                                   const Group::ExceedAction& exceed_action,
+                                   const Group::ProductionCMode& newControl,
+                                   GroupState& group_state,
+                                   DeferredLogger& deferred_logger) const;
 
 private:
     const BlackoilWellModelGeneric& wellModel_; //!< Reference to well model

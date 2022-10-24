@@ -29,6 +29,7 @@
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 
+#include <sstream>
 #include <stdexcept>
 
 namespace Opm {
@@ -372,6 +373,79 @@ checkGroupConstraints(const Group& group,
         violated = violated || this->checkGroupConstraints(grp, reportStepIdx, deferred_logger);
     }
     return violated;
+}
+
+void BlackoilWellModelConstraints::
+actionOnBrokenConstraints(const Group& group,
+                          const Group::InjectionCMode& newControl,
+                          const Phase& controlPhase,
+                          GroupState& group_state,
+                          DeferredLogger& deferred_logger) const
+{
+    auto oldControl = wellModel_.groupState().injection_control(group.name(), controlPhase);
+
+    std::ostringstream ss;
+    if (oldControl != newControl) {
+        const std::string from = Group::InjectionCMode2String(oldControl);
+        ss << "Switching injection control mode for group "<< group.name()
+           << " from " << Group::InjectionCMode2String(oldControl)
+           << " to " << Group::InjectionCMode2String(newControl);
+        group_state.injection_control(group.name(), controlPhase, newControl);
+    }
+
+    if (!ss.str().empty() && wellModel_.comm().rank() == 0)
+        deferred_logger.info(ss.str());
+}
+
+void BlackoilWellModelConstraints::
+actionOnBrokenConstraints(const Group& group,
+                          const Group::ExceedAction& exceed_action,
+                          const Group::ProductionCMode& newControl,
+                          GroupState& group_state,
+                          DeferredLogger& deferred_logger) const
+{
+    const Group::ProductionCMode oldControl = wellModel_.groupState().production_control(group.name());
+
+    std::ostringstream ss;
+
+    switch(exceed_action) {
+    case Group::ExceedAction::NONE: {
+        if (oldControl != newControl && oldControl != Group::ProductionCMode::NONE) {
+            ss << "Group production exceed action is NONE for group " + group.name() + ". Nothing happens.";
+        }
+        break;
+    }
+    case Group::ExceedAction::CON: {
+        OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + "GroupProductionExceedLimit CON not implemented", deferred_logger);
+        break;
+    }
+    case Group::ExceedAction::CON_PLUS: {
+        OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + "GroupProductionExceedLimit CON_PLUS not implemented", deferred_logger);
+        break;
+    }
+    case Group::ExceedAction::WELL: {
+        OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + "GroupProductionExceedLimit WELL not implemented", deferred_logger);
+        break;
+    }
+    case Group::ExceedAction::PLUG: {
+        OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + "GroupProductionExceedLimit PLUG not implemented", deferred_logger);
+        break;
+    }
+    case Group::ExceedAction::RATE: {
+        if (oldControl != newControl) {
+            group_state.production_control(group.name(), newControl);
+            ss << "Switching production control mode for group "<< group.name()
+               << " from " << Group::ProductionCMode2String(oldControl)
+               << " to " << Group::ProductionCMode2String(newControl);
+        }
+        break;
+    }
+    default:
+        throw("Invalid procedure for maximum rate limit selected for group" + group.name());
+    }
+
+    if (!ss.str().empty() && wellModel_.comm().rank() == 0)
+        deferred_logger.debug(ss.str());
 }
 
 }
