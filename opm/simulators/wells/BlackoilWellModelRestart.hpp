@@ -30,6 +30,10 @@
 namespace Opm {
 
 class BlackoilWellModelGeneric;
+namespace data {
+class GroupData;
+}
+class GroupState;
 struct PerforationData;
 class SingleWellState;
 
@@ -49,6 +53,11 @@ public:
                              const data::Well&                    rst_well,
                              const std::vector<PerforationData>&  old_perf_data,
                              SingleWellState&                     ws) const;
+
+    //! \brief Loads per-group data from restart structures.
+    void loadRestartGroupData(const std::string&     group,
+                              const data::GroupData& value,
+                              GroupState& grpState) const;
 
 private:
     //! \brief Loads per-connection data from restart structures.

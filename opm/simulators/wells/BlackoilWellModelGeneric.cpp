@@ -417,33 +417,6 @@ getWellEcl(const std::string& well_name) const
 
 void
 BlackoilWellModelGeneric::
-loadRestartGroupData(const std::string&     group,
-                     const data::GroupData& value)
-{
-    using GPMode = Group::ProductionCMode;
-    using GIMode = Group::InjectionCMode;
-
-    const auto cpc = value.currentControl.currentProdConstraint;
-    const auto cgi = value.currentControl.currentGasInjectionConstraint;
-    const auto cwi = value.currentControl.currentWaterInjectionConstraint;
-
-    auto& grpState = this->groupState();
-
-    if (cpc != GPMode::NONE) {
-        grpState.production_control(group, cpc);
-    }
-
-    if (cgi != GIMode::NONE) {
-        grpState.injection_control(group, Phase::GAS, cgi);
-    }
-
-    if (cwi != GIMode::NONE) {
-        grpState.injection_control(group, Phase::WATER, cwi);
-    }
-}
-
-void
-BlackoilWellModelGeneric::
 loadRestartGuideRates(const int                    report_step,
                       const GuideRateModel::Target target,
                       const data::Wells&           rst_wells)
@@ -519,7 +492,7 @@ loadRestartData(const data::Wells&                 rst_wells,
     }
 
     for (const auto& [group, value] : grpNwrkValues.groupData) {
-        this->loadRestartGroupData(group, value);
+        BlackoilWellModelRestart(*this).loadRestartGroupData(group, value, this->groupState());
     }
 }
 

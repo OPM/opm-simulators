@@ -286,9 +286,6 @@ protected:
                            std::map<std::string, data::GroupData>& gvalues) const;
     void assignNodeValues(std::map<std::string, data::NodeData>& nodevalues) const;
 
-    void loadRestartGroupData(const std::string&     group,
-                              const data::GroupData& value);
-
     void loadRestartGuideRates(const int                    report_step,
                                const GuideRateModel::Target target,
                                const data::Wells&           rst_wells);

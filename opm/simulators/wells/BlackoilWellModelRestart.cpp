@@ -23,6 +23,8 @@
 #include <config.h>
 #include <opm/simulators/wells/BlackoilWellModelRestart.hpp>
 
+#include <opm/output/data/Groups.hpp>
+
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
 #include <opm/simulators/wells/PerforationData.hpp>
 #include <opm/simulators/wells/SingleWellState.hpp>
@@ -116,6 +118,32 @@ loadRestartWellData(const std::string&                   well_name,
         this->loadRestartSegmentData(well_name, phs, rst_well, ws);
     }
 }
+
+void BlackoilWellModelRestart::
+loadRestartGroupData(const std::string&     group,
+                     const data::GroupData& value,
+                     GroupState& grpState) const
+{
+    using GPMode = Group::ProductionCMode;
+    using GIMode = Group::InjectionCMode;
+
+    const auto cpc = value.currentControl.currentProdConstraint;
+    const auto cgi = value.currentControl.currentGasInjectionConstraint;
+    const auto cwi = value.currentControl.currentWaterInjectionConstraint;
+
+    if (cpc != GPMode::NONE) {
+        grpState.production_control(group, cpc);
+    }
+
+    if (cgi != GIMode::NONE) {
+        grpState.injection_control(group, Phase::GAS, cgi);
+    }
+
+    if (cwi != GIMode::NONE) {
+        grpState.injection_control(group, Phase::WATER, cwi);
+    }
+}
+
 
 
 } // namespace Opm
