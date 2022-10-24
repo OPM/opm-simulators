@@ -113,4 +113,24 @@ getGuideRateValues(const Group& group) const
     return grval;
 }
 
+data::GuideRateValue
+BlackoilWellModelGuideRates::
+getGuideRateInjectionGroupValues(const Group& group) const
+{
+    auto grval = data::GuideRateValue{};
+
+    const auto& gname = group.name();
+    if (wellModel_.guideRate().has(gname, Phase::GAS)) {
+        grval.set(data::GuideRateValue::Item::Gas,
+                  wellModel_.guideRate().getSI(gname, Phase::GAS));
+    }
+
+    if (wellModel_.guideRate().has(gname, Phase::WATER)) {
+        grval.set(data::GuideRateValue::Item::Water,
+                  wellModel_.guideRate().getSI(gname, Phase::WATER));
+    }
+
+    return grval;
+}
+
 }

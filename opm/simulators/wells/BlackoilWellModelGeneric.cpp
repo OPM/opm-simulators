@@ -929,26 +929,6 @@ setWsolvent(const Group& group,
     }
 }
 
-data::GuideRateValue
-BlackoilWellModelGeneric::
-getGuideRateInjectionGroupValues(const Group& group) const
-{
-    auto grval = data::GuideRateValue{};
-
-    const auto& gname = group.name();
-    if (this->guideRate_.has(gname, Phase::GAS)) {
-        grval.set(data::GuideRateValue::Item::Gas,
-                  this->guideRate_.getSI(gname, Phase::GAS));
-    }
-
-    if (this->guideRate_.has(gname, Phase::WATER)) {
-        grval.set(data::GuideRateValue::Item::Water,
-                  this->guideRate_.getSI(gname, Phase::WATER));
-    }
-
-    return grval;
-}
-
 void
 BlackoilWellModelGeneric::
 assignWellGuideRates(data::Wells& wsrpt,
@@ -1115,7 +1095,7 @@ calculateAllGroupGuiderates(const int reportStepIdx) const
             this->guideRate_.has(gname, Phase::GAS))
         {
             gr[gname].injection =
-                this->getGuideRateInjectionGroupValues(group);
+                BlackoilWellModelGuideRates(*this).getGuideRateInjectionGroupValues(group);
         }
 
         const auto parent = group.parent();

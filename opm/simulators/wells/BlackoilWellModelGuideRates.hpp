@@ -55,6 +55,9 @@ public:
     //! \brief Obtain guide rate values for group.
     data::GuideRateValue getGuideRateValues(const Group& group) const;
 
+    //! \brief Obtain guide rate values for injection group.
+    data::GuideRateValue getGuideRateInjectionGroupValues(const Group& group) const;
+
 private:
     const BlackoilWellModelGeneric& wellModel_; //!< Reference to well model
 };
