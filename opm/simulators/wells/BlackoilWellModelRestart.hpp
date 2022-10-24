@@ -33,12 +33,15 @@ namespace Opm {
 class BlackoilWellModelGeneric;
 namespace data {
 class GroupData;
+class GroupAndNetworkValues;
 }
 class GroupState;
 class GuideRate;
 class GuideRateConfig;
 struct PerforationData;
+class PhaseUsage;
 class SingleWellState;
+class WellState;
 
 /// Class for restarting the blackoil well model.
 class BlackoilWellModelRestart
@@ -48,19 +51,6 @@ public:
     BlackoilWellModelRestart(const BlackoilWellModelGeneric& wellModel)
         : wellModel_(wellModel)
     {}
-
-    //! \brief Loads per-well data from restart structures.
-    void loadRestartWellData(const std::string&                   well_name,
-                             const bool                           handle_ms_well,
-                             const std::vector<data::Rates::opt>& phs,
-                             const data::Well&                    rst_well,
-                             const std::vector<PerforationData>&  old_perf_data,
-                             SingleWellState&                     ws) const;
-
-    //! \brief Loads per-group data from restart structures.
-    void loadRestartGroupData(const std::string&     group,
-                              const data::GroupData& value,
-                              GroupState& grpState) const;
 
     //! \brief Loads guide rates from restart structures.
     void loadRestartGuideRates(const int                    report_step,
@@ -74,6 +64,13 @@ public:
                                const std::map<std::string, data::GroupData>& rst_groups,
                                GuideRate&                                    guide_rate) const;
 
+    //! \brief Loads well data from restart structures.
+    void loadRestartData(const data::Wells&                 rst_wells,
+                         const data::GroupAndNetworkValues& grpNwrkValues,
+                         const bool                         handle_ms_well,
+                         WellState&                         well_state,
+                         GroupState&                        grpState) const;
+
 private:
     //! \brief Loads per-connection data from restart structures.
     void loadRestartConnectionData(const std::vector<data::Rates::opt>& phs,
@@ -86,6 +83,19 @@ private:
                                 const std::vector<data::Rates::opt>& phs,
                                 const data::Well&                    rst_well,
                                 SingleWellState&                     ws) const;
+
+    //! \brief Loads per-well data from restart structures.
+    void loadRestartWellData(const std::string&                   well_name,
+                             const bool                           handle_ms_well,
+                             const std::vector<data::Rates::opt>& phs,
+                             const data::Well&                    rst_well,
+                             const std::vector<PerforationData>&  old_perf_data,
+                             SingleWellState&                     ws) const;
+
+    //! \brief Loads per-group data from restart structures.
+    void loadRestartGroupData(const std::string&     group,
+                              const data::GroupData& value,
+                              GroupState& grpState) const;
 
     const BlackoilWellModelGeneric& wellModel_; //!< Reference to well model
 };

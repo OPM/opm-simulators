@@ -130,13 +130,6 @@ public:
                         const std::unordered_set<std::string>& wells,
                         const SummaryState& st);
 
-
-    void loadRestartData(const data::Wells& rst_wells,
-                         const data::GroupAndNetworkValues& grpNwrkValues,
-                         const PhaseUsage& phases,
-                         const bool handle_ms_well,
-                         WellState& well_state);
-
     void initFromRestartFile(const RestartValue& restartValues,
                              WellTestState wtestState,
                              const size_t numCells,
@@ -162,6 +155,10 @@ public:
     /// Returns true if the well was actually found and shut.
     bool forceShutWellByName(const std::string& wellname,
                              const double simulation_time);
+
+
+    const std::vector<PerforationData>& perfData(const int well_idx) const
+    { return well_perf_data_[well_idx]; }
 
 protected:
 

@@ -217,4 +217,45 @@ loadRestartGuideRates(const int                                     report_step,
     }
 }
 
+void BlackoilWellModelRestart::
+loadRestartData(const data::Wells&                 rst_wells,
+                const data::GroupAndNetworkValues& grpNwrkValues,
+                const bool                         handle_ms_well,
+                WellState&                         well_state,
+                GroupState&                        grpState) const
+{
+    using rt = data::Rates::opt;
+    const auto& phases = wellModel_.phaseUsage();
+    const auto np = phases.num_phases;
+
+    std::vector<rt> phs(np);
+    if (phases.phase_used[BlackoilPhases::Aqua]) {
+        phs.at(phases.phase_pos[BlackoilPhases::Aqua]) = rt::wat;
+    }
+
+    if (phases.phase_used[BlackoilPhases::Liquid]) {
+        phs.at( phases.phase_pos[BlackoilPhases::Liquid] ) = rt::oil;
+    }
+
+    if (phases.phase_used[BlackoilPhases::Vapour]) {
+        phs.at( phases.phase_pos[BlackoilPhases::Vapour] ) = rt::gas;
+    }
+
+    for (auto well_index = 0*well_state.size();
+         well_index < well_state.size();
+         ++well_index)
+    {
+        const auto& well_name = well_state.name(well_index);
+
+        this->loadRestartWellData(well_name, handle_ms_well, phs,
+                                  rst_wells.at(well_name),
+                                  wellModel_.perfData(well_index),
+                                  well_state.well(well_index));
+    }
+
+    for (const auto& [group, value] : grpNwrkValues.groupData) {
+        this->loadRestartGroupData(group, value, grpState);
+    }
+}
+
 } // namespace Opm

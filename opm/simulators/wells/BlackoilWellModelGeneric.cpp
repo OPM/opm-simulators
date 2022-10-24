@@ -387,48 +387,6 @@ getWellEcl(const std::string& well_name) const
 
 void
 BlackoilWellModelGeneric::
-loadRestartData(const data::Wells&                 rst_wells,
-                const data::GroupAndNetworkValues& grpNwrkValues,
-                const PhaseUsage&                  phases,
-                const bool                         handle_ms_well,
-                WellState&                         well_state)
-{
-    using rt = data::Rates::opt;
-    const auto np = phases.num_phases;
-
-    std::vector<rt> phs(np);
-    if (phases.phase_used[BlackoilPhases::Aqua]) {
-        phs.at(phases.phase_pos[BlackoilPhases::Aqua]) = rt::wat;
-    }
-
-    if (phases.phase_used[BlackoilPhases::Liquid]) {
-        phs.at( phases.phase_pos[BlackoilPhases::Liquid] ) = rt::oil;
-    }
-
-    if (phases.phase_used[BlackoilPhases::Vapour]) {
-        phs.at( phases.phase_pos[BlackoilPhases::Vapour] ) = rt::gas;
-    }
-
-    for (auto well_index = 0*well_state.size();
-         well_index < well_state.size();
-         ++well_index)
-    {
-        const auto& well_name = well_state.name(well_index);
-
-        BlackoilWellModelRestart(*this).
-                loadRestartWellData(well_name, handle_ms_well, phs,
-                                    rst_wells.at(well_name),
-                                    this->well_perf_data_[well_index],
-                                    well_state.well(well_index));
-    }
-
-    for (const auto& [group, value] : grpNwrkValues.groupData) {
-        BlackoilWellModelRestart(*this).loadRestartGroupData(group, value, this->groupState());
-    }
-}
-
-void
-BlackoilWellModelGeneric::
 initFromRestartFile(const RestartValue& restartValues,
                     WellTestState wtestState,
                     const size_t numCells,
@@ -456,8 +414,11 @@ initFromRestartFile(const RestartValue& restartValues,
                                  this->schedule(), handle_ms_well, numCells,
                                  this->well_perf_data_, this->summaryState_);
 
-        loadRestartData(restartValues.wells, restartValues.grp_nwrk,
-                        this->phase_usage_, handle_ms_well, this->wellState());
+        BlackoilWellModelRestart(*this).loadRestartData(restartValues.wells,
+                                                        restartValues.grp_nwrk,
+                                                        handle_ms_well,
+                                                        this->wellState(),
+                                                        this->groupState());
 
         if (config.has_model()) {
             BlackoilWellModelRestart(*this).loadRestartGuideRates(report_step,
