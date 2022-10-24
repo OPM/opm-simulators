@@ -448,4 +448,69 @@ actionOnBrokenConstraints(const Group& group,
         deferred_logger.debug(ss.str());
 }
 
+bool BlackoilWellModelConstraints::
+updateGroupIndividualControl(const Group& group,
+                             const int reportStepIdx,
+                             std::map<std::pair<std::string,Opm::Phase>,std::string>& switched_inj,
+                             std::map<std::string, std::string>& switched_prod,
+                             GroupState& group_state,
+                             WellState& well_state,
+                             DeferredLogger& deferred_logger) const
+{
+    bool changed = false;
+    if (group.isInjectionGroup())
+    {
+        const Phase all[] = {Phase::WATER, Phase::OIL, Phase::GAS};
+        for (Phase phase : all) {
+            if (!group.hasInjectionControl(phase)) {
+                continue;
+            }
+            const auto& changed_this = this->checkGroupInjectionConstraints(group,
+                                                                            reportStepIdx,
+                                                                            phase);
+            if (changed_this.first != Group::InjectionCMode::NONE)
+            {
+                switched_inj.insert({{group.name(), phase},
+                                     Group::InjectionCMode2String(changed_this.first)});
+                this->actionOnBrokenConstraints(group, changed_this.first, phase,
+                                                group_state, deferred_logger);
+                WellGroupHelpers::updateWellRatesFromGroupTargetScale(changed_this.second,
+                                                                      group,
+                                                                      wellModel_.schedule(),
+                                                                      reportStepIdx,
+                                                                      /* isInjector */ false,
+                                                                      wellModel_.groupState(),
+                                                                      well_state);
+                changed = true;
+            }
+        }
+    }
+    if (group.isProductionGroup()) {
+        const auto& changed_this = this->checkGroupProductionConstraints(group,
+                                                                         reportStepIdx,
+                                                                         deferred_logger);
+        const auto controls = group.productionControls(wellModel_.summaryState());
+        if (changed_this.first != Group::ProductionCMode::NONE)
+        {
+            switched_prod.insert({group.name(),
+                                  Group::ProductionCMode2String(changed_this.first)});
+
+            this->actionOnBrokenConstraints(group,
+                                            controls.exceed_action,
+                                            changed_this.first,
+                                            group_state, deferred_logger);
+            WellGroupHelpers::updateWellRatesFromGroupTargetScale(changed_this.second,
+                                                                  group,
+                                                                  wellModel_.schedule(),
+                                                                  reportStepIdx,
+                                                                  /* isInjector */ false,
+                                                                  wellModel_.groupState(),
+                                                                  well_state);
+            changed = true;
+        }
+    }
+
+    return changed;
+}
+
 }

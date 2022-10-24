@@ -33,6 +33,7 @@ class BlackoilWellModelGeneric;
 class DeferredLogger;
 class GroupState;
 class SummaryState;
+class WellState;
 
 /// Class for handling constraints for the blackoil well model.
 class BlackoilWellModelConstraints
@@ -45,18 +46,6 @@ public:
 
     /// Return true if any well has a THP constraint.
     bool hasTHPConstraints() const;
-
-    //! \brief Check and return value and type of constraints for an injection well group.
-    std::pair<Group::InjectionCMode, double>
-    checkGroupInjectionConstraints(const Group& group,
-                                   const int reportStepIdx,
-                                   const Phase& phase) const;
-
-    //! \brief Check and return value and type of constraints for a production well group.
-    std::pair<Group::ProductionCMode, double>
-    checkGroupProductionConstraints(const Group& group,
-                                    const int reportStepIdx,
-                                    DeferredLogger& deferred_logger) const;
 
     //! \brief Check the constraints of a well group.
     bool checkGroupConstraints(const Group& group,
@@ -77,7 +66,28 @@ public:
                                    GroupState& group_state,
                                    DeferredLogger& deferred_logger) const;
 
+    //! \brief Update the individual controls for wells in a group.
+    bool updateGroupIndividualControl(const Group& group,
+                                      const int reportStepIdx,
+                                      std::map<std::pair<std::string,Opm::Phase>,std::string>& switched_inj,
+                                      std::map<std::string, std::string>& switched_prod,
+                                      GroupState& group_state,
+                                      WellState& well_state,
+                                      DeferredLogger& deferred_logger) const;
+
 private:
+    //! \brief Check and return value and type of constraints for an injection well group.
+    std::pair<Group::InjectionCMode, double>
+    checkGroupInjectionConstraints(const Group& group,
+                                   const int reportStepIdx,
+                                   const Phase& phase) const;
+
+    //! \brief Check and return value and type of constraints for a production well group.
+    std::pair<Group::ProductionCMode, double>
+    checkGroupProductionConstraints(const Group& group,
+                                    const int reportStepIdx,
+                                    DeferredLogger& deferred_logger) const;
+
     const BlackoilWellModelGeneric& wellModel_; //!< Reference to well model
 };
 

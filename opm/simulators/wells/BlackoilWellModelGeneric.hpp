@@ -302,10 +302,6 @@ protected:
                                      DeferredLogger& deferred_logger,
                                      const int reportStepIdx);
 
-    bool updateGroupIndividualControl(const Group& group,
-                                      DeferredLogger& deferred_logger,
-                                      const int reportStepIdx);
-
     void updateAndCommunicateGroupData(const int reportStepIdx,
                                        const int iterationIdx);
 

@@ -779,54 +779,6 @@ checkGroupHigherConstraints(const Group& group,
     return changed;
 }
 
-bool
-BlackoilWellModelGeneric::
-updateGroupIndividualControl(const Group& group,
-                             DeferredLogger& deferred_logger,
-                             const int reportStepIdx)
-{
-    bool changed = false;
-    if (group.isInjectionGroup())
-    {
-        const Phase all[] = {Phase::WATER, Phase::OIL, Phase::GAS};
-        for (Phase phase : all) {
-            if (!group.hasInjectionControl(phase)) {
-                continue;
-            }
-            const auto& changed_this =
-                BlackoilWellModelConstraints(*this).
-                    checkGroupInjectionConstraints(group, reportStepIdx, phase);
-            if (changed_this.first != Group::InjectionCMode::NONE)
-            {
-                switched_inj_groups_.insert({{group.name(), phase}, Group::InjectionCMode2String(changed_this.first)});
-                BlackoilWellModelConstraints(*this).
-                actionOnBrokenConstraints(group, changed_this.first, phase,
-                                          this->groupState(), deferred_logger);
-                WellGroupHelpers::updateWellRatesFromGroupTargetScale(changed_this.second, group, schedule(), reportStepIdx, /* isInjector */ false, this->groupState(), this->wellState());
-                changed = true;
-            }
-        }
-    }
-    if (group.isProductionGroup()) {
-        const auto& changed_this =
-            BlackoilWellModelConstraints(*this).
-                checkGroupProductionConstraints(group, reportStepIdx, deferred_logger);
-        const auto controls = group.productionControls(summaryState_);
-        if (changed_this.first != Group::ProductionCMode::NONE)
-        {
-            switched_prod_groups_.insert({group.name(), Group::ProductionCMode2String(changed_this.first)});
-            BlackoilWellModelConstraints(*this).
-                actionOnBrokenConstraints(group, controls.exceed_action,
-                                          changed_this.first,
-                                          this->groupState(), deferred_logger);
-            WellGroupHelpers::updateWellRatesFromGroupTargetScale(changed_this.second, group, schedule(), reportStepIdx, /* isInjector */ false, this->groupState(), this->wellState());
-            changed = true;
-        }
-    }
-
-    return changed;
-}
-
 void
 BlackoilWellModelGeneric::
 updateEclWells(const int timeStepIdx,
