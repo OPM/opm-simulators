@@ -165,6 +165,10 @@ public:
 
     const SummaryState& summaryState() const { return summaryState_; }
 
+    const GuideRate& guideRate() const { return guideRate_; }
+
+    bool reportStepStarts() const { return report_step_starts_; }
+
 protected:
 
     /*
@@ -270,10 +274,6 @@ protected:
     data::GuideRateValue getGuideRateValues(const Group& group) const;
     data::GuideRateValue getGuideRateValues(const Well& well) const;
     data::GuideRateValue getGuideRateInjectionGroupValues(const Group& group) const;
-    void getGuideRateValues(const GuideRate::RateVector& qs,
-                            const bool                   is_inj,
-                            const std::string&           wgname,
-                            data::GuideRateValue&        grval) const;
 
     void assignWellGuideRates(data::Wells& wsrpt,
                               const int reportStepIdx) const;

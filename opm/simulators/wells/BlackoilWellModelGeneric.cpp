@@ -37,6 +37,7 @@
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/wells/BlackoilWellModelConstraints.hpp>
+#include <opm/simulators/wells/BlackoilWellModelGuideRates.hpp>
 #include <opm/simulators/wells/BlackoilWellModelRestart.hpp>
 #include <opm/simulators/wells/GasLiftStage2.hpp>
 #include <opm/simulators/wells/VFPProperties.hpp>
@@ -950,35 +951,9 @@ getGuideRateValues(const Well& well) const
     const auto qs = WellGroupHelpers::
         getWellRateVector(this->wellState(), this->phase_usage_, wname);
 
-    this->getGuideRateValues(qs, well.isInjector(), wname, grval);
+    BlackoilWellModelGuideRates(*this).getGuideRateValues(qs, well.isInjector(), wname, grval);
 
     return grval;
-}
-
-void
-BlackoilWellModelGeneric::
-getGuideRateValues(const GuideRate::RateVector& qs,
-                   const bool                   is_inj,
-                   const std::string&           wgname,
-                   data::GuideRateValue&        grval) const
-{
-    auto getGR = [this, &wgname, &qs](const GuideRateModel::Target t)
-    {
-        return this->guideRate_.getSI(wgname, t, qs);
-    };
-
-    // Note: GuideRate does currently (2020-07-20) not support Target::RES.
-    grval.set(data::GuideRateValue::Item::Gas,
-              getGR(GuideRateModel::Target::GAS));
-
-    grval.set(data::GuideRateValue::Item::Water,
-              getGR(GuideRateModel::Target::WAT));
-
-    if (!is_inj) {
-        // Producer.  Extract "all" guiderate values.
-        grval.set(data::GuideRateValue::Item::Oil,
-                  getGR(GuideRateModel::Target::OIL));
-    }
 }
 
 data::GuideRateValue
@@ -1004,7 +979,7 @@ getGuideRateValues(const Group& group) const
         getProductionGroupRateVector(this->groupState(), this->phase_usage_, gname);
 
     const auto is_inj = false; // This procedure only applies to G*PGR.
-    this->getGuideRateValues(qs, is_inj, gname, grval);
+    BlackoilWellModelGuideRates(*this).getGuideRateValues(qs, is_inj, gname, grval);
 
     return grval;
 }

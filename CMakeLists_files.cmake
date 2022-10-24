@@ -82,6 +82,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/ALQState.cpp
   opm/simulators/wells/BlackoilWellModelConstraints.cpp
   opm/simulators/wells/BlackoilWellModelGeneric.cpp
+  opm/simulators/wells/BlackoilWellModelGuideRates.cpp
   opm/simulators/wells/BlackoilWellModelRestart.cpp
   opm/simulators/wells/GasLiftCommon.cpp
   opm/simulators/wells/GasLiftGroupInfo.cpp
@@ -352,6 +353,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/BlackoilWellModel_impl.hpp
   opm/simulators/wells/BlackoilWellModelConstraints.hpp
   opm/simulators/wells/BlackoilWellModelGeneric.hpp
+  opm/simulators/wells/BlackoilWellModelGuideRates.hpp
   opm/simulators/wells/BlackoilWellModelRestart.hpp
   opm/simulators/wells/GasLiftCommon.hpp
   opm/simulators/wells/GasLiftGroupInfo.hpp
