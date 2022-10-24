@@ -49,6 +49,16 @@ public:
     //! \brief Constructor sets reference to well.
     WellTest(const WellInterfaceGeneric& well) : well_(well) {}
 
+    bool checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
+                             const std::vector<double>& rates_or_potentials,
+                             DeferredLogger& deferred_logger) const;
+
+    RatioLimitCheckReport
+    checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
+                         const SingleWellState& ws,
+                         DeferredLogger& deferred_logger) const;
+
+private:
     void checkMaxGORLimit(const WellEconProductionLimits& econ_production_limits,
                           const SingleWellState& ws,
                           RatioLimitCheckReport& report) const;
@@ -61,11 +71,6 @@ public:
                                const SingleWellState& ws,
                                RatioLimitCheckReport& report) const;
 
-    bool checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
-                             const std::vector<double>& rates_or_potentials,
-                             DeferredLogger& deferred_logger) const;
-
-private:
     template<class RatioFunc>
     bool checkMaxRatioLimitWell(const SingleWellState& ws,
                                 const double max_ratio_limit,

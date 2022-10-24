@@ -234,4 +234,55 @@ bool WellTest::checkRateEconLimits(const WellEconProductionLimits& econ_producti
     return false;
 }
 
+RatioLimitCheckReport WellTest::
+checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
+                     const SingleWellState& ws,
+                     DeferredLogger& deferred_logger) const
+{
+    // TODO: not sure how to define the worst-offending completion when more than one
+    //       ratio related limit is violated.
+    //       The defintion used here is that we define the violation extent based on the
+    //       ratio between the value and the corresponding limit.
+    //       For each violated limit, we decide the worst-offending completion separately.
+    //       Among the worst-offending completions, we use the one has the biggest violation
+    //       extent.
+    RatioLimitCheckReport report;
+
+    if (econ_production_limits.onMaxWaterCut()) {
+        this->checkMaxWaterCutLimit(econ_production_limits, ws, report);
+    }
+
+    if (econ_production_limits.onMaxGasOilRatio()) {
+        this->checkMaxGORLimit(econ_production_limits, ws, report);
+    }
+
+    if (econ_production_limits.onMaxWaterGasRatio()) {
+        this->checkMaxWGRLimit(econ_production_limits, ws, report);
+    }
+
+    if (econ_production_limits.onMaxGasLiquidRatio()) {
+        deferred_logger.warning("NOT_SUPPORTING_MAX_GLR", "the support for max Gas-Liquid ratio is not implemented yet!");
+    }
+
+    if (report.ratio_limit_violated) {
+        // No worst offending completion is found because all the completions are either injecting or
+        // have trivial rates.
+        if(report.worst_offending_completion == RatioLimitCheckReport::INVALIDCOMPLETION) {
+            std::string message = "The well ratio limit is violated but all the completion rates are trivial! " + well_.name() + " is kept open";
+            deferred_logger.warning("WECON_INVALIDCOMPLETION", message);
+            report.ratio_limit_violated = false;
+        }
+        // Due to numerical instability there may exist corner cases where the well breaks
+        // the ratio limit but no completion does.
+        else if(report.violation_extent <= 1.) {
+            std::string message = "The well ratio limit is violated but no completion ratio limit is violated! " + well_.name() + " is kept open";
+            deferred_logger.warning("WECON_INCONSISTANT_COMPLETION_WELL", message);
+            report.ratio_limit_violated = false;
+        }
+    }
+
+    return report;
+}
+
+
 } // namespace Opm
