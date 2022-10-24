@@ -33,6 +33,7 @@ namespace Opm
 
 class PhaseUsage;
 class SingleWellState;
+class WellEconProductionLimits;
 class WellInterfaceGeneric;
 
 struct RatioLimitCheckReport {
@@ -59,6 +60,10 @@ public:
                                        const double max_ratio_limit,
                                        const RatioFunc& ratioFunc,
                                        RatioLimitCheckReport& report) const;
+
+    void checkMaxGORLimit(const WellEconProductionLimits& econ_production_limits,
+                          const SingleWellState& ws,
+                          RatioLimitCheckReport& report) const;
 private:
     const WellInterfaceGeneric& well_; //!< Reference to well interface
 };

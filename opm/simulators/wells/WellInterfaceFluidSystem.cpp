@@ -593,40 +593,6 @@ checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
 template<typename FluidSystem>
 void
 WellInterfaceFluidSystem<FluidSystem>::
-checkMaxGORLimit(const WellEconProductionLimits& econ_production_limits,
-                 const SingleWellState& ws,
-                 RatioLimitCheckReport& report) const
-{
-    assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
-    assert(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx));
-
-    // function to calculate gor based on rates
-    auto gor = [](const std::vector<double>& rates,
-                  const PhaseUsage& pu) {
-        const double oil_rate = -rates[pu.phase_pos[Oil]];
-        const double gas_rate = -rates[pu.phase_pos[Gas]];
-        if (gas_rate <= 0.)
-            return 0.;
-        else if (oil_rate <= 0.)
-            return 1.e100; // big value to mark it as violated
-        else
-            return (gas_rate / oil_rate);
-    };
-
-    const double max_gor_limit = econ_production_limits.maxGasOilRatio();
-    assert(max_gor_limit > 0.);
-
-    const bool gor_limit_violated = WellTest(*this).checkMaxRatioLimitWell(ws, max_gor_limit, gor);
-
-    if (gor_limit_violated) {
-        report.ratio_limit_violated = true;
-        WellTest(*this).checkMaxRatioLimitCompletions(ws, max_gor_limit, gor, report);
-    }
-}
-
-template<typename FluidSystem>
-void
-WellInterfaceFluidSystem<FluidSystem>::
 checkMaxWGRLimit(const WellEconProductionLimits& econ_production_limits,
                  const SingleWellState& ws,
                  RatioLimitCheckReport& report) const
@@ -680,7 +646,9 @@ checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
     }
 
     if (econ_production_limits.onMaxGasOilRatio()) {
-        checkMaxGORLimit(econ_production_limits, ws, report);
+        assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
+        assert(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx));
+        WellTest(*this).checkMaxGORLimit(econ_production_limits, ws, report);
     }
 
     if (econ_production_limits.onMaxWaterGasRatio()) {
