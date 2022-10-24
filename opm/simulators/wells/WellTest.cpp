@@ -119,5 +119,36 @@ void WellTest::checkMaxGORLimit(const WellEconProductionLimits& econ_production_
     }
 }
 
+void WellTest::checkMaxWGRLimit(const WellEconProductionLimits& econ_production_limits,
+                                const SingleWellState& ws,
+                                RatioLimitCheckReport& report) const
+{
+    static constexpr int Gas = BlackoilPhases::Vapour;
+    static constexpr int Water = BlackoilPhases::Aqua;
+
+    // function to calculate wgr based on rates
+    auto wgr = [](const std::vector<double>& rates,
+                  const PhaseUsage& pu) {
+
+        const double water_rate = -rates[pu.phase_pos[Water]];
+        const double gas_rate = -rates[pu.phase_pos[Gas]];
+        if (water_rate <= 0.)
+            return 0.;
+        else if (gas_rate <= 0.)
+            return 1.e100; // big value to mark it as violated
+        else
+            return (water_rate / gas_rate);
+    };
+
+    const double max_wgr_limit = econ_production_limits.maxWaterGasRatio();
+    assert(max_wgr_limit > 0.);
+
+    const bool wgr_limit_violated = this->checkMaxRatioLimitWell(ws, max_wgr_limit, wgr);
+
+    if (wgr_limit_violated) {
+        report.ratio_limit_violated = true;
+        this->checkMaxRatioLimitCompletions(ws, max_wgr_limit, wgr, report);
+    }
+}
 
 } // namespace Opm

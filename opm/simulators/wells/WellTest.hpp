@@ -64,6 +64,11 @@ public:
     void checkMaxGORLimit(const WellEconProductionLimits& econ_production_limits,
                           const SingleWellState& ws,
                           RatioLimitCheckReport& report) const;
+
+    void checkMaxWGRLimit(const WellEconProductionLimits& econ_production_limits,
+                          const SingleWellState& ws,
+                          RatioLimitCheckReport& report) const;
+
 private:
     const WellInterfaceGeneric& well_; //!< Reference to well interface
 };
