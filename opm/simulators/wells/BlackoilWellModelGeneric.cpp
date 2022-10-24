@@ -2109,7 +2109,7 @@ if (!previous_node_pressures.empty()) {
     for (const auto& [name, pressure]: previous_node_pressures) {
         const auto new_pressure = node_pressures_.at(name);
         const double change = (new_pressure - pressure);
-        const double allowed_change = solve_welleq? 0.1e5 : 5.e5;
+        const double allowed_change = solve_welleq ? std::max(std::min(0.1*std::abs(change), 5.e5), 0.1e5) : 5.e5;
         std::cout << " solve_welleq ? " << solve_welleq << " allowed_change " << allowed_change/1.e5 << std::endl;
         if (abs(change) > allowed_change) {
             const double sign = change > 0 ? 1. : -1.;

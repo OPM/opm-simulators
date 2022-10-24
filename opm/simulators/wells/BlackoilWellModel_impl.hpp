@@ -889,10 +889,10 @@ namespace Opm {
         bool update_network_more = true;
         bool changed_well_group = false;
         do {
-            update_network_more = updateWellControlsAndNetwork(deferred_logger);
+            changed_well_group = updateWellControlsAndNetwork(deferred_logger, true);
             assembleImpl(dt, deferred_logger);
-            converged = this->getWellConvergence(this->B_avg_, true).converged();
-            std::cout << " solveWellEq " << " iteration " << iter << " converged ?";
+            converged = this->getWellConvergence(this->B_avg_, true).converged() && !changed_well_group;
+            std::cout << " solveWellEq iteration " << iter << " converged ?";
             if (converged) {
                 std::cout << " YES ";
             } else {
@@ -900,7 +900,7 @@ namespace Opm {
             }
             // std::cout << " network_imbalance " << network_imbalance/1.e5 << std::endl;
             // if (converged && network_imbalance < 0.05e5) {
-            if (converged && !update_network_more) {
+            if (converged) {
                 break;
             }
             ++iter;
@@ -960,7 +960,7 @@ namespace Opm {
                                                terminal_output_, grid().comm());
         }
 
-        const bool well_group_control_changed = updateWellControlsAndNetwork(local_deferredLogger);
+        const bool well_group_control_changed = updateWellControlsAndNetwork(local_deferredLogger, false);
 
         // TODO: assembleImpl function can be removed, it does not do much than assembleWellEq
         assembleImpl(dt, local_deferredLogger);
@@ -977,7 +977,7 @@ namespace Opm {
     template<typename TypeTag>
     bool
     BlackoilWellModel<TypeTag>::
-    updateWellControlsAndNetwork(DeferredLogger& local_deferredLogger)
+    updateWellControlsAndNetwork(DeferredLogger& local_deferredLogger, const bool solve_welleq)
     {
         // not necessarily that we always need to update once of the network solutions
         bool do_network_update = true;
@@ -985,7 +985,7 @@ namespace Opm {
         size_t network_update_iteration = 0;
         while (do_network_update) {
             std::tie(do_network_update, well_group_control_changed) =
-                    updateWellControlsAndNetworkIteration(network_update_iteration, local_deferredLogger);
+                    updateWellControlsAndNetworkIteration(network_update_iteration, local_deferredLogger, solve_welleq);
             ++network_update_iteration;
         }
         return well_group_control_changed;
@@ -998,9 +998,11 @@ namespace Opm {
     std::pair<bool, bool>
     BlackoilWellModel<TypeTag>::
     updateWellControlsAndNetworkIteration(const size_t network_update_iteration,
-                                          DeferredLogger& local_deferredLogger)
+                                          DeferredLogger& local_deferredLogger,
+                                          const bool solve_welleq)
     {
-        auto [well_group_control_changed, more_network_update] = updateWellControls(local_deferredLogger, network_update_iteration);
+        auto [well_group_control_changed, more_network_update] = updateWellControls(local_deferredLogger,
+                                                                                    network_update_iteration, solve_welleq);
 
         bool alq_updated = false;
         OPM_BEGIN_PARALLEL_TRY_CATCH();
@@ -1602,7 +1604,8 @@ namespace Opm {
     std::pair<bool, bool>
     BlackoilWellModel<TypeTag>::
     updateWellControls(DeferredLogger& deferred_logger,
-                       const size_t network_update_it)
+                       const size_t network_update_it,
+                       const bool solve_welleq)
     {
         // Even if there are no wells active locally, we cannot
         // return as the DeferredLogger uses global communication.
@@ -1616,14 +1619,16 @@ namespace Opm {
 
         // network related
         bool more_network_update = false;
-        if (shouldBalanceNetwork(episodeIdx, iterationIdx)) {
-            const auto [local_network_changed, local_network_imbalance] = updateNetworkPressures(episodeIdx);
+        // TODO: we should put solve_welleq here
+        if (shouldBalanceNetwork(episodeIdx, iterationIdx) || solve_welleq) {
+            const auto [local_network_changed, local_network_imbalance] = updateNetworkPressures(episodeIdx, solve_welleq);
             const bool network_changed = comm.sum(local_network_changed);
             const double network_imbalance = comm.max(local_network_imbalance);
             if (network_changed) {
                 const auto& balance = schedule()[episodeIdx].network_balance();
                 // Iterate if not converged, and number of iterations is not yet max (NETBALAN item 3).
-                if (network_update_it < balance.pressure_max_iter() && network_imbalance > balance.pressure_tolerance()) {
+                if ((network_update_it < balance.pressure_max_iter() || solve_welleq)
+                     && network_imbalance > balance.pressure_tolerance()) {
                     more_network_update = true;
                 }
             }

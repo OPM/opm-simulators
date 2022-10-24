@@ -281,7 +281,8 @@ namespace Opm {
             void prepareTimeStep(DeferredLogger& deferred_logger);
             void initPrimaryVariablesEvaluation() const;
             bool shouldBalanceNetwork(const int reportStepIndex, const int iterationIdx) const;
-            std::pair<bool, bool> updateWellControls(DeferredLogger& deferred_logger, const size_t network_update_it = 0);
+            std::pair<bool, bool> updateWellControls(DeferredLogger& deferred_logger, const size_t network_update_it,
+                                                     const bool solve_welleq = false);
 
             void updateAndCommunicate(const int reportStepIdx,
                                       const int iterationIdx,
@@ -384,9 +385,10 @@ namespace Opm {
             // the name is temporary, and will rename when the refactoring is finished.
             // the returned two booleans are {continue_due_to_network, well_group_control_changed}
             std::pair<bool, bool> updateWellControlsAndNetworkIteration(const size_t network_update_iteration,
-                                                                        DeferredLogger& local_deferredLogger);
+                                                                        DeferredLogger& local_deferredLogger,
+                                                                        const bool solve_welleq = false);
 
-            bool updateWellControlsAndNetwork(DeferredLogger& local_deferredLogger);
+            bool updateWellControlsAndNetwork(DeferredLogger& local_deferredLogger, const bool solve_welleq = false);
 
             // called at the end of a time step
             void timeStepSucceeded(const double& simulationTime, const double dt);
