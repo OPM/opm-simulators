@@ -202,10 +202,6 @@ public:
 protected:
     bool getAllowCrossFlow() const;
     double mostStrictBhpFromBhpLimits(const SummaryState& summaryState) const;
-    void updateWellTestStatePhysical(const double simulation_time,
-                                     const bool write_message_to_opmlog,
-                                     WellTestState& well_test_state,
-                                     DeferredLogger& deferred_logger) const;
 
     std::optional<double> bhpMax(const std::function<double(const double)>& fflo,
                                  const double bhp_limit,

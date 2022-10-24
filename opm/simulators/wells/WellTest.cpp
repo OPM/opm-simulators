@@ -437,4 +437,23 @@ void WellTest::updateWellTestStateEconomic(const SingleWellState& ws,
     }
 }
 
+void WellTest::updateWellTestStatePhysical(const double simulation_time,
+                                           const bool write_message_to_opmlog,
+                                           WellTestState& well_test_state,
+                                           DeferredLogger& deferred_logger) const
+{
+    if (well_test_state.well_is_closed(well_.name())) {
+        // Already closed, do nothing.
+    } else {
+        well_test_state.close_well(well_.name(), WellTestConfig::Reason::PHYSICAL, simulation_time);
+        if (write_message_to_opmlog) {
+            const std::string action = well_.wellEcl().getAutomaticShutIn() ? "shut" : "stopped";
+            const std::string msg = "Well " + well_.name()
+                + " will be " + action + " as it can not operate under current reservoir conditions.";
+            deferred_logger.info(msg);
+        }
+    }
+}
+
+
 } // namespace Opm

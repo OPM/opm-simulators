@@ -24,7 +24,6 @@
 
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
-#include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
@@ -513,12 +512,13 @@ updateWellTestState(const SingleWellState& ws,
                     WellTestState& wellTestState,
                     DeferredLogger& deferred_logger) const
 {
-    // updating well test state based on physical (THP/BHP) limits.
-    updateWellTestStatePhysical(simulationTime, writeMessageToOPMLog, wellTestState, deferred_logger);
-
     // updating well test state based on Economic limits for operable wells
-    if (this->isOperableAndSolvable())
+    if (this->isOperableAndSolvable()) {
         WellTest(*this).updateWellTestStateEconomic(ws, simulationTime, writeMessageToOPMLog, wellTestState, deferred_logger);
+    } else {
+        // updating well test state based on physical (THP/BHP) limits.
+        WellTest(*this).updateWellTestStatePhysical(simulationTime, writeMessageToOPMLog, wellTestState, deferred_logger);
+    }
 
     // TODO: well can be shut/closed due to other reasons
 }

@@ -394,26 +394,6 @@ bool WellInterfaceGeneric::isVFPActive(DeferredLogger& deferred_logger) const
     }
 }
 
-void WellInterfaceGeneric::updateWellTestStatePhysical(const double simulation_time,
-                                                       const bool write_message_to_opmlog,
-                                                       WellTestState& well_test_state,
-                                                       DeferredLogger& deferred_logger) const
-{
-    if (!isOperableAndSolvable()) {
-        if (well_test_state.well_is_closed(name())) {
-            // Already closed, do nothing.
-        } else {
-            well_test_state.close_well(name(), WellTestConfig::Reason::PHYSICAL, simulation_time);
-            if (write_message_to_opmlog) {
-                const std::string action = well_ecl_.getAutomaticShutIn() ? "shut" : "stopped";
-                const std::string msg = "Well " + name()
-                    + " will be " + action + " as it can not operate under current reservoir conditions.";
-                deferred_logger.info(msg);
-            }
-        }
-    }
-}
-
 bool WellInterfaceGeneric::isOperableAndSolvable() const
 {
     return operability_status_.isOperableAndSolvable();
