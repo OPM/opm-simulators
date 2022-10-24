@@ -36,6 +36,7 @@
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
+#include <opm/simulators/wells/BlackoilWellModelRestart.hpp>
 #include <opm/simulators/wells/GasLiftStage2.hpp>
 #include <opm/simulators/wells/VFPProperties.hpp>
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
@@ -416,31 +417,6 @@ getWellEcl(const std::string& well_name) const
 
 void
 BlackoilWellModelGeneric::
-loadRestartConnectionData(const std::vector<data::Rates::opt>& phs,
-                          const data::Well&                    rst_well,
-                          const std::vector<PerforationData>&  old_perf_data,
-                          SingleWellState&                     ws)
-{
-    auto& perf_data        = ws.perf_data;
-    auto  perf_pressure    = perf_data.pressure.begin();
-    auto  perf_rates       = perf_data.rates.begin();
-    auto  perf_phase_rates = perf_data.phase_rates.begin();
-
-    for (const auto& pd : old_perf_data) {
-        const auto& rst_connection = rst_well.connections[pd.ecl_index];
-
-        *perf_pressure = rst_connection.pressure;       ++perf_pressure;
-        *perf_rates    = rst_connection.reservoir_rate; ++perf_rates;
-
-        for (const auto& phase : phs) {
-            *perf_phase_rates = rst_connection.rates.get(phase);
-            ++perf_phase_rates;
-        }
-    }
-}
-
-void
-BlackoilWellModelGeneric::
 loadRestartSegmentData(const std::string&                   well_name,
                        const std::vector<data::Rates::opt>& phs,
                        const data::Well&                    rst_well,
@@ -498,7 +474,7 @@ loadRestartWellData(const std::string&                   well_name,
         ws.surface_rates[i] = rst_well.rates.get(phs[i]);
     }
 
-    this->loadRestartConnectionData(phs, rst_well, old_perf_data, ws);
+    BlackoilWellModelRestart(*this).loadRestartConnectionData(phs, rst_well, old_perf_data, ws);
 
     if (handle_ms_well && !rst_well.segments.empty()) {
         this->loadRestartSegmentData(well_name, phs, rst_well, ws);
