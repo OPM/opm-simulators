@@ -292,6 +292,7 @@ namespace Opm
             this->well_control_log_.push_back(from);
             updateWellStateWithTarget(ebos_simulator, group_state, well_state, deferred_logger);
             updatePrimaryVariables(well_state, deferred_logger);
+            initPrimaryVariablesEvaluation();
         }
 
         return changed;
@@ -316,6 +317,7 @@ namespace Opm
 
         updateWellStateWithTarget(simulator, group_state, well_state_copy, deferred_logger);
         calculateExplicitQuantities(simulator, well_state_copy, deferred_logger);
+        // TODO: the following two function are called in function already
         updatePrimaryVariables(well_state_copy, deferred_logger);
         initPrimaryVariablesEvaluation();
 
@@ -1036,15 +1038,18 @@ namespace Opm
             {
                 auto rates = ws.surface_rates;
                 this->adaptRatesForVFP(rates);
-                double bhp = this->calculateBhpFromThp(well_state, rates, well, summaryState, this->getRefDensity(), deferred_logger);
+                const double total_rate = -std::accumulate(rates.begin(), rates.end(), 0.0);
+                double bhp = controls.bhp_limit;
+                /* if (total_rate >= std::numeric_limits<double>::epsilon()) {
+                    bhp = this->calculateBhpFromThp(well_state, rates, well, summaryState, this->getRefDensity(), deferred_logger);
+                } */
                 ws.bhp = bhp;
                 ws.thp = this->getTHPConstraint(summaryState);
 
                 // if the total rates are negative or zero
                 // we try to provide a better intial well rate
                 // using the well potentials
-                double total_rate = -std::accumulate(rates.begin(), rates.end(), 0.0);
-                if (total_rate <= 0.0){
+                if (total_rate <= 0.) {
                     for (int p = 0; p<np; ++p) {
                         ws.surface_rates[p] = -ws.well_potentials[p];
                     }

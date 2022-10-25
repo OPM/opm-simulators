@@ -26,6 +26,7 @@
 
 #include <string>
 #include <algorithm>
+#include <limits>
 
 #if HAVE_CUDA || HAVE_OPENCL
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
@@ -308,11 +309,35 @@ namespace Opm
         debug_cost_counter_ = 0;
         // does the well have a THP related constraint?
         const auto& summaryState = ebosSimulator.vanguard().summaryState();
-        if (!Base::wellHasTHPConstraints(summaryState) || bhp_controlled_well) {
+        if (!Base::wellHasTHPConstraints(summaryState)) {
             computeWellRatesAtBhpLimit(ebosSimulator, well_potentials, deferred_logger);
         } else {
-            well_potentials = computeWellPotentialWithTHP(
-                well_state, ebosSimulator, deferred_logger);
+            constexpr bool outputting_information = true;
+            std::vector<double> bhp_well_potentials {np, 0.};
+            std::vector<double> thp_well_potentials {np, 0.};
+            computeWellRatesAtBhpLimit(ebosSimulator, bhp_well_potentials, deferred_logger);
+            // TODO: we probably should check whether the THP limit is honored when converged with BHP limit
+            thp_well_potentials = computeWellPotentialWithTHP(well_state, ebosSimulator, deferred_logger);
+            const double sum_bhp_well_potentials = std::abs(std::accumulate(bhp_well_potentials.begin(), bhp_well_potentials.end(), 0.0));
+            const double sum_thp_well_potentials = std::abs(std::accumulate(thp_well_potentials.begin(), thp_well_potentials.end(), 0.0));
+            if (outputting_information) {
+                deferred_logger.debug(" well " + this->name() + " sum_bhp_well_potentials " + std::to_string(sum_bhp_well_potentials)
+                                     + " sum_thp_well_potentials " + std::to_string(sum_thp_well_potentials));
+            }
+
+            // very small thp well potentials can be resulted due to solution failure with THP limit
+            if (sum_thp_well_potentials < std::numeric_limits<double>::epsilon() ||
+                sum_thp_well_potentials > sum_bhp_well_potentials) {
+               well_potentials = bhp_well_potentials;
+               if (outputting_information) {
+                   deferred_logger.debug(" well " + this->name() + " get bhp_well_potentials as well potentials ");
+               }
+            } else {
+               well_potentials = thp_well_potentials;
+                if (outputting_information) {
+                    deferred_logger.debug(" well " + this->name() + " get thp_well_potentials as well potentials ");
+                }
+            }
         }
         deferred_logger.debug("Cost in iterations of finding well potential for well "
                               + this->name() + ": " + std::to_string(debug_cost_counter_));
