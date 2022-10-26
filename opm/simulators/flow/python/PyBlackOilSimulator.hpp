@@ -59,7 +59,7 @@ private:
     const std::string deckFilename_;
     bool hasRunInit_ = false;
     bool hasRunCleanup_ = false;
-    bool debug_ = false;
+    //bool debug_ = false;
     // This *must* be declared before other pointers
     // to simulator objects. This in order to deinitialize
     // MPI at the correct time (ie after the other objects).
