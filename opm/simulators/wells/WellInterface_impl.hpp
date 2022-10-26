@@ -1181,16 +1181,12 @@ namespace Opm
     typename WellInterface<TypeTag>::Eval
     WellInterface<TypeTag>::getPerfCellPressure(const typename WellInterface<TypeTag>::FluidState& fs) const
     {
-        Eval pressure;
-        if (Indices::oilEnabled) {
-            pressure = fs.pressure(FluidSystem::oilPhaseIdx);
+        if constexpr (Indices::oilEnabled) {
+            return fs.pressure(FluidSystem::oilPhaseIdx);
+        } else if constexpr (Indices::waterEnabled) {
+            return fs.pressure(FluidSystem::waterPhaseIdx);
         } else {
-            if (Indices::waterEnabled) {
-                pressure = fs.pressure(FluidSystem::waterPhaseIdx);
-            } else {
-                pressure = fs.pressure(FluidSystem::gasPhaseIdx);
-            }
+            return fs.pressure(FluidSystem::gasPhaseIdx);
         }
-        return pressure;
     }
 } // namespace Opm
