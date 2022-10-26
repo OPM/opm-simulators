@@ -132,7 +132,7 @@ addOrRemoveALQincrement_(GradMap &grad_map, const std::string& well_name, bool a
 std::optional<GasLiftStage2::GradInfo>
 GasLiftStage2::
 calcIncOrDecGrad_(
-    const std::string well_name, const GasLiftSingleWell &gs_well, bool increase)
+    const std::string well_name, const GasLiftSingleWell &gs_well, const Group& group, bool increase)
 {
 
     // only applies to wells in the well_state_map (i.e. wells on this rank)
@@ -158,7 +158,7 @@ calcIncOrDecGrad_(
     else {
         auto [oil_rate, gas_rate] = state.getRates();
         auto alq = state.alq();
-        auto grad = gs_well.calcIncOrDecGradient(oil_rate, gas_rate, state.waterRate(), alq, increase);
+        auto grad = gs_well.calcIncOrDecGradient(oil_rate, gas_rate, state.waterRate(), alq, group, increase);
         if (grad) {
             const std::string msg = fmt::format(
               "well {} : adding {} gradient = {}",
@@ -582,7 +582,7 @@ optimizeGroupsRecursive_(const Group &group)
 void
 GasLiftStage2::
 recalculateGradientAndUpdateData_(
-    GradPairItr &grad_itr, bool increase,
+    GradPairItr &grad_itr, const Group& group, bool increase,
 
     //incremental and decremental gradients, if 'grads' are incremental, then
     // 'other_grads' are decremental, or conversely, if 'grads' are decremental, then
@@ -598,7 +598,7 @@ recalculateGradientAndUpdateData_(
     // the grads and other grads are synchronized later
     if(this->stage1_wells_.count(name) > 0) {
         GasLiftSingleWell &gs_well = *(this->stage1_wells_.at(name).get());
-        auto grad = calcIncOrDecGrad_(name, gs_well, increase);
+        auto grad = calcIncOrDecGrad_(name, gs_well, group, increase);
         if (grad) {
             grad_itr->second = grad->grad;
             old_grad = updateGrad_(name, *grad, increase);
@@ -785,7 +785,7 @@ removeSurplusALQ_(const Group &group,
             state.updateRates(well_name);
             state.addOrRemoveALQincrement( this->dec_grads_, well_name, /*add=*/false);
             recalculateGradientAndUpdateData_(
-                        dec_grad_itr, /*increase=*/false, dec_grads, inc_grads);
+                        dec_grad_itr, group, /*increase=*/false, dec_grads, inc_grads);
 
             // The dec_grads and inc_grads needs to be syncronized across ranks
             mpiSyncGlobalGradVector_(dec_grads);
@@ -892,12 +892,12 @@ calculateEcoGradients(std::vector<GasLiftSingleWell *> &wells,
     for (auto well_ptr : wells) {
         const auto &gs_well = *well_ptr;  // gs = GasLiftSingleWell
         const auto &name = gs_well.name();
-        auto inc_grad = this->parent.calcIncOrDecGrad_(name, gs_well, /*increase=*/true);
+        auto inc_grad = this->parent.calcIncOrDecGrad_(name, gs_well, group, /*increase=*/true);
         if (inc_grad) {
             inc_grads.emplace_back(std::make_pair(name, inc_grad->grad));
             this->parent.saveIncGrad_(name, *inc_grad);
         }
-        auto dec_grad = this->parent.calcIncOrDecGrad_(name, gs_well, /*increase=*/false);
+        auto dec_grad = this->parent.calcIncOrDecGrad_(name, gs_well, group, /*increase=*/false);
         if (dec_grad) {
             dec_grads.emplace_back(std::make_pair(name, dec_grad->grad));
             this->parent.saveDecGrad_(name, *dec_grad);
@@ -984,9 +984,9 @@ recalculateGradients(
          GradPairItr &min_dec_grad_itr, GradPairItr &max_inc_grad_itr)
 {
     this->parent.recalculateGradientAndUpdateData_(
-        max_inc_grad_itr, /*increase=*/true, inc_grads, dec_grads);
+        max_inc_grad_itr, this->group, /*increase=*/true, inc_grads, dec_grads);
     this->parent.recalculateGradientAndUpdateData_(
-        min_dec_grad_itr, /*increase=*/false, dec_grads, inc_grads);
+        min_dec_grad_itr, this->group, /*increase=*/false, dec_grads, inc_grads);
 
     // The dec_grads and inc_grads needs to be syncronized across ranks
     this->parent.mpiSyncGlobalGradVector_(dec_grads);

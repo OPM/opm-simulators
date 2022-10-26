@@ -95,7 +95,8 @@ public:
 
     std::optional<GradInfo> calcIncOrDecGradient(double oil_rate, double gas_rate,
                                                  double water_rate,
-                                                 double alq, bool increase) const;
+                                                 double alq, 
+                                                 const Group& group, bool increase) const;
 
     std::unique_ptr<GasLiftWellState> runOptimize(const int iteration_idx);
 
@@ -239,7 +240,7 @@ protected:
         double getBhpWithLimit();
         void warn_(std::string msg) {parent.displayWarning_(msg);}
     };
-    bool checkGroupALQrateExceeded(double delta_alq) const;
+    bool checkGroupALQrateExceeded(double delta_alq, const std::string& gr_name_no_check = "") const;
     bool checkGroupTotalRateExceeded(double delta_alq, double delta_gas_rate) const;
 
     std::pair<std::optional<double>, bool> addOrSubtractAlqIncrement_(
@@ -274,14 +275,14 @@ protected:
     std::pair<double, bool> getGasRateWithLimit_(
                            const BasicRates& rates) const;
     std::pair<double, bool> getGasRateWithGroupLimit_(
-                           double new_gas_rate, double gas_rate) const;
+                           double new_gas_rate, double gas_rate, const std::string& gr_name_no_check) const;
     std::pair<std::optional<LimitedRates>,double> getInitialRatesWithLimit_() const;
     LimitedRates getLimitedRatesFromRates_(const BasicRates& rates) const;
     std::tuple<double,double,bool,bool> getLiquidRateWithGroupLimit_(
                            const double new_oil_rate, const double oil_rate,
-                           const double new_water_rate, const double water_rate) const;
+                           const double new_water_rate, const double water_rate, const std::string& gr_name_no_check) const;
     std::pair<double, bool> getOilRateWithGroupLimit_(
-                           double new_oil_rate, double oil_rate) const;
+                           double new_oil_rate, double oil_rate, const std::string& gr_name_no_check) const;
     std::pair<double, bool> getOilRateWithLimit_(const BasicRates& rates) const;
     std::pair<double, std::optional<Rate>> getOilRateWithLimit2_(
                            const BasicRates& rates) const;
@@ -290,9 +291,9 @@ protected:
     std::pair<double, std::optional<Rate>> getRateWithLimit_(
                     Rate rate_type, const BasicRates& rates) const;
     std::tuple<double, const std::string*, double> getRateWithGroupLimit_(
-                 Rate rate_type, const double new_rate, const double old_rate) const;
+                 Rate rate_type, const double new_rate, const double old_rate, const std::string& gr_name_no_check) const;
     std::pair<double, bool> getWaterRateWithGroupLimit_(
-                           double new_water_rate, double water_rate) const;
+                           double new_water_rate, double water_rate, const std::string& gr_name_no_check) const;
     std::pair<double, bool> getWaterRateWithLimit_(const BasicRates& rates) const;
     std::pair<double, std::optional<Rate>> getWaterRateWithLimit2_(
                            const BasicRates& rates) const;
@@ -323,7 +324,7 @@ protected:
         const LimitedRates& new_rates,
         double delta_alq) const;
     LimitedRates updateRatesToGroupLimits_(
-        const BasicRates& rates, const LimitedRates& new_rates) const;
+        const BasicRates& rates, const LimitedRates& new_rates, const std::string& gr_name = "") const;
     void updateWellStateAlqFixedValue_(const GasLiftOpt::Well& well);
     bool useFixedAlq_(const GasLiftOpt::Well& well);
     void debugInfoGroupRatesExceedTarget(

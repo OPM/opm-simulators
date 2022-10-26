@@ -78,7 +78,7 @@ protected:
     void addOrRemoveALQincrement_(
         GradMap& grad_map, const std::string& well_name, bool add);
     std::optional<GradInfo> calcIncOrDecGrad_(
-        const std::string name, const GasLiftSingleWell& gs_well, bool increase);
+        const std::string name, const GasLiftSingleWell& gs_well, const Group& group, bool increase);
     bool checkRateAlreadyLimited_(GasLiftWellState& state, bool increase);
     GradInfo deleteDecGradItem_(const std::string& name);
     GradInfo deleteIncGradItem_(const std::string& name);
@@ -102,7 +102,7 @@ protected:
     void optimizeGroup_(const Group& group);
     void optimizeGroupsRecursive_(const Group& group);
     void recalculateGradientAndUpdateData_(
-        GradPairItr& grad_itr, bool increase,
+        GradPairItr& grad_itr, const Group& group, bool increase,
         std::vector<GradPair>& grads, std::vector<GradPair>& other_grads);
     void redistributeALQ_(
         std::vector<GasLiftSingleWell *>& wells,  const Group& group,

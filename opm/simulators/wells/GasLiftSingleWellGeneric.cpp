@@ -86,13 +86,19 @@ GasLiftSingleWellGeneric::GasLiftSingleWellGeneric(DeferredLogger& deferred_logg
 // NOTE: Used from GasLiftStage2
 std::optional<GasLiftSingleWellGeneric::GradInfo>
 GasLiftSingleWellGeneric::calcIncOrDecGradient(
-    double oil_rate, double gas_rate, double water_rate, double alq, bool increase) const
+    double oil_rate, double gas_rate, double water_rate, double alq, const Group& group, bool increase) const
 {
     auto [new_alq_opt, alq_is_limited] = addOrSubtractAlqIncrement_(alq, increase);
     // TODO: What to do if ALQ is limited and new_alq != alq?
     if (!new_alq_opt)
         return std::nullopt;
+
     double new_alq = *new_alq_opt;
+
+    auto delta_alq = new_alq - alq;
+    if (checkGroupALQrateExceeded(delta_alq, group.name()))
+        return std::nullopt;
+
     if (auto bhp = computeBhpAtThpLimit_(new_alq)) {
         auto [new_bhp, bhp_is_limited] = getBhpWithLimit_(*bhp);
         // TODO: What to do if BHP is limited?
@@ -104,7 +110,7 @@ GasLiftSingleWellGeneric::calcIncOrDecGradient(
         // std::tie(new_water_rate, water_is_limited) = getWaterRateWithLimit_(rates);
         const auto ratesLimited = getLimitedRatesFromRates_(rates);
         BasicRates oldrates = {oil_rate, gas_rate, water_rate, false};
-        const auto new_rates = updateRatesToGroupLimits_(oldrates, ratesLimited);
+        const auto new_rates = updateRatesToGroupLimits_(oldrates, ratesLimited, group.name());
 
         if (!increase && new_rates.oil < 0) {
             return std::nullopt;
@@ -667,25 +673,25 @@ GasLiftSingleWellGeneric::getRateWithLimit_(Rate rate_type, const BasicRates& ra
 }
 
 std::pair<double, bool>
-GasLiftSingleWellGeneric::getOilRateWithGroupLimit_(double new_oil_rate, double oil_rate) const
+GasLiftSingleWellGeneric::getOilRateWithGroupLimit_(double new_oil_rate, double oil_rate, const std::string& gr_name_no_check) const
 {
-    [[maybe_unused]] auto [rate, gr_name, efficiency] = getRateWithGroupLimit_(Rate::oil, new_oil_rate, oil_rate);
+    [[maybe_unused]] auto [rate, gr_name, efficiency] = getRateWithGroupLimit_(Rate::oil, new_oil_rate, oil_rate, gr_name_no_check);
     bool limited = gr_name != nullptr;
     return {rate, limited};
 }
 
 std::pair<double, bool>
-GasLiftSingleWellGeneric::getGasRateWithGroupLimit_(double new_gas_rate, double gas_rate) const
+GasLiftSingleWellGeneric::getGasRateWithGroupLimit_(double new_gas_rate, double gas_rate, const std::string& gr_name_no_check) const
 {
-    [[maybe_unused]] auto [rate, gr_name, efficiency] = getRateWithGroupLimit_(Rate::gas, new_gas_rate, gas_rate);
+    [[maybe_unused]] auto [rate, gr_name, efficiency] = getRateWithGroupLimit_(Rate::gas, new_gas_rate, gas_rate, gr_name_no_check);
     bool limited = gr_name != nullptr;
     return {rate, limited};
 }
 
 std::pair<double, bool>
-GasLiftSingleWellGeneric::getWaterRateWithGroupLimit_(double new_water_rate, double water_rate) const
+GasLiftSingleWellGeneric::getWaterRateWithGroupLimit_(double new_water_rate, double water_rate, const std::string& gr_name_no_check) const
 {
-    [[maybe_unused]] auto [rate, gr_name, efficiency] = getRateWithGroupLimit_(Rate::water, new_water_rate, water_rate);
+    [[maybe_unused]] auto [rate, gr_name, efficiency] = getRateWithGroupLimit_(Rate::water, new_water_rate, water_rate, gr_name_no_check);
     bool limited = gr_name != nullptr;
     return {rate, limited};
 }
@@ -694,12 +700,13 @@ std::tuple<double, double, bool, bool>
 GasLiftSingleWellGeneric::getLiquidRateWithGroupLimit_(const double new_oil_rate,
                                                        const double oil_rate,
                                                        const double new_water_rate,
-                                                       const double water_rate) const
+                                                       const double water_rate,
+                                                       const std::string& gr_name_no_check) const
 {
     auto liquid_rate = oil_rate + water_rate;
     auto new_liquid_rate = new_oil_rate + new_water_rate;
     auto [liquid_rate_limited, group_name, efficiency]
-        = getRateWithGroupLimit_(Rate::liquid, new_liquid_rate, liquid_rate);
+        = getRateWithGroupLimit_(Rate::liquid, new_liquid_rate, liquid_rate, gr_name_no_check);
     bool limited = group_name != nullptr;
     if (limited) {
         // the oil, gas, and water cases can be handled directly by
@@ -730,7 +737,7 @@ GasLiftSingleWellGeneric::getLiquidRateWithGroupLimit_(const double new_oil_rate
 }
 
 std::tuple<double, const std::string*, double>
-GasLiftSingleWellGeneric::getRateWithGroupLimit_(Rate rate_type, const double new_rate, const double old_rate) const
+GasLiftSingleWellGeneric::getRateWithGroupLimit_(Rate rate_type, const double new_rate, const double old_rate, const std::string& gr_name_no_check) const
 {
     const double delta_rate = new_rate - old_rate;
     if (delta_rate > 0) {
@@ -743,6 +750,9 @@ GasLiftSingleWellGeneric::getRateWithGroupLimit_(Rate rate_type, const double ne
         double gr_target, new_gr_rate, efficiency;
         const std::string* group_name = nullptr;
         for (const auto& [group_name_temp, efficiency_temp] : pairs) {
+            if (gr_name_no_check == group_name_temp)
+                continue;
+
             auto gr_target_opt = this->group_info_.getTarget(rate_type, group_name_temp);
             if (gr_target_opt) {
                 double gr_target_temp = *gr_target_opt;
@@ -1346,20 +1356,20 @@ GasLiftSingleWellGeneric::updateGroupRates_(const LimitedRates& rates,
 }
 
 GasLiftSingleWellGeneric::LimitedRates
-GasLiftSingleWellGeneric::updateRatesToGroupLimits_(const BasicRates& old_rates, const LimitedRates& rates) const
+GasLiftSingleWellGeneric::updateRatesToGroupLimits_(const BasicRates& old_rates, const LimitedRates& rates, const std::string& gr_name) const
 {
     LimitedRates new_rates = rates;
-    auto [new_oil_rate, oil_is_limited] = getOilRateWithGroupLimit_(new_rates.oil, old_rates.oil);
+    auto [new_oil_rate, oil_is_limited] = getOilRateWithGroupLimit_(new_rates.oil, old_rates.oil, gr_name);
     if (oil_is_limited) {
         new_rates.oil_limiting_target = Rate::oil;
     }
-    auto [new_gas_rate, gas_is_limited] = getGasRateWithGroupLimit_(new_rates.gas, old_rates.gas);
-    auto [new_water_rate, water_is_limited] = getWaterRateWithGroupLimit_(new_rates.water, old_rates.water);
+    auto [new_gas_rate, gas_is_limited] = getGasRateWithGroupLimit_(new_rates.gas, old_rates.gas, gr_name);
+    auto [new_water_rate, water_is_limited] = getWaterRateWithGroupLimit_(new_rates.water, old_rates.water, gr_name);
     if (water_is_limited) {
         new_rates.water_limiting_target = Rate::water;
     }
     auto [new_oil_rate2, new_water_rate2, oil_is_limited2, water_is_limited2]
-        = getLiquidRateWithGroupLimit_(new_oil_rate, old_rates.oil, new_water_rate, old_rates.water);
+        = getLiquidRateWithGroupLimit_(new_oil_rate, old_rates.oil, new_water_rate, old_rates.water, gr_name);
     if (oil_is_limited2) {
         new_rates.oil_limiting_target = Rate::liquid;
     }
@@ -1571,10 +1581,12 @@ GasLiftSingleWellGeneric::OptimizeState::checkAlqOutsideLimits(double alq, [[may
 }
 
 bool
-GasLiftSingleWellGeneric::checkGroupALQrateExceeded(double delta_alq) const
+GasLiftSingleWellGeneric::checkGroupALQrateExceeded(double delta_alq, const std::string& gr_name_no_check) const
 {
     const auto& pairs = group_info_.getWellGroups(well_name_);
     for (const auto& [group_name, efficiency] : pairs) {
+        if (gr_name_no_check == group_name)
+                continue;
         auto max_alq_opt = group_info_.maxAlq(group_name);
         if (max_alq_opt) {
             double alq = group_info_.alqRate(group_name) + efficiency * delta_alq;
