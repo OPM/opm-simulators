@@ -961,7 +961,7 @@ namespace Opm
                                              " {} and the old mulplitier {} and the returned multplier {} \n",
                                              perf, Opm::getValue(this->getBhp())/1.e5, connection_pressure/1.e5, calc_mult, old_mult, multipler); */
                 // std::cout << msg;
-                std::cout << " perf " << perf << " multipler " << multipler << std::endl;
+                std::cout << "well " << this->name() << " perf " << perf << " multipler " << multipler << std::endl;
                 break;
             }
             default: {

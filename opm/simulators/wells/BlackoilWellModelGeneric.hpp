@@ -420,6 +420,7 @@ protected:
     GuideRate guideRate_;
     std::unique_ptr<VFPProperties> vfp_properties_{};
     std::map<std::string, double> node_pressures_; // Storing network pressures for output.
+    std::unordered_map<std::string, std::vector<double>> inj_multipliers_;
 
     /*
       The various wellState members should be accessed and modified

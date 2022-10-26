@@ -193,14 +193,21 @@ double WellInterfaceGeneric::rsRvInj() const
 void WellInterfaceGeneric::setInjMult(const std::vector<double>& inj_mult)
 {
     this->inj_multiplier_ = inj_mult;
+    std::cout << " well " << this->name() << " in setInjMult " << std::endl;
+    for (size_t i = 0; i < this->inj_multiplier_.size(); ++i) {
+        std::cout << " well " << this->name() << " perf " << i << " inj_multipler " << this->inj_multiplier_[i] << std::endl;
+    }
 }
 
-void WellInterfaceGeneric::updateInjMult(SingleWellState& ws) const
+void WellInterfaceGeneric::updateInjMult(std::vector<double>& multipliers, SingleWellState& ws) const
 {
-    ws.perf_data.inj_multipler = this->inj_multiplier_;
-    for (size_t i = 0; i < ws.perf_data.inj_multipler.size(); ++i) {
-        ws.perf_data.inj_multipler[i] = std::max(ws.perf_data.inj_multipler[i], this->inj_multiplier_[i]);
+    // ws.perf_data.inj_multipler = this->inj_multiplier_;
+    std::cout << " in function updateInjMult " << std::endl;
+    for (size_t i = 0; i < this->inj_multiplier_.size(); ++i) {
+        multipliers[i] = std::max(multipliers[i], this->inj_multiplier_[i]);
+        std::cout << " well " << this->name() << " perf " << i << " inj_multipler " << this->inj_multiplier_[i] << " final " << multipliers[i] << std::endl;
     }
+    ws.perf_data.inj_multipler = multipliers;
 }
 
 bool WellInterfaceGeneric::wellHasTHPConstraints(const SummaryState& summaryState) const
