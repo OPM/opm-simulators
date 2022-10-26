@@ -365,7 +365,6 @@ public:
             }
 
             unsigned pvtRegionIdx = up.pvtRegionIndex();
-            using FluidState = typename IntensiveQuantities::FluidState;
             // if (upIdx == globalFocusDofIdx){
             if (globalUpIndex == globalIndexIn) {
                 const auto& invB
