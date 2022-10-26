@@ -195,6 +195,12 @@ tests[fpr_nonhc]="flow water-1ph WATER2F"
 tests[actionx_wpimult]="flow actionx ACTIONX_WPIMULT"
 tests[wvfpexp_02]="flow wvfpexp WVFPEXP-02"
 tests[spe1case2_krnum]="flow spe1 SPE1CASE2_KRNUM"
+tests[krnum_02x]="flow krnum KRNUM-02X"
+tests[krnum_02y]="flow krnum KRNUM-02Y"
+tests[krnum_02z]="flow krnum KRNUM-02Z"
+tests[krnum_03x]="flow krnum KRNUM-03X"
+tests[krnum_03y]="flow krnum KRNUM-03Y"
+tests[krnum_03z]="flow krnum KRNUM-03Z"
 
 changed_tests=""
 
