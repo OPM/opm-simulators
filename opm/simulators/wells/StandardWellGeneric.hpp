@@ -85,12 +85,6 @@ protected:
                                const double bhp,
                                DeferredLogger& deferred_logger) const;
 
-    // checking the convergence of the well control equations
-    void checkConvergenceControlEq(const WellState& well_state,
-                                   ConvergenceReport& report,
-                                   DeferredLogger& deferred_logger,
-                                   const double max_residual_allowed) const;
-
     void checkConvergencePolyMW(const std::vector<double>& res,
                                 ConvergenceReport& report,
                                 const double maxResidualAllowed) const;

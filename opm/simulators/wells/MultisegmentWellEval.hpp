@@ -144,13 +144,6 @@ protected:
                             WellState& well_state,
                             DeferredLogger& deferred_logger) const;
 
-    void checkConvergenceControlEq(const WellState& well_state,
-                                   ConvergenceReport& report,
-                                   const double tolerance_pressure_ms_wells,
-                                   const double tolerance_wells,
-                                   const double max_residual_allowed,
-                                   DeferredLogger& deferred_logger) const;
-
     /// check whether the well equations get converged for this well
     ConvergenceReport getWellConvergence(const WellState& well_state,
                                          const std::vector<double>& B_avg,
