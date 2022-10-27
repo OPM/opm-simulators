@@ -322,7 +322,7 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, std::string, AcceleratorMode, "Use GPU (cusparseSolver or openclSolver) or FPGA (fpgaSolver) as the linear solver, usage: '--accelerator-mode=[none|cusparse|opencl|fpga|amgcl]'");
             EWOMS_REGISTER_PARAM(TypeTag, int, BdaDeviceId, "Choose device ID for cusparseSolver or openclSolver, use 'nvidia-smi' or 'clinfo' to determine valid IDs");
             EWOMS_REGISTER_PARAM(TypeTag, int, OpenclPlatformId, "Choose platform ID for openclSolver, use 'clinfo' to determine valid platform IDs");
-            EWOMS_REGISTER_PARAM(TypeTag, bool, OpenclIluParallel, "Parallelize ILU decomposition and application on GPU. Default: true");
+            EWOMS_REGISTER_PARAM(TypeTag, bool, OpenclIluParallel, "Parallelize ILU decomposition and application on GPU");
             EWOMS_REGISTER_PARAM(TypeTag, std::string, FpgaBitstream, "Specify the bitstream file for fpgaSolver (including path), usage: '--fpga-bitstream=<filename>'");
         }
 
