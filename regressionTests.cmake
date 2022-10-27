@@ -457,6 +457,13 @@ add_test_compareECLFiles(CASENAME multflt_model2
 			  REL_TOL ${rel_tol}
 			  DIR model2)
 
+add_test_compareECLFiles(CASENAME multflt_sched_model2
+			  FILENAME 3_A_MPI_MULTFLT_SCHED_MODEL2
+			  SIMULATOR flow
+			  ABS_TOL ${abs_tol}
+			  REL_TOL ${rel_tol}
+			  DIR model2)
+
 add_test_compareECLFiles(CASENAME multpvv_model2
 			  FILENAME 4_MINPVV_MODEL2
 			  SIMULATOR flow
