@@ -115,18 +115,19 @@ addOrRemoveALQincrement_(GradMap &grad_map, const std::string& well_name, bool a
     }
     state.update(gi.new_oil_rate, gi.oil_is_limited,
         gi.new_gas_rate, gi.gas_is_limited,
-        gi.alq, gi.alq_is_limited, gi.new_water_rate, add);
-        this->well_state_.setALQ(well_name, gi.alq);
-        const auto& pu = this->well_state_.phaseUsage();
-        std::vector<double> well_pot(pu.num_phases, 0.0);
-        if(pu.phase_used[BlackoilPhases::PhaseIndex::Liquid])
-            well_pot[pu.phase_pos[BlackoilPhases::PhaseIndex::Liquid]] = gi.new_oil_rate;
-        if(pu.phase_used[BlackoilPhases::PhaseIndex::Aqua])
-            well_pot[pu.phase_pos[BlackoilPhases::PhaseIndex::Aqua]] = gi.new_water_rate;
-        if(pu.phase_used[BlackoilPhases::PhaseIndex::Vapour])
-            well_pot[pu.phase_pos[BlackoilPhases::PhaseIndex::Vapour]] = gi.new_gas_rate;
+        gi.alq, gi.alq_is_limited, gi.new_water_rate, gi.water_is_limited, add);
 
-        this->well_state_[well_name].well_potentials = well_pot;
+    this->well_state_.setALQ(well_name, gi.alq);
+    const auto& pu = this->well_state_.phaseUsage();
+    std::vector<double> well_pot(pu.num_phases, 0.0);
+    if(pu.phase_used[BlackoilPhases::PhaseIndex::Liquid])
+        well_pot[pu.phase_pos[BlackoilPhases::PhaseIndex::Liquid]] = gi.new_oil_rate;
+    if(pu.phase_used[BlackoilPhases::PhaseIndex::Aqua])
+        well_pot[pu.phase_pos[BlackoilPhases::PhaseIndex::Aqua]] = gi.new_water_rate;
+    if(pu.phase_used[BlackoilPhases::PhaseIndex::Vapour])
+        well_pot[pu.phase_pos[BlackoilPhases::PhaseIndex::Vapour]] = gi.new_gas_rate;
+
+    this->well_state_[well_name].well_potentials = well_pot;
 }
 
 std::optional<GasLiftStage2::GradInfo>
@@ -192,7 +193,7 @@ checkRateAlreadyLimited_(GasLiftWellState &state, bool increase)
         if (increase) do_check = true;
     }
     if (do_check) {
-        if (state.gasIsLimited() || state.oilIsLimited() || state.alqIsLimited()) {
+        if (state.gasIsLimited() || state.oilIsLimited() || state.alqIsLimited() || state.waterIsLimited()) {
             const std::string msg = fmt::format(
                 "{} gradient : skipping since {} was limited in previous step",
                 (increase ? "incremental" : "decremental"),
@@ -757,7 +758,7 @@ removeSurplusALQ_(const Group &group,
         displayDebugMessage_(msg);
     }
     SurplusState state {*this, group, oil_rate, gas_rate, water_rate, alq,
-            min_eco_grad, controls.oil_target, controls.gas_target,
+            min_eco_grad, controls.oil_target, controls.gas_target, controls.water_target,
             controls.liquid_target, max_glift };
 
     while (!stop_iteration) {
@@ -768,8 +769,8 @@ removeSurplusALQ_(const Group &group,
         const auto well_name = dec_grad_itr->first;
         auto eco_grad = dec_grad_itr->second;
         bool remove = false;
-        if (state.checkOilTarget() || state.checkGasTarget() 
-              || state.checkLiquidTarget() || state.checkALQlimit()) 
+        if (state.checkOilTarget(eco_grad) || state.checkGasTarget(eco_grad)
+              || state.checkLiquidTarget(eco_grad) || state.checkWaterTarget(eco_grad) || state.checkALQlimit())
         {
             remove = true;
         }
@@ -1085,10 +1086,10 @@ checkEcoGradient(const std::string &well_name, double eco_grad)
 
 bool
 GasLiftStage2::SurplusState::
-checkGasTarget()
+checkGasTarget(double eco_grad)
 {
     if (this->group.has_control(Group::ProductionCMode::GRAT)) {
-        if (this->gas_target < this->gas_rate  ) {
+        if (this->gas_target < (this->gas_rate - eco_grad)  ) {
             if (this->parent.debug) {
                 const std::string msg = fmt::format("group: {} : "
                     "gas rate {} is greater than gas target {}", this->group.name(),
@@ -1102,11 +1103,11 @@ checkGasTarget()
 }
 bool
 GasLiftStage2::SurplusState::
-checkLiquidTarget()
+checkLiquidTarget(double eco_grad)
 {
     if (this->group.has_control(Group::ProductionCMode::LRAT)) {
         auto liquid_rate = this->oil_rate + this->water_rate;
-        if (this->liquid_target < liquid_rate ) {
+        if (this->liquid_target < (liquid_rate - eco_grad) ) {
             if (this->parent.debug) {
                 const std::string msg = fmt::format("group: {} : "
                     "liquid rate {} is greater than liquid target {}", this->group.name(),
@@ -1121,14 +1122,32 @@ checkLiquidTarget()
 
 bool
 GasLiftStage2::SurplusState::
-checkOilTarget()
+checkOilTarget(double eco_grad)
 {
     if (this->group.has_control(Group::ProductionCMode::ORAT)) {
-        if (this->oil_target < this->oil_rate  ) {
+        if (this->oil_target < (this->oil_rate - eco_grad)  ) {
             if (this->parent.debug) {
                 const std::string msg = fmt::format("group: {} : "
                     "oil rate {} is greater than oil target {}", this->group.name(),
                     this->oil_rate, this->oil_target);
+                this->parent.displayDebugMessage_(msg);
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
+bool
+GasLiftStage2::SurplusState::
+checkWaterTarget(double eco_grad)
+{
+    if (this->group.has_control(Group::ProductionCMode::WRAT)) {
+        if (this->water_target < (this->water_rate - eco_grad)  ) {
+            if (this->parent.debug) {
+                const std::string msg = fmt::format("group: {} : "
+                    "water rate {} is greater than oil target {}", this->group.name(),
+                    this->water_rate, this->water_target);
                 this->parent.displayDebugMessage_(msg);
             }
             return true;

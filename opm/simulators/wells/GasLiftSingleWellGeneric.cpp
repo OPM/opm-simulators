@@ -750,8 +750,9 @@ GasLiftSingleWellGeneric::getRateWithGroupLimit_(Rate rate_type, const double ne
         double gr_target, new_gr_rate, efficiency;
         const std::string* group_name = nullptr;
         for (const auto& [group_name_temp, efficiency_temp] : pairs) {
-            if (gr_name_no_check == group_name_temp)
+            if (gr_name_no_check == group_name_temp) {
                 continue;
+            }
 
             auto gr_target_opt = this->group_info_.getTarget(rate_type, group_name_temp);
             if (gr_target_opt) {
@@ -1251,6 +1252,7 @@ GasLiftSingleWellGeneric::runOptimizeLoop_(bool increase)
                                                    cur_alq,
                                                    alq_is_limited,
                                                    new_rates.water,
+                                                   new_rates.water_is_limited,
                                                    increase_opt);
     return ret_value;
 }

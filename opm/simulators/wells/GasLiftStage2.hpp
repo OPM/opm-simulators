@@ -173,7 +173,7 @@ protected:
         SurplusState( GasLiftStage2& parent_, const Group& group_,
               double oil_rate_, double gas_rate_, double water_rate_, double alq_,
               double min_eco_grad_,
-              double oil_target_, double gas_target_, double liquid_target_,
+              double oil_target_, double gas_target_, double water_target_, double liquid_target_,
               std::optional<double> max_glift_) :
             parent{parent_},
             group{group_},
@@ -184,6 +184,7 @@ protected:
             min_eco_grad{min_eco_grad_},
             oil_target{oil_target_},
             gas_target{gas_target_},
+            water_target(water_target_),
             liquid_target{liquid_target_},
             max_glift{max_glift_},
             it{0}
@@ -197,6 +198,7 @@ protected:
         const double min_eco_grad;
         const double oil_target;
         const double gas_target;
+        const double water_target;
         const double liquid_target;
         std::optional<double> max_glift;
         int it;
@@ -205,9 +207,10 @@ protected:
             GradMap &grad_map, const std::string& well_name, bool add);
         bool checkALQlimit();
         bool checkEcoGradient(const std::string& well_name, double eco_grad);
-        bool checkGasTarget();
-        bool checkLiquidTarget();
-        bool checkOilTarget();
+        bool checkGasTarget(double eco_grad);
+        bool checkLiquidTarget(double eco_grad);
+        bool checkOilTarget(double eco_grad);
+        bool checkWaterTarget(double eco_grad);
         void updateRates(const std::string& name);
     };
 };
