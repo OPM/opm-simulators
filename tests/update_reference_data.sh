@@ -56,7 +56,7 @@ declare -A tests
 #    tests[cmake_testname]="binary dirname SIMULATION_CASE
 #
 # The key in the dictionary must agree with the name given to the test when
-# registering it with cmake in compareEclFiles.cmake. The SIMULATION_CASE should
+# registering it with cmake in regressionTests.cmake. The SIMULATION_CASE should
 # be the basename of the .DATA file used for the simulation.
 
 tests[spe1]="flow spe1 SPE1CASE1"
@@ -108,6 +108,7 @@ tests[0a4_grpctl_msw_model2]="flow model2 0A4_GRCTRL_LRAT_LRAT_GGR_BASE_MODEL2_M
 tests[multregt_model2]="flow model2 1_MULTREGT_MODEL2"
 tests[multxyz_model2]="flow model2 2_MULTXYZ_MODEL2"
 tests[multflt_model2]="flow model2 3_MULTFLT_MODEL2"
+tests[multflt_sched_model2]="flow model2 3_A_MPI_MULTFLT_SCHED_MODEL2"
 tests[multpvv_model2]="flow model2 4_MINPVV_MODEL2"
 tests[swatinit_model2]="flow model2 5_SWATINIT_MODEL2"
 tests[endscale_model2]="flow model2 6_ENDSCALE_MODEL2"
