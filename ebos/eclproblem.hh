@@ -1084,6 +1084,7 @@ public:
             this->referencePorosity_[1] = this->referencePorosity_[0];
             updateReferencePorosity_();
             updatePffDofData_();
+            this->model().linearizer().updateDiscretizationParameters();
         }
 
         bool tuningEvent = this->beginEpisode_(enableExperiments, this->episodeIndex());
