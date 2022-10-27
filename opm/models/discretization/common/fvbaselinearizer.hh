@@ -282,6 +282,11 @@ public:
         return linearizationType_;
     };
 
+    void updateDiscretizationParameters()
+    {
+        // This linearizer stores no such parameters.
+    }
+
     /*!
      * \brief Returns the map of constraint degrees of freedom.
      *

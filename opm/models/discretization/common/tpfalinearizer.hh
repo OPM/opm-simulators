@@ -265,6 +265,11 @@ public:
         return linearizationType_;
     };
 
+    void updateDiscretizationParameters()
+    {
+        updateStoredTransmissibilities();
+    }
+
     /*!
      * \brief Returns the map of constraint degrees of freedom.
      *
@@ -497,6 +502,22 @@ private:
             jacobian_->addToBlock(globI, globI, bMat);
         }
     }
+
+    void updateStoredTransmissibilities()
+    {
+        unsigned numCells = model_().numTotalDof();
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+        for (unsigned globI = 0; globI < numCells; globI++) {
+            auto nbInfos = neighborInfo_[globI]; // nbInfos will be a SparseTable<...>::mutable_iterator_range.
+            for (auto& nbInfo : nbInfos) {
+                unsigned globJ = nbInfo.neighbor;
+                nbInfo.trans = problem_().transmissibility(globI, globJ);
+            }
+        }
+    }
+
 
     Simulator *simulatorPtr_;
 
