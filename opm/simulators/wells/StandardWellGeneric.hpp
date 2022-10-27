@@ -85,10 +85,6 @@ protected:
                                const double bhp,
                                DeferredLogger& deferred_logger) const;
 
-    void checkConvergencePolyMW(const std::vector<double>& res,
-                                ConvergenceReport& report,
-                                const double maxResidualAllowed) const;
-
     void computeConnectionPressureDelta();
 
     std::optional<double> computeBhpAtThpLimitInj(const std::function<std::vector<double>(const double)>& frates,

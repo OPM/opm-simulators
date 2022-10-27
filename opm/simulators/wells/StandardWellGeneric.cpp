@@ -396,47 +396,6 @@ computeBhpAtThpLimitInj(const std::function<std::vector<double>(const double)>& 
 template<class Scalar>
 void
 StandardWellGeneric<Scalar>::
-checkConvergencePolyMW(const std::vector<double>& res,
-                       ConvergenceReport& report,
-                       const double maxResidualAllowed) const
-{
-  if (baseif_.isInjector()) {
-      //  checking the convergence of the perforation rates
-      const double wat_vel_tol = 1.e-8;
-      const int dummy_component = -1;
-      using CR = ConvergenceReport;
-      const auto wat_vel_failure_type = CR::WellFailure::Type::MassBalance;
-      for (int perf = 0; perf < baseif_.numPerfs(); ++perf) {
-          const double wat_vel_residual = res[Bhp_ + 1 + perf];
-          if (std::isnan(wat_vel_residual)) {
-              report.setWellFailed({wat_vel_failure_type, CR::Severity::NotANumber, dummy_component, baseif_.name()});
-          } else if (wat_vel_residual > maxResidualAllowed * 10.) {
-              report.setWellFailed({wat_vel_failure_type, CR::Severity::TooLarge, dummy_component, baseif_.name()});
-          } else if (wat_vel_residual > wat_vel_tol) {
-              report.setWellFailed({wat_vel_failure_type, CR::Severity::Normal, dummy_component, baseif_.name()});
-          }
-      }
-
-      // checking the convergence of the skin pressure
-      const double pskin_tol = 1000.; // 1000 pascal
-      const auto pskin_failure_type = CR::WellFailure::Type::Pressure;
-      for (int perf = 0; perf < baseif_.numPerfs(); ++perf) {
-          const double pskin_residual = res[Bhp_ + 1 + perf + baseif_.numPerfs()];
-          if (std::isnan(pskin_residual)) {
-              report.setWellFailed({pskin_failure_type, CR::Severity::NotANumber, dummy_component, baseif_.name()});
-          } else if (pskin_residual > maxResidualAllowed * 10.) {
-              report.setWellFailed({pskin_failure_type, CR::Severity::TooLarge, dummy_component, baseif_.name()});
-          } else if (pskin_residual > pskin_tol) {
-              report.setWellFailed({pskin_failure_type, CR::Severity::Normal, dummy_component, baseif_.name()});
-          }
-      }
-  }
-}
-
-
-template<class Scalar>
-void
-StandardWellGeneric<Scalar>::
 getNumBlocks(unsigned int& numBlocks) const
 {
     numBlocks = duneB_.nonzeroes();

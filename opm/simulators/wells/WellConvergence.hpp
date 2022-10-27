@@ -55,6 +55,11 @@ public:
                                    ConvergenceReport& report,
                                    DeferredLogger& deferred_logger) const;
 
+    void checkConvergencePolyMW(const std::vector<double>& res,
+                                const int Bhp,
+                                const double maxResidualAllowed,
+                                ConvergenceReport& report) const;
+
 private:
     const WellInterfaceGeneric& well_;
 };
