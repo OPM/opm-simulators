@@ -69,8 +69,7 @@ public:
     void getNumBlocks(unsigned int& _nnzs) const;
 
 protected:
-    StandardWellGeneric(int Bhp,
-                        const WellInterfaceGeneric& baseif);
+    StandardWellGeneric(const WellInterfaceGeneric& baseif);
 
     // calculate a relaxation factor to avoid overshoot of total rates
     static double relaxationFactorRate(const std::vector<double>& primary_variables,
@@ -122,9 +121,6 @@ protected:
     mutable BVectorWell invDrw_;
 
     double getRho() const { return perf_densities_[0]; }
-
-private:
-    int Bhp_; // index of Bhp
 };
 
 }

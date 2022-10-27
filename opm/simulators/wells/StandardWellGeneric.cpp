@@ -47,13 +47,11 @@ namespace Opm
 
 template<class Scalar>
 StandardWellGeneric<Scalar>::
-StandardWellGeneric(int Bhp,
-                    const WellInterfaceGeneric& baseif)
+StandardWellGeneric(const WellInterfaceGeneric& baseif)
     : baseif_(baseif)
     , perf_densities_(baseif_.numPerfs())
     , perf_pressure_diffs_(baseif_.numPerfs())
     , parallelB_(duneB_, baseif_.parallelWellInfo())
-    , Bhp_(Bhp)
 {
     duneB_.setBuildMode(OffDiagMatWell::row_wise);
     duneC_.setBuildMode(OffDiagMatWell::row_wise);

@@ -48,7 +48,7 @@ namespace Opm
 template<class FluidSystem, class Indices, class Scalar>
 StandardWellEval<FluidSystem,Indices,Scalar>::
 StandardWellEval(const WellInterfaceIndices<FluidSystem,Indices,Scalar>& baseif)
-    : StandardWellGeneric<Scalar>(Bhp, baseif)
+    : StandardWellGeneric<Scalar>(baseif)
     , baseif_(baseif)
     , F0_(numWellConservationEq)
 {
