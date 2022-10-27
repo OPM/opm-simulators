@@ -154,7 +154,7 @@ public:
                                const std::function<EvalWell()>& bhp_from_thp,
                                EvalWell& control_eq,
                                DeferredLogger& deferred_logger) const;
-
+    virtual double bhpControlScaling() const = 0;
 protected:
     WellInterfaceEval(const WellInterfaceFluidSystem<FluidSystem>& baseif);
 

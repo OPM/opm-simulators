@@ -47,6 +47,9 @@ MultisegmentWellGeneric(WellInterfaceGeneric& baseif)
     , segment_inlets_(numberOfSegments())
     , segment_depth_diffs_(numberOfSegments(), 0.0)
     , perforation_segment_depth_diffs_(baseif_.numPerfs(), 0.0)
+    , bhp_scaling_(1.0)
+    , rate_scaling_(1.0)
+    , bhp_control_scaling_(1.0)  
 {
     // since we decide to use the WellSegments from the well parser. we can reuse a lot from it.
     // for other facilities needed but not available from parser, we need to process them here

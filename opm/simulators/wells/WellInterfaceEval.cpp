@@ -47,7 +47,7 @@ namespace Opm
 template<class FluidSystem>
 WellInterfaceEval<FluidSystem>::
 WellInterfaceEval(const WellInterfaceFluidSystem<FluidSystem>& baseif)
-    : baseif_(baseif)
+  : baseif_(baseif)
 {}
 
 template<class FluidSystem>
@@ -342,11 +342,11 @@ assembleControlEqProd_(const WellState& well_state,
         break;
     }
     case Well::ProducerCMode::BHP: {
-        control_eq = bhp - controls.bhp_limit;
+        control_eq = (bhp - controls.bhp_limit)*this->bhpControlScaling();
         break;
     }
     case Well::ProducerCMode::THP: {
-        control_eq = bhp - bhp_from_thp();
+        control_eq = (bhp - bhp_from_thp())*this->bhpControlScaling();
         break;
     }
     case Well::ProducerCMode::GRUP: {

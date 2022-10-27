@@ -54,6 +54,10 @@ StandardWellGeneric(int Bhp,
     , perf_pressure_diffs_(baseif_.numPerfs())
     , parallelB_(duneB_, baseif_.parallelWellInfo())
     , Bhp_(Bhp)
+    , bhp_scaling_(1.0)
+    , rate_scaling_(1.0)
+    , bhp_control_scaling_(1.0)  
+  
 {
     duneB_.setBuildMode(OffDiagMatWell::row_wise);
     duneC_.setBuildMode(OffDiagMatWell::row_wise);
@@ -68,12 +72,13 @@ relaxationFactorRate(const std::vector<double>& primary_variables,
                      const BVectorWell& dwells)
 {
     double relaxation_factor = 1.0;
-    static constexpr int WQTotal = 0;
+    static constexpr int WQTotal = 0;//NB this may be inconsiten with other definitions
 
     // For injector, we only check the total rates to avoid sign change of rates
-    const double original_total_rate = primary_variables[WQTotal];
+    // we only need scaled rates
+    const double original_total_rate = primary_variables[WQTotal];//*this->rate_scaling_;
     const double newton_update = dwells[0][WQTotal];
-    const double possible_update_total_rate = primary_variables[WQTotal] - newton_update;
+    const double possible_update_total_rate = (primary_variables[WQTotal] - newton_update);;//*this->rate_scaling_;
 
     // 0.8 here is a experimental value, which remains to be optimized
     // if the original rate is zero or possible_update_total_rate is zero, relaxation_factor will
@@ -466,7 +471,7 @@ checkConvergenceControlEq(const WellState& well_state,
         }
     }
 
-    const double well_control_residual = std::abs(this->resWell_[0][Bhp_]);
+    const double well_control_residual = std::abs(this->resWell_[0][Bhp_])/this->bhp_control_scaling_;
     const int dummy_component = -1;
     if (std::isnan(well_control_residual)) {
         report.setWellFailed({ctrltype, CR::Severity::NotANumber, dummy_component, baseif_.name()});

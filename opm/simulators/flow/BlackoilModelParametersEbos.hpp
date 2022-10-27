@@ -156,6 +156,7 @@ template<class TypeTag, class MyTypeTag>
 struct MaxInnerIterWells {
     using type = UndefinedProperty;
 };
+  
 template<class TypeTag, class MyTypeTag>
 struct AlternativeWellRateInit {
     using type = UndefinedProperty;
@@ -165,6 +166,24 @@ struct MaximumNumberOfWellSwitches {
     using type = UndefinedProperty;
 };
 
+
+template<class TypeTag, class MyTypeTag>
+struct WellBhpScaling {
+  using type = double;
+  static constexpr type value = 1.0;
+};
+template<class TypeTag, class MyTypeTag>
+struct WellRateScaling {
+  using type = double;
+  static constexpr type value = 1.0;
+};
+
+template<class TypeTag, class MyTypeTag>
+struct BhpControlScaling {
+  using type = double;
+  static constexpr type value = 1.0;
+};    
+  
 template<class TypeTag>
 struct DbhpMaxRel<TypeTag, TTag::FlowModelParameters> {
     using type = GetPropType<TypeTag, Scalar>;
@@ -495,6 +514,9 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, bool, EnableWellOperabilityCheck, "Enable the well operability checking");
             EWOMS_REGISTER_PARAM(TypeTag, bool, EnableWellOperabilityCheckIter, "Enable the well operability checking during iterations");
             EWOMS_REGISTER_PARAM(TypeTag, int, MaximumNumberOfWellSwitches, "Maximum number of times a well can switch to the same control");
+	    EWOMS_REGISTER_PARAM(TypeTag, double, WellBhpScaling, "Scaling of the Bhp variable");
+	    EWOMS_REGISTER_PARAM(TypeTag, double, WellRateScaling, "Scaling of the Rate variable");
+            EWOMS_REGISTER_PARAM(TypeTag, double, BhpControlScaling, "Scaling of bhp control equation");
         }
     };
 } // namespace Opm
