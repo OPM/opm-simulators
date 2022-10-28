@@ -294,6 +294,7 @@ namespace Opm
                ss << " on rank " << cc.rank();
             }
             deferred_logger.debug(ss.str());
+            deferred_logger.info(ss.str());
 
             this->well_control_log_.push_back(from);
             updateWellStateWithTarget(ebos_simulator, group_state, well_state, deferred_logger);
@@ -839,6 +840,9 @@ namespace Opm
                 this->rateConverter_.calcCoeff(/*fipreg*/ 0, this->pvtRegionIdx_, convert_coeff);
                 const double coeff = convert_coeff[phasePos];
                 ws.surface_rates[phasePos] = controls.reservoir_rate/coeff;
+                if (output_for_well) {
+                    std::cout << " under RESV control " << std::endl;
+                }
                 break;
             }
 
@@ -855,6 +859,9 @@ namespace Opm
                 double total_rate = std::accumulate(rates.begin(), rates.end(), 0.0);
                 if (total_rate <= 0.0)
                     ws.surface_rates = ws.well_potentials;
+                if (output_for_well) {
+                    std::cout << " under THP control " << std::endl;
+                }
 
                 break;
             }
@@ -868,6 +875,9 @@ namespace Opm
                 // if the total rates are negative or zero
                 // we try to provide a better intial well rate
                 // using the well potentials
+                if (output_for_well) {
+                    std::cout << " under BHP control " << std::endl;
+                }
                 if (total_rate <= 0.0)
                     ws.surface_rates = ws.well_potentials;
 
@@ -878,6 +888,9 @@ namespace Opm
                 assert(well.isAvailableForGroupControl());
                 const auto& group = schedule.getGroup(well.groupName(), this->currentStep());
                 const double efficiencyFactor = well.getEfficiencyFactor();
+                if (output_for_well) {
+                    std::cout << " under GRUP control " << std::endl;
+                }
                 std::optional<double> target =
                         this->getGroupInjectionTargetRate(group,
                                                           well_state,
@@ -929,6 +942,9 @@ namespace Opm
                         }
                     }
                 }
+                if (output_for_well) {
+                    std::cout << " under ORAT control " << std::endl;
+                }
                 break;
             }
             case Well::ProducerCMode::WRAT:
@@ -949,6 +965,9 @@ namespace Opm
                         }
                     }
                 }
+                if (output_for_well) {
+                    std::cout << " under WRAT control " << std::endl;
+                }
                 break;
             }
             case Well::ProducerCMode::GRAT:
@@ -968,6 +987,9 @@ namespace Opm
                             ws.surface_rates[p] = - fractions[p] * controls.gas_rate/control_fraction;
                         }
                     }
+                }
+                if (output_for_well) {
+                    std::cout << " under GRAT control " << std::endl;
                 }
 
                 break;
@@ -992,6 +1014,9 @@ namespace Opm
                         }
                     }
                 }
+                if (output_for_well) {
+                    std::cout << " under LRAT control " << std::endl;
+                }
                 break;
             }
             case Well::ProducerCMode::CRAT:
@@ -1000,6 +1025,9 @@ namespace Opm
             }
             case Well::ProducerCMode::RESV:
             {
+                if (output_for_well) {
+                    std::cout << " under RESV control " << std::endl;
+                }
                 std::vector<double> convert_coeff(this->number_of_phases_, 1.0);
                 this->rateConverter_.calcCoeff(/*fipreg*/ 0, this->pvtRegionIdx_, convert_coeff);
                 double total_res_rate = 0.0;
@@ -1051,6 +1079,9 @@ namespace Opm
             }
             case Well::ProducerCMode::BHP:
             {
+                if (output_for_well) {
+                    std::cout << " under BHP control " << std::endl;
+                }
                 ws.bhp = controls.bhp_limit;
                 double total_rate = 0.0;
                 for (int p = 0; p<np; ++p) {
@@ -1068,6 +1099,9 @@ namespace Opm
             }
             case Well::ProducerCMode::THP:
             {
+                if (output_for_well) {
+                    std::cout << " under THP control " << std::endl;
+                }
                 auto rates = ws.surface_rates;
                 this->adaptRatesForVFP(rates);
                 double bhp = this->calculateBhpFromThp(well_state, rates, well, summaryState, this->getRefDensity(), deferred_logger);
@@ -1087,6 +1121,9 @@ namespace Opm
             }
             case Well::ProducerCMode::GRUP:
             {
+                if (output_for_well) {
+                    std::cout << " under GRUP control " << std::endl;
+                }
                 assert(well.isAvailableForGroupControl());
                 const auto& group = schedule.getGroup(well.groupName(), this->currentStep());
                 const double efficiencyFactor = well.getEfficiencyFactor();

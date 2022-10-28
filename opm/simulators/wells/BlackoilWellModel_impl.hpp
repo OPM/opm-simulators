@@ -940,9 +940,7 @@ namespace Opm {
         Dune::Timer perfTimer;
         perfTimer.start();
 
-        if ( ! wellsActive() ) {
-            return;
-        }
+
 
         updatePerforationIntensiveQuantities();
 
@@ -961,6 +959,10 @@ namespace Opm {
         }
 
         const bool well_group_control_changed = updateWellControlsAndNetwork(local_deferredLogger, false);
+
+        if ( ! wellsActive() ) {
+            return;
+        }
 
         // TODO: assembleImpl function can be removed, it does not do much than assembleWellEq
         assembleImpl(dt, local_deferredLogger);
@@ -1015,10 +1017,11 @@ namespace Opm {
             // easier to compare with the original code.
             // And also, there is a lot of things done in the function assembleWellEq, some work needs to be done to
             // split it. For the moment, not touching that direction.
-            // assembleWellEq(dt, local_deferredLogger);
-            for (auto& well : well_container_) {
+            const double dt = this->ebosSimulator_.timeStepSize();
+            assembleWellEq(dt, local_deferredLogger);
+            /* for (auto& well : well_container_) {
                 well->solveWellEquation(ebosSimulator_, this->wellState(), this->groupState(), local_deferredLogger);
-            }
+            } */
         }
         OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger, "updateWellControlsAndNetworkIteration() failed: ",
                                        terminal_output_, grid().comm());
@@ -1610,7 +1613,7 @@ namespace Opm {
         // Even if there are no wells active locally, we cannot
         // return as the DeferredLogger uses global communication.
         // For no well active globally we simply return.
-        if( !wellsActive() ) return { false, false };
+        // if( !wellsActive() ) return { false, false };
 
         const int episodeIdx = ebosSimulator_.episodeIndex();
         const int iterationIdx = ebosSimulator_.model().newtonMethod().numIterations();
@@ -1624,16 +1627,32 @@ namespace Opm {
             const auto [local_network_changed, local_network_imbalance] = updateNetworkPressures(episodeIdx, solve_welleq);
             const bool network_changed = comm.sum(local_network_changed);
             const double network_imbalance = comm.max(local_network_imbalance);
+            std::cout << " network_changed ";
             if (network_changed) {
+                std::cout << " YES " ;
+            } else {
+                std::cout << " NO ";
+            }
+            std::cout << " network_imbalance is " << network_imbalance / 1.e5 << " barsa " << std::endl;
+            if (network_changed || solve_welleq) {
                 const auto& balance = schedule()[episodeIdx].network_balance();
                 // Iterate if not converged, and number of iterations is not yet max (NETBALAN item 3).
-                if ((network_update_it < balance.pressure_max_iter() || solve_welleq)
-                     && network_imbalance > balance.pressure_tolerance()) {
+                // if ((network_update_it < balance.pressure_max_iter() || solve_welleq)
+                //      && network_imbalance > balance.pressure_tolerance()) {
+                if (network_imbalance > balance.pressure_tolerance()) {
                     more_network_update = true;
                 }
             }
         }
+        std::cout << " do more network update ? ";
+        if (more_network_update) {
+            std::cout << " YES ";
+        } else {
+            std::cout << " NO ";
+        }
+        std::cout << std::endl;
 
+        std::cout << "network_update_it " << network_update_it << " max_iter from NETBALAN " << schedule()[episodeIdx].network_balance().pressure_max_iter() << std::endl;
         bool changed_well_group = false;
         // Check group individual constraints.
         const int nupcol = schedule()[episodeIdx].nupcol();
@@ -1854,14 +1873,22 @@ namespace Opm {
             // TODO: are not in the well container anymore
             // TODO: at the current stage, we only detect the well update or the group related opening or shutting yet.
             for (const auto& well : well_container_) {
-                auto& events = this->wellState().well(well->indexOfWell()).events;
+                const auto& events = this->wellState().well(well->indexOfWell()).events;
                 // TODO: it is possible the event should be more selective to the ones we want
                 // if (events.hasEvent(WellState::event_mask) &&
-                if (events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE) &&
-                    network.has_node(well->wellEcl().groupName())) {
-                    std::cout << " well " << well->name() << " made the network_rebalance necessary " << std::endl;
+                const bool is_partof_network = network.has_node(well->wellEcl().groupName());
+                std::cout << " well " << well->name() << " is part of the network ? ";
+                if (is_partof_network) {
+                    std::cout << " YES ";
+                } else {
+                    std::cout << " NO ";
+                }
+                if (is_partof_network && events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE)) {
+                    std::cout << " made the network_rebalance necessary " << std::endl;
                     network_rebalance_necessary = true;
                     break;
+                } else {
+                    std::cout << " did not trigger network_rebalance " << std::endl;
                 }
             }
         }
