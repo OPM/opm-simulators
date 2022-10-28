@@ -25,6 +25,7 @@
 #include <opm/grid/utility/cartesianToCompressed.hpp>
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
 
+#include <opm/simulators/wells/BlackoilWellModelConstraints.hpp>
 #include <opm/simulators/wells/VFPProperties.hpp>
 #include <opm/simulators/utils/MPIPacker.hpp>
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
@@ -1576,7 +1577,15 @@ namespace Opm {
             changed = true;
             updateAndCommunicate(reportStepIdx, iterationIdx, deferred_logger);
         }
-        bool changed_individual =  updateGroupIndividualControl( group, deferred_logger, reportStepIdx);
+        bool changed_individual =
+            BlackoilWellModelConstraints(*this).
+                updateGroupIndividualControl(group,
+                                             reportStepIdx,
+                                             this->switched_inj_groups_,
+                                             this->switched_prod_groups_,
+                                             this->groupState(),
+                                             this->wellState(),
+                                             deferred_logger);
         if (changed_individual) {
             changed = true;
             updateAndCommunicate(reportStepIdx, iterationIdx, deferred_logger);

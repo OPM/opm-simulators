@@ -99,6 +99,8 @@ public:
     const Schedule& schedule() const { return schedule_; }
     const PhaseUsage& phaseUsage() const { return phase_usage_; }
     const GroupState& groupState() const { return this->active_wgstate_.group_state; }
+    std::vector<const WellInterfaceGeneric*> genericWells() const
+    { return {well_container_generic_.begin(), well_container_generic_.end()}; }
 
     /*
       Immutable version of the currently active wellstate.
@@ -156,9 +158,12 @@ public:
     bool forceShutWellByName(const std::string& wellname,
                              const double simulation_time);
 
-
     const std::vector<PerforationData>& perfData(const int well_idx) const
     { return well_perf_data_[well_idx]; }
+
+    const Parallel::Communication& comm() const { return comm_; }
+
+    const SummaryState& summaryState() const { return summaryState_; }
 
 protected:
 
@@ -288,17 +293,6 @@ protected:
 
     void calculateEfficiencyFactors(const int reportStepIdx);
 
-    bool checkGroupConstraints(const Group& group,
-                               const int reportStepIdx,
-                               DeferredLogger& deferred_logger) const;
-
-    std::pair<Group::InjectionCMode, double> checkGroupInjectionConstraints(const Group& group,
-                                                         const int reportStepIdx,
-                                                         const Phase& phase) const;
-    std::pair<Group::ProductionCMode, double> checkGroupProductionConstraints(const Group& group,
-                                                           const int reportStepIdx,
-                                                           DeferredLogger& deferred_logger) const;
-
     void checkGconsaleLimits(const Group& group,
                              WellState& well_state,
                              const int reportStepIdx,
@@ -307,19 +301,6 @@ protected:
     bool checkGroupHigherConstraints(const Group& group,
                                      DeferredLogger& deferred_logger,
                                      const int reportStepIdx);
-
-    bool updateGroupIndividualControl(const Group& group,
-                                      DeferredLogger& deferred_logger,
-                                      const int reportStepIdx);
-
-    void actionOnBrokenConstraints(const Group& group,
-                                   const Group::ExceedAction& exceed_action,
-                                   const Group::ProductionCMode& newControl,
-                                   DeferredLogger& deferred_logger);
-    void actionOnBrokenConstraints(const Group& group,
-                                   const Group::InjectionCMode& newControl,
-                                   const Phase& controlPhase,
-                                   DeferredLogger& deferred_logger);
 
     void updateAndCommunicateGroupData(const int reportStepIdx,
                                        const int iterationIdx);
