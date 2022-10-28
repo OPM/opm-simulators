@@ -33,6 +33,7 @@
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/MSWellHelpers.hpp>
+#include <opm/simulators/wells/WellConvergence.hpp>
 #include <opm/simulators/wells/WellInterfaceIndices.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
@@ -143,89 +144,6 @@ initPrimaryVariablesEvaluation() const
 }
 
 template<typename FluidSystem, typename Indices, typename Scalar>
-void
-MultisegmentWellEval<FluidSystem,Indices,Scalar>::
-checkConvergenceControlEq(const WellState& well_state,
-                          ConvergenceReport& report,
-                          const double tolerance_pressure_ms_wells,
-                          const double tolerance_wells,
-                          const double max_residual_allowed,
-                          DeferredLogger& deferred_logger) const
-{
-    double control_tolerance = 0.;
-    using CR = ConvergenceReport;
-    CR::WellFailure::Type ctrltype = CR::WellFailure::Type::Invalid;
-
-    const int well_index = baseif_.indexOfWell();
-    const auto& ws = well_state.well(well_index);
-    if (baseif_.isInjector() )
-    {
-        auto current = ws.injection_cmode;
-        switch(current) {
-        case Well::InjectorCMode::THP:
-            ctrltype = CR::WellFailure::Type::ControlTHP;
-            control_tolerance = tolerance_pressure_ms_wells;
-            break;
-        case Well::InjectorCMode::BHP:
-            ctrltype = CR::WellFailure::Type::ControlBHP;
-            control_tolerance = tolerance_pressure_ms_wells;
-            break;
-        case Well::InjectorCMode::RATE:
-        case Well::InjectorCMode::RESV:
-            ctrltype = CR::WellFailure::Type::ControlRate;
-            control_tolerance = tolerance_wells;
-            break;
-        case Well::InjectorCMode::GRUP:
-            ctrltype = CR::WellFailure::Type::ControlRate;
-            control_tolerance = tolerance_wells;
-            break;
-        default:
-            OPM_DEFLOG_THROW(std::runtime_error, "Unknown well control control types for well " << baseif_.name(), deferred_logger);
-        }
-    }
-
-    if (baseif_.isProducer() )
-    {
-        auto current = ws.production_cmode;
-        switch(current) {
-        case Well::ProducerCMode::THP:
-            ctrltype = CR::WellFailure::Type::ControlTHP;
-            control_tolerance = tolerance_pressure_ms_wells;
-            break;
-        case Well::ProducerCMode::BHP:
-            ctrltype = CR::WellFailure::Type::ControlBHP;
-            control_tolerance = tolerance_pressure_ms_wells;
-            break;
-        case Well::ProducerCMode::ORAT:
-        case Well::ProducerCMode::WRAT:
-        case Well::ProducerCMode::GRAT:
-        case Well::ProducerCMode::LRAT:
-        case Well::ProducerCMode::RESV:
-        case Well::ProducerCMode::CRAT:
-            ctrltype = CR::WellFailure::Type::ControlRate;
-            control_tolerance = tolerance_wells;
-            break;
-        case Well::ProducerCMode::GRUP:
-            ctrltype = CR::WellFailure::Type::ControlRate;
-            control_tolerance = tolerance_wells;
-            break;
-        default:
-            OPM_DEFLOG_THROW(std::runtime_error, "Unknown well control control types for well " << baseif_.name(), deferred_logger);
-        }
-    }
-
-    const double well_control_residual = std::abs(resWell_[0][SPres]);
-    const int dummy_component = -1;
-    if (std::isnan(well_control_residual)) {
-        report.setWellFailed({ctrltype, CR::Severity::NotANumber, dummy_component, baseif_.name()});
-    } else if (well_control_residual > max_residual_allowed * 10.) {
-        report.setWellFailed({ctrltype, CR::Severity::TooLarge, dummy_component, baseif_.name()});
-    } else if ( well_control_residual > control_tolerance) {
-        report.setWellFailed({ctrltype, CR::Severity::Normal, dummy_component, baseif_.name()});
-    }
-}
-
-template<typename FluidSystem, typename Indices, typename Scalar>
 ConvergenceReport
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 getWellConvergence(const WellState& well_state,
@@ -302,12 +220,16 @@ getWellConvergence(const WellState& well_state,
         }
     }
 
-    checkConvergenceControlEq(well_state,
-                              report,
-                              tolerance_pressure_ms_wells,
-                              tolerance_wells,
-                              max_residual_allowed,
-                              deferred_logger);
+    WellConvergence(baseif_).
+        checkConvergenceControlEq(well_state,
+                                  {tolerance_pressure_ms_wells,
+                                   tolerance_pressure_ms_wells,
+                                   tolerance_wells,
+                                   tolerance_wells,
+                                   max_residual_allowed},
+                                  std::abs(resWell_[0][SPres]),
+                                  report,
+                                  deferred_logger);
 
     return report;
 }

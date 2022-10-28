@@ -69,8 +69,7 @@ public:
     void getNumBlocks(unsigned int& _nnzs) const;
 
 protected:
-    StandardWellGeneric(int Bhp,
-                        const WellInterfaceGeneric& baseif);
+    StandardWellGeneric(const WellInterfaceGeneric& baseif);
 
     // calculate a relaxation factor to avoid overshoot of total rates
     static double relaxationFactorRate(const std::vector<double>& primary_variables,
@@ -84,16 +83,6 @@ protected:
                                const std::vector<double>& rates,
                                const double bhp,
                                DeferredLogger& deferred_logger) const;
-
-    // checking the convergence of the well control equations
-    void checkConvergenceControlEq(const WellState& well_state,
-                                   ConvergenceReport& report,
-                                   DeferredLogger& deferred_logger,
-                                   const double max_residual_allowed) const;
-
-    void checkConvergencePolyMW(const std::vector<double>& res,
-                                ConvergenceReport& report,
-                                const double maxResidualAllowed) const;
 
     void computeConnectionPressureDelta();
 
@@ -132,9 +121,6 @@ protected:
     mutable BVectorWell invDrw_;
 
     double getRho() const { return perf_densities_[0]; }
-
-private:
-    int Bhp_; // index of Bhp
 };
 
 }

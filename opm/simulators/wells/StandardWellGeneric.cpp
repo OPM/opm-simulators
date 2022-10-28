@@ -47,13 +47,11 @@ namespace Opm
 
 template<class Scalar>
 StandardWellGeneric<Scalar>::
-StandardWellGeneric(int Bhp,
-                    const WellInterfaceGeneric& baseif)
+StandardWellGeneric(const WellInterfaceGeneric& baseif)
     : baseif_(baseif)
     , perf_densities_(baseif_.numPerfs())
     , perf_pressure_diffs_(baseif_.numPerfs())
     , parallelB_(duneB_, baseif_.parallelWellInfo())
-    , Bhp_(Bhp)
 {
     duneB_.setBuildMode(OffDiagMatWell::row_wise);
     duneC_.setBuildMode(OffDiagMatWell::row_wise);
@@ -392,131 +390,6 @@ computeBhpAtThpLimitInj(const std::function<std::vector<double>(const double)>& 
         return std::nullopt;
     }
 }
-
-template<class Scalar>
-void
-StandardWellGeneric<Scalar>::
-checkConvergenceControlEq(const WellState& well_state,
-                          ConvergenceReport& report,
-                          DeferredLogger& deferred_logger,
-                          const double max_residual_allowed) const
-{
-    double control_tolerance = 0.;
-    using CR = ConvergenceReport;
-    CR::WellFailure::Type ctrltype = CR::WellFailure::Type::Invalid;
-
-    const int well_index = baseif_.indexOfWell();
-    const auto& ws = well_state.well(well_index);
-    if (baseif_.wellIsStopped()) {
-        ctrltype = CR::WellFailure::Type::ControlRate;
-        control_tolerance = 1.e-6; // use smaller tolerance for zero control?
-    }
-    else if (baseif_.isInjector() )
-    {
-        auto current = ws.injection_cmode;
-        switch(current) {
-        case Well::InjectorCMode::THP:
-            ctrltype = CR::WellFailure::Type::ControlTHP;
-            control_tolerance = 1.e4; // 0.1 bar
-            break;
-        case Well::InjectorCMode::BHP:
-            ctrltype = CR::WellFailure::Type::ControlBHP;
-            control_tolerance = 1.e3; // 0.01 bar
-            break;
-        case Well::InjectorCMode::RATE:
-        case Well::InjectorCMode::RESV:
-            ctrltype = CR::WellFailure::Type::ControlRate;
-            control_tolerance = 1.e-4; //
-            break;
-        case Well::InjectorCMode::GRUP:
-            ctrltype = CR::WellFailure::Type::ControlRate;
-            control_tolerance = 1.e-6; //
-            break;
-        default:
-            OPM_DEFLOG_THROW(std::runtime_error, "Unknown well control control types for well " << baseif_.name(), deferred_logger);
-        }
-    }
-    else if (baseif_.isProducer() )
-    {
-        auto current = ws.production_cmode;
-        switch(current) {
-        case Well::ProducerCMode::THP:
-            ctrltype = CR::WellFailure::Type::ControlTHP;
-            control_tolerance = 1.e4; // 0.1 bar
-            break;
-        case Well::ProducerCMode::BHP:
-            ctrltype = CR::WellFailure::Type::ControlBHP;
-            control_tolerance = 1.e3; // 0.01 bar
-            break;
-        case Well::ProducerCMode::ORAT:
-        case Well::ProducerCMode::WRAT:
-        case Well::ProducerCMode::GRAT:
-        case Well::ProducerCMode::LRAT:
-        case Well::ProducerCMode::RESV:
-        case Well::ProducerCMode::CRAT:
-            ctrltype = CR::WellFailure::Type::ControlRate;
-            control_tolerance = 1.e-4; // smaller tolerance for rate control
-            break;
-        case Well::ProducerCMode::GRUP:
-            ctrltype = CR::WellFailure::Type::ControlRate;
-            control_tolerance = 1.e-6; // smaller tolerance for rate control
-            break;
-        default:
-            OPM_DEFLOG_THROW(std::runtime_error, "Unknown well control control types for well " << baseif_.name(), deferred_logger);
-        }
-    }
-
-    const double well_control_residual = std::abs(this->resWell_[0][Bhp_]);
-    const int dummy_component = -1;
-    if (std::isnan(well_control_residual)) {
-        report.setWellFailed({ctrltype, CR::Severity::NotANumber, dummy_component, baseif_.name()});
-    } else if (well_control_residual > max_residual_allowed * 10.) {
-        report.setWellFailed({ctrltype, CR::Severity::TooLarge, dummy_component, baseif_.name()});
-    } else if ( well_control_residual > control_tolerance) {
-        report.setWellFailed({ctrltype, CR::Severity::Normal, dummy_component, baseif_.name()});
-    }
-}
-
-template<class Scalar>
-void
-StandardWellGeneric<Scalar>::
-checkConvergencePolyMW(const std::vector<double>& res,
-                       ConvergenceReport& report,
-                       const double maxResidualAllowed) const
-{
-  if (baseif_.isInjector()) {
-      //  checking the convergence of the perforation rates
-      const double wat_vel_tol = 1.e-8;
-      const int dummy_component = -1;
-      using CR = ConvergenceReport;
-      const auto wat_vel_failure_type = CR::WellFailure::Type::MassBalance;
-      for (int perf = 0; perf < baseif_.numPerfs(); ++perf) {
-          const double wat_vel_residual = res[Bhp_ + 1 + perf];
-          if (std::isnan(wat_vel_residual)) {
-              report.setWellFailed({wat_vel_failure_type, CR::Severity::NotANumber, dummy_component, baseif_.name()});
-          } else if (wat_vel_residual > maxResidualAllowed * 10.) {
-              report.setWellFailed({wat_vel_failure_type, CR::Severity::TooLarge, dummy_component, baseif_.name()});
-          } else if (wat_vel_residual > wat_vel_tol) {
-              report.setWellFailed({wat_vel_failure_type, CR::Severity::Normal, dummy_component, baseif_.name()});
-          }
-      }
-
-      // checking the convergence of the skin pressure
-      const double pskin_tol = 1000.; // 1000 pascal
-      const auto pskin_failure_type = CR::WellFailure::Type::Pressure;
-      for (int perf = 0; perf < baseif_.numPerfs(); ++perf) {
-          const double pskin_residual = res[Bhp_ + 1 + perf + baseif_.numPerfs()];
-          if (std::isnan(pskin_residual)) {
-              report.setWellFailed({pskin_failure_type, CR::Severity::NotANumber, dummy_component, baseif_.name()});
-          } else if (pskin_residual > maxResidualAllowed * 10.) {
-              report.setWellFailed({pskin_failure_type, CR::Severity::TooLarge, dummy_component, baseif_.name()});
-          } else if (pskin_residual > pskin_tol) {
-              report.setWellFailed({pskin_failure_type, CR::Severity::Normal, dummy_component, baseif_.name()});
-          }
-      }
-  }
-}
-
 
 template<class Scalar>
 void

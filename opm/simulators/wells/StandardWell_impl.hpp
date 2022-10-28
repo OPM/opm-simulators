@@ -23,6 +23,7 @@
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/linalg/SmallDenseMatrixUtils.hpp>
 #include <opm/simulators/wells/VFPHelpers.hpp>
+#include <opm/simulators/wells/WellConvergence.hpp>
 
 #include <algorithm>
 #include <functional>
@@ -2501,7 +2502,8 @@ namespace Opm
 
         // checking the convergence of the extra equations related to polymer injectivity
         if constexpr (Base::has_polymermw) {
-            this->checkConvergencePolyMW(res, report, this->param_.max_residual_allowed_);
+            WellConvergence(*this).
+                checkConvergencePolyMW(res, Bhp, this->param_.max_residual_allowed_, report);
         }
     }
 

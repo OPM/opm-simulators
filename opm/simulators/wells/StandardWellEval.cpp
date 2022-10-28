@@ -32,6 +32,7 @@
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
+#include <opm/simulators/wells/WellConvergence.hpp>
 #include <opm/simulators/wells/WellInterfaceIndices.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
@@ -47,7 +48,7 @@ namespace Opm
 template<class FluidSystem, class Indices, class Scalar>
 StandardWellEval<FluidSystem,Indices,Scalar>::
 StandardWellEval(const WellInterfaceIndices<FluidSystem,Indices,Scalar>& baseif)
-    : StandardWellGeneric<Scalar>(Bhp, baseif)
+    : StandardWellGeneric<Scalar>(baseif)
     , baseif_(baseif)
     , F0_(numWellConservationEq)
 {
@@ -831,7 +832,12 @@ getWellConvergence(const WellState& well_state,
         }
     }
 
-    this->checkConvergenceControlEq(well_state, report, deferred_logger, maxResidualAllowed);
+    WellConvergence(baseif_).
+        checkConvergenceControlEq(well_state,
+                                  {1.e3, 1.e4, 1.e-4, 1.e-6, maxResidualAllowed},
+                                  std::abs(this->resWell_[0][Bhp]),
+                                  report,
+                                  deferred_logger);
 
     return report;
 }
