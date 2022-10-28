@@ -89,7 +89,7 @@ public:
 
     /// return true if wells are available in the reservoir
     bool wellsActive() const;
-    bool hasWell(const std::string& wname);
+    bool hasWell(const std::string& wname) const;
 
     // whether there exists any multisegment well open on this process
     bool anyMSWellOpenLocal() const;
@@ -130,13 +130,6 @@ public:
                         const std::unordered_set<std::string>& wells,
                         const SummaryState& st);
 
-
-    void loadRestartData(const data::Wells& rst_wells,
-                         const data::GroupAndNetworkValues& grpNwrkValues,
-                         const PhaseUsage& phases,
-                         const bool handle_ms_well,
-                         WellState& well_state);
-
     void initFromRestartFile(const RestartValue& restartValues,
                              WellTestState wtestState,
                              const size_t numCells,
@@ -162,6 +155,10 @@ public:
     /// Returns true if the well was actually found and shut.
     bool forceShutWellByName(const std::string& wellname,
                              const double simulation_time);
+
+
+    const std::vector<PerforationData>& perfData(const int well_idx) const
+    { return well_perf_data_[well_idx]; }
 
 protected:
 
@@ -285,34 +282,6 @@ protected:
     void assignGroupValues(const int reportStepIdx,
                            std::map<std::string, data::GroupData>& gvalues) const;
     void assignNodeValues(std::map<std::string, data::NodeData>& nodevalues) const;
-
-    void loadRestartConnectionData(const std::vector<data::Rates::opt>& phs,
-                                   const data::Well&                    rst_well,
-                                   const std::vector<PerforationData>&  old_perf_data,
-                                   SingleWellState&                     ws);
-
-    void loadRestartSegmentData(const std::string&                   well_name,
-                                const std::vector<data::Rates::opt>& phs,
-                                const data::Well&                    rst_well,
-                                SingleWellState&                     ws);
-
-    void loadRestartWellData(const std::string&                   well_name,
-                             const bool                           handle_ms_well,
-                             const std::vector<data::Rates::opt>& phs,
-                             const data::Well&                    rst_well,
-                             const std::vector<PerforationData>&  old_perf_data,
-                             SingleWellState&                     ws);
-
-    void loadRestartGroupData(const std::string&     group,
-                              const data::GroupData& value);
-
-    void loadRestartGuideRates(const int                    report_step,
-                               const GuideRateModel::Target target,
-                               const data::Wells&           rst_wells);
-
-    void loadRestartGuideRates(const int                                     report_step,
-                               const GuideRateConfig&                        config,
-                               const std::map<std::string, data::GroupData>& rst_groups);
 
     std::unordered_map<std::string, data::GroupGuideRates>
     calculateAllGroupGuiderates(const int reportStepIdx) const;
