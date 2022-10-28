@@ -1662,11 +1662,16 @@ namespace Opm {
             const Group& fieldGroup = schedule().getGroup("FIELD", episodeIdx);
             changed_well_group = updateGroupControls(fieldGroup, deferred_logger, episodeIdx, iterationIdx);
         }
+        const std::set<std::string> well_names = {"S-P2", "S-P3", "S-P4", "S-P6", "PROD1", "PROD2", "PROD3"};
         // Check wells' group constraints and communicate.
         bool changed_well_to_group = false;
         for (const auto& well : well_container_) {
             const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Group;
             const bool changed_well = well->updateWellControl(ebosSimulator_, mode, this->wellState(), this->groupState(), deferred_logger);
+            if (well_names.count(well->name()) > 0) {
+                std::cout << " well " << well->name() << " changed_well ? " << changed_well
+                          << " after Group updateWellControl " << std::endl;
+            }
             if (changed_well) {
                 changed_well_to_group = changed_well || changed_well_to_group;
             }
@@ -1683,6 +1688,10 @@ namespace Opm {
         for (const auto& well : well_container_) {
             const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Individual;
             const bool changed_well = well->updateWellControl(ebosSimulator_, mode, this->wellState(), this->groupState(), deferred_logger);
+            if (well_names.count(well->name()) > 0) {
+                std::cout << " well " << well->name() << " changed_well ? " << changed_well
+                          << " after Individual updateWellControl " << std::endl;
+            }
             if (changed_well) {
                 changed_well_individual = changed_well || changed_well_individual;
             }
@@ -1697,6 +1706,12 @@ namespace Opm {
         const Group& fieldGroup = schedule().getGroup("FIELD", episodeIdx);
         updateWsolvent(fieldGroup, episodeIdx,  this->nupcolWellState());
 
+        std::cout << " changed_well_group ? ";
+        if (changed_well_group) {
+            std::cout << " YES " << std::endl;
+        } else {
+            std::cout << " NO " << std::endl;
+        }
         return { changed_well_group, more_network_update };
     }
 

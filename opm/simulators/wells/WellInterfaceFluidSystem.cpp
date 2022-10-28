@@ -423,6 +423,8 @@ checkGroupConstraints(WellState& well_state,
                       const SummaryState& summaryState,
                       DeferredLogger& deferred_logger) const
 {
+    const std::set<std::string> well_names = {"S-P2", "S-P3", "S-P4", "S-P6", "PROD1", "PROD2", "PROD3"};
+
     const auto& well = well_ecl_;
     const int well_index = index_of_well_;
     auto& ws = well_state.well(well_index);
@@ -472,6 +474,15 @@ checkGroupConstraints(WellState& well_state,
                                           schedule, summaryState, deferred_logger);
             // If a group constraint was broken, we set the current well control to
             // be GRUP.
+            if (well_names.count(this->name()) > 0) {
+                std::cout << " group_constraint.first (broken group control?) ? ";
+                if (group_constraint.first) {
+                    std::cout << " YES ";
+                } else {
+                    std::cout << " NO ";
+                }
+                std::cout << " group_constraint.second (constraint? ) : " << group_constraint.second << std::endl;
+            }
             if (group_constraint.first) {
                 ws.production_cmode = Well::ProducerCMode::GRUP;
                 const int np = well_state.numPhases();
