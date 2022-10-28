@@ -1,0 +1,10 @@
+[
+{
+    "casename": "spe1_solvent",
+    "filename": "SPE1CASE2_SOLVENT",
+    "simulator": "flow",
+    "abs_tol": 0.02,
+    "rel_tol": 0.01,
+    "test_args": "--linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8"
+}
+]

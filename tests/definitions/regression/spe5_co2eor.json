@@ -1,0 +1,10 @@
+[
+{
+    "casename": "spe5_co2eor",
+    "filename": "SPE5CASE1_DYN",
+    "simulator": "flow",
+    "abs_tol": 0.02,
+    "rel_tol": 0.01,
+    "test_args": "--flow-newton-max-iterations=20"
+}
+]

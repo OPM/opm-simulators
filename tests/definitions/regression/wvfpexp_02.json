@@ -1,0 +1,10 @@
+[
+{
+    "casename": "wvfpexp_02",
+    "filename": "WVFPEXP-02",
+    "simulator": "flow",
+    "abs_tol": 0.02,
+    "rel_tol": 1e-05,
+    "dir": "wvfpexp"
+}
+]

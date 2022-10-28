@@ -1,0 +1,10 @@
+[
+{
+    "casename": "9_1b_grpctl_stw_model2",
+    "filename": "9_1B_DEPL_MAX_RATE_MIN_THP_STW",
+    "simulator": "flow",
+    "abs_tol": 0.02,
+    "rel_tol": 1e-05,
+    "dir": "model2"
+}
+]

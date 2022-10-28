@@ -1,0 +1,10 @@
+[
+{
+    "casename": "rxft_smry",
+    "filename": "TEST_RXFT",
+    "simulator": "flow",
+    "abs_tol": 0.02,
+    "rel_tol": 1e-05,
+    "dir": "rxft_smry"
+}
+]

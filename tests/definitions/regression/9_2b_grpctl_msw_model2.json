@@ -1,0 +1,10 @@
+[
+{
+    "casename": "9_2b_grpctl_msw_model2",
+    "filename": "9_2B_DEPL_GCONPROD_2L_MSW",
+    "simulator": "flow",
+    "abs_tol": 0.02,
+    "rel_tol": 1e-05,
+    "dir": "model2"
+}
+]

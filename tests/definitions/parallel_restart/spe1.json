@@ -1,0 +1,11 @@
+[
+{
+    "casename": "spe1",
+    "filename": "SPE1CASE2_ACTNUM",
+    "simulator": "flow",
+    "abs_tol": 0.2,
+    "rel_tol": 0.0004,
+    "restart_step": "6",
+    "test_args": "--sched-restart=false"
+}
+]

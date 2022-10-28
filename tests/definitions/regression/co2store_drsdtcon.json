@@ -1,0 +1,10 @@
+[
+{
+    "casename": "co2store_drsdtcon",
+    "filename": "CO2STORE_DRSDTCON",
+    "simulator": "flow",
+    "abs_tol": 0.02,
+    "rel_tol": 1e-05,
+    "dir": "co2store"
+}
+]

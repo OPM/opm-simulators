@@ -1,0 +1,10 @@
+[
+{
+    "casename": "multflt_sched_model2",
+    "filename": "3_A_MPI_MULTFLT_SCHED_MODEL2",
+    "simulator": "flow",
+    "abs_tol": 0.02,
+    "rel_tol": 1e-05,
+    "dir": "model2"
+}
+]

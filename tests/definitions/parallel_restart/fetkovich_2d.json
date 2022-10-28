@@ -1,0 +1,12 @@
+[
+{
+    "casename": "fetkovich_2d",
+    "filename": "2D_FETKOVICHAQUIFER",
+    "simulator": "flow",
+    "abs_tol": 0.2,
+    "rel_tol": 0.0004,
+    "restart_step": "30",
+    "dir": "aquifer-fetkovich",
+    "test_args": "--enable-tuning=true --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-6"
+}
+]

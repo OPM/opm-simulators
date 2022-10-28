@@ -1,0 +1,11 @@
+[
+{
+    "casename": "3_a_mpi_multflt_mod2",
+    "filename": "3_A_MPI_MULTFLT_SCHED_MODEL2",
+    "simulator": "flow",
+    "abs_tol": 0.02,
+    "rel_tol": 8e-05,
+    "dir": "model2",
+    "test_args": "--linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --ecl-enable-drift-compensation=false"
+}
+]

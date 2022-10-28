@@ -1,0 +1,11 @@
+[
+{
+    "casename": "rxft",
+    "filename": "TEST_RXFT",
+    "simulator": "flow",
+    "abs_tol": 0.02,
+    "rel_tol": "1.0e-3",
+    "dir": "rxft_smry",
+    "test_args": "--linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --ecl-enable-drift-compensation=false"
+}
+]

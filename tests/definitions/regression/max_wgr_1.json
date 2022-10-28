@@ -1,0 +1,10 @@
+[
+{
+    "casename": "max_wgr_1",
+    "filename": "MAX_WGR_1",
+    "simulator": "flow",
+    "abs_tol": 0.02,
+    "rel_tol": 1e-05,
+    "dir": "wtest/wecon_wgr_max"
+}
+]

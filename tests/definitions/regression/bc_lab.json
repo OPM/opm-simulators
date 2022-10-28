@@ -1,0 +1,10 @@
+[
+{
+    "casename": "bc_lab",
+    "filename": "BC_LAB",
+    "simulator": "flow",
+    "abs_tol": 0.02,
+    "rel_tol": 1e-05,
+    "dir": "bc_lab"
+}
+]

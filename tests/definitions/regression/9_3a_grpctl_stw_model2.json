@@ -1,0 +1,10 @@
+[
+{
+    "casename": "9_3a_grpctl_stw_model2",
+    "filename": "9_3A_GINJ_REIN-G_STW",
+    "simulator": "flow",
+    "abs_tol": 0.02,
+    "rel_tol": 1e-05,
+    "dir": "model2"
+}
+]

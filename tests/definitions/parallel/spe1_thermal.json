@@ -1,0 +1,11 @@
+[
+{
+    "casename": "spe1_thermal",
+    "filename": "SPE1CASE2_THERMAL",
+    "simulator": "flow",
+    "abs_tol": 0.02,
+    "rel_tol": 1e-05,
+    "dir": "spe1",
+    "test_args": "--linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8"
+}
+]

@@ -1,0 +1,9 @@
+[
+{
+    "casename": "wecon_wtest",
+    "filename": "3D_WECON",
+    "simulator": "flow",
+    "abs_tol": 0.02,
+    "rel_tol": 0.01
+}
+]

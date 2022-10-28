@@ -1,0 +1,10 @@
+[
+{
+    "casename": "spe1_metric_vfp1",
+    "filename": "SPE1CASE1_METRIC_VFP1",
+    "simulator": "flow",
+    "abs_tol": 0.02,
+    "rel_tol": 1e-05,
+    "dir": "vfpprod_spe1"
+}
+]

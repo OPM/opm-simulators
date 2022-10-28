@@ -1,0 +1,10 @@
+[
+{
+    "casename": "krnum_02z",
+    "filename": "KRNUM-02Z",
+    "simulator": "flow",
+    "abs_tol": 0.02,
+    "rel_tol": 1e-05,
+    "dir": "krnum"
+}
+]

@@ -1,0 +1,10 @@
+[
+{
+    "casename": "spe1",
+    "filename": "SPE1CASE2",
+    "simulator": "flow",
+    "abs_tol": 0.02,
+    "rel_tol": 8e-05,
+    "test_args": "--linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --ecl-enable-drift-compensation=false"
+}
+]

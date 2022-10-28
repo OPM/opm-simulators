@@ -1,0 +1,10 @@
+[
+{
+    "casename": "polymer_simple2D",
+    "filename": "2D_THREEPHASE_POLY_HETER",
+    "simulator": "flow",
+    "abs_tol": 0.02,
+    "rel_tol": 0.01,
+    "test_args": "--tolerance-mb=1.e-7"
+}
+]

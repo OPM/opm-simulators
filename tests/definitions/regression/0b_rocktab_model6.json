@@ -1,0 +1,10 @@
+[
+{
+    "casename": "0b_rocktab_model6",
+    "filename": "0B_ROCKTAB_MODEL6",
+    "simulator": "flow",
+    "abs_tol": 0.02,
+    "rel_tol": 1e-05,
+    "dir": "model6"
+}
+]

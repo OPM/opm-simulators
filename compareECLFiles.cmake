@@ -237,6 +237,35 @@ endfunction()
 
 ###########################################################################
 
+### Helper functions ###
+macro(parse_json_test_definition idx)
+  string(JSON casename GET ${JSON_STRING} ${idx} casename)
+  string(JSON filename GET ${JSON_STRING} ${idx} filename)
+  string(JSON simulator GET ${JSON_STRING} ${idx} simulator)
+  string(JSON abs_tol GET ${JSON_STRING} ${idx} abs_tol)
+  string(JSON rel_tol GET ${JSON_STRING} ${idx} rel_tol)
+  set(PARAMS CASENAME ${casename}
+             SIMULATOR ${simulator}
+             FILENAME ${filename}
+             ABS_TOL ${abs_tol}
+             REL_TOL ${rel_tol})
+  string(JSON dir ERROR_VARIABLE err GET ${JSON_STRING} ${idx} dir)
+  if (NOT err)
+    list(APPEND PARAMS DIR ${dir})
+  endif()
+  string(JSON restart_sched ERROR_VARIABLE err GET ${JSON_STRING} ${idx} restart_sched)
+  if (NOT err)
+    list(APPEND PARAMS RESTART_SCHED ${restart_sched})
+  endif()
+  string(JSON restart_step ERROR_VARIABLE err GET ${JSON_STRING} ${idx} restart_step)
+  if (NOT err)
+    list(APPEND PARAMS RESTART_STEP ${restart_step})
+  endif()
+  string(JSON test_args ERROR_VARIABLE err GET ${JSON_STRING} ${idx} test_args)
+  if (NOT err)
+    list(APPEND PARAMS TEST_ARGS ${test_args})
+  endif()
+endmacro()
 
 if(NOT TARGET test-suite)
   add_custom_target(test-suite)
@@ -274,8 +303,8 @@ opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-init-regressionTest.sh "")
 add_test_compareECLFiles(CASENAME norne
                          FILENAME NORNE_ATW2013
                          SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
+                         ABS_TOL 2e-2
+                         REL_TOL 1e-5
                          PREFIX compareECLInitFiles
                          DIR_PREFIX /init)
 

@@ -1,0 +1,10 @@
+[
+{
+    "casename": "fpr_nonhc",
+    "filename": "WATER2F",
+    "simulator": "flow",
+    "abs_tol": 0.02,
+    "rel_tol": 1e-05,
+    "dir": "water-1ph"
+}
+]

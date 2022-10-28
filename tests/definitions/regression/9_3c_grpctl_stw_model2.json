@@ -1,0 +1,10 @@
+[
+{
+    "casename": "9_3c_grpctl_stw_model2",
+    "filename": "9_3C_GINJ_GAS_GCONSUMP_STW",
+    "simulator": "flow",
+    "abs_tol": 0.02,
+    "rel_tol": 1e-05,
+    "dir": "model2"
+}
+]

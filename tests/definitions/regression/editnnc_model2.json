@@ -1,0 +1,10 @@
+[
+{
+    "casename": "editnnc_model2",
+    "filename": "9_EDITNNC_MODEL2",
+    "simulator": "flow",
+    "abs_tol": 0.02,
+    "rel_tol": 1e-05,
+    "dir": "model2"
+}
+]
