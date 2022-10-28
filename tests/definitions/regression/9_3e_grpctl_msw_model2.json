@@ -1,10 +1,12 @@
-[
 {
-    "casename": "9_3e_grpctl_msw_model2",
-    "filename": "9_3E_GAS_MIN_EXPORT_MSW",
+    "test_cases": [
+        {
+            "casename": "9_3e_grpctl_msw_model2",
+            "filename": "9_3E_GAS_MIN_EXPORT_MSW"
+        }
+    ],
     "simulator": "flow",
     "abs_tol": 0.02,
     "rel_tol": 1e-05,
     "dir": "model2"
 }
-]

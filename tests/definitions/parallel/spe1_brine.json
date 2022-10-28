@@ -1,10 +1,12 @@
-[
 {
-    "casename": "spe1_brine",
-    "filename": "SPE1CASE1_BRINE",
+    "test_cases": [
+        {
+            "casename": "spe1_brine",
+            "filename": "SPE1CASE1_BRINE",
+            "test_args": "--linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-6"
+        }
+    ],
     "simulator": "flow",
     "abs_tol": 0.02,
-    "rel_tol": 0.01,
-    "test_args": "--linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-6"
+    "rel_tol": 0.01
 }
-]

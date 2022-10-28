@@ -1,10 +1,12 @@
-[
 {
-    "casename": "min_bhp_3",
-    "filename": "MIN_BHP_3",
+    "test_cases": [
+        {
+            "casename": "min_bhp_3",
+            "filename": "MIN_BHP_3"
+        }
+    ],
     "simulator": "flow",
     "abs_tol": 0.02,
     "rel_tol": 1e-05,
     "dir": "wtest/bhp_min"
 }
-]

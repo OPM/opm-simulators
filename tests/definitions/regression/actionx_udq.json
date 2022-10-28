@@ -1,10 +1,12 @@
-[
 {
-    "casename": "actionx_udq",
-    "filename": "ACTIONX_UDQ",
+    "test_cases": [
+        {
+            "casename": "actionx_udq",
+            "filename": "ACTIONX_UDQ"
+        }
+    ],
     "simulator": "flow",
     "abs_tol": 0.02,
     "rel_tol": 1e-05,
     "dir": "actionx"
 }
-]

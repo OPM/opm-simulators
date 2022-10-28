@@ -1,10 +1,12 @@
-[
 {
-    "casename": "base_model_1",
-    "filename": "BASE_MODEL_1",
+    "test_cases": [
+        {
+            "casename": "base_model_1",
+            "filename": "BASE_MODEL_1"
+        }
+    ],
     "simulator": "flow",
     "abs_tol": 0.02,
     "rel_tol": 1e-05,
     "dir": "model1"
 }
-]

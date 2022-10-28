@@ -1,10 +1,12 @@
-[
 {
-    "casename": "model4_udq_group",
-    "filename": "MOD4_UDQ_ACTIONX",
+    "test_cases": [
+        {
+            "casename": "model4_udq_group",
+            "filename": "MOD4_UDQ_ACTIONX"
+        }
+    ],
     "simulator": "flow",
     "abs_tol": 0.02,
     "rel_tol": 1e-05,
     "dir": "model4"
 }
-]

@@ -1,10 +1,12 @@
-[
 {
-    "casename": "spe1case2_krnum",
-    "filename": "SPE1CASE2_KRNUM",
+    "test_cases": [
+        {
+            "casename": "spe1case2_krnum",
+            "filename": "SPE1CASE2_KRNUM"
+        }
+    ],
     "simulator": "flow",
     "abs_tol": 0.02,
     "rel_tol": 1e-05,
     "dir": "spe1"
 }
-]

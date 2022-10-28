@@ -1,10 +1,12 @@
-[
 {
-    "casename": "spe9group",
-    "filename": "SPE9_CP_GROUP",
+    "test_cases": [
+        {
+            "casename": "spe9group",
+            "filename": "SPE9_CP_GROUP",
+            "test_args": "--linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8"
+        }
+    ],
     "simulator": "flow",
     "abs_tol": 0.02,
-    "rel_tol": 0.01,
-    "test_args": "--linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8"
+    "rel_tol": 0.01
 }
-]

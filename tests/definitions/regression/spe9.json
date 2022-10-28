@@ -1,10 +1,12 @@
-[
 {
-    "casename": "spe9",
-    "filename": "SPE9_CP_SHORT",
+    "test_cases": [
+        {
+            "casename": "spe9",
+            "filename": "SPE9_CP_SHORT"
+        }
+    ],
     "simulator": "flow",
     "abs_tol": 0.02,
     "rel_tol": 1e-05,
     "restart_step": "10"
 }
-]

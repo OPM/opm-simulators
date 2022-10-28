@@ -18,6 +18,7 @@ for match in re.finditer('^add_test_compare_parallel_restarted_simulation\(([^\)
     params = match.group(1).split()
     i = 0
     mapping = dict()
+    mapping['test_cases'] = [dict()]
     while i < len(params):
         if params[i] == 'TEST_ARGS':
             j = 1
@@ -25,16 +26,17 @@ for match in re.finditer('^add_test_compare_parallel_restarted_simulation\(([^\)
             while i + j < len(params) and not params[i+j][0].isupper():
                 val = val + ' ' + params[i+j]
                 j = j + 1
-            mapping[params[i].lower()] = val.strip()
+            mapping['test_cases'][0][params[i].lower()] = val.strip()
             i = i + j
         else:
             if params[i] == 'ABS_TOL' and params[i+1] == '${abs_tol_restart}':
                 params[i+1] = 2e-1
             if params[i] == 'REL_TOL' and params[i+1] == '${rel_tol_restart}':
                 params[i+1] = 4e-4
-            mapping[params[i].lower()] = params[i+1]
+            if params[i] == 'CASENAME' or params[i] == 'FILENAME' or params[i] == 'RESTART_STEP' or params[i] == 'RESTART_SCHEDULE':
+                mapping['test_cases'][0][params[i].lower()] = params[i+1]
+            else:
+                mapping[params[i].lower()] = params[i+1]
             i = i + 2
-    with open('definitions/parallel_restart/{}.json'.format(mapping['casename']),'w') as f:
-        f.write('[\n')
+    with open('definitions/parallel_restart/{}.json'.format(mapping['test_cases'][0]['casename']),'w') as f:
         f.write(json.dumps(mapping, indent=4))
-        f.write('\n]\n')

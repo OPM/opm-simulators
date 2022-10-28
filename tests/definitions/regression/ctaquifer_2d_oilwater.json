@@ -1,10 +1,12 @@
-[
 {
-    "casename": "ctaquifer_2d_oilwater",
-    "filename": "2D_OW_CTAQUIFER",
+    "test_cases": [
+        {
+            "casename": "ctaquifer_2d_oilwater",
+            "filename": "2D_OW_CTAQUIFER"
+        }
+    ],
     "simulator": "flow",
     "abs_tol": 0.02,
     "rel_tol": 1e-05,
     "dir": "aquifer-oilwater"
 }
-]

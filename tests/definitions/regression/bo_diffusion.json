@@ -1,10 +1,12 @@
-[
 {
-    "casename": "bo_diffusion",
-    "filename": "BO_DIFFUSE_CASE1",
+    "test_cases": [
+        {
+            "casename": "bo_diffusion",
+            "filename": "BO_DIFFUSE_CASE1"
+        }
+    ],
     "simulator": "flow",
     "abs_tol": 0.02,
     "rel_tol": 1e-05,
     "dir": "diffusion"
 }
-]

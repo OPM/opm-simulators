@@ -1,9 +1,11 @@
-[
 {
-    "casename": "spe1",
-    "filename": "SPE1CASE1",
+    "test_cases": [
+        {
+            "casename": "spe1",
+            "filename": "SPE1CASE1"
+        }
+    ],
     "simulator": "flow",
     "abs_tol": 0.02,
     "rel_tol": 1e-05
 }
-]

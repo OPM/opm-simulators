@@ -1,10 +1,12 @@
-[
 {
-    "casename": "swatinit_model2",
-    "filename": "5_SWATINIT_MODEL2",
+    "test_cases": [
+        {
+            "casename": "swatinit_model2",
+            "filename": "5_SWATINIT_MODEL2"
+        }
+    ],
     "simulator": "flow",
     "abs_tol": 0.02,
     "rel_tol": 1e-05,
     "dir": "model2"
 }
-]

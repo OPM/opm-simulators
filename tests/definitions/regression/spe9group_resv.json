@@ -1,10 +1,12 @@
-[
 {
-    "casename": "spe9group_resv",
-    "filename": "SPE9_CP_GROUP_RESV",
+    "test_cases": [
+        {
+            "casename": "spe9group_resv",
+            "filename": "SPE9_CP_GROUP_RESV"
+        }
+    ],
     "simulator": "flow",
     "abs_tol": 0.02,
     "rel_tol": 1e-05,
     "dir": "spe9group"
 }
-]

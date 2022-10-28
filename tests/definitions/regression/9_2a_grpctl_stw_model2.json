@@ -1,10 +1,12 @@
-[
 {
-    "casename": "9_2a_grpctl_stw_model2",
-    "filename": "9_2A_DEPL_GCONPROD_1L_STW",
+    "test_cases": [
+        {
+            "casename": "9_2a_grpctl_stw_model2",
+            "filename": "9_2A_DEPL_GCONPROD_1L_STW"
+        }
+    ],
     "simulator": "flow",
     "abs_tol": 0.02,
     "rel_tol": 1e-05,
     "dir": "model2"
 }
-]

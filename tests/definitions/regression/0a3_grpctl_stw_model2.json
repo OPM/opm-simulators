@@ -1,10 +1,12 @@
-[
 {
-    "casename": "0a3_grpctl_stw_model2",
-    "filename": "0A3_GRCTRL_LRAT_LRAT_BASE_MODEL2_STW",
+    "test_cases": [
+        {
+            "casename": "0a3_grpctl_stw_model2",
+            "filename": "0A3_GRCTRL_LRAT_LRAT_BASE_MODEL2_STW"
+        }
+    ],
     "simulator": "flow",
     "abs_tol": 0.02,
     "rel_tol": 1e-05,
     "dir": "model2"
 }
-]

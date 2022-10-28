@@ -1,10 +1,12 @@
-[
 {
-    "casename": "actionx_wefac",
-    "filename": "ACTIONX_WEFAC",
+    "test_cases": [
+        {
+            "casename": "actionx_wefac",
+            "filename": "ACTIONX_WEFAC"
+        }
+    ],
     "simulator": "flow",
     "abs_tol": 0.02,
     "rel_tol": 1e-05,
     "dir": "actionx"
 }
-]

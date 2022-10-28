@@ -1,10 +1,12 @@
-[
 {
-    "casename": "spe1_thermal_watvisc",
-    "filename": "SPE1CASE2_THERMAL_WATVISC",
+    "test_cases": [
+        {
+            "casename": "spe1_thermal_watvisc",
+            "filename": "SPE1CASE2_THERMAL_WATVISC"
+        }
+    ],
     "simulator": "flow",
     "abs_tol": 0.02,
     "rel_tol": 1e-05,
     "dir": "spe1"
 }
-]

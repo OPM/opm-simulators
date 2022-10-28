@@ -1,12 +1,14 @@
-[
 {
-    "casename": "fetkovich_2d",
-    "filename": "2D_FETKOVICHAQUIFER",
+    "test_cases": [
+        {
+            "casename": "fetkovich_2d",
+            "filename": "2D_FETKOVICHAQUIFER",
+            "restart_step": "30",
+            "test_args": "--sched-restart=true"
+        }
+    ],
     "simulator": "flow",
     "abs_tol": 0.2,
     "rel_tol": 0.0004,
-    "restart_step": "30",
-    "dir": "aquifer-fetkovich",
-    "test_args": "--sched-restart=true"
+    "dir": "aquifer-fetkovich"
 }
-]

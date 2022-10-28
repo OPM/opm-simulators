@@ -1,11 +1,13 @@
-[
 {
-    "casename": "spe9",
-    "filename": "SPE9_CP_SHORT",
+    "test_cases": [
+        {
+            "casename": "spe9",
+            "filename": "SPE9_CP_SHORT",
+            "restart_step": "15",
+            "test_args": "--sched-restart=false --tolerance-mb=1e-7"
+        }
+    ],
     "simulator": "flow",
     "abs_tol": 0.2,
-    "rel_tol": 0.0004,
-    "restart_step": "15",
-    "test_args": "--sched-restart=false --tolerance-mb=1e-7"
+    "rel_tol": 0.0004
 }
-]

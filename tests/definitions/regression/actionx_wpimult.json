@@ -1,10 +1,12 @@
-[
 {
-    "casename": "actionx_wpimult",
-    "filename": "ACTIONX_WPIMULT",
+    "test_cases": [
+        {
+            "casename": "actionx_wpimult",
+            "filename": "ACTIONX_WPIMULT"
+        }
+    ],
     "simulator": "flow",
     "abs_tol": 0.02,
     "rel_tol": 1e-05,
     "dir": "actionx"
 }
-]

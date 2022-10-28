@@ -1,10 +1,12 @@
-[
 {
-    "casename": "udq_undefined",
-    "filename": "UDQ_M2",
+    "test_cases": [
+        {
+            "casename": "udq_undefined",
+            "filename": "UDQ_M2"
+        }
+    ],
     "simulator": "flow",
     "abs_tol": 0.02,
     "rel_tol": 1e-05,
     "dir": "udq_actionx"
 }
-]

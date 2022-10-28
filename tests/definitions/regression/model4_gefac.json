@@ -1,10 +1,12 @@
-[
 {
-    "casename": "model4_gefac",
-    "filename": "MOD4_GRP_GEFAC",
+    "test_cases": [
+        {
+            "casename": "model4_gefac",
+            "filename": "MOD4_GRP_GEFAC"
+        }
+    ],
     "simulator": "flow",
     "abs_tol": 0.02,
     "rel_tol": 1e-05,
     "dir": "model4"
 }
-]

@@ -1,11 +1,13 @@
-[
 {
-    "casename": "spe1_gaswater",
-    "filename": "SPE1CASE2_GASWATER",
+    "test_cases": [
+        {
+            "casename": "spe1_gaswater",
+            "filename": "SPE1CASE2_GASWATER",
+            "test_args": "--linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8"
+        }
+    ],
     "simulator": "flow",
     "abs_tol": 0.02,
     "rel_tol": 8e-05,
-    "dir": "spe1",
-    "test_args": "--linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8"
+    "dir": "spe1"
 }
-]

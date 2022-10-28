@@ -1,12 +1,14 @@
-[
 {
-    "casename": "numerical_aquifer_3d_2aqu",
-    "filename": "3D_2AQU_NUM",
+    "test_cases": [
+        {
+            "casename": "numerical_aquifer_3d_2aqu",
+            "filename": "3D_2AQU_NUM",
+            "restart_step": "3",
+            "test_args": "--sched-restart=true --enable-tuning=true"
+        }
+    ],
     "simulator": "flow",
     "abs_tol": "0.4",
     "rel_tol": "4.0e-3",
-    "restart_step": "3",
-    "dir": "aquifer-num",
-    "test_args": "--sched-restart=true --enable-tuning=true"
+    "dir": "aquifer-num"
 }
-]

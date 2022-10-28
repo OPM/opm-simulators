@@ -1,11 +1,13 @@
-[
 {
-    "casename": "0a1_grpctl_msw_model2",
-    "filename": "0A1_GRCTRL_LRAT_ORAT_BASE_MODEL2_MSW",
+    "test_cases": [
+        {
+            "casename": "0a1_grpctl_msw_model2",
+            "filename": "0A1_GRCTRL_LRAT_ORAT_BASE_MODEL2_MSW",
+            "test_args": "--solver-max-time-step-in-days=3"
+        }
+    ],
     "simulator": "flow",
     "abs_tol": 0.02,
     "rel_tol": 1e-05,
-    "dir": "model2",
-    "test_args": "--solver-max-time-step-in-days=3"
+    "dir": "model2"
 }
-]

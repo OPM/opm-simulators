@@ -1,10 +1,12 @@
-[
 {
-    "casename": "actionx_wconinje",
-    "filename": "ACTIONX_WCONINJE",
+    "test_cases": [
+        {
+            "casename": "actionx_wconinje",
+            "filename": "ACTIONX_WCONINJE"
+        }
+    ],
     "simulator": "flow",
     "abs_tol": 0.02,
     "rel_tol": 1e-05,
     "dir": "actionx"
 }
-]

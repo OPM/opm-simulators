@@ -1,10 +1,12 @@
-[
 {
-    "casename": "3d_tran_operator",
-    "filename": "3D_TRAN_OPERATOR",
+    "test_cases": [
+        {
+            "casename": "3d_tran_operator",
+            "filename": "3D_TRAN_OPERATOR"
+        }
+    ],
     "simulator": "flow",
     "abs_tol": 0.02,
     "rel_tol": 1e-05,
     "dir": "parallel_fieldprops"
 }
-]

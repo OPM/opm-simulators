@@ -1,10 +1,12 @@
-[
 {
-    "casename": "polymer_injectivity",
-    "filename": "2D_POLYMER_INJECTIVITY",
+    "test_cases": [
+        {
+            "casename": "polymer_injectivity",
+            "filename": "2D_POLYMER_INJECTIVITY",
+            "test_args": "--tolerance-mb=1.e-7 --tolerance-wells=1.e-6"
+        }
+    ],
     "simulator": "flow",
     "abs_tol": 0.02,
-    "rel_tol": 1e-05,
-    "test_args": "--tolerance-mb=1.e-7 --tolerance-wells=1.e-6"
+    "rel_tol": 1e-05
 }
-]

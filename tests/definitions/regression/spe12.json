@@ -1,7 +1,10 @@
-[
 {
-    "casename": "spe12",
-    "filename": "SPE1CASE2",
+    "test_cases": [
+        {
+            "casename": "spe12",
+            "filename": "SPE1CASE2"
+        }
+    ],
     "simulator": "flow",
     "abs_tol": 0.02,
     "rel_tol": 0.01,
@@ -9,4 +12,3 @@
     "restart_step": "60",
     "dir": "spe1"
 }
-]

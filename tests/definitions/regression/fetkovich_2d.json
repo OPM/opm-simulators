@@ -1,10 +1,12 @@
-[
 {
-    "casename": "fetkovich_2d",
-    "filename": "2D_FETKOVICHAQUIFER",
+    "test_cases": [
+        {
+            "casename": "fetkovich_2d",
+            "filename": "2D_FETKOVICHAQUIFER"
+        }
+    ],
     "simulator": "flow",
     "abs_tol": 0.02,
     "rel_tol": 1e-05,
     "dir": "aquifer-fetkovich"
 }
-]
