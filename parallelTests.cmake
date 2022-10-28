@@ -28,8 +28,9 @@ add_test_compare_parallel_simulation(CASENAME spe9
                                      TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --ecl-enable-drift-compensation=false)
 
 # A test for distributed standard wells. We load distribute only along the z-axis
-add_test_compare_parallel_simulation(CASENAME spe9
+add_test_compare_parallel_simulation(CASENAME spe9_dist_z
                                      FILENAME SPE9_CP_SHORT
+                                     DIR spe9
                                      SIMULATOR flow_distribute_z
                                      ABS_TOL ${abs_tol_parallel}
                                      REL_TOL ${rel_tol_parallel}
@@ -77,7 +78,7 @@ add_test_compare_parallel_simulation(CASENAME spe1_thermal
                                      DIR spe1
                                      TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8)
 
-add_test_compare_parallel_simulation(CASENAME spe1_thermal
+add_test_compare_parallel_simulation(CASENAME spe1_thermal_onephase
                                      FILENAME SPE1CASE2_THERMAL_ONEPHASE
                                      SIMULATOR flow
                                      ABS_TOL ${abs_tol}
