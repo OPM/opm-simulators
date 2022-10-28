@@ -1,0 +1,12 @@
+{
+    "test_cases": [
+        {
+            "casename": "multregt_model2",
+            "filename": "1_MULTREGT_MODEL2"
+        }
+    ],
+    "simulator": "flow",
+    "abs_tol": 0.02,
+    "rel_tol": 1e-05,
+    "dir": "model2"
+}

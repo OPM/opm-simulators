@@ -1,0 +1,13 @@
+{
+    "test_cases": [
+        {
+            "casename": "msw_3d_hfa",
+            "filename": "3D_MSW",
+            "restart_step": "10",
+            "test_args": "--enable-adaptive-time-stepping=false --sched-restart=true"
+        }
+    ],
+    "simulator": "flow",
+    "abs_tol": 200.0,
+    "rel_tol": 0.001
+}

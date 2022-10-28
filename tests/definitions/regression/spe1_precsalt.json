@@ -1,0 +1,12 @@
+{
+    "test_cases": [
+        {
+            "casename": "spe1_precsalt",
+            "filename": "SPE1CASE1_PRECSALT"
+        }
+    ],
+    "simulator": "flow",
+    "abs_tol": 0.02,
+    "rel_tol": 1e-05,
+    "dir": "spe1_precsalt"
+}

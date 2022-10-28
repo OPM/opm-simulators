@@ -1,0 +1,11 @@
+{
+    "test_cases": [
+        {
+            "casename": "wsegsicd",
+            "filename": "TEST_WSEGSICD"
+        }
+    ],
+    "simulator": "flow",
+    "abs_tol": 0.02,
+    "rel_tol": 1e-05
+}

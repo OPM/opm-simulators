@@ -1,0 +1,12 @@
+{
+    "test_cases": [
+        {
+            "casename": "model4_group",
+            "filename": "MOD4_GRP"
+        }
+    ],
+    "simulator": "flow",
+    "abs_tol": 0.02,
+    "rel_tol": 1e-05,
+    "dir": "model4"
+}

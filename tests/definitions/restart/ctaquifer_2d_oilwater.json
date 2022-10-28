@@ -1,0 +1,14 @@
+{
+    "test_cases": [
+        {
+            "casename": "ctaquifer_2d_oilwater",
+            "filename": "2D_OW_CTAQUIFER",
+            "restart_step": "15",
+            "test_args": "--sched-restart=true"
+        }
+    ],
+    "simulator": "flow",
+    "abs_tol": 0.2,
+    "rel_tol": 0.0004,
+    "dir": "aquifer-oilwater"
+}

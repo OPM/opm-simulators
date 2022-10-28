@@ -1,0 +1,12 @@
+{
+    "test_cases": [
+        {
+            "casename": "spe5",
+            "filename": "SPE5CASE1",
+            "test_args": "--flow-newton-max-iterations=20"
+        }
+    ],
+    "simulator": "flow",
+    "abs_tol": 0.02,
+    "rel_tol": 0.01
+}

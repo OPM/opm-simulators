@@ -1,0 +1,12 @@
+{
+    "test_cases": [
+        {
+            "casename": "spe1_radial",
+            "filename": "RADIAL_CAKESLICE"
+        }
+    ],
+    "simulator": "flow",
+    "abs_tol": 0.02,
+    "rel_tol": 1e-05,
+    "dir": "radial_grid"
+}

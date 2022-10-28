@@ -1,0 +1,11 @@
+{
+    "test_cases": [
+        {
+            "casename": "spe9group",
+            "filename": "SPE9_CP_GROUP"
+        }
+    ],
+    "simulator": "flow",
+    "abs_tol": 0.02,
+    "rel_tol": 1e-05
+}

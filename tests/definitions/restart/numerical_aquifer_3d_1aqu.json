@@ -1,0 +1,14 @@
+{
+    "test_cases": [
+        {
+            "casename": "numerical_aquifer_3d_1aqu",
+            "filename": "3D_1AQU_3CELLS",
+            "restart_step": "3",
+            "test_args": "--sched-restart=true --enable-tuning=true"
+        }
+    ],
+    "simulator": "flow",
+    "abs_tol": "0.4",
+    "rel_tol": "4.0e-3",
+    "dir": "aquifer-num"
+}

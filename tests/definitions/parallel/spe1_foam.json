@@ -1,0 +1,11 @@
+{
+    "test_cases": [
+        {
+            "casename": "spe1_foam",
+            "filename": "SPE1FOAM"
+        }
+    ],
+    "simulator": "flow",
+    "abs_tol": 0.02,
+    "rel_tol": 0.01
+}

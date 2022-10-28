@@ -1,0 +1,12 @@
+{
+    "test_cases": [
+        {
+            "casename": "min_gasrate_1",
+            "filename": "MIN_GASRATE_1"
+        }
+    ],
+    "simulator": "flow",
+    "abs_tol": 0.02,
+    "rel_tol": 1e-05,
+    "dir": "wtest/wecon_qg_min"
+}

@@ -1,0 +1,13 @@
+{
+    "test_cases": [
+        {
+            "casename": "spe9_dist_z",
+            "filename": "SPE9_CP_SHORT",
+            "test_args": "--linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --ecl-enable-drift-compensation=false"
+        }
+    ],
+    "dir": "spe9",
+    "simulator": "flow_distribute_z",
+    "abs_tol": 0.02,
+    "rel_tol": 8e-05
+}

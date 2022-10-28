@@ -1,0 +1,13 @@
+{
+    "test_cases": [
+        {
+            "casename": "actionx_m1",
+            "filename": "ACTIONX_M1",
+            "test_args": "--linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-6"
+        }
+    ],
+    "simulator": "flow",
+    "abs_tol": 0.02,
+    "rel_tol": 0.01,
+    "dir": "udq_actionx"
+}

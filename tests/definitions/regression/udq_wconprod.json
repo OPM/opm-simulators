@@ -1,0 +1,12 @@
+{
+    "test_cases": [
+        {
+            "casename": "udq_wconprod",
+            "filename": "UDQ_WCONPROD"
+        }
+    ],
+    "simulator": "flow",
+    "abs_tol": 0.02,
+    "rel_tol": 1e-05,
+    "dir": "udq_actionx"
+}

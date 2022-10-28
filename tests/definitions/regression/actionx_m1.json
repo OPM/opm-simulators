@@ -1,0 +1,13 @@
+{
+    "test_cases": [
+        {
+            "casename": "actionx_m1",
+            "filename": "ACTIONX_M1",
+            "test_args": "--solver-max-time-step-in-days=1"
+        }
+    ],
+    "simulator": "flow",
+    "abs_tol": 0.02,
+    "rel_tol": 1e-05,
+    "dir": "udq_actionx"
+}

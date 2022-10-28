@@ -1,0 +1,13 @@
+{
+    "test_cases": [
+        {
+            "casename": "3d_tran_operator",
+            "filename": "3D_TRAN_OPERATOR",
+            "test_args": "--linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-6"
+        }
+    ],
+    "simulator": "flow",
+    "abs_tol": 0.02,
+    "rel_tol": 8e-05,
+    "dir": "parallel_fieldprops"
+}

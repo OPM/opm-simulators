@@ -1,0 +1,12 @@
+{
+    "test_cases": [
+        {
+            "casename": "9_4a_grpctl_msw_model2",
+            "filename": "9_4A_WINJ_MAXWRATES_MAXBHP_GCONPROD_1L_MSW"
+        }
+    ],
+    "simulator": "flow",
+    "abs_tol": 0.02,
+    "rel_tol": 1e-05,
+    "dir": "model2"
+}

@@ -1,0 +1,11 @@
+{
+    "test_cases": [
+        {
+            "casename": "wsegvalv",
+            "filename": "BASE_MSW_WSEGVALV"
+        }
+    ],
+    "simulator": "flow",
+    "abs_tol": 0.02,
+    "rel_tol": 1e-05
+}

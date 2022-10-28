@@ -1,0 +1,12 @@
+{
+    "test_cases": [
+        {
+            "casename": "polymer_simple2D",
+            "filename": "2D_THREEPHASE_POLY_HETER",
+            "test_args": "--linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8"
+        }
+    ],
+    "simulator": "flow",
+    "abs_tol": 0.02,
+    "rel_tol": 0.01
+}

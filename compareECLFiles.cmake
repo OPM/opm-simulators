@@ -237,6 +237,49 @@ endfunction()
 
 ###########################################################################
 
+### Helper functions ###
+
+macro(parse_json_common_params)
+  string(JSON test_cases GET ${JSON_STRING} "test_cases")
+  string(JSON simulator GET ${JSON_STRING} "simulator")
+  string(JSON abs_tol GET ${JSON_STRING} "abs_tol")
+  string(JSON rel_tol GET ${JSON_STRING} "rel_tol")
+  string(JSON dir ERROR_VARIABLE err GET ${JSON_STRING} dir)
+  if (err)
+    set(dir ${casename})
+  endif()
+endmacro()
+
+macro(parse_json_test_definition idx)
+  string(JSON casename GET ${test_cases} ${idx} casename)
+  string(JSON filename GET ${test_cases} ${idx} filename)
+  string(JSON loc_abs_tol ERROR_VARIABLE err GET ${test_cases} ${idx} abs_tol)
+  if (err)
+    set(loc_abs_tol ${abs_tol})
+  endif()
+  string(JSON loc_rel_tol ERROR_VARIABLE err GET ${test_cases} ${idx} rel_tol)
+  if (err)
+    set(loc_rel_tol ${rel_tol})
+  endif()
+  set(PARAMS CASENAME ${casename}
+             SIMULATOR ${simulator}
+             FILENAME ${filename}
+             ABS_TOL ${loc_abs_tol}
+             REL_TOL ${loc_rel_tol})
+  list(APPEND PARAMS DIR ${dir})
+  string(JSON restart_sched ERROR_VARIABLE err GET ${test_cases} ${idx} restart_sched)
+  if (NOT err)
+    list(APPEND PARAMS RESTART_SCHED ${restart_sched})
+  endif()
+  string(JSON restart_step ERROR_VARIABLE err GET ${test_cases} ${idx} restart_step)
+  if (NOT err)
+    list(APPEND PARAMS RESTART_STEP ${restart_step})
+  endif()
+  string(JSON test_args ERROR_VARIABLE err GET ${test_cases} ${idx} test_args)
+  if (NOT err)
+    list(APPEND PARAMS TEST_ARGS ${test_args})
+  endif()
+endmacro()
 
 if(NOT TARGET test-suite)
   add_custom_target(test-suite)
@@ -256,7 +299,7 @@ add_test_runSimulator(CASENAME norne_parallel
                       PROCS 4)
 
 include (${CMAKE_CURRENT_SOURCE_DIR}/regressionTests.cmake)
-include (${CMAKE_CURRENT_SOURCE_DIR}/restartTests.cmake)
+#include (${CMAKE_CURRENT_SOURCE_DIR}/restartTests.cmake)
 
 # PORV test
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-porv-acceptanceTest.sh "")
@@ -274,8 +317,8 @@ opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-init-regressionTest.sh "")
 add_test_compareECLFiles(CASENAME norne
                          FILENAME NORNE_ATW2013
                          SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
+                         ABS_TOL 2e-2
+                         REL_TOL 1e-5
                          PREFIX compareECLInitFiles
                          DIR_PREFIX /init)
 
@@ -287,7 +330,7 @@ add_test(NAME NORNE_RESTART
 
 
 if(MPI_FOUND)
-  include (${CMAKE_CURRENT_SOURCE_DIR}/parallelRestartTests.cmake)
+#  include (${CMAKE_CURRENT_SOURCE_DIR}/parallelRestartTests.cmake)
 
   # Single test to verify that we treat custom communicators correctly.
   opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-split-comm-test.sh "")
@@ -297,7 +340,7 @@ if(MPI_FOUND)
                       ABS_TOL 0.0
                       REL_TOL 0.0)
 
-  include (${CMAKE_CURRENT_SOURCE_DIR}/parallelTests.cmake)
+#  include (${CMAKE_CURRENT_SOURCE_DIR}/parallelTests.cmake)
 endif()
 
 

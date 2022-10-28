@@ -1,0 +1,12 @@
+{
+    "test_cases": [
+        {
+            "casename": "msw_3d_hfa",
+            "filename": "3D_MSW",
+            "test_args": "--tolerance-pressure-ms-wells=10"
+        }
+    ],
+    "simulator": "flow",
+    "abs_tol": 0.02,
+    "rel_tol": 1e-05
+}

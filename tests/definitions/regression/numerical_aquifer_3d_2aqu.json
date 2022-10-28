@@ -1,0 +1,13 @@
+{
+    "test_cases": [
+        {
+            "casename": "numerical_aquifer_3d_2aqu",
+            "filename": "3D_2AQU_NUM",
+            "test_args": "--tolerance-cnv=0.00003 --time-step-control=pid --linear-solver=cpr"
+        }
+    ],
+    "simulator": "flow",
+    "abs_tol": 0.02,
+    "rel_tol": 1e-05,
+    "dir": "aquifer-num"
+}

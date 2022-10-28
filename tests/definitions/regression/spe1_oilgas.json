@@ -1,0 +1,12 @@
+{
+    "test_cases": [
+        {
+            "casename": "spe1_oilgas",
+            "filename": "SPE1CASE2_OILGAS"
+        }
+    ],
+    "simulator": "flow",
+    "abs_tol": 0.02,
+    "rel_tol": 0.01,
+    "dir": "spe1"
+}
