@@ -1,0 +1,50 @@
+[
+    {
+        "casename": "krnum_02x",
+        "filename": "KRNUM-02X",
+        "simulator": "flow",
+        "abs_tol": 0.02,
+        "rel_tol": 1e-05,
+        "dir": "krnum"
+    },
+    {
+        "casename": "krnum_02y",
+        "filename": "KRNUM-02Y",
+        "simulator": "flow",
+        "abs_tol": 0.02,
+        "rel_tol": 1e-05,
+        "dir": "krnum"
+    },
+    {
+        "casename": "krnum_02z",
+        "filename": "KRNUM-02Z",
+        "simulator": "flow",
+        "abs_tol": 0.02,
+        "rel_tol": 1e-05,
+        "dir": "krnum"
+    },
+    {
+        "casename": "krnum_03x",
+        "filename": "KRNUM-03X",
+        "simulator": "flow",
+        "abs_tol": 0.02,
+        "rel_tol": 1e-05,
+        "dir": "krnum"
+    },
+    {
+        "casename": "krnum_03y",
+        "filename": "KRNUM-03Y",
+        "simulator": "flow",
+        "abs_tol": 0.02,
+        "rel_tol": 1e-05,
+        "dir": "krnum"
+    },
+    {
+        "casename": "krnum_03z",
+        "filename": "KRNUM-03Z",
+        "simulator": "flow",
+        "abs_tol": 0.02,
+        "rel_tol": 1e-05,
+        "dir": "krnum"
+    }
+]
