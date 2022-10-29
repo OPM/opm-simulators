@@ -172,6 +172,10 @@ public:
         return well_index_;
     }
 
+    const std::map<int,std::vector<int>>& getCompletions() const {
+        return completions_;
+    }
+
     double getTHPConstraint(const SummaryState& summaryState) const;
     double getALQ(const WellState& well_state) const;
     double wsolvent() const;
@@ -193,15 +197,15 @@ public:
                                                          DeferredLogger& deferred_logger
                                                          ) const;
 
-
+    void updateWellTestState(const SingleWellState& ws,
+                             const double& simulationTime,
+                             const bool& writeMessageToOPMLog,
+                             WellTestState& wellTestState,
+                             DeferredLogger& deferred_logger) const;
 
 protected:
     bool getAllowCrossFlow() const;
     double mostStrictBhpFromBhpLimits(const SummaryState& summaryState) const;
-    void updateWellTestStatePhysical(const double simulation_time,
-                                     const bool write_message_to_opmlog,
-                                     WellTestState& well_test_state,
-                                     DeferredLogger& deferred_logger) const;
 
     std::optional<double> bhpMax(const std::function<double(const double)>& fflo,
                                  const double bhp_limit,

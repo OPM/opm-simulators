@@ -103,7 +103,6 @@ public:
     using WellInterfaceFluidSystem<FluidSystem>::Gas;
     using WellInterfaceFluidSystem<FluidSystem>::Oil;
     using WellInterfaceFluidSystem<FluidSystem>::Water;
-    using RatioLimitCheckReport = typename WellInterfaceFluidSystem<FluidSystem>::RatioLimitCheckReport;
 
     static constexpr bool has_solvent = getPropValue<TypeTag, Properties::EnableSolvent>();
     static constexpr bool has_zFraction = getPropValue<TypeTag, Properties::EnableExtbo>();

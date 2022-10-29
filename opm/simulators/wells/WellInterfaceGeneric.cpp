@@ -27,10 +27,11 @@
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/PerforationData.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
-#include <opm/simulators/wells/VFPProperties.hpp>
-#include <opm/simulators/wells/WellState.hpp>
-#include <opm/simulators/wells/WellHelpers.hpp>
 #include <opm/simulators/wells/VFPHelpers.hpp>
+#include <opm/simulators/wells/VFPProperties.hpp>
+#include <opm/simulators/wells/WellHelpers.hpp>
+#include <opm/simulators/wells/WellState.hpp>
+#include <opm/simulators/wells/WellTest.hpp>
 #include <cassert>
 #include <cmath>
 #include <cstddef>
@@ -215,6 +216,24 @@ double WellInterfaceGeneric::mostStrictBhpFromBhpLimits(const SummaryState& summ
     return 0.0;
 }
 
+void WellInterfaceGeneric::updateWellTestState(const SingleWellState& ws,
+                                               const double& simulationTime,
+                                               const bool& writeMessageToOPMLog,
+                                               WellTestState& wellTestState,
+                                               DeferredLogger& deferred_logger) const
+{
+    // updating well test state based on Economic limits for operable wells
+    if (this->isOperableAndSolvable()) {
+        WellTest(*this).updateWellTestStateEconomic(ws, simulationTime, writeMessageToOPMLog, wellTestState, deferred_logger);
+    } else {
+        // updating well test state based on physical (THP/BHP) limits.
+        WellTest(*this).updateWellTestStatePhysical(simulationTime, writeMessageToOPMLog, wellTestState, deferred_logger);
+    }
+
+    // TODO: well can be shut/closed due to other reasons
+}
+
+
 double WellInterfaceGeneric::getTHPConstraint(const SummaryState& summaryState) const
 {
     if (dynamic_thp_limit_) {
@@ -389,26 +408,6 @@ bool WellInterfaceGeneric::isVFPActive(DeferredLogger& deferred_logger) const
             } else {
                 OPM_DEFLOG_THROW(std::runtime_error, "VFPINJ table " << std::to_string(table_id) << " is specified,"
                               << " for well " << name() << ", while we could not access it during simulation", deferred_logger);
-            }
-        }
-    }
-}
-
-void WellInterfaceGeneric::updateWellTestStatePhysical(const double simulation_time,
-                                                       const bool write_message_to_opmlog,
-                                                       WellTestState& well_test_state,
-                                                       DeferredLogger& deferred_logger) const
-{
-    if (!isOperableAndSolvable()) {
-        if (well_test_state.well_is_closed(name())) {
-            // Already closed, do nothing.
-        } else {
-            well_test_state.close_well(name(), WellTestConfig::Reason::PHYSICAL, simulation_time);
-            if (write_message_to_opmlog) {
-                const std::string action = well_ecl_.getAutomaticShutIn() ? "shut" : "stopped";
-                const std::string msg = "Well " + name()
-                    + " will be " + action + " as it can not operate under current reservoir conditions.";
-                deferred_logger.info(msg);
             }
         }
     }
