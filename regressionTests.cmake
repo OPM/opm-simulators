@@ -176,7 +176,7 @@ add_test_compareECLFiles(CASENAME spe3
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${coarse_rel_tol}
-                         TEST_ARGS --tolerance-wells=1e-6 --flow-newton-max-iterations=20)
+                         TEST_ARGS --tolerance-wells=1e-6 --newton-max-iterations=20)
 
 add_test_compareECLFiles(CASENAME spe9
                          FILENAME SPE9_CP_SHORT
@@ -237,14 +237,14 @@ add_test_compareECLFiles(CASENAME spe5
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${coarse_rel_tol}
-                         TEST_ARGS --flow-newton-max-iterations=20)
+                         TEST_ARGS --newton-max-iterations=20)
 
 add_test_compareECLFiles(CASENAME spe5_co2eor
                          FILENAME SPE5CASE1_DYN
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${coarse_rel_tol}
-                         TEST_ARGS --flow-newton-max-iterations=20)
+                         TEST_ARGS --newton-max-iterations=20)
 
 add_test_compareECLFiles(CASENAME wecon_wtest
                          FILENAME 3D_WECON
