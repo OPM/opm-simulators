@@ -49,6 +49,7 @@
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/flow/countGlobalCells.hpp>
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
+#include <opm/simulators/wells/BlackoilWellModelGuideRates.hpp>
 #include <opm/simulators/wells/GasLiftSingleWell.hpp>
 #include <opm/simulators/wells/GasLiftWellState.hpp>
 #include <opm/simulators/wells/GasLiftSingleWellGeneric.hpp>
@@ -241,7 +242,7 @@ namespace Opm {
 
                 this->assignWellTracerRates(wsrpt);
 
-                this->assignWellGuideRates(wsrpt, this->reportStepIndex());
+                BlackoilWellModelGuideRates(*this).assignWellGuideRates(wsrpt, this->reportStepIndex());
                 this->assignShutConnections(wsrpt, this->reportStepIndex());
 
                 return wsrpt;

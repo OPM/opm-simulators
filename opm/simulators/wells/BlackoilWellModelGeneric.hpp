@@ -165,6 +165,10 @@ public:
 
     const SummaryState& summaryState() const { return summaryState_; }
 
+    const GuideRate& guideRate() const { return guideRate_; }
+
+    bool reportStepStarts() const { return report_step_starts_; }
+
 protected:
 
     /*
@@ -267,29 +271,13 @@ protected:
                            const int pvtreg,
                            std::vector<double>& resv_coeff) = 0;
 
-    data::GuideRateValue getGuideRateValues(const Group& group) const;
-    data::GuideRateValue getGuideRateValues(const Well& well) const;
-    data::GuideRateValue getGuideRateInjectionGroupValues(const Group& group) const;
-    void getGuideRateValues(const GuideRate::RateVector& qs,
-                            const bool                   is_inj,
-                            const std::string&           wgname,
-                            data::GuideRateValue&        grval) const;
-
-    void assignWellGuideRates(data::Wells& wsrpt,
-                              const int reportStepIdx) const;
     void assignShutConnections(data::Wells& wsrpt,
                                const int reportStepIndex) const;
     void assignGroupControl(const Group& group,
                             data::GroupData& gdata) const;
-    void assignGroupGuideRates(const Group& group,
-                               const std::unordered_map<std::string, data::GroupGuideRates>& groupGuideRates,
-                               data::GroupData& gdata) const;
     void assignGroupValues(const int reportStepIdx,
                            std::map<std::string, data::GroupData>& gvalues) const;
     void assignNodeValues(std::map<std::string, data::NodeData>& nodevalues) const;
-
-    std::unordered_map<std::string, data::GroupGuideRates>
-    calculateAllGroupGuiderates(const int reportStepIdx) const;
 
     void calculateEfficiencyFactors(const int reportStepIdx);
 
@@ -331,8 +319,6 @@ protected:
                               const bool onlyAfterEvent,
                               const SummaryConfig& summaryConfig,
                               DeferredLogger& deferred_logger);
-
-    bool guideRateUpdateIsNeeded(const int reportStepIdx) const;
 
     // create the well container
     virtual void createWellContainer(const int time_step) = 0;
