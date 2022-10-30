@@ -238,7 +238,24 @@ namespace Opm
         // const std::set<std::string> well_names = {"S-P2", "S-P3", "S-P4", "S-P6"};
         const std::set<std::string> well_names = {"S-P2", "S-P3", "S-P4", "S-P6", "PROD1", "PROD2", "PROD3"};
         const bool output_for_well = well_names.count(this->name()) > 0;
-        if (output_for_well) std::cout << " well " + this->name() + " in updateWellControl " << std::endl;
+        if (output_for_well) {
+            std::cout << " well " + this->name() + " in updateWellControl " << std::endl;
+            const auto& ws = well_state.well(this->index_of_well_);
+            std::cout << " well rates are ";
+            for (const auto val : ws.surface_rates) {
+                std::cout << " " << val * 86400.;
+            }
+            std::cout << " bhp " << ws.bhp/1.e5 << " thp " << ws.thp/1.e5;
+            if (this->getDynamicThpLimit()) {
+                std::cout << " dynamic thp limit " << *(this->getDynamicThpLimit()) / 1.e5;
+            }
+            std::cout << std::endl;
+            std::cout << " well potentials are ";
+            for (const auto val : ws.well_potentials) {
+                std::cout << " " << val * 86400.;
+            }
+            std::cout << " control mode " << Well::ProducerCMode2String(ws.production_cmode) << std::endl;
+        }
 
         const auto& summaryState = ebos_simulator.vanguard().summaryState();
         const auto& schedule = ebos_simulator.vanguard().schedule();

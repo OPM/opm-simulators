@@ -2080,6 +2080,14 @@ namespace Opm
             const std::string msg = std::string("well ") + this->name() + std::string(": has negative potentials and is not operable");
             deferred_logger.warning("NEGATIVE_POTENTIALS_INOPERABLE", msg);
         }
+
+        if (output_for_well) {
+            std::cout << " well " << this->name() << " final potential is ";
+            for (const auto val : well_potentials) {
+                std::cout << "  " << val * 86400.;
+            }
+            std::cout << std::endl;
+        }
     }
 
 

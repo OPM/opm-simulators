@@ -908,9 +908,9 @@ namespace Opm {
                 well->solveEqAndUpdateWellState(well_state, deferred_logger);
             }
             // std::tie(changed_well_group, should_update_network, network_imbalance)= updateWellControls(deferred_logger, true);
-            for (auto& well : this->well_container_) {
+            // for (auto& well : this->well_container_) {
                 this->initPrimaryVariablesEvaluation();
-            }
+            // }
         } while (iter < max_iter);
 
         if (!converged) {
@@ -1794,6 +1794,8 @@ namespace Opm {
         const int np = numPhases();
         std::vector<double> potentials;
         const auto& well= well_container_[widx];
+        const std::set<std::string> well_names = {"S-P2", "S-P3", "S-P4", "S-P6", "PROD1", "PROD2", "PROD3"};
+        const bool output_for_well = well_names.count(well->name());
         try {
             well->computeWellPotentials(ebosSimulator_, well_state_copy, potentials, deferred_logger);
         }
@@ -1806,6 +1808,13 @@ namespace Opm {
         for (int p = 0; p < np; ++p) {
             // make sure the potentials are positive
             ws.well_potentials[p] = std::max(0.0, potentials[p]);
+        }
+        if (output_for_well) {
+            std::cout << " well potentials for well " << well->name() << " after computePotentials from BlackoilWellModel " << std::endl;
+            for (const auto val : ws.well_potentials) {
+                std::cout << " " << val * 86400.;
+            }
+            std::cout << std::endl;
         }
     }
 
