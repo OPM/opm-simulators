@@ -1,12 +1,17 @@
 # Parallel tests
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-parallel-restart-regressionTest.sh "")
-add_test_compare_parallel_restarted_simulation(CASENAME spe1
-                                               FILENAME SPE1CASE2_ACTNUM
-                                               SIMULATOR flow
-                                               ABS_TOL ${abs_tol_restart}
-                                               REL_TOL ${rel_tol_restart}
-                                               RESTART_STEP 6
-                                               TEST_ARGS --sched-restart=false)
+
+file(GLOB_RECURSE tests "${OPM_TESTS_ROOT}/parallelRestartTests.json")
+  foreach(json_file ${tests})
+  file(READ ${json_file} JSON_STRING)
+  parse_json_common_params()
+  string(JSON size LENGTH ${test_cases})
+  math(EXPR COUNT "${size}-1")
+  foreach(idx RANGE ${COUNT})
+    parse_json_test_definition(${idx})
+    add_test_compare_parallel_restarted_simulation(${PARAMS})
+  endforeach()
+endforeach()
 
 add_test_compare_parallel_restarted_simulation(CASENAME ctaquifer_2d_oilwater
                                                FILENAME 2D_OW_CTAQUIFER
@@ -16,7 +21,6 @@ add_test_compare_parallel_restarted_simulation(CASENAME ctaquifer_2d_oilwater
                                                RESTART_STEP 15
                                                DIR aquifer-oilwater
                                                TEST_ARGS --enable-tuning=true --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-6)
-
 add_test_compare_parallel_restarted_simulation(CASENAME fetkovich_2d
                                                FILENAME 2D_FETKOVICHAQUIFER
                                                SIMULATOR flow

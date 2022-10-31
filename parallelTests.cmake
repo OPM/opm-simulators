@@ -5,6 +5,18 @@ set(abs_tol_parallel 0.02)
 set(rel_tol_parallel 8e-5)
 set(coarse_rel_tol_parallel 1e-2)
 
+file(GLOB_RECURSE tests "${OPM_TESTS_ROOT}/parallelTests.json")
+foreach(json_file ${tests})
+  file(READ ${json_file} JSON_STRING)
+  parse_json_common_params()
+  string(JSON size LENGTH ${test_cases})
+  math(EXPR COUNT "${size}-1")
+  foreach(idx RANGE ${COUNT})
+    parse_json_test_definition(${idx})
+    add_test_compare_parallel_simulation(${PARAMS})
+  endforeach()
+endforeach()
+
 add_test_compare_parallel_simulation(CASENAME spe1
                                      FILENAME SPE1CASE2
                                      SIMULATOR flow
@@ -155,12 +167,4 @@ add_test_compare_parallel_simulation(CASENAME 3_a_mpi_multflt_mod2
                                      ABS_TOL ${abs_tol_parallel}
                                      REL_TOL ${rel_tol_parallel}
       			       DIR model2
-                                     TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --ecl-enable-drift-compensation=false)
-
-add_test_compare_parallel_simulation(CASENAME rxft
-                                     FILENAME TEST_RXFT
-                                     SIMULATOR flow
-                                     ABS_TOL ${abs_tol_parallel}
-                                     REL_TOL 1.0e-3
-                                     DIR rxft_smry
                                      TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --ecl-enable-drift-compensation=false)
