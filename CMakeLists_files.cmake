@@ -105,6 +105,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/VFPInjProperties.cpp
   opm/simulators/wells/WellBhpThpCalculator.cpp
   opm/simulators/wells/WellConvergence.cpp
+  opm/simulators/wells/WellGroupConstraints.cpp
   opm/simulators/wells/WellGroupControls.cpp
   opm/simulators/wells/WellGroupHelpers.cpp
   opm/simulators/wells/WellHelpers.cpp
@@ -388,6 +389,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/WellBhpThpCalculator.hpp
   opm/simulators/wells/WellConnectionAuxiliaryModule.hpp
   opm/simulators/wells/WellConvergence.hpp
+  opm/simulators/wells/WellGroupConstraints.hpp
   opm/simulators/wells/WellGroupControls.hpp
   opm/simulators/wells/WellGroupHelpers.hpp
   opm/simulators/wells/WellHelpers.hpp
