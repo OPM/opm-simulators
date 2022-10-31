@@ -32,9 +32,9 @@
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
+#include <opm/simulators/wells/WellAssemble.hpp>
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 #include <opm/simulators/wells/WellConvergence.hpp>
-#include <opm/simulators/wells/WellInterfaceEval.hpp>
 #include <opm/simulators/wells/WellInterfaceIndices.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
@@ -393,7 +393,7 @@ assembleControlEq(const WellState& well_state,
         // Find injection rate.
         const EvalWell injection_rate = getWQTotal();
         // Setup function for evaluation of BHP from THP (used only if needed).
-        auto bhp_from_thp = [&]() {
+        std::function<EvalWell()> bhp_from_thp = [&]() {
             const auto rates = getRates();
             return WellBhpThpCalculator(baseif_).calculateBhpFromThp(well_state,
                                                                      rates,
@@ -404,7 +404,7 @@ assembleControlEq(const WellState& well_state,
         };
         // Call generic implementation.
         const auto& inj_controls = well.injectionControls(summaryState);
-        WellInterfaceEval(baseif_).
+        WellAssemble(baseif_).
              assembleControlEqInj(well_state,
                                   group_state,
                                   schedule,
@@ -419,7 +419,7 @@ assembleControlEq(const WellState& well_state,
         // Find rates.
         const auto rates = getRates();
         // Setup function for evaluation of BHP from THP (used only if needed).
-        auto bhp_from_thp = [&]() {
+        std::function<EvalWell()> bhp_from_thp = [&]() {
              return WellBhpThpCalculator(baseif_).calculateBhpFromThp(well_state,
                                                                       rates,
                                                                       well,
@@ -429,7 +429,7 @@ assembleControlEq(const WellState& well_state,
         };
         // Call generic implementation.
         const auto& prod_controls = well.productionControls(summaryState);
-        WellInterfaceEval(baseif_).
+        WellAssemble(baseif_).
             assembleControlEqProd(well_state,
                                   group_state,
                                   schedule,

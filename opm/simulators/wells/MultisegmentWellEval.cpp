@@ -33,9 +33,9 @@
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/MSWellHelpers.hpp>
+#include <opm/simulators/wells/WellAssemble.hpp>
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 #include <opm/simulators/wells/WellConvergence.hpp>
-#include <opm/simulators/wells/WellInterfaceEval.hpp>
 #include <opm/simulators/wells/WellInterfaceIndices.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
@@ -1228,7 +1228,7 @@ assembleControlEq(const WellState& well_state,
         }
         const EvalWell injection_rate = getWQTotal() / scaling;
         // Setup function for evaluation of BHP from THP (used only if needed).
-        auto bhp_from_thp = [&]() {
+        std::function<EvalWell()> bhp_from_thp = [&]() {
             const auto rates = getRates();
             return WellBhpThpCalculator(baseif_).calculateBhpFromThp(well_state,
                                                                      rates,
@@ -1238,22 +1238,21 @@ assembleControlEq(const WellState& well_state,
                                                                      deferred_logger);
         };
         // Call generic implementation.
-        WellInterfaceEval(baseif_).
-            assembleControlEqInj(well_state,
-                                 group_state,
-                                 schedule,
-                                 summaryState,
-                                 inj_controls,
-                                 getBhp(),
-                                 injection_rate,
-                                 bhp_from_thp,
-                                 control_eq,
-                                 deferred_logger);
+        WellAssemble(baseif_).assembleControlEqInj(well_state,
+                                                  group_state,
+                                                   schedule,
+                                                   summaryState,
+                                                   inj_controls,
+                                                   getBhp(),
+                                                   injection_rate,
+                                                   bhp_from_thp,
+                                                   control_eq,
+                                                   deferred_logger);
     } else {
         // Find rates.
         const auto rates = getRates();
         // Setup function for evaluation of BHP from THP (used only if needed).
-        auto bhp_from_thp = [&]() {
+        std::function<EvalWell()> bhp_from_thp = [&]() {
             return WellBhpThpCalculator(baseif_).calculateBhpFromThp(well_state,
                                                                      rates,
                                                                      well,
@@ -1262,17 +1261,16 @@ assembleControlEq(const WellState& well_state,
                                                                      deferred_logger);
         };
         // Call generic implementation.
-        WellInterfaceEval(baseif_).
-            assembleControlEqProd(well_state,
-                                  group_state,
-                                  schedule,
-                                  summaryState,
-                                  prod_controls,
-                                  getBhp(),
-                                  rates,
-                                  bhp_from_thp,
-                                  control_eq,
-                                  deferred_logger);
+        WellAssemble(baseif_).assembleControlEqProd(well_state,
+                                                    group_state,
+                                                    schedule,
+                                                    summaryState,
+                                                    prod_controls,
+                                                    getBhp(),
+                                                    rates,
+                                                    bhp_from_thp,
+                                                    control_eq,
+                                                    deferred_logger);
     }
 
     // using control_eq to update the matrix and residuals
