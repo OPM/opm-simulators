@@ -34,6 +34,7 @@
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 #include <opm/simulators/wells/WellConvergence.hpp>
+#include <opm/simulators/wells/WellInterfaceEval.hpp>
 #include <opm/simulators/wells/WellInterfaceIndices.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
@@ -403,16 +404,17 @@ assembleControlEq(const WellState& well_state,
         };
         // Call generic implementation.
         const auto& inj_controls = well.injectionControls(summaryState);
-        baseif_.assembleControlEqInj(well_state,
-                                     group_state,
-                                     schedule,
-                                     summaryState,
-                                     inj_controls,
-                                     getBhp(),
-                                     injection_rate,
-                                     bhp_from_thp,
-                                     control_eq,
-                                     deferred_logger);
+        WellInterfaceEval(baseif_).
+             assembleControlEqInj(well_state,
+                                  group_state,
+                                  schedule,
+                                  summaryState,
+                                  inj_controls,
+                                  getBhp(),
+                                  injection_rate,
+                                  bhp_from_thp,
+                                  control_eq,
+                                  deferred_logger);
     } else {
         // Find rates.
         const auto rates = getRates();
@@ -427,16 +429,17 @@ assembleControlEq(const WellState& well_state,
         };
         // Call generic implementation.
         const auto& prod_controls = well.productionControls(summaryState);
-        baseif_.assembleControlEqProd(well_state,
-                                      group_state,
-                                      schedule,
-                                      summaryState,
-                                      prod_controls,
-                                      getBhp(),
-                                      rates,
-                                      bhp_from_thp,
-                                      control_eq,
-                                      deferred_logger);
+        WellInterfaceEval(baseif_).
+            assembleControlEqProd(well_state,
+                                  group_state,
+                                  schedule,
+                                  summaryState,
+                                  prod_controls,
+                                  getBhp(),
+                                  rates,
+                                  bhp_from_thp,
+                                  control_eq,
+                                  deferred_logger);
     }
 
     // using control_eq to update the matrix and residuals

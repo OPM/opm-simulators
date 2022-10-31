@@ -49,6 +49,8 @@ class WellInterfaceEval {
     static constexpr int Gas = BlackoilPhases::Vapour;
 
 public:
+    WellInterfaceEval(const WellInterfaceFluidSystem<FluidSystem>& baseif);
+
     template<class EvalWell, class BhpFromThpFunc>
     void assembleControlEqProd(const WellState& well_state,
                                const GroupState& group_state,
@@ -124,8 +126,6 @@ public:
                                DeferredLogger& deferred_logger) const;
 
 protected:
-    WellInterfaceEval(const WellInterfaceFluidSystem<FluidSystem>& baseif);
-
     const WellInterfaceFluidSystem<FluidSystem>& baseif_;
 };
 
