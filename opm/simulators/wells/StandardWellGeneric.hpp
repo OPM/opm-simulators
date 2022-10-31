@@ -66,7 +66,7 @@ protected:
 
 public:
     /// get the number of blocks of the C and B matrices, used to allocate memory in a WellContributions object
-    void getNumBlocks(unsigned int& _nnzs) const;
+    unsigned int getNumBlocks() const;
 
 protected:
     StandardWellGeneric(const WellInterfaceGeneric& baseif);

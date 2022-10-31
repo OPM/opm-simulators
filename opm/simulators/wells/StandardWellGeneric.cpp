@@ -392,11 +392,11 @@ computeBhpAtThpLimitInj(const std::function<std::vector<double>(const double)>& 
 }
 
 template<class Scalar>
-void
+unsigned int
 StandardWellGeneric<Scalar>::
-getNumBlocks(unsigned int& numBlocks) const
+getNumBlocks() const
 {
-    numBlocks = duneB_.nonzeroes();
+    return duneB_.nonzeroes();
 }
 
 template class StandardWellGeneric<double>;
