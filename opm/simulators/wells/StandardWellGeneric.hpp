@@ -79,21 +79,7 @@ protected:
     static double relaxationFactorFraction(const double old_value,
                                            const double dx);
 
-    double calculateThpFromBhp(const WellState& well_state,
-                               const std::vector<double>& rates,
-                               const double bhp,
-                               DeferredLogger& deferred_logger) const;
-
     void computeConnectionPressureDelta();
-
-    std::optional<double> computeBhpAtThpLimitInj(const std::function<std::vector<double>(const double)>& frates,
-                                                  const SummaryState& summary_state,
-                                                  DeferredLogger& deferred_logger) const;
-    std::optional<double> computeBhpAtThpLimitProdWithAlq(const std::function<std::vector<double>(const double)>& frates,
-                                                          const SummaryState& summary_state,
-                                                          DeferredLogger& deferred_logger,
-                                                          double maxPerfPress,
-                                                          double alq_value) const;
 
     // Base interface reference
     const WellInterfaceGeneric& baseif_;
@@ -120,7 +106,10 @@ protected:
     mutable BVectorWell Bx_;
     mutable BVectorWell invDrw_;
 
-    double getRho() const { return perf_densities_[0]; }
+    double getRho() const
+    {
+        return this->perf_densities_.empty() ? 0.0 : perf_densities_[0];
+    }
 };
 
 }

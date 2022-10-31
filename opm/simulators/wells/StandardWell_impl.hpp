@@ -23,6 +23,7 @@
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/linalg/SmallDenseMatrixUtils.hpp>
 #include <opm/simulators/wells/VFPHelpers.hpp>
+#include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 #include <opm/simulators/wells/WellConvergence.hpp>
 
 #include <algorithm>
@@ -1102,7 +1103,7 @@ namespace Opm
     checkOperabilityUnderBHPLimit(const WellState& well_state, const Simulator& ebos_simulator, DeferredLogger& deferred_logger)
     {
         const auto& summaryState = ebos_simulator.vanguard().summaryState();
-        const double bhp_limit = this->mostStrictBhpFromBhpLimits(summaryState);
+        const double bhp_limit = WellBhpThpCalculator(*this).mostStrictBhpFromBhpLimits(summaryState);
         // Crude but works: default is one atmosphere.
         // TODO: a better way to detect whether the BHP is defaulted or not
         const bool bhp_limit_not_defaulted = bhp_limit > 1.5 * unit::barsa;
@@ -1135,7 +1136,11 @@ namespace Opm
                 computeWellRatesWithBhp(ebos_simulator, bhp_limit, well_rates_bhp_limit, deferred_logger);
 
                 this->adaptRatesForVFP(well_rates_bhp_limit);
-                const double thp = this->calculateThpFromBhp(well_state, well_rates_bhp_limit, bhp_limit, deferred_logger);
+                const double thp = WellBhpThpCalculator(*this).calculateThpFromBhp(well_rates_bhp_limit,
+                                                                                   bhp_limit,
+                                                                                   this->getRho(),
+                                                                                   this->getALQ(well_state),
+                                                                                   deferred_logger);
                 const double thp_limit = this->getTHPConstraint(summaryState);
                 if ( (this->isProducer() && thp < thp_limit) || (this->isInjector() && thp > thp_limit) ) {
                     this->operability_status_.obey_thp_limit_under_bhp_limit = false;
@@ -1170,7 +1175,7 @@ namespace Opm
         if (obtain_bhp) {
             this->operability_status_.can_obtain_bhp_with_thp_limit = true;
 
-            const double  bhp_limit = this->mostStrictBhpFromBhpLimits(summaryState);
+            const double  bhp_limit = WellBhpThpCalculator(*this).mostStrictBhpFromBhpLimits(summaryState);
             this->operability_status_.obey_bhp_limit_with_thp_limit = (*obtain_bhp >= bhp_limit);
 
             const double thp_limit = this->getTHPConstraint(summaryState);
@@ -1924,7 +1929,7 @@ namespace Opm
     {
         double bhp;
         auto bhp_at_thp_limit = computeBhpAtThpLimitProdWithAlq(
-                              ebos_simulator, summary_state, deferred_logger, alq);
+                              ebos_simulator, summary_state, alq, deferred_logger);
         if (bhp_at_thp_limit) {
             const auto& controls = this->well_ecl_.productionControls(summary_state);
             bhp = std::max(*bhp_at_thp_limit, controls.bhp_limit);
@@ -2017,7 +2022,7 @@ namespace Opm
         const auto& summaryState = ebosSimulator.vanguard().summaryState();
         if (!Base::wellHasTHPConstraints(summaryState) || bhp_controlled_well) {
             // get the bhp value based on the bhp constraints
-            double bhp = this->mostStrictBhpFromBhpLimits(summaryState);
+            double bhp = WellBhpThpCalculator(*this).mostStrictBhpFromBhpLimits(summaryState);
 
             // In some very special cases the bhp pressure target are
             // temporary violated. This may lead to too small or negative potentials
@@ -2564,8 +2569,8 @@ namespace Opm
     {
         return computeBhpAtThpLimitProdWithAlq(ebos_simulator,
                                                summary_state,
-                                               deferred_logger,
-                                               this->getALQ(well_state));
+                                               this->getALQ(well_state),
+                                               deferred_logger);
     }
 
     template<typename TypeTag>
@@ -2573,8 +2578,8 @@ namespace Opm
     StandardWell<TypeTag>::
     computeBhpAtThpLimitProdWithAlq(const Simulator& ebos_simulator,
                                     const SummaryState& summary_state,
-                                    DeferredLogger& deferred_logger,
-                                    double alq_value) const
+                                    const double alq_value,
+                                    DeferredLogger& deferred_logger) const
     {
         // Make the frates() function.
         auto frates = [this, &ebos_simulator, &deferred_logger](const double bhp) {
@@ -2597,13 +2602,14 @@ namespace Opm
             double pressure_cell = this->getPerfCellPressure(fs).value();
             max_pressure = std::max(max_pressure, pressure_cell);
         }
-        auto bhpAtLimit = this->StandardWellGeneric<Scalar>::computeBhpAtThpLimitProdWithAlq(frates,
-                                                                                  summary_state,
-                                                                                  deferred_logger,
-                                                                                  max_pressure,
-                                                                                  alq_value);
+        auto bhpAtLimit = WellBhpThpCalculator(*this).computeBhpAtThpLimitProd(frates,
+                                                                               summary_state,
+                                                                               max_pressure,
+                                                                               this->getRho(),
+                                                                               alq_value,
+                                                                               deferred_logger);
         auto v = frates(*bhpAtLimit);
-        if(bhpAtLimit && std::all_of(v.cbegin(), v.cend(), [](double i){ return i <= 0; }))
+        if (bhpAtLimit && std::all_of(v.cbegin(), v.cend(), [](double i){ return i <= 0; }))
             return bhpAtLimit;
 
         auto fratesIter = [this, &ebos_simulator, &deferred_logger](const double bhp) {
@@ -2616,11 +2622,12 @@ namespace Opm
             return rates;
         };
 
-        bhpAtLimit = this->StandardWellGeneric<Scalar>::computeBhpAtThpLimitProdWithAlq(fratesIter,
-                                                                                        summary_state,
-                                                                                        deferred_logger,
-                                                                                        max_pressure,
-                                                                                        alq_value);
+        bhpAtLimit = WellBhpThpCalculator(*this).computeBhpAtThpLimitProd(fratesIter,
+                                                                          summary_state,
+                                                                          max_pressure,
+                                                                          this->getRho(),
+                                                                          alq_value,
+                                                                          deferred_logger);
         v = frates(*bhpAtLimit);
         if(bhpAtLimit && std::all_of(v.cbegin(), v.cend(), [](double i){ return i <= 0; }))
             return bhpAtLimit;
@@ -2650,9 +2657,13 @@ namespace Opm
             return rates;
         };
 
-        return this->StandardWellGeneric<Scalar>::computeBhpAtThpLimitInj(frates,
-                                                                          summary_state,
-                                                                          deferred_logger);
+        return WellBhpThpCalculator(*this).computeBhpAtThpLimitInj(frates,
+                                                                   summary_state,
+                                                                   this->getRho(),
+                                                                   1e-6,
+                                                                   50,
+                                                                   true,
+                                                                   deferred_logger);
     }
 
 

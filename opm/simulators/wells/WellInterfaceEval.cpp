@@ -260,52 +260,6 @@ assembleControlEqInj_(const WellState& well_state,
     }
 }
 
-template<class FluidSystem>
-template<class EvalWell>
-EvalWell
-WellInterfaceEval<FluidSystem>::
-calculateBhpFromThp(const WellState& well_state,
-                    const std::vector<EvalWell>& rates,
-                    const Well& well,
-                    const SummaryState& summaryState,
-                    const double rho,
-                    DeferredLogger& deferred_logger) const
-{
-    // TODO: when well is under THP control, the BHP is dependent on the rates,
-    // the well rates is also dependent on the BHP, so it might need to do some iteration.
-    // However, when group control is involved, change of the rates might impacts other wells
-    // so iterations on a higher level will be required. Some investigation might be needed when
-    // we face problems under THP control.
-
-    assert(int(rates.size()) == 3); // the vfp related only supports three phases now.
-
-    const EvalWell aqua = rates[Water];
-    const EvalWell liquid = rates[Oil];
-    const EvalWell vapour = rates[Gas];
-
-    // pick the reference density
-    // typically the reference in the top layer
-    if (baseif_.isInjector() )
-    {
-        const auto& controls = well.injectionControls(summaryState);
-        const double vfp_ref_depth = baseif_.vfpProperties()->getInj()->getTable(controls.vfp_table_number).getDatumDepth();
-        const double dp = wellhelpers::computeHydrostaticCorrection(baseif_.refDepth(), vfp_ref_depth, rho, baseif_.gravity());
-        return baseif_.vfpProperties()->getInj()->bhp(controls.vfp_table_number, aqua, liquid, vapour, baseif_.getTHPConstraint(summaryState)) - dp;
-     }
-     else if (baseif_.isProducer()) {
-         const auto& controls = well.productionControls(summaryState);
-         const double vfp_ref_depth = baseif_.vfpProperties()->getProd()->getTable(controls.vfp_table_number).getDatumDepth();
-         const double dp = wellhelpers::computeHydrostaticCorrection(baseif_.refDepth(), vfp_ref_depth, rho, baseif_.gravity());
-         const auto& wfr =  baseif_.vfpProperties()->getExplicitWFR(controls.vfp_table_number, baseif_.indexOfWell());
-         const auto& gfr = baseif_.vfpProperties()->getExplicitGFR(controls.vfp_table_number, baseif_.indexOfWell());
-         const bool use_vfpexplicit = baseif_.useVfpExplicit();
-         return baseif_.vfpProperties()->getProd()->bhp(controls.vfp_table_number, aqua, liquid, vapour, baseif_.getTHPConstraint(summaryState), baseif_.getALQ(well_state), wfr, gfr, use_vfpexplicit) - dp;
-     }
-     else {
-         OPM_DEFLOG_THROW(std::logic_error, "Expected INJECTOR or PRODUCER for well " + baseif_.name(), deferred_logger);
-     }
-}
-
 #define INSTANCE_METHODS(A,...) \
 template void WellInterfaceEval<A>:: \
 assembleControlEqProd_<__VA_ARGS__>(const WellState&, \
@@ -328,14 +282,7 @@ assembleControlEqInj_<__VA_ARGS__>(const WellState&, \
                                    const __VA_ARGS__&, \
                                    const std::function<__VA_ARGS__()>&, \
                                    __VA_ARGS__&, \
-                                   DeferredLogger&) const; \
-template __VA_ARGS__ WellInterfaceEval<A>:: \
-calculateBhpFromThp<__VA_ARGS__>(const WellState&, \
-                                 const std::vector<__VA_ARGS__>&, \
-                                 const Well&, \
-                                 const SummaryState&, \
-                                 const double, \
-                                 DeferredLogger&) const;
+                                   DeferredLogger&) const;
 
 using FluidSys = BlackOilFluidSystem<double, BlackOilDefaultIndexTraits>;
 
@@ -355,16 +302,5 @@ INSTANCE_METHODS(FluidSys, DenseAd::Evaluation<double,-1,7u>)
 INSTANCE_METHODS(FluidSys, DenseAd::Evaluation<double,-1,8u>)
 INSTANCE_METHODS(FluidSys, DenseAd::Evaluation<double,-1,9u>)
 INSTANCE_METHODS(FluidSys, DenseAd::Evaluation<double,-1,10u>)
-
-#define INSTANCE_BHP(...) \
-template double WellInterfaceEval<__VA_ARGS__>:: \
-calculateBhpFromThp<double>(const WellState&, \
-                            const std::vector<double>&, \
-                            const Well&, \
-                            const SummaryState&, \
-                            const double, \
-                            DeferredLogger&) const;
-
-INSTANCE_BHP(FluidSys)
 
 } // namespace Opm
