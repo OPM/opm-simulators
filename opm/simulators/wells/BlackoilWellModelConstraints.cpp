@@ -29,7 +29,8 @@
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 
-#include <sstream>
+#include <fmt/format.h>
+
 #include <stdexcept>
 
 namespace Opm {
@@ -384,17 +385,17 @@ actionOnBrokenConstraints(const Group& group,
 {
     auto oldControl = wellModel_.groupState().injection_control(group.name(), controlPhase);
 
-    std::ostringstream ss;
     if (oldControl != newControl) {
         const std::string from = Group::InjectionCMode2String(oldControl);
-        ss << "Switching injection control mode for group "<< group.name()
-           << " from " << Group::InjectionCMode2String(oldControl)
-           << " to " << Group::InjectionCMode2String(newControl);
         group_state.injection_control(group.name(), controlPhase, newControl);
+        if (wellModel_.comm().rank() == 0) {
+            auto msg = fmt::format("Switching injection control mode for group {} from {} to {}",
+                                   group.name(),
+                                   Group::InjectionCMode2String(oldControl),
+                                   Group::InjectionCMode2String(newControl));
+            deferred_logger.info(msg);
+        }
     }
-
-    if (!ss.str().empty() && wellModel_.comm().rank() == 0)
-        deferred_logger.info(ss.str());
 }
 
 void BlackoilWellModelConstraints::
@@ -406,12 +407,12 @@ actionOnBrokenConstraints(const Group& group,
 {
     const Group::ProductionCMode oldControl = wellModel_.groupState().production_control(group.name());
 
-    std::ostringstream ss;
-
+    std::string ss;
     switch(exceed_action) {
     case Group::ExceedAction::NONE: {
         if (oldControl != newControl && oldControl != Group::ProductionCMode::NONE) {
-            ss << "Group production exceed action is NONE for group " + group.name() + ". Nothing happens.";
+            ss = fmt::format("Group production exceed action is NONE for group {}. Nothing happens.",
+                             group.name());
         }
         break;
     }
@@ -434,9 +435,10 @@ actionOnBrokenConstraints(const Group& group,
     case Group::ExceedAction::RATE: {
         if (oldControl != newControl) {
             group_state.production_control(group.name(), newControl);
-            ss << "Switching production control mode for group "<< group.name()
-               << " from " << Group::ProductionCMode2String(oldControl)
-               << " to " << Group::ProductionCMode2String(newControl);
+            ss = fmt::format("Switching production control mode for group {} from {} to {}",
+                             group.name(),
+                             Group::ProductionCMode2String(oldControl),
+                             Group::ProductionCMode2String(newControl));
         }
         break;
     }
@@ -444,8 +446,8 @@ actionOnBrokenConstraints(const Group& group,
         throw("Invalid procedure for maximum rate limit selected for group" + group.name());
     }
 
-    if (!ss.str().empty() && wellModel_.comm().rank() == 0)
-        deferred_logger.debug(ss.str());
+    if (!ss.empty() && wellModel_.comm().rank() == 0)
+        deferred_logger.debug(ss);
 }
 
 bool BlackoilWellModelConstraints::
