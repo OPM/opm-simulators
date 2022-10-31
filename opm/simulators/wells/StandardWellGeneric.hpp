@@ -32,6 +32,7 @@
 
 #include <optional>
 #include <vector>
+#include <functional>
 
 namespace Opm
 {
