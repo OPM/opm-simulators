@@ -161,7 +161,6 @@ namespace Opm
 
             // flow also does not use the eWoms Newton method
             EWOMS_HIDE_PARAM(TypeTag, NewtonMaxError);
-            EWOMS_HIDE_PARAM(TypeTag, NewtonMaxIterations);
             EWOMS_HIDE_PARAM(TypeTag, NewtonTolerance);
             EWOMS_HIDE_PARAM(TypeTag, NewtonTargetIterations);
             EWOMS_HIDE_PARAM(TypeTag, NewtonVerbose);
