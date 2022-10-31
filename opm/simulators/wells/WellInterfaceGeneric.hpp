@@ -347,6 +347,7 @@ protected:
 
     // recording the multiplier from the keyword WINJMULT
     mutable std::vector<double> inj_multiplier_;
+    std::vector<double> prev_inj_multipler_;
 
     double well_efficiency_factor_;
     const VFPProperties* vfp_properties_;

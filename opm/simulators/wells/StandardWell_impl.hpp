@@ -930,7 +930,7 @@ namespace Opm
                 const auto gradient = injmult.multiplier_gradient;
                 const auto bhp = Opm::getValue(this->getBhp());
                 if (bhp > frac_press) {
-                    multipler += (bhp - frac_press) * gradient;
+                    multipler = 1. + (bhp - frac_press) * gradient;
                 }
                 break;
             }
@@ -940,7 +940,7 @@ namespace Opm
                 const auto gradient = injmult.multiplier_gradient;
                 const auto connection_pressure = Opm::getValue(this->getBhp()) + this->perf_pressure_diffs_[perf];
                 if (connection_pressure > frac_press) {
-                    multipler += (connection_pressure - frac_press) * gradient;
+                    multipler = 1. + (connection_pressure - frac_press) * gradient;
                 }
                 break;
             }
@@ -952,9 +952,12 @@ namespace Opm
                 // double calc_mult = 1.0;
                 // const double old_mult =  this->inj_multiplier_[perf_ecl_index];
                 if (connection_pressure > frac_press) {
-                    multipler += (connection_pressure - frac_press) * gradient;
+                    multipler = 1.0 + (connection_pressure - frac_press) * gradient;
                     // calc_mult = multipler;
+                } else {
+                    multipler = 1.0;
                 }
+                multipler = std::max(multipler, this->prev_inj_multipler_[perf_ecl_index]);
                 this->inj_multiplier_[perf_ecl_index] = multipler;
                 multipler = this->inj_multiplier_[perf_ecl_index];
                 /* const auto msg = fmt::format("perf {} bhp {} connection pressure {} calculated multplier "
