@@ -56,30 +56,6 @@ public:
                                  const SummaryState& summaryState,
                                  const double rho,
                                  DeferredLogger& deferred_logger) const;
-    template<class EvalWell>
-    void getGroupInjectionControl(const Group& group,
-                                  const WellState& well_state,
-                                  const GroupState& group_state,
-                                  const Schedule& schedule,
-                                  const SummaryState& summaryState,
-                                  const InjectorType& injectorType,
-                                  const EvalWell& bhp,
-                                  const EvalWell& injection_rate,
-                                  EvalWell& control_eq,
-                                  double efficiencyFactor,
-                                  DeferredLogger& deferred_logger) const;
-
-
-    template<class EvalWell>
-    void getGroupProductionControl(const Group& group,
-                                   const WellState& well_state,
-                                   const GroupState& group_state,
-                                   const Schedule& schedule,
-                                   const SummaryState& summaryState,
-                                   const EvalWell& bhp,
-                                   const std::vector<EvalWell>& rates,
-                                   EvalWell& control_eq,
-                                   double efficiencyFactor) const;
 
     template<class EvalWell, class BhpFromThpFunc>
     void assembleControlEqProd(const WellState& well_state,
