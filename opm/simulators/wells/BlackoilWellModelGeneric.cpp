@@ -328,7 +328,7 @@ checkGconsaleLimits(const Group& group,
     if (!schedule()[reportStepIdx].gconsale().has(group.name()))
         return;
 
-    std::ostringstream ss;
+    std::string ss;
 
     const auto& gconsale = schedule()[reportStepIdx].gconsale().get(group.name(), summaryState_);
     const Group::ProductionCMode& oldProductionControl = this->groupState().production_control(group.name());
@@ -359,7 +359,8 @@ checkGconsaleLimits(const Group& group,
         switch(gconsale.max_proc) {
         case GConSale::MaxProcedure::NONE: {
             if (oldProductionControl != Group::ProductionCMode::GRAT && oldProductionControl != Group::ProductionCMode::NONE) {
-                ss << "Group sales exceed maximum limit, but the action is NONE for " + group.name() + ". Nothing happens";
+                ss = fmt::format("Group sales exceed maximum limit, but the action is NONE for {}. Nothing happens",
+                                 group.name());
             }
             break;
             }
@@ -389,9 +390,13 @@ checkGconsaleLimits(const Group& group,
         }
         case GConSale::MaxProcedure::RATE: {
             this->groupState().production_control(group.name(), Group::ProductionCMode::GRAT);
-            ss << "Maximum GCONSALE limit violated for " << group.name() << ". The group is switched from ";
-            ss << Group::ProductionCMode2String(oldProductionControl) << " to " << Group::ProductionCMode2String(Group::ProductionCMode::GRAT);
-            ss << " and limited by the maximum sales rate after consumption and import are considered" ;
+            ss = fmt::format("Maximum GCONSALE limit violated for {}. "
+                             "The group is switched from {} to {} "
+                             "and limited by the maximum sales rate after "
+                             "consumption and import are considered",
+                             group.name(),
+                             Group::ProductionCMode2String(oldProductionControl),
+                             Group::ProductionCMode2String(Group::ProductionCMode::GRAT));
             this->groupState().update_grat_sales_target(group.name(), production_target);
             break;
         }
@@ -402,23 +407,25 @@ checkGconsaleLimits(const Group& group,
     if (sales_rate < gconsale.min_sales_rate) {
         const Group::ProductionCMode& currentProductionControl = this->groupState().production_control(group.name());
         if ( currentProductionControl == Group::ProductionCMode::GRAT ) {
-            ss << "Group " + group.name() + " has sale rate less then minimum permitted value and is under GRAT control. \n";
-            ss << "The GRAT is increased to meet the sales minimum rate. \n";
+            ss = fmt::format("Group {} has sale rate less then minimum permitted value and is under GRAT control.\n"
+                             "The GRAT is increased to meet the sales minimum rate.",
+                             group.name());
             this->groupState().update_grat_sales_target(group.name(), production_target);
         //} else if () {//TODO add action for WGASPROD
         //} else if () {//TODO add action for drilling queue
         } else {
-            ss << "Group " + group.name() + " has sale rate less then minimum permitted value but cannot increase the group production rate \n";
-            ss << "or adjust gas production using WGASPROD or drill new wells to meet the sales target. \n";
-            ss << "Note that WGASPROD and drilling queues are not implemented in Flow. No action is taken. \n ";
+            ss = fmt::format("Group {} has sale rate less then minimum permitted value but cannot increase the group production rate \n"
+                             "or adjust gas production using WGASPROD or drill new wells to meet the sales target. \n"
+                             "Note that WGASPROD and drilling queues are not implemented in Flow. No action is taken.",
+                             group.name());
         }
     }
     if (gconsale.sales_target < 0.0) {
         OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + " has sale rate target less then zero. Not implemented in Flow" , deferred_logger);
     }
 
-    if (!ss.str().empty() && comm_.rank() == 0)
-        deferred_logger.info(ss.str());
+    if (!ss.empty() && comm_.rank() == 0)
+        deferred_logger.info(ss);
 }
 
 bool
