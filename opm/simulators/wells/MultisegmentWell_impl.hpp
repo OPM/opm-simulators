@@ -815,7 +815,11 @@ namespace Opm
                 }
             }
         
-            assert(diag_ell > 0.0);
+            if(not(diag_ell > 0.0)){
+                std::cout << "Diagonal element for cprw on "
+                          << this->name()
+                          << " is " << diag_ell << std::endl;
+            }
             jacobian[welldof_ind][welldof_ind] = diag_ell;
         }else{
             jacobian[welldof_ind][welldof_ind] = 1.0; // maybe we could have used diag_ell if calculated
