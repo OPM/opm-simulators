@@ -450,12 +450,14 @@ public:
             return false;
         }
         Scalar Sw = 0.0;
+        Scalar saltConcentration = 0.0;
         if (waterEnabled && primaryVarsMeaning() != Rvw_po_Sg && primaryVarsMeaning() != Rvw_pg_Rv )
             Sw = (*this)[Indices::waterSaturationIdx];
 
         if constexpr (enableSaltPrecipitation) {
             Scalar saltSolubility = BrineModule::saltSol(pvtRegionIndex());
             if (primaryVarsMeaningBrine() == Sp) {
+                saltConcentration = saltSolubility;
                 Scalar saltSat = (*this)[saltConcentrationIdx];
                 if (saltSat < -eps){ //precipitated salt dissappears
                     setPrimaryVarsMeaningBrine(Cs);
@@ -463,8 +465,8 @@ public:
                 }
             }
             else if (primaryVarsMeaningBrine() == Cs) {
-                Scalar saltConc = (*this)[saltConcentrationIdx];
-                if (saltConc > saltSolubility + eps){ //salt concentration exceeds solubility limit
+                saltConcentration = (*this)[saltConcentrationIdx];
+                if (saltConcentration > saltSolubility + eps){ //salt concentration exceeds solubility limit
                     setPrimaryVarsMeaningBrine(Sp);
                     (*this)[saltConcentrationIdx] = 0.0;
                 }
@@ -519,7 +521,8 @@ public:
                 }
                 Scalar RvwSat = FluidSystem::gasPvt().saturatedWaterVaporizationFactor(pvtRegionIdx_,
                                                                                       T,
-                                                                                      pg);
+                                                                                      pg,
+                                                                                      saltConcentration);
                 setPrimaryVarsMeaning(Rvw_po_Sg);
                 (*this)[Indices::waterSaturationIdx] = RvwSat; //primary variable becomes Rvw
 
@@ -535,7 +538,8 @@ public:
                 Scalar pg = po + (pC[gasPhaseIdx] - pC[oilPhaseIdx]);
                 Scalar RvwSat = FluidSystem::gasPvt().saturatedWaterVaporizationFactor(pvtRegionIdx_,
                                                                                       T,
-                                                                                      pg);
+                                                                                      pg,
+                                                                                      saltConcentration);
 
                 setPrimaryVarsMeaning(Rvw_pg_Rv);
                 (*this)[Indices::pressureSwitchIdx] = pg;
@@ -683,7 +687,8 @@ public:
             Scalar pg = po + (pC[gasPhaseIdx] - pC[oilPhaseIdx]);
             Scalar RvwSat = FluidSystem::gasPvt().saturatedWaterVaporizationFactor(pvtRegionIdx_,
                                                                                    T,
-                                                                                   pg);
+                                                                                   pg,
+                                                                                   saltConcentration);
             Scalar Rvw = (*this)[Indices::waterSaturationIdx];
             if (Rvw > RvwSat*(1.0 + eps)) {
                 // water phase appears
@@ -722,7 +727,8 @@ public:
             Scalar T = asImp_().temperature_();
             Scalar RvwSat = FluidSystem::gasPvt().saturatedWaterVaporizationFactor(pvtRegionIdx_,
                                                                                    T,
-                                                                                   pg);
+                                                                                   pg,
+                                                                                   saltConcentration);
             Scalar Rvw = (*this)[Indices::waterSaturationIdx];
             if (Rvw > RvwSat*(1.0 + eps)) {
                 // water phase appears
@@ -801,7 +807,8 @@ public:
             if(Sw < -eps  && FluidSystem::enableVaporizedWater()) {
                 Scalar RvwSat = FluidSystem::gasPvt().saturatedWaterVaporizationFactor(pvtRegionIdx_,
                                                                                       T,
-                                                                                      pg);
+                                                                                      pg,
+                                                                                      saltConcentration);
                 setPrimaryVarsMeaning(Rvw_pg_Rv);
                 (*this)[Indices::waterSaturationIdx] = RvwSat; //primary variable becomes Rvw
 
