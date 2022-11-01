@@ -139,7 +139,7 @@ namespace Opm
                                              DeferredLogger& deferred_logger) const override;
 
         virtual void  addWellContributions(SparseMatrixAdapter& jacobian) const override;
-        
+
         virtual void addWellPressureEquations(PressureMatrix& mat,
                                               const BVector& x,
                                               const int pressureVarIndex,
@@ -168,7 +168,6 @@ namespace Opm
                                         DeferredLogger& deferred_logger) const override;
 
     protected:
-        int number_segments_;
 
         // regularize msw equation
         bool regularize_;
