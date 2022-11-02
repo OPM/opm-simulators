@@ -545,8 +545,7 @@ if(OpenCL_FOUND)
 endif()
 
 if(ROCALUTION_FOUND)
-  target_include_directories(opmsimulators PRIVATE ${rocalution_INCLUDE_DIR}/rocalution)
-  target_include_directories(test_rocalutionSolver PRIVATE ${rocalution_INCLUDE_DIR}/rocalution)
+  target_include_directories(opmsimulators PUBLIC ${rocalution_INCLUDE_DIR}/rocalution)
 endif()
 
 if(VexCL_FOUND)
