@@ -496,7 +496,7 @@ checkGroupHigherConstraints(const Group& group,
                 resv_coeff_inj,
                 deferred_logger);
                 if (is_changed) {
-                    switched_inj_groups_.insert({ {group.name(), phase}, Group::InjectionCMode2String(Group::InjectionCMode::FLD)});
+                    switched_inj_groups_.insert_or_assign({group.name(), phase}, Group::InjectionCMode2String(Group::InjectionCMode::FLD));
                     BlackoilWellModelConstraints(*this).
                         actionOnBrokenConstraints(group, Group::InjectionCMode::FLD,
                                                   phase, this->groupState(),
@@ -537,7 +537,7 @@ checkGroupHigherConstraints(const Group& group,
                 resv_coeff,
                 deferred_logger);
             if (is_changed) {
-                switched_prod_groups_.insert({group.name(), Group::ProductionCMode2String(Group::ProductionCMode::FLD)});
+                switched_prod_groups_.insert_or_assign(group.name(), Group::ProductionCMode2String(Group::ProductionCMode::FLD));
                 const auto exceed_action = group.productionControls(summaryState_).exceed_action;
                 BlackoilWellModelConstraints(*this).
                         actionOnBrokenConstraints(group, exceed_action,
