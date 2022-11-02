@@ -51,11 +51,6 @@ rocalutionSolverBackend<block_size>::rocalutionSolverBackend(int verbosity_, int
 template <unsigned int block_size>
 rocalutionSolverBackend<block_size>::~rocalutionSolverBackend() {
     rocalution::stop_rocalution();
-
-    // these should be automatically release when rocalutionSolverBackend is destroyed
-    // however, without these, the test_rocalutionSolver segfaults
-    roc_solver.release();
-    roc_prec.release();
 }
 
 
