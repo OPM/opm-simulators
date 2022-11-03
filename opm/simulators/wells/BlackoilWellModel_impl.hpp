@@ -767,9 +767,11 @@ namespace Opm {
                 // "extended" network model (properties defined by
                 // BRANPROP and NODEPROP) which only applies to producers.
 
+#define EXTRA_NETWORK_OUTPUT 1
+#if EXTRA_NETWORK_OUTPUT
                 const std::set<std::string> well_names = {"S-P2", "S-P3", "S-P4", "S-P6", "PROD1", "PROD2", "PROD3"};
-                // const std::set<std::string> well_names = {"S-P6"};
                 const bool output_for_well = well_names.count(well->name()) > 0;
+#endif
 
                 if (this->node_pressures_.empty()) {
                     // there is no existing node pressures
@@ -782,10 +784,12 @@ namespace Opm {
                         // set the dynamic THP constraint based on the network nodal pressure
                         const double nodal_pressure = it->second;
                         well->setDynamicThpLimit(nodal_pressure);
+#if EXTRA_NETWORK_OUTPUT
                         if (output_for_well) {
                             std::cout << " well " << well->name() << " set dyanmic thp limit " << nodal_pressure / 1.e5
                                       << " bar " << std::endl;
                         }
+#endif
                     }
                 }
             }
@@ -892,14 +896,14 @@ namespace Opm {
             changed_well_group = updateWellControlsAndNetwork(deferred_logger, true);
             assembleImpl(dt, deferred_logger);
             converged = this->getWellConvergence(this->B_avg_, true).converged() && !changed_well_group;
+#if EXTRA_NETWORK_OUTPUT
             std::cout << " solveWellEq iteration " << iter << " converged ?";
             if (converged) {
                 std::cout << " YES ";
             } else {
                 std::cout << " NO ";
             }
-            // std::cout << " network_imbalance " << network_imbalance/1.e5 << std::endl;
-            // if (converged && network_imbalance < 0.05e5) {
+#endif
             if (converged) {
                 break;
             }
@@ -907,12 +911,10 @@ namespace Opm {
             for (auto& well : this->well_container_) {
                 well->solveEqAndUpdateWellState(well_state, deferred_logger);
             }
-            // std::tie(changed_well_group, should_update_network, network_imbalance)= updateWellControls(deferred_logger, true);
-            // for (auto& well : this->well_container_) {
-                this->initPrimaryVariablesEvaluation();
-            // }
+            this->initPrimaryVariablesEvaluation();
         } while (iter < max_iter);
 
+        // TODO: make the following to the logger system
         if (!converged) {
             std::cout << " solveWellEq not converged with " << max_iter << " iterations !" << std::endl;
         } else {
@@ -1608,11 +1610,16 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     updateWellControls(DeferredLogger& deferred_logger,
                        const size_t network_update_it,
-                       const bool solve_welleq)
-    {
+                       const bool solve_welleq) {
         // Even if there are no wells active locally, we cannot
         // return as the DeferredLogger uses global communication.
         // For no well active globally we simply return.
+        // TODO: maybe here we should be
+        // const int episodeIdx = ebosSimulator_.episodeIndex();
+        // const auto& network = schedule()[episodeIdx].network();
+        // if (!wellsActive() && !network.active()) {
+        //     return {false, false};
+        // }
         // if( !wellsActive() ) return { false, false };
 
         const int episodeIdx = ebosSimulator_.episodeIndex();
