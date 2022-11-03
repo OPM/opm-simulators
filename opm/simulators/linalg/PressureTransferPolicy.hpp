@@ -25,7 +25,7 @@
 #include <opm/simulators/linalg/twolevelmethodcpr.hh>
 #include <opm/simulators/linalg/PropertyTree.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>
-
+#include <opm/simulators/linalg/WellOperators.hpp>
 
 namespace Opm
 {
@@ -37,7 +37,7 @@ namespace Details
     using SeqCoarseOperatorType = Dune::MatrixAdapter<PressureMatrixType, PressureVectorType, PressureVectorType>;
     template <class Comm>
     using ParCoarseOperatorType
-        = Dune::OverlappingSchwarzOperator<PressureMatrixType, PressureVectorType, PressureVectorType, Comm>;
+         = Opm::GhostLastMatrixAdapter<PressureMatrixType, PressureVectorType, PressureVectorType, Comm>;
     template <class Comm>
     using CoarseOperatorType = std::conditional_t<std::is_same<Comm, Dune::Amg::SequentialInformation>::value,
                                                   SeqCoarseOperatorType,
