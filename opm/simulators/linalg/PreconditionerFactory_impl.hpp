@@ -203,7 +203,8 @@ struct StandardPreconditioners {
         // is the overlapping schwarz operator. This could be extended
         // later, but at this point no other operators are compatible
         // with the AMG hierarchy construction.
-        if constexpr (std::is_same_v<O, Dune::OverlappingSchwarzOperator<M, V, V, C>>) {
+        if constexpr (std::is_same_v<O, Dune::OverlappingSchwarzOperator<M, V, V, C>> ||
+                      std::is_same_v<O, Opm::GhostLastMatrixAdapter<M, V, V, C>>) {
             F::addCreator("amg", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
                 using PrecPtr = std::shared_ptr<Dune::PreconditionerWithUpdate<V, V>>;
                 const std::string smoother = prm.get<std::string>("smoother", "ParOverILU0");
@@ -785,14 +786,28 @@ using OpBPar = Dune::OverlappingSchwarzOperator<Dune::BCRSMatrix<MatrixBlock<dou
                                                 Dune::BlockVector<Dune::FieldVector<double, Dim>>,
                                                 Dune::BlockVector<Dune::FieldVector<double, Dim>>,
                                                 CommPar>;
+template<int Dim>
+using OpGLFPar = Opm::GhostLastMatrixAdapter<Dune::BCRSMatrix<Dune::FieldMatrix<double,Dim,Dim>>,
+                                             Dune::BlockVector<Dune::FieldVector<double,Dim>>,
+                                             Dune::BlockVector<Dune::FieldVector<double,Dim>>,
+                                             CommPar>;
+
+template<int Dim>
+using OpGLBPar = Opm::GhostLastMatrixAdapter<Dune::BCRSMatrix<MatrixBlock<double,Dim,Dim>>,
+                                             Dune::BlockVector<Dune::FieldVector<double,Dim>>,
+                                             Dune::BlockVector<Dune::FieldVector<double,Dim>>,
+                                             CommPar>;
 
 #define INSTANCE_PF_PAR(Dim)                                                                                           \
     template class PreconditionerFactory<OpBSeq<Dim>, CommPar>;                                                        \
     template class PreconditionerFactory<OpFPar<Dim>, CommPar>;                                                        \
     template class PreconditionerFactory<OpBPar<Dim>, CommPar>;                                                        \
+    template class PreconditionerFactory<OpGLFPar<Dim>,CommPar>;                                                       \
+    template class PreconditionerFactory<OpGLBPar<Dim>,CommPar>;                                                       \
     template class PreconditionerFactory<OpW<Dim, false>, CommPar>;                                                    \
     template class PreconditionerFactory<OpWG<Dim, true>, CommPar>;                                                    \
-    template class PreconditionerFactory<OpBPar<Dim>, CommSeq>;
+    template class PreconditionerFactory<OpBPar<Dim>,CommSeq>;                                                         \
+    template class PreconditionerFactory<OpGLBPar<Dim>,CommSeq>;
 #endif
 
 #define INSTANCE_PF_SEQ(Dim)                                                                                           \

@@ -111,7 +111,7 @@ void FlexibleSolverInfo<Matrix,Vector,Comm>::create(const Matrix& matrix,
     if (parallel) {
 #if HAVE_MPI
         if (!wellOperator_) {
-            using ParOperatorType = Dune::OverlappingSchwarzOperator<Matrix, Vector, Vector, Comm>;
+            using ParOperatorType = Opm::GhostLastMatrixAdapter<Matrix, Vector, Vector, Comm>;
             auto pop = std::make_unique<ParOperatorType>(matrix, comm);
             using FlexibleSolverType = Dune::FlexibleSolver<ParOperatorType>;
             auto sol = std::make_unique<FlexibleSolverType>(*pop, comm, prm,
