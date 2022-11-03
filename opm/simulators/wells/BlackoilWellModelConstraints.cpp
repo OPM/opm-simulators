@@ -393,7 +393,7 @@ actionOnBrokenConstraints(const Group& group,
                                    group.name(),
                                    Group::InjectionCMode2String(oldControl),
                                    Group::InjectionCMode2String(newControl));
-            deferred_logger.info(msg);
+            deferred_logger.debug(msg);
         }
     }
 }
@@ -472,8 +472,8 @@ updateGroupIndividualControl(const Group& group,
                                                                             phase);
             if (changed_this.first != Group::InjectionCMode::NONE)
             {
-                switched_inj.insert({{group.name(), phase},
-                                     Group::InjectionCMode2String(changed_this.first)});
+                switched_inj.insert_or_assign({group.name(), phase},
+                                     Group::InjectionCMode2String(changed_this.first));
                 this->actionOnBrokenConstraints(group, changed_this.first, phase,
                                                 group_state, deferred_logger);
                 WellGroupHelpers::updateWellRatesFromGroupTargetScale(changed_this.second,
@@ -494,8 +494,8 @@ updateGroupIndividualControl(const Group& group,
         const auto controls = group.productionControls(wellModel_.summaryState());
         if (changed_this.first != Group::ProductionCMode::NONE)
         {
-            switched_prod.insert({group.name(),
-                                  Group::ProductionCMode2String(changed_this.first)});
+            switched_prod.insert_or_assign(group.name(),
+                                  Group::ProductionCMode2String(changed_this.first));
 
             this->actionOnBrokenConstraints(group,
                                             controls.exceed_action,
