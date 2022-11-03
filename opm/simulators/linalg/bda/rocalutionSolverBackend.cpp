@@ -28,6 +28,7 @@
 #include <opm/simulators/linalg/bda/rocalutionSolverBackend.hpp>
 
 #include <rocalution.hpp>
+#include <base/matrix_formats_ind.hpp> // check if blocks are interpreted as row-major or column-major
 
 namespace Opm
 {
@@ -88,16 +89,20 @@ void rocalutionSolverBackend<block_size>::convert_matrix(std::shared_ptr<Blocked
     // convert values inside block from row major to col major
     // this is the same as transposing a block
     // when compiling rocm from scratch, it is possible to choose the direction, making this transposing unnecessary
-    for(int i = 0; i < nnzb; ++i){
-        tmp_nnzvalues[i * block_size * block_size + 0] = matrix->nnzValues[i * block_size * block_size + 0];
-        tmp_nnzvalues[i * block_size * block_size + 1] = matrix->nnzValues[i * block_size * block_size + 3];
-        tmp_nnzvalues[i * block_size * block_size + 2] = matrix->nnzValues[i * block_size * block_size + 6];
-        tmp_nnzvalues[i * block_size * block_size + 3] = matrix->nnzValues[i * block_size * block_size + 1];
-        tmp_nnzvalues[i * block_size * block_size + 4] = matrix->nnzValues[i * block_size * block_size + 4];
-        tmp_nnzvalues[i * block_size * block_size + 5] = matrix->nnzValues[i * block_size * block_size + 7];
-        tmp_nnzvalues[i * block_size * block_size + 6] = matrix->nnzValues[i * block_size * block_size + 2];
-        tmp_nnzvalues[i * block_size * block_size + 7] = matrix->nnzValues[i * block_size * block_size + 5];
-        tmp_nnzvalues[i * block_size * block_size + 8] = matrix->nnzValues[i * block_size * block_size + 8];
+    // BCSR_IND_BASE == 0: rocalution expects column-major
+    // BCSR_IND_BASE == 1: rocalution expects row-major
+    if (BCSR_IND_BASE == 0) {
+        for(int i = 0; i < nnzb; ++i){
+            tmp_nnzvalues[i * block_size * block_size + 0] = matrix->nnzValues[i * block_size * block_size + 0];
+            tmp_nnzvalues[i * block_size * block_size + 1] = matrix->nnzValues[i * block_size * block_size + 3];
+            tmp_nnzvalues[i * block_size * block_size + 2] = matrix->nnzValues[i * block_size * block_size + 6];
+            tmp_nnzvalues[i * block_size * block_size + 3] = matrix->nnzValues[i * block_size * block_size + 1];
+            tmp_nnzvalues[i * block_size * block_size + 4] = matrix->nnzValues[i * block_size * block_size + 4];
+            tmp_nnzvalues[i * block_size * block_size + 5] = matrix->nnzValues[i * block_size * block_size + 7];
+            tmp_nnzvalues[i * block_size * block_size + 6] = matrix->nnzValues[i * block_size * block_size + 2];
+            tmp_nnzvalues[i * block_size * block_size + 7] = matrix->nnzValues[i * block_size * block_size + 5];
+            tmp_nnzvalues[i * block_size * block_size + 8] = matrix->nnzValues[i * block_size * block_size + 8];
+        }
     }
     if (verbosity >= 3) {
         std::ostringstream out;
