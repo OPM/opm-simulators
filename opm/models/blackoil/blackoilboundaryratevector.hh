@@ -161,7 +161,7 @@ public:
                 }
 
                 Evaluation enthalpyRate = density*extQuants.volumeFlux(phaseIdx)*specificEnthalpy;
-                EnergyModule::addToEnthalpyRate(*this, enthalpyRate);
+                EnergyModule::addToEnthalpyRate(*this, enthalpyRate*getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>());
             }
         }
 
@@ -189,7 +189,7 @@ public:
 
         // heat conduction
         if constexpr (enableEnergy)
-            EnergyModule::addToEnthalpyRate(*this, extQuants.energyFlux());
+            EnergyModule::addToEnthalpyRate(*this, extQuants.energyFlux()*getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>());
 
 #ifndef NDEBUG
         for (unsigned i = 0; i < numEq; ++i) {
