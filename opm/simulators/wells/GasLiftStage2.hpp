@@ -70,6 +70,7 @@ public:
         const GroupState& group_state,
         GLiftProdWells& prod_wells,
         GLiftOptWells& glift_wells,
+        GasLiftGroupInfo& group_info,
         GLiftWellStateMap& state_map,
         bool glift_debug
     );
@@ -89,16 +90,12 @@ protected:
     void displayWarning_(const std::string& msg, const std::string& group_name);
     void displayWarning_(const std::string& msg);
     std::tuple<double, double, double, double> getCurrentGroupRates_(const Group& group);
-    std::array<double,4> getCurrentGroupRatesRecursive_(const Group& group);
-    std::tuple<double, double, double, double> getCurrentWellRates_(
-        const std::string& well_name, const std::string& group_name);
     std::optional<double> getGroupMaxALQ_(const Group &group);
     std::optional<double> getGroupMaxTotalGas_(const Group &group);
     std::vector<GasLiftSingleWell *> getGroupGliftWells_(
         const Group& group);
     void getGroupGliftWellsRecursive_(
         const Group& group, std::vector<GasLiftSingleWell *>& wells);
-    std::tuple<double, double, double> getWellRates_(const WellInterfaceGeneric& well);
     void optimizeGroup_(const Group& group);
     void optimizeGroupsRecursive_(const Group& group);
     void recalculateGradientAndUpdateData_(
@@ -126,6 +123,7 @@ protected:
 
     GLiftProdWells& prod_wells_;
     GLiftOptWells& stage1_wells_;
+    GasLiftGroupInfo& group_info_;
     GLiftWellStateMap& well_state_map_;
 
     int report_step_idx_;

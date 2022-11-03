@@ -247,7 +247,7 @@ GasLiftSingleWellGeneric::checkGroupTargetsViolated(const BasicRates& rates, con
             auto target_opt = this->group_info_.getTarget(rate_type, group_name);
             if (target_opt) {
                 auto delta_rate = new_rates[rate_type] - rates[rate_type];
-                auto new_group_rate = this->group_info_.getRate(rate_type, group_name) + efficiency * delta_rate;
+                auto new_group_rate = this->group_info_.getPotential(rate_type, group_name) + efficiency * delta_rate;
                 if (new_group_rate > *target_opt) {
                     if (this->debug) {
                         const std::string msg

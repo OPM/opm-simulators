@@ -1044,6 +1044,7 @@ BlackoilWellModelGeneric::
 gasLiftOptimizationStage2(DeferredLogger& deferred_logger,
                           GLiftProdWells& prod_wells,
                           GLiftOptWells& glift_wells,
+                          GasLiftGroupInfo& group_info,
                           GLiftWellStateMap& glift_well_state_map,
                           const int episodeIndex)
 {
@@ -1056,6 +1057,7 @@ gasLiftOptimizationStage2(DeferredLogger& deferred_logger,
                          this->groupState(),
                          prod_wells,
                          glift_wells,
+                         group_info,
                          glift_well_state_map,
                          this->glift_debug
     };

@@ -47,6 +47,7 @@ namespace Opm {
     class EclipseState;
     class GasLiftSingleWellGeneric;
     class GasLiftWellState;
+    class GasLiftGroupInfo;
     class Group;
     class GuideRateConfig;
     class ParallelWellInfo;
@@ -305,6 +306,7 @@ protected:
     void gasLiftOptimizationStage2(DeferredLogger& deferred_logger,
                                    GLiftProdWells& prod_wells,
                                    GLiftOptWells& glift_wells,
+                                   GasLiftGroupInfo& group_info,
                                    GLiftWellStateMap& map,
                                    const int episodeIndex);
 

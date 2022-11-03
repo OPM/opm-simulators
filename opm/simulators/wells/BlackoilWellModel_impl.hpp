@@ -994,7 +994,7 @@ namespace Opm {
             gasLiftOptimizationStage1(
                 deferred_logger, prod_wells, glift_wells, group_info, state_map);
             gasLiftOptimizationStage2(
-                deferred_logger, prod_wells, glift_wells, state_map,
+                deferred_logger, prod_wells, glift_wells, group_info, state_map,
                 ebosSimulator_.episodeIndex());
             if (this->glift_debug) gliftDebugShowALQ(deferred_logger);
             num_wells_changed = glift_wells.size();

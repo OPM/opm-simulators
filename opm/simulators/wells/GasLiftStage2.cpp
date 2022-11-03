@@ -28,7 +28,7 @@
 #include <opm/simulators/wells/GasLiftWellState.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 #include <opm/simulators/wells/WellState.hpp>
-
+#include <opm/simulators/wells/GasLiftGroupInfo.hpp>
 #include <cmath>
 #include <optional>
 #include <string>
@@ -47,12 +47,14 @@ GasLiftStage2::GasLiftStage2(
     const GroupState &group_state,
     GLiftProdWells &prod_wells,
     GLiftOptWells &glift_wells,
+    GasLiftGroupInfo& group_info,
     GLiftWellStateMap &state_map,
     bool glift_debug
 ) :
     GasLiftCommon(well_state, group_state, deferred_logger, comm, glift_debug)
     , prod_wells_{prod_wells}
     , stage1_wells_{glift_wells}
+    , group_info_{group_info}
     , well_state_map_{state_map}
     , report_step_idx_{report_step_idx}
     , summary_state_{summary_state}
@@ -278,136 +280,10 @@ std::tuple<double, double, double, double>
 GasLiftStage2::
 getCurrentGroupRates_(const Group &group)
 {
-    auto rates = getCurrentGroupRatesRecursive_(group);
-    this->comm_.sum(rates.data(), rates.size());
-    auto [oil_rate, gas_rate, water_rate, alq] = rates;
-    if (this->debug) {
-        const std::string msg = fmt::format(
-            "Current group rates for {} : oil: {}, gas: {}, water: {}, alq: {}",
-            group.name(), oil_rate, gas_rate, water_rate, alq);
-        displayDebugMessageOnRank0_(msg);
-    }
-
-    return {oil_rate, gas_rate, water_rate, alq};
-}
-
-
-std::array <double, 4>
-GasLiftStage2::
-getCurrentGroupRatesRecursive_(const Group &group)
-{
-    double oil_rate = 0.0;
-    double gas_rate = 0.0;
-    double water_rate = 0.0;
-    double alq = 0.0;
-    // NOTE: A group can either contain wells or groups, but not both
-    if (group.wellgroup()) {
-        for (const std::string& well_name : group.wells()) {
-            auto [sw_oil_rate, sw_gas_rate, sw_water_rate, sw_alq] =
-                getCurrentWellRates_(well_name, group.name());
-            oil_rate += sw_oil_rate;
-            gas_rate += sw_gas_rate;
-            water_rate += sw_water_rate;
-            alq += sw_alq;
-        }
-
-    }
-    else {
-        for (const std::string& group_name : group.groups()) {
-            if(this->schedule_.back().groups.has(group_name)) {
-                const Group& sub_group =
-                    this->schedule_.getGroup(group_name, this->report_step_idx_);
-                // If groups have efficiency factors to model
-                // synchronized downtime of their subordinate wells
-                // (see keyword GEFAC), their lift gas injection rates
-                // are multiplied by their efficiency factors when
-                // they are added to the lift gas supply rate of the
-                // parent group.
-                const auto gefac = sub_group.getGroupEfficiencyFactor();
-                auto rates = getCurrentGroupRatesRecursive_(sub_group);
-                auto [sg_oil_rate, sg_gas_rate, sg_water_rate, sg_alq] = rates;
-                oil_rate += (gefac * sg_oil_rate);
-                gas_rate += (gefac * sg_gas_rate);
-                water_rate += (gefac * sg_water_rate);
-                alq += (gefac * sg_alq);
-            }
-        }
-    }
-    return {oil_rate, gas_rate, water_rate, alq};
-}
-
-std::tuple<double, double, double, double>
-GasLiftStage2::
-getCurrentWellRates_(const std::string &well_name, const std::string &group_name)
-{
-    double oil_rate, gas_rate, water_rate, alq;
-    bool success = false;
-    const WellInterfaceGeneric *well_ptr = nullptr;
-    std::string debug_info;
-    if (this->stage1_wells_.count(well_name) == 1) {
-        GasLiftSingleWell &gs_well = *(this->stage1_wells_.at(well_name).get());
-        const WellInterfaceGeneric &well = gs_well.getWell();
-        well_ptr = &well;
-        GasLiftWellState &state = *(this->well_state_map_.at(well_name).get());
-        std::tie(oil_rate, gas_rate) = state.getRates();
-        water_rate = state.waterRate();
-        success = true;
-        if ( this->debug) debug_info = "(A)";
-    }
-    else if (this->prod_wells_.count(well_name) == 1) {
-        well_ptr = this->prod_wells_.at(well_name);
-        std::tie(oil_rate, gas_rate, water_rate) = getWellRates_(*well_ptr);
-        success = true;
-        if ( this->debug) debug_info = "(B)";
-    }
-
-    if (well_ptr) {
-        // we only want rates from wells owned by the rank
-        if (!well_state_.wellIsOwned(well_ptr->indexOfWell(), well_name)) {
-            success = false;
-        }
-    }
-
-    if (success) {
-        assert(well_ptr);
-        assert(well_ptr->isProducer());
-        alq = this->well_state_.getALQ(well_name);
-        if (this->debug) {
-            const std::string msg = fmt::format(
-                "Rates {} for well {} : oil: {}, gas: {}, water: {}, alq: {}",
-                debug_info, well_name, oil_rate, gas_rate, water_rate, alq);
-            displayDebugMessage_(msg, group_name);
-        }
-        // If wells have efficiency factors to take account of regular
-        // downtime (see keyword WEFAC), their lift gas injection
-        // rates are multiplied by their efficiency factors when they
-        // are added to the group lift gas supply rate. This is
-        // consistent with the summation of flow rates for wells with
-        // downtime, and preserves the ratio of production rate to
-        // lift gas injection rate.
-        const auto &well_ecl = well_ptr->wellEcl();
-        double factor = well_ecl.getEfficiencyFactor();
-        oil_rate *= factor;
-        gas_rate *= factor;
-        water_rate *= factor;
-        alq *= factor;
-        if (this->debug && (factor != 1)) {
-            const std::string msg = fmt::format(
-                "Well {} : efficiency factor {}. New rates : oil: {}, gas: {}, water: {}, alq: {}",
-                well_name, factor, oil_rate, gas_rate, water_rate, alq);
-            displayDebugMessage_(msg, group_name);
-        }
-    }
-    else {
-        // NOTE: This happens for wells that are not producers, or not active.
-        if (this->debug) {
-            const std::string msg = fmt::format("Could not determine current rates for "
-                "well {}: (not active or injector)", well_name);
-            displayDebugMessage_(msg, group_name);
-        }
-        oil_rate = 0.0; gas_rate = 0.0; water_rate = 0.0; alq = 0.0;
-    }
-    return std::make_tuple(oil_rate, gas_rate, water_rate, alq);
+    return {this->group_info_.oilRate(group.name()),
+            this->group_info_.gasRate(group.name()),
+            this->group_info_.waterRate(group.name()),
+            this->group_info_.alqRate(group.name())};
 }
 
 std::optional<double>
@@ -428,24 +304,6 @@ GasLiftStage2::getGroupMaxTotalGas_(const Group &group)
         return gl_group.max_total_gas();
     }
     return std::nullopt; // If GLIFTOPT is missing from schedule, assume unlimited alq
-}
-
-std::tuple<double, double, double>
-GasLiftStage2::
-getWellRates_(const WellInterfaceGeneric &well)
-{
-    const int well_index = well.indexOfWell();
-    const auto& ws = this->well_state_.well(well_index);
-    const auto& pu = well.phaseUsage();
-    auto oil_rate = ws.well_potentials[pu.phase_pos[Oil]];
-    auto water_rate = ws.well_potentials[pu.phase_pos[Water]];
-    double gas_rate = 0.0;
-    // See comment for setupPhaseVariables_() in GasLiftSingleWell_impl.hpp
-    //  about the two-phase oil-water case.
-    if (pu.phase_used[BlackoilPhases::Vapour]) {
-        gas_rate = ws.well_potentials[pu.phase_pos[Gas]];
-    }
-    return {oil_rate, gas_rate, water_rate};
 }
 
 // Find all subordinate wells of a given group.
