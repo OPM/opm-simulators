@@ -22,12 +22,6 @@
 
 #define BOOST_TEST_MODULE OPM_test_openclSolver
 #include <boost/test/unit_test.hpp>
-#include <boost/version.hpp>
-
-#include <dune/common/version.hh>
-
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6) && \
-    BOOST_VERSION / 100 % 1000 > 48
 
 #include <opm/simulators/linalg/bda/BdaBridge.hpp>
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
@@ -206,14 +200,3 @@ BOOST_AUTO_TEST_CASE(TestOpenclSolver)
         BOOST_WARN_MESSAGE(true, "Problem with initializing Platform. skipping test");
     }
 }
-
-
-#else
-
-// Do nothing if we do not have at least Dune 2.6.
-BOOST_AUTO_TEST_CASE(DummyTest)
-{
-    BOOST_REQUIRE(true);
-}
-
-#endif
