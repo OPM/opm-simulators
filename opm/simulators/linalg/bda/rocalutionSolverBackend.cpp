@@ -66,8 +66,6 @@ void rocalutionSolverBackend<block_size>::initialize(std::shared_ptr<BlockedMatr
     out << "Initializing rocalution, matrix size: " << Nb << " blockrows, nnzb: " << nnzb << "\n";
     out << "Maxit: " << maxit << std::scientific << ", tolerance: " << tolerance << "\n";
     OpmLog::info(out.str());
-    out.str("");
-    out.clear();
 
     h_x.resize(Nb * block_size);
 
