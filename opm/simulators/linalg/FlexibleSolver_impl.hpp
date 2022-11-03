@@ -269,9 +269,11 @@ using SeqOpW = Opm::WellModelMatrixAdapter<OBM<N>, BV<N>, BV<N>, false>;
 // Parallel communicator and operators.
 using Comm = Dune::OwnerOverlapCopyCommunication<int, int>;
 template <int N>
-using ParOpM = Dune::OverlappingSchwarzOperator<OBM<N>, BV<N>, BV<N>, Comm>;
+using ParOpM = Opm::GhostLastMatrixAdapter<OBM<N>, BV<N>, BV<N>, Comm>;
 template <int N>
 using ParOpW = Opm::WellModelGhostLastMatrixAdapter<OBM<N>, BV<N>, BV<N>, true>;
+template <int N>
+using ParOpD = Dune::OverlappingSchwarzOperator<OBM<N>, BV<N>, BV<N>, Comm>;
 
 // Note: we must instantiate the constructor that is a template.
 // This is only needed in the parallel case, since otherwise the Comm type is
@@ -288,7 +290,8 @@ template Dune::FlexibleSolver<Operator>::FlexibleSolver(Operator& op,           
 INSTANTIATE_FLEXIBLESOLVER_OP(SeqOpM<N>); \
 INSTANTIATE_FLEXIBLESOLVER_OP(SeqOpW<N>); \
 INSTANTIATE_FLEXIBLESOLVER_OP(ParOpM<N>); \
-INSTANTIATE_FLEXIBLESOLVER_OP(ParOpW<N>);
+INSTANTIATE_FLEXIBLESOLVER_OP(ParOpW<N>); \
+INSTANTIATE_FLEXIBLESOLVER_OP(ParOpD<N>);
 
 #else // HAVE_MPI
 
