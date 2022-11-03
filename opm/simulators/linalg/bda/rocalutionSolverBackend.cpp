@@ -56,7 +56,7 @@ rocalutionSolverBackend<block_size>::~rocalutionSolverBackend() {
 
 
 template <unsigned int block_size>
-void rocalutionSolverBackend<block_size>::initialize(std::shared_ptr<BlockedMatrix> matrix) {
+void rocalutionSolverBackend<block_size>::initialize(BlockedMatrix *matrix) {
     this->Nb = matrix->Nb;
     this->N = Nb * block_size;
     this->nnzb = matrix->nnzbs;
@@ -74,7 +74,7 @@ void rocalutionSolverBackend<block_size>::initialize(std::shared_ptr<BlockedMatr
 
 
 template <unsigned int block_size>
-void rocalutionSolverBackend<block_size>::convert_matrix(std::shared_ptr<BlockedMatrix> matrix) {
+void rocalutionSolverBackend<block_size>::convert_matrix(BlockedMatrix *matrix) {
     Timer t;
 
     for(int i = 0; i < Nb+1; ++i){
@@ -134,14 +134,14 @@ SolverStatus rocalutionSolverBackend<block_size>::solve_system(std::shared_ptr<B
                                                            BdaResult &res)
 {
     if (initialized == false) {
-        initialize(matrix);
+        initialize(matrix.get());
     }
 
     tmp_rowpointers = new int[Nb+1];
     tmp_colindices = new int[nnzb];
     tmp_nnzvalues = new double[nnzb*block_size*block_size];
 
-    convert_matrix(matrix);
+    convert_matrix(matrix.get());
 
     rocalution::LocalVector<double> roc_x;
     rocalution::LocalVector<double> roc_rhs;

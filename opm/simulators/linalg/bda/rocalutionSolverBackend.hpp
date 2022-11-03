@@ -66,12 +66,12 @@ private:
 
     /// Initialize sizes and allocate memory
     /// \param[in] matrix     matrix A
-    void initialize(std::shared_ptr<BlockedMatrix> matrix);
+    void initialize(BlockedMatrix *matrix);
 
     /// Convert matrix to rocalution format
     /// copy matrix to raw pointers, which are given to and freed by rocalution
     /// \param[in] matrix     matrix A
-    void convert_matrix(std::shared_ptr<BlockedMatrix> matrix);
+    void convert_matrix(BlockedMatrix *matrix);
 
 public:
 
