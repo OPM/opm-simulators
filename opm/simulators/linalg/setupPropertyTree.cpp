@@ -110,6 +110,18 @@ setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters 
               << " Please use ilu0, cpr, cpr_trueimpes, cpr_quasiimpes or isai");
 }
 
+std::string getSolverString(const FlowLinearSolverParameters& p)
+{
+    if (p.newton_use_gmres_)
+    {
+        return {"gmres"};
+    }
+    else
+    {
+        return {"bicgstab"};
+    }
+}
+
 PropertyTree
 setupCPRW(const std::string& /*conf*/, const FlowLinearSolverParameters& p)
 {
@@ -118,7 +130,7 @@ setupCPRW(const std::string& /*conf*/, const FlowLinearSolverParameters& p)
     prm.put("maxiter", p.linear_solver_maxiter_);
     prm.put("tol", p.linear_solver_reduction_);
     prm.put("verbosity", p.linear_solver_verbosity_);
-    prm.put("solver", "bicgstab"s);
+    prm.put("solver", getSolverString(p));
     prm.put("preconditioner.type", "cprw"s);
     prm.put("preconditioner.use_well_weights", "false"s);
     prm.put("preconditioner.add_wells", "true"s);
@@ -162,7 +174,7 @@ setupCPR(const std::string& conf, const FlowLinearSolverParameters& p)
     prm.put("maxiter", p.linear_solver_maxiter_);
     prm.put("tol", p.linear_solver_reduction_);
     prm.put("verbosity", p.linear_solver_verbosity_);
-    prm.put("solver", "bicgstab"s);
+    prm.put("solver", getSolverString(p));
     prm.put("preconditioner.type", "cpr"s);
     if (conf == "cpr_quasiimpes") {
         prm.put("preconditioner.weight_type", "quasiimpes"s);
@@ -209,7 +221,7 @@ setupAMG([[maybe_unused]] const std::string& conf, const FlowLinearSolverParamet
     prm.put("tol", p.linear_solver_reduction_);
     prm.put("maxiter", p.linear_solver_maxiter_);
     prm.put("verbosity", p.linear_solver_verbosity_);
-    prm.put("solver", "bicgstab"s);
+    prm.put("solver", getSolverString(p));
     prm.put("preconditioner.type", "amg"s);
     prm.put("preconditioner.alpha", 0.333333333333);
     prm.put("preconditioner.relaxation", 1.0);
@@ -243,7 +255,7 @@ setupILU([[maybe_unused]] const std::string& conf, const FlowLinearSolverParamet
     prm.put("tol", p.linear_solver_reduction_);
     prm.put("maxiter", p.linear_solver_maxiter_);
     prm.put("verbosity", p.linear_solver_verbosity_);
-    prm.put("solver", "bicgstab"s);
+    prm.put("solver", getSolverString(p));
     prm.put("preconditioner.type", "ParOverILU0"s);
     prm.put("preconditioner.relaxation", p.ilu_relaxation_);
     prm.put("preconditioner.ilulevel", p.ilu_fillin_level_);
