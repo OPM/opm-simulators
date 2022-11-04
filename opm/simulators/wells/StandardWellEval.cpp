@@ -746,7 +746,7 @@ updatePrimaryVariablesNewton(const BVectorWell& dwells,
     processFractions();
 
     // updating the total rates Q_t
-    const double relaxation_factor_rate = this->relaxationFactorRate(old_primary_variables, dwells);
+    const double relaxation_factor_rate = this->relaxationFactorRate(old_primary_variables, dwells[0][WQTotal]);
     primary_variables_[WQTotal] = old_primary_variables[WQTotal] - dwells[0][WQTotal] * relaxation_factor_rate;
 
     // updating the bottom hole pressure
