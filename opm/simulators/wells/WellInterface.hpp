@@ -225,8 +225,6 @@ public:
     // Add well contributions to matrix
     virtual void addWellContributions(SparseMatrixAdapter&) const = 0;
 
-    virtual bool isPressureControlled(const WellState& well_state) const;
-    
     virtual void addWellPressureEquations(PressureMatrix& mat,
                                           const BVector& x,
                                           const int pressureVarIndex,

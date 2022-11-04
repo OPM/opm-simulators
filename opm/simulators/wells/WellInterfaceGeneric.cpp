@@ -416,4 +416,18 @@ void WellInterfaceGeneric::reportWellSwitching(const SingleWellState& ws, Deferr
     }
 }
 
+bool WellInterfaceGeneric::isPressureControlled(const WellState& well_state) const
+{
+    const auto& ws = well_state.well(this->index_of_well_);
+    if (this->isInjector()) {
+        const Well::InjectorCMode& current = ws.injection_cmode;
+        return current == Well::InjectorCMode::THP ||
+               current == Well::InjectorCMode::BHP;
+    } else {
+        const Well::ProducerCMode& current = ws.production_cmode;
+        return current == Well::ProducerCMode::THP ||
+               current == Well::ProducerCMode::BHP;
+    }
+}
+
 } // namespace Opm
