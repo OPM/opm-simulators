@@ -816,9 +816,11 @@ namespace Opm
             }
         
             if(not(diag_ell > 0.0)){
-                std::cout << "Diagonal element for cprw on "
+                std::stringstream msg;
+                msg << "Diagonal element for cprw on "
                           << this->name()
-                          << " is " << diag_ell << std::endl;
+                          << " is " << diag_ell;
+                OpmLog::debug(msg.str());
             }
             jacobian[welldof_ind][welldof_ind] = diag_ell;
         }else{
