@@ -193,6 +193,8 @@ public:
                              WellTestState& wellTestState,
                              DeferredLogger& deferred_logger) const;
 
+    bool isPressureControlled(const WellState& well_state) const;
+
 protected:
     bool getAllowCrossFlow() const;
 
