@@ -23,11 +23,6 @@
 #ifndef OPM_STANDARDWELL_GENERIC_HEADER_INCLUDED
 #define OPM_STANDARDWELL_GENERIC_HEADER_INCLUDED
 
-#include <dune/common/dynmatrix.hh>
-#include <dune/common/dynvector.hh>
-#include <dune/istl/bcrsmatrix.hh>
-#include <dune/istl/bvector.hh>
-
 #include <opm/simulators/wells/WellHelpers.hpp>
 
 #include <optional>
@@ -49,27 +44,6 @@ template<class Scalar>
 class StandardWellGeneric
 {
 protected:
-    // sparsity pattern for the matrices
-    //[A C^T    [x       =  [ res
-    // B  D ]   x_well]      res_well]
-
-    // the vector type for the res_well and x_well
-    using VectorBlockWellType = Dune::DynamicVector<Scalar>;
-    using BVectorWell = Dune::BlockVector<VectorBlockWellType>;
-
-    // the matrix type for the diagonal matrix D
-    using DiagMatrixBlockWellType = Dune::DynamicMatrix<Scalar>;
-    using DiagMatWell = Dune::BCRSMatrix<DiagMatrixBlockWellType>;
-
-    // the matrix type for the non-diagonal matrix B and C^T
-    using OffDiagMatrixBlockWellType = Dune::DynamicMatrix<Scalar>;
-    using OffDiagMatWell = Dune::BCRSMatrix<OffDiagMatrixBlockWellType>;
-
-public:
-    /// get the number of blocks of the C and B matrices, used to allocate memory in a WellContributions object
-    unsigned int getNumBlocks() const;
-
-protected:
     StandardWellGeneric(const WellInterfaceGeneric& baseif);
 
     // calculate a relaxation factor to avoid overshoot of total rates
@@ -85,27 +59,10 @@ protected:
     // Base interface reference
     const WellInterfaceGeneric& baseif_;
 
-    // residuals of the well equations
-    BVectorWell resWell_;
-
     // densities of the fluid in each perforation
     std::vector<double> perf_densities_;
     // pressure drop between different perforations
     std::vector<double> perf_pressure_diffs_;
-
-    // two off-diagonal matrices
-    OffDiagMatWell duneB_;
-    OffDiagMatWell duneC_;
-    // diagonal matrix for the well
-    DiagMatWell invDuneD_;
-    DiagMatWell duneD_;
-
-    // Wrapper for the parallel application of B for distributed wells
-    wellhelpers::ParallelStandardWellB<Scalar> parallelB_;
-
-    // several vector used in the matrix calculation
-    mutable BVectorWell Bx_;
-    mutable BVectorWell invDrw_;
 
     double getRho() const
     {

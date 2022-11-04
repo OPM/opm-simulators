@@ -19,6 +19,7 @@
 */
 
 
+#include <opm/simulators/linalg/SmallDenseMatrixUtils.hpp>
 #include <opm/simulators/wells/MSWellHelpers.hpp>
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>

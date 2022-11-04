@@ -32,7 +32,6 @@
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
-#include <opm/simulators/wells/WellAssemble.hpp>
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 #include <opm/simulators/wells/WellConvergence.hpp>
 #include <opm/simulators/wells/WellInterfaceIndices.hpp>
@@ -52,7 +51,8 @@ StandardWellEval<FluidSystem,Indices,Scalar>::
 StandardWellEval(const WellInterfaceIndices<FluidSystem,Indices,Scalar>& baseif)
     : StandardWellGeneric<Scalar>(baseif)
     , baseif_(baseif)
-    , F0_(numWellConservationEq)
+    , F0_(StandardWellEquations<Indices,Scalar>::numWellConservationEq)
+    , linSys_(baseif_.parallelWellInfo())
 {
 }
 
@@ -357,99 +357,6 @@ updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_log
     primary_variables_[Bhp] = ws.bhp;
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-void
-StandardWellEval<FluidSystem,Indices,Scalar>::
-assembleControlEq(const WellState& well_state,
-                  const GroupState& group_state,
-                  const Schedule& schedule,
-                  const SummaryState& summaryState,
-                  DeferredLogger& deferred_logger)
-{
-    static constexpr int Gas = WellInterfaceIndices<FluidSystem,Indices,Scalar>::Gas;
-    static constexpr int Oil = WellInterfaceIndices<FluidSystem,Indices,Scalar>::Oil;
-    static constexpr int Water = WellInterfaceIndices<FluidSystem,Indices,Scalar>::Water;
-    EvalWell control_eq(numWellEq_ + Indices::numEq, 0.0);
-
-    const auto& well = baseif_.wellEcl();
-
-    auto getRates = [&]() {
-        std::vector<EvalWell> rates(3, EvalWell(numWellEq_ + Indices::numEq, 0.0));
-        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-            rates[Water] = getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx));
-        }
-        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-            rates[Oil] = getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx));
-        }
-        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-            rates[Gas] = getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx));
-        }
-        return rates;
-    };
-
-    if (baseif_.wellIsStopped()) {
-        control_eq = getWQTotal();
-    } else if (baseif_.isInjector()) {
-        // Find injection rate.
-        const EvalWell injection_rate = getWQTotal();
-        // Setup function for evaluation of BHP from THP (used only if needed).
-        std::function<EvalWell()> bhp_from_thp = [&]() {
-            const auto rates = getRates();
-            return WellBhpThpCalculator(baseif_).calculateBhpFromThp(well_state,
-                                                                     rates,
-                                                                     well,
-                                                                     summaryState,
-                                                                     this->getRho(),
-                                                                     deferred_logger);
-        };
-        // Call generic implementation.
-        const auto& inj_controls = well.injectionControls(summaryState);
-        WellAssemble(baseif_).
-             assembleControlEqInj(well_state,
-                                  group_state,
-                                  schedule,
-                                  summaryState,
-                                  inj_controls,
-                                  getBhp(),
-                                  injection_rate,
-                                  bhp_from_thp,
-                                  control_eq,
-                                  deferred_logger);
-    } else {
-        // Find rates.
-        const auto rates = getRates();
-        // Setup function for evaluation of BHP from THP (used only if needed).
-        std::function<EvalWell()> bhp_from_thp = [&]() {
-             return WellBhpThpCalculator(baseif_).calculateBhpFromThp(well_state,
-                                                                      rates,
-                                                                      well,
-                                                                      summaryState,
-                                                                      this->getRho(),
-                                                                      deferred_logger);
-        };
-        // Call generic implementation.
-        const auto& prod_controls = well.productionControls(summaryState);
-        WellAssemble(baseif_).
-            assembleControlEqProd(well_state,
-                                  group_state,
-                                  schedule,
-                                  summaryState,
-                                  prod_controls,
-                                  getBhp(),
-                                  rates,
-                                  bhp_from_thp,
-                                  control_eq,
-                                  deferred_logger);
-    }
-
-    // using control_eq to update the matrix and residuals
-    // TODO: we should use a different index system for the well equations
-    this->resWell_[0][Bhp] = control_eq.value();
-    for (int pv_idx = 0; pv_idx < numWellEq_; ++pv_idx) {
-        this->duneD_[0][0][Bhp][pv_idx] = control_eq.derivative(pv_idx + Indices::numEq);
-    }
-}
-
 
 template<class FluidSystem, class Indices, class Scalar>
 void
@@ -702,7 +609,7 @@ void
 StandardWellEval<FluidSystem,Indices,Scalar>::
 computeAccumWell()
 {
-    for (int eq_idx = 0; eq_idx < numWellConservationEq; ++eq_idx) {
+    for (size_t eq_idx = 0; eq_idx < F0_.size(); ++eq_idx) {
         F0_[eq_idx] = wellSurfaceVolumeFraction(eq_idx).value();
     }
 }
@@ -773,7 +680,7 @@ getWellConvergence(const WellState& well_state,
     res.resize(numWellEq_);
     for (int eq_idx = 0; eq_idx < numWellEq_; ++eq_idx) {
         // magnitude of the residual matters
-        res[eq_idx] = std::abs(this->resWell_[0][eq_idx]);
+        res[eq_idx] = std::abs(linSys_.getResidual()[0][eq_idx]);
     }
 
     std::vector<double> well_flux_residual(baseif_.numComponents());
@@ -810,7 +717,7 @@ getWellConvergence(const WellState& well_state,
     WellConvergence(baseif_).
         checkConvergenceControlEq(well_state,
                                   {1.e3, 1.e4, 1.e-4, 1.e-6, maxResidualAllowed},
-                                  std::abs(this->resWell_[0][Bhp]),
+                                   std::abs(linSys_.getResidual()[0][Bhp]),
                                   report,
                                   deferred_logger);
 
@@ -1039,110 +946,16 @@ init(std::vector<double>& perf_depth,
     primary_variables_evaluation_.resize(numWellEq_, EvalWell{numWellEq_ + Indices::numEq, 0.0});
 
     // setup sparsity pattern for the matrices
-    //[A C^T    [x    =  [ res
-    // B D] x_well]      res_well]
-    // set the size of the matrices
-    this->duneD_.setSize(1, 1, 1);
-    this->duneB_.setSize(1, num_cells, baseif_.numPerfs());
-    this->duneC_.setSize(1, num_cells, baseif_.numPerfs());
-
-    for (auto row=this->duneD_.createbegin(), end = this->duneD_.createend(); row!=end; ++row) {
-        // Add nonzeros for diagonal
-        row.insert(row.index());
-    }
-    // the block size is run-time determined now
-    this->duneD_[0][0].resize(numWellEq_, numWellEq_);
-
-    for (auto row = this->duneB_.createbegin(), end = this->duneB_.createend(); row!=end; ++row) {
-        for (int perf = 0 ; perf < baseif_.numPerfs(); ++perf) {
-            const int cell_idx = baseif_.cells()[perf];
-            row.insert(cell_idx);
-        }
-    }
-
-    for (int perf = 0 ; perf < baseif_.numPerfs(); ++perf) {
-        const int cell_idx = baseif_.cells()[perf];
-         // the block size is run-time determined now
-         this->duneB_[0][cell_idx].resize(numWellEq_, Indices::numEq);
-    }
-
-    // make the C^T matrix
-    for (auto row = this->duneC_.createbegin(), end = this->duneC_.createend(); row!=end; ++row) {
-        for (int perf = 0; perf < baseif_.numPerfs(); ++perf) {
-            const int cell_idx = baseif_.cells()[perf];
-            row.insert(cell_idx);
-        }
-    }
-
-    for (int perf = 0; perf < baseif_.numPerfs(); ++perf) {
-        const int cell_idx = baseif_.cells()[perf];
-        this->duneC_[0][cell_idx].resize(numWellEq_, Indices::numEq);
-    }
-
-    this->resWell_.resize(1);
-    // the block size of resWell_ is also run-time determined now
-    this->resWell_[0].resize(numWellEq_);
-
-    // resize temporary class variables
-    this->Bx_.resize( this->duneB_.N() );
-    for (unsigned i = 0; i < this->duneB_.N(); ++i) {
-        this->Bx_[i].resize(numWellEq_);
-    }
-
-    this->invDrw_.resize( this->duneD_.N() );
-    for (unsigned i = 0; i < this->duneD_.N(); ++i) {
-        this->invDrw_[i].resize(numWellEq_);
-    }
+    this->linSys_.init(num_cells, this->numWellEq_, baseif_.numPerfs(), baseif_.cells());
 }
 
 template<class FluidSystem, class Indices, class Scalar>
-void
-StandardWellEval<FluidSystem,Indices,Scalar>::
+void StandardWellEval<FluidSystem,Indices,Scalar>::
 addWellContribution(WellContributions& wellContribs) const
 {
-    std::vector<int> colIndices;
-    std::vector<double> nnzValues;
-    colIndices.reserve(this->duneB_.nonzeroes());
-    nnzValues.reserve(this->duneB_.nonzeroes()*numStaticWellEq * Indices::numEq);
-
-    // duneC
-    for ( auto colC = this->duneC_[0].begin(), endC = this->duneC_[0].end(); colC != endC; ++colC )
-    {
-        colIndices.emplace_back(colC.index());
-        for (int i = 0; i < numStaticWellEq; ++i) {
-            for (int j = 0; j < Indices::numEq; ++j) {
-                nnzValues.emplace_back((*colC)[i][j]);
-            }
-        }
-    }
-    wellContribs.addMatrix(WellContributions::MatrixType::C, colIndices.data(), nnzValues.data(), this->duneC_.nonzeroes());
-
-    // invDuneD
-    colIndices.clear();
-    nnzValues.clear();
-    colIndices.emplace_back(0);
-    for (int i = 0; i < numStaticWellEq; ++i)
-    {
-        for (int j = 0; j < numStaticWellEq; ++j) {
-            nnzValues.emplace_back(this->invDuneD_[0][0][i][j]);
-        }
-    }
-    wellContribs.addMatrix(WellContributions::MatrixType::D, colIndices.data(), nnzValues.data(), 1);
-
-    // duneB
-    colIndices.clear();
-    nnzValues.clear();
-    for ( auto colB = this->duneB_[0].begin(), endB = this->duneB_[0].end(); colB != endB; ++colB )
-    {
-        colIndices.emplace_back(colB.index());
-        for (int i = 0; i < numStaticWellEq; ++i) {
-            for (int j = 0; j < Indices::numEq; ++j) {
-                nnzValues.emplace_back((*colB)[i][j]);
-            }
-        }
-    }
-    wellContribs.addMatrix(WellContributions::MatrixType::B, colIndices.data(), nnzValues.data(), this->duneB_.nonzeroes());
+    linSys_.addWellContribution(wellContribs);
 }
+
 
 #define INSTANCE(A,...) \
 template class StandardWellEval<BlackOilFluidSystem<double,A>,__VA_ARGS__,double>;

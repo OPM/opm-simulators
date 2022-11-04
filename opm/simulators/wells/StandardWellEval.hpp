@@ -23,6 +23,7 @@
 #ifndef OPM_STANDARDWELL_EVAL_HEADER_INCLUDED
 #define OPM_STANDARDWELL_EVAL_HEADER_INCLUDED
 
+#include <opm/simulators/wells/StandardWellEquations.hpp>
 #include <opm/simulators/wells/StandardWellGeneric.hpp>
 
 #include <opm/material/densead/DynamicEvaluation.hpp>
@@ -46,17 +47,9 @@ template<class FluidSystem, class Indices, class Scalar>
 class StandardWellEval : public StandardWellGeneric<Scalar>
 {
 protected:
-    // number of the conservation equations
-    static constexpr int numWellConservationEq = Indices::numPhases + Indices::numSolvents;
-    // number of the well control equations
-    static constexpr int numWellControlEq = 1;
-    // number of the well equations that will always be used
-    // based on the solution strategy, there might be other well equations be introduced
-    static constexpr int numStaticWellEq = numWellConservationEq + numWellControlEq;
-    // the index for Bhp in primary variables and also the index of well control equation
-    // they both will be the last one in their respective system.
-    // TODO: we should have indices for the well equations and well primary variables separately
-    static constexpr int Bhp = numStaticWellEq - numWellControlEq;
+    using BVectorWell = typename StandardWellEquations<Indices,Scalar>::BVectorWell;
+    static constexpr int numStaticWellEq = StandardWellEquations<Indices,Scalar>::numStaticWellEq;
+    static constexpr int Bhp = StandardWellEquations<Indices,Scalar>::Bhp;
 
     // the positions of the primary variables for StandardWell
     // the first one is the weighted total rate (WQ_t), the second and the third ones are F_w and F_g,
@@ -94,10 +87,15 @@ protected:
 public:
     using EvalWell = DenseAd::DynamicEvaluation<Scalar, numStaticWellEq + Indices::numEq + 1>;
     using Eval = DenseAd::Evaluation<Scalar, Indices::numEq>;
-    using BVectorWell = typename StandardWellGeneric<Scalar>::BVectorWell;
 
-        /// add the contribution (C, D^-1, B matrices) of this Well to the WellContributions object
-        void addWellContribution(WellContributions& wellContribs) const;
+    /// get the number of blocks of the C and B matrices, used to allocate memory in a WellContributions object
+    unsigned int getNumBlocks() const
+    {
+        return this->linSys_.getNumBlocks();
+    }
+
+    /// add the contribution (C, D^-1, B matrices) of this Well to the WellContributions object
+    void addWellContribution(WellContributions& wellContribs) const;
 
 protected:
     StandardWellEval(const WellInterfaceIndices<FluidSystem,Indices,Scalar>& baseif);
@@ -126,12 +124,6 @@ protected:
     // which might result in negative rates
     static double relaxationFactorFractionsProducer(const std::vector<double>& primary_variables,
                                                     const BVectorWell& dwells);
-
-    void assembleControlEq(const WellState& well_state,
-                           const GroupState& group_state,
-                           const Schedule& schedule,
-                           const SummaryState& summaryState,
-                           DeferredLogger& deferred_logger);
 
     // computing the accumulation term for later use in well mass equations
     void computeAccumWell();
@@ -190,6 +182,8 @@ protected:
 
     // the saturations in the well bore under surface conditions at the beginning of the time step
     std::vector<double> F0_;
+
+    StandardWellEquations<Indices,Scalar> linSys_; //!< Equation system
 };
 
 }

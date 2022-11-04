@@ -52,11 +52,7 @@ StandardWellGeneric(const WellInterfaceGeneric& baseif)
     : baseif_(baseif)
     , perf_densities_(baseif_.numPerfs())
     , perf_pressure_diffs_(baseif_.numPerfs())
-    , parallelB_(duneB_, baseif_.parallelWellInfo())
 {
-    duneB_.setBuildMode(OffDiagMatWell::row_wise);
-    duneC_.setBuildMode(OffDiagMatWell::row_wise);
-    invDuneD_.setBuildMode(DiagMatWell::row_wise);
 }
 
 
@@ -147,14 +143,6 @@ computeConnectionPressureDelta()
     const auto beg = perf_pressure_diffs_.begin();
     const auto end = perf_pressure_diffs_.end();
     baseif_.parallelWellInfo().partialSumPerfValues(beg, end);
-}
-
-template<class Scalar>
-unsigned int
-StandardWellGeneric<Scalar>::
-getNumBlocks() const
-{
-    return duneB_.nonzeroes();
 }
 
 template class StandardWellGeneric<double>;

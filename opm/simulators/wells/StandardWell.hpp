@@ -39,7 +39,6 @@
 #include <opm/models/blackoil/blackoilbrinemodules.hh>
 #include <opm/models/blackoil/blackoilmicpmodules.hh>
 
-#include <opm/material/densead/DynamicEvaluation.hpp>
 #include <opm/input/eclipse/EclipseState/Runspec.hpp>
 #include <opm/input/eclipse/Schedule/ScheduleTypes.hpp>
 
@@ -122,7 +121,6 @@ namespace Opm
         using Eval = typename StdWellEval::Eval;
         using EvalWell = typename StdWellEval::EvalWell;
         using BVectorWell = typename StdWellEval::BVectorWell;
-        using DiagMatrixBlockWellType = typename StdWellEval::DiagMatrixBlockWellType;
 
         StandardWell(const Well& well,
                      const ParallelWellInfo& pw_info,
