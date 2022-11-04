@@ -703,10 +703,11 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
                     continue;
                 }
 
-                // TODO: the well with same name can change a lot, like they might not have same number of segments
-                // we need to handle that later.
-                // for now, we just copy them.
-                ws.segments = prev_ws.segments;
+                // we do not copy the segment information if the number of segments have changed
+                // safer way should be to check the relevant Event
+                if (ws.segments.size() == prev_ws.segments.size()) {
+                    ws.segments = prev_ws.segments;
+                }
             }
         }
     }
