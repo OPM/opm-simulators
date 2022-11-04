@@ -372,6 +372,8 @@ updatePrimaryVariables(const WellState& well_state) const
     // the index of the top segment in the WellState
     const auto& ws = well_state.well(baseif_.indexOfWell());
     const auto& segments = ws.segments;
+    // maybe a throw for parallel running?
+    assert(int(segments.size()) == this->numberOfSegments());
     const auto& segment_rates = segments.rates;
     const auto& segment_pressure = segments.pressure;
     const PhaseUsage& pu = baseif_.phaseUsage();
