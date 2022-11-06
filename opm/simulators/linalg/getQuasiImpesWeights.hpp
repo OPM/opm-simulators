@@ -132,9 +132,18 @@ namespace Amg
             }
 
             double denominator = 1.0;
+            double rs = Toolbox::template decay<double>(fs.Rs());
+            double rv = Toolbox::template decay<double>(fs.Rv());
+            const auto& meaning = solution[index].primaryVarsMeaning();
+            if (meaning == PrimaryVariables::Sw_pg_Rv) {
+                rs = 0.0;
+            }
+            if (meaning == PrimaryVariables::Sw_po_Rs) {
+                rv = 0.0;
+            }
             if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)
                 && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                denominator = Toolbox::template decay<LhsEval>(1 - fs.Rs() * fs.Rv());
+                denominator = Toolbox::template decay<LhsEval>(1 - rs * rv);
             }
 
             if (not(denominator > 0)) {
@@ -144,31 +153,37 @@ namespace Amg
                 unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(
                     FluidSystem::solventComponentIndex(FluidSystem::oilCompIdx));
                 bweights[activeCompIdx] = Toolbox::template decay<LhsEval>(
-                    (1 / fs.invB(FluidSystem::oilPhaseIdx) - fs.Rs() / fs.invB(FluidSystem::gasPhaseIdx))
+                    (1 / fs.invB(FluidSystem::oilPhaseIdx) - rs / fs.invB(FluidSystem::gasPhaseIdx))
                     / denominator);
             }
             if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                 unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(
                     FluidSystem::solventComponentIndex(FluidSystem::gasCompIdx));
                 bweights[activeCompIdx] = Toolbox::template decay<LhsEval>(
-                    (1 / fs.invB(FluidSystem::gasPhaseIdx) - fs.Rv() / fs.invB(FluidSystem::oilPhaseIdx))
+                    (1 / fs.invB(FluidSystem::gasPhaseIdx) - rv / fs.invB(FluidSystem::oilPhaseIdx))
                     / denominator);
             }
-            const auto& meaning = solution[index].primaryVarsMeaning();
-            if ((meaning == PrimaryVariables::Sw_pg_Rv) || (meaning == PrimaryVariables::Sw_po_Rs)) {
-                // Probably not need bweiths may be initialized to zero anyway
-                unsigned activeCompIdx = -10;
-                if (meaning == PrimaryVariables::Sw_pg_Rv) {
-                    activeCompIdx = Indices::canonicalToActiveComponentIndex(
-                        FluidSystem::solventComponentIndex(FluidSystem::oilCompIdx));
+            if(false){
+                // usure about the best for undersaturated
+                
+                if ((meaning == PrimaryVariables::Sw_pg_Rv) || (meaning == PrimaryVariables::Sw_po_Rs)) {
+                    // Probably not need bweiths may be initialized to zero anyway
+                    unsigned activeCompIdx = -10;
+                    if (meaning == PrimaryVariables::Sw_pg_Rv) {
+                        // only water and gas pressent
+                        activeCompIdx = Indices::canonicalToActiveComponentIndex(
+                        FluidSystem::solventComponentIndex(FluidSystem::oilCompIdx));                       
+                        bweights[activeCompIdx] = 0.0;
+                                                                                         }
+                    if (meaning == PrimaryVariables::Sw_po_Rs) {
+                        // only water and oil pressent
+                        activeCompIdx = Indices::canonicalToActiveComponentIndex(
+                            FluidSystem::solventComponentIndex(FluidSystem::gasCompIdx));
+                        bweights[activeCompIdx] = 0.0;
                 }
-                if (meaning == PrimaryVariables::Sw_po_Rs) {
-                    activeCompIdx = Indices::canonicalToActiveComponentIndex(
-                        FluidSystem::solventComponentIndex(FluidSystem::gasCompIdx));
-                }
-                bweights[activeCompIdx] = 0.0;
+                
             }
-
+            }
             weights[index] = bweights;
         }
     }
