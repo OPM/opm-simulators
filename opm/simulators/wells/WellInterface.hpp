@@ -103,7 +103,6 @@ public:
     using WellInterfaceFluidSystem<FluidSystem>::Gas;
     using WellInterfaceFluidSystem<FluidSystem>::Oil;
     using WellInterfaceFluidSystem<FluidSystem>::Water;
-    using RatioLimitCheckReport = typename WellInterfaceFluidSystem<FluidSystem>::RatioLimitCheckReport;
 
     static constexpr bool has_solvent = getPropValue<TypeTag, Properties::EnableSolvent>();
     static constexpr bool has_zFraction = getPropValue<TypeTag, Properties::EnableExtbo>();
@@ -172,8 +171,8 @@ public:
     virtual std::optional<double> computeBhpAtThpLimitProdWithAlq(
         const Simulator& ebos_simulator,
         const SummaryState& summary_state,
-        DeferredLogger& deferred_logger,
-        double alq_value
+        const double alq_value,
+        DeferredLogger& deferred_logger
     ) const = 0;
 
     /// using the solution x to recover the solution xw for wells and applying
@@ -226,8 +225,6 @@ public:
     // Add well contributions to matrix
     virtual void addWellContributions(SparseMatrixAdapter&) const = 0;
 
-    virtual bool isPressureControlled(const WellState& well_state) const;
-    
     virtual void addWellPressureEquations(PressureMatrix& mat,
                                           const BVector& x,
                                           const int pressureVarIndex,

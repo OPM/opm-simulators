@@ -33,6 +33,9 @@
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/MSWellHelpers.hpp>
+#include <opm/simulators/wells/WellAssemble.hpp>
+#include <opm/simulators/wells/WellBhpThpCalculator.hpp>
+#include <opm/simulators/wells/WellConvergence.hpp>
 #include <opm/simulators/wells/WellInterfaceIndices.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
@@ -143,89 +146,6 @@ initPrimaryVariablesEvaluation() const
 }
 
 template<typename FluidSystem, typename Indices, typename Scalar>
-void
-MultisegmentWellEval<FluidSystem,Indices,Scalar>::
-checkConvergenceControlEq(const WellState& well_state,
-                          ConvergenceReport& report,
-                          const double tolerance_pressure_ms_wells,
-                          const double tolerance_wells,
-                          const double max_residual_allowed,
-                          DeferredLogger& deferred_logger) const
-{
-    double control_tolerance = 0.;
-    using CR = ConvergenceReport;
-    CR::WellFailure::Type ctrltype = CR::WellFailure::Type::Invalid;
-
-    const int well_index = baseif_.indexOfWell();
-    const auto& ws = well_state.well(well_index);
-    if (baseif_.isInjector() )
-    {
-        auto current = ws.injection_cmode;
-        switch(current) {
-        case Well::InjectorCMode::THP:
-            ctrltype = CR::WellFailure::Type::ControlTHP;
-            control_tolerance = tolerance_pressure_ms_wells;
-            break;
-        case Well::InjectorCMode::BHP:
-            ctrltype = CR::WellFailure::Type::ControlBHP;
-            control_tolerance = tolerance_pressure_ms_wells;
-            break;
-        case Well::InjectorCMode::RATE:
-        case Well::InjectorCMode::RESV:
-            ctrltype = CR::WellFailure::Type::ControlRate;
-            control_tolerance = tolerance_wells;
-            break;
-        case Well::InjectorCMode::GRUP:
-            ctrltype = CR::WellFailure::Type::ControlRate;
-            control_tolerance = tolerance_wells;
-            break;
-        default:
-            OPM_DEFLOG_THROW(std::runtime_error, "Unknown well control control types for well " << baseif_.name(), deferred_logger);
-        }
-    }
-
-    if (baseif_.isProducer() )
-    {
-        auto current = ws.production_cmode;
-        switch(current) {
-        case Well::ProducerCMode::THP:
-            ctrltype = CR::WellFailure::Type::ControlTHP;
-            control_tolerance = tolerance_pressure_ms_wells;
-            break;
-        case Well::ProducerCMode::BHP:
-            ctrltype = CR::WellFailure::Type::ControlBHP;
-            control_tolerance = tolerance_pressure_ms_wells;
-            break;
-        case Well::ProducerCMode::ORAT:
-        case Well::ProducerCMode::WRAT:
-        case Well::ProducerCMode::GRAT:
-        case Well::ProducerCMode::LRAT:
-        case Well::ProducerCMode::RESV:
-        case Well::ProducerCMode::CRAT:
-            ctrltype = CR::WellFailure::Type::ControlRate;
-            control_tolerance = tolerance_wells;
-            break;
-        case Well::ProducerCMode::GRUP:
-            ctrltype = CR::WellFailure::Type::ControlRate;
-            control_tolerance = tolerance_wells;
-            break;
-        default:
-            OPM_DEFLOG_THROW(std::runtime_error, "Unknown well control control types for well " << baseif_.name(), deferred_logger);
-        }
-    }
-
-    const double well_control_residual = std::abs(resWell_[0][SPres]);
-    const int dummy_component = -1;
-    if (std::isnan(well_control_residual)) {
-        report.setWellFailed({ctrltype, CR::Severity::NotANumber, dummy_component, baseif_.name()});
-    } else if (well_control_residual > max_residual_allowed * 10.) {
-        report.setWellFailed({ctrltype, CR::Severity::TooLarge, dummy_component, baseif_.name()});
-    } else if ( well_control_residual > control_tolerance) {
-        report.setWellFailed({ctrltype, CR::Severity::Normal, dummy_component, baseif_.name()});
-    }
-}
-
-template<typename FluidSystem, typename Indices, typename Scalar>
 ConvergenceReport
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 getWellConvergence(const WellState& well_state,
@@ -302,12 +222,16 @@ getWellConvergence(const WellState& well_state,
         }
     }
 
-    checkConvergenceControlEq(well_state,
-                              report,
-                              tolerance_pressure_ms_wells,
-                              tolerance_wells,
-                              max_residual_allowed,
-                              deferred_logger);
+    WellConvergence(baseif_).
+        checkConvergenceControlEq(well_state,
+                                  {tolerance_pressure_ms_wells,
+                                   tolerance_pressure_ms_wells,
+                                   tolerance_wells,
+                                   tolerance_wells,
+                                   max_residual_allowed},
+                                  std::abs(resWell_[0][SPres]),
+                                  report,
+                                  deferred_logger);
 
     return report;
 }
@@ -448,6 +372,8 @@ updatePrimaryVariables(const WellState& well_state) const
     // the index of the top segment in the WellState
     const auto& ws = well_state.well(baseif_.indexOfWell());
     const auto& segments = ws.segments;
+    // maybe a throw for parallel running?
+    assert(int(segments.size()) == this->numberOfSegments());
     const auto& segment_rates = segments.rates;
     const auto& segment_pressure = segments.pressure;
     const PhaseUsage& pu = baseif_.phaseUsage();
@@ -1304,40 +1230,49 @@ assembleControlEq(const WellState& well_state,
         }
         const EvalWell injection_rate = getWQTotal() / scaling;
         // Setup function for evaluation of BHP from THP (used only if needed).
-        auto bhp_from_thp = [&]() {
+        std::function<EvalWell()> bhp_from_thp = [&]() {
             const auto rates = getRates();
-            return baseif_.calculateBhpFromThp(well_state, rates, well, summaryState, rho, deferred_logger);
+            return WellBhpThpCalculator(baseif_).calculateBhpFromThp(well_state,
+                                                                     rates,
+                                                                     well,
+                                                                     summaryState,
+                                                                     rho,
+                                                                     deferred_logger);
         };
         // Call generic implementation.
-
-        baseif_.assembleControlEqInj(well_state,
-                                     group_state,
-                                     schedule,
-                                     summaryState,
-                                     inj_controls,
-                                     getBhp(),
-                                     injection_rate,
-                                     bhp_from_thp,
-                                     control_eq,
-                                     deferred_logger);
+        WellAssemble(baseif_).assembleControlEqInj(well_state,
+                                                  group_state,
+                                                   schedule,
+                                                   summaryState,
+                                                   inj_controls,
+                                                   getBhp(),
+                                                   injection_rate,
+                                                   bhp_from_thp,
+                                                   control_eq,
+                                                   deferred_logger);
     } else {
         // Find rates.
         const auto rates = getRates();
         // Setup function for evaluation of BHP from THP (used only if needed).
-        auto bhp_from_thp = [&]() {
-            return baseif_.calculateBhpFromThp(well_state, rates, well, summaryState, rho, deferred_logger);
+        std::function<EvalWell()> bhp_from_thp = [&]() {
+            return WellBhpThpCalculator(baseif_).calculateBhpFromThp(well_state,
+                                                                     rates,
+                                                                     well,
+                                                                     summaryState,
+                                                                     rho,
+                                                                     deferred_logger);
         };
         // Call generic implementation.
-        baseif_.assembleControlEqProd(well_state,
-                                      group_state,
-                                      schedule,
-                                      summaryState,
-                                      prod_controls,
-                                      getBhp(),
-                                      rates,
-                                      bhp_from_thp,
-                                      control_eq,
-                                      deferred_logger);
+        WellAssemble(baseif_).assembleControlEqProd(well_state,
+                                                    group_state,
+                                                    schedule,
+                                                    summaryState,
+                                                    prod_controls,
+                                                    getBhp(),
+                                                    rates,
+                                                    bhp_from_thp,
+                                                    control_eq,
+                                                    deferred_logger);
     }
 
     // using control_eq to update the matrix and residuals
@@ -1345,47 +1280,6 @@ assembleControlEq(const WellState& well_state,
     for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
         duneD_[0][0][SPres][pv_idx] = control_eq.derivative(pv_idx + Indices::numEq);
     }
-}
-
-template<typename FluidSystem, typename Indices, typename Scalar>
-void
-MultisegmentWellEval<FluidSystem,Indices,Scalar>::
-updateThp(WellState& well_state,
-          const double rho,
-          DeferredLogger& deferred_logger) const
-{
-    static constexpr int Gas = BlackoilPhases::Vapour;
-    static constexpr int Oil = BlackoilPhases::Liquid;
-    static constexpr int Water = BlackoilPhases::Aqua;
-    auto& ws = well_state.well(baseif_.indexOfWell());
-
-    // When there is no vaild VFP table provided, we set the thp to be zero.
-    if (!baseif_.isVFPActive(deferred_logger) || baseif_.wellIsStopped()) {
-        ws.thp = 0;
-        return;
-    }
-    // For THP controlled wells, we know the thp value
-    bool thp_controlled = baseif_.isInjector() ? ws.injection_cmode == Well::InjectorCMode::THP:
-                                              ws.production_cmode == Well::ProducerCMode::THP;
-    if (thp_controlled) {
-        return;
-    }
-
-    // the well is under other control types, we calculate the thp based on bhp and rates
-    std::vector<double> rates(3, 0.0);
-
-    const PhaseUsage& pu = baseif_.phaseUsage();
-    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-        rates[ Water ] = ws.surface_rates[pu.phase_pos[ Water ] ];
-    }
-    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-        rates[ Oil ] = ws.surface_rates[pu.phase_pos[ Oil ] ];
-    }
-    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-        rates[ Gas ] = ws.surface_rates[pu.phase_pos[ Gas ] ];
-    }
-
-    ws.thp = this->calculateThpFromBhp(rates, ws.bhp, rho, deferred_logger);
 }
 
 template<typename FluidSystem, typename Indices, typename Scalar>
@@ -1555,7 +1449,12 @@ updateWellStateFromPrimaryVariables(WellState& well_state,
             ws.bhp = segment_pressure[seg];
         }
     }
-    updateThp(well_state, rho, deferred_logger);
+    WellBhpThpCalculator(baseif_).
+            updateThp(rho, [this]() { return baseif_.wellEcl().alq_value(); },
+                      {FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx),
+                       FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx),
+                       FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)},
+                      well_state, deferred_logger);
 }
 
 template<typename FluidSystem, typename Indices, typename Scalar>

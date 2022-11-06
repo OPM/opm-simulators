@@ -130,8 +130,8 @@ computeBhpAtThpLimit_(double alq) const
     auto bhp_at_thp_limit = this->well_.computeBhpAtThpLimitProdWithAlq(
         this->ebos_simulator_,
         this->summary_state_,
-        this->deferred_logger_,
-        alq);
+        alq,
+        this->deferred_logger_);
     if (bhp_at_thp_limit) {
         if (*bhp_at_thp_limit < this->controls_.bhp_limit) {
             const std::string msg = fmt::format(

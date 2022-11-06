@@ -39,8 +39,9 @@ namespace RateConverter
 class Group;
 class GroupState;
 class Schedule;
-class WellState;
+struct RatioLimitCheckReport;
 class SingleWellState;
+class WellState;
 
 template<class FluidSystem>
 class WellInterfaceFluidSystem : public WellInterfaceGeneric {
@@ -51,12 +52,6 @@ protected:
     static constexpr int INVALIDCOMPLETION = std::numeric_limits<int>::max();
 
 public:
-    void updateWellTestState(const SingleWellState& ws,
-                             const double& simulationTime,
-                             const bool& writeMessageToOPMLog,
-                             WellTestState& wellTestState,
-                             DeferredLogger& deferred_logger) const;
-
     int flowPhaseToEbosPhaseIdx(const int phaseIdx) const;
 
     static constexpr int Water = BlackoilPhases::Aqua;
@@ -86,30 +81,6 @@ protected:
                                     const SummaryState& summaryState,
                                     DeferredLogger& deferred_logger) const;
 
-    Well::InjectorCMode activeInjectionConstraint(const SingleWellState& ws,
-                                                  const SummaryState& summaryState,
-                                                  DeferredLogger& deferred_logger) const;
-
-    Well::ProducerCMode activeProductionConstraint(const SingleWellState& ws,
-                                                   const SummaryState& summaryState,
-                                                   DeferredLogger& deferred_logger) const;
-
-    std::pair<bool, double> checkGroupConstraintsInj(const Group& group,
-                                                     const WellState& well_state,
-                                                     const GroupState& group_state,
-                                                     const double efficiencyFactor,
-                                                     const Schedule& schedule,
-                                                     const SummaryState& summaryState,
-                                                     DeferredLogger& deferred_logger) const;
-
-    std::pair<bool, double> checkGroupConstraintsProd(const Group& group,
-                                                      const WellState& well_state,
-                                                      const GroupState& group_state,
-                                                      const double efficiencyFactor,
-                                                      const Schedule& schedule,
-                                                      const SummaryState& summaryState,
-                                                      DeferredLogger& deferred_logger) const;
-
     bool checkGroupConstraints(WellState& well_state,
                                const GroupState& group_state,
                                const Schedule& schedule,
@@ -121,39 +92,6 @@ protected:
                           const Schedule& schedule,
                           const SummaryState& summaryState,
                           DeferredLogger& deferred_logger) const;
-
-    bool checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
-                             const double* rates_or_potentials,
-                             Opm::DeferredLogger& deferred_logger) const;
-
-    struct RatioLimitCheckReport{
-        bool ratio_limit_violated = false;
-        int worst_offending_completion = INVALIDCOMPLETION;
-        double violation_extent = 0.0;
-    };
-
-    void checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
-                               const SingleWellState& ws,
-                               RatioLimitCheckReport& report) const;
-
-    void checkMaxGORLimit(const WellEconProductionLimits& econ_production_limits,
-                          const SingleWellState& ws,
-                          RatioLimitCheckReport& report) const;
-
-    void checkMaxWGRLimit(const WellEconProductionLimits& econ_production_limits,
-                          const SingleWellState& ws,
-                          RatioLimitCheckReport& report) const;
-
-    void checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
-                              const SingleWellState& ws,
-                              RatioLimitCheckReport& report,
-                              DeferredLogger& deferred_logger) const;
-
-    void updateWellTestStateEconomic(const SingleWellState& ws,
-                                     const double simulation_time,
-                                     const bool write_message_to_opmlog,
-                                     WellTestState& well_test_state,
-                                     DeferredLogger& deferred_logger) const;
 
     std::optional<double>
     getGroupInjectionTargetRate(const Group& group,
@@ -175,18 +113,6 @@ protected:
 
     // For the conversion between the surface volume rate and reservoir voidage rate
     const RateConverterType& rateConverter_;
-
-private:
-    template <typename RatioFunc>
-    void checkMaxRatioLimitCompletions(const SingleWellState& ws,
-                                       const double max_ratio_limit,
-                                       const RatioFunc& ratioFunc,
-                                       RatioLimitCheckReport& report) const;
-
-    template<typename RatioFunc>
-    bool checkMaxRatioLimitWell(const SingleWellState& well_state,
-                                const double max_ratio_limit,
-                                const RatioFunc& ratioFunc) const;
 };
 
 }

@@ -1084,6 +1084,7 @@ public:
             this->referencePorosity_[1] = this->referencePorosity_[0];
             updateReferencePorosity_();
             updatePffDofData_();
+            this->model().linearizer().updateDiscretizationParameters();
         }
 
         bool tuningEvent = this->beginEpisode_(enableExperiments, this->episodeIndex());
@@ -2928,7 +2929,7 @@ private:
         const std::vector<T>& operator()(FaceDir::DirEnum dir) const
         {
             if (dir == FaceDir::DirEnum::Unknown)
-                throw std::runtime_error("Tried to acess BC data for the 'Unknown' direction");
+                throw std::runtime_error("Tried to access BC data for the 'Unknown' direction");
             int idx = 0;
             int div = static_cast<int>(dir);
             while ((div /= 2) >= 1)

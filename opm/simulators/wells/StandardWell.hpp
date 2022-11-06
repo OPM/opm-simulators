@@ -218,11 +218,11 @@ namespace Opm
             std::vector<double> &potentials,
             double alq) const;
 
-        virtual std::optional<double> computeBhpAtThpLimitProdWithAlq(
+        std::optional<double> computeBhpAtThpLimitProdWithAlq(
             const Simulator& ebos_simulator,
             const SummaryState& summary_state,
-            DeferredLogger& deferred_logger,
-            double alq_value) const override;
+            const double alq_value,
+            DeferredLogger& deferred_logger) const override;
 
         virtual void computeWellRatesWithBhp(
             const Simulator& ebosSimulator,

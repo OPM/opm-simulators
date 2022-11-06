@@ -139,7 +139,7 @@ namespace Opm
                                              DeferredLogger& deferred_logger) const override;
 
         virtual void  addWellContributions(SparseMatrixAdapter& jacobian) const override;
-        
+
         virtual void addWellPressureEquations(PressureMatrix& mat,
                                               const BVector& x,
                                               const int pressureVarIndex,
@@ -161,14 +161,13 @@ namespace Opm
                                     double* connII,
                                     DeferredLogger& deferred_logger) const;
 
-        virtual std::optional<double> computeBhpAtThpLimitProdWithAlq(
-            const Simulator& ebos_simulator,
-            const SummaryState& summary_state,
-            DeferredLogger& deferred_logger,
-            double alq_value) const override;
+        std::optional<double>
+        computeBhpAtThpLimitProdWithAlq(const Simulator& ebos_simulator,
+                                        const SummaryState& summary_state,
+                                        const double alq_value,
+                                        DeferredLogger& deferred_logger) const override;
 
     protected:
-        int number_segments_;
 
         // regularize msw equation
         bool regularize_;

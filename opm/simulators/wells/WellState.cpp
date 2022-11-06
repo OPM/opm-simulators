@@ -27,10 +27,94 @@
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
+#include <opm/grid/common/p2pcommunicator.hh>
+#include <opm/output/data/Wells.hpp>
 
 #include <algorithm>
 #include <cassert>
 #include <numeric>
+#include <set>
+#include <stdexcept>
+
+namespace {
+
+using P2PCommunicatorType = Dune::Point2PointCommunicator<Dune::SimpleMessageBuffer>;
+using MessageBufferType = P2PCommunicatorType::MessageBufferType;
+
+class PackUnpackXConn : public P2PCommunicatorType::DataHandleInterface
+{
+public:
+    using XConn = std::vector<Opm::data::Connection>;
+
+    explicit PackUnpackXConn(const bool   isOwner,
+                             const XConn& local,
+                             XConn&       global);
+
+    // Pack all data associated with link.
+    void pack(const int link, MessageBufferType& buffer);
+
+    // Unpack all data associated with link.
+    void unpack([[maybe_unused]] const int link,
+                MessageBufferType&         buffer);
+
+private:
+    const XConn& local_;
+    XConn& global_;
+};
+
+PackUnpackXConn::PackUnpackXConn(const bool   isOwner,
+                                 const XConn& local,
+                                 XConn&       global)
+    : local_ (local)
+    , global_(global)
+{
+    if (! isOwner) { return; }
+
+    this->global_.insert(this->global_.end(),
+                         this->local_.begin(),
+                         this->local_.end());
+}
+
+void PackUnpackXConn::pack(const int          link,
+                           MessageBufferType& buffer)
+{
+    // We should only get one link
+    if (link != 0) {
+        throw std::logic_error {
+            "link in pack() does not match expected value 0"
+        };
+    }
+
+    // Write all local connection results
+    {
+        const auto nconn = this->local_.size();
+        buffer.write(nconn);
+    }
+
+    for (const auto& conn : this->local_) {
+        conn.write(buffer);
+    }
+}
+
+void PackUnpackXConn::unpack([[maybe_unused]] const int link,
+                             MessageBufferType&         buffer)
+{
+    const auto nconn = [this, &buffer]()
+    {
+        auto nc = 0 * this->local_.size();
+        buffer.read(nc);
+
+        return nc;
+    }();
+
+    this->global_.reserve(this->global_.size() + nconn);
+
+    for (auto conn = 0*nconn; conn < nconn; ++conn) {
+        this->global_.emplace_back().read(buffer);
+    }
+}
+
+} // Anonymous namespace
 
 namespace Opm
 {
@@ -317,21 +401,24 @@ void WellState::gatherVectorsOnRoot(const std::vector<data::Connection>& from_co
                                                          std::vector<data::Connection>& to_connections,
                                                          const Communication& comm) const
 {
-    int size = from_connections.size();
-    std::vector<int> sizes;
-    std::vector<int> displ;
-    if (comm.rank()==0){
-        sizes.resize(comm.size());
-    }
-    comm.gather(&size, sizes.data(), 1, 0);
+    auto send = std::set<int>{};
+    auto recv = std::set<int>{};
 
-    if (comm.rank()==0){
-        displ.resize(comm.size()+1, 0);
-        std::partial_sum(sizes.begin(), sizes.end(), displ.begin()+1);
-        to_connections.resize(displ.back());
+    const auto isOwner = comm.rank() == 0;
+    if (isOwner) {
+        for (auto other = 0*comm.size() + 1; other < comm.size(); ++other) {
+            recv.insert(other);
+        }
     }
-    comm.gatherv(from_connections.data(), size, to_connections.data(),
-                 sizes.data(), displ.data(), 0);
+    else {
+        send.insert(0);
+    }
+
+    auto toOwnerComm = P2PCommunicatorType{ comm };
+    toOwnerComm.insertRequest(send, recv);
+
+    PackUnpackXConn lineariser { isOwner, from_connections, to_connections };
+    toOwnerComm.exchange(lineariser);
 }
 
 data::Wells
@@ -358,8 +445,9 @@ WellState::report(const int* globalCellIdxMap,
         const auto& wv = ws.surface_rates;
         const auto& wname = this->name(well_index);
 
+        auto dummyWell = data::Well{};
+        auto& well = ws.parallel_info.get().isOwner() ? res[wname] : dummyWell;
 
-        data::Well well;
         well.bhp = ws.bhp;
         well.thp = ws.thp;
         well.temperature = ws.temperature;
@@ -434,9 +522,8 @@ WellState::report(const int* globalCellIdxMap,
             const auto seg_no = ws.segments.segment_number()[seg_ix];
             well.segments[seg_no] = this->reportSegmentResults(well_index, seg_ix, seg_no);
         }
-
-        res.insert( {wname, well} );
     }
+
     return res;
 }
 
@@ -616,10 +703,11 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
                     continue;
                 }
 
-                // TODO: the well with same name can change a lot, like they might not have same number of segments
-                // we need to handle that later.
-                // for now, we just copy them.
-                ws.segments = prev_ws.segments;
+                // we do not copy the segment information if the number of segments have changed
+                // safer way should be to check the relevant Event
+                if (ws.segments.size() == prev_ws.segments.size()) {
+                    ws.segments = prev_ws.segments;
+                }
             }
         }
     }

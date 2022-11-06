@@ -36,6 +36,9 @@
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
+#include <opm/simulators/wells/BlackoilWellModelConstraints.hpp>
+#include <opm/simulators/wells/BlackoilWellModelGuideRates.hpp>
+#include <opm/simulators/wells/BlackoilWellModelRestart.hpp>
 #include <opm/simulators/wells/GasLiftStage2.hpp>
 #include <opm/simulators/wells/VFPProperties.hpp>
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
@@ -56,270 +59,6 @@
 #include <fmt/format.h>
 
 #define EXTRA_NETWORK_OUTPUT 1
-
-namespace {
-    Opm::data::GuideRateValue::Item
-    guideRateRestartItem(const Opm::GuideRateModel::Target target)
-    {
-        using Item = Opm::data::GuideRateValue::Item;
-        using Target = Opm::GuideRateModel::Target;
-
-        static const auto items = std::unordered_map<Target, Item> {
-            { Target::OIL, Item::Oil   },
-            { Target::GAS, Item::Gas   },
-            { Target::WAT, Item::Water },
-            { Target::RES, Item::ResV  },
-        };
-
-        auto i = items.find(target);
-        return (i == items.end()) ? Item::NumItems : i->second;
-    }
-
-    Opm::GuideRate::GuideRateValue
-    makeGuideRateValue(const Opm::data::GuideRateValue&  restart,
-                       const Opm::GuideRateModel::Target target)
-    {
-        const auto item = guideRateRestartItem(target);
-
-        if (! restart.has(item)) {
-            return {};
-        }
-
-        return { 0.0, restart.get(item), target };
-    }
-
-    struct RetrieveWellGuideRate
-    {
-        RetrieveWellGuideRate() = default;
-
-        explicit RetrieveWellGuideRate(const Opm::GuideRate& guideRate,
-                                       const std::string&    wgname);
-
-        explicit RetrieveWellGuideRate(const Opm::GuideRate& guideRate,
-                                       const Opm::Group&     group);
-
-        bool prod      { false };
-        bool inj_water { false };
-        bool inj_gas   { false };
-    };
-
-    RetrieveWellGuideRate
-    operator||(RetrieveWellGuideRate lhs, const RetrieveWellGuideRate& rhs)
-    {
-        lhs.prod      = lhs.prod      || rhs.prod;
-        lhs.inj_water = lhs.inj_water || rhs.inj_water;
-        lhs.inj_gas   = lhs.inj_gas   || rhs.inj_gas;
-
-        return lhs;
-    }
-
-    RetrieveWellGuideRate::RetrieveWellGuideRate(const Opm::GuideRate& guideRate,
-                                                 const std::string&    wgname)
-        : prod      { guideRate.has(wgname) }
-        , inj_water { guideRate.has(wgname, Opm::Phase::WATER) }
-        , inj_gas   { guideRate.has(wgname, Opm::Phase::GAS)   }
-    {}
-
-    RetrieveWellGuideRate::RetrieveWellGuideRate(const Opm::GuideRate& guideRate,
-                                                 const Opm::Group&     group)
-        : RetrieveWellGuideRate{ guideRate, group.name() }
-    {
-        if (group.isProductionGroup()) {
-            this->prod = true;
-        }
-
-        if (group.isInjectionGroup()) {
-            this->inj_water = this->inj_water || group.hasInjectionControl(Opm::Phase::WATER);
-            this->inj_gas   = this->inj_gas   || group.hasInjectionControl(Opm::Phase::GAS);
-        }
-    }
-
-    class GroupTreeWalker
-    {
-    public:
-        using GroupOp = std::function<void(const Opm::Group&)>;
-        using WellOp = std::function<void(const Opm::Well&)>;
-
-        explicit GroupTreeWalker(const Opm::Schedule& sched,
-                                 const int            reportStepIdx)
-            : sched_        (sched)
-            , reportStepIdx_(reportStepIdx)
-        {}
-
-        GroupTreeWalker& groupOp(GroupOp visit)
-        {
-            this->visitGroup_ = std::move(visit);
-            return *this;
-        }
-
-        GroupTreeWalker& wellOp(WellOp visit)
-        {
-            this->visitWell_ = std::move(visit);
-            return *this;
-        }
-
-        void clear()
-        {
-            this->visitGroup_ = GroupOp{};
-            this->visitWell_ = WellOp{};
-        }
-
-        void traversePreOrder();
-        void traversePostOrder();
-
-    private:
-        using NodeOp = void (GroupTreeWalker::*)(std::string_view) const;
-
-        std::reference_wrapper<const Opm::Schedule> sched_;
-        int reportStepIdx_;
-
-        GroupOp visitGroup_{};
-        WellOp visitWell_{};
-
-        std::stack<std::string_view, std::vector<std::string_view>> dfsGroupStack_{};
-        std::unordered_set<std::size_t> dfsGroupDiscovered_{};
-
-        NodeOp postDiscover_{nullptr};
-        NodeOp preFinish_{nullptr};
-
-        void traverse();
-
-        void startWalk();
-        void discover(std::string_view group);
-        void finish(std::string_view group);
-
-        bool isSeen(std::string_view group) const;
-        std::size_t insertIndex(std::string_view group) const;
-
-        void visitGroup(std::string_view group) const;
-        void visitWell(std::string_view well) const;
-
-        const Opm::Group& getGroup(std::string_view group) const;
-        const Opm::Well& getWell(std::string_view well) const;
-    };
-
-    void GroupTreeWalker::traversePreOrder()
-    {
-        this->preFinish_ = nullptr;
-        this->postDiscover_ = &GroupTreeWalker::visitGroup;
-
-        this->traverse();
-    }
-
-    void GroupTreeWalker::traversePostOrder()
-    {
-        this->preFinish_ = &GroupTreeWalker::visitGroup;
-        this->postDiscover_ = nullptr;
-
-        this->traverse();
-    }
-
-    void GroupTreeWalker::traverse()
-    {
-        this->startWalk();
-
-        while (! this->dfsGroupStack_.empty()) {
-            const auto gname = this->dfsGroupStack_.top();
-
-            if (this->isSeen(gname)) {
-                if (this->preFinish_ != nullptr) {
-                    (this->*preFinish_)(gname);
-                }
-
-                this->finish(gname);
-                continue;
-            }
-
-            this->discover(gname);
-
-            if (this->postDiscover_ != nullptr) {
-                (this->*postDiscover_)(gname);
-            }
-
-            const auto& group = this->getGroup(gname);
-
-            if (! group.wellgroup()) { // Node group.  Register child groups.
-                for (const auto& child : group.groups()) {
-                    if (! this->isSeen(child)) {
-                        this->dfsGroupStack_.push(child);
-                    }
-                }
-            }
-            else { // Group is a well group--visit its wells.
-                for (const auto& well : group.wells()) {
-                    this->visitWell(well);
-                }
-            }
-        }
-    }
-
-    void GroupTreeWalker::startWalk()
-    {
-        this->dfsGroupDiscovered_.clear();
-
-        while (! this->dfsGroupStack_.empty()) {
-            this->dfsGroupStack_.pop();
-        }
-
-        this->dfsGroupStack_.push("FIELD");
-    }
-
-    void GroupTreeWalker::discover(std::string_view group)
-    {
-        this->dfsGroupDiscovered_.insert(this->insertIndex(group));
-    }
-
-    void GroupTreeWalker::finish(std::string_view group)
-    {
-        if (this->dfsGroupStack_.top() != group) {
-            throw std::invalid_argument {
-                fmt::format("Internal Error: Expected group '{}', but got '{}'",
-                            group, this->dfsGroupStack_.top())
-            };
-        }
-
-        this->dfsGroupStack_.pop();
-    }
-
-    bool GroupTreeWalker::isSeen(std::string_view group) const
-    {
-        return this->dfsGroupDiscovered_.find(this->insertIndex(group))
-            != this->dfsGroupDiscovered_.end();
-    }
-
-    std::size_t GroupTreeWalker::insertIndex(std::string_view group) const
-    {
-        return this->getGroup(group).insert_index();
-    }
-
-    void GroupTreeWalker::visitGroup(std::string_view group) const
-    {
-        if (! this->visitGroup_) {
-            return;
-        }
-
-        this->visitGroup_(this->getGroup(group));
-    }
-
-    void GroupTreeWalker::visitWell(std::string_view well) const
-    {
-        if (! this->visitWell_) {
-            return;
-        }
-
-        this->visitWell_(this->getWell(well));
-    }
-
-    const Opm::Group& GroupTreeWalker::getGroup(std::string_view group) const
-    {
-        return this->sched_.get().getGroup({group.data(), group.size()}, this->reportStepIdx_);
-    }
-
-    const Opm::Well& GroupTreeWalker::getWell(std::string_view well) const
-    {
-        return this->sched_.get().getWell({well.data(), well.size()}, this->reportStepIdx_);
-    }
-} // Anonymous
 
 namespace Opm {
 
@@ -372,7 +111,7 @@ numPhases() const
 
 bool
 BlackoilWellModelGeneric::
-hasWell(const std::string& wname)
+hasWell(const std::string& wname) const
 {
     return std::any_of(this->wells_ecl_.begin(), this->wells_ecl_.end(),
         [&wname](const Well& well)
@@ -418,204 +157,6 @@ getWellEcl(const std::string& well_name) const
 
 void
 BlackoilWellModelGeneric::
-loadRestartConnectionData(const std::vector<data::Rates::opt>& phs,
-                          const data::Well&                    rst_well,
-                          const std::vector<PerforationData>&  old_perf_data,
-                          SingleWellState&                     ws)
-{
-    auto& perf_data        = ws.perf_data;
-    auto  perf_pressure    = perf_data.pressure.begin();
-    auto  perf_rates       = perf_data.rates.begin();
-    auto  perf_phase_rates = perf_data.phase_rates.begin();
-
-    for (const auto& pd : old_perf_data) {
-        const auto& rst_connection = rst_well.connections[pd.ecl_index];
-
-        *perf_pressure = rst_connection.pressure;       ++perf_pressure;
-        *perf_rates    = rst_connection.reservoir_rate; ++perf_rates;
-
-        for (const auto& phase : phs) {
-            *perf_phase_rates = rst_connection.rates.get(phase);
-            ++perf_phase_rates;
-        }
-    }
-}
-
-void
-BlackoilWellModelGeneric::
-loadRestartSegmentData(const std::string&                   well_name,
-                       const std::vector<data::Rates::opt>& phs,
-                       const data::Well&                    rst_well,
-                       SingleWellState&                     ws)
-{
-    const auto& segment_set = this->getWellEcl(well_name).getSegments();
-    const auto& rst_segments = rst_well.segments;
-
-    // \Note: Eventually we need to handle the situations that some segments are shut
-    assert(0u + segment_set.size() == rst_segments.size());
-
-    const auto np = phs.size();
-    const auto pres_idx = data::SegmentPressures::Value::Pressure;
-
-    auto& segments = ws.segments;
-    auto& segment_pressure = segments.pressure;
-    auto& segment_rates = segments.rates;
-    for (const auto& [segNum, rst_segment] : rst_segments) {
-        const int segment_index = segment_set.segmentNumberToIndex(segNum);
-
-        // Recovering segment rates and pressure from the restart values
-        segment_pressure[segment_index] = rst_segment.pressures[pres_idx];
-
-        const auto& rst_segment_rates = rst_segment.rates;
-        for (auto p = 0*np; p < np; ++p) {
-            segment_rates[segment_index*np + p] = rst_segment_rates.get(phs[p]);
-        }
-    }
-}
-
-void
-BlackoilWellModelGeneric::
-loadRestartWellData(const std::string&                   well_name,
-                    const bool                           handle_ms_well,
-                    const std::vector<data::Rates::opt>& phs,
-                    const data::Well&                    rst_well,
-                    const std::vector<PerforationData>&  old_perf_data,
-                    SingleWellState&                     ws)
-{
-    const auto np = phs.size();
-
-    ws.bhp = rst_well.bhp;
-    ws.thp = rst_well.thp;
-    ws.temperature = rst_well.temperature;
-
-    if (rst_well.current_control.isProducer) {
-        ws.production_cmode = rst_well.current_control.prod;
-    }
-    else {
-        ws.injection_cmode = rst_well.current_control.inj;
-    }
-
-    for (auto i = 0*np; i < np; ++i) {
-        assert( rst_well.rates.has( phs[ i ] ) );
-        ws.surface_rates[i] = rst_well.rates.get(phs[i]);
-    }
-
-    this->loadRestartConnectionData(phs, rst_well, old_perf_data, ws);
-
-    if (handle_ms_well && !rst_well.segments.empty()) {
-        this->loadRestartSegmentData(well_name, phs, rst_well, ws);
-    }
-}
-
-void
-BlackoilWellModelGeneric::
-loadRestartGroupData(const std::string&     group,
-                     const data::GroupData& value)
-{
-    using GPMode = Group::ProductionCMode;
-    using GIMode = Group::InjectionCMode;
-
-    const auto cpc = value.currentControl.currentProdConstraint;
-    const auto cgi = value.currentControl.currentGasInjectionConstraint;
-    const auto cwi = value.currentControl.currentWaterInjectionConstraint;
-
-    auto& grpState = this->groupState();
-
-    if (cpc != GPMode::NONE) {
-        grpState.production_control(group, cpc);
-    }
-
-    if (cgi != GIMode::NONE) {
-        grpState.injection_control(group, Phase::GAS, cgi);
-    }
-
-    if (cwi != GIMode::NONE) {
-        grpState.injection_control(group, Phase::WATER, cwi);
-    }
-}
-
-void
-BlackoilWellModelGeneric::
-loadRestartGuideRates(const int                    report_step,
-                      const GuideRateModel::Target target,
-                      const data::Wells&           rst_wells)
-{
-    for (const auto& [well_name, rst_well] : rst_wells) {
-        if (! this->hasWell(well_name) || this->getWellEcl(well_name).isInjector()) {
-            continue;
-        }
-
-        this->guideRate_.init_grvalue_SI(report_step, well_name,
-                                         makeGuideRateValue(rst_well.guide_rates, target));
-    }
-}
-
-void
-BlackoilWellModelGeneric::
-loadRestartGuideRates(const int                                     report_step,
-                      const GuideRateConfig&                        config,
-                      const std::map<std::string, data::GroupData>& rst_groups)
-{
-    const auto target = config.model().target();
-
-    for (const auto& [group_name, rst_group] : rst_groups) {
-        if (! config.has_production_group(group_name)) {
-            continue;
-        }
-
-        const auto& group = config.production_group(group_name);
-        if ((group.guide_rate > 0.0) || (group.target != Group::GuideRateProdTarget::FORM)) {
-            continue;
-        }
-
-        this->guideRate_.init_grvalue_SI(report_step, group_name,
-                                         makeGuideRateValue(rst_group.guideRates.production, target));
-    }
-}
-
-void
-BlackoilWellModelGeneric::
-loadRestartData(const data::Wells&                 rst_wells,
-                const data::GroupAndNetworkValues& grpNwrkValues,
-                const PhaseUsage&                  phases,
-                const bool                         handle_ms_well,
-                WellState&                         well_state)
-{
-    using rt = data::Rates::opt;
-    const auto np = phases.num_phases;
-
-    std::vector<rt> phs(np);
-    if (phases.phase_used[BlackoilPhases::Aqua]) {
-        phs.at(phases.phase_pos[BlackoilPhases::Aqua]) = rt::wat;
-    }
-
-    if (phases.phase_used[BlackoilPhases::Liquid]) {
-        phs.at( phases.phase_pos[BlackoilPhases::Liquid] ) = rt::oil;
-    }
-
-    if (phases.phase_used[BlackoilPhases::Vapour]) {
-        phs.at( phases.phase_pos[BlackoilPhases::Vapour] ) = rt::gas;
-    }
-
-    for (auto well_index = 0*well_state.size();
-         well_index < well_state.size();
-         ++well_index)
-    {
-        const auto& well_name = well_state.name(well_index);
-
-        this->loadRestartWellData(well_name, handle_ms_well, phs,
-                                  rst_wells.at(well_name),
-                                  this->well_perf_data_[well_index],
-                                  well_state.well(well_index));
-    }
-
-    for (const auto& [group, value] : grpNwrkValues.groupData) {
-        this->loadRestartGroupData(group, value);
-    }
-}
-
-void
-BlackoilWellModelGeneric::
 initFromRestartFile(const RestartValue& restartValues,
                     WellTestState wtestState,
                     const size_t numCells,
@@ -643,22 +184,28 @@ initFromRestartFile(const RestartValue& restartValues,
                                  this->schedule(), handle_ms_well, numCells,
                                  this->well_perf_data_, this->summaryState_);
 
-        loadRestartData(restartValues.wells, restartValues.grp_nwrk,
-                        this->phase_usage_, handle_ms_well, this->wellState());
+        BlackoilWellModelRestart(*this).loadRestartData(restartValues.wells,
+                                                        restartValues.grp_nwrk,
+                                                        handle_ms_well,
+                                                        this->wellState(),
+                                                        this->groupState());
 
         if (config.has_model()) {
-            this->loadRestartGuideRates(report_step,
-                                        config.model().target(),
-                                        restartValues.wells);
+            BlackoilWellModelRestart(*this).loadRestartGuideRates(report_step,
+                                                                  config.model().target(),
+                                                                  restartValues.wells,
+                                                                  this->guideRate_);
         }
     }
 
     if (config.has_model()) {
-        this->loadRestartGuideRates(report_step, config, restartValues.grp_nwrk.groupData);
+        BlackoilWellModelRestart(*this).loadRestartGuideRates(report_step,
+                                                              config,
+                                                              restartValues.grp_nwrk.groupData,
+                                                              this->guideRate_);
 
         this->guideRate_.updateGuideRateExpiration(this->schedule().seconds(report_step), report_step);
     }
-
 
     this->active_wgstate_.wtest_state(std::move(wtestState));
     this->commitWGState();
@@ -762,296 +309,6 @@ initializeWellPerfData()
     }
 }
 
-bool
-BlackoilWellModelGeneric::
-checkGroupConstraints(const Group& group,
-                      const int reportStepIdx,
-                      DeferredLogger& deferred_logger) const
-{
-    if (group.isInjectionGroup()) {
-        const Phase all[] = {Phase::WATER, Phase::OIL, Phase::GAS};
-        for (Phase phase : all) {
-            if (!group.hasInjectionControl(phase)) {
-                continue;
-            }
-            const auto& check = checkGroupInjectionConstraints(group, reportStepIdx, phase);
-            if (check.first != Group::InjectionCMode::NONE) {
-                return true;
-            }
-        }
-    }
-    if (group.isProductionGroup()) {
-        const auto& check = checkGroupProductionConstraints(group, reportStepIdx, deferred_logger);
-        if (check.first != Group::ProductionCMode::NONE)
-        {
-            return true;
-        }
-    }
-
-    // call recursively down the group hiearchy
-    bool violated = false;
-    for (const std::string& groupName : group.groups()) {
-        violated = violated || checkGroupConstraints( schedule().getGroup(groupName, reportStepIdx), reportStepIdx, deferred_logger);
-    }
-    return violated;
-}
-
-std::pair<Group::InjectionCMode, double>
-BlackoilWellModelGeneric::
-checkGroupInjectionConstraints(const Group& group,
-                               const int reportStepIdx,
-                               const Phase& phase) const
-{
-    const auto& well_state = this->wellState();
-
-    int phasePos;
-    if (phase == Phase::GAS && phase_usage_.phase_used[BlackoilPhases::Vapour] )
-        phasePos = phase_usage_.phase_pos[BlackoilPhases::Vapour];
-    else if (phase == Phase::OIL && phase_usage_.phase_used[BlackoilPhases::Liquid])
-        phasePos = phase_usage_.phase_pos[BlackoilPhases::Liquid];
-    else if (phase == Phase::WATER && phase_usage_.phase_used[BlackoilPhases::Aqua] )
-        phasePos = phase_usage_.phase_pos[BlackoilPhases::Aqua];
-    else
-        OPM_THROW(std::runtime_error, "Unknown phase" );
-
-    auto currentControl = this->groupState().injection_control(group.name(), phase);
-    if (group.has_control(phase, Group::InjectionCMode::RATE))
-    {
-        if (currentControl != Group::InjectionCMode::RATE)
-        {
-            double current_rate = 0.0;
-            current_rate += WellGroupHelpers::sumWellSurfaceRates(group, schedule(), well_state, reportStepIdx, phasePos, /*isInjector*/true);
-
-            // sum over all nodes
-            current_rate = comm_.sum(current_rate);
-
-            const auto& controls = group.injectionControls(phase, this->summaryState_);
-            double target = controls.surface_max_rate;
-
-            if (group.has_gpmaint_control(phase, Group::InjectionCMode::RATE))
-                target = this->groupState().gpmaint_target(group.name());
-
-            if (target < current_rate) {
-                double scale = 1.0;
-                if (current_rate > 1e-12)
-                    scale = target / current_rate;
-                return std::make_pair(Group::InjectionCMode::RATE, scale);
-            }
-        }
-    }
-    if (group.has_control(phase, Group::InjectionCMode::RESV))
-    {
-        if (currentControl != Group::InjectionCMode::RESV)
-        {
-            double current_rate = 0.0;
-            current_rate += WellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phasePos, /*isInjector*/true);
-            // sum over all nodes
-            current_rate = comm_.sum(current_rate);
-
-            const auto& controls = group.injectionControls(phase, this->summaryState_);
-            double target = controls.resv_max_rate;
-
-            if (group.has_gpmaint_control(phase, Group::InjectionCMode::RESV))
-                target = this->groupState().gpmaint_target(group.name());
-
-            if (target < current_rate) {
-                double scale = 1.0;
-                if (current_rate > 1e-12)
-                    scale = target / current_rate;
-                return std::make_pair(Group::InjectionCMode::RESV, scale);
-            }
-        }
-    }
-    if (group.has_control(phase, Group::InjectionCMode::REIN))
-    {
-        if (currentControl != Group::InjectionCMode::REIN)
-        {
-            double production_Rate = 0.0;
-            const auto& controls = group.injectionControls(phase, this->summaryState_);
-            const Group& groupRein = schedule().getGroup(controls.reinj_group, reportStepIdx);
-            production_Rate += WellGroupHelpers::sumWellSurfaceRates(groupRein, schedule(), well_state, reportStepIdx, phasePos, /*isInjector*/false);
-
-            // sum over all nodes
-            production_Rate = comm_.sum(production_Rate);
-
-            double current_rate = 0.0;
-            current_rate += WellGroupHelpers::sumWellSurfaceRates(group, schedule(), well_state, reportStepIdx, phasePos, /*isInjector*/true);
-
-            // sum over all nodes
-            current_rate = comm_.sum(current_rate);
-
-            if (controls.target_reinj_fraction*production_Rate < current_rate) {
-                double scale = 1.0;
-                if (current_rate > 1e-12)
-                    scale = controls.target_reinj_fraction*production_Rate / current_rate;
-                return std::make_pair(Group::InjectionCMode::REIN, scale);
-            }
-        }
-    }
-    if (group.has_control(phase, Group::InjectionCMode::VREP))
-    {
-        if (currentControl != Group::InjectionCMode::VREP)
-        {
-            double voidage_rate = 0.0;
-            const auto& controls = group.injectionControls(phase, this->summaryState_);
-            const Group& groupVoidage = schedule().getGroup(controls.voidage_group, reportStepIdx);
-            voidage_rate += WellGroupHelpers::sumWellResRates(groupVoidage, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Aqua], false);
-            voidage_rate += WellGroupHelpers::sumWellResRates(groupVoidage, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Liquid], false);
-            voidage_rate += WellGroupHelpers::sumWellResRates(groupVoidage, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Vapour], false);
-
-            // sum over all nodes
-            voidage_rate = comm_.sum(voidage_rate);
-
-            double total_rate = 0.0;
-            total_rate += WellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Aqua], true);
-            total_rate += WellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Liquid], true);
-            total_rate += WellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Vapour], true);
-
-            // sum over all nodes
-            total_rate = comm_.sum(total_rate);
-
-            if (controls.target_void_fraction*voidage_rate < total_rate) {
-                double scale = 1.0;
-                if (total_rate > 1e-12)
-                    scale = controls.target_void_fraction*voidage_rate / total_rate;
-                return std::make_pair(Group::InjectionCMode::VREP, scale);
-            }
-        }
-    }
-    return std::make_pair(Group::InjectionCMode::NONE, 1.0);
-}
-
-std::pair<Group::ProductionCMode, double>
-BlackoilWellModelGeneric::
-checkGroupProductionConstraints(const Group& group,
-                                const int reportStepIdx,
-                                DeferredLogger& deferred_logger) const
-{
-    const auto& well_state = this->wellState();
-
-    const auto controls = group.productionControls(summaryState_);
-    const Group::ProductionCMode& currentControl = this->groupState().production_control(group.name());
-
-    if (group.has_control(Group::ProductionCMode::ORAT))
-    {
-        if (currentControl != Group::ProductionCMode::ORAT)
-        {
-            double current_rate = 0.0;
-            current_rate += WellGroupHelpers::sumWellSurfaceRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Liquid], false);
-
-            // sum over all nodes
-            current_rate = comm_.sum(current_rate);
-
-            if (controls.oil_target < current_rate  ) {
-                double scale = 1.0;
-                if (current_rate > 1e-12)
-                    scale = controls.oil_target / current_rate;
-                return std::make_pair(Group::ProductionCMode::ORAT, scale);
-            }
-        }
-    }
-
-    if (group.has_control(Group::ProductionCMode::WRAT))
-    {
-        if (currentControl != Group::ProductionCMode::WRAT)
-        {
-
-            double current_rate = 0.0;
-            current_rate += WellGroupHelpers::sumWellSurfaceRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Aqua], false);
-
-            // sum over all nodes
-            current_rate = comm_.sum(current_rate);
-
-            if (controls.water_target < current_rate  ) {
-                double scale = 1.0;
-                if (current_rate > 1e-12)
-                    scale = controls.water_target / current_rate;
-                return std::make_pair(Group::ProductionCMode::WRAT, scale);
-            }
-        }
-    }
-    if (group.has_control(Group::ProductionCMode::GRAT))
-    {
-        if (currentControl != Group::ProductionCMode::GRAT)
-        {
-            double current_rate = 0.0;
-            current_rate += WellGroupHelpers::sumWellSurfaceRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Vapour], false);
-
-            // sum over all nodes
-            current_rate = comm_.sum(current_rate);
-            if (controls.gas_target < current_rate  ) {
-                double scale = 1.0;
-                if (current_rate > 1e-12)
-                    scale = controls.gas_target / current_rate;
-                return std::make_pair(Group::ProductionCMode::GRAT, scale);
-            }
-        }
-    }
-    if (group.has_control(Group::ProductionCMode::LRAT))
-    {
-        if (currentControl != Group::ProductionCMode::LRAT)
-        {
-            double current_rate = 0.0;
-            current_rate += WellGroupHelpers::sumWellSurfaceRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Liquid], false);
-            current_rate += WellGroupHelpers::sumWellSurfaceRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Aqua], false);
-
-            // sum over all nodes
-            current_rate = comm_.sum(current_rate);
-
-            bool skip = false;
-            if (controls.liquid_target == controls.oil_target) {
-                double current_water_rate = WellGroupHelpers::sumWellSurfaceRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Aqua], false);
-                current_water_rate = comm_.sum(current_water_rate);
-                if (std::abs(current_water_rate) < 1e-12) {
-                    skip = true;
-                    deferred_logger.debug("LRAT_ORAT_GROUP", "GROUP " + group.name() + " The LRAT target is equal the ORAT target and the water rate is zero, skip checking LRAT");
-                }
-            }
-
-            if (!skip && controls.liquid_target < current_rate ) {
-                double scale = 1.0;
-                if (current_rate > 1e-12)
-                    scale = controls.liquid_target / current_rate;
-                return std::make_pair(Group::ProductionCMode::LRAT, scale);
-            }
-        }
-    }
-
-    if (group.has_control(Group::ProductionCMode::CRAT))
-    {
-        OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + "CRAT control for production groups not implemented" , deferred_logger);
-    }
-    if (group.has_control(Group::ProductionCMode::RESV))
-    {
-        if (currentControl != Group::ProductionCMode::RESV)
-        {
-            double current_rate = 0.0;
-            current_rate += WellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Aqua], true);
-            current_rate += WellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Liquid], true);
-            current_rate += WellGroupHelpers::sumWellResRates(group, schedule(), well_state, reportStepIdx, phase_usage_.phase_pos[BlackoilPhases::Vapour], true);
-
-            // sum over all nodes
-            current_rate = comm_.sum(current_rate);
-
-            double target = controls.resv_target;
-            if (group.has_gpmaint_control(Group::ProductionCMode::RESV))
-                target = this->groupState().gpmaint_target(group.name());
-
-            if ( target < current_rate ) {
-                double scale = 1.0;
-                if (current_rate > 1e-12)
-                    scale = target / current_rate;
-                return std::make_pair(Group::ProductionCMode::RESV, scale);
-            }
-        }
-    }
-    if (group.has_control(Group::ProductionCMode::PRBL))
-    {
-        OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + "PRBL control for production groups not implemented", deferred_logger);
-    }
-    return std::make_pair(Group::ProductionCMode::NONE, 1.0);
-}
-
 void
 BlackoilWellModelGeneric::
 checkGconsaleLimits(const Group& group,
@@ -1073,7 +330,7 @@ checkGconsaleLimits(const Group& group,
     if (!schedule()[reportStepIdx].gconsale().has(group.name()))
         return;
 
-    std::ostringstream ss;
+    std::string ss;
 
     const auto& gconsale = schedule()[reportStepIdx].gconsale().get(group.name(), summaryState_);
     const Group::ProductionCMode& oldProductionControl = this->groupState().production_control(group.name());
@@ -1104,7 +361,8 @@ checkGconsaleLimits(const Group& group,
         switch(gconsale.max_proc) {
         case GConSale::MaxProcedure::NONE: {
             if (oldProductionControl != Group::ProductionCMode::GRAT && oldProductionControl != Group::ProductionCMode::NONE) {
-                ss << "Group sales exceed maximum limit, but the action is NONE for " + group.name() + ". Nothing happens";
+                ss = fmt::format("Group sales exceed maximum limit, but the action is NONE for {}. Nothing happens",
+                                 group.name());
             }
             break;
             }
@@ -1134,9 +392,13 @@ checkGconsaleLimits(const Group& group,
         }
         case GConSale::MaxProcedure::RATE: {
             this->groupState().production_control(group.name(), Group::ProductionCMode::GRAT);
-            ss << "Maximum GCONSALE limit violated for " << group.name() << ". The group is switched from ";
-            ss << Group::ProductionCMode2String(oldProductionControl) << " to " << Group::ProductionCMode2String(Group::ProductionCMode::GRAT);
-            ss << " and limited by the maximum sales rate after consumption and import are considered" ;
+            ss = fmt::format("Maximum GCONSALE limit violated for {}. "
+                             "The group is switched from {} to {} "
+                             "and limited by the maximum sales rate after "
+                             "consumption and import are considered",
+                             group.name(),
+                             Group::ProductionCMode2String(oldProductionControl),
+                             Group::ProductionCMode2String(Group::ProductionCMode::GRAT));
             this->groupState().update_grat_sales_target(group.name(), production_target);
             break;
         }
@@ -1147,23 +409,25 @@ checkGconsaleLimits(const Group& group,
     if (sales_rate < gconsale.min_sales_rate) {
         const Group::ProductionCMode& currentProductionControl = this->groupState().production_control(group.name());
         if ( currentProductionControl == Group::ProductionCMode::GRAT ) {
-            ss << "Group " + group.name() + " has sale rate less then minimum permitted value and is under GRAT control. \n";
-            ss << "The GRAT is increased to meet the sales minimum rate. \n";
+            ss = fmt::format("Group {} has sale rate less then minimum permitted value and is under GRAT control.\n"
+                             "The GRAT is increased to meet the sales minimum rate.",
+                             group.name());
             this->groupState().update_grat_sales_target(group.name(), production_target);
         //} else if () {//TODO add action for WGASPROD
         //} else if () {//TODO add action for drilling queue
         } else {
-            ss << "Group " + group.name() + " has sale rate less then minimum permitted value but cannot increase the group production rate \n";
-            ss << "or adjust gas production using WGASPROD or drill new wells to meet the sales target. \n";
-            ss << "Note that WGASPROD and drilling queues are not implemented in Flow. No action is taken. \n ";
+            ss = fmt::format("Group {} has sale rate less then minimum permitted value but cannot increase the group production rate \n"
+                             "or adjust gas production using WGASPROD or drill new wells to meet the sales target. \n"
+                             "Note that WGASPROD and drilling queues are not implemented in Flow. No action is taken.",
+                             group.name());
         }
     }
     if (gconsale.sales_target < 0.0) {
         OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + " has sale rate target less then zero. Not implemented in Flow" , deferred_logger);
     }
 
-    if (!ss.str().empty() && comm_.rank() == 0)
-        deferred_logger.info(ss.str());
+    if (!ss.empty() && comm_.rank() == 0)
+        deferred_logger.info(ss);
 }
 
 bool
@@ -1234,8 +498,11 @@ checkGroupHigherConstraints(const Group& group,
                 resv_coeff_inj,
                 deferred_logger);
                 if (is_changed) {
-                    switched_inj_groups_.insert({ {group.name(), phase}, Group::InjectionCMode2String(Group::InjectionCMode::FLD)});
-                    actionOnBrokenConstraints(group, Group::InjectionCMode::FLD, phase, deferred_logger);
+                    switched_inj_groups_.insert_or_assign({group.name(), phase}, Group::InjectionCMode2String(Group::InjectionCMode::FLD));
+                    BlackoilWellModelConstraints(*this).
+                        actionOnBrokenConstraints(group, Group::InjectionCMode::FLD,
+                                                  phase, this->groupState(),
+                                                  deferred_logger);
                     WellGroupHelpers::updateWellRatesFromGroupTargetScale(scaling_factor, group, schedule(), reportStepIdx, /* isInjector */ true, this->groupState(), this->wellState());
                     changed = true;
                 }
@@ -1272,131 +539,20 @@ checkGroupHigherConstraints(const Group& group,
                 resv_coeff,
                 deferred_logger);
             if (is_changed) {
-                switched_prod_groups_.insert({group.name(), Group::ProductionCMode2String(Group::ProductionCMode::FLD)});
+                switched_prod_groups_.insert_or_assign(group.name(), Group::ProductionCMode2String(Group::ProductionCMode::FLD));
                 const auto exceed_action = group.productionControls(summaryState_).exceed_action;
-                actionOnBrokenConstraints(group, exceed_action, Group::ProductionCMode::FLD, deferred_logger);
+                BlackoilWellModelConstraints(*this).
+                        actionOnBrokenConstraints(group, exceed_action,
+                                                  Group::ProductionCMode::FLD,
+                                                  this->groupState(),
+                                                  deferred_logger);
                 WellGroupHelpers::updateWellRatesFromGroupTargetScale(scaling_factor, group, schedule(), reportStepIdx, /* isInjector */ false, this->groupState(), this->wellState());
                 changed = true;
             }
         }
-        
     }
 
     return changed;
-}
-
-bool
-BlackoilWellModelGeneric::
-updateGroupIndividualControl(const Group& group,
-                             DeferredLogger& deferred_logger,
-                             const int reportStepIdx)
-{
-    bool changed = false;
-    if (group.isInjectionGroup())
-    {
-        const Phase all[] = {Phase::WATER, Phase::OIL, Phase::GAS};
-        for (Phase phase : all) {
-            if (!group.hasInjectionControl(phase)) {
-                continue;
-            }
-            const auto& changed_this = checkGroupInjectionConstraints(group, reportStepIdx, phase);
-            if (changed_this.first != Group::InjectionCMode::NONE)
-            {
-                switched_inj_groups_.insert({{group.name(), phase}, Group::InjectionCMode2String(changed_this.first)});
-                actionOnBrokenConstraints(group, changed_this.first, phase, deferred_logger);
-                WellGroupHelpers::updateWellRatesFromGroupTargetScale(changed_this.second, group, schedule(), reportStepIdx, /* isInjector */ false, this->groupState(), this->wellState());
-                changed = true;
-            }
-        }
-    }
-    if (group.isProductionGroup()) {
-        const auto& changed_this = checkGroupProductionConstraints(group, reportStepIdx, deferred_logger);
-        const auto controls = group.productionControls(summaryState_);
-        if (changed_this.first != Group::ProductionCMode::NONE)
-        {
-            switched_prod_groups_.insert({group.name(), Group::ProductionCMode2String(changed_this.first)});
-            actionOnBrokenConstraints(group, controls.exceed_action, changed_this.first, deferred_logger);
-            WellGroupHelpers::updateWellRatesFromGroupTargetScale(changed_this.second, group, schedule(), reportStepIdx, /* isInjector */ false, this->groupState(), this->wellState());
-            changed = true;
-        }
-    }
-
-    return changed;
-}
-
-void
-BlackoilWellModelGeneric::
-actionOnBrokenConstraints(const Group& group,
-                          const Group::ExceedAction& exceed_action,
-                          const Group::ProductionCMode& newControl,
-                          DeferredLogger& deferred_logger)
-{
-    const Group::ProductionCMode oldControl = this->groupState().production_control(group.name());
-
-    std::ostringstream ss;
-
-    switch(exceed_action) {
-    case Group::ExceedAction::NONE: {
-        if (oldControl != newControl && oldControl != Group::ProductionCMode::NONE) {
-            ss << "Group production exceed action is NONE for group " + group.name() + ". Nothing happens.";
-        }
-        break;
-    }
-    case Group::ExceedAction::CON: {
-        OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + "GroupProductionExceedLimit CON not implemented", deferred_logger);
-        break;
-    }
-    case Group::ExceedAction::CON_PLUS: {
-        OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + "GroupProductionExceedLimit CON_PLUS not implemented", deferred_logger);
-        break;
-    }
-    case Group::ExceedAction::WELL: {
-        OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + "GroupProductionExceedLimit WELL not implemented", deferred_logger);
-        break;
-    }
-    case Group::ExceedAction::PLUG: {
-        OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + "GroupProductionExceedLimit PLUG not implemented", deferred_logger);
-        break;
-    }
-    case Group::ExceedAction::RATE: {
-        if (oldControl != newControl) {
-            this->groupState().production_control(group.name(), newControl);
-            ss << "Switching production control mode for group "<< group.name()
-               << " from " << Group::ProductionCMode2String(oldControl)
-               << " to " << Group::ProductionCMode2String(newControl);
-        }
-        break;
-    }
-    default:
-        throw("Invalid procedure for maximum rate limit selected for group" + group.name());
-    }
-
-    Parallel::Communication cc = comm_;
-    if (!ss.str().empty() && cc.rank() == 0)
-        deferred_logger.debug(ss.str());
-}
-
-void
-BlackoilWellModelGeneric::
-actionOnBrokenConstraints(const Group& group,
-                          const Group::InjectionCMode& newControl,
-                          const Phase& controlPhase,
-                          DeferredLogger& deferred_logger)
-{
-    auto oldControl = this->groupState().injection_control(group.name(), controlPhase);
-
-    std::ostringstream ss;
-    if (oldControl != newControl) {
-        const std::string from = Group::InjectionCMode2String(oldControl);
-        ss << "Switching injection control mode for group "<< group.name()
-           << " from " << Group::InjectionCMode2String(oldControl)
-           << " to " << Group::InjectionCMode2String(newControl);
-        this->groupState().injection_control(group.name(), controlPhase, newControl);
-    }
-
-    Parallel::Communication cc = comm_;
-    if (!ss.str().empty() && cc.rank() == 0)
-        deferred_logger.info(ss.str());
 }
 
 void
@@ -1548,206 +704,6 @@ setWsolvent(const Group& group,
     }
 }
 
-data::GuideRateValue
-BlackoilWellModelGeneric::
-getGuideRateValues(const Well& well) const
-{
-    auto grval = data::GuideRateValue{};
-
-    const auto& wname = well.name();
-    if (!this->wellState().has(wname)) {
-        // No flow rates for 'wname' -- might be before well comes
-        // online (e.g., for the initial condition before simulation
-        // starts).
-        return grval;
-    }
-
-    if (!this->guideRate_.has(wname)) {
-        // No guiderates exist for 'wname'.
-        return grval;
-    }
-
-    const auto qs = WellGroupHelpers::
-        getWellRateVector(this->wellState(), this->phase_usage_, wname);
-
-    this->getGuideRateValues(qs, well.isInjector(), wname, grval);
-
-    return grval;
-}
-
-void
-BlackoilWellModelGeneric::
-getGuideRateValues(const GuideRate::RateVector& qs,
-                   const bool                   is_inj,
-                   const std::string&           wgname,
-                   data::GuideRateValue&        grval) const
-{
-    auto getGR = [this, &wgname, &qs](const GuideRateModel::Target t)
-    {
-        return this->guideRate_.getSI(wgname, t, qs);
-    };
-
-    // Note: GuideRate does currently (2020-07-20) not support Target::RES.
-    grval.set(data::GuideRateValue::Item::Gas,
-              getGR(GuideRateModel::Target::GAS));
-
-    grval.set(data::GuideRateValue::Item::Water,
-              getGR(GuideRateModel::Target::WAT));
-
-    if (!is_inj) {
-        // Producer.  Extract "all" guiderate values.
-        grval.set(data::GuideRateValue::Item::Oil,
-                  getGR(GuideRateModel::Target::OIL));
-    }
-}
-
-data::GuideRateValue
-BlackoilWellModelGeneric::
-getGuideRateValues(const Group& group) const
-{
-    auto grval = data::GuideRateValue{};
-    const auto& gname = group.name();
-
-    if (!this->groupState().has_production_rates(gname)) {
-        // No flow rates for production group 'gname' -- might be before
-        // group comes online (e.g., for the initial condition before
-        // simulation starts).
-        return grval;
-    }
-
-    if (!this->guideRate_.has(gname)) {
-        // No guiderates exist for 'gname'.
-        return grval;
-    }
-
-    const auto qs = WellGroupHelpers::
-        getProductionGroupRateVector(this->groupState(), this->phase_usage_, gname);
-
-    const auto is_inj = false; // This procedure only applies to G*PGR.
-    this->getGuideRateValues(qs, is_inj, gname, grval);
-
-    return grval;
-}
-
-data::GuideRateValue
-BlackoilWellModelGeneric::
-getGuideRateInjectionGroupValues(const Group& group) const
-{
-    auto grval = data::GuideRateValue{};
-
-    const auto& gname = group.name();
-    if (this->guideRate_.has(gname, Phase::GAS)) {
-        grval.set(data::GuideRateValue::Item::Gas,
-                  this->guideRate_.getSI(gname, Phase::GAS));
-    }
-
-    if (this->guideRate_.has(gname, Phase::WATER)) {
-        grval.set(data::GuideRateValue::Item::Water,
-                  this->guideRate_.getSI(gname, Phase::WATER));
-    }
-
-    return grval;
-}
-
-void
-BlackoilWellModelGeneric::
-assignWellGuideRates(data::Wells& wsrpt,
-                     const int    reportStepIdx) const
-{
-    auto all = std::unordered_map<std::string, data::GuideRateValue>{};
-    auto retrieve = std::unordered_map<std::string, RetrieveWellGuideRate>{};
-
-    auto walker = GroupTreeWalker{ this->schedule(), reportStepIdx };
-
-    // Populates 'retrieve'.
-    walker.groupOp([this, &retrieve](const Group& group)
-    {
-        const auto& gname = group.name();
-
-        const auto parent = (gname == "FIELD")
-            ? RetrieveWellGuideRate{}
-            : retrieve[group.parent()];
-
-        auto [elm, inserted] =
-            retrieve.emplace(std::piecewise_construct,
-                             std::forward_as_tuple(gname),
-                             std::forward_as_tuple(this->guideRate_, group));
-
-        if (inserted) {
-            elm->second = elm->second || parent;
-        }
-    });
-
-    // Populates 'all'.
-    walker.wellOp([this, &retrieve, &all](const Well& well)
-    {
-        const auto& wname = well.name();
-
-        const auto is_nontrivial =
-            this->guideRate_.has(wname) || this->guideRate_.hasPotentials(wname);
-
-        if (! (is_nontrivial && this->wellState().has(wname))) {
-            all[wname].clear();
-            return;
-        }
-
-        auto parent_pos = retrieve.find(well.groupName());
-        const auto parent = (parent_pos == retrieve.end())
-            ? RetrieveWellGuideRate{} // No entry for 'parent'--unexpected.
-            : parent_pos->second;
-
-        const auto get_gr = parent
-            || RetrieveWellGuideRate{ this->guideRate_, wname };
-
-        const auto qs = WellGroupHelpers::
-            getWellRateVector(this->wellState(), this->phase_usage_, wname);
-
-        auto getGR = [this, &wname, &qs](const GuideRateModel::Target t)
-        {
-            return this->guideRate_.getSI(wname, t, qs);
-        };
-
-        auto& grval = all[wname];
-
-        if (well.isInjector()) {
-            if (get_gr.inj_gas) { // Well supports WGIGR
-                grval.set(data::GuideRateValue::Item::Gas,
-                          getGR(GuideRateModel::Target::GAS));
-            }
-            if (get_gr.inj_water) { // Well supports WWIGR
-                grval.set(data::GuideRateValue::Item::Water,
-                          getGR(GuideRateModel::Target::WAT));
-            }
-        }
-        else if (get_gr.prod) { // Well is producer AND we want/support WxPGR
-            grval
-                .set(data::GuideRateValue::Item::Oil  , getGR(GuideRateModel::Target::OIL))
-                .set(data::GuideRateValue::Item::Gas  , getGR(GuideRateModel::Target::GAS))
-                .set(data::GuideRateValue::Item::Water, getGR(GuideRateModel::Target::WAT));
-        }
-    });
-
-    // Visit groups before their children, meaning no well is visited until
-    // all of its upline parent groups--up to FIELD--have been visited.
-    // Upon completion, 'all' contains guide rate values for all wells
-    // reachable from 'FIELD' at this time/report step.
-    walker.traversePreOrder();
-
-    for (const auto& well : this->wells_ecl_) {
-        auto xwPos = wsrpt.find(well.name());
-        if (xwPos == wsrpt.end()) { // No well results.  Unexpected.
-            continue;
-        }
-
-        auto grPos = all.find(well.name());
-        if (grPos == all.end()) {
-            continue;
-        }
-
-        xwPos->second.guide_rates = grPos->second;
-    }
-}
-
 void
 BlackoilWellModelGeneric::
 assignShutConnections(data::Wells& wsrpt,
@@ -1792,67 +748,6 @@ assignShutConnections(data::Wells& wsrpt,
     }
 }
 
-std::unordered_map<std::string, data::GroupGuideRates>
-BlackoilWellModelGeneric::
-calculateAllGroupGuiderates(const int reportStepIdx) const
-{
-    auto gr = std::unordered_map<std::string, data::GroupGuideRates>{};
-
-    auto walker = GroupTreeWalker{ this->schedule(), reportStepIdx };
-
-    // Populates 'gr'.
-    walker.groupOp([this, &gr](const Group& group)
-    {
-        const auto& gname = group.name();
-
-        if (gname == "FIELD") { return; }
-
-        if (this->guideRate_.has(gname)) {
-            gr[gname].production = this->getGuideRateValues(group);
-        }
-
-        if (this->guideRate_.has(gname, Phase::WATER) ||
-            this->guideRate_.has(gname, Phase::GAS))
-        {
-            gr[gname].injection =
-                this->getGuideRateInjectionGroupValues(group);
-        }
-
-        const auto parent = group.parent();
-        if (parent == "FIELD") { return; }
-
-        gr[parent].injection  += gr[gname].injection;
-        gr[parent].production += gr[gname].production;
-    });
-
-    // Populates 'gr'.
-    walker.wellOp([this, &gr](const Well& well)
-    {
-        if (! (this->guideRate_.has(well.name()) ||
-               this->guideRate_.hasPotentials(well.name())))
-        {
-            return;
-        }
-
-        const auto& gname = well.groupName();
-
-        auto& grval = well.isInjector()
-            ? gr[gname].injection
-            : gr[gname].production;
-
-        grval += this->getGuideRateValues(well);
-    });
-
-    // Visit wells and groups before their parents, meaning no group is
-    // visited until all of its children down to the leaves of the group
-    // tree have been visited.  Upon completion, 'gr' contains guide rate
-    // values for all groups reachable from 'FIELD' at this time/report
-    // step.
-    walker.traversePostOrder();
-
-    return gr;
-}
-
 void
 BlackoilWellModelGeneric::
 assignGroupControl(const Group& group,
@@ -1886,46 +781,18 @@ assignGroupControl(const Group& group,
 
 void
 BlackoilWellModelGeneric::
-assignGroupGuideRates(const Group& group,
-                      const std::unordered_map<std::string, data::GroupGuideRates>& groupGuideRates,
-                      data::GroupData& gdata) const
-{
-    auto& prod = gdata.guideRates.production;  prod.clear();
-    auto& inj  = gdata.guideRates.injection;   inj .clear();
-
-    auto xgrPos = groupGuideRates.find(group.name());
-    if (xgrPos == groupGuideRates.end()) {
-        // No guiderates defined for this group.
-        return;
-    }
-
-    const auto& xgr = xgrPos->second;
-
-    if (this->guideRate_.has(group.name())) {
-        prod = xgr.production;
-    }
-
-    if (this->guideRate_.has(group.name(), Phase::WATER) ||
-        this->guideRate_.has(group.name(), Phase::GAS))
-    {
-        inj = xgr.injection;
-    }
-}
-
-void
-BlackoilWellModelGeneric::
 assignGroupValues(const int                               reportStepIdx,
                   std::map<std::string, data::GroupData>& gvalues) const
 {
     const auto groupGuideRates =
-        this->calculateAllGroupGuiderates(reportStepIdx);
+        BlackoilWellModelGuideRates(*this).calculateAllGroupGuideRates(reportStepIdx);
 
     for (const auto& gname : schedule_.groupNames(reportStepIdx)) {
         const auto& grup = schedule_.getGroup(gname, reportStepIdx);
 
         auto& gdata = gvalues[gname];
         this->assignGroupControl(grup, gdata);
-        this->assignGroupGuideRates(grup, groupGuideRates, gdata);
+        BlackoilWellModelGuideRates(*this).assignGroupGuideRates(grup, groupGuideRates, gdata);
     }
 }
 
@@ -2004,13 +871,7 @@ bool
 BlackoilWellModelGeneric::
 hasTHPConstraints() const
 {
-    int local_result = false;
-    for (const auto& well : well_container_generic_) {
-        if (well->wellHasTHPConstraints(summaryState_)) {
-            local_result=true;
-        }
-    }
-    return comm_.max(local_result);
+    return BlackoilWellModelConstraints(*this).hasTHPConstraints();
 }
 
 bool
@@ -2423,34 +1284,5 @@ runWellPIScaling(const int timeStepIdx,
 
     this->last_run_wellpi_ = timeStepIdx;
 }
-
-
-bool
-BlackoilWellModelGeneric::
-guideRateUpdateIsNeeded(const int reportStepIdx) const {
-    auto need_update =
-    std::any_of(this->well_container_generic_.begin(),
-                this->well_container_generic_.end(),
-    [](const WellInterfaceGeneric* well)
-    {
-        return well->changedToOpenThisStep();
-    });
-    if (!need_update && this->report_step_starts_) {
-        const auto& events = this->schedule()[reportStepIdx].wellgroup_events();
-        constexpr auto effective_events_mask = ScheduleEvents::WELL_STATUS_CHANGE
-            + ScheduleEvents::INJECTION_TYPE_CHANGED
-            + ScheduleEvents::WELL_SWITCHED_INJECTOR_PRODUCER
-            + ScheduleEvents::NEW_WELL;
-
-        need_update = std::any_of(this->well_container_generic_.begin(),
-                              this->well_container_generic_.end(),
-            [&events](const WellInterfaceGeneric* well)
-        {
-            return events.hasEvent(well->name(), effective_events_mask);
-        });
-    }
-    return this->comm_.max(static_cast<int>(need_update));
-}
-
 
 }

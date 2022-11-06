@@ -23,6 +23,7 @@
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/TargetCalculator.hpp>
+#include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 
 #include <dune/common/version.hh>
 
@@ -605,34 +606,6 @@ namespace Opm
     }
 
     template<typename TypeTag>
-    bool
-    WellInterface<TypeTag>::isPressureControlled(const WellState& well_state) const
-    {
-         bool thp_controlled_well = false;
-        bool bhp_controlled_well = false;
-        const auto& ws = well_state.well(this->index_of_well_);
-        if (this->isInjector()) {
-            const Well::InjectorCMode& current = ws.injection_cmode;
-            if (current == Well::InjectorCMode::THP) {
-                thp_controlled_well = true;
-            }
-            if (current == Well::InjectorCMode::BHP) {
-                bhp_controlled_well = true;
-            }
-        } else {
-            const Well::ProducerCMode& current = ws.production_cmode;
-            if (current == Well::ProducerCMode::THP) {
-                thp_controlled_well = true;
-            }
-            if (current == Well::ProducerCMode::BHP) {
-                bhp_controlled_well = true;
-            }
-        }
-        bool ispressureControlled =  (bhp_controlled_well || thp_controlled_well);
-        return ispressureControlled;
-    }
-
-    template<typename TypeTag>
     void
     WellInterface<TypeTag>::addCellRates(RateVector& rates, int cellIdx) const
     {
@@ -866,7 +839,12 @@ namespace Opm
             case Well::InjectorCMode::THP:
             {
                 auto rates = ws.surface_rates;
-                double bhp = this->calculateBhpFromThp(well_state, rates, well, summaryState, this->getRefDensity(), deferred_logger);
+                double bhp = WellBhpThpCalculator(*this).calculateBhpFromThp(well_state,
+                                                                             rates,
+                                                                             well,
+                                                                             summaryState,
+                                                                             this->getRefDensity(),
+                                                                             deferred_logger);
                 ws.bhp = bhp;
                 ws.thp = this->getTHPConstraint(summaryState);
 
@@ -1121,7 +1099,12 @@ namespace Opm
                 }
                 auto rates = ws.surface_rates;
                 this->adaptRatesForVFP(rates);
-                double bhp = this->calculateBhpFromThp(well_state, rates, well, summaryState, this->getRefDensity(), deferred_logger);
+                double bhp = WellBhpThpCalculator(*this).calculateBhpFromThp(well_state,
+                                                                             rates,
+                                                                             well,
+                                                                             summaryState,
+                                                                             this->getRefDensity(),
+                                                                             deferred_logger);
                 ws.bhp = bhp;
                 ws.thp = this->getTHPConstraint(summaryState);
 
@@ -1282,16 +1265,12 @@ namespace Opm
     typename WellInterface<TypeTag>::Eval
     WellInterface<TypeTag>::getPerfCellPressure(const typename WellInterface<TypeTag>::FluidState& fs) const
     {
-        Eval pressure;
-        if (Indices::oilEnabled) {
-            pressure = fs.pressure(FluidSystem::oilPhaseIdx);
+        if constexpr (Indices::oilEnabled) {
+            return fs.pressure(FluidSystem::oilPhaseIdx);
+        } else if constexpr (Indices::waterEnabled) {
+            return fs.pressure(FluidSystem::waterPhaseIdx);
         } else {
-            if (Indices::waterEnabled) {
-                pressure = fs.pressure(FluidSystem::waterPhaseIdx);
-            } else {
-                pressure = fs.pressure(FluidSystem::gasPhaseIdx);
-            }
+            return fs.pressure(FluidSystem::gasPhaseIdx);
         }
-        return pressure;
     }
 } // namespace Opm

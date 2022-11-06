@@ -32,6 +32,7 @@
 
 #include <optional>
 #include <vector>
+#include <functional>
 
 namespace Opm
 {
@@ -66,11 +67,10 @@ protected:
 
 public:
     /// get the number of blocks of the C and B matrices, used to allocate memory in a WellContributions object
-    void getNumBlocks(unsigned int& _nnzs) const;
+    unsigned int getNumBlocks() const;
 
 protected:
-    StandardWellGeneric(int Bhp,
-                        const WellInterfaceGeneric& baseif);
+    StandardWellGeneric(const WellInterfaceGeneric& baseif);
 
     // calculate a relaxation factor to avoid overshoot of total rates
     static double relaxationFactorRate(const std::vector<double>& primary_variables,
@@ -80,31 +80,7 @@ protected:
     static double relaxationFactorFraction(const double old_value,
                                            const double dx);
 
-    double calculateThpFromBhp(const WellState& well_state,
-                               const std::vector<double>& rates,
-                               const double bhp,
-                               DeferredLogger& deferred_logger) const;
-
-    // checking the convergence of the well control equations
-    void checkConvergenceControlEq(const WellState& well_state,
-                                   ConvergenceReport& report,
-                                   DeferredLogger& deferred_logger,
-                                   const double max_residual_allowed) const;
-
-    void checkConvergencePolyMW(const std::vector<double>& res,
-                                ConvergenceReport& report,
-                                const double maxResidualAllowed) const;
-
     void computeConnectionPressureDelta();
-
-    std::optional<double> computeBhpAtThpLimitInj(const std::function<std::vector<double>(const double)>& frates,
-                                                  const SummaryState& summary_state,
-                                                  DeferredLogger& deferred_logger) const;
-    std::optional<double> computeBhpAtThpLimitProdWithAlq(const std::function<std::vector<double>(const double)>& frates,
-                                                          const SummaryState& summary_state,
-                                                          DeferredLogger& deferred_logger,
-                                                          double maxPerfPress,
-                                                          double alq_value) const;
 
     // Base interface reference
     const WellInterfaceGeneric& baseif_;
@@ -131,10 +107,10 @@ protected:
     mutable BVectorWell Bx_;
     mutable BVectorWell invDrw_;
 
-    double getRho() const { return perf_densities_[0]; }
-
-private:
-    int Bhp_; // index of Bhp
+    double getRho() const
+    {
+        return this->perf_densities_.empty() ? 0.0 : perf_densities_[0];
+    }
 };
 
 }

@@ -81,10 +81,6 @@ struct UseGmres {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
-struct LinearSolverRequireFullSparsityPattern {
-    using type = UndefinedProperty;
-};
-template<class TypeTag, class MyTypeTag>
 struct LinearSolverIgnoreConvergenceFailure{
     using type = UndefinedProperty;
 };
@@ -176,10 +172,6 @@ struct IluReorderSpheres<TypeTag, TTag::FlowIstlSolverParams> {
 };
 template<class TypeTag>
 struct UseGmres<TypeTag, TTag::FlowIstlSolverParams> {
-    static constexpr bool value = false;
-};
-template<class TypeTag>
-struct LinearSolverRequireFullSparsityPattern<TypeTag, TTag::FlowIstlSolverParams> {
     static constexpr bool value = false;
 };
 template<class TypeTag>
@@ -285,7 +277,6 @@ namespace Opm
             ilu_redblack_ = EWOMS_GET_PARAM(TypeTag, bool, IluRedblack);
             ilu_reorder_sphere_ = EWOMS_GET_PARAM(TypeTag, bool, IluReorderSpheres);
             newton_use_gmres_ = EWOMS_GET_PARAM(TypeTag, bool, UseGmres);
-            require_full_sparsity_pattern_ = EWOMS_GET_PARAM(TypeTag, bool, LinearSolverRequireFullSparsityPattern);
             ignoreConvergenceFailure_ = EWOMS_GET_PARAM(TypeTag, bool, LinearSolverIgnoreConvergenceFailure);
             scale_linear_system_ = EWOMS_GET_PARAM(TypeTag, bool, ScaleLinearSystem);
             cpr_max_ell_iter_  =  EWOMS_GET_PARAM(TypeTag, int, CprMaxEllIter);
@@ -312,7 +303,6 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, bool, IluRedblack, "Use red-black partitioning for the ILU preconditioner");
             EWOMS_REGISTER_PARAM(TypeTag, bool, IluReorderSpheres, "Whether to reorder the entries of the matrix in the red-black ILU preconditioner in spheres starting at an edge. If false the original ordering is preserved in each color. Otherwise why try to ensure D4 ordering (in a 2D structured grid, the diagonal elements are consecutive).");
             EWOMS_REGISTER_PARAM(TypeTag, bool, UseGmres, "Use GMRES as the linear solver");
-            EWOMS_REGISTER_PARAM(TypeTag, bool, LinearSolverRequireFullSparsityPattern, "Produce the full sparsity pattern for the linear solver");
             EWOMS_REGISTER_PARAM(TypeTag, bool, LinearSolverIgnoreConvergenceFailure, "Continue with the simulation like nothing happened after the linear solver did not converge");
             EWOMS_REGISTER_PARAM(TypeTag, bool, ScaleLinearSystem, "Scale linear system according to equation scale and primary variable types");
             EWOMS_REGISTER_PARAM(TypeTag, int, CprMaxEllIter, "MaxIterations of the elliptic pressure part of the cpr solver");
@@ -322,7 +312,7 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, std::string, AcceleratorMode, "Use GPU (cusparseSolver or openclSolver) or FPGA (fpgaSolver) as the linear solver, usage: '--accelerator-mode=[none|cusparse|opencl|fpga|amgcl]'");
             EWOMS_REGISTER_PARAM(TypeTag, int, BdaDeviceId, "Choose device ID for cusparseSolver or openclSolver, use 'nvidia-smi' or 'clinfo' to determine valid IDs");
             EWOMS_REGISTER_PARAM(TypeTag, int, OpenclPlatformId, "Choose platform ID for openclSolver, use 'clinfo' to determine valid platform IDs");
-            EWOMS_REGISTER_PARAM(TypeTag, bool, OpenclIluParallel, "Parallelize ILU decomposition and application on GPU. Default: true");
+            EWOMS_REGISTER_PARAM(TypeTag, bool, OpenclIluParallel, "Parallelize ILU decomposition and application on GPU");
             EWOMS_REGISTER_PARAM(TypeTag, std::string, FpgaBitstream, "Specify the bitstream file for fpgaSolver (including path), usage: '--fpga-bitstream=<filename>'");
         }
 

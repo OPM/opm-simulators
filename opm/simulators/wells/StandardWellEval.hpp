@@ -177,9 +177,6 @@ protected:
 
     void updateWellStateFromPrimaryVariablesPolyMW(WellState& well_state) const;
 
-    void updateThp(WellState& well_state,
-                   DeferredLogger& deferred_logger) const;
-
     // total number of the well equations and primary variables
     // there might be extra equations be used, numWellEq will be updated during the initialization
     int numWellEq_ = numStaticWellEq;
