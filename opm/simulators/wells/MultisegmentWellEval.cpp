@@ -1419,6 +1419,8 @@ updateWellStateFromPrimaryVariables(WellState& well_state,
     auto& ws = well_state.well(baseif_.indexOfWell());
     auto& segments = ws.segments;
     auto& segment_rates = segments.rates;
+    auto& disgas = segments.dissolved_gas_rate;
+    auto& vapoil = segments.vaporized_oil_rate;
     auto& segment_pressure = segments.pressure;
     for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
         std::vector<double> fractions(baseif_.numPhases(), 0.0);
@@ -1482,10 +1484,23 @@ updateWellStateFromPrimaryVariables(WellState& well_state,
                 .saturatedOilVaporizationFactor(pvtReg, temperature, segment_pressure[seg]);
         }
 
-        // 1) Local condition volume flow rates
+        // 1) Infer phase splitting for oil/gas.
         const auto& [Rs, Rv] = this->baseif_.rateConverter().inferDissolvedVaporisedRatio
             (rsMax, rvMax, segment_rates.begin() + (seg + 0)*this->baseif_.numPhases());
 
+        if (! FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            vapoil[seg] = disgas[seg] = 0.0;
+        }
+        else {
+            const auto* qs = &segment_rates[seg*this->baseif_.numPhases() + 0];
+            const auto denom = 1.0 - (Rs * Rv);
+            const auto io = pu.phase_pos[Oil];
+            const auto ig = pu.phase_pos[Gas];
+            disgas[seg] = Rs * (qs[io] - Rv*qs[ig]) / denom;
+            vapoil[seg] = Rv * (qs[ig] - Rs*qs[io]) / denom;
+        }
+
+        // 2) Local condition volume flow rates
         {
             // Use std::span<> in C++20 and beyond.
             const auto  rate_start = (seg + 0) * this->baseif_.numPhases();
@@ -1499,7 +1514,7 @@ updateWellStateFromPrimaryVariables(WellState& well_state,
                  temperature, saltConc, surf_rates, resv_rates);
         }
 
-        // 2) Local condition holdup fractions.
+        // 3) Local condition holdup fractions.
         const auto tot_resv =
             std::accumulate(segments.phase_resv_rates.begin() + (seg + 0)*this->baseif_.numPhases(),
                             segments.phase_resv_rates.begin() + (seg + 1)*this->baseif_.numPhases(),
@@ -1510,7 +1525,7 @@ updateWellStateFromPrimaryVariables(WellState& well_state,
                        segments.phase_holdup.begin()     + (seg + 0)*this->baseif_.numPhases(),
                        [tot_resv](const auto qr) { return std::clamp(qr / tot_resv, 0.0, 1.0); });
 
-        // 3) Local condition flow velocities for segments other than top segment.
+        // 4) Local condition flow velocities for segments other than top segment.
         if (seg > 0) {
             // Possibly poor approximation
             //    Velocity = Flow rate / cross-sectional area.
@@ -1525,7 +1540,7 @@ updateWellStateFromPrimaryVariables(WellState& well_state,
                            [velocity](const auto hf) { return (hf > 0.0) ? velocity : 0.0; });
         }
 
-        // 4) Local condition phase viscosities.
+        // 5) Local condition phase viscosities.
         segments.phase_viscosity[seg*this->baseif_.numPhases() + pu.phase_pos[Oil]] =
             FluidSystem::oilPvt().viscosity(pvtReg, temperature, segment_pressure[seg], Rs);
 
