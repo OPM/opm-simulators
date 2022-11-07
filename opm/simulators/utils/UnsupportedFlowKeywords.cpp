@@ -324,7 +324,6 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"IONXSURF", {false, std::nullopt}},
         {"ISOLNUM", {false, std::nullopt}},
         {"JFUNCR", {false, std::nullopt}},
-        {"KRNUM", {false, std::nullopt}},
         {"KRNUMMF", {false, std::nullopt}},
         {"LANGMPL", {false, std::nullopt}},
         {"LANGMUIR", {false, std::nullopt}},
