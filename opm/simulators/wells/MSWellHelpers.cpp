@@ -228,6 +228,13 @@ ValueType frictionPressureLoss(const double l, const double diameter,
     // Reynolds number
     const ValueType re = abs( diameter * w / (area * mu));
 
+    if ( re == 0.0 ) {
+        // make sure it is because the mass rate is zero
+        assert(w == 0.);
+        return 0.0;
+    }
+
+
     constexpr double re_value1 = 2000.;
     constexpr double re_value2 = 4000.;
 
