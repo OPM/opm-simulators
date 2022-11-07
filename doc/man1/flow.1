@@ -156,9 +156,6 @@ The maximum number of iterations of the linear solver. Default: 200
 \fB\-\-linear\-solver\-reduction\fR=\fI\,SCALAR\/\fR
 The minimum reduction of the residual which the linear solver must achieve. Default: 0.01
 .TP
-\fB\-\-linear\-solver\-require\-full\-sparsity\-pattern\fR=\fI\,BOOLEAN\/\fR
-Produce the full sparsity pattern for the linear solver. Default: false
-.TP
 \fB\-\-linear\-solver\-restart\fR=\fI\,INTEGER\/\fR
 The number of iterations after which GMRES is restarted. Default: 40
 .TP
@@ -207,6 +204,9 @@ The minimum time step size (in days for field and metric unit and hours for lab 
 \fB\-\-min\-time\-step\-before\-shutting\-problematic\-wells\-in\-days\fR=\fI\,SCALAR\/\fR
 The minimum time step size in days for which problematic wells are not shut. Default: 0.01
 .TP
+\fB\-\-newton\-max\-iterations\fR=\fI\,INTEGER\/\fR
+The maximum number of Newton iterations per time step. Default: 20
+.TP
 \fB\-\-newton\-max\-relax\fR=\fI\,SCALAR\/\fR
 The maximum relaxation factor of a Newton iteration. Default: 0.5
 .TP
@@ -219,8 +219,8 @@ The type of relaxation used by Newton method. Default: "dampen"
 \fB\-\-num\-jacobi\-blocks\fR=\fI\,INTEGER\/\fR
 Number of blocks to be created for the Block\-Jacobi preconditioner. Default: 0
 .TP
-\fB\-\-opencl\-ilu\-parallel\fR=\fI\,BOOLEAN\/\fR
-Parallelize ILU decomposition and application on GPU. Default: true
+\fB\-\-opencl\-ilu\-reorder\fR=\fI\,STRING\/\fR
+Choose the reordering strategy for ILU for openclSolver and fpgaSolver, usage: '\-\-opencl\-ilu\-reorder=[level_scheduling|graph_coloring], level_scheduling behaves like Dune and cusparse, graph_coloring is more aggressive and likely to be faster, but is random\-based and generally increases the number of linear solves and linear iterations significantly. Default: ""
 .TP
 \fB\-\-opencl\-platform\-id\fR=\fI\,INTEGER\/\fR
 Choose platform ID for openclSolver, use 'clinfo' to determine valid platform IDs. Default: 0
