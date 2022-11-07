@@ -706,7 +706,7 @@ assignToSolution(data::Solution& sol)
         {"TMULT_RC", UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     rockCompTransMultiplier_},
         {"WATKR",    UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     relativePermeability_[waterPhaseIdx]},
         {"WAT_DEN",  UnitSystem::measure::density,   data::TargetType::RESTART_AUXILIARY,     density_[waterPhaseIdx]},
-        {"WAT_VISC", UnitSystem::measure::viscosity, data::TargetType::RESTART_AUXILIARY,     viscosity_[gasPhaseIdx]}
+        {"WAT_VISC", UnitSystem::measure::viscosity, data::TargetType::RESTART_AUXILIARY,     viscosity_[waterPhaseIdx]},
     };
 
     for (const auto& entry : data)
