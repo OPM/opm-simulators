@@ -61,13 +61,6 @@ namespace mswellhelpers
     VectorType
     invDX(const MatrixType& D, VectorType x, DeferredLogger& deferred_logger);
 
-
-    template <typename ValueType>
-    ValueType calculateFrictionFactor(const double area, const double diameter,
-                                      const ValueType& w, const double roughness,
-                                      const ValueType& mu);
-
-
     // calculating the friction pressure loss
     // l is the segment length
     // area is the segment cross area
