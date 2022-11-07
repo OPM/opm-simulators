@@ -214,44 +214,31 @@ invDX(const MatrixType& D, VectorType x, DeferredLogger& deferred_logger)
 }
 
 template <typename ValueType>
-ValueType calculateFrictionFactor(const double area, const double diameter,
-                                  const ValueType& w, const double roughness,
-                                  const ValueType& mu)
-{
-
-    ValueType f = 0.;
-    // Reynolds number
-    const ValueType re = abs( diameter * w / (area * mu));
-
-    if ( re == 0.0 ) {
-        // make sure it is because the mass rate is zero
-        assert(w == 0.);
-        return 0.0;
-    }
-
-    const ValueType re_value1 = 2000.;
-    const ValueType re_value2 = 4000.;
-
-    if (re < re_value1) {
-        f = 16. / re;
-    } else if (re > re_value2){
-        f = haalandFormular(re, diameter, roughness);
-    } else { // in between
-        const ValueType f1 = 16. / re_value1;
-        const ValueType f2 = haalandFormular(re_value2, diameter, roughness);
-
-        f = (f2 - f1) / (re_value2 - re_value1) * (re - re_value1) + f1;
-    }
-    return f;
-}
-
-template <typename ValueType>
 ValueType frictionPressureLoss(const double l, const double diameter,
                                const double area, const double roughness,
                                const ValueType& density,
                                const ValueType& w, const ValueType& mu)
 {
-    const ValueType f = calculateFrictionFactor(area, diameter, w, roughness, mu);
+    // Reynolds number
+    const ValueType re = abs( diameter * w / (area * mu));
+
+    constexpr double re_value1 = 2000.;
+    constexpr double re_value2 = 4000.;
+
+    if (re < re_value1) {
+        // not using the formula directly because of the division with very small w
+        // might introduce inf/nan entries in Jacobian matrix
+        return 32.* mu * l * abs(w) / (area * diameter *diameter * density);
+    }
+
+    ValueType f;
+    if (re > re_value2) {
+        f = haalandFormular(re, diameter, roughness);
+    } else { // in between
+        constexpr double f1 = 16. / re_value1;
+        const ValueType f2 = haalandFormular(re_value2, diameter, roughness);
+        f = (f2 - f1) / (re_value2 - re_value1) * (re - re_value1) + f1;
+    }
     // \Note: a factor of 2 needs to be here based on the dimensional analysis
     return 2. * f * l * w * w / (area * area * diameter * density);
 }
