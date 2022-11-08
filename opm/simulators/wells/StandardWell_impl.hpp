@@ -957,7 +957,7 @@ namespace Opm
     {
         const double dFLimit = this->param_.dwell_fraction_max_;
         const double dBHPLimit = this->param_.dbhp_max_rel_;
-        this->StdWellEval::updatePrimaryVariablesNewton(dwells, dFLimit, dBHPLimit);
+        this->primary_variables_.updateNewton(dwells, dFLimit, dBHPLimit);
 
         updateExtraPrimaryVariables(dwells);
 

@@ -111,7 +111,12 @@ public:
     //! \brief Copy values from well state.
     void update(const WellState& well_state, DeferredLogger& deferred_logger);
 
-    //! \brief Update polymer molecular weight values from solution vector.
+    //! \brief Update values from newton update vector.
+    void updateNewton(const BVectorWell& dwells,
+                      const double dFLimit,
+                      const double dBHPLimit);
+
+    //! \brief Update polymer molecular weight values from newton update vector.
     void updatePolyMW(const BVectorWell& dwells);
 
     //! \brief Copy values to well state.
@@ -129,17 +134,17 @@ public:
     //! \brief Returns scaled rate for a component.
     EvalWell getQs(const int compIdx) const;
 
-    //! \brief Handle non-reasonable fractions due to numerical overshoot.
-    void processFractions();
-
+private:
     //! \brief Calculate a relaxation factor for producers.
     //! \details To avoid overshoot of the fractions which might result in negative rates.
     double relaxationFactorFractionsProducer(const std::vector<double>& primary_variables,
                                              const BVectorWell& dwells) const;
 
-private:
     //! \brief Returns volume fraction for a component.
     EvalWell volumeFraction(const unsigned compIdx) const;
+
+    //! \brief Handle non-reasonable fractions due to numerical overshoot.
+    void processFractions();
 
     const WellInterfaceIndices<FluidSystem,Indices,Scalar>& well_; //!< Reference to well interface
 

@@ -108,57 +108,6 @@ computeAccumWell()
 }
 
 template<class FluidSystem, class Indices, class Scalar>
-void
-StandardWellEval<FluidSystem,Indices,Scalar>::
-updatePrimaryVariablesNewton(const BVectorWell& dwells,
-                             [[maybe_unused]] const double dFLimit,
-                             const double dBHPLimit) const
-{
-    const std::vector<double> old_primary_variables = primary_variables_.value_;
-
-    // for injectors, very typical one of the fractions will be one, and it is easy to get zero value
-    // fractions. not sure what is the best way to handle it yet, so we just use 1.0 here
-    [[maybe_unused]] const double relaxation_factor_fractions =
-        (baseif_.isProducer()) ? this->primary_variables_.relaxationFactorFractionsProducer(old_primary_variables, dwells)
-                               : 1.0;
-
-    // update the second and third well variable (The flux fractions)
-
-    if constexpr (has_wfrac_variable) {
-        const int sign2 = dwells[0][WFrac] > 0 ? 1: -1;
-        const double dx2_limited = sign2 * std::min(std::abs(dwells[0][WFrac] * relaxation_factor_fractions), dFLimit);
-        // primary_variables_[WFrac] = old_primary_variables[WFrac] - dx2_limited;
-        primary_variables_.value_[WFrac] = old_primary_variables[WFrac] - dx2_limited;
-    }
-
-    if constexpr (has_gfrac_variable) {
-        const int sign3 = dwells[0][GFrac] > 0 ? 1: -1;
-        const double dx3_limited = sign3 * std::min(std::abs(dwells[0][GFrac] * relaxation_factor_fractions), dFLimit);
-        primary_variables_.value_[GFrac] = old_primary_variables[GFrac] - dx3_limited;
-    }
-
-    if constexpr (Indices::enableSolvent) {
-        const int sign4 = dwells[0][SFrac] > 0 ? 1: -1;
-        const double dx4_limited = sign4 * std::min(std::abs(dwells[0][SFrac]) * relaxation_factor_fractions, dFLimit);
-        primary_variables_.value_[SFrac] = old_primary_variables[SFrac] - dx4_limited;
-    }
-
-    this->primary_variables_.processFractions();
-
-    // updating the total rates Q_t
-    const double relaxation_factor_rate = this->relaxationFactorRate(old_primary_variables, dwells[0][WQTotal]);
-    primary_variables_.value_[WQTotal] = old_primary_variables[WQTotal] - dwells[0][WQTotal] * relaxation_factor_rate;
-
-    // updating the bottom hole pressure
-    {
-        const int sign1 = dwells[0][Bhp] > 0 ? 1: -1;
-        const double dx1_limited = sign1 * std::min(std::abs(dwells[0][Bhp]), std::abs(old_primary_variables[Bhp]) * dBHPLimit);
-        // 1e5 to make sure bhp will not be below 1bar
-        primary_variables_.value_[Bhp] = std::max(old_primary_variables[Bhp] - dx1_limited, 1e5);
-    }
-}
-
-template<class FluidSystem, class Indices, class Scalar>
 ConvergenceReport
 StandardWellEval<FluidSystem,Indices,Scalar>::
 getWellConvergence(const WellState& well_state,
