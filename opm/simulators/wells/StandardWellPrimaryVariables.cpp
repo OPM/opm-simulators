@@ -32,7 +32,7 @@
 #include <opm/models/blackoil/blackoilonephaseindices.hh>
 #include <opm/models/blackoil/blackoiltwophaseindices.hh>
 
-#include <opm/simulators/utils/DeferredLogger.hpp>
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
 #include <opm/simulators/wells/WellInterfaceIndices.hpp>
 #include <opm/simulators/wells/WellState.hpp>
@@ -61,6 +61,107 @@ resize(const int numWellEq)
     numWellEq_ = numWellEq;
 }
 
+template<class FluidSystem, class Indices, class Scalar>
+void StandardWellPrimaryVariables<FluidSystem,Indices,Scalar>::
+update(const WellState& well_state, DeferredLogger& deferred_logger)
+{
+    static constexpr int Water = BlackoilPhases::Aqua;
+    static constexpr int Oil = BlackoilPhases::Liquid;
+    static constexpr int Gas = BlackoilPhases::Vapour;
+
+    const int well_index = well_.indexOfWell();
+    const int np = well_.numPhases();
+    const auto& pu = well_.phaseUsage();
+    const auto& ws = well_state.well(well_index);
+    // the weighted total well rate
+    double total_well_rate = 0.0;
+    for (int p = 0; p < np; ++p) {
+        total_well_rate += well_.scalingFactor(p) * ws.surface_rates[p];
+    }
+
+    // Not: for the moment, the first primary variable for the injectors is not G_total. The injection rate
+    // under surface condition is used here
+    if (well_.isInjector()) {
+        switch (well_.wellEcl().injectorType()) {
+        case InjectorType::WATER:
+            value_[WQTotal] = ws.surface_rates[pu.phase_pos[Water]];
+            break;
+        case InjectorType::GAS:
+            value_[WQTotal] = ws.surface_rates[pu.phase_pos[Gas]];
+            break;
+        case InjectorType::OIL:
+            value_[WQTotal] = ws.surface_rates[pu.phase_pos[Oil]];
+            break;
+        case InjectorType::MULTI:
+            // Not supported.
+            deferred_logger.warning("MULTI_PHASE_INJECTOR_NOT_SUPPORTED",
+                                    "Multi phase injectors are not supported, requested for well " + well_.name());
+            break;
+        }
+    } else {
+            value_[WQTotal] = total_well_rate;
+    }
+
+    if (std::abs(total_well_rate) > 0.) {
+        if constexpr (has_wfrac_variable) {
+            value_[WFrac] = well_.scalingFactor(pu.phase_pos[Water]) * ws.surface_rates[pu.phase_pos[Water]] / total_well_rate;
+        }
+        if constexpr (has_gfrac_variable) {
+            value_[GFrac] = well_.scalingFactor(pu.phase_pos[Gas]) *
+                            (ws.surface_rates[pu.phase_pos[Gas]] -
+                             (Indices::enableSolvent ? ws.sum_solvent_rates() : 0.0) ) / total_well_rate ;
+        }
+        if constexpr (Indices::enableSolvent) {
+            value_[SFrac] = well_.scalingFactor(pu.phase_pos[Gas]) * ws.sum_solvent_rates() / total_well_rate ;
+        }
+    } else { // total_well_rate == 0
+        if (well_.isInjector()) {
+            // only single phase injection handled
+            if constexpr (has_wfrac_variable) {
+                if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                    auto phase = well_.wellEcl().getInjectionProperties().injectorType;
+                    if (phase == InjectorType::WATER) {
+                        value_[WFrac] = 1.0;
+                    } else {
+                        value_[WFrac] = 0.0;
+                    }
+                }
+            }
+            if constexpr (has_gfrac_variable) {
+                if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                    auto phase = well_.wellEcl().getInjectionProperties().injectorType;
+                    if (phase == InjectorType::GAS) {
+                        value_[GFrac] = (1.0 - well_.rsRvInj());
+                        if constexpr (Indices::enableSolvent) {
+                            value_[GFrac] = 1.0 - well_.rsRvInj() - well_.wsolvent();
+                            value_[SFrac] = well_.wsolvent();
+                        }
+                    } else {
+                        value_[GFrac] = 0.0;
+                    }
+                }
+            }
+
+            // TODO: it is possible to leave injector as a oil well,
+            // when F_w and F_g both equals to zero, not sure under what kind of circumstance
+            // this will happen.
+        } else if (well_.isProducer()) { // producers
+            // TODO: the following are not addressed for the solvent case yet
+            if constexpr (has_wfrac_variable) {
+                value_[WFrac] = 1.0 / np;
+            }
+
+            if constexpr (has_gfrac_variable) {
+                value_[GFrac] = 1.0 / np;
+            }
+        } else {
+            OPM_DEFLOG_THROW(std::logic_error, "Expected PRODUCER or INJECTOR type of well", deferred_logger);
+        }
+    }
+
+    // BHP
+    value_[Bhp] = ws.bhp;
+}
 
 template<class FluidSystem, class Indices, class Scalar>
 void StandardWellPrimaryVariables<FluidSystem,Indices,Scalar>::
@@ -77,22 +178,6 @@ updatePolyMW(const BVectorWell& dwells)
 
             const double dx_pskin = dwells[0][pskin_index];
             value_[pskin_index] -= relaxation_factor * dx_pskin;
-        }
-    }
-}
-
-template<class FluidSystem, class Indices, class Scalar>
-void StandardWellPrimaryVariables<FluidSystem,Indices,Scalar>::
-copyToWellStatePolyMW(WellState& well_state) const
-{
-    if (well_.isInjector()) {
-        auto& ws = well_state.well(well_.indexOfWell());
-        auto& perf_data = ws.perf_data;
-        auto& perf_water_velocity = perf_data.water_velocity;
-        auto& perf_skin_pressure = perf_data.skin_pressure;
-        for (int perf = 0; perf < well_.numPerfs(); ++perf) {
-            perf_water_velocity[perf] = value_[Bhp + 1 + perf];
-            perf_skin_pressure[perf] = value_[Bhp + 1 + well_.numPerfs() + perf];
         }
     }
 }
@@ -193,6 +278,22 @@ copyToWellState(WellState& well_state,
             deferred_logger.warning("MULTI_PHASE_INJECTOR_NOT_SUPPORTED",
                                     "Multi phase injectors are not supported, requested for well " + well_.name());
             break;
+        }
+    }
+}
+
+template<class FluidSystem, class Indices, class Scalar>
+void StandardWellPrimaryVariables<FluidSystem,Indices,Scalar>::
+copyToWellStatePolyMW(WellState& well_state) const
+{
+    if (well_.isInjector()) {
+        auto& ws = well_state.well(well_.indexOfWell());
+        auto& perf_data = ws.perf_data;
+        auto& perf_water_velocity = perf_data.water_velocity;
+        auto& perf_skin_pressure = perf_data.skin_pressure;
+        for (int perf = 0; perf < well_.numPerfs(); ++perf) {
+            perf_water_velocity[perf] = value_[Bhp + 1 + perf];
+            perf_skin_pressure[perf] = value_[Bhp + 1 + well_.numPerfs() + perf];
         }
     }
 }

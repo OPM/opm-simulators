@@ -108,6 +108,9 @@ public:
     //! \brief Returns number of well equations.
     int numWellEq() const { return numWellEq_; }
 
+    //! \brief Copy values from well state.
+    void update(const WellState& well_state, DeferredLogger& deferred_logger);
+
     //! \brief Update polymer molecular weight values from solution vector.
     void updatePolyMW(const BVectorWell& dwells);
 
