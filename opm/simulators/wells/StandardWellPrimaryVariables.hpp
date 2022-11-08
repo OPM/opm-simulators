@@ -129,6 +129,9 @@ public:
     //! \brief Returns scaled rate for a component.
     EvalWell getQs(const int compIdx) const;
 
+    //! \brief Handle non-reasonable fractions due to numerical overshoot.
+    void processFractions();
+
 private:
     //! \brief Returns volume fraction for a component.
     EvalWell volumeFraction(const unsigned compIdx) const;

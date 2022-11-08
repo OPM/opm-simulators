@@ -130,105 +130,6 @@ updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_log
 template<class FluidSystem, class Indices, class Scalar>
 void
 StandardWellEval<FluidSystem,Indices,Scalar>::
-processFractions() const
-{
-    static constexpr int Gas = WellInterfaceIndices<FluidSystem,Indices,Scalar>::Gas;
-    static constexpr int Oil = WellInterfaceIndices<FluidSystem,Indices,Scalar>::Oil;
-    static constexpr int Water = WellInterfaceIndices<FluidSystem,Indices,Scalar>::Water;
-    const auto pu = baseif_.phaseUsage();
-    std::vector<double> F(baseif_.numPhases(), 0.0);
-
-    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-        F[pu.phase_pos[Oil]] = 1.0;
-
-        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-            F[pu.phase_pos[Water]] = primary_variables_.value_[WFrac];
-            F[pu.phase_pos[Oil]] -= F[pu.phase_pos[Water]];
-        }
-
-        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-            F[pu.phase_pos[Gas]] = primary_variables_.value_[GFrac];
-            F[pu.phase_pos[Oil]] -= F[pu.phase_pos[Gas]];
-        }
-    }
-    else if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-        F[pu.phase_pos[Water]] = 1.0;
-
-        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-            F[pu.phase_pos[Gas]] = primary_variables_.value_[GFrac];
-            F[pu.phase_pos[Water]] -= F[pu.phase_pos[Gas]];
-        }
-    }
-    else if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-        F[pu.phase_pos[Gas]] = 1.0;
-    }
-
-    [[maybe_unused]] double F_solvent;
-    if constexpr (Indices::enableSolvent) {
-        F_solvent = primary_variables_.value_[SFrac];
-        F[pu.phase_pos[Oil]] -= F_solvent;
-    }
-
-    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-        if (F[Water] < 0.0) {
-            if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                    F[pu.phase_pos[Gas]] /= (1.0 - F[pu.phase_pos[Water]]);
-            }
-            if constexpr (Indices::enableSolvent) {
-                F_solvent /= (1.0 - F[pu.phase_pos[Water]]);
-            }
-            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-                F[pu.phase_pos[Oil]] /= (1.0 - F[pu.phase_pos[Water]]);
-            }
-            F[pu.phase_pos[Water]] = 0.0;
-        }
-    }
-
-    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-        if (F[pu.phase_pos[Gas]] < 0.0) {
-            if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-                F[pu.phase_pos[Water]] /= (1.0 - F[pu.phase_pos[Gas]]);
-            }
-            if constexpr (Indices::enableSolvent) {
-                F_solvent /= (1.0 - F[pu.phase_pos[Gas]]);
-            }
-            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-                F[pu.phase_pos[Oil]] /= (1.0 - F[pu.phase_pos[Gas]]);
-            }
-            F[pu.phase_pos[Gas]] = 0.0;
-        }
-    }
-
-    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-        if (F[pu.phase_pos[Oil]] < 0.0) {
-            if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-                F[pu.phase_pos[Water]] /= (1.0 - F[pu.phase_pos[Oil]]);
-            }
-            if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                F[pu.phase_pos[Gas]] /= (1.0 - F[pu.phase_pos[Oil]]);
-            }
-            if constexpr (Indices::enableSolvent) {
-                F_solvent /= (1.0 - F[pu.phase_pos[Oil]]);
-            }
-            F[pu.phase_pos[Oil]] = 0.0;
-        }
-    }
-
-    if constexpr (has_wfrac_variable) {
-        primary_variables_.value_[WFrac] = F[pu.phase_pos[Water]];
-    }
-
-    if constexpr (has_gfrac_variable) {
-        primary_variables_.value_[GFrac] = F[pu.phase_pos[Gas]];
-    }
-    if constexpr (Indices::enableSolvent) {
-        primary_variables_.value_[SFrac] = F_solvent;
-    }
-}
-
-template<class FluidSystem, class Indices, class Scalar>
-void
-StandardWellEval<FluidSystem,Indices,Scalar>::
 updateWellStateFromPrimaryVariables(WellState& well_state,
                                     DeferredLogger& deferred_logger) const
 {
@@ -289,7 +190,7 @@ updatePrimaryVariablesNewton(const BVectorWell& dwells,
         primary_variables_.value_[SFrac] = old_primary_variables[SFrac] - dx4_limited;
     }
 
-    processFractions();
+    this->primary_variables_.processFractions();
 
     // updating the total rates Q_t
     const double relaxation_factor_rate = this->relaxationFactorRate(old_primary_variables, dwells[0][WQTotal]);

@@ -117,9 +117,6 @@ protected:
               const int num_cells,
               const bool has_polymermw);
 
-    // handle the non reasonable fractions due to numerical overshoot
-    void processFractions() const;
-
     void updatePrimaryVariables(const WellState& well_state,
                                 DeferredLogger& deferred_logger) const;
 

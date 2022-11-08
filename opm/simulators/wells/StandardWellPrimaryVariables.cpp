@@ -425,6 +425,105 @@ getQs(const int comp_idx) const
     }
 }
 
+template<class FluidSystem, class Indices, class Scalar>
+void StandardWellPrimaryVariables<FluidSystem,Indices,Scalar>::
+processFractions()
+{
+    static constexpr int Water = BlackoilPhases::Aqua;
+    static constexpr int Oil = BlackoilPhases::Liquid;
+    static constexpr int Gas = BlackoilPhases::Vapour;
+
+    const auto pu = well_.phaseUsage();
+    std::vector<double> F(well_.numPhases(), 0.0);
+
+    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+        F[pu.phase_pos[Oil]] = 1.0;
+
+        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+            F[pu.phase_pos[Water]] = value_[WFrac];
+            F[pu.phase_pos[Oil]] -= F[pu.phase_pos[Water]];
+        }
+
+        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            F[pu.phase_pos[Gas]] = value_[GFrac];
+            F[pu.phase_pos[Oil]] -= F[pu.phase_pos[Gas]];
+        }
+    }
+    else if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+        F[pu.phase_pos[Water]] = 1.0;
+
+        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            F[pu.phase_pos[Gas]] = value_[GFrac];
+            F[pu.phase_pos[Water]] -= F[pu.phase_pos[Gas]];
+        }
+    }
+    else if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+        F[pu.phase_pos[Gas]] = 1.0;
+    }
+
+    [[maybe_unused]] double F_solvent;
+    if constexpr (Indices::enableSolvent) {
+        F_solvent = value_[SFrac];
+        F[pu.phase_pos[Oil]] -= F_solvent;
+    }
+
+    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+        if (F[Water] < 0.0) {
+            if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                    F[pu.phase_pos[Gas]] /= (1.0 - F[pu.phase_pos[Water]]);
+            }
+            if constexpr (Indices::enableSolvent) {
+                F_solvent /= (1.0 - F[pu.phase_pos[Water]]);
+            }
+            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                F[pu.phase_pos[Oil]] /= (1.0 - F[pu.phase_pos[Water]]);
+            }
+            F[pu.phase_pos[Water]] = 0.0;
+        }
+    }
+
+    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+        if (F[pu.phase_pos[Gas]] < 0.0) {
+            if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                F[pu.phase_pos[Water]] /= (1.0 - F[pu.phase_pos[Gas]]);
+            }
+            if constexpr (Indices::enableSolvent) {
+                F_solvent /= (1.0 - F[pu.phase_pos[Gas]]);
+            }
+            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                F[pu.phase_pos[Oil]] /= (1.0 - F[pu.phase_pos[Gas]]);
+            }
+            F[pu.phase_pos[Gas]] = 0.0;
+        }
+    }
+
+    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+        if (F[pu.phase_pos[Oil]] < 0.0) {
+            if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                F[pu.phase_pos[Water]] /= (1.0 - F[pu.phase_pos[Oil]]);
+            }
+            if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                F[pu.phase_pos[Gas]] /= (1.0 - F[pu.phase_pos[Oil]]);
+            }
+            if constexpr (Indices::enableSolvent) {
+                F_solvent /= (1.0 - F[pu.phase_pos[Oil]]);
+            }
+            F[pu.phase_pos[Oil]] = 0.0;
+        }
+    }
+
+    if constexpr (has_wfrac_variable) {
+        value_[WFrac] = F[pu.phase_pos[Water]];
+    }
+
+    if constexpr (has_gfrac_variable) {
+        value_[GFrac] = F[pu.phase_pos[Gas]];
+    }
+    if constexpr (Indices::enableSolvent) {
+        value_[SFrac] = F_solvent;
+    }
+}
+
 #define INSTANCE(...) \
 template class StandardWellPrimaryVariables<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>;
 
