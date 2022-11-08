@@ -120,10 +120,13 @@ public:
     //! \brief Copy polymer molecular weight values to well state.
     void copyToWellStatePolyMW(WellState& well_state) const;
 
+    //! \brief Returns scaled volume fraction for a component.
+    EvalWell volumeFractionScaled(const int compIdx) const;
+
+private:
     //! \brief Returns volume fraction for a component.
     EvalWell volumeFraction(const unsigned compIdx) const;
 
-private:
     const WellInterfaceIndices<FluidSystem,Indices,Scalar>& well_; //!< Reference to well interface
 
     //! \brief Total number of the well equations and primary variables.

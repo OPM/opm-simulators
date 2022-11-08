@@ -159,22 +159,9 @@ getQs(const int comp_idx) const
         }
         return inj_frac * primary_variables_.evaluation_[WQTotal];
     } else { // producers
-        return primary_variables_.evaluation_[WQTotal] * wellVolumeFractionScaled(comp_idx);
+        return primary_variables_.evaluation_[WQTotal] *
+               primary_variables_.volumeFractionScaled(comp_idx);
     }
-}
-
-template<class FluidSystem, class Indices, class Scalar>
-typename StandardWellEval<FluidSystem,Indices,Scalar>::EvalWell
-StandardWellEval<FluidSystem,Indices,Scalar>::
-wellVolumeFractionScaled(const int compIdx) const
-{
-    const int legacyCompIdx = baseif_.ebosCompIdxToFlowCompIdx(compIdx);
-    const double scal = baseif_.scalingFactor(legacyCompIdx);
-    if (scal > 0)
-        return this->primary_variables_.volumeFraction(compIdx) / scal;
-
-    // the scaling factor may be zero for RESV controlled wells.
-    return this->primary_variables_.volumeFraction(compIdx);
 }
 
 template<class FluidSystem, class Indices, class Scalar>
@@ -184,12 +171,12 @@ wellSurfaceVolumeFraction(const int compIdx) const
 {
     EvalWell sum_volume_fraction_scaled(this->primary_variables_.numWellEq() + Indices::numEq, 0.);
     for (int idx = 0; idx < baseif_.numComponents(); ++idx) {
-        sum_volume_fraction_scaled += wellVolumeFractionScaled(idx);
+        sum_volume_fraction_scaled += primary_variables_.volumeFractionScaled(idx);
     }
 
     assert(sum_volume_fraction_scaled.value() != 0.);
 
-    return wellVolumeFractionScaled(compIdx) / sum_volume_fraction_scaled;
+    return this->primary_variables_.volumeFractionScaled(compIdx) / sum_volume_fraction_scaled;
  }
 
 template<class FluidSystem, class Indices, class Scalar>
