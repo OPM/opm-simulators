@@ -32,6 +32,7 @@
 namespace Opm
 {
 
+class DeferredLogger;
 template<class FluidSystem, class Indices, class Scalar> class WellInterfaceIndices;
 class WellState;
 
@@ -111,6 +112,9 @@ public:
     void updatePolyMW(const BVectorWell& dwells);
 
     //! \brief Copy values to well state.
+    void copyToWellState(WellState& well_state, DeferredLogger& deferred_logger) const;
+
+    //! \brief Copy polymer molecular weight values to well state.
     void copyToWellStatePolyMW(WellState& well_state) const;
 
 private:

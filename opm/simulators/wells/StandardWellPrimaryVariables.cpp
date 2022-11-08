@@ -32,6 +32,8 @@
 #include <opm/models/blackoil/blackoilonephaseindices.hh>
 #include <opm/models/blackoil/blackoiltwophaseindices.hh>
 
+#include <opm/simulators/utils/DeferredLogger.hpp>
+
 #include <opm/simulators/wells/WellInterfaceIndices.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
@@ -91,6 +93,106 @@ copyToWellStatePolyMW(WellState& well_state) const
         for (int perf = 0; perf < well_.numPerfs(); ++perf) {
             perf_water_velocity[perf] = value_[Bhp + 1 + perf];
             perf_skin_pressure[perf] = value_[Bhp + 1 + well_.numPerfs() + perf];
+        }
+    }
+}
+
+template<class FluidSystem, class Indices, class Scalar>
+void StandardWellPrimaryVariables<FluidSystem,Indices,Scalar>::
+copyToWellState(WellState& well_state,
+                DeferredLogger& deferred_logger) const
+{
+    static constexpr int Water = BlackoilPhases::Aqua;
+    static constexpr int Oil = BlackoilPhases::Liquid;
+    static constexpr int Gas = BlackoilPhases::Vapour;
+
+    const PhaseUsage& pu = well_.phaseUsage();
+    std::vector<double> F(well_.numPhases(), 0.0);
+    [[maybe_unused]] double F_solvent = 0.0;
+    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+        const int oil_pos = pu.phase_pos[Oil];
+        F[oil_pos] = 1.0;
+
+        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+            const int water_pos = pu.phase_pos[Water];
+            F[water_pos] = value_[WFrac];
+            F[oil_pos] -= F[water_pos];
+        }
+
+        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            const int gas_pos = pu.phase_pos[Gas];
+            F[gas_pos] = value_[GFrac];
+            F[oil_pos] -= F[gas_pos];
+        }
+
+        if constexpr (Indices::enableSolvent) {
+            F_solvent = value_[SFrac];
+            F[oil_pos] -= F_solvent;
+        }
+    }
+    else if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+        const int water_pos = pu.phase_pos[Water];
+        F[water_pos] = 1.0;
+
+        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            const int gas_pos = pu.phase_pos[Gas];
+            F[gas_pos] = value_[GFrac];
+            F[water_pos] -= F[gas_pos];
+        }
+    }
+    else if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+        const int gas_pos = pu.phase_pos[Gas];
+        F[gas_pos] = 1.0;
+    }
+
+    // convert the fractions to be Q_p / G_total to calculate the phase rates
+    for (int p = 0; p < well_.numPhases(); ++p) {
+        const double scal = well_.scalingFactor(p);
+        // for injection wells, there should only one non-zero scaling factor
+        if (scal > 0) {
+            F[p] /= scal ;
+        } else {
+            // this should only happens to injection wells
+            F[p] = 0.;
+        }
+    }
+
+    // F_solvent is added to F_gas. This means that well_rate[Gas] also contains solvent.
+    // More testing is needed to make sure this is correct for well groups and THP.
+    if constexpr (Indices::enableSolvent) {
+        F_solvent /= well_.scalingFactor(Indices::contiSolventEqIdx);
+        F[pu.phase_pos[Gas]] += F_solvent;
+    }
+
+    auto& ws = well_state.well(well_.indexOfWell());
+    ws.bhp = value_[Bhp];
+
+    // calculate the phase rates based on the primary variables
+    // for producers, this is not a problem, while not sure for injectors here
+    if (well_.isProducer()) {
+        const double g_total = value_[WQTotal];
+        for (int p = 0; p < well_.numPhases(); ++p) {
+            ws.surface_rates[p] = g_total * F[p];
+        }
+    } else { // injectors
+        for (int p = 0; p < well_.numPhases(); ++p) {
+            ws.surface_rates[p] = 0.0;
+        }
+        switch (well_.wellEcl().injectorType()) {
+        case InjectorType::WATER:
+            ws.surface_rates[pu.phase_pos[Water]] = value_[WQTotal];
+            break;
+        case InjectorType::GAS:
+            ws.surface_rates[pu.phase_pos[Gas]] = value_[WQTotal];
+            break;
+        case InjectorType::OIL:
+            ws.surface_rates[pu.phase_pos[Oil]] = value_[WQTotal];
+            break;
+        case InjectorType::MULTI:
+            // Not supported.
+            deferred_logger.warning("MULTI_PHASE_INJECTOR_NOT_SUPPORTED",
+                                    "Multi phase injectors are not supported, requested for well " + well_.name());
+            break;
         }
     }
 }
