@@ -995,7 +995,7 @@ namespace Opm
 
         // other primary variables related to polymer injectivity study
         if constexpr (Base::has_polymermw) {
-            this->updateWellStateFromPrimaryVariablesPolyMW(well_state);
+            this->primary_variables_.copyToWellStatePolyMW(well_state);
         }
     }
 

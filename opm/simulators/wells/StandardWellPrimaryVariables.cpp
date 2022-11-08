@@ -33,6 +33,7 @@
 #include <opm/models/blackoil/blackoiltwophaseindices.hh>
 
 #include <opm/simulators/wells/WellInterfaceIndices.hpp>
+#include <opm/simulators/wells/WellState.hpp>
 
 namespace Opm {
 
@@ -74,6 +75,22 @@ updatePolyMW(const BVectorWell& dwells)
 
             const double dx_pskin = dwells[0][pskin_index];
             value_[pskin_index] -= relaxation_factor * dx_pskin;
+        }
+    }
+}
+
+template<class FluidSystem, class Indices, class Scalar>
+void StandardWellPrimaryVariables<FluidSystem,Indices,Scalar>::
+copyToWellStatePolyMW(WellState& well_state) const
+{
+    if (well_.isInjector()) {
+        auto& ws = well_state.well(well_.indexOfWell());
+        auto& perf_data = ws.perf_data;
+        auto& perf_water_velocity = perf_data.water_velocity;
+        auto& perf_skin_pressure = perf_data.skin_pressure;
+        for (int perf = 0; perf < well_.numPerfs(); ++perf) {
+            perf_water_velocity[perf] = value_[Bhp + 1 + perf];
+            perf_skin_pressure[perf] = value_[Bhp + 1 + well_.numPerfs() + perf];
         }
     }
 }

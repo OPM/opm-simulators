@@ -134,8 +134,6 @@ protected:
                                       const double dFLimit,
                                       const double dBHPLimit) const;
 
-    void updateWellStateFromPrimaryVariablesPolyMW(WellState& well_state) const;
-
     mutable PrimaryVariables primary_variables_; //!< Primary variables for well
 
     // the saturations in the well bore under surface conditions at the beginning of the time step

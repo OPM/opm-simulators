@@ -560,23 +560,6 @@ updateWellStateFromPrimaryVariables(WellState& well_state,
 template<class FluidSystem, class Indices, class Scalar>
 void
 StandardWellEval<FluidSystem,Indices,Scalar>::
-updateWellStateFromPrimaryVariablesPolyMW(WellState& well_state) const
-{
-    if (baseif_.isInjector()) {
-        auto& ws = well_state.well(baseif_.indexOfWell());
-        auto& perf_data = ws.perf_data;
-        auto& perf_water_velocity = perf_data.water_velocity;
-        auto& perf_skin_pressure = perf_data.skin_pressure;
-        for (int perf = 0; perf < baseif_.numPerfs(); ++perf) {
-            perf_water_velocity[perf] = primary_variables_.value_[Bhp + 1 + perf];
-            perf_skin_pressure[perf] = primary_variables_.value_[Bhp + 1 + baseif_.numPerfs() + perf];
-        }
-    }
-}
-
-template<class FluidSystem, class Indices, class Scalar>
-void
-StandardWellEval<FluidSystem,Indices,Scalar>::
 computeAccumWell()
 {
     for (int eq_idx = 0; eq_idx < numWellConservationEq; ++eq_idx) {
