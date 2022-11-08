@@ -34,8 +34,11 @@
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
+#include <opm/simulators/wells/StandardWellGeneric.hpp>
 #include <opm/simulators/wells/WellInterfaceIndices.hpp>
 #include <opm/simulators/wells/WellState.hpp>
+
+#include <algorithm>
 
 namespace Opm {
 
@@ -522,6 +525,52 @@ processFractions()
     if constexpr (Indices::enableSolvent) {
         value_[SFrac] = F_solvent;
     }
+}
+
+template<class FluidSystem, class Indices, class Scalar>
+double StandardWellPrimaryVariables<FluidSystem,Indices,Scalar>::
+relaxationFactorFractionsProducer(const std::vector<double>& primary_variables,
+                                  const BVectorWell& dwells) const
+{
+    // TODO: not considering solvent yet
+    // 0.95 is a experimental value, which remains to be optimized
+    double relaxation_factor = 1.0;
+
+    if (FluidSystem::numActivePhases() > 1) {
+        if constexpr (has_wfrac_variable) {
+            const double relaxation_factor_w = StandardWellGeneric<Scalar>::
+                                               relaxationFactorFraction(primary_variables[WFrac], dwells[0][WFrac]);
+            relaxation_factor = std::min(relaxation_factor, relaxation_factor_w);
+        }
+
+        if constexpr (has_gfrac_variable) {
+            const double relaxation_factor_g = StandardWellGeneric<Scalar>::
+                                               relaxationFactorFraction(primary_variables[GFrac], dwells[0][GFrac]);
+            relaxation_factor = std::min(relaxation_factor, relaxation_factor_g);
+        }
+
+
+        if constexpr (has_wfrac_variable && has_gfrac_variable) {
+            // We need to make sure the even with the relaxation_factor, the sum of F_w and F_g is below one, so there will
+            // not be negative oil fraction later
+            const double original_sum = primary_variables[WFrac] + primary_variables[GFrac];
+            const double relaxed_update = (dwells[0][WFrac] + dwells[0][GFrac]) * relaxation_factor;
+            const double possible_updated_sum = original_sum - relaxed_update;
+            // We only relax if fraction is above 1.
+            // The newton solver should handle the rest
+            const double epsilon = 0.001;
+            if (possible_updated_sum > 1.0 + epsilon) {
+                // since the orignal sum <= 1.0 the epsilon asserts that
+                // the relaxed_update is non trivial.
+                assert(relaxed_update != 0.);
+
+                const double further_relaxation_factor = std::abs((1. - original_sum) / relaxed_update) * 0.95;
+                relaxation_factor *= further_relaxation_factor;
+            }
+        }
+        assert(relaxation_factor >= 0.0 && relaxation_factor <= 1.0);
+    }
+    return relaxation_factor;
 }
 
 #define INSTANCE(...) \

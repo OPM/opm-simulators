@@ -62,7 +62,7 @@ protected:
 public:
     using EvalWell = typename PrimaryVariables::EvalWell;
     using Eval = DenseAd::Evaluation<Scalar, Indices::numEq>;
-    using BVectorWell = typename StandardWellGeneric<Scalar>::BVectorWell;
+    using BVectorWell = typename StandardWellEquations<Scalar,Indices::numEq>::BVectorWell;
 
     //! \brief Returns a const reference to equation system.
     const StandardWellEquations<Scalar,Indices::numEq>& linSys() const
@@ -84,11 +84,6 @@ protected:
     }
 
     EvalWell extendEval(const Eval& in) const;
-
-    // calculate a relaxation factor to avoid overshoot of the fractions for producers
-    // which might result in negative rates
-    static double relaxationFactorFractionsProducer(const std::vector<double>& primary_variables,
-                                                    const BVectorWell& dwells);
 
     // computing the accumulation term for later use in well mass equations
     void computeAccumWell();

@@ -132,6 +132,11 @@ public:
     //! \brief Handle non-reasonable fractions due to numerical overshoot.
     void processFractions();
 
+    //! \brief Calculate a relaxation factor for producers.
+    //! \details To avoid overshoot of the fractions which might result in negative rates.
+    double relaxationFactorFractionsProducer(const std::vector<double>& primary_variables,
+                                             const BVectorWell& dwells) const;
+
 private:
     //! \brief Returns volume fraction for a component.
     EvalWell volumeFraction(const unsigned compIdx) const;
