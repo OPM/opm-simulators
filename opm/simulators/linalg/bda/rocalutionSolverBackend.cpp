@@ -20,6 +20,7 @@
 #include <config.h>
 #include <cmath>
 #include <sstream>
+#include <fmt/format.h>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/ErrorMacros.hpp>
@@ -63,8 +64,8 @@ void rocalutionSolverBackend<block_size>::initialize(BlockedMatrix *matrix) {
     this->nnz = nnzb * block_size * block_size;
 
     std::ostringstream out;
-    out << "Initializing rocalution, matrix size: " << Nb << " blockrows, nnzb: " << nnzb << "\n";
-    out << "Maxit: " << maxit << std::scientific << ", tolerance: " << tolerance << "\n";
+    out << fmt::format("Initializing rocalution, matrix size: {} blockrows, nnzb: {}\n", Nb, nnzb);
+    out << fmt::format("Maxit: {}, tolerance: {:e}\n", maxit, tolerance);
     OpmLog::info(out.str());
 
     h_x.resize(Nb * block_size);
