@@ -127,8 +127,6 @@ protected:
     void updatePrimaryVariables(const WellState& well_state,
                                 DeferredLogger& deferred_logger) const;
 
-    void updatePrimaryVariablesPolyMW(const BVectorWell& dwells) const;
-
     void updateWellStateFromPrimaryVariables(WellState& well_state,
                                              DeferredLogger& deferred_logger) const;
 

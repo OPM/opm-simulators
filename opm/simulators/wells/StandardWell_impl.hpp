@@ -978,7 +978,7 @@ namespace Opm
     {
         // for the water velocity and skin pressure
         if constexpr (Base::has_polymermw) {
-            this->updatePrimaryVariablesPolyMW(dwells);
+            this->primary_variables_.updatePolyMW(dwells);
         }
     }
 

@@ -351,26 +351,6 @@ updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_log
 template<class FluidSystem, class Indices, class Scalar>
 void
 StandardWellEval<FluidSystem,Indices,Scalar>::
-updatePrimaryVariablesPolyMW(const BVectorWell& dwells) const
-{
-    if (baseif_.isInjector()) {
-        for (int perf = 0; perf < baseif_.numPerfs(); ++perf) {
-            const int wat_vel_index = Bhp + 1 + perf;
-            const int pskin_index = Bhp + 1 + baseif_.numPerfs() + perf;
-
-            const double relaxation_factor = 0.9;
-            const double dx_wat_vel = dwells[0][wat_vel_index];
-            primary_variables_.value_[wat_vel_index] -= relaxation_factor * dx_wat_vel;
-
-            const double dx_pskin = dwells[0][pskin_index];
-            primary_variables_.value_[pskin_index] -= relaxation_factor * dx_pskin;
-        }
-    }
-}
-
-template<class FluidSystem, class Indices, class Scalar>
-void
-StandardWellEval<FluidSystem,Indices,Scalar>::
 processFractions() const
 {
     static constexpr int Gas = WellInterfaceIndices<FluidSystem,Indices,Scalar>::Gas;

@@ -25,6 +25,8 @@
 
 #include <opm/material/densead/DynamicEvaluation.hpp>
 
+#include <opm/simulators/wells/StandardWellEquations.hpp>
+
 #include <vector>
 
 namespace Opm
@@ -80,6 +82,7 @@ public:
 
     //! \brief Evaluation for the well equations.
     using EvalWell = DenseAd::DynamicEvaluation<Scalar, numStaticWellEq + Indices::numEq + 1>;
+    using BVectorWell = typename StandardWellEquations<Scalar,Indices::numEq>::BVectorWell;
 
     //! \brief Constructor initializes reference to well interface.
     StandardWellPrimaryVariables(const WellInterfaceIndices<FluidSystem,Indices,Scalar>& well)
@@ -102,6 +105,9 @@ public:
 
     //! \brief Returns number of well equations.
     int numWellEq() const { return numWellEq_; }
+
+    //! \brief Update polymer molecular weight values from solution vector.
+    void updatePolyMW(const BVectorWell& dwells);
 
 private:
     const WellInterfaceIndices<FluidSystem,Indices,Scalar>& well_; //!< Reference to well interface

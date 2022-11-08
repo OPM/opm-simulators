@@ -22,6 +22,9 @@
 #include <config.h>
 #include <opm/simulators/wells/StandardWellPrimaryVariables.hpp>
 
+#include <dune/common/dynvector.hh>
+#include <dune/istl/bvector.hh>
+
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
@@ -53,6 +56,26 @@ resize(const int numWellEq)
     value_.resize(numWellEq, 0.0);
     evaluation_.resize(numWellEq, EvalWell{numWellEq + Indices::numEq, 0.0});
     numWellEq_ = numWellEq;
+}
+
+
+template<class FluidSystem, class Indices, class Scalar>
+void StandardWellPrimaryVariables<FluidSystem,Indices,Scalar>::
+updatePolyMW(const BVectorWell& dwells)
+{
+    if (well_.isInjector()) {
+        for (int perf = 0; perf < well_.numPerfs(); ++perf) {
+            const int wat_vel_index = Bhp + 1 + perf;
+            const int pskin_index = Bhp + 1 + well_.numPerfs() + perf;
+
+            const double relaxation_factor = 0.9;
+            const double dx_wat_vel = dwells[0][wat_vel_index];
+            value_[wat_vel_index] -= relaxation_factor * dx_wat_vel;
+
+            const double dx_pskin = dwells[0][pskin_index];
+            value_[pskin_index] -= relaxation_factor * dx_pskin;
+        }
+    }
 }
 
 #define INSTANCE(...) \
