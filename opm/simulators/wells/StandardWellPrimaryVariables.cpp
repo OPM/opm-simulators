@@ -298,6 +298,57 @@ copyToWellStatePolyMW(WellState& well_state) const
     }
 }
 
+template<class FluidSystem, class Indices, class Scalar>
+typename StandardWellPrimaryVariables<FluidSystem,Indices,Scalar>::EvalWell
+StandardWellPrimaryVariables<FluidSystem,Indices,Scalar>::
+volumeFraction(const unsigned compIdx) const
+{
+    if (FluidSystem::numActivePhases() == 1) {
+        return EvalWell(numWellEq_ + Indices::numEq, 1.0);
+    }
+
+    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+        if (has_wfrac_variable && compIdx == Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx)) {
+            return evaluation_[WFrac];
+        }
+
+        if (has_gfrac_variable && compIdx == Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx)) {
+            return evaluation_[GFrac];
+        }
+
+        if (Indices::enableSolvent && compIdx == (unsigned)Indices::contiSolventEqIdx) {
+            return evaluation_[SFrac];
+        }
+    }
+    else if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+        if (has_gfrac_variable && compIdx == Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx)) {
+            return evaluation_[GFrac];
+        }
+    }
+
+    // Oil or WATER fraction
+    EvalWell well_fraction(numWellEq_ + Indices::numEq, 1.0);
+    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+            well_fraction -= evaluation_[WFrac];
+        }
+
+        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            well_fraction -= evaluation_[GFrac];
+        }
+
+        if constexpr (Indices::enableSolvent) {
+            well_fraction -= evaluation_[SFrac];
+        }
+    }
+    else if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) &&
+             FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+        well_fraction -= evaluation_[GFrac];
+    }
+
+    return well_fraction;
+}
+
 #define INSTANCE(...) \
 template class StandardWellPrimaryVariables<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>;
 

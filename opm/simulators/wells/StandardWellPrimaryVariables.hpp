@@ -120,6 +120,9 @@ public:
     //! \brief Copy polymer molecular weight values to well state.
     void copyToWellStatePolyMW(WellState& well_state) const;
 
+    //! \brief Returns volume fraction for a component.
+    EvalWell volumeFraction(const unsigned compIdx) const;
+
 private:
     const WellInterfaceIndices<FluidSystem,Indices,Scalar>& well_; //!< Reference to well interface
 
