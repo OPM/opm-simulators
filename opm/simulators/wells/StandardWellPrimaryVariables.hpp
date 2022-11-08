@@ -126,6 +126,9 @@ public:
     //! \brief Returns surface volume fraction for a component.
     EvalWell surfaceVolumeFraction(const int compIdx) const;
 
+    //! \brief Returns scaled rate for a component.
+    EvalWell getQs(const int compIdx) const;
+
 private:
     //! \brief Returns volume fraction for a component.
     EvalWell volumeFraction(const unsigned compIdx) const;

@@ -378,6 +378,53 @@ surfaceVolumeFraction(const int compIdx) const
     return this->volumeFractionScaled(compIdx) / sum_volume_fraction_scaled;
  }
 
+template<class FluidSystem, class Indices, class Scalar>
+typename StandardWellPrimaryVariables<FluidSystem,Indices,Scalar>::EvalWell
+StandardWellPrimaryVariables<FluidSystem,Indices,Scalar>::
+getQs(const int comp_idx) const
+{
+    // Note: currently, the WQTotal definition is still depends on Injector/Producer.
+    assert(comp_idx < well_.numComponents());
+
+    if (well_.isInjector()) { // only single phase injection
+        double inj_frac = 0.0;
+        switch (well_.wellEcl().injectorType()) {
+        case InjectorType::WATER:
+            if (comp_idx == int(Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx))) {
+                inj_frac = 1.0;
+            }
+            break;
+        case InjectorType::GAS:
+            if (Indices::enableSolvent && comp_idx == Indices::contiSolventEqIdx) { // solvent
+                inj_frac = well_.wsolvent();
+            } else if (comp_idx == int(Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx))) {
+                inj_frac = 1.0 - well_.rsRvInj();
+                if constexpr (Indices::enableSolvent) {
+                    inj_frac -= well_.wsolvent();
+                }
+            } else if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && comp_idx == int(Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx))) {
+                inj_frac = well_.rsRvInj();
+            }
+            break;
+        case InjectorType::OIL:
+            if (comp_idx == int(Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx))) {
+                inj_frac = 1.0 - well_.rsRvInj();
+            } else if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && comp_idx == int(Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx))) {
+                inj_frac = well_.rsRvInj();
+            }
+            break;
+        case InjectorType::MULTI:
+            // Not supported.
+            // deferred_logger.warning("MULTI_PHASE_INJECTOR_NOT_SUPPORTED",
+            //                         "Multi phase injectors are not supported, requested for well " + name());
+            break;
+        }
+        return inj_frac * evaluation_[WQTotal];
+    } else { // producers
+        return evaluation_[WQTotal] * this->volumeFractionScaled(comp_idx);
+    }
+}
+
 #define INSTANCE(...) \
 template class StandardWellPrimaryVariables<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>;
 
