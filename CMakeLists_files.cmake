@@ -100,6 +100,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/StandardWellEquations.cpp
   opm/simulators/wells/StandardWellEval.cpp
   opm/simulators/wells/StandardWellGeneric.cpp
+  opm/simulators/wells/StandardWellPrimaryVariables.cpp
   opm/simulators/wells/TargetCalculator.cpp
   opm/simulators/wells/VFPHelpers.cpp
   opm/simulators/wells/VFPProdProperties.cpp
@@ -386,6 +387,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/StandardWellEquations.hpp
   opm/simulators/wells/StandardWellEval.hpp
   opm/simulators/wells/StandardWellGeneric.hpp
+  opm/simulators/wells/StandardWellPrimaryVariables.hpp
   opm/simulators/wells/TargetCalculator.hpp
   opm/simulators/wells/VFPHelpers.hpp
   opm/simulators/wells/VFPInjProperties.hpp
