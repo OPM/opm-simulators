@@ -130,7 +130,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     initPrimaryVariablesEvaluation()
     {
-        this->MSWEval::initPrimaryVariablesEvaluation();
+        this->primary_variables_.init();
     }
 
 
@@ -745,7 +745,7 @@ namespace Opm
                                                this->SPres,
                                                well_state);
     }
-    
+
 
     template<typename TypeTag>
     template<class Value>

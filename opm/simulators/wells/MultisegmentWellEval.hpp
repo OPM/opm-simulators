@@ -24,6 +24,7 @@
 
 #include <opm/simulators/wells/MultisegmentWellEquations.hpp>
 #include <opm/simulators/wells/MultisegmentWellGeneric.hpp>
+#include <opm/simulators/wells/MultisegmentWellPrimaryVariables.hpp>
 
 #include <opm/material/densead/Evaluation.hpp>
 
@@ -103,7 +104,6 @@ protected:
     MultisegmentWellEval(WellInterfaceIndices<FluidSystem,Indices,Scalar>& baseif);
 
     void initMatrixAndVectors(const int num_cells);
-    void initPrimaryVariablesEvaluation();
 
     void assembleDefaultPressureEq(const int seg,
                                    WellState& well_state);
@@ -217,12 +217,7 @@ protected:
 
     Equations linSys_; //!< The equation system
 
-    // the values for the primary varibles
-    // based on different solutioin strategies, the wells can have different primary variables
-    std::vector<std::array<double, numWellEq> > primary_variables_;
-
-    // the Evaluation for the well primary variables, which contain derivativles and are used in AD calculation
-    std::vector<std::array<EvalWell, numWellEq> > primary_variables_evaluation_;
+    MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar> primary_variables_;
 
     // the upwinding segment for each segment based on the flow direction
     std::vector<int> upwinding_segments_;
