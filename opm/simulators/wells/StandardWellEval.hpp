@@ -85,7 +85,6 @@ protected:
 
     EvalWell extendEval(const Eval& in) const;
     EvalWell getQs(const int compIdx) const;
-    EvalWell wellSurfaceVolumeFraction(const int compIdx) const;
 
     // calculate a relaxation factor to avoid overshoot of the fractions for producers
     // which might result in negative rates

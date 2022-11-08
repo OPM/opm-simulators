@@ -156,28 +156,13 @@ getQs(const int comp_idx) const
             // deferred_logger.warning("MULTI_PHASE_INJECTOR_NOT_SUPPORTED",
             //                         "Multi phase injectors are not supported, requested for well " + name());
             break;
-        }
+      }
         return inj_frac * primary_variables_.evaluation_[WQTotal];
     } else { // producers
         return primary_variables_.evaluation_[WQTotal] *
                primary_variables_.volumeFractionScaled(comp_idx);
     }
 }
-
-template<class FluidSystem, class Indices, class Scalar>
-typename StandardWellEval<FluidSystem,Indices,Scalar>::EvalWell
-StandardWellEval<FluidSystem,Indices,Scalar>::
-wellSurfaceVolumeFraction(const int compIdx) const
-{
-    EvalWell sum_volume_fraction_scaled(this->primary_variables_.numWellEq() + Indices::numEq, 0.);
-    for (int idx = 0; idx < baseif_.numComponents(); ++idx) {
-        sum_volume_fraction_scaled += primary_variables_.volumeFractionScaled(idx);
-    }
-
-    assert(sum_volume_fraction_scaled.value() != 0.);
-
-    return this->primary_variables_.volumeFractionScaled(compIdx) / sum_volume_fraction_scaled;
- }
 
 template<class FluidSystem, class Indices, class Scalar>
 void
@@ -311,8 +296,8 @@ void
 StandardWellEval<FluidSystem,Indices,Scalar>::
 computeAccumWell()
 {
-    for (int eq_idx = 0; eq_idx < numWellConservationEq; ++eq_idx) {
-        F0_[eq_idx] = wellSurfaceVolumeFraction(eq_idx).value();
+    for (size_t eq_idx = 0; eq_idx < F0_.size(); ++eq_idx) {
+        F0_[eq_idx] = this->primary_variables_.surfaceVolumeFraction(eq_idx).value();
     }
 }
 
