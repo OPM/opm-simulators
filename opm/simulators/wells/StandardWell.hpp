@@ -257,7 +257,7 @@ namespace Opm
         // updating the well_state based on well solution dwells
         void updateWellState(const BVectorWell& dwells,
                              WellState& well_state,
-                             DeferredLogger& deferred_logger) const;
+                             DeferredLogger& deferred_logger);
 
         // calculate the properties for the well connections
         // to calulate the pressure difference between well connections.
