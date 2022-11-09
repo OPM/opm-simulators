@@ -139,7 +139,7 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    updatePrimaryVariables(const WellState& well_state, DeferredLogger& /* deferred_logger */) const
+    updatePrimaryVariables(const WellState& well_state, DeferredLogger& /* deferred_logger */)
     {
         this->MSWEval::updatePrimaryVariables(well_state);
     }

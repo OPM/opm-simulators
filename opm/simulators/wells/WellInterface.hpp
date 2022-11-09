@@ -204,7 +204,7 @@ public:
                            const GroupState& group_state,
                            DeferredLogger& deferred_logger) /* const */;
 
-    virtual void updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_logger) const = 0;
+    virtual void updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_logger) = 0;
 
     virtual void calculateExplicitQuantities(const Simulator& ebosSimulator,
                                              const WellState& well_state,

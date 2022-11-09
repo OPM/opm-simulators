@@ -125,7 +125,7 @@ namespace Opm
                                            std::vector<double>& well_potentials,
                                            DeferredLogger& deferred_logger) override;
 
-        virtual void updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_logger) const override;
+        void updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_logger) override;
 
         virtual void solveEqAndUpdateWellState(WellState& well_state, DeferredLogger& deferred_logger) override; // const?
 
