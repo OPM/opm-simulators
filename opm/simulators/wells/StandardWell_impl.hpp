@@ -75,7 +75,7 @@ namespace Opm
 
     template<typename TypeTag>
     void StandardWell<TypeTag>::
-    initPrimaryVariablesEvaluation() const
+    initPrimaryVariablesEvaluation()
     {
         this->primary_variables_.init();
     }

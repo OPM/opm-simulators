@@ -94,7 +94,7 @@ namespace Opm
                           const std::vector< Scalar >& B_avg,
                           const bool changed_to_open_this_step) override;
 
-        virtual void initPrimaryVariablesEvaluation() const override;
+        void initPrimaryVariablesEvaluation() override;
 
         /// updating the well state based the current control mode
         virtual void updateWellStateWithTarget(const Simulator& ebos_simulator,

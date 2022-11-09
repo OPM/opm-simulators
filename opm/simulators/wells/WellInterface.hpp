@@ -148,7 +148,7 @@ public:
                       const std::vector< Scalar >& B_avg,
                       const bool changed_to_open_this_step);
 
-    virtual void initPrimaryVariablesEvaluation() const = 0;
+    virtual void initPrimaryVariablesEvaluation() = 0;
 
     virtual ConvergenceReport getWellConvergence(const WellState& well_state, const std::vector<double>& B_avg, DeferredLogger& deferred_logger, const bool relax_tolerance) const = 0;
 

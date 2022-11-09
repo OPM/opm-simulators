@@ -144,7 +144,7 @@ namespace Opm
                           const bool changed_to_open_this_step) override;
 
 
-        virtual void initPrimaryVariablesEvaluation() const override;
+        void initPrimaryVariablesEvaluation() override;
 
         /// check whether the well equations get converged for this well
         virtual ConvergenceReport getWellConvergence(const WellState& well_state,

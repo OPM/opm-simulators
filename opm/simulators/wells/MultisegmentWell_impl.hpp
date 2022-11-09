@@ -127,7 +127,7 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    initPrimaryVariablesEvaluation() const
+    initPrimaryVariablesEvaluation()
     {
         this->MSWEval::initPrimaryVariablesEvaluation();
     }
