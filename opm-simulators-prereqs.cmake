@@ -11,6 +11,7 @@ set (opm-simulators_CONFIG_VAR
   HAVE_FPGA
   HAVE_AMGCL
   HAVE_VEXCL
+  HAVE_ROCALUTION
   HAVE_SUITESPARSE_UMFPACK_H
   HAVE_DUNE_ISTL
   DUNE_ISTL_WITH_CHECKING
@@ -40,6 +41,8 @@ set (opm-simulators_DEPS
   "SuiteSparse REQUIRED COMPONENTS umfpack"
   # SuperLU direct solver
   "SuperLU"
+  # ROCALUTION from ROCM framework
+  "rocalution"
   # OPM dependency
   "opm-common REQUIRED"
   "opm-material REQUIRED"

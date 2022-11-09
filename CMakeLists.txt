@@ -297,6 +297,12 @@ if(OpenCL_FOUND)
   endif()
 endif()
 
+find_package(rocalution)
+if(ROCALUTION_FOUND)
+  set(HAVE_ROCALUTION 1)
+endif()
+
+
 # read the list of components from this file (in the project directory);
 # it should set various lists with the names of the files to include
 include (CMakeLists_files.cmake)
@@ -536,6 +542,10 @@ endif()
 
 if(OpenCL_FOUND)
   target_link_libraries( opmsimulators PUBLIC ${OpenCL_LIBRARIES} )
+endif()
+
+if(ROCALUTION_FOUND)
+  target_include_directories(opmsimulators PUBLIC ${rocalution_INCLUDE_DIR}/rocalution)
 endif()
 
 if(VexCL_FOUND)

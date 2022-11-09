@@ -45,6 +45,10 @@
 #include <opm/simulators/linalg/bda/amgclSolverBackend.hpp>
 #endif
 
+#if HAVE_ROCALUTION
+#include <opm/simulators/linalg/bda/rocalutionSolverBackend.hpp>
+#endif
+
 typedef Dune::InverseOperatorResult InverseOperatorResult;
 
 namespace Opm
@@ -93,11 +97,18 @@ BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string acceler
 #else
         OPM_THROW(std::logic_error, "Error amgclSolver was chosen, but amgcl was not found by CMake");
 #endif
+    } else if (accelerator_mode.compare("rocalution") == 0) {
+#if HAVE_ROCALUTION
+        use_gpu = true; // should be replaced by a 'use_bridge' boolean
+        backend.reset(new Opm::Accelerator::rocalutionSolverBackend<block_size>(linear_solver_verbosity, maxit, tolerance));
+#else
+        OPM_THROW(std::logic_error, "Error rocalutionSolver was chosen, but rocalution was not found by CMake");
+#endif
     } else if (accelerator_mode.compare("none") == 0) {
         use_gpu = false;
         use_fpga = false;
     } else {
-        OPM_THROW(std::logic_error, "Error unknown value for parameter 'AcceleratorMode', should be passed like '--accelerator-mode=[none|cusparse|opencl|fpga|amgcl]");
+        OPM_THROW(std::logic_error, "Error unknown value for parameter 'AcceleratorMode', should be passed like '--accelerator-mode=[none|cusparse|opencl|fpga|amgcl|rocalution]");
     }
 }
 
