@@ -959,24 +959,12 @@ namespace Opm
         const double dBHPLimit = this->param_.dbhp_max_rel_;
         this->primary_variables_.updateNewton(dwells, dFLimit, dBHPLimit);
 
-        updateExtraPrimaryVariables(dwells);
-
-        this->primary_variables_.checkFinite(deferred_logger);
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    void
-    StandardWell<TypeTag>::
-    updateExtraPrimaryVariables(const BVectorWell& dwells) const
-    {
         // for the water velocity and skin pressure
         if constexpr (Base::has_polymermw) {
             this->primary_variables_.updateNewtonPolyMW(dwells);
         }
+
+        this->primary_variables_.checkFinite(deferred_logger);
     }
 
 

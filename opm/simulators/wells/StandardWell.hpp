@@ -357,10 +357,6 @@ namespace Opm
                                           const WellState& well_state,
                                           DeferredLogger& deferred_logger) const;
 
-        // update extra primary vriables if there are any
-        void updateExtraPrimaryVariables(const BVectorWell& dwells) const;
-
-
         void updateWellStateFromPrimaryVariables(WellState& well_state, DeferredLogger& deferred_logger) const;
 
         virtual void assembleWellEqWithoutIteration(const Simulator& ebosSimulator,
