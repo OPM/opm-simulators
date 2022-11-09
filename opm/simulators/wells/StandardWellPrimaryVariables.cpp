@@ -222,19 +222,16 @@ update(const WellState& well_state, DeferredLogger& deferred_logger)
 
 template<class FluidSystem, class Indices, class Scalar>
 void StandardWellPrimaryVariables<FluidSystem,Indices,Scalar>::
-updatePolyMW(const BVectorWell& dwells)
+updatePolyMW(const WellState& well_state)
 {
     if (well_.isInjector()) {
+        const auto& ws = well_state.well(well_.indexOfWell());
+        const auto& perf_data = ws.perf_data;
+        const auto& water_velocity = perf_data.water_velocity;
+        const auto& skin_pressure = perf_data.skin_pressure;
         for (int perf = 0; perf < well_.numPerfs(); ++perf) {
-            const int wat_vel_index = Bhp + 1 + perf;
-            const int pskin_index = Bhp + 1 + well_.numPerfs() + perf;
-
-            const double relaxation_factor = 0.9;
-            const double dx_wat_vel = dwells[0][wat_vel_index];
-            value_[wat_vel_index] -= relaxation_factor * dx_wat_vel;
-
-            const double dx_pskin = dwells[0][pskin_index];
-            value_[pskin_index] -= relaxation_factor * dx_pskin;
+            value_[Bhp + 1 + perf] = water_velocity[perf];
+            value_[Bhp + 1 + well_.numPerfs() + perf] = skin_pressure[perf];
         }
     }
 }
@@ -284,6 +281,25 @@ updateNewton(const BVectorWell& dwells,
                                                 std::abs(value_[Bhp]) * dBHPLimit);
     // 1e5 to make sure bhp will not be below 1bar
     value_[Bhp] = std::max(value_[Bhp] - dx1_limited, 1e5);
+}
+
+template<class FluidSystem, class Indices, class Scalar>
+void StandardWellPrimaryVariables<FluidSystem,Indices,Scalar>::
+updateNewtonPolyMW(const BVectorWell& dwells)
+{
+    if (well_.isInjector()) {
+        for (int perf = 0; perf < well_.numPerfs(); ++perf) {
+            const int wat_vel_index = Bhp + 1 + perf;
+            const int pskin_index = Bhp + 1 + well_.numPerfs() + perf;
+
+            const double relaxation_factor = 0.9;
+            const double dx_wat_vel = dwells[0][wat_vel_index];
+            value_[wat_vel_index] -= relaxation_factor * dx_wat_vel;
+
+            const double dx_pskin = dwells[0][pskin_index];
+            value_[pskin_index] -= relaxation_factor * dx_pskin;
+        }
+    }
 }
 
 template<class FluidSystem, class Indices, class Scalar>

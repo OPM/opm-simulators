@@ -979,7 +979,7 @@ namespace Opm
     {
         // for the water velocity and skin pressure
         if constexpr (Base::has_polymermw) {
-            this->primary_variables_.updatePolyMW(dwells);
+            this->primary_variables_.updateNewtonPolyMW(dwells);
         }
     }
 
@@ -2036,16 +2036,7 @@ namespace Opm
 
         // other primary variables related to polymer injection
         if constexpr (Base::has_polymermw) {
-            if (this->isInjector()) {
-                const auto& ws = well_state.well(this->index_of_well_);
-                const auto& perf_data = ws.perf_data;
-                const auto& water_velocity = perf_data.water_velocity;
-                const auto& skin_pressure = perf_data.skin_pressure;
-                for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
-                    this->primary_variables_.value_[Bhp + 1 + perf] = water_velocity[perf];
-                    this->primary_variables_.value_[Bhp + 1 + this->number_of_perforations_ + perf] = skin_pressure[perf];
-                }
-            }
+            this->primary_variables_.updatePolyMW(well_state);
         }
         for (double v : this->primary_variables_.value_) {
             if(!isfinite(v))

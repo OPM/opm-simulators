@@ -111,13 +111,16 @@ public:
     //! \brief Copy values from well state.
     void update(const WellState& well_state, DeferredLogger& deferred_logger);
 
+    //! \brief Copy polymer molecular weigt values from well state.
+    void updatePolyMW(const WellState& well_state);
+
     //! \brief Update values from newton update vector.
     void updateNewton(const BVectorWell& dwells,
                       const double dFLimit,
                       const double dBHPLimit);
 
     //! \brief Update polymer molecular weight values from newton update vector.
-    void updatePolyMW(const BVectorWell& dwells);
+    void updateNewtonPolyMW(const BVectorWell& dwells);
 
     //! \brief Copy values to well state.
     void copyToWellState(WellState& well_state, DeferredLogger& deferred_logger) const;
