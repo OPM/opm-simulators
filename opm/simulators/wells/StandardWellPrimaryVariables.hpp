@@ -134,6 +134,11 @@ public:
     //! \brief Returns scaled rate for a component.
     EvalWell getQs(const int compIdx) const;
 
+    const EvalWell& getBhp() const
+    {
+        return evaluation_[Bhp];
+    }
+
 private:
     //! \brief Calculate a relaxation factor for producers.
     //! \details To avoid overshoot of the fractions which might result in negative rates.

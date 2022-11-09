@@ -548,7 +548,7 @@ namespace Opm
                               schedule, summaryState,
                               this->primary_variables_.numWellEq(),
                               this->getWQTotal(),
-                              this->getBhp(),
+                              this->primary_variables_.getBhp(),
                               gQ,
                               this->getRho(),
                               Bhp,
@@ -580,7 +580,7 @@ namespace Opm
                         DeferredLogger& deferred_logger) const
     {
         const bool allow_cf = this->getAllowCrossFlow() || openCrossFlowAvoidSingularity(ebosSimulator);
-        const EvalWell& bhp = this->getBhp();
+        const EvalWell& bhp = this->primary_variables_.getBhp();
         const int cell_idx = this->well_cells_[perf];
         const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
         std::vector<EvalWell> mob(this->num_components_, {this->primary_variables_.numWellEq() + Indices::numEq, 0.});
@@ -1219,7 +1219,7 @@ namespace Opm
             const auto& fs = intQuants.fluidState();
 
             const double pressure = this->getPerfCellPressure(fs).value();
-            const double bhp = this->getBhp().value();
+            const double bhp = this->primary_variables_.getBhp().value();
 
             // Pressure drawdown (also used to determine direction of flow)
             const double well_pressure = bhp + this->perf_pressure_diffs_[perf];
@@ -2097,7 +2097,7 @@ namespace Opm
             // compute the well water velocity with out shear effects.
             // TODO: do we need to turn on crossflow here?
             const bool allow_cf = this->getAllowCrossFlow() || openCrossFlowAvoidSingularity(ebos_simulator);
-            const EvalWell& bhp = this->getBhp();
+            const EvalWell& bhp = this->primary_variables_.getBhp();
 
             std::vector<EvalWell> cq_s(this->num_components_, {this->primary_variables_.numWellEq() + Indices::numEq, 0.});
             double perf_dis_gas_rate = 0.;
@@ -2578,7 +2578,7 @@ namespace Opm
     {
         // Calculate the rates that follow from the current primary variables.
         std::vector<double> well_q_s(this->num_components_, 0.);
-        const EvalWell& bhp = this->getBhp();
+        const EvalWell& bhp = this->primary_variables_.getBhp();
         const bool allow_cf = this->getAllowCrossFlow() || openCrossFlowAvoidSingularity(ebosSimulator);
         for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
             const int cell_idx = this->well_cells_[perf];
