@@ -70,15 +70,14 @@ Scalar relaxationFactorFraction(const Scalar old_value,
 
 //! \brief Calculate a relaxation factor to avoid overshoot of total rates.
 template<class Scalar>
-Scalar relaxationFactorRate(const std::vector<Scalar>& primary_variables,
+Scalar relaxationFactorRate(const Scalar old_value,
                             const Scalar newton_update)
 {
     Scalar relaxation_factor = 1.0;
-    static constexpr int WQTotal = 0;
 
     // For injector, we only check the total rates to avoid sign change of rates
-    const Scalar original_total_rate = primary_variables[WQTotal];
-    const Scalar possible_update_total_rate = primary_variables[WQTotal] - newton_update;
+    const Scalar original_total_rate = old_value;
+    const Scalar possible_update_total_rate = old_value - newton_update;
 
     // 0.8 here is a experimental value, which remains to be optimized
     // if the original rate is zero or possible_update_total_rate is zero, relaxation_factor will
@@ -277,7 +276,8 @@ updateNewton(const BVectorWell& dwells,
     this->processFractions();
 
     // updating the total rates Q_t
-    const double relaxation_factor_rate = relaxationFactorRate(old_primary_variables, dwells[0][WQTotal]);
+    const double relaxation_factor_rate = relaxationFactorRate(old_primary_variables[WQTotal],
+                                                               dwells[0][WQTotal]);
     value_[WQTotal] = old_primary_variables[WQTotal] - dwells[0][WQTotal] * relaxation_factor_rate;
 
     // updating the bottom hole pressure
