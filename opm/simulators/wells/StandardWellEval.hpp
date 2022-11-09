@@ -73,11 +73,6 @@ protected:
 
     const WellInterfaceIndices<FluidSystem,Indices,Scalar>& baseif_;
 
-    const EvalWell& getWQTotal() const
-    {
-        return primary_variables_.evaluation_[WQTotal];
-    }
-
     EvalWell extendEval(const Eval& in) const;
 
     // computing the accumulation term for later use in well mass equations

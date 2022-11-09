@@ -139,6 +139,11 @@ public:
         return evaluation_[Bhp];
     }
 
+    const EvalWell& getWQTotal() const
+    {
+        return evaluation_[WQTotal];
+    }
+
 private:
     //! \brief Calculate a relaxation factor for producers.
     //! \details To avoid overshoot of the fractions which might result in negative rates.
