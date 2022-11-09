@@ -594,21 +594,86 @@ namespace Opm {
 
             auto& ebosJac = ebosSimulator_.model().linearizer().jacobian().istlMatrix();
             auto& ebosResid = ebosSimulator_.model().linearizer().residual();
-
-            // set initial guess
-            x = 0.0;
-
             auto& ebosSolver = ebosSimulator_.model().newtonMethod().linearSolver();
-            Dune::Timer perfTimer;
-            perfTimer.start();
-            ebosSolver.prepare(ebosJac, ebosResid);
-            linear_solve_setup_time_ = perfTimer.stop();
-            ebosSolver.setResidual(ebosResid);
-            // actually, the error needs to be calculated after setResidual in order to
-            // account for parallelization properly. since the residual of ECFV
-            // discretizations does not need to be synchronized across processes to be
-            // consistent, this is not relevant for OPM-flow...
-            ebosSolver.solve(x);
+
+            std::cerr<<"Hello there!!!"<<std::to_string(ebosSolver.getSolveCount())<<std::endl;
+            if (ebosSolver.getSolveCount()%100==0) {
+
+                if ( terminal_output_ ) {
+                    OpmLog::debug("Running speed test");
+                }
+                Dune::Timer perfTimer;
+
+                auto ebosJacCopy = ebosJac;
+                auto ebosResidCopy = ebosResid;
+
+                // solve with linear solver 0
+                x = 0.0;
+                BVector x0(x);
+                ebosSolver.setActiveSolver(0);
+                perfTimer.start();
+                ebosSolver.prepare(ebosJac, ebosResid);
+                auto linear_solve_setup_time0 = perfTimer.stop();
+                perfTimer.reset();
+                ebosSolver.setResidual(ebosResid);
+                perfTimer.start();
+                ebosSolver.solve(x0);
+                auto time0 = perfTimer.stop();
+                perfTimer.reset();
+
+                // reset matrix to the original and Rhs
+                ebosJac = ebosJacCopy;
+                ebosResid = ebosResidCopy;
+
+                // solve with linear solver 1
+                x = 0.0;
+                BVector x1(x);
+                ebosSolver.setActiveSolver(1);
+                perfTimer.start();
+                ebosSolver.prepare(ebosJac, ebosResid);
+                auto linear_solve_setup_time1 = perfTimer.stop();
+                perfTimer.reset();
+                ebosSolver.setResidual(ebosResid);
+                perfTimer.start();
+                ebosSolver.solve(x1);
+                auto time1 = perfTimer.stop();
+                perfTimer.reset();
+
+                if ( terminal_output_ ) {
+                    OpmLog::debug("Solver time 0: " + std::to_string(time0) + "\n");
+                    OpmLog::debug("Solver time 1: " + std::to_string(time1) + "\n");
+                }
+
+                int fastest_solver = time0 < time1 ? 0 : 1;
+                grid_.comm().broadcast(&fastest_solver, 1, 0);
+                if ( terminal_output_ ) {
+                    OpmLog::debug("Using solver " + std::to_string(fastest_solver));
+                }
+                if (fastest_solver == 0) {
+                    linear_solve_setup_time_ = linear_solve_setup_time0;
+                    x=x0;
+                } else {
+                    linear_solve_setup_time_ = linear_solve_setup_time1;
+                    x=x1;
+                }
+                ebosSolver.setActiveSolver(fastest_solver);
+
+            } else {
+
+                // set initial guess
+                x = 0.0;
+
+                Dune::Timer perfTimer;
+                perfTimer.start();
+                ebosSolver.prepare(ebosJac, ebosResid);
+                linear_solve_setup_time_ = perfTimer.stop();
+                ebosSolver.setResidual(ebosResid);
+                // actually, the error needs to be calculated after setResidual in order to
+                // account for parallelization properly. since the residual of ECFV
+                // discretizations does not need to be synchronized across processes to be
+                // consistent, this is not relevant for OPM-flow...
+                ebosSolver.solve(x);
+            }
        }
 
 
