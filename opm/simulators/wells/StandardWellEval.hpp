@@ -112,9 +112,6 @@ protected:
               const int num_cells,
               const bool has_polymermw);
 
-    void updatePrimaryVariables(const WellState& well_state,
-                                DeferredLogger& deferred_logger) const;
-
     void updateWellStateFromPrimaryVariables(WellState& well_state,
                                              DeferredLogger& deferred_logger) const;
 

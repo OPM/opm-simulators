@@ -72,17 +72,6 @@ extendEval(const Eval& in) const
 template<class FluidSystem, class Indices, class Scalar>
 void
 StandardWellEval<FluidSystem,Indices,Scalar>::
-updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_logger) const
-{
-    if (!baseif_.isOperableAndSolvable() && !baseif_.wellIsStopped())
-        return;
-
-    this->primary_variables_.update(well_state, deferred_logger);
-}
-
-template<class FluidSystem, class Indices, class Scalar>
-void
-StandardWellEval<FluidSystem,Indices,Scalar>::
 updateWellStateFromPrimaryVariables(WellState& well_state,
                                     DeferredLogger& deferred_logger) const
 {

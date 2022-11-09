@@ -2030,8 +2030,9 @@ namespace Opm
     StandardWell<TypeTag>::
     updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_logger) const
     {
-        this->StdWellEval::updatePrimaryVariables(well_state, deferred_logger);
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
+
+        this->primary_variables_.update(well_state, deferred_logger);
 
         // other primary variables related to polymer injection
         if constexpr (Base::has_polymermw) {
