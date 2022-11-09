@@ -175,6 +175,8 @@ SolverStatus rocalutionSolverBackend<block_size>::solve_system(std::shared_ptr<B
     // so it just calls ILU::Build() everytime
     roc_solver->ReBuildNumeric();
 
+    double norm_0 = roc_rhs.Norm(); // since the initial guess is a vector with 0s, initial error is norm(b)
+
     // actually solve
     Dune::Timer t_solve;
     roc_solver->Solve(roc_rhs, &roc_x);
@@ -188,7 +190,7 @@ SolverStatus rocalutionSolverBackend<block_size>::solve_system(std::shared_ptr<B
 
     res.elapsed = t_solve.stop();
     res.iterations = roc_solver->GetIterationCount();
-    res.reduction = roc_solver->GetCurrentResidual();
+    res.reduction = roc_solver->GetCurrentResidual() / norm_0;
     res.conv_rate  = static_cast<double>(pow(res.reduction, 1.0 / res.iterations));
     res.converged = (roc_solver->GetSolverStatus() == 2);
 
