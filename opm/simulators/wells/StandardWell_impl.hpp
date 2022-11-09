@@ -951,7 +951,7 @@ namespace Opm
     StandardWell<TypeTag>::
     updatePrimaryVariablesNewton(const BVectorWell& dwells,
                                  const WellState& /* well_state */,
-                                 DeferredLogger& deferred_logger) const
+                                 DeferredLogger& deferred_logger)
     {
         const double dFLimit = this->param_.dwell_fraction_max_;
         const double dBHPLimit = this->param_.dbhp_max_rel_;
