@@ -178,7 +178,7 @@ public:
     /// xw to update Well State
     virtual void recoverWellSolutionAndUpdateWellState(const BVector& x,
                                                        WellState& well_state,
-                                                       DeferredLogger& deferred_logger) const = 0;
+                                                       DeferredLogger& deferred_logger) = 0;
 
     /// Ax = Ax - C D^-1 B x
     virtual void apply(const BVector& x, BVector& Ax) const = 0;

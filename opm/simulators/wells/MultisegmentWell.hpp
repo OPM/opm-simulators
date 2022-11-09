@@ -115,9 +115,9 @@ namespace Opm
 
         /// using the solution x to recover the solution xw for wells and applying
         /// xw to update Well State
-        virtual void recoverWellSolutionAndUpdateWellState(const BVector& x,
-                                                           WellState& well_state,
-                                                           DeferredLogger& deferred_logger) const override;
+        void recoverWellSolutionAndUpdateWellState(const BVector& x,
+                                                   WellState& well_state,
+                                                   DeferredLogger& deferred_logger) override;
 
         /// computing the well potentials for group control
         virtual void computeWellPotentials(const Simulator& ebosSimulator,
