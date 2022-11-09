@@ -689,6 +689,16 @@ relaxationFactorFractionsProducer(const BVectorWell& dwells) const
     return relaxation_factor;
 }
 
+template<class FluidSystem, class Indices, class Scalar>
+void StandardWellPrimaryVariables<FluidSystem,Indices,Scalar>::
+checkFinite(DeferredLogger& deferred_logger) const
+{
+    for (const Scalar v : value_) {
+        if (!isfinite(v))
+            OPM_DEFLOG_THROW(NumericalIssue, "Infinite primary variable after update from wellState well: " << well_.name(),  deferred_logger);
+    }
+}
+
 #define INSTANCE(...) \
 template class StandardWellPrimaryVariables<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>;
 

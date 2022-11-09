@@ -122,6 +122,9 @@ public:
     //! \brief Update polymer molecular weight values from newton update vector.
     void updateNewtonPolyMW(const BVectorWell& dwells);
 
+    //! \brief Check that all values are finite.
+    void checkFinite(DeferredLogger& deferred_logger) const;
+
     //! \brief Copy values to well state.
     void copyToWellState(WellState& well_state, DeferredLogger& deferred_logger) const;
 
