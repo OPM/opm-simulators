@@ -53,10 +53,6 @@ public:
     static double relaxationFactorRate(const std::vector<double>& primary_variables,
                                        const double newton_update);
 
-    // relaxation factor considering only one fraction value
-    static double relaxationFactorFraction(const double old_value,
-                                           const double dx);
-
 protected:
     StandardWellGeneric(const WellInterfaceGeneric& baseif);
 

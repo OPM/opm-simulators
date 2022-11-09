@@ -40,6 +40,36 @@
 
 #include <algorithm>
 
+namespace {
+
+//! \brief Relaxation factor considering only one fraction value.
+template<class Scalar>
+Scalar relaxationFactorFraction(const Scalar old_value,
+                                const Scalar dx)
+{
+    assert(old_value >= 0. && old_value <= 1.0);
+
+    Scalar relaxation_factor = 1.;
+
+    // updated values without relaxation factor
+    const Scalar possible_updated_value = old_value - dx;
+
+    // 0.95 is an experimental value remains to be optimized
+    if (possible_updated_value < 0.0) {
+        relaxation_factor = std::abs(old_value / dx) * 0.95;
+    } else if (possible_updated_value > 1.0) {
+        relaxation_factor = std::abs((1. - old_value) / dx) * 0.95;
+    }
+    // if possible_updated_value is between 0. and 1.0, then relaxation_factor
+    // remains to be one
+
+    assert(relaxation_factor >= 0. && relaxation_factor <= 1.);
+
+    return relaxation_factor;
+}
+
+}
+
 namespace Opm {
 
 template<class FluidSystem, class Indices, class Scalar>
@@ -538,14 +568,14 @@ relaxationFactorFractionsProducer(const std::vector<double>& primary_variables,
 
     if (FluidSystem::numActivePhases() > 1) {
         if constexpr (has_wfrac_variable) {
-            const double relaxation_factor_w = StandardWellGeneric<Scalar>::
-                                               relaxationFactorFraction(primary_variables[WFrac], dwells[0][WFrac]);
+            const double relaxation_factor_w = relaxationFactorFraction(primary_variables[WFrac],
+                                                                        dwells[0][WFrac]);
             relaxation_factor = std::min(relaxation_factor, relaxation_factor_w);
         }
 
         if constexpr (has_gfrac_variable) {
-            const double relaxation_factor_g = StandardWellGeneric<Scalar>::
-                                               relaxationFactorFraction(primary_variables[GFrac], dwells[0][GFrac]);
+            const double relaxation_factor_g = relaxationFactorFraction(primary_variables[GFrac],
+                                                                        dwells[0][GFrac]);
             relaxation_factor = std::min(relaxation_factor, relaxation_factor_g);
         }
 
