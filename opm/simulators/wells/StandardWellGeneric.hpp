@@ -23,27 +23,12 @@
 #ifndef OPM_STANDARDWELL_GENERIC_HEADER_INCLUDED
 #define OPM_STANDARDWELL_GENERIC_HEADER_INCLUDED
 
-#include <dune/common/dynmatrix.hh>
-#include <dune/common/dynvector.hh>
-#include <dune/istl/bcrsmatrix.hh>
-#include <dune/istl/bvector.hh>
-
-#include <opm/simulators/wells/WellHelpers.hpp>
-
-#include <optional>
 #include <vector>
-#include <functional>
 
 namespace Opm
 {
 
-class ConvergenceReport;
-class DeferredLogger;
-class ParallelWellInfo;
-class Schedule;
-class SummaryState;
 class WellInterfaceGeneric;
-class WellState;
 
 template<class Scalar>
 class StandardWellGeneric

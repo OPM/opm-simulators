@@ -22,26 +22,8 @@
 #include <config.h>
 #include <opm/simulators/wells/StandardWellGeneric.hpp>
 
-#include <opm/common/utility/numeric/RootFinders.hpp>
-
-#include <opm/core/props/BlackoilPhases.hpp>
-
-#include <opm/input/eclipse/Schedule/GasLiftOpt.hpp>
-#include <opm/input/eclipse/Schedule/Schedule.hpp>
-#include <opm/input/eclipse/Schedule/VFPInjTable.hpp>
-
-#include <opm/simulators/timestepping/ConvergenceReport.hpp>
-#include <opm/simulators/utils/DeferredLogger.hpp>
-#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
-#include <opm/simulators/wells/VFPHelpers.hpp>
-#include <opm/simulators/wells/VFPProperties.hpp>
-#include <opm/simulators/wells/WellBhpThpCalculator.hpp>
-#include <opm/simulators/wells/WellHelpers.hpp>
+#include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
-#include <opm/simulators/wells/WellState.hpp>
-
-#include <fmt/format.h>
-#include <stdexcept>
 
 namespace Opm
 {
