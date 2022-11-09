@@ -137,12 +137,9 @@ public:
     void updateUpwindingSegments(const MultisegmentWellGeneric<Scalar>& mswell,
                                  std::vector<int>& upwinding_segments) const;
 
-    // the values for the primary varibles
-    // based on different solutioin strategies, the wells can have different primary variables
-    std::vector<std::array<double, numWellEq> > value_;
-
-    // the Evaluation for the well primary variables, which contain derivativles and are used in AD calculation
-    std::vector<std::array<EvalWell, numWellEq> > evaluation_;
+    //! \brief Returns a const ref to an evaluation.
+    const std::array<EvalWell,numWellEq>& eval(const int idx) const
+    { return evaluation_[idx]; }
 
 private:
     //! \brief Handle non-reasonable fractions due to numerical overshoot.
@@ -151,6 +148,14 @@ private:
     //! \brief Returns volume fraction for component in a segment.
     EvalWell volumeFraction(const int seg,
                             const unsigned compIdx) const;
+
+    //! \brief The values for the primary variables
+    //! \details Based on different solution strategies, the wells can have different primary variables
+    std::vector<std::array<double, numWellEq>> value_;
+
+    //! \brief The Evaluation for the well primary variables.
+    //! \details Contains derivatives and are used in AD calculation
+    std::vector<std::array<EvalWell, numWellEq>> evaluation_;
 
     const WellInterfaceIndices<FluidSystem,Indices,Scalar>& well_; //!< Reference to well interface
 };
