@@ -153,7 +153,7 @@ private:
 
     //! \brief The values for the primary variables.
     //! \details Based on different solution strategies, the wells can have different primary variables.
-    std::vector<double> value_;
+    std::vector<Scalar> value_;
 
     //! \brief The Evaluation for the well primary variables.
     //! \details Contain derivatives and are used in AD calculation
