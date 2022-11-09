@@ -129,7 +129,7 @@ namespace Opm
         if (has_polymermw) {
             if (this->isInjector()) {
                 const int pskin_index = Bhp + 1 + this->numPerfs() + perf;
-                skin_pressure = this->primary_variables_.evaluation_[pskin_index];
+                skin_pressure = this->primary_variables_.eval(pskin_index);
             }
         }
 
@@ -199,7 +199,7 @@ namespace Opm
         if (has_polymermw) {
             if (this->isInjector()) {
                 const int pskin_index = Bhp + 1 + this->numPerfs() + perf;
-                skin_pressure = getValue(this->primary_variables_.evaluation_[pskin_index]);
+                skin_pressure = getValue(this->primary_variables_.eval(pskin_index));
             }
         }
 
@@ -547,8 +547,8 @@ namespace Opm
             assembleControlEq(well_state, group_state,
                               schedule, summaryState,
                               this->primary_variables_.numWellEq(),
-                              this->primary_variables_.getWQTotal(),
-                              this->primary_variables_.getBhp(),
+                              this->primary_variables_.eval(WQTotal),
+                              this->primary_variables_.eval(Bhp),
                               gQ,
                               this->getRho(),
                               Bhp,
@@ -580,7 +580,7 @@ namespace Opm
                         DeferredLogger& deferred_logger) const
     {
         const bool allow_cf = this->getAllowCrossFlow() || openCrossFlowAvoidSingularity(ebosSimulator);
-        const EvalWell& bhp = this->primary_variables_.getBhp();
+        const EvalWell& bhp = this->primary_variables_.eval(Bhp);
         const int cell_idx = this->well_cells_[perf];
         const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
         std::vector<EvalWell> mob(this->num_components_, {this->primary_variables_.numWellEq() + Indices::numEq, 0.});
@@ -1215,7 +1215,7 @@ namespace Opm
             const auto& fs = intQuants.fluidState();
 
             const double pressure = this->getPerfCellPressure(fs).value();
-            const double bhp = this->primary_variables_.getBhp().value();
+            const double bhp = this->primary_variables_.eval(Bhp).value();
 
             // Pressure drawdown (also used to determine direction of flow)
             const double well_pressure = bhp + this->perf_pressure_diffs_[perf];
@@ -2082,7 +2082,7 @@ namespace Opm
             // compute the well water velocity with out shear effects.
             // TODO: do we need to turn on crossflow here?
             const bool allow_cf = this->getAllowCrossFlow() || openCrossFlowAvoidSingularity(ebos_simulator);
-            const EvalWell& bhp = this->primary_variables_.getBhp();
+            const EvalWell& bhp = this->primary_variables_.eval(Bhp);
 
             std::vector<EvalWell> cq_s(this->num_components_, {this->primary_variables_.numWellEq() + Indices::numEq, 0.});
             double perf_dis_gas_rate = 0.;
@@ -2251,7 +2251,7 @@ namespace Opm
                 auto& ws = well_state.well(this->index_of_well_);
                 auto& perf_water_throughput = ws.perf_data.water_throughput;
                 for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
-                    const double perf_water_vel = this->primary_variables_.value_[Bhp + 1 + perf];
+                    const double perf_water_vel = this->primary_variables_.value(Bhp + 1 + perf);
                     // we do not consider the formation damage due to water flowing from reservoir into wellbore
                     if (perf_water_vel > 0.) {
                         perf_water_throughput[perf] += perf_water_vel * dt;
@@ -2282,7 +2282,7 @@ namespace Opm
 
         // water rate is update to use the form from water velocity, since water velocity is
         // a primary variable now
-        cq_s[water_comp_idx] = area * this->primary_variables_.evaluation_[wat_vel_index] * b_w;
+        cq_s[water_comp_idx] = area * this->primary_variables_.eval(wat_vel_index) * b_w;
     }
 
 
@@ -2307,7 +2307,7 @@ namespace Opm
         const int wat_vel_index = Bhp + 1 + perf;
 
         // equation for the water velocity
-        const EvalWell eq_wat_vel = this->primary_variables_.evaluation_[wat_vel_index] - water_velocity;
+        const EvalWell eq_wat_vel = this->primary_variables_.eval(wat_vel_index) - water_velocity;
 
         const auto& ws = well_state.well(this->index_of_well_);
         const auto& perf_data = ws.perf_data;
@@ -2319,8 +2319,8 @@ namespace Opm
         poly_conc.setValue(this->wpolymer());
 
         // equation for the skin pressure
-        const EvalWell eq_pskin = this->primary_variables_.evaluation_[pskin_index]
-                                  - pskin(throughput, this->primary_variables_.evaluation_[wat_vel_index], poly_conc, deferred_logger);
+        const EvalWell eq_pskin = this->primary_variables_.eval(pskin_index)
+                                  - pskin(throughput, this->primary_variables_.eval(wat_vel_index), poly_conc, deferred_logger);
 
         StandardWellAssemble<FluidSystem,Indices,Scalar>(*this).
                 assembleInjectivityEq(eq_pskin,
@@ -2369,7 +2369,7 @@ namespace Opm
         EvalWell cq_s_polymw = cq_s_poly;
         if (this->isInjector()) {
             const int wat_vel_index = Bhp + 1 + perf;
-            const EvalWell water_velocity = this->primary_variables_.evaluation_[wat_vel_index];
+            const EvalWell water_velocity = this->primary_variables_.eval(wat_vel_index);
             if (water_velocity > 0.) { // injecting
                 const auto& ws = well_state.well(this->index_of_well_);
                 const auto& perf_water_throughput = ws.perf_data.water_throughput;
@@ -2563,7 +2563,7 @@ namespace Opm
     {
         // Calculate the rates that follow from the current primary variables.
         std::vector<double> well_q_s(this->num_components_, 0.);
-        const EvalWell& bhp = this->primary_variables_.getBhp();
+        const EvalWell& bhp = this->primary_variables_.eval(Bhp);
         const bool allow_cf = this->getAllowCrossFlow() || openCrossFlowAvoidSingularity(ebosSimulator);
         for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
             const int cell_idx = this->well_cells_[perf];

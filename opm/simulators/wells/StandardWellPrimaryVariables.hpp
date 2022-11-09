@@ -69,7 +69,7 @@ public:
     //! \details Based on the solution strategy, there might be other well equations be introduced.
     static constexpr int numStaticWellEq = numWellConservationEq + numWellControlEq;
 
-    static const int WQTotal = 0; //!< The index for the weights total rate
+    static constexpr int WQTotal = 0; //!< The index for the weighted total rate
 
     //! \brief The index for Bhp in primary variables and the index of well control equation.
     //! \details They both will be the last one in their respective system.
@@ -90,14 +90,6 @@ public:
     StandardWellPrimaryVariables(const WellInterfaceIndices<FluidSystem,Indices,Scalar>& well)
         : well_(well)
     {}
-
-    //! \brief The values for the primary variables.
-    //! \details Based on different solution strategies, the wells can have different primary variables.
-    std::vector<double> value_;
-
-    //! \brief The Evaluation for the well primary variables.
-    //! \details Contain derivatives and are used in AD calculation
-    std::vector<EvalWell> evaluation_;
 
     //! \brief Initialize evaluations from values.
     void init();
@@ -140,15 +132,13 @@ public:
     //! \brief Returns scaled rate for a component.
     EvalWell getQs(const int compIdx) const;
 
-    const EvalWell& getBhp() const
-    {
-        return evaluation_[Bhp];
-    }
+    //! \brief Returns a const ref to an evaluation.
+    Scalar value(const int idx) const
+    { return value_[idx]; }
 
-    const EvalWell& getWQTotal() const
-    {
-        return evaluation_[WQTotal];
-    }
+    //! \brief Returns a const ref to an evaluation.
+    const EvalWell& eval(const int idx) const
+    { return evaluation_[idx]; }
 
 private:
     //! \brief Calculate a relaxation factor for producers.
@@ -160,6 +150,14 @@ private:
 
     //! \brief Handle non-reasonable fractions due to numerical overshoot.
     void processFractions();
+
+    //! \brief The values for the primary variables.
+    //! \details Based on different solution strategies, the wells can have different primary variables.
+    std::vector<double> value_;
+
+    //! \brief The Evaluation for the well primary variables.
+    //! \details Contain derivatives and are used in AD calculation
+    std::vector<EvalWell> evaluation_;
 
     const WellInterfaceIndices<FluidSystem,Indices,Scalar>& well_; //!< Reference to well interface
 

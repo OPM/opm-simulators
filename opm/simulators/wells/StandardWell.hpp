@@ -109,6 +109,8 @@ namespace Opm
         // TODO: we should have indices for the well equations and well primary variables separately
         static constexpr int Bhp = numStaticWellEq - numWellControlEq;
 
+        using StdWellEval::WQTotal;
+
         using typename Base::Scalar;
 
 
