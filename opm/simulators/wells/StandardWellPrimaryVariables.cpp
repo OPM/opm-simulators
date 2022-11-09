@@ -39,6 +39,7 @@
 #include <opm/simulators/wells/WellState.hpp>
 
 #include <algorithm>
+#include <cassert>
 
 namespace {
 
@@ -250,8 +251,7 @@ updateNewton(const BVectorWell& dwells,
     // for injectors, very typical one of the fractions will be one, and it is easy to get zero value
     // fractions. not sure what is the best way to handle it yet, so we just use 1.0 here
     [[maybe_unused]] const double relaxation_factor_fractions =
-        well_.isProducer() ? relaxationFactorFractionsProducer(value_, dwells)
-                           : 1.0;
+        well_.isProducer() ? this->relaxationFactorFractionsProducer(dwells) : 1.0;
 
     // update the second and third well variable (The flux fractions)
 
@@ -630,8 +630,7 @@ processFractions()
 
 template<class FluidSystem, class Indices, class Scalar>
 double StandardWellPrimaryVariables<FluidSystem,Indices,Scalar>::
-relaxationFactorFractionsProducer(const std::vector<double>& primary_variables,
-                                  const BVectorWell& dwells) const
+relaxationFactorFractionsProducer(const BVectorWell& dwells) const
 {
     // TODO: not considering solvent yet
     // 0.95 is a experimental value, which remains to be optimized
@@ -639,13 +638,13 @@ relaxationFactorFractionsProducer(const std::vector<double>& primary_variables,
 
     if (FluidSystem::numActivePhases() > 1) {
         if constexpr (has_wfrac_variable) {
-            const double relaxation_factor_w = relaxationFactorFraction(primary_variables[WFrac],
+            const double relaxation_factor_w = relaxationFactorFraction(value_[WFrac],
                                                                         dwells[0][WFrac]);
             relaxation_factor = std::min(relaxation_factor, relaxation_factor_w);
         }
 
         if constexpr (has_gfrac_variable) {
-            const double relaxation_factor_g = relaxationFactorFraction(primary_variables[GFrac],
+            const double relaxation_factor_g = relaxationFactorFraction(value_[GFrac],
                                                                         dwells[0][GFrac]);
             relaxation_factor = std::min(relaxation_factor, relaxation_factor_g);
         }
@@ -654,7 +653,7 @@ relaxationFactorFractionsProducer(const std::vector<double>& primary_variables,
         if constexpr (has_wfrac_variable && has_gfrac_variable) {
             // We need to make sure the even with the relaxation_factor, the sum of F_w and F_g is below one, so there will
             // not be negative oil fraction later
-            const double original_sum = primary_variables[WFrac] + primary_variables[GFrac];
+            const double original_sum = value_[WFrac] + value_[GFrac];
             const double relaxed_update = (dwells[0][WFrac] + dwells[0][GFrac]) * relaxation_factor;
             const double possible_updated_sum = original_sum - relaxed_update;
             // We only relax if fraction is above 1.
