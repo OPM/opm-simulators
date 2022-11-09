@@ -48,11 +48,6 @@ class WellState;
 template<class Scalar>
 class StandardWellGeneric
 {
-public:
-    // calculate a relaxation factor to avoid overshoot of total rates
-    static double relaxationFactorRate(const std::vector<double>& primary_variables,
-                                       const double newton_update);
-
 protected:
     StandardWellGeneric(const WellInterfaceGeneric& baseif);
 
