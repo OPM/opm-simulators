@@ -1906,34 +1906,34 @@ addWellContribution(WellContributions& wellContribs) const
                                                  Cvals);
 }
 
-#define INSTANCE(A,...) \
-template class MultisegmentWellEval<BlackOilFluidSystem<double,A>,__VA_ARGS__,double>;
+#define INSTANCE(...) \
+template class MultisegmentWellEval<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>;
 
 // One phase
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilOnePhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,5u>)
+INSTANCE(BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>)
+INSTANCE(BlackOilOnePhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>)
+INSTANCE(BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,5u>)
 
 // Two phase
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,0u,0u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,2u,0u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,2u,0u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilTwoPhaseIndices<0u,0u,1u,0u,false,false,0u,2u,0u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilTwoPhaseIndices<0u,0u,2u,0u,false,false,0u,2u,0u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,0u,0u>)
+INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,0u,0u>)
+INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>)
+INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,2u,0u>)
+INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,2u,0u>)
+INSTANCE(BlackOilTwoPhaseIndices<0u,0u,1u,0u,false,false,0u,2u,0u>)
+INSTANCE(BlackOilTwoPhaseIndices<0u,0u,2u,0u,false,false,0u,2u,0u>)
+INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>)
+INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,0u,0u>)
 
 // Blackoil
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<0u,0u,0u,0u,false,false,0u,0u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<0u,0u,0u,0u,true,false,0u,0u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<0u,0u,0u,0u,false,true,0u,0u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<0u,0u,0u,0u,false,true,2u,0u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<1u,0u,0u,0u,false,false,0u,0u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<0u,1u,0u,0u,false,false,0u,0u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<0u,0u,1u,0u,false,false,0u,0u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<0u,0u,0u,1u,false,false,0u,0u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<0u,0u,0u,0u,false,false,1u,0u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<0u,0u,0u,1u,false,true,0u,0u>)
+INSTANCE(BlackOilIndices<0u,0u,0u,0u,false,false,0u,0u>)
+INSTANCE(BlackOilIndices<0u,0u,0u,0u,true,false,0u,0u>)
+INSTANCE(BlackOilIndices<0u,0u,0u,0u,false,true,0u,0u>)
+INSTANCE(BlackOilIndices<0u,0u,0u,0u,false,true,2u,0u>)
+INSTANCE(BlackOilIndices<1u,0u,0u,0u,false,false,0u,0u>)
+INSTANCE(BlackOilIndices<0u,1u,0u,0u,false,false,0u,0u>)
+INSTANCE(BlackOilIndices<0u,0u,1u,0u,false,false,0u,0u>)
+INSTANCE(BlackOilIndices<0u,0u,0u,1u,false,false,0u,0u>)
+INSTANCE(BlackOilIndices<0u,0u,0u,0u,false,false,1u,0u>)
+INSTANCE(BlackOilIndices<0u,0u,0u,1u,false,true,0u,0u>)
 
 } // namespace Opm
