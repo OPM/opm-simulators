@@ -465,6 +465,13 @@ WellState::report(const int* globalCellIdxMap,
             well.rates.set(rt::productivity_index_oil, wpi[pu.phase_pos[BlackoilPhases::Liquid]]);
             well.rates.set(rt::well_potential_oil, well_potentials[pu.phase_pos[BlackoilPhases::Liquid]]);
         }
+        bool co2store = pu.co2_store;
+        if( co2store && pu.phase_used[BlackoilPhases::Liquid] ) {
+            well.rates.set(rt::wat, wv[ pu.phase_pos[BlackoilPhases::Liquid] ] );
+            well.rates.set(rt::reservoir_water, reservoir_rates[pu.phase_pos[BlackoilPhases::Liquid]]);
+            well.rates.set(rt::productivity_index_water, wpi[pu.phase_pos[BlackoilPhases::Liquid]]);
+            well.rates.set(rt::well_potential_water, well_potentials[pu.phase_pos[BlackoilPhases::Liquid]]);
+        }
 
         if( pu.phase_used[BlackoilPhases::Vapour] ) {
             well.rates.set(rt::gas, wv[ pu.phase_pos[BlackoilPhases::Vapour] ] );

@@ -939,6 +939,10 @@ private:
                 this->fip_[Inplace::Phase::GAS][globalDofIdx] = fip[gasPhaseIdx];
             if (FluidSystem::phaseIsActive(waterPhaseIdx) && !this->fip_[Inplace::Phase::WATER].empty())
                 this->fip_[Inplace::Phase::WATER][globalDofIdx] = fip[waterPhaseIdx];
+            bool co2store = simulator_.vanguard().eclState().runspec().co2Storage();
+            if (co2store && FluidSystem::phaseIsActive(oilPhaseIdx) && !this->fip_[Inplace::Phase::WATER].empty())
+                this->fip_[Inplace::Phase::WATER][globalDofIdx] = fip[oilPhaseIdx];
+
 
             if (FluidSystem::phaseIsActive(oilPhaseIdx) && !this->fip_[Inplace::Phase::OilResVolume].empty())
                 this->fip_[Inplace::Phase::OilResVolume][globalDofIdx] = fipr[oilPhaseIdx];

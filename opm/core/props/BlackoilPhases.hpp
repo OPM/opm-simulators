@@ -60,6 +60,7 @@ namespace Opm
         bool has_foam;
         bool has_brine;
         bool has_zFraction;
+        bool co2_store;
 
     };
 

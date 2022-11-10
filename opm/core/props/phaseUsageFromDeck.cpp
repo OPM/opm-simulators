@@ -138,6 +138,7 @@ PhaseUsage phaseUsage(const Phases& phases)
     else
         pu.phase_pos[BlackoilPhases::ZFraction] = -1;
 
+    pu.co2_store = phases.co2store();
 
     return pu;
 }

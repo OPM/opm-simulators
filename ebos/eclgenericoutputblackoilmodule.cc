@@ -729,6 +729,10 @@ assignToSolution(data::Solution& sol)
     if (FluidSystem::phaseIsActive(gasPhaseIdx) && !saturation_[gasPhaseIdx].empty()) {
         sol.insert("SGAS", UnitSystem::measure::identity, std::move(saturation_[gasPhaseIdx]), data::TargetType::RESTART_SOLUTION);
     }
+    bool co2store = eclState_.runspec().co2Storage();
+    if (co2store && (FluidSystem::phaseIsActive(oilPhaseIdx) && !saturation_[oilPhaseIdx].empty())) {
+        sol.insert("SWAT", UnitSystem::measure::identity, std::move(saturation_[oilPhaseIdx]), data::TargetType::RESTART_SOLUTION);
+    }
 
     // Fluid in place
     for (const auto& phase : Inplace::phases()) {
@@ -974,8 +978,9 @@ doAllocBuffers(unsigned bufferSize,
         rstKeywords["TEMP"] = 0;
     }
 
-    if (FluidSystem::phaseIsActive(oilPhaseIdx))
+    if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
         rstKeywords["SOIL"] = 0;
+    }
     if (FluidSystem::phaseIsActive(gasPhaseIdx))
         rstKeywords["SGAS"] = 0;
     if (FluidSystem::phaseIsActive(waterPhaseIdx))

@@ -136,8 +136,12 @@ namespace Opm{
         if (pu.phase_used[BlackoilPhases::Aqua]) {
             family2 = family2 && (!swfnTables.empty() || !sgwfnTables.empty());
         }
+        bool co2store = eclState.runspec().co2Storage();
         if (pu.phase_used[BlackoilPhases::Liquid]) {
-            family2 = family2 && (!sof3Tables.empty() || !sof2Tables.empty());
+            if (co2store)
+                family2 = family2 && (!swfnTables.empty() || !sgwfnTables.empty());
+            else 
+                family2 = family2 && (!sof3Tables.empty() || !sof2Tables.empty());
         }
         if (pu.phase_used[BlackoilPhases::Vapour]) {
             family2 = family2 && (!sgfnTables.empty() || !sgwfnTables.empty());
