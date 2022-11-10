@@ -20,7 +20,7 @@
 */
 
 #include <config.h>
-#include <opm/simulators/wells/StandardWellGeneric.hpp>
+#include <opm/simulators/wells/StandardWellConnections.hpp>
 
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
@@ -29,17 +29,17 @@ namespace Opm
 {
 
 template<class Scalar>
-StandardWellGeneric<Scalar>::
-StandardWellGeneric(const WellInterfaceGeneric& baseif)
-    : baseif_(baseif)
-    , perf_densities_(baseif_.numPerfs())
-    , perf_pressure_diffs_(baseif_.numPerfs())
+StandardWellConnections<Scalar>::
+StandardWellConnections(const WellInterfaceGeneric& well)
+    : perf_densities_(well_.numPerfs())
+    , perf_pressure_diffs_(well_.numPerfs())
+    , well_(well)
 {
 }
 
 template<class Scalar>
 void
-StandardWellGeneric<Scalar>::
+StandardWellConnections<Scalar>::
 computeConnectionPressureDelta()
 {
     // Algorithm:
@@ -56,13 +56,13 @@ computeConnectionPressureDelta()
     //    perforation for each well, for which it will be the
     //    difference to the reference (bhp) depth.
 
-    const int nperf = baseif_.numPerfs();
+    const int nperf = well_.numPerfs();
     perf_pressure_diffs_.resize(nperf, 0.0);
-    auto z_above = baseif_.parallelWellInfo().communicateAboveValues(baseif_.refDepth(), baseif_.perfDepth());
+    auto z_above = well_.parallelWellInfo().communicateAboveValues(well_.refDepth(), well_.perfDepth());
 
     for (int perf = 0; perf < nperf; ++perf) {
-        const double dz = baseif_.perfDepth()[perf] - z_above[perf];
-        perf_pressure_diffs_[perf] = dz * perf_densities_[perf] * baseif_.gravity();
+        const double dz = well_.perfDepth()[perf] - z_above[perf];
+        perf_pressure_diffs_[perf] = dz * perf_densities_[perf] * well_.gravity();
     }
 
     // 2. Compute pressure differences to the reference point (bhp) by
@@ -71,9 +71,9 @@ computeConnectionPressureDelta()
     //    This accumulation must be done per well.
     const auto beg = perf_pressure_diffs_.begin();
     const auto end = perf_pressure_diffs_.end();
-    baseif_.parallelWellInfo().partialSumPerfValues(beg, end);
+    well_.parallelWellInfo().partialSumPerfValues(beg, end);
 }
 
-template class StandardWellGeneric<double>;
+template class StandardWellConnections<double>;
 
 }

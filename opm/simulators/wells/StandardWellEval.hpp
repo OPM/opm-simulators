@@ -23,8 +23,8 @@
 #ifndef OPM_STANDARDWELL_EVAL_HEADER_INCLUDED
 #define OPM_STANDARDWELL_EVAL_HEADER_INCLUDED
 
+#include <opm/simulators/wells/StandardWellConnections.hpp>
 #include <opm/simulators/wells/StandardWellEquations.hpp>
-#include <opm/simulators/wells/StandardWellGeneric.hpp>
 #include <opm/simulators/wells/StandardWellPrimaryVariables.hpp>
 
 #include <opm/material/densead/DynamicEvaluation.hpp>
@@ -45,7 +45,7 @@ template<class FluidSystem, class Indices, class Scalar> class WellInterfaceIndi
 class WellState;
 
 template<class FluidSystem, class Indices, class Scalar>
-class StandardWellEval : public StandardWellGeneric<Scalar>
+class StandardWellEval : public StandardWellConnections<Scalar>
 {
 protected:
     using PrimaryVariables = StandardWellPrimaryVariables<FluidSystem,Indices,Scalar>;

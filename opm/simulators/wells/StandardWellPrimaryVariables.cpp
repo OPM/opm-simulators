@@ -34,7 +34,6 @@
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
-#include <opm/simulators/wells/StandardWellGeneric.hpp>
 #include <opm/simulators/wells/WellInterfaceIndices.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 

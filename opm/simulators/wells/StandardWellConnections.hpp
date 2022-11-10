@@ -20,8 +20,8 @@
 */
 
 
-#ifndef OPM_STANDARDWELL_GENERIC_HEADER_INCLUDED
-#define OPM_STANDARDWELL_GENERIC_HEADER_INCLUDED
+#ifndef OPM_STANDARDWELL_CONNECTIONS_HEADER_INCLUDED
+#define OPM_STANDARDWELL_CONNECTIONS_HEADER_INCLUDED
 
 #include <vector>
 
@@ -31,27 +31,28 @@ namespace Opm
 class WellInterfaceGeneric;
 
 template<class Scalar>
-class StandardWellGeneric
+class StandardWellConnections
 {
-protected:
-    StandardWellGeneric(const WellInterfaceGeneric& baseif);
+public:
+    StandardWellConnections(const WellInterfaceGeneric& well);
 
     void computeConnectionPressureDelta();
 
-    // Base interface reference
-    const WellInterfaceGeneric& baseif_;
-
-    // densities of the fluid in each perforation
-    std::vector<double> perf_densities_;
-    // pressure drop between different perforations
-    std::vector<double> perf_pressure_diffs_;
-
-    double getRho() const
+    Scalar getRho() const
     {
         return this->perf_densities_.empty() ? 0.0 : perf_densities_[0];
     }
+
+    // densities of the fluid in each perforation
+    std::vector<Scalar> perf_densities_;
+    // pressure drop between different perforations
+    std::vector<Scalar> perf_pressure_diffs_;
+
+private:
+    // Base interface reference
+    const WellInterfaceGeneric& well_;
 };
 
 }
 
-#endif // OPM_STANDARDWELL_GENERIC_HEADER_INCLUDED
+#endif // OPM_STANDARDWELL_CONNECTIONS_HEADER_INCLUDED
