@@ -357,7 +357,7 @@ private:
                     }
                     const bool nonzero_massrate = massrate != VectorBlock(0.0);
                     if (free || nonzero_massrate) {
-                        const auto& exFluidState = problem_().initialFluidState(myIdx);
+                        const auto& exFluidState = problem_().boundaryFluidState(myIdx, dir_id);
                         BoundaryConditionData bcdata{free ? BCType::FREE : BCType::RATE,
                                                      massrate,
                                                      exFluidState.pvtRegionIndex(),
