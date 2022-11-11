@@ -1219,7 +1219,7 @@ namespace Opm {
             } else {
                 auto derived_ms = std::dynamic_pointer_cast<MultisegmentWell<TypeTag> >(well);
                 if (derived_ms) {
-                    derived_ms->addWellContribution(wellContribs);
+                    derived_ms->linSys().extract(wellContribs);
                 } else {
                     OpmLog::warning("Warning unknown type of well");
                 }

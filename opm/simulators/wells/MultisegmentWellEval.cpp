@@ -30,7 +30,6 @@
 #include <opm/models/blackoil/blackoilonephaseindices.hh>
 #include <opm/models/blackoil/blackoiltwophaseindices.hh>
 
-#include <opm/simulators/linalg/bda/WellContributions.hpp>
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/MSWellHelpers.hpp>
@@ -1783,74 +1782,6 @@ updateUpwindingSegments()
             upwinding_segments_[seg] = outlet_segment_index;
         }
     }
-}
-
-template<typename FluidSystem, typename Indices, typename Scalar>
-void
-MultisegmentWellEval<FluidSystem,Indices,Scalar>::
-addWellContribution(WellContributions& wellContribs) const
-{
-    unsigned int Mb = linSys_.duneB_.N();       // number of blockrows in duneB_, duneC_ and duneD_
-    unsigned int BnumBlocks = linSys_.duneB_.nonzeroes();
-    unsigned int DnumBlocks = linSys_.duneD_.nonzeroes();
-
-    // duneC
-    std::vector<unsigned int> Ccols;
-    std::vector<double> Cvals;
-    Ccols.reserve(BnumBlocks);
-    Cvals.reserve(BnumBlocks * Indices::numEq * numWellEq);
-    for (auto rowC = linSys_.duneC_.begin(); rowC != linSys_.duneC_.end(); ++rowC) {
-        for (auto colC = rowC->begin(), endC = rowC->end(); colC != endC; ++colC) {
-            Ccols.emplace_back(colC.index());
-            for (int i = 0; i < numWellEq; ++i) {
-                for (int j = 0; j < Indices::numEq; ++j) {
-                    Cvals.emplace_back((*colC)[i][j]);
-                }
-            }
-        }
-    }
-
-    // duneD
-    Dune::UMFPack<typename Equations::DiagMatWell> umfpackMatrix(linSys_.duneD_, 0);
-    double *Dvals = umfpackMatrix.getInternalMatrix().getValues();
-    auto *Dcols = umfpackMatrix.getInternalMatrix().getColStart();
-    auto *Drows = umfpackMatrix.getInternalMatrix().getRowIndex();
-
-    // duneB
-    std::vector<unsigned int> Bcols;
-    std::vector<unsigned int> Brows;
-    std::vector<double> Bvals;
-    Bcols.reserve(BnumBlocks);
-    Brows.reserve(Mb+1);
-    Bvals.reserve(BnumBlocks * Indices::numEq * numWellEq);
-    Brows.emplace_back(0);
-    unsigned int sumBlocks = 0;
-    for (auto rowB = linSys_.duneB_.begin(); rowB != linSys_.duneB_.end(); ++rowB) {
-        int sizeRow = 0;
-        for (auto colB = rowB->begin(), endB = rowB->end(); colB != endB; ++colB) {
-            Bcols.emplace_back(colB.index());
-            for (int i = 0; i < numWellEq; ++i) {
-                for (int j = 0; j < Indices::numEq; ++j) {
-                    Bvals.emplace_back((*colB)[i][j]);
-                }
-            }
-            sizeRow++;
-        }
-        sumBlocks += sizeRow;
-        Brows.emplace_back(sumBlocks);
-    }
-
-    wellContribs.addMultisegmentWellContribution(Indices::numEq,
-                                                 numWellEq,
-                                                 Mb,
-                                                 Bvals,
-                                                 Bcols,
-                                                 Brows,
-                                                 DnumBlocks,
-                                                 Dvals,
-                                                 Dcols,
-                                                 Drows,
-                                                 Cvals);
 }
 
 #define INSTANCE(...) \

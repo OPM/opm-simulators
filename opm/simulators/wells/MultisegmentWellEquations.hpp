@@ -37,6 +37,7 @@ namespace Opm
 {
 
 template<class Scalar> class MultisegmentWellGeneric;
+class WellContributions;
 
 template<class Scalar, int numWellEq, int numEq>
 class MultisegmentWellEquations
@@ -89,6 +90,9 @@ public:
     //! \brief Recover well solution.
     //! \details xw = inv(D)*(rw - C*x)
     void recoverSolutionWell(const BVector& x, BVectorWell& xw) const;
+
+    //! \brief Add the matrices of this well to the WellContributions object.
+    void extract(WellContributions& wellContribs) const;
 
     // two off-diagonal matrices
     OffDiagMatWell duneB_;

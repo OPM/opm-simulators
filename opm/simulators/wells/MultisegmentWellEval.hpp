@@ -51,10 +51,6 @@ class WellState;
 template<typename FluidSystem, typename Indices, typename Scalar>
 class MultisegmentWellEval : public MultisegmentWellGeneric<Scalar>
 {
-public:
-        /// add the contribution (C, D, B matrices) of this Well to the WellContributions object
-        void addWellContribution(WellContributions& wellContribs) const;
-
 protected:
     // TODO: for now, not considering the polymer, solvent and so on to simplify the development process.
 
@@ -98,6 +94,12 @@ protected:
     using EvalWell = DenseAd::Evaluation<double, /*size=*/Indices::numEq + numWellEq>;
     using Eval = DenseAd::Evaluation<Scalar, /*size=*/Indices::numEq>;
 
+public:
+    //! \brief Returns a const reference to equation system.
+    const Equations& linSys() const
+    { return linSys_; }
+
+protected:
     MultisegmentWellEval(WellInterfaceIndices<FluidSystem,Indices,Scalar>& baseif);
 
     void initMatrixAndVectors(const int num_cells);
