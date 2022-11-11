@@ -23,6 +23,7 @@
 #ifndef OPM_STANDARDWELL_EVAL_HEADER_INCLUDED
 #define OPM_STANDARDWELL_EVAL_HEADER_INCLUDED
 
+#include <opm/simulators/wells/StandardWellEquations.hpp>
 #include <opm/simulators/wells/StandardWellGeneric.hpp>
 
 #include <opm/material/densead/DynamicEvaluation.hpp>
@@ -96,8 +97,12 @@ public:
     using Eval = DenseAd::Evaluation<Scalar, Indices::numEq>;
     using BVectorWell = typename StandardWellGeneric<Scalar>::BVectorWell;
 
-        /// add the contribution (C, D^-1, B matrices) of this Well to the WellContributions object
-        void addWellContribution(WellContributions& wellContribs) const;
+    /// add the contribution (C, D^-1, B matrices) of this Well to the WellContributions object
+    void addWellContribution(WellContributions& wellContribs) const;
+
+    //! \brief Returns a const reference to equation system.
+    const StandardWellEquations<Scalar,Indices::numEq>& linSys() const
+    { return linSys_; }
 
 protected:
     StandardWellEval(const WellInterfaceIndices<FluidSystem,Indices,Scalar>& baseif);
@@ -190,6 +195,8 @@ protected:
 
     // the saturations in the well bore under surface conditions at the beginning of the time step
     std::vector<double> F0_;
+
+    StandardWellEquations<Scalar,Indices::numEq> linSys_; //!< Linear equation system
 };
 
 }

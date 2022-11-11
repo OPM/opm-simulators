@@ -432,10 +432,10 @@ namespace Opm
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
         // clear all entries
-        this->duneB_ = 0.0;
-        this->duneC_ = 0.0;
-        this->duneD_ = 0.0;
-        this->resWell_ = 0.0;
+        this->linSys_.duneB_ = 0.0;
+        this->linSys_.duneC_ = 0.0;
+        this->linSys_.duneD_ = 0.0;
+        this->linSys_.resWell_ = 0.0;
 
         assembleWellEqWithoutIterationImpl(ebosSimulator, dt, well_state, group_state, deferred_logger);
     }
@@ -488,17 +488,17 @@ namespace Opm
                 connectionRates[perf][componentIdx] = Base::restrictEval(cq_s_effective);
 
                 // subtract sum of phase fluxes in the well equations.
-                this->resWell_[0][componentIdx] += cq_s_effective.value();
+                this->linSys_.resWell_[0][componentIdx] += cq_s_effective.value();
 
                 // assemble the jacobians
                 for (int pvIdx = 0; pvIdx < this->numWellEq_; ++pvIdx) {
                     // also need to consider the efficiency factor when manipulating the jacobians.
-                    this->duneC_[0][cell_idx][pvIdx][componentIdx] -= cq_s_effective.derivative(pvIdx+Indices::numEq); // intput in transformed matrix
-                    this->duneD_[0][0][componentIdx][pvIdx] += cq_s_effective.derivative(pvIdx+Indices::numEq);
+                    this->linSys_.duneC_[0][cell_idx][pvIdx][componentIdx] -= cq_s_effective.derivative(pvIdx+Indices::numEq); // intput in transformed matrix
+                    this->linSys_.duneD_[0][0][componentIdx][pvIdx] += cq_s_effective.derivative(pvIdx+Indices::numEq);
                 }
 
                 for (int pvIdx = 0; pvIdx < Indices::numEq; ++pvIdx) {
-                    this->duneB_[0][cell_idx][componentIdx][pvIdx] += cq_s_effective.derivative(pvIdx);
+                    this->linSys_.duneB_[0][cell_idx][componentIdx][pvIdx] += cq_s_effective.derivative(pvIdx);
                 }
 
                 // Store the perforation phase flux for later usage.
@@ -512,7 +512,7 @@ namespace Opm
 
             if constexpr (has_zFraction) {
                 for (int pvIdx = 0; pvIdx < this->numWellEq_; ++pvIdx) {
-                    this->duneC_[0][cell_idx][pvIdx][Indices::contiZfracEqIdx] -= cq_s_zfrac_effective.derivative(pvIdx+Indices::numEq);
+                    this->linSys_.duneC_[0][cell_idx][pvIdx][Indices::contiZfracEqIdx] -= cq_s_zfrac_effective.derivative(pvIdx+Indices::numEq);
                 }
             }
         }
@@ -529,7 +529,7 @@ namespace Opm
         }
 
         // accumulate resWell_ and duneD_ in parallel to get effects of all perforations (might be distributed)
-        wellhelpers::sumDistributedWellEntries(this->duneD_[0][0], this->resWell_[0],
+        wellhelpers::sumDistributedWellEntries(this->linSys_.duneD_[0][0], this->linSys_.resWell_[0],
                                                this->parallel_well_info_.communication());
         // add vol * dF/dt + Q to the well equations;
         for (int componentIdx = 0; componentIdx < numWellConservationEq; ++componentIdx) {
@@ -542,9 +542,9 @@ namespace Opm
             }
             resWell_loc -= this->getQs(componentIdx) * this->well_efficiency_factor_;
             for (int pvIdx = 0; pvIdx < this->numWellEq_; ++pvIdx) {
-                this->duneD_[0][0][componentIdx][pvIdx] += resWell_loc.derivative(pvIdx+Indices::numEq);
+                this->linSys_.duneD_[0][0][componentIdx][pvIdx] += resWell_loc.derivative(pvIdx+Indices::numEq);
             }
-            this->resWell_[0][componentIdx] += resWell_loc.value();
+            this->linSys_.resWell_[0][componentIdx] += resWell_loc.value();
         }
 
         const auto& summaryState = ebosSimulator.vanguard().summaryState();
@@ -554,13 +554,13 @@ namespace Opm
 
         // do the local inversion of D.
         try {
-            this->invDuneD_ = this->duneD_; // Not strictly need if not cpr with well contributions is used
-            detail::invertMatrix(this->invDuneD_[0][0]);
+            this->linSys_.invDuneD_ = this->linSys_.duneD_; // Not strictly need if not cpr with well contributions is used
+            detail::invertMatrix(this->linSys_.invDuneD_[0][0]);
         } catch (NumericalProblem&) {
             // for singular matrices, use identity as the inverse
-            this->invDuneD_[0][0] = 0.0;
-            for (size_t i = 0; i < this->invDuneD_[0][0].rows(); ++i) {
-                this->invDuneD_[0][0][i][i] = 1.0;
+            this->linSys_.invDuneD_[0][0] = 0.0;
+            for (size_t i = 0; i < this->linSys_.invDuneD_[0][0].rows(); ++i) {
+                this->linSys_.invDuneD_[0][0][i][i] = 1.0;
             }
         } catch( ... ) {
             OPM_DEFLOG_THROW(NumericalIssue,"Error when inverting local well equations for well " + name(), deferred_logger);
@@ -1689,7 +1689,7 @@ namespace Opm
         // which is why we do not put the assembleWellEq here.
         BVectorWell dx_well(1);
         dx_well[0].resize(this->numWellEq_);
-        this->invDuneD_.mv(this->resWell_, dx_well);
+        this->linSys_.invDuneD_.mv(this->linSys_.resWell_, dx_well);
 
         updateWellState(dx_well, well_state, deferred_logger);
     }
@@ -1725,20 +1725,20 @@ namespace Opm
             // Contributions are already in the matrix itself
             return;
         }
-        assert( this->Bx_.size() == this->duneB_.N() );
-        assert( this->invDrw_.size() == this->invDuneD_.N() );
+        assert(this->linSys_.Bx_.size() == this->linSys_.duneB_.N());
+        assert(this->linSys_.invDrw_.size() == this->linSys_.invDuneD_.N());
 
         // Bx_ = duneB_ * x
-        this->parallelB_.mv(x, this->Bx_);
+        this->linSys_.parallelB_.mv(x, this->linSys_.Bx_);
 
         // invDBx = invDuneD_ * Bx_
         // TODO: with this, we modified the content of the invDrw_.
         // Is it necessary to do this to save some memory?
-        BVectorWell& invDBx = this->invDrw_;
-        this->invDuneD_.mv(this->Bx_, invDBx);
+        BVectorWell& invDBx = this->linSys_.invDrw_;
+        this->linSys_.invDuneD_.mv(this->linSys_.Bx_, invDBx);
 
         // Ax = Ax - duneC_^T * invDBx
-        this->duneC_.mmtv(invDBx,Ax);
+        this->linSys_.duneC_.mmtv(invDBx,Ax);
     }
 
 
@@ -1751,12 +1751,12 @@ namespace Opm
     {
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
-        assert( this->invDrw_.size() == this->invDuneD_.N() );
+        assert(this->linSys_.invDrw_.size() == this->linSys_.invDuneD_.N());
 
         // invDrw_ = invDuneD_ * resWell_
-        this->invDuneD_.mv(this->resWell_, this->invDrw_);
+        this->linSys_.invDuneD_.mv(this->linSys_.resWell_, this->linSys_.invDrw_);
         // r = r - duneC_^T * invDrw_
-        this->duneC_.mmtv(this->invDrw_, r);
+        this->linSys_.duneC_.mmtv(this->linSys_.invDrw_, r);
     }
 
     template<typename TypeTag>
@@ -1766,11 +1766,11 @@ namespace Opm
     {
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
-        BVectorWell resWell = this->resWell_;
+        BVectorWell resWell = this->linSys_.resWell_;
         // resWell = resWell - B * x
-        this->parallelB_.mmv(x, resWell);
+        this->linSys_.parallelB_.mmv(x, resWell);
         // xw = D^-1 * resWell
-        this->invDuneD_.mv(resWell, xw);
+        this->linSys_.invDuneD_.mv(resWell, xw);
     }
 
 
@@ -2178,13 +2178,15 @@ namespace Opm
         // at (0,j) only if this well has a perforation at cell j.
         typename SparseMatrixAdapter::MatrixBlock tmpMat;
         Dune::DynamicMatrix<Scalar> tmp;
-        for ( auto colC = this->duneC_[0].begin(), endC = this->duneC_[0].end(); colC != endC; ++colC )
+        for (auto colC = this->linSys_.duneC_[0].begin(),
+                  endC = this->linSys_.duneC_[0].end(); colC != endC; ++colC)
         {
             const auto row_index = colC.index();
 
-            for ( auto colB = this->duneB_[0].begin(), endB = this->duneB_[0].end(); colB != endB; ++colB )
+            for (auto colB = this->linSys_.duneB_[0].begin(),
+                      endB = this->linSys_.duneB_[0].end(); colB != endB; ++colB)
             {
-                detail::multMatrix(this->invDuneD_[0][0],  (*colB), tmp);
+                detail::multMatrix(this->linSys_.invDuneD_[0][0],  (*colB), tmp);
                 detail::negativeMultMatrixTransposed((*colC), tmp, tmpMat);
                 jacobian.addToBlock( row_index, colB.index(), tmpMat );
             }
@@ -2217,12 +2219,13 @@ namespace Opm
         int nperf = 0;
         auto cell_weights = weights[0];// not need for not(use_well_weights)
         cell_weights = 0.0;
-        assert(this->duneC_.M() == weights.size());
-        const int welldof_ind = this->duneC_.M() + this->index_of_well_;
+        assert(this->linSys_.duneC_.M() == weights.size());
+        const int welldof_ind = this->linSys_.duneC_.M() + this->index_of_well_;
         // do not assume anything about pressure controlled with use_well_weights (work fine with the assumtion also)
-        if( not( this->isPressureControlled(well_state) ) || use_well_weights ){
+        if (!this->isPressureControlled(well_state) || use_well_weights) {
             // make coupling for reservoir to well            
-            for (auto colC = this->duneC_[0].begin(), endC = this->duneC_[0].end(); colC != endC; ++colC) {
+            for (auto colC = this->linSys_.duneC_[0].begin(),
+                      endC = this->linSys_.duneC_[0].end(); colC != endC; ++colC) {
                 const auto row_ind = colC.index();
                 const auto& bw = weights[row_ind];
                 double matel = 0;        
@@ -2244,7 +2247,7 @@ namespace Opm
         bweights[0] = 0.0;
         double diagElem = 0;
         {            
-            if ( use_well_weights ){
+            if (use_well_weights ){
                 // calculate weighs and set diagonal element
                 //NB! use this options without treating pressure controlled separated
                 //NB! calculate quasiimpes well weights NB do not work well with trueimpes reservoir weights
@@ -2252,7 +2255,7 @@ namespace Opm
                 BVectorWell rhs(1);           
                 rhs[0].resize(blockSz);
                 rhs[0][bhp_var_index] = 1.0;
-                DiagMatrixBlockWellType inv_diag_block = this->invDuneD_[0][0];
+                DiagMatrixBlockWellType inv_diag_block = this->linSys_.invDuneD_[0][0];
                 DiagMatrixBlockWellType inv_diag_block_transpose = Opm::wellhelpers::transposeDenseDynMatrix(inv_diag_block);
                 for (size_t i = 0; i < blockSz; ++i) {
                     bweights[0][i] = 0;
@@ -2277,7 +2280,7 @@ namespace Opm
                     }
                     bweights[0][blockSz-1] = 0.0;
                     diagElem = 0.0;
-                    const auto& locmat = this->duneD_[0][0]; 
+                    const auto& locmat = this->linSys_.duneD_[0][0];
                     for (size_t i = 0; i < cell_weights.size(); ++i) {
                         diagElem += locmat[i][bhp_var_index]*cell_weights[i];
                     }
@@ -2289,7 +2292,8 @@ namespace Opm
         jacobian[welldof_ind][welldof_ind] = diagElem;
         // set the matrix elements for well reservoir coupling
         if( not( this->isPressureControlled(well_state) ) || use_well_weights ){
-            for (auto colB = this->duneB_[0].begin(), endB = this->duneB_[0].end(); colB != endB; ++colB) {
+            for (auto colB = this->linSys_.duneB_[0].begin(),
+                      endB = this->linSys_.duneB_[0].end(); colB != endB; ++colB) {
                 const auto col_index = colB.index();
                 const auto& bw = bweights[0];
                 double matel = 0;
@@ -2466,7 +2470,7 @@ namespace Opm
 
         // equation for the water velocity
         const EvalWell eq_wat_vel = this->primary_variables_evaluation_[wat_vel_index] - water_velocity;
-        this->resWell_[0][wat_vel_index] = eq_wat_vel.value();
+        this->linSys_.resWell_[0][wat_vel_index] = eq_wat_vel.value();
 
         const auto& ws = well_state.well(this->index_of_well_);
         const auto& perf_data = ws.perf_data;
@@ -2481,15 +2485,15 @@ namespace Opm
         const EvalWell eq_pskin = this->primary_variables_evaluation_[pskin_index]
                                   - pskin(throughput, this->primary_variables_evaluation_[wat_vel_index], poly_conc, deferred_logger);
 
-        this->resWell_[0][pskin_index] = eq_pskin.value();
+        this->linSys_.resWell_[0][pskin_index] = eq_pskin.value();
         for (int pvIdx = 0; pvIdx < this->numWellEq_; ++pvIdx) {
-            this->duneD_[0][0][wat_vel_index][pvIdx] = eq_wat_vel.derivative(pvIdx+Indices::numEq);
-            this->duneD_[0][0][pskin_index][pvIdx] = eq_pskin.derivative(pvIdx+Indices::numEq);
+            this->linSys_.duneD_[0][0][wat_vel_index][pvIdx] = eq_wat_vel.derivative(pvIdx+Indices::numEq);
+            this->linSys_.duneD_[0][0][pskin_index][pvIdx] = eq_pskin.derivative(pvIdx+Indices::numEq);
         }
 
         // the water velocity is impacted by the reservoir primary varaibles. It needs to enter matrix B
         for (int pvIdx = 0; pvIdx < Indices::numEq; ++pvIdx) {
-            this->duneB_[0][cell_idx][wat_vel_index][pvIdx] = eq_wat_vel.derivative(pvIdx);
+            this->linSys_.duneB_[0][cell_idx][wat_vel_index][pvIdx] = eq_wat_vel.derivative(pvIdx);
         }
     }
 

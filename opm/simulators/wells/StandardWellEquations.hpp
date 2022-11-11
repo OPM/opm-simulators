@@ -20,35 +20,25 @@
 */
 
 
-#ifndef OPM_STANDARDWELL_GENERIC_HEADER_INCLUDED
-#define OPM_STANDARDWELL_GENERIC_HEADER_INCLUDED
+#ifndef OPM_STANDARDWELL_EQUATIONS_HEADER_INCLUDED
+#define OPM_STANDARDWELL_EQUATIONS_HEADER_INCLUDED
+
+#include <opm/simulators/wells/WellHelpers.hpp>
 
 #include <dune/common/dynmatrix.hh>
 #include <dune/common/dynvector.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/bvector.hh>
 
-#include <opm/simulators/wells/WellHelpers.hpp>
-
-#include <optional>
-#include <vector>
-#include <functional>
-
 namespace Opm
 {
 
-class ConvergenceReport;
-class DeferredLogger;
 class ParallelWellInfo;
-class Schedule;
-class SummaryState;
-class WellInterfaceGeneric;
-class WellState;
 
-template<class Scalar>
-class StandardWellGeneric
+template<class Scalar, int numEq>
+class StandardWellEquations
 {
-protected:
+public:
     // sparsity pattern for the matrices
     //[A C^T    [x       =  [ res
     // B  D ]   x_well]      res_well]
@@ -65,32 +55,29 @@ protected:
     using OffDiagMatrixBlockWellType = Dune::DynamicMatrix<Scalar>;
     using OffDiagMatWell = Dune::BCRSMatrix<OffDiagMatrixBlockWellType>;
 
-    StandardWellGeneric(const WellInterfaceGeneric& baseif);
+    // block vector type
+    using BVector = Dune::BlockVector<Dune::FieldVector<Scalar,numEq>>;
 
-    // calculate a relaxation factor to avoid overshoot of total rates
-    static double relaxationFactorRate(const std::vector<double>& primary_variables,
-                                       const double newton_update);
+    StandardWellEquations(const ParallelWellInfo& parallel_well_info);
 
-    // relaxation factor considering only one fraction value
-    static double relaxationFactorFraction(const double old_value,
-                                           const double dx);
+    // two off-diagonal matrices
+    OffDiagMatWell duneB_;
+    OffDiagMatWell duneC_;
+    // diagonal matrix for the well
+    DiagMatWell invDuneD_;
+    DiagMatWell duneD_;
 
-    void computeConnectionPressureDelta();
+    // Wrapper for the parallel application of B for distributed wells
+    wellhelpers::ParallelStandardWellB<Scalar> parallelB_;
 
-    // Base interface reference
-    const WellInterfaceGeneric& baseif_;
+    // residuals of the well equations
+    BVectorWell resWell_;
 
-    // densities of the fluid in each perforation
-    std::vector<double> perf_densities_;
-    // pressure drop between different perforations
-    std::vector<double> perf_pressure_diffs_;
-
-    double getRho() const
-    {
-        return this->perf_densities_.empty() ? 0.0 : perf_densities_[0];
-    }
+    // several vector used in the matrix calculation
+    mutable BVectorWell Bx_;
+    mutable BVectorWell invDrw_;
 };
 
 }
 
-#endif // OPM_STANDARDWELL_GENERIC_HEADER_INCLUDED
+#endif // OPM_STANDARDWELL_EQUATIONS_HEADER_INCLUDED

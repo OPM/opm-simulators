@@ -53,6 +53,7 @@ StandardWellEval(const WellInterfaceIndices<FluidSystem,Indices,Scalar>& baseif)
     : StandardWellGeneric<Scalar>(baseif)
     , baseif_(baseif)
     , F0_(numWellConservationEq)
+    , linSys_(baseif_.parallelWellInfo())
 {
 }
 
@@ -444,9 +445,9 @@ assembleControlEq(const WellState& well_state,
 
     // using control_eq to update the matrix and residuals
     // TODO: we should use a different index system for the well equations
-    this->resWell_[0][Bhp] = control_eq.value();
+    this->linSys_.resWell_[0][Bhp] = control_eq.value();
     for (int pv_idx = 0; pv_idx < numWellEq_; ++pv_idx) {
-        this->duneD_[0][0][Bhp][pv_idx] = control_eq.derivative(pv_idx + Indices::numEq);
+        this->linSys_.duneD_[0][0][Bhp][pv_idx] = control_eq.derivative(pv_idx + Indices::numEq);
     }
 }
 
@@ -773,7 +774,7 @@ getWellConvergence(const WellState& well_state,
     res.resize(numWellEq_);
     for (int eq_idx = 0; eq_idx < numWellEq_; ++eq_idx) {
         // magnitude of the residual matters
-        res[eq_idx] = std::abs(this->resWell_[0][eq_idx]);
+        res[eq_idx] = std::abs(this->linSys_.resWell_[0][eq_idx]);
     }
 
     std::vector<double> well_flux_residual(baseif_.numComponents());
@@ -810,7 +811,7 @@ getWellConvergence(const WellState& well_state,
     WellConvergence(baseif_).
         checkConvergenceControlEq(well_state,
                                   {1.e3, 1.e4, 1.e-4, 1.e-6, maxResidualAllowed},
-                                  std::abs(this->resWell_[0][Bhp]),
+                                  std::abs(this->linSys_.resWell_[0][Bhp]),
                                   report,
                                   deferred_logger);
 
@@ -1042,18 +1043,20 @@ init(std::vector<double>& perf_depth,
     //[A C^T    [x    =  [ res
     // B D] x_well]      res_well]
     // set the size of the matrices
-    this->duneD_.setSize(1, 1, 1);
-    this->duneB_.setSize(1, num_cells, baseif_.numPerfs());
-    this->duneC_.setSize(1, num_cells, baseif_.numPerfs());
+    this->linSys_.duneD_.setSize(1, 1, 1);
+    this->linSys_.duneB_.setSize(1, num_cells, baseif_.numPerfs());
+    this->linSys_.duneC_.setSize(1, num_cells, baseif_.numPerfs());
 
-    for (auto row=this->duneD_.createbegin(), end = this->duneD_.createend(); row!=end; ++row) {
+    for (auto row = this->linSys_.duneD_.createbegin(),
+              end = this->linSys_.duneD_.createend(); row != end; ++row) {
         // Add nonzeros for diagonal
         row.insert(row.index());
     }
     // the block size is run-time determined now
-    this->duneD_[0][0].resize(numWellEq_, numWellEq_);
+    this->linSys_.duneD_[0][0].resize(numWellEq_, numWellEq_);
 
-    for (auto row = this->duneB_.createbegin(), end = this->duneB_.createend(); row!=end; ++row) {
+    for (auto row = this->linSys_.duneB_.createbegin(),
+              end = this->linSys_.duneB_.createend(); row != end; ++row) {
         for (int perf = 0 ; perf < baseif_.numPerfs(); ++perf) {
             const int cell_idx = baseif_.cells()[perf];
             row.insert(cell_idx);
@@ -1063,11 +1066,12 @@ init(std::vector<double>& perf_depth,
     for (int perf = 0 ; perf < baseif_.numPerfs(); ++perf) {
         const int cell_idx = baseif_.cells()[perf];
          // the block size is run-time determined now
-         this->duneB_[0][cell_idx].resize(numWellEq_, Indices::numEq);
+         this->linSys_.duneB_[0][cell_idx].resize(numWellEq_, Indices::numEq);
     }
 
     // make the C^T matrix
-    for (auto row = this->duneC_.createbegin(), end = this->duneC_.createend(); row!=end; ++row) {
+    for (auto row = this->linSys_.duneC_.createbegin(),
+              end = this->linSys_.duneC_.createend(); row != end; ++row) {
         for (int perf = 0; perf < baseif_.numPerfs(); ++perf) {
             const int cell_idx = baseif_.cells()[perf];
             row.insert(cell_idx);
@@ -1076,22 +1080,22 @@ init(std::vector<double>& perf_depth,
 
     for (int perf = 0; perf < baseif_.numPerfs(); ++perf) {
         const int cell_idx = baseif_.cells()[perf];
-        this->duneC_[0][cell_idx].resize(numWellEq_, Indices::numEq);
+        this->linSys_.duneC_[0][cell_idx].resize(numWellEq_, Indices::numEq);
     }
 
-    this->resWell_.resize(1);
+    this->linSys_.resWell_.resize(1);
     // the block size of resWell_ is also run-time determined now
-    this->resWell_[0].resize(numWellEq_);
+    this->linSys_.resWell_[0].resize(numWellEq_);
 
     // resize temporary class variables
-    this->Bx_.resize( this->duneB_.N() );
-    for (unsigned i = 0; i < this->duneB_.N(); ++i) {
-        this->Bx_[i].resize(numWellEq_);
+    this->linSys_.Bx_.resize(this->linSys_.duneB_.N());
+    for (unsigned i = 0; i < this->linSys_.duneB_.N(); ++i) {
+        this->linSys_.Bx_[i].resize(numWellEq_);
     }
 
-    this->invDrw_.resize( this->duneD_.N() );
-    for (unsigned i = 0; i < this->duneD_.N(); ++i) {
-        this->invDrw_[i].resize(numWellEq_);
+    this->linSys_.invDrw_.resize(this->linSys_.duneD_.N());
+    for (unsigned i = 0; i < this->linSys_.duneD_.N(); ++i) {
+        this->linSys_.invDrw_[i].resize(numWellEq_);
     }
 }
 
@@ -1102,11 +1106,12 @@ addWellContribution(WellContributions& wellContribs) const
 {
     std::vector<int> colIndices;
     std::vector<double> nnzValues;
-    colIndices.reserve(this->duneB_.nonzeroes());
-    nnzValues.reserve(this->duneB_.nonzeroes()*numStaticWellEq * Indices::numEq);
+    colIndices.reserve(this->linSys_.duneB_.nonzeroes());
+    nnzValues.reserve(this->linSys_.duneB_.nonzeroes()*numStaticWellEq * Indices::numEq);
 
     // duneC
-    for ( auto colC = this->duneC_[0].begin(), endC = this->duneC_[0].end(); colC != endC; ++colC )
+    for (auto colC = this->linSys_.duneC_[0].begin(),
+              endC = this->linSys_.duneC_[0].end(); colC != endC; ++colC )
     {
         colIndices.emplace_back(colC.index());
         for (int i = 0; i < numStaticWellEq; ++i) {
@@ -1115,7 +1120,7 @@ addWellContribution(WellContributions& wellContribs) const
             }
         }
     }
-    wellContribs.addMatrix(WellContributions::MatrixType::C, colIndices.data(), nnzValues.data(), this->duneC_.nonzeroes());
+    wellContribs.addMatrix(WellContributions::MatrixType::C, colIndices.data(), nnzValues.data(), this->linSys_.duneC_.nonzeroes());
 
     // invDuneD
     colIndices.clear();
@@ -1124,7 +1129,7 @@ addWellContribution(WellContributions& wellContribs) const
     for (int i = 0; i < numStaticWellEq; ++i)
     {
         for (int j = 0; j < numStaticWellEq; ++j) {
-            nnzValues.emplace_back(this->invDuneD_[0][0][i][j]);
+            nnzValues.emplace_back(this->linSys_.invDuneD_[0][0][i][j]);
         }
     }
     wellContribs.addMatrix(WellContributions::MatrixType::D, colIndices.data(), nnzValues.data(), 1);
@@ -1132,7 +1137,8 @@ addWellContribution(WellContributions& wellContribs) const
     // duneB
     colIndices.clear();
     nnzValues.clear();
-    for ( auto colB = this->duneB_[0].begin(), endB = this->duneB_[0].end(); colB != endB; ++colB )
+    for (auto colB = this->linSys_.duneB_[0].begin(),
+              endB = this->linSys_.duneB_[0].end(); colB != endB; ++colB )
     {
         colIndices.emplace_back(colB.index());
         for (int i = 0; i < numStaticWellEq; ++i) {
@@ -1141,7 +1147,14 @@ addWellContribution(WellContributions& wellContribs) const
             }
         }
     }
-    wellContribs.addMatrix(WellContributions::MatrixType::B, colIndices.data(), nnzValues.data(), this->duneB_.nonzeroes());
+    wellContribs.addMatrix(WellContributions::MatrixType::B, colIndices.data(), nnzValues.data(), this->linSys_.duneB_.nonzeroes());
+}
+
+template<class FluidSystem, class Indices, class Scalar>
+unsigned int StandardWellEval<FluidSystem,Indices,Scalar>::
+getNumBlocks() const
+{
+    return linSys_.duneB_.nonzeroes();
 }
 
 #define INSTANCE(...) \
