@@ -35,6 +35,8 @@ namespace Opm
 
 class ParallelWellInfo;
 class WellContributions;
+class WellInterfaceGeneric;
+class WellState;
 
 template<class Scalar, int numEq>
 class StandardWellEquations
@@ -97,6 +99,16 @@ public:
     //! \brief Add the matrices of this well to the sparse matrix adapter.
     template<class SparseMatrixAdapter>
     void extract(SparseMatrixAdapter& jacobian) const;
+
+    //! \brief Extract CPR pressure matrix.
+    template<class PressureMatrix>
+    void extractCPRPressureMatrix(PressureMatrix& jacobian,
+                                  const BVector& weights,
+                                  const int pressureVarIndex,
+                                  const bool use_well_weights,
+                                  const WellInterfaceGeneric& well,
+                                  const int bhp_var_index,
+                                  const WellState& well_state) const;
 
     //! \brief Get the number of blocks of the C and B matrices.
     unsigned int getNumBlocks() const;

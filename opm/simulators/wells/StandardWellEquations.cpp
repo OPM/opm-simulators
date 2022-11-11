@@ -28,6 +28,10 @@
 #include <opm/simulators/linalg/istlsparsematrixadapter.hh>
 #include <opm/simulators/linalg/matrixblock.hh>
 #include <opm/simulators/linalg/SmallDenseMatrixUtils.hpp>
+#include <opm/simulators/wells/WellInterfaceGeneric.hpp>
+
+#include <algorithm>
+#include <cmath>
 
 namespace Opm
 {
@@ -269,9 +273,130 @@ getNumBlocks() const
     return duneB_.nonzeroes();
 }
 
+template<class Scalar, int numEq>
+template<class PressureMatrix>
+void StandardWellEquations<Scalar,numEq>::
+extractCPRPressureMatrix(PressureMatrix& jacobian,
+                         const BVector& weights,
+                         const int pressureVarIndex,
+                         const bool use_well_weights,
+                         const WellInterfaceGeneric& well,
+                         const int bhp_var_index,
+                         const WellState& well_state) const
+{
+    // This adds pressure quation for cpr
+    // For use_well_weights=true
+    //    weights lamda = inv(D)'v  v = 0 v(bhpInd) = 1
+    //    the well equations are summed i lambda' B(:,pressureVarINd) -> B  lambda'*D(:,bhpInd) -> D
+    // For use_well_weights = false
+    //    weights lambda = \sum_i w /n where ths sum is over weights of all perforation cells
+    //    in the case of pressure controlled trivial equations are used and bhp  C=B=0
+    //    then the flow part of the well equations are summed lambda'*B(1:n,pressureVarInd) -> B lambda'*D(1:n,bhpInd) -> D
+    // For bouth
+    //    C -> w'C(:,bhpInd) where w is weights of the perforation cell
+
+    // Add the well contributions in cpr
+    // use_well_weights is a quasiimpes formulation which is not implemented in multisegment
+    int nperf = 0;
+    auto cell_weights = weights[0];// not need for not(use_well_weights)
+    cell_weights = 0.0;
+    assert(duneC_.M() == weights.size());
+    const int welldof_ind = duneC_.M() + well.indexOfWell();
+    // do not assume anything about pressure controlled with use_well_weights (work fine with the assumtion also)
+    if (!well.isPressureControlled(well_state) || use_well_weights) {
+        // make coupling for reservoir to well
+        for (auto colC = duneC_[0].begin(),
+                  endC = duneC_[0].end(); colC != endC; ++colC) {
+            const auto row_ind = colC.index();
+            const auto& bw = weights[row_ind];
+            double matel = 0;
+            assert((*colC).M() == bw.size());
+            for (size_t i = 0; i < bw.size(); ++i) {
+                matel += (*colC)[bhp_var_index][i] * bw[i];
+            }
+
+            jacobian[row_ind][welldof_ind] = matel;
+            cell_weights += bw;
+            nperf += 1;
+        }
+    }
+    cell_weights /= nperf;
+
+    BVectorWell  bweights(1);
+    size_t blockSz = duneD_[0][0].N();
+    bweights[0].resize(blockSz);
+    bweights[0] = 0.0;
+    double diagElem = 0;
+    if (use_well_weights ) {
+        // calculate weighs and set diagonal element
+        //NB! use this options without treating pressure controlled separated
+        //NB! calculate quasiimpes well weights NB do not work well with trueimpes reservoir weights
+        double abs_max = 0;
+        BVectorWell rhs(1);
+        rhs[0].resize(blockSz);
+        rhs[0][bhp_var_index] = 1.0;
+        DiagMatrixBlockWellType inv_diag_block = invDuneD_[0][0];
+        DiagMatrixBlockWellType inv_diag_block_transpose =
+            Opm::wellhelpers::transposeDenseDynMatrix(inv_diag_block);
+        for (size_t i = 0; i < blockSz; ++i) {
+            bweights[0][i] = 0;
+            for (size_t j = 0; j < blockSz; ++j) {
+                bweights[0][i] += inv_diag_block_transpose[i][j] * rhs[0][j];
+            }
+            abs_max = std::max(abs_max, std::fabs(bweights[0][i]));
+        }
+        assert(abs_max > 0.0);
+        for (size_t i = 0; i < blockSz; ++i) {
+            bweights[0][i] /= abs_max;
+        }
+        diagElem = 1.0 / abs_max;
+    } else {
+        // set diagonal element
+        if (well.isPressureControlled(well_state)) {
+            bweights[0][blockSz-1] = 1.0;
+            diagElem = 1.0; // better scaling could have used the calculation below if weights were calculated
+        } else {
+            for (size_t i = 0; i < cell_weights.size(); ++i) {
+                bweights[0][i] = cell_weights[i];
+            }
+            bweights[0][blockSz-1] = 0.0;
+            diagElem = 0.0;
+            const auto& locmat = duneD_[0][0];
+            for (size_t i = 0; i < cell_weights.size(); ++i) {
+                diagElem += locmat[i][bhp_var_index] * cell_weights[i];
+            }
+
+        }
+    }
+    //
+    jacobian[welldof_ind][welldof_ind] = diagElem;
+    // set the matrix elements for well reservoir coupling
+    if (!well.isPressureControlled(well_state) || use_well_weights) {
+        for (auto colB = duneB_[0].begin(),
+                  endB = duneB_[0].end(); colB != endB; ++colB) {
+            const auto col_index = colB.index();
+            const auto& bw = bweights[0];
+            double matel = 0;
+            for (size_t i = 0; i < bw.size(); ++i) {
+                 matel += (*colB)[i][pressureVarIndex] * bw[i];
+            }
+            jacobian[welldof_ind][col_index] = matel;
+        }
+    }
+}
+
 #define INSTANCE(N) \
 template class StandardWellEquations<double,N>; \
-template void StandardWellEquations<double,N>::extract(Linear::IstlSparseMatrixAdapter<MatrixBlock<double,N,N>>&) const;
+template void StandardWellEquations<double,N>:: \
+    extract(Linear::IstlSparseMatrixAdapter<MatrixBlock<double,N,N>>&) const; \
+template void StandardWellEquations<double,N>:: \
+    extractCPRPressureMatrix(Dune::BCRSMatrix<MatrixBlock<double,1,1>>&, \
+                             const typename StandardWellEquations<double,N>::BVector&, \
+                             const int, \
+                             const bool, \
+                             const WellInterfaceGeneric&, \
+                             const int, \
+                             const WellState&) const;
 
 INSTANCE(1)
 INSTANCE(2)
