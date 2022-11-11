@@ -233,10 +233,12 @@ namespace Opm
                                           WellState& well_state,
                                           DeferredLogger& deferred_logger)
     {
-        if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
+        if (!this->isOperableAndSolvable() && !this->wellIsStopped()) {
+            return;
+        }
 
         BVectorWell xw(1);
-        this->recoverSolutionWell(x, xw);
+        this->linSys_.recoverSolutionWell(x, xw);
         updateWellState(xw, well_state, deferred_logger);
     }
 

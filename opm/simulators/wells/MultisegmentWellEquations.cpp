@@ -168,6 +168,17 @@ MultisegmentWellEquations<Scalar,numWellEq,numEq>::solve() const
     return mswellhelpers::applyUMFPack(*duneDSolver_, resWell_);
 }
 
+template<class Scalar, int numWellEq, int numEq>
+void MultisegmentWellEquations<Scalar,numWellEq,numEq>::
+recoverSolutionWell(const BVector& x, BVectorWell& xw) const
+{
+    BVectorWell resWell = resWell_;
+    // resWell = resWell - B * x
+    duneB_.mmv(x, resWell);
+    // xw = D^-1 * resWell
+    xw = mswellhelpers::applyUMFPack(*duneDSolver_, resWell);
+}
+
 #define INSTANCE(numWellEq, numEq) \
 template class MultisegmentWellEquations<double,numWellEq,numEq>;
 

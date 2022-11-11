@@ -142,10 +142,6 @@ protected:
     // handling the overshooting and undershooting of the fractions
     void processFractions(const int seg) const;
 
-    // xw = inv(D)*(rw - C*x)
-    void recoverSolutionWell(const BVector& x,
-                             BVectorWell& xw) const;
-
     void updatePrimaryVariables(const WellState& well_state) const;
 
     void updateUpwindingSegments();

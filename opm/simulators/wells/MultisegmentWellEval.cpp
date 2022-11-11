@@ -390,20 +390,6 @@ updatePrimaryVariables(const WellState& well_state) const
 }
 
 template<typename FluidSystem, typename Indices, typename Scalar>
-void
-MultisegmentWellEval<FluidSystem,Indices,Scalar>::
-recoverSolutionWell(const BVector& x, BVectorWell& xw) const
-{
-    if (!baseif_.isOperableAndSolvable() && !baseif_.wellIsStopped()) return;
-
-    BVectorWell resWell = linSys_.resWell_;
-    // resWell = resWell - B * x
-    linSys_.duneB_.mmv(x, resWell);
-    // xw = D^-1 * resWell
-    xw = mswellhelpers::applyUMFPack(*linSys_.duneDSolver_, resWell);
-}
-
-template<typename FluidSystem, typename Indices, typename Scalar>
 typename MultisegmentWellEval<FluidSystem,Indices,Scalar>::EvalWell
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 volumeFraction(const int seg,
