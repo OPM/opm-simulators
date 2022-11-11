@@ -196,23 +196,16 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     apply(const BVector& x, BVector& Ax) const
     {
-        if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
+        if (!this->isOperableAndSolvable() && !this->wellIsStopped()) {
+            return;
+        }
 
-        if ( this->param_.matrix_add_well_contributions_ )
-        {
+        if (this->param_.matrix_add_well_contributions_) {
             // Contributions are already in the matrix itself
             return;
         }
-        BVectorWell Bx(this->linSys_.duneB_.N());
 
-        this->linSys_.duneB_.mv(x, Bx);
-
-        // invDBx = duneD^-1 * Bx_
-        const BVectorWell invDBx = mswellhelpers::applyUMFPack(this->linSys_.duneD_,
-                                                               this->linSys_.duneDSolver_, Bx);
-
-        // Ax = Ax - duneC_^T * invDBx
-        this->linSys_.duneC_.mmtv(invDBx,Ax);
+        this->linSys_.apply(x, Ax);
     }
 
 

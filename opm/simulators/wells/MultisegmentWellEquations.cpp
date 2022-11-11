@@ -22,6 +22,7 @@
 #include <config.h>
 #include <opm/simulators/wells/MultisegmentWellEquations.hpp>
 
+#include <opm/simulators/wells/MSWellHelpers.hpp>
 #include <opm/simulators/wells/MultisegmentWellGeneric.hpp>
 
 namespace Opm {
@@ -112,6 +113,21 @@ void MultisegmentWellEquations<Scalar,numWellEq,numEq>::clear()
     duneD_ = 0.0;
     resWell_ = 0.0;
     duneDSolver_.reset();
+}
+
+template<class Scalar, int numWellEq, int numEq>
+void MultisegmentWellEquations<Scalar,numWellEq,numEq>::
+apply(const BVector& x, BVector& Ax) const
+{
+    BVectorWell Bx(duneB_.N());
+
+    duneB_.mv(x, Bx);
+
+    // invDBx = duneD^-1 * Bx_
+    const BVectorWell invDBx = mswellhelpers::applyUMFPack(duneD_, duneDSolver_, Bx);
+
+    // Ax = Ax - duneC_^T * invDBx
+    duneC_.mmtv(invDBx,Ax);
 }
 
 #define INSTANCE(numWellEq, numEq) \

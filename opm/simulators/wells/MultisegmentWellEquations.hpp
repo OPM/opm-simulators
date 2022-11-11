@@ -74,7 +74,9 @@ public:
     //! \brief Set all coefficients to 0.
     void clear();
 
-    // TODO, the following should go to a class for computing purpose
+    //! \brief Apply linear operator to vector.
+    void apply(const BVector& x, BVector& Ax) const;
+
     // two off-diagonal matrices
     OffDiagMatWell duneB_;
     OffDiagMatWell duneC_;
