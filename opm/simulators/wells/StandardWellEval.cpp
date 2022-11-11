@@ -1040,63 +1040,8 @@ init(std::vector<double>& perf_depth,
     primary_variables_evaluation_.resize(numWellEq_, EvalWell{numWellEq_ + Indices::numEq, 0.0});
 
     // setup sparsity pattern for the matrices
-    //[A C^T    [x    =  [ res
-    // B D] x_well]      res_well]
-    // set the size of the matrices
-    this->linSys_.duneD_.setSize(1, 1, 1);
-    this->linSys_.duneB_.setSize(1, num_cells, baseif_.numPerfs());
-    this->linSys_.duneC_.setSize(1, num_cells, baseif_.numPerfs());
-
-    for (auto row = this->linSys_.duneD_.createbegin(),
-              end = this->linSys_.duneD_.createend(); row != end; ++row) {
-        // Add nonzeros for diagonal
-        row.insert(row.index());
-    }
-    // the block size is run-time determined now
-    this->linSys_.duneD_[0][0].resize(numWellEq_, numWellEq_);
-
-    for (auto row = this->linSys_.duneB_.createbegin(),
-              end = this->linSys_.duneB_.createend(); row != end; ++row) {
-        for (int perf = 0 ; perf < baseif_.numPerfs(); ++perf) {
-            const int cell_idx = baseif_.cells()[perf];
-            row.insert(cell_idx);
-        }
-    }
-
-    for (int perf = 0 ; perf < baseif_.numPerfs(); ++perf) {
-        const int cell_idx = baseif_.cells()[perf];
-         // the block size is run-time determined now
-         this->linSys_.duneB_[0][cell_idx].resize(numWellEq_, Indices::numEq);
-    }
-
-    // make the C^T matrix
-    for (auto row = this->linSys_.duneC_.createbegin(),
-              end = this->linSys_.duneC_.createend(); row != end; ++row) {
-        for (int perf = 0; perf < baseif_.numPerfs(); ++perf) {
-            const int cell_idx = baseif_.cells()[perf];
-            row.insert(cell_idx);
-        }
-    }
-
-    for (int perf = 0; perf < baseif_.numPerfs(); ++perf) {
-        const int cell_idx = baseif_.cells()[perf];
-        this->linSys_.duneC_[0][cell_idx].resize(numWellEq_, Indices::numEq);
-    }
-
-    this->linSys_.resWell_.resize(1);
-    // the block size of resWell_ is also run-time determined now
-    this->linSys_.resWell_[0].resize(numWellEq_);
-
-    // resize temporary class variables
-    this->linSys_.Bx_.resize(this->linSys_.duneB_.N());
-    for (unsigned i = 0; i < this->linSys_.duneB_.N(); ++i) {
-        this->linSys_.Bx_[i].resize(numWellEq_);
-    }
-
-    this->linSys_.invDrw_.resize(this->linSys_.duneD_.N());
-    for (unsigned i = 0; i < this->linSys_.duneD_.N(); ++i) {
-        this->linSys_.invDrw_[i].resize(numWellEq_);
-    }
+    this->linSys_.init(num_cells, this->numWellEq_,
+                       baseif_.numPerfs(), baseif_.cells());
 }
 
 template<class FluidSystem, class Indices, class Scalar>

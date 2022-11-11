@@ -35,6 +35,72 @@ StandardWellEquations(const ParallelWellInfo& parallel_well_info)
     invDuneD_.setBuildMode(DiagMatWell::row_wise);
 }
 
+template<class Scalar, int numEq>
+void StandardWellEquations<Scalar,numEq>::
+init(const int num_cells,
+     const int numWellEq,
+     const int numPerfs,
+     const std::vector<int>& cells)
+{
+    // setup sparsity pattern for the matrices
+    //[A C^T    [x    =  [ res
+    // B D] x_well]      res_well]
+    // set the size of the matrices
+    duneD_.setSize(1, 1, 1);
+    duneB_.setSize(1, num_cells, numPerfs);
+    duneC_.setSize(1, num_cells, numPerfs);
+
+    for (auto row = duneD_.createbegin(),
+              end = duneD_.createend(); row != end; ++row) {
+        // Add nonzeros for diagonal
+        row.insert(row.index());
+    }
+      // the block size is run-time determined now
+    duneD_[0][0].resize(numWellEq, numWellEq);
+
+    for (auto row = duneB_.createbegin(),
+              end = duneB_.createend(); row != end; ++row) {
+        for (int perf = 0 ; perf < numPerfs; ++perf) {
+            const int cell_idx = cells[perf];
+            row.insert(cell_idx);
+        }
+    }
+
+    for (int perf = 0 ; perf < numPerfs; ++perf) {
+        const int cell_idx = cells[perf];
+        // the block size is run-time determined now
+        duneB_[0][cell_idx].resize(numWellEq, numEq);
+    }
+
+         // make the C^T matrix
+    for (auto row = duneC_.createbegin(),
+              end = duneC_.createend(); row != end; ++row) {
+        for (int perf = 0; perf < numPerfs; ++perf) {
+            const int cell_idx = cells[perf];
+            row.insert(cell_idx);
+        }
+    }
+
+    for (int perf = 0; perf < numPerfs; ++perf) {
+        const int cell_idx = cells[perf];
+        duneC_[0][cell_idx].resize(numWellEq, numEq);
+    }
+
+    resWell_.resize(1);
+    // the block size of resWell_ is also run-time determined now
+    resWell_[0].resize(numWellEq);
+
+    // resize temporary class variables
+    Bx_.resize(duneB_.N());
+    for (unsigned i = 0; i < duneB_.N(); ++i) {
+        Bx_[i].resize(numWellEq);
+    }
+
+    invDrw_.resize(duneD_.N());
+    for (unsigned i = 0; i < duneD_.N(); ++i) {
+        invDrw_[i].resize(numWellEq);
+    }
+}
 
 template<class Scalar, int numEq>
 void StandardWellEquations<Scalar,numEq>::clear()

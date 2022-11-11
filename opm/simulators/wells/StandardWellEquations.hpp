@@ -60,6 +60,16 @@ public:
 
     StandardWellEquations(const ParallelWellInfo& parallel_well_info);
 
+    //! \brief Setup sparsity pattern for the matrices.
+    //! \param num_cells Total number of cells
+    //! \param numWellEq Number of well equations
+    //! \param numPerfs Number of perforations
+    //! \param cells Cell indices for perforations
+    void init(const int num_cells,
+              const int numWellEq,
+              const int numPerfs,
+              const std::vector<int>& cells);
+
     //! \brief Set all coefficients to 0.
     void clear();
 
