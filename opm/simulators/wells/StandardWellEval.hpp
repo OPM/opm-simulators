@@ -53,7 +53,11 @@ protected:
     static constexpr int numWellControlEq = 1;
     // number of the well equations that will always be used
     // based on the solution strategy, there might be other well equations be introduced
+
+public:
     static constexpr int numStaticWellEq = numWellConservationEq + numWellControlEq;
+
+protected:
     // the index for Bhp in primary variables and also the index of well control equation
     // they both will be the last one in their respective system.
     // TODO: we should have indices for the well equations and well primary variables separately
@@ -96,9 +100,6 @@ public:
     using EvalWell = DenseAd::DynamicEvaluation<Scalar, numStaticWellEq + Indices::numEq + 1>;
     using Eval = DenseAd::Evaluation<Scalar, Indices::numEq>;
     using BVectorWell = typename StandardWellGeneric<Scalar>::BVectorWell;
-
-    /// add the contribution (C, D^-1, B matrices) of this Well to the WellContributions object
-    void addWellContribution(WellContributions& wellContribs) const;
 
     //! \brief Returns a const reference to equation system.
     const StandardWellEquations<Scalar,Indices::numEq>& linSys() const

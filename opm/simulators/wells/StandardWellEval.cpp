@@ -1045,57 +1045,6 @@ init(std::vector<double>& perf_depth,
 }
 
 template<class FluidSystem, class Indices, class Scalar>
-void
-StandardWellEval<FluidSystem,Indices,Scalar>::
-addWellContribution(WellContributions& wellContribs) const
-{
-    std::vector<int> colIndices;
-    std::vector<double> nnzValues;
-    colIndices.reserve(this->linSys_.duneB_.nonzeroes());
-    nnzValues.reserve(this->linSys_.duneB_.nonzeroes()*numStaticWellEq * Indices::numEq);
-
-    // duneC
-    for (auto colC = this->linSys_.duneC_[0].begin(),
-              endC = this->linSys_.duneC_[0].end(); colC != endC; ++colC )
-    {
-        colIndices.emplace_back(colC.index());
-        for (int i = 0; i < numStaticWellEq; ++i) {
-            for (int j = 0; j < Indices::numEq; ++j) {
-                nnzValues.emplace_back((*colC)[i][j]);
-            }
-        }
-    }
-    wellContribs.addMatrix(WellContributions::MatrixType::C, colIndices.data(), nnzValues.data(), this->linSys_.duneC_.nonzeroes());
-
-    // invDuneD
-    colIndices.clear();
-    nnzValues.clear();
-    colIndices.emplace_back(0);
-    for (int i = 0; i < numStaticWellEq; ++i)
-    {
-        for (int j = 0; j < numStaticWellEq; ++j) {
-            nnzValues.emplace_back(this->linSys_.invDuneD_[0][0][i][j]);
-        }
-    }
-    wellContribs.addMatrix(WellContributions::MatrixType::D, colIndices.data(), nnzValues.data(), 1);
-
-    // duneB
-    colIndices.clear();
-    nnzValues.clear();
-    for (auto colB = this->linSys_.duneB_[0].begin(),
-              endB = this->linSys_.duneB_[0].end(); colB != endB; ++colB )
-    {
-        colIndices.emplace_back(colB.index());
-        for (int i = 0; i < numStaticWellEq; ++i) {
-            for (int j = 0; j < Indices::numEq; ++j) {
-                nnzValues.emplace_back((*colB)[i][j]);
-            }
-        }
-    }
-    wellContribs.addMatrix(WellContributions::MatrixType::B, colIndices.data(), nnzValues.data(), this->linSys_.duneB_.nonzeroes());
-}
-
-template<class FluidSystem, class Indices, class Scalar>
 unsigned int StandardWellEval<FluidSystem,Indices,Scalar>::
 getNumBlocks() const
 {

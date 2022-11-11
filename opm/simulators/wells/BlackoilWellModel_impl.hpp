@@ -1213,9 +1213,9 @@ namespace Opm {
         for(unsigned int i = 0; i < well_container_.size(); i++){
             auto& well = well_container_[i];
             // maybe WellInterface could implement addWellContribution()
-            auto derived_std = std::dynamic_pointer_cast<StandardWell<TypeTag> >(well);
+            auto derived_std = std::dynamic_pointer_cast<StandardWell<TypeTag>>(well);
             if (derived_std) {
-                derived_std->addWellContribution(wellContribs);
+                derived_std->linSys().extract(derived_std->numStaticWellEq, wellContribs);
             } else {
                 auto derived_ms = std::dynamic_pointer_cast<MultisegmentWell<TypeTag> >(well);
                 if (derived_ms) {

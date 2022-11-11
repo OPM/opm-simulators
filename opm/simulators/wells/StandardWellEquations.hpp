@@ -34,6 +34,7 @@ namespace Opm
 {
 
 class ParallelWellInfo;
+class WellContributions;
 
 template<class Scalar, int numEq>
 class StandardWellEquations
@@ -88,6 +89,10 @@ public:
     //! \brief Recover well solution.
     //! \details xw = inv(D)*(rw - C*x)
     void recoverSolutionWell(const BVector& x, BVectorWell& xw) const;
+
+    //! \brief Add the matrices of this well to the WellContributions object.
+    void extract(const int numStaticWellEq,
+                 WellContributions& wellContribs) const;
 
     // two off-diagonal matrices
     OffDiagMatWell duneB_;
