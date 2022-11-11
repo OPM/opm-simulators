@@ -22,8 +22,14 @@
 #include <config.h>
 #include <opm/simulators/wells/MultisegmentWellEquations.hpp>
 
+#include <dune/istl/umfpack.hh>
+
+#include <opm/common/ErrorMacros.hpp>
+
 #include <opm/simulators/wells/MSWellHelpers.hpp>
 #include <opm/simulators/wells/MultisegmentWellGeneric.hpp>
+
+#include <stdexcept>
 
 namespace Opm {
 
@@ -138,6 +144,21 @@ apply(BVector& r) const
     const BVectorWell invDrw = mswellhelpers::applyUMFPack(duneD_, duneDSolver_, resWell_);
     // r = r - duneC_^T * invDrw
     duneC_.mmtv(invDrw, r);
+}
+
+template<class Scalar, int numWellEq, int numEq>
+void MultisegmentWellEquations<Scalar,numWellEq,numEq>::createSolver()
+{
+#if HAVE_UMFPACK
+    if (duneDSolver_) {
+        return;
+    }
+
+    duneDSolver_ = std::make_shared<Dune::UMFPack<DiagMatWell>>(duneD_, 0);
+#else
+    OPM_THROW(std::runtime_error, "MultisegmentWell support requires UMFPACK. "
+              "Reconfigure opm-simulators with SuiteSparse/UMFPACK support and recompile.");
+#endif
 }
 
 #define INSTANCE(numWellEq, numEq) \

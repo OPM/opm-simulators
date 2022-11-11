@@ -1776,6 +1776,8 @@ namespace Opm
                 this->assemblePressureEq(seg, unit_system, well_state, deferred_logger);
             }
         }
+
+        this->linSys_.createSolver();
     }
 
 

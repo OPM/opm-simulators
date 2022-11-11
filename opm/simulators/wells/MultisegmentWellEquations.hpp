@@ -80,6 +80,9 @@ public:
     //! \brief Apply linear operator to vector.
     void apply(BVector& r) const;
 
+    //! \brief Compute the LU-decomposition of D matrix.
+    void createSolver();
+
     // two off-diagonal matrices
     OffDiagMatWell duneB_;
     OffDiagMatWell duneC_;
