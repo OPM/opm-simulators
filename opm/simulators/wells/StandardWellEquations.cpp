@@ -111,6 +111,25 @@ void StandardWellEquations<Scalar,numEq>::clear()
     resWell_ = 0.0;
 }
 
+template<class Scalar, int numEq>
+void StandardWellEquations<Scalar,numEq>::apply(const BVector& x, BVector& Ax) const
+{
+    assert(Bx_.size() == duneB_.N());
+    assert(invDrw_.size() == invDuneD_.N());
+
+    // Bx_ = duneB_ * x
+    parallelB_.mv(x, Bx_);
+
+    // invDBx = invDuneD_ * Bx_
+    // TODO: with this, we modified the content of the invDrw_.
+    // Is it necessary to do this to save some memory?
+    auto& invDBx = invDrw_;
+    invDuneD_.mv(Bx_, invDBx);
+
+    // Ax = Ax - duneC_^T * invDBx
+    duneC_.mmtv(invDBx, Ax);
+}
+
 #define INSTANCE(N) \
 template class StandardWellEquations<double,N>;
 

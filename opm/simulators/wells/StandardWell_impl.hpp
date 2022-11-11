@@ -1722,20 +1722,8 @@ namespace Opm
             // Contributions are already in the matrix itself
             return;
         }
-        assert(this->linSys_.Bx_.size() == this->linSys_.duneB_.N());
-        assert(this->linSys_.invDrw_.size() == this->linSys_.invDuneD_.N());
 
-        // Bx_ = duneB_ * x
-        this->linSys_.parallelB_.mv(x, this->linSys_.Bx_);
-
-        // invDBx = invDuneD_ * Bx_
-        // TODO: with this, we modified the content of the invDrw_.
-        // Is it necessary to do this to save some memory?
-        BVectorWell& invDBx = this->linSys_.invDrw_;
-        this->linSys_.invDuneD_.mv(this->linSys_.Bx_, invDBx);
-
-        // Ax = Ax - duneC_^T * invDBx
-        this->linSys_.duneC_.mmtv(invDBx,Ax);
+        this->linSys_.apply(x, Ax);
     }
 
 
