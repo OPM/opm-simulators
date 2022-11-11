@@ -130,6 +130,16 @@ apply(const BVector& x, BVector& Ax) const
     duneC_.mmtv(invDBx,Ax);
 }
 
+template<class Scalar, int numWellEq, int numEq>
+void MultisegmentWellEquations<Scalar,numWellEq,numEq>::
+apply(BVector& r) const
+{
+    // invDrw_ = duneD^-1 * resWell_
+    const BVectorWell invDrw = mswellhelpers::applyUMFPack(duneD_, duneDSolver_, resWell_);
+    // r = r - duneC_^T * invDrw
+    duneC_.mmtv(invDrw, r);
+}
+
 #define INSTANCE(numWellEq, numEq) \
 template class MultisegmentWellEquations<double,numWellEq,numEq>;
 

@@ -77,6 +77,9 @@ public:
     //! \brief Apply linear operator to vector.
     void apply(const BVector& x, BVector& Ax) const;
 
+    //! \brief Apply linear operator to vector.
+    void apply(BVector& r) const;
+
     // two off-diagonal matrices
     OffDiagMatWell duneB_;
     OffDiagMatWell duneC_;

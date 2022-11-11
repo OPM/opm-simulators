@@ -217,14 +217,11 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     apply(BVector& r) const
     {
-        if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
+        if (!this->isOperableAndSolvable() && !this->wellIsStopped()) {
+            return;
+        }
 
-        // invDrw_ = duneD^-1 * resWell_
-        const BVectorWell invDrw = mswellhelpers::applyUMFPack(this->linSys_.duneD_,
-                                                               this->linSys_.duneDSolver_,
-                                                               this->linSys_.resWell_);
-        // r = r - duneC_^T * invDrw
-        this->linSys_.duneC_.mmtv(invDrw, r);
+        this->linSys_.apply(r);
     }
 
 
