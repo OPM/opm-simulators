@@ -1736,12 +1736,7 @@ namespace Opm
     {
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
-        assert(this->linSys_.invDrw_.size() == this->linSys_.invDuneD_.N());
-
-        // invDrw_ = invDuneD_ * resWell_
-        this->linSys_.invDuneD_.mv(this->linSys_.resWell_, this->linSys_.invDrw_);
-        // r = r - duneC_^T * invDrw_
-        this->linSys_.duneC_.mmtv(this->linSys_.invDrw_, r);
+        this->linSys_.apply(r);
     }
 
     template<typename TypeTag>

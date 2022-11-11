@@ -130,6 +130,17 @@ void StandardWellEquations<Scalar,numEq>::apply(const BVector& x, BVector& Ax) c
     duneC_.mmtv(invDBx, Ax);
 }
 
+template<class Scalar, int numEq>
+void StandardWellEquations<Scalar,numEq>::apply(BVector& r) const
+{
+    assert(invDrw_.size() == invDuneD_.N());
+
+    // invDrw_ = invDuneD_ * resWell_
+    invDuneD_.mv(resWell_, invDrw_);
+    // r = r - duneC_^T * invDrw_
+    duneC_.mmtv(invDrw_, r);
+}
+
 #define INSTANCE(N) \
 template class StandardWellEquations<double,N>;
 
