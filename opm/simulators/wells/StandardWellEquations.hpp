@@ -85,6 +85,10 @@ public:
     //! \brief Invert D matrix.
     void invert();
 
+    //! \brief Recover well solution.
+    //! \details xw = inv(D)*(rw - C*x)
+    void recoverSolutionWell(const BVector& x, BVectorWell& xw) const;
+
     // two off-diagonal matrices
     OffDiagMatWell duneB_;
     OffDiagMatWell duneC_;

@@ -1732,21 +1732,6 @@ namespace Opm
         this->linSys_.apply(r);
     }
 
-    template<typename TypeTag>
-    void
-    StandardWell<TypeTag>::
-    recoverSolutionWell(const BVector& x, BVectorWell& xw) const
-    {
-        if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
-
-        BVectorWell resWell = this->linSys_.resWell_;
-        // resWell = resWell - B * x
-        this->linSys_.parallelB_.mmv(x, resWell);
-        // xw = D^-1 * resWell
-        this->linSys_.invDuneD_.mv(resWell, xw);
-    }
-
-
 
 
 
@@ -1762,7 +1747,7 @@ namespace Opm
         BVectorWell xw(1);
         xw[0].resize(this->numWellEq_);
 
-        recoverSolutionWell(x, xw);
+        this->linSys_.recoverSolutionWell(x, xw);
         updateWellState(xw, well_state, deferred_logger);
     }
 

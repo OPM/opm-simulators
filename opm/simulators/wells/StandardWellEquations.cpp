@@ -166,6 +166,18 @@ void StandardWellEquations<Scalar,numEq>::solve(BVectorWell& dx_well) const
     invDuneD_.mv(resWell_, dx_well);
 }
 
+
+template<class Scalar, int numEq>
+void StandardWellEquations<Scalar,numEq>::
+recoverSolutionWell(const BVector& x, BVectorWell& xw) const
+{
+    BVectorWell resWell = resWell_;
+    // resWell = resWell - B * x
+    parallelB_.mmv(x, resWell);
+    // xw = D^-1 * resWell
+    invDuneD_.mv(resWell, xw);
+}
+
 #define INSTANCE(N) \
 template class StandardWellEquations<double,N>;
 
