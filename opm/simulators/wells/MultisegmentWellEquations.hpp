@@ -36,6 +36,8 @@ template<class M> class UMFPack;
 namespace Opm
 {
 
+template<class Scalar> class MultisegmentWellGeneric;
+
 template<class Scalar, int numWellEq, int numEq>
 class MultisegmentWellEquations
 {
@@ -59,6 +61,17 @@ public:
     using OffDiagMatrixBlockWellType = Dune::FieldMatrix<Scalar,numWellEq,numEq>;
     using OffDiagMatWell = Dune::BCRSMatrix<OffDiagMatrixBlockWellType>;
 
+    MultisegmentWellEquations(const MultisegmentWellGeneric<Scalar>& well);
+
+    //! \brief Setup sparsity pattern for the matrices.
+    //! \param num_cells Total number of cells
+    //! \param numPerfs Number of perforations
+    //! \param cells Cell indices for perforations
+    void init(const int num_cells,
+              const int numPerfs,
+              const std::vector<int>& cells);
+
+    //! \brief Set all coefficients to 0.
     void clear();
 
     // TODO, the following should go to a class for computing purpose
@@ -75,6 +88,9 @@ public:
 
     // residuals of the well equations
     BVectorWell resWell_;
+
+private:
+    const MultisegmentWellGeneric<Scalar>& well_; //!< Reference to well
 };
 
 }

@@ -22,7 +22,87 @@
 #include <config.h>
 #include <opm/simulators/wells/MultisegmentWellEquations.hpp>
 
+#include <opm/simulators/wells/MultisegmentWellGeneric.hpp>
+
 namespace Opm {
+
+template<class Scalar, int numWellEq, int numEq>
+MultisegmentWellEquations<Scalar,numWellEq,numEq>::
+MultisegmentWellEquations(const MultisegmentWellGeneric<Scalar>& well)
+    : well_(well)
+{
+}
+
+template<class Scalar, int numWellEq, int numEq>
+void MultisegmentWellEquations<Scalar,numWellEq,numEq>::
+init(const int num_cells,
+     const int numPerfs,
+     const std::vector<int>& cells)
+{
+    duneB_.setBuildMode(OffDiagMatWell::row_wise);
+    duneC_.setBuildMode(OffDiagMatWell::row_wise);
+    duneD_.setBuildMode(DiagMatWell::row_wise);
+
+    // set the size and patterns for all the matrices and vectors
+    // [A C^T    [x    =  [ res
+    //  B D] x_well]      res_well]
+
+    // calculating the NNZ for duneD_
+    // NNZ = number_of_segments + 2 * (number_of_inlets / number_of_outlets)
+    {
+        int nnz_d = well_.numberOfSegments();
+        for (const std::vector<int>& inlets : well_.segmentInlets()) {
+            nnz_d += 2 * inlets.size();
+        }
+        duneD_.setSize(well_.numberOfSegments(), well_.numberOfSegments(), nnz_d);
+    }
+    duneB_.setSize(well_.numberOfSegments(), num_cells, numPerfs);
+    duneC_.setSize(well_.numberOfSegments(), num_cells, numPerfs);
+
+    // we need to add the off diagonal ones
+    for (auto row = duneD_.createbegin(),
+              end = duneD_.createend(); row != end; ++row) {
+        // the number of the row corrspnds to the segment now
+        const int seg = row.index();
+        // adding the item related to outlet relation
+        const Segment& segment = well_.segmentSet()[seg];
+        const int outlet_segment_number = segment.outletSegment();
+        if (outlet_segment_number > 0) { // if there is a outlet_segment
+            const int outlet_segment_index = well_.segmentNumberToIndex(outlet_segment_number);
+            row.insert(outlet_segment_index);
+        }
+
+        // Add nonzeros for diagonal
+        row.insert(seg);
+
+        // insert the item related to its inlets
+        for (const int& inlet : well_.segmentInlets()[seg]) {
+            row.insert(inlet);
+        }
+    }
+
+    // make the C matrix
+    for (auto row = duneC_.createbegin(),
+              end = duneC_.createend(); row != end; ++row) {
+        // the number of the row corresponds to the segment number now.
+        for (const int& perf : well_.segmentPerforations()[row.index()]) {
+            const int cell_idx = cells[perf];
+            row.insert(cell_idx);
+        }
+    }
+
+    // make the B^T matrix
+    for (auto row = duneB_.createbegin(),
+              end = duneB_.createend(); row != end; ++row) {
+        // the number of the row corresponds to the segment number now.
+        for (const int& perf : well_.segmentPerforations()[row.index()]) {
+            const int cell_idx = cells[perf];
+            row.insert(cell_idx);
+        }
+    }
+
+    resWell_.resize(well_.numberOfSegments());
+}
 
 template<class Scalar, int numWellEq, int numEq>
 void MultisegmentWellEquations<Scalar,numWellEq,numEq>::clear()

@@ -57,6 +57,7 @@ MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 MultisegmentWellEval(WellInterfaceIndices<FluidSystem,Indices,Scalar>& baseif)
     : MultisegmentWellGeneric<Scalar>(baseif)
     , baseif_(baseif)
+    , linSys_(*this)
     , upwinding_segments_(this->numberOfSegments(), 0)
     , segment_densities_(this->numberOfSegments(), 0.0)
     , segment_mass_rates_(this->numberOfSegments(), 0.0)
@@ -74,70 +75,7 @@ void
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 initMatrixAndVectors(const int num_cells)
 {
-    linSys_.duneB_.setBuildMode(Equations::OffDiagMatWell::row_wise);
-    linSys_.duneC_.setBuildMode(Equations::OffDiagMatWell::row_wise);
-    linSys_.duneD_.setBuildMode(Equations::DiagMatWell::row_wise);
-
-    // set the size and patterns for all the matrices and vectors
-    // [A C^T    [x    =  [ res
-    //  B D] x_well]      res_well]
-
-    // calculatiing the NNZ for duneD_
-    // NNZ = number_of_segments + 2 * (number_of_inlets / number_of_outlets)
-    {
-        int nnz_d = this->numberOfSegments();
-        for (const std::vector<int>& inlets : this->segment_inlets_) {
-            nnz_d += 2 * inlets.size();
-        }
-        linSys_.duneD_.setSize(this->numberOfSegments(), this->numberOfSegments(), nnz_d);
-    }
-    linSys_.duneB_.setSize(this->numberOfSegments(), num_cells, baseif_.numPerfs());
-    linSys_.duneC_.setSize(this->numberOfSegments(), num_cells, baseif_.numPerfs());
-
-    // we need to add the off diagonal ones
-    for (auto row = linSys_.duneD_.createbegin(),
-              end = linSys_.duneD_.createend(); row != end; ++row) {
-        // the number of the row corrspnds to the segment now
-        const int seg = row.index();
-        // adding the item related to outlet relation
-        const Segment& segment = this->segmentSet()[seg];
-        const int outlet_segment_number = segment.outletSegment();
-        if (outlet_segment_number > 0) { // if there is a outlet_segment
-            const int outlet_segment_index = this->segmentNumberToIndex(outlet_segment_number);
-            row.insert(outlet_segment_index);
-        }
-
-        // Add nonzeros for diagonal
-        row.insert(seg);
-
-        // insert the item related to its inlets
-        for (const int& inlet : this->segment_inlets_[seg]) {
-            row.insert(inlet);
-        }
-    }
-
-    // make the C matrix
-    for (auto row = linSys_.duneC_.createbegin(),
-              end = linSys_.duneC_.createend(); row != end; ++row) {
-        // the number of the row corresponds to the segment number now.
-        for (const int& perf : this->segment_perforations_[row.index()]) {
-            const int cell_idx = baseif_.cells()[perf];
-            row.insert(cell_idx);
-        }
-    }
-
-    // make the B^T matrix
-    for (auto row = linSys_.duneB_.createbegin(),
-              end = linSys_.duneB_.createend(); row != end; ++row) {
-        // the number of the row corresponds to the segment number now.
-        for (const int& perf : this->segment_perforations_[row.index()]) {
-            const int cell_idx = baseif_.cells()[perf];
-            row.insert(cell_idx);
-        }
-    }
-
-    linSys_.resWell_.resize(this->numberOfSegments());
-
+    linSys_.init(num_cells, baseif_.numPerfs(), baseif_.cells());
     primary_variables_.resize(this->numberOfSegments());
     primary_variables_evaluation_.resize(this->numberOfSegments());
 }
