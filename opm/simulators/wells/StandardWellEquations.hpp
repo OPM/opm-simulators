@@ -23,6 +23,7 @@
 #ifndef OPM_STANDARDWELL_EQUATIONS_HEADER_INCLUDED
 #define OPM_STANDARDWELL_EQUATIONS_HEADER_INCLUDED
 
+#include <opm/simulators/utils/ParallelCommunication.hpp>
 #include <opm/simulators/wells/WellHelpers.hpp>
 
 #include <dune/common/dynmatrix.hh>
@@ -112,6 +113,9 @@ public:
 
     //! \brief Get the number of blocks of the C and B matrices.
     unsigned int getNumBlocks() const;
+
+    //! \brief Sum with off-process contribution.
+    void sumDistributed(Parallel::Communication comm);
 
     // two off-diagonal matrices
     OffDiagMatWell duneB_;

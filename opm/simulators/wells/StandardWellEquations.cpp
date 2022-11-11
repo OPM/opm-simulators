@@ -385,6 +385,14 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
     }
 }
 
+template<class Scalar, int numEq>
+void StandardWellEquations<Scalar,numEq>::
+sumDistributed(Parallel::Communication comm)
+{
+  // accumulate resWell_ and duneD_ in parallel to get effects of all perforations (might be distributed)
+    wellhelpers::sumDistributedWellEntries(duneD_[0][0], resWell_[0], comm);
+}
+
 #define INSTANCE(N) \
 template class StandardWellEquations<double,N>; \
 template void StandardWellEquations<double,N>:: \
