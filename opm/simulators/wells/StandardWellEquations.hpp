@@ -79,6 +79,9 @@ public:
     //! \brief Apply linear operator to vector.
     void apply(BVector& r) const;
 
+    //! \brief Invert D matrix.
+    void invert();
+
     // two off-diagonal matrices
     OffDiagMatWell duneB_;
     OffDiagMatWell duneC_;

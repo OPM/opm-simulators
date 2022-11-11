@@ -551,14 +551,7 @@ namespace Opm
 
         // do the local inversion of D.
         try {
-            this->linSys_.invDuneD_ = this->linSys_.duneD_; // Not strictly need if not cpr with well contributions is used
-            detail::invertMatrix(this->linSys_.invDuneD_[0][0]);
-        } catch (NumericalProblem&) {
-            // for singular matrices, use identity as the inverse
-            this->linSys_.invDuneD_[0][0] = 0.0;
-            for (size_t i = 0; i < this->linSys_.invDuneD_[0][0].rows(); ++i) {
-                this->linSys_.invDuneD_[0][0][i][i] = 1.0;
-            }
+            this->linSys_.invert();
         } catch( ... ) {
             OPM_DEFLOG_THROW(NumericalIssue,"Error when inverting local well equations for well " + name(), deferred_logger);
         }

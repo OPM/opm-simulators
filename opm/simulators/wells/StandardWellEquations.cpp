@@ -22,6 +22,10 @@
 #include <config.h>
 #include <opm/simulators/wells/StandardWellEquations.hpp>
 
+#include <opm/common/Exceptions.hpp>
+
+#include <opm/simulators/linalg/matrixblock.hh>
+
 namespace Opm
 {
 
@@ -139,6 +143,21 @@ void StandardWellEquations<Scalar,numEq>::apply(BVector& r) const
     invDuneD_.mv(resWell_, invDrw_);
     // r = r - duneC_^T * invDrw_
     duneC_.mmtv(invDrw_, r);
+}
+
+template<class Scalar, int numEq>
+void StandardWellEquations<Scalar,numEq>::invert()
+{
+    try {
+        invDuneD_ = duneD_; // Not strictly need if not cpr with well contributions is used
+        detail::invertMatrix(invDuneD_[0][0]);
+    } catch (NumericalProblem&) {
+        // for singular matrices, use identity as the inverse
+        invDuneD_[0][0] = 0.0;
+        for (size_t i = 0; i < invDuneD_[0][0].rows(); ++i) {
+            invDuneD_[0][0][i][i] = 1.0;
+        }
+    }
 }
 
 #define INSTANCE(N) \
