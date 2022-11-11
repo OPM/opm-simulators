@@ -1634,13 +1634,7 @@ namespace Opm
         computeSegmentFluidProperties(ebosSimulator, deferred_logger);
 
         // clear all entries
-        this->linSys_.duneB_ = 0.0;
-        this->linSys_.duneC_ = 0.0;
-
-        this->linSys_.duneD_ = 0.0;
-        this->linSys_.resWell_ = 0.0;
-
-        this->linSys_.duneDSolver_.reset();
+        this->linSys_.clear();
 
         auto& ws = well_state.well(this->index_of_well_);
         ws.dissolved_gas_rate = 0;

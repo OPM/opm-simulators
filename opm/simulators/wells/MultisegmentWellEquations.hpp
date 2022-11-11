@@ -59,6 +59,8 @@ public:
     using OffDiagMatrixBlockWellType = Dune::FieldMatrix<Scalar,numWellEq,numEq>;
     using OffDiagMatWell = Dune::BCRSMatrix<OffDiagMatrixBlockWellType>;
 
+    void clear();
+
     // TODO, the following should go to a class for computing purpose
     // two off-diagonal matrices
     OffDiagMatWell duneB_;

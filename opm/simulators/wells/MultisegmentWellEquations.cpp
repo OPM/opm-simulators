@@ -22,8 +22,29 @@
 #include <config.h>
 #include <opm/simulators/wells/MultisegmentWellEquations.hpp>
 
+namespace Opm {
 
-namespace Opm
+template<class Scalar, int numWellEq, int numEq>
+void MultisegmentWellEquations<Scalar,numWellEq,numEq>::clear()
 {
+    duneB_ = 0.0;
+    duneC_ = 0.0;
+    duneD_ = 0.0;
+    resWell_ = 0.0;
+    duneDSolver_.reset();
+}
+
+#define INSTANCE(numWellEq, numEq) \
+template class MultisegmentWellEquations<double,numWellEq,numEq>;
+
+INSTANCE(2,1)
+INSTANCE(2,2)
+INSTANCE(2,6)
+INSTANCE(3,2)
+INSTANCE(3,3)
+INSTANCE(3,4)
+INSTANCE(4,3)
+INSTANCE(4,4)
+INSTANCE(4,5)
 
 }
