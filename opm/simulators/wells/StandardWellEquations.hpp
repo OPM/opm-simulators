@@ -79,6 +79,9 @@ public:
     //! \brief Apply linear operator to vector.
     void apply(BVector& r) const;
 
+    //! \brief Apply inverted D matrix to residual and store in vector.
+    void solve(BVectorWell& dx_well) const;
+
     //! \brief Invert D matrix.
     void invert();
 

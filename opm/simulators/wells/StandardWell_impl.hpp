@@ -1679,7 +1679,7 @@ namespace Opm
         // which is why we do not put the assembleWellEq here.
         BVectorWell dx_well(1);
         dx_well[0].resize(this->numWellEq_);
-        this->linSys_.invDuneD_.mv(this->linSys_.resWell_, dx_well);
+        this->linSys_.solve( dx_well);
 
         updateWellState(dx_well, well_state, deferred_logger);
     }

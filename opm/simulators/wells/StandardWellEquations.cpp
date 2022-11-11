@@ -160,6 +160,12 @@ void StandardWellEquations<Scalar,numEq>::invert()
     }
 }
 
+template<class Scalar, int numEq>
+void StandardWellEquations<Scalar,numEq>::solve(BVectorWell& dx_well) const
+{
+    invDuneD_.mv(resWell_, dx_well);
+}
+
 #define INSTANCE(N) \
 template class StandardWellEquations<double,N>;
 
