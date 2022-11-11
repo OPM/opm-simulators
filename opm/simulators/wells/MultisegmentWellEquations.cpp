@@ -27,6 +27,9 @@
 #include <opm/common/ErrorMacros.hpp>
 
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
+#include <opm/simulators/linalg/istlsparsematrixadapter.hh>
+#include <opm/simulators/linalg/matrixblock.hh>
+#include <opm/simulators/linalg/SmallDenseMatrixUtils.hpp>
 
 #include <opm/simulators/wells/MSWellHelpers.hpp>
 #include <opm/simulators/wells/MultisegmentWellGeneric.hpp>
@@ -248,8 +251,47 @@ extract(WellContributions& wellContribs) const
                                                  Cvals);
 }
 
+
+template<class Scalar, int numWellEq, int numEq>
+template<class SparseMatrixAdapter>
+void MultisegmentWellEquations<Scalar,numWellEq,numEq>::
+extract(SparseMatrixAdapter& jacobian) const
+{
+    const auto invDuneD = mswellhelpers::invertWithUMFPack<BVectorWell>(numWellEq,
+                                                                        numEq,
+                                                                        *duneDSolver_);
+
+    // We need to change matrix A as follows
+    // A -= C^T D^-1 B
+    // D is a (nseg x nseg) block matrix with (4 x 4) blocks.
+    // B and C are (nseg x ncells) block matrices with (4 x 4 blocks).
+    // They have nonzeros at (i, j) only if this well has a
+    // perforation at cell j connected to segment i.  The code
+    // assumes that no cell is connected to more than one segment,
+    // i.e. the columns of B/C have no more than one nonzero.
+    for (size_t rowC = 0; rowC < duneC_.N(); ++rowC) {
+        for (auto colC = duneC_[rowC].begin(),
+                  endC = duneC_[rowC].end(); colC != endC; ++colC) {
+            const auto row_index = colC.index();
+            for (size_t rowB = 0; rowB < duneB_.N(); ++rowB) {
+                for (auto colB = duneB_[rowB].begin(),
+                          endB = duneB_[rowB].end(); colB != endB; ++colB) {
+                    const auto col_index = colB.index();
+                    OffDiagMatrixBlockWellType tmp1;
+                    detail::multMatrixImpl(invDuneD[rowC][rowB], (*colB), tmp1, std::true_type());
+                    typename SparseMatrixAdapter::MatrixBlock tmp2;
+                    detail::multMatrixTransposedImpl((*colC), tmp1, tmp2, std::false_type());
+                    jacobian.addToBlock(row_index, col_index, tmp2);
+                }
+            }
+        }
+    }
+}
+
 #define INSTANCE(numWellEq, numEq) \
-template class MultisegmentWellEquations<double,numWellEq,numEq>;
+template class MultisegmentWellEquations<double,numWellEq,numEq>; \
+template void MultisegmentWellEquations<double,numWellEq,numEq>:: \
+    extract(Linear::IstlSparseMatrixAdapter<MatrixBlock<double,numEq,numEq>>&) const;
 
 INSTANCE(2,1)
 INSTANCE(2,2)

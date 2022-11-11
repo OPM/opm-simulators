@@ -19,8 +19,6 @@
 */
 
 
-#include <opm/simulators/linalg/SmallDenseMatrixUtils.hpp>
-#include <opm/simulators/wells/MSWellHelpers.hpp>
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/input/eclipse/Schedule/MSW/Valve.hpp>
@@ -722,35 +720,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     addWellContributions(SparseMatrixAdapter& jacobian) const
     {
-        const auto invDuneD = mswellhelpers::invertWithUMFPack<BVectorWell>(numWellEq,
-                                                                            Indices::numEq,
-                                                                            *this->linSys_.duneDSolver_);
-
-        // We need to change matrix A as follows
-        // A -= C^T D^-1 B
-        // D is a (nseg x nseg) block matrix with (4 x 4) blocks.
-        // B and C are (nseg x ncells) block matrices with (4 x 4 blocks).
-        // They have nonzeros at (i, j) only if this well has a
-        // perforation at cell j connected to segment i.  The code
-        // assumes that no cell is connected to more than one segment,
-        // i.e. the columns of B/C have no more than one nonzero.
-        for (size_t rowC = 0; rowC < this->linSys_.duneC_.N(); ++rowC) {
-            for (auto colC = this->linSys_.duneC_[rowC].begin(),
-                      endC = this->linSys_.duneC_[rowC].end(); colC != endC; ++colC) {
-                const auto row_index = colC.index();
-                for (size_t rowB = 0; rowB < this->linSys_.duneB_.N(); ++rowB) {
-                    for (auto colB = this->linSys_.duneB_[rowB].begin(),
-                              endB = this->linSys_.duneB_[rowB].end(); colB != endB; ++colB) {
-                        const auto col_index = colB.index();
-                        typename Equations::OffDiagMatrixBlockWellType tmp1;
-                        detail::multMatrixImpl(invDuneD[rowC][rowB], (*colB), tmp1, std::true_type());
-                        typename SparseMatrixAdapter::MatrixBlock tmp2;
-                        detail::multMatrixTransposedImpl((*colC), tmp1, tmp2, std::false_type());
-                        jacobian.addToBlock(row_index, col_index, tmp2);
-                    }
-                }
-            }
-        }
+        this->linSys_.extract(jacobian);
     }
 
 

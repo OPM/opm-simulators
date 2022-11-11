@@ -137,7 +137,7 @@ namespace Opm
                                              WellState& well_state,
                                              DeferredLogger& deferred_logger) const override;
 
-        virtual void  addWellContributions(SparseMatrixAdapter& jacobian) const override;
+        void addWellContributions(SparseMatrixAdapter& jacobian) const override;
 
         virtual void addWellPressureEquations(PressureMatrix& mat,
                                               const BVector& x,
