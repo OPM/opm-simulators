@@ -38,6 +38,8 @@ namespace Opm
 
 template<class Scalar> class MultisegmentWellGeneric;
 class WellContributions;
+class WellInterfaceGeneric;
+class WellState;
 
 template<class Scalar, int numWellEq, int numEq>
 class MultisegmentWellEquations
@@ -97,6 +99,16 @@ public:
     //! \brief Add the matrices of this well to the sparse matrix adapter.
     template<class SparseMatrixAdapter>
     void extract(SparseMatrixAdapter& jacobian) const;
+
+    //! \brief Extract CPR pressure matrix.
+    template<class PressureMatrix>
+    void extractCPRPressureMatrix(PressureMatrix& jacobian,
+                                  const BVector& weights,
+                                  const int pressureVarIndex,
+                                  const bool /*use_well_weights*/,
+                                  const WellInterfaceGeneric& well,
+                                  const int seg_pressure_var_ind,
+                                  const WellState& well_state) const;
 
     // two off-diagonal matrices
     OffDiagMatWell duneB_;

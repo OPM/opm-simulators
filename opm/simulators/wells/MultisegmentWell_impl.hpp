@@ -730,79 +730,17 @@ namespace Opm
     addWellPressureEquations(PressureMatrix& jacobian,
                              const BVector& weights,
                              const int pressureVarIndex,
-                             const bool /*use_well_weights*/,
+                             const bool use_well_weights,
                              const WellState& well_state) const
     {
         // Add the pressure contribution to the cpr system for the well
-
-        // Add for coupling from well to reservoir
-        const auto seg_pressure_var_ind  = this->SPres; 
-        const int welldof_ind = this->linSys_.duneC_.M() + this->index_of_well_;
-        if(not(this->isPressureControlled(well_state))){
-            for (size_t rowC = 0; rowC < this->linSys_.duneC_.N(); ++rowC) {
-                for (auto colC = this->linSys_.duneC_[rowC].begin(),
-                          endC = this->linSys_.duneC_[rowC].end(); colC != endC; ++colC) {
-                    const auto row_index = colC.index();
-                    const auto& bw = weights[row_index];
-                    double matel = 0.0;
-                
-                    for(size_t i = 0; i< bw.size(); ++i){
-                        matel += bw[i]*(*colC)[seg_pressure_var_ind][i];
-                    }
-                    jacobian[row_index][welldof_ind] += matel;
-                
-                }
-            }
-        }
-        // make cpr weights for well by pure avarage of reservoir weights of the perforations
-        if(not(this->isPressureControlled(well_state))){        
-            auto well_weight = weights[0];
-            well_weight = 0.0;
-            int num_perfs = 0;
-            for (size_t rowB = 0; rowB < this->linSys_.duneB_.N(); ++rowB) {
-                for (auto colB = this->linSys_.duneB_[rowB].begin(),
-                          endB = this->linSys_.duneB_[rowB].end(); colB != endB; ++colB) {
-                    const auto col_index = colB.index();
-                    const auto& bw = weights[col_index];
-                    well_weight += bw;
-                    num_perfs += 1;
-                }
-            }
-        
-            well_weight /= num_perfs;
-            assert(num_perfs>0);
-        
-            // Add for coupling from reservoir to well and caclulate diag elelement corresping to incompressible standard well
-            double diag_ell = 0.0;
-            for (size_t rowB = 0; rowB < this->linSys_.duneB_.N(); ++rowB) {
-                const auto& bw = well_weight;
-                for (auto colB = this->linSys_.duneB_[rowB].begin(),
-                          endB = this->linSys_.duneB_[rowB].end(); colB != endB; ++colB) {
-                    const auto col_index = colB.index();               
-                    double matel = 0.0;
-                    for(size_t i = 0; i< bw.size(); ++i){
-                        matel += bw[i] *(*colB)[i][pressureVarIndex];
-                    }
-                    jacobian[welldof_ind][col_index] += matel;
-                    diag_ell -= matel;
-                }
-            }
-
-#define EXTRA_DEBUG_MSW 0
-#if EXTRA_DEBUG_MSW            
-            if(not(diag_ell > 0.0)){
-                std::stringstream msg;
-                msg << "Diagonal element for cprw on "
-                          << this->name()
-                          << " is " << diag_ell;
-                OpmLog::warning(msg.str());
-            }
-#endif
-#undef EXTRA_DEBUG_MSW            
-            jacobian[welldof_ind][welldof_ind] = diag_ell;
-        }else{
-            jacobian[welldof_ind][welldof_ind] = 1.0; // maybe we could have used diag_ell if calculated
-        }
+        this->linSys_.extractCPRPressureMatrix(jacobian,
+                                               weights,
+                                               pressureVarIndex,
+                                               use_well_weights,
+                                               *this,
+                                               this->SPres,
+                                               well_state);
     }
     
 

@@ -139,11 +139,11 @@ namespace Opm
 
         void addWellContributions(SparseMatrixAdapter& jacobian) const override;
 
-        virtual void addWellPressureEquations(PressureMatrix& mat,
-                                              const BVector& x,
-                                              const int pressureVarIndex,
-                                              const bool use_well_weights,
-                                              const WellState& well_state) const override;
+        void addWellPressureEquations(PressureMatrix& mat,
+                                      const BVector& x,
+                                      const int pressureVarIndex,
+                                      const bool use_well_weights,
+                                      const WellState& well_state) const override;
 
         virtual std::vector<double> computeCurrentWellRates(const Simulator& ebosSimulator,
                                                             DeferredLogger& deferred_logger) const override;

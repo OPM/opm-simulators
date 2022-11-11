@@ -33,6 +33,7 @@
 
 #include <opm/simulators/wells/MSWellHelpers.hpp>
 #include <opm/simulators/wells/MultisegmentWellGeneric.hpp>
+#include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 
 #include <stdexcept>
 
@@ -288,10 +289,100 @@ extract(SparseMatrixAdapter& jacobian) const
     }
 }
 
+template<class Scalar, int numWellEq, int numEq>
+template<class PressureMatrix>
+void MultisegmentWellEquations<Scalar,numWellEq,numEq>::
+extractCPRPressureMatrix(PressureMatrix& jacobian,
+                         const BVector& weights,
+                         const int pressureVarIndex,
+                         const bool /*use_well_weights*/,
+                         const WellInterfaceGeneric& well,
+                         const int seg_pressure_var_ind,
+                         const WellState& well_state) const
+{
+    // Add the pressure contribution to the cpr system for the well
+
+    // Add for coupling from well to reservoir
+    const int welldof_ind = duneC_.M() + well.indexOfWell();
+    if (!well.isPressureControlled(well_state)) {
+        for (size_t rowC = 0; rowC < duneC_.N(); ++rowC) {
+            for (auto colC = duneC_[rowC].begin(),
+                      endC = duneC_[rowC].end(); colC != endC; ++colC) {
+                const auto row_index = colC.index();
+                const auto& bw = weights[row_index];
+                double matel = 0.0;
+
+                for(size_t i = 0; i< bw.size(); ++i){
+                    matel += bw[i]*(*colC)[seg_pressure_var_ind][i];
+                }
+                jacobian[row_index][welldof_ind] += matel;
+            }
+        }
+    }
+
+    // make cpr weights for well by pure avarage of reservoir weights of the perforations
+    if (!well.isPressureControlled(well_state)) {
+        auto well_weight = weights[0];
+        well_weight = 0.0;
+        int num_perfs = 0;
+        for (size_t rowB = 0; rowB < duneB_.N(); ++rowB) {
+            for (auto colB = duneB_[rowB].begin(),
+                      endB = duneB_[rowB].end(); colB != endB; ++colB) {
+                const auto col_index = colB.index();
+                const auto& bw = weights[col_index];
+                well_weight += bw;
+                num_perfs += 1;
+            }
+        }
+
+        well_weight /= num_perfs;
+        assert(num_perfs > 0);
+
+        // Add for coupling from reservoir to well and caclulate diag elelement corresping to incompressible standard well
+        double diag_ell = 0.0;
+        for (size_t rowB = 0; rowB < duneB_.N(); ++rowB) {
+            const auto& bw = well_weight;
+            for (auto colB = duneB_[rowB].begin(),
+                      endB = duneB_[rowB].end(); colB != endB; ++colB) {
+                const auto col_index = colB.index();
+                double matel = 0.0;
+                for(size_t i = 0; i< bw.size(); ++i){
+                    matel += bw[i] *(*colB)[i][pressureVarIndex];
+                }
+                jacobian[welldof_ind][col_index] += matel;
+                diag_ell -= matel;
+            }
+        }
+
+#define EXTRA_DEBUG_MSW 0
+#if EXTRA_DEBUG_MSW
+        if (diag_ell <= 0.0) {
+            std::stringstream msg;
+            msg << "Diagonal element for cprw on "
+                      << this->name()
+                      << " is " << diag_ell;
+            OpmLog::warning(msg.str());
+        }
+#endif
+#undef EXTRA_DEBUG_MSW
+        jacobian[welldof_ind][welldof_ind] = diag_ell;
+    } else {
+        jacobian[welldof_ind][welldof_ind] = 1.0; // maybe we could have used diag_ell if calculated
+    }
+}
+
 #define INSTANCE(numWellEq, numEq) \
 template class MultisegmentWellEquations<double,numWellEq,numEq>; \
 template void MultisegmentWellEquations<double,numWellEq,numEq>:: \
-    extract(Linear::IstlSparseMatrixAdapter<MatrixBlock<double,numEq,numEq>>&) const;
+    extract(Linear::IstlSparseMatrixAdapter<MatrixBlock<double,numEq,numEq>>&) const; \
+template void MultisegmentWellEquations<double,numWellEq,numEq>:: \
+    extractCPRPressureMatrix(Dune::BCRSMatrix<MatrixBlock<double,1,1>>&, \
+                             const MultisegmentWellEquations<double,numWellEq,numEq>::BVector&, \
+                             const int, \
+                             const bool, \
+                             const WellInterfaceGeneric&, \
+                             const int, \
+                             const WellState&) const;
 
 INSTANCE(2,1)
 INSTANCE(2,2)
