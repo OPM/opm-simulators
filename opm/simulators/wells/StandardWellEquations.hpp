@@ -60,6 +60,9 @@ public:
 
     StandardWellEquations(const ParallelWellInfo& parallel_well_info);
 
+    //! \brief Set all coefficients to 0.
+    void clear();
+
     // two off-diagonal matrices
     OffDiagMatWell duneB_;
     OffDiagMatWell duneC_;

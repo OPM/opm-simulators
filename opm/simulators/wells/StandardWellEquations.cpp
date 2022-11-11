@@ -35,6 +35,16 @@ StandardWellEquations(const ParallelWellInfo& parallel_well_info)
     invDuneD_.setBuildMode(DiagMatWell::row_wise);
 }
 
+
+template<class Scalar, int numEq>
+void StandardWellEquations<Scalar,numEq>::clear()
+{
+    duneB_ = 0.0;
+    duneC_ = 0.0;
+    duneD_ = 0.0;
+    resWell_ = 0.0;
+}
+
 #define INSTANCE(N) \
 template class StandardWellEquations<double,N>;
 
