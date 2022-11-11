@@ -98,6 +98,9 @@ public:
     template<class SparseMatrixAdapter>
     void extract(SparseMatrixAdapter& jacobian) const;
 
+    //! \brief Get the number of blocks of the C and B matrices.
+    unsigned int getNumBlocks() const;
+
     // two off-diagonal matrices
     OffDiagMatWell duneB_;
     OffDiagMatWell duneC_;

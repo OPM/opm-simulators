@@ -1203,7 +1203,7 @@ namespace Opm {
             auto& well = well_container_[i];
             std::shared_ptr<StandardWell<TypeTag> > derived = std::dynamic_pointer_cast<StandardWell<TypeTag> >(well);
             if (derived) {
-                wellContribs.addNumBlocks(derived->getNumBlocks());
+                wellContribs.addNumBlocks(derived->linSys().getNumBlocks());
             }
         }
 

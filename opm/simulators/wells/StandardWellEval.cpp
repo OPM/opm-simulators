@@ -1044,13 +1044,6 @@ init(std::vector<double>& perf_depth,
                        baseif_.numPerfs(), baseif_.cells());
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-unsigned int StandardWellEval<FluidSystem,Indices,Scalar>::
-getNumBlocks() const
-{
-    return linSys_.duneB_.nonzeroes();
-}
-
 #define INSTANCE(...) \
 template class StandardWellEval<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>;
 

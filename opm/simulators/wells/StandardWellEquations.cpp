@@ -262,6 +262,13 @@ extract(SparseMatrixAdapter& jacobian) const
     }
 }
 
+template<class Scalar, int numEq>
+unsigned int StandardWellEquations<Scalar,numEq>::
+getNumBlocks() const
+{
+    return duneB_.nonzeroes();
+}
+
 #define INSTANCE(N) \
 template class StandardWellEquations<double,N>; \
 template void StandardWellEquations<double,N>::extract(Linear::IstlSparseMatrixAdapter<MatrixBlock<double,N,N>>&) const;
