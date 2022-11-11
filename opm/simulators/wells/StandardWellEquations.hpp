@@ -94,6 +94,10 @@ public:
     void extract(const int numStaticWellEq,
                  WellContributions& wellContribs) const;
 
+    //! \brief Add the matrices of this well to the sparse matrix adapter.
+    template<class SparseMatrixAdapter>
+    void extract(SparseMatrixAdapter& jacobian) const;
+
     // two off-diagonal matrices
     OffDiagMatWell duneB_;
     OffDiagMatWell duneC_;

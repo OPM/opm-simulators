@@ -25,7 +25,9 @@
 #include <opm/common/Exceptions.hpp>
 
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
+#include <opm/simulators/linalg/istlsparsematrixadapter.hh>
 #include <opm/simulators/linalg/matrixblock.hh>
+#include <opm/simulators/linalg/SmallDenseMatrixUtils.hpp>
 
 namespace Opm
 {
@@ -233,8 +235,36 @@ extract(const int numStaticWellEq,
                            colIndices.data(), nnzValues.data(), duneB_.nonzeroes());
 }
 
+template<class Scalar, int numEq>
+template<class SparseMatrixAdapter>
+void StandardWellEquations<Scalar,numEq>::
+extract(SparseMatrixAdapter& jacobian) const
+{
+    // We need to change matrx A as follows
+    // A -= C^T D^-1 B
+    // D is diagonal
+    // B and C have 1 row, nc colums and nonzero
+    // at (0,j) only if this well has a perforation at cell j.
+    typename SparseMatrixAdapter::MatrixBlock tmpMat;
+    Dune::DynamicMatrix<Scalar> tmp;
+    for (auto colC = duneC_[0].begin(),
+              endC = duneC_[0].end(); colC != endC; ++colC)
+    {
+        const auto row_index = colC.index();
+
+        for (auto colB = duneB_[0].begin(),
+                  endB = duneB_[0].end(); colB != endB; ++colB)
+        {
+            detail::multMatrix(invDuneD_[0][0], (*colB), tmp);
+            detail::negativeMultMatrixTransposed((*colC), tmp, tmpMat);
+            jacobian.addToBlock(row_index, colB.index(), tmpMat);
+        }
+    }
+}
+
 #define INSTANCE(N) \
-template class StandardWellEquations<double,N>;
+template class StandardWellEquations<double,N>; \
+template void StandardWellEquations<double,N>::extract(Linear::IstlSparseMatrixAdapter<MatrixBlock<double,N,N>>&) const;
 
 INSTANCE(1)
 INSTANCE(2)

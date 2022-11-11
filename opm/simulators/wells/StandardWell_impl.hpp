@@ -2129,26 +2129,7 @@ namespace Opm
     void
     StandardWell<TypeTag>::addWellContributions(SparseMatrixAdapter& jacobian) const
     {
-        // We need to change matrx A as follows
-        // A -= C^T D^-1 B
-        // D is diagonal
-        // B and C have 1 row, nc colums and nonzero
-        // at (0,j) only if this well has a perforation at cell j.
-        typename SparseMatrixAdapter::MatrixBlock tmpMat;
-        Dune::DynamicMatrix<Scalar> tmp;
-        for (auto colC = this->linSys_.duneC_[0].begin(),
-                  endC = this->linSys_.duneC_[0].end(); colC != endC; ++colC)
-        {
-            const auto row_index = colC.index();
-
-            for (auto colB = this->linSys_.duneB_[0].begin(),
-                      endB = this->linSys_.duneB_[0].end(); colB != endB; ++colB)
-            {
-                detail::multMatrix(this->linSys_.invDuneD_[0][0],  (*colB), tmp);
-                detail::negativeMultMatrixTransposed((*colC), tmp, tmpMat);
-                jacobian.addToBlock( row_index, colB.index(), tmpMat );
-            }
-        }
+        this->linSys_.extract(jacobian);
     }
 
     
