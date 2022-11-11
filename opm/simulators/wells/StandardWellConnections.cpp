@@ -32,7 +32,7 @@
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
-#include <opm/simulators/wells/WellInterfaceGeneric.hpp>
+#include <opm/simulators/wells/WellInterfaceIndices.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
 #include <sstream>
@@ -42,7 +42,7 @@ namespace Opm
 
 template<class FluidSystem, class Indices, class Scalar>
 StandardWellConnections<FluidSystem,Indices,Scalar>::
-StandardWellConnections(const WellInterfaceGeneric& well)
+StandardWellConnections(const WellInterfaceIndices<FluidSystem,Indices,Scalar>& well)
     : well_(well)
     , perf_densities_(well.numPerfs())
     , perf_pressure_diffs_(well.numPerfs())
@@ -443,6 +443,86 @@ computePropertiesForPressures(const WellState& well_state,
             surf_dens_perf[well_.numComponents() * perf + Indices::contiSolventEqIdx] = solventRefDensity(cell_idx);
         }
     }
+}
+
+template<class FluidSystem, class Indices, class Scalar>
+void StandardWellConnections<FluidSystem,Indices,Scalar>::
+computeWellConnectionDensitesPressures(const WellState& well_state,
+                                       const std::function<Scalar(int,int)>& invB,
+                                       const std::function<Scalar(int,int)>& mobility,
+                                       const std::function<Scalar(int)>& solventInverseFormationVolumeFactor,
+                                       const std::function<Scalar(int)>& solventMobility,
+                                       const std::vector<double>& b_perf,
+                                       const std::vector<double>& rsmax_perf,
+                                       const std::vector<double>& rvmax_perf,
+                                       const std::vector<double>& rvwmax_perf,
+                                       const std::vector<double>& surf_dens_perf,
+                                       DeferredLogger& deferred_logger)
+{
+    // Compute densities
+    const int nperf = well_.numPerfs();
+    const int np = well_.numPhases();
+    std::vector<double> perfRates(b_perf.size(),0.0);
+    const auto& ws = well_state.well(well_.indexOfWell());
+    const auto& perf_data = ws.perf_data;
+    const auto& perf_rates_state = perf_data.phase_rates;
+
+    for (int perf = 0; perf < nperf; ++perf) {
+        for (int comp = 0; comp < np; ++comp) {
+            perfRates[perf * well_.numComponents() + comp] =  perf_rates_state[perf * np + well_.ebosCompIdxToFlowCompIdx(comp)];
+        }
+    }
+
+    if constexpr (Indices::enableSolvent) {
+        const auto& solvent_perf_rates_state = perf_data.solvent_rates;
+        for (int perf = 0; perf < nperf; ++perf) {
+            perfRates[perf * well_.numComponents() + Indices::contiSolventEqIdx] = solvent_perf_rates_state[perf];
+        }
+    }
+
+    // for producers where all perforations have zero rate we
+    // approximate the perforation mixture using the mobility ratio
+    // and weight the perforations using the well transmissibility.
+    bool all_zero = std::all_of(perfRates.begin(), perfRates.end(),
+                                [](double val) { return val == 0.0; });
+    const auto& comm = well_.parallelWellInfo().communication();
+    if (comm.size() > 1)
+    {
+        all_zero =  (comm.min(all_zero ? 1 : 0) == 1);
+    }
+
+    if (all_zero && well_.isProducer()) {
+        double total_tw = 0;
+        for (int perf = 0; perf < nperf; ++perf) {
+            total_tw += well_.wellIndex()[perf];
+        }
+        if (comm.size() > 1)
+        {
+            total_tw = comm.sum(total_tw);
+        }
+        for (int perf = 0; perf < nperf; ++perf) {
+            const int cell_idx = well_.cells()[perf];
+            const double well_tw_fraction = well_.wellIndex()[perf] / total_tw;
+            double total_mobility = 0.0;
+            for (int p = 0; p < np; ++p) {
+                int ebosPhaseIdx = well_.flowPhaseToEbosPhaseIdx(p);
+                total_mobility += invB(cell_idx, ebosPhaseIdx) * mobility(cell_idx, ebosPhaseIdx);
+            }
+            if constexpr (Indices::enableSolvent) {
+                total_mobility += solventInverseFormationVolumeFactor(cell_idx) * solventMobility(cell_idx);
+            }
+            for (int p = 0; p < np; ++p) {
+                int ebosPhaseIdx = well_.flowPhaseToEbosPhaseIdx(p);
+                perfRates[perf * well_.numComponents() + p] = well_tw_fraction * mobility(cell_idx, ebosPhaseIdx) / total_mobility;
+            }
+            if constexpr (Indices::enableSolvent) {
+                perfRates[perf * well_.numComponents() + Indices::contiSolventEqIdx] = well_tw_fraction * solventInverseFormationVolumeFactor(cell_idx) / total_mobility;
+            }
+        }
+    }
+
+    this->computeDensities(perfRates, b_perf, rsmax_perf, rvmax_perf, rvwmax_perf, surf_dens_perf, deferred_logger);
+    this->computePressureDelta();
 }
 
 #define INSTANCE(...) \

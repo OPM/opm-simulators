@@ -255,7 +255,7 @@ namespace Opm
                     DeferredLogger& deferred_logger) const
     {
         // Pressure drawdown (also used to determine direction of flow)
-        const Value well_pressure = bhp + this->connections_.perf_pressure_diffs_[perf];
+        const Value well_pressure = bhp + this->connections_.pressure_diff(perf);
         Value drawdown = pressure - well_pressure;
         if (this->isInjector()) {
             drawdown += skin_pressure;
@@ -1449,71 +1449,38 @@ namespace Opm
                                            const std::vector<double>& surf_dens_perf,
                                            DeferredLogger& deferred_logger)
     {
-        // Compute densities
-        const int nperf = this->number_of_perforations_;
-        const int np = this->number_of_phases_;
-        std::vector<double> perfRates(b_perf.size(),0.0);
-        const auto& ws = well_state.well(this->index_of_well_);
-        const auto& perf_data = ws.perf_data;
-        const auto& perf_rates_state = perf_data.phase_rates;
-
-        for (int perf = 0; perf < nperf; ++perf) {
-            for (int comp = 0; comp < np; ++comp) {
-                perfRates[perf * this->num_components_ + comp] =  perf_rates_state[perf * np + this->ebosCompIdxToFlowCompIdx(comp)];
-            }
-        }
-
-        if constexpr (has_solvent) {
-            const auto& solvent_perf_rates_state = perf_data.solvent_rates;
-            for (int perf = 0; perf < nperf; ++perf) {
-                perfRates[perf * this->num_components_ + Indices::contiSolventEqIdx] = solvent_perf_rates_state[perf];
-            }
-        }
-
-        // for producers where all perforations have zero rate we
-        // approximate the perforation mixture using the mobility ratio
-        // and weight the perforations using the well transmissibility.
-        bool all_zero = std::all_of(perfRates.begin(), perfRates.end(), [](double val) { return val == 0.0; });
-        const auto& comm = this->parallel_well_info_.communication();
-        if (comm.size() > 1)
+        std::function<Scalar(int,int)> invB =
+        [&ebosSimulator](int cell_idx, int phase_idx)
         {
-            all_zero =  (comm.min(all_zero ? 1 : 0) == 1);
-        }
+            return ebosSimulator.model().cachedIntensiveQuantities(cell_idx, 0)->fluidState().invB(phase_idx).value();
+        };
+        std::function<Scalar(int,int)> mobility =
+        [&ebosSimulator](int cell_idx, int phase_idx)
+        {
+            return ebosSimulator.model().cachedIntensiveQuantities(cell_idx, 0)->mobility(phase_idx).value();
+        };
+        std::function<Scalar(int)> invFac =
+        [&ebosSimulator](int cell_idx)
+        {
+            return ebosSimulator.model().cachedIntensiveQuantities(cell_idx, 0)->solventInverseFormationVolumeFactor().value();
+        };
+        std::function<Scalar(int)> solventMobility =
+        [&ebosSimulator](int cell_idx)
+        {
+            return ebosSimulator.model().cachedIntensiveQuantities(cell_idx, 0)->solventMobility().value();
+        };
 
-        if ( all_zero && this->isProducer() ) {
-            double total_tw = 0;
-            for (int perf = 0; perf < nperf; ++perf) {
-                total_tw += this->well_index_[perf];
-            }
-            if (comm.size() > 1)
-            {
-                total_tw = comm.sum(total_tw);
-            }
-            for (int perf = 0; perf < nperf; ++perf) {
-                const int cell_idx = this->well_cells_[perf];
-                const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
-                const auto& fs = intQuants.fluidState();
-                const double well_tw_fraction = this->well_index_[perf] / total_tw;
-                double total_mobility = 0.0;
-                for (int p = 0; p < np; ++p) {
-                    int ebosPhaseIdx = this->flowPhaseToEbosPhaseIdx(p);
-                    total_mobility += fs.invB(ebosPhaseIdx).value() * intQuants.mobility(ebosPhaseIdx).value();
-                }
-                if constexpr (has_solvent) {
-                    total_mobility += intQuants.solventInverseFormationVolumeFactor().value() * intQuants.solventMobility().value();
-                }
-                for (int p = 0; p < np; ++p) {
-                    int ebosPhaseIdx = this->flowPhaseToEbosPhaseIdx(p);
-                    perfRates[perf * this->num_components_ + p] = well_tw_fraction * intQuants.mobility(ebosPhaseIdx).value() / total_mobility;
-                }
-                if constexpr (has_solvent) {
-                    perfRates[perf * this->num_components_ + Indices::contiSolventEqIdx] = well_tw_fraction * intQuants.solventInverseFormationVolumeFactor().value() / total_mobility;
-                }
-            }
-        }
-
-        this->connections_.computeDensities(perfRates, b_perf, rsmax_perf, rvmax_perf, rvwmax_perf, surf_dens_perf, deferred_logger);
-        this->connections_.computePressureDelta();
+        this->connections_.computeWellConnectionDensitesPressures(well_state,
+                                                                  invB,
+                                                                  mobility,
+                                                                  invFac,
+                                                                  solventMobility,
+                                                                  b_perf,
+                                                                  rsmax_perf,
+                                                                  rvmax_perf,
+                                                                  rvwmax_perf,
+                                                                  surf_dens_perf,
+                                                                  deferred_logger);
     }
 
 
