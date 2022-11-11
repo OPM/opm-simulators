@@ -161,6 +161,13 @@ void MultisegmentWellEquations<Scalar,numWellEq,numEq>::createSolver()
 #endif
 }
 
+template<class Scalar, int numWellEq, int numEq>
+typename MultisegmentWellEquations<Scalar,numWellEq,numEq>::BVectorWell
+MultisegmentWellEquations<Scalar,numWellEq,numEq>::solve() const
+{
+    return mswellhelpers::applyUMFPack(*duneDSolver_, resWell_);
+}
+
 #define INSTANCE(numWellEq, numEq) \
 template class MultisegmentWellEquations<double,numWellEq,numEq>;
 

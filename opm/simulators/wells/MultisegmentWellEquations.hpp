@@ -83,6 +83,9 @@ public:
     //! \brief Compute the LU-decomposition of D matrix.
     void createSolver();
 
+    //! \brief Apply inverted D matrix to residual and return result.
+    BVectorWell solve() const;
+
     // two off-diagonal matrices
     OffDiagMatWell duneB_;
     OffDiagMatWell duneC_;

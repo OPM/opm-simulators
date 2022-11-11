@@ -519,8 +519,7 @@ namespace Opm
 
         // We assemble the well equations, then we check the convergence,
         // which is why we do not put the assembleWellEq here.
-        const BVectorWell dx_well = mswellhelpers::applyUMFPack(*this->linSys_.duneDSolver_,
-                                                                this->linSys_.resWell_);
+        const BVectorWell dx_well = this->linSys_.solve();
 
         updateWellState(dx_well, well_state, deferred_logger);
     }
@@ -1495,8 +1494,7 @@ namespace Opm
 
             assembleWellEqWithoutIteration(ebosSimulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
 
-            const BVectorWell dx_well = mswellhelpers::applyUMFPack(*this->linSys_.duneDSolver_,
-                                                                    this->linSys_.resWell_);
+            const BVectorWell dx_well = this->linSys_.solve();
 
             if (it > this->param_.strict_inner_iter_wells_) {
                 relax_convergence = true;
