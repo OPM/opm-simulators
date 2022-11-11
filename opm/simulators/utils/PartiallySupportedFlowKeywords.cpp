@@ -35,28 +35,22 @@ partiallySupported()
          {
             "BRANPROP",
             {
-               {5,{false, allow_values<std::string> {"NONE"}, "BRANPROP(ALQ-DEN): option is not supported and should be defaulted (1*)"}}, // ALQ_SURFACE_DENSITY
-            },
-         },
-         {
-            "COMPORD",
-            {
-               {2,{true, allow_values<std::string> {"DEPTH", "INPUT", "TRACK"}, "COMPORD(COMPORD): should equal DEPTH INPUT or TRACK – will STOP"}}, // ORDER_TYPE
+               {5,{true, allow_values<std::string> {"NONE"}, "BRANPROP(ALQ-DEN): option is not supported. Default is supported."}}, // ALQ_SURFACE_DENSITY
             },
          },
          {
             "EDITNNC",
             {
-               {12,{false, allow_values<std::string> {}, "EDITNNC(FACE1): not supported use 1* - will continue"}}, // FACE_FLOW12
-               {13,{false, allow_values<std::string> {}, "EDITNNC(FACE2): not supported use 1* - will continue"}}, // FACE_FLOW21
+               {12,{true, allow_values<std::string> {"NONE"}, "EDITNNC(FACE1): not supported use default."}}, // FACE_FLOW12
+               {13,{true, allow_values<std::string> {"NONE"}, "EDITNNC(FACE2): not supported use default."}}, // FACE_FLOW21
             },
          },
          {
             "EHYSTR",
             {
-               {5,{true, allow_values<std::string> {"KR", "PC", "BOTH"}, "EHYSTR(HYSTOPT): relative permeability hysteresis option should equal BOTH, KR, or PC – will STOP"}}, // limiting_hyst_flag
-               {6,{true, allow_values<std::string> {"RETR"}, "EHYSTR(HYSTSCAN): only RETR supported – will STOP"}}, // shape_cap_press_flag
-               {7,{false, allow_values<std::string> {}, "EHYSTR(HYSTMOB): mobility option not supported and is ignored"}}, // init_fluid_mob_flag
+               {5,{true, allow_values<std::string> {"KR", "PC", "BOTH"}, "EHYSTR(HYSTOPT): relative permeability hysteresis option should equal BOTH, KR, or PC"}}, // limiting_hyst_flag
+               {6,{true, allow_values<std::string> {"RETR"}, "EHYSTR(HYSTSCAN): only RETR supported"}}, // shape_cap_press_flag
+               {7,{false, allow_values<std::string> {"DRAIN"}, "EHYSTR(HYSTMOB): mobility option not supported and is ignored"}}, // init_fluid_mob_flag
                {8,{false, allow_values<std::string> {"OIL"}, "EHYSTR(HYSTWET): only OIL supported value is ignored"}}, // wetting_phase_flag
                {9,{false, allow_values<std::string> {"NO"}, "EHYSTR(HYBAKOIL): not used and is ignored"}}, // baker_flag_oil
                {10,{false, allow_values<std::string> {"NO"}, "EHYSTR(HYBAKGAS): not used and is ignored"}}, // baker_flag_gas
@@ -66,24 +60,24 @@ partiallySupported()
          {
             "ENDSCALE",
             {
-               {1,{false, allow_values<std::string> {"NODIR"}, "ENDSCALE(DIRECT): only default value of NODIR supported"}}, // DIRECT
-               {2,{false, allow_values<std::string> {"REVERS"}, "ENDSCALE(IRREVERS): only default value of REVERS supported"}}, // IRREVERS
+               {1,{true, allow_values<std::string> {"NODIR"}, "ENDSCALE(DIRECT): only default value of NODIR supported"}}, // DIRECT
+               {2,{true, allow_values<std::string> {"REVERS"}, "ENDSCALE(IRREVERS): only default value of REVERS supported"}}, // IRREVERS
             },
          },
          {
             "EQLOPTS",
             {
-               {1,{false, allow_values<std::string> {"THPRES"}, "EQLOPTS(MOBILE/QUIESC/IRREVER): options not supported – value ignored"}}, // OPTION1
-               {2,{false, allow_values<std::string> {"THPRES"}, "EQLOPTS(MOBILE/QUIESC/IRREVER): options not supported – value ignored"}}, // OPTION2
-               {3,{false, allow_values<std::string> {"THPRES"}, "EQLOPTS(MOBILE/QUIESC/IRREVER): options not supported – value ignored"}}, // OPTION3
-               {4,{false, allow_values<std::string> {"THPRES"}, "EQLOPTS(MOBILE/QUIESC/IRREVER): options not supported – value ignored"}}, // OPTION4
+               {1,{true, allow_values<std::string> {"THPRES"}, "EQLOPTS(MOBILE/QUIESC/IRREVER): options not supported"}}, // OPTION1
+               {2,{true, allow_values<std::string> {"THPRES"}, "EQLOPTS(MOBILE/QUIESC/IRREVER): options not supported"}}, // OPTION2
+               {3,{true, allow_values<std::string> {"THPRES"}, "EQLOPTS(MOBILE/QUIESC/IRREVER): options not supported"}}, // OPTION3
+               {4,{true, allow_values<std::string> {"THPRES"}, "EQLOPTS(MOBILE/QUIESC/IRREVER): options not supported"}}, // OPTION4
             },
          },
          {
             "FOAMOPTS",
             {
-               {1,{false, allow_values<std::string> {"GAS"}, "FOAMOPTS(FOAMOPT1): only the default option of GAS is supported – value ignored"}}, // TRANSPORT_PHASE
-               {2,{false, allow_values<std::string> {"TAB"}, "FOAMOPTS(FOAMOPT2): only the default option of TAB is supported – value ignored"}}, // MODEL
+               {1,{true, allow_values<std::string> {"GAS"}, "FOAMOPTS(FOAMOPT1): only the default option of GAS is supported"}}, // TRANSPORT_PHASE
+               {2,{true, allow_values<std::string> {"TAB"}, "FOAMOPTS(FOAMOPT2): only the default option of TAB is supported"}}, // MODEL
             },
          },
          {
@@ -103,36 +97,36 @@ partiallySupported()
          {
             "GCONPROD",
             {
-               {2,{true, allow_values<std::string> {"NONE", "FLD", "ORAT", "WRAT", "GRAT", "LRAT", "RESV"}, "GCONPROD(TARGET): valid option should be NONE/FLD/ORAT/WRAT/GRAT/LRAT or RESV – will STOP"}}, // CONTROL_MODE
-               {11,{true, allow_values<std::string> {}, "GCONPROD(ACTWAT): water violation procedure not implemented – will STOP"}}, // WATER_EXCEED_PROCEDURE
-               {12,{true, allow_values<std::string> {}, "GCONPROD(ACTGAS): gas violation procedure not implemented – will STOP"}}, // GAS_EXCEED_PROCEDURE
-               {13,{true, allow_values<std::string> {}, "GCONPROD(ACTLIQ): liquid violation procedure not implemented – will STOP"}}, // LIQUID_EXCEED_PROCEDURE
-               {21,{false, allow_values<std::string> {}, "GCONPROD(COMBPROC): linearly combined procedure is not used and should be defaulted (1*) – will continue"}}, // LIN_TARGET_EXCEED_PROCEDURE
+               {2,{true, allow_values<std::string> {"NONE", "FLD", "ORAT", "WRAT", "GRAT", "LRAT", "RESV"}, "GCONPROD(TARGET): valid option should be NONE/FLD/ORAT/WRAT/GRAT/LRAT or RESV"}}, // CONTROL_MODE
+               {11,{true, allow_values<std::string> {"NONE"}, "GCONPROD(ACTWAT): water violation procedure not implemented, item should be defaulted"}}, // WATER_EXCEED_PROCEDURE
+               {12,{true, allow_values<std::string> {"NONE"}, "GCONPROD(ACTGAS): gas violation procedure not implemented, item should be defaulted"}}, // GAS_EXCEED_PROCEDURE
+               {13,{true, allow_values<std::string> {"NONE"}, "GCONPROD(ACTLIQ): liquid violation procedure not implemented, item should be defaulted"}}, // LIQUID_EXCEED_PROCEDURE
+               {21,{true, allow_values<std::string> {"NONE"}, "GCONPROD(COMBPROC): linearly combined procedure is not used and should be defaulted (1*)"}}, // LIN_TARGET_EXCEED_PROCEDURE
             },
          },
          {
             "GEFAC",
             {
-               {3,{true, allow_values<std::string> {"YES"}, "GEFAC(GRPNETWK): Extended Network Model efficiency NO option not implemented – will STOP"}}, // TRANSFER_EXT_NET
+               {3,{true, allow_values<std::string> {"YES"}, "GEFAC(GRPNETWK): Extended Network Model efficiency NO option not implemented"}}, // TRANSFER_EXT_NET
             },
          },
          {
             "GRIDOPTS",
             {
-               {1,{true, allow_values<std::string> {"NO", "YES"}, "GRIDOPTS(TRANMULT): should be set to either NO or YES – will STOP"}}, // TRANMULT
+               {1,{true, allow_values<std::string> {"NO", "YES"}, "GRIDOPTS(TRANMULT): should be set to either NO or YES"}}, // TRANMULT
             },
          },
          {
             "GUIDERAT",
             {
-               {2,{true, allow_values<std::string> {"OIL", "LIQ", "GAS", "RES", "NONE"}, "GUIDERAT(PHASE): unsupported option must be OIL LIQ GAS RES or NONE – will STOP"}}, // NOMINATED_PHASE
-               {9,{true, allow_values<std::string> {"YES"}, "GUIDERAT(GROPT01): only the default option of YES supported – will STOP"}}, // ALLOW_INCREASE
+               {2,{true, allow_values<std::string> {"OIL", "LIQ", "GAS", "RES", "NONE"}, "GUIDERAT(PHASE): unsupported option must be OIL LIQ GAS RES or NONE"}}, // NOMINATED_PHASE
+               {9,{true, allow_values<std::string> {"YES"}, "GUIDERAT(GROPT01): only the default option of YES is supported"}}, // ALLOW_INCREASE
             },
          },
          {
             "MISCIBLE",
             {
-               {3,{false, allow_values<std::string> {"NONE"}, "MISCIBLE(MISOPT): only option NONE is supported – value ignored"}}, // TWOPOINT
+               {3,{true, allow_values<std::string> {"NONE"}, "MISCIBLE(MISOPT): only option NONE is supported"}}, // TWOPOINT
             },
          },
          {
@@ -147,68 +141,83 @@ partiallySupported()
          {
             "MULTIREG",
             {
-               {4,{false, allow_values<std::string> {"F", "M", "O"}, "MULTIREG(REGION_NAME): must equal to F/M or O"}}, // NOT_DEFINED
+               {4,{true, allow_values<std::string> {"F", "M", "O"}, "MULTIREG(REGION_NAME): must equal to F/M or O"}}, // NOT_DEFINED
             },
          },
          {
             "MULTREGP",
             {
-               {3,{false, allow_values<std::string> {"F", "M", "O"}, "MULTREGP(REGION_NAME): must equal to F/M or O"}}, // REGION_TYPE
+               {3,{true, allow_values<std::string> {"F", "M", "O"}, "MULTREGP(REGION_NAME): must equal to F/M or O"}}, // REGION_TYPE
             },
          },
          {
             "MULTREGT",
             {
-               {6,{false, allow_values<std::string> {"F", "M", "O"}, "MULTREGT(REGION_NAME): must equal to F/M or O"}}, // REGION_DEF
+               {6,{true, allow_values<std::string> {"F", "M", "O"}, "MULTREGT(REGION_NAME): must equal to F/M or O"}}, // REGION_DEF
             },
          },
          {
             "NNC",
             {
-               {12,{false, allow_values<std::string> {}, "NNC(FACE1): not supported use 1* - will continue"}}, // VE_FACE1
-               {13,{false, allow_values<std::string> {}, "NNC(FACE2): not supported use 1* - will continue"}}, // VE_FACE2
+               {12,{true, allow_values<std::string> {}, "NNC(FACE1): not supported use 1*."}}, // VE_FACE1
+               {13,{true, allow_values<std::string> {}, "NNC(FACE2): not supported use 1*."}}, // VE_FACE2
             },
          },
          {
             "NODEPROP",
             {
-               {6,{false, allow_values<std::string> {}, "NODEPROP(GRPNAME): not used – will continue"}}, // SOURCE_SINK_GROUP
-               {7,{false, allow_values<std::string> {}, "NODEPROP(NETTYPE): not used – will continue"}}, // NETWORK_VALUE_TYPE
+               {6,{true, allow_values<std::string> {}, "NODEPROP(GRPNAME): not supported use default"}}, // SOURCE_SINK_GROUP
+               {7,{true, allow_values<std::string> {}, "NODEPROP(NETTYPE): not supported use default"}}, // NETWORK_VALUE_TYPE
+            },
+         },
+         {
+            "PINCH",
+            {
+               {2,{true, allow_values<std::string> {"GAP"}, "PINCH(PINCHOPT) equal to NOGAP is not supported."}},
             },
          },
          {
             "RESTART",
             {
-               {3,{true, allow_values<std::string> {}, "RESTART(RSTYPE): restart from SAVE file not supported – will STOP"}}, // SAVEFILE
-               {4,{true, allow_values<std::string> {"UNFORMATTED"}, "RESTART(RSFORMAT): restart from SAVE file not supported – will STOP"}}, // SAVEFILE_FORMAT
+               {3,{true, allow_values<std::string> {}, "RESTART(RSTYPE): restart from SAVE file not supported"}}, // SAVEFILE
+               {4,{true, allow_values<std::string> {"UNFORMATTED"}, "RESTART(RSFORMAT): restart from SAVE file not supported"}}, // SAVEFILE_FORMAT
             },
          },
          {
             "ROCKCOMP",
             {
                {1,{true, allow_values<std::string> {"REVERS", "IRREVERS"}, "ROCKCOMP(ROCKOPT): only the REVERS and IRREVERS options are supported – will STOP"}}, // HYSTERESIS
-               {3,{false, allow_values<std::string> {"YES"}, "ROCKCOMP(WATINOPT): only equal to YES is supported"}}, // WATER_COMPACTION
+               {3,{true, allow_values<std::string> {"YES", "NO"}, "ROCKCOMP(WATINOPT): only YES and NO are supported"}}, // WATER_COMPACTION
                {4,{false, allow_values<std::string> {}, "ROCKCOMP(PORTXROP): transmissibility dependent on porosity model is not supported"}}, // PORTXROP
+            },
+         },
+         {
+            "ROCKOPTS",
+            {
+               {1,{true, allow_values<std::string> {"PRESSURE"}, "ROCKOPTS: only the PRESSURE options are supported"}}, 
+               {2,{true, allow_values<std::string> {"NOSTORE"}, "ROCKOPTS: only the NOSTORE options are supported"}}, 
+               {3,{true, allow_values<std::string> {"PVTNUM", "ROCKNUM"}, "ROCKOPTS: only PVTNUM and ROCKNUM are supported"}}, 
             },
          },
          {
             "RPTRST",
             {
-               {1,{false, allow_values<std::string> {"ALLPROPS", "BASIC=1", "BASIC=2", "BASIC=3", "BASIC=4", "BASIC=5", "BASIC=6", "DEN", "KRG", "KRO", "KRW", "RSSAT", "RVSAT", "VISC"}, "RPTRST(RPTRST): invalid option or unsupported integer control format – will continue"}}, // MNEMONIC_LIST 
+               {1,{false, allow_values<std::string> {"ALLPROPS", "BASIC=1", "BASIC=2", "BASIC=3", "BASIC=4", "BASIC=5", "BASIC=6", "DEN", "KRG", "KRO", "KRW", "RSSAT", "RVSAT", "VISC"}, "RPTRST(RPTRST): invalid option or unsupported integer control format"}}, // MNEMONIC_LIST
             },
          },
          {
             "SATOPTS",
             {
-               {2,{false, allow_values<std::string> {"HYSTER"}, "SATOPTS(IRREVERS): reversible directional relative permeability option not supported – value ignored"}}, // IRREVERS
-               {3,{false, allow_values<std::string> {"HYSTER"}, "SATOPTS(HYSTER): hysteresis directional relative permeability option not supported - value ignored"}}, // HYSTER
-               {4,{false, allow_values<std::string> {"HYSTER"}, "SATOPTS(SURFTENS): capillary pressure surface tension pressure dependency option not supported – value ignored"}}, // SURFTENS
+               {1,{true, allow_values<std::string> {"HYSTER", "DIRECT"}, "SATOPTS(IRREVERS/SURFTENS): options not supported"}}, // IRREVERS
+               {2,{true, allow_values<std::string> {"HYSTER", "DIRECT"}, "SATOPTS(IRREVERS/SURFTENS): options not supported"}}, // IRREVERS
+               {3,{true, allow_values<std::string> {"HYSTER", "DIRECT"}, "SATOPTS(IRREVERS/SURFTENS): options not supported"}}, // IRREVERS
+               {4,{true, allow_values<std::string> {"HYSTER", "DIRECT"}, "SATOPTS(IRREVERS/SURFTENS): options not supported"}}, // IRREVERS
             },
          },
          {
             "SPECGRID",
             {
-               {5,{true, allow_values<std::string> {"F"}, "SPECGRID(TYPE): only option F (Cartesian grids supported) supported – will STOP"}}, // COORD_TYPE
+               {5,{true, allow_values<std::string> {"F"}, "SPECGRID(TYPE): only option F (Cartesian grids supported) supported"}}, // COORD_TYPE
             },
          },
          {
@@ -230,79 +239,80 @@ partiallySupported()
          {
             "TRACER",
             {
-               {4,{false, allow_values<std::string> {}, "TRACER(SOLPHASE): partitioned tracer model not supported - ignored as not used"}}, // SOLUTION_PHASE
-               {6,{false, allow_values<std::string> {}, "TRACER(ADSPHASE): partitioned tracer model not supported - ignored as not used"}}, // ADSORB_PHASE
+               {1,{true, [](const std::string& val){ return val.size()<=3;}, "TRACER(NAME): Only names of tracers up to 3 characters are supported."}},
+               {4,{true, allow_values<std::string> {}, "TRACER(SOLPHASE): partitioned tracer model not supported use default"}}, // SOLUTION_PHASE
+               {6,{true, allow_values<std::string> {}, "TRACER(ADSPHASE): partitioned tracer model not supported use default"}}, // ADSORB_PHASE
             },
          },
          {
             "TRACERS",
             {
-               {5,{false, allow_values<std::string> {"NODIFF"}, "TRACERS(DIFFOPT): numerical diffusion control not implemented. - ignored as not used"}}, // NUMERIC_DIFF
-               {8,{false, allow_values<std::string> {"NO"}, "TRACERS(NONLIN): only linear option NO supported – will continue"}}, // PASSIVE_NONLINEAR
+               {5,{true, allow_values<std::string> {"NODIFF"}, "TRACERS(DIFFOPT): numerical diffusion control for tracers not implemented."}}, // NUMERIC_DIFF
+               {8,{true, allow_values<std::string> {"NO"}, "TRACERS(NONLIN): only linear option NO supported"}}, // PASSIVE_NONLINEAR
             },
          },
          {
             "UDQDIMS",
             {
-               {11,{false, allow_values<std::string> {"N"}, "UDQDIMS(RSEED): option is not supported – value ignored"}}, // RESTART_NEW_SEED
+               {11,{true, allow_values<std::string> {"N"}, "UDQDIMS(RSEED): option is not supported use default"}}, // RESTART_NEW_SEED
             },
          },
          {
             "WCONHIST",
             {
-               {3,{true, allow_values<std::string> {"ORAT", "WRAT", "GRAT", "LRAT", "RESV", "BHP"}, "WCONHIST(TARGET): should be set to ORAT/WRAT/GRAT/LRAT/RESV or BHP – will STOP"}}, // CMODE
+               {3,{true, allow_values<std::string> {"ORAT", "WRAT", "GRAT", "LRAT", "RESV", "BHP"}, "WCONHIST(TARGET): should be set to ORAT/WRAT/GRAT/LRAT/RESV or BHP"}}, // CMODE
             },
          },
          {
             "WEFAC",
             {
-               {3,{true, allow_values<std::string> {"YES"}, "WEFAC(WELNETWK): only the YES option is supported – will STOP"}}, // EXTENDED_NETWORK_OPT
+               {3,{true, allow_values<std::string> {"YES"}, "WEFAC(WELNETWK): only the YES option is supported"}}, // EXTENDED_NETWORK_OPT
             },
          },
          {
             "WELSPECS",
             {
-               {8,{true, allow_values<std::string> {"STD", "NO"}, "WELSPECS(WELNETWK): only the STD and NO options are supported – will STOP"}}, // INFLOW_EQ
-               {12,{false, allow_values<std::string> {"SEG"}, "WELSPECS(DENOPT): only the SEG option is supported – will continue"}}, // DENSITY_CALC
-               {14,{false, allow_values<std::string> {}, "WELSPECS(STRMLIN1): not used  – will continue"}}, // FRONTSIM1
-               {15,{false, allow_values<std::string> {}, "WELSPECS(STRMLIN2): not used – will continue"}}, // FRONTSIM2
-               {16,{false, allow_values<std::string> {"STD"}, "WELSPECS(TYPECOMP): not used – will continue"}}, // well_model
+               {8,{true, allow_values<std::string> {"STD", "NO"}, "WELSPECS(WELNETWK): only the STD and NO options are supported"}}, // INFLOW_EQ
+               {12,{true, allow_values<std::string> {"SEG"}, "WELSPECS(DENOPT): only the SEG option is supported"}}, // DENSITY_CALC
+               {14,{true, allow_values<std::string> {}, "WELSPECS(STRMLIN1): not used and should be defaulted"}}, // FRONTSIM1
+               {15,{true, allow_values<std::string> {}, "WELSPECS(STRMLIN2): not used and should be defaulted"}}, // FRONTSIM2
+               {16,{true, allow_values<std::string> {"STD"}, "WELSPECS(TYPECOMP): not used and should be defaulted"}}, // well_model
             },
          },
          {
             "WELTARG",
             {
-               {2,{true, allow_values<std::string> {"ORAT", "WRAT", "GRAT", "LRAT", "RESV", "BHP", "THP", "VFP", "LIFT", "GUID"}, "WELTARG(TARGET): invalid option – will STOP"}}, // CMODE
+               {2,{true, allow_values<std::string> {"ORAT", "WRAT", "GRAT", "LRAT", "RESV", "BHP", "THP", "VFP", "LIFT", "GUID"}, "WELTARG(TARGET): invalid option"}}, // CMODE
             },
          },
          {
             "WGRUPCON",
             {
-               {4,{true, allow_values<std::string> {"OIL", "WAT", "GAS", "LIQ", "RES", "RAT"}, "WGRUPCON(TARGET): only OIL WAT GAS LIQ RES RAT options are supported – will STOP"}}, // PHASE
+               {4,{true, allow_values<std::string> {"OIL", "WAT", "GAS", "LIQ", "RES", "RAT"}, "WGRUPCON(TARGET): only OIL WAT GAS LIQ RES RAT options are supported"}}, // PHASE
             },
          },
          {
             "WHISTCTL",
             {
-               {2,{false, allow_values<std::string> {"NO"}, "WHISTCTL(END): only the NO option is supported – will continue"}}, // BPH_TERMINATE
+               {2,{true, allow_values<std::string> {"NO"}, "WHISTCTL(END): only the NO option is supported"}}, // BPH_TERMINATE
             },
          },
          {
             "WLIFTOPT",
             {
-               {7,{false, allow_values<std::string> {"NO"}, "WLIFTOPT(OPTLIMIT): only the default NO option is supported – will continue"}}, // ALLOCATE_EXTRA_LIFT_GAS
+               {7,{true, allow_values<std::string> {"NO"}, "WLIFTOPT(OPTLIMIT): only the default NO option is supported"}}, // ALLOCATE_EXTRA_LIFT_GAS
             },
          },
          {
             "WTEST",
             {
-               {3,{false, allow_values<std::string> {"E", "P", "EP", "PE", ""}, "WTEST(TEST): only the E (economic) option is currently supported – will continue"}}, // REASON
+               {3,{true, allow_values<std::string> {"E", "P", "EP", "PE", ""}, "WTEST(TEST): only the E (economic) and P (physical) reason is currently supported"}}, // REASON
             },
          },
          {
             "WVFPEXP",
             {
-               {5,{false, allow_values<std::string> {"WG"}, "WVFPEXP(EXTRAPOLATION_CONTROL): only support linear extrapolation – will continue"}}, // EXTRAPOLATION_CONTROL
+               {5,{false, allow_values<std::string> {"WG"}, "WVFPEXP(EXTRAP): only linear extrapolation is support "}}, // EXTRAPOLATION_CONTROL
             },
          },
    };
@@ -318,17 +328,17 @@ partiallySupported()
          {
             "EDITNNC",
             {
-               {8,{false, allow_values<int> {0}, "EDITNNC(ISATNUM1): only default value of 0 supported – will continue"}}, // SAT_TABLE12
-               {9,{false, allow_values<int> {0}, "EDITNNC(ISATNUM2): only default value of 0 supported – will continue"}}, // SAT_TABLE21
-               {10,{false, allow_values<int> {0}, "EDITNNC(IPRSNUM1): only default value of 0 supported – will continue"}}, // PRESS_TABLE12
-               {11,{false, allow_values<int> {0}, "EDITNNC(IPRSNUM2): only default value of 0 supported – will continue"}}, // PRESS_TABLE21
+               {8,{true, allow_values<int> {0}, "EDITNNC(ISATNUM1): only default value of 0 supported"}}, // SAT_TABLE12
+               {9,{true, allow_values<int> {0}, "EDITNNC(ISATNUM2): only default value of 0 supported"}}, // SAT_TABLE21
+               {10,{true, allow_values<int> {0}, "EDITNNC(IPRSNUM1): only default value of 0 supported"}}, // PRESS_TABLE12
+               {11,{true, allow_values<int> {0}, "EDITNNC(IPRSNUM2): only default value of 0 supported"}}, // PRESS_TABLE21
             },
          },
          {
             "EHYSTR",
             {
-               {2,{false, allow_values<int> {0, 1, 2, 3}, "EHYSTR(HYSTMOD): only Carlson or Killough Hysteresis Models supported (0,1 or 2,3)"}}, // relative_perm_hyst
-               {13,{false, allow_values<int> {0}, "EHYSTR(HYSWETRP): Killough’s option not supported and is ignored"}}, // FLAG_SOMETHING
+               {2,{true, allow_values<int> {0, 1, 2, 3}, "EHYSTR(HYSTMOD): only Carlson or Killough Hysteresis Models supported (0,1 or 2,3)"}}, // relative_perm_hyst
+               {13,{true, allow_values<int> {0}, "EHYSTR(HYSWETRP): Killough’s option not supported and should be defaulted"}}, // FLAG_SOMETHING
             },
          },
          {
@@ -336,53 +346,52 @@ partiallySupported()
             {
                {3,{false, allow_values<int> {1}, "ENDSCALE(NTENDP): depth end-point scaling not supported – value ignored"}}, // NTENDP
                {4,{false, allow_values<int> {20}, "ENDSCALE(NNODES): depth end-point scaling not supported – value ignored"}}, // NSENDP
-               {5,{false, allow_values<int> {0}, "ENDSCALE(MODE): depth temperature end-point scaling not supported – value ignored"}}, // COMP_MODE
+               {5,{true, allow_values<int> {0}, "ENDSCALE(MODE): depth temperature end-point scaling not supported"}}, // COMP_MODE
             },
          },
          {
             "EQLDIMS",
             {
-               {4,{false, allow_values<int> {1}, "EQLDIMS(NTTRVD): tracer end-point depth scaling not supported – value ignored"}}, // NTTRVD
-               {5,{false, allow_values<int> {20}, "EQLDIMS(NSTRVD): tracer end-point depth scaling not supported – value ignored"}}, // NSTRVD
+               {4,{true, allow_values<int> {1}, "EQLDIMS(NTTRVD): tracer regions (TNUM) not supported. This item should be defaulted to 1."}}, // NTTRVD
             },
          },
          {
             "EQUIL",
             {
-               {9,{true, [](int x) { return x >= -20 && x <= 0; }, "EQUIL(EQLOPT3): only values less than or equal to zero are supported (default is -5) - will STOP"}}, // OIP_INIT
-               {10,{false, allow_values<int> {}, "EQUIL(EQLOPT4): compositional option not used – will continue"}}, // EQLOPT4
-               {11,{false, allow_values<int> {}, "EQUIL(EQLOPT5): compositional option not used – will continue"}}, // EQLOPT5
+               {9,{true, [](int x) { return x >= -20 && x <= 0; }, "EQUIL(EQLOPT3): only values less than or equal to zero are supported (default is -5)"}}, // OIP_INIT
+               {10,{false, allow_values<int> {}, "EQUIL(EQLOPT4): compositional option not used, should be defaulted"}}, // EQLOPT4
+               {11,{false, allow_values<int> {}, "EQUIL(EQLOPT5): compositional option not used, should be defaulted"}}, // EQLOPT5
             },
          },
          {
             "FOAMROCK",
             {
-               {1,{false, allow_values<int> {1}, "FOAMROCK(ADINDX): only the default(1) value is supported – value ignored"}}, // ADSORPTION_INDEX
+               {1,{true, allow_values<int> {1}, "FOAMROCK(ADINDX): only the default(1) value is supported"}}, // ADSORPTION_INDEX
             },
          },
          {
             "GRIDFILE",
             {
-               {1,{false, allow_values<int> {0}, "GRIDFILE(NGRID): only default value of 0 supported – will continue"}}, // GRID
-               {2,{false, allow_values<int> {1}, "GRIDFILE(NEGRID): only default value of 1 supported – will continue"}}, // EGRID
+               {1,{false, allow_values<int> {0}, "GRIDFILE(NGRID): output of GRID file is not supported."}}, // GRID
+               {2,{false, allow_values<int> {0,1}, "GRIDFILE(NEGRID): only generate (1) or not (0) an EGRID file is supported."}}, // EGRID
             },
          },
          {
             "MESSAGES",
             {
-               {7,{false, allow_values<int> {1000000}, "MESSAGES(STOPMESG): option is not supported – will continue"}}, // MESSAGE_STOP_LIMIT
-               {8,{false, allow_values<int> {1000000}, "MESSAGES(STOPCOMT): option is not supported – will continue"}}, // COMMENT_STOP_LIMIT
-               {9,{false, allow_values<int> {10000}, "MESSAGES(STOPWARN): option is not supported – will continue"}}, // WARNING_STOP_LIMIT
-               {10,{false, allow_values<int> {100}, "MESSAGES(STOPPROB): option is not supported – will continue"}}, // PROBLEM_STOP_LIMIT
-               {11,{false, allow_values<int> {10}, "MESSAGES(STOPERRS): option is not supported – will continue"}}, // ERROR_STOP_LIMIT
-               {12,{false, allow_values<int> {1}, "MESSAGES(STOPBUGS): option is not supported – will continue"}}, // BUG_STOP_LIMIT
-               {13,{false, allow_values<int> {10}, "MESSAGES(PRTGRPMS): option is not supported – will continue"}}, // GROUP_PRINT_LIMIT
+               {7,{false, allow_values<int> {1000000}, "MESSAGES(STOPMESG): option is not supported"}}, // MESSAGE_STOP_LIMIT
+               {8,{false, allow_values<int> {1000000}, "MESSAGES(STOPCOMT): option is not supported"}}, // COMMENT_STOP_LIMIT
+               {9,{false, allow_values<int> {10000}, "MESSAGES(STOPWARN): option is not supported"}}, // WARNING_STOP_LIMIT
+               {10,{false, allow_values<int> {100}, "MESSAGES(STOPPROB): option is not supported"}}, // PROBLEM_STOP_LIMIT
+               {11,{false, allow_values<int> {10}, "MESSAGES(STOPERRS): option is not supported"}}, // ERROR_STOP_LIMIT
+               {12,{false, allow_values<int> {1}, "MESSAGES(STOPBUGS): option is not supported"}}, // BUG_STOP_LIMIT
+               {13,{false, allow_values<int> {10}, "MESSAGES(PRTGRPMS): option is not supported"}}, // GROUP_PRINT_LIMIT
             },
          },
          {
             "NETBALAN",
             {
-               {5,{false, allow_values<int> {10}, "NETBALAN(THPMXITE): option is not supported – will continue"}}, // MAX_ITER_THP
+               {5,{false, allow_values<int> {10}, "NETBALAN(THPMXITE): option is not supported"}}, // MAX_ITER_THP
             },
          },
          {
@@ -394,10 +403,10 @@ partiallySupported()
          {
             "NNC",
             {
-               {8,{false, allow_values<int> {0}, "NNC(ISATNUM1): only default value of 0 supported – will continue"}}, // SIM_DEPENDENT1
-               {9,{false, allow_values<int> {0}, "NNC(ISATNUM2): only default value of 0 supported – will continue"}}, // SIM_DEPENDENT2
-               {10,{false, allow_values<int> {0}, "NNC(IPRSNUM1): only default value of 0 supported – will continue"}}, // PRESSURE_TABLE1
-               {11,{false, allow_values<int> {0}, "NNC(IPRSNUM2): only default value of 0 supported – will continue"}}, // PRESSURE_TABLE2
+               {8,{true, allow_values<int> {0}, "NNC(ISATNUM1): only default value of 0 supported"}}, // SIM_DEPENDENT1
+               {9,{true, allow_values<int> {0}, "NNC(ISATNUM2): only default value of 0 supported"}}, // SIM_DEPENDENT2
+               {10,{true, allow_values<int> {0}, "NNC(IPRSNUM1): only default value of 0 supported"}}, // PRESSURE_TABLE1
+               {11,{true, allow_values<int> {0}, "NNC(IPRSNUM2): only default value of 0 supported"}}, // PRESSURE_TABLE2
             },
          },
          {
@@ -418,7 +427,7 @@ partiallySupported()
          {
             "SPECGRID",
             {
-               {4,{false, allow_values<int> {1}, "SPECGRID(NUMRES): must be equal to 1"}}, // NUMRES
+               {4,{true, allow_values<int> {1}, "SPECGRID(NUMRES): must be equal to 1"}}, // NUMRES
             },
          },
          {
@@ -443,7 +452,7 @@ partiallySupported()
          {
             "TRACER",
             {
-               {5,{false, allow_values<int> {0}, "TRACER(KPNUM): partitioned tracer model not supported - ignored as not used"}}, // NUM_PART_TABLE
+               {5,{true, allow_values<int> {0}, "TRACER(KPNUM): partitioned tracer model not supported use default"}}, // NUM_PART_TABLE
             },
          },
          {
@@ -487,7 +496,7 @@ partiallySupported()
          {
             "WELSPECS",
             {
-               {17,{true, allow_values<int> {0}, "WELSPECS(POLYTAB): only the default value of zero is supported – will STOP"}}, // POLYMER_TABLE
+               {17,{true, allow_values<int> {0}, "WELSPECS(POLYTAB): only the default value of zero is supported"}}, // POLYMER_TABLE
             },
          },
    };
@@ -536,14 +545,14 @@ partiallySupported()
          {
             "EDITNNC",
             {
-               {14,{false, allow_values<double> {0}, "EDITNNC(DIFFNNC): not supported – will continue"}}, // DIFFM
+               {14,{true, allow_values<double> {0}, "EDITNNC(DIFFNNC): not supported and should be defaulted"}}, // DIFFM
             },
          },
          {
-            "EHYSTR",
+            "EHYSTR",   
             {
-               {3,{false, allow_values<double> {1.0}, "EHYSTR(HYSTREL): Killough’s option not supported and is ignored"}}, // curvature_param_killough_wetting
-               {12,{false, allow_values<double> {0}, "EHYSTR(HYTHRESH): Killough’s option not supported and is ignored"}}, // threshold_saturation
+               {3,{false, allow_values<double> {1.0}, "EHYSTR(HYSTREL): Killough’s option not supported and should be defaulted"}}, // curvature_param_killough_wetting
+               {12,{true, allow_values<double> {0}, "EHYSTR(HYTHRESH): Killough’s option not supported and should be defaulted"}}, // threshold_saturation
             },
          },
          {
@@ -555,18 +564,18 @@ partiallySupported()
          {
             "GCONINJE",
             {
-               {13,{false, allow_values<double> {}, "GCONINJE(WGASRATE): wet gas rate is not used and should be defaulted (1*) – will continue"}}, // WETGAS_TARGET
+               {13,{false, allow_values<double> {}, "GCONINJE(WGASRATE): wet gas rate is not used and should be defaulted (1*)"}}, // WETGAS_TARGET
             },
          },
          {
             "GCONPROD",
             {
-               {15,{false, allow_values<double> {}, "GCONPROD(RESVFRAC): reservoir volume fraction is not supported and should be defaulted (1*) – will STOP"}}, // RESERVOIR_VOLUME_BALANCE
-               {16,{false, allow_values<double> {}, "GCONPROD(WGASRATE): wet gas rate is not used and should be defaulted (1*) – will continue"}}, // WETGAS_TARGET
-               {17,{false, allow_values<double> {}, "GCONPROD(CALRATE): calorific rate is not used and should be defaulted (1*) – will continue"}}, // CALORIFIC_TARGET
-               {18,{false, allow_values<double> {}, "GCONPROD(GASFRAC): gas production fraction is not used and should be defaulted (1*) – will continue"}}, // SURFACE_GAS_FRACTION
-               {19,{false, allow_values<double> {}, "GCONPROD(WATFRAC): water production fraction is not used and should be defaulted (1*) – will continue"}}, // SURFACE_WAT_FRACTION
-               {20,{false, allow_values<double> {}, "GCONPROD(COMBRATE): linearly combined rate is not used and should be defaulted (1*) – will continue"}}, // LINEAR_COMBINED_TARGET
+               {15,{true, allow_values<double> {}, "GCONPROD(RESVFRAC): reservoir volume fraction is not supported and should be defaulted (1*)"}}, // RESERVOIR_VOLUME_BALANCE
+               {16,{false, allow_values<double> {}, "GCONPROD(WGASRATE): wet gas rate is not used and should be defaulted (1*)"}}, // WETGAS_TARGET
+               {17,{false, allow_values<double> {}, "GCONPROD(CALRATE): calorific rate is not used and should be defaulted (1*)"}}, // CALORIFIC_TARGET
+               {18,{false, allow_values<double> {}, "GCONPROD(GASFRAC): gas production fraction is not used and should be defaulted (1*)"}}, // SURFACE_GAS_FRACTION
+               {19,{false, allow_values<double> {}, "GCONPROD(WATFRAC): water production fraction is not used and should be defaulted (1*)"}}, // SURFACE_WAT_FRACTION
+               {20,{true, allow_values<double> {}, "GCONPROD(COMBRATE): linearly combined rate is not used and should be defaulted (1*)"}}, // LINEAR_COMBINED_TARGET
             },
          },
          {
@@ -578,38 +587,38 @@ partiallySupported()
          {
             "MULTFLT",
             {
-               {3,{false, allow_values<double> {}, "MULTFLT(FLT-DIF): the diffusivity multiplier option is not supported – will continue"}}, // NOT_DEFINED
+               {3,{true, allow_values<double> {}, "MULTFLT(FLT-DIF): the diffusivity multiplier option is not supported"}}, // NOT_DEFINED
             },
          },
          {
             "NETBALAN",
             {
-               {1,{true, [](const double value) { return value <= 0.0; }, "NETBALAN(NSTEP): only negative values or 0 supported – will stop"}}, // TIME_INTERVAL
-               {4,{false, allow_values<double> {0.01}, "NETBALAN(GRPCNV): not supported – will continue"}}, // THP_CONVERGENCE_LIMIT
-               {6,{false, allow_values<double> {1e20}, "NETBALAN(NTRGERR): not supported – will continue"}}, // TARGET_BALANCE_ERROR
-               {7,{false, allow_values<double> {1e20}, "NETBALAN(NMAXERR): not supported – will continue"}}, // MAX_BALANCE_ERROR
-               {8,{false, allow_values<double> {}, "NETBALAN(NTSMIN): not supported – will continue"}}, // MIN_TIME_STEP
+               {1,{true, [](const double value) { return value <= 0.0; }, "NETBALAN(NSTEP): only negative values or 0 supported"}}, // TIME_INTERVAL
+               {4,{false, allow_values<double> {0.01}, "NETBALAN(GRPCNV): not supported"}}, // THP_CONVERGENCE_LIMIT
+               {6,{false, allow_values<double> {1e20}, "NETBALAN(NTRGERR): not supported"}}, // TARGET_BALANCE_ERROR
+               {7,{false, allow_values<double> {1e20}, "NETBALAN(NMAXERR): not supported"}}, // MAX_BALANCE_ERROR
+               {8,{false, allow_values<double> {}, "NETBALAN(NTSMIN): not supported"}}, // MIN_TIME_STEP
             },
          },
          {
             "NNC",
             {
-               {14,{false, allow_values<double> {0}, "NNC(DIFFNNC): not supported – will continue"}}, // DIFFUSIVITY
-               {15,{false, allow_values<double> {0}, "NNC(DISPNNC): not supported – will continue"}}, // SIM_DEPENDENT3
-               {16,{false, allow_values<double> {0}, "NNC(AREANNC): not supported – will continue"}}, // VDFLOW_AREA
-               {17,{false, allow_values<double> {0}, "NNC(PERMNNC): only default value of 0 supported – will continue"}}, // VDFLOW_PERM
+               {14,{true, allow_values<double> {0}, "NNC(DIFFNNC): not supported"}}, // DIFFUSIVITY
+               {15,{true, allow_values<double> {0}, "NNC(DISPNNC): not supported"}}, // SIM_DEPENDENT3
+               {16,{true, allow_values<double> {0}, "NNC(AREANNC): not supported"}}, // VDFLOW_AREA
+               {17,{true, allow_values<double> {0}, "NNC(PERMNNC): not supported"}}, // VDFLOW_PERM
             },
          },
          {
-            "PLYMAX",
+            "PLYMAX",  
             {
-               {2,{false, allow_values<double> {}, "PLYMAX(SALTCON): option is ignored if the BRINE keyword is absent – will continue"}}, // MAX_SALT_CONCENTRATION
+               {2,{false, allow_values<double> {}, "PLYMAX(SALTCON): option is ignored since BRINE and POLYMER combination is not implemented in OPM Flow"}}, // MAX_SALT_CONCENTRATION
             },
          },
          {
             "ROCKCOMP",
             {
-               {4,{false, allow_values<double> {0}, "ROCKCOMP(CARKZEXP): transmissibility dependent on porosity model is not supported"}}, // CARKZEXP
+               {5,{false, allow_values<double> {0}, "ROCKCOMP(CARKZEXP): transmissibility dependent on porosity model is not supported"}}, // CARKZEXP
             },
          },
          {
@@ -621,60 +630,59 @@ partiallySupported()
          {
             "VISCREF",
             {
-               {3,{false, allow_values<double> {}, "VISCREF(API): API tracking option is not supported - value ignored"}}, // API_GRAVITY
+               {3,{true, allow_values<double> {}, "VISCREF(API): API tracking option is not supported"}}, // API_GRAVITY
             },
          },
          {
             "WCONHIST",
             {
-               {11,{false, [](double x) { return x == 0; }, "WCONHIST(WGRA): wet gas rate is not supported and is ignored – will continue"}}, // WGASRAT
-               {12,{false, [](double x) { return x == 0; }, "WCONHIST(NGL): natural gas rate is not supported and is ignored – will continue"}}, // NGLRAT
+               {11,{false, [](double x) { return x == 0; }, "WCONHIST(WGRA): wet gas rate is not supported use default"}}, // WGASRAT
+               {12,{false, [](double x) { return x == 0; }, "WCONHIST(NGL): natural gas rate is not supported use default"}}, // NGLRAT
             },
          },
          {
             "WCONINJE",
             {
-               {10,{false, [](double x) { return x == 0; }, "WCONINJE(RSRVINJ): is not supported and is ignored – will continue"}}, // VAPOIL_C
-               {11,{false, [](double x) { return x == 0; }, "WCONINJE(RSSTEAM): is not supported and is ignored – will continue"}}, // GAS_STEAM_RATIO
-               {12,{false, [](double x) { return x == 0; }, "WCONINJE(OILFRAC): is not supported and is ignored – will continue"}}, // SURFACE_OIL_FRACTION
-               {13,{false, [](double x) { return x == 0; }, "WCONINJE(WATFRAC): is not supported and is ignored – will continue"}}, // SURFACE_WATER_FRACTION
-               {14,{false, [](double x) { return x == 0; }, "WCONINJE(GASFRAC): is not supported and is ignored – will continue"}}, // SURFACE_GAS_FRACTION
-               {15,{false, [](double x) { return x == 0; }, "WCONINJE(OILSTEAM): is not supported and is ignored – will continue"}}, // OIL_STEAM_RATIO
+               {11,{true, [](double x) { return x == 0; }, "WCONINJE(RSSTEAM): is not supported and is ignored"}}, // GAS_STEAM_RATIO
+               {12,{true, [](double x) { return x == 0; }, "WCONINJE(OILFRAC): is not supported and is ignored"}}, // SURFACE_OIL_FRACTION
+               {13,{true, [](double x) { return x == 0; }, "WCONINJE(WATFRAC): is not supported and is ignored"}}, // SURFACE_WATER_FRACTION
+               {14,{true, [](double x) { return x == 0; }, "WCONINJE(GASFRAC): is not supported and is ignored"}}, // SURFACE_GAS_FRACTION
+               {15,{true, [](double x) { return x == 0; }, "WCONINJE(OILSTEAM): is not supported and is ignored"}}, // OIL_STEAM_RATIO
             },
          },
          {
             "WCONINJH",
             {
-               {8,{false, [](double x) { return x == 0; }, "WCONINJH(RSRVINJ): is not supported and is ignored – will continue"}}, // VAPOIL_C
-               {9,{false, [](double x) { return x == 0; }, "WCONINJH(OILFRAC): is not supported and is ignored – will continue"}}, // SURFACE_OIL_FRACTION
-               {10,{false, [](double x) { return x == 0; }, "WCONINJH(WATFRAC): is not supported and is ignored – will continue"}}, // SURFACE_WATER_FRACTION
-               {11,{false, [](double x) { return x == 0; }, "WCONINJH(GASFRAC): is not supported and is ignored – will continue"}}, // SURFACE_GAS_FRACTION
+               {8,{true, [](double x) { return x == 0; }, "WCONINJH(RSRVINJ): is not supported and is ignored"}}, // VAPOIL_C
+               {9,{true, [](double x) { return x == 0; }, "WCONINJH(OILFRAC): is not supported and is ignored"}}, // SURFACE_OIL_FRACTION
+               {10,{true, [](double x) { return x == 0; }, "WCONINJH(WATFRAC): is not supported and is ignored"}}, // SURFACE_WATER_FRACTION
+               {11,{true, [](double x) { return x == 0; }, "WCONINJH(GASFRAC): is not supported and is ignored"}}, // SURFACE_GAS_FRACTION
             },
          },
          {
             "WCONPROD",
             {
-               {13,{false, allow_values<double> {}, "WCONPROD(WGASRATE): wet gas rate is not used and should be defaulted (1*) – will continue"}}, // E300_ITEM13
-               {14,{false, allow_values<double> {}, "WCONPROD(MOLARATE): molar rate not used and should be defaulted (1*) – will continue"}}, // E300_ITEM14
-               {15,{false, allow_values<double> {}, "WCONPROD(STEAMRAT): steam rate is not used and should be defaulted (1*) – will continue"}}, // E300_ITEM15
-               {16,{false, allow_values<double> {}, "WCONPROD(DELTAP): pressure offset not used and should be defaulted (1*) – will continue"}}, // E300_ITEM16
-               {17,{false, allow_values<double> {}, "WCONPROD(DELTAT): temperature offset not used and should be defaulted (1*) – will continue"}}, // E300_ITEM17
-               {18,{false, allow_values<double> {}, "WCONPROD(CALRATE): calorific rate not used and should be defaulted (1*) – will continue"}}, // E300_ITEM18
-               {19,{false, allow_values<double> {}, "WCONPROD(COMBPROC): linearly combined rate not used and should be defaulted (1*) – will continue"}}, // E300_ITEM19
-               {20,{false, allow_values<double> {}, "WCONPROD(NGL): natural gas liquid rate  is not used and should be defaulted (1*) – will continue"}}, // E300_ITEM20
+               {13,{false, allow_values<double> {}, "WCONPROD(WGASRATE): wet gas rate is not used and should be defaulted (1*)"}}, // E300_ITEM13
+               {14,{false, allow_values<double> {}, "WCONPROD(MOLARATE): molar rate not used and should be defaulted (1*)"}}, // E300_ITEM14
+               {15,{false, allow_values<double> {}, "WCONPROD(STEAMRAT): steam rate is not used and should be defaulted (1*)"}}, // E300_ITEM15
+               {16,{false, allow_values<double> {}, "WCONPROD(DELTAP): pressure offset not used and should be defaulted (1*)"}}, // E300_ITEM16
+               {17,{false, allow_values<double> {}, "WCONPROD(DELTAT): temperature offset not used and should be defaulted (1*)"}}, // E300_ITEM17
+               {18,{false, allow_values<double> {}, "WCONPROD(CALRATE): calorific rate not used and should be defaulted (1*)"}}, // E300_ITEM18
+               {19,{true, allow_values<double> {}, "WCONPROD(COMBPROC): linearly combined rate not used and should be defaulted (1*)"}}, // E300_ITEM19
+               {20,{false, allow_values<double> {}, "WCONPROD(NGL): natural gas liquid rate  is not used and should be defaulted (1*)"}}, // E300_ITEM20
             },
          },
          {
             "WINJTEMP",
             {
-               {2,{false, allow_values<double> {1}, "WINJTEMP(STEAMQAL): steam injection is not supported – will continue"}}, // STEAM_QUALITY
-               {5,{false, allow_values<double> {0}, "WINJTEMP(ENTHALPY): enthalpy of injected fluid is not supported – will continue"}}, // ENTHALPY
+               {2,{true, allow_values<double> {1}, "WINJTEMP(STEAMQAL): steam injection is not supported, this item should be defaulted"}}, // STEAM_QUALITY
+               {5,{true, allow_values<double> {0}, "WINJTEMP(ENTHALPY): enthalpy of injected fluid is not supported"}}, // ENTHALPY
             },
          },
          {
             "WLIFTOPT",
             {
-               {6,{false, allow_values<double> {0}, "WLIFTOPT(OPTGAS): incremental gas weighting not supported – will continue"}}, // DELTA_GAS_RATE_WEIGHT_FACTOR
+               {6,{true, allow_values<double> {0}, "WLIFTOPT(OPTGAS): incremental gas weighting not supported"}}, // DELTA_GAS_RATE_WEIGHT_FACTOR
             },
          },
    };
