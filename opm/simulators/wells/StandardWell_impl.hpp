@@ -19,9 +19,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <opm/common/utility/numeric/RootFinders.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
-#include <opm/simulators/linalg/SmallDenseMatrixUtils.hpp>
 #include <opm/simulators/wells/VFPHelpers.hpp>
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 #include <opm/simulators/wells/WellConvergence.hpp>
