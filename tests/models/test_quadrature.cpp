@@ -123,11 +123,7 @@ void writeTetrahedronSubControlVolumes([[maybe_unused]] const Grid& grid)
     using Stencil = Opm::VcfvStencil<Scalar, GridView>;
     using Mapper = typename Stencil :: Mapper;
 
-#if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
     Mapper mapper(gridView, Dune::mcmgVertexLayout());
-#else
-    Mapper mapper(gridView);
-#endif
     Stencil stencil(gridView, mapper);
 
     auto eIt = gridView.template begin<0>();
@@ -207,13 +203,8 @@ void writeCubeSubControlVolumes([[maybe_unused]] const Grid& grid)
     GridFactory2 gf2;
     const auto &gridView = grid.leafView();
 
-#if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
     using VertexMapper = Dune::MultipleCodimMultipleGeomTypeMapper<GridView>;
     VertexMapper vertexMapper(gridView, Dune::mcmgVertexLayout());
-#else
-    using VertexMapper = Dune::MultipleCodimMultipleGeomTypeMapper<GridView, Dune::MCMGVertexLayout>;
-    VertexMapper vertexMapper(gridView);
-#endif
     Stencil stencil(gridView, vertexMapper);
     auto eIt = gridView.template begin<0>();
     const auto &eEndIt = gridView.template end<0>();
@@ -309,11 +300,7 @@ void testQuadrature()
     using Stencil = Opm::VcfvStencil<Scalar, GridView>;
     using Mapper = typename Stencil :: Mapper;
 
-#if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
     Mapper mapper(gridView, Dune::mcmgVertexLayout());
-#else
-    Mapper mapper(gridView);
-#endif
     Stencil stencil(gridView, mapper);
     for (; eIt != eEndIt; ++eIt) {
         const auto &elemGeom = eIt->geometry();
