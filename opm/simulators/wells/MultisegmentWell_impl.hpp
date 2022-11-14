@@ -814,14 +814,18 @@ namespace Opm
                     diag_ell -= matel;
                 }
             }
-        
+
+#define EXTRA_DEBUG_MSW 0
+#if EXTRA_DEBUG_MSW            
             if(not(diag_ell > 0.0)){
                 std::stringstream msg;
                 msg << "Diagonal element for cprw on "
                           << this->name()
                           << " is " << diag_ell;
-                OpmLog::debug(msg.str());
+                OpmLog::warning(msg.str());
             }
+#endif
+#undef EXTRA_DEBUG_MSW            
             jacobian[welldof_ind][welldof_ind] = diag_ell;
         }else{
             jacobian[welldof_ind][welldof_ind] = 1.0; // maybe we could have used diag_ell if calculated
@@ -1586,6 +1590,7 @@ namespace Opm
                 sstr << " " << measure_history[i] << " \n";
             }
 #endif
+#undef EXTRA_DEBUG_MSW
             deferred_logger.debug(sstr.str());
         }
 
