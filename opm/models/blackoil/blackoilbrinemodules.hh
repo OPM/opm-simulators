@@ -344,6 +344,14 @@ public:
         return params_.saltsolTable_[pvtnumRegionIdx];
     }
 
+    static const Scalar saltdenTable(const ElementContext& elemCtx,
+                                                  unsigned scvIdx,
+                                                  unsigned timeIdx)
+    {
+        unsigned pvtnumRegionIdx = elemCtx.problem().pvtRegionIndex(elemCtx, scvIdx, timeIdx);
+        return params_.saltdenTable_[pvtnumRegionIdx];
+    }
+
     static bool hasBDensityTables()
     {
         return !params_.bdensityTable_.empty();
@@ -416,6 +424,9 @@ public:
         if constexpr (enableSaltPrecipitation) {
             const auto& saltsolTable = BrineModule::saltsolTable(elemCtx, dofIdx, timeIdx);
             saltSolubility_ = saltsolTable;
+
+            const auto& saltdenTable = BrineModule::saltdenTable(elemCtx, dofIdx, timeIdx);
+            saltDensity_ = saltdenTable;
 
             if (priVars.primaryVarsMeaningBrine() == PrimaryVariables::Sp) {
                 saltSaturation_ = priVars.makeEvaluation(saltConcentrationIdx, timeIdx);
