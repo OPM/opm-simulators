@@ -1896,14 +1896,34 @@ equilibrateHorizontal(const CellRange&  cells,
     });
 }
 
+using MatLaw = EclMaterialLawManager<ThreePhaseMaterialTraits<double,0,1,2>>;
+#if HAVE_DUNE_ALUGRID
+#if HAVE_MPI
+using ALUGridComm = Dune::ALUGridMPIComm;
+#else
+using ALUGridComm = Dune::ALUGridNoComm;
+#endif //HAVE_MPI
+using ALUGrid3CN = Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming, ALUGridComm>;
+#endif //HAVE_DUNE_ALUGRID
+
 #if HAVE_DUNE_FEM
 using GridView = Dune::Fem::GridPart2GridViewImpl<
                                      Dune::Fem::AdaptiveLeafGridPart<
                                          Dune::CpGrid,
                                          Dune::PartitionIteratorType(4),
                                          false>>;
+#if HAVE_DUNE_ALUGRID
+using ALUGridView = Dune::Fem::GridPart2GridViewImpl<
+                                     Dune::Fem::AdaptiveLeafGridPart<
+                                         ALUGrid3CN,
+                                         Dune::PartitionIteratorType(4),
+                                         false>>;
+#endif //HAVE_DUNE_ALUGRID
 #else
 using GridView = Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>;
+#if HAVE_DUNE_ALUGRID
+using ALUGridView = Dune::GridView<Dune::ALU3dLeafGridViewTraits<const ALUGrid3CN, Dune::PartitionIteratorType(4)>>;
+#endif //HAVE_DUNE_ALUGRID
 #endif
 
 using Mapper = Dune::MultipleCodimMultipleGeomTypeMapper<GridView>;
@@ -1913,7 +1933,6 @@ template class InitialStateComputer<BlackOilFluidSystem<double>,
                                     Mapper,
                                     Dune::CartesianIndexMapper<Dune::CpGrid>>;
 
-using MatLaw = EclMaterialLawManager<ThreePhaseMaterialTraits<double,0,1,2>>;
 template InitialStateComputer<BlackOilFluidSystem<double>,
                               Dune::CpGrid,
                               GridView,
@@ -1925,22 +1944,14 @@ template InitialStateComputer<BlackOilFluidSystem<double>,
                          const GridView&,
                          const Dune::CartesianIndexMapper<Dune::CpGrid>&,
                          const double,
-                         const bool);                                    
+                         const bool);
 #if HAVE_DUNE_ALUGRID
-#if HAVE_MPI
-using ALUGridComm = Dune::ALUGridMPIComm;
-#else
-using ALUGridComm = Dune::ALUGridNoComm;
-#endif //HAVE_MPI
-using ALUGrid3CN = Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming, ALUGridComm>;
-using ALUGridView = Dune::GridView<Dune::ALU3dLeafGridViewTraits<const ALUGrid3CN, Dune::PartitionIteratorType(4)>>;
 using ALUGridMapper = Dune::MultipleCodimMultipleGeomTypeMapper<ALUGridView>;
 template class InitialStateComputer<BlackOilFluidSystem<double>,
                                     ALUGrid3CN,
                                     ALUGridView,
                                     ALUGridMapper,
                                     Dune::CartesianIndexMapper<ALUGrid3CN>>;
-
 template InitialStateComputer<BlackOilFluidSystem<double>,
                               ALUGrid3CN,
                               ALUGridView,
@@ -1954,7 +1965,6 @@ template InitialStateComputer<BlackOilFluidSystem<double>,
                          const double,
                          const bool);
 #endif //HAVE_DUNE_ALUGRID
-
 
 } // namespace DeckDependent
 
