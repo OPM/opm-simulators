@@ -172,7 +172,7 @@ protected:
               double oil_rate_, double gas_rate_, double water_rate_, double alq_,
               double min_eco_grad_,
               double oil_target_, double gas_target_, double water_target_, double liquid_target_,
-              std::optional<double> max_glift_) :
+              std::optional<double> max_glift_, std::optional<double> max_total_gas_) :
             parent{parent_},
             group{group_},
             oil_rate{oil_rate_},
@@ -185,6 +185,7 @@ protected:
             water_target(water_target_),
             liquid_target{liquid_target_},
             max_glift{max_glift_},
+            max_total_gas{max_total_gas_},
             it{0}
         {}
         GasLiftStage2 &parent;
@@ -199,17 +200,19 @@ protected:
         const double water_target;
         const double liquid_target;
         std::optional<double> max_glift;
+        std::optional<double> max_total_gas;
         int it;
 
         void addOrRemoveALQincrement(
             GradMap &grad_map, const std::string& well_name, bool add);
-        bool checkALQlimit();
+        bool checkALQlimit(double delta_alq, double delta_gas);
         bool checkEcoGradient(const std::string& well_name, double eco_grad);
-        bool checkGasTarget();
-        bool checkLiquidTarget(double eco_grad);
-        bool checkOilTarget(double eco_grad);
-        bool checkWaterTarget();
-        void updateRates(const std::string& name);
+        bool checkGasTarget(double delta_gas);
+        bool checkLiquidTarget(double delta_liquid);
+        bool checkOilTarget(double delta_oil);
+        bool checkWaterTarget(double delta_water);
+        std::array<double, 4> computeDelta(const std::string& name);
+        void updateRates(const std::array<double, 4>& delta);
     };
 };
 
