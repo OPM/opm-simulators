@@ -499,23 +499,25 @@ opm_add_test(flow_distribute_z
   ${FLOW_TGTS}
   $<TARGET_OBJECTS:moduleVersion>
   )
-if (NOT BUILD_FLOW_ALU_GRID)
-  set(FLOW_ALUGRID_ONLY_DEFAULT_ENABLE_IF "FALSE")
-else()
-  set(FLOW_ALUGRID_ONLY_DEFAULT_ENABLE_IF "TRUE")
-endif()
 
-# the production oriented general-purpose ECL simulator
-opm_add_test(flow_alugrid
-  ONLY_COMPILE
-  ALWAYS_ENABLE
-  DEFAULT_ENABLE_IF ${FLOW_ALUGRID_ONLY_DEFAULT_ENABLE_IF}
-  DEPENDS opmsimulators
-  LIBRARIES opmsimulators
-  SOURCES
-  flow/flow_blackoil_alugrid.cpp
-  $<TARGET_OBJECTS:moduleVersion>)
-target_compile_definitions(flow_alugrid PRIVATE USE_ALUGRID)
+if(dune-alugrid_FOUND)
+  if (NOT BUILD_FLOW_ALU_GRID)
+    set(FLOW_ALUGRID_ONLY_DEFAULT_ENABLE_IF "FALSE")
+  else()
+    set(FLOW_ALUGRID_ONLY_DEFAULT_ENABLE_IF "TRUE")
+  endif()
+
+  opm_add_test(flow_alugrid
+    ONLY_COMPILE
+    ALWAYS_ENABLE
+    DEFAULT_ENABLE_IF ${FLOW_ALUGRID_ONLY_DEFAULT_ENABLE_IF}
+    DEPENDS opmsimulators
+    LIBRARIES opmsimulators
+    SOURCES
+    flow/flow_blackoil_alugrid.cpp
+    $<TARGET_OBJECTS:moduleVersion>)
+  target_compile_definitions(flow_alugrid PRIVATE USE_ALUGRID)
+endif()
 
 if (BUILD_FLOW)
   install(TARGETS flow DESTINATION bin)

@@ -30,17 +30,6 @@
 
 #if USE_ALUGRID
 #define DISABLE_ALUGRID_SFC_ORDERING 1
-#if !HAVE_DUNE_ALUGRID
-#warning "ALUGrid was indicated to be used for the ECL black oil simulator, but this "
-#warning "requires the presence of dune-alugrid >= 2.4. Falling back to Dune::CpGrid"
-#undef USE_ALUGRID
-#define USE_ALUGRID 0
-#endif
-#else
-#define USE_ALUGRID 0
-#endif
-
-#if USE_ALUGRID
 #include "eclalugridvanguard.hh"
 #elif USE_POLYHEDRALGRID
 #include "eclpolyhedralgridvanguard.hh"
@@ -888,15 +877,11 @@ public:
         
         // Re-ordering in case of ALUGrid
         std::function<unsigned int(unsigned int)> gridToEquilGrid;
-        #ifdef HAVE_DUNE_ALUGRID
-        using Grid = GetPropType<TypeTag, Properties::Grid>;
-        typename std::is_same<Grid, Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming>>::type isAlugrid;
-        if constexpr (isAlugrid) {
-            gridToEquilGrid = [&simulator](unsigned int i) {
-                return simulator.vanguard().gridIdxToEquilGridIdx(i);
-            };
-        }
-        #endif // HAVE_DUNE_ALUGRID
+        #if USE_ALUGRID
+        gridToEquilGrid = [&simulator](unsigned int i) {
+            return simulator.vanguard().gridIdxToEquilGridIdx(i);
+        };
+        #endif // USE_ALUGRID
         transmissibilities_.finishInit(gridToEquilGrid);
 
         const auto& initconfig = eclState.getInitConfig();
@@ -973,13 +958,11 @@ public:
 
             // Re-ordering in case of ALUGrid
             std::function<unsigned int(unsigned int)> equilGridToGrid;
-            #ifdef HAVE_DUNE_ALUGRID
-            if (isAlugrid) {
-              equilGridToGrid = [&simulator](unsigned int i) {
-                  return simulator.vanguard().gridEquilIdxToGridIdx(i);
-              };
-            }
-            #endif // HAVE_DUNE_ALUGRID
+            #if USE_ALUGRID
+            equilGridToGrid = [&simulator](unsigned int i) {
+                return simulator.vanguard().gridEquilIdxToGridIdx(i);
+            };
+            #endif // USE_ALUGRID
             eclWriter_->writeInit(equilGridToGrid);
         }
 
@@ -1068,16 +1051,11 @@ public:
 
             // Re-ordering in case of ALUGrid
             std::function<unsigned int(unsigned int)> equilGridToGrid;
-            #ifdef HAVE_DUNE_ALUGRID
-            using Grid = GetPropType<TypeTag, Properties::Grid>;
-            typename std::is_same<Grid, Dune::ALUGrid<3, 3, Dune::cube,
-            Dune::nonconforming>>::type isAlugrid;
-            if constexpr (isAlugrid) {
-                  equilGridToGrid = [&simulator](unsigned int i) {
-                      return simulator.vanguard().gridEquilIdxToGridIdx(i);
-                  };
-            }
-            #endif // HAVE_DUNE_ALUGRID
+            #if USE_ALUGRID
+            equilGridToGrid = [&simulator](unsigned int i) {
+                  return simulator.vanguard().gridEquilIdxToGridIdx(i);
+            };
+            #endif // USE_ALUGRID
 
             // re-compute all quantities which may possibly be affected.
             transmissibilities_.update(true, equilGridToGrid);
@@ -1219,15 +1197,11 @@ public:
 
         // Re-ordering in case of Alugrid
         std::function<unsigned int(unsigned int)> gridToEquilGrid;
-        #ifdef HAVE_DUNE_ALUGRID
-        using Grid = GetPropType<TypeTag, Properties::Grid>;
-        typename std::is_same<Grid, Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming>>::type isAlugrid;
-        if constexpr (isAlugrid) {
-            gridToEquilGrid = [&simulator](unsigned int i) {
-                return simulator.vanguard().gridIdxToEquilGridIdx(i);
-            };
-        }
-        #endif // HAVE_DUNE_ALUGRID
+        #if USE_ALUGRID
+        gridToEquilGrid = [&simulator](unsigned int i) {
+            return simulator.vanguard().gridIdxToEquilGridIdx(i);
+        };
+        #endif // USE_ALUGRID
 
         std::function<void(bool)> transUp =
             [this,gridToEquilGrid](bool global) {

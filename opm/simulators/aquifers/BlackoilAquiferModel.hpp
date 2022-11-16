@@ -40,7 +40,7 @@
 #ifdef USE_POLYHEDRALGRID
 #include <opm/grid/polyhedralgrid.hh>
 #endif
-#if HAVE_DUNE_ALUGRID
+#if USE_ALUGRID
 #include <dune/alugrid/grid.hh>
 #endif
 
@@ -71,7 +71,7 @@ class SupportsFaceTag<Dune::PolyhedralGrid<3, 3>>
 {};
 #endif
 
-#if HAVE_DUNE_ALUGRID
+#if USE_ALUGRID
 template<>
 class SupportsFaceTag<Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming>>
     : public std::bool_constant<true>

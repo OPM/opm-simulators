@@ -32,6 +32,8 @@
 #include "alucartesianindexmapper.hh"
 #include <opm/models/common/multiphasebaseproperties.hh>
 
+#include <opm/common/OpmLog/OpmLog.hpp>
+
 #include <dune/alugrid/grid.hh>
 #include <dune/alugrid/common/fromtogridfactory.hh>
 #include <dune/alugrid/dgf.hh>
@@ -286,13 +288,17 @@ protected:
         // view; on rank 0 we have undistributed data for the entire grid, on
         // the other ranks the EclipseState is empty.
         if (mpiRank == 0) {
-          // Processing grid
-          input_grid = &this->eclState().getInputGrid();
-          global_porv = this->eclState().fieldProps().porv(true);
-          OpmLog::info("\nProcessing grid");
-          }
+            // Processing grid
+            input_grid = &this->eclState().getInputGrid();
+            global_porv = this->eclState().fieldProps().porv(true);
+            OpmLog::info("\nProcessing grid");
+        }
 
+#if HAVE_MPI
         this->equilGrid_ = std::make_unique<Dune::CpGrid>(EclGenericVanguard::comm());
+#else
+        this->equilGrid_ = std::make_unique<Dune::CpGrid>();
+#endif
         // Note: removed_cells is guaranteed to be empty on ranks other than 0.
         auto removed_cells =
             this->equilGrid_->processEclipseFormat(input_grid,

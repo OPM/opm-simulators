@@ -33,12 +33,6 @@
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
 
-#if HAVE_DUNE_ALUGRID
-#include <dune/alugrid/grid.hh>
-#include <dune/alugrid/3d/gridview.hh>
-#include "alucartesianindexmapper.hh"
-#endif // HAVE_DUNE_ALUGRID
-
 #include <array>
 #include <map>
 #include <tuple>

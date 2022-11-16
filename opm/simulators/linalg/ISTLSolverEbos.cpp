@@ -37,6 +37,11 @@
 #include <iostream>
 #endif
 
+#if HAVE_DUNE_ALUGRID
+#include <dune/alugrid/grid.hh>
+#include <ebos/alucartesianindexmapper.hh>
+#endif // HAVE_DUNE_ALUGRID
+
 namespace Opm {
 namespace detail {
 
@@ -346,15 +351,32 @@ using CommunicationType = Dune::CollectiveCommunication<int>;
     template struct FlexibleSolverInfo<BM<Dim>,BV<Dim>,CommunicationType>;
 
 #if HAVE_CUDA || HAVE_OPENCL || HAVE_FPGA || HAVE_AMGCL || HAVE_ROCALUTION
+
+#define INSTANCE_GRID(Dim, Grid) \
+    template void BdaSolverInfo<BM<Dim>,BV<Dim>>:: \
+    prepare(const Grid&, \
+            const Dune::CartesianIndexMapper<Grid>&, \
+            const std::vector<Well>&, \
+            const std::vector<int>&, \
+            const size_t, const bool);
+
+#if HAVE_DUNE_ALUGRID
+#if HAVE_MPI
+    using ALUGrid3CN = Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming, Dune::ALUGridMPIComm>;
+#else
+    using ALUGrid3CN = Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming, Dune::ALUGridNoComm>;
+#endif //HAVE_MPI
 #define INSTANCE(Dim) \
     template struct BdaSolverInfo<BM<Dim>,BV<Dim>>; \
-    template void BdaSolverInfo<BM<Dim>,BV<Dim>>:: \
-    prepare<Dune::CpGrid>(const Dune::CpGrid&, \
-               const Dune::CartesianIndexMapper<Dune::CpGrid>&, \
-               const std::vector<Well>&, \
-               const std::vector<int>&, \
-               const size_t, const bool); \
+    INSTANCE_GRID(Dim,Dune::CpGrid) \
+    INSTANCE_GRID(Dim,ALUGrid3CN) \
     INSTANCE_FLEX(Dim)
+#else
+#define INSTANCE(Dim) \
+    template struct BdaSolverInfo<BM<Dim>,BV<Dim>>; \
+    INSTANCE_GRID(Dim,Dune::CpGrid) \
+    INSTANCE_FLEX(Dim)
+#endif
 #else
 #define INSTANCE(Dim) \
     INSTANCE_FLEX(Dim)
