@@ -34,6 +34,13 @@
 
 #if HAVE_DUNE_ALUGRID
 #include <dune/alugrid/grid.hh>
+#if HAVE_MPI
+template<int dim, Dune::ALUGridElementType elType>
+using AluGrid = Dune::ALUGrid<dim, dim, elType, Dune::nonconforming, Dune::ALUGridMPIComm>;
+#else
+template<int dim, Dune::ALUGridElementType elType>
+using AluGrid = Dune::ALUGrid<dim, dim, elType, Dune::nonconforming, Dune::ALUGridNoComm>;
+#endif //HAVE_MPI
 #endif
 
 #include <dune/common/version.hh>
@@ -107,7 +114,7 @@ void writeTetrahedronSubControlVolumes([[maybe_unused]] const Grid& grid)
 #if HAVE_DUNE_ALUGRID
     using GridView = typename Grid::LeafGridView;
 
-    using Grid2 = Dune::ALUGrid<dim, dim, Dune::cube, Dune::nonconforming>;
+    using Grid2 = AluGrid<dim, Dune::cube>;
     using GridView2 = typename Grid2::LeafGridView;
     using GridFactory2 = Dune::GridFactory<Grid2>;
 
@@ -116,11 +123,7 @@ void writeTetrahedronSubControlVolumes([[maybe_unused]] const Grid& grid)
     using Stencil = Opm::VcfvStencil<Scalar, GridView>;
     using Mapper = typename Stencil :: Mapper;
 
-#if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
     Mapper mapper(gridView, Dune::mcmgVertexLayout());
-#else
-    Mapper mapper(gridView);
-#endif
     Stencil stencil(gridView, mapper);
 
     auto eIt = gridView.template begin<0>();
@@ -156,9 +159,9 @@ void writeTetrahedronSubControlVolumes([[maybe_unused]] const Grid& grid)
         }
     }
 
-    const auto &grid2 = *gf2.createGrid();
+    const auto grid2 = gf2.createGrid();
     using VtkWriter = Dune::VTKWriter<GridView2>;
-    VtkWriter writer(grid2.leafView(), Dune::VTK::conforming);
+    VtkWriter writer(grid2->leafView(), Dune::VTK::conforming);
     writer.write("tetrahedron-scvs", Dune::VTK::ascii);
 #endif // HAVE_DUNE_ALUGRID
 }
@@ -166,7 +169,7 @@ void writeTetrahedronSubControlVolumes([[maybe_unused]] const Grid& grid)
 void testTetrahedron()
 {
 #if HAVE_DUNE_ALUGRID
-    using Grid = Dune::ALUGrid<dim, dim, Dune::simplex, Dune::nonconforming>;
+    using Grid = AluGrid<dim, Dune::simplex>;
     using GridFactory = Dune::GridFactory<Grid>;
     GridFactory gf;
     Scalar corners[][3] = { { 0, 0, 0 }, { 1, 0, 0 }, { 0, 1, 0 }, { 0, 0, 1 } };
@@ -180,10 +183,10 @@ void testTetrahedron()
     std::vector<unsigned int> v = { 0, 1, 2, 3 };
     // in Dune >= 2.6 topologyIds seem to be opaque integers. WTF!?
     gf.insertElement(Dune::GeometryType(/*topologyId=*/0, dim), v);
-    const auto& grid = *gf.createGrid();
+    const auto grid = gf.createGrid();
 
     // write the sub-control volumes to a VTK file.
-    writeTetrahedronSubControlVolumes(grid);
+    writeTetrahedronSubControlVolumes(*grid);
 #endif // HAVE_DUNE_ALUGRID
 }
 
@@ -192,8 +195,7 @@ void writeCubeSubControlVolumes([[maybe_unused]] const Grid& grid)
 {
 #if HAVE_DUNE_ALUGRID
     using GridView = typename Grid::LeafGridView;
-
-    using Grid2 = Dune::ALUGrid<dim, dim, Dune::cube, Dune::nonconforming>;
+    using Grid2 = AluGrid<dim, Dune::cube>;
     using GridView2 = typename Grid2::LeafGridView;
     using GridFactory2 = Dune::GridFactory<Grid2>;
     using Stencil = Opm::VcfvStencil<Scalar, GridView>;
@@ -201,13 +203,8 @@ void writeCubeSubControlVolumes([[maybe_unused]] const Grid& grid)
     GridFactory2 gf2;
     const auto &gridView = grid.leafView();
 
-#if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
     using VertexMapper = Dune::MultipleCodimMultipleGeomTypeMapper<GridView>;
     VertexMapper vertexMapper(gridView, Dune::mcmgVertexLayout());
-#else
-    using VertexMapper = Dune::MultipleCodimMultipleGeomTypeMapper<GridView, Dune::MCMGVertexLayout>;
-    VertexMapper vertexMapper(gridView);
-#endif
     Stencil stencil(gridView, vertexMapper);
     auto eIt = gridView.template begin<0>();
     const auto &eEndIt = gridView.template end<0>();
@@ -242,9 +239,9 @@ void writeCubeSubControlVolumes([[maybe_unused]] const Grid& grid)
         }
     }
 
-    const auto &grid2 = *gf2.createGrid();
+    const auto grid2 = gf2.createGrid();
     using VtkWriter = Dune::VTKWriter<GridView2>;
-    VtkWriter writer(grid2.leafView(), Dune::VTK::conforming);
+    VtkWriter writer(grid2->leafView(), Dune::VTK::conforming);
     writer.write("cube-scvs", Dune::VTK::ascii);
 #endif // HAVE_DUNE_ALUGRID
 }
@@ -252,7 +249,7 @@ void writeCubeSubControlVolumes([[maybe_unused]] const Grid& grid)
 void testCube()
 {
 #if HAVE_DUNE_ALUGRID
-    using Grid = Dune::ALUGrid<dim, dim, Dune::cube, Dune::nonconforming>;
+    using Grid = AluGrid<dim, Dune::cube>;
     using GridFactory = Dune::GridFactory<Grid>;
     GridFactory gf;
     Scalar corners[][3] = { { 0, 0, 0 },
@@ -273,10 +270,10 @@ void testCube()
     std::vector<unsigned int> v = { 0, 1, 2, 3, 4, 5, 6, 7 };
     // in Dune >= 2.6 topologyIds seem to be opaque integers. WTF!?
     gf.insertElement(Dune::GeometryType((1 << dim) - 1, dim), v);
-    const auto& grid = *gf.createGrid();
+    const auto grid = gf.createGrid();
 
     // write the sub-control volumes to a VTK file.
-    writeCubeSubControlVolumes(grid);
+    writeCubeSubControlVolumes(*grid);
 #endif // HAVE_DUNE_ALUGRID
 }
 
@@ -303,11 +300,7 @@ void testQuadrature()
     using Stencil = Opm::VcfvStencil<Scalar, GridView>;
     using Mapper = typename Stencil :: Mapper;
 
-#if DUNE_VERSION_NEWER(DUNE_GRID, 2,6)
     Mapper mapper(gridView, Dune::mcmgVertexLayout());
-#else
-    Mapper mapper(gridView);
-#endif
     Stencil stencil(gridView, mapper);
     for (; eIt != eEndIt; ++eIt) {
         const auto &elemGeom = eIt->geometry();
