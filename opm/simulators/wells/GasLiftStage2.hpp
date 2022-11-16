@@ -79,7 +79,7 @@ protected:
     void addOrRemoveALQincrement_(
         GradMap& grad_map, const std::string& well_name, bool add);
     std::optional<GradInfo> calcIncOrDecGrad_(
-        const std::string name, const GasLiftSingleWell& gs_well, const Group& group, bool increase);
+        const std::string name, const GasLiftSingleWell& gs_well, const std::string& gr_name_dont_limit, bool increase);
     bool checkRateAlreadyLimited_(GasLiftWellState& state, bool increase);
     GradInfo deleteDecGradItem_(const std::string& name);
     GradInfo deleteIncGradItem_(const std::string& name);
@@ -99,7 +99,7 @@ protected:
     void optimizeGroup_(const Group& group);
     void optimizeGroupsRecursive_(const Group& group);
     void recalculateGradientAndUpdateData_(
-        GradPairItr& grad_itr, const Group& group, bool increase,
+        GradPairItr& grad_itr, const std::string& gr_name_dont_limit, bool increase,
         std::vector<GradPair>& grads, std::vector<GradPair>& other_grads);
     void redistributeALQ_(
         std::vector<GasLiftSingleWell *>& wells,  const Group& group,
@@ -205,10 +205,10 @@ protected:
             GradMap &grad_map, const std::string& well_name, bool add);
         bool checkALQlimit();
         bool checkEcoGradient(const std::string& well_name, double eco_grad);
-        bool checkGasTarget(double eco_grad);
+        bool checkGasTarget();
         bool checkLiquidTarget(double eco_grad);
         bool checkOilTarget(double eco_grad);
-        bool checkWaterTarget(double eco_grad);
+        bool checkWaterTarget();
         void updateRates(const std::string& name);
     };
 };

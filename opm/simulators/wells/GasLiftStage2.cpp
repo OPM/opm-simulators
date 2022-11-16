@@ -135,7 +135,7 @@ addOrRemoveALQincrement_(GradMap &grad_map, const std::string& well_name, bool a
 std::optional<GasLiftStage2::GradInfo>
 GasLiftStage2::
 calcIncOrDecGrad_(
-    const std::string well_name, const GasLiftSingleWell &gs_well, const Group& group, bool increase)
+    const std::string well_name, const GasLiftSingleWell &gs_well, const std::string& gr_name_dont_limit, bool increase)
 {
 
     // only applies to wells in the well_state_map (i.e. wells on this rank)
@@ -161,7 +161,7 @@ calcIncOrDecGrad_(
     else {
         auto [oil_rate, gas_rate] = state.getRates();
         auto alq = state.alq();
-        auto grad = gs_well.calcIncOrDecGradient(oil_rate, gas_rate, state.waterRate(), alq, group, increase);
+        auto grad = gs_well.calcIncOrDecGradient(oil_rate, gas_rate, state.waterRate(), alq, gr_name_dont_limit, increase);
         if (grad) {
             const std::string msg = fmt::format(
               "well {} : adding {} gradient = {}",
@@ -441,7 +441,7 @@ optimizeGroupsRecursive_(const Group &group)
 void
 GasLiftStage2::
 recalculateGradientAndUpdateData_(
-    GradPairItr &grad_itr, const Group& group, bool increase,
+    GradPairItr &grad_itr, const std::string& gr_name_dont_limit, bool increase,
 
     //incremental and decremental gradients, if 'grads' are incremental, then
     // 'other_grads' are decremental, or conversely, if 'grads' are decremental, then
@@ -457,7 +457,7 @@ recalculateGradientAndUpdateData_(
     // the grads and other grads are synchronized later
     if(this->stage1_wells_.count(name) > 0) {
         GasLiftSingleWell &gs_well = *(this->stage1_wells_.at(name).get());
-        auto grad = calcIncOrDecGrad_(name, gs_well, group, increase);
+        auto grad = calcIncOrDecGrad_(name, gs_well, gr_name_dont_limit, increase);
         if (grad) {
             grad_itr->second = grad->grad;
             old_grad = updateGrad_(name, *grad, increase);
@@ -627,8 +627,8 @@ removeSurplusALQ_(const Group &group,
         const auto well_name = dec_grad_itr->first;
         auto eco_grad = dec_grad_itr->second;
         bool remove = false;
-        if (state.checkOilTarget(eco_grad) || state.checkGasTarget(eco_grad)
-              || state.checkLiquidTarget(eco_grad) || state.checkWaterTarget(eco_grad) || state.checkALQlimit())
+        if (state.checkOilTarget(eco_grad) || state.checkGasTarget()
+              || state.checkLiquidTarget(eco_grad) || state.checkWaterTarget() || state.checkALQlimit())
         {
             remove = true;
         }
@@ -643,8 +643,12 @@ removeSurplusALQ_(const Group &group,
         if (remove) {
             state.updateRates(well_name);
             state.addOrRemoveALQincrement( this->dec_grads_, well_name, /*add=*/false);
+            // We pass the current group rate in order to avoid limiting the rates
+            // and gaslift based on the current group limits. In other words we want to reduce
+            // the gasslift as much as possible as long as we are able to produce the group
+            // targets
             recalculateGradientAndUpdateData_(
-                        dec_grad_itr, group, /*increase=*/false, dec_grads, inc_grads);
+                        dec_grad_itr, group.name(), /*increase=*/false, dec_grads, inc_grads);
 
             // The dec_grads and inc_grads needs to be syncronized across ranks
             mpiSyncGlobalGradVector_(dec_grads);
@@ -751,12 +755,12 @@ calculateEcoGradients(std::vector<GasLiftSingleWell *> &wells,
     for (auto well_ptr : wells) {
         const auto &gs_well = *well_ptr;  // gs = GasLiftSingleWell
         const auto &name = gs_well.name();
-        auto inc_grad = this->parent.calcIncOrDecGrad_(name, gs_well, group, /*increase=*/true);
+        auto inc_grad = this->parent.calcIncOrDecGrad_(name, gs_well, group.name(), /*increase=*/true);
         if (inc_grad) {
             inc_grads.emplace_back(std::make_pair(name, inc_grad->grad));
             this->parent.saveIncGrad_(name, *inc_grad);
         }
-        auto dec_grad = this->parent.calcIncOrDecGrad_(name, gs_well, group, /*increase=*/false);
+        auto dec_grad = this->parent.calcIncOrDecGrad_(name, gs_well, group.name(), /*increase=*/false);
         if (dec_grad) {
             dec_grads.emplace_back(std::make_pair(name, dec_grad->grad));
             this->parent.saveDecGrad_(name, *dec_grad);
@@ -843,9 +847,9 @@ recalculateGradients(
          GradPairItr &min_dec_grad_itr, GradPairItr &max_inc_grad_itr)
 {
     this->parent.recalculateGradientAndUpdateData_(
-        max_inc_grad_itr, this->group, /*increase=*/true, inc_grads, dec_grads);
+        max_inc_grad_itr, this->group.name(), /*increase=*/true, inc_grads, dec_grads);
     this->parent.recalculateGradientAndUpdateData_(
-        min_dec_grad_itr, this->group, /*increase=*/false, dec_grads, inc_grads);
+        min_dec_grad_itr, this->group.name(), /*increase=*/false, dec_grads, inc_grads);
 
     // The dec_grads and inc_grads needs to be syncronized across ranks
     this->parent.mpiSyncGlobalGradVector_(dec_grads);
@@ -944,10 +948,10 @@ checkEcoGradient(const std::string &well_name, double eco_grad)
 
 bool
 GasLiftStage2::SurplusState::
-checkGasTarget(double eco_grad)
+checkGasTarget()
 {
     if (this->group.has_control(Group::ProductionCMode::GRAT)) {
-        if (this->gas_target < (this->gas_rate - eco_grad)  ) {
+        if (this->gas_target < (this->gas_rate)  ) {
             if (this->parent.debug) {
                 const std::string msg = fmt::format("group: {} : "
                     "gas rate {} is greater than gas target {}", this->group.name(),
@@ -965,6 +969,8 @@ checkLiquidTarget(double eco_grad)
 {
     if (this->group.has_control(Group::ProductionCMode::LRAT)) {
         auto liquid_rate = this->oil_rate + this->water_rate;
+        // the eco_grad is subtracted from the rate to make sure the
+        // group still can produce its target
         if (this->liquid_target < (liquid_rate - eco_grad) ) {
             if (this->parent.debug) {
                 const std::string msg = fmt::format("group: {} : "
@@ -983,6 +989,8 @@ GasLiftStage2::SurplusState::
 checkOilTarget(double eco_grad)
 {
     if (this->group.has_control(Group::ProductionCMode::ORAT)) {
+        // the eco_grad is subtracted from the rate to make sure the
+        // group still can produce its target
         if (this->oil_target < (this->oil_rate - eco_grad)  ) {
             if (this->parent.debug) {
                 const std::string msg = fmt::format("group: {} : "
@@ -998,10 +1006,10 @@ checkOilTarget(double eco_grad)
 
 bool
 GasLiftStage2::SurplusState::
-checkWaterTarget(double eco_grad)
+checkWaterTarget()
 {
     if (this->group.has_control(Group::ProductionCMode::WRAT)) {
-        if (this->water_target < (this->water_rate - eco_grad)  ) {
+        if (this->water_target < (this->water_rate)  ) {
             if (this->parent.debug) {
                 const std::string msg = fmt::format("group: {} : "
                     "water rate {} is greater than oil target {}", this->group.name(),
