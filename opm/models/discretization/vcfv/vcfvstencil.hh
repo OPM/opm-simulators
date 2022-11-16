@@ -1102,7 +1102,7 @@ public:
      */
     Entity entity(unsigned dofIdx) const
     {
-        assert(0 <= dofIdx && dofIdx < numDof());
+        assert(dofIdx < numDof());
         return element_.template subEntity<dim>(static_cast<int>(dofIdx));
     }
 
