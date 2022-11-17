@@ -18,8 +18,7 @@
 */
 
 #include <config.h> // CMake
-#include <cstdlib>
-#include <cstring>
+
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/ErrorMacros.hpp>
 

@@ -21,8 +21,6 @@
 
 #include <opm/simulators/linalg/bda/opencl/openclWellContributions.hpp>
 
-#include <cstdlib>
-#include <cstring>
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/ErrorMacros.hpp>
 

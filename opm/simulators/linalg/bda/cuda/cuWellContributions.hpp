@@ -24,9 +24,6 @@
 
 #include <cuda_runtime.h>
 
-#include <memory>
-#include <vector>
-
 
 namespace Opm
 {

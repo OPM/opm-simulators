@@ -63,8 +63,6 @@ public:
     int nnzs;
 };
 
-void sortRow(int *colIndices, double *data, int left, int right);
-
 } // namespace Accelerator
 } // namespace Opm
 

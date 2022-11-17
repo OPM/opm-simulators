@@ -45,7 +45,6 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.cpp
   opm/simulators/flow/ValidationFunctions.cpp
   opm/simulators/linalg/bda/WellContributions.cpp
-  opm/simulators/linalg/bda/Matrix.cpp
   opm/simulators/linalg/bda/MultisegmentWellContribution.cpp
   opm/simulators/linalg/ExtractParallelGridInformationToISTL.cpp
   opm/simulators/linalg/FlexibleSolver1.cpp

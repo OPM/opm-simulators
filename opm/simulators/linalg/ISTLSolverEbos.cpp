@@ -34,7 +34,6 @@
 #if HAVE_CUDA || HAVE_OPENCL || HAVE_AMGCL || HAVE_ROCALUTION
 #include <opm/simulators/linalg/bda/BdaBridge.hpp>
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
-#include <iostream>
 #endif
 
 #if HAVE_DUNE_ALUGRID
@@ -212,7 +211,6 @@ prepare(const Grid& grid,
                                  useWellConn,
                                  wellConnectionsGraph_,
                                  numJacobiBlocks_);
-      std::cout << "Create block-Jacobi pattern" << std::endl;
       this->blockJacobiAdjacency(grid, cellPartition, nonzeroes);
     }
 }
