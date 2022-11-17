@@ -422,18 +422,16 @@ namespace Opm {
              * \param[out] voidage_rates Reservoir volume flow rates for all
              *    active phases.
              */
-            template <class Rates>
-            void calcReservoirVoidageRates(const int    pvtRegionIdx,
-                                           const double p,
-                                           const double rs,
-                                           const double rv,
-                                           const double T,
-                                           const double saltConcentration,
-                                           const Rates& surface_rates,
-                                           Rates&       voidage_rates) const
+            template <typename SurfaceRates, typename VoidageRates>
+            void calcReservoirVoidageRates(const int           pvtRegionIdx,
+                                           const double        p,
+                                           const double        rs,
+                                           const double        rv,
+                                           const double        T,
+                                           const double        saltConcentration,
+                                           const SurfaceRates& surface_rates,
+                                           VoidageRates&       voidage_rates) const
             {
-                std::fill(voidage_rates.begin(), voidage_rates.end(), 0.0);
-
                 const auto& pu = this->phaseUsage_;
                 const auto  iw = RegionAttributeHelpers::PhasePos::water(pu);
                 const auto  io = RegionAttributeHelpers::PhasePos::oil  (pu);
@@ -441,6 +439,8 @@ namespace Opm {
 
                 const auto [Rs, Rv] = this->
                     dissolvedVaporisedRatio(io, ig, rs, rv, surface_rates);
+
+                std::fill_n(&voidage_rates[0], pu.num_phases, 0.0);
 
                 if (RegionAttributeHelpers::PhaseUsed::water(pu)) {
                     // q[w]_r = q[w]_s / bw
@@ -480,6 +480,17 @@ namespace Opm {
 
                     voidage_rates[ig] /= bg * detR;
                 }
+            }
+
+            template <class Rates>
+            std::pair<double, double>
+            inferDissolvedVaporisedRatio(const double rsMax,
+                                         const double rvMax,
+                                         const Rates& surface_rates) const
+            {
+                const auto io = RegionAttributeHelpers::PhasePos::oil(this->phaseUsage_);
+                const auto ig = RegionAttributeHelpers::PhasePos::gas(this->phaseUsage_);
+                return this->dissolvedVaporisedRatio(io, ig, rsMax, rvMax, surface_rates);
             }
 
             /**

@@ -20,35 +20,53 @@
 #ifndef OPM_SEGMENTSTATE_HEADER_INCLUDED
 #define OPM_SEGMENTSTATE_HEADER_INCLUDED
 
+#include <cstddef>
 #include <vector>
 
 namespace Opm
 {
-
 class WellSegments;
-class WellConnections;
+} // namespace Opm
 
+namespace Opm
+{
 
 class SegmentState
 {
 public:
     SegmentState() = default;
     SegmentState(int num_phases, const WellSegments& segments);
+
     double pressure_drop(std::size_t index) const;
     bool empty() const;
     void scale_pressure(double bhp);
+
     const std::vector<int>& segment_number() const;
     std::size_t size() const;
 
     std::vector<double> rates;
+
+    /// Segment condition volume flow rates through segment (per phase)
+    std::vector<double> phase_resv_rates;
+
+    /// Segment condition flow velocity through segment (per phase)
+    std::vector<double> phase_velocity;
+
+    /// Segment condition holdup fractions through segment (per phase)
+    std::vector<double> phase_holdup;
+
+    /// Segment condition phase viscosities.
+    std::vector<double> phase_viscosity;
+
     std::vector<double> pressure;
     std::vector<double> pressure_drop_friction;
     std::vector<double> pressure_drop_hydrostatic;
     std::vector<double> pressure_drop_accel;
+
 private:
     std::vector<int>    m_segment_number;
 };
 
-}
+} // namepace Opm
 
-#endif
+#endif  // OPM_SEGMENTSTATE_HEADER_INCLUDED
