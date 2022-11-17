@@ -84,7 +84,7 @@ public:
 namespace Opm
 {
 
-#if HAVE_CUDA || HAVE_OPENCL || HAVE_AMGCL || HAVE_ROCALUTION
+#if COMPILE_BDA_BRIDGE
 template<class Matrix, class Vector, int block_size> class BdaBridge;
 class WellContributions;
 #endif
@@ -113,7 +113,7 @@ struct FlexibleSolverInfo
     size_t interiorCellNum_ = 0;
 };
 
-#if HAVE_CUDA || HAVE_OPENCL || HAVE_AMGCL || HAVE_ROCALUTION
+#if COMPILE_BDA_BRIDGE
 template<class Matrix, class Vector>
 struct BdaSolverInfo
 {
@@ -245,7 +245,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                                      EWOMS_PARAM_IS_SET(TypeTag, int, LinearSolverMaxIter),
                                      EWOMS_PARAM_IS_SET(TypeTag, int, CprMaxEllIter));
 
-#if HAVE_CUDA || HAVE_OPENCL || HAVE_AMGCL || HAVE_ROCALUTION
+#if COMPILE_BDA_BRIDGE
             {
                 std::string accelerator_mode = EWOMS_GET_PARAM(TypeTag, std::string, AcceleratorMode);
                 if ((simulator_.vanguard().grid().comm().size() > 1) && (accelerator_mode != "none")) {
@@ -383,7 +383,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             // Solve system.
             Dune::InverseOperatorResult result;
 
-#if HAVE_CUDA || HAVE_OPENCL || HAVE_AMGCL || HAVE_ROCALUTION
+#if COMPILE_BDA_BRIDGE
             std::function<void(WellContributions&)> getContribs =
                 [this](WellContributions& w)
                 {
@@ -555,7 +555,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         Matrix* matrix_;
         Vector *rhs_;
 
-#if HAVE_CUDA || HAVE_OPENCL || HAVE_AMGCL || HAVE_ROCALUTION
+#if COMPILE_BDA_BRIDGE
         std::unique_ptr<detail::BdaSolverInfo<Matrix, Vector>> bdaBridge;
 #endif
 
