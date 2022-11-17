@@ -128,10 +128,6 @@ template<class TypeTag, class MyTypeTag>
 struct OpenclIluParallel {
     using type = UndefinedProperty;
 };
-template<class TypeTag, class MyTypeTag>
-struct FpgaBitstream {
-    using type = UndefinedProperty;
-};
 template<class TypeTag>
 struct LinearSolverReduction<TypeTag, TTag::FlowIstlSolverParams> {
     using type = GetPropType<TypeTag, Scalar>;
@@ -226,10 +222,6 @@ template<class TypeTag>
 struct OpenclIluParallel<TypeTag, TTag::FlowIstlSolverParams> {
     static constexpr bool value = true; // note: false should only be used in debug
 };
-template<class TypeTag>
-struct FpgaBitstream<TypeTag, TTag::FlowIstlSolverParams> {
-    static constexpr auto value = "";
-};
 
 } // namespace Opm::Properties
 
@@ -261,7 +253,6 @@ namespace Opm
         int cpr_reuse_setup_;
         int cpr_reuse_interval_;
         bool opencl_ilu_parallel_;
-        std::string fpga_bitstream_;
 
         template <class TypeTag>
         void init()
@@ -287,7 +278,6 @@ namespace Opm
             bda_device_id_ = EWOMS_GET_PARAM(TypeTag, int, BdaDeviceId);
             opencl_platform_id_ = EWOMS_GET_PARAM(TypeTag, int, OpenclPlatformId);
             opencl_ilu_parallel_ = EWOMS_GET_PARAM(TypeTag, bool, OpenclIluParallel);
-            fpga_bitstream_ = EWOMS_GET_PARAM(TypeTag, std::string, FpgaBitstream);
         }
 
         template <class TypeTag>
@@ -309,11 +299,10 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, int, CprReuseSetup, "Reuse preconditioner setup. Valid options are 0: recreate the preconditioner for every linear solve, 1: recreate once every timestep, 2: recreate if last linear solve took more than 10 iterations, 3: never recreate, 4: recreated every CprReuseInterval");
             EWOMS_REGISTER_PARAM(TypeTag, int, CprReuseInterval, "Reuse preconditioner interval. Used when CprReuseSetup is set to 4, then the preconditioner will be fully recreated instead of reused every N linear solve, where N is this parameter.");
             EWOMS_REGISTER_PARAM(TypeTag, std::string, LinearSolver, "Configuration of solver. Valid options are: ilu0 (default), cpr (an alias for cpr_trueimpes), cpr_quasiimpes, cpr_trueimpes or amg. Alternatively, you can request a configuration to be read from a JSON file by giving the filename here, ending with '.json.'");
-            EWOMS_REGISTER_PARAM(TypeTag, std::string, AcceleratorMode, "Use GPU (cusparseSolver or openclSolver) or FPGA (fpgaSolver) as the linear solver, usage: '--accelerator-mode=[none|cusparse|opencl|fpga|amgcl]'");
+            EWOMS_REGISTER_PARAM(TypeTag, std::string, AcceleratorMode, "Choose a linear solver, usage: '--accelerator-mode=[none|cusparse|opencl|amgcl|rocalution]'");
             EWOMS_REGISTER_PARAM(TypeTag, int, BdaDeviceId, "Choose device ID for cusparseSolver or openclSolver, use 'nvidia-smi' or 'clinfo' to determine valid IDs");
             EWOMS_REGISTER_PARAM(TypeTag, int, OpenclPlatformId, "Choose platform ID for openclSolver, use 'clinfo' to determine valid platform IDs");
             EWOMS_REGISTER_PARAM(TypeTag, bool, OpenclIluParallel, "Parallelize ILU decomposition and application on GPU");
-            EWOMS_REGISTER_PARAM(TypeTag, std::string, FpgaBitstream, "Specify the bitstream file for fpgaSolver (including path), usage: '--fpga-bitstream=<filename>'");
         }
 
         FlowLinearSolverParameters() { reset(); }
@@ -337,7 +326,6 @@ namespace Opm
             bda_device_id_            = 0;
             opencl_platform_id_       = 0;
             opencl_ilu_parallel_      = true;
-            fpga_bitstream_           = "";
         }
     };
 

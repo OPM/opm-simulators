@@ -18,8 +18,7 @@
 */
 
 #include <config.h> // CMake
-#include <cstdlib>
-#include <cstring>
+
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/ErrorMacros.hpp>
 
@@ -52,10 +51,6 @@ WellContributions::create(const std::string& accelerator_mode, bool useWellConn)
 #else
         OPM_THROW(std::runtime_error, "Cannot initialize well contributions: OpenCL is not enabled");
 #endif
-    }
-    else if(accelerator_mode.compare("fpga") == 0){
-        // unused for FPGA, but must be defined to avoid error
-        return std::make_unique<WellContributions>();
     }
     else if(accelerator_mode.compare("amgcl") == 0){
         if (!useWellConn) {

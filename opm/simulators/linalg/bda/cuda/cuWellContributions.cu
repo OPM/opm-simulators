@@ -19,8 +19,6 @@
 
 
 #include <config.h> // CMake
-#include <cstdlib>
-#include <cstring>
 
 #include "opm/simulators/linalg/bda/cuda/cuWellContributions.hpp"
 

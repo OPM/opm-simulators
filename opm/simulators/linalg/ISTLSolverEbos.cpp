@@ -31,10 +31,9 @@
 #include <opm/simulators/linalg/ParallelIstlInformation.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
-#if HAVE_CUDA || HAVE_OPENCL || HAVE_FPGA || HAVE_AMGCL || HAVE_ROCALUTION
+#if HAVE_CUDA || HAVE_OPENCL || HAVE_AMGCL || HAVE_ROCALUTION
 #include <opm/simulators/linalg/bda/BdaBridge.hpp>
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
-#include <iostream>
 #endif
 
 #if HAVE_DUNE_ALUGRID
@@ -176,11 +175,10 @@ void FlexibleSolverInfo<Matrix,Vector,Comm>::create(const Matrix& matrix,
     }
 }
 
-#if HAVE_CUDA || HAVE_OPENCL || HAVE_FPGA || HAVE_AMGCL || HAVE_ROCALUTION
+#if HAVE_CUDA || HAVE_OPENCL || HAVE_AMGCL || HAVE_ROCALUTION
 template<class Matrix, class Vector>
 BdaSolverInfo<Matrix,Vector>::
 BdaSolverInfo(const std::string& accelerator_mode,
-              const std::string& fpga_bitstream,
               const int linear_solver_verbosity,
               const int maxit,
               const double tolerance,
@@ -188,7 +186,7 @@ BdaSolverInfo(const std::string& accelerator_mode,
               const int deviceID,
               const bool opencl_ilu_parallel,
               const std::string& linsolver)
-    : bridge_(std::make_unique<Bridge>(accelerator_mode, fpga_bitstream,
+    : bridge_(std::make_unique<Bridge>(accelerator_mode,
                                        linear_solver_verbosity, maxit,
                                        tolerance, platformID, deviceID,
                                        opencl_ilu_parallel, linsolver))
@@ -213,7 +211,6 @@ prepare(const Grid& grid,
                                  useWellConn,
                                  wellConnectionsGraph_,
                                  numJacobiBlocks_);
-      std::cout << "Create block-Jacobi pattern" << std::endl;
       this->blockJacobiAdjacency(grid, cellPartition, nonzeroes);
     }
 }
@@ -229,12 +226,11 @@ apply(Vector& rhs,
       Dune::InverseOperatorResult& result)
 {
     bool use_gpu = bridge_->getUseGpu();
-    bool use_fpga = bridge_->getUseFpga();
-    if (use_gpu || use_fpga) {
+    if (use_gpu) {
         auto wellContribs = WellContributions::create(accelerator_mode_, useWellConn);
         bridge_->initWellContributions(*wellContribs, x.N() * x[0].N());
 
-        // the WellContributions can only be applied separately with CUDA or OpenCL, not with an FPGA, amgcl or rocalution
+        // the WellContributions can only be applied separately with CUDA or OpenCL, not with amgcl or rocalution
 #if HAVE_CUDA || HAVE_OPENCL
         if (!useWellConn) {
             getContribs(*wellContribs);
@@ -350,7 +346,7 @@ using CommunicationType = Dune::CollectiveCommunication<int>;
     template void makeOverlapRowsInvalid<BM<Dim>>(BM<Dim>&, const std::vector<int>&); \
     template struct FlexibleSolverInfo<BM<Dim>,BV<Dim>,CommunicationType>;
 
-#if HAVE_CUDA || HAVE_OPENCL || HAVE_FPGA || HAVE_AMGCL || HAVE_ROCALUTION
+#if HAVE_CUDA || HAVE_OPENCL || HAVE_AMGCL || HAVE_ROCALUTION
 
 #define INSTANCE_GRID(Dim, Grid) \
     template void BdaSolverInfo<BM<Dim>,BV<Dim>>:: \

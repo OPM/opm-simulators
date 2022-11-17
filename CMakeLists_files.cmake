@@ -45,7 +45,6 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.cpp
   opm/simulators/flow/ValidationFunctions.cpp
   opm/simulators/linalg/bda/WellContributions.cpp
-  opm/simulators/linalg/bda/Matrix.cpp
   opm/simulators/linalg/bda/MultisegmentWellContribution.cpp
   opm/simulators/linalg/ExtractParallelGridInformationToISTL.cpp
   opm/simulators/linalg/FlexibleSolver1.cpp
@@ -148,11 +147,6 @@ if(ROCALUTION_FOUND)
 endif()
 if(CUDA_FOUND OR OPENCL_FOUND OR HAVE_FPGA OR amgcl_FOUND OR ROCALUTION_FOUND)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/BdaBridge.cpp)
-endif()
-if(HAVE_FPGA)
-  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/FPGABILU0.cpp)
-  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/FPGASolverBackend.cpp)
-  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/FPGAUtils.cpp)
 endif()
 if(amgcl_FOUND)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/amgclSolverBackend.cpp)
@@ -304,9 +298,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/bda/cuda/cusparseSolverBackend.hpp
   opm/simulators/linalg/bda/opencl/ChowPatelIlu.hpp
   opm/simulators/linalg/bda/opencl/BISAI.hpp
-  opm/simulators/linalg/bda/FPGABILU0.hpp
-  opm/simulators/linalg/bda/FPGASolverBackend.hpp
-  opm/simulators/linalg/bda/FPGAUtils.hpp
   opm/simulators/linalg/bda/Reorder.hpp
   opm/simulators/linalg/bda/opencl/opencl.hpp
   opm/simulators/linalg/bda/opencl/openclKernels.hpp
