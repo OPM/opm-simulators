@@ -121,6 +121,7 @@ EclGenericOutputBlackoilModule(const EclipseState& eclState,
     , enableSaltPrecipitation_(enableSaltPrecipitation)
     , enableExtbo_(enableExtbo)
     , enableMICP_(enableMICP)
+    , co2store_(eclState_.runspec().co2Storage())
 {
     const auto& fp = eclState_.fieldProps();
 
@@ -712,6 +713,17 @@ assignToSolution(data::Solution& sol)
     for (const auto& entry : data)
         doInsert(entry);
 
+    const std::vector<DataEntry> data_co2store = {
+        {"WATKR",    UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     relativePermeability_[oilPhaseIdx]},
+        {"WAT_DEN",  UnitSystem::measure::density,   data::TargetType::RESTART_AUXILIARY,     density_[oilPhaseIdx]},
+        {"WAT_VISC", UnitSystem::measure::viscosity, data::TargetType::RESTART_AUXILIARY,     viscosity_[oilPhaseIdx]}
+    };
+    if (co2store_) {
+        for (const auto& entry : data_co2store)
+            doInsert(entry);
+    }
+
+
     if (!temperature_.empty()) {
         if (enableEnergy_)
             sol.insert("TEMP", UnitSystem::measure::temperature, std::move(temperature_), data::TargetType::RESTART_SOLUTION);
@@ -729,8 +741,7 @@ assignToSolution(data::Solution& sol)
     if (FluidSystem::phaseIsActive(gasPhaseIdx) && !saturation_[gasPhaseIdx].empty()) {
         sol.insert("SGAS", UnitSystem::measure::identity, std::move(saturation_[gasPhaseIdx]), data::TargetType::RESTART_SOLUTION);
     }
-    bool co2store = eclState_.runspec().co2Storage();
-    if (co2store && (FluidSystem::phaseIsActive(oilPhaseIdx) && !saturation_[oilPhaseIdx].empty())) {
+    if (co2store_ && (FluidSystem::phaseIsActive(oilPhaseIdx) && !saturation_[oilPhaseIdx].empty())) {
         sol.insert("SWAT", UnitSystem::measure::identity, std::move(saturation_[oilPhaseIdx]), data::TargetType::RESTART_SOLUTION);
     }
 
@@ -766,7 +777,7 @@ setRestart(const data::Solution& sol,
            unsigned globalDofIndex)
 {
     Scalar so = 1.0;
-    if (!saturation_[waterPhaseIdx].empty() && sol.has("SWAT")) {
+    if (!co2store_ && !saturation_[waterPhaseIdx].empty() && sol.has("SWAT")) {
         saturation_[waterPhaseIdx][elemIdx] = sol.data("SWAT")[globalDofIndex];
         so -= sol.data("SWAT")[globalDofIndex];
     }
@@ -985,6 +996,8 @@ doAllocBuffers(unsigned bufferSize,
         rstKeywords["SGAS"] = 0;
     if (FluidSystem::phaseIsActive(waterPhaseIdx))
         rstKeywords["SWAT"] = 0;
+    if (co2store_ && FluidSystem::phaseIsActive(oilPhaseIdx))
+        rstKeywords["SWAT"] = 0;
 
     if (FluidSystem::enableDissolvedGas()) {
         rs_.resize(bufferSize, 0.0);
@@ -1057,6 +1070,10 @@ doAllocBuffers(unsigned bufferSize,
         rstKeywords["BW"] = 0;
         invB_[waterPhaseIdx].resize(bufferSize, 0.0);
     }
+    if (co2store_ && FluidSystem::phaseIsActive(oilPhaseIdx) && rstKeywords["BW"] > 0) {
+        rstKeywords["BW"] = 0;
+        invB_[oilPhaseIdx].resize(bufferSize, 0.0);
+    }
     if (FluidSystem::phaseIsActive(oilPhaseIdx) && rstKeywords["BO"] > 0) {
         rstKeywords["BO"] = 0;
         invB_[oilPhaseIdx].resize(bufferSize, 0.0);
@@ -1083,6 +1100,10 @@ doAllocBuffers(unsigned bufferSize,
         rstKeywords["VWAT"] = 0;
         viscosity_[waterPhaseIdx].resize(bufferSize, 0.0);
     }
+    if (co2store_ && FluidSystem::phaseIsActive(oilPhaseIdx) && hasVWAT) {
+        rstKeywords["VWAT"] = 0;
+        viscosity_[oilPhaseIdx].resize(bufferSize, 0.0);
+    }
     if (FluidSystem::phaseIsActive(oilPhaseIdx) && hasVOIL > 0) {
         rstKeywords["VOIL"] = 0;
         viscosity_[oilPhaseIdx].resize(bufferSize, 0.0);
@@ -1095,6 +1116,10 @@ doAllocBuffers(unsigned bufferSize,
     if (FluidSystem::phaseIsActive(waterPhaseIdx) && rstKeywords["KRW"] > 0) {
         rstKeywords["KRW"] = 0;
         relativePermeability_[waterPhaseIdx].resize(bufferSize, 0.0);
+    }
+    if (co2store_ && FluidSystem::phaseIsActive(oilPhaseIdx) && rstKeywords["KRW"] > 0) {
+        rstKeywords["KRW"] = 0;
+        relativePermeability_[oilPhaseIdx].resize(bufferSize, 0.0);
     }
     if (FluidSystem::phaseIsActive(oilPhaseIdx) && rstKeywords["KRO"] > 0) {
         rstKeywords["KRO"] = 0;

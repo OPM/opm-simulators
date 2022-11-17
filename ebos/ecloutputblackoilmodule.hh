@@ -539,7 +539,12 @@ public:
                 unsigned int cartesianIdxBlock = key.second - 1;
                 if (cartesianIdx == cartesianIdxBlock) {
                     if ((key.first == "BWSAT") || (key.first == "BSWAT"))
-                        val.second = getValue(fs.saturation(waterPhaseIdx));
+                    {
+                        if(this->co2store_)
+                            val.second = getValue(fs.saturation(oilPhaseIdx));
+                        else
+                            val.second = getValue(fs.saturation(waterPhaseIdx));
+                    }
                     else if ((key.first == "BGSAT") || (key.first == "BSGAS"))
                         val.second = getValue(fs.saturation(gasPhaseIdx));
                     else if ((key.first == "BOSAT") || (key.first == "BSOIL"))
@@ -563,7 +568,12 @@ public:
                             val.second = getValue(fs.temperature(waterPhaseIdx));
                     }
                     else if (key.first == "BWKR" || key.first == "BKRW")
-                        val.second = getValue(intQuants.relativePermeability(waterPhaseIdx));
+                    {
+                        if (this->co2store_)
+                            val.second = getValue(intQuants.relativePermeability(oilPhaseIdx));
+                        else
+                            val.second = getValue(intQuants.relativePermeability(waterPhaseIdx));
+                    }
                     else if (key.first == "BGKR" || key.first == "BKRG")
                         val.second = getValue(intQuants.relativePermeability(gasPhaseIdx));
                     else if (key.first == "BOKR" || key.first == "BKRO")
@@ -583,11 +593,21 @@ public:
                     else if (key.first == "BGPC")
                         val.second = getValue(fs.pressure(gasPhaseIdx)) - getValue(fs.pressure(oilPhaseIdx));
                     else if (key.first == "BWPR")
-                        val.second = getValue(fs.pressure(waterPhaseIdx));
+                    {
+                        if (this->co2store_)
+                            val.second = getValue(fs.pressure(oilPhaseIdx));
+                        else
+                            val.second = getValue(fs.pressure(waterPhaseIdx));
+                    }
                     else if (key.first == "BGPR")
                         val.second = getValue(fs.pressure(gasPhaseIdx));
                     else if (key.first == "BVWAT" || key.first == "BWVIS")
-                        val.second = getValue(fs.viscosity(waterPhaseIdx));
+                    {
+                        if (this->co2store_)
+                            val.second = getValue(fs.viscosity(oilPhaseIdx));
+                        else
+                            val.second = getValue(fs.viscosity(waterPhaseIdx));
+                    }
                     else if (key.first == "BVGAS" || key.first == "BGVIS")
                         val.second = getValue(fs.viscosity(gasPhaseIdx));
                     else if (key.first == "BVOIL" || key.first == "BOVIS")
@@ -604,7 +624,10 @@ public:
                             val.second = getValue(fs.saturation(oilPhaseIdx));
                         }
                         else if (key.first == "BWPV") {
-                            val.second = getValue(fs.saturation(waterPhaseIdx));
+                            if (this->co2store_)
+                                val.second = getValue(fs.saturation(oilPhaseIdx));
+                            else
+                                val.second = getValue(fs.saturation(waterPhaseIdx));
                         }
                         else {
                             val.second = getValue(fs.saturation(gasPhaseIdx));
@@ -653,7 +676,11 @@ public:
                                 * getValue(fs.saturation(oilPhaseIdx));
                         }
                         else {  // BWIP
-                            val.second = getValue(fs.invB(waterPhaseIdx))
+                            if (this->co2store_)
+                                val.second =getValue(fs.invB(oilPhaseIdx))
+                                * getValue(fs.saturation(oilPhaseIdx));
+                            else
+                                val.second = getValue(fs.invB(waterPhaseIdx))
                                 * getValue(fs.saturation(waterPhaseIdx));
                         }
 
@@ -939,8 +966,7 @@ private:
                 this->fip_[Inplace::Phase::GAS][globalDofIdx] = fip[gasPhaseIdx];
             if (FluidSystem::phaseIsActive(waterPhaseIdx) && !this->fip_[Inplace::Phase::WATER].empty())
                 this->fip_[Inplace::Phase::WATER][globalDofIdx] = fip[waterPhaseIdx];
-            bool co2store = simulator_.vanguard().eclState().runspec().co2Storage();
-            if (co2store && FluidSystem::phaseIsActive(oilPhaseIdx) && !this->fip_[Inplace::Phase::WATER].empty())
+            if (this->co2store_ && FluidSystem::phaseIsActive(oilPhaseIdx) && !this->fip_[Inplace::Phase::WATER].empty())
                 this->fip_[Inplace::Phase::WATER][globalDofIdx] = fip[oilPhaseIdx];
 
 
@@ -950,6 +976,8 @@ private:
                 this->fip_[Inplace::Phase::GasResVolume][globalDofIdx] = fipr[gasPhaseIdx];
             if (FluidSystem::phaseIsActive(waterPhaseIdx) && !this->fip_[Inplace::Phase::WaterResVolume].empty())
                 this->fip_[Inplace::Phase::WaterResVolume][globalDofIdx] = fipr[waterPhaseIdx];
+            if (this->co2store_ && FluidSystem::phaseIsActive(oilPhaseIdx) && !this->fip_[Inplace::Phase::WaterResVolume].empty())
+                this->fip_[Inplace::Phase::WaterResVolume][globalDofIdx] = fipr[oilPhaseIdx];
 
             if (FluidSystem::phaseIsActive(waterPhaseIdx) && !this->fip_[Inplace::Phase::SALT].empty())
                 this->fip_[Inplace::Phase::SALT][globalDofIdx] = fipr[waterPhaseIdx] * fs.saltConcentration().value();

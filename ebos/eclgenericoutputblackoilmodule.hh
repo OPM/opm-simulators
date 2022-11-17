@@ -396,6 +396,8 @@ protected:
     bool outputFipRestart_;
     bool computeFip_;
 
+    bool co2store_;
+
     std::unordered_map<Inplace::Phase, ScalarBuffer> fip_;
     std::unordered_map<std::string, std::vector<int>> regions_;
     std::unordered_map<Inplace::Phase, std::vector<SummaryConfigNode>> regionNodes_;
