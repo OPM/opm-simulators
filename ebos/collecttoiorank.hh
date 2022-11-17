@@ -74,7 +74,9 @@ public:
                  const data::GroupAndNetworkValues& localGroupAndNetworkData,
                  const data::Aquifers& localAquiferData,
                  const WellTestState& localWellTestState,
-                 const EclInterRegFlowMap& interRegFlows);
+                 const EclInterRegFlowMap& interRegFlows,
+                 const std::array<std::pair<std::string, std::pair<std::vector<int>, std::vector<double>>>, 3>& localFlowsn,
+                 const std::array<std::pair<std::string, std::pair<std::vector<int>, std::vector<double>>>, 3>& localFloresn);
 
     const std::map<std::size_t, double>& globalWBPData() const
     { return this->globalWBPData_; }
@@ -102,6 +104,12 @@ public:
 
     const EclInterRegFlowMap& globalInterRegFlows() const
     { return this->globalInterRegFlows_; }
+
+    const std::array<std::pair<std::string, std::pair<std::vector<int>, std::vector<double>>>, 3>& globalFlowsn() const
+    { return globalFlowsn_; }
+
+    const std::array<std::pair<std::string, std::pair<std::vector<int>, std::vector<double>>>, 3>& globalFloresn() const
+    { return globalFloresn_; }
 
     bool isIORank() const
     { return toIORankComm_.rank() == ioRank; }
@@ -142,6 +150,8 @@ protected:
     data::Aquifers globalAquiferData_;
     WellTestState globalWellTestState_;
     std::vector<int> localIdxToGlobalIdx_;
+    std::array<std::pair<std::string, std::pair<std::vector<int>, std::vector<double>>>, 3> globalFlowsn_;
+    std::array<std::pair<std::string, std::pair<std::vector<int>, std::vector<double>>>, 3> globalFloresn_;
     /// \brief sorted list of cartesian indices present-
     ///
     /// non-empty only when running in parallel
