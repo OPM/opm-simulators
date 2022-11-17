@@ -37,10 +37,6 @@
 #include <opm/simulators/linalg/bda/opencl/openclWellContributions.hpp>
 #endif
 
-#if HAVE_FPGA
-#include <opm/simulators/linalg/bda/FPGASolverBackend.hpp>
-#endif
-
 #if HAVE_AMGCL
 #include <opm/simulators/linalg/bda/amgclSolverBackend.hpp>
 #endif
@@ -60,7 +56,6 @@ namespace Opm
 
 template <class BridgeMatrix, class BridgeVector, int block_size>
 BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string accelerator_mode_,
-                                                             [[maybe_unused]] std::string fpga_bitstream,
                                                              int linear_solver_verbosity, int maxit,
                                                              double tolerance,
                                                              [[maybe_unused]] unsigned int platformID,
@@ -83,13 +78,6 @@ BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string acceler
 #else
         OPM_THROW(std::logic_error, "Error openclSolver was chosen, but OpenCL was not found by CMake");
 #endif
-    } else if (accelerator_mode.compare("fpga") == 0) {
-#if HAVE_FPGA
-        use_fpga = true;
-        backend.reset(new Opm::Accelerator::FpgaSolverBackend<block_size>(fpga_bitstream, linear_solver_verbosity, maxit, tolerance, opencl_ilu_parallel));
-#else
-        OPM_THROW(std::logic_error, "Error fpgaSolver was chosen, but FPGA was not enabled by CMake");
-#endif
     } else if (accelerator_mode.compare("amgcl") == 0) {
 #if HAVE_AMGCL
         use_gpu = true; // should be replaced by a 'use_bridge' boolean
@@ -106,9 +94,8 @@ BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string acceler
 #endif
     } else if (accelerator_mode.compare("none") == 0) {
         use_gpu = false;
-        use_fpga = false;
     } else {
-        OPM_THROW(std::logic_error, "Error unknown value for parameter 'AcceleratorMode', should be passed like '--accelerator-mode=[none|cusparse|opencl|fpga|amgcl|rocalution]");
+        OPM_THROW(std::logic_error, "Error unknown value for parameter 'AcceleratorMode', should be passed like '--accelerator-mode=[none|cusparse|opencl|amgcl|rocalution]");
     }
 }
 
@@ -208,7 +195,7 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system(BridgeMatri
                                                                      WellContributions& wellContribs,
                                                                      InverseOperatorResult& res)
 {
-    if (use_gpu || use_fpga) {
+    if (use_gpu) {
         BdaResult result;
         result.converged = false;
         const int dim = (*bridgeMat)[0][0].N();
@@ -217,7 +204,7 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system(BridgeMatri
 
         if (dim != 3) {
             OpmLog::warning("BdaSolver only accepts blocksize = 3 at this time, will use Dune for the remainder of the program");
-            use_gpu = use_fpga = false;
+            use_gpu = false;
             return;
         }
 
@@ -289,7 +276,7 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system(BridgeMatri
 
 template <class BridgeMatrix, class BridgeVector, int block_size>
 void BdaBridge<BridgeMatrix, BridgeVector, block_size>::get_result([[maybe_unused]] BridgeVector& x) {
-    if (use_gpu || use_fpga) {
+    if (use_gpu) {
         backend->get_result(static_cast<double*>(&(x[0][0])));
     }
 }

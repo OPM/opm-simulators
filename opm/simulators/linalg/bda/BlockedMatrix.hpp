@@ -20,12 +20,6 @@
 #ifndef OPM_BLOCKED_MATRIX_HPP
 #define OPM_BLOCKED_MATRIX_HPP
 
-#if HAVE_FPGA
-#include <vector>
-#include <opm/simulators/linalg/bda/Matrix.hpp>
-#endif
-
-
 namespace Opm
 {
 namespace Accelerator
@@ -94,27 +88,6 @@ public:
         }
     }
 
-#if HAVE_FPGA
-    constexpr static double nnzThreshold = 1e-80;  // for unblocking, a nonzero must be bigger than this threshold to be considered a nonzero
-
-    int countUnblockedNnzs();
-
-    void unblock(Matrix *mat, bool isUMatrix);
-
-    /// Converts this matrix to the dataformat used by the FPGA
-    /// Is done every linear solve. The exact sparsity pattern can change every time since the zeros are removed during unblocking
-    int toRDF(int numColors, int *nodesPerColor, bool isUMatrix,
-        std::vector<std::vector<int> >& colIndicesInColor, int nnzsPerRowLimit, int *nnzValsSizes,
-        std::vector<std::vector<double> >& nnzValues, short int *colIndices, unsigned char *NROffsets, int *colorSizes, int *valSize);
-
-    /// Analyses the sparsity pattern and prepares for toRDF()
-    /// Is only called once
-    int findPartitionColumns(int numColors, int *nodesPerColor,
-        int rowsPerColorLimit, int columnsPerColorLimit,
-        std::vector<std::vector<int> >& colIndicesInColor, int *PIndicesAddr, int *colorSizes,
-        std::vector<std::vector<int> >& LColIndicesInColor, int *LPIndicesAddr, int *LColorSizes,
-        std::vector<std::vector<int> >& UColIndicesInColor, int *UPIndicesAddr, int *UColorSizes);
-#endif
 
     double *nnzValues;
     int *colIndices;
@@ -150,40 +123,6 @@ void blockMultSub(double *a, double *b, double *c, unsigned int block_size);
 /// \param[out] resMat           output block
 /// \param[in] block_size        size of block
 void blockMult(double *mat1, double *mat2, double *resMat, unsigned int block_size);
-
-
-#if HAVE_FPGA
-/// Perform a matrix-matrix subtraction on two blocks, element-wise
-/// resMat = mat1 - mat2
-/// \param[in] mat1              input block 1
-/// \param[in] mat2              input block 2
-/// \param[out] resMat           output block
-/// \param[in] block_size        size of block
-void blockSub(double *mat1, double *mat2, double *resMat, unsigned int block_size);
-
-/// Perform a matrix-vector multiplication
-/// resVect = mat * vect
-/// resVect += mat * vect
-/// \param[in] mat               input matrix
-/// \param[in] vect              input vector
-/// \param[in] scale             multiply output with this factor
-/// \param[inout] resVect        output vector
-/// \param[in] resetRes          if true, overwrite resVect, otherwise add to it
-/// \param[in] block_size        size of block
-void blockVectMult(double *mat, double *vect, double scale, double *resVect, bool resetRes, unsigned int block_size);
-
-/// Convert a blocked inverse diagonal to the FPGA format.
-/// This is the only blocked structure on the FPGA, since it needs blocked matrix-vector multiplication after the backwards substitution of U.
-/// Since the rows of U are reversed, the rows of the diag are also reversed.
-/// The cachelines can hold 8 doubles, a block has 9 doubles.
-/// The format converts 3x3 blocks to 3x4 blocks, so 1 cacheline holds 2 unblocked rows.
-/// Then 2 blocks (24 doubles) fit on 3 cachelines.
-/// Example:
-/// [1 2 3]    [1 2 3 0]              [1 2 3 0 4 5 6 0]
-/// [4 5 6] -> [4 5 6 0] -> hardware: [7 8 9 0 block2 row1]
-/// [7 8 9]    [7 8 9 0]              [block2 row2 block2 row3]
-void blockedDiagtoRDF(double *blockedDiagVals, int rowSize, int numColors, std::vector<int>& rowsPerColor, double *RDFDiag);
-#endif
 
 } // namespace Accelerator
 } // namespace Opm

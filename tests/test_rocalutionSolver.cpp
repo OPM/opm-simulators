@@ -92,7 +92,6 @@ testRocalutionSolver(const boost::property_tree::ptree& prm, Matrix<bz>& matrix,
     const int platformID = 0;
     const int deviceID = 0;
     const std::string accelerator_mode("rocalution");
-    const std::string fpga_bitstream("empty");    // unused
     const std::string linsolver("ilu0");
     Dune::InverseOperatorResult result;
 
@@ -101,7 +100,6 @@ testRocalutionSolver(const boost::property_tree::ptree& prm, Matrix<bz>& matrix,
     std::unique_ptr<Opm::BdaBridge<Matrix<bz>, Vector<bz>, bz> > bridge;
     try {
         bridge = std::make_unique<Opm::BdaBridge<Matrix<bz>, Vector<bz>, bz> >(accelerator_mode,
-                                                                               fpga_bitstream,
                                                                                linear_solver_verbosity,
                                                                                maxit,
                                                                                tolerance,

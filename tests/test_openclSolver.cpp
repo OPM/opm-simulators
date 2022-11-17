@@ -97,12 +97,10 @@ createBridge(const boost::property_tree::ptree& prm, std::unique_ptr<Opm::BdaBri
     const int platformID = 0;
     const int deviceID = 0;
     const std::string accelerator_mode("opencl");
-    const std::string fpga_bitstream("empty");    // unused
     const std::string linsolver("ilu0");
 
     try {
         bridge = std::make_unique<Opm::BdaBridge<Matrix<bz>, Vector<bz>, bz> >(accelerator_mode,
-                                                                               fpga_bitstream,
                                                                                linear_solver_verbosity,
                                                                                maxit,
                                                                                tolerance,
