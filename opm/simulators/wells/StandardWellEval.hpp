@@ -133,12 +133,6 @@ protected:
     static double relaxationFactorFractionsProducer(const std::vector<double>& primary_variables,
                                                     const BVectorWell& dwells);
 
-    void assembleControlEq(const WellState& well_state,
-                           const GroupState& group_state,
-                           const Schedule& schedule,
-                           const SummaryState& summaryState,
-                           DeferredLogger& deferred_logger);
-
     // computing the accumulation term for later use in well mass equations
     void computeAccumWell();
 

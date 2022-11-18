@@ -20,6 +20,7 @@
 */
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+#include <opm/simulators/wells/StandardWellAssemble.hpp>
 #include <opm/simulators/wells/VFPHelpers.hpp>
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 #include <opm/simulators/wells/WellConvergence.hpp>
@@ -544,7 +545,18 @@ namespace Opm
 
         const auto& summaryState = ebosSimulator.vanguard().summaryState();
         const Schedule& schedule = ebosSimulator.vanguard().schedule();
-        this->assembleControlEq(well_state, group_state, schedule, summaryState, deferred_logger);
+        std::function<EvalWell(int)> gQ = [this](int a) { return this->getQs(a); };
+        StandardWellAssemble<FluidSystem,Indices,Scalar>(*this).
+            assembleControlEq(well_state, group_state,
+                              schedule, summaryState,
+                              this->numWellEq_,
+                              this->getWQTotal(),
+                              this->getBhp(),
+                              gQ,
+                              this->getRho(),
+                              Bhp,
+                              this->linSys_,
+                              deferred_logger);
 
 
         // do the local inversion of D.
