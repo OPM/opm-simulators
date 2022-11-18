@@ -79,6 +79,13 @@ public:
                                const int numWellEq,
                                StandardWellEquations<Scalar,Indices::numEq>& eqns) const;
 
+    //! \brief Assemble equation for Z fraction.
+    template<class EvalWell>
+    void assembleZFracEq(const EvalWell& cq_s_zfrac_effective,
+                         const int cell_idx,
+                         const int numWellEq,
+                         StandardWellEquations<Scalar,Indices::numEq>& eqns) const;
+
 private:
     const WellInterfaceFluidSystem<FluidSystem>& well_; //!< Reference to well
 };

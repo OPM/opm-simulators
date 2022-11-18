@@ -500,9 +500,11 @@ namespace Opm
             }
 
             if constexpr (has_zFraction) {
-                for (int pvIdx = 0; pvIdx < this->numWellEq_; ++pvIdx) {
-                    this->linSys_.duneC_[0][cell_idx][pvIdx][Indices::contiZfracEqIdx] -= cq_s_zfrac_effective.derivative(pvIdx+Indices::numEq);
-                }
+                StandardWellAssemble<FluidSystem,Indices,Scalar>(*this).
+                    assembleZFracEq(cq_s_zfrac_effective,
+                                    cell_idx,
+                                    this->numWellEq_,
+                                    this->linSys_);
             }
         }
         // Update the connection

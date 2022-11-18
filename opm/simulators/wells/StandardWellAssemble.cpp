@@ -188,6 +188,19 @@ assemblePerforationEq(const EvalWell& cq_s_effective,
     }
 }
 
+template<class FluidSystem, class Indices, class Scalar>
+template<class EvalWell>
+void StandardWellAssemble<FluidSystem,Indices,Scalar>::
+assembleZFracEq(const EvalWell& cq_s_zfrac_effective,
+                const int cell_idx,
+                const int numWellEq,
+                StandardWellEquations<Scalar,Indices::numEq>& eqns) const
+{
+    for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
+        eqns.duneC_[0][cell_idx][pvIdx][Indices::contiZfracEqIdx] -= cq_s_zfrac_effective.derivative(pvIdx+Indices::numEq);
+    }
+}
+
 #define INSTANCE(Dim,...) \
 template class StandardWellAssemble<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>; \
 template void \
@@ -219,7 +232,13 @@ StandardWellAssemble<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA
                           const int, \
                           const int, \
                           const int, \
-                          StandardWellEquations<double,__VA_ARGS__::numEq>&) const;
+                          StandardWellEquations<double,__VA_ARGS__::numEq>&) const; \
+template void \
+StandardWellAssemble<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>:: \
+    assembleZFracEq(const DenseAd::Evaluation<double,-1,Dim>&, \
+                    const int, \
+                    const int, \
+                    StandardWellEquations<double,__VA_ARGS__::numEq>&) const;
 
 // One phase
 INSTANCE(4u, BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>)
