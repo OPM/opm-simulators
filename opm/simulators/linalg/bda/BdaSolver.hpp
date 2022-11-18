@@ -57,8 +57,6 @@ namespace Accelerator {
         int maxit = 200;
         double tolerance = 1e-2;
 
-        std::string bitstream;
-
         int N;           // number of rows
         int Nb;          // number of blocked rows (Nb*block_size == N)
         int nnz;         // number of nonzeroes (scalars)
@@ -70,8 +68,7 @@ namespace Accelerator {
         bool initialized = false;
 
     public:
-        /// Construct a BdaSolver, can be cusparseSolver, openclSolver, fpgaSolver
-        /// \param[in] fpga_bitstream             FPGA bitstream file name (only for fpgaSolver)
+        /// Construct a BdaSolver
         /// \param[in] linear_solver_verbosity    verbosity of solver
         /// \param[in] maxit                      maximum number of iterations for solver
         /// \param[in] tolerance                  required relative tolerance for solver
@@ -80,7 +77,6 @@ namespace Accelerator {
         BdaSolver(int linear_solver_verbosity, int max_it, double tolerance_) : verbosity(linear_solver_verbosity), maxit(max_it), tolerance(tolerance_) {};
         BdaSolver(int linear_solver_verbosity, int max_it, double tolerance_, unsigned int deviceID_) : verbosity(linear_solver_verbosity), maxit(max_it), tolerance(tolerance_), deviceID(deviceID_) {};
         BdaSolver(int linear_solver_verbosity, int max_it, double tolerance_, unsigned int platformID_, unsigned int deviceID_) : verbosity(linear_solver_verbosity), maxit(max_it), tolerance(tolerance_), platformID(platformID_), deviceID(deviceID_) {};
-        BdaSolver(std::string fpga_bitstream, int linear_solver_verbosity, int max_it, double tolerance_) : verbosity(linear_solver_verbosity), maxit(max_it), tolerance(tolerance_), bitstream(fpga_bitstream) {};
 
         /// Define virtual destructor, so that the derivedclass destructor will be called
         virtual ~BdaSolver() {};

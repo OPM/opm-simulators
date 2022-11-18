@@ -56,36 +56,12 @@ public:
         M = M_;
     }
 
-#if HAVE_FPGA
-    /// Converts this matrix to the dataformat used by the FPGA.
-    /// The FPGA uses a new data format called CSRO (Compressed Sparse Row Offset).
-    /// The purpose of this format is to allow the data to be streamable.
-    /// The rowPointers array has an unpredictable reading pattern/timing,
-    /// it also needs a extra work if a row is shorter than a cacheline.
-    /// The array of N+1 rowPointers is replaced by an array of nnz rowOffsets.
-    /// The value of this offset is 0, unless the corresponding nnz is the first of a row,
-    /// in that case it is 'the number of empty rows preceeding it + 1'.
-    /// The FPGA can simply add the rowOffset to the current rowIdx to get the new rowIdx.
-    /// Example:
-    /// [1 0 0 3 0]    nnzValues   [1 3 2 2 1 4 3 4 1]
-    /// [0 2 2 0 1]    colIndices  [0 3 1 2 4 0 1 2 4]
-    /// [4 0 0 0 0] -> rowPointers [0 2 5 6 6 9]
-    /// [0 0 0 0 0]    rowOffsets  [1 0 1 0 0 1 2 0 0]
-    /// [0 3 4 0 1]
-    /// The rowOffset is stored in 1 byte, meaning the maximum value is 255.
-    int toRDF(int numColors, std::vector<int>& nodesPerColor,
-        std::vector<std::vector<int> >& colIndicesInColor, int nnzsPerRowLimit, 
-        std::vector<std::vector<double> >& ubNnzValues, short int *ubColIndices, int *nnzValsSizes, unsigned char *NROffsets, int *colorSizes);
-#endif
-
     std::vector<double> nnzValues;
     std::vector<int> colIndices;
     std::vector<int> rowPointers;
     int N, M;
     int nnzs;
 };
-
-void sortRow(int *colIndices, double *data, int left, int right);
 
 } // namespace Accelerator
 } // namespace Opm

@@ -1,6 +1,6 @@
 /*
   Copyright 2019 SINTEF Digital, Mathematics and Cybernetics.
-  Copyright 2021 Equinor
+  Copyright 2022 Equinor
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -20,11 +20,12 @@
 
 #include <config.h>
 
-#define BOOST_TEST_MODULE OPM_test_cusparseSolver
+#define BOOST_TEST_MODULE OPM_test_rocalutionSolver
 #include <boost/test/unit_test.hpp>
 
 #include <opm/simulators/linalg/bda/BdaBridge.hpp>
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
+#include <rocalution.hpp>
 
 #include <dune/common/fvector.hh>
 #include <dune/istl/bvector.hh>
@@ -35,12 +36,6 @@
 
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
-
-class DeviceInitException : public std::logic_error
-{
-public:
-    DeviceInitException(std::string msg) : logic_error(msg){};
-};
 
 template <int bz>
 using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, bz, bz>>;
@@ -88,22 +83,20 @@ getDuneSolution(Matrix<bz>& matrix, Vector<bz>& rhs)
 
 template <int bz>
 Dune::BlockVector<Dune::FieldVector<double, bz>>
-testCusparseSolver(const boost::property_tree::ptree& prm, Matrix<bz>& matrix, Vector<bz>& rhs)
+testRocalutionSolver(const boost::property_tree::ptree& prm, Matrix<bz>& matrix, Vector<bz>& rhs)
 {
-
     const int linear_solver_verbosity = prm.get<int>("verbosity");
     const int maxit = prm.get<int>("maxiter");
     const double tolerance = prm.get<double>("tol");
-    const bool opencl_ilu_parallel(true); // unused
-    const int platformID = 0;                     // unused
+    const bool opencl_ilu_parallel(true);
+    const int platformID = 0;
     const int deviceID = 0;
-    const std::string accelerator_mode("cusparse");
+    const std::string accelerator_mode("rocalution");
     const std::string linsolver("ilu0");
     Dune::InverseOperatorResult result;
 
     Vector<bz> x(rhs.size());
-
-    auto wellContribs = Opm::WellContributions::create("cusparse", false);
+    auto wellContribs = Opm::WellContributions::create(accelerator_mode, true);
     std::unique_ptr<Opm::BdaBridge<Matrix<bz>, Vector<bz>, bz> > bridge;
     try {
         bridge = std::make_unique<Opm::BdaBridge<Matrix<bz>, Vector<bz>, bz> >(accelerator_mode,
@@ -114,19 +107,15 @@ testCusparseSolver(const boost::property_tree::ptree& prm, Matrix<bz>& matrix, V
                                                                                deviceID,
                                                                                opencl_ilu_parallel,
                                                                                linsolver);
-        auto mat2 = matrix; // deep copy to make sure nnz values are in contiguous memory
-                            // matrix created by readMatrixMarket() did not have contiguous memory
-        bridge->solve_system(&mat2, &mat2, /*numJacobiBlocks=*/0, rhs, *wellContribs, result);
-        bridge->get_result(x);
-
-        return x;
     } catch (const std::logic_error& error) {
         BOOST_WARN_MESSAGE(true, error.what());
-        if (strstr(error.what(), "Could not get device") != nullptr)
-            throw DeviceInitException(error.what());
-        else
-            throw error;
     }
+    auto mat2 = matrix; // deep copy to make sure nnz values are in contiguous memory
+                        // matrix created by readMatrixMarket() did not have contiguous memory
+    bridge->solve_system(&mat2, &mat2, /*numJacobiBlocks=*/0, rhs, *wellContribs, result);
+    bridge->get_result(x);
+
+    return x;
 }
 
 namespace pt = boost::property_tree;
@@ -139,7 +128,7 @@ void test3(const pt::ptree& prm)
     readLinearSystem("matr33.txt", "rhs3.txt", matrix, rhs);
     Vector<bz> rhs2 = rhs; // deep copy, getDuneSolution() changes values in rhs vector
     auto duneSolution = getDuneSolution<bz>(matrix, rhs);
-    auto sol = testCusparseSolver<bz>(prm, matrix, rhs2);
+    auto sol = testRocalutionSolver<bz>(prm, matrix, rhs2);
 
     BOOST_REQUIRE_EQUAL(sol.size(), duneSolution.size());
     for (size_t i = 0; i < sol.size(); ++i) {
@@ -150,7 +139,7 @@ void test3(const pt::ptree& prm)
 }
 
 
-BOOST_AUTO_TEST_CASE(TestCusparseSolver)
+BOOST_AUTO_TEST_CASE(TestRocalutionSolver)
 {
     pt::ptree prm;
 
@@ -160,10 +149,13 @@ BOOST_AUTO_TEST_CASE(TestCusparseSolver)
         pt::read_json(file, prm);
     }
 
-    try {
-        // Test with 3x3 block solvers.
+    rocalution::init_rocalution();
+    auto rocalution_backend_descriptor = rocalution::_get_backend_descriptor();
+
+    if (rocalution_backend_descriptor->accelerator) {
+        // test rocalution with 3x3 blocks
         test3(prm);
-    } catch(const DeviceInitException& ) {
+    } else {
         BOOST_WARN_MESSAGE(true, "Problem with initializing a device. skipping test");
     }
 }

@@ -18,15 +18,15 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <fmt/format.h>
 #include <config.h>
+
 #include <opm/simulators/wells/WellState.hpp>
 
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
-#include <opm/simulators/wells/ParallelWellInfo.hpp>
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
+#include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/grid/common/p2pcommunicator.hh>
 #include <opm/output/data/Wells.hpp>
 
@@ -35,6 +35,9 @@
 #include <numeric>
 #include <set>
 #include <stdexcept>
+#include <vector>
+
+#include <fmt/format.h>
 
 namespace {
 
@@ -425,14 +428,15 @@ data::Wells
 WellState::report(const int* globalCellIdxMap,
                   const std::function<bool(const int)>& wasDynamicallyClosed) const
 {
-    if (this->numWells() == 0)
+    if (this->numWells() == 0) {
         return {};
+    }
 
     using rt = data::Rates::opt;
     const auto& pu = this->phaseUsage();
 
     data::Wells res;
-    for( std::size_t well_index = 0; well_index < this->size(); well_index++) {
+    for (std::size_t well_index = 0; well_index < this->size(); ++well_index) {
         const auto& ws = this->well(well_index);
         if ((ws.status == Well::Status::SHUT) && !wasDynamicallyClosed(well_index))
         {
@@ -505,12 +509,10 @@ WellState::report(const int* globalCellIdxMap,
         }
 
         const auto& pwinfo = ws.parallel_info.get();
-        if (pwinfo.communication().size()==1)
-        {
+        if (pwinfo.communication().size() == 1) {
             reportConnections(well.connections, pu, well_index, globalCellIdxMap);
         }
-        else
-        {
+        else {
             std::vector<data::Connection> connections;
 
             reportConnections(connections, pu, well_index, globalCellIdxMap);
@@ -828,17 +830,21 @@ void WellState::updateGlobalIsGrup(const Comm& comm)
 }
 
 data::Segment
-WellState::reportSegmentResults(const int         well_id,
-                                const int         seg_ix,
-                                const int         seg_no) const
+WellState::reportSegmentResults(const int well_id,
+                                const int seg_ix,
+                                const int seg_no) const
 {
+    using PhaseQuant = data::SegmentPhaseQuantity::Item;
+
     const auto& segments = this->well(well_id).segments;
-    if (segments.empty())
+    if (segments.empty()) {
         return {};
+    }
 
     auto seg_res = data::Segment{};
     {
         using Value = data::SegmentPressures::Value;
+
         auto& segpress = seg_res.pressures;
         segpress[Value::Pressure] = segments.pressure[seg_ix];
         segpress[Value::PDrop] = segments.pressure_drop(seg_ix);
@@ -848,20 +854,40 @@ WellState::reportSegmentResults(const int         well_id,
     }
 
     const auto& pu = this->phaseUsage();
-    const auto rate = &segments.rates[seg_ix * pu.num_phases];
+    const auto* rate = &segments.rates[seg_ix * pu.num_phases];
+    const auto* resv = &segments.phase_resv_rates[seg_ix * pu.num_phases];
+    const auto* velocity = &segments.phase_velocity[seg_ix * pu.num_phases];
+    const auto* holdup = &segments.phase_holdup[seg_ix * pu.num_phases];
+    const auto* viscosity = &segments.phase_viscosity[seg_ix * pu.num_phases];
+
     if (pu.phase_used[Water]) {
-        seg_res.rates.set(data::Rates::opt::wat,
-                          rate[pu.phase_pos[Water]]);
+        const auto iw = pu.phase_pos[Water];
+
+        seg_res.rates.set(data::Rates::opt::wat, rate[iw]);
+        seg_res.rates.set(data::Rates::opt::reservoir_water, resv[iw]);
+        seg_res.velocity.set(PhaseQuant::Water, velocity[iw]);
+        seg_res.holdup.set(PhaseQuant::Water, holdup[iw]);
+        seg_res.viscosity.set(PhaseQuant::Water, viscosity[iw]);
     }
 
     if (pu.phase_used[Oil]) {
-        seg_res.rates.set(data::Rates::opt::oil,
-                          rate[pu.phase_pos[Oil]]);
+        const auto io = pu.phase_pos[Oil];
+
+        seg_res.rates.set(data::Rates::opt::oil, rate[io]);
+        seg_res.rates.set(data::Rates::opt::reservoir_oil, resv[io]);
+        seg_res.velocity.set(PhaseQuant::Oil, velocity[io]);
+        seg_res.holdup.set(PhaseQuant::Oil, holdup[io]);
+        seg_res.viscosity.set(PhaseQuant::Oil, viscosity[io]);
     }
 
     if (pu.phase_used[Gas]) {
-        seg_res.rates.set(data::Rates::opt::gas,
-                          rate[pu.phase_pos[Gas]]);
+        const auto ig = pu.phase_pos[Gas];
+
+        seg_res.rates.set(data::Rates::opt::gas, rate[ig]);
+        seg_res.rates.set(data::Rates::opt::reservoir_gas, resv[ig]);
+        seg_res.velocity.set(PhaseQuant::Gas, velocity[ig]);
+        seg_res.holdup.set(PhaseQuant::Gas, holdup[ig]);
+        seg_res.viscosity.set(PhaseQuant::Gas, viscosity[ig]);
     }
 
     seg_res.segNumber = seg_no;
@@ -913,5 +939,3 @@ WellState::parallelWellInfo(std::size_t well_index) const
 template void WellState::updateGlobalIsGrup<Parallel::Communication>(const Parallel::Communication& comm);
 template void WellState::communicateGroupRates<Parallel::Communication>(const Parallel::Communication& comm);
 } // namespace Opm
-
-

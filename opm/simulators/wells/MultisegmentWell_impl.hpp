@@ -112,7 +112,7 @@ namespace Opm
         // specified perforation depth
         this->initMatrixAndVectors(num_cells);
 
-        // calcuate the depth difference between the perforations and the perforated grid block
+        // calculate the depth difference between the perforations and the perforated grid block
         for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
             const int cell_idx = this->well_cells_[perf];
             this->cell_perforation_depth_diffs_[perf] = depth_arg[cell_idx] - this->perf_depth_[perf];
@@ -297,7 +297,7 @@ namespace Opm
             }
             // for pressure controlled wells the well rates are the potentials
             // if the rates are trivial we are most probably looking at the newly
-            // opened well and we therefore make the affort of computing the potentials anyway.
+            // opened well, and we therefore make the effort of computing the potentials anyway.
             if (total_rate > 0) {
                 for (int phase = 0; phase < np; ++phase){
                     well_potentials[phase] = sign * ws.surface_rates[phase];
@@ -402,7 +402,7 @@ namespace Opm
                                       std::vector<double>& well_flux,
                                       DeferredLogger& deferred_logger) const
     {
-        // creating a copy of the well itself, to avoid messing up the explicit informations
+        // creating a copy of the well itself, to avoid messing up the explicit information
         // during this copy, the only information not copied properly is the well controls
         MultisegmentWell<TypeTag> well_copy(*this);
         well_copy.debug_cost_counter_ = 0;
@@ -814,8 +814,18 @@ namespace Opm
                     diag_ell -= matel;
                 }
             }
-        
-            assert(diag_ell > 0.0);
+
+#define EXTRA_DEBUG_MSW 0
+#if EXTRA_DEBUG_MSW            
+            if(not(diag_ell > 0.0)){
+                std::stringstream msg;
+                msg << "Diagonal element for cprw on "
+                          << this->name()
+                          << " is " << diag_ell;
+                OpmLog::warning(msg.str());
+            }
+#endif
+#undef EXTRA_DEBUG_MSW            
             jacobian[welldof_ind][welldof_ind] = diag_ell;
         }else{
             jacobian[welldof_ind][welldof_ind] = 1.0; // maybe we could have used diag_ell if calculated
@@ -1323,13 +1333,12 @@ namespace Opm
             for (const int perf : this->segment_perforations_[seg]) {
             std::vector<Scalar> mob(this->num_components_, 0.0);
 
-            // TODO: mabye we should store the mobility somewhere, so that we only need to calculate it one per iteration
+            // TODO: maybe we should store the mobility somewhere, so that we only need to calculate it one per iteration
             getMobilityScalar(ebos_simulator, perf, mob);
 
             const int cell_idx = this->well_cells_[perf];
             const auto& int_quantities = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
             const auto& fs = int_quantities.fluidState();
-            // the pressure of the reservoir grid block the well connection is in
             // pressure difference between the segment and the perforation
             const double perf_seg_press_diff = this->gravity_ * this->segment_densities_[seg].value() * this->perforation_segment_depth_diffs_[perf];
             // pressure difference between the perforation and the grid cell
@@ -1516,7 +1525,7 @@ namespace Opm
             bool is_stagnate = false;
 
             this->detectOscillations(measure_history, it, is_oscillate, is_stagnate);
-            // TODO: maybe we should have more sophiscated strategy to recover the relaxation factor,
+            // TODO: maybe we should have more sophisticated strategy to recover the relaxation factor,
             // for example, to recover it to be bigger
 
             if (is_oscillate || is_stagnate) {
@@ -1580,6 +1589,7 @@ namespace Opm
                 sstr << " " << measure_history[i] << " \n";
             }
 #endif
+#undef EXTRA_DEBUG_MSW
             deferred_logger.debug(sstr.str());
         }
 
@@ -1635,7 +1645,7 @@ namespace Opm
 
         for (int seg = 0; seg < nseg; ++seg) {
             // calculating the accumulation term
-            // TODO: without considering the efficiencty factor for now
+            // TODO: without considering the efficiency factor for now
             {
                 const EvalWell segment_surface_volume = getSegmentSurfaceVolume(ebosSimulator, seg);
 

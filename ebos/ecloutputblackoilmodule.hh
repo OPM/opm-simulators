@@ -742,7 +742,7 @@ public:
             const auto cellIndex = activeIndex(elem);
 
             return {
-                cellIndex,
+                static_cast<int>(cellIndex),
                 cartesianIndex(cellIndex),
                 elem.partitionType() == Dune::InteriorEntity
             };

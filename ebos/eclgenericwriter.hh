@@ -30,10 +30,6 @@
 
 #include "collecttoiorank.hh"
 #include <ebos/ecltransmissibility.hh>
-#if HAVE_DUNE_ALUGRID
-#include "alucartesianindexmapper.hh"
-#include <dune/alugrid/common/fromtogridfactory.hh>
-#endif // HAVE_DUNE_ALUGRID
 #include <opm/models/parallel/tasklets.hh>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 

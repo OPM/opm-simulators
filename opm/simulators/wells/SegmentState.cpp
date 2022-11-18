@@ -16,44 +16,59 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
-#include <algorithm>
-#include <stdexcept>
-
 #include <opm/simulators/wells/SegmentState.hpp>
 
-#include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 #include <opm/input/eclipse/Schedule/MSW/WellSegments.hpp>
+
+#include <algorithm>
+#include <cstddef>
+#include <iterator>
+#include <stdexcept>
+#include <vector>
+
+namespace {
+
+std::vector<int> make_segment_number(const Opm::WellSegments& segments)
+{
+    std::vector<int> segment_number;
+    segment_number.reserve(segments.size());
+
+    std::transform(segments.begin(), segments.end(),
+                   std::back_inserter(segment_number),
+        [](const Opm::Segment& segment)
+    {
+        return segment.segmentNumber();
+    });
+
+    return segment_number;
+}
+
+} // Anonymous namespace
 
 namespace Opm
 {
 
-namespace {
-std::vector<int> make_segment_number( const WellSegments& segments ) {
-    std::vector<int> segment_number;
-    std::transform(segments.begin(), segments.end(), std::back_insert_iterator(segment_number), [](const Segment& segment) { return segment.segmentNumber(); });
-    return segment_number;
-}
-
-}
-
-SegmentState::SegmentState(int num_phases, const WellSegments& segments) :
-    rates(segments.size() * num_phases),
-    pressure(segments.size()),
-    pressure_drop_friction(segments.size()),
-    pressure_drop_hydrostatic(segments.size()),
-    pressure_drop_accel(segments.size()),
-    m_segment_number(make_segment_number(segments))
-{
-}
+SegmentState::SegmentState(int num_phases, const WellSegments& segments)
+    : rates                    (segments.size() * num_phases)
+    , phase_resv_rates         (segments.size() * num_phases)
+    , phase_velocity           (segments.size() * num_phases)
+    , phase_holdup             (segments.size() * num_phases)
+    , phase_viscosity          (segments.size() * num_phases)
+    , pressure                 (segments.size())
+    , pressure_drop_friction   (segments.size())
+    , pressure_drop_hydrostatic(segments.size())
+    , pressure_drop_accel      (segments.size())
+    , m_segment_number         (make_segment_number(segments))
+{}
 
 double SegmentState::pressure_drop(std::size_t index) const {
     return this->pressure_drop_friction[index] + this->pressure_drop_hydrostatic[index] + this->pressure_drop_accel[index];
 }
-
 
 bool SegmentState::empty() const {
     return this->rates.empty();
@@ -62,7 +77,6 @@ bool SegmentState::empty() const {
 std::size_t SegmentState::size() const {
     return this->pressure.size();
 }
-
 
 void SegmentState::scale_pressure(const double bhp) {
     if (this->empty())
@@ -80,4 +94,4 @@ const std::vector<int>& SegmentState::segment_number() const {
     return this->m_segment_number;
 }
 
-}
+} // namespace Opm

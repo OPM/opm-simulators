@@ -45,7 +45,6 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.cpp
   opm/simulators/flow/ValidationFunctions.cpp
   opm/simulators/linalg/bda/WellContributions.cpp
-  opm/simulators/linalg/bda/Matrix.cpp
   opm/simulators/linalg/bda/MultisegmentWellContribution.cpp
   opm/simulators/linalg/ExtractParallelGridInformationToISTL.cpp
   opm/simulators/linalg/FlexibleSolver1.cpp
@@ -143,15 +142,13 @@ if(OPENCL_FOUND)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/openclSolverBackend.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/openclWellContributions.cpp)
 endif()
-if(CUDA_FOUND OR OPENCL_FOUND OR HAVE_FPGA OR HAVE_AMGCL)
+if(ROCALUTION_FOUND)
+  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/rocalutionSolverBackend.cpp)
+endif()
+if(CUDA_FOUND OR OPENCL_FOUND OR HAVE_FPGA OR amgcl_FOUND OR ROCALUTION_FOUND)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/BdaBridge.cpp)
 endif()
-if(HAVE_FPGA)
-  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/FPGABILU0.cpp)
-  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/FPGASolverBackend.cpp)
-  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/FPGAUtils.cpp)
-endif()
-if(HAVE_AMGCL)
+if(amgcl_FOUND)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/amgclSolverBackend.cpp)
   if(CUDA_FOUND)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/cuda/amgclSolverBackend.cu)
@@ -205,6 +202,9 @@ if(OPENCL_FOUND)
   list(APPEND TEST_SOURCE_FILES tests/test_openclSolver.cpp)
   list(APPEND TEST_SOURCE_FILES tests/test_solvetransposed3x3.cpp)
   list(APPEND TEST_SOURCE_FILES tests/test_csrToCscOffsetMap.cpp)
+endif()
+if(ROCALUTION_FOUND)
+  list(APPEND TEST_SOURCE_FILES tests/test_rocalutionSolver.cpp)
 endif()
 
 list (APPEND TEST_DATA_FILES
@@ -298,9 +298,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/bda/cuda/cusparseSolverBackend.hpp
   opm/simulators/linalg/bda/opencl/ChowPatelIlu.hpp
   opm/simulators/linalg/bda/opencl/BISAI.hpp
-  opm/simulators/linalg/bda/FPGABILU0.hpp
-  opm/simulators/linalg/bda/FPGASolverBackend.hpp
-  opm/simulators/linalg/bda/FPGAUtils.hpp
   opm/simulators/linalg/bda/Reorder.hpp
   opm/simulators/linalg/bda/opencl/opencl.hpp
   opm/simulators/linalg/bda/opencl/openclKernels.hpp
@@ -310,6 +307,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/bda/opencl/openclWellContributions.hpp
   opm/simulators/linalg/bda/Matrix.hpp
   opm/simulators/linalg/bda/MultisegmentWellContribution.hpp
+  opm/simulators/linalg/bda/rocalutionSolverBackend.hpp
   opm/simulators/linalg/bda/WellContributions.hpp
   opm/simulators/linalg/amgcpr.hh
   opm/simulators/linalg/twolevelmethodcpr.hh

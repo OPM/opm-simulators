@@ -38,7 +38,6 @@ class BdaBridge
 private:
     int verbosity = 0;
     bool use_gpu = false;
-    bool use_fpga = false;
     std::string accelerator_mode;
     std::unique_ptr<Opm::Accelerator::BdaSolver<block_size> > backend;
     std::shared_ptr<Opm::Accelerator::BlockedMatrix> matrix;  // 'stores' matrix, actually points to h_rows, h_cols and the received BridgeMatrix for the nonzeroes
@@ -50,8 +49,7 @@ private:
 
 public:
     /// Construct a BdaBridge
-    /// \param[in] accelerator_mode           to select if an accelerated solver is used, is passed via command-line: '--accelerator-mode=[none|cusparse|opencl|fpga]'
-    /// \param[in] fpga_bitstream             FPGA programming bitstream file name, is passed via command-line: '--fpga-bitstream=[<filename>]'
+    /// \param[in] accelerator_mode           to select if an accelerated solver is used, is passed via command-line: '--accelerator-mode=[none|cusparse|opencl|amgcl|rocalution]'
     /// \param[in] linear_solver_verbosity    verbosity of BdaSolver
     /// \param[in] maxit                      maximum number of iterations for BdaSolver
     /// \param[in] tolerance                  required relative tolerance for BdaSolver
@@ -59,7 +57,7 @@ public:
     /// \param[in] deviceID                   the device ID to be used by the cusparse- and openclSolvers, too high values could cause runtime errors
     /// \param[in] opencl_ilu_parallel        whether to parallelize the ILU decomposition and application in OpenCL with level_scheduling
     /// \param[in] linsolver                  indicating the preconditioner, equal to the --linear-solver cmdline argument
-    BdaBridge(std::string accelerator_mode, std::string fpga_bitstream, int linear_solver_verbosity, int maxit, double tolerance,
+    BdaBridge(std::string accelerator_mode, int linear_solver_verbosity, int maxit, double tolerance,
         unsigned int platformID, unsigned int deviceID, bool opencl_ilu_parallel, std::string linsolver);
 
 
@@ -94,12 +92,6 @@ public:
     /// \param[in] wellContribs   container to hold all WellContributions
     /// \param[in] N              number of rows in scalar vector that wellContribs will be applied on
     void initWellContributions(WellContributions& wellContribs, unsigned N);
-
-    /// Return whether the BdaBridge will use the FPGA or not
-    /// return whether the BdaBridge will use the FPGA or not
-    bool getUseFpga(){
-        return use_fpga;
-    }
 
     /// Return the selected accelerator mode, this is input via the command-line
     std::string getAccleratorName(){

@@ -35,6 +35,8 @@
 
 #include <array>
 #include <memory>
+#include <utility>
+#include <vector>
 
 namespace Dune {
 template<class Matrix> class UMFPack;

@@ -22,12 +22,6 @@
 
 #define BOOST_TEST_MODULE OPM_test_openclSolver
 #include <boost/test/unit_test.hpp>
-#include <boost/version.hpp>
-
-#include <dune/common/version.hh>
-
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 6) && \
-    BOOST_VERSION / 100 % 1000 > 48
 
 #include <opm/simulators/linalg/bda/BdaBridge.hpp>
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
@@ -103,12 +97,10 @@ createBridge(const boost::property_tree::ptree& prm, std::unique_ptr<Opm::BdaBri
     const int platformID = 0;
     const int deviceID = 0;
     const std::string accelerator_mode("opencl");
-    const std::string fpga_bitstream("empty");    // unused
     const std::string linsolver("ilu0");
 
     try {
         bridge = std::make_unique<Opm::BdaBridge<Matrix<bz>, Vector<bz>, bz> >(accelerator_mode,
-                                                                               fpga_bitstream,
                                                                                linear_solver_verbosity,
                                                                                maxit,
                                                                                tolerance,
@@ -189,7 +181,7 @@ void test3(const pt::ptree& prm)
 }
 
 
-BOOST_AUTO_TEST_CASE(TestDefaultPreconditionerFactory)
+BOOST_AUTO_TEST_CASE(TestOpenclSolver)
 {
     pt::ptree prm;
 
@@ -206,14 +198,3 @@ BOOST_AUTO_TEST_CASE(TestDefaultPreconditionerFactory)
         BOOST_WARN_MESSAGE(true, "Problem with initializing Platform. skipping test");
     }
 }
-
-
-#else
-
-// Do nothing if we do not have at least Dune 2.6.
-BOOST_AUTO_TEST_CASE(DummyTest)
-{
-    BOOST_REQUIRE(true);
-}
-
-#endif

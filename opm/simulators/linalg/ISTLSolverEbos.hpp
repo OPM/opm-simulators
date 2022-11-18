@@ -84,7 +84,7 @@ public:
 namespace Opm
 {
 
-#if HAVE_CUDA || HAVE_OPENCL || HAVE_FPGA || HAVE_AMGCL
+#if HAVE_CUDA || HAVE_OPENCL || HAVE_AMGCL || HAVE_ROCALUTION
 template<class Matrix, class Vector, int block_size> class BdaBridge;
 class WellContributions;
 #endif
@@ -113,7 +113,7 @@ struct FlexibleSolverInfo
     size_t interiorCellNum_ = 0;
 };
 
-#if HAVE_CUDA || HAVE_OPENCL || HAVE_FPGA || HAVE_AMGCL
+#if HAVE_CUDA || HAVE_OPENCL || HAVE_AMGCL || HAVE_ROCALUTION
 template<class Matrix, class Vector>
 struct BdaSolverInfo
 {
@@ -121,7 +121,6 @@ struct BdaSolverInfo
   using Bridge = BdaBridge<Matrix,Vector,Matrix::block_type::rows>;
 
   BdaSolverInfo(const std::string& accelerator_mode,
-                const std::string& fpga_bitstream,
                 const int linear_solver_verbosity,
                 const int maxit,
                 const double tolerance,
@@ -246,12 +245,12 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                                      EWOMS_PARAM_IS_SET(TypeTag, int, LinearSolverMaxIter),
                                      EWOMS_PARAM_IS_SET(TypeTag, int, CprMaxEllIter));
 
-#if HAVE_CUDA || HAVE_OPENCL || HAVE_FPGA || HAVE_AMGCL
+#if HAVE_CUDA || HAVE_OPENCL || HAVE_AMGCL || HAVE_ROCALUTION
             {
                 std::string accelerator_mode = EWOMS_GET_PARAM(TypeTag, std::string, AcceleratorMode);
                 if ((simulator_.vanguard().grid().comm().size() > 1) && (accelerator_mode != "none")) {
                     if (on_io_rank) {
-                        OpmLog::warning("Cannot use GPU or FPGA with MPI, GPU/FPGA are disabled");
+                        OpmLog::warning("Cannot use GPU with MPI, GPU are disabled");
                     }
                     accelerator_mode = "none";
                 }
@@ -261,10 +260,8 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                 const double tolerance = EWOMS_GET_PARAM(TypeTag, double, LinearSolverReduction);
                 const bool opencl_ilu_parallel = EWOMS_GET_PARAM(TypeTag, bool, OpenclIluParallel);
                 const int linear_solver_verbosity = parameters_.linear_solver_verbosity_;
-                std::string fpga_bitstream = EWOMS_GET_PARAM(TypeTag, std::string, FpgaBitstream);
                 std::string linsolver = EWOMS_GET_PARAM(TypeTag, std::string, LinearSolver);
                 bdaBridge = std::make_unique<detail::BdaSolverInfo<Matrix,Vector>>(accelerator_mode,
-                                                                                   fpga_bitstream,
                                                                                    linear_solver_verbosity,
                                                                                    maxit,
                                                                                    tolerance,
@@ -275,7 +272,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             }
 #else
             if (EWOMS_GET_PARAM(TypeTag, std::string, AcceleratorMode) != "none") {
-                OPM_THROW(std::logic_error,"Cannot use accelerated solver since CUDA, OpenCL and amgcl were not found by cmake and FPGA was not enabled");
+                OPM_THROW(std::logic_error,"Cannot use accelerated solver since CUDA, OpenCL and amgcl were not found by cmake");
             }
 #endif
             extractParallelGridInformationToISTL(simulator_.vanguard().grid(), parallelInformation_);
@@ -286,12 +283,6 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             ElementMapper elemMapper(simulator_.vanguard().gridView(), Dune::mcmgElementLayout());
             detail::findOverlapAndInterior(simulator_.vanguard().grid(), elemMapper, overlapRows_, interiorRows_);
             useWellConn_ = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
-#if HAVE_FPGA
-            // check usage of MatrixAddWellContributions: for FPGA they must be included
-            if (EWOMS_GET_PARAM(TypeTag, std::string, AcceleratorMode) == "fpga" && !useWellConn_) {
-                OPM_THROW(std::logic_error,"fpgaSolver needs --matrix-add-well-contributions=true");
-            }
-#endif
             const bool ownersFirst = EWOMS_GET_PARAM(TypeTag, bool, OwnerCellsFirst);
             if (!ownersFirst) {
                 const std::string msg = "The linear solver no longer supports --owner-cells-first=false.";
@@ -392,9 +383,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             // Solve system.
             Dune::InverseOperatorResult result;
 
-            // Use GPU if: available, chosen by user, and successful.
-            // Use FPGA if: support compiled, chosen by user, and successful.
-#if HAVE_CUDA || HAVE_OPENCL || HAVE_FPGA || HAVE_AMGCL
+#if HAVE_CUDA || HAVE_OPENCL || HAVE_AMGCL || HAVE_ROCALUTION
             std::function<void(WellContributions&)> getContribs =
                 [this](WellContributions& w)
                 {
@@ -566,7 +555,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         Matrix* matrix_;
         Vector *rhs_;
 
-#if HAVE_CUDA || HAVE_OPENCL || HAVE_FPGA || HAVE_AMGCL
+#if HAVE_CUDA || HAVE_OPENCL || HAVE_AMGCL || HAVE_ROCALUTION
         std::unique_ptr<detail::BdaSolverInfo<Matrix, Vector>> bdaBridge;
 #endif
 
