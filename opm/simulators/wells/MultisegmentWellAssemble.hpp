@@ -116,6 +116,14 @@ public:
                         const EvalWell& segment_rate,
                         Equations& eqns1) const;
 
+    //! \brief Assemble inflow term.
+    void assembleInflowTerm(const int seg,
+                            const int inlet,
+                            const int inlet_upwind,
+                            const int comp_idx,
+                            const EvalWell& inlet_rate,
+                            Equations& eqns) const;
+
 private:
     const WellInterfaceIndices<FluidSystem,Indices,Scalar>& well_; //!< Reference to well
 };

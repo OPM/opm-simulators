@@ -242,6 +242,26 @@ assembleOutflowTerm(const int seg,
     // pressure derivative should be zero
 }
 
+template<class FluidSystem, class Indices, class Scalar>
+void MultisegmentWellAssemble<FluidSystem,Indices,Scalar>::
+assembleInflowTerm(const int seg,
+                   const int inlet,
+                   const int inlet_upwind,
+                   const int comp_idx,
+                   const EvalWell& inlet_rate,
+                   Equations& eqns) const
+ {
+    eqns.resWell_[seg][comp_idx] += inlet_rate.value();
+    eqns.duneD_[seg][inlet][comp_idx][WQTotal] += inlet_rate.derivative(WQTotal + Indices::numEq);
+    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+        eqns.duneD_[seg][inlet_upwind][comp_idx][WFrac] += inlet_rate.derivative(WFrac + Indices::numEq);
+    }
+    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+        eqns.duneD_[seg][inlet_upwind][comp_idx][GFrac] += inlet_rate.derivative(GFrac + Indices::numEq);
+    }
+    // pressure derivative should be zero
+}
+
 #define INSTANCE(...) \
 template class MultisegmentWellAssemble<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>;
 

@@ -1583,19 +1583,9 @@ namespace Opm
                 for (const int inlet : this->segment_inlets_[seg]) {
                     for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
                         const EvalWell inlet_rate = this->getSegmentRateUpwinding(inlet, comp_idx) * this->well_efficiency_factor_;
-
                         const int inlet_upwind = this->upwinding_segments_[inlet];
-                        // inlet_rate contains the derivatives with respect to WQTotal in inlet,
-                        // and WFrac and GFrac in inlet_upwind
-                        this->linSys_.resWell_[seg][comp_idx] += inlet_rate.value();
-                        this->linSys_.duneD_[seg][inlet][comp_idx][WQTotal] += inlet_rate.derivative(WQTotal + Indices::numEq);
-                        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-                            this->linSys_.duneD_[seg][inlet_upwind][comp_idx][WFrac] += inlet_rate.derivative(WFrac + Indices::numEq);
-                        }
-                        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                            this->linSys_.duneD_[seg][inlet_upwind][comp_idx][GFrac] += inlet_rate.derivative(GFrac + Indices::numEq);
-                        }
-                        // pressure derivative should be zero
+                        MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(*this).
+                            assembleInflowTerm(seg, inlet, inlet_upwind, comp_idx, inlet_rate, this->linSys_);
                     }
                 }
             }
