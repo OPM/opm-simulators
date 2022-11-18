@@ -124,6 +124,13 @@ public:
                             const EvalWell& inlet_rate,
                             Equations& eqns) const;
 
+    //! \brief Assemble equation for a perforation.
+    void assemblePerforationEq(const int seg,
+                               const int cell_idx,
+                               const int comp_idx,
+                               const EvalWell& cq_s_effective,
+                               Equations& eqns) const;
+
 private:
     const WellInterfaceIndices<FluidSystem,Indices,Scalar>& well_; //!< Reference to well
 };

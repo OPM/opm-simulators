@@ -262,6 +262,32 @@ assembleInflowTerm(const int seg,
     // pressure derivative should be zero
 }
 
+template<class FluidSystem, class Indices, class Scalar>
+void MultisegmentWellAssemble<FluidSystem,Indices,Scalar>::
+assemblePerforationEq(const int seg,
+                      const int cell_idx,
+                      const int comp_idx,
+                      const EvalWell& cq_s_effective,
+                      Equations& eqns) const
+{
+    // subtract sum of phase fluxes in the well equations.
+    eqns.resWell_[seg][comp_idx] += cq_s_effective.value();
+
+    // assemble the jacobians
+    for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
+        // also need to consider the efficiency factor when manipulating the jacobians.
+        eqns.duneC_[seg][cell_idx][pv_idx][comp_idx] -= cq_s_effective.derivative(pv_idx + Indices::numEq); // input in transformed matrix
+
+        // the index name for the D should be eq_idx / pv_idx
+        eqns.duneD_[seg][seg][comp_idx][pv_idx] += cq_s_effective.derivative(pv_idx + Indices::numEq);
+    }
+
+    for (int pv_idx = 0; pv_idx < Indices::numEq; ++pv_idx) {
+        // also need to consider the efficiency factor when manipulating the jacobians.
+        eqns.duneB_[seg][cell_idx][comp_idx][pv_idx] += cq_s_effective.derivative(pv_idx);
+    }
+}
+
 #define INSTANCE(...) \
 template class MultisegmentWellAssemble<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>;
 
