@@ -1438,25 +1438,17 @@ assembleICDPressureEq(const int seg,
     auto& ws = well_state.well(baseif_.indexOfWell());
     ws.segments.pressure_drop_friction[seg] = icd_pressure_drop.value();
 
-    const int seg_upwind = upwinding_segments_[seg];
-    linSys_.resWell_[seg][SPres] = pressure_equation.value();
-    linSys_.duneD_[seg][seg][SPres][SPres] += pressure_equation.derivative(SPres + Indices::numEq);
-    linSys_.duneD_[seg][seg][SPres][WQTotal] += pressure_equation.derivative(WQTotal + Indices::numEq);
-    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-        linSys_.duneD_[seg][seg_upwind][SPres][WFrac] += pressure_equation.derivative(WFrac + Indices::numEq);
-    }
-    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-        linSys_.duneD_[seg][seg_upwind][SPres][GFrac] += pressure_equation.derivative(GFrac + Indices::numEq);
-    }
-
     // contribution from the outlet segment
     const int outlet_segment_index = this->segmentNumberToIndex(this->segmentSet()[seg].outletSegment());
     const EvalWell outlet_pressure = getSegmentPressure(outlet_segment_index);
 
-    linSys_.resWell_[seg][SPres] -= outlet_pressure.value();
-    for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-        linSys_.duneD_[seg][outlet_segment_index][SPres][pv_idx] = -outlet_pressure.derivative(pv_idx + Indices::numEq);
-    }
+    const int seg_upwind = upwinding_segments_[seg];
+    MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(baseif_).
+        assemblePressureEq(seg, seg_upwind, outlet_segment_index,
+                           pressure_equation, outlet_pressure,
+                           linSys_,
+                           FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx),
+                           FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx));
 }
 
 template<typename FluidSystem, typename Indices, typename Scalar>
