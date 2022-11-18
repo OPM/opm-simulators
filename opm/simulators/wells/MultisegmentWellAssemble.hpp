@@ -103,6 +103,12 @@ public:
                            const Scalar value,
                            Equations& eqns) const;
 
+    //! \brief Assemble accumulation term.
+    void assembleAccumulationTerm(const int seg,
+                                  const int comp_idx,
+                                  const EvalWell& accumulation_term,
+                                  Equations& eqns1) const;
+
 private:
     const WellInterfaceIndices<FluidSystem,Indices,Scalar>& well_; //!< Reference to well
 };

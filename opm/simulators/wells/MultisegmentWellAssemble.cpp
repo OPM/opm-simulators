@@ -210,6 +210,19 @@ assembleTrivialEq(const int seg,
     eqns.duneD_[seg][seg][SPres][WQTotal] = 1.;
 }
 
+template<class FluidSystem, class Indices, class Scalar>
+void MultisegmentWellAssemble<FluidSystem,Indices,Scalar>::
+assembleAccumulationTerm(const int seg,
+                         const int comp_idx,
+                         const EvalWell& accumulation_term,
+                         Equations& eqns) const
+{
+    eqns.resWell_[seg][comp_idx] += accumulation_term.value();
+    for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
+      eqns.duneD_[seg][seg][comp_idx][pv_idx] += accumulation_term.derivative(pv_idx + Indices::numEq);
+    }
+}
+
 #define INSTANCE(...) \
 template class MultisegmentWellAssemble<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>;
 

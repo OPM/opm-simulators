@@ -1563,11 +1563,8 @@ namespace Opm
                 for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
                     const EvalWell accumulation_term = regularization_factor * (segment_surface_volume * this->surfaceVolumeFraction(seg, comp_idx)
                                                      - segment_fluid_initial_[seg][comp_idx]) / dt;
-
-                    this->linSys_.resWell_[seg][comp_idx] += accumulation_term.value();
-                    for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-                        this->linSys_.duneD_[seg][seg][comp_idx][pv_idx] += accumulation_term.derivative(pv_idx + Indices::numEq);
-                    }
+                    MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(*this).
+                        assembleAccumulationTerm(seg, comp_idx, accumulation_term, this->linSys_);
                 }
             }
             // considering the contributions due to flowing out from the segment
