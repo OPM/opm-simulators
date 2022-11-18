@@ -86,6 +86,14 @@ public:
                          const int numWellEq,
                          StandardWellEquations<Scalar,Indices::numEq>& eqns) const;
 
+    //! \brief Assemble a source term.
+    template<class EvalWell>
+    void assembleSourceEq(const EvalWell& resWell_loc,
+                          const int componentIdx,
+                          const int numWellEq,
+                          StandardWellEquations<Scalar,Indices::numEq>& eqns) const;
+
+
 private:
     const WellInterfaceFluidSystem<FluidSystem>& well_; //!< Reference to well
 };

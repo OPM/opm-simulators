@@ -532,10 +532,11 @@ namespace Opm
                 resWell_loc += (this->wellSurfaceVolumeFraction(componentIdx) - this->F0_[componentIdx]) * volume / dt;
             }
             resWell_loc -= this->getQs(componentIdx) * this->well_efficiency_factor_;
-            for (int pvIdx = 0; pvIdx < this->numWellEq_; ++pvIdx) {
-                this->linSys_.duneD_[0][0][componentIdx][pvIdx] += resWell_loc.derivative(pvIdx+Indices::numEq);
-            }
-            this->linSys_.resWell_[0][componentIdx] += resWell_loc.value();
+            StandardWellAssemble<FluidSystem,Indices,Scalar>(*this).
+                assembleSourceEq(resWell_loc,
+                                 componentIdx,
+                                 this->numWellEq_,
+                                 this->linSys_);
         }
 
         const auto& summaryState = ebosSimulator.vanguard().summaryState();
