@@ -43,6 +43,21 @@ class WellState;
 template<class FluidSystem, class Indices, class Scalar>
 class MultisegmentWellAssemble
 {
+    static constexpr bool has_water = (Indices::waterSwitchIdx >= 0);
+    static constexpr bool has_gas = (Indices::compositionSwitchIdx >= 0);
+    static constexpr bool has_oil = (Indices::numPhases - has_gas - has_water) > 0;
+
+    // In the implementation, one should use has_wfrac_variable
+    // rather than has_water to check if you should do something
+    // with the variable at the WFrac location, similar for GFrac.
+    static constexpr bool has_wfrac_variable = has_water && Indices::numPhases > 1;
+    static constexpr bool has_gfrac_variable = has_gas && has_oil;
+
+    static constexpr int WQTotal = 0;
+    static constexpr int WFrac = has_wfrac_variable ? 1 : -1000;
+    static constexpr int GFrac = has_gfrac_variable ? has_wfrac_variable + 1 : -1000;
+    static constexpr int SPres = has_wfrac_variable + has_gfrac_variable + 1;
+
 public:
     static constexpr int numWellEq = Indices::numPhases+1;
     using Equations = MultisegmentWellEquations<Scalar,numWellEq,Indices::numEq>;
@@ -62,10 +77,16 @@ public:
                            const double rho,
                            const EvalWell& wqTotal,
                            const EvalWell& bhp,
-                           const int SPres,
                            const std::function<EvalWell(const int)>& getQs,
                            Equations& eqns,
                            DeferredLogger& deferred_logger) const;
+
+
+    //! \brief Assemble pressure loss term.
+    void assemblePressureLoss(const int seg,
+                              const int seg_upwind,
+                              const EvalWell& accelerationPressureLoss,
+                              Equations& eqns) const;
 
 private:
     const WellInterfaceIndices<FluidSystem,Indices,Scalar>& well_; //!< Reference to well

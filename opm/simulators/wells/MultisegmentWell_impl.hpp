@@ -1683,7 +1683,6 @@ namespace Opm
                                         getRefDensity(),
                                         this->getWQTotal(),
                                         this->getBhp(),
-                                        SPres,
                                         gQ,
                                         this->linSys_,
                                         deferred_logger);

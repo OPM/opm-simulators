@@ -33,6 +33,7 @@
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/MSWellHelpers.hpp>
+#include <opm/simulators/wells/MultisegmentWellAssemble.hpp>
 #include <opm/simulators/wells/RateConverter.hpp>
 #include <opm/simulators/wells/WellAssemble.hpp>
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
@@ -1148,15 +1149,8 @@ handleAccelerationPressureLoss(const int seg,
     auto& segments = well_state.well(baseif_.indexOfWell()).segments;
     segments.pressure_drop_accel[seg] = accelerationPressureLoss.value();
 
-    linSys_.resWell_[seg][SPres] -= accelerationPressureLoss.value();
-    linSys_.duneD_[seg][seg][SPres][SPres] -= accelerationPressureLoss.derivative(SPres + Indices::numEq);
-    linSys_.duneD_[seg][seg][SPres][WQTotal] -= accelerationPressureLoss.derivative(WQTotal + Indices::numEq);
-    if (has_wfrac_variable) {
-        linSys_.duneD_[seg][seg_upwind][SPres][WFrac] -= accelerationPressureLoss.derivative(WFrac + Indices::numEq);
-    }
-    if (has_gfrac_variable) {
-        linSys_.duneD_[seg][seg_upwind][SPres][GFrac] -= accelerationPressureLoss.derivative(GFrac + Indices::numEq);
-    }
+    MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(baseif_).
+        assemblePressureLoss(seg, seg_upwind, accelerationPressureLoss, linSys_);
 }
 
 template<typename FluidSystem, typename Indices, typename Scalar>

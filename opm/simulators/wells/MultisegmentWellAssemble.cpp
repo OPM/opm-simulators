@@ -48,7 +48,6 @@ assembleControlEq(const WellState& well_state,
                   const double rho,
                   const EvalWell& wqTotal,
                   const EvalWell& bhp,
-                  const int SPres,
                   const std::function<EvalWell(const int)>& getQs,
                   Equations& eqns,
                   DeferredLogger& deferred_logger) const
@@ -155,6 +154,24 @@ assembleControlEq(const WellState& well_state,
     }
 }
 
+template<class FluidSystem, class Indices, class Scalar>
+void MultisegmentWellAssemble<FluidSystem,Indices,Scalar>::
+assemblePressureLoss(const int seg,
+                     const int seg_upwind,
+                     const EvalWell& accelerationPressureLoss,
+                     Equations& eqns) const
+{
+    eqns.resWell_[seg][SPres] -= accelerationPressureLoss.value();
+    eqns.duneD_[seg][seg][SPres][SPres] -= accelerationPressureLoss.derivative(SPres + Indices::numEq);
+    eqns.duneD_[seg][seg][SPres][WQTotal] -= accelerationPressureLoss.derivative(WQTotal + Indices::numEq);
+    if constexpr (has_wfrac_variable) {
+        eqns.duneD_[seg][seg_upwind][SPres][WFrac] -= accelerationPressureLoss.derivative(WFrac + Indices::numEq);
+    }
+    if constexpr (has_gfrac_variable) {
+        eqns.duneD_[seg][seg_upwind][SPres][GFrac] -= accelerationPressureLoss.derivative(GFrac + Indices::numEq);
+    }
+}
+
 #define INSTANCE(...) \
 template class MultisegmentWellAssemble<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>;
 
@@ -175,8 +192,10 @@ INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>)
 
 // Blackoil
 INSTANCE(BlackOilIndices<0u,0u,0u,0u,false,false,0u,0u>)
+INSTANCE(BlackOilIndices<0u,0u,0u,0u,false,false,1u,0u>)
 INSTANCE(BlackOilIndices<0u,0u,0u,0u,true,false,0u,0u>)
 INSTANCE(BlackOilIndices<0u,0u,0u,0u,false,true,0u,0u>)
+INSTANCE(BlackOilIndices<0u,0u,0u,0u,false,true,2u,0u>)
 INSTANCE(BlackOilIndices<1u,0u,0u,0u,false,false,0u,0u>)
 INSTANCE(BlackOilIndices<0u,1u,0u,0u,false,false,0u,0u>)
 INSTANCE(BlackOilIndices<0u,0u,1u,0u,false,false,0u,0u>)
