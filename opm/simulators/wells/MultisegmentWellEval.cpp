@@ -113,7 +113,7 @@ getWellConvergence(const WellState& well_state,
     std::vector<std::vector<double>> abs_residual(this->numberOfSegments(), std::vector<double>(numWellEq, 0.0));
     for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
         for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
-            abs_residual[seg][eq_idx] = std::abs(linSys_.resWell_[seg][eq_idx]);
+            abs_residual[seg][eq_idx] = std::abs(linSys_.residual()[seg][eq_idx]);
         }
     }
 
@@ -178,7 +178,7 @@ getWellConvergence(const WellState& well_state,
                                    tolerance_wells,
                                    tolerance_wells,
                                    max_residual_allowed},
-                                  std::abs(linSys_.resWell_[0][SPres]),
+                                  std::abs(linSys_.residual()[0][SPres]),
                                   report,
                                   deferred_logger);
 
@@ -1484,10 +1484,10 @@ getFiniteWellResiduals(const std::vector<Scalar>& B_avg,
         for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
             double residual = 0.;
             if (eq_idx < baseif_.numComponents()) {
-                residual = std::abs(linSys_.resWell_[seg][eq_idx]) * B_avg[eq_idx];
+                residual = std::abs(linSys_.residual()[seg][eq_idx]) * B_avg[eq_idx];
             } else {
                 if (seg > 0) {
-                    residual = std::abs(linSys_.resWell_[seg][eq_idx]);
+                    residual = std::abs(linSys_.residual()[seg][eq_idx]);
                 }
             }
             if (std::isnan(residual) || std::isinf(residual)) {
@@ -1504,7 +1504,7 @@ getFiniteWellResiduals(const std::vector<Scalar>& B_avg,
 
     // handling the control equation residual
     {
-        const double control_residual = std::abs(linSys_.resWell_[0][numWellEq - 1]);
+        const double control_residual = std::abs(linSys_.residual()[0][numWellEq - 1]);
         if (std::isnan(control_residual) || std::isinf(control_residual)) {
            deferred_logger.debug("nan or inf value for control residal get for well " + baseif_.name());
            return {false, residuals};

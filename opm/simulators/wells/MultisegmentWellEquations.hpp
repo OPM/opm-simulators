@@ -110,6 +110,12 @@ public:
                                   const int seg_pressure_var_ind,
                                   const WellState& well_state) const;
 
+    //! \brief Returns a const reference to the residual.
+    const BVectorWell& residual() const
+    {
+        return resWell_;
+    }
+
     // two off-diagonal matrices
     OffDiagMatWell duneB_;
     OffDiagMatWell duneC_;
