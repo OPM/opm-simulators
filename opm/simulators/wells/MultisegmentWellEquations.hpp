@@ -36,6 +36,7 @@ template<class M> class UMFPack;
 namespace Opm
 {
 
+template<class Scalar, int numWellEq, int numEq> class MultisegmentWellEquationAccess;
 template<class Scalar> class MultisegmentWellGeneric;
 class WellContributions;
 class WellInterfaceGeneric;
@@ -116,6 +117,8 @@ public:
         return resWell_;
     }
 
+  private:
+    friend class MultisegmentWellEquationAccess<Scalar,numWellEq,numEq>;
     // two off-diagonal matrices
     OffDiagMatWell duneB_;
     OffDiagMatWell duneC_;
@@ -125,12 +128,11 @@ public:
     /// \brief solver for diagonal matrix
     ///
     /// This is a shared_ptr as MultisegmentWell is copied in computeWellPotentials...
-    mutable std::shared_ptr<Dune::UMFPack<DiagMatWell> > duneDSolver_;
+    mutable std::shared_ptr<Dune::UMFPack<DiagMatWell>> duneDSolver_;
 
     // residuals of the well equations
     BVectorWell resWell_;
 
-private:
     const MultisegmentWellGeneric<Scalar>& well_; //!< Reference to well
 };
 
