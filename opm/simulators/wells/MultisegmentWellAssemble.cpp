@@ -37,6 +37,47 @@
 
 namespace Opm {
 
+//! \brief Class administering assembler access to equation system.
+template<class Scalar, int numWellEq, int numEq>
+class MultisegmentWellEquationAccess {
+public:
+    //! \brief Constructor initializes reference to the equation system.
+    MultisegmentWellEquationAccess(MultisegmentWellEquations<Scalar,numWellEq,numEq>& eqns)
+        : eqns_(eqns)
+    {}
+
+    using BVectorWell = typename MultisegmentWellEquations<Scalar,numWellEq,numEq>::BVectorWell;
+    using DiagMatWell = typename MultisegmentWellEquations<Scalar,numWellEq,numEq>::DiagMatWell;
+    using OffDiatMatWell = typename MultisegmentWellEquations<Scalar,numWellEq,numEq>::OffDiagMatWell;
+
+    //! \brief Returns a reference to residual vector.
+    BVectorWell& residual()
+    {
+        return eqns_.resWell_;
+    }
+
+    //! \brief Returns a reference to B matrix.
+    OffDiatMatWell& B()
+    {
+        return eqns_.duneB_;
+    }
+
+    //! \brief Returns a reference to C matrix.
+    OffDiatMatWell& C()
+    {
+        return eqns_.duneC_;
+    }
+
+    //! \brief Returns a reference to D matrix.
+    DiagMatWell& D()
+    {
+        return eqns_.duneD_;
+    }
+
+private:
+    MultisegmentWellEquations<Scalar,numWellEq,numEq>& eqns_; //!< Reference to equation system
+};
+
 template<class FluidSystem, class Indices, class Scalar>
 void MultisegmentWellAssemble<FluidSystem,Indices,Scalar>::
 assembleControlEq(const WellState& well_state,
@@ -49,7 +90,7 @@ assembleControlEq(const WellState& well_state,
                   const EvalWell& wqTotal,
                   const EvalWell& bhp,
                   const std::function<EvalWell(const int)>& getQs,
-                  Equations& eqns,
+                  Equations& eqns1,
                   DeferredLogger& deferred_logger) const
 {
     static constexpr int Gas = BlackoilPhases::Vapour;
@@ -147,10 +188,11 @@ assembleControlEq(const WellState& well_state,
                                                   deferred_logger);
     }
 
+    MultisegmentWellEquationAccess<Scalar,numWellEq,Indices::numEq> eqns(eqns1);
     // using control_eq to update the matrix and residuals
-    eqns.resWell_[0][SPres] = control_eq.value();
+    eqns.residual()[0][SPres] = control_eq.value();
     for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-        eqns.duneD_[0][0][SPres][pv_idx] = control_eq.derivative(pv_idx + Indices::numEq);
+        eqns.D()[0][0][SPres][pv_idx] = control_eq.derivative(pv_idx + Indices::numEq);
     }
 }
 
@@ -159,16 +201,17 @@ void MultisegmentWellAssemble<FluidSystem,Indices,Scalar>::
 assemblePressureLoss(const int seg,
                      const int seg_upwind,
                      const EvalWell& accelerationPressureLoss,
-                     Equations& eqns) const
+                     Equations& eqns1) const
 {
-    eqns.resWell_[seg][SPres] -= accelerationPressureLoss.value();
-    eqns.duneD_[seg][seg][SPres][SPres] -= accelerationPressureLoss.derivative(SPres + Indices::numEq);
-    eqns.duneD_[seg][seg][SPres][WQTotal] -= accelerationPressureLoss.derivative(WQTotal + Indices::numEq);
+    MultisegmentWellEquationAccess<Scalar,numWellEq,Indices::numEq> eqns(eqns1);
+    eqns.residual()[seg][SPres] -= accelerationPressureLoss.value();
+    eqns.D()[seg][seg][SPres][SPres] -= accelerationPressureLoss.derivative(SPres + Indices::numEq);
+    eqns.D()[seg][seg][SPres][WQTotal] -= accelerationPressureLoss.derivative(WQTotal + Indices::numEq);
     if constexpr (has_wfrac_variable) {
-        eqns.duneD_[seg][seg_upwind][SPres][WFrac] -= accelerationPressureLoss.derivative(WFrac + Indices::numEq);
+        eqns.D()[seg][seg_upwind][SPres][WFrac] -= accelerationPressureLoss.derivative(WFrac + Indices::numEq);
     }
     if constexpr (has_gfrac_variable) {
-        eqns.duneD_[seg][seg_upwind][SPres][GFrac] -= accelerationPressureLoss.derivative(GFrac + Indices::numEq);
+        eqns.D()[seg][seg_upwind][SPres][GFrac] -= accelerationPressureLoss.derivative(GFrac + Indices::numEq);
     }
 }
 
@@ -179,24 +222,25 @@ assemblePressureEq(const int seg,
                    const int outlet_segment_index,
                    const EvalWell& pressure_equation,
                    const EvalWell& outlet_pressure,
-                   Equations& eqns,
+                   Equations& eqns1,
                    bool wfrac,
                    bool gfrac) const
 {
-    eqns.resWell_[seg][SPres] = pressure_equation.value();
-    eqns.duneD_[seg][seg][SPres][SPres] += pressure_equation.derivative(SPres + Indices::numEq);
-    eqns.duneD_[seg][seg][SPres][WQTotal] += pressure_equation.derivative(WQTotal + Indices::numEq);
+    MultisegmentWellEquationAccess<Scalar,numWellEq,Indices::numEq> eqns(eqns1);
+    eqns.residual()[seg][SPres] = pressure_equation.value();
+    eqns.D()[seg][seg][SPres][SPres] += pressure_equation.derivative(SPres + Indices::numEq);
+    eqns.D()[seg][seg][SPres][WQTotal] += pressure_equation.derivative(WQTotal + Indices::numEq);
     if (wfrac) {
-        eqns.duneD_[seg][seg_upwind][SPres][WFrac] += pressure_equation.derivative(WFrac + Indices::numEq);
+        eqns.D()[seg][seg_upwind][SPres][WFrac] += pressure_equation.derivative(WFrac + Indices::numEq);
     }
     if (gfrac) {
-        eqns.duneD_[seg][seg_upwind][SPres][GFrac] += pressure_equation.derivative(GFrac + Indices::numEq);
+        eqns.D()[seg][seg_upwind][SPres][GFrac] += pressure_equation.derivative(GFrac + Indices::numEq);
     }
 
     // contribution from the outlet segment
-    eqns.resWell_[seg][SPres] -= outlet_pressure.value();
+    eqns.residual()[seg][SPres] -= outlet_pressure.value();
     for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-        eqns.duneD_[seg][outlet_segment_index][SPres][pv_idx] = -outlet_pressure.derivative(pv_idx + Indices::numEq);
+        eqns.D()[seg][outlet_segment_index][SPres][pv_idx] = -outlet_pressure.derivative(pv_idx + Indices::numEq);
     }
 }
 
@@ -204,10 +248,11 @@ template<class FluidSystem, class Indices, class Scalar>
 void MultisegmentWellAssemble<FluidSystem,Indices,Scalar>::
 assembleTrivialEq(const int seg,
                   const Scalar value,
-                  Equations& eqns) const
+                  Equations& eqns1) const
 {
-    eqns.resWell_[seg][SPres] = value;
-    eqns.duneD_[seg][seg][SPres][WQTotal] = 1.;
+    MultisegmentWellEquationAccess<Scalar,numWellEq,Indices::numEq> eqns(eqns1);
+    eqns.residual()[seg][SPres] = value;
+    eqns.D()[seg][seg][SPres][WQTotal] = 1.;
 }
 
 template<class FluidSystem, class Indices, class Scalar>
@@ -215,11 +260,12 @@ void MultisegmentWellAssemble<FluidSystem,Indices,Scalar>::
 assembleAccumulationTerm(const int seg,
                          const int comp_idx,
                          const EvalWell& accumulation_term,
-                         Equations& eqns) const
+                         Equations& eqns1) const
 {
-    eqns.resWell_[seg][comp_idx] += accumulation_term.value();
+    MultisegmentWellEquationAccess<Scalar,numWellEq,Indices::numEq> eqns(eqns1);
+    eqns.residual()[seg][comp_idx] += accumulation_term.value();
     for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-      eqns.duneD_[seg][seg][comp_idx][pv_idx] += accumulation_term.derivative(pv_idx + Indices::numEq);
+      eqns.D()[seg][seg][comp_idx][pv_idx] += accumulation_term.derivative(pv_idx + Indices::numEq);
     }
 }
 
@@ -229,15 +275,16 @@ assembleOutflowTerm(const int seg,
                     const int seg_upwind,
                     const int comp_idx,
                     const EvalWell& segment_rate,
-                    Equations& eqns) const
+                    Equations& eqns1) const
 {
-    eqns.resWell_[seg][comp_idx] -= segment_rate.value();
-    eqns.duneD_[seg][seg][comp_idx][WQTotal] -= segment_rate.derivative(WQTotal + Indices::numEq);
+    MultisegmentWellEquationAccess<Scalar,numWellEq,Indices::numEq> eqns(eqns1);
+    eqns.residual()[seg][comp_idx] -= segment_rate.value();
+    eqns.D()[seg][seg][comp_idx][WQTotal] -= segment_rate.derivative(WQTotal + Indices::numEq);
     if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-        eqns.duneD_[seg][seg_upwind][comp_idx][WFrac] -= segment_rate.derivative(WFrac + Indices::numEq);
+        eqns.D()[seg][seg_upwind][comp_idx][WFrac] -= segment_rate.derivative(WFrac + Indices::numEq);
     }
     if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-        eqns.duneD_[seg][seg_upwind][comp_idx][GFrac] -= segment_rate.derivative(GFrac + Indices::numEq);
+        eqns.D()[seg][seg_upwind][comp_idx][GFrac] -= segment_rate.derivative(GFrac + Indices::numEq);
     }
     // pressure derivative should be zero
 }
@@ -249,15 +296,16 @@ assembleInflowTerm(const int seg,
                    const int inlet_upwind,
                    const int comp_idx,
                    const EvalWell& inlet_rate,
-                   Equations& eqns) const
+                   Equations& eqns1) const
  {
-    eqns.resWell_[seg][comp_idx] += inlet_rate.value();
-    eqns.duneD_[seg][inlet][comp_idx][WQTotal] += inlet_rate.derivative(WQTotal + Indices::numEq);
+    MultisegmentWellEquationAccess<Scalar,numWellEq,Indices::numEq> eqns(eqns1);
+    eqns.residual()[seg][comp_idx] += inlet_rate.value();
+    eqns.D()[seg][inlet][comp_idx][WQTotal] += inlet_rate.derivative(WQTotal + Indices::numEq);
     if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-        eqns.duneD_[seg][inlet_upwind][comp_idx][WFrac] += inlet_rate.derivative(WFrac + Indices::numEq);
+        eqns.D()[seg][inlet_upwind][comp_idx][WFrac] += inlet_rate.derivative(WFrac + Indices::numEq);
     }
     if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-        eqns.duneD_[seg][inlet_upwind][comp_idx][GFrac] += inlet_rate.derivative(GFrac + Indices::numEq);
+        eqns.D()[seg][inlet_upwind][comp_idx][GFrac] += inlet_rate.derivative(GFrac + Indices::numEq);
     }
     // pressure derivative should be zero
 }
@@ -268,23 +316,24 @@ assemblePerforationEq(const int seg,
                       const int cell_idx,
                       const int comp_idx,
                       const EvalWell& cq_s_effective,
-                      Equations& eqns) const
+                      Equations& eqns1) const
 {
+    MultisegmentWellEquationAccess<Scalar,numWellEq,Indices::numEq> eqns(eqns1);
     // subtract sum of phase fluxes in the well equations.
-    eqns.resWell_[seg][comp_idx] += cq_s_effective.value();
+    eqns.residual()[seg][comp_idx] += cq_s_effective.value();
 
     // assemble the jacobians
     for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
         // also need to consider the efficiency factor when manipulating the jacobians.
-        eqns.duneC_[seg][cell_idx][pv_idx][comp_idx] -= cq_s_effective.derivative(pv_idx + Indices::numEq); // input in transformed matrix
+        eqns.C()[seg][cell_idx][pv_idx][comp_idx] -= cq_s_effective.derivative(pv_idx + Indices::numEq); // input in transformed matrix
 
         // the index name for the D should be eq_idx / pv_idx
-        eqns.duneD_[seg][seg][comp_idx][pv_idx] += cq_s_effective.derivative(pv_idx + Indices::numEq);
+        eqns.D()[seg][seg][comp_idx][pv_idx] += cq_s_effective.derivative(pv_idx + Indices::numEq);
     }
 
     for (int pv_idx = 0; pv_idx < Indices::numEq; ++pv_idx) {
         // also need to consider the efficiency factor when manipulating the jacobians.
-        eqns.duneB_[seg][cell_idx][comp_idx][pv_idx] += cq_s_effective.derivative(pv_idx);
+        eqns.B()[seg][cell_idx][comp_idx][pv_idx] += cq_s_effective.derivative(pv_idx);
     }
 }
 
