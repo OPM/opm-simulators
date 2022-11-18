@@ -200,6 +200,16 @@ assemblePressureEq(const int seg,
     }
 }
 
+template<class FluidSystem, class Indices, class Scalar>
+void MultisegmentWellAssemble<FluidSystem,Indices,Scalar>::
+assembleTrivialEq(const int seg,
+                  const Scalar value,
+                  Equations& eqns) const
+{
+    eqns.resWell_[seg][SPres] = value;
+    eqns.duneD_[seg][seg][SPres][WQTotal] = 1.;
+}
+
 #define INSTANCE(...) \
 template class MultisegmentWellAssemble<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>;
 

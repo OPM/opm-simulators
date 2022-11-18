@@ -98,6 +98,11 @@ public:
                             bool wfrac = has_wfrac_variable,
                             bool gfrac = has_gfrac_variable) const;
 
+    //! \brief Assembles a trivial equation.
+    void assembleTrivialEq(const int seg,
+                           const Scalar value,
+                           Equations& eqns) const;
+
 private:
     const WellInterfaceIndices<FluidSystem,Indices,Scalar>& well_; //!< Reference to well
 };
