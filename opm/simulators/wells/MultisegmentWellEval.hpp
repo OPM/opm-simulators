@@ -105,15 +105,6 @@ protected:
     void initMatrixAndVectors(const int num_cells);
     void initPrimaryVariablesEvaluation() const;
 
-    void assembleControlEq(const WellState& well_state,
-                           const GroupState& group_state,
-                           const Schedule& schedule,
-                           const SummaryState& summaryState,
-                           const Well::InjectionControls& inj_controls,
-                           const Well::ProductionControls& prod_controls,
-                           const double rho,
-                           DeferredLogger& deferred_logger);
-
     void assembleDefaultPressureEq(const int seg,
                                    WellState& well_state);
 

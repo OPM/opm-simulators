@@ -19,6 +19,7 @@
 */
 
 
+#include <opm/simulators/wells/MultisegmentWellAssemble.hpp>
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/input/eclipse/Schedule/MSW/Valve.hpp>
@@ -1671,13 +1672,20 @@ namespace Opm
             if (seg == 0) { // top segment, pressure equation is the control equation
                 const auto& summaryState = ebosSimulator.vanguard().summaryState();
                 const Schedule& schedule = ebosSimulator.vanguard().schedule();
-                this->assembleControlEq(well_state,
+                std::function<EvalWell(const int)> gQ = [this](int a) { return this->getQs(a); };
+                MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(*this).
+                        assembleControlEq(well_state,
                                         group_state,
                                         schedule,
                                         summaryState,
                                         inj_controls,
                                         prod_controls,
                                         getRefDensity(),
+                                        this->getWQTotal(),
+                                        this->getBhp(),
+                                        SPres,
+                                        gQ,
+                                        this->linSys_,
                                         deferred_logger);
             } else {
                 const UnitSystem& unit_system = ebosSimulator.vanguard().eclState().getDeckUnitSystem();
