@@ -117,6 +117,12 @@ public:
     //! \brief Sum with off-process contribution.
     void sumDistributed(Parallel::Communication comm);
 
+    //! \brief Returns a const reference to the residual.
+    const BVectorWell& residual() const
+    {
+        return resWell_;
+    }
+
     // two off-diagonal matrices
     OffDiagMatWell duneB_;
     OffDiagMatWell duneC_;

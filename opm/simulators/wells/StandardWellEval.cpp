@@ -679,7 +679,7 @@ getWellConvergence(const WellState& well_state,
     res.resize(numWellEq_);
     for (int eq_idx = 0; eq_idx < numWellEq_; ++eq_idx) {
         // magnitude of the residual matters
-        res[eq_idx] = std::abs(this->linSys_.resWell_[0][eq_idx]);
+        res[eq_idx] = std::abs(this->linSys_.residual()[0][eq_idx]);
     }
 
     std::vector<double> well_flux_residual(baseif_.numComponents());
@@ -716,7 +716,7 @@ getWellConvergence(const WellState& well_state,
     WellConvergence(baseif_).
         checkConvergenceControlEq(well_state,
                                   {1.e3, 1.e4, 1.e-4, 1.e-6, maxResidualAllowed},
-                                  std::abs(this->linSys_.resWell_[0][Bhp]),
+                                  std::abs(this->linSys_.residual()[0][Bhp]),
                                   report,
                                   deferred_logger);
 
