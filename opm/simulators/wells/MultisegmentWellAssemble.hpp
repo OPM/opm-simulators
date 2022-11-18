@@ -109,6 +109,13 @@ public:
                                   const EvalWell& accumulation_term,
                                   Equations& eqns1) const;
 
+    //! \brief Assemble outflow term.
+    void assembleOutflowTerm(const int seg,
+                        const int seg_upwind,
+                        const int comp_idx,
+                        const EvalWell& segment_rate,
+                        Equations& eqns1) const;
+
 private:
     const WellInterfaceIndices<FluidSystem,Indices,Scalar>& well_; //!< Reference to well
 };

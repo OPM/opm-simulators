@@ -223,6 +223,25 @@ assembleAccumulationTerm(const int seg,
     }
 }
 
+template<class FluidSystem, class Indices, class Scalar>
+void MultisegmentWellAssemble<FluidSystem,Indices,Scalar>::
+assembleOutflowTerm(const int seg,
+                    const int seg_upwind,
+                    const int comp_idx,
+                    const EvalWell& segment_rate,
+                    Equations& eqns) const
+{
+    eqns.resWell_[seg][comp_idx] -= segment_rate.value();
+    eqns.duneD_[seg][seg][comp_idx][WQTotal] -= segment_rate.derivative(WQTotal + Indices::numEq);
+    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+        eqns.duneD_[seg][seg_upwind][comp_idx][WFrac] -= segment_rate.derivative(WFrac + Indices::numEq);
+    }
+    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+        eqns.duneD_[seg][seg_upwind][comp_idx][GFrac] -= segment_rate.derivative(GFrac + Indices::numEq);
+    }
+    // pressure derivative should be zero
+}
+
 #define INSTANCE(...) \
 template class MultisegmentWellAssemble<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>;
 

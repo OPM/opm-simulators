@@ -1569,21 +1569,12 @@ namespace Opm
             }
             // considering the contributions due to flowing out from the segment
             {
+                const int seg_upwind = this->upwinding_segments_[seg];
                 for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
-                    const EvalWell segment_rate = this->getSegmentRateUpwinding(seg, comp_idx) * this->well_efficiency_factor_;
-
-                    const int seg_upwind = this->upwinding_segments_[seg];
-                    // segment_rate contains the derivatives with respect to WQTotal in seg,
-                    // and WFrac and GFrac in seg_upwind
-                    this->linSys_.resWell_[seg][comp_idx] -= segment_rate.value();
-                    this->linSys_.duneD_[seg][seg][comp_idx][WQTotal] -= segment_rate.derivative(WQTotal + Indices::numEq);
-                    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-                        this->linSys_.duneD_[seg][seg_upwind][comp_idx][WFrac] -= segment_rate.derivative(WFrac + Indices::numEq);
-                    }
-                    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                        this->linSys_.duneD_[seg][seg_upwind][comp_idx][GFrac] -= segment_rate.derivative(GFrac + Indices::numEq);
-                    }
-                    // pressure derivative should be zero
+                    const EvalWell segment_rate = this->getSegmentRateUpwinding(seg, comp_idx) *
+                                                  this->well_efficiency_factor_;
+                    MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(*this).
+                        assembleOutflowTerm(seg, seg_upwind, comp_idx, segment_rate, this->linSys_);
                 }
             }
 
