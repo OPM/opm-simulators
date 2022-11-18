@@ -35,6 +35,7 @@ namespace Opm
 {
 
 class ParallelWellInfo;
+template<class Scalar, int numEq> class StandardWellEquationAccess;
 class WellContributions;
 class WellInterfaceGeneric;
 class WellState;
@@ -122,6 +123,9 @@ public:
     {
         return resWell_;
     }
+
+private:
+    friend class StandardWellEquationAccess<Scalar,numEq>;
 
     // two off-diagonal matrices
     OffDiagMatWell duneB_;
