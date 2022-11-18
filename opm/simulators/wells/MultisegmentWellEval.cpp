@@ -1180,25 +1180,14 @@ assembleDefaultPressureEq(const int seg,
         segments.pressure_drop_friction[seg] = friction_pressure_drop.value();
     }
 
-    linSys_.resWell_[seg][SPres] = pressure_equation.value();
-    const int seg_upwind = upwinding_segments_[seg];
-    linSys_.duneD_[seg][seg][SPres][SPres] += pressure_equation.derivative(SPres + Indices::numEq);
-    linSys_.duneD_[seg][seg][SPres][WQTotal] += pressure_equation.derivative(WQTotal + Indices::numEq);
-    if (has_wfrac_variable) {
-        linSys_.duneD_[seg][seg_upwind][SPres][WFrac] += pressure_equation.derivative(WFrac + Indices::numEq);
-    }
-    if (has_gfrac_variable) {
-        linSys_.duneD_[seg][seg_upwind][SPres][GFrac] += pressure_equation.derivative(GFrac + Indices::numEq);
-    }
-
     // contribution from the outlet segment
     const int outlet_segment_index = this->segmentNumberToIndex(this->segmentSet()[seg].outletSegment());
     const EvalWell outlet_pressure = getSegmentPressure(outlet_segment_index);
 
-    linSys_.resWell_[seg][SPres] -= outlet_pressure.value();
-    for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-        linSys_.duneD_[seg][outlet_segment_index][SPres][pv_idx] = -outlet_pressure.derivative(pv_idx + Indices::numEq);
-    }
+    const int seg_upwind = upwinding_segments_[seg];
+    MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(baseif_).
+        assemblePressureEq(seg, seg_upwind, outlet_segment_index,
+                           pressure_equation, outlet_pressure, linSys_);
 
     if (this->accelerationalPressureLossConsidered()) {
         handleAccelerationPressureLoss(seg, well_state);

@@ -88,6 +88,16 @@ public:
                               const EvalWell& accelerationPressureLoss,
                               Equations& eqns) const;
 
+    //! \brief Assemble pressure terms.
+    void assemblePressureEq(const int seg,
+                            const int seg_upwind,
+                            const int outlet_segment_index,
+                            const EvalWell& pressure_equation,
+                            const EvalWell& outlet_pressure,
+                            Equations& eqns,
+                            bool wfrac = has_wfrac_variable,
+                            bool gfrac = has_gfrac_variable) const;
+
 private:
     const WellInterfaceIndices<FluidSystem,Indices,Scalar>& well_; //!< Reference to well
 };

@@ -172,6 +172,34 @@ assemblePressureLoss(const int seg,
     }
 }
 
+template<class FluidSystem, class Indices, class Scalar>
+void MultisegmentWellAssemble<FluidSystem,Indices,Scalar>::
+assemblePressureEq(const int seg,
+                   const int seg_upwind,
+                   const int outlet_segment_index,
+                   const EvalWell& pressure_equation,
+                   const EvalWell& outlet_pressure,
+                   Equations& eqns,
+                   bool wfrac,
+                   bool gfrac) const
+{
+    eqns.resWell_[seg][SPres] = pressure_equation.value();
+    eqns.duneD_[seg][seg][SPres][SPres] += pressure_equation.derivative(SPres + Indices::numEq);
+    eqns.duneD_[seg][seg][SPres][WQTotal] += pressure_equation.derivative(WQTotal + Indices::numEq);
+    if (wfrac) {
+        eqns.duneD_[seg][seg_upwind][SPres][WFrac] += pressure_equation.derivative(WFrac + Indices::numEq);
+    }
+    if (gfrac) {
+        eqns.duneD_[seg][seg_upwind][SPres][GFrac] += pressure_equation.derivative(GFrac + Indices::numEq);
+    }
+
+    // contribution from the outlet segment
+    eqns.resWell_[seg][SPres] -= outlet_pressure.value();
+    for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
+        eqns.duneD_[seg][outlet_segment_index][SPres][pv_idx] = -outlet_pressure.derivative(pv_idx + Indices::numEq);
+    }
+}
+
 #define INSTANCE(...) \
 template class MultisegmentWellAssemble<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>;
 
