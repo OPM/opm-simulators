@@ -71,6 +71,14 @@ public:
                                const int numWellEq,
                                StandardWellEquations<Scalar,Indices::numEq>& eqns) const;
 
+    //! \brief Assemble equation for a perforation.
+    template<class EvalWell>
+    void assemblePerforationEq(const EvalWell& cq_s_effective,
+                               const int componentIdx,
+                               const int cell_idx,
+                               const int numWellEq,
+                               StandardWellEquations<Scalar,Indices::numEq>& eqns) const;
+
 private:
     const WellInterfaceFluidSystem<FluidSystem>& well_; //!< Reference to well
 };

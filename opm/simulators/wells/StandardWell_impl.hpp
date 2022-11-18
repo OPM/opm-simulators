@@ -483,19 +483,12 @@ namespace Opm
 
                 connectionRates[perf][componentIdx] = Base::restrictEval(cq_s_effective);
 
-                // subtract sum of phase fluxes in the well equations.
-                this->linSys_.resWell_[0][componentIdx] += cq_s_effective.value();
-
-                // assemble the jacobians
-                for (int pvIdx = 0; pvIdx < this->numWellEq_; ++pvIdx) {
-                    // also need to consider the efficiency factor when manipulating the jacobians.
-                    this->linSys_.duneC_[0][cell_idx][pvIdx][componentIdx] -= cq_s_effective.derivative(pvIdx+Indices::numEq); // intput in transformed matrix
-                    this->linSys_.duneD_[0][0][componentIdx][pvIdx] += cq_s_effective.derivative(pvIdx+Indices::numEq);
-                }
-
-                for (int pvIdx = 0; pvIdx < Indices::numEq; ++pvIdx) {
-                    this->linSys_.duneB_[0][cell_idx][componentIdx][pvIdx] += cq_s_effective.derivative(pvIdx);
-                }
+                StandardWellAssemble<FluidSystem,Indices,Scalar>(*this).
+                    assemblePerforationEq(cq_s_effective,
+                                          componentIdx,
+                                          cell_idx,
+                                          this->numWellEq_,
+                                          this->linSys_);
 
                 // Store the perforation phase flux for later usage.
                 if (has_solvent && componentIdx == Indices::contiSolventEqIdx) {

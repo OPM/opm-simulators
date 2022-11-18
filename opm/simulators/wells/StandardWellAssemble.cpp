@@ -164,6 +164,30 @@ assembleInjectivityEq(const EvalWell& eq_pskin,
     }
 }
 
+template<class FluidSystem, class Indices, class Scalar>
+template<class EvalWell>
+void StandardWellAssemble<FluidSystem,Indices,Scalar>::
+assemblePerforationEq(const EvalWell& cq_s_effective,
+                      const int componentIdx,
+                      const int cell_idx,
+                      const int numWellEq,
+                      StandardWellEquations<Scalar,Indices::numEq>& eqns) const
+{
+  // subtract sum of phase fluxes in the well equations.
+    eqns.resWell_[0][componentIdx] += cq_s_effective.value();
+
+       // assemble the jacobians
+    for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
+        // also need to consider the efficiency factor when manipulating the jacobians.
+        eqns.duneC_[0][cell_idx][pvIdx][componentIdx] -= cq_s_effective.derivative(pvIdx+Indices::numEq); // intput in transformed matrix
+        eqns.duneD_[0][0][componentIdx][pvIdx] += cq_s_effective.derivative(pvIdx+Indices::numEq);
+    }
+
+    for (int pvIdx = 0; pvIdx < Indices::numEq; ++pvIdx) {
+        eqns.duneB_[0][cell_idx][componentIdx][pvIdx] += cq_s_effective.derivative(pvIdx);
+    }
+}
+
 #define INSTANCE(Dim,...) \
 template class StandardWellAssemble<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>; \
 template void \
@@ -185,6 +209,13 @@ StandardWellAssemble<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA
     assembleInjectivityEq(const DenseAd::Evaluation<double,-1,Dim>&, \
                           const DenseAd::Evaluation<double,-1,Dim>&, \
                           const int, \
+                          const int, \
+                          const int, \
+                          const int, \
+                          StandardWellEquations<double,__VA_ARGS__::numEq>&) const; \
+template void \
+StandardWellAssemble<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>:: \
+    assemblePerforationEq(const DenseAd::Evaluation<double,-1,Dim>&, \
                           const int, \
                           const int, \
                           const int, \
