@@ -140,6 +140,30 @@ assembleControlEq(const WellState& well_state,
     }
 }
 
+template<class FluidSystem, class Indices, class Scalar>
+template<class EvalWell>
+void StandardWellAssemble<FluidSystem,Indices,Scalar>::
+assembleInjectivityEq(const EvalWell& eq_pskin,
+                      const EvalWell& eq_wat_vel,
+                      const int pskin_index,
+                      const int wat_vel_index,
+                      const int cell_idx,
+                      const int numWellEq,
+                      StandardWellEquations<Scalar,Indices::numEq>& eqns) const
+{
+    eqns.resWell_[0][pskin_index] = eq_pskin.value();
+    eqns.resWell_[0][wat_vel_index] = eq_wat_vel.value();
+    for (int pvIdx = 0; pvIdx < numWellEq; ++pvIdx) {
+        eqns.duneD_[0][0][wat_vel_index][pvIdx] = eq_wat_vel.derivative(pvIdx+Indices::numEq);
+        eqns.duneD_[0][0][pskin_index][pvIdx] = eq_pskin.derivative(pvIdx+Indices::numEq);
+    }
+
+         // the water velocity is impacted by the reservoir primary varaibles. It needs to enter matrix B
+    for (int pvIdx = 0; pvIdx < Indices::numEq; ++pvIdx) {
+        eqns.duneB_[0][cell_idx][wat_vel_index][pvIdx] = eq_wat_vel.derivative(pvIdx);
+    }
+}
+
 #define INSTANCE(Dim,...) \
 template class StandardWellAssemble<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>; \
 template void \
@@ -155,7 +179,16 @@ StandardWellAssemble<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA
                       const double, \
                       const int, \
                       StandardWellEquations<double,__VA_ARGS__::numEq>&, \
-                      DeferredLogger&) const;
+                      DeferredLogger&) const; \
+template void \
+StandardWellAssemble<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>:: \
+    assembleInjectivityEq(const DenseAd::Evaluation<double,-1,Dim>&, \
+                          const DenseAd::Evaluation<double,-1,Dim>&, \
+                          const int, \
+                          const int, \
+                          const int, \
+                          const int, \
+                          StandardWellEquations<double,__VA_ARGS__::numEq>&) const;
 
 // One phase
 INSTANCE(4u, BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>)

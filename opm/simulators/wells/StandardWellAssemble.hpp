@@ -61,6 +61,15 @@ public:
                            StandardWellEquations<Scalar,Indices::numEq>& eqns,
                            DeferredLogger& deferred_logger) const;
 
+    //! \brief Assemble injectivity equation.
+    template<class EvalWell>
+    void assembleInjectivityEq(const EvalWell& eq_pskin,
+                               const EvalWell& eq_wat_vel,
+                               const int pskin_index,
+                               const int wat_vel_index,
+                               const int cell_idx,
+                               const int numWellEq,
+                               StandardWellEquations<Scalar,Indices::numEq>& eqns) const;
 
 private:
     const WellInterfaceFluidSystem<FluidSystem>& well_; //!< Reference to well

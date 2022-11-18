@@ -2325,7 +2325,6 @@ namespace Opm
 
         // equation for the water velocity
         const EvalWell eq_wat_vel = this->primary_variables_evaluation_[wat_vel_index] - water_velocity;
-        this->linSys_.resWell_[0][wat_vel_index] = eq_wat_vel.value();
 
         const auto& ws = well_state.well(this->index_of_well_);
         const auto& perf_data = ws.perf_data;
@@ -2340,16 +2339,14 @@ namespace Opm
         const EvalWell eq_pskin = this->primary_variables_evaluation_[pskin_index]
                                   - pskin(throughput, this->primary_variables_evaluation_[wat_vel_index], poly_conc, deferred_logger);
 
-        this->linSys_.resWell_[0][pskin_index] = eq_pskin.value();
-        for (int pvIdx = 0; pvIdx < this->numWellEq_; ++pvIdx) {
-            this->linSys_.duneD_[0][0][wat_vel_index][pvIdx] = eq_wat_vel.derivative(pvIdx+Indices::numEq);
-            this->linSys_.duneD_[0][0][pskin_index][pvIdx] = eq_pskin.derivative(pvIdx+Indices::numEq);
-        }
-
-        // the water velocity is impacted by the reservoir primary varaibles. It needs to enter matrix B
-        for (int pvIdx = 0; pvIdx < Indices::numEq; ++pvIdx) {
-            this->linSys_.duneB_[0][cell_idx][wat_vel_index][pvIdx] = eq_wat_vel.derivative(pvIdx);
-        }
+        StandardWellAssemble<FluidSystem,Indices,Scalar>(*this).
+                assembleInjectivityEq(eq_pskin,
+                                      eq_wat_vel,
+                                      pskin_index,
+                                      wat_vel_index,
+                                      cell_idx,
+                                      this->numWellEq_,
+                                      this->linSys_);
     }
 
 
