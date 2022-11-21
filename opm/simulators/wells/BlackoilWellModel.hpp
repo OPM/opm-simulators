@@ -283,7 +283,7 @@ namespace Opm {
             void initPrimaryVariablesEvaluation() const;
             bool shouldBalanceNetwork(const int reportStepIndex, const int iterationIdx) const;
             std::pair<bool, bool> updateWellControls(DeferredLogger& deferred_logger, const size_t network_update_it,
-                                                     const bool solve_welleq = false);
+                                                     const bool balance_network = false);
 
             void updateAndCommunicate(const int reportStepIdx,
                                       const int iterationIdx,
@@ -357,9 +357,8 @@ namespace Opm {
 
             SimulatorReportSingle last_report_{};
 
-            // Looking for a better name, basically, we solve the well equations, including the groups and networks.
-            // without updating the reservoir here
-            void solveWellEq(DeferredLogger& deferred_logger);
+            // solve to get a good network solution, group and well states might be updated as a result
+            void balanceNetwork(DeferredLogger& deferred_logger);
 
             // used to better efficiency of calcuation
             mutable BVector scaleAddRes_{};
@@ -387,7 +386,7 @@ namespace Opm {
             // the returned two booleans are {continue_due_to_network, well_group_control_changed}
             std::pair<bool, bool> updateWellControlsAndNetworkIteration(const size_t network_update_iteration,
                                                                         DeferredLogger& local_deferredLogger,
-                                                                        const bool solve_welleq = false);
+                                                                        const bool balance_network = false);
 
             bool updateWellControlsAndNetwork(DeferredLogger& local_deferredLogger, const bool solve_welleq = false);
 

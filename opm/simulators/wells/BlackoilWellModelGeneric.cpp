@@ -929,7 +929,7 @@ inferLocalShutWells()
 
 std::pair<bool, double>
 BlackoilWellModelGeneric::
-updateNetworkPressures(const int reportStepIdx, const bool solve_welleq)
+updateNetworkPressures(const int reportStepIdx, const bool balance_network)
 {
     // Get the network and return if inactive.
     const auto& network = schedule()[reportStepIdx].network();
@@ -976,7 +976,7 @@ updateNetworkPressures(const int reportStepIdx, const bool solve_welleq)
             const double change = (new_pressure - pressure);
             const double allowed_change = std::max(std::min(0.1*std::abs(change), 5.e5), 0.05e5);
 #if EXTRA_NETWORK_OUTPUT
-            sstream << "for node " << name << " solve_welleq ? " << solve_welleq << " allowed_change " << allowed_change/1.e5 << std::endl;
+            sstream << "for node " << name << " balance_network ? " << balance_network << " allowed_change " << allowed_change / 1.e5 << std::endl;
 #endif
             if (abs(change) > allowed_change) {
                 const double sign = change > 0 ? 1. : -1.;

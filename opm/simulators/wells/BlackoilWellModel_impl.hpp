@@ -767,13 +767,6 @@ namespace Opm {
                 // Producers only, since we so far only support the
                 // "extended" network model (properties defined by
                 // BRANPROP and NODEPROP) which only applies to producers.
-
-#define EXTRA_NETWORK_OUTPUT 1
-#if EXTRA_NETWORK_OUTPUT
-                const std::set<std::string> well_names = {"S-P2", "S-P3", "S-P4", "S-P6", "PROD1", "PROD2", "PROD3"};
-                const bool output_for_well = well_names.count(well->name()) > 0;
-#endif
-
                 if (this->node_pressures_.empty()) {
                     // there is no existing node pressures
                     break;
@@ -785,12 +778,6 @@ namespace Opm {
                         // set the dynamic THP constraint based on the network nodal pressure
                         const double nodal_pressure = it->second;
                         well->setDynamicThpLimit(nodal_pressure);
-#if EXTRA_NETWORK_OUTPUT
-                        if (output_for_well) {
-                            std::cout << " well " << well->name() << " set dyanmic thp limit " << nodal_pressure / 1.e5
-                                      << " bar " << std::endl;
-                        }
-#endif
                     }
                 }
             }
@@ -882,7 +869,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    solveWellEq(DeferredLogger& deferred_logger) {
+    balanceNetwork(DeferredLogger& deferred_logger) {
         const double dt = this->ebosSimulator_.timeStepSize();
         // updatePerforationIntensiveQuantities();
         // TODO: should we also have the group and network backed-up here?
@@ -898,7 +885,7 @@ namespace Opm {
             assembleImpl(dt, deferred_logger);
             converged = this->getWellConvergence(this->B_avg_, true).converged() && !changed_well_group;
 #if EXTRA_NETWORK_OUTPUT
-            std::cout << " solveWellEq iteration " << iter << " converged ?";
+            std::cout << " balanceNetwork iteration " << iter << " converged ?";
             if (converged) {
                 std::cout << " YES ";
             } else {
@@ -917,9 +904,9 @@ namespace Opm {
 
         // TODO: make the following to the logger system
         if (!converged) {
-            std::cout << " solveWellEq not converged with " << max_iter << " iterations !" << std::endl;
+            std::cout << " balanceNetwork not converged with " << max_iter << " iterations !" << std::endl;
         } else {
-            std::cout << " solveWellEq gets converged after " << iter << " iterations " << std::endl;
+            std::cout << " balanceNetwork gets converged after " << iter << " iterations " << std::endl;
         }
     }
 
@@ -1004,10 +991,10 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     updateWellControlsAndNetworkIteration(const size_t network_update_iteration,
                                           DeferredLogger& local_deferredLogger,
-                                          const bool solve_welleq)
+                                          const bool balance_network)
     {
-        auto [well_group_control_changed, more_network_update] = updateWellControls(local_deferredLogger,
-                                                                                    network_update_iteration, solve_welleq);
+        const auto [well_group_control_changed, more_network_update] = updateWellControls(local_deferredLogger,
+                                                                                    network_update_iteration, balance_network);
 
         bool alq_updated = false;
         OPM_BEGIN_PARALLEL_TRY_CATCH();
@@ -1590,7 +1577,6 @@ namespace Opm {
             return iterationIdx == 0;
         } else if (balance.mode() == Network::Balance::CalcMode::NUPCOL) {
             const int nupcol = schedule()[reportStepIdx].nupcol();
-            // const int nupcol = 4;
             return iterationIdx < nupcol;
         } else {
             // We do not support any other rebalancing modes,
@@ -1610,58 +1596,32 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     updateWellControls(DeferredLogger& deferred_logger,
                        const size_t network_update_it,
-                       const bool solve_welleq) {
-        // Even if there are no wells active locally, we cannot
-        // return as the DeferredLogger uses global communication.
-        // For no well active globally we simply return.
-        // TODO: maybe here we should be
-        // const int episodeIdx = ebosSimulator_.episodeIndex();
-        // const auto& network = schedule()[episodeIdx].network();
-        // if (!wellsActive() && !network.active()) {
-        //     return {false, false};
-        // }
-        // if( !wellsActive() ) return { false, false };
+                       const bool balance_network) {
 
         const int episodeIdx = ebosSimulator_.episodeIndex();
+        const auto& network = schedule()[episodeIdx].network();
+        if (!wellsActive() && !network.active()) {
+             return {false, false};
+        }
+
         const int iterationIdx = ebosSimulator_.model().newtonMethod().numIterations();
         const auto& comm = ebosSimulator_.vanguard().grid().comm();
         updateAndCommunicateGroupData(episodeIdx, iterationIdx);
 
         // network related
+        // The following should put in one function
         bool more_network_update = false;
-        // TODO: we should put solve_welleq here
-        if (shouldBalanceNetwork(episodeIdx, iterationIdx) || solve_welleq) {
-            const auto [local_network_changed, local_network_imbalance] = updateNetworkPressures(episodeIdx, solve_welleq);
+        if (shouldBalanceNetwork(episodeIdx, iterationIdx) || balance_network) {
+            const auto [local_network_changed, local_network_imbalance] = updateNetworkPressures(episodeIdx, balance_network);
+            // TODO: in the current form, the network_changed is of no use
             const bool network_changed = comm.sum(local_network_changed);
             const double network_imbalance = comm.max(local_network_imbalance);
-            std::cout << " network_changed ";
-            if (network_changed) {
-                std::cout << " YES " ;
-            } else {
-                std::cout << " NO ";
+            const auto& balance = schedule()[episodeIdx].network_balance();
+            if (network_imbalance > balance.pressure_tolerance()) {
+                more_network_update = true;
             }
-            std::cout << " network_imbalance is " << network_imbalance / 1.e5 << " barsa " << std::endl;
-            // TODO: originally, the if condition is here is because there is no relaxation for the update of
-            // the network nodal pressure.
-            // if (network_changed || solve_welleq) {
-                const auto& balance = schedule()[episodeIdx].network_balance();
-                // Iterate if not converged, and number of iterations is not yet max (NETBALAN item 3).
-                // if ((network_update_it < balance.pressure_max_iter() || solve_welleq)
-                //      && network_imbalance > balance.pressure_tolerance()) {
-                if (network_imbalance > balance.pressure_tolerance()) {
-                    more_network_update = true;
-                }
-            // }
         }
-        std::cout << " do more network update ? ";
-        if (more_network_update) {
-            std::cout << " YES ";
-        } else {
-            std::cout << " NO ";
-        }
-        std::cout << std::endl;
 
-        std::cout << "network_update_it " << network_update_it << " max_iter from NETBALAN " << schedule()[episodeIdx].network_balance().pressure_max_iter() << std::endl;
         bool changed_well_group = false;
         // Check group individual constraints.
         const int nupcol = schedule()[episodeIdx].nupcol();
@@ -1671,16 +1631,11 @@ namespace Opm {
             const Group& fieldGroup = schedule().getGroup("FIELD", episodeIdx);
             changed_well_group = updateGroupControls(fieldGroup, deferred_logger, episodeIdx, iterationIdx);
         }
-        const std::set<std::string> well_names = {"S-P2", "S-P3", "S-P4", "S-P6", "PROD1", "PROD2", "PROD3"};
         // Check wells' group constraints and communicate.
         bool changed_well_to_group = false;
         for (const auto& well : well_container_) {
             const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Group;
             const bool changed_well = well->updateWellControl(ebosSimulator_, mode, this->wellState(), this->groupState(), deferred_logger);
-            if (well_names.count(well->name()) > 0) {
-                std::cout << " well " << well->name() << " changed_well ? " << changed_well
-                          << " after Group updateWellControl " << std::endl;
-            }
             if (changed_well) {
                 changed_well_to_group = changed_well || changed_well_to_group;
             }
@@ -1697,10 +1652,6 @@ namespace Opm {
         for (const auto& well : well_container_) {
             const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Individual;
             const bool changed_well = well->updateWellControl(ebosSimulator_, mode, this->wellState(), this->groupState(), deferred_logger);
-            if (well_names.count(well->name()) > 0) {
-                std::cout << " well " << well->name() << " changed_well ? " << changed_well
-                          << " after Individual updateWellControl " << std::endl;
-            }
             if (changed_well) {
                 changed_well_individual = changed_well || changed_well_individual;
             }
@@ -1715,12 +1666,6 @@ namespace Opm {
         const Group& fieldGroup = schedule().getGroup("FIELD", episodeIdx);
         updateWsolvent(fieldGroup, episodeIdx,  this->nupcolWellState());
 
-        std::cout << " changed_well_group ? ";
-        if (changed_well_group) {
-            std::cout << " YES " << std::endl;
-        } else {
-            std::cout << " NO " << std::endl;
-        }
         return { changed_well_group, more_network_update };
     }
 
@@ -1811,8 +1756,6 @@ namespace Opm {
         const int np = numPhases();
         std::vector<double> potentials;
         const auto& well= well_container_[widx];
-        const std::set<std::string> well_names = {"S-P2", "S-P3", "S-P4", "S-P6", "PROD1", "PROD2", "PROD3"};
-        const bool output_for_well = well_names.count(well->name());
         try {
             well->computeWellPotentials(ebosSimulator_, well_state_copy, potentials, deferred_logger);
         }
@@ -1825,13 +1768,6 @@ namespace Opm {
         for (int p = 0; p < np; ++p) {
             // make sure the potentials are positive
             ws.well_potentials[p] = std::max(0.0, potentials[p]);
-        }
-        if (output_for_well) {
-            std::cout << " well potentials for well " << well->name() << " after computePotentials from BlackoilWellModel " << std::endl;
-            for (const auto val : ws.well_potentials) {
-                std::cout << " " << val * 86400.;
-            }
-            std::cout << std::endl;
         }
     }
 
@@ -1958,7 +1894,7 @@ namespace Opm {
         // TODO: basically, we will update
         if (network_rebalance_necessary) {
             // this is to obtain good network solution
-            solveWellEq(deferred_logger);
+            balanceNetwork(deferred_logger);
         }
     }
 
