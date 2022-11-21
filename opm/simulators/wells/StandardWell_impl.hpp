@@ -681,13 +681,10 @@ namespace Opm
                     fs.setDensity(phaseIdx, rho);
                     const auto& h = FluidSystem::enthalpy(fs, paramCache, phaseIdx);
                     fs.setEnthalpy(phaseIdx, h);
-                    cq_r_thermal *= this->extendEval(fs.enthalpy(phaseIdx)) * this->extendEval(fs.density(phaseIdx));
-                    connectionRates[perf][Indices::contiEnergyEqIdx] += getValue(cq_r_thermal);
-                } else {
-                    // compute the thermal flux
-                    cq_r_thermal *= this->extendEval(fs.enthalpy(phaseIdx)) * this->extendEval(fs.density(phaseIdx));
-                    connectionRates[perf][Indices::contiEnergyEqIdx] += Base::restrictEval(cq_r_thermal);
                 }
+                // compute the thermal flux
+                cq_r_thermal *= this->extendEval(fs.enthalpy(phaseIdx)) * this->extendEval(fs.density(phaseIdx));
+                connectionRates[perf][Indices::contiEnergyEqIdx] += Base::restrictEval(cq_r_thermal);
             }
         }
 
