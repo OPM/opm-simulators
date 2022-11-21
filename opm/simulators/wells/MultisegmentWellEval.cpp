@@ -884,9 +884,14 @@ pressureDropSpiralICD(const int seg) const
         density.clearDerivatives();
     }
 
-    const EvalWell liquid_emulsion_viscosity = mswellhelpers::emulsionViscosity(water_fraction, water_viscosity,
-                                                                                oil_fraction, oil_viscosity, sicd);
-    const EvalWell mixture_viscosity = (water_fraction + oil_fraction) * liquid_emulsion_viscosity + gas_fraction * gas_viscosity;
+
+    const EvalWell liquid_fraction = water_fraction + oil_fraction;
+
+    // viscosity contribution from the liquid
+    const EvalWell liquid_viscosity_fraction = liquid_fraction < 1.e-30 ? oil_fraction * oil_viscosity + water_fraction * water_viscosity :
+            liquid_fraction * mswellhelpers::emulsionViscosity(water_fraction, water_viscosity, oil_fraction, oil_viscosity, sicd);
+
+    const EvalWell mixture_viscosity = liquid_viscosity_fraction + gas_fraction * gas_viscosity;
 
     const EvalWell reservoir_rate = segment_mass_rates_[seg] / density;
 
