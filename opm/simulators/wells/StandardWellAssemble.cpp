@@ -32,6 +32,7 @@
 #include <opm/models/blackoil/blackoiltwophaseindices.hh>
 
 #include <opm/simulators/wells/StandardWellEquations.hpp>
+#include <opm/simulators/wells/StandardWellPrimaryVariables.hpp>
 #include <opm/simulators/wells/WellAssemble.hpp>
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 #include <opm/simulators/wells/WellInterfaceFluidSystem.hpp>
@@ -80,48 +81,43 @@ private:
 };
 
 template<class FluidSystem, class Indices, class Scalar>
-template<class EvalWell>
 void
 StandardWellAssemble<FluidSystem,Indices,Scalar>::
 assembleControlEq(const WellState& well_state,
                   const GroupState& group_state,
                   const Schedule& schedule,
                   const SummaryState& summaryState,
-                  const int numWellEq,
-                  const EvalWell& wqTotal,
-                  const EvalWell& bhp,
-                  const std::function<EvalWell(int)>& getQs,
+                  const PrimaryVariables& primary_variables,
                   const double rho,
-                  const int Bhp,
                   StandardWellEquations<Scalar,Indices::numEq>& eqns1,
                   DeferredLogger& deferred_logger) const
 {
     static constexpr int Water = BlackoilPhases::Aqua;
     static constexpr int Oil = BlackoilPhases::Liquid;
     static constexpr int Gas = BlackoilPhases::Vapour;
-    EvalWell control_eq(numWellEq + Indices::numEq, 0.0);
+    EvalWell control_eq(primary_variables.numWellEq() + Indices::numEq, 0.0);
 
     const auto& well = well_.wellEcl();
 
     auto getRates = [&]() {
-        std::vector<EvalWell> rates(3, EvalWell(numWellEq + Indices::numEq, 0.0));
+        std::vector<EvalWell> rates(3, EvalWell(primary_variables.numWellEq() + Indices::numEq, 0.0));
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-            rates[Water] = getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx));
+            rates[Water] = primary_variables.getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx));
         }
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-            rates[Oil] = getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx));
+            rates[Oil] = primary_variables.getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx));
         }
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-            rates[Gas] = getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx));
+            rates[Gas] = primary_variables.getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx));
         }
         return rates;
     };
 
     if (well_.wellIsStopped()) {
-        control_eq = wqTotal;
+        control_eq = primary_variables.eval(PrimaryVariables::WQTotal);
     } else if (well_.isInjector()) {
         // Find injection rate.
-        const EvalWell injection_rate = wqTotal;
+        const EvalWell injection_rate = primary_variables.eval(PrimaryVariables::WQTotal);
                                                  // Setup function for evaluation of BHP from THP (used only if needed).
         std::function<EvalWell()> bhp_from_thp = [&]() {
             const auto rates = getRates();
@@ -141,7 +137,7 @@ assembleControlEq(const WellState& well_state,
                                  schedule,
                                  summaryState,
                                  inj_controls,
-                                 bhp,
+                                 primary_variables.eval(PrimaryVariables::Bhp),
                                  injection_rate,
                                  bhp_from_thp,
                                  control_eq,
@@ -166,7 +162,7 @@ assembleControlEq(const WellState& well_state,
                                   schedule,
                                   summaryState,
                                   prod_controls,
-                                  bhp,
+                                  primary_variables.eval(PrimaryVariables::Bhp),
                                   rates,
                                   bhp_from_thp,
                                   control_eq,
@@ -176,14 +172,13 @@ assembleControlEq(const WellState& well_state,
     // using control_eq to update the matrix and residuals
     // TODO: we should use a different index system for the well equations
     StandardWellEquationAccess eqns(eqns1);
-    eqns.residual()[0][Bhp] = control_eq.value();
-    for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-        eqns.D()[0][0][Bhp][pv_idx] = control_eq.derivative(pv_idx + Indices::numEq);
+    eqns.residual()[0][PrimaryVariables::Bhp] = control_eq.value();
+    for (int pv_idx = 0; pv_idx < primary_variables.numWellEq(); ++pv_idx) {
+        eqns.D()[0][0][PrimaryVariables::Bhp][pv_idx] = control_eq.derivative(pv_idx + Indices::numEq);
     }
 }
 
 template<class FluidSystem, class Indices, class Scalar>
-template<class EvalWell>
 void StandardWellAssemble<FluidSystem,Indices,Scalar>::
 assembleInjectivityEq(const EvalWell& eq_pskin,
                       const EvalWell& eq_wat_vel,
@@ -208,7 +203,6 @@ assembleInjectivityEq(const EvalWell& eq_pskin,
 }
 
 template<class FluidSystem, class Indices, class Scalar>
-template<class EvalWell>
 void StandardWellAssemble<FluidSystem,Indices,Scalar>::
 assemblePerforationEq(const EvalWell& cq_s_effective,
                       const int componentIdx,
@@ -234,7 +228,6 @@ assemblePerforationEq(const EvalWell& cq_s_effective,
 }
 
 template<class FluidSystem, class Indices, class Scalar>
-template<class EvalWell>
 void StandardWellAssemble<FluidSystem,Indices,Scalar>::
 assembleSourceEq(const EvalWell& resWell_loc,
                  const int componentIdx,
@@ -249,7 +242,6 @@ assembleSourceEq(const EvalWell& resWell_loc,
 }
 
 template<class FluidSystem, class Indices, class Scalar>
-template<class EvalWell>
 void StandardWellAssemble<FluidSystem,Indices,Scalar>::
 assembleZFracEq(const EvalWell& cq_s_zfrac_effective,
                 const int cell_idx,
@@ -263,56 +255,14 @@ assembleZFracEq(const EvalWell& cq_s_zfrac_effective,
 }
 
 #define INSTANCE(Dim,...) \
-template class StandardWellAssemble<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>; \
-template void \
-StandardWellAssemble<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>:: \
-    assembleControlEq(const WellState&, \
-                      const GroupState&, \
-                      const Schedule&, \
-                      const SummaryState&, \
-                      const int, \
-                      const DenseAd::Evaluation<double,-1,Dim>&, \
-                      const DenseAd::Evaluation<double,-1,Dim>&, \
-                      const std::function<DenseAd::Evaluation<double,-1,Dim>(int)>&, \
-                      const double, \
-                      const int, \
-                      StandardWellEquations<double,__VA_ARGS__::numEq>&, \
-                      DeferredLogger&) const; \
-template void \
-StandardWellAssemble<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>:: \
-    assembleInjectivityEq(const DenseAd::Evaluation<double,-1,Dim>&, \
-                          const DenseAd::Evaluation<double,-1,Dim>&, \
-                          const int, \
-                          const int, \
-                          const int, \
-                          const int, \
-                          StandardWellEquations<double,__VA_ARGS__::numEq>&) const; \
-template void \
-StandardWellAssemble<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>:: \
-    assemblePerforationEq(const DenseAd::Evaluation<double,-1,Dim>&, \
-                          const int, \
-                          const int, \
-                          const int, \
-                          StandardWellEquations<double,__VA_ARGS__::numEq>&) const; \
-template void \
-StandardWellAssemble<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>:: \
-    assembleZFracEq(const DenseAd::Evaluation<double,-1,Dim>&, \
-                    const int, \
-                    const int, \
-                    StandardWellEquations<double,__VA_ARGS__::numEq>&) const; \
-template void \
-StandardWellAssemble<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>:: \
-  assembleSourceEq(const DenseAd::Evaluation<double,-1,Dim>&, \
-                   const int, \
-                   const int, \
-                   StandardWellEquations<double,__VA_ARGS__::numEq>&) const;
+template class StandardWellAssemble<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>;
 
 // One phase
 INSTANCE(4u, BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>)
 INSTANCE(5u, BlackOilOnePhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>)
 INSTANCE(9u, BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,5u>)
 
-     // Two phase
+// Two phase
 INSTANCE(6u, BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,0u,0u>)
 INSTANCE(6u, BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>)
 INSTANCE(6u, BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,2u,0u>)
@@ -323,7 +273,7 @@ INSTANCE(7u, BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,0u,0u>)
 INSTANCE(7u, BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,2u,0u>)
 INSTANCE(8u, BlackOilTwoPhaseIndices<0u,0u,2u,0u,false,false,0u,2u,0u>)
 
-     // Blackoil
+// Blackoil
 INSTANCE(8u, BlackOilIndices<0u,0u,0u,0u,false,false,0u,0u>)
 INSTANCE(9u, BlackOilIndices<0u,0u,0u,0u,true,false,0u,0u>)
 INSTANCE(9u, BlackOilIndices<0u,0u,0u,0u,false,true,0u,0u>)

@@ -542,16 +542,11 @@ namespace Opm
 
         const auto& summaryState = ebosSimulator.vanguard().summaryState();
         const Schedule& schedule = ebosSimulator.vanguard().schedule();
-        std::function<EvalWell(int)> gQ = [this](int a) { return this->primary_variables_.getQs(a); };
         StandardWellAssemble<FluidSystem,Indices,Scalar>(*this).
             assembleControlEq(well_state, group_state,
                               schedule, summaryState,
-                              this->primary_variables_.numWellEq(),
-                              this->primary_variables_.eval(WQTotal),
-                              this->primary_variables_.eval(Bhp),
-                              gQ,
+                              this->primary_variables_,
                               this->getRho(),
-                              Bhp,
                               this->linSys_,
                               deferred_logger);
 
