@@ -1641,7 +1641,9 @@ namespace Opm {
                 std::cout << " NO ";
             }
             std::cout << " network_imbalance is " << network_imbalance / 1.e5 << " barsa " << std::endl;
-            if (network_changed || solve_welleq) {
+            // TODO: originally, the if condition is here is because there is no relaxation for the update of
+            // the network nodal pressure.
+            // if (network_changed || solve_welleq) {
                 const auto& balance = schedule()[episodeIdx].network_balance();
                 // Iterate if not converged, and number of iterations is not yet max (NETBALAN item 3).
                 // if ((network_update_it < balance.pressure_max_iter() || solve_welleq)
@@ -1649,7 +1651,7 @@ namespace Opm {
                 if (network_imbalance > balance.pressure_tolerance()) {
                     more_network_update = true;
                 }
-            }
+            // }
         }
         std::cout << " do more network update ? ";
         if (more_network_update) {
