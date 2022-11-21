@@ -78,16 +78,6 @@ protected:
     // computing the accumulation term for later use in well mass equations
     void computeAccumWell();
 
-    // TODO: not total sure whether it is a good idea to put this function here
-    // the major reason to put here is to avoid the usage of Wells struct
-    void computeConnectionDensities(const std::vector<double>& perfComponentRates,
-                                    const std::vector<double>& b_perf,
-                                    const std::vector<double>& rsmax_perf,
-                                    const std::vector<double>& rvmax_perf,
-                                    const std::vector<double>& rvwmax_perf,
-                                    const std::vector<double>& surf_dens_perf,
-                                    DeferredLogger& deferred_logger);
-
     ConvergenceReport getWellConvergence(const WellState& well_state,
                                          const std::vector<double>& B_avg,
                                          const double maxResidualAllowed,
@@ -111,7 +101,7 @@ protected:
     std::vector<double> F0_;
 
     StandardWellEquations<Scalar,Indices::numEq> linSys_; //!< Linear equation system
-    StandardWellConnections<Scalar> connections_; //!< Connection level values
+    StandardWellConnections<FluidSystem,Indices,Scalar> connections_; //!< Connection level values
 };
 
 }

@@ -1625,8 +1625,7 @@ namespace Opm
             }
         }
 
-        this->computeConnectionDensities(perfRates, b_perf, rsmax_perf, rvmax_perf, rvwmax_perf, surf_dens_perf, deferred_logger);
-
+        this->connections_.computeConnectionDensities(perfRates, b_perf, rsmax_perf, rvmax_perf, rvwmax_perf, surf_dens_perf, deferred_logger);
         this->connections_.computeConnectionPressureDelta();
     }
 
