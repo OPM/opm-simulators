@@ -84,13 +84,13 @@ computePressureDelta()
 
 template<class FluidSystem, class Indices, class Scalar>
 void StandardWellConnections<FluidSystem,Indices,Scalar>::
-computeConnectionDensities(const std::vector<Scalar>& perfComponentRates,
-                           const std::vector<Scalar>& b_perf,
-                           const std::vector<Scalar>& rsmax_perf,
-                           const std::vector<Scalar>& rvmax_perf,
-                           const std::vector<Scalar>& rvwmax_perf,
-                           const std::vector<Scalar>& surf_dens_perf,
-                           DeferredLogger& deferred_logger)
+computeDensities(const std::vector<Scalar>& perfComponentRates,
+                 const std::vector<Scalar>& b_perf,
+                 const std::vector<Scalar>& rsmax_perf,
+                 const std::vector<Scalar>& rvmax_perf,
+                 const std::vector<Scalar>& rvwmax_perf,
+                 const std::vector<Scalar>& surf_dens_perf,
+                 DeferredLogger& deferred_logger)
 {
     // Verify that we have consistent input.
     const int nperf = well_.numPerfs();
