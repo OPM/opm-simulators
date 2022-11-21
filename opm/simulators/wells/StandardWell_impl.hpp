@@ -546,7 +546,7 @@ namespace Opm
             assembleControlEq(well_state, group_state,
                               schedule, summaryState,
                               this->primary_variables_,
-                              this->connections_.getRho(),
+                              this->connections_.rho(),
                               this->linSys_,
                               deferred_logger);
 
@@ -1117,7 +1117,7 @@ namespace Opm
                 this->adaptRatesForVFP(well_rates_bhp_limit);
                 const double thp = WellBhpThpCalculator(*this).calculateThpFromBhp(well_rates_bhp_limit,
                                                                                    bhp_limit,
-                                                                                   this->connections_.getRho(),
+                                                                                   this->connections_.rho(),
                                                                                    this->getALQ(well_state),
                                                                                    deferred_logger);
                 const double thp_limit = this->getTHPConstraint(summaryState);
@@ -1918,7 +1918,7 @@ namespace Opm
     StandardWell<TypeTag>::
     getRefDensity() const
     {
-        return this->connections_.getRho();
+        return this->connections_.rho();
     }
 
 
@@ -2316,7 +2316,7 @@ namespace Opm
         auto bhpAtLimit = WellBhpThpCalculator(*this).computeBhpAtThpLimitProd(frates,
                                                                                summary_state,
                                                                                max_pressure,
-                                                                               this->connections_.getRho(),
+                                                                               this->connections_.rho(),
                                                                                alq_value,
                                                                                deferred_logger);
         auto v = frates(*bhpAtLimit);
@@ -2336,7 +2336,7 @@ namespace Opm
         bhpAtLimit = WellBhpThpCalculator(*this).computeBhpAtThpLimitProd(fratesIter,
                                                                           summary_state,
                                                                           max_pressure,
-                                                                          this->connections_.getRho(),
+                                                                          this->connections_.rho(),
                                                                           alq_value,
                                                                           deferred_logger);
         v = frates(*bhpAtLimit);
@@ -2370,7 +2370,7 @@ namespace Opm
 
         return WellBhpThpCalculator(*this).computeBhpAtThpLimitInj(frates,
                                                                    summary_state,
-                                                                   this->connections_.getRho(),
+                                                                   this->connections_.rho(),
                                                                    1e-6,
                                                                    50,
                                                                    true,

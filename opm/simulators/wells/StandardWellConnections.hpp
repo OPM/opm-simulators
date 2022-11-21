@@ -62,7 +62,8 @@ public:
                                        std::vector<Scalar>& rvwmax_perf,
                                        std::vector<Scalar>& surf_dens_perf) const;
 
-    Scalar getRho() const
+    //! \brief Returns density for first perforation.
+    Scalar rho() const
     {
         return this->perf_densities_.empty() ? 0.0 : perf_densities_[0];
     }
