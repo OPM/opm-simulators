@@ -986,6 +986,7 @@ namespace Opm {
                 phase_usage_,
                 deferred_logger,
                 this->wellState(),
+                this->groupState(),
                 ebosSimulator_.vanguard().grid().comm(),
                 this->glift_debug
             };
@@ -993,7 +994,7 @@ namespace Opm {
             gasLiftOptimizationStage1(
                 deferred_logger, prod_wells, glift_wells, group_info, state_map);
             gasLiftOptimizationStage2(
-                deferred_logger, prod_wells, glift_wells, state_map,
+                deferred_logger, prod_wells, glift_wells, group_info, state_map,
                 ebosSimulator_.episodeIndex());
             if (this->glift_debug) gliftDebugShowALQ(deferred_logger);
             num_wells_changed = glift_wells.size();
