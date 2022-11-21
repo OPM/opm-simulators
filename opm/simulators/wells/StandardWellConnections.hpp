@@ -23,6 +23,7 @@
 #ifndef OPM_STANDARDWELL_CONNECTIONS_HEADER_INCLUDED
 #define OPM_STANDARDWELL_CONNECTIONS_HEADER_INCLUDED
 
+#include <functional>
 #include <vector>
 
 namespace Opm
@@ -48,6 +49,18 @@ public:
                           const std::vector<Scalar>& rvwmax_perf,
                           const std::vector<Scalar>& surf_dens_perf,
                           DeferredLogger& deferred_logger);
+
+    void computePropertiesForWellConnectionPressures(const WellState& well_state,
+                                                     const std::function<Scalar(int,int)>& getTemperature,
+                                                     const std::function<Scalar(int)>& getSaltConcentration,
+                                                     const std::function<int(int)>& pvtRegionIdx,
+                                                     const std::function<Scalar(int)>& solventInverseFormationVolumeFactor,
+                                                     const std::function<Scalar(int)>& solventRefDensity,
+                                                     std::vector<Scalar>& b_perf,
+                                                     std::vector<Scalar>& rsmax_perf,
+                                                     std::vector<Scalar>& rvmax_perf,
+                                                     std::vector<Scalar>& rvwmax_perf,
+                                                     std::vector<Scalar>& surf_dens_perf) const;
 
     Scalar getRho() const
     {
