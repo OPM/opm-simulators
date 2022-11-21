@@ -49,11 +49,11 @@ namespace Opm
 template<class FluidSystem, class Indices, class Scalar>
 StandardWellEval<FluidSystem,Indices,Scalar>::
 StandardWellEval(const WellInterfaceIndices<FluidSystem,Indices,Scalar>& baseif)
-    : StandardWellConnections<Scalar>(baseif)
-    , baseif_(baseif)
+    : baseif_(baseif)
     , primary_variables_(baseif_)
     , F0_(numWellConservationEq)
     , linSys_(baseif_.parallelWellInfo())
+    , connections_(baseif)
 {
 }
 
@@ -78,7 +78,7 @@ updateWellStateFromPrimaryVariables(WellState& well_state,
     this->primary_variables_.copyToWellState(well_state, deferred_logger);
 
     WellBhpThpCalculator(baseif_).
-            updateThp(this->getRho(),
+            updateThp(connections_.getRho(),
                       [this,&well_state]() { return this->baseif_.getALQ(well_state); },
                       {FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx),
                        FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx),
@@ -343,7 +343,7 @@ computeConnectionDensities(const std::vector<double>& perfComponentRates,
         }
 
         // Compute segment density.
-        this->perf_densities_[perf] = std::inner_product(surf_dens.begin(), surf_dens.end(), mix.begin(), 0.0) / volrat;
+        this->connections_.perf_densities_[perf] = std::inner_product(surf_dens.begin(), surf_dens.end(), mix.begin(), 0.0) / volrat;
     }
 }
 

@@ -255,7 +255,7 @@ namespace Opm
                     DeferredLogger& deferred_logger) const
     {
         // Pressure drawdown (also used to determine direction of flow)
-        const Value well_pressure = bhp + this->perf_pressure_diffs_[perf];
+        const Value well_pressure = bhp + this->connections_.perf_pressure_diffs_[perf];
         Value drawdown = pressure - well_pressure;
         if (this->isInjector()) {
             drawdown += skin_pressure;
@@ -546,7 +546,7 @@ namespace Opm
             assembleControlEq(well_state, group_state,
                               schedule, summaryState,
                               this->primary_variables_,
-                              this->getRho(),
+                              this->connections_.getRho(),
                               this->linSys_,
                               deferred_logger);
 
@@ -777,7 +777,7 @@ namespace Opm
         }
 
         // Store the perforation pressure for later usage.
-        perf_data.pressure[perf] = ws.bhp + this->perf_pressure_diffs_[perf];
+        perf_data.pressure[perf] = ws.bhp + this->connections_.perf_pressure_diffs_[perf];
     }
 
 
@@ -1021,7 +1021,7 @@ namespace Opm
             }
 
             // the pressure difference between the connection and BHP
-            const double h_perf = this->perf_pressure_diffs_[perf];
+            const double h_perf = this->connections_.perf_pressure_diffs_[perf];
             const double pressure_diff = p_r - h_perf;
 
             // Let us add a check, since the pressure is calculated based on zero value BHP
@@ -1117,7 +1117,7 @@ namespace Opm
                 this->adaptRatesForVFP(well_rates_bhp_limit);
                 const double thp = WellBhpThpCalculator(*this).calculateThpFromBhp(well_rates_bhp_limit,
                                                                                    bhp_limit,
-                                                                                   this->getRho(),
+                                                                                   this->connections_.getRho(),
                                                                                    this->getALQ(well_state),
                                                                                    deferred_logger);
                 const double thp_limit = this->getTHPConstraint(summaryState);
@@ -1204,7 +1204,7 @@ namespace Opm
             const double bhp = this->primary_variables_.eval(Bhp).value();
 
             // Pressure drawdown (also used to determine direction of flow)
-            const double well_pressure = bhp + this->perf_pressure_diffs_[perf];
+            const double well_pressure = bhp + this->connections_.perf_pressure_diffs_[perf];
             const double drawdown = pressure - well_pressure;
 
             // for now, if there is one perforation can produce/inject in the correct
@@ -1627,7 +1627,7 @@ namespace Opm
 
         this->computeConnectionDensities(perfRates, b_perf, rsmax_perf, rvmax_perf, rvwmax_perf, surf_dens_perf, deferred_logger);
 
-        this->computeConnectionPressureDelta();
+        this->connections_.computeConnectionPressureDelta();
     }
 
 
@@ -2032,7 +2032,7 @@ namespace Opm
     StandardWell<TypeTag>::
     getRefDensity() const
     {
-        return this->perf_densities_[0];
+        return this->connections_.getRho();
     }
 
 
@@ -2430,7 +2430,7 @@ namespace Opm
         auto bhpAtLimit = WellBhpThpCalculator(*this).computeBhpAtThpLimitProd(frates,
                                                                                summary_state,
                                                                                max_pressure,
-                                                                               this->getRho(),
+                                                                               this->connections_.getRho(),
                                                                                alq_value,
                                                                                deferred_logger);
         auto v = frates(*bhpAtLimit);
@@ -2450,7 +2450,7 @@ namespace Opm
         bhpAtLimit = WellBhpThpCalculator(*this).computeBhpAtThpLimitProd(fratesIter,
                                                                           summary_state,
                                                                           max_pressure,
-                                                                          this->getRho(),
+                                                                          this->connections_.getRho(),
                                                                           alq_value,
                                                                           deferred_logger);
         v = frates(*bhpAtLimit);
@@ -2484,7 +2484,7 @@ namespace Opm
 
         return WellBhpThpCalculator(*this).computeBhpAtThpLimitInj(frates,
                                                                    summary_state,
-                                                                   this->getRho(),
+                                                                   this->connections_.getRho(),
                                                                    1e-6,
                                                                    50,
                                                                    true,
