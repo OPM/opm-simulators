@@ -37,7 +37,7 @@ class StandardWellConnections
 public:
     StandardWellConnections(const WellInterfaceGeneric& well);
 
-    void computeConnectionPressureDelta();
+    void computePressureDelta();
 
     // TODO: not total sure whether it is a good idea to put this function here
     // the major reason to put here is to avoid the usage of Wells struct

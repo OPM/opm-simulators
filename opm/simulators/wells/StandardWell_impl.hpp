@@ -1626,7 +1626,7 @@ namespace Opm
         }
 
         this->connections_.computeConnectionDensities(perfRates, b_perf, rsmax_perf, rvmax_perf, rvwmax_perf, surf_dens_perf, deferred_logger);
-        this->connections_.computeConnectionPressureDelta();
+        this->connections_.computePressureDelta();
     }
 
 
@@ -1640,7 +1640,7 @@ namespace Opm
                                    const WellState& well_state,
                                    DeferredLogger& deferred_logger)
     {
-         // 1. Compute properties required by computeConnectionPressureDelta().
+         // 1. Compute properties required by computePressureDelta().
          //    Note that some of the complexity of this part is due to the function
          //    taking std::vector<double> arguments, and not Eigen objects.
          std::vector<double> b_perf;

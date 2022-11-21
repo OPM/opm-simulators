@@ -48,7 +48,7 @@ StandardWellConnections(const WellInterfaceGeneric& well)
 
 template<class FluidSystem, class Indices, class Scalar>
 void StandardWellConnections<FluidSystem,Indices,Scalar>::
-computeConnectionPressureDelta()
+computePressureDelta()
 {
     // Algorithm:
 
