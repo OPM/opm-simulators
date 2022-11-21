@@ -278,17 +278,17 @@ computeDensities(const std::vector<Scalar>& perfComponentRates,
 
 template<class FluidSystem, class Indices, class Scalar>
 void StandardWellConnections<FluidSystem,Indices,Scalar>::
-computePropertiesForWellConnectionPressures(const WellState& well_state,
-                                            const std::function<Scalar(int,int)>& getTemperature,
-                                            const std::function<Scalar(int)>& getSaltConcentration,
-                                            const std::function<int(int)>& pvtRegionIdx,
-                                            const std::function<Scalar(int)>& solventInverseFormationVolumeFactor,
-                                            const std::function<Scalar(int)>& solventRefDensity,
-                                            std::vector<Scalar>& b_perf,
-                                            std::vector<Scalar>& rsmax_perf,
-                                            std::vector<Scalar>& rvmax_perf,
-                                            std::vector<Scalar>& rvwmax_perf,
-                                            std::vector<Scalar>& surf_dens_perf) const
+computePropertiesForPressures(const WellState& well_state,
+                              const std::function<Scalar(int,int)>& getTemperature,
+                              const std::function<Scalar(int)>& getSaltConcentration,
+                              const std::function<int(int)>& pvtRegionIdx,
+                              const std::function<Scalar(int)>& solventInverseFormationVolumeFactor,
+                              const std::function<Scalar(int)>& solventRefDensity,
+                              std::vector<Scalar>& b_perf,
+                              std::vector<Scalar>& rsmax_perf,
+                              std::vector<Scalar>& rvmax_perf,
+                              std::vector<Scalar>& rvwmax_perf,
+                              std::vector<Scalar>& surf_dens_perf) const
 {
     const int nperf = well_.numPerfs();
     const PhaseUsage& pu = well_.phaseUsage();

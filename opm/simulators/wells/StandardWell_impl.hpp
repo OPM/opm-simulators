@@ -1314,17 +1314,17 @@ namespace Opm
             return ebosSimulator.model().cachedIntensiveQuantities(cell_idx, 0)->solventRefDensity();
         };
 
-        this->connections_.computePropertiesForWellConnectionPressures(well_state,
-                                                                       getTemperature,
-                                                                       getSaltConcentration,
-                                                                       getPvtRegionIdx,
-                                                                       getInvFac,
-                                                                       getSolventDensity,
-                                                                       b_perf,
-                                                                       rsmax_perf,
-                                                                       rvmax_perf,
-                                                                       rvwmax_perf,
-                                                                       surf_dens_perf);
+        this->connections_.computePropertiesForPressures(well_state,
+                                                         getTemperature,
+                                                         getSaltConcentration,
+                                                         getPvtRegionIdx,
+                                                         getInvFac,
+                                                         getSolventDensity,
+                                                         b_perf,
+                                                         rsmax_perf,
+                                                         rvmax_perf,
+                                                         rvwmax_perf,
+                                                         surf_dens_perf);
     }
 
 
