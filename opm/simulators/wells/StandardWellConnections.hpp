@@ -39,18 +39,6 @@ class StandardWellConnections
 public:
     StandardWellConnections(const WellInterfaceIndices<FluidSystem,Indices,Scalar>& well);
 
-    void computePressureDelta();
-
-    // TODO: not total sure whether it is a good idea to put this function here
-    // the major reason to put here is to avoid the usage of Wells struct
-    void computeDensities(const std::vector<Scalar>& perfComponentRates,
-                          const std::vector<Scalar>& b_perf,
-                          const std::vector<Scalar>& rsmax_perf,
-                          const std::vector<Scalar>& rvmax_perf,
-                          const std::vector<Scalar>& rvwmax_perf,
-                          const std::vector<Scalar>& surf_dens_perf,
-                          DeferredLogger& deferred_logger);
-
     void computePropertiesForPressures(const WellState& well_state,
                                        const std::function<Scalar(int,int)>& getTemperature,
                                        const std::function<Scalar(int)>& getSaltConcentration,
@@ -63,17 +51,18 @@ public:
                                        std::vector<Scalar>& rvwmax_perf,
                                        std::vector<Scalar>& surf_dens_perf) const;
 
-    void computeWellConnectionDensitesPressures(const WellState& well_state,
-                                                const std::function<Scalar(int,int)>& invB,
-                                                const std::function<Scalar(int,int)>& mobility,
-                                                const std::function<Scalar(int)>& solventInverseFormationVolumeFactor,
-                                                const std::function<Scalar(int)>& solventMobility,
-                                                const std::vector<double>& b_perf,
-                                                const std::vector<double>& rsmax_perf,
-                                                const std::vector<double>& rvmax_perf,
-                                                const std::vector<double>& rvwmax_perf,
-                                                const std::vector<double>& surf_dens_perf,
-                                                DeferredLogger& deferred_logger);
+    //! \brief Compute connection properties (densities, pressure drop, ...)
+    void computeProperties(const WellState& well_state,
+                           const std::function<Scalar(int,int)>& invB,
+                           const std::function<Scalar(int,int)>& mobility,
+                           const std::function<Scalar(int)>& solventInverseFormationVolumeFactor,
+                           const std::function<Scalar(int)>& solventMobility,
+                           const std::vector<double>& b_perf,
+                           const std::vector<double>& rsmax_perf,
+                           const std::vector<double>& rvmax_perf,
+                           const std::vector<double>& rvwmax_perf,
+                           const std::vector<double>& surf_dens_perf,
+                           DeferredLogger& deferred_logger);
 
     //! \brief Returns density for first perforation.
     Scalar rho() const
@@ -86,6 +75,18 @@ public:
     { return perf_pressure_diffs_[perf]; }
 
 private:
+    void computePressureDelta();
+
+    // TODO: not total sure whether it is a good idea to put this function here
+    // the major reason to put here is to avoid the usage of Wells struct
+    void computeDensities(const std::vector<Scalar>& perfComponentRates,
+                          const std::vector<Scalar>& b_perf,
+                          const std::vector<Scalar>& rsmax_perf,
+                          const std::vector<Scalar>& rvmax_perf,
+                          const std::vector<Scalar>& rvwmax_perf,
+                          const std::vector<Scalar>& surf_dens_perf,
+                          DeferredLogger& deferred_logger);
+
     const WellInterfaceIndices<FluidSystem,Indices,Scalar>& well_; //!< Reference to well interface
 
     std::vector<Scalar> perf_densities_; //!< densities of the fluid in each perforation

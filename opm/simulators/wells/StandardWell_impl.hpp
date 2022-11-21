@@ -1470,17 +1470,17 @@ namespace Opm
             return ebosSimulator.model().cachedIntensiveQuantities(cell_idx, 0)->solventMobility().value();
         };
 
-        this->connections_.computeWellConnectionDensitesPressures(well_state,
-                                                                  invB,
-                                                                  mobility,
-                                                                  invFac,
-                                                                  solventMobility,
-                                                                  b_perf,
-                                                                  rsmax_perf,
-                                                                  rvmax_perf,
-                                                                  rvwmax_perf,
-                                                                  surf_dens_perf,
-                                                                  deferred_logger);
+        this->connections_.computeProperties(well_state,
+                                             invB,
+                                             mobility,
+                                             invFac,
+                                             solventMobility,
+                                             b_perf,
+                                             rsmax_perf,
+                                             rvmax_perf,
+                                             rvwmax_perf,
+                                             surf_dens_perf,
+                                             deferred_logger);
     }
 
 

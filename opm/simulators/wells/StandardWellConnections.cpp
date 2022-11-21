@@ -447,17 +447,17 @@ computePropertiesForPressures(const WellState& well_state,
 
 template<class FluidSystem, class Indices, class Scalar>
 void StandardWellConnections<FluidSystem,Indices,Scalar>::
-computeWellConnectionDensitesPressures(const WellState& well_state,
-                                       const std::function<Scalar(int,int)>& invB,
-                                       const std::function<Scalar(int,int)>& mobility,
-                                       const std::function<Scalar(int)>& solventInverseFormationVolumeFactor,
-                                       const std::function<Scalar(int)>& solventMobility,
-                                       const std::vector<double>& b_perf,
-                                       const std::vector<double>& rsmax_perf,
-                                       const std::vector<double>& rvmax_perf,
-                                       const std::vector<double>& rvwmax_perf,
-                                       const std::vector<double>& surf_dens_perf,
-                                       DeferredLogger& deferred_logger)
+computeProperties(const WellState& well_state,
+                  const std::function<Scalar(int,int)>& invB,
+                  const std::function<Scalar(int,int)>& mobility,
+                  const std::function<Scalar(int)>& solventInverseFormationVolumeFactor,
+                  const std::function<Scalar(int)>& solventMobility,
+                  const std::vector<double>& b_perf,
+                  const std::vector<double>& rsmax_perf,
+                  const std::vector<double>& rvmax_perf,
+                  const std::vector<double>& rvwmax_perf,
+                  const std::vector<double>& surf_dens_perf,
+                  DeferredLogger& deferred_logger)
 {
     // Compute densities
     const int nperf = well_.numPerfs();
