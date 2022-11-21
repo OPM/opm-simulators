@@ -68,14 +68,15 @@ public:
         return this->perf_densities_.empty() ? 0.0 : perf_densities_[0];
     }
 
-    // densities of the fluid in each perforation
-    std::vector<Scalar> perf_densities_;
-    // pressure drop between different perforations
-    std::vector<Scalar> perf_pressure_diffs_;
+    //! \brief Returns pressure drop for a given perforation.
+    Scalar pressure_diff(const unsigned perf) const
+    { return perf_pressure_diffs_[perf]; }
 
 private:
-    // Base interface reference
-    const WellInterfaceGeneric& well_;
+    const WellInterfaceGeneric& well_; //!< Base interface reference
+
+    std::vector<Scalar> perf_densities_; //!< densities of the fluid in each perforation
+    std::vector<Scalar> perf_pressure_diffs_; //!< // pressure drop between different perforations
 };
 
 }

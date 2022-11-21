@@ -777,7 +777,7 @@ namespace Opm
         }
 
         // Store the perforation pressure for later usage.
-        perf_data.pressure[perf] = ws.bhp + this->connections_.perf_pressure_diffs_[perf];
+        perf_data.pressure[perf] = ws.bhp + this->connections_.pressure_diff(perf);
     }
 
 
@@ -1021,7 +1021,7 @@ namespace Opm
             }
 
             // the pressure difference between the connection and BHP
-            const double h_perf = this->connections_.perf_pressure_diffs_[perf];
+            const double h_perf = this->connections_.pressure_diff(perf);
             const double pressure_diff = p_r - h_perf;
 
             // Let us add a check, since the pressure is calculated based on zero value BHP
@@ -1204,7 +1204,7 @@ namespace Opm
             const double bhp = this->primary_variables_.eval(Bhp).value();
 
             // Pressure drawdown (also used to determine direction of flow)
-            const double well_pressure = bhp + this->connections_.perf_pressure_diffs_[perf];
+            const double well_pressure = bhp + this->connections_.pressure_diff(perf);
             const double drawdown = pressure - well_pressure;
 
             // for now, if there is one perforation can produce/inject in the correct

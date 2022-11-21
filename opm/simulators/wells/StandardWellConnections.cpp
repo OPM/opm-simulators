@@ -43,9 +43,9 @@ namespace Opm
 template<class FluidSystem, class Indices, class Scalar>
 StandardWellConnections<FluidSystem,Indices,Scalar>::
 StandardWellConnections(const WellInterfaceGeneric& well)
-    : perf_densities_(well.numPerfs())
+    : well_(well)
+    , perf_densities_(well.numPerfs())
     , perf_pressure_diffs_(well.numPerfs())
-    , well_(well)
 {
 }
 
