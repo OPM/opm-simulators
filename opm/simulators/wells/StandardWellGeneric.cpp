@@ -64,14 +64,13 @@ template<class Scalar>
 double
 StandardWellGeneric<Scalar>::
 relaxationFactorRate(const std::vector<double>& primary_variables,
-                     const BVectorWell& dwells)
+                     const double newton_update)
 {
     double relaxation_factor = 1.0;
     static constexpr int WQTotal = 0;
 
     // For injector, we only check the total rates to avoid sign change of rates
     const double original_total_rate = primary_variables[WQTotal];
-    const double newton_update = dwells[0][WQTotal];
     const double possible_update_total_rate = primary_variables[WQTotal] - newton_update;
 
     // 0.8 here is a experimental value, which remains to be optimized
