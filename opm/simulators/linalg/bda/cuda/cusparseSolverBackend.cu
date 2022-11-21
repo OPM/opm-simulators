@@ -52,7 +52,31 @@ const cusparseDirection_t order = CUSPARSE_DIRECTION_ROW;
 
 
 template <unsigned int block_size>
-cusparseSolverBackend<block_size>::cusparseSolverBackend(int verbosity_, int maxit_, double tolerance_, unsigned int deviceID_) : BdaSolver<block_size>(verbosity_, maxit_, tolerance_, deviceID_) {}
+cusparseSolverBackend<block_size>::cusparseSolverBackend(int verbosity_, int maxit_, double tolerance_, unsigned int deviceID_) : BdaSolver<block_size>(verbosity_, maxit_, tolerance_, deviceID_) {
+
+    // initialize CUDA device, stream and libraries
+    cudaSetDevice(deviceID);
+    cudaCheckLastError("Could not get device");
+    struct cudaDeviceProp props;
+    cudaGetDeviceProperties(&props, deviceID);
+    cudaCheckLastError("Could not get device properties");
+    std::ostringstream out;
+    out << "Name GPU: " << props.name << ", Compute Capability: " << props.major << "." << props.minor;
+    OpmLog::info(out.str());
+
+    cudaStreamCreate(&stream);
+    cudaCheckLastError("Could not create stream");
+
+    cublasCreate(&cublasHandle);
+    cudaCheckLastError("Could not create cublasHandle");
+    cusparseCreate(&cusparseHandle);
+    cudaCheckLastError("Could not create cusparseHandle");
+
+    cublasSetStream(cublasHandle, stream);
+    cudaCheckLastError("Could not set stream to cublas");
+    cusparseSetStream(cusparseHandle, stream);
+    cudaCheckLastError("Could not set stream to cusparse");
+}
 
 template <unsigned int block_size>
 cusparseSolverBackend<block_size>::~cusparseSolverBackend() {
@@ -209,25 +233,6 @@ void cusparseSolverBackend<block_size>::initialize(std::shared_ptr<BlockedMatrix
     out << "Maxit: " << maxit << std::scientific << ", tolerance: " << tolerance << "\n";
     OpmLog::info(out.str());
 
-    cudaSetDevice(deviceID);
-    cudaCheckLastError("Could not get device");
-    struct cudaDeviceProp props;
-    cudaGetDeviceProperties(&props, deviceID);
-    cudaCheckLastError("Could not get device properties");
-    out.str("");
-    out.clear();
-    out << "Name GPU: " << props.name << ", Compute Capability: " << props.major << "." << props.minor;
-    OpmLog::info(out.str());
-
-    cudaStreamCreate(&stream);
-    cudaCheckLastError("Could not create stream");
-
-    cublasCreate(&cublasHandle);
-    cudaCheckLastError("Could not create cublasHandle");
-
-    cusparseCreate(&cusparseHandle);
-    cudaCheckLastError("Could not create cusparseHandle");
-
     cudaMalloc((void**)&d_x, sizeof(double) * N);
     cudaMalloc((void**)&d_b, sizeof(double) * N);
     cudaMalloc((void**)&d_r, sizeof(double) * N);
@@ -250,11 +255,6 @@ void cusparseSolverBackend<block_size>::initialize(std::shared_ptr<BlockedMatrix
         d_mRows = d_bRows;
     }
     cudaCheckLastError("Could not allocate enough memory on GPU");
-
-    cublasSetStream(cublasHandle, stream);
-    cudaCheckLastError("Could not set stream to cublas");
-    cusparseSetStream(cusparseHandle, stream);
-    cudaCheckLastError("Could not set stream to cusparse");
 
 #if COPY_ROW_BY_ROW
     cudaMallocHost((void**)&vals_contiguous, sizeof(double) * nnz);
