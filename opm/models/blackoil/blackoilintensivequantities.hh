@@ -92,6 +92,7 @@ class BlackOilIntensiveQuantities
     enum { enableFoam = getPropValue<TypeTag, Properties::EnableFoam>() };
     enum { enableBrine = getPropValue<TypeTag, Properties::EnableBrine>() };
     enum { enableEvaporation = getPropValue<TypeTag, Properties::EnableEvaporation>() };
+    enum { has_disgas_in_water = getPropValue<TypeTag, Properties::EnableDisgasInWater>() };
     enum { enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>() };
     enum { enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>() };
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
@@ -130,6 +131,7 @@ public:
                                           enableEvaporation,
                                           enableBrine,
                                           enableSaltPrecipitation,
+                                          has_disgas_in_water,
                                           Indices::numPhases>;
     using ScalarFluidState = BlackOilFluidState<Scalar,
                                                 FluidSystem,
@@ -139,6 +141,7 @@ public:
                                                 enableEvaporation,
                                                 enableBrine,
                                                 enableSaltPrecipitation,
+                                                has_disgas_in_water,
                                                 Indices::numPhases>;
     using Problem = GetPropType<TypeTag, Properties::Problem>;
 
@@ -150,6 +153,9 @@ public:
         }        
         if (enableEvaporation) { 
             fluidState_.setRvw(0.0);
+        }
+        if (has_disgas_in_water) {
+            fluidState_.setRsw(0.0);
         }
     }
     BlackOilIntensiveQuantities(const BlackOilIntensiveQuantities& other) = default;
@@ -186,10 +192,12 @@ public:
         if constexpr (waterEnabled) {
             if (priVars.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Sw) {
                 Sw = priVars.makeEvaluation(Indices::waterSwitchIdx, timeIdx);
-            } else if (priVars.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Disabled){
-                // water is enabled but is not a primary variable i.e. one phase case
+            } else if(priVars.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Rsw ||
+                      priVars.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Disabled) {
+                      // water is enabled but is not a primary variable i.e. one component/phase case
+                      // or two-phase water + gas with only water present
                 Sw = 1.0;
-            }
+            } // else i.e. for MeaningWater() = Rvw, Sw is still 0.0;
         }
         Evaluation Sg = 0.0;
         if constexpr (gasEnabled) {
@@ -238,13 +246,13 @@ public:
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
                 if (FluidSystem::phaseIsActive(phaseIdx))
                     fluidState_.setPressure(phaseIdx, pg + (pC[phaseIdx] - pC[gasPhaseIdx]));
-        //} else if (priVars.primaryVarsMeaningPressure() == PrimaryVariables::Pw) {
-        //    const Evaluation& pw = priVars.makeEvaluation(Indices::pressureSwitchIdx, timeIdx);
-        //   for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
-        //        if (FluidSystem::phaseIsActive(phaseIdx))
-        //            fluidState_.setPressure(phaseIdx, pw + (pC[phaseIdx] - pC[waterPhaseIdx]));
+        } else if (priVars.primaryVarsMeaningPressure() == PrimaryVariables::PressureMeaning::Pw) {
+            const Evaluation& pw = priVars.makeEvaluation(Indices::pressureSwitchIdx, timeIdx);
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+                if (FluidSystem::phaseIsActive(phaseIdx))
+                    fluidState_.setPressure(phaseIdx, pw + (pC[phaseIdx] - pC[waterPhaseIdx]));
         } else {
-            //assert(FluidSystem::phaseIsActive(oilPhaseIdx));
+            assert(FluidSystem::phaseIsActive(oilPhaseIdx));
             const Evaluation& po = priVars.makeEvaluation(Indices::pressureSwitchIdx, timeIdx);
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
                 if (FluidSystem::phaseIsActive(phaseIdx))
@@ -309,6 +317,18 @@ public:
             }
         }
 
+        if (priVars.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Rsw) {
+            const auto& Rsw = priVars.makeEvaluation(Indices::waterSwitchIdx, timeIdx);
+            fluidState_.setRsw(Rsw);
+        } else {
+            if (FluidSystem::enableDissolvedGasInWater()) {
+                const Evaluation& RswSat = FluidSystem::saturatedDissolutionFactor(fluidState_,
+                                                            waterPhaseIdx,
+                                                            pvtRegionIdx);
+                fluidState_.setRsw(RswSat);
+            }
+        }
+
         typename FluidSystem::template ParameterCache<Evaluation> paramCache;
         paramCache.setRegionIndex(pvtRegionIdx);
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
@@ -350,6 +370,12 @@ public:
         if (FluidSystem::phaseIsActive(waterPhaseIdx)) {
             rho = fluidState_.invB(waterPhaseIdx);
             rho *= FluidSystem::referenceDensity(waterPhaseIdx, pvtRegionIdx);
+            if (FluidSystem::enableDissolvedGasInWater()) {
+                rho +=
+                    fluidState_.invB(waterPhaseIdx) *
+                    fluidState_.Rsw() *
+                    FluidSystem::referenceDensity(gasPhaseIdx, pvtRegionIdx);
+            }
             fluidState_.setDensity(waterPhaseIdx, rho);
         }
 
@@ -450,6 +476,7 @@ public:
         }
         assert(isfinite(fluidState_.Rs()));
         assert(isfinite(fluidState_.Rv()));
+
 #endif
     }
 
