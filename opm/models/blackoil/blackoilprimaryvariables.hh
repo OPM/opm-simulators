@@ -127,6 +127,7 @@ public:
     enum class WaterMeaning {
         Sw,  // water saturation
         Rvw, // vaporized water
+        Rsw, // dissolved gas in water
         Disabled, // The primary variable is not used
     };
 
@@ -138,7 +139,6 @@ public:
     enum class GasMeaning {
         Sg, // gas saturation
         Rs, // dissolved gas in oil
-        //Rsw, // dissolved gas in water
         Rv, // vapporized oil
         Disabled, // The primary variable is not used
     };
@@ -349,6 +349,8 @@ public:
             primaryVarsMeaningPressure_ = PressureMeaning::Pg;
         } else if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
             primaryVarsMeaningPressure_ = PressureMeaning::Po;
+        } else if ( waterPresent && FluidSystem::enableDissolvedGasInWater() && !gasPresent){
+            primaryVarsMeaningPressure_ = PressureMeaning::Pw;
         } else if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
             primaryVarsMeaningPressure_ = PressureMeaning::Pg;
         } else {
@@ -364,6 +366,8 @@ public:
             primaryVarsMeaningWater_ = WaterMeaning::Sw;
         } else if (gasPresent && FluidSystem::enableVaporizedWater()) {
             primaryVarsMeaningWater_ = WaterMeaning::Rvw;
+        } else if (waterPresent && FluidSystem::enableDissolvedGasInWater()) {
+            primaryVarsMeaningWater_ = WaterMeaning::Rsw;
         } else if (FluidSystem::phaseIsActive(waterPhaseIdx) && !oneActivePhases) {
             primaryVarsMeaningWater_ = WaterMeaning::Sw;
         } else {
@@ -381,8 +385,6 @@ public:
             primaryVarsMeaningGas_ = GasMeaning::Rs;
         } else if (gasPresent && FluidSystem::enableVaporizedOil()){
             primaryVarsMeaningGas_ = GasMeaning::Rv;
-        //} else if (waterPresent && FluidSystem::enableDissolvedGasInWater()) {
-        //    primaryVarsMeaningGas_ = Rsw;
         } else if (FluidSystem::phaseIsActive(gasPhaseIdx) && FluidSystem::phaseIsActive(oilPhaseIdx)) {
             primaryVarsMeaningGas_ = GasMeaning::Sg;
         } else {
@@ -425,6 +427,12 @@ public:
                 (*this)[waterSwitchIdx] = rvw;
                 break;
             }
+            case WaterMeaning::Rsw:
+            {
+                const auto& Rsw = BlackOil::getRsw_<FluidSystem, FluidState, Scalar>(fluidState, pvtRegionIdx_);
+                (*this)[waterSwitchIdx] = Rsw;
+                break;
+            }
             case WaterMeaning::Disabled:
             {
                 break;
@@ -450,12 +458,6 @@ public:
                 (*this)[compositionSwitchIdx] = rv;
                 break;
             }
-            //case Rsw:
-            //{
-                //const auto& Rsw = BlackOil::getRsw_<FluidSystem, FluidState, Scalar>(fluidState, pvtRegionIdx_);
-                //(*this)[waterSwitchIdx] = Rsw;
-            //    break;
-            //}
             case GasMeaning::Disabled:
             {
                 break;
@@ -530,7 +532,7 @@ public:
         // keep track if any meaning has changed
         bool changed = false;
 
-        // special case for cells with almost only water
+        // special case cells with almost only water
         // use both saturations (if the phase is enabled)
         if (sw >= thresholdWaterFilledCell) {
 
@@ -541,25 +543,20 @@ public:
             if constexpr (compositionSwitchEnabled)
                 (*this)[Indices::compositionSwitchIdx] = 0.0;
 
-            //const Scalar& po = (*this)[pressureSwitchIdx];
-            changed = primaryVarsMeaningWater() != WaterMeaning::Sw || primaryVarsMeaningGas() != GasMeaning::Sg;
+            changed = primaryVarsMeaningGas() != GasMeaning::Sg;
             if(changed) {
-                if constexpr (waterEnabled)
-                    setPrimaryVarsMeaningWater(WaterMeaning::Sw);
                 if constexpr (compositionSwitchEnabled)
                     setPrimaryVarsMeaningGas(GasMeaning::Sg);
 
-                //setPrimaryVarsMeaningPressure(PressureMeaning::Po);
                 // use water pressure?
             }
             return changed;
         }
 
-        // if water phase disappeares:  Sw (water saturation) -> Rvw (fraction of water in gas phase)
-        // if water phase appears: Rvw (fraction of water in gas phase) -> Sw (water saturation)
         switch(primaryVarsMeaningWater()) {
             case WaterMeaning::Sw:
             {
+                // if water phase disappeares:  Sw (water saturation) -> Rvw (fraction of water in gas phase)
                 if(sw < -eps && sg > eps && FluidSystem::enableVaporizedWater()) {
                     Scalar p = (*this)[pressureSwitchIdx];
                     if(primaryVarsMeaningPressure() == PressureMeaning::Po) {
@@ -575,6 +572,27 @@ public:
                                                                                    saltConcentration);
                     setPrimaryVarsMeaningWater(WaterMeaning::Rvw);
                     (*this)[Indices::waterSwitchIdx] = rvwSat; //primary variable becomes Rvw
+                    changed = true;
+                    break;
+                }
+                // if gas phase disappeares:  Sw (water saturation) -> Rsw (fraction of gas in water phase)
+                // and Pg (gas pressure) -> Pw ( water pressure)
+                if(sg < -eps && sw > eps && FluidSystem::enableDissolvedGasInWater()) {
+                    const Scalar& pg = (*this)[pressureSwitchIdx];
+                    assert(primaryVarsMeaningPressure() == PressureMeaning::Pg);
+                    std::array<Scalar, numPhases> pC = { 0.0 };
+                    const MaterialLawParams& matParams = problem.materialLawParams(globalDofIdx);
+                    Scalar so = 1.0 - sw - solventSaturation_();
+                    computeCapillaryPressures_(pC, so,  /*sg=*/ 0.0, sw, matParams);
+                    Scalar pw = pg + (pC[waterPhaseIdx] - pC[gasPhaseIdx]);
+                    Scalar rswSat = FluidSystem::waterPvt().saturatedGasDissolutionFactor(pvtRegionIdx_,
+                                                                                   T,
+                                                                                   pw,
+                                                                                   saltConcentration);
+                    setPrimaryVarsMeaningWater(WaterMeaning::Rsw);
+                    (*this)[Indices::waterSwitchIdx] = rswSat; //primary variable becomes Rsw
+                    setPrimaryVarsMeaningPressure(PressureMeaning::Pw);
+                    (*this)[Indices::pressureSwitchIdx] = pw;
                     changed = true;
                     break;
                 }
@@ -595,10 +613,37 @@ public:
                                                                                    T,
                                                                                    p,
                                                                                    saltConcentration);
+                // if water phase appears: Rvw (fraction of water in gas phase) -> Sw (water saturation)
                 if (rvw > rvwSat*(1.0 + eps)) {
-                    // water phase appears
                     setPrimaryVarsMeaningWater(WaterMeaning::Sw);
                     (*this)[Indices::waterSwitchIdx] = 0.0; // water saturation
+                    changed = true;
+                }
+                break;
+            }
+            case WaterMeaning::Rsw:
+            {
+                // Gas phase not present. The hydrocarbon gas phase
+                // appears as soon as more of the gas component is present in the water phase
+                // than what saturated water can hold.
+                const Scalar& pw = (*this)[pressureSwitchIdx];
+                assert(primaryVarsMeaningPressure() == PressureMeaning::Pw);
+                Scalar rswSat = FluidSystem::waterPvt().saturatedGasDissolutionFactor(pvtRegionIdx_,
+                                                                                   T,
+                                                                                   pw,
+                                                                                   saltConcentration);
+
+                Scalar rsw = (*this)[Indices::waterSwitchIdx];
+                if (rsw > rswSat) {
+                    // the gas phase appears, i.e., switch the primary variables to WaterMeaning::Sw
+                    setPrimaryVarsMeaningWater(WaterMeaning::Sw);
+                    (*this)[Indices::waterSwitchIdx] = 1.0; // hydrocarbon water saturation
+                    setPrimaryVarsMeaningPressure(PressureMeaning::Pg);
+                    std::array<Scalar, numPhases> pC = { 0.0 };
+                    const MaterialLawParams& matParams = problem.materialLawParams(globalDofIdx);
+                    computeCapillaryPressures_(pC, /*so=*/ 0.0,  /*sg=*/ 0.0, /*sw=*/ 1.0, matParams);
+                    Scalar pg = pw + (pC[gasPhaseIdx] - pC[waterPhaseIdx]);
+                    (*this)[Indices::pressureSwitchIdx] = pg;
                     changed = true;
                 }
                 break;
@@ -669,22 +714,6 @@ public:
                     (*this)[Indices::compositionSwitchIdx] = std::min(rvMax, rvSat);
                     changed = true;
                 }
-                //if(sg < -eps && sw > eps && FluidSystem::enableDissolvedGasInWater()) {
-                //    const Scalar& po = (*this)[pressureSwitchIdx];
-                //    std::array<Scalar, numPhases> pC = { 0.0 };
-                //    const MaterialLawParams& matParams = problem.materialLawParams(globalDofIdx);
-                //    Scalar so = 1.0 - sw - solventSaturation_();
-                //    computeCapillaryPressures_(pC, so,  /*sg=*/ 0.0, sw, matParams);
-                //    Scalar pw = po + (pC[waterPhaseIdx] - pC[oilPhaseIdx]);
-                //    Scalar rswSat = FluidSystem::waterPvt().saturatedWaterDissolutionFactor(pvtRegionIdx_,
-                //                                                                   T,
-                //                                                                   pw,
-                //                                                                   saltConcentration);
-                //    setPrimaryVarsMeaningWater(Rsw);
-                //    (*this)[Indices::waterSwitchIdx] = rswSat; //primary variable becomes Rsw
-                //    changed = true;
-                //    break;
-                //}
                 break;
             }
             case GasMeaning::Rs:
@@ -755,11 +784,6 @@ public:
                 }
                 break;
             }
-            //case Rsw:
-            //{
-                //TODO
-            //    break;
-            //}
             case GasMeaning::Disabled:
             {
                 break;

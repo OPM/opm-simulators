@@ -163,6 +163,8 @@ struct EnableBrine<TypeTag, TTag::BlackOilModel> { static constexpr bool value =
 template<class TypeTag>
 struct EnableEvaporation<TypeTag, TTag::BlackOilModel> { static constexpr bool value = false; };
 template<class TypeTag>
+struct EnableDisgasInWater<TypeTag, TTag::BlackOilModel> { static constexpr bool value = false; };
+template<class TypeTag>
 struct EnableSaltPrecipitation<TypeTag, TTag::BlackOilModel> { static constexpr bool value = false; };
 template<class TypeTag>
 struct EnableMICP<TypeTag, TTag::BlackOilModel> { static constexpr bool value = false; };

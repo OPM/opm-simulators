@@ -308,7 +308,7 @@ protected:
                 if (currentValue.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Sw)
                     delta *= satAlpha;
                 else {
-                    //Ensure Rvw factor does not become negative
+                    //Ensure Rvw and Rsw factor does not become negative
                     if (delta > currentValue[ Indices::waterSwitchIdx]) 
                         delta = currentValue[ Indices::waterSwitchIdx];
                 }
