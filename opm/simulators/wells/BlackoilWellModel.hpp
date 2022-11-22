@@ -320,7 +320,7 @@ namespace Opm {
             Simulator& ebosSimulator_;
 
             // a vector of all the wells.
-            std::vector<WellInterfacePtr > well_container_{};
+            std::vector<WellInterfacePtr> well_container_{};
 
             std::vector<bool> is_cell_perforated_{};
 

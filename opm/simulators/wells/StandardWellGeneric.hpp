@@ -65,11 +65,6 @@ protected:
     using OffDiagMatrixBlockWellType = Dune::DynamicMatrix<Scalar>;
     using OffDiagMatWell = Dune::BCRSMatrix<OffDiagMatrixBlockWellType>;
 
-public:
-    /// get the number of blocks of the C and B matrices, used to allocate memory in a WellContributions object
-    unsigned int getNumBlocks() const;
-
-protected:
     StandardWellGeneric(const WellInterfaceGeneric& baseif);
 
     // calculate a relaxation factor to avoid overshoot of total rates
@@ -85,27 +80,10 @@ protected:
     // Base interface reference
     const WellInterfaceGeneric& baseif_;
 
-    // residuals of the well equations
-    BVectorWell resWell_;
-
     // densities of the fluid in each perforation
     std::vector<double> perf_densities_;
     // pressure drop between different perforations
     std::vector<double> perf_pressure_diffs_;
-
-    // two off-diagonal matrices
-    OffDiagMatWell duneB_;
-    OffDiagMatWell duneC_;
-    // diagonal matrix for the well
-    DiagMatWell invDuneD_;
-    DiagMatWell duneD_;
-
-    // Wrapper for the parallel application of B for distributed wells
-    wellhelpers::ParallelStandardWellB<Scalar> parallelB_;
-
-    // several vector used in the matrix calculation
-    mutable BVectorWell Bx_;
-    mutable BVectorWell invDrw_;
 
     double getRho() const
     {

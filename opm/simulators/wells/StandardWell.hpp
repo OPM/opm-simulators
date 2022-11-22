@@ -253,9 +253,6 @@ namespace Opm
     protected:
         bool regularize_;
 
-        // xw = inv(D)*(rw - C*x)
-        void recoverSolutionWell(const BVector& x, BVectorWell& xw) const;
-
         // updating the well_state based on well solution dwells
         void updateWellState(const BVectorWell& dwells,
                              WellState& well_state,

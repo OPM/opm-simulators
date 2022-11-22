@@ -71,7 +71,6 @@ class WellInterface : public WellInterfaceIndices<GetPropType<TypeTag, Propertie
                                                   GetPropType<TypeTag, Properties::Scalar>>
 {
 public:
-
     using ModelParameters = BlackoilModelParametersEbos<TypeTag>;
 
     using Grid = GetPropType<TypeTag, Properties::Grid>;
