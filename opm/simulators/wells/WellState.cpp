@@ -171,8 +171,7 @@ void WellState::initSingleInjector(const Well& well,
                                    const SummaryState& summary_state) {
 
     const auto& pu = this->phase_usage_;
-    const auto& inj_controls = well.injectionControls(summary_state);
-    const double temp = inj_controls.temperature;
+    const double temp = well.temperature();
 
     auto& ws = this->wells_.add(well.name(), SingleWellState{well.name(), well_info, false, pressure_first_connection, well_perf_data, pu, temp});
 
