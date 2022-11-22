@@ -32,7 +32,6 @@
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
-#include <opm/simulators/wells/WellAssemble.hpp>
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 #include <opm/simulators/wells/WellConvergence.hpp>
 #include <opm/simulators/wells/WellInterfaceIndices.hpp>
@@ -361,100 +360,6 @@ updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_log
 template<class FluidSystem, class Indices, class Scalar>
 void
 StandardWellEval<FluidSystem,Indices,Scalar>::
-assembleControlEq(const WellState& well_state,
-                  const GroupState& group_state,
-                  const Schedule& schedule,
-                  const SummaryState& summaryState,
-                  DeferredLogger& deferred_logger)
-{
-    static constexpr int Gas = WellInterfaceIndices<FluidSystem,Indices,Scalar>::Gas;
-    static constexpr int Oil = WellInterfaceIndices<FluidSystem,Indices,Scalar>::Oil;
-    static constexpr int Water = WellInterfaceIndices<FluidSystem,Indices,Scalar>::Water;
-    EvalWell control_eq(numWellEq_ + Indices::numEq, 0.0);
-
-    const auto& well = baseif_.wellEcl();
-
-    auto getRates = [&]() {
-        std::vector<EvalWell> rates(3, EvalWell(numWellEq_ + Indices::numEq, 0.0));
-        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-            rates[Water] = getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx));
-        }
-        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-            rates[Oil] = getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx));
-        }
-        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-            rates[Gas] = getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx));
-        }
-        return rates;
-    };
-
-    if (baseif_.wellIsStopped()) {
-        control_eq = getWQTotal();
-    } else if (baseif_.isInjector()) {
-        // Find injection rate.
-        const EvalWell injection_rate = getWQTotal();
-        // Setup function for evaluation of BHP from THP (used only if needed).
-        std::function<EvalWell()> bhp_from_thp = [&]() {
-            const auto rates = getRates();
-            return WellBhpThpCalculator(baseif_).calculateBhpFromThp(well_state,
-                                                                     rates,
-                                                                     well,
-                                                                     summaryState,
-                                                                     this->getRho(),
-                                                                     deferred_logger);
-        };
-        // Call generic implementation.
-        const auto& inj_controls = well.injectionControls(summaryState);
-        WellAssemble(baseif_).
-             assembleControlEqInj(well_state,
-                                  group_state,
-                                  schedule,
-                                  summaryState,
-                                  inj_controls,
-                                  getBhp(),
-                                  injection_rate,
-                                  bhp_from_thp,
-                                  control_eq,
-                                  deferred_logger);
-    } else {
-        // Find rates.
-        const auto rates = getRates();
-        // Setup function for evaluation of BHP from THP (used only if needed).
-        std::function<EvalWell()> bhp_from_thp = [&]() {
-             return WellBhpThpCalculator(baseif_).calculateBhpFromThp(well_state,
-                                                                      rates,
-                                                                      well,
-                                                                      summaryState,
-                                                                      this->getRho(),
-                                                                      deferred_logger);
-        };
-        // Call generic implementation.
-        const auto& prod_controls = well.productionControls(summaryState);
-        WellAssemble(baseif_).
-            assembleControlEqProd(well_state,
-                                  group_state,
-                                  schedule,
-                                  summaryState,
-                                  prod_controls,
-                                  getBhp(),
-                                  rates,
-                                  bhp_from_thp,
-                                  control_eq,
-                                  deferred_logger);
-    }
-
-    // using control_eq to update the matrix and residuals
-    // TODO: we should use a different index system for the well equations
-    this->linSys_.resWell_[0][Bhp] = control_eq.value();
-    for (int pv_idx = 0; pv_idx < numWellEq_; ++pv_idx) {
-        this->linSys_.duneD_[0][0][Bhp][pv_idx] = control_eq.derivative(pv_idx + Indices::numEq);
-    }
-}
-
-
-template<class FluidSystem, class Indices, class Scalar>
-void
-StandardWellEval<FluidSystem,Indices,Scalar>::
 updatePrimaryVariablesPolyMW(const BVectorWell& dwells) const
 {
     if (baseif_.isInjector()) {
@@ -774,7 +679,7 @@ getWellConvergence(const WellState& well_state,
     res.resize(numWellEq_);
     for (int eq_idx = 0; eq_idx < numWellEq_; ++eq_idx) {
         // magnitude of the residual matters
-        res[eq_idx] = std::abs(this->linSys_.resWell_[0][eq_idx]);
+        res[eq_idx] = std::abs(this->linSys_.residual()[0][eq_idx]);
     }
 
     std::vector<double> well_flux_residual(baseif_.numComponents());
@@ -811,7 +716,7 @@ getWellConvergence(const WellState& well_state,
     WellConvergence(baseif_).
         checkConvergenceControlEq(well_state,
                                   {1.e3, 1.e4, 1.e-4, 1.e-6, maxResidualAllowed},
-                                  std::abs(this->linSys_.resWell_[0][Bhp]),
+                                  std::abs(this->linSys_.residual()[0][Bhp]),
                                   report,
                                   deferred_logger);
 

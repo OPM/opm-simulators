@@ -96,6 +96,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/PerfData.cpp
   opm/simulators/wells/SegmentState.cpp
   opm/simulators/wells/SingleWellState.cpp
+  opm/simulators/wells/StandardWellAssemble.cpp
   opm/simulators/wells/StandardWellEquations.cpp
   opm/simulators/wells/StandardWellEval.cpp
   opm/simulators/wells/StandardWellGeneric.cpp
@@ -381,8 +382,10 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/SingleWellState.hpp
   opm/simulators/wells/StandardWell.hpp
   opm/simulators/wells/StandardWell_impl.hpp
+  opm/simulators/wells/StandardWellAssemble.hpp
   opm/simulators/wells/StandardWellEquations.hpp
   opm/simulators/wells/StandardWellEval.hpp
+  opm/simulators/wells/StandardWellGeneric.hpp
   opm/simulators/wells/TargetCalculator.hpp
   opm/simulators/wells/VFPHelpers.hpp
   opm/simulators/wells/VFPInjProperties.hpp

@@ -20,6 +20,7 @@
 */
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+#include <opm/simulators/wells/StandardWellAssemble.hpp>
 #include <opm/simulators/wells/VFPHelpers.hpp>
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 #include <opm/simulators/wells/WellConvergence.hpp>
@@ -482,19 +483,12 @@ namespace Opm
 
                 connectionRates[perf][componentIdx] = Base::restrictEval(cq_s_effective);
 
-                // subtract sum of phase fluxes in the well equations.
-                this->linSys_.resWell_[0][componentIdx] += cq_s_effective.value();
-
-                // assemble the jacobians
-                for (int pvIdx = 0; pvIdx < this->numWellEq_; ++pvIdx) {
-                    // also need to consider the efficiency factor when manipulating the jacobians.
-                    this->linSys_.duneC_[0][cell_idx][pvIdx][componentIdx] -= cq_s_effective.derivative(pvIdx+Indices::numEq); // intput in transformed matrix
-                    this->linSys_.duneD_[0][0][componentIdx][pvIdx] += cq_s_effective.derivative(pvIdx+Indices::numEq);
-                }
-
-                for (int pvIdx = 0; pvIdx < Indices::numEq; ++pvIdx) {
-                    this->linSys_.duneB_[0][cell_idx][componentIdx][pvIdx] += cq_s_effective.derivative(pvIdx);
-                }
+                StandardWellAssemble<FluidSystem,Indices,Scalar>(*this).
+                    assemblePerforationEq(cq_s_effective,
+                                          componentIdx,
+                                          cell_idx,
+                                          this->numWellEq_,
+                                          this->linSys_);
 
                 // Store the perforation phase flux for later usage.
                 if (has_solvent && componentIdx == Indices::contiSolventEqIdx) {
@@ -506,9 +500,11 @@ namespace Opm
             }
 
             if constexpr (has_zFraction) {
-                for (int pvIdx = 0; pvIdx < this->numWellEq_; ++pvIdx) {
-                    this->linSys_.duneC_[0][cell_idx][pvIdx][Indices::contiZfracEqIdx] -= cq_s_zfrac_effective.derivative(pvIdx+Indices::numEq);
-                }
+                StandardWellAssemble<FluidSystem,Indices,Scalar>(*this).
+                    assembleZFracEq(cq_s_zfrac_effective,
+                                    cell_idx,
+                                    this->numWellEq_,
+                                    this->linSys_);
             }
         }
         // Update the connection
@@ -536,15 +532,27 @@ namespace Opm
                 resWell_loc += (this->wellSurfaceVolumeFraction(componentIdx) - this->F0_[componentIdx]) * volume / dt;
             }
             resWell_loc -= this->getQs(componentIdx) * this->well_efficiency_factor_;
-            for (int pvIdx = 0; pvIdx < this->numWellEq_; ++pvIdx) {
-                this->linSys_.duneD_[0][0][componentIdx][pvIdx] += resWell_loc.derivative(pvIdx+Indices::numEq);
-            }
-            this->linSys_.resWell_[0][componentIdx] += resWell_loc.value();
+            StandardWellAssemble<FluidSystem,Indices,Scalar>(*this).
+                assembleSourceEq(resWell_loc,
+                                 componentIdx,
+                                 this->numWellEq_,
+                                 this->linSys_);
         }
 
         const auto& summaryState = ebosSimulator.vanguard().summaryState();
         const Schedule& schedule = ebosSimulator.vanguard().schedule();
-        this->assembleControlEq(well_state, group_state, schedule, summaryState, deferred_logger);
+        std::function<EvalWell(int)> gQ = [this](int a) { return this->getQs(a); };
+        StandardWellAssemble<FluidSystem,Indices,Scalar>(*this).
+            assembleControlEq(well_state, group_state,
+                              schedule, summaryState,
+                              this->numWellEq_,
+                              this->getWQTotal(),
+                              this->getBhp(),
+                              gQ,
+                              this->getRho(),
+                              Bhp,
+                              this->linSys_,
+                              deferred_logger);
 
 
         // do the local inversion of D.
@@ -2313,7 +2321,6 @@ namespace Opm
 
         // equation for the water velocity
         const EvalWell eq_wat_vel = this->primary_variables_evaluation_[wat_vel_index] - water_velocity;
-        this->linSys_.resWell_[0][wat_vel_index] = eq_wat_vel.value();
 
         const auto& ws = well_state.well(this->index_of_well_);
         const auto& perf_data = ws.perf_data;
@@ -2328,16 +2335,14 @@ namespace Opm
         const EvalWell eq_pskin = this->primary_variables_evaluation_[pskin_index]
                                   - pskin(throughput, this->primary_variables_evaluation_[wat_vel_index], poly_conc, deferred_logger);
 
-        this->linSys_.resWell_[0][pskin_index] = eq_pskin.value();
-        for (int pvIdx = 0; pvIdx < this->numWellEq_; ++pvIdx) {
-            this->linSys_.duneD_[0][0][wat_vel_index][pvIdx] = eq_wat_vel.derivative(pvIdx+Indices::numEq);
-            this->linSys_.duneD_[0][0][pskin_index][pvIdx] = eq_pskin.derivative(pvIdx+Indices::numEq);
-        }
-
-        // the water velocity is impacted by the reservoir primary varaibles. It needs to enter matrix B
-        for (int pvIdx = 0; pvIdx < Indices::numEq; ++pvIdx) {
-            this->linSys_.duneB_[0][cell_idx][wat_vel_index][pvIdx] = eq_wat_vel.derivative(pvIdx);
-        }
+        StandardWellAssemble<FluidSystem,Indices,Scalar>(*this).
+                assembleInjectivityEq(eq_pskin,
+                                      eq_wat_vel,
+                                      pskin_index,
+                                      wat_vel_index,
+                                      cell_idx,
+                                      this->numWellEq_,
+                                      this->linSys_);
     }
 
 
