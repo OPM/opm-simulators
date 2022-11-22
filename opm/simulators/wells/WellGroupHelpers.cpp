@@ -682,7 +682,11 @@ namespace WellGroupHelpers
         if (!gpm)
             return;
 
-        const auto [name, number] = *gpm->region();
+        const auto& region = gpm->region();
+        if (!region)
+            return;
+
+        const auto [name, number] = *region;
         const double error = gpm->pressure_target() - regional_values.pressure(number);
         double current_rate = 0.0;
         const auto& pu = well_state.phaseUsage();
