@@ -873,6 +873,7 @@ WellState::reportSegmentResults(const int well_id,
         const auto io = pu.phase_pos[Oil];
 
         seg_res.rates.set(data::Rates::opt::oil, rate[io]);
+        seg_res.rates.set(data::Rates::opt::vaporized_oil, segments.vaporized_oil_rate[seg_ix]);
         seg_res.rates.set(data::Rates::opt::reservoir_oil, resv[io]);
         seg_res.velocity.set(PhaseQuant::Oil, velocity[io]);
         seg_res.holdup.set(PhaseQuant::Oil, holdup[io]);
@@ -883,6 +884,7 @@ WellState::reportSegmentResults(const int well_id,
         const auto ig = pu.phase_pos[Gas];
 
         seg_res.rates.set(data::Rates::opt::gas, rate[ig]);
+        seg_res.rates.set(data::Rates::opt::dissolved_gas, segments.dissolved_gas_rate[seg_ix]);
         seg_res.rates.set(data::Rates::opt::reservoir_gas, resv[ig]);
         seg_res.velocity.set(PhaseQuant::Gas, velocity[ig]);
         seg_res.holdup.set(PhaseQuant::Gas, holdup[ig]);

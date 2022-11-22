@@ -1,5 +1,5 @@
 /*
-  Copyright Equinor ASA 2021
+  Copyright Equinor ASA 2021, 2022.
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -45,6 +45,8 @@ public:
     std::size_t size() const;
 
     std::vector<double> rates;
+    std::vector<double> dissolved_gas_rate;
+    std::vector<double> vaporized_oil_rate;
 
     /// Segment condition volume flow rates through segment (per phase)
     std::vector<double> phase_resv_rates;
