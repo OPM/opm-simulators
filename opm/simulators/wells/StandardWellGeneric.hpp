@@ -49,31 +49,7 @@ template<class Scalar>
 class StandardWellGeneric
 {
 protected:
-    // sparsity pattern for the matrices
-    //[A C^T    [x       =  [ res
-    // B  D ]   x_well]      res_well]
-
-    // the vector type for the res_well and x_well
-    using VectorBlockWellType = Dune::DynamicVector<Scalar>;
-    using BVectorWell = Dune::BlockVector<VectorBlockWellType>;
-
-    // the matrix type for the diagonal matrix D
-    using DiagMatrixBlockWellType = Dune::DynamicMatrix<Scalar>;
-    using DiagMatWell = Dune::BCRSMatrix<DiagMatrixBlockWellType>;
-
-    // the matrix type for the non-diagonal matrix B and C^T
-    using OffDiagMatrixBlockWellType = Dune::DynamicMatrix<Scalar>;
-    using OffDiagMatWell = Dune::BCRSMatrix<OffDiagMatrixBlockWellType>;
-
     StandardWellGeneric(const WellInterfaceGeneric& baseif);
-
-    // calculate a relaxation factor to avoid overshoot of total rates
-    static double relaxationFactorRate(const std::vector<double>& primary_variables,
-                                       const double newton_update);
-
-    // relaxation factor considering only one fraction value
-    static double relaxationFactorFraction(const double old_value,
-                                           const double dx);
 
     void computeConnectionPressureDelta();
 

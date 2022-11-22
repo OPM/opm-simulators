@@ -109,6 +109,8 @@ namespace Opm
         // TODO: we should have indices for the well equations and well primary variables separately
         static constexpr int Bhp = numStaticWellEq - numWellControlEq;
 
+        using StdWellEval::WQTotal;
+
         using typename Base::Scalar;
 
 
@@ -122,7 +124,6 @@ namespace Opm
         using Eval = typename StdWellEval::Eval;
         using EvalWell = typename StdWellEval::EvalWell;
         using BVectorWell = typename StdWellEval::BVectorWell;
-        using DiagMatrixBlockWellType = typename StdWellEval::DiagMatrixBlockWellType;
 
         StandardWell(const Well& well,
                      const ParallelWellInfo& pw_info,
@@ -355,10 +356,6 @@ namespace Opm
         void updatePrimaryVariablesNewton(const BVectorWell& dwells,
                                           const WellState& well_state,
                                           DeferredLogger& deferred_logger) const;
-
-        // update extra primary vriables if there are any
-        void updateExtraPrimaryVariables(const BVectorWell& dwells) const;
-
 
         void updateWellStateFromPrimaryVariables(WellState& well_state, DeferredLogger& deferred_logger) const;
 

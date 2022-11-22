@@ -55,59 +55,6 @@ StandardWellGeneric(const WellInterfaceGeneric& baseif)
 {
 }
 
-
-template<class Scalar>
-double
-StandardWellGeneric<Scalar>::
-relaxationFactorRate(const std::vector<double>& primary_variables,
-                     const double newton_update)
-{
-    double relaxation_factor = 1.0;
-    static constexpr int WQTotal = 0;
-
-    // For injector, we only check the total rates to avoid sign change of rates
-    const double original_total_rate = primary_variables[WQTotal];
-    const double possible_update_total_rate = primary_variables[WQTotal] - newton_update;
-
-    // 0.8 here is a experimental value, which remains to be optimized
-    // if the original rate is zero or possible_update_total_rate is zero, relaxation_factor will
-    // always be 1.0, more thoughts might be needed.
-    if (original_total_rate * possible_update_total_rate < 0.) { // sign changed
-        relaxation_factor = std::abs(original_total_rate / newton_update) * 0.8;
-    }
-
-    assert(relaxation_factor >= 0.0 && relaxation_factor <= 1.0);
-
-    return relaxation_factor;
-}
-
-template<class Scalar>
-double
-StandardWellGeneric<Scalar>::
-relaxationFactorFraction(const double old_value,
-                         const double dx)
-{
-    assert(old_value >= 0. && old_value <= 1.0);
-
-    double relaxation_factor = 1.;
-
-    // updated values without relaxation factor
-    const double possible_updated_value = old_value - dx;
-
-    // 0.95 is an experimental value remains to be optimized
-    if (possible_updated_value < 0.0) {
-        relaxation_factor = std::abs(old_value / dx) * 0.95;
-    } else if (possible_updated_value > 1.0) {
-        relaxation_factor = std::abs((1. - old_value) / dx) * 0.95;
-    }
-    // if possible_updated_value is between 0. and 1.0, then relaxation_factor
-    // remains to be one
-
-    assert(relaxation_factor >= 0. && relaxation_factor <= 1.);
-
-    return relaxation_factor;
-}
-
 template<class Scalar>
 void
 StandardWellGeneric<Scalar>::
