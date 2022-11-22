@@ -60,7 +60,6 @@ private:
     int *tmp_colindices;     // store matrix on host, this pointer is given to and freed by rocalution
     double *tmp_nnzvalues;   // store matrix on host, this pointer is given to and freed by rocalution
 
-    // must be declared in this order, to prevent a segfault during the test
     std::unique_ptr<rocalution::ILU<rocalution::LocalMatrix<double>, rocalution::LocalVector<double>, double> > roc_prec;
     std::unique_ptr<rocalution::BiCGStab<rocalution::LocalMatrix<double>, rocalution::LocalVector<double>, double> > roc_solver;
 
