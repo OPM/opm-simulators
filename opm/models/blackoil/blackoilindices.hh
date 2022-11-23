@@ -96,10 +96,20 @@ struct BlackOilIndices
     // Primary variable indices
     ////////
 
-    //! The index of the water saturation
+    /*!
+     * \brief Index of the switching variable which determines the composistion of the water phase
+     *
+     * Depending on the phases present, this variable is either interpreted as
+     * water saturation or vapporized water in gas phase
+     */
     static const int waterSaturationIdx = PVOffset + 0;
 
-    //! Index of the oil pressure in a vector of primary variables
+    /*!
+     * \brief Index of the switching variable which determines the pressure
+     *
+     * Depending on the phases present, this variable is either interpreted as the
+     * pressure of the oil phase, gas phase (if no oil) or water phase (if only water)
+     */
     static const int pressureSwitchIdx = PVOffset + 1;
 
     /*!

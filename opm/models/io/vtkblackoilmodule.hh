@@ -204,8 +204,11 @@ public:
             this->resizeScalarBuffer_(oilSaturationRatio_);
             this->resizeScalarBuffer_(gasSaturationRatio_);
         }
-        if (primaryVarsMeaningOutput_())
-            this->resizeScalarBuffer_(primaryVarsMeaning_);
+        if (primaryVarsMeaningOutput_()) {
+            this->resizeScalarBuffer_(primaryVarsMeaningPressure_);
+            this->resizeScalarBuffer_(primaryVarsMeaningWater_);
+            this->resizeScalarBuffer_(primaryVarsMeaningGas_);
+        }
     }
 
     /*!
@@ -289,9 +292,14 @@ public:
                 waterFormationVolumeFactor_[globalDofIdx] =
                     1.0/FluidSystem::template inverseFormationVolumeFactor<FluidState, Scalar>(fs, waterPhaseIdx, pvtRegionIdx);
 
-            if (primaryVarsMeaningOutput_())
-                primaryVarsMeaning_[globalDofIdx] =
-                    primaryVars.primaryVarsMeaning();
+            if (primaryVarsMeaningOutput_()) {
+                primaryVarsMeaningWater_[globalDofIdx] =
+                    primaryVars.primaryVarsMeaningWater();
+                primaryVarsMeaningGas_[globalDofIdx] =
+                    primaryVars.primaryVarsMeaningGas();
+                primaryVarsMeaningPressure_[globalDofIdx] =
+                    primaryVars.primaryVarsMeaningPressure();
+            }
         }
     }
 
@@ -327,8 +335,11 @@ public:
             this->commitScalarBuffer_(baseWriter, "saturation ratio_gas", gasSaturationRatio_);
         }
 
-        if (primaryVarsMeaningOutput_())
-            this->commitScalarBuffer_(baseWriter, "primary vars meaning", primaryVarsMeaning_);
+        if (primaryVarsMeaningOutput_()) {
+            this->commitScalarBuffer_(baseWriter, "primary vars meaning water", primaryVarsMeaningWater_);
+            this->commitScalarBuffer_(baseWriter, "primary vars meaning gas", primaryVarsMeaningGas_);
+            this->commitScalarBuffer_(baseWriter, "primary vars meaning pressure", primaryVarsMeaningPressure_);
+        }
     }
 
 private:
@@ -411,7 +422,11 @@ private:
     ScalarBuffer oilSaturationRatio_;
     ScalarBuffer gasSaturationRatio_;
 
-    ScalarBuffer primaryVarsMeaning_;
+    ScalarBuffer primaryVarsMeaningPressure_;
+    ScalarBuffer primaryVarsMeaningWater_;
+    ScalarBuffer primaryVarsMeaningGas_;
+
+
 };
 } // namespace Opm
 

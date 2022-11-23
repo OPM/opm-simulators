@@ -423,13 +423,13 @@ public:
         // if the primary variable is either the gas saturation, Rs or Rv
         assert(int(Indices::compositionSwitchIdx) == int(pvIdx));
 
-        auto pvMeaning = this->solution(0)[globalDofIdx].primaryVarsMeaning();
-        if (pvMeaning == PrimaryVariables::Sw_po_Sg)
+        auto pvMeaning = this->solution(0)[globalDofIdx].primaryVarsMeaningGas();
+        if (pvMeaning == PrimaryVariables::Sg)
             return 1.0; // gas saturation
-        else if (pvMeaning == PrimaryVariables::Sw_po_Rs)
+        else if (pvMeaning == PrimaryVariables::Rs)
             return 1.0/250.; // gas dissolution factor
         else {
-            assert(pvMeaning == PrimaryVariables::Sw_pg_Rv);
+            assert(pvMeaning == PrimaryVariables::Rv);
             return 1.0/0.025; // oil vaporization factor
         }
 
@@ -475,7 +475,10 @@ public:
             outstream << priVars[eqIdx] << " ";
 
         // write the pseudo primary variables
-        outstream << priVars.primaryVarsMeaning() << " ";
+        outstream << priVars.primaryVarsMeaningGas() << " ";
+        outstream << priVars.primaryVarsMeaningWater() << " ";
+        outstream << priVars.primaryVarsMeaningPressure() << " ";
+
         outstream << priVars.pvtRegionIndex() << " ";
 
         SolventModule::serializeEntity(*this, outstream, dof);
@@ -507,8 +510,14 @@ public:
         }
 
         // read the pseudo primary variables
-        unsigned primaryVarsMeaning;
-        instream >> primaryVarsMeaning;
+        unsigned primaryVarsMeaningGas;
+        instream >> primaryVarsMeaningGas;
+
+        unsigned primaryVarsMeaningWater;
+        instream >> primaryVarsMeaningWater;
+
+        unsigned primaryVarsMeaningPressure;
+        instream >> primaryVarsMeaningPressure;
 
         unsigned pvtRegionIdx;
         instream >> pvtRegionIdx;
@@ -521,8 +530,13 @@ public:
         PolymerModule::deserializeEntity(*this, instream, dof);
         EnergyModule::deserializeEntity(*this, instream, dof);
 
-        using PVM = typename PrimaryVariables::PrimaryVarsMeaning;
-        priVars.setPrimaryVarsMeaning(static_cast<PVM>(primaryVarsMeaning));
+        using PVM_G = typename PrimaryVariables::PrimaryVarsMeaningGas;
+        using PVM_W = typename PrimaryVariables::PrimaryVarsMeaningWater;
+        using PVM_P = typename PrimaryVariables::PrimaryVarsMeaningPressure;
+        priVars.setPrimaryVarsMeaningGas(static_cast<PVM_G>(primaryVarsMeaningGas));
+        priVars.setPrimaryVarsMeaningWater(static_cast<PVM_W>(primaryVarsMeaningWater));
+        priVars.setPrimaryVarsMeaningPressure(static_cast<PVM_P>(primaryVarsMeaningPressure));
+
         priVars.setPvtRegionIndex(pvtRegionIdx);
     }
 

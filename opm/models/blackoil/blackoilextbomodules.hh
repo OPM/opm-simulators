@@ -619,17 +619,14 @@ public:
 
         Evaluation pbub = fs.pressure(oilPhaseIdx);
 
-        if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_po_Sg) {
+        if (priVars.primaryVarsMeaningWater() == PrimaryVariables::Sw) {
            static const Scalar thresholdWaterFilledCell = 1.0 - 1e-6;
-           Scalar Sw = 0.0;
-           if (Indices::waterEnabled)
-              Sw = priVars.makeEvaluation(Indices::waterSaturationIdx, timeIdx).value();
-
-           if (Sw >= thresholdWaterFilledCell)
+           Scalar sw = priVars.makeEvaluation(Indices::waterSaturationIdx, timeIdx).value();
+           if (sw >= thresholdWaterFilledCell)
               rs_ = 0.0;  // water only, zero rs_ ...
         }
 
-        if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_po_Rs) {
+        if (priVars.primaryVarsMeaningGas() == PrimaryVariables::Rs) {
            rs_ = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx);
            const Evaluation zLim = ExtboModule::zLim(pvtRegionIdx);
            if (zFraction_ > zLim) {
@@ -642,7 +639,7 @@ public:
            xVolume_ = ExtboModule::xVolume(pvtRegionIdx, pbub, zFraction_);
         }
 
-        if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_pg_Rv) {
+        if (priVars.primaryVarsMeaningGas() == PrimaryVariables::Rv) {
            rv_ = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx);
            Evaluation rvsat = ExtboModule::rv(pvtRegionIdx, pbub, zFraction_);
            bg_ = ExtboModule::bg(pvtRegionIdx, pbub, zFraction_) + ExtboModule::gasCmp(pvtRegionIdx, zFraction_)*(rv_-rvsat);

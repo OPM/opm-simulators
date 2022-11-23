@@ -184,44 +184,28 @@ public:
         // extract the water and the gas saturations for convenience
         Evaluation Sw = 0.0;
         if constexpr (waterEnabled) {
-            if (priVars.primaryVarsMeaning() == PrimaryVariables::OnePhase_p) {
-                Sw = 1.0;
-            } else if (priVars.primaryVarsMeaning() != PrimaryVariables::Rvw_po_Sg && priVars.primaryVarsMeaning() != PrimaryVariables::Rvw_pg_Rv) {
+            if (priVars.primaryVarsMeaningWater() == PrimaryVariables::Sw) {
                 Sw = priVars.makeEvaluation(Indices::waterSaturationIdx, timeIdx);
+            } else if (priVars.primaryVarsMeaningWater() == PrimaryVariables::W_disabled){
+                // water is enabled but is not a primary variable i.e. one phase case
+                Sw = 1.0;
             }
         }
         Evaluation Sg = 0.0;
-        if constexpr (compositionSwitchEnabled)
-        {
-            if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_po_Sg) {
-                // -> threephase case
-                assert( priVars.primaryVarsMeaning() != PrimaryVariables::OnePhase_p );
+        if constexpr (gasEnabled) {
+            if (priVars.primaryVarsMeaningGas() == PrimaryVariables::Sg) {
                 Sg = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx);
-            } else if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_pg_Rv) {
-                // -> gas-water case
+            } else if (priVars.primaryVarsMeaningGas() == PrimaryVariables::Rv) {
                 Sg = 1.0 - Sw;
-
-                // deal with solvent
-                if (enableSolvent)
-                    Sg -= priVars.makeEvaluation(Indices::solventSaturationIdx, timeIdx);
-
-            } else if (priVars.primaryVarsMeaning() == PrimaryVariables::Rvw_po_Sg) {
-                 // -> oil-gas case
-                 Sg = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx);
-            } else if (priVars.primaryVarsMeaning() == PrimaryVariables::Rvw_pg_Rv) {
-                 // -> gas case
-                 Sg = 1.0;
-            } else
-            {
-                assert(priVars.primaryVarsMeaning() == PrimaryVariables::Sw_po_Rs);
-                // -> oil-water case
-                Sg = 0.0;
+            } else if (priVars.primaryVarsMeaningGas() == PrimaryVariables::G_disabled) {
+                if constexpr (waterEnabled) {
+                    Sg = 1.0 - Sw; // two phase water + gas
+                } else {
+                    // one phase case
+                    Sg = 1.0;
+                }
             }
         }
-        if constexpr (gasEnabled && waterEnabled && !oilEnabled) {
-            Sg = 1.0 - Sw;
-        }
-
         Valgrind::CheckDefined(Sg);
         Valgrind::CheckDefined(Sw);
 
@@ -249,14 +233,18 @@ public:
         problem.updateRelperms(mobility_, dirMob_, fluidState_, globalSpaceIdx);
 
         // oil is the reference phase for pressure
-        if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_pg_Rv || priVars.primaryVarsMeaning() == PrimaryVariables::Rvw_pg_Rv) {
+        if (priVars.primaryVarsMeaningPressure() == PrimaryVariables::Pg) {
             const Evaluation& pg = priVars.makeEvaluation(Indices::pressureSwitchIdx, timeIdx);
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
                 if (FluidSystem::phaseIsActive(phaseIdx))
                     fluidState_.setPressure(phaseIdx, pg + (pC[phaseIdx] - pC[gasPhaseIdx]));
-        }
-
-        else {
+        //} else if (priVars.primaryVarsMeaningPressure() == PrimaryVariables::Pw) {
+        //    const Evaluation& pw = priVars.makeEvaluation(Indices::pressureSwitchIdx, timeIdx);
+        //   for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+        //        if (FluidSystem::phaseIsActive(phaseIdx))
+        //            fluidState_.setPressure(phaseIdx, pw + (pC[phaseIdx] - pC[waterPhaseIdx]));
+        } else {
+            //assert(FluidSystem::phaseIsActive(oilPhaseIdx));
             const Evaluation& po = priVars.makeEvaluation(Indices::pressureSwitchIdx, timeIdx);
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
                 if (FluidSystem::phaseIsActive(phaseIdx))
@@ -277,141 +265,48 @@ public:
 
         // take the meaning of the switching primary variable into account for the gas
         // and oil phase compositions
-        if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_po_Sg) {
-            // in the threephase case, gas and oil phases are potentially present, i.e.,
-            // we use the compositions of the gas-saturated oil and oil-saturated gas.
-            if (FluidSystem::enableDissolvedGas()) {
-                const Evaluation& RsSat = enableExtbo ? asImp_().rs() :
-                    FluidSystem::saturatedDissolutionFactor(fluidState_,
-                                                            oilPhaseIdx,
-                                                            pvtRegionIdx,
-                                                            SoMax);
-                fluidState_.setRs(min(RsMax, RsSat));
-            }
-            else if constexpr (compositionSwitchEnabled)
-                fluidState_.setRs(0.0);
-
-            if (FluidSystem::enableVaporizedOil()) {
-                const Evaluation& RvSat = enableExtbo ? asImp_().rv() :
-                    FluidSystem::saturatedDissolutionFactor(fluidState_,
-                                                            gasPhaseIdx,
-                                                            pvtRegionIdx,
-                                                            SoMax);
-                fluidState_.setRv(min(RvMax, RvSat));
-            }
-            else if constexpr (compositionSwitchEnabled)
-                fluidState_.setRv(0.0);
-
-            if (FluidSystem::enableVaporizedWater()) {
-                const Evaluation& RvwSat = FluidSystem::saturatedVaporizationFactor(fluidState_,
-                                                            gasPhaseIdx,
-                                                            pvtRegionIdx);
-                fluidState_.setRvw(RvwSat);
-            }
-        }
-        else if (priVars.primaryVarsMeaning() == PrimaryVariables::Rvw_po_Sg) {
-            // The switching variable is the water-gas ratio Rvw
-            const auto& Rvw = priVars.makeEvaluation(Indices::waterSaturationIdx, timeIdx);
-            fluidState_.setRvw(Rvw);
-
-            if (FluidSystem::enableDissolvedGas()) {
-                const Evaluation& RsSat = enableExtbo ? asImp_().rs() :
-                    FluidSystem::saturatedDissolutionFactor(fluidState_,
-                                                            oilPhaseIdx,
-                                                            pvtRegionIdx,
-                                                            SoMax);
-                fluidState_.setRs(min(RsMax, RsSat));
-            }
-            else if constexpr (compositionSwitchEnabled)
-                fluidState_.setRs(0.0);
-
-            if (FluidSystem::enableVaporizedOil()) {
-                const Evaluation& RvSat = enableExtbo ? asImp_().rv() :
-                    FluidSystem::saturatedDissolutionFactor(fluidState_,
-                                                            gasPhaseIdx,
-                                                            pvtRegionIdx,
-                                                            SoMax);
-                fluidState_.setRv(min(RvMax, RvSat));
-            }
-            else if constexpr (compositionSwitchEnabled)
-                fluidState_.setRv(0.0);
-        }
-        else if (priVars.primaryVarsMeaning() == PrimaryVariables::Rvw_pg_Rv) {
-            // The switching variable is the water-gas ratio Rvw
-            const auto& Rvw = priVars.makeEvaluation(Indices::waterSaturationIdx, timeIdx);
-            fluidState_.setRvw(Rvw);
-
-            const auto& Rv = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx);
-            fluidState_.setRv(Rv);
-
-            if (FluidSystem::enableDissolvedGas()) {
-                // the oil phase is not present, but we need to compute its "composition" for
-                // the gravity correction anyway
-                const auto& RsSat = enableExtbo ? asImp_().rs() :
-                    FluidSystem::saturatedDissolutionFactor(fluidState_,
-                                                            oilPhaseIdx,
-                                                            pvtRegionIdx,
-                                                            SoMax);
-
-                fluidState_.setRs(min(RsMax, RsSat));
-            }
-            else {
-                fluidState_.setRs(0.0);
-            }
-        }
-        else if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_po_Rs) {
-            // if the switching variable is the mole fraction of the gas component in the
-            // oil phase, we can directly set the composition of the oil phase
+        if (priVars.primaryVarsMeaningGas() == PrimaryVariables::Rs) {
             const auto& Rs = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx);
-            fluidState_.setRs(min(RsMax, Rs));
-
-            if (FluidSystem::enableVaporizedOil()) {
-                // the gas phase is not present, but we need to compute its "composition"
-                // for the gravity correction anyway
-                const auto& RvSat = enableExtbo ? asImp_().rv() :
-                    FluidSystem::saturatedDissolutionFactor(fluidState_,
-                                                            gasPhaseIdx,
-                                                            pvtRegionIdx,
-                                                            SoMax);
-
-                fluidState_.setRv(min(RvMax, RvSat));
-            }
-            else
-                fluidState_.setRv(0.0);
-
-            if (FluidSystem::enableVaporizedWater()) {
-                const Evaluation& RvwSat = FluidSystem::saturatedVaporizationFactor(fluidState_,
-                                                            gasPhaseIdx,
-                                                            pvtRegionIdx);
-                fluidState_.setRvw(RvwSat);
-            }
-        }
-        else if (priVars.primaryVarsMeaning() == PrimaryVariables::Sw_pg_Rv) {
-            const auto& Rv = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx);
-            fluidState_.setRv(Rv);
-
-            if (FluidSystem::enableDissolvedGas()) {
-                // the oil phase is not present, but we need to compute its "composition" for
-                // the gravity correction anyway
-                const auto& RsSat = enableExtbo ? asImp_().rs() :
+            fluidState_.setRs(Rs);
+        } else {
+            if (FluidSystem::enableDissolvedGas()) { // Add So > 0? i.e. if only water set rs = 0)
+                const Evaluation& RsSat = enableExtbo ? asImp_().rs() :
                     FluidSystem::saturatedDissolutionFactor(fluidState_,
                                                             oilPhaseIdx,
                                                             pvtRegionIdx,
                                                             SoMax);
-
                 fluidState_.setRs(min(RsMax, RsSat));
-            } else {
-                fluidState_.setRs(0.0);
             }
+            else if constexpr (compositionSwitchEnabled)
+                fluidState_.setRs(0.0);
+        }
 
-            if (FluidSystem::enableVaporizedWater()) {
+        if (priVars.primaryVarsMeaningGas() == PrimaryVariables::Rv) {
+            const auto& Rv = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx);
+            fluidState_.setRv(Rv);
+        } else {
+            if (FluidSystem::enableVaporizedOil() ) { // Add Sg > 0? i.e. if only water set rv = 0)
+                const Evaluation& RvSat = enableExtbo ? asImp_().rv() :
+                    FluidSystem::saturatedDissolutionFactor(fluidState_,
+                                                            gasPhaseIdx,
+                                                            pvtRegionIdx,
+                                                            SoMax);
+                fluidState_.setRv(min(RvMax, RvSat));
+            }
+            else if constexpr (compositionSwitchEnabled)
+                fluidState_.setRv(0.0);
+        }
+
+        if (priVars.primaryVarsMeaningWater() == PrimaryVariables::Rvw) {
+            const auto& Rvw = priVars.makeEvaluation(Indices::waterSaturationIdx, timeIdx);
+            fluidState_.setRvw(Rvw);
+        } else {
+            if (FluidSystem::enableVaporizedWater()) { // Add Sg > 0? i.e. if only water set rv = 0)
                 const Evaluation& RvwSat = FluidSystem::saturatedVaporizationFactor(fluidState_,
                                                             gasPhaseIdx,
                                                             pvtRegionIdx);
                 fluidState_.setRvw(RvwSat);
             }
-        } else {
-            assert(priVars.primaryVarsMeaning() == PrimaryVariables::OnePhase_p);
         }
 
         typename FluidSystem::template ParameterCache<Evaluation> paramCache;
