@@ -61,14 +61,12 @@ EclGenericThresholdPressure(const CartesianIndexMapper& cartMapper,
                             const GridView& gridView,
                             const ElementMapper& elementMapper,
                             const EclipseState& eclState,
-                            const Deck& deck,
-                            bool enableExperiments)
+                            const Deck& deck)
     : cartMapper_(cartMapper)
     , gridView_(gridView)
     , elementMapper_(elementMapper)
     , eclState_(eclState)
     , deck_(deck)
-    , enableExperiments_(enableExperiments)
 {
 }
 
@@ -79,28 +77,26 @@ thresholdPressure(int elem1Idx, int elem2Idx) const
     if (!enableThresholdPressure_)
         return 0.0;
 
-    if (enableExperiments_) {
-        // threshold pressure accross faults
-        if (!thpresftValues_.empty()) {
-            int cartElem1Idx = cartMapper_.cartesianIndex(elem1Idx);
-            int cartElem2Idx = cartMapper_.cartesianIndex(elem2Idx);
+    // threshold pressure accross faults
+    if (!thpresftValues_.empty()) {
+        int cartElem1Idx = cartMapper_.cartesianIndex(elem1Idx);
+        int cartElem2Idx = cartMapper_.cartesianIndex(elem2Idx);
 
-            assert(0 <= cartElem1Idx && static_cast<int>(cartElemFaultIdx_.size()) > cartElem1Idx);
-            assert(0 <= cartElem2Idx && static_cast<int>(cartElemFaultIdx_.size()) > cartElem2Idx);
+        assert(0 <= cartElem1Idx && static_cast<int>(cartElemFaultIdx_.size()) > cartElem1Idx);
+        assert(0 <= cartElem2Idx && static_cast<int>(cartElemFaultIdx_.size()) > cartElem2Idx);
 
-            int fault1Idx = cartElemFaultIdx_[cartElem1Idx];
-            int fault2Idx = cartElemFaultIdx_[cartElem2Idx];
-            if (fault1Idx != -1 && fault1Idx == fault2Idx)
-                // inside a fault there's no threshold pressure, even accross EQUIL
-                // regions.
-                return 0.0;
-            if (fault1Idx != fault2Idx) {
-                // TODO: which value if a cell is part of multiple faults? we take
-                // the maximum here.
-                Scalar val1 = (fault1Idx >= 0) ? thpresftValues_[fault1Idx] : 0.0;
-                Scalar val2 = (fault2Idx >= 0) ? thpresftValues_[fault2Idx] : 0.0;
-                return std::max(val1, val2);
-            }
+        int fault1Idx = cartElemFaultIdx_[cartElem1Idx];
+        int fault2Idx = cartElemFaultIdx_[cartElem2Idx];
+        if (fault1Idx != -1 && fault1Idx == fault2Idx)
+            // inside a fault there's no threshold pressure, even accross EQUIL
+            // regions.
+            return 0.0;
+        if (fault1Idx != fault2Idx) {
+            // TODO: which value if a cell is part of multiple faults? we take
+            // the maximum here.
+            Scalar val1 = (fault1Idx >= 0) ? thpresftValues_[fault1Idx] : 0.0;
+            Scalar val2 = (fault2Idx >= 0) ? thpresftValues_[fault2Idx] : 0.0;
+            return std::max(val1, val2);
         }
     }
 
@@ -199,11 +195,9 @@ applyExplicitThresholdPressures_()
         }
     }
 
-    if (enableExperiments_) {
-        // apply threshold pressures accross faults (experimental!)
-        if (thpres.ftSize() > 0)
-            configureThpresft_();
-    }
+    // apply threshold pressures across faults
+    if (thpres.ftSize() > 0)
+        configureThpresft_();
 }
 
 template<class Grid, class GridView, class ElementMapper, class Scalar>
@@ -215,7 +209,7 @@ configureThpresft_()
     const SimulationConfig& simConfig = eclState_.getSimulationConfig();
     const auto& thpres = simConfig.getThresholdPressure();
 
-    // extract the multipliers from the deck keyword
+    // extract the multipliers
     int numFaults = faults.size();
     int numCartesianElem = eclState_.getInputGrid().getCartesianSize();
     thpresftValues_.resize(numFaults, -1.0);

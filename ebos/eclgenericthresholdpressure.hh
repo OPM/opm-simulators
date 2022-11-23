@@ -47,8 +47,7 @@ public:
                                 const GridView& gridView,
                                 const ElementMapper& elementMapper,
                                 const EclipseState& eclState,
-                                const Deck& deck,
-                                bool enableExperiments);
+                                const Deck& deck);
 
     /*!
      * \brief Returns the theshold pressure [Pa] for the intersection between two elements.
@@ -103,7 +102,6 @@ protected:
     std::vector<int> cartElemFaultIdx_;
 
     bool enableThresholdPressure_;
-    bool enableExperiments_;
 };
 
 } // namespace Opm
