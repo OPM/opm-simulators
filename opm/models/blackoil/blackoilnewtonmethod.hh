@@ -249,7 +249,6 @@ protected:
         static constexpr bool enableEnergy = Indices::temperatureIdx >= 0;
         static constexpr bool enableFoam = Indices::foamConcentrationIdx >= 0;
         static constexpr bool enableBrine = Indices::saltConcentrationIdx >= 0;
-        static constexpr bool compositionSwitchEnabled = Indices::compositionSwitchIdx >= 0;
         static constexpr bool enableMICP = Indices::microbialConcentrationIdx >= 0;
 
         currentValue.checkDefined();
@@ -262,19 +261,16 @@ protected:
         Scalar deltaSg = 0.0;
         Scalar deltaSs = 0.0;
 
-        if (Indices::waterEnabled && FluidSystem::numActivePhases() > 1
-            && currentValue.primaryVarsMeaning() != PrimaryVariables::Rvw_po_Sg 
-            && currentValue.primaryVarsMeaning() != PrimaryVariables::Rvw_pg_Rv) {
+        if (currentValue.primaryVarsMeaningWater() == PrimaryVariables::Sw)
+        {
             deltaSw = update[Indices::waterSaturationIdx];
-            deltaSo = -deltaSw;
+            deltaSo -= deltaSw;
         }
-
-        if (compositionSwitchEnabled && (currentValue.primaryVarsMeaning() == PrimaryVariables::Sw_po_Sg
-            || currentValue.primaryVarsMeaning() == PrimaryVariables::Rvw_po_Sg)) {
+        if (currentValue.primaryVarsMeaningGas() == PrimaryVariables::Sg)
+        {
             deltaSg = update[Indices::compositionSwitchIdx];
             deltaSo -= deltaSg;
         }
-
         if (enableSolvent) {
             deltaSs = update[Indices::solventSaturationIdx];
             deltaSo -= deltaSs;
@@ -307,10 +303,9 @@ protected:
             }
             // water saturation delta
             else if (pvIdx == Indices::waterSaturationIdx)
-                if (currentValue.primaryVarsMeaning() != PrimaryVariables::Rvw_po_Sg 
-                    && currentValue.primaryVarsMeaning() != PrimaryVariables::Rvw_pg_Rv)
+                if (currentValue.primaryVarsMeaningWater() == PrimaryVariables::Sw)
                     delta *= satAlpha;
-                else{
+                else {
                     //Ensure Rvw factor does not become negative
                     if (delta > currentValue[ Indices::waterSaturationIdx]) 
                         delta = currentValue[ Indices::waterSaturationIdx];
@@ -321,10 +316,10 @@ protected:
                 // interpretation since it can represent Sg, Rs or Rv. For now, we only
                 // limit saturation deltas and ensure that the R factors do not become
                 // negative.
-                if (currentValue.primaryVarsMeaning() == PrimaryVariables::Sw_po_Sg 
-                    || currentValue.primaryVarsMeaning() == PrimaryVariables::Rvw_po_Sg)
+                if (currentValue.primaryVarsMeaningGas() == PrimaryVariables::Sg)
                     delta *= satAlpha;
                 else {
+                    //Ensure Rv and Rs factor does not become negative
                     if (delta > currentValue[Indices::compositionSwitchIdx])
                         delta = currentValue[Indices::compositionSwitchIdx];
                 }
