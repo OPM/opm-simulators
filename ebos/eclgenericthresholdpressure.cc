@@ -24,9 +24,6 @@
 #include <config.h>
 #include <ebos/eclgenericthresholdpressure.hh>
 
-#include <opm/material/densead/Evaluation.hpp>
-#include <opm/material/densead/Math.hpp>
-#include <opm/input/eclipse/Deck/Deck.hpp>
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/FieldPropsManager.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/Eqldims.hpp>
@@ -60,13 +57,11 @@ EclGenericThresholdPressure<Grid,GridView,ElementMapper,Scalar>::
 EclGenericThresholdPressure(const CartesianIndexMapper& cartMapper,
                             const GridView& gridView,
                             const ElementMapper& elementMapper,
-                            const EclipseState& eclState,
-                            const Deck& deck)
+                            const EclipseState& eclState)
     : cartMapper_(cartMapper)
     , gridView_(gridView)
     , elementMapper_(elementMapper)
     , eclState_(eclState)
-    , deck_(deck)
 {
 }
 

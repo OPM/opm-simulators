@@ -74,8 +74,7 @@ public:
         : BaseType(simulator.vanguard().cartesianIndexMapper(),
                    simulator.vanguard().gridView(),
                    simulator.model().elementMapper(),
-                   simulator.vanguard().eclState(),
-                   simulator.vanguard().deck())
+                   simulator.vanguard().eclState())
         , simulator_(simulator)
     {
     }
