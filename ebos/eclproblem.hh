@@ -912,42 +912,6 @@ public:
             drift_ = 0.0;
         }
 
-        if constexpr (enableExperiments)
-        {
-            int success = 1;
-            const auto& cc = simulator.vanguard().grid().comm();
-
-            try
-            {
-                // Only rank 0 has the deck and hence can do the checks!
-                if (cc.rank() == 0)
-                    this->checkDeckCompatibility_(simulator.vanguard().deck(),
-                                                  enableApiTracking,
-                                                  enableSolvent,
-                                                  enablePolymer,
-                                                  enableExtbo,
-                                                  enableEnergy,
-                                                  Indices::numPhases,
-                                                  Indices::gasEnabled,
-                                                  Indices::oilEnabled,
-                                                  Indices::waterEnabled,
-                                                  enableMICP);
-            }
-            catch(const std::exception& e)
-            {
-                success = 0;
-                success = cc.min(success);
-                throw;
-            }
-
-            success = cc.min(success);
-
-            if (!success)
-            {
-                throw std::runtime_error("Checking deck compatibility failed");
-            }
-        }
-
         // write the static output files (EGRID, INIT, SMSPEC, etc.)
         if (enableEclOutput_) {
             if (simulator.vanguard().grid().comm().size() > 1) {
