@@ -91,7 +91,6 @@ void EclGenericVanguard::readDeck(const std::string& filename)
     Dune::Timer setupTimer;
     setupTimer.start();
 
-    std::shared_ptr<Opm::Deck> deck;
     std::shared_ptr<Opm::EclipseState> eclipseState;
     std::shared_ptr<Opm::Schedule> schedule;
     std::unique_ptr<Opm::UDQState> udqState;
@@ -107,7 +106,7 @@ void EclGenericVanguard::readDeck(const std::string& filename)
                                              {ParseContext::SUMMARY_UNKNOWN_GROUP, InputError::WARN}});
 
     Opm::readDeck(EclGenericVanguard::comm(),
-                  filename, deck, eclipseState, schedule, udqState,
+                  filename, eclipseState, schedule, udqState,
                   actionState, wtestState,
                   summaryConfig, nullptr, nullptr, std::move(parseContext),
                   false, false, {});

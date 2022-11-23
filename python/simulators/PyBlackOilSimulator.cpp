@@ -147,7 +147,7 @@ int PyBlackOilSimulator::stepInit()
     }
     if (this->deck_) {
         main_ = std::make_unique<Opm::Main>(
-            this->deck_,
+            this->deck_->getDataFile(),
             this->eclipse_state_,
             this->schedule_,
             this->summary_config_

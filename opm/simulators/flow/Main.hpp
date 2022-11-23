@@ -47,12 +47,10 @@
 #include <flow/flow_ebos_oilwater_polymer_injectivity.hpp>
 #include <flow/flow_ebos_micp.hpp>
 
-#include <opm/input/eclipse/Deck/Deck.hpp>
 #include <opm/input/eclipse/Parser/ErrorGuard.hpp>
 #include <opm/input/eclipse/Parser/Parser.hpp>
 #include <opm/input/eclipse/Parser/ParseContext.hpp>
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/input/eclipse/EclipseState/checkDeck.hpp>
 #include <opm/input/eclipse/Schedule/ArrayDimChecker.hpp>
 #include <opm/input/eclipse/Schedule/UDQ/UDQState.hpp>
 #include <opm/input/eclipse/Schedule/Action/State.hpp>
@@ -135,16 +133,15 @@ public:
 
     // This constructor can be called from Python when Python has
     // already parsed a deck
-    Main(std::shared_ptr<Deck> deck,
+    Main(const std::string& filename,
          std::shared_ptr<EclipseState> eclipseState,
          std::shared_ptr<Schedule> schedule,
          std::shared_ptr<SummaryConfig> summaryConfig)
-        : deck_{std::move(deck)}
-        , eclipseState_{std::move(eclipseState)}
+        : eclipseState_{std::move(eclipseState)}
         , schedule_{std::move(schedule)}
         , summaryConfig_{std::move(summaryConfig)}
     {
-        setArgvArgc_(deck_->getDataFile());
+        setArgvArgc_(filename);
         initMPI();
     }
 
@@ -523,7 +520,8 @@ private:
             if (output_param >= 0)
                 outputInterval = output_param;
 
-            readDeck(EclGenericVanguard::comm(), deckFilename, deck_, eclipseState_, schedule_, udqState_, actionState_, wtestState_,
+            readDeck(EclGenericVanguard::comm(), deckFilename, eclipseState_,
+                     schedule_, udqState_, actionState_, wtestState_,
                      summaryConfig_, nullptr, python, std::move(parseContext),
                      init_from_restart_file, outputCout_, outputInterval);
 
@@ -818,7 +816,6 @@ private:
     std::unique_ptr<WellTestState> wtestState_{};
 
     // These variables may be owned by both Python and the simulator
-    std::shared_ptr<Deck> deck_{};
     std::shared_ptr<EclipseState> eclipseState_{};
     std::shared_ptr<Schedule> schedule_{};
     std::shared_ptr<SummaryConfig> summaryConfig_{};
