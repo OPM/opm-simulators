@@ -67,6 +67,7 @@ public:
                              const double maxPerfPress,
                              const double rho,
                              const double alq_value,
+                             const double thp_limit,
                              DeferredLogger& deferred_logger) const;
 
     //! \brief Compute BHP from THP limit for an injector.

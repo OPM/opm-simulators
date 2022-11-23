@@ -1917,6 +1917,7 @@ namespace Opm
                                         this->maxPerfPress(ebos_simulator),
                                         this->getRefDensity(),
                                         alq_value,
+                                        this->getTHPConstraint(summary_state),
                                         deferred_logger);
 
        if (bhpAtLimit)
@@ -1937,6 +1938,7 @@ namespace Opm
                                        this->maxPerfPress(ebos_simulator),
                                        this->getRefDensity(),
                                        alq_value,
+                                       this->getTHPConstraint(summary_state),
                                        deferred_logger);
     }
 
