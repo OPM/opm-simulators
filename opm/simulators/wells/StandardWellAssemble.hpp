@@ -23,8 +23,6 @@
 #ifndef OPM_STANDARDWELL_ASSEMBLE_HEADER_INCLUDED
 #define OPM_STANDARDWELL_ASSEMBLE_HEADER_INCLUDED
 
-#include <functional>
-
 namespace Opm
 {
 
@@ -32,6 +30,7 @@ class DeferredLogger;
 class GroupState;
 class Schedule;
 template<class Scalar, int numEq> class StandardWellEquations;
+template<class FluidSystem, class Indices, class Scalar> class StandardWellPrimaryVariables;
 class SummaryState;
 template<class FluidSystem> class WellInterfaceFluidSystem;
 class WellState;
@@ -41,28 +40,25 @@ template<class FluidSystem, class Indices, class Scalar>
 class StandardWellAssemble
 {
 public:
+    using PrimaryVariables = StandardWellPrimaryVariables<FluidSystem,Indices,Scalar>;
+    using EvalWell = typename PrimaryVariables::EvalWell;
+
     //! \brief Constructor initializes reference to well.
     StandardWellAssemble(const WellInterfaceFluidSystem<FluidSystem>& well)
         : well_(well)
     {}
 
     //! \brief Assemble control equation.
-    template<class EvalWell>
     void assembleControlEq(const WellState& well_state,
                            const GroupState& group_state,
                            const Schedule& schedule,
                            const SummaryState& summaryState,
-                           const int numWellEq,
-                           const EvalWell& wqTotal,
-                           const EvalWell& bhp,
-                           const std::function<EvalWell(int)>& getQs,
+                           const PrimaryVariables& primary_variables,
                            const double rho,
-                           const int Bhp,
                            StandardWellEquations<Scalar,Indices::numEq>& eqns,
                            DeferredLogger& deferred_logger) const;
 
     //! \brief Assemble injectivity equation.
-    template<class EvalWell>
     void assembleInjectivityEq(const EvalWell& eq_pskin,
                                const EvalWell& eq_wat_vel,
                                const int pskin_index,
@@ -72,7 +68,6 @@ public:
                                StandardWellEquations<Scalar,Indices::numEq>& eqns) const;
 
     //! \brief Assemble equation for a perforation.
-    template<class EvalWell>
     void assemblePerforationEq(const EvalWell& cq_s_effective,
                                const int componentIdx,
                                const int cell_idx,
@@ -80,19 +75,16 @@ public:
                                StandardWellEquations<Scalar,Indices::numEq>& eqns) const;
 
     //! \brief Assemble equation for Z fraction.
-    template<class EvalWell>
     void assembleZFracEq(const EvalWell& cq_s_zfrac_effective,
                          const int cell_idx,
                          const int numWellEq,
                          StandardWellEquations<Scalar,Indices::numEq>& eqns) const;
 
     //! \brief Assemble a source term.
-    template<class EvalWell>
     void assembleSourceEq(const EvalWell& resWell_loc,
                           const int componentIdx,
                           const int numWellEq,
                           StandardWellEquations<Scalar,Indices::numEq>& eqns) const;
-
 
 private:
     const WellInterfaceFluidSystem<FluidSystem>& well_; //!< Reference to well
