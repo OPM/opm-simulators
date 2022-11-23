@@ -268,7 +268,6 @@ public:
             // case. E.g. check that number of phases == 3
             EclGenericVanguard::setParams(
                 setupTime_,
-                deck_,
                 eclipseState_,
                 schedule_,
                 std::move(udqState_),
@@ -290,7 +289,6 @@ private:
         const auto& phases = rspec.phases();
 
         EclGenericVanguard::setParams(this->setupTime_,
-                                      this->deck_,
                                       this->eclipseState_,
                                       this->schedule_,
                                       std::move(this->udqState_),
@@ -374,7 +372,6 @@ private:
     int dispatchStatic_()
     {
         EclGenericVanguard::setParams(this->setupTime_,
-                                      this->deck_,
                                       this->eclipseState_,
                                       this->schedule_,
                                       std::move(this->udqState_),
