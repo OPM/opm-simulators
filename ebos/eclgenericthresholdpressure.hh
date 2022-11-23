@@ -86,7 +86,7 @@ protected:
     // THPRES keyword.
     void applyExplicitThresholdPressures_();
 
-    void extractThpresft_(const DeckKeyword& thpresftKeyword);
+    void configureThpresft_();
 
     const CartesianIndexMapper& cartMapper_;
     const GridView& gridView_;

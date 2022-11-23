@@ -201,41 +201,33 @@ applyExplicitThresholdPressures_()
 
     if (enableExperiments_) {
         // apply threshold pressures accross faults (experimental!)
-        if (deck_.hasKeyword("THPRESFT"))
-            extractThpresft_(deck_["THPRESFT"].back());
+        if (thpres.ftSize() > 0)
+            configureThpresft_();
     }
 }
 
 template<class Grid, class GridView, class ElementMapper, class Scalar>
 void EclGenericThresholdPressure<Grid,GridView,ElementMapper,Scalar>::
-extractThpresft_(const DeckKeyword& thpresftKeyword)
+configureThpresft_()
 {
     // retrieve the faults collection.
     const FaultCollection& faults = eclState_.getFaults();
+    const SimulationConfig& simConfig = eclState_.getSimulationConfig();
+    const auto& thpres = simConfig.getThresholdPressure();
 
     // extract the multipliers from the deck keyword
     int numFaults = faults.size();
     int numCartesianElem = eclState_.getInputGrid().getCartesianSize();
     thpresftValues_.resize(numFaults, -1.0);
     cartElemFaultIdx_.resize(numCartesianElem, -1);
-    for (size_t recordIdx = 0; recordIdx < thpresftKeyword.size(); ++ recordIdx) {
-        const DeckRecord& record = thpresftKeyword.getRecord(recordIdx);
-
-        const std::string& faultName = record.getItem("FAULT_NAME").getTrimmedString(0);
-        Scalar thpresValue = record.getItem("VALUE").getSIDouble(0);
-
-        for (size_t faultIdx = 0; faultIdx < faults.size(); faultIdx++) {
-            auto& fault = faults.getFault(faultIdx);
-            if (fault.getName() != faultName)
-                continue;
-
-            thpresftValues_[faultIdx] = thpresValue;
-            for (const FaultFace& face: fault)
-                // "face" is a misnomer because the object describes a set of cell
-                // indices, but we go with the conventions of the parser here...
-                for (size_t cartElemIdx: face)
-                    cartElemFaultIdx_[cartElemIdx] = faultIdx;
-        }
+    for (size_t faultIdx = 0; faultIdx < faults.size(); faultIdx++) {
+        auto& fault = faults.getFault(faultIdx);
+        thpresftValues_[faultIdx] = thpres.getThresholdPressureFault(faultIdx);
+        for (const FaultFace& face : fault)
+            // "face" is a misnomer because the object describes a set of cell
+            // indices, but we go with the conventions of the parser here...
+            for (size_t cartElemIdx : face)
+                cartElemFaultIdx_[cartElemIdx] = faultIdx;
     }
 }
 
