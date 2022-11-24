@@ -280,19 +280,6 @@ protected:
                         Scalar timeStepSize,
                         Scalar endTime);
 
-    void checkDeckCompatibility_(const Deck& deck,
-                                 bool enableApiTracking,
-                                 bool enableSolvent,
-                                 bool enablePolymer,
-                                 bool enableExtbo,
-                                 bool enableEnergy,
-                                 int numPhases,
-                                 bool indicesGasEnabled,
-                                 bool indicesOilEnabled,
-                                 bool indicesWaterEnabled,
-                                 bool enableMICP) const;
-
-
     void readRockParameters_(const std::vector<Scalar>& cellCenterDepths);
     void readRockCompactionParameters_();
 
