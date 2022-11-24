@@ -136,10 +136,12 @@ public:
             const TableContainer& saltsolTables = tableManager.getSaltsolTables();
             if (!saltsolTables.empty()) {
                 params_.saltsolTable_.resize(numPvtRegions);
+                params_.saltdenTable_.resize(numPvtRegions);
                 assert(numPvtRegions == saltsolTables.size());
                 for (unsigned pvtRegionIdx = 0; pvtRegionIdx < numPvtRegions; ++ pvtRegionIdx) {
                     const SaltsolTable& saltsolTable = saltsolTables.getTable<SaltsolTable>(pvtRegionIdx );
                     params_.saltsolTable_[pvtRegionIdx] = saltsolTable.getSaltsolColumn().front();
+                    params_.saltdenTable_[pvtRegionIdx] = saltsolTable.getSaltdenColumn().front();
                 }
             }
         }
@@ -231,7 +233,7 @@ public:
                     * Toolbox::template decay<LhsEval>(fs.saltConcentration());
 
             if (enableSaltPrecipitation){
-                double saltDensity = 2170; // Solid salt density kg/m3
+                double saltDensity = intQuants.saltDensity(); // Solid salt density kg/m3
                 const LhsEval solidSalt =
                               Toolbox::template decay<LhsEval>(intQuants.porosity())
                               / (1.0 - Toolbox::template decay<LhsEval>(intQuants.saltSaturation()) + 1.e-8)
@@ -342,6 +344,14 @@ public:
         return params_.saltsolTable_[pvtnumRegionIdx];
     }
 
+    static const Scalar saltdenTable(const ElementContext& elemCtx,
+                                                  unsigned scvIdx,
+                                                  unsigned timeIdx)
+    {
+        unsigned pvtnumRegionIdx = elemCtx.problem().pvtRegionIndex(elemCtx, scvIdx, timeIdx);
+        return params_.saltdenTable_[pvtnumRegionIdx];
+    }
+
     static bool hasBDensityTables()
     {
         return !params_.bdensityTable_.empty();
@@ -415,6 +425,9 @@ public:
             const auto& saltsolTable = BrineModule::saltsolTable(elemCtx, dofIdx, timeIdx);
             saltSolubility_ = saltsolTable;
 
+            const auto& saltdenTable = BrineModule::saltdenTable(elemCtx, dofIdx, timeIdx);
+            saltDensity_ = saltdenTable;
+
             if (priVars.primaryVarsMeaningBrine() == PrimaryVariables::Sp) {
                 saltSaturation_ = priVars.makeEvaluation(saltConcentrationIdx, timeIdx);
                 fs.setSaltConcentration(saltSolubility_);
@@ -462,6 +475,9 @@ public:
     Scalar saltSolubility() const
     { return saltSolubility_; }
 
+    Scalar saltDensity() const
+    { return saltDensity_; }
+
     const Evaluation& permFactor() const
     { return permFactor_; }
 
@@ -474,6 +490,7 @@ protected:
     Evaluation saltSaturation_;
     Evaluation permFactor_;
     Scalar saltSolubility_;
+    Scalar saltDensity_;
 
 };
 
@@ -506,6 +523,9 @@ public:
 
     const Scalar saltSolubility() const
     { throw std::logic_error("saltSolubility() called but salt precipitation is disabled"); }
+
+    const Scalar saltDensity() const
+    { throw std::logic_error("saltDensity() called but salt precipitation is disabled"); }
 
     const Evaluation& permFactor() const
     { throw std::logic_error("permFactor() called but salt precipitation is disabled"); }
