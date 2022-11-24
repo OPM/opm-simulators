@@ -462,14 +462,16 @@ namespace Opm {
 
                 Scalar saturationsNew[FluidSystem::numPhases] = { 0.0 };
                 Scalar oilSaturationNew = 1.0;
-                if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && FluidSystem::numActivePhases() > 1) {
+                if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) &&
+                    FluidSystem::numActivePhases() > 1 &&
+                    priVarsNew.primaryVarsMeaningWater() == PrimaryVariables::Sw) {
                     saturationsNew[FluidSystem::waterPhaseIdx] = priVarsNew[Indices::waterSaturationIdx];
                     oilSaturationNew -= saturationsNew[FluidSystem::waterPhaseIdx];
                 }
 
                 if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) &&
                     FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
-                    priVarsNew.primaryVarsMeaning() == PrimaryVariables::Sw_po_Sg) {
+                    priVarsNew.primaryVarsMeaningGas() == PrimaryVariables::Sg) {
                     assert(Indices::compositionSwitchIdx >= 0 );
                     saturationsNew[FluidSystem::gasPhaseIdx] = priVarsNew[Indices::compositionSwitchIdx];
                     oilSaturationNew -= saturationsNew[FluidSystem::gasPhaseIdx];
@@ -493,14 +495,12 @@ namespace Opm {
                 resultDenom += pressureNew*pressureNew;
 
                 if (FluidSystem::numActivePhases() > 1) {
-                    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                    if (priVarsOld.primaryVarsMeaningWater() == PrimaryVariables::Sw) {
                         saturationsOld[FluidSystem::waterPhaseIdx] = priVarsOld[Indices::waterSaturationIdx];
                         oilSaturationOld -= saturationsOld[FluidSystem::waterPhaseIdx];
                     }
 
-                    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) &&
-                        FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
-                        priVarsOld.primaryVarsMeaning() == PrimaryVariables::Sw_po_Sg)
+                    if (priVarsOld.primaryVarsMeaningGas() == PrimaryVariables::Sg)
                     {
                         assert(Indices::compositionSwitchIdx >= 0 );
                         saturationsOld[FluidSystem::gasPhaseIdx] = priVarsOld[Indices::compositionSwitchIdx];
