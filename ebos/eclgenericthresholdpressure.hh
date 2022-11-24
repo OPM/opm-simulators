@@ -34,8 +34,6 @@
 
 namespace Opm {
 
-class Deck;
-class DeckKeyword;
 class EclipseState;
 
 template<class Grid, class GridView, class ElementMapper, class Scalar>
@@ -46,9 +44,7 @@ public:
     EclGenericThresholdPressure(const CartesianIndexMapper& cartMapper,
                                 const GridView& gridView,
                                 const ElementMapper& elementMapper,
-                                const EclipseState& eclState,
-                                const Deck& deck,
-                                bool enableExperiments);
+                                const EclipseState& eclState);
 
     /*!
      * \brief Returns the theshold pressure [Pa] for the intersection between two elements.
@@ -86,13 +82,12 @@ protected:
     // THPRES keyword.
     void applyExplicitThresholdPressures_();
 
-    void extractThpresft_(const DeckKeyword& thpresftKeyword);
+    void configureThpresft_();
 
     const CartesianIndexMapper& cartMapper_;
     const GridView& gridView_;
     const ElementMapper& elementMapper_;
     const EclipseState& eclState_;
-    const Deck& deck_;
     std::vector<Scalar> thpresDefault_;
     std::vector<Scalar> thpres_;
     unsigned numEquilRegions_;
@@ -103,7 +98,6 @@ protected:
     std::vector<int> cartElemFaultIdx_;
 
     bool enableThresholdPressure_;
-    bool enableExperiments_;
 };
 
 } // namespace Opm

@@ -67,7 +67,6 @@ class EclThresholdPressure : public EclGenericThresholdPressure<GetPropType<Type
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
-    enum { enableExperiments = getPropValue<TypeTag, Properties::EnableExperiments>() };
     enum { numPhases = FluidSystem::numPhases };
 
 public:
@@ -75,9 +74,7 @@ public:
         : BaseType(simulator.vanguard().cartesianIndexMapper(),
                    simulator.vanguard().gridView(),
                    simulator.model().elementMapper(),
-                   simulator.vanguard().eclState(),
-                   simulator.vanguard().deck(),
-                   enableExperiments)
+                   simulator.vanguard().eclState())
         , simulator_(simulator)
     {
     }
