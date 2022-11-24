@@ -103,22 +103,12 @@ public:
      * \brief Set the simulation configuration objects.
      */
     static void setParams(double setupTime,
-                          std::shared_ptr<Deck> deck,
                           std::shared_ptr<EclipseState> eclState,
                           std::shared_ptr<Schedule> schedule,
                           std::unique_ptr<UDQState> udqState,
                           std::unique_ptr<Action::State> actionState,
                           std::unique_ptr<WellTestState> wtestState,
                           std::shared_ptr<SummaryConfig> summaryConfig);
-
-    /*!
-     * \brief Return a reference to the parsed ECL deck.
-     */
-    const Deck& deck() const
-    { return *deck_; }
-
-    Deck& deck()
-    { return *deck_; }
 
     /*!
      * \brief Return a reference to the internalized ECL deck.
@@ -309,7 +299,6 @@ protected:
     // parser objects.
     std::shared_ptr<Python> python;
     // These variables may be owned by both Python and the simulator
-    static std::shared_ptr<Deck> deck_;
     static std::shared_ptr<EclipseState> eclState_;
     static std::shared_ptr<Schedule> eclSchedule_;
     static std::shared_ptr<SummaryConfig> eclSummaryConfig_;

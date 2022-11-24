@@ -181,15 +181,14 @@ namespace {
         wtestState = std::make_unique<Opm::WellTestState>();
     }
 
-    std::shared_ptr<Opm::Deck>
+    Opm::Deck
     readDeckFile(const std::string&       deckFilename,
                  const bool               checkDeck,
                  const Opm::Parser&       parser,
                  const Opm::ParseContext& parseContext,
                  Opm::ErrorGuard&         errorGuard)
     {
-        auto deck = std::make_shared<Opm::Deck>
-            (parser.parseFile(deckFilename, parseContext, errorGuard));
+        Opm::Deck deck(parser.parseFile(deckFilename, parseContext, errorGuard));
 
         auto keyword_validator = Opm::KeywordValidation::KeywordValidator {
             Opm::FlowKeywordValidation::unsupportedKeywords(),
@@ -199,10 +198,10 @@ namespace {
             Opm::KeywordValidation::specialValidation()
         };
 
-        keyword_validator.validateDeck(*deck, parseContext, errorGuard);
+        keyword_validator.validateDeck(deck, parseContext, errorGuard);
 
         if (checkDeck) {
-            Opm::checkDeck(*deck, parser, parseContext, errorGuard);
+            Opm::checkDeck(deck, parser, parseContext, errorGuard);
         }
 
         return deck;
@@ -222,7 +221,6 @@ namespace {
     void readOnIORank(Opm::Parallel::Communication         comm,
                       const std::string&                   deckFilename,
                       const Opm::ParseContext*             parseContext,
-                      std::shared_ptr<Opm::Deck>&          deck,
                       std::shared_ptr<Opm::EclipseState>&  eclipseState,
                       std::shared_ptr<Opm::Schedule>&      schedule,
                       std::unique_ptr<Opm::UDQState>&      udqState,
@@ -235,33 +233,31 @@ namespace {
                       const std::optional<int>&            outputInterval,
                       Opm::ErrorGuard&                     errorGuard)
     {
-        if (((deck == nullptr) || (schedule == nullptr) || (summaryConfig == nullptr)) &&
+        if (((schedule == nullptr) || (summaryConfig == nullptr)) &&
             (parseContext == nullptr))
         {
             OPM_THROW(std::logic_error,
-                      "We need a parse context if deck, schedule, "
+                      "We need a parse context if schedule "
                       "or summaryConfig are not initialized");
         }
 
         auto parser = Opm::Parser{};
-        if (deck == nullptr) {
-            deck = readDeckFile(deckFilename, checkDeck, parser,
-                                *parseContext, errorGuard);
-        }
+        const auto deck = readDeckFile(deckFilename, checkDeck, parser,
+                                       *parseContext, errorGuard);
 
         if (eclipseState == nullptr) {
-            eclipseState = createEclipseState(comm, *deck);
+            eclipseState = createEclipseState(comm, deck);
         }
 
         if (eclipseState->getInitConfig().restartRequested()) {
-            loadObjectsFromRestart(*deck, parser, *parseContext,
+            loadObjectsFromRestart(deck, parser, *parseContext,
                                    initFromRestart, outputInterval,
                                    *eclipseState, std::move(python),
                                    schedule, udqState, actionState, wtestState,
                                    errorGuard);
         }
         else {
-            createNonRestartDynamicObjects(*deck, *eclipseState,
+            createNonRestartDynamicObjects(deck, *eclipseState,
                                            *parseContext, std::move(python),
                                            schedule, udqState, actionState, wtestState,
                                            errorGuard);
@@ -274,7 +270,7 @@ namespace {
 
         if (summaryConfig == nullptr) {
             summaryConfig = std::make_shared<Opm::SummaryConfig>
-                (*deck, *schedule, eclipseState->fieldProps(),
+                (deck, *schedule, eclipseState->fieldProps(),
                  eclipseState->aquifer(), *parseContext, errorGuard);
         }
 
@@ -480,7 +476,6 @@ Opm::setupLogging(const int          mpi_rank_,
 
 void Opm::readDeck(Opm::Parallel::Communication    comm,
                    const std::string&              deckFilename,
-                   std::shared_ptr<Deck>&          deck,
                    std::shared_ptr<EclipseState>&  eclipseState,
                    std::shared_ptr<Schedule>&      schedule,
                    std::unique_ptr<UDQState>&      udqState,
@@ -503,7 +498,7 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
 
     if (comm.rank() == 0) { // Always true when !HAVE_MPI
         try {
-            readOnIORank(comm, deckFilename, parseContext.get(), deck,
+            readOnIORank(comm, deckFilename, parseContext.get(),
                          eclipseState, schedule, udqState, actionState, wtestState,
                          summaryConfig, std::move(python), initFromRestart,
                          checkDeck, outputInterval, *errorGuard);

@@ -26,7 +26,6 @@
 
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/utility/TimeService.hpp>
-#include <opm/input/eclipse/Deck/Deck.hpp>
 #include <opm/input/eclipse/EclipseState/Aquifer/NumericalAquifer/NumericalAquiferCell.hpp>
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/Parser/ErrorGuard.hpp>
@@ -55,7 +54,6 @@
 namespace Opm {
 
 double EclGenericVanguard::setupTime_ = 0.0;
-std::shared_ptr<Deck> EclGenericVanguard::deck_;
 std::shared_ptr<EclipseState> EclGenericVanguard::eclState_;
 std::shared_ptr<Schedule> EclGenericVanguard::eclSchedule_;
 std::shared_ptr<SummaryConfig> EclGenericVanguard::eclSummaryConfig_;
@@ -72,7 +70,6 @@ EclGenericVanguard::EclGenericVanguard()
 EclGenericVanguard::~EclGenericVanguard() = default;
 
 void EclGenericVanguard::setParams(double setupTime,
-                                   std::shared_ptr<Deck> deck,
                                    std::shared_ptr<EclipseState> eclState,
                                    std::shared_ptr<Schedule> schedule,
                                    std::unique_ptr<UDQState> udqState,
@@ -81,7 +78,6 @@ void EclGenericVanguard::setParams(double setupTime,
                                    std::shared_ptr<SummaryConfig> summaryConfig)
 {
     EclGenericVanguard::setupTime_ = setupTime;
-    EclGenericVanguard::deck_ = std::move(deck);
     EclGenericVanguard::eclState_ = std::move(eclState);
     EclGenericVanguard::eclSchedule_ = std::move(schedule);
     EclGenericVanguard::udqState_ = std::move(udqState);
@@ -95,7 +91,6 @@ void EclGenericVanguard::readDeck(const std::string& filename)
     Dune::Timer setupTimer;
     setupTimer.start();
 
-    std::shared_ptr<Opm::Deck> deck;
     std::shared_ptr<Opm::EclipseState> eclipseState;
     std::shared_ptr<Opm::Schedule> schedule;
     std::unique_ptr<Opm::UDQState> udqState;
@@ -111,13 +106,13 @@ void EclGenericVanguard::readDeck(const std::string& filename)
                                              {ParseContext::SUMMARY_UNKNOWN_GROUP, InputError::WARN}});
 
     Opm::readDeck(EclGenericVanguard::comm(),
-                  filename, deck, eclipseState, schedule, udqState,
+                  filename, eclipseState, schedule, udqState,
                   actionState, wtestState,
                   summaryConfig, nullptr, nullptr, std::move(parseContext),
                   false, false, {});
 
     EclGenericVanguard::setParams(setupTimer.elapsed(),
-                                  deck, eclipseState, schedule,
+                                  eclipseState, schedule,
                                   std::move(udqState),
                                   std::move(actionState),
                                   std::move(wtestState), summaryConfig);
