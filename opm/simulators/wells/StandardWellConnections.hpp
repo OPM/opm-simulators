@@ -49,6 +49,7 @@ public:
                                        std::vector<Scalar>& rsmax_perf,
                                        std::vector<Scalar>& rvmax_perf,
                                        std::vector<Scalar>& rvwmax_perf,
+                                       std::vector<Scalar>& rswmax_perf,
                                        std::vector<Scalar>& surf_dens_perf) const;
 
     //! \brief Compute connection properties (densities, pressure drop, ...)
@@ -61,6 +62,7 @@ public:
                            const std::vector<Scalar>& rsmax_perf,
                            const std::vector<Scalar>& rvmax_perf,
                            const std::vector<Scalar>& rvwmax_perf,
+                           const std::vector<Scalar>& rswmax_perf,
                            const std::vector<Scalar>& surf_dens_perf,
                            DeferredLogger& deferred_logger);
 
@@ -84,6 +86,7 @@ private:
                           const std::vector<Scalar>& rsmax_perf,
                           const std::vector<Scalar>& rvmax_perf,
                           const std::vector<Scalar>& rvwmax_perf,
+                          const std::vector<Scalar>& rswmax_perf,
                           const std::vector<Scalar>& surf_dens_perf,
                           DeferredLogger& deferred_logger);
 

@@ -305,6 +305,8 @@ copyToWellState(const MultisegmentWellGeneric<Scalar>& mswell,
                 (pvtReg, segment_pressure[seg],
                  std::max(0.0, Rs),
                  std::max(0.0, Rv),
+                 0.0, // Rsw
+                 0.0, // Rvw
                  temperature, saltConc, surf_rates, resv_rates);
         }
 
@@ -340,7 +342,7 @@ copyToWellState(const MultisegmentWellGeneric<Scalar>& mswell,
 
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
             segments.phase_viscosity[seg * well_.numPhases() + pu.phase_pos[Water]] =
-                FluidSystem::waterPvt().viscosity(pvtReg, temperature, segment_pressure[seg], saltConc);
+                FluidSystem::waterPvt().viscosity(pvtReg, temperature, segment_pressure[seg],  0.0 /*Rsw*/, saltConc);
         }
 
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {

@@ -104,6 +104,8 @@ namespace Opm {
                     ra.rv = 0.0;
                     ra.pv = 0.0;
                     ra.saltConcentration = 0.0;
+                    ra.rsw = 0.0;
+                    ra.rvw = 0.0;
 
                 }
 
@@ -162,6 +164,12 @@ namespace Opm {
                             attr.temperature += fs.temperature(FluidSystem::gasPhaseIdx).value() * hydrocarbonPV;
                         }
                         attr.saltConcentration += fs.saltConcentration().value() * hydrocarbonPV;
+                        if (FluidSystem::enableDissolvedGasInWater()) {
+                            attr.rsw += fs.Rsw().value() * hydrocarbonPV; // scale with total volume?
+                        }
+                        if (FluidSystem::enableVaporizedWater()) {
+                            attr.rvw += fs.Rvw().value() * hydrocarbonPV; // scale with total volume?
+                        }
                     }
 
                     if (pv_cell > 0.) {
@@ -183,6 +191,12 @@ namespace Opm {
                             attr.temperature += fs.temperature(FluidSystem::waterPhaseIdx).value() * pv_cell;
                         }
                         attr.saltConcentration += fs.saltConcentration().value() * pv_cell;
+                        if (FluidSystem::enableDissolvedGasInWater()) {
+                            attr.rsw += fs.Rsw().value() * pv_cell; 
+                        }
+                        if (FluidSystem::enableVaporizedWater()) {
+                            attr.rvw += fs.Rvw().value() * pv_cell;
+                        }
                     }
                 }
 
@@ -199,11 +213,15 @@ namespace Opm {
                           const double rs_hpv_sum = comm.sum(attri_hpv.rs);
                           const double rv_hpv_sum = comm.sum(attri_hpv.rv);
                           const double sc_hpv_sum = comm.sum(attri_hpv.saltConcentration);
+                          const double rsw_hpv_sum = comm.sum(attri_hpv.rsw);
+                          const double rvw_hpv_sum = comm.sum(attri_hpv.rvw);
 
                           ra.pressure = p_hpv_sum / hpv_sum;
                           ra.temperature = T_hpv_sum / hpv_sum;
                           ra.rs = rs_hpv_sum / hpv_sum;
                           ra.rv = rv_hpv_sum / hpv_sum;
+                          ra.rsw = rsw_hpv_sum / hpv_sum;
+                          ra.rvw = rvw_hpv_sum / hpv_sum;
                           ra.pv = hpv_sum;
                           ra.saltConcentration = sc_hpv_sum / hpv_sum;
                       } else {
@@ -215,12 +233,16 @@ namespace Opm {
                           const double T_pv_sum = comm.sum(attri_pv.temperature);
                           const double rs_pv_sum = comm.sum(attri_pv.rs);
                           const double rv_pv_sum = comm.sum(attri_pv.rv);
+                          const double rsw_pv_sum = comm.sum(attri_pv.rsw);
+                          const double rvw_pv_sum = comm.sum(attri_pv.rvw);
                           const double sc_pv_sum = comm.sum(attri_pv.saltConcentration);
 
                           ra.pressure = p_pv_sum / pv_sum;
                           ra.temperature = T_pv_sum / pv_sum;
                           ra.rs = rs_pv_sum / pv_sum;
                           ra.rv = rv_pv_sum / pv_sum;
+                          ra.rsw = rsw_pv_sum / pv_sum;
+                          ra.rvw = rvw_pv_sum / pv_sum;
                           ra.pv = pv_sum;
                           ra.saltConcentration = sc_pv_sum / pv_sum;
                       }
@@ -277,12 +299,24 @@ namespace Opm {
 
                 std::fill(& coeff[0], & coeff[0] + phaseUsage_.num_phases, 0.0);
 
+                // Actual Rsw and Rvw:
+                double Rsw = ra.rsw;
+                double Rvw = ra.rvw;
+                // Determinant of 'R' matrix
+                const double detRw = 1.0 - (Rsw * Rvw);
+
                 if (RegionAttributeHelpers::PhaseUsed::water(pu)) {
-                    // q[w]_r = q[w]_s / bw
+                    // q[w]_r = 1/(bw * (1 - rsw*rvw)) * (q[w]_s - rvw*q[g]_s)
 
-                    const double bw = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, saltConcentration);
+                    const double bw = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rsw, saltConcentration);
 
-                    coeff[iw] = 1.0 / bw;
+                    const double den = bw * detRw;
+
+                    coeff[iw] += 1.0 / den;
+
+                    if (RegionAttributeHelpers::PhaseUsed::gas(pu)) {
+                        coeff[ig] -= ra.rvw / den;
+                    }
                 }
 
                 // Actual Rs and Rv:
@@ -291,6 +325,13 @@ namespace Opm {
 
                 // Determinant of 'R' matrix
                 const double detR = 1.0 - (Rs * Rv);
+
+                // Currently we only support either gas in water or gas in oil
+                // not both
+                if(detR != 1 && detRw != 1 ) {
+                    std::string msg = "only support " + std::to_string(detR) + " " + std::to_string(detR);
+                    throw(msg);
+                }
 
                 if (RegionAttributeHelpers::PhaseUsed::oil(pu)) {
                     // q[o]_r = 1/(bo * (1 - rs*rv)) * (q[o]_s - rv*q[g]_s)
@@ -307,14 +348,19 @@ namespace Opm {
 
                 if (RegionAttributeHelpers::PhaseUsed::gas(pu)) {
                     // q[g]_r = 1/(bg * (1 - rs*rv)) * (q[g]_s - rs*q[o]_s)
-
-                    const double bg  = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rv, 0.0 /*=Rvw*/);
-                    const double den = bg * detR;
-
-                    coeff[ig] += 1.0 / den;
-
-                    if (RegionAttributeHelpers::PhaseUsed::oil(pu)) {
-                        coeff[io] -= ra.rs / den;
+                    const double bg  = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rv, Rvw);
+                    if (FluidSystem::enableDissolvedGasInWater()) {
+                        const double denw = bg * detRw;
+                        coeff[ig] += 1.0 / denw;
+                        if (RegionAttributeHelpers::PhaseUsed::water(pu)) {
+                           coeff[iw] -= ra.rsw / denw;
+                        }
+                    } else {
+                        const double den = bg * detR;
+                        coeff[ig] += 1.0 / den;
+                        if (RegionAttributeHelpers::PhaseUsed::oil(pu)) {
+                            coeff[io] -= ra.rs / den;
+                        }
                     }
                 }
             }
@@ -338,7 +384,7 @@ namespace Opm {
                 if (RegionAttributeHelpers::PhaseUsed::water(pu)) {
                     // q[w]_r = q[w]_s / bw
 
-                    const double bw = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, saltConcentration);
+                    const double bw = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, 0.0, saltConcentration);
 
                     coeff[iw] = 1.0 / bw;
                 }
@@ -385,7 +431,8 @@ namespace Opm {
                 const auto& ra = this->attr_.attributes(r);
 
                 this->calcReservoirVoidageRates(pvtRegionIdx,
-                                                ra.pressure, ra.rs, ra.rv,
+                                                ra.pressure, ra.rs, ra.rv, 
+                                                ra.rsw, ra.rvw, 
                                                 ra.temperature,
                                                 ra.saltConcentration,
                                                 surface_rates,
@@ -409,6 +456,10 @@ namespace Opm {
              * \param[in] rs Dissolved gas/oil ratio.
              *
              * \param[in] rv Vaporised oil/gas ratio.
+             *        
+             * \param[in] rsw Dissolved gas/water ratio.
+             *
+             * \param[in] rwv Vaporised water/gas ratio.
              *
              * \param[in] T Temperature.  Unused in non-thermal simulation
              *    runs.
@@ -427,6 +478,8 @@ namespace Opm {
                                            const double        p,
                                            const double        rs,
                                            const double        rv,
+                                           const double        rsw,
+                                           const double        rvw,
                                            const double        T,
                                            const double        saltConcentration,
                                            const SurfaceRates& surface_rates,
@@ -440,15 +493,29 @@ namespace Opm {
                 const auto [Rs, Rv] = this->
                     dissolvedVaporisedRatio(io, ig, rs, rv, surface_rates);
 
+                const auto [Rsw, Rvw] = this->
+                    dissolvedVaporisedRatio(iw, ig, rsw, rvw, surface_rates);
+
+
                 std::fill_n(&voidage_rates[0], pu.num_phases, 0.0);
 
+
+                // Determinant of 'R' matrix
+                const auto detRw = 1.0 - (Rsw * Rvw);
+
                 if (RegionAttributeHelpers::PhaseUsed::water(pu)) {
-                    // q[w]_r = q[w]_s / bw
+                    // q[w]_r = 1/(bw * (1 - rsw*rvw)) * (q[w]_s - rvw*q[g]_s)
+                    voidage_rates[iw] = surface_rates[iw];
+
                     const auto bw = FluidSystem::waterPvt()
                         .inverseFormationVolumeFactor(pvtRegionIdx, T, p,
+                                                      Rsw,
                                                       saltConcentration);
 
-                    voidage_rates[iw] = surface_rates[iw] / bw;
+                    if (RegionAttributeHelpers::PhaseUsed::gas(pu)) {
+                        voidage_rates[iw] -= Rvw * surface_rates[ig];
+                    }
+                    voidage_rates[iw] /= bw * detRw;
                 }
 
                 // Determinant of 'R' matrix
@@ -467,18 +534,32 @@ namespace Opm {
                     voidage_rates[io] /= bo * detR;
                 }
 
+                // we only support either gas in water
+                // or gas in oil
+                if(detR != 1 && detRw != 1 ) {
+                    std::string msg = "only support " + std::to_string(detR) + " " + std::to_string(detR);
+                    throw(msg);
+                }
                 if (RegionAttributeHelpers::PhaseUsed::gas(pu)) {
                     // q[g]_r = 1/(bg * (1 - rs*rv)) * (q[g]_s - rs*q[o]_s)
                     voidage_rates[ig] = surface_rates[ig];
                     if (RegionAttributeHelpers::PhaseUsed::oil(pu)) {
                         voidage_rates[ig] -= Rs * surface_rates[io];
                     }
+                    if (RegionAttributeHelpers::PhaseUsed::water(pu)) {
+                        voidage_rates[ig] -= Rsw * surface_rates[iw];
+                    }
 
                     const auto bg = FluidSystem::gasPvt()
                         .inverseFormationVolumeFactor(pvtRegionIdx, T, p,
-                                                      Rv, 0.0 /*=Rvw*/);
+                                                      Rv, Rvw);
 
-                    voidage_rates[ig] /= bg * detR;
+                    // we only support either gas in water or gas in oil
+                    if (detRw == 1) {
+                        voidage_rates[ig] /= bg * detR;
+                    } else { 
+                        voidage_rates[ig] /= bg * detRw;
+                    }
                 }
             }
 
@@ -537,6 +618,8 @@ namespace Opm {
                     , temperature(0.0)
                     , rs(0.0)
                     , rv(0.0)
+                    , rsw(0.0)
+                    , rvw(0.0)
                     , pv(0.0)
                     , saltConcentration(0.0)
                 {}
@@ -545,6 +628,8 @@ namespace Opm {
                 double temperature;
                 double rs;
                 double rv;
+                double rsw;
+                double rvw;
                 double pv;
                 double saltConcentration;
             };

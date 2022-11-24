@@ -113,6 +113,7 @@ public:
     static constexpr bool has_foam = getPropValue<TypeTag, Properties::EnableFoam>();
     static constexpr bool has_brine = getPropValue<TypeTag, Properties::EnableBrine>();
     static constexpr bool has_watVapor = getPropValue<TypeTag, Properties::EnableEvaporation>();
+    static constexpr bool has_disgas_in_water = getPropValue<TypeTag, Properties::EnableDisgasInWater>();
     static constexpr bool has_saltPrecip = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>();
     static constexpr bool has_micp = getPropValue<TypeTag, Properties::EnableMICP>();
 
@@ -125,6 +126,7 @@ public:
                                           has_watVapor,
                                           has_brine,
                                           has_saltPrecip,
+                                          has_disgas_in_water,
                                           Indices::numPhases >;
     /// Constructor
     WellInterface(const Well& well,
