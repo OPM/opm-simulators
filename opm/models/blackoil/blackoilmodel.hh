@@ -342,7 +342,7 @@ public:
     {
         std::ostringstream oss;
 
-        if (pvIdx == Indices::waterSaturationIdx)
+        if (pvIdx == Indices::waterSwitchIdx)
             oss << "saturation_" << FluidSystem::phaseName(FluidSystem::waterPhaseIdx);
         else if (pvIdx == Indices::pressureSwitchIdx)
             oss << "pressure_switching";
@@ -396,7 +396,7 @@ public:
             return 1.0;
 
         // saturations are always in the range [0, 1]!
-        if (int(Indices::waterSaturationIdx) == int(pvIdx))
+        if (int(Indices::waterSwitchIdx) == int(pvIdx))
             return 1.0;
 
         // oil pressures usually are in the range of 100 to 500 bars for typical oil

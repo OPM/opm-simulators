@@ -263,7 +263,7 @@ protected:
 
         if (currentValue.primaryVarsMeaningWater() == PrimaryVariables::Sw)
         {
-            deltaSw = update[Indices::waterSaturationIdx];
+            deltaSw = update[Indices::waterSwitchIdx];
             deltaSo -= deltaSw;
         }
         if (currentValue.primaryVarsMeaningGas() == PrimaryVariables::Sg)
@@ -302,13 +302,13 @@ protected:
                     delta = signum(delta)*dpMaxRel_*currentValue[pvIdx];
             }
             // water saturation delta
-            else if (pvIdx == Indices::waterSaturationIdx)
+            else if (pvIdx == Indices::waterSwitchIdx)
                 if (currentValue.primaryVarsMeaningWater() == PrimaryVariables::Sw)
                     delta *= satAlpha;
                 else {
                     //Ensure Rvw factor does not become negative
-                    if (delta > currentValue[ Indices::waterSaturationIdx]) 
-                        delta = currentValue[ Indices::waterSaturationIdx];
+                    if (delta > currentValue[ Indices::waterSwitchIdx]) 
+                        delta = currentValue[ Indices::waterSwitchIdx];
                 }
             else if (pvIdx == Indices::compositionSwitchIdx) {
                 // the switching primary variable for composition is tricky because the

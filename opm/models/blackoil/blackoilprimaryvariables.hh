@@ -79,7 +79,7 @@ class BlackOilPrimaryVariables : public FvBasePrimaryVariables<TypeTag>
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
 
     // primary variable indices
-    enum { waterSaturationIdx = Indices::waterSaturationIdx };
+    enum { waterSwitchIdx = Indices::waterSwitchIdx };
     enum { pressureSwitchIdx = Indices::pressureSwitchIdx };
     enum { compositionSwitchIdx = Indices::compositionSwitchIdx };
     enum { saltConcentrationIdx  = Indices::saltConcentrationIdx };
@@ -406,13 +406,13 @@ public:
         switch(primaryVarsMeaningWater()) {
             case Sw:
             {
-                (*this)[waterSaturationIdx] = FsToolbox::value(fluidState.saturation(waterPhaseIdx));
+                (*this)[waterSwitchIdx] = FsToolbox::value(fluidState.saturation(waterPhaseIdx));
                 break;
             }
             case Rvw:
             {
                 const auto& rvw = BlackOil::getRvw_<FluidSystem, FluidState, Scalar>(fluidState, pvtRegionIdx_);
-                (*this)[waterSaturationIdx] = rvw;
+                (*this)[waterSwitchIdx] = rvw;
                 break;
             }
             case W_disabled:
@@ -443,7 +443,7 @@ public:
             //case Rsw:
             //{
                 //const auto& Rsw = BlackOil::getRsw_<FluidSystem, FluidState, Scalar>(fluidState, pvtRegionIdx_);
-                //(*this)[waterSaturationIdx] = Rsw;
+                //(*this)[waterSwitchIdx] = Rsw;
             //    break;
             //}
             case G_disabled:
@@ -486,7 +486,7 @@ public:
         Scalar saltConcentration = 0.0;
         const Scalar& T = asImp_().temperature_();
         if (primaryVarsMeaningWater() == Sw)
-            sw = (*this)[waterSaturationIdx];
+            sw = (*this)[waterSwitchIdx];
         if (primaryVarsMeaningGas() == Sg)
             sg = (*this)[compositionSwitchIdx];
 
@@ -518,7 +518,7 @@ public:
 
             // make sure water saturations does not exceed 1.0
             if constexpr (waterEnabled)
-                (*this)[Indices::waterSaturationIdx] = 1.0;
+                (*this)[Indices::waterSwitchIdx] = 1.0;
             // the hydrocarbon gas saturation is set to 0.0
             if constexpr (compositionSwitchEnabled)
                 (*this)[Indices::compositionSwitchIdx] = 0.0;
@@ -554,7 +554,7 @@ public:
                                                                                    p,
                                                                                    saltConcentration);
                     setPrimaryVarsMeaningWater(Rvw);
-                    (*this)[Indices::waterSaturationIdx] = rvwSat; //primary variable becomes Rvw
+                    (*this)[Indices::waterSwitchIdx] = rvwSat; //primary variable becomes Rvw
                     changed = true;
                     break;
                 }
@@ -570,7 +570,7 @@ public:
                 //                                                                   pw,
                 //                                                                   saltConcentration);
                 //    setPrimaryVarsMeaningWater(Rsw);
-                //    (*this)[Indices::waterSaturationIdx] = rswSat; //primary variable becomes Rsw
+                //    (*this)[Indices::waterSwitchIdx] = rswSat; //primary variable becomes Rsw
                 //    changed = true;
                 //    break;
                 //}
@@ -578,7 +578,7 @@ public:
             }
             case Rvw:
             {
-                const Scalar& rvw = (*this)[waterSaturationIdx];
+                const Scalar& rvw = (*this)[waterSwitchIdx];
                 Scalar p = (*this)[pressureSwitchIdx];
                 if(primaryVarsMeaningPressure() == Po) {
                     std::array<Scalar, numPhases> pC = { 0.0 };
@@ -594,7 +594,7 @@ public:
                 if (rvw > rvwSat*(1.0 + eps)) {
                     // water phase appears
                     setPrimaryVarsMeaningWater(Sw);
-                    (*this)[Indices::waterSaturationIdx] = 0.0; // water saturation
+                    (*this)[Indices::waterSwitchIdx] = 0.0; // water saturation
                     changed = true;
                 }
                 break;
@@ -748,7 +748,7 @@ public:
         }
         Scalar sw = 0.0;
         if (primaryVarsMeaningWater() == Sw)
-            sw = (*this)[Indices::waterSaturationIdx];
+            sw = (*this)[Indices::waterSwitchIdx];
         Scalar sg = 0.0;
         if (primaryVarsMeaningGas() == Sg)
             sg = (*this)[Indices::compositionSwitchIdx];
@@ -768,7 +768,7 @@ public:
         ssol = ssol/st;
         assert(st>0.5);
         if (primaryVarsMeaningWater() == Sw)
-            (*this)[Indices::waterSaturationIdx] = sw;
+            (*this)[Indices::waterSwitchIdx] = sw;
         if (primaryVarsMeaningGas() == Sg)
             (*this)[Indices::compositionSwitchIdx] = sg;
         if constexpr (enableSolvent)
