@@ -465,7 +465,7 @@ namespace Opm {
                 if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) &&
                     FluidSystem::numActivePhases() > 1 &&
                     priVarsNew.primaryVarsMeaningWater() == PrimaryVariables::Sw) {
-                    saturationsNew[FluidSystem::waterPhaseIdx] = priVarsNew[Indices::waterSaturationIdx];
+                    saturationsNew[FluidSystem::waterPhaseIdx] = priVarsNew[Indices::waterSwitchIdx];
                     oilSaturationNew -= saturationsNew[FluidSystem::waterPhaseIdx];
                 }
 
@@ -496,7 +496,7 @@ namespace Opm {
 
                 if (FluidSystem::numActivePhases() > 1) {
                     if (priVarsOld.primaryVarsMeaningWater() == PrimaryVariables::Sw) {
-                        saturationsOld[FluidSystem::waterPhaseIdx] = priVarsOld[Indices::waterSaturationIdx];
+                        saturationsOld[FluidSystem::waterPhaseIdx] = priVarsOld[Indices::waterSwitchIdx];
                         oilSaturationOld -= saturationsOld[FluidSystem::waterPhaseIdx];
                     }
 
