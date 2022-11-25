@@ -144,7 +144,7 @@ namespace Opm
                           const bool changed_to_open_this_step) override;
 
 
-        virtual void initPrimaryVariablesEvaluation() const override;
+        void initPrimaryVariablesEvaluation() override;
 
         /// check whether the well equations get converged for this well
         virtual ConvergenceReport getWellConvergence(const WellState& well_state,
@@ -159,9 +159,9 @@ namespace Opm
 
         /// using the solution x to recover the solution xw for wells and applying
         /// xw to update Well State
-        virtual void recoverWellSolutionAndUpdateWellState(const BVector& x,
-                                                           WellState& well_state,
-                                                           DeferredLogger& deferred_logger) const override;
+        void recoverWellSolutionAndUpdateWellState(const BVector& x,
+                                                   WellState& well_state,
+                                                   DeferredLogger& deferred_logger) override;
 
         /// computing the well potentials for group control
         virtual void computeWellPotentials(const Simulator& ebosSimulator,
@@ -169,7 +169,7 @@ namespace Opm
                                            std::vector<double>& well_potentials,
                                            DeferredLogger& deferred_logger) /* const */ override;
 
-        virtual void updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_logger) const override;
+        void updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_logger) override;
 
         virtual void solveEqAndUpdateWellState(WellState& well_state, DeferredLogger& deferred_logger) override;
 
@@ -257,7 +257,7 @@ namespace Opm
         // updating the well_state based on well solution dwells
         void updateWellState(const BVectorWell& dwells,
                              WellState& well_state,
-                             DeferredLogger& deferred_logger) const;
+                             DeferredLogger& deferred_logger);
 
         // calculate the properties for the well connections
         // to calulate the pressure difference between well connections.
@@ -355,7 +355,7 @@ namespace Opm
 
         void updatePrimaryVariablesNewton(const BVectorWell& dwells,
                                           const WellState& well_state,
-                                          DeferredLogger& deferred_logger) const;
+                                          DeferredLogger& deferred_logger);
 
         void updateWellStateFromPrimaryVariables(WellState& well_state, DeferredLogger& deferred_logger) const;
 

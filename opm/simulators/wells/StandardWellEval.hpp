@@ -105,7 +105,7 @@ protected:
     void updateWellStateFromPrimaryVariables(WellState& well_state,
                                              DeferredLogger& deferred_logger) const;
 
-    mutable PrimaryVariables primary_variables_; //!< Primary variables for well
+    PrimaryVariables primary_variables_; //!< Primary variables for well
 
     // the saturations in the well bore under surface conditions at the beginning of the time step
     std::vector<double> F0_;

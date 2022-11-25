@@ -75,7 +75,7 @@ namespace Opm
 
     template<typename TypeTag>
     void StandardWell<TypeTag>::
-    initPrimaryVariablesEvaluation() const
+    initPrimaryVariablesEvaluation()
     {
         this->primary_variables_.init();
     }
@@ -932,7 +932,7 @@ namespace Opm
     StandardWell<TypeTag>::
     updateWellState(const BVectorWell& dwells,
                     WellState& well_state,
-                    DeferredLogger& deferred_logger) const
+                    DeferredLogger& deferred_logger)
     {
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
@@ -951,7 +951,7 @@ namespace Opm
     StandardWell<TypeTag>::
     updatePrimaryVariablesNewton(const BVectorWell& dwells,
                                  const WellState& /* well_state */,
-                                 DeferredLogger& deferred_logger) const
+                                 DeferredLogger& deferred_logger)
     {
         const double dFLimit = this->param_.dwell_fraction_max_;
         const double dBHPLimit = this->param_.dbhp_max_rel_;
@@ -1729,7 +1729,7 @@ namespace Opm
     StandardWell<TypeTag>::
     recoverWellSolutionAndUpdateWellState(const BVector& x,
                                           WellState& well_state,
-                                          DeferredLogger& deferred_logger) const
+                                          DeferredLogger& deferred_logger)
     {
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
@@ -2010,7 +2010,7 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_logger) const
+    updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_logger)
     {
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 

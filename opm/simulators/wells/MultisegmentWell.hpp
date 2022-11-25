@@ -94,7 +94,7 @@ namespace Opm
                           const std::vector< Scalar >& B_avg,
                           const bool changed_to_open_this_step) override;
 
-        virtual void initPrimaryVariablesEvaluation() const override;
+        void initPrimaryVariablesEvaluation() override;
 
         /// updating the well state based the current control mode
         virtual void updateWellStateWithTarget(const Simulator& ebos_simulator,
@@ -115,9 +115,9 @@ namespace Opm
 
         /// using the solution x to recover the solution xw for wells and applying
         /// xw to update Well State
-        virtual void recoverWellSolutionAndUpdateWellState(const BVector& x,
-                                                           WellState& well_state,
-                                                           DeferredLogger& deferred_logger) const override;
+        void recoverWellSolutionAndUpdateWellState(const BVector& x,
+                                                   WellState& well_state,
+                                                   DeferredLogger& deferred_logger) override;
 
         /// computing the well potentials for group control
         virtual void computeWellPotentials(const Simulator& ebosSimulator,
@@ -125,7 +125,7 @@ namespace Opm
                                            std::vector<double>& well_potentials,
                                            DeferredLogger& deferred_logger) override;
 
-        virtual void updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_logger) const override;
+        void updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_logger) override;
 
         virtual void solveEqAndUpdateWellState(WellState& well_state, DeferredLogger& deferred_logger) override; // const?
 
