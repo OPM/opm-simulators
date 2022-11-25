@@ -733,7 +733,7 @@ public:
 
             //oil is the reference phase for pressure
             const auto linearizationType = elemCtx.linearizationType();
-            if (priVars.primaryVarsMeaningPressure() == PrimaryVariables::Pg)
+            if (priVars.primaryVarsMeaningPressure() == PrimaryVariables::PressureMeaning::Pg)
                 pgMisc = priVars.makeEvaluation(Indices::pressureSwitchIdx, timeIdx, linearizationType);
             else {
                 const Evaluation& po = priVars.makeEvaluation(Indices::pressureSwitchIdx, timeIdx, linearizationType);

@@ -424,12 +424,12 @@ public:
         assert(int(Indices::compositionSwitchIdx) == int(pvIdx));
 
         auto pvMeaning = this->solution(0)[globalDofIdx].primaryVarsMeaningGas();
-        if (pvMeaning == PrimaryVariables::PrimaryVarsMeaningGas::Sg)
+        if (pvMeaning == PrimaryVariables::GasMeaning::Sg)
             return 1.0; // gas saturation
-        else if (pvMeaning == PrimaryVariables::PrimaryVarsMeaningGas::Rs)
+        else if (pvMeaning == PrimaryVariables::GasMeaning::Rs)
             return 1.0/250.; // gas dissolution factor
         else {
-            assert(pvMeaning == PrimaryVariables::PrimaryVarsMeaningGas::Rv);
+            assert(pvMeaning == PrimaryVariables::GasMeaning::Rv);
             return 1.0/0.025; // oil vaporization factor
         }
 
@@ -530,9 +530,9 @@ public:
         PolymerModule::deserializeEntity(*this, instream, dof);
         EnergyModule::deserializeEntity(*this, instream, dof);
 
-        using PVM_G = typename PrimaryVariables::PrimaryVarsMeaningGas;
-        using PVM_W = typename PrimaryVariables::PrimaryVarsMeaningWater;
-        using PVM_P = typename PrimaryVariables::PrimaryVarsMeaningPressure;
+        using PVM_G = typename PrimaryVariables::GasMeaning;
+        using PVM_W = typename PrimaryVariables::WaterMeaning;
+        using PVM_P = typename PrimaryVariables::PressureMeaning;
         priVars.setPrimaryVarsMeaningGas(static_cast<PVM_G>(primaryVarsMeaningGas));
         priVars.setPrimaryVarsMeaningWater(static_cast<PVM_W>(primaryVarsMeaningWater));
         priVars.setPrimaryVarsMeaningPressure(static_cast<PVM_P>(primaryVarsMeaningPressure));

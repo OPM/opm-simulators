@@ -428,7 +428,7 @@ public:
             const auto& saltdenTable = BrineModule::saltdenTable(elemCtx, dofIdx, timeIdx);
             saltDensity_ = saltdenTable;
 
-            if (priVars.primaryVarsMeaningBrine() == PrimaryVariables::PrimaryVarsMeaningBrine::Sp) {
+            if (priVars.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Sp) {
                 saltSaturation_ = priVars.makeEvaluation(saltConcentrationIdx, timeIdx);
                 fs.setSaltConcentration(saltSolubility_);
             }

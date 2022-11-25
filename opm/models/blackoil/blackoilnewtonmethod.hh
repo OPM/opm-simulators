@@ -261,12 +261,12 @@ protected:
         Scalar deltaSg = 0.0;
         Scalar deltaSs = 0.0;
 
-        if (currentValue.primaryVarsMeaningWater() == PrimaryVariables::PrimaryVarsMeaningWater::Sw)
+        if (currentValue.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Sw)
         {
             deltaSw = update[Indices::waterSwitchIdx];
             deltaSo -= deltaSw;
         }
-        if (currentValue.primaryVarsMeaningGas() == PrimaryVariables::PrimaryVarsMeaningGas::Sg)
+        if (currentValue.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Sg)
         {
             deltaSg = update[Indices::compositionSwitchIdx];
             deltaSo -= deltaSg;
@@ -303,7 +303,7 @@ protected:
             }
             // water saturation delta
             else if (pvIdx == Indices::waterSwitchIdx)
-                if (currentValue.primaryVarsMeaningWater() == PrimaryVariables::PrimaryVarsMeaningWater::Sw)
+                if (currentValue.primaryVarsMeaningWater() == PrimaryVariables::WaterMeaning::Sw)
                     delta *= satAlpha;
                 else {
                     //Ensure Rvw factor does not become negative
@@ -316,7 +316,7 @@ protected:
                 // interpretation since it can represent Sg, Rs or Rv. For now, we only
                 // limit saturation deltas and ensure that the R factors do not become
                 // negative.
-                if (currentValue.primaryVarsMeaningGas() == PrimaryVariables::PrimaryVarsMeaningGas::Sg)
+                if (currentValue.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Sg)
                     delta *= satAlpha;
                 else {
                     //Ensure Rv and Rs factor does not become negative
@@ -348,7 +348,7 @@ protected:
             }
             else if (enableBrine && pvIdx == Indices::saltConcentrationIdx &&
                      enableSaltPrecipitation &&
-                     currentValue.primaryVarsMeaningBrine() == PrimaryVariables::PrimaryVarsMeaningBrine::Sp) {
+                     currentValue.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Sp) {
                 const double maxSaltSaturationChange = 0.1;
                 const double sign = delta >= 0. ? 1. : -1.;
                 delta = sign * std::min(std::abs(delta), maxSaltSaturationChange);
@@ -382,10 +382,10 @@ protected:
 
             if (enableBrine && pvIdx == Indices::saltConcentrationIdx) { 
                // keep the salt concentration above 0
-               if (!enableSaltPrecipitation || (enableSaltPrecipitation && currentValue.primaryVarsMeaningBrine() == PrimaryVariables::PrimaryVarsMeaningBrine::Cs))
+               if (!enableSaltPrecipitation || (enableSaltPrecipitation && currentValue.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Cs))
                    nextValue[pvIdx] = std::max(nextValue[pvIdx], 0.0); 
                // keep the salt saturation below upperlimit
-               if ((enableSaltPrecipitation && currentValue.primaryVarsMeaningBrine() == PrimaryVariables::PrimaryVarsMeaningBrine::Sp))
+               if ((enableSaltPrecipitation && currentValue.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Sp))
                    nextValue[pvIdx] = std::min(nextValue[pvIdx], 1.0-1.e-8); 
             }
 
