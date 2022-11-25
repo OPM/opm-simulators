@@ -185,7 +185,7 @@ public:
         Evaluation Sw = 0.0;
         if constexpr (waterEnabled) {
             if (priVars.primaryVarsMeaningWater() == PrimaryVariables::Sw) {
-                Sw = priVars.makeEvaluation(Indices::waterSaturationIdx, timeIdx);
+                Sw = priVars.makeEvaluation(Indices::waterSwitchIdx, timeIdx);
             } else if (priVars.primaryVarsMeaningWater() == PrimaryVariables::W_disabled){
                 // water is enabled but is not a primary variable i.e. one phase case
                 Sw = 1.0;
@@ -298,7 +298,7 @@ public:
         }
 
         if (priVars.primaryVarsMeaningWater() == PrimaryVariables::Rvw) {
-            const auto& Rvw = priVars.makeEvaluation(Indices::waterSaturationIdx, timeIdx);
+            const auto& Rvw = priVars.makeEvaluation(Indices::waterSwitchIdx, timeIdx);
             fluidState_.setRvw(Rvw);
         } else {
             if (FluidSystem::enableVaporizedWater()) { // Add Sg > 0? i.e. if only water set rv = 0)

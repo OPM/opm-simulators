@@ -621,7 +621,7 @@ public:
 
         if (priVars.primaryVarsMeaningWater() == PrimaryVariables::Sw) {
            static const Scalar thresholdWaterFilledCell = 1.0 - 1e-6;
-           Scalar sw = priVars.makeEvaluation(Indices::waterSaturationIdx, timeIdx).value();
+           Scalar sw = priVars.makeEvaluation(Indices::waterSwitchIdx, timeIdx).value();
            if (sw >= thresholdWaterFilledCell)
               rs_ = 0.0;  // water only, zero rs_ ...
         }

@@ -92,7 +92,7 @@ struct BlackOilTwoPhaseIndices
     //////////////////////////////
 
     //! The index of the water saturation. For two-phase oil gas models this is disabled.
-    static const int waterSaturationIdx  = waterEnabled ? PVOffset + 0 : -10000;
+    static const int waterSwitchIdx  = waterEnabled ? PVOffset + 0 : -10000;
 
     //! Index of the oil pressure in a vector of primary variables
     static const int pressureSwitchIdx  = waterEnabled ? PVOffset + 1 : PVOffset + 0;
