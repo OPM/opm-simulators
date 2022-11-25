@@ -294,11 +294,11 @@ public:
 
             if (primaryVarsMeaningOutput_()) {
                 primaryVarsMeaningWater_[globalDofIdx] =
-                    primaryVars.primaryVarsMeaningWater();
+                    static_cast<int>(primaryVars.primaryVarsMeaningWater());
                 primaryVarsMeaningGas_[globalDofIdx] =
-                    primaryVars.primaryVarsMeaningGas();
+                    static_cast<int>(primaryVars.primaryVarsMeaningGas());
                 primaryVarsMeaningPressure_[globalDofIdx] =
-                    primaryVars.primaryVarsMeaningPressure();
+                    static_cast<int>(primaryVars.primaryVarsMeaningPressure());
             }
         }
     }

@@ -184,20 +184,20 @@ public:
         // extract the water and the gas saturations for convenience
         Evaluation Sw = 0.0;
         if constexpr (waterEnabled) {
-            if (priVars.primaryVarsMeaningWater() == PrimaryVariables::Sw) {
+            if (priVars.primaryVarsMeaningWater() == PrimaryVariables::PrimaryVarsMeaningWater::Sw) {
                 Sw = priVars.makeEvaluation(Indices::waterSwitchIdx, timeIdx);
-            } else if (priVars.primaryVarsMeaningWater() == PrimaryVariables::W_disabled){
+            } else if (priVars.primaryVarsMeaningWater() == PrimaryVariables::PrimaryVarsMeaningWater::Disabled){
                 // water is enabled but is not a primary variable i.e. one phase case
                 Sw = 1.0;
             }
         }
         Evaluation Sg = 0.0;
         if constexpr (gasEnabled) {
-            if (priVars.primaryVarsMeaningGas() == PrimaryVariables::Sg) {
+            if (priVars.primaryVarsMeaningGas() == PrimaryVariables::PrimaryVarsMeaningGas::Sg) {
                 Sg = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx);
-            } else if (priVars.primaryVarsMeaningGas() == PrimaryVariables::Rv) {
+            } else if (priVars.primaryVarsMeaningGas() == PrimaryVariables::PrimaryVarsMeaningGas::Rv) {
                 Sg = 1.0 - Sw;
-            } else if (priVars.primaryVarsMeaningGas() == PrimaryVariables::G_disabled) {
+            } else if (priVars.primaryVarsMeaningGas() == PrimaryVariables::PrimaryVarsMeaningGas::Disabled) {
                 if constexpr (waterEnabled) {
                     Sg = 1.0 - Sw; // two phase water + gas
                 } else {
@@ -233,7 +233,7 @@ public:
         problem.updateRelperms(mobility_, dirMob_, fluidState_, globalSpaceIdx);
 
         // oil is the reference phase for pressure
-        if (priVars.primaryVarsMeaningPressure() == PrimaryVariables::Pg) {
+        if (priVars.primaryVarsMeaningPressure() == PrimaryVariables::PrimaryVarsMeaningPressure::Pg) {
             const Evaluation& pg = priVars.makeEvaluation(Indices::pressureSwitchIdx, timeIdx);
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
                 if (FluidSystem::phaseIsActive(phaseIdx))
@@ -265,7 +265,7 @@ public:
 
         // take the meaning of the switching primary variable into account for the gas
         // and oil phase compositions
-        if (priVars.primaryVarsMeaningGas() == PrimaryVariables::Rs) {
+        if (priVars.primaryVarsMeaningGas() == PrimaryVariables::PrimaryVarsMeaningGas::Rs) {
             const auto& Rs = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx);
             fluidState_.setRs(Rs);
         } else {
@@ -281,7 +281,7 @@ public:
                 fluidState_.setRs(0.0);
         }
 
-        if (priVars.primaryVarsMeaningGas() == PrimaryVariables::Rv) {
+        if (priVars.primaryVarsMeaningGas() == PrimaryVariables::PrimaryVarsMeaningGas::Rv) {
             const auto& Rv = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx);
             fluidState_.setRv(Rv);
         } else {
@@ -297,7 +297,7 @@ public:
                 fluidState_.setRv(0.0);
         }
 
-        if (priVars.primaryVarsMeaningWater() == PrimaryVariables::Rvw) {
+        if (priVars.primaryVarsMeaningWater() == PrimaryVariables::PrimaryVarsMeaningWater::Rvw) {
             const auto& Rvw = priVars.makeEvaluation(Indices::waterSwitchIdx, timeIdx);
             fluidState_.setRvw(Rvw);
         } else {
@@ -414,7 +414,7 @@ public:
         }
 
         // deal with salt-precipitation
-        if (enableSaltPrecipitation && priVars.primaryVarsMeaningBrine() == PrimaryVariables::Sp) {
+        if (enableSaltPrecipitation && priVars.primaryVarsMeaningBrine() == PrimaryVariables::PrimaryVarsMeaningBrine::Sp) {
             Evaluation Sp = priVars.makeEvaluation(Indices::saltConcentrationIdx, timeIdx);
             porosity_ *= (1.0 - Sp);
         }

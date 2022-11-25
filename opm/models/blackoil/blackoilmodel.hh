@@ -343,7 +343,7 @@ public:
         std::ostringstream oss;
 
         if (pvIdx == Indices::waterSwitchIdx)
-            oss << "saturation_" << FluidSystem::phaseName(FluidSystem::waterPhaseIdx);
+            oss << "water_switching";
         else if (pvIdx == Indices::pressureSwitchIdx)
             oss << "pressure_switching";
         else if (static_cast<int>(pvIdx) == Indices::compositionSwitchIdx)
@@ -424,12 +424,12 @@ public:
         assert(int(Indices::compositionSwitchIdx) == int(pvIdx));
 
         auto pvMeaning = this->solution(0)[globalDofIdx].primaryVarsMeaningGas();
-        if (pvMeaning == PrimaryVariables::Sg)
+        if (pvMeaning == PrimaryVariables::PrimaryVarsMeaningGas::Sg)
             return 1.0; // gas saturation
-        else if (pvMeaning == PrimaryVariables::Rs)
+        else if (pvMeaning == PrimaryVariables::PrimaryVarsMeaningGas::Rs)
             return 1.0/250.; // gas dissolution factor
         else {
-            assert(pvMeaning == PrimaryVariables::Rv);
+            assert(pvMeaning == PrimaryVariables::PrimaryVarsMeaningGas::Rv);
             return 1.0/0.025; // oil vaporization factor
         }
 
@@ -475,9 +475,9 @@ public:
             outstream << priVars[eqIdx] << " ";
 
         // write the pseudo primary variables
-        outstream << priVars.primaryVarsMeaningGas() << " ";
-        outstream << priVars.primaryVarsMeaningWater() << " ";
-        outstream << priVars.primaryVarsMeaningPressure() << " ";
+        outstream << static_cast<int>(priVars.primaryVarsMeaningGas()) << " ";
+        outstream << static_cast<int>(priVars.primaryVarsMeaningWater()) << " ";
+        outstream << static_cast<int>(priVars.primaryVarsMeaningPressure()) << " ";
 
         outstream << priVars.pvtRegionIndex() << " ";
 
