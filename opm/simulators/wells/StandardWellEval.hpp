@@ -23,8 +23,8 @@
 #ifndef OPM_STANDARDWELL_EVAL_HEADER_INCLUDED
 #define OPM_STANDARDWELL_EVAL_HEADER_INCLUDED
 
+#include <opm/simulators/wells/StandardWellConnections.hpp>
 #include <opm/simulators/wells/StandardWellEquations.hpp>
-#include <opm/simulators/wells/StandardWellGeneric.hpp>
 #include <opm/simulators/wells/StandardWellPrimaryVariables.hpp>
 
 #include <opm/material/densead/DynamicEvaluation.hpp>
@@ -45,7 +45,7 @@ template<class FluidSystem, class Indices, class Scalar> class WellInterfaceIndi
 class WellState;
 
 template<class FluidSystem, class Indices, class Scalar>
-class StandardWellEval : public StandardWellGeneric<Scalar>
+class StandardWellEval
 {
 protected:
     using PrimaryVariables = StandardWellPrimaryVariables<FluidSystem,Indices,Scalar>;
@@ -78,16 +78,6 @@ protected:
     // computing the accumulation term for later use in well mass equations
     void computeAccumWell();
 
-    // TODO: not total sure whether it is a good idea to put this function here
-    // the major reason to put here is to avoid the usage of Wells struct
-    void computeConnectionDensities(const std::vector<double>& perfComponentRates,
-                                    const std::vector<double>& b_perf,
-                                    const std::vector<double>& rsmax_perf,
-                                    const std::vector<double>& rvmax_perf,
-                                    const std::vector<double>& rvwmax_perf,
-                                    const std::vector<double>& surf_dens_perf,
-                                    DeferredLogger& deferred_logger);
-
     ConvergenceReport getWellConvergence(const WellState& well_state,
                                          const std::vector<double>& B_avg,
                                          const double maxResidualAllowed,
@@ -111,6 +101,7 @@ protected:
     std::vector<double> F0_;
 
     StandardWellEquations<Scalar,Indices::numEq> linSys_; //!< Linear equation system
+    StandardWellConnections<FluidSystem,Indices,Scalar> connections_; //!< Connection level values
 };
 
 }
