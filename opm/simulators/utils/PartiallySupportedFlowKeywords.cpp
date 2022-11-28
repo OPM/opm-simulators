@@ -294,12 +294,6 @@ partiallySupported()
             },
          },
          {
-            "WRFTPLT",
-            {
-               {4,{false, allow_values<std::string> {"NO"}, "WRFTPLT(MULTISEG): output is currently not supported – will continue"}}, // OUTPUT_SEGMENT
-            },
-         },
-         {
             "WTEST",
             {
                {3,{false, allow_values<std::string> {"E", "P", "EP", "PE", ""}, "WTEST(TEST): only the E (economic) option is currently supported – will continue"}}, // REASON
