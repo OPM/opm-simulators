@@ -928,7 +928,7 @@ namespace Opm
                 const auto& injmult = this->well_ecl_.getConnections()[perf_ecl_index].injmult();
                 const auto frac_press = injmult.fracture_pressure;
                 const auto gradient = injmult.multiplier_gradient;
-                const auto bhp = Opm::getValue(this->getBhp());
+                const auto bhp = this->primary_variables_.value(Bhp);
                 if (bhp > frac_press) {
                     multipler = 1. + (bhp - frac_press) * gradient;
                 }
@@ -938,7 +938,7 @@ namespace Opm
                 const auto& injmult = this->well_ecl_.getConnections()[perf_ecl_index].injmult();
                 const auto frac_press = injmult.fracture_pressure;
                 const auto gradient = injmult.multiplier_gradient;
-                const auto connection_pressure = Opm::getValue(this->getBhp()) + this->perf_pressure_diffs_[perf];
+                const auto connection_pressure = this->primary_variables_.value(Bhp) + this->connections_.pressure_diff(perf);
                 if (connection_pressure > frac_press) {
                     multipler = 1. + (connection_pressure - frac_press) * gradient;
                 }
@@ -948,7 +948,7 @@ namespace Opm
                 const auto& injmult = this->well_ecl_.getConnections()[perf_ecl_index].injmult();
                 const auto frac_press = injmult.fracture_pressure;
                 const auto gradient = injmult.multiplier_gradient;
-                const auto connection_pressure = Opm::getValue(this->getBhp()) + this->perf_pressure_diffs_[perf];
+                const auto connection_pressure = this->primary_variables_.value(Bhp) + this->connections_.pressure_diff(perf);
                 // double calc_mult = 1.0;
                 // const double old_mult =  this->inj_multiplier_[perf_ecl_index];
                 if (connection_pressure > frac_press) {
