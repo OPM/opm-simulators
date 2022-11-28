@@ -342,7 +342,9 @@ public:
         // deal with the primary variables for the energy extension
         EnergyModule::assignPrimaryVars(*this, fluidState);
 
-        // determine the meaning of the primary variables
+        // Determine the meaning of the pressure primary variables
+        // Depending on the phases present, this variable is either interpreted as the
+        // pressure of the oil phase, gas phase (if no oil) or water phase (if only water)
         if (gasPresent && FluidSystem::enableVaporizedOil() && !oilPresent){
             primaryVarsMeaningPressure_ = PressureMeaning::Pg;
         } else if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
@@ -354,7 +356,10 @@ public:
             primaryVarsMeaningPressure_ = PressureMeaning::Pw;
         }
 
-        // determine the meaning of the primary variables
+        // Determine the meaning of the water primary variables
+        // Depending on the phases present, this variable is either interpreted as
+        // water saturation or vapporized water in the gas phase
+        // For two-phase gas-oil models and one-phase case the variable is disabled.
         if ( waterPresent && gasPresent ){
             primaryVarsMeaningWater_ = WaterMeaning::Sw;
         } else if (gasPresent && FluidSystem::enableVaporizedWater()) {
@@ -365,7 +370,11 @@ public:
             primaryVarsMeaningWater_ = WaterMeaning::Disabled;
         }
 
-        // determine the meaning of the primary variables
+        // Determine the meaning of the gas primary variables
+        // Depending on the phases present, this variable is either interpreted as the
+        // saturation of the gas phase, as the fraction of the gas component in the oil
+        // phase (Rs) or as the  fraction of the oil component (Rv) in the gas phase.
+        // For two-phase water-oil and water-gas models and one-phase case the variable is disabled.
         if ( gasPresent && oilPresent ) {
             primaryVarsMeaningGas_ = GasMeaning::Sg;
         } else if (oilPresent && FluidSystem::enableDissolvedGas()) {
@@ -380,6 +389,7 @@ public:
             primaryVarsMeaningGas_ = GasMeaning::Disabled;
         }
 
+        // Determine the meaning of the brine primary variables
         if constexpr (enableSaltPrecipitation){
             if (precipitatedSaltPresent)
                 primaryVarsMeaningBrine_ = BrineMeaning::Sp;
@@ -461,9 +471,7 @@ public:
      *        meaningful.
      *
      * If the meaning of the primary variables changes, their values are also adapted in a
-     * meaningful manner. (e.g. if the gas phase appears and the composition switching
-     * variable changes its meaning from the gas dissolution factor GasMeaning::Rs to the gas
-     * saturation Sg, the value for this variable is set to zero.)
+     * meaningful manner.
      * A Scalar eps can be passed to make the switching condition more strict.
      * Useful for avoiding ocsilation in the primaryVarsMeaning.
      *
@@ -478,9 +486,14 @@ public:
         // the IntensiveQuantities). The reason is that most intensive quantities are not
         // required to be able to decide if the primary variables needs to be switched or
         // not, so it would be a waste to compute them.
+
+        // Both the primary variable meaning of water and gas are disabled i.e.
+        // It is a one-phase case and we no variable meaning switch is needed.
         if (primaryVarsMeaningWater() == WaterMeaning::Disabled && primaryVarsMeaningGas() == GasMeaning::Disabled){
             return false;
         }
+
+        // Read the current saturation from the primary variables
         Scalar sw = 0.0;
         Scalar sg = 0.0;
         Scalar saltConcentration = 0.0;
@@ -493,6 +506,8 @@ public:
         if (primaryVarsMeaningGas() == GasMeaning::Disabled && gasEnabled)
             sg = 1.0 - sw; // water + gas case
 
+        // if solid phase disappeares:  Sp (Solid salt saturation) -> Cs (salt concentration)
+        // if solid phase appears: Cs (salt concentration) ->  Sp (Solid salt saturation)
         if constexpr (enableSaltPrecipitation) {
             Scalar saltSolubility = BrineModule::saltSol(pvtRegionIndex());
             if (primaryVarsMeaningBrine() == BrineMeaning::Sp) {
@@ -512,8 +527,11 @@ public:
             }
         }
 
+        // keep track if any meaning has changed
         bool changed = false;
+
         // special case for cells with almost only water
+        // use both saturations (if the phase is enabled)
         if (sw >= thresholdWaterFilledCell) {
 
             // make sure water saturations does not exceed 1.0
@@ -537,6 +555,8 @@ public:
             return changed;
         }
 
+        // if water phase disappeares:  Sw (water saturation) -> Rvw (fraction of water in gas phase)
+        // if water phase appears: Rvw (fraction of water in gas phase) -> Sw (water saturation)
         switch(primaryVarsMeaningWater()) {
             case WaterMeaning::Sw:
             {
@@ -558,22 +578,6 @@ public:
                     changed = true;
                     break;
                 }
-                //if(sg < -eps && sw > eps && FluidSystem::enableDissolvedGasInWater()) {
-                //    const Scalar& po = (*this)[pressureSwitchIdx];
-                //    std::array<Scalar, numPhases> pC = { 0.0 };
-                //    const MaterialLawParams& matParams = problem.materialLawParams(globalDofIdx);
-                //    Scalar so = 1.0 - sw - solventSaturation_();
-                //    computeCapillaryPressures_(pC, so,  /*sg=*/ 0.0, sw, matParams);
-                //    Scalar pw = po + (pC[waterPhaseIdx] - pC[oilPhaseIdx]);
-                //    Scalar rswSat = FluidSystem::waterPvt().saturatedWaterDissolutionFactor(pvtRegionIdx_,
-                //                                                                   T,
-                //                                                                   pw,
-                //                                                                   saltConcentration);
-                //    setPrimaryVarsMeaningWater(Rsw);
-                //    (*this)[Indices::waterSwitchIdx] = rswSat; //primary variable becomes Rsw
-                //    changed = true;
-                //    break;
-                //}
                 break;
             }
             case WaterMeaning::Rvw:
@@ -607,6 +611,14 @@ public:
                 throw std::logic_error("No valid primary variable selected for water");
         }
 
+
+        // if gas phase disappeares:  Sg (gas saturation) -> Rs (fraction of gas in oil phase)
+        // if oil phase disappeares:  Sg (gas saturation) -> Rv (fraction of oil in gas phase)
+        //                            Po (oil pressure )  -> Pg (gas pressure)
+
+        // if gas phase appears: Rs (fraction of gas in oil phase) -> Sg (gas saturation)
+        // if oil phase appears: Rv (fraction of oil in gas phase) -> Sg (gas saturation)
+        //                       Pg (gas pressure )                -> Po (oil pressure)
         switch(primaryVarsMeaningGas()) {
             case GasMeaning::Sg:
             {
@@ -657,6 +669,22 @@ public:
                     (*this)[Indices::compositionSwitchIdx] = std::min(rvMax, rvSat);
                     changed = true;
                 }
+                //if(sg < -eps && sw > eps && FluidSystem::enableDissolvedGasInWater()) {
+                //    const Scalar& po = (*this)[pressureSwitchIdx];
+                //    std::array<Scalar, numPhases> pC = { 0.0 };
+                //    const MaterialLawParams& matParams = problem.materialLawParams(globalDofIdx);
+                //    Scalar so = 1.0 - sw - solventSaturation_();
+                //    computeCapillaryPressures_(pC, so,  /*sg=*/ 0.0, sw, matParams);
+                //    Scalar pw = po + (pC[waterPhaseIdx] - pC[oilPhaseIdx]);
+                //    Scalar rswSat = FluidSystem::waterPvt().saturatedWaterDissolutionFactor(pvtRegionIdx_,
+                //                                                                   T,
+                //                                                                   pw,
+                //                                                                   saltConcentration);
+                //    setPrimaryVarsMeaningWater(Rsw);
+                //    (*this)[Indices::waterSwitchIdx] = rswSat; //primary variable becomes Rsw
+                //    changed = true;
+                //    break;
+                //}
                 break;
             }
             case GasMeaning::Rs:
