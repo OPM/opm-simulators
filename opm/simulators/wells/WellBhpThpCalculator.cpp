@@ -142,6 +142,7 @@ computeBhpAtThpLimitProd(const std::function<std::vector<double>(const double)>&
                          const double maxPerfPress,
                          const double rho,
                          const double alq_value,
+                         const double thp_limit,
                          DeferredLogger& deferred_logger) const
 {
     // Given a VFP function returning bhp as a function of phase
@@ -168,7 +169,6 @@ computeBhpAtThpLimitProd(const std::function<std::vector<double>(const double)>&
     const auto& controls = well_.wellEcl().productionControls(summary_state);
     const auto& table = well_.vfpProperties()->getProd()->getTable(controls.vfp_table_number);
     const double vfp_ref_depth = table.getDatumDepth();
-    const double thp_limit = this->getTHPConstraint(summary_state);
     const double dp = wellhelpers::computeHydrostaticCorrection(well_.refDepth(), vfp_ref_depth, rho, well_.gravity());
 
     auto fbhp = [this, &controls, thp_limit, dp, alq_value](const std::vector<double>& rates) {
