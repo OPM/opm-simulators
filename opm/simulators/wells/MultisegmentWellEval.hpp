@@ -211,7 +211,7 @@ protected:
                                    DeferredLogger& deferred_logger) const;
 
     void handleAccelerationPressureLoss(const int seg,
-                                        WellState& well_state) const;
+                                        WellState& well_state);
 
     // pressure drop for Autonomous ICD segment (WSEGAICD)
     EvalWell pressureDropAutoICD(const int seg,

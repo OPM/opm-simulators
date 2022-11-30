@@ -1299,7 +1299,7 @@ template<typename FluidSystem, typename Indices, typename Scalar>
 void
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 handleAccelerationPressureLoss(const int seg,
-                               WellState& well_state) const
+                               WellState& well_state)
 {
     const double area = this->segmentSet()[seg].crossArea();
     const EvalWell mass_rate = segment_mass_rates_[seg];
