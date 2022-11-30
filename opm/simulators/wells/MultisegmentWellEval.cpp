@@ -1600,7 +1600,7 @@ MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 assembleICDPressureEq(const int seg,
                       const UnitSystem& unit_system,
                       WellState& well_state,
-                      DeferredLogger& deferred_logger) const
+                      DeferredLogger& deferred_logger)
 {
     // TODO: upwinding needs to be taken care of
     // top segment can not be a spiral ICD device

@@ -138,7 +138,7 @@ protected:
     void assembleICDPressureEq(const int seg,
                                const UnitSystem& unit_system,
                                WellState& well_state,
-                               DeferredLogger& deferred_logger) const;
+                               DeferredLogger& deferred_logger);
 
 
     void assemblePressureEq(const int seg,
