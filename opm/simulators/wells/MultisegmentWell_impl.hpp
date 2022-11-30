@@ -727,7 +727,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     addWellContributions(SparseMatrixAdapter& jacobian) const
     {
-        const auto invDuneD = mswellhelpers::invertWithUMFPack<DiagMatWell, BVectorWell>(this->duneD_, this->duneDSolver_);
+        const auto invDuneD = mswellhelpers::invertWithUMFPack<BVectorWell>(this->duneD_, this->duneDSolver_);
 
         // We need to change matrix A as follows
         // A -= C^T D^-1 B
