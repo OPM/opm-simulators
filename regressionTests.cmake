@@ -6,6 +6,18 @@ set(abs_tol 2e-2)
 set(rel_tol 1e-5)
 set(coarse_rel_tol 1e-2)
 
+file(GLOB_RECURSE tests ${OPM_TESTS_ROOT}/regressionTests.json)
+foreach(json_file ${tests})
+  file(READ ${json_file} JSON_STRING)
+  parse_json_common_params()
+  string(JSON size LENGTH ${test_cases})
+  math(EXPR COUNT "${size}-1")
+  foreach(idx RANGE ${COUNT})
+    parse_json_test_definition(${idx})
+    add_test_compareECLFiles(${PARAMS})
+  endforeach()
+endforeach()
+
 add_test_compareECLFiles(CASENAME spe12
                          FILENAME SPE1CASE2
                          SIMULATOR flow
@@ -975,45 +987,3 @@ add_test_compareECLFiles(CASENAME spe1case2_krnum
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR spe1)
-
-add_test_compareECLFiles(CASENAME krnum_02x
-                         FILENAME KRNUM-02X
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR krnum)
-
-add_test_compareECLFiles(CASENAME krnum_02y
-                         FILENAME KRNUM-02Y
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR krnum)
-
-add_test_compareECLFiles(CASENAME krnum_02z
-                         FILENAME KRNUM-02Z
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR krnum)
-
-add_test_compareECLFiles(CASENAME krnum_03x
-                         FILENAME KRNUM-03X
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR krnum)
-
-add_test_compareECLFiles(CASENAME krnum_03y
-                         FILENAME KRNUM-03Y
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR krnum)
-
-add_test_compareECLFiles(CASENAME krnum_03z
-                         FILENAME KRNUM-03Z
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR krnum)
