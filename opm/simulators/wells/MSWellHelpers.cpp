@@ -139,7 +139,7 @@ applyUMFPack(const MatrixType& D,
 #endif // HAVE_UMFPACK
 }
 
-template <typename MatrixType, typename VectorType>
+template <typename VectorType, typename MatrixType>
 Dune::Matrix<typename MatrixType::block_type>
 invertWithUMFPack(const MatrixType& D, std::shared_ptr<Dune::UMFPack<MatrixType> >& linsolver)
 {
@@ -332,7 +332,7 @@ using Mat = Dune::BCRSMatrix<Dune::FieldMatrix<double,Dim,Dim>>;
                                                       std::shared_ptr<Dune::UMFPack<Mat<Dim>>>&, \
                                                       Vec<Dim>); \
     template Dune::Matrix<typename Mat<Dim>::block_type> \
-    invertWithUMFPack<Mat<Dim>,Vec<Dim>>(const Mat<Dim>& D, \
+    invertWithUMFPack<Vec<Dim>,Mat<Dim>>(const Mat<Dim>& D, \
                                          std::shared_ptr<Dune::UMFPack<Mat<Dim>>>&);
 
 INSTANCE_UMF(2)
