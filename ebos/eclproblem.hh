@@ -1738,7 +1738,7 @@ public:
             values[Indices::polymerMoleWeightIdx]= this->polymerMoleWeight_[globalDofIdx];
 
         if constexpr (enableBrine) {
-            if (enableSaltPrecipitation && values.primaryVarsMeaningBrine() == PrimaryVariables::Sp) {
+            if (enableSaltPrecipitation && values.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Sp) {
                 values[Indices::saltConcentrationIdx] = initialFluidStates_[globalDofIdx].saltSaturation();
             }
             else {

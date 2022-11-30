@@ -73,7 +73,7 @@ protected:
     // GFrac     2      1  -1000  -1000                   -1000
     // Spres     3      2      2      2                       1
 
-    static constexpr bool has_water = (Indices::waterSaturationIdx >= 0);
+    static constexpr bool has_water = (Indices::waterSwitchIdx >= 0);
     static constexpr bool has_gas = (Indices::compositionSwitchIdx >= 0);
     static constexpr bool has_oil = (Indices::numPhases - has_gas - has_water) > 0;
 
