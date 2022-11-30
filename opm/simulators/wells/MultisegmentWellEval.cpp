@@ -72,7 +72,7 @@ MultisegmentWellEval(WellInterfaceIndices<FluidSystem,Indices,Scalar>& baseif)
 template<typename FluidSystem, typename Indices, typename Scalar>
 void
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
-initMatrixAndVectors(const int num_cells) const
+initMatrixAndVectors(const int num_cells)
 {
     duneB_.setBuildMode(OffDiagMatWell::row_wise);
     duneC_.setBuildMode(OffDiagMatWell::row_wise);

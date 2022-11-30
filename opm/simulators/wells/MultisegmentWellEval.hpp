@@ -118,7 +118,7 @@ protected:
 
     MultisegmentWellEval(WellInterfaceIndices<FluidSystem,Indices,Scalar>& baseif);
 
-    void initMatrixAndVectors(const int num_cells) const;
+    void initMatrixAndVectors(const int num_cells);
     void initPrimaryVariablesEvaluation() const;
 
     void assembleControlEq(const WellState& well_state,
