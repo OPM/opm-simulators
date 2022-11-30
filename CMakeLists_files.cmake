@@ -171,7 +171,6 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_blackoil_amg.cpp
   tests/test_convergencereport.cpp
   tests/test_deferredlogger.cpp
-  tests/test_ecl_output.cc
   tests/test_eclinterregflows.cpp
   tests/test_equil.cc
   tests/test_flexiblesolver.cpp
@@ -211,7 +210,6 @@ if(ROCALUTION_FOUND)
 endif()
 
 list (APPEND TEST_DATA_FILES
-  tests/SUMMARY_DECK_NON_CONSTANT_POROSITY.DATA
   tests/equil_base.DATA
   tests/equil_capillary.DATA
   tests/equil_capillary_overlap.DATA
