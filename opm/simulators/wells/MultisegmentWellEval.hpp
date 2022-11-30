@@ -144,7 +144,7 @@ protected:
     void assemblePressureEq(const int seg,
                             const UnitSystem& unit_system,
                             WellState& well_state,
-                            DeferredLogger& deferred_logger) const;
+                            DeferredLogger& deferred_logger);
 
     /// check whether the well equations get converged for this well
     ConvergenceReport getWellConvergence(const WellState& well_state,

@@ -1670,7 +1670,7 @@ MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 assemblePressureEq(const int seg,
                    const UnitSystem& unit_system,
                    WellState& well_state,
-                   DeferredLogger& deferred_logger) const
+                   DeferredLogger& deferred_logger)
 {
     switch(this->segmentSet()[seg].segmentType()) {
         case Segment::SegmentType::SICD :
