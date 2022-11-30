@@ -131,7 +131,7 @@ protected:
                            DeferredLogger& deferred_logger);
 
     void assembleDefaultPressureEq(const int seg,
-                                   WellState& well_state) const;
+                                   WellState& well_state);
 
 
     // assemble pressure equation for ICD segments

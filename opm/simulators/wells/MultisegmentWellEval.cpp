@@ -1351,7 +1351,7 @@ template<typename FluidSystem, typename Indices, typename Scalar>
 void
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 assembleDefaultPressureEq(const int seg,
-                          WellState& well_state) const
+                          WellState& well_state)
 {
     assert(seg != 0); // not top segment
 
