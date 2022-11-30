@@ -247,10 +247,10 @@ protected:
 
     // TODO, the following should go to a class for computing purpose
     // two off-diagonal matrices
-    mutable OffDiagMatWell duneB_;
-    mutable OffDiagMatWell duneC_;
+    OffDiagMatWell duneB_;
+    OffDiagMatWell duneC_;
     // "diagonal" matrix for the well. It has offdiagonal entries for inlets and outlets.
-    mutable DiagMatWell duneD_;
+    DiagMatWell duneD_;
 
     /// \brief solver for diagonal matrix
     ///
@@ -258,7 +258,7 @@ protected:
     mutable std::shared_ptr<Dune::UMFPack<DiagMatWell> > duneDSolver_;
 
     // residuals of the well equations
-    mutable BVectorWell resWell_;
+    BVectorWell resWell_;
 
     // the values for the primary varibles
     // based on different solutioin strategies, the wells can have different primary variables
