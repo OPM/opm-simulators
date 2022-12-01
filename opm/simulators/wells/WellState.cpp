@@ -569,7 +569,8 @@ void WellState::reportConnections(std::vector<data::Connection>& connections,
     }
     for( auto& comp : connections) {
         const auto * rates = &perf_data.phase_rates[np*local_comp_index];
-        const auto& connPI  = perf_data.prod_index;
+        const auto * connPI  = &perf_data.prod_index[np*local_comp_index];
+
 
         for( int i = 0; i < np; ++i ) {
             comp.rates.set( phs[ i ], rates[i] );
