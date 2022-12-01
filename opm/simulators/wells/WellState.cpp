@@ -550,7 +550,6 @@ void WellState::reportConnections(std::vector<data::Connection>& connections,
     }
 
     const int np = pu.num_phases;
-    size_t local_comp_index = 0;
     std::vector< rt > phs( np );
     std::vector<rt> pi(np);
     if( pu.phase_used[Water] ) {
@@ -567,9 +566,12 @@ void WellState::reportConnections(std::vector<data::Connection>& connections,
         phs.at( pu.phase_pos[Gas] ) = rt::gas;
         pi .at( pu.phase_pos[Gas] ) = rt::productivity_index_gas;
     }
+
+    size_t local_conn_index = 0;
     for( auto& comp : connections) {
-        const auto * rates = &perf_data.phase_rates[np*local_comp_index];
-        const auto& connPI  = perf_data.prod_index;
+        const auto * rates = &perf_data.phase_rates[np * local_conn_index];
+        const auto * connPI = &perf_data.prod_index[np * local_conn_index];
+
 
         for( int i = 0; i < np; ++i ) {
             comp.rates.set( phs[ i ], rates[i] );
@@ -577,18 +579,18 @@ void WellState::reportConnections(std::vector<data::Connection>& connections,
         }
         if ( pu.has_polymer ) {
             const auto& perf_polymer_rate = perf_data.polymer_rates;
-            comp.rates.set( rt::polymer, perf_polymer_rate[local_comp_index]);
+            comp.rates.set( rt::polymer, perf_polymer_rate[local_conn_index]);
         }
         if ( pu.has_brine ) {
             const auto& perf_brine_rate = perf_data.brine_rates;
-            comp.rates.set( rt::brine, perf_brine_rate[local_comp_index]);
+            comp.rates.set( rt::brine, perf_brine_rate[local_conn_index]);
         }
         if ( pu.has_solvent ) {
             const auto& perf_solvent_rate = perf_data.solvent_rates;
-            comp.rates.set( rt::solvent, perf_solvent_rate[local_comp_index] );
+            comp.rates.set( rt::solvent, perf_solvent_rate[local_conn_index] );
         }
 
-        ++local_comp_index;
+        ++local_conn_index;
     }
 }
 
