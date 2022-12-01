@@ -90,6 +90,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/GlobalWellInfo.cpp
   opm/simulators/wells/GroupState.cpp
   opm/simulators/wells/MSWellHelpers.cpp
+  opm/simulators/wells/MultisegmentWellEquations.cpp
   opm/simulators/wells/MultisegmentWellEval.cpp
   opm/simulators/wells/MultisegmentWellGeneric.cpp
   opm/simulators/wells/ParallelWellInfo.cpp
@@ -371,6 +372,9 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/MSWellHelpers.hpp
   opm/simulators/wells/MultisegmentWell.hpp
   opm/simulators/wells/MultisegmentWell_impl.hpp
+  opm/simulators/wells/MultisegmentWellEquations.hpp
+  opm/simulators/wells/MultisegmentWellEval.hpp
+  opm/simulators/wells/MultisegmentWellGeneric.hpp
   opm/simulators/wells/ParallelWellInfo.hpp
   opm/simulators/wells/PerfData.hpp
   opm/simulators/wells/PerforationData.hpp

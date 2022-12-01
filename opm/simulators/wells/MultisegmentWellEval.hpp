@@ -22,16 +22,12 @@
 #ifndef OPM_MULTISEGMENTWELL_EVAL_HEADER_INCLUDED
 #define OPM_MULTISEGMENTWELL_EVAL_HEADER_INCLUDED
 
+#include <opm/simulators/wells/MultisegmentWellEquations.hpp>
 #include <opm/simulators/wells/MultisegmentWellGeneric.hpp>
 
 #include <opm/material/densead/Evaluation.hpp>
 
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
-
-#include <dune/common/fmatrix.hh>
-#include <dune/common/fvector.hh>
-#include <dune/istl/bcrsmatrix.hh>
-#include <dune/istl/bvector.hh>
 
 #include <array>
 #include <memory>
@@ -91,24 +87,10 @@ protected:
     //  the number of well equations  TODO: it should have a more general strategy for it
     static constexpr int numWellEq = Indices::numPhases + 1;
 
-    // sparsity pattern for the matrices
-    // [A C^T    [x       =  [ res
-    //  B  D ]   x_well]      res_well]
+    using Equations = MultisegmentWellEquations<Scalar,numWellEq,Indices::numEq>;
 
-    // the vector type for the res_well and x_well
-    using VectorBlockWellType = Dune::FieldVector<Scalar, numWellEq>;
-    using BVectorWell = Dune::BlockVector<VectorBlockWellType>;
-
-    using VectorBlockType = Dune::FieldVector<Scalar, Indices::numEq>;
-    using BVector = Dune::BlockVector<VectorBlockType>;
-
-    // the matrix type for the diagonal matrix D
-    using DiagMatrixBlockWellType = Dune::FieldMatrix<Scalar, numWellEq, numWellEq>;
-    using DiagMatWell = Dune::BCRSMatrix<DiagMatrixBlockWellType>;
-
-    // the matrix type for the non-diagonal matrix B and C^T
-    using OffDiagMatrixBlockWellType = Dune::FieldMatrix<Scalar, numWellEq, Indices::numEq>;
-    using OffDiagMatWell = Dune::BCRSMatrix<OffDiagMatrixBlockWellType>;
+    using BVector = typename Equations::BVector;
+    using BVectorWell = typename Equations::BVectorWell;
 
     // TODO: for more efficient implementation, we should have EvalReservoir, EvalWell, and EvalRerservoirAndWell
     //                                                         EvalR (Eval), EvalW, EvalRW
@@ -245,20 +227,7 @@ protected:
 
     const WellInterfaceIndices<FluidSystem,Indices,Scalar>& baseif_;
 
-    // TODO, the following should go to a class for computing purpose
-    // two off-diagonal matrices
-    OffDiagMatWell duneB_;
-    OffDiagMatWell duneC_;
-    // "diagonal" matrix for the well. It has offdiagonal entries for inlets and outlets.
-    DiagMatWell duneD_;
-
-    /// \brief solver for diagonal matrix
-    ///
-    /// This is a shared_ptr as MultisegmentWell is copied in computeWellPotentials...
-    mutable std::shared_ptr<Dune::UMFPack<DiagMatWell> > duneDSolver_;
-
-    // residuals of the well equations
-    BVectorWell resWell_;
+    Equations linSys_; //!< The equation system
 
     // the values for the primary varibles
     // based on different solutioin strategies, the wells can have different primary variables

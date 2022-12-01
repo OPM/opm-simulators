@@ -74,9 +74,9 @@ void
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 initMatrixAndVectors(const int num_cells)
 {
-    duneB_.setBuildMode(OffDiagMatWell::row_wise);
-    duneC_.setBuildMode(OffDiagMatWell::row_wise);
-    duneD_.setBuildMode(DiagMatWell::row_wise);
+    linSys_.duneB_.setBuildMode(Equations::OffDiagMatWell::row_wise);
+    linSys_.duneC_.setBuildMode(Equations::OffDiagMatWell::row_wise);
+    linSys_.duneD_.setBuildMode(Equations::DiagMatWell::row_wise);
 
     // set the size and patterns for all the matrices and vectors
     // [A C^T    [x    =  [ res
@@ -89,13 +89,14 @@ initMatrixAndVectors(const int num_cells)
         for (const std::vector<int>& inlets : this->segment_inlets_) {
             nnz_d += 2 * inlets.size();
         }
-        duneD_.setSize(this->numberOfSegments(), this->numberOfSegments(), nnz_d);
+        linSys_.duneD_.setSize(this->numberOfSegments(), this->numberOfSegments(), nnz_d);
     }
-    duneB_.setSize(this->numberOfSegments(), num_cells, baseif_.numPerfs());
-    duneC_.setSize(this->numberOfSegments(), num_cells, baseif_.numPerfs());
+    linSys_.duneB_.setSize(this->numberOfSegments(), num_cells, baseif_.numPerfs());
+    linSys_.duneC_.setSize(this->numberOfSegments(), num_cells, baseif_.numPerfs());
 
     // we need to add the off diagonal ones
-    for (auto row = duneD_.createbegin(), end = duneD_.createend(); row != end; ++row) {
+    for (auto row = linSys_.duneD_.createbegin(),
+              end = linSys_.duneD_.createend(); row != end; ++row) {
         // the number of the row corrspnds to the segment now
         const int seg = row.index();
         // adding the item related to outlet relation
@@ -116,7 +117,8 @@ initMatrixAndVectors(const int num_cells)
     }
 
     // make the C matrix
-    for (auto row = duneC_.createbegin(), end = duneC_.createend(); row != end; ++row) {
+    for (auto row = linSys_.duneC_.createbegin(),
+              end = linSys_.duneC_.createend(); row != end; ++row) {
         // the number of the row corresponds to the segment number now.
         for (const int& perf : this->segment_perforations_[row.index()]) {
             const int cell_idx = baseif_.cells()[perf];
@@ -125,7 +127,8 @@ initMatrixAndVectors(const int num_cells)
     }
 
     // make the B^T matrix
-    for (auto row = duneB_.createbegin(), end = duneB_.createend(); row != end; ++row) {
+    for (auto row = linSys_.duneB_.createbegin(),
+              end = linSys_.duneB_.createend(); row != end; ++row) {
         // the number of the row corresponds to the segment number now.
         for (const int& perf : this->segment_perforations_[row.index()]) {
             const int cell_idx = baseif_.cells()[perf];
@@ -133,7 +136,7 @@ initMatrixAndVectors(const int num_cells)
         }
     }
 
-    resWell_.resize(this->numberOfSegments());
+    linSys_.resWell_.resize(this->numberOfSegments());
 
     primary_variables_.resize(this->numberOfSegments());
     primary_variables_evaluation_.resize(this->numberOfSegments());
@@ -172,7 +175,7 @@ getWellConvergence(const WellState& well_state,
     std::vector<std::vector<double>> abs_residual(this->numberOfSegments(), std::vector<double>(numWellEq, 0.0));
     for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
         for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
-            abs_residual[seg][eq_idx] = std::abs(resWell_[seg][eq_idx]);
+            abs_residual[seg][eq_idx] = std::abs(linSys_.resWell_[seg][eq_idx]);
         }
     }
 
@@ -237,7 +240,7 @@ getWellConvergence(const WellState& well_state,
                                    tolerance_wells,
                                    tolerance_wells,
                                    max_residual_allowed},
-                                  std::abs(resWell_[0][SPres]),
+                                  std::abs(linSys_.resWell_[0][SPres]),
                                   report,
                                   deferred_logger);
 
@@ -455,11 +458,11 @@ recoverSolutionWell(const BVector& x, BVectorWell& xw) const
 {
     if (!baseif_.isOperableAndSolvable() && !baseif_.wellIsStopped()) return;
 
-    BVectorWell resWell = resWell_;
+    BVectorWell resWell = linSys_.resWell_;
     // resWell = resWell - B * x
-    duneB_.mmv(x, resWell);
+    linSys_.duneB_.mmv(x, resWell);
     // xw = D^-1 * resWell
-    xw = mswellhelpers::applyUMFPack(duneD_, duneDSolver_, resWell);
+    xw = mswellhelpers::applyUMFPack(linSys_.duneD_, linSys_.duneDSolver_, resWell);
 }
 
 template<typename FluidSystem, typename Indices, typename Scalar>
@@ -1289,9 +1292,9 @@ assembleControlEq(const WellState& well_state,
     }
 
     // using control_eq to update the matrix and residuals
-    resWell_[0][SPres] = control_eq.value();
+    linSys_.resWell_[0][SPres] = control_eq.value();
     for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-        duneD_[0][0][SPres][pv_idx] = control_eq.derivative(pv_idx + Indices::numEq);
+        linSys_.duneD_[0][0][SPres][pv_idx] = control_eq.derivative(pv_idx + Indices::numEq);
     }
 }
 
@@ -1336,14 +1339,14 @@ handleAccelerationPressureLoss(const int seg,
     auto& segments = well_state.well(baseif_.indexOfWell()).segments;
     segments.pressure_drop_accel[seg] = accelerationPressureLoss.value();
 
-    resWell_[seg][SPres] -= accelerationPressureLoss.value();
-    duneD_[seg][seg][SPres][SPres] -= accelerationPressureLoss.derivative(SPres + Indices::numEq);
-    duneD_[seg][seg][SPres][WQTotal] -= accelerationPressureLoss.derivative(WQTotal + Indices::numEq);
+    linSys_.resWell_[seg][SPres] -= accelerationPressureLoss.value();
+    linSys_.duneD_[seg][seg][SPres][SPres] -= accelerationPressureLoss.derivative(SPres + Indices::numEq);
+    linSys_.duneD_[seg][seg][SPres][WQTotal] -= accelerationPressureLoss.derivative(WQTotal + Indices::numEq);
     if (has_wfrac_variable) {
-        duneD_[seg][seg_upwind][SPres][WFrac] -= accelerationPressureLoss.derivative(WFrac + Indices::numEq);
+        linSys_.duneD_[seg][seg_upwind][SPres][WFrac] -= accelerationPressureLoss.derivative(WFrac + Indices::numEq);
     }
     if (has_gfrac_variable) {
-        duneD_[seg][seg_upwind][SPres][GFrac] -= accelerationPressureLoss.derivative(GFrac + Indices::numEq);
+        linSys_.duneD_[seg][seg_upwind][SPres][GFrac] -= accelerationPressureLoss.derivative(GFrac + Indices::numEq);
     }
 }
 
@@ -1374,24 +1377,24 @@ assembleDefaultPressureEq(const int seg,
         segments.pressure_drop_friction[seg] = friction_pressure_drop.value();
     }
 
-    resWell_[seg][SPres] = pressure_equation.value();
+    linSys_.resWell_[seg][SPres] = pressure_equation.value();
     const int seg_upwind = upwinding_segments_[seg];
-    duneD_[seg][seg][SPres][SPres] += pressure_equation.derivative(SPres + Indices::numEq);
-    duneD_[seg][seg][SPres][WQTotal] += pressure_equation.derivative(WQTotal + Indices::numEq);
+    linSys_.duneD_[seg][seg][SPres][SPres] += pressure_equation.derivative(SPres + Indices::numEq);
+    linSys_.duneD_[seg][seg][SPres][WQTotal] += pressure_equation.derivative(WQTotal + Indices::numEq);
     if (has_wfrac_variable) {
-        duneD_[seg][seg_upwind][SPres][WFrac] += pressure_equation.derivative(WFrac + Indices::numEq);
+        linSys_.duneD_[seg][seg_upwind][SPres][WFrac] += pressure_equation.derivative(WFrac + Indices::numEq);
     }
     if (has_gfrac_variable) {
-        duneD_[seg][seg_upwind][SPres][GFrac] += pressure_equation.derivative(GFrac + Indices::numEq);
+        linSys_.duneD_[seg][seg_upwind][SPres][GFrac] += pressure_equation.derivative(GFrac + Indices::numEq);
     }
 
     // contribution from the outlet segment
     const int outlet_segment_index = this->segmentNumberToIndex(this->segmentSet()[seg].outletSegment());
     const EvalWell outlet_pressure = getSegmentPressure(outlet_segment_index);
 
-    resWell_[seg][SPres] -= outlet_pressure.value();
+    linSys_.resWell_[seg][SPres] -= outlet_pressure.value();
     for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-        duneD_[seg][outlet_segment_index][SPres][pv_idx] = -outlet_pressure.derivative(pv_idx + Indices::numEq);
+        linSys_.duneD_[seg][outlet_segment_index][SPres][pv_idx] = -outlet_pressure.derivative(pv_idx + Indices::numEq);
     }
 
     if (this->accelerationalPressureLossConsidered()) {
@@ -1609,8 +1612,8 @@ assembleICDPressureEq(const int seg,
     if (const auto& segment = this->segmentSet()[seg];
        (segment.segmentType() == Segment::SegmentType::VALVE) &&
        (segment.valve().status() == Opm::ICDStatus::SHUT) ) { // we use a zero rate equation to handle SHUT valve
-        resWell_[seg][SPres] = this->primary_variables_evaluation_[seg][WQTotal].value();
-        duneD_[seg][seg][SPres][WQTotal] = 1.;
+        linSys_.resWell_[seg][SPres] = this->primary_variables_evaluation_[seg][WQTotal].value();
+        linSys_.duneD_[seg][seg][SPres][WQTotal] = 1.;
 
         auto& ws = well_state.well(baseif_.indexOfWell());
         ws.segments.pressure_drop_friction[seg] = 0.;
@@ -1644,23 +1647,23 @@ assembleICDPressureEq(const int seg,
     ws.segments.pressure_drop_friction[seg] = icd_pressure_drop.value();
 
     const int seg_upwind = upwinding_segments_[seg];
-    resWell_[seg][SPres] = pressure_equation.value();
-    duneD_[seg][seg][SPres][SPres] += pressure_equation.derivative(SPres + Indices::numEq);
-    duneD_[seg][seg][SPres][WQTotal] += pressure_equation.derivative(WQTotal + Indices::numEq);
+    linSys_.resWell_[seg][SPres] = pressure_equation.value();
+    linSys_.duneD_[seg][seg][SPres][SPres] += pressure_equation.derivative(SPres + Indices::numEq);
+    linSys_.duneD_[seg][seg][SPres][WQTotal] += pressure_equation.derivative(WQTotal + Indices::numEq);
     if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-        duneD_[seg][seg_upwind][SPres][WFrac] += pressure_equation.derivative(WFrac + Indices::numEq);
+        linSys_.duneD_[seg][seg_upwind][SPres][WFrac] += pressure_equation.derivative(WFrac + Indices::numEq);
     }
     if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-        duneD_[seg][seg_upwind][SPres][GFrac] += pressure_equation.derivative(GFrac + Indices::numEq);
+        linSys_.duneD_[seg][seg_upwind][SPres][GFrac] += pressure_equation.derivative(GFrac + Indices::numEq);
     }
 
     // contribution from the outlet segment
     const int outlet_segment_index = this->segmentNumberToIndex(this->segmentSet()[seg].outletSegment());
     const EvalWell outlet_pressure = getSegmentPressure(outlet_segment_index);
 
-    resWell_[seg][SPres] -= outlet_pressure.value();
+    linSys_.resWell_[seg][SPres] -= outlet_pressure.value();
     for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-        duneD_[seg][outlet_segment_index][SPres][pv_idx] = -outlet_pressure.derivative(pv_idx + Indices::numEq);
+        linSys_.duneD_[seg][outlet_segment_index][SPres][pv_idx] = -outlet_pressure.derivative(pv_idx + Indices::numEq);
     }
 }
 
@@ -1697,10 +1700,10 @@ getFiniteWellResiduals(const std::vector<Scalar>& B_avg,
         for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
             double residual = 0.;
             if (eq_idx < baseif_.numComponents()) {
-                residual = std::abs(resWell_[seg][eq_idx]) * B_avg[eq_idx];
+                residual = std::abs(linSys_.resWell_[seg][eq_idx]) * B_avg[eq_idx];
             } else {
                 if (seg > 0) {
-                    residual = std::abs(resWell_[seg][eq_idx]);
+                    residual = std::abs(linSys_.resWell_[seg][eq_idx]);
                 }
             }
             if (std::isnan(residual) || std::isinf(residual)) {
@@ -1717,7 +1720,7 @@ getFiniteWellResiduals(const std::vector<Scalar>& B_avg,
 
     // handling the control equation residual
     {
-        const double control_residual = std::abs(resWell_[0][numWellEq - 1]);
+        const double control_residual = std::abs(linSys_.resWell_[0][numWellEq - 1]);
         if (std::isnan(control_residual) || std::isinf(control_residual)) {
            deferred_logger.debug("nan or inf value for control residal get for well " + baseif_.name());
            return {false, residuals};
@@ -1863,16 +1866,16 @@ void
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 addWellContribution(WellContributions& wellContribs) const
 {
-    unsigned int Mb = duneB_.N();       // number of blockrows in duneB_, duneC_ and duneD_
-    unsigned int BnumBlocks = duneB_.nonzeroes();
-    unsigned int DnumBlocks = duneD_.nonzeroes();
+    unsigned int Mb = linSys_.duneB_.N();       // number of blockrows in duneB_, duneC_ and duneD_
+    unsigned int BnumBlocks = linSys_.duneB_.nonzeroes();
+    unsigned int DnumBlocks = linSys_.duneD_.nonzeroes();
 
     // duneC
     std::vector<unsigned int> Ccols;
     std::vector<double> Cvals;
     Ccols.reserve(BnumBlocks);
     Cvals.reserve(BnumBlocks * Indices::numEq * numWellEq);
-    for (auto rowC = duneC_.begin(); rowC != duneC_.end(); ++rowC) {
+    for (auto rowC = linSys_.duneC_.begin(); rowC != linSys_.duneC_.end(); ++rowC) {
         for (auto colC = rowC->begin(), endC = rowC->end(); colC != endC; ++colC) {
             Ccols.emplace_back(colC.index());
             for (int i = 0; i < numWellEq; ++i) {
@@ -1884,7 +1887,7 @@ addWellContribution(WellContributions& wellContribs) const
     }
 
     // duneD
-    Dune::UMFPack<DiagMatWell> umfpackMatrix(duneD_, 0);
+    Dune::UMFPack<typename Equations::DiagMatWell> umfpackMatrix(linSys_.duneD_, 0);
     double *Dvals = umfpackMatrix.getInternalMatrix().getValues();
     auto *Dcols = umfpackMatrix.getInternalMatrix().getColStart();
     auto *Drows = umfpackMatrix.getInternalMatrix().getRowIndex();
@@ -1898,7 +1901,7 @@ addWellContribution(WellContributions& wellContribs) const
     Bvals.reserve(BnumBlocks * Indices::numEq * numWellEq);
     Brows.emplace_back(0);
     unsigned int sumBlocks = 0;
-    for (auto rowB = duneB_.begin(); rowB != duneB_.end(); ++rowB) {
+    for (auto rowB = linSys_.duneB_.begin(); rowB != linSys_.duneB_.end(); ++rowB) {
         int sizeRow = 0;
         for (auto colB = rowB->begin(), endB = rowB->end(); colB != endB; ++colB) {
             Bcols.emplace_back(colB.index());
