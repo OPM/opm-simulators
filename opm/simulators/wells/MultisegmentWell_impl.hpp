@@ -519,8 +519,7 @@ namespace Opm
 
         // We assemble the well equations, then we check the convergence,
         // which is why we do not put the assembleWellEq here.
-        const BVectorWell dx_well = mswellhelpers::applyUMFPack(this->linSys_.duneD_,
-                                                                this->linSys_.duneDSolver_,
+        const BVectorWell dx_well = mswellhelpers::applyUMFPack(*this->linSys_.duneDSolver_,
                                                                 this->linSys_.resWell_);
 
         updateWellState(dx_well, well_state, deferred_logger);
@@ -722,7 +721,9 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     addWellContributions(SparseMatrixAdapter& jacobian) const
     {
-        const auto invDuneD = mswellhelpers::invertWithUMFPack<BVectorWell>(this->linSys_.duneD_, this->linSys_.duneDSolver_);
+        const auto invDuneD = mswellhelpers::invertWithUMFPack<BVectorWell>(numWellEq,
+                                                                            Indices::numEq,
+                                                                            *this->linSys_.duneDSolver_);
 
         // We need to change matrix A as follows
         // A -= C^T D^-1 B
@@ -1494,8 +1495,7 @@ namespace Opm
 
             assembleWellEqWithoutIteration(ebosSimulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
 
-            const BVectorWell dx_well = mswellhelpers::applyUMFPack(this->linSys_.duneD_,
-                                                                    this->linSys_.duneDSolver_,
+            const BVectorWell dx_well = mswellhelpers::applyUMFPack(*this->linSys_.duneDSolver_,
                                                                     this->linSys_.resWell_);
 
             if (it > this->param_.strict_inner_iter_wells_) {

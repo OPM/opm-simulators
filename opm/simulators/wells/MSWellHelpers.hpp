@@ -42,8 +42,7 @@ namespace mswellhelpers
     /// Applies umfpack and checks for singularity
     template <typename MatrixType, typename VectorType>
     VectorType
-    applyUMFPack(const MatrixType& D,
-                 std::shared_ptr<Dune::UMFPack<MatrixType>>& linsolver,
+    applyUMFPack(Dune::UMFPack<MatrixType>& linsolver,
                  VectorType x);
 
 
@@ -51,8 +50,9 @@ namespace mswellhelpers
     /// Applies umfpack and checks for singularity
     template <typename VectorType, typename MatrixType>
     Dune::Matrix<typename MatrixType::block_type>
-    invertWithUMFPack(const MatrixType& D,
-                      std::shared_ptr<Dune::UMFPack<MatrixType> >& linsolver);
+    invertWithUMFPack(const int size,
+                      const int bsize,
+                      Dune::UMFPack<MatrixType>& linsolver);
 
 
 

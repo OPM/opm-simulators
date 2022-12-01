@@ -130,7 +130,7 @@ apply(const BVector& x, BVector& Ax) const
     duneB_.mv(x, Bx);
 
     // invDBx = duneD^-1 * Bx_
-    const BVectorWell invDBx = mswellhelpers::applyUMFPack(duneD_, duneDSolver_, Bx);
+    const BVectorWell invDBx = mswellhelpers::applyUMFPack(*duneDSolver_, Bx);
 
     // Ax = Ax - duneC_^T * invDBx
     duneC_.mmtv(invDBx,Ax);
@@ -141,7 +141,7 @@ void MultisegmentWellEquations<Scalar,numWellEq,numEq>::
 apply(BVector& r) const
 {
     // invDrw_ = duneD^-1 * resWell_
-    const BVectorWell invDrw = mswellhelpers::applyUMFPack(duneD_, duneDSolver_, resWell_);
+    const BVectorWell invDrw = mswellhelpers::applyUMFPack(*duneDSolver_, resWell_);
     // r = r - duneC_^T * invDrw
     duneC_.mmtv(invDrw, r);
 }

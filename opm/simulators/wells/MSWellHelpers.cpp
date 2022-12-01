@@ -100,16 +100,10 @@ namespace mswellhelpers
     /// Applies umfpack and checks for singularity
 template <typename MatrixType, typename VectorType>
 VectorType
-applyUMFPack(const MatrixType& D,
-             std::shared_ptr<Dune::UMFPack<MatrixType>>& linsolver,
+applyUMFPack(Dune::UMFPack<MatrixType>& linsolver,
              VectorType x)
 {
 #if HAVE_UMFPACK
-    if (!linsolver)
-    {
-        linsolver = std::make_shared<Dune::UMFPack<MatrixType>>(D, 0);
-    }
-
     // The copy of x seems mandatory for calling UMFPack!
     VectorType y(x.size());
     y = 0.;
@@ -118,7 +112,7 @@ applyUMFPack(const MatrixType& D,
     Dune::InverseOperatorResult res;
 
     // Solve
-    linsolver->apply(y, x, res);
+    linsolver.apply(y, x, res);
 
     // Checking if there is any inf or nan in y
     // it will be the solution before we find a way to catch the singularity of the matrix
@@ -141,24 +135,24 @@ applyUMFPack(const MatrixType& D,
 
 template <typename VectorType, typename MatrixType>
 Dune::Matrix<typename MatrixType::block_type>
-invertWithUMFPack(const MatrixType& D, std::shared_ptr<Dune::UMFPack<MatrixType> >& linsolver)
+invertWithUMFPack(const int size,
+                  const int bsize,
+                  Dune::UMFPack<MatrixType>& linsolver)
 {
 #if HAVE_UMFPACK
-    const int sz = D.M();
-    const int bsz = D[0][0].M();
-    VectorType e(sz);
+    VectorType e(size);
     e = 0.0;
 
     // Make a full block matrix.
-    Dune::Matrix<typename MatrixType::block_type> inv(sz, sz);
+    Dune::Matrix<typename MatrixType::block_type> inv(size, size);
 
     // Create inverse by passing basis vectors to the solver.
-    for (int ii = 0; ii < sz; ++ii) {
-        for (int jj = 0; jj < bsz; ++jj) {
+    for (int ii = 0; ii < size; ++ii) {
+        for (int jj = 0; jj < bsize; ++jj) {
             e[ii][jj] = 1.0;
-            auto col = applyUMFPack(D, linsolver, e);
-            for (int cc = 0; cc < sz; ++cc) {
-                for (int dd = 0; dd < bsz; ++dd) {
+            auto col = applyUMFPack(linsolver, e);
+            for (int cc = 0; cc < size; ++cc) {
+                for (int dd = 0; dd < bsize; ++dd) {
                     inv[cc][ii][dd][jj] = col[cc][dd];
                 }
             }
@@ -328,12 +322,10 @@ template<int Dim>
 using Mat = Dune::BCRSMatrix<Dune::FieldMatrix<double,Dim,Dim>>;
 
 #define INSTANCE_UMF(Dim) \
-    template Vec<Dim> applyUMFPack<Mat<Dim>,Vec<Dim>>(const Mat<Dim>&, \
-                                                      std::shared_ptr<Dune::UMFPack<Mat<Dim>>>&, \
+    template Vec<Dim> applyUMFPack<Mat<Dim>,Vec<Dim>>(Dune::UMFPack<Mat<Dim>>&, \
                                                       Vec<Dim>); \
     template Dune::Matrix<typename Mat<Dim>::block_type> \
-    invertWithUMFPack<Vec<Dim>,Mat<Dim>>(const Mat<Dim>& D, \
-                                         std::shared_ptr<Dune::UMFPack<Mat<Dim>>>&);
+    invertWithUMFPack<Vec<Dim>,Mat<Dim>>(const int, const int, Dune::UMFPack<Mat<Dim>>&);
 
 INSTANCE_UMF(2)
 INSTANCE_UMF(3)

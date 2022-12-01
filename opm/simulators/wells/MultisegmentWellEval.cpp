@@ -400,7 +400,7 @@ recoverSolutionWell(const BVector& x, BVectorWell& xw) const
     // resWell = resWell - B * x
     linSys_.duneB_.mmv(x, resWell);
     // xw = D^-1 * resWell
-    xw = mswellhelpers::applyUMFPack(linSys_.duneD_, linSys_.duneDSolver_, resWell);
+    xw = mswellhelpers::applyUMFPack(*linSys_.duneDSolver_, resWell);
 }
 
 template<typename FluidSystem, typename Indices, typename Scalar>
