@@ -40,18 +40,15 @@ class WellState;
 template <typename Scalar>
 class MultisegmentWellGeneric
 {
-protected:
-    MultisegmentWellGeneric(WellInterfaceGeneric& baseif);
+public:
+    //! \brief Returns the inlet segments for each segment.
+    const std::vector<std::vector<int>>& segmentInlets() const;
 
-    // scale the segment rates and pressure based on well rates and bhp
-    void scaleSegmentRatesWithWellRates(WellState& well_state) const;
-    void scaleSegmentPressuresWithBhp(WellState& well_state) const;
+    //! \brief Returns the perforation index for each segment.
+    const std::vector<std::vector<int>>& segmentPerforations() const;
 
     // get the WellSegments from the well_ecl_
     const WellSegments& segmentSet() const;
-
-    // components of the pressure drop to be included
-    WellSegments::CompPressureDrop compPressureDrop() const;
 
     // segment number is an ID of the segment, it is specified in the deck
     // get the loation of the segment with a segment number in the segmentSet
@@ -59,6 +56,16 @@ protected:
 
     /// number of segments for this well
     int numberOfSegments() const;
+
+protected:
+    MultisegmentWellGeneric(WellInterfaceGeneric& baseif);
+
+    // scale the segment rates and pressure based on well rates and bhp
+    void scaleSegmentRatesWithWellRates(WellState& well_state) const;
+    void scaleSegmentPressuresWithBhp(WellState& well_state) const;
+
+    // components of the pressure drop to be included
+    WellSegments::CompPressureDrop compPressureDrop() const;
 
     /// Detect oscillation or stagnation based on the residual measure history
     void detectOscillations(const std::vector<double>& measure_history,
@@ -82,7 +89,7 @@ protected:
     // belonging to this segment
     std::vector<std::vector<int>> segment_perforations_;
 
-    // the inlet segments for each segment. It is for convinience and efficiency reason
+    // the inlet segments for each segment. It is for convenience and efficiency reason
     std::vector<std::vector<int>> segment_inlets_;
 
     std::vector<double> segment_depth_diffs_;
