@@ -310,6 +310,11 @@ private:
     // Construct the BCRS matrix for the Jacobian of the residual function
     void createMatrix_()
     {
+        if (!neighborInfo_.empty()) {
+            // It is ok to call this function multiple times, but it
+            // should not do anything if already called.
+            return;
+        }
         const auto& model = model_();
         Stencil stencil(gridView_(), model_().dofMapper());
 
@@ -505,6 +510,12 @@ private:
 
     void updateStoredTransmissibilities()
     {
+        if (neighborInfo_.empty()) {
+            // This function was called before createMatrix_() was called.
+            // We call initFirstIteration_(), not createMatrix_(), because
+            // that will also initialize the residual consistently.
+            initFirstIteration_();
+        }
         unsigned numCells = model_().numTotalDof();
 #ifdef _OPENMP
 #pragma omp parallel for
