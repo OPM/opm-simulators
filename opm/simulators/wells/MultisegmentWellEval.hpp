@@ -118,7 +118,7 @@ protected:
 
     MultisegmentWellEval(WellInterfaceIndices<FluidSystem,Indices,Scalar>& baseif);
 
-    void initMatrixAndVectors(const int num_cells) const;
+    void initMatrixAndVectors(const int num_cells);
     void initPrimaryVariablesEvaluation() const;
 
     void assembleControlEq(const WellState& well_state,
@@ -131,20 +131,20 @@ protected:
                            DeferredLogger& deferred_logger);
 
     void assembleDefaultPressureEq(const int seg,
-                                   WellState& well_state) const;
+                                   WellState& well_state);
 
 
     // assemble pressure equation for ICD segments
     void assembleICDPressureEq(const int seg,
                                const UnitSystem& unit_system,
                                WellState& well_state,
-                               DeferredLogger& deferred_logger) const;
+                               DeferredLogger& deferred_logger);
 
 
     void assemblePressureEq(const int seg,
                             const UnitSystem& unit_system,
                             WellState& well_state,
-                            DeferredLogger& deferred_logger) const;
+                            DeferredLogger& deferred_logger);
 
     /// check whether the well equations get converged for this well
     ConvergenceReport getWellConvergence(const WellState& well_state,
@@ -211,7 +211,7 @@ protected:
                                    DeferredLogger& deferred_logger) const;
 
     void handleAccelerationPressureLoss(const int seg,
-                                        WellState& well_state) const;
+                                        WellState& well_state);
 
     // pressure drop for Autonomous ICD segment (WSEGAICD)
     EvalWell pressureDropAutoICD(const int seg,
@@ -247,10 +247,10 @@ protected:
 
     // TODO, the following should go to a class for computing purpose
     // two off-diagonal matrices
-    mutable OffDiagMatWell duneB_;
-    mutable OffDiagMatWell duneC_;
+    OffDiagMatWell duneB_;
+    OffDiagMatWell duneC_;
     // "diagonal" matrix for the well. It has offdiagonal entries for inlets and outlets.
-    mutable DiagMatWell duneD_;
+    DiagMatWell duneD_;
 
     /// \brief solver for diagonal matrix
     ///
@@ -258,7 +258,7 @@ protected:
     mutable std::shared_ptr<Dune::UMFPack<DiagMatWell> > duneDSolver_;
 
     // residuals of the well equations
-    mutable BVectorWell resWell_;
+    BVectorWell resWell_;
 
     // the values for the primary varibles
     // based on different solutioin strategies, the wells can have different primary variables

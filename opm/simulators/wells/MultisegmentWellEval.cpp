@@ -72,7 +72,7 @@ MultisegmentWellEval(WellInterfaceIndices<FluidSystem,Indices,Scalar>& baseif)
 template<typename FluidSystem, typename Indices, typename Scalar>
 void
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
-initMatrixAndVectors(const int num_cells) const
+initMatrixAndVectors(const int num_cells)
 {
     duneB_.setBuildMode(OffDiagMatWell::row_wise);
     duneC_.setBuildMode(OffDiagMatWell::row_wise);
@@ -1299,7 +1299,7 @@ template<typename FluidSystem, typename Indices, typename Scalar>
 void
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 handleAccelerationPressureLoss(const int seg,
-                               WellState& well_state) const
+                               WellState& well_state)
 {
     const double area = this->segmentSet()[seg].crossArea();
     const EvalWell mass_rate = segment_mass_rates_[seg];
@@ -1351,7 +1351,7 @@ template<typename FluidSystem, typename Indices, typename Scalar>
 void
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 assembleDefaultPressureEq(const int seg,
-                          WellState& well_state) const
+                          WellState& well_state)
 {
     assert(seg != 0); // not top segment
 
@@ -1600,7 +1600,7 @@ MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 assembleICDPressureEq(const int seg,
                       const UnitSystem& unit_system,
                       WellState& well_state,
-                      DeferredLogger& deferred_logger) const
+                      DeferredLogger& deferred_logger)
 {
     // TODO: upwinding needs to be taken care of
     // top segment can not be a spiral ICD device
@@ -1670,7 +1670,7 @@ MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 assemblePressureEq(const int seg,
                    const UnitSystem& unit_system,
                    WellState& well_state,
-                   DeferredLogger& deferred_logger) const
+                   DeferredLogger& deferred_logger)
 {
     switch(this->segmentSet()[seg].segmentType()) {
         case Segment::SegmentType::SICD :
