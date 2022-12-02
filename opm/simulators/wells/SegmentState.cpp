@@ -1,5 +1,5 @@
 /*
-  Copyright Equinor ASA 2021
+  Copyright Equinor ASA 2021, 2022.
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -55,6 +55,8 @@ namespace Opm
 
 SegmentState::SegmentState(int num_phases, const WellSegments& segments)
     : rates                    (segments.size() * num_phases)
+    , dissolved_gas_rate       (segments.size())
+    , vaporized_oil_rate       (segments.size())
     , phase_resv_rates         (segments.size() * num_phases)
     , phase_velocity           (segments.size() * num_phases)
     , phase_holdup             (segments.size() * num_phases)

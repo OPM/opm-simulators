@@ -22,6 +22,7 @@
 
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/simulators/wells/GasLiftSingleWellGeneric.hpp>
+#include <opm/simulators/wells/GroupState.hpp>
 
 #include <dune/common/version.hh>
 #include <dune/common/parallel/mpihelper.hh>
@@ -66,8 +67,10 @@ public:
         const SummaryState& summary_state,
         DeferredLogger& deferred_logger,
         WellState& well_state,
+        const GroupState& group_state,
         GLiftProdWells& prod_wells,
         GLiftOptWells& glift_wells,
+        GasLiftGroupInfo& group_info,
         GLiftWellStateMap& state_map,
         bool glift_debug
     );
@@ -76,7 +79,7 @@ protected:
     void addOrRemoveALQincrement_(
         GradMap& grad_map, const std::string& well_name, bool add);
     std::optional<GradInfo> calcIncOrDecGrad_(
-        const std::string name, const GasLiftSingleWell& gs_well, bool increase);
+        const std::string name, const GasLiftSingleWell& gs_well, const std::string& gr_name_dont_limit, bool increase);
     bool checkRateAlreadyLimited_(GasLiftWellState& state, bool increase);
     GradInfo deleteDecGradItem_(const std::string& name);
     GradInfo deleteIncGradItem_(const std::string& name);
@@ -86,21 +89,17 @@ protected:
     void displayDebugMessage_(const std::string& msg, const std::string& group_name);
     void displayWarning_(const std::string& msg, const std::string& group_name);
     void displayWarning_(const std::string& msg);
-    std::tuple<double, double, double> getCurrentGroupRates_(
-        const Group& group);
-    std::array<double,3> getCurrentGroupRatesRecursive_(
-        const Group& group);
-    std::tuple<double, double, double> getCurrentWellRates_(
-        const std::string& well_name, const std::string& group_name);
+    std::tuple<double, double, double, double> getCurrentGroupRates_(const Group& group);
+    std::optional<double> getGroupMaxALQ_(const Group &group);
+    std::optional<double> getGroupMaxTotalGas_(const Group &group);
     std::vector<GasLiftSingleWell *> getGroupGliftWells_(
         const Group& group);
     void getGroupGliftWellsRecursive_(
         const Group& group, std::vector<GasLiftSingleWell *>& wells);
-    std::pair<double, double> getWellRates_(const WellInterfaceGeneric& well);
     void optimizeGroup_(const Group& group);
     void optimizeGroupsRecursive_(const Group& group);
     void recalculateGradientAndUpdateData_(
-        GradPairItr& grad_itr, bool increase,
+        GradPairItr& grad_itr, const std::string& gr_name_dont_limit, bool increase,
         std::vector<GradPair>& grads, std::vector<GradPair>& other_grads);
     void redistributeALQ_(
         std::vector<GasLiftSingleWell *>& wells,  const Group& group,
@@ -124,6 +123,7 @@ protected:
 
     GLiftProdWells& prod_wells_;
     GLiftOptWells& stage1_wells_;
+    GasLiftGroupInfo& group_info_;
     GLiftWellStateMap& well_state_map_;
 
     int report_step_idx_;
@@ -169,38 +169,50 @@ protected:
 
     struct SurplusState {
         SurplusState( GasLiftStage2& parent_, const Group& group_,
-            double oil_rate_, double gas_rate_, double alq_, double min_eco_grad_,
-            double oil_target_, double gas_target_,
-            std::optional<double> max_glift_) :
+              double oil_rate_, double gas_rate_, double water_rate_, double alq_,
+              double min_eco_grad_,
+              double oil_target_, double gas_target_, double water_target_, double liquid_target_,
+              std::optional<double> max_glift_, std::optional<double> max_total_gas_) :
             parent{parent_},
             group{group_},
             oil_rate{oil_rate_},
             gas_rate{gas_rate_},
+            water_rate{water_rate_},
             alq{alq_},
             min_eco_grad{min_eco_grad_},
             oil_target{oil_target_},
             gas_target{gas_target_},
+            water_target(water_target_),
+            liquid_target{liquid_target_},
             max_glift{max_glift_},
+            max_total_gas{max_total_gas_},
             it{0}
         {}
         GasLiftStage2 &parent;
         const Group &group;
         double oil_rate;
         double gas_rate;
+        double water_rate;
         double alq;
         const double min_eco_grad;
         const double oil_target;
         const double gas_target;
+        const double water_target;
+        const double liquid_target;
         std::optional<double> max_glift;
+        std::optional<double> max_total_gas;
         int it;
 
         void addOrRemoveALQincrement(
             GradMap &grad_map, const std::string& well_name, bool add);
-        bool checkALQlimit();
+        bool checkALQlimit(double delta_alq, double delta_gas);
         bool checkEcoGradient(const std::string& well_name, double eco_grad);
-        bool checkGasTarget();
-        bool checkOilTarget();
-        void updateRates(const std::string& name);
+        bool checkGasTarget(double delta_gas);
+        bool checkLiquidTarget(double delta_liquid);
+        bool checkOilTarget(double delta_oil);
+        bool checkWaterTarget(double delta_water);
+        std::array<double, 4> computeDelta(const std::string& name);
+        void updateRates(const std::array<double, 4>& delta);
     };
 };
 

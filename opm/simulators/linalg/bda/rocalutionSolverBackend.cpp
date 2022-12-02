@@ -52,6 +52,11 @@ rocalutionSolverBackend<block_size>::rocalutionSolverBackend(int verbosity_, int
 
 template <unsigned int block_size>
 rocalutionSolverBackend<block_size>::~rocalutionSolverBackend() {
+    // normally, these rocalution variables are destroyed after the destructor automatically,
+    // but sometimes it segfaults, both with test_rocalutionSolver and with an actual case
+    // release both variables here to prevent that segfault
+    roc_prec.release();
+    roc_solver.release();
     rocalution::stop_rocalution();
 }
 

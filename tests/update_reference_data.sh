@@ -202,6 +202,12 @@ tests[krnum_02z]="flow krnum KRNUM-02Z"
 tests[krnum_03x]="flow krnum KRNUM-03X"
 tests[krnum_03y]="flow krnum KRNUM-03Y"
 tests[krnum_03z]="flow krnum KRNUM-03Z"
+tests[model_field_gridunit_cm]="flow gridunit M_FIELD_GRID_CM"
+tests[model_field_gridunit_feet]="flow gridunit M_FIELD_GRID_FEET"
+tests[model_field_gridunit_metres]="flow gridunit M_FIELD_GRID_METRES"
+tests[model_metric_gridunit_cm]="flow gridunit M_METRIC_GRID_CM"
+tests[model_metric_gridunit_feet]="flow gridunit M_METRIC_GRID_FEET"
+tests[model_metric_gridunit_metres]="flow gridunit M_METRIC_GRID_METRES"
 
 changed_tests=""
 

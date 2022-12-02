@@ -31,7 +31,7 @@ namespace Opm
         //GasLiftWellState() { }
         GasLiftWellState(double oil_rate, bool oil_is_limited,
                      double gas_rate, bool gas_is_limited,
-            double alq, bool alq_is_limited, double water_rate, std::optional<bool> increase) :
+            double alq, bool alq_is_limited, double water_rate, bool water_is_limited, std::optional<bool> increase) :
                 oil_rate_{oil_rate},
                 oil_is_limited_{oil_is_limited},
                 gas_rate_{gas_rate},
@@ -39,6 +39,7 @@ namespace Opm
                 alq_{alq},
                 alq_is_limited_{alq_is_limited},
                 water_rate_{water_rate},
+                water_is_limited_{water_is_limited},
                 increase_{increase}
         {}
         double alq() const { return alq_; }
@@ -51,9 +52,11 @@ namespace Opm
         bool oilIsLimited() const { return oil_is_limited_; }
         double oilRate() const { return oil_rate_; }
         double waterRate() const { return water_rate_; }
+        bool waterIsLimited() const { return water_is_limited_; }
         void update(double oil_rate, bool oil_is_limited,
             double gas_rate, bool gas_is_limited,
             double alq, bool alq_is_limited, double water_rate,
+            double water_is_limited,
             bool increase)
         {
             oil_rate_ = oil_rate;
@@ -63,6 +66,7 @@ namespace Opm
             alq_ = alq;
             alq_is_limited_ = alq_is_limited;
             water_rate_ = water_rate;
+            water_is_limited_ = water_is_limited;
             increase_ = increase;
         }
     private:
@@ -73,6 +77,7 @@ namespace Opm
         double alq_;
         bool alq_is_limited_;
         double water_rate_;
+        bool water_is_limited_;
         std::optional<bool> increase_;
     };
 

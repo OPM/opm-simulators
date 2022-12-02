@@ -181,6 +181,7 @@ BOOST_AUTO_TEST_CASE(G1)
         well_model.phaseUsage(),
         deferred_logger,
         well_state,
+        group_state,
         comm,
         /*glift_debug=*/false
     };

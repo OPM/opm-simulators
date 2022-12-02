@@ -162,6 +162,7 @@ endif()
 
 if(CUDA_FOUND)
   set(HAVE_CUDA 1)
+  set(COMPILE_BDA_BRIDGE 1)
   include_directories(${CUDA_INCLUDE_DIRS})
 endif()
 
@@ -173,6 +174,7 @@ if(OpenCL_FOUND)
   find_file(CL2_HPP CL/cl2.hpp HINTS ${OpenCL_INCLUDE_DIRS})
   if(CL2_HPP)
     set(HAVE_OPENCL 1)
+    set(COMPILE_BDA_BRIDGE 1)
     include_directories(${OpenCL_INCLUDE_DIRS})
     find_file(OPENCL_HPP CL/opencl.hpp HINTS ${OpenCL_INCLUDE_DIRS})
     if(OPENCL_HPP)
@@ -206,6 +208,7 @@ endif()
 find_package(amgcl)
 if(amgcl_FOUND)
   set(HAVE_AMGCL 1)
+  set(COMPILE_BDA_BRIDGE 1)
   # Linking to target angcl::amgcl drags in OpenMP and -fopenmp as a compile
   # flag. With that nvcc fails as it does not that flag.
   # Hence we set AMGCL_INCLUDE_DIRS.
@@ -217,6 +220,7 @@ if(OpenCL_FOUND)
   find_package(VexCL)
   if(VexCL_FOUND)
     set(HAVE_VEXCL 1)
+    set(COMPILE_BDA_BRIDGE 1)
     # generator expressions in vexcl do not seem to work and therefore
     # we cannot use the imported target. Hence we exract the needed info
     # from the targets
@@ -235,6 +239,7 @@ endif()
 find_package(rocalution)
 if(ROCALUTION_FOUND)
   set(HAVE_ROCALUTION 1)
+  set(COMPILE_BDA_BRIDGE 1)
 endif()
 
 

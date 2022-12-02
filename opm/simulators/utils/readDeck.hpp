@@ -29,7 +29,6 @@
 #include <string>
 
 namespace Opm {
-    class Deck;
     class EclipseState;
     class ErrorGuard;
     class ParseContext;
@@ -77,7 +76,6 @@ setupLogging(int                mpi_rank_,
 /// are created and can be used outside later.
 void readDeck(Parallel::Communication         comm,
               const std::string&              deckFilename,
-              std::shared_ptr<Deck>&          deck,
               std::shared_ptr<EclipseState>&  eclipseState,
               std::shared_ptr<Schedule>&      schedule,
               std::unique_ptr<UDQState>&      udqState,

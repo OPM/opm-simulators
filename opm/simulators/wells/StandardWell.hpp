@@ -25,7 +25,6 @@
 
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
 #include <opm/simulators/wells/RateConverter.hpp>
-#include <opm/simulators/wells/StandardWellGeneric.hpp>
 #include <opm/simulators/wells/VFPInjProperties.hpp>
 #include <opm/simulators/wells/VFPProdProperties.hpp>
 #include <opm/simulators/wells/WellInterface.hpp>
@@ -109,6 +108,8 @@ namespace Opm
         // TODO: we should have indices for the well equations and well primary variables separately
         static constexpr int Bhp = numStaticWellEq - numWellControlEq;
 
+        using StdWellEval::WQTotal;
+
         using typename Base::Scalar;
 
 
@@ -122,7 +123,6 @@ namespace Opm
         using Eval = typename StdWellEval::Eval;
         using EvalWell = typename StdWellEval::EvalWell;
         using BVectorWell = typename StdWellEval::BVectorWell;
-        using DiagMatrixBlockWellType = typename StdWellEval::DiagMatrixBlockWellType;
 
         StandardWell(const Well& well,
                      const ParallelWellInfo& pw_info,
@@ -143,7 +143,7 @@ namespace Opm
                           const bool changed_to_open_this_step) override;
 
 
-        virtual void initPrimaryVariablesEvaluation() const override;
+        void initPrimaryVariablesEvaluation() override;
 
         /// check whether the well equations get converged for this well
         virtual ConvergenceReport getWellConvergence(const WellState& well_state,
@@ -158,9 +158,9 @@ namespace Opm
 
         /// using the solution x to recover the solution xw for wells and applying
         /// xw to update Well State
-        virtual void recoverWellSolutionAndUpdateWellState(const BVector& x,
-                                                           WellState& well_state,
-                                                           DeferredLogger& deferred_logger) const override;
+        void recoverWellSolutionAndUpdateWellState(const BVector& x,
+                                                   WellState& well_state,
+                                                   DeferredLogger& deferred_logger) override;
 
         /// computing the well potentials for group control
         virtual void computeWellPotentials(const Simulator& ebosSimulator,
@@ -168,7 +168,7 @@ namespace Opm
                                            std::vector<double>& well_potentials,
                                            DeferredLogger& deferred_logger) /* const */ override;
 
-        virtual void updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_logger) const override;
+        void updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_logger) override;
 
         virtual void solveEqAndUpdateWellState(WellState& well_state, DeferredLogger& deferred_logger) override;
 
@@ -253,13 +253,10 @@ namespace Opm
     protected:
         bool regularize_;
 
-        // xw = inv(D)*(rw - C*x)
-        void recoverSolutionWell(const BVector& x, BVectorWell& xw) const;
-
         // updating the well_state based on well solution dwells
         void updateWellState(const BVectorWell& dwells,
                              WellState& well_state,
-                             DeferredLogger& deferred_logger) const;
+                             DeferredLogger& deferred_logger);
 
         // calculate the properties for the well connections
         // to calulate the pressure difference between well connections.
@@ -357,11 +354,7 @@ namespace Opm
 
         void updatePrimaryVariablesNewton(const BVectorWell& dwells,
                                           const WellState& well_state,
-                                          DeferredLogger& deferred_logger) const;
-
-        // update extra primary vriables if there are any
-        void updateExtraPrimaryVariables(const BVectorWell& dwells) const;
-
+                                          DeferredLogger& deferred_logger);
 
         void updateWellStateFromPrimaryVariables(WellState& well_state, DeferredLogger& deferred_logger) const;
 

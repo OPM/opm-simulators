@@ -72,7 +72,7 @@ MultisegmentWellEval(WellInterfaceIndices<FluidSystem,Indices,Scalar>& baseif)
 template<typename FluidSystem, typename Indices, typename Scalar>
 void
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
-initMatrixAndVectors(const int num_cells) const
+initMatrixAndVectors(const int num_cells)
 {
     duneB_.setBuildMode(OffDiagMatWell::row_wise);
     duneC_.setBuildMode(OffDiagMatWell::row_wise);
@@ -884,9 +884,14 @@ pressureDropSpiralICD(const int seg) const
         density.clearDerivatives();
     }
 
-    const EvalWell liquid_emulsion_viscosity = mswellhelpers::emulsionViscosity(water_fraction, water_viscosity,
-                                                                                oil_fraction, oil_viscosity, sicd);
-    const EvalWell mixture_viscosity = (water_fraction + oil_fraction) * liquid_emulsion_viscosity + gas_fraction * gas_viscosity;
+
+    const EvalWell liquid_fraction = water_fraction + oil_fraction;
+
+    // viscosity contribution from the liquid
+    const EvalWell liquid_viscosity_fraction = liquid_fraction < 1.e-30 ? oil_fraction * oil_viscosity + water_fraction * water_viscosity :
+            liquid_fraction * mswellhelpers::emulsionViscosity(water_fraction, water_viscosity, oil_fraction, oil_viscosity, sicd);
+
+    const EvalWell mixture_viscosity = liquid_viscosity_fraction + gas_fraction * gas_viscosity;
 
     const EvalWell reservoir_rate = segment_mass_rates_[seg] / density;
 
@@ -1294,7 +1299,7 @@ template<typename FluidSystem, typename Indices, typename Scalar>
 void
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 handleAccelerationPressureLoss(const int seg,
-                               WellState& well_state) const
+                               WellState& well_state)
 {
     const double area = this->segmentSet()[seg].crossArea();
     const EvalWell mass_rate = segment_mass_rates_[seg];
@@ -1346,7 +1351,7 @@ template<typename FluidSystem, typename Indices, typename Scalar>
 void
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 assembleDefaultPressureEq(const int seg,
-                          WellState& well_state) const
+                          WellState& well_state)
 {
     assert(seg != 0); // not top segment
 
@@ -1414,6 +1419,8 @@ updateWellStateFromPrimaryVariables(WellState& well_state,
     auto& ws = well_state.well(baseif_.indexOfWell());
     auto& segments = ws.segments;
     auto& segment_rates = segments.rates;
+    auto& disgas = segments.dissolved_gas_rate;
+    auto& vapoil = segments.vaporized_oil_rate;
     auto& segment_pressure = segments.pressure;
     for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
         std::vector<double> fractions(baseif_.numPhases(), 0.0);
@@ -1477,10 +1484,23 @@ updateWellStateFromPrimaryVariables(WellState& well_state,
                 .saturatedOilVaporizationFactor(pvtReg, temperature, segment_pressure[seg]);
         }
 
-        // 1) Local condition volume flow rates
+        // 1) Infer phase splitting for oil/gas.
         const auto& [Rs, Rv] = this->baseif_.rateConverter().inferDissolvedVaporisedRatio
             (rsMax, rvMax, segment_rates.begin() + (seg + 0)*this->baseif_.numPhases());
 
+        if (! FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            vapoil[seg] = disgas[seg] = 0.0;
+        }
+        else {
+            const auto* qs = &segment_rates[seg*this->baseif_.numPhases() + 0];
+            const auto denom = 1.0 - (Rs * Rv);
+            const auto io = pu.phase_pos[Oil];
+            const auto ig = pu.phase_pos[Gas];
+            disgas[seg] = Rs * (qs[io] - Rv*qs[ig]) / denom;
+            vapoil[seg] = Rv * (qs[ig] - Rs*qs[io]) / denom;
+        }
+
+        // 2) Local condition volume flow rates
         {
             // Use std::span<> in C++20 and beyond.
             const auto  rate_start = (seg + 0) * this->baseif_.numPhases();
@@ -1494,7 +1514,7 @@ updateWellStateFromPrimaryVariables(WellState& well_state,
                  temperature, saltConc, surf_rates, resv_rates);
         }
 
-        // 2) Local condition holdup fractions.
+        // 3) Local condition holdup fractions.
         const auto tot_resv =
             std::accumulate(segments.phase_resv_rates.begin() + (seg + 0)*this->baseif_.numPhases(),
                             segments.phase_resv_rates.begin() + (seg + 1)*this->baseif_.numPhases(),
@@ -1505,7 +1525,7 @@ updateWellStateFromPrimaryVariables(WellState& well_state,
                        segments.phase_holdup.begin()     + (seg + 0)*this->baseif_.numPhases(),
                        [tot_resv](const auto qr) { return std::clamp(qr / tot_resv, 0.0, 1.0); });
 
-        // 3) Local condition flow velocities for segments other than top segment.
+        // 4) Local condition flow velocities for segments other than top segment.
         if (seg > 0) {
             // Possibly poor approximation
             //    Velocity = Flow rate / cross-sectional area.
@@ -1520,7 +1540,7 @@ updateWellStateFromPrimaryVariables(WellState& well_state,
                            [velocity](const auto hf) { return (hf > 0.0) ? velocity : 0.0; });
         }
 
-        // 4) Local condition phase viscosities.
+        // 5) Local condition phase viscosities.
         segments.phase_viscosity[seg*this->baseif_.numPhases() + pu.phase_pos[Oil]] =
             FluidSystem::oilPvt().viscosity(pvtReg, temperature, segment_pressure[seg], Rs);
 
@@ -1580,7 +1600,7 @@ MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 assembleICDPressureEq(const int seg,
                       const UnitSystem& unit_system,
                       WellState& well_state,
-                      DeferredLogger& deferred_logger) const
+                      DeferredLogger& deferred_logger)
 {
     // TODO: upwinding needs to be taken care of
     // top segment can not be a spiral ICD device
@@ -1650,7 +1670,7 @@ MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 assemblePressureEq(const int seg,
                    const UnitSystem& unit_system,
                    WellState& well_state,
-                   DeferredLogger& deferred_logger) const
+                   DeferredLogger& deferred_logger)
 {
     switch(this->segmentSet()[seg].segmentType()) {
         case Segment::SegmentType::SICD :
@@ -1906,34 +1926,34 @@ addWellContribution(WellContributions& wellContribs) const
                                                  Cvals);
 }
 
-#define INSTANCE(A,...) \
-template class MultisegmentWellEval<BlackOilFluidSystem<double,A>,__VA_ARGS__,double>;
+#define INSTANCE(...) \
+template class MultisegmentWellEval<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>;
 
 // One phase
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilOnePhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,5u>)
+INSTANCE(BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>)
+INSTANCE(BlackOilOnePhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>)
+INSTANCE(BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,5u>)
 
 // Two phase
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,0u,0u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,2u,0u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,2u,0u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilTwoPhaseIndices<0u,0u,1u,0u,false,false,0u,2u,0u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilTwoPhaseIndices<0u,0u,2u,0u,false,false,0u,2u,0u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,0u,0u>)
+INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,0u,0u>)
+INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>)
+INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,2u,0u>)
+INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,2u,0u>)
+INSTANCE(BlackOilTwoPhaseIndices<0u,0u,1u,0u,false,false,0u,2u,0u>)
+INSTANCE(BlackOilTwoPhaseIndices<0u,0u,2u,0u,false,false,0u,2u,0u>)
+INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>)
+INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,0u,0u>)
 
 // Blackoil
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<0u,0u,0u,0u,false,false,0u,0u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<0u,0u,0u,0u,true,false,0u,0u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<0u,0u,0u,0u,false,true,0u,0u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<0u,0u,0u,0u,false,true,2u,0u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<1u,0u,0u,0u,false,false,0u,0u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<0u,1u,0u,0u,false,false,0u,0u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<0u,0u,1u,0u,false,false,0u,0u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<0u,0u,0u,1u,false,false,0u,0u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<0u,0u,0u,0u,false,false,1u,0u>)
-INSTANCE(BlackOilDefaultIndexTraits,BlackOilIndices<0u,0u,0u,1u,false,true,0u,0u>)
+INSTANCE(BlackOilIndices<0u,0u,0u,0u,false,false,0u,0u>)
+INSTANCE(BlackOilIndices<0u,0u,0u,0u,true,false,0u,0u>)
+INSTANCE(BlackOilIndices<0u,0u,0u,0u,false,true,0u,0u>)
+INSTANCE(BlackOilIndices<0u,0u,0u,0u,false,true,2u,0u>)
+INSTANCE(BlackOilIndices<1u,0u,0u,0u,false,false,0u,0u>)
+INSTANCE(BlackOilIndices<0u,1u,0u,0u,false,false,0u,0u>)
+INSTANCE(BlackOilIndices<0u,0u,1u,0u,false,false,0u,0u>)
+INSTANCE(BlackOilIndices<0u,0u,0u,1u,false,false,0u,0u>)
+INSTANCE(BlackOilIndices<0u,0u,0u,0u,false,false,1u,0u>)
+INSTANCE(BlackOilIndices<0u,0u,0u,1u,false,true,0u,0u>)
 
 } // namespace Opm

@@ -22,6 +22,7 @@
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/wells/WellState.hpp>
+#include <opm/simulators/wells/GroupState.hpp>
 
 #include <string>
 #include <fmt/format.h>
@@ -36,6 +37,7 @@ public:
 protected:
     GasLiftCommon(
         WellState &well_state,
+        const GroupState &group_state,
         DeferredLogger &deferred_logger,
         const Parallel::Communication& comm,
         bool debug
@@ -51,6 +53,7 @@ protected:
         MessageType msg_type = MessageType::INFO) const;
 
     WellState &well_state_;
+    const GroupState& group_state_;
     DeferredLogger &deferred_logger_;
     const Parallel::Communication& comm_;
     bool debug;

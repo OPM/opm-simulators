@@ -31,7 +31,7 @@
 #include <opm/simulators/linalg/ParallelIstlInformation.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
-#if HAVE_CUDA || HAVE_OPENCL || HAVE_AMGCL || HAVE_ROCALUTION
+#if COMPILE_BDA_BRIDGE
 #include <opm/simulators/linalg/bda/BdaBridge.hpp>
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
 #endif
@@ -149,7 +149,7 @@ void FlexibleSolverInfo<Matrix,Vector,Comm>::create(const Matrix& matrix,
             this->op_ = std::move(pop);
             this->solver_ = std::move(sol);
         }
-    #endif
+#endif
     } else {
         if (!wellOperator_) {
             using SeqOperatorType = Dune::MatrixAdapter<Matrix, Vector, Vector>;
@@ -175,7 +175,7 @@ void FlexibleSolverInfo<Matrix,Vector,Comm>::create(const Matrix& matrix,
     }
 }
 
-#if HAVE_CUDA || HAVE_OPENCL || HAVE_AMGCL || HAVE_ROCALUTION
+#if COMPILE_BDA_BRIDGE
 template<class Matrix, class Vector>
 BdaSolverInfo<Matrix,Vector>::
 BdaSolverInfo(const std::string& accelerator_mode,
@@ -329,7 +329,7 @@ copyMatToBlockJac(const Matrix& mat, Matrix& blockJac)
         }
     }
 }
-#endif
+#endif // COMPILE_BDA_BRIDGE
 
 template<int Dim>
 using BM = Dune::BCRSMatrix<MatrixBlock<double,Dim,Dim>>;
@@ -346,7 +346,7 @@ using CommunicationType = Dune::CollectiveCommunication<int>;
     template void makeOverlapRowsInvalid<BM<Dim>>(BM<Dim>&, const std::vector<int>&); \
     template struct FlexibleSolverInfo<BM<Dim>,BV<Dim>,CommunicationType>;
 
-#if HAVE_CUDA || HAVE_OPENCL || HAVE_AMGCL || HAVE_ROCALUTION
+#if COMPILE_BDA_BRIDGE
 
 #define INSTANCE_GRID(Dim, Grid) \
     template void BdaSolverInfo<BM<Dim>,BV<Dim>>:: \
@@ -376,7 +376,7 @@ using CommunicationType = Dune::CollectiveCommunication<int>;
 #else
 #define INSTANCE(Dim) \
     INSTANCE_FLEX(Dim)
-#endif
+#endif // COMPILE_BDA_BRIDGE
 
 INSTANCE(1)
 INSTANCE(2)

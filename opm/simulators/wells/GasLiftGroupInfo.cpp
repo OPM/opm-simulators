@@ -32,10 +32,11 @@ GasLiftGroupInfo(
     const PhaseUsage &phase_usage,
     DeferredLogger &deferred_logger,
     WellState &well_state,
+    const GroupState &group_state,
     const Communication &comm,
     bool glift_debug
 ) :
-    GasLiftCommon(well_state, deferred_logger, comm, glift_debug)
+    GasLiftCommon(well_state, group_state, deferred_logger, comm, glift_debug)
     , ecl_wells_{ecl_wells}
     , schedule_{schedule}
     , summary_state_{summary_state}
@@ -74,6 +75,28 @@ gasRate(const std::string& group_name) const
     return group_rate.gasRate();
 }
 
+double
+GasLiftGroupInfo::
+gasPotential(const std::string& group_name) const
+{
+    auto& group_rate = this->group_rate_map_.at(group_name);
+    return group_rate.gasPotential();
+}
+double
+GasLiftGroupInfo::
+waterPotential(const std::string& group_name) const
+{
+    auto& group_rate = this->group_rate_map_.at(group_name);
+    return group_rate.waterPotential();
+}
+double
+GasLiftGroupInfo::
+oilPotential(const std::string& group_name) const
+{
+    auto& group_rate = this->group_rate_map_.at(group_name);
+    return group_rate.oilPotential();
+}
+
 std::optional<double>
 GasLiftGroupInfo::
 gasTarget(const std::string& group_name) const
@@ -95,6 +118,24 @@ getRate(Rate rate_type, const std::string& group_name) const
         return waterRate(group_name);
     case Rate::liquid:
         return oilRate(group_name) + waterRate(group_name);
+    default:
+        // Need this to avoid compiler warning : control reaches end of non-void function
+        throw std::runtime_error("This should not happen");
+    }
+}
+double
+GasLiftGroupInfo::
+getPotential(Rate rate_type, const std::string& group_name) const
+{
+    switch (rate_type) {
+    case Rate::oil:
+        return oilPotential(group_name);
+    case Rate::gas:
+        return gasPotential(group_name);
+    case Rate::water:
+        return waterPotential(group_name);
+    case Rate::liquid:
+        return oilPotential(group_name) + waterPotential(group_name);
     default:
         // Need this to avoid compiler warning : control reaches end of non-void function
         throw std::runtime_error("This should not happen");
@@ -437,36 +478,56 @@ displayDebugMessage_(const std::string &msg, const std::string &well_name)
 }
 
 
-std::tuple<double, double, double>
+std::tuple<double, double, double, double, double, double>
 GasLiftGroupInfo::
-getProducerWellRates_(int well_index)
+getProducerWellRates_(const Well* well, int well_index)
 {
     const auto& pu = this->phase_usage_;
     const auto& ws= this->well_state_.well(well_index);
     const auto& wrate = ws.well_potentials;
 
-    const auto oil_rate = pu.phase_used[Oil]
+    const auto oil_pot = pu.phase_used[Oil]
         ? wrate[pu.phase_pos[Oil]]
         : 0.0;
 
-    const auto gas_rate = pu.phase_used[Gas]
+    const auto gas_pot = pu.phase_used[Gas]
         ? wrate[pu.phase_pos[Gas]]
         : 0.0;
 
-    const auto water_rate = pu.phase_used[Water]
+    const auto water_pot = pu.phase_used[Water]
         ? wrate[pu.phase_pos[Water]]
         : 0.0;
 
-    return {oil_rate, gas_rate, water_rate};
+    const auto controls = well->productionControls(this->summary_state_);
+    double oil_rate = oil_pot;
+    if (controls.hasControl(Well::ProducerCMode::ORAT)) {
+        oil_rate = std::min(controls.oil_rate, oil_rate);
+    }
+    double gas_rate = gas_pot;
+    if (controls.hasControl(Well::ProducerCMode::GRAT)) {
+        gas_rate = std::min(controls.gas_rate, gas_rate);
+    }
+    double water_rate = water_pot;
+    if (controls.hasControl(Well::ProducerCMode::WRAT)) {
+        water_rate = std::min(controls.water_rate, water_rate);
+    }
+    if (controls.hasControl(Well::ProducerCMode::LRAT)) {
+        double liquid_rate = oil_rate + water_rate;
+        double liquid_rate_lim = std::min(controls.liquid_rate, liquid_rate);
+        water_rate = water_rate / liquid_rate * liquid_rate_lim;
+        oil_rate = oil_rate / liquid_rate * liquid_rate_lim;
+    }
+
+    return {oil_rate, gas_rate, water_rate, oil_pot, gas_pot, water_pot};
 }
 
-std::tuple<double, double, double, double>
+std::tuple<double, double, double, double, double, double, double>
 GasLiftGroupInfo::
 initializeGroupRatesRecursive_(const Group &group)
 {
-    std::array<double,4> rates{};
+    std::array<double,7> rates{};
     if (this->debug) debugStartInitializeGroup(group.name());
-    auto& [oil_rate, water_rate, gas_rate, alq] = rates;
+    auto& [oil_rate, water_rate, gas_rate, oil_potential, water_potential, gas_potential, alq] = rates;
     if (group.wellgroup()) {
         for (const std::string& well_name : group.wells()) {
             // NOTE: we cannot simply use:
@@ -481,17 +542,21 @@ initializeGroupRatesRecursive_(const Group &group)
                 assert(well); // Should never be nullptr
                 const int index = (itr->second).second;
                 if (well->isProducer()) {
-                    auto [sw_oil_rate, sw_gas_rate, sw_water_rate] = getProducerWellRates_(index);
+                    auto [sw_oil_rate, sw_gas_rate, sw_water_rate, sw_oil_pot, sw_gas_pot, sw_water_pot] = getProducerWellRates_(well, index);
                     auto sw_alq = this->well_state_.getALQ(well_name);
                     double factor = well->getEfficiencyFactor();
                     oil_rate += (factor * sw_oil_rate);
                     gas_rate += (factor * sw_gas_rate);
                     water_rate += (factor * sw_water_rate);
+                    oil_potential += (factor * sw_oil_pot);
+                    gas_potential += (factor * sw_gas_pot);
+                    water_potential += (factor * sw_water_pot);
+
                     alq += (factor * sw_alq);
                     if (this->debug) {
                         debugDisplayWellContribution_(
                             group.name(), well_name, factor,
-                            sw_oil_rate, sw_gas_rate, sw_water_rate, sw_alq,
+                            sw_oil_pot, sw_gas_pot, sw_water_pot, sw_alq,
                             oil_rate, gas_rate, water_rate, alq
                         );
                     }
@@ -506,12 +571,16 @@ initializeGroupRatesRecursive_(const Group &group)
                 continue;
             const Group& sub_group = this->schedule_.getGroup(
                 group_name, this->report_step_idx_);
-            auto [sg_oil_rate, sg_gas_rate, sg_water_rate, sg_alq]
+            auto [sg_oil_rate, sg_gas_rate, sg_water_rate,
+                  sg_oil_pot, sg_gas_pot, sg_water_pot, sg_alq]
                 = initializeGroupRatesRecursive_(sub_group);
             const auto gefac = sub_group.getGroupEfficiencyFactor();
             oil_rate += (gefac * sg_oil_rate);
             gas_rate += (gefac * sg_gas_rate);
             water_rate += (gefac * sg_water_rate);
+            oil_potential += (gefac * sg_oil_pot);
+            gas_potential += (gefac * sg_gas_pot);
+            water_potential += (gefac * sg_water_pot);
             alq += (gefac * sg_alq);
         }
     }
@@ -537,14 +606,29 @@ initializeGroupRatesRecursive_(const Group &group)
     }
     if (oil_target || liquid_target || water_target || gas_target || max_total_gas || max_alq) {
         updateGroupIdxMap_(group.name());
+        if(oil_target)
+            oil_rate = std::min(oil_rate, *oil_target);
+        if(gas_target)
+            gas_rate = std::min(gas_rate, *gas_target);
+        if(water_target)
+            water_rate = std::min(water_rate, *water_target);
+        if(liquid_target) {
+            double liquid_rate = oil_rate + water_rate;
+            double liquid_rate_limited = std::min(liquid_rate, *liquid_target);
+            oil_rate = oil_rate / liquid_rate * liquid_rate_limited;
+            water_rate = water_rate / liquid_rate * liquid_rate_limited;
+        }
+
         this->group_rate_map_.try_emplace(group.name(),
-            oil_rate, gas_rate, water_rate, alq, oil_target, gas_target, water_target, liquid_target, max_total_gas, max_alq);
+            oil_rate, gas_rate, water_rate, alq,
+            oil_potential, gas_potential, water_potential,
+            oil_target, gas_target, water_target, liquid_target, max_total_gas, max_alq);
         if (this->debug) {
             debugDisplayUpdatedGroupRates(
                 group.name(), oil_rate, gas_rate, water_rate, alq);
         }
     }
-    return std::make_tuple(oil_rate, gas_rate, water_rate, alq);
+    return std::make_tuple(oil_rate, gas_rate, water_rate, oil_potential, gas_potential, water_potential, alq);
 }
 
 void

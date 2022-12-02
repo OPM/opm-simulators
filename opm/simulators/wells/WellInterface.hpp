@@ -71,7 +71,6 @@ class WellInterface : public WellInterfaceIndices<GetPropType<TypeTag, Propertie
                                                   GetPropType<TypeTag, Properties::Scalar>>
 {
 public:
-
     using ModelParameters = BlackoilModelParametersEbos<TypeTag>;
 
     using Grid = GetPropType<TypeTag, Properties::Grid>;
@@ -149,7 +148,7 @@ public:
                       const std::vector< Scalar >& B_avg,
                       const bool changed_to_open_this_step);
 
-    virtual void initPrimaryVariablesEvaluation() const = 0;
+    virtual void initPrimaryVariablesEvaluation() = 0;
 
     virtual ConvergenceReport getWellConvergence(const WellState& well_state, const std::vector<double>& B_avg, DeferredLogger& deferred_logger, const bool relax_tolerance) const = 0;
 
@@ -179,7 +178,7 @@ public:
     /// xw to update Well State
     virtual void recoverWellSolutionAndUpdateWellState(const BVector& x,
                                                        WellState& well_state,
-                                                       DeferredLogger& deferred_logger) const = 0;
+                                                       DeferredLogger& deferred_logger) = 0;
 
     /// Ax = Ax - C D^-1 B x
     virtual void apply(const BVector& x, BVector& Ax) const = 0;
@@ -205,7 +204,7 @@ public:
                            const GroupState& group_state,
                            DeferredLogger& deferred_logger) /* const */;
 
-    virtual void updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_logger) const = 0;
+    virtual void updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_logger) = 0;
 
     virtual void calculateExplicitQuantities(const Simulator& ebosSimulator,
                                              const WellState& well_state,

@@ -1094,6 +1094,7 @@ namespace Opm {
                 phase_usage_,
                 deferred_logger,
                 this->wellState(),
+                this->groupState(),
                 ebosSimulator_.vanguard().grid().comm(),
                 this->glift_debug
             };
@@ -1101,7 +1102,7 @@ namespace Opm {
             gasLiftOptimizationStage1(
                 deferred_logger, prod_wells, glift_wells, group_info, state_map);
             gasLiftOptimizationStage2(
-                deferred_logger, prod_wells, glift_wells, state_map,
+                deferred_logger, prod_wells, glift_wells, group_info, state_map,
                 ebosSimulator_.episodeIndex());
             if (this->glift_debug) gliftDebugShowALQ(deferred_logger);
             num_wells_changed = glift_wells.size();
@@ -1310,7 +1311,7 @@ namespace Opm {
             auto& well = well_container_[i];
             std::shared_ptr<StandardWell<TypeTag> > derived = std::dynamic_pointer_cast<StandardWell<TypeTag> >(well);
             if (derived) {
-                wellContribs.addNumBlocks(derived->getNumBlocks());
+                wellContribs.addNumBlocks(derived->linSys().getNumBlocks());
             }
         }
 
@@ -1320,9 +1321,9 @@ namespace Opm {
         for(unsigned int i = 0; i < well_container_.size(); i++){
             auto& well = well_container_[i];
             // maybe WellInterface could implement addWellContribution()
-            auto derived_std = std::dynamic_pointer_cast<StandardWell<TypeTag> >(well);
+            auto derived_std = std::dynamic_pointer_cast<StandardWell<TypeTag>>(well);
             if (derived_std) {
-                derived_std->addWellContribution(wellContribs);
+                derived_std->linSys().extract(derived_std->numStaticWellEq, wellContribs);
             } else {
                 auto derived_ms = std::dynamic_pointer_cast<MultisegmentWell<TypeTag> >(well);
                 if (derived_ms) {

@@ -33,6 +33,7 @@
 #include <opm/input/eclipse/Schedule/SummaryState.hpp>
 #include <opm/simulators/wells/GasLiftCommon.hpp>
 #include <opm/simulators/wells/WellState.hpp>
+#include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 
 #include <algorithm>
@@ -81,6 +82,7 @@ public:
         const PhaseUsage& phase_usage,
         DeferredLogger& deferred_logger,
         WellState& well_state,
+        const GroupState& group_state,
         const Parallel::Communication& comm,
         bool glift_debug
     );
@@ -89,8 +91,12 @@ public:
 
     double alqRate(const std::string& group_name);
     double gasRate(const std::string& group_name) const;
+    double gasPotential(const std::string& group_name) const;
+    double waterPotential(const std::string& group_name) const;
+    double oilPotential(const std::string& group_name) const;
     int getGroupIdx(const std::string& group_name);
     double getRate(Rate rate_type, const std::string& group_name) const;
+    double getPotential(Rate rate_type, const std::string& group_name) const;
     std::tuple<double,double,double,double> getRates(const int group_idx) const;
     std::optional<double> gasTarget(const std::string& group_name) const;
     std::optional<double> getTarget(
@@ -128,8 +134,9 @@ protected:
     void debugStartInitializeGroup(const std::string& name) const;
     void displayDebugMessage_(const std::string& msg) const override;
     void displayDebugMessage_(const std::string& msg, const std::string& well_name);
-    std::tuple<double, double, double> getProducerWellRates_(const int index);
-    std::tuple<double, double, double, double>
+    std::tuple<double, double, double, double, double, double>
+        getProducerWellRates_(const Well* well, const int index);
+    std::tuple<double, double, double, double, double, double, double>
         initializeGroupRatesRecursive_(const Group &group);
     void initializeWell2GroupMapRecursive_(
         const Group& group, std::vector<std::string>& group_names,
@@ -140,6 +147,7 @@ protected:
     class GroupRates {
     public:
         GroupRates( double oil_rate, double gas_rate, double water_rate, double alq,
+            double oil_potential, double gas_potential, double water_potential,
             std::optional<double> oil_target,
             std::optional<double> gas_target,
             std::optional<double> water_target,
@@ -151,6 +159,9 @@ protected:
             gas_rate_{gas_rate},
             water_rate_{water_rate},
             alq_{alq},
+            oil_potential_{oil_potential},
+            gas_potential_{gas_potential},
+            water_potential_{water_potential},
             oil_target_{oil_target},
             gas_target_{gas_target},
             water_target_{water_target},
@@ -175,6 +186,9 @@ protected:
         double oilRate() const { return oil_rate_; }
         std::optional<double> oilTarget() const { return oil_target_; }
         std::optional<double> liquidTarget() const { return liquid_target_; }
+        double oilPotential() const { return oil_potential_; }
+        double gasPotential() const { return gas_potential_; }
+        double waterPotential() const { return water_potential_; }
 
         void update(double delta_oil, double delta_gas, double delta_water, double delta_alq)
         {
@@ -182,12 +196,17 @@ protected:
             gas_rate_ += delta_gas;
             water_rate_ += delta_water;
             alq_ += delta_alq;
+            // Note. We don't updata the potentials at this point. They
+            // are only needed initially.
         }
     private:
         double oil_rate_;
         double gas_rate_;
         double water_rate_;
         double alq_;
+        double oil_potential_;
+        double gas_potential_;
+        double water_potential_;
         std::optional<double> oil_target_;
         std::optional<double> gas_target_;
         std::optional<double> water_target_;

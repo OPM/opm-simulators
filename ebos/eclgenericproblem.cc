@@ -26,7 +26,6 @@
 
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
-#include <opm/input/eclipse/Deck/Deck.hpp>
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/OverburdTable.hpp>
@@ -444,80 +443,6 @@ beginTimeStep_(bool enableExperiments,
         // DRVDT is enabled
         for (size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRv_.size(); ++pvtRegionIdx)
             maxDRv_[pvtRegionIdx] = oilVaporizationControl.getMaxDRVDT(pvtRegionIdx)*timeStepSize;
-}
-
-template<class GridView, class FluidSystem, class Scalar>
-void EclGenericProblem<GridView,FluidSystem,Scalar>::
-checkDeckCompatibility_(const Deck& deck,
-                        bool enableApiTracking,
-                        bool enableSolvent,
-                        bool enablePolymer,
-                        bool enableExtbo,
-                        bool enableEnergy,
-                        int numPhases,
-                        bool indicesGasEnabled,
-                        bool indicesOilEnabled,
-                        bool indicesWaterEnabled,
-                        bool enableMICP) const
-{
-    if (enableApiTracking)
-        throw std::logic_error("API tracking is not yet implemented but requested at compile time.");
-    if (!enableApiTracking && deck.hasKeyword("API"))
-        throw std::logic_error("The simulator is build with API tracking disabled, but API tracking is requested by the deck.");
-
-    if (enableSolvent && !deck.hasKeyword("SOLVENT"))
-        throw std::runtime_error("The simulator requires the solvent option to be enabled, but the deck does not.");
-    else if (!enableSolvent && deck.hasKeyword("SOLVENT"))
-        throw std::runtime_error("The deck enables the solvent option, but the simulator is compiled without it.");
-
-    if (enablePolymer && !deck.hasKeyword("POLYMER"))
-        throw std::runtime_error("The simulator requires the polymer option to be enabled, but the deck does not.");
-    else if (!enablePolymer && deck.hasKeyword("POLYMER"))
-        throw std::runtime_error("The deck enables the polymer option, but the simulator is compiled without it.");
-
-    if (enableMICP && !deck.hasKeyword("MICP"))
-        throw std::runtime_error("The simulator requires the MICP option to be enabled, but the deck does not.");
-    else if (!enableMICP && deck.hasKeyword("MICP"))
-        throw std::runtime_error("The deck enables the MICP option, but the simulator is compiled without it.");
-
-    if (enableExtbo && !deck.hasKeyword("PVTSOL"))
-        throw std::runtime_error("The simulator requires the extendedBO option to be enabled, but the deck does not.");
-    else if (!enableExtbo && deck.hasKeyword("PVTSOL"))
-        throw std::runtime_error("The deck enables the extendedBO option, but the simulator is compiled without it.");
-
-    if (deck.hasKeyword("TEMP") && deck.hasKeyword("THERMAL"))
-        throw std::runtime_error("The deck enables both, the TEMP and the THERMAL options, but they are mutually exclusive.");
-
-    bool deckEnergyEnabled = (deck.hasKeyword("TEMP") || deck.hasKeyword("THERMAL"));
-    if (enableEnergy && !deckEnergyEnabled)
-        throw std::runtime_error("The simulator requires the TEMP or the THERMAL option to be enabled, but the deck activates neither.");
-    else if (!enableEnergy && deckEnergyEnabled)
-        throw std::runtime_error("The deck enables the TEMP or the THERMAL option, but the simulator is not compiled to support either.");
-
-    if (deckEnergyEnabled && deck.hasKeyword("TEMP"))
-        std::cerr << "WARNING: The deck requests the TEMP option, i.e., treating energy "
-                  << "conservation as a post processing step. This is currently unsupported, "
-                  << "i.e., energy conservation is always handled fully implicitly." << std::endl;
-
-    int numDeckPhases = FluidSystem::numActivePhases();
-    if (numDeckPhases < numPhases)
-        std::cerr << "WARNING: The number of active phases specified by the deck ("
-                  << numDeckPhases << ") is smaller than the number of compiled-in phases ("
-                  << numPhases << "). This usually results in a significant "
-                  << "performance degradation compared to using a specialized simulator."  << std::endl;
-    else if (numDeckPhases < numPhases)
-        throw std::runtime_error("The deck enables "+std::to_string(numDeckPhases)+" phases "
-                                 "while this simulator can only handle "+
-                                 std::to_string(numPhases)+".");
-
-    // make sure that the correct phases are active
-    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && !indicesOilEnabled)
-        throw std::runtime_error("The deck enables oil, but this simulator cannot handle it.");
-    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && !indicesGasEnabled)
-        throw std::runtime_error("The deck enables gas, but this simulator cannot handle it.");
-    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && !indicesWaterEnabled)
-        throw std::runtime_error("The deck enables water, but this simulator cannot handle it.");
-    // the opposite cases should be fine (albeit a bit slower than what's possible)
 }
 
 template<class GridView, class FluidSystem, class Scalar>

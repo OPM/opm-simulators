@@ -19,6 +19,7 @@
 */
 
 
+#include <opm/simulators/linalg/SmallDenseMatrixUtils.hpp>
 #include <opm/simulators/wells/MSWellHelpers.hpp>
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
@@ -126,7 +127,7 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    initPrimaryVariablesEvaluation() const
+    initPrimaryVariablesEvaluation()
     {
         this->MSWEval::initPrimaryVariablesEvaluation();
     }
@@ -138,7 +139,7 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    updatePrimaryVariables(const WellState& well_state, DeferredLogger& /* deferred_logger */) const
+    updatePrimaryVariables(const WellState& well_state, DeferredLogger& /* deferred_logger */)
     {
         this->MSWEval::updatePrimaryVariables(well_state);
     }
@@ -237,7 +238,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     recoverWellSolutionAndUpdateWellState(const BVector& x,
                                           WellState& well_state,
-                                          DeferredLogger& deferred_logger) const
+                                          DeferredLogger& deferred_logger)
     {
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
@@ -726,7 +727,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     addWellContributions(SparseMatrixAdapter& jacobian) const
     {
-        const auto invDuneD = mswellhelpers::invertWithUMFPack<DiagMatWell, BVectorWell>(this->duneD_, this->duneDSolver_);
+        const auto invDuneD = mswellhelpers::invertWithUMFPack<BVectorWell>(this->duneD_, this->duneDSolver_);
 
         // We need to change matrix A as follows
         // A -= C^T D^-1 B
