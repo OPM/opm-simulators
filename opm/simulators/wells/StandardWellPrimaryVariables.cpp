@@ -224,7 +224,7 @@ update(const WellState& well_state, DeferredLogger& deferred_logger)
     // const std::set<std::string> well_names = {"S-P6"};
     if (well_names.count(well_.name()) > 0) {
         std::cout << " outputting the primary variables for well " << well_.name() << " after updatePrimaryVariables " << std::endl;
-        std::cout << " primary_variables_ : " << value_[WQTotal]*86400. << " " << primary_variables_[WFrac] << " " << value_[GFrac]
+        std::cout << " primary_variables_ : " << value_[WQTotal]*86400. << " " << value_[WFrac] << " " << value_[GFrac]
                   << " " << value_[Bhp]/1.e5 << std::endl;
     }
 }
@@ -290,6 +290,15 @@ updateNewton(const BVectorWell& dwells,
                                                 std::abs(value_[Bhp]) * dBHPLimit);
     // 1e5 to make sure bhp will not be below 1bar
     value_[Bhp] = std::max(value_[Bhp] - dx1_limited, 1e5);
+
+    // const std::set<std::string> well_names = {"S-P2", "S-P3", "S-P4", "S-P6"};
+    const std::set<std::string> well_names = {"S-P2", "S-P3", "S-P4", "S-P6", "PROD1", "PROD2", "PROD3"};
+    // const std::set<std::string> well_names = {"S-P6"};
+    if (well_names.count(well_.name()) > 0) {
+        std::cout << " outputting the primary variables for well " << well_.name() << " after updatePrimaryVariablesNewton " << std::endl;
+        std::cout << " primary_variables_ : " << value_[WQTotal]*86400. << " " << value_[WFrac] << " " << value_[GFrac]
+                  << " " << value_[Bhp]/1.e5 << std::endl;
+    }
 }
 
 template<class FluidSystem, class Indices, class Scalar>
@@ -408,6 +417,23 @@ copyToWellState(WellState& well_state,
                                     "Multi phase injectors are not supported, requested for well " + well_.name());
             break;
         }
+    }
+
+    // const std::set<std::string> well_names = {"S-P3", "S-P4", "S-P6"};
+    // const std::set<std::string> well_names = {"S-P6"};
+    // const std::set<std::string> well_names = {"S-P2", "S-P3", "S-P4", "S-P6"};
+    const std::set<std::string> well_names = {"S-P2", "S-P3", "S-P4", "S-P6", "PROD1", "PROD2", "PROD3"};
+    if (well_names.count(well_.name()) > 0) {
+        std::cout << " outputting the well state after updateWellStateFromPrimaryVariables for well " << well_.name() << std::endl;
+        std::cout << " well rates are ";
+        for (const auto val : ws.surface_rates) {
+            std::cout << " " << val * 86400.;
+        }
+        std::cout << " bhp " << ws.bhp/1.e5 << " thp " << ws.thp/1.e5;
+        if (well_.getDynamicThpLimit()) {
+            std::cout << " dynamic thp limit " << *(well_.getDynamicThpLimit()) / 1.e5;
+        }
+        std::cout << std::endl;
     }
 }
 

@@ -84,22 +84,6 @@ updateWellStateFromPrimaryVariables(WellState& well_state,
                        FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx),
                        FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)},
                       well_state, deferred_logger);
-    // const std::set<std::string> well_names = {"S-P3", "S-P4", "S-P6"};
-    // const std::set<std::string> well_names = {"S-P6"};
-    // const std::set<std::string> well_names = {"S-P2", "S-P3", "S-P4", "S-P6"};
-    const std::set<std::string> well_names = {"S-P2", "S-P3", "S-P4", "S-P6", "PROD1", "PROD2", "PROD3"};
-    if (well_names.count(baseif_.name()) > 0) {
-        std::cout << " outputting the well state after updateWellStateFromPrimaryVariables for well " << baseif_.name() << std::endl;
-        std::cout << " well rates are ";
-        for (const auto val : ws.surface_rates) {
-            std::cout << " " << val * 86400.;
-        }
-        std::cout << " bhp " << ws.bhp/1.e5 << " thp " << ws.thp/1.e5;
-        if (baseif_.getDynamicThpLimit()) {
-            std::cout << " dynamic thp limit " << *(baseif_.getDynamicThpLimit()) / 1.e5;
-        }
-        std::cout << std::endl;
-    }
 }
 
 template<class FluidSystem, class Indices, class Scalar>
@@ -109,14 +93,6 @@ computeAccumWell()
 {
     for (size_t eq_idx = 0; eq_idx < F0_.size(); ++eq_idx) {
         F0_[eq_idx] = this->primary_variables_.surfaceVolumeFraction(eq_idx).value();
-    }
-    // const std::set<std::string> well_names = {"S-P2", "S-P3", "S-P4", "S-P6"};
-    const std::set<std::string> well_names = {"S-P2", "S-P3", "S-P4", "S-P6", "PROD1", "PROD2", "PROD3"};
-    // const std::set<std::string> well_names = {"S-P6"};
-    if (well_names.count(baseif_.name()) > 0) {
-        std::cout << " outputting the primary variables for well " << baseif_.name() << " after updatePrimaryVariablesNewton " << std::endl;
-        std::cout << " primary_variables_ : " << primary_variables_[WQTotal]*86400. << " " << primary_variables_[WFrac] << " " << primary_variables_[GFrac]
-                  << " " << primary_variables_[Bhp]/1.e5 << std::endl;
     }
 }
 
