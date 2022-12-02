@@ -902,12 +902,14 @@ namespace Opm {
             this->initPrimaryVariablesEvaluation();
         } while (iter < max_iter);
 
+#if EXTRA_NETWORK_OUTPUT
         // TODO: make the following to the logger system
         if (!converged) {
             std::cout << " balanceNetwork not converged with " << max_iter << " iterations !" << std::endl;
         } else {
             std::cout << " balanceNetwork gets converged after " << iter << " iterations " << std::endl;
         }
+#endif
     }
 
 
@@ -1841,7 +1843,6 @@ namespace Opm {
     prepareTimeStep(DeferredLogger& deferred_logger)
     {
         bool network_rebalance_necessary = false;
-        std::cout << " I am in function prepareTimeStep() " << std::endl;
         const int reportStepIdx = ebosSimulator_.episodeIndex();
         const auto& network = schedule()[reportStepIdx].network();
         // TODO: without considering more complicated situation, it should only apply to the first time step within the
@@ -1855,19 +1856,25 @@ namespace Opm {
                 // TODO: it is possible the event should be more selective to the ones we want
                 // if (events.hasEvent(WellState::event_mask) &&
                 const bool is_partof_network = network.has_node(well->wellEcl().groupName());
+#if EXTRA_NETWORK_OUTPUT
                 std::cout << " well " << well->name() << " is part of the network ? ";
                 if (is_partof_network) {
                     std::cout << " YES ";
                 } else {
                     std::cout << " NO ";
                 }
+#endif
                 if (is_partof_network && events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE)) {
-                    std::cout << " made the network_rebalance necessary " << std::endl;
                     network_rebalance_necessary = true;
                     break;
+                }
+#if EXTRA_NETWORK_OUTPUT
+                if (network_rebalance_necessary) {
+                    std::cout << " made the network_rebalance necessary " << std::endl;
                 } else {
                     std::cout << " did not trigger network_rebalance " << std::endl;
                 }
+#endif
             }
         }
         for (const auto& well : well_container_) {
@@ -1891,8 +1898,6 @@ namespace Opm {
             }
         }
         updatePrimaryVariables(deferred_logger);
-        // TODO: how to do the network balancing?
-        // TODO: basically, we will update
         if (network_rebalance_necessary) {
             // this is to obtain good network solution
             balanceNetwork(deferred_logger);

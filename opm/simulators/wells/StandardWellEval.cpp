@@ -108,10 +108,6 @@ getWellConvergence(const WellState& well_state,
                    std::vector<double>& res,
                    DeferredLogger& deferred_logger) const
 {
-    // const std::set<std::string> well_names = {"S-P3", "S-P4", "S-P6"};
-    // const std::set<std::string> well_names = {"S-P6"};
-    // const std::set<std::string> well_names = {"S-P2", "S-P3", "S-P4", "S-P6"};
-    const std::set<std::string> well_names = {"S-P2", "S-P3", "S-P4", "S-P6", "PROD1", "PROD2", "PROD3"};
     res.resize(this->primary_variables_.numWellEq());
     for (int eq_idx = 0; eq_idx < this->primary_variables_.numWellEq(); ++eq_idx) {
         // magnitude of the residual matters
@@ -124,18 +120,6 @@ getWellConvergence(const WellState& well_state,
     for (int compIdx = 0; compIdx < baseif_.numComponents(); ++compIdx )
     {
         well_flux_residual[compIdx] = B_avg[compIdx] * res[compIdx];
-    }
-    if (well_names.count(baseif_.name()) > 0) {
-        std::cout << " well " << baseif_.name() << " residuals ";
-        for (const auto val : well_flux_residual) {
-            std::cout << " " << val;
-        }
-        std::cout << " flux_tolerance ";
-        if (relax_tolerance) {
-            std::cout << relaxed_tolerance_flow;
-        } else {
-            std::cout << tol_wells;
-        }
     }
     ConvergenceReport report;
     using CR = ConvergenceReport;
@@ -166,16 +150,6 @@ getWellConvergence(const WellState& well_state,
                                   std::abs(this->linSys_.residual()[0][Bhp]),
                                   report,
                                   deferred_logger);
-
-    if (well_names.count(baseif_.name()) > 0) {
-        std::cout << " converged ? ";
-        if (report.converged()) {
-            std::cout << " YES ";
-        } else {
-            std::cout << " NO ";
-        }
-        std::cout << std::endl;
-    }
 
     return report;
 }

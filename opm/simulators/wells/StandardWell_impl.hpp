@@ -29,6 +29,7 @@
 #include <functional>
 #include <numeric>
 
+#define EXTRA_NETWORK_OUTPUT 1
 namespace Opm
 {
 
@@ -1778,14 +1779,13 @@ namespace Opm
             return;
         }
 
-        // const std::set<std::string> well_names = {"S-P3", "S-P4", "S-P6"};
-        // const std::set<std::string> well_names = {"S-P2", "S-P3", "S-P4", "S-P6"};
+#if EXTRA_NETWORK_OUTPUT
         const std::set<std::string> well_names = {"S-P2", "S-P3", "S-P4", "S-P6", "PROD1", "PROD2", "PROD3"};
-        // const std::set<std::string> well_names = {"S-P6"};
         const bool output_for_well = well_names.count(this->name()) > 0;
         if (output_for_well) {
             std::cout << " calculating well potentials for well " << this->name() << std::endl;
         }
+#endif
 
         this->operability_status_.has_negative_potentials = false;
         // If the well is pressure controlled the potential equals the rate.
@@ -1803,19 +1803,24 @@ namespace Opm
         } else {
             const Well::ProducerCMode& current = ws.production_cmode;
             if (current == Well::ProducerCMode::THP) {
+#if EXTRA_NETWORK_OUTPUT
                 if (output_for_well) {
                     std::cout << " well " << this->name() << " is under THP control " << std::endl;
                 }
+#endif
                 thp_controlled_well = true;
             }
             if (current == Well::ProducerCMode::BHP) {
+#if EXTRA_NETWORK_OUTPUT
                 if (output_for_well) {
                     std::cout << " well " << this->name() << " is under BHP control " << std::endl;
                 }
+#endif
                 bhp_controlled_well = true;
             }
         }
         if (!this->changed_to_open_this_step_ && (thp_controlled_well || bhp_controlled_well)) {
+#if EXTRA_NETWORK_OUTPUT
             if (output_for_well) {
                 std::cout << " well rates are ";
                 for (const auto val: ws.surface_rates) {
@@ -1827,6 +1832,7 @@ namespace Opm
                 }
                 std::cout << std::endl;
             }
+#endif
 
             double total_rate = 0.0;
             const double sign = this->isInjector() ? 1.0:-1.0;
@@ -1862,15 +1868,9 @@ namespace Opm
                 bhp = std::min(ws.bhp, bhp);
 
             assert(std::abs(bhp) != std::numeric_limits<double>::max());
-            if (output_for_well) {
-                std::cout << " calculating well potentials based on BHP for well " << this->name() << std::endl;
-            }
             computeWellRatesWithBhpIterations(ebosSimulator, bhp, well_potentials, deferred_logger);
         } else {
             // the well has a THP related constraint
-            if (output_for_well) {
-                std::cout << " calculating well potentials based on THP for well " << this->name() << std::endl;
-            }
             well_potentials = computeWellPotentialWithTHP(ebosSimulator, deferred_logger, well_state);
         }
 
@@ -1885,14 +1885,6 @@ namespace Opm
             this->operability_status_.has_negative_potentials = true;
             const std::string msg = std::string("well ") + this->name() + std::string(": has negative potentials and is not operable");
             deferred_logger.warning("NEGATIVE_POTENTIALS_INOPERABLE", msg);
-        }
-
-        if (output_for_well) {
-            std::cout << " well " << this->name() << " final potential is ";
-            for (const auto val : well_potentials) {
-                std::cout << "  " << val * 86400.;
-            }
-            std::cout << std::endl;
         }
     }
 
