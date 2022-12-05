@@ -170,6 +170,21 @@ compPressureDrop() const
     return segmentSet().compPressureDrop();
 }
 
+template<typename Scalar>
+const std::vector<std::vector<int>>&
+MultisegmentWellGeneric<Scalar>::
+segmentInlets() const
+{
+    return segment_inlets_;
+}
+
+template<typename Scalar>
+const std::vector<std::vector<int>>&
+MultisegmentWellGeneric<Scalar>::
+segmentPerforations() const
+{
+    return segment_perforations_;
+}
 
 template<typename Scalar>
 int
