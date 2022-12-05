@@ -289,7 +289,6 @@ namespace Opm
                ss << " on rank " << cc.rank();
             }
             deferred_logger.debug(ss.str());
-            deferred_logger.info(ss.str());
 
             this->well_control_log_.push_back(from);
             updateWellStateWithTarget(ebos_simulator, group_state, well_state, deferred_logger);

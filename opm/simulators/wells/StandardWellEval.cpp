@@ -121,6 +121,7 @@ getWellConvergence(const WellState& well_state,
     {
         well_flux_residual[compIdx] = B_avg[compIdx] * res[compIdx];
     }
+
     ConvergenceReport report;
     using CR = ConvergenceReport;
     CR::WellFailure::Type type = CR::WellFailure::Type::MassBalance;

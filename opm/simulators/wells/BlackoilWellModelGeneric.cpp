@@ -58,8 +58,6 @@
 
 #include <fmt/format.h>
 
-#define EXTRA_NETWORK_OUTPUT 0
-
 namespace Opm {
 
 BlackoilWellModelGeneric::
@@ -955,8 +953,8 @@ updateNetworkPressures(const int reportStepIdx)
         for (const auto& [name, pressure]: previous_node_pressures) {
             const auto new_pressure = node_pressures_.at(name);
             const double change = (new_pressure - pressure);
-            if (abs(change) > network_imbalance) {
-                network_imbalance = abs(change);
+            if (std::abs(change) > network_imbalance) {
+                network_imbalance = std::abs(change);
             }
             // we dampen the amount of the nodal pressure can change during one iteration
             // due to the fact our nodal pressure calcualtion is somewhat explicit
@@ -968,8 +966,8 @@ updateNetworkPressures(const int reportStepIdx)
         }
     } else {
         for (const auto& [name, pressure]: node_pressures_) {
-            if (abs(pressure) > network_imbalance) {
-                network_imbalance = abs(pressure);
+            if (std::abs(pressure) > network_imbalance) {
+                network_imbalance = std::abs(pressure);
             }
         }
     }

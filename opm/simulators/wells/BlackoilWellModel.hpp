@@ -23,6 +23,7 @@
 
 #ifndef OPM_BLACKOILWELLMODEL_HEADER_INCLUDED
 #define OPM_BLACKOILWELLMODEL_HEADER_INCLUDED
+
 #include <ebos/eclproblem.hh>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
@@ -285,7 +286,8 @@ namespace Opm {
             // return { changed_well_group, more_network_update };
             // the first return value indicates whether the well and group are changed
             // the second return value indicated whether
-            std::pair<bool, bool> updateWellControls(DeferredLogger &deferred_logger, const bool balance_network = false);
+            std::pair<bool, bool> updateWellControls(DeferredLogger &deferred_logger,
+                                                     const bool balance_network = false);
 
             void updateAndCommunicate(const int reportStepIdx,
                                       const int iterationIdx,
@@ -359,10 +361,11 @@ namespace Opm {
 
             SimulatorReportSingle last_report_{};
 
-            // solve to get a good network solution, group and well states might be updated as a result
+            // solve to get a good network solution, group and well states might be updated as a result.
+            // the reservoir should stay static during this solution procedure
             void balanceNetwork(DeferredLogger& deferred_logger);
 
-            // used to better efficiency of calcuation
+            // used to better efficiency of calculation
             mutable BVector scaleAddRes_{};
 
             std::vector<Scalar> B_avg_{};

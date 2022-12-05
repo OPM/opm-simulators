@@ -976,6 +976,9 @@ namespace Opm {
     {
         // not necessarily that we always need to update once of the network solutions
         // TODO: we do not consider what happens if we could not get network converged
+        // TODO: and we do not consider whether well_group_control_changed affect the network solution
+        // here, there might be something missing in the logic or there should be a better logic
+        // to handle the coupling between the network and well/group solution
         bool do_network_update = true;
         bool well_group_control_changed = false;
         while (do_network_update) {
