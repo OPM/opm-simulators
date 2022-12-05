@@ -29,7 +29,7 @@
 #include <functional>
 #include <numeric>
 
-#define EXTRA_NETWORK_OUTPUT 1
+#define EXTRA_NETWORK_OUTPUT 0
 namespace Opm
 {
 

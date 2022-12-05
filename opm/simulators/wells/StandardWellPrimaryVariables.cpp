@@ -39,7 +39,7 @@
 
 #include <algorithm>
 #include <cassert>
-#define EXTRA_NETWORK_OUTPUT 1
+#define EXTRA_NETWORK_OUTPUT 0
 
 namespace {
 

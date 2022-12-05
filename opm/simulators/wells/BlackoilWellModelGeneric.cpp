@@ -58,7 +58,7 @@
 
 #include <fmt/format.h>
 
-#define EXTRA_NETWORK_OUTPUT 1
+#define EXTRA_NETWORK_OUTPUT 0
 
 namespace Opm {
 
@@ -943,28 +943,34 @@ updateNetworkPressures(const int reportStepIdx, const bool balance_network)
                                                                 *(vfp_properties_->getProd()),
                                                                 schedule(),
                                                                 reportStepIdx);
-#if EXTRA_NETWORK_OUTPUT
     double biggest_change = 1.e9;
     if (!previous_node_pressures.empty()) {
+#if EXTRA_NETWORK_OUTPUT
         std::ostringstream sstream;
         sstream << " the pressure change during the iterations \n";
-        biggest_change = 0;
         std::string biggest_change_name;
+#endif
+        biggest_change = 0;
         for (const auto& [name, pressure]: previous_node_pressures) {
             const auto new_pressure = node_pressures_.at(name);
             const double change = (new_pressure - pressure);
+#if EXTRA_NETWORK_OUTPUT
             sstream << name << " " << pressure / 1.e5 << " " << new_pressure / 1.e5 << " change " << change/1.e5 << " \n";
+#endif
             if (abs(change) > abs(biggest_change)) {
                 biggest_change = change;
+#if EXTRA_NETWORK_OUTPUT
                 biggest_change_name = name;
+#endif
             }
         }
+#if EXTRA_NETWORK_OUTPUT
         sstream << " biggest change is for " << biggest_change_name << " and is " << biggest_change/1.e5 << " Bar \n";
         if (comm_.rank() == 0) {
             OpmLog::info(sstream.str());
         }
-    }
 #endif
+    }
 
     if (!previous_node_pressures.empty()) {
 #if EXTRA_NETWORK_OUTPUT
