@@ -19,6 +19,7 @@
 */
 
 
+#include <opm/simulators/wells/MultisegmentWellAssemble.hpp>
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/input/eclipse/Schedule/MSW/Valve.hpp>
@@ -1562,30 +1563,18 @@ namespace Opm
                 for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
                     const EvalWell accumulation_term = regularization_factor * (segment_surface_volume * this->surfaceVolumeFraction(seg, comp_idx)
                                                      - segment_fluid_initial_[seg][comp_idx]) / dt;
-
-                    this->linSys_.resWell_[seg][comp_idx] += accumulation_term.value();
-                    for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-                        this->linSys_.duneD_[seg][seg][comp_idx][pv_idx] += accumulation_term.derivative(pv_idx + Indices::numEq);
-                    }
+                    MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(*this).
+                        assembleAccumulationTerm(seg, comp_idx, accumulation_term, this->linSys_);
                 }
             }
             // considering the contributions due to flowing out from the segment
             {
+                const int seg_upwind = this->upwinding_segments_[seg];
                 for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
-                    const EvalWell segment_rate = this->getSegmentRateUpwinding(seg, comp_idx) * this->well_efficiency_factor_;
-
-                    const int seg_upwind = this->upwinding_segments_[seg];
-                    // segment_rate contains the derivatives with respect to WQTotal in seg,
-                    // and WFrac and GFrac in seg_upwind
-                    this->linSys_.resWell_[seg][comp_idx] -= segment_rate.value();
-                    this->linSys_.duneD_[seg][seg][comp_idx][WQTotal] -= segment_rate.derivative(WQTotal + Indices::numEq);
-                    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-                        this->linSys_.duneD_[seg][seg_upwind][comp_idx][WFrac] -= segment_rate.derivative(WFrac + Indices::numEq);
-                    }
-                    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                        this->linSys_.duneD_[seg][seg_upwind][comp_idx][GFrac] -= segment_rate.derivative(GFrac + Indices::numEq);
-                    }
-                    // pressure derivative should be zero
+                    const EvalWell segment_rate = this->getSegmentRateUpwinding(seg, comp_idx) *
+                                                  this->well_efficiency_factor_;
+                    MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(*this).
+                        assembleOutflowTerm(seg, seg_upwind, comp_idx, segment_rate, this->linSys_);
                 }
             }
 
@@ -1594,19 +1583,9 @@ namespace Opm
                 for (const int inlet : this->segment_inlets_[seg]) {
                     for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
                         const EvalWell inlet_rate = this->getSegmentRateUpwinding(inlet, comp_idx) * this->well_efficiency_factor_;
-
                         const int inlet_upwind = this->upwinding_segments_[inlet];
-                        // inlet_rate contains the derivatives with respect to WQTotal in inlet,
-                        // and WFrac and GFrac in inlet_upwind
-                        this->linSys_.resWell_[seg][comp_idx] += inlet_rate.value();
-                        this->linSys_.duneD_[seg][inlet][comp_idx][WQTotal] += inlet_rate.derivative(WQTotal + Indices::numEq);
-                        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-                            this->linSys_.duneD_[seg][inlet_upwind][comp_idx][WFrac] += inlet_rate.derivative(WFrac + Indices::numEq);
-                        }
-                        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                            this->linSys_.duneD_[seg][inlet_upwind][comp_idx][GFrac] += inlet_rate.derivative(GFrac + Indices::numEq);
-                        }
-                        // pressure derivative should be zero
+                        MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(*this).
+                            assembleInflowTerm(seg, inlet, inlet_upwind, comp_idx, inlet_rate, this->linSys_);
                     }
                 }
             }
@@ -1647,23 +1626,8 @@ namespace Opm
 
                     this->connectionRates_[perf][comp_idx] = Base::restrictEval(cq_s_effective);
 
-                    // subtract sum of phase fluxes in the well equations.
-                    this->linSys_.resWell_[seg][comp_idx] += cq_s_effective.value();
-
-                    // assemble the jacobians
-                    for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-
-                        // also need to consider the efficiency factor when manipulating the jacobians.
-                        this->linSys_.duneC_[seg][cell_idx][pv_idx][comp_idx] -= cq_s_effective.derivative(pv_idx + Indices::numEq); // intput in transformed matrix
-
-                        // the index name for the D should be eq_idx / pv_idx
-                        this->linSys_.duneD_[seg][seg][comp_idx][pv_idx] += cq_s_effective.derivative(pv_idx + Indices::numEq);
-                    }
-
-                    for (int pv_idx = 0; pv_idx < Indices::numEq; ++pv_idx) {
-                        // also need to consider the efficiency factor when manipulating the jacobians.
-                        this->linSys_.duneB_[seg][cell_idx][comp_idx][pv_idx] += cq_s_effective.derivative(pv_idx);
-                    }
+                    MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(*this).
+                        assemblePerforationEq(seg, cell_idx, comp_idx, cq_s_effective, this->linSys_);
                 }
             }
 
@@ -1671,13 +1635,19 @@ namespace Opm
             if (seg == 0) { // top segment, pressure equation is the control equation
                 const auto& summaryState = ebosSimulator.vanguard().summaryState();
                 const Schedule& schedule = ebosSimulator.vanguard().schedule();
-                this->assembleControlEq(well_state,
+                std::function<EvalWell(const int)> gQ = [this](int a) { return this->getQs(a); };
+                MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(*this).
+                        assembleControlEq(well_state,
                                         group_state,
                                         schedule,
                                         summaryState,
                                         inj_controls,
                                         prod_controls,
                                         getRefDensity(),
+                                        this->getWQTotal(),
+                                        this->getBhp(),
+                                        gQ,
+                                        this->linSys_,
                                         deferred_logger);
             } else {
                 const UnitSystem& unit_system = ebosSimulator.vanguard().eclState().getDeckUnitSystem();
