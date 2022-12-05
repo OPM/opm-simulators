@@ -282,9 +282,10 @@ namespace Opm {
             void initPrimaryVariablesEvaluation() const;
             bool shouldBalanceNetwork(const int reportStepIndex, const int iterationIdx) const;
 
-            // TODO: explain what are returning here
-            std::pair<bool, bool> updateWellControls(DeferredLogger& deferred_logger, const size_t network_update_it,
-                                                     const bool balance_network = false);
+            // return { changed_well_group, more_network_update };
+            // the first return value indicates whether the well and group are changed
+            // the second return value indicated whether
+            std::pair<bool, bool> updateWellControls(DeferredLogger &deferred_logger, const bool balance_network = false);
 
             void updateAndCommunicate(const int reportStepIdx,
                                       const int iterationIdx,
@@ -385,8 +386,7 @@ namespace Opm {
             // to avoid calling the assembleImpl in recursive manner
             // the name is temporary, and will rename when the refactoring is finished.
             // the returned two booleans are {continue_due_to_network, well_group_control_changed}
-            std::pair<bool, bool> updateWellControlsAndNetworkIteration(const size_t network_update_iteration,
-                                                                        DeferredLogger& local_deferredLogger,
+            std::pair<bool, bool> updateWellControlsAndNetworkIteration(DeferredLogger &local_deferredLogger,
                                                                         const bool balance_network = false);
 
             bool updateWellControlsAndNetwork(DeferredLogger& local_deferredLogger, const bool balance_network = false);

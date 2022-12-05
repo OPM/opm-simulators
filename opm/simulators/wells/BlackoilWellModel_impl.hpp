@@ -975,13 +975,12 @@ namespace Opm {
     updateWellControlsAndNetwork(DeferredLogger& local_deferredLogger, const bool balance_network)
     {
         // not necessarily that we always need to update once of the network solutions
+        // TODO: we do not consider what happens if we could not get network converged
         bool do_network_update = true;
         bool well_group_control_changed = false;
-        size_t network_update_iteration = 0;
         while (do_network_update) {
             std::tie(do_network_update, well_group_control_changed) =
-                    updateWellControlsAndNetworkIteration(network_update_iteration, local_deferredLogger, balance_network);
-            ++network_update_iteration;
+                    updateWellControlsAndNetworkIteration(local_deferredLogger, balance_network);
         }
         return well_group_control_changed;
     }
@@ -992,12 +991,10 @@ namespace Opm {
     template<typename TypeTag>
     std::pair<bool, bool>
     BlackoilWellModel<TypeTag>::
-    updateWellControlsAndNetworkIteration(const size_t network_update_iteration,
-                                          DeferredLogger& local_deferredLogger,
-                                          const bool balance_network)
+    updateWellControlsAndNetworkIteration(DeferredLogger &local_deferredLogger, const bool balance_network)
     {
         const auto [well_group_control_changed, more_network_update] = updateWellControls(local_deferredLogger,
-                                                                                    network_update_iteration, balance_network);
+                                                                                          balance_network);
 
         bool alq_updated = false;
         OPM_BEGIN_PARALLEL_TRY_CATCH();
@@ -1598,9 +1595,7 @@ namespace Opm {
     template<typename TypeTag>
     std::pair<bool, bool>
     BlackoilWellModel<TypeTag>::
-    updateWellControls(DeferredLogger& deferred_logger,
-                       const size_t /* network_update_it */,
-                       const bool balance_network) {
+    updateWellControls(DeferredLogger &deferred_logger, const bool balance_network) {
 
         const int episodeIdx = ebosSimulator_.episodeIndex();
         const auto& network = schedule()[episodeIdx].network();
