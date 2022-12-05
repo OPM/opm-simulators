@@ -927,14 +927,19 @@ inferLocalShutWells()
     }
 }
 
-std::pair<bool, double>
+double
 BlackoilWellModelGeneric::
-updateNetworkPressures(const int reportStepIdx, const bool balance_network)
+updateNetworkPressures(const int reportStepIdx)
 {
+    // TODO: the old logic related to whether wells are under THP/nodal pressure control
+    // should still be relevant. But the current way relying on network_imbalance to control
+    // the convergence. The logic related to whether wells are under THP/nodal pressure control
+    // can potentially be used optimize this function.
+
     // Get the network and return if inactive.
     const auto& network = schedule()[reportStepIdx].network();
     if (!network.active()) {
-        return { false, 0.0 };
+        return 0.0;
     }
     const auto previous_node_pressures = node_pressures_;
     node_pressures_ = WellGroupHelpers::computeNetworkPressures(network,
@@ -943,66 +948,32 @@ updateNetworkPressures(const int reportStepIdx, const bool balance_network)
                                                                 *(vfp_properties_->getProd()),
                                                                 schedule(),
                                                                 reportStepIdx);
-    double biggest_change = 1.e9;
-    if (!previous_node_pressures.empty()) {
-#if EXTRA_NETWORK_OUTPUT
-        std::ostringstream sstream;
-        sstream << " the pressure change during the iterations \n";
-        std::string biggest_change_name;
-#endif
-        biggest_change = 0;
-        for (const auto& [name, pressure]: previous_node_pressures) {
-            const auto new_pressure = node_pressures_.at(name);
-            const double change = (new_pressure - pressure);
-#if EXTRA_NETWORK_OUTPUT
-            sstream << name << " " << pressure / 1.e5 << " " << new_pressure / 1.e5 << " change " << change/1.e5 << " \n";
-#endif
-            if (abs(change) > abs(biggest_change)) {
-                biggest_change = change;
-#if EXTRA_NETWORK_OUTPUT
-                biggest_change_name = name;
-#endif
-            }
-        }
-#if EXTRA_NETWORK_OUTPUT
-        sstream << " biggest change is for " << biggest_change_name << " and is " << biggest_change/1.e5 << " Bar \n";
-        if (comm_.rank() == 0) {
-            OpmLog::info(sstream.str());
-        }
-#endif
-    }
 
+    // here, the network imbalance is the difference between the previous nodal pressure and the new nodal pressure
+    double network_imbalance = 0.;
     if (!previous_node_pressures.empty()) {
-#if EXTRA_NETWORK_OUTPUT
-        std::ostringstream sstream;
-        sstream << " the pressure change during the iterations \n";
-#endif
         for (const auto& [name, pressure]: previous_node_pressures) {
             const auto new_pressure = node_pressures_.at(name);
             const double change = (new_pressure - pressure);
+            if (abs(change) > network_imbalance) {
+                network_imbalance = abs(change);
+            }
+            // we dampen the amount of the nodal pressure can change during one iteration
+            // due to the fact our nodal pressure calcualtion is somewhat explicit
             const double allowed_change = std::max(std::min(0.1*std::abs(change), 5.e5), 0.05e5);
-#if EXTRA_NETWORK_OUTPUT
-            sstream << "for node " << name << " balance_network ? " << balance_network << " allowed_change " << allowed_change / 1.e5 << std::endl;
-#endif
             if (abs(change) > allowed_change) {
                 const double sign = change > 0 ? 1. : -1.;
                 node_pressures_[name] = pressure + sign * allowed_change;
-#if EXTRA_NETWORK_OUTPUT
-                sstream << name << " node pressure adjusted to be " << node_pressures_[name] / 1.e5
-                        << " to avoid too big pressure change than " << allowed_change/1.e5 << " bar " << std::endl;
-#endif
             }
         }
-#if EXTRA_NETWORK_OUTPUT
-        if (comm_.rank() == 0) {
-            OpmLog::info(sstream.str());
+    } else {
+        for (const auto& [name, pressure]: node_pressures_) {
+            if (abs(pressure) > network_imbalance) {
+                network_imbalance = abs(pressure);
+            }
         }
-#endif
     }
 
-    // Set the thp limits of wells
-    bool active_limit_change = false;
-    double network_imbalance = 0.0;
     for (auto& well : well_container_generic_) {
         // Producers only, since we so far only support the
         // "extended" network model (properties defined by
@@ -1016,49 +987,15 @@ updateNetworkPressures(const int reportStepIdx, const bool balance_network)
                 well->setDynamicThpLimit(new_limit);
                 SingleWellState& ws = this->wellState()[well->indexOfWell()];
                 const bool thp_is_limit = ws.production_cmode == Well::ProducerCMode::THP;
-                // TODO: the name will_swtich_to_thp is a little deceiving, because other constraint might come first
-                const bool will_switch_to_thp = ws.thp < new_limit;
-#if EXTRA_NETWORK_OUTPUT
-                std::ostringstream  sstream;
-                sstream << " well " << well->name() << " thp_is_limit ";
-                if (thp_is_limit) {
-                    sstream << " YES ";
-                } else {
-                    sstream << " NO ";
-                }
-                sstream << " will_switch_to_thp ";
-                if (will_switch_to_thp) {
-                    sstream << " YES ";
-                } else {
-                    sstream << " NO ";
-                }
-#endif
-                if (thp_is_limit || will_switch_to_thp) {
-                    active_limit_change = true;
-                    network_imbalance = std::max(network_imbalance, std::fabs(new_limit - ws.thp));
-#if EXTRA_NETWORK_OUTPUT
-                    sstream << "new_limit is  " << new_limit/1.e5 << " well thp is " << ws.thp/1.e5 << " network_imbalance " << std::fabs(new_limit - ws.thp) / 1.e5 << " Barsa";
-#endif
-                }
-#if EXTRA_NETWORK_OUTPUT
-                sstream << " \n";
-                OpmLog::info(sstream.str());
-#endif
+                // TODO: should this happen here?
                 if (thp_is_limit) {
                     ws.thp = well->getTHPConstraint(summaryState_);
                 }
             }
         }
     }
-    network_imbalance = std::abs(biggest_change);
 
-#if EXTRA_NETWORK_OUTPUT
-    std::ostringstream sstream;
-    sstream << " the final network_imbalance is " << network_imbalance / 1.e5  << " barsa " << " active_limit_change ? " << active_limit_change << "\n";
-    OpmLog::info(sstream.str());
-#endif
-
-    return { active_limit_change, network_imbalance };
+    return network_imbalance;
 }
 
 void

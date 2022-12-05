@@ -880,7 +880,6 @@ namespace Opm {
         const int max_iter = 100;
         bool converged = false;
         size_t iter = 0;
-        bool update_network_more = true;
         bool changed_well_group = false;
         do {
             changed_well_group = updateWellControlsAndNetwork(deferred_logger, true);
@@ -973,7 +972,7 @@ namespace Opm {
     template<typename TypeTag>
     bool
     BlackoilWellModel<TypeTag>::
-    updateWellControlsAndNetwork(DeferredLogger& local_deferredLogger, const bool solve_welleq)
+    updateWellControlsAndNetwork(DeferredLogger& local_deferredLogger, const bool balance_network)
     {
         // not necessarily that we always need to update once of the network solutions
         bool do_network_update = true;
@@ -981,7 +980,7 @@ namespace Opm {
         size_t network_update_iteration = 0;
         while (do_network_update) {
             std::tie(do_network_update, well_group_control_changed) =
-                    updateWellControlsAndNetworkIteration(network_update_iteration, local_deferredLogger, solve_welleq);
+                    updateWellControlsAndNetworkIteration(network_update_iteration, local_deferredLogger, balance_network);
             ++network_update_iteration;
         }
         return well_group_control_changed;
@@ -1600,7 +1599,7 @@ namespace Opm {
     std::pair<bool, bool>
     BlackoilWellModel<TypeTag>::
     updateWellControls(DeferredLogger& deferred_logger,
-                       const size_t network_update_it,
+                       const size_t /* network_update_it */,
                        const bool balance_network) {
 
         const int episodeIdx = ebosSimulator_.episodeIndex();
@@ -1617,9 +1616,7 @@ namespace Opm {
         // The following should put in one function
         bool more_network_update = false;
         if (shouldBalanceNetwork(episodeIdx, iterationIdx) || balance_network) {
-            const auto [local_network_changed, local_network_imbalance] = updateNetworkPressures(episodeIdx, balance_network);
-            // TODO: in the current form, the network_changed is of no use
-            const bool network_changed = comm.sum(local_network_changed);
+            const auto local_network_imbalance = updateNetworkPressures(episodeIdx);
             const double network_imbalance = comm.max(local_network_imbalance);
             const auto& balance = schedule()[episodeIdx].network_balance();
             if (network_imbalance > balance.pressure_tolerance()) {

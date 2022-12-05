@@ -23,7 +23,6 @@
 
 #ifndef OPM_BLACKOILWELLMODEL_HEADER_INCLUDED
 #define OPM_BLACKOILWELLMODEL_HEADER_INCLUDED
-
 #include <ebos/eclproblem.hh>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
@@ -282,6 +281,8 @@ namespace Opm {
             void prepareTimeStep(DeferredLogger& deferred_logger);
             void initPrimaryVariablesEvaluation() const;
             bool shouldBalanceNetwork(const int reportStepIndex, const int iterationIdx) const;
+
+            // TODO: explain what are returning here
             std::pair<bool, bool> updateWellControls(DeferredLogger& deferred_logger, const size_t network_update_it,
                                                      const bool balance_network = false);
 
@@ -388,7 +389,7 @@ namespace Opm {
                                                                         DeferredLogger& local_deferredLogger,
                                                                         const bool balance_network = false);
 
-            bool updateWellControlsAndNetwork(DeferredLogger& local_deferredLogger, const bool solve_welleq = false);
+            bool updateWellControlsAndNetwork(DeferredLogger& local_deferredLogger, const bool balance_network = false);
 
             // called at the end of a time step
             void timeStepSucceeded(const double& simulationTime, const double dt);
