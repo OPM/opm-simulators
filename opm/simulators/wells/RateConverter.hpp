@@ -25,6 +25,7 @@
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/grid/utility/RegionMapping.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+#include <opm/simulators/utils/ParallelCommunication.hpp>
 #include <opm/simulators/wells/RegionAttributeHelpers.hpp>
 
 #include <dune/grid/common/gridenums.hh>
@@ -83,6 +84,18 @@ namespace Opm {
                 , attr_      (rmap_, Attributes())
             {}
 
+            SurfaceToReservoirVoidage(const PhaseUsage& phaseUsage,
+                                      const Region&     region,
+                                      Parallel::Communication comm)
+                : phaseUsage_(phaseUsage)
+#if HAVE_MPI
+                , rmap_      (region, comm)
+#else
+                , rmap_      (region)
+#endif
+                , attr_      (rmap_, Attributes())
+            {}
+
             /**
              * Compute pore volume averaged hydrocarbon state pressure, rs and rv.
              *
@@ -120,7 +133,9 @@ namespace Opm {
 
                 ElementContext elemCtx( simulator );
                 const auto& gridView = simulator.gridView();
+#if !HAVE_MPI
                 const auto& comm = gridView.comm();
+#endif
 
                 OPM_BEGIN_PARALLEL_TRY_CATCH();
                 for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
@@ -190,6 +205,9 @@ namespace Opm {
 
                 for (const auto& reg : rmap_.activeRegions()) {
                       auto& ra = attr_.attributes(reg);
+#if HAVE_MPI
+                      Parallel::Communication comm(rmap_.comm());
+#endif
                       const double hpv_sum = comm.sum(attributes_hpv[reg].pv);
                       // TODO: should we have some epsilon here instead of zero?
                       if (hpv_sum > 0.) {
