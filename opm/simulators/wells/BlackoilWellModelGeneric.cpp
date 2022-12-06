@@ -441,8 +441,8 @@ checkGroupHigherConstraints(const Group& group,
     // What is the proper approach?
     const int fipnum = 0;
     int pvtreg = well_perf_data_.empty() || well_perf_data_[0].empty()
-        ? pvt_region_idx_[0]
-        : pvt_region_idx_[well_perf_data_[0][0].cell_index];
+        ? (pvt_region_idx_.empty() ? -1 : pvt_region_idx_[0])
+        : (pvt_region_idx_.empty() ? -1 : pvt_region_idx_[well_perf_data_[0][0].cell_index]);
 
     bool changed = false;
     if ( comm_.size() > 1)
@@ -452,8 +452,10 @@ checkGroupHigherConstraints(const Group& group,
         // is decided by the order in the Schedule using Well::seqIndex()
         int firstWellIndex = well_perf_data_.empty() ?
             std::numeric_limits<int>::max() : wells_ecl_[0].seqIndex();
-        auto regIndexPair = std::make_pair(pvtreg, firstWellIndex);
-        std::vector<decltype(regIndexPair)> pairs(comm_.size());
+        std::vector<std::pair<int,int>> pairs(comm_.size());
+        std::pair<int,int> regIndexPair{-1,std::numeric_limits<int>::max()};
+        if (pvtreg > -1)
+            regIndexPair = std::make_pair(pvtreg, firstWellIndex);
         comm_.allgather(&regIndexPair, 1, pairs.data());
         pvtreg = std::min_element(pairs.begin(), pairs.end(),
                                   [](const auto& p1, const auto& p2){ return p1.second < p2.second;})
