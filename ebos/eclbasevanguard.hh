@@ -98,6 +98,11 @@ struct OwnerCellsFirst {
 };
 
 template<class TypeTag, class MyTypeTag>
+struct AllowEmptyPartitions {
+    using type = UndefinedProperty;
+};
+
+template<class TypeTag, class MyTypeTag>
 struct SerialPartitioning {
     using type = UndefinedProperty;
 };
@@ -156,6 +161,10 @@ struct NumJacobiBlocks<TypeTag, TTag::EclBaseVanguard> {
 template<class TypeTag>
 struct OwnerCellsFirst<TypeTag, TTag::EclBaseVanguard> {
     static constexpr bool value = true;
+};
+template<class TypeTag>
+struct AllowEmptyPartitions<TypeTag, TTag::EclBaseVanguard> {
+    static constexpr bool value = false;
 };
 template<class TypeTag>
 struct SerialPartitioning<TypeTag, TTag::EclBaseVanguard> {
@@ -245,6 +254,8 @@ public:
 
         EWOMS_REGISTER_PARAM(TypeTag, bool, OwnerCellsFirst,
                              "Order cells owned by rank before ghost/overlap cells.");
+        EWOMS_REGISTER_PARAM(TypeTag, bool, AllowEmptyPartitions,
+                             "Allow ranks with no grid cells.");
 #if HAVE_MPI
         EWOMS_REGISTER_PARAM(TypeTag, bool, SerialPartitioning,
                              "Perform partitioning for parallel runs on a single process.");
@@ -258,6 +269,7 @@ public:
                              "See https://sandialabs.github.io/Zoltan/ug_html/ug.html "
                              "for available Zoltan options.");
         EWOMS_HIDE_PARAM(TypeTag, ZoltanParams);
+        EWOMS_HIDE_PARAM(TypeTag, AllowEmptyPartitions);
 #endif
         EWOMS_REGISTER_PARAM(TypeTag, bool, AllowDistributedWells,
                              "Allow the perforations of a well to be distributed to interior of multiple processes");
@@ -283,6 +295,7 @@ public:
 #endif
 
         ownersFirst_ = EWOMS_GET_PARAM(TypeTag, bool, OwnerCellsFirst);
+        allowEmptyPartitions_ = EWOMS_GET_PARAM(TypeTag, bool, AllowEmptyPartitions);
 #if HAVE_MPI
         serialPartitioning_ = EWOMS_GET_PARAM(TypeTag, bool, SerialPartitioning);
         zoltanImbalanceTol_ = EWOMS_GET_PARAM(TypeTag, double, ZoltanImbalanceTol);
@@ -624,6 +637,9 @@ protected:
     /*! \brief Whether a cells is in the interior.
      */
     std::vector<int> is_interior_;
+
+    //! \brief Allow empty grid partitions.
+    bool allowEmptyPartitions_;
 };
 
 } // namespace Opm
