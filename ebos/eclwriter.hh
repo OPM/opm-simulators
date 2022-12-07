@@ -309,8 +309,11 @@ public:
             // N.B. damarisUpdate_ should be set to true if at any time the model geometry changes
             if (this->damarisUpdate_) {
                 const auto& gridView = simulator_.gridView();
-                const int numElements = gridView.size(/*codim=*/0); // This it is the local ranks model size.
+                const auto& interior_elements = elements(gridView, Dune::Partitions::interior);
+                const int numElements = std::distance(interior_elements.begin(), interior_elements.end());
                 Opm::DamarisOutput::setupDamarisWritingPars(simulator_.vanguard().grid().comm(), numElements);
+                const std::vector<int>& local_to_global = this->collectToIORank_.localIdxToGlobalIdxMapping();
+                damaris_write("GLOBAL_CELL_INDEX", local_to_global.data());
                 // By default we assume static grid
                 this->damarisUpdate_ = false;
             }
