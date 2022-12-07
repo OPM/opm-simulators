@@ -20,6 +20,7 @@
 #include <config.h>
 
 #include <ebos/eclgenericoutputblackoilmodule.hh>
+#include <ebos/eclmpiserializer.hh>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 
@@ -642,7 +643,9 @@ addRftDataToWells(data::Wells& wellDatas, size_t reportStepNum)
 
 template<class FluidSystem, class Scalar>
 void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
-assignToSolution(data::Solution& sol)
+assignToSolution(data::Solution& sol,
+                 const Parallel::Communication& comm,
+                 const size_t num_cells)
 {
     using DataEntry = std::tuple<std::string,
                                  UnitSystem::measure,
@@ -709,49 +712,114 @@ assignToSolution(data::Solution& sol)
         {"WAT_VISC", UnitSystem::measure::viscosity, data::TargetType::RESTART_AUXILIARY,     viscosity_[waterPhaseIdx]},
     };
 
-    for (const auto& entry : data)
-        doInsert(entry);
+    // if we have processes with zero cells, we need to broadcast
+    // keys to include since local checks for zero vectors will cause
+    // differences across processes. we here assume process 0 owns cells
+    std::vector<std::size_t> process_cells(comm.size(), 1);
+    bool has_zeros = false;
+    int first_nonzero = 0;
+    if (comm.size() > 1) {
+        comm.allgather(&num_cells, 1, process_cells.data());
+        has_zeros = *std::min_element(process_cells.begin(), process_cells.end()) == 0;
+        first_nonzero = std::distance(process_cells.begin(),
+                            std::find_if(process_cells.begin(), process_cells.end(),
+                                         [](std::size_t r) { return r != 0; }));
+    }
 
-    if (!temperature_.empty()) {
-        if (enableEnergy_)
-            sol.insert("TEMP", UnitSystem::measure::temperature, std::move(temperature_), data::TargetType::RESTART_SOLUTION);
-        else {
-            // Flow allows for initializing of non-constant initial temperature.
-            // For output of this temperature for visualization and restart set --enable-opm-restart=true
-            assert(enableTemperature_);
-            sol.insert("TEMP", UnitSystem::measure::temperature, std::move(temperature_), data::TargetType::RESTART_AUXILIARY);
+    using ExtraData = std::tuple<std::string,
+                                 UnitSystem::measure,
+                                 data::TargetType>;
+    std::vector<ExtraData> extras;
+    auto insertExtra = [has_zeros, first_nonzero,
+                        &extras,& sol, comm](const std::string& name,
+                                                        UnitSystem::measure measure,
+                                                        std::vector<Scalar>&& vec,
+                                                        data::TargetType type)
+    {
+        if (has_zeros && comm.rank() == first_nonzero)
+            extras.emplace_back(std::make_tuple(name, measure, type));
+        sol.insert(name, measure, vec, type);
+
+    };
+    if (process_cells[comm.rank()] > 0) {
+        for (const auto& entry : data)
+            doInsert(entry);
+
+        if (!temperature_.empty()) {
+            if (enableEnergy_)
+                insertExtra("TEMP", UnitSystem::measure::temperature, std::move(temperature_), data::TargetType::RESTART_SOLUTION);
+            else {
+                // Flow allows for initializing of non-constant initial temperature.
+                // For output of this temperature for visualization and restart set --enable-opm-restart=true
+                assert(enableTemperature_);
+                insertExtra("TEMP", UnitSystem::measure::temperature, std::move(temperature_), data::TargetType::RESTART_AUXILIARY);
+            }
+        }
+
+        if (FluidSystem::phaseIsActive(waterPhaseIdx) && !saturation_[waterPhaseIdx].empty()) {
+            insertExtra("SWAT", UnitSystem::measure::identity, std::move(saturation_[waterPhaseIdx]), data::TargetType::RESTART_SOLUTION);
+        }
+        if (FluidSystem::phaseIsActive(gasPhaseIdx) && !saturation_[gasPhaseIdx].empty()) {
+            insertExtra("SGAS", UnitSystem::measure::identity, std::move(saturation_[gasPhaseIdx]), data::TargetType::RESTART_SOLUTION);
+        }
+
+        // Fluid in place
+        for (const auto& phase : Inplace::phases()) {
+            if (outputFipRestart_ && !fip_[phase].empty()) {
+                ScalarBuffer f = fip_[phase];
+                insertExtra(EclString(phase),
+                            UnitSystem::measure::volume,
+                            std::move(f),
+                            data::TargetType::SUMMARY);
+            }
+        }
+
+        // tracers
+        if (!tracerConcentrations_.empty()) {
+            const auto& tracers = eclState_.tracer();
+            for (std::size_t tracerIdx = 0; tracerIdx < tracers.size(); tracerIdx++) {
+                const auto& tracer = tracers[tracerIdx];
+                insertExtra(tracer.fname(), UnitSystem::measure::identity, std::move(tracerConcentrations_[tracerIdx]), data::TargetType::RESTART_TRACER_SOLUTION);
+            }
+            // We need put tracerConcentrations into a valid state.
+            // Otherwise next time we end up here outside of a restart write we will
+            // move invalidated data above (as it was moved away before and never
+            // reallocated)
+            tracerConcentrations_.resize(0);
         }
     }
-
-    if (FluidSystem::phaseIsActive(waterPhaseIdx) && !saturation_[waterPhaseIdx].empty()) {
-        sol.insert("SWAT", UnitSystem::measure::identity, std::move(saturation_[waterPhaseIdx]), data::TargetType::RESTART_SOLUTION);
-    }
-    if (FluidSystem::phaseIsActive(gasPhaseIdx) && !saturation_[gasPhaseIdx].empty()) {
-        sol.insert("SGAS", UnitSystem::measure::identity, std::move(saturation_[gasPhaseIdx]), data::TargetType::RESTART_SOLUTION);
-    }
-
-    // Fluid in place
-    for (const auto& phase : Inplace::phases()) {
-        if (outputFipRestart_ && !fip_[phase].empty()) {
-            sol.insert(EclString(phase),
-                       UnitSystem::measure::volume,
-                       fip_[phase],
-                       data::TargetType::SUMMARY);
+    std::vector<std::string> keys;
+    if (has_zeros) {
+        if (comm.rank() == 0) {
+            for (const auto& entry : sol) {
+                keys.push_back(entry.first);
+            }
         }
-    }
+        EclMpiSerializer serializer(comm);
+        serializer.broadcast(first_nonzero, keys, extras);
 
-    // tracers
-    if (!tracerConcentrations_.empty()) {
-        const auto& tracers = eclState_.tracer();
-        for (std::size_t tracerIdx = 0; tracerIdx < tracers.size(); tracerIdx++) {
-            const auto& tracer = tracers[tracerIdx];
-            sol.insert(tracer.fname(), UnitSystem::measure::identity, std::move(tracerConcentrations_[tracerIdx]), data::TargetType::RESTART_TRACER_SOLUTION);
+        if (process_cells[comm.rank()] == 0) {
+            for (const auto& key : keys) {
+                const auto entry =
+                    std::find_if(data.begin(), data.end(),
+                                [key](const DataEntry& e)
+                                {
+                                    return std::get<0>(e) == key;
+                                });
+                if (entry != data.end()) {
+                    sol.insert(key, std::get<1>(*entry),
+                               std::move(std::get<3>(*entry)), std::get<2>(*entry));
+                } else {
+                    const auto entry2  =
+                        std::find_if(extras.begin(), extras.end(),
+                                    [key](const ExtraData& e)
+                                    {
+                                        return std::get<0>(e) == key;
+                                    });
+                    sol.insert(key, std::get<1>(*entry2), {}, std::get<2>(*entry2));
+                }
+            }
         }
-        // We need put tracerConcentrations into a valid state.
-        // Otherwise next time we end up here outside of a restart write we will
-        // move invalidated data above (as it was moved away before and never
-        // reallocated)
-        tracerConcentrations_.resize(0);
     }
 }
 
