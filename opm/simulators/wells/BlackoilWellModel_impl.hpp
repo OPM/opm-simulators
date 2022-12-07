@@ -1053,10 +1053,6 @@ namespace Opm {
                 }
                 num_rates_to_sync = groups_to_sync.size();
             }
-            // Since "group_info" is not used in stage2, there is no need to
-            //   communicate rates if this is the last iteration...
-            if (i == (num_procs - 1))
-                break;
             num_rates_to_sync = comm.sum(num_rates_to_sync);
             if (num_rates_to_sync > 0) {
                 std::vector<int> group_indexes;
@@ -1085,14 +1081,6 @@ namespace Opm {
                     group_water_rates.resize(num_rates_to_sync);
                     group_alq_rates.resize(num_rates_to_sync);
                 }
-                // TODO: We only need to broadcast to processors with index
-                //   j > i since we do not use the "group_info" in stage 2. In
-                //   this case we should use comm.send() and comm.receive()
-                //   instead of comm.broadcast() to communicate with specific
-                //   processes, and these processes only need to receive the
-                //   data if they are going to check the group rates in stage1
-                //   Another similar idea is to only communicate the rates to
-                //   process j = i + 1
 #if HAVE_MPI
                 EclMpiSerializer ser(comm);
                 ser.broadcast(i, group_indexes, group_oil_rates,
