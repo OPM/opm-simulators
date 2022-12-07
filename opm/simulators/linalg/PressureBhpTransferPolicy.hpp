@@ -50,7 +50,6 @@ namespace Opm
         }
         const int global_max = comm.communicator().max(glo_max);
         // used append the welldofs at the end
-        assert(loc_max + 1 == indset.size());
         size_t local_ind = loc_max + 1;
         for (int i = 0; i < nw; ++i) {
             // need to set unique global number
