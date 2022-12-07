@@ -172,6 +172,9 @@ namespace Opm
 
     virtual void calculateCoarseEntries(const FineOperator& fineOperator) override
     {
+        if (coarseLevelMatrix_->N() == 0)
+            return;
+
         const auto& fineMatrix = fineOperator.getmat();
         *coarseLevelMatrix_ = 0;
         auto rowCoarse = coarseLevelMatrix_->begin();
