@@ -111,11 +111,17 @@ namespace Opm
                     = static_cast<size_t>(std::ceil(fineLevelMatrix.nonzeroes() /
                                                     std::max(1ul,fineLevelMatrix.N())));
                 const double overflow_fraction = 1.2;
-                coarseLevelMatrix_.reset(new CoarseMatrix(fineLevelMatrix.N() + nw,
-                                                          fineLevelMatrix.M() + nw,
-                                                          average_elements_per_row,
-                                                          overflow_fraction,
-                                                          CoarseMatrix::implicit));
+                if (fineLevelMatrix.N() + nw > 0) {
+                    coarseLevelMatrix_ = std::make_unique<CoarseMatrix>(fineLevelMatrix.N() + nw,
+                                                                        fineLevelMatrix.M() + nw,
+                                                                        average_elements_per_row,
+                                                                        overflow_fraction,
+                                                                        CoarseMatrix::implicit);
+                } else { // workaround bcrsmatrix bug with implicit build mode + empty matrix
+                    coarseLevelMatrix_ = std::make_unique<CoarseMatrix>(fineLevelMatrix.N() + nw,
+                                                                        fineLevelMatrix.M() + nw,
+                                                                        CoarseMatrix::random);
+                }
                 int rownum = 0;
                 for (const auto& row : fineLevelMatrix) {
                     for (auto col = row.begin(), cend = row.end(); col != cend; ++col) {
@@ -151,7 +157,12 @@ namespace Opm
 #endif
         if (prm_.get<bool>("add_wells")) {
             fineOperator.addWellPressureEquationsStruct(*coarseLevelMatrix_);
-            coarseLevelMatrix_->compress(); // all elemenst should be set
+            if (coarseLevelMatrix_->N() > 0) {
+                coarseLevelMatrix_->compress(); // all elements should be set
+            } else { // workaround for bug in compress()
+                coarseLevelMatrix_->endrowsizes();
+                coarseLevelMatrix_->endindices();
+            }
             if constexpr (!std::is_same_v<Communication, Dune::Amg::SequentialInformation>) {
                 extendCommunicatorWithWells(*communication_, coarseLevelCommunication_, nw);
             }
