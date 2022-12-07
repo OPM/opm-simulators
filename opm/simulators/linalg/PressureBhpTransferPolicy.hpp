@@ -108,7 +108,8 @@ namespace Opm
             const auto& nw = fineOperator.getNumberOfExtraEquations();
             if (prm_.get<bool>("add_wells")) {
                 const size_t average_elements_per_row
-                    = static_cast<size_t>(std::ceil(fineLevelMatrix.nonzeroes() / fineLevelMatrix.N()));
+                    = static_cast<size_t>(std::ceil(fineLevelMatrix.nonzeroes() /
+                                                    std::max(1ul,fineLevelMatrix.N())));
                 const double overflow_fraction = 1.2;
                 coarseLevelMatrix_.reset(new CoarseMatrix(fineLevelMatrix.N() + nw,
                                                           fineLevelMatrix.M() + nw,
