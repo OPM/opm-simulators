@@ -1874,6 +1874,7 @@ namespace Opm {
 #endif
             }
         }
+        network_rebalance_necessary = comm_.max(network_rebalance_necessary);
         for (const auto& well : well_container_) {
             auto& events = this->wellState().well(well->indexOfWell()).events;
             if (events.hasEvent(WellState::event_mask)) {
