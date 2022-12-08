@@ -888,7 +888,8 @@ namespace Opm {
             return grid_.comm().sum(errorPV);
         }
 
-        ConvergenceReport getReservoirConvergence(const double dt,
+        ConvergenceReport getReservoirConvergence(const double reportTime,
+                                                  const double dt,
                                                   const int iteration,
                                                   std::vector<Scalar>& B_avg,
                                                   std::vector<Scalar>& residual_norms)
@@ -927,7 +928,7 @@ namespace Opm {
             }
 
             // Create convergence report.
-            ConvergenceReport report;
+            ConvergenceReport report{reportTime};
             using CR = ConvergenceReport;
             for (int compIdx = 0; compIdx < numComp; ++compIdx) {
                 double res[2] = { mass_balance_residual[compIdx], CNV[compIdx] };
@@ -953,6 +954,7 @@ namespace Opm {
                     } else if (res[ii] > tol[ii]) {
                         report.setReservoirFailed({types[ii], CR::Severity::Normal, compIdx});
                     }
+                    report.setReservoirConvergenceMetric(types[ii], compIdx, res[ii]);
                 }
             }
 
@@ -1003,7 +1005,9 @@ namespace Opm {
         {
             // Get convergence reports for reservoir and wells.
             std::vector<Scalar> B_avg(numEq, 0.0);
-            auto report = getReservoirConvergence(timer.currentStepLength(), iteration, B_avg, residual_norms);
+            auto report = getReservoirConvergence(timer.simulationTimeElapsed(),
+                                                  timer.currentStepLength(),
+                                                  iteration, B_avg, residual_norms);
             report += wellModel().getWellConvergence(B_avg, /*checkWellGroupControls*/report.converged());
 
             return report;
