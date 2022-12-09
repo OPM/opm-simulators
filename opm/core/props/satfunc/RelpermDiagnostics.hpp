@@ -30,11 +30,17 @@ namespace Opm {
     class EclipseState;
     class MiscTable;
     class MsfnTable;
-    class SgcwimTable;
+    class SgcwmisTable;
+    class SgfnTable;
+    class SgofTable;
+    class SgwfnTable;
+    class SlgofTable;
     class Sof2Table;
+    class Sof3Table;
     class SorwmisTable;
     class SsfnTable;
-    class SgwfnTable;
+    class SwfnTable;
+    class SwofTable;
 
     ///This class is intend to be a relperm diagnostics, to detect
     ///wrong input of relperm table and endpoints.
