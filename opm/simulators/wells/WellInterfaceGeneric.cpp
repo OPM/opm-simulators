@@ -206,7 +206,7 @@ void WellInterfaceGeneric::updateInjMult(std::vector<double>& multipliers, Singl
     std::cout << " in function updateInjMult " << std::endl;
     for (size_t perf = 0; perf < this->inj_multiplier_.size(); ++perf) {
         const auto perf_ecl_index = this->perforationData()[perf].ecl_index;
-        if (this->well_ecl_.getConnections()[perf_ecl_index].injmult().mode == Connection::InjMultMode::CIRR) {
+        if (this->well_ecl_.getInjMultMode() == Well::InjMultMode::CIRR) {
             multipliers[perf] = std::max(multipliers[perf], this->inj_multiplier_[perf]);
         } else {
             multipliers[perf] = this->inj_multiplier_[perf];
