@@ -574,6 +574,10 @@ private:
     /// fluid state.
     double materialLawCapPressOilWater() const;
 
+    /// Extract gas/water capillary pressure value (Pg - Pw) from current
+    /// fluid state.
+    double materialLawCapPressGasWater() const;
+
     /// Predicate for whether specific phase has constant capillary pressure
     /// curve in current cell.
     ///

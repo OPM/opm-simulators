@@ -139,12 +139,12 @@ public:
 
             if (FluidSystem::enableDissolvedGas())
                 fluidState.setRs(initialState.rs()[elemIdx]);
-            else if (Indices::gasEnabled)
+            else if (Indices::gasEnabled && Indices::oilEnabled)
                 fluidState.setRs(0.0);
 
             if (FluidSystem::enableVaporizedOil())
                 fluidState.setRv(initialState.rv()[elemIdx]);
-            else if (Indices::gasEnabled)
+            else if (Indices::gasEnabled && Indices::oilEnabled)
                 fluidState.setRv(0.0);
 
             if (FluidSystem::enableVaporizedWater())

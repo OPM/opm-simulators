@@ -515,6 +515,13 @@ typename PressureTable<FluidSystem,Region>::Strategy
 PressureTable<FluidSystem,Region>::
 selectEquilibrationStrategy(const Region& reg) const
 {
+    if (!this->oilActive()) {
+        if (reg.datum() > reg.zwoc()) { // Datum in water zone
+            return &PressureTable::equil_WOG;
+        }
+        return &PressureTable::equil_GOW;
+    }
+
     if (reg.datum() > reg.zwoc()) {      // Datum in water zone
         return &PressureTable::equil_WOG;
     }
@@ -636,12 +643,14 @@ void PhaseSaturations<MaterialLawManager, FluidSystem, Region, CellID>::deriveGa
     auto& sg = this->sat_.gas;
 
     const auto isIncr = true; // dPcgo/dSg >= 0 for all Sg.
+    const auto oilActive = this->evalPt_.ptable->oilActive();
 
     if (this->isConstCapPress(this->gasPos())) {
         // Sharp interface between phases.  Can derive phase saturation
         // directly from knowing where 'depth' of evaluation point is
         // relative to depth of O/G contact.
-        sg = this->fromDepthTable(this->evalPt_.region->zgoc(),
+        const auto gas_contact = oilActive? this->evalPt_.region->zgoc() : this->evalPt_.region->zwoc();
+        sg = this->fromDepthTable(gas_contact,
                                   this->gasPos(), isIncr);
     }
     else {
@@ -652,8 +661,8 @@ void PhaseSaturations<MaterialLawManager, FluidSystem, Region, CellID>::deriveGa
         //    Pcgo(Sg) = Pg - Po
         //
         // Note that Pcgo is defined to be (Pg - Po), not (Po - Pg).
-        const auto pcgo = this->press_.gas - this->press_.oil;
-
+        const auto pw = oilActive? this->press_.oil : this->press_.water;
+        const auto pcgo = this->press_.gas - pw;
         sg = this->invertCapPress(pcgo, this->gasPos(), isIncr);
     }
 }
@@ -732,32 +741,18 @@ accountForScaledSaturations()
 {
     const auto gasActive = this->evalPt_.ptable->gasActive();
     const auto watActive = this->evalPt_.ptable->waterActive();
+    const auto oilActive = this->evalPt_.ptable->oilActive();
+
+    auto sg = gasActive? this->sat_.gas : 0.0;
+    auto sw = watActive? this->sat_.water : 0.0;
+    auto so = oilActive? this->sat_.oil : 0.0;
+
+    this->fluidState_.setSaturation(this->waterPos(), sw);
+    this->fluidState_.setSaturation(this->oilPos(), so);
+    this->fluidState_.setSaturation(this->gasPos(), sg);
 
     const auto& scaledDrainageInfo = this->matLawMgr_
         .oilWaterScaledEpsInfoDrainage(this->evalPt_.position->cell);
-
-    const auto sg = this->sat_.gas;
-    const auto sw = this->sat_.water;
-
-    {
-        auto so = 1.0;
-
-        if (watActive) {
-            const auto swu = scaledDrainageInfo.Swu;
-            so -= swu;
-
-            this->fluidState_.setSaturation(this->waterPos(), swu);
-        }
-
-        if (gasActive) {
-            const auto sgu = scaledDrainageInfo.Sgu;
-            so -= sgu;
-
-            this->fluidState_.setSaturation(this->gasPos(), sgu);
-        }
-
-        this->fluidState_.setSaturation(this->oilPos(), so);
-    }
 
     const auto thresholdSat = 1.0e-6;
     if (watActive && ((sw + thresholdSat) > scaledDrainageInfo.Swu)) {
@@ -765,31 +760,43 @@ accountForScaledSaturations()
         // pressure to that which corresponds to maximum possible water
         // saturation value.
         this->fluidState_.setSaturation(this->waterPos(), scaledDrainageInfo.Swu);
+        if (oilActive) {
+            this->fluidState_.setSaturation(this->oilPos(), so + sw - scaledDrainageInfo.Swu);
+        } else if (gasActive) {
+            this->fluidState_.setSaturation(this->gasPos(), sg + sw - scaledDrainageInfo.Swu);
+        }
+        sw = scaledDrainageInfo.Swu;
         this->computeMaterialLawCapPress();
 
-        // Pcow = Po - Pw => Po = Pw + Pcow
-        this->press_.oil = this->press_.water + this->materialLawCapPressOilWater();
+        if (oilActive) {
+            // Pcow = Po - Pw => Po = Pw + Pcow
+            this->press_.oil = this->press_.water + this->materialLawCapPressOilWater();
+        } else {
+            // Pcgw = Pg - Pw => Pg = Pw + Pcgw
+            this->press_.gas = this->press_.water + this->materialLawCapPressGasWater();
+        }
+
     }
-    else if (gasActive && ((sg + thresholdSat) > scaledDrainageInfo.Sgu)) {
+    if (gasActive && ((sg + thresholdSat) > scaledDrainageInfo.Sgu)) {
         // Gas saturation exceeds maximum possible value.  Reset oil phase
         // pressure to that which corresponds to maximum possible gas
         // saturation value.
         this->fluidState_.setSaturation(this->gasPos(), scaledDrainageInfo.Sgu);
+        if (oilActive) {
+            this->fluidState_.setSaturation(this->oilPos(), so + sg - scaledDrainageInfo.Sgu);
+        } else if (watActive) {
+            this->fluidState_.setSaturation(this->waterPos(), sw + sg - scaledDrainageInfo.Sgu);
+        }
+        sg = scaledDrainageInfo.Sgu;
         this->computeMaterialLawCapPress();
 
-        // Pcgo = Pg - Po => Po = Pg - Pcgo
-        this->press_.oil = this->press_.gas - this->materialLawCapPressGasOil();
-    }
-
-    if (gasActive && ((sg - thresholdSat) < scaledDrainageInfo.Sgl)) {
-        // Gas saturation less than minimum possible value in cell.  Reset
-        // gas phase pressure to that which corresponds to minimum possible
-        // gas saturation.
-        this->fluidState_.setSaturation(this->gasPos(), scaledDrainageInfo.Sgl);
-        this->computeMaterialLawCapPress();
-
-        // Pcgo = Pg - Po => Pg = Po + Pcgo
-        this->press_.gas = this->press_.oil + this->materialLawCapPressGasOil();
+        if (oilActive) {
+            // Pcgo = Pg - Po => Po = Pg - Pcgo
+            this->press_.oil = this->press_.gas - this->materialLawCapPressGasOil();
+        } else {
+            // Pcgw = Pg - Pw => Pw = Pg - Pcgw
+            this->press_.water =  this->press_.gas - this->materialLawCapPressGasWater();
+        }
     }
 
     if (watActive && ((sw - thresholdSat) < scaledDrainageInfo.Swl)) {
@@ -797,10 +804,43 @@ accountForScaledSaturations()
         // water phase pressure to that which corresponds to minimum
         // possible water saturation value.
         this->fluidState_.setSaturation(this->waterPos(), scaledDrainageInfo.Swl);
+        if (oilActive) {
+            this->fluidState_.setSaturation(this->oilPos(), so + sw - scaledDrainageInfo.Swl);
+        } else if (gasActive) {
+            this->fluidState_.setSaturation(this->gasPos(), sg + sw - scaledDrainageInfo.Swl);
+        }
+        sw = scaledDrainageInfo.Swl;
         this->computeMaterialLawCapPress();
 
-        // Pcwo = Po - Pw => Pw = Po - Pcow
-        this->press_.water = this->press_.oil - this->materialLawCapPressOilWater();
+        if (oilActive) {
+            // Pcwo = Po - Pw => Pw = Po - Pcow
+            this->press_.water = this->press_.oil - this->materialLawCapPressOilWater();
+        } else {
+            // Pcgw = Pg - Pw => Pw = Pg - Pcgw
+            this->press_.water = this->press_.gas - this->materialLawCapPressGasWater();
+        }
+    }
+
+    if (gasActive && ((sg - thresholdSat) < scaledDrainageInfo.Sgl)) {
+        // Gas saturation less than minimum possible value in cell.  Reset
+        // gas phase pressure to that which corresponds to minimum possible
+        // gas saturation.
+        this->fluidState_.setSaturation(this->gasPos(), scaledDrainageInfo.Sgl);
+        if (oilActive) {
+            this->fluidState_.setSaturation(this->oilPos(), so + sg - scaledDrainageInfo.Sgl);
+        } else if (watActive) {
+            this->fluidState_.setSaturation(this->waterPos(), sw + sg - scaledDrainageInfo.Sgl);
+        }
+        sg = scaledDrainageInfo.Sgl;
+        this->computeMaterialLawCapPress();
+
+        if (oilActive) {
+            // Pcgo = Pg - Po => Pg = Po + Pcgo
+            this->press_.gas = this->press_.oil + this->materialLawCapPressGasOil();
+        } else {
+            // Pcgw = Pg - Pw => Pg = Pw + Pcgw
+            this->press_.gas = this->press_.water + this->materialLawCapPressGasWater();
+        }
     }
 }
 
@@ -844,6 +884,14 @@ double PhaseSaturations<MaterialLawManager, FluidSystem, Region, CellID>::
 materialLawCapPressOilWater() const
 {
     return this->matLawCapPress_[this->oilPos()]
+        - this->matLawCapPress_[this->waterPos()];
+}
+
+template <class MaterialLawManager, class FluidSystem, class Region, typename CellID>
+double PhaseSaturations<MaterialLawManager, FluidSystem, Region, CellID>::
+materialLawCapPressGasWater() const
+{
+    return this->matLawCapPress_[this->gasPos()]
         - this->matLawCapPress_[this->waterPos()];
 }
 
@@ -1081,7 +1129,6 @@ equil_GOW(const Region& reg, const VSpan& span)
             reg.zgoc(),
             this->gas(reg.zgoc()) - reg.pcgoGoc()
         };
-
         this->makeOilPressure(ic, reg, span);
     }
 
@@ -1107,8 +1154,8 @@ template <class FluidSystem, class Region>
 void PressureTable<FluidSystem, Region>::
 equil_OWG(const Region& reg, const VSpan& span)
 {
-    // Datum depth in gas zone.  Calculate phase pressure for gas first,
-    // followed by oil and water if applicable.
+    // Datum depth in oil zone.  Calculate phase pressure for oil first,
+    // followed by gas and water if applicable.
 
     if (! this->oilActive()) {
         throw std::invalid_argument {
@@ -1141,7 +1188,6 @@ equil_OWG(const Region& reg, const VSpan& span)
             reg.zgoc(),
             this->oil(reg.zgoc()) + reg.pcgoGoc()
         };
-
         this->makeGasPressure(ic, reg, span);
     }
 }
