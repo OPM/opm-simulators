@@ -129,7 +129,7 @@ double WellBhpThpCalculator::calculateThpFromBhp(const std::vector<double>& rate
         thp = well_.vfpProperties()->getProd()->thp(table_id, aqua, liquid, vapour, bhp + dp, alq);
     }
     else {
-        OPM_DEFLOG_THROW(std::logic_error, "Expected INJECTOR or PRODUCER well", deferred_logger);
+        OPM_DEFLOG_THROW(std::logic_error, "Well "+ well_.name() + " Expected to be INJECTOR or PRODUCER", deferred_logger);
     }
 
     return thp;
@@ -192,8 +192,8 @@ computeBhpAtThpLimitProd(const std::function<std::vector<double>(const double)>&
     // could not solve for the bhp-point, we could not continue to find the bhp
     if (!bhp_max.has_value()) {
         deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE_INOPERABLE",
-                                "Robust bhp(thp) solve failed due to not being able to "
-                                "find bhp-point where production becomes non-zero for well " + well_.name());
+                                " Well " + well_.name() + " Robust bhp(thp) failed, unable to "
+                                "find bhp-point where production becomes non-zero");
         return std::nullopt;
     }
     const std::array<double, 2> range {controls.bhp_limit, *bhp_max};
@@ -309,7 +309,7 @@ calculateBhpFromThp(const WellState& well_state,
                                                       wfr, gfr, use_vfpexplicit) - dp;
      }
      else {
-         OPM_DEFLOG_THROW(std::logic_error, "Expected INJECTOR or PRODUCER for well " + well_.name(), deferred_logger);
+         OPM_DEFLOG_THROW(std::logic_error, "Well " + well_.name() + " Expected to be INJECTOR or PRODUCER", deferred_logger);
      }
 }
 
@@ -426,7 +426,8 @@ computeBhpAtThpLimitInjImpl(const std::function<std::vector<double>(const double
             // Use previous value (or max value if at start) if we failed.
             bhp_samples.push_back(bhp_samples.empty() ? low : bhp_samples.back());
             deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE_EXTRACT_SAMPLES",
-                                    "Robust bhp(thp) solve failed extracting bhp values at flo samples for well " + well_.name());
+                                    "Well " + well_.name() + " Robust bhp(thp) failed, unable to "
+                                    "extract bhp values at flo samples");
         }
     }
 
@@ -484,7 +485,7 @@ computeBhpAtThpLimitInjImpl(const std::function<std::vector<double>(const double
         // are all equal to the bhp_limit.
         assert(low == controls.bhp_limit);
         deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE",
-                                "Robust bhp(thp) solve failed for well " + well_.name());
+                                "Well " + well_.name() + " Robust bhp(thp) failed");
         return std::nullopt;
     }
     try {
@@ -498,7 +499,7 @@ computeBhpAtThpLimitInjImpl(const std::function<std::vector<double>(const double
     }
     catch (...) {
         deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE",
-                                "Robust bhp(thp) solve failed for well " + well_.name());
+                                "Well " + well_.name() + " Robust bhp(thp) failed");
         return std::nullopt;
     }
 }
@@ -539,7 +540,7 @@ bhpMax(const std::function<double(const double)>& fflo,
             // There will be no solution here, return an
             // empty optional.
             deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE_INOPERABLE",
-                                    "Robust bhp(thp) solve failed due to inoperability for well " + well_.name());
+                                    "Well " + well_.name() + " Robust bhp(thp) failed due to well inoperability");
             return std::nullopt;
         } else {
             // Still producing, even at high bhp.
@@ -568,7 +569,7 @@ bhpMax(const std::function<double(const double)>& fflo,
             bhp_max = low;
         } else {
             deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE_INOPERABLE",
-                                    "Bisect did not find the bhp-point where we produce for well " + well_.name());
+                                    "Well " + well_.name() + " Bisect did not find the bhp-point to produce for the well");
             return std::nullopt;
         }
     }
@@ -624,14 +625,14 @@ computeBhpAtThpLimit(const std::function<std::vector<double>(const double)>& fra
     }
 
     if (!finding_bracket) {
-        deferred_logger.debug(" Trying the brute force search to bracket the bhp for last attempt ");
+        deferred_logger.debug(" Well " + well_.name() + " Trying brute force search to bracket the bhp, last attempt");
         finding_bracket = this->bruteForceBracket(eq, range, low, high, deferred_logger);
     }
 
     if (!finding_bracket) {
         deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE_INOPERABLE",
-                                "Robust bhp(thp) solve failed due to not being able to "
-                                "bracket the bhp solution with the brute force search for " + well_.name());
+                                "Well " + well_.name() + " Robust bhp(thp) failed, unable to "
+                                "bracket the bhp solution with the brute force search");
         return std::nullopt;
     }
 
@@ -646,7 +647,7 @@ computeBhpAtThpLimit(const std::function<std::vector<double>(const double)>& fra
     }
     catch (...) {
         deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE",
-                                "Robust bhp(thp) solve failed for well " + well_.name());
+                                "Well " + well_.name() + " Robust bhp(thp) failed");
         return std::nullopt;
     }
 }
@@ -711,13 +712,12 @@ bisectBracket(const std::function<double(const double)>& eq,
             if (std::min(abs_low, abs_high) < limit) {
                 // Return the least bad solution if less off than 0.1 bar.
                 deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE_BRACKETING_FAILURE",
-                                        "Robust bhp(thp) not solved precisely for well " + well_.name());
+                                        "Well " + well_.name() + " Robust bhp(thp) not solved precisely");
                 approximate_solution = abs_low < abs_high ? low : high;
             } else {
                     // Return failure.
                 deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE_BRACKETING_FAILURE",
-                                         "Robust bhp(thp) solve failed due to bracketing failure for well " +
-                                         well_.name());
+                                        "Well " + well_.name() + " Robust bhp(thp) failed due to bracketing failure");
             }
         }
     } else {
