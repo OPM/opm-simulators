@@ -350,8 +350,8 @@ public:
         liveOilPvt.setSaturatedOilViscosity(/*regionIdx=*/0, muo);
 
         Opm::WaterPvtMultiplexer<Scalar> *waterPvt = new Opm::WaterPvtMultiplexer<Scalar>;
-        waterPvt->setApproach(WaterPvtApproach::ConstantCompressibilityWaterPvt);
-        auto& ccWaterPvt = waterPvt->template getRealPvt<WaterPvtApproach::ConstantCompressibilityWaterPvt>();
+        waterPvt->setApproach(WaterPvtApproach::ConstantCompressibilityWater);
+        auto& ccWaterPvt = waterPvt->template getRealPvt<WaterPvtApproach::ConstantCompressibilityWater>();
         ccWaterPvt.setNumRegions(/*numPvtRegions=*/1);
         ccWaterPvt.setReferenceDensities(/*regionIdx=*/0, rhoRefO, rhoRefG, rhoRefW);
         ccWaterPvt.setViscosity(/*regionIdx=*/0, 9.6e-4);
