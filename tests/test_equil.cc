@@ -177,8 +177,8 @@ static void initDefaultFluidSystem()
     FluidSystem::setReferenceDensities(rhoRefO, rhoRefW, rhoRefG, /*regionIdx=*/0);
 
     auto gasPvt = std::make_shared<Opm::GasPvtMultiplexer<double>>();
-    gasPvt->setApproach(Opm::GasPvtApproach::DryGasPvt);
-    auto& dryGasPvt = gasPvt->getRealPvt<Opm::GasPvtApproach::DryGasPvt>();
+    gasPvt->setApproach(Opm::GasPvtApproach::DryGas);
+    auto& dryGasPvt = gasPvt->getRealPvt<Opm::GasPvtApproach::DryGas>();
     dryGasPvt.setNumRegions(/*numPvtRegion=*/1);
     dryGasPvt.setReferenceDensities(/*regionIdx=*/0, rhoRefO, rhoRefG, rhoRefW);
     dryGasPvt.setGasFormationVolumeFactor(/*regionIdx=*/0, Bg);
