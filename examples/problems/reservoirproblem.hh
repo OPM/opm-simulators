@@ -333,8 +333,8 @@ public:
         FluidSystem::setReferenceDensities(rhoRefO, rhoRefW, rhoRefG, /*regionIdx=*/0);
 
         Opm::GasPvtMultiplexer<Scalar> *gasPvt = new Opm::GasPvtMultiplexer<Scalar>;
-        gasPvt->setApproach(GasPvtApproach::DryGasPvt);
-        auto& dryGasPvt = gasPvt->template getRealPvt<GasPvtApproach::DryGasPvt>();
+        gasPvt->setApproach(GasPvtApproach::DryGas);
+        auto& dryGasPvt = gasPvt->template getRealPvt<GasPvtApproach::DryGas>();
         dryGasPvt.setNumRegions(/*numPvtRegion=*/1);
         dryGasPvt.setReferenceDensities(/*regionIdx=*/0, rhoRefO, rhoRefG, rhoRefW);
         dryGasPvt.setGasFormationVolumeFactor(/*regionIdx=*/0, Bg);
