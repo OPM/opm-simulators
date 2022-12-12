@@ -341,8 +341,8 @@ public:
         dryGasPvt.setGasViscosity(/*regionIdx=*/0, mug);
 
         Opm::OilPvtMultiplexer<Scalar> *oilPvt = new Opm::OilPvtMultiplexer<Scalar>;
-        oilPvt->setApproach(OilPvtApproach::LiveOilPvt);
-        auto& liveOilPvt = oilPvt->template getRealPvt<OilPvtApproach::LiveOilPvt>();
+        oilPvt->setApproach(OilPvtApproach::LiveOil);
+        auto& liveOilPvt = oilPvt->template getRealPvt<OilPvtApproach::LiveOil>();
         liveOilPvt.setNumRegions(/*numPvtRegion=*/1);
         liveOilPvt.setReferenceDensities(/*regionIdx=*/0, rhoRefO, rhoRefG, rhoRefW);
         liveOilPvt.setSaturatedOilGasDissolutionFactor(/*regionIdx=*/0, Rs);
