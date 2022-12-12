@@ -193,8 +193,8 @@ static void initDefaultFluidSystem()
     deadOilPvt.setOilViscosity(/*regionIdx=*/0, muo);
 
     auto waterPvt = std::make_shared<Opm::WaterPvtMultiplexer<double>>();
-    waterPvt->setApproach(Opm::WaterPvtApproach::ConstantCompressibilityWaterPvt);
-    auto& ccWaterPvt = waterPvt->getRealPvt<Opm::WaterPvtApproach::ConstantCompressibilityWaterPvt>();
+    waterPvt->setApproach(Opm::WaterPvtApproach::ConstantCompressibilityWater);
+    auto& ccWaterPvt = waterPvt->getRealPvt<Opm::WaterPvtApproach::ConstantCompressibilityWater>();
     ccWaterPvt.setNumRegions(/*numPvtRegions=*/1);
     ccWaterPvt.setReferenceDensities(/*regionIdx=*/0, rhoRefO, rhoRefG, rhoRefW);
     ccWaterPvt.setViscosity(/*regionIdx=*/0, 1);
