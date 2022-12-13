@@ -32,10 +32,11 @@
 
 #include "darcyfluxmodule.hh"
 
+#include <opm/common/Exceptions.hpp>
+
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 
 #include <opm/material/common/Valgrind.hpp>
-#include <opm/material/common/Exceptions.hpp>
 
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
@@ -448,8 +449,8 @@ protected:
         unsigned newtonIter = 0;
         while (deltaV.one_norm() > 1e-11) {
             if (newtonIter >= 50)
-                throw NumericalIssue("Could not determine Forchheimer velocity within "
-                                     +std::to_string(newtonIter)+" iterations");
+                throw NumericalProblem("Could not determine Forchheimer velocity within "
+                                       + std::to_string(newtonIter)+" iterations");
             ++newtonIter;
 
             // calculate the residual and its Jacobian matrix

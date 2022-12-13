@@ -30,6 +30,8 @@
 
 #include "blackoilproperties.hh"
 
+#include <opm/common/Exceptions.hpp>
+
 #include <opm/models/blackoil/blackoilsolventparams.hh>
 #include <opm/models/io/vtkblackoilsolventmodule.hh>
 #include <opm/models/common/quantitycallbacks.hh>
@@ -49,7 +51,6 @@
 #endif
 
 #include <opm/material/common/Valgrind.hpp>
-#include <opm/material/common/Exceptions.hpp>
 
 #include <dune/common/fvector.hh>
 
@@ -1189,7 +1190,7 @@ public:
                 solventPGrad[dimIdx] += f[dimIdx];
 
                 if (!isfinite(solventPGrad[dimIdx]))
-                    throw NumericalIssue("Non-finite potential gradient for solvent 'phase'");
+                    throw NumericalProblem("Non-finite potential gradient for solvent 'phase'");
             }
         }
 

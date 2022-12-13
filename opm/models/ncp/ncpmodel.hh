@@ -40,6 +40,8 @@
 #include "ncpnewtonmethod.hh"
 #include "ncpindices.hh"
 
+#include <opm/common/Exceptions.hpp>
+
 #include <opm/models/common/multiphasebasemodel.hh>
 #include <opm/models/common/energymodule.hh>
 #include <opm/models/common/diffusionmodule.hh>
@@ -48,7 +50,6 @@
 #include <opm/models/io/vtkdiffusionmodule.hh>
 
 #include <opm/material/common/Valgrind.hpp>
-#include <opm/material/common/Exceptions.hpp>
 
 #include <dune/common/fvector.hh>
 
@@ -381,8 +382,8 @@ public:
                     Opm::Valgrind::CheckDefined(minActivityCoeff_[globalIdx][compIdx]);
                 }
                 if (minActivityCoeff_[globalIdx][compIdx] <= 0)
-                    throw Opm::NumericalIssue("The minimum activity coefficient for component "+std::to_string(compIdx)
-                                                +" on DOF "+std::to_string(globalIdx)+" is negative or zero!");
+                    throw NumericalProblem("The minimum activity coefficient for component "+std::to_string(compIdx)
+                                           +" on DOF "+std::to_string(globalIdx)+" is negative or zero!");
             }
         }
     }

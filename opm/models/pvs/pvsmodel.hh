@@ -40,6 +40,8 @@
 #include "pvsextensivequantities.hh"
 #include "pvsindices.hh"
 
+#include <opm/common/Exceptions.hpp>
+
 #include <opm/models/common/multiphasebasemodel.hh>
 #include <opm/models/common/diffusionmodule.hh>
 #include <opm/models/common/energymodule.hh>
@@ -49,7 +51,6 @@
 
 #include <opm/material/fluidmatrixinteractions/NullMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
-#include <opm/material/common/Exceptions.hpp>
 
 #include <iostream>
 #include <sstream>
@@ -545,7 +546,7 @@ public:
         succeeded = this->simulator_.gridView().comm().min(succeeded);
 
         if (!succeeded)
-            throw Opm::NumericalIssue("A process did not succeed in adapting the primary variables");
+            throw NumericalProblem("A process did not succeed in adapting the primary variables");
 
         // make sure that if there was a variable switch in an
         // other partition we will also set the switch flag
