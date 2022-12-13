@@ -25,6 +25,7 @@
 
 #include <sys/utsname.h>
 
+#include <opm/simulators/flow/ConvergenceOutputConfiguration.hpp>
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp>
 #include <opm/simulators/utils/ParallelFileMerger.hpp>
 #include <opm/simulators/utils/moduleVersion.hpp>
@@ -574,27 +575,37 @@ namespace Opm
         // Output summary after simulation has completed
         void runSimulatorAfterSim_(SimulatorReport &report)
         {
-            if (this->output_cout_) {
-                std::ostringstream ss;
-                ss << "\n\n================    End of simulation     ===============\n\n";
-                ss << fmt::format("Number of MPI processes: {:9}\n", mpi_size_ );
-#if _OPENMP
-                int threads = omp_get_max_threads();
+            if (! this->output_cout_) {
+                return;
+            }
+
+            const int threads
+#if !defined(_OPENMP) || !_OPENMP
+                = 1;
 #else
-                int threads = 1;
+                = omp_get_max_threads();
 #endif
-                ss << fmt::format("Threads per MPI process: {:9}\n", threads);
-                report.reportFullyImplicit(ss);
-                OpmLog::info(ss.str());
-                const std::string dir = eclState().getIOConfig().getOutputDir();
+
+            std::ostringstream ss;
+            ss << "\n\n================    End of simulation     ===============\n\n";
+            ss << fmt::format("Number of MPI processes: {:9}\n", mpi_size_ );
+            ss << fmt::format("Threads per MPI process: {:9}\n", threads);
+            report.reportFullyImplicit(ss);
+            OpmLog::info(ss.str());
+
+            const auto extraConvOutput = ConvergenceOutputConfiguration {
+                EWOMS_GET_PARAM(TypeTag, std::string, ExtraConvergenceOutput),
+                R"(ExtraConvergenceOutput (--extra-convergence-output))"
+            };
+
+            if (extraConvOutput.want(ConvergenceOutputConfiguration::Option::Steps)) {
                 namespace fs = ::std::filesystem;
-                fs::path output_dir(dir);
-                {
-                    std::string filename = eclState().getIOConfig().getBaseName() + ".INFOSTEP";
-                    fs::path fullpath = output_dir / filename;
-                    std::ofstream os(fullpath.string());
-                    report.fullReports(os);
-                }
+
+                const auto infostep = fs::path { eclState().getIOConfig().getOutputDir() } /
+                    fs::path { eclState().getIOConfig().getBaseName() }.concat(".INFOSTEP");
+
+                std::ofstream os(infostep);
+                report.fullReports(os);
             }
         }
 
