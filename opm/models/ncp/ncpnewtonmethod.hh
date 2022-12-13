@@ -30,9 +30,9 @@
 
 #include "ncpproperties.hh"
 
-#include <opm/models/nonlinear/newtonmethod.hh>
+#include <opm/common/Exceptions.hpp>
 
-#include <opm/material/common/Exceptions.hpp>
+#include <opm/models/nonlinear/newtonmethod.hh>
 
 #include <algorithm>
 
@@ -118,9 +118,9 @@ protected:
         // make sure that the error never grows beyond the maximum
         // allowed one
         if (this->error_ > EWOMS_GET_PARAM(TypeTag, Scalar, NewtonMaxError))
-            throw Opm::NumericalIssue("Newton: Error "+std::to_string(double(this->error_))+
-                                        +" is larger than maximum allowed error of "
-                                        +std::to_string(double(EWOMS_GET_PARAM(TypeTag, Scalar, NewtonMaxError))));
+            throw Opm::NumericalProblem("Newton: Error "+std::to_string(double(this->error_))+
+                                        + " is larger than maximum allowed error of "
+                                        + std::to_string(double(EWOMS_GET_PARAM(TypeTag, Scalar, NewtonMaxError))));
     }
 
     /*!

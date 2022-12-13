@@ -31,10 +31,12 @@
 #define EWOMS_DARCY_FLUX_MODULE_HH
 
 #include "multiphasebaseproperties.hh"
+
+#include <opm/common/Exceptions.hpp>
+
 #include <opm/models/common/quantitycallbacks.hh>
 
 #include <opm/material/common/Valgrind.hpp>
-#include <opm/material/common/Exceptions.hpp>
 
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
@@ -280,8 +282,8 @@ protected:
 
                 for (unsigned dimIdx = 0; dimIdx < potentialGrad_[phaseIdx].size(); ++dimIdx) {
                     if (!isfinite(potentialGrad_[phaseIdx][dimIdx])) {
-                        throw NumericalIssue("Non-finite potential gradient for phase '"
-                                             +std::string(FluidSystem::phaseName(phaseIdx))+"'");
+                        throw NumericalProblem("Non-finite potential gradient for phase '"
+                                               + std::string(FluidSystem::phaseName(phaseIdx))+"'");
                     }
                 }
             }
@@ -399,8 +401,8 @@ protected:
                 Valgrind::CheckDefined(potentialGrad_[phaseIdx]);
                 for (unsigned dimIdx = 0; dimIdx < potentialGrad_[phaseIdx].size(); ++dimIdx) {
                     if (!isfinite(potentialGrad_[phaseIdx][dimIdx])) {
-                        throw NumericalIssue("Non finite potential gradient for phase '"
-                                             +std::string(FluidSystem::phaseName(phaseIdx))+"'");
+                        throw NumericalProblem("Non-finite potential gradient for phase '"
+                                               + std::string(FluidSystem::phaseName(phaseIdx))+"'");
                     }
                 }
             }

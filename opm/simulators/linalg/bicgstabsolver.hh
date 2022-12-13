@@ -34,7 +34,7 @@
 #include <opm/models/utils/timer.hh>
 #include <opm/models/utils/timerguard.hh>
 
-#include <opm/material/common/Exceptions.hpp>
+#include <opm/common/Exceptions.hpp>
 
 #include <memory>
 
@@ -198,7 +198,7 @@ public:
 
             // beta = (rho_i/rho_(i-1))*(alpha/omega_(i-1))
             if (std::abs(rho) <= breakdownEps || std::abs(omega) <= breakdownEps)
-                throw Opm::NumericalIssue("Breakdown of the BiCGStab solver (division by zero)");
+                throw NumericalProblem("Breakdown of the BiCGStab solver (division by zero)");
             Scalar beta = (rho_i/rho)*(alpha/omega);
 
             // make rho correspond to the current iteration (i.e., forget rho_(i-1))
@@ -230,10 +230,10 @@ public:
             // alpha = rho_i/(r0hat,v_i)
             Scalar denom = scalarProduct_.dot(r0hat, v);
             if (std::abs(denom) <= breakdownEps)
-                throw Opm::NumericalIssue("Breakdown of the BiCGStab solver (division by zero)");
+                throw NumericalProblem("Breakdown of the BiCGStab solver (division by zero)");
             alpha = rho_i/denom;
             if (std::abs(alpha) <= breakdownEps)
-                throw Opm::NumericalIssue("Breakdown of the BiCGStab solver (stagnation detected)");
+                throw NumericalProblem("Breakdown of the BiCGStab solver (stagnation detected)");
 
             // h = x_(i-1) + alpha*y
             // s = r_(i-1) - alpha*v_i
@@ -286,10 +286,10 @@ public:
             // omega_i = (t*s)/(t*t)
             denom = scalarProduct_.dot(t, t);
             if (std::abs(denom) <= breakdownEps)
-                throw Opm::NumericalIssue("Breakdown of the BiCGStab solver (division by zero)");
+                throw NumericalProblem("Breakdown of the BiCGStab solver (division by zero)");
             omega = scalarProduct_.dot(t, s)/denom;
             if (std::abs(omega) <= breakdownEps)
-                throw Opm::NumericalIssue("Breakdown of the BiCGStab solver (stagnation detected)");
+                throw NumericalProblem("Breakdown of the BiCGStab solver (stagnation detected)");
 
             // x_i = h + omega_i*z
             // x = h; // not necessary because x and h are the same object

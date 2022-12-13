@@ -30,6 +30,8 @@
 
 #include "blackoilproperties.hh"
 
+#include <opm/common/Exceptions.hpp>
+
 #include <opm/models/utils/signum.hh>
 #include <opm/models/nonlinear/newtonmethod.hh>
 #include "blackoilmicpmodules.hh"
@@ -227,7 +229,7 @@ public:
         succeeded = comm.min(succeeded);
 
         if (!succeeded)
-            throw NumericalIssue("A process did not succeed in adapting the primary variables");
+            throw NumericalProblem("A process did not succeed in adapting the primary variables");
 
         numPriVarsSwitched_ = comm.sum(numPriVarsSwitched_);
     }

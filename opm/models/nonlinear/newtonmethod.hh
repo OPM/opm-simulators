@@ -30,13 +30,15 @@
 #include "nullconvergencewriter.hh"
 
 #include "newtonmethodproperties.hh"
-#include <opm/models/utils/timer.hh>
-#include <opm/models/utils/timerguard.hh>
-#include <opm/simulators/linalg/linalgproperties.hh>
+
+#include <opm/common/Exceptions.hpp>
 
 #include <opm/material/densead/Math.hpp>
 
-#include <opm/material/common/Exceptions.hpp>
+#include <opm/models/utils/timer.hh>
+#include <opm/models/utils/timerguard.hh>
+
+#include <opm/simulators/linalg/linalgproperties.hh>
 
 #include <dune/istl/istlexception.hh>
 #include <dune/common/classname.hh>
@@ -407,7 +409,7 @@ public:
 
             return false;
         }
-        catch (const NumericalIssue& e)
+        catch (const NumericalProblem& e)
         {
             if (asImp_().verbose_())
                 std::cout << "Newton method caught exception: \""
@@ -574,7 +576,7 @@ protected:
         succeeded = comm.min(succeeded);
 
         if (!succeeded)
-            throw NumericalIssue("pre processing of the problem failed");
+            throw NumericalProblem("pre processing of the problem failed");
 
         lastError_ = error_;
     }
@@ -626,9 +628,9 @@ protected:
         // make sure that the error never grows beyond the maximum
         // allowed one
         if (error_ > newtonMaxError)
-            throw NumericalIssue("Newton: Error "+std::to_string(double(error_))
-                                  +" is larger than maximum allowed error of "
-                                  +std::to_string(double(newtonMaxError)));
+            throw NumericalProblem("Newton: Error "+std::to_string(double(error_))
+                                   + " is larger than maximum allowed error of "
+                                   + std::to_string(double(newtonMaxError)));
     }
 
     /*!
@@ -669,7 +671,7 @@ protected:
             succeeded = comm.min(succeeded);
 
             if (!succeeded)
-                throw NumericalIssue("post processing of an auxilary equation failed");
+                throw NumericalProblem("post processing of an auxilary equation failed");
         }
     }
 
@@ -700,7 +702,7 @@ protected:
 
         // make sure not to swallow non-finite values at this point
         if (!std::isfinite(solutionUpdate.one_norm()))
-            throw NumericalIssue("Non-finite update!");
+            throw NumericalProblem("Non-finite update!");
 
         size_t numGridDof = model().numGridDof();
         for (unsigned dofIdx = 0; dofIdx < numGridDof; ++dofIdx) {
@@ -798,7 +800,7 @@ protected:
         succeeded = comm.min(succeeded);
 
         if (!succeeded)
-            throw NumericalIssue("post processing of the problem failed");
+            throw NumericalProblem("post processing of the problem failed");
 
         if (asImp_().verbose_()) {
             std::cout << "Newton iteration " << numIterations_ << ""
