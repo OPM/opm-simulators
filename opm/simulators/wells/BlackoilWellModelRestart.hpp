@@ -32,14 +32,14 @@ namespace Opm {
 
 class BlackoilWellModelGeneric;
 namespace data {
-class GroupData;
+struct GroupData;
 class GroupAndNetworkValues;
 }
 class GroupState;
 class GuideRate;
 class GuideRateConfig;
 struct PerforationData;
-class PhaseUsage;
+struct PhaseUsage;
 class SingleWellState;
 class WellState;
 

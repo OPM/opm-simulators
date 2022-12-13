@@ -33,7 +33,7 @@ namespace Opm {
 class BlackoilWellModelGeneric;
 namespace data {
 struct GroupData;
-class GroupGuideRates;
+struct GroupGuideRates;
 class GuideRateValue;
 class Wells;
 }
