@@ -178,11 +178,13 @@ static void initDefaultFluidSystem()
 
     auto gasPvt = std::make_shared<Opm::GasPvtMultiplexer<double>>();
     gasPvt->setApproach(Opm::GasPvtApproach::DryGas);
-    auto& dryGasPvt = gasPvt->getRealPvt<Opm::GasPvtApproach::DryGas>();
-    dryGasPvt.setNumRegions(/*numPvtRegion=*/1);
-    dryGasPvt.setReferenceDensities(/*regionIdx=*/0, rhoRefO, rhoRefG, rhoRefW);
-    dryGasPvt.setGasFormationVolumeFactor(/*regionIdx=*/0, Bg);
-    dryGasPvt.setGasViscosity(/*regionIdx=*/0, mug);
+    gasPvt->visit([&](Opm::DryGasPvt<double>& dryGasPvt)
+                  {
+                      dryGasPvt.setNumRegions(/*numPvtRegion=*/1);
+                      dryGasPvt.setReferenceDensities(/*regionIdx=*/0, rhoRefO, rhoRefG, rhoRefW);
+                      dryGasPvt.setGasFormationVolumeFactor(/*regionIdx=*/0, Bg);
+                      dryGasPvt.setGasViscosity(/*regionIdx=*/0, mug);
+                  });
 
     auto oilPvt = std::make_shared<Opm::OilPvtMultiplexer<double>>();
     oilPvt->setApproach(Opm::OilPvtApproach::DeadOil);
