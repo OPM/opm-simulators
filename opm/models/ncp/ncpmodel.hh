@@ -76,19 +76,19 @@ struct NcpModel { using InheritsFrom = std::tuple<VtkDiffusion,
 
 //! Use the Ncp local jacobian operator for the compositional NCP model
 template<class TypeTag>
-struct LocalResidual<TypeTag, TTag::NcpModel> { using type = Opm::NcpLocalResidual<TypeTag>; };
+struct LocalResidual<TypeTag, TTag::NcpModel> { using type = NcpLocalResidual<TypeTag>; };
 
 //! Use the Ncp specific newton method for the compositional NCP model
 template<class TypeTag>
-struct NewtonMethod<TypeTag, TTag::NcpModel> { using type = Opm::NcpNewtonMethod<TypeTag>; };
+struct NewtonMethod<TypeTag, TTag::NcpModel> { using type = NcpNewtonMethod<TypeTag>; };
 
 //! the Model property
 template<class TypeTag>
-struct Model<TypeTag, TTag::NcpModel> { using type = Opm::NcpModel<TypeTag>; };
+struct Model<TypeTag, TTag::NcpModel> { using type = NcpModel<TypeTag>; };
 
 //! The type of the base base class for actual problems
 template<class TypeTag>
-struct BaseProblem<TypeTag, TTag::NcpModel> { using type = Opm::MultiPhaseBaseProblem<TypeTag>; };
+struct BaseProblem<TypeTag, TTag::NcpModel> { using type = MultiPhaseBaseProblem<TypeTag>; };
 
 //! Disable the energy equation by default
 template<class TypeTag>
@@ -100,27 +100,27 @@ struct EnableDiffusion<TypeTag, TTag::NcpModel> { static constexpr bool value = 
 
 //! the RateVector property
 template<class TypeTag>
-struct RateVector<TypeTag, TTag::NcpModel> { using type = Opm::NcpRateVector<TypeTag>; };
+struct RateVector<TypeTag, TTag::NcpModel> { using type = NcpRateVector<TypeTag>; };
 
 //! the BoundaryRateVector property
 template<class TypeTag>
-struct BoundaryRateVector<TypeTag, TTag::NcpModel> { using type = Opm::NcpBoundaryRateVector<TypeTag>; };
+struct BoundaryRateVector<TypeTag, TTag::NcpModel> { using type = NcpBoundaryRateVector<TypeTag>; };
 
 //! the PrimaryVariables property
 template<class TypeTag>
-struct PrimaryVariables<TypeTag, TTag::NcpModel> { using type = Opm::NcpPrimaryVariables<TypeTag>; };
+struct PrimaryVariables<TypeTag, TTag::NcpModel> { using type = NcpPrimaryVariables<TypeTag>; };
 
 //! the IntensiveQuantities property
 template<class TypeTag>
-struct IntensiveQuantities<TypeTag, TTag::NcpModel> { using type = Opm::NcpIntensiveQuantities<TypeTag>; };
+struct IntensiveQuantities<TypeTag, TTag::NcpModel> { using type = NcpIntensiveQuantities<TypeTag>; };
 
 //! the ExtensiveQuantities property
 template<class TypeTag>
-struct ExtensiveQuantities<TypeTag, TTag::NcpModel> { using type = Opm::NcpExtensiveQuantities<TypeTag>; };
+struct ExtensiveQuantities<TypeTag, TTag::NcpModel> { using type = NcpExtensiveQuantities<TypeTag>; };
 
 //! The indices required by the compositional NCP model
 template<class TypeTag>
-struct Indices<TypeTag, TTag::NcpModel> { using type = Opm::NcpIndices<TypeTag, 0>; };
+struct Indices<TypeTag, TTag::NcpModel> { using type = NcpIndices<TypeTag, 0>; };
 
 //! The unmodified weight for the pressure primary variable
 template<class TypeTag>
@@ -172,7 +172,7 @@ namespace Opm {
  * changed to the Forchheimer approach by
  * \code
  * template<class TypeTag>
-struct FluxModule<TypeTag, TTag::MyProblemTypeTag> { using type = Opm::ForchheimerFluxModule<TypeTag>; };
+struct FluxModule<TypeTag, TTag::MyProblemTypeTag> { using type = ForchheimerFluxModule<TypeTag>; };
  * \endcode
  *
  * The core of the model is the conservation mass of each component by
@@ -247,7 +247,7 @@ class NcpModel
 
     using ComponentVector = Dune::FieldVector<Scalar, numComponents>;
 
-    using Toolbox = Opm::MathToolbox<Evaluation>;
+    using Toolbox = MathToolbox<Evaluation>;
 
     using EnergyModule = Opm::EnergyModule<TypeTag, enableEnergy>;
     using DiffusionModule = Opm::DiffusionModule<TypeTag, enableDiffusion>;
@@ -268,13 +268,13 @@ public:
         EnergyModule::registerParameters();
 
         // register runtime parameters of the VTK output modules
-        Opm::VtkCompositionModule<TypeTag>::registerParameters();
+        VtkCompositionModule<TypeTag>::registerParameters();
 
         if (enableDiffusion)
-            Opm::VtkDiffusionModule<TypeTag>::registerParameters();
+            VtkDiffusionModule<TypeTag>::registerParameters();
 
         if (enableEnergy)
-            Opm::VtkEnergyModule<TypeTag>::registerParameters();
+            VtkEnergyModule<TypeTag>::registerParameters();
     }
 
     /*!
@@ -378,7 +378,7 @@ public:
                         std::min(minActivityCoeff_[globalIdx][compIdx],
                                  Toolbox::value(fs.fugacityCoefficient(phaseIdx, compIdx))
                                  * Toolbox::value(fs.pressure(phaseIdx)));
-                    Opm::Valgrind::CheckDefined(minActivityCoeff_[globalIdx][compIdx]);
+                    Valgrind::CheckDefined(minActivityCoeff_[globalIdx][compIdx]);
                 }
                 if (minActivityCoeff_[globalIdx][compIdx] <= 0)
                     throw Opm::NumericalIssue("The minimum activity coefficient for component "+std::to_string(compIdx)
@@ -402,7 +402,7 @@ public:
             unsigned compIdx = pvIdx - fugacity0Idx;
             assert(compIdx <= numComponents);
 
-            Opm::Valgrind::CheckDefined(minActivityCoeff_[globalDofIdx][compIdx]);
+            Valgrind::CheckDefined(minActivityCoeff_[globalDofIdx][compIdx]);
             static const Scalar fugacityBaseWeight =
                 getPropValue<TypeTag, Properties::NcpFugacitiesBaseWeight>();
             result = fugacityBaseWeight / minActivityCoeff_[globalDofIdx][compIdx];
@@ -467,11 +467,11 @@ public:
     {
         ParentType::registerOutputModules_();
 
-        this->addOutputModule(new Opm::VtkCompositionModule<TypeTag>(this->simulator_));
+        this->addOutputModule(new VtkCompositionModule<TypeTag>(this->simulator_));
         if (enableDiffusion)
-            this->addOutputModule(new Opm::VtkDiffusionModule<TypeTag>(this->simulator_));
+            this->addOutputModule(new VtkDiffusionModule<TypeTag>(this->simulator_));
         if (enableEnergy)
-            this->addOutputModule(new Opm::VtkEnergyModule<TypeTag>(this->simulator_));
+            this->addOutputModule(new VtkEnergyModule<TypeTag>(this->simulator_));
     }
 
     mutable Scalar referencePressure_;
