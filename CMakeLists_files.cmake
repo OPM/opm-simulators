@@ -42,6 +42,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/timestepping/SimulatorReport.cpp
   opm/simulators/flow/countGlobalCells.cpp
   opm/simulators/flow/ConvergenceOutputConfiguration.cpp
+  opm/simulators/flow/ExtraConvergenceOutputThread.cpp
   opm/simulators/flow/KeywordValidation.cpp
   opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.cpp
   opm/simulators/flow/ValidationFunctions.cpp
@@ -276,6 +277,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/BlackoilModelEbos.hpp
   opm/simulators/flow/BlackoilModelParametersEbos.hpp
   opm/simulators/flow/ConvergenceOutputConfiguration.hpp
+  opm/simulators/flow/ExtraConvergenceOutputThread.hpp
   opm/simulators/flow/FlowMainEbos.hpp
   opm/simulators/flow/Main.hpp
   opm/simulators/flow/NonlinearSolverEbos.hpp
