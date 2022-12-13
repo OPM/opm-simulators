@@ -194,11 +194,13 @@ static void initDefaultFluidSystem()
 
     auto waterPvt = std::make_shared<Opm::WaterPvtMultiplexer<double>>();
     waterPvt->setApproach(Opm::WaterPvtApproach::ConstantCompressibilityWater);
-    auto& ccWaterPvt = waterPvt->getRealPvt<Opm::WaterPvtApproach::ConstantCompressibilityWater>();
-    ccWaterPvt.setNumRegions(/*numPvtRegions=*/1);
-    ccWaterPvt.setReferenceDensities(/*regionIdx=*/0, rhoRefO, rhoRefG, rhoRefW);
-    ccWaterPvt.setViscosity(/*regionIdx=*/0, 1);
-    ccWaterPvt.setCompressibility(/*regionIdx=*/0, 0);
+    waterPvt->visit([&](Opm::ConstantCompressibilityWaterPvt<double>& ccWaterPvt)
+                    {
+                        ccWaterPvt.setNumRegions(/*numPvtRegions=*/1);
+                        ccWaterPvt.setReferenceDensities(/*regionIdx=*/0, rhoRefO, rhoRefG, rhoRefW);
+                        ccWaterPvt.setViscosity(/*regionIdx=*/0, 1);
+                        ccWaterPvt.setCompressibility(/*regionIdx=*/0, 0);
+                    });
 
     gasPvt->initEnd();
     oilPvt->initEnd();
