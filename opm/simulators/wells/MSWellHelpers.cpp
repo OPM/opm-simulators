@@ -121,7 +121,7 @@ applyUMFPack(Dune::UMFPack<MatrixType>& linsolver,
             if (std::isinf(y[i_block][i_elem]) || std::isnan(y[i_block][i_elem]) ) {
                 const std::string msg{"nan or inf value found after UMFPack solve due to singular matrix"};
                 OpmLog::debug(msg);
-                OPM_THROW_NOLOG(NumericalIssue, msg);
+                OPM_THROW_NOLOG(NumericalProblem, msg);
             }
         }
     }
@@ -207,7 +207,7 @@ invDX(const MatrixType& D, VectorType x, DeferredLogger& deferred_logger)
     linsolver.apply(y, x, res);
 
     if ( !res.converged ) {
-        OPM_DEFLOG_THROW(NumericalIssue, "the invDX did not converge ", deferred_logger);
+        OPM_DEFLOG_THROW(NumericalProblem, "the invDX did not converge ", deferred_logger);
     }
 
     return y;

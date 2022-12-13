@@ -28,9 +28,11 @@
 #ifndef EWOMS_ECL_NEWTON_METHOD_HH
 #define EWOMS_ECL_NEWTON_METHOD_HH
 
+#include <opm/common/Exceptions.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
+
 #include <opm/models/blackoil/blackoilnewtonmethod.hh>
 #include <opm/models/utils/signum.hh>
-#include <opm/common/OpmLog/OpmLog.hpp>
 
 namespace Opm::Properties {
 
@@ -229,16 +231,16 @@ public:
         // make sure that the error never grows beyond the maximum
         // allowed one
         if (this->error_ > newtonMaxError)
-            throw NumericalIssue("Newton: Error "+std::to_string(double(this->error_))
-                                        +" is larger than maximum allowed error of "
-                                        +std::to_string(double(newtonMaxError)));
+            throw NumericalProblem("Newton: Error "+std::to_string(double(this->error_))
+                                   + " is larger than maximum allowed error of "
+                                   + std::to_string(double(newtonMaxError)));
 
         // make sure that the error never grows beyond the maximum
         // allowed one
         if (errorSum_ > newtonMaxError)
-            throw NumericalIssue("Newton: Sum of the error "+std::to_string(double(errorSum_))
-                                        +" is larger than maximum allowed error of "
-                                        +std::to_string(double(newtonMaxError)));
+            throw NumericalProblem("Newton: Sum of the error "+std::to_string(double(errorSum_))
+                                   + " is larger than maximum allowed error of "
+                                   + std::to_string(double(newtonMaxError)));
     }
 
     void endIteration_(SolutionVector& nextSolution,

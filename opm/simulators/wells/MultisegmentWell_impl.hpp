@@ -18,12 +18,14 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <opm/common/Exceptions.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
+
+#include <opm/input/eclipse/Schedule/MSW/Valve.hpp>
 
 #include <opm/simulators/wells/MultisegmentWellAssemble.hpp>
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
-#include <opm/input/eclipse/Schedule/MSW/Valve.hpp>
-#include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <string>
 #include <algorithm>
@@ -829,9 +831,9 @@ namespace Opm
                 const Value d = 1.0 - rv * rs;
 
                 if (getValue(d) == 0.0) {
-                    OPM_DEFLOG_THROW(NumericalIssue, "Zero d value obtained for well " << this->name()
-                                                     << " during flux calculation"
-                                                     << " with rs " << rs << " and rv " << rv, deferred_logger);
+                    OPM_DEFLOG_THROW(NumericalProblem, "Zero d value obtained for well " << this->name()
+                                                       << " during flux calculation"
+                                                       << " with rs " << rs << " and rv " << rv, deferred_logger);
                 }
 
                 const Value tmp_oil = (cmix_s[oilCompIdx] - rv * cmix_s[gasCompIdx]) / d;

@@ -21,10 +21,10 @@
 #ifndef OPM_DEFERREDLOGGINGERRORHELPERS_HPP
 #define OPM_DEFERREDLOGGINGERRORHELPERS_HPP
 
+#include <opm/common/Exceptions.hpp>
+
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/utils/gatherDeferredLogger.hpp>
-
-#include <opm/material/common/Exceptions.hpp>
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
@@ -69,7 +69,7 @@ void _throw(Opm::ExceptionType::ExcEnum exc_type,
         throw std::invalid_argument(message);
         break;
     case Opm::ExceptionType::NUMERICAL_ISSUE:
-        throw Opm::NumericalIssue(message);
+        throw Opm::NumericalProblem(message);
         break;
     case Opm::ExceptionType::DEFAULT:
     case Opm::ExceptionType::LOGIC_ERROR:
@@ -124,7 +124,7 @@ try {
 /// There is a clause that will catch anything
 #define OPM_PARALLEL_CATCH_CLAUSE(obptc_exc_type,          \
                                   obptc_exc_msg)           \
-catch (const Opm::NumericalIssue& e){                      \
+catch (const Opm::NumericalProblem& e){                    \
     obptc_exc_type = Opm::ExceptionType::NUMERICAL_ISSUE;  \
     obptc_exc_msg = e.what();                              \
 } catch (const std::runtime_error& e) {                    \

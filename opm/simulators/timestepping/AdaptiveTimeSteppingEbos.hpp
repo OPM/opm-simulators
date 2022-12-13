@@ -6,17 +6,21 @@
 #include <iostream>
 #include <utility>
 
-#include <opm/simulators/timestepping/SimulatorReport.hpp>
-#include <opm/grid/utility/StopWatch.hpp>
-#include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/common/Exceptions.hpp>
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
+
+#include <opm/core/props/phaseUsageFromDeck.hpp>
+
+#include <opm/grid/utility/StopWatch.hpp>
+
+#include <opm/input/eclipse/Schedule/ScheduleState.hpp>
+
+#include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
 #include <opm/simulators/timestepping/AdaptiveSimulatorTimer.hpp>
 #include <opm/simulators/timestepping/TimeStepControlInterface.hpp>
 #include <opm/simulators/timestepping/TimeStepControl.hpp>
-#include <opm/core/props/phaseUsageFromDeck.hpp>
-#include <opm/input/eclipse/Schedule/ScheduleState.hpp>
-#include <opm/common/Exceptions.hpp>
 
 namespace Opm::Properties {
 
@@ -429,7 +433,7 @@ namespace Opm {
                     logException_(e, solverVerbose_);
                     // since linearIterations is < 0 this will restart the solver
                 }
-                catch (const NumericalIssue& e) {
+                catch (const NumericalProblem& e) {
                     substepReport = solver.failureReport();
                     causeOfFailure = "Solver convergence failure - Numerical problem encountered";
 
@@ -544,7 +548,7 @@ namespace Opm {
                         if (solverVerbose_) {
                             OpmLog::error(msg);
                         }
-                        OPM_THROW_NOLOG(NumericalIssue, msg);
+                        OPM_THROW_NOLOG(NumericalProblem, msg);
                     }
 
                     // The new, chopped timestep.
@@ -560,7 +564,7 @@ namespace Opm {
                         if (solverVerbose_) {
                             OpmLog::error(msg);
                         }
-                        OPM_THROW_NOLOG(NumericalIssue, msg);
+                        OPM_THROW_NOLOG(NumericalProblem, msg);
                     }
 
                     // Define utility function for chopping timestep.
