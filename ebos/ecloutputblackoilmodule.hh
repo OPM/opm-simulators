@@ -27,6 +27,9 @@
 #ifndef EWOMS_ECL_OUTPUT_BLACK_OIL_MODULE_HH
 #define EWOMS_ECL_OUTPUT_BLACK_OIL_MODULE_HH
 
+#include <opm/common/Exceptions.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
+
 #include <opm/models/blackoil/blackoilproperties.hh>
 
 #include <opm/models/utils/propertysystem.hh>
@@ -40,8 +43,6 @@
 #include <opm/output/data/Cells.hpp>
 #include <opm/output/eclipse/EclipseIO.hpp>
 #include <opm/output/eclipse/Inplace.hpp>
-
-#include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <ebos/eclgenericoutputblackoilmodule.hh>
 
@@ -420,7 +421,7 @@ public:
                 try {
                     this->bubblePointPressure_[globalDofIdx] = getValue(FluidSystem::bubblePointPressure(fs, intQuants.pvtRegionIndex()));
                 }
-                catch (const NumericalIssue&) {
+                catch (const NumericalProblem&) {
                     const auto cartesianIdx = elemCtx.simulator().vanguard().cartesianIndex(globalDofIdx);
                     this->failedCellsPb_.push_back(cartesianIdx);
                 }
@@ -429,7 +430,7 @@ public:
                 try {
                     this->dewPointPressure_[globalDofIdx] = getValue(FluidSystem::dewPointPressure(fs, intQuants.pvtRegionIndex()));
                 }
-                catch (const NumericalIssue&) {
+                catch (const NumericalProblem&) {
                     const auto cartesianIdx = elemCtx.simulator().vanguard().cartesianIndex(globalDofIdx);
                     this->failedCellsPd_.push_back(cartesianIdx);
                 }

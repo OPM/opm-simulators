@@ -19,6 +19,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <opm/common/Exceptions.hpp>
+
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/StandardWellAssemble.hpp>
 #include <opm/simulators/wells/VFPHelpers.hpp>
@@ -555,7 +557,7 @@ namespace Opm
         try {
             this->linSys_.invert();
         } catch( ... ) {
-            OPM_DEFLOG_THROW(NumericalIssue,"Error when inverting local well equations for well " + name(), deferred_logger);
+            OPM_DEFLOG_THROW(NumericalProblem, "Error when inverting local well equations for well " + name(), deferred_logger);
         }
     }
 

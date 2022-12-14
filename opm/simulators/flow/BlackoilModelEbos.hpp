@@ -27,28 +27,30 @@
 #include <ebos/eclproblem.hh>
 #include <opm/models/utils/start.hh>
 
-#include <opm/simulators/timestepping/AdaptiveTimeSteppingEbos.hpp>
-
-#include <opm/simulators/flow/NonlinearSolverEbos.hpp>
-#include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
-#include <opm/simulators/wells/BlackoilWellModel.hpp>
-#include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
-#include <opm/simulators/wells/WellConnectionAuxiliaryModule.hpp>
-#include <opm/simulators/flow/countGlobalCells.hpp>
-#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
-
-#include <opm/grid/UnstructuredGrid.h>
-#include <opm/simulators/timestepping/SimulatorReport.hpp>
-#include <opm/core/props/phaseUsageFromDeck.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
-#include <opm/input/eclipse/Units/Units.hpp>
-#include <opm/simulators/timestepping/SimulatorTimer.hpp>
+
+#include <opm/core/props/phaseUsageFromDeck.hpp>
+
+#include <opm/grid/UnstructuredGrid.h>
+
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/TableManager.hpp>
+#include <opm/input/eclipse/Units/Units.hpp>
 
+#include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
+#include <opm/simulators/flow/countGlobalCells.hpp>
+#include <opm/simulators/flow/NonlinearSolverEbos.hpp>
+#include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
 #include <opm/simulators/linalg/ISTLSolverEbos.hpp>
+#include <opm/simulators/timestepping/AdaptiveTimeSteppingEbos.hpp>
+#include <opm/simulators/timestepping/SimulatorReport.hpp>
+#include <opm/simulators/timestepping/SimulatorTimer.hpp>
+
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+#include <opm/simulators/wells/BlackoilWellModel.hpp>
+#include <opm/simulators/wells/WellConnectionAuxiliaryModule.hpp>
 
 #include <dune/istl/owneroverlapcopy.hh>
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
@@ -397,9 +399,9 @@ namespace Opm {
 
                 // Throw if any NaN or too large residual found.
                 if (severity == ConvergenceReport::Severity::NotANumber) {
-                    OPM_THROW(NumericalIssue, "NaN residual found!");
+                    OPM_THROW(NumericalProblem, "NaN residual found!");
                 } else if (severity == ConvergenceReport::Severity::TooLarge) {
-                    OPM_THROW_NOLOG(NumericalIssue, "Too large residual found!");
+                    OPM_THROW_NOLOG(NumericalProblem, "Too large residual found!");
                 }
             }
             report.update_time += perfTimer.stop();

@@ -19,6 +19,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <opm/common/Exceptions.hpp>
+
 #include <opm/input/eclipse/Schedule/ScheduleTypes.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
@@ -407,7 +409,7 @@ namespace Opm
         bool converged = false;
         try {
             converged = this->iterateWellEqWithControl(ebosSimulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
-        } catch (NumericalIssue& e ) {
+        } catch (NumericalProblem& e ) {
             const std::string msg = "Inner well iterations failed for well " + this->name() + " Treat the well as unconverged. ";
             deferred_logger.warning("INNER_ITERATION_FAILED", msg);
             converged = false;
