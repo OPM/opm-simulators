@@ -621,22 +621,24 @@ applyAllZMultipliers_(Scalar& trans,
         assert(insideFaceIdx==5); // as insideCartElemIdx < outsideCartElemIdx holds for the Z column
         assert(outsideCartElemIdx > insideCartElemIdx);
         auto lastCartElemIdx = outsideCartElemIdx - cartDims[0]*cartDims[1];
-        // Last multiplier
-        Scalar mult = transMult.getMultiplier(lastCartElemIdx , FaceDir::ZPlus);
+        // Last multiplier using (Z+)*(Z-)
+        Scalar mult = transMult.getMultiplier(lastCartElemIdx , FaceDir::ZPlus) *
+            transMult.getMultiplier(outsideCartElemIdx , FaceDir::ZMinus);
 
         if ( !pinchTop )
         {
-            // pick the smallest multiplier for Z+ while looking down the pillar until reaching the other end of the connection
-            // While Z- is not all used here.
-            for(auto cartElemIdx = insideCartElemIdx; cartElemIdx < lastCartElemIdx;
-                cartElemIdx += cartDims[0]*cartDims[1])
+            // pick the smallest multiplier using (Z+)*(Z-) while looking down
+            // the pillar until reaching the other end of the connection
+            for(auto cartElemIdx = insideCartElemIdx; cartElemIdx < lastCartElemIdx;)
             {
-                mult = std::min(mult, transMult.getMultiplier(cartElemIdx, FaceDir::ZPlus));
+                auto multiplier = transMult.getMultiplier(cartElemIdx, FaceDir::ZPlus);
+                cartElemIdx += cartDims[0]*cartDims[1];
+                multiplier *= transMult.getMultiplier(cartElemIdx, FaceDir::ZMinus);
+                mult = std::min(mult, multiplier);
             }
         }
 
         trans *= mult;
-        applyMultipliers_(trans, outsideFaceIdx, outsideCartElemIdx, transMult);
     }
     else
     {
