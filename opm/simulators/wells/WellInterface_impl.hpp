@@ -1370,4 +1370,29 @@ namespace Opm
         connII[phase_pos] = connIICalc(mt * fs.invB(this->flowPhaseToEbosPhaseIdx(phase_pos)).value());
     }
 
+
+
+    template<typename TypeTag>
+    void WellInterface<TypeTag>::updateWaterInjectionVolume(const double dt, WellState& well_state) const
+    {
+        if (!FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+           return;
+        }
+        // it is currently used for the filter cake modeling related to formation damage study
+        auto& ws = well_state.well(this->index_of_well_);
+        const auto& connection_rates = ws.perf_data.phase_rates;
+        // per connection
+        auto& water_injection_volume = ws.perf_data.water_injection_volume;
+        // which is the index for water
+        // and also, we should check whether the phase is active
+        const size_t water_index = FluidSystem::waterPhaseIdx;
+        const size_t np = well_state.numPhases();
+        for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
+            // not considering the production water
+            const double water_rates = std::max(0., connection_rates[perf * np + water_index]);
+            water_injection_volume[perf] += water_rates * dt;
+            std::cout << " well " << this->name() << " perf " << perf << " injection volume " << water_injection_volume[perf] << std::endl;
+        }
+    }
+
 } // namespace Opm

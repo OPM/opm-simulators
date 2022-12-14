@@ -303,6 +303,8 @@ public:
     // update perforation water throughput based on solved water rate
     virtual void updateWaterThroughput(const double dt, WellState& well_state) const = 0;
 
+    void updateWaterInjectionVolume(const double dt, WellState& well_state) const;
+
     /// Compute well rates based on current reservoir conditions and well variables.
     /// Used in updateWellStateRates().
     virtual std::vector<double> computeCurrentWellRates(const Simulator& ebosSimulator,

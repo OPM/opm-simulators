@@ -84,6 +84,12 @@ public:
     std::vector<double> water_throughput;
     std::vector<double> skin_pressure;
     std::vector<double> water_velocity;
+
+    // This is the accumulated water injection volume
+    // At the moment, it will be used for the filtration cake modeling
+    // TODO: it might be problematic to handle the well open and shut, connection open and shut
+    // TODO: let us handle the most straightforward scenarios for now
+    std::vector<double> water_injection_volume;
 };
 
 } // namespace Opm

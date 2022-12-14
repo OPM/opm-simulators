@@ -472,6 +472,10 @@ namespace Opm {
             if (getPropValue<TypeTag, Properties::EnablePolymerMW>() && well->isInjector()) {
                 well->updateWaterThroughput(dt, this->wellState());
             }
+
+            if (well->isInjector()) {
+                well->updateWaterInjectionVolume(dt, this->wellState());
+            }
         }
 
         // at the end of the time step, updating the inj_multiplier saved in WellState for later use
