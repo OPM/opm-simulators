@@ -18,6 +18,8 @@
 */
 #include "config.h"
 #include <opm/simulators/flow/Main.hpp>
+#include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
+#include <opm/models/discretization/common/tpfalinearizer.hh>
 #include "tracy/Tracy.hpp"
 #include "tracy/TracyC.h"
 //sudo apt install libcapstone-dev
@@ -25,20 +27,25 @@
 namespace Opm {
 namespace Properties {
 namespace TTag {
-struct EclFlowProblemFast {
+struct EclFlowProblemTPFAFast {
     using InheritsFrom = std::tuple<EclFlowProblem>;
 };
 }
-template<class TypeTag>
-struct EclEnableAquifers<TypeTag, TTag::EclFlowProblemFast> {
-    static constexpr bool value = false;
-};
+    template<class TypeTag>
+    struct Linearizer<TypeTag, TTag::EclFlowProblemTPFAFast> { using type = TpfaLinearizer<TypeTag>; };
+    
+    template<class TypeTag>
+    struct LocalResidual<TypeTag, TTag::EclFlowProblemTPFAFast> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
+    
+    template<class TypeTag>
+    struct EnableDiffusion<TypeTag, TTag::EclFlowProblemTPFAFast> { static constexpr bool value = false; };
+
 }
 }
 int main(int argc, char** argv)
 {
     OPM_TIME_BLOCK(FullSimulator);
-    using TypeTag = Opm::Properties::TTag::EclFlowProblemFast;
+    using TypeTag = Opm::Properties::TTag::EclFlowProblemTPFAFast;
     auto mainObject = Opm::Main(argc, argv);
     return mainObject.runStatic<TypeTag>();
 }
