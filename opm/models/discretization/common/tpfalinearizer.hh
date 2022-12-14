@@ -384,13 +384,14 @@ private:
 
         // allocate raw matrix
         jacobian_.reset(new SparseMatrixAdapter(simulator_()));
-        diagElemAddress_.resize(numCells);
+        diagMatAddress_.resize(numCells);
         // create matrix structure based on sparsity pattern
         jacobian_->reserve(sparsityPattern);
         for (unsigned globI = 0; globI < numCells; globI++) {
-            diagElements_[globI] = jacobian_->blockAddress(globI,globI,bMat);           
+            const auto& nbInfos = neighborInfo_[globI];
+            diagMatAddress_[globI] = jacobian_->blockAddress(globI,globI);           
             for (auto& nbInfo : nbInfos) {
-                nbInfo.matAdress = jacobian_->blockAddress(globI,nbInfo.neighbor);
+                nbInfo.matAddress = jacobian_->blockAddress(nbInfo.neighbor,globI);
             }
         }
     }
@@ -435,23 +436,23 @@ private:
             MatrixBlock bMat(0.0);
             ADVectorBlock adres(0.0);
             const IntensiveQuantities* intQuantsInP = model_().cachedIntensiveQuantities(globI, /*timeIdx*/ 0);
-            if (intQuantsInP == nullptr) {
-                throw std::logic_error("Missing updated intensive quantities for cell " + std::to_string(globI));
-            }
+            // if (intQuantsInP == nullptr) {
+            //     throw std::logic_error("Missing updated intensive quantities for cell " + std::to_string(globI));
+            // }
             const IntensiveQuantities& intQuantsIn = *intQuantsInP;
 
             // Flux term.
             short loc = 0;
             for (const auto& nbInfo : nbInfos) {
                 unsigned globJ = nbInfo.neighbor;
-                assert(globJ != globI);
+                //assert(globJ != globI);
                 res = 0.0;
                 bMat = 0.0;
                 adres = 0.0;
                 const IntensiveQuantities* intQuantsExP = model_().cachedIntensiveQuantities(globJ, /*timeIdx*/ 0);
-                if (intQuantsExP == nullptr) {
-                    throw std::logic_error("Missing updated intensive quantities for cell " + std::to_string(globJ) + " when assembling fluxes for cell " + std::to_string(globI));
-                }
+                // if (intQuantsExP == nullptr) {
+                //     throw std::logic_error("Missing updated intensive quantities for cell " + std::to_string(globJ) + " when assembling fluxes for cell " + std::to_string(globI));
+                // }
                 const IntensiveQuantities& intQuantsEx = *intQuantsExP;
                 LocalResidual::computeFlux(
                        adres, problem_(), globI, globJ, intQuantsIn, intQuantsEx,
@@ -460,7 +461,7 @@ private:
                 setResAndJacobi(res, bMat, adres);
                 residual_[globI] += res;
                 //jacobian_->addToBlock(globI, globI, bMat);
-                *diagElemAddress_[globI] += bMat;
+                *diagMatAddress_[globI] += bMat;
                 bMat *= -1.0;
                 //jacobian_->addToBlock(globJ, globI, bMat);
                 *nbInfo.matAddress += bMat;
@@ -485,7 +486,7 @@ private:
             // residual_[globI] -= model_().cachedStorage(globI, 1); //*storefac;
             residual_[globI] += res;
             //jacobian_->addToBlock(globI, globI, bMat);
-            *diagElemAddress_[globI] += bMat;
+            *diagMatAddress_[globI] += bMat;
             // wells sources for now (should be moved out)
             if (well_local) {
                 res = 0.0;
@@ -496,7 +497,7 @@ private:
                 setResAndJacobi(res, bMat, adres);
                 residual_[globI] += res;
                 //jacobian_->addToBlock(globI, globI, bMat);
-                 *diagElemAddress_[globI] += bMat;
+                 *diagMatAddress_[globI] += bMat;
             }
         } // end of loop for cell globI.
 
@@ -515,7 +516,7 @@ private:
             setResAndJacobi(res, bMat, adres);
             residual_[globI] += res;
             //jacobian_->addToBlock(globI, globI, bMat);
-            *diagElemAddress_[globI] += bMat;
+            *diagMatAddress_[globI] += bMat;
         }
     }
 
@@ -557,10 +558,10 @@ private:
         double trans;
         double faceArea;
         FaceDir::DirEnum faceDirection;
-        MatrixBlock* matAddres;
+        MatrixBlock* matAddress;
     };
     SparseTable<NeighborInfo> neighborInfo_;
-    std::vector<MatrixBlock*> diagElemAddress_;
+    std::vector<MatrixBlock*> diagMatAddress_;
 
     using ScalarFluidState = typename IntensiveQuantities::ScalarFluidState;
     struct BoundaryConditionData
