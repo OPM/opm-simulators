@@ -20,7 +20,6 @@
   module for the precise wording of the license and the list of
   copyright holders.
 */
-#include <opm/material/common/Exceptions.hpp>
 
 #include <dune/common/version.hh>
 #include <dune/common/fvector.hh>
@@ -29,10 +28,11 @@
 #include <algorithm>
 #include <fstream>
 #include <iomanip>
-#include <vector>
+#include <memory>
+#include <stdexcept>
 #include <sstream>
 #include <string>
-#include <memory>
+#include <vector>
 
 namespace Ewoms {
 /*!

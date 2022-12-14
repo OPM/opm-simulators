@@ -30,8 +30,6 @@
 
 #include <opm/models/utils/quadraturegeometries.hh>
 
-#include <opm/material/common/Exceptions.hpp>
-
 #include <dune/grid/common/intersectioniterator.hh>
 #include <dune/grid/common/mcmgmapper.hh>
 #include <dune/geometry/referenceelements.hh>
@@ -42,6 +40,7 @@
 
 #include <dune/common/version.hh>
 
+#include <stdexcept>
 #include <vector>
 
 namespace Opm {

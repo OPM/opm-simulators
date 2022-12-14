@@ -31,12 +31,12 @@
 #include "fvbaseproperties.hh"
 #include "linearizationtype.hh"
 
+#include <opm/common/Exceptions.hpp>
+
 #include <opm/models/parallel/gridcommhandles.hh>
 #include <opm/models/parallel/threadmanager.hh>
 #include <opm/models/parallel/threadedentityiterator.hh>
 #include <opm/models/discretization/common/baseauxiliarymodule.hh>
-
-#include <opm/material/common/Exceptions.hpp>
 
 #include <dune/common/version.hh>
 #include <dune/common/fvector.hh>
@@ -219,7 +219,7 @@ public:
         succeeded = gridView_().comm().min(succeeded);
 
         if (!succeeded)
-            throw NumericalIssue("A process did not succeed in linearizing the system");
+            throw NumericalProblem("A process did not succeed in linearizing the system");
     }
 
     void finalize()
@@ -252,7 +252,7 @@ public:
             succeeded = comm.min(succeeded);
 
             if (!succeeded)
-                throw NumericalIssue("linearization of an auxiliary equation failed");
+                throw NumericalProblem("linearization of an auxiliary equation failed");
         }
     }
 

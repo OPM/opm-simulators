@@ -31,13 +31,14 @@
 #include "pvsindices.hh"
 #include "pvsproperties.hh"
 
+#include <opm/common/Exceptions.hpp>
+
 #include <opm/models/discretization/common/fvbaseprimaryvariables.hh>
 #include <opm/models/common/energymodule.hh>
 
 #include <opm/material/constraintsolvers/NcpFlash.hpp>
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 #include <opm/material/common/Valgrind.hpp>
-#include <opm/material/common/Exceptions.hpp>
 
 #include <dune/common/fvector.hh>
 
@@ -303,7 +304,7 @@ public:
 
         // some phase must be present
         if (phasePresence_ == 0)
-            throw Opm::NumericalIssue("Phase state was 0, i.e., no fluid is present");
+            throw NumericalProblem("Phase state was 0, i.e., no fluid is present");
 
         // set the primary variables which correspond to mole
         // fractions of the present phase which has the lowest index.

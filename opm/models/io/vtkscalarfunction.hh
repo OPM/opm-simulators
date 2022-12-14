@@ -34,10 +34,9 @@
 #include <dune/common/fvector.hh>
 #include <dune/common/version.hh>
 
-#include <opm/material/common/Exceptions.hpp>
-
-#include <string>
 #include <limits>
+#include <stdexcept>
+#include <string>
 #include <vector>
 
 namespace Opm {

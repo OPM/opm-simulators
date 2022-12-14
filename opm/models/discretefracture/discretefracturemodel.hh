@@ -40,8 +40,7 @@
 #include <opm/models/immiscible/immisciblemodel.hh>
 #include <opm/models/io/vtkdiscretefracturemodule.hh>
 
-#include <opm/material/common/Exceptions.hpp>
-
+#include <stdexcept>
 #include <string>
 
 namespace Opm {
