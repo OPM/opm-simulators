@@ -459,6 +459,18 @@ if(dune-alugrid_FOUND)
   target_compile_definitions(flow_alugrid PRIVATE USE_ALUGRID)
 endif()
 
+opm_add_test(flow_blackoil_fast
+  ONLY_COMPILE
+  ALWAYS_ENABLE
+  DEPENDS opmsimulators
+  LIBRARIES opmsimulators
+  SOURCES
+  flow/flow_blackoil_fast.cpp
+  $<TARGET_OBJECTS:moduleVersion>)
+#target_compile_definitions(flow_blackoil_fast)
+target_link_libraries(flow_blackoil_fast TracyClient)
+
+
 if (BUILD_FLOW)
   install(TARGETS flow DESTINATION bin)
   opm_add_bash_completion(flow)
