@@ -58,7 +58,6 @@
 
 #include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/common/Valgrind.hpp>
-#include <opm/material/common/Exceptions.hpp>
 
 #include <dune/common/version.hh>
 #include <dune/common/fvector.hh>
@@ -74,6 +73,7 @@
 
 #include <limits>
 #include <list>
+#include <stdexcept>
 #include <sstream>
 #include <string>
 #include <vector>

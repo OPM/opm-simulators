@@ -27,6 +27,8 @@
 #ifndef EWOMS_PARALLEL_BASE_BACKEND_HH
 #define EWOMS_PARALLEL_BASE_BACKEND_HH
 
+#include <opm/common/Exceptions.hpp>
+
 #include <opm/simulators/linalg/istlsparsematrixadapter.hh>
 #include <opm/simulators/linalg/overlappingbcrsmatrix.hh>
 #include <opm/simulators/linalg/overlappingblockvector.hh>
@@ -329,7 +331,7 @@ protected:
         // ranks.
         preconditionerIsReady = simulator_.gridView().comm().min(preconditionerIsReady);
         if (!preconditionerIsReady)
-            throw Opm::NumericalIssue("Creating the preconditioner failed");
+            throw NumericalProblem("Creating the preconditioner failed");
 
         // create the parallel preconditioner
         return std::make_shared<ParallelPreconditioner>(precWrapper_.get(), overlappingMatrix_->overlap());

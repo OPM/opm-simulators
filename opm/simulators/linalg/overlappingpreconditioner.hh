@@ -29,7 +29,7 @@
 
 #include "overlappingscalarproduct.hh"
 
-#include <opm/material/common/Exceptions.hpp>
+#include <opm/common/Exceptions.hpp>
 #include <opm/simulators/linalg/ilufirstelement.hh> //definitions needed in next header
 #include <dune/istl/preconditioner.hh>
 
@@ -88,7 +88,7 @@ public:
             x.sync();
         }
         else
-            throw Opm::NumericalIssue("Preconditioner threw an exception in pre() method on some process.");
+            throw NumericalProblem("Preconditioner threw an exception in pre() method on some process.");
 #else
         seqPreCond_.pre(x, y);
 #endif
@@ -133,7 +133,7 @@ public:
                 x.sync();
             }
             else
-                throw Opm::NumericalIssue("Preconditioner threw an exception on some process.");
+                throw NumericalProblem("Preconditioner threw an exception on some process.");
         }
         else
 #endif // HAVE_MPI
@@ -170,7 +170,7 @@ public:
             x.sync();
         }
         else
-            throw Opm::NumericalIssue("Preconditioner threw an exception in post() method on "
+            throw NumericalProblem("Preconditioner threw an exception in post() method on "
                                         "some process.");
 #else
         seqPreCond_.post(x);
