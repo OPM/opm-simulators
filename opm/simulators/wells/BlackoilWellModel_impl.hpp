@@ -1265,7 +1265,9 @@ namespace Opm {
 
     template <typename TypeTag>
     void BlackoilWellModel<TypeTag>::
-    addReseroirSourceTerms(GlobalEqVector& residual, SparseMatrixAdapter& jacobian) const
+    addReseroirSourceTerms(const std::vector<MatrixBlock*>& diagMatAddress,
+                           GlobalEqVector& residual,
+                           SparseMatrixAdapter& jacobian) const
     {
         // NB this loop may write to same element if a cell has more than one perforation
 #ifdef _OPENMP
@@ -1284,11 +1286,11 @@ namespace Opm {
                 // Scalar volume =  ebosSimulator_.problem().volume(cellIdx,0);
                 rate *= -1.0;
                 VectorBlockType res(0.0);
-		using  MatrixBlockType = Opm::MatrixBlock<Scalar, numEq, numEq >;
-                MatrixBlockType bMat(0.0);
+                MatrixBlock bMat(0.0);
                 ebosSimulator_.model().linearizer().setResAndJacobi(res, bMat, rate);
                 residual[cellIdx] += res;
-                jacobian.addToBlock(cellIdx, cellIdx, bMat);
+                //jacobian.addToBlock(cellIdx, cellIdx, bMat);
+                *diagMatAddress[cellIdx] += bMat;
             }
         }
     }

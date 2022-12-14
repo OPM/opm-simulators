@@ -128,7 +128,7 @@ namespace Opm {
             // or there is some other strategy, like TypeTag
             typedef Dune::FieldVector<Scalar, numEq    > VectorBlockType;
             typedef Dune::BlockVector<VectorBlockType> BVector;
-
+            typedef Opm::MatrixBlock<Scalar, numEq, numEq > MatrixBlock;
             typedef BlackOilPolymerModule<TypeTag> PolymerModule;
             typedef BlackOilMICPModule<TypeTag> MICPModule;
 
@@ -268,7 +268,8 @@ namespace Opm {
             void addWellContributions(SparseMatrixAdapter& jacobian) const;
 
 	    // add source from wells to the reservoir matrix
-	    void addReseroirSourceTerms(GlobalEqVector& residual,
+	    void addReseroirSourceTerms(const std::vector<MatrixBlock*>& diagMatAddress,
+                                        GlobalEqVector& residual,
                                         SparseMatrixAdapter& jacobian) const;
 	  
             // called at the beginning of a report step
