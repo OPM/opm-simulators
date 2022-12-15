@@ -1403,7 +1403,6 @@ namespace Opm
             setToZero(connPI);
 
             if (this->isInjector()) {
-                std::cout << "perf_ecl_index " << allPerfID << " ";
                 this->computeConnLevelInjInd(fs, preferred_phase, connPICalc,
                                              mob, connPI, deferred_logger);
             }
@@ -2532,15 +2531,12 @@ namespace Opm
 
         auto phase_pos = 0;
         if (preferred_phase == Phase::GAS) {
-            std::cout << " Gas ";
             phase_pos = pu.phase_pos[Gas];
         }
         else if (preferred_phase == Phase::OIL) {
-            std::cout << " Oil ";
             phase_pos = pu.phase_pos[Oil];
         }
         else if (preferred_phase == Phase::WATER) {
-            std::cout << " Water ";
             phase_pos = pu.phase_pos[Water];
         }
         else {
@@ -2554,8 +2550,5 @@ namespace Opm
         const auto zero   = EvalWell{this->primary_variables_.numWellEq() + Indices::numEq, 0.0};
         const auto mt     = std::accumulate(mobility.begin(), mobility.end(), zero);
         connII[phase_pos] = connIICalc(mt.value() * fs.invB(this->flowPhaseToEbosPhaseIdx(phase_pos)).value());
-        if (this->name() == "INJ-6") {
-            std::cout << "total_mobility " << mt.value() << " injectivity " << connII[phase_pos] << std::endl;
-        }
     }
 } // namespace Opm

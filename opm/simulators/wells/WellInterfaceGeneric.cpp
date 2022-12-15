@@ -194,16 +194,10 @@ void WellInterfaceGeneric::setInjMult(const std::vector<double>& inj_mult)
 {
     this->inj_multiplier_ = inj_mult;
     this->prev_inj_multipler_ = this->inj_multiplier_;
-    std::cout << " well " << this->name() << " in setInjMult " << std::endl;
-    for (size_t i = 0; i < this->inj_multiplier_.size(); ++i) {
-        std::cout << " well " << this->name() << " perf " << i << " inj_multipler " << this->inj_multiplier_[i] << std::endl;
-    }
 }
 
 void WellInterfaceGeneric::updateInjMult(std::vector<double>& multipliers) const
 {
-    // ws.perf_data.inj_multipler = this->inj_multiplier_;
-    std::cout << " in function updateInjMult " << std::endl;
     for (size_t perf = 0; perf < this->inj_multiplier_.size(); ++perf) {
         const auto perf_ecl_index = this->perforationData()[perf].ecl_index;
         if (this->well_ecl_.getInjMultMode() == Well::InjMultMode::CIRR) {
@@ -211,21 +205,19 @@ void WellInterfaceGeneric::updateInjMult(std::vector<double>& multipliers) const
         } else {
             multipliers[perf] = this->inj_multiplier_[perf];
         }
-        std::cout << " well " << this->name() << " perf " << perf << " perf_ecl_index " << perf_ecl_index << " inj_multipler " << this->inj_multiplier_[perf] << " final " << multipliers[perf] << std::endl;
     }
 }
 
 
 
-    double
-    WellInterfaceGeneric::
-    getInjMult(const int perf,
-               const double bhp,
-               const double perf_pres,
-               DeferredLogger& deferred_logger) const
+    double WellInterfaceGeneric::getInjMult(const int perf,
+                                            const double bhp,
+                                            const double perf_pres,
+                                            DeferredLogger& deferred_logger) const
 {
         const auto perf_ecl_index = this->perforationData()[perf].ecl_index;
         double multipler = 1.;
+        // TODO: make it throw
         assert(!this->isProducer());
         switch (this->well_ecl_.getInjMultMode()) {
             case Well::InjMultMode::WREV: {
@@ -250,22 +242,14 @@ void WellInterfaceGeneric::updateInjMult(std::vector<double>& multipliers) const
                 const auto& injmult = this->well_ecl_.getConnections()[perf_ecl_index].injmult();
                 const auto frac_press = injmult.fracture_pressure;
                 const auto gradient = injmult.multiplier_gradient;
-                // double calc_mult = 1.0;
-                // const double old_mult =  this->inj_multiplier_[perf_ecl_index];
                 if (perf_pres > frac_press) {
                     multipler = 1.0 + (perf_pres - frac_press) * gradient;
-                    // calc_mult = multipler;
                 } else {
                     multipler = 1.0;
                 }
                 multipler = std::max(multipler, this->prev_inj_multipler_[perf_ecl_index]);
                 // store the calculated multiplier value
                 this->inj_multiplier_[perf_ecl_index] = multipler;
-                /* const auto msg = fmt::format("perf {} bhp {} connection pressure {} calculated multplier "
-                                             " {} and the old mulplitier {} and the returned multplier {} \n",
-                                             perf, Opm::getValue(this->getBhp())/1.e5, connection_pressure/1.e5, calc_mult, old_mult, multipler); */
-                // std::cout << msg;
-                std::cout << "well " << this->name() << " perf " << perf << " multipler " << multipler << std::endl;
                 break;
             }
             default: {

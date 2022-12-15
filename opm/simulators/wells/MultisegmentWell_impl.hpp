@@ -390,6 +390,8 @@ namespace Opm
                 // flux for each perforation
                 std::vector<Scalar> mob(this->num_components_, 0.);
                 getMobility(ebosSimulator, perf, mob, deferred_logger);
+
+                // getMobilityScalar(ebosSimulator, seg, perf, mob, deferred_logger);
                 double trans_mult = ebosSimulator.problem().template rockCompTransMultiplier<double>(intQuants, cell_idx);
                 const double Tw = this->well_index_[perf] * trans_mult;
 
@@ -717,6 +719,11 @@ namespace Opm
 
             std::vector<Scalar> mob(this->num_components_, 0.0);
             getMobility(ebosSimulator, static_cast<int>(subsetPerfID), mob, deferred_logger);
+            /* const WellConnections& completion_set = this->wellEcl().getConnections();
+            const Connection& connection = completion_set.get(static_cast<int>(subsetPerfID));
+            const int seg = this->segmentNumberToIndex(connection.segment());
+            getMobilityScalar(ebosSimulator, seg, static_cast<int>(subsetPerfID), mob, deferred_logger); */
+
 
             const auto& fs = fluidState(subsetPerfID);
             setToZero(connPI);
@@ -1085,7 +1092,22 @@ namespace Opm
                           }
                       };
         WellInterface<TypeTag>::getMobility(ebosSimulator, perf, mob, obtain, deferred_logger);
+	
+	// TODO: make this a function
+        // apply WINJMULT if it is active
+        const auto perf_ecl_index = this->perforationData()[perf].ecl_index;
+        if (this->isInjector() && this->well_ecl_.getConnections()[perf_ecl_index].injmult().active()) {
+            const double bhp = getValue(this->primary_variables_.getBhp());
+            const double perf_seg_press_diff = this->gravity() * this->segments_.density(seg).value()
+                                                               * this->segments_.perforation_depth_diff(perf);
+            const double perf_press = this->primary_variables_.getSegmentPressure(seg).value() + perf_seg_press_diff;
+            const double mulipler = this->getInjMult(perf, bhp, perf_press, deferred_logger);
+            for (size_t i = 0; i < mob.size(); ++i) {
+                mob[i] *= mulipler;
+            }
+        }
     }
+
 
 
 
@@ -1183,6 +1205,7 @@ namespace Opm
                 std::vector<Scalar> mob(this->num_components_, 0.0);
 
                 // TODO: maybe we should store the mobility somewhere, so that we only need to calculate it one per iteration
+
                 getMobility(ebos_simulator, perf, mob, deferred_logger);
 
                 const int cell_idx = this->well_cells_[perf];
@@ -1541,6 +1564,7 @@ namespace Opm
                 const int cell_idx = this->well_cells_[perf];
                 const auto& int_quants = ebosSimulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
                 std::vector<EvalWell> mob(this->num_components_, 0.0);
+
                 getMobility(ebosSimulator, perf, mob, deferred_logger);
                 const double trans_mult = ebosSimulator.problem().template rockCompTransMultiplier<double>(int_quants, cell_idx);
                 const double Tw = this->well_index_[perf] * trans_mult;
@@ -1853,7 +1877,11 @@ namespace Opm
                 const int cell_idx = this->well_cells_[perf];
                 const auto& int_quants = ebosSimulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
                 std::vector<Scalar> mob(this->num_components_, 0.0);
+<<<<<<< HEAD
                 getMobility(ebosSimulator, perf, mob, deferred_logger);
+=======
+                getMobilityScalar(ebosSimulator, seg, perf, mob, deferred_logger);
+>>>>>>> 5f0ab325b (extending WINJMULT support to MultisegmentWell)
                 const double trans_mult = ebosSimulator.problem().template rockCompTransMultiplier<double>(int_quants, cell_idx);
                 const double Tw = this->well_index_[perf] * trans_mult;
                 std::vector<Scalar> cq_s(this->num_components_, 0.0);
