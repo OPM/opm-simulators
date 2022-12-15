@@ -181,7 +181,7 @@ public:
     void setInjMult(const std::vector<double>& inj_mult);
 
     // update the InjMult information in the well state
-    void updateInjMult(std::vector<double>& multipliers, SingleWellState& ws) const;
+    void updateInjMult(std::vector<double>& multipliers) const;
 
     // whether a well is specified with a non-zero and valid VFP table number
     bool isVFPActive(DeferredLogger& deferred_logger) const;

@@ -200,7 +200,7 @@ void WellInterfaceGeneric::setInjMult(const std::vector<double>& inj_mult)
     }
 }
 
-void WellInterfaceGeneric::updateInjMult(std::vector<double>& multipliers, SingleWellState& ws) const
+void WellInterfaceGeneric::updateInjMult(std::vector<double>& multipliers) const
 {
     // ws.perf_data.inj_multipler = this->inj_multiplier_;
     std::cout << " in function updateInjMult " << std::endl;
@@ -213,7 +213,6 @@ void WellInterfaceGeneric::updateInjMult(std::vector<double>& multipliers, Singl
         }
         std::cout << " well " << this->name() << " perf " << perf << " perf_ecl_index " << perf_ecl_index << " inj_multipler " << this->inj_multiplier_[perf] << " final " << multipliers[perf] << std::endl;
     }
-    ws.perf_data.inj_multipler = multipliers;
 }
 
 bool WellInterfaceGeneric::wellHasTHPConstraints(const SummaryState& summaryState) const

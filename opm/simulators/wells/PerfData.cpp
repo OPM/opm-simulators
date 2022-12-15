@@ -46,7 +46,6 @@ PerfData::PerfData(std::size_t num_perf, double pressure_first_connection_, bool
         this->water_throughput.resize(num_perf);
         this->skin_pressure.resize(num_perf);
         this->water_velocity.resize(num_perf);
-        this->inj_multipler.resize(num_perf, 1.0);
     }
 }
 
@@ -98,7 +97,6 @@ bool PerfData::try_assign(const PerfData& other) {
     this->water_throughput = other.water_throughput;
     this->skin_pressure = other.skin_pressure;
     this->water_velocity = other.water_velocity;
-    this->inj_multipler = other.inj_multipler;
     this->prod_index = other.prod_index;
     this->micp_rates = other.micp_rates;
     return true;
