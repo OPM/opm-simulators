@@ -44,6 +44,12 @@ struct EnableTuning {
     using type = UndefinedProperty;
 };
 
+template <class TypeTag, class MyTypeTag>
+struct ExtraConvergenceOutput
+{
+    using type = UndefinedProperty;
+};
+
 template<class TypeTag>
 struct EnableTerminalOutput<TypeTag, TTag::EclFlowProblem> {
     static constexpr bool value = true;
@@ -55,6 +61,12 @@ struct EnableAdaptiveTimeStepping<TypeTag, TTag::EclFlowProblem> {
 template<class TypeTag>
 struct EnableTuning<TypeTag, TTag::EclFlowProblem> {
     static constexpr bool value = false;
+};
+
+template <class TypeTag>
+struct ExtraConvergenceOutput<TypeTag, TTag::EclFlowProblem>
+{
+    static constexpr auto* value = "none";
 };
 
 } // namespace Opm::Properties
@@ -137,6 +149,15 @@ public:
                              "Use adaptive time stepping between report steps");
         EWOMS_REGISTER_PARAM(TypeTag, bool, EnableTuning,
                              "Honor some aspects of the TUNING keyword.");
+        EWOMS_REGISTER_PARAM(TypeTag, std::string, ExtraConvergenceOutput,
+                             "Provide additional convergence output "
+                             "files for diagnostic purposes. "
+                             "\"none\" gives no extra output and "
+                             "overrides all other options, "
+                             "\"steps\" generates an INFOSTEP file, "
+                             "\"iterations\" generates an INFOITER file. "
+                             "Combine options with commas, e.g., "
+                             "\"steps,iterations\" for multiple outputs.");
     }
 
     /// Run the simulation.

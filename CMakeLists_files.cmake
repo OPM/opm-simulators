@@ -41,6 +41,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/core/props/satfunc/RelpermDiagnostics.cpp
   opm/simulators/timestepping/SimulatorReport.cpp
   opm/simulators/flow/countGlobalCells.cpp
+  opm/simulators/flow/ConvergenceOutputConfiguration.cpp
   opm/simulators/flow/KeywordValidation.cpp
   opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.cpp
   opm/simulators/flow/ValidationFunctions.cpp
@@ -171,6 +172,7 @@ endif()
 list (APPEND TEST_SOURCE_FILES
   tests/test_ALQState.cpp
   tests/test_blackoil_amg.cpp
+  tests/test_convergenceoutputconfiguration.cpp
   tests/test_convergencereport.cpp
   tests/test_deferredlogger.cpp
   tests/test_eclinterregflows.cpp
@@ -271,6 +273,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/countGlobalCells.hpp
   opm/simulators/flow/BlackoilModelEbos.hpp
   opm/simulators/flow/BlackoilModelParametersEbos.hpp
+  opm/simulators/flow/ConvergenceOutputConfiguration.hpp
   opm/simulators/flow/FlowMainEbos.hpp
   opm/simulators/flow/Main.hpp
   opm/simulators/flow/NonlinearSolverEbos.hpp
