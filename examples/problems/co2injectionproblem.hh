@@ -61,9 +61,6 @@ namespace Opm {
 template <class TypeTag>
 class Co2InjectionProblem;
 
-namespace Co2Injection {
-#include <opm/material/components/co2tables.inc>
-}
 //! \endcond
 }
 
@@ -109,10 +106,9 @@ struct FluidSystem<TypeTag, TTag::Co2InjectionBaseProblem>
 {
 private:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-    using CO2Tables = Opm::Co2Injection::CO2Tables;
 
 public:
-    using type = Opm::BrineCO2FluidSystem<Scalar, CO2Tables>;
+    using type = Opm::BrineCO2FluidSystem<Scalar>;
     //using type = Opm::H2ON2FluidSystem<Scalar, /*useComplexRelations=*/false>;
 };
 
