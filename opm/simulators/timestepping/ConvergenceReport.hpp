@@ -21,9 +21,11 @@
 #ifndef OPM_CONVERGENCEREPORT_HEADER_INCLUDED
 #define OPM_CONVERGENCEREPORT_HEADER_INCLUDED
 
+#include <algorithm>
 #include <cassert>
 #include <numeric>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace Opm
@@ -61,6 +63,21 @@ namespace Opm
             Severity severity_;
             int phase_;
         };
+        class ReservoirConvergenceMetric
+        {
+        public:
+            ReservoirConvergenceMetric(ReservoirFailure::Type t, int phase, double value)
+                : type_(t), phase_(phase), value_(value)
+            {
+            }
+            ReservoirFailure::Type type() const { return type_; }
+            int phase() const { return phase_; }
+            double value() const { return value_; }
+        private:
+            ReservoirFailure::Type type_;
+            int phase_;
+            double value_;
+        };
         class WellFailure
         {
         public:
@@ -83,7 +100,13 @@ namespace Opm
         // ----------- Mutating member functions -----------
 
         ConvergenceReport()
-            : status_{AllGood}
+            : ConvergenceReport{0.0}
+        {
+        }
+
+        explicit ConvergenceReport(const double reportTime)
+            : reportTime_{reportTime}
+            , status_{AllGood}
             , res_failures_{}
             , well_failures_{}
             , wellGroupTargetsViolated_(false)
@@ -110,6 +133,12 @@ namespace Opm
             well_failures_.push_back(wf);
         }
 
+        template <typename... Args>
+        void setReservoirConvergenceMetric(Args&&... args)
+        {
+            this->res_convergence_.emplace_back(std::forward<Args>(args)...);
+        }
+
         void setWellGroupTargetsViolated(const bool wellGroupTargetsViolated)
         {
             wellGroupTargetsViolated_ = wellGroupTargetsViolated;
@@ -117,9 +146,11 @@ namespace Opm
 
         ConvergenceReport& operator+=(const ConvergenceReport& other)
         {
+            reportTime_ = std::max(reportTime_, other.reportTime_);
             status_ = static_cast<Status>(status_ | other.status_);
             res_failures_.insert(res_failures_.end(), other.res_failures_.begin(), other.res_failures_.end());
             well_failures_.insert(well_failures_.end(), other.well_failures_.begin(), other.well_failures_.end());
+            res_convergence_.insert(res_convergence_.end(), other.res_convergence_.begin(), other.res_convergence_.end());
             assert(reservoirFailed() != res_failures_.empty());
             assert(wellFailed() != well_failures_.empty());
             wellGroupTargetsViolated_ = (wellGroupTargetsViolated_ || other.wellGroupTargetsViolated_);
@@ -127,6 +158,11 @@ namespace Opm
         }
 
         // ----------- Const member functions (queries) -----------
+
+        double reportTime() const
+        {
+            return reportTime_;
+        }
 
         bool converged() const
         {
@@ -146,6 +182,11 @@ namespace Opm
         const std::vector<ReservoirFailure>& reservoirFailures() const
         {
             return res_failures_;
+        }
+
+        const std::vector<ReservoirConvergenceMetric>& reservoirConvergence() const
+        {
+            return res_convergence_;
         }
 
         const std::vector<WellFailure>& wellFailures() const
@@ -172,9 +213,11 @@ namespace Opm
     private:
 
         // ----------- Member variables -----------
+        double reportTime_;
         Status status_;
         std::vector<ReservoirFailure> res_failures_;
         std::vector<WellFailure> well_failures_;
+        std::vector<ReservoirConvergenceMetric> res_convergence_;
         bool wellGroupTargetsViolated_;
     };
 

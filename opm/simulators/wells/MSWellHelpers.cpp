@@ -100,16 +100,10 @@ namespace mswellhelpers
     /// Applies umfpack and checks for singularity
 template <typename MatrixType, typename VectorType>
 VectorType
-applyUMFPack(const MatrixType& D,
-             std::shared_ptr<Dune::UMFPack<MatrixType>>& linsolver,
+applyUMFPack(Dune::UMFPack<MatrixType>& linsolver,
              VectorType x)
 {
 #if HAVE_UMFPACK
-    if (!linsolver)
-    {
-        linsolver = std::make_shared<Dune::UMFPack<MatrixType>>(D, 0);
-    }
-
     // The copy of x seems mandatory for calling UMFPack!
     VectorType y(x.size());
     y = 0.;
@@ -118,7 +112,7 @@ applyUMFPack(const MatrixType& D,
     Dune::InverseOperatorResult res;
 
     // Solve
-    linsolver->apply(y, x, res);
+    linsolver.apply(y, x, res);
 
     // Checking if there is any inf or nan in y
     // it will be the solution before we find a way to catch the singularity of the matrix
@@ -127,7 +121,7 @@ applyUMFPack(const MatrixType& D,
             if (std::isinf(y[i_block][i_elem]) || std::isnan(y[i_block][i_elem]) ) {
                 const std::string msg{"nan or inf value found after UMFPack solve due to singular matrix"};
                 OpmLog::debug(msg);
-                OPM_THROW_NOLOG(NumericalIssue, msg);
+                OPM_THROW_NOLOG(NumericalProblem, msg);
             }
         }
     }
@@ -141,24 +135,24 @@ applyUMFPack(const MatrixType& D,
 
 template <typename VectorType, typename MatrixType>
 Dune::Matrix<typename MatrixType::block_type>
-invertWithUMFPack(const MatrixType& D, std::shared_ptr<Dune::UMFPack<MatrixType> >& linsolver)
+invertWithUMFPack(const int size,
+                  const int bsize,
+                  Dune::UMFPack<MatrixType>& linsolver)
 {
 #if HAVE_UMFPACK
-    const int sz = D.M();
-    const int bsz = D[0][0].M();
-    VectorType e(sz);
+    VectorType e(size);
     e = 0.0;
 
     // Make a full block matrix.
-    Dune::Matrix<typename MatrixType::block_type> inv(sz, sz);
+    Dune::Matrix<typename MatrixType::block_type> inv(size, size);
 
     // Create inverse by passing basis vectors to the solver.
-    for (int ii = 0; ii < sz; ++ii) {
-        for (int jj = 0; jj < bsz; ++jj) {
+    for (int ii = 0; ii < size; ++ii) {
+        for (int jj = 0; jj < bsize; ++jj) {
             e[ii][jj] = 1.0;
-            auto col = applyUMFPack(D, linsolver, e);
-            for (int cc = 0; cc < sz; ++cc) {
-                for (int dd = 0; dd < bsz; ++dd) {
+            auto col = applyUMFPack(linsolver, e);
+            for (int cc = 0; cc < size; ++cc) {
+                for (int dd = 0; dd < bsize; ++dd) {
                     inv[cc][ii][dd][jj] = col[cc][dd];
                 }
             }
@@ -213,42 +207,10 @@ invDX(const MatrixType& D, VectorType x, DeferredLogger& deferred_logger)
     linsolver.apply(y, x, res);
 
     if ( !res.converged ) {
-        OPM_DEFLOG_THROW(NumericalIssue, "the invDX did not converge ", deferred_logger);
+        OPM_DEFLOG_THROW(NumericalProblem, "the invDX did not converge ", deferred_logger);
     }
 
     return y;
-}
-
-template <typename ValueType>
-ValueType calculateFrictionFactor(const double area, const double diameter,
-                                  const ValueType& w, const double roughness,
-                                  const ValueType& mu)
-{
-
-    ValueType f = 0.;
-    // Reynolds number
-    const ValueType re = abs( diameter * w / (area * mu));
-
-    if ( re == 0.0 ) {
-        // make sure it is because the mass rate is zero
-        assert(w == 0.);
-        return 0.0;
-    }
-
-    const ValueType re_value1 = 2000.;
-    const ValueType re_value2 = 4000.;
-
-    if (re < re_value1) {
-        f = 16. / re;
-    } else if (re > re_value2){
-        f = haalandFormular(re, diameter, roughness);
-    } else { // in between
-        const ValueType f1 = 16. / re_value1;
-        const ValueType f2 = haalandFormular(re_value2, diameter, roughness);
-
-        f = (f2 - f1) / (re_value2 - re_value1) * (re - re_value1) + f1;
-    }
-    return f;
 }
 
 template <typename ValueType>
@@ -257,7 +219,26 @@ ValueType frictionPressureLoss(const double l, const double diameter,
                                const ValueType& density,
                                const ValueType& w, const ValueType& mu)
 {
-    const ValueType f = calculateFrictionFactor(area, diameter, w, roughness, mu);
+    // Reynolds number
+    const ValueType re = abs( diameter * w / (area * mu));
+
+    constexpr double re_value1 = 2000.;
+    constexpr double re_value2 = 4000.;
+
+    if (re < re_value1) {
+        // not using the formula directly because of the division with very small w
+        // might introduce inf/nan entries in Jacobian matrix
+        return 32.* mu * l * abs(w) / (area * diameter *diameter * density);
+    }
+
+    ValueType f;
+    if (re > re_value2) {
+        f = haalandFormular(re, diameter, roughness);
+    } else { // in between
+        constexpr double f1 = 16. / re_value1;
+        const ValueType f2 = haalandFormular(re_value2, diameter, roughness);
+        f = (f2 - f1) / (re_value2 - re_value1) * (re - re_value1) + f1;
+    }
     // \Note: a factor of 2 needs to be here based on the dimensional analysis
     return 2. * f * l * w * w / (area * area * diameter * density);
 }
@@ -328,12 +309,10 @@ template<int Dim>
 using Mat = Dune::BCRSMatrix<Dune::FieldMatrix<double,Dim,Dim>>;
 
 #define INSTANCE_UMF(Dim) \
-    template Vec<Dim> applyUMFPack<Mat<Dim>,Vec<Dim>>(const Mat<Dim>&, \
-                                                      std::shared_ptr<Dune::UMFPack<Mat<Dim>>>&, \
+    template Vec<Dim> applyUMFPack<Mat<Dim>,Vec<Dim>>(Dune::UMFPack<Mat<Dim>>&, \
                                                       Vec<Dim>); \
     template Dune::Matrix<typename Mat<Dim>::block_type> \
-    invertWithUMFPack<Vec<Dim>,Mat<Dim>>(const Mat<Dim>& D, \
-                                         std::shared_ptr<Dune::UMFPack<Mat<Dim>>>&);
+    invertWithUMFPack<Vec<Dim>,Mat<Dim>>(const int, const int, Dune::UMFPack<Mat<Dim>>&);
 
 INSTANCE_UMF(2)
 INSTANCE_UMF(3)

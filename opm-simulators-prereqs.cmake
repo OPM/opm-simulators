@@ -45,7 +45,6 @@ set (opm-simulators_DEPS
   "rocalution"
   # OPM dependency
   "opm-common REQUIRED"
-  "opm-material REQUIRED"
   "opm-grid REQUIRED"
   "opm-models REQUIRED"
   "Damaris 1.7"

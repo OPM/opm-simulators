@@ -27,28 +27,30 @@
 #include <ebos/eclproblem.hh>
 #include <opm/models/utils/start.hh>
 
-#include <opm/simulators/timestepping/AdaptiveTimeSteppingEbos.hpp>
-
-#include <opm/simulators/flow/NonlinearSolverEbos.hpp>
-#include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
-#include <opm/simulators/wells/BlackoilWellModel.hpp>
-#include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
-#include <opm/simulators/wells/WellConnectionAuxiliaryModule.hpp>
-#include <opm/simulators/flow/countGlobalCells.hpp>
-#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
-
-#include <opm/grid/UnstructuredGrid.h>
-#include <opm/simulators/timestepping/SimulatorReport.hpp>
-#include <opm/core/props/phaseUsageFromDeck.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
-#include <opm/input/eclipse/Units/Units.hpp>
-#include <opm/simulators/timestepping/SimulatorTimer.hpp>
+
+#include <opm/core/props/phaseUsageFromDeck.hpp>
+
+#include <opm/grid/UnstructuredGrid.h>
+
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/TableManager.hpp>
+#include <opm/input/eclipse/Units/Units.hpp>
 
+#include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
+#include <opm/simulators/flow/countGlobalCells.hpp>
+#include <opm/simulators/flow/NonlinearSolverEbos.hpp>
+#include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
 #include <opm/simulators/linalg/ISTLSolverEbos.hpp>
+#include <opm/simulators/timestepping/AdaptiveTimeSteppingEbos.hpp>
+#include <opm/simulators/timestepping/SimulatorReport.hpp>
+#include <opm/simulators/timestepping/SimulatorTimer.hpp>
+
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+#include <opm/simulators/wells/BlackoilWellModel.hpp>
+#include <opm/simulators/wells/WellConnectionAuxiliaryModule.hpp>
 
 #include <dune/istl/owneroverlapcopy.hh>
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
@@ -59,13 +61,14 @@
 #include <dune/common/timer.hh>
 #include <dune/common/unused.hh>
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
-#include <iostream>
 #include <iomanip>
+#include <iostream>
 #include <limits>
+#include <utility>
 #include <vector>
-#include <algorithm>
 
 namespace Opm::Properties {
 
@@ -202,6 +205,70 @@ namespace Opm {
         typedef Dune::BlockVector<VectorBlockType>      BVector;
 
         typedef ISTLSolverEbos<TypeTag> ISTLSolverType;
+
+        class ComponentName
+        {
+        public:
+            ComponentName()
+                : names_(numEq)
+            {
+                for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
+                    if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                        continue;
+                    }
+
+                    const unsigned canonicalCompIdx = FluidSystem::solventComponentIndex(phaseIdx);
+                    names_[Indices::canonicalToActiveComponentIndex(canonicalCompIdx)]
+                        = FluidSystem::componentName(canonicalCompIdx);
+                }
+
+                if constexpr (has_solvent_) {
+                    names_[solventSaturationIdx] = "Solvent";
+                }
+
+                if constexpr (has_extbo_) {
+                    names_[zFractionIdx] = "ZFraction";
+                }
+
+                if constexpr (has_polymer_) {
+                    names_[polymerConcentrationIdx] = "Polymer";
+                }
+
+                if constexpr (has_polymermw_) {
+                    assert(has_polymer_);
+                    names_[polymerMoleWeightIdx] = "MolecularWeightP";
+                }
+
+                if constexpr (has_energy_) {
+                    names_[temperatureIdx] = "Energy";
+                }
+
+                if constexpr (has_foam_) {
+                    names_[foamConcentrationIdx] = "Foam";
+                }
+
+                if constexpr (has_brine_) {
+                    names_[saltConcentrationIdx] = "Brine";
+                }
+
+                if constexpr (has_micp_) {
+                    names_[microbialConcentrationIdx] = "Microbes";
+                    names_[oxygenConcentrationIdx] = "Oxygen";
+                    names_[ureaConcentrationIdx] = "Urea";
+                    names_[biofilmConcentrationIdx] = "Biofilm";
+                    names_[calciteConcentrationIdx] = "Calcite";
+                }
+            }
+
+            const std::string& name(const int compIdx) const
+            {
+                return this->names_[compIdx];
+            }
+
+        private:
+            std::vector<std::string> names_{};
+        };
+
         //typedef typename SolutionVector :: value_type            PrimaryVariables ;
 
         // ---------  Public methods  ---------
@@ -332,9 +399,9 @@ namespace Opm {
 
                 // Throw if any NaN or too large residual found.
                 if (severity == ConvergenceReport::Severity::NotANumber) {
-                    OPM_THROW(NumericalIssue, "NaN residual found!");
+                    OPM_THROW(NumericalProblem, "NaN residual found!");
                 } else if (severity == ConvergenceReport::Severity::TooLarge) {
-                    OPM_THROW_NOLOG(NumericalIssue, "Too large residual found!");
+                    OPM_THROW_NOLOG(NumericalProblem, "Too large residual found!");
                 }
             }
             report.update_time += perfTimer.stop();
@@ -823,7 +890,8 @@ namespace Opm {
             return grid_.comm().sum(errorPV);
         }
 
-        ConvergenceReport getReservoirConvergence(const double dt,
+        ConvergenceReport getReservoirConvergence(const double reportTime,
+                                                  const double dt,
                                                   const int iteration,
                                                   std::vector<Scalar>& B_avg,
                                                   std::vector<Scalar>& residual_norms)
@@ -861,51 +929,8 @@ namespace Opm {
                 residual_norms.push_back(CNV[compIdx]);
             }
 
-            // Setup component names, only the first time the function is run.
-            static std::vector<std::string> compNames;
-            if (compNames.empty()) {
-                compNames.resize(numComp);
-                for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
-                    if (!FluidSystem::phaseIsActive(phaseIdx)) {
-                        continue;
-                    }
-                    const unsigned canonicalCompIdx = FluidSystem::solventComponentIndex(phaseIdx);
-                    const unsigned compIdx = Indices::canonicalToActiveComponentIndex(canonicalCompIdx);
-                    compNames[compIdx] = FluidSystem::componentName(canonicalCompIdx);
-                }
-                if constexpr (has_solvent_) {
-                    compNames[solventSaturationIdx] = "Solvent";
-                }
-                if constexpr (has_extbo_) {
-                    compNames[zFractionIdx] = "ZFraction";
-                }
-                if constexpr (has_polymer_) {
-                    compNames[polymerConcentrationIdx] = "Polymer";
-                }
-                if constexpr (has_polymermw_) {
-                    assert(has_polymer_);
-                    compNames[polymerMoleWeightIdx] = "MolecularWeightP";
-                }
-                if constexpr (has_energy_) {
-                    compNames[temperatureIdx] = "Energy";
-                }
-                if constexpr (has_foam_) {
-                    compNames[foamConcentrationIdx] = "Foam";
-                }
-                if constexpr (has_brine_) {
-                    compNames[saltConcentrationIdx] = "Brine";
-                }
-                if constexpr (has_micp_) {
-                    compNames[microbialConcentrationIdx] = "Microbes";
-                    compNames[oxygenConcentrationIdx] = "Oxygen";
-                    compNames[ureaConcentrationIdx] = "Urea";
-                    compNames[biofilmConcentrationIdx] = "Biofilm";
-                    compNames[calciteConcentrationIdx] = "Calcite";
-            }
-            }
-
             // Create convergence report.
-            ConvergenceReport report;
+            ConvergenceReport report{reportTime};
             using CR = ConvergenceReport;
             for (int compIdx = 0; compIdx < numComp; ++compIdx) {
                 double res[2] = { mass_balance_residual[compIdx], CNV[compIdx] };
@@ -916,21 +941,22 @@ namespace Opm {
                     if (std::isnan(res[ii])) {
                         report.setReservoirFailed({types[ii], CR::Severity::NotANumber, compIdx});
                         if ( terminal_output_ ) {
-                            OpmLog::debug("NaN residual for " + compNames[compIdx] + " equation.");
+                            OpmLog::debug("NaN residual for " + this->compNames_.name(compIdx) + " equation.");
                         }
                     } else if (res[ii] > maxResidualAllowed()) {
                         report.setReservoirFailed({types[ii], CR::Severity::TooLarge, compIdx});
                         if ( terminal_output_ ) {
-                            OpmLog::debug("Too large residual for " + compNames[compIdx] + " equation.");
+                            OpmLog::debug("Too large residual for " + this->compNames_.name(compIdx) + " equation.");
                         }
                     } else if (res[ii] < 0.0) {
                         report.setReservoirFailed({types[ii], CR::Severity::Normal, compIdx});
                         if ( terminal_output_ ) {
-                            OpmLog::debug("Negative residual for " + compNames[compIdx] + " equation.");
+                            OpmLog::debug("Negative residual for " + this->compNames_.name(compIdx) + " equation.");
                         }
                     } else if (res[ii] > tol[ii]) {
                         report.setReservoirFailed({types[ii], CR::Severity::Normal, compIdx});
                     }
+                    report.setReservoirConvergenceMetric(types[ii], compIdx, res[ii]);
                 }
             }
 
@@ -942,12 +968,12 @@ namespace Opm {
                     std::string msg = "Iter";
                     for (int compIdx = 0; compIdx < numComp; ++compIdx) {
                         msg += "    MB(";
-                        msg += compNames[compIdx][0];
+                        msg += this->compNames_.name(compIdx)[0];
                         msg += ")  ";
                     }
                     for (int compIdx = 0; compIdx < numComp; ++compIdx) {
                         msg += "    CNV(";
-                        msg += compNames[compIdx][0];
+                        msg += this->compNames_.name(compIdx)[0];
                         msg += ") ";
                     }
                     OpmLog::debug(msg);
@@ -981,7 +1007,9 @@ namespace Opm {
         {
             // Get convergence reports for reservoir and wells.
             std::vector<Scalar> B_avg(numEq, 0.0);
-            auto report = getReservoirConvergence(timer.currentStepLength(), iteration, B_avg, residual_norms);
+            auto report = getReservoirConvergence(timer.simulationTimeElapsed(),
+                                                  timer.currentStepLength(),
+                                                  iteration, B_avg, residual_norms);
             report += wellModel().getWellConvergence(B_avg, /*checkWellGroupControls*/report.converged());
 
             return report;
@@ -1065,6 +1093,8 @@ namespace Opm {
         BVector dx_old_;
 
         std::vector<StepReport> convergence_reports_;
+        ComponentName compNames_{};
+
     public:
         /// return the StandardWells object
         BlackoilWellModel<TypeTag>&

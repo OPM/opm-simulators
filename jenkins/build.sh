@@ -5,13 +5,11 @@
 
 declare -a upstreams
 upstreams=(opm-common
-           opm-material
            opm-grid
            opm-models)
 
 declare -A upstreamRev
 upstreamRev[opm-common]=master
-upstreamRev[opm-material]=master
 upstreamRev[opm-grid]=master
 upstreamRev[opm-models]=master
 

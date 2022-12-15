@@ -31,7 +31,7 @@ namespace Opm
 {
 
 class DeferredLogger;
-class PhaseUsage;
+struct PhaseUsage;
 class SingleWellState;
 class WellEconProductionLimits;
 class WellInterfaceGeneric;

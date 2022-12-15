@@ -1,6 +1,6 @@
 /*
+  Copyright 2018, 2022 Equinor ASA.
   Copyright 2018 SINTEF Digital, Mathematics and Cybernetics.
-  Copyright 2018 Equinor.
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -43,6 +43,18 @@ namespace
         MPI_Pack(&phase, 1, MPI_INT, buf.data(), buf.size(), &offset, mpi_communicator);
     }
 
+    void packReservoirConvergenceMetric(const ConvergenceReport::ReservoirConvergenceMetric& m,
+                                        std::vector<char>& buf,
+                                        int& offset, MPI_Comm mpi_communicator)
+    {
+        int type = static_cast<int>(m.type());
+        int phase = m.phase();
+        double value = m.value();
+        MPI_Pack(&type, 1, MPI_INT, buf.data(), buf.size(), &offset, mpi_communicator);
+        MPI_Pack(&phase, 1, MPI_INT, buf.data(), buf.size(), &offset, mpi_communicator);
+        MPI_Pack(&value, 1, MPI_DOUBLE, buf.data(), buf.size(), &offset, mpi_communicator);
+    }
+
     void packWellFailure(const ConvergenceReport::WellFailure& f,
                          std::vector<char>& buf,
                          int& offset, MPI_Comm mpi_communicator)
@@ -65,11 +77,20 @@ namespace
         // Pack the data.
         // Status will not be packed, it is possible to deduce from the other data.
         // Reservoir failures.
+        double reportTime = local_report.reportTime();
+        MPI_Pack(&reportTime, 1, MPI_DOUBLE, buf.data(), buf.size(), &offset, mpi_communicator);
         const auto rf = local_report.reservoirFailures();
         int num_rf = rf.size();
         MPI_Pack(&num_rf, 1, MPI_INT, buf.data(), buf.size(), &offset, mpi_communicator);
         for (const auto& f : rf) {
             packReservoirFailure(f, buf, offset, mpi_communicator);
+        }
+        // Reservoir convergence metrics.
+        const auto rm = local_report.reservoirConvergence();
+        int num_rm = rm.size();
+        MPI_Pack(&num_rm, 1, MPI_INT, buf.data(), buf.size(), &offset, mpi_communicator);
+        for (const auto& m : rm) {
+            packReservoirConvergenceMetric(m, buf, offset, mpi_communicator);
         }
         // Well failures.
         const auto wf = local_report.wellFailures();
@@ -84,13 +105,16 @@ namespace
     {
         int int_pack_size = 0;
         MPI_Pack_size(1, MPI_INT, mpi_communicator, &int_pack_size);
+        int double_pack_size = 0;
+        MPI_Pack_size(1, MPI_DOUBLE, mpi_communicator, &double_pack_size);
         const int num_rf = local_report.reservoirFailures().size();
+        const int num_rm = local_report.reservoirConvergence().size();
         const int num_wf = local_report.wellFailures().size();
         int wellnames_length = 0;
         for (const auto& f : local_report.wellFailures()) {
             wellnames_length += (f.wellName().size() + 1);
         }
-        return (2 + 3*num_rf + 4*num_wf) * int_pack_size + wellnames_length;
+        return (3 + 3*num_rf + 2*num_rm + 4*num_wf)*int_pack_size + (1 + 1*num_rm)*double_pack_size + wellnames_length;
     }
 
     ConvergenceReport::ReservoirFailure unpackReservoirFailure(const std::vector<char>& recv_buffer, int& offset, MPI_Comm mpi_communicator)
@@ -105,6 +129,19 @@ namespace
         return ConvergenceReport::ReservoirFailure(static_cast<ConvergenceReport::ReservoirFailure::Type>(type),
                                                    static_cast<ConvergenceReport::Severity>(severity),
                                                    phase);
+    }
+
+    ConvergenceReport::ReservoirConvergenceMetric
+    unpackReservoirConvergenceMetric(const std::vector<char>& recv_buffer, int& offset, MPI_Comm mpi_communicator)
+    {
+        int type = -1;
+        int phase = -1;
+        double value = -1.0;
+        auto* data = const_cast<char*>(recv_buffer.data());
+        MPI_Unpack(data, recv_buffer.size(), &offset, &type, 1, MPI_INT, mpi_communicator);
+        MPI_Unpack(data, recv_buffer.size(), &offset, &phase, 1, MPI_INT, mpi_communicator);
+        MPI_Unpack(data, recv_buffer.size(), &offset, &value, 1, MPI_DOUBLE, mpi_communicator);
+        return { static_cast<ConvergenceReport::ReservoirFailure::Type>(type), phase, value };
     }
 
     ConvergenceReport::WellFailure unpackWellFailure(const std::vector<char>& recv_buffer, int& offset, MPI_Comm mpi_communicator)
@@ -129,13 +166,20 @@ namespace
 
     ConvergenceReport unpackSingleConvergenceReport(const std::vector<char>& recv_buffer, int& offset, MPI_Comm mpi_communicator)
     {
-        ConvergenceReport cr;
-        int num_rf = -1;
         auto* data = const_cast<char*>(recv_buffer.data());
+        double reportTime{0.0};
+        MPI_Unpack(data, recv_buffer.size(), &offset, &reportTime, 1, MPI_DOUBLE, mpi_communicator);
+        ConvergenceReport cr{reportTime};
+        int num_rf = -1;
         MPI_Unpack(data, recv_buffer.size(), &offset, &num_rf, 1, MPI_INT, mpi_communicator);
         for (int rf = 0; rf < num_rf; ++rf) {
             ConvergenceReport::ReservoirFailure f = unpackReservoirFailure(recv_buffer, offset, mpi_communicator);
             cr.setReservoirFailed(f);
+        }
+        int num_rm = -1;
+        MPI_Unpack(data, recv_buffer.size(), &offset, &num_rm, 1, MPI_INT, mpi_communicator);
+        for (int rm = 0; rm < num_rm; ++rm) {
+            cr.setReservoirConvergenceMetric(unpackReservoirConvergenceMetric(recv_buffer, offset, mpi_communicator));
         }
         int num_wf = -1;
         MPI_Unpack(data, recv_buffer.size(), &offset, &num_wf, 1, MPI_INT, mpi_communicator);

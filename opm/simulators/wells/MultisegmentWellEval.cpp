@@ -30,10 +30,10 @@
 #include <opm/models/blackoil/blackoilonephaseindices.hh>
 #include <opm/models/blackoil/blackoiltwophaseindices.hh>
 
-#include <opm/simulators/linalg/bda/WellContributions.hpp>
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/MSWellHelpers.hpp>
+#include <opm/simulators/wells/MultisegmentWellAssemble.hpp>
 #include <opm/simulators/wells/RateConverter.hpp>
 #include <opm/simulators/wells/WellAssemble.hpp>
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
@@ -57,6 +57,7 @@ MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 MultisegmentWellEval(WellInterfaceIndices<FluidSystem,Indices,Scalar>& baseif)
     : MultisegmentWellGeneric<Scalar>(baseif)
     , baseif_(baseif)
+    , linSys_(*this)
     , upwinding_segments_(this->numberOfSegments(), 0)
     , segment_densities_(this->numberOfSegments(), 0.0)
     , segment_mass_rates_(this->numberOfSegments(), 0.0)
@@ -74,67 +75,7 @@ void
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 initMatrixAndVectors(const int num_cells)
 {
-    duneB_.setBuildMode(OffDiagMatWell::row_wise);
-    duneC_.setBuildMode(OffDiagMatWell::row_wise);
-    duneD_.setBuildMode(DiagMatWell::row_wise);
-
-    // set the size and patterns for all the matrices and vectors
-    // [A C^T    [x    =  [ res
-    //  B D] x_well]      res_well]
-
-    // calculatiing the NNZ for duneD_
-    // NNZ = number_of_segments + 2 * (number_of_inlets / number_of_outlets)
-    {
-        int nnz_d = this->numberOfSegments();
-        for (const std::vector<int>& inlets : this->segment_inlets_) {
-            nnz_d += 2 * inlets.size();
-        }
-        duneD_.setSize(this->numberOfSegments(), this->numberOfSegments(), nnz_d);
-    }
-    duneB_.setSize(this->numberOfSegments(), num_cells, baseif_.numPerfs());
-    duneC_.setSize(this->numberOfSegments(), num_cells, baseif_.numPerfs());
-
-    // we need to add the off diagonal ones
-    for (auto row = duneD_.createbegin(), end = duneD_.createend(); row != end; ++row) {
-        // the number of the row corrspnds to the segment now
-        const int seg = row.index();
-        // adding the item related to outlet relation
-        const Segment& segment = this->segmentSet()[seg];
-        const int outlet_segment_number = segment.outletSegment();
-        if (outlet_segment_number > 0) { // if there is a outlet_segment
-            const int outlet_segment_index = this->segmentNumberToIndex(outlet_segment_number);
-            row.insert(outlet_segment_index);
-        }
-
-        // Add nonzeros for diagonal
-        row.insert(seg);
-
-        // insert the item related to its inlets
-        for (const int& inlet : this->segment_inlets_[seg]) {
-            row.insert(inlet);
-        }
-    }
-
-    // make the C matrix
-    for (auto row = duneC_.createbegin(), end = duneC_.createend(); row != end; ++row) {
-        // the number of the row corresponds to the segment number now.
-        for (const int& perf : this->segment_perforations_[row.index()]) {
-            const int cell_idx = baseif_.cells()[perf];
-            row.insert(cell_idx);
-        }
-    }
-
-    // make the B^T matrix
-    for (auto row = duneB_.createbegin(), end = duneB_.createend(); row != end; ++row) {
-        // the number of the row corresponds to the segment number now.
-        for (const int& perf : this->segment_perforations_[row.index()]) {
-            const int cell_idx = baseif_.cells()[perf];
-            row.insert(cell_idx);
-        }
-    }
-
-    resWell_.resize(this->numberOfSegments());
-
+    linSys_.init(num_cells, baseif_.numPerfs(), baseif_.cells());
     primary_variables_.resize(this->numberOfSegments());
     primary_variables_evaluation_.resize(this->numberOfSegments());
 }
@@ -172,7 +113,7 @@ getWellConvergence(const WellState& well_state,
     std::vector<std::vector<double>> abs_residual(this->numberOfSegments(), std::vector<double>(numWellEq, 0.0));
     for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
         for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
-            abs_residual[seg][eq_idx] = std::abs(resWell_[seg][eq_idx]);
+            abs_residual[seg][eq_idx] = std::abs(linSys_.residual()[seg][eq_idx]);
         }
     }
 
@@ -237,7 +178,7 @@ getWellConvergence(const WellState& well_state,
                                    tolerance_wells,
                                    tolerance_wells,
                                    max_residual_allowed},
-                                  std::abs(resWell_[0][SPres]),
+                                  std::abs(linSys_.residual()[0][SPres]),
                                   report,
                                   deferred_logger);
 
@@ -446,20 +387,6 @@ updatePrimaryVariables(const WellState& well_state) const
             }
         }
     }
-}
-
-template<typename FluidSystem, typename Indices, typename Scalar>
-void
-MultisegmentWellEval<FluidSystem,Indices,Scalar>::
-recoverSolutionWell(const BVector& x, BVectorWell& xw) const
-{
-    if (!baseif_.isOperableAndSolvable() && !baseif_.wellIsStopped()) return;
-
-    BVectorWell resWell = resWell_;
-    // resWell = resWell - B * x
-    duneB_.mmv(x, resWell);
-    // xw = D^-1 * resWell
-    xw = mswellhelpers::applyUMFPack(duneD_, duneDSolver_, resWell);
 }
 
 template<typename FluidSystem, typename Indices, typename Scalar>
@@ -1184,120 +1111,6 @@ getSegmentSurfaceVolume(const EvalWell& temperature,
 template<typename FluidSystem, typename Indices, typename Scalar>
 void
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
-assembleControlEq(const WellState& well_state,
-                  const GroupState& group_state,
-                  const Schedule& schedule,
-                  const SummaryState& summaryState,
-                  const Well::InjectionControls& inj_controls,
-                  const Well::ProductionControls& prod_controls,
-                  const double rho,
-                  DeferredLogger& deferred_logger)
-{
-    static constexpr int Gas = BlackoilPhases::Vapour;
-    static constexpr int Oil = BlackoilPhases::Liquid;
-    static constexpr int Water = BlackoilPhases::Aqua;
-
-    EvalWell control_eq(0.0);
-
-    const auto& well = baseif_.wellEcl();
-
-    auto getRates = [&]() {
-        std::vector<EvalWell> rates(3, 0.0);
-        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-            rates[Water] = getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx));
-        }
-        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-            rates[Oil] = getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx));
-        }
-        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-            rates[Gas] = getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx));
-        }
-        return rates;
-    };
-
-    if (baseif_.wellIsStopped()) {
-        control_eq = getWQTotal();
-    } else if (baseif_.isInjector() ) {
-        // Find scaling factor to get injection rate,
-        const InjectorType injectorType = inj_controls.injector_type;
-        double scaling = 1.0;
-        const auto& pu = baseif_.phaseUsage();
-        switch (injectorType) {
-        case InjectorType::WATER:
-        {
-            scaling = baseif_.scalingFactor(pu.phase_pos[BlackoilPhases::Aqua]);
-            break;
-        }
-        case InjectorType::OIL:
-        {
-            scaling = baseif_.scalingFactor(pu.phase_pos[BlackoilPhases::Liquid]);
-            break;
-        }
-        case InjectorType::GAS:
-        {
-            scaling = baseif_.scalingFactor(pu.phase_pos[BlackoilPhases::Vapour]);
-            break;
-        }
-        default:
-            throw("Expected WATER, OIL or GAS as type for injectors " + well.name());
-        }
-        const EvalWell injection_rate = getWQTotal() / scaling;
-        // Setup function for evaluation of BHP from THP (used only if needed).
-        std::function<EvalWell()> bhp_from_thp = [&]() {
-            const auto rates = getRates();
-            return WellBhpThpCalculator(baseif_).calculateBhpFromThp(well_state,
-                                                                     rates,
-                                                                     well,
-                                                                     summaryState,
-                                                                     rho,
-                                                                     deferred_logger);
-        };
-        // Call generic implementation.
-        WellAssemble(baseif_).assembleControlEqInj(well_state,
-                                                  group_state,
-                                                   schedule,
-                                                   summaryState,
-                                                   inj_controls,
-                                                   getBhp(),
-                                                   injection_rate,
-                                                   bhp_from_thp,
-                                                   control_eq,
-                                                   deferred_logger);
-    } else {
-        // Find rates.
-        const auto rates = getRates();
-        // Setup function for evaluation of BHP from THP (used only if needed).
-        std::function<EvalWell()> bhp_from_thp = [&]() {
-            return WellBhpThpCalculator(baseif_).calculateBhpFromThp(well_state,
-                                                                     rates,
-                                                                     well,
-                                                                     summaryState,
-                                                                     rho,
-                                                                     deferred_logger);
-        };
-        // Call generic implementation.
-        WellAssemble(baseif_).assembleControlEqProd(well_state,
-                                                    group_state,
-                                                    schedule,
-                                                    summaryState,
-                                                    prod_controls,
-                                                    getBhp(),
-                                                    rates,
-                                                    bhp_from_thp,
-                                                    control_eq,
-                                                    deferred_logger);
-    }
-
-    // using control_eq to update the matrix and residuals
-    resWell_[0][SPres] = control_eq.value();
-    for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-        duneD_[0][0][SPres][pv_idx] = control_eq.derivative(pv_idx + Indices::numEq);
-    }
-}
-
-template<typename FluidSystem, typename Indices, typename Scalar>
-void
-MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 handleAccelerationPressureLoss(const int seg,
                                WellState& well_state)
 {
@@ -1336,15 +1149,8 @@ handleAccelerationPressureLoss(const int seg,
     auto& segments = well_state.well(baseif_.indexOfWell()).segments;
     segments.pressure_drop_accel[seg] = accelerationPressureLoss.value();
 
-    resWell_[seg][SPres] -= accelerationPressureLoss.value();
-    duneD_[seg][seg][SPres][SPres] -= accelerationPressureLoss.derivative(SPres + Indices::numEq);
-    duneD_[seg][seg][SPres][WQTotal] -= accelerationPressureLoss.derivative(WQTotal + Indices::numEq);
-    if (has_wfrac_variable) {
-        duneD_[seg][seg_upwind][SPres][WFrac] -= accelerationPressureLoss.derivative(WFrac + Indices::numEq);
-    }
-    if (has_gfrac_variable) {
-        duneD_[seg][seg_upwind][SPres][GFrac] -= accelerationPressureLoss.derivative(GFrac + Indices::numEq);
-    }
+    MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(baseif_).
+        assemblePressureLoss(seg, seg_upwind, accelerationPressureLoss, linSys_);
 }
 
 template<typename FluidSystem, typename Indices, typename Scalar>
@@ -1374,25 +1180,14 @@ assembleDefaultPressureEq(const int seg,
         segments.pressure_drop_friction[seg] = friction_pressure_drop.value();
     }
 
-    resWell_[seg][SPres] = pressure_equation.value();
-    const int seg_upwind = upwinding_segments_[seg];
-    duneD_[seg][seg][SPres][SPres] += pressure_equation.derivative(SPres + Indices::numEq);
-    duneD_[seg][seg][SPres][WQTotal] += pressure_equation.derivative(WQTotal + Indices::numEq);
-    if (has_wfrac_variable) {
-        duneD_[seg][seg_upwind][SPres][WFrac] += pressure_equation.derivative(WFrac + Indices::numEq);
-    }
-    if (has_gfrac_variable) {
-        duneD_[seg][seg_upwind][SPres][GFrac] += pressure_equation.derivative(GFrac + Indices::numEq);
-    }
-
     // contribution from the outlet segment
     const int outlet_segment_index = this->segmentNumberToIndex(this->segmentSet()[seg].outletSegment());
     const EvalWell outlet_pressure = getSegmentPressure(outlet_segment_index);
 
-    resWell_[seg][SPres] -= outlet_pressure.value();
-    for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-        duneD_[seg][outlet_segment_index][SPres][pv_idx] = -outlet_pressure.derivative(pv_idx + Indices::numEq);
-    }
+    const int seg_upwind = upwinding_segments_[seg];
+    MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(baseif_).
+        assemblePressureEq(seg, seg_upwind, outlet_segment_index,
+                           pressure_equation, outlet_pressure, linSys_);
 
     if (this->accelerationalPressureLossConsidered()) {
         handleAccelerationPressureLoss(seg, well_state);
@@ -1609,8 +1404,8 @@ assembleICDPressureEq(const int seg,
     if (const auto& segment = this->segmentSet()[seg];
        (segment.segmentType() == Segment::SegmentType::VALVE) &&
        (segment.valve().status() == Opm::ICDStatus::SHUT) ) { // we use a zero rate equation to handle SHUT valve
-        resWell_[seg][SPres] = this->primary_variables_evaluation_[seg][WQTotal].value();
-        duneD_[seg][seg][SPres][WQTotal] = 1.;
+        MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(baseif_).
+            assembleTrivialEq(seg, this->primary_variables_evaluation_[seg][WQTotal].value(), linSys_);
 
         auto& ws = well_state.well(baseif_.indexOfWell());
         ws.segments.pressure_drop_friction[seg] = 0.;
@@ -1643,25 +1438,17 @@ assembleICDPressureEq(const int seg,
     auto& ws = well_state.well(baseif_.indexOfWell());
     ws.segments.pressure_drop_friction[seg] = icd_pressure_drop.value();
 
-    const int seg_upwind = upwinding_segments_[seg];
-    resWell_[seg][SPres] = pressure_equation.value();
-    duneD_[seg][seg][SPres][SPres] += pressure_equation.derivative(SPres + Indices::numEq);
-    duneD_[seg][seg][SPres][WQTotal] += pressure_equation.derivative(WQTotal + Indices::numEq);
-    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-        duneD_[seg][seg_upwind][SPres][WFrac] += pressure_equation.derivative(WFrac + Indices::numEq);
-    }
-    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-        duneD_[seg][seg_upwind][SPres][GFrac] += pressure_equation.derivative(GFrac + Indices::numEq);
-    }
-
     // contribution from the outlet segment
     const int outlet_segment_index = this->segmentNumberToIndex(this->segmentSet()[seg].outletSegment());
     const EvalWell outlet_pressure = getSegmentPressure(outlet_segment_index);
 
-    resWell_[seg][SPres] -= outlet_pressure.value();
-    for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-        duneD_[seg][outlet_segment_index][SPres][pv_idx] = -outlet_pressure.derivative(pv_idx + Indices::numEq);
-    }
+    const int seg_upwind = upwinding_segments_[seg];
+    MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(baseif_).
+        assemblePressureEq(seg, seg_upwind, outlet_segment_index,
+                           pressure_equation, outlet_pressure,
+                           linSys_,
+                           FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx),
+                           FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx));
 }
 
 template<typename FluidSystem, typename Indices, typename Scalar>
@@ -1697,10 +1484,10 @@ getFiniteWellResiduals(const std::vector<Scalar>& B_avg,
         for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
             double residual = 0.;
             if (eq_idx < baseif_.numComponents()) {
-                residual = std::abs(resWell_[seg][eq_idx]) * B_avg[eq_idx];
+                residual = std::abs(linSys_.residual()[seg][eq_idx]) * B_avg[eq_idx];
             } else {
                 if (seg > 0) {
-                    residual = std::abs(resWell_[seg][eq_idx]);
+                    residual = std::abs(linSys_.residual()[seg][eq_idx]);
                 }
             }
             if (std::isnan(residual) || std::isinf(residual)) {
@@ -1717,7 +1504,7 @@ getFiniteWellResiduals(const std::vector<Scalar>& B_avg,
 
     // handling the control equation residual
     {
-        const double control_residual = std::abs(resWell_[0][numWellEq - 1]);
+        const double control_residual = std::abs(linSys_.residual()[0][numWellEq - 1]);
         if (std::isnan(control_residual) || std::isinf(control_residual)) {
            deferred_logger.debug("nan or inf value for control residal get for well " + baseif_.name());
            return {false, residuals};
@@ -1856,74 +1643,6 @@ updateUpwindingSegments()
             upwinding_segments_[seg] = outlet_segment_index;
         }
     }
-}
-
-template<typename FluidSystem, typename Indices, typename Scalar>
-void
-MultisegmentWellEval<FluidSystem,Indices,Scalar>::
-addWellContribution(WellContributions& wellContribs) const
-{
-    unsigned int Mb = duneB_.N();       // number of blockrows in duneB_, duneC_ and duneD_
-    unsigned int BnumBlocks = duneB_.nonzeroes();
-    unsigned int DnumBlocks = duneD_.nonzeroes();
-
-    // duneC
-    std::vector<unsigned int> Ccols;
-    std::vector<double> Cvals;
-    Ccols.reserve(BnumBlocks);
-    Cvals.reserve(BnumBlocks * Indices::numEq * numWellEq);
-    for (auto rowC = duneC_.begin(); rowC != duneC_.end(); ++rowC) {
-        for (auto colC = rowC->begin(), endC = rowC->end(); colC != endC; ++colC) {
-            Ccols.emplace_back(colC.index());
-            for (int i = 0; i < numWellEq; ++i) {
-                for (int j = 0; j < Indices::numEq; ++j) {
-                    Cvals.emplace_back((*colC)[i][j]);
-                }
-            }
-        }
-    }
-
-    // duneD
-    Dune::UMFPack<DiagMatWell> umfpackMatrix(duneD_, 0);
-    double *Dvals = umfpackMatrix.getInternalMatrix().getValues();
-    auto *Dcols = umfpackMatrix.getInternalMatrix().getColStart();
-    auto *Drows = umfpackMatrix.getInternalMatrix().getRowIndex();
-
-    // duneB
-    std::vector<unsigned int> Bcols;
-    std::vector<unsigned int> Brows;
-    std::vector<double> Bvals;
-    Bcols.reserve(BnumBlocks);
-    Brows.reserve(Mb+1);
-    Bvals.reserve(BnumBlocks * Indices::numEq * numWellEq);
-    Brows.emplace_back(0);
-    unsigned int sumBlocks = 0;
-    for (auto rowB = duneB_.begin(); rowB != duneB_.end(); ++rowB) {
-        int sizeRow = 0;
-        for (auto colB = rowB->begin(), endB = rowB->end(); colB != endB; ++colB) {
-            Bcols.emplace_back(colB.index());
-            for (int i = 0; i < numWellEq; ++i) {
-                for (int j = 0; j < Indices::numEq; ++j) {
-                    Bvals.emplace_back((*colB)[i][j]);
-                }
-            }
-            sizeRow++;
-        }
-        sumBlocks += sizeRow;
-        Brows.emplace_back(sumBlocks);
-    }
-
-    wellContribs.addMultisegmentWellContribution(Indices::numEq,
-                                                 numWellEq,
-                                                 Mb,
-                                                 Bvals,
-                                                 Bcols,
-                                                 Brows,
-                                                 DnumBlocks,
-                                                 Dvals,
-                                                 Dcols,
-                                                 Drows,
-                                                 Cvals);
 }
 
 #define INSTANCE(...) \

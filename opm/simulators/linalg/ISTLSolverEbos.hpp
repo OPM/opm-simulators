@@ -27,6 +27,7 @@
 #include <ebos/eclbasevanguard.hh>
 
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/common/Exceptions.hpp>
 
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/common/multiphasebaseproperties.hh>
@@ -432,7 +433,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             // Check for failure of linear solver.
             if (!parameters_.ignoreConvergenceFailure_ && !result.converged) {
                 const std::string msg("Convergence failure for linear solver.");
-                OPM_THROW_NOLOG(NumericalIssue, msg);
+                OPM_THROW_NOLOG(NumericalProblem, msg);
             }
         }
     protected:

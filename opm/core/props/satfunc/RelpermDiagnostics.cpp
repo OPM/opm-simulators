@@ -24,6 +24,7 @@
 #include <opm/core/props/satfunc/RelpermDiagnostics.hpp>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 
+#include <opm/material/fluidmatrixinteractions/EclEpsGridProperties.hpp>
 #include <opm/material/fluidmatrixinteractions/EclEpsScalingPoints.hpp>
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
@@ -46,7 +47,7 @@
 #include <dune/alugrid/grid.hh>
 #include <dune/alugrid/3d/gridview.hh>
 #endif // HAVE_DUNE_ALUGRID
-namespace Opm{
+namespace Opm {
 
     bool RelpermDiagnostics::phaseCheck_(const EclipseState& es)
     {

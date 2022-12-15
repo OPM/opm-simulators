@@ -110,7 +110,12 @@ public:
     { return toIORankComm_.size() > 1; }
 
     int localIdxToGlobalIdx(unsigned localIdx) const;
-   
+
+    const std::vector<int>& localIdxToGlobalIdxMapping() const
+    {
+        return localIdxToGlobalIdx_;
+    }
+
     bool doesNeedReordering() const
     { return needsReordering;}
 

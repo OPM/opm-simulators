@@ -22,6 +22,8 @@
 #include <config.h>
 #include <opm/simulators/wells/StandardWellPrimaryVariables.hpp>
 
+#include <opm/common/Exceptions.hpp>
+
 #include <dune/common/dynvector.hh>
 #include <dune/istl/bvector.hh>
 
@@ -719,7 +721,7 @@ checkFinite(DeferredLogger& deferred_logger) const
 {
     for (const Scalar v : value_) {
         if (!isfinite(v))
-            OPM_DEFLOG_THROW(NumericalIssue, "Infinite primary variable after update from wellState well: " << well_.name(),  deferred_logger);
+            OPM_DEFLOG_THROW(NumericalProblem, "Infinite primary variable after update from wellState well: " << well_.name(),  deferred_logger);
     }
 }
 

@@ -137,5 +137,10 @@ setupDamarisWritingPars(Parallel::Communication comm, const int n_elements_local
         OpmLog::error("Damaris library produced an error result for "
                       "damaris_set_position(\"PRESSURE\", temp_int64_t);");
     }
+    damaris_err = damaris_set_position("GLOBAL_CELL_INDEX", temp_int64_t);
+    if (damaris_err != DAMARIS_OK && rank == 0) {
+        OpmLog::error("Damaris library produced an error result for "
+                      "damaris_set_position(\"GLOBAL_CELL_INDEX\", temp_int64_t);");
+    }
 }
 } // namespace Opm::DamarisOutput
