@@ -286,8 +286,8 @@ namespace Opm {
             // return { changed_well_group, more_network_update };
             // the first return value indicates whether the well and group are changed
             // the second return value indicated whether
-            std::pair<bool, bool> updateWellControls(DeferredLogger &deferred_logger,
-                                                     const bool balance_network = false);
+            std::pair<bool, bool> updateWellControls(DeferredLogger &deferred_logger, const bool balance_network,
+                                                     const bool relax_network_tolerance);
 
             void updateAndCommunicate(const int reportStepIdx,
                                       const int iterationIdx,
@@ -389,8 +389,10 @@ namespace Opm {
             // to avoid calling the assembleImpl in recursive manner
             // the name is temporary, and will rename when the refactoring is finished.
             // the returned two booleans are {continue_due_to_network, well_group_control_changed}
-            std::pair<bool, bool> updateWellControlsAndNetworkIteration(DeferredLogger &local_deferredLogger,
-                                                                        const bool balance_network = false);
+            std::pair<bool, bool>
+            updateWellControlsAndNetworkIteration(DeferredLogger &local_deferredLogger,
+                                                  const bool balance_network,
+                                                  const bool relax_network_tolerance);
 
             bool updateWellControlsAndNetwork(DeferredLogger& local_deferredLogger, const bool balance_network = false);
 

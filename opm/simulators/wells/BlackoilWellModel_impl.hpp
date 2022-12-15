@@ -981,9 +981,24 @@ namespace Opm {
         // to handle the coupling between the network and well/group solution
         bool do_network_update = true;
         bool well_group_control_changed = false;
+        size_t network_iteration = 0;
+        const auto &comm = ebosSimulator_.vanguard().grid().comm();
         while (do_network_update) {
+            if (network_iteration == 101) {
+                if (comm.rank() == 0) {
+                    std::cout << " more than 100 iterations are used, we are using relaxed tolerance for network update now" << std::endl;
+                }
+            }
+            const bool relax_network_balance = network_iteration > 100;
             std::tie(do_network_update, well_group_control_changed) =
-                    updateWellControlsAndNetworkIteration(local_deferredLogger, balance_network);
+                    updateWellControlsAndNetworkIteration(local_deferredLogger, balance_network, relax_network_balance);
+            network_iteration ++;
+            if (network_iteration == 201) {
+                if (comm.rank() == 0) {
+                    std::cout << " more than 200 iterations are used., we stop the network update now " << std::endl;
+                }
+                break;
+            }
         }
         return well_group_control_changed;
     }
@@ -994,10 +1009,12 @@ namespace Opm {
     template<typename TypeTag>
     std::pair<bool, bool>
     BlackoilWellModel<TypeTag>::
-    updateWellControlsAndNetworkIteration(DeferredLogger &local_deferredLogger, const bool balance_network)
+    updateWellControlsAndNetworkIteration(DeferredLogger &local_deferredLogger,
+                                          const bool balance_network,
+                                          const bool relax_network_tolerance)
     {
         const auto [well_group_control_changed, more_network_update] = updateWellControls(local_deferredLogger,
-                                                                                          balance_network);
+                                                                                          balance_network, relax_network_tolerance);
 
         bool alq_updated = false;
         OPM_BEGIN_PARALLEL_TRY_CATCH();
@@ -1586,7 +1603,8 @@ namespace Opm {
     template<typename TypeTag>
     std::pair<bool, bool>
     BlackoilWellModel<TypeTag>::
-    updateWellControls(DeferredLogger &deferred_logger, const bool balance_network) {
+    updateWellControls(DeferredLogger &deferred_logger, const bool balance_network,
+                       const bool relax_network_tolerance) {
 
         const int episodeIdx = ebosSimulator_.episodeIndex();
         const auto& network = schedule()[episodeIdx].network();
@@ -1605,7 +1623,11 @@ namespace Opm {
             const auto local_network_imbalance = updateNetworkPressures(episodeIdx);
             const double network_imbalance = comm.max(local_network_imbalance);
             const auto& balance = schedule()[episodeIdx].network_balance();
-            if (network_imbalance > balance.pressure_tolerance()) {
+            const double tolerance = relax_network_tolerance ? 10.0 * balance.pressure_tolerance() :  balance.pressure_tolerance();
+            if (comm.rank() == 0) {
+                std::cout << "network_imbalance " << network_imbalance/1.e5 << " network tolerance " << tolerance/1.e5 << std::endl;
+            }
+            if (network_imbalance > tolerance) {
                 more_network_update = true;
             }
         }
