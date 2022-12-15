@@ -215,6 +215,70 @@ void WellInterfaceGeneric::updateInjMult(std::vector<double>& multipliers) const
     }
 }
 
+
+
+    double
+    WellInterfaceGeneric::
+    getInjMult(const int perf,
+               const double bhp,
+               const double perf_pres,
+               DeferredLogger& deferred_logger) const
+{
+        const auto perf_ecl_index = this->perforationData()[perf].ecl_index;
+        double multipler = 1.;
+        assert(!this->isProducer());
+        switch (this->well_ecl_.getInjMultMode()) {
+            case Well::InjMultMode::WREV: {
+                const auto& injmult = this->well_ecl_.getConnections()[perf_ecl_index].injmult();
+                const auto frac_press = injmult.fracture_pressure;
+                const auto gradient = injmult.multiplier_gradient;
+                if (bhp > frac_press) {
+                    multipler = 1. + (bhp - frac_press) * gradient;
+                }
+                break;
+            }
+            case Well::InjMultMode::CREV: {
+                const auto& injmult = this->well_ecl_.getConnections()[perf_ecl_index].injmult();
+                const auto frac_press = injmult.fracture_pressure;
+                const auto gradient = injmult.multiplier_gradient;
+                if (perf_pres > frac_press) {
+                    multipler = 1. + (perf_pres - frac_press) * gradient;
+                }
+                break;
+            }
+            case Well::InjMultMode::CIRR: {
+                const auto& injmult = this->well_ecl_.getConnections()[perf_ecl_index].injmult();
+                const auto frac_press = injmult.fracture_pressure;
+                const auto gradient = injmult.multiplier_gradient;
+                // double calc_mult = 1.0;
+                // const double old_mult =  this->inj_multiplier_[perf_ecl_index];
+                if (perf_pres > frac_press) {
+                    multipler = 1.0 + (perf_pres - frac_press) * gradient;
+                    // calc_mult = multipler;
+                } else {
+                    multipler = 1.0;
+                }
+                multipler = std::max(multipler, this->prev_inj_multipler_[perf_ecl_index]);
+                // store the calculated multiplier value
+                this->inj_multiplier_[perf_ecl_index] = multipler;
+                /* const auto msg = fmt::format("perf {} bhp {} connection pressure {} calculated multplier "
+                                             " {} and the old mulplitier {} and the returned multplier {} \n",
+                                             perf, Opm::getValue(this->getBhp())/1.e5, connection_pressure/1.e5, calc_mult, old_mult, multipler); */
+                // std::cout << msg;
+                std::cout << "well " << this->name() << " perf " << perf << " multipler " << multipler << std::endl;
+                break;
+            }
+            default: {
+                const auto msg = "Well " + this->name() + " has invalid InjMultMode \n";
+                OPM_DEFLOG_THROW(std::runtime_error, msg, deferred_logger);
+            }
+        }
+        return multipler;
+}
+
+
+
+
 bool WellInterfaceGeneric::wellHasTHPConstraints(const SummaryState& summaryState) const
 {
     // only wells under prediction mode can have THP constraint

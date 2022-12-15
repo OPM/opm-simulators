@@ -904,74 +904,14 @@ namespace Opm
         // checking whether the well has WINJMULT setup
         const auto perf_ecl_index = this->perforationData()[perf].ecl_index;
         if (this->well_ecl_.getConnections()[perf_ecl_index].injmult().active()) {
-            const double mulipler = this->getInjMult(perf, deferred_logger);
+            const double bhp = this->primary_variables_.value(Bhp);
+            const double perf_press = bhp +  this->connections_.pressure_diff(perf);
+            const double mulipler = this->getInjMult(perf, bhp, perf_press, deferred_logger);
             for (size_t i = 0; i < mob.size(); ++i) {
                 mob[i] *= mulipler;
             }
         }
     }
-
-
-    template<typename TypeTag>
-    double
-    StandardWell<TypeTag>::
-    getInjMult(const int perf,
-               DeferredLogger& deferred_logger) const {
-        const auto perf_ecl_index = this->perforationData()[perf].ecl_index;
-        double multipler = 1.;
-        assert(!this->isProducer());
-        switch (this->well_ecl_.getInjMultMode()) {
-            case Well::InjMultMode::WREV: {
-                const auto& injmult = this->well_ecl_.getConnections()[perf_ecl_index].injmult();
-                const auto frac_press = injmult.fracture_pressure;
-                const auto gradient = injmult.multiplier_gradient;
-                const auto bhp = this->primary_variables_.value(Bhp);
-                if (bhp > frac_press) {
-                    multipler = 1. + (bhp - frac_press) * gradient;
-                }
-                break;
-            }
-            case Well::InjMultMode::CREV: {
-                const auto& injmult = this->well_ecl_.getConnections()[perf_ecl_index].injmult();
-                const auto frac_press = injmult.fracture_pressure;
-                const auto gradient = injmult.multiplier_gradient;
-                const auto connection_pressure = this->primary_variables_.value(Bhp) + this->connections_.pressure_diff(perf);
-                if (connection_pressure > frac_press) {
-                    multipler = 1. + (connection_pressure - frac_press) * gradient;
-                }
-                break;
-            }
-            case Well::InjMultMode::CIRR: {
-                const auto& injmult = this->well_ecl_.getConnections()[perf_ecl_index].injmult();
-                const auto frac_press = injmult.fracture_pressure;
-                const auto gradient = injmult.multiplier_gradient;
-                const auto connection_pressure = this->primary_variables_.value(Bhp) + this->connections_.pressure_diff(perf);
-                // double calc_mult = 1.0;
-                // const double old_mult =  this->inj_multiplier_[perf_ecl_index];
-                if (connection_pressure > frac_press) {
-                    multipler = 1.0 + (connection_pressure - frac_press) * gradient;
-                    // calc_mult = multipler;
-                } else {
-                    multipler = 1.0;
-                }
-                multipler = std::max(multipler, this->prev_inj_multipler_[perf_ecl_index]);
-                this->inj_multiplier_[perf_ecl_index] = multipler;
-                multipler = this->inj_multiplier_[perf_ecl_index];
-                /* const auto msg = fmt::format("perf {} bhp {} connection pressure {} calculated multplier "
-                                             " {} and the old mulplitier {} and the returned multplier {} \n",
-                                             perf, Opm::getValue(this->getBhp())/1.e5, connection_pressure/1.e5, calc_mult, old_mult, multipler); */
-                // std::cout << msg;
-                std::cout << "well " << this->name() << " perf " << perf << " multipler " << multipler << std::endl;
-                break;
-            }
-            default: {
-                const auto msg = fmt::format("Well {} has unvalid InjMultMode \n", this->name());
-                OPM_DEFLOG_THROW(std::runtime_error, msg, deferred_logger);
-            }
-        }
-        return multipler;
-    }
-
 
 
     template<typename TypeTag>

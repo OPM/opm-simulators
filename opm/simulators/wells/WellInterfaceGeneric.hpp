@@ -183,6 +183,11 @@ public:
     // update the InjMult information in the well state
     void updateInjMult(std::vector<double>& multipliers) const;
 
+    double  getInjMult(const int perf,
+               const double bhp,
+               const double perf_pres,
+               DeferredLogger& deferred_logger) const;
+
     // whether a well is specified with a non-zero and valid VFP table number
     bool isVFPActive(DeferredLogger& deferred_logger) const;
 
