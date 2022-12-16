@@ -37,6 +37,8 @@
 #include <cmath>
 #include <stdexcept>
 
+#include <fmt/format.h>
+
 namespace Opm
 {
 
@@ -65,6 +67,13 @@ MultisegmentWellGeneric(WellInterfaceGeneric& baseif)
         const Connection& connection = completion_set.get(perf);
         if (connection.state() == Connection::State::OPEN) {
             const int segment_index = segmentNumberToIndex(connection.segment());
+            if ( segment_index == -1) {
+                OPM_THROW(std::logic_error,
+                          fmt::format("COMPSEGS: Well {} has connection in cell {}, {}, {} "
+                                      "without associated segment.", baseif_.wellEcl().name(),
+                                      connection.getI() + 1, connection.getJ() + 1,
+                                      connection.getK() + 1));
+            }
             segment_perforations_[segment_index].push_back(i_perf_wells);
             baseif.perfDepth()[i_perf_wells] = connection.depth();
             const double segment_depth = segmentSet()[segment_index].depth();
