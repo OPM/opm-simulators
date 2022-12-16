@@ -134,7 +134,7 @@ protected:
     // handling the overshooting and undershooting of the fractions
     void processFractions(const int seg);
 
-    void updatePrimaryVariables(const WellState& well_state) const;
+    void updatePrimaryVariables(const WellState& well_state);
 
     void updateUpwindingSegments();
 

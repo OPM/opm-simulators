@@ -307,7 +307,7 @@ updatePrimaryVariablesNewton(const BVectorWell& dwells,
 template<typename FluidSystem, typename Indices, typename Scalar>
 void
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
-updatePrimaryVariables(const WellState& well_state) const
+updatePrimaryVariables(const WellState& well_state)
 {
     static constexpr int Water = BlackoilPhases::Aqua;
     static constexpr int Gas = BlackoilPhases::Vapour;
