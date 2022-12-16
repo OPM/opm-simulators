@@ -188,7 +188,7 @@ getWellConvergence(const WellState& well_state,
 template<typename FluidSystem, typename Indices, typename Scalar>
 void
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
-processFractions(const int seg) const
+processFractions(const int seg)
 {
     static constexpr int Water = BlackoilPhases::Aqua;
     static constexpr int Oil = BlackoilPhases::Liquid;

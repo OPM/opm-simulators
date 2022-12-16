@@ -132,7 +132,7 @@ protected:
                                          const bool relax_tolerance) const;
 
     // handling the overshooting and undershooting of the fractions
-    void processFractions(const int seg) const;
+    void processFractions(const int seg);
 
     void updatePrimaryVariables(const WellState& well_state) const;
 
