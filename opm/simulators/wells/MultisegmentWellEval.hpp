@@ -219,10 +219,10 @@ protected:
 
     // the values for the primary varibles
     // based on different solutioin strategies, the wells can have different primary variables
-    mutable std::vector<std::array<double, numWellEq> > primary_variables_;
+    std::vector<std::array<double, numWellEq> > primary_variables_;
 
     // the Evaluation for the well primary variables, which contain derivativles and are used in AD calculation
-    mutable std::vector<std::array<EvalWell, numWellEq> > primary_variables_evaluation_;
+    std::vector<std::array<EvalWell, numWellEq> > primary_variables_evaluation_;
 
     // the upwinding segment for each segment based on the flow direction
     std::vector<int> upwinding_segments_;
