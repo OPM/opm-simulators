@@ -627,6 +627,14 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
                 const Connection& connection = completion_set.get(perf);
                 if (connection.state() == Connection::State::OPEN) {
                     const int segment_index = segment_set.segmentNumberToIndex(connection.segment());
+                    if ( segment_index == -1) {
+                        OPM_THROW(std::logic_error,
+                                  fmt::format("COMPSEGS: Well {} has connection in cell {}, {}, {} "
+                                              "without associated segment.", well_ecl.name(),
+                                              connection.getI() + 1 , connection.getJ() + 1,
+                                              connection.getK() + 1 ));
+                    }
+
                     segment_perforations[segment_index].push_back(n_activeperf);
                     n_activeperf++;
                 }
