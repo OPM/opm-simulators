@@ -83,7 +83,7 @@ initMatrixAndVectors(const int num_cells)
 template<typename FluidSystem, typename Indices, typename Scalar>
 void
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
-initPrimaryVariablesEvaluation() const
+initPrimaryVariablesEvaluation()
 {
     for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
         for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {

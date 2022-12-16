@@ -103,11 +103,10 @@ protected:
     MultisegmentWellEval(WellInterfaceIndices<FluidSystem,Indices,Scalar>& baseif);
 
     void initMatrixAndVectors(const int num_cells);
-    void initPrimaryVariablesEvaluation() const;
+    void initPrimaryVariablesEvaluation();
 
     void assembleDefaultPressureEq(const int seg,
                                    WellState& well_state);
-
 
     // assemble pressure equation for ICD segments
     void assembleICDPressureEq(const int seg,
