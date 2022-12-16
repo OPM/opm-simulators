@@ -261,7 +261,7 @@ MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 updatePrimaryVariablesNewton(const BVectorWell& dwells,
                              const double relaxation_factor,
                              const double dFLimit,
-                             const double max_pressure_change) const
+                             const double max_pressure_change)
 {
     const std::vector<std::array<double, numWellEq> > old_primary_variables = primary_variables_;
 

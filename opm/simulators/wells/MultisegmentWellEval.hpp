@@ -142,7 +142,7 @@ protected:
     void updatePrimaryVariablesNewton(const BVectorWell& dwells,
                                       const double relaxation_factor,
                                       const double DFLimit,
-                                      const double max_pressure_change) const;
+                                      const double max_pressure_change);
 
     void computeSegmentFluidProperties(const EvalWell& temperature,
                                        const EvalWell& saltConcentration,
