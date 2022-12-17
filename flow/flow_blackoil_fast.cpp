@@ -22,6 +22,7 @@
 #include <opm/models/discretization/common/tpfalinearizer.hh>
 #include "tracy/Tracy.hpp"
 #include "tracy/TracyC.h"
+#include <opm/models/blackoil/blackoilintensivequantitiessimple.hh>
 //sudo apt install libcapstone-dev
 #define OPM_TIME_BLOCK(blockname) ZoneNamedN(blockname, #blockname, true);
 namespace Opm {
@@ -40,8 +41,14 @@ struct EclFlowProblemTPFAFast {
     template<class TypeTag>
     struct EnableDiffusion<TypeTag, TTag::EclFlowProblemTPFAFast> { static constexpr bool value = false; };
 
+    template<class TypeTag>
+    struct IntensiveQuantities<TypeTag, TTag::EclFlowProblemTPFAFast> {
+        using type = BlackOilIntensiveQuantitiesSimple<TypeTag>;
+    };
+
 }
 }
+
 int main(int argc, char** argv)
 {
     OPM_TIME_BLOCK(FullSimulator);

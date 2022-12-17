@@ -1474,6 +1474,12 @@ public:
     std::shared_ptr<const EclMaterialLawManager> materialLawManager() const
     { return materialLawManager_; }
 
+    void updateCachedQuantities(){
+        //this->model().invalidateAndUpdateIntensiveQuantities(0);
+        const auto& solution = this->model().solution(/*timeIdx*/0);
+        this->model().invalidateAndUpdateIntensiveQuantitiesSimple(*this,solution,/*timeIdx*/0);    
+    }
+    
     template <class FluidState>
     void updateRelperms(
         std::array<Evaluation,numPhases> &mobility,
