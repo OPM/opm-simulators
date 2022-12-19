@@ -610,7 +610,7 @@ namespace Opm
     updateWellState(const BVectorWell& dwells,
                     WellState& well_state,
                     DeferredLogger& deferred_logger,
-                    const double relaxation_factor) const
+                    const double relaxation_factor)
     {
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 

@@ -103,11 +103,10 @@ protected:
     MultisegmentWellEval(WellInterfaceIndices<FluidSystem,Indices,Scalar>& baseif);
 
     void initMatrixAndVectors(const int num_cells);
-    void initPrimaryVariablesEvaluation() const;
+    void initPrimaryVariablesEvaluation();
 
     void assembleDefaultPressureEq(const int seg,
                                    WellState& well_state);
-
 
     // assemble pressure equation for ICD segments
     void assembleICDPressureEq(const int seg,
@@ -133,9 +132,9 @@ protected:
                                          const bool relax_tolerance) const;
 
     // handling the overshooting and undershooting of the fractions
-    void processFractions(const int seg) const;
+    void processFractions(const int seg);
 
-    void updatePrimaryVariables(const WellState& well_state) const;
+    void updatePrimaryVariables(const WellState& well_state);
 
     void updateUpwindingSegments();
 
@@ -143,7 +142,7 @@ protected:
     void updatePrimaryVariablesNewton(const BVectorWell& dwells,
                                       const double relaxation_factor,
                                       const double DFLimit,
-                                      const double max_pressure_change) const;
+                                      const double max_pressure_change);
 
     void computeSegmentFluidProperties(const EvalWell& temperature,
                                        const EvalWell& saltConcentration,
@@ -220,10 +219,10 @@ protected:
 
     // the values for the primary varibles
     // based on different solutioin strategies, the wells can have different primary variables
-    mutable std::vector<std::array<double, numWellEq> > primary_variables_;
+    std::vector<std::array<double, numWellEq> > primary_variables_;
 
     // the Evaluation for the well primary variables, which contain derivativles and are used in AD calculation
-    mutable std::vector<std::array<EvalWell, numWellEq> > primary_variables_evaluation_;
+    std::vector<std::array<EvalWell, numWellEq> > primary_variables_evaluation_;
 
     // the upwinding segment for each segment based on the flow direction
     std::vector<int> upwinding_segments_;

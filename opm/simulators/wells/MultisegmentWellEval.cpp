@@ -83,7 +83,7 @@ initMatrixAndVectors(const int num_cells)
 template<typename FluidSystem, typename Indices, typename Scalar>
 void
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
-initPrimaryVariablesEvaluation() const
+initPrimaryVariablesEvaluation()
 {
     for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
         for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
@@ -188,7 +188,7 @@ getWellConvergence(const WellState& well_state,
 template<typename FluidSystem, typename Indices, typename Scalar>
 void
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
-processFractions(const int seg) const
+processFractions(const int seg)
 {
     static constexpr int Water = BlackoilPhases::Aqua;
     static constexpr int Oil = BlackoilPhases::Liquid;
@@ -261,7 +261,7 @@ MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 updatePrimaryVariablesNewton(const BVectorWell& dwells,
                              const double relaxation_factor,
                              const double dFLimit,
-                             const double max_pressure_change) const
+                             const double max_pressure_change)
 {
     const std::vector<std::array<double, numWellEq> > old_primary_variables = primary_variables_;
 
@@ -307,7 +307,7 @@ updatePrimaryVariablesNewton(const BVectorWell& dwells,
 template<typename FluidSystem, typename Indices, typename Scalar>
 void
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
-updatePrimaryVariables(const WellState& well_state) const
+updatePrimaryVariables(const WellState& well_state)
 {
     static constexpr int Water = BlackoilPhases::Aqua;
     static constexpr int Gas = BlackoilPhases::Vapour;
