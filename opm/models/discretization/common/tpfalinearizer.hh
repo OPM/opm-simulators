@@ -436,9 +436,9 @@ private:
             MatrixBlock bMat(0.0);
             ADVectorBlock adres(0.0);
             const IntensiveQuantities* intQuantsInP = model_().cachedIntensiveQuantities(globI, /*timeIdx*/ 0);
-            // if (intQuantsInP == nullptr) {
-            //     throw std::logic_error("Missing updated intensive quantities for cell " + std::to_string(globI));
-            // }
+            if (intQuantsInP == nullptr) {
+                throw std::logic_error("Missing updated intensive quantities for cell " + std::to_string(globI));
+            }
             const IntensiveQuantities& intQuantsIn = *intQuantsInP;
 
             // Flux term.
