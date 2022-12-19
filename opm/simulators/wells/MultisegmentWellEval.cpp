@@ -185,43 +185,15 @@ MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 handleAccelerationPressureLoss(const int seg,
                                WellState& well_state)
 {
-    const double area = this->segmentSet()[seg].crossArea();
-    const EvalWell mass_rate = segments_.mass_rates_[seg];
-    const int seg_upwind = segments_.upwinding_segments_[seg];
-    EvalWell density = segments_.densities_[seg_upwind];
-    // WARNING
-    // We disregard the derivatives from the upwind density to make sure derivatives
-    // wrt. to different segments dont get mixed.
-    if (seg != seg_upwind) {
-        density.clearDerivatives();
-    }
-
-    EvalWell accelerationPressureLoss = mswellhelpers::velocityHead(area, mass_rate, density);
-    // handling the velocity head of intlet segments
-    for (const int inlet : this->segments_.inlets_[seg]) {
-        const int seg_upwind_inlet = segments_.upwinding_segments_[inlet];
-        const double inlet_area = this->segmentSet()[inlet].crossArea();
-        EvalWell inlet_density = this->segments_.densities_[seg_upwind_inlet];
-        // WARNING
-        // We disregard the derivatives from the upwind density to make sure derivatives
-        // wrt. to different segments dont get mixed.
-        if (inlet != seg_upwind_inlet) {
-            inlet_density.clearDerivatives();
-        }
-        const EvalWell inlet_mass_rate = segments_.mass_rates_[inlet];
-        accelerationPressureLoss -= mswellhelpers::velocityHead(std::max(inlet_area, area), inlet_mass_rate, inlet_density);
-    }
-
-    // We change the sign of the accelerationPressureLoss for injectors.
-    // Is this correct? Testing indicates that this is what the reference simulator does
-    const double sign = mass_rate < 0. ? 1.0 : - 1.0;
-    accelerationPressureLoss *= sign;
+    const EvalWell accelerationPressureLoss = segments_.accelerationPressureLoss(seg);
 
     auto& segments = well_state.well(baseif_.indexOfWell()).segments;
     segments.pressure_drop_accel[seg] = accelerationPressureLoss.value();
 
     MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(baseif_).
-        assemblePressureLoss(seg, seg_upwind, accelerationPressureLoss, linSys_);
+        assemblePressureLoss(seg,
+                             segments_.upwinding_segments_[seg],
+                             accelerationPressureLoss, linSys_);
 }
 
 template<typename FluidSystem, typename Indices, typename Scalar>

@@ -673,6 +673,47 @@ pressureDropValve(const int seg) const
     return sign * (friction_pressure_loss + constriction_pressure_loss);
 }
 
+template<class FluidSystem, class Indices, class Scalar>
+typename MultisegmentWellSegments<FluidSystem,Indices,Scalar>::EvalWell
+MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
+accelerationPressureLoss(const int seg) const
+{
+    const auto& segment_set = well_.wellEcl().getSegments();
+    const double area = segment_set[seg].crossArea();
+    const EvalWell mass_rate = mass_rates_[seg];
+    const int seg_upwind = upwinding_segments_[seg];
+    EvalWell density = densities_[seg_upwind];
+    // WARNING
+    // We disregard the derivatives from the upwind density to make sure derivatives
+    // wrt. to different segments dont get mixed.
+    if (seg != seg_upwind) {
+        density.clearDerivatives();
+    }
+
+    EvalWell accelerationPressureLoss = mswellhelpers::velocityHead(area, mass_rate, density);
+    // handling the velocity head of intlet segments
+    for (const int inlet : inlets_[seg]) {
+        const int seg_upwind_inlet = upwinding_segments_[inlet];
+        const double inlet_area = segment_set[inlet].crossArea();
+        EvalWell inlet_density = densities_[seg_upwind_inlet];
+        // WARNING
+        // We disregard the derivatives from the upwind density to make sure derivatives
+        // wrt. to different segments dont get mixed.
+        if (inlet != seg_upwind_inlet) {
+            inlet_density.clearDerivatives();
+        }
+        const EvalWell inlet_mass_rate = mass_rates_[inlet];
+        accelerationPressureLoss -= mswellhelpers::velocityHead(std::max(inlet_area, area), inlet_mass_rate, inlet_density);
+    }
+
+    // We change the sign of the accelerationPressureLoss for injectors.
+    // Is this correct? Testing indicates that this is what the reference simulator does
+    const double sign = mass_rate < 0. ? 1.0 : - 1.0;
+    accelerationPressureLoss *= sign;
+
+    return accelerationPressureLoss;
+}
+
 #define INSTANCE(...) \
 template class MultisegmentWellSegments<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>;
 
