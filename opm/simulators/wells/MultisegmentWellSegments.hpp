@@ -93,7 +93,7 @@ public:
         return upwinding_segments_[seg];
     }
 
-    double getRefDensity() const
+    Scalar getRefDensity() const
     {
         return densities_[0].value();
     }
@@ -103,7 +103,7 @@ public:
         return densities_[seg];
     }
 
-    double perforation_depth_diff(const int perf) const
+    Scalar perforation_depth_diff(const int perf) const
     {
         return perforation_depth_diffs_[perf];
     }
@@ -123,12 +123,12 @@ private:
     // depth difference between the segment and the perforation
     // or in another way, the depth difference between the perforation and
     // the segment the perforation belongs to
-    std::vector<double> perforation_depth_diffs_;
+    std::vector<Scalar> perforation_depth_diffs_;
 
     // the inlet segments for each segment. It is for convenience and efficiency reason
     std::vector<std::vector<int>> inlets_;
 
-    std::vector<double> depth_diffs_;
+    std::vector<Scalar> depth_diffs_;
 
     // the densities of segment fluids
     // we should not have this member variable
