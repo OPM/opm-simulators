@@ -358,14 +358,6 @@ computeSegmentFluidProperties(const EvalWell& temperature,
 template<typename FluidSystem, typename Indices, typename Scalar>
 typename MultisegmentWellEval<FluidSystem,Indices,Scalar>::EvalWell
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
-getHydroPressureLoss(const int seg) const
-{
-    return segments_.densities_[seg] * baseif_.gravity() * segments_.depth_diffs_[seg];
-}
-
-template<typename FluidSystem, typename Indices, typename Scalar>
-typename MultisegmentWellEval<FluidSystem,Indices,Scalar>::EvalWell
-MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 getFrictionPressureLoss(const int seg) const
 {
     const EvalWell mass_rate = segments_.mass_rates_[seg];
@@ -797,7 +789,7 @@ assembleDefaultPressureEq(const int seg,
     // we only consider the hydrostatic pressure loss first
     // TODO: we might be able to add member variables to store these values, then we update well state
     // after converged
-    const auto hydro_pressure_drop = getHydroPressureLoss(seg);
+    const auto hydro_pressure_drop = segments_.getHydroPressureLoss(seg);
     auto& ws = well_state.well(baseif_.indexOfWell());
     auto& segments = ws.segments;
     segments.pressure_drop_hydrostatic[seg] = hydro_pressure_drop.value();

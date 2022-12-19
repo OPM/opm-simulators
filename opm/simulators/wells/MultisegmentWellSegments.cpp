@@ -108,6 +108,14 @@ MultisegmentWellSegments(const int numSegments,
     }
 }
 
+template<class FluidSystem, class Indices, class Scalar>
+typename MultisegmentWellSegments<FluidSystem,Indices,Scalar>::EvalWell
+MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
+getHydroPressureLoss(const int seg) const
+{
+    return densities_[seg] * well_.gravity() * depth_diffs_[seg];
+}
+
 #define INSTANCE(...) \
 template class MultisegmentWellSegments<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>;
 

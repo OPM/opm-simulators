@@ -113,7 +113,6 @@ protected:
                                        DeferredLogger& deferred_logger);
 
     EvalWell getFrictionPressureLoss(const int seg) const;
-    EvalWell getHydroPressureLoss(const int seg) const;
     EvalWell getSegmentSurfaceVolume(const EvalWell& temperature,
                                      const EvalWell& saltConcentration,
                                      const int pvt_region_index,

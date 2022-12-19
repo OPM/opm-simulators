@@ -41,6 +41,9 @@ public:
     MultisegmentWellSegments(const int numSegments,
                              WellInterfaceGeneric& well);
 
+
+    EvalWell getHydroPressureLoss(const int seg) const;
+
     // TODO: trying to use the information from the Well opm-parser as much
     // as possible, it will possibly be re-implemented later for efficiency reason.
 
