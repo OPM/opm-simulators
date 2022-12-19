@@ -107,11 +107,6 @@ protected:
                                          const double relaxed_inner_tolerance_pressure_ms_well,
                                          const bool relax_tolerance) const;
 
-    void computeSegmentFluidProperties(const EvalWell& temperature,
-                                       const EvalWell& saltConcentration,
-                                       int pvt_region_index,
-                                       DeferredLogger& deferred_logger);
-
     EvalWell getFrictionPressureLoss(const int seg) const;
 
     std::pair<bool, std::vector<Scalar> >

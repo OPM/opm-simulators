@@ -41,6 +41,11 @@ public:
     MultisegmentWellSegments(const int numSegments,
                              WellInterfaceGeneric& well);
 
+    void computeFluidProperties(const EvalWell& temperature,
+                                const EvalWell& saltConcentration,
+                                const PrimaryVariables& primary_variables,
+                                int pvt_region_index,
+                                DeferredLogger& deferred_logger);
 
     EvalWell getHydroPressureLoss(const int seg) const;
 

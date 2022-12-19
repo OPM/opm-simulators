@@ -1036,10 +1036,11 @@ namespace Opm
             pvt_region_index = fs.pvtRegionIndex();
         }
 
-        this->MSWEval::computeSegmentFluidProperties(temperature,
-                                                     saltConcentration,
-                                                     pvt_region_index,
-                                                     deferred_logger);
+        this->segments_.computeFluidProperties(temperature,
+                                               saltConcentration,
+                                               this->primary_variables_,
+                                               pvt_region_index,
+                                               deferred_logger);
     }
 
 
