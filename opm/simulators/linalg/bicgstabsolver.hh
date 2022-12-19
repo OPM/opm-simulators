@@ -127,7 +127,7 @@ public:
         // stopped in case exceptions are thrown as well as if the method returns
         // regularly.)
         report_.reset();
-        Opm::TimerGuard reportTimerGuard(report_.timer());
+        TimerGuard reportTimerGuard(report_.timer());
         report_.timer().start();
 
         // preconditioned stabilized biconjugate gradient method
@@ -334,7 +334,7 @@ public:
         convergenceCriterion_ = &crit;
     }
 
-    const Opm::Linear::SolverReport& report() const
+    const SolverReport& report() const
     { return report_; }
 
 private:
@@ -344,7 +344,7 @@ private:
     Preconditioner& preconditioner_;
     ConvergenceCriterion& convergenceCriterion_;
     Dune::ScalarProduct<Vector>& scalarProduct_;
-    Opm::Linear::SolverReport report_;
+    SolverReport report_;
 
     unsigned maxIterations_;
     unsigned verbosity_;
