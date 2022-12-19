@@ -288,6 +288,32 @@ computeFluidProperties(const EvalWell& temperature,
 }
 
 template<class FluidSystem, class Indices, class Scalar>
+void MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
+updateUpwindingSegments(const PrimaryVariables& primary_variables)
+{
+    for (size_t seg = 0; seg < perforations_.size(); ++seg) {
+        // special treatment is needed for segment 0
+        if (seg == 0) {
+            // we are not supposed to have injecting producers and producing injectors
+            assert(!(well_.isProducer() && primary_variables.eval(seg)[primary_variables.WQTotal] > 0.));
+            assert(!(well_.isInjector() && primary_variables.eval(seg)[primary_variables.WQTotal] < 0.));
+            upwinding_segments_[seg] = seg;
+            continue;
+        }
+
+        // for other normal segments
+        if (primary_variables.eval(seg)[primary_variables.WQTotal] <= 0.) {
+            upwinding_segments_[seg] = seg;
+        } else {
+            const auto& segment_set = well_.wellEcl().getSegments();
+            const int outlet_segment_index = segment_set.segmentNumberToIndex(segment_set[seg].outletSegment());
+            upwinding_segments_[seg] = outlet_segment_index;
+        }
+    }
+}
+
+
+template<class FluidSystem, class Indices, class Scalar>
 typename MultisegmentWellSegments<FluidSystem,Indices,Scalar>::EvalWell
 MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
 getHydroPressureLoss(const int seg) const

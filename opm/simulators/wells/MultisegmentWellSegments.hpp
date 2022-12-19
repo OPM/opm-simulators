@@ -48,6 +48,9 @@ public:
                                 int pvt_region_index,
                                 DeferredLogger& deferred_logger);
 
+    //! \brief Update upwinding segments.
+    void updateUpwindingSegments(const PrimaryVariables& primary_variables);
+
     EvalWell getHydroPressureLoss(const int seg) const;
 
     EvalWell getSurfaceVolume(const EvalWell& temperature,

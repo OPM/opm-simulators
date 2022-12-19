@@ -1534,8 +1534,7 @@ namespace Opm
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
         // update the upwinding segments
-        this->primary_variables_.updateUpwindingSegments(*this,
-                                                         this->segments_.upwinding_segments_);
+        this->segments_.updateUpwindingSegments(this->primary_variables_);
 
         // calculate the fluid properties needed.
         computeSegmentFluidProperties(ebosSimulator, deferred_logger);
