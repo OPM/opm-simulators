@@ -161,8 +161,8 @@ namespace Opm
         Base::updateWellStateWithTarget(ebos_simulator, group_state, well_state, deferred_logger);
         // scale segment rates based on the wellRates
         // and segment pressure based on bhp
-        this->scaleSegmentRatesWithWellRates(this->segments_.inlets_,
-                                             this->segments_.perforations_,
+        this->scaleSegmentRatesWithWellRates(this->segments_.inlets(),
+                                             this->segments_.perforations(),
                                              well_state);
         this->scaleSegmentPressuresWithBhp(well_state);
     }
@@ -370,7 +370,7 @@ namespace Opm
         segments_copy.scale_pressure(bhp);
         const auto& segment_pressure = segments_copy.pressure;
         for (int seg = 0; seg < nseg; ++seg) {
-            for (const int perf : this->segments_.perforations_[seg]) {
+            for (const int perf : this->segments_.perforations()[seg]) {
                 const int cell_idx = this->well_cells_[perf];
                 const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
                 // flux for each perforation
@@ -443,8 +443,8 @@ namespace Opm
                 ws.surface_rates[phase] = sign * ws.well_potentials[phase];
             }
         }
-        well_copy.scaleSegmentRatesWithWellRates(this->segments_.inlets_,
-                                                 this->segments_.perforations_,
+        well_copy.scaleSegmentRatesWithWellRates(this->segments_.inlets(),
+                                                 this->segments_.perforations(),
                                                  well_state_copy);
 
         well_copy.calculateExplicitQuantities(ebosSimulator, well_state_copy, deferred_logger);
@@ -774,7 +774,8 @@ namespace Opm
                     DeferredLogger& deferred_logger) const
     {
         // pressure difference between the segment and the perforation
-        const Value perf_seg_press_diff = this->gravity() * segment_density * this->segments_.perforation_depth_diffs_[perf];
+        const Value perf_seg_press_diff = this->gravity() * segment_density *
+                                          this->segments_.perforation_depth_diff(perf);
         // pressure difference between the perforation and the grid cell
         const double cell_perf_press_diff = this->cell_perforation_pressure_diffs_[perf];
 
@@ -935,7 +936,7 @@ namespace Opm
                               Tw,
                               perf,
                               segment_pressure,
-                              this->segments_.densities_[seg],
+                              this->segments_.density(seg),
                               allow_cf,
                               cmix_s,
                               cq_s,
@@ -996,7 +997,7 @@ namespace Opm
                               Tw,
                               perf,
                               segment_pressure,
-                              getValue(this->segments_.densities_[seg]),
+                              getValue(this->segments_.density(seg)),
                               allow_cf,
                               cmix_s,
                               cq_s,
@@ -1158,7 +1159,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     getRefDensity() const
     {
-        return this->segments_.densities_[0].value();
+        return this->segments_.getRefDensity();
     }
 
     template<typename TypeTag>
@@ -1243,14 +1244,15 @@ namespace Opm
             const double segment_depth = this->segmentSet()[seg].depth();
             const int outlet_segment_index = this->segmentNumberToIndex(this->segmentSet()[seg].outletSegment());
             const double segment_depth_outlet = seg == 0? ref_depth : this->segmentSet()[outlet_segment_index].depth();
-            double dp = wellhelpers::computeHydrostaticCorrection(segment_depth_outlet, segment_depth, this->segments_.densities_[seg].value(), this->gravity_);
+            double dp = wellhelpers::computeHydrostaticCorrection(segment_depth_outlet, segment_depth,
+                                                                  this->segments_.density(seg).value(), this->gravity_);
             // we add the hydrostatic correction from the outlet segment
             // in order to get the correction all the way to the bhp ref depth.
             if (seg > 0) {
                 dp += seg_dp[outlet_segment_index];
             }
             seg_dp[seg] = dp;
-            for (const int perf : this->segments_.perforations_[seg]) {
+            for (const int perf : this->segments_.perforations()[seg]) {
                 std::vector<Scalar> mob(this->num_components_, 0.0);
 
                 // TODO: maybe we should store the mobility somewhere, so that we only need to calculate it one per iteration
@@ -1260,7 +1262,7 @@ namespace Opm
                 const auto& int_quantities = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
                 const auto& fs = int_quantities.fluidState();
                 // pressure difference between the segment and the perforation
-                const double perf_seg_press_diff = this->gravity_ * this->segments_.densities_[seg].value() * this->segments_.perforation_depth_diffs_[perf];
+                const double perf_seg_press_diff = this->segments_.getPressureDiffSegPerf(seg, perf);
                 // pressure difference between the perforation and the grid cell
                 const double cell_perf_press_diff = this->cell_perforation_pressure_diffs_[perf];
                 const double pressure_cell = this->getPerfCellPressure(fs).value();
@@ -1576,7 +1578,7 @@ namespace Opm
             }
             // considering the contributions due to flowing out from the segment
             {
-                const int seg_upwind = this->segments_.upwinding_segments_[seg];
+                const int seg_upwind = this->segments_.upwinding_segment(seg);
                 for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
                     const EvalWell segment_rate =
                         this->primary_variables_.getSegmentRateUpwinding(seg,
@@ -1590,8 +1592,8 @@ namespace Opm
 
             // considering the contributions from the inlet segments
             {
-                for (const int inlet : this->segments_.inlets_[seg]) {
-                    const int inlet_upwind = this->segments_.upwinding_segments_[inlet];
+                for (const int inlet : this->segments_.inlets()[seg]) {
+                    const int inlet_upwind = this->segments_.upwinding_segment(inlet);
                     for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
                         const EvalWell inlet_rate =
                             this->primary_variables_.getSegmentRateUpwinding(inlet,
@@ -1609,7 +1611,7 @@ namespace Opm
             auto& perf_data = ws.perf_data;
             auto& perf_rates = perf_data.phase_rates;
             auto& perf_press_state = perf_data.pressure;
-            for (const int perf : this->segments_.perforations_[seg]) {
+            for (const int perf : this->segments_.perforations()[seg]) {
                 const int cell_idx = this->well_cells_[perf];
                 const auto& int_quants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
                 std::vector<EvalWell> mob(this->num_components_, 0.0);
@@ -1691,14 +1693,14 @@ namespace Opm
 
         for (int seg = 0; seg < nseg; ++seg) {
             const EvalWell segment_pressure = this->primary_variables_.getSegmentPressure(seg);
-            for (const int perf : this->segments_.perforations_[seg]) {
+            for (const int perf : this->segments_.perforations()[seg]) {
 
                 const int cell_idx = this->well_cells_[perf];
                 const auto& intQuants = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
                 const auto& fs = intQuants.fluidState();
 
                 // pressure difference between the segment and the perforation
-                const EvalWell perf_seg_press_diff = this->gravity_ * this->segments_.densities_[seg] * this->segments_.perforation_depth_diffs_[perf];
+                const EvalWell perf_seg_press_diff = this->segments_.getPressureDiffSegPerf(seg, perf);
                 // pressure difference between the perforation and the grid cell
                 const double cell_perf_press_diff = this->cell_perforation_pressure_diffs_[perf];
 
@@ -1893,7 +1895,7 @@ namespace Opm
         double max_pressure = 0.0;
         const int nseg = this->numberOfSegments();
         for (int seg = 0; seg < nseg; ++seg) {
-            for (const int perf : this->segments_.perforations_[seg]) {
+            for (const int perf : this->segments_.perforations()[seg]) {
                 const int cell_idx = this->well_cells_[perf];
                 const auto& int_quants = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
                 const auto& fs = int_quants.fluidState();
@@ -1921,7 +1923,7 @@ namespace Opm
         for (int seg = 0; seg < nseg; ++seg) {
             // calculating the perforation rate for each perforation that belongs to this segment
             const Scalar seg_pressure = getValue(this->primary_variables_.getSegmentPressure(seg));
-            for (const int perf : this->segments_.perforations_[seg]) {
+            for (const int perf : this->segments_.perforations()[seg]) {
                 const int cell_idx = this->well_cells_[perf];
                 const auto& int_quants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
                 std::vector<Scalar> mob(this->num_components_, 0.0);

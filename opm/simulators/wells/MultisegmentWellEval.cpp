@@ -69,8 +69,8 @@ MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 initMatrixAndVectors(const int num_cells)
 {
     linSys_.init(num_cells, baseif_.numPerfs(),
-                 baseif_.cells(), segments_.inlets_,
-                 segments_.perforations_);
+                 baseif_.cells(), segments_.inlets(),
+                 segments_.perforations());
     primary_variables_.resize(this->numberOfSegments());
 }
 
@@ -192,7 +192,7 @@ handleAccelerationPressureLoss(const int seg,
 
     MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(baseif_).
         assemblePressureLoss(seg,
-                             segments_.upwinding_segments_[seg],
+                             segments_.upwinding_segment(seg),
                              accelerationPressureLoss, linSys_);
 }
 
@@ -227,7 +227,7 @@ assembleDefaultPressureEq(const int seg,
     const int outlet_segment_index = this->segmentNumberToIndex(this->segmentSet()[seg].outletSegment());
     const EvalWell outlet_pressure = primary_variables_.getSegmentPressure(outlet_segment_index);
 
-    const int seg_upwind = segments_.upwinding_segments_[seg];
+    const int seg_upwind = segments_.upwinding_segment(seg);
     MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(baseif_).
         assemblePressureEq(seg, seg_upwind, outlet_segment_index,
                            pressure_equation, outlet_pressure, linSys_);
@@ -290,7 +290,7 @@ assembleICDPressureEq(const int seg,
     const int outlet_segment_index = this->segmentNumberToIndex(this->segmentSet()[seg].outletSegment());
     const EvalWell outlet_pressure = primary_variables_.getSegmentPressure(outlet_segment_index);
 
-    const int seg_upwind = segments_.upwinding_segments_[seg];
+    const int seg_upwind = segments_.upwinding_segment(seg);
     MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(baseif_).
         assemblePressureEq(seg, seg_upwind, outlet_segment_index,
                            pressure_equation, outlet_pressure,

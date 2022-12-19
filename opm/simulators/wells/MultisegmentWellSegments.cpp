@@ -322,6 +322,14 @@ getHydroPressureLoss(const int seg) const
 }
 
 template<class FluidSystem, class Indices, class Scalar>
+Scalar MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
+getPressureDiffSegPerf(const int seg,
+                       const int perf) const
+{
+    return well_.gravity() * densities_[seg].value() * perforation_depth_diffs_[perf];
+}
+
+template<class FluidSystem, class Indices, class Scalar>
 typename MultisegmentWellSegments<FluidSystem,Indices,Scalar>::EvalWell
 MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
 getSurfaceVolume(const EvalWell& temperature,

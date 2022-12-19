@@ -53,6 +53,10 @@ public:
 
     EvalWell getHydroPressureLoss(const int seg) const;
 
+    //! Pressure difference between segment and perforation.
+    Scalar getPressureDiffSegPerf(const int seg,
+                                  const int perf) const;
+
     EvalWell getSurfaceVolume(const EvalWell& temperature,
                               const EvalWell& saltConcentration,
                               const PrimaryVariables& primary_variables,
@@ -74,6 +78,37 @@ public:
     // pressure loss due to acceleration
     EvalWell accelerationPressureLoss(const int seg) const;
 
+    const std::vector<std::vector<int>>& inlets() const
+    {
+        return inlets_;
+    }
+
+    const std::vector<std::vector<int>>& perforations() const
+    {
+        return perforations_;
+    }
+
+    int upwinding_segment(const int seg) const
+    {
+        return upwinding_segments_[seg];
+    }
+
+    double getRefDensity() const
+    {
+        return densities_[0].value();
+    }
+
+    const EvalWell& density(const int seg) const
+    {
+        return densities_[seg];
+    }
+
+    double perforation_depth_diff(const int perf) const
+    {
+        return perforation_depth_diffs_[perf];
+    }
+
+private:
     // TODO: trying to use the information from the Well opm-parser as much
     // as possible, it will possibly be re-implemented later for efficiency reason.
 
@@ -112,7 +147,6 @@ public:
     std::vector<std::vector<EvalWell>> phase_fractions_;
     std::vector<std::vector<EvalWell>> phase_viscosities_;
 
-private:
     const WellInterfaceGeneric& well_;
 };
 
