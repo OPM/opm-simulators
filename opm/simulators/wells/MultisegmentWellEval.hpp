@@ -53,36 +53,10 @@ template<typename FluidSystem, typename Indices, typename Scalar>
 class MultisegmentWellEval : public MultisegmentWellGeneric<Scalar>
 {
 protected:
-    // TODO: for now, not considering the polymer, solvent and so on to simplify the development process.
-
-    // TODO: we need to have order for the primary variables and also the order for the well equations.
-    // sometimes, they are similar, while sometimes, they can have very different forms.
-
-    // Table showing the primary variable indices, depending on what phases are present:
-    //
-    //         WOG     OG     WG     WO    W/O/G (single phase)
-    // WQTotal   0      0      0      0                       0
-    // WFrac     1  -1000      1      1                   -1000
-    // GFrac     2      1  -1000  -1000                   -1000
-    // Spres     3      2      2      2                       1
-
-    static constexpr bool has_water = (Indices::waterSwitchIdx >= 0);
-    static constexpr bool has_gas = (Indices::compositionSwitchIdx >= 0);
-    static constexpr bool has_oil = (Indices::numPhases - has_gas - has_water) > 0;
-
-    // In the implementation, one should use has_wfrac_variable
-    // rather than has_water to check if you should do something
-    // with the variable at the WFrac location, similar for GFrac.
-    static constexpr bool has_wfrac_variable = has_water && Indices::numPhases > 1;
-    static constexpr bool has_gfrac_variable = has_gas && has_oil;
-
-    static constexpr int WQTotal = 0;
-    static constexpr int WFrac = has_wfrac_variable ? 1 : -1000;
-    static constexpr int GFrac = has_gfrac_variable ? has_wfrac_variable + 1 : -1000;
-    static constexpr int SPres = has_wfrac_variable + has_gfrac_variable + 1;
-
-    //  the number of well equations  TODO: it should have a more general strategy for it
-    static constexpr int numWellEq = Indices::numPhases + 1;
+    using PrimaryVariables = MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>;
+    static constexpr int numWellEq = PrimaryVariables::numWellEq;
+    static constexpr int SPres = PrimaryVariables::SPres;
+    static constexpr int WQTotal = PrimaryVariables::WQTotal;
 
     using Equations = MultisegmentWellEquations<Scalar,numWellEq,Indices::numEq>;
 
@@ -92,7 +66,7 @@ protected:
     // TODO: for more efficient implementation, we should have EvalReservoir, EvalWell, and EvalRerservoirAndWell
     //                                                         EvalR (Eval), EvalW, EvalRW
     // TODO: for now, we only use one type to save some implementation efforts, while improve later.
-    using EvalWell = DenseAd::Evaluation<double, /*size=*/Indices::numEq + numWellEq>;
+    using EvalWell = typename PrimaryVariables::EvalWell;
     using Eval = DenseAd::Evaluation<Scalar, /*size=*/Indices::numEq>;
 
 public:
@@ -178,7 +152,7 @@ protected:
 
     Equations linSys_; //!< The equation system
 
-    MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar> primary_variables_;
+    PrimaryVariables primary_variables_; //!< The primary variables
 
     // the upwinding segment for each segment based on the flow direction
     std::vector<int> upwinding_segments_;
