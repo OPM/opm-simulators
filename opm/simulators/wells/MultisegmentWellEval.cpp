@@ -69,7 +69,8 @@ MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 initMatrixAndVectors(const int num_cells)
 {
     linSys_.init(num_cells, baseif_.numPerfs(),
-                 baseif_.cells(), segments_.perforations_);
+                 baseif_.cells(), segments_.inlets_,
+                 segments_.perforations_);
     primary_variables_.resize(this->numberOfSegments());
 }
 
@@ -755,7 +756,7 @@ handleAccelerationPressureLoss(const int seg,
 
     EvalWell accelerationPressureLoss = mswellhelpers::velocityHead(area, mass_rate, density);
     // handling the velocity head of intlet segments
-    for (const int inlet : this->segment_inlets_[seg]) {
+    for (const int inlet : this->segments_.inlets_[seg]) {
         const int seg_upwind_inlet = segments_.upwinding_segments_[inlet];
         const double inlet_area = this->segmentSet()[inlet].crossArea();
         EvalWell inlet_density = this->segments_.densities_[seg_upwind_inlet];

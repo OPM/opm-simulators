@@ -57,6 +57,9 @@ public:
     // the segment the perforation belongs to
     std::vector<double> perforation_depth_diffs_;
 
+    // the inlet segments for each segment. It is for convenience and efficiency reason
+    std::vector<std::vector<int>> inlets_;
+
     // the densities of segment fluids
     // we should not have this member variable
     std::vector<EvalWell> densities_;

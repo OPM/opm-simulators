@@ -43,6 +43,7 @@ MultisegmentWellSegments(const int numSegments,
                          WellInterfaceGeneric& well)
     : perforations_(numSegments)
     , perforation_depth_diffs_(well.numPerfs(), 0.0)
+    , inlets_(well.wellEcl().getSegments().size())
     , densities_(numSegments, 0.0)
     , mass_rates_(numSegments, 0.0)
     , viscosities_(numSegments, 0.0)
@@ -83,6 +84,18 @@ MultisegmentWellSegments(const int numSegments,
             i_perf_wells++;
         }
     }
+
+    // initialize the segment_inlets_
+    for (const Segment& segment : segment_set) {
+        const int segment_number = segment.segmentNumber();
+        const int outlet_segment_number = segment.outletSegment();
+        if (outlet_segment_number > 0) {
+            const int segment_index = segment_set.segmentNumberToIndex(segment_number);
+            const int outlet_segment_index = segment_set.segmentNumberToIndex(outlet_segment_number);
+            inlets_[outlet_segment_index].push_back(segment_index);
+        }
+    }
+
 }
 
 #define INSTANCE(...) \

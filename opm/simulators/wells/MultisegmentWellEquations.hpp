@@ -71,11 +71,13 @@ public:
     //! \param num_cells Total number of cells
     //! \param numPerfs Number of perforations
     //! \param cells Cell indices for perforations
-    //! \param perforations Cell indices for segment perforations
+    //! \param segment_inlets Cell indices for segment inlets
+    //! \param segment_perforations Cell indices for segment perforations
     void init(const int num_cells,
               const int numPerfs,
               const std::vector<int>& cells,
-              const std::vector<std::vector<int>>& perforations);
+              const std::vector<std::vector<int>>& segment_inlets,
+              const std::vector<std::vector<int>>& segment_perforations);
 
     //! \brief Set all coefficients to 0.
     void clear();

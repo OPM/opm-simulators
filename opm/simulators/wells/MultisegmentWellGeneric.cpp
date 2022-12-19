@@ -46,21 +46,8 @@ template<typename Scalar>
 MultisegmentWellGeneric<Scalar>::
 MultisegmentWellGeneric(WellInterfaceGeneric& baseif)
     : baseif_(baseif)
-    , segment_inlets_(numberOfSegments())
     , segment_depth_diffs_(numberOfSegments(), 0.0)
 {
-    // initialize the segment_inlets_
-    for (int seg = 0; seg < numberOfSegments(); ++seg) {
-        const Segment& segment = segmentSet()[seg];
-        const int segment_number = segment.segmentNumber();
-        const int outlet_segment_number = segment.outletSegment();
-        if (outlet_segment_number > 0) {
-            const int segment_index = segmentNumberToIndex(segment_number);
-            const int outlet_segment_index = segmentNumberToIndex(outlet_segment_number);
-            segment_inlets_[outlet_segment_index].push_back(segment_index);
-        }
-    }
-
     // calculating the depth difference between the segment and its oulet_segments
     // for the top segment, we will make its zero unless we find other purpose to use this value
     for (int seg = 1; seg < numberOfSegments(); ++seg) {
@@ -75,7 +62,8 @@ MultisegmentWellGeneric(WellInterfaceGeneric& baseif)
 template<typename Scalar>
 void
 MultisegmentWellGeneric<Scalar>::
-scaleSegmentRatesWithWellRates(const std::vector<std::vector<int>>& segment_perforations,
+scaleSegmentRatesWithWellRates(const std::vector<std::vector<int>>& segment_inlets,
+                               const std::vector<std::vector<int>>& segment_perforations,
                                WellState& well_state) const
 {
     auto& ws = well_state.well(baseif_.indexOfWell());
@@ -105,7 +93,7 @@ scaleSegmentRatesWithWellRates(const std::vector<std::vector<int>>& segment_perf
             }
 
             std::vector<double> rates;
-            WellState::calculateSegmentRates(segment_inlets_,
+            WellState::calculateSegmentRates(segment_inlets,
                                              segment_perforations,
                                              perforation_rates,
                                              num_single_phase, 0, rates);
@@ -148,14 +136,6 @@ MultisegmentWellGeneric<Scalar>::
 compPressureDrop() const
 {
     return segmentSet().compPressureDrop();
-}
-
-template<typename Scalar>
-const std::vector<std::vector<int>>&
-MultisegmentWellGeneric<Scalar>::
-segmentInlets() const
-{
-    return segment_inlets_;
 }
 
 template<typename Scalar>

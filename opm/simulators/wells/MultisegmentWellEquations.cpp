@@ -51,6 +51,7 @@ void MultisegmentWellEquations<Scalar,numWellEq,numEq>::
 init(const int num_cells,
      const int numPerfs,
      const std::vector<int>& cells,
+     const std::vector<std::vector<int>>& segment_inlets,
      const std::vector<std::vector<int>>& perforations)
 {
     duneB_.setBuildMode(OffDiagMatWell::row_wise);
@@ -65,7 +66,7 @@ init(const int num_cells,
     // NNZ = number_of_segments + 2 * (number_of_inlets / number_of_outlets)
     {
         int nnz_d = well_.numberOfSegments();
-        for (const std::vector<int>& inlets : well_.segmentInlets()) {
+        for (const std::vector<int>& inlets : segment_inlets) {
             nnz_d += 2 * inlets.size();
         }
         duneD_.setSize(well_.numberOfSegments(), well_.numberOfSegments(), nnz_d);
@@ -90,7 +91,7 @@ init(const int num_cells,
         row.insert(seg);
 
         // insert the item related to its inlets
-        for (const int& inlet : well_.segmentInlets()[seg]) {
+        for (const int& inlet : segment_inlets[seg]) {
             row.insert(inlet);
         }
     }

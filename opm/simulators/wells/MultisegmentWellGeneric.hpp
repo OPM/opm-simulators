@@ -41,9 +41,6 @@ template <typename Scalar>
 class MultisegmentWellGeneric
 {
 public:
-    //! \brief Returns the inlet segments for each segment.
-    const std::vector<std::vector<int>>& segmentInlets() const;
-
     // get the WellSegments from the well_ecl_
     const WellSegments& segmentSet() const;
 
@@ -58,7 +55,8 @@ protected:
     MultisegmentWellGeneric(WellInterfaceGeneric& baseif);
 
     // scale the segment rates and pressure based on well rates and bhp
-    void scaleSegmentRatesWithWellRates(const std::vector<std::vector<int>>& segment_perforations,
+    void scaleSegmentRatesWithWellRates(const std::vector<std::vector<int>>& segment_inlets,
+                                        const std::vector<std::vector<int>>& segment_perforations,
                                         WellState& well_state) const;
     void scaleSegmentPressuresWithBhp(WellState& well_state) const;
 
@@ -75,9 +73,6 @@ protected:
     bool frictionalPressureLossConsidered() const;
 
     const WellInterfaceGeneric& baseif_;
-
-    // the inlet segments for each segment. It is for convenience and efficiency reason
-    std::vector<std::vector<int>> segment_inlets_;
 
     std::vector<double> segment_depth_diffs_;
 };

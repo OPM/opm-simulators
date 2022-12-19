@@ -161,7 +161,9 @@ namespace Opm
         Base::updateWellStateWithTarget(ebos_simulator, group_state, well_state, deferred_logger);
         // scale segment rates based on the wellRates
         // and segment pressure based on bhp
-        this->scaleSegmentRatesWithWellRates(this->segments_.perforations_, well_state);
+        this->scaleSegmentRatesWithWellRates(this->segments_.inlets_,
+                                             this->segments_.perforations_,
+                                             well_state);
         this->scaleSegmentPressuresWithBhp(well_state);
     }
 
@@ -441,7 +443,8 @@ namespace Opm
                 ws.surface_rates[phase] = sign * ws.well_potentials[phase];
             }
         }
-        well_copy.scaleSegmentRatesWithWellRates(this->segments_.perforations_,
+        well_copy.scaleSegmentRatesWithWellRates(this->segments_.inlets_,
+                                                 this->segments_.perforations_,
                                                  well_state_copy);
 
         well_copy.calculateExplicitQuantities(ebosSimulator, well_state_copy, deferred_logger);
@@ -1587,7 +1590,7 @@ namespace Opm
 
             // considering the contributions from the inlet segments
             {
-                for (const int inlet : this->segment_inlets_[seg]) {
+                for (const int inlet : this->segments_.inlets_[seg]) {
                     const int inlet_upwind = this->segments_.upwinding_segments_[inlet];
                     for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
                         const EvalWell inlet_rate =
