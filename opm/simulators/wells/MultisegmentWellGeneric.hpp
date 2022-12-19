@@ -73,8 +73,6 @@ protected:
     bool frictionalPressureLossConsidered() const;
 
     const WellInterfaceGeneric& baseif_;
-
-    std::vector<double> segment_depth_diffs_;
 };
 
 }

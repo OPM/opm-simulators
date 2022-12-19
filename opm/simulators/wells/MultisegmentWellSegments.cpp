@@ -44,6 +44,7 @@ MultisegmentWellSegments(const int numSegments,
     : perforations_(numSegments)
     , perforation_depth_diffs_(well.numPerfs(), 0.0)
     , inlets_(well.wellEcl().getSegments().size())
+    , depth_diffs_(numSegments, 0.0)
     , densities_(numSegments, 0.0)
     , mass_rates_(numSegments, 0.0)
     , viscosities_(numSegments, 0.0)
@@ -96,6 +97,15 @@ MultisegmentWellSegments(const int numSegments,
         }
     }
 
+    // calculating the depth difference between the segment and its oulet_segments
+    // for the top segment, we will make its zero unless we find other purpose to use this value
+    for (int seg = 1; seg < numSegments; ++seg) {
+        const double segment_depth = segment_set[seg].depth();
+        const int outlet_segment_number = segment_set[seg].outletSegment();
+        const Segment& outlet_segment = segment_set[segment_set.segmentNumberToIndex(outlet_segment_number)];
+        const double outlet_depth = outlet_segment.depth();
+        depth_diffs_[seg] = segment_depth - outlet_depth;
+    }
 }
 
 #define INSTANCE(...) \

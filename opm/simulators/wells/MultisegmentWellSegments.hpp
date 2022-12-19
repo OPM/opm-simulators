@@ -60,6 +60,8 @@ public:
     // the inlet segments for each segment. It is for convenience and efficiency reason
     std::vector<std::vector<int>> inlets_;
 
+    std::vector<double> depth_diffs_;
+
     // the densities of segment fluids
     // we should not have this member variable
     std::vector<EvalWell> densities_;

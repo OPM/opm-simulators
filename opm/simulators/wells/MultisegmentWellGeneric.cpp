@@ -46,17 +46,7 @@ template<typename Scalar>
 MultisegmentWellGeneric<Scalar>::
 MultisegmentWellGeneric(WellInterfaceGeneric& baseif)
     : baseif_(baseif)
-    , segment_depth_diffs_(numberOfSegments(), 0.0)
 {
-    // calculating the depth difference between the segment and its oulet_segments
-    // for the top segment, we will make its zero unless we find other purpose to use this value
-    for (int seg = 1; seg < numberOfSegments(); ++seg) {
-        const double segment_depth = segmentSet()[seg].depth();
-        const int outlet_segment_number = segmentSet()[seg].outletSegment();
-        const Segment& outlet_segment = segmentSet()[segmentNumberToIndex(outlet_segment_number)];
-        const double outlet_depth = outlet_segment.depth();
-        segment_depth_diffs_[seg] = segment_depth - outlet_depth;
-    }
 }
 
 template<typename Scalar>

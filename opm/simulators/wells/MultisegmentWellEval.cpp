@@ -360,7 +360,7 @@ typename MultisegmentWellEval<FluidSystem,Indices,Scalar>::EvalWell
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 getHydroPressureLoss(const int seg) const
 {
-    return segments_.densities_[seg] * baseif_.gravity() * this->segment_depth_diffs_[seg];
+    return segments_.densities_[seg] * baseif_.gravity() * segments_.depth_diffs_[seg];
 }
 
 template<typename FluidSystem, typename Indices, typename Scalar>
