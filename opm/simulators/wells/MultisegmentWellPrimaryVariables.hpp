@@ -24,6 +24,8 @@
 
 #include <opm/material/densead/Evaluation.hpp>
 
+#include <opm/simulators/wells/MultisegmentWellEquations.hpp>
+
 #include <array>
 #include <vector>
 
@@ -70,6 +72,9 @@ public:
 
     using EvalWell = DenseAd::Evaluation<double, /*size=*/Indices::numEq + numWellEq>;
 
+    using Equations = MultisegmentWellEquations<Scalar,numWellEq,Indices::numEq>;
+    using BVectorWell = typename Equations::BVectorWell;
+
     MultisegmentWellPrimaryVariables(const WellInterfaceIndices<FluidSystem,Indices,Scalar>& well)
         : well_(well)
     {}
@@ -83,6 +88,12 @@ public:
     //! \brief Copy values from well state.
     void update(const WellState& well_state);
 
+    //! \brief Update values from newton update vector.
+    void updateNewton(const BVectorWell& dwells,
+                      const double relaxation_factor,
+                      const double DFLimit,
+                      const double max_pressure_change);
+
     // the values for the primary varibles
     // based on different solutioin strategies, the wells can have different primary variables
     std::vector<std::array<double, numWellEq> > value_;
@@ -90,10 +101,10 @@ public:
     // the Evaluation for the well primary variables, which contain derivativles and are used in AD calculation
     std::vector<std::array<EvalWell, numWellEq> > evaluation_;
 
+private:
     //! \brief Handle non-reasonable fractions due to numerical overshoot.
     void processFractions(const int seg);
 
-private:
     const WellInterfaceIndices<FluidSystem,Indices,Scalar>& well_; //!< Reference to well interface
 };
 

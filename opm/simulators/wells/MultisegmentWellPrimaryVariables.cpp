@@ -144,6 +144,54 @@ update(const WellState& well_state)
 
 template<class FluidSystem, class Indices, class Scalar>
 void MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::
+updateNewton(const BVectorWell& dwells,
+             const double relaxation_factor,
+             const double dFLimit,
+             const double max_pressure_change)
+{
+    const std::vector<std::array<double, numWellEq>> old_primary_variables = value_;
+
+    for (size_t seg = 0; seg < value_.size(); ++seg) {
+        if (has_wfrac_variable) {
+            const int sign = dwells[seg][WFrac] > 0. ? 1 : -1;
+            const double dx_limited = sign * std::min(std::abs(dwells[seg][WFrac]) * relaxation_factor, dFLimit);
+            value_[seg][WFrac] = old_primary_variables[seg][WFrac] - dx_limited;
+        }
+
+        if (has_gfrac_variable) {
+            const int sign = dwells[seg][GFrac] > 0. ? 1 : -1;
+            const double dx_limited = sign * std::min(std::abs(dwells[seg][GFrac]) * relaxation_factor, dFLimit);
+            value_[seg][GFrac] = old_primary_variables[seg][GFrac] - dx_limited;
+        }
+
+        // handling the overshooting or undershooting of the fractions
+        this->processFractions(seg);
+
+        // update the segment pressure
+        {
+            const int sign = dwells[seg][SPres] > 0.? 1 : -1;
+            const double dx_limited = sign * std::min(std::abs(dwells[seg][SPres]) * relaxation_factor, max_pressure_change);
+            value_[seg][SPres] = std::max(old_primary_variables[seg][SPres] - dx_limited, 1e5);
+        }
+
+        // update the total rate // TODO: should we have a limitation of the total rate change?
+        {
+            value_[seg][WQTotal] = old_primary_variables[seg][WQTotal] - relaxation_factor * dwells[seg][WQTotal];
+
+            // make sure that no injector produce and no producer inject
+            if (seg == 0) {
+                if (well_.isInjector()) {
+                    value_[seg][WQTotal] = std::max(value_[seg][WQTotal], 0.0);
+                } else {
+                    value_[seg][WQTotal] = std::min(value_[seg][WQTotal], 0.0);
+                }
+            }
+        }
+    }
+}
+
+template<class FluidSystem, class Indices, class Scalar>
+void MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::
 processFractions(const int seg)
 {
     static constexpr int Water = BlackoilPhases::Aqua;

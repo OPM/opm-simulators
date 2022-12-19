@@ -616,10 +616,10 @@ namespace Opm
 
         const double dFLimit = this->param_.dwell_fraction_max_;
         const double max_pressure_change = this->param_.max_pressure_change_ms_wells_;
-        this->MSWEval::updatePrimaryVariablesNewton(dwells,
-                                                    relaxation_factor,
-                                                    dFLimit,
-                                                    max_pressure_change);
+        this->primary_variables_.updateNewton(dwells,
+                                              relaxation_factor,
+                                              dFLimit,
+                                              max_pressure_change);
 
         this->updateWellStateFromPrimaryVariables(well_state, getRefDensity(), deferred_logger);
         Base::calculateReservoirRates(well_state.well(this->index_of_well_));

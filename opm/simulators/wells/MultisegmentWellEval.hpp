@@ -133,12 +133,6 @@ protected:
 
     void updateUpwindingSegments();
 
-    // updating the well_state based on well solution dwells
-    void updatePrimaryVariablesNewton(const BVectorWell& dwells,
-                                      const double relaxation_factor,
-                                      const double DFLimit,
-                                      const double max_pressure_change);
-
     void computeSegmentFluidProperties(const EvalWell& temperature,
                                        const EvalWell& saltConcentration,
                                        int pvt_region_index,
