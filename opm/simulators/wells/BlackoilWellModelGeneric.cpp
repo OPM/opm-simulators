@@ -935,6 +935,8 @@ updateNetworkPressures(const int reportStepIdx)
     // can potentially be used optimize this function.
 
     // Get the network and return if inactive.
+
+    // TODO: something extra might need to be handled if later the nodes in the network are changing with time
     const auto& network = schedule()[reportStepIdx].network();
     if (!network.active()) {
         return 0.0;
@@ -957,8 +959,13 @@ updateNetworkPressures(const int reportStepIdx)
                 network_imbalance = std::abs(change);
             }
             // we dampen the amount of the nodal pressure can change during one iteration
-            // due to the fact our nodal pressure calcualtion is somewhat explicit
-            const double allowed_change = std::max(std::min(0.1*std::abs(change), 5.e5), 0.05e5);
+            // due to the fact our nodal pressure calculation is somewhat explicit
+            // TODO: the following parameters are subject to adjustment for optimization purpose
+            constexpr double upper_update_bound = 5.0 * unit::barsa;
+            constexpr double lower_update_bound = 0.05 * unit::barsa;
+            // relative dampening factor based on update value
+            constexpr double damping_factor = 0.1;
+            const double allowed_change = std::max(std::min(damping_factor * std::abs(change), upper_update_bound), lower_update_bound);
             if (abs(change) > allowed_change) {
                 const double sign = change > 0 ? 1. : -1.;
                 node_pressures_[name] = pressure + sign * allowed_change;
@@ -983,9 +990,11 @@ updateNetworkPressures(const int reportStepIdx)
                 // set the dynamic THP constraint of the well accordingly.
                 const double new_limit = it->second;
                 well->setDynamicThpLimit(new_limit);
+                // TODO: should this happen here?
+                // testing shows the following code matters. Somehow the update the THP is missing
+                // in the current updateWellControls part under certain circumstances
                 SingleWellState& ws = this->wellState()[well->indexOfWell()];
                 const bool thp_is_limit = ws.production_cmode == Well::ProducerCMode::THP;
-                // TODO: should this happen here?
                 if (thp_is_limit) {
                     ws.thp = well->getTHPConstraint(summaryState_);
                 }

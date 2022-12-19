@@ -877,7 +877,7 @@ namespace Opm {
         // TODO: should we also have the group and network backed-up here?
         auto& well_state = this->wellState();
         // B_avg is updated in the beginTimeStep();
-        const int max_iter = 100;
+        const size_t max_iter = 100;
         bool converged = false;
         size_t iter = 0;
         bool changed_well_group = false;
@@ -903,14 +903,14 @@ namespace Opm {
             this->initPrimaryVariablesEvaluation();
         } while (iter < max_iter);
 
-#if EXTRA_NETWORK_OUTPUT
-        // TODO: make the following to the logger system
         if (!converged) {
-            std::cout << " balanceNetwork not converged with " << max_iter << " iterations !" << std::endl;
+            const std::string msg = fmt::format("balanceNetwork did not get converged with {} iterations, and unconverged "
+                                                "network balance result will be used", max_iter);
+            deferred_logger.warning(msg);
         } else {
-            std::cout << " balanceNetwork gets converged after " << iter << " iterations " << std::endl;
+            const std::string msg = fmt::format("balanceNetwork get converged with {} iterations", iter);
+            deferred_logger.debug(msg);
         }
-#endif
     }
 
 
@@ -974,29 +974,29 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     updateWellControlsAndNetwork(DeferredLogger& local_deferredLogger, const bool balance_network)
     {
-        // not necessarily that we always need to update once of the network solutions
+        // TODO: not necessarily that we always need to update once of the network solutions
         // TODO: we do not consider what happens if we could not get network converged
         // TODO: and we do not consider whether well_group_control_changed affect the network solution
         // here, there might be something missing in the logic or there should be a better logic
         // to handle the coupling between the network and well/group solution
         bool do_network_update = true;
         bool well_group_control_changed = false;
+        // after certain number of the iterations, we use relaxed tolerance for the network update
+        constexpr size_t iteration_to_relax = 100;
+        // after certain number of the iterations, we terminate
+        constexpr size_t max_iteration = 200;
         size_t network_iteration = 0;
         const auto &comm = ebosSimulator_.vanguard().grid().comm();
         while (do_network_update) {
-            if (network_iteration == 101) {
-                if (comm.rank() == 0) {
-                    std::cout << " more than 100 iterations are used, we are using relaxed tolerance for network update now" << std::endl;
-                }
+            if (network_iteration == iteration_to_relax) {
+                local_deferredLogger.info(std::to_string(iteration_to_relax) + " iterations are used, we are using relaxed tolerance for network update now");
             }
-            const bool relax_network_balance = network_iteration > 100;
+            const bool relax_network_balance = network_iteration >= 100;
             std::tie(do_network_update, well_group_control_changed) =
                     updateWellControlsAndNetworkIteration(local_deferredLogger, balance_network, relax_network_balance);
-            network_iteration ++;
-            if (network_iteration == 201) {
-                if (comm.rank() == 0) {
-                    std::cout << " more than 200 iterations are used., we stop the network update now " << std::endl;
-                }
+            ++network_iteration;
+            if (network_iteration == max_iteration) {
+                local_deferredLogger.info("maximum of " + std::to_string(max_iteration) + " iterations has been used, we stop the network update now");
                 break;
             }
         }
@@ -1620,13 +1620,15 @@ namespace Opm {
         // The following should put in one function
         bool more_network_update = false;
         if (shouldBalanceNetwork(episodeIdx, iterationIdx) || balance_network) {
-            const auto local_network_imbalance = updateNetworkPressures(episodeIdx);
-            const double network_imbalance = comm.max(local_network_imbalance);
+            const auto network_imbalance = updateNetworkPressures(episodeIdx);
             const auto& balance = schedule()[episodeIdx].network_balance();
             const double tolerance = relax_network_tolerance ? 10.0 * balance.pressure_tolerance() :  balance.pressure_tolerance();
+#if EXTRA_NETWORK_OUTPUT
+            // TODO: it should go to the DeferredLogger system
             if (comm.rank() == 0) {
                 std::cout << "network_imbalance " << network_imbalance/1.e5 << " network tolerance " << tolerance/1.e5 << std::endl;
             }
+#endif
             if (network_imbalance > tolerance) {
                 more_network_update = true;
             }

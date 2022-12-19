@@ -394,7 +394,7 @@ namespace Opm {
                                                   const bool balance_network,
                                                   const bool relax_network_tolerance);
 
-            bool updateWellControlsAndNetwork(DeferredLogger& local_deferredLogger, const bool balance_network = false);
+            bool updateWellControlsAndNetwork(DeferredLogger& local_deferredLogger, const bool balance_network);
 
             // called at the end of a time step
             void timeStepSucceeded(const double& simulationTime, const double dt);
