@@ -1645,7 +1645,6 @@ namespace Opm
             if (seg == 0) { // top segment, pressure equation is the control equation
                 const auto& summaryState = ebosSimulator.vanguard().summaryState();
                 const Schedule& schedule = ebosSimulator.vanguard().schedule();
-                std::function<EvalWell(const int)> gQ = [this](int a) { return this->primary_variables_.getQs(a); };
                 MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(*this).
                         assembleControlEq(well_state,
                                         group_state,
@@ -1654,9 +1653,7 @@ namespace Opm
                                         inj_controls,
                                         prod_controls,
                                         getRefDensity(),
-                                        this->primary_variables_.getWQTotal(),
-                                        this->primary_variables_.getBhp(),
-                                        gQ,
+                                        this->primary_variables_,
                                         this->linSys_,
                                         deferred_logger);
             } else {
