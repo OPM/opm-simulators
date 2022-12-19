@@ -445,7 +445,7 @@ private:
             short loc = 0;
             for (const auto& nbInfo : nbInfos) {
                 unsigned globJ = nbInfo.neighbor;
-                //assert(globJ != globI);
+                assert(globJ != globI);
                 res = 0.0;
                 bMat = 0.0;
                 adres = 0.0;
@@ -515,7 +515,7 @@ private:
             adres *= bdyInfo.bcdata.faceArea;
             setResAndJacobi(res, bMat, adres);
             residual_[globI] += res;
-            //jacobian_->addToBlock(globI, globI, bMat);
+            ////SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
             *diagMatAddress_[globI] += bMat;
         }
     }
