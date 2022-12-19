@@ -142,7 +142,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     updatePrimaryVariables(const WellState& well_state, DeferredLogger& /* deferred_logger */)
     {
-        this->MSWEval::updatePrimaryVariables(well_state);
+        this->primary_variables_.update(well_state);
     }
 
 

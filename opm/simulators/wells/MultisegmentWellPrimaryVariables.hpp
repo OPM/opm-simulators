@@ -31,6 +31,7 @@ namespace Opm
 {
 
 template<class FluidSystem, class Indices, class Scalar> class WellInterfaceIndices;
+class WellState;
 
 template<class FluidSystem, class Indices, class Scalar>
 class MultisegmentWellPrimaryVariables
@@ -78,6 +79,9 @@ public:
 
     //! \brief Initialize evaluations from values.
     void init();
+
+    //! \brief Copy values from well state.
+    void update(const WellState& well_state);
 
     // the values for the primary varibles
     // based on different solutioin strategies, the wells can have different primary variables
