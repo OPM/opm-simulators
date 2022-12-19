@@ -214,7 +214,7 @@ computeSegmentFluidProperties(const EvalWell& temperature,
         std::vector<EvalWell> visc(baseif_.numComponents(), 0.0);
         std::vector<EvalWell>& phase_densities = segment_phase_densities_[seg];
 
-        const EvalWell seg_pressure = getSegmentPressure(seg);
+        const EvalWell seg_pressure = primary_variables_.getSegmentPressure(seg);
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
             const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
             b[waterCompIdx] =
@@ -363,17 +363,9 @@ computeSegmentFluidProperties(const EvalWell& temperature,
 template<typename FluidSystem, typename Indices, typename Scalar>
 typename MultisegmentWellEval<FluidSystem,Indices,Scalar>::EvalWell
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
-getSegmentPressure(const int seg) const
-{
-    return primary_variables_.evaluation_[seg][SPres];
-}
-
-template<typename FluidSystem, typename Indices, typename Scalar>
-typename MultisegmentWellEval<FluidSystem,Indices,Scalar>::EvalWell
-MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 getBhp() const
 {
-    return getSegmentPressure(0);
+    return primary_variables_.getSegmentPressure(0);
 }
 
 template<typename FluidSystem, typename Indices, typename Scalar>
@@ -656,7 +648,7 @@ getSegmentSurfaceVolume(const EvalWell& temperature,
                         const int pvt_region_index,
                         const int seg_idx) const
 {
-    const EvalWell seg_pressure = getSegmentPressure(seg_idx);
+    const EvalWell seg_pressure = primary_variables_.getSegmentPressure(seg_idx);
 
     std::vector<EvalWell> mix_s(baseif_.numComponents(), 0.0);
     for (int comp_idx = 0; comp_idx < baseif_.numComponents(); ++comp_idx) {
@@ -846,7 +838,7 @@ assembleDefaultPressureEq(const int seg,
     assert(seg != 0); // not top segment
 
     // for top segment, the well control equation will be used.
-    EvalWell pressure_equation = getSegmentPressure(seg);
+    EvalWell pressure_equation = primary_variables_.getSegmentPressure(seg);
 
     // we need to handle the pressure difference between the two segments
     // we only consider the hydrostatic pressure loss first
@@ -866,7 +858,7 @@ assembleDefaultPressureEq(const int seg,
 
     // contribution from the outlet segment
     const int outlet_segment_index = this->segmentNumberToIndex(this->segmentSet()[seg].outletSegment());
-    const EvalWell outlet_pressure = getSegmentPressure(outlet_segment_index);
+    const EvalWell outlet_pressure = primary_variables_.getSegmentPressure(outlet_segment_index);
 
     const int seg_upwind = upwinding_segments_[seg];
     MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(baseif_).
@@ -1100,7 +1092,7 @@ assembleICDPressureEq(const int seg,
     // p_seg - deltaP - p_outlet = 0.
     // the major part is how to calculate the deltaP
 
-    EvalWell pressure_equation = getSegmentPressure(seg);
+    EvalWell pressure_equation = primary_variables_.getSegmentPressure(seg);
 
     EvalWell icd_pressure_drop;
     switch(this->segmentSet()[seg].segmentType()) {
@@ -1124,7 +1116,7 @@ assembleICDPressureEq(const int seg,
 
     // contribution from the outlet segment
     const int outlet_segment_index = this->segmentNumberToIndex(this->segmentSet()[seg].outletSegment());
-    const EvalWell outlet_pressure = getSegmentPressure(outlet_segment_index);
+    const EvalWell outlet_pressure = primary_variables_.getSegmentPressure(outlet_segment_index);
 
     const int seg_upwind = upwinding_segments_[seg];
     MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(baseif_).

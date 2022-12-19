@@ -361,6 +361,14 @@ getSegmentRateUpwinding(const int seg,
     return segment_rate;
 }
 
+template<class FluidSystem, class Indices, class Scalar>
+typename MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::EvalWell
+MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::
+getSegmentPressure(const int seg) const
+{
+    return evaluation_[seg][SPres];
+}
+
 #define INSTANCE(...) \
 template class MultisegmentWellPrimaryVariables<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>;
 

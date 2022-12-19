@@ -1600,7 +1600,7 @@ namespace Opm
             }
 
             // calculating the perforation rate for each perforation that belongs to this segment
-            const EvalWell seg_pressure = this->getSegmentPressure(seg);
+            const EvalWell seg_pressure = this->primary_variables_.getSegmentPressure(seg);
             auto& perf_data = ws.perf_data;
             auto& perf_rates = perf_data.phase_rates;
             auto& perf_press_state = perf_data.pressure;
@@ -1688,7 +1688,7 @@ namespace Opm
         const int nseg = this->numberOfSegments();
 
         for (int seg = 0; seg < nseg; ++seg) {
-            const EvalWell segment_pressure = this->getSegmentPressure(seg);
+            const EvalWell segment_pressure = this->primary_variables_.getSegmentPressure(seg);
             for (const int perf : this->segment_perforations_[seg]) {
 
                 const int cell_idx = this->well_cells_[perf];
@@ -1917,7 +1917,7 @@ namespace Opm
         const int nseg = this->numberOfSegments();
         for (int seg = 0; seg < nseg; ++seg) {
             // calculating the perforation rate for each perforation that belongs to this segment
-            const Scalar seg_pressure = getValue(this->getSegmentPressure(seg));
+            const Scalar seg_pressure = getValue(this->primary_variables_.getSegmentPressure(seg));
             for (const int perf : this->segment_perforations_[seg]) {
                 const int cell_idx = this->well_cells_[perf];
                 const auto& int_quants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));

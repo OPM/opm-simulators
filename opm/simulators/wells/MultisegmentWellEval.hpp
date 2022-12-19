@@ -143,7 +143,6 @@ protected:
     EvalWell getHydroPressureLoss(const int seg) const;
     EvalWell getQs(const int comp_idx) const;
     EvalWell getSegmentWQTotal(const int seg) const;
-    EvalWell getSegmentPressure(const int seg) const;
     EvalWell getSegmentRate(const int seg, const int comp_idx) const;
     EvalWell getSegmentSurfaceVolume(const EvalWell& temperature,
                                      const EvalWell& saltConcentration,

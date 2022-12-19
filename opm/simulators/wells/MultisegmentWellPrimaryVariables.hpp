@@ -109,6 +109,9 @@ public:
                                      const int seg_upwind,
                                      const size_t comp_idx) const;
 
+    //! \brief Get pressure for a segment.
+    EvalWell getSegmentPressure(const int seg) const;
+
     // the values for the primary varibles
     // based on different solutioin strategies, the wells can have different primary variables
     std::vector<std::array<double, numWellEq> > value_;
