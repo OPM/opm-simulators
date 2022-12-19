@@ -29,6 +29,8 @@
 namespace Opm
 {
 
+class WellInterfaceGeneric;
+
 template<typename FluidSystem, typename Indices, typename Scalar>
 class MultisegmentWellSegments
 {
@@ -37,7 +39,23 @@ class MultisegmentWellSegments
 
 public:
     MultisegmentWellSegments(const int numSegments,
-                             const int numComponents);
+                             WellInterfaceGeneric& well);
+
+    // TODO: trying to use the information from the Well opm-parser as much
+    // as possible, it will possibly be re-implemented later for efficiency reason.
+
+    // the completions that is related to each segment
+    // the completions's ids are their index in the vector well_index_, well_cell_
+    // This is also assuming the order of the completions in Well is the same with
+    // the order of the completions in wells.
+    // it is for convinience reason. we can just calcuate the inforation for segment once then using it for all the perofrations
+    // belonging to this segment
+    std::vector<std::vector<int>> perforations_;
+
+    // depth difference between the segment and the perforation
+    // or in another way, the depth difference between the perforation and
+    // the segment the perforation belongs to
+    std::vector<double> perforation_depth_diffs_;
 
     // the densities of segment fluids
     // we should not have this member variable
@@ -55,6 +73,9 @@ public:
     std::vector<std::vector<EvalWell>> phase_densities_;
     std::vector<std::vector<EvalWell>> phase_fractions_;
     std::vector<std::vector<EvalWell>> phase_viscosities_;
+
+private:
+    const WellInterfaceGeneric& well_;
 };
 
 }

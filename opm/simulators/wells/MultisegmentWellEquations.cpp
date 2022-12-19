@@ -50,7 +50,8 @@ template<class Scalar, int numWellEq, int numEq>
 void MultisegmentWellEquations<Scalar,numWellEq,numEq>::
 init(const int num_cells,
      const int numPerfs,
-     const std::vector<int>& cells)
+     const std::vector<int>& cells,
+     const std::vector<std::vector<int>>& perforations)
 {
     duneB_.setBuildMode(OffDiagMatWell::row_wise);
     duneC_.setBuildMode(OffDiagMatWell::row_wise);
@@ -98,7 +99,7 @@ init(const int num_cells,
     for (auto row = duneC_.createbegin(),
               end = duneC_.createend(); row != end; ++row) {
         // the number of the row corresponds to the segment number now.
-        for (const int& perf : well_.segmentPerforations()[row.index()]) {
+        for (const int& perf : perforations[row.index()]) {
             const int cell_idx = cells[perf];
             row.insert(cell_idx);
         }
@@ -108,7 +109,7 @@ init(const int num_cells,
     for (auto row = duneB_.createbegin(),
               end = duneB_.createend(); row != end; ++row) {
         // the number of the row corresponds to the segment number now.
-        for (const int& perf : well_.segmentPerforations()[row.index()]) {
+        for (const int& perf : perforations[row.index()]) {
             const int cell_idx = cells[perf];
             row.insert(cell_idx);
         }

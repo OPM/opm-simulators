@@ -44,9 +44,6 @@ public:
     //! \brief Returns the inlet segments for each segment.
     const std::vector<std::vector<int>>& segmentInlets() const;
 
-    //! \brief Returns the perforation index for each segment.
-    const std::vector<std::vector<int>>& segmentPerforations() const;
-
     // get the WellSegments from the well_ecl_
     const WellSegments& segmentSet() const;
 
@@ -61,7 +58,8 @@ protected:
     MultisegmentWellGeneric(WellInterfaceGeneric& baseif);
 
     // scale the segment rates and pressure based on well rates and bhp
-    void scaleSegmentRatesWithWellRates(WellState& well_state) const;
+    void scaleSegmentRatesWithWellRates(const std::vector<std::vector<int>>& segment_perforations,
+                                        WellState& well_state) const;
     void scaleSegmentPressuresWithBhp(WellState& well_state) const;
 
     // components of the pressure drop to be included
@@ -78,26 +76,10 @@ protected:
 
     const WellInterfaceGeneric& baseif_;
 
-    // TODO: trying to use the information from the Well opm-parser as much
-    // as possible, it will possibly be re-implemented later for efficiency reason.
-
-    // the completions that is related to each segment
-    // the completions's ids are their index in the vector well_index_, well_cell_
-    // This is also assuming the order of the completions in Well is the same with
-    // the order of the completions in wells.
-    // it is for convinience reason. we can just calcuate the inforation for segment once then using it for all the perofrations
-    // belonging to this segment
-    std::vector<std::vector<int>> segment_perforations_;
-
     // the inlet segments for each segment. It is for convenience and efficiency reason
     std::vector<std::vector<int>> segment_inlets_;
 
     std::vector<double> segment_depth_diffs_;
-
-    // depth difference between the segment and the perforation
-    // or in another way, the depth difference between the perforation and
-    // the segment the perforation belongs to
-    std::vector<double> perforation_segment_depth_diffs_;
 };
 
 }
