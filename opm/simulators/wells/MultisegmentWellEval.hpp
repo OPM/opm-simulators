@@ -25,6 +25,7 @@
 #include <opm/simulators/wells/MultisegmentWellEquations.hpp>
 #include <opm/simulators/wells/MultisegmentWellGeneric.hpp>
 #include <opm/simulators/wells/MultisegmentWellPrimaryVariables.hpp>
+#include <opm/simulators/wells/MultisegmentWellSegments.hpp>
 
 #include <opm/material/densead/Evaluation.hpp>
 
@@ -59,6 +60,7 @@ protected:
     static constexpr int WQTotal = PrimaryVariables::WQTotal;
 
     using Equations = MultisegmentWellEquations<Scalar,numWellEq,Indices::numEq>;
+    using MSWSegments = MultisegmentWellSegments<FluidSystem,Indices,Scalar>;
 
     using BVector = typename Equations::BVector;
     using BVectorWell = typename Equations::BVectorWell;
@@ -154,22 +156,7 @@ protected:
 
     PrimaryVariables primary_variables_; //!< The primary variables
 
-    // the upwinding segment for each segment based on the flow direction
-    std::vector<int> upwinding_segments_;
-
-    // the densities of segment fluids
-    // we should not have this member variable
-    std::vector<EvalWell> segment_densities_;
-
-    // the mass rate of the segments
-    std::vector<EvalWell> segment_mass_rates_;
-
-    // the viscosity of the segments
-    std::vector<EvalWell> segment_viscosities_;
-
-    std::vector<std::vector<EvalWell>> segment_phase_densities_;
-    std::vector<std::vector<EvalWell>> segment_phase_fractions_;
-    std::vector<std::vector<EvalWell>> segment_phase_viscosities_;
+    MSWSegments segments_; //!< Segment properties
 
     // depth difference between perforations and the perforated grid cells
     std::vector<double> cell_perforation_depth_diffs_;

@@ -57,13 +57,7 @@ MultisegmentWellEval(WellInterfaceIndices<FluidSystem,Indices,Scalar>& baseif)
     , baseif_(baseif)
     , linSys_(*this)
     , primary_variables_(baseif)
-    , upwinding_segments_(this->numberOfSegments(), 0)
-    , segment_densities_(this->numberOfSegments(), 0.0)
-    , segment_mass_rates_(this->numberOfSegments(), 0.0)
-    , segment_viscosities_(this->numberOfSegments(), 0.0)
-    , segment_phase_densities_(this->numberOfSegments(), std::vector<EvalWell>(baseif_.numComponents(), 0.0)) // number of phase here?
-    , segment_phase_fractions_(this->numberOfSegments(), std::vector<EvalWell>(baseif_.numComponents(), 0.0)) // number of phase here?
-    , segment_phase_viscosities_(this->numberOfSegments(), std::vector<EvalWell>(baseif_.numComponents(), 0.0)) // number of phase here?
+    , segments_(this->numberOfSegments(), baseif_.numComponents())
     , cell_perforation_depth_diffs_(baseif_.numPerfs(), 0.0)
     , cell_perforation_pressure_diffs_(baseif_.numPerfs(), 0.0)
 {
@@ -211,7 +205,7 @@ computeSegmentFluidProperties(const EvalWell& temperature,
 
         std::vector<EvalWell> b(baseif_.numComponents(), 0.0);
         std::vector<EvalWell> visc(baseif_.numComponents(), 0.0);
-        std::vector<EvalWell>& phase_densities = segment_phase_densities_[seg];
+        std::vector<EvalWell>& phase_densities = segments_.phase_densities_[seg];
 
         const EvalWell seg_pressure = primary_variables_.getSegmentPressure(seg);
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
@@ -300,7 +294,7 @@ computeSegmentFluidProperties(const EvalWell& temperature,
             }
         }
 
-        segment_phase_viscosities_[seg] = visc;
+        segments_.phase_viscosities_[seg] = visc;
 
         std::vector<EvalWell> mix(mix_s);
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
@@ -332,29 +326,29 @@ computeSegmentFluidProperties(const EvalWell& temperature,
             volrat += mix[comp_idx] / b[comp_idx];
         }
 
-        this->segment_viscosities_[seg] = 0.;
+        this->segments_.viscosities_[seg] = 0.;
         // calculate the average viscosity
         for (int comp_idx = 0; comp_idx < baseif_.numComponents(); ++comp_idx) {
             const EvalWell fraction =  mix[comp_idx] / b[comp_idx] / volrat;
             // TODO: a little more work needs to be done to handle the negative fractions here
-            this->segment_phase_fractions_[seg][comp_idx] = fraction; // >= 0.0 ? fraction : 0.0;
-            this->segment_viscosities_[seg] += visc[comp_idx] * this->segment_phase_fractions_[seg][comp_idx];
+            this->segments_.phase_fractions_[seg][comp_idx] = fraction; // >= 0.0 ? fraction : 0.0;
+            this->segments_.viscosities_[seg] += visc[comp_idx] * this->segments_.phase_fractions_[seg][comp_idx];
         }
 
         EvalWell density(0.0);
         for (int comp_idx = 0; comp_idx < baseif_.numComponents(); ++comp_idx) {
             density += surf_dens[comp_idx] * mix_s[comp_idx];
         }
-        this->segment_densities_[seg] = density / volrat;
+        this->segments_.densities_[seg] = density / volrat;
 
         // calculate the mass rates
-        segment_mass_rates_[seg] = 0.;
+        segments_.mass_rates_[seg] = 0.;
         for (int comp_idx = 0; comp_idx < baseif_.numComponents(); ++comp_idx) {
-            const int upwind_seg = upwinding_segments_[seg];
+            const int upwind_seg = segments_.upwinding_segments_[seg];
             const EvalWell rate = primary_variables_.getSegmentRateUpwinding(seg,
                                                                              upwind_seg,
                                                                              comp_idx);
-            this->segment_mass_rates_[seg] += rate * surf_dens[comp_idx];
+            this->segments_.mass_rates_[seg] += rate * surf_dens[comp_idx];
         }
     }
 }
@@ -364,7 +358,7 @@ typename MultisegmentWellEval<FluidSystem,Indices,Scalar>::EvalWell
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 getHydroPressureLoss(const int seg) const
 {
-    return segment_densities_[seg] * baseif_.gravity() * this->segment_depth_diffs_[seg];
+    return segments_.densities_[seg] * baseif_.gravity() * this->segment_depth_diffs_[seg];
 }
 
 template<typename FluidSystem, typename Indices, typename Scalar>
@@ -372,10 +366,10 @@ typename MultisegmentWellEval<FluidSystem,Indices,Scalar>::EvalWell
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 getFrictionPressureLoss(const int seg) const
 {
-    const EvalWell mass_rate = segment_mass_rates_[seg];
-    const int seg_upwind = upwinding_segments_[seg];
-    EvalWell density = segment_densities_[seg_upwind];
-    EvalWell visc = segment_viscosities_[seg_upwind];
+    const EvalWell mass_rate = segments_.mass_rates_[seg];
+    const int seg_upwind = segments_.upwinding_segments_[seg];
+    EvalWell density = segments_.densities_[seg_upwind];
+    EvalWell visc = segments_.viscosities_[seg_upwind];
     // WARNING
     // We disregard the derivatives from the upwind density to make sure derivatives
     // wrt. to different segments dont get mixed.
@@ -402,9 +396,9 @@ pressureDropSpiralICD(const int seg) const
 {
     const SICD& sicd = this->segmentSet()[seg].spiralICD();
 
-    const int seg_upwind = upwinding_segments_[seg];
-    const std::vector<EvalWell>& phase_fractions = segment_phase_fractions_[seg_upwind];
-    const std::vector<EvalWell>& phase_viscosities = segment_phase_viscosities_[seg_upwind];
+    const int seg_upwind = segments_.upwinding_segments_[seg];
+    const std::vector<EvalWell>& phase_fractions = segments_.phase_fractions_[seg_upwind];
+    const std::vector<EvalWell>& phase_viscosities = segments_.phase_viscosities_[seg_upwind];
 
     EvalWell water_fraction = 0.;
     EvalWell water_viscosity = 0.;
@@ -430,7 +424,7 @@ pressureDropSpiralICD(const int seg) const
         gas_viscosity = phase_viscosities[gas_pos];
     }
 
-    EvalWell density = segment_densities_[seg_upwind];
+    EvalWell density = segments_.densities_[seg_upwind];
     // WARNING
     // We disregard the derivatives from the upwind density to make sure derivatives
     // wrt. to different segments dont get mixed.
@@ -453,7 +447,7 @@ pressureDropSpiralICD(const int seg) const
 
     const EvalWell mixture_viscosity = liquid_viscosity_fraction + gas_fraction * gas_viscosity;
 
-    const EvalWell reservoir_rate = segment_mass_rates_[seg] / density;
+    const EvalWell reservoir_rate = segments_.mass_rates_[seg] / density;
 
     const EvalWell reservoir_rate_icd = reservoir_rate * sicd.scalingFactor();
 
@@ -483,10 +477,10 @@ pressureDropAutoICD(const int seg,
 {
     const AutoICD& aicd = this->segmentSet()[seg].autoICD();
 
-    const int seg_upwind = this->upwinding_segments_[seg];
-    const std::vector<EvalWell>& phase_fractions = this->segment_phase_fractions_[seg_upwind];
-    const std::vector<EvalWell>& phase_viscosities = this->segment_phase_viscosities_[seg_upwind];
-    const std::vector<EvalWell>& phase_densities = this->segment_phase_densities_[seg_upwind];
+    const int seg_upwind = segments_.upwinding_segments_[seg];
+    const std::vector<EvalWell>& phase_fractions = this->segments_.phase_fractions_[seg_upwind];
+    const std::vector<EvalWell>& phase_viscosities = this->segments_.phase_viscosities_[seg_upwind];
+    const std::vector<EvalWell>& phase_densities = this->segments_.phase_densities_[seg_upwind];
 
     EvalWell water_fraction = 0.;
     EvalWell water_viscosity = 0.;
@@ -518,7 +512,7 @@ pressureDropAutoICD(const int seg,
         gas_density = phase_densities[gas_pos];
     }
 
-    EvalWell density = segment_densities_[seg_upwind];
+    EvalWell density = segments_.densities_[seg_upwind];
     // WARNING
     // We disregard the derivatives from the upwind density to make sure derivatives
     // wrt. to different segments dont get mixed.
@@ -546,7 +540,7 @@ pressureDropAutoICD(const int seg,
 
     const double rho_reference = aicd.densityCalibration();
     const double visc_reference = aicd.viscosityCalibration();
-    const auto volume_rate_icd = this->segment_mass_rates_[seg] * aicd.scalingFactor() / mixture_density;
+    const auto volume_rate_icd = this->segments_.mass_rates_[seg] * aicd.scalingFactor() / mixture_density;
     const double sign = volume_rate_icd <= 0. ? 1.0 : -1.0;
     // convert 1 unit volume rate
     using M  = UnitSystem::measure;
@@ -567,10 +561,10 @@ pressureDropValve(const int seg) const
 {
     const Valve& valve = this->segmentSet()[seg].valve();
 
-    const EvalWell& mass_rate = segment_mass_rates_[seg];
-    const int seg_upwind = upwinding_segments_[seg];
-    EvalWell visc = segment_viscosities_[seg_upwind];
-    EvalWell density = segment_densities_[seg_upwind];
+    const EvalWell& mass_rate = segments_.mass_rates_[seg];
+    const int seg_upwind = segments_.upwinding_segments_[seg];
+    EvalWell visc = segments_.viscosities_[seg_upwind];
+    EvalWell density = segments_.densities_[seg_upwind];
     // WARNING
     // We disregard the derivatives from the upwind density to make sure derivatives
     // wrt. to different segments dont get mixed.
@@ -748,9 +742,9 @@ handleAccelerationPressureLoss(const int seg,
                                WellState& well_state)
 {
     const double area = this->segmentSet()[seg].crossArea();
-    const EvalWell mass_rate = segment_mass_rates_[seg];
-    const int seg_upwind = upwinding_segments_[seg];
-    EvalWell density = segment_densities_[seg_upwind];
+    const EvalWell mass_rate = segments_.mass_rates_[seg];
+    const int seg_upwind = segments_.upwinding_segments_[seg];
+    EvalWell density = segments_.densities_[seg_upwind];
     // WARNING
     // We disregard the derivatives from the upwind density to make sure derivatives
     // wrt. to different segments dont get mixed.
@@ -761,16 +755,16 @@ handleAccelerationPressureLoss(const int seg,
     EvalWell accelerationPressureLoss = mswellhelpers::velocityHead(area, mass_rate, density);
     // handling the velocity head of intlet segments
     for (const int inlet : this->segment_inlets_[seg]) {
-        const int seg_upwind_inlet = upwinding_segments_[inlet];
+        const int seg_upwind_inlet = segments_.upwinding_segments_[inlet];
         const double inlet_area = this->segmentSet()[inlet].crossArea();
-        EvalWell inlet_density = this->segment_densities_[seg_upwind_inlet];
+        EvalWell inlet_density = this->segments_.densities_[seg_upwind_inlet];
         // WARNING
         // We disregard the derivatives from the upwind density to make sure derivatives
         // wrt. to different segments dont get mixed.
         if (inlet != seg_upwind_inlet) {
             inlet_density.clearDerivatives();
         }
-        const EvalWell inlet_mass_rate = segment_mass_rates_[inlet];
+        const EvalWell inlet_mass_rate = segments_.mass_rates_[inlet];
         accelerationPressureLoss -= mswellhelpers::velocityHead(std::max(inlet_area, area), inlet_mass_rate, inlet_density);
     }
 
@@ -817,7 +811,7 @@ assembleDefaultPressureEq(const int seg,
     const int outlet_segment_index = this->segmentNumberToIndex(this->segmentSet()[seg].outletSegment());
     const EvalWell outlet_pressure = primary_variables_.getSegmentPressure(outlet_segment_index);
 
-    const int seg_upwind = upwinding_segments_[seg];
+    const int seg_upwind = segments_.upwinding_segments_[seg];
     MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(baseif_).
         assemblePressureEq(seg, seg_upwind, outlet_segment_index,
                            pressure_equation, outlet_pressure, linSys_);
@@ -880,7 +874,7 @@ assembleICDPressureEq(const int seg,
     const int outlet_segment_index = this->segmentNumberToIndex(this->segmentSet()[seg].outletSegment());
     const EvalWell outlet_pressure = primary_variables_.getSegmentPressure(outlet_segment_index);
 
-    const int seg_upwind = upwinding_segments_[seg];
+    const int seg_upwind = segments_.upwinding_segments_[seg];
     MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(baseif_).
         assemblePressureEq(seg, seg_upwind, outlet_segment_index,
                            pressure_equation, outlet_pressure,
