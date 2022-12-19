@@ -68,11 +68,7 @@ namespace Opm
         using typename MSWEval::Equations;
         using typename MSWEval::EvalWell;
         using typename MSWEval::BVectorWell;
-        using MSWEval::GFrac;
-        using MSWEval::WFrac;
-        using MSWEval::WQTotal;
         using MSWEval::SPres;
-        using MSWEval::numWellEq;
         using typename Base::PressureMatrix;
 
         MultisegmentWell(const Well& well,

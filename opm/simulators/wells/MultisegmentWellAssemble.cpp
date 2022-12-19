@@ -31,6 +31,7 @@
 #include <opm/models/blackoil/blackoiltwophaseindices.hh>
 
 #include <opm/simulators/wells/MultisegmentWellEquations.hpp>
+#include <opm/simulators/wells/MultisegmentWellPrimaryVariables.hpp>
 #include <opm/simulators/wells/WellAssemble.hpp>
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 #include <opm/simulators/wells/WellInterfaceIndices.hpp>
@@ -87,9 +88,7 @@ assembleControlEq(const WellState& well_state,
                   const Well::InjectionControls& inj_controls,
                   const Well::ProductionControls& prod_controls,
                   const double rho,
-                  const EvalWell& wqTotal,
-                  const EvalWell& bhp,
-                  const std::function<EvalWell(const int)>& getQs,
+                  const PrimaryVariables& primary_variables,
                   Equations& eqns1,
                   DeferredLogger& deferred_logger) const
 {
@@ -104,19 +103,19 @@ assembleControlEq(const WellState& well_state,
     auto getRates = [&]() {
         std::vector<EvalWell> rates(3, 0.0);
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-            rates[Water] = getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx));
+            rates[Water] = primary_variables.getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx));
         }
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-            rates[Oil] = getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx));
+            rates[Oil] = primary_variables.getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx));
         }
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-            rates[Gas] = getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx));
+            rates[Gas] = primary_variables.getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx));
         }
         return rates;
     };
 
     if (well_.wellIsStopped()) {
-        control_eq = wqTotal;
+        control_eq = primary_variables.getWQTotal();
     } else if (well_.isInjector() ) {
         // Find scaling factor to get injection rate,
         const InjectorType injectorType = inj_controls.injector_type;
@@ -141,7 +140,7 @@ assembleControlEq(const WellState& well_state,
         default:
             throw("Expected WATER, OIL or GAS as type for injectors " + well.name());
         }
-        const EvalWell injection_rate = wqTotal / scaling;
+        const EvalWell injection_rate = primary_variables.getWQTotal() / scaling;
         // Setup function for evaluation of BHP from THP (used only if needed).
         std::function<EvalWell()> bhp_from_thp = [&]() {
             const auto rates = getRates();
@@ -158,7 +157,7 @@ assembleControlEq(const WellState& well_state,
                                                  schedule,
                                                  summaryState,
                                                  inj_controls,
-                                                 bhp,
+                                                 primary_variables.getBhp(),
                                                  injection_rate,
                                                  bhp_from_thp,
                                                  control_eq,
@@ -181,7 +180,7 @@ assembleControlEq(const WellState& well_state,
                                                   schedule,
                                                   summaryState,
                                                   prod_controls,
-                                                  bhp,
+                                                  primary_variables.getBhp(),
                                                   rates,
                                                   bhp_from_thp,
                                                   control_eq,

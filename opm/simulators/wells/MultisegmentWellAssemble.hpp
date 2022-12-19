@@ -26,14 +26,13 @@
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/material/densead/Evaluation.hpp>
 
-#include <functional>
-
 namespace Opm
 {
 
 class DeferredLogger;
 class GroupState;
 template<class Scalar, int numWellEq, int numEq> class MultisegmentWellEquations;
+template<class FluidSystem, class Indices, class Scalar> class MultisegmentWellPrimaryVariables;
 class Schedule;
 class SummaryState;
 template<class FluidSystem, class Indices, class Scalar> class WellInterfaceIndices;
@@ -61,7 +60,9 @@ class MultisegmentWellAssemble
 public:
     static constexpr int numWellEq = Indices::numPhases+1;
     using Equations = MultisegmentWellEquations<Scalar,numWellEq,Indices::numEq>;
+    using PrimaryVariables = MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>;
     using EvalWell = DenseAd::Evaluation<Scalar, numWellEq+Indices::numEq>;
+
     //! \brief Constructor initializes reference to well.
     MultisegmentWellAssemble(const WellInterfaceIndices<FluidSystem,Indices,Scalar>& well)
         : well_(well)
@@ -75,9 +76,7 @@ public:
                            const Well::InjectionControls& inj_controls,
                            const Well::ProductionControls& prod_controls,
                            const double rho,
-                           const EvalWell& wqTotal,
-                           const EvalWell& bhp,
-                           const std::function<EvalWell(const int)>& getQs,
+                           const PrimaryVariables& primary_variables,
                            Equations& eqns,
                            DeferredLogger& deferred_logger) const;
 
