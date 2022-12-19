@@ -174,22 +174,6 @@ getWellConvergence(const WellState& well_state,
 template<typename FluidSystem, typename Indices, typename Scalar>
 typename MultisegmentWellEval<FluidSystem,Indices,Scalar>::EvalWell
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
-surfaceVolumeFraction(const int seg,
-                      const int comp_idx) const
-{
-    EvalWell sum_volume_fraction_scaled = 0.;
-    for (int idx = 0; idx < baseif_.numComponents(); ++idx) {
-        sum_volume_fraction_scaled += primary_variables_.volumeFractionScaled(seg, idx);
-    }
-
-    assert(sum_volume_fraction_scaled.value() != 0.);
-
-    return primary_variables_.volumeFractionScaled(seg, comp_idx) / sum_volume_fraction_scaled;
-}
-
-template<typename FluidSystem, typename Indices, typename Scalar>
-typename MultisegmentWellEval<FluidSystem,Indices,Scalar>::EvalWell
-MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 getSegmentRateUpwinding(const int seg,
                         const size_t comp_idx) const
 {
@@ -264,7 +248,7 @@ computeSegmentFluidProperties(const EvalWell& temperature,
         // the compostion of the components inside wellbore under surface condition
         std::vector<EvalWell> mix_s(baseif_.numComponents(), 0.0);
         for (int comp_idx = 0; comp_idx < baseif_.numComponents(); ++comp_idx) {
-            mix_s[comp_idx] = surfaceVolumeFraction(seg, comp_idx);
+            mix_s[comp_idx] = primary_variables_.surfaceVolumeFraction(seg, comp_idx);
         }
 
         std::vector<EvalWell> b(baseif_.numComponents(), 0.0);
@@ -714,7 +698,7 @@ getSegmentSurfaceVolume(const EvalWell& temperature,
 
     std::vector<EvalWell> mix_s(baseif_.numComponents(), 0.0);
     for (int comp_idx = 0; comp_idx < baseif_.numComponents(); ++comp_idx) {
-        mix_s[comp_idx] = surfaceVolumeFraction(seg_idx, comp_idx);
+        mix_s[comp_idx] = primary_variables_.surfaceVolumeFraction(seg_idx, comp_idx);
     }
 
     std::vector<EvalWell> b(baseif_.numComponents(), 0.);

@@ -186,10 +186,6 @@ protected:
                                              const double rho,
                                              DeferredLogger& deferred_logger) const;
 
-    // basically Q_p / \sigma_p Q_p
-    EvalWell surfaceVolumeFraction(const int seg,
-                                   const int comp_idx) const;
-
     // convert a Eval from reservoir to contain the derivative related to wells
     EvalWell extendEval(const Eval& in) const;
 

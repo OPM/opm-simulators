@@ -99,6 +99,11 @@ public:
     EvalWell volumeFractionScaled(const int seg,
                                   const int compIdx) const;
 
+    //! \brief Returns surface volume fraction for a component in a segment.
+    //! \details basically Q_p / \sigma_p Q_p
+    EvalWell surfaceVolumeFraction(const int seg,
+                                   const int compIdx) const;
+
     // the values for the primary varibles
     // based on different solutioin strategies, the wells can have different primary variables
     std::vector<std::array<double, numWellEq> > value_;

@@ -595,7 +595,7 @@ namespace Opm
             // TODO: trying to reduce the times for the surfaceVolumeFraction calculation
             const double surface_volume = getSegmentSurfaceVolume(ebos_simulator, seg).value();
             for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
-                segment_fluid_initial_[seg][comp_idx] = surface_volume * this->surfaceVolumeFraction(seg, comp_idx).value();
+                segment_fluid_initial_[seg][comp_idx] = surface_volume * this->primary_variables_.surfaceVolumeFraction(seg, comp_idx).value();
             }
         }
     }
@@ -919,7 +919,7 @@ namespace Opm
 
         std::vector<EvalWell> cmix_s(this->numComponents(), 0.0);
         for (int comp_idx = 0; comp_idx < this->numComponents(); ++comp_idx) {
-            cmix_s[comp_idx] = this->surfaceVolumeFraction(seg, comp_idx);
+            cmix_s[comp_idx] = this->primary_variables_.surfaceVolumeFraction(seg, comp_idx);
         }
 
         this->computePerfRate(pressure_cell,
@@ -976,7 +976,7 @@ namespace Opm
 
         std::vector<Scalar> cmix_s(this->numComponents(), 0.0);
         for (int comp_idx = 0; comp_idx < this->numComponents(); ++comp_idx) {
-            cmix_s[comp_idx] = getValue(this->surfaceVolumeFraction(seg, comp_idx));
+            cmix_s[comp_idx] = getValue(this->primary_variables_.surfaceVolumeFraction(seg, comp_idx));
         }
 
         Scalar perf_dis_gas_rate = 0.0;
@@ -1563,7 +1563,7 @@ namespace Opm
                 const Scalar regularization_factor =  this->regularize_? this->param_.regularization_factor_wells_ : 1.0;
                 // for each component
                 for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
-                    const EvalWell accumulation_term = regularization_factor * (segment_surface_volume * this->surfaceVolumeFraction(seg, comp_idx)
+                    const EvalWell accumulation_term = regularization_factor * (segment_surface_volume * this->primary_variables_.surfaceVolumeFraction(seg, comp_idx)
                                                      - segment_fluid_initial_[seg][comp_idx]) / dt;
                     MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(*this).
                         assembleAccumulationTerm(seg, comp_idx, accumulation_term, this->linSys_);
