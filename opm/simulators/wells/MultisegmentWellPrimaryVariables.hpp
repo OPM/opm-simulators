@@ -115,6 +115,10 @@ public:
     //! \brief Get pressure for a segment.
     EvalWell getSegmentPressure(const int seg) const;
 
+    //! \brief Get rate for a component in a segment.
+    EvalWell getSegmentRate(const int seg,
+                            const int comp_idx) const;
+
     // the values for the primary varibles
     // based on different solutioin strategies, the wells can have different primary variables
     std::vector<std::array<double, numWellEq> > value_;

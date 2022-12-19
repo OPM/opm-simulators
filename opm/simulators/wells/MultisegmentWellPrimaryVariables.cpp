@@ -377,6 +377,15 @@ getBhp() const
     return this->getSegmentPressure(0);
 }
 
+template<class FluidSystem, class Indices, class Scalar>
+typename MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::EvalWell
+MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::
+getSegmentRate(const int seg,
+               const int comp_idx) const
+{
+    return evaluation_[seg][WQTotal] * this->volumeFractionScaled(seg, comp_idx);
+}
+
 #define INSTANCE(...) \
 template class MultisegmentWellPrimaryVariables<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>;
 
