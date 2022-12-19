@@ -348,7 +348,7 @@ private:
                         if (materialLawManager->hasDirectionalRelperms()) {
                             dirId = scvf.faceDirFromDirId();
                         }
-                        loc_nbinfo[dofIdx - 1] = NeighborInfo{neighborIdx, trans, area, dirId};
+                        loc_nbinfo[dofIdx - 1] = NeighborInfo{neighborIdx, trans, area, dirId, nullptr};
                     }
                 }
                 neighborInfo_.appendRow(loc_nbinfo.begin(), loc_nbinfo.end());
@@ -385,9 +385,16 @@ private:
 
         // allocate raw matrix
         jacobian_.reset(new SparseMatrixAdapter(simulator_()));
-
+        diagMatAddress_.resize(numCells);
         // create matrix structure based on sparsity pattern
         jacobian_->reserve(sparsityPattern);
+        for (unsigned globI = 0; globI < numCells; globI++) {
+            const auto& nbInfos = neighborInfo_[globI];
+            diagMatAddress_[globI] = jacobian_->blockAddress(globI, globI);
+            for (auto& nbInfo : nbInfos) {
+                nbInfo.matBlockAddress = jacobian_->blockAddress(nbInfo.neighbor, globI);
+            }
+        }
     }
 
     // reset the global linear system of equations.
@@ -454,9 +461,11 @@ private:
                 adres *= nbInfo.faceArea;
                 setResAndJacobi(res, bMat, adres);
                 residual_[globI] += res;
-                jacobian_->addToBlock(globI, globI, bMat);
+                //SparseAdapter syntax:  jacobian_->addToBlock(globI, globI, bMat);
+                *diagMatAddress_[globI] += bMat;
                 bMat *= -1.0;
-                jacobian_->addToBlock(globJ, globI, bMat);
+                //SparseAdapter syntax: jacobian_->addToBlock(globJ, globI, bMat);
+                *nbInfo.matBlockAddress += bMat;
                 ++loc;
             }
 
@@ -477,7 +486,8 @@ private:
             bMat *= storefac;
             // residual_[globI] -= model_().cachedStorage(globI, 1); //*storefac;
             residual_[globI] += res;
-            jacobian_->addToBlock(globI, globI, bMat);
+            //SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
+            *diagMatAddress_[globI] += bMat;
             // wells sources for now (should be moved out)
             if (well_local) {
                 res = 0.0;
@@ -487,7 +497,8 @@ private:
                 adres *= -volume;
                 setResAndJacobi(res, bMat, adres);
                 residual_[globI] += res;
-                jacobian_->addToBlock(globI, globI, bMat);
+                //SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
+                 *diagMatAddress_[globI] += bMat;
             }
         } // end of loop for cell globI.
 
@@ -505,7 +516,8 @@ private:
             adres *= bdyInfo.bcdata.faceArea;
             setResAndJacobi(res, bMat, adres);
             residual_[globI] += res;
-            jacobian_->addToBlock(globI, globI, bMat);
+            ////SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
+            *diagMatAddress_[globI] += bMat;
         }
     }
 
@@ -547,8 +559,10 @@ private:
         double trans;
         double faceArea;
         FaceDir::DirEnum faceDirection;
+        MatrixBlock* matBlockAddress;
     };
     SparseTable<NeighborInfo> neighborInfo_;
+    std::vector<MatrixBlock*> diagMatAddress_;
 
     using ScalarFluidState = typename IntensiveQuantities::ScalarFluidState;
     struct BoundaryConditionData
