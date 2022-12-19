@@ -77,22 +77,22 @@ class PvsPrimaryVariables : public FvBasePrimaryVariables<TypeTag>
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
 
-    using Toolbox = typename Opm::MathToolbox<Evaluation>;
+    using Toolbox = MathToolbox<Evaluation>;
     using ComponentVector = Dune::FieldVector<Scalar, numComponents>;
     using EnergyModule = Opm::EnergyModule<TypeTag, enableEnergy>;
     using NcpFlash = Opm::NcpFlash<Scalar, FluidSystem>;
 
 public:
     PvsPrimaryVariables() : ParentType()
-    { Opm::Valgrind::SetDefined(*this); }
+    { Valgrind::SetDefined(*this); }
 
     /*!
      * \copydoc ImmisciblePrimaryVariables::ImmisciblePrimaryVariables(Scalar)
      */
     explicit PvsPrimaryVariables(Scalar value) : ParentType(value)
     {
-        Opm::Valgrind::CheckDefined(value);
-        Opm::Valgrind::SetDefined(*this);
+        Valgrind::CheckDefined(value);
+        Valgrind::SetDefined(*this);
 
         phasePresence_ = 0;
     }
@@ -103,7 +103,7 @@ public:
      */
     PvsPrimaryVariables(const PvsPrimaryVariables& value) : ParentType(value)
     {
-        Opm::Valgrind::SetDefined(*this);
+        Valgrind::SetDefined(*this);
 
         phasePresence_ = value.phasePresence_;
     }
@@ -133,7 +133,7 @@ public:
         // use a flash calculation to calculate a fluid state in
         // thermodynamic equilibrium
         typename FluidSystem::template ParameterCache<Scalar> paramCache;
-        Opm::CompositionalFluidState<Scalar, FluidSystem> fsFlash;
+        CompositionalFluidState<Scalar, FluidSystem> fsFlash;
 
         // use the externally given fluid state as initial value for
         // the flash calculation
@@ -277,7 +277,7 @@ public:
     template <class FluidState>
     void assignNaive(const FluidState& fluidState)
     {
-        using FsToolbox = Opm::MathToolbox<typename FluidState::Scalar>;
+        using FsToolbox = MathToolbox<typename FluidState::Scalar>;
 
         // assign the phase temperatures. this is out-sourced to
         // the energy module
@@ -285,7 +285,7 @@ public:
 
         // set the pressure of the first phase
         (*this)[pressure0Idx] = FsToolbox::value(fluidState.pressure(/*phaseIdx=*/0));
-        Opm::Valgrind::CheckDefined((*this)[pressure0Idx]);
+        Valgrind::CheckDefined((*this)[pressure0Idx]);
 
         // determine the phase presence.
         phasePresence_ = 0;
@@ -317,12 +317,12 @@ public:
 
             if (phaseIsPresent(phaseIdx)) {
                 (*this)[switch0Idx + switchIdx] = FsToolbox::value(fluidState.saturation(phaseIdx));
-                Opm::Valgrind::CheckDefined((*this)[switch0Idx + switchIdx]);
+                Valgrind::CheckDefined((*this)[switch0Idx + switchIdx]);
             }
             else {
                 (*this)[switch0Idx + switchIdx] =
                     FsToolbox::value(fluidState.moleFraction(lowestPhaseIdx, compIdx));
-                Opm::Valgrind::CheckDefined((*this)[switch0Idx + switchIdx]);
+                Valgrind::CheckDefined((*this)[switch0Idx + switchIdx]);
             }
         }
 
@@ -331,7 +331,7 @@ public:
         for (unsigned compIdx = numPhases - 1; compIdx < numComponents - 1; ++compIdx) {
             (*this)[switch0Idx + compIdx] =
                 FsToolbox::value(fluidState.moleFraction(lowestPhaseIdx, compIdx + 1));
-            Opm::Valgrind::CheckDefined((*this)[switch0Idx + compIdx]);
+            Valgrind::CheckDefined((*this)[switch0Idx + compIdx]);
         }
     }
 
