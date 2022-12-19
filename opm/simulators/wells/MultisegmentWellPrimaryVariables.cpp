@@ -29,6 +29,9 @@
 #include <opm/models/blackoil/blackoilonephaseindices.hh>
 #include <opm/models/blackoil/blackoiltwophaseindices.hh>
 
+#include <opm/simulators/wells/MultisegmentWellGeneric.hpp>
+#include <opm/simulators/wells/RateConverter.hpp>
+#include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 #include <opm/simulators/wells/WellInterfaceIndices.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
@@ -188,6 +191,201 @@ updateNewton(const BVectorWell& dwells,
             }
         }
     }
+}
+
+template<class FluidSystem, class Indices, class Scalar>
+void MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::
+copyToWellState(const MultisegmentWellGeneric<Scalar>& mswell,
+                const double rho,
+                WellState& well_state,
+                DeferredLogger& deferred_logger) const
+{
+    static constexpr int Gas = BlackoilPhases::Vapour;
+    static constexpr int Oil = BlackoilPhases::Liquid;
+    static constexpr int Water = BlackoilPhases::Aqua;
+
+    const auto pvtReg = std::max(well_.wellEcl().pvt_table_number() - 1, 0);
+
+    const PhaseUsage& pu = well_.phaseUsage();
+    assert( FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) );
+    const int oil_pos = pu.phase_pos[Oil];
+
+    auto& ws = well_state.well(well_.indexOfWell());
+    auto& segments = ws.segments;
+    auto& segment_rates = segments.rates;
+    auto& disgas = segments.dissolved_gas_rate;
+    auto& vapoil = segments.vaporized_oil_rate;
+    auto& segment_pressure = segments.pressure;
+    for (size_t seg = 0; seg < value_.size(); ++seg) {
+        std::vector<double> fractions(well_.numPhases(), 0.0);
+        fractions[oil_pos] = 1.0;
+
+        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+            const int water_pos = pu.phase_pos[Water];
+            fractions[water_pos] = value_[seg][WFrac];
+            fractions[oil_pos] -= fractions[water_pos];
+        }
+
+        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            const int gas_pos = pu.phase_pos[Gas];
+            fractions[gas_pos] = value_[seg][GFrac];
+            fractions[oil_pos] -= fractions[gas_pos];
+        }
+
+        // convert the fractions to be Q_p / G_total to calculate the phase rates
+        for (int p = 0; p < well_.numPhases(); ++p) {
+            const double scale = well_.scalingFactor(p);
+            // for injection wells, there should only one non-zero scaling factor
+            if (scale > 0.) {
+                fractions[p] /= scale;
+            } else {
+                // this should only happens to injection wells
+                fractions[p] = 0.;
+            }
+        }
+
+        // calculate the phase rates based on the primary variables
+        const double g_total = value_[seg][WQTotal];
+        for (int p = 0; p < well_.numPhases(); ++p) {
+            const double phase_rate = g_total * fractions[p];
+            segment_rates[seg * well_.numPhases() + p] = phase_rate;
+            if (seg == 0) { // top segment
+                ws.surface_rates[p] = phase_rate;
+            }
+        }
+
+        // update the segment pressure
+        segment_pressure[seg] = value_[seg][SPres];
+
+        if (seg == 0) { // top segment
+            ws.bhp = segment_pressure[seg];
+        }
+
+        // Calculate other per-phase dynamic quantities.
+
+        const auto temperature = 0.0; // Ignore thermal effects
+        const auto saltConc = 0.0;    // Ignore salt precipitation
+        const auto Rvw = 0.0;         // Ignore vaporised water.
+
+        auto rsMax = 0.0;
+        auto rvMax = 0.0;
+        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            // Both oil and gas active.
+            rsMax = FluidSystem::oilPvt()
+                .saturatedGasDissolutionFactor(pvtReg, temperature, segment_pressure[seg]);
+
+            rvMax = FluidSystem::gasPvt()
+                .saturatedOilVaporizationFactor(pvtReg, temperature, segment_pressure[seg]);
+        }
+
+        // 1) Infer phase splitting for oil/gas.
+        const auto& [Rs, Rv] = well_.rateConverter().inferDissolvedVaporisedRatio
+            (rsMax, rvMax, segment_rates.begin() + seg * well_.numPhases());
+
+        if (! FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            vapoil[seg] = disgas[seg] = 0.0;
+        }
+        else {
+            const auto* qs = &segment_rates[seg * well_.numPhases()];
+            const auto denom = 1.0 - (Rs * Rv);
+            const auto io = pu.phase_pos[Oil];
+            const auto ig = pu.phase_pos[Gas];
+            disgas[seg] = Rs * (qs[io] - Rv*qs[ig]) / denom;
+            vapoil[seg] = Rv * (qs[ig] - Rs*qs[io]) / denom;
+        }
+
+        // 2) Local condition volume flow rates
+        {
+            // Use std::span<> in C++20 and beyond.
+            const auto  rate_start = seg  * well_.numPhases();
+            const auto* surf_rates = segment_rates.data()             + rate_start;
+            auto*       resv_rates = segments.phase_resv_rates.data() + rate_start;
+
+            well_.rateConverter().calcReservoirVoidageRates
+                (pvtReg, segment_pressure[seg],
+                 std::max(0.0, Rs),
+                 std::max(0.0, Rv),
+                 temperature, saltConc, surf_rates, resv_rates);
+        }
+
+        // 3) Local condition holdup fractions.
+        const auto tot_resv =
+            std::accumulate(segments.phase_resv_rates.begin() + (seg + 0) * well_.numPhases(),
+                            segments.phase_resv_rates.begin() + (seg + 1) * well_.numPhases(),
+                            0.0);
+
+        std::transform(segments.phase_resv_rates.begin() + (seg + 0) * well_.numPhases(),
+                       segments.phase_resv_rates.begin() + (seg + 1) * well_.numPhases(),
+                       segments.phase_holdup.begin()     + (seg + 0) * well_.numPhases(),
+                       [tot_resv](const auto qr) { return std::clamp(qr / tot_resv, 0.0, 1.0); });
+
+        // 4) Local condition flow velocities for segments other than top segment.
+        if (seg > 0) {
+            // Possibly poor approximation
+            //    Velocity = Flow rate / cross-sectional area.
+            // Additionally ignores drift flux.
+            const auto area = well_.wellEcl().getSegments()
+                .getFromSegmentNumber(segments.segment_number()[seg]).crossArea();
+            const auto velocity = (area > 0.0) ? tot_resv / area : 0.0;
+
+            std::transform(segments.phase_holdup.begin()   + (seg + 0) * well_.numPhases(),
+                           segments.phase_holdup.begin()   + (seg + 1) * well_.numPhases(),
+                           segments.phase_velocity.begin() + (seg + 0) * well_.numPhases(),
+                           [velocity](const auto hf) { return (hf > 0.0) ? velocity : 0.0; });
+        }
+
+        // 5) Local condition phase viscosities.
+        segments.phase_viscosity[seg * well_.numPhases() + pu.phase_pos[Oil]] =
+            FluidSystem::oilPvt().viscosity(pvtReg, temperature, segment_pressure[seg], Rs);
+
+        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+            segments.phase_viscosity[seg * well_.numPhases() + pu.phase_pos[Water]] =
+                FluidSystem::waterPvt().viscosity(pvtReg, temperature, segment_pressure[seg], saltConc);
+        }
+
+        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            segments.phase_viscosity[seg * well_.numPhases() + pu.phase_pos[Gas]] =
+                FluidSystem::gasPvt().viscosity(pvtReg, temperature, segment_pressure[seg], Rv, Rvw);
+        }
+    }
+
+    // Segment flow velocity in top segment.
+    {
+        const auto np = well_.numPhases();
+        auto segVel = [&segments, np](const auto segmentNumber)
+        {
+            auto v = 0.0;
+            const auto* vel = segments.phase_velocity.data() + segmentNumber*np;
+            for (auto p = 0*np; p < np; ++p) {
+                if (std::abs(vel[p]) > std::abs(v)) {
+                    v = vel[p];
+                }
+            }
+
+            return v;
+        };
+
+        const auto seg = 0;
+        auto maxVel = 0.0;
+        for (const auto& inlet : mswell.segmentSet()[seg].inletSegments()) {
+            const auto v = segVel(mswell.segmentNumberToIndex(inlet));
+            if (std::abs(v) > std::abs(maxVel)) {
+                maxVel = v;
+            }
+        }
+
+        std::transform(segments.phase_holdup.begin()   + (seg + 0) * well_.numPhases(),
+                       segments.phase_holdup.begin()   + (seg + 1) * well_.numPhases(),
+                       segments.phase_velocity.begin() + (seg + 0) * well_.numPhases(),
+                       [maxVel](const auto hf) { return (hf > 0.0) ? maxVel : 0.0; });
+    }
+
+    WellBhpThpCalculator(well_)
+        .updateThp(rho, [this]() { return well_.wellEcl().alq_value(); },
+                   {FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx),
+                    FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx),
+                    FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)},
+                   well_state, deferred_logger);
 }
 
 template<class FluidSystem, class Indices, class Scalar>

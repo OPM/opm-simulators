@@ -32,6 +32,8 @@
 namespace Opm
 {
 
+class DeferredLogger;
+template<class Scalar> class MultisegmentWellGeneric;
 template<class FluidSystem, class Indices, class Scalar> class WellInterfaceIndices;
 class WellState;
 
@@ -93,6 +95,12 @@ public:
                       const double relaxation_factor,
                       const double DFLimit,
                       const double max_pressure_change);
+
+    //! \brief Copy values to well state.
+    void copyToWellState(const MultisegmentWellGeneric<Scalar>& mswell,
+                         const double rho,
+                         WellState& well_state,
+                         DeferredLogger& deferred_logger) const;
 
     //! \brief Returns scaled volume fraction for a component in a segment.
     //! \details F_p / g_p, the basic usage of this value is because Q_p = G_t * F_p / G_p

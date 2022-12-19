@@ -621,7 +621,8 @@ namespace Opm
                                               dFLimit,
                                               max_pressure_change);
 
-        this->updateWellStateFromPrimaryVariables(well_state, getRefDensity(), deferred_logger);
+        this->primary_variables_.copyToWellState(*this, getRefDensity(),
+                                                 well_state, deferred_logger);
         Base::calculateReservoirRates(well_state.well(this->index_of_well_));
     }
 
