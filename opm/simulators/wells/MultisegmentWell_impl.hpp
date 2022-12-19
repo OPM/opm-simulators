@@ -1755,10 +1755,11 @@ namespace Opm
             pvt_region_index = fs.pvtRegionIndex();
         }
 
-        return this->MSWEval::getSegmentSurfaceVolume(temperature,
-                                                      saltConcentration,
-                                                      pvt_region_index,
-                                                      seg_idx);
+        return this->segments_.getSurfaceVolume(temperature,
+                                                saltConcentration,
+                                                this->primary_variables_,
+                                                pvt_region_index,
+                                                seg_idx);
     }
 
 

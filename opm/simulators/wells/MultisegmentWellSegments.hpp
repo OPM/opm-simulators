@@ -44,6 +44,12 @@ public:
 
     EvalWell getHydroPressureLoss(const int seg) const;
 
+    EvalWell getSurfaceVolume(const EvalWell& temperature,
+                              const EvalWell& saltConcentration,
+                              const PrimaryVariables& primary_variables,
+                              const int pvt_region_index,
+                              const int seg_idx) const;
+
     // TODO: trying to use the information from the Well opm-parser as much
     // as possible, it will possibly be re-implemented later for efficiency reason.
 
