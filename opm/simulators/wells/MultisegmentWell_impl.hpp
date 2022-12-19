@@ -1653,7 +1653,7 @@ namespace Opm
                                         inj_controls,
                                         prod_controls,
                                         getRefDensity(),
-                                        this->getWQTotal(),
+                                        this->primary_variables_.getWQTotal(),
                                         this->primary_variables_.getBhp(),
                                         gQ,
                                         this->linSys_,

@@ -140,13 +140,10 @@ protected:
 
     EvalWell getFrictionPressureLoss(const int seg) const;
     EvalWell getHydroPressureLoss(const int seg) const;
-    EvalWell getSegmentWQTotal(const int seg) const;
     EvalWell getSegmentSurfaceVolume(const EvalWell& temperature,
                                      const EvalWell& saltConcentration,
                                      const int pvt_region_index,
                                      const int seg_idx) const;
-    EvalWell getWQTotal() const;
-
 
     std::pair<bool, std::vector<Scalar> >
     getFiniteWellResiduals(const std::vector<Scalar>& B_avg,

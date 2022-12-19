@@ -363,22 +363,6 @@ computeSegmentFluidProperties(const EvalWell& temperature,
 template<typename FluidSystem, typename Indices, typename Scalar>
 typename MultisegmentWellEval<FluidSystem,Indices,Scalar>::EvalWell
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
-getSegmentWQTotal(const int seg) const
-{
-    return primary_variables_.evaluation_[seg][WQTotal];
-}
-
-template<typename FluidSystem, typename Indices, typename Scalar>
-typename MultisegmentWellEval<FluidSystem,Indices,Scalar>::EvalWell
-MultisegmentWellEval<FluidSystem,Indices,Scalar>::
-getWQTotal() const
-{
-    return getSegmentWQTotal(0);
-}
-
-template<typename FluidSystem, typename Indices, typename Scalar>
-typename MultisegmentWellEval<FluidSystem,Indices,Scalar>::EvalWell
-MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 getHydroPressureLoss(const int seg) const
 {
     return segment_densities_[seg] * baseif_.gravity() * this->segment_depth_diffs_[seg];
