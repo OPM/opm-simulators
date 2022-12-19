@@ -1654,7 +1654,7 @@ namespace Opm
                                         prod_controls,
                                         getRefDensity(),
                                         this->getWQTotal(),
-                                        this->getBhp(),
+                                        this->primary_variables_.getBhp(),
                                         gQ,
                                         this->linSys_,
                                         deferred_logger);

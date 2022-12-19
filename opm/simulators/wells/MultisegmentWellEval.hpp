@@ -138,7 +138,6 @@ protected:
                                        int pvt_region_index,
                                        DeferredLogger& deferred_logger);
 
-    EvalWell getBhp() const;
     EvalWell getFrictionPressureLoss(const int seg) const;
     EvalWell getHydroPressureLoss(const int seg) const;
     EvalWell getQs(const int comp_idx) const;

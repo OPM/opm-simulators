@@ -109,6 +109,9 @@ public:
                                      const int seg_upwind,
                                      const size_t comp_idx) const;
 
+    //! \brief Get bottomhole pressure.
+    EvalWell getBhp() const;
+
     //! \brief Get pressure for a segment.
     EvalWell getSegmentPressure(const int seg) const;
 
