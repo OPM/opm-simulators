@@ -90,6 +90,9 @@ public:
     // the Evaluation for the well primary variables, which contain derivativles and are used in AD calculation
     std::vector<std::array<EvalWell, numWellEq> > evaluation_;
 
+    //! \brief Handle non-reasonable fractions due to numerical overshoot.
+    void processFractions(const int seg);
+
 private:
     const WellInterfaceIndices<FluidSystem,Indices,Scalar>& well_; //!< Reference to well interface
 };

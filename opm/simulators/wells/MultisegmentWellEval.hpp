@@ -131,9 +131,6 @@ protected:
                                          const double relaxed_inner_tolerance_pressure_ms_well,
                                          const bool relax_tolerance) const;
 
-    // handling the overshooting and undershooting of the fractions
-    void processFractions(const int seg);
-
     void updateUpwindingSegments();
 
     // updating the well_state based on well solution dwells

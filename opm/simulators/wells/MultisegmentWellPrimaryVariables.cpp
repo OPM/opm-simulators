@@ -142,6 +142,75 @@ update(const WellState& well_state)
     }
 }
 
+template<class FluidSystem, class Indices, class Scalar>
+void MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::
+processFractions(const int seg)
+{
+    static constexpr int Water = BlackoilPhases::Aqua;
+    static constexpr int Oil = BlackoilPhases::Liquid;
+    static constexpr int Gas = BlackoilPhases::Vapour;
+
+    const PhaseUsage& pu = well_.phaseUsage();
+
+    std::vector<double> fractions(well_.numPhases(), 0.0);
+
+    assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
+    const int oil_pos = pu.phase_pos[Oil];
+    fractions[oil_pos] = 1.0;
+
+    if ( FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) ) {
+        const int water_pos = pu.phase_pos[Water];
+        fractions[water_pos] = value_[seg][WFrac];
+        fractions[oil_pos] -= fractions[water_pos];
+    }
+
+    if ( FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) ) {
+        const int gas_pos = pu.phase_pos[Gas];
+        fractions[gas_pos] = value_[seg][GFrac];
+        fractions[oil_pos] -= fractions[gas_pos];
+    }
+
+    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+        const int water_pos = pu.phase_pos[Water];
+        if (fractions[water_pos] < 0.0) {
+            if ( FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) ) {
+                fractions[pu.phase_pos[Gas]] /= (1.0 - fractions[water_pos]);
+            }
+            fractions[oil_pos] /= (1.0 - fractions[water_pos]);
+            fractions[water_pos] = 0.0;
+        }
+    }
+
+    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+        const int gas_pos = pu.phase_pos[Gas];
+        if (fractions[gas_pos] < 0.0) {
+            if ( FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) ) {
+                fractions[pu.phase_pos[Water]] /= (1.0 - fractions[gas_pos]);
+            }
+            fractions[oil_pos] /= (1.0 - fractions[gas_pos]);
+            fractions[gas_pos] = 0.0;
+        }
+    }
+
+    if (fractions[oil_pos] < 0.0) {
+        if ( FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) ) {
+            fractions[pu.phase_pos[Water]] /= (1.0 - fractions[oil_pos]);
+        }
+        if ( FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) ) {
+            fractions[pu.phase_pos[Gas]] /= (1.0 - fractions[oil_pos]);
+        }
+        fractions[oil_pos] = 0.0;
+    }
+
+    if ( FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) ) {
+        value_[seg][WFrac] = fractions[pu.phase_pos[Water]];
+    }
+
+    if ( FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) ) {
+        value_[seg][GFrac] = fractions[pu.phase_pos[Gas]];
+    }
+}
+
 #define INSTANCE(...) \
 template class MultisegmentWellPrimaryVariables<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>;
 
