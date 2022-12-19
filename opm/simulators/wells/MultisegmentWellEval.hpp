@@ -186,10 +186,6 @@ protected:
                                              const double rho,
                                              DeferredLogger& deferred_logger) const;
 
-    // F_p / g_p, the basic usage of this value is because Q_p = G_t * F_p / G_p
-    EvalWell volumeFractionScaled(const int seg,
-                                  const int comp_idx) const;
-
     // basically Q_p / \sigma_p Q_p
     EvalWell surfaceVolumeFraction(const int seg,
                                    const int comp_idx) const;

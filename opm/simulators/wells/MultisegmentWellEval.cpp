@@ -174,34 +174,17 @@ getWellConvergence(const WellState& well_state,
 template<typename FluidSystem, typename Indices, typename Scalar>
 typename MultisegmentWellEval<FluidSystem,Indices,Scalar>::EvalWell
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
-volumeFractionScaled(const int seg,
-                     const int comp_idx) const
-{
-    // For reservoir rate control, the distr in well control is used for the
-    // rate conversion coefficients. For the injection well, only the distr of the injection
-    // phase is not zero.
-    const double scale = baseif_.scalingFactor(baseif_.ebosCompIdxToFlowCompIdx(comp_idx));
-    if (scale > 0.) {
-        return primary_variables_.volumeFraction(seg, comp_idx) / scale;
-    }
-
-    return primary_variables_.volumeFraction(seg, comp_idx);
-}
-
-template<typename FluidSystem, typename Indices, typename Scalar>
-typename MultisegmentWellEval<FluidSystem,Indices,Scalar>::EvalWell
-MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 surfaceVolumeFraction(const int seg,
                       const int comp_idx) const
 {
     EvalWell sum_volume_fraction_scaled = 0.;
     for (int idx = 0; idx < baseif_.numComponents(); ++idx) {
-        sum_volume_fraction_scaled += volumeFractionScaled(seg, idx);
+        sum_volume_fraction_scaled += primary_variables_.volumeFractionScaled(seg, idx);
     }
 
     assert(sum_volume_fraction_scaled.value() != 0.);
 
-    return volumeFractionScaled(seg, comp_idx) / sum_volume_fraction_scaled;
+    return primary_variables_.volumeFractionScaled(seg, comp_idx) / sum_volume_fraction_scaled;
 }
 
 template<typename FluidSystem, typename Indices, typename Scalar>
@@ -237,7 +220,8 @@ getSegmentRateUpwinding(const int seg,
         return 0.0;
     }
 
-    const EvalWell segment_rate = primary_variables_.evaluation_[seg][WQTotal] * volumeFractionScaled(seg_upwind, comp_idx);
+    const EvalWell segment_rate = primary_variables_.evaluation_[seg][WQTotal] *
+                                  primary_variables_.volumeFractionScaled(seg_upwind, comp_idx);
 
     assert(segment_rate.derivative(SPres + Indices::numEq) == 0.);
 
@@ -452,7 +436,8 @@ MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 getSegmentRate(const int seg,
                const int comp_idx) const
 {
-    return primary_variables_.evaluation_[seg][WQTotal] * volumeFractionScaled(seg, comp_idx);
+    return primary_variables_.evaluation_[seg][WQTotal] *
+           primary_variables_.volumeFractionScaled(seg, comp_idx);
 }
 
 template<typename FluidSystem, typename Indices, typename Scalar>

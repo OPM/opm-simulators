@@ -94,9 +94,10 @@ public:
                       const double DFLimit,
                       const double max_pressure_change);
 
-    //! \brief Returns volume fraction for component in a segment.
-    EvalWell volumeFraction(const int seg,
-                            const unsigned compIdx) const;
+    //! \brief Returns scaled volume fraction for a component in a segment.
+    //! \details F_p / g_p, the basic usage of this value is because Q_p = G_t * F_p / G_p
+    EvalWell volumeFractionScaled(const int seg,
+                                  const int compIdx) const;
 
     // the values for the primary varibles
     // based on different solutioin strategies, the wells can have different primary variables
@@ -108,6 +109,10 @@ public:
 private:
     //! \brief Handle non-reasonable fractions due to numerical overshoot.
     void processFractions(const int seg);
+
+    //! \brief Returns volume fraction for component in a segment.
+    EvalWell volumeFraction(const int seg,
+                            const unsigned compIdx) const;
 
     const WellInterfaceIndices<FluidSystem,Indices,Scalar>& well_; //!< Reference to well interface
 };

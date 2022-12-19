@@ -288,6 +288,23 @@ volumeFraction(const int seg,
     return oil_fraction;
 }
 
+template<class FluidSystem, class Indices, class Scalar>
+typename MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::EvalWell
+MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::
+volumeFractionScaled(const int seg,
+                     const int comp_idx) const
+{
+    // For reservoir rate control, the distr in well control is used for the
+    // rate conversion coefficients. For the injection well, only the distr of the injection
+    // phase is not zero.
+    const double scale = well_.scalingFactor(well_.ebosCompIdxToFlowCompIdx(comp_idx));
+    if (scale > 0.) {
+        return this->volumeFraction(seg, comp_idx) / scale;
+    }
+
+    return this->volumeFraction(seg, comp_idx);
+}
+
 #define INSTANCE(...) \
 template class MultisegmentWellPrimaryVariables<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>;
 
