@@ -46,69 +46,15 @@ template<typename Scalar>
 MultisegmentWellGeneric<Scalar>::
 MultisegmentWellGeneric(WellInterfaceGeneric& baseif)
     : baseif_(baseif)
-    , segment_perforations_(numberOfSegments())
-    , segment_inlets_(numberOfSegments())
-    , segment_depth_diffs_(numberOfSegments(), 0.0)
-    , perforation_segment_depth_diffs_(baseif_.numPerfs(), 0.0)
 {
-    // since we decide to use the WellSegments from the well parser. we can reuse a lot from it.
-    // for other facilities needed but not available from parser, we need to process them here
-
-    // initialize the segment_perforations_ and update perforation_segment_depth_diffs_
-    const WellConnections& completion_set = baseif_.wellEcl().getConnections();
-    // index of the perforation within wells struct
-    // there might be some perforations not active, which causes the number of the perforations in
-    // well_ecl_ and wells struct different
-    // the current implementation is a temporary solution for now, it should be corrected from the parser
-    // side
-    int i_perf_wells = 0;
-    baseif.perfDepth().resize(baseif_.numPerfs(), 0.);
-    for (size_t perf = 0; perf < completion_set.size(); ++perf) {
-        const Connection& connection = completion_set.get(perf);
-        if (connection.state() == Connection::State::OPEN) {
-            const int segment_index = segmentNumberToIndex(connection.segment());
-            if ( segment_index == -1) {
-                OPM_THROW(std::logic_error,
-                          fmt::format("COMPSEGS: Well {} has connection in cell {}, {}, {} "
-                                      "without associated segment.", baseif_.wellEcl().name(),
-                                      connection.getI() + 1, connection.getJ() + 1,
-                                      connection.getK() + 1));
-            }
-            segment_perforations_[segment_index].push_back(i_perf_wells);
-            baseif.perfDepth()[i_perf_wells] = connection.depth();
-            const double segment_depth = segmentSet()[segment_index].depth();
-            perforation_segment_depth_diffs_[i_perf_wells] = baseif.perfDepth()[i_perf_wells] - segment_depth;
-            i_perf_wells++;
-        }
-    }
-
-    // initialize the segment_inlets_
-    for (int seg = 0; seg < numberOfSegments(); ++seg) {
-        const Segment& segment = segmentSet()[seg];
-        const int segment_number = segment.segmentNumber();
-        const int outlet_segment_number = segment.outletSegment();
-        if (outlet_segment_number > 0) {
-            const int segment_index = segmentNumberToIndex(segment_number);
-            const int outlet_segment_index = segmentNumberToIndex(outlet_segment_number);
-            segment_inlets_[outlet_segment_index].push_back(segment_index);
-        }
-    }
-
-    // calculating the depth difference between the segment and its oulet_segments
-    // for the top segment, we will make its zero unless we find other purpose to use this value
-    for (int seg = 1; seg < numberOfSegments(); ++seg) {
-        const double segment_depth = segmentSet()[seg].depth();
-        const int outlet_segment_number = segmentSet()[seg].outletSegment();
-        const Segment& outlet_segment = segmentSet()[segmentNumberToIndex(outlet_segment_number)];
-        const double outlet_depth = outlet_segment.depth();
-        segment_depth_diffs_[seg] = segment_depth - outlet_depth;
-    }
 }
 
 template<typename Scalar>
 void
 MultisegmentWellGeneric<Scalar>::
-scaleSegmentRatesWithWellRates(WellState& well_state) const
+scaleSegmentRatesWithWellRates(const std::vector<std::vector<int>>& segment_inlets,
+                               const std::vector<std::vector<int>>& segment_perforations,
+                               WellState& well_state) const
 {
     auto& ws = well_state.well(baseif_.indexOfWell());
     auto& segments = ws.segments;
@@ -137,7 +83,10 @@ scaleSegmentRatesWithWellRates(WellState& well_state) const
             }
 
             std::vector<double> rates;
-            WellState::calculateSegmentRates(segment_inlets_, segment_perforations_, perforation_rates, num_single_phase, 0, rates);
+            WellState::calculateSegmentRates(segment_inlets,
+                                             segment_perforations,
+                                             perforation_rates,
+                                             num_single_phase, 0, rates);
             for (int seg = 0; seg < numberOfSegments(); ++seg) {
                 segment_rates[baseif_.numPhases() * seg + phase] = rates[seg];
             }
@@ -177,22 +126,6 @@ MultisegmentWellGeneric<Scalar>::
 compPressureDrop() const
 {
     return segmentSet().compPressureDrop();
-}
-
-template<typename Scalar>
-const std::vector<std::vector<int>>&
-MultisegmentWellGeneric<Scalar>::
-segmentInlets() const
-{
-    return segment_inlets_;
-}
-
-template<typename Scalar>
-const std::vector<std::vector<int>>&
-MultisegmentWellGeneric<Scalar>::
-segmentPerforations() const
-{
-    return segment_perforations_;
 }
 
 template<typename Scalar>

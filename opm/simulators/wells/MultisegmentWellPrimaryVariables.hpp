@@ -133,10 +133,6 @@ public:
     //! \brief Get WQTotal.
     EvalWell getWQTotal() const;
 
-    //! \brief Update upwinding segments.
-    void updateUpwindingSegments(const MultisegmentWellGeneric<Scalar>& mswell,
-                                 std::vector<int>& upwinding_segments) const;
-
     //! \brief Returns a const ref to an evaluation.
     const std::array<EvalWell,numWellEq>& eval(const int idx) const
     { return evaluation_[idx]; }

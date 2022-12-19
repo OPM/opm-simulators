@@ -25,6 +25,7 @@
 #include <opm/simulators/wells/MultisegmentWellEquations.hpp>
 #include <opm/simulators/wells/MultisegmentWellGeneric.hpp>
 #include <opm/simulators/wells/MultisegmentWellPrimaryVariables.hpp>
+#include <opm/simulators/wells/MultisegmentWellSegments.hpp>
 
 #include <opm/material/densead/Evaluation.hpp>
 
@@ -34,10 +35,6 @@
 #include <memory>
 #include <utility>
 #include <vector>
-
-namespace Dune {
-template<class Matrix> class UMFPack;
-}
 
 namespace Opm
 {
@@ -59,6 +56,7 @@ protected:
     static constexpr int WQTotal = PrimaryVariables::WQTotal;
 
     using Equations = MultisegmentWellEquations<Scalar,numWellEq,Indices::numEq>;
+    using MSWSegments = MultisegmentWellSegments<FluidSystem,Indices,Scalar>;
 
     using BVector = typename Equations::BVector;
     using BVectorWell = typename Equations::BVectorWell;
@@ -105,18 +103,6 @@ protected:
                                          const double relaxed_inner_tolerance_pressure_ms_well,
                                          const bool relax_tolerance) const;
 
-    void computeSegmentFluidProperties(const EvalWell& temperature,
-                                       const EvalWell& saltConcentration,
-                                       int pvt_region_index,
-                                       DeferredLogger& deferred_logger);
-
-    EvalWell getFrictionPressureLoss(const int seg) const;
-    EvalWell getHydroPressureLoss(const int seg) const;
-    EvalWell getSegmentSurfaceVolume(const EvalWell& temperature,
-                                     const EvalWell& saltConcentration,
-                                     const int pvt_region_index,
-                                     const int seg_idx) const;
-
     std::pair<bool, std::vector<Scalar> >
     getFiniteWellResiduals(const std::vector<Scalar>& B_avg,
                            DeferredLogger& deferred_logger) const;
@@ -135,15 +121,8 @@ protected:
     void handleAccelerationPressureLoss(const int seg,
                                         WellState& well_state);
 
-    // pressure drop for Autonomous ICD segment (WSEGAICD)
     EvalWell pressureDropAutoICD(const int seg,
                                  const UnitSystem& unit_system) const;
-
-    // pressure drop for Spiral ICD segment (WSEGSICD)
-    EvalWell pressureDropSpiralICD(const int seg) const;
-
-    // pressure drop for sub-critical valve (WSEGVALV)
-    EvalWell pressureDropValve(const int seg) const;
 
     // convert a Eval from reservoir to contain the derivative related to wells
     EvalWell extendEval(const Eval& in) const;
@@ -151,25 +130,8 @@ protected:
     const WellInterfaceIndices<FluidSystem,Indices,Scalar>& baseif_;
 
     Equations linSys_; //!< The equation system
-
     PrimaryVariables primary_variables_; //!< The primary variables
-
-    // the upwinding segment for each segment based on the flow direction
-    std::vector<int> upwinding_segments_;
-
-    // the densities of segment fluids
-    // we should not have this member variable
-    std::vector<EvalWell> segment_densities_;
-
-    // the mass rate of the segments
-    std::vector<EvalWell> segment_mass_rates_;
-
-    // the viscosity of the segments
-    std::vector<EvalWell> segment_viscosities_;
-
-    std::vector<std::vector<EvalWell>> segment_phase_densities_;
-    std::vector<std::vector<EvalWell>> segment_phase_fractions_;
-    std::vector<std::vector<EvalWell>> segment_phase_viscosities_;
+    MSWSegments segments_; //!< Segment properties
 
     // depth difference between perforations and the perforated grid cells
     std::vector<double> cell_perforation_depth_diffs_;
