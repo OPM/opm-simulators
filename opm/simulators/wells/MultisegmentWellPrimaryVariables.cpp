@@ -259,6 +259,35 @@ processFractions(const int seg)
     }
 }
 
+template<typename FluidSystem, typename Indices, typename Scalar>
+typename MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::EvalWell
+MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::
+volumeFraction(const int seg,
+               const unsigned compIdx) const
+{
+    if (has_wfrac_variable && compIdx == Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx)) {
+        return evaluation_[seg][WFrac];
+    }
+
+    if (has_gfrac_variable && compIdx == Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx)) {
+        return evaluation_[seg][GFrac];
+    }
+
+    // Oil fraction
+    EvalWell oil_fraction = 1.0;
+    if (has_wfrac_variable) {
+        oil_fraction -= evaluation_[seg][WFrac];
+    }
+
+    if (has_gfrac_variable) {
+        oil_fraction -= evaluation_[seg][GFrac];
+    }
+    /* if (has_solvent) {
+        oil_fraction -= evaluation_[seg][SFrac];
+    } */
+    return oil_fraction;
+}
+
 #define INSTANCE(...) \
 template class MultisegmentWellPrimaryVariables<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>;
 

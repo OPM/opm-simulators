@@ -186,11 +186,6 @@ protected:
                                              const double rho,
                                              DeferredLogger& deferred_logger) const;
 
-    // fraction value of the primary variables
-    // should we just use member variables to store them instead of calculating them again and again
-    EvalWell volumeFraction(const int seg,
-                            const unsigned compIdx) const;
-
     // F_p / g_p, the basic usage of this value is because Q_p = G_t * F_p / G_p
     EvalWell volumeFractionScaled(const int seg,
                                   const int comp_idx) const;

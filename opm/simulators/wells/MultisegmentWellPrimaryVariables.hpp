@@ -94,6 +94,10 @@ public:
                       const double DFLimit,
                       const double max_pressure_change);
 
+    //! \brief Returns volume fraction for component in a segment.
+    EvalWell volumeFraction(const int seg,
+                            const unsigned compIdx) const;
+
     // the values for the primary varibles
     // based on different solutioin strategies, the wells can have different primary variables
     std::vector<std::array<double, numWellEq> > value_;

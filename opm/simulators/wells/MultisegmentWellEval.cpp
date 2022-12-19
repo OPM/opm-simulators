@@ -174,35 +174,6 @@ getWellConvergence(const WellState& well_state,
 template<typename FluidSystem, typename Indices, typename Scalar>
 typename MultisegmentWellEval<FluidSystem,Indices,Scalar>::EvalWell
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
-volumeFraction(const int seg,
-               const unsigned compIdx) const
-{
-    if (has_wfrac_variable && compIdx == Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx)) {
-        return primary_variables_.evaluation_[seg][WFrac];
-    }
-
-    if (has_gfrac_variable && compIdx == Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx)) {
-        return primary_variables_.evaluation_[seg][GFrac];
-    }
-
-    // Oil fraction
-    EvalWell oil_fraction = 1.0;
-    if (has_wfrac_variable) {
-        oil_fraction -= primary_variables_.evaluation_[seg][WFrac];
-    }
-
-    if (has_gfrac_variable) {
-        oil_fraction -= primary_variables_.evaluation_[seg][GFrac];
-    }
-    /* if (has_solvent) {
-        oil_fraction -= primary_variables_evaluation_[seg][SFrac];
-    } */
-    return oil_fraction;
-}
-
-template<typename FluidSystem, typename Indices, typename Scalar>
-typename MultisegmentWellEval<FluidSystem,Indices,Scalar>::EvalWell
-MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 volumeFractionScaled(const int seg,
                      const int comp_idx) const
 {
@@ -211,10 +182,10 @@ volumeFractionScaled(const int seg,
     // phase is not zero.
     const double scale = baseif_.scalingFactor(baseif_.ebosCompIdxToFlowCompIdx(comp_idx));
     if (scale > 0.) {
-        return volumeFraction(seg, comp_idx) / scale;
+        return primary_variables_.volumeFraction(seg, comp_idx) / scale;
     }
 
-    return volumeFraction(seg, comp_idx);
+    return primary_variables_.volumeFraction(seg, comp_idx);
 }
 
 template<typename FluidSystem, typename Indices, typename Scalar>
