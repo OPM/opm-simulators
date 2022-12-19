@@ -107,8 +107,6 @@ protected:
                                          const double relaxed_inner_tolerance_pressure_ms_well,
                                          const bool relax_tolerance) const;
 
-    EvalWell getFrictionPressureLoss(const int seg) const;
-
     std::pair<bool, std::vector<Scalar> >
     getFiniteWellResiduals(const std::vector<Scalar>& B_avg,
                            DeferredLogger& deferred_logger) const;

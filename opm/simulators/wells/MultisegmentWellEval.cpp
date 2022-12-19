@@ -182,34 +182,6 @@ extendEval(const Eval& in) const
 template<typename FluidSystem, typename Indices, typename Scalar>
 typename MultisegmentWellEval<FluidSystem,Indices,Scalar>::EvalWell
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
-getFrictionPressureLoss(const int seg) const
-{
-    const EvalWell mass_rate = segments_.mass_rates_[seg];
-    const int seg_upwind = segments_.upwinding_segments_[seg];
-    EvalWell density = segments_.densities_[seg_upwind];
-    EvalWell visc = segments_.viscosities_[seg_upwind];
-    // WARNING
-    // We disregard the derivatives from the upwind density to make sure derivatives
-    // wrt. to different segments dont get mixed.
-    if (seg != seg_upwind) {
-        density.clearDerivatives();
-        visc.clearDerivatives();
-    }
-    const int outlet_segment_index = this->segmentNumberToIndex(this->segmentSet()[seg].outletSegment());
-    const double length = this->segmentSet()[seg].totalLength() - this->segmentSet()[outlet_segment_index].totalLength();
-    assert(length > 0.);
-    const double roughness = this->segmentSet()[seg].roughness();
-    const double area = this->segmentSet()[seg].crossArea();
-    const double diameter = this->segmentSet()[seg].internalDiameter();
-
-    const double sign = mass_rate < 0. ? 1.0 : - 1.0;
-
-    return sign * mswellhelpers::frictionPressureLoss(length, diameter, area, roughness, density, mass_rate, visc);
-}
-
-template<typename FluidSystem, typename Indices, typename Scalar>
-typename MultisegmentWellEval<FluidSystem,Indices,Scalar>::EvalWell
-MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 pressureDropSpiralICD(const int seg) const
 {
     const SICD& sicd = this->segmentSet()[seg].spiralICD();
@@ -476,7 +448,7 @@ assembleDefaultPressureEq(const int seg,
     pressure_equation -= hydro_pressure_drop;
 
     if (this->frictionalPressureLossConsidered()) {
-        const auto friction_pressure_drop = getFrictionPressureLoss(seg);
+        const auto friction_pressure_drop = segments_.getFrictionPressureLoss(seg);
         pressure_equation -= friction_pressure_drop;
         segments.pressure_drop_friction[seg] = friction_pressure_drop.value();
     }

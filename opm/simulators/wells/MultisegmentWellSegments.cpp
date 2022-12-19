@@ -31,6 +31,7 @@
 #include <opm/models/blackoil/blackoiltwophaseindices.hh>
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
+#include <opm/simulators/wells/MSWellHelpers.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 
 #include <fmt/format.h>
@@ -438,6 +439,36 @@ getSurfaceVolume(const EvalWell& temperature,
 
     return volume / vol_ratio;
 }
+
+template<class FluidSystem, class Indices, class Scalar>
+typename MultisegmentWellSegments<FluidSystem,Indices,Scalar>::EvalWell
+MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
+getFrictionPressureLoss(const int seg) const
+{
+    const EvalWell mass_rate = mass_rates_[seg];
+    const int seg_upwind = upwinding_segments_[seg];
+    EvalWell density = densities_[seg_upwind];
+    EvalWell visc = viscosities_[seg_upwind];
+    // WARNING
+    // We disregard the derivatives from the upwind density to make sure derivatives
+    // wrt. to different segments dont get mixed.
+    if (seg != seg_upwind) {
+        density.clearDerivatives();
+        visc.clearDerivatives();
+    }
+    const auto& segment_set = well_.wellEcl().getSegments();
+    const int outlet_segment_index = segment_set.segmentNumberToIndex(segment_set[seg].outletSegment());
+    const double length = segment_set[seg].totalLength() - segment_set[outlet_segment_index].totalLength();
+    assert(length > 0.);
+    const double roughness = segment_set[seg].roughness();
+    const double area = segment_set[seg].crossArea();
+    const double diameter = segment_set[seg].internalDiameter();
+
+    const double sign = mass_rate < 0. ? 1.0 : - 1.0;
+
+    return sign * mswellhelpers::frictionPressureLoss(length, diameter, area, roughness, density, mass_rate, visc);
+}
+
 
 #define INSTANCE(...) \
 template class MultisegmentWellSegments<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>;
