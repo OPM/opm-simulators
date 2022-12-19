@@ -174,47 +174,6 @@ getWellConvergence(const WellState& well_state,
 template<typename FluidSystem, typename Indices, typename Scalar>
 typename MultisegmentWellEval<FluidSystem,Indices,Scalar>::EvalWell
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
-getSegmentRateUpwinding(const int seg,
-                        const size_t comp_idx) const
-{
-    const int seg_upwind = upwinding_segments_[seg];
-    // the result will contain the derivative with respect to WQTotal in segment seg,
-    // and the derivatives with respect to WFrac GFrac in segment seg_upwind.
-    // the derivative with respect to SPres should be zero.
-    if (seg == 0 && baseif_.isInjector()) {
-        const Well& well = baseif_.wellEcl();
-        auto phase = well.getInjectionProperties().injectorType;
-
-        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)
-                && Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx) == comp_idx
-                && phase == InjectorType::WATER)
-            return primary_variables_.evaluation_[seg][WQTotal] / baseif_.scalingFactor(baseif_.ebosCompIdxToFlowCompIdx(comp_idx));
-
-
-        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)
-                && Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx) == comp_idx
-                && phase == InjectorType::OIL)
-            return primary_variables_.evaluation_[seg][WQTotal] / baseif_.scalingFactor(baseif_.ebosCompIdxToFlowCompIdx(comp_idx));
-
-        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)
-                && Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx) == comp_idx
-                && phase == InjectorType::GAS)
-            return primary_variables_.evaluation_[seg][WQTotal] / baseif_.scalingFactor(baseif_.ebosCompIdxToFlowCompIdx(comp_idx));
-
-        return 0.0;
-    }
-
-    const EvalWell segment_rate = primary_variables_.evaluation_[seg][WQTotal] *
-                                  primary_variables_.volumeFractionScaled(seg_upwind, comp_idx);
-
-    assert(segment_rate.derivative(SPres + Indices::numEq) == 0.);
-
-    return segment_rate;
-}
-
-template<typename FluidSystem, typename Indices, typename Scalar>
-typename MultisegmentWellEval<FluidSystem,Indices,Scalar>::EvalWell
-MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 extendEval(const Eval& in) const
 {
     EvalWell out = 0.0;
@@ -392,7 +351,10 @@ computeSegmentFluidProperties(const EvalWell& temperature,
         // calculate the mass rates
         segment_mass_rates_[seg] = 0.;
         for (int comp_idx = 0; comp_idx < baseif_.numComponents(); ++comp_idx) {
-            const EvalWell rate = getSegmentRateUpwinding(seg, comp_idx);
+            const int upwind_seg = upwinding_segments_[seg];
+            const EvalWell rate = primary_variables_.getSegmentRateUpwinding(seg,
+                                                                             upwind_seg,
+                                                                             comp_idx);
             this->segment_mass_rates_[seg] += rate * surf_dens[comp_idx];
         }
     }

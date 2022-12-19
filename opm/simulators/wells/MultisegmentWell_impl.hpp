@@ -1573,8 +1573,11 @@ namespace Opm
             {
                 const int seg_upwind = this->upwinding_segments_[seg];
                 for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
-                    const EvalWell segment_rate = this->getSegmentRateUpwinding(seg, comp_idx) *
-                                                  this->well_efficiency_factor_;
+                    const EvalWell segment_rate =
+                        this->primary_variables_.getSegmentRateUpwinding(seg,
+                                                                         seg_upwind,
+                                                                         comp_idx) *
+                        this->well_efficiency_factor_;
                     MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(*this).
                         assembleOutflowTerm(seg, seg_upwind, comp_idx, segment_rate, this->linSys_);
                 }
@@ -1583,9 +1586,13 @@ namespace Opm
             // considering the contributions from the inlet segments
             {
                 for (const int inlet : this->segment_inlets_[seg]) {
+                    const int inlet_upwind = this->upwinding_segments_[inlet];
                     for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
-                        const EvalWell inlet_rate = this->getSegmentRateUpwinding(inlet, comp_idx) * this->well_efficiency_factor_;
-                        const int inlet_upwind = this->upwinding_segments_[inlet];
+                        const EvalWell inlet_rate =
+                            this->primary_variables_.getSegmentRateUpwinding(inlet,
+                                                                             inlet_upwind,
+                                                                             comp_idx) *
+                            this->well_efficiency_factor_;
                         MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(*this).
                             assembleInflowTerm(seg, inlet, inlet_upwind, comp_idx, inlet_rate, this->linSys_);
                     }

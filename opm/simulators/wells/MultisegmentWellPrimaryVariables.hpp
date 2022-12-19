@@ -104,6 +104,11 @@ public:
     EvalWell surfaceVolumeFraction(const int seg,
                                    const int compIdx) const;
 
+    //! \brief Returns upwinding rate for a component in a segment.
+    EvalWell getSegmentRateUpwinding(const int seg,
+                                     const int seg_upwind,
+                                     const size_t comp_idx) const;
+
     // the values for the primary varibles
     // based on different solutioin strategies, the wells can have different primary variables
     std::vector<std::array<double, numWellEq> > value_;

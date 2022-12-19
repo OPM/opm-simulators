@@ -321,6 +321,46 @@ surfaceVolumeFraction(const int seg,
     return this->volumeFractionScaled(seg, comp_idx) / sum_volume_fraction_scaled;
 }
 
+template<class FluidSystem, class Indices, class Scalar>
+typename MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::EvalWell
+MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::
+getSegmentRateUpwinding(const int seg,
+                        const int seg_upwind,
+                        const size_t comp_idx) const
+{
+    // the result will contain the derivative with respect to WQTotal in segment seg,
+    // and the derivatives with respect to WFrac GFrac in segment seg_upwind.
+    // the derivative with respect to SPres should be zero.
+    if (seg == 0 && well_.isInjector()) {
+        const Well& well = well_.wellEcl();
+        auto phase = well.getInjectionProperties().injectorType;
+
+        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)
+                && Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx) == comp_idx
+                && phase == InjectorType::WATER)
+            return evaluation_[seg][WQTotal] / well_.scalingFactor(well_.ebosCompIdxToFlowCompIdx(comp_idx));
+
+        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)
+                && Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx) == comp_idx
+                && phase == InjectorType::OIL)
+            return evaluation_[seg][WQTotal] / well_.scalingFactor(well_.ebosCompIdxToFlowCompIdx(comp_idx));
+
+        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)
+                && Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx) == comp_idx
+                && phase == InjectorType::GAS)
+            return evaluation_[seg][WQTotal] / well_.scalingFactor(well_.ebosCompIdxToFlowCompIdx(comp_idx));
+
+        return 0.0;
+    }
+
+    const EvalWell segment_rate = evaluation_[seg][WQTotal] *
+                                  this->volumeFractionScaled(seg_upwind, comp_idx);
+
+    assert(segment_rate.derivative(SPres + Indices::numEq) == 0.);
+
+    return segment_rate;
+}
+
 #define INSTANCE(...) \
 template class MultisegmentWellPrimaryVariables<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>;
 

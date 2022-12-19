@@ -145,8 +145,6 @@ protected:
     EvalWell getSegmentWQTotal(const int seg) const;
     EvalWell getSegmentPressure(const int seg) const;
     EvalWell getSegmentRate(const int seg, const int comp_idx) const;
-    EvalWell getSegmentRateUpwinding(const int seg,
-                                     const size_t comp_idx) const;
     EvalWell getSegmentSurfaceVolume(const EvalWell& temperature,
                                      const EvalWell& saltConcentration,
                                      const int pvt_region_index,
