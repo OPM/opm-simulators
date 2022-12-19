@@ -124,9 +124,6 @@ protected:
     EvalWell pressureDropAutoICD(const int seg,
                                  const UnitSystem& unit_system) const;
 
-    // pressure drop for sub-critical valve (WSEGVALV)
-    EvalWell pressureDropValve(const int seg) const;
-
     // convert a Eval from reservoir to contain the derivative related to wells
     EvalWell extendEval(const Eval& in) const;
 

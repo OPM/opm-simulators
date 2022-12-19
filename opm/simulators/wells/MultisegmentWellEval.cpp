@@ -180,43 +180,6 @@ extendEval(const Eval& in) const
 }
 
 template<typename FluidSystem, typename Indices, typename Scalar>
-typename MultisegmentWellEval<FluidSystem,Indices,Scalar>::EvalWell
-MultisegmentWellEval<FluidSystem,Indices,Scalar>::
-pressureDropValve(const int seg) const
-{
-    const Valve& valve = this->segmentSet()[seg].valve();
-
-    const EvalWell& mass_rate = segments_.mass_rates_[seg];
-    const int seg_upwind = segments_.upwinding_segments_[seg];
-    EvalWell visc = segments_.viscosities_[seg_upwind];
-    EvalWell density = segments_.densities_[seg_upwind];
-    // WARNING
-    // We disregard the derivatives from the upwind density to make sure derivatives
-    // wrt. to different segments dont get mixed.
-    if (seg != seg_upwind) {
-        visc.clearDerivatives();
-        density.clearDerivatives();
-    }
-
-    const double additional_length = valve.pipeAdditionalLength();
-    const double roughness = valve.pipeRoughness();
-    const double diameter = valve.pipeDiameter();
-    const double area = valve.pipeCrossArea();
-
-    const EvalWell friction_pressure_loss =
-        mswellhelpers::frictionPressureLoss(additional_length, diameter, area, roughness, density, mass_rate, visc);
-
-    const double area_con = valve.conCrossArea();
-    const double cv = valve.conFlowCoefficient();
-
-    const EvalWell constriction_pressure_loss =
-        mswellhelpers::valveContrictionPressureLoss(mass_rate, density, area_con, cv);
-
-    const double sign = mass_rate <= 0. ? 1.0 : -1.0;
-    return sign * (friction_pressure_loss + constriction_pressure_loss);
-}
-
-template<typename FluidSystem, typename Indices, typename Scalar>
 void
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 handleAccelerationPressureLoss(const int seg,
@@ -340,7 +303,7 @@ assembleICDPressureEq(const int seg,
             icd_pressure_drop = segments_.pressureDropAutoICD(seg, unit_system);
             break;
         case Segment::SegmentType::VALVE :
-            icd_pressure_drop = pressureDropValve(seg);
+            icd_pressure_drop = segments_.pressureDropValve(seg);
             break;
         default: {
             OPM_DEFLOG_THROW(std::runtime_error, "Segment " + std::to_string(this->segmentSet()[seg].segmentNumber())

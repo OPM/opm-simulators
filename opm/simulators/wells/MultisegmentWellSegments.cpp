@@ -635,6 +635,44 @@ pressureDropAutoICD(const int seg,
     return result;
 }
 
+template<class FluidSystem, class Indices, class Scalar>
+typename MultisegmentWellSegments<FluidSystem,Indices,Scalar>::EvalWell
+MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
+pressureDropValve(const int seg) const
+{
+    const auto& segment_set = well_.wellEcl().getSegments();
+    const Valve& valve = segment_set[seg].valve();
+
+    const EvalWell& mass_rate = mass_rates_[seg];
+    const int seg_upwind = upwinding_segments_[seg];
+    EvalWell visc = viscosities_[seg_upwind];
+    EvalWell density = densities_[seg_upwind];
+    // WARNING
+    // We disregard the derivatives from the upwind density to make sure derivatives
+    // wrt. to different segments dont get mixed.
+    if (seg != seg_upwind) {
+        visc.clearDerivatives();
+        density.clearDerivatives();
+    }
+
+    const double additional_length = valve.pipeAdditionalLength();
+    const double roughness = valve.pipeRoughness();
+    const double diameter = valve.pipeDiameter();
+    const double area = valve.pipeCrossArea();
+
+    const EvalWell friction_pressure_loss =
+        mswellhelpers::frictionPressureLoss(additional_length, diameter, area, roughness, density, mass_rate, visc);
+
+    const double area_con = valve.conCrossArea();
+    const double cv = valve.conFlowCoefficient();
+
+    const EvalWell constriction_pressure_loss =
+        mswellhelpers::valveContrictionPressureLoss(mass_rate, density, area_con, cv);
+
+    const double sign = mass_rate <= 0. ? 1.0 : -1.0;
+    return sign * (friction_pressure_loss + constriction_pressure_loss);
+}
+
 #define INSTANCE(...) \
 template class MultisegmentWellSegments<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>;
 
