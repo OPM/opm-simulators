@@ -36,10 +36,6 @@
 #include <utility>
 #include <vector>
 
-namespace Dune {
-template<class Matrix> class UMFPack;
-}
-
 namespace Opm
 {
 
@@ -129,9 +125,6 @@ protected:
     EvalWell pressureDropAutoICD(const int seg,
                                  const UnitSystem& unit_system) const;
 
-    // pressure drop for Spiral ICD segment (WSEGSICD)
-    EvalWell pressureDropSpiralICD(const int seg) const;
-
     // pressure drop for sub-critical valve (WSEGVALV)
     EvalWell pressureDropValve(const int seg) const;
 
@@ -141,9 +134,7 @@ protected:
     const WellInterfaceIndices<FluidSystem,Indices,Scalar>& baseif_;
 
     Equations linSys_; //!< The equation system
-
     PrimaryVariables primary_variables_; //!< The primary variables
-
     MSWSegments segments_; //!< Segment properties
 
     // depth difference between perforations and the perforated grid cells

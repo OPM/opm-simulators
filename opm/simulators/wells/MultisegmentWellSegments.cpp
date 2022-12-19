@@ -469,6 +469,85 @@ getFrictionPressureLoss(const int seg) const
     return sign * mswellhelpers::frictionPressureLoss(length, diameter, area, roughness, density, mass_rate, visc);
 }
 
+template<class FluidSystem, class Indices, class Scalar>
+typename MultisegmentWellSegments<FluidSystem,Indices,Scalar>::EvalWell
+MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
+pressureDropSpiralICD(const int seg) const
+{
+    const auto& segment_set = well_.wellEcl().getSegments();
+    const SICD& sicd = segment_set[seg].spiralICD();
+
+    const int seg_upwind = upwinding_segments_[seg];
+    const std::vector<EvalWell>& phase_fractions = phase_fractions_[seg_upwind];
+    const std::vector<EvalWell>& phase_viscosities = phase_viscosities_[seg_upwind];
+
+    EvalWell water_fraction = 0.;
+    EvalWell water_viscosity = 0.;
+    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+        const int water_pos = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+        water_fraction = phase_fractions[water_pos];
+        water_viscosity = phase_viscosities[water_pos];
+    }
+
+    EvalWell oil_fraction = 0.;
+    EvalWell oil_viscosity = 0.;
+    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+        const int oil_pos = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
+        oil_fraction = phase_fractions[oil_pos];
+        oil_viscosity = phase_viscosities[oil_pos];
+    }
+
+    EvalWell gas_fraction = 0.;
+    EvalWell gas_viscosity = 0.;
+    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+        const int gas_pos = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+        gas_fraction = phase_fractions[gas_pos];
+        gas_viscosity = phase_viscosities[gas_pos];
+    }
+
+    EvalWell density = densities_[seg_upwind];
+    // WARNING
+    // We disregard the derivatives from the upwind density to make sure derivatives
+    // wrt. to different segments dont get mixed.
+    if (seg != seg_upwind) {
+        water_fraction.clearDerivatives();
+        water_viscosity.clearDerivatives();
+        oil_fraction.clearDerivatives();
+        oil_viscosity.clearDerivatives();
+        gas_fraction.clearDerivatives();
+        gas_viscosity.clearDerivatives();
+        density.clearDerivatives();
+    }
+
+    const EvalWell liquid_fraction = water_fraction + oil_fraction;
+
+    // viscosity contribution from the liquid
+    const EvalWell liquid_viscosity_fraction = liquid_fraction < 1.e-30 ? oil_fraction * oil_viscosity + water_fraction * water_viscosity :
+            liquid_fraction * mswellhelpers::emulsionViscosity(water_fraction, water_viscosity, oil_fraction, oil_viscosity, sicd);
+
+    const EvalWell mixture_viscosity = liquid_viscosity_fraction + gas_fraction * gas_viscosity;
+
+    const EvalWell reservoir_rate = mass_rates_[seg] / density;
+
+    const EvalWell reservoir_rate_icd = reservoir_rate * sicd.scalingFactor();
+
+    const double viscosity_cali = sicd.viscosityCalibration();
+
+    using MathTool = MathToolbox<EvalWell>;
+
+    const double density_cali = sicd.densityCalibration();
+    const EvalWell temp_value1 = MathTool::pow(density / density_cali, 0.75);
+    const EvalWell temp_value2 = MathTool::pow(mixture_viscosity / viscosity_cali, 0.25);
+
+    // formulation before 2016, base_strength is used
+    // const double base_strength = sicd.strength() / density_cali;
+    // formulation since 2016, strength is used instead
+    const double strength = sicd.strength();
+
+    const double sign = reservoir_rate_icd <= 0. ? 1.0 : -1.0;
+
+    return sign * temp_value1 * temp_value2 * strength * reservoir_rate_icd * reservoir_rate_icd;
+}
 
 #define INSTANCE(...) \
 template class MultisegmentWellSegments<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>;

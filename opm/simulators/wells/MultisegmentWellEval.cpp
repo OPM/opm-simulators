@@ -182,86 +182,6 @@ extendEval(const Eval& in) const
 template<typename FluidSystem, typename Indices, typename Scalar>
 typename MultisegmentWellEval<FluidSystem,Indices,Scalar>::EvalWell
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
-pressureDropSpiralICD(const int seg) const
-{
-    const SICD& sicd = this->segmentSet()[seg].spiralICD();
-
-    const int seg_upwind = segments_.upwinding_segments_[seg];
-    const std::vector<EvalWell>& phase_fractions = segments_.phase_fractions_[seg_upwind];
-    const std::vector<EvalWell>& phase_viscosities = segments_.phase_viscosities_[seg_upwind];
-
-    EvalWell water_fraction = 0.;
-    EvalWell water_viscosity = 0.;
-    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-        const int water_pos = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
-        water_fraction = phase_fractions[water_pos];
-        water_viscosity = phase_viscosities[water_pos];
-    }
-
-    EvalWell oil_fraction = 0.;
-    EvalWell oil_viscosity = 0.;
-    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-        const int oil_pos = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
-        oil_fraction = phase_fractions[oil_pos];
-        oil_viscosity = phase_viscosities[oil_pos];
-    }
-
-    EvalWell gas_fraction = 0.;
-    EvalWell gas_viscosity = 0.;
-    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-        const int gas_pos = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-        gas_fraction = phase_fractions[gas_pos];
-        gas_viscosity = phase_viscosities[gas_pos];
-    }
-
-    EvalWell density = segments_.densities_[seg_upwind];
-    // WARNING
-    // We disregard the derivatives from the upwind density to make sure derivatives
-    // wrt. to different segments dont get mixed.
-    if (seg != seg_upwind) {
-        water_fraction.clearDerivatives();
-        water_viscosity.clearDerivatives();
-        oil_fraction.clearDerivatives();
-        oil_viscosity.clearDerivatives();
-        gas_fraction.clearDerivatives();
-        gas_viscosity.clearDerivatives();
-        density.clearDerivatives();
-    }
-
-
-    const EvalWell liquid_fraction = water_fraction + oil_fraction;
-
-    // viscosity contribution from the liquid
-    const EvalWell liquid_viscosity_fraction = liquid_fraction < 1.e-30 ? oil_fraction * oil_viscosity + water_fraction * water_viscosity :
-            liquid_fraction * mswellhelpers::emulsionViscosity(water_fraction, water_viscosity, oil_fraction, oil_viscosity, sicd);
-
-    const EvalWell mixture_viscosity = liquid_viscosity_fraction + gas_fraction * gas_viscosity;
-
-    const EvalWell reservoir_rate = segments_.mass_rates_[seg] / density;
-
-    const EvalWell reservoir_rate_icd = reservoir_rate * sicd.scalingFactor();
-
-    const double viscosity_cali = sicd.viscosityCalibration();
-
-    using MathTool = MathToolbox<EvalWell>;
-
-    const double density_cali = sicd.densityCalibration();
-    const EvalWell temp_value1 = MathTool::pow(density / density_cali, 0.75);
-    const EvalWell temp_value2 = MathTool::pow(mixture_viscosity / viscosity_cali, 0.25);
-
-    // formulation before 2016, base_strength is used
-    // const double base_strength = sicd.strength() / density_cali;
-    // formulation since 2016, strength is used instead
-    const double strength = sicd.strength();
-
-    const double sign = reservoir_rate_icd <= 0. ? 1.0 : -1.0;
-
-    return sign * temp_value1 * temp_value2 * strength * reservoir_rate_icd * reservoir_rate_icd;
-}
-
-template<typename FluidSystem, typename Indices, typename Scalar>
-typename MultisegmentWellEval<FluidSystem,Indices,Scalar>::EvalWell
-MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 pressureDropAutoICD(const int seg,
                     const UnitSystem& unit_system) const
 {
@@ -499,7 +419,7 @@ assembleICDPressureEq(const int seg,
     EvalWell icd_pressure_drop;
     switch(this->segmentSet()[seg].segmentType()) {
         case Segment::SegmentType::SICD :
-            icd_pressure_drop = pressureDropSpiralICD(seg);
+            icd_pressure_drop = segments_.pressureDropSpiralICD(seg);
             break;
         case Segment::SegmentType::AICD :
             icd_pressure_drop = pressureDropAutoICD(seg, unit_system);

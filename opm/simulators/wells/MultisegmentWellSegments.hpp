@@ -57,6 +57,9 @@ public:
 
     EvalWell getFrictionPressureLoss(const int seg) const;
 
+    // pressure drop for Spiral ICD segment (WSEGSICD)
+    EvalWell pressureDropSpiralICD(const int seg) const;
+
     // TODO: trying to use the information from the Well opm-parser as much
     // as possible, it will possibly be re-implemented later for efficiency reason.
 
