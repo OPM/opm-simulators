@@ -363,14 +363,6 @@ computeSegmentFluidProperties(const EvalWell& temperature,
 template<typename FluidSystem, typename Indices, typename Scalar>
 typename MultisegmentWellEval<FluidSystem,Indices,Scalar>::EvalWell
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
-getQs(const int comp_idx) const
-{
-    return primary_variables_.getSegmentRate(0, comp_idx);
-}
-
-template<typename FluidSystem, typename Indices, typename Scalar>
-typename MultisegmentWellEval<FluidSystem,Indices,Scalar>::EvalWell
-MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 getSegmentWQTotal(const int seg) const
 {
     return primary_variables_.evaluation_[seg][WQTotal];

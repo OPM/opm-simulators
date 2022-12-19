@@ -453,7 +453,7 @@ namespace Opm
         well_flux.clear();
         well_flux.resize(np, 0.0);
         for (int compIdx = 0; compIdx < this->num_components_; ++compIdx) {
-            const EvalWell rate = well_copy.getQs(compIdx);
+            const EvalWell rate = well_copy.primary_variables_.getQs(compIdx);
             well_flux[this->ebosCompIdxToFlowCompIdx(compIdx)] = rate.value();
         }
         debug_cost_counter_ += well_copy.debug_cost_counter_;
@@ -1644,7 +1644,7 @@ namespace Opm
             if (seg == 0) { // top segment, pressure equation is the control equation
                 const auto& summaryState = ebosSimulator.vanguard().summaryState();
                 const Schedule& schedule = ebosSimulator.vanguard().schedule();
-                std::function<EvalWell(const int)> gQ = [this](int a) { return this->getQs(a); };
+                std::function<EvalWell(const int)> gQ = [this](int a) { return this->primary_variables_.getQs(a); };
                 MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(*this).
                         assembleControlEq(well_state,
                                         group_state,

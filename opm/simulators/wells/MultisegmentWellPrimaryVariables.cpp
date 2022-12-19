@@ -386,6 +386,14 @@ getSegmentRate(const int seg,
     return evaluation_[seg][WQTotal] * this->volumeFractionScaled(seg, comp_idx);
 }
 
+template<class FluidSystem, class Indices, class Scalar>
+typename MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::EvalWell
+MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::
+getQs(const int comp_idx) const
+{
+    return this->getSegmentRate(0, comp_idx);
+}
+
 #define INSTANCE(...) \
 template class MultisegmentWellPrimaryVariables<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>;
 

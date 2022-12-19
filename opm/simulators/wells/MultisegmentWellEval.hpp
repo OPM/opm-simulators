@@ -140,7 +140,6 @@ protected:
 
     EvalWell getFrictionPressureLoss(const int seg) const;
     EvalWell getHydroPressureLoss(const int seg) const;
-    EvalWell getQs(const int comp_idx) const;
     EvalWell getSegmentWQTotal(const int seg) const;
     EvalWell getSegmentSurfaceVolume(const EvalWell& temperature,
                                      const EvalWell& saltConcentration,

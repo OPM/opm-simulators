@@ -119,6 +119,9 @@ public:
     EvalWell getSegmentRate(const int seg,
                             const int comp_idx) const;
 
+    //! \brief Returns scaled rate for a component.
+    EvalWell getQs(const int comp_idx) const;
+
     // the values for the primary varibles
     // based on different solutioin strategies, the wells can have different primary variables
     std::vector<std::array<double, numWellEq> > value_;
