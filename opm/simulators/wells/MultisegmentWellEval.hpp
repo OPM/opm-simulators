@@ -121,7 +121,6 @@ protected:
     void handleAccelerationPressureLoss(const int seg,
                                         WellState& well_state);
 
-    // pressure drop for Autonomous ICD segment (WSEGAICD)
     EvalWell pressureDropAutoICD(const int seg,
                                  const UnitSystem& unit_system) const;
 

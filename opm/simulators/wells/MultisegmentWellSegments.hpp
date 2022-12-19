@@ -29,6 +29,7 @@
 namespace Opm
 {
 
+class UnitSystem;
 class WellInterfaceGeneric;
 
 template<typename FluidSystem, typename Indices, typename Scalar>
@@ -59,6 +60,10 @@ public:
 
     // pressure drop for Spiral ICD segment (WSEGSICD)
     EvalWell pressureDropSpiralICD(const int seg) const;
+
+    // pressure drop for Autonomous ICD segment (WSEGAICD)
+    EvalWell pressureDropAutoICD(const int seg,
+                                 const UnitSystem& unit_system) const;
 
     // TODO: trying to use the information from the Well opm-parser as much
     // as possible, it will possibly be re-implemented later for efficiency reason.

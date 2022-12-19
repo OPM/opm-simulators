@@ -549,6 +549,92 @@ pressureDropSpiralICD(const int seg) const
     return sign * temp_value1 * temp_value2 * strength * reservoir_rate_icd * reservoir_rate_icd;
 }
 
+template<class FluidSystem, class Indices, class Scalar>
+typename MultisegmentWellSegments<FluidSystem,Indices,Scalar>::EvalWell
+MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
+pressureDropAutoICD(const int seg,
+                    const UnitSystem& unit_system) const
+{
+    const auto& segment_set = well_.wellEcl().getSegments();
+    const AutoICD& aicd = segment_set[seg].autoICD();
+
+    const int seg_upwind = upwinding_segments_[seg];
+    const std::vector<EvalWell>& phase_fractions = phase_fractions_[seg_upwind];
+    const std::vector<EvalWell>& phase_viscosities = phase_viscosities_[seg_upwind];
+    const std::vector<EvalWell>& phase_densities = phase_densities_[seg_upwind];
+
+    EvalWell water_fraction = 0.;
+    EvalWell water_viscosity = 0.;
+    EvalWell water_density = 0.;
+    if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+        const int water_pos = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+        water_fraction = phase_fractions[water_pos];
+        water_viscosity = phase_viscosities[water_pos];
+        water_density = phase_densities[water_pos];
+    }
+
+    EvalWell oil_fraction = 0.;
+    EvalWell oil_viscosity = 0.;
+    EvalWell oil_density = 0.;
+    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+        const int oil_pos = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
+        oil_fraction = phase_fractions[oil_pos];
+        oil_viscosity = phase_viscosities[oil_pos];
+        oil_density = phase_densities[oil_pos];
+    }
+
+    EvalWell gas_fraction = 0.;
+    EvalWell gas_viscosity = 0.;
+    EvalWell gas_density = 0.;
+    if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+        const int gas_pos = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+        gas_fraction = phase_fractions[gas_pos];
+        gas_viscosity = phase_viscosities[gas_pos];
+        gas_density = phase_densities[gas_pos];
+    }
+
+    EvalWell density = densities_[seg_upwind];
+    // WARNING
+    // We disregard the derivatives from the upwind density to make sure derivatives
+    // wrt. to different segments dont get mixed.
+    if (seg != seg_upwind) {
+        water_fraction.clearDerivatives();
+        water_viscosity.clearDerivatives();
+        water_density.clearDerivatives();
+        oil_fraction.clearDerivatives();
+        oil_viscosity.clearDerivatives();
+        oil_density.clearDerivatives();
+        gas_fraction.clearDerivatives();
+        gas_viscosity.clearDerivatives();
+        gas_density.clearDerivatives();
+        density.clearDerivatives();
+    }
+
+    using MathTool = MathToolbox<EvalWell>;
+    const EvalWell mixture_viscosity = MathTool::pow(water_fraction, aicd.waterViscExponent()) * water_viscosity
+                                     + MathTool::pow(oil_fraction, aicd.oilViscExponent()) * oil_viscosity
+                                     + MathTool::pow(gas_fraction, aicd.gasViscExponent()) * gas_viscosity;
+
+    const EvalWell mixture_density = MathTool::pow(water_fraction, aicd.waterDensityExponent()) * water_density
+                                   + MathTool::pow(oil_fraction, aicd.oilDensityExponent()) * oil_density
+                                   + MathTool::pow(gas_fraction, aicd.gasDensityExponent()) * gas_density;
+
+    const double rho_reference = aicd.densityCalibration();
+    const double visc_reference = aicd.viscosityCalibration();
+    const auto volume_rate_icd = mass_rates_[seg] * aicd.scalingFactor() / mixture_density;
+    const double sign = volume_rate_icd <= 0. ? 1.0 : -1.0;
+    // convert 1 unit volume rate
+    using M  = UnitSystem::measure;
+    const double unit_volume_rate = unit_system.to_si(M::geometric_volume_rate, 1.);
+
+    // TODO: we did not consider the maximum allowed rate here
+    const auto result = sign / rho_reference * mixture_density * mixture_density
+                      * MathTool::pow(visc_reference/mixture_viscosity, aicd.viscExponent())
+                      * aicd.strength() * MathTool::pow( -sign * volume_rate_icd, aicd.flowRateExponent())
+                      * std::pow(unit_volume_rate, (2. - aicd.flowRateExponent())) ;
+    return result;
+}
+
 #define INSTANCE(...) \
 template class MultisegmentWellSegments<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>;
 
