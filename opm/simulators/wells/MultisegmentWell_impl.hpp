@@ -1526,11 +1526,11 @@ namespace Opm
                                    const GroupState& group_state,
                                    DeferredLogger& deferred_logger)
     {
-
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
         // update the upwinding segments
-        this->updateUpwindingSegments();
+        this->primary_variables_.updateUpwindingSegments(*this,
+                                                         this->upwinding_segments_);
 
         // calculate the fluid properties needed.
         computeSegmentFluidProperties(ebosSimulator, deferred_logger);

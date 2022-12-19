@@ -1057,31 +1057,6 @@ getResidualMeasureValue(const WellState& well_state,
     return sum;
 }
 
-template<typename FluidSystem, typename Indices, typename Scalar>
-void
-MultisegmentWellEval<FluidSystem,Indices,Scalar>::
-updateUpwindingSegments()
-{
-    for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
-        // special treatment is needed for segment 0
-        if (seg == 0) {
-            // we are not supposed to have injecting producers and producing injectors
-            assert( ! (baseif_.isProducer() && primary_variables_.evaluation_[seg][WQTotal] > 0.) );
-            assert( ! (baseif_.isInjector() && primary_variables_.evaluation_[seg][WQTotal] < 0.) );
-            upwinding_segments_[seg] = seg;
-            continue;
-        }
-
-        // for other normal segments
-        if (primary_variables_.evaluation_[seg][WQTotal] <= 0.) {
-            upwinding_segments_[seg] = seg;
-        } else {
-            const int outlet_segment_index = this->segmentNumberToIndex(this->segmentSet()[seg].outletSegment());
-            upwinding_segments_[seg] = outlet_segment_index;
-        }
-    }
-}
-
 #define INSTANCE(...) \
 template class MultisegmentWellEval<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>;
 

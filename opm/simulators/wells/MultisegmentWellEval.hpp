@@ -131,8 +131,6 @@ protected:
                                          const double relaxed_inner_tolerance_pressure_ms_well,
                                          const bool relax_tolerance) const;
 
-    void updateUpwindingSegments();
-
     void computeSegmentFluidProperties(const EvalWell& temperature,
                                        const EvalWell& saltConcentration,
                                        int pvt_region_index,

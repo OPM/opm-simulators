@@ -600,6 +600,31 @@ getWQTotal() const
     return evaluation_[0][WQTotal];
 }
 
+template<class FluidSystem, class Indices, class Scalar>
+void MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::
+updateUpwindingSegments(const MultisegmentWellGeneric<Scalar>& mswell,
+                        std::vector<int>& upwinding_segments) const
+{
+    for (size_t seg = 0; seg < value_.size(); ++seg) {
+        // special treatment is needed for segment 0
+        if (seg == 0) {
+            // we are not supposed to have injecting producers and producing injectors
+            assert(!(well_.isProducer() && evaluation_[seg][WQTotal] > 0.));
+            assert(!(well_.isInjector() && evaluation_[seg][WQTotal] < 0.));
+            upwinding_segments[seg] = seg;
+            continue;
+        }
+
+        // for other normal segments
+        if (evaluation_[seg][WQTotal] <= 0.) {
+            upwinding_segments[seg] = seg;
+        } else {
+            const int outlet_segment_index = mswell.segmentNumberToIndex(mswell.segmentSet()[seg].outletSegment());
+            upwinding_segments[seg] = outlet_segment_index;
+        }
+    }
+}
+
 #define INSTANCE(...) \
 template class MultisegmentWellPrimaryVariables<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>;
 

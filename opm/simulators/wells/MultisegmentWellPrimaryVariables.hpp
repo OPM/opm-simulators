@@ -133,6 +133,10 @@ public:
     //! \brief Get WQTotal.
     EvalWell getWQTotal() const;
 
+    //! \brief Update upwinding segments.
+    void updateUpwindingSegments(const MultisegmentWellGeneric<Scalar>& mswell,
+                                 std::vector<int>& upwinding_segments) const;
+
     // the values for the primary varibles
     // based on different solutioin strategies, the wells can have different primary variables
     std::vector<std::array<double, numWellEq> > value_;
