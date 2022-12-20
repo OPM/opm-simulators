@@ -834,7 +834,9 @@ namespace Opm {
         }
         // It should be able to find in wells_ecl.
         if (index_well_ecl == nw_wells_ecl) {
-            OPM_DEFLOG_THROW(std::logic_error, "Could not find well " << well_name << " in wells_ecl ", deferred_logger);
+            OPM_DEFLOG_THROW(std::logic_error,
+                             fmt::format("Could not find well {} in wells_ecl ", well_name),
+                             deferred_logger);
         }
 
         return this->createWellPointer(index_well_ecl, report_step);
@@ -877,8 +879,9 @@ namespace Opm {
                 calculateExplicitQuantities(local_deferredLogger);
                 prepareTimeStep(local_deferredLogger);
             }
-            OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger, "assemble() failed (It=0): ",
-                                               terminal_output_, grid().comm());
+            OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger,
+                                           "assemble() failed (It=0): ",
+                                           terminal_output_, grid().comm());
         }
 
         const bool well_group_control_changed = assembleImpl(iterationIdx, dt, 0, local_deferredLogger);
