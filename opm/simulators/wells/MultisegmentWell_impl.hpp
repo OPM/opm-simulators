@@ -23,6 +23,8 @@
 
 #include <opm/input/eclipse/Schedule/MSW/Valve.hpp>
 
+#include <opm/material/densead/EvaluationFormat.hpp>
+
 #include <opm/simulators/wells/MultisegmentWellAssemble.hpp>
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
@@ -841,9 +843,11 @@ namespace Opm
                 const Value d = 1.0 - rv * rs;
 
                 if (getValue(d) == 0.0) {
-                    OPM_DEFLOG_THROW(NumericalProblem, "Zero d value obtained for well " << this->name()
-                                                       << " during flux calculation"
-                                                       << " with rs " << rs << " and rv " << rv, deferred_logger);
+                    OPM_DEFLOG_THROW(NumericalProblem,
+                                     fmt::format("Zero d value obtained for well {} "
+                                                 "during flux calculation with rs {} and rv {}",
+                                                 this->name(), rs, rv),
+                                     deferred_logger);
                 }
 
                 const Value tmp_oil = (cmix_s[oilCompIdx] - rv * cmix_s[gasCompIdx]) / d;
@@ -2012,10 +2016,9 @@ namespace Opm
         }
         else {
             OPM_DEFLOG_THROW(NotImplemented,
-                             "Unsupported Injector Type ("
-                             << static_cast<int>(preferred_phase)
-                             << ") for well " << this->name()
-                             << " during connection I.I. calculation",
+                             fmt::format("Unsupported Injector Type ({}) "
+                                         "for well {} during connection I.I. calculation",
+                                         static_cast<int>(preferred_phase), this->name()),
                              deferred_logger);
         }
 
