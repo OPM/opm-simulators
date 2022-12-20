@@ -20,6 +20,8 @@
 #include <config.h>
 #include <opm/simulators/wells/GasLiftCommon.hpp>
 
+#include <fmt/format.h>
+
 namespace Opm {
 
 GasLiftCommon::
