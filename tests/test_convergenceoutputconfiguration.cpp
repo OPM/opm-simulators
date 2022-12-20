@@ -135,6 +135,9 @@ BOOST_AUTO_TEST_CASE(Misprint)
     BOOST_CHECK_THROW(Opm::ConvergenceOutputConfiguration{"nonce"},
                       std::invalid_argument);
 
+    BOOST_CHECK_THROW(Opm::ConvergenceOutputConfiguration("nonce", "X"),
+                      std::invalid_argument);
+
     BOOST_CHECK_THROW(Opm::ConvergenceOutputConfiguration{"stepS"},
                       std::invalid_argument);
 
