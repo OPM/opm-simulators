@@ -32,6 +32,9 @@
 #include <opm/simulators/wells/WellHelpers.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 #include <opm/simulators/wells/WellTest.hpp>
+
+#include <fmt/format.h>
+
 #include <cassert>
 #include <cmath>
 #include <cstddef>
@@ -65,7 +68,7 @@ WellInterfaceGeneric::WellInterfaceGeneric(const Well& well,
         return perf1.ecl_index < perf2.ecl_index;
     }));
     if (time_step < 0) {
-        OPM_THROW(std::invalid_argument, "Negtive time step is used to construct WellInterface");
+        OPM_THROW(std::invalid_argument, "Negative time step is used to construct WellInterface");
     }
 
     ref_depth_ = well.getRefDepth();
@@ -355,8 +358,11 @@ bool WellInterfaceGeneric::isVFPActive(DeferredLogger& deferred_logger) const
             if (vfp_properties_->getProd()->hasTable(table_id)) {
                 return true;
             } else {
-                OPM_DEFLOG_THROW(std::runtime_error, "VFPPROD table " << std::to_string(table_id) << " is specified,"
-                              << " for well " << name() << ", while we could not access it during simulation", deferred_logger);
+                OPM_DEFLOG_THROW(std::runtime_error,
+                                 fmt::format("VFPPROD table {} is specified "
+                                             "for well {}, while we could not access it during simulation",
+                                             table_id, name()),
+                                 deferred_logger);
             }
         }
 
@@ -368,8 +374,11 @@ bool WellInterfaceGeneric::isVFPActive(DeferredLogger& deferred_logger) const
             if (vfp_properties_->getInj()->hasTable(table_id)) {
                 return true;
             } else {
-                OPM_DEFLOG_THROW(std::runtime_error, "VFPINJ table " << std::to_string(table_id) << " is specified,"
-                              << " for well " << name() << ", while we could not access it during simulation", deferred_logger);
+                OPM_DEFLOG_THROW(std::runtime_error,
+                                 fmt::format("VFPINJ table {} is specified "
+                                             "for well {}, while we could not access it during simulation",
+                                             table_id, name()),
+                                 deferred_logger);
             }
         }
     }
@@ -410,9 +419,8 @@ void WellInterfaceGeneric::reportWellSwitching(const SingleWellState& ws, Deferr
     }
     // only report the final switching
     if (from != to) {
-        std::string msg = "    Well " + name()
-        + " control mode changed from " + from + " to " + to;
-        deferred_logger.info(msg);
+        deferred_logger.info(fmt::format("    Well {} control mode changed from {} to {}",
+                                         name(), from, to));
     }
 }
 
