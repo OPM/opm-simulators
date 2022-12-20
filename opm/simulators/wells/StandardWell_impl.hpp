@@ -27,6 +27,8 @@
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 #include <opm/simulators/wells/WellConvergence.hpp>
 
+#include <fmt/format.h>
+
 #include <algorithm>
 #include <functional>
 #include <numeric>
