@@ -30,7 +30,6 @@
 #include <optional>
 #include <vector>
 #include <utility>
-#include <fmt/format.h>
 
 namespace Opm
 {
