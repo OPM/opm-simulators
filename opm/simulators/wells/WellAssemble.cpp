@@ -95,7 +95,9 @@ assembleControlEqProd(const WellState& well_state,
         break;
     }
     case Well::ProducerCMode::CRAT: {
-        OPM_DEFLOG_THROW(std::runtime_error, "CRAT control not supported " << well_.name(), deferred_logger);
+        OPM_DEFLOG_THROW(std::runtime_error,
+                         "CRAT control not supported, well " + well_.name(),
+                         deferred_logger);
     }
     case Well::ProducerCMode::RESV: {
         auto total_rate = rates[0]; // To get the correct type only.
@@ -166,10 +168,14 @@ assembleControlEqProd(const WellState& well_state,
         break;
     }
     case Well::ProducerCMode::CMODE_UNDEFINED: {
-        OPM_DEFLOG_THROW(std::runtime_error, "Well control must be specified for well " + well_.name(), deferred_logger);
+        OPM_DEFLOG_THROW(std::runtime_error,
+                         "Well control must be specified for well " + well_.name(),
+                         deferred_logger);
     }
     case Well::ProducerCMode::NONE: {
-        OPM_DEFLOG_THROW(std::runtime_error, "Well control must be specified for well " + well_.name(), deferred_logger);
+        OPM_DEFLOG_THROW(std::runtime_error,
+                         "Well control must be specified for well " + well_.name(),
+                         deferred_logger);
     }
     }
 }
