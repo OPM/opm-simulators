@@ -2050,7 +2050,9 @@ namespace Opm
         if constexpr (Base::has_polymermw) {
             const int water_table_id = this->well_ecl_.getPolymerProperties().m_skprwattable;
             if (water_table_id <= 0) {
-                OPM_DEFLOG_THROW(std::runtime_error, "Unused SKPRWAT table id used for well " << name(), deferred_logger);
+                OPM_DEFLOG_THROW(std::runtime_error,
+                                 fmt::format("Unused SKPRWAT table id used for well {}", name()),
+                                 deferred_logger);
             }
             const auto& water_table_func = PolymerModule::getSkprwatTable(water_table_id);
             const EvalWell throughput_eval(this->primary_variables_.numWellEq() + Indices::numEq, throughput);
@@ -2059,8 +2061,10 @@ namespace Opm
             pskin_water = water_table_func.eval(throughput_eval, water_velocity);
             return pskin_water;
         } else {
-            OPM_DEFLOG_THROW(std::runtime_error, "Polymermw is not activated, "
-                                          "while injecting skin pressure is requested for well " << name(), deferred_logger);
+            OPM_DEFLOG_THROW(std::runtime_error,
+                             fmt::format("Polymermw is not activated, while injecting "
+                                         "skin pressure is requested for well {}", name()),
+                             deferred_logger);
         }
     }
 
@@ -2084,7 +2088,9 @@ namespace Opm
             }
             const int polymer_table_id = this->well_ecl_.getPolymerProperties().m_skprpolytable;
             if (polymer_table_id <= 0) {
-                OPM_DEFLOG_THROW(std::runtime_error, "Unavailable SKPRPOLY table id used for well " << name(), deferred_logger);
+                OPM_DEFLOG_THROW(std::runtime_error,
+                                 fmt::format("Unavailable SKPRPOLY table id used for well {}", name()),
+                                 deferred_logger);
             }
             const auto& skprpolytable = PolymerModule::getSkprpolyTable(polymer_table_id);
             const double reference_concentration = skprpolytable.refConcentration;
@@ -2100,8 +2106,10 @@ namespace Opm
             const EvalWell pskin = pskin_water + (pskin_poly - pskin_water) / reference_concentration * poly_inj_conc;
             return sign * pskin;
         } else {
-            OPM_DEFLOG_THROW(std::runtime_error, "Polymermw is not activated, "
-                                          "while injecting skin pressure is requested for well " << name(), deferred_logger);
+            OPM_DEFLOG_THROW(std::runtime_error,
+                             fmt::format("Polymermw is not activated, while injecting "
+                                         "skin pressure is requested for well {}", name()),
+                             deferred_logger);
         }
     }
 
@@ -2127,8 +2135,10 @@ namespace Opm
             molecular_weight = table_func.eval(throughput_eval, abs(water_velocity));
             return molecular_weight;
         } else {
-            OPM_DEFLOG_THROW(std::runtime_error, "Polymermw is not activated, "
-                                          "while injecting polymer molecular weight is requested for well " << name(), deferred_logger);
+            OPM_DEFLOG_THROW(std::runtime_error,
+                             fmt::format("Polymermw is not activated, while injecting "
+                                         "polymer molecular weight is requested for well {}", name()),
+                             deferred_logger);
         }
     }
 
@@ -2551,10 +2561,9 @@ namespace Opm
         }
         else {
             OPM_DEFLOG_THROW(NotImplemented,
-                             "Unsupported Injector Type ("
-                             << static_cast<int>(preferred_phase)
-                             << ") for well " << this->name()
-                             << " during connection I.I. calculation",
+                             fmt::format("Unsupported Injector Type ({}) "
+                                         "for well {} during connection I.I. calculation",
+                                         static_cast<int>(preferred_phase), this->name()),
                              deferred_logger);
         }
 
