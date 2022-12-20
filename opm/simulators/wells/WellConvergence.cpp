@@ -72,7 +72,9 @@ checkConvergenceControlEq(const WellState& well_state,
             control_tolerance = tolerances.grup;
             break;
         default:
-            OPM_DEFLOG_THROW(std::runtime_error, "Unknown well control control types for well " << well_.name(), deferred_logger);
+            OPM_DEFLOG_THROW(std::runtime_error,
+                             "Unknown well control control types for well " + well_.name(),
+                             deferred_logger);
         }
     }
     else if (well_.isProducer() )
@@ -101,7 +103,9 @@ checkConvergenceControlEq(const WellState& well_state,
             control_tolerance = tolerances.grup;
             break;
         default:
-            OPM_DEFLOG_THROW(std::runtime_error, "Unknown well control control types for well " << well_.name(), deferred_logger);
+            OPM_DEFLOG_THROW(std::runtime_error,
+                             "Unknown well control control types for well " + well_.name(),
+                             deferred_logger);
         }
     }
 
