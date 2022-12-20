@@ -58,7 +58,7 @@ struct EnableTuning {
 };
 
 template <class TypeTag, class MyTypeTag>
-struct ExtraConvergenceOutput
+struct OutputExtraConvergenceInfo
 {
     using type = UndefinedProperty;
 };
@@ -77,7 +77,7 @@ struct EnableTuning<TypeTag, TTag::EclFlowProblem> {
 };
 
 template <class TypeTag>
-struct ExtraConvergenceOutput<TypeTag, TTag::EclFlowProblem>
+struct OutputExtraConvergenceInfo<TypeTag, TTag::EclFlowProblem>
 {
     static constexpr auto* value = "none";
 };
@@ -150,8 +150,8 @@ public:
             this->terminalOutput_ = EWOMS_GET_PARAM(TypeTag, bool, EnableTerminalOutput);
 
             this->startConvergenceOutputThread(EWOMS_GET_PARAM(TypeTag, std::string,
-                                                               ExtraConvergenceOutput),
-                                               R"(ExtraConvergenceOutput (--extra-convergence-output))");
+                                                               OutputExtraConvergenceInfo),
+                                               R"(OutputExtraConvergenceInfo (--output-extra-convergence-info))");
         }
     }
 
@@ -173,7 +173,7 @@ public:
                              "Use adaptive time stepping between report steps");
         EWOMS_REGISTER_PARAM(TypeTag, bool, EnableTuning,
                              "Honor some aspects of the TUNING keyword.");
-        EWOMS_REGISTER_PARAM(TypeTag, std::string, ExtraConvergenceOutput,
+        EWOMS_REGISTER_PARAM(TypeTag, std::string, OutputExtraConvergenceInfo,
                              "Provide additional convergence output "
                              "files for diagnostic purposes. "
                              "\"none\" gives no extra output and "

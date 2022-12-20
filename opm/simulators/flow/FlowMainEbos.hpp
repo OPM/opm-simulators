@@ -594,8 +594,8 @@ namespace Opm
             OpmLog::info(ss.str());
 
             const auto extraConvOutput = ConvergenceOutputConfiguration {
-                EWOMS_GET_PARAM(TypeTag, std::string, ExtraConvergenceOutput),
-                R"(ExtraConvergenceOutput (--extra-convergence-output))"
+                EWOMS_GET_PARAM(TypeTag, std::string, OutputExtraConvergenceInfo),
+                R"(OutputExtraConvergenceInfo (--output-extra-convergence-info))"
             };
 
             if (extraConvOutput.want(ConvergenceOutputConfiguration::Option::Steps)) {
