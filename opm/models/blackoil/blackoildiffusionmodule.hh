@@ -123,7 +123,12 @@ public:
             }
 
             // no diffusion in water for blackoil models
-            if (FluidSystem::waterPhaseIdx == phaseIdx) {
+            if (!FluidSystem::enableDissolvedGasInWater() && FluidSystem::waterPhaseIdx == phaseIdx) {
+                continue;
+            }
+
+            // no diffusion in gas phase in water + gas system. 
+            if (FluidSystem::gasPhaseIdx == phaseIdx && !FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
                 continue;
             }
 
@@ -137,15 +142,20 @@ public:
                 continue;
             Evaluation convFactor = 1.0;
             Evaluation diffR = 0.0;
-            if (FluidSystem::enableDissolvedGas() && phaseIdx == FluidSystem::oilPhaseIdx) {
+            if (FluidSystem::enableDissolvedGas() && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && phaseIdx == FluidSystem::oilPhaseIdx) {
                 Evaluation rsAvg = (fluidStateI.Rs() + Toolbox::value(fluidStateJ.Rs())) / 2;
-                convFactor = 1.0 / (fraction(pvtRegionIndex) + rsAvg);
+                convFactor = 1.0 / (toMolFractionGasOil(pvtRegionIndex) + rsAvg);
                 diffR = fluidStateI.Rs() - Toolbox::value(fluidStateJ.Rs());
             }
-            if (FluidSystem::enableVaporizedOil() && phaseIdx == FluidSystem::gasPhaseIdx) {
+            if (FluidSystem::enableVaporizedOil() && FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && phaseIdx == FluidSystem::gasPhaseIdx) {
                 Evaluation rvAvg = (fluidStateI.Rv() + Toolbox::value(fluidStateJ.Rv())) / 2;
-                convFactor = fraction(pvtRegionIndex) / (1.0 + rvAvg*fraction(pvtRegionIndex));
+                convFactor = toMolFractionGasOil(pvtRegionIndex) / (1.0 + rvAvg*toMolFractionGasOil(pvtRegionIndex));
                 diffR = fluidStateI.Rv() - Toolbox::value(fluidStateJ.Rv());
+            }
+            if (FluidSystem::enableDissolvedGasInWater() && phaseIdx == FluidSystem::waterPhaseIdx) {
+                Evaluation rsAvg = (fluidStateI.Rsw() + Toolbox::value(fluidStateJ.Rsw())) / 2;
+                convFactor = 1.0 / (toMolFractionGasWater(pvtRegionIndex) + rsAvg);
+                diffR = fluidStateI.Rsw() - Toolbox::value(fluidStateJ.Rsw());
             }
 
             // mass flux of solvent component (oil in oil or gas in gas)
@@ -170,12 +180,19 @@ public:
     }
 
 private:
-    static Scalar fraction (unsigned regionIdx) {
+    static Scalar toMolFractionGasOil (unsigned regionIdx) {
         Scalar mMOil = FluidSystem::molarMass(FluidSystem::oilCompIdx, regionIdx);
         Scalar rhoO = FluidSystem::referenceDensity(FluidSystem::oilPhaseIdx, regionIdx);
         Scalar mMGas = FluidSystem::molarMass(FluidSystem::gasCompIdx, regionIdx);
         Scalar rhoG = FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, regionIdx);
         return rhoO * mMGas / (rhoG * mMOil);
+    }
+    static Scalar toMolFractionGasWater (unsigned regionIdx) {
+        Scalar mMWater = FluidSystem::molarMass(FluidSystem::waterCompIdx, regionIdx);
+        Scalar rhoW = FluidSystem::referenceDensity(FluidSystem::waterPhaseIdx, regionIdx);
+        Scalar mMGas = FluidSystem::molarMass(FluidSystem::gasCompIdx, regionIdx);
+        Scalar rhoG = FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, regionIdx);
+        return rhoW * mMGas / (rhoG * mMWater);
     }
 };
 
@@ -331,7 +348,7 @@ protected:
             }
 
             // no diffusion in water for blackoil models
-            if (FluidSystem::waterPhaseIdx == phaseIdx) {
+            if (!FluidSystem::enableDissolvedGasInWater() && FluidSystem::waterPhaseIdx == phaseIdx) {
                 continue;
             }
 
@@ -469,7 +486,7 @@ protected:
                 continue;
             }
             // no diffusion in water for blackoil models
-            if (FluidSystem::waterPhaseIdx == phaseIdx) {
+            if (!FluidSystem::enableDissolvedGasInWater() && FluidSystem::waterPhaseIdx == phaseIdx) {
                 continue;
             }
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {

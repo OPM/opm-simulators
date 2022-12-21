@@ -148,6 +148,14 @@ public:
                     * surfaceVolume;
             }
 
+            // account for dissolved gas in water
+            if (phaseIdx == waterPhaseIdx && FluidSystem::enableDissolvedGasInWater()) {
+                unsigned activeGasCompIdx = Indices::canonicalToActiveComponentIndex(gasCompIdx);
+                storage[conti0EqIdx + activeGasCompIdx] +=
+                    Toolbox::template decay<LhsEval>(intQuants.fluidState().Rsw())
+                    * surfaceVolume;
+            }
+
             // account for vaporized oil
             if (phaseIdx == gasPhaseIdx && FluidSystem::enableVaporizedOil()) {
                 unsigned activeOilCompIdx = Indices::canonicalToActiveComponentIndex(oilCompIdx);
@@ -600,6 +608,17 @@ public:
                     flux[conti0EqIdx + activeGasCompIdx] += Rs*surfaceVolumeFlux;
                 else
                     flux[conti0EqIdx + activeGasCompIdx] += Rs*surfaceVolumeFlux*FluidSystem::referenceDensity(gasPhaseIdx, pvtRegionIdx);
+            }
+        } else  if (phaseIdx == waterPhaseIdx) {
+            // dissolved gas (in the water phase).
+            if (FluidSystem::enableDissolvedGasInWater()) {
+                const auto& Rsw = BlackOil::getRsw_<FluidSystem, FluidState, UpEval>(upFs, pvtRegionIdx);
+
+                unsigned activeGasCompIdx = Indices::canonicalToActiveComponentIndex(gasCompIdx);
+                if (blackoilConserveSurfaceVolume)
+                    flux[conti0EqIdx + activeGasCompIdx] += Rsw*surfaceVolumeFlux;
+                else
+                    flux[conti0EqIdx + activeGasCompIdx] += Rsw*surfaceVolumeFlux*FluidSystem::referenceDensity(gasPhaseIdx, pvtRegionIdx);
             }
         }
         else if (phaseIdx == gasPhaseIdx) {
