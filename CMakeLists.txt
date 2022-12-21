@@ -372,7 +372,8 @@ set(FLOW_MODELS blackoil brine energy extbo foam gasoil gaswater
                 oilwater_polymer_injectivity micp polymer solvent
                 gasoil_energy brine_saltprecipitation
                 gaswater_saltprec_vapwat brine_precsalt_vapwat
-                blackoil_legacyassembly gasoildiffuse)
+                blackoil_legacyassembly gasoildiffuse gaswater_dissolution
+                gaswater_dissolution_diffuse)
 set(FLOW_VARIANT_MODELS brine_energy onephase onephase_energy)
 
 set(FLOW_TGTS)

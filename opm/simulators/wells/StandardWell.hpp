@@ -266,6 +266,7 @@ namespace Opm
                                                          std::vector<double>& rsmax_perf,
                                                          std::vector<double>& rvmax_perf,
                                                          std::vector<double>& rvwmax_perf,
+                                                         std::vector<double>& rswmax_perf,
                                                          std::vector<double>& surf_dens_perf) const;
 
         void computeWellConnectionDensitesPressures(const Simulator& ebosSimulator,
@@ -274,6 +275,7 @@ namespace Opm
                                                     const std::vector<double>& rsmax_perf,
                                                     const std::vector<double>& rvmax_perf,
                                                     const std::vector<double>& rvwmax_perf,
+                                                    const std::vector<double>& rswmax_perf,
                                                     const std::vector<double>& surf_dens_perf,
                                                     DeferredLogger& deferred_logger);
 
@@ -289,6 +291,7 @@ namespace Opm
                                  const bool allow_cf,
                                  std::vector<EvalWell>& cq_s,
                                  double& perf_dis_gas_rate,
+                                 double& perf_dis_gas_rate_in_water,
                                  double& perf_vap_oil_rate,
                                  double& perf_vap_wat_rate,
                                  DeferredLogger& deferred_logger) const;
@@ -309,6 +312,7 @@ namespace Opm
                              const Value& rs,
                              const Value& rv,
                              const Value& rvw,
+                             const Value& rsw,
                              std::vector<Value>& b_perfcells_dense,
                              const double Tw,
                              const int perf,
@@ -317,6 +321,7 @@ namespace Opm
                              const std::vector<Value>& cmix_s,
                              std::vector<Value>& cq_s,
                              double& perf_dis_gas_rate,
+                             double& perf_dis_gas_rate_in_water,
                              double& perf_vap_oil_rate,
                              double& perf_vap_wat_rate,
                              DeferredLogger& deferred_logger) const;

@@ -62,6 +62,8 @@ public:
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
     enum { enableBrine = getPropValue<TypeTag, Properties::EnableBrine>() };
     enum { enableEvaporation = getPropValue<TypeTag, Properties::EnableEvaporation>() };
+    enum { has_disgas_in_water = getPropValue<TypeTag, Properties::EnableDisgasInWater>() };
+
     enum { enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>() };
 
     static constexpr int numEq = BlackoilIndices::numEq;
@@ -77,6 +79,7 @@ public:
                                           enableEvaporation,
                                           enableBrine,
                                           enableSaltPrecipitation,
+                                          has_disgas_in_water,
                                           BlackoilIndices::numPhases>;
 
     // Constructor

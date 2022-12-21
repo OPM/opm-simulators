@@ -143,11 +143,12 @@ computeFluidProperties(const EvalWell& temperature,
 
         const EvalWell seg_pressure = primary_variables.getSegmentPressure(seg);
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+            EvalWell rsw(0.0);
             const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
             b[waterCompIdx] =
-                FluidSystem::waterPvt().inverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure, saltConcentration);
+                FluidSystem::waterPvt().inverseFormationVolumeFactor(pvt_region_index, temperature, seg_pressure, rsw, saltConcentration);
             visc[waterCompIdx] =
-                FluidSystem::waterPvt().viscosity(pvt_region_index, temperature, seg_pressure, saltConcentration);
+                FluidSystem::waterPvt().viscosity(pvt_region_index, temperature, seg_pressure, rsw, saltConcentration);
             // TODO: double check here
             // TODO: should not we use phaseIndex here?
             phase_densities[waterCompIdx] = b[waterCompIdx] * surf_dens[waterCompIdx];
@@ -348,10 +349,12 @@ getSurfaceVolume(const EvalWell& temperature,
     std::vector<EvalWell> b(well_.numComponents(), 0.);
     if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
         const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+        EvalWell rsw(0.0);
         b[waterCompIdx] =
             FluidSystem::waterPvt().inverseFormationVolumeFactor(pvt_region_index,
                                                                  temperature,
                                                                  seg_pressure,
+                                                                 rsw,
                                                                  saltConcentration);
     }
 

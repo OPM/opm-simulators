@@ -414,6 +414,7 @@ protected:
     ScalarBuffer oilPressure_;
     ScalarBuffer temperature_;
     ScalarBuffer rs_;
+    ScalarBuffer rsw_;
     ScalarBuffer rv_;
     ScalarBuffer rvw_;
     ScalarBuffer overburdenPressure_;

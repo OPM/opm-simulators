@@ -685,6 +685,7 @@ assignToSolution(data::Solution& sol)
         {"PCOG",     UnitSystem::measure::pressure,  data::TargetType::RESTART_SOLUTION,      pcog_},
         {"PRES_OVB", UnitSystem::measure::pressure,  data::TargetType::RESTART_SOLUTION,      overburdenPressure_},
         {"RS",       UnitSystem::measure::gas_oil_ratio, data::TargetType::RESTART_SOLUTION,  rs_},
+        {"RSW",      UnitSystem::measure::gas_oil_ratio, data::TargetType::RESTART_SOLUTION,  rsw_},
         {"RSSAT",    UnitSystem::measure::gas_oil_ratio, data::TargetType::RESTART_AUXILIARY, gasDissolutionFactor_},
         {"RV",       UnitSystem::measure::oil_gas_ratio, data::TargetType::RESTART_SOLUTION,  rv_},
         {"RVSAT",    UnitSystem::measure::oil_gas_ratio, data::TargetType::RESTART_AUXILIARY, oilVaporizationFactor_},
@@ -791,6 +792,8 @@ setRestart(const data::Solution& sol,
         temperature_[elemIdx] = sol.data("TEMP")[globalDofIndex];
     if (!rs_.empty() && sol.has("RS"))
         rs_[elemIdx] = sol.data("RS")[globalDofIndex];
+    if (!rsw_.empty() && sol.has("RSW"))
+        rsw_[elemIdx] = sol.data("RSW")[globalDofIndex];
     if (!rv_.empty() && sol.has("RV"))
         rv_[elemIdx] = sol.data("RV")[globalDofIndex];
     if (!rvw_.empty() && sol.has("RVW"))
@@ -984,6 +987,10 @@ doAllocBuffers(unsigned bufferSize,
     if (FluidSystem::enableDissolvedGas()) {
         rs_.resize(bufferSize, 0.0);
         rstKeywords["RS"] = 0;
+    }
+    if (FluidSystem::enableDissolvedGasInWater()) {
+        rsw_.resize(bufferSize, 0.0);
+        rstKeywords["RSW"] = 0;
     }
     if (FluidSystem::enableVaporizedOil()) {
         rv_.resize(bufferSize, 0.0);
