@@ -1375,6 +1375,7 @@ namespace Opm
     template<typename TypeTag>
     void WellInterface<TypeTag>::updateWaterInjectionVolume(const double dt, WellState& well_state) const
     {
+        // TODO: gonna abuse this function for calculation the skin factors
         if (!FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
            return;
         }
@@ -1392,6 +1393,32 @@ namespace Opm
             const double water_rates = std::max(0., connection_rates[perf * np + water_index]);
             water_injection_volume[perf] += water_rates * dt;
             std::cout << " well " << this->name() << " perf " << perf << " injection volume " << water_injection_volume[perf] << std::endl;
+        }
+
+        // TODO: if the injection concentration changes, the filter cake thickness can be different, need to find a general way
+        // can apply to the a few different ways of handling the modeling of filter cake
+
+
+        // the filter injecting concentration, the porosity, the area size
+        // we also need the permeability of the formation, and rw and some other information
+        for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
+            const auto perf_ecl_index = this->perforationData()[perf].ecl_index;
+            const auto connection = this->well_ecl_.getConnections()[perf_ecl_index];
+            const auto& filter_cake = this->well_ecl_.getConnections()[perf_ecl_index].getFilterCake();
+            if (filter_cake.active()) {
+                // we do the work here, the main thing here is to compute a multiplier for the transmissibility
+                if (filter_cake.geometry == Connection::FilterCakeGeometry::LINEAR) {
+                    const double poro = filter_cake.poro;
+                    const double perm = filter_cake.perm;
+                    const double rw = connection.getFilterCakeRadius();
+                    const double area = connection.getFilterCakeArea();
+                    const double conc = this->well_ecl_.getFilterConc();
+                    const double thickness = water_injection_volume[perf] * conc / (area*(1.-poro));
+                    std::cout << " perf " << perf << " water_injection_volume " << water_injection_volume[perf] << " conc " << conc
+                              << " area " << area << " poro " << poro << " thickness " << thickness << std::endl;
+                    double skin_factor = 0.;
+                }
+            }
         }
     }
 
