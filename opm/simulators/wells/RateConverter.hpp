@@ -562,27 +562,6 @@ namespace Opm {
                 if ((io < 0) || (ig < 0)) {
                     return { rs, rv };
                 }
-
-#define BURN_RESV_BRIDGES 0
-
-#if !BURN_RESV_BRIDGES
-
-                auto b = rs;
-                if (io >= 0 && ig >= 0) {
-                    b = surface_rates[ig] / (surface_rates[io] + 1.0e-15);
-                }
-                const double Rs = std::min(rs, b);
-
-                b = rv;
-                if (io >= 0 && ig >= 0) {
-                    b = surface_rates[io] / (surface_rates[ig] + 1.0e-15);
-                }
-                const double Rv = std::min(rv, b);
-
-                return { Rs, Rv };
-
-#else // BURN_RESV_BRIDGES
-
                 auto eps = std::copysign(1.0e-15, surface_rates[io]);
                 const auto Rs = surface_rates[ig] / (surface_rates[io] + eps);
 
@@ -593,10 +572,6 @@ namespace Opm {
                     std::clamp(static_cast<double>(Rs), 0.0, rs),
                     std::clamp(static_cast<double>(Rv), 0.0, rv)
                 };
-
-#endif  // BURN_RESV_BRIDGES
-
-#undef BURN_RESV_BRIDGES
             }
         };
 
