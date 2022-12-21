@@ -180,11 +180,11 @@ struct ScaleLinearSystem<TypeTag, TTag::FlowIstlSolverParams> {
 };
 template<class TypeTag>
 struct CprReuseSetup<TypeTag, TTag::FlowIstlSolverParams> {
-    static constexpr int value = 3;
+    static constexpr int value = 4;
 };
 template<class TypeTag>
 struct CprReuseInterval<TypeTag, TTag::FlowIstlSolverParams> {
-    static constexpr int value = 10;
+    static constexpr int value = 30;
 };
 template<class TypeTag>
 struct LinearSolver<TypeTag, TTag::FlowIstlSolverParams> {
