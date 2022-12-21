@@ -38,8 +38,8 @@ namespace Opm
 /// from file the data in the JSON file will override any other options.
 PropertyTree
 setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters to potentially override.
-                  bool LinearSolverMaxIterSet,
-                  bool CprMaxEllIterSet)
+                  bool linearSolverMaxIterSet,
+                  bool linearSolverReductionSet)
 {
     std::string conf = p.linsolver_;
 
@@ -68,21 +68,25 @@ setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters 
             // Treat "cpr" as short cut for the true IMPES variant.
             conf = "cpr_trueimpes";
         }
-        if (!LinearSolverMaxIterSet) {
+        if (!linearSolverMaxIterSet) {
             // Use our own default unless it was explicitly overridden by user.
             p.linear_solver_maxiter_ = 20;
         }
-        if (!CprMaxEllIterSet) {
+        if (!linearSolverReductionSet) {
             // Use our own default unless it was explicitly overridden by user.
-            p.cpr_max_ell_iter_ = 1;
+            p.linear_solver_reduction_ = 0.005;
         }
         return setupCPR(conf, p);
     }
 
     if ((conf == "cprw")) {
-        if (!LinearSolverMaxIterSet) {
+        if (!linearSolverMaxIterSet) {
             // Use our own default unless it was explicitly overridden by user.
             p.linear_solver_maxiter_ = 20;
+        }
+        if (!linearSolverReductionSet) {
+            // Use our own default unless it was explicitly overridden by user.
+            p.linear_solver_reduction_ = 0.005;
         }
         return setupCPRW(conf, p);
     }
@@ -145,7 +149,7 @@ setupCPRW(const std::string& /*conf*/, const FlowLinearSolverParameters& p)
     prm.put("preconditioner.coarsesolver.preconditioner.type", "amg"s);
     prm.put("preconditioner.coarsesolver.preconditioner.alpha", 0.333333333333);
     prm.put("preconditioner.coarsesolver.preconditioner.relaxation", 1.0);
-    prm.put("preconditioner.coarsesolver.preconditioner.iterations", p.cpr_max_ell_iter_);
+    prm.put("preconditioner.coarsesolver.preconditioner.iterations", 1);
     prm.put("preconditioner.coarsesolver.preconditioner.coarsenTarget", 1200);
     prm.put("preconditioner.coarsesolver.preconditioner.pre_smooth", 1);
     prm.put("preconditioner.coarsesolver.preconditioner.post_smooth", 1);
@@ -191,11 +195,11 @@ setupCPR(const std::string& conf, const FlowLinearSolverParameters& p)
     prm.put("preconditioner.coarsesolver.preconditioner.type", "amg"s);
     prm.put("preconditioner.coarsesolver.preconditioner.alpha", 0.333333333333);
     prm.put("preconditioner.coarsesolver.preconditioner.relaxation", 1.0);
-    prm.put("preconditioner.coarsesolver.preconditioner.iterations", p.cpr_max_ell_iter_);
+    prm.put("preconditioner.coarsesolver.preconditioner.iterations", 1);
     prm.put("preconditioner.coarsesolver.preconditioner.coarsenTarget", 1200);
     prm.put("preconditioner.coarsesolver.preconditioner.pre_smooth", 1);
     prm.put("preconditioner.coarsesolver.preconditioner.post_smooth", 1);
-    prm.put("preconditioner.coarsesolver.preconditioner.beta", 1e-5);
+    prm.put("preconditioner.coarsesolver.preconditioner.beta", 0.0);
     prm.put("preconditioner.coarsesolver.preconditioner.smoother", "ILU0"s);
     prm.put("preconditioner.coarsesolver.preconditioner.verbosity", 0);
     prm.put("preconditioner.coarsesolver.preconditioner.maxlevel", 15);
@@ -204,7 +208,7 @@ setupCPR(const std::string& conf, const FlowLinearSolverParameters& p)
     // graph might be unsymmetric and hence not supported by the PTScotch/ParMetis
     // calls in DUNE. Accumulating to 1 skips PTScotch/ParMetis
     prm.put("preconditioner.coarsesolver.preconditioner.accumulate", 1);
-    prm.put("preconditioner.coarsesolver.preconditioner.prolongationdamping", 1.6);
+    prm.put("preconditioner.coarsesolver.preconditioner.prolongationdamping", 1.0);
     prm.put("preconditioner.coarsesolver.preconditioner.maxdistance", 2);
     prm.put("preconditioner.coarsesolver.preconditioner.maxconnectivity", 15);
     prm.put("preconditioner.coarsesolver.preconditioner.maxaggsize", 6);

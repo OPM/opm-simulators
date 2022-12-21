@@ -244,7 +244,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             parameters_.template init<TypeTag>();
             prm_ = setupPropertyTree(parameters_,
                                      EWOMS_PARAM_IS_SET(TypeTag, int, LinearSolverMaxIter),
-                                     EWOMS_PARAM_IS_SET(TypeTag, int, CprMaxEllIter));
+                                     EWOMS_PARAM_IS_SET(TypeTag, double, LinearSolverReduction));
 
 #if COMPILE_BDA_BRIDGE
             {
