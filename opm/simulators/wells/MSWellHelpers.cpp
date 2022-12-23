@@ -29,6 +29,7 @@
 #include <opm/input/eclipse/Schedule/MSW/SICD.hpp>
 
 #include <opm/material/densead/Evaluation.hpp>
+#include <opm/material/densead/Math.hpp>
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
