@@ -49,7 +49,6 @@
 
 #include <memory>
 #include <optional>
-#include <fmt/format.h>
 
 namespace Opm
 {

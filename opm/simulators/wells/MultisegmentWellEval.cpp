@@ -22,8 +22,6 @@
 
 #include <opm/simulators/wells/MultisegmentWellEval.hpp>
 
-#include <dune/istl/umfpack.hh>
-
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
 #include <opm/models/blackoil/blackoilindices.hh>
@@ -32,12 +30,13 @@
 
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
-#include <opm/simulators/wells/MSWellHelpers.hpp>
 #include <opm/simulators/wells/MultisegmentWellAssemble.hpp>
 #include <opm/simulators/wells/WellAssemble.hpp>
 #include <opm/simulators/wells/WellConvergence.hpp>
 #include <opm/simulators/wells/WellInterfaceIndices.hpp>
 #include <opm/simulators/wells/WellState.hpp>
+
+#include <fmt/format.h>
 
 #include <algorithm>
 #include <array>
@@ -278,8 +277,11 @@ assembleICDPressureEq(const int seg,
             icd_pressure_drop = segments_.pressureDropValve(seg);
             break;
         default: {
-            OPM_DEFLOG_THROW(std::runtime_error, "Segment " + std::to_string(this->segmentSet()[seg].segmentNumber())
-                             + " for well " + baseif_.name() + " is not of ICD type", deferred_logger);
+            OPM_DEFLOG_THROW(std::runtime_error,
+                             fmt::format("Segment {} for well {} is not of ICD type",
+                                         this->segmentSet()[seg].segmentNumber(),
+                                         baseif_.name()),
+                             deferred_logger);
         }
     }
     pressure_equation = pressure_equation - icd_pressure_drop;
@@ -339,8 +341,8 @@ getFiniteWellResiduals(const std::vector<Scalar>& B_avg,
                 }
             }
             if (std::isnan(residual) || std::isinf(residual)) {
-                deferred_logger.debug("nan or inf value for residal get for well " + baseif_.name()
-                                      + " segment " + std::to_string(seg) + " eq_idx " + std::to_string(eq_idx));
+                deferred_logger.debug(fmt::format("nan or inf value for residual for well {} segment {} eq_idx {}",
+                                                  baseif_.name(), seg, eq_idx));
                 return {false, residuals};
             }
 
@@ -354,7 +356,7 @@ getFiniteWellResiduals(const std::vector<Scalar>& B_avg,
     {
         const double control_residual = std::abs(linSys_.residual()[0][numWellEq - 1]);
         if (std::isnan(control_residual) || std::isinf(control_residual)) {
-           deferred_logger.debug("nan or inf value for control residal get for well " + baseif_.name());
+           deferred_logger.debug(fmt::format("nan or inf value for control residual for well {}", baseif_.name()));
            return {false, residuals};
         }
         residuals[numWellEq] = control_residual;
@@ -393,7 +395,9 @@ getControlTolerance(const WellState& well_state,
             control_tolerance = tolerance_wells;
             break;
         default:
-            OPM_DEFLOG_THROW(std::runtime_error, "Unknown well control control types for well " << baseif_.name(), deferred_logger);
+            OPM_DEFLOG_THROW(std::runtime_error,
+                             fmt::format("Unknown well control control types for well {}", baseif_.name()),
+                             deferred_logger);
         }
     }
 
@@ -419,7 +423,9 @@ getControlTolerance(const WellState& well_state,
             control_tolerance = tolerance_wells; // smaller tolerance for rate control
             break;
         default:
-            OPM_DEFLOG_THROW(std::runtime_error, "Unknown well control control types for well " << baseif_.name(), deferred_logger);
+            OPM_DEFLOG_THROW(std::runtime_error,
+                             fmt::format("Unknown well control control types for well {}", baseif_.name()),
+                             deferred_logger);
         }
     }
 

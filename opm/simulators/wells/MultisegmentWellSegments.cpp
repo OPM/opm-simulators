@@ -23,6 +23,8 @@
 
 #include <opm/common/ErrorMacros.hpp>
 
+#include <opm/material/densead/EvaluationFormat.hpp>
+
 #include <opm/material/fluidsystems/BlackOilDefaultIndexTraits.hpp>
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
@@ -35,7 +37,6 @@
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 
 #include <fmt/format.h>
-#include <sstream>
 
 namespace Opm
 {
@@ -238,14 +239,14 @@ computeFluidProperties(const EvalWell& temperature,
 
             const EvalWell d = 1.0 - rs * rv;
             if (d <= 0.0) {
-                std::ostringstream sstr;
-                sstr << "Problematic d value " << d << " obtained for well " << well_.name()
-                     << " during segment density calculations with rs " << rs
-                     << ", rv " << rv << " and pressure " << seg_pressure
-                     << " obtaining d " << d
-                     << " Continue as if no dissolution (rs = 0) and vaporization (rv = 0) "
-                     << " for this connection.";
-                deferred_logger.debug(sstr.str());
+                const std::string str =
+                    fmt::format("Problematic d value {} obtained for well {} "
+                                "during segment density calculations with rs {}, "
+                                "rv {} and pressure {}. "
+                                "Continue as if no dissolution (rs = 0) and "
+                                "vaporization (rv = 0) for this connection.",
+                                d, well_.name(), rv, seg_pressure);
+                deferred_logger.debug(str);
             } else {
                 if (rs > 0.0) {
                     mix[gasCompIdx] = (mix_s[gasCompIdx] - mix_s[oilCompIdx] * rs) / d;
@@ -448,14 +449,14 @@ getSurfaceVolume(const EvalWell& temperature,
 
         const EvalWell d = 1.0 - rs * rv;
         if (d <= 0.0 || d > 1.0) {
-            std::ostringstream sstr;
-            sstr << "Problematic d value " << d << " obtained for well " << well_.name()
-                 << " during conversion to surface volume with rs " << rs
-                 << ", rv " << rv << " and pressure " << seg_pressure
-                 << " obtaining d " << d
-                 << " Continue as if no dissolution (rs = 0) and vaporization (rv = 0) "
-                 << " for this connection.";
-            OpmLog::debug(sstr.str());
+            const std::string str =
+                fmt::format("Problematic d value {} obtained for well {} "
+                            "during conversion to surface volume with rs {}, "
+                            "rv {} and pressure {}. "
+                            "Continue as if no dissolution (rs = 0) and "
+                            "vaporization (rv = 0) for this connection.",
+                            d, well_.name(), rs, rv, seg_pressure);
+            OpmLog::debug(str);
         } else {
             if (rs > 0.0) {
                 mix[gasCompIdx] = (mix_s[gasCompIdx] - mix_s[oilCompIdx] * rs) / d;
