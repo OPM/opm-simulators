@@ -23,7 +23,7 @@
 #ifndef OPM_STANDARDWELL_PRIMARY_VARIABLES_HEADER_INCLUDED
 #define OPM_STANDARDWELL_PRIMARY_VARIABLES_HEADER_INCLUDED
 
-#include <opm/material/densead/DynamicEvaluation.hpp>
+#include <opm/material/densead/Evaluation.hpp>
 
 #include <opm/simulators/wells/StandardWellEquations.hpp>
 

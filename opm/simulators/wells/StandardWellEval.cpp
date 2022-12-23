@@ -22,7 +22,6 @@
 #include <config.h>
 #include <opm/simulators/wells/StandardWellEval.hpp>
 
-#include <opm/material/densead/DynamicEvaluation.hpp>
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
 #include <opm/models/blackoil/blackoilindices.hh>

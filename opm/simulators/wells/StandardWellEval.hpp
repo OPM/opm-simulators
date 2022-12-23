@@ -27,7 +27,7 @@
 #include <opm/simulators/wells/StandardWellEquations.hpp>
 #include <opm/simulators/wells/StandardWellPrimaryVariables.hpp>
 
-#include <opm/material/densead/DynamicEvaluation.hpp>
+#include <opm/material/densead/Evaluation.hpp>
 
 #include <optional>
 #include <vector>
