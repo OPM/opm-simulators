@@ -38,7 +38,7 @@
 #include <opm/models/blackoil/blackoilbrinemodules.hh>
 #include <opm/models/blackoil/blackoilmicpmodules.hh>
 
-#include <opm/material/densead/DynamicEvaluation.hpp>
+#include <opm/material/densead/Evaluation.hpp>
 #include <opm/input/eclipse/EclipseState/Runspec.hpp>
 #include <opm/input/eclipse/Schedule/ScheduleTypes.hpp>
 
