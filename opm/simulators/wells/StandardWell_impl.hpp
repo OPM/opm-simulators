@@ -239,6 +239,10 @@ namespace Opm
         if (this->isInjector()) {
             drawdown += skin_pressure;
         }
+        const double effectiveTw = this->isInjector() ? this->inj_fc_multiplier_[perf] * Tw : Tw;
+        if (this->isInjector()) {
+            std::cout << " well " << this->name() << " perf " << perf << " Tw " << Tw << " scaling " << this->inj_fc_multiplier_[perf] << " effectiveTw " << effectiveTw << std::endl;
+        }
 
         // producing perforations
         if (drawdown > 0)  {
@@ -249,7 +253,7 @@ namespace Opm
 
             // compute component volumetric rates at standard conditions
             for (int componentIdx = 0; componentIdx < this->numComponents(); ++componentIdx) {
-                const Value cq_p = - Tw * (mob[componentIdx] * drawdown);
+                const Value cq_p = - effectiveTw * (mob[componentIdx] * drawdown);
                 cq_s[componentIdx] = b_perfcells_dense[componentIdx] * cq_p;
             }
 
@@ -271,7 +275,7 @@ namespace Opm
             }
 
             // injection perforations total volume rates
-            const Value cqt_i = - Tw * (total_mob_dense * drawdown);
+            const Value cqt_i = - effectiveTw * (total_mob_dense * drawdown);
 
             // compute volume ratio between connection at standard conditions
             Value volumeRatio = bhp * 0.0; // initialize it with the correct type

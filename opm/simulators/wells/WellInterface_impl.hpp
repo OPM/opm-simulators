@@ -1372,12 +1372,16 @@ namespace Opm
 
 
 
+    // TODO: this function does not need to be in the WellInterface class?
     template<typename TypeTag>
     void WellInterface<TypeTag>::updateWaterInjectionVolume(const double dt, WellState& well_state) const
     {
+        if (!this->isInjector()) {
+            return;
+        }
         // TODO: gonna abuse this function for calculation the skin factors
         if (!FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-           return;
+            return;
         }
         // it is currently used for the filter cake modeling related to formation damage study
         auto& ws = well_state.well(this->index_of_well_);
@@ -1392,13 +1396,13 @@ namespace Opm
             // not considering the production water
             const double water_rates = std::max(0., connection_rates[perf * np + water_index]);
             water_injection_volume[perf] += water_rates * dt;
-            std::cout << " well " << this->name() << " perf " << perf << " injection volume " << water_injection_volume[perf] << std::endl;
+            std::cout << " well " << this->name() << " perf " << perf << " injection volume "
+                      << water_injection_volume[perf] << std::endl;
         }
+    }
 
-        // TODO: if the injection concentration changes, the filter cake thickness can be different, need to find a general way
-        // can apply to the a few different ways of handling the modeling of filter cake
-
-
+    template<typename TypeTag>
+    void WellInterface<TypeTag>::updateInjFCMult(const std::vector<double>& water_inj_volume) {
         // the filter injecting concentration, the porosity, the area size
         // we also need the permeability of the formation, and rw and some other information
         for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
@@ -1410,16 +1414,35 @@ namespace Opm
                 if (filter_cake.geometry == Connection::FilterCakeGeometry::LINEAR) {
                     const double poro = filter_cake.poro;
                     const double perm = filter_cake.perm;
+                    // TODO: do we want to use this rw?
                     const double rw = connection.getFilterCakeRadius();
                     const double area = connection.getFilterCakeArea();
                     const double conc = this->well_ecl_.getFilterConc();
-                    const double thickness = water_injection_volume[perf] * conc / (area*(1.-poro));
-                    std::cout << " perf " << perf << " water_injection_volume " << water_injection_volume[perf] << " conc " << conc
+                    const double thickness = water_inj_volume[perf] * conc / (area*(1.-poro));
+                    std::cout << " perf " << perf << " water_injection_volume " << water_inj_volume[perf] << " conc " << conc
                               << " area " << area << " poro " << poro << " thickness " << thickness << std::endl;
-                    double skin_factor = 0.;
+                    // TODO: this formulation might not apply for different situation
+                    // but we are using this form just for first prototype
+                    const double K = connection.Kh() / connection.connectionLength();
+                    const double skin_factor = thickness / rw * K / perm;
+                    std::cout << " K " << K << " skin_factor " << skin_factor << std::endl;
+                    const auto cr0 = connection.r0();
+                    const auto crw = connection.rw();
+                    const auto cskinfactor = connection.skinFactor();
+                    const auto denom = std::log(cr0 / std::min(crw, cr0)) + cskinfactor;
+                    const auto denom2 = std::log(cr0 / std::min(crw, cr0)) + cskinfactor + skin_factor;
+                    const auto scaling = denom / denom2;
+                    std::cout << " scaling will be " << scaling << std::endl;
+                    this->inj_fc_multiplier_[perf] = scaling;
+                    std::cout << " well " << this->name() << " perf " << perf << " inj_fc_scaling " << this->inj_fc_multiplier_[perf] << std::endl;
+                    // TODO: basically, rescale the well connectivity index with the following formulation
+                    // CF = angle * Kh / (std::log(r0 / std::min(rw, r0)) + skin_factor);
                 }
+            } else {
+                this->inj_fc_multiplier_[perf] = 1.0;
             }
         }
     }
+
 
 } // namespace Opm

@@ -310,6 +310,14 @@ namespace Opm {
             well->setGuideRate(&guideRate_);
         }
 
+        for (auto& well : well_container_) {
+            if (well->isInjector()) {
+                const auto& ws = this->wellState().well(well->indexOfWell());
+                const auto& water_inj_volume = ws.perf_data.water_injection_volume;
+                well->updateInjFCMult(water_inj_volume);
+            }
+        }
+
         // Close completions due to economic reasons
         for (auto& well : well_container_) {
             well->closeCompletions(wellTestState());

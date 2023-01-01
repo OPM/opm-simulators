@@ -97,6 +97,11 @@ WellInterfaceGeneric::WellInterfaceGeneric(const Well& well,
             saturation_table_number_[perf] = pd.satnum_id;
             ++perf;
         }
+        if (this->isInjector()) {
+            inj_fc_multiplier_.resize(number_of_perforations_, 1.0);
+            // TODO: if the injection concentration changes, the filter cake thickness can be different, need to find a general way
+            // can apply to the a few different ways of handling the modeling of filter cake
+        }
     }
 
     // initialization of the completions mapping
