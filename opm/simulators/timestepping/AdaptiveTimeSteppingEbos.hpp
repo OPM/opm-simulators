@@ -702,7 +702,8 @@ namespace Opm {
 
             }
             else
-                OPM_THROW(std::runtime_error,"Unsupported time step control selected "<< control);
+                OPM_THROW(std::runtime_error,
+                          "Unsupported time step control selected " + control);
 
             // make sure growth factor is something reasonable
             assert(growthFactor_ >= 1.0);
