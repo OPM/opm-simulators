@@ -112,7 +112,9 @@ struct Setup
                 } else {
                     if (completion.state() != Opm::Connection::State::SHUT) {
                         OPM_THROW(std::runtime_error,
-                                  "Completion state: " << Opm::Connection::State2String(completion.state()) << " not handled");
+                                  "Completion state: " +
+                                  Opm::Connection::State2String(completion.state()) +
+                                  " not handled");
                     }
                 }
             }
