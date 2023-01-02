@@ -56,7 +56,8 @@ void test_milu0(M& A)
 
         if ( col == colend )
         {
-            OPM_THROW(std::logic_error, "Missing diagonal entry for row " << irow.index());
+            OPM_THROW(std::logic_error,
+                      "Missing diagonal entry for row " + std::to_string(irow.index()));
         }
         for (++col ;col != colend; ++col)
         {

@@ -122,7 +122,8 @@ class WellState;
                 } else if (relaxationTypeString == "sor") {
                     relaxType_ = SOR;
                 } else {
-                    OPM_THROW(std::runtime_error, "Unknown Relaxtion Type " << relaxationTypeString);
+                    OPM_THROW(std::runtime_error,
+                              "Unknown Relaxtion Type " + relaxationTypeString);
                 }
             }
 

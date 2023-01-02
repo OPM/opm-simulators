@@ -29,6 +29,7 @@
 #include <opm/simulators/linalg/bda/opencl/openclKernels.hpp>
 #include <opm/simulators/linalg/bda/Reorder.hpp>
 
+#include <sstream>
 
 namespace Opm
 {

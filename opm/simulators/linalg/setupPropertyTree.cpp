@@ -47,18 +47,18 @@ setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters 
     if (conf.size() > 5 && conf.substr(conf.size() - 5, 5) == ".json") { // the ends_with() method is not available until C++20
 #if BOOST_VERSION / 100 % 1000 > 48
         if ( !std::filesystem::exists(conf) ) {
-            OPM_THROW(std::invalid_argument, "JSON file " << conf << " does not exist.");
+            OPM_THROW(std::invalid_argument, "JSON file " + conf + " does not exist.");
         }
         try {
             return PropertyTree(conf);
         }
         catch (...) {
-            OPM_THROW(std::invalid_argument, "Failed reading linear solver configuration from JSON file " << conf);
+            OPM_THROW(std::invalid_argument, "Failed reading linear solver configuration from JSON file " + conf);
         }
 #else
         OPM_THROW(std::invalid_argument,
                   "--linear-solver-configuration=file.json not supported with "
-                      << "boost version. Needs version > 1.48.");
+                  "boost version. Needs version > 1.48.");
 #endif
     }
 
@@ -110,8 +110,8 @@ setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters 
 
     // No valid configuration option found.
     OPM_THROW(std::invalid_argument,
-              conf << " is not a valid setting for --linear-solver-configuration."
-              << " Please use ilu0, cpr, cpr_trueimpes, cpr_quasiimpes or isai");
+              conf + " is not a valid setting for --linear-solver-configuration."
+              " Please use ilu0, cpr, cpr_trueimpes, cpr_quasiimpes or isai");
 }
 
 std::string getSolverString(const FlowLinearSolverParameters& p)

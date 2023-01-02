@@ -33,6 +33,8 @@
 #include <opm/simulators/linalg/bda/Reorder.hpp>
 #include <opm/simulators/linalg/bda/opencl/ChowPatelIlu.hpp> // disable BISAI if ChowPatel is selected
 
+#include <sstream>
+
 namespace Opm
 {
 namespace Accelerator
