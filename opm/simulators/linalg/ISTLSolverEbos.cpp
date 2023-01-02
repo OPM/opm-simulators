@@ -106,8 +106,9 @@ std::function<Vector()> getWeightsCalculator(const PropertyTree& prm,
             weightsCalculator = trueFunc;
         } else {
             OPM_THROW(std::invalid_argument,
-                      "Weights type " << weightsType << "not implemented for cpr."
-                      << " Please use quasiimpes or trueimpes.");
+                      "Weights type " + weightsType +
+                      "not implemented for cpr."
+                      " Please use quasiimpes or trueimpes.");
         }
     }
     return weightsCalculator;
