@@ -181,7 +181,7 @@ struct StandardPreconditioners
               auto sargs = AMGSmootherArgsHelper<Smoother>::args(prm);
               return std::make_shared<Dune::Amg::AMGCPR<O, V, Smoother, C>>(op, crit, sargs, comm);
             } else {
-              OPM_THROW(std::invalid_argument, "Properties: No smoother with name " << smoother << ".");
+              OPM_THROW(std::invalid_argument, "Properties: No smoother with name " + smoother + ".");
             }
           });
         }
@@ -343,7 +343,8 @@ struct StandardPreconditioners<Operator,Dune::Amg::SequentialInformation>
     #endif
                     return AMGHelper<O,C,M,V>::template makeAmgPreconditioner<Smoother>(op, prm);
                 } else {
-                    OPM_THROW(std::invalid_argument, "Properties: No smoother with name " << smoother << ".");
+                    OPM_THROW(std::invalid_argument,
+                              "Properties: No smoother with name " + smoother + ".");
                 }
             });
             F::addCreator("kamg", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
@@ -375,7 +376,8 @@ struct StandardPreconditioners<Operator,Dune::Amg::SequentialInformation>
     #endif
                     return AMGHelper<O,C,M,V>::template makeAmgPreconditioner<Smoother>(op, prm, true);
                 } else {
-                    OPM_THROW(std::invalid_argument, "Properties: No smoother with name " << smoother << ".");
+                    OPM_THROW(std::invalid_argument,
+                              "Properties: No smoother with name " + smoother + ".");
                 }
             });
             F::addCreator("famg", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
