@@ -47,7 +47,8 @@ std::map<std::string,std::string> setupZoltanParams(const std::string& conf)
     } else if (conf.size() > 5 && conf.substr(conf.size() - 5, 5) == ".json") {
 #if BOOST_VERSION / 100 % 1000 > 48
         if ( !std::filesystem::exists(conf) ) {
-            OPM_THROW(std::invalid_argument, "JSON file " << conf << " does not exist.");
+            OPM_THROW(std::invalid_argument,
+                      "JSON file " + conf + " does not exist.");
         }
         boost::property_tree::ptree tree;
         try {
@@ -63,13 +64,13 @@ std::map<std::string,std::string> setupZoltanParams(const std::string& conf)
 #else
         OPM_THROW(std::invalid_argument,
                   "--zoltan-params=file.json not supported with "
-                      << "boost version. Needs version > 1.48.");
+                  "boost version. Needs version > 1.48.");
 #endif
     } else {
         // No valid configuration option found.
         OPM_THROW(std::invalid_argument,
-                  conf << " is not a valid setting for --zoltan-params."
-                  << " Please use graph, hypergraph or scotch");
+                  conf + " is not a valid setting for --zoltan-params."
+                  " Please use graph, hypergraph or scotch");
     }
 
     return result;
