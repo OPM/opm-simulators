@@ -241,7 +241,7 @@ namespace Opm
         }
         const double effectiveTw = this->isInjector() ? this->inj_fc_multiplier_[perf] * Tw : Tw;
         if (this->isInjector()) {
-            std::cout << " well " << this->name() << " perf " << perf << " Tw " << Tw << " scaling " << this->inj_fc_multiplier_[perf] << " effectiveTw " << effectiveTw << std::endl;
+            // std::cout << " well " << this->name() << " perf " << perf << " Tw " << Tw << " scaling " << this->inj_fc_multiplier_[perf] << " effectiveTw " << effectiveTw << std::endl;
         }
 
         // producing perforations

@@ -1437,6 +1437,26 @@ namespace Opm
                     std::cout << " well " << this->name() << " perf " << perf << " inj_fc_scaling " << this->inj_fc_multiplier_[perf] << std::endl;
                     // TODO: basically, rescale the well connectivity index with the following formulation
                     // CF = angle * Kh / (std::log(r0 / std::min(rw, r0)) + skin_factor);
+                } else  if (filter_cake.geometry == Connection::FilterCakeGeometry::RADIAL) {
+                    const double poro = filter_cake.poro;
+                    const double perm = filter_cake.perm;
+                    const double conc = this->well_ecl_.getFilterConc();
+                    const double rw = connection.getFilterCakeRadius();
+                    const double rc = std::sqrt(rw * rw - conc * water_inj_volume[perf]/(3.1415926*(1-poro)));
+                    std::cout << " perf " << perf << " rw " << rw << " rc " << rc;
+                    const double K = connection.Kh() / connection.connectionLength();
+                    std::cout << " K " << K << " perm " << perm;
+                    const double skin_factor = K / perm * std::log(rw/rc);
+                    std::cout << " skin_factor " << skin_factor << std::endl;
+                    const auto cr0 = connection.r0();
+                    const auto crw = connection.rw();
+                    const auto cskinfactor = connection.skinFactor();
+                    const auto denom = std::log(cr0 / std::min(crw, cr0)) + cskinfactor;
+                    const auto denom2 = std::log(cr0 / std::min(crw, cr0)) + cskinfactor + skin_factor;
+                    const auto scaling = denom / denom2;
+                    std::cout << " scaling will be " << scaling << std::endl;
+                    this->inj_fc_multiplier_[perf] = scaling;
+                    std::cout << " well " << this->name() << " perf " << perf << " inj_fc_scaling " << this->inj_fc_multiplier_[perf] << std::endl;
                 }
             } else {
                 this->inj_fc_multiplier_[perf] = 1.0;
