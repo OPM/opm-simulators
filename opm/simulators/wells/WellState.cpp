@@ -393,7 +393,8 @@ WellState::currentWellRates(const std::string& wellName) const
     auto it = well_rates.find(wellName);
 
     if (it == well_rates.end())
-        OPM_THROW(std::logic_error, "Could not find any rates for well  " << wellName);
+        OPM_THROW(std::logic_error,
+                  "Could not find any rates for well " + wellName);
 
     return it->second.second;
 }
@@ -918,8 +919,10 @@ bool WellState::wellIsOwned(std::size_t well_index,
 bool WellState::wellIsOwned(const std::string& wellName) const
 {
     const auto& well_index = this->index(wellName);
-    if (!well_index.has_value())
-        OPM_THROW(std::logic_error, "Could not find well " << wellName << " in well map");
+    if (!well_index.has_value()) {
+        OPM_THROW(std::logic_error,
+                  fmt::format("Could not find well {} in well map", wellName));
+    }
 
     return wellIsOwned(well_index.value(), wellName);
 }
@@ -949,4 +952,5 @@ WellState::parallelWellInfo(std::size_t well_index) const
 
 template void WellState::updateGlobalIsGrup<Parallel::Communication>(const Parallel::Communication& comm);
 template void WellState::communicateGroupRates<Parallel::Communication>(const Parallel::Communication& comm);
+
 } // namespace Opm
