@@ -242,7 +242,8 @@ public:
                 case 5:
                     return Dir::ZPlus;
                 default:
-                    OPM_THROW(std::runtime_error, "Unexpected face id" << dirId_);
+                    OPM_THROW(std::runtime_error,
+                              "Unexpected face id" + std::to_string(dirId_));
             }
         }
 
