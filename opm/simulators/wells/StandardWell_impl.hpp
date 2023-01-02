@@ -305,9 +305,15 @@ namespace Opm
                     perf_dis_gas_rate = getValue(dis_gas);
                     perf_vap_oil_rate = getValue(vap_oil);
                 }
-            }
 
-            if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                    const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+                    const Value vap_wat = rvw * cq_sGas;
+                    cq_s[waterCompIdx] += vap_wat;
+                    if (this->isProducer())
+                        perf_vap_wat_rate = getValue(vap_wat);
+                }
+            } else if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                 const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
                 const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
                 const Value cq_sWat = cq_s[waterCompIdx];
