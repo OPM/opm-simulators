@@ -51,10 +51,14 @@ namespace Opm
         , verbose_( verbose )
     {
         if( decayrate_  > 1.0 ) {
-            OPM_THROW(std::runtime_error,"SimpleIterationCountTimeStepControl: decay should be <= 1 " << decayrate_ );
+            OPM_THROW(std::runtime_error,
+                      "SimpleIterationCountTimeStepControl: "
+                      "decay should be <= 1 " + std::to_string(decayrate_));
         }
         if( growthrate_ < 1.0 ) {
-            OPM_THROW(std::runtime_error,"SimpleIterationCountTimeStepControl: growth should be >= 1 " << growthrate_ );
+            OPM_THROW(std::runtime_error,
+                      "SimpleIterationCountTimeStepControl: "
+                      "growth should be >= 1 " + std::to_string(growthrate_));
         }
     }
 
