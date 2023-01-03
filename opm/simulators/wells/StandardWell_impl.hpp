@@ -240,9 +240,6 @@ namespace Opm
             drawdown += skin_pressure;
         }
         const double effectiveTw = this->isInjector() ? this->inj_fc_multiplier_[perf] * Tw : Tw;
-        if (this->isInjector()) {
-            // std::cout << " well " << this->name() << " perf " << perf << " Tw " << Tw << " scaling " << this->inj_fc_multiplier_[perf] << " effectiveTw " << effectiveTw << std::endl;
-        }
 
         // producing perforations
         if (drawdown > 0)  {

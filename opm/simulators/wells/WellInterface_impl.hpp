@@ -1410,25 +1410,27 @@ namespace Opm
             const auto connection = this->well_ecl_.getConnections()[perf_ecl_index];
             const auto& filter_cake = this->well_ecl_.getConnections()[perf_ecl_index].getFilterCake();
             if (filter_cake.active()) {
+                const double poro = filter_cake.poro;
+                const double perm = filter_cake.perm;
+                const double conc = this->well_ecl_.getFilterConc();
+                const double rw = connection.getFilterCakeRadius();
+                const auto cr0 = connection.r0();
+                const auto crw = connection.rw();
+                const auto cskinfactor = connection.skinFactor();
+                const double K = connection.Kh() / connection.connectionLength();
+                const double factor = filter_cake.sf_multiplier;
                 // we do the work here, the main thing here is to compute a multiplier for the transmissibility
                 if (filter_cake.geometry == Connection::FilterCakeGeometry::LINEAR) {
-                    const double poro = filter_cake.poro;
-                    const double perm = filter_cake.perm;
                     // TODO: do we want to use this rw?
-                    const double rw = connection.getFilterCakeRadius();
                     const double area = connection.getFilterCakeArea();
-                    const double conc = this->well_ecl_.getFilterConc();
                     const double thickness = water_inj_volume[perf] * conc / (area*(1.-poro));
                     std::cout << " perf " << perf << " water_injection_volume " << water_inj_volume[perf] << " conc " << conc
                               << " area " << area << " poro " << poro << " thickness " << thickness << std::endl;
                     // TODO: this formulation might not apply for different situation
                     // but we are using this form just for first prototype
-                    const double K = connection.Kh() / connection.connectionLength();
-                    const double skin_factor = thickness / rw * K / perm;
+                    std::cout << " sf_multiplier " << factor;
+                    const double skin_factor = thickness / rw * K / perm * factor;
                     std::cout << " K " << K << " skin_factor " << skin_factor << std::endl;
-                    const auto cr0 = connection.r0();
-                    const auto crw = connection.rw();
-                    const auto cskinfactor = connection.skinFactor();
                     const auto denom = std::log(cr0 / std::min(crw, cr0)) + cskinfactor;
                     const auto denom2 = std::log(cr0 / std::min(crw, cr0)) + cskinfactor + skin_factor;
                     const auto scaling = denom / denom2;
@@ -1438,19 +1440,12 @@ namespace Opm
                     // TODO: basically, rescale the well connectivity index with the following formulation
                     // CF = angle * Kh / (std::log(r0 / std::min(rw, r0)) + skin_factor);
                 } else  if (filter_cake.geometry == Connection::FilterCakeGeometry::RADIAL) {
-                    const double poro = filter_cake.poro;
-                    const double perm = filter_cake.perm;
-                    const double conc = this->well_ecl_.getFilterConc();
-                    const double rw = connection.getFilterCakeRadius();
                     const double rc = std::sqrt(rw * rw - conc * water_inj_volume[perf]/(3.1415926*(1-poro)));
                     std::cout << " perf " << perf << " rw " << rw << " rc " << rc;
-                    const double K = connection.Kh() / connection.connectionLength();
                     std::cout << " K " << K << " perm " << perm;
-                    const double skin_factor = K / perm * std::log(rw/rc);
+                    std::cout << " sf_multiplier " << factor;
+                    const double skin_factor = K / perm * std::log(rw/rc) * factor;
                     std::cout << " skin_factor " << skin_factor << std::endl;
-                    const auto cr0 = connection.r0();
-                    const auto crw = connection.rw();
-                    const auto cskinfactor = connection.skinFactor();
                     const auto denom = std::log(cr0 / std::min(crw, cr0)) + cskinfactor;
                     const auto denom2 = std::log(cr0 / std::min(crw, cr0)) + cskinfactor + skin_factor;
                     const auto scaling = denom / denom2;
