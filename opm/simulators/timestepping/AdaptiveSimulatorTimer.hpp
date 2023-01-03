@@ -20,7 +20,7 @@
 #define OPM_ADAPTIVESIMULATORTIMER_HEADER_INCLUDED
 
 #include <cassert>
-#include <iostream>
+#include <iosfwd>
 #include <vector>
 #include <limits>
 #include <algorithm>
