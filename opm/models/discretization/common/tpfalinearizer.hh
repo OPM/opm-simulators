@@ -532,11 +532,7 @@ public:
 private:
     void linearize_()
     {
-<<<<<<< HEAD
         OPM_TIMEBLOCK(linearize);
-        const bool well_local = true;
-=======
->>>>>>> 54ab7ee7c (add option to make well assembly based on only wells)
         resetSystem_();
         unsigned numCells = model_().numTotalDof();
         const bool& enableFlows = simulator_().problem().eclWriter()->eclOutputModule().hasFlows();
@@ -641,7 +637,7 @@ private:
 
         // Add sparse source terms. For now only wells.
         if (separateSparseSourceTerms_) {
-            problem_().wellModel().addReservoirSourceTerms(residual_, *jacobian_);
+            problem_().wellModel().addReservoirSourceTerms(residual_, diagMatAddress_);
         }
 
         // Boundary terms. Only looping over cells with nontrivial bcs.
