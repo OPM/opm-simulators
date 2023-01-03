@@ -285,6 +285,10 @@ public:
                 this->rs_[globalDofIdx] = getValue(fs.Rs());
                 Valgrind::CheckDefined(this->rs_[globalDofIdx]);
             }
+            if (!this->rsw_.empty()) {
+                this->rsw_[globalDofIdx] = getValue(fs.Rsw());
+                Valgrind::CheckDefined(this->rsw_[globalDofIdx]);
+            }
 
             if (!this->rv_.empty()) {
                 this->rv_[globalDofIdx] = getValue(fs.Rv());
@@ -497,6 +501,9 @@ public:
 
                 if (!this->rs_.empty())
                     this->rs_[globalDofIdx] = fsInitial.Rs();
+
+                if (!this->rsw_.empty())
+                    this->rsw_[globalDofIdx] = fsInitial.Rsw();
 
                 if (!this->rvw_.empty())
                     this->rvw_[globalDofIdx] = fsInitial.Rvw();
@@ -823,6 +830,8 @@ public:
             fs.setTemperature(this->temperature_[elemIdx]);
         if (!this->rs_.empty())
            fs.setRs(this->rs_[elemIdx]);
+        if (!this->rsw_.empty())
+           fs.setRsw(this->rsw_[elemIdx]);
         if (!this->rv_.empty())
            fs.setRv(this->rv_[elemIdx]);
         if (!this->rvw_.empty())

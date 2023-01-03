@@ -393,7 +393,8 @@ WellState::currentWellRates(const std::string& wellName) const
     auto it = well_rates.find(wellName);
 
     if (it == well_rates.end())
-        OPM_THROW(std::logic_error, "Could not find any rates for well  " << wellName);
+        OPM_THROW(std::logic_error,
+                  "Could not find any rates for well " + wellName);
 
     return it->second.second;
 }
@@ -495,7 +496,7 @@ WellState::report(const int* globalCellIdxMap,
             well.rates.set(rt::alq, 0.0);
         }
 
-        well.rates.set(rt::dissolved_gas, ws.dissolved_gas_rate);
+        well.rates.set(rt::dissolved_gas, ws.dissolved_gas_rate + ws.dissolved_gas_rate_in_water);
         well.rates.set(rt::vaporized_oil, ws.vaporized_oil_rate);
         well.rates.set(rt::vaporized_water, ws.vaporized_wat_rate);
 
@@ -627,6 +628,14 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
                 const Connection& connection = completion_set.get(perf);
                 if (connection.state() == Connection::State::OPEN) {
                     const int segment_index = segment_set.segmentNumberToIndex(connection.segment());
+                    if ( segment_index == -1) {
+                        OPM_THROW(std::logic_error,
+                                  fmt::format("COMPSEGS: Well {} has connection in cell {}, {}, {} "
+                                              "without associated segment.", well_ecl.name(),
+                                              connection.getI() + 1 , connection.getJ() + 1,
+                                              connection.getK() + 1 ));
+                    }
+
                     segment_perforations[segment_index].push_back(n_activeperf);
                     n_activeperf++;
                 }
@@ -910,8 +919,10 @@ bool WellState::wellIsOwned(std::size_t well_index,
 bool WellState::wellIsOwned(const std::string& wellName) const
 {
     const auto& well_index = this->index(wellName);
-    if (!well_index.has_value())
-        OPM_THROW(std::logic_error, "Could not find well " << wellName << " in well map");
+    if (!well_index.has_value()) {
+        OPM_THROW(std::logic_error,
+                  fmt::format("Could not find well {} in well map", wellName));
+    }
 
     return wellIsOwned(well_index.value(), wellName);
 }
@@ -941,4 +952,5 @@ WellState::parallelWellInfo(std::size_t well_index) const
 
 template void WellState::updateGlobalIsGrup<Parallel::Communication>(const Parallel::Communication& comm);
 template void WellState::communicateGroupRates<Parallel::Communication>(const Parallel::Communication& comm);
+
 } // namespace Opm

@@ -721,7 +721,9 @@ checkFinite(DeferredLogger& deferred_logger) const
 {
     for (const Scalar v : value_) {
         if (!isfinite(v))
-            OPM_DEFLOG_THROW(NumericalProblem, "Infinite primary variable after update from wellState well: " << well_.name(),  deferred_logger);
+            OPM_DEFLOG_THROW(NumericalProblem,
+                             "Infinite primary variable after update from wellState, well: " + well_.name(),
+                             deferred_logger);
     }
 }
 

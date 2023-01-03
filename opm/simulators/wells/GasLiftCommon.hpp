@@ -25,7 +25,6 @@
 #include <opm/simulators/wells/GroupState.hpp>
 
 #include <string>
-#include <fmt/format.h>
 
 namespace Opm
 {

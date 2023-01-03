@@ -68,11 +68,7 @@ namespace Opm
         using typename MSWEval::Equations;
         using typename MSWEval::EvalWell;
         using typename MSWEval::BVectorWell;
-        using MSWEval::GFrac;
-        using MSWEval::WFrac;
-        using MSWEval::WQTotal;
         using MSWEval::SPres;
-        using MSWEval::numWellEq;
         using typename Base::PressureMatrix;
 
         MultisegmentWell(const Well& well,
@@ -185,7 +181,7 @@ namespace Opm
         void updateWellState(const BVectorWell& dwells,
                              WellState& well_state,
                              DeferredLogger& deferred_logger,
-                             const double relaxation_factor=1.0) const;
+                             const double relaxation_factor = 1.0);
 
 
         // computing the accumulation term for later use in well mass equations

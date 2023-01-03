@@ -93,14 +93,6 @@ struct ScaleLinearSystem {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
-struct CprMaxEllIter {
-    using type = UndefinedProperty;
-};
-template<class TypeTag, class MyTypeTag>
-struct CprEllSolvetype {
-    using type = UndefinedProperty;
-};
-template<class TypeTag, class MyTypeTag>
 struct CprReuseSetup {
     using type = UndefinedProperty;
 };
@@ -187,20 +179,12 @@ struct ScaleLinearSystem<TypeTag, TTag::FlowIstlSolverParams> {
     static constexpr bool value = false;
 };
 template<class TypeTag>
-struct CprMaxEllIter<TypeTag, TTag::FlowIstlSolverParams> {
-    static constexpr int value = 20;
-};
-template<class TypeTag>
-struct CprEllSolvetype<TypeTag, TTag::FlowIstlSolverParams> {
-    static constexpr int value = 0;
-};
-template<class TypeTag>
 struct CprReuseSetup<TypeTag, TTag::FlowIstlSolverParams> {
-    static constexpr int value = 3;
+    static constexpr int value = 4;
 };
 template<class TypeTag>
 struct CprReuseInterval<TypeTag, TTag::FlowIstlSolverParams> {
-    static constexpr int value = 10;
+    static constexpr int value = 30;
 };
 template<class TypeTag>
 struct LinearSolver<TypeTag, TTag::FlowIstlSolverParams> {
@@ -249,7 +233,6 @@ namespace Opm
         std::string accelerator_mode_;
         int bda_device_id_;
         int opencl_platform_id_;
-        int cpr_max_ell_iter_;
         int cpr_reuse_setup_;
         int cpr_reuse_interval_;
         bool opencl_ilu_parallel_;
@@ -270,7 +253,6 @@ namespace Opm
             newton_use_gmres_ = EWOMS_GET_PARAM(TypeTag, bool, UseGmres);
             ignoreConvergenceFailure_ = EWOMS_GET_PARAM(TypeTag, bool, LinearSolverIgnoreConvergenceFailure);
             scale_linear_system_ = EWOMS_GET_PARAM(TypeTag, bool, ScaleLinearSystem);
-            cpr_max_ell_iter_  =  EWOMS_GET_PARAM(TypeTag, int, CprMaxEllIter);
             cpr_reuse_setup_  =  EWOMS_GET_PARAM(TypeTag, int, CprReuseSetup);
             cpr_reuse_interval_  =  EWOMS_GET_PARAM(TypeTag, int, CprReuseInterval);
             linsolver_ = EWOMS_GET_PARAM(TypeTag, std::string, LinearSolver);
@@ -295,7 +277,6 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, bool, UseGmres, "Use GMRES as the linear solver");
             EWOMS_REGISTER_PARAM(TypeTag, bool, LinearSolverIgnoreConvergenceFailure, "Continue with the simulation like nothing happened after the linear solver did not converge");
             EWOMS_REGISTER_PARAM(TypeTag, bool, ScaleLinearSystem, "Scale linear system according to equation scale and primary variable types");
-            EWOMS_REGISTER_PARAM(TypeTag, int, CprMaxEllIter, "MaxIterations of the elliptic pressure part of the cpr solver");
             EWOMS_REGISTER_PARAM(TypeTag, int, CprReuseSetup, "Reuse preconditioner setup. Valid options are 0: recreate the preconditioner for every linear solve, 1: recreate once every timestep, 2: recreate if last linear solve took more than 10 iterations, 3: never recreate, 4: recreated every CprReuseInterval");
             EWOMS_REGISTER_PARAM(TypeTag, int, CprReuseInterval, "Reuse preconditioner interval. Used when CprReuseSetup is set to 4, then the preconditioner will be fully recreated instead of reused every N linear solve, where N is this parameter.");
             EWOMS_REGISTER_PARAM(TypeTag, std::string, LinearSolver, "Configuration of solver. Valid options are: ilu0 (default), cpr (an alias for cpr_trueimpes), cpr_quasiimpes, cpr_trueimpes or amg. Alternatively, you can request a configuration to be read from a JSON file by giving the filename here, ending with '.json.'");

@@ -27,6 +27,8 @@
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 #include <opm/simulators/wells/WellConvergence.hpp>
 
+#include <fmt/format.h>
+
 #include <algorithm>
 #include <functional>
 #include <numeric>
@@ -98,6 +100,7 @@ namespace Opm
                         const bool allow_cf,
                         std::vector<EvalWell>& cq_s,
                         double& perf_dis_gas_rate,
+                        double& perf_dis_gas_rate_in_water,
                         double& perf_vap_oil_rate,
                         double& perf_vap_wat_rate,
                         DeferredLogger& deferred_logger) const
@@ -107,6 +110,8 @@ namespace Opm
         const EvalWell rs = this->extendEval(fs.Rs());
         const EvalWell rv = this->extendEval(fs.Rv());
         const EvalWell rvw = this->extendEval(fs.Rvw());
+        const EvalWell rsw = this->extendEval(fs.Rsw());
+
 
         std::vector<EvalWell> b_perfcells_dense(this->num_components_, EvalWell{this->primary_variables_.numWellEq() + Indices::numEq, 0.0});
         for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
@@ -148,6 +153,7 @@ namespace Opm
                         rs,
                         rv,
                         rvw,
+                        rsw,
                         b_perfcells_dense,
                         Tw,
                         perf,
@@ -156,6 +162,7 @@ namespace Opm
                         cmix_s,
                         cq_s,
                         perf_dis_gas_rate,
+                        perf_dis_gas_rate_in_water,
                         perf_vap_oil_rate,
                         perf_vap_wat_rate,
                         deferred_logger);
@@ -178,6 +185,7 @@ namespace Opm
         const Scalar rs = fs.Rs().value();
         const Scalar rv = fs.Rv().value();
         const Scalar rvw = fs.Rvw().value();
+        const Scalar rsw = fs.Rsw().value();
         std::vector<Scalar> b_perfcells_dense(this->num_components_, 0.0);
         for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
@@ -209,6 +217,7 @@ namespace Opm
         Scalar perf_dis_gas_rate = 0.0;
         Scalar perf_vap_oil_rate = 0.0;
         Scalar perf_vap_wat_rate = 0.0;
+        Scalar perf_dis_gas_rate_in_water = 0.0;
 
         // surface volume fraction of fluids within wellbore
         std::vector<Scalar> cmix_s(this->numComponents(), 0.0);
@@ -222,6 +231,7 @@ namespace Opm
                         rs,
                         rv,
                         rvw,
+                        rsw,
                         b_perfcells_dense,
                         Tw,
                         perf,
@@ -230,6 +240,7 @@ namespace Opm
                         cmix_s,
                         cq_s,
                         perf_dis_gas_rate,
+                        perf_dis_gas_rate_in_water,
                         perf_vap_oil_rate,
                         perf_vap_wat_rate,
                         deferred_logger);
@@ -245,6 +256,7 @@ namespace Opm
                     const Value& rs,
                     const Value& rv,
                     const Value& rvw,
+                    const Value& rsw,
                     std::vector<Value>& b_perfcells_dense,
                     const double Tw,
                     const int perf,
@@ -253,6 +265,7 @@ namespace Opm
                     const std::vector<Value>& cmix_s,
                     std::vector<Value>& cq_s,
                     double& perf_dis_gas_rate,
+                    double& perf_dis_gas_rate_in_water,
                     double& perf_vap_oil_rate,
                     double& perf_vap_wat_rate,
                     DeferredLogger& deferred_logger) const
@@ -293,12 +306,26 @@ namespace Opm
                     perf_dis_gas_rate = getValue(dis_gas);
                     perf_vap_oil_rate = getValue(vap_oil);
                 }
+
                 if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                     const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
                     const Value vap_wat = rvw * cq_sGas;
                     cq_s[waterCompIdx] += vap_wat;
                     if (this->isProducer())
                         perf_vap_wat_rate = getValue(vap_wat);
+                }
+            } else if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+                const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+                const Value cq_sWat = cq_s[waterCompIdx];
+                const Value cq_sGas = cq_s[gasCompIdx];
+                const Value vap_wat = rvw * cq_sGas;
+                const Value dis_gas_wat = rsw * cq_sWat;
+                cq_s[waterCompIdx] += vap_wat;
+                cq_s[gasCompIdx]   += dis_gas_wat;
+                if (this->isProducer()) {
+                    perf_vap_wat_rate = getValue(vap_wat);
+                    perf_dis_gas_rate_in_water = getValue(dis_gas_wat);
                 }
             }
 
@@ -320,9 +347,32 @@ namespace Opm
             // compute volume ratio between connection at standard conditions
             Value volumeRatio = bhp * 0.0; // initialize it with the correct type
 ;
-            if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+            if (FluidSystem::enableVaporizedWater() && FluidSystem::enableDissolvedGasInWater()) {
                 const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
-                volumeRatio += cmix_s[waterCompIdx] / b_perfcells_dense[waterCompIdx];
+                const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+                // Incorporate RSW/RVW factors if both water and gas active
+                const Value d = 1.0 - rvw * rsw;
+
+                if (d <= 0.0) {
+                    std::ostringstream sstr;
+                    sstr << "Problematic d value " << d << " obtained for well " << this->name()
+                         << " during computePerfRate calculations with rsw " << rsw
+                         << ", rvw " << rvw << " and pressure " << pressure
+                         << " obtaining d " << d
+                         << " Continue as if no dissolution (rsw = 0) and vaporization (rvw = 0) "
+                         << " for this connection.";
+                    deferred_logger.debug(sstr.str());
+                }
+                const Value tmp_wat = d > 0.0? (cmix_s[waterCompIdx] - rvw * cmix_s[gasCompIdx]) / d : cmix_s[waterCompIdx];
+                volumeRatio += tmp_wat / b_perfcells_dense[waterCompIdx];
+
+                const Value tmp_gas =  d > 0.0? (cmix_s[gasCompIdx] - rsw * cmix_s[waterCompIdx]) / d : cmix_s[waterCompIdx];
+                volumeRatio += tmp_gas / b_perfcells_dense[gasCompIdx];
+            } else {
+                if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                    const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+                    volumeRatio += cmix_s[waterCompIdx] / b_perfcells_dense[waterCompIdx];
+                }
             }
 
             if constexpr (Indices::enableSolvent) {
@@ -408,10 +458,12 @@ namespace Opm
                         perf_vap_wat_rate = getValue(rvw) * (getValue(cq_s[gasCompIdx]) - getValue(rs) * getValue(cq_s[oilCompIdx])) / d;
                     }
                 }
-                else if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                     //no oil
                     const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+                    const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
                     perf_vap_wat_rate = getValue(rvw) * getValue(cq_s[gasCompIdx]);
+                    perf_dis_gas_rate_in_water = getValue(rsw) * getValue(cq_s[waterCompIdx]);
                 }
             }
         }
@@ -459,6 +511,7 @@ namespace Opm
 
         ws.vaporized_oil_rate = 0;
         ws.dissolved_gas_rate = 0;
+        ws.dissolved_gas_rate_in_water = 0;
         ws.vaporized_wat_rate = 0;
 
         const int np = this->number_of_phases_;
@@ -518,6 +571,7 @@ namespace Opm
         {
             const auto& comm = this->parallel_well_info_.communication();
             ws.dissolved_gas_rate = comm.sum(ws.dissolved_gas_rate);
+            ws.dissolved_gas_rate_in_water = comm.sum(ws.dissolved_gas_rate_in_water);
             ws.vaporized_oil_rate = comm.sum(ws.vaporized_oil_rate);
             ws.vaporized_wat_rate = comm.sum(ws.vaporized_wat_rate);
         }
@@ -585,12 +639,13 @@ namespace Opm
         getMobilityEval(ebosSimulator, perf, mob, deferred_logger);
 
         double perf_dis_gas_rate = 0.;
+        double perf_dis_gas_rate_in_water = 0.;
         double perf_vap_oil_rate = 0.;
         double perf_vap_wat_rate = 0.;
         double trans_mult = ebosSimulator.problem().template rockCompTransMultiplier<double>(intQuants,  cell_idx);
         const double Tw = this->well_index_[perf] * trans_mult;
         computePerfRateEval(intQuants, mob, bhp, Tw, perf, allow_cf,
-                            cq_s, perf_dis_gas_rate, perf_vap_oil_rate, perf_vap_wat_rate, deferred_logger);
+                            cq_s, perf_dis_gas_rate, perf_dis_gas_rate_in_water, perf_vap_oil_rate, perf_vap_wat_rate, deferred_logger);
 
         auto& ws = well_state.well(this->index_of_well_);
         auto& perf_data = ws.perf_data;
@@ -609,6 +664,7 @@ namespace Opm
         // updating the solution gas rate and solution oil rate
         if (this->isProducer()) {
             ws.dissolved_gas_rate += perf_dis_gas_rate;
+            ws.dissolved_gas_rate_in_water += perf_dis_gas_rate_in_water;
             ws.vaporized_oil_rate += perf_vap_oil_rate;
             ws.vaporized_wat_rate += perf_vap_wat_rate;
         }
@@ -1289,6 +1345,7 @@ namespace Opm
                                                 std::vector<double>& rsmax_perf,
                                                 std::vector<double>& rvmax_perf,
                                                 std::vector<double>& rvwmax_perf,
+                                                std::vector<double>& rswmax_perf,
                                                 std::vector<double>& surf_dens_perf) const
     {
         std::function<Scalar(int,int)> getTemperature =
@@ -1327,6 +1384,7 @@ namespace Opm
                                                          rsmax_perf,
                                                          rvmax_perf,
                                                          rvwmax_perf,
+                                                         rswmax_perf,
                                                          surf_dens_perf);
     }
 
@@ -1449,6 +1507,7 @@ namespace Opm
                                            const std::vector<double>& rsmax_perf,
                                            const std::vector<double>& rvmax_perf,
                                            const std::vector<double>& rvwmax_perf,
+                                           const std::vector<double>& rswmax_perf,
                                            const std::vector<double>& surf_dens_perf,
                                            DeferredLogger& deferred_logger)
     {
@@ -1482,6 +1541,7 @@ namespace Opm
                                              rsmax_perf,
                                              rvmax_perf,
                                              rvwmax_perf,
+                                             rswmax_perf,
                                              surf_dens_perf,
                                              deferred_logger);
     }
@@ -1504,9 +1564,10 @@ namespace Opm
          std::vector<double> rsmax_perf;
          std::vector<double> rvmax_perf;
          std::vector<double> rvwmax_perf;
+         std::vector<double> rswmax_perf;
          std::vector<double> surf_dens_perf;
-         computePropertiesForWellConnectionPressures(ebosSimulator, well_state, b_perf, rsmax_perf, rvmax_perf, rvwmax_perf, surf_dens_perf);
-         computeWellConnectionDensitesPressures(ebosSimulator, well_state, b_perf, rsmax_perf, rvmax_perf, rvwmax_perf, surf_dens_perf, deferred_logger);
+         computePropertiesForWellConnectionPressures(ebosSimulator, well_state, b_perf, rsmax_perf, rvmax_perf, rvwmax_perf, rswmax_perf, surf_dens_perf);
+         computeWellConnectionDensitesPressures(ebosSimulator, well_state, b_perf, rsmax_perf, rvmax_perf, rvwmax_perf, rswmax_perf, surf_dens_perf, deferred_logger);
     }
 
 
@@ -1959,12 +2020,13 @@ namespace Opm
 
             std::vector<EvalWell> cq_s(this->num_components_, {this->primary_variables_.numWellEq() + Indices::numEq, 0.});
             double perf_dis_gas_rate = 0.;
+            double perf_dis_gas_rate_in_water = 0.;
             double perf_vap_oil_rate = 0.;
             double perf_vap_wat_rate = 0.;
             double trans_mult = ebos_simulator.problem().template rockCompTransMultiplier<double>(int_quant, cell_idx);
             const double Tw = this->well_index_[perf] * trans_mult;
             computePerfRateEval(int_quant, mob, bhp, Tw, perf, allow_cf,
-                                cq_s, perf_dis_gas_rate, perf_vap_oil_rate, perf_vap_wat_rate, deferred_logger);
+                                cq_s, perf_dis_gas_rate, perf_dis_gas_rate_in_water, perf_vap_oil_rate, perf_vap_wat_rate, deferred_logger);
             // TODO: make area a member
             const double area = 2 * M_PI * this->perf_rep_radius_[perf] * this->perf_length_[perf];
             const auto& material_law_manager = ebos_simulator.problem().materialLawManager();
@@ -2028,7 +2090,9 @@ namespace Opm
         if constexpr (Base::has_polymermw) {
             const int water_table_id = this->well_ecl_.getPolymerProperties().m_skprwattable;
             if (water_table_id <= 0) {
-                OPM_DEFLOG_THROW(std::runtime_error, "Unused SKPRWAT table id used for well " << name(), deferred_logger);
+                OPM_DEFLOG_THROW(std::runtime_error,
+                                 fmt::format("Unused SKPRWAT table id used for well {}", name()),
+                                 deferred_logger);
             }
             const auto& water_table_func = PolymerModule::getSkprwatTable(water_table_id);
             const EvalWell throughput_eval(this->primary_variables_.numWellEq() + Indices::numEq, throughput);
@@ -2037,8 +2101,10 @@ namespace Opm
             pskin_water = water_table_func.eval(throughput_eval, water_velocity);
             return pskin_water;
         } else {
-            OPM_DEFLOG_THROW(std::runtime_error, "Polymermw is not activated, "
-                                          "while injecting skin pressure is requested for well " << name(), deferred_logger);
+            OPM_DEFLOG_THROW(std::runtime_error,
+                             fmt::format("Polymermw is not activated, while injecting "
+                                         "skin pressure is requested for well {}", name()),
+                             deferred_logger);
         }
     }
 
@@ -2062,7 +2128,9 @@ namespace Opm
             }
             const int polymer_table_id = this->well_ecl_.getPolymerProperties().m_skprpolytable;
             if (polymer_table_id <= 0) {
-                OPM_DEFLOG_THROW(std::runtime_error, "Unavailable SKPRPOLY table id used for well " << name(), deferred_logger);
+                OPM_DEFLOG_THROW(std::runtime_error,
+                                 fmt::format("Unavailable SKPRPOLY table id used for well {}", name()),
+                                 deferred_logger);
             }
             const auto& skprpolytable = PolymerModule::getSkprpolyTable(polymer_table_id);
             const double reference_concentration = skprpolytable.refConcentration;
@@ -2078,8 +2146,10 @@ namespace Opm
             const EvalWell pskin = pskin_water + (pskin_poly - pskin_water) / reference_concentration * poly_inj_conc;
             return sign * pskin;
         } else {
-            OPM_DEFLOG_THROW(std::runtime_error, "Polymermw is not activated, "
-                                          "while injecting skin pressure is requested for well " << name(), deferred_logger);
+            OPM_DEFLOG_THROW(std::runtime_error,
+                             fmt::format("Polymermw is not activated, while injecting "
+                                         "skin pressure is requested for well {}", name()),
+                             deferred_logger);
         }
     }
 
@@ -2105,8 +2175,10 @@ namespace Opm
             molecular_weight = table_func.eval(throughput_eval, abs(water_velocity));
             return molecular_weight;
         } else {
-            OPM_DEFLOG_THROW(std::runtime_error, "Polymermw is not activated, "
-                                          "while injecting polymer molecular weight is requested for well " << name(), deferred_logger);
+            OPM_DEFLOG_THROW(std::runtime_error,
+                             fmt::format("Polymermw is not activated, while injecting "
+                                         "polymer molecular weight is requested for well {}", name()),
+                             deferred_logger);
         }
     }
 
@@ -2529,10 +2601,9 @@ namespace Opm
         }
         else {
             OPM_DEFLOG_THROW(NotImplemented,
-                             "Unsupported Injector Type ("
-                             << static_cast<int>(preferred_phase)
-                             << ") for well " << this->name()
-                             << " during connection I.I. calculation",
+                             fmt::format("Unsupported Injector Type ({}) "
+                                         "for well {} during connection I.I. calculation",
+                                         static_cast<int>(preferred_phase), this->name()),
                              deferred_logger);
         }
 

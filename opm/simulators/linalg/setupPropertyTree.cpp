@@ -38,8 +38,8 @@ namespace Opm
 /// from file the data in the JSON file will override any other options.
 PropertyTree
 setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters to potentially override.
-                  bool LinearSolverMaxIterSet,
-                  bool CprMaxEllIterSet)
+                  bool linearSolverMaxIterSet,
+                  bool linearSolverReductionSet)
 {
     std::string conf = p.linsolver_;
 
@@ -47,18 +47,18 @@ setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters 
     if (conf.size() > 5 && conf.substr(conf.size() - 5, 5) == ".json") { // the ends_with() method is not available until C++20
 #if BOOST_VERSION / 100 % 1000 > 48
         if ( !std::filesystem::exists(conf) ) {
-            OPM_THROW(std::invalid_argument, "JSON file " << conf << " does not exist.");
+            OPM_THROW(std::invalid_argument, "JSON file " + conf + " does not exist.");
         }
         try {
             return PropertyTree(conf);
         }
         catch (...) {
-            OPM_THROW(std::invalid_argument, "Failed reading linear solver configuration from JSON file " << conf);
+            OPM_THROW(std::invalid_argument, "Failed reading linear solver configuration from JSON file " + conf);
         }
 #else
         OPM_THROW(std::invalid_argument,
                   "--linear-solver-configuration=file.json not supported with "
-                      << "boost version. Needs version > 1.48.");
+                  "boost version. Needs version > 1.48.");
 #endif
     }
 
@@ -68,21 +68,25 @@ setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters 
             // Treat "cpr" as short cut for the true IMPES variant.
             conf = "cpr_trueimpes";
         }
-        if (!LinearSolverMaxIterSet) {
+        if (!linearSolverMaxIterSet) {
             // Use our own default unless it was explicitly overridden by user.
             p.linear_solver_maxiter_ = 20;
         }
-        if (!CprMaxEllIterSet) {
+        if (!linearSolverReductionSet) {
             // Use our own default unless it was explicitly overridden by user.
-            p.cpr_max_ell_iter_ = 1;
+            p.linear_solver_reduction_ = 0.005;
         }
         return setupCPR(conf, p);
     }
 
     if ((conf == "cprw")) {
-        if (!LinearSolverMaxIterSet) {
+        if (!linearSolverMaxIterSet) {
             // Use our own default unless it was explicitly overridden by user.
             p.linear_solver_maxiter_ = 20;
+        }
+        if (!linearSolverReductionSet) {
+            // Use our own default unless it was explicitly overridden by user.
+            p.linear_solver_reduction_ = 0.005;
         }
         return setupCPRW(conf, p);
     }
@@ -106,8 +110,8 @@ setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters 
 
     // No valid configuration option found.
     OPM_THROW(std::invalid_argument,
-              conf << " is not a valid setting for --linear-solver-configuration."
-              << " Please use ilu0, cpr, cpr_trueimpes, cpr_quasiimpes or isai");
+              conf + " is not a valid setting for --linear-solver-configuration."
+              " Please use ilu0, cpr, cpr_trueimpes, cpr_quasiimpes or isai");
 }
 
 std::string getSolverString(const FlowLinearSolverParameters& p)
@@ -145,7 +149,7 @@ setupCPRW(const std::string& /*conf*/, const FlowLinearSolverParameters& p)
     prm.put("preconditioner.coarsesolver.preconditioner.type", "amg"s);
     prm.put("preconditioner.coarsesolver.preconditioner.alpha", 0.333333333333);
     prm.put("preconditioner.coarsesolver.preconditioner.relaxation", 1.0);
-    prm.put("preconditioner.coarsesolver.preconditioner.iterations", p.cpr_max_ell_iter_);
+    prm.put("preconditioner.coarsesolver.preconditioner.iterations", 1);
     prm.put("preconditioner.coarsesolver.preconditioner.coarsenTarget", 1200);
     prm.put("preconditioner.coarsesolver.preconditioner.pre_smooth", 1);
     prm.put("preconditioner.coarsesolver.preconditioner.post_smooth", 1);
@@ -191,11 +195,11 @@ setupCPR(const std::string& conf, const FlowLinearSolverParameters& p)
     prm.put("preconditioner.coarsesolver.preconditioner.type", "amg"s);
     prm.put("preconditioner.coarsesolver.preconditioner.alpha", 0.333333333333);
     prm.put("preconditioner.coarsesolver.preconditioner.relaxation", 1.0);
-    prm.put("preconditioner.coarsesolver.preconditioner.iterations", p.cpr_max_ell_iter_);
+    prm.put("preconditioner.coarsesolver.preconditioner.iterations", 1);
     prm.put("preconditioner.coarsesolver.preconditioner.coarsenTarget", 1200);
     prm.put("preconditioner.coarsesolver.preconditioner.pre_smooth", 1);
     prm.put("preconditioner.coarsesolver.preconditioner.post_smooth", 1);
-    prm.put("preconditioner.coarsesolver.preconditioner.beta", 1e-5);
+    prm.put("preconditioner.coarsesolver.preconditioner.beta", 0.0);
     prm.put("preconditioner.coarsesolver.preconditioner.smoother", "ILU0"s);
     prm.put("preconditioner.coarsesolver.preconditioner.verbosity", 0);
     prm.put("preconditioner.coarsesolver.preconditioner.maxlevel", 15);
@@ -204,7 +208,7 @@ setupCPR(const std::string& conf, const FlowLinearSolverParameters& p)
     // graph might be unsymmetric and hence not supported by the PTScotch/ParMetis
     // calls in DUNE. Accumulating to 1 skips PTScotch/ParMetis
     prm.put("preconditioner.coarsesolver.preconditioner.accumulate", 1);
-    prm.put("preconditioner.coarsesolver.preconditioner.prolongationdamping", 1.6);
+    prm.put("preconditioner.coarsesolver.preconditioner.prolongationdamping", 1.0);
     prm.put("preconditioner.coarsesolver.preconditioner.maxdistance", 2);
     prm.put("preconditioner.coarsesolver.preconditioner.maxconnectivity", 15);
     prm.put("preconditioner.coarsesolver.preconditioner.maxaggsize", 6);

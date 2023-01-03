@@ -280,7 +280,7 @@ density(const double depth,
 {
     // The initializing algorithm can give depths outside the range due to numerical noise i.e. we extrapolate
     double saltConcentration = saltVdTable_.eval(depth, /*extrapolate=*/true);
-    double rho = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx_, temp_, press, saltConcentration);
+    double rho = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx_, temp_, press, 0.0 /*=Rsw*/, saltConcentration);
     rho *= FluidSystem::referenceDensity(FluidSystem::waterPhaseIdx, pvtRegionIdx_);
     return rho;
 }
@@ -1583,8 +1583,9 @@ applyNumericalAquifers_(const GridView& gridView,
         const auto search = num_aqu_cells.find(cartIx);
         if (search != num_aqu_cells.end()) {
             // numerical aquifer cells are filled with water initially
-            // for co2store the oilphase is used for brine
-            const auto watPos = co2store? FluidSystem::oilPhaseIdx : FluidSystem::waterPhaseIdx;
+            // for co2store the oilphase may be used for the brine
+            bool co2store_oil_as_brine = co2store && FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx);
+            const auto watPos =  co2store_oil_as_brine? FluidSystem::oilPhaseIdx : FluidSystem::waterPhaseIdx;
             if (FluidSystem::phaseIsActive(watPos)) {
                 this->sat_[watPos][elemIdx] = 1.;
             } else {

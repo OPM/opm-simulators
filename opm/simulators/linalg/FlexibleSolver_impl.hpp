@@ -177,7 +177,8 @@ namespace Dune
             linsolver_.reset(new Dune::UMFPack<MatrixType>(linearoperator_for_solver_->getmat(), verbosity, dummy));
 #endif
         } else {
-            OPM_THROW(std::invalid_argument, "Properties: Solver " << solver_type << " not known.");
+            OPM_THROW(std::invalid_argument,
+                      "Properties: Solver " + solver_type + " not known.");
         }
     }
 

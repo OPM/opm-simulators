@@ -29,7 +29,6 @@
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
 #include <string>
-#include <sstream>
 #include <exception>
 #include <stdexcept>
 
@@ -42,13 +41,14 @@
 // exception class derived from either std::logic_error or
 // std::runtime_error.
 //
-// Usage: OPM_DEFLOG_THROW(ExceptionClass, "Error message " << value, DeferredLogger);
-#define OPM_DEFLOG_THROW(Exception, message, deferred_logger)                             \
-    do {                                                                \
-        std::ostringstream oss__;                                       \
-        oss__ << "[" << __FILE__ << ":" << __LINE__ << "] " << message; \
-        deferred_logger.error(oss__.str());                               \
-        throw Exception(oss__.str());                                   \
+// Usage: OPM_DEFLOG_THROW(ExceptionClass, "Error message", DeferredLogger);
+#define OPM_DEFLOG_THROW(Exception, message, deferred_logger)   \
+    do {                                                        \
+        std::string oss__ = std::string{"["} + __FILE__ + ":" + \
+                            std::to_string(__LINE__) + "] " +   \
+                            message;                            \
+        deferred_logger.error(oss__);                           \
+        throw Exception(oss__);                                 \
     } while (false)
 
 namespace {

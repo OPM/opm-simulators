@@ -23,6 +23,7 @@
 #include <opm/common/ErrorMacros.hpp>
 
 #include <opm/material/densead/Evaluation.hpp>
+#include <opm/material/densead/Math.hpp>
 
 #include <opm/input/eclipse/Schedule/VFPInjTable.hpp>
 #include <opm/input/eclipse/Schedule/VFPProdTable.hpp>
@@ -594,7 +595,9 @@ const T& getTable(const std::map<int, std::reference_wrapper<const T>>& tables, 
 {
     auto entry = tables.find(table_id);
     if (entry == tables.end()) {
-        OPM_THROW(std::invalid_argument, "Nonexistent VFP table " << table_id << " referenced.");
+        OPM_THROW(std::invalid_argument,
+                  "Nonexistent VFP table " +
+                  std::to_string(table_id) + " referenced.");
     }
     else {
         return entry->second.get();

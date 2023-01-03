@@ -42,6 +42,8 @@
 #include <flow/flow_ebos_onephase_energy.hpp>
 #include <flow/flow_ebos_oilwater_brine.hpp>
 #include <flow/flow_ebos_gaswater_brine.hpp>
+#include <flow/flow_ebos_gaswater_dissolution.hpp>
+#include <flow/flow_ebos_gaswater_dissolution_diffuse.hpp>
 #include <flow/flow_ebos_energy.hpp>
 #include <flow/flow_ebos_oilwater_polymer.hpp>
 #include <flow/flow_ebos_oilwater_polymer_injectivity.hpp>
@@ -632,6 +634,7 @@ private:
     int runTwoPhase(const Phases& phases)
     {
         const bool diffusive = eclipseState_->getSimulationConfig().isDiffusive();
+        const bool disgasw = eclipseState_->getSimulationConfig().hasDISGASW();
 
         // oil-gas
         if (phases.active( Phase::OIL ) && phases.active( Phase::GAS )) {
@@ -655,12 +658,19 @@ private:
 
         // gas-water
         else if ( phases.active( Phase::GAS ) && phases.active( Phase::WATER ) ) {
+            if (disgasw) {
+                if (diffusive) {
+                    return flowEbosGasWaterDissolutionDiffuseMain(argc_, argv_, outputCout_, outputFiles_);
+                }
+                return flowEbosGasWaterDissolutionMain(argc_, argv_, outputCout_, outputFiles_);
+            }
             if (diffusive) {
                 if (outputCout_) {
-                    std::cerr << "The DIFFUSE option is not available for the two-phase gas/water model." << std::endl;
+                    std::cerr << "The DIFFUSE option is not available for the two-phase gas/water model without disgasw." << std::endl;
                 }
                 return EXIT_FAILURE;
             }
+
             return flowEbosGasWaterMain(argc_, argv_, outputCout_, outputFiles_);
         }
         else {

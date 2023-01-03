@@ -22,16 +22,29 @@
 #ifndef OPM_SIMULATORFULLYIMPLICITBLACKOILEBOS_HEADER_INCLUDED
 #define OPM_SIMULATORFULLYIMPLICITBLACKOILEBOS_HEADER_INCLUDED
 
-#include <opm/simulators/flow/NonlinearSolverEbos.hpp>
 #include <opm/simulators/flow/BlackoilModelEbos.hpp>
 #include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
-#include <opm/simulators/wells/WellState.hpp>
+#include <opm/simulators/flow/ConvergenceOutputConfiguration.hpp>
+#include <opm/simulators/flow/ExtraConvergenceOutputThread.hpp>
+#include <opm/simulators/flow/NonlinearSolverEbos.hpp>
 #include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
-#include <opm/simulators/utils/moduleVersion.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeSteppingEbos.hpp>
+#include <opm/simulators/utils/moduleVersion.hpp>
+#include <opm/simulators/wells/WellState.hpp>
+
 #include <opm/grid/utility/StopWatch.hpp>
 
+#include <opm/input/eclipse/Units/UnitSystem.hpp>
+
 #include <opm/common/ErrorMacros.hpp>
+
+#include <memory>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <thread>
+#include <utility>
+#include <vector>
 
 namespace Opm::Properties {
 
@@ -41,6 +54,12 @@ struct EnableAdaptiveTimeStepping {
 };
 template<class TypeTag, class MyTypeTag>
 struct EnableTuning {
+    using type = UndefinedProperty;
+};
+
+template <class TypeTag, class MyTypeTag>
+struct OutputExtraConvergenceInfo
+{
     using type = UndefinedProperty;
 };
 
@@ -55,6 +74,12 @@ struct EnableAdaptiveTimeStepping<TypeTag, TTag::EclFlowProblem> {
 template<class TypeTag>
 struct EnableTuning<TypeTag, TTag::EclFlowProblem> {
     static constexpr bool value = false;
+};
+
+template <class TypeTag>
+struct OutputExtraConvergenceInfo<TypeTag, TTag::EclFlowProblem>
+{
+    static constexpr auto* value = "none";
 };
 
 } // namespace Opm::Properties
@@ -119,10 +144,21 @@ public:
     {
         phaseUsage_ = phaseUsageFromDeck(eclState());
 
-        // Only rank 0 does print to std::cout
-        const auto& comm = grid().comm();
-        terminalOutput_ = EWOMS_GET_PARAM(TypeTag, bool, EnableTerminalOutput);
-        terminalOutput_ = terminalOutput_ && (comm.rank() == 0);
+        // Only rank 0 does print to std::cout, and only if specifically requested.
+        this->terminalOutput_ = false;
+        if (this->grid().comm().rank() == 0) {
+            this->terminalOutput_ = EWOMS_GET_PARAM(TypeTag, bool, EnableTerminalOutput);
+
+            this->startConvergenceOutputThread(EWOMS_GET_PARAM(TypeTag, std::string,
+                                                               OutputExtraConvergenceInfo),
+                                               R"(OutputExtraConvergenceInfo (--output-extra-convergence-info))");
+        }
+    }
+
+    ~SimulatorFullyImplicitBlackoilEbos()
+    {
+        // Safe to call on all ranks, not just the I/O rank.
+        this->endConvergenceOutputThread();
     }
 
     static void registerParameters()
@@ -137,6 +173,15 @@ public:
                              "Use adaptive time stepping between report steps");
         EWOMS_REGISTER_PARAM(TypeTag, bool, EnableTuning,
                              "Honor some aspects of the TUNING keyword.");
+        EWOMS_REGISTER_PARAM(TypeTag, std::string, OutputExtraConvergenceInfo,
+                             "Provide additional convergence output "
+                             "files for diagnostic purposes. "
+                             "\"none\" gives no extra output and "
+                             "overrides all other options, "
+                             "\"steps\" generates an INFOSTEP file, "
+                             "\"iterations\" generates an INFOITER file. "
+                             "Combine options with commas, e.g., "
+                             "\"steps,iterations\" for multiple outputs.");
     }
 
     /// Run the simulation.
@@ -289,6 +334,13 @@ public:
         // update timing.
         report_.success.solver_time += solverTimer_->secsSinceStart();
 
+        if (this->grid().comm().rank() == 0) {
+            // Destructively grab the step convergence reports.  The solver
+            // object and the model object contained therein are about to go
+            // out of scope.
+            this->writeConvergenceOutput(solver->model().getStepReportsDestructively());
+        }
+
         // Increment timer, remember well state.
         ++timer;
 
@@ -297,14 +349,13 @@ public:
                 const std::string version = moduleVersionName();
                 outputTimestampFIP(timer, eclState().getTitle(), version);
             }
-        }
 
-        if (terminalOutput_) {
             std::string msg =
                 "Time step took " + std::to_string(solverTimer_->secsSinceStart()) + " seconds; "
                 "total solver time " + std::to_string(report_.success.solver_time) + " seconds.";
             OpmLog::debug(msg);
         }
+
         return true;
     }
 
@@ -361,6 +412,65 @@ protected:
     const WellModel& wellModel_() const
     { return ebosSimulator_.problem().wellModel(); }
 
+    void startConvergenceOutputThread(std::string_view convOutputOptions,
+                                      std::string_view optionName)
+    {
+        const auto config = ConvergenceOutputConfiguration {
+            convOutputOptions, optionName
+        };
+        if (! config.want(ConvergenceOutputConfiguration::Option::Iterations)) {
+            return;
+        }
+
+        auto getPhaseName = ConvergenceOutputThread::ComponentToPhaseName {
+            [compNames = typename Model::ComponentName{}](const int compIdx)
+            { return std::string_view { compNames.name(compIdx) }; }
+        };
+
+        auto convertTime = ConvergenceOutputThread::ConvertToTimeUnits {
+            [usys = this->eclState().getUnits()](const double time)
+            { return usys.from_si(UnitSystem::measure::time, time); }
+        };
+
+        this->convergenceOutputQueue_.emplace();
+        this->convergenceOutputObject_.emplace
+            (this->eclState().getIOConfig().getOutputDir(),
+             this->eclState().getIOConfig().getBaseName(),
+             std::move(getPhaseName),
+             std::move(convertTime),
+             config, *this->convergenceOutputQueue_);
+
+        this->convergenceOutputThread_
+            .emplace(&ConvergenceOutputThread::writeASynchronous,
+                     &this->convergenceOutputObject_.value());
+    }
+
+    void writeConvergenceOutput(std::vector<typename Model::StepReport>&& reports)
+    {
+        if (! this->convergenceOutputThread_.has_value()) {
+            return;
+        }
+
+        auto requests = std::vector<ConvergenceReportQueue::OutputRequest>{};
+        requests.reserve(reports.size());
+
+        for (auto&& report : reports) {
+            requests.push_back({ report.report_step, report.current_step, std::move(report.report) });
+        }
+
+        this->convergenceOutputQueue_->enqueue(std::move(requests));
+    }
+
+    void endConvergenceOutputThread()
+    {
+        if (! this->convergenceOutputThread_.has_value()) {
+            return;
+        }
+
+        this->convergenceOutputQueue_->signalLastOutputRequest();
+        this->convergenceOutputThread_->join();
+    }
+
     // Data.
     Simulator& ebosSimulator_;
     std::unique_ptr<WellConnectionAuxiliaryModule<TypeTag>> wellAuxMod_;
@@ -377,6 +487,10 @@ protected:
     std::unique_ptr<time::StopWatch> solverTimer_;
     std::unique_ptr<time::StopWatch> totalTimer_;
     std::unique_ptr<TimeStepper> adaptiveTimeStepping_;
+
+    std::optional<ConvergenceReportQueue> convergenceOutputQueue_{};
+    std::optional<ConvergenceOutputThread> convergenceOutputObject_{};
+    std::optional<std::thread> convergenceOutputThread_{};
 };
 
 } // namespace Opm

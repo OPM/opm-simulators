@@ -24,7 +24,7 @@
 
 #include <opm/core/props/BlackoilPhases.hpp>
 
-#include <opm/material/densead/DynamicEvaluation.hpp>
+#include <opm/material/densead/Evaluation.hpp>
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
 #include <opm/models/blackoil/blackoilindices.hh>

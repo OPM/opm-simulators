@@ -41,6 +41,8 @@ list (APPEND MAIN_SOURCE_FILES
   opm/core/props/satfunc/RelpermDiagnostics.cpp
   opm/simulators/timestepping/SimulatorReport.cpp
   opm/simulators/flow/countGlobalCells.cpp
+  opm/simulators/flow/ConvergenceOutputConfiguration.cpp
+  opm/simulators/flow/ExtraConvergenceOutputThread.cpp
   opm/simulators/flow/KeywordValidation.cpp
   opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.cpp
   opm/simulators/flow/ValidationFunctions.cpp
@@ -94,6 +96,8 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/MultisegmentWellEquations.cpp
   opm/simulators/wells/MultisegmentWellEval.cpp
   opm/simulators/wells/MultisegmentWellGeneric.cpp
+  opm/simulators/wells/MultisegmentWellPrimaryVariables.cpp
+  opm/simulators/wells/MultisegmentWellSegments.cpp
   opm/simulators/wells/ParallelWellInfo.cpp
   opm/simulators/wells/PerfData.cpp
   opm/simulators/wells/SegmentState.cpp
@@ -171,6 +175,7 @@ endif()
 list (APPEND TEST_SOURCE_FILES
   tests/test_ALQState.cpp
   tests/test_blackoil_amg.cpp
+  tests/test_convergenceoutputconfiguration.cpp
   tests/test_convergencereport.cpp
   tests/test_deferredlogger.cpp
   tests/test_eclinterregflows.cpp
@@ -271,6 +276,8 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/countGlobalCells.hpp
   opm/simulators/flow/BlackoilModelEbos.hpp
   opm/simulators/flow/BlackoilModelParametersEbos.hpp
+  opm/simulators/flow/ConvergenceOutputConfiguration.hpp
+  opm/simulators/flow/ExtraConvergenceOutputThread.hpp
   opm/simulators/flow/FlowMainEbos.hpp
   opm/simulators/flow/Main.hpp
   opm/simulators/flow/NonlinearSolverEbos.hpp
@@ -377,6 +384,8 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/MultisegmentWellEquations.hpp
   opm/simulators/wells/MultisegmentWellEval.hpp
   opm/simulators/wells/MultisegmentWellGeneric.hpp
+  opm/simulators/wells/MultisegmentWellPrimaryVariables.hpp
+  opm/simulators/wells/MultisegmentWellSegments.hpp
   opm/simulators/wells/ParallelWellInfo.hpp
   opm/simulators/wells/PerfData.hpp
   opm/simulators/wells/PerforationData.hpp

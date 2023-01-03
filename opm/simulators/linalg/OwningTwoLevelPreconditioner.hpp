@@ -107,7 +107,8 @@ public:
             std::string filename = prm.get<std::string>("weights_filename", "impes_weights.txt");
             std::ofstream outfile(filename);
             if (!outfile) {
-                OPM_THROW(std::ofstream::failure, "Could not write weights to file " << filename << ".");
+                OPM_THROW(std::ofstream::failure,
+                          "Could not write weights to file " + filename + ".");
             }
             Dune::writeMatrixMarket(weights_, outfile);
         }
@@ -139,7 +140,8 @@ public:
             auto filename = prm.get<std::string>("weights_filename", "impes_weights.txt");
             std::ofstream outfile(filename);
             if (!outfile) {
-                OPM_THROW(std::ofstream::failure, "Could not write weights to file " << filename << ".");
+                OPM_THROW(std::ofstream::failure,
+                          "Could not write weights to file " + filename + ".");
             }
             Dune::writeMatrixMarket(weights_, outfile);
         }

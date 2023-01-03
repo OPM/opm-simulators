@@ -134,7 +134,8 @@ void milu0_decomposition(M& A, FieldFunct<M> absFunctor, FieldFunct<M> signFunct
         }
 
         if ( a_ik.index() != irow.index() )
-            OPM_THROW(std::logic_error, "Matrix is missing diagonal for row " << irow.index());
+            OPM_THROW(std::logic_error,
+                      "Matrix is missing diagonal for row " + std::to_string(irow.index()));
 
         int index = 0;
         for(const auto& entry: sum_dropped)

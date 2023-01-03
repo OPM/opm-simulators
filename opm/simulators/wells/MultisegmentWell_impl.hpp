@@ -23,6 +23,8 @@
 
 #include <opm/input/eclipse/Schedule/MSW/Valve.hpp>
 
+#include <opm/material/densead/EvaluationFormat.hpp>
+
 #include <opm/simulators/wells/MultisegmentWellAssemble.hpp>
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
@@ -81,9 +83,14 @@ namespace Opm
         }
 
         if(this->rsRvInj() > 0) {
-            OPM_THROW(std::runtime_error, "dissolved gas/ vapporized oil in injected oil/gas not supported by multisegment well yet."
-            << " \n See  (WCONINJE item 10 / WCONHIST item 8)");
+            OPM_THROW(std::runtime_error,
+                      "dissolved gas/ vapporized oil in injected oil/gas not supported by multisegment well yet."
+                      " \n See  (WCONINJE item 10 / WCONHIST item 8)");
         }
+        if constexpr (!Indices::oilEnabled && Indices::numPhases > 1) {
+            OPM_THROW(std::runtime_error, "water + gas case not supported by multisegment well yet");
+        }
+
     }
 
 
@@ -130,7 +137,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     initPrimaryVariablesEvaluation()
     {
-        this->MSWEval::initPrimaryVariablesEvaluation();
+        this->primary_variables_.init();
     }
 
 
@@ -142,7 +149,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     updatePrimaryVariables(const WellState& well_state, DeferredLogger& /* deferred_logger */)
     {
-        this->MSWEval::updatePrimaryVariables(well_state);
+        this->primary_variables_.update(well_state);
     }
 
 
@@ -161,7 +168,9 @@ namespace Opm
         Base::updateWellStateWithTarget(ebos_simulator, group_state, well_state, deferred_logger);
         // scale segment rates based on the wellRates
         // and segment pressure based on bhp
-        this->scaleSegmentRatesWithWellRates(well_state);
+        this->scaleSegmentRatesWithWellRates(this->segments_.inlets(),
+                                             this->segments_.perforations(),
+                                             well_state);
         this->scaleSegmentPressuresWithBhp(well_state);
     }
 
@@ -368,7 +377,7 @@ namespace Opm
         segments_copy.scale_pressure(bhp);
         const auto& segment_pressure = segments_copy.pressure;
         for (int seg = 0; seg < nseg; ++seg) {
-            for (const int perf : this->segment_perforations_[seg]) {
+            for (const int perf : this->segments_.perforations()[seg]) {
                 const int cell_idx = this->well_cells_[perf];
                 const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
                 // flux for each perforation
@@ -441,7 +450,9 @@ namespace Opm
                 ws.surface_rates[phase] = sign * ws.well_potentials[phase];
             }
         }
-        well_copy.scaleSegmentRatesWithWellRates(well_state_copy);
+        well_copy.scaleSegmentRatesWithWellRates(this->segments_.inlets(),
+                                                 this->segments_.perforations(),
+                                                 well_state_copy);
 
         well_copy.calculateExplicitQuantities(ebosSimulator, well_state_copy, deferred_logger);
         const double dt = ebosSimulator.timeStepSize();
@@ -453,7 +464,7 @@ namespace Opm
         well_flux.clear();
         well_flux.resize(np, 0.0);
         for (int compIdx = 0; compIdx < this->num_components_; ++compIdx) {
-            const EvalWell rate = well_copy.getQs(compIdx);
+            const EvalWell rate = well_copy.primary_variables_.getQs(compIdx);
             well_flux[this->ebosCompIdxToFlowCompIdx(compIdx)] = rate.value();
         }
         debug_cost_counter_ += well_copy.debug_cost_counter_;
@@ -595,7 +606,7 @@ namespace Opm
             // TODO: trying to reduce the times for the surfaceVolumeFraction calculation
             const double surface_volume = getSegmentSurfaceVolume(ebos_simulator, seg).value();
             for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
-                segment_fluid_initial_[seg][comp_idx] = surface_volume * this->surfaceVolumeFraction(seg, comp_idx).value();
+                segment_fluid_initial_[seg][comp_idx] = surface_volume * this->primary_variables_.surfaceVolumeFraction(seg, comp_idx).value();
             }
         }
     }
@@ -610,18 +621,19 @@ namespace Opm
     updateWellState(const BVectorWell& dwells,
                     WellState& well_state,
                     DeferredLogger& deferred_logger,
-                    const double relaxation_factor) const
+                    const double relaxation_factor)
     {
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
         const double dFLimit = this->param_.dwell_fraction_max_;
         const double max_pressure_change = this->param_.max_pressure_change_ms_wells_;
-        this->MSWEval::updatePrimaryVariablesNewton(dwells,
-                                                    relaxation_factor,
-                                                    dFLimit,
-                                                    max_pressure_change);
+        this->primary_variables_.updateNewton(dwells,
+                                              relaxation_factor,
+                                              dFLimit,
+                                              max_pressure_change);
 
-        this->updateWellStateFromPrimaryVariables(well_state, getRefDensity(), deferred_logger);
+        this->primary_variables_.copyToWellState(*this, getRefDensity(),
+                                                 well_state, deferred_logger);
         Base::calculateReservoirRates(well_state.well(this->index_of_well_));
     }
 
@@ -745,7 +757,7 @@ namespace Opm
                                                this->SPres,
                                                well_state);
     }
-    
+
 
     template<typename TypeTag>
     template<class Value>
@@ -769,7 +781,8 @@ namespace Opm
                     DeferredLogger& deferred_logger) const
     {
         // pressure difference between the segment and the perforation
-        const Value perf_seg_press_diff = this->gravity() * segment_density * this->perforation_segment_depth_diffs_[perf];
+        const Value perf_seg_press_diff = this->gravity() * segment_density *
+                                          this->segments_.perforation_depth_diff(perf);
         // pressure difference between the perforation and the grid cell
         const double cell_perf_press_diff = this->cell_perforation_pressure_diffs_[perf];
 
@@ -831,9 +844,11 @@ namespace Opm
                 const Value d = 1.0 - rv * rs;
 
                 if (getValue(d) == 0.0) {
-                    OPM_DEFLOG_THROW(NumericalProblem, "Zero d value obtained for well " << this->name()
-                                                       << " during flux calculation"
-                                                       << " with rs " << rs << " and rv " << rv, deferred_logger);
+                    OPM_DEFLOG_THROW(NumericalProblem,
+                                     fmt::format("Zero d value obtained for well {} "
+                                                 "during flux calculation with rs {} and rv {}",
+                                                 this->name(), rs, rv),
+                                     deferred_logger);
                 }
 
                 const Value tmp_oil = (cmix_s[oilCompIdx] - rv * cmix_s[gasCompIdx]) / d;
@@ -919,7 +934,7 @@ namespace Opm
 
         std::vector<EvalWell> cmix_s(this->numComponents(), 0.0);
         for (int comp_idx = 0; comp_idx < this->numComponents(); ++comp_idx) {
-            cmix_s[comp_idx] = this->surfaceVolumeFraction(seg, comp_idx);
+            cmix_s[comp_idx] = this->primary_variables_.surfaceVolumeFraction(seg, comp_idx);
         }
 
         this->computePerfRate(pressure_cell,
@@ -930,7 +945,7 @@ namespace Opm
                               Tw,
                               perf,
                               segment_pressure,
-                              this->segment_densities_[seg],
+                              this->segments_.density(seg),
                               allow_cf,
                               cmix_s,
                               cq_s,
@@ -976,7 +991,7 @@ namespace Opm
 
         std::vector<Scalar> cmix_s(this->numComponents(), 0.0);
         for (int comp_idx = 0; comp_idx < this->numComponents(); ++comp_idx) {
-            cmix_s[comp_idx] = getValue(this->surfaceVolumeFraction(seg, comp_idx));
+            cmix_s[comp_idx] = getValue(this->primary_variables_.surfaceVolumeFraction(seg, comp_idx));
         }
 
         Scalar perf_dis_gas_rate = 0.0;
@@ -991,7 +1006,7 @@ namespace Opm
                               Tw,
                               perf,
                               segment_pressure,
-                              getValue(this->segment_densities_[seg]),
+                              getValue(this->segments_.density(seg)),
                               allow_cf,
                               cmix_s,
                               cq_s,
@@ -1031,10 +1046,11 @@ namespace Opm
             pvt_region_index = fs.pvtRegionIndex();
         }
 
-        this->MSWEval::computeSegmentFluidProperties(temperature,
-                                                     saltConcentration,
-                                                     pvt_region_index,
-                                                     deferred_logger);
+        this->segments_.computeFluidProperties(temperature,
+                                               saltConcentration,
+                                               this->primary_variables_,
+                                               pvt_region_index,
+                                               deferred_logger);
     }
 
 
@@ -1152,7 +1168,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     getRefDensity() const
     {
-        return this->segment_densities_[0].value();
+        return this->segments_.getRefDensity();
     }
 
     template<typename TypeTag>
@@ -1237,83 +1253,84 @@ namespace Opm
             const double segment_depth = this->segmentSet()[seg].depth();
             const int outlet_segment_index = this->segmentNumberToIndex(this->segmentSet()[seg].outletSegment());
             const double segment_depth_outlet = seg == 0? ref_depth : this->segmentSet()[outlet_segment_index].depth();
-            double dp = wellhelpers::computeHydrostaticCorrection(segment_depth_outlet, segment_depth, this->segment_densities_[seg].value(), this->gravity_);
+            double dp = wellhelpers::computeHydrostaticCorrection(segment_depth_outlet, segment_depth,
+                                                                  this->segments_.density(seg).value(), this->gravity_);
             // we add the hydrostatic correction from the outlet segment
             // in order to get the correction all the way to the bhp ref depth.
             if (seg > 0) {
                 dp += seg_dp[outlet_segment_index];
             }
             seg_dp[seg] = dp;
-            for (const int perf : this->segment_perforations_[seg]) {
-            std::vector<Scalar> mob(this->num_components_, 0.0);
+            for (const int perf : this->segments_.perforations()[seg]) {
+                std::vector<Scalar> mob(this->num_components_, 0.0);
 
-            // TODO: maybe we should store the mobility somewhere, so that we only need to calculate it one per iteration
-            getMobilityScalar(ebos_simulator, perf, mob);
+                // TODO: maybe we should store the mobility somewhere, so that we only need to calculate it one per iteration
+                getMobilityScalar(ebos_simulator, perf, mob);
 
-            const int cell_idx = this->well_cells_[perf];
-            const auto& int_quantities = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
-            const auto& fs = int_quantities.fluidState();
-            // pressure difference between the segment and the perforation
-            const double perf_seg_press_diff = this->gravity_ * this->segment_densities_[seg].value() * this->perforation_segment_depth_diffs_[perf];
-            // pressure difference between the perforation and the grid cell
-            const double cell_perf_press_diff = this->cell_perforation_pressure_diffs_[perf];
-            const double pressure_cell = this->getPerfCellPressure(fs).value();
+                const int cell_idx = this->well_cells_[perf];
+                const auto& int_quantities = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
+                const auto& fs = int_quantities.fluidState();
+                // pressure difference between the segment and the perforation
+                const double perf_seg_press_diff = this->segments_.getPressureDiffSegPerf(seg, perf);
+                // pressure difference between the perforation and the grid cell
+                const double cell_perf_press_diff = this->cell_perforation_pressure_diffs_[perf];
+                const double pressure_cell = this->getPerfCellPressure(fs).value();
 
-            // calculating the b for the connection
-            std::vector<double> b_perf(this->num_components_);
-            for (size_t phase = 0; phase < FluidSystem::numPhases; ++phase) {
-                if (!FluidSystem::phaseIsActive(phase)) {
-                    continue;
+                // calculating the b for the connection
+                std::vector<double> b_perf(this->num_components_);
+                for (size_t phase = 0; phase < FluidSystem::numPhases; ++phase) {
+                    if (!FluidSystem::phaseIsActive(phase)) {
+                        continue;
+                    }
+                    const unsigned comp_idx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phase));
+                    b_perf[comp_idx] = fs.invB(phase).value();
                 }
-                const unsigned comp_idx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phase));
-                b_perf[comp_idx] = fs.invB(phase).value();
-            }
 
-            // the pressure difference between the connection and BHP
-            const double h_perf = cell_perf_press_diff + perf_seg_press_diff + dp;
-            const double pressure_diff = pressure_cell - h_perf;
+                // the pressure difference between the connection and BHP
+                const double h_perf = cell_perf_press_diff + perf_seg_press_diff + dp;
+                const double pressure_diff = pressure_cell - h_perf;
 
-            // do not take into consideration the crossflow here.
-            if ( (this->isProducer() && pressure_diff < 0.) || (this->isInjector() && pressure_diff > 0.) ) {
-                deferred_logger.debug("CROSSFLOW_IPR",
-                                "cross flow found when updateIPR for well " + this->name());
-            }
+                // do not take into consideration the crossflow here.
+                if ( (this->isProducer() && pressure_diff < 0.) || (this->isInjector() && pressure_diff > 0.) ) {
+                    deferred_logger.debug("CROSSFLOW_IPR",
+                                    "cross flow found when updateIPR for well " + this->name());
+                }
 
-            // the well index associated with the connection
-            const double tw_perf = this->well_index_[perf]*ebos_simulator.problem().template rockCompTransMultiplier<double>(int_quantities, cell_idx);
+                // the well index associated with the connection
+                const double tw_perf = this->well_index_[perf]*ebos_simulator.problem().template rockCompTransMultiplier<double>(int_quantities, cell_idx);
 
-            std::vector<double> ipr_a_perf(this->ipr_a_.size());
-            std::vector<double> ipr_b_perf(this->ipr_b_.size());
-            for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
-                const double tw_mob = tw_perf * mob[comp_idx] * b_perf[comp_idx];
-                ipr_a_perf[comp_idx] += tw_mob * pressure_diff;
-                ipr_b_perf[comp_idx] += tw_mob;
-            }
+                std::vector<double> ipr_a_perf(this->ipr_a_.size());
+                std::vector<double> ipr_b_perf(this->ipr_b_.size());
+                for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
+                    const double tw_mob = tw_perf * mob[comp_idx] * b_perf[comp_idx];
+                    ipr_a_perf[comp_idx] += tw_mob * pressure_diff;
+                    ipr_b_perf[comp_idx] += tw_mob;
+                }
 
-            // we need to handle the rs and rv when both oil and gas are present
-            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                const unsigned oil_comp_idx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
-                const unsigned gas_comp_idx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-                const double rs = (fs.Rs()).value();
-                const double rv = (fs.Rv()).value();
+                // we need to handle the rs and rv when both oil and gas are present
+                if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                    const unsigned oil_comp_idx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
+                    const unsigned gas_comp_idx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+                    const double rs = (fs.Rs()).value();
+                    const double rv = (fs.Rv()).value();
 
-                const double dis_gas_a = rs * ipr_a_perf[oil_comp_idx];
-                const double vap_oil_a = rv * ipr_a_perf[gas_comp_idx];
+                    const double dis_gas_a = rs * ipr_a_perf[oil_comp_idx];
+                    const double vap_oil_a = rv * ipr_a_perf[gas_comp_idx];
 
-                ipr_a_perf[gas_comp_idx] += dis_gas_a;
-                ipr_a_perf[oil_comp_idx] += vap_oil_a;
+                    ipr_a_perf[gas_comp_idx] += dis_gas_a;
+                    ipr_a_perf[oil_comp_idx] += vap_oil_a;
 
-                const double dis_gas_b = rs * ipr_b_perf[oil_comp_idx];
-                const double vap_oil_b = rv * ipr_b_perf[gas_comp_idx];
+                    const double dis_gas_b = rs * ipr_b_perf[oil_comp_idx];
+                    const double vap_oil_b = rv * ipr_b_perf[gas_comp_idx];
 
-                ipr_b_perf[gas_comp_idx] += dis_gas_b;
-                ipr_b_perf[oil_comp_idx] += vap_oil_b;
-            }
+                    ipr_b_perf[gas_comp_idx] += dis_gas_b;
+                    ipr_b_perf[oil_comp_idx] += vap_oil_b;
+                }
 
-            for (size_t comp_idx = 0; comp_idx < ipr_a_perf.size(); ++comp_idx) {
-                this->ipr_a_[comp_idx] += ipr_a_perf[comp_idx];
-                this->ipr_b_[comp_idx] += ipr_b_perf[comp_idx];
-            }
+                for (size_t comp_idx = 0; comp_idx < ipr_a_perf.size(); ++comp_idx) {
+                    this->ipr_a_[comp_idx] += ipr_a_perf[comp_idx];
+                    this->ipr_b_[comp_idx] += ipr_b_perf[comp_idx];
+                }
             }
         }
     }
@@ -1525,11 +1542,10 @@ namespace Opm
                                    const GroupState& group_state,
                                    DeferredLogger& deferred_logger)
     {
-
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
         // update the upwinding segments
-        this->updateUpwindingSegments();
+        this->segments_.updateUpwindingSegments(this->primary_variables_);
 
         // calculate the fluid properties needed.
         computeSegmentFluidProperties(ebosSimulator, deferred_logger);
@@ -1539,6 +1555,7 @@ namespace Opm
 
         auto& ws = well_state.well(this->index_of_well_);
         ws.dissolved_gas_rate = 0;
+        ws.dissolved_gas_rate_in_water = 0;
         ws.vaporized_oil_rate = 0;
         ws.vaporized_wat_rate = 0;
 
@@ -1563,7 +1580,7 @@ namespace Opm
                 const Scalar regularization_factor =  this->regularize_? this->param_.regularization_factor_wells_ : 1.0;
                 // for each component
                 for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
-                    const EvalWell accumulation_term = regularization_factor * (segment_surface_volume * this->surfaceVolumeFraction(seg, comp_idx)
+                    const EvalWell accumulation_term = regularization_factor * (segment_surface_volume * this->primary_variables_.surfaceVolumeFraction(seg, comp_idx)
                                                      - segment_fluid_initial_[seg][comp_idx]) / dt;
                     MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(*this).
                         assembleAccumulationTerm(seg, comp_idx, accumulation_term, this->linSys_);
@@ -1571,10 +1588,13 @@ namespace Opm
             }
             // considering the contributions due to flowing out from the segment
             {
-                const int seg_upwind = this->upwinding_segments_[seg];
+                const int seg_upwind = this->segments_.upwinding_segment(seg);
                 for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
-                    const EvalWell segment_rate = this->getSegmentRateUpwinding(seg, comp_idx) *
-                                                  this->well_efficiency_factor_;
+                    const EvalWell segment_rate =
+                        this->primary_variables_.getSegmentRateUpwinding(seg,
+                                                                         seg_upwind,
+                                                                         comp_idx) *
+                        this->well_efficiency_factor_;
                     MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(*this).
                         assembleOutflowTerm(seg, seg_upwind, comp_idx, segment_rate, this->linSys_);
                 }
@@ -1582,10 +1602,14 @@ namespace Opm
 
             // considering the contributions from the inlet segments
             {
-                for (const int inlet : this->segment_inlets_[seg]) {
+                for (const int inlet : this->segments_.inlets()[seg]) {
+                    const int inlet_upwind = this->segments_.upwinding_segment(inlet);
                     for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
-                        const EvalWell inlet_rate = this->getSegmentRateUpwinding(inlet, comp_idx) * this->well_efficiency_factor_;
-                        const int inlet_upwind = this->upwinding_segments_[inlet];
+                        const EvalWell inlet_rate =
+                            this->primary_variables_.getSegmentRateUpwinding(inlet,
+                                                                             inlet_upwind,
+                                                                             comp_idx) *
+                            this->well_efficiency_factor_;
                         MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(*this).
                             assembleInflowTerm(seg, inlet, inlet_upwind, comp_idx, inlet_rate, this->linSys_);
                     }
@@ -1593,11 +1617,11 @@ namespace Opm
             }
 
             // calculating the perforation rate for each perforation that belongs to this segment
-            const EvalWell seg_pressure = this->getSegmentPressure(seg);
+            const EvalWell seg_pressure = this->primary_variables_.getSegmentPressure(seg);
             auto& perf_data = ws.perf_data;
             auto& perf_rates = perf_data.phase_rates;
             auto& perf_press_state = perf_data.pressure;
-            for (const int perf : this->segment_perforations_[seg]) {
+            for (const int perf : this->segments_.perforations()[seg]) {
                 const int cell_idx = this->well_cells_[perf];
                 const auto& int_quants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
                 std::vector<EvalWell> mob(this->num_components_, 0.0);
@@ -1637,7 +1661,6 @@ namespace Opm
             if (seg == 0) { // top segment, pressure equation is the control equation
                 const auto& summaryState = ebosSimulator.vanguard().summaryState();
                 const Schedule& schedule = ebosSimulator.vanguard().schedule();
-                std::function<EvalWell(const int)> gQ = [this](int a) { return this->getQs(a); };
                 MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(*this).
                         assembleControlEq(well_state,
                                         group_state,
@@ -1646,9 +1669,7 @@ namespace Opm
                                         inj_controls,
                                         prod_controls,
                                         getRefDensity(),
-                                        this->getWQTotal(),
-                                        this->getBhp(),
-                                        gQ,
+                                        this->primary_variables_,
                                         this->linSys_,
                                         deferred_logger);
             } else {
@@ -1681,15 +1702,15 @@ namespace Opm
         const int nseg = this->numberOfSegments();
 
         for (int seg = 0; seg < nseg; ++seg) {
-            const EvalWell segment_pressure = this->getSegmentPressure(seg);
-            for (const int perf : this->segment_perforations_[seg]) {
+            const EvalWell segment_pressure = this->primary_variables_.getSegmentPressure(seg);
+            for (const int perf : this->segments_.perforations()[seg]) {
 
                 const int cell_idx = this->well_cells_[perf];
                 const auto& intQuants = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
                 const auto& fs = intQuants.fluidState();
 
                 // pressure difference between the segment and the perforation
-                const EvalWell perf_seg_press_diff = this->gravity_ * this->segment_densities_[seg] * this->perforation_segment_depth_diffs_[perf];
+                const EvalWell perf_seg_press_diff = this->segments_.getPressureDiffSegPerf(seg, perf);
                 // pressure difference between the perforation and the grid cell
                 const double cell_perf_press_diff = this->cell_perforation_pressure_diffs_[perf];
 
@@ -1746,10 +1767,11 @@ namespace Opm
             pvt_region_index = fs.pvtRegionIndex();
         }
 
-        return this->MSWEval::getSegmentSurfaceVolume(temperature,
-                                                      saltConcentration,
-                                                      pvt_region_index,
-                                                      seg_idx);
+        return this->segments_.getSurfaceVolume(temperature,
+                                                saltConcentration,
+                                                this->primary_variables_,
+                                                pvt_region_index,
+                                                seg_idx);
     }
 
 
@@ -1883,7 +1905,7 @@ namespace Opm
         double max_pressure = 0.0;
         const int nseg = this->numberOfSegments();
         for (int seg = 0; seg < nseg; ++seg) {
-            for (const int perf : this->segment_perforations_[seg]) {
+            for (const int perf : this->segments_.perforations()[seg]) {
                 const int cell_idx = this->well_cells_[perf];
                 const auto& int_quants = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
                 const auto& fs = int_quants.fluidState();
@@ -1910,8 +1932,8 @@ namespace Opm
         const int nseg = this->numberOfSegments();
         for (int seg = 0; seg < nseg; ++seg) {
             // calculating the perforation rate for each perforation that belongs to this segment
-            const Scalar seg_pressure = getValue(this->getSegmentPressure(seg));
-            for (const int perf : this->segment_perforations_[seg]) {
+            const Scalar seg_pressure = getValue(this->primary_variables_.getSegmentPressure(seg));
+            for (const int perf : this->segments_.perforations()[seg]) {
                 const int cell_idx = this->well_cells_[perf];
                 const auto& int_quants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
                 std::vector<Scalar> mob(this->num_components_, 0.0);
@@ -1995,10 +2017,9 @@ namespace Opm
         }
         else {
             OPM_DEFLOG_THROW(NotImplemented,
-                             "Unsupported Injector Type ("
-                             << static_cast<int>(preferred_phase)
-                             << ") for well " << this->name()
-                             << " during connection I.I. calculation",
+                             fmt::format("Unsupported Injector Type ({}) "
+                                         "for well {} during connection I.I. calculation",
+                                         static_cast<int>(preferred_phase), this->name()),
                              deferred_logger);
         }
 

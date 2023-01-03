@@ -244,7 +244,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             parameters_.template init<TypeTag>();
             prm_ = setupPropertyTree(parameters_,
                                      EWOMS_PARAM_IS_SET(TypeTag, int, LinearSolverMaxIter),
-                                     EWOMS_PARAM_IS_SET(TypeTag, int, CprMaxEllIter));
+                                     EWOMS_PARAM_IS_SET(TypeTag, double, LinearSolverReduction));
 
 #if COMPILE_BDA_BRIDGE
             {
@@ -339,8 +339,8 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             } else {
                 // Pointers should not change
                 if ( &(M.istlMatrix()) != matrix_ ) {
-                        OPM_THROW(std::logic_error, "Matrix objects are expected to be reused when reassembling!"
-                                  <<" old pointer was " << matrix_ << ", new one is " << (&M.istlMatrix()) );
+                        OPM_THROW(std::logic_error,
+                                  "Matrix objects are expected to be reused when reassembling!");
                 }
             }
             rhs_ = &b;

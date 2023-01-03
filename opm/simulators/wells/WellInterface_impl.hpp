@@ -29,6 +29,8 @@
 
 #include <dune/common/version.hh>
 
+#include <fmt/format.h>
+
 namespace Opm
 {
 
@@ -941,7 +943,9 @@ namespace Opm
             }
             case Well::ProducerCMode::CRAT:
             {
-                OPM_DEFLOG_THROW(std::runtime_error, "CRAT control not supported " << this->name(), deferred_logger);
+                OPM_DEFLOG_THROW(std::runtime_error,
+                                 fmt::format("CRAT control not supported, well {}", this->name()),
+                                 deferred_logger);
             }
             case Well::ProducerCMode::RESV:
             {
