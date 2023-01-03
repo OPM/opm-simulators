@@ -1,5 +1,5 @@
 #include <config.h>
-#include <iostream>
+#include <fstream>
 
 #define BOOST_TEST_MODULE CsrToCscOffsetMap
 #include <boost/test/unit_test.hpp>
