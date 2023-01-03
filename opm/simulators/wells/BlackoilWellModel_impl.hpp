@@ -1250,7 +1250,8 @@ namespace Opm {
 
     template <typename TypeTag>
     void BlackoilWellModel<TypeTag>::
-    addReservoirSourceTerms(GlobalEqVector& residual, SparseMatrixAdapter& jacobian) const
+    addReservoirSourceTerms(GlobalEqVector& residual,
+                            std::vector<typename SparseMatrixAdapter::MatrixBlock*>& diagMatAddress) const
     {
         // NB this loop may write multiple times to the same element
         // if a cell is perforated by more than one well, so it should
@@ -1264,14 +1265,13 @@ namespace Opm {
             for (unsigned perfIdx = 0; perfIdx < rates.size(); ++perfIdx) {
                 unsigned cellIdx = cells[perfIdx];
                 auto rate = rates[perfIdx];
-                // Scalar volume =  ebosSimulator_.problem().volume(cellIdx,0);
                 rate *= -1.0;
                 VectorBlockType res(0.0);
-		using  MatrixBlockType = Opm::MatrixBlock<Scalar, numEq, numEq >;
+                using MatrixBlockType = typename SparseMatrixAdapter::MatrixBlock;
                 MatrixBlockType bMat(0.0);
                 ebosSimulator_.model().linearizer().setResAndJacobi(res, bMat, rate);
                 residual[cellIdx] += res;
-                jacobian.addToBlock(cellIdx, cellIdx, bMat);
+                *diagMatAddress[cellIdx] += bMat;
             }
         }
     }

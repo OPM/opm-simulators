@@ -273,7 +273,7 @@ namespace Opm {
 
             // add source from wells to the reservoir matrix
             void addReservoirSourceTerms(GlobalEqVector& residual,
-                                         SparseMatrixAdapter& jacobian) const;
+                                         std::vector<typename SparseMatrixAdapter::MatrixBlock*>& diagMatAddress) const;
 
             // called at the beginning of a report step
             void beginReportStep(const int time_step);
