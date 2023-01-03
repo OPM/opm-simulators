@@ -42,13 +42,13 @@
 // std::runtime_error.
 //
 // Usage: OPM_DEFLOG_THROW(ExceptionClass, "Error message", DeferredLogger);
-#define OPM_DEFLOG_THROW(Exception, message, deferred_logger)   \
-    do {                                                        \
-        std::string oss__ = std::string{"["} + __FILE__ + ":" + \
-                            std::to_string(__LINE__) + "] " +   \
-                            message;                            \
-        deferred_logger.error(oss__);                           \
-        throw Exception(oss__);                                 \
+#define OPM_DEFLOG_THROW(Exception, message, deferred_logger)  \
+    do {                                                       \
+        std::string oss_ = std::string{"["} + __FILE__ + ":" + \
+                           std::to_string(__LINE__) + "] " +   \
+                           message;                            \
+        deferred_logger.error(oss_);                           \
+        throw Exception(oss_);                                 \
     } while (false)
 
 namespace {
