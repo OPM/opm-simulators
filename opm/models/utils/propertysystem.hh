@@ -28,7 +28,7 @@
 
 #include <tuple>
 #include <type_traits>
-#include <iostream>
+#include <ostream>
 
 namespace Opm {
 namespace Properties {
@@ -245,7 +245,7 @@ constexpr auto getPropValue() { return Properties::Detail::GetPropImpl<TypeTag, 
 
 namespace Properties {
 template <class TypeTag>
-void printValues(std::ostream& os = std::cout)
+void printValues(std::ostream& os)
 {
     os <<
     "The eWoms property system was compiled with the macro\n"
