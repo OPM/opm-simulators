@@ -4,14 +4,14 @@
 #
 # Usage:
 #
-# runTest.sh TEST_TYPE [TEST_ARGS]
+# run-vtu-test.sh TEST_TYPE [TEST_ARGS]
 #
 MY_DIR="$(dirname "$0")"
 
 usage() {
     echo "Usage:"
     echo
-    echo "runTest.sh TEST_TYPE -e binary -- [TEST_ARGS]"
+    echo "run-vtu-test.sh TEST_TYPE -e binary -- [TEST_ARGS]"
     echo "where TEST_TYPE can either be --plain, --simulation, --spe1 or --parallel-simulation=\$NUM_CORES (is '$TEST_TYPE')."
 };
 
@@ -53,7 +53,8 @@ fi
 
 if test "$TEST_TYPE" != "--spe1"; then
     # find the binary in the its folder
-    TEST_BINARY=$(find . -type f -perm -0111 -name "$TEST_NAME")
+    echo `pwd`
+    TEST_BINARY=$(find .. -type f -perm -0111 -name "$TEST_NAME")
     NUM_BINARIES=$(echo "$TEST_BINARY" | wc -w | tr -d '[:space:]')
 
     if test "$NUM_BINARIES" != "1"; then
