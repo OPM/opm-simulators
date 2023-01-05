@@ -33,6 +33,9 @@
 
 #include <opm/grid/CpGrid.hpp>
 #include <opm/grid/polyhedralgrid.hh>
+
+#include <dune/common/parametertree.hh>
+
 #if HAVE_DUNE_ALUGRID
 #include <dune/alugrid/grid.hh>
 #include <dune/alugrid/3d/gridview.hh>
@@ -47,11 +50,45 @@
 
 #include <boost/date_time.hpp>
 
+#include <algorithm>
 #include <limits>
 #include <stdexcept>
 #include <iostream>
 
 namespace Opm {
+
+int eclPositionalParameter(Dune::ParameterTree& tree,
+                           std::set<std::string>& seenParams,
+                           std::string& errorMsg,
+                           const char** argv,
+                           int paramIdx)
+{
+    std::string param  = argv[paramIdx];
+    size_t i = param.find('=');
+    if (i != std::string::npos) {
+        std::string oldParamName = param.substr(0, i);
+        std::string oldParamValue = param.substr(i+1);
+        std::string newParamName = "--" + oldParamName;
+        std::replace(newParamName.begin(),
+                     newParamName.end(), '_' , '-');
+        errorMsg =
+          "The old syntax to specify parameters on the command line is no longer supported: "
+          "Try replacing '" + oldParamName + "=" + oldParamValue + "' with "+
+          "'" + newParamName + "=" + oldParamValue + "'!";
+        return 0;
+    }
+
+    if (seenParams.count("EclDeckFileName") > 0) {
+        errorMsg =
+            "Parameter 'EclDeckFileName' specified multiple times"
+            " as a command line parameter";
+        return 0;
+    }
+
+    tree["EclDeckFileName"] = argv[paramIdx];
+    seenParams.insert("EclDeckFileName");
+    return 1;
+}
 
 template<class GridView, class FluidSystem, class Scalar>
 EclGenericProblem<GridView,FluidSystem,Scalar>::

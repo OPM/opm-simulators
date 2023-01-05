@@ -734,33 +734,11 @@ public:
     {
         using ParamsMeta = GetProp<TypeTag, Properties::ParameterMetaData>;
         Dune::ParameterTree& tree = ParamsMeta::tree();
-
-        std::string param  = argv[paramIdx];
-        size_t i = param.find('=');
-        if (i != std::string::npos) {
-            std::string oldParamName = param.substr(0, i);
-            std::string oldParamValue = param.substr(i+1);
-            std::string newParamName = "--" + oldParamName;
-            for (size_t j = 0; j < newParamName.size(); ++j)
-                if (newParamName[j] == '_')
-                    newParamName[j] = '-';
-            errorMsg =
-                "The old syntax to specify parameters on the command line is no longer supported: "
-                "Try replacing '"+oldParamName+"="+oldParamValue+"' with "+
-                "'"+newParamName+"="+oldParamValue+"'!";
-            return 0;
-        }
-
-        if (seenParams.count("EclDeckFileName") > 0) {
-            errorMsg =
-                "Parameter 'EclDeckFileName' specified multiple times"
-                " as a command line parameter";
-            return 0;
-        }
-
-        tree["EclDeckFileName"] = argv[paramIdx];
-        seenParams.insert("EclDeckFileName");
-        return 1;
+        return eclPositionalParameter(tree,
+                                      seenParams,
+                                      errorMsg,
+                                      argv,
+                                      paramIdx);
     }
 
     /*!
