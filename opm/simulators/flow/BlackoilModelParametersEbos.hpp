@@ -168,7 +168,30 @@ template<class TypeTag, class MyTypeTag>
 struct UseAverageDensityMsWells {
     using type = UndefinedProperty;
 };
-
+template<class TypeTag, class MyTypeTag>
+struct NonlinearSolver {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct LocalSolveApproach {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct OuterAspinTolerance {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct MaxLocalSolveIterations {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct LocalToleranceScalingMb {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct LocalToleranceScalingCnv {
+    using type = UndefinedProperty;
+};
 template<class TypeTag>
 struct DbhpMaxRel<TypeTag, TTag::FlowModelParameters> {
     using type = GetPropType<TypeTag, Scalar>;
@@ -316,10 +339,33 @@ template<class TypeTag>
 struct UseAverageDensityMsWells<TypeTag, TTag::FlowModelParameters> {
     static constexpr bool value = false;
 };
-
-
-
-
+template<class TypeTag>
+struct NonlinearSolver<TypeTag, TTag::FlowModelParameters> {
+    static constexpr auto value = "newton";
+};
+template<class TypeTag>
+struct LocalSolveApproach<TypeTag, TTag::FlowModelParameters> {
+    static constexpr auto value = "jacobi";
+};
+template<class TypeTag>
+struct OuterAspinTolerance<TypeTag, TTag::FlowModelParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e-3;
+};
+template<class TypeTag>
+struct MaxLocalSolveIterations<TypeTag, TTag::FlowModelParameters> {
+    static constexpr int value = 20;
+};
+template<class TypeTag>
+struct LocalToleranceScalingMb<TypeTag, TTag::FlowModelParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1.0;
+};
+template<class TypeTag>
+struct LocalToleranceScalingCnv<TypeTag, TTag::FlowModelParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 0.01;
+};
 
 // if openMP is available, determine the number threads per process automatically.
 #if _OPENMP
@@ -436,7 +482,16 @@ namespace Opm
         /// Whether to approximate segment densities by averaging over segment and its outlet 
         bool use_average_density_ms_wells_;
 
+        // Choose nonlinear solver type: newton, aspin, nldd.
+        std::string nonlinear_solver_;
+        std::string local_solve_approach_;
 
+        double outer_aspin_tolerance_;
+
+        int max_local_solve_iterations_;
+
+        double local_tolerance_scaling_mb_;
+        double local_tolerance_scaling_cnv_;
 
         /// Construct from user parameters or defaults.
         BlackoilModelParametersEbos()
@@ -473,6 +528,12 @@ namespace Opm
             check_well_operability_iter_ = EWOMS_GET_PARAM(TypeTag, bool, EnableWellOperabilityCheckIter);
             max_number_of_well_switches_ = EWOMS_GET_PARAM(TypeTag, int, MaximumNumberOfWellSwitches);
             use_average_density_ms_wells_ = EWOMS_GET_PARAM(TypeTag, bool, UseAverageDensityMsWells);
+            nonlinear_solver_ = EWOMS_GET_PARAM(TypeTag, std::string, NonlinearSolver);
+            local_solve_approach_ = EWOMS_GET_PARAM(TypeTag, std::string, LocalSolveApproach);
+            outer_aspin_tolerance_ = EWOMS_GET_PARAM(TypeTag, double, OuterAspinTolerance);
+            max_local_solve_iterations_ = EWOMS_GET_PARAM(TypeTag, int, MaxLocalSolveIterations);
+            local_tolerance_scaling_mb_ = EWOMS_GET_PARAM(TypeTag, double, LocalToleranceScalingMb);
+            local_tolerance_scaling_cnv_ = EWOMS_GET_PARAM(TypeTag, double, LocalToleranceScalingCnv);
             deck_file_name_ = EWOMS_GET_PARAM(TypeTag, std::string, EclDeckFileName);
         }
 
@@ -512,6 +573,12 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, bool, EnableWellOperabilityCheckIter, "Enable the well operability checking during iterations");
             EWOMS_REGISTER_PARAM(TypeTag, int, MaximumNumberOfWellSwitches, "Maximum number of times a well can switch to the same control");
             EWOMS_REGISTER_PARAM(TypeTag, bool, UseAverageDensityMsWells, "Approximate segment densitities by averaging over segment and its outlet");
+            EWOMS_REGISTER_PARAM(TypeTag, std::string, NonlinearSolver, "Choose nonlinear solver. Valid choices are newton, aspin or nldd.");
+            EWOMS_REGISTER_PARAM(TypeTag, std::string, LocalSolveApproach, "Choose local solve approach. Valid choices are jacobi and gauss-seidel");
+            EWOMS_REGISTER_PARAM(TypeTag, Scalar, OuterAspinTolerance, "Tolerance for ASPIN residual.");
+            EWOMS_REGISTER_PARAM(TypeTag, int, MaxLocalSolveIterations, "Max iterations for local solves with ASPIN or NLDD.");
+            EWOMS_REGISTER_PARAM(TypeTag, Scalar, LocalToleranceScalingMb, "Set lower than 1.0 to use stricter convergence tolerance for local solves.");
+            EWOMS_REGISTER_PARAM(TypeTag, Scalar, LocalToleranceScalingCnv, "Set lower than 1.0 to use stricter convergence tolerance for local solves.");
         }
     };
 } // namespace Opm
