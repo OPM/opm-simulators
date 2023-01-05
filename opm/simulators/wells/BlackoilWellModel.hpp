@@ -28,6 +28,7 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <cassert>
+#include <cstddef>
 #include <map>
 #include <memory>
 #include <optional>
@@ -36,10 +37,6 @@
 #include <tuple>
 #include <unordered_map>
 #include <vector>
-
-#include <stddef.h>
-
-#include <opm/input/eclipse/EclipseState/Runspec.hpp>
 
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
@@ -343,9 +340,9 @@ namespace Opm {
 
 
             const ModelParameters param_;
-            size_t global_num_cells_{};
+            std::size_t global_num_cells_{};
             // the number of the cells in the local grid
-            size_t local_num_cells_{};
+            std::size_t local_num_cells_{};
             double gravity_{};
             std::vector<double> depth_{};
             bool alternative_well_rate_init_{};
