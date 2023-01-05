@@ -779,7 +779,7 @@ public:
         MICPModule::initFromState(vanguard.eclState());
 
         // create the ECL writer
-        eclWriter_.reset(new EclWriterType(simulator));
+        eclWriter_ = std::make_unique<EclWriterType>(simulator);
 
         enableDriftCompensation_ = EWOMS_GET_PARAM(TypeTag, bool, EclEnableDriftCompensation);
 
