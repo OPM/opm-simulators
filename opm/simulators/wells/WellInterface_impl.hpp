@@ -22,6 +22,9 @@
 #include <opm/common/Exceptions.hpp>
 
 #include <opm/input/eclipse/Schedule/ScheduleTypes.hpp>
+#include <opm/input/eclipse/Schedule/Well/FilterCake.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
+
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/TargetCalculator.hpp>
@@ -1407,12 +1410,15 @@ namespace Opm
         // we also need the permeability of the formation, and rw and some other information
         for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
             const auto perf_ecl_index = this->perforationData()[perf].ecl_index;
-            const auto connection = this->well_ecl_.getConnections()[perf_ecl_index];
-            const auto& filter_cake = this->well_ecl_.getConnections()[perf_ecl_index].getFilterCake();
+            const auto& connections = this->well_ecl_.getConnections();
+            const auto& connection = connections[perf_ecl_index];
+            const auto& filter_cake = connection.getFilterCake();
             if (filter_cake.active()) {
-                const double poro = filter_cake.poro;
-                const double perm = filter_cake.perm;
                 const double conc = this->well_ecl_.getFilterConc();
+                const double area = connection.getFilterCakeArea();
+                const double poro = filter_cake.poro;
+                const double thickness = water_inj_volume[perf] * conc / (area*(1.-poro));
+                const double perm = filter_cake.perm;
                 const double rw = connection.getFilterCakeRadius();
                 const auto cr0 = connection.r0();
                 const auto crw = connection.rw();
@@ -1420,10 +1426,9 @@ namespace Opm
                 const double K = connection.Kh() / connection.connectionLength();
                 const double factor = filter_cake.sf_multiplier;
                 // we do the work here, the main thing here is to compute a multiplier for the transmissibility
-                if (filter_cake.geometry == Connection::FilterCakeGeometry::LINEAR) {
+                // TODO: the formulation needs to be double checked
+                if (filter_cake.geometry == FilterCake::FilterCakeGeometry::LINEAR) {
                     // TODO: do we want to use this rw?
-                    const double area = connection.getFilterCakeArea();
-                    const double thickness = water_inj_volume[perf] * conc / (area*(1.-poro));
                     std::cout << " perf " << perf << " water_injection_volume " << water_inj_volume[perf] << " conc " << conc
                               << " area " << area << " poro " << poro << " thickness " << thickness << std::endl;
                     // TODO: this formulation might not apply for different situation
@@ -1432,22 +1437,26 @@ namespace Opm
                     const double skin_factor = thickness / rw * K / perm * factor;
                     std::cout << " K " << K << " skin_factor " << skin_factor << std::endl;
                     const auto denom = std::log(cr0 / std::min(crw, cr0)) + cskinfactor;
-                    const auto denom2 = std::log(cr0 / std::min(crw, cr0)) + cskinfactor + skin_factor;
+                    const auto denom2 = denom + skin_factor;
                     const auto scaling = denom / denom2;
                     std::cout << " scaling will be " << scaling << std::endl;
                     this->inj_fc_multiplier_[perf] = scaling;
                     std::cout << " well " << this->name() << " perf " << perf << " inj_fc_scaling " << this->inj_fc_multiplier_[perf] << std::endl;
                     // TODO: basically, rescale the well connectivity index with the following formulation
                     // CF = angle * Kh / (std::log(r0 / std::min(rw, r0)) + skin_factor);
-                } else  if (filter_cake.geometry == Connection::FilterCakeGeometry::RADIAL) {
-                    const double rc = std::sqrt(rw * rw - conc * water_inj_volume[perf]/(3.1415926*(1-poro)));
+                } else  if (filter_cake.geometry == FilterCake::FilterCakeGeometry::RADIAL) {
+                    // const double rc = std::sqrt(rw * rw - conc * water_inj_volume[perf]/(3.1415926*(1-poro)));
+                    std::cout << " perf " << perf << " water_injection_volume " << water_inj_volume[perf] << " conc " << conc
+                              << " area " << area << " poro " << poro << " thickness " << thickness << std::endl;
+                    const double rc = std::sqrt(rw * rw + 2. * rw * thickness );
                     std::cout << " perf " << perf << " rw " << rw << " rc " << rc;
                     std::cout << " K " << K << " perm " << perm;
                     std::cout << " sf_multiplier " << factor;
-                    const double skin_factor = K / perm * std::log(rw/rc) * factor;
+                    // const double skin_factor = K / perm * std::log(rw/rc) * factor;
+                    const double skin_factor = K / perm * std::log(rc/rw) * factor;
                     std::cout << " skin_factor " << skin_factor << std::endl;
                     const auto denom = std::log(cr0 / std::min(crw, cr0)) + cskinfactor;
-                    const auto denom2 = std::log(cr0 / std::min(crw, cr0)) + cskinfactor + skin_factor;
+                    const auto denom2 = denom + skin_factor;
                     const auto scaling = denom / denom2;
                     std::cout << " scaling will be " << scaling << std::endl;
                     this->inj_fc_multiplier_[perf] = scaling;
