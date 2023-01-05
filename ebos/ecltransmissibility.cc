@@ -216,7 +216,7 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map)
     bool useSmallestMultiplier;
     if (comm.rank() == 0) {
         const auto& eclGrid = eclState_.getInputGrid();
-        useSmallestMultiplier = eclGrid.getMultzOption() == PinchMode::ModeEnum::ALL;
+        useSmallestMultiplier = eclGrid.getMultzOption() == PinchMode::ALL;
     }
     if (global && comm.size() > 1) {
         comm.broadcast(&useSmallestMultiplier, 1, 0);
