@@ -2189,10 +2189,10 @@ private:
         this->updateProperty_("EclProblem::updateMinPressure_() failed:",
                               [this](unsigned compressedDofIdx, const IntensiveQuantities& iq)
                               {
-                                const auto& fs = iq.fluidState();
-                                const Scalar mo = getValue(fs.pressure(oilPhaseIdx));
-                                auto& mos = this->minOilPressure_;
-                                mos[compressedDofIdx] = std::min(mos[compressedDofIdx], mo);
+                                  const auto& fs = iq.fluidState();
+                                  const Scalar mo = getValue(fs.pressure(oilPhaseIdx));
+                                  auto& mos = this->minOilPressure_;
+                                  mos[compressedDofIdx] = std::min(mos[compressedDofIdx], mo);
                               });
         return true;
     }
