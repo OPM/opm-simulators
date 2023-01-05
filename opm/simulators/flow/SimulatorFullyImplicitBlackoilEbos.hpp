@@ -362,7 +362,9 @@ public:
         // Run a multiple steps of the solver depending on the time step control.
         solverTimer_->start();
 
-        auto solver = createSolver(wellModel_());
+        if (!solver_) {
+            solver_ = createSolver(wellModel_());
+        }
 
         ebosSimulator_.startNextEpisode(
             ebosSimulator_.startTime()
@@ -375,8 +377,7 @@ public:
             loadStep_ = -1;
             ebosSimulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
         }
-        solver->model().beginReportStep();
-
+        solver_->model().beginReportStep();
         bool enableTUNING = EWOMS_GET_PARAM(TypeTag, bool, EnableTuning);
 
         // If sub stepping is enabled allow the solver to sub cycle
@@ -398,13 +399,13 @@ public:
                 events.hasEvent(ScheduleEvents::INJECTION_TYPE_CHANGED) ||
                 events.hasEvent(ScheduleEvents::WELL_SWITCHED_INJECTOR_PRODUCER) ||
                 events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE);
-            auto stepReport = adaptiveTimeStepping_->step(timer, *solver, event, nullptr);
+            auto stepReport = adaptiveTimeStepping_->step(timer, *solver_, event, nullptr);
             report_ += stepReport;
             //Pass simulation report to eclwriter for summary output
             ebosSimulator_.problem().setSimulationReport(report_);
         } else {
             // solve for complete report step
-            auto stepReport = solver->step(timer);
+            auto stepReport = solver_->step(timer);
             report_ += stepReport;
             if (terminalOutput_) {
                 std::ostringstream ss;
@@ -421,7 +422,7 @@ public:
         ebosSimulator_.problem().writeOutput();
         report_.success.output_write_time += perfTimer.stop();
 
-        solver->model().endReportStep();
+        solver_->model().endReportStep();
 
         // take time that was used to solve system for this reportStep
         solverTimer_->stop();
@@ -433,7 +434,7 @@ public:
             // Destructively grab the step convergence reports.  The solver
             // object and the model object contained therein are about to go
             // out of scope.
-            this->writeConvergenceOutput(solver->model().getStepReportsDestructively());
+            this->writeConvergenceOutput(solver_->model().getStepReportsDestructively());
         }
 
         // Increment timer, remember well state.
@@ -485,6 +486,9 @@ public:
         serializer(report_);
         serializer(adaptiveTimeStepping_);
     }
+
+    const Model& model() const
+    { return solver_->model(); }
 
 protected:
 
@@ -701,6 +705,8 @@ protected:
 
     ModelParameters modelParam_;
     SolverParameters solverParam_;
+
+    std::unique_ptr<Solver> solver_;
 
     // Observed objects.
     PhaseUsage phaseUsage_;
