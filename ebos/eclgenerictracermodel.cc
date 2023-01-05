@@ -31,7 +31,7 @@
 #include <opm/grid/polyhedralgrid.hh>
 #include <opm/models/discretization/ecfv/ecfvstencil.hh>
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/input/eclipse/EclipseState/Runspec.hpp>
+#include <opm/input/eclipse/EclipseState/Phase.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/TracerVdTable.hpp>
 
 #include <dune/istl/operators.hh>

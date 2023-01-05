@@ -25,7 +25,7 @@
 
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/input/eclipse/Schedule/Group/Group.hpp>
-#include <opm/input/eclipse/EclipseState/Runspec.hpp>
+#include <opm/input/eclipse/EclipseState/Phase.hpp>
 #include <opm/input/eclipse/Schedule/Group/GPMaint.hpp>
 #include <opm/simulators/wells/WellContainer.hpp>
 
