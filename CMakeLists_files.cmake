@@ -50,6 +50,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/NonlinearSolverEbos.cpp
   opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.cpp
   opm/simulators/flow/ValidationFunctions.cpp
+  opm/simulators/flow/aspinPartition.cpp
   opm/simulators/linalg/bda/WellContributions.cpp
   opm/simulators/linalg/bda/MultisegmentWellContribution.cpp
   opm/simulators/linalg/ExtractParallelGridInformationToISTL.cpp
@@ -226,6 +227,7 @@ endif()
 # find tests -name '*.cpp' -a ! -wholename '*/not-unit/*' -printf '\t%p\n' | sort
 list (APPEND TEST_SOURCE_FILES
   tests/test_ALQState.cpp
+  tests/test_aspinPartition.cpp
   tests/test_blackoil_amg.cpp
   tests/test_convergenceoutputconfiguration.cpp
   tests/test_convergencereport.cpp
@@ -343,6 +345,7 @@ list (APPEND TEST_DATA_FILES
   tests/include/summary.inc
   tests/include/test1_20x30x10.grdecl
   tests/include/well_vfp.ecl
+  tests/partition.txt
   )
 
 
@@ -362,6 +365,8 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp
   opm/simulators/flow/KeywordValidation.hpp
   opm/simulators/flow/ValidationFunctions.hpp
+  opm/simulators/flow/aspinPartition.hpp
+  opm/simulators/flow/SubDomain.hpp
   opm/core/props/BlackoilPhases.hpp
   opm/core/props/phaseUsageFromDeck.hpp
   opm/core/props/satfunc/RelpermDiagnostics.hpp
@@ -421,6 +426,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/SmallDenseMatrixUtils.hpp
   opm/simulators/linalg/WellOperators.hpp
   opm/simulators/linalg/WriteSystemMatrixHelper.hpp
+  opm/simulators/linalg/extractMatrix.hpp
   opm/simulators/linalg/findOverlapRowsAndColumns.hpp
   opm/simulators/linalg/getQuasiImpesWeights.hpp
   opm/simulators/linalg/setupPropertyTree.hpp
