@@ -101,6 +101,7 @@ private:
     std::shared_ptr<AbstractPrecondType> preconditioner_;
     std::shared_ptr<AbstractScalarProductType> scalarproduct_;
     std::shared_ptr<AbstractSolverType> linsolver_;
+    bool HACK_is_umfpack_ = false;
 };
 
 } // namespace Dune
