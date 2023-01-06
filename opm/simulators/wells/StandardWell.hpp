@@ -254,6 +254,25 @@ namespace Opm
                                     DeferredLogger& deferred_logger) const;
 
 
+        std::vector<double> getPrimaryVars() const override
+        {
+            const int num_pri_vars = this->primary_variables_.numWellEq();
+            std::vector<double> retval(num_pri_vars);
+            for (int ii = 0; ii < num_pri_vars; ++ii) {
+                retval[ii] = this->primary_variables_.value(ii);
+            }
+            return retval;
+        }
+
+        int setPrimaryVars(std::vector<double>::const_iterator it) override
+        {
+            const int num_pri_vars = this->primary_variables_.numWellEq();
+            for (int ii = 0; ii < num_pri_vars; ++ii) {
+                this->primary_variables_.setValue(ii, it[ii]);
+            }
+            return num_pri_vars;
+        }
+
     protected:
         bool regularize_;
 

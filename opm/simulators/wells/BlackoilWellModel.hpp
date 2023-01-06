@@ -45,6 +45,7 @@
 
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/flow/countGlobalCells.hpp>
+#include <opm/simulators/flow/SubDomain.hpp>
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
 #include <opm/simulators/wells/BlackoilWellModelGuideRates.hpp>
 #include <opm/simulators/wells/GasLiftSingleWell.hpp>
@@ -137,6 +138,8 @@ namespace Opm {
             using AverageRegionalPressureType = RegionAverageCalculator::
                 AverageRegionalPressure<FluidSystem, std::vector<int> >;
 
+            using Domain = SubDomain<Grid>;
+
             BlackoilWellModel(Simulator& ebosSimulator);
 
             void init();
@@ -155,10 +158,16 @@ namespace Opm {
             {}
 
             void linearize(SparseMatrixAdapter& jacobian, GlobalEqVector& res) override;
+            void linearizeDomain(const Domain& domain, SparseMatrixAdapter& jacobian, GlobalEqVector& res);
 
             void postSolve(GlobalEqVector& deltaX) override
             {
                 recoverWellSolutionAndUpdateWellState(deltaX);
+            }
+
+            void postSolveLocal(GlobalEqVector& deltaX, const Domain& domain)
+            {
+                recoverWellSolutionAndUpdateWellStateLocal(deltaX, domain);
             }
 
             /////////////
@@ -270,6 +279,11 @@ namespace Opm {
             // Check if well equations is converged.
             ConvergenceReport getWellConvergence(const std::vector<Scalar>& B_avg, const bool checkWellGroupControls = false) const;
 
+            // Check if well equations are converged locally.
+            ConvergenceReport getLocalWellConvergence(const Domain& domain,
+                                                      const std::vector<Scalar>& B_avg,
+                                                      const bool checkGroupConvergence = false) const;
+
             const SimulatorReportSingle& lastReport() const;
 
             void addWellContributions(SparseMatrixAdapter& jacobian) const;
@@ -292,6 +306,7 @@ namespace Opm {
             // at the beginning of each time step (Not report step)
             void prepareTimeStep(DeferredLogger& deferred_logger);
             void initPrimaryVariablesEvaluation() const;
+            void initPrimaryVariablesEvaluationLocal(const Domain& domain) const;
 
             std::pair<bool, bool>
             updateWellControls(const bool mandatory_network_balance, DeferredLogger& deferred_logger, const bool relax_network_tolerance = false);
@@ -327,6 +342,20 @@ namespace Opm {
             }
 
             int numLocalNonshutWells() const;
+
+            // prototype for assemble function for ASPIN solveLocal()
+            // will try to merge back to assemble() when done prototyping
+            void assembleLocal(const int iterationIdx,
+                               const double dt,
+                               const Domain& domain);
+            void updateWellControlsLocal(DeferredLogger& deferred_logger, const bool checkGroupControls,
+                                         const Domain& domain);
+
+            void logPrimaryVars() const;
+            std::vector<double> getPrimaryVarsDomain(const Domain& domain) const;
+            void setPrimaryVarsDomain(const Domain& domain, const std::vector<double>& vars);
+
+            void setupDomains(const std::vector<Domain>& domains);
 
         protected:
             Simulator& ebosSimulator_;
@@ -377,6 +406,9 @@ namespace Opm {
 
             std::vector<Scalar> B_avg_{};
 
+            // Keep track of the domain of each well, if using subdomains.
+            std::map<std::string, int> well_domain_;
+
             const Grid& grid() const
             { return ebosSimulator_.vanguard().grid(); }
 
@@ -404,6 +436,7 @@ namespace Opm {
                                               const double dt,
                                               DeferredLogger& local_deferredLogger);
 
+
             // called at the end of a time step
             void timeStepSucceeded(const double& simulationTime, const double dt);
 
@@ -413,6 +446,10 @@ namespace Opm {
             // using the solution x to recover the solution xw for wells and applying
             // xw to update Well State
             void recoverWellSolutionAndUpdateWellState(const BVector& x);
+
+            // using the solution x to recover the solution xw for wells and applying
+            // xw to update Well State
+            void recoverWellSolutionAndUpdateWellStateLocal(const BVector& x, const Domain& domain);
 
             // setting the well_solutions_ based on well_state.
             void updatePrimaryVariables(DeferredLogger& deferred_logger);
@@ -438,6 +475,7 @@ namespace Opm {
             int reportStepIndex() const;
 
             void assembleWellEq(const double dt, DeferredLogger& deferred_logger);
+            void assembleWellEqLocal(const double dt, const Domain& domain, DeferredLogger& deferred_logger);
 
             void prepareWellsBeforeAssembling(const double dt, DeferredLogger& deferred_logger);
 

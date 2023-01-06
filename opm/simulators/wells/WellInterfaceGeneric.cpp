@@ -397,6 +397,11 @@ bool WellInterfaceGeneric::isVFPActive(DeferredLogger& deferred_logger) const
     }
 }
 
+const Well& WellInterfaceGeneric::scheduleWell() const
+{
+    return well_ecl_;
+}
+
 bool WellInterfaceGeneric::isOperableAndSolvable() const
 {
     return operability_status_.isOperableAndSolvable();
