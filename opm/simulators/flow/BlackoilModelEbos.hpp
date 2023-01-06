@@ -27,6 +27,24 @@
 #include <ebos/eclproblem.hh>
 #include <opm/models/utils/start.hh>
 
+#include <opm/simulators/timestepping/AdaptiveTimeSteppingEbos.hpp>
+
+#include <opm/simulators/flow/NonlinearSolverEbos.hpp>
+#include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
+#include <opm/simulators/wells/BlackoilWellModel.hpp>
+#include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
+#include <opm/simulators/wells/WellConnectionAuxiliaryModule.hpp>
+#include <opm/simulators/flow/aspinPartition.hpp>
+#include <opm/simulators/flow/SubDomain.hpp>
+#include <opm/simulators/flow/countGlobalCells.hpp>
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+#include <opm/simulators/linalg/extractMatrix.hpp>
+
+#include <opm/grid/common/SubGridView.hpp>
+#include <opm/simulators/timestepping/SimulatorReport.hpp>
+#include <opm/simulators/linalg/ParallelIstlInformation.hpp>
+#include <opm/core/props/phaseUsageFromDeck.hpp>
+
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
@@ -43,6 +61,9 @@
 #include <opm/simulators/flow/NonlinearSolverEbos.hpp>
 #include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
 #include <opm/simulators/linalg/ISTLSolverEbos.hpp>
+
+
+
 #include <opm/simulators/timestepping/AdaptiveTimeSteppingEbos.hpp>
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
@@ -52,10 +73,16 @@
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
 #include <opm/simulators/wells/WellConnectionAuxiliaryModule.hpp>
 
+
+#include <dune/istl/matrixmarket.hh>
+#include <opm/simulators/linalg/MatrixMarketSpecializations.hpp>
+
 #include <dune/istl/owneroverlapcopy.hh>
 #include <dune/common/parallel/communication.hh>
 #include <dune/common/timer.hh>
 #include <dune/common/unused.hh>
+
+#include <fmt/format.h>
 
 #include <algorithm>
 #include <cassert>
@@ -200,6 +227,8 @@ namespace Opm {
         typedef typename SparseMatrixAdapter::IstlMatrix Mat;
         typedef Dune::BlockVector<VectorBlockType>      BVector;
 
+        using Domain = SubDomain<Grid>;
+
         typedef ISTLSolverEbos<TypeTag> ISTLSolverType;
 
         class ComponentName
@@ -295,13 +324,95 @@ namespace Opm {
             // compute global sum of number of cells
             global_nc_ = detail::countGlobalCells(grid_);
             convergence_reports_.reserve(300); // Often insufficient, but avoids frequent moves.
+            // TODO: remember to fix!
+            if (param_.nonlinear_solver_ == "aspin" || param_.nonlinear_solver_ == "nldd" || param_.nonlinear_solver_ == "purelocal") {
+                setupAspinDomains();
+            }
         }
+
 
         bool isParallel() const
         { return  grid_.comm().size() > 1; }
 
+
         const EclipseState& eclState() const
         { return ebosSimulator_.vanguard().eclState(); }
+
+
+
+        void setupAspinDomains()
+        {
+            // Create partitions.
+            const int num_cells = detail::countLocalInteriorCells(grid_);
+            auto [partition_vector, num_partitions] = partitionCells(num_cells);
+
+            // Scan through partitioning to get correct size for each.
+            std::vector<int> sizes(num_partitions, 0);
+            for (int p : partition_vector) {
+                ++sizes[p];
+            }
+
+            // Set up correctly sized vectors of entity seeds and of indices for each partition.
+            using EntitySeed = typename Grid::template Codim<0>::EntitySeed;
+            std::vector<std::vector<EntitySeed>> seeds(num_partitions);
+            std::vector<std::vector<int>> partitions(num_partitions);
+            for (int part = 0; part < num_partitions; ++part) {
+                seeds[part].resize(sizes[part]);
+                partitions[part].resize(sizes[part]);
+            }
+
+            // Iterate through grid once, setting the seeds of all partitions.
+            std::vector<int> count(num_partitions, 0);
+            const auto beg = grid_.template leafbegin<0>();
+            const auto end = grid_.template leafend<0>();
+            int cell = 0;
+            for (auto it = beg; it != end; ++it, ++cell) {
+                const int p = partition_vector[cell];
+                seeds[p][count[p]] = it->seed();
+                partitions[p][count[p]] = cell;
+                ++count[p];
+            }
+            assert(cell == num_cells);
+            assert(count == sizes);
+
+            // Create the domains.
+            const int num_domains = partitions.size();
+            for (int index = 0; index < num_domains; ++index) {
+                std::vector<bool> interior(num_cells, false);
+                for (int ix : partitions[index]) {
+                    interior[ix] = true;
+                }
+                Dune::SubGridView<Grid> view(ebosSimulator_.vanguard().grid(), std::move(seeds[index]));
+                domains_.emplace_back(index, std::move(partitions[index]), std::move(interior), std::move(view));
+            }
+
+            // Set up container for the local system matrices.
+            domain_matrices_.resize(num_domains);
+
+            // Set up container for the local linear solvers.
+            for (int index = 0; index < num_domains; ++index) {
+                // TODO: The ISTLSolverEbos constructor will make
+                // parallel structures appropriate for the full grid
+                // only. This must be addressed before going parallel.
+                FlowLinearSolverParameters param;
+                param.template init<TypeTag>();
+                // Override solver type with umfpack if small domain.
+                // Otherwise hardcode to ILU0
+                if (domains_[index].cells.size() < 200) {
+                    param.linsolver_ = "umfpack.json";
+                } else {
+                    param.linsolver_ = "ilu0";
+                    param.linear_solver_reduction_ = 1e-2;
+                }
+                param.linear_solver_print_json_definition_ = false;
+                domain_linsolvers_.emplace_back(ebosSimulator_, param);
+            }
+
+            assert(int(domains_.size()) == num_domains);
+        }
+
+
+
 
         /// Called once before each time step.
         /// \param[in] timer                  simulation timer
@@ -335,6 +446,10 @@ namespace Opm {
                 std::cout << "equation scaling not supported yet" << std::endl;
                 //updateEquationsScaling();
             }
+
+            // Setup domain->well mapping.
+            wellModel().setupDomains(domains_);
+
             report.pre_post_time += perfTimer.stop();
 
             return report;
@@ -348,18 +463,11 @@ namespace Opm {
         /// \param[in] iteration              should be 0 for the first call of a new timestep
         /// \param[in] timer                  simulation timer
         /// \param[in] nonlinear_solver       nonlinear solver used (for oscillation/relaxation control)
-        /// \param[in, out] reservoir_state   reservoir state variables
-        /// \param[in, out] well_state        well state variables
         template <class NonlinearSolverType>
         SimulatorReportSingle nonlinearIteration(const int iteration,
                                                  const SimulatorTimerInterface& timer,
                                                  NonlinearSolverType& nonlinear_solver)
         {
-            SimulatorReportSingle report;
-            failureReport_ = SimulatorReportSingle();
-            Dune::Timer perfTimer;
-
-            perfTimer.start();
             if (iteration == 0) {
                 // For each iteration we store in a vector the norms of the residual of
                 // the mass balance for each active phase, the well flux and the well equations.
@@ -370,8 +478,29 @@ namespace Opm {
                 convergence_reports_.back().report.reserve(11);
             }
 
+            if (param_.nonlinear_solver_ == "aspin" || param_.nonlinear_solver_ == "nldd" || param_.nonlinear_solver_ == "purelocal") {
+                return nonlinearIterationAspin(iteration, timer, nonlinear_solver);
+            } else {
+                return nonlinearIterationNewton(iteration, timer, nonlinear_solver);
+            }
+        }
+
+
+        template <class NonlinearSolverType>
+        SimulatorReportSingle nonlinearIterationNewton(const int iteration,
+                                                       const SimulatorTimerInterface& timer,
+                                                       NonlinearSolverType& nonlinear_solver)
+        {
+
+            // -----------   Set up reports and timer   -----------
+            SimulatorReportSingle report;
+            failureReport_ = SimulatorReportSingle();
+            Dune::Timer perfTimer;
+
+            perfTimer.start();
             report.total_linearizations = 1;
 
+            // -----------   Assemble   -----------
             try {
                 report += assembleReservoir(timer, iteration);
                 report.assemble_time += perfTimer.stop();
@@ -383,12 +512,41 @@ namespace Opm {
                 throw; // continue throwing the stick
             }
 
+#if 0
+            // DEBUG HACK
+            // Check if domain-diagonal parts are identical to stored subdomain matrices.
+            if (param_.nonlinear_solver_ == "nldd") {
+                const Mat& main_matrix = ebosSimulator_.model().linearizer().jacobian().istlMatrix();
+                for (const auto& domain : domains_) {
+                    if (domain_matrices_[domain.index]) {
+                        auto domain_diag_part = Details::extractMatrix(main_matrix, domain.cells);
+                        if (Details::matrixEqual(domain_diag_part, *domain_matrices_[domain.index])) {
+                            OpmLog::debug("  *** matrices IDENTICAL for domain " + std::to_string(domain.index));
+                        } else {
+                            OpmLog::debug("  *** matrices DIFFER for domain " + std::to_string(domain.index));
+                        }
+                    } else {
+                        OpmLog::debug("  *** no local matrix for domain " + std::to_string(domain.index));
+                    }
+                }
+            }
+#endif
+
+            // -----------   Check if converged   -----------
             std::vector<double> residual_norms;
             perfTimer.reset();
             perfTimer.start();
             // the step is not considered converged until at least minIter iterations is done
             {
-                auto convrep = getConvergence(timer, iteration,residual_norms);
+                auto convrep = getConvergence(timer, iteration, residual_norms);
+                // if (!convrep.converged()) {
+                //     std::ostringstream os;
+                //     os << "Convergence data for Newton iteration " << iteration << "\n"
+                //        << convrep;
+                //     OpmLog::debug(os.str());
+                // }
+                ////wellModel().logPrimaryVars();
+
                 report.converged = convrep.converged()  && iteration > nonlinear_solver.minIter();;
                 ConvergenceReport::Severity severity = convrep.severityOfWorstFailure();
                 convergence_reports_.back().report.push_back(std::move(convrep));
@@ -400,8 +558,11 @@ namespace Opm {
                     OPM_THROW_NOLOG(NumericalProblem, "Too large residual found!");
                 }
             }
-            report.update_time += perfTimer.stop();
+            //report.convergence_check_time += perfTimer.stop();
             residual_norms_history_.push_back(residual_norms);
+            // Dune::writeMatrixToMatlab(ebosSimulator_.model().linearizer().jacobian().istlMatrix(), "beforeWellModelLinearize.matlab");
+
+            // -----------   If not converged, solve linear system   -----------
             if (!report.converged) {
                 perfTimer.reset();
                 perfTimer.start();
@@ -422,6 +583,7 @@ namespace Opm {
                     // Note that linearize may throw for MSwells.
                     wellModel().linearize(ebosSimulator().model().linearizer().jacobian(),
                                           ebosSimulator().model().linearizer().residual());
+                    //wellModel().logPrimaryVars();
 
                     solveJacobianSystem(x);
                     report.linear_solve_setup_time += linear_solve_setup_time_;
@@ -444,12 +606,13 @@ namespace Opm {
                 // on observation to avoid some big performance degeneration under some circumstances.
                 // there is no theorectical explanation which way is better for sure.
                 wellModel().postSolve(x);
+                //wellModel().logPrimaryVars();
 
                 if (param_.use_update_stabilization_) {
                     // Stabilize the nonlinear update.
                     bool isOscillate = false;
                     bool isStagnate = false;
-                    nonlinear_solver.detectOscillations(residual_norms_history_, iteration, isOscillate, isStagnate);
+                    nonlinear_solver.detectOscillations(residual_norms_history_, residual_norms_history_.size() - 1, isOscillate, isStagnate);
                     if (isOscillate) {
                         current_relaxation_ -= nonlinear_solver.relaxIncrement();
                         current_relaxation_ = std::max(current_relaxation_, nonlinear_solver.relaxMax());
@@ -472,11 +635,738 @@ namespace Opm {
             return report;
         }
 
+
+
+
+        template <class NonlinearSolverType>
+        SimulatorReportSingle nonlinearIterationAspin(const int iteration,
+                                                      const SimulatorTimerInterface& timer,
+                                                      NonlinearSolverType& nonlinear_solver)
+        {
+            // -----------   Set up reports and timer   -----------
+            SimulatorReportSingle report;
+            failureReport_ = SimulatorReportSingle();
+            Dune::Timer perfTimer;
+
+            //wellModel().logPrimaryVars();
+
+            perfTimer.start();
+            report.total_linearizations = 1;
+
+            // -----------   Assemble   -----------
+            try {
+                report += assembleReservoir(timer, iteration);
+                report.assemble_time += perfTimer.stop();
+            }
+            catch (...) {
+                report.assemble_time += perfTimer.stop();
+                failureReport_ += report;
+                // todo (?): make the report an attribute of the class
+                throw; // continue throwing the stick
+            }
+            //wellModel().logPrimaryVars();
+
+            // -----------   Check if converged   -----------
+            std::vector<double> residual_norms;
+            perfTimer.reset();
+            perfTimer.start();
+            // the step is not considered converged until at least minIter iterations is done
+            {
+                auto convrep = getConvergence(timer, iteration, residual_norms);
+                if (!convrep.converged()) {
+                    // std::ostringstream os;
+                    // os << "Convergence data for first global iteration:\n"
+                    //    << convrep;
+                    // OpmLog::debug(os.str());
+                }
+                report.converged = convrep.converged()  && iteration > nonlinear_solver.minIter();;
+                ConvergenceReport::Severity severity = convrep.severityOfWorstFailure();
+                convergence_reports_.back().report.push_back(std::move(convrep));
+
+                // Throw if any NaN or too large residual found.
+                if (severity == ConvergenceReport::Severity::NotANumber) {
+                    OPM_THROW(NumericalProblem, "NaN residual found!");
+                } else if (severity == ConvergenceReport::Severity::TooLarge) {
+                    OPM_THROW_NOLOG(NumericalProblem, "Too large residual found!");
+                }
+            }
+            //report.convergence_check_time += perfTimer.stop();
+            residual_norms_history_.push_back(residual_norms);
+
+            if (report.converged) {
+                return report;
+            }
+
+            // -----------   If not converged, do an ASPIN or NLDD iteration   -----------
+
+            // apply the Schur compliment of the well model to the reservoir linearized
+            // equations
+            // wellModel().linearize(ebosSimulator().model().linearizer().jacobian(),
+            //                       ebosSimulator().model().linearizer().residual());
+
+            // Take a copy of the FI residual.
+            // auto fully_implicit_residual = ebosSimulator().model().linearizer().residual();
+            // ... and the Jacobian.
+            // auto fully_implicit_jacobian = ebosSimulator().model().linearizer().jacobian().istlMatrix();
+            // ... and the solution state that generated it.
+            auto& solution = ebosSimulator().model().solution(0);
+            auto initial_solution = solution;
+            // auto initial_wellstate = wellModel().wellState();
+            auto locally_solved = initial_solution;
+
+            // -----------   Decide on an ordering for the domains   -----------
+            std::vector<int> domain_order(domains_.size());
+            if (param_.local_solve_approach_ == "gauss-seidel") {
+                if (true) {
+                    // Use average pressures to order domains.
+                    std::vector<std::pair<double, int>> avgpress_per_domain(domains_.size());
+                    for (const auto& domain : domains_) {
+                        double press_sum = 0.0;
+                        for (const int c : domain.cells) {
+                            press_sum += solution[c][Indices::pressureSwitchIdx];
+                        }
+                        const double avgpress = press_sum / domain.cells.size();
+                        avgpress_per_domain[domain.index] = std::make_pair(avgpress, domain.index);
+                    }
+                    // Lexicographical sort by pressure, then index.
+                    std::sort(avgpress_per_domain.begin(), avgpress_per_domain.end());
+                    // Reverse since we want high-pressure regions solved first.
+                    std::reverse(avgpress_per_domain.begin(), avgpress_per_domain.end());
+                    for (size_t ii = 0; ii < domains_.size(); ++ii) {
+                        domain_order[ii] = avgpress_per_domain[ii].second;
+                    }
+                } else {
+                    // Use maximum residual to order domains.
+                    const auto& residual = ebosSimulator_.model().linearizer().residual();
+                    const int num_vars = residual[0].size();
+                    std::vector<std::pair<double, int>> maxres_per_domain(domains_.size());
+                    for (const auto& domain : domains_) {
+                        double maxres = 0.0;
+                        for (const int c : domain.cells) {
+                            for (int ii = 0; ii < num_vars; ++ii) {
+                                maxres = std::max(maxres, std::fabs(residual[c][ii]));
+                            }
+                        }
+                        maxres_per_domain[domain.index] = std::make_pair(maxres, domain.index);
+                    }
+                    // Lexicographical sort by pressure, then index.
+                    std::sort(maxres_per_domain.begin(), maxres_per_domain.end());
+                    // Reverse since we want high-pressure regions solved first.
+                    std::reverse(maxres_per_domain.begin(), maxres_per_domain.end());
+                    for (size_t ii = 0; ii < domains_.size(); ++ii) {
+                        domain_order[ii] = maxres_per_domain[ii].second;
+                    }
+                }
+            } else {
+                std::iota(domain_order.begin(), domain_order.end(), 0);
+            }
+
+            // -----------   Solve each domain separately   -----------
+            std::vector<SimulatorReportSingle> domain_reports(domains_.size());
+            for (const int domain_index : domain_order) {
+                const auto& domain = domains_[domain_index];
+                SimulatorReportSingle local_report;
+                if (param_.local_solve_approach_ == "jacobi") {
+                    auto initial_local_well_primary_vars = wellModel().getPrimaryVarsDomain(domain);
+                    auto initial_local_solution = Details::extractVector(solution, domain.cells);
+                    auto res = solveLocal(domain, timer, iteration);
+                    local_report = res.first;
+#if 0
+                    auto local_solution = Details::extractVector(solution, domain.cells);
+                    Details::setGlobal(local_solution, domain.cells, locally_solved);
+                    Details::setGlobal(initial_local_solution, domain.cells, solution);
+                   // ebosSimulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain.view);
+#else
+                    if (/*!local_report.converged*/ false) {
+                        // Try again with a less strict tolerance.
+                        wellModel().setPrimaryVarsDomain(domain, initial_local_well_primary_vars);
+                        Details::setGlobal(initial_local_solution, domain.cells, solution);
+                        ebosSimulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain.view);
+                        // auto param_orig = param_;
+                        // param_.local_tolerance_scaling_cnv_ *= 10.0;
+                        // param_.local_tolerance_scaling_mb_ *= 10.0;
+                        auto res = solveLocal(domain, timer, iteration);
+                        local_report = res.first;
+                        // param_ = param_orig;
+                    }
+                    if (local_report.converged) {
+                        auto local_solution = Details::extractVector(solution, domain.cells);
+                        Details::setGlobal(local_solution, domain.cells, locally_solved);
+                        Details::setGlobal(initial_local_solution, domain.cells, solution);
+                        ebosSimulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain.view);
+                    } else {
+                        wellModel().setPrimaryVarsDomain(domain, initial_local_well_primary_vars);
+                        Details::setGlobal(initial_local_solution, domain.cells, solution);
+                        ebosSimulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain.view);
+                    }
+#endif
+                } else {
+                    assert(param_.local_solve_approach_ == "gauss-seidel");
+                    auto initial_local_well_primary_vars = wellModel().getPrimaryVarsDomain(domain);
+                    auto initial_local_solution = Details::extractVector(solution, domain.cells);
+                    auto res = solveLocal(domain, timer, iteration);
+                    local_report = res.first;
+                    if (/*!local_report.converged*/ false) {
+                        // Try again with a less strict tolerance.
+                        wellModel().setPrimaryVarsDomain(domain, initial_local_well_primary_vars);
+                        Details::setGlobal(initial_local_solution, domain.cells, solution);
+                        ebosSimulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain.view);
+                        // auto param_orig = param_;
+                        // param_.local_tolerance_scaling_cnv_ = 50.0;
+                        // param_.local_tolerance_scaling_mb_ = 50.0;
+                        auto res = solveLocal(domain, timer, iteration);
+                        local_report = res.first;
+                        // param_ = param_orig;
+                    }
+                    if (!local_report.converged) {
+                        // We look at the detailed convergence report to evaluate
+                        // if we should accept the unconverged solution.
+                        const auto& convrep = res.second;
+                        // We do not accept a solution if the wells are unconverged.
+                        if (!convrep.wellFailed()) {
+                            // Calculare the sums of the mb and cnv failures.
+                            double mb_sum = 0.0;
+                            double cnv_sum = 0.0;
+                            for (const auto& rf : convrep.reservoirFailures()) {
+                                if (rf.type() == ConvergenceReport::ReservoirFailure::Type::MassBalance) {
+                                    // mb_sum += rf.magnitude();
+                                } else if (rf.type() == ConvergenceReport::ReservoirFailure::Type::Cnv) {
+                                    // cnv_sum += rf.magnitude();
+                                }
+                            }
+                            // If not too high, we overrule the convergence failure.
+                            if (mb_sum < 1e-3 && cnv_sum < 1.0) {
+                                local_report.converged = true;
+                                OpmLog::debug("Accepting solution in unconverged domain " + std::to_string(domain.index));
+                            }
+                        }
+                    }
+                    if (local_report.converged) {
+                        auto local_solution = Details::extractVector(solution, domain.cells);
+                        Details::setGlobal(local_solution, domain.cells, locally_solved);
+                    } else {
+                        wellModel().setPrimaryVarsDomain(domain, initial_local_well_primary_vars);
+                        Details::setGlobal(initial_local_solution, domain.cells, solution);
+                        ebosSimulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain.view);
+                    }
+                }
+                // This should have updated the global matrix to be
+                // dR_i/du_j evaluated at new local solutions for
+                // i == j, at old solution for i != j.
+                if (!local_report.converged) {
+                    // TODO: more proper treatment, including in parallel.
+                    OpmLog::debug("Convergence failure in domain " + std::to_string(domain.index));
+                }
+                domain_reports[domain.index] = local_report;
+            }
+
+#if 0
+            // DEBUG write solution vectors.
+            {
+                const int nc = UgGridHelpers::numCells(grid_);
+                BVector sol(nc);
+                for (int c = 0; c < nc; ++c) {
+                    sol[c] = solution[c];
+                }
+                BVector loc_sol(nc);
+                for (int c = 0; c < nc; ++c) {
+                    loc_sol[c] = locally_solved[c];
+                }
+                Dune::storeMatrixMarket(sol, param_.local_solve_approach_ + "-" + std::to_string(iteration) + ".mm");
+                Dune::storeMatrixMarket(loc_sol, param_.local_solve_approach_ + "-local-" + std::to_string(iteration) + ".mm");
+            }
+#endif
+
+            // Print summary of local solve convergence.
+            {
+                int num_converged = 0;
+                SimulatorReportSingle rep;
+                for (const auto& dr : domain_reports) {
+                    if (dr.converged) {
+                        ++num_converged;
+                    }
+                    rep += dr;
+                }
+                std::ostringstream os;
+                os << fmt::format("Local solves finished. Converged for {}/{} domains.\n",
+                                  num_converged, domain_reports.size());
+                rep.reportFullyImplicit(os, nullptr);
+                OpmLog::debug(os.str());
+                local_reports_accumulated_ += rep;
+            }
+
+#define ASPIN_EXTRA_WELL_OUTPUT 1
+#if ASPIN_EXTRA_WELL_OUTPUT
+            // Extra debug output.
+            //wellModel().logPrimaryVars();
+            {
+                std::ostringstream os;
+                os << "   ** Well rates:";
+                for (int w = 0; w < wellModel().wellState().numWells(); ++w) {
+                    os << " | ";
+                    const auto& wr = wellModel().wellState().wellRates(w);
+                    for (const double r : wr) {
+                        os << ' ' << r;
+                    }
+                }
+                OpmLog::debug(os.str());
+            }
+#endif
+
+            if (param_.nonlinear_solver_ == "purelocal") {
+                if (param_.local_solve_approach_ == "jacobi") {
+                    solution = locally_solved;
+                    ebosSimulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
+                }
+                return report;
+            }
+            else if (param_.nonlinear_solver_ == "nldd") {
+                if (param_.local_solve_approach_ == "jacobi") {
+                    solution = locally_solved;
+                    ebosSimulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
+                }
+                // Finish with a Newton step.
+                // ebosSimulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
+                auto rep = nonlinearIterationNewton(iteration + 100, timer, nonlinear_solver);
+                report += rep;
+                if (rep.converged) {
+                    report.converged = true;
+                }
+                return report;
+            }
+            report.total_newton_iterations = 1;
+
+            /*
+            // HACK to check FI convergence
+            // Take a copy of the FI residual.
+            auto res1 = ebosSimulator().model().linearizer().residual();
+            // ... and the Jacobian.
+            auto jac1 = ebosSimulator().model().linearizer().jacobian().istlMatrix();
+            // ... and the solution state that generated it.
+            auto sol1 = solution;
+            auto ws1 = wellModel().wellState();
+
+            // -----------   Assemble   -----------
+            try {
+                report += assembleReservoir(timer, iteration);
+                report.assemble_time += perfTimer.stop();
+            }
+            catch (...) {
+                report.assemble_time += perfTimer.stop();
+                failureReport_ += report;
+                // todo (?): make the report an attribute of the class
+                throw; // continue throwing the stick
+            }
+            //wellModel().logPrimaryVars();
+
+            // -----------   Check if converged   -----------
+            perfTimer.reset();
+            perfTimer.start();
+            // the step is not considered converged until at least minIter iterations is done
+            {
+                auto convrep = getConvergence(timer, iteration, residual_norms);
+                report.converged = convrep.converged()  && iteration > nonlinear_solver.minIter();;
+                ConvergenceReport::Severity severity = convrep.severityOfWorstFailure();
+                convergence_reports_.back().report.push_back(std::move(convrep));
+
+                // Throw if any NaN or too large residual found.
+                if (severity == ConvergenceReport::Severity::NotANumber) {
+                    OPM_THROW(NumericalProblem, "NaN residual found!");
+                } else if (severity == ConvergenceReport::Severity::TooLarge) {
+                    OPM_THROW(NumericalProblem, "Too large residual found!");
+                }
+            }
+            report.update_time += perfTimer.stop();
+            residual_norms_history_.push_back(residual_norms);
+
+            if (report.converged) {
+                return report;
+            }
+            // HACK reinstate everything
+            ebosSimulator().model().linearizer().residual() = res1;
+            ebosSimulator().model().linearizer().jacobian().istlMatrix() = jac1;
+            solution = sol1;
+            wellModel().wellState() = ws1;
+            */
+
+            // -----------   Compute ASPIN residual, check convergence   -----------
+            const int nc = grid_.size(0); // Includes both owned cells and overlap.
+            BVector aspin_residual(nc);
+            const int num_vars = aspin_residual[0].size();
+            std::vector<double> max_sol(num_vars, 0.0);
+            std::vector<double> max_diff(num_vars, 0.0);
+            for (int c = 0; c < nc; ++c) {
+                aspin_residual[c] = initial_solution[c] - locally_solved[c];
+                for (int var = 0; var < num_vars; ++var) {
+                    max_sol[var] = std::max(max_sol[var], std::fabs(locally_solved[c][var]));
+                    max_diff[var] = std::max(max_diff[var], std::fabs(aspin_residual[c][var]));
+                }
+            }
+            double max_scaled_diff = 0.0;
+            for (int var = 0; var < num_vars; ++var) {
+                max_scaled_diff = std::max(max_scaled_diff, max_diff[var]/max_sol[var]);
+            }
+            OpmLog::debug("  Scaled ASPIN residual: " + std::to_string(max_scaled_diff));
+            if (max_scaled_diff < param_.outer_aspin_tolerance_) {
+                report.converged = true;
+                solution = locally_solved;
+                return report;
+            }
+
+            // -----------   Solve global linear system   -----------
+            // The matrix is kept as is for now.
+            // TODO: test with proper ASPIN (in what we have now, columns are updated outside the diagonal
+            // domain-domain interaction blocks in a Gauss-Seidel-like manner), and other variations.
+            // NOTE: the above should no longer be true, the matrix is ASPIN now (should be).
+            //
+#if 0
+            // Compute rhs.
+            // The modified residual is D * aspin_residual in each domain.
+            auto& ebosResid = ebosSimulator_.model().linearizer().residual();
+            for (const auto& domain : domains_) {
+                auto aspin_res_local = Details::extractVector(aspin_residual, domain.cells);
+                BVector aspin_res_mod(aspin_res_local.size());
+                aspin_res_mod = 0;
+                if (domain_reports[domain.index].total_newton_iterations > 0) {
+                    (*domain_matrices_[domain.index]).mv(aspin_res_local, aspin_res_mod);
+                }
+                Details::setGlobal(aspin_res_mod, domain.cells, ebosResid);
+            }
+            // Add J_aspin * aspin_residual to the modified residual, so we solve for
+            // the difference from the local solution rather than from the very start
+            // of the iteration.
+            {
+                const auto& ebosJac = ebosSimulator_.model().linearizer().jacobian().istlMatrix();
+                BVector yy(nc);
+                ebosJac.mv(aspin_residual, yy);
+                ebosResid -= yy;
+            }
+#else
+            // Compute rhs.
+            {
+                auto Jcopy = ebosSimulator_.model().linearizer().jacobian().istlMatrix();
+                Dune::storeMatrixMarket(Jcopy, "aspinjac.mm");
+                // Eliminate the domain diagonal blocks from Jcopy. Jcopy is then (J - D)
+                for (const auto& domain : domains_) {
+                    for (const int cell : domain.cells) {
+                        auto& row = Jcopy[cell];
+                        for (auto iter = row.begin(); iter != row.end(); ++iter) {
+                            int col = iter.index();
+                            auto lb = std::find(domain.cells.begin(), domain.cells.end(), col);
+                            if (lb != domain.cells.end()) {
+                                //std::cerr << "row = " << cell << "   col = " << col <<'\n';
+                                *iter = 0.0;
+                            }
+                        }
+                    }
+                }
+                Dune::storeMatrixMarket(Jcopy, "aspinjacoffdiag.mm");
+                // Set the residual to -Jcopy * aspin_residual, which will then be (D - J)*(x^k - x^{k+1})
+                auto& ebosResid = ebosSimulator_.model().linearizer().residual();
+                ebosResid = 0.0;
+                Jcopy.mmv(aspin_residual, ebosResid);
+            }
+#endif
+
+            // Check convergence before solving.
+            {
+                auto convrep = getConvergence(timer, -iteration, residual_norms);
+                // report.converged = convrep.converged()  && iteration > nonlinear_solver.minIter();;
+                // ConvergenceReport::Severity severity = convrep.severityOfWorstFailure();
+                // convergence_reports_.back().report.push_back(std::move(convrep));
+
+                // // Throw if any NaN or too large residual found.
+                // if (severity == ConvergenceReport::Severity::NotANumber) {
+                //     OPM_THROW(NumericalProblem, "NaN residual found!");
+                // } else if (severity == ConvergenceReport::Severity::TooLarge) {
+                //     OPM_THROW_NOLOG(NumericalProblem, "Too large residual found!");
+                // }
+            }
+            // report.convergence_check_time += perfTimer.stop();
+            // residual_norms_history_.push_back(residual_norms);
+
+            // if (report.converged) {
+            //     return report;
+            // }
+
+
+            // Solve the linear system.
+            linear_solve_setup_time_ = 0.0;
+            BVector x(nc);
+            try {
+                solveJacobianSystem(x);
+                report.linear_solve_setup_time += linear_solve_setup_time_;
+                report.linear_solve_time += perfTimer.stop();
+                report.total_linear_iterations += linearIterationsLastSolve();
+            }
+            catch (...) {
+                report.linear_solve_setup_time += linear_solve_setup_time_;
+                report.linear_solve_time += perfTimer.stop();
+                report.total_linear_iterations += linearIterationsLastSolve();
+
+                failureReport_ += report;
+                throw; // re-throw up
+            }
+
+            perfTimer.reset();
+            perfTimer.start();
+
+            // -----------   Update solution   -----------
+
+            // Compute the nonlinear update.
+
+            // apply the Schur compliment of the well model to the reservoir linearized
+            // equations
+            // wellModel().linearize(ebosSimulator().model().linearizer().jacobian(),
+            //                       ebosSimulator().model().linearizer().residual());
+
+
+            // handling well state update before oscillation treatment is a decision based
+            // on observation to avoid some big performance degeneration under some circumstances.
+            // there is no theorectical explanation which way is better for sure.
+            // wellModel().wellState() = initial_wellstate;
+            // ebosSimulator_.model().newtonMethod().setIterationIndex(iteration);
+            // wellModel().beginIteration();
+
+            // Before we can do postSolve() we must take into account that the current
+            // state in the wells are from after the local solves, not from the start
+            // of the iteration.
+            // Instead of passing x (where state_{i+1} = state_i + x, i.e. x is the
+            // difference from one global iteration to the next) we should pass
+            // y, with y = state_{i+1} - state_after_local_solve.
+            // BVector y(nc);
+            // for (int c = 0; c < nc; ++c) {
+            //     y[c] = solution[c] - locally_solved[c];
+            // }
+            // wellModel().postSolve(y);
+
+            if (param_.use_update_stabilization_) {
+                // Stabilize the nonlinear update.
+                bool isOscillate = false;
+                bool isStagnate = false;
+                nonlinear_solver.detectOscillations(residual_norms_history_, iteration, isOscillate, isStagnate);
+                if (isOscillate) {
+                    current_relaxation_ -= nonlinear_solver.relaxIncrement();
+                    current_relaxation_ = std::max(current_relaxation_, nonlinear_solver.relaxMax());
+                    if (terminalOutputEnabled()) {
+                        std::string msg = "    Oscillating behavior detected: Relaxation set to "
+                            + std::to_string(current_relaxation_);
+                        OpmLog::info(msg);
+                    }
+                }
+                nonlinear_solver.stabilizeNonlinearUpdate(x, dx_old_, current_relaxation_);
+            }
+
+            // Apply the update, with considering model-dependent limitations and
+            // chopping of the update. This update must be based on the initial solution,
+            // not the solution after the local solve.
+            // ebosSimulator().model().solution(0) = initial_solution;
+            updateSolution(x);
+
+
+
+
+            // Before we can do postSolve() we must take into account that the current
+            // state in the wells are from after the local solves, not from the start
+            // of the iteration.
+            // Instead of passing x (where state_{i+1} = state_i - x, i.e. x is the
+            // difference from one global iteration to the next) we should pass
+            // y, with y = state_after_local_solve - state_{i+1}.
+            // BVector y(nc);
+            // for (int c = 0; c < nc; ++c) {
+            //     y[c] = locally_solved[c] - solution[c];
+            // }
+            // wellModel().postSolve(y);
+            wellModel().postSolve(x);
+
+
+
+
+            report.update_time += perfTimer.stop();
+
+            //wellModel().logPrimaryVars();
+
+            // Extra debug output.
+            {
+                std::ostringstream os;
+                os << "   ** Well rates:";
+                for (int w = 0; w < wellModel().wellState().numWells(); ++w) {
+                    os << " | ";
+                    const auto& wr = wellModel().wellState().wellRates(w);
+                    for (const double r : wr) {
+                        os << ' ' << r;
+                    }
+                }
+                OpmLog::debug(os.str());
+            }
+
+
+            return report;
+        }
+
+
+
+
+        std::pair<SimulatorReportSingle, ConvergenceReport>
+        solveLocal(const Domain& domain,
+                   const SimulatorTimerInterface& timer,
+                   const int global_iteration,
+                   const bool initial_assembly_required = false)
+        {
+            SimulatorReportSingle report;
+            Dune::Timer solveTimer;
+            solveTimer.start();
+            Dune::Timer detailTimer;
+
+            // TODO: the following assertion will fail, does it indicate a programming error?
+            // assert(ebosSimulator_.model().newtonMethod().numIterations() == 0);
+            ebosSimulator_.model().newtonMethod().setIterationIndex(0);
+            //ebosSimulator_.problem().beginIteration();
+
+            // When called, if assembly has already been performed
+            // with the initial values, we only need to check
+            // for local convergence. Otherwise, we must do a local
+            // assembly.
+            int iter = 0;
+            if (initial_assembly_required) {
+                OpmLog::debug("solveLocal() initial assembly START");
+                //wellModel().logPrimaryVars();
+                detailTimer.start();
+                ebosSimulator_.model().newtonMethod().setIterationIndex(iter);
+                // TODO: we should have a beginIterationLocal function()
+                // only handling the well model for now
+                // ebosSimulator_.problem().beginIteration();
+                ebosSimulator_.problem().wellModel().assembleLocal(ebosSimulator_.model().newtonMethod().numIterations(),
+                                                                   ebosSimulator_.timeStepSize(),
+                                                                   domain);
+                // Assemble reservoir locally.
+                report += assembleReservoirLocal(domain, iter);
+                report.assemble_time += detailTimer.stop();
+                OpmLog::debug("solveLocal() initial assembly END");
+                //wellModel().logPrimaryVars();
+            }
+            detailTimer.reset();
+            detailTimer.start();
+            std::vector<double> resnorms;
+            auto convreport = getLocalConvergence(domain, timer, 0, resnorms);
+            if (convreport.converged()) {
+                // TODO: set more info, timing etc.
+                report.converged = true;
+                // Exit, but not if we are on the first global iteration
+                // (if so, we require at least one iteration).
+                //if (global_iteration > 0) {
+                    return { report, convreport };
+                //}
+            } else {
+                // std::ostringstream os;
+                // os << "Convergence data for first local iteration:\n"
+                //    << convreport;
+                // OpmLog::debug(os.str());
+            }
+            //report.convergence_check_time += detailTimer.stop();
+
+            // We have already assembled for the first iteration,
+            // but not done the Schur complement for the wells yet.
+            detailTimer.reset();
+            detailTimer.start();
+            wellModel().linearizeDomain(domain,
+                                        ebosSimulator().model().linearizer().jacobian(),
+                                        ebosSimulator().model().linearizer().residual());
+            const double tt1 = detailTimer.stop();
+            report.assemble_time += tt1;
+            report.assemble_time_well += tt1;
+            //wellModel().logPrimaryVars();
+
+            // Local Newton loop.
+            const int max_iter = param_.max_local_solve_iterations_;
+            bool converged = false;
+            do {
+                // Solve local linear system.
+                // Note that x has full size, we expect it to be nonzero only for in-domain cells.
+                const int nc = grid_.size(0);
+                BVector x(nc);
+                detailTimer.reset();
+                detailTimer.start();
+                solveLocalJacobianSystem(domain, x);
+                wellModel().postSolveLocal(x, domain);
+                report.linear_solve_time += detailTimer.stop();
+                report.linear_solve_setup_time += linear_solve_setup_time_;
+                report.total_linear_iterations = linearIterationsLastSolve();
+                //wellModel().logPrimaryVars();
+
+                // Update local solution. // TODO: x is still full size, should we optimize it?
+                detailTimer.reset();
+                detailTimer.start();
+                updateDomainSolution(domain, x);
+                report.update_time += detailTimer.stop();
+                // Note: endIteration does not do anything
+                // ebosSimulator_.problem().endIteration();
+
+                // Assemble well and reservoir.
+                detailTimer.reset();
+                detailTimer.start();
+                ++iter;
+                ebosSimulator_.model().newtonMethod().setIterationIndex(iter);
+                // TODO: we should have a beginIterationLocal function()
+                // only handling the well model for now
+                // ebosSimulator_.problem().beginIteration();
+                // Assemble reservoir locally.
+                ebosSimulator_.problem().wellModel().assembleLocal(ebosSimulator_.model().newtonMethod().numIterations(),
+                                                                   ebosSimulator_.timeStepSize(),
+                                                                   domain);
+                report += assembleReservoirLocal(domain, iter);
+                report.assemble_time += detailTimer.stop();
+
+
+                // Check for local convergence.
+                detailTimer.reset();
+                detailTimer.start();
+                convreport = getLocalConvergence(domain, timer, iter, resnorms);
+                // report.convergence_check_time += detailTimer.stop();
+                //wellModel().logPrimaryVars();
+                // Dune::writeMatrixToMatlab(ebosSimulator_.model().linearizer().jacobian().istlMatrix(), "beforeWellModelLinearize.matlab");
+
+                // apply the Schur compliment of the well model to the reservoir linearized
+                // equations
+                detailTimer.reset();
+                detailTimer.start();
+                wellModel().linearizeDomain(domain,
+                                            ebosSimulator().model().linearizer().jacobian(),
+                                            ebosSimulator().model().linearizer().residual());
+                const double tt2 = detailTimer.stop();
+                report.assemble_time += tt2;
+                report.assemble_time_well += tt2;
+                //wellModel().logPrimaryVars();
+
+            } while (!convreport.converged() && iter <= max_iter);
+
+            ebosSimulator_.problem().endIteration();
+
+            if (!convreport.converged()) {
+                // std::ostringstream os;
+                // os << "Convergence data for unconverged local solution:\n"
+                //    << convreport;
+                // OpmLog::debug(os.str());
+            }
+
+            report.converged = convreport.converged();
+            report.total_newton_iterations = iter;
+            report.total_linearizations = iter;
+            report.total_time = solveTimer.stop();
+            // TODO: set more info, timing etc.
+            return { report, convreport };
+        }
+
+
+
+
         void printIf(int c, double x, double y, double eps, std::string type) {
             if (std::abs(x-y) > eps) {
                 std::cout << type << " " <<c << ": "<<x << " " << y << std::endl;
             }
         }
+
+
 
 
         /// Called once after each time step.
@@ -489,6 +1379,7 @@ namespace Opm {
             perfTimer.start();
             ebosSimulator_.problem().endTimeStep();
             report.pre_post_time += perfTimer.stop();
+            // report.completed_timesteps = 1;
             return report;
         }
 
@@ -499,11 +1390,39 @@ namespace Opm {
         SimulatorReportSingle assembleReservoir(const SimulatorTimerInterface& /* timer */,
                                                 const int iterationIdx)
         {
+            // TODO: Undo this temporary testing change.
+            // if (param_.enable_aspin_) {
+            //     ebosSimulator_.model().newtonMethod().setIterationIndex(iterationIdx);
+            //     ebosSimulator_.problem().beginIteration();
+            //     ebosSimulator_.model().linearizer().resetSystem();
+            //     for (const auto& domain : domains_) {
+            //         assembleReservoirLocal(domain, iterationIdx);
+            //     }
+            //     ebosSimulator_.problem().endIteration();
+            // } else {
+                ebosSimulator_.model().newtonMethod().setIterationIndex(iterationIdx);
+                ebosSimulator_.problem().beginIteration();
+                ebosSimulator_.model().linearizer().linearizeDomain();
+                ebosSimulator_.problem().endIteration();
+            // }
+            return wellModel().lastReport();
+        }
+
+        /// Assemble the residual and Jacobian of the nonlinear system.
+        /// \param[in]      reservoir_state   reservoir state variables
+        /// \param[in, out] well_state        well state variables
+        /// \param[in]      initial_assembly  pass true if this is the first call to assemble() in this timestep
+        SimulatorReportSingle assembleReservoirLocal(const Domain& domain,
+                                                     const int iterationIdx)
+        {
             // -------- Mass balance equations --------
-            ebosSimulator_.model().newtonMethod().setIterationIndex(iterationIdx);
-            ebosSimulator_.problem().beginIteration();
-            ebosSimulator_.model().linearizer().linearizeDomain();
-            ebosSimulator_.problem().endIteration();
+            // ebosSimulator_.model().newtonMethod().setIterationIndex(iterationIdx);
+            // ebosSimulator_.problem().beginIteration();
+            // Need to set residual and jacobian to zero in the domain.
+            ebosSimulator_.model().linearizer().resetSystem(domain.view, domain.interior);
+            // Call the domain-dependent linearization.
+            ebosSimulator_.model().linearizer().linearizeDomain(domain.view, domain.interior);
+            // ebosSimulator_.problem().endIteration();
 
             return wellModel().lastReport();
         }
@@ -598,12 +1517,43 @@ namespace Opm {
             return ebosSimulator_.model().newtonMethod().linearSolver().iterations ();
         }
 
+
+        void solveLocalJacobianSystem(const Domain& domain, BVector& global_x)
+        {
+            Dune::Timer perfTimer;
+            perfTimer.start();
+
+            const Mat& main_matrix = ebosSimulator_.model().linearizer().jacobian().istlMatrix();
+            if (domain_matrices_[domain.index]) {
+                Details::copySubMatrix(main_matrix, domain.cells, *domain_matrices_[domain.index]);
+            } else {
+                domain_matrices_[domain.index] = std::make_unique<Mat>(Details::extractMatrix(main_matrix, domain.cells));
+            }
+            auto& jac = *domain_matrices_[domain.index];
+            auto res = Details::extractVector(ebosSimulator_.model().linearizer().residual(), domain.cells);
+            auto x = res;
+
+            // set initial guess
+            global_x = 0.0;
+            x = 0.0;
+
+            auto& linsolver = domain_linsolvers_[domain.index];
+
+            linsolver.prepare(jac, res);
+            linear_solve_setup_time_ = perfTimer.stop();
+            linsolver.setResidual(res);
+            //linsolver.setMatrix(jac);
+            linsolver.solve(x);
+
+            Details::setGlobal(x, domain.cells, global_x);
+        }
+
         /// Solve the Jacobian system Jx = r where J is the Jacobian and
         /// r is the residual.
         void solveJacobianSystem(BVector& x)
         {
 
-            auto& ebosJac = ebosSimulator_.model().linearizer().jacobian();
+            auto& ebosJac = ebosSimulator_.model().linearizer().jacobian().istlMatrix();
             auto& ebosResid = ebosSimulator_.model().linearizer().residual();
 
             // set initial guess
@@ -619,9 +1569,30 @@ namespace Opm {
             // account for parallelization properly. since the residual of ECFV
             // discretizations does not need to be synchronized across processes to be
             // consistent, this is not relevant for OPM-flow...
-            ebosSolver.setMatrix(ebosJac);
+            //ebosSolver.setMatrix(ebosJac);
             ebosSolver.solve(x);
        }
+
+
+
+        /// Apply an update to the primary variables.
+        void updateDomainSolution(const Domain& domain, const BVector& dx)
+        {
+            auto& ebosNewtonMethod = ebosSimulator_.model().newtonMethod();
+            SolutionVector& solution = ebosSimulator_.model().solution(/*timeIdx=*/0);
+
+            ebosNewtonMethod.update_(/*nextSolution=*/solution,
+                                     /*curSolution=*/solution,
+                                     /*update=*/dx,
+                                     /*resid=*/dx,
+                                     domain.cells); // the update routines of the black
+                                                    // oil model do not care about the
+                                                    // residual
+
+            // if the solution is updated, the intensive quantities need to be recalculated
+            ebosSimulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain.view);
+        }
+
 
 
 
@@ -719,7 +1690,8 @@ namespace Opm {
         ///         of the cells associated with a numerical aquifer.
         std::tuple<double,double> localConvergenceData(std::vector<Scalar>& R_sum,
                                     std::vector<Scalar>& maxCoeff,
-                                    std::vector<Scalar>& B_avg)
+                                    std::vector<Scalar>& B_avg,
+                                    std::vector<int>& maxCoeffCell)
         {
             OPM_TIMEBLOCK(localConvergenceData);
             double pvSumLocal = 0.0;
@@ -734,9 +1706,11 @@ namespace Opm {
             OPM_BEGIN_PARALLEL_TRY_CATCH();
             for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
                 elemCtx.updatePrimaryStencil(elem);
-                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+                // elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+
                 const unsigned cell_idx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-                const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
+                // const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
+                const auto& intQuants = *(ebosSimulator_.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
                 const auto& fs = intQuants.fluidState();
 
                 const double pvValue = ebosProblem.referencePorosity(cell_idx, /*timeIdx=*/0) * ebosModel.dofTotalVolume( cell_idx );
@@ -759,7 +1733,140 @@ namespace Opm {
                     const auto R2 = ebosResid[cell_idx][compIdx];
 
                     R_sum[ compIdx ] += R2;
-                    maxCoeff[ compIdx ] = std::max( maxCoeff[ compIdx ], std::abs( R2 ) / pvValue );
+                    const double Rval = std::abs( R2 ) / pvValue;
+                    if (Rval > maxCoeff[ compIdx ]) {
+                        maxCoeff[ compIdx ] = Rval;
+                        maxCoeffCell[ compIdx ] = cell_idx;
+                    }
+                }
+
+                if constexpr (has_solvent_) {
+                    B_avg[ contiSolventEqIdx ] += 1.0 / intQuants.solventInverseFormationVolumeFactor().value();
+                    const auto R2 = ebosResid[cell_idx][contiSolventEqIdx];
+                    R_sum[ contiSolventEqIdx ] += R2;
+                    maxCoeff[ contiSolventEqIdx ] = std::max( maxCoeff[ contiSolventEqIdx ], std::abs( R2 ) / pvValue );
+                }
+                if constexpr (has_extbo_) {
+                    B_avg[ contiZfracEqIdx ] += 1.0 / fs.invB(FluidSystem::gasPhaseIdx).value();
+                    const auto R2 = ebosResid[cell_idx][contiZfracEqIdx];
+                    R_sum[ contiZfracEqIdx ] += R2;
+                    maxCoeff[ contiZfracEqIdx ] = std::max( maxCoeff[ contiZfracEqIdx ], std::abs( R2 ) / pvValue );
+                }
+                if constexpr (has_polymer_) {
+                    B_avg[ contiPolymerEqIdx ] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
+                    const auto R2 = ebosResid[cell_idx][contiPolymerEqIdx];
+                    R_sum[ contiPolymerEqIdx ] += R2;
+                    maxCoeff[ contiPolymerEqIdx ] = std::max( maxCoeff[ contiPolymerEqIdx ], std::abs( R2 ) / pvValue );
+                }
+                if constexpr (has_foam_) {
+                    B_avg[ contiFoamEqIdx ] += 1.0 / fs.invB(FluidSystem::gasPhaseIdx).value();
+                    const auto R2 = ebosResid[cell_idx][contiFoamEqIdx];
+                    R_sum[ contiFoamEqIdx ] += R2;
+                    maxCoeff[ contiFoamEqIdx ] = std::max( maxCoeff[ contiFoamEqIdx ], std::abs( R2 ) / pvValue );
+                }
+                if constexpr (has_brine_) {
+                    B_avg[ contiBrineEqIdx ] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
+                    const auto R2 = ebosResid[cell_idx][contiBrineEqIdx];
+                    R_sum[ contiBrineEqIdx ] += R2;
+                    maxCoeff[ contiBrineEqIdx ] = std::max( maxCoeff[ contiBrineEqIdx ], std::abs( R2 ) / pvValue );
+                }
+
+                if constexpr (has_polymermw_) {
+                    static_assert(has_polymer_);
+
+                    B_avg[contiPolymerMWEqIdx] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
+                    // the residual of the polymer molecular equation is scaled down by a 100, since molecular weight
+                    // can be much bigger than 1, and this equation shares the same tolerance with other mass balance equations
+                    // TODO: there should be a more general way to determine the scaling-down coefficient
+                    const auto R2 = ebosResid[cell_idx][contiPolymerMWEqIdx] / 100.;
+                    R_sum[contiPolymerMWEqIdx] += R2;
+                    maxCoeff[contiPolymerMWEqIdx] = std::max( maxCoeff[contiPolymerMWEqIdx], std::abs( R2 ) / pvValue );
+                }
+
+                if constexpr (has_energy_) {
+                    B_avg[ contiEnergyEqIdx ] += 1.0;
+                    const auto R2 = ebosResid[cell_idx][contiEnergyEqIdx];
+                    R_sum[ contiEnergyEqIdx ] += R2;
+                    maxCoeff[ contiEnergyEqIdx ] = std::max( maxCoeff[ contiEnergyEqIdx ], std::abs( R2 ) / pvValue );
+                }
+
+            }
+
+            OPM_END_PARALLEL_TRY_CATCH("BlackoilModelEbos::localConvergenceData() failed: ", grid_.comm());
+
+            // compute local average in terms of global number of elements
+            const int bSize = B_avg.size();
+            for ( int i = 0; i<bSize; ++i )
+            {
+                B_avg[ i ] /= Scalar( global_nc_ );
+            }
+
+            return {pvSumLocal, numAquiferPvSumLocal};
+        }
+
+
+        // Get reservoir quantities on this process needed for convergence calculations.
+        double localDomainConvergenceData(const Domain& domain,
+                                          std::vector<Scalar>& R_sum,
+                                          std::vector<Scalar>& maxCoeff,
+                                          std::vector<Scalar>& B_avg,
+                                          std::vector<int>& maxCoeffCell)
+        {
+            double pvSumLocal = 0.0;
+            const auto& ebosModel = ebosSimulator_.model();
+            const auto& ebosProblem = ebosSimulator_.problem();
+
+            const auto& ebosResid = ebosSimulator_.model().linearizer().residual();
+
+            ElementContext elemCtx(ebosSimulator_);
+            const auto& gridView = domain.view;
+            const auto& elemEndIt = gridView.template end</*codim=*/0>();
+            OPM_BEGIN_PARALLEL_TRY_CATCH();
+            for (auto elemIt = gridView.template begin</*codim=*/0>();
+                 elemIt != elemEndIt;
+                 ++elemIt)
+            {
+                if (elemIt->partitionType() != Dune::InteriorEntity) {
+                    continue;
+                }
+                const auto& elem = *elemIt;
+                elemCtx.updatePrimaryStencil(elem);
+                // elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+                const unsigned cell_idx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+
+                // const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
+                auto* intQuantsPtr = ebosSimulator_.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0);
+                // const auto& intQuants = *(ebosSimulator_.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
+                if (intQuantsPtr == nullptr) {
+                    OpmLog::debug("** no cached intensive quantities for cell " + std::to_string(cell_idx));
+                    elemCtx.updatePrimaryIntensiveQuantities(0);
+                    intQuantsPtr = ebosSimulator_.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0);
+                    assert(intQuantsPtr != nullptr);
+                }
+                const auto& intQuants = *intQuantsPtr;
+
+                const auto& fs = intQuants.fluidState();
+
+                const double pvValue = ebosProblem.referencePorosity(cell_idx, /*timeIdx=*/0) * ebosModel.dofTotalVolume( cell_idx );
+                pvSumLocal += pvValue;
+
+                for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx)
+                {
+                    if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                        continue;
+                    }
+
+                    const unsigned compIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
+
+                    B_avg[ compIdx ] += 1.0 / fs.invB(phaseIdx).value();
+                    const auto R2 = ebosResid[cell_idx][compIdx];
+
+                    R_sum[ compIdx ] += R2;
+                    const double Rval = std::abs( R2 ) / pvValue;
+                    if (Rval > maxCoeff[ compIdx ]) {
+                        maxCoeff[ compIdx ] = Rval;
+                        maxCoeffCell[ compIdx ] = cell_idx;
+                    }
                 }
 
                 if constexpr (has_solvent_) {
@@ -842,11 +1949,42 @@ namespace Opm {
             const int bSize = B_avg.size();
             for ( int i = 0; i<bSize; ++i )
             {
-                B_avg[ i ] /= Scalar( global_nc_ );
+                B_avg[ i ] /= Scalar(domain.cells.size());
             }
 
-            return {pvSumLocal, numAquiferPvSumLocal};
+            // return {pvSumLocal, numAquiferPvSumLocal};
+            return pvSumLocal;
         }
+
+
+        double computeCnvErrorPvLocal(const Domain& domain, const std::vector<Scalar>& B_avg, double dt)
+        {
+            double errorPV{};
+            const auto& ebosModel = ebosSimulator_.model();
+            const auto& ebosProblem = ebosSimulator_.problem();
+            const auto& ebosResid = ebosSimulator_.model().linearizer().residual();
+
+            for (const int cell_idx : domain.cells)
+            {
+                const double pvValue = ebosProblem.referencePorosity(cell_idx, /*timeIdx=*/0) * ebosModel.dofTotalVolume( cell_idx );
+                const auto& cellResidual = ebosResid[cell_idx];
+                bool cnvViolated = false;
+
+                for (unsigned eqIdx = 0; eqIdx < cellResidual.size(); ++eqIdx)
+                {
+                    using std::fabs;
+                    Scalar CNV = cellResidual[eqIdx] * dt * B_avg[eqIdx] / pvValue;
+                    cnvViolated = cnvViolated || (fabs(CNV) > param_.tolerance_cnv_);
+                }
+
+                if (cnvViolated)
+                {
+                    errorPV += pvValue;
+                }
+            }
+            return errorPV;
+        }
+
 
         /// \brief Compute the total pore volume of cells violating CNV that are not part
         ///        of a numerical aquifer.
@@ -870,7 +2008,7 @@ namespace Opm {
                     continue;
                 }
                 elemCtx.updatePrimaryStencil(elem);
-                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+                // elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
                 const unsigned cell_idx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
                 const double pvValue = ebosProblem.referencePorosity(cell_idx, /*timeIdx=*/0) * ebosModel.dofTotalVolume( cell_idx );
                 const auto& cellResidual = ebosResid[cell_idx];
@@ -894,6 +2032,119 @@ namespace Opm {
             return grid_.comm().sum(errorPV);
         }
 
+        ConvergenceReport getLocalReservoirConvergence(const double reportTime,
+                                                       const double dt,
+                                                       const int iteration,
+                                                       const Domain& domain,
+                                                       std::vector<Scalar>& B_avg,
+                                                       std::vector<Scalar>& residual_norms)
+        {
+            typedef std::vector< Scalar > Vector;
+
+            const int numComp = numEq;
+            Vector R_sum(numComp, 0.0 );
+            Vector maxCoeff(numComp, std::numeric_limits< Scalar >::lowest() );
+            std::vector<int> maxCoeffCell(numComp, -1);
+            const double pvSum = localDomainConvergenceData(domain, R_sum, maxCoeff, B_avg, maxCoeffCell);
+
+            // compute global sum and max of quantities
+            // const double pvSum = convergenceReduction(grid_.comm(), pvSumLocal,
+            //                                           R_sum, maxCoeff, B_avg);
+
+            auto cnvErrorPvFraction = computeCnvErrorPvLocal(domain, B_avg, dt);
+            cnvErrorPvFraction /= pvSum;
+
+            const double tol_mb  = param_.local_tolerance_scaling_mb_ * param_.tolerance_mb_;
+            // Default value of relaxed_max_pv_fraction_ is 0.03 and min_strict_cnv_iter_ is 0.
+            // For each iteration, we need to determine whether to use the relaxed CNV tolerance.
+            // To disable the usage of relaxed CNV tolerance, you can set the relaxed_max_pv_fraction_ to be 0.
+            const bool use_relaxed = cnvErrorPvFraction < param_.relaxed_max_pv_fraction_ && iteration >= param_.min_strict_cnv_iter_;
+            // Tighter bound for local convergence should increase the
+            // likelyhood of: local convergence => global convergence
+            const double tol_cnv = param_.local_tolerance_scaling_cnv_
+                * (use_relaxed ? param_.tolerance_cnv_relaxed_ :  param_.tolerance_cnv_);
+
+            // Finish computation
+            std::vector<Scalar> CNV(numComp);
+            std::vector<Scalar> mass_balance_residual(numComp);
+            for ( int compIdx = 0; compIdx < numComp; ++compIdx )
+            {
+                CNV[compIdx]                    = B_avg[compIdx] * dt * maxCoeff[compIdx];
+                mass_balance_residual[compIdx]  = std::abs(B_avg[compIdx]*R_sum[compIdx]) * dt / pvSum;
+                residual_norms.push_back(CNV[compIdx]);
+            }
+
+            // Create convergence report.
+            ConvergenceReport report;
+            using CR = ConvergenceReport;
+            for (int compIdx = 0; compIdx < numComp; ++compIdx) {
+                double res[2] = { mass_balance_residual[compIdx], CNV[compIdx] };
+                CR::ReservoirFailure::Type types[2] = { CR::ReservoirFailure::Type::MassBalance,
+                                                        CR::ReservoirFailure::Type::Cnv };
+                double tol[2] = { tol_mb, tol_cnv };
+                int cell[2] = { -1, maxCoeffCell[compIdx] }; // No cell associated with MB failures.
+                for (int ii : {0, 1}) {
+                    if (std::isnan(res[ii])) {
+                        report.setReservoirFailed({types[ii], CR::Severity::NotANumber, compIdx});//, cell[ii], res[ii]});
+                        if ( terminal_output_ ) {
+                            OpmLog::debug("NaN residual for " + compNames_.name(compIdx) + " equation.");
+                        }
+                    } else if (res[ii] > maxResidualAllowed()) {
+                        report.setReservoirFailed({types[ii], CR::Severity::TooLarge, compIdx});//, cell[ii], res[ii]});
+                        if ( terminal_output_ ) {
+                            OpmLog::debug("Too large residual for " + compNames_.name(compIdx) + " equation.");
+                        }
+                    } else if (res[ii] < 0.0) {
+                        report.setReservoirFailed({types[ii], CR::Severity::Normal, compIdx});//, cell[ii], res[ii]});
+                        if ( terminal_output_ ) {
+                            OpmLog::debug("Negative residual for " + compNames_.name(compIdx) + " equation.");
+                        }
+                    } else if (res[ii] > tol[ii]) {
+                        report.setReservoirFailed({types[ii], CR::Severity::Normal, compIdx});//, cell[ii], res[ii]});
+                    }
+                }
+            }
+
+            // Output of residuals.
+            if ( terminal_output_ )
+            {
+                // Only rank 0 does print to std::cout
+                if (iteration == 0) {
+                    std::string msg = fmt::format("Domain {}, size {}, containing cell {}\n| Iter",
+                                                  domain.index, domain.cells.size(), domain.cells[0]);
+                    for (int compIdx = 0; compIdx < numComp; ++compIdx) {
+                        msg += "    MB(";
+                        msg += compNames_.name(compIdx)[0];
+                        msg += ")  ";
+                    }
+                    for (int compIdx = 0; compIdx < numComp; ++compIdx) {
+                        msg += "    CNV(";
+                        msg += compNames_.name(compIdx)[0];
+                        msg += ") ";
+                    }
+                    OpmLog::debug(msg);
+                }
+                std::ostringstream ss;
+                ss << "| ";
+                const std::streamsize oprec = ss.precision(3);
+                const std::ios::fmtflags oflags = ss.setf(std::ios::scientific);
+                ss << std::setw(4) << iteration;
+                for (int compIdx = 0; compIdx < numComp; ++compIdx) {
+                    ss << std::setw(11) << mass_balance_residual[compIdx];
+                }
+                for (int compIdx = 0; compIdx < numComp; ++compIdx) {
+                    ss << std::setw(11) << CNV[compIdx];
+                }
+                ss.precision(oprec);
+                ss.flags(oflags);
+                OpmLog::debug(ss.str());
+            }
+
+            return report;
+        }
+
+
+
         ConvergenceReport getReservoirConvergence(const double reportTime,
                                                   const double dt,
                                                   const int iteration,
@@ -906,7 +2157,8 @@ namespace Opm {
             const int numComp = numEq;
             Vector R_sum(numComp, 0.0 );
             Vector maxCoeff(numComp, std::numeric_limits< Scalar >::lowest() );
-            const auto [ pvSumLocal, numAquiferPvSumLocal] = localConvergenceData(R_sum, maxCoeff, B_avg);
+            std::vector<int> maxCoeffCell(numComp, -1);
+            const auto [ pvSumLocal, numAquiferPvSumLocal] = localConvergenceData(R_sum, maxCoeff, B_avg, maxCoeffCell);
 
             // compute global sum and max of quantities
             const auto [ pvSum, numAquiferPvSum ] =
@@ -942,24 +2194,25 @@ namespace Opm {
                 CR::ReservoirFailure::Type types[2] = { CR::ReservoirFailure::Type::MassBalance,
                                                         CR::ReservoirFailure::Type::Cnv };
                 double tol[2] = { tol_mb, tol_cnv };
+                int cell[2] = { -1, maxCoeffCell[compIdx] }; // No cell associated with MB failures.
                 for (int ii : {0, 1}) {
                     if (std::isnan(res[ii])) {
-                        report.setReservoirFailed({types[ii], CR::Severity::NotANumber, compIdx});
+                        report.setReservoirFailed({types[ii], CR::Severity::NotANumber, compIdx});//, cell[ii], res[ii]});
                         if ( terminal_output_ ) {
                             OpmLog::debug("NaN residual for " + this->compNames_.name(compIdx) + " equation.");
                         }
                     } else if (res[ii] > maxResidualAllowed()) {
-                        report.setReservoirFailed({types[ii], CR::Severity::TooLarge, compIdx});
+                        report.setReservoirFailed({types[ii], CR::Severity::TooLarge, compIdx});//, cell[ii], res[ii]});
                         if ( terminal_output_ ) {
                             OpmLog::debug("Too large residual for " + this->compNames_.name(compIdx) + " equation.");
                         }
                     } else if (res[ii] < 0.0) {
-                        report.setReservoirFailed({types[ii], CR::Severity::Normal, compIdx});
+                        report.setReservoirFailed({types[ii], CR::Severity::Normal, compIdx});//, cell[ii], res[ii]});
                         if ( terminal_output_ ) {
                             OpmLog::debug("Negative residual for " + this->compNames_.name(compIdx) + " equation.");
                         }
                     } else if (res[ii] > tol[ii]) {
-                        report.setReservoirFailed({types[ii], CR::Severity::Normal, compIdx});
+                        report.setReservoirFailed({types[ii], CR::Severity::Normal, compIdx});//, cell[ii], res[ii]});
                     }
                     report.setReservoirConvergenceMetric(types[ii], compIdx, res[ii]);
                 }
@@ -998,6 +2251,22 @@ namespace Opm {
                 OpmLog::debug(ss.str());
             }
 
+            return report;
+        }
+
+        ConvergenceReport getLocalConvergence(const Domain& domain,
+                                              const SimulatorTimerInterface& timer,
+                                              const int iteration,
+                                              std::vector<double>& residual_norms)
+        {
+            std::vector<Scalar> B_avg(numEq, 0.0);
+            auto report = getLocalReservoirConvergence(timer.simulationTimeElapsed(),
+                                                       timer.currentStepLength(),
+                                                       iteration,
+                                                       domain,
+                                                       B_avg,
+                                                       residual_norms);
+            report += wellModel().getLocalWellConvergence(domain, B_avg, false);
             return report;
         }
 
@@ -1059,6 +2328,10 @@ namespace Opm {
         const SimulatorReportSingle& failureReport() const
         { return failureReport_; }
 
+        /// return the statistics if the nonlinearIteration() method failed
+        const SimulatorReportSingle& localAccumulatedReports() const
+        { return local_reports_accumulated_; }
+
         const std::vector<StepReport>& stepReports() const
         {
             return convergence_reports_;
@@ -1086,6 +2359,7 @@ namespace Opm {
 
         ModelParameters                 param_;
         SimulatorReportSingle failureReport_;
+        SimulatorReportSingle local_reports_accumulated_;
 
         // Well Model
         BlackoilWellModel<TypeTag>& well_model_;
@@ -1101,6 +2375,9 @@ namespace Opm {
 
         std::vector<StepReport> convergence_reports_;
         ComponentName compNames_{};
+        std::vector<Domain> domains_;
+        std::vector<std::unique_ptr<Mat>> domain_matrices_;
+        std::vector<ISTLSolverType> domain_linsolvers_;
 
     public:
         /// return the StandardWells object

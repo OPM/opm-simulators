@@ -460,6 +460,13 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
         {
             SimulatorReport report = simulator_->run(*simtimer_);
             runSimulatorAfterSim_(report);
+            {
+                SimulatorReportSingle rep_local = simulator_->model().localAccumulatedReports();
+                std::ostringstream os;
+                os << "===  Accumulated local solve data ===\n";
+                rep_local.reportFullyImplicit(os);
+                OpmLog::info(os.str());
+            }
             return report.success.exit_status;
         }
 
