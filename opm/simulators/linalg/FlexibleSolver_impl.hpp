@@ -73,6 +73,12 @@ namespace Dune
     FlexibleSolver<Operator>::
     apply(VectorType& x, VectorType& rhs, Dune::InverseOperatorResult& res)
     {
+#if HAVE_SUITESPARSE_UMFPACK
+        if (HACK_is_umfpack_) {
+            using MatrixType = std::remove_const_t<std::remove_reference_t<decltype(linearoperator_for_solver_->getmat())>>;
+            linsolver_.reset(new Dune::UMFPack<MatrixType>(linearoperator_for_solver_->getmat(), 0, false));
+        }
+#endif
         linsolver_->apply(x, rhs, res);
     }
 
@@ -81,6 +87,12 @@ namespace Dune
     FlexibleSolver<Operator>::
     apply(VectorType& x, VectorType& rhs, double reduction, Dune::InverseOperatorResult& res)
     {
+#if HAVE_SUITESPARSE_UMFPACK
+        if (HACK_is_umfpack_) {
+            using MatrixType = std::remove_const_t<std::remove_reference_t<decltype(linearoperator_for_solver_->getmat())>>;
+            linsolver_.reset(new Dune::UMFPack<MatrixType>(linearoperator_for_solver_->getmat(), 0, false));
+        }
+#endif
         linsolver_->apply(x, rhs, reduction, res);
     }
 
@@ -185,9 +197,9 @@ namespace Dune
                                                                                           verbosity);
 #if HAVE_SUITESPARSE_UMFPACK
         } else if (solver_type == "umfpack") {
-            bool dummy = false;
             using MatrixType = std::remove_const_t<std::remove_reference_t<decltype(linearoperator_for_solver_->getmat())>>;
-            linsolver_ = std::make_shared<Dune::UMFPack<MatrixType>>(linearoperator_for_solver_->getmat(), verbosity, dummy);
+            linsolver_ = std::make_shared<Dune::UMFPack<MatrixType>>(linearoperator_for_solver_->getmat(), verbosity, false);
+            HACK_is_umfpack_ = true;
 #endif
 #if HAVE_CUDA
         } else if (solver_type == "cubicgstab") {
