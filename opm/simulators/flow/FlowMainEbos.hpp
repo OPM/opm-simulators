@@ -259,7 +259,7 @@ namespace Opm
                 if (EWOMS_GET_PARAM(TypeTag, int, PrintProperties) == 1) {
                     doExit = true;
                     if (mpiRank == 0)
-                        Properties::printValues<TypeTag>();
+                        Properties::printValues<TypeTag>(std::cout);
                 }
 
                 if (EWOMS_GET_PARAM(TypeTag, int, PrintParameters) == 1) {

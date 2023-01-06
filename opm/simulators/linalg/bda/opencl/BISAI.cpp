@@ -19,7 +19,6 @@
 
 #include <config.h>
 #include <algorithm>
-#include <iostream>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/ErrorMacros.hpp>

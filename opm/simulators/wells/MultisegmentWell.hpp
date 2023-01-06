@@ -25,8 +25,6 @@
 #include <opm/simulators/wells/WellInterface.hpp>
 #include <opm/simulators/wells/MultisegmentWellEval.hpp>
 
-#include <opm/input/eclipse/EclipseState/Runspec.hpp>
-
 namespace Opm
 {
     class DeferredLogger;

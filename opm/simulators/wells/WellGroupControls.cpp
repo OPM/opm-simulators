@@ -22,7 +22,7 @@
 #include <config.h>
 #include <opm/simulators/wells/WellGroupControls.hpp>
 
-#include <opm/input/eclipse/EclipseState/Runspec.hpp>
+#include <opm/input/eclipse/EclipseState/Phase.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Group/Group.hpp>
 #include <opm/input/eclipse/Schedule/ScheduleTypes.hpp>

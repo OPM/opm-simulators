@@ -39,7 +39,6 @@
 #include <opm/models/blackoil/blackoilmicpmodules.hh>
 
 #include <opm/material/densead/Evaluation.hpp>
-#include <opm/input/eclipse/EclipseState/Runspec.hpp>
 #include <opm/input/eclipse/Schedule/ScheduleTypes.hpp>
 
 #include <opm/simulators/wells/StandardWellEval.hpp>
@@ -61,7 +60,7 @@ namespace Opm
     {
 
     public:
-        typedef WellInterface<TypeTag> Base;
+        using Base = WellInterface<TypeTag>;
         using StdWellEval = StandardWellEval<GetPropType<TypeTag, Properties::FluidSystem>,
                                              GetPropType<TypeTag, Properties::Indices>,
                                              GetPropType<TypeTag, Properties::Scalar>>;

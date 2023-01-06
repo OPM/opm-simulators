@@ -134,7 +134,7 @@ namespace Opm {
             const auto& connectionSet = well.getConnections();
             wellCells.reserve(connectionSet.size());
 
-            for ( size_t c=0; c < connectionSet.size(); c++ )
+            for (std::size_t c = 0; c < connectionSet.size(); c++)
             {
                 const auto& connection = connectionSet.get(c);
                 int compressed_idx = compressedIndexForInterior(connection.global_index());
