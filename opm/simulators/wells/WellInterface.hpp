@@ -328,6 +328,16 @@ public:
         return connectionRates_;
     }
 
+    virtual std::vector<double> getPrimaryVars() const
+    {
+        return {};
+    }
+
+    virtual int setPrimaryVars(std::vector<double>::const_iterator)
+    {
+        return 0;
+    }
+
 protected:
     // simulation parameters
     const ModelParameters& param_;

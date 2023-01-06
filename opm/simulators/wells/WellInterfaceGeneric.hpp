@@ -197,6 +197,9 @@ public:
 
     bool stopppedOrZeroRateTarget(const SummaryState& summary_state,
                                   const WellState& well_state) const;
+
+    const Well& scheduleWell() const;
+
 protected:
     bool getAllowCrossFlow() const;
 

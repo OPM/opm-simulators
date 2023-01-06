@@ -38,6 +38,7 @@
 #endif
 
 #include <algorithm>
+#include <iomanip>
 #include <utility>
 
 #include <fmt/format.h>
@@ -167,6 +168,36 @@ namespace Opm {
             well->apply(res);
         }
     }
+
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    linearizeDomain(const Domain& domain, SparseMatrixAdapter& jacobian, GlobalEqVector& res)
+    {
+        if (!param_.matrix_add_well_contributions_) {
+            // if the well contributions are not supposed to be included explicitly in
+            // the matrix, we only apply the vector part of the Schur complement here.
+            for (const auto& well: well_container_) {
+                if (well_domain_.at(well->name()) == domain.index) {
+                    // r = r - duneC_^T * invDuneD_ * resWell_
+                    well->apply(res);
+                }
+            }
+            return;
+        }
+
+        for (const auto& well: well_container_) {
+            if (well_domain_.at(well->name()) == domain.index) {
+                well->addWellContributions(jacobian);
+                // applying the well residual to reservoir residuals
+                // r = r - duneC_^T * invDuneD_ * resWell_
+                well->apply(res);
+            }
+        }
+    }
+
+
 
 
     template<typename TypeTag>
@@ -1026,6 +1057,66 @@ namespace Opm {
 
 
 
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    assembleLocal(const int iterationIdx,
+                  const double dt,
+                  const Domain& domain)
+    {
+
+        DeferredLogger local_deferredLogger;
+        // TODO: not handling gas lift for now
+        /* if (this->glift_debug) {
+            const std::string msg = fmt::format(
+                    "assemble() : iteration {}" , iterationIdx);
+            gliftDebug(msg, local_deferredLogger);
+        } */
+        last_report_ = SimulatorReportSingle();
+        Dune::Timer perfTimer;
+        perfTimer.start();
+
+        /* if ( ! wellsActive() ) {
+            return;
+        } */
+
+
+        // TODO: this function remains to be optimized, because we do not need to handle all the wells
+        updatePerforationIntensiveQuantities();
+
+        auto exc_type = ExceptionType::NONE;
+        std::string exc_msg;
+        try {
+            // if (iterationIdx == 0) {
+            //     calculateExplicitQuantities(local_deferredLogger);
+            //     prepareTimeStep(local_deferredLogger);
+            // }
+            updateWellControlsLocal(local_deferredLogger, /* check group controls */ false, domain);
+
+            // Set the well primary variables based on the value of well solutions
+            initPrimaryVariablesEvaluationLocal(domain);
+
+            // maybeDoGasLiftOptimize(local_deferredLogger);
+            assembleWellEqLocal(dt, domain, local_deferredLogger);
+        } catch (const std::runtime_error& e) {
+            exc_type = ExceptionType::RUNTIME_ERROR;
+            exc_msg = e.what();
+        } catch (const std::invalid_argument& e) {
+            exc_type = ExceptionType::INVALID_ARGUMENT;
+            exc_msg = e.what();
+        } catch (const std::logic_error& e) {
+            exc_type = ExceptionType::LOGIC_ERROR;
+            exc_msg = e.what();
+        } catch (const std::exception& e) {
+            exc_type = ExceptionType::DEFAULT;
+            exc_msg = e.what();
+        }
+        // @TODO errors here must be caught higher up, as this method is not called in parallel.
+        logAndCheckForExceptionsAndThrow(local_deferredLogger, exc_type, "assemble() failed: " + exc_msg, terminal_output_, Parallel::Communication());
+        last_report_.converged = true;
+        last_report_.assemble_time_well += perfTimer.stop();
+    }
+
 
     template<typename TypeTag>
     bool
@@ -1235,6 +1326,17 @@ namespace Opm {
     {
         for (auto& well : well_container_) {
             well->assembleWellEq(ebosSimulator_, dt, this->wellState(), this->groupState(), deferred_logger);
+        }
+    }
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    assembleWellEqLocal(const double dt, const Domain& domain, DeferredLogger& deferred_logger)
+    {
+        for (auto& well : well_container_) {
+            if (well_domain_.at(well->name()) == domain.index) {
+                well->assembleWellEq(ebosSimulator_, dt, this->wellState(), this->groupState(), deferred_logger);
+            }
         }
     }
 
@@ -1466,7 +1568,6 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     recoverWellSolutionAndUpdateWellState(const BVector& x)
     {
-         
         DeferredLogger local_deferredLogger;
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         {
@@ -1474,12 +1575,34 @@ namespace Opm {
                 const auto& summary_state = ebosSimulator_.vanguard().summaryState();
                 well->recoverWellSolutionAndUpdateWellState(summary_state, x, this->wellState(), local_deferredLogger);
             }
-
         }
         OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger,
                                        "recoverWellSolutionAndUpdateWellState() failed: ",
                                        terminal_output_, ebosSimulator_.vanguard().grid().comm());
+    }
 
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    recoverWellSolutionAndUpdateWellStateLocal(const BVector& x, const Domain& domain)
+    {
+        DeferredLogger local_deferredLogger;
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
+        {
+            const auto& summary_state = this->ebosSimulator_.vanguard().summaryState();
+
+            for (auto& well : well_container_) {
+                if (well_domain_.at(well->name()) == domain.index) {
+                    well->recoverWellSolutionAndUpdateWellState(summary_state, x,
+                                                                this->wellState(),
+                                                                local_deferredLogger);
+                }
+            }
+        }
+        OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger,
+                                       "recoverWellSolutionAndUpdateWellState() failed: ",
+                                       terminal_output_, ebosSimulator_.vanguard().grid().comm());
     }
 
 
@@ -1495,6 +1618,81 @@ namespace Opm {
         }
     }
 
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    initPrimaryVariablesEvaluationLocal(const Domain& domain) const
+    {
+        for (auto& well : well_container_) {
+            if (well_domain_.at(well->name()) == domain.index) {
+                well->initPrimaryVariablesEvaluation();
+            }
+        }
+    }
+
+
+
+
+
+
+    template<typename TypeTag>
+    ConvergenceReport
+    BlackoilWellModel<TypeTag>::
+    getLocalWellConvergence(const Domain& domain,
+                            const std::vector<Scalar>& B_avg,
+                            const bool checkWellGroupControls) const
+    {
+        const auto& summary_state = ebosSimulator_.vanguard().summaryState();
+
+        const auto relax_tolerance = ebosSimulator_.model().newtonMethod().numIterations()
+            > param_.strict_outer_iter_wells_;
+
+        Opm::DeferredLogger local_deferredLogger;
+
+        // Get global (from all processes) convergence report.
+        ConvergenceReport local_report;
+
+        for (const auto& well : well_container_) {
+            if ((well_domain_.at(well->name()) == domain.index) &&
+                well->isOperableAndSolvable())
+            {
+                local_report += well->getWellConvergence(summary_state, this->wellState(), B_avg,
+                                                         local_deferredLogger, relax_tolerance);
+            }
+        }
+
+        // This function will be called once for each domain on a process,
+        // and the number of domains on a process will vary, so there is
+        // no way to communicate here. There is also no need, as a domain
+        // is local to a single process in our current approach.
+        // Therefore there is no call to gatherDeferredLogger() or to
+        // gatherConvergenceReport() below.
+        Opm::DeferredLogger global_deferredLogger = local_deferredLogger;
+        ConvergenceReport report = local_report;
+
+        // the well_group_control_changed info is already communicated
+        // TODO: Check what the implications are here for local solves.
+        if (checkWellGroupControls) {
+            report.setWellGroupTargetsViolated(this->lastReport().well_group_control_changed);
+        }
+
+        if (terminal_output_) {
+            global_deferredLogger.logMessages();
+        }
+
+
+        // Log debug messages for NaN or too large residuals.
+        if (terminal_output_) {
+            for (const auto& f : report.wellFailures()) {
+                if (f.severity() == ConvergenceReport::Severity::NotANumber) {
+                    OpmLog::debug("NaN residual found with phase " + std::to_string(f.phase()) + " for well " + f.wellName());
+                } else if (f.severity() == ConvergenceReport::Severity::TooLarge) {
+                    OpmLog::debug("Too large residual found with phase " + std::to_string(f.phase()) + " for well " + f.wellName());
+                }
+            }
+        }
+        return report;
+    }
 
 
 
@@ -1640,6 +1838,55 @@ namespace Opm {
 
         return { changed_well_group, more_network_update };
     }
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    updateWellControlsLocal(DeferredLogger& deferred_logger, const bool checkGroupControls, const Domain& domain)
+    {
+        // Even if there are no wells active locally, we cannot
+        // return as the DeferredLogger uses global communication.
+        // For no well active globally we simply return.
+        if( !wellsActive() ) return ;
+
+/*        updateAndCommunicateGroupData();
+
+        updateNetworkPressures(); */
+
+        std::set<std::string> switched_wells;
+        std::set<std::string> switched_groups;
+
+/*        if (checkGroupControls) {
+            // Check group individual constraints.
+            updateGroupIndividualControls(deferred_logger, switched_groups);
+
+            // Check group's constraints from higher levels.
+            updateGroupHigherControls(deferred_logger, switched_groups);
+
+            updateAndCommunicateGroupData();
+
+            // Check wells' group constraints and communicate.
+            for (const auto& well : well_container_) {
+                const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Group;
+                const bool changed = well->updateWellControl(ebosSimulator_, mode, this->wellState(), this->groupState(), deferred_logger);
+                if (changed) {
+                    switched_wells.insert(well->name());
+                }
+            }
+            updateAndCommunicateGroupData();
+        } */
+
+        // Check individual well constraints and communicate.
+        for (const auto& well : well_container_) {
+            if (switched_wells.count(well->name()) || well_domain_.at(well->name()) != domain.index) {
+                continue;
+            }
+            const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Individual;
+            well->updateWellControl(ebosSimulator_, mode, this->wellState(), this->groupState(), deferred_logger);
+        }
+       //  updateAndCommunicateGroupData();
+    }
+
 
 
     template<typename TypeTag>
@@ -1949,6 +2196,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     updatePerforationIntensiveQuantities()
     {
+#if 0
         ElementContext elemCtx(ebosSimulator_);
         const auto& gridView = ebosSimulator_.gridView();
 
@@ -1963,6 +2211,7 @@ namespace Opm {
             elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
         }
         OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::updatePerforationIntensiveQuantities() failed: ", ebosSimulator_.vanguard().grid().comm());
+#endif
     }
 
 
@@ -2094,6 +2343,59 @@ namespace Opm {
     }
 
 
+    template <typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    logPrimaryVars() const
+    {
+        std::ostringstream os;
+        for (const auto& w : well_container_) {
+            os << w->name() << ":";
+            auto pv = w->getPrimaryVars();
+            for (const double v : pv) {
+                os << ' ' << v;
+            }
+            os << '\n';
+        }
+        OpmLog::debug(os.str());
+    }
+
+
+
+    template <typename TypeTag>
+    std::vector<double>
+    BlackoilWellModel<TypeTag>::
+    getPrimaryVarsDomain(const Domain& domain) const
+    {
+        std::vector<double> ret;
+        for (const auto& well : well_container_) {
+            if (well_domain_.at(well->name()) == domain.index) {
+                const auto& pv = well->getPrimaryVars();
+                for (const double v : pv) {
+                    ret.push_back(v);
+                }
+            }
+        }
+        return ret;
+    }
+
+
+
+    template <typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    setPrimaryVarsDomain(const Domain& domain, const std::vector<double>& vars)
+    {
+        int offset = 0;
+        for (auto& well : well_container_) {
+            if (well_domain_.at(well->name()) == domain.index) {
+                int num_pri_vars = well->setPrimaryVars(vars.begin() + offset);
+                offset += num_pri_vars;
+            }
+        }
+    }
+
+
 
     template <typename TypeTag>
     void
@@ -2118,7 +2420,38 @@ namespace Opm {
     }
 
 
+    template <typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    setupDomains(const std::vector<Domain>& domains)
+    {
+        for (const auto& wellPtr : this->well_container_) {
+            const int first_well_cell = wellPtr->cells()[0];
+            for (const auto& domain : domains) {
+                const bool found = std::binary_search(domain.cells.begin(), domain.cells.end(), first_well_cell);
+                if (found) {
+                    // Assuming that if the first well cell is found in a domain,
+                    // then all of that well's cells are in that same domain.
+                    // TODO verify assumption.
+                    well_domain_[wellPtr->name()] = domain.index;
 
-
+                    // Verify that all of that well's cells are in that same domain.
+                    for (int well_cell : wellPtr->cells()) {
+                        if (!std::binary_search(domain.cells.begin(), domain.cells.end(), well_cell)) {
+                            // TODO: ensure proper exit in parallel.
+                            OPM_THROW(std::runtime_error, "Well found on multiple domains.");
+                        }
+                    }
+                }
+            }
+        }
+        // TODO: ensure output on rank 0 only.
+        std::ostringstream os;
+        os << "Well name      Domain\n";
+        for (const auto& [wname, domain] : well_domain_) {
+            os << wname << std::setw(21 - wname.size()) << domain << '\n';
+        }
+        OpmLog::debug(os.str());
+    }
 
 } // namespace Opm
