@@ -368,6 +368,15 @@ updateKrnum_()
 }
 
 template<class GridView, class FluidSystem, class Scalar>
+void EclGenericProblem<GridView,FluidSystem,Scalar>::
+updateImbnum_()
+{
+    updateNum("IMBNUMX", imbnumx_);
+    updateNum("IMBNUMY", imbnumy_);
+    updateNum("IMBNUMZ", imbnumz_);
+}
+
+template<class GridView, class FluidSystem, class Scalar>
 bool EclGenericProblem<GridView,FluidSystem,Scalar>::
 vapparsActive(int episodeIdx) const
 {

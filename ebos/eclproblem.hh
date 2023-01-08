@@ -1415,6 +1415,11 @@ public:
         return materialLawManager_->materialLawParams(globalDofIdx);
     }
 
+    const MaterialLawParams& materialLawParams(unsigned globalDofIdx, FaceDir::DirEnum facedir) const
+    {
+        return materialLawManager_->materialLawParams(globalDofIdx, facedir);
+    }
+
     /*!
      * \brief Return the parameters for the energy storage law of the rock
      */
@@ -1455,34 +1460,24 @@ public:
         FluidState &fluidState,
         unsigned globalSpaceIdx) const
     {
-        // calculate relative permeabilities. note that we store the result into the
-        // mobility_ class attribute. the division by the phase viscosity happens later.
-        const auto& materialParams = materialLawParams(globalSpaceIdx);
-        MaterialLaw::relativePermeabilities(mobility, materialParams, fluidState);
-        Valgrind::CheckDefined(mobility);
-        if (materialLawManager_->hasDirectionalRelperms()) {
-            auto satnumIdx = materialLawManager_->satnumRegionIdx(globalSpaceIdx);
+        {
+            // calculate relative permeabilities. note that we store the result into the
+            // mobility_ class attribute. the division by the phase viscosity happens later.
+            const auto& materialParams = materialLawParams(globalSpaceIdx);
+            MaterialLaw::relativePermeabilities(mobility, materialParams, fluidState);
+            Valgrind::CheckDefined(mobility);
+        }
+        if (materialLawManager_->hasDirectionalRelperms()
+               || materialLawManager_->hasDirectionalImbnum())
+        {
             using Dir = FaceDir::DirEnum;
             constexpr int ndim = 3;
             dirMob = std::make_unique<DirectionalMobility<TypeTag, Evaluation>>();
             Dir facedirs[ndim] = {Dir::XPlus, Dir::YPlus, Dir::ZPlus};
             for (int i = 0; i<ndim; i++) {
-                auto krnumSatIdx = materialLawManager_->getKrnumSatIdx(globalSpaceIdx, facedirs[i]);
+                const auto& materialParams = materialLawParams(globalSpaceIdx, facedirs[i]);
                 auto& mob_array = dirMob->getArray(i);
-                if (krnumSatIdx != satnumIdx) {
-                    // This hack is also used by StandardWell_impl.hpp:getMobilityEval() to temporarily use a different
-                    // satnum index for a cell
-                    const auto& paramsCell = materialLawManager_->connectionMaterialLawParams(krnumSatIdx, globalSpaceIdx);
-                    MaterialLaw::relativePermeabilities(mob_array, paramsCell, fluidState);
-                    // reset the cell's satnum index back to the original
-                    materialLawManager_->connectionMaterialLawParams(satnumIdx, globalSpaceIdx);
-                }
-                else {
-                    // Copy the default (non-directional dependent) mobility
-                    for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                        mob_array[phaseIdx] = mobility[phaseIdx];
-                    }
-                }
+                MaterialLaw::relativePermeabilities(mob_array, materialParams, fluidState);
             }
         }
     }
