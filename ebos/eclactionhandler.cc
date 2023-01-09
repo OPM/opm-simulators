@@ -31,6 +31,7 @@
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/Schedule/Action/ActionContext.hpp>
 #include <opm/input/eclipse/Schedule/Action/ActionX.hpp>
+#include <opm/input/eclipse/Schedule/Action/SimulatorUpdate.hpp>
 #include <opm/input/eclipse/Schedule/Action/State.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 
