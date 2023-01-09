@@ -25,7 +25,6 @@
 
 #include <opm/core/props/BlackoilPhases.hpp>
 
-#include <opm/input/eclipse/Schedule/GasLiftOpt.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/simulators/wells/GasLiftGroupInfo.hpp>
 #include <opm/simulators/wells/GasLiftCommon.hpp>
@@ -42,6 +41,7 @@ namespace Opm
 {
 
 class DeferredLogger;
+class GasLiftWell;
 class GasLiftWellState;
 class Schedule;
 class SummaryState;

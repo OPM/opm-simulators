@@ -17,6 +17,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <opm/input/eclipse/Schedule/GasLiftOpt.hpp>
 #include <fmt/format.h>
 
 namespace Opm {

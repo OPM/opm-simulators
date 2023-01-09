@@ -29,7 +29,6 @@
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/input/eclipse/Schedule/Group/Group.hpp>
-#include <opm/input/eclipse/Schedule/GasLiftOpt.hpp>
 #include <opm/input/eclipse/Schedule/SummaryState.hpp>
 #include <opm/simulators/wells/GasLiftCommon.hpp>
 #include <opm/simulators/wells/WellState.hpp>
@@ -44,6 +43,9 @@
 
 namespace Opm
 {
+
+class GasLiftOpt;
+
 class GasLiftGroupInfo : public GasLiftCommon
 {
 protected:
