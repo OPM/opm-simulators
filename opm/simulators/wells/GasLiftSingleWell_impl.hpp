@@ -191,7 +191,7 @@ setupPhaseVariables_()
 template<typename TypeTag>
 void
 GasLiftSingleWell<TypeTag>::
-setAlqMaxRate_(const GasLiftOpt::Well &well)
+setAlqMaxRate_(const GasLiftWell &well)
 {
     auto& max_alq_optional = well.max_rate();
     if (max_alq_optional) {

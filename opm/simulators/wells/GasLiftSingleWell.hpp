@@ -58,7 +58,7 @@ namespace Opm
         std::optional<double> computeBhpAtThpLimit_(double alq) const override;
         BasicRates computeWellRates_(
             double bhp, bool bhp_is_limited, bool debug_output=true) const override;
-        void setAlqMaxRate_(const GasLiftOpt::Well& well);
+        void setAlqMaxRate_(const GasLiftWell& well);
         void setupPhaseVariables_();
         bool checkThpControl_() const override;
 

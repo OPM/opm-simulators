@@ -317,7 +317,7 @@ protected:
     std::unique_ptr<GasLiftWellState> runOptimize1_();
     std::unique_ptr<GasLiftWellState> runOptimize2_();
     std::unique_ptr<GasLiftWellState> runOptimizeLoop_(bool increase);
-    void setAlqMinRate_(const GasLiftOpt::Well& well);
+    void setAlqMinRate_(const GasLiftWell& well);
     std::unique_ptr<GasLiftWellState> tryIncreaseLiftGas_();
     std::unique_ptr<GasLiftWellState> tryDecreaseLiftGas_();
     void updateGroupRates_(
@@ -326,8 +326,8 @@ protected:
         double delta_alq) const;
     LimitedRates updateRatesToGroupLimits_(
         const BasicRates& rates, const LimitedRates& new_rates, const std::string& gr_name = "") const;
-    void updateWellStateAlqFixedValue_(const GasLiftOpt::Well& well);
-    bool useFixedAlq_(const GasLiftOpt::Well& well);
+    void updateWellStateAlqFixedValue_(const GasLiftWell& well);
+    bool useFixedAlq_(const GasLiftWell& well);
     void debugInfoGroupRatesExceedTarget(
         Rate rate_type, const std::string& gr_name, double rate, double target) const;
     void warnMaxIterationsExceeded_();
@@ -356,7 +356,7 @@ protected:
 
     std::string well_name_;
 
-    const GasLiftOpt::Well* gl_well_;
+    const GasLiftWell* gl_well_;
 
     bool optimize_;
     bool debug_limit_increase_decrease_;
