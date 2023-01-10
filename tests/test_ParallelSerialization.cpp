@@ -63,6 +63,7 @@
 #include <opm/input/eclipse/Schedule/Events.hpp>
 #include <opm/input/eclipse/Schedule/GasLiftOpt.hpp>
 #include <opm/input/eclipse/Schedule/Group/GConSale.hpp>
+#include <opm/input/eclipse/Schedule/Group/GConSump.hpp>
 #include <opm/input/eclipse/Schedule/Group/Group.hpp>
 #include <opm/input/eclipse/Schedule/Group/GuideRateConfig.hpp>
 #include <opm/input/eclipse/Schedule/Group/GuideRateModel.hpp>

@@ -30,6 +30,7 @@
 #include <opm/output/eclipse/RestartValue.hpp>
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/Schedule/Group/GConSump.hpp>
 #include <opm/input/eclipse/Schedule/Group/GuideRateConfig.hpp>
 #include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
