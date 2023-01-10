@@ -23,6 +23,8 @@
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 #include <opm/grid/utility/cartesianToCompressed.hpp>
+
+#include <opm/input/eclipse/Schedule/Network/Balance.hpp>
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
 
 #include <opm/simulators/wells/BlackoilWellModelConstraints.hpp>
