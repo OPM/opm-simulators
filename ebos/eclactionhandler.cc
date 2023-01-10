@@ -245,4 +245,12 @@ EclActionHandler::fetchWellPI(const int reportStep,
   return wellpi;
 }
 
+void EclActionHandler::evalUDQAssignments(const unsigned episodeIdx,
+                                          UDQState& udq_state)
+{
+    const auto& udq = schedule_[episodeIdx].udq();
+    const auto& well_matcher = schedule_.wellMatcher(episodeIdx);
+    udq.eval_assign(episodeIdx, well_matcher, summaryState_, udq_state);
+}
+
 } // namespace Opm

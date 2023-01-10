@@ -43,6 +43,7 @@ class EclipseState;
 class Schedule;
 struct SimulatorUpdate;
 class SummaryState;
+class UDQState;
 
 //! \brief Class handling Action support in simulator
 class EclActionHandler
@@ -61,6 +62,10 @@ public:
   void applyActions(int reportStep,
                     double sim_time,
                     const TransFunc& updateTrans);
+
+  //! \brief Evaluates UDQ assign statements.
+  void evalUDQAssignments(const unsigned episodeIdx,
+                          UDQState& udq_state);
 
 private:
   /*
