@@ -78,6 +78,7 @@
 #include <opm/material/common/Valgrind.hpp>
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellMatcher.hpp>
 #include <opm/common/utility/TimeService.hpp>
 #include <opm/utility/CopyablePtr.hpp>
 #include <opm/material/common/ConditionalStorage.hpp>
