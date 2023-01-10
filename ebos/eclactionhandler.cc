@@ -34,6 +34,7 @@
 #include <opm/input/eclipse/Schedule/Action/SimulatorUpdate.hpp>
 #include <opm/input/eclipse/Schedule/Action/State.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellMatcher.hpp>
 
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
 #include <opm/simulators/utils/ParallelSerialization.hpp>
@@ -242,6 +243,14 @@ EclActionHandler::fetchWellPI(const int reportStep,
       wellpi[wname] = wellpi_vector[ well.seqIndex() ];
   }
   return wellpi;
+}
+
+void EclActionHandler::evalUDQAssignments(const unsigned episodeIdx,
+                                          UDQState& udq_state)
+{
+    const auto& udq = schedule_[episodeIdx].udq();
+    const auto& well_matcher = schedule_.wellMatcher(episodeIdx);
+    udq.eval_assign(episodeIdx, well_matcher, summaryState_, udq_state);
 }
 
 } // namespace Opm
