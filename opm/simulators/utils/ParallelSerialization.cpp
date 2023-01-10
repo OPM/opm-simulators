@@ -25,6 +25,7 @@
 #include <opm/input/eclipse/EclipseState/Grid/TransMult.hpp>
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
+#include <opm/input/eclipse/Schedule/GasLiftOpt.hpp>
 #include <opm/input/eclipse/Schedule/RPTConfig.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Action/ASTNode.hpp>
