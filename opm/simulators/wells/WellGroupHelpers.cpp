@@ -742,7 +742,6 @@ namespace WellGroupHelpers
             default:
                 throw std::invalid_argument("Invalid Flow target type in GPMAINT");
         }
-
         auto& gpmaint_state = group_state.gpmaint(group.name());
         double rate = gpm->rate(gpmaint_state, current_rate, error, dt);
         group_state.update_gpmaint_target(group.name(), std::max(0.0, sign * rate));
@@ -1266,7 +1265,12 @@ namespace WellGroupHelpers
             const std::vector<double>& groupSurfaceRates = group_state.production_rates(group_name);
             return tcalc.calcModeRateFromRates(groupSurfaceRates);
         };
-        const double orig_target = tcalc.groupTarget(group.productionControls(summaryState));
+
+        std::optional<Group::ProductionControls> ctrl;
+        if (!group.has_gpmaint_control(currentGroupControl))
+            ctrl = group.productionControls(summaryState);
+
+        const double orig_target = tcalc.groupTarget(ctrl, deferred_logger);
         // Assume we have a chain of groups as follows: BOTTOM -> MIDDLE -> TOP.
         // Then ...
         // TODO finish explanation.
@@ -1408,7 +1412,12 @@ namespace WellGroupHelpers
             return tcalc.calcModeRateFromRates(groupSurfaceRates);
         };
 
-        const double orig_target = tcalc.groupTarget(group.injectionControls(injectionPhase, summaryState), deferred_logger);
+        std::optional<Group::InjectionControls> ctrl;
+        if (!group.has_gpmaint_control(injectionPhase, currentGroupControl))
+            ctrl = group.injectionControls(injectionPhase, summaryState);
+
+
+        const double orig_target = tcalc.groupTarget(ctrl, deferred_logger);
         // Assume we have a chain of groups as follows: BOTTOM -> MIDDLE -> TOP.
         // Then ...
         // TODO finish explanation.

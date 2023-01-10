@@ -1049,7 +1049,8 @@ namespace Opm
                                                           group_state,
                                                           schedule,
                                                           summaryState,
-                                                          efficiencyFactor);
+                                                          efficiencyFactor,
+                                                          deferred_logger);
 
                 // we don't want to scale with zero and get zero rates.
                 if (scale > 0) {

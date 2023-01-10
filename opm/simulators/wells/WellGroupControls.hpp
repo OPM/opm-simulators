@@ -84,7 +84,8 @@ public:
                                    const std::vector<EvalWell>& rates,
                                    const RateConvFunc& rateConverter,
                                    double efficiencyFactor,
-                                   EvalWell& control_eq) const;
+                                   EvalWell& control_eq,
+                                   DeferredLogger& deferred_logger) const;
 
     double getGroupProductionTargetRate(const Group& group,
                                         const WellState& well_state,
@@ -92,7 +93,8 @@ public:
                                         const Schedule& schedule,
                                         const SummaryState& summaryState,
                                         const RateConvFunc& rateConverter,
-                                        double efficiencyFactor) const;
+                                        double efficiencyFactor,
+                                        DeferredLogger& deferred_logger) const;
 
 private:
     const WellInterfaceGeneric& well_; //!< Reference to well interface

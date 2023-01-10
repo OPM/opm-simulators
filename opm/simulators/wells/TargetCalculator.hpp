@@ -59,7 +59,7 @@ namespace WellGroupHelpers
         template <typename RateType>
         RateType calcModeRateFromRates(const RateType* rates) const;
 
-        double groupTarget(const Group::ProductionControls ctrl) const;
+        double groupTarget(const std::optional<Group::ProductionControls>& ctrl, Opm::DeferredLogger& deferred_logger) const;
 
         GuideRateModel::Target guideTargetMode() const;
 
@@ -94,7 +94,7 @@ namespace WellGroupHelpers
             return rates[pos_];
         }
 
-        double groupTarget(const Group::InjectionControls& ctrl, Opm::DeferredLogger& deferred_logger) const;
+        double groupTarget(const std::optional<Group::InjectionControls>& ctrl, Opm::DeferredLogger& deferred_logger) const;
 
         GuideRateModel::Target guideTargetMode() const;
 

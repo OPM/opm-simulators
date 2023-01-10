@@ -154,8 +154,11 @@ getGroupInjectionControl(const Group& group,
         return tcalc.calcModeRateFromRates(groupTargetReductions);
     };
 
-    const double orig_target = tcalc.groupTarget(group.injectionControls(injectionPhase,
-                                                                         summaryState),
+    std::optional<Group::InjectionControls> ctrl;
+    if (!group.has_gpmaint_control(injectionPhase, currentGroupControl))
+        ctrl = group.injectionControls(injectionPhase, summaryState);
+
+    const double orig_target = tcalc.groupTarget(ctrl,
                                                 deferred_logger);
     const auto chain = WellGroupHelpers::groupChainTopBot(well_.name(), group.name(),
                                                           schedule, well_.currentStep());
@@ -213,7 +216,6 @@ getGroupInjectionTargetRate(const Group& group,
         // Should not be here.
         assert(false);
     }
-
     auto currentGroupControl = group_state.injection_control(group.name(), injectionPhase);
     if (currentGroupControl == Group::InjectionCMode::FLD ||
         currentGroupControl == Group::InjectionCMode::NONE) {
@@ -273,7 +275,12 @@ getGroupInjectionTargetRate(const Group& group,
         return tcalc.calcModeRateFromRates(groupTargetReductions);
     };
 
-    const double orig_target = tcalc.groupTarget(group.injectionControls(injectionPhase, summaryState), deferred_logger);
+    std::optional<Group::InjectionControls> ctrl;
+    if (!group.has_gpmaint_control(injectionPhase, currentGroupControl))
+        ctrl = group.injectionControls(injectionPhase, summaryState);
+
+    const double orig_target = tcalc.groupTarget(ctrl, deferred_logger);
+
     const auto chain = WellGroupHelpers::groupChainTopBot(well_.name(), group.name(), schedule, well_.currentStep());
     // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
     const size_t num_ancestors = chain.size() - 1;
@@ -300,7 +307,8 @@ void WellGroupControls::getGroupProductionControl(const Group& group,
                                                   const std::vector<EvalWell>& rates,
                                                   const RateConvFunc& rateConverter,
                                                   double efficiencyFactor,
-                                                  EvalWell& control_eq) const
+                                                  EvalWell& control_eq,
+                                                  DeferredLogger& deferred_logger) const
 {
     const Group::ProductionCMode& currentGroupControl = group_state.production_control(group.name());
     if (currentGroupControl == Group::ProductionCMode::FLD ||
@@ -324,7 +332,7 @@ void WellGroupControls::getGroupProductionControl(const Group& group,
             getGroupProductionControl(parent, well_state, group_state,
                                       schedule, summaryState, bhp,
                                       rates, rateConverter,
-                                      efficiencyFactor, control_eq);
+                                      efficiencyFactor, control_eq, deferred_logger);
             return;
         }
     }
@@ -371,7 +379,11 @@ void WellGroupControls::getGroupProductionControl(const Group& group,
         return tcalc.calcModeRateFromRates(groupTargetReductions);
     };
 
-    const double orig_target = tcalc.groupTarget(group.productionControls(summaryState));
+    std::optional<Group::ProductionControls> ctrl;
+    if (!group.has_gpmaint_control(currentGroupControl))
+        ctrl = group.productionControls(summaryState);
+
+    const double orig_target = tcalc.groupTarget(ctrl, deferred_logger);
     const auto chain = WellGroupHelpers::groupChainTopBot(well_.name(), group.name(),
                                                           schedule, well_.currentStep());
     // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
@@ -399,7 +411,8 @@ getGroupProductionTargetRate(const Group& group,
                              const Schedule& schedule,
                              const SummaryState& summaryState,
                              const RateConvFunc& rateConverter,
-                             double efficiencyFactor) const
+                             double efficiencyFactor,
+                             DeferredLogger& deferred_logger) const
 {
     const Group::ProductionCMode& currentGroupControl = group_state.production_control(group.name());
     if (currentGroupControl == Group::ProductionCMode::FLD ||
@@ -412,7 +425,8 @@ getGroupProductionTargetRate(const Group& group,
             efficiencyFactor *= group.getGroupEfficiencyFactor();
             return getGroupProductionTargetRate(parent, well_state, group_state,
                                                 schedule, summaryState,
-                                                rateConverter, efficiencyFactor);
+                                                rateConverter, efficiencyFactor,
+                                                deferred_logger);
         }
     }
 
@@ -451,7 +465,11 @@ getGroupProductionTargetRate(const Group& group,
         return tcalc.calcModeRateFromRates(groupTargetReductions);
     };
 
-    const double orig_target = tcalc.groupTarget(group.productionControls(summaryState));
+    std::optional<Group::ProductionControls> ctrl;
+    if (!group.has_gpmaint_control(currentGroupControl))
+        ctrl = group.productionControls(summaryState);
+
+    const double orig_target = tcalc.groupTarget(ctrl, deferred_logger);
     const auto chain = WellGroupHelpers::groupChainTopBot(well_.name(), group.name(),
                                                           schedule, well_.currentStep());
     // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
@@ -505,7 +523,8 @@ getGroupProductionControl<__VA_ARGS__>(const Group&, \
                                        const std::vector<__VA_ARGS__>&, \
                                        const RateConvFunc& rateConverter, \
                                        double efficiencyFactor, \
-                                       __VA_ARGS__& control_eq) const;
+                                       __VA_ARGS__& control_eq, \
+                                       DeferredLogger& deferred_logger) const; \
 
 INSTANCE(DenseAd::Evaluation<double,3,0u>)
 INSTANCE(DenseAd::Evaluation<double,4,0u>)
