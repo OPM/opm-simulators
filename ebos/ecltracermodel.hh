@@ -30,6 +30,8 @@
 
 #include <ebos/eclgenerictracermodel.hh>
 
+#include <opm/input/eclipse/Schedule/Well/WellTracerProperties.hpp>
+
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/simulators/utils/VectorVectorDataHandle.hpp>
 
