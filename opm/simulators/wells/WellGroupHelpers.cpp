@@ -26,6 +26,7 @@
 #include <opm/input/eclipse/Schedule/Group/GConSale.hpp>
 #include <opm/input/eclipse/Schedule/Group/GPMaint.hpp>
 #include <opm/input/eclipse/Schedule/Group/Group.hpp>
+#include <opm/input/eclipse/Schedule/Network/ExtNetwork.hpp>
 
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
