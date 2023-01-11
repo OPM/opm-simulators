@@ -32,6 +32,8 @@
 #include <opm/grid/GridManager.hpp>
 #include <opm/grid/cpgrid/GridHelpers.hpp>
 
+#include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
+
 #include <opm/input/eclipse/Units/Units.hpp>
 
 #include <opm/models/utils/start.hh>
