@@ -47,6 +47,8 @@
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
 #include <opm/input/eclipse/Parser/ErrorGuard.hpp>
+#include <opm/input/eclipse/Parser/InputErrorAction.hpp>
+#include <opm/input/eclipse/Parser/ParseContext.hpp>
 #include <opm/input/eclipse/Parser/Parser.hpp>
 
 #include <opm/input/eclipse/Schedule/Action/State.hpp>
@@ -573,4 +575,18 @@ void Opm::verifyValidCellGeometry(Parallel::Communication comm,
         R"(No active cell in input grid has valid/finite cell geometry
 Please check geometry keywords, especially if grid is imported through GDFILE)"
     };
+}
+
+std::unique_ptr<Opm::ParseContext> Opm::setupParseContext(const bool strictParsing)
+{
+    auto parseContext =
+        std::make_unique<ParseContext>(std::vector<std::pair<std::string , InputErrorAction>>
+                                       {{ParseContext::PARSE_RANDOM_SLASH, InputErrorAction::IGNORE},
+                                       {ParseContext::PARSE_MISSING_DIMS_KEYWORD, InputErrorAction::WARN},
+                                       {ParseContext::SUMMARY_UNKNOWN_WELL, InputErrorAction::WARN},
+                                       {ParseContext::SUMMARY_UNKNOWN_GROUP, InputErrorAction::WARN}});
+    if (strictParsing)
+        parseContext->update(InputErrorAction::DELAYED_EXIT1);
+
+    return parseContext;
 }

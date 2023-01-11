@@ -50,7 +50,6 @@
 #include <flow/flow_ebos_micp.hpp>
 
 #include <opm/input/eclipse/Parser/ErrorGuard.hpp>
-#include <opm/input/eclipse/Parser/InputErrorAction.hpp>
 #include <opm/input/eclipse/Parser/Parser.hpp>
 #include <opm/input/eclipse/Parser/ParseContext.hpp>
 #include <opm/input/eclipse/Python/Python.hpp>
@@ -504,14 +503,8 @@ private:
                                       outputDir,
                                       EWOMS_GET_PARAM(PreTypeTag, std::string, OutputMode),
                                       outputCout_, "STDOUT_LOGGER", allRanksDbgPrtLog);
-            auto parseContext =
-                std::make_unique<ParseContext>(std::vector<std::pair<std::string , InputErrorAction>>
-                                               {{ParseContext::PARSE_RANDOM_SLASH, InputErrorAction::IGNORE},
-                                                {ParseContext::PARSE_MISSING_DIMS_KEYWORD, InputErrorAction::WARN},
-                                                {ParseContext::SUMMARY_UNKNOWN_WELL, InputErrorAction::WARN},
-                                                {ParseContext::SUMMARY_UNKNOWN_GROUP, InputErrorAction::WARN}});
-            if (EWOMS_GET_PARAM(PreTypeTag, bool, EclStrictParsing))
-                parseContext->update(InputErrorAction::DELAYED_EXIT1);
+            const bool strictParsing = EWOMS_GET_PARAM(PreTypeTag, bool, EclStrictParsing);
+            auto parseContext = setupParseContext(strictParsing);
 
             FlowMainEbos<PreTypeTag>::printPRTHeader(outputCout_);
 
