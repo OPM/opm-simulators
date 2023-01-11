@@ -20,8 +20,10 @@
 
 #include <opm/grid/utility/StopWatch.hpp>
 
-#include <opm/input/eclipse/Schedule/ScheduleState.hpp>
 #include <opm/input/eclipse/Units/Units.hpp>
+#include <opm/input/eclipse/Units/UnitSystem.hpp>
+
+#include <opm/input/eclipse/Schedule/Tuning.hpp>
 
 #include <opm/models/utils/basicproperties.hh>
 #include <opm/models/utils/parametersystem.hh>
@@ -37,12 +39,10 @@
 #include <cassert>
 #include <cmath>
 #include <memory>
-#include <ostream>
 #include <set>
 #include <sstream>
 #include <stdexcept>
 #include <string>
-#include <utility>
 #include <vector>
 
 namespace Opm::Properties {
