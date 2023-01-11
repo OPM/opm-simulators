@@ -170,6 +170,13 @@ public:
 
     bool reportStepStarts() const { return report_step_starts_; }
 
+    bool shouldBalanceNetwork(const int reportStepIndex,
+                              const int iterationIdx) const;
+
+    bool shouldIterateNetwork(const int reportStepIndex,
+                              const std::size_t recursion_level,
+                              const double network_imbalance) const;
+
 protected:
 
     /*

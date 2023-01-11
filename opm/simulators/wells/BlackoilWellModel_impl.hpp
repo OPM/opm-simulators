@@ -23,6 +23,7 @@
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 #include <opm/grid/utility/cartesianToCompressed.hpp>
+
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
 
 #include <opm/simulators/wells/BlackoilWellModelConstraints.hpp>
@@ -934,12 +935,9 @@ namespace Opm {
 
         // Maybe do a recursive call to iterate network and well controls.
         if (network_changed) {
-            if (shouldBalanceNetwork(reportStepIdx, iterationIdx)) {
-                const auto& balance = schedule()[reportStepIdx].network_balance();
-                // Iterate if not converged, and number of iterations is not yet max (NETBALAN item 3).
-                if (recursion_level < balance.pressure_max_iter() && network_imbalance > balance.pressure_tolerance()) {
-                    well_group_control_changed = assembleImpl(iterationIdx, dt, recursion_level + 1, local_deferredLogger);
-                }
+            if (shouldBalanceNetwork(reportStepIdx, iterationIdx) &&
+                shouldIterateNetwork(reportStepIdx, recursion_level, network_imbalance)) {
+                well_group_control_changed = assembleImpl(iterationIdx, dt, recursion_level + 1, local_deferredLogger);
             }
         }
         return well_group_control_changed;
@@ -1439,30 +1437,6 @@ namespace Opm {
         // TODO: checking isOperableAndSolvable() ?
         for (auto& well : well_container_) {
             well->calculateExplicitQuantities(ebosSimulator_, this->wellState(), deferred_logger);
-        }
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    bool
-    BlackoilWellModel<TypeTag>::
-    shouldBalanceNetwork(const int reportStepIdx, const int iterationIdx) const
-    {
-        const auto& balance = schedule()[reportStepIdx].network_balance();
-        if (balance.mode() == Network::Balance::CalcMode::TimeStepStart) {
-            return iterationIdx == 0;
-        } else if (balance.mode() == Network::Balance::CalcMode::NUPCOL) {
-            const int nupcol = schedule()[reportStepIdx].nupcol();
-            return iterationIdx < nupcol;
-        } else {
-            // We do not support any other rebalancing modes,
-            // i.e. TimeInterval based rebalancing is not available.
-            // This should be warned about elsewhere, so we choose to
-            // avoid spamming with a warning here.
-            return false;
         }
     }
 
