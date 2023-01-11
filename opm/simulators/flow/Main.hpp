@@ -77,7 +77,6 @@
 
 #include <cassert>
 #include <cstdlib>
-#include <filesystem>
 #include <iostream>
 #include <memory>
 #include <stdexcept>
@@ -537,34 +536,6 @@ private:
 
         exitCode = EXIT_SUCCESS;
         return true;
-    }
-
-    std::filesystem::path simulationCaseName_(const std::string& casename)
-    {
-        namespace fs = ::std::filesystem;
-
-        auto exists = [](const fs::path& f)
-        {
-            return (fs::exists(f) && fs::is_regular_file(f))
-                || (fs::is_symlink(f) &&
-                    fs::is_regular_file(fs::read_symlink(f)));
-        };
-
-        auto simcase = fs::path { casename };
-
-        if (exists(simcase)) {
-            return simcase;
-        }
-
-        for (const auto& ext : { std::string("DATA"), std::string("data") }) {
-            if (exists(simcase.replace_extension(ext))) {
-                return simcase;
-            }
-        }
-
-        throw std::invalid_argument {
-            "Cannot find input case '" + casename + '\''
-        };
     }
 
     // This function is an extreme special case, if the program has been invoked
