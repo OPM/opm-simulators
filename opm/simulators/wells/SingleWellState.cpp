@@ -19,6 +19,9 @@
 
 #include <config.h>
 #include <opm/simulators/wells/SingleWellState.hpp>
+
+#include <opm/input/eclipse/Units/Units.hpp>
+
 #include <opm/simulators/wells/PerforationData.hpp>
 
 namespace Opm {
