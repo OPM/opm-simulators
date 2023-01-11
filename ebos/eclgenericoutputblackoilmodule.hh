@@ -209,7 +209,7 @@ public:
     }
 
     // Virtual destructor for safer inheritance.
-    virtual ~EclGenericOutputBlackoilModule() = default;
+    virtual ~EclGenericOutputBlackoilModule();
 
 protected:
     using ScalarBuffer = std::vector<Scalar>;

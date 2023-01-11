@@ -142,6 +142,10 @@ EclGenericOutputBlackoilModule(const EclipseState& eclState,
 }
 
 template<class FluidSystem, class Scalar>
+EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
+~EclGenericOutputBlackoilModule() = default;
+
+template<class FluidSystem, class Scalar>
 void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
 outputCumLog(size_t reportStepNum, const bool substep, bool forceDisableCumOutput)
 {
