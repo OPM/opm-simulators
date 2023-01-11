@@ -24,6 +24,8 @@
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 #include <opm/grid/utility/cartesianToCompressed.hpp>
 
+#include <opm/input/eclipse/Schedule/Well/WellTestConfig.hpp>
+
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
 
 #include <opm/simulators/wells/BlackoilWellModelConstraints.hpp>
