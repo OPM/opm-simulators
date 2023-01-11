@@ -220,9 +220,8 @@ namespace Opm {
 
             // Compute regional average pressures used by gpmaint
             if (schedule_[timeStepIdx].has_gpmaint()) {
-                const auto& fp = this->eclState_.fieldProps();
-                const auto& fipnum = fp.get_int("FIPNUM");
-                regionalAveragePressureCalculator_.reset(new AverageRegionalPressureType (phase_usage_,fipnum));
+                WellGroupHelpers::setRegionAveragePressureCalculator(fieldGroup, schedule(),
+                        timeStepIdx, this->eclState_.fieldProps(), phase_usage_, regionalAveragePressureCalculator_);
             }
 
             {
@@ -342,10 +341,12 @@ namespace Opm {
         auto exc_type = ExceptionType::NONE;
         // update gpmaint targets
         if (schedule_[reportStepIdx].has_gpmaint()) {
-            regionalAveragePressureCalculator_->template defineState<ElementContext>(ebosSimulator_);
+            for (auto& calculator : regionalAveragePressureCalculator_) {
+                calculator.second->template defineState<ElementContext>(ebosSimulator_);
+            }
             const double dt = ebosSimulator_.timeStepSize();
             WellGroupHelpers::updateGpMaintTargetForGroups(fieldGroup,
-                                                           schedule_, *regionalAveragePressureCalculator_, reportStepIdx, dt, this->wellState(), this->groupState());
+                                                           schedule_, regionalAveragePressureCalculator_, reportStepIdx, dt, this->wellState(), this->groupState());
         }
         try {
             // Compute initial well solution for new wells and injectors that change injection type i.e. WAG.
