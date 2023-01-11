@@ -120,110 +120,23 @@ int flowEbosMain(int argc, char** argv, bool outputCout, bool outputFiles)
 class Main
 {
 public:
-    Main(int argc, char** argv) : argc_(argc), argv_(argv)  { initMPI();  }
+    Main(int argc, char** argv);
 
     // This constructor can be called from Python
-    Main(const std::string& filename)
-    {
-        setArgvArgc_(filename);
-        initMPI();
-    }
+    Main(const std::string& filename);
 
     // This constructor can be called from Python when Python has
     // already parsed a deck
     Main(const std::string& filename,
          std::shared_ptr<EclipseState> eclipseState,
          std::shared_ptr<Schedule> schedule,
-         std::shared_ptr<SummaryConfig> summaryConfig)
-        : eclipseState_{std::move(eclipseState)}
-        , schedule_{std::move(schedule)}
-        , summaryConfig_{std::move(summaryConfig)}
-    {
-        setArgvArgc_(filename);
-        initMPI();
-    }
+         std::shared_ptr<SummaryConfig> summaryConfig);
 
+    ~Main();
 
-    ~Main()
-    {
-#if HAVE_MPI
-        if (test_split_comm_) {
-            // Cannot use EclGenericVanguard::comm()
-            // to get world size here, as it may be
-            // a split communication at this point.
-            int world_size;
-            MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-            if (world_size > 1) {
-                MPI_Comm new_comm = EclGenericVanguard::comm();
-                int result;
-                MPI_Comm_compare(MPI_COMM_WORLD, new_comm, &result);
-                assert(result == MPI_UNEQUAL);
-                MPI_Comm_free(&new_comm);
-            }
-        }
-#endif // HAVE_MPI
+    void setArgvArgc_(const std::string& filename);
 
-        EclGenericVanguard::setCommunication(nullptr);
-
-#if HAVE_DAMARIS
-        if (enableDamarisOutput_) {
-            int err;
-            if (isSimulationRank_) {
-                err = damaris_stop();
-                if (err != DAMARIS_OK) {
-                    std::cerr << "ERROR: Damaris library produced an error result for damaris_stop()" << std::endl;
-                }
-            }
-            err = damaris_finalize();
-            if (err != DAMARIS_OK) {
-                std::cerr << "ERROR: Damaris library produced an error result for damaris_finalize()" << std::endl;
-            }
-        }
-#endif // HAVE_DAMARIS
-
-#if HAVE_MPI && !HAVE_DUNE_FEM
-        MPI_Finalize();
-#endif
-    }
-
-    void setArgvArgc_(const std::string& filename)
-    {
-        this->deckFilename_ = filename;
-        this->flowProgName_ = "flow";
-
-        this->argc_ = 2;
-        this->saveArgs_[0] = const_cast<char *>(this->flowProgName_.c_str());
-        this->saveArgs_[1] = const_cast<char *>(this->deckFilename_.c_str());
-
-        // Note: argv[argc] must exist and be nullptr
-        assert ((sizeof this->saveArgs_) > (this->argc_ * sizeof this->saveArgs_[0]));
-        this->saveArgs_[this->argc_] = nullptr;
-
-        this->argv_ = this->saveArgs_;
-    }
-
-    void initMPI()
-    {
-#if HAVE_DUNE_FEM
-        Dune::Fem::MPIManager::initialize(argc_, argv_);
-#elif HAVE_MPI
-        MPI_Init(&argc_, &argv_);
-#endif
-        EclGenericVanguard::setCommunication(std::make_unique<Parallel::Communication>());
-
-        handleTestSplitCommunicatorCmdLine_();
-
-#if HAVE_MPI
-        if (test_split_comm_ && EclGenericVanguard::comm().size() > 1) {
-            int world_rank = EclGenericVanguard::comm().rank();
-            int color = (world_rank == 0);
-            MPI_Comm new_comm;
-            MPI_Comm_split(EclGenericVanguard::comm(), color, world_rank, &new_comm);
-            isSimulationRank_ = (world_rank > 0);
-            EclGenericVanguard::setCommunication(std::make_unique<Parallel::Communication>(new_comm));
-        }
-#endif // HAVE_MPI
-    }
+    void initMPI();
 
     int runDynamic()
     {
@@ -303,12 +216,12 @@ private:
         }
 
         // water-only case
-        else if(phases.size() == 1 && phases.active(Phase::WATER) && !thermal) {
+        else if (phases.size() == 1 && phases.active(Phase::WATER) && !thermal) {
             return this->runWaterOnly(phases);
         }
 
         // water-only case with energy
-        else if(phases.size() == 2 && phases.active(Phase::WATER) && thermal) {
+        else if (phases.size() == 2 && phases.active(Phase::WATER) && thermal) {
             return this->runWaterOnlyEnergy(phases);
         }
 
@@ -545,19 +458,7 @@ private:
     //
     // the call is intercepted by this function which will print "flow $version"
     // on stdout and exit(0).
-    void handleVersionCmdLine_(int argc, char** argv)
-    {
-        auto pos = std::find_if(argv, argv + argc,
-            [](const char* arg)
-        {
-            return std::strcmp(arg, "--version") == 0;
-        });
-
-        if (pos != argv + argc) {
-            std::cout << "flow " << moduleVersionName() << std::endl;
-            std::exit(EXIT_SUCCESS);
-        }
-    }
+    void handleVersionCmdLine_(int argc, char** argv);
 
     // This function is a special case, if the program has been invoked
     // with the argument "--test-split-communicator=true" as the FIRST
@@ -565,15 +466,7 @@ private:
     // test_split_comm_ flag to true.
     // Note: initializing the parameter system before MPI could make this
     // use the parameter system instead.
-    void handleTestSplitCommunicatorCmdLine_()
-    {
-        if (argc_ >= 2 && std::strcmp(argv_[1], "--test-split-communicator=true") == 0) {
-            test_split_comm_ = true;
-            --argc_;             // We have one less argument.
-            argv_[1] = argv_[0]; // What used to be the first proper argument now becomes the command argument.
-            ++argv_;             // Pretend this is what it always was.
-        }
-    }
+    void handleTestSplitCommunicatorCmdLine_();
 
     int runMICP(const Phases& phases)
     {
