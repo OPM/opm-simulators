@@ -24,6 +24,7 @@
 #define EWOMS_ECL_GENERIC_OUTPUT_BLACK_OIL_MODULE_HH
 
 #include <array>
+#include <functional>
 #include <map>
 #include <numeric>
 #include <optional>
@@ -372,6 +373,8 @@ protected:
                        const ScalarBuffer& values);
 
     static Scalar sum(const ScalarBuffer& v);
+
+    void setupBlockData(std::function<bool(int)> isCartIdxOnThisRank);
 
     virtual bool isDefunctParallelWell(std::string wname) const = 0;
 

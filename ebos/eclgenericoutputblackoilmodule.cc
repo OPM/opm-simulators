@@ -1809,6 +1809,22 @@ updateSummaryRegionValues(const Inplace& inplace,
     }
 }
 
+template<class FluidSystem,class Scalar>
+void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
+setupBlockData(std::function<bool(int)> isCartIdxOnThisRank)
+{
+    for (const auto& node : summaryConfig_) {
+        if ((node.category() == SummaryConfigNode::Category::Block) &&
+            isCartIdxOnThisRank(node.number() - 1))
+        {
+            this->blockData_.emplace(std::piecewise_construct,
+                                     std::forward_as_tuple(node.keyword(),
+                                                           node.number()),
+                                     std::forward_as_tuple(0.0));
+        }
+    }
+}
+
 template class EclGenericOutputBlackoilModule<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,double>;
 
 } // namespace Opm
