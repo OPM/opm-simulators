@@ -32,7 +32,6 @@
 
 #include <opm/output/data/Wells.hpp>
 #include <opm/output/eclipse/Inplace.hpp>
-#include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
@@ -42,6 +41,9 @@ namespace Opm {
 
 namespace data { class Solution; }
 class EclipseState;
+class Schedule;
+class SummaryConfig;
+class SummaryConfigNode;
 class SummaryState;
 
 template<class FluidSystem, class Scalar>
