@@ -17,8 +17,9 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <config.h>
+#include <opm/simulators/utils/ParallelEclipseState.hpp>
 
-#include "ParallelEclipseState.hpp"
+#include <opm/input/eclipse/EclipseState/Grid/FieldData.hpp>
 
 #include <opm/common/ErrorMacros.hpp>
 

@@ -43,6 +43,12 @@
 #include <opm/input/eclipse/Deck/Deck.hpp>
 
 #include <opm/input/eclipse/EclipseState/checkDeck.hpp>
+#include <opm/input/eclipse/EclipseState/Grid/FieldData.hpp>
+#include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
+
+#include <opm/input/eclipse/Parser/ErrorGuard.hpp>
+#include <opm/input/eclipse/Parser/Parser.hpp>
+
 #include <opm/input/eclipse/Schedule/Action/State.hpp>
 #include <opm/input/eclipse/Schedule/ArrayDimChecker.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
@@ -50,10 +56,6 @@
 #include <opm/input/eclipse/Schedule/UDQ/UDQConfig.hpp>
 #include <opm/input/eclipse/Schedule/UDQ/UDQState.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
-#include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
-
-#include <opm/input/eclipse/Parser/ErrorGuard.hpp>
-#include <opm/input/eclipse/Parser/Parser.hpp>
 
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
 
