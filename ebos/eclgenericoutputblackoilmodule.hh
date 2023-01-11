@@ -32,7 +32,6 @@
 
 #include <opm/output/data/Wells.hpp>
 #include <opm/output/eclipse/Inplace.hpp>
-#include <opm/input/eclipse/Schedule/SummaryState.hpp>
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
@@ -43,6 +42,7 @@ namespace Opm {
 
 namespace data { class Solution; }
 class EclipseState;
+class SummaryState;
 
 template<class FluidSystem, class Scalar>
 class EclGenericOutputBlackoilModule {
