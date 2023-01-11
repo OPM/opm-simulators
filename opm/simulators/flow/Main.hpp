@@ -504,13 +504,13 @@ private:
                                       EWOMS_GET_PARAM(PreTypeTag, std::string, OutputMode),
                                       outputCout_, "STDOUT_LOGGER", allRanksDbgPrtLog);
             auto parseContext =
-                std::make_unique<ParseContext>(std::vector<std::pair<std::string , InputError::Action>>
-                                               {{ParseContext::PARSE_RANDOM_SLASH, InputError::IGNORE},
-                                                {ParseContext::PARSE_MISSING_DIMS_KEYWORD, InputError::WARN},
-                                                {ParseContext::SUMMARY_UNKNOWN_WELL, InputError::WARN},
-                                                {ParseContext::SUMMARY_UNKNOWN_GROUP, InputError::WARN}});
+                std::make_unique<ParseContext>(std::vector<std::pair<std::string , InputErrorAction>>
+                                               {{ParseContext::PARSE_RANDOM_SLASH, InputErrorAction::IGNORE},
+                                                {ParseContext::PARSE_MISSING_DIMS_KEYWORD, InputErrorAction::WARN},
+                                                {ParseContext::SUMMARY_UNKNOWN_WELL, InputErrorAction::WARN},
+                                                {ParseContext::SUMMARY_UNKNOWN_GROUP, InputErrorAction::WARN}});
             if (EWOMS_GET_PARAM(PreTypeTag, bool, EclStrictParsing))
-                parseContext->update(InputError::DELAYED_EXIT1);
+                parseContext->update(InputErrorAction::DELAYED_EXIT1);
 
             FlowMainEbos<PreTypeTag>::printPRTHeader(outputCout_);
 

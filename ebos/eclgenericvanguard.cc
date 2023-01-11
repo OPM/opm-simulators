@@ -99,11 +99,11 @@ void EclGenericVanguard::readDeck(const std::string& filename)
     std::shared_ptr<Opm::SummaryConfig> summaryConfig;
 
     auto parseContext =
-        std::make_unique<ParseContext>(std::vector<std::pair<std::string , InputError::Action>>
-                                            {{ParseContext::PARSE_RANDOM_SLASH, InputError::IGNORE},
-                                             {ParseContext::PARSE_MISSING_DIMS_KEYWORD, InputError::WARN},
-                                             {ParseContext::SUMMARY_UNKNOWN_WELL, InputError::WARN},
-                                             {ParseContext::SUMMARY_UNKNOWN_GROUP, InputError::WARN}});
+        std::make_unique<ParseContext>(std::vector<std::pair<std::string , InputErrorAction>>
+                                            {{ParseContext::PARSE_RANDOM_SLASH, InputErrorAction::IGNORE},
+                                             {ParseContext::PARSE_MISSING_DIMS_KEYWORD, InputErrorAction::WARN},
+                                             {ParseContext::SUMMARY_UNKNOWN_WELL, InputErrorAction::WARN},
+                                             {ParseContext::SUMMARY_UNKNOWN_GROUP, InputErrorAction::WARN}});
 
     Opm::readDeck(EclGenericVanguard::comm(),
                   filename, eclipseState, schedule, udqState,
