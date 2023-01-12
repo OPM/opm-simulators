@@ -25,6 +25,7 @@
 #include <opm/input/eclipse/Schedule/Well/WellBrineProperties.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellFoamProperties.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellPolymerProperties.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/PerforationData.hpp>
@@ -463,6 +464,20 @@ double WellInterfaceGeneric::wsalt_() const
         return fprop.m_saltConcentration;
     } else {
         // Not a water injection well => no salt (?).
+        return 0.0;
+    }
+}
+
+double WellInterfaceGeneric::wpolymer_() const
+{
+    auto injectorType = this->well_ecl_.injectorType();
+
+    if (injectorType == InjectorType::WATER) {
+        WellPolymerProperties polymer = this->well_ecl_.getPolymerProperties();
+        const double polymer_injection_concentration = polymer.m_polymerConcentration;
+        return polymer_injection_concentration;
+    } else {
+        // Not a water injection well => no polymer.
         return 0.0;
     }
 }
