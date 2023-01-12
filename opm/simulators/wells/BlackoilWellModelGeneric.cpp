@@ -1239,4 +1239,24 @@ shouldIterateNetwork(const int reportStepIdx,
            network_imbalance > balance.pressure_tolerance();
 }
 
+std::vector<int>
+BlackoilWellModelGeneric::
+getCellsForConnections(const Well& well) const
+{
+    std::vector<int> wellCells;
+    // All possible connections of the well
+    const auto& connectionSet = well.getConnections();
+    wellCells.reserve(connectionSet.size());
+
+    for (const auto& connection : connectionSet)
+    {
+        int compressed_idx = compressedIndexForInterior(connection.global_index());
+        if (compressed_idx >= 0) { // Ignore connections in inactive/remote cells.
+            wellCells.push_back(compressed_idx);
+        }
+    }
+
+    return wellCells;
+}
+
 }
