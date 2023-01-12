@@ -24,6 +24,7 @@
 #include <opm/common/utility/numeric/RootFinders.hpp>
 
 #include <opm/input/eclipse/Schedule/VFPInjTable.hpp>
+#include <opm/input/eclipse/Schedule/MSW/WellSegments.hpp>
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/VFPHelpers.hpp>
@@ -179,6 +180,27 @@ MultisegmentWellGeneric<Scalar>::
 accelerationalPressureLossConsidered() const
 {
     return (segmentSet().compPressureDrop() == WellSegments::CompPressureDrop::HFA);
+}
+
+
+template<class Scalar>
+double
+MultisegmentWellGeneric<Scalar>::getSegmentDp(const int seg,
+                                              const double density,
+                                              const std::vector<double>& seg_dp) const
+{
+    const double segment_depth = this->segmentSet()[seg].depth();
+    const int outlet_segment_index = this->segmentNumberToIndex(this->segmentSet()[seg].outletSegment());
+    const double segment_depth_outlet = seg == 0 ? baseif_.refDepth() : this->segmentSet()[outlet_segment_index].depth();
+    double dp = wellhelpers::computeHydrostaticCorrection(segment_depth_outlet, segment_depth,
+                                                          density, baseif_.gravity());
+    // we add the hydrostatic correction from the outlet segment
+    // in order to get the correction all the way to the bhp ref depth.
+    if (seg > 0) {
+        dp += seg_dp[outlet_segment_index];
+    }
+
+    return dp;
 }
 
 template class MultisegmentWellGeneric<double>;

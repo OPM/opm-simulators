@@ -26,6 +26,8 @@
 
 #include <opm/common/ErrorMacros.hpp>
 
+#include <opm/input/eclipse/Schedule/MSW/WellSegments.hpp>
+
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
 #include <opm/simulators/linalg/istlsparsematrixadapter.hh>
 #include <opm/simulators/linalg/matrixblock.hh>

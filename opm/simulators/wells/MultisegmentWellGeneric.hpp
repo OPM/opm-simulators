@@ -22,8 +22,6 @@
 #ifndef OPM_MULTISEGMENTWELL_GENERIC_HEADER_INCLUDED
 #define OPM_MULTISEGMENTWELL_GENERIC_HEADER_INCLUDED
 
-#include <opm/input/eclipse/Schedule/MSW/WellSegments.hpp>
-
 #include <functional>
 #include <optional>
 #include <vector>
@@ -35,6 +33,8 @@ namespace Opm
 class DeferredLogger;
 class SummaryState;
 class WellInterfaceGeneric;
+enum class WellSegmentCompPressureDrop;
+class WellSegments;
 class WellState;
 
 template <typename Scalar>
@@ -61,7 +61,7 @@ protected:
     void scaleSegmentPressuresWithBhp(WellState& well_state) const;
 
     // components of the pressure drop to be included
-    WellSegments::CompPressureDrop compPressureDrop() const;
+    WellSegmentCompPressureDrop compPressureDrop() const;
 
     /// Detect oscillation or stagnation based on the residual measure history
     void detectOscillations(const std::vector<double>& measure_history,
@@ -71,6 +71,10 @@ protected:
 
     bool accelerationalPressureLossConsidered() const;
     bool frictionalPressureLossConsidered() const;
+
+    double getSegmentDp(const int seg,
+                        const double density,
+                        const std::vector<double>& seg_dp) const;
 
     const WellInterfaceGeneric& baseif_;
 };

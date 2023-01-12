@@ -165,11 +165,6 @@ namespace Opm
         // regularize msw equation
         bool regularize_;
 
-        // components of the pressure drop to be included
-        WellSegments::CompPressureDrop compPressureDrop() const;
-        // multi-phase flow model
-        WellSegments::MultiPhaseModel multiphaseModel() const;
-
         // the intial amount of fluids in each segment under surface condition
         std::vector<std::vector<double> > segment_fluid_initial_;
 

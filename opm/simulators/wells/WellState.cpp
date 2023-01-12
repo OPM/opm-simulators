@@ -23,6 +23,7 @@
 #include <opm/simulators/wells/WellState.hpp>
 
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/input/eclipse/Schedule/MSW/WellSegments.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 

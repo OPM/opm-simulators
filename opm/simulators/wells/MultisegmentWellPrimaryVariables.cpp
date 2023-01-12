@@ -22,6 +22,8 @@
 #include <config.h>
 #include <opm/simulators/wells/MultisegmentWellPrimaryVariables.hpp>
 
+#include <opm/input/eclipse/Schedule/MSW/WellSegments.hpp>
+
 #include <opm/material/fluidsystems/BlackOilDefaultIndexTraits.hpp>
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 

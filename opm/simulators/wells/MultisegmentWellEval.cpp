@@ -22,6 +22,8 @@
 
 #include <opm/simulators/wells/MultisegmentWellEval.hpp>
 
+#include <opm/input/eclipse/Schedule/MSW/WellSegments.hpp>
+
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
 #include <opm/models/blackoil/blackoilindices.hh>
