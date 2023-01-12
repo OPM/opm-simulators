@@ -22,7 +22,6 @@
 #include <opm/common/Exceptions.hpp>
 
 #include <opm/input/eclipse/Schedule/ScheduleTypes.hpp>
-#include <opm/input/eclipse/Schedule/Well/WellBrineProperties.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/TargetCalculator.hpp>
@@ -136,15 +135,7 @@ namespace Opm
     wsalt() const
     {
         if constexpr (has_brine) {
-            auto injectorType = this->well_ecl_.injectorType();
-
-            if (injectorType == InjectorType::WATER) {
-                WellBrineProperties fprop = this->well_ecl_.getBrineProperties();
-                return fprop.m_saltConcentration;
-            } else {
-                // Not a water injection well => no salt (?).
-                return 0.0;
-            }
+            return this->wsalt_();
         }
 
         return 0.0;

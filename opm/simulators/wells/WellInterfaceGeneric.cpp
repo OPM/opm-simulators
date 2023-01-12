@@ -22,6 +22,7 @@
 #include <config.h>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 
+#include <opm/input/eclipse/Schedule/Well/WellBrineProperties.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellFoamProperties.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
@@ -449,6 +450,19 @@ double WellInterfaceGeneric::wfoam_() const
         return fprop.m_foamConcentration;
     } else {
         // Not a gas injection well => no foam.
+        return 0.0;
+    }
+}
+
+double WellInterfaceGeneric::wsalt_() const
+{
+    auto injectorType = this->well_ecl_.injectorType();
+
+    if (injectorType == InjectorType::WATER) {
+        WellBrineProperties fprop = this->well_ecl_.getBrineProperties();
+        return fprop.m_saltConcentration;
+    } else {
+        // Not a water injection well => no salt (?).
         return 0.0;
     }
 }
