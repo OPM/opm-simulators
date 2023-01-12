@@ -27,7 +27,6 @@
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/parametersystem.hh>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
-#include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/input/eclipse/Schedule/Group/Group.hpp>
 #include <opm/input/eclipse/Schedule/SummaryState.hpp>
 #include <opm/simulators/wells/GasLiftCommon.hpp>
@@ -45,6 +44,7 @@ namespace Opm
 {
 
 class GasLiftOpt;
+class Well;
 
 class GasLiftGroupInfo : public GasLiftCommon
 {
