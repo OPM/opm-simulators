@@ -630,7 +630,7 @@ namespace Opm {
             for (int w = 0; w < nw; ++w) {
                 const Well& well_ecl = wells_ecl_[w];
 
-                if (well_ecl.getConnections().empty()) {
+                if (!well_ecl.hasConnections()) {
                     // No connections in this well.  Nothing to do.
                     continue;
                 }
@@ -1642,7 +1642,7 @@ namespace Opm {
         // corresponding "this->wells_ecl_[shutWell]".
 
         for (const auto& shutWell : this->local_shut_wells_) {
-            if (this->wells_ecl_[shutWell].getConnections().empty()) {
+            if (!this->wells_ecl_[shutWell].hasConnections()) {
                 // No connections in this well.  Nothing to do.
                 continue;
             }
