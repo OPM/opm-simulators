@@ -198,6 +198,8 @@ public:
 protected:
     bool getAllowCrossFlow() const;
 
+    double wfoam_() const;
+
     // definition of the struct OperabilityStatus
     struct OperabilityStatus {
         bool isOperableAndSolvable() const {
