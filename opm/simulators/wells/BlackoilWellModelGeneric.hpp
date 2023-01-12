@@ -343,6 +343,7 @@ protected:
     /// \brief get compressed index for interior cells (-1, otherwise
     virtual int compressedIndexForInterior(int cartesian_cell_idx) const = 0;
 
+    std::vector<int> getCellsForConnections(const Well& well) const;
 
     Schedule& schedule_;
     const SummaryState& summaryState_;

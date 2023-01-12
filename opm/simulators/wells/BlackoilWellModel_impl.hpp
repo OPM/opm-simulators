@@ -128,20 +128,7 @@ namespace Opm {
         // initialize the additional cell connections introduced by wells.
         for (const auto& well : schedule_wells)
         {
-            std::vector<int> wellCells;
-            // All possible connections of the well
-            const auto& connectionSet = well.getConnections();
-            wellCells.reserve(connectionSet.size());
-
-            for (std::size_t c = 0; c < connectionSet.size(); c++)
-            {
-                const auto& connection = connectionSet.get(c);
-                int compressed_idx = compressedIndexForInterior(connection.global_index());
-                if ( compressed_idx >= 0 ) { // Ignore connections in inactive/remote cells.
-                    wellCells.push_back(compressed_idx);
-                }
-            }
-
+            std::vector<int> wellCells = this->getCellsForConnections(well);
             for (int cellIdx : wellCells) {
                 neighbors[cellIdx].insert(wellCells.begin(),
                                           wellCells.end());
@@ -630,7 +617,7 @@ namespace Opm {
             for (int w = 0; w < nw; ++w) {
                 const Well& well_ecl = wells_ecl_[w];
 
-                if (well_ecl.getConnections().empty()) {
+                if (!well_ecl.hasConnections()) {
                     // No connections in this well.  Nothing to do.
                     continue;
                 }
@@ -1288,19 +1275,7 @@ namespace Opm {
         // initialize the additional cell connections introduced by wells.
         for ( const auto& well : schedule_wells )
         {
-            std::vector<int> compressed_well_perforations;
-            // All possible completions of the well
-            const auto& completionSet = well.getConnections();
-            compressed_well_perforations.reserve(completionSet.size());
-
-            for (const auto& connection: well.getConnections())
-            {
-                const int compressed_idx = compressedIndexForInterior(connection.global_index());
-                if ( compressed_idx >= 0 ) // Ignore completions in inactive/remote cells.
-                {
-                    compressed_well_perforations.push_back(compressed_idx);
-                }
-            }
+            std::vector<int> compressed_well_perforations = this->getCellsForConnections(well);
 
             // also include wells with no perforations in case
             std::sort(compressed_well_perforations.begin(),
@@ -1642,7 +1617,7 @@ namespace Opm {
         // corresponding "this->wells_ecl_[shutWell]".
 
         for (const auto& shutWell : this->local_shut_wells_) {
-            if (this->wells_ecl_[shutWell].getConnections().empty()) {
+            if (!this->wells_ecl_[shutWell].hasConnections()) {
                 // No connections in this well.  Nothing to do.
                 continue;
             }

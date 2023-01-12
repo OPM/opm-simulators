@@ -21,6 +21,7 @@
 
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 
 namespace Dune
 {
