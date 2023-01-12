@@ -72,6 +72,10 @@ protected:
     bool accelerationalPressureLossConsidered() const;
     bool frictionalPressureLossConsidered() const;
 
+    double getSegmentDp(const int seg,
+                        const double density,
+                        const std::vector<double>& seg_dp) const;
+
     const WellInterfaceGeneric& baseif_;
 };
 
