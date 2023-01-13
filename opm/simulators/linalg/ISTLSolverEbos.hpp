@@ -239,7 +239,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
               iterations_( 0 ),
               calls_( 0 ),
               converged_(false),
-              matrix_(),
+              matrix_(nullptr),
               parameters_(parameters)
         {
             initialize();
@@ -252,7 +252,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
               iterations_( 0 ),
               calls_( 0 ),
               converged_(false),
-              matrix_()
+              matrix_(nullptr)
         {
             parameters_.template init<TypeTag>(simulator_.vanguard().eclState().getSimulationConfig().useCPR());
             initialize();
@@ -341,7 +341,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         void prepare(const Matrix& M, Vector& b)
         {
             OPM_TIMEBLOCK(istlSolverEbosPrepare);        
-            static bool firstcall = true;
+            const bool firstcall = (matrix_ == nullptr);
 #if HAVE_MPI
             if (firstcall) {
                 const size_t size = M.N();
@@ -385,8 +385,6 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
 #else
             prepareFlexibleSolver();
 #endif
-
-            firstcall = false;
         }
 
 
