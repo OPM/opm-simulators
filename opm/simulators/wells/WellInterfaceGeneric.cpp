@@ -482,4 +482,19 @@ double WellInterfaceGeneric::wpolymer_() const
     }
 }
 
+int WellInterfaceGeneric::polymerTable_() const
+{
+    return this->well_ecl_.getPolymerProperties().m_skprpolytable;
+}
+
+int WellInterfaceGeneric::polymerWaterTable_() const
+{
+    return this->well_ecl_.getPolymerProperties().m_skprwattable;
+}
+
+int WellInterfaceGeneric::polymerInjTable_() const
+{
+    return this->well_ecl_.getPolymerProperties().m_plymwinjtable;
+}
+
 } // namespace Opm
