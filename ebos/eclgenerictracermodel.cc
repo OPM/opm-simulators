@@ -34,6 +34,8 @@
 #include <opm/input/eclipse/EclipseState/Phase.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/TracerVdTable.hpp>
 
+#include <opm/input/eclipse/Schedule/Well/WellTracerProperties.hpp>
+
 #include <dune/istl/operators.hh>
 #include <dune/istl/solvers.hh>
 #include <dune/istl/schwarz.hh>
@@ -70,6 +72,7 @@ struct TracerSolverSelector
     using TracerOperator = Dune::OverlappingSchwarzOperator<M, V, V, Comm>;
     using type = Dune::FlexibleSolver<TracerOperator>;
 };
+
 template<class Vector, class Grid, class Matrix>
 std::tuple<std::unique_ptr<Dune::OverlappingSchwarzOperator<Matrix,Vector,Vector,
                                                             Dune::OwnerOverlapCopyCommunication<int,int>>>,
@@ -111,7 +114,6 @@ EclGenericTracerModel(const GridView& gridView,
 {
 }
 
-
 template<class Grid,class GridView, class DofMapper, class Stencil, class Scalar>
 Scalar EclGenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
 tracerConcentration(int tracerIdx, int globalDofIdx) const
@@ -121,7 +123,6 @@ tracerConcentration(int tracerIdx, int globalDofIdx) const
 
     return tracerConcentration_[tracerIdx][globalDofIdx];
 }
-
 
 template<class Grid,class GridView, class DofMapper, class Stencil, class Scalar>
 void EclGenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
@@ -145,12 +146,18 @@ fname(int tracerIdx) const
 }
 
 template<class Grid,class GridView, class DofMapper, class Stencil, class Scalar>
+double EclGenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
+currentConcentration_(const Well& eclWell, const std::string& name) const
+{
+    return eclWell.getTracerProperties().getConcentration(name);
+}
+
+template<class Grid,class GridView, class DofMapper, class Stencil, class Scalar>
 const std::string& EclGenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
 name(int tracerIdx) const
 {
     return this->eclState_.tracer()[tracerIdx].name;
 }
-
 
 template<class Grid,class GridView, class DofMapper, class Stencil, class Scalar>
 void EclGenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::

@@ -44,6 +44,7 @@
 namespace Opm {
 
 class EclipseState;
+class Well;
 
 template<class Grid, class GridView, class DofMapper, class Stencil, class Scalar>
 class EclGenericTracerModel {
@@ -95,6 +96,8 @@ protected:
     bool linearSolve_(const TracerMatrix& M, TracerVector& x, TracerVector& b);
 
     bool linearSolveBatchwise_(const TracerMatrix& M, std::vector<TracerVector>& x, std::vector<TracerVector>& b);
+
+    double currentConcentration_(const Well& eclWell, const std::string& name) const;
 
     const GridView& gridView_;
     const EclipseState& eclState_;

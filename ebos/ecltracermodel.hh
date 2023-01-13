@@ -30,8 +30,6 @@
 
 #include <ebos/eclgenerictracermodel.hh>
 
-#include <opm/input/eclipse/Schedule/Well/WellTracerProperties.hpp>
-
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/simulators/utils/VectorVectorDataHandle.hpp>
 
@@ -341,7 +339,7 @@ protected:
 
         std::vector<double> wtracer(tr.numTracer());
         for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
-            wtracer[tIdx] = eclWell.getTracerProperties().getConcentration(this->name(tr.idx_[tIdx]));
+            wtracer[tIdx] = this->currentConcentration_(eclWell, this->name(tr.idx_[tIdx]));
         }
 
         for (auto& perfData : well.perforationData()) {
