@@ -199,7 +199,12 @@ protected:
     bool getAllowCrossFlow() const;
 
     double wfoam_() const;
+    double wpolymer_() const;
     double wsalt_() const;
+
+    int polymerTable_() const;
+    int polymerInjTable_() const;
+    int polymerWaterTable_() const;
 
     // definition of the struct OperabilityStatus
     struct OperabilityStatus {

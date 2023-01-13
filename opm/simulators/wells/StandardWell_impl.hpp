@@ -2056,7 +2056,7 @@ namespace Opm
               DeferredLogger& deferred_logger) const
     {
         if constexpr (Base::has_polymermw) {
-            const int water_table_id = this->well_ecl_.getPolymerProperties().m_skprwattable;
+            const int water_table_id = this->polymerWaterTable_();
             if (water_table_id <= 0) {
                 OPM_DEFLOG_THROW(std::runtime_error,
                                  fmt::format("Unused SKPRWAT table id used for well {}", name()),
@@ -2094,7 +2094,7 @@ namespace Opm
             if (poly_inj_conc == 0.) {
                 return sign * pskinwater(throughput, water_velocity_abs, deferred_logger);
             }
-            const int polymer_table_id = this->well_ecl_.getPolymerProperties().m_skprpolytable;
+            const int polymer_table_id = this->polymerTable_();
             if (polymer_table_id <= 0) {
                 OPM_DEFLOG_THROW(std::runtime_error,
                                  fmt::format("Unavailable SKPRPOLY table id used for well {}", name()),
@@ -2133,7 +2133,7 @@ namespace Opm
                DeferredLogger& deferred_logger) const
     {
         if constexpr (Base::has_polymermw) {
-            const int table_id = this->well_ecl_.getPolymerProperties().m_plymwinjtable;
+            const int table_id = this->polymerInjTable_();
             const auto& table_func = PolymerModule::getPlymwinjTable(table_id);
             const EvalWell throughput_eval(this->primary_variables_.numWellEq() + Indices::numEq, throughput);
             EvalWell molecular_weight(this->primary_variables_.numWellEq() + Indices::numEq, 0.);

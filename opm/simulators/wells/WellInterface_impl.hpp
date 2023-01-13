@@ -96,16 +96,7 @@ namespace Opm
     wpolymer() const
     {
         if constexpr (has_polymer) {
-            auto injectorType = this->well_ecl_.injectorType();
-
-            if (injectorType == InjectorType::WATER) {
-                WellPolymerProperties polymer = this->well_ecl_.getPolymerProperties();
-                const double polymer_injection_concentration = polymer.m_polymerConcentration;
-                return polymer_injection_concentration;
-            } else {
-                // Not a water injection well => no polymer.
-                return 0.0;
-            }
+            return this->wpolymer_();
         }
 
         return 0.0;
