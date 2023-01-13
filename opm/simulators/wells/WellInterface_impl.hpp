@@ -135,15 +135,7 @@ namespace Opm
     wsalt() const
     {
         if constexpr (has_brine) {
-            auto injectorType = this->well_ecl_.injectorType();
-
-            if (injectorType == InjectorType::WATER) {
-                WellBrineProperties fprop = this->well_ecl_.getBrineProperties();
-                return fprop.m_saltConcentration;
-            } else {
-                // Not a water injection well => no salt (?).
-                return 0.0;
-            }
+            return this->wsalt_();
         }
 
         return 0.0;
