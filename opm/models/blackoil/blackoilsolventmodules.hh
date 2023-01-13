@@ -999,36 +999,35 @@ private:
         const Evaluation bg = fs.invB(gasPhaseIdx);
         const Evaluation bs = solventInverseFormationVolumeFactor();
 
-        // Set the effective invB factors
-        fs.setInvB(oilPhaseIdx, pmisc * bOilEff + (1.0 - pmisc) * bo);
-        fs.setInvB(gasPhaseIdx, pmisc * bGasEff + (1.0 - pmisc) * bg);
-        solventInvFormationVolumeFactor_ = pmisc * bSolventEff + (1.0 - pmisc) * bs;
+        const Evaluation bo_eff = pmisc * bOilEff + (1.0 - pmisc) * bo;
+        const Evaluation bg_eff = pmisc * bGasEff + (1.0 - pmisc) * bg;
+        const Evaluation bs_eff = pmisc * bSolventEff + (1.0 - pmisc) * bs;
 
         // set the densities
         fs.setDensity(oilPhaseIdx,
-                      fs.invB(oilPhaseIdx)
+                      bo_eff
                       *(FluidSystem::referenceDensity(oilPhaseIdx, pvtRegionIdx)
                         + FluidSystem::referenceDensity(gasPhaseIdx, pvtRegionIdx)*fs.Rs()));
         fs.setDensity(gasPhaseIdx,
-                      fs.invB(gasPhaseIdx)
+                      bg_eff
                       *(FluidSystem::referenceDensity(gasPhaseIdx, pvtRegionIdx)
                         + FluidSystem::referenceDensity(oilPhaseIdx, pvtRegionIdx)*fs.Rv()));
-        solventDensity_ = solventInverseFormationVolumeFactor()*solventRefDensity();
+        solventDensity_ = bs_eff*solventRefDensity();
 
         // set the viscosity / mobility
         // TODO make it possible to store and modify the viscosity in fs directly
 
         // keep the mu*b interpolation
         Evaluation& mobo = asImp_().mobility_[oilPhaseIdx];
-        muOilEff = fs.invB(oilPhaseIdx) / (pmisc * bOilEff / muOilEff + (1.0 - pmisc) * bo / muOil);
+        muOilEff = bo_eff / (pmisc * bOilEff / muOilEff + (1.0 - pmisc) * bo / muOil);
         mobo *= muOil / muOilEff;
 
         Evaluation& mobg = asImp_().mobility_[gasPhaseIdx];
-        muGasEff = fs.invB(gasPhaseIdx) / (pmisc * bGasEff / muGasEff + (1.0 - pmisc) * bg / muGas);
+        muGasEff = bg_eff / (pmisc * bGasEff / muGasEff + (1.0 - pmisc) * bg / muGas);
         mobg *= muGas / muGasEff;
 
         // Update viscosity of solvent
-        solventViscosity_ = solventInvFormationVolumeFactor_ / (pmisc * bSolventEff / muSolventEff + (1.0 - pmisc) * bs / muSolvent);
+        solventViscosity_ = bs_eff / (pmisc * bSolventEff / muSolventEff + (1.0 - pmisc) * bs / muSolvent);
     }
 
 protected:
