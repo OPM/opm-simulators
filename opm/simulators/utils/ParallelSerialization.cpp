@@ -51,6 +51,7 @@
 #include <opm/input/eclipse/Schedule/Well/WellBrineProperties.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellFoamProperties.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellTracerProperties.hpp>
 
 #include <ebos/eclmpiserializer.hh>
 

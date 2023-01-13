@@ -339,7 +339,7 @@ protected:
 
         std::vector<double> wtracer(tr.numTracer());
         for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
-            wtracer[tIdx] = eclWell.getTracerProperties().getConcentration(this->name(tr.idx_[tIdx]));
+            wtracer[tIdx] = this->currentConcentration_(eclWell, this->name(tr.idx_[tIdx]));
         }
 
         for (auto& perfData : well.perforationData()) {
