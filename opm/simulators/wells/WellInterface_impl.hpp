@@ -138,16 +138,7 @@ namespace Opm
     wmicrobes() const
     {
       if constexpr (has_micp) {
-          auto injectorType = this->well_ecl_.injectorType();
-
-          if (injectorType == InjectorType::WATER) {
-              WellMICPProperties microbes = this->well_ecl_.getMICPProperties();
-              const double microbial_injection_concentration = microbes.m_microbialConcentration;
-              return microbial_injection_concentration;
-          } else {
-              // Not a water injection well => no microbes.
-              return 0.0;
-          }
+          return this->wmicrobes_();
       }
 
       return 0.0;
@@ -159,16 +150,7 @@ namespace Opm
     woxygen() const
     {
       if constexpr (has_micp) {
-          auto injectorType = this->well_ecl_.injectorType();
-
-          if (injectorType == InjectorType::WATER) {
-              WellMICPProperties oxygen = this->well_ecl_.getMICPProperties();
-              const double oxygen_injection_concentration = oxygen.m_oxygenConcentration;
-              return oxygen_injection_concentration;
-          } else {
-              // Not a water injection well => no oxygen.
-              return 0.0;
-          }
+          return this->woxygen_();
       }
 
       return 0.0;
@@ -186,16 +168,7 @@ namespace Opm
     wurea() const
     {
       if constexpr (has_micp) {
-          auto injectorType = this->well_ecl_.injectorType();
-
-          if (injectorType == InjectorType::WATER) {
-              WellMICPProperties urea = this->well_ecl_.getMICPProperties();
-              const double urea_injection_concentration = urea.m_ureaConcentration / 10.; //Dividing by scaling factor 10
-              return urea_injection_concentration;
-          } else {
-              // Not a water injection well => no urea.
-              return 0.0;
-          }
+          return this->wurea_();
       }
 
       return 0.0;

@@ -25,6 +25,7 @@
 #include <opm/input/eclipse/Schedule/Well/WellBrineProperties.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellFoamProperties.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellMICPProperties.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellPolymerProperties.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
@@ -442,6 +443,20 @@ bool WellInterfaceGeneric::isPressureControlled(const WellState& well_state) con
     }
 }
 
+double WellInterfaceGeneric::wmicrobes_() const
+{
+    auto injectorType = this->well_ecl_.injectorType();
+
+    if (injectorType == InjectorType::WATER) {
+        WellMICPProperties microbes = this->well_ecl_.getMICPProperties();
+        const double microbial_injection_concentration = microbes.m_microbialConcentration;
+        return microbial_injection_concentration;
+    } else {
+        // Not a water injection well => no microbes.
+        return 0.0;
+    }
+}
+
 double WellInterfaceGeneric::wfoam_() const
 {
     auto injectorType = this->well_ecl_.injectorType();
@@ -468,6 +483,20 @@ double WellInterfaceGeneric::wsalt_() const
     }
 }
 
+double WellInterfaceGeneric::woxygen_() const
+{
+    auto injectorType = this->well_ecl_.injectorType();
+
+    if (injectorType == InjectorType::WATER) {
+        WellMICPProperties oxygen = this->well_ecl_.getMICPProperties();
+        const double oxygen_injection_concentration = oxygen.m_oxygenConcentration;
+        return oxygen_injection_concentration;
+    } else {
+        // Not a water injection well => no oxygen.
+        return 0.0;
+    }
+}
+
 double WellInterfaceGeneric::wpolymer_() const
 {
     auto injectorType = this->well_ecl_.injectorType();
@@ -478,6 +507,20 @@ double WellInterfaceGeneric::wpolymer_() const
         return polymer_injection_concentration;
     } else {
         // Not a water injection well => no polymer.
+        return 0.0;
+    }
+}
+
+double WellInterfaceGeneric::wurea_() const
+{
+    auto injectorType = this->well_ecl_.injectorType();
+
+    if (injectorType == InjectorType::WATER) {
+        WellMICPProperties urea = this->well_ecl_.getMICPProperties();
+        const double urea_injection_concentration = urea.m_ureaConcentration / 10.; //Dividing by scaling factor 10
+        return urea_injection_concentration;
+    } else {
+        // Not a water injection well => no urea.
         return 0.0;
     }
 }
