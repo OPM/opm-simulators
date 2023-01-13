@@ -121,15 +121,7 @@ namespace Opm
     wfoam() const
     {
         if constexpr (has_foam) {
-            auto injectorType = this->well_ecl_.injectorType();
-
-            if (injectorType == InjectorType::GAS) {
-                WellFoamProperties fprop = this->well_ecl_.getFoamProperties();
-                return fprop.m_foamConcentration;
-            } else {
-                // Not a gas injection well => no foam.
-                return 0.0;
-            }
+            return this->wfoam_();
         }
 
         return 0.0;

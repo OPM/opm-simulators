@@ -23,6 +23,7 @@
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellFoamProperties.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/PerforationData.hpp>
@@ -436,6 +437,19 @@ bool WellInterfaceGeneric::isPressureControlled(const WellState& well_state) con
         const Well::ProducerCMode& current = ws.production_cmode;
         return current == Well::ProducerCMode::THP ||
                current == Well::ProducerCMode::BHP;
+    }
+}
+
+double WellInterfaceGeneric::wfoam_() const
+{
+    auto injectorType = this->well_ecl_.injectorType();
+
+    if (injectorType == InjectorType::GAS) {
+        WellFoamProperties fprop = this->well_ecl_.getFoamProperties();
+        return fprop.m_foamConcentration;
+    } else {
+        // Not a gas injection well => no foam.
+        return 0.0;
     }
 }
 
