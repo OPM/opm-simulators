@@ -234,11 +234,11 @@ public:
                 if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
                     this->oilPressure_[globalDofIdx] = getValue(fs.pressure(oilPhaseIdx));
                 }else{
-                    // put pressure in oil pressure for output
-                    if (FluidSystem::phaseIsActive(waterPhaseIdx)) {
-                        this->oilPressure_[globalDofIdx] = getValue(fs.pressure(waterPhaseIdx));
-                    } else {
+                    // put pressure in oil pressure for output. Use gas if oil is not present
+                    if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
                         this->oilPressure_[globalDofIdx] = getValue(fs.pressure(gasPhaseIdx));
+                    } else { // use water if neither oil nor gas is present
+                        this->oilPressure_[globalDofIdx] = getValue(fs.pressure(waterPhaseIdx));
                     }
                 }
                 Valgrind::CheckDefined(this->oilPressure_[globalDofIdx]);
