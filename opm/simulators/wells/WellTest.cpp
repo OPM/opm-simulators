@@ -23,6 +23,7 @@
 #include <opm/simulators/wells/WellTest.hpp>
 
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellEconProductionLimits.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
