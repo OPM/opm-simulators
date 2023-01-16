@@ -682,7 +682,7 @@ assignToSolution(data::Solution& sol)
         {"PORV_RC",  UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     rockCompPorvMultiplier_},
         {"PPCW",     UnitSystem::measure::pressure,  data::TargetType::RESTART_SOLUTION,      ppcw_},
         {"PRESROCC", UnitSystem::measure::pressure,  data::TargetType::RESTART_SOLUTION,      minimumOilPressure_},
-        {"PRESSURE", UnitSystem::measure::pressure,  data::TargetType::RESTART_SOLUTION,      oilPressure_},
+        {"PRESSURE", UnitSystem::measure::pressure,  data::TargetType::RESTART_SOLUTION,      fluidPressure_},
         {"PCOW",     UnitSystem::measure::pressure,  data::TargetType::RESTART_SOLUTION,      pcow_},
         {"PCOG",     UnitSystem::measure::pressure,  data::TargetType::RESTART_SOLUTION,      pcog_},
         {"PRES_OVB", UnitSystem::measure::pressure,  data::TargetType::RESTART_SOLUTION,      overburdenPressure_},
@@ -788,8 +788,8 @@ setRestart(const data::Solution& sol,
     assert(!saturation_[oilPhaseIdx].empty());
     saturation_[oilPhaseIdx][elemIdx] = so;
 
-    if (!oilPressure_.empty() && sol.has("PRESSURE"))
-        oilPressure_[elemIdx] = sol.data("PRESSURE")[globalDofIndex];
+    if (!fluidPressure_.empty() && sol.has("PRESSURE"))
+        fluidPressure_[elemIdx] = sol.data("PRESSURE")[globalDofIndex];
     if (!temperature_.empty() && sol.has("TEMP"))
         temperature_[elemIdx] = sol.data("TEMP")[globalDofIndex];
     if (!rs_.empty() && sol.has("RS"))
@@ -969,7 +969,7 @@ doAllocBuffers(unsigned bufferSize,
         saturation_[phaseIdx].resize(bufferSize, 0.0);
     }
     // and oil pressure
-    oilPressure_.resize(bufferSize, 0.0);
+    fluidPressure_.resize(bufferSize, 0.0);
     rstKeywords["PRES"] = 0;
     rstKeywords["PRESSURE"] = 0;
 
