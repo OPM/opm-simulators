@@ -27,6 +27,9 @@
 #define PROPS_CENTROIDS_DATAHANDLE_HPP
 
 #if HAVE_MPI
+
+#include <opm/input/eclipse/EclipseState/Grid/FieldData.hpp>
+
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
 #include <opm/simulators/utils/ParallelRestart.hpp>
 #include <dune/grid/common/datahandleif.hh>
