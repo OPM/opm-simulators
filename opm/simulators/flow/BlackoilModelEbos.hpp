@@ -37,7 +37,6 @@
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/TableManager.hpp>
-#include <opm/input/eclipse/Units/Units.hpp>
 
 #include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
 #include <opm/simulators/flow/countGlobalCells.hpp>

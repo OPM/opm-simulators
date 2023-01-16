@@ -21,6 +21,8 @@
 
 #include <opm/common/Exceptions.hpp>
 
+#include <opm/input/eclipse/Units/Units.hpp>
+
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/StandardWellAssemble.hpp>
 #include <opm/simulators/wells/VFPHelpers.hpp>

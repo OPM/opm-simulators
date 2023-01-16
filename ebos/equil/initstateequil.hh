@@ -31,8 +31,6 @@
 
 #include <opm/models/utils/propertysystem.hh>
 
-#include <opm/input/eclipse/Units/Units.hpp>
-
 #include <opm/material/common/Tabulated1DFunction.hpp>
 #include <opm/material/fluidstates/SimpleModularFluidState.hpp>
 
@@ -687,7 +685,7 @@ public:
                          const Grid& grid,
                          const GridView& gridView,
                          const CartesianIndexMapper& cartMapper,
-                         const double grav = unit::gravity,
+                         const double grav,
                          const bool applySwatInit = true);
 
     using Vec = std::vector<double>;

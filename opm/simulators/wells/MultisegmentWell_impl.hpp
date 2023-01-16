@@ -22,6 +22,7 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/input/eclipse/Schedule/MSW/Valve.hpp>
+#include <opm/input/eclipse/Units/Units.hpp>
 
 #include <opm/material/densead/EvaluationFormat.hpp>
 
