@@ -60,6 +60,8 @@ enum class FileOutputMode {
 void
 ensureOutputDirExists(const std::string& cmdline_output_dir);
 
+std::unique_ptr<ParseContext> setupParseContext(const bool strictParsing);
+
 // Setup the OpmLog backends
 FileOutputMode
 setupLogging(int                mpi_rank_,
