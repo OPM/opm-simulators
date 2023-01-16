@@ -37,6 +37,8 @@
 
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
 
+#include <opm/output/eclipse/RestartValue.hpp>
+
 #include <dune/grid/common/partitionset.hh>
 
 #include <limits>
