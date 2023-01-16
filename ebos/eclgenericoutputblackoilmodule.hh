@@ -48,11 +48,11 @@ template<class FluidSystem, class Scalar>
 class EclGenericOutputBlackoilModule {
 public:
      Scalar* getPRESSURE_ptr(void) {
-        return (this->oilPressure_.data()) ;
+        return (this->fluidPressure_.data()) ;
     };
     
     int  getPRESSURE_size( void ) {
-        return (this->oilPressure_.size()) ;
+        return (this->fluidPressure_.size()) ;
     };
     
     // write cumulative production and injection reports to output
@@ -411,7 +411,7 @@ protected:
     ScalarBuffer pressureTimesPoreVolume_;
     ScalarBuffer pressureTimesHydrocarbonVolume_;
     ScalarBuffer dynamicPoreVolume_;
-    ScalarBuffer oilPressure_;
+    ScalarBuffer fluidPressure_;
     ScalarBuffer temperature_;
     ScalarBuffer rs_;
     ScalarBuffer rsw_;
