@@ -24,6 +24,7 @@
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
 #include <opm/simulators/linalg/bda/BlockedMatrix.hpp>
 
+#include <memory>
 #include <string>
 
 namespace Opm {

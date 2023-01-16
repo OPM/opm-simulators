@@ -20,8 +20,6 @@
 #ifndef OPM_AMGCLSOLVER_BACKEND_HEADER_INCLUDED
 #define OPM_AMGCLSOLVER_BACKEND_HEADER_INCLUDED
 
-#include <mutex>
-
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
 #include <opm/simulators/linalg/bda/BdaSolver.hpp>
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
@@ -37,6 +35,10 @@
 #include <amgcl/solver/bicgstab.hpp>
 #include <amgcl/preconditioner/runtime.hpp>
 #include <amgcl/value_type/static_matrix.hpp>
+
+#include <memory>
+#include <mutex>
+#include <vector>
 
 namespace Opm
 {
