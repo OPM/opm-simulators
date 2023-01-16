@@ -38,8 +38,6 @@
 #include <opm/material/common/Valgrind.hpp>
 
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
-#include <opm/input/eclipse/Units/Units.hpp>
-
 #include <opm/output/data/Cells.hpp>
 #include <opm/output/eclipse/EclipseIO.hpp>
 #include <opm/output/eclipse/Inplace.hpp>
