@@ -254,8 +254,13 @@ void EclActionHandler::evalUDQAssignments(const unsigned episodeIdx,
                                           UDQState& udq_state)
 {
     const auto& udq = schedule_[episodeIdx].udq();
-    const auto& well_matcher = schedule_.wellMatcher(episodeIdx);
-    udq.eval_assign(episodeIdx, schedule_, well_matcher, summaryState_, udq_state);
+
+    udq.eval_assign(episodeIdx,
+                    this->schedule_,
+                    this->schedule_.wellMatcher(episodeIdx),
+                    this->schedule_.segmentMatcherFactory(episodeIdx),
+                    this->summaryState_,
+                    udq_state);
 }
 
 } // namespace Opm
