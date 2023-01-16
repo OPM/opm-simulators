@@ -82,7 +82,7 @@ partitionCells(const int num_cells)
     const std::string method = "simple";
     // const std::string method = "file";
     if (method == "simple") {
-        return partitionCellsSimple(num_cells, 1);
+        return partitionCellsSimple(num_cells, 25);
     } else if (method == "file") {
         return partitionCellsFromFile(num_cells);
     } else {
