@@ -643,7 +643,7 @@ namespace Opm {
 
             // if the solution is updated, the intensive quantities need to be recalculated
             //ebosSimulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
-            ebosSimulator_.problem().updateCachedQuantities();///*time*/0);
+            ebosSimulator_.problem().updateCachedQuantities();
         }
 
         /// Return true if output to cout is wanted.

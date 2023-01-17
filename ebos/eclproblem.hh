@@ -60,6 +60,7 @@
 #include <opm/models/common/directionalmobility.hh>
 #include <opm/models/utils/pffgridvector.hh>
 #include <opm/models/blackoil/blackoilmodel.hh>
+#include <opm/models/blackoil/blackoilintensivequantitiessimple.hh>
 #include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
 
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
@@ -1449,8 +1450,10 @@ public:
     { return materialLawManager_; }
 
     void updateCachedQuantities(){
-        constexpr bool is_local = std::is_same<IntensiveQuantities, BlackoilIntensiveQuantitiesSimple<TypeTag> >::value;
-        if(is_local){
+        // use local update without element context if possible
+        constexpr bool is_local
+            = std::is_same<IntensiveQuantities, BlackOilIntensiveQuantitiesSimple<TypeTag> >::value;
+        if constexpr (is_local){
             const auto& solution = this->model().solution(/*timeIdx*/0);
             this->model().invalidateAndUpdateIntensiveQuantitiesSimple(*this,solution,/*timeIdx*/0);
         }else{
