@@ -28,7 +28,6 @@
 #include <opm/common/utility/TimeService.hpp>
 #include <opm/input/eclipse/EclipseState/Aquifer/NumericalAquifer/NumericalAquiferCell.hpp>
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/input/eclipse/Parser/ErrorGuard.hpp>
 #include <opm/input/eclipse/Parser/InputErrorAction.hpp>
 #include <opm/input/eclipse/Schedule/Action/State.hpp>
 #include <opm/input/eclipse/Schedule/OilVaporizationProperties.hpp>
@@ -101,7 +100,7 @@ void EclGenericVanguard::readDeck(const std::string& filename)
     Opm::readDeck(EclGenericVanguard::comm(),
                   filename, eclipseState, schedule, udqState,
                   actionState, wtestState,
-                  summaryConfig, nullptr, nullptr, false,
+                  summaryConfig, nullptr, false,
                   false, false, {});
 
     EclGenericVanguard::setParams(setupTimer.elapsed(),

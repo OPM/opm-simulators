@@ -515,7 +515,7 @@ private:
 
             readDeck(EclGenericVanguard::comm(), deckFilename, eclipseState_,
                      schedule_, udqState_, actionState_, wtestState_,
-                     summaryConfig_, nullptr, python, strictParsing,
+                     summaryConfig_, python, strictParsing,
                      init_from_restart_file, outputCout_, outputInterval);
 
             verifyValidCellGeometry(EclGenericVanguard::comm(), *this->eclipseState_);
