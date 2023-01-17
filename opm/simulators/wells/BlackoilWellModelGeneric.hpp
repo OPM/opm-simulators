@@ -345,6 +345,9 @@ protected:
 
     std::vector<int> getCellsForConnections(const Well& well) const;
 
+    std::vector<std::string> getWellsForTesting(const int timeStepIdx,
+                                                const double simulationTime);
+
     Schedule& schedule_;
     const SummaryState& summaryState_;
     const EclipseState& eclState_;

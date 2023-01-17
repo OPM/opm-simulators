@@ -1260,4 +1260,15 @@ getCellsForConnections(const Well& well) const
     return wellCells;
 }
 
+std::vector<std::string>
+BlackoilWellModelGeneric::getWellsForTesting(const int timeStepIdx,
+                                             const double simulationTime)
+{
+  const auto& wtest_config = schedule()[timeStepIdx].wtest_config();
+  if (!wtest_config.empty()) { // there is a WTEST request
+      return wellTestState().test_wells(wtest_config, simulationTime);
+  } else
+      return {};
+}
+
 }
