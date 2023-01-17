@@ -134,11 +134,11 @@ namespace Amg
             double denominator = 1.0;
             double rs = Toolbox::template decay<double>(fs.Rs());
             double rv = Toolbox::template decay<double>(fs.Rv());
-            const auto& meaning = solution[index].primaryVarsMeaning();
-            if (meaning == PrimaryVariables::Sw_pg_Rv) {
+            const auto& priVars = solution[index];
+            if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rv) {
                 rs = 0.0;
             }
-            if (meaning == PrimaryVariables::Sw_po_Rs) {
+            if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs) {
                 rv = 0.0;
             }
             if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)
@@ -166,16 +166,20 @@ namespace Amg
             if(false){
                 // usure about the best for undersaturated
                 
-                if ((meaning == PrimaryVariables::Sw_pg_Rv) || (meaning == PrimaryVariables::Sw_po_Rs)) {
+                if (
+                    (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rv)
+                    ||
+                    (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs)
+                    ) {
                     // Probably not need bweiths may be initialized to zero anyway
                     unsigned activeCompIdx = -10;
-                    if (meaning == PrimaryVariables::Sw_pg_Rv) {
+                    if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rv) {
                         // only water and gas pressent
                         activeCompIdx = Indices::canonicalToActiveComponentIndex(
                         FluidSystem::solventComponentIndex(FluidSystem::oilCompIdx));                       
                         bweights[activeCompIdx] = 0.0;
                                                                                          }
-                    if (meaning == PrimaryVariables::Sw_po_Rs) {
+                    if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs) {
                         // only water and oil pressent
                         activeCompIdx = Indices::canonicalToActiveComponentIndex(
                             FluidSystem::solventComponentIndex(FluidSystem::gasCompIdx));
