@@ -53,7 +53,6 @@ namespace Opm {
 namespace Action { class State; }
 class Deck;
 class EclipseState;
-class ErrorGuard;
 struct NumericalAquiferCell;
 class ParseContext;
 class Schedule;

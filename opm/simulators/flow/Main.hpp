@@ -49,7 +49,6 @@
 #include <flow/flow_ebos_oilwater_polymer_injectivity.hpp>
 #include <flow/flow_ebos_micp.hpp>
 
-#include <opm/input/eclipse/Parser/ErrorGuard.hpp>
 #include <opm/input/eclipse/Python/Python.hpp>
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/Schedule/UDQ/UDQState.hpp>
@@ -515,7 +514,7 @@ private:
 
             readDeck(EclGenericVanguard::comm(), deckFilename, eclipseState_,
                      schedule_, udqState_, actionState_, wtestState_,
-                     summaryConfig_, nullptr, python, strictParsing,
+                     summaryConfig_, python, strictParsing,
                      init_from_restart_file, outputCout_, outputInterval);
 
             verifyValidCellGeometry(EclGenericVanguard::comm(), *this->eclipseState_);

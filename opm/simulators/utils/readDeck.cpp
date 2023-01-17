@@ -487,16 +487,13 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
                    std::unique_ptr<Action::State>& actionState,
                    std::unique_ptr<WellTestState>& wtestState,
                    std::shared_ptr<SummaryConfig>& summaryConfig,
-                   std::unique_ptr<ErrorGuard>     errorGuard,
                    std::shared_ptr<Python>         python,
                    const bool                      strictParsing,
                    const bool                      initFromRestart,
                    const bool                      checkDeck,
                    const std::optional<int>&       outputInterval)
 {
-    if (errorGuard == nullptr) {
-        errorGuard = std::make_unique<ErrorGuard>();
-    }
+    auto errorGuard = std::make_unique<ErrorGuard>();
 
     int parseSuccess = 1; // > 0 is success
     std::string failureMessage;
