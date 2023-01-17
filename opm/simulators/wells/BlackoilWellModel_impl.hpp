@@ -379,30 +379,24 @@ namespace Opm {
                                             const double simulationTime,
                                             DeferredLogger& deferred_logger)
     {
-        const auto& wtest_config = schedule()[timeStepIdx].wtest_config();
-        if (!wtest_config.empty()) { // there is a WTEST request
-            const std::vector<std::string> wellsForTesting = wellTestState()
-                .test_wells(wtest_config, simulationTime);
-            for (const std::string& well_name : wellsForTesting) {
+        for (const std::string& well_name : this->getWellsForTesting(timeStepIdx, simulationTime)) {
+            const Well& wellEcl = schedule().getWell(well_name, timeStepIdx);
+            if (wellEcl.getStatus() == Well::Status::SHUT)
+                continue;
 
-                const Well& wellEcl = schedule().getWell(well_name, timeStepIdx);
-                if (wellEcl.getStatus() == Well::Status::SHUT)
-                    continue;
+            WellInterfacePtr well = createWellForWellTest(well_name, timeStepIdx, deferred_logger);
+            // some preparation before the well can be used
+            well->init(&phase_usage_, depth_, gravity_, local_num_cells_, B_avg_, true);
 
-                WellInterfacePtr well = createWellForWellTest(well_name, timeStepIdx, deferred_logger);
-                // some preparation before the well can be used
-                well->init(&phase_usage_, depth_, gravity_, local_num_cells_, B_avg_, true);
+            double well_efficiency_factor = wellEcl.getEfficiencyFactor();
+            WellGroupHelpers::accumulateGroupEfficiencyFactor(schedule().getGroup(wellEcl.groupName(), timeStepIdx),
+                                                              schedule(), timeStepIdx, well_efficiency_factor);
 
-                double well_efficiency_factor = wellEcl.getEfficiencyFactor();
-                WellGroupHelpers::accumulateGroupEfficiencyFactor(schedule().getGroup(wellEcl.groupName(), timeStepIdx),
-                                                                  schedule(), timeStepIdx, well_efficiency_factor);
+            well->setWellEfficiencyFactor(well_efficiency_factor);
+            well->setVFPProperties(vfp_properties_.get());
+            well->setGuideRate(&guideRate_);
 
-                well->setWellEfficiencyFactor(well_efficiency_factor);
-                well->setVFPProperties(vfp_properties_.get());
-                well->setGuideRate(&guideRate_);
-
-                well->wellTesting(ebosSimulator_, simulationTime, this->wellState(), this->groupState(), wellTestState(), deferred_logger);
-            }
+            well->wellTesting(ebosSimulator_, simulationTime, this->wellState(), this->groupState(), wellTestState(), deferred_logger);
         }
     }
 
