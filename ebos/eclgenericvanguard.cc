@@ -30,7 +30,6 @@
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/Parser/ErrorGuard.hpp>
 #include <opm/input/eclipse/Parser/InputErrorAction.hpp>
-#include <opm/input/eclipse/Parser/ParseContext.hpp>
 #include <opm/input/eclipse/Schedule/Action/State.hpp>
 #include <opm/input/eclipse/Schedule/OilVaporizationProperties.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
@@ -99,17 +98,10 @@ void EclGenericVanguard::readDeck(const std::string& filename)
     std::unique_ptr<Opm::WellTestState> wtestState;
     std::shared_ptr<Opm::SummaryConfig> summaryConfig;
 
-    auto parseContext =
-        std::make_unique<ParseContext>(std::vector<std::pair<std::string , InputErrorAction>>
-                                            {{ParseContext::PARSE_RANDOM_SLASH, InputErrorAction::IGNORE},
-                                             {ParseContext::PARSE_MISSING_DIMS_KEYWORD, InputErrorAction::WARN},
-                                             {ParseContext::SUMMARY_UNKNOWN_WELL, InputErrorAction::WARN},
-                                             {ParseContext::SUMMARY_UNKNOWN_GROUP, InputErrorAction::WARN}});
-
     Opm::readDeck(EclGenericVanguard::comm(),
                   filename, eclipseState, schedule, udqState,
                   actionState, wtestState,
-                  summaryConfig, nullptr, nullptr, std::move(parseContext),
+                  summaryConfig, nullptr, nullptr, false,
                   false, false, {});
 
     EclGenericVanguard::setParams(setupTimer.elapsed(),

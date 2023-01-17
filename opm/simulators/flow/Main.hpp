@@ -50,7 +50,6 @@
 #include <flow/flow_ebos_micp.hpp>
 
 #include <opm/input/eclipse/Parser/ErrorGuard.hpp>
-#include <opm/input/eclipse/Parser/ParseContext.hpp>
 #include <opm/input/eclipse/Python/Python.hpp>
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/Schedule/UDQ/UDQState.hpp>
@@ -502,7 +501,6 @@ private:
                                       EWOMS_GET_PARAM(PreTypeTag, std::string, OutputMode),
                                       outputCout_, "STDOUT_LOGGER", allRanksDbgPrtLog);
             const bool strictParsing = EWOMS_GET_PARAM(PreTypeTag, bool, EclStrictParsing);
-            auto parseContext = setupParseContext(strictParsing);
 
             FlowMainEbos<PreTypeTag>::printPRTHeader(outputCout_);
 
@@ -517,7 +515,7 @@ private:
 
             readDeck(EclGenericVanguard::comm(), deckFilename, eclipseState_,
                      schedule_, udqState_, actionState_, wtestState_,
-                     summaryConfig_, nullptr, python, std::move(parseContext),
+                     summaryConfig_, nullptr, python, strictParsing,
                      init_from_restart_file, outputCout_, outputInterval);
 
             verifyValidCellGeometry(EclGenericVanguard::comm(), *this->eclipseState_);
@@ -718,7 +716,7 @@ private:
 
         return flowEbosWaterOnlyMain(argc_, argv_, outputCout_, outputFiles_);
     }
-    
+
     int runWaterOnlyEnergy(const Phases& phases)
     {
         if (!phases.active(Phase::WATER) || phases.size() != 2) {
@@ -742,7 +740,7 @@ private:
             return EXIT_FAILURE;
         }
 
-        if (phases.size() == 3) { 
+        if (phases.size() == 3) {
 
             if (phases.active(Phase::OIL)){ // oil water brine case
                 return flowEbosOilWaterBrineMain(argc_, argv_, outputCout_, outputFiles_);
@@ -752,7 +750,7 @@ private:
                     eclipseState_->getSimulationConfig().hasVAPWAT()) {
                     //case with water vaporization into gas phase and salt precipitation
                     return flowEbosGasWaterSaltprecVapwatMain(argc_, argv_, outputCout_, outputFiles_);
-                } 
+                }
                 else {
                     return flowEbosGasWaterBrineMain(argc_, argv_, outputCout_, outputFiles_);
                 }
