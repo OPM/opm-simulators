@@ -49,7 +49,6 @@
 #include <flow/flow_ebos_oilwater_polymer_injectivity.hpp>
 #include <flow/flow_ebos_micp.hpp>
 
-#include <opm/input/eclipse/Parser/ErrorGuard.hpp>
 #include <opm/input/eclipse/Python/Python.hpp>
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/Schedule/UDQ/UDQState.hpp>
