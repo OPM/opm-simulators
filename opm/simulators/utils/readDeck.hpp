@@ -86,7 +86,7 @@ void readDeck(Parallel::Communication         comm,
               std::shared_ptr<SummaryConfig>& summaryConfig,
               std::unique_ptr<ErrorGuard>     errorGuard,
               std::shared_ptr<Python>         python,
-              std::unique_ptr<ParseContext>   parseContext,
+              bool                            strictParsing,
               bool                            initFromRestart,
               bool                            checkDeck,
               const std::optional<int>&       outputInterval);

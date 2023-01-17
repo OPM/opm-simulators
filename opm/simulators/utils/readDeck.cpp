@@ -489,7 +489,7 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
                    std::shared_ptr<SummaryConfig>& summaryConfig,
                    std::unique_ptr<ErrorGuard>     errorGuard,
                    std::shared_ptr<Python>         python,
-                   std::unique_ptr<ParseContext>   parseContext,
+                   const bool                      strictParsing,
                    const bool                      initFromRestart,
                    const bool                      checkDeck,
                    const std::optional<int>&       outputInterval)
@@ -503,6 +503,7 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
 
     if (comm.rank() == 0) { // Always true when !HAVE_MPI
         try {
+            auto parseContext = setupParseContext(strictParsing);
             readOnIORank(comm, deckFilename, parseContext.get(),
                          eclipseState, schedule, udqState, actionState, wtestState,
                          summaryConfig, std::move(python), initFromRestart,
