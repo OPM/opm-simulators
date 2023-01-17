@@ -34,6 +34,7 @@
 #include <opm/input/eclipse/EclipseState/Phase.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/TracerVdTable.hpp>
 
+#include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellTracerProperties.hpp>
 
 #include <dune/istl/operators.hh>
