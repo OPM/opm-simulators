@@ -26,6 +26,12 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <dune/common/timer.hh>
 
+// WellContributions are included via the solver
+// MultisegmentWellContribution includes the cuda runtime if found by CMake
+// this leads to inclusion of both amd_hip_vector_types.h and vector_types.h
+// which both define vector types like uchar2, short3 and double4.
+#undef HAVE_CUDA
+
 #include <opm/simulators/linalg/bda/rocalutionSolverBackend.hpp>
 
 #include <rocalution.hpp>

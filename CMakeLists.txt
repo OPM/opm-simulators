@@ -209,6 +209,14 @@ else()
   endif()
 endif()
 
+find_package(rocblas)
+find_package(rocsparse)
+
+if(rocsparse_FOUND AND rocblas_FOUND)
+  set(HAVE_ROCSPARSE 1)
+  set(COMPILE_BDA_BRIDGE 1)
+endif()
+
 find_package(amgcl)
 if(amgcl_FOUND)
   set(HAVE_AMGCL 1)
@@ -529,6 +537,11 @@ endif()
 
 if(ROCALUTION_FOUND)
   target_include_directories(opmsimulators PUBLIC ${rocalution_INCLUDE_DIR}/rocalution)
+endif()
+
+if(rocsparse_FOUND AND rocblas_FOUND)
+  target_link_libraries( opmsimulators PUBLIC rocsparse )
+  target_link_libraries( opmsimulators PUBLIC rocblas )
 endif()
 
 if(VexCL_FOUND)
