@@ -27,6 +27,10 @@
 
 #include <opm/simulators/utils/readDeck.hpp>
 
+#if HAVE_DAMARIS
+#include <opm/simulators/utils/DamarisOutputModule.hpp>
+#endif
+
 namespace Opm {
 
 Main::Main(int argc, char** argv)
@@ -210,5 +214,29 @@ void Main::setupVanguard()
                                   std::move(this->wtestState_),
                                   this->summaryConfig_);
 }
+
+#if HAVE_DAMARIS
+void Main::setupDamaris(const std::string& outputDir)
+{
+    // By default EnableDamarisOutputCollective is true so all simulation results will
+    // be written into one single file for each iteration using Parallel HDF5.
+    // It set to false, FilePerCore mode is used in Damaris, then simulation results in each
+    // node are aggregated by dedicated Damaris cores and stored to separate files per Damaris core.
+    // Irrespective of mode, output is written asynchronously at the end of each timestep.
+    const bool enableDamarisOutputCollective = EWOMS_GET_PARAM(PreTypeTag, bool, EnableDamarisOutputCollective);
+    // Using the ModifyModel class to set the XML file for Damaris.
+    DamarisOutput::initializeDamaris(EclGenericVanguard::comm(), EclGenericVanguard::comm().rank(), outputDir, enableDamarisOutputCollective);
+    int is_client;
+    MPI_Comm new_comm;
+    int err = damaris_start(&is_client);
+    isSimulationRank_ = (is_client > 0);
+    if (isSimulationRank_ && err == DAMARIS_OK) {
+        damaris_client_comm_get(&new_comm);
+        EclGenericVanguard::setCommunication(std::make_unique<Parallel::Communication>(new_comm));
+    } else {
+        return false;
+    }
+}
+#endif
 
 } // namespace Opm
