@@ -20,12 +20,12 @@
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif // HAVE_CONFIG_H
+#include <opm/simulators/wells/GlobalWellInfo.hpp>
+
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
+#include <opm/input/eclipse/Schedule/Well/Well.hpp>
 
 #include <stdexcept>
-
-#include <opm/simulators/wells/GlobalWellInfo.hpp>
-#include <opm/input/eclipse/Schedule/Schedule.hpp>
-
 
 namespace Opm {
 
