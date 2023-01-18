@@ -27,7 +27,6 @@
 #include <opm/core/props/BlackoilPhases.hpp>
 
 #include <opm/input/eclipse/Schedule/ScheduleTypes.hpp>
-#include <opm/input/eclipse/Schedule/Well/Well.hpp>
 
 #include <functional>
 
@@ -41,6 +40,8 @@ class Schedule;
 class SummaryState;
 template<class FluidSystem> class WellInterfaceFluidSystem;
 class WellState;
+class WellInjectionControls;
+class WellProductionControls;
 
 template<class FluidSystem>
 class WellAssemble {
@@ -56,7 +57,7 @@ public:
                                const GroupState& group_state,
                                const Schedule& schedule,
                                const SummaryState& summaryState,
-                               const Well::ProductionControls& controls,
+                               const WellProductionControls& controls,
                                const EvalWell& bhp,
                                const std::vector<EvalWell>& rates, // Always 3 canonical rates.
                                const std::function<EvalWell()>& bhp_from_thp,
@@ -68,7 +69,7 @@ public:
                               const GroupState& group_state,
                               const Schedule& schedule,
                               const SummaryState& summaryState,
-                              const Well::InjectionControls& controls,
+                              const WellInjectionControls& controls,
                               const EvalWell& bhp,
                               const EvalWell& injection_rate,
                               const std::function<EvalWell()>& bhp_from_thp,
