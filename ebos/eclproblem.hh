@@ -1698,6 +1698,9 @@ public:
      */
     bool recycleFirstIterationStorage() const
     {
+        if (this->simulator().timeStepIndex() == 0)
+             return true;
+
         int episodeIdx = this->episodeIndex();
         return !this->drsdtActive_(episodeIdx) &&
                !this->drvdtActive_(episodeIdx) &&
