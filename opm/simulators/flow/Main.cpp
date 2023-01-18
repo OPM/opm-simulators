@@ -24,6 +24,7 @@
 #include <opm/simulators/flow/Main.hpp>
 
 #include <opm/input/eclipse/Python/Python.hpp>
+#include <opm/input/eclipse/Schedule/UDQ/UDQState.hpp>
 
 #include <opm/simulators/utils/readDeck.hpp>
 

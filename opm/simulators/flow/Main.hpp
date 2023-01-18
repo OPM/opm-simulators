@@ -50,7 +50,6 @@
 #include <flow/flow_ebos_micp.hpp>
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/input/eclipse/Schedule/UDQ/UDQState.hpp>
 #include <opm/input/eclipse/Schedule/Action/State.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
 
@@ -91,6 +90,8 @@ struct FlowEarlyBird {
 } // namespace Opm::Properties
 
 namespace Opm {
+
+class UDQState;
 
 // ----------------- Main program -----------------
 template <class TypeTag>
