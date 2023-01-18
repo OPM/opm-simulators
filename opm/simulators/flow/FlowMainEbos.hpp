@@ -35,7 +35,6 @@
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/IOConfig/IOConfig.hpp>
 #include <opm/input/eclipse/EclipseState/InitConfig/InitConfig.hpp>
-#include <opm/input/eclipse/Schedule/UDQ/UDQState.hpp>
 #include <opm/common/utility/String.hpp>
 
 #include <fmt/format.h>

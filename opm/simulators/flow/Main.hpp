@@ -49,17 +49,12 @@
 #include <flow/flow_ebos_oilwater_polymer_injectivity.hpp>
 #include <flow/flow_ebos_micp.hpp>
 
-#include <opm/input/eclipse/Python/Python.hpp>
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/input/eclipse/Schedule/UDQ/UDQState.hpp>
-#include <opm/input/eclipse/Schedule/Action/State.hpp>
-#include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
 
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/parametersystem.hh>
 
 #include <opm/simulators/flow/FlowMainEbos.hpp>
-#include <opm/simulators/utils/readDeck.hpp>
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/misc/mpimanager.hh>
@@ -71,13 +66,8 @@
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
 #endif
 
-#if HAVE_DAMARIS
-#include <opm/simulators/utils/DamarisOutputModule.hpp>
-#endif
-
 #include <cassert>
 #include <cstdlib>
-#include <filesystem>
 #include <iostream>
 #include <memory>
 #include <stdexcept>
@@ -98,6 +88,10 @@ struct FlowEarlyBird {
 } // namespace Opm::Properties
 
 namespace Opm {
+
+namespace Action { class State; }
+class UDQState;
+class WellTestState;
 
 // ----------------- Main program -----------------
 template <class TypeTag>
@@ -121,110 +115,23 @@ int flowEbosMain(int argc, char** argv, bool outputCout, bool outputFiles)
 class Main
 {
 public:
-    Main(int argc, char** argv) : argc_(argc), argv_(argv)  { initMPI();  }
+    Main(int argc, char** argv);
 
     // This constructor can be called from Python
-    Main(const std::string& filename)
-    {
-        setArgvArgc_(filename);
-        initMPI();
-    }
+    Main(const std::string& filename);
 
     // This constructor can be called from Python when Python has
     // already parsed a deck
     Main(const std::string& filename,
          std::shared_ptr<EclipseState> eclipseState,
          std::shared_ptr<Schedule> schedule,
-         std::shared_ptr<SummaryConfig> summaryConfig)
-        : eclipseState_{std::move(eclipseState)}
-        , schedule_{std::move(schedule)}
-        , summaryConfig_{std::move(summaryConfig)}
-    {
-        setArgvArgc_(filename);
-        initMPI();
-    }
+         std::shared_ptr<SummaryConfig> summaryConfig);
 
+    ~Main();
 
-    ~Main()
-    {
-#if HAVE_MPI
-        if (test_split_comm_) {
-            // Cannot use EclGenericVanguard::comm()
-            // to get world size here, as it may be
-            // a split communication at this point.
-            int world_size;
-            MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-            if (world_size > 1) {
-                MPI_Comm new_comm = EclGenericVanguard::comm();
-                int result;
-                MPI_Comm_compare(MPI_COMM_WORLD, new_comm, &result);
-                assert(result == MPI_UNEQUAL);
-                MPI_Comm_free(&new_comm);
-            }
-        }
-#endif // HAVE_MPI
+    void setArgvArgc_(const std::string& filename);
 
-        EclGenericVanguard::setCommunication(nullptr);
-
-#if HAVE_DAMARIS
-        if (enableDamarisOutput_) {
-            int err;
-            if (isSimulationRank_) {
-                err = damaris_stop();
-                if (err != DAMARIS_OK) {
-                    std::cerr << "ERROR: Damaris library produced an error result for damaris_stop()" << std::endl;
-                }
-            }
-            err = damaris_finalize();
-            if (err != DAMARIS_OK) {
-                std::cerr << "ERROR: Damaris library produced an error result for damaris_finalize()" << std::endl;
-            }
-        }
-#endif // HAVE_DAMARIS
-
-#if HAVE_MPI && !HAVE_DUNE_FEM
-        MPI_Finalize();
-#endif
-    }
-
-    void setArgvArgc_(const std::string& filename)
-    {
-        this->deckFilename_ = filename;
-        this->flowProgName_ = "flow";
-
-        this->argc_ = 2;
-        this->saveArgs_[0] = const_cast<char *>(this->flowProgName_.c_str());
-        this->saveArgs_[1] = const_cast<char *>(this->deckFilename_.c_str());
-
-        // Note: argv[argc] must exist and be nullptr
-        assert ((sizeof this->saveArgs_) > (this->argc_ * sizeof this->saveArgs_[0]));
-        this->saveArgs_[this->argc_] = nullptr;
-
-        this->argv_ = this->saveArgs_;
-    }
-
-    void initMPI()
-    {
-#if HAVE_DUNE_FEM
-        Dune::Fem::MPIManager::initialize(argc_, argv_);
-#elif HAVE_MPI
-        MPI_Init(&argc_, &argv_);
-#endif
-        EclGenericVanguard::setCommunication(std::make_unique<Parallel::Communication>());
-
-        handleTestSplitCommunicatorCmdLine_();
-
-#if HAVE_MPI
-        if (test_split_comm_ && EclGenericVanguard::comm().size() > 1) {
-            int world_rank = EclGenericVanguard::comm().rank();
-            int color = (world_rank == 0);
-            MPI_Comm new_comm;
-            MPI_Comm_split(EclGenericVanguard::comm(), color, world_rank, &new_comm);
-            isSimulationRank_ = (world_rank > 0);
-            EclGenericVanguard::setCommunication(std::make_unique<Parallel::Communication>(new_comm));
-        }
-#endif // HAVE_MPI
-    }
+    void initMPI();
 
     int runDynamic()
     {
@@ -262,14 +169,7 @@ public:
         if (initialize_<Properties::TTag::FlowEarlyBird>(exitCode)) {
             // TODO: check that this deck really represents a blackoil
             // case. E.g. check that number of phases == 3
-            EclGenericVanguard::setParams(
-                setupTime_,
-                eclipseState_,
-                schedule_,
-                std::move(udqState_),
-                std::move(this->actionState_),
-                std::move(this->wtestState_),
-                summaryConfig_);
+            this->setupVanguard();
             return flowEbosBlackoilTpfaMainInit(
                 argc_, argv_, outputCout_, outputFiles_);
         } else {
@@ -284,13 +184,7 @@ private:
         const auto& rspec = this->eclipseState_->runspec();
         const auto& phases = rspec.phases();
 
-        EclGenericVanguard::setParams(this->setupTime_,
-                                      this->eclipseState_,
-                                      this->schedule_,
-                                      std::move(this->udqState_),
-                                      std::move(this->actionState_),
-                                      std::move(this->wtestState_),
-                                      this->summaryConfig_);
+        this->setupVanguard();
 
         // run the actual simulator
         //
@@ -304,12 +198,12 @@ private:
         }
 
         // water-only case
-        else if(phases.size() == 1 && phases.active(Phase::WATER) && !thermal) {
+        else if (phases.size() == 1 && phases.active(Phase::WATER) && !thermal) {
             return this->runWaterOnly(phases);
         }
 
         // water-only case with energy
-        else if(phases.size() == 2 && phases.active(Phase::WATER) && thermal) {
+        else if (phases.size() == 2 && phases.active(Phase::WATER) && thermal) {
             return this->runWaterOnlyEnergy(phases);
         }
 
@@ -367,13 +261,7 @@ private:
     template <class TypeTag>
     int dispatchStatic_()
     {
-        EclGenericVanguard::setParams(this->setupTime_,
-                                      this->eclipseState_,
-                                      this->schedule_,
-                                      std::move(this->udqState_),
-                                      std::move(this->actionState_),
-                                      std::move(this->wtestState_),
-                                      this->summaryConfig_);
+        this->setupVanguard();
         return flowEbosMain<TypeTag>(argc_, argv_, outputCout_, outputFiles_);
     }
 
@@ -435,29 +323,11 @@ private:
             if (!outputDir.empty()) {
                 ensureOutputDirExists(outputDir);
             }
-            // By default EnableDamarisOutputCollective is true so all simulation results will
-            // be written into one single file for each iteration using Parallel HDF5.
-            // It set to false, FilePerCore mode is used in Damaris, then simulation results in each
-            // node are aggregated by dedicated Damaris cores and stored to separate files per Damaris core.
-            // Irrespective of mode, output is written asynchronously at the end of each timestep.
-            const bool enableDamarisOutputCollective = EWOMS_GET_PARAM(PreTypeTag, bool, EnableDamarisOutputCollective);
-            // Using the ModifyModel class to set the XML file for Damaris.
-            DamarisOutput::initializeDamaris(EclGenericVanguard::comm(), EclGenericVanguard::comm().rank(), outputDir, enableDamarisOutputCollective);
-            int is_client;
-            MPI_Comm new_comm;
-            int err = damaris_start(&is_client);
-            isSimulationRank_ = (is_client > 0);
-            if (isSimulationRank_ && err == DAMARIS_OK) {
-                damaris_client_comm_get(&new_comm);
-                EclGenericVanguard::setCommunication(std::make_unique<Parallel::Communication>(new_comm));
-            } else {
-                return false;
-            }
+            this->setupDamaris(outputDir);
         }
 #endif // HAVE_DAMARIS
 
         int mpiRank = EclGenericVanguard::comm().rank();
-        FileOutputMode outputMode = FileOutputMode::OUTPUT_NONE;
         outputCout_ = false;
         if (mpiRank == 0)
             outputCout_ = EWOMS_GET_PARAM(PreTypeTag, bool, EnableTerminalOutput);
@@ -488,39 +358,18 @@ private:
         if (outputCout_) {
             FlowMainEbos<PreTypeTag>::printBanner(EclGenericVanguard::comm());
         }
+
         // Create Deck and EclipseState.
         try {
-            auto python = std::make_shared<Python>();
-            const bool init_from_restart_file = !EWOMS_GET_PARAM(PreTypeTag, bool, SchedRestart);
-            const bool allRanksDbgPrtLog = EWOMS_GET_PARAM(PreTypeTag, bool,
-                                                      EnableLoggingFalloutWarning);
-            outputMode = setupLogging(mpiRank,
-                                      deckFilename,
-                                      outputDir,
-                                      EWOMS_GET_PARAM(PreTypeTag, std::string, OutputMode),
-                                      outputCout_, "STDOUT_LOGGER", allRanksDbgPrtLog);
-            const bool strictParsing = EWOMS_GET_PARAM(PreTypeTag, bool, EclStrictParsing);
-
-            FlowMainEbos<PreTypeTag>::printPRTHeader(outputCout_);
-
-            if (outputCout_) {
-                OpmLog::info("Reading deck file '" + deckFilename + "'");
-            }
-
-            std::optional<int> outputInterval;
-            int output_param = EWOMS_GET_PARAM(PreTypeTag, int, EclOutputInterval);
-            if (output_param >= 0)
-                outputInterval = output_param;
-
-            readDeck(EclGenericVanguard::comm(), deckFilename, eclipseState_,
-                     schedule_, udqState_, actionState_, wtestState_,
-                     summaryConfig_, python, strictParsing,
-                     init_from_restart_file, outputCout_, outputInterval);
-
-            verifyValidCellGeometry(EclGenericVanguard::comm(), *this->eclipseState_);
-
+            this->readDeck(deckFilename,
+                           outputDir,
+                           EWOMS_GET_PARAM(PreTypeTag, std::string, OutputMode),
+                           !EWOMS_GET_PARAM(PreTypeTag, bool, SchedRestart),
+                           EWOMS_GET_PARAM(PreTypeTag, bool,  EnableLoggingFalloutWarning),
+                           EWOMS_GET_PARAM(PreTypeTag, bool, EclStrictParsing),
+                           mpiRank,
+                           EWOMS_GET_PARAM(PreTypeTag, int, EclOutputInterval));
             setupTime_ = externalSetupTimer.elapsed();
-            outputFiles_ = (outputMode != FileOutputMode::OUTPUT_NONE);
         }
         catch (const std::invalid_argument& e)
         {
@@ -539,34 +388,6 @@ private:
         return true;
     }
 
-    std::filesystem::path simulationCaseName_(const std::string& casename)
-    {
-        namespace fs = ::std::filesystem;
-
-        auto exists = [](const fs::path& f)
-        {
-            return (fs::exists(f) && fs::is_regular_file(f))
-                || (fs::is_symlink(f) &&
-                    fs::is_regular_file(fs::read_symlink(f)));
-        };
-
-        auto simcase = fs::path { casename };
-
-        if (exists(simcase)) {
-            return simcase;
-        }
-
-        for (const auto& ext : { std::string("DATA"), std::string("data") }) {
-            if (exists(simcase.replace_extension(ext))) {
-                return simcase;
-            }
-        }
-
-        throw std::invalid_argument {
-            "Cannot find input case '" + casename + '\''
-        };
-    }
-
     // This function is an extreme special case, if the program has been invoked
     // *exactly* as:
     //
@@ -574,19 +395,7 @@ private:
     //
     // the call is intercepted by this function which will print "flow $version"
     // on stdout and exit(0).
-    void handleVersionCmdLine_(int argc, char** argv)
-    {
-        auto pos = std::find_if(argv, argv + argc,
-            [](const char* arg)
-        {
-            return std::strcmp(arg, "--version") == 0;
-        });
-
-        if (pos != argv + argc) {
-            std::cout << "flow " << moduleVersionName() << std::endl;
-            std::exit(EXIT_SUCCESS);
-        }
-    }
+    void handleVersionCmdLine_(int argc, char** argv);
 
     // This function is a special case, if the program has been invoked
     // with the argument "--test-split-communicator=true" as the FIRST
@@ -594,15 +403,7 @@ private:
     // test_split_comm_ flag to true.
     // Note: initializing the parameter system before MPI could make this
     // use the parameter system instead.
-    void handleTestSplitCommunicatorCmdLine_()
-    {
-        if (argc_ >= 2 && std::strcmp(argv_[1], "--test-split-communicator=true") == 0) {
-            test_split_comm_ = true;
-            --argc_;             // We have one less argument.
-            argv_[1] = argv_[0]; // What used to be the first proper argument now becomes the command argument.
-            ++argv_;             // Pretend this is what it always was.
-        }
-    }
+    void handleTestSplitCommunicatorCmdLine_();
 
     int runMICP(const Phases& phases)
     {
@@ -802,6 +603,21 @@ private:
             return flowEbosBlackoilTpfaMain(argc_, argv_, outputCout_, outputFiles_);
         }
     }
+
+    void readDeck(const std::string& deckFilename,
+                  const std::string& outputDir,
+                  const std::string& outputMode,
+                  const bool init_from_restart_file,
+                  const bool allRanksDbgPrtLog,
+                  const bool strictParsing,
+                  const int mpiRank,
+                  const int output_param);
+
+    void setupVanguard();
+
+#if HAVE_DAMARIS
+    void setupDamaris(const std::string& outputDir);
+#endif
 
     int argc_{0};
     char** argv_{nullptr};
