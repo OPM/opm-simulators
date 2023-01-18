@@ -25,6 +25,7 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/input/eclipse/Schedule/MSW/WellSegments.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
+#include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
@@ -773,7 +774,7 @@ void WellState::shutWell(int well_index)
     ws.shut();
 }
 
-void WellState::updateStatus(int well_index, Well::Status status)
+void WellState::updateStatus(int well_index, WellStatus status)
 {
     auto& ws = this->well(well_index);
     ws.updateStatus(status);

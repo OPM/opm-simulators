@@ -22,12 +22,12 @@
 
 #include <opm/input/eclipse/Schedule/GasLiftOpt.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
+#include <opm/input/eclipse/Schedule/Well/Well.hpp>
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/wells/GasLiftWellState.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/WellState.hpp>
-
 
 #include <fmt/format.h>
 
@@ -455,7 +455,7 @@ GasLiftSingleWellGeneric::debugShowProducerControlMode() const
 {
     const int well_index = this->well_state_.index(this->well_name_).value();
     const Well::ProducerCMode& control_mode = this->well_state_.well(well_index).production_cmode;
-    const std::string msg = fmt::format("Current control mode is: {}", Well::ProducerCMode2String(control_mode));
+    const std::string msg = fmt::format("Current control mode is: {}", WellProducerCMode2String(control_mode));
     displayDebugMessage_(msg);
 }
 

@@ -25,12 +25,13 @@
 #include <string>
 #include <vector>
 
-#include <opm/input/eclipse/Schedule/Well/Well.hpp>
-
 namespace Opm {
 
 class Schedule;
 class Well;
+enum class WellInjectorCMode;
+enum class WellProducerCMode;
+enum class WellStatus;
 
 
 /*
@@ -71,8 +72,8 @@ public:
     bool in_injecting_group(const std::string& wname) const;
     std::size_t well_index(const std::string& wname) const;
     const std::string& well_name(std::size_t well_index) const;
-    void update_injector(std::size_t well_index, Well::Status well_status, Well::InjectorCMode injection_cmode);
-    void update_producer(std::size_t well_index, Well::Status well_status, Well::ProducerCMode production_cmode);
+    void update_injector(std::size_t well_index, WellStatus well_status, WellInjectorCMode injection_cmode);
+    void update_producer(std::size_t well_index, WellStatus well_status, WellProducerCMode production_cmode);
     void clear();
 
 private:

@@ -20,6 +20,8 @@
 #include <config.h>
 #include <opm/simulators/wells/SingleWellState.hpp>
 
+#include <opm/input/eclipse/Schedule/Well/Well.hpp>
+
 #include <opm/input/eclipse/Units/Units.hpp>
 
 #include <opm/simulators/wells/PerforationData.hpp>
