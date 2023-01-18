@@ -31,6 +31,7 @@
 #include <opm/output/data/Solution.hpp>
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 #include <opm/input/eclipse/Schedule/RFTConfig.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/SummaryState.hpp>
@@ -139,6 +140,10 @@ EclGenericOutputBlackoilModule(const EclipseState& eclState,
         this->regionNodes_[phase] = summaryConfig_.keywords(key_pattern);
     }
 }
+
+template<class FluidSystem, class Scalar>
+EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
+~EclGenericOutputBlackoilModule() = default;
 
 template<class FluidSystem, class Scalar>
 void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
@@ -1800,6 +1805,22 @@ updateSummaryRegionValues(const Inplace& inplace,
                              get_vector(node, Inplace::Phase::PressurePV),
                              get_vector(node, Inplace::Phase::DynamicPoreVolume),
                              false);
+        }
+    }
+}
+
+template<class FluidSystem,class Scalar>
+void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
+setupBlockData(std::function<bool(int)> isCartIdxOnThisRank)
+{
+    for (const auto& node : summaryConfig_) {
+        if ((node.category() == SummaryConfigNode::Category::Block) &&
+            isCartIdxOnThisRank(node.number() - 1))
+        {
+            this->blockData_.emplace(std::piecewise_construct,
+                                     std::forward_as_tuple(node.keyword(),
+                                                           node.number()),
+                                     std::forward_as_tuple(0.0));
         }
     }
 }

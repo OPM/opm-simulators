@@ -24,6 +24,7 @@
 #define EWOMS_ECL_GENERIC_OUTPUT_BLACK_OIL_MODULE_HH
 
 #include <array>
+#include <functional>
 #include <map>
 #include <numeric>
 #include <optional>
@@ -32,7 +33,6 @@
 
 #include <opm/output/data/Wells.hpp>
 #include <opm/output/eclipse/Inplace.hpp>
-#include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
@@ -42,6 +42,9 @@ namespace Opm {
 
 namespace data { class Solution; }
 class EclipseState;
+class Schedule;
+class SummaryConfig;
+class SummaryConfigNode;
 class SummaryState;
 
 template<class FluidSystem, class Scalar>
@@ -207,7 +210,7 @@ public:
     }
 
     // Virtual destructor for safer inheritance.
-    virtual ~EclGenericOutputBlackoilModule() = default;
+    virtual ~EclGenericOutputBlackoilModule();
 
 protected:
     using ScalarBuffer = std::vector<Scalar>;
@@ -370,6 +373,8 @@ protected:
                        const ScalarBuffer& values);
 
     static Scalar sum(const ScalarBuffer& v);
+
+    void setupBlockData(std::function<bool(int)> isCartIdxOnThisRank);
 
     virtual bool isDefunctParallelWell(std::string wname) const = 0;
 

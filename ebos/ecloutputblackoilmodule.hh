@@ -37,7 +37,6 @@
 
 #include <opm/material/common/Valgrind.hpp>
 
-#include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 #include <opm/output/data/Cells.hpp>
 #include <opm/output/eclipse/EclipseIO.hpp>
 #include <opm/output/eclipse/Inplace.hpp>
@@ -152,14 +151,12 @@ public:
             this->createLocalRegion_(region_pair.second);
         }
 
-        for (const auto& node : this->simulator_.vanguard().summaryConfig()) {
-            if ((node.category() == SummaryConfigNode::Category::Block)
-                && collectToIORank.isCartIdxOnThisRank(node.number() - 1)) {
-                this->blockData_.emplace(std::piecewise_construct,
-                                         std::forward_as_tuple(node.keyword(), node.number()),
-                                         std::forward_as_tuple(0.0));
-            }
-        }
+        auto isCartIdxOnThisRank = [&collectToIORank](int idx)
+                                   {
+                                       return collectToIORank.isCartIdxOnThisRank(idx);
+                                   };
+
+        this->setupBlockData(isCartIdxOnThisRank);
 
         for (const auto& global_index : wbp_index_list) {
             if (collectToIORank.isCartIdxOnThisRank(global_index - 1)) {
