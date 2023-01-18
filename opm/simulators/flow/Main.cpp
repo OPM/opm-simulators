@@ -23,6 +23,8 @@
 #include <config.h>
 #include <opm/simulators/flow/Main.hpp>
 
+#include <opm/simulators/utils/readDeck.hpp>
+
 namespace Opm {
 
 Main::Main(int argc, char** argv)
@@ -152,6 +154,48 @@ void Main::handleTestSplitCommunicatorCmdLine_()
         argv_[1] = argv_[0]; // What used to be the first proper argument now becomes the command argument.
         ++argv_;             // Pretend this is what it always was.
     }
+}
+
+void Main::readDeck(const std::string& deckFilename,
+                    const std::string& outputDir,
+                    const std::string& outputMode,
+                    const bool init_from_restart_file,
+                    const bool allRanksDbgPrtLog,
+                    const bool strictParsing,
+                    const int mpiRank,
+                    const int output_param)
+{
+    auto omode = setupLogging(mpiRank,
+                              deckFilename,
+                              outputDir,
+                              outputMode,
+                              outputCout_, "STDOUT_LOGGER", allRanksDbgPrtLog);
+
+    if (outputCout_) {
+        OpmLog::info("Reading deck file '" + deckFilename + "'");
+    }
+
+    std::optional<int> outputInterval;
+    if (output_param >= 0)
+        outputInterval = output_param;
+
+    Opm::readDeck(EclGenericVanguard::comm(),
+                  deckFilename,
+                  eclipseState_,
+                  schedule_,
+                  udqState_,
+                  actionState_,
+                  wtestState_,
+                  summaryConfig_,
+                  std::make_shared<Python>(),
+                  strictParsing,
+                  init_from_restart_file,
+                  outputCout_,
+                  outputInterval);
+
+    verifyValidCellGeometry(EclGenericVanguard::comm(), *this->eclipseState_);
+
+    outputFiles_ = (omode != FileOutputMode::OUTPUT_NONE);
 }
 
 } // namespace Opm

@@ -59,7 +59,6 @@
 #include <opm/models/utils/parametersystem.hh>
 
 #include <opm/simulators/flow/FlowMainEbos.hpp>
-#include <opm/simulators/utils/readDeck.hpp>
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/misc/mpimanager.hh>
@@ -369,7 +368,6 @@ private:
 #endif // HAVE_DAMARIS
 
         int mpiRank = EclGenericVanguard::comm().rank();
-        FileOutputMode outputMode = FileOutputMode::OUTPUT_NONE;
         outputCout_ = false;
         if (mpiRank == 0)
             outputCout_ = EWOMS_GET_PARAM(PreTypeTag, bool, EnableTerminalOutput);
@@ -400,39 +398,18 @@ private:
         if (outputCout_) {
             FlowMainEbos<PreTypeTag>::printBanner(EclGenericVanguard::comm());
         }
+
         // Create Deck and EclipseState.
         try {
-            auto python = std::make_shared<Python>();
-            const bool init_from_restart_file = !EWOMS_GET_PARAM(PreTypeTag, bool, SchedRestart);
-            const bool allRanksDbgPrtLog = EWOMS_GET_PARAM(PreTypeTag, bool,
-                                                      EnableLoggingFalloutWarning);
-            outputMode = setupLogging(mpiRank,
-                                      deckFilename,
-                                      outputDir,
-                                      EWOMS_GET_PARAM(PreTypeTag, std::string, OutputMode),
-                                      outputCout_, "STDOUT_LOGGER", allRanksDbgPrtLog);
-            const bool strictParsing = EWOMS_GET_PARAM(PreTypeTag, bool, EclStrictParsing);
-
-            FlowMainEbos<PreTypeTag>::printPRTHeader(outputCout_);
-
-            if (outputCout_) {
-                OpmLog::info("Reading deck file '" + deckFilename + "'");
-            }
-
-            std::optional<int> outputInterval;
-            int output_param = EWOMS_GET_PARAM(PreTypeTag, int, EclOutputInterval);
-            if (output_param >= 0)
-                outputInterval = output_param;
-
-            readDeck(EclGenericVanguard::comm(), deckFilename, eclipseState_,
-                     schedule_, udqState_, actionState_, wtestState_,
-                     summaryConfig_, python, strictParsing,
-                     init_from_restart_file, outputCout_, outputInterval);
-
-            verifyValidCellGeometry(EclGenericVanguard::comm(), *this->eclipseState_);
-
+            this->readDeck(deckFilename,
+                           outputDir,
+                           EWOMS_GET_PARAM(PreTypeTag, std::string, OutputMode),
+                           !EWOMS_GET_PARAM(PreTypeTag, bool, SchedRestart),
+                           EWOMS_GET_PARAM(PreTypeTag, bool,  EnableLoggingFalloutWarning),
+                           EWOMS_GET_PARAM(PreTypeTag, bool, EclStrictParsing),
+                           mpiRank,
+                           EWOMS_GET_PARAM(PreTypeTag, int, EclOutputInterval));
             setupTime_ = externalSetupTimer.elapsed();
-            outputFiles_ = (outputMode != FileOutputMode::OUTPUT_NONE);
         }
         catch (const std::invalid_argument& e)
         {
@@ -666,6 +643,15 @@ private:
             return flowEbosBlackoilTpfaMain(argc_, argv_, outputCout_, outputFiles_);
         }
     }
+
+    void readDeck(const std::string& deckFilename,
+                  const std::string& outputDir,
+                  const std::string& outputMode,
+                  const bool init_from_restart_file,
+                  const bool allRanksDbgPrtLog,
+                  const bool strictParsing,
+                  const int mpiRank,
+                  const int output_param);
 
     int argc_{0};
     char** argv_{nullptr};
