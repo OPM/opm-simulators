@@ -22,12 +22,12 @@
 
 #include <opm/input/eclipse/Schedule/GasLiftOpt.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
+#include <opm/input/eclipse/Schedule/Well/Well.hpp>
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/wells/GasLiftWellState.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/WellState.hpp>
-
 
 #include <fmt/format.h>
 

@@ -25,7 +25,7 @@
 
 #include <opm/core/props/BlackoilPhases.hpp>
 
-#include <opm/input/eclipse/Schedule/Well/Well.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellProductionControls.hpp>
 #include <opm/simulators/wells/GasLiftGroupInfo.hpp>
 #include <opm/simulators/wells/GasLiftCommon.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
@@ -337,7 +337,7 @@ protected:
     GasLiftGroupInfo& group_info_;
     const PhaseUsage& phase_usage_;
     GLiftSyncGroups& sync_groups_;
-    const Well::ProductionControls controls_;
+    const WellProductionControls controls_;
 
     double increment_;
     double max_alq_;
