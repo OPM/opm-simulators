@@ -1682,6 +1682,10 @@ public:
     bool recycleFirstIterationStorage() const
     {
         int episodeIdx = this->episodeIndex();
+        
+        if (this->simulator().timeStepIndex() == 0)
+            return true;
+
         return !this->drsdtActive_(episodeIdx) &&
                !this->drvdtActive_(episodeIdx) &&
                this->rockCompPoroMultWc_.empty() &&
