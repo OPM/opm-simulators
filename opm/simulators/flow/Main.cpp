@@ -23,6 +23,8 @@
 #include <config.h>
 #include <opm/simulators/flow/Main.hpp>
 
+#include <opm/input/eclipse/Python/Python.hpp>
+
 #include <opm/simulators/utils/readDeck.hpp>
 
 namespace Opm {
