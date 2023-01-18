@@ -320,10 +320,8 @@ private:
 #if HAVE_DAMARIS
         enableDamarisOutput_ = EWOMS_GET_PARAM(PreTypeTag, bool, EnableDamarisOutput);
         if (enableDamarisOutput_) {
-            if (!outputDir.empty()) {
-                ensureOutputDirExists(outputDir);
-            }
-            this->setupDamaris(outputDir);
+            this->setupDamaris(outputDir,
+                               EWOMS_GET_PARAM(PreTypeTag, bool, EnableDamarisOutputCollective));
         }
 #endif // HAVE_DAMARIS
 
@@ -616,7 +614,8 @@ private:
     void setupVanguard();
 
 #if HAVE_DAMARIS
-    void setupDamaris(const std::string& outputDir);
+    void setupDamaris(const std::string& outputDir,
+                      const bool enableDamarisOutputCollective);
 #endif
 
     int argc_{0};
