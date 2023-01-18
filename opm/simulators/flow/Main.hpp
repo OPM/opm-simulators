@@ -172,14 +172,7 @@ public:
         if (initialize_<Properties::TTag::FlowEarlyBird>(exitCode)) {
             // TODO: check that this deck really represents a blackoil
             // case. E.g. check that number of phases == 3
-            EclGenericVanguard::setParams(
-                setupTime_,
-                eclipseState_,
-                schedule_,
-                std::move(udqState_),
-                std::move(this->actionState_),
-                std::move(this->wtestState_),
-                summaryConfig_);
+            this->setupVanguard();
             return flowEbosBlackoilTpfaMainInit(
                 argc_, argv_, outputCout_, outputFiles_);
         } else {
@@ -194,13 +187,7 @@ private:
         const auto& rspec = this->eclipseState_->runspec();
         const auto& phases = rspec.phases();
 
-        EclGenericVanguard::setParams(this->setupTime_,
-                                      this->eclipseState_,
-                                      this->schedule_,
-                                      std::move(this->udqState_),
-                                      std::move(this->actionState_),
-                                      std::move(this->wtestState_),
-                                      this->summaryConfig_);
+        this->setupVanguard();
 
         // run the actual simulator
         //
@@ -277,13 +264,7 @@ private:
     template <class TypeTag>
     int dispatchStatic_()
     {
-        EclGenericVanguard::setParams(this->setupTime_,
-                                      this->eclipseState_,
-                                      this->schedule_,
-                                      std::move(this->udqState_),
-                                      std::move(this->actionState_),
-                                      std::move(this->wtestState_),
-                                      this->summaryConfig_);
+        this->setupVanguard();
         return flowEbosMain<TypeTag>(argc_, argv_, outputCout_, outputFiles_);
     }
 
@@ -651,6 +632,8 @@ private:
                   const bool strictParsing,
                   const int mpiRank,
                   const int output_param);
+
+    void setupVanguard();
 
     int argc_{0};
     char** argv_{nullptr};

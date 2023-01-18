@@ -200,4 +200,15 @@ void Main::readDeck(const std::string& deckFilename,
     outputFiles_ = (omode != FileOutputMode::OUTPUT_NONE);
 }
 
+void Main::setupVanguard()
+{
+    EclGenericVanguard::setParams(this->setupTime_,
+                                  this->eclipseState_,
+                                  this->schedule_,
+                                  std::move(this->udqState_),
+                                  std::move(this->actionState_),
+                                  std::move(this->wtestState_),
+                                  this->summaryConfig_);
+}
+
 } // namespace Opm
