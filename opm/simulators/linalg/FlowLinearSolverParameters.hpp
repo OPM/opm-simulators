@@ -238,7 +238,7 @@ namespace Opm
         bool opencl_ilu_parallel_;
 
         template <class TypeTag>
-        void init()
+        void init(bool cprRequestedInDataFile)
         {
             // TODO: these parameters have undocumented non-trivial dependencies
             linear_solver_reduction_ = EWOMS_GET_PARAM(TypeTag, double, LinearSolverReduction);
@@ -255,7 +255,13 @@ namespace Opm
             scale_linear_system_ = EWOMS_GET_PARAM(TypeTag, bool, ScaleLinearSystem);
             cpr_reuse_setup_  =  EWOMS_GET_PARAM(TypeTag, int, CprReuseSetup);
             cpr_reuse_interval_  =  EWOMS_GET_PARAM(TypeTag, int, CprReuseInterval);
-            linsolver_ = EWOMS_GET_PARAM(TypeTag, std::string, LinearSolver);
+
+            if (!EWOMS_PARAM_IS_SET(TypeTag, int, LinearSolverMaxIter) && cprRequestedInDataFile) {
+                linsolver_ = "cpr";
+            } else {
+                linsolver_ = EWOMS_GET_PARAM(TypeTag, std::string, LinearSolver);
+            }
+
             accelerator_mode_ = EWOMS_GET_PARAM(TypeTag, std::string, AcceleratorMode);
             bda_device_id_ = EWOMS_GET_PARAM(TypeTag, int, BdaDeviceId);
             opencl_platform_id_ = EWOMS_GET_PARAM(TypeTag, int, OpenclPlatformId);
