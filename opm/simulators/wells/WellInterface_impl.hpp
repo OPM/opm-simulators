@@ -193,9 +193,9 @@ namespace Opm
         auto& ws = well_state.well(this->index_of_well_);
         std::string from;
         if (well.isInjector()) {
-            from = Well::InjectorCMode2String(ws.injection_cmode);
+            from = WellInjectorCMode2String(ws.injection_cmode);
         } else {
-            from = Well::ProducerCMode2String(ws.production_cmode);
+            from = WellProducerCMode2String(ws.production_cmode);
         }
         bool oscillating = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) >= param_.max_number_of_well_switches_;
 
@@ -229,9 +229,9 @@ namespace Opm
         if (changed) {
             std::string to;
             if (well.isInjector()) {
-                to = Well::InjectorCMode2String(ws.injection_cmode);
+                to = WellInjectorCMode2String(ws.injection_cmode);
             } else {
-                to = Well::ProducerCMode2String(ws.production_cmode);
+                to = WellProducerCMode2String(ws.production_cmode);
             }
             std::ostringstream ss;
             ss << "    Switching control mode for well " << this->name()
@@ -427,13 +427,13 @@ namespace Opm
                 thp_control = ws.injection_cmode == Well::InjectorCMode::THP;
                 if (thp_control) {
                     ws.injection_cmode = Well::InjectorCMode::BHP;
-                    this->well_control_log_.push_back(Well::InjectorCMode2String(Well::InjectorCMode::THP));
+                    this->well_control_log_.push_back(WellInjectorCMode2String(Well::InjectorCMode::THP));
                 }
             } else {
                 thp_control = ws.production_cmode == Well::ProducerCMode::THP;
                 if (thp_control) {
                     ws.production_cmode = Well::ProducerCMode::BHP;
-                    this->well_control_log_.push_back(Well::ProducerCMode2String(Well::ProducerCMode::THP));
+                    this->well_control_log_.push_back(WellProducerCMode2String(Well::ProducerCMode::THP));
                 }
             }
             if (thp_control) {

@@ -455,7 +455,7 @@ GasLiftSingleWellGeneric::debugShowProducerControlMode() const
 {
     const int well_index = this->well_state_.index(this->well_name_).value();
     const Well::ProducerCMode& control_mode = this->well_state_.well(well_index).production_cmode;
-    const std::string msg = fmt::format("Current control mode is: {}", Well::ProducerCMode2String(control_mode));
+    const std::string msg = fmt::format("Current control mode is: {}", WellProducerCMode2String(control_mode));
     displayDebugMessage_(msg);
 }
 

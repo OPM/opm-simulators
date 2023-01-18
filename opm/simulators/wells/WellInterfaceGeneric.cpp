@@ -419,9 +419,9 @@ void WellInterfaceGeneric::reportWellSwitching(const SingleWellState& ws, Deferr
     std::string from = well_control_log_[0];
     std::string to;
     if (isInjector()) {
-        to = Well::InjectorCMode2String(ws.injection_cmode);
+        to = WellInjectorCMode2String(ws.injection_cmode);
     } else {
-        to = Well::ProducerCMode2String(ws.production_cmode);
+        to = WellProducerCMode2String(ws.production_cmode);
     }
     // only report the final switching
     if (from != to) {
