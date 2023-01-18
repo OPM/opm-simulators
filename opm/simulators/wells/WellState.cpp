@@ -774,7 +774,7 @@ void WellState::shutWell(int well_index)
     ws.shut();
 }
 
-void WellState::updateStatus(int well_index, Well::Status status)
+void WellState::updateStatus(int well_index, WellStatus status)
 {
     auto& ws = this->well(well_index);
     ws.updateStatus(status);
