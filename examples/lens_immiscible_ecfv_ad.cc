@@ -31,6 +31,7 @@
 #include "lens_immiscible_ecfv_ad.hh"
 
 #include <opm/models/utils/start.hh>
+#include <opm/simulators/linalg/parallelbicgstabbackend.hh>
 
 int main(int argc, char **argv)
 {

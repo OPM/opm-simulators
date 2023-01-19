@@ -29,6 +29,8 @@
 
 #include <opm/models/utils/start.hh>
 #include <opm/models/ncp/ncpmodel.hh>
+#include <opm/simulators/linalg/parallelbicgstabbackend.hh>
+
 #include "problems/diffusionproblem.hh"
 
 namespace Opm::Properties {

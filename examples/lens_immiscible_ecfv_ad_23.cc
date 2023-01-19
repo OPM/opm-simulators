@@ -33,6 +33,8 @@
 #include <dune/grid/geometrygrid.hh>
 #include <dune/grid/io/file/dgfparser/dgfgeogrid.hh>
 
+#include <opm/simulators/linalg/parallelbicgstabbackend.hh>
+
 namespace Opm::Properties {
 
 // Use Dune-grid's GeometryGrid< YaspGrid >
