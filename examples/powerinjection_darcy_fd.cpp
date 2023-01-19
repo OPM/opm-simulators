@@ -29,6 +29,7 @@
 
 #include <opm/models/utils/start.hh>
 #include <opm/models/immiscible/immisciblemodel.hh>
+#include <opm/simulators/linalg/parallelbicgstabbackend.hh>
 #include "problems/powerinjectionproblem.hh"
 
 namespace Opm::Properties {

@@ -30,6 +30,8 @@
 #include <opm/models/utils/start.hh>
 #include <opm/models/immiscible/immisciblemodel.hh>
 #include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
+#include <opm/simulators/linalg/parallelbicgstabbackend.hh>
+
 #include "problems/fingerproblem.hh"
 
 namespace Opm::Properties {

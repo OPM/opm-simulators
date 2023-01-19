@@ -31,6 +31,8 @@
 #include <opm/models/utils/start.hh>
 #include <opm/models/blackoil/blackoilmodel.hh>
 #include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
+#include <opm/simulators/linalg/parallelbicgstabbackend.hh>
+
 #include "problems/reservoirproblem.hh"
 
 namespace Opm::Properties {

@@ -32,7 +32,6 @@
 
 #include <opm/models/utils/basicproperties.hh>
 #include <opm/models/io/dgfvanguard.hh>
-#include <opm/simulators/linalg/parallelbicgstabbackend.hh>
 
 namespace Opm::Properties {
 
@@ -40,6 +39,7 @@ namespace TTag {
 struct FvBaseNewtonMethod;
 struct VtkPrimaryVars;
 struct FiniteDifferenceLocalLinearizer;
+struct ParallelBiCGStabLinearSolver;
 }
 
 namespace TTag {
