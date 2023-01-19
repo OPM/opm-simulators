@@ -241,7 +241,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
 #if HAVE_MPI
             comm_.reset( new CommunicationType( simulator_.vanguard().grid().comm() ) );
 #endif
-            parameters_.template init<TypeTag>();
+            parameters_.template init<TypeTag>(simulator_.vanguard().eclState().getSimulationConfig().useCPR());
             prm_ = setupPropertyTree(parameters_,
                                      EWOMS_PARAM_IS_SET(TypeTag, int, LinearSolverMaxIter),
                                      EWOMS_PARAM_IS_SET(TypeTag, double, LinearSolverReduction));

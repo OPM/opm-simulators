@@ -131,7 +131,7 @@ add_test_compare_parallel_simulation(CASENAME numerical_aquifer_3d_2aqu
                                      ABS_TOL 0.17
                                      REL_TOL ${coarse_rel_tol_parallel}
                                      DIR aquifer-num
-                                     TEST_ARGS --tolerance-cnv=0.000003 --time-step-control=pid --linear-solver=cpr)
+                                     TEST_ARGS --tolerance-cnv=0.000003 --time-step-control=pid --linear-solver=cpr_trueimpes)
 
 add_test_compare_parallel_simulation(CASENAME numerical_aquifer_3d_1aqu
                                      FILENAME 3D_1AQU_3CELLS
@@ -139,7 +139,7 @@ add_test_compare_parallel_simulation(CASENAME numerical_aquifer_3d_1aqu
                                      ABS_TOL ${abs_tol_parallel}
                                      REL_TOL ${coarse_rel_tol_parallel}
                                      DIR aquifer-num
-                                     TEST_ARGS --tolerance-cnv=0.00003 --time-step-control=pid --linear-solver=cpr)
+                                     TEST_ARGS --tolerance-cnv=0.00003 --time-step-control=pid --linear-solver=cpr_trueimpes)
 
 add_test_compare_parallel_simulation(CASENAME actionx_m1
                                      FILENAME ACTIONX_M1
