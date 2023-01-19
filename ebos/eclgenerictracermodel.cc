@@ -24,6 +24,7 @@
 #include <config.h>
 #include <ebos/eclgenerictracermodel.hh>
 
+#include <opm/simulators/linalg/ilufirstelement.hh>
 #include <opm/simulators/linalg/PropertyTree.hpp>
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>

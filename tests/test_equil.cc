@@ -37,6 +37,7 @@
 #include <opm/input/eclipse/Units/Units.hpp>
 
 #include <opm/models/utils/start.hh>
+#include <opm/simulators/linalg/parallelbicgstabbackend.hh>
 
 #include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
