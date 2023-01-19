@@ -33,7 +33,7 @@ add_test_compare_parallel_restarted_simulation(CASENAME numerical_aquifer_3d_2aq
                                                REL_TOL 5.0e-2
                                                RESTART_STEP 3
                                                DIR aquifer-num
-                                               TEST_ARGS --enable-tuning=true --tolerance-cnv=0.00003 --time-step-control=pid --linear-solver=cpr)
+                                               TEST_ARGS --enable-tuning=true --tolerance-cnv=0.00003 --time-step-control=pid --linear-solver=cpr_trueimpes)
 
 add_test_compare_parallel_restarted_simulation(CASENAME numerical_aquifer_3d_1aqu
                                                FILENAME 3D_1AQU_3CELLS
@@ -42,4 +42,4 @@ add_test_compare_parallel_restarted_simulation(CASENAME numerical_aquifer_3d_1aq
                                                REL_TOL 5.0e-2
                                                RESTART_STEP 3
                                                DIR aquifer-num
-                                               TEST_ARGS --enable-tuning=true --tolerance-cnv=0.00003 --time-step-control=pid --linear-solver=cpr)
+                                               TEST_ARGS --enable-tuning=true --tolerance-cnv=0.00003 --time-step-control=pid --linear-solver=cpr_trueimpes)
