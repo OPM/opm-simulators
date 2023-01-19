@@ -31,15 +31,16 @@
 #include <opm/grid/common/CartesianIndexMapper.hpp>
 
 #include <opm/models/blackoil/blackoilmodel.hh>
-#include <opm/common/OpmLog/OpmLog.hpp>
+
+#include <opm/simulators/linalg/matrixblock.hh>
 
 #include <dune/istl/bcrsmatrix.hh>
 
-#include <dune/common/version.hh>
-
+#include <array>
+#include <functional>
+#include <map>
 #include <string>
 #include <vector>
-#include <iostream>
 
 namespace Opm {
 
