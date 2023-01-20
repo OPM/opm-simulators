@@ -103,7 +103,6 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"COMPVEL", {true, std::nullopt}},
         {"CPIFACT", {true, std::nullopt}},
         {"CPIFACTL", {true, std::nullopt}},
-        {"CPR", {false, std::string{"Keyword not supported. However CPR can be spesificed via command line options."}}},
         {"CSKIN", {true, std::nullopt}},
         {"CONNECTION", {true, std::nullopt}},
         {"CONNECTION_PROBE", {true, std::nullopt}},
