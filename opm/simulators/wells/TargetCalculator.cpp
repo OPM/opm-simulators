@@ -95,29 +95,35 @@ RateType TargetCalculator::calcModeRateFromRates(const RateType* rates) const
     }
 }
 
-double TargetCalculator::groupTarget(const Group::ProductionControls ctrl) const
+double TargetCalculator::groupTarget(const std::optional<Group::ProductionControls>& ctrl, Opm::DeferredLogger& deferred_logger) const
 {
+    if (!ctrl && !use_gpmaint_) {
+        OPM_DEFLOG_THROW(std::logic_error,
+                         "Production group " + this->group_name_
+                         + "must either have a valid control or use GPMAINT",
+                         deferred_logger);
+    }
     switch (cmode_) {
     case Group::ProductionCMode::ORAT:
-        return ctrl.oil_target;
+        return ctrl->oil_target;
     case Group::ProductionCMode::WRAT:
-        return ctrl.water_target;
+        return ctrl->water_target;
     case Group::ProductionCMode::GRAT:
     {
         // gas target may have been adjusted by GCONSALE
         if ( group_grat_target_from_sales_ > 0)
             return group_grat_target_from_sales_;
 
-        return ctrl.gas_target;
+        return ctrl->gas_target;
     }
     case Group::ProductionCMode::LRAT:
-        return ctrl.liquid_target;
+        return ctrl->liquid_target;
     case Group::ProductionCMode::RESV:
     {
-        if(use_gpmaint_)
+        if(use_gpmaint_ && this->group_state_.has_gpmaint_target(this->group_name_))
             return this->group_state_.gpmaint_target(this->group_name_);
 
-        return ctrl.resv_target;
+        return ctrl->resv_target;
     }
     default:
         // Should never be here.
@@ -192,34 +198,40 @@ InjectionTargetCalculator::InjectionTargetCalculator(const Group::InjectionCMode
 }
 
 
-double InjectionTargetCalculator::groupTarget(const Group::InjectionControls& ctrl, Opm::DeferredLogger& deferred_logger) const
+double InjectionTargetCalculator::groupTarget(const std::optional<Group::InjectionControls>& ctrl, Opm::DeferredLogger& deferred_logger) const
 {
+    if (!ctrl && !use_gpmaint_) {
+        OPM_DEFLOG_THROW(std::logic_error,
+                         "Injection group " + this->group_name_
+                         + "must either have a valid control or use GPMAINT",
+                         deferred_logger);
+    }
     switch (cmode_) {
     case Group::InjectionCMode::RATE:
         if(use_gpmaint_ && this->group_state_.has_gpmaint_target(this->group_name_))
             return this->group_state_.gpmaint_target(this->group_name_);
 
-        return ctrl.surface_max_rate;
+        return ctrl->surface_max_rate;
     case Group::InjectionCMode::RESV:
         if(use_gpmaint_ && this->group_state_.has_gpmaint_target(this->group_name_))
             return this->group_state_.gpmaint_target(this->group_name_) / resv_coeff_[pos_];
 
-        return ctrl.resv_max_rate / resv_coeff_[pos_];
+        return ctrl->resv_max_rate / resv_coeff_[pos_];
     case Group::InjectionCMode::REIN: {
-        double production_rate = this->group_state_.injection_rein_rates(ctrl.reinj_group)[pos_];
-        return ctrl.target_reinj_fraction * production_rate;
+        double production_rate = this->group_state_.injection_rein_rates(ctrl->reinj_group)[pos_];
+        return ctrl->target_reinj_fraction * production_rate;
     }
     case Group::InjectionCMode::VREP: {
         const std::vector<double>& group_injection_reductions = this->group_state_.injection_reduction_rates(this->group_name_);
-        double voidage_rate = group_state_.injection_vrep_rate(ctrl.voidage_group) * ctrl.target_void_fraction;
+        double voidage_rate = group_state_.injection_vrep_rate(ctrl->voidage_group) * ctrl->target_void_fraction;
         double inj_reduction = 0.0;
-        if (ctrl.phase != Phase::WATER)
+        if (ctrl->phase != Phase::WATER)
             inj_reduction += group_injection_reductions[pu_.phase_pos[BlackoilPhases::Aqua]]
                     * resv_coeff_[pu_.phase_pos[BlackoilPhases::Aqua]];
-        if (ctrl.phase != Phase::OIL)
+        if (ctrl->phase != Phase::OIL)
             inj_reduction += group_injection_reductions[pu_.phase_pos[BlackoilPhases::Liquid]]
                     * resv_coeff_[pu_.phase_pos[BlackoilPhases::Liquid]];
-        if (ctrl.phase != Phase::GAS)
+        if (ctrl->phase != Phase::GAS)
             inj_reduction += group_injection_reductions[pu_.phase_pos[BlackoilPhases::Vapour]]
                     * resv_coeff_[pu_.phase_pos[BlackoilPhases::Vapour]];
         voidage_rate -= inj_reduction;

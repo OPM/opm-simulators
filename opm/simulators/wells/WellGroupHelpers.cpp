@@ -689,7 +689,7 @@ namespace WellGroupHelpers
             return;
 
         const auto [name, number] = *region;
-        const double error = gpm->pressure_target() - regional_values.pressure(number);
+        const double error = gpm->pressure_target() - regional_values.at(name)->pressure(number);
         double current_rate = 0.0;
         const auto& pu = well_state.phaseUsage();
         double sign = 1.0;
@@ -744,7 +744,6 @@ namespace WellGroupHelpers
             default:
                 throw std::invalid_argument("Invalid Flow target type in GPMAINT");
         }
-
         auto& gpmaint_state = group_state.gpmaint(group.name());
         double rate = gpm->rate(gpmaint_state, current_rate, error, dt);
         group_state.update_gpmaint_target(group.name(), std::max(0.0, sign * rate));
@@ -1268,7 +1267,12 @@ namespace WellGroupHelpers
             const std::vector<double>& groupSurfaceRates = group_state.production_rates(group_name);
             return tcalc.calcModeRateFromRates(groupSurfaceRates);
         };
-        const double orig_target = tcalc.groupTarget(group.productionControls(summaryState));
+
+        std::optional<Group::ProductionControls> ctrl;
+        if (!group.has_gpmaint_control(currentGroupControl))
+            ctrl = group.productionControls(summaryState);
+
+        const double orig_target = tcalc.groupTarget(ctrl, deferred_logger);
         // Assume we have a chain of groups as follows: BOTTOM -> MIDDLE -> TOP.
         // Then ...
         // TODO finish explanation.
@@ -1410,7 +1414,12 @@ namespace WellGroupHelpers
             return tcalc.calcModeRateFromRates(groupSurfaceRates);
         };
 
-        const double orig_target = tcalc.groupTarget(group.injectionControls(injectionPhase, summaryState), deferred_logger);
+        std::optional<Group::InjectionControls> ctrl;
+        if (!group.has_gpmaint_control(injectionPhase, currentGroupControl))
+            ctrl = group.injectionControls(injectionPhase, summaryState);
+
+
+        const double orig_target = tcalc.groupTarget(ctrl, deferred_logger);
         // Assume we have a chain of groups as follows: BOTTOM -> MIDDLE -> TOP.
         // Then ...
         // TODO finish explanation.
@@ -1477,6 +1486,32 @@ namespace WellGroupHelpers
         return std::make_pair(current_rate > target_rate, scale);
     }
 
+    template <class AverageRegionalPressureType>
+    void setRegionAveragePressureCalculator(const Group& group,
+                                            const Schedule& schedule,
+                                            const int reportStepIdx,
+                                            const FieldPropsManager& fp,
+                                            const PhaseUsage& pu,
+                                            std::map<std::string, std::unique_ptr<AverageRegionalPressureType>>& regionalAveragePressureCalculator) 
+    {
+        for (const std::string& groupName : group.groups()) {
+            setRegionAveragePressureCalculator( schedule.getGroup(groupName, reportStepIdx), schedule, 
+                                                reportStepIdx, fp, pu, regionalAveragePressureCalculator);
+        }
+        const auto& gpm = group.gpmaint();
+        if (!gpm)
+            return;
+
+        const auto& reg = gpm->region();
+        if (!reg)
+            return;
+
+        if (regionalAveragePressureCalculator.count(reg->first) == 0) {
+            const std::string name = (reg->first.rfind("FIP", 0) == 0) ? reg->first : "FIP" + reg->first;
+            const auto& fipnum = fp.get_int(name);
+            regionalAveragePressureCalculator[reg->first] = std::make_unique<AverageRegionalPressureType>(pu,fipnum);
+        }
+    }
 
     template <class Comm>
     void updateGuideRates(const Group& group,
@@ -1615,13 +1650,20 @@ namespace WellGroupHelpers
     }
 
  using AvgP = RegionAverageCalculator::AverageRegionalPressure<BlackOilFluidSystem<double>,std::vector<int>>;
- template void WellGroupHelpers::updateGpMaintTargetForGroups<AvgP>(const Group&,
+ using AvgPMap = std::map<std::string, std::unique_ptr<AvgP>>;
+ template void WellGroupHelpers::updateGpMaintTargetForGroups<AvgPMap>(const Group&,
                                                                     const Schedule&,
-                                                                    const AvgP&,
+                                                                    const AvgPMap&,
                                                                     int,
                                                                     double,
                                                                     const WellState&,
                                                                     GroupState&);
+ template void WellGroupHelpers::setRegionAveragePressureCalculator<AvgP>(const Group&,
+                                            const Schedule&,
+                                            const int,
+                                            const FieldPropsManager&,
+                                            const PhaseUsage&,
+                                            AvgPMap&);
 
 template
 void updateGuideRateForProductionGroups<Parallel::Communication>(const Group& group,

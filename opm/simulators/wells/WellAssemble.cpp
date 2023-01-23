@@ -164,7 +164,8 @@ assembleControlEqProd(const WellState& well_state,
                                                              bhp, active_rates,
                                                              rCoeff,
                                                              efficiencyFactor,
-                                                             control_eq);
+                                                             control_eq,
+                                                             deferred_logger);
         break;
     }
     case Well::ProducerCMode::CMODE_UNDEFINED: {

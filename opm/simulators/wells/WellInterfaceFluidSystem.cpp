@@ -189,7 +189,8 @@ getGroupProductionTargetRate(const Group& group,
                           const GroupState& group_state,
                           const Schedule& schedule,
                           const SummaryState& summaryState,
-                          double efficiencyFactor) const
+                          double efficiencyFactor,
+                          DeferredLogger& deferred_logger) const
 {
     auto rCoeff = [this](const int id, const int region, std::vector<double>& coeff)
     {
@@ -199,7 +200,8 @@ getGroupProductionTargetRate(const Group& group,
     return WellGroupControls(*this).getGroupProductionTargetRate(group, well_state,
                                                                  group_state, schedule,
                                                                  summaryState,
-                                                                 rCoeff, efficiencyFactor);
+                                                                 rCoeff, efficiencyFactor,
+                                                                 deferred_logger);
 }
 
 template class WellInterfaceFluidSystem<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>>;
