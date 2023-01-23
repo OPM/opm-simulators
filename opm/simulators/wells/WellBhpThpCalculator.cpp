@@ -29,6 +29,8 @@
 #include <opm/input/eclipse/Schedule/VFPInjTable.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 
+#include <opm/input/eclipse/Units/Units.hpp>
+
 #include <opm/material/densead/Evaluation.hpp>
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>

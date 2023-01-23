@@ -28,11 +28,11 @@
 #include <opm/common/utility/TimeService.hpp>
 #include <opm/input/eclipse/EclipseState/Aquifer/NumericalAquifer/NumericalAquiferCell.hpp>
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/input/eclipse/Parser/ErrorGuard.hpp>
-#include <opm/input/eclipse/Parser/ParseContext.hpp>
+#include <opm/input/eclipse/Parser/InputErrorAction.hpp>
 #include <opm/input/eclipse/Schedule/Action/State.hpp>
 #include <opm/input/eclipse/Schedule/OilVaporizationProperties.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
+#include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
 #include <opm/input/eclipse/Schedule/SummaryState.hpp>
 #include <opm/input/eclipse/Schedule/UDQ/UDQState.hpp>
@@ -98,17 +98,10 @@ void EclGenericVanguard::readDeck(const std::string& filename)
     std::unique_ptr<Opm::WellTestState> wtestState;
     std::shared_ptr<Opm::SummaryConfig> summaryConfig;
 
-    auto parseContext =
-        std::make_unique<ParseContext>(std::vector<std::pair<std::string , InputError::Action>>
-                                            {{ParseContext::PARSE_RANDOM_SLASH, InputError::IGNORE},
-                                             {ParseContext::PARSE_MISSING_DIMS_KEYWORD, InputError::WARN},
-                                             {ParseContext::SUMMARY_UNKNOWN_WELL, InputError::WARN},
-                                             {ParseContext::SUMMARY_UNKNOWN_GROUP, InputError::WARN}});
-
     Opm::readDeck(EclGenericVanguard::comm(),
                   filename, eclipseState, schedule, udqState,
                   actionState, wtestState,
-                  summaryConfig, nullptr, nullptr, std::move(parseContext),
+                  summaryConfig, nullptr, false,
                   false, false, {});
 
     EclGenericVanguard::setParams(setupTimer.elapsed(),

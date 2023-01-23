@@ -43,16 +43,21 @@
 #include <opm/input/eclipse/Deck/Deck.hpp>
 
 #include <opm/input/eclipse/EclipseState/checkDeck.hpp>
+#include <opm/input/eclipse/EclipseState/Grid/FieldData.hpp>
+#include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
+
+#include <opm/input/eclipse/Parser/ErrorGuard.hpp>
+#include <opm/input/eclipse/Parser/InputErrorAction.hpp>
+#include <opm/input/eclipse/Parser/ParseContext.hpp>
+#include <opm/input/eclipse/Parser/Parser.hpp>
+
 #include <opm/input/eclipse/Schedule/Action/State.hpp>
 #include <opm/input/eclipse/Schedule/ArrayDimChecker.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/SummaryState.hpp>
+#include <opm/input/eclipse/Schedule/UDQ/UDQConfig.hpp>
 #include <opm/input/eclipse/Schedule/UDQ/UDQState.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
-#include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
-
-#include <opm/input/eclipse/Parser/ErrorGuard.hpp>
-#include <opm/input/eclipse/Parser/Parser.hpp>
 
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
 
@@ -482,22 +487,20 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
                    std::unique_ptr<Action::State>& actionState,
                    std::unique_ptr<WellTestState>& wtestState,
                    std::shared_ptr<SummaryConfig>& summaryConfig,
-                   std::unique_ptr<ErrorGuard>     errorGuard,
                    std::shared_ptr<Python>         python,
-                   std::unique_ptr<ParseContext>   parseContext,
+                   const bool                      strictParsing,
                    const bool                      initFromRestart,
                    const bool                      checkDeck,
                    const std::optional<int>&       outputInterval)
 {
-    if (errorGuard == nullptr) {
-        errorGuard = std::make_unique<ErrorGuard>();
-    }
+    auto errorGuard = std::make_unique<ErrorGuard>();
 
     int parseSuccess = 1; // > 0 is success
     std::string failureMessage;
 
     if (comm.rank() == 0) { // Always true when !HAVE_MPI
         try {
+            auto parseContext = setupParseContext(strictParsing);
             readOnIORank(comm, deckFilename, parseContext.get(),
                          eclipseState, schedule, udqState, actionState, wtestState,
                          summaryConfig, std::move(python), initFromRestart,
@@ -570,4 +573,18 @@ void Opm::verifyValidCellGeometry(Parallel::Communication comm,
         R"(No active cell in input grid has valid/finite cell geometry
 Please check geometry keywords, especially if grid is imported through GDFILE)"
     };
+}
+
+std::unique_ptr<Opm::ParseContext> Opm::setupParseContext(const bool strictParsing)
+{
+    auto parseContext =
+        std::make_unique<ParseContext>(std::vector<std::pair<std::string , InputErrorAction>>
+                                       {{ParseContext::PARSE_RANDOM_SLASH, InputErrorAction::IGNORE},
+                                       {ParseContext::PARSE_MISSING_DIMS_KEYWORD, InputErrorAction::WARN},
+                                       {ParseContext::SUMMARY_UNKNOWN_WELL, InputErrorAction::WARN},
+                                       {ParseContext::SUMMARY_UNKNOWN_GROUP, InputErrorAction::WARN}});
+    if (strictParsing)
+        parseContext->update(InputErrorAction::DELAYED_EXIT1);
+
+    return parseContext;
 }

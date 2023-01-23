@@ -30,9 +30,15 @@
 #include <opm/output/eclipse/RestartValue.hpp>
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/Schedule/Group/GConSale.hpp>
+#include <opm/input/eclipse/Schedule/Group/GConSump.hpp>
 #include <opm/input/eclipse/Schedule/Group/GuideRateConfig.hpp>
 #include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
+#include <opm/input/eclipse/Schedule/Network/Balance.hpp>
+#include <opm/input/eclipse/Schedule/Network/ExtNetwork.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellTestConfig.hpp>
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
@@ -57,6 +63,7 @@
 #include <vector>
 
 #include <fmt/format.h>
+#include "opm/input/eclipse/Units/Units.hpp"
 
 namespace Opm {
 
@@ -1238,6 +1245,73 @@ runWellPIScaling(const int timeStepIdx,
     }
 
     this->last_run_wellpi_ = timeStepIdx;
+}
+
+bool
+BlackoilWellModelGeneric::
+shouldBalanceNetwork(const int reportStepIdx, const int iterationIdx) const
+{
+    const auto& network = schedule()[reportStepIdx].network();
+    if (!network.active()) {
+        return false;
+    }
+
+    const auto& balance = schedule()[reportStepIdx].network_balance();
+    if (balance.mode() == Network::Balance::CalcMode::TimeStepStart) {
+        return iterationIdx == 0;
+    } else if (balance.mode() == Network::Balance::CalcMode::NUPCOL) {
+        const int nupcol = schedule()[reportStepIdx].nupcol();
+        return iterationIdx < nupcol;
+    } else {
+        // We do not support any other rebalancing modes,
+        // i.e. TimeInterval based rebalancing is not available.
+        // This should be warned about elsewhere, so we choose to
+        // avoid spamming with a warning here.
+        return false;
+    }
+}
+
+bool
+BlackoilWellModelGeneric::
+shouldIterateNetwork(const int reportStepIdx,
+                     const std::size_t recursion_level,
+                     const double network_imbalance) const
+{
+    const auto& balance = schedule()[reportStepIdx].network_balance();
+    // Iterate if not converged, and number of iterations is not yet max (NETBALAN item 3).
+    return recursion_level < balance.pressure_max_iter() &&
+           network_imbalance > balance.pressure_tolerance();
+}
+
+std::vector<int>
+BlackoilWellModelGeneric::
+getCellsForConnections(const Well& well) const
+{
+    std::vector<int> wellCells;
+    // All possible connections of the well
+    const auto& connectionSet = well.getConnections();
+    wellCells.reserve(connectionSet.size());
+
+    for (const auto& connection : connectionSet)
+    {
+        int compressed_idx = compressedIndexForInterior(connection.global_index());
+        if (compressed_idx >= 0) { // Ignore connections in inactive/remote cells.
+            wellCells.push_back(compressed_idx);
+        }
+    }
+
+    return wellCells;
+}
+
+std::vector<std::string>
+BlackoilWellModelGeneric::getWellsForTesting(const int timeStepIdx,
+                                             const double simulationTime)
+{
+  const auto& wtest_config = schedule()[timeStepIdx].wtest_config();
+  if (!wtest_config.empty()) { // there is a WTEST request
+      return wellTestState().test_wells(wtest_config, simulationTime);
+  } else
+      return {};
 }
 
 }

@@ -22,12 +22,12 @@
 
 #include <opm/input/eclipse/Schedule/GasLiftOpt.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
+#include <opm/input/eclipse/Schedule/Well/Well.hpp>
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/wells/GasLiftWellState.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/WellState.hpp>
-
 
 #include <fmt/format.h>
 
@@ -455,7 +455,7 @@ GasLiftSingleWellGeneric::debugShowProducerControlMode() const
 {
     const int well_index = this->well_state_.index(this->well_name_).value();
     const Well::ProducerCMode& control_mode = this->well_state_.well(well_index).production_cmode;
-    const std::string msg = fmt::format("Current control mode is: {}", Well::ProducerCMode2String(control_mode));
+    const std::string msg = fmt::format("Current control mode is: {}", WellProducerCMode2String(control_mode));
     displayDebugMessage_(msg);
 }
 
@@ -1304,7 +1304,7 @@ GasLiftSingleWellGeneric::tryIncreaseLiftGas_()
 }
 
 void
-GasLiftSingleWellGeneric::setAlqMinRate_(const GasLiftOpt::Well& well)
+GasLiftSingleWellGeneric::setAlqMinRate_(const GasLiftWell& well)
 {
     // NOTE:  According to WLIFTOPT item 5 :
     //   if min_rate() is negative, it means: allocate at least enough lift gas
@@ -1394,7 +1394,7 @@ GasLiftSingleWellGeneric::updateRatesToGroupLimits_(const BasicRates& old_rates,
 
 // Called when we should use a fixed ALQ value
 void
-GasLiftSingleWellGeneric::updateWellStateAlqFixedValue_(const GasLiftOpt::Well& well)
+GasLiftSingleWellGeneric::updateWellStateAlqFixedValue_(const GasLiftWell& well)
 {
     auto& max_alq_optional = well.max_rate();
     if (max_alq_optional) {
@@ -1421,7 +1421,7 @@ GasLiftSingleWellGeneric::updateWellStateAlqFixedValue_(const GasLiftOpt::Well& 
 //   value that can be set either in Item 3 of this keyword, or in
 //   Item 12 of keyword WCONPROD, or with keyword WELTARG.
 bool
-GasLiftSingleWellGeneric::useFixedAlq_(const GasLiftOpt::Well& well)
+GasLiftSingleWellGeneric::useFixedAlq_(const GasLiftWell& well)
 {
     auto wliftopt_item2 = well.use_glo();
     if (wliftopt_item2) {

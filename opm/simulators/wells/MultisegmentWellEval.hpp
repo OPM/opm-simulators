@@ -29,8 +29,6 @@
 
 #include <opm/material/densead/Evaluation.hpp>
 
-#include <opm/input/eclipse/Schedule/Well/Well.hpp>
-
 #include <array>
 #include <memory>
 #include <utility>

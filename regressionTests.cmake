@@ -169,7 +169,7 @@ add_test_compareECLFiles(CASENAME numerical_aquifer_3d_2aqu
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR aquifer-num
-                         TEST_ARGS --tolerance-cnv=0.00003 --time-step-control=pid --linear-solver=cpr)
+                         TEST_ARGS --tolerance-cnv=0.00003 --time-step-control=pid --linear-solver=cpr_trueimpes)
 
 add_test_compareECLFiles(CASENAME numerical_aquifer_3d_1aqu
                          FILENAME 3D_1AQU_3CELLS
@@ -177,7 +177,7 @@ add_test_compareECLFiles(CASENAME numerical_aquifer_3d_1aqu
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR aquifer-num
-                         TEST_ARGS --tolerance-cnv=0.00003 --time-step-control=pid --linear-solver=cpr)
+                         TEST_ARGS --tolerance-cnv=0.00003 --time-step-control=pid --linear-solver=cpr_trueimpes)
 
 add_test_compareECLFiles(CASENAME spe3
                          FILENAME SPE3CASE1

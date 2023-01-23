@@ -96,16 +96,7 @@ namespace Opm
     wpolymer() const
     {
         if constexpr (has_polymer) {
-            auto injectorType = this->well_ecl_.injectorType();
-
-            if (injectorType == InjectorType::WATER) {
-                WellPolymerProperties polymer = this->well_ecl_.getPolymerProperties();
-                const double polymer_injection_concentration = polymer.m_polymerConcentration;
-                return polymer_injection_concentration;
-            } else {
-                // Not a water injection well => no polymer.
-                return 0.0;
-            }
+            return this->wpolymer_();
         }
 
         return 0.0;
@@ -121,15 +112,7 @@ namespace Opm
     wfoam() const
     {
         if constexpr (has_foam) {
-            auto injectorType = this->well_ecl_.injectorType();
-
-            if (injectorType == InjectorType::GAS) {
-                WellFoamProperties fprop = this->well_ecl_.getFoamProperties();
-                return fprop.m_foamConcentration;
-            } else {
-                // Not a gas injection well => no foam.
-                return 0.0;
-            }
+            return this->wfoam_();
         }
 
         return 0.0;
@@ -143,15 +126,7 @@ namespace Opm
     wsalt() const
     {
         if constexpr (has_brine) {
-            auto injectorType = this->well_ecl_.injectorType();
-
-            if (injectorType == InjectorType::WATER) {
-                WellBrineProperties fprop = this->well_ecl_.getBrineProperties();
-                return fprop.m_saltConcentration;
-            } else {
-                // Not a water injection well => no salt (?).
-                return 0.0;
-            }
+            return this->wsalt_();
         }
 
         return 0.0;
@@ -163,16 +138,7 @@ namespace Opm
     wmicrobes() const
     {
       if constexpr (has_micp) {
-          auto injectorType = this->well_ecl_.injectorType();
-
-          if (injectorType == InjectorType::WATER) {
-              WellMICPProperties microbes = this->well_ecl_.getMICPProperties();
-              const double microbial_injection_concentration = microbes.m_microbialConcentration;
-              return microbial_injection_concentration;
-          } else {
-              // Not a water injection well => no microbes.
-              return 0.0;
-          }
+          return this->wmicrobes_();
       }
 
       return 0.0;
@@ -184,16 +150,7 @@ namespace Opm
     woxygen() const
     {
       if constexpr (has_micp) {
-          auto injectorType = this->well_ecl_.injectorType();
-
-          if (injectorType == InjectorType::WATER) {
-              WellMICPProperties oxygen = this->well_ecl_.getMICPProperties();
-              const double oxygen_injection_concentration = oxygen.m_oxygenConcentration;
-              return oxygen_injection_concentration;
-          } else {
-              // Not a water injection well => no oxygen.
-              return 0.0;
-          }
+          return this->woxygen_();
       }
 
       return 0.0;
@@ -211,16 +168,7 @@ namespace Opm
     wurea() const
     {
       if constexpr (has_micp) {
-          auto injectorType = this->well_ecl_.injectorType();
-
-          if (injectorType == InjectorType::WATER) {
-              WellMICPProperties urea = this->well_ecl_.getMICPProperties();
-              const double urea_injection_concentration = urea.m_ureaConcentration / 10.; //Dividing by scaling factor 10
-              return urea_injection_concentration;
-          } else {
-              // Not a water injection well => no urea.
-              return 0.0;
-          }
+          return this->wurea_();
       }
 
       return 0.0;
@@ -245,9 +193,9 @@ namespace Opm
         auto& ws = well_state.well(this->index_of_well_);
         std::string from;
         if (well.isInjector()) {
-            from = Well::InjectorCMode2String(ws.injection_cmode);
+            from = WellInjectorCMode2String(ws.injection_cmode);
         } else {
-            from = Well::ProducerCMode2String(ws.production_cmode);
+            from = WellProducerCMode2String(ws.production_cmode);
         }
         bool oscillating = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) >= param_.max_number_of_well_switches_;
 
@@ -281,9 +229,9 @@ namespace Opm
         if (changed) {
             std::string to;
             if (well.isInjector()) {
-                to = Well::InjectorCMode2String(ws.injection_cmode);
+                to = WellInjectorCMode2String(ws.injection_cmode);
             } else {
-                to = Well::ProducerCMode2String(ws.production_cmode);
+                to = WellProducerCMode2String(ws.production_cmode);
             }
             std::ostringstream ss;
             ss << "    Switching control mode for well " << this->name()
@@ -479,13 +427,13 @@ namespace Opm
                 thp_control = ws.injection_cmode == Well::InjectorCMode::THP;
                 if (thp_control) {
                     ws.injection_cmode = Well::InjectorCMode::BHP;
-                    this->well_control_log_.push_back(Well::InjectorCMode2String(Well::InjectorCMode::THP));
+                    this->well_control_log_.push_back(WellInjectorCMode2String(Well::InjectorCMode::THP));
                 }
             } else {
                 thp_control = ws.production_cmode == Well::ProducerCMode::THP;
                 if (thp_control) {
                     ws.production_cmode = Well::ProducerCMode::BHP;
-                    this->well_control_log_.push_back(Well::ProducerCMode2String(Well::ProducerCMode::THP));
+                    this->well_control_log_.push_back(WellProducerCMode2String(Well::ProducerCMode::THP));
                 }
             }
             if (thp_control) {

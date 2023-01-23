@@ -22,6 +22,8 @@
 #include <config.h>
 #include <opm/simulators/wells/WellConstraints.hpp>
 
+#include <opm/input/eclipse/Schedule/Well/WVFPEXP.hpp>
+
 #include <opm/core/props/BlackoilPhases.hpp>
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
@@ -148,7 +150,7 @@ activeInjectionConstraint(const SingleWellState& ws,
                 "The THP limit is violated for injector " +
                 well_.name() +
                 ". But the rate will increase if switched to THP. " +
-                "The well is therefore kept at " + Well::InjectorCMode2String(currentControl));
+                "The well is therefore kept at " + WellInjectorCMode2String(currentControl));
             }
         }
     }
@@ -272,7 +274,7 @@ activeProductionConstraint(const SingleWellState& ws,
                 "The THP limit is violated for producer " +
                 well_.name() +
                 ". But the rate will increase if switched to THP. " +
-                "The well is therefore kept at " + Well::ProducerCMode2String(currentControl));
+                "The well is therefore kept at " + WellProducerCMode2String(currentControl));
             }
         }
     }

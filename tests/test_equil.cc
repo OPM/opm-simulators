@@ -32,9 +32,12 @@
 #include <opm/grid/GridManager.hpp>
 #include <opm/grid/cpgrid/GridHelpers.hpp>
 
+#include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
+
 #include <opm/input/eclipse/Units/Units.hpp>
 
 #include <opm/models/utils/start.hh>
+#include <opm/simulators/linalg/parallelbicgstabbackend.hh>
 
 #include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
@@ -789,6 +792,49 @@ BOOST_AUTO_TEST_CASE(DeckWithLiveOil)
         BOOST_CHECK_CLOSE(rs[i], rs_ecl[i], reltol_ecl);
     }
 }
+
+BOOST_AUTO_TEST_CASE(DeckWithCO2STORE)
+{
+    using TypeTag = Opm::Properties::TTag::TestEquilTypeTag;
+    using FluidSystem = Opm::GetPropType<TypeTag, Opm::Properties::FluidSystem>;
+    auto simulator1 = initSimulator<TypeTag>("equil_co2store_go.DATA");
+    EquilFixture::Initializer comp_go(*simulator1->problem().materialLawManager(),
+                                    simulator1->vanguard().eclState(),
+                                    simulator1->vanguard().grid(),
+                                    simulator1->vanguard().gridView(),
+                                    simulator1->vanguard().cartesianMapper(), 9.80665);
+
+    auto simulator2 = initSimulator<TypeTag>("equil_co2store_gw.DATA");
+    EquilFixture::Initializer comp_gw(*simulator2->problem().materialLawManager(),
+                                     simulator2->vanguard().eclState(),
+                                     simulator2->vanguard().grid(),
+                                     simulator2->vanguard().gridView(),
+                                     simulator2->vanguard().cartesianMapper(), 9.80665);
+
+    Opm::GridManager gm(simulator2->vanguard().eclState().getInputGrid());
+    const UnstructuredGrid& grid = *(gm.c_grid());
+
+    const double reltol = 1.0e-5;
+    const auto& pressures_go = comp_go.press();
+    BOOST_REQUIRE_EQUAL(pressures_go.size(), 3U);
+    BOOST_REQUIRE_EQUAL(int(pressures_go[0].size()), grid.number_of_cells);
+
+    const auto& pressures_gw = comp_gw.press();
+    BOOST_REQUIRE_EQUAL(pressures_gw.size(), 3U);
+    BOOST_REQUIRE_EQUAL(int(pressures_gw[0].size()), grid.number_of_cells);
+
+    const auto& sats_go = comp_go.saturation();
+    const auto& sats_gw = comp_gw.saturation();
+
+    for (int i = 0; i < grid.number_of_cells; ++i) {
+        BOOST_CHECK_CLOSE(pressures_go[FluidSystem::gasPhaseIdx][i],  pressures_gw[FluidSystem::gasPhaseIdx][i], reltol);
+        BOOST_CHECK_CLOSE(pressures_go[FluidSystem::oilPhaseIdx][i], pressures_gw[FluidSystem::waterPhaseIdx][i], reltol);
+
+        BOOST_CHECK_CLOSE(sats_go[FluidSystem::gasPhaseIdx][i], sats_gw[FluidSystem::gasPhaseIdx][i], reltol);
+        BOOST_CHECK_CLOSE(sats_go[FluidSystem::oilPhaseIdx][i], sats_gw[FluidSystem::waterPhaseIdx][i], reltol);
+    }
+}
+
 
 BOOST_AUTO_TEST_CASE(DeckWithWetGas)
 {

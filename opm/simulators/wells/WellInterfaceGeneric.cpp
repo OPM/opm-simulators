@@ -22,7 +22,13 @@
 #include <config.h>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 
+#include <opm/input/eclipse/Schedule/Well/WellBrineProperties.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellFoamProperties.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellMICPProperties.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellPolymerProperties.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
+#include <opm/input/eclipse/Schedule/Well/WVFPEXP.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/PerforationData.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
@@ -413,9 +419,9 @@ void WellInterfaceGeneric::reportWellSwitching(const SingleWellState& ws, Deferr
     std::string from = well_control_log_[0];
     std::string to;
     if (isInjector()) {
-        to = Well::InjectorCMode2String(ws.injection_cmode);
+        to = WellInjectorCMode2String(ws.injection_cmode);
     } else {
-        to = Well::ProducerCMode2String(ws.production_cmode);
+        to = WellProducerCMode2String(ws.production_cmode);
     }
     // only report the final switching
     if (from != to) {
@@ -436,6 +442,103 @@ bool WellInterfaceGeneric::isPressureControlled(const WellState& well_state) con
         return current == Well::ProducerCMode::THP ||
                current == Well::ProducerCMode::BHP;
     }
+}
+
+double WellInterfaceGeneric::wmicrobes_() const
+{
+    auto injectorType = this->well_ecl_.injectorType();
+
+    if (injectorType == InjectorType::WATER) {
+        WellMICPProperties microbes = this->well_ecl_.getMICPProperties();
+        const double microbial_injection_concentration = microbes.m_microbialConcentration;
+        return microbial_injection_concentration;
+    } else {
+        // Not a water injection well => no microbes.
+        return 0.0;
+    }
+}
+
+double WellInterfaceGeneric::wfoam_() const
+{
+    auto injectorType = this->well_ecl_.injectorType();
+
+    if (injectorType == InjectorType::GAS) {
+        WellFoamProperties fprop = this->well_ecl_.getFoamProperties();
+        return fprop.m_foamConcentration;
+    } else {
+        // Not a gas injection well => no foam.
+        return 0.0;
+    }
+}
+
+double WellInterfaceGeneric::wsalt_() const
+{
+    auto injectorType = this->well_ecl_.injectorType();
+
+    if (injectorType == InjectorType::WATER) {
+        WellBrineProperties fprop = this->well_ecl_.getBrineProperties();
+        return fprop.m_saltConcentration;
+    } else {
+        // Not a water injection well => no salt (?).
+        return 0.0;
+    }
+}
+
+double WellInterfaceGeneric::woxygen_() const
+{
+    auto injectorType = this->well_ecl_.injectorType();
+
+    if (injectorType == InjectorType::WATER) {
+        WellMICPProperties oxygen = this->well_ecl_.getMICPProperties();
+        const double oxygen_injection_concentration = oxygen.m_oxygenConcentration;
+        return oxygen_injection_concentration;
+    } else {
+        // Not a water injection well => no oxygen.
+        return 0.0;
+    }
+}
+
+double WellInterfaceGeneric::wpolymer_() const
+{
+    auto injectorType = this->well_ecl_.injectorType();
+
+    if (injectorType == InjectorType::WATER) {
+        WellPolymerProperties polymer = this->well_ecl_.getPolymerProperties();
+        const double polymer_injection_concentration = polymer.m_polymerConcentration;
+        return polymer_injection_concentration;
+    } else {
+        // Not a water injection well => no polymer.
+        return 0.0;
+    }
+}
+
+double WellInterfaceGeneric::wurea_() const
+{
+    auto injectorType = this->well_ecl_.injectorType();
+
+    if (injectorType == InjectorType::WATER) {
+        WellMICPProperties urea = this->well_ecl_.getMICPProperties();
+        const double urea_injection_concentration = urea.m_ureaConcentration / 10.; //Dividing by scaling factor 10
+        return urea_injection_concentration;
+    } else {
+        // Not a water injection well => no urea.
+        return 0.0;
+    }
+}
+
+int WellInterfaceGeneric::polymerTable_() const
+{
+    return this->well_ecl_.getPolymerProperties().m_skprpolytable;
+}
+
+int WellInterfaceGeneric::polymerWaterTable_() const
+{
+    return this->well_ecl_.getPolymerProperties().m_skprwattable;
+}
+
+int WellInterfaceGeneric::polymerInjTable_() const
+{
+    return this->well_ecl_.getPolymerProperties().m_plymwinjtable;
 }
 
 } // namespace Opm

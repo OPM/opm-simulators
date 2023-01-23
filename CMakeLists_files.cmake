@@ -44,6 +44,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/ConvergenceOutputConfiguration.cpp
   opm/simulators/flow/ExtraConvergenceOutputThread.cpp
   opm/simulators/flow/KeywordValidation.cpp
+  opm/simulators/flow/Main.cpp
   opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.cpp
   opm/simulators/flow/ValidationFunctions.cpp
   opm/simulators/linalg/bda/WellContributions.cpp
@@ -113,6 +114,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/VFPInjProperties.cpp
   opm/simulators/wells/WellAssemble.cpp
   opm/simulators/wells/WellBhpThpCalculator.cpp
+  opm/simulators/wells/WellConnectionAuxiliaryModule.cpp
   opm/simulators/wells/WellConstraints.cpp
   opm/simulators/wells/WellConvergence.cpp
   opm/simulators/wells/WellGroupConstraints.cpp
@@ -233,6 +235,8 @@ list (APPEND TEST_DATA_FILES
   tests/capillary_overlap.DATA
   tests/capillarySwatinit.DATA
   tests/deadfluids.DATA
+  tests/equil_co2store_go.DATA
+  tests/equil_co2store_gw.DATA
   tests/equil_wetgas.DATA
   tests/equil_liveoil.DATA
   tests/equil_humidwetgas.DATA

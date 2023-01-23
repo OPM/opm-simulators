@@ -23,7 +23,10 @@
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 #include <opm/grid/utility/cartesianToCompressed.hpp>
+
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
+#include <opm/input/eclipse/Schedule/Network/ExtNetwork.hpp>
+#include <opm/input/eclipse/Schedule/Network/Balance.hpp>
 
 #include <opm/simulators/wells/BlackoilWellModelConstraints.hpp>
 #include <opm/simulators/wells/VFPProperties.hpp>
@@ -129,20 +132,7 @@ namespace Opm {
         // initialize the additional cell connections introduced by wells.
         for (const auto& well : schedule_wells)
         {
-            std::vector<int> wellCells;
-            // All possible connections of the well
-            const auto& connectionSet = well.getConnections();
-            wellCells.reserve(connectionSet.size());
-
-            for (std::size_t c = 0; c < connectionSet.size(); c++)
-            {
-                const auto& connection = connectionSet.get(c);
-                int compressed_idx = compressedIndexForInterior(connection.global_index());
-                if ( compressed_idx >= 0 ) { // Ignore connections in inactive/remote cells.
-                    wellCells.push_back(compressed_idx);
-                }
-            }
-
+            std::vector<int> wellCells = this->getCellsForConnections(well);
             for (int cellIdx : wellCells) {
                 neighbors[cellIdx].insert(wellCells.begin(),
                                           wellCells.end());
@@ -393,30 +383,24 @@ namespace Opm {
                                             const double simulationTime,
                                             DeferredLogger& deferred_logger)
     {
-        const auto& wtest_config = schedule()[timeStepIdx].wtest_config();
-        if (!wtest_config.empty()) { // there is a WTEST request
-            const std::vector<std::string> wellsForTesting = wellTestState()
-                .test_wells(wtest_config, simulationTime);
-            for (const std::string& well_name : wellsForTesting) {
+        for (const std::string& well_name : this->getWellsForTesting(timeStepIdx, simulationTime)) {
+            const Well& wellEcl = schedule().getWell(well_name, timeStepIdx);
+            if (wellEcl.getStatus() == Well::Status::SHUT)
+                continue;
 
-                const Well& wellEcl = schedule().getWell(well_name, timeStepIdx);
-                if (wellEcl.getStatus() == Well::Status::SHUT)
-                    continue;
+            WellInterfacePtr well = createWellForWellTest(well_name, timeStepIdx, deferred_logger);
+            // some preparation before the well can be used
+            well->init(&phase_usage_, depth_, gravity_, local_num_cells_, B_avg_, true);
 
-                WellInterfacePtr well = createWellForWellTest(well_name, timeStepIdx, deferred_logger);
-                // some preparation before the well can be used
-                well->init(&phase_usage_, depth_, gravity_, local_num_cells_, B_avg_, true);
+            double well_efficiency_factor = wellEcl.getEfficiencyFactor();
+            WellGroupHelpers::accumulateGroupEfficiencyFactor(schedule().getGroup(wellEcl.groupName(), timeStepIdx),
+                                                              schedule(), timeStepIdx, well_efficiency_factor);
 
-                double well_efficiency_factor = wellEcl.getEfficiencyFactor();
-                WellGroupHelpers::accumulateGroupEfficiencyFactor(schedule().getGroup(wellEcl.groupName(), timeStepIdx),
-                                                                  schedule(), timeStepIdx, well_efficiency_factor);
+            well->setWellEfficiencyFactor(well_efficiency_factor);
+            well->setVFPProperties(vfp_properties_.get());
+            well->setGuideRate(&guideRate_);
 
-                well->setWellEfficiencyFactor(well_efficiency_factor);
-                well->setVFPProperties(vfp_properties_.get());
-                well->setGuideRate(&guideRate_);
-
-                well->wellTesting(ebosSimulator_, simulationTime, this->wellState(), this->groupState(), wellTestState(), deferred_logger);
-            }
+            well->wellTesting(ebosSimulator_, simulationTime, this->wellState(), this->groupState(), wellTestState(), deferred_logger);
         }
     }
 
@@ -631,7 +615,7 @@ namespace Opm {
             for (int w = 0; w < nw; ++w) {
                 const Well& well_ecl = wells_ecl_[w];
 
-                if (well_ecl.getConnections().empty()) {
+                if (!well_ecl.hasConnections()) {
                     // No connections in this well.  Nothing to do.
                     continue;
                 }
@@ -1418,19 +1402,7 @@ namespace Opm {
         // initialize the additional cell connections introduced by wells.
         for ( const auto& well : schedule_wells )
         {
-            std::vector<int> compressed_well_perforations;
-            // All possible completions of the well
-            const auto& completionSet = well.getConnections();
-            compressed_well_perforations.reserve(completionSet.size());
-
-            for (const auto& connection: well.getConnections())
-            {
-                const int compressed_idx = compressedIndexForInterior(connection.global_index());
-                if ( compressed_idx >= 0 ) // Ignore completions in inactive/remote cells.
-                {
-                    compressed_well_perforations.push_back(compressed_idx);
-                }
-            }
+            std::vector<int> compressed_well_perforations = this->getCellsForConnections(well);
 
             // also include wells with no perforations in case
             std::sort(compressed_well_perforations.begin(),
@@ -1567,35 +1539,6 @@ namespace Opm {
         // TODO: checking isOperableAndSolvable() ?
         for (auto& well : well_container_) {
             well->calculateExplicitQuantities(ebosSimulator_, this->wellState(), deferred_logger);
-        }
-    }
-
-
-
-
-
-    template<typename TypeTag>
-    bool
-    BlackoilWellModel<TypeTag>::
-    shouldBalanceNetwork(const int reportStepIdx, const int iterationIdx) const
-    {
-        const auto& network = schedule()[reportStepIdx].network();
-        if (!network.active()) {
-            return false;
-        }
-
-        const auto& balance = schedule()[reportStepIdx].network_balance();
-        if (balance.mode() == Network::Balance::CalcMode::TimeStepStart) {
-            return iterationIdx == 0;
-        } else if (balance.mode() == Network::Balance::CalcMode::NUPCOL) {
-            const int nupcol = schedule()[reportStepIdx].nupcol();
-            return iterationIdx < nupcol;
-        } else {
-            // We do not support any other rebalancing modes,
-            // i.e. TimeInterval based rebalancing is not available.
-            // This should be warned about elsewhere, so we choose to
-            // avoid spamming with a warning here.
-            return false;
         }
     }
 
@@ -1814,7 +1757,7 @@ namespace Opm {
         // corresponding "this->wells_ecl_[shutWell]".
 
         for (const auto& shutWell : this->local_shut_wells_) {
-            if (this->wells_ecl_[shutWell].getConnections().empty()) {
+            if (!this->wells_ecl_[shutWell].hasConnections()) {
                 // No connections in this well.  Nothing to do.
                 continue;
             }

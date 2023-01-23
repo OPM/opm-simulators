@@ -63,11 +63,7 @@ setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters 
     }
 
     // Use CPR configuration.
-    if ((conf == "cpr") || (conf == "cpr_trueimpes") || (conf == "cpr_quasiimpes")) {
-        if (conf == "cpr") {
-            // Treat "cpr" as short cut for the true IMPES variant.
-            conf = "cpr_trueimpes";
-        }
+    if ((conf == "cpr_trueimpes") || (conf == "cpr_quasiimpes")) {
         if (!linearSolverMaxIterSet) {
             // Use our own default unless it was explicitly overridden by user.
             p.linear_solver_maxiter_ = 20;
@@ -79,7 +75,7 @@ setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters 
         return setupCPR(conf, p);
     }
 
-    if ((conf == "cprw")) {
+    if ((conf == "cpr") || (conf == "cprw")) {
         if (!linearSolverMaxIterSet) {
             // Use our own default unless it was explicitly overridden by user.
             p.linear_solver_maxiter_ = 20;

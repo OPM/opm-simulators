@@ -17,6 +17,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <opm/input/eclipse/Schedule/GasLiftOpt.hpp>
 #include <fmt/format.h>
 
 namespace Opm {
@@ -191,7 +192,7 @@ setupPhaseVariables_()
 template<typename TypeTag>
 void
 GasLiftSingleWell<TypeTag>::
-setAlqMaxRate_(const GasLiftOpt::Well &well)
+setAlqMaxRate_(const GasLiftWell &well)
 {
     auto& max_alq_optional = well.max_rate();
     if (max_alq_optional) {

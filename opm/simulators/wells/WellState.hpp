@@ -34,7 +34,6 @@
 #include <opm/output/data/Wells.hpp>
 
 #include <opm/input/eclipse/Schedule/Events.hpp>
-#include <opm/input/eclipse/Schedule/Well/Well.hpp>
 
 #include <dune/common/version.hh>
 #include <dune/common/parallel/mpihelper.hh>
@@ -51,6 +50,7 @@ namespace Opm
 
 class ParallelWellInfo;
 class Schedule;
+enum class WellStatus;
 
 /// The state of a set of wells, tailored for use by the fully
 /// implicit blackoil simulator.
@@ -211,7 +211,7 @@ public:
 
     bool wellIsOwned(const std::string& wellName) const;
 
-    void updateStatus(int well_index, Well::Status status);
+    void updateStatus(int well_index, WellStatus status);
 
     void openWell(int well_index);
     void shutWell(int well_index);

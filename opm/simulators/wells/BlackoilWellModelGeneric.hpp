@@ -170,6 +170,13 @@ public:
 
     bool reportStepStarts() const { return report_step_starts_; }
 
+    bool shouldBalanceNetwork(const int reportStepIndex,
+                              const int iterationIdx) const;
+
+    bool shouldIterateNetwork(const int reportStepIndex,
+                              const std::size_t recursion_level,
+                              const double network_imbalance) const;
+
 protected:
 
     /*
@@ -336,6 +343,10 @@ protected:
     /// \brief get compressed index for interior cells (-1, otherwise
     virtual int compressedIndexForInterior(int cartesian_cell_idx) const = 0;
 
+    std::vector<int> getCellsForConnections(const Well& well) const;
+
+    std::vector<std::string> getWellsForTesting(const int timeStepIdx,
+                                                const double simulationTime);
 
     Schedule& schedule_;
     const SummaryState& summaryState_;

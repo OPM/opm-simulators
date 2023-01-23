@@ -28,7 +28,6 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
 
-#include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
 
 #include <opm/core/props/BlackoilPhases.hpp>
@@ -64,6 +63,9 @@ namespace Opm {
 
 namespace Opm
 {
+
+class WellInjectionProperties;
+class WellProductionProperties;
 
 template<typename TypeTag>
 class WellInterface : public WellInterfaceIndices<GetPropType<TypeTag, Properties::FluidSystem>,
@@ -327,8 +329,8 @@ protected:
 
     virtual void assembleWellEqWithoutIteration(const Simulator& ebosSimulator,
                                                 const double dt,
-                                                const Well::InjectionControls& inj_controls,
-                                                const Well::ProductionControls& prod_controls,
+                                                const WellInjectionControls& inj_controls,
+                                                const WellProductionControls& prod_controls,
                                                 WellState& well_state,
                                                 const GroupState& group_state,
                                                 DeferredLogger& deferred_logger) = 0;
@@ -336,8 +338,8 @@ protected:
     // iterate well equations with the specified control until converged
     virtual bool iterateWellEqWithControl(const Simulator& ebosSimulator,
                                           const double dt,
-                                          const Well::InjectionControls& inj_controls,
-                                          const Well::ProductionControls& prod_controls,
+                                          const WellInjectionControls& inj_controls,
+                                          const WellProductionControls& prod_controls,
                                           WellState& well_state,
                                           const GroupState& group_state,
                                           DeferredLogger& deferred_logger) = 0;

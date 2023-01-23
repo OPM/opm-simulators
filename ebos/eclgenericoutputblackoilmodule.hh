@@ -24,6 +24,7 @@
 #define EWOMS_ECL_GENERIC_OUTPUT_BLACK_OIL_MODULE_HH
 
 #include <array>
+#include <functional>
 #include <map>
 #include <numeric>
 #include <optional>
@@ -32,8 +33,6 @@
 
 #include <opm/output/data/Wells.hpp>
 #include <opm/output/eclipse/Inplace.hpp>
-#include <opm/input/eclipse/Schedule/SummaryState.hpp>
-#include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
@@ -43,16 +42,20 @@ namespace Opm {
 
 namespace data { class Solution; }
 class EclipseState;
+class Schedule;
+class SummaryConfig;
+class SummaryConfigNode;
+class SummaryState;
 
 template<class FluidSystem, class Scalar>
 class EclGenericOutputBlackoilModule {
 public:
      Scalar* getPRESSURE_ptr(void) {
-        return (this->oilPressure_.data()) ;
+        return (this->fluidPressure_.data()) ;
     };
     
     int  getPRESSURE_size( void ) {
-        return (this->oilPressure_.size()) ;
+        return (this->fluidPressure_.size()) ;
     };
     
     // write cumulative production and injection reports to output
@@ -207,7 +210,7 @@ public:
     }
 
     // Virtual destructor for safer inheritance.
-    virtual ~EclGenericOutputBlackoilModule() = default;
+    virtual ~EclGenericOutputBlackoilModule();
 
 protected:
     using ScalarBuffer = std::vector<Scalar>;
@@ -371,6 +374,8 @@ protected:
 
     static Scalar sum(const ScalarBuffer& v);
 
+    void setupBlockData(std::function<bool(int)> isCartIdxOnThisRank);
+
     virtual bool isDefunctParallelWell(std::string wname) const = 0;
 
     const EclipseState& eclState_;
@@ -411,7 +416,7 @@ protected:
     ScalarBuffer pressureTimesPoreVolume_;
     ScalarBuffer pressureTimesHydrocarbonVolume_;
     ScalarBuffer dynamicPoreVolume_;
-    ScalarBuffer oilPressure_;
+    ScalarBuffer fluidPressure_;
     ScalarBuffer temperature_;
     ScalarBuffer rs_;
     ScalarBuffer rsw_;

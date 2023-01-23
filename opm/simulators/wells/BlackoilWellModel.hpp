@@ -278,7 +278,6 @@ namespace Opm {
             // at the beginning of each time step (Not report step)
             void prepareTimeStep(DeferredLogger& deferred_logger);
             void initPrimaryVariablesEvaluation() const;
-            bool shouldBalanceNetwork(const int reportStepIndex, const int iterationIdx) const;
 
             // return { changed_well_group, more_network_update };
             // the first return value indicates whether the well and group are changed

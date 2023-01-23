@@ -31,8 +31,6 @@
 
 #include <opm/models/utils/propertysystem.hh>
 
-#include <opm/input/eclipse/Units/Units.hpp>
-
 #include <opm/material/common/Tabulated1DFunction.hpp>
 #include <opm/material/fluidstates/SimpleModularFluidState.hpp>
 
@@ -574,6 +572,10 @@ private:
     /// fluid state.
     double materialLawCapPressOilWater() const;
 
+    /// Extract gas/water capillary pressure value (Pg - Pw) from current
+    /// fluid state.
+    double materialLawCapPressGasWater() const;
+
     /// Predicate for whether specific phase has constant capillary pressure
     /// curve in current cell.
     ///
@@ -683,7 +685,7 @@ public:
                          const Grid& grid,
                          const GridView& gridView,
                          const CartesianIndexMapper& cartMapper,
-                         const double grav = unit::gravity,
+                         const double grav,
                          const bool applySwatInit = true);
 
     using Vec = std::vector<double>;

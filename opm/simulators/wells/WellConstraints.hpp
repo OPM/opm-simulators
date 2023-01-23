@@ -24,8 +24,6 @@
 #ifndef OPM_WELL_CONSTRAINTS_HEADER_INCLUDED
 #define OPM_WELL_CONSTRAINTS_HEADER_INCLUDED
 
-#include <opm/input/eclipse/Schedule/Well/Well.hpp>
-
 #include <functional>
 #include <utility>
 #include <vector>
@@ -37,7 +35,10 @@ class DeferredLogger;
 using RegionId = int;
 class Rates;
 class SingleWellState;
+class SummaryState;
 class WellInterfaceGeneric;
+enum class WellInjectorCMode;
+enum class WellProducerCMode;
 
 //! \brief Class for computing well group constraints.
 class WellConstraints {
@@ -57,13 +58,13 @@ public:
                                DeferredLogger& deferred_logger) const;
 
 private:
-    Well::InjectorCMode
+    WellInjectorCMode
     activeInjectionConstraint(const SingleWellState& ws,
                               const SummaryState& summaryState,
                               bool& thp_limit_violated_but_not_switched,
                               DeferredLogger& deferred_logger) const;
 
-    Well::ProducerCMode
+    WellProducerCMode
     activeProductionConstraint(const SingleWellState& ws,
                                const SummaryState& summaryState,
                                const RateConvFunc& calcReservoirVoidageRates,

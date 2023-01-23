@@ -18,14 +18,14 @@
 */
 
 #include <config.h>
-#include <sstream>
+
+#include <opm/simulators/linalg/bda/amgclSolverBackend.hpp>
+
+#include <opm/simulators/linalg/bda/BdaResult.hpp>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <dune/common/timer.hh>
-
-#include <opm/simulators/linalg/bda/BdaResult.hpp>
-#include <opm/simulators/linalg/bda/amgclSolverBackend.hpp>
 
 #include <boost/property_tree/json_parser.hpp>
 
@@ -33,6 +33,18 @@
 #include <amgcl/backend/vexcl.hpp>
 #include <amgcl/backend/vexcl_static_matrix.hpp>
 #endif
+
+#include <algorithm>
+#include <fstream>
+#include <ios>
+#include <ostream>
+#include <memory>
+#include <mutex>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include <tuple>
+#include <vector>
 
 namespace Opm
 {
@@ -43,8 +55,13 @@ using Opm::OpmLog;
 using Dune::Timer;
 
 template <unsigned int block_size>
-amgclSolverBackend<block_size>::amgclSolverBackend(int verbosity_, int maxit_, double tolerance_, unsigned int platformID_, unsigned int deviceID_) : BdaSolver<block_size>(verbosity_, maxit_, tolerance_, platformID_, deviceID_) {}
-
+amgclSolverBackend<block_size>::amgclSolverBackend(const int          verbosity_,
+                                                   const int          maxit_,
+                                                   const double       tolerance_,
+                                                   const unsigned int platformID_,
+                                                   const unsigned int deviceID_)
+    : BdaSolver<block_size>(verbosity_, maxit_, tolerance_, platformID_, deviceID_)
+{}
 
 template <unsigned int block_size>
 amgclSolverBackend<block_size>::~amgclSolverBackend() {}
@@ -360,10 +377,10 @@ void amgclSolverBackend<block_size>::get_result(double *x_) {
 
 template <unsigned int block_size>
 SolverStatus amgclSolverBackend<block_size>::solve_system(std::shared_ptr<BlockedMatrix> matrix,
-                                                           double *b,
-                                                           [[maybe_unused]] std::shared_ptr<BlockedMatrix> jacMatrix,
-                                                           [[maybe_unused]] WellContributions& wellContribs,
-                                                           BdaResult &res)
+                                                          double *b,
+                                                          [[maybe_unused]] std::shared_ptr<BlockedMatrix> jacMatrix,
+                                                          [[maybe_unused]] WellContributions& wellContribs,
+                                                          BdaResult &res)
 {
     if (initialized == false) {
         initialize(matrix->Nb, matrix->nnzbs);
@@ -372,6 +389,16 @@ SolverStatus amgclSolverBackend<block_size>::solve_system(std::shared_ptr<Blocke
     convert_data(matrix->nnzValues, matrix->rowPointers);
     solve_system(b, res);
     return SolverStatus::BDA_SOLVER_SUCCESS;
+}
+
+template <>
+SolverStatus amgclSolverBackend<1>::solve_system([[maybe_unused]] std::shared_ptr<BlockedMatrix> matrix,
+                                                 [[maybe_unused]] double *b,
+                                                 [[maybe_unused]] std::shared_ptr<BlockedMatrix> jacMatrix,
+                                                 [[maybe_unused]] WellContributions& wellContribs,
+                                                 [[maybe_unused]] BdaResult &res)
+{
+    OPM_THROW(std::logic_error, "amgclSolverBackend not implemented for sz 1");
 }
 
 

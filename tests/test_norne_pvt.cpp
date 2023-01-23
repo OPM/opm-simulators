@@ -36,6 +36,7 @@
 
 #include <opm/input/eclipse/Python/Python.hpp>
 #include <opm/input/eclipse/Units/Units.hpp>
+#include <opm/input/eclipse/Parser/InputErrorAction.hpp>
 #include <opm/input/eclipse/Parser/Parser.hpp>
 #include <opm/input/eclipse/Parser/ParseContext.hpp>
 #include <opm/input/eclipse/Parser/ErrorGuard.hpp>
@@ -280,7 +281,7 @@ void verify_norne_oil_pvt_region2(const Opm::EclipseState& eclState, const Opm::
 }
 
 BOOST_AUTO_TEST_CASE( Test_Norne_PVT) {
-    Opm::ParseContext parseContext({{ ParseContext::PARSE_RANDOM_SLASH , InputError::IGNORE }});
+    Opm::ParseContext parseContext({{ ParseContext::PARSE_RANDOM_SLASH , InputErrorAction::IGNORE }});
     Opm::ErrorGuard errorGuard;
     Opm::Parser parser;
     auto python = std::make_shared<Opm::Python>();
