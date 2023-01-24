@@ -478,6 +478,9 @@ namespace Opm {
                 convergence_reports_.back().report.reserve(11);
             }
 
+            if (iteration == 0) {
+                return nonlinearIterationNewton(iteration, timer, nonlinear_solver);
+            }
             if (param_.nonlinear_solver_ == "aspin" || param_.nonlinear_solver_ == "nldd" || param_.nonlinear_solver_ == "purelocal") {
                 return nonlinearIterationAspin(iteration, timer, nonlinear_solver);
             } else {
