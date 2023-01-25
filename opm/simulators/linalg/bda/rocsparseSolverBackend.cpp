@@ -1,5 +1,5 @@
 /*
-  Copyright 2020 Equinor ASA
+  Copyright 2023 Equinor ASA
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -79,14 +79,10 @@ rocsparseSolverBackend<block_size>::rocsparseSolverBackend(int verbosity_, int m
 
 template <unsigned int block_size>
 rocsparseSolverBackend<block_size>::~rocsparseSolverBackend() {
-    try {
-        HIP_CHECK(hipStreamSynchronize(stream));
-        HIP_CHECK(hipStreamDestroy(stream));
-        ROCSPARSE_CHECK(rocsparse_destroy_handle(handle));
-        ROCBLAS_CHECK(rocblas_destroy_handle(blas_handle));
-    } catch (const std::logic_error& err) {
-        OpmLog::error(err.what());
-    }
+    HIP_CHECK(hipStreamSynchronize(stream));
+    HIP_CHECK(hipStreamDestroy(stream));
+    ROCSPARSE_CHECK(rocsparse_destroy_handle(handle));
+    ROCBLAS_CHECK(rocblas_destroy_handle(blas_handle));
 }
 
 

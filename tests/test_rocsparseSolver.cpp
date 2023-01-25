@@ -1,6 +1,6 @@
 /*
   Copyright 2019 SINTEF Digital, Mathematics and Cybernetics.
-  Copyright 2022 Equinor
+  Copyright 2023 Equinor
 
   This file is part of the Open Porous Media project (OPM).
 
