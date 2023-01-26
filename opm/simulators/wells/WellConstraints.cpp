@@ -129,6 +129,9 @@ activeInjectionConstraint(const SingleWellState& ws,
             return Well::InjectorCMode::RESV;
     }
 
+    // Note: we are not working on injecting network yet, so it is possible we need to change the following line
+    // to be as follows to incorporate the injecting network nodal pressure
+    // if (well_.wellHasTHPConstraints(summaryState) && currentControl != Well::InjectorCMode::THP)
     if (controls.hasControl(Well::InjectorCMode::THP) && currentControl != Well::InjectorCMode::THP)
     {
         const auto& thp = well_.getTHPConstraint(summaryState);
@@ -248,7 +251,7 @@ activeProductionConstraint(const SingleWellState& ws,
         }
     }
 
-    if (controls.hasControl(Well::ProducerCMode::THP) && currentControl != Well::ProducerCMode::THP) {
+    if (well_.wellHasTHPConstraints(summaryState) && currentControl != Well::ProducerCMode::THP) {
         const auto& thp = well_.getTHPConstraint(summaryState);
         double current_thp = ws.thp;
         if (thp > current_thp && !ws.trivial_target) {
