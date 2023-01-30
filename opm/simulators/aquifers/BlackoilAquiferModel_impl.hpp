@@ -17,6 +17,10 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+// TODO: remove this include
+#include <iostream>
+
+#include <opm/simulators/aquifers/AquiferConstantFlux.hpp>
 
 #include <opm/common/ErrorMacros.hpp>
 #include <stdexcept>
@@ -54,7 +58,30 @@ BlackoilAquiferModel<TypeTag>::initFromRestart(const data::Aquifers& aquiferSoln
 template <typename TypeTag>
 void
 BlackoilAquiferModel<TypeTag>::beginEpisode()
-{}
+{
+    // TODO: not totally sure this is the function should be used.
+    // basically, we want to update the aquifer related information from SCHEDULE setup in this section
+    // it is the beginning of a report step
+
+    const auto& connections = this->simulator_.vanguard().eclState().aquifer().connections();
+    const int report_step  = this->simulator_.episodeIndex();
+    const auto& aqufluxs = this->simulator_.vanguard().schedule()[report_step].aqufluxs;// .aquflu// simulator.vanguard().schedule()[reportStepIdx].events()
+    for (const auto& elem : aqufluxs) {
+        const int id = elem.first;
+        auto find = std::find_if(begin(this->aquifers), end(this->aquifers), [id](auto& v){ return v->aquiferID() == id; });
+        if (find == this->aquifers.end()) {
+            // the aquifer id does not exist in aquifers yet
+            const auto& aquinfo = elem.second;
+            auto aqf = std::make_unique<AquiferConstantFlux<TypeTag>>(aquinfo, connections.getConnections(aquinfo->id), this->simulator_);
+            this->aquifers.push_back(std::move(aqf));
+        } else {
+            const auto& aquinfo = elem.second;
+            auto aqf = std::make_unique<AquiferConstantFlux<TypeTag>>(aquinfo, connections.getConnections(aquinfo->id), this->simulator_);
+            *find = std::move(aqf);
+            // create
+        }
+    }
+}
 
 template <typename TypeTag>
 void
@@ -175,6 +202,9 @@ BlackoilAquiferModel<TypeTag>::init()
             aquifers.push_back(std::move(aqf));
         }
     }
+
+    // first time handle constant flux aquifers, which is stored in the schedule. Other aquifer types might also be refactored later
+    // to be able to be updated through SCHEDULE.
 }
 
 template<typename TypeTag>
