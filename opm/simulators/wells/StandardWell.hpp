@@ -334,6 +334,9 @@ namespace Opm
             DeferredLogger& deferred_logger,
             const WellState &well_state) const;
 
+        bool updateWellStateWithTHPTargetProd(const Simulator& ebos_simulator,
+                                              WellState& well_state,
+                                              DeferredLogger& deferred_logger) const;
 
         virtual double getRefDensity() const override;
 

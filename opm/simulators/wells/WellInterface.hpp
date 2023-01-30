@@ -201,6 +201,10 @@ public:
                                            WellState& well_state,
                                            DeferredLogger& deferred_logger) const;
 
+    virtual bool updateWellStateWithTHPTargetProd(const Simulator& ebos_simulator,
+                                                  WellState& well_state,
+                                                  DeferredLogger& deferred_logger) const = 0;
+
     enum class IndividualOrGroup { Individual, Group, Both };
     bool updateWellControl(const Simulator& ebos_simulator,
                            const IndividualOrGroup iog,
