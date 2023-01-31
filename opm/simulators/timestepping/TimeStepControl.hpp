@@ -35,6 +35,8 @@ namespace Opm
     class SimpleIterationCountTimeStepControl : public TimeStepControlInterface
     {
     public:
+        SimpleIterationCountTimeStepControl() = default;
+
         /// \brief constructor
         /// \param target_iterations  number of desired iterations (e.g. Newton iterations) per time step in one time step
         //  \param decayrate          decayrate of time step when target iterations are not met (should be <= 1)
@@ -45,14 +47,27 @@ namespace Opm
                                              const double growthrate,
                                              const bool verbose = false);
 
+        static SimpleIterationCountTimeStepControl serializationTestObject();
+
         /// \brief \copydoc TimeStepControlInterface::computeTimeStepSize
         double computeTimeStepSize( const double dt, const int iterations, const RelativeChangeInterface& /* relativeChange */, const double /*simulationTimeElapsed */ ) const;
 
+        template<class Serializer>
+        void serializeOp(Serializer& serializer)
+        {
+            serializer(target_iterations_);
+            serializer(decayrate_);
+            serializer(growthrate_);
+            serializer(verbose_);
+        }
+
+        bool operator==(const SimpleIterationCountTimeStepControl&) const;
+
     protected:
-        const int     target_iterations_;
-        const double  decayrate_;
-        const double  growthrate_;
-        const bool    verbose_;
+        const int     target_iterations_ = 0;
+        const double  decayrate_ = 0.0;
+        const double  growthrate_ = 0.0;
+        const bool    verbose_ = false;
     };
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////

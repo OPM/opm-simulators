@@ -66,6 +66,12 @@ namespace Opm
         }
     }
 
+    SimpleIterationCountTimeStepControl
+    SimpleIterationCountTimeStepControl::serializationTestObject()
+    {
+        return {1, 1.0, 2.0, true};
+    }
+
     double SimpleIterationCountTimeStepControl::
     computeTimeStepSize( const double dt, const int iterations, const RelativeChangeInterface& /* relativeChange */, const double /*simulationTimeElapsed */) const
     {
@@ -84,6 +90,15 @@ namespace Opm
         }
 
         return dtEstimate;
+    }
+
+    bool SimpleIterationCountTimeStepControl::
+    operator==(const SimpleIterationCountTimeStepControl& ctrl) const
+    {
+         return this->target_iterations_ == ctrl.target_iterations_ &&
+                this->decayrate_ == ctrl.decayrate_ &&
+                this->growthrate_ == ctrl.growthrate_ &&
+                this->verbose_ == ctrl.verbose_;
     }
 
     ////////////////////////////////////////////////////////
