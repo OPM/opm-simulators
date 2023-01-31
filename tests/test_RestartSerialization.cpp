@@ -19,8 +19,11 @@
 
 #include <config.h>
 
+#include <ebos/ebos.hh>
+
 #include <opm/common/utility/Serializer.hpp>
 
+#include <opm/simulators/timestepping/AdaptiveTimeSteppingEbos.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
 #include <opm/simulators/timestepping/TimeStepControl.hpp>
 #include <opm/simulators/utils/SerializationPackers.hpp>
@@ -42,7 +45,7 @@ std::tuple<T,int,int> PackUnpack(T& in)
     ser.unpack(out);
     size_t pos2 = ser.position();
 
-    return std::make_tuple(out, pos1, pos2);
+    return std::make_tuple(std::move(out), pos1, pos2);
 }
 
 #define TEST_FOR_TYPE_NAMED_OBJ(TYPE, NAME, OBJ) \
@@ -65,6 +68,12 @@ TEST_FOR_TYPE(PIDAndIterationCountTimeStepControl)
 TEST_FOR_TYPE(PIDTimeStepControl)
 TEST_FOR_TYPE(SimpleIterationCountTimeStepControl)
 TEST_FOR_TYPE(SimulatorTimer)
+
+namespace Opm { using ATE = AdaptiveTimeSteppingEbos<Opm::Properties::TTag::EbosTypeTag>; }
+TEST_FOR_TYPE_NAMED_OBJ(ATE, AdaptiveTimeSteppingEbosHardcoded, serializationTestObjectHardcoded)
+TEST_FOR_TYPE_NAMED_OBJ(ATE, AdaptiveTimeSteppingEbosPID, serializationTestObjectPID)
+TEST_FOR_TYPE_NAMED_OBJ(ATE, AdaptiveTimeSteppingEbosPIDIt, serializationTestObjectPIDIt)
+TEST_FOR_TYPE_NAMED_OBJ(ATE, AdaptiveTimeSteppingEbosSimple, serializationTestObjectSimple)
 
 bool init_unit_test_func()
 {

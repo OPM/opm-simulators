@@ -21,12 +21,20 @@
 #ifndef OPM_TIMESTEPCONTROL_HEADER_INCLUDED
 #define OPM_TIMESTEPCONTROL_HEADER_INCLUDED
 
-#include <vector>
-
 #include <opm/simulators/timestepping/TimeStepControlInterface.hpp>
+
+#include <string>
+#include <vector>
 
 namespace Opm
 {
+    enum class TimeStepControlType {
+      SimpleIterationCount,
+      PID,
+      PIDAndIterationCount,
+      HardCodedTimeStep
+    };
+
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///
     ///  A simple iteration count based adaptive time step control.
@@ -35,6 +43,7 @@ namespace Opm
     class SimpleIterationCountTimeStepControl : public TimeStepControlInterface
     {
     public:
+        static constexpr TimeStepControlType Type = TimeStepControlType::SimpleIterationCount;
         SimpleIterationCountTimeStepControl() = default;
 
         /// \brief constructor
@@ -87,6 +96,7 @@ namespace Opm
     class PIDTimeStepControl : public TimeStepControlInterface
     {
     public:
+        static constexpr TimeStepControlType Type = TimeStepControlType::PID;
         /// \brief constructor
         /// \param tol      tolerance for the relative changes of the numerical solution to be accepted
         ///                 in one time step (default is 1e-3)
@@ -126,6 +136,8 @@ namespace Opm
     {
         typedef PIDTimeStepControl BaseType;
     public:
+        static constexpr TimeStepControlType Type = TimeStepControlType::PIDAndIterationCount;
+
         /// \brief constructor
         /// \param target_iterations  number of desired iterations per time step
         /// \param tol        tolerance for the relative changes of the numerical solution to be accepted
@@ -174,6 +186,7 @@ namespace Opm
     class HardcodedTimeStepControl : public TimeStepControlInterface
     {
     public:
+        static constexpr TimeStepControlType Type = TimeStepControlType::HardCodedTimeStep;
         HardcodedTimeStepControl() = default;
 
         /// \brief constructor
