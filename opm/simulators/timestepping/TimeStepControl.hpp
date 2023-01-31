@@ -94,14 +94,26 @@ namespace Opm
         PIDTimeStepControl( const double tol = 1e-3,
                             const bool verbose = false );
 
+        static PIDTimeStepControl serializationTestObject();
+
         /// \brief \copydoc TimeStepControlInterface::computeTimeStepSize
         double computeTimeStepSize( const double dt, const int /* iterations */, const RelativeChangeInterface& relativeChange, const double /*simulationTimeElapsed */ ) const;
 
-    protected:
-        const double tol_;
-        mutable std::vector< double > errors_;
+        template<class Serializer>
+        void serializeOp(Serializer& serializer)
+        {
+            serializer(tol_);
+            serializer(errors_);
+            serializer(verbose_);
+        }
 
-        const bool verbose_;
+        bool operator==(const PIDTimeStepControl&) const;
+
+    protected:
+        const double tol_ = 1e-3;
+        mutable std::vector< double > errors_{};
+
+        const bool verbose_ = false;
     };
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
