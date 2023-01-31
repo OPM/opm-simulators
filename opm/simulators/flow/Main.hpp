@@ -68,6 +68,7 @@
 
 #include <cassert>
 #include <cstdlib>
+#include <functional>
 #include <iostream>
 #include <memory>
 #include <stdexcept>
@@ -366,7 +367,8 @@ private:
                            EWOMS_GET_PARAM(PreTypeTag, bool,  EnableLoggingFalloutWarning),
                            EWOMS_GET_PARAM(PreTypeTag, bool, EclStrictParsing),
                            mpiRank,
-                           EWOMS_GET_PARAM(PreTypeTag, int, EclOutputInterval));
+                           EWOMS_GET_PARAM(PreTypeTag, int, EclOutputInterval),
+                           FlowMainEbos<PreTypeTag>::printPRTHeader);
             setupTime_ = externalSetupTimer.elapsed();
         }
         catch (const std::invalid_argument& e)
@@ -609,7 +611,8 @@ private:
                   const bool allRanksDbgPrtLog,
                   const bool strictParsing,
                   const int mpiRank,
-                  const int output_param);
+                  const int output_param,
+                  std::function<void(bool)> outputPrt);
 
     void setupVanguard();
 
