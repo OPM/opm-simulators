@@ -28,8 +28,11 @@
 #define EWOMS_ECL_GENERIC_VANGUARD_HH
 
 #include <opm/grid/common/GridEnums.hpp>
+
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
+
 #include <opm/simulators/utils/ParallelCommunication.hpp>
+
 #if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
 #include <dune/common/parallel/communication.hh>
 #else
@@ -68,9 +71,9 @@ public:
 
     struct SimulationModelParams {
         double setupTime_;
-        std::unique_ptr<Parallel::Communication> comm_;
         std::unique_ptr<UDQState> udqState_;
         std::unique_ptr<Action::State> actionState_;
+        std::unique_ptr<SummaryState> summaryState_;
         std::unique_ptr<WellTestState> wtestState_;
         std::shared_ptr<EclipseState> eclState_;
         std::shared_ptr<Schedule> eclSchedule_;
@@ -84,12 +87,15 @@ public:
      * \details Needs to be in compile unit.
      */
     EclGenericVanguard();
+    explicit EclGenericVanguard(SimulationModelParams&& params);
 
     /*!
      * \brief Destructor.
      * \details Empty, but needs to be in compile unit.
      */
     ~EclGenericVanguard();
+
+    static SimulationModelParams serializationTestParams();
 
     /*!
      * \brief Returns the canonical path to a deck file.
@@ -254,6 +260,14 @@ public:
         assert(comm_);
         return *comm_;
     }
+
+    // Private to avoid pulling schedule in header.
+    // Static state is not serialized, only use for restart.
+    template<class Serializer>
+    void serializeOp(Serializer& serializer);
+
+    // Only compares dynamic state.
+    bool operator==(const EclGenericVanguard& rhs) const;
 
 protected:
     void updateOutputDir_(std::string outputDir,
