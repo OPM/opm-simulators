@@ -61,6 +61,7 @@ BOOST_AUTO_TEST_CASE(NAME) \
     TEST_FOR_TYPE_NAMED(TYPE, TYPE)
 
 TEST_FOR_TYPE(HardcodedTimeStepControl)
+TEST_FOR_TYPE(PIDAndIterationCountTimeStepControl)
 TEST_FOR_TYPE(PIDTimeStepControl)
 TEST_FOR_TYPE(SimpleIterationCountTimeStepControl)
 TEST_FOR_TYPE(SimulatorTimer)

@@ -138,8 +138,22 @@ namespace Opm
                                              const double minTimeStepBasedOnIterations = 0.,
                                              const bool verbose = false);
 
+        static PIDAndIterationCountTimeStepControl serializationTestObject();
+
         /// \brief \copydoc TimeStepControlInterface::computeTimeStepSize
         double computeTimeStepSize( const double dt, const int iterations, const RelativeChangeInterface& relativeChange, const double /*simulationTimeElapsed */ ) const;
+
+        template<class Serializer>
+        void serializeOp(Serializer& serializer)
+        {
+            serializer(static_cast<PIDTimeStepControl&>(*this));
+            serializer(target_iterations_);
+            serializer(decayDampingFactor_);
+            serializer(growthDampingFactor_);
+            serializer(minTimeStepBasedOnIterations_);
+        }
+
+        bool operator==(const PIDAndIterationCountTimeStepControl&) const;
 
     protected:
         const int     target_iterations_;
