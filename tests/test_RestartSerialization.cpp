@@ -20,8 +20,14 @@
 #include <config.h>
 
 #include <ebos/ebos.hh>
+#include <ebos/eclgenericvanguard.hh>
 
 #include <opm/common/utility/Serializer.hpp>
+
+#include <opm/input/eclipse/Schedule/Action/State.hpp>
+#include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
+#include <opm/input/eclipse/Schedule/SummaryState.hpp>
+#include <opm/input/eclipse/Schedule/UDQ/UDQState.hpp>
 
 #include <opm/simulators/timestepping/AdaptiveTimeSteppingEbos.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
@@ -74,6 +80,28 @@ TEST_FOR_TYPE_NAMED_OBJ(ATE, AdaptiveTimeSteppingEbosHardcoded, serializationTes
 TEST_FOR_TYPE_NAMED_OBJ(ATE, AdaptiveTimeSteppingEbosPID, serializationTestObjectPID)
 TEST_FOR_TYPE_NAMED_OBJ(ATE, AdaptiveTimeSteppingEbosPIDIt, serializationTestObjectPIDIt)
 TEST_FOR_TYPE_NAMED_OBJ(ATE, AdaptiveTimeSteppingEbosSimple, serializationTestObjectSimple)
+
+BOOST_AUTO_TEST_CASE(EclGenericVanguard)
+{
+    auto in_params = Opm::EclGenericVanguard::serializationTestParams();
+    Opm::EclGenericVanguard val1(in_params);
+    Opm::Serialization::MemPacker packer;
+    Opm::Serializer ser(packer);
+    ser.pack(val1);
+    size_t pos1 = ser.position();
+    Opm::EclGenericVanguard::SetupParams out_params;
+    out_params.setupTime_ = 0.0;
+    out_params.actionState_ = std::make_unique<Opm::Action::State>();
+    out_params.udqState_ = std::make_unique<Opm::UDQState>();
+    out_params.eclSchedule_ = std::make_shared<Opm::Schedule>();
+    out_params.summaryState_ = std::make_unique<Opm::SummaryState>();
+    Opm::EclGenericVanguard val2(out_params);
+    ser.unpack(val2);
+    size_t pos2 = ser.position();
+
+    BOOST_CHECK_MESSAGE(pos1 == pos2, "Packed size differ from unpack size for EclGenericVanguard");
+    BOOST_CHECK_MESSAGE(val1 == val2, "Deserialized EclGenericVanguard differ");
+}
 
 bool init_unit_test_func()
 {
