@@ -82,6 +82,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/utils/gatherDeferredLogger.cpp
   opm/simulators/utils/ParallelFileMerger.cpp
   opm/simulators/utils/ParallelRestart.cpp
+  opm/simulators/utils/SerializationPackers.cpp
   opm/simulators/wells/ALQState.cpp
   opm/simulators/wells/BlackoilWellModelConstraints.cpp
   opm/simulators/wells/BlackoilWellModelGeneric.cpp
@@ -372,6 +373,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/utils/ParallelEclipseState.hpp
   opm/simulators/utils/ParallelRestart.hpp
   opm/simulators/utils/PropsCentroidsDataHandle.hpp
+  opm/simulators/utils/SerializationPackers.hpp
   opm/simulators/utils/VectorVectorDataHandle.hpp
   opm/simulators/wells/ALQState.hpp
   opm/simulators/wells/BlackoilWellModel.hpp
