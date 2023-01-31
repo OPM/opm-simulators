@@ -242,6 +242,12 @@ namespace Opm
         , minTimeStepBasedOnIterations_(minTimeStepBasedOnIterations)
     {}
 
+    PIDAndIterationCountTimeStepControl
+    PIDAndIterationCountTimeStepControl::serializationTestObject()
+    {
+        return {1, 2.0, 3.0, 4.0, 5.0, true};
+    }
+
     double PIDAndIterationCountTimeStepControl::
     computeTimeStepSize( const double dt, const int iterations, const RelativeChangeInterface& relChange,  const double simulationTimeElapsed ) const
     {
@@ -262,6 +268,15 @@ namespace Opm
         }
 
         return std::min(dtEstimatePID, dtEstimateIter);
+    }
+
+    bool PIDAndIterationCountTimeStepControl::operator==(const PIDAndIterationCountTimeStepControl& ctrl) const
+    {
+        return static_cast<const PIDTimeStepControl&>(*this) == ctrl &&
+               this->target_iterations_ == ctrl.target_iterations_ &&
+               this->decayDampingFactor_ == ctrl.decayDampingFactor_ &&
+               this->growthDampingFactor_ == ctrl.growthDampingFactor_ &&
+               this->minTimeStepBasedOnIterations_ == ctrl.minTimeStepBasedOnIterations_;
     }
 
 } // end namespace Opm
