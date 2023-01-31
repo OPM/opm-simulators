@@ -343,7 +343,6 @@ namespace Opm
         }
 
         // Print an ASCII-art header to the PRT and DEBUG files.
-        // \return Whether unkown keywords were seen during parsing.
         static void printPRTHeader(bool output_cout)
         {
           if (output_cout) {

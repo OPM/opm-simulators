@@ -171,13 +171,16 @@ void Main::readDeck(const std::string& deckFilename,
                     const bool allRanksDbgPrtLog,
                     const bool strictParsing,
                     const int mpiRank,
-                    const int output_param)
+                    const int output_param,
+                    std::function<void(bool)> outputPrt)
 {
     auto omode = setupLogging(mpiRank,
                               deckFilename,
                               outputDir,
                               outputMode,
                               outputCout_, "STDOUT_LOGGER", allRanksDbgPrtLog);
+
+    outputPrt(outputCout_);
 
     if (outputCout_) {
         OpmLog::info("Reading deck file '" + deckFilename + "'");
