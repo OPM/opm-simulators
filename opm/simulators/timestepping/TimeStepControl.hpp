@@ -148,12 +148,24 @@ namespace Opm
     class HardcodedTimeStepControl : public TimeStepControlInterface
     {
     public:
+        HardcodedTimeStepControl() = default;
+
         /// \brief constructor
         /// \param filename   filename contaning the timesteps
         explicit HardcodedTimeStepControl( const std::string& filename);
 
+        static HardcodedTimeStepControl serializationTestObject();
+
         /// \brief \copydoc TimeStepControlInterface::computeTimeStepSize
         double computeTimeStepSize( const double dt, const int /* iterations */, const RelativeChangeInterface& /*relativeChange */, const double simulationTimeElapsed) const;
+
+        template<class Serializer>
+        void serializeOp(Serializer& serializer)
+        {
+            serializer(subStepTime_);
+        }
+
+        bool operator==(const HardcodedTimeStepControl&) const;
 
     protected:
         // store the time (in days) of the substeps the simulator should use
