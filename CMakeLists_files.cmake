@@ -199,6 +199,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_parallelwellinfo.cpp
   tests/test_preconditionerfactory.cpp
   tests/test_relpermdiagnostics.cpp
+  tests/test_RestartSerialization.cpp
   tests/test_stoppedwells.cpp
   tests/test_timer.cpp
   tests/test_vfpproperties.cpp

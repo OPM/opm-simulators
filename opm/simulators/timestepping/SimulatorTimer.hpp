@@ -20,7 +20,6 @@
 #ifndef OPM_SIMULATORTIMER_HEADER_INCLUDED
 #define OPM_SIMULATORTIMER_HEADER_INCLUDED
 
-#include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/simulators/timestepping/SimulatorTimerInterface.hpp>
 
 #include <boost/date_time/gregorian/gregorian_types.hpp>
@@ -33,6 +32,7 @@ namespace Opm
 {
 
     class ParameterGroup;
+    class Schedule;
 
     class SimulatorTimer : public SimulatorTimerInterface
     {
@@ -43,6 +43,8 @@ namespace Opm
 
         /// Default constructor.
         SimulatorTimer();
+
+        static SimulatorTimer serializationTestObject();
 
         /// Initialize from parameters. Accepts the following:
         ///    num_psteps    (default 1)
@@ -116,6 +118,18 @@ namespace Opm
 
         /// return copy of object
         std::unique_ptr<SimulatorTimerInterface> clone() const override;
+
+        template<class Serializer>
+        void serializeOp(Serializer& serializer)
+        {
+            serializer(timesteps_);
+            serializer(current_step_);
+            serializer(current_time_);
+            serializer(total_time_);
+            serializer(start_date_);
+        }
+
+        bool operator==(const SimulatorTimer& rhs) const;
 
     private:
         std::vector<double> timesteps_;
