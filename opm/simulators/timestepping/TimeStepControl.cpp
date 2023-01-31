@@ -108,7 +108,7 @@ namespace Opm
     ////////////////////////////////////////////////////////
 
     HardcodedTimeStepControl::
-    HardcodedTimeStepControl( const std::string& filename)
+    HardcodedTimeStepControl(const std::string& filename)
     {
         std::ifstream infile (filename);
         if (!infile.is_open()) {
@@ -125,11 +125,24 @@ namespace Opm
         }
     }
 
+    HardcodedTimeStepControl HardcodedTimeStepControl::serializationTestObject()
+    {
+        HardcodedTimeStepControl result;
+        result.subStepTime_ = {1.0, 2.0};
+
+        return result;
+    }
+
     double HardcodedTimeStepControl::
     computeTimeStepSize( const double /*dt */, const int /*iterations */, const RelativeChangeInterface& /* relativeChange */ , const double simulationTimeElapsed) const
     {
         auto nextTime = std::upper_bound(subStepTime_.begin(), subStepTime_.end(), simulationTimeElapsed);
         return (*nextTime - simulationTimeElapsed);
+    }
+
+    bool HardcodedTimeStepControl::operator==(const HardcodedTimeStepControl& ctrl) const
+    {
+        return this->subStepTime_ == ctrl.subStepTime_;
     }
 
 
