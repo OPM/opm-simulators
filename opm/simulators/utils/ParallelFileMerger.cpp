@@ -23,6 +23,7 @@
 #endif // HAVE_CONFIG_H
 
 #include <opm/simulators/utils/ParallelFileMerger.hpp>
+#include <fstream>
 #include <iostream>
 
 namespace Opm

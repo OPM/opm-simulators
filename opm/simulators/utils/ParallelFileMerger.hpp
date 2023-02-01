@@ -22,7 +22,7 @@
 #define OPM_PARALLELFILEMERGER_HEADER_INCLUDED
 
 #include <filesystem>
-#include <fstream>
+#include <iosfwd>
 #include <memory>
 #include <regex>
 #include <string>
