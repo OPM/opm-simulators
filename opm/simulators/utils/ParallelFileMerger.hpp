@@ -22,16 +22,13 @@
 #define OPM_PARALLELFILEMERGER_HEADER_INCLUDED
 
 #include <filesystem>
-#include <fstream>
+#include <iosfwd>
 #include <memory>
 #include <regex>
 #include <string>
 
-
-namespace Opm
-{
-namespace detail
-{
+namespace Opm {
+namespace detail {
 
 namespace fs = ::std::filesystem;
 
@@ -73,6 +70,8 @@ private:
     /// \brief Whether to show any logging fallout
     bool show_fallout_;
 };
+
 } // end namespace detail
 } // end namespace Opm
+
 #endif // end header guard
