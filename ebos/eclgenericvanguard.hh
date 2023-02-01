@@ -66,6 +66,19 @@ class EclGenericVanguard {
 public:
     using ParallelWellStruct = std::vector<std::pair<std::string,bool>>;
 
+    struct SetupParams {
+        double setupTime_;
+        std::unique_ptr<Parallel::Communication> comm_;
+        std::unique_ptr<UDQState> udqState_;
+        std::unique_ptr<Action::State> actionState_;
+        std::unique_ptr<WellTestState> wtestState_;
+        std::shared_ptr<EclipseState> eclState_;
+        std::shared_ptr<Schedule> eclSchedule_;
+        std::shared_ptr<SummaryConfig> eclSummaryConfig_;
+    };
+
+    static SetupParams setupParams_;
+
     /*!
      * \brief Constructor.
      * \details Needs to be in compile unit.
@@ -89,7 +102,7 @@ public:
     /*!
      * \brief Returns the wall time required to set up the simulator before it was born.
      */
-    static double setupTime()
+    double setupTime()
     { return setupTime_; }
 
     /*!
@@ -101,13 +114,7 @@ public:
     /*!
      * \brief Set the simulation configuration objects.
      */
-    static void setParams(double setupTime,
-                          std::shared_ptr<EclipseState> eclState,
-                          std::shared_ptr<Schedule> schedule,
-                          std::unique_ptr<UDQState> udqState,
-                          std::unique_ptr<Action::State> actionState,
-                          std::unique_ptr<WellTestState> wtestState,
-                          std::shared_ptr<SummaryConfig> summaryConfig);
+    void setParams(SetupParams& params);
 
     /*!
      * \brief Return a reference to the internalized ECL deck.
@@ -258,7 +265,7 @@ protected:
 
     void init();
 
-    static double setupTime_;
+    double setupTime_;
 
     // These variables may be owned by both Python and the simulator
     static std::unique_ptr<Parallel::Communication> comm_;
@@ -285,22 +292,22 @@ protected:
     bool enableExperiments_;
 
     std::unique_ptr<SummaryState> summaryState_;
-    static std::unique_ptr<UDQState> udqState_;
-    static std::unique_ptr<Action::State> actionState_;
+    std::unique_ptr<UDQState> udqState_;
+    std::unique_ptr<Action::State> actionState_;
 
     // Observe that this instance is handled differently from the other state
     // variables, it will only be initialized for a restart run. While
     // initializing a restarted run this instance is transferred to the WGState
     // member in the well model.
-    static std::unique_ptr<WellTestState> wtestState_;
+    std::unique_ptr<WellTestState> wtestState_;
 
     // these attributes point  either to the internal  or to the external version of the
     // parser objects.
     std::shared_ptr<Python> python;
     // These variables may be owned by both Python and the simulator
-    static std::shared_ptr<EclipseState> eclState_;
-    static std::shared_ptr<Schedule> eclSchedule_;
-    static std::shared_ptr<SummaryConfig> eclSummaryConfig_;
+    std::shared_ptr<EclipseState> eclState_;
+    std::shared_ptr<Schedule> eclSchedule_;
+    std::shared_ptr<SummaryConfig> eclSummaryConfig_;
 
     /*! \brief Information about wells in parallel
      *
