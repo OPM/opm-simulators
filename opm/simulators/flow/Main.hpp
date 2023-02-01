@@ -54,6 +54,7 @@
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/parametersystem.hh>
 
+#include <opm/simulators/flow/Banners.hpp>
 #include <opm/simulators/flow/FlowMainEbos.hpp>
 
 #if HAVE_DUNE_FEM
@@ -68,7 +69,6 @@
 
 #include <cassert>
 #include <cstdlib>
-#include <functional>
 #include <iostream>
 #include <memory>
 #include <stdexcept>
@@ -354,8 +354,13 @@ private:
             exitCode = EXIT_FAILURE;
             return false;
         }
+
+        std::string cmdline_params;
         if (outputCout_) {
-            FlowMainEbos<PreTypeTag>::printBanner(EclGenericVanguard::comm());
+            printFlowBanner(EclGenericVanguard::comm().size(), getNumThreads<PreTypeTag>());
+            std::ostringstream str;
+            Parameters::printValues<PreTypeTag>(str);
+            cmdline_params = str.str();
         }
 
         // Create Deck and EclipseState.
@@ -368,7 +373,7 @@ private:
                            EWOMS_GET_PARAM(PreTypeTag, bool, EclStrictParsing),
                            mpiRank,
                            EWOMS_GET_PARAM(PreTypeTag, int, EclOutputInterval),
-                           FlowMainEbos<PreTypeTag>::printPRTHeader);
+                           cmdline_params);
             setupTime_ = externalSetupTimer.elapsed();
         }
         catch (const std::invalid_argument& e)
@@ -612,9 +617,33 @@ private:
                   const bool strictParsing,
                   const int mpiRank,
                   const int output_param,
-                  std::function<void(bool)> outputPrt);
+                  const std::string& parameters);
 
     void setupVanguard();
+
+    template<class TypeTag>
+    static int getNumThreads()
+    {
+
+        int threads = 1;
+
+#ifdef _OPENMP
+        // This function is called before the parallel OpenMP stuff gets initialized.
+        // That initialization happends after the deck is read and we want this message.
+        // Hence we duplicate the code of setupParallelism to get the number of threads.
+        if (std::getenv("OMP_NUM_THREADS"))
+            threads =  omp_get_max_threads();
+        else
+            threads = std::min(2, omp_get_max_threads());
+
+        const int input_threads = EWOMS_GET_PARAM(TypeTag, int, ThreadsPerProcess);
+
+        if (input_threads > 0)
+            threads = std::min(input_threads, omp_get_max_threads());
+#endif
+
+        return threads;
+    }
 
 #if HAVE_DAMARIS
     void setupDamaris(const std::string& outputDir,
