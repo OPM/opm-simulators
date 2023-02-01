@@ -86,6 +86,12 @@ TEST_FOR_TYPE_NAMED_OBJ(ATE, AdaptiveTimeSteppingEbosSimple, serializationTestOb
 namespace Opm { using BPV = BlackOilPrimaryVariables<Properties::TTag::EbosTypeTag>; }
 TEST_FOR_TYPE_NAMED(BPV, BlackoilPrimaryVariables)
 
+namespace Opm {
+    using Disc = Opm::FvBaseDiscretization<Opm::Properties::TTag::EbosTypeTag>;
+    using BVec = typename Disc::BlockVectorWrapper;
+}
+TEST_FOR_TYPE_NAMED(BVec, BlockVectorWrapper)
+
 BOOST_AUTO_TEST_CASE(EclGenericVanguard)
 {
     auto in_params = Opm::EclGenericVanguard::serializationTestParams();
