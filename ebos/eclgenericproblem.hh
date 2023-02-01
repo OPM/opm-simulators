@@ -74,6 +74,11 @@ public:
                       const Schedule& schedule,
                       const GridView& gridView);
 
+
+    static EclGenericProblem serializationTestObject(const EclipseState& eclState,
+                                                     const Schedule& schedule,
+                                                     const GridView& gridView);
+
     /*!
      * \copydoc FvBaseProblem::helpPreamble
      */
@@ -256,6 +261,32 @@ public:
     { return maxFails_; }
 
     bool vapparsActive(int episodeIdx) const;
+
+    bool operator==(const EclGenericProblem& rhs) const;
+
+    template<class Serializer>
+    void serializeOp(Serializer& serializer)
+    {
+        serializer(maxOilSaturation_);
+        serializer(maxPolymerAdsorption_);
+        serializer(maxWaterSaturation_);
+        serializer(minOilPressure_);
+        serializer(overburdenPressure_);
+        serializer(polymerConcentration_);
+        serializer(polymerMoleWeight_);
+        serializer(solventSaturation_);
+        serializer(microbialConcentration_);
+        serializer(oxygenConcentration_);
+        serializer(ureaConcentration_);
+        serializer(biofilmConcentration_);
+        serializer(calciteConcentration_);
+        serializer(lastRv_);
+        serializer(maxDRv_);
+        serializer(convectiveDrs_);
+        serializer(lastRs_);
+        serializer(maxDRs_);
+        serializer(dRsDtOnlyFreeGas_);
+    }
 
 protected:
     bool drsdtActive_(int episodeIdx) const;
