@@ -43,12 +43,12 @@ ParallelFileMerger::ParallelFileMerger(const fs::path& output_dir,
     {
         auto debugPath = output_dir;
         debugPath /= (deckname + ".DBG");
-        debugStream_.reset(new std::ofstream(debugPath,
-                                             std::ofstream::app));
+        debugStream_ = std::make_unique<std::ofstream>(debugPath,
+                                                       std::ofstream::app);
         auto logPath = output_dir;
         logPath /= ( deckname + ".PRT");
-        logStream_.reset(new std::ofstream(logPath,
-                                           std::ofstream::app));
+        logStream_ = std::make_unique<std::ofstream>(logPath,
+                                                     std::ofstream::app);
     }
 }
 
