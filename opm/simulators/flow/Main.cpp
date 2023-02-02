@@ -27,6 +27,7 @@
 #include <opm/input/eclipse/Schedule/Action/State.hpp>
 #include <opm/input/eclipse/Schedule/UDQ/UDQState.hpp>
 
+#include <opm/simulators/flow/Banners.hpp>
 #include <opm/simulators/utils/readDeck.hpp>
 
 #if HAVE_DAMARIS
@@ -172,7 +173,7 @@ void Main::readDeck(const std::string& deckFilename,
                     const bool strictParsing,
                     const int mpiRank,
                     const int output_param,
-                    std::function<void(bool)> outputPrt)
+                    const std::string& parameters)
 {
     auto omode = setupLogging(mpiRank,
                               deckFilename,
@@ -180,9 +181,8 @@ void Main::readDeck(const std::string& deckFilename,
                               outputMode,
                               outputCout_, "STDOUT_LOGGER", allRanksDbgPrtLog);
 
-    outputPrt(outputCout_);
-
     if (outputCout_) {
+        printPRTHeader(parameters);
         OpmLog::info("Reading deck file '" + deckFilename + "'");
     }
 
