@@ -21,10 +21,10 @@
 #ifndef OPM_PERFDATA_HEADER_INCLUDED
 #define OPM_PERFDATA_HEADER_INCLUDED
 
+#include <cstddef>
 #include <vector>
 
-namespace Opm
-{
+namespace Opm {
 
 class PerfData
 {
@@ -32,13 +32,39 @@ private:
     bool injector;
 
 public:
+    PerfData() = default;
     PerfData(std::size_t num_perf, double pressure_first_connection_, bool injector_, std::size_t num_phases);
+
+    static PerfData serializationTestObject();
+
     std::size_t size() const;
     bool empty() const;
     bool try_assign(const PerfData& other);
 
+    template<class Serializer>
+    void serializeOp(Serializer& serializer)
+    {
+        serializer(pressure_first_connection);
+        serializer(pressure);
+        serializer(rates);
+        serializer(phase_rates);
+        serializer(solvent_rates);
+        serializer(polymer_rates);
+        serializer(brine_rates);
+        serializer(prod_index);
+        serializer(micp_rates);
+        serializer(cell_index);
+        serializer(connection_transmissibility_factor);
+        serializer(satnum_id);
+        serializer(ecl_index);
+        serializer(water_throughput);
+        serializer(skin_pressure);
+        serializer(water_velocity);
+    }
 
-    double pressure_first_connection;
+    bool operator==(const PerfData&) const;
+
+    double pressure_first_connection{};
     std::vector<double> pressure;
     std::vector<double> rates;
     std::vector<double> phase_rates;
@@ -52,7 +78,6 @@ public:
     std::vector<double> connection_transmissibility_factor;
     std::vector<int> satnum_id;
     std::vector<std::size_t> ecl_index;
-
 
     // The water_throughput, skin_pressure and water_velocity variables are only
     // used for injectors to check the injectivity.
