@@ -45,13 +45,25 @@ namespace Opm {
 template <class T>
 class WellContainer {
 public:
-
     WellContainer() = default;
 
+    WellContainer(std::size_t size)
+        : m_data(size)
+    {}
 
     WellContainer(std::initializer_list<std::pair<std::string,T>> init_list) {
         for (const auto& [name, value] : init_list)
             this->add(name, value);
+    }
+
+    static WellContainer serializationTestObject(const T& data)
+    {
+        WellContainer<T> result;
+
+        result.m_data = {data};
+        result.index_map = {{"test1", 1}, {"test2", 4}};
+
+        return result;
     }
 
     bool empty() const {
@@ -167,6 +179,20 @@ public:
         return wlist;
     }
 
+    template<class Serializer>
+    void serializeOp(Serializer& serializer)
+    {
+        for (auto& d : m_data) {
+            serializer(d);
+        }
+        serializer(index_map);
+    }
+
+    bool operator==(const WellContainer<T>& rhs) const
+    {
+        return this->m_data == rhs.m_data &&
+               this->index_map == rhs.index_map;
+    }
 
 private:
     void update_if(std::size_t index, const std::string& name, const WellContainer<T>& other) {
