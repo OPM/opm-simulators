@@ -22,25 +22,29 @@
 #ifndef OPM_AQUIFERANALYTICAL_HEADER_INCLUDED
 #define OPM_AQUIFERANALYTICAL_HEADER_INCLUDED
 
-#include <opm/simulators/aquifers/AquiferInterface.hpp>
-
 #include <opm/common/utility/numeric/linearInterpolation.hpp>
+
 #include <opm/input/eclipse/EclipseState/Aquifer/Aquancon.hpp>
-
-#include <opm/output/data/Aquifer.hpp>
-
-#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
 #include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/material/densead/Math.hpp>
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
 
+#include <opm/models/blackoil/blackoilproperties.hh>
+#include <opm/models/utils/basicproperties.hh>
+
+#include <opm/output/data/Aquifer.hpp>
+
+#include <opm/simulators/aquifers/AquiferInterface.hpp>
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <limits>
 #include <numeric>
+#include <optional>
 #include <unordered_map>
 #include <vector>
 
@@ -181,6 +185,25 @@ public:
     std::size_t size() const
     {
         return this->connections_.size();
+    }
+
+    template<class Serializer>
+    void serializeOp(Serializer& serializer)
+    {
+        serializer(pressure_previous_);
+        serializer(pressure_current_);
+        serializer(Qai_);
+        serializer(rhow_);
+        serializer(W_flux_);
+    }
+
+    bool operator==(const AquiferAnalytical& rhs) const
+    {
+        return this->pressure_previous_ == rhs.pressure_previous_ &&
+               this->pressure_current_ == rhs.pressure_current_ &&
+               this->Qai_ == rhs.Qai_ &&
+               this->rhow_ == rhs.rhow_ &&
+               this->W_flux_ == rhs.W_flux_;
     }
 
 protected:
