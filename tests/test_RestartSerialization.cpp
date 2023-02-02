@@ -37,6 +37,7 @@
 #include <opm/simulators/timestepping/TimeStepControl.hpp>
 #include <opm/simulators/utils/SerializationPackers.hpp>
 #include <opm/simulators/wells/ALQState.hpp>
+#include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/SegmentState.hpp>
 #include <opm/simulators/wells/SingleWellState.hpp>
@@ -210,6 +211,104 @@ BOOST_AUTO_TEST_CASE(EclGenericProblem)
     const size_t pos2 = ser.position();
     BOOST_CHECK_MESSAGE(pos1 == pos2, "Packed size differ from unpack size for EclGenericProblem");
     BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized EclGenericProblem differ");
+}
+
+namespace Opm {
+
+class BlackoilWellModelGenericTest : public BlackoilWellModelGeneric
+{
+public:
+    BlackoilWellModelGenericTest(Schedule& schedule,
+                                 const SummaryState& summaryState,
+                                 const EclipseState& eclState,
+                                 const PhaseUsage& phase_usage,
+                                 const Parallel::Communication& comm,
+                                 bool deserialize)
+        : BlackoilWellModelGeneric(schedule, summaryState,
+                                   eclState, phase_usage, comm)
+    {
+        if (deserialize) {
+            active_wgstate_.well_state = WellState(dummy);
+            last_valid_wgstate_.well_state = WellState(dummy);
+            nupcol_wgstate_.well_state = WellState(dummy);
+        }
+    }
+
+    void setSerializationTestData()
+    {
+        initial_step_ =  true;
+        report_step_starts_ = true;
+        last_run_wellpi_ = 1;
+        local_shut_wells_ = {2, 3};
+        closed_this_step_ = {"test1", "test2"};
+        guideRate_.setSerializationTestData();
+        node_pressures_ = {{"test3", 4.0}};
+        active_wgstate_ = WGState::serializationTestObject(dummy);
+        last_valid_wgstate_ = WGState::serializationTestObject(dummy);
+        nupcol_wgstate_ = WGState::serializationTestObject(dummy);
+        last_glift_opt_time_ = 5.0;
+        switched_prod_groups_ = {{"test4", "test5"}};
+        switched_inj_groups_ = {{{"test4", Phase::SOLVENT}, "test5"}};
+    }
+
+    void calcRates(const int, const int, std::vector<double>&) override
+    {}
+
+    void calcInjRates(const int, const int, std::vector<double>&) override
+    {}
+
+    void computePotentials(const std::size_t,
+                           const WellState&,
+                           std::string&,
+                           ExceptionType::ExcEnum&,
+                           DeferredLogger&) override
+    {}
+
+    void createWellContainer(const int) override
+    {}
+
+    void initWellContainer(const int) override
+    {}
+
+    void calculateProductivityIndexValuesShutWells(const int,
+                                                   DeferredLogger&) override
+    {}
+
+    void calculateProductivityIndexValues(DeferredLogger&) override
+    {}
+
+
+    int compressedIndexForInterior(int) const override
+    {
+        return 0;
+    }
+
+private:
+    ParallelWellInfo dummy;
+};
+
+}
+
+BOOST_AUTO_TEST_CASE(BlackoilWellModelGeneric)
+{
+    Opm::Schedule schedule{};
+    Opm::SummaryState summaryState{};
+    Opm::EclipseState eclState{};
+    Opm::PhaseUsage phase_usage{};
+    Opm::Parallel::Communication comm{};
+    Opm::BlackoilWellModelGenericTest data_out(schedule, summaryState,
+                                               eclState, phase_usage, comm, false);
+    data_out.setSerializationTestData();
+    Opm::Serialization::MemPacker packer;
+    Opm::Serializer ser(packer);
+    ser.pack(data_out);
+    const size_t pos1 = ser.position();
+    Opm::BlackoilWellModelGenericTest data_in(schedule, summaryState,
+                                              eclState, phase_usage, comm, true);
+    ser.unpack(data_in);
+    const size_t pos2 = ser.position();
+    BOOST_CHECK_MESSAGE(pos1 == pos2, "Packed size differ from unpack size for BlackoilWellModelGeneric");
+    BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized BlackoilWellModelGeneric differ");
 }
 
 template<class Grid, class GridView, class DofMapper, class Stencil, class Scalar>
