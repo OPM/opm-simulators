@@ -40,6 +40,7 @@
 #include <opm/simulators/wells/ALQState.hpp>
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
+#include <opm/simulators/wells/PerfData.hpp>
 #include <opm/simulators/wells/SegmentState.hpp>
 #include <opm/simulators/wells/SingleWellState.hpp>
 
@@ -83,6 +84,7 @@ BOOST_AUTO_TEST_CASE(NAME) \
 TEST_FOR_TYPE(ALQState)
 TEST_FOR_TYPE(GroupState)
 TEST_FOR_TYPE(HardcodedTimeStepControl)
+TEST_FOR_TYPE(PerfData)
 TEST_FOR_TYPE(PIDAndIterationCountTimeStepControl)
 TEST_FOR_TYPE(PIDTimeStepControl)
 TEST_FOR_TYPE(SegmentState)
