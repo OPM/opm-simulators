@@ -122,8 +122,24 @@ void PackUnpackXConn::unpack([[maybe_unused]] const int link,
 
 } // Anonymous namespace
 
-namespace Opm
+namespace Opm {
+
+WellState::WellState(const ParallelWellInfo& pinfo)
+    : phase_usage_{}
 {
+    wells_.add("test4",
+               SingleWellState{"dummy", pinfo, false, 0.0, {}, phase_usage_, 0.0});
+}
+
+WellState WellState::serializationTestObject(const ParallelWellInfo& pinfo)
+{
+    WellState result(PhaseUsage{});
+    result.alq_state = ALQState::serializationTestObject();
+    result.well_rates = {{"test2", {true, {1.0}}}, {"test3", {false, {2.0}}}};
+    result.wells_.add("test4", SingleWellState::serializationTestObject(pinfo));
+
+    return result;
+}
 
 void WellState::base_init(const std::vector<double>& cellPressures,
                           const std::vector<Well>& wells_ecl,
@@ -943,6 +959,13 @@ void WellState::updateWellsDefaultALQ( const std::vector<Well>& wells_ecl )
             this->alq_state.update_default(well.name(), alq);
         }
     }
+}
+
+bool WellState::operator==(const WellState& rhs) const
+{
+    return this->alq_state == rhs.alq_state &&
+           this->well_rates == rhs.well_rates &&
+           this->wells_ == rhs.wells_;
 }
 
 
