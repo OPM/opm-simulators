@@ -202,6 +202,16 @@ BOOST_AUTO_TEST_CASE(EclGenericTracerModel)
     BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized EclGenericTracerModel differ");
 }
 
+namespace Opm {
+
+class TBatchExport : public EclTracerModel<Properties::TTag::EbosTypeTag> {
+public:
+    using TBatch = TracerBatch<double>;
+};
+
+}
+
+TEST_FOR_TYPE_NAMED(TBatchExport::TBatch, TracerBatch)
 
 namespace {
 
