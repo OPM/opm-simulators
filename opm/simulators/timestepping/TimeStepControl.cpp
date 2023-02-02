@@ -27,10 +27,14 @@
 #include <string>
 #include <fstream>
 #include <iostream>
+#include <limits>
 
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/input/eclipse/Units/Units.hpp>
 #include <opm/simulators/timestepping/TimeStepControl.hpp>
+
+#include <fmt/format.h>
 
 namespace Opm
 {
@@ -141,16 +145,21 @@ namespace Opm
         errors_[ 2 ] = error;
         for( int i=0; i<2; ++i ) {
             assert(std::isfinite(errors_[i]));
-            assert(errors_[i]>0);
         }
 
-        if( error > tol_ )
+        if( errors_[2] > tol_ )
         {
             // adjust dt by given tolerance
             const double newDt = dt * tol_ / error;
-            if( verbose_ )
-                std::cout << "Computed step size (tol): " << unit::convert::to( newDt, unit::day ) << " (days)" << std::endl;
+            if ( verbose_ )
+                    OpmLog::info(fmt::format("Computed step size (tol): {} days", unit::convert::to( newDt, unit::day )));
             return newDt;
+        }
+        else if (errors_[1] == 0 || errors_[2] == 0.)
+        {
+            if ( verbose_ )
+                OpmLog::info("The solution between time steps does not change, there is no time step constraint from the PID time step control ");
+            return std::numeric_limits<double>::max();
         }
         else
         {
@@ -162,7 +171,7 @@ namespace Opm
                                  std::pow( tol_         / errors_[ 2 ], kI ) *
                                  std::pow( errors_[0]*errors_[0]/errors_[ 1 ]/errors_[ 2 ], kD ));
             if( verbose_ )
-                std::cout << "Computed step size (pow): " << unit::convert::to( newDt, unit::day ) << " (days)" << std::endl;
+                OpmLog::info(fmt::format("Computed step size (pow): {} days", unit::convert::to( newDt, unit::day )));
             return newDt;
         }
     }
