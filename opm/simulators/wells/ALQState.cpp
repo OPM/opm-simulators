@@ -21,13 +21,24 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
+#include <opm/simulators/wells/ALQState.hpp>
+
 #include <cstddef>
 #include <stdexcept>
 
-
-#include <opm/simulators/wells/ALQState.hpp>
-
 namespace Opm {
+
+ALQState ALQState::serializationTestObject()
+{
+    ALQState result;
+    result.current_alq_ = {{"test1", 1.0}};
+    result.default_alq_ = {{"test2", 2.0}, {"test3", 3.0}};
+    result.alq_increase_count_= {{"test4", 4}};
+    result.alq_decrease_count_= {{"test5", 5}};
+    result.debug_counter_ = 6;
+
+    return result;
+}
 
 double ALQState::get(const std::string& wname) const {
     auto iter = this->current_alq_.find(wname);
@@ -132,7 +143,14 @@ std::size_t ALQState::unpack_data(const double * data) {
     return index;
 }
 
-
+bool ALQState::operator==(const ALQState& rhs) const
+{
+    return this->current_alq_ == rhs.current_alq_ &&
+           this->default_alq_ == rhs.default_alq_ &&
+           this->alq_increase_count_ == rhs.alq_increase_count_ &&
+           this->alq_decrease_count_ == rhs.alq_decrease_count_ &&
+           this->debug_counter_ == rhs.debug_counter_;
+}
 
 }
 
