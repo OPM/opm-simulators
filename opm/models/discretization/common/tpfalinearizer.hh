@@ -266,6 +266,26 @@ public:
         return linearizationType_;
     };
 
+    /*!
+     * \brief Return constant reference to the flowsInfo.
+     *
+     * (This object is only non-empty if the FLOWS keyword is true.)
+     */
+    const auto& getFlowsInfo() const{
+
+        return flowsInfo_;
+    }   
+
+    /*!
+     * \brief Return constant reference to the floresInfo.
+     *
+     * (This object is only non-empty if the FLORES keyword is true.)
+     */
+    const auto& getFloresInfo() const{
+
+        return floresInfo_;
+    }
+
     void updateDiscretizationParameters()
     {
         updateStoredTransmissibilities();
@@ -306,6 +326,9 @@ private:
         // initialize the Jacobian matrix and the vector for the residual function
         residual_.resize(model_().numTotalDof());
         resetSystem_();
+
+        // initialize the sparse tables for Flows and Flores
+        createFlows_();
     }
 
     // Construct the BCRS matrix for the Jacobian of the residual function
@@ -405,6 +428,73 @@ private:
         jacobian_->clear();
     }
 
+    // Initialize the flows and flores sparse tables
+    void createFlows_()
+    {
+        // If FLOWS/FLORES is set in any RPTRST in the schedule, then we initializate the sparse tables
+        const bool anyFlows = simulator_().problem().eclWriter()->eclOutputModule().anyFlows();
+        const bool anyFlores = simulator_().problem().eclWriter()->eclOutputModule().anyFlores();
+        if ((!anyFlows || !flowsInfo_.empty())  && (!anyFlores || !floresInfo_.empty())) {
+            return;
+        }
+        const auto& model = model_();
+        const auto& nncOutput = simulator_().problem().eclWriter()->getOutputNnc();
+        Stencil stencil(gridView_(), model_().dofMapper());
+        unsigned numCells = model.numTotalDof();
+        std::unordered_multimap<int, std::pair<int, int>> nncIndices;
+        std::vector<FlowInfo> loc_flinfo;
+        unsigned int nncId = 0;
+        VectorBlock flow(0.0);
+
+        // Create a nnc structure to use fast lookup
+        for (unsigned int nncIdx = 0; nncIdx < nncOutput.size(); ++nncIdx) {
+            const int ci1 = nncOutput[nncIdx].cell1;
+            const int ci2 = nncOutput[nncIdx].cell2;
+            nncIndices.emplace(ci1, std::make_pair(ci2, nncIdx));
+        }
+
+        if (anyFlows) {
+            flowsInfo_.reserve(numCells, 6 * numCells);
+        }
+        if (anyFlores) {
+            floresInfo_.reserve(numCells, 6 * numCells);
+        }
+
+        for (const auto& elem : elements(gridView_())) {
+            stencil.update(elem);
+            for (unsigned primaryDofIdx = 0; primaryDofIdx < stencil.numPrimaryDof(); ++primaryDofIdx) {
+                unsigned myIdx = stencil.globalSpaceIndex(primaryDofIdx);
+                loc_flinfo.resize(stencil.numDof() - 1);
+                for (unsigned dofIdx = 0; dofIdx < stencil.numDof(); ++dofIdx) {
+                    unsigned neighborIdx = stencil.globalSpaceIndex(dofIdx);
+                    if (dofIdx > 0) {
+                        const auto scvfIdx = dofIdx - 1;
+                        const auto& scvf = stencil.interiorFace(scvfIdx);
+                        int faceId = scvf.dirId();
+                        const int cartMyIdx = simulator_().vanguard().cartesianIndex(myIdx);
+                        const int cartNeighborIdx = simulator_().vanguard().cartesianIndex(neighborIdx);
+                        const auto& range = nncIndices.equal_range(cartMyIdx);
+                        for (auto it = range.first; it != range.second; ++it) { 
+                            if (it->second.first == cartNeighborIdx){
+                                // -1 gives problem since is used for the nncInput from the deck
+                                faceId = -2;
+                                // the index is stored to be used for writting the outputs
+                                nncId = it->second.second;
+                            }
+                        }
+                        loc_flinfo[dofIdx - 1] = FlowInfo{faceId, flow, nncId};
+                    }
+                }
+                if (anyFlows) {
+                    flowsInfo_.appendRow(loc_flinfo.begin(), loc_flinfo.end());
+                }
+                if (anyFlores) {
+                    floresInfo_.appendRow(loc_flinfo.begin(), loc_flinfo.end());
+                }
+            }
+        }
+    }
+
 public:
     void setResAndJacobi(VectorBlock& res, MatrixBlock& bMat, const ADVectorBlock& resid) const
     {
@@ -428,6 +518,8 @@ private:
         const bool well_local = true;
         resetSystem_();
         unsigned numCells = model_().numTotalDof();
+        const bool& enableFlows = simulator_().problem().eclWriter()->eclOutputModule().hasFlows();
+        const bool& enableFlores = simulator_().problem().eclWriter()->eclOutputModule().hasFlores();
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
@@ -436,6 +528,7 @@ private:
             VectorBlock res(0.0);
             MatrixBlock bMat(0.0);
             ADVectorBlock adres(0.0);
+            ADVectorBlock darcyFlux(0.0);
             const IntensiveQuantities* intQuantsInP = model_().cachedIntensiveQuantities(globI, /*timeIdx*/ 0);
             if (intQuantsInP == nullptr) {
                 throw std::logic_error("Missing updated intensive quantities for cell " + std::to_string(globI));
@@ -450,15 +543,26 @@ private:
                 res = 0.0;
                 bMat = 0.0;
                 adres = 0.0;
+                darcyFlux = 0.0;
                 const IntensiveQuantities* intQuantsExP = model_().cachedIntensiveQuantities(globJ, /*timeIdx*/ 0);
                 if (intQuantsExP == nullptr) {
                     throw std::logic_error("Missing updated intensive quantities for cell " + std::to_string(globJ) + " when assembling fluxes for cell " + std::to_string(globI));
                 }
                 const IntensiveQuantities& intQuantsEx = *intQuantsExP;
                 LocalResidual::computeFlux(
-                       adres, problem_(), globI, globJ, intQuantsIn, intQuantsEx,
+                       adres, darcyFlux, problem_(), globI, globJ, intQuantsIn, intQuantsEx,
                            nbInfo.trans, nbInfo.faceArea, nbInfo.faceDirection);
                 adres *= nbInfo.faceArea;
+                if (enableFlows) {
+                    for (unsigned phaseIdx = 0; phaseIdx < numEq; ++ phaseIdx) {
+                        flowsInfo_[globI][loc].flow[phaseIdx] = adres[phaseIdx].value();
+                    }
+                }
+                if (enableFlores) {
+                    for (unsigned phaseIdx = 0; phaseIdx < numEq; ++ phaseIdx) {
+                        floresInfo_[globI][loc].flow[phaseIdx] = darcyFlux[phaseIdx].value();
+                    }
+                }
                 setResAndJacobi(res, bMat, adres);
                 residual_[globI] += res;
                 //SparseAdapter syntax:  jacobian_->addToBlock(globI, globI, bMat);
@@ -563,6 +667,15 @@ private:
     };
     SparseTable<NeighborInfo> neighborInfo_;
     std::vector<MatrixBlock*> diagMatAddress_;
+
+    struct FlowInfo
+    {
+        int faceId;
+        VectorBlock flow;
+        unsigned int nncId;
+    };
+    SparseTable<FlowInfo> flowsInfo_;
+    SparseTable<FlowInfo> floresInfo_;
 
     using ScalarFluidState = typename IntensiveQuantities::ScalarFluidState;
     struct BoundaryConditionData
