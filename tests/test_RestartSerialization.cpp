@@ -113,6 +113,20 @@ BOOST_AUTO_TEST_CASE(SingleWellState)
     BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized SingleWellState differ");
 }
 
+BOOST_AUTO_TEST_CASE(WellContainer)
+{
+    auto data_out = Opm::WellContainer<double>::serializationTestObject(1.0);
+    Opm::Serialization::MemPacker packer;
+    Opm::Serializer ser(packer);
+    ser.pack(data_out);
+    const size_t pos1 = ser.position();
+    decltype(data_out) data_in;
+    ser.unpack(data_in);
+    const size_t pos2 = ser.position();
+    BOOST_CHECK_MESSAGE(pos1 == pos2, "Packed size differ from unpack size for WellContainer");
+    BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized WellContainer differ");
+}
+
 BOOST_AUTO_TEST_CASE(EclGenericVanguard)
 {
     auto in_params = Opm::EclGenericVanguard::serializationTestParams();
