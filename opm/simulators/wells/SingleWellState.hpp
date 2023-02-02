@@ -47,6 +47,34 @@ public:
                     const PhaseUsage& pu,
                     double temp);
 
+    static SingleWellState serializationTestObject(const ParallelWellInfo& pinfo);
+
+    template<class Serializer>
+    void serializeOp(Serializer& serializer)
+    {
+        serializer(name);
+        serializer(status);
+        serializer(producer);
+        serializer(bhp);
+        serializer(thp);
+        serializer(temperature);
+        serializer(dissolved_gas_rate);
+        serializer(dissolved_gas_rate_in_water);
+        serializer(vaporized_oil_rate);
+        serializer(vaporized_wat_rate);
+        serializer(well_potentials);
+        serializer(productivity_index);
+        serializer(surface_rates);
+        serializer(reservoir_rates);
+        serializer(trivial_target);
+        serializer(segments);
+        serializer(events);
+        serializer(injection_cmode);
+        serializer(production_cmode);
+    }
+
+    bool operator==(const SingleWellState&) const;
+
     std::string name;
     std::reference_wrapper<const ParallelWellInfo> parallel_info;
 

@@ -36,6 +36,7 @@
 #include <opm/simulators/timestepping/TimeStepControl.hpp>
 #include <opm/simulators/utils/SerializationPackers.hpp>
 #include <opm/simulators/wells/SegmentState.hpp>
+#include <opm/simulators/wells/SingleWellState.hpp>
 
 #define BOOST_TEST_MODULE TestRestartSerialization
 #define BOOST_TEST_NO_MAIN
@@ -95,6 +96,21 @@ namespace Opm {
     using BVec = typename Disc::BlockVectorWrapper;
 }
 TEST_FOR_TYPE_NAMED(BVec, BlockVectorWrapper)
+
+BOOST_AUTO_TEST_CASE(SingleWellState)
+{
+    Opm::ParallelWellInfo dummy;
+    auto data_out = Opm::SingleWellState::serializationTestObject(dummy);
+    Opm::Serialization::MemPacker packer;
+    Opm::Serializer ser(packer);
+    ser.pack(data_out);
+    const size_t pos1 = ser.position();
+    decltype(data_out) data_in("", dummy, false, 0.0, {}, Opm::PhaseUsage{}, 0.0);
+    ser.unpack(data_in);
+    const size_t pos2 = ser.position();
+    BOOST_CHECK_MESSAGE(pos1 == pos2, "Packed size differ from unpack size for SingleWellState");
+    BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized SingleWellState differ");
+}
 
 BOOST_AUTO_TEST_CASE(EclGenericVanguard)
 {
