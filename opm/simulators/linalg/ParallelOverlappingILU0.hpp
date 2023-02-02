@@ -342,6 +342,7 @@ protected:
     void reorderBack(const Range& reorderedV, Range& v);
 
     //! \brief The ILU0 decomposition of the matrix.
+    std::unique_ptr<Matrix> ILU_;
     CRS lower_;
     CRS upper_;
     std::vector< block_type > inv_;
