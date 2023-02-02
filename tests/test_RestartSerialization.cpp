@@ -36,6 +36,7 @@
 #include <opm/simulators/timestepping/TimeStepControl.hpp>
 #include <opm/simulators/utils/SerializationPackers.hpp>
 #include <opm/simulators/wells/ALQState.hpp>
+#include <opm/simulators/wells/GlobalWellInfo.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/PerfData.hpp>
 #include <opm/simulators/wells/SegmentState.hpp>
@@ -77,6 +78,7 @@ BOOST_AUTO_TEST_CASE(NAME) \
     TEST_FOR_TYPE_NAMED(TYPE, TYPE)
 
 TEST_FOR_TYPE(ALQState)
+TEST_FOR_TYPE(GlobalWellInfo)
 TEST_FOR_TYPE(GroupState)
 TEST_FOR_TYPE(HardcodedTimeStepControl)
 TEST_FOR_TYPE(PerfData)

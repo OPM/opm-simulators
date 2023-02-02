@@ -29,8 +29,6 @@
 
 namespace Opm {
 
-
-
 GlobalWellInfo::GlobalWellInfo(const Schedule& sched, std::size_t report_step, const std::vector<Well>& local_wells)
 {
     auto num_wells = sched.numWells(report_step);
@@ -46,6 +44,16 @@ GlobalWellInfo::GlobalWellInfo(const Schedule& sched, std::size_t report_step, c
         this->local_map.push_back( well.seqIndex() );
 }
 
+GlobalWellInfo GlobalWellInfo::serializationTestObject()
+{
+    GlobalWellInfo result;
+    result.local_map = {1, 2, 3};
+    result.name_map = {{"test1", 4}, {"test2", 5}};
+    result.m_in_injecting_group = {6};
+    result.m_in_producing_group = {7, 8};
+
+    return result;
+}
 
 bool GlobalWellInfo::in_injecting_group(const std::string& wname) const {
     auto global_well_index = this->name_map.at(wname);
@@ -86,4 +94,13 @@ const std::string& GlobalWellInfo::well_name(std::size_t well_index) const {
     }
     throw std::logic_error("No well with index: " + std::to_string(well_index));
 }
+
+bool GlobalWellInfo::operator==(const GlobalWellInfo& rhs) const
+{
+    return this->local_map == rhs.local_map &&
+           this->name_map == rhs.name_map &&
+           this->m_in_injecting_group == rhs.m_in_injecting_group &&
+           this->m_in_producing_group == rhs.m_in_producing_group;
+}
+
 }

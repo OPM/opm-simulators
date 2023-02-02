@@ -33,7 +33,6 @@ enum class WellInjectorCMode;
 enum class WellProducerCMode;
 enum class WellStatus;
 
-
 /*
   The context of the GlobalWellInfo class is the situation where the wells are
   distributed among different processors. Most well processing only considers
@@ -49,10 +48,20 @@ enum class WellStatus;
     under group control.
 */
 
-
 class GlobalWellInfo {
 public:
 
+    GlobalWellInfo() = default;
+    GlobalWellInfo(const Schedule& sched, std::size_t report_step, const std::vector<Well>& local_wells);
+    static GlobalWellInfo serializationTestObject();
+
+    bool in_producing_group(const std::string& wname) const;
+    bool in_injecting_group(const std::string& wname) const;
+    std::size_t well_index(const std::string& wname) const;
+    const std::string& well_name(std::size_t well_index) const;
+    void update_injector(std::size_t well_index, WellStatus well_status, WellInjectorCMode injection_cmode);
+    void update_producer(std::size_t well_index, WellStatus well_status, WellProducerCMode production_cmode);
+    void clear();
 
     /*
       Will sum the m_in_injecting_group and m_in_producing_group vectors across
@@ -65,16 +74,16 @@ public:
         comm.sum( this->m_in_producing_group.data(), size);
     }
 
+    template<class Serializer>
+    void serializeOp(Serializer& serializer)
+    {
+        serializer(local_map);
+        serializer(name_map);
+        serializer(m_in_injecting_group);
+        serializer(m_in_producing_group);
+    }
 
-
-    GlobalWellInfo(const Schedule& sched, std::size_t report_step, const std::vector<Well>& local_wells);
-    bool in_producing_group(const std::string& wname) const;
-    bool in_injecting_group(const std::string& wname) const;
-    std::size_t well_index(const std::string& wname) const;
-    const std::string& well_name(std::size_t well_index) const;
-    void update_injector(std::size_t well_index, WellStatus well_status, WellInjectorCMode injection_cmode);
-    void update_producer(std::size_t well_index, WellStatus well_status, WellProducerCMode production_cmode);
-    void clear();
+    bool operator==(const GlobalWellInfo&) const;
 
 private:
     std::vector<std::size_t> local_map;    // local_index -> global_index
