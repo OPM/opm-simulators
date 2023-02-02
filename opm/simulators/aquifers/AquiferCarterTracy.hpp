@@ -23,6 +23,8 @@
 
 #include <opm/simulators/aquifers/AquiferAnalytical.hpp>
 
+#include <opm/input/eclipse/EclipseState/Aquifer/AquiferCT.hpp>
+
 #include <opm/output/data/Aquifer.hpp>
 
 #include <exception>
@@ -56,6 +58,22 @@ public:
         : Base(aquct_data.aquiferID, connections, ebosSimulator)
         , aquct_data_(aquct_data)
     {}
+
+    static AquiferCarterTracy serializationTestObject(const Simulator& ebosSimulator)
+    {
+        AquiferCarterTracy result({}, ebosSimulator, {});
+
+        result.pressure_previous_ = {1.0, 2.0, 3.0};
+        result.pressure_current_ = {4.0, 5.0};
+        result.Qai_ = {{6.0}};
+        result.rhow_ = 7.0;
+        result.W_flux_ = 8.0;
+        result.fluxValue_ = 9.0;
+        result.dimensionless_time_ = 10.0;
+        result.dimensionless_pressure_ = 11.0;
+
+        return result;
+    }
 
     void endTimeStep() override
     {
@@ -98,6 +116,23 @@ public:
         }
 
         return data;
+    }
+
+    template<class Serializer>
+    void serializeOp(Serializer& serializer)
+    {
+        serializer(static_cast<Base&>(*this));
+        serializer(fluxValue_);
+        serializer(dimensionless_time_);
+        serializer(dimensionless_pressure_);
+    }
+
+    bool operator==(const AquiferCarterTracy& rhs) const
+    {
+        return static_cast<const AquiferAnalytical<TypeTag>&>(*this) == rhs &&
+               this->fluxValue_ == rhs.fluxValue_ &&
+               this->dimensionless_time_ == rhs.dimensionless_time_ &&
+               this->dimensionless_pressure_ == rhs.dimensionless_pressure_;
     }
 
 protected:
