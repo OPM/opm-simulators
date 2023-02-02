@@ -595,6 +595,9 @@ class EclProblem : public GetPropType<TypeTag, Properties::BaseProblem>
                                             GetPropType<TypeTag, Properties::FluidSystem>,
                                             GetPropType<TypeTag, Properties::Scalar>>
 {
+    using BaseType = EclGenericProblem<GetPropType<TypeTag, Properties::GridView>,
+                                       GetPropType<TypeTag, Properties::FluidSystem>,
+                                       GetPropType<TypeTag, Properties::Scalar>>;
     using ParentType = GetPropType<TypeTag, Properties::BaseProblem>;
     using Implementation = GetPropType<TypeTag, Properties::Problem>;
 
@@ -2046,6 +2049,16 @@ public:
     const std::unique_ptr<EclWriterType>& eclWriter() const
     {
         return eclWriter_;
+    }
+
+    template<class Serializer>
+    void serializeOp(Serializer& serializer)
+    {
+        serializer(static_cast<BaseType&>(*this));
+        serializer(drift_);
+        serializer(wellModel_);
+        serializer(aquiferModel_);
+        serializer(tracerModel_);
     }
 
 private:
