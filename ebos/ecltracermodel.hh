@@ -205,6 +205,13 @@ public:
     void deserialize(Restarter&)
     { /* not implemented */ }
 
+    template<class Serializer>
+    void serializeOp(Serializer& serializer)
+    {
+        serializer(static_cast<BaseType&>(*this));
+        serializer(tbatch);
+    }
+
 protected:
 
     // evaluate water storage volume(s) in a single cell
@@ -555,7 +562,32 @@ protected:
       std::vector<TV> residual_;
       std::unique_ptr<TracerMatrix> mat;
 
-      TracerBatch(int phaseIdx) : phaseIdx_(phaseIdx) {}
+      bool operator==(const TracerBatch& rhs) const
+      {
+            return this->concentrationInitial_ == rhs.concentrationInitial_ &&
+                   this->concentration_ == rhs.concentration_;
+      }
+
+      static TracerBatch serializationTestObject()
+      {
+          TracerBatch<TV> result(4);
+          result.idx_ = {1,2,3};
+          result.concentrationInitial_ = {5.0, 6.0};
+          result.concentration_ = {7.0, 8.0};
+          result.storageOfTimeIndex1_ = {9.0, 10.0, 11.0};
+          result.residual_ = {12.0, 13.0};
+
+          return result;
+      }
+
+      template<class Serializer>
+      void serializeOp(Serializer& serializer)
+      {
+          serializer(concentrationInitial_);
+          serializer(concentration_);
+      }
+
+      TracerBatch(int phaseIdx = 0) : phaseIdx_(phaseIdx) {}
 
       int numTracer() const {return idx_.size(); }
 
