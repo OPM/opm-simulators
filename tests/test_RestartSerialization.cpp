@@ -35,6 +35,7 @@
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
 #include <opm/simulators/timestepping/TimeStepControl.hpp>
 #include <opm/simulators/utils/SerializationPackers.hpp>
+#include <opm/simulators/wells/SegmentState.hpp>
 
 #define BOOST_TEST_MODULE TestRestartSerialization
 #define BOOST_TEST_NO_MAIN
@@ -76,6 +77,7 @@ BOOST_AUTO_TEST_CASE(NAME) \
 TEST_FOR_TYPE(HardcodedTimeStepControl)
 TEST_FOR_TYPE(PIDAndIterationCountTimeStepControl)
 TEST_FOR_TYPE(PIDTimeStepControl)
+TEST_FOR_TYPE(SegmentState)
 TEST_FOR_TYPE(SimpleIterationCountTimeStepControl)
 TEST_FOR_TYPE(SimulatorTimer)
 
