@@ -29,6 +29,7 @@ namespace Opm {
 
 class ALQState {
 public:
+    static ALQState serializationTestObject();
 
     std::size_t pack_size() const;
     std::size_t unpack_data(const double * data);
@@ -45,6 +46,18 @@ public:
     void set_debug_counter(int value);
     int  get_debug_counter();
     int  update_debug_counter();
+
+    template<class Serializer>
+    void serializeOp(Serializer& serializer)
+    {
+        serializer(current_alq_);
+        serializer(default_alq_);
+        serializer(alq_increase_count_);
+        serializer(alq_decrease_count_);
+        serializer(debug_counter_);
+    }
+
+    bool operator==(const ALQState&) const;
 
 private:
     std::map<std::string, double> current_alq_;
