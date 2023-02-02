@@ -203,6 +203,83 @@ BOOST_AUTO_TEST_CASE(AquiferNumerical)
     BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized AquiferFetkovich differ");
 }
 
+template<class Grid, class GridView, class DofMapper, class Stencil, class Scalar>
+class EclGenericTracerModelTest : public Opm::EclGenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar> {
+    using Base = Opm::EclGenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>;
+public:
+    EclGenericTracerModelTest(const GridView& gridView,
+                              const Opm::EclipseState& eclState,
+                              const Dune::CartesianIndexMapper<Grid>& cartMapper,
+                              const DofMapper& dofMapper,
+                              const std::function<std::array<double,Grid::dimensionworld>(int)> centroids) :
+        Base(gridView, eclState, cartMapper, dofMapper, centroids)
+    {}
+
+    static EclGenericTracerModelTest
+    serializationTestObject(const GridView& gridView,
+                            const Opm::EclipseState& eclState,
+                            const Dune::CartesianIndexMapper<Grid>& cartMapper,
+                            const DofMapper& dofMapper,
+                            const std::function<std::array<double,Grid::dimensionworld>(int)> centroids)
+    {
+        EclGenericTracerModelTest result(gridView, eclState, cartMapper, dofMapper, centroids);
+        result.tracerConcentration_ = {{1.0}, {2.0}, {3.0}};
+        result.tracerResidual_ = {{1.0}};
+        result.wellTracerRate_.insert({{"foo", "bar"}, 4.0});
+
+        return result;
+    }
+
+    bool operator==(const EclGenericTracerModelTest& rhs) const
+    {
+        if (this->tracerResidual_.size() != rhs.tracerResidual_.size()) {
+            return false;
+        }
+        for (size_t i = 0; i < this->tracerResidual_.size(); ++i) {
+            if (this->tracerResidual_[i] != rhs.tracerResidual_[i]) {
+                return false;
+            }
+        }
+        if (this->tracerConcentration_.size() != rhs.tracerConcentration_.size()) {
+            return false;
+        }
+        for (size_t i = 0; i < this->tracerConcentration_.size(); ++i) {
+            if (this->tracerConcentration_[i].size() != rhs.tracerConcentration_[i].size()) {
+                return false;
+            }
+            for (size_t j = 0; j < this->tracerConcentration_[i].size(); ++j) {
+                if (this->tracerConcentration_[i][j] != rhs.tracerConcentration_[i][j]) {
+                    return false;
+                }
+            }
+        }
+        return this->wellTracerRate_ == rhs.wellTracerRate_;
+    }
+};
+
+BOOST_AUTO_TEST_CASE(EclGenericTracerModel)
+{
+    Dune::CpGrid grid;
+    Opm::EclipseState eclState;
+    Dune::CartesianIndexMapper<Dune::CpGrid> mapper(grid);
+    Dune::MultipleCodimMultipleGeomTypeMapper<Dune::CpGrid::LeafGridView> dofMapper(grid.leafGridView(), Dune::mcmgElementLayout());
+    auto centroids = [](int) { return std::array<double,Dune::CpGrid::dimensionworld>{}; };
+    auto data_out = EclGenericTracerModelTest<Dune::CpGrid,
+                                              Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>,
+                                              Dune::MultipleCodimMultipleGeomTypeMapper<Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>>,
+                                              Opm::EcfvStencil<double,Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>,false,false>,
+                                              double>::serializationTestObject(grid.leafGridView(), eclState, mapper, dofMapper, centroids);
+    Opm::Serialization::MemPacker packer;
+    Opm::Serializer ser(packer);
+    ser.pack(data_out);
+    size_t pos1 = ser.position();
+    decltype(data_out) data_in(grid.leafGridView(), eclState, mapper, dofMapper, centroids);
+    ser.unpack(data_in);
+    size_t pos2 = ser.position();
+    BOOST_CHECK_MESSAGE(pos1 == pos2, "Packed size differ from unpack size for EclGenericTracerModel");
+    BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized EclGenericTracerModel differ");
+}
+
 bool init_unit_test_func()
 {
     return true;
