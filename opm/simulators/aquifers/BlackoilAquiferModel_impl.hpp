@@ -184,4 +184,23 @@ data::Aquifers BlackoilAquiferModel<TypeTag>::aquiferData() const
     return data;
 }
 
+template<typename TypeTag>
+template<class Serializer>
+void BlackoilAquiferModel<TypeTag>::
+serializeOp(Serializer& serializer)
+{
+    for (auto& aiPtr : aquifers) {
+        auto* ct = dynamic_cast<AquiferCarterTracy<TypeTag>*>(aiPtr.get());
+        auto* fetp = dynamic_cast<AquiferFetkovich<TypeTag>*>(aiPtr.get());
+        auto* num = dynamic_cast<AquiferNumerical<TypeTag>*>(aiPtr.get());
+        if (ct) {
+            serializer(*ct);
+        } else if (fetp) {
+            serializer(*fetp);
+        } else if (num) {
+            serializer(*num);
+        }
+    }
+}
+
 } // namespace Opm
