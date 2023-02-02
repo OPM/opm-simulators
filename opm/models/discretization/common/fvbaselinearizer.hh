@@ -32,6 +32,7 @@
 #include "linearizationtype.hh"
 
 #include <opm/common/Exceptions.hpp>
+#include <opm/grid/utility/SparseTable.hpp>
 
 #include <opm/models/parallel/gridcommhandles.hh>
 #include <opm/models/parallel/threadmanager.hh>
@@ -294,6 +295,22 @@ public:
      */
     const std::map<unsigned, Constraints>& constraintsMap() const
     { return constraintsMap_; }
+
+    /*!
+     * \brief Return constant reference to the flowsInfo.
+     *
+     * (This object has been only implemented for the tpfalinearizer.)
+     */
+    const auto& getFlowsInfo() const
+    {return flowsInfo_;}   
+
+    /*!
+     * \brief Return constant reference to the floresInfo.
+     *
+     * (This object has been only implemented for the tpfalinearizer.)
+     */
+    const auto& getFloresInfo() const
+    {return floresInfo_;}
 
 private:
     Simulator& simulator_()
@@ -587,6 +604,16 @@ private:
     // The constraint equations (only non-empty if the
     // EnableConstraints property is true)
     std::map<unsigned, Constraints> constraintsMap_;
+
+
+    struct FlowInfo
+    {
+        int faceId;
+        VectorBlock flow;
+        unsigned int nncId;
+    };
+    SparseTable<FlowInfo> flowsInfo_;
+    SparseTable<FlowInfo> floresInfo_;
 
     // the jacobian matrix
     std::unique_ptr<SparseMatrixAdapter> jacobian_;
