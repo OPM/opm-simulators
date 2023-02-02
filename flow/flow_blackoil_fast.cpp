@@ -38,6 +38,9 @@ struct EclFlowProblemTPFAFast {
     struct EnableDiffusion<TypeTag, TTag::EclFlowProblemTPFAFast> { static constexpr bool value = false; };
 
     template<class TypeTag>
+    struct EnableTemperature<TypeTag, TTag::EclFlowProblemTPFAFast> { static constexpr bool value = false; };
+    
+    template<class TypeTag>
     struct IntensiveQuantities<TypeTag, TTag::EclFlowProblemTPFAFast> {
         using type = BlackOilIntensiveQuantitiesSimple<TypeTag>;
     };
