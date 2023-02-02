@@ -139,6 +139,33 @@ EclGenericOutputBlackoilModule(const EclipseState& eclState,
         std::string key_pattern = "R" + EclString(phase) + "*";
         this->regionNodes_[phase] = summaryConfig_.keywords(key_pattern);
     }
+
+    // Check if FLORES/FLOWS is set in any RPTRST in the schedule
+    anyFlores_ = false;     // Used for the initialization of the sparse table
+    anyFlows_ = false;
+    enableFlores_ = false;  // Used for the output of i+, j+, k+
+    enableFloresn_ = false; // Used for the special case of nnc
+    enableFlows_ = false; 
+    enableFlowsn_ = false; 
+    
+    for (const auto& block : this->schedule_) { // Uses Schedule::begin() and Schedule::end()
+        const auto& rstkw = block.rst_config().keywords;
+
+        if (! anyFlores_) {
+            anyFlores_ = rstkw.find("FLORES") != rstkw.end();
+        }
+
+        if (! anyFlows_) {
+            anyFlows_ = rstkw.find("FLOWS") != rstkw.end();
+        }
+
+        if (anyFlores_ && anyFlows_) {
+            // Terminate report step loop early if both FLORES and FLOWS
+            // have been set at some point as there's no need to search
+            // any further in that case.
+            break;
+        }
+    }
 }
 
 template<class FluidSystem, class Scalar>
@@ -669,6 +696,24 @@ assignToSolution(data::Solution& sol)
         {"1OVERBW",  UnitSystem::measure::water_inverse_formation_volume_factor, data::TargetType::RESTART_AUXILIARY, invB_[waterPhaseIdx]},
         {"BIOFILM",  UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      cBiofilm_},
         {"CALCITE",  UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      cCalcite_},
+        {"FLOGASI+", UnitSystem::measure::gas_surface_rate,    data::TargetType::RESTART_SOLUTION, flowsi_[gasCompIdx]},
+        {"FLOGASJ+", UnitSystem::measure::gas_surface_rate,    data::TargetType::RESTART_SOLUTION, flowsj_[gasCompIdx]},
+        {"FLOGASK+", UnitSystem::measure::gas_surface_rate,    data::TargetType::RESTART_SOLUTION, flowsk_[gasCompIdx]},
+        {"FLOOILI+", UnitSystem::measure::liquid_surface_rate, data::TargetType::RESTART_SOLUTION, flowsi_[oilCompIdx]},
+        {"FLOOILJ+", UnitSystem::measure::liquid_surface_rate, data::TargetType::RESTART_SOLUTION, flowsj_[oilCompIdx]},
+        {"FLOOILK+", UnitSystem::measure::liquid_surface_rate, data::TargetType::RESTART_SOLUTION, flowsk_[oilCompIdx]},
+        {"FLOWATI+", UnitSystem::measure::liquid_surface_rate, data::TargetType::RESTART_SOLUTION, flowsi_[waterCompIdx]},
+        {"FLOWATJ+", UnitSystem::measure::liquid_surface_rate, data::TargetType::RESTART_SOLUTION, flowsj_[waterCompIdx]},
+        {"FLOWATK+", UnitSystem::measure::liquid_surface_rate, data::TargetType::RESTART_SOLUTION, flowsk_[waterCompIdx]}, 
+        {"FLRGASI+", UnitSystem::measure::rate,      data::TargetType::RESTART_SOLUTION,      floresi_[gasCompIdx]},
+        {"FLRGASJ+", UnitSystem::measure::rate,      data::TargetType::RESTART_SOLUTION,      floresj_[gasCompIdx]},
+        {"FLRGASK+", UnitSystem::measure::rate,      data::TargetType::RESTART_SOLUTION,      floresk_[gasCompIdx]},
+        {"FLROILI+", UnitSystem::measure::rate,      data::TargetType::RESTART_SOLUTION,      floresi_[oilCompIdx]},
+        {"FLROILJ+", UnitSystem::measure::rate,      data::TargetType::RESTART_SOLUTION,      floresj_[oilCompIdx]},
+        {"FLROILK+", UnitSystem::measure::rate,      data::TargetType::RESTART_SOLUTION,      floresk_[oilCompIdx]},
+        {"FLRWATI+", UnitSystem::measure::rate,      data::TargetType::RESTART_SOLUTION,      floresi_[waterCompIdx]},
+        {"FLRWATJ+", UnitSystem::measure::rate,      data::TargetType::RESTART_SOLUTION,      floresj_[waterCompIdx]},
+        {"FLRWATK+", UnitSystem::measure::rate,      data::TargetType::RESTART_SOLUTION,      floresk_[waterCompIdx]},
         {"FOAM",     UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      cFoam_},
         {"GASKR",    UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     relativePermeability_[gasPhaseIdx]},
         {"GAS_DEN",  UnitSystem::measure::density,   data::TargetType::RESTART_AUXILIARY,     density_[gasPhaseIdx]},
@@ -818,7 +863,7 @@ setRestart(const data::Solution& sol,
         permFact_[elemIdx] = sol.data("PERMFACT")[globalDofIndex];
     if (!soMax_.empty() && sol.has("SOMAX"))
         soMax_[elemIdx] = sol.data("SOMAX")[globalDofIndex];
-    if (!pcSwMdcOw_.empty() &&sol.has("PCSWM_OW"))
+    if (!pcSwMdcOw_.empty() && sol.has("PCSWM_OW"))
         pcSwMdcOw_[elemIdx] = sol.data("PCSWM_OW")[globalDofIndex];
     if (!krnSwMdcOw_.empty() && sol.has("KRNSW_OW"))
         krnSwMdcOw_[elemIdx] = sol.data("KRNSW_OW")[globalDofIndex];
@@ -879,7 +924,8 @@ doAllocBuffers(unsigned bufferSize,
                const bool isRestart,
                const bool vapparsActive,
                const bool enableHysteresis,
-               unsigned numTracers)
+               unsigned numTracers,
+               unsigned numOutputNnc)
 {
     // Only output RESTART_AUXILIARY asked for by the user.
     std::map<std::string, int> rstKeywords = schedule_.rst_keywords(reportStepNum);
@@ -1074,6 +1120,52 @@ doAllocBuffers(unsigned bufferSize,
     if (FluidSystem::phaseIsActive(gasPhaseIdx) && rstKeywords["BG"] > 0) {
         rstKeywords["BG"] = 0;
         invB_[gasPhaseIdx].resize(bufferSize, 0.0);
+    }
+
+    enableFlows_ = false;
+    enableFlowsn_ = false;
+    if (rstKeywords["FLOWS"] > 0) {
+        rstKeywords["FLOWS"] = 0;
+        enableFlows_ = true;
+        std::array<int, 3> phaseIdxs = { gasPhaseIdx, oilPhaseIdx, waterPhaseIdx }; 
+        std::array<int, 3> compIdxs = { gasCompIdx, oilCompIdx, waterCompIdx };
+        auto rstName = std::array{ "FLOGASN+", "FLOOILN+", "FLOWATN+" };
+        for (unsigned ii = 0; ii < phaseIdxs.size(); ++ii) {
+            if (FluidSystem::phaseIsActive(phaseIdxs[ii])) {
+                flowsi_[compIdxs[ii]].resize(bufferSize, 0.0);
+                flowsj_[compIdxs[ii]].resize(bufferSize, 0.0);
+                flowsk_[compIdxs[ii]].resize(bufferSize, 0.0);
+                if (numOutputNnc > 0) {
+                    enableFlowsn_ = true;
+                    flowsn_[compIdxs[ii]].first = rstName[ii];
+                    flowsn_[compIdxs[ii]].second.first.resize(numOutputNnc, -1);
+                    flowsn_[compIdxs[ii]].second.second.resize(numOutputNnc, 0.0);
+                }
+            }
+        }
+    }
+
+    enableFlores_ = false;
+    enableFloresn_ = false;
+    if (rstKeywords["FLORES"] > 0) {
+        rstKeywords["FLORES"] = 0;
+        enableFlores_ = true;
+        std::array<int, 3> phaseIdxs = { gasPhaseIdx, oilPhaseIdx, waterPhaseIdx }; 
+        std::array<int, 3> compIdxs = { gasCompIdx, oilCompIdx, waterCompIdx };
+        auto rstName = std::array{ "FLRGASN+", "FLROILN+", "FLRWATN+" };
+        for (unsigned ii = 0; ii < phaseIdxs.size(); ++ii) {
+            if (FluidSystem::phaseIsActive(phaseIdxs[ii])) {
+                floresi_[compIdxs[ii]].resize(bufferSize, 0.0);
+                floresj_[compIdxs[ii]].resize(bufferSize, 0.0);
+                floresk_[compIdxs[ii]].resize(bufferSize, 0.0);
+                if (numOutputNnc > 0) {
+                    enableFloresn_ = true;
+                    floresn_[compIdxs[ii]].first = rstName[ii];
+                    floresn_[compIdxs[ii]].second.first.resize(numOutputNnc, -1);
+                    floresn_[compIdxs[ii]].second.second.resize(numOutputNnc, 0.0);
+                }
+            }
+        }
     }
 
     if (rstKeywords["DEN"] > 0) {

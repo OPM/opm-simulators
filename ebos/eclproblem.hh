@@ -2043,6 +2043,11 @@ public:
         return { free, massratebc_(dir)[globalSpaceIdx] };
     }
 
+    const std::unique_ptr<EclWriterType>& eclWriter() const
+    {
+        return eclWriter_;
+    }
+
 private:
     template<class UpdateFunc>
     void updateProperty_(const std::string& failureMsg,
