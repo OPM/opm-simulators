@@ -68,6 +68,25 @@ SegmentState::SegmentState(int num_phases, const WellSegments& segments)
     , m_segment_number         (make_segment_number(segments))
 {}
 
+SegmentState SegmentState::serializationTestObject()
+{
+    SegmentState result;
+    result.rates = {1.0, 2.0};
+    result.dissolved_gas_rate = {3.0, 4.0, 5.0};
+    result.vaporized_oil_rate = {6.0};
+    result.phase_resv_rates = {7.0, 8.0};
+    result.phase_velocity = {9.0};
+    result.phase_holdup = {10.0, 11.0};
+    result.phase_viscosity = {12.0};
+    result.pressure = {13.0, 14.0};
+    result.pressure_drop_friction = {15.0};
+    result.pressure_drop_hydrostatic = {16.0, 17.0};
+    result.pressure_drop_accel = {18.0};
+    result.m_segment_number = {19, 20};
+
+    return result;
+}
+
 double SegmentState::pressure_drop(std::size_t index) const {
     return this->pressure_drop_friction[index] + this->pressure_drop_hydrostatic[index] + this->pressure_drop_accel[index];
 }
@@ -94,6 +113,22 @@ void SegmentState::scale_pressure(const double bhp) {
 
 const std::vector<int>& SegmentState::segment_number() const {
     return this->m_segment_number;
+}
+
+bool SegmentState::operator==(const SegmentState& rhs) const
+{
+    return this->rates == rhs.rates &&
+           this->dissolved_gas_rate == rhs.dissolved_gas_rate &&
+           this->vaporized_oil_rate == rhs.vaporized_oil_rate &&
+           this->phase_resv_rates == rhs.phase_resv_rates &&
+           this->phase_velocity == rhs.phase_velocity &&
+           this->phase_holdup == rhs.phase_holdup &&
+           this->phase_viscosity == rhs.phase_viscosity &&
+           this->pressure == rhs.pressure &&
+           this->pressure_drop_friction == rhs.pressure_drop_friction &&
+           this->pressure_drop_hydrostatic == rhs.pressure_drop_hydrostatic &&
+           this->pressure_drop_accel == rhs.pressure_drop_accel &&
+           this->m_segment_number == rhs.m_segment_number;
 }
 
 } // namespace Opm

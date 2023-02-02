@@ -37,12 +37,33 @@ public:
     SegmentState() = default;
     SegmentState(int num_phases, const WellSegments& segments);
 
+    static SegmentState serializationTestObject();
+
     double pressure_drop(std::size_t index) const;
     bool empty() const;
     void scale_pressure(double bhp);
 
     const std::vector<int>& segment_number() const;
     std::size_t size() const;
+
+    template<class Serializer>
+    void serializeOp(Serializer& serializer)
+    {
+        serializer(rates);
+        serializer(dissolved_gas_rate);
+        serializer(vaporized_oil_rate);
+        serializer(phase_resv_rates);
+        serializer(phase_velocity);
+        serializer(phase_holdup);
+        serializer(phase_viscosity);
+        serializer(pressure);
+        serializer(pressure_drop_friction);
+        serializer(pressure_drop_hydrostatic);
+        serializer(pressure_drop_accel);
+        serializer(m_segment_number);
+    }
+
+    bool operator==(const SegmentState&) const;
 
     std::vector<double> rates;
     std::vector<double> dissolved_gas_rate;
