@@ -152,41 +152,27 @@ struct AquiferFixture {
 
 BOOST_GLOBAL_FIXTURE(AquiferFixture);
 
-BOOST_AUTO_TEST_CASE(AquiferCarterTracy)
-{
-    using TT = Opm::Properties::TTag::EbosTypeTag;
-    Opm::EclGenericVanguard::readDeck("GLIFT1.DATA");
-    using Simulator = Opm::GetPropType<TT, Opm::Properties::Simulator>;
-    Simulator sim;
-    auto data_out = Opm::AquiferCarterTracy<TT>::serializationTestObject(sim);
-    Opm::Serialization::MemPacker packer;
-    Opm::Serializer ser(packer);
-    ser.pack(data_out);
-    size_t pos1 = ser.position();
-    decltype(data_out) data_in({}, sim, {});
-    ser.unpack(data_in);
-    size_t pos2 = ser.position();
-    BOOST_CHECK_MESSAGE(pos1 == pos2, "Packed size differ from unpack size for AquiferCarterTracy");
-    BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized AquiferCarterTracy differ");
+#define TEST_FOR_AQUIFER(TYPE) \
+BOOST_AUTO_TEST_CASE(TYPE) \
+{ \
+    using TT = Opm::Properties::TTag::EbosTypeTag; \
+    Opm::EclGenericVanguard::readDeck("GLIFT1.DATA"); \
+    using Simulator = Opm::GetPropType<TT, Opm::Properties::Simulator>; \
+    Simulator sim; \
+    auto data_out = Opm::TYPE<TT>::serializationTestObject(sim); \
+    Opm::Serialization::MemPacker packer; \
+    Opm::Serializer ser(packer); \
+    ser.pack(data_out); \
+    const size_t pos1 = ser.position(); \
+    decltype(data_out) data_in({}, sim, {}); \
+    ser.unpack(data_in); \
+    const size_t pos2 = ser.position(); \
+    BOOST_CHECK_MESSAGE(pos1 == pos2, "Packed size differ from unpack size for " #TYPE); \
+    BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized " #TYPE " differ"); \
 }
 
-BOOST_AUTO_TEST_CASE(AquiferFetkovich)
-{
-    using TT = Opm::Properties::TTag::EbosTypeTag;
-    Opm::EclGenericVanguard::readDeck("GLIFT1.DATA");
-    using Simulator = Opm::GetPropType<TT, Opm::Properties::Simulator>;
-    Simulator sim;
-    auto data_out = Opm::AquiferFetkovich<TT>::serializationTestObject(sim);
-    Opm::Serialization::MemPacker packer;
-    Opm::Serializer ser(packer);
-    ser.pack(data_out);
-    size_t pos1 = ser.position();
-    decltype(data_out) data_in({}, sim, {});
-    ser.unpack(data_in);
-    size_t pos2 = ser.position();
-    BOOST_CHECK_MESSAGE(pos1 == pos2, "Packed size differ from unpack size for AquiferFetkovich");
-    BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized AquiferFetkovich differ");
-}
+TEST_FOR_AQUIFER(AquiferCarterTracy)
+TEST_FOR_AQUIFER(AquiferFetkovich)
 
 BOOST_AUTO_TEST_CASE(AquiferNumerical)
 {
@@ -198,12 +184,12 @@ BOOST_AUTO_TEST_CASE(AquiferNumerical)
     Opm::Serialization::MemPacker packer;
     Opm::Serializer ser(packer);
     ser.pack(data_out);
-    size_t pos1 = ser.position();
+    const size_t pos1 = ser.position();
     decltype(data_out) data_in({}, sim);
     ser.unpack(data_in);
-    size_t pos2 = ser.position();
-    BOOST_CHECK_MESSAGE(pos1 == pos2, "Packed size differ from unpack size for AquiferFetkovich");
-    BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized AquiferFetkovich differ");
+    const size_t pos2 = ser.position();
+    BOOST_CHECK_MESSAGE(pos1 == pos2, "Packed size differ from unpack size for AquiferNumerical");
+    BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized AquiferNumerical differ");
 }
 
 bool init_unit_test_func()
