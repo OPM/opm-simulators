@@ -395,7 +395,7 @@ namespace Opm {
                 // parallel structures appropriate for the full grid
                 // only. This must be addressed before going parallel.
                 FlowLinearSolverParameters param;
-                param.template init<TypeTag>();
+                param.template init<TypeTag>(ebosSimulator_.vanguard().eclState().getSimulationConfig().useCPR());
                 // Override solver type with umfpack if small domain.
                 // Otherwise hardcode to ILU0
                 if (domains_[index].cells.size() < 200) {
