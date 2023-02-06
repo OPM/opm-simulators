@@ -48,6 +48,7 @@ set (opm-simulators_DEPS
   "opm-grid REQUIRED"
   "opm-models REQUIRED"
   "Damaris 1.7"
+  "HDF5"
   )
 
 find_package_deps(opm-simulators)
