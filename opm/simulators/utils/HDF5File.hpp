@@ -62,7 +62,11 @@ public:
     //! \details Throws exception on failure
     void read(const std::string& group,
               const std::string& dset,
-              std::vector<char>& buffer);
+              std::vector<char>& buffer) const;
+
+    //! \brief Lists the entries in a given group.
+    //! \details Note: Both datasets and subgroups are returned
+    std::vector<std::string> list(const std::string& group) const;
 
 private:
     hid_t m_file = H5I_INVALID_HID; //!< File handle

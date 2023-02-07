@@ -94,3 +94,33 @@ BOOST_AUTO_TEST_CASE(WriteExistentDset)
     std::filesystem::remove(path);
 }
 
+BOOST_AUTO_TEST_CASE(List)
+{
+    auto path = std::filesystem::temp_directory_path() / Opm::unique_path("hdf5test%%%%%");
+    std::filesystem::create_directory(path);
+    auto rwpath = (path / "existent_dset.hdf5").string();
+    const std::vector<char> test_data{1,2,3,4,5,6,8,9};
+    {
+        Opm::HDF5File out_file(rwpath, Opm::HDF5File::OpenMode::OVERWRITE);
+        BOOST_CHECK_NO_THROW(out_file.write("/test_data", "d1", test_data));
+        BOOST_CHECK_NO_THROW(out_file.write("/test_data", "d2", test_data));
+        BOOST_CHECK_NO_THROW(out_file.write("/test_data/test", "d2", test_data));
+    }
+    {
+        Opm::HDF5File in_file(rwpath, Opm::HDF5File::OpenMode::READ);
+
+        auto res1 = in_file.list("/");
+        BOOST_CHECK_EQUAL(res1.size(), 1u);
+        BOOST_CHECK_EQUAL(res1[0], "test_data");
+
+        auto res2 = in_file.list("/test_data");
+        BOOST_CHECK_EQUAL(res2.size(), 3u);
+        BOOST_CHECK_EQUAL(res2[0], "d1");
+        BOOST_CHECK_EQUAL(res2[1], "d2");
+        BOOST_CHECK_EQUAL(res2[2], "test");
+
+        BOOST_CHECK_THROW(in_file.list("/not_there"), std::runtime_error);
+    }
+    std::filesystem::remove(rwpath);
+    std::filesystem::remove(path);
+}
