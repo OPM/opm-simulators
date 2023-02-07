@@ -42,15 +42,15 @@
         #include <opm/simulators/utils/GridDataOutput.hpp>
         
         // N.B. does not seem to be able to be allocated with new operator.
-        Opm::GridDataOutput::SimMeshDataAccessor damarisGeomWriter(gridView, Dune::VTK::conforming) ;
-        // damarisGeomWriter = new SimMeshDataAccessor(gridView, Dune::VTK::conforming);  // this does not compile
-        damarisGeomWriter.printGridDetails() ;
+        Opm::GridDataOutput::SimMeshDataAccessor geomData(gridView, Dune::VTK::conforming) ;
+        // geomData = new SimMeshDataAccessor(gridView, Dune::VTK::conforming);  // this does not compile
+        geomData.printGridDetails() ;
         
-        int nvert = damarisGeomWriter.getNVertices() ;
+        int nvert = geomData.getNVertices() ;
         double * x_vert = new double[nvert] ;
         double * y_vert = new double[nvert] ;
         double * z_vert = new double[nvert] ;
-        damarisGeomWriter.writeGridPoints(x_vert,y_vert,z_vert) ;
+        geomData.writeGridPoints(x_vert,y_vert,z_vert) ;
         
         ... do something with vertex data ....
         
