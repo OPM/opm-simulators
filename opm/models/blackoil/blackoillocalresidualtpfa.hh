@@ -377,7 +377,8 @@ public:
                     darcyFlux = pressureDifference *
                        (Toolbox::value(up.mobility(phaseIdx, facedir)) * Toolbox::value(transMult) * (-trans / faceArea));
             }
-            darcy[phaseIdx] = darcyFlux.value() * faceArea; // For the FLORES fluxes 
+            unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
+            darcy[conti0EqIdx + activeCompIdx] = darcyFlux.value() * faceArea; // For the FLORES fluxes
 
             unsigned pvtRegionIdx = up.pvtRegionIndex();
             // if (upIdx == globalFocusDofIdx){
