@@ -323,6 +323,8 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"ISOLNUM", {true, std::nullopt}},
         {"JFUNCR", {true, std::nullopt}},
         {"KRNUMMF", {true, std::nullopt}},
+        {"KRNUMR-", {true, std::nullopt}},
+        {"KRNUMT-", {true, std::nullopt}},
         {"KRNUMX-", {true, std::nullopt}},
         {"KRNUMY-", {true, std::nullopt}},
         {"KRNUMZ-", {true, std::nullopt}},
