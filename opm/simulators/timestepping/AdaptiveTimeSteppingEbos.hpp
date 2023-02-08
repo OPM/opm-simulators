@@ -3,8 +3,12 @@
 #ifndef OPM_ADAPTIVE_TIME_STEPPING_EBOS_HPP
 #define OPM_ADAPTIVE_TIME_STEPPING_EBOS_HPP
 
-#include <iostream>
-#include <utility>
+#include <dune/common/version.hh>
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 8)
+#include <dune/istl/istlexception.hh>
+#else
+#include <dune/istl/ilu.hh>
+#endif
 
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/ErrorMacros.hpp>
@@ -17,11 +21,27 @@
 #include <opm/input/eclipse/Schedule/ScheduleState.hpp>
 #include <opm/input/eclipse/Units/Units.hpp>
 
+#include <opm/models/utils/basicproperties.hh>
+#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/propertysystem.hh>
+
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
 #include <opm/simulators/timestepping/AdaptiveSimulatorTimer.hpp>
 #include <opm/simulators/timestepping/TimeStepControlInterface.hpp>
 #include <opm/simulators/timestepping/TimeStepControl.hpp>
+
+#include <algorithm>
+#include <cassert>
+#include <cmath>
+#include <memory>
+#include <ostream>
+#include <set>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace Opm::Properties {
 
