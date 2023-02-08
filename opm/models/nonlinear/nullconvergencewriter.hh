@@ -29,6 +29,7 @@
 #define EWOMS_NULL_CONVERGENCE_WRITER_HH
 
 #include <opm/models/utils/propertysystem.hh>
+#include <opm/simulators/linalg/linalgproperties.hh>
 
 namespace Opm::Properties {
 

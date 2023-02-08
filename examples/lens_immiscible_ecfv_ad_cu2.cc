@@ -37,6 +37,7 @@
 #include "lens_immiscible_ecfv_ad.hh"
 
 #include <opm/models/utils/start.hh>
+#include <opm/simulators/linalg/parallelbicgstabbackend.hh>
 
 // fake forward declaration to prevent esoteric compiler warning
 int mainCU2(int argc, char **argv);

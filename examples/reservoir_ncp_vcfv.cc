@@ -31,6 +31,8 @@
 #include <opm/models/utils/start.hh>
 #include <opm/models/ncp/ncpmodel.hh>
 #include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
+#include <opm/simulators/linalg/parallelbicgstabbackend.hh>
+
 #include "problems/reservoirproblem.hh"
 
 namespace Opm::Properties {

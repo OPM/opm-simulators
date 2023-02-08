@@ -31,6 +31,8 @@
 
 #include <opm/models/utils/start.hh>
 #include <opm/models/pvs/pvsmodel.hh>
+#include <opm/simulators/linalg/parallelbicgstabbackend.hh>
+
 #include "problems/obstacleproblem.hh"
 
 namespace Opm::Properties {
