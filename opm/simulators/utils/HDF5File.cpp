@@ -22,6 +22,8 @@
 #include <config.h>
 #include <opm/simulators/utils/HDF5File.hpp>
 
+#include <opm/common/utility/String.hpp>
+
 #include <filesystem>
 #include <stdexcept>
 
@@ -80,7 +82,24 @@ void HDF5File::write(const std::string& group,
     if (groupExists(m_file, group)) {
         grp = H5Gopen2(m_file, group.c_str(), H5P_DEFAULT);
     } else {
+        auto grps = split_string(group, '/');
+        std::string curr;
+        for (size_t i = 0; i < grps.size()-1; ++i) {
+            curr += '/';
+            curr += grps[i];
+            if (!groupExists(m_file, curr)) {
+                hid_t subgrp = H5Gcreate2(m_file, curr.c_str(), 0, H5P_DEFAULT, H5P_DEFAULT);
+                if (subgrp == H5I_INVALID_HID) {
+                    throw std::runtime_error("HDF5File: Failed to create group '" + curr + "'");
+                }
+                H5Gclose(subgrp);
+            }
+        }
         grp = H5Gcreate2(m_file, group.c_str(), 0, H5P_DEFAULT, H5P_DEFAULT);
+    }
+
+    if (grp == H5I_INVALID_HID) {
+        throw std::runtime_error("HDF5File: Failed to create group '" + group + "'");
     }
 
     hsize_t size = buffer.size();
@@ -90,7 +109,7 @@ void HDF5File::write(const std::string& group,
     hid_t dataset_id = H5Dcreate2(grp, dset.c_str(), H5T_NATIVE_CHAR, space,
                        H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     if (dataset_id == H5I_INVALID_HID) {
-        throw std::runtime_error("HDF5File: Trying to write already existing dataset " + group + '/' + dset);
+        throw std::runtime_error("HDF5File: Trying to write already existing dataset '" + group + '/' + dset + "'");
     }
 
     if (size > 0) {
