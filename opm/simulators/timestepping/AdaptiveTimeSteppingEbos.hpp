@@ -782,7 +782,7 @@ namespace Opm {
             return failing_wells;
         }
 
-        typedef std::unique_ptr<TimeStepControlInterface> TimeStepControlType;
+        using TimeStepControlType = std::unique_ptr<TimeStepControlInterface>;
 
         TimeStepControlType timeStepControl_; //!< time step control object
         double restartFactor_;               //!< factor to multiply time step with when solver fails to converge
