@@ -52,8 +52,7 @@ RestartValue loadParallelRestart(const EclipseIO* eclIO,
     }
 
     EclMpiSerializer ser(comm);
-    ser.broadcast(restartValues);
-    ser.broadcast(summaryState);
+    ser.broadcast(0, restartValues, summaryState);
     return restartValues;
 #else
     (void) comm;
