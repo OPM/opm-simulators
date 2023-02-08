@@ -28,6 +28,8 @@
  */
 #include "config.h"              /*@\label{tutorial1:include-begin}@*/
 #include <opm/models/utils/start.hh> /*@\label{tutorial1:include-end}@*/
+#include <opm/simulators/linalg/parallelbicgstabbackend.hh>
+
 #include "tutorial1problem.hh" /*@\label{tutorial1:include-problem-header}@*/
 
 int main(int argc, char **argv)

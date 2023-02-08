@@ -30,6 +30,7 @@
 #include <opm/models/utils/propertysystem.hh>
 
 #include <opm/models/discretization/common/fvbaseproperties.hh>
+#include <opm/simulators/linalg/linalgproperties.hh>
 
 #include <set>
 #include <vector>

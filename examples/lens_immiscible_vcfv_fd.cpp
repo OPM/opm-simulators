@@ -30,6 +30,8 @@
 
 #include <opm/models/utils/start.hh>
 #include <opm/models/immiscible/immisciblemodel.hh>
+#include <opm/simulators/linalg/parallelbicgstabbackend.hh>
+
 #include "problems/lensproblem.hh"
 
 namespace Opm::Properties {

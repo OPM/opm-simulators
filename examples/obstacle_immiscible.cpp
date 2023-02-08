@@ -29,6 +29,7 @@
 #include "config.h"
 
 #include <opm/models/utils/start.hh>
+#include <opm/simulators/linalg/parallelbicgstabbackend.hh>
 #include <opm/models/immiscible/immisciblemodel.hh>
 #include "problems/obstacleproblem.hh"
 
