@@ -432,7 +432,7 @@ namespace Opm {
                 }
 
                 SimulatorReportSingle substepReport;
-                std::string causeOfFailure = "";
+                std::string causeOfFailure;
                 try {
                     substepReport = solver.step(substepTimer);
                     if (solverVerbose_) {
