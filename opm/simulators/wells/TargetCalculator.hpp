@@ -24,6 +24,7 @@
 #include <opm/input/eclipse/Schedule/Group/Group.hpp>
 #include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
 
+#include <optional>
 #include <string>
 #include <vector>
 
