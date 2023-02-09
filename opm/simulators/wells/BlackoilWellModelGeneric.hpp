@@ -138,6 +138,10 @@ public:
                              const size_t numCells,
                              bool handle_ms_well);
 
+    void prepareDeserialize(int report_step,
+                            const size_t numCells,
+                            bool handle_ms_well);
+
     /*
       Will assign the internal member last_valid_well_state_ to the
       current value of the this->active_well_state_. The state stored

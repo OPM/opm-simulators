@@ -124,6 +124,11 @@ public:
         return this->well_rates.find(wellName) != this->well_rates.end();
     }
 
+    void clearWellRates()
+    {
+        this->well_rates.clear();
+    }
+
     template<class Communication>
     void gatherVectorsOnRoot(const std::vector< data::Connection >& from_connections,
                              std::vector< data::Connection >& to_connections,

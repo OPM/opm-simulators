@@ -75,6 +75,12 @@ struct SaveStep
     using type = UndefinedProperty;
 };
 
+template <class TypeTag, class MyTypeTag>
+struct LoadStep
+{
+    using type = UndefinedProperty;
+};
+
 template<class TypeTag>
 struct EnableTerminalOutput<TypeTag, TTag::EclFlowProblem> {
     static constexpr bool value = true;
@@ -98,6 +104,12 @@ template <class TypeTag>
 struct SaveStep<TypeTag, TTag::EclFlowProblem>
 {
     static constexpr auto* value = "";
+};
+
+template <class TypeTag>
+struct LoadStep<TypeTag, TTag::EclFlowProblem>
+{
+    static constexpr int value = -1;
 };
 
 } // namespace Opm::Properties
@@ -180,6 +192,8 @@ public:
         } else if (!saveSpec.empty()) {
             saveStep_ = std::atoi(saveSpec.c_str());
         }
+
+        loadStep_ = EWOMS_GET_PARAM(TypeTag, int, LoadStep);
     }
 
     ~SimulatorFullyImplicitBlackoilEbos()
@@ -213,6 +227,10 @@ public:
                              "Save serialized state to .OPMRST file. "
                              "Either a specific report step, \"all\" to save "
                              "all report steps or \":x\" to save every x'th step.");
+        EWOMS_REGISTER_PARAM(TypeTag, int, LoadStep,
+                             "Load serialized state from .OPMRST file. "
+                             "Either a specific report step, or 0 to load last "
+                             "stored report step.");
     }
 
     /// Run the simulation.
@@ -277,6 +295,10 @@ public:
             return false;
         }
 
+        if (loadStep_ > -1) {
+            loadTimerInfo(timer);
+        }
+
         // Report timestep.
         if (terminalOutput_) {
             std::ostringstream ss;
@@ -312,7 +334,14 @@ public:
                + schedule().seconds(timer.currentStepNum()),
             timer.currentStepLength());
         ebosSimulator_.setEpisodeIndex(timer.currentStepNum());
+        if (loadStep_> -1) {
+            wellModel_().prepareDeserialize(loadStep_ - 1);
+            loadSimulatorState();
+            loadStep_ = -1;
+            ebosSimulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
+        }
         solver->model().beginReportStep();
+
         bool enableTUNING = EWOMS_GET_PARAM(TypeTag, bool, EnableTuning);
 
         // If sub stepping is enabled allow the solver to sub cycle
@@ -549,6 +578,35 @@ protected:
         }
     }
 
+    //! \brief Load timer info from serialized state.
+    void loadTimerInfo([[maybe_unused]] SimulatorTimer& timer)
+    {
+#if !HAVE_HDF5
+        OpmLog::error("Loading of serialized state requested, but no HDF5 support available.");
+        loadStep_ = -1;
+#else
+        const std::string fileName = ebosSimulator_.vanguard().caseName() + ".OPMRST";
+        HDF5Serializer reader(saveFile_, HDF5File::OpenMode::READ);
+        if (loadStep_ == 0)
+            loadStep_ = reader.lastReportStep();
+
+        OpmLog::info("Loading serialized state for report step " + std::to_string(loadStep_));
+        const std::string groupName = "/report_step/" + std::to_string(loadStep_);
+        reader.read(timer, groupName, "simulator_timer");
+#endif
+    }
+
+    //! \brief Load simulator state from serialized state.
+    void loadSimulatorState()
+    {
+#if HAVE_HDF5
+        const std::string fileName = ebosSimulator_.vanguard().caseName() + ".OPMRST";
+        HDF5Serializer reader(fileName, HDF5File::OpenMode::READ);
+        const std::string groupName = "/report_step/" + std::to_string(loadStep_);
+        reader.read(*this, groupName, "simulator_data");
+#endif
+    }
+
     // Data.
     Simulator& ebosSimulator_;
     std::unique_ptr<WellConnectionAuxiliaryModule<TypeTag>> wellAuxMod_;
@@ -572,6 +630,7 @@ protected:
 
     int saveStride_ = -1; //!< Stride to save serialized state at
     int saveStep_ = -1; //!< Specific step to save serialized state at
+    int loadStep_ = -1; //!< Step to load serialized state from
 };
 
 } // namespace Opm

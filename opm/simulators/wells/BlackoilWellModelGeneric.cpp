@@ -218,6 +218,29 @@ initFromRestartFile(const RestartValue& restartValues,
     initial_step_ = false;
 }
 
+void
+BlackoilWellModelGeneric::
+prepareDeserialize(int report_step, const size_t numCells, bool handle_ms_well)
+{
+    // wells_ecl_ should only contain wells on this processor.
+    wells_ecl_ = getLocalWells(report_step);
+    this->local_parallel_well_info_ = createLocalParallelWellInfo(wells_ecl_);
+
+    this->initializeWellProdIndCalculators();
+    initializeWellPerfData();
+
+    if (! this->wells_ecl_.empty()) {
+        handle_ms_well &= anyMSWellOpenLocal();
+        this->wellState().resize(this->wells_ecl_, this->local_parallel_well_info_,
+                                 this->schedule(), handle_ms_well, numCells,
+                                 this->well_perf_data_, this->summaryState_);
+
+    }
+    this->wellState().clearWellRates();
+    this->commitWGState();
+    this->updateNupcolWGState();
+}
+
 std::vector<Well>
 BlackoilWellModelGeneric::
 getLocalWells(const int timeStepIdx) const
