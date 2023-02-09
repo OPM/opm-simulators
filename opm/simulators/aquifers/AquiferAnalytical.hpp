@@ -226,6 +226,11 @@ protected:
         return FluidSystem::waterCompIdx;
     }
 
+    double cumulativeFlux() const
+    {
+        return Opm::getValue(this->W_flux_);
+    }
+
 
     void initQuantities()
     {

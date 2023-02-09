@@ -41,14 +41,16 @@ public:
     // TODO: we need to pass in the previous flux volume
     AquiferConstantFlux(const std::shared_ptr<AquiferFlux>& aquifer,
                         const std::vector<Aquancon::AquancCell>& connections,
-                        const Simulator& ebos_simulator)
+                        const Simulator& ebos_simulator,
+                        const double init_cumulative_flux = 0.)
         : AquiferInterface<TypeTag>(aquifer->id, ebos_simulator)
          , connections_(connections)
          , aquifer_data_(aquifer)
+         , cumulative_flux_(init_cumulative_flux)
     {
         // flux_volume is the flux volume from previoius running
         this->initializeConnections();
-        flux_rate_.resize(this->connections_.size(), {0});
+        connection_flux_.resize(this->connections_.size(), {0});
     }
 
     virtual ~AquiferConstantFlux() = default;
@@ -70,9 +72,15 @@ public:
     }
 
     void endTimeStep() {
-        for (const auto& q : this->flux_rate_) {
-            this->cumulative_flux_ += Opm::getValue(q) * this->ebos_simulator_.timeStepSize();
+        this->flux_rate_ = 0.;
+        for (const auto& q : this->connection_flux_) {
+            this->flux_rate_ += Opm::getValue(q);
         }
+
+        const auto& comm = this->ebos_simulator_.vanguard().grid().comm();
+        comm.sum(&this->flux_rate_, 1);
+
+        this->cumulative_flux_ += this->flux_rate_ * this->ebos_simulator_.timeStepSize();
     }
 
     data::AquiferData aquiferData() const
@@ -82,7 +90,7 @@ public:
         // pressure for constant flux aquifer is 0
         data.pressure = 0.;
         data.fluxRate = 0.;
-        for (const auto& q : this->flux_rate_) {
+        for (const auto& q : this->connection_flux_) {
             data.fluxRate += q.value();
         }
         data.volume = this->cumulative_flux_;
@@ -107,9 +115,9 @@ public:
 
         const double fw = this->aquifer_data_->flux;
         // const double m = this->connections_[idx].influx_coeff;
-        this->flux_rate_[idx] = fw * this->connections_[idx].effective_facearea;
+        this->connection_flux_[idx] = fw * this->connections_[idx].effective_facearea;
         rates[BlackoilIndices::conti0EqIdx + compIdx_()]
-                += this->flux_rate_[idx] / model.dofTotalVolume(cellIdx);
+                += this->connection_flux_[idx] / model.dofTotalVolume(cellIdx);
     }
 
     // TODO: repeated function from AquiferAnalytical
@@ -125,7 +133,8 @@ private:
     // But if the grid change, not sure how to handle
     // std::vector<double> faceArea_connected_;
     std::vector<int> cellToConnectionIdx_;
-    std::vector<Eval> flux_rate_;
+    std::vector<Eval> connection_flux_;
+    double flux_rate_;
     double cumulative_flux_ = 0.;
 
 
@@ -156,6 +165,11 @@ private:
             return FluidSystem::oilCompIdx;
 
         return FluidSystem::waterCompIdx;
+    }
+
+    double cumulativeFlux() const
+    {
+        return this->cumulative_flux_;
     }
 };
 }

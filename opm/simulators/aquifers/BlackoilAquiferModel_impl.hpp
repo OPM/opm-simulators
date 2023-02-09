@@ -75,10 +75,11 @@ BlackoilAquiferModel<TypeTag>::beginEpisode()
             auto aqf = std::make_unique<AquiferConstantFlux<TypeTag>>(aquinfo, connections.getConnections(aquinfo->id), this->simulator_);
             this->aquifers.push_back(std::move(aqf));
         } else {
+            const double prev_cumulative_flux = (*find)->cumulativeFlux();
             const auto& aquinfo = elem.second;
-            auto aqf = std::make_unique<AquiferConstantFlux<TypeTag>>(aquinfo, connections.getConnections(aquinfo->id), this->simulator_);
+            // TODO: it should be improved to be something like a update instead of creating a new one
+            auto aqf = std::make_unique<AquiferConstantFlux<TypeTag>>(aquinfo, connections.getConnections(aquinfo->id), this->simulator_, prev_cumulative_flux);
             *find = std::move(aqf);
-            // create
         }
     }
 }

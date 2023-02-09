@@ -76,6 +76,10 @@ public:
 
     int aquiferID() const { return this->aquiferID_; }
 
+    // TODO: in the future, we might need to save the aquifer state here
+    // TODO: when other aquifer types are involved
+    virtual double cumulativeFlux() const = 0;
+
 protected:
     bool co2store_() const
     {
