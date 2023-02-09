@@ -569,8 +569,9 @@ protected:
             return;
         }
 
-        int nextStep = timer.currentStepNum();
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
 
+        int nextStep = timer.currentStepNum();
         if ((saveStep_ != -1 && nextStep == saveStep_)  ||
             (saveStride_ != -1 && (nextStep % saveStride_) == 0)) {
 #if !HAVE_HDF5
@@ -580,7 +581,9 @@ protected:
             if (nextStep == saveStride_ || nextStep == saveStep_) {
                 std::filesystem::remove(saveFile_);
             }
-            HDF5Serializer writer(saveFile_, HDF5File::OpenMode::APPEND);
+            HDF5Serializer writer(saveFile_,
+                                  HDF5File::OpenMode::APPEND,
+                                  EclGenericVanguard::comm());
             if (nextStep == saveStride_ || nextStep == saveStep_) {
                 std::ostringstream str;
                 Parameters::printValues<TypeTag>(str);
@@ -592,10 +595,14 @@ protected:
                                    EclGenericVanguard::comm().size());
             }
             writer.write(*this, groupName, "simulator_data");
-            writer.write(timer, groupName, "simulator_timer");
+            writer.write(timer, groupName, "simulator_timer",
+                         HDF5File::DataSetMode::ROOT_ONLY);
             OpmLog::info("Serialized state written for report step " + std::to_string(nextStep));
 #endif
         }
+
+        OPM_END_PARALLEL_TRY_CATCH("Error saving serialized state: ",
+                                   EclGenericVanguard::comm());
     }
 
     //! \brief Load timer info from serialized state.
@@ -605,13 +612,22 @@ protected:
         OpmLog::error("Loading of serialized state requested, but no HDF5 support available.");
         loadStep_ = -1;
 #else
-        HDF5Serializer reader(saveFile_, HDF5File::OpenMode::READ);
-        if (loadStep_ == 0)
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
+
+        HDF5Serializer reader(saveFile_,
+                              HDF5File::OpenMode::READ,
+                              EclGenericVanguard::comm());
+
+        if (loadStep_ == 0) {
             loadStep_ = reader.lastReportStep();
+        }
 
         OpmLog::info("Loading serialized state for report step " + std::to_string(loadStep_));
         const std::string groupName = "/report_step/" + std::to_string(loadStep_);
-        reader.read(timer, groupName, "simulator_timer");
+        reader.read(timer, groupName, "simulator_timer", HDF5File::DataSetMode::ROOT_ONLY);
+
+        OPM_END_PARALLEL_TRY_CATCH("Error loading serialized state: ",
+                                   EclGenericVanguard::comm());
 #endif
     }
 
@@ -619,9 +635,16 @@ protected:
     void loadSimulatorState()
     {
 #if HAVE_HDF5
-        HDF5Serializer reader(saveFile_, HDF5File::OpenMode::READ);
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
+
+        HDF5Serializer reader(saveFile_,
+                              HDF5File::OpenMode::READ,
+                              EclGenericVanguard::comm());
         const std::string groupName = "/report_step/" + std::to_string(loadStep_);
         reader.read(*this, groupName, "simulator_data");
+
+        OPM_END_PARALLEL_TRY_CATCH("Error loading serialized state: ",
+                                   EclGenericVanguard::comm());
 #endif
     }
 

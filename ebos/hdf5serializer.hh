@@ -25,6 +25,7 @@
 
 #include <opm/simulators/utils/HDF5File.hpp>
 #include <opm/simulators/utils/moduleVersion.hpp>
+#include <opm/simulators/utils/ParallelCommunication.hpp>
 #include <opm/simulators/utils/SerializationPackers.hpp>
 
 #include <algorithm>
@@ -36,9 +37,11 @@ namespace Opm {
 //! \brief Class for (de-)serializing using HDF5.
 class HDF5Serializer : public Serializer<Serialization::MemPacker> {
 public:
-    HDF5Serializer(const std::string& fileName, HDF5File::OpenMode mode)
+    HDF5Serializer(const std::string& fileName,
+                   HDF5File::OpenMode mode,
+                   Parallel::Communication comm)
         : Serializer<Serialization::MemPacker>(m_packer_priv)
-        , m_h5file(fileName, mode)
+        , m_h5file(fileName, mode, comm)
     {}
 
     //! \brief Serialize and write data to restart file.
@@ -47,7 +50,8 @@ public:
     template<class T>
     void write(T& data,
                const std::string& group,
-               const std::string& dset)
+               const std::string& dset,
+               HDF5File::DataSetMode mode = HDF5File::DataSetMode::PROCESS_SPLIT)
     {
         try {
             this->pack(data);
@@ -56,7 +60,7 @@ public:
             throw;
         }
 
-        m_h5file.write(group, dset, m_buffer);
+        m_h5file.write(group, dset, m_buffer, mode);
     }
 
     //! \brief Writes a header to the file.
@@ -80,7 +84,7 @@ public:
             m_packSize = std::numeric_limits<size_t>::max();
             throw;
         }
-        m_h5file.write("/", "simulator_info", m_buffer);
+        m_h5file.write("/", "simulator_info", m_buffer, HDF5File::DataSetMode::ROOT_ONLY);
     }
 
     //! \brief Read data and deserialize from restart file.
@@ -89,9 +93,10 @@ public:
     template<class T>
     void read(T& data,
               const std::string& group,
-              const std::string& dset)
+              const std::string& dset,
+              HDF5File::DataSetMode mode = HDF5File::DataSetMode::PROCESS_SPLIT)
     {
-        m_h5file.read(group, dset, m_buffer);
+        m_h5file.read(group, dset, m_buffer, mode);
         this->unpack(data);
     }
 

@@ -24,6 +24,7 @@
 #include <opm/simulators/utils/HDF5File.hpp>
 
 #define BOOST_TEST_MODULE HDF5FileTest
+#define BOOST_TEST_NO_MAIN
 #include <boost/test/unit_test.hpp>
 
 #include <filesystem>
@@ -36,13 +37,18 @@ BOOST_AUTO_TEST_CASE(ReadWrite)
     auto path = std::filesystem::temp_directory_path() / Opm::unique_path("hdf5test%%%%%");
     std::filesystem::create_directory(path);
     auto rwpath = (path / "rw.hdf5").string();
+#if HAVE_MPI
+    Parallel::Communication comm(MPI_COMM_SELF);
+#else
+    Parallel::Communcation comm;
+#endif
     const std::vector<char> test_data{1,2,3,4,5,6,8,9};
     {
-        Opm::HDF5File out_file(rwpath, Opm::HDF5File::OpenMode::OVERWRITE);
+        Opm::HDF5File out_file(rwpath, Opm::HDF5File::OpenMode::OVERWRITE, comm);
         BOOST_CHECK_NO_THROW(out_file.write("/test_data", "d1", test_data));
     }
     {
-        Opm::HDF5File in_file(rwpath, Opm::HDF5File::OpenMode::READ);
+        Opm::HDF5File in_file(rwpath, Opm::HDF5File::OpenMode::READ, comm);
         std::vector<char> data;
         BOOST_CHECK_NO_THROW(in_file.read("/test_data", "d1", data));
         BOOST_CHECK_EQUAL_COLLECTIONS(data.begin(), data.end(),
@@ -54,7 +60,12 @@ BOOST_AUTO_TEST_CASE(ReadWrite)
 
 BOOST_AUTO_TEST_CASE(ThrowOpenNonexistent)
 {
-    BOOST_CHECK_THROW(Opm::HDF5File out_file("no_such_file.hdf5", Opm::HDF5File::OpenMode::READ), std::runtime_error);
+#if HAVE_MPI
+    Parallel::Communication comm(MPI_COMM_SELF);
+#else
+    Parallel::Communcation comm;
+#endif
+    BOOST_CHECK_THROW(Opm::HDF5File out_file("no_such_file.hdf5", Opm::HDF5File::OpenMode::READ, comm), std::runtime_error);
 }
 
 BOOST_AUTO_TEST_CASE(ReadNonExistentDset)
@@ -62,13 +73,18 @@ BOOST_AUTO_TEST_CASE(ReadNonExistentDset)
     auto path = std::filesystem::temp_directory_path() / Opm::unique_path("hdf5test%%%%%");
     std::filesystem::create_directory(path);
     auto rwpath = (path / "existent_dset.hdf5").string();
+#if HAVE_MPI
+    Parallel::Communication comm(MPI_COMM_SELF);
+#else
+    Parallel::Communcation comm;
+#endif
     const std::vector<char> test_data{1,2,3,4,5,6,8,9};
     {
-        Opm::HDF5File out_file(rwpath, Opm::HDF5File::OpenMode::OVERWRITE);
+        Opm::HDF5File out_file(rwpath, Opm::HDF5File::OpenMode::OVERWRITE, comm);
         BOOST_CHECK_NO_THROW(out_file.write("/test_data", "d1", test_data));
     }
     {
-        Opm::HDF5File in_file(rwpath, Opm::HDF5File::OpenMode::READ);
+        Opm::HDF5File in_file(rwpath, Opm::HDF5File::OpenMode::READ, comm);
         std::vector<char> data;
         BOOST_CHECK_NO_THROW(in_file.read("/test_data", "d1", data));
         BOOST_CHECK_EQUAL_COLLECTIONS(data.begin(), data.end(),
@@ -84,9 +100,14 @@ BOOST_AUTO_TEST_CASE(WriteExistentDset)
     auto path = std::filesystem::temp_directory_path() / Opm::unique_path("hdf5test%%%%%");
     std::filesystem::create_directory(path);
     auto rwpath = (path / "existent_dset.hdf5").string();
+#if HAVE_MPI
+    Parallel::Communication comm(MPI_COMM_SELF);
+#else
+    Parallel::Communcation comm;
+#endif
     const std::vector<char> test_data{1,2,3,4,5,6,8,9};
     {
-        Opm::HDF5File out_file(rwpath, Opm::HDF5File::OpenMode::OVERWRITE);
+        Opm::HDF5File out_file(rwpath, Opm::HDF5File::OpenMode::OVERWRITE, comm);
         BOOST_CHECK_NO_THROW(out_file.write("/test_data", "d1", test_data));
         BOOST_CHECK_THROW(out_file.write("/test_data", "d1", test_data), std::runtime_error);
     }
@@ -99,15 +120,20 @@ BOOST_AUTO_TEST_CASE(List)
     auto path = std::filesystem::temp_directory_path() / Opm::unique_path("hdf5test%%%%%");
     std::filesystem::create_directory(path);
     auto rwpath = (path / "existent_dset.hdf5").string();
+#if HAVE_MPI
+    Parallel::Communication comm(MPI_COMM_SELF);
+#else
+    Parallel::Communcation comm;
+#endif
     const std::vector<char> test_data{1,2,3,4,5,6,8,9};
     {
-        Opm::HDF5File out_file(rwpath, Opm::HDF5File::OpenMode::OVERWRITE);
+        Opm::HDF5File out_file(rwpath, Opm::HDF5File::OpenMode::OVERWRITE, comm);
         BOOST_CHECK_NO_THROW(out_file.write("/test_data", "d1", test_data));
         BOOST_CHECK_NO_THROW(out_file.write("/test_data", "d2", test_data));
         BOOST_CHECK_NO_THROW(out_file.write("/test_data/test", "d2", test_data));
     }
     {
-        Opm::HDF5File in_file(rwpath, Opm::HDF5File::OpenMode::READ);
+        Opm::HDF5File in_file(rwpath, Opm::HDF5File::OpenMode::READ, comm);
 
         auto res1 = in_file.list("/");
         BOOST_CHECK_EQUAL(res1.size(), 1u);
@@ -123,4 +149,15 @@ BOOST_AUTO_TEST_CASE(List)
     }
     std::filesystem::remove(rwpath);
     std::filesystem::remove(path);
+}
+
+bool init_unit_test_func()
+{
+    return true;
+}
+
+int main(int argc, char** argv)
+{
+    Dune::MPIHelper::instance(argc, argv);
+    return boost::unit_test::unit_test_main(&init_unit_test_func, argc, argv);
 }

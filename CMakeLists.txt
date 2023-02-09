@@ -91,6 +91,10 @@ endif()
 
 find_package(opm-common REQUIRED)
 
+if(USE_MPI)
+  set(HDF5_PREFER_PARALLEL TRUE)
+endif()
+
 include(OpmInit)
 OpmSetPolicies()
 
@@ -335,6 +339,30 @@ opm_add_test(test_broadcast
     tests/test_broadcast.cpp
   CONDITION
     MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
+  DRIVER_ARGS
+    -n 4
+    -b ${PROJECT_BINARY_DIR}
+)
+
+opm_add_test(test_HDF5File_Parallel
+  DEPENDS "opmsimulators"
+  LIBRARIES opmsimulators ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
+  SOURCES
+    tests/test_HDF5File_Parallel.cpp
+  CONDITION
+    HDF5_FOUND AND MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
+  DRIVER_ARGS
+    -n 4
+    -b ${PROJECT_BINARY_DIR}
+)
+
+opm_add_test(test_HDF5Serializer_Parallel
+  DEPENDS "opmsimulators"
+  LIBRARIES opmsimulators ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
+  SOURCES
+    tests/test_HDF5Serializer_Parallel.cpp
+  CONDITION
+    HDF5_FOUND AND MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
   DRIVER_ARGS
     -n 4
     -b ${PROJECT_BINARY_DIR}
