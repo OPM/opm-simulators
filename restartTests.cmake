@@ -84,3 +84,17 @@ add_test_compare_restarted_simulation(CASENAME spe1
                                       REL_TOL ${rel_tol_restart}
                                       RESTART_STEP 6
                                       TEST_ARGS --sched-restart=false)
+
+# Serialized restart tests
+if(HDF5_FOUND)
+  opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-serialization-regressionTest.sh "")
+  add_test_compare_restarted_simulation(CASENAME spe1_serialized
+                                        DIR spe1
+                                        FILENAME SPE1CASE1
+                                        SIMULATOR flow
+                                        TEST_NAME compareSerializedSim_flow+spe1
+                                        ABS_TOL 2e-2
+                                        REL_TOL 1e-5
+                                        RESTART_STEP 94
+                                        TEST_ARGS --tolerance-mb=1e-7)
+endif()
