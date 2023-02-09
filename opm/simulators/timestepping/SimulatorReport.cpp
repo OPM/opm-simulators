@@ -202,6 +202,20 @@ namespace Opm
         os << std::endl;
     }
 
+    SimulatorReport SimulatorReport::serializationTestObject()
+    {
+        return SimulatorReport{SimulatorReportSingle::serializationTestObject(),
+                               SimulatorReportSingle::serializationTestObject(),
+                               {SimulatorReportSingle::serializationTestObject()}};
+    }
+
+    bool SimulatorReport::operator==(const SimulatorReport& rhs) const
+    {
+        return this->success == rhs.success &&
+               this->failure == rhs.failure &&
+               this->stepreports == rhs.stepreports;
+    }
+
     void SimulatorReport::operator+=(const SimulatorReportSingle& sr)
     {
         if (sr.converged) {

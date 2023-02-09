@@ -102,10 +102,21 @@ namespace Opm
         SimulatorReportSingle failure;
         std::vector<SimulatorReportSingle> stepreports;
 
+        static SimulatorReport serializationTestObject();
+
+        bool operator==(const SimulatorReport&) const;
         void operator+=(const SimulatorReportSingle& sr);
         void operator+=(const SimulatorReport& sr);
         void reportFullyImplicit(std::ostream& os) const;
         void fullReports(std::ostream& os) const;
+
+        template<class Serializer>
+        void serializeOp(Serializer& serializer)
+        {
+            serializer(success);
+            serializer(failure);
+            serializer(stepreports);
+        }
     };
 
     } // namespace Opm

@@ -87,6 +87,7 @@ TEST_FOR_TYPE(PIDAndIterationCountTimeStepControl)
 TEST_FOR_TYPE(PIDTimeStepControl)
 TEST_FOR_TYPE(SegmentState)
 TEST_FOR_TYPE(SimpleIterationCountTimeStepControl)
+TEST_FOR_TYPE(SimulatorReport)
 TEST_FOR_TYPE(SimulatorReportSingle)
 TEST_FOR_TYPE(SimulatorTimer)
 
