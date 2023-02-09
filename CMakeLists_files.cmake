@@ -449,4 +449,9 @@ endif()
 
 list (APPEND EXAMPLE_SOURCE_FILES
   examples/printvfp.cpp
+)
+if(HDF5_FOUND)
+  list (APPEND EXAMPLE_SOURCE_FILES
+    examples/opmrst_inspect.cpp
   )
+endif()
