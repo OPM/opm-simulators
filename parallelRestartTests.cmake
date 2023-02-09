@@ -43,3 +43,18 @@ add_test_compare_parallel_restarted_simulation(CASENAME numerical_aquifer_3d_1aq
                                                RESTART_STEP 3
                                                DIR aquifer-num
                                                TEST_ARGS --enable-tuning=true --tolerance-cnv=0.00003 --time-step-control=pid --linear-solver=cpr_trueimpes)
+
+# Serialized restart tests
+if(HDF5_FOUND)
+  opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-serialization-regressionTest.sh "")
+  add_test_compare_parallel_restarted_simulation(CASENAME spe1_serialized
+                                                 DIR spe1
+                                                 FILENAME SPE1CASE1
+                                                 SIMULATOR flow
+                                                 TEST_NAME compareParallelSerializedSim_flow+spe1
+                                                 ABS_TOL 2e-2
+                                                 REL_TOL 1e-5
+                                                 RESTART_STEP 94
+                                                 TEST_ARGS --tolerance-mb=1e-7
+                                                 MPI_PROCS 4)
+endif()
