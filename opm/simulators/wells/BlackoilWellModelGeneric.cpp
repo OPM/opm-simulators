@@ -24,6 +24,8 @@
 
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
 
+#include <opm/common/ErrorMacros.hpp>
+
 #include <opm/output/data/GuideRateValue.hpp>
 #include <opm/output/data/Groups.hpp>
 #include <opm/output/data/Wells.hpp>

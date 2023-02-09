@@ -23,6 +23,8 @@
 #include <config.h>
 #include <opm/simulators/wells/BlackoilWellModelConstraints.hpp>
 
+#include <opm/common/ErrorMacros.hpp>
+
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>

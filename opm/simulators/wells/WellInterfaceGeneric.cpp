@@ -22,6 +22,8 @@
 #include <config.h>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 
+#include <opm/common/ErrorMacros.hpp>
+
 #include <opm/input/eclipse/Schedule/Well/WellBrineProperties.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellFoamProperties.hpp>
