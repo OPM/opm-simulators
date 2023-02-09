@@ -22,10 +22,10 @@
 #define ECL_HDF5_SERIALIZER_HH
 
 #include <opm/common/utility/Serializer.hpp>
-#include <opm/common/utility/MemPacker.hpp>
 
 #include <opm/simulators/utils/HDF5File.hpp>
 #include <opm/simulators/utils/moduleVersion.hpp>
+#include <opm/simulators/utils/SerializationPackers.hpp>
 
 #include <algorithm>
 #include <cctype>

@@ -20,6 +20,7 @@ set (opm-simulators_CONFIG_VAR
   DUNE_ISTL_VERSION_REVISION
   HAVE_SUITESPARSE_UMFPACK
   HAVE_DAMARIS
+  HAVE_HDF5
   )
 
 # dependencies
