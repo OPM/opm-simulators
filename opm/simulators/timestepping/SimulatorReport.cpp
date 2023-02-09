@@ -17,15 +17,14 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "config.h"
-
+#include <config.h>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
+
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/input/eclipse/Units/Units.hpp>
 
 #include <iomanip>
 #include <ostream>
-#include <sstream>
 #include <fmt/format.h>
 
 namespace Opm
@@ -59,7 +58,7 @@ namespace Opm
     }
 
 
-    void SimulatorReportSingle::reportStep(std::ostringstream& ss) const
+    void SimulatorReportSingle::reportStep(std::ostream& ss) const
     {
         if (total_well_iterations != 0) {
             ss << fmt::format("Well its={:2}", total_well_iterations);

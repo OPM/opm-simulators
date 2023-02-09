@@ -61,7 +61,7 @@ namespace Opm
         /// Increment this report's times by those in sr.
         void operator+=(const SimulatorReportSingle& sr);
         /// Print a report suitable for a single simulation step.
-        void reportStep(std::ostringstream& os) const;
+        void reportStep(std::ostream& os) const;
         /// Print a report suitable for the end of a fully implicit case, leaving out the pressure/transport time.
         void reportFullyImplicit(std::ostream& os, const SimulatorReportSingle* failedReport = nullptr) const;
     };
