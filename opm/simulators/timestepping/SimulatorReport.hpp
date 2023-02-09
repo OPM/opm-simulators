@@ -19,8 +19,11 @@
 
 #ifndef OPM_SIMULATORREPORT_HEADER_INCLUDED
 #define OPM_SIMULATORREPORT_HEADER_INCLUDED
+
 #include <cassert>
+#include <cstdlib>
 #include <iosfwd>
+#include <limits>
 #include <vector>
 
 namespace Opm
@@ -29,35 +32,32 @@ namespace Opm
     /// A struct for returning timing data from a simulator to its caller.
     struct SimulatorReportSingle
     {
-        double pressure_time;
-        double transport_time;
-        double total_time;
-        double solver_time;
-        double assemble_time;
-        double pre_post_time;
-        double assemble_time_well;
-        double linear_solve_setup_time;
-        double linear_solve_time;
-        double update_time;
-        double output_write_time;
+        double pressure_time = 0.0;
+        double transport_time = 0.0;
+        double total_time = 0.0;
+        double solver_time = 0.0;
+        double assemble_time = 0.0;
+        double pre_post_time = 0.0;
+        double assemble_time_well = 0.0;
+        double linear_solve_setup_time = 0.0;
+        double linear_solve_time = 0.0;
+        double update_time = 0.0;
+        double output_write_time = 0.0;
 
-        unsigned int total_well_iterations;
-        unsigned int total_linearizations;
-        unsigned int total_newton_iterations;
-        unsigned int total_linear_iterations;
-        unsigned int min_linear_iterations;
-        unsigned int max_linear_iterations;
+        unsigned int total_well_iterations = 0;
+        unsigned int total_linearizations = 0;
+        unsigned int total_newton_iterations = 0;
+        unsigned int total_linear_iterations = 0;
+        unsigned int min_linear_iterations = std::numeric_limits<unsigned int>::max();
+        unsigned int max_linear_iterations = 0;
 
+        bool converged = false;
+        bool well_group_control_changed = false;
+        int exit_status = EXIT_SUCCESS;
 
-        bool converged;
-        bool well_group_control_changed;
-        int exit_status;
+        double global_time = 0.0;
+        double timestep_length = 0.0;
 
-        double global_time;
-        double timestep_length;
-
-        /// Default constructor initializing all times to 0.0.
-        SimulatorReportSingle();
         /// Increment this report's times by those in sr.
         void operator+=(const SimulatorReportSingle& sr);
         /// Print a report suitable for a single simulation step.

@@ -27,36 +27,9 @@
 #include <ostream>
 #include <sstream>
 #include <fmt/format.h>
-#include <limits>
 
 namespace Opm
 {
-    SimulatorReportSingle::SimulatorReportSingle()
-        : pressure_time(0.0),
-          transport_time(0.0),
-          total_time(0.0),
-          solver_time(0.0),
-          assemble_time(0.0),
-          pre_post_time(0.0),
-          assemble_time_well(0.0),
-          linear_solve_setup_time(0.0),
-          linear_solve_time(0.0),
-          update_time(0.0),
-          output_write_time(0.0),
-          total_well_iterations(0),
-          total_linearizations( 0 ),
-          total_newton_iterations( 0 ),
-          total_linear_iterations( 0 ),
-          min_linear_iterations ( std::numeric_limits<unsigned int>::max() ),
-          max_linear_iterations ( 0 ),
-          converged(false),
-          well_group_control_changed(false),
-          exit_status(EXIT_SUCCESS),
-          global_time(0),
-          timestep_length(0.0)
-    {
-    }
-
     void SimulatorReportSingle::operator+=(const SimulatorReportSingle& sr)
     {
         pressure_time += sr.pressure_time;
