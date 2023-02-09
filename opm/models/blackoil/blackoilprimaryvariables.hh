@@ -175,6 +175,21 @@ public:
      */
     BlackOilPrimaryVariables(const BlackOilPrimaryVariables& value) = default;
 
+    static BlackOilPrimaryVariables serializationTestObject()
+    {
+        BlackOilPrimaryVariables result;
+        result.pvtRegionIdx_ = 1;
+        result.primaryVarsMeaningBrine_ = BrineMeaning::Sp;
+        result.primaryVarsMeaningGas_ = GasMeaning::Rv;
+        result.primaryVarsMeaningPressure_ = PressureMeaning::Pg;
+        result.primaryVarsMeaningWater_ = WaterMeaning::Rsw;
+        for (size_t i = 0; i < result.size(); ++i) {
+            result[i] = i+1;
+        }
+
+        return result;
+    }
+
     /*!
      * \brief Set the index of the region which should be used for PVT properties.
      *
@@ -861,6 +876,28 @@ public:
 
         Valgrind::CheckDefined(pvtRegionIdx_);
 #endif // NDEBUG
+    }
+
+    template<class Serializer>
+    void serializeOp(Serializer& serializer)
+    {
+        using FV = Dune::FieldVector<double,getPropValue<TypeTag, Properties::NumEq>()>;
+        serializer(static_cast<FV&>(*this));
+        serializer(primaryVarsMeaningWater_);
+        serializer(primaryVarsMeaningPressure_);
+        serializer(primaryVarsMeaningGas_);
+        serializer(primaryVarsMeaningBrine_);
+        serializer(pvtRegionIdx_);
+    }
+
+    bool operator==(const BlackOilPrimaryVariables& rhs) const
+    {
+        return static_cast<const FvBasePrimaryVariables<TypeTag>&>(*this) == rhs &&
+               this->primaryVarsMeaningWater_ == rhs.primaryVarsMeaningWater_ &&
+               this->primaryVarsMeaningPressure_ == rhs.primaryVarsMeaningPressure_ &&
+               this->primaryVarsMeaningGas_ == rhs.primaryVarsMeaningGas_ &&
+               this->primaryVarsMeaningBrine_ == rhs.primaryVarsMeaningBrine_ &&
+               this->pvtRegionIdx_ == rhs.pvtRegionIdx_;
     }
 
 private:
