@@ -381,6 +381,14 @@ public:
     const Grid& grid() const
     { return ebosSimulator_.vanguard().grid(); }
 
+    template<class Serializer>
+    void serializeOp(Serializer& serializer)
+    {
+        serializer(ebosSimulator_);
+        serializer(report_);
+        serializer(adaptiveTimeStepping_);
+    }
+
 protected:
 
     std::unique_ptr<Solver> createSolver(WellModel& wellModel)
