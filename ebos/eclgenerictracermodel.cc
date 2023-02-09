@@ -219,9 +219,6 @@ doInit(bool rst, size_t numGridDof,
             throw std::logic_error(fmt::format("Can not initialize tracer: {}", tracer.name));
     }
 
-    // residual of tracers
-    tracerResidual_.resize(numGridDof);
-
     // allocate matrix for storing the Jacobian of the tracer residual
     tracerMatrix_ = std::make_unique<TracerMatrix>(numGridDof, numGridDof, TracerMatrix::random);
 
