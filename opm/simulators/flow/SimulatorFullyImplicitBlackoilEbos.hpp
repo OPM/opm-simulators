@@ -81,6 +81,12 @@ struct LoadStep
     using type = UndefinedProperty;
 };
 
+template <class TypeTag, class MyTypeTag>
+struct SaveFile
+{
+    using type = UndefinedProperty;
+};
+
 template<class TypeTag>
 struct EnableTerminalOutput<TypeTag, TTag::EclFlowProblem> {
     static constexpr bool value = true;
@@ -102,6 +108,12 @@ struct OutputExtraConvergenceInfo<TypeTag, TTag::EclFlowProblem>
 
 template <class TypeTag>
 struct SaveStep<TypeTag, TTag::EclFlowProblem>
+{
+    static constexpr auto* value = "";
+};
+
+template <class TypeTag>
+struct SaveFile<TypeTag, TTag::EclFlowProblem>
 {
     static constexpr auto* value = "";
 };
@@ -194,6 +206,11 @@ public:
         }
 
         loadStep_ = EWOMS_GET_PARAM(TypeTag, int, LoadStep);
+
+        saveFile_ = EWOMS_GET_PARAM(TypeTag, std::string, SaveFile);
+        if (saveFile_.empty()) {
+          saveFile_ = ebosSimulator_.vanguard().caseName() + ".OPMRST";
+        }
     }
 
     ~SimulatorFullyImplicitBlackoilEbos()
@@ -231,6 +248,10 @@ public:
                              "Load serialized state from .OPMRST file. "
                              "Either a specific report step, or 0 to load last "
                              "stored report step.");
+        EWOMS_REGISTER_PARAM(TypeTag, std::string, SaveFile,
+                             "FileName for .OPMRST file used for serialized state. "
+                             "If empty, CASENAME.OPMRST is used.");
+        EWOMS_HIDE_PARAM(TypeTag, SaveFile);
     }
 
     /// Run the simulation.
@@ -555,12 +576,11 @@ protected:
 #if !HAVE_HDF5
             OpmLog::error("Saving of serialized state requested, but no HDF5 support available.");
 #else
-            const std::string fileName = ebosSimulator_.vanguard().caseName() + ".OPMRST";
             const std::string groupName = "/report_step/" + std::to_string(nextStep);
             if (nextStep == saveStride_ || nextStep == saveStep_) {
-                std::filesystem::remove(fileName);
+                std::filesystem::remove(saveFile_);
             }
-            HDF5Serializer writer(fileName, HDF5File::OpenMode::APPEND);
+            HDF5Serializer writer(saveFile_, HDF5File::OpenMode::APPEND);
             if (nextStep == saveStride_ || nextStep == saveStep_) {
                 std::ostringstream str;
                 Parameters::printValues<TypeTag>(str);
@@ -585,7 +605,6 @@ protected:
         OpmLog::error("Loading of serialized state requested, but no HDF5 support available.");
         loadStep_ = -1;
 #else
-        const std::string fileName = ebosSimulator_.vanguard().caseName() + ".OPMRST";
         HDF5Serializer reader(saveFile_, HDF5File::OpenMode::READ);
         if (loadStep_ == 0)
             loadStep_ = reader.lastReportStep();
@@ -600,8 +619,7 @@ protected:
     void loadSimulatorState()
     {
 #if HAVE_HDF5
-        const std::string fileName = ebosSimulator_.vanguard().caseName() + ".OPMRST";
-        HDF5Serializer reader(fileName, HDF5File::OpenMode::READ);
+        HDF5Serializer reader(saveFile_, HDF5File::OpenMode::READ);
         const std::string groupName = "/report_step/" + std::to_string(loadStep_);
         reader.read(*this, groupName, "simulator_data");
 #endif
@@ -631,6 +649,7 @@ protected:
     int saveStride_ = -1; //!< Stride to save serialized state at
     int saveStep_ = -1; //!< Specific step to save serialized state at
     int loadStep_ = -1; //!< Step to load serialized state from
+    std::string saveFile_; //!< File to load/save serialized state from/to.
 };
 
 } // namespace Opm
