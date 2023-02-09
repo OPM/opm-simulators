@@ -970,6 +970,20 @@ public:
         restarter.deserializeSectionEnd();
     }
 
+    template<class Serializer>
+    void serializeOp(Serializer& serializer)
+    {
+        serializer(*vanguard_);
+        serializer(*model_);
+        serializer(*problem_);
+        serializer(episodeIdx_);
+        serializer(episodeStartTime_);
+        serializer(episodeLength_);
+        serializer(startTime_);
+        serializer(time_);
+        serializer(timeStepIdx_);
+    }
+
 private:
     std::unique_ptr<Vanguard> vanguard_;
     std::unique_ptr<Model> model_;
