@@ -202,8 +202,9 @@ namespace Opm {
             WellGroupHelpers::setCmodeGroup(fieldGroup, schedule(), summaryState, timeStepIdx, this->wellState(), this->groupState());
 
             // Compute reservoir volumes for RESV controls.
-            rateConverter_.reset(new RateConverterType (phase_usage_,
-                                                        std::vector<int>(local_num_cells_, 0)));
+            rateConverter_ = std::make_unique<RateConverterType>(phase_usage_,
+                                                                 std::vector<int>(local_num_cells_, 0),
+                                                                 ebosSimulator_.gridView().comm());
             rateConverter_->template defineState<ElementContext>(ebosSimulator_);
 
             // Compute regional average pressures used by gpmaint

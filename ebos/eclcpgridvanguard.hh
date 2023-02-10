@@ -101,6 +101,7 @@ public:
         : EclBaseVanguard<TypeTag>(simulator)
     {
         this->callImplementationInit();
+        this->grid().setAllowEmptyPartitions(this->allowEmptyPartitions_);
     }
 
     /*!

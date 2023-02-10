@@ -345,8 +345,9 @@ public:
 
         data::Solution localCellData = {};
         if (! isSubStep) {
-            this->eclOutputModule_->assignToSolution(localCellData);
-
+            this->eclOutputModule_->assignToSolution(localCellData,
+                                                     simulator_.gridView().comm(),
+                                                     simulator_.gridView().size(/*codim=*/0));
             // add cell data to perforations for Rft output
             this->eclOutputModule_->addRftDataToWells(localWellData, reportStepNum);
         }

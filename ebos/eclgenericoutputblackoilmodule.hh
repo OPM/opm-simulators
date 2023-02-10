@@ -95,7 +95,9 @@ public:
     /*!
      * \brief Move all buffers to data::Solution.
      */
-    void assignToSolution(data::Solution& sol);
+    void assignToSolution(data::Solution& sol,
+                          const Parallel::Communication& comm,
+                          const size_t num_cells);
 
     void setRestart(const data::Solution& sol,
                     unsigned elemIdx,
