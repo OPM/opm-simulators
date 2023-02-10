@@ -254,6 +254,10 @@ namespace Opm::GridDataOutput
 
     VertexIterator vertexBegin () const
     {
+      /*GridCellIterator  x = gridView_.template begin< 0, VTK_Partition >();
+      GridCellIterator end = gridView_.template end< 0, VTK_Partition >() ;
+      VertexIterator vi(x,end,datamode, *vertexmapper );
+      return( vi ) ;*/
       return VertexIterator( gridView_.template begin< 0, VTK_Partition >(),
                              gridView_.template end< 0, VTK_Partition >(),
                              datamode, *vertexmapper );
@@ -401,14 +405,12 @@ namespace Opm::GridDataOutput
       //vertexdata.clear();
     }
 
-    //! get the precision with which coordinates are written out
-    /*Dune::VTK::Precision coordPrecision() const
-    { return coordPrec; }
-*/
     //! destructor
     ~SimMeshDataAccessor ()
     {
       this->clear();
+      delete vertexmapper; 
+      number.clear();
     }
 
     
@@ -418,8 +420,6 @@ namespace Opm::GridDataOutput
     {
       Dune::VTK::FileType fileType =
         (n == 1) ? Dune::VTK::polyData : Dune::VTK::unstructuredGrid;
-
-      // VTK::VTUWriter writer(s, outputtype, fileType);
 
       // Grid characteristics
       vertexmapper = new VertexMapper( gridView_, Dune::mcmgVertexLayout() );
@@ -433,7 +433,7 @@ namespace Opm::GridDataOutput
 
       this->setup_called_bool_ = true ;
 
-      delete vertexmapper; number.clear();
+      // delete vertexmapper; number.clear();
     }
 
     void writeGeometryData() {
@@ -592,7 +592,7 @@ namespace Opm::GridDataOutput
     {
         int dimw=w;
         VertexIterator vEnd = vertexEnd();
-        for (VertexIterator vit=vertexBegin(); vit!=vEnd; ++vit)
+        for (VertexIterator vit=vertexBegin(); vit!=vertexEnd(); ++vit)
         {          
           x_inout.push_back(  (T) (*vit).geometry().corner(vit.localindex())[0] );
           y_inout.push_back(  (T) (*vit).geometry().corner(vit.localindex())[1] );
@@ -608,10 +608,11 @@ namespace Opm::GridDataOutput
     void writeGridPoints( T*  x_inout,  T*  y_inout, T* z_inout )
     {
         int dimw=w;
-        VertexIterator vEnd = vertexEnd();
         int i = 0 ;
         T zero_val = 0.0 ;
-        for (VertexIterator vit=vertexBegin(); vit!=vEnd; ++vit)
+        
+        for (VertexIterator vit=vertexBegin(); vit!=vertexEnd(); ++vit )
+        //for (VertexIterator vit=vertexBegin(); i < nvertices ; i++  )
         {          
           x_inout[i] = static_cast<T>((*vit).geometry().corner(vit.localindex())[0]) ;
           y_inout[i] = static_cast<T>((*vit).geometry().corner(vit.localindex())[1]) ;
@@ -619,9 +620,11 @@ namespace Opm::GridDataOutput
             z_inout[i] = static_cast<T>((*vit).geometry().corner(vit.localindex())[2]) ; 
           else 
             z_inout[i] = zero_val;  
-        
-          i++ ;
+           i++ ;
         }
+        
+        
+        
     }
 
     //! write the connectivity array
