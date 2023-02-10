@@ -22,6 +22,8 @@
 #ifndef OPM_SIMULATORFULLYIMPLICITBLACKOILEBOS_HEADER_INCLUDED
 #define OPM_SIMULATORFULLYIMPLICITBLACKOILEBOS_HEADER_INCLUDED
 
+#include <dune/common/hash.hh>
+
 #include <opm/simulators/flow/BlackoilModelEbos.hpp>
 #include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
 #include <opm/simulators/flow/ConvergenceOutputConfiguration.hpp>
@@ -593,6 +595,12 @@ protected:
                                    ebosSimulator_.vanguard().caseName(),
                                    str.str(),
                                    EclGenericVanguard::comm().size());
+
+                if (EclGenericVanguard::comm().size() > 1) {
+                    const auto& cellMapping = ebosSimulator_.vanguard().globalCell();
+                    std::size_t hash = Dune::hash_range(cellMapping.begin(), cellMapping.end());
+                    writer.write(hash, "/", "grid_checksum");
+                }
             }
             writer.write(*this, groupName, "simulator_data");
             writer.write(timer, groupName, "simulator_timer",
@@ -625,6 +633,16 @@ protected:
         OpmLog::info("Loading serialized state for report step " + std::to_string(loadStep_));
         const std::string groupName = "/report_step/" + std::to_string(loadStep_);
         reader.read(timer, groupName, "simulator_timer", HDF5File::DataSetMode::ROOT_ONLY);
+
+        if (EclGenericVanguard::comm().size() > 1) {
+            std::size_t stored_hash;
+            reader.read(stored_hash, "/", "grid_checksum");
+            const auto& cellMapping = ebosSimulator_.vanguard().globalCell();
+            std::size_t hash = Dune::hash_range(cellMapping.begin(), cellMapping.end());
+            if (hash != stored_hash) {
+                throw std::runtime_error("Grid hash mismatch, .SAVE file cannot be used");
+            }
+        }
 
         OPM_END_PARALLEL_TRY_CATCH("Error loading serialized state: ",
                                    EclGenericVanguard::comm());
