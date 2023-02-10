@@ -26,7 +26,9 @@
 
 #include <dune/grid/common/gridenums.hh>
 #include <dune/grid/common/rangegenerators.hh>
+
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 #include <memory>
 #include <stdexcept>
@@ -34,6 +36,7 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+
 /**
  * \file
  * Facility for converting component rates at surface conditions to
@@ -93,7 +96,7 @@ namespace Opm {
                 }
                 numRegions = comm.max(numRegions);
                 for (int reg = 1; reg <= numRegions ; ++ reg) {
-                    if(!attr_.has(reg))
+                    if (!attr_.has(reg))
                         attr_.insert(reg, Attributes());
                 }
                 // create map from cell to region
