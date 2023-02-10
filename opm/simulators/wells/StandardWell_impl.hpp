@@ -1783,6 +1783,34 @@ namespace Opm
         return potentials;
     }
 
+
+
+    template<typename TypeTag>
+    bool
+    StandardWell<TypeTag>::
+    updateWellStateWithTHPTargetProd(const Simulator& ebos_simulator,
+                                     WellState& well_state,
+                                     DeferredLogger& deferred_logger) const
+    {
+        const auto& summary_state = ebos_simulator.vanguard().summaryState();
+
+        auto bhp_at_thp_limit = computeBhpAtThpLimitProdWithAlq(
+            ebos_simulator, summary_state, this->getALQ(well_state), deferred_logger);
+        if (bhp_at_thp_limit) {
+            std::vector<double> rates(this->number_of_phases_, 0.0);
+            computeWellRatesWithBhp(ebos_simulator, *bhp_at_thp_limit, rates, deferred_logger);
+            auto& ws = well_state.well(this->name());
+            ws.surface_rates = rates;
+            ws.bhp = *bhp_at_thp_limit;
+            ws.thp = this->getTHPConstraint(summary_state);
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+
+
     template<typename TypeTag>
     double
     StandardWell<TypeTag>::
@@ -2363,9 +2391,14 @@ namespace Opm
                                                                                alq_value,
                                                                                this->getTHPConstraint(summary_state),
                                                                                deferred_logger);
-        auto v = frates(*bhpAtLimit);
-        if (bhpAtLimit && std::all_of(v.cbegin(), v.cend(), [](double i){ return i <= 0; }))
-            return bhpAtLimit;
+
+        if (bhpAtLimit) {
+            auto v = frates(*bhpAtLimit);
+            if (std::all_of(v.cbegin(), v.cend(), [](double i){ return i <= 0; }) ) {
+                return bhpAtLimit;
+            }
+        }
+
 
         auto fratesIter = [this, &ebos_simulator, &deferred_logger](const double bhp) {
             // Solver the well iterations to see if we are
@@ -2384,9 +2417,15 @@ namespace Opm
                                                                           alq_value,
                                                                           this->getTHPConstraint(summary_state),
                                                                           deferred_logger);
-        v = frates(*bhpAtLimit);
-        if(bhpAtLimit && std::all_of(v.cbegin(), v.cend(), [](double i){ return i <= 0; }))
-            return bhpAtLimit;
+
+
+        if (bhpAtLimit) {
+            // should we use fratesIter here since fratesIter is used in computeBhpAtThpLimitProd above?
+            auto v = frates(*bhpAtLimit);
+            if (std::all_of(v.cbegin(), v.cend(), [](double i){ return i <= 0; }) ) {
+                return bhpAtLimit;
+            }
+        }
 
         // we still don't get a valied solution.
         return std::nullopt;

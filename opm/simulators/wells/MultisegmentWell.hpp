@@ -258,6 +258,10 @@ namespace Opm
                                  const Simulator& ebos_simulator,
                                  DeferredLogger& deferred_logger) const;
 
+        bool updateWellStateWithTHPTargetProd(const Simulator& ebos_simulator,
+                                              WellState& well_state,
+                                              DeferredLogger& deferred_logger) const;
+
         virtual double getRefDensity() const override;
 
         virtual bool iterateWellEqWithControl(const Simulator& ebosSimulator,

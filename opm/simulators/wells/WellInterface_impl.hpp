@@ -965,24 +965,26 @@ namespace Opm
             }
             case Well::ProducerCMode::THP:
             {
-                auto rates = ws.surface_rates;
-                this->adaptRatesForVFP(rates);
-                double bhp = WellBhpThpCalculator(*this).calculateBhpFromThp(well_state,
-                                                                             rates,
-                                                                             well,
-                                                                             summaryState,
-                                                                             this->getRefDensity(),
-                                                                             deferred_logger);
-                ws.bhp = bhp;
-                ws.thp = this->getTHPConstraint(summaryState);
+                const bool update_success = updateWellStateWithTHPTargetProd(ebos_simulator, well_state, deferred_logger);
 
-                // if the total rates are negative or zero
-                // we try to provide a better intial well rate
-                // using the well potentials
-                double total_rate = -std::accumulate(rates.begin(), rates.end(), 0.0);
-                if (total_rate <= 0.0){
-                    for (int p = 0; p<np; ++p) {
-                        ws.surface_rates[p] = -ws.well_potentials[p];
+                if (!update_success) {
+                    // the following is the original way of initializing well state with THP constraint
+                    // keeping it for robust reason in case that it fails to get a bhp value with THP constraint
+                    // more sophisticated design might be needed in the future
+                    auto rates = ws.surface_rates;
+                    this->adaptRatesForVFP(rates);
+                    const double bhp = WellBhpThpCalculator(*this).calculateBhpFromThp(
+                        well_state, rates, well, summaryState, this->getRefDensity(), deferred_logger);
+                    ws.bhp = bhp;
+                    ws.thp = this->getTHPConstraint(summaryState);
+                    // if the total rates are negative or zero
+                    // we try to provide a better initial well rate
+                    // using the well potentials
+                    const double total_rate = -std::accumulate(rates.begin(), rates.end(), 0.0);
+                    if (total_rate <= 0.0) {
+                        for (int p = 0; p < this->number_of_phases_; ++p) {
+                            ws.surface_rates[p] = -ws.well_potentials[p];
+                        }
                     }
                 }
                 break;
