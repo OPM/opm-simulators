@@ -53,37 +53,26 @@
 
 namespace Opm {
 
-double EclGenericVanguard::setupTime_ = 0.0;
-std::shared_ptr<EclipseState> EclGenericVanguard::eclState_;
-std::shared_ptr<Schedule> EclGenericVanguard::eclSchedule_;
-std::shared_ptr<SummaryConfig> EclGenericVanguard::eclSummaryConfig_;
-std::unique_ptr<UDQState> EclGenericVanguard::udqState_;
-std::unique_ptr<Action::State> EclGenericVanguard::actionState_;
-std::unique_ptr<WellTestState> EclGenericVanguard::wtestState_;
 std::unique_ptr<Parallel::Communication> EclGenericVanguard::comm_;
+EclGenericVanguard::SimulationModelParams EclGenericVanguard::modelParams_;
 
 EclGenericVanguard::EclGenericVanguard()
     : python(std::make_shared<Python>())
 {
+    defineSimulationModel(std::move(modelParams_));
 }
 
 EclGenericVanguard::~EclGenericVanguard() = default;
 
-void EclGenericVanguard::defineSimulationModel(double setupTime,
-                                               std::shared_ptr<EclipseState> eclState,
-                                               std::shared_ptr<Schedule> schedule,
-                                               std::unique_ptr<UDQState> udqState,
-                                               std::unique_ptr<Action::State> actionState,
-                                               std::unique_ptr<WellTestState> wtestState,
-                                               std::shared_ptr<SummaryConfig> summaryConfig)
+void EclGenericVanguard::defineSimulationModel(SimulationModelParams&& params)
 {
-    EclGenericVanguard::setupTime_ = setupTime;
-    EclGenericVanguard::eclState_ = std::move(eclState);
-    EclGenericVanguard::eclSchedule_ = std::move(schedule);
-    EclGenericVanguard::udqState_ = std::move(udqState);
-    EclGenericVanguard::actionState_ = std::move(actionState);
-    EclGenericVanguard::wtestState_ = std::move(wtestState);
-    EclGenericVanguard::eclSummaryConfig_ = std::move(summaryConfig);
+    actionState_ = std::move(params.actionState_);
+    eclSchedule_ = std::move(params.eclSchedule_);
+    eclState_ = std::move(params.eclState_);
+    eclSummaryConfig_ = std::move(params.eclSummaryConfig_);
+    setupTime_ = params.setupTime_;
+    udqState_ = std::move(params.udqState_);
+    wtestState_ = std::move(params.wtestState_);
 }
 
 void EclGenericVanguard::readDeck(const std::string& filename)
@@ -91,24 +80,16 @@ void EclGenericVanguard::readDeck(const std::string& filename)
     Dune::Timer setupTimer;
     setupTimer.start();
 
-    std::shared_ptr<Opm::EclipseState> eclipseState;
-    std::shared_ptr<Opm::Schedule> schedule;
-    std::unique_ptr<Opm::UDQState> udqState;
-    std::unique_ptr<Opm::Action::State> actionState;
-    std::unique_ptr<Opm::WellTestState> wtestState;
-    std::shared_ptr<Opm::SummaryConfig> summaryConfig;
-
     Opm::readDeck(EclGenericVanguard::comm(),
-                  filename, eclipseState, schedule, udqState,
-                  actionState, wtestState,
-                  summaryConfig, nullptr, false,
-                  false, false, {});
-
-    EclGenericVanguard::defineSimulationModel(setupTimer.elapsed(),
-                                              eclipseState, schedule,
-                                              std::move(udqState),
-                                              std::move(actionState),
-                                              std::move(wtestState), summaryConfig);
+                  filename,
+                  modelParams_.eclState_,
+                  modelParams_.eclSchedule_,
+                  modelParams_.udqState_,
+                  modelParams_.actionState_,
+                  modelParams_.wtestState_,
+                  modelParams_.eclSummaryConfig_,
+                  nullptr, false, false, false, {});
+    modelParams_.setupTime_ = setupTimer.stop();
 }
 
 std::string EclGenericVanguard::canonicalDeckPath(const std::string& caseName)
