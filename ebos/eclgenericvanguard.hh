@@ -101,13 +101,13 @@ public:
     /*!
      * \brief Set the simulation configuration objects.
      */
-    static void setParams(double setupTime,
-                          std::shared_ptr<EclipseState> eclState,
-                          std::shared_ptr<Schedule> schedule,
-                          std::unique_ptr<UDQState> udqState,
-                          std::unique_ptr<Action::State> actionState,
-                          std::unique_ptr<WellTestState> wtestState,
-                          std::shared_ptr<SummaryConfig> summaryConfig);
+    static void defineSimulationModel(double setupTime,
+                                      std::shared_ptr<EclipseState> eclState,
+                                      std::shared_ptr<Schedule> schedule,
+                                      std::unique_ptr<UDQState> udqState,
+                                      std::unique_ptr<Action::State> actionState,
+                                      std::unique_ptr<WellTestState> wtestState,
+                                      std::shared_ptr<SummaryConfig> summaryConfig);
 
     /*!
      * \brief Return a reference to the internalized ECL deck.
