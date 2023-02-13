@@ -202,8 +202,8 @@ namespace Opm {
             WellGroupHelpers::setCmodeGroup(fieldGroup, schedule(), summaryState, timeStepIdx, this->wellState(), this->groupState());
 
             // Compute reservoir volumes for RESV controls.
-            rateConverter_.reset(new RateConverterType (phase_usage_,
-                                                        std::vector<int>(local_num_cells_, 0)));
+            rateConverter_ = std::make_unique<RateConverterType>(phase_usage_,
+                                                                 std::vector<int>(local_num_cells_, 0));
             rateConverter_->template defineState<ElementContext>(ebosSimulator_);
 
             // Compute regional average pressures used by gpmaint
@@ -215,7 +215,9 @@ namespace Opm {
             {
                 const auto& sched_state = this->schedule()[timeStepIdx];
                 // update VFP properties
-                vfp_properties_.reset(new VFPProperties( sched_state.vfpinj(), sched_state.vfpprod(), this->prevWellState()));
+                vfp_properties_ = std::make_unique<VFPProperties>(sched_state.vfpinj(),
+                                                                  sched_state.vfpprod(),
+                                                                  this->prevWellState());
                 this->initializeWellProdIndCalculators();
                 if (sched_state.events().hasEvent(ScheduleEvents::Events::WELL_PRODUCTIVITY_INDEX)) {
                     this->runWellPIScaling(timeStepIdx, local_deferredLogger);
