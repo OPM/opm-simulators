@@ -20,11 +20,12 @@
 #include "config.h"
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
 #include <opm/common/utility/parameters/ParameterGroup.hpp>
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Units/Units.hpp>
 #include <ostream>
 #include <numeric>
 
-#include <boost/date_time/gregorian_calendar.hpp>
+#include <boost/date_time/gregorian/gregorian_types.hpp>
 #include <boost/date_time/posix_time/conversion.hpp>
 
 namespace Opm
@@ -34,8 +35,20 @@ namespace Opm
     SimulatorTimer::SimulatorTimer()
         : current_step_(0),
           current_time_(0.0),
-          start_date_(std::make_shared<boost::gregorian::date>(2012,1,1))    // A really arbitrary default starting value?!
+          start_date_(2012,1,1)    // A really arbitrary default starting value?!
     {
+    }
+
+    SimulatorTimer SimulatorTimer::serializationTestObject()
+    {
+        SimulatorTimer res;
+        res.timesteps_ = {1.0, 2.0, 3.0};
+        res.current_step_ = 4;
+        res.current_time_ = 5.0;
+        res.total_time_ = 6.0;
+        res.start_date_ = boost::gregorian::date(2023,1,31);
+
+        return res;
     }
 
     /// Initialize from parameters. Accepts the following:
@@ -61,7 +74,7 @@ namespace Opm
         }
 
         setCurrentStepNum(report_step);
-        *start_date_ = boost::posix_time::from_time_t(schedule.getStartTime()).date();
+        start_date_ = boost::posix_time::from_time_t(schedule.getStartTime()).date();
     }
 
     /// Whether the current step is the first step.
@@ -111,7 +124,7 @@ namespace Opm
 
     boost::posix_time::ptime SimulatorTimer::startDateTime() const
     {
-        return boost::posix_time::ptime(*start_date_);
+        return boost::posix_time::ptime(start_date_);
     }
 
 
@@ -162,6 +175,13 @@ namespace Opm
        return std::make_unique<SimulatorTimer>(*this);
     }
 
-
+    bool SimulatorTimer::operator==(const SimulatorTimer& rhs) const
+    {
+        return this->timesteps_ == rhs.timesteps_ &&
+               this->current_step_ == rhs.current_step_ &&
+               this->current_time_ == rhs.current_time_ &&
+               this->total_time_ == rhs.total_time_ &&
+               this->start_date_ == rhs.start_date_;
+    }
 
 } // namespace Opm
