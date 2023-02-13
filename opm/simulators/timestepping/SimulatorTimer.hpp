@@ -23,10 +23,11 @@
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/simulators/timestepping/SimulatorTimerInterface.hpp>
 
-#include <iosfwd>
-#include <vector>
+#include <boost/date_time/gregorian/gregorian_types.hpp>
 
-namespace boost { namespace gregorian { class date; } }
+#include <iosfwd>
+#include <memory>
+#include <vector>
 
 namespace Opm
 {
@@ -114,14 +115,14 @@ namespace Opm
         bool lastStepFailed() const override { return false; }
 
         /// return copy of object
-        std::unique_ptr< SimulatorTimerInterface > clone() const override;
+        std::unique_ptr<SimulatorTimerInterface> clone() const override;
 
     private:
         std::vector<double> timesteps_;
         int current_step_;
         double current_time_;
         double total_time_;
-        std::shared_ptr<boost::gregorian::date> start_date_;
+        boost::gregorian::date start_date_;
     };
 
 

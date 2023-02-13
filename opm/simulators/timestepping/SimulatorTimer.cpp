@@ -34,7 +34,7 @@ namespace Opm
     SimulatorTimer::SimulatorTimer()
         : current_step_(0),
           current_time_(0.0),
-          start_date_(std::make_shared<boost::gregorian::date>(2012,1,1))    // A really arbitrary default starting value?!
+          start_date_(2012,1,1)    // A really arbitrary default starting value?!
     {
     }
 
@@ -61,7 +61,7 @@ namespace Opm
         }
 
         setCurrentStepNum(report_step);
-        *start_date_ = boost::posix_time::from_time_t(schedule.getStartTime()).date();
+        start_date_ = boost::posix_time::from_time_t(schedule.getStartTime()).date();
     }
 
     /// Whether the current step is the first step.
@@ -111,7 +111,7 @@ namespace Opm
 
     boost::posix_time::ptime SimulatorTimer::startDateTime() const
     {
-        return boost::posix_time::ptime(*start_date_);
+        return boost::posix_time::ptime(start_date_);
     }
 
 
