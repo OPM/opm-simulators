@@ -98,6 +98,18 @@ private:
                        const std::string& group,
                        const std::string& dset) const;
 
+    //! \brief Return a dataset creation properly list with compression settings.
+    //! \param size Size of dataset
+    hid_t getCompression(hsize_t size) const;
+
+    //! \brief Helper function to write a dataset.
+    //! \param rank Process rank that should write
+    //! \param dataset_id Handle for dataset to write
+    //! \param dxpl Dataset transfer property list
+    //! \param size Size of dataset
+    //! \param data Data to write
+    void writeDset(int rank, hid_t dataset_id,
+                   hid_t dxpl, hsize_t size, const void* data) const;
     hid_t m_file = H5I_INVALID_HID; //!< File handle
     Parallel::Communication comm_;
 };
