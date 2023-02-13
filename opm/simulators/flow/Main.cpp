@@ -211,13 +211,13 @@ void Main::readDeck(const std::string& deckFilename,
 
 void Main::setupVanguard()
 {
-    EclGenericVanguard::setParams(this->setupTime_,
-                                  this->eclipseState_,
-                                  this->schedule_,
-                                  std::move(this->udqState_),
-                                  std::move(this->actionState_),
-                                  std::move(this->wtestState_),
-                                  this->summaryConfig_);
+    EclGenericVanguard::defineSimulationModel(this->setupTime_,
+                                              this->eclipseState_,
+                                              this->schedule_,
+                                              std::move(this->udqState_),
+                                              std::move(this->actionState_),
+                                              std::move(this->wtestState_),
+                                              this->summaryConfig_);
 }
 
 #if HAVE_DAMARIS

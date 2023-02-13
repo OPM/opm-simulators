@@ -69,13 +69,13 @@ EclGenericVanguard::EclGenericVanguard()
 
 EclGenericVanguard::~EclGenericVanguard() = default;
 
-void EclGenericVanguard::setParams(double setupTime,
-                                   std::shared_ptr<EclipseState> eclState,
-                                   std::shared_ptr<Schedule> schedule,
-                                   std::unique_ptr<UDQState> udqState,
-                                   std::unique_ptr<Action::State> actionState,
-                                   std::unique_ptr<WellTestState> wtestState,
-                                   std::shared_ptr<SummaryConfig> summaryConfig)
+void EclGenericVanguard::defineSimulationModel(double setupTime,
+                                               std::shared_ptr<EclipseState> eclState,
+                                               std::shared_ptr<Schedule> schedule,
+                                               std::unique_ptr<UDQState> udqState,
+                                               std::unique_ptr<Action::State> actionState,
+                                               std::unique_ptr<WellTestState> wtestState,
+                                               std::shared_ptr<SummaryConfig> summaryConfig)
 {
     EclGenericVanguard::setupTime_ = setupTime;
     EclGenericVanguard::eclState_ = std::move(eclState);
@@ -104,11 +104,11 @@ void EclGenericVanguard::readDeck(const std::string& filename)
                   summaryConfig, nullptr, false,
                   false, false, {});
 
-    EclGenericVanguard::setParams(setupTimer.elapsed(),
-                                  eclipseState, schedule,
-                                  std::move(udqState),
-                                  std::move(actionState),
-                                  std::move(wtestState), summaryConfig);
+    EclGenericVanguard::defineSimulationModel(setupTimer.elapsed(),
+                                              eclipseState, schedule,
+                                              std::move(udqState),
+                                              std::move(actionState),
+                                              std::move(wtestState), summaryConfig);
 }
 
 std::string EclGenericVanguard::canonicalDeckPath(const std::string& caseName)
