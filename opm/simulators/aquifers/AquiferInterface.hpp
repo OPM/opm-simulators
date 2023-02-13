@@ -56,8 +56,6 @@ public:
     virtual void beginTimeStep() = 0;
     virtual void endTimeStep() = 0;
 
-
-
     virtual data::AquiferData aquiferData() const = 0;
 
     template <class Context>

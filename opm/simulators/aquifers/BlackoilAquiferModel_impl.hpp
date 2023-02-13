@@ -17,8 +17,6 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-// TODO: remove this include
-#include <iostream>
 
 #include <opm/simulators/aquifers/AquiferConstantFlux.hpp>
 
@@ -59,26 +57,25 @@ template <typename TypeTag>
 void
 BlackoilAquiferModel<TypeTag>::beginEpisode()
 {
-    // TODO: not totally sure this is the function should be used.
+    // probably function name beginReportStep() is more appropriate.
     // basically, we want to update the aquifer related information from SCHEDULE setup in this section
     // it is the beginning of a report step
-
     const auto& connections = this->simulator_.vanguard().eclState().aquifer().connections();
     const int report_step  = this->simulator_.episodeIndex();
-    const auto& aqufluxs = this->simulator_.vanguard().schedule()[report_step].aqufluxs;// .aquflu// simulator.vanguard().schedule()[reportStepIdx].events()
+    const auto& aqufluxs = this->simulator_.vanguard().schedule()[report_step].aqufluxs;
     for (const auto& elem : aqufluxs) {
         const int id = elem.first;
         auto find = std::find_if(begin(this->aquifers), end(this->aquifers), [id](auto& v){ return v->aquiferID() == id; });
         if (find == this->aquifers.end()) {
-            // the aquifer id does not exist in aquifers yet
-            const auto& aquinfo = elem.second;
-            auto aqf = std::make_unique<AquiferConstantFlux<TypeTag>>(aquinfo, connections.getConnections(aquinfo->id), this->simulator_);
+            // the aquifer id does not exist in BlackoilAquiferModel yet
+            const auto& aquinfo = *(elem.second);
+            auto aqf = std::make_unique<AquiferConstantFlux<TypeTag>>(aquinfo, connections.getConnections(aquinfo.id), this->simulator_);
             this->aquifers.push_back(std::move(aqf));
         } else {
             const double prev_cumulative_flux = (*find)->cumulativeFlux();
-            const auto& aquinfo = elem.second;
-            // TODO: it should be improved to be something like a update instead of creating a new one
-            auto aqf = std::make_unique<AquiferConstantFlux<TypeTag>>(aquinfo, connections.getConnections(aquinfo->id), this->simulator_, prev_cumulative_flux);
+            const auto& aquinfo = *(elem.second);
+            // TODO: it should be improved to be something like to update the related information instead of creating a new one
+            auto aqf = std::make_unique<AquiferConstantFlux<TypeTag>>(aquinfo, connections.getConnections(aquinfo.id), this->simulator_, prev_cumulative_flux);
             *find = std::move(aqf);
         }
     }
@@ -196,6 +193,20 @@ BlackoilAquiferModel<TypeTag>::init()
         aquifers.push_back(std::move(aqf));
     }
 
+    for (const auto& [id, aq] : aquifer.aquflux()) {
+        if ( !aq.active ) continue;
+
+        if (!connections.hasAquiferConnections(id)) {
+            auto msg = fmt::format("No valid connections for constant flux aquifer {}, aquifer {} will be ignored.",
+                                   id, id);
+            OpmLog::warning(msg);
+            continue;
+        }
+
+        auto aqf = std::make_unique<AquiferConstantFlux<TypeTag>>(aq, connections.getConnections(id), this->simulator_);
+        this->aquifers.push_back(std::move(aqf));
+    }
+
     if (aquifer.hasNumericalAquifer()) {
         const auto& num_aquifers = aquifer.numericalAquifers().aquifers();
         for ([[maybe_unused]]const auto& [id, aqu] : num_aquifers) {
@@ -203,9 +214,6 @@ BlackoilAquiferModel<TypeTag>::init()
             aquifers.push_back(std::move(aqf));
         }
     }
-
-    // first time handle constant flux aquifers, which is stored in the schedule. Other aquifer types might also be refactored later
-    // to be able to be updated through SCHEDULE.
 }
 
 template<typename TypeTag>

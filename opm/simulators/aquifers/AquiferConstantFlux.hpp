@@ -37,18 +37,16 @@ public:
     static constexpr int numEq = BlackoilIndices::numEq;
     using Eval = DenseAd::Evaluation<double, /*size=*/numEq>;
 
-
-    // TODO: we need to pass in the previous flux volume
-    AquiferConstantFlux(const std::shared_ptr<AquiferFlux>& aquifer,
+    AquiferConstantFlux(const AquiferFlux& aquifer,
                         const std::vector<Aquancon::AquancCell>& connections,
                         const Simulator& ebos_simulator,
                         const double init_cumulative_flux = 0.)
-        : AquiferInterface<TypeTag>(aquifer->id, ebos_simulator)
+        : AquiferInterface<TypeTag>(aquifer.id, ebos_simulator)
          , connections_(connections)
          , aquifer_data_(aquifer)
          , cumulative_flux_(init_cumulative_flux)
     {
-        // flux_volume is the flux volume from previoius running
+        // init_cumulative_flux is the flux volume from previoius running
         this->initializeConnections();
         connection_flux_.resize(this->connections_.size(), {0});
     }
@@ -63,9 +61,7 @@ public:
     }
 
     void initialSolutionApplied() {
-        // Note: we can not do this here
-        // with the current way, we put the AQUFLUX in the first report step of Schedule
-        // Maybe it might bring some undesiable consequence to remove it from the solution
+        // this->initializeConnections();
     }
 
     void beginTimeStep() {
@@ -86,7 +82,7 @@ public:
     data::AquiferData aquiferData() const
     {
         data::AquiferData data;
-        data.aquiferID = this->aquifer_data_->id;
+        data.aquiferID = this->aquifer_data_.id;
         // pressure for constant flux aquifer is 0
         data.pressure = 0.;
         data.fluxRate = 0.;
@@ -113,7 +109,7 @@ public:
             throw std::logic_error("Invalid intensive quantities cache detected in AquiferAnalytical::addToSource()");
         }
 
-        const double fw = this->aquifer_data_->flux;
+        const double fw = this->aquifer_data_.flux;
         // const double m = this->connections_[idx].influx_coeff;
         this->connection_flux_[idx] = fw * this->connections_[idx].effective_facearea;
         rates[BlackoilIndices::conti0EqIdx + compIdx_()]
@@ -128,18 +124,14 @@ public:
 
 private:
     const std::vector<Aquancon::AquancCell> connections_;
-    std::shared_ptr<AquiferFlux> aquifer_data_;
-    // TODO: for simple case, faceArea_connected_ is not needed here, since it is calculated when parsing
-    // But if the grid change, not sure how to handle
-    // std::vector<double> faceArea_connected_;
+    AquiferFlux aquifer_data_;
     std::vector<int> cellToConnectionIdx_;
     std::vector<Eval> connection_flux_;
-    double flux_rate_;
+    double flux_rate_ {};
     double cumulative_flux_ = 0.;
 
 
     void initializeConnections() {
-        // this->faceArea_connected_.resize(this->size(), {0});
 
         this->cellToConnectionIdx_.resize(this->ebos_simulator_.gridView().size(/*codim=*/0), -1);
         const auto& gridView = this->ebos_simulator_.vanguard().gridView();
@@ -156,9 +148,11 @@ private:
 
             this->cellToConnectionIdx_[cell_index] = idx;
         }
-        // TODO: at the moment, we are using the effective_facearea from the parser. Should we update the facearea here?
+        // TODO: at the moment, we are using the effective_facearea from the parser. Should we update the facearea here if
+        //  the grid changed during the preprocessing?
     }
-    // TODO: function from AquiferAnalytical
+
+    // TODO: this is a function from AquiferAnalytical
     int compIdx_() const
     {
         if (this->co2store_())
