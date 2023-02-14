@@ -479,7 +479,7 @@ public:
             std::cout << std::setprecision(3)
                       << "Simulation of problem '" << asImp_().name() << "' finished.\n"
                       << "\n"
-                      << "------------------------ Timing receipt ------------------------\n"
+                      << "------------------------ Timing ------------------------\n"
                       << "Setup time: " << setupTime << " seconds" << Simulator::humanReadableTime(setupTime)
                       << ", " << setupTime/(executionTime + setupTime)*100 << "%\n"
                       << "Simulation time: " << executionTime << " seconds" << Simulator::humanReadableTime(executionTime)
@@ -499,15 +499,8 @@ public:
                       << "Threads per processes: " << threadsPerProcess << "\n"
                       << "Total CPU time: " << globalCpuTime << " seconds" << Simulator::humanReadableTime(globalCpuTime) << "\n"
                       << "\n"
-                      << "Note 1: If not stated otherwise, all times are wall clock times\n"
-                      << "Note 2: Taxes and administrative overhead are "
-                      << (executionTime - (linearizeTime+solveTime+updateTime+prePostProcessTime+writeTime))/executionTime*100
-                      << "%\n"
-                      << "\n"
-                      << "Our simulation hours are 24/7. Thank you for choosing us.\n"
                       << "----------------------------------------------------------------\n"
-                      << "\n"
-                      << std::flush;
+                      << std::endl;
         }
     }
 
