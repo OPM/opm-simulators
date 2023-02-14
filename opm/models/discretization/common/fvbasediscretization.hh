@@ -71,6 +71,7 @@
 #include <dune/fem/misc/capabilities.hh>
 #endif
 
+#include <algorithm>
 #include <limits>
 #include <list>
 #include <stdexcept>
@@ -379,6 +380,7 @@ class FvBaseDiscretization
 
     using LocalEvalBlockVector = typename LocalResidual::LocalEvalBlockVector;
 
+public:
     class BlockVectorWrapper
     {
     protected:
@@ -388,12 +390,37 @@ class FvBaseDiscretization
             : blockVector_(size)
         {}
 
+        BlockVectorWrapper() = default;
+
+        static BlockVectorWrapper serializationTestObject()
+        {
+            BlockVectorWrapper result("dummy", 3);
+            result.blockVector_[0] = 1.0;
+            result.blockVector_[1] = 2.0;
+            result.blockVector_[2] = 3.0;
+
+            return result;
+        }
+
         SolutionVector& blockVector()
         { return blockVector_; }
         const SolutionVector& blockVector() const
         { return blockVector_; }
+
+        bool operator==(const BlockVectorWrapper& wrapper) const
+        {
+            return std::equal(this->blockVector_.begin(), this->blockVector_.end(),
+                              wrapper.blockVector_.begin(), wrapper.blockVector_.end());
+        }
+
+        template<class Serializer>
+        void serializeOp(Serializer& serializer)
+        {
+            serializer(blockVector_);
+        }
     };
 
+private:
 #if HAVE_DUNE_FEM
     using DiscreteFunctionSpace = GetPropType<TypeTag, Properties::DiscreteFunctionSpace>   ;
 
@@ -1868,6 +1895,23 @@ public:
 
     const Timer& updateTimer() const
     { return updateTimer_; }
+
+    template<class Serializer>
+    void serializeOp(Serializer& serializer)
+    {
+        for (auto& sol : solution_)
+            serializer(*sol);
+    }
+
+    bool operator==(const FvBaseDiscretization& rhs) const
+    {
+        return std::equal(this->solution_.begin(), this->solution_.end(),
+                          rhs.solution_.begin(), rhs.solution_.end(),
+                          [](const auto& x, const auto& y)
+                          {
+                              return *x == *y;
+                          });
+    }
 
 protected:
     void resizeAndResetIntensiveQuantitiesCache_()
