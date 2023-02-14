@@ -78,6 +78,13 @@ public:
     const std::map<std::pair<std::string, std::string>, double>&
     getWellTracerRates() const {return wellTracerRate_;}
 
+    template<class Serializer>
+    void serializeOp(Serializer& serializer)
+    {
+        serializer(tracerConcentration_);
+        serializer(wellTracerRate_);
+    }
+
 protected:
     EclGenericTracerModel(const GridView& gridView,
                           const EclipseState& eclState,

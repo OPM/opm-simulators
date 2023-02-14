@@ -42,6 +42,8 @@
 #include <boost/date_time/gregorian/gregorian.hpp>
 #include <boost/test/unit_test.hpp>
 
+#include <algorithm>
+
 template<class T>
 std::tuple<T,int,int> PackUnpack(T& in)
 {
@@ -133,6 +135,83 @@ BOOST_AUTO_TEST_CASE(EclGenericProblem)
     BOOST_CHECK_MESSAGE(pos1 == pos2, "Packed size differ from unpack size for EclGenericProblem");
     BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized EclGenericProblem differ");
 }
+
+template<class Grid, class GridView, class DofMapper, class Stencil, class Scalar>
+class EclGenericTracerModelTest : public Opm::EclGenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar> {
+    using Base = Opm::EclGenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>;
+public:
+    EclGenericTracerModelTest(const GridView& gridView,
+                              const Opm::EclipseState& eclState,
+                              const Dune::CartesianIndexMapper<Grid>& cartMapper,
+                              const DofMapper& dofMapper,
+                              const std::function<std::array<double,Grid::dimensionworld>(int)> centroids) :
+        Base(gridView, eclState, cartMapper, dofMapper, centroids)
+    {}
+
+    static EclGenericTracerModelTest
+    serializationTestObject(const GridView& gridView,
+                            const Opm::EclipseState& eclState,
+                            const Dune::CartesianIndexMapper<Grid>& cartMapper,
+                            const DofMapper& dofMapper,
+                            const std::function<std::array<double,Grid::dimensionworld>(int)> centroids)
+    {
+        EclGenericTracerModelTest result(gridView, eclState, cartMapper, dofMapper, centroids);
+        result.tracerConcentration_ = {{1.0}, {2.0}, {3.0}};
+        result.wellTracerRate_.insert({{"foo", "bar"}, 4.0});
+
+        return result;
+    }
+
+    bool operator==(const EclGenericTracerModelTest& rhs) const
+    {
+        if (this->tracerConcentration_.size() != rhs.tracerConcentration_.size()) {
+            return false;
+        }
+        for (size_t i = 0; i < this->tracerConcentration_.size(); ++i) {
+            if (!std::equal(this->tracerConcentration_[i].begin(),
+                            this->tracerConcentration_[i].end(),
+                            rhs.tracerConcentration_[i].begin(),
+                            rhs.tracerConcentration_[i].end())) {
+                return false;
+            }
+        }
+        return this->wellTracerRate_ == rhs.wellTracerRate_;
+    }
+};
+
+BOOST_AUTO_TEST_CASE(EclGenericTracerModel)
+{
+    Dune::CpGrid grid;
+    Opm::EclipseState eclState;
+    Dune::CartesianIndexMapper<Dune::CpGrid> mapper(grid);
+    Dune::MultipleCodimMultipleGeomTypeMapper<Dune::CpGrid::LeafGridView> dofMapper(grid.leafGridView(), Dune::mcmgElementLayout());
+    auto centroids = [](int) { return std::array<double,Dune::CpGrid::dimensionworld>{}; };
+    auto data_out = EclGenericTracerModelTest<Dune::CpGrid,
+                                              Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>,
+                                              Dune::MultipleCodimMultipleGeomTypeMapper<Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>>,
+                                              Opm::EcfvStencil<double,Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>,false,false>,
+                                              double>::serializationTestObject(grid.leafGridView(), eclState, mapper, dofMapper, centroids);
+    Opm::Serialization::MemPacker packer;
+    Opm::Serializer ser(packer);
+    ser.pack(data_out);
+    const size_t pos1 = ser.position();
+    decltype(data_out) data_in(grid.leafGridView(), eclState, mapper, dofMapper, centroids);
+    ser.unpack(data_in);
+    const size_t pos2 = ser.position();
+    BOOST_CHECK_MESSAGE(pos1 == pos2, "Packed size differ from unpack size for EclGenericTracerModel");
+    BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized EclGenericTracerModel differ");
+}
+
+namespace Opm {
+
+class TBatchExport : public EclTracerModel<Properties::TTag::EbosTypeTag> {
+public:
+    using TBatch = TracerBatch<double>;
+};
+
+}
+
+TEST_FOR_TYPE_NAMED(TBatchExport::TBatch, TracerBatch)
 
 namespace {
 
