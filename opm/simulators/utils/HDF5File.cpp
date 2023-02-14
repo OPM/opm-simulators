@@ -22,6 +22,8 @@
 #include <config.h>
 #include <opm/simulators/utils/HDF5File.hpp>
 
+#include <opm/common/utility/String.hpp>
+
 #include <filesystem>
 #include <stdexcept>
 
@@ -80,7 +82,24 @@ void HDF5File::write(const std::string& group,
     if (groupExists(m_file, group)) {
         grp = H5Gopen2(m_file, group.c_str(), H5P_DEFAULT);
     } else {
+        auto grps = split_string(group, '/');
+        std::string curr;
+        for (size_t i = 0; i < grps.size()-1; ++i) {
+            curr += '/';
+            curr += grps[i];
+            if (!groupExists(m_file, curr)) {
+                hid_t subgrp = H5Gcreate2(m_file, curr.c_str(), 0, H5P_DEFAULT, H5P_DEFAULT);
+                if (subgrp == H5I_INVALID_HID) {
+                    throw std::runtime_error("HDF5File: Failed to create group '" + curr + "'");
+                }
+                H5Gclose(subgrp);
+            }
+        }
         grp = H5Gcreate2(m_file, group.c_str(), 0, H5P_DEFAULT, H5P_DEFAULT);
+    }
+
+    if (grp == H5I_INVALID_HID) {
+        throw std::runtime_error("HDF5File: Failed to create group '" + group + "'");
     }
 
     hsize_t size = buffer.size();
@@ -90,7 +109,7 @@ void HDF5File::write(const std::string& group,
     hid_t dataset_id = H5Dcreate2(grp, dset.c_str(), H5T_NATIVE_CHAR, space,
                        H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     if (dataset_id == H5I_INVALID_HID) {
-        throw std::runtime_error("HDF5File: Trying to write already existing dataset " + group + '/' + dset);
+        throw std::runtime_error("HDF5File: Trying to write already existing dataset '" + group + '/' + dset + "'");
     }
 
     if (size > 0) {
@@ -109,7 +128,7 @@ void HDF5File::write(const std::string& group,
 
 void HDF5File::read(const std::string& group,
                     const std::string& dset,
-                    std::vector<char>& buffer)
+                    std::vector<char>& buffer) const
 {
     hid_t dataset_id = H5Dopen2(m_file, (group + "/"+ dset).c_str(), H5P_DEFAULT);
     if (dataset_id == H5I_INVALID_HID) {
@@ -121,6 +140,27 @@ void HDF5File::read(const std::string& group,
     buffer.resize(size);
     H5Dread(dataset_id, H5T_NATIVE_CHAR, H5S_ALL, H5S_ALL, H5P_DEFAULT, buffer.data());
     H5Dclose(dataset_id);
+}
+
+std::vector<std::string> HDF5File::list(const std::string& group) const
+{
+    // Lambda function pushing the group entries to a vector
+    auto&& list_group = [] (hid_t, const char* name, const H5L_info_t*, void* data) -> herr_t
+    {
+        auto& list = *static_cast<std::vector<std::string>*>(data);
+        list.push_back(name);
+        return 0;
+    };
+
+    hsize_t idx = 0;
+    std::vector<std::string> result;
+    if (H5Literate_by_name(m_file, group.c_str(),
+                           H5_INDEX_NAME, H5_ITER_INC,
+                           &idx, list_group, &result, H5P_DEFAULT) < 0) {
+        throw std::runtime_error("Failure while listing HDF5 group '" + group + "'");
+    }
+
+    return result;
 }
 
 }

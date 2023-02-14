@@ -225,6 +225,7 @@ if(ROCALUTION_FOUND)
 endif()
 if(HDF5_FOUND)
   list(APPEND TEST_SOURCE_FILES tests/test_HDF5File.cpp)
+  list(APPEND TEST_SOURCE_FILES tests/test_HDF5Serializer.cpp)
 endif()
 
 list (APPEND TEST_DATA_FILES
@@ -441,6 +442,7 @@ list (APPEND PUBLIC_HEADER_FILES
 
 if(HDF5_FOUND)
   list(APPEND PUBLIC_HEADER_FILES
+    ebos/hdf5serializer.hh
     opm/simulators/utils/HDF5File.hpp
   )
 endif()
