@@ -111,24 +111,6 @@ void
 BlackoilAquiferModel<TypeTag>::endEpisode()
 {}
 
-template <typename TypeTag>
-template <class Restarter>
-void
-BlackoilAquiferModel<TypeTag>::serialize(Restarter& /* res */)
-{
-    // TODO (?)
-    throw std::logic_error("BlackoilAquiferModel::serialize() is not yet implemented");
-}
-
-template <typename TypeTag>
-template <class Restarter>
-void
-BlackoilAquiferModel<TypeTag>::deserialize(Restarter& /* res */)
-{
-    // TODO (?)
-    throw std::logic_error("BlackoilAquiferModel::deserialize() is not yet implemented");
-}
-
 // Initialize the aquifers in the deck
 template <typename TypeTag>
 void

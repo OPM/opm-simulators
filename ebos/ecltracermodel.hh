@@ -187,23 +187,6 @@ public:
         advanceTracerFields();
     }
 
-    /*!
-     * \brief This method writes the complete state of all tracer
-     *        to the hard disk.
-     */
-    template <class Restarter>
-    void serialize(Restarter&)
-    { /* not implemented */ }
-
-    /*!
-     * \brief This method restores the complete state of the tracer
-     *        from disk.
-     *
-     * It is the inverse of the serialize() method.
-     */
-    template <class Restarter>
-    void deserialize(Restarter&)
-    { /* not implemented */ }
 
 protected:
 
