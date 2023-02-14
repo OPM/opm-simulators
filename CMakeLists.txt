@@ -441,13 +441,13 @@ opm_add_test(flow_distribute_z
   $<TARGET_OBJECTS:moduleVersion>
   )
 
-opm_add_test(flow_blackoil_ebos
+opm_add_test(ebos
   ONLY_COMPILE
   ALWAYS_ENABLE
   DEPENDS opmsimulators
   LIBRARIES opmsimulators
   SOURCES
-  flow/flow_blackoil_ebos.cpp
+  flow/ebos.cpp
   $<TARGET_OBJECTS:moduleVersion>
   )
 
