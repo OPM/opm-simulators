@@ -114,6 +114,26 @@ BOOST_AUTO_TEST_CASE(EclGenericVanguard)
     BOOST_CHECK_MESSAGE(val1 == val2, "Deserialized EclGenericVanguard differ");
 }
 
+BOOST_AUTO_TEST_CASE(EclGenericProblem)
+{
+    Opm::EclipseState eclState;
+    Opm::Schedule schedule;
+    Dune::CpGrid grid;
+    auto data_out = Opm::EclGenericProblem<Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>,
+                                           Opm::BlackOilFluidSystem<double,Opm::BlackOilDefaultIndexTraits>,
+                                           double>::
+        serializationTestObject(eclState, schedule, grid.leafGridView());
+    Opm::Serialization::MemPacker packer;
+    Opm::Serializer ser(packer);
+    ser.pack(data_out);
+    const size_t pos1 = ser.position();
+    decltype(data_out) data_in(eclState, schedule, grid.leafGridView());
+    ser.unpack(data_in);
+    const size_t pos2 = ser.position();
+    BOOST_CHECK_MESSAGE(pos1 == pos2, "Packed size differ from unpack size for EclGenericProblem");
+    BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized EclGenericProblem differ");
+}
+
 bool init_unit_test_func()
 {
     return true;
@@ -121,5 +141,6 @@ bool init_unit_test_func()
 
 int main(int argc, char** argv)
 {
+    Dune::MPIHelper::instance(argc, argv);
     return boost::unit_test::unit_test_main(&init_unit_test_func, argc, argv);
 }
