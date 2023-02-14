@@ -530,13 +530,7 @@ public:
      *        quantities.
      *
      * This allows to specify different Pressure-Volume-Temperature (PVT) relations in
-     * different parts of the spatial domain. Note that this concept should be seen as a
-     * work-around of the fact that the black-oil model does not capture the
-     * thermodynamics well enough. (Because there is, err, only a single real world with
-     * in which all substances follow the same physical laws and hence the same
-     * thermodynamics.) Anyway: Since the ECL file format uses multiple PVT regions, we
-     * support it as well in our black-oil model. (Note that, if it is not explicitly
-     * specified, the PVT region index is 0.)
+     * different parts of the spatial domain.
      */
     auto pvtRegionIndex() const
         -> decltype(std::declval<FluidState>().pvtRegionIndex())
