@@ -18,6 +18,9 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <opm/common/ErrorMacros.hpp>
+#include <stdexcept>
+
 namespace Opm
 {
 
@@ -182,6 +185,27 @@ data::Aquifers BlackoilAquiferModel<TypeTag>::aquiferData() const
         data.insert_or_assign(aqu->aquiferID(), aqu->aquiferData());
 
     return data;
+}
+
+template<typename TypeTag>
+template<class Serializer>
+void BlackoilAquiferModel<TypeTag>::
+serializeOp(Serializer& serializer)
+{
+    for (auto& aiPtr : aquifers) {
+        auto* ct = dynamic_cast<AquiferCarterTracy<TypeTag>*>(aiPtr.get());
+        auto* fetp = dynamic_cast<AquiferFetkovich<TypeTag>*>(aiPtr.get());
+        auto* num = dynamic_cast<AquiferNumerical<TypeTag>*>(aiPtr.get());
+        if (ct) {
+            serializer(*ct);
+        } else if (fetp) {
+            serializer(*fetp);
+        } else if (num) {
+            serializer(*num);
+        } else {
+            OPM_THROW(std::logic_error, "Error serializing BlackoilAquiferModel: unknown aquifer type");
+        }
+    }
 }
 
 } // namespace Opm

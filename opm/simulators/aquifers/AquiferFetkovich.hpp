@@ -23,6 +23,8 @@ along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <opm/simulators/aquifers/AquiferAnalytical.hpp>
 
+#include <opm/input/eclipse/EclipseState/Aquifer/Aquifetp.hpp>
+
 #include <opm/output/data/Aquifer.hpp>
 
 #include <exception>
@@ -58,6 +60,20 @@ public:
     {
     }
 
+    static AquiferFetkovich serializationTestObject(const Simulator& ebosSimulator)
+    {
+        AquiferFetkovich result({}, ebosSimulator, {});
+
+        result.pressure_previous_ = {1.0, 2.0, 3.0};
+        result.pressure_current_ = {4.0, 5.0};
+        result.Qai_ = {{6.0}};
+        result.rhow_ = 7.0;
+        result.W_flux_ = 8.0;
+        result.aquifer_pressure_ = 9.0;
+
+        return result;
+    }
+
     void endTimeStep() override
     {
         for (const auto& q : this->Qai_) {
@@ -87,6 +103,19 @@ public:
         aquFet->timeConstant = this->aqufetp_data_.timeConstant();
 
         return data;
+    }
+
+    template<class Serializer>
+    void serializeOp(Serializer& serializer)
+    {
+        serializer(static_cast<Base&>(*this));
+        serializer(aquifer_pressure_);
+    }
+
+    bool operator==(const AquiferFetkovich& rhs) const
+    {
+        return static_cast<const Base&>(*this) == rhs &&
+               this->aquifer_pressure_ == rhs.aquifer_pressure_;
     }
 
 protected:

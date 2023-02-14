@@ -134,6 +134,64 @@ BOOST_AUTO_TEST_CASE(EclGenericProblem)
     BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized EclGenericProblem differ");
 }
 
+namespace {
+
+struct AquiferFixture {
+    AquiferFixture() {
+        using TT = Opm::Properties::TTag::EbosTypeTag;
+        const char* argv[] = {
+            "test_RestartSerialization",
+            "--ecl-deck-file-name=GLIFT1.DATA"
+        };
+        Opm::setupParameters_<TT>(2, argv, /*registerParams=*/true);
+        Opm::EclGenericVanguard::setCommunication(std::make_unique<Opm::Parallel::Communication>());
+    }
+};
+
+}
+
+BOOST_GLOBAL_FIXTURE(AquiferFixture);
+
+#define TEST_FOR_AQUIFER(TYPE) \
+BOOST_AUTO_TEST_CASE(TYPE) \
+{ \
+    using TT = Opm::Properties::TTag::EbosTypeTag; \
+    Opm::EclGenericVanguard::readDeck("GLIFT1.DATA"); \
+    using Simulator = Opm::GetPropType<TT, Opm::Properties::Simulator>; \
+    Simulator sim; \
+    auto data_out = Opm::TYPE<TT>::serializationTestObject(sim); \
+    Opm::Serialization::MemPacker packer; \
+    Opm::Serializer ser(packer); \
+    ser.pack(data_out); \
+    const size_t pos1 = ser.position(); \
+    decltype(data_out) data_in({}, sim, {}); \
+    ser.unpack(data_in); \
+    const size_t pos2 = ser.position(); \
+    BOOST_CHECK_MESSAGE(pos1 == pos2, "Packed size differ from unpack size for " #TYPE); \
+    BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized " #TYPE " differ"); \
+}
+
+TEST_FOR_AQUIFER(AquiferCarterTracy)
+TEST_FOR_AQUIFER(AquiferFetkovich)
+
+BOOST_AUTO_TEST_CASE(AquiferNumerical)
+{
+    using TT = Opm::Properties::TTag::EbosTypeTag;
+    Opm::EclGenericVanguard::readDeck("GLIFT1.DATA");
+    using Simulator = Opm::GetPropType<TT, Opm::Properties::Simulator>;
+    Simulator sim;
+    auto data_out = Opm::AquiferNumerical<TT>::serializationTestObject(sim);
+    Opm::Serialization::MemPacker packer;
+    Opm::Serializer ser(packer);
+    ser.pack(data_out);
+    const size_t pos1 = ser.position();
+    decltype(data_out) data_in({}, sim);
+    ser.unpack(data_in);
+    const size_t pos2 = ser.position();
+    BOOST_CHECK_MESSAGE(pos1 == pos2, "Packed size differ from unpack size for AquiferNumerical");
+    BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized AquiferNumerical differ");
+}
+
 bool init_unit_test_func()
 {
     return true;

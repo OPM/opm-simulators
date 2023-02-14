@@ -112,6 +112,9 @@ public:
     template <class Restarter>
     void deserialize(Restarter& res);
 
+    template<class Serializer>
+    void serializeOp(Serializer& serializer);
+
 protected:
     // ---------      Types      ---------
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
