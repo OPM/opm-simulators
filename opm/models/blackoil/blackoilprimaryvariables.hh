@@ -193,10 +193,9 @@ public:
     /*!
      * \brief Set the index of the region which should be used for PVT properties.
      *
-     * The concept of PVT regions is a hack to work around the fact that the
-     * pseudo-components used by the black oil model (i.e., oil, gas and water) change
-     * their composition within the spatial domain. We implement them because, the ECL
-     * file format mandates them.
+     * PVT regions represent spatial variation of the composition decribed
+     * by the pseudo-components used by the black oil model (i.e., oil, gas
+     * and water). This introduce spatially varying pvt behaviour.
      */
     void setPvtRegionIndex(unsigned value)
     { pvtRegionIdx_ = static_cast<unsigned short>(value); }
