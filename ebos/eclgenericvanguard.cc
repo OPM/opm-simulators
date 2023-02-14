@@ -232,6 +232,7 @@ void EclGenericVanguard::init()
     // it means that setParams is called
     if(!eclState_){
         this->readDeck(fileName_);
+        this->defineSimulationModel(std::move(this->modelParams_));
     }
 
     if (!this->summaryState_)
