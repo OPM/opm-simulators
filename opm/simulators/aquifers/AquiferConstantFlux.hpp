@@ -73,9 +73,6 @@ public:
             this->flux_rate_ += Opm::getValue(q);
         }
 
-        const auto& comm = this->ebos_simulator_.vanguard().grid().comm();
-        comm.sum(&this->flux_rate_, 1);
-
         this->cumulative_flux_ += this->flux_rate_ * this->ebos_simulator_.timeStepSize();
     }
 
