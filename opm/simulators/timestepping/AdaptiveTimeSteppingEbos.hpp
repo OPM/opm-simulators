@@ -788,7 +788,7 @@ namespace Opm {
             result.solverVerbose_ = true;
             result.timestepVerbose_ = true;
             result.suggestedNextTimestep_ = 7.0;
-            result.fullTimestepInitially_ = 8.0;
+            result.fullTimestepInitially_ = true;
             result.useNewtonIteration_ = true;
             result.minTimeStepBeforeShuttingProblematicWells_ = 9.0;
             result.timeStepControlType_ = Controller::Type;
