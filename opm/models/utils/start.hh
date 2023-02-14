@@ -349,10 +349,8 @@ static inline int start(int argc, char **argv,  bool registerParams=true)
                 std::cout << tmp << std::endl << std::endl;
             }
             else
-                std::cout << "eWoms " << versionString
-                          << " will now start the trip. "
-                          << "Please sit back, relax and enjoy the ride.\n"
-                          << std::flush;
+                std::cout << "opm models " << versionString
+                          << " will now start the simulation. " << std::endl;
         }
 
         // print the parameters if requested
@@ -393,9 +391,7 @@ static inline int start(int argc, char **argv,  bool registerParams=true)
         simulator.run();
 
         if (myRank == 0) {
-            std::cout << "eWoms reached the destination. If it is not the one that was intended, "
-                      << "change the booking and try again.\n"
-                      << std::flush;
+            std::cout << "Simulation completed" << std::endl;                                 
         }
         return 0;
     }
