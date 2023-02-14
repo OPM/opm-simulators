@@ -441,7 +441,7 @@ opm_add_test(flow_distribute_z
   $<TARGET_OBJECTS:moduleVersion>
   )
 
-opm_add_test(flow_blackoil_ebos)
+opm_add_test(flow_blackoil_ebos
   ONLY_COMPILE
   ALWAYS_ENABLE
   DEPENDS opmsimulators
