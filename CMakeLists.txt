@@ -446,7 +446,7 @@ opm_add_test(flow_blackoil_ebos
   ALWAYS_ENABLE
   DEPENDS opmsimulators
   LIBRARIES opmsimulators
-  SOURCE
+  SOURCES
   flow/flow_blackoil_ebos.cpp
   $<TARGET_OBJECTS:moduleVersion>
   )
