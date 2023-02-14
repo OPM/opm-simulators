@@ -46,10 +46,10 @@ std::tuple<T,int,int> PackUnpack(T& in)
     Opm::Serialization::MemPacker packer;
     Opm::Serializer ser(packer);
     ser.pack(in);
-    size_t pos1 = ser.position();
+    const size_t pos1 = ser.position();
     T out{};
     ser.unpack(out);
-    size_t pos2 = ser.position();
+    const size_t pos2 = ser.position();
 
     return std::make_tuple(std::move(out), pos1, pos2);
 }
