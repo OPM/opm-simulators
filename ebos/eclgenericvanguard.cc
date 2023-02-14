@@ -223,6 +223,17 @@ void EclGenericVanguard::init()
         std::transform(caseName_.begin(), caseName_.end(), caseName_.begin(), ::toupper);
     }
 
+    // set communicator if not set as in opm flow
+    if(!comm_){
+        EclGenericVanguard::setCommunication(std::make_unique<Parallel::Communication>());
+    }
+    
+    // set eclState if not already set as in opm flow
+    // it means that setParams is called
+    if(!eclState_){
+        this->readDeck(fileName_);
+    }
+
     if (!this->summaryState_)
         this->summaryState_ = std::make_unique<SummaryState>( TimeService::from_time_t(this->eclSchedule_->getStartTime() ));
 
