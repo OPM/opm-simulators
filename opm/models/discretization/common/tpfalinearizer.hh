@@ -529,6 +529,7 @@ private:
 #pragma omp parallel for
 #endif
         for (unsigned globI = 0; globI < numCells; globI++) {
+            OPM_TIMEBLOCK_LOCAL(linearizationForEachCell);
             const auto& nbInfos = neighborInfo_[globI]; // this is a set but should maybe be changed
             VectorBlock res(0.0);
             MatrixBlock bMat(0.0);
@@ -541,8 +542,11 @@ private:
             const IntensiveQuantities& intQuantsIn = *intQuantsInP;
 
             // Flux term.
+            {
+            OPM_TIMEBLOCK_LOCAL(fluxCalculationForEachCell);    
             short loc = 0;
             for (const auto& nbInfo : nbInfos) {
+                OPM_TIMEBLOCK_LOCAL(fluxCalculationForEachFace);
                 unsigned globJ = nbInfo.neighbor;
                 assert(globJ != globI);
                 res = 0.0;
@@ -577,13 +581,17 @@ private:
                 *nbInfo.matBlockAddress += bMat;
                 ++loc;
             }
+            }
 
             // Accumulation term.
             double dt = simulator_().timeStepSize();
             double volume = model_().dofTotalVolume(globI);
             Scalar storefac = volume / dt;
             adres = 0.0;
-            LocalResidual::computeStorage(adres, intQuantsIn);
+            {
+                OPM_TIMEBLOCK_LOCAL(calculateStorage);
+                LocalResidual::computeStorage(adres, intQuantsIn);
+            }
             setResAndJacobi(res, bMat, adres);
             // TODO: check recycleFirst etc.
             // first we use it as storage cache
@@ -599,6 +607,7 @@ private:
             *diagMatAddress_[globI] += bMat;
             // wells sources for now (should be moved out)
             if (well_local) {
+                OPM_TIMEBLOCK_LOCAL(localWellAssembly);
                 res = 0.0;
                 bMat = 0.0;
                 adres = 0.0;
