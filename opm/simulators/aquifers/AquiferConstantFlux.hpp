@@ -37,14 +37,12 @@ public:
     static constexpr int numEq = BlackoilIndices::numEq;
     using Eval = DenseAd::Evaluation<double, /*size=*/numEq>;
 
-    AquiferConstantFlux(const AquiferFlux& aquifer,
+    AquiferConstantFlux(const SingleAquiferFlux& aquifer,
                         const std::vector<Aquancon::AquancCell>& connections,
-                        const Simulator& ebos_simulator,
-                        const double init_cumulative_flux = 0.)
+                        const Simulator& ebos_simulator)
         : AquiferInterface<TypeTag>(aquifer.id, ebos_simulator)
          , connections_(connections)
          , aquifer_data_(aquifer)
-         , cumulative_flux_(init_cumulative_flux)
     {
         // init_cumulative_flux is the flux volume from previoius running
         this->initializeConnections();
@@ -53,15 +51,14 @@ public:
 
     virtual ~AquiferConstantFlux() = default;
 
-    /* void updateAquifer(const std::shared_ptr<AquiferFlux>& aquifer) {
+    void updateAquifer(const SingleAquiferFlux& aquifer) {
         aquifer_data_ = aquifer;
-    } */
+    }
 
     void initFromRestart(const data::Aquifers& /* aquiferSoln */) {
     }
 
     void initialSolutionApplied() {
-        // this->initializeConnections();
     }
 
     void beginTimeStep() {
@@ -107,32 +104,23 @@ public:
         }
 
         const double fw = this->aquifer_data_.flux;
-        // const double m = this->connections_[idx].influx_coeff;
         this->connection_flux_[idx] = fw * this->connections_[idx].effective_facearea;
         rates[BlackoilIndices::conti0EqIdx + compIdx_()]
                 += this->connection_flux_[idx] / model.dofTotalVolume(cellIdx);
     }
 
-    // TODO: repeated function from AquiferAnalytical
-    std::size_t size() const
-    {
-        return this->connections_.size();
-    }
-
 private:
     const std::vector<Aquancon::AquancCell> connections_;
-    AquiferFlux aquifer_data_;
+    SingleAquiferFlux aquifer_data_;
     std::vector<int> cellToConnectionIdx_;
     std::vector<Eval> connection_flux_;
     double flux_rate_ {};
     double cumulative_flux_ = 0.;
 
-
     void initializeConnections() {
-
         this->cellToConnectionIdx_.resize(this->ebos_simulator_.gridView().size(/*codim=*/0), -1);
         const auto& gridView = this->ebos_simulator_.vanguard().gridView();
-        for (std::size_t idx = 0; idx < this->size(); ++idx) {
+        for (std::size_t idx = 0; idx < this->connections_.size(); ++idx) {
             const auto global_index = this->connections_[idx].global_index;
             const int cell_index = this->ebos_simulator_.vanguard().compressedIndex(global_index);
             auto elemIt = gridView.template begin</*codim=*/ 0>();
@@ -156,11 +144,6 @@ private:
             return FluidSystem::oilCompIdx;
 
         return FluidSystem::waterCompIdx;
-    }
-
-    double cumulativeFlux() const
-    {
-        return this->cumulative_flux_;
     }
 };
 }

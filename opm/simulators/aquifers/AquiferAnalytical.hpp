@@ -226,12 +226,6 @@ protected:
         return FluidSystem::waterCompIdx;
     }
 
-    double cumulativeFlux() const
-    {
-        return Opm::getValue(this->W_flux_);
-    }
-
-
     void initQuantities()
     {
         // We reset the cumulative flux at the start of any simulation, so, W_flux = 0

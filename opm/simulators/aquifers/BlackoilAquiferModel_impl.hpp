@@ -68,15 +68,20 @@ BlackoilAquiferModel<TypeTag>::beginEpisode()
         auto find = std::find_if(begin(this->aquifers), end(this->aquifers), [id](auto& v){ return v->aquiferID() == id; });
         if (find == this->aquifers.end()) {
             // the aquifer id does not exist in BlackoilAquiferModel yet
-            const auto& aquinfo = *(elem.second);
+            const auto& aquinfo = elem.second;
             auto aqf = std::make_unique<AquiferConstantFlux<TypeTag>>(aquinfo, connections.getConnections(aquinfo.id), this->simulator_);
             this->aquifers.push_back(std::move(aqf));
         } else {
-            const double prev_cumulative_flux = (*find)->cumulativeFlux();
-            const auto& aquinfo = *(elem.second);
-            // TODO: it should be improved to be something like to update the related information instead of creating a new one
-            auto aqf = std::make_unique<AquiferConstantFlux<TypeTag>>(aquinfo, connections.getConnections(aquinfo.id), this->simulator_, prev_cumulative_flux);
-            *find = std::move(aqf);
+            const auto& aquinfo = elem.second;
+            auto aqu = dynamic_cast<AquiferConstantFlux<TypeTag>*> (find->get());
+            if (!aqu) {
+                // if the aquifers can return types easily, we might be able to give a better message with type information
+                const auto msg = fmt::format("Aquifer {} is updated with constant flux aquifer keyword AQUFLUX at report step {},"
+                                                       " while it might be specified to be a different type of aquifer before this. We do not support the conversion between"
+                                                       " different types of aquifer.\n", id, report_step);
+                OPM_THROW(std::runtime_error, msg);
+            }
+            aqu->updateAquifer(aquinfo);
         }
     }
 }
@@ -194,6 +199,7 @@ BlackoilAquiferModel<TypeTag>::init()
     }
 
     for (const auto& [id, aq] : aquifer.aquflux()) {
+        // make sure not dummy constant flux aquifers
         if ( !aq.active ) continue;
 
         if (!connections.hasAquiferConnections(id)) {
