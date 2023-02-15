@@ -175,6 +175,7 @@ public:
      */
     void linearizeDomain()
     {
+        OPM_TIMEBLOCK(linearizeDomain);
         // we defer the initialization of the Jacobian matrix until here because the
         // auxiliary modules usually assume the problem, model and grid to be fully
         // initialized...
@@ -215,6 +216,7 @@ public:
      */
     void linearizeAuxiliaryEquations()
     {
+        OPM_TIMEBLOCK(linearizeAuxilaryEquations);
         // flush possible local caches into matrix structure
         jacobian_->commit();
 
@@ -334,6 +336,7 @@ private:
     // Construct the BCRS matrix for the Jacobian of the residual function
     void createMatrix_()
     {
+        OPM_TIMEBLOCK(createMatrix);
         if (!neighborInfo_.empty()) {
             // It is ok to call this function multiple times, but it
             // should not do anything if already called.
@@ -431,6 +434,7 @@ private:
     // Initialize the flows and flores sparse tables
     void createFlows_()
     {
+        OPM_TIMEBLOCK(createFlows);
         // If FLOWS/FLORES is set in any RPTRST in the schedule, then we initializate the sparse tables
         const bool anyFlows = simulator_().problem().eclWriter()->eclOutputModule().anyFlows();
         const bool anyFlores = simulator_().problem().eclWriter()->eclOutputModule().anyFlores();
@@ -515,6 +519,7 @@ public:
 private:
     void linearize_()
     {
+        OPM_TIMEBLOCK(linearize);
         const bool well_local = true;
         resetSystem_();
         unsigned numCells = model_().numTotalDof();
