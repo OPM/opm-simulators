@@ -351,32 +351,47 @@ namespace WellGroupHelpers
             // accumulate group contribution from sub group
             if (isInjector) {
                 const Phase all[] = {Phase::WATER, Phase::OIL, Phase::GAS};
-                bool individual_control = false;
-                int num_group_controlled_wells = 0;
                 for (Phase phase : all) {
-                    const Group::InjectionCMode& currentGroupControl
-                            = group_state.injection_control(subGroup.name(), phase);
-                    individual_control = individual_control || (currentGroupControl != Group::InjectionCMode::FLD
-                            && currentGroupControl != Group::InjectionCMode::NONE);
-                    num_group_controlled_wells
-                            += groupControlledWells(schedule, wellState, group_state, reportStepIdx, subGroupName, "", !isInjector, phase);
-                }
-                if (individual_control || num_group_controlled_wells == 0) {
-                    for (int phase = 0; phase < np; phase++) {
-                        groupTargetReduction[phase]
-                            += subGroupEfficiency * sumWellSurfaceRates(subGroup, schedule, wellState, reportStepIdx, phase, isInjector);
-                    }
-                } else {
-                    // The subgroup may participate in group control.
-                    bool has_guide_rate = false;
-                    for (Phase phase : all) {
-                        has_guide_rate = has_guide_rate || guide_rate.has(subGroupName, phase);
+
+                    int phase_pos = -1;
+                    switch (phase) {
+                    case Phase::GAS:
+                        if (pu.phase_used[BlackoilPhases::Vapour]) {
+                            phase_pos = pu.phase_pos[BlackoilPhases::Vapour];
+                        }
+                        break;
+                    case Phase::OIL:
+                        if (pu.phase_used[BlackoilPhases::Liquid]) {
+                            phase_pos = pu.phase_pos[BlackoilPhases::Liquid];
+                        }
+                        break;
+                    case Phase::WATER:
+                        if (pu.phase_used[BlackoilPhases::Aqua]) {
+                            phase_pos = pu.phase_pos[BlackoilPhases::Aqua];
+                        }
+                        break;
+                    default:
+                        // just to avoid warning
+                        throw std::invalid_argument("unhandled phase enum");
                     }
 
-                    if (!has_guide_rate) {
+                    // the phase is not present
+                    if (phase_pos == -1)
+                        continue;
+
+                    const Group::InjectionCMode& currentGroupControl
+                            = group_state.injection_control(subGroup.name(), phase);
+                    const bool individual_control = (currentGroupControl != Group::InjectionCMode::FLD
+                            && currentGroupControl != Group::InjectionCMode::NONE);
+                    const int num_group_controlled_wells
+                            = groupControlledWells(schedule, wellState, group_state, reportStepIdx, subGroupName, "", !isInjector, phase);
+                    if (individual_control || num_group_controlled_wells == 0) {
+                        groupTargetReduction[phase_pos]
+                            += subGroupEfficiency * sumWellSurfaceRates(subGroup, schedule, wellState, reportStepIdx, phase_pos, isInjector);
+                    } else {
                         // Accumulate from this subgroup only if no group guide rate is set for it.
-                        for (int phase = 0; phase < np; phase++) {
-                            groupTargetReduction[phase] += subGroupEfficiency * subGroupTargetReduction[phase];
+                        if (!guide_rate.has(subGroupName, phase)) {
+                            groupTargetReduction[phase_pos] += subGroupEfficiency * subGroupTargetReduction[phase_pos];
                         }
                     }
                 }
