@@ -21,6 +21,7 @@
 
 #include <ebos/ebos.hh>
 #include <ebos/eclgenericvanguard.hh>
+#include <ebos/femcpgridcompat.hh>
 
 #include <opm/common/utility/Serializer.hpp>
 
@@ -123,15 +124,23 @@ BOOST_AUTO_TEST_CASE(EclGenericProblem)
     Opm::EclipseState eclState;
     Opm::Schedule schedule;
     Dune::CpGrid grid;
-    auto data_out = Opm::EclGenericProblem<Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>,
-                                           Opm::BlackOilFluidSystem<double,Opm::BlackOilDefaultIndexTraits>,
-                                           double>::
-        serializationTestObject(eclState, schedule, grid.leafGridView());
+#if HAVE_DUNE_FEM
+    using GridPart = Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>;
+    using GridView = Dune::GridView<Dune::Fem::GridPart2GridViewTraits<GridPart>>;
+    auto gridPart = GridPart(grid);
+    auto gridView = GridView(static_cast<GridView>(gridPart));
+#else
+    using GridView = Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>;
+    auto gridView = grid.leafGridView();
+#endif // HAVE_DUNE_FEM
+    auto data_out
+        = Opm::EclGenericProblem<GridView, Opm::BlackOilFluidSystem<double, Opm::BlackOilDefaultIndexTraits>, double>::
+            serializationTestObject(eclState, schedule, gridView);
     Opm::Serialization::MemPacker packer;
     Opm::Serializer ser(packer);
     ser.pack(data_out);
     const size_t pos1 = ser.position();
-    decltype(data_out) data_in(eclState, schedule, grid.leafGridView());
+    decltype(data_out) data_in(eclState, schedule, gridView);
     ser.unpack(data_in);
     const size_t pos2 = ser.position();
     BOOST_CHECK_MESSAGE(pos1 == pos2, "Packed size differ from unpack size for EclGenericProblem");
@@ -186,18 +195,28 @@ BOOST_AUTO_TEST_CASE(EclGenericTracerModel)
     Dune::CpGrid grid;
     Opm::EclipseState eclState;
     Dune::CartesianIndexMapper<Dune::CpGrid> mapper(grid);
-    Dune::MultipleCodimMultipleGeomTypeMapper<Dune::CpGrid::LeafGridView> dofMapper(grid.leafGridView(), Dune::mcmgElementLayout());
     auto centroids = [](int) { return std::array<double,Dune::CpGrid::dimensionworld>{}; };
+#if HAVE_DUNE_FEM
+    using GridPart = Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>;
+    using GridView = Dune::GridView<Dune::Fem::GridPart2GridViewTraits<GridPart>>;
+    auto gridPart = GridPart(grid);
+    auto gridView = GridView(static_cast<GridView>(gridPart));
+#else
+    using GridView = Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>;
+    auto gridView = grid.leafGridView();
+#endif // HAVE_DUNE_FEM
+    Dune::MultipleCodimMultipleGeomTypeMapper<GridView> dofMapper(gridView, Dune::mcmgElementLayout());
     auto data_out = EclGenericTracerModelTest<Dune::CpGrid,
-                                              Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>,
-                                              Dune::MultipleCodimMultipleGeomTypeMapper<Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>>,
-                                              Opm::EcfvStencil<double,Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>,false,false>,
-                                              double>::serializationTestObject(grid.leafGridView(), eclState, mapper, dofMapper, centroids);
+                                              GridView,
+                                              Dune::MultipleCodimMultipleGeomTypeMapper<GridView>,
+                                              Opm::EcfvStencil<double, GridView, false, false>,
+                                              double>
+        ::serializationTestObject(gridView, eclState, mapper, dofMapper, centroids);
     Opm::Serialization::MemPacker packer;
     Opm::Serializer ser(packer);
     ser.pack(data_out);
     const size_t pos1 = ser.position();
-    decltype(data_out) data_in(grid.leafGridView(), eclState, mapper, dofMapper, centroids);
+    decltype(data_out) data_in(gridView, eclState, mapper, dofMapper, centroids);
     ser.unpack(data_in);
     const size_t pos2 = ser.position();
     BOOST_CHECK_MESSAGE(pos1 == pos2, "Packed size differ from unpack size for EclGenericTracerModel");
@@ -280,6 +299,15 @@ bool init_unit_test_func()
 
 int main(int argc, char** argv)
 {
-    Dune::MPIHelper::instance(argc, argv);
+    // MPI setup.
+    int argcDummy = 1;
+    const char *tmp[] = {"test_RestartSerialization"};
+    char **argvDummy = const_cast<char**>(tmp);
+#if HAVE_DUNE_FEM
+    Dune::Fem::MPIManager::initialize(argcDummy, argvDummy);
+#else
+    Dune::MPIHelper::instance(argcDummy, argvDummy);
+#endif
+
     return boost::unit_test::unit_test_main(&init_unit_test_func, argc, argv);
 }
