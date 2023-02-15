@@ -631,6 +631,7 @@ namespace Opm {
         /// Apply an update to the primary variables.
         void updateSolution(const BVector& dx)
         {
+            OPM_TIMEBLOCK(updateSolution);
             auto& ebosNewtonMethod = ebosSimulator_.model().newtonMethod();
             SolutionVector& solution = ebosSimulator_.model().solution(/*timeIdx=*/0);
 
@@ -642,7 +643,10 @@ namespace Opm {
                                                     // residual
 
             // if the solution is updated, the intensive quantities need to be recalculated
-            ebosSimulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
+            {
+                OPM_TIMEBLOCK(invalidateAndUpdateIntensiveQuantities);
+                ebosSimulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
+            }
         }
 
         /// Return true if output to cout is wanted.
@@ -659,6 +663,7 @@ namespace Opm {
                                                        std::vector< Scalar >& maxCoeff,
                                                        std::vector< Scalar >& B_avg)
         {
+            OPM_TIMEBLOCK(convergenceReduction);
             // Compute total pore volume (use only owned entries)
             double pvSum = pvSumLocal;
             double numAquiferPvSum = numAquiferPvSumLocal;
@@ -718,6 +723,7 @@ namespace Opm {
                                     std::vector<Scalar>& maxCoeff,
                                     std::vector<Scalar>& B_avg)
         {
+            OPM_TIMEBLOCK(localConvergenceData);
             double pvSumLocal = 0.0;
             double numAquiferPvSumLocal = 0.0;
             const auto& ebosModel = ebosSimulator_.model();
@@ -848,6 +854,7 @@ namespace Opm {
         ///        of a numerical aquifer.
         double computeCnvErrorPv(const std::vector<Scalar>& B_avg, double dt)
         {
+            OPM_TIMEBLOCK(computeCnvErrorPv);
             double errorPV{};
             const auto& ebosModel = ebosSimulator_.model();
             const auto& ebosProblem = ebosSimulator_.problem();
@@ -895,6 +902,7 @@ namespace Opm {
                                                   std::vector<Scalar>& B_avg,
                                                   std::vector<Scalar>& residual_norms)
         {
+            OPM_TIMEBLOCK(getReservoirConvergence);
             typedef std::vector< Scalar > Vector;
 
             const int numComp = numEq;
@@ -1004,13 +1012,16 @@ namespace Opm {
                                          const int iteration,
                                          std::vector<double>& residual_norms)
         {
+            OPM_TIMEBLOCK(getConvergence);
             // Get convergence reports for reservoir and wells.
             std::vector<Scalar> B_avg(numEq, 0.0);
             auto report = getReservoirConvergence(timer.simulationTimeElapsed(),
                                                   timer.currentStepLength(),
                                                   iteration, B_avg, residual_norms);
-            report += wellModel().getWellConvergence(B_avg, /*checkWellGroupControls*/report.converged());
-
+            {
+                OPM_TIMEBLOCK(getWellConvergence);
+                report += wellModel().getWellConvergence(B_avg, /*checkWellGroupControls*/report.converged());
+            }
             return report;
         }
 
@@ -1033,6 +1044,7 @@ namespace Opm {
         std::vector<std::vector<double> >
         computeFluidInPlace(const std::vector<int>& /*fipnum*/) const
         {
+            OPM_TIMEBLOCK(computeFluidInPlace);
             //assert(true)
             //return an empty vector
             std::vector<std::vector<double> > regionValues(0, std::vector<double>(0,0.0));
