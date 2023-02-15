@@ -1198,14 +1198,15 @@ public:
      */
     void writeOutput(bool verbose = true)
     {
-        OPM_TIMEBLOCK(writeOutput);
+        OPM_TIMEBLOCK(problemWriteOutput);
         // use the generic code to prepare the output fields and to
         // write the desired VTK files.
         ParentType::writeOutput(verbose);
 
         bool isSubStep = !EWOMS_GET_PARAM(TypeTag, bool, EnableWriteAllSolutions) && !this->simulator().episodeWillBeOver();
-        if (enableEclOutput_)
+        if (enableEclOutput_){
             eclWriter_->writeOutput(isSubStep);
+        }
     }
 
     void finalizeOutput() {

@@ -216,6 +216,7 @@ public:
      */
     void processElement(const ElementContext& elemCtx)
     {
+        OPM_TIMEBLOCK_LOCAL(processElement);
         if (!std::is_same<Discretization, EcfvDiscretization<TypeTag>>::value)
             return;
 
@@ -857,6 +858,7 @@ public:
     template <class ActiveIndex, class CartesianIndex>
     void processFluxes(const ElementContext& elemCtx, ActiveIndex&& activeIndex, CartesianIndex&& cartesianIndex)
     {
+        OPM_TIMEBLOCK_LOCAL(processFluxes);
         const auto identifyCell = [&activeIndex, &cartesianIndex](const Element& elem) -> EclInterRegFlowMap::Cell {
             const auto cellIndex = activeIndex(elem);
 
@@ -983,7 +985,7 @@ private:
 
     void updateFluidInPlace_(const ElementContext& elemCtx, unsigned dofIdx)
     {
-
+        OPM_TIMEBLOCK_LOCAL(updateFluidInPlace);
         const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
         const auto& fs = intQuants.fluidState();
         unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);

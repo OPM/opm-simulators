@@ -305,6 +305,7 @@ public:
 
     void writeOutput(bool isSubStep)
     {
+        OPM_TIMEBLOCK(writeOutput);
         const int reportStepNum = simulator_.episodeIndex() + 1;
         this->prepareLocalCellData(isSubStep, reportStepNum);
         this->eclOutputModule_->outputErrorLog(simulator_.gridView().comm());
@@ -500,6 +501,7 @@ private:
     void prepareLocalCellData(const bool isSubStep,
                               const int  reportStepNum)
     {
+        OPM_TIMEBLOCK(prepareLocalCellData);
         const auto& gridView = simulator_.vanguard().gridView();
         const int numElements = gridView.size(/*codim=*/0);
         const bool log = this->collectToIORank_.isIORank();
@@ -520,6 +522,7 @@ private:
 
     void captureLocalFluxData()
     {
+        OPM_TIMEBLOCK(captureLocalData);
         const auto& gridView = this->simulator_.vanguard().gridView();
         const auto timeIdx = 0u;
 
