@@ -43,7 +43,8 @@ bool GroupState::operator==(const GroupState& other) const {
            this->inj_vrep_rate == other.inj_vrep_rate &&
            this->inj_surface_rates == other.inj_surface_rates &&
            this->m_grat_sales_target == other.m_grat_sales_target &&
-           this->injection_controls == other.injection_controls;
+           this->injection_controls == other.injection_controls &&
+           this->gpmaint_state == other.gpmaint_state;
 }
 
 //-------------------------------------------------------------------------
