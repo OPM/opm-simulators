@@ -33,6 +33,25 @@ GroupState::GroupState(std::size_t np) :
     num_phases(np)
 {}
 
+GroupState GroupState::serializationTestObject()
+{
+    GroupState result(3);
+    result.m_production_rates = {{"test1", {1.0, 2.0}}};
+    result.production_controls = {{"test2", Group::ProductionCMode::LRAT}};
+    result.prod_red_rates = {{"test3", {3.0, 4.0, 5.0}}};
+    result.inj_red_rates = {{"test4", {6.0, 7.0}}};
+    result.inj_surface_rates = {{"test5", {8.0}}};
+    result.inj_resv_rates = {{"test6", {9.0, 10.0}}};
+    result.inj_rein_rates = {{"test7", {11.0}}};
+    result.inj_vrep_rate = {{"test8", 12.0}, {"test9", 13.0}};
+    result.m_grat_sales_target = {{"test10", 14.0}};
+    result.m_gpmaint_target = {{"test11", 15.0}};
+    result.injection_controls = {{{Phase::FOAM, "test12"}, Group::InjectionCMode::REIN}};
+    result.gpmaint_state.add("foo", GPMaint::State::serializationTestObject());
+
+    return result;
+}
+
 bool GroupState::operator==(const GroupState& other) const {
     return this->m_production_rates == other.m_production_rates &&
            this->production_controls == other.production_controls &&
@@ -43,7 +62,8 @@ bool GroupState::operator==(const GroupState& other) const {
            this->inj_vrep_rate == other.inj_vrep_rate &&
            this->inj_surface_rates == other.inj_surface_rates &&
            this->m_grat_sales_target == other.m_grat_sales_target &&
-           this->injection_controls == other.injection_controls;
+           this->injection_controls == other.injection_controls &&
+           this->gpmaint_state == other.gpmaint_state;
 }
 
 //-------------------------------------------------------------------------

@@ -36,6 +36,7 @@
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
 #include <opm/simulators/timestepping/TimeStepControl.hpp>
 #include <opm/simulators/utils/SerializationPackers.hpp>
+#include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/SegmentState.hpp>
 #include <opm/simulators/wells/SingleWellState.hpp>
 
@@ -76,6 +77,7 @@ BOOST_AUTO_TEST_CASE(NAME) \
 #define TEST_FOR_TYPE(TYPE) \
     TEST_FOR_TYPE_NAMED(TYPE, TYPE)
 
+TEST_FOR_TYPE(GroupState)
 TEST_FOR_TYPE(HardcodedTimeStepControl)
 TEST_FOR_TYPE(PIDAndIterationCountTimeStepControl)
 TEST_FOR_TYPE(PIDTimeStepControl)
@@ -111,6 +113,20 @@ BOOST_AUTO_TEST_CASE(SingleWellState)
     const size_t pos2 = ser.position();
     BOOST_CHECK_MESSAGE(pos1 == pos2, "Packed size differ from unpack size for SingleWellState");
     BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized SingleWellState differ");
+}
+
+BOOST_AUTO_TEST_CASE(WellContainer)
+{
+    auto data_out = Opm::WellContainer<double>::serializationTestObject(1.0);
+    Opm::Serialization::MemPacker packer;
+    Opm::Serializer ser(packer);
+    ser.pack(data_out);
+    const size_t pos1 = ser.position();
+    decltype(data_out) data_in;
+    ser.unpack(data_in);
+    const size_t pos2 = ser.position();
+    BOOST_CHECK_MESSAGE(pos1 == pos2, "Packed size differ from unpack size for WellContainer");
+    BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized WellContainer differ");
 }
 
 BOOST_AUTO_TEST_CASE(EclGenericVanguard)
