@@ -410,6 +410,10 @@ bool WellInterfaceGeneric::thpLimitViolatedButNotSwitched() const
 
 double WellInterfaceGeneric::getALQ(const WellState& well_state) const
 {
+    // no alq for injectors.
+    if (isInjector())
+        return 0.0;
+
     return well_state.getALQ(name());
 }
 
