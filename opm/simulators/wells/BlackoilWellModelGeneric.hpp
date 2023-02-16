@@ -177,6 +177,40 @@ public:
                               const std::size_t recursion_level,
                               const double network_imbalance) const;
 
+    template<class Serializer>
+    void serializeOp(Serializer& serializer)
+    {
+        serializer(initial_step_);
+        serializer(report_step_starts_);
+        serializer(last_run_wellpi_);
+        serializer(local_shut_wells_);
+        serializer(closed_this_step_);
+        serializer(guideRate_);
+        serializer(node_pressures_);
+        serializer(active_wgstate_);
+        serializer(last_valid_wgstate_);
+        serializer(nupcol_wgstate_);
+        serializer(last_glift_opt_time_);
+        serializer(switched_prod_groups_);
+        serializer(switched_inj_groups_);
+    }
+
+    bool operator==(const BlackoilWellModelGeneric& rhs) const
+    {
+        return this->initial_step_ == rhs.initial_step_ &&
+               this->report_step_starts_ == rhs.report_step_starts_ &&
+               this->last_run_wellpi_ == rhs.last_run_wellpi_ &&
+               this->local_shut_wells_ == rhs.local_shut_wells_ &&
+               this->closed_this_step_ == rhs.closed_this_step_ &&
+               this->node_pressures_ == rhs.node_pressures_ &&
+               this->active_wgstate_ == rhs.active_wgstate_ &&
+               this->last_valid_wgstate_ == rhs.last_valid_wgstate_ &&
+               this->nupcol_wgstate_ == rhs.nupcol_wgstate_ &&
+               this->last_glift_opt_time_ == rhs.last_glift_opt_time_ &&
+               this->switched_prod_groups_ == rhs.switched_prod_groups_ &&
+               this->switched_inj_groups_ == rhs.switched_inj_groups_;
+    }
+
 protected:
 
     /*
