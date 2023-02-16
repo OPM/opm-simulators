@@ -228,6 +228,13 @@ namespace Opm {
                                     param_.use_multisegment_well_);
             }
 
+            using BlackoilWellModelGeneric::prepareDeserialize;
+            void prepareDeserialize(const int report_step)
+            {
+                prepareDeserialize(report_step, grid().size(0),
+                                   param_.use_multisegment_well_);
+            }
+
             data::Wells wellData() const
             {
                 auto wsrpt = this->wellState()
