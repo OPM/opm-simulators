@@ -26,6 +26,7 @@
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
+#include <cassert>
 #include <filesystem>
 #include <stdexcept>
 
@@ -61,7 +62,7 @@ HDF5File::HDF5File(const std::string& fileName,
         acc_tpl = H5Pcreate(H5P_FILE_ACCESS);
         H5Pset_fapl_mpio(acc_tpl, comm_, info);
 #else
-        assert(0); // should be unreachable
+        assert(false); // should be unreachable
 #endif
     }
 
