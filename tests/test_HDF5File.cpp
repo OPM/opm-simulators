@@ -30,17 +30,15 @@
 #include <filesystem>
 #include <stdexcept>
 
-using namespace Opm;
-
 BOOST_AUTO_TEST_CASE(ReadWrite)
 {
     auto path = std::filesystem::temp_directory_path() / Opm::unique_path("hdf5test%%%%%");
     std::filesystem::create_directory(path);
     auto rwpath = (path / "rw.hdf5").string();
 #if HAVE_MPI
-    Parallel::Communication comm(MPI_COMM_SELF);
+    Opm::Parallel::Communication comm{MPI_COMM_SELF};
 #else
-    Parallel::Communcation comm;
+    Opm::Parallel::Communication comm{};
 #endif
     const std::vector<char> test_data{1,2,3,4,5,6,8,9};
     {
@@ -61,9 +59,9 @@ BOOST_AUTO_TEST_CASE(ReadWrite)
 BOOST_AUTO_TEST_CASE(ThrowOpenNonexistent)
 {
 #if HAVE_MPI
-    Parallel::Communication comm(MPI_COMM_SELF);
+    Opm::Parallel::Communication comm{MPI_COMM_SELF};
 #else
-    Parallel::Communcation comm;
+    Opm::Parallel::Communication comm{};
 #endif
     BOOST_CHECK_THROW(Opm::HDF5File out_file("no_such_file.hdf5", Opm::HDF5File::OpenMode::READ, comm), std::runtime_error);
 }
@@ -74,9 +72,9 @@ BOOST_AUTO_TEST_CASE(ReadNonExistentDset)
     std::filesystem::create_directory(path);
     auto rwpath = (path / "existent_dset.hdf5").string();
 #if HAVE_MPI
-    Parallel::Communication comm(MPI_COMM_SELF);
+    Opm::Parallel::Communication comm{MPI_COMM_SELF};
 #else
-    Parallel::Communcation comm;
+    Opm::Parallel::Communication comm{};
 #endif
     const std::vector<char> test_data{1,2,3,4,5,6,8,9};
     {
@@ -101,9 +99,9 @@ BOOST_AUTO_TEST_CASE(WriteExistentDset)
     std::filesystem::create_directory(path);
     auto rwpath = (path / "existent_dset.hdf5").string();
 #if HAVE_MPI
-    Parallel::Communication comm(MPI_COMM_SELF);
+    Opm::Parallel::Communication comm{MPI_COMM_SELF};
 #else
-    Parallel::Communcation comm;
+    Opm::Parallel::Communication comm{};
 #endif
     const std::vector<char> test_data{1,2,3,4,5,6,8,9};
     {
@@ -121,9 +119,9 @@ BOOST_AUTO_TEST_CASE(List)
     std::filesystem::create_directory(path);
     auto rwpath = (path / "existent_dset.hdf5").string();
 #if HAVE_MPI
-    Parallel::Communication comm(MPI_COMM_SELF);
+    Opm::Parallel::Communication comm{MPI_COMM_SELF};
 #else
-    Parallel::Communcation comm;
+    Opm::Parallel::Communication comm{};
 #endif
     const std::vector<char> test_data{1,2,3,4,5,6,8,9};
     {

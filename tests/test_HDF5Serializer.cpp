@@ -24,6 +24,7 @@
 #include <ebos/hdf5serializer.hh>
 
 #include <opm/input/eclipse/Schedule/Group/Group.hpp>
+#include <opm/simulators/utils/ParallelCommunication.hpp>
 
 #define BOOST_TEST_MODULE HDF5FileTest
 #define BOOST_TEST_NO_MAIN
@@ -42,7 +43,7 @@ BOOST_AUTO_TEST_CASE(Header)
 #if HAVE_MPI
     Parallel::Communication comm(MPI_COMM_SELF);
 #else
-    Parallel::Communcation comm;
+    Parallel::Communication comm{};
 #endif
     std::array<std::string,5> output{"foo", "bar", "foobar", "bob", "bobbar"};
     {
@@ -72,7 +73,7 @@ BOOST_AUTO_TEST_CASE(WriteRead)
 #if HAVE_MPI
     Parallel::Communication comm(MPI_COMM_SELF);
 #else
-    Parallel::Communcation comm;
+    Parallel::Communication comm{};
 #endif
     auto output = Group::serializationTestObject();
     {
