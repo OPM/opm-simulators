@@ -33,6 +33,7 @@
 #include <opm/models/blackoil/blackoilprimaryvariables.hh>
 
 #include <opm/simulators/timestepping/AdaptiveTimeSteppingEbos.hpp>
+#include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
 #include <opm/simulators/timestepping/TimeStepControl.hpp>
 #include <opm/simulators/utils/SerializationPackers.hpp>
@@ -86,6 +87,8 @@ TEST_FOR_TYPE(PIDAndIterationCountTimeStepControl)
 TEST_FOR_TYPE(PIDTimeStepControl)
 TEST_FOR_TYPE(SegmentState)
 TEST_FOR_TYPE(SimpleIterationCountTimeStepControl)
+TEST_FOR_TYPE(SimulatorReport)
+TEST_FOR_TYPE(SimulatorReportSingle)
 TEST_FOR_TYPE(SimulatorTimer)
 
 namespace Opm { using ATE = AdaptiveTimeSteppingEbos<Properties::TTag::EbosTypeTag>; }

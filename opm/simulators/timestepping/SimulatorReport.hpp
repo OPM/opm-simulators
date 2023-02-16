@@ -58,12 +58,42 @@ namespace Opm
         double global_time = 0.0;
         double timestep_length = 0.0;
 
+        static SimulatorReportSingle serializationTestObject();
+
+        bool operator==(const SimulatorReportSingle&) const;
         /// Increment this report's times by those in sr.
         void operator+=(const SimulatorReportSingle& sr);
         /// Print a report suitable for a single simulation step.
         void reportStep(std::ostream& os) const;
         /// Print a report suitable for the end of a fully implicit case, leaving out the pressure/transport time.
         void reportFullyImplicit(std::ostream& os, const SimulatorReportSingle* failedReport = nullptr) const;
+
+        template<class Serializer>
+        void serializeOp(Serializer& serializer)
+        {
+            serializer(pressure_time);
+            serializer(transport_time);
+            serializer(total_time);
+            serializer(solver_time);
+            serializer(assemble_time);
+            serializer(pre_post_time);
+            serializer(assemble_time_well);
+            serializer(linear_solve_setup_time);
+            serializer(linear_solve_time);
+            serializer(update_time);
+            serializer(output_write_time);
+            serializer(total_well_iterations);
+            serializer(total_linearizations);
+            serializer(total_newton_iterations);
+            serializer(total_linear_iterations);
+            serializer(min_linear_iterations);
+            serializer(max_linear_iterations);
+            serializer(converged);
+            serializer(well_group_control_changed);
+            serializer(exit_status);
+            serializer(global_time);
+            serializer(timestep_length);
+        }
     };
 
     struct SimulatorReport
@@ -72,10 +102,21 @@ namespace Opm
         SimulatorReportSingle failure;
         std::vector<SimulatorReportSingle> stepreports;
 
+        static SimulatorReport serializationTestObject();
+
+        bool operator==(const SimulatorReport&) const;
         void operator+=(const SimulatorReportSingle& sr);
         void operator+=(const SimulatorReport& sr);
         void reportFullyImplicit(std::ostream& os) const;
         void fullReports(std::ostream& os) const;
+
+        template<class Serializer>
+        void serializeOp(Serializer& serializer)
+        {
+            serializer(success);
+            serializer(failure);
+            serializer(stepreports);
+        }
     };
 
     } // namespace Opm

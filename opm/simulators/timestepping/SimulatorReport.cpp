@@ -29,6 +29,40 @@
 
 namespace Opm
 {
+    SimulatorReportSingle SimulatorReportSingle::serializationTestObject()
+    {
+        return SimulatorReportSingle{1.0, 2.0, 3.0, 4.0, 5.0, 6.0,
+                                     7.0, 8.0, 9.0, 10.0, 11.0,
+                                     12, 13, 14, 15, 16, 17,
+                                     true, false, 18, 19.0, 20.0};
+    }
+
+    bool SimulatorReportSingle::operator==(const SimulatorReportSingle& rhs) const
+    {
+        return this->pressure_time == rhs.pressure_time &&
+               this->transport_time == rhs.transport_time &&
+               this->total_time == rhs.total_time &&
+               this->solver_time == rhs.solver_time &&
+               this->assemble_time == rhs.assemble_time &&
+               this->pre_post_time == rhs.pre_post_time &&
+               this->assemble_time_well == rhs.assemble_time_well &&
+               this->linear_solve_setup_time == rhs.linear_solve_setup_time &&
+               this->linear_solve_time == rhs.linear_solve_time &&
+               this->update_time == rhs.update_time &&
+               this->output_write_time == rhs.output_write_time &&
+               this->total_well_iterations == rhs.total_well_iterations &&
+               this->total_linearizations == rhs.total_linearizations &&
+               this->total_newton_iterations == rhs.total_newton_iterations &&
+               this->total_linear_iterations == rhs.total_linear_iterations &&
+               this->min_linear_iterations == rhs.min_linear_iterations &&
+               this->max_linear_iterations == rhs.max_linear_iterations &&
+               this->converged == rhs.converged &&
+               this->well_group_control_changed == rhs.well_group_control_changed &&
+               this->exit_status == rhs.exit_status &&
+               this->global_time == rhs.global_time &&
+               this->timestep_length == rhs.timestep_length;
+    }
+
     void SimulatorReportSingle::operator+=(const SimulatorReportSingle& sr)
     {
         pressure_time += sr.pressure_time;
@@ -166,6 +200,20 @@ namespace Opm
                             100.0*failureReport->total_linear_iterations/n);
         }
         os << std::endl;
+    }
+
+    SimulatorReport SimulatorReport::serializationTestObject()
+    {
+        return SimulatorReport{SimulatorReportSingle::serializationTestObject(),
+                               SimulatorReportSingle::serializationTestObject(),
+                               {SimulatorReportSingle::serializationTestObject()}};
+    }
+
+    bool SimulatorReport::operator==(const SimulatorReport& rhs) const
+    {
+        return this->success == rhs.success &&
+               this->failure == rhs.failure &&
+               this->stepreports == rhs.stepreports;
     }
 
     void SimulatorReport::operator+=(const SimulatorReportSingle& sr)
