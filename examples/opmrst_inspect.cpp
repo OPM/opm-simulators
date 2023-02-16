@@ -40,9 +40,9 @@ int main(int argc, char** argv)
     }
 
 #if HAVE_MPI
-    Opm::Parallel::Communication comm(MPI_COMM_SELF);
+    Opm::Parallel::Communication comm{MPI_COMM_SELF};
 #else
-    Opm::Parallel::Communication comm();
+    Opm::Parallel::Communication comm{};
 #endif
 
     Dune::MPIHelper::instance(argc, argv);
