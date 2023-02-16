@@ -88,7 +88,7 @@ namespace {
     std::string::size_type
     writeConvergenceHeader(std::ostream&                                             os,
                            const Opm::ConvergenceOutputThread::ComponentToPhaseName& getPhaseName,
-                           const Opm::ConvergenceReportQueue::OutputRequest&         firstRequest)
+                           const Opm::ConvergenceOutputRequest&                      firstRequest)
     {
         const auto minColSize = std::string::size_type{11};
 
@@ -115,7 +115,7 @@ namespace {
     void writeConvergenceRequest(std::ostream&                                           os,
                                  const Opm::ConvergenceOutputThread::ConvertToTimeUnits& convertTime,
                                  std::string::size_type                                  colSize,
-                                 const Opm::ConvergenceReportQueue::OutputRequest&       request)
+                                 const Opm::ConvergenceOutputRequest&                    request)
     {
         const auto firstColSize = std::string::size_type{11};
 
@@ -158,7 +158,7 @@ public:
         return this->queue_;
     }
 
-    void write(const std::vector<ConvergenceReportQueue::OutputRequest>& requests);
+    void write(const std::vector<ConvergenceOutputRequest>& requests);
     bool finalRequestWritten() const
     {
         return this->finalRequestWritten_;
@@ -173,7 +173,7 @@ private:
     bool haveOutputIterHeader_{false};
     bool finalRequestWritten_{false};
 
-    void writeIterInfo(const std::vector<ConvergenceReportQueue::OutputRequest>& requests);
+    void writeIterInfo(const std::vector<ConvergenceOutputRequest>& requests);
 };
 
 Opm::ConvergenceOutputThread::Impl::Impl(std::string_view               outputDir,
@@ -195,7 +195,7 @@ Opm::ConvergenceOutputThread::Impl::Impl(std::string_view               outputDi
 
 void
 Opm::ConvergenceOutputThread::Impl::
-write(const std::vector<ConvergenceReportQueue::OutputRequest>& requests)
+write(const std::vector<ConvergenceOutputRequest>& requests)
 {
     assert (! requests.empty() &&
             "Internal logic error in forming convergence output request");
@@ -205,7 +205,7 @@ write(const std::vector<ConvergenceReportQueue::OutputRequest>& requests)
 
 void
 Opm::ConvergenceOutputThread::Impl::
-writeIterInfo(const std::vector<ConvergenceReportQueue::OutputRequest>& requests)
+writeIterInfo(const std::vector<ConvergenceOutputRequest>& requests)
 {
     if (! this->infoIter_.has_value()) {
         return;
@@ -238,34 +238,6 @@ writeIterInfo(const std::vector<ConvergenceReportQueue::OutputRequest>& requests
 // Public Interface Below Separator
 // ===========================================================================
 
-void Opm::ConvergenceReportQueue::enqueue(std::vector<OutputRequest>&& requests)
-{
-    // Signal output thread if we're going from "no work" to "some work".
-    // We don't need to signal if we're going from "some work" to "more
-    // work".
-    auto must_notify = false;
-
-    {
-        std::lock_guard<std::mutex> guard{ this->mtx_ };
-        must_notify = this->requests_.empty();
-        this->requests_.insert(this->requests_.end(),
-                               std::make_move_iterator(requests.begin()),
-                               std::make_move_iterator(requests.end()));
-    }
-
-    if (must_notify) {
-        this->cv_.notify_one();
-    }
-}
-
-void Opm::ConvergenceReportQueue::signalLastOutputRequest()
-{
-    // Empty request signals end of production.
-    this->enqueue(std::vector<OutputRequest>(1));
-}
-
-// ---------------------------------------------------------------------------
-
 Opm::ConvergenceOutputThread::
 ConvergenceOutputThread(std::string_view               outputDir,
                         std::string_view               baseName,
@@ -273,7 +245,8 @@ ConvergenceOutputThread(std::string_view               outputDir,
                         ConvertToTimeUnits             convertTime,
                         ConvergenceOutputConfiguration config,
                         ConvergenceReportQueue&        queue)
-    : pImpl_ { std::make_unique<Impl>(outputDir,
+    : ConvergenceReportQueue::Thread(queue)
+    , pImpl_ { std::make_unique<Impl>(outputDir,
                                       baseName,
                                       getPhaseName,
                                       convertTime,
@@ -284,41 +257,25 @@ ConvergenceOutputThread(std::string_view               outputDir,
 Opm::ConvergenceOutputThread::~ConvergenceOutputThread() = default;
 
 Opm::ConvergenceOutputThread::ConvergenceOutputThread(ConvergenceOutputThread&& src)
-    : pImpl_ { std::move(src.pImpl_) }
+    : ConvergenceReportQueue::Thread(src.pImpl_->queue())
+    , pImpl_ { std::move(src.pImpl_) }
 {}
 
 void
 Opm::ConvergenceOutputThread::
-writeSynchronous(std::vector<ConvergenceReportQueue::OutputRequest>&& requests)
+writeSynchronous(std::vector<ConvergenceOutputRequest>&& requests)
 {
     this->pImpl_->write(requests);
 }
 
-void Opm::ConvergenceOutputThread::writeASynchronous()
+void
+Opm::ConvergenceOutputThread::write(const std::vector<ConvergenceOutputRequest>& requests)
 {
-    // This is the main function of the convergence output thread.  It runs
-    // for the duration of the process, although mostly in an idle/waiting
-    // state.  Implementation from Microsoft's "GoingNative" show, episode
-    // 53, on threading and parallelism in the STL.
+    this->pImpl_->write(requests);
+}
 
-    auto& queue = this->pImpl_->queue();
-
-    // Note: Loop terminates only when final request written.
-    for (auto localReq = std::vector<ConvergenceReportQueue::OutputRequest>{} ; ; localReq.clear()) {
-        std::unique_lock<std::mutex> lock { queue.mtx_ };
-        queue.cv_.wait(lock, [&queue]() { return !queue.requests_.empty(); });
-
-        // Capture all pending output requests, relinquish lock and write
-        // file output outside of the critical section.
-        queue.requests_.swap(localReq);
-
-        lock.unlock();
-
-        this->pImpl_->write(localReq);
-
-        if (this->pImpl_->finalRequestWritten()) {
-            // No more output coming.  Shut down thread.
-            return;
-        }
-    }
+bool
+Opm::ConvergenceOutputThread::finalRequestWritten() const
+{
+    return this->pImpl_->finalRequestWritten();
 }

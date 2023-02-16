@@ -367,12 +367,13 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/timestepping/SimulatorTimer.hpp
   opm/simulators/timestepping/SimulatorTimerInterface.hpp
   opm/simulators/timestepping/gatherConvergenceReport.hpp
-  opm/simulators/utils/ParallelFileMerger.hpp
   opm/simulators/utils/DeferredLoggingErrorHelpers.hpp
   opm/simulators/utils/DeferredLogger.hpp
   opm/simulators/utils/gatherDeferredLogger.hpp
   opm/simulators/utils/moduleVersion.hpp
+  opm/simulators/utils/OutputQueue.hpp
   opm/simulators/utils/ParallelEclipseState.hpp
+  opm/simulators/utils/ParallelFileMerger.hpp
   opm/simulators/utils/ParallelRestart.hpp
   opm/simulators/utils/PropsCentroidsDataHandle.hpp
   opm/simulators/utils/SerializationPackers.hpp

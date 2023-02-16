@@ -21,6 +21,7 @@
 #define EXTRA_CONVERGENCE_OUTPUT_THREAD_HPP
 
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
+#include <opm/simulators/utils/OutputQueue.hpp>
 
 #include <condition_variable>
 #include <functional>
@@ -46,62 +47,35 @@ namespace Opm
 /// Forward declaration so that Queue may declare this type its 'friend'.
 class ConvergenceOutputThread;
 
+/// Single output request.
+///
+/// Associates non-linear iteration convergence information to single
+/// report and timestep.
+struct ConvergenceOutputRequest
+{
+    /// Current report step
+    int reportStep{-1};
+
+    /// Current timestep within \c reportStep.  Expected to be a small
+    /// integer.
+    int currentStep{-1};
+
+    /// Convergence metrics for each non-linear ieration in the \c
+    /// currentStep.
+    std::vector<ConvergenceReport> reports{};
+};
+
 /// Communication channel between thread creating output requests and
 /// consumer thread writing those requests to a file.
 ///
 /// Output thread has access to internal state.  Producer thread uses public
 /// interface.  Producer thread creates an object of this type and launches
 /// the output thread with a reference to that queue object.
-class ConvergenceReportQueue
-{
-public:
-    /// Single output request.
-    ///
-    /// Associates non-linear iteration convergence information to single
-    /// report and timestep.
-    struct OutputRequest
-    {
-        /// Current report step
-        int reportStep{-1};
-
-        /// Current timestep within \c reportStep.  Expected to be a small
-        /// integer.
-        int currentStep{-1};
-
-        /// Convergence metrics for each non-linear ieration in the \c
-        /// currentStep.
-        std::vector<ConvergenceReport> reports{};
-    };
-
-    /// Push sequence of output requests, typically all substeps whether
-    /// converged or not, of a single report step.
-    ///
-    /// \param[in] requests Output request sequence.  Queue takes ownership.
-    void enqueue(std::vector<OutputRequest>&& requests);
-
-    /// Signal end of output request stream.
-    ///
-    /// No additional requests should be added to queue following a call to
-    /// this member function.  Output thread detects this signal, completes
-    /// any pending output requests, and shuts down afterwards.
-    void signalLastOutputRequest();
-
-    friend class ConvergenceOutputThread;
-
-private:
-    /// Mutex for critical sections protecting 'requests_'.
-    std::mutex mtx_{};
-
-    /// Condition variable for threads waiting on changes to 'requests_'.
-    std::condition_variable cv_{};
-
-    /// Pending convergence output requests.
-    std::vector<OutputRequest> requests_{};
-};
+using ConvergenceReportQueue = OutputQueue<ConvergenceOutputRequest>;
 
 /// Encapsulating object for thread processing producer's convergence output
 /// requests.
-class ConvergenceOutputThread
+class ConvergenceOutputThread : public ConvergenceReportQueue::Thread
 {
 public:
     /// Protocol for converting a phase/component ID into a human readable
@@ -167,16 +141,11 @@ public:
     /// Mostly for development and debugging purposes.
     ///
     /// \param[in] requests Output request sequence.  Thread takes ownership.
-    void writeSynchronous(std::vector<ConvergenceReportQueue::OutputRequest>&& requests);
+    void writeSynchronous(std::vector<ConvergenceOutputRequest>&& requests);
 
-    /// Output thread worker function
-    ///
-    /// This is the endpoint that users should associate to a \code
-    /// std::thread \endcode object.
-    ///
-    /// Returns once last pending output request is written (cf. \code
-    /// ConvergenceReportQueue::signalLastOutputRequest() \endcode.)
-    void writeASynchronous();
+    void write(const std::vector<ConvergenceOutputRequest>& requests) override;
+
+    bool finalRequestWritten() const override;
 
 private:
     /// Private implementation class.

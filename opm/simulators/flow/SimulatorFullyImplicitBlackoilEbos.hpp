@@ -544,7 +544,7 @@ protected:
             return;
         }
 
-        auto requests = std::vector<ConvergenceReportQueue::OutputRequest>{};
+        auto requests = std::vector<ConvergenceOutputRequest>{};
         requests.reserve(reports.size());
 
         for (auto&& report : reports) {
