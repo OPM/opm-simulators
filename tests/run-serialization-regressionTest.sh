@@ -21,7 +21,8 @@ then
 fi
 
 OPTIND=1
-while getopts "i:r:b:f:a:t:c:e:d:s:" OPT
+MPI_PROCS=1
+while getopts "i:r:b:f:a:t:c:e:n:d:s:" OPT
 do
   case "${OPT}" in
     i) INPUT_DATA_PATH=${OPTARG} ;;
@@ -34,22 +35,27 @@ do
     d) ;;
     s) RESTART_STEP=${OPTARG} ;;
     e) EXE_NAME=${OPTARG} ;;
+    n) MPI_PROCS=${OPTARG} ;;
   esac
 done
 shift $(($OPTIND-1))
 TEST_ARGS="$@"
 
 BASE_NAME=${FILENAME}
+if test $MPI_PROCS -gt 1
+then
+  CMD_PREFIX="mpirun -np $MPI_PROCS "
+fi
 
 rm -Rf ${RESULT_PATH}
 mkdir -p ${RESULT_PATH}
 cd ${RESULT_PATH}
-${BINPATH}/${EXE_NAME} ${INPUT_DATA_PATH}/${FILENAME} --output-dir=${RESULT_PATH} ${TEST_ARGS} --save-step=${RESTART_STEP}
+${CMD_PREFIX}${BINPATH}/${EXE_NAME} ${INPUT_DATA_PATH}/${FILENAME} --output-dir=${RESULT_PATH} ${TEST_ARGS} --save-step=${RESTART_STEP}
 
 test $? -eq 0 || exit 1
 
 mkdir -p ${RESULT_PATH}/restart
-${BINPATH}/${EXE_NAME} ${INPUT_DATA_PATH}/${FILENAME} --output-dir=${RESULT_PATH}/restart ${TEST_ARGS} --load-step=${RESTART_STEP} --save-file=${RESULT_PATH}/${FILENAME}.OPMRST
+${CMD_PREFIX}${BINPATH}/${EXE_NAME} ${INPUT_DATA_PATH}/${FILENAME} --output-dir=${RESULT_PATH}/restart ${TEST_ARGS} --load-step=${RESTART_STEP} --save-file=${RESULT_PATH}/${FILENAME}.OPMRST
 test $? -eq 0 || exit 1
 
 echo "=== Executing comparison for restart file ==="

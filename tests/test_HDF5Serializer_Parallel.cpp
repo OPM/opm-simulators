@@ -19,35 +19,44 @@
 
 #include <config.h>
 
-#include <opm/common/utility/FileSystem.hpp>
-
 #include <ebos/hdf5serializer.hh>
+
+#include <opm/common/utility/FileSystem.hpp>
 
 #include <opm/input/eclipse/Schedule/Group/Group.hpp>
 
-#define BOOST_TEST_MODULE HDF5FileTest
+#include <opm/simulators/utils/ParallelCommunication.hpp>
+
+#define BOOST_TEST_MODULE HDF5SerializerParallelTest
 #define BOOST_TEST_NO_MAIN
 #include <boost/test/unit_test.hpp>
 
 #include <filesystem>
 #include <stdexcept>
+#include <string>
 
 using namespace Opm;
 
 BOOST_AUTO_TEST_CASE(Header)
 {
-    auto path = std::filesystem::temp_directory_path() / Opm::unique_path("hdf5test%%%%%");
+    Parallel::Communication comm;
+    std::string path = std::filesystem::temp_directory_path() / Opm::unique_path("hdf5test%%%%%");
+    if (comm.rank() == 0) {
+        path = std::filesystem::temp_directory_path() / Opm::unique_path("hdf5test%%%%%");
+    }
+    std::size_t size = path.size();
+    comm.broadcast(&size, 1, 0);
+    if (comm.rank() != 0) {
+        path.resize(size);
+    }
+    comm.broadcast(path.data(), size, 0);
     std::filesystem::create_directory(path);
-    auto rwpath = (path / "rw.hdf5").string();
-#if HAVE_MPI
-    Parallel::Communication comm(MPI_COMM_SELF);
-#else
-    Parallel::Communcation comm;
-#endif
+    auto rwpath = (std::filesystem::path(path) / "rw.hdf5").string();
     std::array<std::string,5> output{"foo", "bar", "foobar", "bob", "bobbar"};
     {
         HDF5Serializer ser(rwpath, HDF5File::OpenMode::OVERWRITE, comm);
-        ser.writeHeader(output[0], output[1], output[2], output[3], output[4], 5);
+        ser.writeHeader(output[0], output[1], output[2],
+                        output[3], output[4], comm.size());
     }
     {
         HDF5Serializer ser(rwpath, HDF5File::OpenMode::READ, comm);
@@ -57,7 +66,7 @@ BOOST_AUTO_TEST_CASE(Header)
         const auto& [strings, num_procs] = input;
         BOOST_CHECK_EQUAL_COLLECTIONS(strings.begin(), strings.end(),
                                       output.begin(), output.end());
-        BOOST_CHECK_EQUAL(num_procs, 5);
+        BOOST_CHECK_EQUAL(num_procs, comm.size());
     }
 
     std::filesystem::remove(rwpath);
@@ -66,14 +75,19 @@ BOOST_AUTO_TEST_CASE(Header)
 
 BOOST_AUTO_TEST_CASE(WriteRead)
 {
-    auto path = std::filesystem::temp_directory_path() / Opm::unique_path("hdf5test%%%%%");
+    Parallel::Communication comm;
+    std::string path = std::filesystem::temp_directory_path() / Opm::unique_path("hdf5test%%%%%");
+    if (comm.rank() == 0) {
+        path = std::filesystem::temp_directory_path() / Opm::unique_path("hdf5test%%%%%");
+    }
+    std::size_t size = path.size();
+    comm.broadcast(&size, 1, 0);
+    if (comm.rank() != 0) {
+        path.resize(size);
+    }
+    comm.broadcast(path.data(), size, 0);
     std::filesystem::create_directory(path);
-    auto rwpath = (path / "rw.hdf5").string();
-#if HAVE_MPI
-    Parallel::Communication comm(MPI_COMM_SELF);
-#else
-    Parallel::Communcation comm;
-#endif
+    auto rwpath = (std::filesystem::path(path) / "rw.hdf5").string();
     auto output = Group::serializationTestObject();
     {
         HDF5Serializer ser(rwpath, HDF5File::OpenMode::OVERWRITE, comm);

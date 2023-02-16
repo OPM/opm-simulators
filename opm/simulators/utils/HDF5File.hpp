@@ -21,6 +21,8 @@
 #ifndef HDF5_FILE_HPP
 #define HDF5_FILE_HPP
 
+#include <opm/simulators/utils/ParallelCommunication.hpp>
+
 #include <hdf5.h>
 
 #include <string>
@@ -38,10 +40,18 @@ public:
         READ       //!< Open existing file for reading
     };
 
+    //! \brief Enumeration of dataset modes.
+    enum class DataSetMode {
+        ROOT_ONLY,     //!< A single dataset created at the root process
+        PROCESS_SPLIT  //!< One separate data set for each parallel process
+    };
+
     //! \brief Opens HDF5 file for I/O.
     //! \param fileName Name of file to open
     //! \param mode Open mode for file
-    HDF5File(const std::string& fileName, OpenMode mode);
+    HDF5File(const std::string& fileName,
+             OpenMode mode,
+             Parallel::Communication comm);
 
     //! \brief Destructor clears up any opened files.
     ~HDF5File();
@@ -53,7 +63,8 @@ public:
     //! \details Throws exception on failure
     void write(const std::string& group,
                const std::string& dset,
-               const std::vector<char>& buffer);
+               const std::vector<char>& buffer,
+               DataSetMode mode = DataSetMode::PROCESS_SPLIT) const;
 
     //! \brief Read a char buffer from a specified location in file.
     //! \param group Group ("directory") to read data from
@@ -62,14 +73,33 @@ public:
     //! \details Throws exception on failure
     void read(const std::string& group,
               const std::string& dset,
-              std::vector<char>& buffer) const;
+              std::vector<char>& buffer,
+              DataSetMode Mode = DataSetMode::PROCESS_SPLIT) const;
 
     //! \brief Lists the entries in a given group.
     //! \details Note: Both datasets and subgroups are returned
     std::vector<std::string> list(const std::string& group) const;
 
 private:
+    //! \brief Write data from each process to a separate dataset.
+    //! \param grp Handle for group to store dataset in
+    //! \param buffer Data to write
+    //! \param dset Name of dataset
+    void writeSplit(hid_t grp,
+                    const std::vector<char>& buffer,
+                    const std::string& dset) const;
+
+    //! \brief Write data from root process only.
+    //! \param grp Handle for group to store dataset in
+    //! \param buffer Data to write
+    //! \param dset Name of dataset
+    void writeRootOnly(hid_t grp,
+                       const std::vector<char>& buffer,
+                       const std::string& group,
+                       const std::string& dset) const;
+
     hid_t m_file = H5I_INVALID_HID; //!< File handle
+    Parallel::Communication comm_;
 };
 
 }
