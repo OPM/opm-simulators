@@ -146,6 +146,22 @@ BOOST_AUTO_TEST_CASE(WellState)
     BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized WellState differ");
 }
 
+BOOST_AUTO_TEST_CASE(WGState)
+{
+    Opm::ParallelWellInfo dummy;
+    auto data_out = Opm::WGState::serializationTestObject(dummy);
+    Opm::Serialization::MemPacker packer;
+    Opm::Serializer ser(packer);
+    ser.pack(data_out);
+    const size_t pos1 = ser.position();
+    decltype(data_out) data_in(Opm::PhaseUsage{});
+    data_in.well_state = Opm::WellState(dummy);
+    ser.unpack(data_in);
+    const size_t pos2 = ser.position();
+    BOOST_CHECK_MESSAGE(pos1 == pos2, "Packed size differ from unpack size for WGState");
+    BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized WGState differ");
+}
+
 BOOST_AUTO_TEST_CASE(EclGenericVanguard)
 {
     auto in_params = Opm::EclGenericVanguard::serializationTestParams();

@@ -32,10 +32,27 @@ WGState::WGState(const PhaseUsage& pu) :
     well_test_state{}
 {}
 
+WGState WGState::serializationTestObject(const ParallelWellInfo& pinfo)
+{
+    WGState result(PhaseUsage{});
+    result.well_state = WellState::serializationTestObject(pinfo);
+    result.group_state = GroupState::serializationTestObject();
+    result.well_test_state = WellTestState::serializationTestObject();
+
+    return result;
+}
+
 void WGState::wtest_state(WellTestState wtest_state)
 {
     wtest_state.filter_wells( this->well_state.wells() );
     this->well_test_state = std::move(wtest_state);
+}
+
+bool WGState::operator==(const WGState& rhs) const
+{
+    return this->well_state == rhs.well_state &&
+           this->group_state == rhs.group_state &&
+           this->well_test_state == rhs.well_test_state;
 }
 
 }
