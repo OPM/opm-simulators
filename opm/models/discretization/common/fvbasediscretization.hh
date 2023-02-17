@@ -1899,8 +1899,13 @@ public:
     template<class Serializer>
     void serializeOp(Serializer& serializer)
     {
-        for (auto& sol : solution_)
+        for (auto& sol : solution_) {
+#if HAVE_DUNE_FEM
+            serializer(sol->blockVector());
+#else
             serializer(*sol);
+#endif
+        }
     }
 
     bool operator==(const FvBaseDiscretization& rhs) const
