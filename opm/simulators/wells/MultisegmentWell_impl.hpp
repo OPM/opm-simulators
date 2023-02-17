@@ -787,10 +787,15 @@ namespace Opm
         // pressure difference between the perforation and the grid cell
         const double cell_perf_press_diff = this->cell_perforation_pressure_diffs_[perf];
 
-        perf_press = pressure_cell - cell_perf_press_diff;
+        // perforation pressure is the wellbore pressure corrected to perforation depth
+        // (positive sign due to convention in segments_.perforation_depth_diff() )
+        perf_press = segment_pressure + perf_seg_press_diff;
+        
+        // cell pressure corrected to perforation depth 
+        const Value cell_press_at_perf = pressure_cell - cell_perf_press_diff;
+        
         // Pressure drawdown (also used to determine direction of flow)
-        // TODO: not 100% sure about the sign of the seg_perf_press_diff
-        const Value drawdown = perf_press - (segment_pressure + perf_seg_press_diff);
+        const Value drawdown = cell_press_at_perf - perf_press;
 
         // producing perforations
         if ( drawdown > 0.0) {
