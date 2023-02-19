@@ -149,6 +149,13 @@ add_test_compareECLFiles(CASENAME jfunc_01
                          DIR jfunc
                          TEST_ARGS --enable-tuning=true)
 
+add_test_compareECLFiles(CASENAME pinch_nopinch_1x1x10
+                         FILENAME PINCH10_NOPINCH
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR pinch)
+
 add_test_compareECLFiles(CASENAME ctaquifer_2d_oilwater
                          FILENAME 2D_OW_CTAQUIFER
                          SIMULATOR flow
