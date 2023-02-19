@@ -141,6 +141,14 @@ add_test_compareECLFiles(CASENAME spe1_radial
                            REL_TOL ${rel_tol}
                            DIR radial_grid)
 
+add_test_compareECLFiles(CASENAME jfunc_01
+                         FILENAME JFUNC-01
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR jfunc
+                         TEST_ARGS --enable-tuning=true)
+
 add_test_compareECLFiles(CASENAME ctaquifer_2d_oilwater
                          FILENAME 2D_OW_CTAQUIFER
                          SIMULATOR flow
