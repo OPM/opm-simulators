@@ -401,8 +401,22 @@ add_test_compareECLFiles(CASENAME pinch_multz_all
                          REL_TOL ${rel_tol}
                          DIR pinch)
 
+add_test_compareECLFiles(CASENAME pinch_multzm_all
+                         FILENAME PINCH_MULTZ-_ALL
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR pinch)
+
 add_test_compareECLFiles(CASENAME pinch_multz_all_barrier
                          FILENAME PINCH_MULTZ_ALL_BARRIER
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR pinch)
+
+add_test_compareECLFiles(CASENAME pinch_multzm_all_barrier
+                         FILENAME PINCH_MULTZ-_ALL_BARRIER
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
