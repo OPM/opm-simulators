@@ -41,6 +41,8 @@ namespace Opm {
     class SsfnTable;
     class SwfnTable;
     class SwofTable;
+    class GsfTable;
+    class WsfTable;
 
     ///This class is intend to be a relperm diagnostics, to detect
     ///wrong input of relperm table and endpoints.
@@ -70,6 +72,7 @@ namespace Opm {
         enum SaturationFunctionFamily {
             FamilyI,
             FamilyII,
+            FamilyIII,
             NoFamily
         };
 
@@ -107,6 +110,10 @@ namespace Opm {
                              const int satnumIdx);
         void sgfnTableCheck_(const SgfnTable& sgfnTables,
                              const int satnumIdx);
+        void wsfTableCheck_(const WsfTable& wsfTables,
+                            const int satnumIdx);
+        void gsfTableCheck_(const GsfTable& gsfTables,
+                            const int satnumIdx);
         void sof3TableCheck_(const Sof3Table& sof3Tables,
                              const int satnumIdx);
         void sof2TableCheck_(const Sof2Table& sof2Tables,
