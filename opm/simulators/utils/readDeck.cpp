@@ -268,8 +268,6 @@ namespace {
                                            errorGuard);
         }
 
-        eclipseState->appendAqufluxSchedule(schedule->getAquiferFluxSchedule());
-
         if (Opm::OpmLog::hasBackend("STDOUT_LOGGER")) {
             // loggers might not be set up!
             setupMessageLimiter((*schedule)[0].message_limits(), "STDOUT_LOGGER");

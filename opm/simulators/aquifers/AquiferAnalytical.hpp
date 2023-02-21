@@ -226,6 +226,7 @@ protected:
         return FluidSystem::waterCompIdx;
     }
 
+
     void initQuantities()
     {
         // We reset the cumulative flux at the start of any simulation, so, W_flux = 0

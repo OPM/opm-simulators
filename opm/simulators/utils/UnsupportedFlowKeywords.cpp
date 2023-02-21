@@ -59,6 +59,7 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"AQUCHWAT", {true, std::nullopt}},
         {"AQUCWFAC", {true, std::nullopt}},
         {"AQUFET", {true, std::string{"Use the AQUFETP keyword instead"}}},
+        {"AQUFLUX", {true, std::nullopt}},
         {"AQUNNC", {true, std::nullopt}},
         {"AUTOCOAR", {true, std::nullopt}},
         {"AUTOREF", {true, std::nullopt}},

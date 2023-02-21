@@ -122,7 +122,6 @@ protected:
 
     Simulator& simulator_;
 
-    // TODO: possibly better to use unorder_map here for aquifers
     std::vector<std::unique_ptr<AquiferInterface<TypeTag>>> aquifers;
 
     // This initialization function is used to connect the parser objects with the ones needed by AquiferCarterTracy

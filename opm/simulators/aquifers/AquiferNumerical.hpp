@@ -171,11 +171,6 @@ public:
                this->pressure_ == rhs.pressure_;
     }
 
-    double cumulativeFlux() const
-    {
-        return this->cumulative_flux_;
-    }
-
 private:
     void checkConnectsToReservoir()
     {
