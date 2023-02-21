@@ -21,6 +21,9 @@
 #include <opm/simulators/aquifers/AquiferConstantFlux.hpp>
 
 #include <opm/common/ErrorMacros.hpp>
+
+#include <algorithm>
+#include <memory>
 #include <stdexcept>
 
 namespace Opm

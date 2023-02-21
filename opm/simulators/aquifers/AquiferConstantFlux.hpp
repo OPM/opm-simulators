@@ -110,7 +110,7 @@ public:
     }
 
 private:
-    const std::vector<Aquancon::AquancCell> connections_;
+    const std::vector<Aquancon::AquancCell>& connections_;
     SingleAquiferFlux aquifer_data_;
     std::vector<int> cellToConnectionIdx_;
     std::vector<Eval> connection_flux_;
@@ -119,17 +119,13 @@ private:
 
     void initializeConnections() {
         this->cellToConnectionIdx_.resize(this->ebos_simulator_.gridView().size(/*codim=*/0), -1);
-        const auto& gridView = this->ebos_simulator_.vanguard().gridView();
         for (std::size_t idx = 0; idx < this->connections_.size(); ++idx) {
             const auto global_index = this->connections_[idx].global_index;
-            const int cell_index = this->ebos_simulator_.vanguard().compressedIndex(global_index);
-            auto elemIt = gridView.template begin</*codim=*/ 0>();
-            if (cell_index > 0)
-                std::advance(elemIt, cell_index);
+            const int cell_index = this->ebos_simulator_.vanguard().compressedIndexForInterior(global_index);
 
-            //the global_index is not part of this grid
-            if (cell_index < 0 || elemIt->partitionType() != Dune::InteriorEntity)
+            if (cell_index < 0) {
                 continue;
+            }
 
             this->cellToConnectionIdx_[cell_index] = idx;
         }

@@ -186,7 +186,7 @@ add_test_compareECLFiles(CASENAME numerical_aquifer_3d_1aqu
                          DIR aquifer-num
                          TEST_ARGS --tolerance-cnv=0.00003 --time-step-control=pid --linear-solver=cpr_trueimpes)
 
-add_test_compareECLFiles(CASENAME aquflux-01
+add_test_compareECLFiles(CASENAME aquflux_01
                          FILENAME AQUFLUX-01
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}

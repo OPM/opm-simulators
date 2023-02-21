@@ -133,7 +133,7 @@ add_test_compare_parallel_simulation(CASENAME numerical_aquifer_3d_2aqu
                                      DIR aquifer-num
                                      TEST_ARGS --tolerance-cnv=0.000003 --time-step-control=pid --linear-solver=cpr_trueimpes)
 
-add_test_compare_parallel_simulation(CASENAME aquflux-01
+add_test_compare_parallel_simulation(CASENAME aquflux_01
                                      FILENAME AQUFLUX-01
                                      SIMULATOR flow
                                      ABS_TOL ${abs_tol}
