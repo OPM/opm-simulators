@@ -20,6 +20,9 @@
 #ifndef OPM_AQUIFERCONSTANTFLUX_HPP
 #define OPM_AQUIFERCONSTANTFLUX_HPP
 
+#include <opm/material/common/MathToolbox.hpp>
+#include <opm/material/densead/Evaluation.hpp>
+
 #include <opm/simulators/aquifers/AquiferInterface.hpp>
 
 #include <opm/input/eclipse/EclipseState/Aquifer/Aquancon.hpp>
