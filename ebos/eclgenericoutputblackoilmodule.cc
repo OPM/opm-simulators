@@ -70,6 +70,11 @@ std::string EclString(Opm::Inplace::Phase phase) {
     case Opm::Inplace::Phase::OilResVolume: return "OIPR";
     case Opm::Inplace::Phase::GasResVolume: return "GIPR";
     case Opm::Inplace::Phase::SALT: return "SIP";
+    case Opm::Inplace::Phase::CO2InWaterPhase: return "WCD";
+    case Opm::Inplace::Phase::CO2InGasPhaseInMob: return "GCDI";
+    case Opm::Inplace::Phase::CO2InGasPhaseMob: return "GCDM";
+    case Opm::Inplace::Phase::WaterInGasPhase: return "WIPG";
+    case Opm::Inplace::Phase::WaterInWaterPhase: return "WIPL";
     default: throw std::logic_error(fmt::format("Phase enum with integer value: {} not recognized", static_cast<int>(phase)));
     }
 }
@@ -1285,6 +1290,11 @@ fipUnitConvert_(std::unordered_map<Inplace::Phase, Scalar>& fip) const
         {Inplace::Phase::OilResVolume,      M::volume},
         {Inplace::Phase::GasResVolume,      M::volume},
         {Inplace::Phase::SALT,              M::mass},
+        {Inplace::Phase::CO2InWaterPhase,   M::gas_surface_volume},
+        {Inplace::Phase::CO2InGasPhaseInMob,M::gas_surface_volume},
+        {Inplace::Phase::CO2InGasPhaseMob,  M::gas_surface_volume},
+        {Inplace::Phase::WaterInWaterPhase, M::liquid_surface_volume},
+        {Inplace::Phase::WaterInGasPhase,   M::liquid_surface_volume},
     };
 
     for (auto& [phase, value] : fip) {
