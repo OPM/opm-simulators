@@ -71,6 +71,7 @@ public:
         serializer(events);
         serializer(injection_cmode);
         serializer(production_cmode);
+        serializer(perf_data);
     }
 
     bool operator==(const SingleWellState&) const;
