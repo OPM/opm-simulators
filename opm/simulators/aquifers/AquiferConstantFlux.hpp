@@ -20,6 +20,9 @@
 #ifndef OPM_AQUIFERCONSTANTFLUX_HPP
 #define OPM_AQUIFERCONSTANTFLUX_HPP
 
+#include <opm/material/common/MathToolbox.hpp>
+#include <opm/material/densead/Evaluation.hpp>
+
 #include <opm/simulators/aquifers/AquiferInterface.hpp>
 
 #include <opm/input/eclipse/EclipseState/Aquifer/Aquancon.hpp>
@@ -47,6 +50,14 @@ public:
         // init_cumulative_flux is the flux volume from previoius running
         this->initializeConnections();
         connection_flux_.resize(this->connections_.size(), {0});
+    }
+
+    static AquiferConstantFlux serializationTestObject(const Simulator& ebos_simulator)
+    {
+        AquiferConstantFlux<TypeTag> result({}, {}, ebos_simulator);
+        result.cumulative_flux_ = 1.0;
+
+        return result;
     }
 
     virtual ~AquiferConstantFlux() = default;
@@ -91,7 +102,8 @@ public:
 
     void addToSource(RateVector& rates,
                      const unsigned cellIdx,
-                     const unsigned timeIdx) {
+                     const unsigned timeIdx) override
+    {
         const auto& model = this->ebos_simulator_.model();
 
         const int idx = this->cellToConnectionIdx_[cellIdx];
@@ -107,6 +119,17 @@ public:
         this->connection_flux_[idx] = fw * this->connections_[idx].effective_facearea;
         rates[BlackoilIndices::conti0EqIdx + compIdx_()]
                 += this->connection_flux_[idx] / model.dofTotalVolume(cellIdx);
+    }
+
+    template<class Serializer>
+    void serializeOp(Serializer& serializer)
+    {
+        serializer(cumulative_flux_);
+    }
+
+    bool operator==(const AquiferConstantFlux& rhs) const
+    {
+        return this->cumulative_flux_ == rhs.cumulative_flux_;
     }
 
 private:

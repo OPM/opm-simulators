@@ -244,12 +244,15 @@ serializeOp(Serializer& serializer)
         auto* ct = dynamic_cast<AquiferCarterTracy<TypeTag>*>(aiPtr.get());
         auto* fetp = dynamic_cast<AquiferFetkovich<TypeTag>*>(aiPtr.get());
         auto* num = dynamic_cast<AquiferNumerical<TypeTag>*>(aiPtr.get());
+        auto* flux = dynamic_cast<AquiferConstantFlux<TypeTag>*>(aiPtr.get());
         if (ct) {
             serializer(*ct);
         } else if (fetp) {
             serializer(*fetp);
         } else if (num) {
             serializer(*num);
+        } else if (flux) {
+            serializer(*flux);
         } else {
             OPM_THROW(std::logic_error, "Error serializing BlackoilAquiferModel: unknown aquifer type");
         }

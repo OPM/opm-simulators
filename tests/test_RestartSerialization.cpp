@@ -459,6 +459,24 @@ BOOST_AUTO_TEST_CASE(AquiferNumerical)
     BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized AquiferNumerical differ");
 }
 
+BOOST_AUTO_TEST_CASE(AquiferConstantFlux)
+{
+    using TT = Opm::Properties::TTag::EbosTypeTag;
+    Opm::EclGenericVanguard::readDeck("GLIFT1.DATA");
+    using Simulator = Opm::GetPropType<TT, Opm::Properties::Simulator>;
+    Simulator sim;
+    auto data_out = Opm::AquiferConstantFlux<TT>::serializationTestObject(sim);
+    Opm::Serialization::MemPacker packer;
+    Opm::Serializer ser(packer);
+    ser.pack(data_out);
+    const size_t pos1 = ser.position();
+    decltype(data_out) data_in({}, {}, sim);
+    ser.unpack(data_in);
+    const size_t pos2 = ser.position();
+    BOOST_CHECK_MESSAGE(pos1 == pos2, "Packed size differ from unpack size for AquiferConstantFlux");
+    BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized AquiferConstantFlux differ");
+}
+
 bool init_unit_test_func()
 {
     return true;
