@@ -64,7 +64,7 @@ WellInterfaceFluidSystem(const Well& well,
 {
 }
 
-template<typename FluidSystem>
+template <typename FluidSystem>
 void
 WellInterfaceFluidSystem<FluidSystem>::
 calculateReservoirRates(SingleWellState& ws) const
@@ -72,14 +72,32 @@ calculateReservoirRates(SingleWellState& ws) const
     const int fipreg = 0; // not considering the region for now
     const int np = number_of_phases_;
 
-    std::vector<double> surface_rates(np, 0.0);
-    for (int p = 0; p < np; ++p) {
-        surface_rates[p] = ws.surface_rates[p];
-    }
+    this->rateConverter_
+        .calcReservoirVoidageRates(fipreg,
+                                   this->pvtRegionIdx_,
+                                   ws.surface_rates,
+                                   ws.reservoir_rates);
 
-    std::vector<double> voidage_rates(np, 0.0);
-    rateConverter_.calcReservoirVoidageRates(fipreg, pvtRegionIdx_, surface_rates, voidage_rates);
-    ws.reservoir_rates = voidage_rates;
+    // Compute total connection reservoir rate CVPR/CVIR
+    auto& perf_data = ws.perf_data;
+    const auto num_perf_well = perf_data.size();
+    const auto& surf_perf_rates = perf_data.phase_rates;
+    for (auto i = 0*num_perf_well; i < num_perf_well; ++i) {
+        const auto surface_rates_perf = std::vector<double>
+            { surf_perf_rates.begin() + (i + 0)*np ,
+              surf_perf_rates.begin() + (i + 1)*np };
+
+        std::vector<double> voidage_rates_perf(np, 0.0);
+        this->rateConverter_
+            .calcReservoirVoidageRates(fipreg,
+                                       this->pvtRegionIdx_,
+                                       surface_rates_perf,
+                                       voidage_rates_perf);
+
+        perf_data.rates[i] =
+            std::accumulate(voidage_rates_perf.begin(),
+                            voidage_rates_perf.end(), 0.0);
+    }
 }
 
 template <typename FluidSystem>
