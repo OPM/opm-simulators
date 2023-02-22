@@ -94,7 +94,8 @@ public:
 
     void addToSource(RateVector& rates,
                      const unsigned cellIdx,
-                     const unsigned timeIdx) {
+                     const unsigned timeIdx) override
+    {
         const auto& model = this->ebos_simulator_.model();
 
         const int idx = this->cellToConnectionIdx_[cellIdx];
