@@ -69,7 +69,7 @@ add_test_compare_restarted_simulation(CASENAME msw_3d_hfa
                                       ABS_TOL ${abs_tol_restart_msw}
                                       REL_TOL ${rel_tol_restart_msw}
                                       RESTART_STEP 10
-                                      TEST_ARGS --enable-adaptive-time-stepping=false --sched-restart=true)
+                                      TEST_ARGS --enable-adaptive-time-stepping=false --sched-restart=true --tolerance-wells=1e-7)
 
 
 # Basic restart tests which only compare the summary output, this test driver should
