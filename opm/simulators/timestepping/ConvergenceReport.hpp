@@ -81,7 +81,7 @@ namespace Opm
         class WellFailure
         {
         public:
-            enum struct Type { Invalid, MassBalance, Pressure, ControlBHP, ControlTHP, ControlRate, Unsolvable };
+            enum struct Type { Invalid, MassBalance, Pressure, ControlBHP, ControlTHP, ControlRate, Unsolvable, WrongFlowDirection };
             WellFailure(Type t, Severity s, int phase, const std::string& well_name)
                 : type_(t), severity_(s), phase_(phase), well_name_(well_name)
             {
