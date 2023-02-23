@@ -247,10 +247,6 @@ if(ROCALUTION_FOUND)
 endif()
 
 
-# read the list of components from this file (in the project directory);
-# it should set various lists with the names of the files to include
-include (CMakeLists_files.cmake)
-
 macro (config_hook)
   opm_need_version_of ("dune-common")
   opm_need_version_of ("dune-istl")
@@ -282,6 +278,22 @@ macro (fortran_hook)
 endmacro (fortran_hook)
 
 macro (files_hook)
+  if(MPI_FOUND AND HDF5_FOUND AND NOT HDF5_IS_PARALLEL)
+    message(WARNING "When building parallel OPM flow we need a "
+      "parallel version of hdf5, but found only a serial one. "
+      "Please install a parallel hdf5 library for MPI "
+      "(e.g with apt-get install libhdf5-mpi-dev) and do a clean "
+      "rebuild (build after \"make clean\"). Continuing with "
+      "only normal restart without hdf5 file support.")
+    set(HDF5_FOUND OFF)
+    unset(HAVE_HDF5)
+  endif()
+  # read the list of components from this file (in the project directory);
+  # it should set various lists with the names of the files to include
+  # include needs to be here to make reset HDF5_FOUND available in
+  # (CMakeLists_files.cmake and because we need the created lists during
+  # then inclusion of OpmLibMain
+  include (CMakeLists_files.cmake)
 endmacro (files_hook)
 
 macro (tests_hook)
