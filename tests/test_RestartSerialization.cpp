@@ -30,6 +30,8 @@
 #include <opm/input/eclipse/Schedule/SummaryState.hpp>
 #include <opm/input/eclipse/Schedule/UDQ/UDQState.hpp>
 
+#include <opm/material/fluidmatrixinteractions/EclHysteresisTwoPhaseLawParams.hpp>
+
 #include <opm/models/blackoil/blackoilprimaryvariables.hh>
 
 #include <opm/simulators/timestepping/AdaptiveTimeSteppingEbos.hpp>
@@ -101,6 +103,20 @@ TEST_FOR_TYPE_NAMED_OBJ(ATE, AdaptiveTimeSteppingEbosSimple, serializationTestOb
 
 namespace Opm { using BPV = BlackOilPrimaryVariables<Properties::TTag::EbosTypeTag>; }
 TEST_FOR_TYPE_NAMED(BPV, BlackoilPrimaryVariables)
+
+namespace Opm {
+    struct DummyMaterial {
+        struct Params {
+            struct Traits {
+                using Scalar = double;
+            };
+        };
+    };
+
+    using HystParam = EclHysteresisTwoPhaseLawParams<DummyMaterial>;
+}
+
+TEST_FOR_TYPE_NAMED(HystParam, EclHysteresisTwoPhaseLawParams)
 
 namespace Opm {
     using Disc = Opm::FvBaseDiscretization<Opm::Properties::TTag::EbosTypeTag>;
