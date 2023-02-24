@@ -2059,6 +2059,7 @@ public:
         serializer(wellModel_);
         serializer(aquiferModel_);
         serializer(tracerModel_);
+        serializer(*materialLawManager_);
     }
 
 private:
