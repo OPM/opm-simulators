@@ -20,6 +20,8 @@
 
 #include <opm/simulators/linalg/ParallelOverlappingILU0.hpp>
 
+#include <dune/common/version.hh>
+
 #include <dune/istl/ilu.hh>
 #include <dune/istl/owneroverlapcopy.hh>
 

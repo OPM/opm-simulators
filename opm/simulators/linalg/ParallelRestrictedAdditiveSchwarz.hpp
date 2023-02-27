@@ -55,33 +55,19 @@ struct ConstructionTraits<Opm::ParallelRestrictedOverlappingSchwarz<Range,
     typedef ConstructionTraits<SeqPreconditioner> SeqConstructionTraits;
 
     /// \brief Construct a parallel restricted overlapping schwarz preconditioner.
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
     typedef std::shared_ptr< Opm::ParallelRestrictedOverlappingSchwarz<Range,
                                                                        Domain,
                                                                        ParallelInfo,
                                                                        SeqPreconditioner> > ParallelRestrictedOverlappingSchwarzPointer;
-#else
-    typedef Opm::ParallelRestrictedOverlappingSchwarz<Range,
-                                                      Domain,
-                                                      ParallelInfo,
-                                                      SeqPreconditioner>*  ParallelRestrictedOverlappingSchwarzPointer;
-#endif
 
     static inline ParallelRestrictedOverlappingSchwarzPointer
     construct(Arguments& args)
     {
-        return
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
-             std::make_shared(
-#endif
-                new Opm::ParallelRestrictedOverlappingSchwarz
-                              <Range,Domain,ParallelInfo,SeqPreconditioner>(*SeqConstructionTraits ::construct(args),
-                                                         args.getComm())
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
-        );
-#else
-        ;
-#endif
+        using PROS =
+            Opm::ParallelRestrictedOverlappingSchwarz<Range,Domain,
+                                                      ParallelInfo,SeqPreconditioner>;
+        return std::make_shared<PROS>(*SeqConstructionTraits::construct(args),
+                                      args.getComm());
     }
 
     /// \brief Deconstruct and free a parallel restricted overlapping schwarz preconditioner.

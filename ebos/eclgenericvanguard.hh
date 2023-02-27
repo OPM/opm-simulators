@@ -33,11 +33,7 @@
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
 #include <dune/common/parallel/communication.hh>
-#else
-#include <dune/common/parallel/collectivecommunication.hh>
-#endif
 
 #include <array>
 #include <cassert>

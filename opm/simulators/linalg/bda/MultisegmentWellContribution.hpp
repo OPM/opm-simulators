@@ -73,12 +73,7 @@ private:
     unsigned int getColIdx(unsigned int idx);
 
 public:
-
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
     using UMFPackIndex = SuiteSparse_long;
-#else
-    using UMFPackIndex = int;
-#endif
 
 #if HAVE_CUDA
     /// Set a cudaStream to be used

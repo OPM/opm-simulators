@@ -7,6 +7,7 @@
 
 #include<dune/istl/bcrsmatrix.hh>
 #include<dune/istl/bvector.hh>
+#include<dune/common/version.hh>
 #include<dune/common/fmatrix.hh>
 #include<dune/common/fvector.hh>
 #include<opm/simulators/linalg/ParallelOverlappingILU0.hpp>

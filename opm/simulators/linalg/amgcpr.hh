@@ -256,7 +256,6 @@ namespace Dune
        * @param matrix The fine level matrix operator.
        * @param pinfo The fine level parallel information.
        */
-#if DUNE_VERSION_NEWER( DUNE_ISTL, 2, 7 )
       template<class C>
       void createHierarchies(C& criterion, Operator& matrix,
                              const PI& pinfo)
@@ -270,12 +269,6 @@ namespace Dune
       template<class C>
       void createHierarchies(C& criterion, std::shared_ptr< Operator > matrix,
                              std::shared_ptr< PI > pinfo );
-
-#else
-      template<class C>
-      void createHierarchies(C& criterion, Operator& matrix,
-                             const PI& pinfo);
-#endif
 
       void setupCoarseSolver();
 
@@ -492,12 +485,8 @@ namespace Dune
 
     template<class M, class X, class S, class PI, class A>
     template<class C>
-#if DUNE_VERSION_NEWER( DUNE_ISTL, 2, 7)
     void AMGCPR<M,X,S,PI,A>::createHierarchies(C& criterion, std::shared_ptr< Operator > matrix,
                                                std::shared_ptr< PI > pinfo )
-#else
-    void AMGCPR<M,X,S,PI,A>::createHierarchies(C& criterion, Operator& matrix, const PI& pinfo )
-#endif
     {
       Timer watch;
       matrices_.reset(new OperatorHierarchy(matrix, pinfo));
@@ -538,14 +527,8 @@ namespace Dune
           cargs.setComm(*matrices_->parallelInformation().coarsest());
         }
 
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
         coarseSmoother_ = ConstructionTraits<Smoother>::construct(cargs);
-#else
-        coarseSmoother_.reset(ConstructionTraits<Smoother>::construct(cargs));
-#endif
-
         scalarProduct_ = createScalarProduct<X>(cargs.getComm(),category());
-
 
         typedef DirectSolverSelector< typename M::matrix_type, X > SolverSelector;
 
@@ -660,13 +643,8 @@ namespace Dune
         matrices_->parallelInformation().coarsest()->copyOwnerToAll(x,x);
 
 
-#if DUNE_VERSION_NEWER( DUNE_ISTL, 2, 7)
       typedef std::shared_ptr< Range  >  RangePtr ;
       typedef std::shared_ptr< Domain >  DomainPtr;
-#else
-      typedef Range*  RangePtr;
-      typedef Domain* DomainPtr;
-#endif
 
       // Hierarchy takes ownership of pointers
       RangePtr copy( new Range(b) );

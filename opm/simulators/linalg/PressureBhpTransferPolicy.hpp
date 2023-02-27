@@ -140,21 +140,12 @@ namespace Opm
                     ++createIter;
                 }
             }
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
         if constexpr (std::is_same_v<Communication, Dune::Amg::SequentialInformation>) {
             coarseLevelCommunication_ = std::make_shared<Communication>();
         } else {
             coarseLevelCommunication_ = std::make_shared<Communication>(
                 communication_->communicator(), communication_->category(), false);
         }
-#else
-        if constexpr (std::is_same_v<Communication, Dune::Amg::SequentialInformation>) {
-            coarseLevelCommunication_ = std::make_shared<Communication>();
-        } else {
-            coarseLevelCommunication_ = std::make_shared<Communication>(
-                communication_->communicator(), communication_->getSolverCategory(), false);
-        }
-#endif
         if (prm_.get<bool>("add_wells")) {
             fineOperator.addWellPressureEquationsStruct(*coarseLevelMatrix_);
             coarseLevelMatrix_->compress(); // all elemenst should be set
@@ -167,13 +158,8 @@ namespace Opm
         this->lhs_.resize(this->coarseLevelMatrix_->M());
         this->rhs_.resize(this->coarseLevelMatrix_->N());
         using OperatorArgs = typename Dune::Amg::ConstructionTraits<CoarseOperator>::Arguments;
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
         OperatorArgs oargs(coarseLevelMatrix_, *coarseLevelCommunication_);
         this->operator_ = Dune::Amg::ConstructionTraits<CoarseOperator>::construct(oargs);
-#else
-        OperatorArgs oargs(*coarseLevelMatrix_, *coarseLevelCommunication_);
-        this->operator_.reset(Dune::Amg::ConstructionTraits<CoarseOperator>::construct(oargs));
-#endif
     }
 
     virtual void calculateCoarseEntries(const FineOperator& fineOperator) override

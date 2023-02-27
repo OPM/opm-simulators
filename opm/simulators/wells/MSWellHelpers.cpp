@@ -185,11 +185,7 @@ invDX(const MatrixType& D, VectorType x, DeferredLogger& deferred_logger)
     Dune::MatrixAdapter<MatrixType, VectorType, VectorType> linearOperator(D);
 
     // Sequential incomplete LU decomposition as the preconditioner
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
     Dune::SeqILU<MatrixType, VectorType, VectorType> preconditioner(D, 1.0);
-#else
-    Dune::SeqILU0<MatrixType, VectorType, VectorType> preconditioner(D, 1.0);
-#endif
     // Dune::SeqILUn<MatrixType, VectorType, VectorType> preconditioner(D, 1, 0.92);
     // Dune::SeqGS<MatrixType, VectorType, VectorType> preconditioner(D, 1, 1);
     // Dune::SeqJac<MatrixType, VectorType, VectorType> preconditioner(D, 1, 1);
