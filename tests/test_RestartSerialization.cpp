@@ -30,6 +30,8 @@
 #include <opm/input/eclipse/Schedule/SummaryState.hpp>
 #include <opm/input/eclipse/Schedule/UDQ/UDQState.hpp>
 
+#include <opm/output/eclipse/Inplace.hpp>
+
 #include <opm/material/fluidmatrixinteractions/EclHysteresisTwoPhaseLawParams.hpp>
 
 #include <opm/models/blackoil/blackoilprimaryvariables.hh>
@@ -86,6 +88,7 @@ BOOST_AUTO_TEST_CASE(NAME) \
 TEST_FOR_TYPE(ALQState)
 TEST_FOR_TYPE(GroupState)
 TEST_FOR_TYPE(HardcodedTimeStepControl)
+TEST_FOR_TYPE(Inplace)
 TEST_FOR_TYPE(PerfData)
 TEST_FOR_TYPE(PIDAndIterationCountTimeStepControl)
 TEST_FOR_TYPE(PIDTimeStepControl)
