@@ -251,11 +251,6 @@ public:
      */
     bool solve(Vector& x)
     {
-#if ! DUNE_VERSION_NEWER(DUNE_COMMON, 2,7)
-        Dune::FMatrixPrecision<LinearSolverScalar>::set_singular_limit(1.e-30);
-        Dune::FMatrixPrecision<LinearSolverScalar>::set_absolute_limit(1.e-30);
-#endif
-
         (*overlappingx_) = 0.0;
 
         auto parPreCond = asImp_().preparePreconditioner_();
@@ -459,15 +454,9 @@ struct OverlappingLinearOperator<TypeTag, TTag::ParallelBaseLinearSolver>
                                                   OverlappingVector>;
 };
 
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2,7)
 template<class TypeTag>
 struct PreconditionerWrapper<TypeTag, TTag::ParallelBaseLinearSolver>
 { using type = Opm::Linear::PreconditionerWrapperILU<TypeTag>; };
-#else
-template<class TypeTag>
-struct PreconditionerWrapper<TypeTag, TTag::ParallelBaseLinearSolver>
-{ using type = Opm::Linear::PreconditionerWrapperILU0<TypeTag>; };
-#endif
 
 //! set the default overlap size to 2
 template<class TypeTag>

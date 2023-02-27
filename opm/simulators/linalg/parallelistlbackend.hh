@@ -152,15 +152,9 @@ template<class TypeTag>
 struct LinearSolverWrapper<TypeTag, TTag::ParallelIstlLinearSolver>
 { using type = Opm::Linear::SolverWrapperBiCGStab<TypeTag>; };
 
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2,7)
 template<class TypeTag>
 struct PreconditionerWrapper<TypeTag, TTag::ParallelIstlLinearSolver>
 { using type = Opm::Linear::PreconditionerWrapperILU<TypeTag>; };
-#else
-template<class TypeTag>
-struct PreconditionerWrapper<TypeTag, TTag::ParallelIstlLinearSolver>
-{ using type = Opm::Linear::PreconditionerWrapperILU0<TypeTag>; };
-#endif
 
 //! set the GMRes restart parameter to 10 by default
 template<class TypeTag>

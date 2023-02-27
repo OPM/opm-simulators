@@ -27,7 +27,6 @@
 #ifndef EWOMS_OVERLAPPING_SCALAR_PRODUCT_HH
 #define EWOMS_OVERLAPPING_SCALAR_PRODUCT_HH
 
-#include <dune/common/version.hh>
 #include <dune/common/parallel/mpihelper.hh>
 #include <dune/istl/scalarproducts.hh>
 
@@ -44,11 +43,7 @@ class OverlappingScalarProduct
 public:
     using field_type = typename OverlappingBlockVector::field_type;
 
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
     using CollectiveCommunication = typename Dune::Communication<typename Dune::MPIHelper::MPICommunicator>;
-#else
-    using CollectiveCommunication = typename Dune::CollectiveCommunication<typename Dune::MPIHelper::MPICommunicator>;
-#endif
     using real_type = typename Dune::ScalarProduct<OverlappingBlockVector>::real_type;
 
     //! the kind of computations supported by the operator. Either overlapping or non-overlapping
@@ -57,20 +52,11 @@ public:
 
     OverlappingScalarProduct(const Overlap& overlap)
         : overlap_(overlap),
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
           comm_( Dune::MPIHelper::getCommunication() )
-#else
-          comm_( Dune::MPIHelper::getCollectiveCommunication() )
-#endif
     {}
 
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2,7)
     field_type dot(const OverlappingBlockVector& x,
                    const OverlappingBlockVector& y) const override
-#else
-    field_type dot(const OverlappingBlockVector& x,
-                   const OverlappingBlockVector& y) override
-#endif
     {
         field_type sum = 0;
         size_t numLocal = overlap_.numLocal();
@@ -83,11 +69,7 @@ public:
         return comm_.sum( sum );
     }
 
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2,7)
     real_type norm(const OverlappingBlockVector& x) const override
-#else
-    real_type norm(const OverlappingBlockVector& x) override
-#endif
     { return std::sqrt(dot(x, x)); }
 
 private:
