@@ -151,6 +151,19 @@ getWellConvergence(const WellState& well_state,
                                   report,
                                   deferred_logger);
 
+    // for stopped well, we do not enforce the following checking to avoid dealing with sign of near-zero values
+    // for BHP or THP controlled wells, we need to make sure the flow direction is correct
+    if (!baseif_.wellIsStopped() && baseif_.isPressureControlled(well_state)) {
+        // checking the flow direction
+        const double sign = baseif_.isProducer() ? -1. : 1.;
+        const auto weight_total_flux = this->primary_variables_.value(PrimaryVariables::WQTotal) * sign;
+        constexpr int dummy_phase = -1;
+        if (weight_total_flux < 0.) {
+            report.setWellFailed(
+                    {CR::WellFailure::Type::WrongFlowDirection, CR::Severity::Normal, dummy_phase, baseif_.name()});
+        }
+    }
+
     return report;
 }
 
