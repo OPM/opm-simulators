@@ -41,6 +41,7 @@
 #include <opm/material/common/Valgrind.hpp>
 
 #include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/utility/CopyablePtr.hpp>
 
@@ -168,7 +169,7 @@ public:
     void update(const ElementContext& elemCtx, unsigned dofIdx, unsigned timeIdx)
     {
         ParentType::update(elemCtx, dofIdx, timeIdx);
-        OPM_TIMEBLOCK_LOCAL(blackoilIntensiveQuanititiesUpdate);        
+        OPM_TIMEBLOCK_LOCAL(blackoilIntensiveQuanititiesUpdate);
         const auto& problem = elemCtx.problem();
         const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
         const auto& linearizationType = problem.model().linearizer().getLinearizationType();
