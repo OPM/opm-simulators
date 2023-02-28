@@ -175,6 +175,7 @@ public:
      */
     void linearizeDomain()
     {
+        OPM_TIMEBLOCK(linearizeDomain);
         // we defer the initialization of the Jacobian matrix until here because the
         // auxiliary modules usually assume the problem, model and grid to be fully
         // initialized...
@@ -215,6 +216,7 @@ public:
      */
     void linearizeAuxiliaryEquations()
     {
+        OPM_TIMEBLOCK(linearizeAuxilaryEquations);
         // flush possible local caches into matrix structure
         jacobian_->commit();
 
@@ -334,6 +336,7 @@ private:
     // Construct the BCRS matrix for the Jacobian of the residual function
     void createMatrix_()
     {
+        OPM_TIMEBLOCK(createMatrix);
         if (!neighborInfo_.empty()) {
             // It is ok to call this function multiple times, but it
             // should not do anything if already called.
@@ -431,6 +434,7 @@ private:
     // Initialize the flows and flores sparse tables
     void createFlows_()
     {
+        OPM_TIMEBLOCK(createFlows);
         // If FLOWS/FLORES is set in any RPTRST in the schedule, then we initializate the sparse tables
         const bool anyFlows = simulator_().problem().eclWriter()->eclOutputModule().anyFlows();
         const bool anyFlores = simulator_().problem().eclWriter()->eclOutputModule().anyFlores();
@@ -515,6 +519,7 @@ public:
 private:
     void linearize_()
     {
+        OPM_TIMEBLOCK(linearize);
         const bool well_local = true;
         resetSystem_();
         unsigned numCells = model_().numTotalDof();
@@ -524,6 +529,7 @@ private:
 #pragma omp parallel for
 #endif
         for (unsigned globI = 0; globI < numCells; globI++) {
+            OPM_TIMEBLOCK_LOCAL(linearizationForEachCell);
             const auto& nbInfos = neighborInfo_[globI]; // this is a set but should maybe be changed
             VectorBlock res(0.0);
             MatrixBlock bMat(0.0);
@@ -536,8 +542,11 @@ private:
             const IntensiveQuantities& intQuantsIn = *intQuantsInP;
 
             // Flux term.
+            {
+            OPM_TIMEBLOCK_LOCAL(fluxCalculationForEachCell);    
             short loc = 0;
             for (const auto& nbInfo : nbInfos) {
+                OPM_TIMEBLOCK_LOCAL(fluxCalculationForEachFace);
                 unsigned globJ = nbInfo.neighbor;
                 assert(globJ != globI);
                 res = 0.0;
@@ -572,13 +581,17 @@ private:
                 *nbInfo.matBlockAddress += bMat;
                 ++loc;
             }
+            }
 
             // Accumulation term.
             double dt = simulator_().timeStepSize();
             double volume = model_().dofTotalVolume(globI);
             Scalar storefac = volume / dt;
             adres = 0.0;
-            LocalResidual::computeStorage(adres, intQuantsIn);
+            {
+                OPM_TIMEBLOCK_LOCAL(computeStorage);
+                LocalResidual::computeStorage(adres, intQuantsIn);
+            }
             setResAndJacobi(res, bMat, adres);
             // TODO: check recycleFirst etc.
             // first we use it as storage cache
@@ -594,6 +607,7 @@ private:
             *diagMatAddress_[globI] += bMat;
             // wells sources for now (should be moved out)
             if (well_local) {
+                OPM_TIMEBLOCK_LOCAL(localWellAssembly);
                 res = 0.0;
                 bMat = 0.0;
                 adres = 0.0;

@@ -124,6 +124,7 @@ public:
     static void computeStorage(Dune::FieldVector<LhsEval, numEq>& storage,
                                const IntensiveQuantities& intQuants)
     {
+        OPM_TIMEBLOCK_LOCAL(computeStorage);
         // retrieve the intensive quantities for the SCV at the specified point in time
         const auto& fs = intQuants.fluidState();
         storage = 0.0;
@@ -213,6 +214,7 @@ public:
                             const Scalar faceArea,
                             const FaceDir::DirEnum facedir)
     {
+        OPM_TIMEBLOCK_LOCAL(computeFlux);
         flux = 0.0;
         darcy = 0.0;
         Scalar Vin = problem.model().dofTotalVolume(globalIndexIn);
@@ -260,6 +262,7 @@ public:
                             unsigned scvfIdx,
                             unsigned timeIdx)
     {
+        OPM_TIMEBLOCK_LOCAL(computeFlux);              
         assert(timeIdx == 0);
 
         flux = 0.0;
@@ -336,6 +339,7 @@ public:
                                  const Scalar& faceArea,
                                  const FaceDir::DirEnum facedir)
     {
+        OPM_TIMEBLOCK_LOCAL(calculateFluxes);
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx))
                 continue;
@@ -460,6 +464,7 @@ public:
                                         const IntensiveQuantities& insideIntQuants,
                                         unsigned globalSpaceIdx)
     {
+        OPM_TIMEBLOCK_LOCAL(computeBoundaryFluxFree);
         std::array<short, numPhases> upIdx;
         std::array<short, numPhases> dnIdx;
         RateVector volumeFlux;
@@ -543,6 +548,7 @@ public:
                               unsigned globalSpaceIdex,
                               unsigned timeIdx)
     {
+        OPM_TIMEBLOCK_LOCAL(computeSource);
         // retrieve the source term intrinsic to the problem
         problem.source(source, globalSpaceIdex, timeIdx);
 
@@ -564,6 +570,7 @@ public:
                        unsigned dofIdx,
                        unsigned timeIdx) const
     {
+        OPM_TIMEBLOCK_LOCAL(computeSource);
         // retrieve the source term intrinsic to the problem
         elemCtx.problem().source(source, elemCtx, dofIdx, timeIdx);
 
