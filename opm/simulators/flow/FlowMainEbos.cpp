@@ -25,9 +25,13 @@
 
 #include <opm/common/utility/String.hpp>
 
+#include <opm/simulators/flow/ConvergenceOutputConfiguration.hpp>
+
 #include <opm/simulators/utils/ParallelFileMerger.hpp>
 
 #include <algorithm>
+#include <filesystem>
+#include <fstream>
 #include <string>
 
 namespace Opm {
@@ -52,6 +56,26 @@ void mergeParallelLogFiles(std::string_view output_dir,
                   fs::directory_iterator(),
                   detail::ParallelFileMerger(output_path, basename,
                                              enableLoggingFalloutWarning));
+}
+
+void handleExtraConvergenceOutput(SimulatorReport& report,
+                                  std::string_view option,
+                                  std::string_view optionName,
+                                  std::string_view output_dir,
+                                  std::string_view base_name)
+{
+    const auto extraConvOutput = ConvergenceOutputConfiguration {
+        option, optionName
+    };
+
+    if (extraConvOutput.want(ConvergenceOutputConfiguration::Option::Steps)) {
+      namespace fs = ::std::filesystem;
+
+      const auto infostep = fs::path{output_dir} / fs::path{base_name}.concat(".INFOSTEP");
+
+      std::ofstream os(infostep);
+      report.fullReports(os);
+    }
 }
 
 } // namespace detail

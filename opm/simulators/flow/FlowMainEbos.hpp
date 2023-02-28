@@ -22,18 +22,12 @@
 #ifndef OPM_FLOW_MAIN_EBOS_HEADER_INCLUDED
 #define OPM_FLOW_MAIN_EBOS_HEADER_INCLUDED
 
-#include <opm/simulators/flow/ConvergenceOutputConfiguration.hpp>
 #include <opm/simulators/flow/Banners.hpp>
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp>
-#include <opm/simulators/utils/moduleVersion.hpp>
-#include <opm/simulators/utils/ParallelEclipseState.hpp>
-#include <flow/flow_ebos_blackoil.hpp>
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/IOConfig/IOConfig.hpp>
 #include <opm/input/eclipse/EclipseState/InitConfig/InitConfig.hpp>
-
-#include <filesystem>
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/misc/mpimanager.hh>
@@ -82,6 +76,13 @@ namespace detail {
 void mergeParallelLogFiles(std::string_view output_dir,
                            std::string_view deck_filename,
                            bool enableLoggingFalloutWarning);
+
+void handleExtraConvergenceOutput(SimulatorReport& report,
+                                  std::string_view option,
+                                  std::string_view optionName,
+                                  std::string_view output_dir,
+                                  std::string_view base_name);
+
 }
 
     class Deck;
@@ -99,7 +100,7 @@ void mergeParallelLogFiles(std::string_view output_dir,
         using Scalar = GetPropType<TypeTag, Properties::Scalar>;
         using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
-        typedef SimulatorFullyImplicitBlackoilEbos<TypeTag> Simulator;
+        using Simulator = SimulatorFullyImplicitBlackoilEbos<TypeTag>;
 
         FlowMainEbos(int argc, char **argv, bool output_cout, bool output_files )
             : argc_{argc}, argv_{argv},
@@ -488,20 +489,11 @@ void mergeParallelLogFiles(std::string_view output_dir,
 
             printFlowTrailer(mpi_size_, threads, report);
 
-            const auto extraConvOutput = ConvergenceOutputConfiguration {
-                EWOMS_GET_PARAM(TypeTag, std::string, OutputExtraConvergenceInfo),
-                R"(OutputExtraConvergenceInfo (--output-extra-convergence-info))"
-            };
-
-            if (extraConvOutput.want(ConvergenceOutputConfiguration::Option::Steps)) {
-                namespace fs = ::std::filesystem;
-
-                const auto infostep = fs::path { eclState().getIOConfig().getOutputDir() } /
-                    fs::path { eclState().getIOConfig().getBaseName() }.concat(".INFOSTEP");
-
-                std::ofstream os(infostep);
-                report.fullReports(os);
-            }
+            detail::handleExtraConvergenceOutput(report,
+                                                 EWOMS_GET_PARAM(TypeTag, std::string, OutputExtraConvergenceInfo),
+                                                 R"(OutputExtraConvergenceInfo (--output-extra-convergence-info))",
+                                                 eclState().getIOConfig().getOutputDir(),
+                                                 eclState().getIOConfig().getBaseName());
         }
 
         // Run the simulator.
