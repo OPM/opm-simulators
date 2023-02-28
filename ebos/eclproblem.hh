@@ -975,6 +975,7 @@ public:
      */
     void beginEpisode()
     {
+        OPM_TIMEBLOCK(beginEpisode);
         // Proceed to the next report step
         auto& simulator = this->simulator();
         int episodeIdx = simulator.episodeIndex();
@@ -1038,6 +1039,7 @@ public:
      */
     void beginTimeStep()
     {
+        OPM_TIMEBLOCK(beginTimeStep);
         int episodeIdx = this->episodeIndex();
 
         this->beginTimeStep_(enableExperiments,
@@ -1059,9 +1061,11 @@ public:
 
         // the derivatives may have change
         bool invalidateIntensiveQuantities = invalidateFromMaxWaterSat || invalidateFromMinPressure || invalidateFromHyst || invalidateFromMaxOilSat;
-        if (invalidateIntensiveQuantities)
+        if (invalidateIntensiveQuantities){
+            OPM_TIMEBLOCK(beginTimeStepInvalidateIntensiveQuantities);
             this->model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
-
+        }
+        
         if constexpr (getPropValue<TypeTag, Properties::EnablePolymer>())
             updateMaxPolymerAdsorption_();
 
@@ -1077,6 +1081,7 @@ public:
      */
     void beginIteration()
     {
+        OPM_TIMEBLOCK(beginIteration);
         wellModel_.beginIteration();
         if (enableAquifers_)
             aquiferModel_.beginIteration();
@@ -1087,6 +1092,7 @@ public:
      */
     void endIteration()
     {
+        OPM_TIMEBLOCK(endIteration);
         wellModel_.endIteration();
         if (enableAquifers_)
             aquiferModel_.endIteration();
@@ -1097,6 +1103,7 @@ public:
      */
     void endTimeStep()
     {
+        OPM_TIMEBLOCK(endTimeStep);
 #ifndef NDEBUG
         if constexpr (getPropValue<TypeTag, Properties::EnableDebuggingChecks>()) {
             // in debug mode, we don't care about performance, so we check if the model does
@@ -1169,6 +1176,7 @@ public:
      */
     void endEpisode()
     {
+        OPM_TIMEBLOCK(endEpisode);
         auto& simulator = this->simulator();
         auto& schedule = simulator.vanguard().schedule();
 
@@ -1193,16 +1201,19 @@ public:
      */
     void writeOutput(bool verbose = true)
     {
+        OPM_TIMEBLOCK(problemWriteOutput);
         // use the generic code to prepare the output fields and to
         // write the desired VTK files.
         ParentType::writeOutput(verbose);
 
         bool isSubStep = !EWOMS_GET_PARAM(TypeTag, bool, EnableWriteAllSolutions) && !this->simulator().episodeWillBeOver();
-        if (enableEclOutput_)
+        if (enableEclOutput_){
             eclWriter_->writeOutput(isSubStep);
+        }
     }
 
     void finalizeOutput() {
+        OPM_TIMEBLOCK(finalizeOutput);
         // this will write all pending output to disk
         // to avoid corruption of output files
         eclWriter_.reset();
@@ -1463,6 +1474,7 @@ public:
         FluidState &fluidState,
         unsigned globalSpaceIdx) const
     {
+        OPM_TIMEBLOCK_LOCAL(updateRelperms);
         {
             // calculate relative permeabilities. note that we store the result into the
             // mobility_ class attribute. the division by the phase viscosity happens later.
@@ -1560,6 +1572,7 @@ public:
                   unsigned spaceIdx,
                   unsigned timeIdx) const
     {
+        OPM_TIMEBLOCK(eclProblemBoundary);
         if (!context.intersection(spaceIdx).boundary())
             return;
 
@@ -1769,6 +1782,7 @@ public:
                 unsigned globalDofIdx,
                 unsigned timeIdx) const
     {
+        OPM_TIMEBLOCK(eclProblemSource);
         rate = 0.0;
 
         wellModel_.computeTotalRatesForDof(rate, globalDofIdx);
@@ -1850,6 +1864,7 @@ public:
 
     const InitialFluidState boundaryFluidState(unsigned globalDofIdx, const int directionId) const
     {
+        OPM_TIMEBLOCK_LOCAL(boundaryFluidState);
         FaceDir::DirEnum dir = FaceDir::FromIntersectionIndex(directionId);
         const auto& dirichlet = dirichlet_(dir)[globalDofIdx];
         if(std::get<0>(dirichlet) == BCComponent::NONE)
@@ -1939,6 +1954,7 @@ public:
      */
     Scalar nextTimeStepSize() const
     {
+        OPM_TIMEBLOCK(nexTimeStepSize);
         // allow external code to do the timestepping
         if (this->nextTimeStepSize_ > 0.0)
             return this->nextTimeStepSize_;
@@ -1965,7 +1981,7 @@ public:
     template <class LhsEval>
     LhsEval rockCompPoroMultiplier(const IntensiveQuantities& intQuants, unsigned elementIdx) const
     {
-
+        OPM_TIMEBLOCK_LOCAL(rockCompPoroMultiplier);
         if (this->rockCompPoroMult_.empty() && this->rockCompPoroMultWc_.empty())
             return 1.0;
 
@@ -2005,6 +2021,7 @@ public:
     template <class LhsEval>
     LhsEval rockCompTransMultiplier(const IntensiveQuantities& intQuants, unsigned elementIdx) const
     {
+        OPM_TIMEBLOCK_LOCAL(rockCompTransMultiplier);
         if (this->rockCompTransMult_.empty() && this->rockCompTransMultWc_.empty())
             return 1.0;
 
@@ -2037,6 +2054,7 @@ public:
 
     std::pair<bool, RateVector> boundaryCondition(const unsigned int globalSpaceIdx, const int directionId)
     {
+        OPM_TIMEBLOCK_LOCAL(boundaryCondition);
         if (!nonTrivialBoundaryConditions_) {
             return { false, RateVector(0.0) };
         }
@@ -2068,6 +2086,7 @@ private:
     void updateProperty_(const std::string& failureMsg,
                          UpdateFunc func)
     {
+        OPM_TIMEBLOCK(updateProperty);
         ElementContext elemCtx(this->simulator());
         const auto& vanguard = this->simulator().vanguard();
         OPM_BEGIN_PARALLEL_TRY_CATCH();
@@ -2085,6 +2104,7 @@ private:
     // update the parameters needed for DRSDT and DRVDT
     void updateCompositionChangeLimits_()
     {
+        OPM_TIMEBLOCK(updateCompositionChangeLimits);
         // update the "last Rs" values for all elements, including the ones in the ghost
         // and overlap regions
         int episodeIdx = this->episodeIndex();
@@ -2155,6 +2175,7 @@ private:
 
     bool updateMaxOilSaturation_()
     {
+        OPM_TIMEBLOCK(updateMaxOilSaturation);
         int episodeIdx = this->episodeIndex();
 
         // we use VAPPARS
@@ -2175,6 +2196,7 @@ private:
 
     bool updateMaxWaterSaturation_()
     {
+        OPM_TIMEBLOCK(updateMaxWaterSaturation);
         // water compaction is activated in ROCKCOMP
         if (this->maxWaterSaturation_.empty())
             return false;
@@ -2193,6 +2215,7 @@ private:
 
     bool updateMinPressure_()
     {
+        OPM_TIMEBLOCK(updateMinPressure);
         // IRREVERS option is used in ROCKCOMP
         if (this->minOilPressure_.empty())
             return false;
@@ -2210,6 +2233,7 @@ private:
 
     void readMaterialParameters_()
     {
+        OPM_TIMEBLOCK(readMaterialParameters);
         const auto& simulator = this->simulator();
         const auto& vanguard = simulator.vanguard();
         const auto& eclState = vanguard.eclState();

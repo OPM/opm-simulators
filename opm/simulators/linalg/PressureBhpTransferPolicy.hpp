@@ -31,6 +31,7 @@ namespace Opm
                                      std::shared_ptr<Communication>& commRW,
                                      const int nw)
     {
+        OPM_TIMEBLOCK(extendCommunicatorWithWells);
         // used for extending the coarse communicator pattern
         using IndexSet = typename Communication::ParallelIndexSet;
         using LocalIndex = typename IndexSet::LocalIndex;
@@ -104,6 +105,7 @@ namespace Opm
 
         virtual void createCoarseLevelSystem(const FineOperator& fineOperator) override
         {
+            OPM_TIMEBLOCK(createCoarseLevelSystem);
             using CoarseMatrix = typename CoarseOperator::matrix_type;
             const auto& fineLevelMatrix = fineOperator.getmat();
             const auto& nw = fineOperator.getNumberOfExtraEquations();
@@ -172,6 +174,7 @@ namespace Opm
 
     virtual void calculateCoarseEntries(const FineOperator& fineOperator) override
     {
+        OPM_TIMEBLOCK(calculateCoarseEntries);
         const auto& fineMatrix = fineOperator.getmat();
         *coarseLevelMatrix_ = 0;
         auto rowCoarse = coarseLevelMatrix_->begin();
@@ -196,6 +199,7 @@ namespace Opm
             }
         }
         if (prm_.get<bool>("add_wells")) {
+            OPM_TIMEBLOCK(cprwAddWellEquation);
             assert(transpose == false); // not implemented
             bool use_well_weights = prm_.get<bool>("use_well_weights");
             fineOperator.addWellPressureEquations(*coarseLevelMatrix_, weights_, use_well_weights);
@@ -209,6 +213,7 @@ namespace Opm
 
     virtual void moveToCoarseLevel(const typename ParentType::FineRangeType& fine) override
     {
+        OPM_TIMEBLOCK(moveToCoarseLevel);
         //NB we iterate over fine assumming welldofs is at the end
         // Set coarse vector to zero
         this->rhs_ = 0;
@@ -233,6 +238,7 @@ namespace Opm
 
     virtual void moveToFineLevel(typename ParentType::FineDomainType& fine) override
     {
+        OPM_TIMEBLOCK(moveToFineLevel);
         //NB we iterate over fine assumming welldofs is at the end
         auto end = fine.end(), begin = fine.begin();
 

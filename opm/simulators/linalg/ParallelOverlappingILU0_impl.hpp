@@ -95,6 +95,7 @@ void ghost_last_bilu0_decomposition (M& A, size_t interiorSize)
 template<class M, class CRS, class InvVector>
 void convertToCRS(const M& A, CRS& lower, CRS& upper, InvVector& inv)
 {
+  OPM_TIMEBLOCK(convertToCRS);  
   // No need to do anything for 0 rows. Return to prevent indexing a
   // a zero sized array.
   if ( A.N() == 0 )
@@ -285,6 +286,7 @@ template<class Matrix, class Domain, class Range, class ParallelInfoT>
 void ParallelOverlappingILU0<Matrix,Domain,Range,ParallelInfoT>::
 apply (Domain& v, const Range& d)
 {
+    OPM_TIMEBLOCK(apply);
     Range& md = reorderD(d);
     Domain& mv = reorderV(v);
 
@@ -354,6 +356,7 @@ template<class Matrix, class Domain, class Range, class ParallelInfoT>
 void ParallelOverlappingILU0<Matrix,Domain,Range,ParallelInfoT>::
 update()
 {
+    OPM_TIMEBLOCK(update);
     // (For older DUNE versions the communicator might be
     // invalid if redistribution in AMG happened on the coarset level.
     // Therefore we check for nonzero size
@@ -403,11 +406,13 @@ update()
 
     try
     {
+        OPM_TIMEBLOCK(iluDecomposition);
         if (iluIteration_ == 0) {
             // create ILU-0 decomposition
             if (ordering_.empty())
             {
                 if (ILU_) {
+                    OPM_TIMEBLOCK(iluDecompositionMakeMatrix);
                     // The ILU_ matrix is already a copy with the same
                     // sparse structure as A_, but the values of A_ may
                     // have changed, so we must copy all elements.

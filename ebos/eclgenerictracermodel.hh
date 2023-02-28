@@ -29,7 +29,7 @@
 #define EWOMS_ECL_GENERIC_TRACER_MODEL_HH
 
 #include <opm/grid/common/CartesianIndexMapper.hpp>
-
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/models/blackoil/blackoilmodel.hh>
 
 #include <opm/simulators/linalg/matrixblock.hh>
