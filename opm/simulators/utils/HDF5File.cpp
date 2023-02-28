@@ -197,36 +197,41 @@ void HDF5File::writeSplit(hid_t grp,
                           const std::string& dset) const
 {
     std::vector<hsize_t> proc_sizes(comm_.size());
+    hid_t dxpl = H5P_DEFAULT;
     if (comm_.size() > 1) {
         hsize_t lsize = buffer.size();
         comm_.allgather(&lsize, 1, proc_sizes.data());
+        dxpl = H5Pcreate(H5P_DATASET_XFER);
+        H5Pset_dxpl_mpio(dxpl, H5FD_MPIO_COLLECTIVE);
     } else {
         proc_sizes[0] = buffer.size();
     }
 
     for (int i = 0; i < comm_.size(); ++i) {
         hid_t space = H5Screate_simple(1, &proc_sizes[i], nullptr);
+        hid_t dcpl = this->getCompression(proc_sizes[i]);
         hid_t dataset_id = H5Dcreate2(grp,
                                       std::to_string(i).c_str(),
                                       H5T_NATIVE_CHAR, space,
-                                      H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+                                      H5P_DEFAULT, dcpl, H5P_DEFAULT);
         if (dataset_id == H5I_INVALID_HID) {
+            H5Sclose(space);
+            if (dcpl != H5P_DEFAULT) {
+                H5Pclose(dcpl);
+            }
             throw std::runtime_error("Trying to write already existing dataset '" +
                                      dset + '/' + std::to_string(i) + "'");
         }
 
-        if (i == comm_.rank()) {
-            hid_t filespace = H5Dget_space(dataset_id);
-            hsize_t stride = 1;
-            hsize_t start = 0;
-            H5Sselect_hyperslab(filespace, H5S_SELECT_SET, &start, &stride, &proc_sizes[i], nullptr);
-            hid_t memspace = H5Screate_simple(1, &proc_sizes[i], nullptr);
-            H5Dwrite(dataset_id, H5T_NATIVE_CHAR, memspace, filespace, H5P_DEFAULT, buffer.data());
-            H5Sclose(memspace);
-            H5Sclose(filespace);
-        }
+        writeDset(i, dataset_id, dxpl, proc_sizes[i], buffer.data());
         H5Dclose(dataset_id);
         H5Sclose(space);
+        if (dcpl != H5P_DEFAULT) {
+            H5Pclose(dcpl);
+        }
+    }
+    if (dxpl != H5P_DEFAULT) {
+        H5Pclose(dxpl);
     }
 }
 
@@ -238,27 +243,54 @@ void HDF5File::writeRootOnly(hid_t grp,
     hsize_t size = buffer.size();
     comm_.broadcast(&size, 1, 0);
     hid_t space = H5Screate_simple(1, &size, nullptr);
+    hid_t dcpl = this->getCompression(size);
+    hid_t dxpl = H5P_DEFAULT;
+    if (comm_.size() > 1) {
+        dxpl = H5Pcreate(H5P_DATASET_XFER);
+        H5Pset_dxpl_mpio(dxpl, H5FD_MPIO_COLLECTIVE);
+    }
     hid_t dataset_id = H5Dcreate2(grp,
                                   dset.c_str(),
                                   H5T_NATIVE_CHAR, space,
-                                  H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+                                  H5P_DEFAULT, dcpl, H5P_DEFAULT);
     if (dataset_id == H5I_INVALID_HID) {
+        H5Sclose(space);
+        H5Pclose(dcpl);
         throw std::runtime_error("Trying to write already existing dataset '" +
                                  group + '/' + dset + "'");
     }
 
-    if (comm_.rank() == 0) {
-        hid_t filespace = H5Dget_space(dataset_id);
-        hsize_t stride = 1;
-        hsize_t start = 0;
-        H5Sselect_hyperslab(filespace, H5S_SELECT_SET, &start, &stride, &size, nullptr);
-        hid_t memspace = H5Screate_simple(1, &size, nullptr);
-        H5Dwrite(dataset_id, H5T_NATIVE_CHAR, memspace, filespace, H5P_DEFAULT, buffer.data());
-        H5Sclose(memspace);
-        H5Sclose(filespace);
-    }
+    writeDset(0, dataset_id, dxpl, size, buffer.data());
     H5Dclose(dataset_id);
     H5Sclose(space);
+    if (dxpl != H5P_DEFAULT) {
+        H5Pclose(dxpl);
+    }
+}
+
+hid_t HDF5File::getCompression(hsize_t size) const
+{
+    hid_t dcpl = H5P_DEFAULT;
+    if (H5Zfilter_avail(H5Z_FILTER_DEFLATE)) {
+        dcpl = H5Pcreate(H5P_DATASET_CREATE);
+        H5Pset_deflate(dcpl, 1);
+        H5Pset_chunk(dcpl, 1, &size);
+    }
+    return dcpl;
+}
+
+void HDF5File::writeDset(int rank, hid_t dataset_id,
+                         hid_t dxpl, hsize_t size, const void* data) const
+{
+    hid_t filespace = H5Dget_space(dataset_id);
+    hsize_t stride = 1;
+    hsize_t start = comm_.rank() == rank ? 0 : size;
+    hsize_t lsize = comm_.rank() == rank ? size : 0;
+    H5Sselect_hyperslab(filespace, H5S_SELECT_SET, &start, &stride, &lsize, nullptr);
+    hid_t memspace = H5Screate_simple(1, &lsize, nullptr);
+    H5Dwrite(dataset_id, H5T_NATIVE_CHAR, memspace, filespace, dxpl, data);
+    H5Sclose(memspace);
+    H5Sclose(filespace);
 }
 
 }
