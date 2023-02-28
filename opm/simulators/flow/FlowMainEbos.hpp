@@ -25,7 +25,6 @@
 #include <opm/simulators/flow/ConvergenceOutputConfiguration.hpp>
 #include <opm/simulators/flow/Banners.hpp>
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp>
-#include <opm/simulators/utils/ParallelFileMerger.hpp>
 #include <opm/simulators/utils/moduleVersion.hpp>
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
 #include <flow/flow_ebos_blackoil.hpp>
@@ -33,7 +32,6 @@
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/IOConfig/IOConfig.hpp>
 #include <opm/input/eclipse/EclipseState/InitConfig/InitConfig.hpp>
-#include <opm/common/utility/String.hpp>
 
 #include <filesystem>
 
@@ -44,6 +42,7 @@
 #endif
 
 #include <memory>
+#include <string_view>
 
 namespace Opm::Properties {
 
@@ -77,8 +76,13 @@ struct OutputInterval<TypeTag, TTag::EclFlowProblem> {
 
 } // namespace Opm::Properties
 
-namespace Opm
-{
+namespace Opm {
+namespace detail {
+
+void mergeParallelLogFiles(std::string_view output_dir,
+                           std::string_view deck_filename,
+                           bool enableLoggingFalloutWarning);
+}
 
     class Deck;
 
@@ -379,8 +383,6 @@ namespace Opm
             ThreadManager::init();
         }
 
-
-
         void mergeParallelLogFiles()
         {
             // force closing of all log files.
@@ -390,25 +392,9 @@ namespace Opm
                 return;
             }
 
-            namespace fs = ::std::filesystem;
-            const std::string& output_dir = eclState().getIOConfig().getOutputDir();
-            fs::path output_path(output_dir);
-            fs::path deck_filename(EWOMS_GET_PARAM(TypeTag, std::string, EclDeckFileName));
-            std::string basename;
-            // Strip extension "." and ".DATA"
-            std::string extension = uppercase(deck_filename.extension().string());
-            if ( extension == ".DATA" || extension == "." )
-            {
-                basename = uppercase(deck_filename.stem().string());
-            }
-            else
-            {
-                basename = uppercase(deck_filename.filename().string());
-            }
-            std::for_each(fs::directory_iterator(output_path),
-                          fs::directory_iterator(),
-                          detail::ParallelFileMerger(output_path, basename,
-                                                     EWOMS_GET_PARAM(TypeTag, bool, EnableLoggingFalloutWarning)));
+            detail::mergeParallelLogFiles(eclState().getIOConfig().getOutputDir(),
+                                          EWOMS_GET_PARAM(TypeTag, std::string, EclDeckFileName),
+                                          EWOMS_GET_PARAM(TypeTag, bool, EnableLoggingFalloutWarning));
         }
 
         void setupEbosSimulator()
