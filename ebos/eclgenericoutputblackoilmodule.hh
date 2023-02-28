@@ -252,6 +252,12 @@ public:
     // Virtual destructor for safer inheritance.
     virtual ~EclGenericOutputBlackoilModule();
 
+    template<class Serializer>
+    void serializeOp(Serializer& serializer)
+    {
+        serializer(initialInplace_);
+    }
+
 protected:
     using ScalarBuffer = std::vector<Scalar>;
     using StringBuffer = std::vector<std::string>;

@@ -475,6 +475,12 @@ public:
     Scalar restartTimeStepSize() const
     { return restartTimeStepSize_; }
 
+    template<class Serializer>
+    void serializeOp(Serializer& serializer)
+    {
+        serializer(*eclOutputModule_);
+    }
+
 private:
     static bool enableEclOutput_()
     { return EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput); }

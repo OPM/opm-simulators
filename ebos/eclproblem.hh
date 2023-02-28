@@ -2060,6 +2060,7 @@ public:
         serializer(aquiferModel_);
         serializer(tracerModel_);
         serializer(*materialLawManager_);
+        serializer(*eclWriter_);
     }
 
 private:
