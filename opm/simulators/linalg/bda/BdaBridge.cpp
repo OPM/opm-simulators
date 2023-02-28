@@ -101,7 +101,7 @@ BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string acceler
         use_gpu = true; // should be replaced by a 'use_bridge' boolean
         backend.reset(new Opm::Accelerator::rocsparseSolverBackend<block_size>(linear_solver_verbosity, maxit, tolerance, platformID, deviceID));
 #else
-        OPM_THROW(std::logic_error, "Error openclSolver was chosen, but rocsparse was not found by CMake");
+        OPM_THROW(std::logic_error, "Error rocsparseSolver was chosen, but rocsparse/rocblas was not found by CMake");
 #endif
     } else if (accelerator_mode.compare("none") == 0) {
         use_gpu = false;
