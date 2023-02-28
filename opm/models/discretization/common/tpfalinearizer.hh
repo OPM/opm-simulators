@@ -589,7 +589,7 @@ private:
             Scalar storefac = volume / dt;
             adres = 0.0;
             {
-                OPM_TIMEBLOCK_LOCAL(calculateStorage);
+                OPM_TIMEBLOCK_LOCAL(computeStorage);
                 LocalResidual::computeStorage(adres, intQuantsIn);
             }
             setResAndJacobi(res, bMat, adres);
