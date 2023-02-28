@@ -44,6 +44,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/countGlobalCells.cpp
   opm/simulators/flow/ConvergenceOutputConfiguration.cpp
   opm/simulators/flow/ExtraConvergenceOutputThread.cpp
+  opm/simulators/flow/FlowMainEbos.cpp
   opm/simulators/flow/KeywordValidation.cpp
   opm/simulators/flow/Main.cpp
   opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.cpp

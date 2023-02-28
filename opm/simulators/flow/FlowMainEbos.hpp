@@ -22,26 +22,21 @@
 #ifndef OPM_FLOW_MAIN_EBOS_HEADER_INCLUDED
 #define OPM_FLOW_MAIN_EBOS_HEADER_INCLUDED
 
-#include <opm/simulators/flow/ConvergenceOutputConfiguration.hpp>
 #include <opm/simulators/flow/Banners.hpp>
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp>
-#include <opm/simulators/utils/ParallelFileMerger.hpp>
-#include <opm/simulators/utils/moduleVersion.hpp>
-#include <opm/simulators/utils/ParallelEclipseState.hpp>
-#include <flow/flow_ebos_blackoil.hpp>
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/IOConfig/IOConfig.hpp>
 #include <opm/input/eclipse/EclipseState/InitConfig/InitConfig.hpp>
-#include <opm/common/utility/String.hpp>
-
-#include <filesystem>
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/misc/mpimanager.hh>
 #else
 #include <dune/common/parallel/mpihelper.hh>
 #endif
+
+#include <memory>
+#include <string_view>
 
 namespace Opm::Properties {
 
@@ -75,8 +70,20 @@ struct OutputInterval<TypeTag, TTag::EclFlowProblem> {
 
 } // namespace Opm::Properties
 
-namespace Opm
-{
+namespace Opm {
+namespace detail {
+
+void mergeParallelLogFiles(std::string_view output_dir,
+                           std::string_view deck_filename,
+                           bool enableLoggingFalloutWarning);
+
+void handleExtraConvergenceOutput(SimulatorReport& report,
+                                  std::string_view option,
+                                  std::string_view optionName,
+                                  std::string_view output_dir,
+                                  std::string_view base_name);
+
+}
 
     class Deck;
 
@@ -93,7 +100,7 @@ namespace Opm
         using Scalar = GetPropType<TypeTag, Properties::Scalar>;
         using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
-        typedef SimulatorFullyImplicitBlackoilEbos<TypeTag> Simulator;
+        using Simulator = SimulatorFullyImplicitBlackoilEbos<TypeTag>;
 
         FlowMainEbos(int argc, char **argv, bool output_cout, bool output_files )
             : argc_{argc}, argv_{argv},
@@ -377,8 +384,6 @@ namespace Opm
             ThreadManager::init();
         }
 
-
-
         void mergeParallelLogFiles()
         {
             // force closing of all log files.
@@ -388,30 +393,14 @@ namespace Opm
                 return;
             }
 
-            namespace fs = ::std::filesystem;
-            const std::string& output_dir = eclState().getIOConfig().getOutputDir();
-            fs::path output_path(output_dir);
-            fs::path deck_filename(EWOMS_GET_PARAM(TypeTag, std::string, EclDeckFileName));
-            std::string basename;
-            // Strip extension "." and ".DATA"
-            std::string extension = uppercase(deck_filename.extension().string());
-            if ( extension == ".DATA" || extension == "." )
-            {
-                basename = uppercase(deck_filename.stem().string());
-            }
-            else
-            {
-                basename = uppercase(deck_filename.filename().string());
-            }
-            std::for_each(fs::directory_iterator(output_path),
-                          fs::directory_iterator(),
-                          detail::ParallelFileMerger(output_path, basename,
-                                                     EWOMS_GET_PARAM(TypeTag, bool, EnableLoggingFalloutWarning)));
+            detail::mergeParallelLogFiles(eclState().getIOConfig().getOutputDir(),
+                                          EWOMS_GET_PARAM(TypeTag, std::string, EclDeckFileName),
+                                          EWOMS_GET_PARAM(TypeTag, bool, EnableLoggingFalloutWarning));
         }
 
         void setupEbosSimulator()
         {
-            ebosSimulator_.reset(new EbosSimulator(EclGenericVanguard::comm(), /*verbose=*/false));
+            ebosSimulator_ = std::make_unique<EbosSimulator>(EclGenericVanguard::comm(), /*verbose=*/false);
             ebosSimulator_->executionTimer().start();
             ebosSimulator_->model().applyInitialSolution();
 
@@ -500,20 +489,11 @@ namespace Opm
 
             printFlowTrailer(mpi_size_, threads, report);
 
-            const auto extraConvOutput = ConvergenceOutputConfiguration {
-                EWOMS_GET_PARAM(TypeTag, std::string, OutputExtraConvergenceInfo),
-                R"(OutputExtraConvergenceInfo (--output-extra-convergence-info))"
-            };
-
-            if (extraConvOutput.want(ConvergenceOutputConfiguration::Option::Steps)) {
-                namespace fs = ::std::filesystem;
-
-                const auto infostep = fs::path { eclState().getIOConfig().getOutputDir() } /
-                    fs::path { eclState().getIOConfig().getBaseName() }.concat(".INFOSTEP");
-
-                std::ofstream os(infostep);
-                report.fullReports(os);
-            }
+            detail::handleExtraConvergenceOutput(report,
+                                                 EWOMS_GET_PARAM(TypeTag, std::string, OutputExtraConvergenceInfo),
+                                                 R"(OutputExtraConvergenceInfo (--output-extra-convergence-info))",
+                                                 eclState().getIOConfig().getOutputDir(),
+                                                 eclState().getIOConfig().getBaseName());
         }
 
         // Run the simulator.
@@ -566,7 +546,7 @@ namespace Opm
         void createSimulator()
         {
             // Create the simulator instance.
-            simulator_.reset(new Simulator(*ebosSimulator_));
+            simulator_ = std::make_unique<Simulator>(*ebosSimulator_);
         }
 
         Grid& grid()
