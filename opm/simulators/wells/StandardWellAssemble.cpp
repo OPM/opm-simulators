@@ -272,7 +272,7 @@ INSTANCE(7u, BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>)
 INSTANCE(7u, BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,0u,0u>)
 INSTANCE(7u, BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,2u,0u>)
 INSTANCE(8u, BlackOilTwoPhaseIndices<0u,0u,2u,0u,false,false,0u,2u,0u>)
-
+INSTANCE(7u, BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,0u,0u>)
 // Blackoil
 INSTANCE(8u, BlackOilIndices<0u,0u,0u,0u,false,false,0u,0u>)
 INSTANCE(9u, BlackOilIndices<0u,0u,0u,0u,true,false,0u,0u>)
