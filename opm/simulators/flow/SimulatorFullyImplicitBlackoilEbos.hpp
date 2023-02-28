@@ -212,15 +212,14 @@ public:
         saveFile_ = EWOMS_GET_PARAM(TypeTag, std::string, SaveFile);
         if (saveFile_.empty()) {
             const auto& ioconfig = ebosSimulator_.vanguard().eclState().getIOConfig();
-            std::filesystem::path path(ioconfig.getOutputDir() + '/');
-            path.replace_filename(ioconfig.getBaseName() + ".OPMRST");
-            if (loadStep_ != -1 && !std::filesystem::exists(path)) {
-                saveFile_ = ioconfig.fullBasePath() + ".OPMRST";
+            saveFile_ = ioconfig.fullBasePath() + ".OPMRST";
+            if (loadStep_ != -1 && !std::filesystem::exists(saveFile_)) {
+                std::filesystem::path path(ioconfig.getInputDir() + "/");
+                path.replace_filename(ioconfig.getBaseName() + ".OPMRST");
+                saveFile_ = path;
                 if (!std::filesystem::exists(saveFile_)) {
                     OPM_THROW(std::runtime_error, "Error locating serialized restart file");
                 }
-            } else {
-                saveFile_ = path;
             }
         }
     }
