@@ -43,6 +43,8 @@
 #include <dune/common/parallel/mpihelper.hh>
 #endif
 
+#include <memory>
+
 namespace Opm::Properties {
 
 template<class TypeTag, class MyTypeTag>
@@ -411,7 +413,7 @@ namespace Opm
 
         void setupEbosSimulator()
         {
-            ebosSimulator_.reset(new EbosSimulator(EclGenericVanguard::comm(), /*verbose=*/false));
+            ebosSimulator_ = std::make_unique<EbosSimulator>(EclGenericVanguard::comm(), /*verbose=*/false);
             ebosSimulator_->executionTimer().start();
             ebosSimulator_->model().applyInitialSolution();
 
@@ -566,7 +568,7 @@ namespace Opm
         void createSimulator()
         {
             // Create the simulator instance.
-            simulator_.reset(new Simulator(*ebosSimulator_));
+            simulator_ = std::make_unique<Simulator>(*ebosSimulator_);
         }
 
         Grid& grid()
