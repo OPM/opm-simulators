@@ -917,7 +917,7 @@ public:
         // to the first "real" episode/report step
         // for restart the episode index and start is already set
         if (!initconfig.restartRequested()) {
-            simulator.startNextEpisode(schedule.seconds(0));
+            simulator.startNextEpisode(schedule.seconds(1));
             simulator.setEpisodeIndex(0);
         }
     }
