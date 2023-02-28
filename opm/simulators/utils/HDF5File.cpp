@@ -199,10 +199,14 @@ void HDF5File::writeSplit(hid_t grp,
     std::vector<hsize_t> proc_sizes(comm_.size());
     hid_t dxpl = H5P_DEFAULT;
     if (comm_.size() > 1) {
+#if HAVE_MPI
         hsize_t lsize = buffer.size();
         comm_.allgather(&lsize, 1, proc_sizes.data());
         dxpl = H5Pcreate(H5P_DATASET_XFER);
         H5Pset_dxpl_mpio(dxpl, H5FD_MPIO_COLLECTIVE);
+#else
+        assert(false); // should be unreachable
+#endif
     } else {
         proc_sizes[0] = buffer.size();
     }
@@ -246,8 +250,12 @@ void HDF5File::writeRootOnly(hid_t grp,
     hid_t dcpl = this->getCompression(size);
     hid_t dxpl = H5P_DEFAULT;
     if (comm_.size() > 1) {
+#if HAVE_MPI
         dxpl = H5Pcreate(H5P_DATASET_XFER);
         H5Pset_dxpl_mpio(dxpl, H5FD_MPIO_COLLECTIVE);
+#else
+        assert(false); // should be unreachable
+#endif
     }
     hid_t dataset_id = H5Dcreate2(grp,
                                   dset.c_str(),
