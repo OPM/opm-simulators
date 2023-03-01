@@ -20,8 +20,12 @@
 
 #pragma once
 
+#include <opm/common/TimingMacros.hpp>
+
 #include <opm/simulators/linalg/matrixblock.hh>
+#include <opm/simulators/linalg/PropertyTree.hpp>
 #include <opm/simulators/linalg/twolevelmethodcpr.hh>
+
 #include <dune/istl/paamg/pinfo.hh>
 
 namespace Opm

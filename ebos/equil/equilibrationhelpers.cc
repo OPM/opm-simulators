@@ -25,6 +25,8 @@
 
 #include <ebos/equil/equilibrationhelpers.hh>
 
+#include <opm/common/TimingMacros.hpp>
+
 #include <opm/common/utility/numeric/RootFinders.hpp>
 
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
