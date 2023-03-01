@@ -26,7 +26,6 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
-#include <opm/simulators/utils/moduleVersion.hpp>
 
 #include <fmt/format.h>
 
@@ -51,9 +50,10 @@ unsigned long long getTotalSystemMemory()
 
 namespace Opm {
 
-void printPRTHeader(const std::string& parameters)
+void printPRTHeader(const std::string& parameters,
+                    std::string_view moduleVersion,
+                    std::string_view compileTimestamp)
 {
-    const std::string version = moduleVersion();
     const double megabyte = 1024 * 1024;
     unsigned num_cpu = std::thread::hardware_concurrency();
     struct utsname arch;
@@ -73,13 +73,13 @@ void printPRTHeader(const std::string& parameters)
     ss << " #         #######    ######       #   #    \n\n";
     ss << "Flow is a simulator for fully implicit three-phase black-oil flow,";
     ss << " and is part of OPM.\nFor more information visit: https://opm-project.org \n\n";
-    ss << "Flow Version     =  " + version + "\n";
+    ss << "Flow Version     =  " << moduleVersion << "\n";
     if (uname(&arch) == 0) {
        ss << "Machine name     =  " << arch.nodename << " (Number of logical cores: " << num_cpu;
        ss << ", Memory size: " << std::fixed << std::setprecision (2) << mem_size << " MB) \n";
        ss << "Operating system =  " << arch.sysname << " " << arch.machine << " (Kernel: " << arch.release;
        ss << ", " << arch.version << " )\n";
-       ss << "Build time       =  " << compileTimestamp() << "\n";
+       ss << "Build time       =  " << compileTimestamp << "\n";
     }
     if (user) {
        ss << "User             =  " << user << std::endl;
@@ -91,11 +91,11 @@ void printPRTHeader(const std::string& parameters)
     OpmLog::note(ss.str());
 }
 
-void printFlowBanner(int nprocs, int nthreads)
+void printFlowBanner(int nprocs, int nthreads, std::string_view moduleVersionName)
 {
     const int lineLen = 70;
-    const std::string version = moduleVersionName();
-    const std::string banner = "This is flow "+version;
+    std::string banner = "This is flow ";
+    banner += moduleVersionName;
     const int bannerPreLen = (lineLen - 2 - banner.size())/2;
     const int bannerPostLen = bannerPreLen + (lineLen - 2 - banner.size())%2;
     std::cout << "**********************************************************************\n";

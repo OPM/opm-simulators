@@ -23,16 +23,19 @@
 #define OPM_FLOW_BANNERS_HEADER_INCLUDED
 
 #include <string>
+#include <string_view>
 
 namespace Opm {
 
 class SimulatorReport;
 
 // Print an ASCII-art header to the PRT and DEBUG files.
-void printPRTHeader(const std::string& parameters);
+void printPRTHeader(const std::string& parameters,
+                    std::string_view moduleVersion,
+                    std::string_view compileTimestamp);
 
 // Print flow application banner.
-void printFlowBanner(int nprocs, int threads);
+void printFlowBanner(int nprocs, int threads, std::string_view moduleVersionName);
 
 // Print flow application trailer.
 void printFlowTrailer(int nprocs, int nthreads,

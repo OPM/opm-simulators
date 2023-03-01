@@ -141,7 +141,8 @@ void Main::initMPI()
 #endif // HAVE_MPI
 }
 
-void Main::handleVersionCmdLine_(int argc, char** argv)
+void Main::handleVersionCmdLine_(int argc, char** argv,
+                                 std::string_view moduleVersionName)
 {
     auto pos = std::find_if(argv, argv + argc,
         [](const char* arg)
@@ -150,7 +151,7 @@ void Main::handleVersionCmdLine_(int argc, char** argv)
     });
 
     if (pos != argv + argc) {
-        std::cout << "flow " << moduleVersionName() << std::endl;
+        std::cout << "flow " << moduleVersionName << std::endl;
         std::exit(EXIT_SUCCESS);
     }
 }
@@ -173,7 +174,9 @@ void Main::readDeck(const std::string& deckFilename,
                     const bool strictParsing,
                     const int mpiRank,
                     const int output_param,
-                    const std::string& parameters)
+                    const std::string& parameters,
+                    std::string_view moduleVersion,
+                    std::string_view compileTimestamp)
 {
     auto omode = setupLogging(mpiRank,
                               deckFilename,
@@ -182,7 +185,7 @@ void Main::readDeck(const std::string& deckFilename,
                               outputCout_, "STDOUT_LOGGER", allRanksDbgPrtLog);
 
     if (outputCout_) {
-        printPRTHeader(parameters);
+        printPRTHeader(parameters, moduleVersion, compileTimestamp);
         OpmLog::info("Reading deck file '" + deckFilename + "'");
     }
 
