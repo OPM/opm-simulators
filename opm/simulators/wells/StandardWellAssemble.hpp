@@ -23,6 +23,8 @@
 #ifndef OPM_STANDARDWELL_ASSEMBLE_HEADER_INCLUDED
 #define OPM_STANDARDWELL_ASSEMBLE_HEADER_INCLUDED
 
+#include <opm/input/eclipse/Schedule/Well/Well.hpp>
+
 namespace Opm
 {
 
@@ -53,6 +55,8 @@ public:
                            const GroupState& group_state,
                            const Schedule& schedule,
                            const SummaryState& summaryState,
+                           const Well::InjectionControls& inj_controls,
+                           const Well::ProductionControls& prod_controls,
                            const PrimaryVariables& primary_variables,
                            const double rho,
                            StandardWellEquations<Scalar,Indices::numEq>& eqns,

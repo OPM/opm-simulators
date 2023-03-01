@@ -476,8 +476,8 @@ namespace Opm
     StandardWell<TypeTag>::
     assembleWellEqWithoutIteration(const Simulator& ebosSimulator,
                                    const double dt,
-                                   const Well::InjectionControls& /*inj_controls*/,
-                                   const Well::ProductionControls& /*prod_controls*/,
+                                   const Well::InjectionControls& inj_controls,
+                                   const Well::ProductionControls& prod_controls,
                                    WellState& well_state,
                                    const GroupState& group_state,
                                    DeferredLogger& deferred_logger)
@@ -489,7 +489,7 @@ namespace Opm
         // clear all entries
         this->linSys_.clear();
 
-        assembleWellEqWithoutIterationImpl(ebosSimulator, dt, well_state, group_state, deferred_logger);
+        assembleWellEqWithoutIterationImpl(ebosSimulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
     }
 
 
@@ -500,6 +500,8 @@ namespace Opm
     StandardWell<TypeTag>::
     assembleWellEqWithoutIterationImpl(const Simulator& ebosSimulator,
                                        const double dt,
+                                       const Well::InjectionControls& inj_controls,
+                                       const Well::ProductionControls& prod_controls,
                                        WellState& well_state,
                                        const GroupState& group_state,
                                        DeferredLogger& deferred_logger)
@@ -603,6 +605,7 @@ namespace Opm
         StandardWellAssemble<FluidSystem,Indices,Scalar>(*this).
             assembleControlEq(well_state, group_state,
                               schedule, summaryState,
+                              inj_controls, prod_controls,
                               this->primary_variables_,
                               this->connections_.rho(),
                               this->linSys_,
@@ -1705,18 +1708,32 @@ namespace Opm
                                       std::vector<double>& well_flux,
                                       DeferredLogger& deferred_logger) const
     {
+        // creating a copy of the well itself, to avoid messing up the explicit information
+        // during this copy, the only information not copied properly is the well controls
+        StandardWell<TypeTag> well_copy(*this);
 
         // iterate to get a more accurate well density
         // create a copy of the well_state to use. If the operability checking is sucessful, we use this one
         // to replace the original one
         WellState well_state_copy = ebosSimulator.problem().wellModel().wellState();
         const auto& group_state  = ebosSimulator.problem().wellModel().groupState();
-        auto& ws = well_state_copy.well(this->index_of_well_);
+
+        // Get the current controls.
+        const auto& summary_state = ebosSimulator.vanguard().summaryState();
+        auto inj_controls = well_copy.well_ecl_.isInjector()
+                            ? well_copy.well_ecl_.injectionControls(summary_state)
+                            : Well::InjectionControls(0);
+        auto prod_controls = well_copy.well_ecl_.isProducer()
+                             ? well_copy.well_ecl_.productionControls(summary_state) :
+                             Well::ProductionControls(0);
 
         //  Set current control to bhp, and bhp value in state, modify bhp limit in control object.
-        if (this->well_ecl_.isInjector()) {
+        auto& ws = well_state_copy.well(this->index_of_well_);
+        if (well_copy.well_ecl_.isInjector()) {
+            inj_controls.bhp_limit = bhp;
             ws.injection_cmode = Well::InjectorCMode::BHP;
         } else {
+            prod_controls.bhp_limit = bhp;
             ws.production_cmode = Well::ProducerCMode::BHP;
         }
         ws.bhp = bhp;
@@ -1728,22 +1745,19 @@ namespace Opm
             well_state_copy.wellRates(this->index_of_well_)[phase]
                     = sign * ws.well_potentials[phase];
         }
-        // creating a copy of the well itself, to avoid messing up the explicit informations
-        // during this copy, the only information not copied properly is the well controls
-        StandardWell<TypeTag> well(*this);
-        well.calculateExplicitQuantities(ebosSimulator, well_state_copy, deferred_logger);
+        well_copy.calculateExplicitQuantities(ebosSimulator, well_state_copy, deferred_logger);
 
         const double dt = ebosSimulator.timeStepSize();
-        bool converged = well.iterateWellEquations(ebosSimulator, dt, well_state_copy, group_state, deferred_logger);
+        const bool converged = well_copy.iterateWellEqWithControl(ebosSimulator, dt, inj_controls, prod_controls, well_state_copy, group_state, deferred_logger);
         if (!converged) {
             const std::string msg = " well " + name() + " did not get converged during well potential calculations "
                                                         " potentials are computed based on unconverged solution";
             deferred_logger.debug(msg);
         }
-        well.updatePrimaryVariables(well_state_copy, deferred_logger);
-        well.computeWellConnectionPressures(ebosSimulator, well_state_copy, deferred_logger);
-        well.initPrimaryVariablesEvaluation();
-        well.computeWellRatesWithBhp(ebosSimulator, bhp, well_flux, deferred_logger);
+        well_copy.updatePrimaryVariables(well_state_copy, deferred_logger);
+        well_copy.computeWellConnectionPressures(ebosSimulator, well_state_copy, deferred_logger);
+        well_copy.initPrimaryVariablesEvaluation();
+        well_copy.computeWellRatesWithBhp(ebosSimulator, bhp, well_flux, deferred_logger);
     }
 
 

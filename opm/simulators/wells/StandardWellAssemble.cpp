@@ -87,6 +87,8 @@ assembleControlEq(const WellState& well_state,
                   const GroupState& group_state,
                   const Schedule& schedule,
                   const SummaryState& summaryState,
+                  const Well::InjectionControls& inj_controls,
+                  const Well::ProductionControls& prod_controls,
                   const PrimaryVariables& primary_variables,
                   const double rho,
                   StandardWellEquations<Scalar,Indices::numEq>& eqns1,
@@ -129,8 +131,6 @@ assembleControlEq(const WellState& well_state,
                                                                    deferred_logger);
         };
 
-             // Call generic implementation.
-        const auto& inj_controls = well.injectionControls(summaryState);
         WellAssemble(well_).
             assembleControlEqInj(well_state,
                                  group_state,
@@ -154,8 +154,6 @@ assembleControlEq(const WellState& well_state,
                                                                    rho,
                                                                    deferred_logger);
         };
-           // Call generic implementation.
-        const auto& prod_controls = well.productionControls(summaryState);
         WellAssemble(well_).
             assembleControlEqProd(well_state,
                                   group_state,
