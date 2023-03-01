@@ -32,6 +32,7 @@
 #include "linearizationtype.hh"
 
 #include <opm/common/Exceptions.hpp>
+#include <opm/common/TimingMacros.hpp>
 
 #include <opm/models/discretization/common/baseauxiliarymodule.hh>
 
