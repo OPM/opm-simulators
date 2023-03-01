@@ -31,6 +31,7 @@
 #include <opm/simulators/flow/NonlinearSolverEbos.hpp>
 #include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeSteppingEbos.hpp>
+#include <opm/simulators/timestepping/ConvergenceReport.hpp>
 #include <opm/simulators/utils/moduleVersion.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
@@ -547,7 +548,7 @@ protected:
                      &this->convergenceOutputObject_.value());
     }
 
-    void writeConvergenceOutput(std::vector<typename Model::StepReport>&& reports)
+    void writeConvergenceOutput(std::vector<StepReport>&& reports)
     {
         if (! this->convergenceOutputThread_.has_value()) {
             return;

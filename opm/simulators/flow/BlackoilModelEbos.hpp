@@ -44,6 +44,7 @@
 #include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
 #include <opm/simulators/linalg/ISTLSolverEbos.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeSteppingEbos.hpp>
+#include <opm/simulators/timestepping/ConvergenceReport.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
 
@@ -1061,13 +1062,6 @@ namespace Opm {
         const SimulatorReportSingle& failureReport() const
         { return failureReport_; }
 
-        struct StepReport
-        {
-            int report_step;
-            int current_step;
-            std::vector<ConvergenceReport> report;
-        };
-
         const std::vector<StepReport>& stepReports() const
         {
             return convergence_reports_;
@@ -1155,6 +1149,7 @@ namespace Opm {
         double drMaxRel() const { return param_.dr_max_rel_; }
         double maxResidualAllowed() const { return param_.max_residual_allowed_; }
         double linear_solve_setup_time_;
+
     public:
         std::vector<bool> wasSwitched_;
     };
