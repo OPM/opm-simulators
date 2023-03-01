@@ -253,10 +253,15 @@ struct MinTimeStepBasedOnNewtonIterations<TypeTag, TTag::FlowTimeSteppingParamet
 } // namespace Opm::Properties
 
 namespace Opm {
-    // AdaptiveTimeStepping
-    //---------------------
+
+namespace detail {
+
     void logTimer(const AdaptiveSimulatorTimer& substepTimer);
 
+}
+
+    // AdaptiveTimeStepping
+    //---------------------
     template<class TypeTag>
     class AdaptiveTimeSteppingEbos
     {
@@ -430,7 +435,7 @@ namespace Opm {
                 // get current delta t
                 const double dt = substepTimer.currentStepLength() ;
                 if (timestepVerbose_) {
-                    logTimer(substepTimer);
+                    detail::logTimer(substepTimer);
                 }
 
                 SimulatorReportSingle substepReport;

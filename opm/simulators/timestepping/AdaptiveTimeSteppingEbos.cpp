@@ -2,6 +2,7 @@
 */
 
 #include <config.h>
+#include <opm/simulators/timestepping/AdaptiveTimeSteppingEbos.hpp>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/input/eclipse/Units/Units.hpp>
@@ -10,6 +11,7 @@
 #include <sstream>
 
 namespace Opm {
+namespace detail {
 
 void logTimer(const AdaptiveSimulatorTimer& substepTimer)
 {
@@ -24,4 +26,5 @@ void logTimer(const AdaptiveSimulatorTimer& substepTimer)
     OpmLog::info(ss.str());
 }
 
-}
+} // namespace detail
+} // namespace Opm
