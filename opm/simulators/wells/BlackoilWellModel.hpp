@@ -424,6 +424,11 @@ namespace Opm {
 
             void assembleWellEq(const double dt, DeferredLogger& deferred_logger);
 
+            void prepareWellsBeforeAssembling(const double dt, DeferredLogger& deferred_logger);
+
+            // TODO: finding a better naming
+            void singleAssembleWellEq(const double dt, DeferredLogger& deferred_logger);
+
             bool maybeDoGasLiftOptimize(DeferredLogger& deferred_logger);
 
             void gasLiftOptimizationStage1(DeferredLogger& deferred_logger,

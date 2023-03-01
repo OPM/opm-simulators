@@ -166,6 +166,20 @@ public:
                         const GroupState& group_state,
                         DeferredLogger& deferred_logger);
 
+    // naming becomes nasty now
+    void singleAssembleWellEq(const Simulator& ebosSimulator,
+                              const double dt,
+                              WellState& well_state,
+                              const GroupState& group_state,
+                              DeferredLogger& deferred_logger);
+
+    void prepareWellBeforeAssembling(const Simulator& ebosSimulator,
+                                     const double dt,
+                                     WellState& well_state,
+                                     const GroupState& group_state,
+                                     DeferredLogger& deferred_logger);
+
+
     virtual void computeWellRatesWithBhp(
         const Simulator& ebosSimulator,
         const double& bhp,

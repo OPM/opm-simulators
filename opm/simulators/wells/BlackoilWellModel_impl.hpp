@@ -872,6 +872,8 @@ namespace Opm {
 
         const bool well_group_control_changed = assembleImpl(iterationIdx, dt, 0, local_deferredLogger);
 
+        singleAssembleWellEq(dt, local_deferredLogger);
+
         // if group or well control changes we don't consider the
         // case converged
         last_report_.well_group_control_changed = well_group_control_changed;
@@ -885,6 +887,7 @@ namespace Opm {
     template<typename TypeTag>
     bool
     BlackoilWellModel<TypeTag>::
+    // the name needs to be changed since it is not assembling anymore actually
     assembleImpl(const int iterationIdx,
                  const double dt,
                  const std::size_t recursion_level,
@@ -900,7 +903,7 @@ namespace Opm {
             initPrimaryVariablesEvaluation();
 
             alq_updated = maybeDoGasLiftOptimize(local_deferredLogger);
-            assembleWellEq(dt, local_deferredLogger);
+            prepareWellsBeforeAssembling(dt, local_deferredLogger);
         }
         OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger, "assemble() failed: ",
                                        terminal_output_, grid().comm());
@@ -1142,6 +1145,28 @@ namespace Opm {
             well->assembleWellEq(ebosSimulator_, dt, this->wellState(), this->groupState(), deferred_logger);
         }
     }
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    prepareWellsBeforeAssembling(const double dt, DeferredLogger& deferred_logger)
+    {
+        for (auto& well : well_container_) {
+            well->prepareWellBeforeAssembling(ebosSimulator_, dt, this->wellState(), this->groupState(), deferred_logger);
+        }
+    }
+
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    singleAssembleWellEq(const double dt, DeferredLogger& deferred_logger)
+    {
+        for (auto& well: well_container_) {
+            well->singleAssembleWellEq(ebosSimulator_, dt, this->wellState(), this->groupState(), deferred_logger);
+        }
+    }
+
 
     template<typename TypeTag>
     void
