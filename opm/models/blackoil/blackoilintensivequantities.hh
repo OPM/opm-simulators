@@ -37,12 +37,17 @@
 #include "blackoilenergymodules.hh"
 #include "blackoildiffusionmodule.hh"
 #include "blackoilmicpmodules.hh"
+
+#include <opm/common/TimingMacros.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
+
+#include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
+
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
 #include <opm/material/common/Valgrind.hpp>
 
-#include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
-#include <opm/common/ErrorMacros.hpp>
-#include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/models/common/directionalmobility.hh>
+
 #include <opm/utility/CopyablePtr.hpp>
 
 #include <dune/common/fmatrix.hh>
