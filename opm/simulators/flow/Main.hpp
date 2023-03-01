@@ -73,6 +73,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 
@@ -278,7 +279,7 @@ private:
         Dune::Timer externalSetupTimer;
         externalSetupTimer.start();
 
-        handleVersionCmdLine_(argc_, argv_);
+        handleVersionCmdLine_(argc_, argv_, Opm::moduleVersionName());
 
         // we always want to use the default locale, and thus spare us the trouble
         // with incorrect locale settings.
@@ -357,7 +358,9 @@ private:
 
         std::string cmdline_params;
         if (outputCout_) {
-            printFlowBanner(EclGenericVanguard::comm().size(), getNumThreads<PreTypeTag>());
+            printFlowBanner(EclGenericVanguard::comm().size(),
+                            getNumThreads<PreTypeTag>(),
+                            Opm::moduleVersionName());
             std::ostringstream str;
             Parameters::printValues<PreTypeTag>(str);
             cmdline_params = str.str();
@@ -373,7 +376,9 @@ private:
                            EWOMS_GET_PARAM(PreTypeTag, bool, EclStrictParsing),
                            mpiRank,
                            EWOMS_GET_PARAM(PreTypeTag, int, EclOutputInterval),
-                           cmdline_params);
+                           cmdline_params,
+                           Opm::moduleVersion(),
+                           Opm::compileTimestamp());
             setupTime_ = externalSetupTimer.elapsed();
         }
         catch (const std::invalid_argument& e)
@@ -400,7 +405,8 @@ private:
     //
     // the call is intercepted by this function which will print "flow $version"
     // on stdout and exit(0).
-    void handleVersionCmdLine_(int argc, char** argv);
+    void handleVersionCmdLine_(int argc, char** argv,
+                               std::string_view moduleVersionName);
 
     // This function is a special case, if the program has been invoked
     // with the argument "--test-split-communicator=true" as the FIRST
@@ -617,7 +623,9 @@ private:
                   const bool strictParsing,
                   const int mpiRank,
                   const int output_param,
-                  const std::string& parameters);
+                  const std::string& parameters,
+                  std::string_view moduleVersion,
+                  std::string_view compileTimestamp);
 
     void setupVanguard();
 
