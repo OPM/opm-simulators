@@ -80,15 +80,6 @@ struct NewtonRelaxationType<TypeTag, TTag::FlowNonLinearSolver> {
 
 namespace Opm {
 
-namespace detail {
-
-/// Detect oscillation or stagnation in a given residual history.
-void detectOscillations(const std::vector<std::vector<double>>& residualHistory,
-                        const int it, const int numPhases, const double relaxRelTol,
-                        bool& oscillate, bool& stagnate);
-
-}
-
 class WellState;
 
 // Available relaxation scheme types.
@@ -96,6 +87,21 @@ enum class NonlinearRelaxType {
     Dampen,
     SOR
 };
+
+namespace detail {
+
+/// Detect oscillation or stagnation in a given residual history.
+void detectOscillations(const std::vector<std::vector<double>>& residualHistory,
+                        const int it, const int numPhases, const double relaxRelTol,
+                        bool& oscillate, bool& stagnate);
+
+/// Apply a stabilization to dx, depending on dxOld and relaxation parameters.
+/// Implemention for Dune block vectors.
+template <class BVector>
+void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
+                              const double omega, NonlinearRelaxType relaxType);
+
+}
 
     /// A nonlinear solver class suitable for general fully-implicit models,
     /// as well as pressure, transport and sequential models.
@@ -298,40 +304,7 @@ enum class NonlinearRelaxType {
         template <class BVector>
         void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld, const double omega) const
         {
-            // The dxOld is updated with dx.
-            // If omega is equal to 1., no relaxtion will be appiled.
-
-            BVector tempDxOld = dxOld;
-            dxOld = dx;
-
-            switch (relaxType()) {
-            case NonlinearRelaxType::Dampen: {
-                if (omega == 1.) {
-                    return;
-                }
-                auto i = dx.size();
-                for (i = 0; i < dx.size(); ++i) {
-                    dx[i] *= omega;
-                }
-                return;
-            }
-            case NonlinearRelaxType::SOR: {
-                if (omega == 1.) {
-                    return;
-                }
-                auto i = dx.size();
-                for (i = 0; i < dx.size(); ++i) {
-                    dx[i] *= omega;
-                    tempDxOld[i] *= (1.-omega);
-                    dx[i] += tempDxOld[i];
-                }
-                return;
-            }
-            default:
-                OPM_THROW(std::runtime_error, "Can only handle Dampen and SOR relaxation type.");
-            }
-
-            return;
+            detail::stabilizeNonlinearUpdate(dx, dxOld, omega, this->relaxType());
         }
 
         /// The greatest relaxation factor (i.e. smallest factor) allowed.
