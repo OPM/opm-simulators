@@ -91,6 +91,12 @@ void detectOscillations(const std::vector<std::vector<double>>& residualHistory,
 
 class WellState;
 
+// Available relaxation scheme types.
+enum class NonlinearRelaxType {
+    Dampen,
+    SOR
+};
+
     /// A nonlinear solver class suitable for general fully-implicit models,
     /// as well as pressure, transport and sequential models.
     template <class TypeTag, class PhysicalModel>
@@ -99,16 +105,10 @@ class WellState;
         using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
     public:
-        // Available relaxation scheme types.
-        enum RelaxType {
-            Dampen,
-            SOR
-        };
-
         // Solver parameters controlling nonlinear process.
         struct SolverParameters
         {
-            RelaxType relaxType_;
+            NonlinearRelaxType relaxType_;
             double relaxMax_;
             double relaxIncrement_;
             double relaxRelTol_;
@@ -127,9 +127,9 @@ class WellState;
 
                 const auto& relaxationTypeString = EWOMS_GET_PARAM(TypeTag, std::string, NewtonRelaxationType);
                 if (relaxationTypeString == "dampen") {
-                    relaxType_ = Dampen;
+                    relaxType_ = NonlinearRelaxType::Dampen;
                 } else if (relaxationTypeString == "sor") {
-                    relaxType_ = SOR;
+                    relaxType_ = NonlinearRelaxType::SOR;
                 } else {
                     OPM_THROW(std::runtime_error,
                               "Unknown Relaxtion Type " + relaxationTypeString);
@@ -147,7 +147,7 @@ class WellState;
             void reset()
             {
                 // default values for the solver parameters
-                relaxType_ = Dampen;
+                relaxType_ = NonlinearRelaxType::Dampen;
                 relaxMax_ = 0.5;
                 relaxIncrement_ = 0.1;
                 relaxRelTol_ = 0.2;
@@ -305,7 +305,7 @@ class WellState;
             dxOld = dx;
 
             switch (relaxType()) {
-            case Dampen: {
+            case NonlinearRelaxType::Dampen: {
                 if (omega == 1.) {
                     return;
                 }
@@ -315,7 +315,7 @@ class WellState;
                 }
                 return;
             }
-            case SOR: {
+            case NonlinearRelaxType::SOR: {
                 if (omega == 1.) {
                     return;
                 }
@@ -343,7 +343,7 @@ class WellState;
         { return param_.relaxIncrement_; }
 
         /// The relaxation type (Dampen or SOR).
-        enum RelaxType relaxType() const
+        NonlinearRelaxType relaxType() const
         { return param_.relaxType_; }
 
         /// The relaxation relative tolerance.
