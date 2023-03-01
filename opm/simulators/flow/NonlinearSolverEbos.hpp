@@ -80,6 +80,15 @@ struct NewtonRelaxationType<TypeTag, TTag::FlowNonLinearSolver> {
 
 namespace Opm {
 
+namespace detail {
+
+/// Detect oscillation or stagnation in a given residual history.
+void detectOscillations(const std::vector<std::vector<double>>& residualHistory,
+                        const int it, const int numPhases, const double relaxRelTol,
+                        bool& oscillate, bool& stagnate);
+
+}
+
 class WellState;
 
     /// A nonlinear solver class suitable for general fully-implicit models,
@@ -279,34 +288,8 @@ class WellState;
         void detectOscillations(const std::vector<std::vector<double>>& residualHistory,
                                 const int it, bool& oscillate, bool& stagnate) const
         {
-            // The detection of oscillation in two primary variable results in the report of the detection
-            // of oscillation for the solver.
-            // Only the saturations are used for oscillation detection for the black oil model.
-            // Stagnate is not used for any treatment here.
-
-            if ( it < 2 ) {
-                oscillate = false;
-                stagnate = false;
-                return;
-            }
-
-            stagnate = true;
-            int oscillatePhase = 0;
-            const std::vector<double>& F0 = residualHistory[it];
-            const std::vector<double>& F1 = residualHistory[it - 1];
-            const std::vector<double>& F2 = residualHistory[it - 2];
-            for (int p= 0; p < model_->numPhases(); ++p){
-                const double d1 = std::abs((F0[p] - F2[p]) / F0[p]);
-                const double d2 = std::abs((F0[p] - F1[p]) / F0[p]);
-
-                oscillatePhase += (d1 < relaxRelTol()) && (relaxRelTol() < d2);
-
-                // Process is 'stagnate' unless at least one phase
-                // exhibits significant residual change.
-                stagnate = (stagnate && !(std::abs((F1[p] - F2[p]) / F2[p]) > 1.0e-3));
-            }
-
-            oscillate = (oscillatePhase > 1);
+            detail::detectOscillations(residualHistory, it, model_->numPhases(),
+                                       this->relaxRelTol(), oscillate, stagnate);
         }
 
 
@@ -392,6 +375,7 @@ class WellState;
         int linearIterationsLast_;
         int wellIterationsLast_;
     };
+
 } // namespace Opm
 
 #endif // OPM_NON_LINEAR_SOLVER_EBOS_HPP

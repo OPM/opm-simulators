@@ -47,6 +47,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/FlowMainEbos.cpp
   opm/simulators/flow/KeywordValidation.cpp
   opm/simulators/flow/Main.cpp
+  opm/simulators/flow/NonlinearSolverEbos.cpp
   opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.cpp
   opm/simulators/flow/ValidationFunctions.cpp
   opm/simulators/linalg/bda/WellContributions.cpp
