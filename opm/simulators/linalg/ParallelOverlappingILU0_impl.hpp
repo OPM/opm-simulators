@@ -24,6 +24,7 @@
 #include <dune/istl/owneroverlapcopy.hh>
 
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/common/TimingMacros.hpp>
 
 #include <opm/simulators/linalg/GraphColoring.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>

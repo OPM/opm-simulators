@@ -28,6 +28,7 @@
 
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
+#include <opm/common/TimingMacros.hpp>
 
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/common/multiphasebaseproperties.hh>
