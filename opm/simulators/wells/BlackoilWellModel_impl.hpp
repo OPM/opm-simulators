@@ -873,8 +873,7 @@ namespace Opm {
 
         const bool well_group_control_changed = updateWellControlsAndNetwork(dt, local_deferredLogger);
 
-        // TODO: assembleImpl function can be removed, it does not do much than assembleWellEq
-        assembleImpl(dt, local_deferredLogger);
+        assembleWellEqOnly(dt, local_deferredLogger);
 
         // if group or well control changes we don't consider the
         // case converged
@@ -921,14 +920,8 @@ namespace Opm {
             initPrimaryVariablesEvaluation();
 
             alq_updated = maybeDoGasLiftOptimize(local_deferredLogger);
-            // TODO: in theory, there is not need to actually assemble the well equations here, for now, so it is
-            // easier to compare with the original code.
-            // And also, there is a lot of things done in the function assembleWellEq, some work needs to be done to
-            // split it. For the moment, not touching that direction.
-            assembleWellEq(dt, local_deferredLogger);
-            /* for (auto& well : well_container_) {
-                well->solveWellEquation(ebosSimulator_, this->wellState(), this->groupState(), local_deferredLogger);
-            } */
+
+            prepareWellsBeforeAssembling(dt, local_deferredLogger);
         }
         OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger, "updateWellControlsAndNetworkIteration() failed: ",
                                        terminal_output_, grid().comm());
@@ -1181,6 +1174,28 @@ namespace Opm {
             well->assembleWellEq(ebosSimulator_, dt, this->wellState(), this->groupState(), deferred_logger);
         }
     }
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    prepareWellsBeforeAssembling(const double dt, DeferredLogger& deferred_logger)
+    {
+        for (auto& well : well_container_) {
+            well->prepareWellBeforeAssembling(ebosSimulator_, dt, this->wellState(), this->groupState(), deferred_logger);
+        }
+    }
+
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    assembleWellEqOnly(const double dt, DeferredLogger& deferred_logger)
+    {
+        for (auto& well: well_container_) {
+            well->assembleWellEqOnly(ebosSimulator_, dt, this->wellState(), this->groupState(), deferred_logger);
+        }
+    }
+
 
     template<typename TypeTag>
     void
