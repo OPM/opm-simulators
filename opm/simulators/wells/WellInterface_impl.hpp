@@ -382,12 +382,16 @@ namespace Opm
         const double dt = ebosSimulator.timeStepSize();
         const auto& summary_state = ebosSimulator.vanguard().summaryState();
         const bool has_thp_limit = this->wellHasTHPConstraints(summary_state);
-        if (has_thp_limit)
+        bool converged;
+        if (has_thp_limit) {
             well_state.well(this->indexOfWell()).production_cmode = Well::ProducerCMode::THP;
-        else
+            converged = gliftBeginTimeStepWellTestIterateWellEquations(
+                ebosSimulator, dt, well_state, group_state, deferred_logger);
+        }
+        else {
             well_state.well(this->indexOfWell()).production_cmode = Well::ProducerCMode::BHP;
-
-        const bool converged = iterateWellEquations(ebosSimulator, dt, well_state, group_state, deferred_logger);
+            converged = iterateWellEquations(ebosSimulator, dt, well_state, group_state, deferred_logger);
+        }
         if (converged) {
             deferred_logger.debug("WellTest: Well equation for well " + this->name() +  " converged");
             return true;
@@ -582,6 +586,38 @@ namespace Opm
                                 "well not operable, trying with explicit vfp lookup: " + this->name());
             updateWellOperability(ebos_simulator, well_state, deferred_logger);
         }
+    }
+
+    template<typename TypeTag>
+    bool
+    WellInterface<TypeTag>::
+    gliftBeginTimeStepWellTestIterateWellEquations(
+        const Simulator& ebos_simulator,
+        const double dt,
+        WellState& well_state,
+        const GroupState &group_state,
+        DeferredLogger& deferred_logger)
+    {
+        const auto& well_name = this->name();
+        const auto& summary_state = ebos_simulator.vanguard().summaryState();
+        assert(this->wellHasTHPConstraints(summary_state));
+        const auto& schedule = ebos_simulator.vanguard().schedule();
+        auto report_step_idx = ebos_simulator.episodeIndex();
+        const auto& glo = schedule.glo(report_step_idx);
+        assert(glo.has_well(well_name));
+        auto increment = glo.gaslift_increment();
+        auto alq = well_state.getALQ(well_name);
+        bool converged;
+        while (alq > 0) {
+            well_state.setALQ(well_name, alq);
+            if ((converged =
+                  iterateWellEquations(ebos_simulator, dt, well_state, group_state, deferred_logger)))
+            {
+                return converged;
+            }
+            alq -= increment;
+        }
+        return false;
     }
 
     template<typename TypeTag>
