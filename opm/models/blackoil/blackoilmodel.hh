@@ -483,10 +483,10 @@ public:
 
         outstream << priVars.pvtRegionIndex() << " ";
 
-        SolventModule::serializeEntity(*this, outstream, dof);
-        ExtboModule::serializeEntity(*this, outstream, dof);
-        PolymerModule::serializeEntity(*this, outstream, dof);
-        EnergyModule::serializeEntity(*this, outstream, dof);
+        SolventModule::serializeEntity(asImp_(), outstream, dof);
+        ExtboModule::serializeEntity(asImp_(), outstream, dof);
+        PolymerModule::serializeEntity(asImp_(), outstream, dof);
+        EnergyModule::serializeEntity(asImp_(), outstream, dof);
     }
 
     /*!
@@ -527,10 +527,10 @@ public:
         if (!instream.good())
             throw std::runtime_error("Could not deserialize degree of freedom "+std::to_string(dofIdx));
 
-        SolventModule::deserializeEntity(*this, instream, dof);
-        ExtboModule::deserializeEntity(*this, instream, dof);
-        PolymerModule::deserializeEntity(*this, instream, dof);
-        EnergyModule::deserializeEntity(*this, instream, dof);
+        SolventModule::deserializeEntity(asImp_(), instream, dof);
+        ExtboModule::deserializeEntity(asImp_(), instream, dof);
+        PolymerModule::deserializeEntity(asImp_(), instream, dof);
+        EnergyModule::deserializeEntity(asImp_(), instream, dof);
 
         using PVM_G = typename PrimaryVariables::GasMeaning;
         using PVM_W = typename PrimaryVariables::WaterMeaning;
@@ -591,10 +591,10 @@ protected:
         ParentType::registerOutputModules_();
 
         // add the VTK output modules which make sense for the blackoil model
-        SolventModule::registerOutputModules(*this, this->simulator_);
-        PolymerModule::registerOutputModules(*this, this->simulator_);
-        EnergyModule::registerOutputModules(*this, this->simulator_);
-        MICPModule::registerOutputModules(*this, this->simulator_);
+        SolventModule::registerOutputModules(asImp_(), this->simulator_);
+        PolymerModule::registerOutputModules(asImp_(), this->simulator_);
+        EnergyModule::registerOutputModules(asImp_(), this->simulator_);
+        MICPModule::registerOutputModules(asImp_(), this->simulator_);
 
         this->addOutputModule(new VtkBlackOilModule<TypeTag>(this->simulator_));
         this->addOutputModule(new VtkCompositionModule<TypeTag>(this->simulator_));
