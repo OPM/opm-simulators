@@ -221,6 +221,14 @@ namespace Opm
         bool wellGroupTargetsViolated_;
     };
 
+    struct StepReport
+    {
+        int report_step;
+        int current_step;
+        std::vector<ConvergenceReport> report;
+    };
+
+
 } // namespace Opm
 
 #endif // OPM_CONVERGENCEREPORT_HEADER_INCLUDED
