@@ -30,6 +30,8 @@
 #include <rocblas/rocblas.h>
 #include <rocsparse/rocsparse.h>
 
+#include <hip/hip_version.h>
+
 namespace Opm
 {
 namespace Accelerator
@@ -65,8 +67,11 @@ private:
     rocsparse_operation operation = rocsparse_operation_none;
     rocsparse_handle handle;
     rocblas_handle blas_handle;
-    rocsparse_mat_descr descr_M, descr_L, descr_U;
+    rocsparse_mat_descr descr_A, descr_M, descr_L, descr_U;
     rocsparse_mat_info ilu_info;
+#if HIP_VERSION >= 50400000
+    rocsparse_mat_info spmv_info;
+#endif
     hipStream_t stream;
 
     rocsparse_int *d_Arows, *d_Mrows;
