@@ -114,7 +114,7 @@ createBridge(const boost::property_tree::ptree& prm, std::unique_ptr<Opm::BdaBri
                                                                                linsolver);
     } catch (const std::logic_error& error) {
         BOOST_WARN_MESSAGE(true, error.what());
-        if (strstr(error.what(), "HIP error: hipInit() failed") != nullptr)
+        if (strstr(error.what(), "HIP Error: could not get device") != nullptr)
             throw HIPInitException(error.what());
         else
             throw error;

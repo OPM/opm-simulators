@@ -72,9 +72,27 @@ using Dune::Timer;
 
 template <unsigned int block_size>
 rocsparseSolverBackend<block_size>::rocsparseSolverBackend(int verbosity_, int maxit_, double tolerance_, unsigned int platformID_, unsigned int deviceID_) : BdaSolver<block_size>(verbosity_, maxit_, tolerance_, platformID_, deviceID_) {
+    hipDevice_t device;
+    if(hipDeviceGet(&device, deviceID) != hipSuccess)
+    {
+        OPM_THROW(std::logic_error, "HIP Error: could not get device");
+    }
 
+    ROCSPARSE_CHECK(rocsparse_create_handle(&handle));
+    ROCBLAS_CHECK(rocblas_create_handle(&blas_handle));
+
+    ROCSPARSE_CHECK(rocsparse_get_version(handle, &ver));
+    ROCSPARSE_CHECK(rocsparse_get_git_rev(handle, rev));
+
+    std::ostringstream out;
+    out << "rocSPARSE version: " << ver / 100000 << "." << ver / 100 % 1000 << "."
+        << ver % 100 << "-" << rev << "\n";
+    OpmLog::info(out.str());
+
+    HIP_CHECK(hipStreamCreate(&stream));
+    ROCSPARSE_CHECK(rocsparse_set_stream(handle, stream));
+    ROCBLAS_CHECK(rocblas_set_stream(blas_handle, stream));
 }
-
 
 
 template <unsigned int block_size>
@@ -289,20 +307,6 @@ void rocsparseSolverBackend<block_size>::initialize(std::shared_ptr<BlockedMatri
     HIP_CHECK(hipMalloc((void**)&d_s, sizeof(double) * N));
     HIP_CHECK(hipMalloc((void**)&d_t, sizeof(double) * N));
     HIP_CHECK(hipMalloc((void**)&d_v, sizeof(double) * N));
-
-    ROCSPARSE_CHECK(rocsparse_create_handle(&handle));
-    ROCBLAS_CHECK(rocblas_create_handle(&blas_handle));
-
-    ROCSPARSE_CHECK(rocsparse_get_version(handle, &ver));
-    ROCSPARSE_CHECK(rocsparse_get_git_rev(handle, rev));
-
-    out << "rocSPARSE version: " << ver / 100000 << "." << ver / 100 % 1000 << "."
-        << ver % 100 << "-" << rev << "\n";
-    OpmLog::info(out.str());
-
-    HIP_CHECK(hipStreamCreate(&stream));
-    ROCSPARSE_CHECK(rocsparse_set_stream(handle, stream));
-    ROCBLAS_CHECK(rocblas_set_stream(blas_handle, stream));
 
     HIP_CHECK(hipMalloc((void**)&d_Arows, sizeof(rocsparse_int) * (Nb + 1)));
     HIP_CHECK(hipMalloc((void**)&d_Acols, sizeof(rocsparse_int) * nnzb));
