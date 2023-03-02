@@ -377,7 +377,7 @@ public:
                                 this->actionState(),
                                 this->udqState(),
                                 this->summaryState(),
-                                simulator_.problem().thresholdPressure().data(),
+                                simulator_.problem().thresholdPressure().getRestartVector(),
                                 curTime, nextStepSize,
                                 EWOMS_GET_PARAM(TypeTag, bool, EclOutputDoublePrecision),
                                 isFlowsn,
