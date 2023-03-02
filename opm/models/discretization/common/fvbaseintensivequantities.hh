@@ -80,14 +80,15 @@ public:
      */
     void checkDefined() const
     { }
-
+protected:
+    Scalar extrusionFactor_;
 private:
     const Implementation& asImp_() const
     { return *static_cast<const Implementation*>(this); }
     Implementation& asImp_()
     { return *static_cast<Implementation*>(this); }
 
-    Scalar extrusionFactor_;
+    
 };
 
 } // namespace Opm
