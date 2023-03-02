@@ -1572,7 +1572,7 @@ public:
                   unsigned spaceIdx,
                   unsigned timeIdx) const
     {
-        OPM_TIMEBLOCK(eclProblemBoundary);
+        OPM_TIMEBLOCK_LOCAL(eclProblemBoundary);
         if (!context.intersection(spaceIdx).boundary())
             return;
 
@@ -1782,7 +1782,7 @@ public:
                 unsigned globalDofIdx,
                 unsigned timeIdx) const
     {
-        OPM_TIMEBLOCK(eclProblemSource);
+        OPM_TIMEBLOCK_LOCAL(eclProblemSource);
         rate = 0.0;
 
         wellModel_.computeTotalRatesForDof(rate, globalDofIdx);
