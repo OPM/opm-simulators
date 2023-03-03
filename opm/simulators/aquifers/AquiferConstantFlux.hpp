@@ -66,16 +66,16 @@ public:
         aquifer_data_ = aquifer;
     }
 
-    void initFromRestart(const data::Aquifers& /* aquiferSoln */) {
+    void initFromRestart(const data::Aquifers& /* aquiferSoln */) override {
     }
 
-    void initialSolutionApplied() {
+    void initialSolutionApplied() override {
     }
 
-    void beginTimeStep() {
+    void beginTimeStep() override {
     }
 
-    void endTimeStep() {
+    void endTimeStep() override {
         this->flux_rate_ = 0.;
         for (const auto& q : this->connection_flux_) {
             this->flux_rate_ += Opm::getValue(q);
@@ -84,7 +84,7 @@ public:
         this->cumulative_flux_ += this->flux_rate_ * this->ebos_simulator_.timeStepSize();
     }
 
-    data::AquiferData aquiferData() const
+    data::AquiferData aquiferData() const override
     {
         data::AquiferData data;
         data.aquiferID = this->aquifer_data_.id;

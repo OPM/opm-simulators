@@ -254,7 +254,7 @@ struct MinTimeStepBasedOnNewtonIterations<TypeTag, TTag::FlowTimeSteppingParamet
 
 namespace Opm {
 
-class StepReport;
+struct StepReport;
 
 namespace detail {
 
