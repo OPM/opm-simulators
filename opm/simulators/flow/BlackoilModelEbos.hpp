@@ -67,6 +67,7 @@
 #include <iomanip>
 #include <limits>
 #include <type_traits>
+#include <tuple>
 #include <utility>
 #include <vector>
 
