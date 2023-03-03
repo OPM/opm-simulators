@@ -40,6 +40,11 @@ public:
         return this->names_[compIdx];
     }
 
+    const std::vector<std::string>& names() const
+    {
+        return this->names_;
+    }
+
 private:
     std::vector<std::string> names_{};
 };
