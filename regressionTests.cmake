@@ -170,7 +170,9 @@ add_test_compareECLFiles(CASENAME fetkovich_2d
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR aquifer-fetkovich)
+                         DIR aquifer-fetkovich
+                         RESTART_STEP 30
+                         RESTART_SCHED true)
 
 add_test_compareECLFiles(CASENAME numerical_aquifer_3d_2aqu
                          FILENAME 3D_2AQU_NUM

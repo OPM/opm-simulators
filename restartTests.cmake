@@ -20,15 +20,6 @@ add_test_compare_restarted_simulation(CASENAME spe9
                                       RESTART_STEP 15
                                       TEST_ARGS --sched-restart=false  --tolerance-mb=1e-7)
 
-add_test_compare_restarted_simulation(CASENAME fetkovich_2d
-                                      FILENAME 2D_FETKOVICHAQUIFER
-                                      SIMULATOR flow
-                                      ABS_TOL ${abs_tol_restart}
-                                      REL_TOL ${rel_tol_restart}
-                                      RESTART_STEP 30
-                                      DIR aquifer-fetkovich
-                                      TEST_ARGS --sched-restart=true)
-
 add_test_compare_restarted_simulation(CASENAME numerical_aquifer_3d_1aqu
                                       FILENAME 3D_1AQU_3CELLS
                                       SIMULATOR flow
