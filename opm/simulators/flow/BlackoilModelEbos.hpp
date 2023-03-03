@@ -160,7 +160,7 @@ namespace Opm {
     {
     public:
         // ---------  Types and enums  ---------
-        typedef BlackoilModelParametersEbos<TypeTag> ModelParameters;
+        using ModelParameters = BlackoilModelParametersEbos<TypeTag>;
 
         using Simulator = GetPropType<TypeTag, Properties::Simulator>;
         using Grid = GetPropType<TypeTag, Properties::Grid>;
@@ -172,8 +172,8 @@ namespace Opm {
         using Indices = GetPropType<TypeTag, Properties::Indices>;
         using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
         using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>;
+        using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
-        typedef double Scalar;
         static const int numEq = Indices::numEq;
         static const int contiSolventEqIdx = Indices::contiSolventEqIdx;
         static const int contiZfracEqIdx = Indices::contiZfracEqIdx;
@@ -200,14 +200,14 @@ namespace Opm {
         static const int biofilmConcentrationIdx = Indices::biofilmConcentrationIdx;
         static const int calciteConcentrationIdx = Indices::calciteConcentrationIdx;
 
-        typedef Dune::FieldVector<Scalar, numEq >        VectorBlockType;
-        typedef typename SparseMatrixAdapter::MatrixBlock MatrixBlockType;
-        typedef typename SparseMatrixAdapter::IstlMatrix Mat;
-        typedef Dune::BlockVector<VectorBlockType>      BVector;
+        using VectorBlockType = Dune::FieldVector<Scalar, numEq>;
+        using MatrixBlockType = typename SparseMatrixAdapter::MatrixBlock;
+        using Mat = typename SparseMatrixAdapter::IstlMatrix;
+        using BVector = Dune::BlockVector<VectorBlockType>;
 
         using Domain = SubDomain<Grid>;
 
-        typedef ISTLSolverEbos<TypeTag> ISTLSolverType;
+        using ISTLSolverType = ISTLSolverEbos<TypeTag>;
 
         class ComponentName
         {
@@ -271,8 +271,6 @@ namespace Opm {
         private:
             std::vector<std::string> names_{};
         };
-
-        //typedef typename SolutionVector :: value_type            PrimaryVariables ;
 
         // ---------  Public methods  ---------
 
@@ -1709,7 +1707,7 @@ namespace Opm {
                                                   std::vector<Scalar>& residual_norms)
         {
             OPM_TIMEBLOCK(getReservoirConvergence);
-            typedef std::vector< Scalar > Vector;
+            using Vector = std::vector<Scalar>;
 
             const int numComp = numEq;
             Vector R_sum(numComp, 0.0 );
