@@ -107,6 +107,12 @@ namespace Opm
 
     void SimulatorReportSingle::reportFullyImplicit(std::ostream& os, const SimulatorReportSingle* failureReport) const
     {
+        auto noZero = [](auto val)
+        {
+            if (val == decltype(val){0})
+                return decltype(val){1};
+            return val;
+        };
         os << fmt::format("Total time (seconds):       {:9.2f} \n", total_time);
 
          os << fmt::format("Solver time (seconds):      {:9.2f} \n",
@@ -120,7 +126,7 @@ namespace Opm
             if (failureReport) {
               os << fmt::format(" (Failed: {:2.1f}; {:2.1f}%)",
                                 failureReport->assemble_time,
-                                100*failureReport->assemble_time/t);
+                                100*failureReport->assemble_time/noZero(t));
              }
             os << std::endl;
 
@@ -129,7 +135,7 @@ namespace Opm
             if (failureReport) {
               os << fmt::format(" (Failed: {:2.1f}; {:2.1f}%)",
                                 failureReport->assemble_time_well,
-                                100*failureReport->assemble_time_well/t);
+                                100*failureReport->assemble_time_well/noZero(t));
             }
             os << std::endl;
 
@@ -138,7 +144,7 @@ namespace Opm
             if (failureReport) {
               os << fmt::format(" (Failed: {:2.1f}; {:2.1f}%)",
                                 failureReport->linear_solve_time,
-                                100*failureReport->linear_solve_time/t);
+                                100*failureReport->linear_solve_time/noZero(t));
             }
             os << std::endl;
 
@@ -147,7 +153,7 @@ namespace Opm
             if (failureReport) {
               os << fmt::format(" (Failed: {:2.1f}; {:2.1f}%)",
                                 failureReport->linear_solve_setup_time,
-                                100*failureReport->linear_solve_setup_time/t);
+                                100*failureReport->linear_solve_setup_time/noZero(t));
             }
             os << std::endl;
 
@@ -156,7 +162,7 @@ namespace Opm
             if (failureReport) {
               os << fmt::format(" (Failed: {:2.1f}; {:2.1f}%)",
                                 failureReport->update_time,
-                                100*failureReport->update_time/t);
+                                100*failureReport->update_time/noZero(t));
             }
             os << std::endl;
             t = pre_post_time + (failureReport ? failureReport->pre_post_time : 0.0);
@@ -164,14 +170,13 @@ namespace Opm
             if (failureReport) {
               os << fmt::format(" (Failed: {:2.1f}; {:2.1f}%)",
                                 failureReport->pre_post_time,
-                                100*failureReport->pre_post_time/t);
+                                100*failureReport->pre_post_time/noZero(t));
             }
             os << std::endl;
 
             os << fmt::format(" Output write time (seconds): {:7.2f}", 
                               output_write_time + (failureReport ? failureReport->output_write_time : 0.0));
             os << std::endl;
-
         }
 
         int n = total_linearizations + (failureReport ? failureReport->total_linearizations : 0);
@@ -179,7 +184,7 @@ namespace Opm
         if (failureReport) {
           os << fmt::format("    (Failed: {:3}; {:2.1f}%)",
                             failureReport->total_linearizations,
-                            100.0*failureReport->total_linearizations/n);
+                            100.0*failureReport->total_linearizations/noZero(n));
         }
         os << std::endl;
 
@@ -188,7 +193,7 @@ namespace Opm
         if (failureReport) {
           os << fmt::format("    (Failed: {:3}; {:2.1f}%)",
                             failureReport->total_newton_iterations,
-                            100.0*failureReport->total_newton_iterations/n);
+                            100.0*failureReport->total_newton_iterations/noZero(n));
         }
         os << std::endl;
 
@@ -197,7 +202,7 @@ namespace Opm
         if (failureReport) {
           os << fmt::format("    (Failed: {:3}; {:2.1f}%)",
                             failureReport->total_linear_iterations,
-                            100.0*failureReport->total_linear_iterations/n);
+                            100.0*failureReport->total_linear_iterations/noZero(n));
         }
         os << std::endl;
     }
