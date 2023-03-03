@@ -65,7 +65,6 @@
 #include <cassert>
 #include <cmath>
 #include <iomanip>
-#include <iostream>
 #include <limits>
 #include <type_traits>
 #include <utility>
@@ -434,7 +433,7 @@ namespace Opm {
             std::fill(wasSwitched_.begin(), wasSwitched_.end(), false);
 
             if (param_.update_equations_scaling_) {
-                std::cout << "equation scaling not supported yet" << std::endl;
+                OpmLog::error("Equation scaling not supported");
                 //updateEquationsScaling();
             }
 
