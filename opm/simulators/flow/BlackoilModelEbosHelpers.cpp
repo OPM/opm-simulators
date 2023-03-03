@@ -25,6 +25,7 @@
 #include <opm/simulators/flow/BlackoilModelEbosHelpers.hpp>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/common/TimingMacros.hpp>
 
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
 
@@ -116,6 +117,63 @@ ConvergenceReport createConvergenceReport(const int iteration,
     return report;
 }
 
+template<class Scalar>
+std::tuple<double,double> convergenceReduction(Parallel::Communication comm,
+                                               const double pvSumLocal,
+                                               const double numAquiferPvSumLocal,
+                                               std::vector<Scalar>& R_sum,
+                                               std::vector<Scalar>& maxCoeff,
+                                               std::vector<Scalar>& B_avg)
+{
+    OPM_TIMEBLOCK(convergenceReduction);
+    // Compute total pore volume (use only owned entries)
+    double pvSum = pvSumLocal;
+    double numAquiferPvSum = numAquiferPvSumLocal;
+
+    if (comm.size() > 1) {
+        // global reduction
+        std::vector<Scalar> sumBuffer;
+        std::vector<Scalar> maxBuffer;
+        const int numComp = B_avg.size();
+        sumBuffer.reserve( 2*numComp + 2 ); // +2 for (numAquifer)pvSum
+        maxBuffer.reserve( numComp );
+        for (int compIdx = 0; compIdx < numComp; ++compIdx) {
+            sumBuffer.push_back(B_avg[compIdx]);
+            sumBuffer.push_back(R_sum[compIdx]);
+            maxBuffer.push_back(maxCoeff[compIdx]);
+        }
+
+        // Compute total pore volume
+        sumBuffer.push_back(pvSum);
+        sumBuffer.push_back(numAquiferPvSum);
+
+        // compute global sum
+        comm.sum(sumBuffer.data(), sumBuffer.size());
+
+        // compute global max
+        comm.max(maxBuffer.data(), maxBuffer.size());
+
+        // restore values to local variables
+        for (int compIdx = 0, buffIdx = 0; compIdx < numComp; ++compIdx, ++buffIdx) {
+            B_avg[compIdx] = sumBuffer[buffIdx];
+            ++buffIdx;
+
+            R_sum[compIdx] = sumBuffer[buffIdx];
+        }
+
+        for (int compIdx = 0; compIdx < numComp; ++compIdx) {
+            maxCoeff[compIdx] = maxBuffer[compIdx];
+        }
+
+        // restore global pore volume
+        pvSum = sumBuffer[sumBuffer.size() - 2];
+        numAquiferPvSum = sumBuffer.back();
+    }
+
+    // return global pore volume
+    return {pvSum, numAquiferPvSum};
+}
+
 template ConvergenceReport
 createConvergenceReport<double>(const int,
                                 const double,
@@ -127,6 +185,14 @@ createConvergenceReport<double>(const int,
                                 const std::vector<double>&,
                                 const std::vector<double>&,
                                 const std::string&);
+
+template std::tuple<double,double>
+convergenceReduction<double>(Parallel::Communication,
+                             const double,
+                             const double,
+                             std::vector<double>&,
+                             std::vector<double>&,
+                             std::vector<double>&);
 
 } // namespace detail
 } // namespace Opm
