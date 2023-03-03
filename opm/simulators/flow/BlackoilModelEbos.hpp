@@ -931,15 +931,6 @@ namespace Opm {
 
 
 
-        void printIf(int c, double x, double y, double eps, std::string type) {
-            if (std::abs(x-y) > eps) {
-                std::cout << type << " " <<c << ": "<<x << " " << y << std::endl;
-            }
-        }
-
-
-
-
         /// Called once after each time step.
         /// In this class, this function does nothing.
         /// \param[in] timer                  simulation timer
