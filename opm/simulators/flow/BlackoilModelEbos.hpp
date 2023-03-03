@@ -52,13 +52,12 @@
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+#include <opm/simulators/utils/ParallelCommunication.hpp>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
 #include <opm/simulators/wells/WellConnectionAuxiliaryModule.hpp>
 
 #include <dune/istl/owneroverlapcopy.hh>
-#include <dune/common/parallel/communication.hh>
 #include <dune/common/timer.hh>
-#include <dune/common/unused.hh>
 
 #include <fmt/format.h>
 
@@ -1171,8 +1170,7 @@ namespace Opm {
             return terminal_output_;
         }
 
-        template <class CollectiveCommunication>
-        std::tuple<double,double> convergenceReduction(const CollectiveCommunication& comm,
+        std::tuple<double,double> convergenceReduction(Parallel::Communication comm,
                                                        const double pvSumLocal,
                                                        const double numAquiferPvSumLocal,
                                                        std::vector< Scalar >& R_sum,
