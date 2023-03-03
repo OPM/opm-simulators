@@ -88,6 +88,8 @@ protected:
 
     void configureThpresft_();
 
+    void logPressures();
+
     const CartesianIndexMapper& cartMapper_;
     const GridView& gridView_;
     const ElementMapper& elementMapper_;

@@ -154,6 +154,8 @@ private:
         // runs. (i.e. take the maximum of all processes)
         for (unsigned i = 0; i < this->thpresDefault_.size(); ++i)
             this->thpresDefault_[i] = gridView.comm().max(this->thpresDefault_[i]);
+
+        this->logPressures();
     }
 
     const Simulator& simulator_;
