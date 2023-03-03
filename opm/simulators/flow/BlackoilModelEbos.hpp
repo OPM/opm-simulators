@@ -25,7 +25,6 @@
 #define OPM_BLACKOILMODELEBOS_HEADER_INCLUDED
 
 #include <ebos/eclproblem.hh>
-#include <opm/models/utils/start.hh>
 
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
@@ -56,7 +55,6 @@
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
 #include <opm/simulators/wells/WellConnectionAuxiliaryModule.hpp>
 
-#include <dune/istl/owneroverlapcopy.hh>
 #include <dune/common/timer.hh>
 
 #include <fmt/format.h>

@@ -27,9 +27,11 @@
 #ifndef EWOMS_ECL_BASE_AQUIFER_MODEL_HH
 #define EWOMS_ECL_BASE_AQUIFER_MODEL_HH
 
-#include <opm/output/data/Aquifer.hpp>
-
+#include <opm/models/discretization/common/fvbaseproperties.hh>
+#include <opm/models/utils/basicproperties.hh>
 #include <opm/models/utils/propertysystem.hh>
+
+#include <opm/output/data/Aquifer.hpp>
 
 #include <exception>
 #include <stdexcept>
