@@ -551,6 +551,7 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"RSSPEC", {true, std::nullopt}},
         {"SAMG", {true, std::nullopt}},
         {"SAVE", {false, std::nullopt}},
+        {"SGWFLET", {false, std::nullopt}},
         {"SKIP", {true, std::nullopt}},
         {"SKIP100", {true, std::nullopt}},
         {"SKIP300", {true, std::nullopt}},
