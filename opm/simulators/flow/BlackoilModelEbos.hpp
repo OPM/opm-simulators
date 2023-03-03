@@ -39,6 +39,7 @@
 
 #include <opm/simulators/aquifers/AquiferGridUtils.hpp>
 #include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
+#include <opm/simulators/flow/BlackoilModelEbosHelpers.hpp>
 #include <opm/simulators/flow/BlackoilModelEbosNldd.hpp>
 #include <opm/simulators/flow/countGlobalCells.hpp>
 #include <opm/simulators/flow/NonlinearSolverEbos.hpp>
@@ -802,7 +803,8 @@ namespace Opm {
         }
 
 
-        void updateTUNING(const Tuning& tuning) {          
+        void updateTUNING(const Tuning& tuning)
+        {
             param_.tolerance_mb_ = tuning.XXXMBE;
             if ( terminal_output_ ) {
                 OpmLog::debug(fmt::format("Setting BlackoilModelEbos mass balance limit (XXXMBE) to {:.2e}", tuning.XXXMBE));
@@ -852,70 +854,15 @@ namespace Opm {
             }
 
             // Create convergence report.
-            ConvergenceReport report{reportTime};
-            using CR = ConvergenceReport;
-            for (int compIdx = 0; compIdx < numComp; ++compIdx) {
-                double res[2] = { mass_balance_residual[compIdx], CNV[compIdx] };
-                CR::ReservoirFailure::Type types[2] = { CR::ReservoirFailure::Type::MassBalance,
-                                                        CR::ReservoirFailure::Type::Cnv };
-                double tol[2] = { tol_mb, tol_cnv };
-                for (int ii : {0, 1}) {
-                    if (std::isnan(res[ii])) {
-                        report.setReservoirFailed({types[ii], CR::Severity::NotANumber, compIdx});
-                        if ( terminal_output_ ) {
-                            OpmLog::debug("NaN residual for " + this->compNames_.name(compIdx) + " equation.");
-                        }
-                    } else if (res[ii] > maxResidualAllowed()) {
-                        report.setReservoirFailed({types[ii], CR::Severity::TooLarge, compIdx});
-                        if ( terminal_output_ ) {
-                            OpmLog::debug("Too large residual for " + this->compNames_.name(compIdx) + " equation.");
-                        }
-                    } else if (res[ii] < 0.0) {
-                        report.setReservoirFailed({types[ii], CR::Severity::Normal, compIdx});
-                        if ( terminal_output_ ) {
-                            OpmLog::debug("Negative residual for " + this->compNames_.name(compIdx) + " equation.");
-                        }
-                    } else if (res[ii] > tol[ii]) {
-                        report.setReservoirFailed({types[ii], CR::Severity::Normal, compIdx});
-                    }
-                    report.setReservoirConvergenceMetric(types[ii], compIdx, res[ii]);
-                }
-            }
-
-            // Output of residuals.
-            if ( terminal_output_ )
-            {
-                // Only rank 0 does print to std::cout
-                if (iteration == 0) {
-                    std::string msg = "Iter";
-                    for (int compIdx = 0; compIdx < numComp; ++compIdx) {
-                        msg += "    MB(";
-                        msg += this->compNames_.name(compIdx)[0];
-                        msg += ")  ";
-                    }
-                    for (int compIdx = 0; compIdx < numComp; ++compIdx) {
-                        msg += "    CNV(";
-                        msg += this->compNames_.name(compIdx)[0];
-                        msg += ") ";
-                    }
-                    OpmLog::debug(msg);
-                }
-                std::ostringstream ss;
-                const std::streamsize oprec = ss.precision(3);
-                const std::ios::fmtflags oflags = ss.setf(std::ios::scientific);
-                ss << std::setw(4) << iteration;
-                for (int compIdx = 0; compIdx < numComp; ++compIdx) {
-                    ss << std::setw(11) << mass_balance_residual[compIdx];
-                }
-                for (int compIdx = 0; compIdx < numComp; ++compIdx) {
-                    ss << std::setw(11) << CNV[compIdx];
-                }
-                ss.precision(oprec);
-                ss.flags(oflags);
-                OpmLog::debug(ss.str());
-            }
-
-            return report;
+            return detail::createConvergenceReport(iteration,
+                                                   reportTime,
+                                                   tol_mb,
+                                                   tol_cnv,
+                                                   this->maxResidualAllowed(),
+                                                   this->terminal_output_,
+                                                   this->compNames_.names(),
+                                                   CNV,
+                                                   mass_balance_residual, "");
         }
 
         /// Compute convergence based on total mass balance (tol_mb) and maximum

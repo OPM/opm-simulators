@@ -41,6 +41,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/core/props/satfunc/RelpermDiagnostics.cpp
   opm/simulators/timestepping/SimulatorReport.cpp
   opm/simulators/flow/Banners.cpp
+  opm/simulators/flow/BlackoilModelEbosHelpers.cpp
   opm/simulators/flow/countGlobalCells.cpp
   opm/simulators/flow/ConvergenceOutputConfiguration.cpp
   opm/simulators/flow/ExtraConvergenceOutputThread.cpp
@@ -364,6 +365,7 @@ list (APPEND PUBLIC_HEADER_FILES
   ebos/eclinterregflows.hh
   opm/simulators/flow/countGlobalCells.hpp
   opm/simulators/flow/BlackoilModelEbos.hpp
+  opm/simulators/flow/BlackoilModelEbosHelpers.hpp
   opm/simulators/flow/BlackoilModelEbosNldd.hpp
   opm/simulators/flow/BlackoilModelParametersEbos.hpp
   opm/simulators/flow/Banners.hpp

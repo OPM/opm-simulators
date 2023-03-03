@@ -30,6 +30,7 @@
 
 #include <opm/simulators/aquifers/AquiferGridUtils.hpp>
 
+#include <opm/simulators/flow/BlackoilModelEbosHelpers.hpp>
 #include <opm/simulators/flow/partitionCells.hpp>
 #include <opm/simulators/flow/SubDomain.hpp>
 
@@ -550,71 +551,18 @@ private:
         }
 
         // Create convergence report.
-        ConvergenceReport report{reportTime};
-        using CR = ConvergenceReport;
-        for (int compIdx = 0; compIdx < numComp; ++compIdx) {
-            double res[2] = { mass_balance_residual[compIdx], CNV[compIdx] };
-            CR::ReservoirFailure::Type types[2] = { CR::ReservoirFailure::Type::MassBalance,
-                                                    CR::ReservoirFailure::Type::Cnv };
-            double tol[2] = { tol_mb, tol_cnv };
-            for (int ii : {0, 1}) {
-                if (std::isnan(res[ii])) {
-                    report.setReservoirFailed({types[ii], CR::Severity::NotANumber, compIdx});
-                    if (model_.terminalOutputEnabled()) {
-                        OpmLog::debug("NaN residual for " + model_.compNames().name(compIdx) + " equation.");
-                    }
-                } else if (res[ii] > model_.param().max_residual_allowed_) {
-                    report.setReservoirFailed({types[ii], CR::Severity::TooLarge, compIdx});
-                    if (model_.terminalOutputEnabled()) {
-                        OpmLog::debug("Too large residual for " + model_.compNames().name(compIdx) + " equation.");
-                    }
-                } else if (res[ii] < 0.0) {
-                    report.setReservoirFailed({types[ii], CR::Severity::Normal, compIdx});
-                    if (model_.terminalOutputEnabled()) {
-                        OpmLog::debug("Negative residual for " + model_.compNames().name(compIdx) + " equation.");
-                    }
-                } else if (res[ii] > tol[ii]) {
-                    report.setReservoirFailed({types[ii], CR::Severity::Normal, compIdx});
-                }
-            }
-        }
-
-        // Output of residuals.
-        if (model_.terminalOutputEnabled())
-        {
-            // Only rank 0 does print to std::cout
-            if (iteration == 0) {
-                std::string msg = fmt::format("Domain {}, size {}, containing cell {}\n| Iter",
-                                              domain.index, domain.cells.size(), domain.cells[0]);
-                for (int compIdx = 0; compIdx < numComp; ++compIdx) {
-                    msg += "    MB(";
-                    msg += model_.compNames().name(compIdx)[0];
-                    msg += ")  ";
-                }
-                for (int compIdx = 0; compIdx < numComp; ++compIdx) {
-                    msg += "    CNV(";
-                    msg += model_.compNames().name(compIdx)[0];
-                    msg += ") ";
-                }
-                OpmLog::debug(msg);
-            }
-            std::ostringstream ss;
-            ss << "| ";
-            const std::streamsize oprec = ss.precision(3);
-            const std::ios::fmtflags oflags = ss.setf(std::ios::scientific);
-            ss << std::setw(4) << iteration;
-            for (int compIdx = 0; compIdx < numComp; ++compIdx) {
-                ss << std::setw(11) << mass_balance_residual[compIdx];
-            }
-            for (int compIdx = 0; compIdx < numComp; ++compIdx) {
-                ss << std::setw(11) << CNV[compIdx];
-            }
-            ss.precision(oprec);
-            ss.flags(oflags);
-            OpmLog::debug(ss.str());
-        }
-
-        return report;
+        const std::string msg = fmt::format("Domain {}, size {}, containing cell {}\n| ",
+                                            domain.index, domain.cells.size(), domain.cells[0]);
+        return detail::createConvergenceReport(iteration,
+                                               reportTime,
+                                               tol_mb,
+                                               tol_cnv,
+                                               model_.param().max_residual_allowed_,
+                                               model_.terminalOutputEnabled(),
+                                               model_.compNames().names(),
+                                               CNV,
+                                               mass_balance_residual,
+                                               msg);
     }
 
     ConvergenceReport getDomainConvergence(const Domain& domain,
