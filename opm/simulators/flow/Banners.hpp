@@ -27,7 +27,7 @@
 
 namespace Opm {
 
-class SimulatorReport;
+struct SimulatorReport;
 
 // Print an ASCII-art header to the PRT and DEBUG files.
 void printPRTHeader(const std::string& parameters,
