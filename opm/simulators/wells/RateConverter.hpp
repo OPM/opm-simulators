@@ -110,7 +110,6 @@ namespace Opm {
                     ra.saltConcentration = 0.0;
                     ra.rsw = 0.0;
                     ra.rvw = 0.0;
-
                 }
 
                 // quantities for pore volume average
@@ -329,38 +328,7 @@ namespace Opm {
 
             template <class Coeff>
             void
-            calcInjCoeff(const RegionId r, const int pvtRegionIdx, Coeff& coeff) const
-            {
-                const auto& pu = phaseUsage_;
-                const auto& ra = attr_.attributes(r);
-                const double p = ra.pressure;
-                const double T = ra.temperature;
-                const double saltConcentration = ra.saltConcentration;
-
-                const int   iw = RegionAttributeHelpers::PhasePos::water(pu);
-                const int   io = RegionAttributeHelpers::PhasePos::oil  (pu);
-                const int   ig = RegionAttributeHelpers::PhasePos::gas  (pu);
-
-                std::fill(& coeff[0], & coeff[0] + phaseUsage_.num_phases, 0.0);
-
-                if (RegionAttributeHelpers::PhaseUsed::water(pu)) {
-                    // q[w]_r = q[w]_s / bw
-
-                    const double bw = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, 0.0, saltConcentration);
-
-                    coeff[iw] = 1.0 / bw;
-                }
-
-                if (RegionAttributeHelpers::PhaseUsed::oil(pu)) {
-                    const double bo = FluidSystem::oilPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, 0.0);
-                    coeff[io] += 1.0 / bo;
-                }
-
-                if (RegionAttributeHelpers::PhaseUsed::gas(pu)) {
-                    const double bg = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, 0.0, 0.0);
-                    coeff[ig] += 1.0 / bg;
-                }
-            }
+            calcInjCoeff(const RegionId r, const int pvtRegionIdx, Coeff& coeff) const;
 
             /**
              * Convert surface volume flow rates to reservoir voidage flow

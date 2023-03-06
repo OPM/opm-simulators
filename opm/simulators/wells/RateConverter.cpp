@@ -24,6 +24,8 @@
 #include <opm/material/fluidsystems/BlackOilDefaultIndexTraits.hpp>
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
+#include <algorithm>
+
 namespace Opm {
 namespace RateConverter {
 
@@ -55,11 +57,50 @@ sumRates(std::unordered_map<RegionId,Attributes>& attributes_hpv,
     }
 }
 
+template <class FluidSystem, class Region>
+template <class Coeff>
+void SurfaceToReservoirVoidage<FluidSystem,Region>::
+calcInjCoeff(const RegionId r, const int pvtRegionIdx, Coeff& coeff) const
+{
+    const auto& pu = phaseUsage_;
+    const auto& ra = attr_.attributes(r);
+    const double p = ra.pressure;
+    const double T = ra.temperature;
+    const double saltConcentration = ra.saltConcentration;
+
+    const int   iw = RegionAttributeHelpers::PhasePos::water(pu);
+    const int   io = RegionAttributeHelpers::PhasePos::oil  (pu);
+    const int   ig = RegionAttributeHelpers::PhasePos::gas  (pu);
+
+    std::fill(& coeff[0], & coeff[0] + phaseUsage_.num_phases, 0.0);
+
+    if (RegionAttributeHelpers::PhaseUsed::water(pu)) {
+        // q[w]_r = q[w]_s / bw
+
+        const double bw = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, 0.0, saltConcentration);
+
+        coeff[iw] = 1.0 / bw;
+    }
+
+    if (RegionAttributeHelpers::PhaseUsed::oil(pu)) {
+        const double bo = FluidSystem::oilPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, 0.0);
+        coeff[io] += 1.0 / bo;
+    }
+
+    if (RegionAttributeHelpers::PhaseUsed::gas(pu)) {
+        const double bg = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, 0.0, 0.0);
+        coeff[ig] += 1.0 / bg;
+    }
+}
+
 using FS = BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>;
 template void SurfaceToReservoirVoidage<FS,std::vector<int>>::
     sumRates(std::unordered_map<int,Attributes>&,
              std::unordered_map<int,Attributes>&,
              Parallel::Communication);
+
+template void SurfaceToReservoirVoidage<FS,std::vector<int>>::
+    calcInjCoeff<std::vector<double>>(const int, const int, std::vector<double>&) const;
 
 } // namespace RateConverter
 } // namespace Opm
