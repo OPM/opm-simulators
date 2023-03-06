@@ -278,18 +278,7 @@ namespace Opm {
             void calcReservoirVoidageRates(const RegionId r,
                                            const int      pvtRegionIdx,
                                            const Rates&   surface_rates,
-                                           Rates&         voidage_rates) const
-            {
-                const auto& ra = this->attr_.attributes(r);
-
-                this->calcReservoirVoidageRates(pvtRegionIdx,
-                                                ra.pressure, ra.rs, ra.rv, 
-                                                ra.rsw, ra.rvw, 
-                                                ra.temperature,
-                                                ra.saltConcentration,
-                                                surface_rates,
-                                                voidage_rates);
-            }
+                                           Rates&         voidage_rates) const;
 
             /**
              * Convert surface volume flow rates to reservoir voidage flow
@@ -335,85 +324,7 @@ namespace Opm {
                                            const double        T,
                                            const double        saltConcentration,
                                            const SurfaceRates& surface_rates,
-                                           VoidageRates&       voidage_rates) const
-            {
-                const auto& pu = this->phaseUsage_;
-                const auto  iw = RegionAttributeHelpers::PhasePos::water(pu);
-                const auto  io = RegionAttributeHelpers::PhasePos::oil  (pu);
-                const auto  ig = RegionAttributeHelpers::PhasePos::gas  (pu);
-
-                const auto [Rs, Rv] = this->
-                    dissolvedVaporisedRatio(io, ig, rs, rv, surface_rates);
-
-                const auto [Rsw, Rvw] = this->
-                    dissolvedVaporisedRatio(iw, ig, rsw, rvw, surface_rates);
-
-
-                std::fill_n(&voidage_rates[0], pu.num_phases, 0.0);
-
-
-                // Determinant of 'R' matrix
-                const auto detRw = 1.0 - (Rsw * Rvw);
-
-                if (RegionAttributeHelpers::PhaseUsed::water(pu)) {
-                    // q[w]_r = 1/(bw * (1 - rsw*rvw)) * (q[w]_s - rvw*q[g]_s)
-                    voidage_rates[iw] = surface_rates[iw];
-
-                    const auto bw = FluidSystem::waterPvt()
-                        .inverseFormationVolumeFactor(pvtRegionIdx, T, p,
-                                                      Rsw,
-                                                      saltConcentration);
-
-                    if (RegionAttributeHelpers::PhaseUsed::gas(pu)) {
-                        voidage_rates[iw] -= Rvw * surface_rates[ig];
-                    }
-                    voidage_rates[iw] /= bw * detRw;
-                }
-
-                // Determinant of 'R' matrix
-                const auto detR = 1.0 - (Rs * Rv);
-
-                if (RegionAttributeHelpers::PhaseUsed::oil(pu)) {
-                    // q[o]_r = 1/(bo * (1 - rs*rv)) * (q[o]_s - rv*q[g]_s)
-                    voidage_rates[io] = surface_rates[io];
-                    if (RegionAttributeHelpers::PhaseUsed::gas(pu)) {
-                        voidage_rates[io] -= Rv * surface_rates[ig];
-                    }
-
-                    const auto bo = FluidSystem::oilPvt()
-                        .inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rs);
-
-                    voidage_rates[io] /= bo * detR;
-                }
-
-                // we only support either gas in water
-                // or gas in oil
-                if (detR != 1 && detRw != 1) {
-                    std::string msg = "only support " + std::to_string(detR) + " " + std::to_string(detR);
-                    throw std::range_error(msg);
-                }
-                if (RegionAttributeHelpers::PhaseUsed::gas(pu)) {
-                    // q[g]_r = 1/(bg * (1 - rs*rv)) * (q[g]_s - rs*q[o]_s)
-                    voidage_rates[ig] = surface_rates[ig];
-                    if (RegionAttributeHelpers::PhaseUsed::oil(pu)) {
-                        voidage_rates[ig] -= Rs * surface_rates[io];
-                    }
-                    if (RegionAttributeHelpers::PhaseUsed::water(pu)) {
-                        voidage_rates[ig] -= Rsw * surface_rates[iw];
-                    }
-
-                    const auto bg = FluidSystem::gasPvt()
-                        .inverseFormationVolumeFactor(pvtRegionIdx, T, p,
-                                                      Rv, Rvw);
-
-                    // we only support either gas in water or gas in oil
-                    if (detRw == 1) {
-                        voidage_rates[ig] /= bg * detR;
-                    } else { 
-                        voidage_rates[ig] /= bg * detRw;
-                    }
-                }
-            }
+                                           VoidageRates&       voidage_rates) const;
 
             template <class Rates>
             std::pair<double, double>
