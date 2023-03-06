@@ -328,9 +328,9 @@ namespace Opm {
 
                 // Currently we only support either gas in water or gas in oil
                 // not both
-                if(detR != 1 && detRw != 1 ) {
+                if (detR != 1 && detRw != 1) {
                     std::string msg = "only support " + std::to_string(detR) + " " + std::to_string(detR);
-                    throw(msg);
+                    throw std::range_error(msg);
                 }
 
                 if (RegionAttributeHelpers::PhaseUsed::oil(pu)) {
@@ -536,9 +536,9 @@ namespace Opm {
 
                 // we only support either gas in water
                 // or gas in oil
-                if(detR != 1 && detRw != 1 ) {
+                if (detR != 1 && detRw != 1) {
                     std::string msg = "only support " + std::to_string(detR) + " " + std::to_string(detR);
-                    throw(msg);
+                    throw std::range_error(msg);
                 }
                 if (RegionAttributeHelpers::PhaseUsed::gas(pu)) {
                     // q[g]_r = 1/(bg * (1 - rs*rv)) * (q[g]_s - rs*q[o]_s)
