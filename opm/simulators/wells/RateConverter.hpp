@@ -210,7 +210,7 @@ namespace Opm {
              *
              * Integral type.
              */
-            typedef typename RegionMapping<Region>::RegionId RegionId;
+            using RegionId = typename RegionMapping<Region>::RegionId;
 
             /**
              * Compute coefficients for surface-to-reservoir voidage
