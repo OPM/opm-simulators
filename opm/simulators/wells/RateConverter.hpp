@@ -27,6 +27,8 @@
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/RegionAttributeHelpers.hpp>
 
+#include <opm/simulators/utils/ParallelCommunication.hpp>
+
 #include <dune/grid/common/gridenums.hh>
 #include <dune/grid/common/rangegenerators.hh>
 
@@ -204,26 +206,9 @@ namespace Opm {
 
                 OPM_END_PARALLEL_TRY_CATCH("SurfaceToReservoirVoidage::defineState() failed: ", simulator.vanguard().grid().comm());
 
-                for (const auto& reg : rmap_.activeRegions()) {
-                      // Calculating first using the hydrocarbon pore volumes
-                      auto& ra = attr_.attributes(reg);
-                      const auto& attri_hpv = attributes_hpv[reg];
-                      ra.data = attri_hpv.data;
-                      comm.sum(ra.data.data(), ra.data.size());
-                      // TODO: should we have some epsilon here instead of zero?
-                      // No hydrocarbon pore volume, redo but this time using full pore volumes.
-                      if (ra.pv <= 0.) {
-                          // using the pore volume to do the averaging
-                          const auto& attri_pv = attributes_pv[reg];
-                          ra.data = attri_pv.data;
-                          comm.sum(ra.data.data(), ra.data.size());
-                          assert(ra.pv > 0.);
-                      }
-                      const double pv_sum = ra.pv;
-                      for (double& d : ra.data)
-                          d /= pv_sum;
-                      ra.pv = pv_sum;
-                }
+                this->sumRates(attributes_hpv,
+                               attributes_pv,
+                               comm);
             }
 
             /**
@@ -624,6 +609,10 @@ namespace Opm {
                 double& pv;
                 double& saltConcentration;
             };
+
+            void sumRates(std::unordered_map<RegionId,Attributes>& attributes_hpv,
+                          std::unordered_map<RegionId,Attributes>& attributes_pv,
+                          Parallel::Communication comm);
 
             RegionAttributeHelpers::RegionAttributes<RegionId, Attributes> attr_;
 
