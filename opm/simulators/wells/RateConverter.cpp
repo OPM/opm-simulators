@@ -25,6 +25,36 @@
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
 #include <algorithm>
+#include <cmath>
+#include <stdexcept>
+#include <string>
+
+namespace {
+
+template <typename Rates>
+std::pair<double, double>
+dissolvedVaporisedRatio(const int    io,
+                        const int    ig,
+                        const double rs,
+                        const double rv,
+                        const Rates& surface_rates)
+{
+    if ((io < 0) || (ig < 0)) {
+        return { rs, rv };
+    }
+    auto eps = std::copysign(1.0e-15, surface_rates[io]);
+    const auto Rs = surface_rates[ig] / (surface_rates[io] + eps);
+
+    eps = std::copysign(1.0e-15, surface_rates[ig]);
+    const auto Rv = surface_rates[io] / (surface_rates[ig] + eps);
+
+    return {
+        std::clamp(static_cast<double>(Rs), 0.0, rs),
+        std::clamp(static_cast<double>(Rv), 0.0, rv)
+    };
+}
+
+}
 
 namespace Opm {
 namespace RateConverter {
@@ -195,10 +225,10 @@ calcReservoirVoidageRates(const int           pvtRegionIdx,
     const auto  io = RegionAttributeHelpers::PhasePos::oil  (pu);
     const auto  ig = RegionAttributeHelpers::PhasePos::gas  (pu);
 
-    const auto [Rs, Rv] = this->
+    const auto [Rs, Rv] =
         dissolvedVaporisedRatio(io, ig, rs, rv, surface_rates);
 
-    const auto [Rsw, Rvw] = this->
+    const auto [Rsw, Rvw] =
         dissolvedVaporisedRatio(iw, ig, rsw, rvw, surface_rates);
 
 
@@ -287,6 +317,19 @@ calcReservoirVoidageRates(const RegionId r,
                                     voidage_rates);
 }
 
+template <class FluidSystem, class Region>
+template <class Rates>
+std::pair<double, double>
+SurfaceToReservoirVoidage<FluidSystem,Region>::
+inferDissolvedVaporisedRatio(const double rsMax,
+                             const double rvMax,
+                             const Rates& surface_rates) const
+{
+    const auto io = RegionAttributeHelpers::PhasePos::oil(this->phaseUsage_);
+    const auto ig = RegionAttributeHelpers::PhasePos::gas(this->phaseUsage_);
+    return dissolvedVaporisedRatio(io, ig, rsMax, rvMax, surface_rates);
+}
+
 using FS = BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>;
 template void SurfaceToReservoirVoidage<FS,std::vector<int>>::
     sumRates(std::unordered_map<int,Attributes>&,
@@ -325,6 +368,12 @@ template void SurfaceToReservoirVoidage<FS,std::vector<int>>::
                                                    const int,
                                                    const std::vector<double>&,
                                                    std::vector<double>&) const;
+
+template std::pair<double,double>
+SurfaceToReservoirVoidage<FS,std::vector<int>>::
+    inferDissolvedVaporisedRatio<std::vector<double>::iterator>(const double,
+                                                                const double,
+                                                                const std::vector<double>::iterator&) const;
 
 } // namespace RateConverter
 } // namespace Opm

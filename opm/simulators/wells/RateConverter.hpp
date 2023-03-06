@@ -32,13 +32,8 @@
 #include <dune/grid/common/gridenums.hh>
 #include <dune/grid/common/rangegenerators.hh>
 
-#include <algorithm>
 #include <array>
 #include <cassert>
-#include <cmath>
-#include <memory>
-#include <stdexcept>
-#include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -330,12 +325,7 @@ namespace Opm {
             std::pair<double, double>
             inferDissolvedVaporisedRatio(const double rsMax,
                                          const double rvMax,
-                                         const Rates& surface_rates) const
-            {
-                const auto io = RegionAttributeHelpers::PhasePos::oil(this->phaseUsage_);
-                const auto ig = RegionAttributeHelpers::PhasePos::gas(this->phaseUsage_);
-                return this->dissolvedVaporisedRatio(io, ig, rsMax, rvMax, surface_rates);
-            }
+                                         const Rates& surface_rates) const;
 
             /**
              * Compute coefficients for surface-to-reservoir voidage
@@ -416,29 +406,6 @@ namespace Opm {
                           Parallel::Communication comm);
 
             RegionAttributeHelpers::RegionAttributes<RegionId, Attributes> attr_;
-
-            template <typename Rates>
-            std::pair<double, double>
-            dissolvedVaporisedRatio(const int    io,
-                                    const int    ig,
-                                    const double rs,
-                                    const double rv,
-                                    const Rates& surface_rates) const
-            {
-                if ((io < 0) || (ig < 0)) {
-                    return { rs, rv };
-                }
-                auto eps = std::copysign(1.0e-15, surface_rates[io]);
-                const auto Rs = surface_rates[ig] / (surface_rates[io] + eps);
-
-                eps = std::copysign(1.0e-15, surface_rates[ig]);
-                const auto Rv = surface_rates[io] / (surface_rates[ig] + eps);
-
-                return {
-                    std::clamp(static_cast<double>(Rs), 0.0, rs),
-                    std::clamp(static_cast<double>(Rv), 0.0, rv)
-                };
-            }
         };
 
     } // namespace RateConverter
