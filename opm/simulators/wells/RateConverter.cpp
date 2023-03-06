@@ -93,6 +93,89 @@ calcInjCoeff(const RegionId r, const int pvtRegionIdx, Coeff& coeff) const
     }
 }
 
+template <class FluidSystem, class Region>
+template <class Coeff>
+void SurfaceToReservoirVoidage<FluidSystem,Region>::
+calcCoeff(const RegionId r, const int pvtRegionIdx, Coeff& coeff) const
+{
+    const auto& pu = phaseUsage_;
+    const auto& ra = attr_.attributes(r);
+    const double p = ra.pressure;
+    const double T = ra.temperature;
+    const double saltConcentration = ra.saltConcentration;
+
+    const int   iw = RegionAttributeHelpers::PhasePos::water(pu);
+    const int   io = RegionAttributeHelpers::PhasePos::oil  (pu);
+    const int   ig = RegionAttributeHelpers::PhasePos::gas  (pu);
+
+    std::fill(& coeff[0], & coeff[0] + phaseUsage_.num_phases, 0.0);
+
+    // Actual Rsw and Rvw:
+    double Rsw = ra.rsw;
+    double Rvw = ra.rvw;
+    // Determinant of 'R' matrix
+    const double detRw = 1.0 - (Rsw * Rvw);
+
+    if (RegionAttributeHelpers::PhaseUsed::water(pu)) {
+        // q[w]_r = 1/(bw * (1 - rsw*rvw)) * (q[w]_s - rvw*q[g]_s)
+
+        const double bw = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rsw, saltConcentration);
+
+        const double den = bw * detRw;
+
+        coeff[iw] += 1.0 / den;
+
+        if (RegionAttributeHelpers::PhaseUsed::gas(pu)) {
+            coeff[ig] -= ra.rvw / den;
+        }
+    }
+
+    // Actual Rs and Rv:
+    double Rs = ra.rs;
+    double Rv = ra.rv;
+
+    // Determinant of 'R' matrix
+    const double detR = 1.0 - (Rs * Rv);
+
+    // Currently we only support either gas in water or gas in oil
+    // not both
+    if (detR != 1 && detRw != 1) {
+        std::string msg = "only support " + std::to_string(detR) + " " + std::to_string(detR);
+        throw std::range_error(msg);
+    }
+
+    if (RegionAttributeHelpers::PhaseUsed::oil(pu)) {
+        // q[o]_r = 1/(bo * (1 - rs*rv)) * (q[o]_s - rv*q[g]_s)
+
+        const double bo = FluidSystem::oilPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rs);
+        const double den = bo * detR;
+
+        coeff[io] += 1.0 / den;
+
+        if (RegionAttributeHelpers::PhaseUsed::gas(pu)) {
+            coeff[ig] -= ra.rv / den;
+        }
+    }
+
+    if (RegionAttributeHelpers::PhaseUsed::gas(pu)) {
+        // q[g]_r = 1/(bg * (1 - rs*rv)) * (q[g]_s - rs*q[o]_s)
+        const double bg  = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rv, Rvw);
+        if (FluidSystem::enableDissolvedGasInWater()) {
+            const double denw = bg * detRw;
+            coeff[ig] += 1.0 / denw;
+            if (RegionAttributeHelpers::PhaseUsed::water(pu)) {
+               coeff[iw] -= ra.rsw / denw;
+            }
+        } else {
+            const double den = bg * detR;
+            coeff[ig] += 1.0 / den;
+            if (RegionAttributeHelpers::PhaseUsed::oil(pu)) {
+                coeff[io] -= ra.rs / den;
+            }
+        }
+    }
+}
+
 using FS = BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>;
 template void SurfaceToReservoirVoidage<FS,std::vector<int>>::
     sumRates(std::unordered_map<int,Attributes>&,
@@ -101,6 +184,8 @@ template void SurfaceToReservoirVoidage<FS,std::vector<int>>::
 
 template void SurfaceToReservoirVoidage<FS,std::vector<int>>::
     calcInjCoeff<std::vector<double>>(const int, const int, std::vector<double>&) const;
+template void SurfaceToReservoirVoidage<FS,std::vector<int>>::
+    calcCoeff<std::vector<double>>(const int, const int, std::vector<double>&) const;
 
 } // namespace RateConverter
 } // namespace Opm
