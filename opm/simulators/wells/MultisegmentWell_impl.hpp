@@ -22,6 +22,7 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/input/eclipse/Schedule/MSW/Valve.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 #include <opm/input/eclipse/Units/Units.hpp>
 
 #include <opm/material/densead/EvaluationFormat.hpp>
@@ -718,9 +719,14 @@ namespace Opm
             };
 
             std::vector<Scalar> mob(this->num_components_, 0.0);
+<<<<<<< HEAD
             getMobility(ebosSimulator, static_cast<int>(subsetPerfID), mob, deferred_logger);
             /* const WellConnections& completion_set = this->wellEcl().getConnections();
             const Connection& connection = completion_set.get(static_cast<int>(subsetPerfID));
+=======
+            const WellConnections& connections = this->wellEcl().getConnections();
+            const Connection& connection = connections.get(static_cast<int>(subsetPerfID));
+>>>>>>> eb898d07f (fixing the compilation related to WINJMULT)
             const int seg = this->segmentNumberToIndex(connection.segment());
             getMobilityScalar(ebosSimulator, seg, static_cast<int>(subsetPerfID), mob, deferred_logger); */
 
@@ -1877,11 +1883,11 @@ namespace Opm
                 const int cell_idx = this->well_cells_[perf];
                 const auto& int_quants = ebosSimulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
                 std::vector<Scalar> mob(this->num_components_, 0.0);
-<<<<<<< HEAD
+
                 getMobility(ebosSimulator, perf, mob, deferred_logger);
-=======
-                getMobilityScalar(ebosSimulator, seg, perf, mob, deferred_logger);
->>>>>>> 5f0ab325b (extending WINJMULT support to MultisegmentWell)
+
+                // getMobilityScalar(ebosSimulator, seg, perf, mob, deferred_logger);
+
                 const double trans_mult = ebosSimulator.problem().template rockCompTransMultiplier<double>(int_quants, cell_idx);
                 const double Tw = this->well_index_[perf] * trans_mult;
                 std::vector<Scalar> cq_s(this->num_components_, 0.0);
