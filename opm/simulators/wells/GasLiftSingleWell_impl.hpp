@@ -160,7 +160,9 @@ GasLiftSingleWell<TypeTag>::
 setupPhaseVariables_()
 {
     const auto& pu = this->phase_usage_;
+#ifndef NDEBUG
     bool num_phases_ok = (pu.num_phases == 3);
+#endif
     if (pu.num_phases == 2) {
         // NOTE: We support two-phase oil-water flow, by setting the gas flow rate
         //   to zero. This is done by initializing the potential vector to zero:
@@ -176,7 +178,9 @@ setupPhaseVariables_()
              && pu.phase_used[BlackoilPhases::Liquid] == 1
              && pu.phase_used[BlackoilPhases::Vapour] == 0)
         {
+#ifndef NDEBUG
             num_phases_ok = true;  // two-phase oil-water is also supported
+#endif
         }
         else {
             throw std::logic_error("Two-phase gas lift optimization only supported"
