@@ -2017,6 +2017,8 @@ namespace Details {
     using MatLaw = EclMaterialLawManager<ThreePhaseMaterialTraits<double,0,1,2>>;
     template class PhaseSaturations<MatLaw,BlackOilFluidSystem<double>,
                                     EquilReg,size_t>;
+
+    template std::pair<double,double> cellZMinMax(const Dune::cpgrid::Entity<0>& element);
 }
 
 } // namespace EQUIL
