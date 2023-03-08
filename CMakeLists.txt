@@ -91,12 +91,12 @@ endif()
 
 find_package(opm-common REQUIRED)
 
+include(OpmInit)
+OpmSetPolicies()
+
 if(USE_MPI)
   set(HDF5_PREFER_PARALLEL TRUE)
 endif()
-
-include(OpmInit)
-OpmSetPolicies()
 
 # not the same location as most of the other projects? this hook overrides
 macro (dir_hook)
