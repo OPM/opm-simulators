@@ -31,6 +31,8 @@
 #include <dune/grid/common/rangegenerators.hh>
 
 #include <algorithm>
+#include <array>
+#include <cassert>
 #include <cmath>
 #include <memory>
 #include <stdexcept>
@@ -203,49 +205,24 @@ namespace Opm {
                 OPM_END_PARALLEL_TRY_CATCH("SurfaceToReservoirVoidage::defineState() failed: ", simulator.vanguard().grid().comm());
 
                 for (const auto& reg : rmap_.activeRegions()) {
+                      // Calculating first using the hydrocarbon pore volumes
                       auto& ra = attr_.attributes(reg);
-                      const double hpv_sum = comm.sum(attributes_hpv[reg].pv);
+                      const auto& attri_hpv = attributes_hpv[reg];
+                      ra.data = attri_hpv.data;
+                      comm.sum(ra.data.data(), ra.data.size());
                       // TODO: should we have some epsilon here instead of zero?
-                      if (hpv_sum > 0.) {
-                          const auto& attri_hpv = attributes_hpv[reg];
-                          const double p_hpv_sum = comm.sum(attri_hpv.pressure);
-                          const double T_hpv_sum = comm.sum(attri_hpv.temperature);
-                          const double rs_hpv_sum = comm.sum(attri_hpv.rs);
-                          const double rv_hpv_sum = comm.sum(attri_hpv.rv);
-                          const double sc_hpv_sum = comm.sum(attri_hpv.saltConcentration);
-                          const double rsw_hpv_sum = comm.sum(attri_hpv.rsw);
-                          const double rvw_hpv_sum = comm.sum(attri_hpv.rvw);
-
-                          ra.pressure = p_hpv_sum / hpv_sum;
-                          ra.temperature = T_hpv_sum / hpv_sum;
-                          ra.rs = rs_hpv_sum / hpv_sum;
-                          ra.rv = rv_hpv_sum / hpv_sum;
-                          ra.rsw = rsw_hpv_sum / hpv_sum;
-                          ra.rvw = rvw_hpv_sum / hpv_sum;
-                          ra.pv = hpv_sum;
-                          ra.saltConcentration = sc_hpv_sum / hpv_sum;
-                      } else {
+                      // No hydrocarbon pore volume, redo but this time using full pore volumes.
+                      if (ra.pv <= 0.) {
                           // using the pore volume to do the averaging
                           const auto& attri_pv = attributes_pv[reg];
-                          const double pv_sum = comm.sum(attri_pv.pv);
-                          assert(pv_sum > 0.);
-                          const double p_pv_sum = comm.sum(attri_pv.pressure);
-                          const double T_pv_sum = comm.sum(attri_pv.temperature);
-                          const double rs_pv_sum = comm.sum(attri_pv.rs);
-                          const double rv_pv_sum = comm.sum(attri_pv.rv);
-                          const double rsw_pv_sum = comm.sum(attri_pv.rsw);
-                          const double rvw_pv_sum = comm.sum(attri_pv.rvw);
-                          const double sc_pv_sum = comm.sum(attri_pv.saltConcentration);
-
-                          ra.pressure = p_pv_sum / pv_sum;
-                          ra.temperature = T_pv_sum / pv_sum;
-                          ra.rs = rs_pv_sum / pv_sum;
-                          ra.rv = rv_pv_sum / pv_sum;
-                          ra.rsw = rsw_pv_sum / pv_sum;
-                          ra.rvw = rvw_pv_sum / pv_sum;
-                          ra.pv = pv_sum;
-                          ra.saltConcentration = sc_pv_sum / pv_sum;
+                          ra.data = attri_pv.data;
+                          comm.sum(ra.data.data(), ra.data.size());
+                          assert(ra.pv > 0.);
                       }
+                      const double pv_sum = ra.pv;
+                      for (double& d : ra.data)
+                          d /= pv_sum;
+                      ra.pv = pv_sum;
                 }
             }
 
@@ -614,24 +591,38 @@ namespace Opm {
              */
             struct Attributes {
                 Attributes()
-                    : pressure   (0.0)
-                    , temperature(0.0)
-                    , rs(0.0)
-                    , rv(0.0)
-                    , rsw(0.0)
-                    , rvw(0.0)
-                    , pv(0.0)
-                    , saltConcentration(0.0)
+                    : data{0.0}
+                    , pressure(data[0])
+                    , temperature(data[1])
+                    , rs(data[2])
+                    , rv(data[3])
+                    , rsw(data[4])
+                    , rvw(data[5])
+                    , pv(data[6])
+                    , saltConcentration(data[7])
                 {}
 
-                double pressure;
-                double temperature;
-                double rs;
-                double rv;
-                double rsw;
-                double rvw;
-                double pv;
-                double saltConcentration;
+                Attributes(const Attributes& rhs)
+                    : Attributes()
+                {
+                    this->data = rhs.data;
+                }
+
+                Attributes& operator=(const Attributes& rhs)
+                {
+                    this->data = rhs.data;
+                    return *this;
+                }
+
+                std::array<double,8> data;
+                double& pressure;
+                double& temperature;
+                double& rs;
+                double& rv;
+                double& rsw;
+                double& rvw;
+                double& pv;
+                double& saltConcentration;
             };
 
             RegionAttributeHelpers::RegionAttributes<RegionId, Attributes> attr_;
