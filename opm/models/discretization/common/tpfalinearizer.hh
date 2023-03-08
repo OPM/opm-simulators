@@ -55,7 +55,7 @@ namespace Opm::Properties {
     template<class TypeTag, class MyTypeTag>
     struct SeparateSparseSourceTerms {
         using type = bool;
-        static constexpr type value = true;
+        static constexpr type value = false;
     };
 }
 
