@@ -63,11 +63,6 @@ struct FlashSolver<TypeTag, TTag::Co2InjectionFlashNiEcfvProblem>
 #if HAVE_QUAD
 template<class TypeTag>
 struct Scalar<TypeTag, TTag::Co2InjectionFlashNiEcfvProblem> { using type = quad; };
-
-// the default linear solver used for this problem (-> AMG) cannot be used with quadruple
-// precision scalars... (this seems to only apply to Dune >= 2.4)
-template<class TypeTag>
-struct LinearSolverSplice<TypeTag, TTag::Co2InjectionFlashNiEcfvProblem> { using type = TTag::ParallelBiCGStabLinearSolver; };
 #else
 template<class TypeTag>
 struct NewtonTolerance<TypeTag, TTag::Co2InjectionFlashNiEcfvProblem>
