@@ -58,7 +58,8 @@ public:
         , aquifer_data_            (aquifer)
         , connection_flux_         (connections_.size(), Eval{0})
     {
-        this->initializeConnections();
+        const auto connected_face_area = this->initializeConnections();
+        this->area_fraction_ = this->computeFaceAreaFraction(connected_face_area);
     }
 
     static AquiferConstantFlux serializationTestObject(const Simulator& ebos_simulator)
@@ -149,9 +150,15 @@ private:
     std::vector<int> cellToConnectionIdx_{};
     double flux_rate_{};
     double cumulative_flux_{};
+    double area_fraction_{1.0};
 
-    void initializeConnections() {
-        this->cellToConnectionIdx_.resize(this->ebos_simulator_.gridView().size(/*codim=*/0), -1);
+    double initializeConnections()
+    {
+        auto connected_face_area = 0.0;
+
+        this->cellToConnectionIdx_
+            .resize(this->ebos_simulator_.gridView().size(/*codim=*/0), -1);
+
         for (std::size_t idx = 0; idx < this->connections_.size(); ++idx) {
             const auto global_index = this->connections_[idx].global_index;
             const int cell_index = this->ebos_simulator_.vanguard()
@@ -162,11 +169,25 @@ private:
             }
 
             this->cellToConnectionIdx_[cell_index] = idx;
+
+            connected_face_area += this->connections_[idx].effective_facearea;
         }
 
         // TODO: At the moment, we are using the effective_facearea from the
         // parser.  Should we update the facearea here if the grid changed
         // during the preprocessing?
+
+        return connected_face_area;
+    }
+
+    double computeFaceAreaFraction(const double connected_face_area) const
+    {
+        const auto tot_face_area = this->ebos_simulator_.vanguard()
+            .grid().comm().sum(connected_face_area);
+
+        return (tot_face_area > 0.0)
+            ? connected_face_area / tot_face_area
+            : 0.0;
     }
 
     // TODO: this is a function from AquiferAnalytical
