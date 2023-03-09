@@ -491,7 +491,7 @@ BOOST_AUTO_TEST_CASE(AquiferConstantFlux)
     Opm::Serializer ser(packer);
     ser.pack(data_out);
     const size_t pos1 = ser.position();
-    decltype(data_out) data_in({}, {}, sim);
+    decltype(data_out) data_in({}, sim, {});
     ser.unpack(data_in);
     const size_t pos2 = ser.position();
     BOOST_CHECK_MESSAGE(pos1 == pos2, "Packed size differ from unpack size for AquiferConstantFlux");
