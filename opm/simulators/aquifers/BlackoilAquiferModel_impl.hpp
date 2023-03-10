@@ -268,7 +268,7 @@ void BlackoilAquiferModel<TypeTag>::createDynamicAquifers(const int episode_inde
         auto aquPos =
             std::find_if(std::begin(this->aquifers),
                          std::end(this->aquifers),
-                [id](const auto& aquPtr)
+                [id = id](const auto& aquPtr)
             {
                 return aquPtr->aquiferID() == id;
             });
