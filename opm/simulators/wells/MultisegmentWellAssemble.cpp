@@ -35,6 +35,7 @@
 #include <opm/simulators/wells/WellAssemble.hpp>
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 #include <opm/simulators/wells/WellInterfaceIndices.hpp>
+#include <opm/simulators/wells/WellState.hpp>
 
 namespace Opm {
 
@@ -162,6 +163,9 @@ assembleControlEq(const WellState& well_state,
                                                  bhp_from_thp,
                                                  control_eq,
                                                  deferred_logger);
+    } else if (rateControlWithZeroTarget(well_state.well(well_.indexOfWell()).production_cmode, prod_controls)) {
+        // Production mode, zero target. Treat as STOP.
+        control_eq = primary_variables.getWQTotal();
     } else {
         // Find rates.
         const auto rates = getRates();
