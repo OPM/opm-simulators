@@ -25,6 +25,7 @@
 #include <algorithm>
 #include <memory>
 #include <stdexcept>
+#include <string_view>
 
 namespace Opm
 {
@@ -60,33 +61,12 @@ template <typename TypeTag>
 void
 BlackoilAquiferModel<TypeTag>::beginEpisode()
 {
-    // probably function name beginReportStep() is more appropriate.
-    // basically, we want to update the aquifer related information from SCHEDULE setup in this section
-    // it is the beginning of a report step
-    const auto& connections = this->simulator_.vanguard().eclState().aquifer().connections();
-    const int report_step  = this->simulator_.episodeIndex();
-    const auto& aqufluxs = this->simulator_.vanguard().schedule()[report_step].aqufluxs;
-    for (const auto& elem : aqufluxs) {
-        const int id = elem.first;
-        auto find = std::find_if(begin(this->aquifers), end(this->aquifers), [id](auto& v){ return v->aquiferID() == id; });
-        if (find == this->aquifers.end()) {
-            // the aquifer id does not exist in BlackoilAquiferModel yet
-            const auto& aquinfo = elem.second;
-            auto aqf = std::make_unique<AquiferConstantFlux<TypeTag>>(aquinfo, connections.getConnections(aquinfo.id), this->simulator_);
-            this->aquifers.push_back(std::move(aqf));
-        } else {
-            const auto& aquinfo = elem.second;
-            auto aqu = dynamic_cast<AquiferConstantFlux<TypeTag>*> (find->get());
-            if (!aqu) {
-                // if the aquifers can return types easily, we might be able to give a better message with type information
-                const auto msg = fmt::format("Aquifer {} is updated with constant flux aquifer keyword AQUFLUX at report step {},"
-                                                       " while it might be specified to be a different type of aquifer before this. We do not support the conversion between"
-                                                       " different types of aquifer.\n", id, report_step);
-                OPM_THROW(std::runtime_error, msg);
-            }
-            aqu->updateAquifer(aquinfo);
-        }
-    }
+    // Probably function name beginReportStep() is more appropriate.
+    //
+    // Basically, we want to update the aquifer related information from
+    // SCHEDULE setup in this section it is the beginning of a report step
+
+    this->createDynamicAquifers(this->simulator_.episodeIndex());
 }
 
 template <typename TypeTag>
@@ -167,62 +147,12 @@ BlackoilAquiferModel<TypeTag>::deserialize(Restarter& /* res */)
 
 // Initialize the aquifers in the deck
 template <typename TypeTag>
-void
-BlackoilAquiferModel<TypeTag>::init()
+void BlackoilAquiferModel<TypeTag>::init()
 {
-    const auto& aquifer = this->simulator_.vanguard().eclState().aquifer();
-
-    if (!aquifer.active()) {
-        return;
+    if (this->simulator_.vanguard().eclState().aquifer().active()) {
+        this->initializeStaticAquifers();
     }
 
-    const auto& connections = aquifer.connections();
-    for (const auto& aq : aquifer.ct()) {
-        if (!connections.hasAquiferConnections(aq.aquiferID)) {
-            auto msg = fmt::format("No valid connections for Carter-Tracy aquifer {}, aquifer {} will be ignored.",
-                                   aq.aquiferID, aq.aquiferID);
-            OpmLog::warning(msg);
-            continue;
-        }
-        auto aqf = std::make_unique<AquiferCarterTracy<TypeTag>>(connections.getConnections(aq.aquiferID),
-                                                                 this->simulator_, aq);
-        aquifers.push_back(std::move(aqf));
-    }
-
-    for (const auto& aq : aquifer.fetp()) {
-        if (!connections.hasAquiferConnections(aq.aquiferID)) {
-            auto msg = fmt::format("No valid connections for Fetkovich aquifer {}, aquifer {} will be ignored.",
-                                   aq.aquiferID, aq.aquiferID);
-            OpmLog::warning(msg);
-            continue;
-        }
-        auto aqf = std::make_unique<AquiferFetkovich<TypeTag>>(connections.getConnections(aq.aquiferID),
-                                                               this->simulator_, aq);
-        aquifers.push_back(std::move(aqf));
-    }
-
-    for (const auto& [id, aq] : aquifer.aquflux()) {
-        // make sure not dummy constant flux aquifers
-        if ( !aq.active ) continue;
-
-        if (!connections.hasAquiferConnections(id)) {
-            auto msg = fmt::format("No valid connections for constant flux aquifer {}, aquifer {} will be ignored.",
-                                   id, id);
-            OpmLog::warning(msg);
-            continue;
-        }
-
-        auto aqf = std::make_unique<AquiferConstantFlux<TypeTag>>(aq, connections.getConnections(id), this->simulator_);
-        this->aquifers.push_back(std::move(aqf));
-    }
-
-    if (aquifer.hasNumericalAquifer()) {
-        const auto& num_aquifers = aquifer.numericalAquifers().aquifers();
-        for ([[maybe_unused]]const auto& [id, aqu] : num_aquifers) {
-            auto aqf = std::make_unique<AquiferNumerical<TypeTag>>(aqu, this->simulator_);
-            aquifers.push_back(std::move(aqf));
-        }
-    }
 }
 
 template<typename TypeTag>
@@ -255,6 +185,121 @@ serializeOp(Serializer& serializer)
             serializer(*flux);
         } else {
             OPM_THROW(std::logic_error, "Error serializing BlackoilAquiferModel: unknown aquifer type");
+        }
+    }
+}
+
+template <typename TypeTag>
+void BlackoilAquiferModel<TypeTag>::initializeStaticAquifers()
+{
+    const auto& aquifer =
+        this->simulator_.vanguard().eclState().aquifer();
+
+    for (const auto& aquCT : aquifer.ct()) {
+        auto aquCTPtr = this->template createAnalyticAquiferPointer
+            <AquiferCarterTracy<TypeTag>>(aquCT, aquCT.aquiferID, "Carter-Tracy");
+
+        if (aquCTPtr != nullptr) {
+            this->aquifers.push_back(std::move(aquCTPtr));
+        }
+    }
+
+    for (const auto& aquFetp : aquifer.fetp()) {
+        auto aquFetpPtr = this->template createAnalyticAquiferPointer
+            <AquiferFetkovich<TypeTag>>(aquFetp, aquFetp.aquiferID, "Fetkovich");
+
+        if (aquFetpPtr != nullptr) {
+            this->aquifers.push_back(std::move(aquFetpPtr));
+        }
+    }
+
+    for (const auto& [id, aquFlux] : aquifer.aquflux()) {
+        // Make sure not dummy constant flux aquifers
+        if (! aquFlux.active) { continue; }
+
+        auto aquFluxPtr = this->template createAnalyticAquiferPointer
+            <AquiferConstantFlux<TypeTag>>(aquFlux, id, "Constant Flux");
+
+        if (aquFluxPtr != nullptr) {
+            this->aquifers.push_back(std::move(aquFluxPtr));
+        }
+    }
+
+    if (aquifer.hasNumericalAquifer()) {
+        for (const auto& aquNum : aquifer.numericalAquifers().aquifers()) {
+            auto aquNumPtr = std::make_unique<AquiferNumerical<TypeTag>>
+                (aquNum.second, this->simulator_);
+
+            this->aquifers.push_back(std::move(aquNumPtr));
+        }
+    }
+}
+
+template <typename TypeTag>
+template <typename AquiferType, typename AquiferData>
+std::unique_ptr<AquiferType>
+BlackoilAquiferModel<TypeTag>::
+createAnalyticAquiferPointer(const AquiferData& aqData,
+                             const int          aquiferID,
+                             std::string_view   aqType) const
+{
+    const auto& connections =
+        this->simulator_.vanguard().eclState().aquifer().connections();
+
+    if (! connections.hasAquiferConnections(aquiferID)) {
+        const auto msg = fmt::format("No valid connections for {} aquifer {}.  "
+                                     "Aquifer {} will be ignored.",
+                                     aqType, aquiferID, aquiferID);
+        OpmLog::warning(msg);
+
+        return {};
+    }
+
+    return std::make_unique<AquiferType>
+        (connections.getConnections(aquiferID), this->simulator_, aqData);
+}
+
+template <typename TypeTag>
+void BlackoilAquiferModel<TypeTag>::createDynamicAquifers(const int episode_index)
+{
+    const auto& sched = this->simulator_.vanguard().schedule()[episode_index];
+
+    for (const auto& [id, aquFlux] : sched.aqufluxs) {
+        auto aquPos =
+            std::find_if(std::begin(this->aquifers),
+                         std::end(this->aquifers),
+                [id](const auto& aquPtr)
+            {
+                return aquPtr->aquiferID() == id;
+            });
+
+        if (aquPos == std::end(this->aquifers)) {
+            // An aquifer with this 'id' does not yet exist in
+            // the collection managed by this object.  Create it.
+            auto aquFluxPtr = this->template createAnalyticAquiferPointer
+                <AquiferConstantFlux<TypeTag>>(aquFlux, id, "Constant Flux");
+
+            if (aquFluxPtr != nullptr) {
+                this->aquifers.push_back(std::move(aquFluxPtr));
+            }
+        }
+        else {
+            auto aquFluxPtr = dynamic_cast<AquiferConstantFlux<TypeTag>*>(aquPos->get());
+            if (aquFluxPtr == nullptr) {
+                // If the aquifers can return types easily, we might be able
+                // to give a better message with type information.
+                const auto msg =
+                    fmt::format("Aquifer {} is updated with constant flux "
+                                "aquifer keyword AQUFLUX at report step {}, "
+                                "while it might be specified to be a "
+                                "different type of aquifer before this. "
+                                "We do not support the conversion between "
+                                "different types of aquifer.\n", id, episode_index);
+
+                OPM_THROW(std::runtime_error, msg);
+            }
+
+            aquFluxPtr->updateAquifer(aquFlux);
         }
     }
 }
