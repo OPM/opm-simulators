@@ -113,7 +113,7 @@ public:
 
     void addToSource(RateVector& rates,
                      const unsigned cellIdx,
-                     const unsigned timeIdx) override
+                     [[maybe_unused]] const unsigned timeIdx) override
     {
         const int idx = this->cellToConnectionIdx_[cellIdx];
         if (idx < 0) {
