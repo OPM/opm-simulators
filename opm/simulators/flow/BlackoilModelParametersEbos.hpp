@@ -192,6 +192,14 @@ template<class TypeTag, class MyTypeTag>
 struct LocalToleranceScalingCnv {
     using type = UndefinedProperty;
 };
+template<class TypeTag, class MyTypeTag>
+struct NumLocalDomains {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct LocalDomainsPartitioningImbalance {
+    using type = UndefinedProperty;
+};
 template<class TypeTag>
 struct DbhpMaxRel<TypeTag, TTag::FlowModelParameters> {
     using type = GetPropType<TypeTag, Scalar>;
@@ -366,6 +374,16 @@ struct LocalToleranceScalingCnv<TypeTag, TTag::FlowModelParameters> {
     using type = GetPropType<TypeTag, Scalar>;
     static constexpr type value = 0.01;
 };
+template<class TypeTag>
+struct NumLocalDomains<TypeTag, TTag::FlowModelParameters> {
+    using type = int;
+    static constexpr auto value = 0;
+};
+template<class TypeTag>
+struct LocalDomainsPartitioningImbalance<TypeTag, TTag::FlowModelParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr auto value = type{1.03};
+};
 
 // if openMP is available, determine the number threads per process automatically.
 #if _OPENMP
@@ -493,6 +511,9 @@ namespace Opm
         double local_tolerance_scaling_mb_;
         double local_tolerance_scaling_cnv_;
 
+        int num_local_domains_{0};
+        double local_domain_partition_imbalance_{1.03};
+
         /// Construct from user parameters or defaults.
         BlackoilModelParametersEbos()
         {
@@ -534,6 +555,8 @@ namespace Opm
             max_local_solve_iterations_ = EWOMS_GET_PARAM(TypeTag, int, MaxLocalSolveIterations);
             local_tolerance_scaling_mb_ = EWOMS_GET_PARAM(TypeTag, double, LocalToleranceScalingMb);
             local_tolerance_scaling_cnv_ = EWOMS_GET_PARAM(TypeTag, double, LocalToleranceScalingCnv);
+            num_local_domains_ = EWOMS_GET_PARAM(TypeTag, int, NumLocalDomains);
+            local_domain_partition_imbalance_ = std::max(1.0, EWOMS_GET_PARAM(TypeTag, double, LocalDomainsPartitioningImbalance));
             deck_file_name_ = EWOMS_GET_PARAM(TypeTag, std::string, EclDeckFileName);
         }
 
@@ -579,6 +602,8 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, int, MaxLocalSolveIterations, "Max iterations for local solves with ASPIN or NLDD.");
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, LocalToleranceScalingMb, "Set lower than 1.0 to use stricter convergence tolerance for local solves.");
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, LocalToleranceScalingCnv, "Set lower than 1.0 to use stricter convergence tolerance for local solves.");
+            EWOMS_REGISTER_PARAM(TypeTag, int, NumLocalDomains, "Number of local domains for ASPIN/NLDD solves.");
+            EWOMS_REGISTER_PARAM(TypeTag, Scalar, LocalDomainsPartitioningImbalance, "Subdomain partitioning imbalance tolerance. 1.03 is 3 percent imbalance.");
         }
     };
 } // namespace Opm

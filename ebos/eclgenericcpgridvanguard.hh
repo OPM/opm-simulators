@@ -28,9 +28,12 @@
 #define EWOMS_ECL_CP_GRID_GENERIC_VANGUARD_HH
 
 #include <ebos/eclgenericvanguard.hh>
+
 #include <opm/grid/CpGrid.hpp>
+#include <opm/grid/utility/OpmWellType.hpp>
 
 #include <functional>
+#include <memory>
 #include <optional>
 #include <vector>
 
@@ -114,6 +117,13 @@ public:
     {
         return this->cell_part_;
     }
+
+#if HAVE_MPI
+    std::vector<int>
+    partitionCells(const int                                     numDomains,
+                   const double                                  imbalanceTolerance,
+                   const std::vector<Dune::cpgrid::OpmWellType>& wells) const;
+#endif
 
 protected:
     /*!

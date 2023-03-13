@@ -90,6 +90,7 @@
 #include <iomanip>
 #include <iostream>
 #include <limits>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -343,26 +344,26 @@ namespace Opm {
         void setupAspinDomains()
         {
             // Create partitions.
-            const int num_cells = detail::countLocalInteriorCells(grid_);
-            auto [partition_vector, num_partitions] = partitionCells(num_cells);
+            const auto& [partition_vector, num_domains] =
+                this->partitionCells();
 
             // Scan through partitioning to get correct size for each.
-            std::vector<int> sizes(num_partitions, 0);
-            for (int p : partition_vector) {
+            std::vector<int> sizes(num_domains, 0);
+            for (const auto& p : partition_vector) {
                 ++sizes[p];
             }
 
             // Set up correctly sized vectors of entity seeds and of indices for each partition.
             using EntitySeed = typename Grid::template Codim<0>::EntitySeed;
-            std::vector<std::vector<EntitySeed>> seeds(num_partitions);
-            std::vector<std::vector<int>> partitions(num_partitions);
-            for (int part = 0; part < num_partitions; ++part) {
-                seeds[part].resize(sizes[part]);
-                partitions[part].resize(sizes[part]);
+            std::vector<std::vector<EntitySeed>> seeds(num_domains);
+            std::vector<std::vector<int>> partitions(num_domains);
+            for (int domain = 0; domain < num_domains; ++domain) {
+                seeds[domain].resize(sizes[domain]);
+                partitions[domain].resize(sizes[domain]);
             }
 
             // Iterate through grid once, setting the seeds of all partitions.
-            std::vector<int> count(num_partitions, 0);
+            std::vector<int> count(num_domains, 0);
             const auto beg = grid_.template leafbegin<0>();
             const auto end = grid_.template leafend<0>();
             int cell = 0;
@@ -372,18 +373,26 @@ namespace Opm {
                 partitions[p][count[p]] = cell;
                 ++count[p];
             }
-            assert(cell == num_cells);
+            //assert(cell == num_cells);
             assert(count == sizes);
 
             // Create the domains.
-            const int num_domains = partitions.size();
+            //const int num_domains = partitions.size();
             for (int index = 0; index < num_domains; ++index) {
-                std::vector<bool> interior(num_cells, false);
+                std::vector<bool> interior(partition_vector.size(), false);
                 for (int ix : partitions[index]) {
                     interior[ix] = true;
                 }
-                Dune::SubGridPart<Grid> view(ebosSimulator_.vanguard().grid(), std::move(seeds[index]));
-                domains_.emplace_back(index, std::move(partitions[index]), std::move(interior), std::move(view));
+
+                Dune::SubGridPart<Grid> view {
+                    ebosSimulator_.vanguard().grid(),
+                    std::move(seeds[index])
+                };
+
+                this->domains_.emplace_back(index,
+                                            std::move(partitions[index]),
+                                            std::move(interior),
+                                            std::move(view));
             }
 
             // Set up container for the local system matrices.
@@ -2398,6 +2407,19 @@ namespace Opm {
         }
 
     private:
+        template <typename, class = void>
+        struct HasZoltanPartitioning : public std::false_type {};
+
+        template <typename GridType>
+        struct HasZoltanPartitioning<
+            GridType,
+            std::void_t<decltype(std::declval<GridType>().zoltanPartitionWithoutScatter
+                                 (std::declval<const std::vector<Well>*>(),
+                                  std::declval<const double*>(),
+                                  std::declval<const int>(),
+                                  std::declval<const double>()))>
+            > : public std::true_type {};
+
         template<class T>
         bool isNumericalAquiferCell(const Dune::CpGrid& grid, const T& elem)
         {
@@ -2423,6 +2445,46 @@ namespace Opm {
         double drMaxRel() const { return param_.dr_max_rel_; }
         double maxResidualAllowed() const { return param_.max_residual_allowed_; }
         double linear_solve_setup_time_;
+
+        std::pair<std::vector<int>, int> partitionCells() const
+        {
+            if constexpr (HasZoltanPartitioning<Grid>::value) {
+                return this->partitionCellsZoltan();
+            }
+            else {
+                return this->partitionCellsFallback();
+            }
+        }
+
+        std::pair<std::vector<int>, int> partitionCellsZoltan() const
+        {
+            const auto wells = this->ebosSimulator_.vanguard().schedule().getWellsatEnd();
+
+            auto partition_vector = this->grid_.zoltanPartitionWithoutScatter
+                (&wells, nullptr, this->param_.num_local_domains_,
+                 this->param_.local_domain_partition_imbalance_);
+
+            return this->countDomains(std::move(partition_vector));
+        }
+
+        std::pair<std::vector<int>, int> partitionCellsFallback() const
+        {
+            const int num_cells = detail::countLocalInteriorCells(this->grid_);
+
+            return this->countDomains(partitionCells(num_cells));
+        }
+
+        std::pair<std::vector<int>, int>
+        countDomains(std::vector<int> partition_vector) const
+        {
+            auto maxPos = std::max_element(partition_vector.begin(),
+                                           partition_vector.end());
+
+            const auto num_domains = (maxPos == partition_vector.end())
+                ? 0 : *maxPos + 1;
+
+            return { std::move(partition_vector), num_domains };
+        }
 
     public:
         std::vector<bool> wasSwitched_;
