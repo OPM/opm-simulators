@@ -49,7 +49,7 @@
 #include <dune/fem/gridpart/adaptiveleafgridpart.hh>
 #include <dune/fem/gridpart/common/gridpart2gridview.hh>
 #include <ebos/femcpgridcompat.hh>
-#endif //HAVE_DUNE_FEM
+#endif // HAVE_DUNE_FEM
 
 #include <cassert>
 #include <numeric>
@@ -84,6 +84,20 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::releaseEquilGrid()
 }
 
 #if HAVE_MPI
+
+template <class ElementMapper, class GridView, class Scalar>
+std::vector<int>
+EclGenericCpGridVanguard<ElementMapper, GridView, Scalar>::
+partitionCells(const int                                     numDomains,
+               const double                                  imbalanceTolerance,
+               const std::vector<Dune::cpgrid::OpmWellType>& wells) const
+{
+    const auto* faceTrans = static_cast<const double*>(nullptr);
+
+    return this->grid_->
+        zoltanPartitionWithoutScatter(&wells, faceTrans, numDomains, imbalanceTolerance);
+}
+
 template<class ElementMapper, class GridView, class Scalar>
 void EclGenericCpGridVanguard<ElementMapper, GridView, Scalar>::
 doLoadBalance_(const Dune::EdgeWeightMethod            edgeWeightsMethod,
