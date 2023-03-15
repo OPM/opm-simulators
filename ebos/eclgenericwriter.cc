@@ -274,21 +274,21 @@ writeInit(const std::function<unsigned int(unsigned int)>& map)
 
 template<class Grid, class EquilGrid, class GridView, class ElementMapper, class Scalar>
 data::Solution EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>::
-computeTrans_(const std::unordered_map<int,int>& cartesianToActive, const std::function<unsigned int(unsigned int)>& map) const
+computeTrans_(const std::unordered_map<int,int>& cartesianToActive,
+              const std::function<unsigned int(unsigned int)>& map) const
 {
     const auto& cartMapper = *equilCartMapper_;
     const auto& cartDims = cartMapper.cartesianDimensions();
-    const int globalSize = cartDims[0]*cartDims[1]*cartDims[2];
+    const int globalSize = cartDims[0] * cartDims[1] * cartDims[2];
 
-    data::CellData tranx = {UnitSystem::measure::transmissibility, std::vector<double>(globalSize), data::TargetType::INIT};
-    data::CellData trany = {UnitSystem::measure::transmissibility, std::vector<double>(globalSize), data::TargetType::INIT};
-    data::CellData tranz = {UnitSystem::measure::transmissibility, std::vector<double>(globalSize), data::TargetType::INIT};
+    auto tranx = data::CellData {
+        UnitSystem::measure::transmissibility,
+        std::vector<double>(globalSize, 0.0),
+        data::TargetType::INIT
+    };
 
-    for (size_t i = 0; i < tranx.data.size(); ++i) {
-        tranx.data[0] = 0.0;
-        trany.data[0] = 0.0;
-        tranz.data[0] = 0.0;
-    }
+    auto trany = tranx;
+    auto tranz = tranx;
 
     using GlobalGridView = typename EquilGrid::LeafGridView;
     const GlobalGridView& globalGridView = equilGrid_->leafGridView();
@@ -336,9 +336,11 @@ computeTrans_(const std::unordered_map<int,int>& cartesianToActive, const std::f
         }
     }
 
-    return {{"TRANX", tranx},
-            {"TRANY", trany},
-            {"TRANZ", tranz}};
+    return {
+        {"TRANX", tranx},
+        {"TRANY", trany},
+        {"TRANZ", tranz},
+    };
 }
 
 template<class Grid, class EquilGrid, class GridView, class ElementMapper, class Scalar>
