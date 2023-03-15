@@ -1005,7 +1005,7 @@ doAllocBuffers(unsigned bufferSize,
                unsigned numTracers,
                unsigned numOutputNnc)
 {
-    // Only output RESTART_AUXILIARY asked for by the user.
+    // Output RESTART_OPM_EXTENDED only when explicitly requested by user.
     std::map<std::string, int> rstKeywords = schedule_.rst_keywords(reportStepNum);
     for (auto& [keyword, should_write] : rstKeywords) {
         if (this->isOutputCreationDirective_(keyword)) {
@@ -1288,6 +1288,22 @@ doAllocBuffers(unsigned bufferSize,
             this->density_[phaseIdx].resize(bufferSize, 0.0);
         }
     }
+
+    if (auto& deng = rstKeywords["DENG"]; (deng > 0) && FluidSystem::phaseIsActive(gasPhaseIdx)) {
+        deng = 0;
+        this->density_[gasPhaseIdx].resize(bufferSize, 0.0);
+    }
+
+    if (auto& deno = rstKeywords["DENO"]; (deno > 0) && FluidSystem::phaseIsActive(oilPhaseIdx)) {
+        deno = 0;
+        this->density_[oilPhaseIdx].resize(bufferSize, 0.0);
+    }
+
+    if (auto& denw = rstKeywords["DENW"]; (denw > 0) && FluidSystem::phaseIsActive(waterPhaseIdx)) {
+        denw = 0;
+        this->density_[waterPhaseIdx].resize(bufferSize, 0.0);
+    }
+
     const bool hasVWAT = (rstKeywords["VISC"] > 0) || (rstKeywords["VWAT"] > 0);
     const bool hasVOIL = (rstKeywords["VISC"] > 0) || (rstKeywords["VOIL"] > 0);
     const bool hasVGAS = (rstKeywords["VISC"] > 0) || (rstKeywords["VGAS"] > 0);
