@@ -811,15 +811,15 @@ assignToSolution(data::Solution& sol)
     for (const auto& entry : data)
         doInsert(entry);
 
-    if (!temperature_.empty()) {
-        if (enableEnergy_)
-            sol.insert("TEMP", UnitSystem::measure::temperature, std::move(temperature_), data::TargetType::RESTART_SOLUTION);
-        else {
-            // Flow allows for initializing of non-constant initial temperature.
-            // For output of this temperature for visualization and restart set --enable-opm-restart=true
-            assert(enableTemperature_);
-            sol.insert("TEMP", UnitSystem::measure::temperature, std::move(temperature_), data::TargetType::RESTART_AUXILIARY);
-        }
+    if ((this->enableEnergy_ || this->enableTemperature_) &&
+        ! this->temperature_.empty())
+    {
+        const auto tag = this->enableEnergy_
+            ? data::TargetType::RESTART_SOLUTION
+            : data::TargetType::RESTART_OPM_EXTENDED;
+
+        sol.insert("TEMP", UnitSystem::measure::temperature,
+                   std::move(this->temperature_), tag);
     }
 
     if (FluidSystem::phaseIsActive(waterPhaseIdx) &&
