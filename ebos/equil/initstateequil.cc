@@ -2000,6 +2000,29 @@ template InitialStateComputer<BlackOilFluidSystem<double>,
                          const Dune::CartesianIndexMapper<ALUGrid3CN>&,
                          const double,
                          const bool);
+#if HAVE_DUNE_FEM
+using MapperFemAluGrid = Dune::MultipleCodimMultipleGeomTypeMapper<Dune::Fem::GridPart2GridViewImpl<Dune::Fem::AdaptiveLeafGridPart<ALUGrid3CN> > >;
+using GridViewFemAluGrid = Dune::Fem::GridPart2GridViewImpl<
+                                     Dune::Fem::AdaptiveLeafGridPart<ALUGrid3CN>>;
+template class InitialStateComputer<BlackOilFluidSystem<double>,
+                                    ALUGrid3CN,
+                                    GridViewFemAluGrid,
+                                    MapperFemAluGrid,
+                                    Dune::CartesianIndexMapper<ALUGrid3CN>>;
+
+template InitialStateComputer<BlackOilFluidSystem<double>,
+                              ALUGrid3CN,
+                              GridViewFemAluGrid,
+                              MapperFemAluGrid,
+                              Dune::CartesianIndexMapper<ALUGrid3CN>>::
+    InitialStateComputer(MatLaw&,
+                         const EclipseState&,
+                         const ALUGrid3CN&,
+                         const GridViewFemAluGrid&,
+                         const Dune::CartesianIndexMapper<ALUGrid3CN>&,
+                         const double,
+                         const bool);
+#endif //HAVE_DUNE_FEM
 #endif //HAVE_DUNE_ALUGRID
 
 
