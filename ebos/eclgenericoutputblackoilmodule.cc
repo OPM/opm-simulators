@@ -56,26 +56,65 @@
 
 namespace {
 
-std::string EclString(Opm::Inplace::Phase phase) {
-    switch(phase) {
-    case Opm::Inplace::Phase::WATER: return "WIP";
-    case Opm::Inplace::Phase::OIL: return "OIP";
-    case Opm::Inplace::Phase::GAS: return "GIP";
-    case Opm::Inplace::Phase::OilInLiquidPhase: return "OIPL";
-    case Opm::Inplace::Phase::OilInGasPhase: return "OIPG";
-    case Opm::Inplace::Phase::GasInLiquidPhase: return "GIPL";
-    case Opm::Inplace::Phase::GasInGasPhase: return "GIPG";
-    case Opm::Inplace::Phase::PoreVolume: return "RPV";
-    case Opm::Inplace::Phase::WaterResVolume: return "WIPR";
-    case Opm::Inplace::Phase::OilResVolume: return "OIPR";
-    case Opm::Inplace::Phase::GasResVolume: return "GIPR";
-    case Opm::Inplace::Phase::SALT: return "SIP";
-    case Opm::Inplace::Phase::CO2InWaterPhase: return "WCD";
-    case Opm::Inplace::Phase::CO2InGasPhaseInMob: return "GCDI";
-    case Opm::Inplace::Phase::CO2InGasPhaseMob: return "GCDM";
-    case Opm::Inplace::Phase::WaterInGasPhase: return "WIPG";
-    case Opm::Inplace::Phase::WaterInWaterPhase: return "WIPL";
-    default: throw std::logic_error(fmt::format("Phase enum with integer value: {} not recognized", static_cast<int>(phase)));
+std::string EclString(const Opm::Inplace::Phase phase)
+{
+    switch (phase) {
+    case Opm::Inplace::Phase::WATER:
+        return "WIP";
+
+    case Opm::Inplace::Phase::OIL:
+        return "OIP";
+
+    case Opm::Inplace::Phase::GAS:
+        return "GIP";
+
+    case Opm::Inplace::Phase::OilInLiquidPhase:
+        return "OIPL";
+
+    case Opm::Inplace::Phase::OilInGasPhase:
+        return "OIPG";
+
+    case Opm::Inplace::Phase::GasInLiquidPhase:
+        return "GIPL";
+
+    case Opm::Inplace::Phase::GasInGasPhase:
+        return "GIPG";
+
+    case Opm::Inplace::Phase::PoreVolume:
+        return "RPV";
+
+    case Opm::Inplace::Phase::WaterResVolume:
+        return "WIPR";
+
+    case Opm::Inplace::Phase::OilResVolume:
+        return "OIPR";
+
+    case Opm::Inplace::Phase::GasResVolume:
+        return "GIPR";
+
+    case Opm::Inplace::Phase::SALT:
+        return "SIP";
+
+    case Opm::Inplace::Phase::CO2InWaterPhase:
+        return "WCD";
+
+    case Opm::Inplace::Phase::CO2InGasPhaseInMob:
+        return "GCDI";
+
+    case Opm::Inplace::Phase::CO2InGasPhaseMob:
+        return "GCDM";
+
+    case Opm::Inplace::Phase::WaterInGasPhase:
+        return "WIPG";
+
+    case Opm::Inplace::Phase::WaterInWaterPhase:
+        return "WIPL";
+
+    default:
+        throw std::logic_error {
+            fmt::format("Phase enum with integer value: "
+                        "{} not recognized", static_cast<int>(phase))
+        };
     }
 }
 
@@ -782,11 +821,20 @@ assignToSolution(data::Solution& sol)
         }
     }
 
-    if (FluidSystem::phaseIsActive(waterPhaseIdx) && !saturation_[waterPhaseIdx].empty()) {
-        sol.insert("SWAT", UnitSystem::measure::identity, std::move(saturation_[waterPhaseIdx]), data::TargetType::RESTART_SOLUTION);
+    if (FluidSystem::phaseIsActive(waterPhaseIdx) &&
+        ! this->saturation_[waterPhaseIdx].empty())
+    {
+        sol.insert("SWAT", UnitSystem::measure::identity,
+                   std::move(this->saturation_[waterPhaseIdx]),
+                   data::TargetType::RESTART_SOLUTION);
     }
-    if (FluidSystem::phaseIsActive(gasPhaseIdx) && !saturation_[gasPhaseIdx].empty()) {
-        sol.insert("SGAS", UnitSystem::measure::identity, std::move(saturation_[gasPhaseIdx]), data::TargetType::RESTART_SOLUTION);
+
+    if (FluidSystem::phaseIsActive(gasPhaseIdx) &&
+        ! this->saturation_[gasPhaseIdx].empty())
+    {
+        sol.insert("SGAS", UnitSystem::measure::identity,
+                   std::move(this->saturation_[gasPhaseIdx]),
+                   data::TargetType::RESTART_SOLUTION);
     }
 
     if (eclState_.runspec().co2Storage() && !rsw_.empty()) {
@@ -799,27 +847,33 @@ assignToSolution(data::Solution& sol)
     }
 
     // Fluid in place
-    for (const auto& phase : Inplace::phases()) {
-        if (outputFipRestart_ && !fip_[phase].empty()) {
-            sol.insert(EclString(phase),
-                       UnitSystem::measure::volume,
-                       fip_[phase],
-                       data::TargetType::SUMMARY);
+    if (this->outputFipRestart_) {
+        for (const auto& phase : Inplace::phases()) {
+            if (! this->fip_[phase].empty()) {
+                sol.insert(EclString(phase),
+                           UnitSystem::measure::volume,
+                           this->fip_[phase],
+                           data::TargetType::SUMMARY);
+            }
         }
     }
 
-    // tracers
-    if (!tracerConcentrations_.empty()) {
-        const auto& tracers = eclState_.tracer();
-        for (std::size_t tracerIdx = 0; tracerIdx < tracers.size(); tracerIdx++) {
-            const auto& tracer = tracers[tracerIdx];
-            sol.insert(tracer.fname(), UnitSystem::measure::identity, std::move(tracerConcentrations_[tracerIdx]), data::TargetType::RESTART_TRACER_SOLUTION);
+    // Tracers
+    if (! this->tracerConcentrations_.empty()) {
+        const auto& tracers = this->eclState_.tracer();
+        for (auto tracerIdx = 0*tracers.size();
+             tracerIdx < tracers.size(); ++tracerIdx)
+        {
+            sol.insert(tracers[tracerIdx].fname(),
+                       UnitSystem::measure::identity,
+                       std::move(tracerConcentrations_[tracerIdx]),
+                       data::TargetType::RESTART_TRACER_SOLUTION);
         }
-        // We need put tracerConcentrations into a valid state.
-        // Otherwise next time we end up here outside of a restart write we will
-        // move invalidated data above (as it was moved away before and never
-        // reallocated)
-        tracerConcentrations_.resize(0);
+
+        // Put tracerConcentrations container into a valid state.  Otherwise
+        // we'll move from vectors that have already been moved from if we
+        // get here and it's not a restart step.
+        this->tracerConcentrations_.clear();
     }
 }
 
@@ -952,14 +1006,19 @@ doAllocBuffers(unsigned bufferSize,
         }
     }
 
+    if (auto& norst = rstKeywords["NORST"]; norst > 0) {
+        // Don't emit diagnostic messages about unsupported 'NORST' key.
+        norst = 0;
+    }
+
     this->outputFipRestart_ = false;
     this->computeFip_ = false;
 
     // Fluid in place
     for (const auto& phase : Inplace::phases()) {
         if (!substep || summaryConfig_.require3DField(EclString(phase))) {
-            if (rstKeywords["FIP"] > 0) {
-                rstKeywords["FIP"] = 0;
+            if (auto& fip = rstKeywords["FIP"]; fip > 0) {
+                fip = 0;
                 this->outputFipRestart_ = true;
             }
 
@@ -1020,37 +1079,43 @@ doAllocBuffers(unsigned bufferSize,
         }
     }
 
-    // field data should be allocated
-    // 1) when we want to restart
-    // 2) when it is ask for by the user via restartConfig
-    // 3) when it is not a substep
-    if (!isRestart && (!schedule_.write_rst_file(reportStepNum) || substep))
+    // Field data should be allocated
+    // 1) When we want to restart
+    // 2) When it is ask for by the user via restartConfig
+    // 3) When it is not a substep
+    if (!isRestart && (!schedule_.write_rst_file(reportStepNum) || substep)) {
         return;
-
-    // always output saturation of active phases
-    for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-        if (!FluidSystem::phaseIsActive(phaseIdx))
-            continue;
-
-        saturation_[phaseIdx].resize(bufferSize, 0.0);
     }
-    // and oil pressure
+
+    // Always output saturation of active phases
+    for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+        if (! FluidSystem::phaseIsActive(phaseIdx)) {
+            continue;
+        }
+
+        this->saturation_[phaseIdx].resize(bufferSize, 0.0);
+    }
+
+    // And oil pressure
     fluidPressure_.resize(bufferSize, 0.0);
     rstKeywords["PRES"] = 0;
     rstKeywords["PRESSURE"] = 0;
 
-    // allocate memory for temperature
+    // Allocate memory for temperature
     if (enableEnergy_ || enableTemperature_) {
-        temperature_.resize(bufferSize, 0.0);
+        this->temperature_.resize(bufferSize, 0.0);
         rstKeywords["TEMP"] = 0;
     }
 
-    if (FluidSystem::phaseIsActive(oilPhaseIdx))
+    if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
         rstKeywords["SOIL"] = 0;
-    if (FluidSystem::phaseIsActive(gasPhaseIdx))
+    }
+    if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
         rstKeywords["SGAS"] = 0;
-    if (FluidSystem::phaseIsActive(waterPhaseIdx))
+    }
+    if (FluidSystem::phaseIsActive(waterPhaseIdx)) {
         rstKeywords["SWAT"] = 0;
+    }
 
     if (FluidSystem::enableDissolvedGas()) {
         rs_.resize(bufferSize, 0.0);
@@ -1069,20 +1134,31 @@ doAllocBuffers(unsigned bufferSize,
         rstKeywords["RVW"] = 0;
     }
 
-    if (schedule_[reportStepNum].oilvap().drsdtConvective())
+    if (schedule_[reportStepNum].oilvap().drsdtConvective()) {
         drsdtcon_.resize(bufferSize, 0.0);
-    if (enableSolvent_)
+    }
+
+    if (enableSolvent_) {
         sSol_.resize(bufferSize, 0.0);
-    if (enablePolymer_)
+    }
+
+    if (enablePolymer_) {
         cPolymer_.resize(bufferSize, 0.0);
-    if (enableFoam_)
+    }
+
+    if (enableFoam_) {
         cFoam_.resize(bufferSize, 0.0);
-    if (enableBrine_)
+    }
+
+    if (enableBrine_) {
         cSalt_.resize(bufferSize, 0.0);
+    }
+
     if (enableSaltPrecipitation_) {
         pSalt_.resize(bufferSize, 0.0);
         permFact_.resize(bufferSize, 0.0);
     }
+
     if (enableExtbo_) {
         extboX_.resize(bufferSize, 0.0);
         extboY_.resize(bufferSize, 0.0);
@@ -1091,7 +1167,8 @@ doAllocBuffers(unsigned bufferSize,
         mFracGas_.resize(bufferSize, 0.0);
         mFracCo2_.resize(bufferSize, 0.0);
     }
-    if (enableMICP_){
+
+    if (enableMICP_) {
         cMicrobes_.resize(bufferSize, 0.0);
         cOxygen_.resize(bufferSize, 0.0);
         cUrea_.resize(bufferSize, 0.0);
@@ -1099,8 +1176,9 @@ doAllocBuffers(unsigned bufferSize,
         cCalcite_.resize(bufferSize, 0.0);
     }
 
-    if (vapparsActive)
+    if (vapparsActive) {
         soMax_.resize(bufferSize, 0.0);
+    }
 
     if (enableHysteresis) {
         pcSwMdcOw_.resize(bufferSize, 0.0);
@@ -1141,16 +1219,20 @@ doAllocBuffers(unsigned bufferSize,
     if (rstKeywords["FLOWS"] > 0) {
         rstKeywords["FLOWS"] = 0;
         enableFlows_ = true;
-        std::array<int, 3> phaseIdxs = { gasPhaseIdx, oilPhaseIdx, waterPhaseIdx }; 
-        std::array<int, 3> compIdxs = { gasCompIdx, oilCompIdx, waterCompIdx };
-        auto rstName = std::array{ "FLOGASN+", "FLOOILN+", "FLOWATN+" };
+
+        const std::array<int, 3> phaseIdxs = { gasPhaseIdx, oilPhaseIdx, waterPhaseIdx };
+        const std::array<int, 3> compIdxs = { gasCompIdx, oilCompIdx, waterCompIdx };
+        const auto rstName = std::array { "FLOGASN+", "FLOOILN+", "FLOWATN+" };
+
         for (unsigned ii = 0; ii < phaseIdxs.size(); ++ii) {
             if (FluidSystem::phaseIsActive(phaseIdxs[ii])) {
                 flowsi_[compIdxs[ii]].resize(bufferSize, 0.0);
                 flowsj_[compIdxs[ii]].resize(bufferSize, 0.0);
                 flowsk_[compIdxs[ii]].resize(bufferSize, 0.0);
+
                 if (numOutputNnc > 0) {
                     enableFlowsn_ = true;
+
                     flowsn_[compIdxs[ii]].first = rstName[ii];
                     flowsn_[compIdxs[ii]].second.first.resize(numOutputNnc, -1);
                     flowsn_[compIdxs[ii]].second.second.resize(numOutputNnc, 0.0);
@@ -1164,16 +1246,20 @@ doAllocBuffers(unsigned bufferSize,
     if (rstKeywords["FLORES"] > 0) {
         rstKeywords["FLORES"] = 0;
         enableFlores_ = true;
-        std::array<int, 3> phaseIdxs = { gasPhaseIdx, oilPhaseIdx, waterPhaseIdx }; 
-        std::array<int, 3> compIdxs = { gasCompIdx, oilCompIdx, waterCompIdx };
-        auto rstName = std::array{ "FLRGASN+", "FLROILN+", "FLRWATN+" };
+
+        const std::array<int, 3> phaseIdxs = { gasPhaseIdx, oilPhaseIdx, waterPhaseIdx };
+        const std::array<int, 3> compIdxs = { gasCompIdx, oilCompIdx, waterCompIdx };
+        const auto rstName = std::array{ "FLRGASN+", "FLROILN+", "FLRWATN+" };
+
         for (unsigned ii = 0; ii < phaseIdxs.size(); ++ii) {
             if (FluidSystem::phaseIsActive(phaseIdxs[ii])) {
                 floresi_[compIdxs[ii]].resize(bufferSize, 0.0);
                 floresj_[compIdxs[ii]].resize(bufferSize, 0.0);
                 floresk_[compIdxs[ii]].resize(bufferSize, 0.0);
+
                 if (numOutputNnc > 0) {
                     enableFloresn_ = true;
+
                     floresn_[compIdxs[ii]].first = rstName[ii];
                     floresn_[compIdxs[ii]].second.first.resize(numOutputNnc, -1);
                     floresn_[compIdxs[ii]].second.second.resize(numOutputNnc, 0.0);
@@ -1182,12 +1268,14 @@ doAllocBuffers(unsigned bufferSize,
         }
     }
 
-    if (rstKeywords["DEN"] > 0) {
-        rstKeywords["DEN"] = 0;
+    if (auto& den = rstKeywords["DEN"]; den > 0) {
+        den = 0;
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-            if (!FluidSystem::phaseIsActive(phaseIdx))
+            if (!FluidSystem::phaseIsActive(phaseIdx)) {
                 continue;
-            density_[phaseIdx].resize(bufferSize, 0.0);
+            }
+
+            this->density_[phaseIdx].resize(bufferSize, 0.0);
         }
     }
     const bool hasVWAT = (rstKeywords["VISC"] > 0) || (rstKeywords["VWAT"] > 0);
@@ -1271,11 +1359,13 @@ doAllocBuffers(unsigned bufferSize,
     failedCellsPd_.clear();
 
     // Not supported in flow legacy
-    if (false)
+    if (false) {
         saturatedOilFormationVolumeFactor_.resize(bufferSize, 0.0);
-    if (false)
-        oilSaturationPressure_.resize(bufferSize, 0.0);
+    }
 
+    if (false) {
+        oilSaturationPressure_.resize(bufferSize, 0.0);
+    }
 }
 
 template<class FluidSystem, class Scalar>
