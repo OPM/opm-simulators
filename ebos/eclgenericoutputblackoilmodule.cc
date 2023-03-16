@@ -839,21 +839,39 @@ assignToSolution(data::Solution& sol)
     }
 
     if (eclState_.runspec().co2Storage() && !rsw_.empty()) {
-        std::vector<double> mfrac(rsw_.size(), 0.0);
-        const auto& pvtnum = eclState_.fieldProps().get_int("PVTNUM");
-        for (size_t i = 0; i < rsw_.size(); ++i) {
-            mfrac[i] = FluidSystem::convertXwGToxwG(FluidSystem::convertRswToXwG(rsw_[i], pvtnum[i]-1), pvtnum[i]-1);
-        }
-        sol.insert("XMFCO2", UnitSystem::measure::identity, std::move(mfrac), data::TargetType::RESTART_AUXILIARY);
+        auto mfrac = std::vector<double>(this->rsw_.size(), 0.0);
+
+        std::transform(this->rsw_.begin(), this->rsw_.end(),
+                       this->eclState_.fieldProps().get_int("PVTNUM").begin(),
+                       mfrac.begin(),
+            [](const auto& rsw, const int pvtReg)
+        {
+            const auto xwg = FluidSystem::convertRswToXwG(rsw, pvtReg - 1);
+            return FluidSystem::convertXwGToxwG(xwg, pvtReg - 1);
+        });
+
+        sol.insert("XMFCO2",
+                   UnitSystem::measure::identity,
+                   std::move(mfrac),
+                   data::TargetType::RESTART_OPM_EXTENDED);
     }
 
     if (eclState_.runspec().co2Storage() && !rvw_.empty()) {
-        std::vector<double> mfrac(rvw_.size(), 0.0);
-        const auto& pvtnum = eclState_.fieldProps().get_int("PVTNUM");
-        for (size_t i = 0; i < rvw_.size(); ++i) {
-            mfrac[i] = FluidSystem::convertXgWToxgW(FluidSystem::convertRvwToXgW(rvw_[i], pvtnum[i]-1), pvtnum[i]-1);
-        }
-        sol.insert("YMFWAT", UnitSystem::measure::identity, std::move(mfrac), data::TargetType::RESTART_AUXILIARY);
+        auto mfrac = std::vector<double>(this->rvw_.size(), 0.0);
+
+        std::transform(this->rvw_.begin(), this->rvw_.end(),
+                       this->eclState_.fieldProps().get_int("PVTNUM").begin(),
+                       mfrac.begin(),
+            [](const auto& rvw, const int pvtReg)
+        {
+            const auto xgw = FluidSystem::convertRvwToXgW(rvw, pvtReg - 1);
+            return FluidSystem::convertXgWToxgW(xgw, pvtReg - 1);
+        });
+
+        sol.insert("YMFWAT",
+                   UnitSystem::measure::identity,
+                   std::move(mfrac),
+                   data::TargetType::RESTART_OPM_EXTENDED);
     }
 
     // Fluid in place
