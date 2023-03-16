@@ -618,7 +618,6 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"SURFWNUM", {true, std::nullopt}},
         {"SWF32D", {true, std::nullopt}},
         {"SWINGFAC", {true, std::nullopt}},
-        {"TEMP", {true, std::nullopt}},
         {"TEMPNODE", {true, std::nullopt}},
         {"TEMPTVD", {true, std::nullopt}},
         {"TIGHTEN", {true, std::nullopt}},
