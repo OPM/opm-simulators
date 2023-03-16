@@ -443,6 +443,7 @@ public:
                     this->failedCellsPb_.push_back(cartesianIdx);
                 }
             }
+
             if (!this->dewPointPressure_.empty()) {
                 try {
                     this->dewPointPressure_[globalDofIdx]
@@ -488,20 +489,21 @@ public:
                 }
             }
 
-
             if (!this->ppcw_.empty()) {
                 this->ppcw_[globalDofIdx] = matLawManager->oilWaterScaledEpsInfoDrainage(globalDofIdx).maxPcow;
                 // printf("ppcw_[%d] = %lg\n", globalDofIdx, ppcw_[globalDofIdx]);
             }
+
             // hack to make the intial output of rs and rv Ecl compatible.
             // For cells with swat == 1 Ecl outputs; rs = rsSat and rv=rvSat, in all but the initial step
             // where it outputs rs and rv values calculated by the initialization. To be compatible we overwrite
             // rs and rv with the values computed in the initially.
             // Volume factors, densities and viscosities need to be recalculated with the updated rs and rv values.
             // This can be removed when ebos has 100% controll over output
-            if (elemCtx.simulator().episodeIndex() < 0 && FluidSystem::phaseIsActive(oilPhaseIdx)
-                && FluidSystem::phaseIsActive(gasPhaseIdx)) {
-
+            if ((elemCtx.simulator().episodeIndex() < 0) &&
+                FluidSystem::phaseIsActive(oilPhaseIdx) &&
+                FluidSystem::phaseIsActive(gasPhaseIdx))
+            {
                 const auto& fsInitial = problem.initialFluidState(globalDofIdx);
 
                 // use initial rs and rv values
@@ -521,6 +523,7 @@ public:
                 if (!this->density_[oilPhaseIdx].empty())
                     this->density_[oilPhaseIdx][globalDofIdx]
                         = FluidSystem::density(fsInitial, oilPhaseIdx, intQuants.pvtRegionIndex());
+
                 if (!this->density_[gasPhaseIdx].empty())
                     this->density_[gasPhaseIdx][globalDofIdx]
                         = FluidSystem::density(fsInitial, gasPhaseIdx, intQuants.pvtRegionIndex());
@@ -528,12 +531,15 @@ public:
                 if (!this->invB_[oilPhaseIdx].empty())
                     this->invB_[oilPhaseIdx][globalDofIdx]
                         = FluidSystem::inverseFormationVolumeFactor(fsInitial, oilPhaseIdx, intQuants.pvtRegionIndex());
+
                 if (!this->invB_[gasPhaseIdx].empty())
                     this->invB_[gasPhaseIdx][globalDofIdx]
                         = FluidSystem::inverseFormationVolumeFactor(fsInitial, gasPhaseIdx, intQuants.pvtRegionIndex());
+
                 if (!this->viscosity_[oilPhaseIdx].empty())
                     this->viscosity_[oilPhaseIdx][globalDofIdx]
                         = FluidSystem::viscosity(fsInitial, oilPhaseIdx, intQuants.pvtRegionIndex());
+
                 if (!this->viscosity_[gasPhaseIdx].empty())
                     this->viscosity_[gasPhaseIdx][globalDofIdx]
                         = FluidSystem::viscosity(fsInitial, gasPhaseIdx, intQuants.pvtRegionIndex());
