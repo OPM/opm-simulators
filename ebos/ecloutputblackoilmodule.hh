@@ -1080,10 +1080,6 @@ private:
                 if (!this->fip_[Inplace::Phase::OilInGasPhase].empty())
                     this->fip_[Inplace::Phase::OilInGasPhase][globalDofIdx] = oilInPlaceGas;
 
-                // CO2STORE OIL + GAS
-                if (!this->fip_[Inplace::Phase::CO2InWaterPhase].empty())
-                    this->fip_[Inplace::Phase::CO2InWaterPhase][globalDofIdx] = gasInPlaceLiquid;
-
                 // Add dissolved gas and vaporized oil to total Fip
                 if (!this->fip_[Inplace::Phase::OIL].empty())
                     this->fip_[Inplace::Phase::OIL][globalDofIdx] += oilInPlaceGas;
@@ -1095,9 +1091,6 @@ private:
                 // Gas dissolved in water and vaporized water
                 Scalar gasInPlaceWater = getValue(fs.Rsw()) * fip[waterPhaseIdx];
                 Scalar waterInPlaceGas = getValue(fs.Rvw()) * fip[gasPhaseIdx];
-
-                if (!this->fip_[Inplace::Phase::CO2InWaterPhase].empty())
-                    this->fip_[Inplace::Phase::CO2InWaterPhase][globalDofIdx] = gasInPlaceWater;
 
                 if (!this->fip_[Inplace::Phase::WaterInGasPhase].empty())
                     this->fip_[Inplace::Phase::WaterInGasPhase][globalDofIdx] = waterInPlaceGas;
@@ -1115,16 +1108,41 @@ private:
                 = simulator_.problem().materialLawManager()->oilWaterScaledEpsInfoDrainage(globalDofIdx);
             const Scalar& sgcr = scaledDrainageInfo.Sgcr;
             if (FluidSystem::phaseIsActive(gasPhaseIdx) && !this->fip_[Inplace::Phase::CO2InGasPhaseInMob].empty()) {
-                const double bg = getValue(fs.invB(gasPhaseIdx));
                 const double sg = getValue(fs.saturation(gasPhaseIdx));
-                Scalar imMobileGas = pv * bg * std::min(sgcr , sg);
+                const double rhog = getValue(fs.density(gasPhaseIdx));
+                const double xgW = FluidSystem::phaseIsActive(waterPhaseIdx)?
+                            FluidSystem::convertRvwToXgW(getValue(fs.Rvw()), fs.pvtRegionIndex()):
+                            FluidSystem::convertRvToXgO(getValue(fs.Rv()), fs.pvtRegionIndex());
+                Scalar mM = FluidSystem::molarMass(gasCompIdx, fs.pvtRegionIndex());
+                Scalar imMobileGas = (1 - xgW) * pv * rhog * std::min(sgcr , sg) / mM;
                 this->fip_[Inplace::Phase::CO2InGasPhaseInMob][globalDofIdx] = imMobileGas;
             }
             if (FluidSystem::phaseIsActive(gasPhaseIdx) && !this->fip_[Inplace::Phase::CO2InGasPhaseMob].empty()) {
-                const double bg = getValue(fs.invB(gasPhaseIdx));
+                const double rhog = getValue(fs.density(gasPhaseIdx));
                 const double sg = getValue(fs.saturation(gasPhaseIdx));
-                Scalar mobileGas = pv * bg * std::max(0.0, sg - sgcr);
-                this->fip_[Inplace::Phase::CO2InGasPhaseMob][globalDofIdx] = mobileGas;
+                const double xgW = FluidSystem::phaseIsActive(waterPhaseIdx)?
+                            FluidSystem::convertRvwToXgW(getValue(fs.Rvw()), fs.pvtRegionIndex()):
+                            FluidSystem::convertRvToXgO(getValue(fs.Rv()), fs.pvtRegionIndex());
+                Scalar mM = FluidSystem::molarMass(gasCompIdx, fs.pvtRegionIndex());
+                Scalar mobileGas = (1 - xgW) * pv * rhog * std::max(0.0, sg - sgcr) / mM;
+                this->fip_[Inplace::Phase::CO2InGasPhaseMob][globalDofIdx] = mobileGas*mM;
+            }
+
+            if (FluidSystem::phaseIsActive(waterPhaseIdx) && !this->fip_[Inplace::Phase::CO2InWaterPhase].empty()) {
+                const double rhow = getValue(fs.density(waterPhaseIdx));
+                const double sw = getValue(fs.saturation(waterPhaseIdx));
+                const double xwG = FluidSystem::convertRswToXwG(getValue(fs.Rsw()), fs.pvtRegionIndex());
+                Scalar mM = FluidSystem::molarMass(gasCompIdx, fs.pvtRegionIndex());
+                Scalar co2inWater = xwG * pv * rhow * sw / mM;
+                this->fip_[Inplace::Phase::CO2InWaterPhase][globalDofIdx] = co2inWater;
+            }
+            if (FluidSystem::phaseIsActive(oilPhaseIdx) && !this->fip_[Inplace::Phase::CO2InWaterPhase].empty()) {
+                const double rhoo = getValue(fs.density(oilPhaseIdx));
+                const double so = getValue(fs.saturation(oilPhaseIdx));
+                const double xoG = FluidSystem::convertRsToXoG(getValue(fs.Rs()), fs.pvtRegionIndex());
+                Scalar mM = FluidSystem::molarMass(gasCompIdx, fs.pvtRegionIndex());
+                Scalar co2inWater = xoG * pv * rhoo * so / mM;
+                this->fip_[Inplace::Phase::CO2InWaterPhase][globalDofIdx] = co2inWater;
             }
         }
     }
