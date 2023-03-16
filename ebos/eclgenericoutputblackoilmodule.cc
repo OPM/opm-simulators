@@ -789,6 +789,15 @@ assignToSolution(data::Solution& sol)
         sol.insert("SGAS", UnitSystem::measure::identity, std::move(saturation_[gasPhaseIdx]), data::TargetType::RESTART_SOLUTION);
     }
 
+    if (eclState_.runspec().co2Storage() && !rsw_.empty()) {
+        std::vector<double> mfrac(rsw_.size(), 0.0);
+        const auto& pvtnum = eclState_.fieldProps().get_int("PVTNUM");
+        for (size_t i = 0; i < rsw_.size(); ++i) {
+            mfrac[i] = FluidSystem::convertXoGToxoG(FluidSystem::convertRswToXwG(rsw_[i], pvtnum[i]-1), pvtnum[i]-1);
+        }
+        sol.insert("XMFCO2", UnitSystem::measure::identity, std::move(mfrac), data::TargetType::RESTART_AUXILIARY);
+    }
+
     // Fluid in place
     for (const auto& phase : Inplace::phases()) {
         if (outputFipRestart_ && !fip_[phase].empty()) {
