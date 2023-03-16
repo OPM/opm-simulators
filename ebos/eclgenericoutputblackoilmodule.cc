@@ -1275,7 +1275,6 @@ fipUnitConvert_(std::unordered_map<Inplace::Phase, Scalar>& fip) const
 {
     const UnitSystem& units = eclState_.getUnits();
     using M = UnitSystem::measure;
-
     const auto unit_map = std::unordered_map<Inplace::Phase, M> {
         {Inplace::Phase::WATER,             M::liquid_surface_volume},
         {Inplace::Phase::OIL,               M::liquid_surface_volume},
@@ -1290,9 +1289,9 @@ fipUnitConvert_(std::unordered_map<Inplace::Phase, Scalar>& fip) const
         {Inplace::Phase::OilResVolume,      M::volume},
         {Inplace::Phase::GasResVolume,      M::volume},
         {Inplace::Phase::SALT,              M::mass},
-        {Inplace::Phase::CO2InWaterPhase,   M::gas_surface_volume},
-        {Inplace::Phase::CO2InGasPhaseInMob,M::gas_surface_volume},
-        {Inplace::Phase::CO2InGasPhaseMob,  M::gas_surface_volume},
+        {Inplace::Phase::CO2InWaterPhase,   M::moles},
+        {Inplace::Phase::CO2InGasPhaseInMob,M::moles},
+        {Inplace::Phase::CO2InGasPhaseMob,  M::moles},
         {Inplace::Phase::WaterInWaterPhase, M::liquid_surface_volume},
         {Inplace::Phase::WaterInGasPhase,   M::liquid_surface_volume},
     };
