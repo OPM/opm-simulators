@@ -41,13 +41,20 @@
 
 #include <dune/grid/common/partitionset.hh>
 
+#include <opm/common/OpmLog/OpmLog.hpp>
+
 #include <limits>
 #include <stdexcept>
 #include <string>
 
 #if HAVE_DAMARIS
 #include <opm/simulators/utils/DamarisOutputModule.hpp>
+
+#include <opm/simulators/utils/GridDataOutput.hpp>
+#include <damaris/util/DamarisGeometryData.hpp>
 #endif
+
+#include <opm/simulators/utils/GridDataOutput.hpp>
 
 
 namespace Opm::Properties {
@@ -311,6 +318,7 @@ public:
         this->eclOutputModule_->outputErrorLog(simulator_.gridView().comm());
 #ifdef HAVE_DAMARIS
         if (EWOMS_GET_PARAM(TypeTag, bool, EnableDamarisOutput)) {
+            const int rank = simulator_.vanguard().grid().comm().rank() ;
             // N.B. damarisUpdate_ should be set to true if at any time the model geometry changes
             if (this->damarisUpdate_) {
                 const auto& gridView = simulator_.gridView();
@@ -318,11 +326,136 @@ public:
                 const int numElements = std::distance(interior_elements.begin(), interior_elements.end());
                 Opm::DamarisOutput::setupDamarisWritingPars(simulator_.vanguard().grid().comm(), numElements);
                 const std::vector<int>& local_to_global = this->collectToIORank_.localIdxToGlobalIdxMapping();
-                damaris_write("GLOBAL_CELL_INDEX", local_to_global.data());
-                // By default we assume static grid
-                this->damarisUpdate_ = false;
-            }
+                int damaris_err ;
+                
+                Opm::GridDataOutput::SimMeshDataAccessor geomData(gridView, Dune::VTK::conforming) ;
+                geomData.printGridDetails() ;
+                
+                int nvert = geomData.getNVertices() ;
+                
+                damaris::model::vertex_data_structure vertex_structure = damaris::model::VERTEX_SEPARATE_X_Y_Z ;  // define this as we know it works with Ascent
+                damaris::model::DamarisGeometryData damarisMeshVars(vertex_structure, geomData.getNVertices(), 
+                                                            geomData.getNCells(), geomData.getNCorners(), rank) ;
 
+                
+                const bool hasPolyCells = geomData.hasPolyhedralCells() ;
+                if ( hasPolyCells ) {
+                    std::cout << "The Grid has polyhedral elements - we will need to define extra connectivity arrays" << std::endl ;
+                } 
+                damarisMeshVars.set_hasPolyhedralCells(hasPolyCells) ;
+              
+                /* This is our template XML model for x,y,z coordinates
+                    <parameter name="n_coords_local"     type="int" value="1" />
+                    <parameter name="n_coords_global"    type="int" value="1" comment="only needed if we need to write to HDF5 in Collective mode/>
+                    <layout    name="n_coords_layout"    type="double" dimensions="n_coords_local"   comment="For the individual x, y and z coordinates of the mesh vertices, these values are referenced in the topologies/topo/subelements/connectivity_pg data"  />
+                    <group name="coordset/coords/values"> 
+                        <variable name="x"    layout="n_coords_layout"  type="scalar"  visualizable="false"  unit="m"   script="PythonConduitTest" time-varying="false" />
+                        <variable name="y"    layout="n_coords_layout"  type="scalar"  visualizable="false"  unit="m"   script="PythonConduitTest" time-varying="false" />
+                        <variable name="z"    layout="n_coords_layout"  type="scalar"  visualizable="false"  unit="m"   script="PythonConduitTest" time-varying="false" />
+                    </group>
+                */
+                int xyz_coord_dims = 1 ;
+                std::vector<std::string> param_names = {"n_coords_local"} ;
+                std::string variable_x = "coordset/coords/values/x" ;
+                std::string variable_y = "coordset/coords/values/y" ;
+                std::string variable_z = "coordset/coords/values/z" ;
+                // damarisMeshVars.set_damaris_var_name_vertex_x( xyz_coord_dims, param_names, variable_x) ;
+                // damarisMeshVars.set_damaris_var_name_vertex_y( xyz_coord_dims, param_names, variable_y) ;
+                // damarisMeshVars.set_damaris_var_name_vertex_z( xyz_coord_dims, param_names, variable_z) ;
+                
+                
+                //std::cout << "INFO: " << rank << " :Calling: damarisMeshVars.ReturnDamarisVarofType(DAMARIS_TYPE_DOUBLE, xyz_coord_dims, param_names, variable_x ) " << std::endl ;
+                /*damaris::model::DamarisVar<double>* var_x =  dynamic_cast<damaris::model::DamarisVar<double>* >( damarisMeshVars.ReturnDamarisVarofType(DAMARIS_TYPE_DOUBLE, xyz_coord_dims, param_names, variable_x )) ;
+                damarisMeshVars.set_damaris_var_name_vertex_x( var_x ) ;
+                damaris::model::DamarisVar<double>* var_y =  dynamic_cast<damaris::model::DamarisVar<double>* >(damarisMeshVars.ReturnDamarisVarofType(DAMARIS_TYPE_DOUBLE, xyz_coord_dims, param_names, variable_y )) ;
+                damarisMeshVars.set_damaris_var_name_vertex_y( var_y ) ;
+                damaris::model::DamarisVar<double>* var_z =  dynamic_cast<damaris::model::DamarisVar<double>* >(damarisMeshVars.ReturnDamarisVarofType(DAMARIS_TYPE_DOUBLE, xyz_coord_dims, param_names, variable_z )) ;
+                damarisMeshVars.set_damaris_var_name_vertex_z( var_z ) ;*/
+                
+                damarisMeshVars.set_damaris_var_name_vertex_x(xyz_coord_dims,  param_names, variable_x) ;
+                damarisMeshVars.set_damaris_var_name_vertex_y(xyz_coord_dims,  param_names, variable_y) ;
+                damarisMeshVars.set_damaris_var_name_vertex_z(xyz_coord_dims,  param_names, variable_z) ;
+                
+                std::vector<int> param_vertices ;
+                param_vertices.push_back(geomData.getNVertices() ) ;
+                
+                damarisMeshVars.SetAll_VERTEX_SEPARATE_X_Y_Z_shmem(param_vertices) ;
+                //std::cout << "INFO: " << rank << " : Calling: var_x->SetDamarisParameter( " << param_vertices[0] << " ) " << std::endl ;
+                //var_x->SetDamarisParameter( param_vertices )  ;
+                //var_y->SetDamarisParameter( param_vertices )  ;
+                //var_z->SetDamarisParameter( param_vertices )  ;
+                //std::cout << "INFO: " << rank << " : Calling: var_x->SetPointersToDamarisShmem( ) " << std::endl ;
+                //var_x->SetPointersToDamarisShmem(  )  ;
+                //var_y->SetPointersToDamarisShmem(  )  ;
+                //var_z->SetPointersToDamarisShmem(  )  ;
+                
+                damaris::model::DamarisVar<double>* var_x =  dynamic_cast<damaris::model::DamarisVar<double>* >(damarisMeshVars.get_x()) ;
+                damaris::model::DamarisVar<double>* var_y =  dynamic_cast<damaris::model::DamarisVar<double>* >(damarisMeshVars.get_y()) ;
+                damaris::model::DamarisVar<double>* var_z =  dynamic_cast<damaris::model::DamarisVar<double>* >(damarisMeshVars.get_z()) ;
+                
+                //std::cout << "INFO: " << rank << " :Calling: geomData.writeGridPoints(var_x->data_ptr_,var_y->data_ptr_,var_z->data_ptr_) ; " << std::endl ;
+                //OpmLog::info("\nProcessing grid - eclalu");
+                // geomData.writeGridPoints(x_vert,y_vert,z_vert) ;
+                // geomData.writeGridPoints(damarisMeshVars.get_x()->data_ptr(),damarisMeshVars.get_y()->data_ptr(),damarisMeshVars.get_z()->data_ptr()) ;
+                geomData.writeGridPoints(var_x->data_ptr(),var_y->data_ptr(),var_x->data_ptr()) ;
+                // geomData.writeGridPoints(var_x_ptr,var_y_ptr,var_z_ptr) ;
+                // geomData.writeGridPoints(x_inout,y_inout,z_inout) ;
+                
+                // WE may not need these as the ~DamarisGeometryData will call them  
+                std::cout << "INFO: " << rank << " :Calling: var_x->CommitVariableDamarisShmem( ) ; " << std::endl ;
+                damarisMeshVars.CommitAll_VERTEX_SEPARATE_X_Y_Z_shmem() ;
+                //var_x->CommitVariableDamarisShmem(  )  ;
+                std::cout << "INFO: " << rank << " :Calling: var_x->ClearVariableDamarisShmem( ) ; " << std::endl ;
+                damarisMeshVars.ClearAll_VERTEX_SEPARATE_X_Y_Z_shmem() ;
+                //var_x->ClearVariableDamarisShmem(  )  ;
+                
+                // delete var_x ;
+                // delete var_y ;
+                // delete var_z ;
+                param_names[0] = "n_connectivity_ph" ; 
+                std::string varname = std::string("topologies/topo/elements/connectivity") ;
+                damarisMeshVars.set_damaris_var_name_connectivity(xyz_coord_dims, param_names , varname ) ;
+                param_names[0] = "n_offsets_types_ph" ; 
+                varname = std::string("topologies/topo/elements/offsets") ;
+                damarisMeshVars.set_damaris_var_name_offsets(xyz_coord_dims, param_names, varname ) ;
+                param_names[0] = "n_offsets_types_ph" ; 
+                varname = std::string("topologies/topo/elements/types") ; 
+                damarisMeshVars.set_damaris_var_name_types(xyz_coord_dims, param_names, varname ) ;
+                
+                // sleep(80);
+                
+                damaris::model::DamarisVar<int>* var_connectivity =  dynamic_cast<damaris::model::DamarisVar<int>* >(damarisMeshVars.get_connectivity()) ;
+                damaris::model::DamarisVar<int>* var_offsets =  dynamic_cast<damaris::model::DamarisVar<int>* >(damarisMeshVars.get_offsets()) ;
+                damaris::model::DamarisVar<char>* var_types =  dynamic_cast<damaris::model::DamarisVar<char>* >(damarisMeshVars.get_types()) ;
+                
+                std::vector<int> param_connectivity ;
+                param_connectivity.push_back( geomData.getNCorners() ) ;
+                var_connectivity->SetDamarisParameter(param_connectivity) ;
+                var_connectivity->SetPointersToDamarisShmem() ;
+                
+                std::vector<int> param_offsets ;
+                param_offsets.push_back(geomData.getNCells() ) ;
+                var_offsets->SetDamarisParameter(param_offsets) ;
+                var_offsets->SetPointersToDamarisShmem() ;
+                var_types->SetDamarisParameter(param_offsets) ;
+                var_types->SetPointersToDamarisShmem() ;
+                
+                geomData.writeConnectivity(var_connectivity->data_ptr()) ;
+                geomData.writeOffsetsCells(var_offsets->data_ptr()) ;
+                geomData.writeCellTypes(var_types->data_ptr()) ;
+                
+                // TODO: Check the commit and clear damaris functions have been called.
+                
+                damaris_err = damaris_write("GLOBAL_CELL_INDEX", local_to_global.data());
+                if (damaris_err != DAMARIS_OK) {
+                    std::cerr << "ERROR rank =" << rank << " : eclwrite::writeOutput : damaris_write(\"GLOBAL_CELL_INDEX\", local_to_global.data())" << ", Damaris error = " <<  damaris_error_string(damaris_err) << std::endl ;
+                }
+                
+                // Currently by default we assume static grid (unchanging through the simulation)
+                this->damarisUpdate_ = false; 
+            }
+            
+            
             if (!isSubStep) {
                 // Output the PRESSURE field
                 if (this->eclOutputModule_->getPRESSURE_ptr() != nullptr) {
@@ -385,6 +518,7 @@ public:
                                 isFloresn,
                                 std::move(floresn));
         }
+
     }
 
     void beginRestart()
