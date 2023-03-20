@@ -243,7 +243,7 @@ assemblePressureEq(const int seg,
     // contribution from the outlet segment
     eqns.residual()[seg][SPres] -= outlet_pressure.value();
     for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-        eqns.D()[seg][outlet_segment_index][SPres][pv_idx] = -outlet_pressure.derivative(pv_idx + Indices::numEq);
+        eqns.D()[seg][outlet_segment_index][SPres][pv_idx] -= outlet_pressure.derivative(pv_idx + Indices::numEq);
     }
 }
 
