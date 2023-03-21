@@ -1127,7 +1127,8 @@ public:
 
         // deal with DRSDT and DRVDT
         updateCompositionChangeLimits_();
-
+        {
+        OPM_TIMEBLOCK(driftCompansation);
         if (enableDriftCompensation_) {
             const auto& residual = this->model().linearizer().residual();
             for (unsigned globalDofIdx = 0; globalDofIdx < residual.size(); globalDofIdx ++) {
@@ -1137,7 +1138,7 @@ public:
                     drift_[globalDofIdx] *= this->model().dofTotalVolume(globalDofIdx);
             }
         }
-
+        }
         bool isSubStep = !EWOMS_GET_PARAM(TypeTag, bool, EnableWriteAllSolutions) && !this->simulator().episodeWillBeOver();
         eclWriter_->evalSummaryState(isSubStep);
 
@@ -1155,11 +1156,12 @@ public:
             [this,gridToEquilGrid](bool global) {
                 this->transmissibilities_.update(global,gridToEquilGrid);
             };
-
+        {
+        OPM_TIMEBLOCK(applyActions);
         actionHandler_.applyActions(episodeIdx,
                                     simulator.time() + simulator.timeStepSize(),
                                     transUp);
-
+        }
         // deal with "clogging" for the MICP model
         if constexpr (enableMICP){
           auto& model = this->model();
