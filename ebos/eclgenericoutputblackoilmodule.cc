@@ -841,7 +841,7 @@ assignToSolution(data::Solution& sol)
         std::vector<double> mfrac(rsw_.size(), 0.0);
         const auto& pvtnum = eclState_.fieldProps().get_int("PVTNUM");
         for (size_t i = 0; i < rsw_.size(); ++i) {
-            mfrac[i] = FluidSystem::convertXoGToxoG(FluidSystem::convertRswToXwG(rsw_[i], pvtnum[i]-1), pvtnum[i]-1);
+            mfrac[i] = FluidSystem::convertXwGToxwG(FluidSystem::convertRswToXwG(rsw_[i], pvtnum[i]-1), pvtnum[i]-1);
         }
         sol.insert("XMFCO2", UnitSystem::measure::identity, std::move(mfrac), data::TargetType::RESTART_AUXILIARY);
     }
