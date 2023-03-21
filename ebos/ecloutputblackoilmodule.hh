@@ -1017,11 +1017,17 @@ private:
             this->dynamicPoreVolume_[globalDofIdx] = pv;
 
             Scalar hydrocarbon = 0.0;
-            if (FluidSystem::phaseIsActive(oilPhaseIdx))
-                hydrocarbon += getValue(fs.saturation(oilPhaseIdx));
-            if (FluidSystem::phaseIsActive(gasPhaseIdx))
-                hydrocarbon += getValue(fs.saturation(gasPhaseIdx));
 
+            if (!this->eclState_.runspec().co2Storage()) {
+                // Common case.  Hydrocarbon volume is fraction occupied by actual hydrocarbons.
+                if (FluidSystem::phaseIsActive(oilPhaseIdx))
+                    hydrocarbon += getValue(fs.saturation(oilPhaseIdx));
+                if (FluidSystem::phaseIsActive(gasPhaseIdx))
+                    hydrocarbon += getValue(fs.saturation(gasPhaseIdx));
+            } else {
+                // CO2 storage: Hydrocarbon volume is full pore-volume.
+                hydrocarbon = 1.0;
+            }
             this->hydrocarbonPoreVolume_[globalDofIdx] = pv * hydrocarbon;
 
             if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
