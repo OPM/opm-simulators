@@ -175,6 +175,7 @@ public:
      */
     void evalSummaryState(bool isSubStep)
     {
+        OPM_TIMEBLOCK(evalSummaryState);
         const int reportStepNum = simulator_.episodeIndex() + 1;
         /*
           The summary data is not evaluated for timestep 0, that is
@@ -247,9 +248,12 @@ public:
 
         std::map<std::string, double> miscSummaryData;
         std::map<std::string, std::vector<double>> regionData;
-        auto inplace = eclOutputModule_->outputFipLog(miscSummaryData, regionData, isSubStep, simulator_.gridView().comm());
+        Inplace inplace;
+        {
+        OPM_TIMEBLOCK(outputFipLogAndFipresvLog);    
+        inplace = eclOutputModule_->outputFipLog(miscSummaryData, regionData, isSubStep, simulator_.gridView().comm());
         eclOutputModule_->outputFipresvLog(miscSummaryData, regionData, isSubStep, simulator_.gridView().comm());
-
+        }
         bool forceDisableProdOutput = false;
         bool forceDisableInjOutput = false;
         bool forceDisableCumOutput = false;
@@ -279,7 +283,8 @@ public:
         if (this->simulation_report_.success.total_newton_iterations != 0) {
             miscSummaryData["MSUMNEWT"] = this->simulation_report_.success.total_newton_iterations;
         }
-
+        {
+        OPM_TIMEBLOCK(evalSummary);    
         this->evalSummary(reportStepNum, curTime,
                           this->collectToIORank_.isParallel() ?
                             this->collectToIORank_.globalWBPData() :
@@ -297,10 +302,13 @@ public:
                           ? this->collectToIORank_.globalInterRegFlows()
                           : this->eclOutputModule_->getInterRegFlows(),
                           summaryState(), udqState());
-
+        }
+        {
+        OPM_TIMEBLOCK(outputXXX);    
         eclOutputModule_->outputProdLog(reportStepNum, isSubStep, forceDisableProdOutput);
         eclOutputModule_->outputInjLog(reportStepNum, isSubStep, forceDisableInjOutput);
         eclOutputModule_->outputCumLog(reportStepNum, isSubStep, forceDisableCumOutput);
+        }
     }
 
     void writeOutput(bool isSubStep)
@@ -470,7 +478,7 @@ public:
     void endRestart()
     {}
 
-    const EclOutputBlackOilModule<TypeTag>& eclOutputModule() const
+    EclOutputBlackOilModule<TypeTag>& eclOutputModule() const
     { return *eclOutputModule_; }
 
     Scalar restartTimeStepSize() const
@@ -507,6 +515,7 @@ private:
     void prepareLocalCellData(const bool isSubStep,
                               const int  reportStepNum)
     {
+        if( !(eclOutputModule_->localDataValid()) ){
         OPM_TIMEBLOCK(prepareLocalCellData);
         const auto& gridView = simulator_.vanguard().gridView();
         const int numElements = gridView.size(/*codim=*/0);
@@ -517,13 +526,27 @@ private:
 
         ElementContext elemCtx(simulator_);
         OPM_BEGIN_PARALLEL_TRY_CATCH();
+        {
+        OPM_TIMEBLOCK(prepareCellBasedData);    
         for (const auto& elem : elements(gridView)) {
             elemCtx.updatePrimaryStencil(elem);
             elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 
             eclOutputModule_->processElement(elemCtx);
         }
+        }
+        {
+        OPM_TIMEBLOCK(prepareFluidInPlace);        
+        for (const auto& elem : elements(gridView)) {
+            elemCtx.updatePrimaryStencil(elem);
+            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+
+            eclOutputModule_->updateFluidInPlace(elemCtx);
+        }
+        }
+        eclOutputModule_->validateLocalData();
         OPM_END_PARALLEL_TRY_CATCH("EclWriter::prepareLocalCellData() failed: ", simulator_.vanguard().grid().comm());
+        }
     }
 
     void captureLocalFluxData()

@@ -249,6 +249,18 @@ public:
         return this->initialInplace_.value();
     }
 
+    bool localDataValid() const{
+        return local_data_valid_;
+    }
+
+    void invalidateLocalData(){
+        local_data_valid_ = false;
+    }
+
+    void validateLocalData(){
+        local_data_valid_ = true;
+    }
+    
     // Virtual destructor for safer inheritance.
     virtual ~EclGenericOutputBlackoilModule();
 
@@ -543,6 +555,7 @@ protected:
     std::map<std::size_t , double> wbpData_;
 
     std::optional<Inplace> initialInplace_;
+    bool local_data_valid_;
 };
 
 } // namespace Opm
