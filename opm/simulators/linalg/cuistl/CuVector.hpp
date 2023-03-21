@@ -104,8 +104,8 @@ public:
     Dune::BlockVector<Dune::FieldVector<T, blockSize>> asDuneBlockVector() const
     {
         OPM_ERROR_IF(dim() % blockSize != 0,
-                     "blockSize is not a multiple of dim(). Given blockSize = " << blockSize
-                                                                                << " and dim() = " << dim());
+                     "blockSize is not a multiple of dim(). Given blockSize = " + std::to_string(blockSize)
+                         + " and dim() = " + std::to_string( dim()));
 
         Dune::BlockVector<Dune::FieldVector<T, blockSize>> returnValue(dim() / blockSize);
         copyToHost(returnValue);

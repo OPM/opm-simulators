@@ -23,6 +23,7 @@
 #include <dune/common/fvector.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/bvector.hh>
+#include <fmt/core.h>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/simulators/linalg/cuistl/CuSeqILU0.hpp>
 #include <opm/simulators/linalg/cuistl/impl/cusparse_constants.hpp>
@@ -281,9 +282,9 @@ CuSeqILU0<M, X, Y, l>::findBufferSize()
                                                            m_infoU.get(),
                                                            &bufferSizeU));
 
-    OPM_ERROR_IF(bufferSizeL <= 0, "bufferSizeL is non-positive. Given value is " << bufferSizeL);
-    OPM_ERROR_IF(bufferSizeU <= 0, "bufferSizeU is non-positive. Given value is " << bufferSizeU);
-    OPM_ERROR_IF(bufferSizeM <= 0, "bufferSizeM is non-positive. Given value is " << bufferSizeM);
+    OPM_ERROR_IF(bufferSizeL <= 0, fmt::format("bufferSizeL is non-positive. Given value is {}.", bufferSizeL));
+    OPM_ERROR_IF(bufferSizeU <= 0, fmt::format("bufferSizeU is non-positive. Given value is {}.", bufferSizeU));
+    OPM_ERROR_IF(bufferSizeM <= 0, fmt::format("bufferSizeM is non-positive. Given value is {}.", bufferSizeM));
 
     return size_t(std::max(bufferSizeL, std::max(bufferSizeU, bufferSizeM)));
 }

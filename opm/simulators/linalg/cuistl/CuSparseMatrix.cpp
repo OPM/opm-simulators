@@ -21,6 +21,7 @@
 #include <dune/common/fvector.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/bvector.hh>
+#include <fmt/core.h>
 #include <opm/simulators/linalg/cuistl/CuSparseMatrix.hpp>
 #include <opm/simulators/linalg/cuistl/impl/cusparse_constants.hpp>
 #include <opm/simulators/linalg/cuistl/impl/cusparse_safe_call.hpp>
@@ -30,9 +31,10 @@
 
 #define CHECK_SIZE(x)                                                                                                  \
     if (x.dim() != blockSize() * N()) {                                                                                \
-        OPM_THROW(std::invalid_argument,                                                                               \
-                  "Size mismatch. " << #x << " has " << x.dim() << " elements, while we have " << blockSize() * N()    \
-                                    << " elements.");                                                                  \
+        OPM_THROW(                                                                                                     \
+            std::invalid_argument,                                                                                     \
+            fmt::format(                                                                                               \
+                "Size mismatch. {} has {} elements, while we have {} elements.", #x, x.dim(), blockSize() * N()));     \
     }
 
 namespace Opm::cuistl

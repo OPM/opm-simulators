@@ -19,6 +19,7 @@
 #include <cublas_v2.h>
 #include <cuda.h>
 #include <cuda_runtime.h>
+#include <fmt/core.h>
 #include <opm/simulators/linalg/cuistl/CuVector.hpp>
 #include <opm/simulators/linalg/cuistl/impl/cublas_safe_call.hpp>
 #include <opm/simulators/linalg/cuistl/impl/cublas_wrapper.hpp>
@@ -28,7 +29,7 @@
 #define CHECKSIZE(x)                                                                                                   \
     if (x.m_numberOfElements != m_numberOfElements) {                                                                  \
         OPM_THROW(std::invalid_argument,                                                                               \
-                  "Given vector has " << x.m_numberOfElements << ", while we have " << m_numberOfElements);            \
+                  fmt::format("Given vector has {}, while we have {}.", x.m_numberOfElements, m_numberOfElements));    \
     }
 #define CHECKPOSITIVESIZE                                                                                              \
     if (m_numberOfElements <= 0) {                                                                                     \
@@ -234,8 +235,9 @@ CuVector<T>::copyFromHost(const T* dataPointer, int numberOfElements)
 {
     if (numberOfElements > dim()) {
         OPM_THROW(std::runtime_error,
-                  "Requesting to copy too many elements. Vector has " << dim() << " elements, while "
-                                                                      << numberOfElements << " was requested.");
+                  fmt::format("Requesting to copy too many elements. Vector has {} elements, while {} was requested.",
+                              dim(),
+                              numberOfElements));
     }
     OPM_CUDA_SAFE_CALL(cudaMemcpy(data(), dataPointer, numberOfElements * sizeof(T), cudaMemcpyHostToDevice));
 }

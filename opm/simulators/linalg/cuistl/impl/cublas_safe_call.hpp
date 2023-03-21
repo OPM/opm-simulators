@@ -20,6 +20,7 @@
 #define CUBLAS_SAFE_CALL_HPP
 #include <cublas_v2.h>
 #include <exception>
+#include <fmt/core.h>
 #include <opm/common/ErrorMacros.hpp>
 #define CHECK_CUBLAS_ERROR_TYPE(code, x)                                                                               \
     if (code == x) {                                                                                                   \
@@ -51,10 +52,15 @@ getCublasErrorMessage(int code)
         cublasStatus_t error = expression;                                                                             \
         if (error != CUBLAS_STATUS_SUCCESS) {                                                                          \
             OPM_THROW(std::runtime_error,                                                                              \
-                      "cuBLAS expression did not execute correctly. Expression was: \n\n"                              \
-                          << "    " << #expression << "\n\n"                                                           \
-                          << "in function " << __func__ << ", in " << __FILE__ << " at line " << __LINE__ << "\n"      \
-                          << "CuBLAS error code was: " << getCublasErrorMessage(error) << "\n");                       \
+                      fmt::format("cuBLAS expression did not execute correctly. Expression was: \n\n"                  \
+                                  "    {}\n\n"                                                                         \
+                                  "in function {}, in {}, at line {}.\n"                                               \
+                                  "CuBLAS error code was: {}\n",                                                       \
+                                  #expression,                                                                         \
+                                  __func__,                                                                            \
+                                  __FILE__,                                                                            \
+                                  __LINE__,                                                                            \
+                                  getCublasErrorMessage(error)));                                                      \
         }                                                                                                              \
     } while (false)
 #endif // CUBLAS_SAFE_CALL_HPP

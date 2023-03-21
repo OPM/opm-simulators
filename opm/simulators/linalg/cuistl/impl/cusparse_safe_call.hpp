@@ -20,6 +20,7 @@
 #define CUSPARSE_SAFE_CALL_HPP
 #include <cusparse.h>
 #include <exception>
+#include <fmt/core.h>
 #include <opm/common/ErrorMacros.hpp>
 #define CHECK_CUSPARSE_ERROR_TYPE(code, x)                                                                             \
     if (code == x) {                                                                                                   \
@@ -51,10 +52,14 @@ getCusparseErrorMessage(int code)
         cusparseStatus_t error = expression;                                                                           \
         if (error != CUSPARSE_STATUS_SUCCESS) {                                                                        \
             OPM_THROW(std::runtime_error,                                                                              \
-                      "cuSparse expression did not execute correctly. Expression was: \n\n"                            \
-                          << "    " << #expression << "\n\n"                                                           \
-                          << "in function " << __func__ << ", in " << __FILE__ << " at line " << __LINE__ << "\n"      \
-                          << "CuSparse error code was: " << getCusparseErrorMessage(error) << "\n");                   \
+                      fmt::format("cuSparse expression did not execute correctly. Expression was: \n\n"                \
+                                  "    {}\n\nin function {}, in {}, at line {}\n"                                      \
+                                  "CuSparse error code was: {}\n",                                                     \
+                                  #expression,                                                                         \
+                                  __func__,                                                                            \
+                                  __FILE__,                                                                            \
+                                  __LINE__,                                                                            \
+                                  getCusparseErrorMessage(error)));                                                    \
         }                                                                                                              \
     } while (false)
 #endif // CUSPARSE_SAFE_CALL_HPP
