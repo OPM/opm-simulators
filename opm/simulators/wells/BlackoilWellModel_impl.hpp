@@ -237,6 +237,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     beginTimeStep()
     {
+        OPM_TIMEBLOCK(beginTimeStep);
         updatePerforationIntensiveQuantities();
         updateAverageFormationFactor();
         DeferredLogger local_deferredLogger;

@@ -183,6 +183,7 @@ namespace Opm {
 
             void beginEpisode()
             {
+                OPM_TIMEBLOCK(beginEpsiode);
                 beginReportStep(ebosSimulator_.episodeIndex());
             }
 
@@ -190,6 +191,7 @@ namespace Opm {
 
             void beginIteration()
             {
+                OPM_TIMEBLOCK(beginIteration);
                 assemble(ebosSimulator_.model().newtonMethod().numIterations(),
                          ebosSimulator_.timeStepSize());
             }
@@ -199,6 +201,7 @@ namespace Opm {
 
             void endTimeStep()
             {
+                OPM_TIMEBLOCK(endTimeStep);
                 timeStepSucceeded(ebosSimulator_.time(), ebosSimulator_.timeStepSize());
             }
 
