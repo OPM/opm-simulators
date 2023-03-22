@@ -546,7 +546,7 @@ public:
             }
 
             // Add fluid in Place values
-            updateFluidInPlace_(elemCtx, dofIdx);
+            //updateFluidInPlace_(elemCtx, dofIdx);
 
             // Adding block data
             const auto cartesianIdx = elemCtx.simulator().vanguard().cartesianIndex(globalDofIdx);
@@ -978,6 +978,11 @@ public:
         }
     }
 
+    void updateFluidInPlace(const ElementContext& elemCtx){
+        for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
+            updateFluidInPlace_(elemCtx, dofIdx);
+        }
+    }
 private:
     bool isDefunctParallelWell(std::string wname) const override
     {

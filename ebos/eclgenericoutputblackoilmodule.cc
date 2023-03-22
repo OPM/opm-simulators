@@ -169,6 +169,7 @@ EclGenericOutputBlackoilModule(const EclipseState& eclState,
     , enableSaltPrecipitation_(enableSaltPrecipitation)
     , enableExtbo_(enableExtbo)
     , enableMICP_(enableMICP)
+    , local_data_valid_(false)  
 {
     const auto& fp = eclState_.fieldProps();
 
