@@ -64,7 +64,7 @@ init()
 
 template<class FluidSystem, class Indices, class Scalar>
 void MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::
-update(const WellState& well_state)
+update(const WellState& well_state, const bool zero_rate_target)
 {
     static constexpr int Water = BlackoilPhases::Aqua;
     static constexpr int Gas = BlackoilPhases::Vapour;
@@ -104,6 +104,9 @@ update(const WellState& well_state)
             }
         }
         value_[seg][WQTotal] = total_seg_rate;
+        if (zero_rate_target && seg == 0) {
+            value_[seg][WQTotal] = 0;
+        }
         if (std::abs(total_seg_rate) > 0.) {
             if (has_wfrac_variable) {
                 const int water_pos = pu.phase_pos[Water];
@@ -152,6 +155,7 @@ void MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::
 updateNewton(const BVectorWell& dwells,
              const double relaxation_factor,
              const double dFLimit,
+             const bool zero_rate_target,
              const double max_pressure_change)
 {
     const std::vector<std::array<double, numWellEq>> old_primary_variables = value_;
@@ -192,6 +196,10 @@ updateNewton(const BVectorWell& dwells,
                 }
             }
         }
+    }
+
+    if (zero_rate_target) {
+        value_[0][WQTotal] = 0.;
     }
 }
 

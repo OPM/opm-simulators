@@ -1324,7 +1324,8 @@ namespace Opm {
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         {
             for (auto& well : well_container_) {
-                well->recoverWellSolutionAndUpdateWellState(x, this->wellState(), local_deferredLogger);
+                const auto& summary_state = ebosSimulator_.vanguard().summaryState();
+                well->recoverWellSolutionAndUpdateWellState(summary_state, x, this->wellState(), local_deferredLogger);
             }
 
         }
@@ -1659,7 +1660,8 @@ namespace Opm {
             auto& events = this->wellState().well(well->indexOfWell()).events;
             if (events.hasEvent(WellState::event_mask)) {
                 well->updateWellStateWithTarget(ebosSimulator_, this->groupState(), this->wellState(), deferred_logger);
-                well->updatePrimaryVariables(this->wellState(), deferred_logger);
+                const auto& summary_state = ebosSimulator_.vanguard().summaryState();
+                well->updatePrimaryVariables(summary_state, this->wellState(), deferred_logger);
                 well->initPrimaryVariablesEvaluation();
                 // There is no new well control change input within a report step,
                 // so next time step, the well does not consider to have effective events anymore.
@@ -1733,7 +1735,8 @@ namespace Opm {
     updatePrimaryVariables(DeferredLogger& deferred_logger)
     {
         for (const auto& well : well_container_) {
-            well->updatePrimaryVariables(this->wellState(), deferred_logger);
+            const auto& summary_state = ebosSimulator_.vanguard().summaryState();
+            well->updatePrimaryVariables(summary_state, this->wellState(), deferred_logger);
         }
     }
 

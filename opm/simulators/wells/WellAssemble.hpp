@@ -44,10 +44,6 @@ class WellState;
 class WellInjectionControls;
 class WellProductionControls;
 
-/// Helper to avoid singular control equations.
-bool rateControlWithZeroTarget(const WellProducerCMode mode,
-                               const WellProductionControls& controls);
-
 template<class FluidSystem>
 class WellAssemble {
     static constexpr int Water = BlackoilPhases::Aqua;

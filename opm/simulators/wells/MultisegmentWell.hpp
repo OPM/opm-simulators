@@ -108,7 +108,8 @@ namespace Opm
 
         /// using the solution x to recover the solution xw for wells and applying
         /// xw to update Well State
-        void recoverWellSolutionAndUpdateWellState(const BVector& x,
+        void recoverWellSolutionAndUpdateWellState(const SummaryState& summary_state,
+                                                   const BVector& x,
                                                    WellState& well_state,
                                                    DeferredLogger& deferred_logger) override;
 
@@ -118,9 +119,13 @@ namespace Opm
                                            std::vector<double>& well_potentials,
                                            DeferredLogger& deferred_logger) override;
 
-        void updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_logger) override;
+        void updatePrimaryVariables(const SummaryState& summary_state,
+                                    const WellState& well_state,
+                                    DeferredLogger& deferred_logger) override;
 
-        virtual void solveEqAndUpdateWellState(WellState& well_state, DeferredLogger& deferred_logger) override; // const?
+        virtual void solveEqAndUpdateWellState(const Simulator& ebos_simulator,
+                                               WellState& well_state,
+                                               DeferredLogger& deferred_logger) override; // const?
 
         virtual void calculateExplicitQuantities(const Simulator& ebosSimulator,
                                                  const WellState& well_state,
@@ -171,7 +176,8 @@ namespace Opm
         mutable int debug_cost_counter_ = 0;
 
         // updating the well_state based on well solution dwells
-        void updateWellState(const BVectorWell& dwells,
+        void updateWellState(const SummaryState& summary_state,
+                             const BVectorWell& dwells,
                              WellState& well_state,
                              DeferredLogger& deferred_logger,
                              const double relaxation_factor = 1.0);
