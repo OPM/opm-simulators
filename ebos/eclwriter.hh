@@ -478,7 +478,10 @@ public:
     void endRestart()
     {}
 
-    EclOutputBlackOilModule<TypeTag>& eclOutputModule() const
+    const EclOutputBlackOilModule<TypeTag>& eclOutputModule() const
+    { return *eclOutputModule_; }
+
+    EclOutputBlackOilModule<TypeTag>& mutableEclOutputModule() const
     { return *eclOutputModule_; }
 
     Scalar restartTimeStepSize() const
@@ -515,8 +518,11 @@ private:
     void prepareLocalCellData(const bool isSubStep,
                               const int  reportStepNum)
     {
-        if( !(eclOutputModule_->localDataValid()) ){
         OPM_TIMEBLOCK(prepareLocalCellData);
+        if (eclOutputModule_->localDataValid()) {
+            return;
+        }
+
         const auto& gridView = simulator_.vanguard().gridView();
         const int numElements = gridView.size(/*codim=*/0);
         const bool log = this->collectToIORank_.isIORank();
@@ -546,7 +552,6 @@ private:
         }
         eclOutputModule_->validateLocalData();
         OPM_END_PARALLEL_TRY_CATCH("EclWriter::prepareLocalCellData() failed: ", simulator_.vanguard().grid().comm());
-        }
     }
 
     void captureLocalFluxData()

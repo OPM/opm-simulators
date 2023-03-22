@@ -647,7 +647,7 @@ namespace Opm {
             {
                 OPM_TIMEBLOCK(invalidateAndUpdateIntensiveQuantities);
                 ebosSimulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
-                ebosSimulator_.problem().eclWriter()->eclOutputModule().invalidateLocalData();
+                ebosSimulator_.problem().eclWriter()->mutableEclOutputModule().invalidateLocalData();
             }
         }
 
