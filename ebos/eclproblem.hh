@@ -1454,7 +1454,7 @@ public:
      */
     std::shared_ptr<const EclMaterialLawManager> materialLawManager() const
     { return materialLawManager_; }
-
+    
     template <class FluidState>
     void updateRelperms(
         std::array<Evaluation,numPhases> &mobility,
@@ -1735,6 +1735,7 @@ public:
      */
     void initialSolutionApplied()
     {
+        this->model().invalidateAndUpdateIntensiveQuantities(/*timeIdx*/0);
         // initialize the wells. Note that this needs to be done after initializing the
         // intrinsic permeabilities and the after applying the initial solution because
         // the well model uses these...
