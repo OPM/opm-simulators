@@ -562,7 +562,7 @@ private:
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
-        for (size_t dofIdx=0; dofIdx < numElements; ++dofIdx){
+        for (int dofIdx=0; dofIdx < numElements; ++dofIdx){
                 const auto& intQuants = *(simulator_.model().cachedIntensiveQuantities(dofIdx, /*timeIdx=*/0));
                 const auto totVolume = simulator_.model().dofTotalVolume(dofIdx);
                 eclOutputModule_->updateFluidInPlace(dofIdx, intQuants, totVolume);
