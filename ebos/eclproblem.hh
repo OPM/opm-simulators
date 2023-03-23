@@ -2222,7 +2222,7 @@ private:
         const auto& fs = iq.fluidState();
         const Scalar So = decay<Scalar>(fs.saturation(oilPhaseIdx));
         auto& mos = this->maxOilSaturation_;
-        if(mos[compressedDofIdx], So){
+        if(mos[compressedDofIdx] < So){
             mos[compressedDofIdx] = So;
             return true;
         }else{
