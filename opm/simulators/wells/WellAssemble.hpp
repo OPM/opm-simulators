@@ -27,7 +27,6 @@
 #include <opm/core/props/BlackoilPhases.hpp>
 
 #include <opm/input/eclipse/Schedule/ScheduleTypes.hpp>
-#include <opm/input/eclipse/Schedule/Well/WellEnums.hpp>
 
 #include <functional>
 
@@ -43,10 +42,6 @@ template<class FluidSystem> class WellInterfaceFluidSystem;
 class WellState;
 class WellInjectionControls;
 class WellProductionControls;
-
-/// Helper to avoid singular control equations.
-bool rateControlWithZeroTarget(const WellProducerCMode mode,
-                               const WellProductionControls& controls);
 
 template<class FluidSystem>
 class WellAssemble {
@@ -84,8 +79,6 @@ public:
 private:
     const WellInterfaceFluidSystem<FluidSystem>& well_;
 };
-
-
 
 }
 

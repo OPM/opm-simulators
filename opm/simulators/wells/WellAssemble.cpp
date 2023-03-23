@@ -43,32 +43,6 @@
 namespace Opm
 {
 
-bool rateControlWithZeroTarget(const Well::ProducerCMode mode,
-                               const Well::ProductionControls& controls)
-{
-    switch (mode) {
-    case Well::ProducerCMode::ORAT:
-        return controls.oil_rate == 0.0;
-    case Well::ProducerCMode::WRAT:
-        return controls.water_rate == 0.0;
-    case Well::ProducerCMode::GRAT:
-        return controls.gas_rate == 0.0;
-    case Well::ProducerCMode::LRAT:
-        return controls.liquid_rate == 0.0;
-    case Well::ProducerCMode::CRAT:
-        // Unsupported, will cause exception elsewhere, treat as nonzero target here.
-        return false;
-    case Well::ProducerCMode::RESV:
-        if (controls.prediction_mode) {
-            return controls.resv_rate == 0.0;
-        } else {
-            return controls.water_rate == 0.0 && controls.oil_rate == 0.0 && controls.gas_rate == 0.0;
-        }
-    default:
-        return false;
-    }
-}
-
 template<class FluidSystem>
 WellAssemble<FluidSystem>::
 WellAssemble(const WellInterfaceFluidSystem<FluidSystem>& well)
