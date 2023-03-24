@@ -250,7 +250,7 @@ public:
         std::map<std::string, std::vector<double>> regionData;
         Inplace inplace;
         {
-        OPM_TIMEBLOCK(outputFipLogAndFipresvLog);    
+        OPM_TIMEBLOCK(outputFipLogAndFipresvLog);
         inplace = eclOutputModule_->outputFipLog(miscSummaryData, regionData, isSubStep, simulator_.gridView().comm());
         eclOutputModule_->outputFipresvLog(miscSummaryData, regionData, isSubStep, simulator_.gridView().comm());
         }
@@ -284,7 +284,7 @@ public:
             miscSummaryData["MSUMNEWT"] = this->simulation_report_.success.total_newton_iterations;
         }
         {
-        OPM_TIMEBLOCK(evalSummary);    
+        OPM_TIMEBLOCK(evalSummary);
         this->evalSummary(reportStepNum, curTime,
                           this->collectToIORank_.isParallel() ?
                             this->collectToIORank_.globalWBPData() :
@@ -304,7 +304,7 @@ public:
                           summaryState(), udqState());
         }
         {
-        OPM_TIMEBLOCK(outputXXX);    
+        OPM_TIMEBLOCK(outputXXX);
         eclOutputModule_->outputProdLog(reportStepNum, isSubStep, forceDisableProdOutput);
         eclOutputModule_->outputInjLog(reportStepNum, isSubStep, forceDisableInjOutput);
         eclOutputModule_->outputCumLog(reportStepNum, isSubStep, forceDisableCumOutput);
@@ -533,7 +533,7 @@ private:
         ElementContext elemCtx(simulator_);
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         {
-        OPM_TIMEBLOCK(prepareCellBasedData);    
+        OPM_TIMEBLOCK(prepareCellBasedData);
         for (const auto& elem : elements(gridView)) {
             elemCtx.updatePrimaryStencil(elem);
             elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
@@ -542,7 +542,7 @@ private:
         }
         }
         if(!simulator_.model().linearizer().getFlowsInfo().empty()){
-            OPM_TIMEBLOCK(prepareFlowsData);     
+            OPM_TIMEBLOCK(prepareFlowsData);
             for (const auto& elem : elements(gridView)) {
                 elemCtx.updatePrimaryStencil(elem);
                 elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
@@ -550,7 +550,7 @@ private:
             }
         }
         {
-        OPM_TIMEBLOCK(prepareBlockData);    
+        OPM_TIMEBLOCK(prepareBlockData);
         for (const auto& elem : elements(gridView)) {
             elemCtx.updatePrimaryStencil(elem);
             elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);

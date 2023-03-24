@@ -28,14 +28,18 @@
 #define EWOMS_ECL_OUTPUT_BLACK_OIL_MODULE_HH
 
 #include <opm/common/Exceptions.hpp>
+#include <opm/common/TimingMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
-#include <opm/models/blackoil/blackoilproperties.hh>
+#include <opm/material/common/Valgrind.hpp>
+#include <opm/material/fluidmatrixinteractions/EclEpsScalingPoints.hpp>
+#include <opm/material/fluidstates/BlackOilFluidState.hpp>
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
+#include <opm/models/blackoil/blackoilproperties.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/utils/parametersystem.hh>
 #include <opm/models/utils/propertysystem.hh>
-
-#include <opm/material/common/Valgrind.hpp>
 
 #include <opm/output/data/Cells.hpp>
 #include <opm/output/eclipse/EclipseIO.hpp>
@@ -545,7 +549,7 @@ public:
                     this->viscosity_[gasPhaseIdx][globalDofIdx]
                         = FluidSystem::viscosity(fsInitial, gasPhaseIdx, intQuants.pvtRegionIndex());
             }
-  
+
 
             // Adding Well RFT data
             const auto cartesianIdx = elemCtx.simulator().vanguard().cartesianIndex(globalDofIdx);
@@ -585,14 +589,14 @@ public:
     void processElementFlows(const ElementContext& elemCtx)
     {
         OPM_TIMEBLOCK_LOCAL(processElementBlockData);
-        if (!std::is_same<Discretization, EcfvDiscretization<TypeTag>>::value)
+        if (!std::is_same_v<Discretization, EcfvDiscretization<TypeTag>>)
             return;
 
         const auto& problem = elemCtx.simulator().problem();
         for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
 
             unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
-            if (!problem.model().linearizer().getFlowsInfo().empty()) {                
+            if (!problem.model().linearizer().getFlowsInfo().empty()) {
                 const auto& flowsInf = problem.model().linearizer().getFlowsInfo();
                 auto flowsInfos = flowsInf[globalDofIdx];
                 for (auto& flowsInfo : flowsInfos) {
@@ -856,8 +860,7 @@ public:
             }
         }
     }
-    
-    
+
     /*!
      * \brief Capture connection fluxes, particularly to account for inter-region flows.
      *
@@ -1003,12 +1006,14 @@ public:
         }
     }
 
-    void updateFluidInPlace(const ElementContext& elemCtx){
+    void updateFluidInPlace(const ElementContext& elemCtx)
+    {
         for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
             updateFluidInPlace_(elemCtx, dofIdx);
         }
     }
-    void updateFluidInPlace(unsigned globalDofIdx,const IntensiveQuantities& intQuants, double totVolume){
+    void updateFluidInPlace(unsigned globalDofIdx,const IntensiveQuantities& intQuants, double totVolume)
+    {
         this->updateFluidInPlace_(globalDofIdx, intQuants, totVolume);
     }
 private:
@@ -1022,13 +1027,14 @@ private:
         return candidate == parallelWells.end() || *candidate != value;
     }
 
-    void updateFluidInPlace_(const ElementContext& elemCtx, unsigned dofIdx){
+    void updateFluidInPlace_(const ElementContext& elemCtx, unsigned dofIdx)
+    {
         const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
         unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
         const auto totVolume = elemCtx.simulator().model().dofTotalVolume(globalDofIdx);
         this->updateFluidInPlace_(globalDofIdx, intQuants, totVolume);
     }
-    
+
     void updateFluidInPlace_(unsigned globalDofIdx,const IntensiveQuantities& intQuants, double totVolume)
     {
         OPM_TIMEBLOCK_LOCAL(updateFluidInPlace);
@@ -1295,7 +1301,7 @@ private:
     }
 
     const Simulator& simulator_;
-    };
+};
 
 } // namespace Opm
 
