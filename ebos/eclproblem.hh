@@ -50,6 +50,7 @@
 #include "ecltracermodel.hh"
 #include "vtkecltracermodule.hh"
 #include "eclgenericproblem.hh"
+#include "FIBlackOilModel.hpp"
 
 #include <opm/core/props/satfunc/RelpermDiagnostics.hpp>
 
@@ -204,6 +205,11 @@ struct Problem<TypeTag, TTag::EclBaseProblem> {
     using type = EclProblem<TypeTag>;
 };
 
+template<class TypeTag>
+struct Model<TypeTag, TTag::EclBaseProblem> {
+    using type = FIBlackOilModel<TypeTag>;
+};
+    
 // Select the element centered finite volume method as spatial discretization
 template<class TypeTag>
 struct SpatialDiscretizationSplice<TypeTag, TTag::EclBaseProblem> {
