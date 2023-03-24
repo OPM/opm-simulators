@@ -589,7 +589,7 @@ public:
     void processElementFlows(const ElementContext& elemCtx)
     {
         OPM_TIMEBLOCK_LOCAL(processElementBlockData);
-        if (!std::is_same<Discretization, EcfvDiscretization<TypeTag>>::value)
+        if (!std::is_same_v<Discretization, EcfvDiscretization<TypeTag>>)
             return;
 
         const auto& problem = elemCtx.simulator().problem();
