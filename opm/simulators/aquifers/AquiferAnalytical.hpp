@@ -150,7 +150,7 @@ public:
         if (idx < 0)
             return;
 
-        const auto* intQuantsPtr = model.cachedIntensiveQuantities(cellIdx, timeIdx);
+        const auto* intQuantsPtr = &model.intensiveQuantities(cellIdx, timeIdx);
         if (intQuantsPtr == nullptr) {
             throw std::logic_error("Invalid intensive quantities cache detected in AquiferAnalytical::addToSource()");
         }
