@@ -129,7 +129,7 @@ assembleControlEqProd(const WellState& well_state,
         auto total_rate = rates[0]; // To get the correct type only.
         total_rate = 0.0;
         std::vector<double> convert_coeff(well_.numPhases(), 1.0);
-        well_.rateConverter().calcCoeff(/*fipreg*/ 0, well_.pvtRegionIdx(), convert_coeff);
+        well_.rateConverter().calcCoeff(/*fipreg*/ 0, well_.pvtRegionIdx(), well_state.well(well_.indexOfWell()).surface_rates, convert_coeff);
         for (int phase = 0; phase < 3; ++phase) {
             if (pu.phase_used[phase]) {
                 const int pos = pu.phase_pos[phase];

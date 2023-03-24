@@ -128,11 +128,43 @@ template <class Coeff>
 void SurfaceToReservoirVoidage<FluidSystem,Region>::
 calcCoeff(const RegionId r, const int pvtRegionIdx, Coeff& coeff) const
 {
-    const auto& pu = phaseUsage_;
     const auto& ra = attr_.attributes(r);
-    const double p = ra.pressure;
-    const double T = ra.temperature;
-    const double saltConcentration = ra.saltConcentration;
+    calcCoeff(pvtRegionIdx, ra.pressure, ra.rs, ra.rv, ra.rsw, ra.rvw, ra.temperature, ra.saltConcentration, coeff);
+}
+
+template <class FluidSystem, class Region>
+template <class Coeff, class Rates>
+void SurfaceToReservoirVoidage<FluidSystem,Region>::
+calcCoeff(const RegionId r, const int pvtRegionIdx, const Rates& surface_rates, Coeff& coeff) const
+{
+    const auto& ra = attr_.attributes(r);
+    const auto& pu = phaseUsage_;
+    const int   iw = RegionAttributeHelpers::PhasePos::water(pu);
+    const int   io = RegionAttributeHelpers::PhasePos::oil  (pu);
+    const int   ig = RegionAttributeHelpers::PhasePos::gas  (pu);
+    const auto [Rs, Rv] =
+        dissolvedVaporisedRatio(io, ig, ra.rs, ra.rv, surface_rates);
+
+    const auto [Rsw, Rvw] =
+        dissolvedVaporisedRatio(iw, ig, ra.rsw, ra.rvw, surface_rates);
+
+    calcCoeff(pvtRegionIdx, ra.pressure, Rs, Rv, Rsw, Rvw, ra.temperature, ra.saltConcentration, coeff);
+}
+
+template <class FluidSystem, class Region>
+template <class Coeff>
+void SurfaceToReservoirVoidage<FluidSystem,Region>::
+calcCoeff(  const int pvtRegionIdx,
+            const double        p,
+            const double        Rs,
+            const double        Rv,
+            const double        Rsw,
+            const double        Rvw,
+            const double        T,
+            const double saltConcentration,
+            Coeff& coeff) const
+{
+    const auto& pu = phaseUsage_;
 
     const int   iw = RegionAttributeHelpers::PhasePos::water(pu);
     const int   io = RegionAttributeHelpers::PhasePos::oil  (pu);
@@ -140,9 +172,6 @@ calcCoeff(const RegionId r, const int pvtRegionIdx, Coeff& coeff) const
 
     std::fill(& coeff[0], & coeff[0] + phaseUsage_.num_phases, 0.0);
 
-    // Actual Rsw and Rvw:
-    double Rsw = ra.rsw;
-    double Rvw = ra.rvw;
     // Determinant of 'R' matrix
     const double detRw = 1.0 - (Rsw * Rvw);
 
@@ -156,13 +185,9 @@ calcCoeff(const RegionId r, const int pvtRegionIdx, Coeff& coeff) const
         coeff[iw] += 1.0 / den;
 
         if (RegionAttributeHelpers::PhaseUsed::gas(pu)) {
-            coeff[ig] -= ra.rvw / den;
+            coeff[ig] -= Rvw / den;
         }
     }
-
-    // Actual Rs and Rv:
-    double Rs = ra.rs;
-    double Rv = ra.rv;
 
     // Determinant of 'R' matrix
     const double detR = 1.0 - (Rs * Rv);
@@ -183,7 +208,7 @@ calcCoeff(const RegionId r, const int pvtRegionIdx, Coeff& coeff) const
         coeff[io] += 1.0 / den;
 
         if (RegionAttributeHelpers::PhaseUsed::gas(pu)) {
-            coeff[ig] -= ra.rv / den;
+            coeff[ig] -= Rv / den;
         }
     }
 
@@ -194,17 +219,18 @@ calcCoeff(const RegionId r, const int pvtRegionIdx, Coeff& coeff) const
             const double denw = bg * detRw;
             coeff[ig] += 1.0 / denw;
             if (RegionAttributeHelpers::PhaseUsed::water(pu)) {
-               coeff[iw] -= ra.rsw / denw;
+               coeff[iw] -= Rsw / denw;
             }
         } else {
             const double den = bg * detR;
             coeff[ig] += 1.0 / den;
             if (RegionAttributeHelpers::PhaseUsed::oil(pu)) {
-                coeff[io] -= ra.rs / den;
+                coeff[io] -= Rs / den;
             }
         }
     }
 }
+
 
 template <class FluidSystem, class Region>
 template <typename SurfaceRates, typename VoidageRates>
@@ -340,6 +366,8 @@ template void SurfaceToReservoirVoidage<FS,std::vector<int>>::
     calcInjCoeff<std::vector<double>>(const int, const int, std::vector<double>&) const;
 template void SurfaceToReservoirVoidage<FS,std::vector<int>>::
     calcCoeff<std::vector<double>>(const int, const int, std::vector<double>&) const;
+template void SurfaceToReservoirVoidage<FS,std::vector<int>>::
+    calcCoeff<std::vector<double>, std::vector<double>>(const int, const int, const std::vector<double>&, std::vector<double>&) const;
 template void SurfaceToReservoirVoidage<FS,std::vector<int>>::
     calcReservoirVoidageRates<std::vector<double>,std::vector<double>>(const int,
                                                                        const double,
