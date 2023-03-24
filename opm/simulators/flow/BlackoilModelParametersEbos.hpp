@@ -68,6 +68,10 @@ struct ToleranceWells {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
+struct ToleranceWellStdwell {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
 struct ToleranceWellControl {
     using type = UndefinedProperty;
 };
@@ -204,6 +208,11 @@ template<class TypeTag>
 struct ToleranceWells<TypeTag, TTag::FlowModelParameters> {
     using type = GetPropType<TypeTag, Scalar>;
     static constexpr type value = 1e-4;
+};
+template<class TypeTag>
+struct ToleranceWellStdwell<TypeTag, TTag::FlowModelParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e-7;
 };
 template<class TypeTag>
 struct ToleranceWellControl<TypeTag, TTag::FlowModelParameters> {
@@ -349,6 +358,8 @@ namespace Opm
         /// Tolerance for the well control equations
         //  TODO: it might need to distinguish between rate control and pressure control later
         double tolerance_well_control_;
+        // Tolerance for the standard well mass conservation equation
+        double tolerance_well_stdwell_;
         /// Tolerance for the pressure equations for multisegment wells
         double tolerance_pressure_ms_wells_;
         /// Relaxed tolerance for for the well flow residual
@@ -434,6 +445,7 @@ namespace Opm
             tolerance_cnv_ = EWOMS_GET_PARAM(TypeTag, Scalar, ToleranceCnv);
             tolerance_cnv_relaxed_ = EWOMS_GET_PARAM(TypeTag, Scalar, ToleranceCnvRelaxed);
             tolerance_wells_ = EWOMS_GET_PARAM(TypeTag, Scalar, ToleranceWells);
+            tolerance_well_stdwell_ = EWOMS_GET_PARAM(TypeTag, Scalar, ToleranceWellStdwell);
             tolerance_well_control_ = EWOMS_GET_PARAM(TypeTag, Scalar, ToleranceWellControl);
             max_welleq_iter_ = EWOMS_GET_PARAM(TypeTag, int, MaxWelleqIter);
             use_multisegment_well_ = EWOMS_GET_PARAM(TypeTag, bool, UseMultisegmentWell);
@@ -472,6 +484,7 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, ToleranceCnvRelaxed, "Relaxed local convergence tolerance that applies for iterations after the iterations with the strict tolerance");
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, ToleranceWells, "Well convergence tolerance");
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, ToleranceWellControl, "Tolerance for the well control equations");
+            EWOMS_REGISTER_PARAM(TypeTag, Scalar, ToleranceWellStdwell, "Tolerance for conservation equation for standard wells");
             EWOMS_REGISTER_PARAM(TypeTag, int, MaxWelleqIter, "Maximum number of iterations to determine solution the  well equations");
             EWOMS_REGISTER_PARAM(TypeTag, bool, UseMultisegmentWell, "Use the well model for multi-segment wells instead of the one for single-segment wells");
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, TolerancePressureMsWells, "Tolerance for the pressure equations for multi-segment wells");

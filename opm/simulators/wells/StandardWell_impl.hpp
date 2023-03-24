@@ -1416,7 +1416,7 @@ namespace Opm
         ConvergenceReport report = this->StdWellEval::getWellConvergence(well_state,
                                                                          B_avg,
                                                                          this->param_.max_residual_allowed_,
-                                                                         this->param_.tolerance_wells_,
+                                                                         this->param_.tolerance_well_stdwell_,
                                                                          this->param_.relaxed_tolerance_flow_well_,
                                                                          relax_tolerance,
                                                                          res,
