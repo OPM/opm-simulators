@@ -370,7 +370,7 @@ namespace Opm
         int strict_outer_iter_wells_;
 
         /// Regularization factor for wells
-        int regularization_factor_wells_;
+        double regularization_factor_wells_;
 
         /// Maximum newton iterations with inner well iterations
         int max_niter_inner_well_iter_;
