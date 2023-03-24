@@ -28,14 +28,18 @@
 #define EWOMS_ECL_OUTPUT_BLACK_OIL_MODULE_HH
 
 #include <opm/common/Exceptions.hpp>
+#include <opm/common/TimingMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
-#include <opm/models/blackoil/blackoilproperties.hh>
+#include <opm/material/common/Valgrind.hpp>
+#include <opm/material/fluidmatrixinteractions/EclEpsScalingPoints.hpp>
+#include <opm/material/fluidstates/BlackOilFluidState.hpp>
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
+#include <opm/models/blackoil/blackoilproperties.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/utils/parametersystem.hh>
 #include <opm/models/utils/propertysystem.hh>
-
-#include <opm/material/common/Valgrind.hpp>
 
 #include <opm/output/data/Cells.hpp>
 #include <opm/output/eclipse/EclipseIO.hpp>
