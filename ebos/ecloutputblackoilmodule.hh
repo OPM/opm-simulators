@@ -1150,6 +1150,10 @@ private:
                 if (!this->fip_[Inplace::Phase::WaterInWaterPhase].empty())
                     this->fip_[Inplace::Phase::WaterInWaterPhase][globalDofIdx] = fip[waterPhaseIdx];
 
+                // For water+gas cases the gas in water is added to the GIPL value
+                if (!this->fip_[Inplace::Phase::GasInLiquidPhase].empty() && !FluidSystem::phaseIsActive(oilPhaseIdx))
+                    this->fip_[Inplace::Phase::GasInLiquidPhase][globalDofIdx] = gasInPlaceWater;
+
                 // Add dissolved gas and vaporized water to total Fip
                 if (!this->fip_[Inplace::Phase::WATER].empty())
                     this->fip_[Inplace::Phase::WATER][globalDofIdx] += waterInPlaceGas;
