@@ -855,7 +855,7 @@ public:
         this->readRockParameters_(simulator.vanguard().cellCenterDepths());
         readMaterialParameters_();
         readThermalParameters_();
-        
+
         // Re-ordering in case of ALUGrid
         std::function<unsigned int(unsigned int)> gridToEquilGrid;
         #if USE_ALUGRID
@@ -1454,7 +1454,7 @@ public:
      */
     std::shared_ptr<const EclMaterialLawManager> materialLawManager() const
     { return materialLawManager_; }
-    
+
     template <class FluidState>
     void updateRelperms(
         std::array<Evaluation,numPhases> &mobility,
@@ -1797,8 +1797,8 @@ public:
             const auto& model = this->model();
 
             // we use a lower tolerance for the compensation too
-            // assure the added drift from the last step does not 
-            // cause convergence issues on the current step 
+            // assure the added drift from the last step does not
+            // cause convergence issues on the current step
             Scalar maxCompensation = model.newtonMethod().tolerance()/10;
             Scalar poro = this->porosity(globalDofIdx, timeIdx);
             Scalar dt = simulator.timeStepSize();
@@ -2068,11 +2068,11 @@ public:
         serializer(tracerModel_);
         serializer(*materialLawManager_);
         serializer(*eclWriter_);
-    }    
+    }
 private:
     Implementation& asImp_()
     { return *static_cast<Implementation *>(this); }
-    
+
     void updateExplicitQuantitites_()
     {
         OPM_TIMEBLOCK(updateExplicitQuantities);
@@ -2216,7 +2216,7 @@ private:
         return false;
     }
 
-    bool updateMaxOilSaturation_(unsigned compressedDofIdx, const IntensiveQuantities& iq) 
+    bool updateMaxOilSaturation_(unsigned compressedDofIdx, const IntensiveQuantities& iq)
     {
         OPM_TIMEBLOCK_LOCAL(updateMaxOilSaturation);
         const auto& fs = iq.fluidState();
@@ -2704,7 +2704,7 @@ private:
                                             - gasSaturationData[dofIdx]);
 
             //////
-            // set phase pressures 
+            // set phase pressures
             //////
             Scalar pressure = pressureData[dofIdx]; // oil pressure (or gas pressure for water-gas system or water pressure for single phase)
 

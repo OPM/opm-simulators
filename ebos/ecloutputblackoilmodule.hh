@@ -545,7 +545,7 @@ public:
                     this->viscosity_[gasPhaseIdx][globalDofIdx]
                         = FluidSystem::viscosity(fsInitial, gasPhaseIdx, intQuants.pvtRegionIndex());
             }
-  
+
 
             // Adding Well RFT data
             const auto cartesianIdx = elemCtx.simulator().vanguard().cartesianIndex(globalDofIdx);
@@ -592,7 +592,7 @@ public:
         for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
 
             unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
-            if (!problem.model().linearizer().getFlowsInfo().empty()) {                
+            if (!problem.model().linearizer().getFlowsInfo().empty()) {
                 const auto& flowsInf = problem.model().linearizer().getFlowsInfo();
                 auto flowsInfos = flowsInf[globalDofIdx];
                 for (auto& flowsInfo : flowsInfos) {
@@ -856,8 +856,7 @@ public:
             }
         }
     }
-    
-    
+
     /*!
      * \brief Capture connection fluxes, particularly to account for inter-region flows.
      *
@@ -1003,12 +1002,14 @@ public:
         }
     }
 
-    void updateFluidInPlace(const ElementContext& elemCtx){
+    void updateFluidInPlace(const ElementContext& elemCtx)
+    {
         for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
             updateFluidInPlace_(elemCtx, dofIdx);
         }
     }
-    void updateFluidInPlace(unsigned globalDofIdx,const IntensiveQuantities& intQuants, double totVolume){
+    void updateFluidInPlace(unsigned globalDofIdx,const IntensiveQuantities& intQuants, double totVolume)
+    {
         this->updateFluidInPlace_(globalDofIdx, intQuants, totVolume);
     }
 private:
@@ -1022,13 +1023,14 @@ private:
         return candidate == parallelWells.end() || *candidate != value;
     }
 
-    void updateFluidInPlace_(const ElementContext& elemCtx, unsigned dofIdx){
+    void updateFluidInPlace_(const ElementContext& elemCtx, unsigned dofIdx)
+    {
         const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
         unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
         const auto totVolume = elemCtx.simulator().model().dofTotalVolume(globalDofIdx);
         this->updateFluidInPlace_(globalDofIdx, intQuants, totVolume);
     }
-    
+
     void updateFluidInPlace_(unsigned globalDofIdx,const IntensiveQuantities& intQuants, double totVolume)
     {
         OPM_TIMEBLOCK_LOCAL(updateFluidInPlace);
@@ -1295,7 +1297,7 @@ private:
     }
 
     const Simulator& simulator_;
-    };
+};
 
 } // namespace Opm
 

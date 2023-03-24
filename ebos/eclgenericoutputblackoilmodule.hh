@@ -260,7 +260,7 @@ public:
     void validateLocalData(){
         local_data_valid_ = true;
     }
-    
+
     // Virtual destructor for safer inheritance.
     virtual ~EclGenericOutputBlackoilModule();
 
