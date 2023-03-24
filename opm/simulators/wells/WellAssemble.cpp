@@ -179,9 +179,13 @@ assembleControlEqProd(const WellState& well_state,
                 active_rates[pu.phase_pos[canonical_phase]] = rates[canonical_phase];
             }
         }
-        auto rCoeff = [this](const RegionId id, const int region, std::vector<double>& coeff)
+        auto rCoeff = [this, &group_state](const RegionId id, const int region, const std::optional<std::string>& prod_gname, std::vector<double>& coeff)
         {
-            well_.rateConverter().calcCoeff(id, region, coeff);
+            if (prod_gname)
+                well_.rateConverter().calcCoeff(id, region, group_state.production_rates(*prod_gname), coeff);
+            else
+                well_.rateConverter().calcCoeff(id, region, coeff);
+
         };
         WellGroupControls(well_).getGroupProductionControl(group, well_state,
                                                              group_state,
@@ -269,9 +273,13 @@ assembleControlEqInj(const WellState& well_state,
     case Well::InjectorCMode::GRUP: {
         assert(well_.wellEcl().isAvailableForGroupControl());
         const auto& group = schedule.getGroup(well_.wellEcl().groupName(), well_.currentStep());
-        auto rCoeff = [this](const RegionId id, const int region, std::vector<double>& coeff)
+        auto rCoeff = [this, &group_state](const RegionId id, const int region, const std::optional<std::string>& prod_gname, std::vector<double>& coeff)
         {
-            well_.rateConverter().calcInjCoeff(id, region, coeff);
+            if(prod_gname) {
+                well_.rateConverter().calcCoeff(id, region, group_state.production_rates(*prod_gname), coeff);
+            } else {
+                well_.rateConverter().calcInjCoeff(id, region, coeff);
+            }
         };
         WellGroupControls(well_).getGroupInjectionControl(group,
                                                             well_state,

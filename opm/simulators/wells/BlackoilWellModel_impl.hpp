@@ -1856,9 +1856,10 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     calcRates(const int fipnum,
               const int pvtreg,
+              const std::vector<double>& production_rates,
               std::vector<double>& resv_coeff)
     {
-        rateConverter_->calcCoeff(fipnum, pvtreg, resv_coeff);
+        rateConverter_->calcCoeff(fipnum, pvtreg, production_rates, resv_coeff);
     }
 
     template<typename TypeTag>

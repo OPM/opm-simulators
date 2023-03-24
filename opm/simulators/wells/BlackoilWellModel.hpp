@@ -444,6 +444,7 @@ namespace Opm {
 
             void calcRates(const int fipnum,
                            const int pvtreg,
+                           const std::vector<double>& production_rates,
                            std::vector<double>& resv_coeff) override;
 
             void calcInjRates(const int fipnum,
