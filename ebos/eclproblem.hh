@@ -2100,7 +2100,6 @@ private:
                          UpdateFunc func)
     {
         OPM_TIMEBLOCK(updateProperty);
-        const auto& problem = this->simulator().problem();
         const auto& model = this->simulator().model();
         const auto& primaryVars = model.solution(/*timeIdx*/0);
         const auto& vanguard = this->simulator().vanguard();
