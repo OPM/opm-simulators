@@ -98,10 +98,22 @@ rocsparseSolverBackend<block_size>::rocsparseSolverBackend(int verbosity_, int m
 
 template <unsigned int block_size>
 rocsparseSolverBackend<block_size>::~rocsparseSolverBackend() {
-    HIP_CHECK(hipStreamSynchronize(stream));
-    HIP_CHECK(hipStreamDestroy(stream));
-    ROCSPARSE_CHECK(rocsparse_destroy_handle(handle));
-    ROCBLAS_CHECK(rocblas_destroy_handle(blas_handle));
+    hipError_t hipstatus = hipStreamSynchronize(stream);
+    if(hipstatus != hipSuccess){
+        OpmLog::error("Could not synchronize with hipStream");
+    }
+    hipstatus = hipStreamDestroy(stream);
+    if(hipstatus != hipSuccess){
+        OpmLog::error("Could not destroy hipStream");
+    }
+    rocsparse_status status1 = rocsparse_destroy_handle(handle);
+    if(status1 != rocsparse_status_success){
+        OpmLog::error("Could not destroy rocsparse handle");
+    }
+    rocblas_status status2 = rocblas_destroy_handle(blas_handle);
+    if(status2 != rocblas_status_success){
+        OpmLog::error("Could not destroy rocblas handle");
+    }
 }
 
 
