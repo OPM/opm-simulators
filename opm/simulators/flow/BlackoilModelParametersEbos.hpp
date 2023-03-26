@@ -212,7 +212,7 @@ struct ToleranceWells<TypeTag, TTag::FlowModelParameters> {
 template<class TypeTag>
 struct ToleranceWellStdwell<TypeTag, TTag::FlowModelParameters> {
     using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1e-7;
+    static constexpr type value = 1e-8;
 };
 template<class TypeTag>
 struct ToleranceWellControl<TypeTag, TTag::FlowModelParameters> {
