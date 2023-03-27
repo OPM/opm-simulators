@@ -28,6 +28,13 @@
 #ifndef FI_BLACK_OIL_MODEL_HPP
 #define FI_BLACK_OIL_MODEL_HPP
 
+#include <opm/models/blackoil/blackoilmodel.hh>
+#include <opm/models/utils/propertysystem.hh>
+
+#include <opm/common/ErrorMacros.hpp>
+
+#include <stdexcept>
+
 namespace Opm{
     template<typename TypeTag>
     class FIBlackOilModel: public BlackOilModel<TypeTag>{
@@ -37,21 +44,19 @@ namespace Opm{
     public:
         FIBlackOilModel(Simulator& simulator): BlackOilModel<TypeTag>(simulator){
         }
-        
+
         // standard flow
         const IntensiveQuantities& intensiveQuantities(unsigned globalIdx, unsigned timeIdx) const{
-            const auto& primaryVars = this->solution(timeIdx);
-            const auto& problem = this->simulator_.problem();
-            const auto intquant = this->cachedIntensiveQuantities(globalIdx, timeIdx);
             if (!this->enableIntensiveQuantityCache_){
-                OPM_THROW(std::logic_error, "Run without intentive quantites not enabled: Use --enable-intensive-quantity=true");
+                OPM_THROW(std::logic_error, "Run without intensive quantites not enabled: Use --enable-intensive-quantity=true");
             }
+            const auto* intquant = this->cachedIntensiveQuantities(globalIdx, timeIdx);
             if(!intquant){
                 OPM_THROW(std::logic_error, "Intensive quantites need to be updated in code");
-            }    
-            return *intquant;    
+            }
+            return *intquant;
         }
 
     };
-}
-#endif
+} // namespace Opm
+#endif // FI_BLACK_OIL_MODEL_HPP
