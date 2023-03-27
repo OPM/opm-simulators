@@ -533,7 +533,7 @@ private:
         ElementContext elemCtx(simulator_);
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         if(!isSubStep){
-        OPM_TIMEBLOCK(prepareCellBasedData);    
+        OPM_TIMEBLOCK(prepareCellBasedData);
         for (const auto& elem : elements(gridView)) {
             elemCtx.updatePrimaryStencil(elem);
             elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
@@ -550,7 +550,7 @@ private:
             }
         }
         if(!eclOutputModule_->getBlockData().empty()){
-        OPM_TIMEBLOCK(prepareBlockData);    
+        OPM_TIMEBLOCK(prepareBlockData);
         for (const auto& elem : elements(gridView)) {
             elemCtx.updatePrimaryStencil(elem);
             elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
