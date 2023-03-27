@@ -156,10 +156,6 @@ public:
 
     virtual ConvergenceReport getWellConvergence(const WellState& well_state, const std::vector<double>& B_avg, DeferredLogger& deferred_logger, const bool relax_tolerance) const = 0;
 
-    virtual void solveEqAndUpdateWellState(const Simulator& ebos_simulator,
-                                           WellState& well_state,
-                                           DeferredLogger& deferred_logger) = 0;
-
     void assembleWellEq(const Simulator& ebosSimulator,
                         const double dt,
                         WellState& well_state,
