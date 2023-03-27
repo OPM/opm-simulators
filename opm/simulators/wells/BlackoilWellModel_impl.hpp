@@ -1907,7 +1907,7 @@ namespace Opm {
 
             for (int perf = 0; perf < num_perf_this_well; ++perf) {
                 const int cell_idx = well_perf_data_[wellID][perf].cell_index;
-                const auto& intQuants = *(ebosSimulator_.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
+                const auto& intQuants = ebosSimulator_.model().intensiveQuantities(cell_idx, /*timeIdx=*/0);
                 const auto& fs = intQuants.fluidState();
 
                 // we on only have one temperature pr cell any phaseIdx will do

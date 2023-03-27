@@ -1052,7 +1052,7 @@ namespace Opm
         }
         for (int perf = 0; perf < nperf; ++perf) {
             const int cell_idx = this->well_cells_[perf];
-            const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
+            const auto& intQuants = ebosSimulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
             const double well_tw_fraction = this->well_index_[perf] / total_tw;
             double total_mobility = 0.0;
