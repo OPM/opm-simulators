@@ -348,6 +348,20 @@ porosity(unsigned globalSpaceIdx, unsigned timeIdx) const
 }
 
 template<class GridView, class FluidSystem, class Scalar>
+Scalar EclGenericProblem<GridView,FluidSystem,Scalar>::
+rockFraction(unsigned elementIdx, unsigned timeIdx) const
+{
+    const auto& fp = eclState_.fieldProps();
+    const std::vector<double>& poro  = fp.get_double("PORO");
+    // the reference porosity is defined as the accumulated pore volume divided by the
+    // geometric volume of the element. Note that it can
+    // be larger than 1.0 if porevolume multipliers are used
+    // to for instance implement larger boundary cells
+    Scalar porosity = poro[elementIdx];
+    return referencePorosity(elementIdx, timeIdx) / porosity * (1 - porosity);
+}
+
+template<class GridView, class FluidSystem, class Scalar>
 template<class T>
 void EclGenericProblem<GridView,FluidSystem,Scalar>::
 updateNum(const std::string& name, std::vector<T>& numbers)
