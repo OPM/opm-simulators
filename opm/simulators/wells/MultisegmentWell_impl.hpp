@@ -148,9 +148,12 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    updatePrimaryVariables(const WellState& well_state, DeferredLogger& /* deferred_logger */)
+    updatePrimaryVariables(const SummaryState& summary_state,
+                           const WellState& well_state,
+                           DeferredLogger& /* deferred_logger */)
     {
-        this->primary_variables_.update(well_state);
+        const bool zero_rate_target = this->wellUnderZeroProductionRateControl(summary_state, well_state);
+        this->primary_variables_.update(well_state, zero_rate_target);
     }
 
 
@@ -240,7 +243,8 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    recoverWellSolutionAndUpdateWellState(const BVector& x,
+    recoverWellSolutionAndUpdateWellState(const SummaryState& summary_state,
+                                          const BVector& x,
                                           WellState& well_state,
                                           DeferredLogger& deferred_logger)
     {
@@ -250,7 +254,7 @@ namespace Opm
 
         BVectorWell xw(1);
         this->linSys_.recoverSolutionWell(x, xw);
-        updateWellState(xw, well_state, deferred_logger);
+        updateWellState(summary_state, xw, well_state, deferred_logger);
     }
 
 
@@ -528,24 +532,6 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    solveEqAndUpdateWellState(WellState& well_state, DeferredLogger& deferred_logger)
-    {
-        if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
-
-        // We assemble the well equations, then we check the convergence,
-        // which is why we do not put the assembleWellEq here.
-        const BVectorWell dx_well = this->linSys_.solve();
-
-        updateWellState(dx_well, well_state, deferred_logger);
-    }
-
-
-
-
-
-    template <typename TypeTag>
-    void
-    MultisegmentWell<TypeTag>::
     computePerfCellPressDiffs(const Simulator& ebosSimulator)
     {
         for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
@@ -619,7 +605,8 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    updateWellState(const BVectorWell& dwells,
+    updateWellState(const SummaryState& summary_state,
+                    const BVectorWell& dwells,
                     WellState& well_state,
                     DeferredLogger& deferred_logger,
                     const double relaxation_factor)
@@ -628,9 +615,11 @@ namespace Opm
 
         const double dFLimit = this->param_.dwell_fraction_max_;
         const double max_pressure_change = this->param_.max_pressure_change_ms_wells_;
+        const bool zero_rate_target = this->wellUnderZeroProductionRateControl(summary_state, well_state);
         this->primary_variables_.updateNewton(dwells,
                                               relaxation_factor,
                                               dFLimit,
+                                              zero_rate_target,
                                               max_pressure_change);
 
         this->primary_variables_.copyToWellState(*this, getRefDensity(),
@@ -649,7 +638,8 @@ namespace Opm
                                 const WellState& well_state,
                                 DeferredLogger& deferred_logger)
     {
-        updatePrimaryVariables(well_state, deferred_logger);
+        const auto& summary_state = ebosSimulator.vanguard().summaryState();
+        updatePrimaryVariables(summary_state, well_state, deferred_logger);
         initPrimaryVariablesEvaluation();
         computePerfCellPressDiffs(ebosSimulator);
         computeInitialSegmentFluids(ebosSimulator);
@@ -1492,7 +1482,8 @@ namespace Opm
                 this->regularize_ = true;
                 deferred_logger.debug(sstr.str());
             }
-            updateWellState(dx_well, well_state, deferred_logger, relaxation_factor);
+            const auto& summary_state = ebosSimulator.vanguard().summaryState();
+            updateWellState(summary_state, dx_well, well_state, deferred_logger, relaxation_factor);
             initPrimaryVariablesEvaluation();
         }
 

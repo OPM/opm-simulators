@@ -26,6 +26,7 @@
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/TargetCalculator.hpp>
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
+#include <opm/simulators/wells/WellHelpers.hpp>
 
 #include <dune/common/version.hh>
 
@@ -244,7 +245,7 @@ namespace Opm
 
             this->well_control_log_.push_back(from);
             updateWellStateWithTarget(ebos_simulator, group_state, well_state, deferred_logger);
-            updatePrimaryVariables(well_state, deferred_logger);
+            updatePrimaryVariables(summaryState, well_state, deferred_logger);
         }
 
         return changed;
@@ -269,7 +270,8 @@ namespace Opm
 
         updateWellStateWithTarget(simulator, group_state, well_state_copy, deferred_logger);
         calculateExplicitQuantities(simulator, well_state_copy, deferred_logger);
-        updatePrimaryVariables(well_state_copy, deferred_logger);
+        const auto& summary_state = simulator.vanguard().summaryState();
+        updatePrimaryVariables(summary_state, well_state_copy, deferred_logger);
         initPrimaryVariablesEvaluation();
 
         if (this->isProducer()) {
@@ -1127,5 +1129,20 @@ namespace Opm
         } else {
             return fs.pressure(FluidSystem::gasPhaseIdx);
         }
+    }
+
+
+    template<typename TypeTag>
+    bool WellInterface<TypeTag>::wellUnderZeroProductionRateControl(const SummaryState& summary_state,
+                                                                    const WellState& well_state) const
+    {
+        if (this->wellIsStopped()) return true;
+
+        bool zero_rate_target = false;
+        if (this->well_ecl_.isProducer()) {
+            const auto prod_controls = this->well_ecl_.productionControls(summary_state);
+            zero_rate_target = wellhelpers::rateControlWithZeroTarget(well_state.well(this->index_of_well_).production_cmode, prod_controls);
+        }
+        return zero_rate_target;
     }
 } // namespace Opm

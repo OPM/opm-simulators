@@ -993,13 +993,15 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    updateWellState(const BVectorWell& dwells,
+    updateWellState(const SummaryState& summary_state,
+                    const BVectorWell& dwells,
                     WellState& well_state,
                     DeferredLogger& deferred_logger)
     {
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
-        updatePrimaryVariablesNewton(dwells, well_state, deferred_logger);
+        const bool zero_rate_target = this->wellUnderZeroProductionRateControl(summary_state, well_state);
+        updatePrimaryVariablesNewton(dwells, zero_rate_target, deferred_logger);
 
         updateWellStateFromPrimaryVariables(well_state, deferred_logger);
         Base::calculateReservoirRates(well_state.well(this->index_of_well_));
@@ -1013,12 +1015,12 @@ namespace Opm
     void
     StandardWell<TypeTag>::
     updatePrimaryVariablesNewton(const BVectorWell& dwells,
-                                 const WellState& /* well_state */,
+                                 const bool zero_rate_target,
                                  DeferredLogger& deferred_logger)
     {
         const double dFLimit = this->param_.dwell_fraction_max_;
         const double dBHPLimit = this->param_.dbhp_max_rel_;
-        this->primary_variables_.updateNewton(dwells, dFLimit, dBHPLimit);
+        this->primary_variables_.updateNewton(dwells, zero_rate_target, dFLimit, dBHPLimit);
 
         // for the water velocity and skin pressure
         if constexpr (Base::has_polymermw) {
@@ -1581,7 +1583,9 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    solveEqAndUpdateWellState(WellState& well_state, DeferredLogger& deferred_logger)
+    solveEqAndUpdateWellState(const SummaryState& summary_state,
+                              WellState& well_state,
+                              DeferredLogger& deferred_logger)
     {
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
@@ -1591,7 +1595,7 @@ namespace Opm
         dx_well[0].resize(this->primary_variables_.numWellEq());
         this->linSys_.solve( dx_well);
 
-        updateWellState(dx_well, well_state, deferred_logger);
+        updateWellState(summary_state, dx_well, well_state, deferred_logger);
     }
 
 
@@ -1605,7 +1609,8 @@ namespace Opm
                                 const WellState& well_state,
                                 DeferredLogger& deferred_logger)
     {
-        updatePrimaryVariables(well_state, deferred_logger);
+        const auto& summary_state = ebosSimulator.vanguard().summaryState();
+        updatePrimaryVariables(summary_state, well_state, deferred_logger);
         initPrimaryVariablesEvaluation();
         computeWellConnectionPressures(ebosSimulator, well_state, deferred_logger);
         this->computeAccumWell();
@@ -1648,7 +1653,8 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    recoverWellSolutionAndUpdateWellState(const BVector& x,
+    recoverWellSolutionAndUpdateWellState(const SummaryState& summary_state,
+                                          const BVector& x,
                                           WellState& well_state,
                                           DeferredLogger& deferred_logger)
     {
@@ -1658,7 +1664,7 @@ namespace Opm
         xw[0].resize(this->primary_variables_.numWellEq());
 
         this->linSys_.recoverSolutionWell(x, xw);
-        updateWellState(xw, well_state, deferred_logger);
+        updateWellState(summary_state, xw, well_state, deferred_logger);
     }
 
 
@@ -1754,7 +1760,7 @@ namespace Opm
                                                         " potentials are computed based on unconverged solution";
             deferred_logger.debug(msg);
         }
-        well_copy.updatePrimaryVariables(well_state_copy, deferred_logger);
+        well_copy.updatePrimaryVariables(summary_state, well_state_copy, deferred_logger);
         well_copy.computeWellConnectionPressures(ebosSimulator, well_state_copy, deferred_logger);
         well_copy.initPrimaryVariablesEvaluation();
         well_copy.computeWellRatesWithBhp(ebosSimulator, bhp, well_flux, deferred_logger);
@@ -1970,11 +1976,14 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_logger)
+    updatePrimaryVariables(const SummaryState& summary_state,
+                           const WellState& well_state,
+                           DeferredLogger& deferred_logger)
     {
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
-        this->primary_variables_.update(well_state, deferred_logger);
+        const bool zero_rate_target = this->wellUnderZeroProductionRateControl(summary_state, well_state);
+        this->primary_variables_.update(well_state, zero_rate_target, deferred_logger);
 
         // other primary variables related to polymer injection
         if constexpr (Base::has_polymermw) {
@@ -2511,7 +2520,8 @@ namespace Opm
             }
 
             ++it;
-            solveEqAndUpdateWellState(well_state, deferred_logger);
+            const auto& summary_state = ebosSimulator.vanguard().summaryState();
+            solveEqAndUpdateWellState(summary_state, well_state, deferred_logger);
 
             // TODO: when this function is used for well testing purposes, will need to check the controls, so that we will obtain convergence
             // under the most restrictive control. Based on this converged results, we can check whether to re-open the well. Either we refactor

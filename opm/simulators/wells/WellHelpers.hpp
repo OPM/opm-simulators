@@ -31,6 +31,8 @@
 namespace Opm {
 
 class ParallelWellInfo;
+enum class WellProducerCMode;
+class WellProductionControls;
 
 namespace wellhelpers {
 
@@ -82,6 +84,10 @@ void sumDistributedWellEntries(Dune::DynamicMatrix<Scalar>& mat,
 // used for calculating quasiimpes well weights
 template <class DenseMatrix>
 DenseMatrix transposeDenseDynMatrix(const DenseMatrix& M);
+
+/// Helper to check whether the well is under zero production rate control
+bool rateControlWithZeroTarget(const WellProducerCMode& mode,
+                               const WellProductionControls& controls);
 
 } // namespace wellhelpers
 } // namespace Opm
