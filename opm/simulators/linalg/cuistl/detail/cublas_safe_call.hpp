@@ -16,18 +16,25 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef CUBLAS_SAFE_CALL_HPP
-#define CUBLAS_SAFE_CALL_HPP
+#ifndef OPM_CUBLAS_SAFE_CALL_HPP
+#define OPM_CUBLAS_SAFE_CALL_HPP
 #include <cublas_v2.h>
 #include <exception>
 #include <fmt/core.h>
 #include <opm/common/ErrorMacros.hpp>
+#include <string_view>
+
+
+
+
+namespace Opm::cuistl::detail
+{
+
 #define CHECK_CUBLAS_ERROR_TYPE(code, x)                                                                               \
     if (code == x) {                                                                                                   \
         return #x;                                                                                                     \
     }
-namespace
-{
+
 /**
  * @brief getCublasErrorMessage Converts an error code returned from a cublas function a human readable string.
  * @param code an error code from a cublas routine
@@ -49,9 +56,48 @@ getCublasErrorMessage(int code)
 
     return fmt::format("UNKNOWN CUBLAS ERROR {}.", code);
 }
-} // namespace
-#undef CHECK_CUSPRASE_ERROR_TYPE
 
+#undef CHECK_CUSPRASE_ERROR_TYPE
+/**
+ * @brief cublasSafeCall checks the return type of the CUBLAS expression (function call) and throws an exception if it
+ * does not equal CUBLAS_STATUS_SUCCESS.
+ *
+ * Example usage:
+ * @code{.cpp}
+ * #include <opm/simulators/linalg/cuistl/detail/cuda_safe_call.hpp>
+ * #include <cublas_v2.h>
+ *
+ * void some_function() {
+ *     cublasHandle_t cublasHandle;
+ *     cudaSafeCall(cublasCreate(&cublasHandle), "cublasCreate(&cublasHandle)", __FILE__, __func__, __LINE__);
+ * }
+ * @endcode
+ *
+ * @note It is probably easier to use the macro OPM_CUBLAS_SAFE_CALL
+ *
+ * @todo Refactor to use std::source_location once we shift to C++20
+ */
+inline void
+cublasSafeCall(cublasStatus_t error,
+               const std::string_view& expression,
+               const std::string_view& filename,
+               const std::string_view& functionName,
+               size_t lineNumber)
+{
+    if (error != CUBLAS_STATUS_SUCCESS) {
+        OPM_THROW(std::runtime_error,
+                  fmt::format("cuBLAS expression did not execute correctly. Expression was: \n\n"
+                              "    {}\n\n"
+                              "in function {}, in {}, at line {}.\n"
+                              "CuBLAS error code was: {}\n",
+                              expression,
+                              functionName,
+                              filename,
+                              lineNumber,
+                              getCublasErrorMessage(error)));
+    }
+}
+} // namespace Opm::cuistl::detail
 /**
  * @brief OPM_CUBLAS_SAFE_CALL checks the return type of the cublas expression (function call) and throws an exception
  * if it does not equal CUBLAS_STATUS_SUCCESS.
@@ -70,19 +116,6 @@ getCublasErrorMessage(int code)
  * @note This should be used for any call to cuBlas unless you have a good reason not to.
  */
 #define OPM_CUBLAS_SAFE_CALL(expression)                                                                               \
-    do {                                                                                                               \
-        cublasStatus_t error = expression;                                                                             \
-        if (error != CUBLAS_STATUS_SUCCESS) {                                                                          \
-            OPM_THROW(std::runtime_error,                                                                              \
-                      fmt::format("cuBLAS expression did not execute correctly. Expression was: \n\n"                  \
-                                  "    {}\n\n"                                                                         \
-                                  "in function {}, in {}, at line {}.\n"                                               \
-                                  "CuBLAS error code was: {}\n",                                                       \
-                                  #expression,                                                                         \
-                                  __func__,                                                                            \
-                                  __FILE__,                                                                            \
-                                  __LINE__,                                                                            \
-                                  getCublasErrorMessage(error)));                                                      \
-        }                                                                                                              \
-    } while (false)
-#endif // CUBLAS_SAFE_CALL_HPP
+    ::Opm::cuistl::detail::cublasSafeCall(expression, #expression, __FILE__, __func__, __LINE__)
+
+#endif // OPM_CUBLAS_SAFE_CALL_HPP
