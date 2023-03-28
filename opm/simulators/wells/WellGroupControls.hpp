@@ -24,6 +24,7 @@
 #ifndef OPM_WELL_GROUP_CONTROLS_HEADER_INCLUDED
 #define OPM_WELL_GROUP_CONTROLS_HEADER_INCLUDED
 
+#include <string>
 #include <functional>
 #include <optional>
 #include <vector>

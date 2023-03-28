@@ -27,6 +27,8 @@
 #include <functional>
 #include <utility>
 #include <vector>
+#include <string>
+#include <optional>
 
 namespace Opm
 {
