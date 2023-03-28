@@ -144,11 +144,18 @@ if(CUDA_FOUND)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/cuda/cusparseSolverBackend.cu)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/cuda/cuWellContributions.cu)
 
-  # CUISTL
+  # CUISTL SOURCE
+  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/cuistl/detail/CuBlasHandle.cpp)
+  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/cuistl/detail/CuSparseHandle.cpp)
+
+  # CUISTL HEADERS
   list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/detail/cuda_safe_call.hpp)
   list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/detail/cusparse_safe_call.hpp)
   list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/detail/cublas_safe_call.hpp)
   list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/detail/cuda_check_last_error.hpp)
+  list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/detail/CuBlasHandle.hpp)
+  list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/detail/CuSparseHandle.hpp)
+
 endif()
 if(OPENCL_FOUND)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/BlockedMatrix.cpp)
@@ -230,6 +237,10 @@ if(CUDA_FOUND)
   list(APPEND TEST_SOURCE_FILES tests/cuistl/test_cublas_safe_call.cpp)
   list(APPEND TEST_SOURCE_FILES tests/cuistl/test_cuda_safe_call.cpp)
   list(APPEND TEST_SOURCE_FILES tests/cuistl/test_cuda_check_last_error.cpp)
+  list(APPEND TEST_SOURCE_FILES tests/cuistl/test_cublas_handle.cpp)
+  list(APPEND TEST_SOURCE_FILES tests/cuistl/test_cusparse_handle.cpp)
+
+
 endif()
 if(OPENCL_FOUND)
   list(APPEND TEST_SOURCE_FILES tests/test_openclSolver.cpp)
