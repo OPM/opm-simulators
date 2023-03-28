@@ -522,10 +522,14 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
                     double dtEstimate = timeStepControl_->computeTimeStepSize(dt, iterations, relativeChange,
                                                                                substepTimer.simulationTimeElapsed());
 
-                    assert(dtEstimate > 0);
+                    if(!(dtEstimate > 0)){
+                        OPM_THROW(std::runtime_error,"Timestep estimate have become zero");
+                    }
                     // limit the growth of the timestep size by the growth factor
                     dtEstimate = std::min(dtEstimate, double(maxGrowth_ * dt));
-                    assert(dtEstimate > 0);
+                    if(!(dtEstimate > 0)){
+                        OPM_THROW(std::runtime_error,"Timestep estimate have become zero");
+                    }
                     // further restrict time step size growth after convergence problems
                     if (restarts > 0) {
                         dtEstimate = std::min(growthFactor_ * dt, dtEstimate);
@@ -539,7 +543,10 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
                         const double maxPredictionTHPTimestep = 16.0 * unit::day;
                         dtEstimate = std::min(dtEstimate, maxPredictionTHPTimestep);
                     }
-                    assert(dtEstimate > 0);
+ 
+                    if(!(dtEstimate > 0)){
+                        OPM_THROW(std::runtime_error,"Timestep estimate have become zero");
+                    }
                     if (timestepVerbose_) {
                         std::ostringstream ss;
                         substepReport.reportStep(ss);
@@ -877,7 +884,11 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
                           "Unsupported time step control selected " + control);
 
             // make sure growth factor is something reasonable
-            assert(growthFactor_ >= 1.0);
+            
+            if(!(growthFactor_ >= 1.0)){
+                OPM_THROW(std::runtime_error,
+                          "GrowthFactor is set to less than one");
+            }
         }
 
         using TimeStepController = std::unique_ptr<TimeStepControlInterface>;

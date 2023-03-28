@@ -106,13 +106,17 @@ namespace Opm
     /// Current step length.
     double SimulatorTimer::currentStepLength() const
     {
-        assert(!done());
+        if(done()){
+            OPM_THROW(std::runtime_error,"CurrentStepLenth called but step is done");
+        }
         return timesteps_[current_step_];
     }
 
     double SimulatorTimer::stepLengthTaken() const
     {
-        assert(current_step_ > 0);
+        if(!(current_step_ > 0)){
+            OPM_THROW(std::runtime_error,"Current timestep has zero length");
+        }
         return timesteps_[current_step_ - 1];
     }
 
@@ -156,7 +160,10 @@ namespace Opm
     /// Next step.
     SimulatorTimer& SimulatorTimer::operator++()
     {
-        assert(!done());
+        if(done()){
+            OPM_THROW(std::runtime_error,"Step is not done but ++ is called");
+        }
+
         current_time_ += timesteps_[current_step_];
         ++current_step_;
         return *this;

@@ -581,15 +581,15 @@ namespace Opm {
                         Scalar tmpSat = saturationsNew[phaseIdx] - saturationsOld[phaseIdx];
                         resultDelta += tmpSat*tmpSat;
                         resultDenom += saturationsNew[phaseIdx]*saturationsNew[phaseIdx];
-                        assert(std::isfinite(resultDelta));
-                        assert(std::isfinite(resultDenom));
                     }
                 }
             }
 
             resultDelta = gridView.comm().sum(resultDelta);
             resultDenom = gridView.comm().sum(resultDenom);
-
+            if (!(std::isfinite(resultDelta) && std::isfinite(resultDenom))) {
+                OPM_THROW(std::runtime_error,"Not finite variable change");
+            }
             if (resultDenom > 0.0)
                 return resultDelta/resultDenom;
             return 0.0;
