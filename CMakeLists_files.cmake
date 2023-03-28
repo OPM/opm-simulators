@@ -195,6 +195,7 @@ if(CUDA_FOUND)
   list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/set_device.hpp)
 
 endif()
+
 if(USE_BDA_BRIDGE)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/BdaBridge.cpp
                                  opm/simulators/linalg/bda/WellContributions.cpp
@@ -219,6 +220,7 @@ if(USE_BDA_BRIDGE)
   endif()
   if(rocsparse_FOUND AND rocblas_FOUND)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/rocsparseSolverBackend.cpp)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/rocsparseWellContributions.cpp)
   endif()
   if(amgcl_FOUND)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/amgclSolverBackend.cpp)
@@ -473,6 +475,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/bda/MultisegmentWellContribution.hpp
   opm/simulators/linalg/bda/rocalutionSolverBackend.hpp
   opm/simulators/linalg/bda/rocsparseSolverBackend.hpp
+  opm/simulators/linalg/bda/rocsparseWellContributions.hpp
   opm/simulators/linalg/bda/WellContributions.hpp
   opm/simulators/linalg/amgcpr.hh
   opm/simulators/linalg/twolevelmethodcpr.hh
