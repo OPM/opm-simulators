@@ -195,6 +195,9 @@ public:
 
     bool isPressureControlled(const WellState& well_state) const;
 
+    bool wellUnderZeroRateControl(const SummaryState& summary_state,
+                                  const WellState& well_state) const;
+
 protected:
     bool getAllowCrossFlow() const;
 

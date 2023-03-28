@@ -1000,7 +1000,7 @@ namespace Opm
     {
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
-        const bool zero_rate_target = this->wellUnderZeroProductionRateControl(summary_state, well_state);
+        const bool zero_rate_target = this->wellUnderZeroRateControl(summary_state, well_state);
         updatePrimaryVariablesNewton(dwells, zero_rate_target, deferred_logger);
 
         updateWellStateFromPrimaryVariables(well_state, deferred_logger);
@@ -1982,7 +1982,7 @@ namespace Opm
     {
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
-        const bool zero_rate_target = this->wellUnderZeroProductionRateControl(summary_state, well_state);
+        const bool zero_rate_target = this->wellUnderZeroRateControl(summary_state, well_state);
         this->primary_variables_.update(well_state, zero_rate_target, deferred_logger);
 
         // other primary variables related to polymer injection

@@ -116,7 +116,7 @@ assembleControlEq(const WellState& well_state,
         return rates;
     };
 
-    if (well_.wellIsStopped()) {
+    if (well_.wellUnderZeroRateControl(summaryState, well_state)) {
         control_eq = primary_variables.eval(PrimaryVariables::WQTotal);
     } else if (well_.isInjector()) {
         // Find injection rate.
@@ -143,9 +143,6 @@ assembleControlEq(const WellState& well_state,
                                  bhp_from_thp,
                                  control_eq,
                                  deferred_logger);
-    } else if (wellhelpers::rateControlWithZeroTarget(well_state.well(well_.indexOfWell()).production_cmode, prod_controls)) {
-        // Production mode, zero target. Treat as STOP.
-        control_eq = primary_variables.eval(PrimaryVariables::WQTotal);
     } else {
              // Find rates.
         const auto rates = getRates();

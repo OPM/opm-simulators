@@ -450,6 +450,24 @@ bool WellInterfaceGeneric::isPressureControlled(const WellState& well_state) con
     }
 }
 
+
+
+bool WellInterfaceGeneric::wellUnderZeroRateControl(const SummaryState& summary_state,
+                                                    const WellState& well_state) const
+{
+    if (this->wellIsStopped()) return true;
+
+    if (this->isProducer()) { // producers
+        const auto prod_controls = this->well_ecl_.productionControls(summary_state);
+        const auto prod_mode = well_state.well(this->indexOfWell()).production_cmode;
+        return wellhelpers::rateControlWithZeroProdTarget(prod_controls, prod_mode);
+    } else { // injectors
+        const auto inj_controls = this->well_ecl_.injectionControls(summary_state);
+        const auto inj_mode = well_state.well(this->indexOfWell()).injection_cmode;
+        return wellhelpers::rateControlWithZeroInjTarget(inj_controls, inj_mode);
+    }
+}
+
 double WellInterfaceGeneric::wmicrobes_() const
 {
     auto injectorType = this->well_ecl_.injectorType();
