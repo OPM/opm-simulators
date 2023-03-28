@@ -37,6 +37,7 @@
 #undef HAVE_CUDA
 
 #include <opm/simulators/linalg/bda/rocsparseSolverBackend.hpp>
+#include <opm/simulators/linalg/bda/rocsparseWellContributions.hpp>
 
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
 
@@ -152,7 +153,7 @@ void rocsparseSolverBackend<block_size>::gpu_pbicgstab([[maybe_unused]] WellCont
     double one  = 1.0;
     double mone = -1.0;
 
-    Timer t_total, t_prec(false), t_spmv(false), t_rest(false);
+    Timer t_total, t_prec(false), t_spmv(false), t_well(false), t_rest(false);
 
     // set stream here, the WellContributions object is destroyed every linear solve
     // the number of wells can change every linear solve
@@ -232,10 +233,18 @@ void rocsparseSolverBackend<block_size>::gpu_pbicgstab([[maybe_unused]] WellCont
         if (verbosity >= 3) {
             HIP_CHECK(hipStreamSynchronize(stream));
             t_spmv.stop();
-            t_rest.start();
+            t_well.start();
         }
 
         // apply wellContributions
+        if(wellContribs.getNumWells() > 0){
+            static_cast<WellContributionsRocsparse&>(wellContribs).apply(d_pw, d_v);
+        }
+        if (verbosity >= 3) {
+            HIP_CHECK(hipStreamSynchronize(stream));
+            t_well.stop();
+            t_rest.start();
+        }
 
         ROCBLAS_CHECK(rocblas_ddot(blas_handle, N, d_rw, 1, d_v, 1, &tmp1));
         alpha = rho / tmp1;
@@ -285,10 +294,18 @@ void rocsparseSolverBackend<block_size>::gpu_pbicgstab([[maybe_unused]] WellCont
         if(verbosity >= 3){
             HIP_CHECK(hipStreamSynchronize(stream));
             t_spmv.stop();
-            t_rest.start();
+            t_well.start();
         }
 
         // apply wellContributions
+        if(wellContribs.getNumWells() > 0){
+            static_cast<WellContributionsRocsparse&>(wellContribs).apply(d_s, d_t);
+        }
+        if (verbosity >= 3) {
+            HIP_CHECK(hipStreamSynchronize(stream));
+            t_well.stop();
+            t_rest.start();
+        }
 
         ROCBLAS_CHECK(rocblas_ddot(blas_handle, N, d_t, 1, d_r, 1, &tmp1));
         ROCBLAS_CHECK(rocblas_ddot(blas_handle, N, d_t, 1, d_t, 1, &tmp2));

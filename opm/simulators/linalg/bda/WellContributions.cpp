@@ -32,6 +32,10 @@
 #include <opm/simulators/linalg/bda/cuda/cuWellContributions.hpp>
 #endif
 
+#ifdef HAVE_ROCSPARSE
+#include <opm/simulators/linalg/bda/rocsparseWellContributions.hpp>
+#endif
+
 namespace Opm
 {
 
@@ -54,9 +58,14 @@ WellContributions::create(const std::string& accelerator_mode, bool useWellConn)
     }
     else if(accelerator_mode.compare("rocsparse") == 0){
         if (!useWellConn) {
-            OPM_THROW(std::logic_error, "Error rocsparse requires --matrix-add-well-contributions=true");
+#if HAVE_ROCSPARSE
+            return std::make_unique<WellContributionsRocsparse>();
+#else
+        OPM_THROW(std::runtime_error, "Cannot initialize well contributions: rocsparse is not enabled");
+#endif
         }
         return std::make_unique<WellContributions>();
+
     }
     else if(accelerator_mode.compare("amgcl") == 0){
         if (!useWellConn) {
