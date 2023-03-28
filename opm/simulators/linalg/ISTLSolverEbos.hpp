@@ -434,9 +434,11 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             // store number of iterations
             iterations_ = result.iterations;
             converged_ = result.converged;
-
+            if(result.reduction < parameters_.relaxed_linear_solver_reduction_){
+                converged_ = true;
+            }   
             // Check for failure of linear solver.
-            if (!parameters_.ignoreConvergenceFailure_ && !result.converged) {
+            if (!parameters_.ignoreConvergenceFailure_ && !converged_) {
                 const std::string msg("Convergence failure for linear solver.");
                 OPM_THROW_NOLOG(NumericalProblem, msg);
             }
