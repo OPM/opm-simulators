@@ -184,7 +184,8 @@ namespace Opm
                       const GroupState& group_state,
                       DeferredLogger& deferred_logger) /* const */
     {
-        if (this->wellIsStopped()) {
+        const auto& summary_state = ebos_simulator.vanguard().summaryState();
+        if (this->wellUnderZeroRateControl(summary_state, well_state)) {
             return false;
         }
 

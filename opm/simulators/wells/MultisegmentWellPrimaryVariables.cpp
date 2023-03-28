@@ -207,6 +207,7 @@ template<class FluidSystem, class Indices, class Scalar>
 void MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::
 copyToWellState(const MultisegmentWellGeneric<Scalar>& mswell,
                 const double rho,
+                const bool zero_rate_target,
                 WellState& well_state,
                 DeferredLogger& deferred_logger) const
 {
@@ -393,7 +394,7 @@ copyToWellState(const MultisegmentWellGeneric<Scalar>& mswell,
     }
 
     WellBhpThpCalculator(well_)
-        .updateThp(rho, [this]() { return well_.wellEcl().alq_value(); },
+        .updateThp(rho, zero_rate_target, [this]() { return well_.wellEcl().alq_value(); },
                    {FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx),
                     FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx),
                     FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)},

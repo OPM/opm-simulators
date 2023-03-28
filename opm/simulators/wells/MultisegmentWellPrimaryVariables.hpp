@@ -100,6 +100,7 @@ public:
     //! \brief Copy values to well state.
     void copyToWellState(const MultisegmentWellGeneric<Scalar>& mswell,
                          const double rho,
+                         const bool zero_rate_target,
                          WellState& well_state,
                          DeferredLogger& deferred_logger) const;
 

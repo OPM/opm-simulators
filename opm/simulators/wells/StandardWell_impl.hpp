@@ -1003,7 +1003,7 @@ namespace Opm
         const bool zero_rate_target = this->wellUnderZeroRateControl(summary_state, well_state);
         updatePrimaryVariablesNewton(dwells, zero_rate_target, deferred_logger);
 
-        updateWellStateFromPrimaryVariables(well_state, deferred_logger);
+        updateWellStateFromPrimaryVariables(zero_rate_target, well_state, deferred_logger);
         Base::calculateReservoirRates(well_state.well(this->index_of_well_));
     }
 
@@ -1037,9 +1037,11 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    updateWellStateFromPrimaryVariables(WellState& well_state, DeferredLogger& deferred_logger) const
+    updateWellStateFromPrimaryVariables(const bool zero_rate_target,
+                                        WellState& well_state,
+                                        DeferredLogger& deferred_logger) const
     {
-        this->StdWellEval::updateWellStateFromPrimaryVariables(well_state, deferred_logger);
+        this->StdWellEval::updateWellStateFromPrimaryVariables(zero_rate_target, well_state, deferred_logger);
 
         // other primary variables related to polymer injectivity study
         if constexpr (Base::has_polymermw) {

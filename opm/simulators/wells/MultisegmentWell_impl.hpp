@@ -622,7 +622,7 @@ namespace Opm
                                               zero_rate_target,
                                               max_pressure_change);
 
-        this->primary_variables_.copyToWellState(*this, getRefDensity(),
+        this->primary_variables_.copyToWellState(*this, getRefDensity(), zero_rate_target,
                                                  well_state, deferred_logger);
         Base::calculateReservoirRates(well_state.well(this->index_of_well_));
     }

@@ -368,7 +368,9 @@ namespace Opm
                                           const bool zero_rate_target,
                                           DeferredLogger& deferred_logger);
 
-        void updateWellStateFromPrimaryVariables(WellState& well_state, DeferredLogger& deferred_logger) const;
+        void updateWellStateFromPrimaryVariables(const bool zero_rate_target,
+                                                 WellState& well_state,
+                                                 DeferredLogger& deferred_logger) const;
 
         virtual void assembleWellEqWithoutIteration(const Simulator& ebosSimulator,
                                                     const double dt,
