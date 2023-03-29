@@ -195,7 +195,9 @@ calcCoeff(  const int pvtRegionIdx,
     // Currently we only support either gas in water or gas in oil
     // not both
     if (detR != 1 && detRw != 1) {
-        std::string msg = "only support " + std::to_string(detR) + " " + std::to_string(detR);
+        std::string msg = "We currently support either gas in water or gas in oil, not both."
+        "i.e. detR = " + std::to_string(detR) + " and detRw " + std::to_string(detRw) +
+        "can not both be different from 1";
         throw std::range_error(msg);
     }
 
