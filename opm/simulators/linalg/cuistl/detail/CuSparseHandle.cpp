@@ -1,5 +1,5 @@
 /*
-  Copyright SINTEF AS 2022
+  Copyright 2022-2023 SINTEF AS
 
   This file is part of the Open Porous Media project (OPM).
 
