@@ -46,7 +46,7 @@ namespace Opm::cuistl::detail
  *
  * @todo This can be done for more generic types, but then it is probably wise to wait for C++20's cmp-functions
  */
-int
+inline int
 to_int(size_t s)
 {
     static_assert(
@@ -80,7 +80,7 @@ to_int(size_t s)
  * @throw std::invalid_argument if i is negative.
  * @todo This can be done for more generic types, but then it is probably wise to wait for C++20's cmp-functions
  */
-size_t
+inline size_t
 to_size_t(int i)
 {
     static_assert(
