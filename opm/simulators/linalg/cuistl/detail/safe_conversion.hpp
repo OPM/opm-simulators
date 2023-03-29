@@ -39,7 +39,7 @@ namespace Opm::cuistl::detail
 {
 
 /**
- * @brief convert converts a (on most relevant platforms) 64 bits unsigned size_t to a signed 32 bits signed  int
+ * @brief to_int converts a (on most relevant platforms) 64 bits unsigned size_t to a signed 32 bits signed  int
  * @param s the unsigned integer
  * @throw std::invalid_argument exception if s is out of range for an int
  * @return converted s to int if s is within the range of int
@@ -47,7 +47,7 @@ namespace Opm::cuistl::detail
  * @todo This can be done for more generic types, but then it is probably wise to wait for C++20's cmp-functions
  */
 int
-convert(size_t s)
+to_int(size_t s)
 {
     static_assert(
         std::is_signed_v<int>,
@@ -73,7 +73,7 @@ convert(size_t s)
 }
 
 /**
- * @brief convert converts a (on most relevant platforms) a 32 bit signed int to a 64 bits unsigned int
+ * @brief to_size_t converts a (on most relevant platforms) a 32 bit signed int to a 64 bits unsigned int
  * @param i the signed integer
  * @return converted i to size_t if it is a non-negative integer.
  *
@@ -81,7 +81,7 @@ convert(size_t s)
  * @todo This can be done for more generic types, but then it is probably wise to wait for C++20's cmp-functions
  */
 size_t
-convert(int i)
+to_size_t(int i)
 {
     static_assert(
         std::is_signed_v<int>,
