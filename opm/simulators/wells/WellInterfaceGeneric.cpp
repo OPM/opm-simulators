@@ -452,11 +452,9 @@ bool WellInterfaceGeneric::isPressureControlled(const WellState& well_state) con
 
 
 
-bool WellInterfaceGeneric::wellUnderZeroRateControl(const SummaryState& summary_state,
-                                                    const WellState& well_state) const
+bool WellInterfaceGeneric::wellUnderZeroRateTarget(const SummaryState& summary_state,
+                                                   const WellState& well_state) const
 {
-    if (this->wellIsStopped()) return true;
-
     if (this->isProducer()) { // producers
         const auto prod_controls = this->well_ecl_.productionControls(summary_state);
         const auto prod_mode = well_state.well(this->indexOfWell()).production_cmode;
@@ -466,6 +464,13 @@ bool WellInterfaceGeneric::wellUnderZeroRateControl(const SummaryState& summary_
         const auto inj_mode = well_state.well(this->indexOfWell()).injection_cmode;
         return wellhelpers::rateControlWithZeroInjTarget(inj_controls, inj_mode);
     }
+}
+
+bool WellInterfaceGeneric::stopppedOrZeroRateTarget(const SummaryState& summary_state,
+                                                    const WellState& well_state) const
+{
+    return (this->wellIsStopped() || this->wellUnderZeroRateTarget(summary_state, well_state));
+
 }
 
 double WellInterfaceGeneric::wmicrobes_() const

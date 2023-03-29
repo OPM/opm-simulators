@@ -116,7 +116,7 @@ assembleControlEq(const WellState& well_state,
         return rates;
     };
 
-    if (well_.wellUnderZeroRateControl(summaryState, well_state)) {
+    if (well_.stopppedOrZeroRateTarget(summaryState, well_state)) {
         control_eq = primary_variables.eval(PrimaryVariables::WQTotal);
     } else if (well_.isInjector()) {
         // Find injection rate.

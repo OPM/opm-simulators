@@ -64,7 +64,7 @@ init()
 
 template<class FluidSystem, class Indices, class Scalar>
 void MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::
-update(const WellState& well_state, const bool zero_rate_target)
+update(const WellState& well_state, const bool stop_or_zero_rate_target)
 {
     static constexpr int Water = BlackoilPhases::Aqua;
     static constexpr int Gas = BlackoilPhases::Vapour;
@@ -104,7 +104,7 @@ update(const WellState& well_state, const bool zero_rate_target)
             }
         }
         value_[seg][WQTotal] = total_seg_rate;
-        if (zero_rate_target && seg == 0) {
+        if (stop_or_zero_rate_target && seg == 0) {
             value_[seg][WQTotal] = 0;
         }
         if (std::abs(total_seg_rate) > 0.) {
@@ -155,7 +155,7 @@ void MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::
 updateNewton(const BVectorWell& dwells,
              const double relaxation_factor,
              const double dFLimit,
-             const bool zero_rate_target,
+             const bool stop_or_zero_rate_target,
              const double max_pressure_change)
 {
     const std::vector<std::array<double, numWellEq>> old_primary_variables = value_;
@@ -198,7 +198,7 @@ updateNewton(const BVectorWell& dwells,
         }
     }
 
-    if (zero_rate_target) {
+    if (stop_or_zero_rate_target) {
         value_[0][WQTotal] = 0.;
     }
 }
@@ -207,7 +207,7 @@ template<class FluidSystem, class Indices, class Scalar>
 void MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::
 copyToWellState(const MultisegmentWellGeneric<Scalar>& mswell,
                 const double rho,
-                const bool zero_rate_target,
+                const bool stop_or_zero_rate_target,
                 WellState& well_state,
                 DeferredLogger& deferred_logger) const
 {
@@ -394,7 +394,7 @@ copyToWellState(const MultisegmentWellGeneric<Scalar>& mswell,
     }
 
     WellBhpThpCalculator(well_)
-        .updateThp(rho, zero_rate_target, [this]() { return well_.wellEcl().alq_value(); },
+        .updateThp(rho, stop_or_zero_rate_target, [this]() { return well_.wellEcl().alq_value(); },
                    {FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx),
                     FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx),
                     FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)},

@@ -71,7 +71,7 @@ extendEval(const Eval& in) const
 template<class FluidSystem, class Indices, class Scalar>
 void
 StandardWellEval<FluidSystem,Indices,Scalar>::
-updateWellStateFromPrimaryVariables(const bool zero_rate_target,
+updateWellStateFromPrimaryVariables(const bool stop_or_zero_rate_target,
                                     WellState& well_state,
                                     DeferredLogger& deferred_logger) const
 {
@@ -79,7 +79,7 @@ updateWellStateFromPrimaryVariables(const bool zero_rate_target,
 
     WellBhpThpCalculator(baseif_).
             updateThp(connections_.rho(),
-                      zero_rate_target,
+                      stop_or_zero_rate_target,
                       [this,&well_state]() { return this->baseif_.getALQ(well_state); },
                       {FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx),
                        FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx),

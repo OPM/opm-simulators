@@ -1000,10 +1000,10 @@ namespace Opm
     {
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
-        const bool zero_rate_target = this->wellUnderZeroRateControl(summary_state, well_state);
-        updatePrimaryVariablesNewton(dwells, zero_rate_target, deferred_logger);
+        const bool stop_or_zero_rate_target = this->stopppedOrZeroRateTarget(summary_state, well_state);
+        updatePrimaryVariablesNewton(dwells, stop_or_zero_rate_target, deferred_logger);
 
-        updateWellStateFromPrimaryVariables(zero_rate_target, well_state, deferred_logger);
+        updateWellStateFromPrimaryVariables(stop_or_zero_rate_target, well_state, deferred_logger);
         Base::calculateReservoirRates(well_state.well(this->index_of_well_));
     }
 
@@ -1015,12 +1015,12 @@ namespace Opm
     void
     StandardWell<TypeTag>::
     updatePrimaryVariablesNewton(const BVectorWell& dwells,
-                                 const bool zero_rate_target,
+                                 const bool stop_or_zero_rate_target,
                                  DeferredLogger& deferred_logger)
     {
         const double dFLimit = this->param_.dwell_fraction_max_;
         const double dBHPLimit = this->param_.dbhp_max_rel_;
-        this->primary_variables_.updateNewton(dwells, zero_rate_target, dFLimit, dBHPLimit);
+        this->primary_variables_.updateNewton(dwells, stop_or_zero_rate_target, dFLimit, dBHPLimit);
 
         // for the water velocity and skin pressure
         if constexpr (Base::has_polymermw) {
@@ -1037,11 +1037,11 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    updateWellStateFromPrimaryVariables(const bool zero_rate_target,
+    updateWellStateFromPrimaryVariables(const bool stop_or_zero_rate_target,
                                         WellState& well_state,
                                         DeferredLogger& deferred_logger) const
     {
-        this->StdWellEval::updateWellStateFromPrimaryVariables(zero_rate_target, well_state, deferred_logger);
+        this->StdWellEval::updateWellStateFromPrimaryVariables(stop_or_zero_rate_target, well_state, deferred_logger);
 
         // other primary variables related to polymer injectivity study
         if constexpr (Base::has_polymermw) {
@@ -1984,8 +1984,8 @@ namespace Opm
     {
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
-        const bool zero_rate_target = this->wellUnderZeroRateControl(summary_state, well_state);
-        this->primary_variables_.update(well_state, zero_rate_target, deferred_logger);
+        const bool stop_or_zero_rate_target = this->stopppedOrZeroRateTarget(summary_state, well_state);
+        this->primary_variables_.update(well_state, stop_or_zero_rate_target, deferred_logger);
 
         // other primary variables related to polymer injection
         if constexpr (Base::has_polymermw) {

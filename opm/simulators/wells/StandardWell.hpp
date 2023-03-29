@@ -365,10 +365,10 @@ namespace Opm
                                             DeferredLogger& deferred_logger) const;
 
         void updatePrimaryVariablesNewton(const BVectorWell& dwells,
-                                          const bool zero_rate_target,
+                                          const bool stop_or_zero_rate_target,
                                           DeferredLogger& deferred_logger);
 
-        void updateWellStateFromPrimaryVariables(const bool zero_rate_target,
+        void updateWellStateFromPrimaryVariables(const bool stop_or_zero_rate_target,
                                                  WellState& well_state,
                                                  DeferredLogger& deferred_logger) const;
 

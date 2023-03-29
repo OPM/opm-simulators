@@ -185,7 +185,7 @@ namespace Opm
                       DeferredLogger& deferred_logger) /* const */
     {
         const auto& summary_state = ebos_simulator.vanguard().summaryState();
-        if (this->wellUnderZeroRateControl(summary_state, well_state)) {
+        if (this->stopppedOrZeroRateTarget(summary_state, well_state)) {
             return false;
         }
 

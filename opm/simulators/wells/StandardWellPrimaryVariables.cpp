@@ -122,7 +122,7 @@ resize(const int numWellEq)
 template<class FluidSystem, class Indices, class Scalar>
 void StandardWellPrimaryVariables<FluidSystem,Indices,Scalar>::
 update(const WellState& well_state,
-       const bool zero_rate_target,
+       const bool stop_or_zero_rate_target,
        DeferredLogger& deferred_logger)
 {
     static constexpr int Water = BlackoilPhases::Aqua;
@@ -160,7 +160,7 @@ update(const WellState& well_state,
         }
     } else {
             value_[WQTotal] = total_well_rate;
-            if (zero_rate_target) {
+            if (stop_or_zero_rate_target) {
                 value_[WQTotal] = 0.;
             }
     }
@@ -245,7 +245,7 @@ updatePolyMW(const WellState& well_state)
 template<class FluidSystem, class Indices, class Scalar>
 void StandardWellPrimaryVariables<FluidSystem,Indices,Scalar>::
 updateNewton(const BVectorWell& dwells,
-             const bool zero_rate_target,
+             const bool stop_or_zero_rate_target,
              [[maybe_unused]] const double dFLimit,
              const double dBHPLimit)
 {
@@ -281,7 +281,7 @@ updateNewton(const BVectorWell& dwells,
 
     // updating the total rates Q_t
     value_[WQTotal] = value_[WQTotal] - dwells[0][WQTotal] * relaxation_factor_rate;
-    if (zero_rate_target) {
+    if (stop_or_zero_rate_target) {
         value_[WQTotal] = 0.;
     }
     // TODO: here, we make sure it is zero for zero rated wells

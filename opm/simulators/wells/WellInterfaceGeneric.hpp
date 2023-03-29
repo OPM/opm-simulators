@@ -195,9 +195,8 @@ public:
 
     bool isPressureControlled(const WellState& well_state) const;
 
-    bool wellUnderZeroRateControl(const SummaryState& summary_state,
+    bool stopppedOrZeroRateTarget(const SummaryState& summary_state,
                                   const WellState& well_state) const;
-
 protected:
     bool getAllowCrossFlow() const;
 
@@ -211,6 +210,9 @@ protected:
     int polymerTable_() const;
     int polymerInjTable_() const;
     int polymerWaterTable_() const;
+
+    bool wellUnderZeroRateTarget(const SummaryState& summary_state,
+                                 const WellState& well_state) const;
 
     // definition of the struct OperabilityStatus
     struct OperabilityStatus {
