@@ -1058,7 +1058,7 @@ public:
 
         // update maximum water saturation and minimum pressure
         // used when ROCKCOMP is activated
-        asImp_().updateExplicitQuantitites_();
+        asImp_().updateExplicitQuantities_();
 
         wellModel_.beginTimeStep();
         if (enableAquifers_)
@@ -2079,7 +2079,7 @@ private:
     Implementation& asImp_()
     { return *static_cast<Implementation *>(this); }
 
-    void updateExplicitQuantitites_()
+    void updateExplicitQuantities_()
     {
         OPM_TIMEBLOCK(updateExplicitQuantities);
         const bool invalidateFromMaxWaterSat = updateMaxWaterSaturation_();
