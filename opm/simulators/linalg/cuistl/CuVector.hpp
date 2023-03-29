@@ -24,7 +24,9 @@
 #include <fmt/core.h>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/simulators/linalg/cuistl/detail/CuBlasHandle.hpp>
+#include <opm/simulators/linalg/cuistl/detail/safe_conversion.hpp>
 #include <vector>
+
 
 namespace Opm::cuistl
 {
@@ -80,6 +82,8 @@ public:
      * @note This does CPU to GPU transfer.
      * @note This does synchronous transfer.
      *
+     * @note For now data.size() needs to be within the limits of int due to restrctions of CuBlas.
+     *
      * @param data the vector to copy from
      */
     explicit CuVector(const std::vector<T>& data);
@@ -106,9 +110,11 @@ public:
     /**
      * @brief CuVector allocates new GPU memory of size numberOfElements * sizeof(T)
      *
+     * @note For now numberOfElements needs to be within the limits of int due to restrictions in cublas
+     *
      * @param numberOfElements number of T elements to allocate
      */
-    explicit CuVector(const int numberOfElements);
+    explicit CuVector(const size_t numberOfElements);
 
 
     /**
@@ -119,8 +125,10 @@ public:
      *
      * @param numberOfElements number of T elements to allocate
      * @param dataOnHost data on host/CPU
+     *
+     * @note For now numberOfElements needs to be within the limits of int due to restrictions in cublas
      */
-    CuVector(const T* dataOnHost, const int numberOfElements);
+    CuVector(const T* dataOnHost, const size_t numberOfElements);
 
     /**
      * @brief ~CuVector calls cudaFree
@@ -147,7 +155,7 @@ public:
     template <int BlockDimension>
     void copyFromHost(const Dune::BlockVector<Dune::FieldVector<T, BlockDimension>>& vector)
     {
-        if (m_numberOfElements != vector.dim()) {
+        if (detail::to_size_t(m_numberOfElements) != vector.dim()) {
             OPM_THROW(std::runtime_error,
                       fmt::format("Given incompatible vector size. CuVector has size {}, \n"
                                   "however, BlockVector has N() = {}, and dim = {}.",
@@ -169,7 +177,7 @@ public:
     template <int BlockDimension>
     void copyToHost(Dune::BlockVector<Dune::FieldVector<T, BlockDimension>>& vector) const
     {
-        if (m_numberOfElements != vector.dim()) {
+        if (detail::to_size_t(m_numberOfElements) != vector.dim()) {
             OPM_THROW(std::runtime_error,
                       fmt::format("Given incompatible vector size. CuVector has size {},\n however, the BlockVector "
                                   "has has N() = {}, and dim() = {}.",
@@ -188,7 +196,7 @@ public:
      * @note This does synchronous transfer.
      * @note assumes that this vector has numberOfElements elements
      */
-    void copyFromHost(const T* dataPointer, int numberOfElements);
+    void copyFromHost(const T* dataPointer, size_t numberOfElements);
 
     /**
      * @brief copyFromHost copies numberOfElements to the CPU memory dataPointer
@@ -197,7 +205,7 @@ public:
      * @note This does synchronous transfer.
      * @note assumes that this vector has numberOfElements elements
      */
-    void copyToHost(T* dataPointer, int numberOfElements) const;
+    void copyToHost(T* dataPointer, size_t numberOfElements) const;
 
     /**
      * @brief copyToHost copies data from an std::vector
@@ -328,6 +336,9 @@ public:
 
 private:
     T* m_dataOnDevice = nullptr;
+
+    // Note that we store this as int to make sure we are always cublas compatible.
+    // This gives the added benifit that a size_t to int conversion error occurs during construction.
     const int m_numberOfElements;
     detail::CuBlasHandle& m_cuBlasHandle;
 };

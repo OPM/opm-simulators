@@ -41,24 +41,25 @@ namespace Opm::cuistl
 
 template <class T>
 CuVector<T>::CuVector(const std::vector<T>& data)
-    : CuVector(data.data(), data.size())
+    : CuVector(data.data(), detail::to_int(data.size()))
 {
 }
 
 template <class T>
-CuVector<T>::CuVector(const int numberOfElements)
-    : m_numberOfElements(numberOfElements)
+CuVector<T>::CuVector(const size_t numberOfElements)
+    : m_numberOfElements(detail::to_int(numberOfElements))
     , m_cuBlasHandle(detail::CuBlasHandle::getInstance())
 {
-    OPM_CUDA_SAFE_CALL(cudaMalloc(&m_dataOnDevice, sizeof(T) * m_numberOfElements));
+    OPM_CUDA_SAFE_CALL(cudaMalloc(&m_dataOnDevice, sizeof(T) * detail::to_size_t(m_numberOfElements)));
 }
 
 template <class T>
-CuVector<T>::CuVector(const T* dataOnHost, const int numberOfElements)
+CuVector<T>::CuVector(const T* dataOnHost, const size_t numberOfElements)
     : CuVector(numberOfElements)
 {
 
-    OPM_CUDA_SAFE_CALL(cudaMemcpy(m_dataOnDevice, dataOnHost, m_numberOfElements * sizeof(T), cudaMemcpyHostToDevice));
+    OPM_CUDA_SAFE_CALL(cudaMemcpy(
+        m_dataOnDevice, dataOnHost, detail::to_size_t(m_numberOfElements) * sizeof(T), cudaMemcpyHostToDevice));
 }
 
 template <class T>
@@ -66,7 +67,7 @@ CuVector<T>&
 CuVector<T>::operator=(T scalar)
 {
     CHECKPOSITIVESIZE
-    detail::setVectorValue(data(), m_numberOfElements, scalar);
+    detail::setVectorValue(data(), detail::to_size_t(m_numberOfElements), scalar);
     return *this;
 }
 
@@ -79,8 +80,10 @@ CuVector<T>::operator=(const CuVector<T>& other)
     if (other.m_numberOfElements != m_numberOfElements) {
         OPM_THROW(std::invalid_argument, "Can only copy from vector of same size.");
     }
-    OPM_CUDA_SAFE_CALL(
-        cudaMemcpy(m_dataOnDevice, other.m_dataOnDevice, m_numberOfElements * sizeof(T), cudaMemcpyDeviceToDevice));
+    OPM_CUDA_SAFE_CALL(cudaMemcpy(m_dataOnDevice,
+                                  other.m_dataOnDevice,
+                                  detail::to_size_t(m_numberOfElements) * sizeof(T),
+                                  cudaMemcpyDeviceToDevice));
     return *this;
 }
 
@@ -90,8 +93,10 @@ CuVector<T>::CuVector(const CuVector<T>& other)
 {
     CHECKPOSITIVESIZE
     CHECKSIZE(other)
-    OPM_CUDA_SAFE_CALL(
-        cudaMemcpy(m_dataOnDevice, other.m_dataOnDevice, m_numberOfElements * sizeof(T), cudaMemcpyDeviceToDevice));
+    OPM_CUDA_SAFE_CALL(cudaMemcpy(m_dataOnDevice,
+                                  other.m_dataOnDevice,
+                                  detail::to_size_t(m_numberOfElements) * sizeof(T),
+                                  cudaMemcpyDeviceToDevice));
 }
 
 template <class T>
@@ -111,14 +116,19 @@ template <typename T>
 typename CuVector<T>::size_type
 CuVector<T>::dim() const
 {
-    return m_numberOfElements;
+    // Note that there is no way for m_numberOfElements to be non-positive,
+    // but for sanity we still use the safe conversion function here.
+    //
+    // We also doubt that this will lead to any performance penality, but should this prove
+    // to be false, this can be replaced by a simple cast to size_t
+    return detail::to_size_t(m_numberOfElements);
 }
 
 template <typename T>
 std::vector<T>
 CuVector<T>::asStdVector() const
 {
-    std::vector<T> temporary(m_numberOfElements);
+    std::vector<T> temporary(detail::to_size_t(m_numberOfElements));
     copyToHost(temporary);
     return temporary;
 }
@@ -231,7 +241,7 @@ CuVector<T>::operator-=(const CuVector<T>& other)
 
 template <class T>
 void
-CuVector<T>::copyFromHost(const T* dataPointer, int numberOfElements)
+CuVector<T>::copyFromHost(const T* dataPointer, size_t numberOfElements)
 {
     if (numberOfElements > dim()) {
         OPM_THROW(std::runtime_error,
@@ -244,7 +254,7 @@ CuVector<T>::copyFromHost(const T* dataPointer, int numberOfElements)
 
 template <class T>
 void
-CuVector<T>::copyToHost(T* dataPointer, int numberOfElements) const
+CuVector<T>::copyToHost(T* dataPointer, size_t numberOfElements) const
 {
     OPM_CUDA_SAFE_CALL(cudaMemcpy(dataPointer, data(), numberOfElements * sizeof(T), cudaMemcpyDeviceToHost));
 }
