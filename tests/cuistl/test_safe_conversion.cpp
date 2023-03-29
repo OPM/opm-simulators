@@ -23,13 +23,13 @@
 #include <boost/test/unit_test.hpp>
 #include <opm/simulators/linalg/cuistl/detail/safe_conversion.hpp>
 
-BOOST_AUTO_TEST_CASE(TestThrowsOutofRange)
+BOOST_AUTO_TEST_CASE(TestToIntThrowsOutofRange)
 {
     BOOST_CHECK_THROW(Opm::cuistl::detail::convert(size_t(std::numeric_limits<int>::max()) + size_t(1));
                       , std::invalid_argument);
 }
 
-BOOST_AUTO_TEST_CASE(TestConvertInRange)
+BOOST_AUTO_TEST_CASE(TestToIntConvertInRange)
 {
     // This might seem slow, but it is really fast:
     for (size_t i = 0; i <= size_t(1024 * 1024); ++i) {
@@ -38,4 +38,21 @@ BOOST_AUTO_TEST_CASE(TestConvertInRange)
 
     BOOST_CHECK_EQUAL(std::numeric_limits<int>::max(),
                       Opm::cuistl::detail::convert(size_t(std::numeric_limits<int>::max())));
+}
+
+
+BOOST_AUTO_TEST_CASE(TestToSizeTThrowsOutofRange)
+{
+    BOOST_CHECK_THROW(Opm::cuistl::detail::convert(-1);, std::invalid_argument);
+}
+
+BOOST_AUTO_TEST_CASE(TestToSizeTConvertInRange)
+{
+    // This might seem slow, but it is really fast:
+    for (int i = 0; i <= 1024 * 1024; ++i) {
+        BOOST_CHECK_EQUAL(size_t(i), Opm::cuistl::detail::convert(i));
+    }
+
+    BOOST_CHECK_EQUAL(size_t(std::numeric_limits<int>::max()),
+                      Opm::cuistl::detail::convert(std::numeric_limits<int>::max()));
 }
