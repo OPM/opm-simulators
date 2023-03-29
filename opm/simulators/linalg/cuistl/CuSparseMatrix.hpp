@@ -25,6 +25,7 @@
 #include <opm/simulators/linalg/cuistl/CuVector.hpp>
 #include <opm/simulators/linalg/cuistl/detail/CuMatrixDescription.hpp>
 #include <opm/simulators/linalg/cuistl/detail/CuSparseHandle.hpp>
+#include <opm/simulators/linalg/cuistl/detail/safe_conversion.hpp>
 #include <vector>
 
 namespace Opm::cuistl
@@ -56,12 +57,15 @@ public:
     //! \param[in] numberOfNonzeroElements number of nonzero elements
     //! \param[in] blockSize size of each block matrix (typically 3)
     //! \param[in] numberOfRows the number of rows
+    //!
+    //! \note We assume numberOfNonzeroBlocks, blockSize and numberOfRows all are representable as int due to
+    //!       restrictions in the current version of cusparse. This might change in future versions.
     CuSparseMatrix(const T* nonZeroElements,
                    const int* rowIndices,
                    const int* columnIndices,
-                   int numberOfNonzeroBlocks,
-                   int blockSize,
-                   int numberOfRows);
+                   size_t numberOfNonzeroBlocks,
+                   size_t blockSize,
+                   size_t numberOfRows);
 
     // TODO: Handle copy ctor and operator=
 
@@ -101,7 +105,12 @@ public:
      */
     size_t N() const
     {
-        return m_numberOfRows;
+        // Technically this safe conversion is not needed since we enforce these to be
+        // non-negative in the constructor, but keeping them for added sanity for now.
+        //
+        // We don't believe this will yield any performance penality (it's used too far away from the inner loop),
+        // but should that be false, they can be removed.
+        return detail::to_size_t(m_numberOfRows);
     }
 
     /**
@@ -110,7 +119,12 @@ public:
      */
     size_t nonzeroes() const
     {
-        return m_numberOfNonzeroBlocks;
+        // Technically this safe conversion is not needed since we enforce these to be
+        // non-negative in the constructor, but keeping them for added sanity for now.
+        //
+        // We don't believe this will yield any performance penality (it's used too far away from the inner loop),
+        // but should that be false, they can be removed.
+        return detail::to_size_t(m_numberOfNonzeroBlocks);
     }
 
     /**
@@ -179,17 +193,27 @@ public:
      * This is equivalent to matrix.N() * matrix.blockSize()
      * @return matrix.N() * matrix.blockSize()
      */
-    int dim() const
+    size_t dim() const
     {
-        return m_blockSize * m_numberOfRows;
+        // Technically this safe conversion is not needed since we enforce these to be
+        // non-negative in the constructor, but keeping them for added sanity for now.
+        //
+        // We don't believe this will yield any performance penality (it's used too far away from the inner loop),
+        // but should that be false, they can be removed.
+        return detail::to_size_t(m_blockSize) * detail::to_size_t(m_numberOfRows);
     }
 
     /**
      * @brief blockSize size of the blocks
      */
-    int blockSize() const
+    size_t blockSize() const
     {
-        return m_blockSize;
+        // Technically this safe conversion is not needed since we enforce these to be
+        // non-negative in the constructor, but keeping them for added sanity for now.
+        //
+        // We don't believe this will yield any performance penality (it's used too far away from the inner loop),
+        // but should that be false, they can be removed.
+        return detail::to_size_t(m_blockSize);
     }
 
     /**
@@ -244,6 +268,11 @@ private:
     CuVector<T> m_nonZeroElements;
     CuVector<int> m_columnIndices;
     CuVector<int> m_rowIndices;
+
+    // Notice that we store these three as int to make sure we are cusparse compatible.
+    //
+    // This gives the added benifit of checking the size constraints at construction of the matrix
+    // rather than in some call to cusparse.
     const int m_numberOfNonzeroBlocks;
     const int m_numberOfRows;
     const int m_blockSize;

@@ -44,15 +44,15 @@ template <class T>
 CuSparseMatrix<T>::CuSparseMatrix(const T* nonZeroElements,
                                   const int* rowIndices,
                                   const int* columnIndices,
-                                  int numberOfNonzeroBlocks,
-                                  int blockSize,
-                                  int numberOfRows)
+                                  size_t numberOfNonzeroBlocks,
+                                  size_t blockSize,
+                                  size_t numberOfRows)
     : m_nonZeroElements(nonZeroElements, numberOfNonzeroBlocks * blockSize * blockSize)
     , m_columnIndices(columnIndices, numberOfNonzeroBlocks)
     , m_rowIndices(rowIndices, numberOfRows + 1)
-    , m_numberOfNonzeroBlocks(numberOfNonzeroBlocks)
-    , m_numberOfRows(numberOfRows)
-    , m_blockSize(blockSize)
+    , m_numberOfNonzeroBlocks(detail::to_int(numberOfNonzeroBlocks))
+    , m_numberOfRows(detail::to_int(numberOfRows))
+    , m_blockSize(detail::to_int(blockSize))
     , m_matrixDescription(detail::createMatrixDescription())
     , m_cusparseHandle(detail::CuSparseHandle::getInstance())
 {
@@ -75,11 +75,11 @@ CuSparseMatrix<T>::fromMatrix(const MatrixType& matrix)
 
     rowIndices.push_back(0);
 
-    const int blockSize = matrix[0][0].N();
-    const int numberOfRows = matrix.N();
-    const int numberOfNonzeroBlocks = matrix.nonzeroes();
-    const int numberOfNonzeroElements = blockSize * blockSize * numberOfNonzeroBlocks;
+    const size_t blockSize = matrix[0][0].N();
+    const size_t numberOfRows = matrix.N();
+    const size_t numberOfNonzeroBlocks = matrix.nonzeroes();
 #ifndef CUSPARSE_ASSUME_UNSAFE_SPARSITY
+    const size_t numberOfNonzeroElements = blockSize * blockSize * numberOfNonzeroBlocks;
     std::vector<T> nonZeroElementsData;
     // TODO: [perf] Can we avoid building nonZeroElementsData?
     nonZeroElementsData.reserve(numberOfNonzeroElements);
@@ -90,14 +90,14 @@ CuSparseMatrix<T>::fromMatrix(const MatrixType& matrix)
         for (auto columnIterator = row.begin(); columnIterator != row.end(); ++columnIterator) {
             columnIndices.push_back(columnIterator.index());
 #ifndef CUSPARSE_ASSUME_UNSAFE_SPARSITY
-            for (int c = 0; c < blockSize; ++c) {
-                for (int d = 0; d < blockSize; ++d) {
+            for (size_t c = 0; c < blockSize; ++c) {
+                for (size_t d = 0; d < blockSize; ++d) {
                     nonZeroElementsData.push_back((*columnIterator)[c][d]);
                 }
             }
 #endif
         }
-        rowIndices.push_back(columnIndices.size());
+        rowIndices.push_back(detail::to_int(columnIndices.size()));
     }
 #ifndef CUSPARSE_ASSUME_UNSAFE_SPARSITY
     auto nonZeroElements = nonZeroElementsData.data();
@@ -106,7 +106,7 @@ CuSparseMatrix<T>::fromMatrix(const MatrixType& matrix)
 #endif
     // Sanity check
     // h_rows and h_cols could be changed to 'unsigned int', but cusparse expects 'int'
-    OPM_ERROR_IF(size_t(rowIndices[matrix.N()]) != matrix.nonzeroes(),
+    OPM_ERROR_IF(rowIndices[matrix.N()] != detail::to_int(matrix.nonzeroes()),
                  "Error size of rows do not sum to number of nonzeroes in CuSparseMatrix.");
     OPM_ERROR_IF(rowIndices.size() != numberOfRows + 1, "Row indices do not match for CuSparseMatrix.");
     OPM_ERROR_IF(columnIndices.size() != numberOfNonzeroBlocks, "Column indices do not match for CuSparseMatrix.");
@@ -125,17 +125,18 @@ CuSparseMatrix<T>::updateNonzeroValues(const MatrixType& matrix)
     OPM_ERROR_IF(matrix[0][0].N() != blockSize(), "Matrix does not have the same blocksize.");
     OPM_ERROR_IF(matrix.N() != N(), "Matrix does not have the same number of rows.");
 
-    const int numberOfRows = N();
-    const int numberOfNonzeroBlocks = nonzeroes();
-    const int numberOfNonzeroElements = blockSize() * blockSize() * numberOfNonzeroBlocks;
 #ifndef CUSPARSE_ASSUME_UNSAFE_SPARSITY
+    const size_t numberOfRows = N();
+    const size_t numberOfNonzeroBlocks = nonzeroes();
+    const size_t numberOfNonzeroElements = blockSize() * blockSize() * numberOfNonzeroBlocks;
+
     std::vector<T> nonZeroElementsData;
     // TODO: [perf] Can we avoid building nonZeroElementsData?
     nonZeroElementsData.reserve(numberOfNonzeroElements);
     for (auto& row : matrix) {
         for (auto columnIterator = row.begin(); columnIterator != row.end(); ++columnIterator) {
-            for (int c = 0; c < blockSize(); ++c) {
-                for (int d = 0; d < blockSize(); ++d) {
+            for (size_t c = 0; c < blockSize(); ++c) {
+                for (size_t d = 0; d < blockSize(); ++d) {
                     nonZeroElementsData.push_back((*columnIterator)[c][d]);
                 }
             }
@@ -182,13 +183,11 @@ CuSparseMatrix<T>::mv(const CuVector<T>& x, CuVector<T>& y) const
 {
     CHECK_SIZE(x)
     CHECK_SIZE(y)
-    if (blockSize() < 2) {
+    if (blockSize() < 2u) {
         OPM_THROW(
             std::invalid_argument,
             "CuSparseMatrix<T>::usmv and CuSparseMatrix<T>::mv are only implemented for block sizes greater than 1.");
     }
-    const auto numberOfRows = N();
-    const auto numberOfNonzeroBlocks = nonzeroes();
     const auto nonzeroValues = getNonZeroValues().data();
 
     auto rowIndices = getRowIndices().data();
@@ -198,9 +197,9 @@ CuSparseMatrix<T>::mv(const CuVector<T>& x, CuVector<T>& y) const
     OPM_CUSPARSE_SAFE_CALL(detail::cusparseBsrmv(m_cusparseHandle.get(),
                                                  detail::CUSPARSE_MATRIX_ORDER,
                                                  CUSPARSE_OPERATION_NON_TRANSPOSE,
-                                                 numberOfRows,
-                                                 numberOfRows,
-                                                 numberOfNonzeroBlocks,
+                                                 m_numberOfRows,
+                                                 m_numberOfRows,
+                                                 m_numberOfNonzeroBlocks,
                                                  &alpha,
                                                  m_matrixDescription->get(),
                                                  nonzeroValues,
@@ -218,13 +217,12 @@ CuSparseMatrix<T>::umv(const CuVector<T>& x, CuVector<T>& y) const
 {
     CHECK_SIZE(x)
     CHECK_SIZE(y)
-    if (blockSize() < 2) {
+    if (blockSize() < 2u) {
         OPM_THROW(
             std::invalid_argument,
             "CuSparseMatrix<T>::usmv and CuSparseMatrix<T>::mv are only implemented for block sizes greater than 1.");
     }
-    const auto numberOfRows = N();
-    const auto numberOfNonzeroBlocks = nonzeroes();
+
     const auto nonzeroValues = getNonZeroValues().data();
 
     auto rowIndices = getRowIndices().data();
@@ -234,15 +232,15 @@ CuSparseMatrix<T>::umv(const CuVector<T>& x, CuVector<T>& y) const
     OPM_CUSPARSE_SAFE_CALL(detail::cusparseBsrmv(m_cusparseHandle.get(),
                                                  detail::CUSPARSE_MATRIX_ORDER,
                                                  CUSPARSE_OPERATION_NON_TRANSPOSE,
-                                                 numberOfRows,
-                                                 numberOfRows,
-                                                 numberOfNonzeroBlocks,
+                                                 m_numberOfRows,
+                                                 m_numberOfRows,
+                                                 m_numberOfNonzeroBlocks,
                                                  &alpha,
                                                  m_matrixDescription->get(),
                                                  nonzeroValues,
                                                  rowIndices,
                                                  columnIndices,
-                                                 blockSize(),
+                                                 m_blockSize,
                                                  x.data(),
                                                  &beta,
                                                  y.data()));
