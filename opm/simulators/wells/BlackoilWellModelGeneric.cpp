@@ -549,7 +549,7 @@ checkGroupHigherConstraints(const Group& group,
             rates[phasePos] = -comm_.sum(local_current_rate);
         }
         std::vector<double> resv_coeff(phase_usage_.num_phases, 0.0);
-        calcRates(fipnum, pvtreg, resv_coeff);
+        calcRates(fipnum, pvtreg, this->groupState().production_rates(group.name()), resv_coeff);
         // Check higher up only if under individual (not FLD) control.
         const Group::ProductionCMode& currentControl = this->groupState().production_control(group.name());
         if (currentControl != Group::ProductionCMode::FLD && group.productionGroupControlAvailable()) {

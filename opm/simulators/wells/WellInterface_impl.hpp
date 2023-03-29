@@ -900,7 +900,7 @@ namespace Opm
             case Well::ProducerCMode::RESV:
             {
                 std::vector<double> convert_coeff(this->number_of_phases_, 1.0);
-                this->rateConverter_.calcCoeff(/*fipreg*/ 0, this->pvtRegionIdx_, convert_coeff);
+                this->rateConverter_.calcCoeff(/*fipreg*/ 0, this->pvtRegionIdx_, ws.surface_rates, convert_coeff);
                 double total_res_rate = 0.0;
                 for (int p = 0; p<np; ++p) {
                     total_res_rate -= ws.surface_rates[p] * convert_coeff[p];

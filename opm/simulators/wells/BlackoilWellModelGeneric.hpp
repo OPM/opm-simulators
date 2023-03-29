@@ -312,6 +312,7 @@ protected:
                      double wsolvent);
     virtual void calcRates(const int fipnum,
                            const int pvtreg,
+                           const std::vector<double>& production_rates,
                            std::vector<double>& resv_coeff) = 0;
     virtual void calcInjRates(const int fipnum,
                            const int pvtreg,
