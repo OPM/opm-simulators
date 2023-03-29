@@ -266,6 +266,13 @@ apply(Vector& rhs,
 }
 
 template<class Matrix, class Vector>
+bool BdaSolverInfo<Matrix,Vector>::
+gpuActive()
+{
+    return bridge_->getUseGpu();
+}
+
+template<class Matrix, class Vector>
 template<class Grid>
 void BdaSolverInfo<Matrix,Vector>::
 blockJacobiAdjacency(const Grid& grid,

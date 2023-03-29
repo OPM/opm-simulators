@@ -149,6 +149,8 @@ struct BdaSolverInfo
              Vector& x,
              Dune::InverseOperatorResult& result);
 
+  bool gpuActive();
+
   int numJacobiBlocks_ = 0;
 
 private:
@@ -351,7 +353,14 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             if (isParallel() && prm_.get<std::string>("preconditioner.type") != "ParOverILU0") {
                 detail::makeOverlapRowsInvalid(getMatrix(), overlapRows_);
             }
+#if COMPILE_BDA_BRIDGE
+            if(!bdaBridge->gpuActive()){
+                prepareFlexibleSolver();
+            }
+#else
             prepareFlexibleSolver();
+#endif
+
             firstcall = false;
         }
 
@@ -401,6 +410,11 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
 #endif
             {
                 OPM_TIMEBLOCK(flexibleSolverApply);
+#if COMPILE_BDA_BRIDGE
+                if(bdaBridge->gpuActive()){
+                    prepareFlexibleSolver();
+                }
+#endif
                 assert(flexibleSolver_.solver_);
                 flexibleSolver_.solver_->apply(x, *rhs_, result);
             }
