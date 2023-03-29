@@ -437,7 +437,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             if(result.reduction < parameters_.relaxed_linear_solver_reduction_){
                 std::stringstream ss;
                 ss<< "Full linear solver tolerance not achived. The reduction is:" << result.reduction
-                  << " after " << result.iterations << " iteraions ";
+                  << " after " << result.iterations << " iterations ";
                 OpmLog::warning(ss.str());
                 converged_ = true;
             }   
