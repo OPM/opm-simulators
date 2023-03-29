@@ -164,6 +164,7 @@ if(CUDA_FOUND)
   list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/detail/CuMatrixDescription.hpp)
   list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/detail/CuSparseResource.hpp)
   list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/detail/CuSparseResource_impl.hpp)
+  list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/detail/safe_conversion.hpp)
 
 
 
@@ -252,6 +253,8 @@ if(CUDA_FOUND)
   list(APPEND TEST_SOURCE_FILES tests/cuistl/test_cusparse_handle.cpp)
   list(APPEND TEST_SOURCE_FILES tests/cuistl/test_cuvector.cpp)
   list(APPEND TEST_SOURCE_FILES tests/cuistl/test_cusparsematrix.cpp)
+  list(APPEND TEST_SOURCE_FILES tests/cuistl/test_safe_conversion.cpp)
+
 endif()
 if(OPENCL_FOUND)
   list(APPEND TEST_SOURCE_FILES tests/test_openclSolver.cpp)
