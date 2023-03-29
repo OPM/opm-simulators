@@ -74,10 +74,14 @@ public:
     /**
      * @brief fromMatrix creates a new matrix with the same block size and values as the given matrix
      * @param matrix the matrix to copy from
+     * @param copyNonZeroElementsDirectly if true will do a memcpy from matrix[0][0][0][0], otherwise will build up the
+     * non-zero elements by looping over the matrix. Note that setting this to true will yield a performance increase,
+     * but might not always yield correct results depending on how the matrix matrix has been initialized. If unsure,
+     * leave it as false.
      * @tparam MatrixType is assumed to be a Dune::BCRSMatrix compatible matrix.
      */
     template <class MatrixType>
-    static CuSparseMatrix<T> fromMatrix(const MatrixType& matrix);
+    static CuSparseMatrix<T> fromMatrix(const MatrixType& matrix, bool copyNonZeroElementsDirectly = false);
 
     /**
      * @brief setUpperTriangular sets the CuSparse flag that this is an upper diagonal (with unit diagonal) matrix.
@@ -257,12 +261,15 @@ public:
     /**
      * @brief updateNonzeroValues updates the non-zero values by using the non-zero values of the supplied matrix
      * @param matrix the matrix to extract the non-zero values from
-     *
+     * @param copyNonZeroElementsDirectly if true will do a memcpy from matrix[0][0][0][0], otherwise will build up the
+     * non-zero elements by looping over the matrix. Note that setting this to true will yield a performance increase,
+     * but might not always yield correct results depending on how the matrix matrix has been initialized. If unsure,
+     * leave it as false.
      * @note This assumes the given matrix has the same sparsity pattern.
      * @tparam MatrixType is assumed to be a Dune::BCRSMatrix compatible matrix.
      */
     template <class MatrixType>
-    void updateNonzeroValues(const MatrixType& matrix);
+    void updateNonzeroValues(const MatrixType& matrix, bool copyNonZeroElementsDirectly = false);
 
 private:
     CuVector<T> m_nonZeroElements;

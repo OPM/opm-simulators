@@ -27,7 +27,6 @@
 #include <opm/simulators/linalg/cuistl/detail/cusparse_safe_call.hpp>
 #include <opm/simulators/linalg/cuistl/detail/cusparse_wrapper.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>
-#define CUSPARSE_ASSUME_UNSAFE_SPARSITY 1
 
 #define CHECK_SIZE(x)                                                                                                  \
     if (x.dim() != blockSize() * N()) {                                                                                \
@@ -39,6 +38,34 @@
 
 namespace Opm::cuistl
 {
+
+namespace
+{
+    template <class T, class M>
+    std::vector<T> extractNonzeroValues(const M& matrix)
+    {
+        const size_t blockSize = matrix[0][0].N();
+        const size_t numberOfNonzeroBlocks = matrix.nonzeroes();
+        const size_t numberOfNonzeroElements = blockSize * blockSize * numberOfNonzeroBlocks;
+
+        std::vector<T> nonZeroElementsData;
+        // TODO: [perf] Can we avoid building nonZeroElementsData?
+        nonZeroElementsData.reserve(numberOfNonzeroElements);
+        for (auto& row : matrix) {
+            for (auto columnIterator = row.begin(); columnIterator != row.end(); ++columnIterator) {
+                for (size_t c = 0; c < blockSize; ++c) {
+                    for (size_t d = 0; d < blockSize; ++d) {
+                        nonZeroElementsData.push_back((*columnIterator)[c][d]);
+                    }
+                }
+            }
+        }
+
+        return nonZeroElementsData;
+    }
+} // namespace
+
+
 
 template <class T>
 CuSparseMatrix<T>::CuSparseMatrix(const T* nonZeroElements,
@@ -67,7 +94,7 @@ CuSparseMatrix<T>::~CuSparseMatrix()
 template <typename T>
 template <typename MatrixType>
 CuSparseMatrix<T>
-CuSparseMatrix<T>::fromMatrix(const MatrixType& matrix)
+CuSparseMatrix<T>::fromMatrix(const MatrixType& matrix, bool copyNonZeroElementsDirectly)
 {
     // TODO: Do we need this intermediate storage? Or this shuffling of data?
     std::vector<int> columnIndices;
@@ -78,32 +105,16 @@ CuSparseMatrix<T>::fromMatrix(const MatrixType& matrix)
     const size_t blockSize = matrix[0][0].N();
     const size_t numberOfRows = matrix.N();
     const size_t numberOfNonzeroBlocks = matrix.nonzeroes();
-#ifndef CUSPARSE_ASSUME_UNSAFE_SPARSITY
-    const size_t numberOfNonzeroElements = blockSize * blockSize * numberOfNonzeroBlocks;
-    std::vector<T> nonZeroElementsData;
-    // TODO: [perf] Can we avoid building nonZeroElementsData?
-    nonZeroElementsData.reserve(numberOfNonzeroElements);
-#endif
+
     columnIndices.reserve(numberOfNonzeroBlocks);
     rowIndices.reserve(numberOfRows + 1);
     for (auto& row : matrix) {
         for (auto columnIterator = row.begin(); columnIterator != row.end(); ++columnIterator) {
             columnIndices.push_back(columnIterator.index());
-#ifndef CUSPARSE_ASSUME_UNSAFE_SPARSITY
-            for (size_t c = 0; c < blockSize; ++c) {
-                for (size_t d = 0; d < blockSize; ++d) {
-                    nonZeroElementsData.push_back((*columnIterator)[c][d]);
-                }
-            }
-#endif
         }
         rowIndices.push_back(detail::to_int(columnIndices.size()));
     }
-#ifndef CUSPARSE_ASSUME_UNSAFE_SPARSITY
-    auto nonZeroElements = nonZeroElementsData.data();
-#else
-    const T* nonZeroElements = static_cast<const T*>(&((matrix[0][0][0][0])));
-#endif
+
     // Sanity check
     // h_rows and h_cols could be changed to 'unsigned int', but cusparse expects 'int'
     OPM_ERROR_IF(rowIndices[matrix.N()] != detail::to_int(matrix.nonzeroes()),
@@ -112,41 +123,38 @@ CuSparseMatrix<T>::fromMatrix(const MatrixType& matrix)
     OPM_ERROR_IF(columnIndices.size() != numberOfNonzeroBlocks, "Column indices do not match for CuSparseMatrix.");
 
 
-    return CuSparseMatrix<T>(
-        nonZeroElements, rowIndices.data(), columnIndices.data(), numberOfNonzeroBlocks, blockSize, numberOfRows);
+    if (copyNonZeroElementsDirectly) {
+        const T* nonZeroElements = static_cast<const T*>(&((matrix[0][0][0][0])));
+        return CuSparseMatrix<T>(
+            nonZeroElements, rowIndices.data(), columnIndices.data(), numberOfNonzeroBlocks, blockSize, numberOfRows);
+    } else {
+        auto nonZeroElementData = extractNonzeroValues<T>(matrix);
+        return CuSparseMatrix<T>(nonZeroElementData.data(),
+                                 rowIndices.data(),
+                                 columnIndices.data(),
+                                 numberOfNonzeroBlocks,
+                                 blockSize,
+                                 numberOfRows);
+    }
 }
 
 template <class T>
 template <class MatrixType>
 void
-CuSparseMatrix<T>::updateNonzeroValues(const MatrixType& matrix)
+CuSparseMatrix<T>::updateNonzeroValues(const MatrixType& matrix, bool copyNonZeroElementsDirectly)
 {
     OPM_ERROR_IF(nonzeroes() != matrix.nonzeroes(), "Matrix does not have the same number of non-zero elements.");
     OPM_ERROR_IF(matrix[0][0].N() != blockSize(), "Matrix does not have the same blocksize.");
     OPM_ERROR_IF(matrix.N() != N(), "Matrix does not have the same number of rows.");
 
-#ifndef CUSPARSE_ASSUME_UNSAFE_SPARSITY
-    const size_t numberOfRows = N();
-    const size_t numberOfNonzeroBlocks = nonzeroes();
-    const size_t numberOfNonzeroElements = blockSize() * blockSize() * numberOfNonzeroBlocks;
+    if (!copyNonZeroElementsDirectly) {
+        auto nonZeroElementsData = extractNonzeroValues<T>(matrix);
+        m_nonZeroElements.copyFromHost(nonZeroElementsData.data(), nonzeroes() * blockSize() * blockSize());
 
-    std::vector<T> nonZeroElementsData;
-    // TODO: [perf] Can we avoid building nonZeroElementsData?
-    nonZeroElementsData.reserve(numberOfNonzeroElements);
-    for (auto& row : matrix) {
-        for (auto columnIterator = row.begin(); columnIterator != row.end(); ++columnIterator) {
-            for (size_t c = 0; c < blockSize(); ++c) {
-                for (size_t d = 0; d < blockSize(); ++d) {
-                    nonZeroElementsData.push_back((*columnIterator)[c][d]);
-                }
-            }
-        }
+    } else {
+        const T* newNonZeroElements = static_cast<const T*>(&((matrix[0][0][0][0])));
+        m_nonZeroElements.copyFromHost(newNonZeroElements, nonzeroes() * blockSize() * blockSize());
     }
-    auto newNonZeroElements = nonZeroElementsData.data();
-#else
-    const T* newNonZeroElements = static_cast<const T*>(&((matrix[0][0][0][0])));
-#endif
-    m_nonZeroElements.copyFromHost(newNonZeroElements, nonzeroes() * blockSize() * blockSize());
 }
 
 template <typename T>
@@ -286,13 +294,13 @@ CuSparseMatrix<T>::usmv(T alpha, const CuVector<T>& x, CuVector<T>& y) const
 
 #define INSTANTIATE_CUSPARSE_DUNE_MATRIX_CONSTRUCTION_FUNTIONS(realtype, blockdim)                                     \
     template CuSparseMatrix<realtype> CuSparseMatrix<realtype>::fromMatrix(                                            \
-        const Dune::BCRSMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>&);                                     \
+        const Dune::BCRSMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>&, bool);                               \
     template CuSparseMatrix<realtype> CuSparseMatrix<realtype>::fromMatrix(                                            \
-        const Dune::BCRSMatrix<Opm::MatrixBlock<realtype, blockdim, blockdim>>&);                                      \
+        const Dune::BCRSMatrix<Opm::MatrixBlock<realtype, blockdim, blockdim>>&, bool);                                \
     template void CuSparseMatrix<realtype>::updateNonzeroValues(                                                       \
-        const Dune::BCRSMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>&);                                     \
+        const Dune::BCRSMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>&, bool);                               \
     template void CuSparseMatrix<realtype>::updateNonzeroValues(                                                       \
-        const Dune::BCRSMatrix<Opm::MatrixBlock<realtype, blockdim, blockdim>>&)
+        const Dune::BCRSMatrix<Opm::MatrixBlock<realtype, blockdim, blockdim>>&, bool)
 
 template class CuSparseMatrix<float>;
 template class CuSparseMatrix<double>;
