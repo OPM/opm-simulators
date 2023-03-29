@@ -138,6 +138,17 @@ public:
     Scalar referencePorosity(unsigned elementIdx, unsigned timeIdx) const
     { return referencePorosity_[timeIdx][elementIdx]; }
 
+
+    /*!
+     * \brief Returns the rockFraction of an element
+     *
+     * Usually 1 - porosity, but if pvmult is used to modify porosity
+     * we will apply the same multiplier to the rock fraction
+     * i.e. pvmult*(1 - porosity) and thus interpret multpv as a volume
+     * multiplier. This is to avoid negative rock volume for pvmult*porosity > 1
+     */
+    Scalar rockFraction(unsigned elementIdx, unsigned timeIdx) const;
+
     /*!
      * \brief Sets the porosity of an element
      *
