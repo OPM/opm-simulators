@@ -918,15 +918,18 @@ GasLiftSingleWellGeneric::increaseALQtoMinALQ_(const double orig_alq, const Limi
     LimitedRates rates = orig_rates;
     while (!stop_iteration) {
         double temp_alq = alq + this->increment_;
+
+        alq = temp_alq;
         if (temp_alq >= min_alq)
             break;
+
         auto temp_rates = computeLimitedWellRatesWithALQ_(temp_alq);
-        if (!temp_rates)
-            break;
-        alq = temp_alq;
-        rates = *temp_rates;
-        if (rates.limited())
-            break;
+
+        if (temp_rates) {
+            rates = *temp_rates;
+            if (rates.limited())
+                break;
+        }
     }
     return std::make_pair(rates, alq);
 }
