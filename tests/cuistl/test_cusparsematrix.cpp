@@ -52,7 +52,6 @@ BOOST_AUTO_TEST_CASE(TestConstruction1D)
     const int nonZeroes = N * 3 - 2;
     using M = Dune::FieldMatrix<double, 1, 1>;
     using SpMatrix = Dune::BCRSMatrix<M>;
-    using Vector = Dune::BlockVector<Dune::FieldVector<double, 1>>;
 
     SpMatrix B(N, N, nonZeroes, SpMatrix::row_wise);
     for (auto row = B.createbegin(); row != B.createend(); ++row) {
