@@ -341,6 +341,9 @@ private:
     // This gives the added benifit that a size_t to int conversion error occurs during construction.
     const int m_numberOfElements;
     detail::CuBlasHandle& m_cuBlasHandle;
+
+    void assertSameSize(const CuVector<T>& other) const;
+    void assertHasElements() const;
 };
 } // namespace Opm::cuistl
 #endif
