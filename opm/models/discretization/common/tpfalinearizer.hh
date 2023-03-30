@@ -532,6 +532,15 @@ public:
 private:
     void linearize_()
     {
+        // This check should be removed once this is addressed by
+        // for example storing the previous timesteps' values for
+        // rsmax (for DRSDT) and similar.
+        if (!problem_().recycleFirstIterationStorage()) {
+            if (!model_().storeIntensiveQuantities() && !model_().enableStorageCache()) {
+                OPM_THROW(std::runtime_error, "Must have cached either IQs or storage when we cannot recycle.");
+            }
+        }
+
         OPM_TIMEBLOCK(linearize);
         resetSystem_();
         unsigned numCells = model_().numTotalDof();
@@ -547,11 +556,7 @@ private:
             MatrixBlock bMat(0.0);
             ADVectorBlock adres(0.0);
             ADVectorBlock darcyFlux(0.0);
-            const IntensiveQuantities* intQuantsInP = model_().cachedIntensiveQuantities(globI, /*timeIdx*/ 0);
-            if (intQuantsInP == nullptr) {
-                throw std::logic_error("Missing updated intensive quantities for cell " + std::to_string(globI));
-            }
-            const IntensiveQuantities& intQuantsIn = *intQuantsInP;
+            const IntensiveQuantities& intQuantsIn = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
 
             // Flux term.
             {
@@ -565,11 +570,7 @@ private:
                 bMat = 0.0;
                 adres = 0.0;
                 darcyFlux = 0.0;
-                const IntensiveQuantities* intQuantsExP = model_().cachedIntensiveQuantities(globJ, /*timeIdx*/ 0);
-                if (intQuantsExP == nullptr) {
-                    throw std::logic_error("Missing updated intensive quantities for cell " + std::to_string(globJ) + " when assembling fluxes for cell " + std::to_string(globI));
-                }
-                const IntensiveQuantities& intQuantsEx = *intQuantsExP;
+                const IntensiveQuantities& intQuantsEx = model_().intensiveQuantities(globJ, /*timeIdx*/ 0);
                 LocalResidual::computeFlux(
                        adres, darcyFlux, problem_(), globI, globJ, intQuantsIn, intQuantsEx,
                            nbInfo.trans, nbInfo.faceArea, nbInfo.faceDirection);
@@ -605,15 +606,36 @@ private:
                 LocalResidual::computeStorage(adres, intQuantsIn);
             }
             setResAndJacobi(res, bMat, adres);
-            // TODO: check recycleFirst etc.
-            // first we use it as storage cache
-            if (model_().newtonMethod().numIterations() == 0) {
-                model_().updateCachedStorage(globI, /*timeIdx=*/1, res);
+            // Either use cached storage term, or compute it on the fly.
+            if (model_().enableStorageCache()) {
+                // The cached storage for timeIdx 0 (current time) is not
+                // used, but after storage cache is shifted at the end of the
+                // timestep, it will become cached storage for timeIdx 1.
+                model_().updateCachedStorage(globI, /*timeIdx=*/0, res);
+                if (model_().newtonMethod().numIterations() == 0) {
+                    // Need to update the storage cache.
+                    if (problem_().recycleFirstIterationStorage()) {
+                        // Assumes nothing have changed in the system which
+                        // affects masses calculated from primary variables.
+                        model_().updateCachedStorage(globI, /*timeIdx=*/1, res);
+                    } else {
+                        Dune::FieldVector<Scalar, numEq> tmp;
+                        IntensiveQuantities intQuantOld = model_().intensiveQuantities(globI, 1);
+                        LocalResidual::computeStorage(tmp, intQuantOld);
+                        model_().updateCachedStorage(globI, /*timeIdx=*/1, tmp);
+                    }
+                }
+                res -= model_().cachedStorage(globI, 1);
+            } else {
+                OPM_TIMEBLOCK_LOCAL(computeStorage0);
+                Dune::FieldVector<Scalar, numEq> tmp;
+                IntensiveQuantities intQuantOld = model_().intensiveQuantities(globI, 1);
+                LocalResidual::computeStorage(tmp, intQuantOld);
+                // assume volume do not change
+                res -= tmp;
             }
-            res -= model_().cachedStorage(globI, 1);
             res *= storefac;
             bMat *= storefac;
-            // residual_[globI] -= model_().cachedStorage(globI, 1); //*storefac;
             residual_[globI] += res;
             //SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
             *diagMatAddress_[globI] += bMat;
