@@ -1592,10 +1592,14 @@ public:
             const auto& dirichlet = dirichlet_(dir)[globalDofIdx];
             if (freebc_(dir)[globalDofIdx])
                 values.setFreeFlow(context, spaceIdx, timeIdx, boundaryFluidState(globalDofIdx, indexInInside));
+            else if (thermalbc_(dir)[globalDofIdx])
+                values.setThermalFlow(context, spaceIdx, timeIdx, boundaryFluidState(globalDofIdx, indexInInside));
             else if (std::get<0>(dirichlet) != BCComponent::NONE)
                 values.setFreeFlow(context, spaceIdx, timeIdx, boundaryFluidState(globalDofIdx, indexInInside));
-            else
+            else {
+                // TODO account for enthalpy flux.
                 values.setMassRate(massratebc_(dir)[globalDofIdx], pvtRegionIdx);
+            }
         }
     }
 
@@ -2864,6 +2868,7 @@ private:
 
             massratebc_.resize(numElems, 0.0);
             freebc_.resize(numElems, false);
+            thermalbc_.resize(numElems, false);
             dirichlet_.resize(numElems, {BCComponent::NONE, 0.0,0.0});
 
             auto loopAndApply = [&cartesianToCompressedElemIdx,
@@ -2931,7 +2936,19 @@ private:
                     if (initconfig.restartRequested()) {
                         throw std::logic_error("restart is not compatible with using free boundary conditions");
                     }
-                } else if (type == BCType::DIRICHLET) {
+                } else if (type == BCType::THERMAL) {
+                    std::vector<bool>& data = thermalbc_(bcface.dir);
+                    loopAndApply(bcface,
+                                 [&data](int elemIdx) { data[elemIdx] = true; });
+
+                    // TODO: either the real initial solution needs to be computed or read from the restart file
+                    const auto& eclState = simulator.vanguard().eclState();
+                    const auto& initconfig = eclState.getInitConfig();
+                    if (initconfig.restartRequested()) {
+                        throw std::logic_error("restart is not compatible with using free boundary conditions");
+                    }
+                }
+                else if (type == BCType::DIRICHLET) {
                     const auto component = bcface.component;
                     const auto pressure = bcface.pressure;
                     const auto temperature = bcface.temperature;
@@ -3075,6 +3092,7 @@ private:
     };
 
     BCData<bool> freebc_;
+    BCData<bool> thermalbc_;
     BCData<RateVector> massratebc_;
     BCData<std::tuple<BCComponent, std::optional<double>, std::optional<double>>> dirichlet_;
     bool nonTrivialBoundaryConditions_ = false;
