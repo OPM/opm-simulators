@@ -154,7 +154,11 @@ public:
 
     virtual void initPrimaryVariablesEvaluation() = 0;
 
-    virtual ConvergenceReport getWellConvergence(const WellState& well_state, const std::vector<double>& B_avg, DeferredLogger& deferred_logger, const bool relax_tolerance) const = 0;
+    virtual ConvergenceReport getWellConvergence(const SummaryState& summary_state,
+                                                 const WellState& well_state,
+                                                 const std::vector<double>& B_avg,
+                                                 DeferredLogger& deferred_logger,
+                                                 const bool relax_tolerance) const = 0;
 
     void assembleWellEq(const Simulator& ebosSimulator,
                         const double dt,
