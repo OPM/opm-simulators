@@ -28,14 +28,6 @@
 #include <opm/simulators/linalg/cuistl/detail/cusparse_wrapper.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>
 
-#define CHECK_SIZE(x)                                                                                                  \
-    if (x.dim() != blockSize() * N()) {                                                                                \
-        OPM_THROW(                                                                                                     \
-            std::invalid_argument,                                                                                     \
-            fmt::format(                                                                                               \
-                "Size mismatch. {} has {} elements, while we have {} elements.", #x, x.dim(), blockSize() * N()));     \
-    }
-
 namespace Opm::cuistl
 {
 
@@ -189,8 +181,8 @@ template <typename T>
 void
 CuSparseMatrix<T>::mv(const CuVector<T>& x, CuVector<T>& y) const
 {
-    CHECK_SIZE(x)
-    CHECK_SIZE(y)
+    assertSameSize(x);
+    assertSameSize(y);
     if (blockSize() < 2u) {
         OPM_THROW(
             std::invalid_argument,
@@ -223,8 +215,8 @@ template <typename T>
 void
 CuSparseMatrix<T>::umv(const CuVector<T>& x, CuVector<T>& y) const
 {
-    CHECK_SIZE(x)
-    CHECK_SIZE(y)
+    assertSameSize(x);
+    assertSameSize(y);
     if (blockSize() < 2u) {
         OPM_THROW(
             std::invalid_argument,
@@ -258,8 +250,8 @@ template <typename T>
 void
 CuSparseMatrix<T>::usmv(T alpha, const CuVector<T>& x, CuVector<T>& y) const
 {
-    CHECK_SIZE(x)
-    CHECK_SIZE(y)
+    assertSameSize(x);
+    assertSameSize(y);
     if (blockSize() < 2) {
         OPM_THROW(
             std::invalid_argument,
@@ -290,6 +282,19 @@ CuSparseMatrix<T>::usmv(T alpha, const CuVector<T>& x, CuVector<T>& y) const
                                                  y.data()));
 }
 
+template <class T>
+template <class M>
+void
+CuSparseMatrix<T>::assertSameSize(const M& x) const
+{
+    if (x.dim() != blockSize() * N()) {
+        OPM_THROW(std::invalid_argument,
+                  fmt::format("Size mismatch. Input vector has {} elements, while we have {} elements.",
+                              x.dim(),
+                              blockSize() * N()));
+    }
+}
+
 
 
 #define INSTANTIATE_CUSPARSE_DUNE_MATRIX_CONSTRUCTION_FUNTIONS(realtype, blockdim)                                     \
@@ -318,4 +323,5 @@ INSTANTIATE_CUSPARSE_DUNE_MATRIX_CONSTRUCTION_FUNTIONS(float, 3);
 INSTANTIATE_CUSPARSE_DUNE_MATRIX_CONSTRUCTION_FUNTIONS(float, 4);
 INSTANTIATE_CUSPARSE_DUNE_MATRIX_CONSTRUCTION_FUNTIONS(float, 5);
 INSTANTIATE_CUSPARSE_DUNE_MATRIX_CONSTRUCTION_FUNTIONS(float, 6);
+
 } // namespace Opm::cuistl

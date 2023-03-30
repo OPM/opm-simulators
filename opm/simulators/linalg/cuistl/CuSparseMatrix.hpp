@@ -294,6 +294,9 @@ private:
 
     detail::CuSparseMatrixDescriptionPtr m_matrixDescription;
     detail::CuSparseHandle& m_cusparseHandle;
+
+    template <class M>
+    void assertSameSize(const M& otherMatrix) const;
 };
 } // namespace Opm::cuistl
 #endif
