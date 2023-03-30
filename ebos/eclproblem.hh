@@ -2082,7 +2082,7 @@ public:
 private:
     Implementation& asImp_()
     { return *static_cast<Implementation *>(this); }
-
+protected:
     void updateExplicitQuantities_()
     {
         OPM_TIMEBLOCK(updateExplicitQuantities);
@@ -2814,7 +2814,7 @@ private:
             return false;
         }
     }
-
+private:
     struct PffDofData_
     {
         ConditionalStorage<enableEnergy, Scalar> thermalHalfTransIn;
