@@ -184,7 +184,8 @@ namespace Opm
                       const GroupState& group_state,
                       DeferredLogger& deferred_logger) /* const */
     {
-        if (this->wellIsStopped()) {
+        const auto& summary_state = ebos_simulator.vanguard().summaryState();
+        if (this->stopppedOrZeroRateTarget(summary_state, well_state)) {
             return false;
         }
 
@@ -1131,18 +1132,4 @@ namespace Opm
         }
     }
 
-
-    template<typename TypeTag>
-    bool WellInterface<TypeTag>::wellUnderZeroProductionRateControl(const SummaryState& summary_state,
-                                                                    const WellState& well_state) const
-    {
-        if (this->wellIsStopped()) return true;
-
-        bool zero_rate_target = false;
-        if (this->well_ecl_.isProducer()) {
-            const auto prod_controls = this->well_ecl_.productionControls(summary_state);
-            zero_rate_target = wellhelpers::rateControlWithZeroTarget(well_state.well(this->index_of_well_).production_cmode, prod_controls);
-        }
-        return zero_rate_target;
-    }
 } // namespace Opm

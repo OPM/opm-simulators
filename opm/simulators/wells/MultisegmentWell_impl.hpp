@@ -152,8 +152,8 @@ namespace Opm
                            const WellState& well_state,
                            DeferredLogger& /* deferred_logger */)
     {
-        const bool zero_rate_target = this->wellUnderZeroProductionRateControl(summary_state, well_state);
-        this->primary_variables_.update(well_state, zero_rate_target);
+        const bool stop_or_zero_rate_target = this->stopppedOrZeroRateTarget(summary_state, well_state);
+        this->primary_variables_.update(well_state, stop_or_zero_rate_target);
     }
 
 
@@ -615,14 +615,14 @@ namespace Opm
 
         const double dFLimit = this->param_.dwell_fraction_max_;
         const double max_pressure_change = this->param_.max_pressure_change_ms_wells_;
-        const bool zero_rate_target = this->wellUnderZeroProductionRateControl(summary_state, well_state);
+        const bool stop_or_zero_rate_target = this->stopppedOrZeroRateTarget(summary_state, well_state);
         this->primary_variables_.updateNewton(dwells,
                                               relaxation_factor,
                                               dFLimit,
-                                              zero_rate_target,
+                                              stop_or_zero_rate_target,
                                               max_pressure_change);
 
-        this->primary_variables_.copyToWellState(*this, getRefDensity(),
+        this->primary_variables_.copyToWellState(*this, getRefDensity(), stop_or_zero_rate_target,
                                                  well_state, deferred_logger);
         Base::calculateReservoirRates(well_state.well(this->index_of_well_));
     }

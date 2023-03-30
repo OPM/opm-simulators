@@ -360,8 +360,6 @@ protected:
 
     Eval getPerfCellPressure(const FluidState& fs) const;
 
-    bool wellUnderZeroProductionRateControl(const SummaryState& summary_state,
-                                            const WellState& well_state) const;
 };
 
 }

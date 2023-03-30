@@ -92,7 +92,8 @@ protected:
               const int num_cells,
               const bool has_polymermw);
 
-    void updateWellStateFromPrimaryVariables(WellState& well_state,
+    void updateWellStateFromPrimaryVariables(const bool stop_or_zero_rate_target,
+                                             WellState& well_state,
                                              DeferredLogger& deferred_logger) const;
 
     PrimaryVariables primary_variables_; //!< Primary variables for well

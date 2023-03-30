@@ -102,7 +102,7 @@ public:
 
     //! \brief Copy values from well state.
     void update(const WellState& well_state,
-                const bool zero_rate_target,
+                const bool stop_or_zero_rate_target,
                 DeferredLogger& deferred_logger);
 
     //! \brief Copy polymer molecular weigt values from well state.
@@ -110,7 +110,7 @@ public:
 
     //! \brief Update values from newton update vector.
     void updateNewton(const BVectorWell& dwells,
-                      const bool zero_rate_target,
+                      const bool stop_or_zero_rate_target,
                       const double dFLimit,
                       const double dBHPLimit);
 

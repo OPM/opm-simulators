@@ -25,6 +25,7 @@
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 
+#include <opm/input/eclipse/Schedule/Well/WellInjectionControls.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellProductionControls.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellEnums.hpp>
 
@@ -171,8 +172,8 @@ DenseMatrix transposeDenseDynMatrix(const DenseMatrix& M)
     return tmp;
 }
 
-bool rateControlWithZeroTarget(const WellProducerCMode& mode,
-                               const WellProductionControls& controls)
+bool rateControlWithZeroProdTarget(const WellProductionControls& controls,
+                                   const WellProducerCMode mode)
 {
     switch (mode) {
         case WellProducerCMode::ORAT:
@@ -192,6 +193,20 @@ bool rateControlWithZeroTarget(const WellProducerCMode& mode,
             } else {
                 return controls.water_rate == 0.0 && controls.oil_rate == 0.0 && controls.gas_rate == 0.0;
             }
+        default:
+            return false;
+    }
+}
+
+
+bool rateControlWithZeroInjTarget(const WellInjectionControls& controls,
+                                  const WellInjectorCMode mode)
+{
+    switch (mode) {
+        case WellInjectorCMode::RATE:
+            return controls.surface_rate == 0.0;
+        case WellInjectorCMode::RESV:
+            return controls.reservoir_rate == 0.0;
         default:
             return false;
     }
