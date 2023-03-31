@@ -478,6 +478,7 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map)
     }
     applyEditNncToGridTrans_(globalToLocal);
     applyNncToGridTrans_(globalToLocal);
+    applyEditNncrToGridTrans_(globalToLocal);
 
     //remove very small non-neighbouring transmissibilities
     removeSmallNonCartesianTransmissibilities_();
@@ -896,6 +897,19 @@ applyEditNncToGridTrans_(const std::unordered_map<std::size_t,int>& globalToLoca
                                        return input.edit_location(nnc);},
                                    // Multiply transmissibility with EDITNNC value
                                    [](double& trans, const double& rhs){ trans *= rhs;});
+}
+
+template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
+void EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+applyEditNncrToGridTrans_(const std::unordered_map<std::size_t,int>& globalToLocal)
+{
+    const auto& input = eclState_.getInputNNC();
+    applyEditNncToGridTransHelper_(globalToLocal, "EDITNNCR",
+                                   input.editr(),
+                                   [&input](const NNCdata& nnc){
+                                       return input.editr_location(nnc);},
+                                   // Replace Transmissibility with EDITNNCR value
+                                   [](double& trans, const double& rhs){ trans = rhs;});
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
