@@ -172,6 +172,7 @@ if(CUDA_FOUND)
   list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/detail/has_function.hpp)
   list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/detail/preconditioner_should_call_post_pre.hpp)
   list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/PreconditionerAdapter.hpp)
+  list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/PreconditionerConvertFieldTypeAdapter.hpp)
 
 
 endif()
@@ -261,6 +262,7 @@ if(CUDA_FOUND)
   list(APPEND TEST_SOURCE_FILES tests/cuistl/test_cusparsematrix.cpp)
   list(APPEND TEST_SOURCE_FILES tests/cuistl/test_safe_conversion.cpp)
   list(APPEND TEST_SOURCE_FILES tests/cuistl/test_cuseqilu0.cpp)
+  list(APPEND TEST_SOURCE_FILES tests/cuistl/test_converttofloatadapter.cpp)
 
 endif()
 if(OPENCL_FOUND)
