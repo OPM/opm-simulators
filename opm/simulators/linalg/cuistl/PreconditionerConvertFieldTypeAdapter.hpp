@@ -117,7 +117,7 @@ public:
     //! \note After the PreconditionerConvertFieldTypeAdapter you can get the converted matrix
     //! by calling getConvertedMatrix(), which in turn can be used to create the underlying preconditioner.
     //! Once the underlying precondtioner has been called, this must be supplied to setUnderlyingPreconditioner.
-    PreconditionerConvertFieldTypeAdapter(const M& matrix)
+    explicit PreconditionerConvertFieldTypeAdapter(const M& matrix)
         : m_matrix(matrix)
         , m_convertedMatrix(createConvertedMatrix())
     {
