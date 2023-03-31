@@ -480,13 +480,13 @@ public:
         // assign the actual primary variables
         switch(primaryVarsMeaningPressure()) {
             case PressureMeaning::Po:
-                (*this)[pressureSwitchIdx] = this->setScaledPressure(FsToolbox::value(fluidState.pressure(oilPhaseIdx)));
+                this->setScaledPressure_(FsToolbox::value(fluidState.pressure(oilPhaseIdx)));
                 break;
             case PressureMeaning::Pg:
-                (*this)[pressureSwitchIdx] = this->setScaledPressure(FsToolbox::value(fluidState.pressure(gasPhaseIdx)));
+                this->setScaledPressure_(FsToolbox::value(fluidState.pressure(gasPhaseIdx)));
                 break;
             case PressureMeaning::Pw:
-                (*this)[pressureSwitchIdx] = this->setScaledPressure(FsToolbox::value(fluidState.pressure(waterPhaseIdx)));
+                this->setScaledPressure_(FsToolbox::value(fluidState.pressure(waterPhaseIdx)));
                 break;
             default:
                 throw std::logic_error("No valid primary variable selected for pressure");
@@ -707,7 +707,7 @@ public:
                     setPrimaryVarsMeaningWater(WaterMeaning::Rsw);
                     (*this)[Indices::waterSwitchIdx] = rswSat; //primary variable becomes Rsw
                     setPrimaryVarsMeaningPressure(PressureMeaning::Pw);
-                    (*this)[Indices::pressureSwitchIdx] = this->setScaledPressure(pw);
+                    this->setScaledPressure_(pw);
                     changed = true;
                     break;
                 }
@@ -758,7 +758,7 @@ public:
                     const MaterialLawParams& matParams = problem.materialLawParams(globalDofIdx);
                     computeCapillaryPressures_(pC, /*so=*/ 0.0,  /*sg=*/ 0.0, /*sw=*/ 1.0, matParams);
                     Scalar pg = pw + (pC[gasPhaseIdx] - pC[waterPhaseIdx]);
-                    (*this)[Indices::pressureSwitchIdx] = this->setScaledPressure(pg);
+                    this->setScaledPressure_(pg);
                     changed = true;
                 }
                 break;
@@ -814,7 +814,7 @@ public:
                     // we start at the GasMeaning::Rv value that corresponds to that of oil-saturated
                     // hydrocarbon gas
                     setPrimaryVarsMeaningPressure(PressureMeaning::Pg);
-                    (*this)[Indices::pressureSwitchIdx] = this->setScaledPressure(pg);
+                    this->setScaledPressure_(pg);
                     Scalar soMax = problem.maxOilSaturation(globalDofIdx);
                     Scalar rvMax = problem.maxOilVaporizationFactor(/*timeIdx=*/0, globalDofIdx);
                     Scalar rvSat = enableExtbo ? ExtboModule::rv(pvtRegionIndex(),
@@ -893,7 +893,7 @@ public:
 
                     setPrimaryVarsMeaningGas(GasMeaning::Sg);
                     setPrimaryVarsMeaningPressure(PressureMeaning::Po);
-                    (*this)[Indices::pressureSwitchIdx] = this->setScaledPressure(po);
+                    this->setScaledPressure_(po);
                     (*this)[Indices::compositionSwitchIdx] = sg2; // hydrocarbon gas saturation
                     changed = true;
                 }
