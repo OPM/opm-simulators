@@ -87,17 +87,45 @@ public:
                                           BlackoilIndices::numPhases>;
 
     // Constructor
-    AquiferAnalytical(int aqID,
-                     const std::vector<Aquancon::AquancCell>& connections,
-                     const Simulator& ebosSimulator)
+    AquiferAnalytical(const int aqID,
+                      const std::vector<Aquancon::AquancCell>& connections,
+                      const Simulator& ebosSimulator)
         : AquiferInterface<TypeTag>(aqID, ebosSimulator)
         , connections_(connections)
     {
+        this->initializeConnectionMappings();
     }
 
     // Destructor
     virtual ~AquiferAnalytical()
+    {}
+
+    void computeFaceAreaFraction(const std::vector<double>& total_face_area) override
     {
+        assert (total_face_area.size() >= static_cast<std::vector<double>::size_type>(this->aquiferID()));
+
+        const auto tfa = total_face_area[this->aquiferID() - 1];
+        const auto eps_sqrt = std::sqrt(std::numeric_limits<double>::epsilon());
+
+        if (tfa < eps_sqrt) {
+            this->alphai_.assign(this->size(), Scalar{0});
+        }
+        else {
+            std::transform(this->faceArea_connected_.begin(),
+                           this->faceArea_connected_.end(),
+                           this->alphai_.begin(),
+                           [tfa](const Scalar area)
+                           {
+                               return area / tfa;
+                           });
+        }
+
+        this->area_fraction_ = this->totalFaceArea() / tfa;
+    }
+
+    double totalFaceArea() const override
+    {
+        return this->total_face_area_;
     }
 
     void initFromRestart(const data::Aquifers& aquiferSoln) override
@@ -108,8 +136,9 @@ public:
 
         this->assignRestartData(xaqPos->second);
 
-        this->W_flux_ = xaqPos->second.volume;
+        this->W_flux_ = xaqPos->second.volume * this->area_fraction_;
         this->pa0_ = xaqPos->second.initPressure;
+
         this->solution_set_from_restart_ = true;
     }
 
@@ -226,19 +255,17 @@ protected:
     void initQuantities()
     {
         // We reset the cumulative flux at the start of any simulation, so, W_flux = 0
-        if (!this->solution_set_from_restart_) {
+        if (! this->solution_set_from_restart_) {
             W_flux_ = Scalar{0};
         }
 
-        // We next get our connections to the aquifer and initialize these quantities using the initialize_connections
-        // function
-        initializeConnections();
-        calculateAquiferCondition();
-        calculateAquiferConstants();
+        this->initializeConnectionDepths();
+        this->calculateAquiferCondition();
+        this->calculateAquiferConstants();
 
-        pressure_previous_.resize(this->connections_.size(), Scalar{0});
-        pressure_current_.resize(this->connections_.size(), Scalar{0});
-        Qai_.resize(this->connections_.size(), Scalar{0});
+        this->pressure_previous_.resize(this->size(), Scalar{0});
+        this->pressure_current_.resize(this->size(), Scalar{0});
+        this->Qai_.resize(this->size(), Scalar{0});
     }
 
     void updateCellPressure(std::vector<Eval>& pressure_water,
@@ -257,54 +284,54 @@ protected:
         pressure_water.at(idx) = fs.pressure(this->phaseIdx_()).value();
     }
 
-    void initializeConnections()
+    void initializeConnectionMappings()
     {
-        this->cell_depth_.resize(this->size(), this->aquiferDepth());
         this->alphai_.resize(this->size(), 1.0);
         this->faceArea_connected_.resize(this->size(), Scalar{0});
 
-        // Translate the C face tag into the enum used by opm-parser's TransMult class
-        FaceDir::DirEnum faceDirection;
-
-        bool has_active_connection_on_proc = false;
-
-        // denom_face_areas is the sum of the areas connected to an aquifer
-        Scalar denom_face_areas{0};
+        // total_face_area_ is the sum of the areas connected to an aquifer
+        this->total_face_area_ = Scalar{0};
         this->cellToConnectionIdx_.resize(this->ebos_simulator_.gridView().size(/*codim=*/0), -1);
         const auto& gridView = this->ebos_simulator_.vanguard().gridView();
         for (std::size_t idx = 0; idx < this->size(); ++idx) {
             const auto global_index = this->connections_[idx].global_index;
             const int cell_index = this->ebos_simulator_.vanguard().compressedIndex(global_index);
-            auto elemIt = gridView.template begin</*codim=*/ 0>();
-            if (cell_index > 0)
-                std::advance(elemIt, cell_index);
-
-           //the global_index is not part of this grid
-            if ( cell_index < 0 || elemIt->partitionType() != Dune::InteriorEntity)
+            if (cell_index < 0) {
                 continue;
+            }
 
-            has_active_connection_on_proc = true;
+            auto elemIt = gridView.template begin</*codim=*/ 0>();
+            std::advance(elemIt, cell_index);
+
+            // The global_index is not part of this grid
+            if (elemIt->partitionType() != Dune::InteriorEntity) {
+                continue;
+            }
 
             this->cellToConnectionIdx_[cell_index] = idx;
-            this->cell_depth_.at(idx) = this->ebos_simulator_.vanguard().cellCenterDepth(cell_index);
         }
-        // get areas for all connections
-        ElementMapper elemMapper(gridView, Dune::mcmgElementLayout());
-        for (const auto& elem : elements(gridView)) {
-            unsigned cell_index = elemMapper.index(elem);
-            int idx = this->cellToConnectionIdx_[cell_index];
 
-            // only deal with connections given by the aquifer
-            if( idx < 0)
+        // Translate the C face tag into the enum used by opm-parser's TransMult class
+        FaceDir::DirEnum faceDirection;
+
+        // Get areas for all connections
+        const auto& elemMapper = this->ebos_simulator_.model().dofMapper();
+        for (const auto& elem : elements(gridView)) {
+            const unsigned cell_index = elemMapper.index(elem);
+            const int idx = this->cellToConnectionIdx_[cell_index];
+
+            // Only deal with connections given by the aquifer
+            if (idx < 0) {
                 continue;
+            }
 
             for (const auto& intersection : intersections(gridView, elem)) {
-                // only deal with grid boundaries
-                if (!intersection.boundary())
+                // Only deal with grid boundaries
+                if (! intersection.boundary()) {
                     continue;
+                }
 
-                int insideFaceIdx  = intersection.indexInInside();
-                switch (insideFaceIdx) {
+                switch (intersection.indexInInside()) {
                 case 0:
                     faceDirection = FaceDir::XMinus;
                     break;
@@ -325,51 +352,41 @@ protected:
                     break;
                 default:
                     OPM_THROW(std::logic_error,
-                        "Internal error in initialization of aquifer.");
+                              "Internal error in initialization of aquifer.");
                 }
-
 
                 if (faceDirection == this->connections_[idx].face_dir) {
                     this->faceArea_connected_[idx] = this->connections_[idx].influx_coeff;
                     break;
                 }
             }
-            denom_face_areas += this->faceArea_connected_.at(idx);
-        }
 
-        const auto& comm = this->ebos_simulator_.vanguard().grid().comm();
-        comm.sum(&denom_face_areas, 1);
-        const double eps_sqrt = std::sqrt(std::numeric_limits<double>::epsilon());
-        for (std::size_t idx = 0; idx < this->size(); ++idx) {
-            // Protect against division by zero NaNs.
-            this->alphai_.at(idx) = (denom_face_areas < eps_sqrt)
-                ? Scalar{0}
-                : this->faceArea_connected_.at(idx) / denom_face_areas;
-        }
-
-        if (this->solution_set_from_restart_) {
-            this->rescaleProducedVolume(has_active_connection_on_proc);
+            this->total_face_area_ += this->faceArea_connected_.at(idx);
         }
     }
 
-    void rescaleProducedVolume(const bool has_active_connection_on_proc)
+    void initializeConnectionDepths()
     {
-        // Needed in parallel restart to approximate influence of aquifer
-        // being "owned" by a subset of the parallel processes.  If the
-        // aquifer is fully owned by a single process--i.e., if all cells
-        // connecting to the aquifer are on a single process--then this_area
-        // is tot_area on that process and zero elsewhere.
+        this->cell_depth_.resize(this->size(), this->aquiferDepth());
 
-        const auto this_area = has_active_connection_on_proc
-            ? std::accumulate(this->alphai_.begin(),
-                              this->alphai_.end(),
-                              Scalar{0})
-            : Scalar{0};
+        const auto& gridView = this->ebos_simulator_.vanguard().gridView();
+        for (std::size_t idx = 0; idx < this->size(); ++idx) {
+            const int cell_index = this->ebos_simulator_.vanguard()
+                .compressedIndex(this->connections_[idx].global_index);
+            if (cell_index < 0) {
+                continue;
+            }
 
-        const auto tot_area = this->ebos_simulator_.vanguard()
-            .grid().comm().sum(this_area);
+            auto elemIt = gridView.template begin</*codim=*/ 0>();
+            std::advance(elemIt, cell_index);
 
-        this->W_flux_ *= this_area / tot_area;
+            // The global_index is not part of this grid
+            if (elemIt->partitionType() != Dune::InteriorEntity) {
+                continue;
+            }
+
+            this->cell_depth_.at(idx) = this->ebos_simulator_.vanguard().cellCenterDepth(cell_index);
+        }
     }
 
     // This function is for calculating the aquifer properties from equilibrium state with the reservoir
@@ -433,9 +450,13 @@ protected:
     std::optional<Scalar> Ta0_{}; // initial aquifer temperature
     Scalar rhow_{};
 
+    Scalar total_face_area_{};
+    Scalar area_fraction_{Scalar{1}};
+
     Eval W_flux_;
 
     bool solution_set_from_restart_ {false};
+    bool has_active_connection_on_proc_{false};
 };
 
 } // namespace Opm

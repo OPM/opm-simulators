@@ -154,6 +154,14 @@ public:
         this->cumulative_flux_ = 0.;
     }
 
+    void computeFaceAreaFraction(const std::vector<double>& /*total_face_area*/) override
+    {}
+
+    double totalFaceArea() const override
+    {
+        return 1.0;
+    }
+
     template<class Serializer>
     void serializeOp(Serializer& serializer)
     {

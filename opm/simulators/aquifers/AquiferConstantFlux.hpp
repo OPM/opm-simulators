@@ -32,8 +32,10 @@
 #include <opm/material/densead/Evaluation.hpp>
 
 #include <algorithm>
+#include <cassert>
 #include <numeric>
 #include <stdexcept>
+#include <vector>
 
 namespace Opm {
 
@@ -58,8 +60,7 @@ public:
         , aquifer_data_            (aquifer)
         , connection_flux_         (connections_.size(), Eval{0})
     {
-        const auto connected_face_area = this->initializeConnections();
-        this->area_fraction_ = this->computeFaceAreaFraction(connected_face_area);
+        this->total_face_area_ = this->initializeConnections();
     }
 
     static AquiferConstantFlux serializationTestObject(const Simulator& ebos_simulator)
@@ -71,6 +72,19 @@ public:
     }
 
     virtual ~AquiferConstantFlux() = default;
+
+    void computeFaceAreaFraction(const std::vector<double>& total_face_area) override
+    {
+        assert (total_face_area.size() >= static_cast<std::vector<double>::size_type>(this->aquiferID()));
+
+        this->area_fraction_ = this->totalFaceArea()
+            / total_face_area[this->aquiferID() - 1];
+    }
+
+    double totalFaceArea() const override
+    {
+        return this->total_face_area_;
+    }
 
     void updateAquifer(const SingleAquiferFlux& aquifer)
     {
@@ -150,6 +164,7 @@ private:
     std::vector<int> cellToConnectionIdx_{};
     double flux_rate_{};
     double cumulative_flux_{};
+    double total_face_area_{0.0};
     double area_fraction_{1.0};
 
     double initializeConnections()
