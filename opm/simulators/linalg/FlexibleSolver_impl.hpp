@@ -170,6 +170,15 @@ namespace Dune
                                                                                   restart, // desired residual reduction factor
                                                                                   maxiter, // maximum number of iterations
                                                                                   verbosity);
+        } else if (solver_type == "flexgmres") {
+            int restart = prm.get<int>("restart", 15);
+            linsolver_ = std::make_shared<Dune::RestartedFlexibleGMResSolver<VectorType>>(*linearoperator_for_solver_,
+                                                                                          *scalarproduct_,
+                                                                                          *preconditioner_,
+                                                                                          tol,
+                                                                                          restart, // desired residual reduction factor
+                                                                                          maxiter, // maximum number of iterations
+                                                                                          verbosity));
 #if HAVE_SUITESPARSE_UMFPACK
         } else if (solver_type == "umfpack") {
             bool dummy = false;
