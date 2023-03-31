@@ -201,6 +201,9 @@ protected:
     /// \brief Multiplies the grid transmissibilities according to EDITNNC.
     void applyEditNncToGridTrans_(const std::unordered_map<std::size_t,int>& globalToLocal);
 
+    /// \brief Resets the grid transmissibilities according to EDITNNCR.
+    void applyEditNncrToGridTrans_(const std::unordered_map<std::size_t,int>& globalToLocal);
+
     void applyEditNncToGridTransHelper_(const std::unordered_map<std::size_t,int>& globalToLocal,
                                         const std::string& keyword, const std::vector<NNCdata>& nncs,
                                         const std::function<KeywordLocation(const NNCdata&)>& getLocation,
