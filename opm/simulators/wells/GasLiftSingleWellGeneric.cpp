@@ -1163,8 +1163,8 @@ GasLiftSingleWellGeneric::runOptimizeLoop_(bool increase)
     // if (this->debug) debugShowBhpAlqTable_();
     if (this->debug)
         debugShowAlqIncreaseDecreaseCounts_();
-    //if (this->debug)
-    //    debugShowTargets_();
+    if (this->debug)
+        debugShowTargets_();
     bool success = false; // did we succeed to increase alq?
     bool alq_is_limited = false;
     LimitedRates new_rates = *rates;

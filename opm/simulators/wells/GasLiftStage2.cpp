@@ -486,11 +486,9 @@ recalculateGradientAndUpdateData_(
             auto grad = calcIncOrDecGrad_(name, gs_well, gr_name_dont_limit, !increase);
             if (grad) {
                 updateGrad_(name, *grad, !increase);
-                //updateGrad_(name, *old_grad, !increase);
                 // NOTE: This may invalidate any iterator into 'other_grads' since
                 //   updateGradVector_() will do a push_back() if 'name' is not found..
                 updateGradVector_(name, other_grads, grad->grad);
-                //updateGradVector_(name, other_grads, old_grad->grad);
             }
             else {
                 for (auto it = other_grads.begin(); it != other_grads.end(); it++) {
