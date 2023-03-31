@@ -159,7 +159,6 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"DZNET", {true, std::nullopt}},
         {"ECHO", {false, std::nullopt}},
         {"ECLMC", {true, std::nullopt}},
-        {"EDITNNCR", {true, std::nullopt}},
         {"EHYSTRR", {true, std::nullopt}},
         {"ENDDYN", {true, std::nullopt}},
         {"ENDFIN", {true, std::nullopt}},
