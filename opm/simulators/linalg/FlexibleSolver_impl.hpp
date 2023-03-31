@@ -166,8 +166,8 @@ namespace Dune
             linsolver_ = std::make_shared<Dune::RestartedGMResSolver<VectorType>>(*linearoperator_for_solver_,
                                                                                   *scalarproduct_,
                                                                                   *preconditioner_,
-                                                                                  tol,
-                                                                                  restart, // desired residual reduction factor
+                                                                                  tol,// desired residual reduction factor
+                                                                                  restart, 
                                                                                   maxiter, // maximum number of iterations
                                                                                   verbosity);
         } else if (solver_type == "flexgmres") {
@@ -175,8 +175,8 @@ namespace Dune
             linsolver_ = std::make_shared<Dune::RestartedFlexibleGMResSolver<VectorType>>(*linearoperator_for_solver_,
                                                                                           *scalarproduct_,
                                                                                           *preconditioner_,
-                                                                                          tol,
-                                                                                          restart, // desired residual reduction factor
+                                                                                          tol,// desired residual reduction factor
+                                                                                          restart, 
                                                                                           maxiter, // maximum number of iterations
                                                                                           verbosity));
 #if HAVE_SUITESPARSE_UMFPACK
