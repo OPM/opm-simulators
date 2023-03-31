@@ -302,11 +302,19 @@ void WellState::init(const std::vector<double>& cellPressures,
         auto& ws = this->well(w);
         if (wells_ecl[w].isProducer()) {
             const auto controls = wells_ecl[w].productionControls(summary_state);
-            ws.production_cmode = controls.cmode;
+            if (controls.cmode == Well::ProducerCMode::GRUP && !wells_ecl[w].isAvailableForGroupControl()) {
+                ws.production_cmode = Well::ProducerCMode::BHP; // wells always has a BHP control
+            } else {
+                ws.production_cmode = controls.cmode;
+            }
         }
         else {
             const auto controls = wells_ecl[w].injectionControls(summary_state);
-            ws.injection_cmode = controls.cmode;
+            if (controls.cmode == Well::InjectorCMode::GRUP && !wells_ecl[w].isAvailableForGroupControl()) {
+                ws.injection_cmode = Well::InjectorCMode::BHP; // wells always has a BHP control
+            } else {
+                ws.injection_cmode = controls.cmode;
+            }
         }
     }
 

@@ -131,6 +131,10 @@ checkGroupConstraints(WellState& well_state,
                       const SummaryState& summaryState,
                       DeferredLogger& deferred_logger) const
 {
+
+    if (!this->wellEcl().isAvailableForGroupControl())
+        return false;
+
     auto rCoeff = [this, &group_state](const RegionId id, const int region, const std::optional<std::string>& prod_gname, std::vector<double>& coeff)
     {
         if (prod_gname)
