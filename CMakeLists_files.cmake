@@ -172,6 +172,8 @@ if(CUDA_FOUND)
   list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/detail/has_function.hpp)
   list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/detail/preconditioner_should_call_post_pre.hpp)
   list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/PreconditionerAdapter.hpp)
+  list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/CuSeqILU0.hpp)
+  list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/detail/fix_zero_diagonal.hpp)
   list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/PreconditionerConvertFieldTypeAdapter.hpp)
 
 
