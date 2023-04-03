@@ -178,7 +178,7 @@ namespace Dune
                                                                                           tol,// desired residual reduction factor
                                                                                           restart, 
                                                                                           maxiter, // maximum number of iterations
-                                                                                          verbosity));
+                                                                                          verbosity);
 #if HAVE_SUITESPARSE_UMFPACK
         } else if (solver_type == "umfpack") {
             bool dummy = false;
