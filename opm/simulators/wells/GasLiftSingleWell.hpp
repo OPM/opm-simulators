@@ -55,7 +55,7 @@ namespace Opm
         const WellInterfaceGeneric &getWell() const override { return well_; }
 
     private:
-        std::optional<double> computeBhpAtThpLimit_(double alq) const override;
+        std::optional<double> computeBhpAtThpLimit_(double alq, bool debug_ouput=true) const override;
         BasicRates computeWellRates_(
             double bhp, bool bhp_is_limited, bool debug_output=true) const override;
         void setAlqMaxRate_(const GasLiftWell& well);

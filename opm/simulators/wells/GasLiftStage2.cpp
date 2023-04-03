@@ -96,6 +96,8 @@ runOptimize()
 // Update GasLiftWellState and WellState for "well_name" to the
 //   new ALQ value and related data (the data has already been computed and
 //   saved in "grad_map")
+// INPUT: grad_map : map of incremental (if "add" is true) or decremental
+//        (if "add" is false) GradInfo structs for each well name.
 void
 GasLiftStage2::
 addOrRemoveALQincrement_(GradMap &grad_map, const std::string& well_name, bool add)
@@ -141,35 +143,35 @@ calcIncOrDecGrad_(
     // only applies to wells in the well_state_map (i.e. wells on this rank)
     if(this->well_state_map_.count(well_name) == 0)
         return std::nullopt;
-    if (this->debug) {
-        const std::string msg = fmt::format("well {} : calculating {} gradient..",
-            well_name, (increase ? "incremental" : "decremental"));
-        displayDebugMessage_(msg);
-    }
     GasLiftWellState &state = *(this->well_state_map_.at(well_name).get());
-    if (checkRateAlreadyLimited_(state, increase)) {
-        /*
-        const std::string msg = fmt::format(
-            "well {} : not able to obtain {} gradient",
-            well_name,
-            (increase ? "incremental" : "decremental")
-        );
-        displayDebugMessage_(msg);
-        */
+    if (checkRateAlreadyLimited_(well_name, state, increase)) {
         return std::nullopt;
     }
     else {
         auto [oil_rate, gas_rate] = state.getRates();
         auto alq = state.alq();
-        auto grad = gs_well.calcIncOrDecGradient(oil_rate, gas_rate, state.waterRate(), alq, gr_name_dont_limit, increase);
-        if (grad) {
-            const std::string msg = fmt::format(
-              "well {} : adding {} gradient = {}",
-              well_name,
-              (increase ? "incremental" : "decremental"),
-              grad->grad
-            );
-            displayDebugMessage_(msg);
+        auto grad = gs_well.calcIncOrDecGradient(
+            oil_rate, gas_rate, state.waterRate(), alq, gr_name_dont_limit, increase, /*debug_output=*/false);
+        if (this->debug) {
+            if (grad) {
+                const std::string msg = fmt::format(
+                    "well {} : alq = {} : adding {} gradient = {}",
+                    well_name,
+                    alq,
+                    (increase ? "incremental" : "decremental"),
+                    grad->grad
+                );
+                displayDebugMessage_(msg);
+            }
+            else {
+                const std::string msg = fmt::format(
+                    "well {} : alq = {} : failed to compute {} gradient",
+                    well_name,
+                    alq,
+                    (increase ? "incremental" : "decremental")
+                );
+                displayDebugMessage_(msg);
+            }
         }
         return grad;
     }
@@ -177,7 +179,7 @@ calcIncOrDecGrad_(
 
 bool
 GasLiftStage2::
-checkRateAlreadyLimited_(GasLiftWellState &state, bool increase)
+checkRateAlreadyLimited_(const std::string& well_name, GasLiftWellState &state, bool increase)
 {
     auto current_increase = state.increase();
     bool do_check = false;
@@ -197,10 +199,12 @@ checkRateAlreadyLimited_(GasLiftWellState &state, bool increase)
     if (do_check) {
         if (state.gasIsLimited() || state.oilIsLimited() || state.alqIsLimited() || state.waterIsLimited()) {
             const std::string msg = fmt::format(
-                "{} gradient : skipping since {} was limited in previous step",
+                "Well {} : alq = {} : skipping {} gradient since {} was limited in previous step",
+                well_name,
+                state.alq(),
                 (increase ? "incremental" : "decremental"),
-                (state.oilIsLimited() ? "oil" :
-                    (state.gasIsLimited() ? "gas" : "alq")));
+                (state.oilIsLimited() ? "oil" : (state.gasIsLimited() ? "gas" : "alq"))
+            );
             displayDebugMessage_(msg);
             return true;
         }
@@ -405,14 +409,12 @@ optimizeGroup_(const Group &group)
 {
     const auto& group_name = group.name();
     const auto prod_control = this->group_state_.production_control(group_name);
-    //if (group.has_control(Group::ProductionCMode::ORAT) || group.has_control(Group::ProductionCMode::LRAT)
-    //                   || max_glift || max_total_gas)
-    // NOTE: it only makes sense to try to optimize the distribution of the gaslift if the amount
-    //   of gaslift is constrained either by the maximum allowed gaslift or total gas
-    //   or the group is under individual control
     if ((prod_control != Group::ProductionCMode::NONE) && (prod_control != Group::ProductionCMode::FLD))
     {
-        displayDebugMessage_("optimizing", group_name);
+        if (this->debug) {
+            const std::string msg = fmt::format("optimizing (control = {})", Group::ProductionCMode2String(prod_control));
+            displayDebugMessage_(msg, group_name);
+        }
         auto wells = getGroupGliftWells_(group);
         std::vector<GradPair> inc_grads;
         std::vector<GradPair> dec_grads;
@@ -420,7 +422,10 @@ optimizeGroup_(const Group &group)
         removeSurplusALQ_(group, inc_grads, dec_grads);
     }
     else {
-        displayDebugMessage_("skipping", group_name);
+        if (this->debug) {
+            const std::string msg = fmt::format("skipping (control = {})", Group::ProductionCMode2String(prod_control));
+            displayDebugMessage_(msg, group_name);
+        }
     }
 }
 
@@ -441,12 +446,12 @@ optimizeGroupsRecursive_(const Group &group)
 void
 GasLiftStage2::
 recalculateGradientAndUpdateData_(
-    GradPairItr &grad_itr, const std::string& gr_name_dont_limit, bool increase,
+        GradPairItr &grad_itr, const std::string& gr_name_dont_limit, bool increase,
 
-    //incremental and decremental gradients, if 'grads' are incremental, then
-    // 'other_grads' are decremental, or conversely, if 'grads' are decremental, then
-    // 'other_grads' are incremental
-    std::vector<GradPair> &grads,  std::vector<GradPair> &other_grads)
+        //incremental and decremental gradients, if 'grads' are incremental, then
+        // 'other_grads' are decremental, or conversely, if 'grads' are decremental, then
+        // 'other_grads' are incremental
+        std::vector<GradPair> &grads,  std::vector<GradPair> &other_grads)
 {
     // NOTE: We make a copy of the name string instead of taking a reference
     //   since we may have to erase grad_itr (in the "else" condition below)
@@ -457,25 +462,43 @@ recalculateGradientAndUpdateData_(
     // the grads and other grads are synchronized later
     if(this->stage1_wells_.count(name) > 0) {
         GasLiftSingleWell &gs_well = *(this->stage1_wells_.at(name).get());
-        auto grad = calcIncOrDecGrad_(name, gs_well, gr_name_dont_limit, increase);
-        if (grad) {
-            grad_itr->second = grad->grad;
-            old_grad = updateGrad_(name, *grad, increase);
+        {
+            auto grad = calcIncOrDecGrad_(name, gs_well, gr_name_dont_limit, increase);
+            if (grad) {
+                grad_itr->second = grad->grad;
+                old_grad = updateGrad_(name, *grad, increase);
+            }
+            else {
+                grads.erase(grad_itr); // NOTE: this invalidates grad_itr
+                old_grad = deleteGrad_(name, increase);
+            }
         }
-        else {
-            grads.erase(grad_itr); // NOTE: this invalidates grad_itr
-            old_grad = deleteGrad_(name, increase);
+        // If the old incremental/decremental gradient was defined, it becomes the new
+        //   decremental/incremental gradient
+        if (old_grad) {
+            // NOTE: Either creates a new item or reassigns
+            // The old incremental gradient becomes the new decremental gradient
+            //   or the old decremental gradient becomes the new incremental gradient
+            // NOTE: The gradient itself (old_grad.grad) will be equal to the new decremental
+            //   gradient, but the other fields in old_grad cannot be used as they refer to
+            //   the incremental gradient. E.g. old_grad.alq is the alq after an increase in alq,
+            //   not a decrease, so we need to recalculate the decremental values here..
+            auto grad = calcIncOrDecGrad_(name, gs_well, gr_name_dont_limit, !increase);
+            if (grad) {
+                updateGrad_(name, *grad, !increase);
+                // NOTE: This may invalidate any iterator into 'other_grads' since
+                //   updateGradVector_() will do a push_back() if 'name' is not found..
+                updateGradVector_(name, other_grads, grad->grad);
+            }
+            else {
+                for (auto it = other_grads.begin(); it != other_grads.end(); it++) {
+                    if (it->first == name) {
+                        other_grads.erase(it);
+                        deleteGrad_(name, !increase);
+                    }
+                }
+            }
         }
-    }
-
-    if (old_grad) {
-        // NOTE: Either creates a new item or reassigns
-        // The old incremental gradient becomes the new decremental gradient
-        //   or the old decremental gradient becomes the new incremental gradient
-        updateGrad_(name, *old_grad, !increase);
-        // NOTE: This may invalidate any iterator into 'other_grads' since
-        //   updateGradVector_() will do a push_back() if 'name' is not found..
-        updateGradVector_(name, other_grads, old_grad->grad);
     }
 }
 
@@ -608,7 +631,7 @@ removeSurplusALQ_(const Group &group,
     if (this->debug) {
         std::string max_glift_str = "unlimited";
         if (max_glift) max_glift_str = fmt::format("{}", *max_glift);
-        const std::string msg = fmt::format("Starting iteration for group: {}. "
+        const std::string msg = fmt::format("Starting remove surplus iteration for group: {}. "
             "oil_rate = {}, oil_target = {}, gas_rate = {}, gas_target = {}, "
             "water_rate = {}, liquid_target = {}, alq = {}, max_alq = {}",
             group.name(), oil_rate, controls.oil_target,
@@ -798,7 +821,7 @@ void
 GasLiftStage2::OptimizeState::
 debugShowIterationInfo()
 {
-    const std::string msg = fmt::format("iteration {}", this->it);
+    const std::string msg = fmt::format("redistribute ALQ iteration {}", this->it);
     displayDebugMessage_(msg);
 }
 

@@ -85,8 +85,14 @@ GasLiftSingleWellGeneric::GasLiftSingleWellGeneric(DeferredLogger& deferred_logg
  ****************************************/
 // NOTE: Used from GasLiftStage2
 std::optional<GasLiftSingleWellGeneric::GradInfo>
-GasLiftSingleWellGeneric::calcIncOrDecGradient(
-    double oil_rate, double gas_rate, double water_rate, double alq, const std::string& gr_name_dont_limit, bool increase) const
+GasLiftSingleWellGeneric::calcIncOrDecGradient( double oil_rate,
+                                                double gas_rate,
+                                                double water_rate,
+                                                double alq,
+                                                const std::string& gr_name_dont_limit,
+                                                bool increase,
+                                                bool debug_output
+    ) const
 {
     auto [new_alq_opt, alq_is_limited] = addOrSubtractAlqIncrement_(alq, increase);
     // TODO: What to do if ALQ is limited and new_alq != alq?
@@ -99,15 +105,10 @@ GasLiftSingleWellGeneric::calcIncOrDecGradient(
     if (checkGroupALQrateExceeded(delta_alq, gr_name_dont_limit))
         return std::nullopt;
 
-    if (auto bhp = computeBhpAtThpLimit_(new_alq)) {
+    if (auto bhp = computeBhpAtThpLimit_(new_alq, debug_output)) {
         auto [new_bhp, bhp_is_limited] = getBhpWithLimit_(*bhp);
         // TODO: What to do if BHP is limited?
-        auto rates = computeWellRates_(new_bhp, bhp_is_limited);
-        // double new_oil_rate, new_gas_rate, new_water_rate;
-        // bool oil_is_limited, gas_is_limited, water_is_limited;
-        // std::tie(new_oil_rate, oil_is_limited) = getOilRateWithLimit_(rates);
-        // std::tie(new_gas_rate, gas_is_limited) = getGasRateWithLimit_(rates);
-        // std::tie(new_water_rate, water_is_limited) = getWaterRateWithLimit_(rates);
+        auto rates = computeWellRates_(new_bhp, bhp_is_limited, debug_output);
         const auto ratesLimited = getLimitedRatesFromRates_(rates);
         BasicRates oldrates = {oil_rate, gas_rate, water_rate, false};
         const auto new_rates = updateRatesToGroupLimits_(oldrates, ratesLimited, gr_name_dont_limit);
@@ -288,7 +289,7 @@ computeConvergedBhpAtThpLimitByMaybeIncreasingALQ_() const
     auto alq = this->orig_alq_;
     double new_alq = alq;
     std::optional<double> bhp;
-    while (alq <= (this->max_alq_ + this->increment_)) {
+    while ((alq < this->max_alq_) || checkALQequal_(alq, this->max_alq_)) {
         if (bhp = computeBhpAtThpLimit_(alq); bhp) {
             new_alq = alq;
             break;
@@ -321,7 +322,8 @@ GasLiftSingleWellGeneric::computeInitialWellRates_() const
                                                 rates->water);
             displayDebugMessage_(msg);
         }
-    } else {
+    }
+    else {
         displayDebugMessage_("Aborting optimization.");
     }
     return {rates, initial_alq};
@@ -1531,10 +1533,10 @@ GasLiftSingleWellGeneric::OptimizeState::checkAlqOutsideLimits(double alq, [[may
         }
     } else { // we are decreasing lift gas
         if (alq == 0) {
-            ss << "ALQ is zero, cannot decrease further. Stopping iteration.";
+            ss << "ALQ is zero, cannot decrease further. Stopping iteration. ";
             result = true;
         } else if (alq < 0) {
-            ss << "Negative ALQ: " << alq << ". Stopping iteration.";
+            ss << "Negative ALQ: " << alq << ". Stopping iteration. ";
             result = true;
         }
         // NOTE: A negative min_alq_ means: allocate at least enough lift gas
@@ -1593,7 +1595,7 @@ GasLiftSingleWellGeneric::checkGroupALQrateExceeded(double delta_alq, const std:
     const auto& pairs = group_info_.getWellGroups(well_name_);
     for (const auto& [group_name, efficiency] : pairs) {
         // in stage 2 we don't want to limit the rate to the group
-        // target we are trying to redistribute the gaslift within 
+        // target we are trying to redistribute the gaslift within
         if (gr_name_dont_limit == group_name)
             continue;
         auto max_alq_opt = group_info_.maxAlq(group_name);
