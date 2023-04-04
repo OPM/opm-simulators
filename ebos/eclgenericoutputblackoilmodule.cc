@@ -151,6 +151,7 @@ EclGenericOutputBlackoilModule(const EclipseState& eclState,
                            const SummaryState& summaryState,
                            bool enableEnergy,
                            bool enableTemperature,
+                           bool enableMech,
                            bool enableSolvent,
                            bool enablePolymer,
                            bool enableFoam,
@@ -166,6 +167,7 @@ EclGenericOutputBlackoilModule(const EclipseState& eclState,
     , logOutput_(eclState, schedule, summaryState)
     , enableEnergy_(enableEnergy)
     , enableTemperature_(enableTemperature)
+    , enableMech_(enableMech)
     , enableSolvent_(enableSolvent)
     , enablePolymer_(enablePolymer)
     , enableFoam_(enableFoam)
@@ -423,15 +425,26 @@ assignToSolution(data::Solution& sol)
     const auto extendedSolutionArrays = std::array {
         DataEntry{"BIOFILM",  UnitSystem::measure::identity,           cBiofilm_},
         DataEntry{"CALCITE",  UnitSystem::measure::identity,           cCalcite_},
+        DataEntry{"DELSTRXX", UnitSystem::measure::pressure,           delstressXX_},
+        DataEntry{"DELSTRYY", UnitSystem::measure::pressure,           delstressYY_},
+        DataEntry{"DELSTRZZ", UnitSystem::measure::pressure,           delstressZZ_},
+        DataEntry{"DELSTRXY", UnitSystem::measure::pressure,           delstressXY_},
+        DataEntry{"DELSTRXZ", UnitSystem::measure::pressure,           delstressXZ_},
+        DataEntry{"DELSTRYZ", UnitSystem::measure::pressure,           delstressYZ_},
+        DataEntry{"DISPX",    UnitSystem::measure::length,             dispX_},
+        DataEntry{"DISPY",    UnitSystem::measure::length,             dispY_},
+        DataEntry{"DISPZ",    UnitSystem::measure::length,             dispZ_},
         DataEntry{"DRSDTCON", UnitSystem::measure::gas_oil_ratio_rate, drsdtcon_},
         DataEntry{"KRNSW_GO", UnitSystem::measure::identity,           krnSwMdcGo_},
         DataEntry{"KRNSW_OW", UnitSystem::measure::identity,           krnSwMdcOw_},
+        DataEntry{"MECHPOTF", UnitSystem::measure::pressure,           mechPotentialForce_},
         DataEntry{"MICROBES", UnitSystem::measure::density,            cMicrobes_},
         DataEntry{"OXYGEN",   UnitSystem::measure::density,            cOxygen_},
         DataEntry{"PCSWM_GO", UnitSystem::measure::identity,           pcSwMdcGo_},
         DataEntry{"PCSWM_OW", UnitSystem::measure::identity,           pcSwMdcOw_},
         DataEntry{"PERMFACT", UnitSystem::measure::identity,           permFact_},
         DataEntry{"PORV_RC",  UnitSystem::measure::identity,           rockCompPorvMultiplier_},
+        DataEntry{"PRESPOTF", UnitSystem::measure::pressure,           mechPotentialPressForce_},
         DataEntry{"PRES_OVB", UnitSystem::measure::pressure,           overburdenPressure_},
         DataEntry{"RSW",      UnitSystem::measure::gas_oil_ratio,      rsw_},
         DataEntry{"RVW",      UnitSystem::measure::oil_gas_ratio,      rvw_},
@@ -442,6 +455,19 @@ assignToSolution(data::Solution& sol)
         DataEntry{"STD_CO2",  UnitSystem::measure::identity,           mFracCo2_},
         DataEntry{"STD_GAS",  UnitSystem::measure::identity,           mFracGas_},
         DataEntry{"STD_OIL",  UnitSystem::measure::identity,           mFracOil_},
+        DataEntry{"STRAINXX", UnitSystem::measure::identity,           strainXX_},
+        DataEntry{"STRAINYY", UnitSystem::measure::identity,           strainYY_},
+        DataEntry{"STRAINZZ", UnitSystem::measure::identity,           strainZZ_},
+        DataEntry{"STRAINXY", UnitSystem::measure::identity,           strainXY_},
+        DataEntry{"STRAINXZ", UnitSystem::measure::identity,           strainXZ_},
+        DataEntry{"STRAINYZ", UnitSystem::measure::identity,           strainYZ_},
+        DataEntry{"STRESSXX", UnitSystem::measure::length,             stressXX_},
+        DataEntry{"STRESSYY", UnitSystem::measure::length,             stressYY_},
+        DataEntry{"STRESSZZ", UnitSystem::measure::length,             stressZZ_},
+        DataEntry{"STRESSXY", UnitSystem::measure::length,             stressXY_},
+        DataEntry{"STRESSXZ", UnitSystem::measure::length,             stressXZ_},
+        DataEntry{"STRESSYZ", UnitSystem::measure::length,             stressYZ_},
+        DataEntry{"TEMPPOTF", UnitSystem::measure::pressure,           mechPotentialTempForce_},
         DataEntry{"TMULT_RC", UnitSystem::measure::identity,           rockCompTransMultiplier_},
         DataEntry{"UREA",     UnitSystem::measure::density,            cUrea_},
     };
@@ -759,6 +785,66 @@ doAllocBuffers(unsigned bufferSize,
     fluidPressure_.resize(bufferSize, 0.0);
     rstKeywords["PRES"] = 0;
     rstKeywords["PRESSURE"] = 0;
+
+    if (enableMech_ && eclState_.runspec().mech()) {
+        this->mechPotentialForce_.resize(bufferSize,0.0);
+        rstKeywords["MECHPOTF"] = 0;
+        this->mechPotentialTempForce_.resize(bufferSize,0.0);
+        rstKeywords["TEMPPOTF"] = 0;
+        this->mechPotentialPressForce_.resize(bufferSize,0.0);
+        rstKeywords["PRESPOTF"] = 0;
+
+        this->dispX_.resize(bufferSize,0.0);
+        rstKeywords["DISPX"] = 0;
+        this->dispY_.resize(bufferSize,0.0);
+        rstKeywords["DISPY"] = 0;
+        this->dispZ_.resize(bufferSize,0.0);
+        rstKeywords["DISPZ"] = 0;
+        this->stressXX_.resize(bufferSize,0.0);
+        rstKeywords["STRESSXX"] = 0;
+        this->stressYY_.resize(bufferSize,0.0);
+        rstKeywords["STRESSYY"] = 0;
+        this->stressZZ_.resize(bufferSize,0.0);
+        rstKeywords["STRESSZZ"] = 0;
+        this->stressXY_.resize(bufferSize,0.0);
+        rstKeywords["STRESSXY"] = 0;
+        this->stressXZ_.resize(bufferSize,0.0);
+        rstKeywords["STRESSXZ"] = 0;
+        this->stressXY_.resize(bufferSize,0.0);
+        rstKeywords["STRESSXY"] = 0;
+        this->stressYZ_.resize(bufferSize,0.0);
+        rstKeywords["STRESSYZ"] = 0;
+
+        this->strainXX_.resize(bufferSize,0.0);
+        rstKeywords["STRAINXX"] = 0;
+        this->strainYY_.resize(bufferSize,0.0);
+        rstKeywords["STRAINYY"] = 0;
+        this->strainZZ_.resize(bufferSize,0.0);
+        rstKeywords["STRAINZZ"] = 0;
+        this->strainXY_.resize(bufferSize,0.0);
+        rstKeywords["STRAINXY"] = 0;
+        this->strainXZ_.resize(bufferSize,0.0);
+        rstKeywords["STRAINXZ"] = 0;
+        this->strainXY_.resize(bufferSize,0.0);
+        rstKeywords["STRAINXY"] = 0;
+        this->strainYZ_.resize(bufferSize,0.0);
+        rstKeywords["STRAINYZ"] = 0;
+
+        this->delstressXX_.resize(bufferSize,0.0);
+        rstKeywords["DELSTRXX"] = 0;
+        this->delstressYY_.resize(bufferSize,0.0);
+        rstKeywords["DELSTRYY"] = 0;
+        this->delstressZZ_.resize(bufferSize,0.0);
+        rstKeywords["DELSTRZZ"] = 0;
+        this->delstressXY_.resize(bufferSize,0.0);
+        rstKeywords["DELSTRXY"] = 0;
+        this->delstressXZ_.resize(bufferSize,0.0);
+        rstKeywords["DELSTRXZ"] = 0;
+        this->delstressXY_.resize(bufferSize,0.0);
+        rstKeywords["DELSTRXY"] = 0;
+        this->delstressYZ_.resize(bufferSize,0.0);
+        rstKeywords["DELSTRYZ"] = 0;
+    }
 
     // If TEMP is set in RPTRST we output temperature even if THERMAL
     // is not activated
