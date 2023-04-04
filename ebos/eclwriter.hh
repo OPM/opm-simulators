@@ -573,7 +573,16 @@ private:
             }
         }
 
-        if (! this->simulator_.model().linearizer().getFlowsInfo().empty()) {
+        {
+        OPM_TIMEBLOCK(prepareMechData);
+        for (const auto& elem : elements(gridView)) {
+            elemCtx.updatePrimaryStencil(elem);
+            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+            eclOutputModule_->processElementMech(elemCtx);
+        }
+        }
+
+        if(! this->simulator_.model().linearizer().getFlowsInfo().empty()){
             OPM_TIMEBLOCK(prepareFlowsData);
             for (const auto& elem : elements(gridView)) {
                 elemCtx.updatePrimaryStencil(elem);

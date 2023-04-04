@@ -283,6 +283,7 @@ protected:
                                    const SummaryState& summaryState,
                                    bool enableEnergy,
                                    bool enableTemperature,
+                                   bool enableMech,
                                    bool enableSolvent,
                                    bool enablePolymer,
                                    bool enableFoam,
@@ -445,6 +446,7 @@ protected:
 
     bool enableEnergy_;
     bool enableTemperature_;
+    bool enableMech_;
 
     bool enableSolvent_;
     bool enablePolymer_;
@@ -482,6 +484,7 @@ protected:
     ScalarBuffer pressureTimesHydrocarbonVolume_;
     ScalarBuffer dynamicPoreVolume_;
     ScalarBuffer fluidPressure_;
+    ScalarBuffer fluidPresDiff_;
     ScalarBuffer temperature_;
     ScalarBuffer rs_;
     ScalarBuffer rsw_;

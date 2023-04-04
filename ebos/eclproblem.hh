@@ -207,6 +207,7 @@ struct NumPressurePointsEquil {
 };
 
 
+    
 // Set the problem property
 template<class TypeTag>
 struct Problem<TypeTag, TTag::EclBaseProblem> {
@@ -531,6 +532,10 @@ struct EnableTemperature<TypeTag, TTag::EclBaseProblem> {
     static constexpr bool value = true;
 };
 
+template<class TypeTag>
+struct EnableMech<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = false;
+};
 // disable all extensions supported by black oil model. this should not really be
 // necessary but it makes things a bit more explicit
 template<class TypeTag>

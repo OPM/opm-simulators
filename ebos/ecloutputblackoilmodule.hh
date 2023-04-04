@@ -145,6 +145,7 @@ public:
                    simulator.vanguard().summaryState(),
                    getPropValue<TypeTag, Properties::EnableEnergy>(),
                    getPropValue<TypeTag, Properties::EnableTemperature>(),
+                   getPropValue<TypeTag, Properties::EnableMech>(),
                    getPropValue<TypeTag, Properties::EnableSolvent>(),
                    getPropValue<TypeTag, Properties::EnablePolymer>(),
                    getPropValue<TypeTag, Properties::EnableFoam>(),
@@ -216,6 +217,16 @@ public:
                              problem.eclWriter()->getOutputNnc().size());
     }
 
+    void processElementMech(const ElementContext& elemCtx){
+        const auto& problem = elemCtx.simulator().problem();
+        for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
+            const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
+            const auto& fs = intQuants.fluidState();
+            typedef typename std::remove_const<typename std::remove_reference<decltype(fs)>::type>::type FluidState;
+            unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+            this->fluidPresDiff_[globalDofIdx] = getValue(fs.pressure(waterPhaseIdx));           
+        }
+    }
     /*!
      * \brief Modify the internal buffers according to the intensive
      *        quanties relevant for an element
@@ -256,7 +267,7 @@ public:
                 }
                 Valgrind::CheckDefined(this->fluidPressure_[globalDofIdx]);
             }
-
+            
             if (!this->temperature_.empty()) {
                 this->temperature_[globalDofIdx] = getValue(fs.temperature(oilPhaseIdx));
                 Valgrind::CheckDefined(this->temperature_[globalDofIdx]);

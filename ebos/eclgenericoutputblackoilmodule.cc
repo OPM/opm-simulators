@@ -149,6 +149,7 @@ EclGenericOutputBlackoilModule(const EclipseState& eclState,
                            const SummaryState& summaryState,
                            bool enableEnergy,
                            bool enableTemperature,
+                           bool enableMech,    
                            bool enableSolvent,
                            bool enablePolymer,
                            bool enableFoam,
@@ -163,6 +164,7 @@ EclGenericOutputBlackoilModule(const EclipseState& eclState,
     , interRegionFlows_(numCells(eclState), defineInterRegionFlowArrays(eclState, summaryConfig))
     , enableEnergy_(enableEnergy)
     , enableTemperature_(enableTemperature)
+    , enableMech_(enableMech)  
     , enableSolvent_(enableSolvent)
     , enablePolymer_(enablePolymer)
     , enableFoam_(enableFoam)
@@ -731,8 +733,97 @@ assignToSolution(data::Solution& sol)
     auto doInsert = [&sol](const DataEntry&       entry,
                            const data::TargetType target)
     {
-        if (std::get<2>(entry).empty()) {
-            return;
+        if (!std::get<3>(entry).empty())
+            sol.insert(std::get<0>(entry), std::get<1>(entry),
+                       std::move(std::get<3>(entry)), std::get<2>(entry));
+    };
+
+    const std::vector<DataEntry> data = {
+        {"1OVERBG",  UnitSystem::measure::gas_inverse_formation_volume_factor,   data::TargetType::RESTART_AUXILIARY, invB_[gasPhaseIdx]},
+        {"1OVERBO",  UnitSystem::measure::oil_inverse_formation_volume_factor,   data::TargetType::RESTART_AUXILIARY, invB_[oilPhaseIdx]},
+        {"1OVERBW",  UnitSystem::measure::water_inverse_formation_volume_factor, data::TargetType::RESTART_AUXILIARY, invB_[waterPhaseIdx]},
+        {"BIOFILM",  UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      cBiofilm_},
+        {"CALCITE",  UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      cCalcite_},
+        {"FLOGASI+", UnitSystem::measure::gas_surface_rate,    data::TargetType::RESTART_SOLUTION, flowsi_[gasCompIdx]},
+        {"FLOGASJ+", UnitSystem::measure::gas_surface_rate,    data::TargetType::RESTART_SOLUTION, flowsj_[gasCompIdx]},
+        {"FLOGASK+", UnitSystem::measure::gas_surface_rate,    data::TargetType::RESTART_SOLUTION, flowsk_[gasCompIdx]},
+        {"FLOOILI+", UnitSystem::measure::liquid_surface_rate, data::TargetType::RESTART_SOLUTION, flowsi_[oilCompIdx]},
+        {"FLOOILJ+", UnitSystem::measure::liquid_surface_rate, data::TargetType::RESTART_SOLUTION, flowsj_[oilCompIdx]},
+        {"FLOOILK+", UnitSystem::measure::liquid_surface_rate, data::TargetType::RESTART_SOLUTION, flowsk_[oilCompIdx]},
+        {"FLOWATI+", UnitSystem::measure::liquid_surface_rate, data::TargetType::RESTART_SOLUTION, flowsi_[waterCompIdx]},
+        {"FLOWATJ+", UnitSystem::measure::liquid_surface_rate, data::TargetType::RESTART_SOLUTION, flowsj_[waterCompIdx]},
+        {"FLOWATK+", UnitSystem::measure::liquid_surface_rate, data::TargetType::RESTART_SOLUTION, flowsk_[waterCompIdx]}, 
+        {"FLRGASI+", UnitSystem::measure::rate,      data::TargetType::RESTART_SOLUTION,      floresi_[gasCompIdx]},
+        {"FLRGASJ+", UnitSystem::measure::rate,      data::TargetType::RESTART_SOLUTION,      floresj_[gasCompIdx]},
+        {"FLRGASK+", UnitSystem::measure::rate,      data::TargetType::RESTART_SOLUTION,      floresk_[gasCompIdx]},
+        {"FLROILI+", UnitSystem::measure::rate,      data::TargetType::RESTART_SOLUTION,      floresi_[oilCompIdx]},
+        {"FLROILJ+", UnitSystem::measure::rate,      data::TargetType::RESTART_SOLUTION,      floresj_[oilCompIdx]},
+        {"FLROILK+", UnitSystem::measure::rate,      data::TargetType::RESTART_SOLUTION,      floresk_[oilCompIdx]},
+        {"FLRWATI+", UnitSystem::measure::rate,      data::TargetType::RESTART_SOLUTION,      floresi_[waterCompIdx]},
+        {"FLRWATJ+", UnitSystem::measure::rate,      data::TargetType::RESTART_SOLUTION,      floresj_[waterCompIdx]},
+        {"FLRWATK+", UnitSystem::measure::rate,      data::TargetType::RESTART_SOLUTION,      floresk_[waterCompIdx]},
+        {"FOAM",     UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      cFoam_},
+        {"GASKR",    UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     relativePermeability_[gasPhaseIdx]},
+        {"GAS_DEN",  UnitSystem::measure::density,   data::TargetType::RESTART_AUXILIARY,     density_[gasPhaseIdx]},
+        {"GAS_VISC", UnitSystem::measure::viscosity, data::TargetType::RESTART_AUXILIARY,     viscosity_[gasPhaseIdx]},
+        {"KRNSW_GO", UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     krnSwMdcGo_},
+        {"KRNSW_OW", UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     krnSwMdcOw_},
+        {"MICROBES", UnitSystem::measure::density,   data::TargetType::RESTART_SOLUTION,      cMicrobes_},
+        {"OILKR",    UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     relativePermeability_[oilPhaseIdx]},
+        {"OIL_DEN",  UnitSystem::measure::density,   data::TargetType::RESTART_AUXILIARY,     density_[oilPhaseIdx]},
+        {"OIL_VISC", UnitSystem::measure::viscosity, data::TargetType::RESTART_AUXILIARY,     viscosity_[oilPhaseIdx]},
+        {"OXYGEN",   UnitSystem::measure::density,   data::TargetType::RESTART_SOLUTION,      cOxygen_},
+        {"PBUB",     UnitSystem::measure::pressure,  data::TargetType::RESTART_AUXILIARY,     bubblePointPressure_},
+        {"PCSWM_GO", UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     pcSwMdcGo_},
+        {"PCSWM_OW", UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     pcSwMdcOw_},
+        {"PDEW",     UnitSystem::measure::pressure,  data::TargetType::RESTART_AUXILIARY,     dewPointPressure_},
+        {"POLYMER",  UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      cPolymer_},
+        {"PORV_RC",  UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     rockCompPorvMultiplier_},
+        {"PPCW",     UnitSystem::measure::pressure,  data::TargetType::RESTART_SOLUTION,      ppcw_},
+        {"PRESROCC", UnitSystem::measure::pressure,  data::TargetType::RESTART_SOLUTION,      minimumOilPressure_},
+        {"PRESSURE", UnitSystem::measure::pressure,  data::TargetType::RESTART_SOLUTION,      fluidPressure_},
+        {"PRESDIFF", UnitSystem::measure::pressure,  data::TargetType::RESTART_SOLUTION,      fluidPresDiff_},
+        {"PCOW",     UnitSystem::measure::pressure,  data::TargetType::RESTART_SOLUTION,      pcow_},
+        {"PCOG",     UnitSystem::measure::pressure,  data::TargetType::RESTART_SOLUTION,      pcog_},
+        {"PRES_OVB", UnitSystem::measure::pressure,  data::TargetType::RESTART_SOLUTION,      overburdenPressure_},
+        {"RS",       UnitSystem::measure::gas_oil_ratio, data::TargetType::RESTART_SOLUTION,  rs_},
+        {"RSW",      UnitSystem::measure::gas_oil_ratio, data::TargetType::RESTART_SOLUTION,  rsw_},
+        {"RSSAT",    UnitSystem::measure::gas_oil_ratio, data::TargetType::RESTART_AUXILIARY, gasDissolutionFactor_},
+        {"RV",       UnitSystem::measure::oil_gas_ratio, data::TargetType::RESTART_SOLUTION,  rv_},
+        {"RVSAT",    UnitSystem::measure::oil_gas_ratio, data::TargetType::RESTART_AUXILIARY, oilVaporizationFactor_},
+        {"RVW",      UnitSystem::measure::oil_gas_ratio, data::TargetType::RESTART_AUXILIARY, rvw_},
+        {"SALT",     UnitSystem::measure::salinity,  data::TargetType::RESTART_SOLUTION,      cSalt_},
+        {"SALTP",    UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     pSalt_},
+        {"PERMFACT", UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     permFact_},
+        {"SOMAX",    UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      soMax_},
+        {"DRSDTCON", UnitSystem::measure::gas_oil_ratio_rate,  data::TargetType::RESTART_AUXILIARY,     drsdtcon_},
+        {"SSOLVENT", UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      sSol_},
+        {"SS_X",     UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      extboX_},
+        {"SS_Y",     UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      extboY_},
+        {"SS_Z",     UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      extboZ_},
+        {"STD_CO2",  UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      mFracCo2_},
+        {"STD_GAS",  UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      mFracGas_},
+        {"STD_OIL",  UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      mFracOil_},
+        {"SWMAX",    UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      swMax_},
+        {"UREA",     UnitSystem::measure::density,   data::TargetType::RESTART_SOLUTION,      cUrea_},
+        {"TMULT_RC", UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     rockCompTransMultiplier_},
+        {"WATKR",    UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     relativePermeability_[waterPhaseIdx]},
+        {"WAT_DEN",  UnitSystem::measure::density,   data::TargetType::RESTART_AUXILIARY,     density_[waterPhaseIdx]},
+        {"WAT_VISC", UnitSystem::measure::viscosity, data::TargetType::RESTART_AUXILIARY,     viscosity_[waterPhaseIdx]},
+    };
+
+    for (const auto& entry : data)
+        doInsert(entry);
+
+    if (!temperature_.empty()) {
+        if (enableEnergy_)
+            sol.insert("TEMP", UnitSystem::measure::temperature, std::move(temperature_), data::TargetType::RESTART_SOLUTION);
+        else {
+            // Flow allows for initializing of non-constant initial temperature.
+            // For output of this temperature for visualization and restart set --enable-opm-restart=true
+            assert(enableTemperature_);
+            sol.insert("TEMP", UnitSystem::measure::temperature, std::move(temperature_), data::TargetType::RESTART_AUXILIARY);
+>>>>>>> bf8f4dd77 (added outputwriting for geomechanical module)
         }
 
         sol.insert(std::get<std::string>(entry),
@@ -1138,9 +1229,13 @@ doAllocBuffers(unsigned bufferSize,
     rstKeywords["PRES"] = 0;
     rstKeywords["PRESSURE"] = 0;
 
-    // If TEMP is set in RPTRST we output temperature even if THERMAL
-    // is not activated
-    if (enableEnergy_ || rstKeywords["TEMP"] > 0) {
+    if (enableMech_){
+        this->fluidPresDiff_.resize(bufferSize,0.0);
+        rstKeywords["PresDiff"] = 0;    
+    }
+    
+    // Allocate memory for temperature
+    if (enableEnergy_ || enableTemperature_) {
         this->temperature_.resize(bufferSize, 0.0);
         rstKeywords["TEMP"] = 0;
     }
