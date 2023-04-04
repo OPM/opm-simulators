@@ -669,7 +669,6 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"VISCD", {true, std::nullopt}},
         {"VISDATES", {true, std::nullopt}},
         {"VISOPTS", {true, std::nullopt}},
-        {"WAGHYSTR", {true, std::nullopt}},
         {"WAITBAL", {true, std::nullopt}},
         {"WALKALIN", {true, std::nullopt}},
         {"WALQCALC", {true, std::nullopt}},
