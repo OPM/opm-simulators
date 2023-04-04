@@ -258,6 +258,15 @@ partiallySupported()
             },
          },
          {
+            "WAGHYSTR",
+            {
+               {3,{true, allow_values<std::string> {"YES"}, "WAGHYSTR(GAS_MODEL): only the YES option is supported – will STOP"}}, // GAS_MODEL
+               {4,{true, allow_values<std::string> {"NO"}, "WAGHYSTR(RES_OIL): only the NO option is supported – will STOP"}}, // RES_OIL
+               {5,{true, allow_values<std::string> {"NO"}, "WAGHYSTR(WATER_MODEL): only the NO option is supported – will STOP"}}, // WATER_MODEL
+            },
+         },
+
+         {
             "WCONHIST",
             {
                {3,{true, allow_values<std::string> {"ORAT", "WRAT", "GRAT", "LRAT", "RESV", "BHP"}, "WCONHIST(TARGET): should be set to ORAT/WRAT/GRAT/LRAT/RESV or BHP"}}, // CMODE
@@ -631,6 +640,12 @@ partiallySupported()
             "VISCREF",
             {
                {3,{true, allow_values<double> {}, "VISCREF(API): API tracking option is not supported"}}, // API_GRAVITY
+            },
+         },
+         {
+            "WAGHYSTR",
+            {
+               {8,{false, allow_values<double> {}, "WAGHYSTR(RES_OIL_MOD_FRACTION): Residual oil modification for STONE1 not supported - value ignored"}}, // RES_OIL_MOD_FRACTION
             },
          },
          {
