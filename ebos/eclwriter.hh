@@ -122,6 +122,7 @@ class EclWriter : public EclGenericWriter<GetPropType<TypeTag, Properties::Grid>
     using BaseType = EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>;
 
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    enum { enableMech = getPropValue<TypeTag, Properties::EnableMech>() };
     enum { enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>() };
     enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
 
@@ -574,6 +575,7 @@ private:
         }
 
         {
+        if(enableMech){    
         OPM_TIMEBLOCK(prepareMechData);
         for (const auto& elem : elements(gridView)) {
             elemCtx.updatePrimaryStencil(elem);

@@ -224,7 +224,9 @@ public:
             const auto& fs = intQuants.fluidState();
             typedef typename std::remove_const<typename std::remove_reference<decltype(fs)>::type>::type FluidState;
             unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
-            this->fluidPresDiff_[globalDofIdx] = getValue(fs.pressure(waterPhaseIdx));           
+            if(!this->fluidPresDiff_.empty()){
+                this->fluidPresDiff_[globalDofIdx] = getValue(fs.pressure(waterPhaseIdx));
+            }
         }
     }
     /*!
