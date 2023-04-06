@@ -82,6 +82,7 @@ public:
 
     //! \brief Update THP.
     void updateThp(const double rho,
+                   const bool stop_or_zero_rate_target,
                    const std::function<double()>& alq_value,
                    const std::array<unsigned,3>& active,
                    WellState& well_state,

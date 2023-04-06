@@ -26,6 +26,7 @@
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/TargetCalculator.hpp>
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
+#include <opm/simulators/wells/WellHelpers.hpp>
 
 #include <dune/common/version.hh>
 
@@ -183,7 +184,8 @@ namespace Opm
                       const GroupState& group_state,
                       DeferredLogger& deferred_logger) /* const */
     {
-        if (this->wellIsStopped()) {
+        const auto& summary_state = ebos_simulator.vanguard().summaryState();
+        if (this->stopppedOrZeroRateTarget(summary_state, well_state)) {
             return false;
         }
 
@@ -244,7 +246,7 @@ namespace Opm
 
             this->well_control_log_.push_back(from);
             updateWellStateWithTarget(ebos_simulator, group_state, well_state, deferred_logger);
-            updatePrimaryVariables(well_state, deferred_logger);
+            updatePrimaryVariables(summaryState, well_state, deferred_logger);
         }
 
         return changed;
@@ -269,7 +271,8 @@ namespace Opm
 
         updateWellStateWithTarget(simulator, group_state, well_state_copy, deferred_logger);
         calculateExplicitQuantities(simulator, well_state_copy, deferred_logger);
-        updatePrimaryVariables(well_state_copy, deferred_logger);
+        const auto& summary_state = simulator.vanguard().summaryState();
+        updatePrimaryVariables(summary_state, well_state_copy, deferred_logger);
         initPrimaryVariablesEvaluation();
 
         if (this->isProducer()) {
@@ -898,7 +901,7 @@ namespace Opm
             case Well::ProducerCMode::RESV:
             {
                 std::vector<double> convert_coeff(this->number_of_phases_, 1.0);
-                this->rateConverter_.calcCoeff(/*fipreg*/ 0, this->pvtRegionIdx_, convert_coeff);
+                this->rateConverter_.calcCoeff(/*fipreg*/ 0, this->pvtRegionIdx_, ws.surface_rates, convert_coeff);
                 double total_res_rate = 0.0;
                 for (int p = 0; p<np; ++p) {
                     total_res_rate -= ws.surface_rates[p] * convert_coeff[p];
@@ -1052,7 +1055,7 @@ namespace Opm
         }
         for (int perf = 0; perf < nperf; ++perf) {
             const int cell_idx = this->well_cells_[perf];
-            const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
+            const auto& intQuants = ebosSimulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
             const double well_tw_fraction = this->well_index_[perf] / total_tw;
             double total_mobility = 0.0;
@@ -1128,4 +1131,5 @@ namespace Opm
             return fs.pressure(FluidSystem::gasPhaseIdx);
         }
     }
+
 } // namespace Opm

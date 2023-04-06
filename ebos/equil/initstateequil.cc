@@ -27,7 +27,7 @@
 
 namespace Opm {
 namespace EQUIL {
-namespace DeckDependent {    
+namespace DeckDependent {
 #if HAVE_DUNE_FEM
 using GridView = Dune::Fem::GridPart2GridViewImpl<
                                      Dune::Fem::AdaptiveLeafGridPart<
@@ -57,7 +57,7 @@ template InitialStateComputer<BlackOilFluidSystem<double>,
                          const GridView&,
                          const Dune::CartesianIndexMapper<Dune::CpGrid>&,
                          const double,
-                         const bool);                                    
+                         const bool);
 #if HAVE_DUNE_ALUGRID
 #if HAVE_MPI
 using ALUGridComm = Dune::ALUGridMPIComm;
@@ -105,6 +105,6 @@ namespace Details {
 
     template std::pair<double,double> cellZMinMax(const Dune::cpgrid::Entity<0>& element);
 }
-}
+
 } // namespace EQUIL
- // namespace Opm
+} // namespace Opm

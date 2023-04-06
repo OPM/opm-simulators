@@ -243,6 +243,22 @@ namespace Opm {
             void
             calcCoeff(const RegionId r, const int pvtRegionIdx, Coeff& coeff) const;
 
+            template <class Coeff , class Rates>
+            void
+            calcCoeff(const RegionId r, const int pvtRegionIdx, const Rates& surface_rates, Coeff& coeff) const;
+
+            template <class Coeff>
+            void
+            calcCoeff(  const int pvtRegionIdx,
+                        const double        p,
+                        const double        rs,
+                        const double        rv,
+                        const double        rsw,
+                        const double        rvw,
+                        const double        T,
+                        const double saltConcentration,
+                        Coeff& coeff) const;
+
             template <class Coeff>
             void
             calcInjCoeff(const RegionId r, const int pvtRegionIdx, Coeff& coeff) const;

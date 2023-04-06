@@ -237,6 +237,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     beginTimeStep()
     {
+        OPM_TIMEBLOCK(beginTimeStep);
         updatePerforationIntensiveQuantities();
         updateAverageFormationFactor();
         DeferredLogger local_deferredLogger;
@@ -1248,6 +1249,35 @@ namespace Opm {
         }
     }
 
+    template <typename TypeTag>
+    void BlackoilWellModel<TypeTag>::
+    addReservoirSourceTerms(GlobalEqVector& residual,
+                            std::vector<typename SparseMatrixAdapter::MatrixBlock*>& diagMatAddress) const
+    {
+        // NB this loop may write multiple times to the same element
+        // if a cell is perforated by more than one well, so it should
+        // not be OpenMP-parallelized.
+        for (const auto& well : well_container_) {
+            if (!well->isOperableAndSolvable() && !well->wellIsStopped()) {
+                continue;
+            }
+            const auto& cells = well->cells();
+            const auto& rates = well->connectionRates();
+            for (unsigned perfIdx = 0; perfIdx < rates.size(); ++perfIdx) {
+                unsigned cellIdx = cells[perfIdx];
+                auto rate = rates[perfIdx];
+                rate *= -1.0;
+                VectorBlockType res(0.0);
+                using MatrixBlockType = typename SparseMatrixAdapter::MatrixBlock;
+                MatrixBlockType bMat(0.0);
+                ebosSimulator_.model().linearizer().setResAndJacobi(res, bMat, rate);
+                residual[cellIdx] += res;
+                *diagMatAddress[cellIdx] += bMat;
+            }
+        }
+    }
+
+
     template<typename TypeTag>
     int
     BlackoilWellModel<TypeTag>::
@@ -1323,7 +1353,8 @@ namespace Opm {
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         {
             for (auto& well : well_container_) {
-                well->recoverWellSolutionAndUpdateWellState(x, this->wellState(), local_deferredLogger);
+                const auto& summary_state = ebosSimulator_.vanguard().summaryState();
+                well->recoverWellSolutionAndUpdateWellState(summary_state, x, this->wellState(), local_deferredLogger);
             }
 
         }
@@ -1658,7 +1689,8 @@ namespace Opm {
             auto& events = this->wellState().well(well->indexOfWell()).events;
             if (events.hasEvent(WellState::event_mask)) {
                 well->updateWellStateWithTarget(ebosSimulator_, this->groupState(), this->wellState(), deferred_logger);
-                well->updatePrimaryVariables(this->wellState(), deferred_logger);
+                const auto& summary_state = ebosSimulator_.vanguard().summaryState();
+                well->updatePrimaryVariables(summary_state, this->wellState(), deferred_logger);
                 well->initPrimaryVariablesEvaluation();
                 // There is no new well control change input within a report step,
                 // so next time step, the well does not consider to have effective events anymore.
@@ -1732,7 +1764,8 @@ namespace Opm {
     updatePrimaryVariables(DeferredLogger& deferred_logger)
     {
         for (const auto& well : well_container_) {
-            well->updatePrimaryVariables(this->wellState(), deferred_logger);
+            const auto& summary_state = ebosSimulator_.vanguard().summaryState();
+            well->updatePrimaryVariables(summary_state, this->wellState(), deferred_logger);
         }
     }
 
@@ -1855,9 +1888,10 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     calcRates(const int fipnum,
               const int pvtreg,
+              const std::vector<double>& production_rates,
               std::vector<double>& resv_coeff)
     {
-        rateConverter_->calcCoeff(fipnum, pvtreg, resv_coeff);
+        rateConverter_->calcCoeff(fipnum, pvtreg, production_rates, resv_coeff);
     }
 
     template<typename TypeTag>
@@ -1906,7 +1940,7 @@ namespace Opm {
 
             for (int perf = 0; perf < num_perf_this_well; ++perf) {
                 const int cell_idx = well_perf_data_[wellID][perf].cell_index;
-                const auto& intQuants = *(ebosSimulator_.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
+                const auto& intQuants = ebosSimulator_.model().intensiveQuantities(cell_idx, /*timeIdx=*/0);
                 const auto& fs = intQuants.fluidState();
 
                 // we on only have one temperature pr cell any phaseIdx will do

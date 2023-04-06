@@ -150,26 +150,23 @@ public:
         if (idx < 0)
             return;
 
-        const auto* intQuantsPtr = model.cachedIntensiveQuantities(cellIdx, timeIdx);
-        if (intQuantsPtr == nullptr) {
-            throw std::logic_error("Invalid intensive quantities cache detected in AquiferAnalytical::addToSource()");
-        }
+        const auto& intQuants = model.intensiveQuantities(cellIdx, timeIdx);
 
         // This is the pressure at td + dt
-        this->updateCellPressure(this->pressure_current_, idx, *intQuantsPtr);
+        this->updateCellPressure(this->pressure_current_, idx, intQuants);
         this->calculateInflowRate(idx, this->ebos_simulator_);
 
         rates[BlackoilIndices::conti0EqIdx + compIdx_()]
             += this->Qai_[idx] / model.dofTotalVolume(cellIdx);
 
         if constexpr (enableEnergy) {
-            auto fs = intQuantsPtr->fluidState();
+            auto fs = intQuants.fluidState();
             if (this->Ta0_.has_value() && this->Qai_[idx] > 0)
             {
                 fs.setTemperature(this->Ta0_.value());
                 typedef typename std::decay<decltype(fs)>::type::Scalar FsScalar;
                 typename FluidSystem::template ParameterCache<FsScalar> paramCache;
-                const unsigned pvtRegionIdx = intQuantsPtr->pvtRegionIndex();
+                const unsigned pvtRegionIdx = intQuants.pvtRegionIndex();
                 paramCache.setRegionIndex(pvtRegionIdx);
                 paramCache.setMaxOilSat(this->ebos_simulator_.problem().maxOilSaturation(cellIdx));
                 paramCache.updatePhase(fs, this->phaseIdx_());
@@ -177,7 +174,7 @@ public:
                 fs.setEnthalpy(this->phaseIdx_(), h);
             }
             rates[BlackoilIndices::contiEnergyEqIdx]
-            += this->Qai_[idx] *fs.enthalpy(this->phaseIdx_()) * FluidSystem::referenceDensity( this->phaseIdx_(), intQuantsPtr->pvtRegionIndex()) / model.dofTotalVolume(cellIdx);
+            += this->Qai_[idx] *fs.enthalpy(this->phaseIdx_()) * FluidSystem::referenceDensity( this->phaseIdx_(), intQuants.pvtRegionIndex()) / model.dofTotalVolume(cellIdx);
 
         }
     }

@@ -28,14 +28,18 @@
 #define EWOMS_ECL_OUTPUT_BLACK_OIL_MODULE_HH
 
 #include <opm/common/Exceptions.hpp>
+#include <opm/common/TimingMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
-#include <opm/models/blackoil/blackoilproperties.hh>
+#include <opm/material/common/Valgrind.hpp>
+#include <opm/material/fluidmatrixinteractions/EclEpsScalingPoints.hpp>
+#include <opm/material/fluidstates/BlackOilFluidState.hpp>
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
+#include <opm/models/blackoil/blackoilproperties.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/utils/parametersystem.hh>
 #include <opm/models/utils/propertysystem.hh>
-
-#include <opm/material/common/Valgrind.hpp>
 
 #include <opm/output/data/Cells.hpp>
 #include <opm/output/eclipse/EclipseIO.hpp>
@@ -113,6 +117,7 @@ class EclOutputBlackOilModule : public EclGenericOutputBlackoilModule<GetPropTyp
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
     using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>;
+    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
     using Element = typename GridView::template Codim<0>::Entity;
@@ -545,127 +550,9 @@ public:
                         = FluidSystem::viscosity(fsInitial, gasPhaseIdx, intQuants.pvtRegionIndex());
             }
 
-            // Add fluid in Place values
-            updateFluidInPlace_(elemCtx, dofIdx);
-
-            // Adding block data
-            const auto cartesianIdx = elemCtx.simulator().vanguard().cartesianIndex(globalDofIdx);
-            for (auto& val : this->blockData_) {
-                const auto& key = val.first;
-                assert(key.second > 0);
-                unsigned int cartesianIdxBlock = key.second - 1;
-                if (cartesianIdx == cartesianIdxBlock) {
-                    if ((key.first == "BWSAT") || (key.first == "BSWAT"))
-                        val.second = getValue(fs.saturation(waterPhaseIdx));
-                    else if ((key.first == "BGSAT") || (key.first == "BSGAS"))
-                        val.second = getValue(fs.saturation(gasPhaseIdx));
-                    else if ((key.first == "BOSAT") || (key.first == "BSOIL"))
-                        val.second = getValue(fs.saturation(oilPhaseIdx));
-                    else if (key.first == "BNSAT")
-                        val.second = intQuants.solventSaturation().value();
-                    else if ((key.first == "BPR") || (key.first == "BPRESSUR")) {
-                        if (FluidSystem::phaseIsActive(oilPhaseIdx))
-                            val.second = getValue(fs.pressure(oilPhaseIdx));
-                        else if (FluidSystem::phaseIsActive(gasPhaseIdx))
-                            val.second = getValue(fs.pressure(gasPhaseIdx));
-                        else if (FluidSystem::phaseIsActive(waterPhaseIdx))
-                            val.second = getValue(fs.pressure(waterPhaseIdx));
-                    } else if ((key.first == "BTCNFHEA") || (key.first == "BTEMP")) {
-                        if (FluidSystem::phaseIsActive(oilPhaseIdx))
-                            val.second = getValue(fs.temperature(oilPhaseIdx));
-                        else if (FluidSystem::phaseIsActive(gasPhaseIdx))
-                            val.second = getValue(fs.temperature(gasPhaseIdx));
-                        else if (FluidSystem::phaseIsActive(waterPhaseIdx))
-                            val.second = getValue(fs.temperature(waterPhaseIdx));
-                    } else if (key.first == "BWKR" || key.first == "BKRW")
-                        val.second = getValue(intQuants.relativePermeability(waterPhaseIdx));
-                    else if (key.first == "BGKR" || key.first == "BKRG")
-                        val.second = getValue(intQuants.relativePermeability(gasPhaseIdx));
-                    else if (key.first == "BOKR" || key.first == "BKRO")
-                        val.second = getValue(intQuants.relativePermeability(oilPhaseIdx));
-                    else if (key.first == "BKROG") {
-                        const auto& materialParams = problem.materialLawParams(elemCtx, dofIdx, /* timeIdx = */ 0);
-                        const auto krog
-                            = MaterialLaw::template relpermOilInOilGasSystem<Evaluation>(materialParams, fs);
-                        val.second = getValue(krog);
-                    } else if (key.first == "BKROW") {
-                        const auto& materialParams = problem.materialLawParams(elemCtx, dofIdx, /* timeIdx = */ 0);
-                        const auto krow
-                            = MaterialLaw::template relpermOilInOilWaterSystem<Evaluation>(materialParams, fs);
-                        val.second = getValue(krow);
-                    } else if (key.first == "BWPC")
-                        val.second = getValue(fs.pressure(oilPhaseIdx)) - getValue(fs.pressure(waterPhaseIdx));
-                    else if (key.first == "BGPC")
-                        val.second = getValue(fs.pressure(gasPhaseIdx)) - getValue(fs.pressure(oilPhaseIdx));
-                    else if (key.first == "BWPR")
-                        val.second = getValue(fs.pressure(waterPhaseIdx));
-                    else if (key.first == "BGPR")
-                        val.second = getValue(fs.pressure(gasPhaseIdx));
-                    else if (key.first == "BVWAT" || key.first == "BWVIS")
-                        val.second = getValue(fs.viscosity(waterPhaseIdx));
-                    else if (key.first == "BVGAS" || key.first == "BGVIS")
-                        val.second = getValue(fs.viscosity(gasPhaseIdx));
-                    else if (key.first == "BVOIL" || key.first == "BOVIS")
-                        val.second = getValue(fs.viscosity(oilPhaseIdx));
-                    else if ((key.first == "BRPV") || (key.first == "BOPV") || (key.first == "BWPV")
-                             || (key.first == "BGPV")) {
-                        if (key.first == "BRPV") {
-                            val.second = 1.0;
-                        } else if (key.first == "BOPV") {
-                            val.second = getValue(fs.saturation(oilPhaseIdx));
-                        } else if (key.first == "BWPV") {
-                            val.second = getValue(fs.saturation(waterPhaseIdx));
-                        } else {
-                            val.second = getValue(fs.saturation(gasPhaseIdx));
-                        }
-
-                        // Include active pore-volume.
-                        val.second *= elemCtx.simulator().model().dofTotalVolume(globalDofIdx)
-                            * getValue(intQuants.porosity());
-                    } else if (key.first == "BRS")
-                        val.second = getValue(fs.Rs());
-                    else if (key.first == "BRV")
-                        val.second = getValue(fs.Rv());
-                    else if ((key.first == "BOIP") || (key.first == "BOIPL") || (key.first == "BOIPG")
-                             || (key.first == "BGIP") || (key.first == "BGIPL") || (key.first == "BGIPG")
-                             || (key.first == "BWIP")) {
-                        if ((key.first == "BOIP") || (key.first == "BOIPL")) {
-                            val.second = getValue(fs.invB(oilPhaseIdx)) * getValue(fs.saturation(oilPhaseIdx));
-
-                            if (key.first == "BOIP") {
-                                val.second += getValue(fs.Rv()) * getValue(fs.invB(gasPhaseIdx))
-                                    * getValue(fs.saturation(gasPhaseIdx));
-                            }
-                        } else if (key.first == "BOIPG") {
-                            val.second = getValue(fs.Rv()) * getValue(fs.invB(gasPhaseIdx))
-                                * getValue(fs.saturation(gasPhaseIdx));
-                        } else if ((key.first == "BGIP") || (key.first == "BGIPG")) {
-                            val.second = getValue(fs.invB(gasPhaseIdx)) * getValue(fs.saturation(gasPhaseIdx));
-
-                            if (key.first == "BGIP") {
-                                val.second += getValue(fs.Rs()) * getValue(fs.invB(oilPhaseIdx))
-                                    * getValue(fs.saturation(oilPhaseIdx));
-                            }
-                        } else if (key.first == "BGIPL") {
-                            val.second = getValue(fs.Rs()) * getValue(fs.invB(oilPhaseIdx))
-                                * getValue(fs.saturation(oilPhaseIdx));
-                        } else { // BWIP
-                            val.second = getValue(fs.invB(waterPhaseIdx)) * getValue(fs.saturation(waterPhaseIdx));
-                        }
-
-                        // Include active pore-volume.
-                        val.second *= elemCtx.simulator().model().dofTotalVolume(globalDofIdx)
-                            * getValue(intQuants.porosity());
-                    } else {
-                        std::string logstring = "Keyword '";
-                        logstring.append(key.first);
-                        logstring.append("' is unhandled for output to file.");
-                        OpmLog::warning("Unhandled output keyword", logstring);
-                    }
-                }
-            }
 
             // Adding Well RFT data
+            const auto cartesianIdx = elemCtx.simulator().vanguard().cartesianIndex(globalDofIdx);
             if (this->oilConnectionPressures_.count(cartesianIdx) > 0) {
                 this->oilConnectionPressures_[cartesianIdx] = getValue(fs.pressure(oilPhaseIdx));
             }
@@ -696,8 +583,19 @@ public:
                         = tracerModel.tracerConcentration(tracerIdx, globalDofIdx);
                 }
             }
+        }
+    }
 
-            // flows
+    void processElementFlows(const ElementContext& elemCtx)
+    {
+        OPM_TIMEBLOCK_LOCAL(processElementBlockData);
+        if (!std::is_same_v<Discretization, EcfvDiscretization<TypeTag>>)
+            return;
+
+        const auto& problem = elemCtx.simulator().problem();
+        for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
+
+            unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
             if (!problem.model().linearizer().getFlowsInfo().empty()) {
                 const auto& flowsInf = problem.model().linearizer().getFlowsInfo();
                 auto flowsInfos = flowsInf[globalDofIdx];
@@ -827,6 +725,136 @@ public:
                             this->floresn_[waterCompIdx].second.second[floresInfo.nncId]
                                 = floresInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(waterCompIdx)];
                         }
+                    }
+                }
+            }
+        }
+    }
+
+    void processElementBlockData(const ElementContext& elemCtx)
+    {
+        OPM_TIMEBLOCK_LOCAL(processElementBlockData);
+        if (!std::is_same<Discretization, EcfvDiscretization<TypeTag>>::value)
+            return;
+
+        const auto& problem = elemCtx.simulator().problem();
+        for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
+                // Adding block data
+            unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+            const auto cartesianIdx = elemCtx.simulator().vanguard().cartesianIndex(globalDofIdx);
+            const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
+            const auto& fs = intQuants.fluidState();
+            for (auto& val : this->blockData_) {
+                const auto& key = val.first;
+                assert(key.second > 0);
+                unsigned int cartesianIdxBlock = key.second - 1;
+                if (cartesianIdx == cartesianIdxBlock) {
+                    if ((key.first == "BWSAT") || (key.first == "BSWAT"))
+                        val.second = getValue(fs.saturation(waterPhaseIdx));
+                    else if ((key.first == "BGSAT") || (key.first == "BSGAS"))
+                        val.second = getValue(fs.saturation(gasPhaseIdx));
+                    else if ((key.first == "BOSAT") || (key.first == "BSOIL"))
+                        val.second = getValue(fs.saturation(oilPhaseIdx));
+                    else if (key.first == "BNSAT")
+                        val.second = intQuants.solventSaturation().value();
+                    else if ((key.first == "BPR") || (key.first == "BPRESSUR")) {
+                        if (FluidSystem::phaseIsActive(oilPhaseIdx))
+                            val.second = getValue(fs.pressure(oilPhaseIdx));
+                        else if (FluidSystem::phaseIsActive(gasPhaseIdx))
+                            val.second = getValue(fs.pressure(gasPhaseIdx));
+                        else if (FluidSystem::phaseIsActive(waterPhaseIdx))
+                            val.second = getValue(fs.pressure(waterPhaseIdx));
+                    } else if ((key.first == "BTCNFHEA") || (key.first == "BTEMP")) {
+                        if (FluidSystem::phaseIsActive(oilPhaseIdx))
+                            val.second = getValue(fs.temperature(oilPhaseIdx));
+                        else if (FluidSystem::phaseIsActive(gasPhaseIdx))
+                            val.second = getValue(fs.temperature(gasPhaseIdx));
+                        else if (FluidSystem::phaseIsActive(waterPhaseIdx))
+                            val.second = getValue(fs.temperature(waterPhaseIdx));
+                    } else if (key.first == "BWKR" || key.first == "BKRW")
+                        val.second = getValue(intQuants.relativePermeability(waterPhaseIdx));
+                    else if (key.first == "BGKR" || key.first == "BKRG")
+                        val.second = getValue(intQuants.relativePermeability(gasPhaseIdx));
+                    else if (key.first == "BOKR" || key.first == "BKRO")
+                        val.second = getValue(intQuants.relativePermeability(oilPhaseIdx));
+                    else if (key.first == "BKROG") {
+                        const auto& materialParams = problem.materialLawParams(elemCtx, dofIdx, /* timeIdx = */ 0);
+                        const auto krog
+                            = MaterialLaw::template relpermOilInOilGasSystem<Evaluation>(materialParams, fs);
+                        val.second = getValue(krog);
+                    } else if (key.first == "BKROW") {
+                        const auto& materialParams = problem.materialLawParams(elemCtx, dofIdx, /* timeIdx = */ 0);
+                        const auto krow
+                            = MaterialLaw::template relpermOilInOilWaterSystem<Evaluation>(materialParams, fs);
+                        val.second = getValue(krow);
+                    } else if (key.first == "BWPC")
+                        val.second = getValue(fs.pressure(oilPhaseIdx)) - getValue(fs.pressure(waterPhaseIdx));
+                    else if (key.first == "BGPC")
+                        val.second = getValue(fs.pressure(gasPhaseIdx)) - getValue(fs.pressure(oilPhaseIdx));
+                    else if (key.first == "BWPR")
+                        val.second = getValue(fs.pressure(waterPhaseIdx));
+                    else if (key.first == "BGPR")
+                        val.second = getValue(fs.pressure(gasPhaseIdx));
+                    else if (key.first == "BVWAT" || key.first == "BWVIS")
+                        val.second = getValue(fs.viscosity(waterPhaseIdx));
+                    else if (key.first == "BVGAS" || key.first == "BGVIS")
+                        val.second = getValue(fs.viscosity(gasPhaseIdx));
+                    else if (key.first == "BVOIL" || key.first == "BOVIS")
+                        val.second = getValue(fs.viscosity(oilPhaseIdx));
+                    else if ((key.first == "BRPV") || (key.first == "BOPV") || (key.first == "BWPV")
+                             || (key.first == "BGPV")) {
+                        if (key.first == "BRPV") {
+                            val.second = 1.0;
+                        } else if (key.first == "BOPV") {
+                            val.second = getValue(fs.saturation(oilPhaseIdx));
+                        } else if (key.first == "BWPV") {
+                            val.second = getValue(fs.saturation(waterPhaseIdx));
+                        } else {
+                            val.second = getValue(fs.saturation(gasPhaseIdx));
+                        }
+
+                        // Include active pore-volume.
+                        val.second *= elemCtx.simulator().model().dofTotalVolume(globalDofIdx)
+                            * getValue(intQuants.porosity());
+                    } else if (key.first == "BRS")
+                        val.second = getValue(fs.Rs());
+                    else if (key.first == "BRV")
+                        val.second = getValue(fs.Rv());
+                    else if ((key.first == "BOIP") || (key.first == "BOIPL") || (key.first == "BOIPG")
+                             || (key.first == "BGIP") || (key.first == "BGIPL") || (key.first == "BGIPG")
+                             || (key.first == "BWIP")) {
+                        if ((key.first == "BOIP") || (key.first == "BOIPL")) {
+                            val.second = getValue(fs.invB(oilPhaseIdx)) * getValue(fs.saturation(oilPhaseIdx));
+
+                            if (key.first == "BOIP") {
+                                val.second += getValue(fs.Rv()) * getValue(fs.invB(gasPhaseIdx))
+                                    * getValue(fs.saturation(gasPhaseIdx));
+                            }
+                        } else if (key.first == "BOIPG") {
+                            val.second = getValue(fs.Rv()) * getValue(fs.invB(gasPhaseIdx))
+                                * getValue(fs.saturation(gasPhaseIdx));
+                        } else if ((key.first == "BGIP") || (key.first == "BGIPG")) {
+                            val.second = getValue(fs.invB(gasPhaseIdx)) * getValue(fs.saturation(gasPhaseIdx));
+
+                            if (key.first == "BGIP") {
+                                val.second += getValue(fs.Rs()) * getValue(fs.invB(oilPhaseIdx))
+                                    * getValue(fs.saturation(oilPhaseIdx));
+                            }
+                        } else if (key.first == "BGIPL") {
+                            val.second = getValue(fs.Rs()) * getValue(fs.invB(oilPhaseIdx))
+                                * getValue(fs.saturation(oilPhaseIdx));
+                        } else { // BWIP
+                            val.second = getValue(fs.invB(waterPhaseIdx)) * getValue(fs.saturation(waterPhaseIdx));
+                        }
+
+                        // Include active pore-volume.
+                        val.second *= elemCtx.simulator().model().dofTotalVolume(globalDofIdx)
+                            * getValue(intQuants.porosity());
+                    } else {
+                        std::string logstring = "Keyword '";
+                        logstring.append(key.first);
+                        logstring.append("' is unhandled for output to file.");
+                        OpmLog::warning("Unhandled output keyword", logstring);
                     }
                 }
             }
@@ -978,6 +1006,16 @@ public:
         }
     }
 
+    void updateFluidInPlace(const ElementContext& elemCtx)
+    {
+        for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
+            updateFluidInPlace_(elemCtx, dofIdx);
+        }
+    }
+    void updateFluidInPlace(unsigned globalDofIdx,const IntensiveQuantities& intQuants, double totVolume)
+    {
+        this->updateFluidInPlace_(globalDofIdx, intQuants, totVolume);
+    }
 private:
     bool isDefunctParallelWell(std::string wname) const override
     {
@@ -991,10 +1029,18 @@ private:
 
     void updateFluidInPlace_(const ElementContext& elemCtx, unsigned dofIdx)
     {
-        OPM_TIMEBLOCK_LOCAL(updateFluidInPlace);
         const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
-        const auto& fs = intQuants.fluidState();
         unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+        const auto totVolume = elemCtx.simulator().model().dofTotalVolume(globalDofIdx);
+        this->updateFluidInPlace_(globalDofIdx, intQuants, totVolume);
+    }
+
+    void updateFluidInPlace_(unsigned globalDofIdx,const IntensiveQuantities& intQuants, double totVolume)
+    {
+        OPM_TIMEBLOCK_LOCAL(updateFluidInPlace);
+        //const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
+        const auto& fs = intQuants.fluidState();
+        //unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
 
         // Fluid in Place calculations
 
@@ -1005,7 +1051,7 @@ private:
         // PORV, MINPV and friends). Also note that because of this, the porosity
         // returned by the intensive quantities can be outside of the physical
         // range [0, 1] in pathetic cases.
-        const auto totVolume = elemCtx.simulator().model().dofTotalVolume(globalDofIdx);
+        //const auto totVolume = elemCtx.simulator().model().dofTotalVolume(globalDofIdx);
         const double pv = totVolume * intQuants.porosity().value();
 
         if (!this->pressureTimesHydrocarbonVolume_.empty() && !this->pressureTimesPoreVolume_.empty()) {
@@ -1017,11 +1063,17 @@ private:
             this->dynamicPoreVolume_[globalDofIdx] = pv;
 
             Scalar hydrocarbon = 0.0;
-            if (FluidSystem::phaseIsActive(oilPhaseIdx))
-                hydrocarbon += getValue(fs.saturation(oilPhaseIdx));
-            if (FluidSystem::phaseIsActive(gasPhaseIdx))
-                hydrocarbon += getValue(fs.saturation(gasPhaseIdx));
 
+            if (!this->eclState_.runspec().co2Storage()) {
+                // Common case.  Hydrocarbon volume is fraction occupied by actual hydrocarbons.
+                if (FluidSystem::phaseIsActive(oilPhaseIdx))
+                    hydrocarbon += getValue(fs.saturation(oilPhaseIdx));
+                if (FluidSystem::phaseIsActive(gasPhaseIdx))
+                    hydrocarbon += getValue(fs.saturation(gasPhaseIdx));
+            } else {
+                // CO2 storage: Hydrocarbon volume is full pore-volume.
+                hydrocarbon = 1.0;
+            }
             this->hydrocarbonPoreVolume_[globalDofIdx] = pv * hydrocarbon;
 
             if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
@@ -1103,6 +1155,10 @@ private:
 
                 if (!this->fip_[Inplace::Phase::WaterInWaterPhase].empty())
                     this->fip_[Inplace::Phase::WaterInWaterPhase][globalDofIdx] = fip[waterPhaseIdx];
+
+                // For water+gas cases the gas in water is added to the GIPL value
+                if (!this->fip_[Inplace::Phase::GasInLiquidPhase].empty() && !FluidSystem::phaseIsActive(oilPhaseIdx))
+                    this->fip_[Inplace::Phase::GasInLiquidPhase][globalDofIdx] = gasInPlaceWater;
 
                 // Add dissolved gas and vaporized water to total Fip
                 if (!this->fip_[Inplace::Phase::WATER].empty())

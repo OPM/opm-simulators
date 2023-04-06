@@ -101,13 +101,16 @@ public:
     int numWellEq() const { return numWellEq_; }
 
     //! \brief Copy values from well state.
-    void update(const WellState& well_state, DeferredLogger& deferred_logger);
+    void update(const WellState& well_state,
+                const bool stop_or_zero_rate_target,
+                DeferredLogger& deferred_logger);
 
     //! \brief Copy polymer molecular weigt values from well state.
     void updatePolyMW(const WellState& well_state);
 
     //! \brief Update values from newton update vector.
     void updateNewton(const BVectorWell& dwells,
+                      const bool stop_or_zero_rate_target,
                       const double dFLimit,
                       const double dBHPLimit);
 

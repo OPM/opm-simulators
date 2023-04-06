@@ -638,7 +638,7 @@ namespace Opm
         const bool allow_cf = this->getAllowCrossFlow() || openCrossFlowAvoidSingularity(ebosSimulator);
         const EvalWell& bhp = this->primary_variables_.eval(Bhp);
         const int cell_idx = this->well_cells_[perf];
-        const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
+        const auto& intQuants = ebosSimulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
         std::vector<EvalWell> mob(this->num_components_, {this->primary_variables_.numWellEq() + Indices::numEq, 0.});
         getMobilityEval(ebosSimulator, perf, mob, deferred_logger);
 
@@ -856,7 +856,7 @@ namespace Opm
     {
         const int cell_idx = this->well_cells_[perf];
         assert (int(mob.size()) == this->num_components_);
-        const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
+        const auto& intQuants = ebosSimulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/0);
         const auto& materialLawManager = ebosSimulator.problem().materialLawManager();
 
         // either use mobility of the perforation cell or calcualte its own
@@ -925,7 +925,7 @@ namespace Opm
     {
         const int cell_idx = this->well_cells_[perf];
         assert (int(mob.size()) == this->num_components_);
-        const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
+        const auto& intQuants = ebosSimulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/0);
         const auto& materialLawManager = ebosSimulator.problem().materialLawManager();
 
         // either use mobility of the perforation cell or calcualte its own
@@ -993,15 +993,17 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    updateWellState(const BVectorWell& dwells,
+    updateWellState(const SummaryState& summary_state,
+                    const BVectorWell& dwells,
                     WellState& well_state,
                     DeferredLogger& deferred_logger)
     {
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
-        updatePrimaryVariablesNewton(dwells, well_state, deferred_logger);
+        const bool stop_or_zero_rate_target = this->stopppedOrZeroRateTarget(summary_state, well_state);
+        updatePrimaryVariablesNewton(dwells, stop_or_zero_rate_target, deferred_logger);
 
-        updateWellStateFromPrimaryVariables(well_state, deferred_logger);
+        updateWellStateFromPrimaryVariables(stop_or_zero_rate_target, well_state, deferred_logger);
         Base::calculateReservoirRates(well_state.well(this->index_of_well_));
     }
 
@@ -1013,12 +1015,12 @@ namespace Opm
     void
     StandardWell<TypeTag>::
     updatePrimaryVariablesNewton(const BVectorWell& dwells,
-                                 const WellState& /* well_state */,
+                                 const bool stop_or_zero_rate_target,
                                  DeferredLogger& deferred_logger)
     {
         const double dFLimit = this->param_.dwell_fraction_max_;
         const double dBHPLimit = this->param_.dbhp_max_rel_;
-        this->primary_variables_.updateNewton(dwells, dFLimit, dBHPLimit);
+        this->primary_variables_.updateNewton(dwells, stop_or_zero_rate_target, dFLimit, dBHPLimit);
 
         // for the water velocity and skin pressure
         if constexpr (Base::has_polymermw) {
@@ -1035,9 +1037,11 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    updateWellStateFromPrimaryVariables(WellState& well_state, DeferredLogger& deferred_logger) const
+    updateWellStateFromPrimaryVariables(const bool stop_or_zero_rate_target,
+                                        WellState& well_state,
+                                        DeferredLogger& deferred_logger) const
     {
-        this->StdWellEval::updateWellStateFromPrimaryVariables(well_state, deferred_logger);
+        this->StdWellEval::updateWellStateFromPrimaryVariables(stop_or_zero_rate_target, well_state, deferred_logger);
 
         // other primary variables related to polymer injectivity study
         if constexpr (Base::has_polymermw) {
@@ -1065,7 +1069,7 @@ namespace Opm
             getMobilityScalar(ebos_simulator, perf, mob, deferred_logger);
 
             const int cell_idx = this->well_cells_[perf];
-            const auto& int_quantities = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
+            const auto& int_quantities = ebos_simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
             const auto& fs = int_quantities.fluidState();
             // the pressure of the reservoir grid block the well connection is in
             double p_r = this->getPerfCellPressure(fs).value();
@@ -1260,7 +1264,7 @@ namespace Opm
 
         for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
             const int cell_idx = this->well_cells_[perf];
-            const auto& intQuants = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/0));
+            const auto& intQuants = ebos_simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
 
             const double pressure = this->getPerfCellPressure(fs).value();
@@ -1355,27 +1359,27 @@ namespace Opm
         std::function<Scalar(int,int)> getTemperature =
         [&ebosSimulator](int cell_idx, int phase_idx)
         {
-            return ebosSimulator.model().cachedIntensiveQuantities(cell_idx, 0)->fluidState().temperature(phase_idx).value();
+            return ebosSimulator.model().intensiveQuantities(cell_idx, 0).fluidState().temperature(phase_idx).value();
         };
         std::function<Scalar(int)> getSaltConcentration =
         [&ebosSimulator](int cell_idx)
         {
-            return ebosSimulator.model().cachedIntensiveQuantities(cell_idx, 0)->fluidState().saltConcentration().value();
+            return ebosSimulator.model().intensiveQuantities(cell_idx, 0).fluidState().saltConcentration().value();
         };
         std::function<int(int)> getPvtRegionIdx =
         [&ebosSimulator](int cell_idx)
         {
-            return ebosSimulator.model().cachedIntensiveQuantities(cell_idx, 0)->fluidState().pvtRegionIndex();
+            return ebosSimulator.model().intensiveQuantities(cell_idx, 0).fluidState().pvtRegionIndex();
         };
         std::function<Scalar(int)> getInvFac =
         [&ebosSimulator](int cell_idx)
         {
-            return ebosSimulator.model().cachedIntensiveQuantities(cell_idx, 0)->solventInverseFormationVolumeFactor().value();
+            return ebosSimulator.model().intensiveQuantities(cell_idx, 0).solventInverseFormationVolumeFactor().value();
         };
         std::function<Scalar(int)> getSolventDensity =
         [&ebosSimulator](int cell_idx)
         {
-            return ebosSimulator.model().cachedIntensiveQuantities(cell_idx, 0)->solventRefDensity();
+            return ebosSimulator.model().intensiveQuantities(cell_idx, 0).solventRefDensity();
         };
 
         this->connections_.computePropertiesForPressures(well_state,
@@ -1438,7 +1442,7 @@ namespace Opm
         {
             const auto cell_idx = this->well_cells_[perf];
             return ebosSimulator.model()
-               .cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0)->fluidState();
+               .intensiveQuantities(cell_idx, /*timeIdx=*/ 0).fluidState();
         };
 
         const int np = this->number_of_phases_;
@@ -1518,22 +1522,22 @@ namespace Opm
         std::function<Scalar(int,int)> invB =
         [&ebosSimulator](int cell_idx, int phase_idx)
         {
-            return ebosSimulator.model().cachedIntensiveQuantities(cell_idx, 0)->fluidState().invB(phase_idx).value();
+            return ebosSimulator.model().intensiveQuantities(cell_idx, 0).fluidState().invB(phase_idx).value();
         };
         std::function<Scalar(int,int)> mobility =
         [&ebosSimulator](int cell_idx, int phase_idx)
         {
-            return ebosSimulator.model().cachedIntensiveQuantities(cell_idx, 0)->mobility(phase_idx).value();
+            return ebosSimulator.model().intensiveQuantities(cell_idx, 0).mobility(phase_idx).value();
         };
         std::function<Scalar(int)> invFac =
         [&ebosSimulator](int cell_idx)
         {
-            return ebosSimulator.model().cachedIntensiveQuantities(cell_idx, 0)->solventInverseFormationVolumeFactor().value();
+            return ebosSimulator.model().intensiveQuantities(cell_idx, 0).solventInverseFormationVolumeFactor().value();
         };
         std::function<Scalar(int)> solventMobility =
         [&ebosSimulator](int cell_idx)
         {
-            return ebosSimulator.model().cachedIntensiveQuantities(cell_idx, 0)->solventMobility().value();
+            return ebosSimulator.model().intensiveQuantities(cell_idx, 0).solventMobility().value();
         };
 
         this->connections_.computeProperties(well_state,
@@ -1581,7 +1585,9 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    solveEqAndUpdateWellState(WellState& well_state, DeferredLogger& deferred_logger)
+    solveEqAndUpdateWellState(const SummaryState& summary_state,
+                              WellState& well_state,
+                              DeferredLogger& deferred_logger)
     {
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
@@ -1591,7 +1597,7 @@ namespace Opm
         dx_well[0].resize(this->primary_variables_.numWellEq());
         this->linSys_.solve( dx_well);
 
-        updateWellState(dx_well, well_state, deferred_logger);
+        updateWellState(summary_state, dx_well, well_state, deferred_logger);
     }
 
 
@@ -1605,7 +1611,8 @@ namespace Opm
                                 const WellState& well_state,
                                 DeferredLogger& deferred_logger)
     {
-        updatePrimaryVariables(well_state, deferred_logger);
+        const auto& summary_state = ebosSimulator.vanguard().summaryState();
+        updatePrimaryVariables(summary_state, well_state, deferred_logger);
         initPrimaryVariablesEvaluation();
         computeWellConnectionPressures(ebosSimulator, well_state, deferred_logger);
         this->computeAccumWell();
@@ -1648,7 +1655,8 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    recoverWellSolutionAndUpdateWellState(const BVector& x,
+    recoverWellSolutionAndUpdateWellState(const SummaryState& summary_state,
+                                          const BVector& x,
                                           WellState& well_state,
                                           DeferredLogger& deferred_logger)
     {
@@ -1658,7 +1666,7 @@ namespace Opm
         xw[0].resize(this->primary_variables_.numWellEq());
 
         this->linSys_.recoverSolutionWell(x, xw);
-        updateWellState(xw, well_state, deferred_logger);
+        updateWellState(summary_state, xw, well_state, deferred_logger);
     }
 
 
@@ -1680,7 +1688,7 @@ namespace Opm
 
         for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
             const int cell_idx = this->well_cells_[perf];
-            const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
+            const auto& intQuants = ebosSimulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
             // flux for each perforation
             std::vector<Scalar> mob(this->num_components_, 0.);
             getMobilityScalar(ebosSimulator, perf, mob, deferred_logger);
@@ -1754,7 +1762,7 @@ namespace Opm
                                                         " potentials are computed based on unconverged solution";
             deferred_logger.debug(msg);
         }
-        well_copy.updatePrimaryVariables(well_state_copy, deferred_logger);
+        well_copy.updatePrimaryVariables(summary_state, well_state_copy, deferred_logger);
         well_copy.computeWellConnectionPressures(ebosSimulator, well_state_copy, deferred_logger);
         well_copy.initPrimaryVariablesEvaluation();
         well_copy.computeWellRatesWithBhp(ebosSimulator, bhp, well_flux, deferred_logger);
@@ -1970,11 +1978,14 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_logger)
+    updatePrimaryVariables(const SummaryState& summary_state,
+                           const WellState& well_state,
+                           DeferredLogger& deferred_logger)
     {
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
-        this->primary_variables_.update(well_state, deferred_logger);
+        const bool stop_or_zero_rate_target = this->stopppedOrZeroRateTarget(summary_state, well_state);
+        this->primary_variables_.update(well_state, stop_or_zero_rate_target, deferred_logger);
 
         // other primary variables related to polymer injection
         if constexpr (Base::has_polymermw) {
@@ -2007,7 +2018,7 @@ namespace Opm
                                    DeferredLogger& deferred_logger) const
     {
         const int cell_idx = this->well_cells_[perf];
-        const auto& int_quant = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
+        const auto& int_quant = ebos_simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
         const EvalWell polymer_concentration = this->extendEval(int_quant.polymerConcentration());
 
         // TODO: not sure should based on the well type or injecting/producing peforations
@@ -2230,7 +2241,7 @@ namespace Opm
                           std::vector<EvalWell>& cq_s) const
     {
         const int cell_idx = this->well_cells_[perf];
-        const auto& int_quants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
+        const auto& int_quants = ebosSimulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
         const auto& fs = int_quants.fluidState();
         const EvalWell b_w = this->extendEval(fs.invB(FluidSystem::waterPhaseIdx));
         const double area = M_PI * this->bore_diameters_[perf] * this->perf_length_[perf];
@@ -2255,7 +2266,7 @@ namespace Opm
                                DeferredLogger& deferred_logger)
     {
         const int cell_idx = this->well_cells_[perf];
-        const auto& int_quants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
+        const auto& int_quants = ebosSimulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
         const auto& fs = int_quants.fluidState();
         const EvalWell b_w = this->extendEval(fs.invB(FluidSystem::waterPhaseIdx));
         const EvalWell water_flux_r = water_flux_s / b_w;
@@ -2393,7 +2404,7 @@ namespace Opm
         double max_pressure = 0.0;
         for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
             const int cell_idx = this->well_cells_[perf];
-            const auto& int_quants = *(ebos_simulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
+            const auto& int_quants = ebos_simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
             const auto& fs = int_quants.fluidState();
             double pressure_cell = this->getPerfCellPressure(fs).value();
             max_pressure = std::max(max_pressure, pressure_cell);
@@ -2511,7 +2522,8 @@ namespace Opm
             }
 
             ++it;
-            solveEqAndUpdateWellState(well_state, deferred_logger);
+            const auto& summary_state = ebosSimulator.vanguard().summaryState();
+            solveEqAndUpdateWellState(summary_state, well_state, deferred_logger);
 
             // TODO: when this function is used for well testing purposes, will need to check the controls, so that we will obtain convergence
             // under the most restrictive control. Based on this converged results, we can check whether to re-open the well. Either we refactor
@@ -2537,7 +2549,7 @@ namespace Opm
         const bool allow_cf = this->getAllowCrossFlow() || openCrossFlowAvoidSingularity(ebosSimulator);
         for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
             const int cell_idx = this->well_cells_[perf];
-            const auto& intQuants = *(ebosSimulator.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
+            const auto& intQuants = ebosSimulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
             std::vector<Scalar> mob(this->num_components_, 0.);
             getMobilityScalar(ebosSimulator, perf, mob, deferred_logger);
             std::vector<Scalar> cq_s(this->num_components_, 0.);

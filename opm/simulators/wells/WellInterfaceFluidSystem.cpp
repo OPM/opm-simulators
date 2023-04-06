@@ -131,9 +131,13 @@ checkGroupConstraints(WellState& well_state,
                       const SummaryState& summaryState,
                       DeferredLogger& deferred_logger) const
 {
-    auto rCoeff = [this](const int id, const int region, std::vector<double>& coeff)
+    auto rCoeff = [this, &group_state](const RegionId id, const int region, const std::optional<std::string>& prod_gname, std::vector<double>& coeff)
     {
-        this->rateConverter().calcCoeff(id, region, coeff);
+        if (prod_gname)
+            this->rateConverter().calcCoeff(id, region, group_state.production_rates(*prod_gname), coeff);
+        else
+            this->rateConverter().calcInjCoeff(id, region, coeff);
+
     };
 
     return WellGroupConstraints(*this).checkGroupConstraints(well_state, group_state,
@@ -187,9 +191,13 @@ getGroupInjectionTargetRate(const Group& group,
                             double efficiencyFactor,
                             DeferredLogger& deferred_logger) const
 {
-    auto rCoeff = [this](const int id, const int region, std::vector<double>& coeff)
+    auto rCoeff = [this, &group_state](const RegionId id, const int region, const std::optional<std::string>& prod_gname, std::vector<double>& coeff)
     {
-        this->rateConverter().calcCoeff(id, region, coeff);
+        if (prod_gname)
+            this->rateConverter().calcCoeff(id, region, group_state.production_rates(*prod_gname), coeff);
+        else
+            this->rateConverter().calcInjCoeff(id, region, coeff);
+
     };
 
     return WellGroupControls(*this).getGroupInjectionTargetRate(group, well_state,
@@ -210,9 +218,13 @@ getGroupProductionTargetRate(const Group& group,
                           double efficiencyFactor,
                           DeferredLogger& deferred_logger) const
 {
-    auto rCoeff = [this](const int id, const int region, std::vector<double>& coeff)
+    auto rCoeff = [this, &group_state](const RegionId id, const int region, const std::optional<std::string>& prod_gname, std::vector<double>& coeff)
     {
-        this->rateConverter().calcCoeff(id, region, coeff);
+        if (prod_gname)
+            this->rateConverter().calcCoeff(id, region, group_state.production_rates(*prod_gname), coeff);
+        else
+            this->rateConverter().calcInjCoeff(id, region, coeff);
+
     };
 
     return WellGroupControls(*this).getGroupProductionTargetRate(group, well_state,
