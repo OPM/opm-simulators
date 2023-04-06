@@ -29,6 +29,11 @@
 // MultisegmentWellContribution includes the cuda runtime if found by CMake
 // this leads to inclusion of both amd_hip_vector_types.h and vector_types.h
 // which both define vector types like uchar2, short3 and double4.
+// Restore the value (if defined) afterwards.
+#ifdef HAVE_CUDA
+#define HIP_HAVE_CUDA_DEFINED HAVE_CUDA
+#endif
+
 #undef HAVE_CUDA
 
 #include <opm/simulators/linalg/bda/rocsparseSolverBackend.hpp>
@@ -37,6 +42,11 @@
 
 #include <hip/hip_runtime_api.h>
 #include <hip/hip_version.h>
+
+#ifdef HIP_HAVE_CUDA_DEFINED
+#define HAVE_CUDA HIP_HAVE_CUDA_DEFINED
+#undef HIP_HAVE_CUDA_DEFINED
+#endif
 
 #define HIP_CHECK(stat)                               \
     {                                                 \
