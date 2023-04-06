@@ -256,7 +256,22 @@ macro (config_hook)
   include_directories(${EXTRA_INCLUDES})
 
   include(UseDamaris)
+endmacro (config_hook)
 
+macro (prereqs_hook)
+endmacro (prereqs_hook)
+
+macro (sources_hook)
+  if(OPENCL_FOUND)
+    include(opencl-source-provider)
+    list(APPEND opm-simulators_SOURCES ${PROJECT_BINARY_DIR}/clSources.cpp)
+  endif()
+endmacro (sources_hook)
+
+macro (fortran_hook)
+endmacro (fortran_hook)
+
+macro (files_hook)
   if(hip_FOUND)
     get_filename_component(CXX_COMPILER ${CMAKE_CXX_COMPILER} NAME)
     if(hip_VERSION VERSION_LESS "5.3")
@@ -278,22 +293,6 @@ macro (config_hook)
       set(COMPILE_BDA_BRIDGE 1)
     endif()
   endif()
-endmacro (config_hook)
-
-macro (prereqs_hook)
-endmacro (prereqs_hook)
-
-macro (sources_hook)
-  if(OPENCL_FOUND)
-    include(opencl-source-provider)
-    list(APPEND opm-simulators_SOURCES ${PROJECT_BINARY_DIR}/clSources.cpp)
-  endif()
-endmacro (sources_hook)
-
-macro (fortran_hook)
-endmacro (fortran_hook)
-
-macro (files_hook)
   if(MPI_FOUND AND HDF5_FOUND AND NOT HDF5_IS_PARALLEL)
     message(WARNING "When building parallel OPM flow we need a "
       "parallel version of hdf5, but found only a serial one. "
