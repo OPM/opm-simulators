@@ -48,13 +48,15 @@
 #include <string>
 
 #if HAVE_DAMARIS
-#include <opm/simulators/utils/DamarisOutputModule.hpp>
 
+#include <opm/simulators/utils/DamarisOutputModule.hpp>
 #include <opm/simulators/utils/GridDataOutput.hpp>
 #include <damaris/util/DamarisGeometryData.hpp>
+
+
 #endif
 
-#include <opm/simulators/utils/GridDataOutput.hpp>
+// #include <opm/simulators/utils/GridDataOutput.hpp>
 
 
 namespace Opm::Properties {
@@ -127,6 +129,8 @@ class EclWriter : public EclGenericWriter<GetPropType<TypeTag, Properties::Grid>
     using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
     using ElementIterator = typename GridView::template Codim<0>::Iterator;
     using BaseType = EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>;
+    
+    typedef Dune::MultipleCodimMultipleGeomTypeMapper< GridView > VertexMapper;
 
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
     enum { enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>() };
@@ -321,24 +325,34 @@ public:
             const int rank = simulator_.vanguard().grid().comm().rank() ;
             // N.B. damarisUpdate_ should be set to true if at any time the model geometry changes
             if (this->damarisUpdate_) {
+                int damaris_err ;
+           
                 const auto& gridView = simulator_.gridView();
                 const auto& interior_elements = elements(gridView, Dune::Partitions::interior);
+                // Get the size of the unique vector elements (excludes the shared 'ghost' elements)
                 const int numElements = std::distance(interior_elements.begin(), interior_elements.end());
+                // Sets the damaris parameter values which then defines sizes of the arrays per-rank and globally.
+                // Also sets the offsets to where a ranks array data sits within the global array. 
+                // This is usefull for HDF5 output and for defining distributed arrays in Dask.
                 Opm::DamarisOutput::setupDamarisWritingPars(simulator_.vanguard().grid().comm(), numElements);
                 const std::vector<int>& local_to_global = this->collectToIORank_.localIdxToGlobalIdxMapping();
-                int damaris_err ;
                 
-                Opm::GridDataOutput::SimMeshDataAccessor geomData(gridView, Dune::VTK::conforming) ;
+                // Opm::GridDataOutput::SimMeshDataAccessor geomData(gridView, Dune::VTK::conforming) ;
+                Opm::GridDataOutput::SimMeshDataAccessor geomData(gridView, Dune::Partitions::interior) ;
                 geomData.printGridDetails() ;
                 
-                int nvert = geomData.getNVertices() ;
+                //geomData.setDunePartitionType(Dune::Partitions::ghost) ; // we cannot reuse the same object using a different partition.
+                //geomData.printGridDetails() ;
                 
+                
+              try {
+
                 damaris::model::vertex_data_structure vertex_structure = damaris::model::VERTEX_SEPARATE_X_Y_Z ;  // define this as we know it works with Ascent
                 damaris::model::DamarisGeometryData damarisMeshVars(vertex_structure, geomData.getNVertices(), 
                                                             geomData.getNCells(), geomData.getNCorners(), rank) ;
 
                 
-                const bool hasPolyCells = geomData.hasPolyhedralCells() ;
+                const bool hasPolyCells = geomData.polyhedralCellPresent() ;
                 if ( hasPolyCells ) {
                     std::cout << "The Grid has polyhedral elements - we will need to define extra connectivity arrays" << std::endl ;
                 } 
@@ -364,24 +378,27 @@ public:
                 damarisMeshVars.set_damaris_var_name_vertex_y(xyz_coord_dims,  param_names, variable_y) ;
                 damarisMeshVars.set_damaris_var_name_vertex_z(xyz_coord_dims,  param_names, variable_z) ;
                 
+                // Used to stor Damaris paramaters, which are then used to resize the 
+                // shared memory region used to save the mesh data
                 std::vector<int> param_vertices ;
                 std::vector<int> param_connectivity ;
                 std::vector<int> param_offsets ;
                 
                 
-                param_vertices.push_back(geomData.getNVertices() ) ;                
-                damarisMeshVars.SetAll_VERTEX_SEPARATE_X_Y_Z_shmem(param_vertices) ;
+                param_vertices.push_back(geomData.getNVertices() ) ; 
+                damarisMeshVars.SetAll_VERTEX_SEPARATE_X_Y_Z_shmem(param_vertices) ;  // { geomData.getNVertices()  } 
                 
                 damaris::model::DamarisVar<double>* var_x =  dynamic_cast<damaris::model::DamarisVar<double>* >(damarisMeshVars.get_x()) ;
                 damaris::model::DamarisVar<double>* var_y =  dynamic_cast<damaris::model::DamarisVar<double>* >(damarisMeshVars.get_y()) ;
                 damaris::model::DamarisVar<double>* var_z =  dynamic_cast<damaris::model::DamarisVar<double>* >(damarisMeshVars.get_z()) ;
                 
-                geomData.writeGridPoints(var_x->data_ptr(),var_y->data_ptr(),var_x->data_ptr()) ;
+                if ( geomData.writeGridPoints(var_x->data_ptr(),var_y->data_ptr(),var_z->data_ptr()) < 0)
+                     DUNE_THROW(Dune::IOError, geomData.getError()  );
+                
 
                 // We do not need these as the ~DamarisGeometryData destructor will call them  
                 // damarisMeshVars.CommitAll_VERTEX_SEPARATE_X_Y_Z_shmem() ;
                 // damarisMeshVars.ClearAll_VERTEX_SEPARATE_X_Y_Z_shmem() ;
-                
                 
                 /* This is our template XML model for connectivity 
                     <parameter name="n_connectivity_ph"        type="int"  value="1" />
@@ -406,11 +423,12 @@ public:
                 varname = std::string("topologies/topo/elements/types") ;                     // This string must match the group/variable name of the Damaris XML file 
                 damarisMeshVars.set_damaris_var_name_types(xyz_coord_dims, param_names, varname ) ;
                 
-                // Here we retrieve the DamarisVar objects. We need to *know the type* of the data
+                // Here we retrieve the DamarisVar objects. We need to *match the type* of the data as set in the Damaris XML file
                 damaris::model::DamarisVar<int>* var_connectivity =  dynamic_cast<damaris::model::DamarisVar<int>* >(damarisMeshVars.get_connectivity()) ;
                 damaris::model::DamarisVar<int>* var_offsets      =  dynamic_cast<damaris::model::DamarisVar<int>* >(damarisMeshVars.get_offsets()) ;
                 damaris::model::DamarisVar<char>* var_types       =  dynamic_cast<damaris::model::DamarisVar<char>* >(damarisMeshVars.get_types()) ;
                 
+                // Set the Damaris shared memory for each variable needed to store mesh data
                 param_connectivity.push_back( geomData.getNCorners() ) ;
                 var_connectivity->SetDamarisParameter(param_connectivity) ;
                 var_connectivity->SetPointersToDamarisShmem() ;
@@ -421,11 +439,34 @@ public:
                 var_types->SetDamarisParameter(param_offsets) ;
                 var_types->SetPointersToDamarisShmem() ;
                 
-                geomData.writeConnectivity(var_connectivity->data_ptr()) ;
-                geomData.writeOffsetsCells(var_offsets->data_ptr()) ;
-                geomData.writeCellTypes(var_types->data_ptr()) ;
+                // Copy the mesh data from the Durne grid
+                long i = 0 ;
+                i = geomData.writeConnectivity(var_connectivity->data_ptr()) ;
+                if ( i  < 0)
+                     DUNE_THROW(Dune::IOError, geomData.getError() );
+                std::cout << " writeConnectivity " << i << std::endl ;
                 
-                //  Commit and clear damaris functions are called .
+                i = geomData.writeOffsetsCells(var_offsets->data_ptr()) ;
+                if ( i < 0)
+                     DUNE_THROW(Dune::IOError,geomData.getError() );
+                std::cout << " writeOffsetsCells " << i << std::endl ;
+                
+                i = geomData.writeCellTypes(var_types->data_ptr()) ;
+                if ( i < 0)
+                     DUNE_THROW(Dune::IOError,geomData.getError() );
+                 std::cout << " writeCellTypes " << i << std::endl ;
+                //  Commit and clear damaris functions are called when the object goes out of scope (in the destructor)
+            }
+            catch (std::exception& e) 
+            {
+                std :: cout << e.what() << std::endl;
+                
+            }
+
+                
+                
+                // GLOBAL_CELL_INDEX is used to reorder variable data when writing to disk 
+                // This is enabl;ed using select-file="GLOBAL_CELL_INDEX" in the <variable> XML tag
                 damaris_err = damaris_write("GLOBAL_CELL_INDEX", local_to_global.data());
                 if (damaris_err != DAMARIS_OK) {
                     std::cerr << "ERROR rank =" << rank << " : eclwrite::writeOutput : damaris_write(\"GLOBAL_CELL_INDEX\", local_to_global.data())" 
@@ -435,7 +476,7 @@ public:
                 // Currently by default we assume static grid (unchanging through the simulation)
                 // Set damarisUpdate_ to true if we want to update the geometry to sent to Damaris 
                 this->damarisUpdate_ = false; 
-            }
+            }  // end of if (this->damarisUpdate_)
             
             
             if (!isSubStep) {

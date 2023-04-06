@@ -75,6 +75,8 @@ initializeDamaris(MPI_Comm comm, int mpiRank, std::string outputDir, bool enable
     }
 }
 
+
+
 void
 setupDamarisWritingPars(Parallel::Communication comm, const int n_elements_local_grid)
 {
