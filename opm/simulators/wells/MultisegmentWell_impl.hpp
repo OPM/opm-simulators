@@ -530,6 +530,21 @@ namespace Opm
     }
 
 
+    template <typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
+    solveEqAndUpdateWellState(const SummaryState& summary_state, WellState& well_state, DeferredLogger& deferred_logger)
+    {
+        if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
+
+        // We assemble the well equations, then we check the convergence,
+        // which is why we do not put the assembleWellEq here.
+        const BVectorWell dx_well = this->linSys_.solve();
+
+        updateWellState(summary_state, dx_well, well_state, deferred_logger);
+    }
+
+
 
     template <typename TypeTag>
     void

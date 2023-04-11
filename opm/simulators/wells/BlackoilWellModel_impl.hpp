@@ -25,6 +25,8 @@
 #include <opm/grid/utility/cartesianToCompressed.hpp>
 
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
+#include <opm/input/eclipse/Schedule/Network/ExtNetwork.hpp>
+#include <opm/input/eclipse/Schedule/Network/Balance.hpp>
 
 #include <opm/simulators/wells/BlackoilWellModelConstraints.hpp>
 #include <opm/simulators/wells/VFPProperties.hpp>
@@ -40,6 +42,8 @@
 #include <utility>
 
 #include <fmt/format.h>
+
+#define EXTRA_NETWORK_OUTPUT 0
 
 namespace Opm {
     template<typename TypeTag>
@@ -747,6 +751,28 @@ namespace Opm {
         well_container_generic_.clear();
         for (auto& w : well_container_)
           well_container_generic_.push_back(w.get());
+
+        const auto& network = schedule()[time_step].network();
+        if (network.active()) {
+            for (auto& well: well_container_generic_) {
+                // Producers only, since we so far only support the
+                // "extended" network model (properties defined by
+                // BRANPROP and NODEPROP) which only applies to producers.
+                if (this->node_pressures_.empty()) {
+                    // there is no existing node pressures
+                    break;
+                }
+                if (well->isProducer()) {
+                    const auto it = node_pressures_.find(well->wellEcl().groupName());
+                    if (it != node_pressures_.end()) {
+                        // The well belongs to a group which has a network nodal pressure,
+                        // set the dynamic THP constraint based on the network nodal pressure
+                        const double nodal_pressure = it->second;
+                        well->setDynamicThpLimit(nodal_pressure);
+                    }
+                }
+            }
+        }
     }
 
 
@@ -836,6 +862,56 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
+    balanceNetwork(DeferredLogger& deferred_logger) {
+        const double dt = this->ebosSimulator_.timeStepSize();
+        // updatePerforationIntensiveQuantities();
+        // TODO: should we also have the group and network backed-up here?
+        auto& well_state = this->wellState();
+        // B_avg is updated in the beginTimeStep();
+        const size_t max_iter = 100;
+        bool converged = false;
+        size_t iter = 0;
+        bool changed_well_group = false;
+        do {
+            changed_well_group = updateWellControlsAndNetwork(deferred_logger, true);
+            assembleImpl(dt, deferred_logger);
+            converged = this->getWellConvergence(this->B_avg_, true).converged() && !changed_well_group;
+#if EXTRA_NETWORK_OUTPUT
+            std::cout << " balanceNetwork iteration " << iter << " converged ?";
+            if (converged) {
+                std::cout << " YES ";
+            } else {
+                std::cout << " NO ";
+            }
+#endif
+            if (converged) {
+                break;
+            }
+            ++iter;
+						//const SummaryState& summary_state = ebosSimulator_.vanguard().summaryState();
+						const SummaryState& summary_state = this->summaryState();
+            for (auto& well : this->well_container_) {
+                well->solveEqAndUpdateWellState(summary_state, well_state, deferred_logger);
+            }
+            this->initPrimaryVariablesEvaluation();
+        } while (iter < max_iter);
+
+        if (!converged) {
+            const std::string msg = fmt::format("balanceNetwork did not get converged with {} iterations, and unconverged "
+                                                "network balance result will be used", max_iter);
+            deferred_logger.warning(msg);
+        } else {
+            const std::string msg = fmt::format("balanceNetwork get converged with {} iterations", iter);
+            deferred_logger.debug(msg);
+        }
+    }
+
+
+
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
     assemble(const int iterationIdx,
              const double dt)
     {
@@ -850,9 +926,7 @@ namespace Opm {
         Dune::Timer perfTimer;
         perfTimer.start();
 
-        if ( ! wellsActive() ) {
-            return;
-        }
+
 
         updatePerforationIntensiveQuantities();
 
@@ -871,9 +945,20 @@ namespace Opm {
                                            terminal_output_, grid().comm());
         }
 
-        const bool well_group_control_changed = updateWellControlsAndNetwork(dt, local_deferredLogger);
+// <<<<<<< HEAD
+//         const bool well_group_control_changed = updateWellControlsAndNetwork(dt, local_deferredLogger);
 
-        assembleWellEqWithoutIteration(dt, local_deferredLogger);
+//         assembleWellEqWithoutIteration(dt, local_deferredLogger);
+// =======
+        const bool well_group_control_changed = updateWellControlsAndNetwork(local_deferredLogger, false);
+
+        if ( ! wellsActive() ) {
+            return;
+        }
+
+        // TODO: assembleImpl function can be removed, it does not do much than assembleWellEq
+        assembleImpl(dt, local_deferredLogger);
+// >>>>>>> 42342102e (Updating PR4307 to new interface)
 
         // if group or well control changes we don't consider the
         // case converged
@@ -887,16 +972,46 @@ namespace Opm {
     template<typename TypeTag>
     bool
     BlackoilWellModel<TypeTag>::
-    updateWellControlsAndNetwork(const double dt, DeferredLogger& local_deferredLogger)
+// <<<<<<< HEAD
+//     updateWellControlsAndNetwork(const double dt, DeferredLogger& local_deferredLogger)
+//     {
+//         // not necessarily that we always need to update once of the network solutions
+//         bool do_network_update = true;
+//         bool well_group_control_changed = false;
+//         std::size_t network_update_iteration = 0;
+//         while (do_network_update) {
+//             std::tie(do_network_update, well_group_control_changed) =
+//                     updateWellControlsAndNetworkIteration(dt, network_update_iteration, local_deferredLogger);
+//             ++network_update_iteration;
+// =======
+    updateWellControlsAndNetwork(DeferredLogger& local_deferredLogger, const bool balance_network)
     {
-        // not necessarily that we always need to update once of the network solutions
+        // TODO: not necessarily that we always need to update once of the network solutions
+        // TODO: we do not consider what happens if we could not get network converged
+        // TODO: and we do not consider whether well_group_control_changed affect the network solution
+        // here, there might be something missing in the logic or there should be a better logic
+        // to handle the coupling between the network and well/group solution
         bool do_network_update = true;
         bool well_group_control_changed = false;
-        std::size_t network_update_iteration = 0;
+        // after certain number of the iterations, we use relaxed tolerance for the network update
+        constexpr size_t iteration_to_relax = 100;
+        // after certain number of the iterations, we terminate
+        constexpr size_t max_iteration = 200;
+        size_t network_iteration = 0;
+        const auto &comm = ebosSimulator_.vanguard().grid().comm();
         while (do_network_update) {
+            if (network_iteration == iteration_to_relax) {
+                local_deferredLogger.info(std::to_string(iteration_to_relax) + " iterations are used, we are using relaxed tolerance for network update now");
+            }
+            const bool relax_network_balance = network_iteration >= 100;
             std::tie(do_network_update, well_group_control_changed) =
-                    updateWellControlsAndNetworkIteration(dt, network_update_iteration, local_deferredLogger);
-            ++network_update_iteration;
+                    updateWellControlsAndNetworkIteration(local_deferredLogger, balance_network, relax_network_balance);
+            ++network_iteration;
+            if (network_iteration == max_iteration) {
+                local_deferredLogger.info("maximum of " + std::to_string(max_iteration) + " iterations has been used, we stop the network update now");
+                break;
+            }
+// >>>>>>> 42342102e (Updating PR4307 to new interface)
         }
         return well_group_control_changed;
     }
@@ -907,11 +1022,20 @@ namespace Opm {
     template<typename TypeTag>
     std::pair<bool, bool>
     BlackoilWellModel<TypeTag>::
-    updateWellControlsAndNetworkIteration(const double dt,
-                                          const std::size_t network_update_iteration,
-                                          DeferredLogger& local_deferredLogger)
+// <<<<<<< HEAD
+//     updateWellControlsAndNetworkIteration(const double dt,
+//                                           const std::size_t network_update_iteration,
+//                                           DeferredLogger& local_deferredLogger)
+//     {
+//         auto [well_group_control_changed, more_network_update] = updateWellControls(local_deferredLogger, network_update_iteration);
+// =======
+    updateWellControlsAndNetworkIteration(DeferredLogger &local_deferredLogger,
+                                          const bool balance_network,
+                                          const bool relax_network_tolerance)
     {
-        auto [well_group_control_changed, more_network_update] = updateWellControls(local_deferredLogger, network_update_iteration);
+        const auto [well_group_control_changed, more_network_update] = updateWellControls(local_deferredLogger,
+                                                                                          balance_network, relax_network_tolerance);
+// >>>>>>> 42342102e (Updating PR4307 to new interface)
 
         bool alq_updated = false;
         OPM_BEGIN_PARALLEL_TRY_CATCH();
@@ -920,8 +1044,20 @@ namespace Opm {
             initPrimaryVariablesEvaluation();
 
             alq_updated = maybeDoGasLiftOptimize(local_deferredLogger);
+// <<<<<<< HEAD
 
-            prepareWellsBeforeAssembling(dt, local_deferredLogger);
+//             prepareWellsBeforeAssembling(dt, local_deferredLogger);
+// =======
+            // TODO: in theory, there is not need to actually assemble the well equations here, for now, so it is
+            // easier to compare with the original code.
+            // And also, there is a lot of things done in the function assembleWellEq, some work needs to be done to
+            // split it. For the moment, not touching that direction.
+            const double dt = this->ebosSimulator_.timeStepSize();
+            assembleWellEq(dt, local_deferredLogger);
+            /* for (auto& well : well_container_) {
+                well->solveWellEquation(ebosSimulator_, this->wellState(), this->groupState(), local_deferredLogger);
+            } */
+// >>>>>>> 42342102e (Updating PR4307 to new interface)
         }
         OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger, "updateWellControlsAndNetworkIteration() failed: ",
                                        terminal_output_, grid().comm());
@@ -946,6 +1082,27 @@ namespace Opm {
 
 
 
+// <<<<<<< HEAD
+// =======
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    assembleImpl(const double dt, DeferredLogger& local_deferredLogger)
+    {
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
+        {
+            // Set the well primary variables based on the value of well solutions
+            initPrimaryVariablesEvaluation();
+            assembleWellEq(dt, local_deferredLogger);
+        }
+        OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger, "assembleImpl() failed: ",
+                                       terminal_output_, grid().comm());
+    }
+
+
+
+
+// >>>>>>> 42342102e (Updating PR4307 to new interface)
     template<typename TypeTag>
     bool
     BlackoilWellModel<TypeTag>::
@@ -1490,27 +1647,54 @@ namespace Opm {
     template<typename TypeTag>
     std::pair<bool, bool>
     BlackoilWellModel<TypeTag>::
-    updateWellControls(DeferredLogger& deferred_logger,
-                       const std::size_t network_update_it)
-    {
-        // Even if there are no wells active locally, we cannot
-        // return as the DeferredLogger uses global communication.
-        // For no well active globally we simply return.
-        if( !wellsActive() ) return { false, false };
+// <<<<<<< HEAD
+//     updateWellControls(DeferredLogger& deferred_logger,
+//                        const std::size_t network_update_it)
+//     {
+//         // Even if there are no wells active locally, we cannot
+//         // return as the DeferredLogger uses global communication.
+//         // For no well active globally we simply return.
+//         if( !wellsActive() ) return { false, false };
+// =======
+    updateWellControls(DeferredLogger &deferred_logger, const bool balance_network,
+                       const bool relax_network_tolerance) {
+// >>>>>>> 42342102e (Updating PR4307 to new interface)
 
         const int episodeIdx = ebosSimulator_.episodeIndex();
+        const auto& network = schedule()[episodeIdx].network();
+        if (!wellsActive() && !network.active()) {
+             return {false, false};
+        }
+
         const int iterationIdx = ebosSimulator_.model().newtonMethod().numIterations();
         const auto& comm = ebosSimulator_.vanguard().grid().comm();
         updateAndCommunicateGroupData(episodeIdx, iterationIdx);
 
         // network related
+// <<<<<<< HEAD
+//         bool more_network_update = false;
+//         if (shouldBalanceNetwork(episodeIdx, iterationIdx)) {
+//             const auto [local_network_changed, local_network_imbalance] = updateNetworkPressures(episodeIdx);
+//             const bool network_changed = comm.sum(local_network_changed);
+//             const double network_imbalance = comm.max(local_network_imbalance);
+//             if (network_changed) {
+//                 more_network_update = moreNetworkIteration(episodeIdx, network_update_it, network_imbalance);
+// =======
+        // The following should put in one function
         bool more_network_update = false;
-        if (shouldBalanceNetwork(episodeIdx, iterationIdx)) {
-            const auto [local_network_changed, local_network_imbalance] = updateNetworkPressures(episodeIdx);
-            const bool network_changed = comm.sum(local_network_changed);
-            const double network_imbalance = comm.max(local_network_imbalance);
-            if (network_changed) {
-                more_network_update = moreNetworkIteration(episodeIdx, network_update_it, network_imbalance);
+        if (shouldBalanceNetwork(episodeIdx, iterationIdx) || balance_network) {
+            const auto network_imbalance = updateNetworkPressures(episodeIdx);
+            const auto& balance = schedule()[episodeIdx].network_balance();
+            const double tolerance = relax_network_tolerance ? 10.0 * balance.pressure_tolerance() :  balance.pressure_tolerance();
+#if EXTRA_NETWORK_OUTPUT
+            // TODO: it should go to the DeferredLogger system
+            if (comm.rank() == 0) {
+                std::cout << "network_imbalance " << network_imbalance/1.e5 << " network tolerance " << tolerance/1.e5 << std::endl;
+            }
+#endif
+            if (network_imbalance > tolerance) {
+                more_network_update = true;
+// >>>>>>> 42342102e (Updating PR4307 to new interface)
             }
         }
 
@@ -1731,6 +1915,42 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     prepareTimeStep(DeferredLogger& deferred_logger)
     {
+        bool network_rebalance_necessary = false;
+        const int reportStepIdx = ebosSimulator_.episodeIndex();
+        const auto& network = schedule()[reportStepIdx].network();
+        // TODO: without considering more complicated situation, it should only apply to the first time step within the
+        // TODO: report step?
+        if (network.active()) {
+            // TODO: with this approach, we will not be able to detect a well is `closed` or `shut`, because those wells
+            // TODO: are not in the well container anymore
+            // TODO: at the current stage, we only detect the well update or the group related opening or shutting yet.
+            for (const auto& well : well_container_) {
+                const auto& events = this->wellState().well(well->indexOfWell()).events;
+                // TODO: it is possible the event should be more selective to the ones we want
+                // if (events.hasEvent(WellState::event_mask) &&
+                const bool is_partof_network = network.has_node(well->wellEcl().groupName());
+#if EXTRA_NETWORK_OUTPUT
+                std::cout << " well " << well->name() << " is part of the network ? ";
+                if (is_partof_network) {
+                    std::cout << " YES ";
+                } else {
+                    std::cout << " NO ";
+                }
+#endif
+                if (is_partof_network && events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE)) {
+                    network_rebalance_necessary = true;
+                    break;
+                }
+#if EXTRA_NETWORK_OUTPUT
+                if (network_rebalance_necessary) {
+                    std::cout << " made the network_rebalance necessary " << std::endl;
+                } else {
+                    std::cout << " did not trigger network_rebalance " << std::endl;
+                }
+#endif
+            }
+        }
+        network_rebalance_necessary = comm_.max(network_rebalance_necessary);
         for (const auto& well : well_container_) {
             auto& events = this->wellState().well(well->indexOfWell()).events;
             if (events.hasEvent(WellState::event_mask)) {
@@ -1753,6 +1973,10 @@ namespace Opm {
             }
         }
         updatePrimaryVariables(deferred_logger);
+        if (network_rebalance_necessary) {
+            // this is to obtain good network solution
+            balanceNetwork(deferred_logger);
+        }
     }
 
     template<typename TypeTag>

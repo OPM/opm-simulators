@@ -884,8 +884,11 @@ namespace WellGroupHelpers
 #if EXTRA_DEBUG_NETWORK
                     std::ostringstream oss;
                     oss << "parent: " << (*upbranch).uptree_node() << "  child: " << node
-                        << "  rates = [ " << rates[0]*86400 << ", " << rates[1]*86400 << ", " << rates[2]*86400 << " ]"
-                        << "  p(parent) = " << up_press/1e5 << "  p(child) = " << node_pressures[node]/1e5 << std::endl;
+                        << "  rates = [ " << rates[0] * 86400 << ", " << rates[1] * 86400 << ", "
+                        << rates[2] * 86400 << " ]"
+                        << "  p(parent) = " << up_press / 1e5 << "  p(child) = " << node_pressures[node] / 1e5
+                        << " liquid rate " << (rates[0]+rates[1])*86400. << std::endl;
+                    std::cout << oss.str();
                     OpmLog::debug(oss.str());
 #endif
                 } else {
