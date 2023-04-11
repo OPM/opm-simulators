@@ -223,8 +223,17 @@ protected:
              if (this->aquct_data_.initial_temperature.has_value())
                  temp = this->aquct_data_.initial_temperature.value();
 
-             Scalar rs = 0.0; // no dissolved CO2
-             Scalar waterViscosity = FluidSystem::oilPvt().viscosity(pvtRegionIdx(), temp, press, rs);
+             Scalar waterViscosity = 0.;
+             if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                 Scalar rs = 0.0; // no dissolved CO2
+                 waterViscosity = FluidSystem::oilPvt().viscosity(pvtRegionIdx(), temp, press, rs);
+             } else if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                 Scalar salt = 0.;
+                 Scalar rsw = 0.;
+                 waterViscosity = FluidSystem::waterPvt().viscosity(pvtRegionIdx(), temp, press, rsw, salt);
+             } else {
+                 OPM_THROW(std::runtime_error, "water or oil phase is needed to run CO2Store.");
+             }
              const auto x = this->aquct_data_.porosity * this->aquct_data_.total_compr * this->aquct_data_.inner_radius * this->aquct_data_.inner_radius;
              this->Tc_  = waterViscosity * x / this->aquct_data_.permeability;
         } else {
@@ -254,16 +263,26 @@ protected:
             this->Ta0_ = this->aquct_data_.initial_temperature.value();
 
         if(this->co2store_()) {
-             const auto press = this->aquct_data_.initial_pressure.value();
+            const auto press = this->aquct_data_.initial_pressure.value();
 
-             Scalar temp = FluidSystem::reservoirTemperature();
-             if (this->aquct_data_.initial_temperature.has_value())
-                 temp = this->aquct_data_.initial_temperature.value();
+            Scalar temp = FluidSystem::reservoirTemperature();
+            if (this->aquct_data_.initial_temperature.has_value())
+                temp = this->aquct_data_.initial_temperature.value();
 
-             Scalar rs = 0.0; // no dissolved CO2
-             Scalar waterDensity = FluidSystem::oilPvt().inverseFormationVolumeFactor(pvtRegionIdx(), temp, press, rs)
-                     * FluidSystem::oilPvt().oilReferenceDensity(pvtRegionIdx());
-             this->rhow_  = waterDensity;
+            Scalar waterDensity = 0.;
+            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                Scalar rs = 0.0; // no dissolved CO2
+                waterDensity = FluidSystem::oilPvt().inverseFormationVolumeFactor(pvtRegionIdx(), temp, press, rs)
+                               * FluidSystem::oilPvt().oilReferenceDensity(pvtRegionIdx());
+            } else if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                Scalar salinity = 0.;
+                Scalar rsw = 0.;
+                waterDensity = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx(), temp, press, rsw, salinity)
+                               * FluidSystem::waterPvt().waterReferenceDensity(pvtRegionIdx());
+            } else {
+                OPM_THROW(std::runtime_error, "water or oil phase is needed to run CO2Store.");
+            }
+            this->rhow_  = waterDensity;
         } else {
             this->rhow_ = this->aquct_data_.waterDensity();
         }
