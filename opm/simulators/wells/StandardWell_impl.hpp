@@ -1222,7 +1222,8 @@ namespace Opm
             this->operability_status_.can_obtain_bhp_with_thp_limit = true;
 
             const double  bhp_limit = WellBhpThpCalculator(*this).mostStrictBhpFromBhpLimits(summaryState);
-            this->operability_status_.obey_bhp_limit_with_thp_limit = (*obtain_bhp >= bhp_limit);
+            this->operability_status_.obey_bhp_limit_with_thp_limit = this->isProducer() ?
+                                                              *obtain_bhp >= bhp_limit : *obtain_bhp <= bhp_limit ;
 
             const double thp_limit = this->getTHPConstraint(summaryState);
             if (this->isProducer() && *obtain_bhp < thp_limit) {
