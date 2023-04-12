@@ -35,6 +35,7 @@
 
 #include <opm/material/densead/Math.hpp>
 
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/utils/timer.hh>
 #include <opm/models/utils/timerguard.hh>
 
@@ -42,7 +43,6 @@
 
 #include <dune/istl/istlexception.hh>
 #include <dune/common/classname.hh>
-#include <dune/common/version.hh>
 #include <dune/common/parallel/mpihelper.hh>
 
 #include <iostream>
@@ -127,11 +127,7 @@ class NewtonMethod
     using ConvergenceWriter = GetPropType<TypeTag, Properties::NewtonConvergenceWriter>;
 
     using Communicator = typename Dune::MPIHelper::MPICommunicator;
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
     using CollectiveCommunication = typename Dune::Communication<typename Dune::MPIHelper::MPICommunicator>;
-#else
-    using CollectiveCommunication = Dune::CollectiveCommunication<Communicator>;
-#endif
 
 public:
     NewtonMethod(Simulator& simulator)

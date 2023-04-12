@@ -31,13 +31,13 @@
 #include <opm/models/io/restart.hh>
 #include <opm/models/utils/parametersystem.hh>
 
+#include <opm/models/utils/basicproperties.hh>
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/timer.hh>
 #include <opm/models/utils/timerguard.hh>
 #include <opm/models/parallel/mpiutil.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 
-#include <dune/common/version.hh>
 #include <dune/common/parallel/mpihelper.hh>
 
 #include <iostream>
@@ -53,11 +53,7 @@ namespace detail
 {
 inline auto getMPIHelperCommunication()
 {
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
     return Dune::MPIHelper::getCommunication();
-#else
-    return Dune::MPIHelper::getCollectiveCommunication();
-#endif
 }
 } // end namespace detail
 } // end namespace Opm
@@ -111,12 +107,7 @@ class Simulator
     using Problem = GetPropType<TypeTag, Properties::Problem>;
 
     using MPIComm = typename Dune::MPIHelper::MPICommunicator;
-    #if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
-        using Communication = Dune::Communication<MPIComm>;
-    #else
-        using Communication = Dune::CollectiveCommunication<MPIComm>;
-    #endif
-
+    using Communication = Dune::Communication<MPIComm>;
 
 public:
     // do not allow to copy simulators around

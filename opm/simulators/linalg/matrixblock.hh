@@ -25,7 +25,6 @@
 
 #include <dune/common/dynmatrix.hh>
 #include <dune/common/fmatrix.hh>
-#include <dune/common/version.hh>
 #include <dune/common/typetraits.hh>
 
 #include <dune/istl/superlu.hh>
@@ -218,9 +217,6 @@ static inline void invertMatrix(Dune::DynamicMatrix<K>& matrix)
          return;
      }
 
-#if ! DUNE_VERSION_NEWER( DUNE_COMMON, 2, 7 )
-     Dune::FMatrixPrecision<K>::set_singular_limit(1.e-30);
-#endif
      matrix.invert();
 }
 
