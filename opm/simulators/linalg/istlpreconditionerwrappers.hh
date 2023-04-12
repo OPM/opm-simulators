@@ -145,8 +145,6 @@ EWOMS_WRAP_ISTL_PRECONDITIONER(GaussSeidel, Dune::SeqGS)
 EWOMS_WRAP_ISTL_PRECONDITIONER(SOR, Dune::SeqSOR)
 EWOMS_WRAP_ISTL_PRECONDITIONER(SSOR, Dune::SeqSSOR)
 
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2,7)
-
 // we need a custom preconditioner wrapper for ILU because the Dune::SeqILU class uses a
 // non-standard extra template parameter to specify its order.
 template <class TypeTag>
@@ -187,11 +185,6 @@ public:
 private:
     SequentialPreconditioner *seqPreCond_;
 };
-
-#else
-EWOMS_WRAP_ISTL_SIMPLE_PRECONDITIONER(ILU0, Dune::SeqILU0)
-EWOMS_WRAP_ISTL_PRECONDITIONER(ILUn, Dune::SeqILUn)
-#endif
 
 #undef EWOMS_WRAP_ISTL_PRECONDITIONER
 }} // namespace Linear, Opm

@@ -28,7 +28,9 @@
 #ifndef EWOMS_NULL_CONVERGENCE_WRITER_HH
 #define EWOMS_NULL_CONVERGENCE_WRITER_HH
 
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/utils/propertysystem.hh>
+
 #include <opm/simulators/linalg/linalgproperties.hh>
 
 namespace Opm::Properties {

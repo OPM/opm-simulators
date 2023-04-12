@@ -38,9 +38,9 @@
 #include <dune/istl/paamg/pinfo.hh>
 #include <dune/istl/owneroverlapcopy.hh>
 
-#include <dune/common/version.hh>
-
-#include <iostream>
+#include <memory>
+#include <tuple>
+#include <utility>
 
 namespace Opm::Linear {
 template <class TypeTag>
@@ -109,12 +109,7 @@ class ParallelAmgBackend : public ParallelBaseBackend<TypeTag>
     using SequentialSmoother = Dune::SeqSOR<IstlMatrix, Vector, Vector>;
 // using SequentialSmoother = Dune::SeqSSOR<IstlMatrix,Vector,Vector>;
 // using SequentialSmoother = Dune::SeqJac<IstlMatrix,Vector,Vector>;
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2,7)
 // using SequentialSmoother = Dune::SeqILU<IstlMatrix,Vector,Vector>;
-#else
-// using SequentialSmoother = Dune::SeqILU0<IstlMatrix,Vector,Vector>;
-// using SequentialSmoother = Dune::SeqILUn<IstlMatrix,Vector,Vector>;
-#endif
 
 #if HAVE_MPI
     using OwnerOverlapCopyCommunication = Dune::OwnerOverlapCopyCommunication<Opm::Linear::Index>;

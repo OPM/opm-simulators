@@ -47,7 +47,6 @@
 
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
-#include <dune/common/version.hh>
 
 #include <sstream>
 #include <string>
@@ -157,15 +156,9 @@ template<class TypeTag>
 struct LinearSolverWrapper<TypeTag, TTag::WaterAirBaseProblem>
 { using type = Opm::Linear::SolverWrapperRestartedGMRes<TypeTag>; };
 
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2,7)
 template<class TypeTag>
 struct PreconditionerWrapper<TypeTag, TTag::WaterAirBaseProblem>
 { using type = Opm::Linear::PreconditionerWrapperILU<TypeTag>; };
-#else
-template<class TypeTag>
-struct PreconditionerWrapper<TypeTag, TTag::WaterAirBaseProblem>
-{ using type = Opm::Linear::PreconditionerWrapperILUn<TypeTag>; };
-#endif
 template<class TypeTag>
 struct PreconditionerOrder<TypeTag, TTag::WaterAirBaseProblem> { static constexpr int value = 2; };
 
