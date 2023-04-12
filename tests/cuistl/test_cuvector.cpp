@@ -280,5 +280,16 @@ BOOST_AUTO_TEST_CASE(RandomVectors)
                 BOOST_CHECK_EQUAL(projectedA[i], a[i]);
             }
         }
+
+        aGPU = GVector(a);
+        auto twoNormAtIndices = aGPU.two_norm(indexSetGPU);
+
+        double correctTwoNormAtIndices = 0.0;
+        for (size_t i = 0; i < indexSet.size(); ++i) {
+            correctTwoNormAtIndices += a[indexSet[i]] * a[indexSet[i]];
+        }
+        correctTwoNormAtIndices = std::sqrt(correctTwoNormAtIndices);
+
+        BOOST_CHECK_CLOSE(correctTwoNormAtIndices, twoNormAtIndices, 1e-7);
     }
 }

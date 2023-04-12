@@ -54,7 +54,7 @@ namespace
         // TODO: [perf] Is it faster to just use a mask? Probably does not matter either way
         //              This is hopefully not where we will spend most of our time.
         if (globalIndex < numberOfElements) {
-            buffer[indices[globalIndex]] = a[indices[globalIndex]] * b[indices[globalIndex]];
+            buffer[globalIndex] = a[indices[globalIndex]] * b[indices[globalIndex]];
         }
     }
 
