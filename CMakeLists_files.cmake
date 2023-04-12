@@ -161,6 +161,9 @@ endif()
 if(ROCALUTION_FOUND)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/rocalutionSolverBackend.cpp)
 endif()
+if(rocsparse_FOUND AND rocblas_FOUND)
+  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/rocsparseSolverBackend.cpp)
+endif()
 if(COMPILE_BDA_BRIDGE)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/BdaBridge.cpp)
 endif()
@@ -225,6 +228,9 @@ if(OPENCL_FOUND)
 endif()
 if(ROCALUTION_FOUND)
   list(APPEND TEST_SOURCE_FILES tests/test_rocalutionSolver.cpp)
+endif()
+if(rocsparse_FOUND AND rocblas_FOUND)
+  list(APPEND TEST_SOURCE_FILES tests/test_rocsparseSolver.cpp)
 endif()
 if(HDF5_FOUND)
   list(APPEND TEST_SOURCE_FILES tests/test_HDF5File.cpp)
@@ -337,6 +343,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/bda/Matrix.hpp
   opm/simulators/linalg/bda/MultisegmentWellContribution.hpp
   opm/simulators/linalg/bda/rocalutionSolverBackend.hpp
+  opm/simulators/linalg/bda/rocsparseSolverBackend.hpp
   opm/simulators/linalg/bda/WellContributions.hpp
   opm/simulators/linalg/amgcpr.hh
   opm/simulators/linalg/twolevelmethodcpr.hh
