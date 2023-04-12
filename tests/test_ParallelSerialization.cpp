@@ -144,11 +144,7 @@
 template<class T>
 std::tuple<T,int,int> PackUnpack(T& in)
 {
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
     const auto& comm = Dune::MPIHelper::getCommunication();
-#else
-    const auto& comm = Dune::MPIHelper::getCollectiveCommunication();
-#endif
 
     Opm::EclMpiSerializer ser(comm);
     ser.pack(in);

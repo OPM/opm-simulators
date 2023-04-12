@@ -24,13 +24,8 @@
 
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
 
-#include <dune/common/version.hh>
 #include <dune/istl/paamg/aggregates.hh>
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
 #include <dune/istl/paamg/matrixhierarchy.hh>
-#else
-#include <dune/istl/paamg/hierarchy.hh>
-#endif
 
 #include <cstddef>
 #include <map>

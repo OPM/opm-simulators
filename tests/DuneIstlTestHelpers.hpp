@@ -29,14 +29,8 @@
 #error "This file needs to compiled with MPI support!"
 #endif
 
-#include <dune/common/version.hh>
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
 #include <dune/common/parallel/mpicommunication.hh>
 #include <dune/common/parallel/communication.hh>
-#else
-#include <dune/common/parallel/mpicollectivecommunication.hh>
-#include <dune/common/parallel/collectivecommunication.hh>
-#endif
 
 #include <dune/common/parallel/indexset.hh>
 #include <dune/common/parallel/communicator.hh>

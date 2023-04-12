@@ -5,7 +5,6 @@
 #include <boost/test/unit_test.hpp>
 #include <boost/version.hpp>
 
-#include <dune/common/version.hh>
 #include <dune/common/fvector.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixmarket.hh>
@@ -14,11 +13,7 @@
 
 BOOST_AUTO_TEST_CASE(testcsrtocscoffsetmap){
 
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
     using Matrix = Dune::BCRSMatrix<double>;
-#else
-    using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<double,1,1>>;
-#endif
 
     Matrix matrix;
     {

@@ -60,11 +60,7 @@ protected:
     using GroupRateMap =
         std::map<std::string, GroupRates>;
     using GroupIdxMap = std::map<std::string, int>;
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
     using Communication = Dune::Communication<Dune::MPIHelper::MPICommunicator>;
-#else
-    using Communication = Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator>;
-#endif
 
     // TODO: same definition with WellInterface, and
     //   WellState eventually they should go to a common header file.

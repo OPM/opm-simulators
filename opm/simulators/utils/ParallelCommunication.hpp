@@ -23,16 +23,13 @@
 #include <dune/common/version.hh>
 #include <dune/common/parallel/mpihelper.hh>
 
-namespace Opm
-{
-namespace Parallel
-{
+namespace Opm {
+namespace Parallel {
+
     using MPIComm = typename Dune::MPIHelper::MPICommunicator;
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
     using Communication = Dune::Communication<MPIComm>;
-#else
-    using Communication = Dune::CollectiveCommunication<MPIComm>;
-#endif
+
 } // namespace Parallel
 } // end namespace Opm
+
 #endif // OPM_PARALLELCOMMUNICATION_HEADER_INCLUDED
