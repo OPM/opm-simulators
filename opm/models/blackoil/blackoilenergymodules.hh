@@ -157,9 +157,9 @@ public:
             }
 
             // add the internal energy of the rock
-            Scalar refPoro = intQuants.referencePorosity();
+            Scalar rockFraction = intQuants.rockFraction();
             const auto& uRock = decay<LhsEval>(intQuants.rockInternalEnergy());
-            storage[contiEnergyEqIdx] += (1.0 - refPoro)*uRock;
+            storage[contiEnergyEqIdx] += rockFraction*uRock;
             storage[contiEnergyEqIdx] *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
         }
     }
@@ -368,6 +368,14 @@ public:
 
         const auto& thermalConductionLawParams = elemCtx.problem().thermalConductionLawParams(elemCtx, dofIdx, timeIdx);
         totalThermalConductivity_ = ThermalConductionLaw::thermalConductivity(thermalConductionLawParams, fs);
+
+        // Retrieve the rock fraction from the problem
+        // Usually 1 - porosity, but if pvmult is used to modify porosity
+        // we will apply the same multiplier to the rock fraction
+        // i.e. pvmult*(1 - porosity) and thus interpret multpv as a volume
+        // multiplier. This is to avoid negative rock volume for pvmult*porosity > 1
+        const unsigned cell_idx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
+        rockFraction_ = elemCtx.problem().rockFraction(cell_idx, timeIdx);
     }
 
     const Evaluation& rockInternalEnergy() const
@@ -376,12 +384,16 @@ public:
     const Evaluation& totalThermalConductivity() const
     { return totalThermalConductivity_; }
 
+    const Scalar& rockFraction() const
+    { return rockFraction_; }
+
 protected:
     Implementation& asImp_()
     { return *static_cast<Implementation*>(this); }
 
     Evaluation rockInternalEnergy_;
     Evaluation totalThermalConductivity_;
+    Scalar rockFraction_;
 };
 
 template <class TypeTag>
