@@ -122,6 +122,9 @@ private:
                          const std::array<double, 2>& range,
                          DeferredLogger& deferred_logger) const;
 
+    //! \brief Get pressure adjustment to the bhp calculated from VFP table
+    double getVfpBhpAdjustment(const double bph_tab, const double thp_limit) const;
+
     //! \brief Find limits using bisection.
     bool bisectBracket(const std::function<double(const double)>& eq,
                        const std::array<double, 2>& range,
