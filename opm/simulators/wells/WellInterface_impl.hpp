@@ -604,20 +604,24 @@ namespace Opm
         const auto& schedule = ebos_simulator.vanguard().schedule();
         auto report_step_idx = ebos_simulator.episodeIndex();
         const auto& glo = schedule.glo(report_step_idx);
-        assert(glo.has_well(well_name));
-        auto increment = glo.gaslift_increment();
-        auto alq = well_state.getALQ(well_name);
-        bool converged;
-        while (alq > 0) {
-            well_state.setALQ(well_name, alq);
-            if ((converged =
-                  iterateWellEquations(ebos_simulator, dt, well_state, group_state, deferred_logger)))
-            {
-                return converged;
+        if(glo.has_well(well_name)) {
+            auto increment = glo.gaslift_increment();
+            auto alq = well_state.getALQ(well_name);
+            bool converged;
+            while (alq > 0) {
+                well_state.setALQ(well_name, alq);
+                if ((converged =
+                      iterateWellEquations(ebos_simulator, dt, well_state, group_state, deferred_logger)))
+                {
+                    return converged;
+                }
+                alq -= increment;
             }
-            alq -= increment;
+            return false;
         }
-        return false;
+        else {
+            return iterateWellEquations(ebos_simulator, dt, well_state, group_state, deferred_logger);
+        }
     }
 
     template<typename TypeTag>
