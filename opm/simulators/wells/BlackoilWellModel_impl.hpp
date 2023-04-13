@@ -991,7 +991,7 @@ namespace Opm {
         // TODO: and we do not consider whether well_group_control_changed affect the network solution
         // here, there might be something missing in the logic or there should be a better logic
         // to handle the coupling between the network and well/group solution
-        bool do_network_update = true;
+        bool do_network_update = balance_network;
         bool well_group_control_changed = false;
         // after certain number of the iterations, we use relaxed tolerance for the network update
         constexpr size_t iteration_to_relax = 100;
@@ -1928,7 +1928,7 @@ namespace Opm {
                 const auto& events = this->wellState().well(well->indexOfWell()).events;
                 // TODO: it is possible the event should be more selective to the ones we want
                 // if (events.hasEvent(WellState::event_mask) &&
-                const bool is_partof_network = network.has_node(well->wellEcl().groupName());
+                const bool is_partof_network = well->wellEcl().predictionMode() && network.has_node(well->wellEcl().groupName());
 #if EXTRA_NETWORK_OUTPUT
                 std::cout << " well " << well->name() << " is part of the network ? ";
                 if (is_partof_network) {
