@@ -381,9 +381,14 @@ namespace Opm
         const WellState well_state0 = well_state;
         const double dt = ebosSimulator.timeStepSize();
         const auto& summary_state = ebosSimulator.vanguard().summaryState();
-        const bool has_thp_limit = this->wellHasTHPConstraints(summary_state);
-        bool converged;
-        if (has_thp_limit) {
+// <<<<<<< HEAD
+//         const bool has_thp_limit = this->wellHasTHPConstraints(summary_state);
+//         bool converged;
+//         if (has_thp_limit) {
+// =======
+        const bool has_thp_limit = this->wellEcl().predictionMode() && this->wellHasTHPConstraints(summary_state);
+        if (has_thp_limit)
+// >>>>>>> 892b218f2 (.. and now actually allowing for the network to function..)
             well_state.well(this->indexOfWell()).production_cmode = Well::ProducerCMode::THP;
             converged = gliftBeginTimeStepWellTestIterateWellEquations(
                 ebosSimulator, dt, well_state, group_state, deferred_logger);

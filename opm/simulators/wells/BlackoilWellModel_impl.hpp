@@ -991,7 +991,7 @@ namespace Opm {
         // TODO: and we do not consider whether well_group_control_changed affect the network solution
         // here, there might be something missing in the logic or there should be a better logic
         // to handle the coupling between the network and well/group solution
-        bool do_network_update = balance_network;
+        bool do_network_update = true;
         bool well_group_control_changed = false;
         // after certain number of the iterations, we use relaxed tolerance for the network update
         constexpr size_t iteration_to_relax = 100;

@@ -192,6 +192,10 @@ double WellInterfaceGeneric::rsRvInj() const
 
 bool WellInterfaceGeneric::wellHasTHPConstraints(const SummaryState& summaryState) const
 {
+    if (!this->wellEcl().predictionMode()) {
+        return false;    
+    }
+    
     if (dynamic_thp_limit_) {
         return true;
     }
