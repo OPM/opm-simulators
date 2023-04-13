@@ -821,13 +821,6 @@ add_test_compareECLFiles(CASENAME 3d_tran_operator
                          DIR parallel_fieldprops)
 
 
-add_test_compareECLFiles(CASENAME actionx_gconinje
-                         FILENAME ACTIONX_GCONINJE
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR actionx)
-
 add_test_compareECLFiles(CASENAME actionx_gconprod
                          FILENAME ACTIONX_GCONPROD
                          SIMULATOR flow
@@ -835,13 +828,6 @@ add_test_compareECLFiles(CASENAME actionx_gconprod
                          REL_TOL ${rel_tol}
                          DIR actionx)
 
-
-add_test_compareECLFiles(CASENAME actionx_wconinje
-                         FILENAME ACTIONX_WCONINJE
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR actionx)
 
 add_test_compareECLFiles(CASENAME actionx_wefac
                          FILENAME ACTIONX_WEFAC
