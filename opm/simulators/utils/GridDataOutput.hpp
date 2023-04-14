@@ -17,7 +17,7 @@
     (aka cell) types for the sub-partition. This allows the full set of verticies to be reused for 
     visualisation of the various sub-partitions, at the expense of copying all the vertices. Typically
     a user is interested in the interiorBoarder elements which make use of the bulk (~80%) of the vertices.
-    This saves having to subset the vertices.
+    This saves having to renumber the indexes to the vertices for the sub-partitions.
     
     N.B. The class checks for polyhedral cells within the requested partiton and breaks with an exception if found.
     
@@ -56,6 +56,7 @@ namespace Opm::GridDataOutput
    *  
    */
   // template< class GridView, unsigned int partitions >
+  enum ConnectivityVertexOrder { DUNE = 0 , VTK = 1 } ;
   
   template< class GridView, unsigned int partitions >
   class SimMeshDataAccessor {
@@ -81,13 +82,12 @@ namespace Opm::GridDataOutput
      *   Dune::Partitions::all
      *
      * N.B. To visualise 'field' data on the extracted grid mesh then the field variable
-     *       should contain at least as many vlaues as the mesh has cells  (ncells_) or vertecies (nvertices_)
-     *       depending on if data is cell cenred or vertex centred, respectively.
+     *       should contain at least as many vlaues as the mesh has cells  (ncells_) or vertices (nvertices_)
+     *       depending on if data is cell centred or vertex centred, respectively.
      *
      *  This class does not work with grids containing polyhedral cells (well, it has not been tested
-     *  with this kind of grid data). The user should call
-     *  polyhedralCellPresent() to test if polyhedral cells are present and decide what they want to 
-     *  do before copying data using the data accessor methods.
+     *  with this kind of grid data). The user should call polyhedralCellPresent() to test if polyhedral 
+     *  cells are present and decide what they want to do before copying data using the data accessor methods.
      */
     explicit SimMeshDataAccessor ( const GridView &gridView,  
                             Dune::PartitionSet<partitions>  dunePartition)
@@ -129,9 +129,15 @@ namespace Opm::GridDataOutput
     }
 
 
-    //! Count the vertices, cells and corners
+    /** 
+        Count the vertices, cells and corners.
+        
+        We count all the vertices ( the Dune::Partitions::all partition ) as then we do not need to renumber
+        the vertices as all the subsets use references to the full set.
+    */ 
     void countEntities(  )
     {
+        // We include all the vertices for this ranks partition
         const auto& vert_partition_it = vertices(gridView_, Dune::Partitions::all);
         nvertices_ = std::distance(vert_partition_it.begin(), vert_partition_it.end());
         
@@ -148,7 +154,7 @@ namespace Opm::GridDataOutput
 
 
      /**
-       Write the positions of vertices - directly to the pointers given in paramaters 1
+       Write the positions of vertices - directly to the pointers given in paramaters 
        
        returns the number of vertices written, or -1 if an error was detected
     */
@@ -156,26 +162,30 @@ namespace Opm::GridDataOutput
     long  writeGridPoints( T*  x_inout,  T*  y_inout, T* z_inout )
     {
         long i = 0 ;
-        for (const auto& vit :   vertices(gridView_, Dune::Partitions::all) )
-        {      
-            if (i < nvertices_) 
-            {
+        
+        if (dimw_ == 3) {
+            for (const auto& vit :   vertices(gridView_, Dune::Partitions::all) )
+            {      
+                // if (i < nvertices_) // As we are templated on the Dune::PartitionSet<partitions>, this cannot change
                 auto xyz_local = vit.geometry().corner(0);  // verticies only have one corner
-                
                 x_inout[i] = static_cast<T>(xyz_local[0]) ;
                 y_inout[i] = static_cast<T>(xyz_local[1]) ;
-                if (dimw_ == 3)
-                    z_inout[i] = static_cast<T>(xyz_local[2]) ; 
-                else 
-                    z_inout[i] = static_cast<T>(0.0);  
-            } else {
-                error_strm_ << "Opm::GridDataOutput::SimMeshDataAccessor ERROR - writeGridPoints(*x, *y, *z) tried to write more vertices than expected (" << nvertices_ << ")" << std::endl ;
-                return -1l ;
+                z_inout[i] = static_cast<T>(xyz_local[2]) ; 
+                i++ ;
             }
-            i++ ;
+        } else if (dimw_ == 2)  {
+            for (const auto& vit :   vertices(gridView_, Dune::Partitions::all) )
+            {      
+                // if (i < nvertices_) // As we are templated on the Dune::PartitionSet<partitions>, this cannot change
+                auto xyz_local = vit.geometry().corner(0);  // verticies only have one corner
+                x_inout[i] = static_cast<T>(xyz_local[0]) ;
+                y_inout[i] = static_cast<T>(xyz_local[1]) ;
+                z_inout[i] = static_cast<T>(0.0);
+                i++ ;
+            }
         }
         
-        return i-1 ;
+        return i ;
     }
     
     
@@ -188,26 +198,30 @@ namespace Opm::GridDataOutput
     long writeGridPoints_AOS( T*  xyz_inout )
     {
         long i = 0 ;
-        long toomany = 3 * nvertices_ ;
-        for (const auto& vit :   vertices(gridView_, Dune::Partitions::all))
-        {   
-             if (i < toomany) 
-             {
+        // long toomany = 3 * nvertices_ ;
+        
+        if (dimw_ == 3) {
+            for (const auto& vit :   vertices(gridView_, Dune::Partitions::all))
+            {   
+                 // if (i < toomany) // As we are templated on the Dune::PartitionSet<partitions>, this cannot change
                 auto xyz_local = vit.geometry().corner(0);
-                
                 xyz_inout[i++] = static_cast<T>(xyz_local[0]) ;
                 xyz_inout[i++] = static_cast<T>(xyz_local[1]) ;
-                if (dimw_ == 3)
-                    xyz_inout[i++] = static_cast<T>(xyz_local[2]) ;
-                else 
-                    xyz_inout[i++] = static_cast<T>(0.0) ;  
-             } else {
-                error_strm_ << "Opm::GridDataOutput::SimMeshDataAccessor ERROR - writeGridPoints_AOS(*xyz) tried to write more vertices than expected (" << nvertices_ << ")" << std::endl ;
-                return -1l ;
-             }
+                xyz_inout[i++] = static_cast<T>(xyz_local[2]) ;
+                
+            }
+        } else if (dimw_ == 2)  {
+            for (const auto& vit :   vertices(gridView_, Dune::Partitions::all))
+            {   
+                 // if (i < toomany) // As we are templated on the Dune::PartitionSet<partitions>, this cannot change
+                auto xyz_local = vit.geometry().corner(0);
+                xyz_inout[i++] = static_cast<T>(xyz_local[0]) ;
+                xyz_inout[i++] = static_cast<T>(xyz_local[1]) ;
+                xyz_inout[i++] = static_cast<T>(0.0) ;  
+            }
         }
         
-        return (i-1) / 3 ;
+        return ( (i) / 3 );
     }
     
     
@@ -220,33 +234,34 @@ namespace Opm::GridDataOutput
     long writeGridPoints_SOA( T*  xyz_inout )
     {
         long i = 0 ;
+        
+        // Get offsets into structure
         T * xyz_inout_y = xyz_inout + nvertices_ ;
         T * xyz_inout_z = xyz_inout + (2*nvertices_) ;
         
+        if (dimw_ == 3) {
             for (const auto& vit :   vertices(gridView_, Dune::Partitions::all))
             {     
-                if (i < nvertices_) 
-                {
-                    auto xyz_local = vit.geometry().corner(0);
-                    
-                    xyz_inout[i] = static_cast<T>(xyz_local[0]) ;
-                    xyz_inout_y[i]= static_cast<T>(xyz_local[1]) ;
-                    if (dimw_ == 3) {
-                        xyz_inout_z[i] = static_cast<T>(xyz_local[2]) ;
-                    }
-                    else {
-                        xyz_inout_z[i] = static_cast<T>(0.0);  
-                    }
-
-                    i++ ;
-                }
-                else {
-                    error_strm_ << "Opm::GridDataOutput::SimMeshDataAccessor ERROR - writeGridPoints_SOA(*xyz) tried to write more vertices than expected (" << nvertices_ << ")" << std::endl ;
-                    return -1l ;
-                }
+                //if (i < nvertices_)  // As we are templated on the Dune::PartitionSet<partitions>, this cannot change
+                auto xyz_local = vit.geometry().corner(0);
+                xyz_inout[i] = static_cast<T>(xyz_local[0]) ;
+                xyz_inout_y[i]= static_cast<T>(xyz_local[1]) ;
+                xyz_inout_z[i] = static_cast<T>(xyz_local[2]) ;
+                i++ ;
+            }
+        } else if (dimw_ == 2)  {
+            for (const auto& vit :   vertices(gridView_, Dune::Partitions::all))
+            {     
+                //if (i < nvertices_)  // As we are templated on the Dune::PartitionSet<partitions>, this cannot change
+                auto xyz_local = vit.geometry().corner(0);
+                xyz_inout[i] = static_cast<T>(xyz_local[0]) ;
+                xyz_inout_y[i]= static_cast<T>(xyz_local[1]) ;
+                xyz_inout_z[i] = static_cast<T>(0.0);  
+                i++ ;
             }
             
-        return (i-1) ;
+        }
+        return (i) ;
     }
     
     
@@ -258,28 +273,43 @@ namespace Opm::GridDataOutput
       returns the number of corner indecies written, or -1 if an error was detected
     */
     template <typename I>
-    long writeConnectivity(I * connectivity_inout)
+    long writeConnectivity(I * connectivity_inout, ConnectivityVertexOrder whichOrder)
     {
         long i = 0 ;
         // connectivity
-        for (const auto& cit :  elements(gridView_, dunePartition_))
-        {  
-          // const int cell_corners = cit.subEntities( 3 );  // get the full list of verticies of the cell
-          auto cell_corners = cit.geometry().corners() ;
-          for( auto vx = 0; vx < cell_corners; ++ vx )  
-          {
-              if (i < ncorners_) {
+        if ( whichOrder == DUNE )  {
+        // DUNE order
+            for (const auto& cit :  elements(gridView_, dunePartition_))
+            {  
+              // const int cell_corners = cit.subEntities( 3 );  // get the full list of verticies of the cell
+              auto cell_corners = cit.geometry().corners() ;
+              for( auto vx = 0; vx < cell_corners; ++ vx )  
+              {
+                  // if (i < ncorners_) // As we are templated on the Dune::PartitionSet<partitions>, this cannot change
                   const int vxIdx = gridView_.indexSet().subIndex( cit, vx, 3 );
-                  int vtkOrder = Dune::VTK::renumber(cit.type(), vx) ;
-                  connectivity_inout[i + vtkOrder] = vxIdx ;
-              } else {
-                 error_strm_ << "Opm::GridDataOutput::SimMeshDataAccessor ERROR - writeConnectivity(*con) tried to write more corner indecies than expected (" << ncorners_ << ")" << std::endl ;
-                 return -1l ;
+                  connectivity_inout[i + vx] = vxIdx ;
               }
-          }
-          
-          i += cell_corners ; 
+              i += cell_corners ; 
+            }
+        } else {
+            // VTK order
+            for (const auto& cit :  elements(gridView_, dunePartition_))
+            {  
+              // const int cell_corners = cit.subEntities( 3 );  // get the full list of verticies of the cell
+              auto cell_corners = cit.geometry().corners() ;
+              for( auto vx = 0; vx < cell_corners; ++ vx )  
+              {
+                  // if (i < ncorners_) { // As we are templated on the Dune::PartitionSet<partitions>, this cannot change
+                  const int vxIdx = gridView_.indexSet().subIndex( cit, vx, 3 );
+                  int vtkOrder ; 
+                  vtkOrder = Dune::VTK::renumber(cit.type(), vx) ;
+                  connectivity_inout[i + vtkOrder] = vxIdx ;
+              }
+              
+              i += cell_corners ; 
+            }
         }
+        
         
         return (i) ;
     }
@@ -299,13 +329,9 @@ namespace Opm::GridDataOutput
         {  
             // const int cell_corners = cit.subEntities( 3 );  // get the full list of verticies of the cell
             auto cell_corners = cit.geometry().corners() ;
-            if (i <= ncells_) {
-                offsets_inout[i] = offsets_inout[i-1] +  cell_corners ;
-                i++ ;
-            } else {
-                error_strm_ << "Opm::GridDataOutput::SimMeshDataAccessor ERROR - writeOffsetsCells(*offset) tried to write more values than expected (" << ncells_ << ")" << std::endl ;
-                return -1l ;
-            }
+            // if (i <= ncells_) { // As we are templated on the Dune::PartitionSet<partitions>, this cannot change
+            offsets_inout[i] = offsets_inout[i-1] +  cell_corners ;
+            i++ ;
         }
 
         return (i-1 ) ;
@@ -321,13 +347,9 @@ namespace Opm::GridDataOutput
         // types
         for (const auto& cit :  elements(gridView_, dunePartition_))
         {
-          if (i < ncells_) {
+          // if (i < ncells_) { // As we are templated on the Dune::PartitionSet<partitions>, this cannot change
               I vtktype = static_cast<I>(Dune::VTK::geometryType(cit.type()));
               types_inout[i++] = vtktype ;
-          } else {
-              error_strm_ << "Opm::GridDataOutput::SimMeshDataAccessor ERROR - writeCellTypes(*types) tried to write more values than expected (" << ncells_ << ")" << std::endl ;
-              return -1l ;
-            }
         }
         
         return (i) ;
@@ -423,43 +445,8 @@ namespace Opm::GridDataOutput
           return false ;
   }
   
-  /*
-    The set of elements that we are interested in
-    e.g. Dune::Partitions::all
-         Dune::Partitions::interior
-         Dune::Partitions::interiorBorder
-         Dune::Partitions::border
-         Dune::Partitions::ghost
-         Dune::Partitions::front
-         Dune::Partitions::interiorBorderOverlapFront
-         Dune::Partitions::interiorBorderOverlap
-    
- template< unsigned int partition >
-  void setDunePartitionType(Dune::PartitionSet<partition> dunePartition) 
-  {
-      if (pt != dunePartition_) {
-          dunePartition_  = pt ;
-          countEntities(dunePartition) ;  // recount entities as the partition of interest has changed
-      }
-      
-  }
-  */
-  
-  protected:
 
-    /** 
-    The set of elements that we are interested in
-    e.g. 
-         Dune::Partitions::interior
-         Dune::Partitions::border
-         Dune::Partitions::overlap
-         Dune::Partitions::front
-         Dune::Partitions::ghost
-         Dune::Partitions::interiorBorder
-         Dune::Partitions::interiorBorderOverlapFront
-         Dune::Partitions::interiorBorderOverlap
-         Dune::Partitions::all
-    */
+  protected:
 
     GridView gridView_;  // the grid
     

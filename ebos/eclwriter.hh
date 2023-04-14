@@ -335,7 +335,7 @@ public:
                 // Also sets the offsets to where a ranks array data sits within the global array. 
                 // This is usefull for HDF5 output and for defining distributed arrays in Dask.
                 Opm::DamarisOutput::setupDamarisWritingPars(simulator_.vanguard().grid().comm(), numElements);
-                const std::vector<int>& local_to_global = this->collectToIORank_.localIdxToGlobalIdxMapping();
+                
                 
                 // Opm::GridDataOutput::SimMeshDataAccessor geomData(gridView, Dune::VTK::conforming) ;
                 Opm::GridDataOutput::SimMeshDataAccessor geomData(gridView, Dune::Partitions::interior) ;
@@ -369,7 +369,7 @@ public:
                     </group>
                 */
                 int xyz_coord_dims = 1 ;
-                std::vector<std::string> param_names = {"n_coords_local"} ;
+                std::vector<std::string> param_names = {"n_coords_local"} ;  // a vector of strings as a variables layout may be defined by multiple parameters 
                 std::string variable_x = "coordset/coords/values/x" ;  // This string must match the group/variable name of the Damaris XML file 
                 std::string variable_y = "coordset/coords/values/y" ;  // This string must match the group/variable name of the Damaris XML file 
                 std::string variable_z = "coordset/coords/values/z" ;  // This string must match the group/variable name of the Damaris XML file 
@@ -378,16 +378,22 @@ public:
                 damarisMeshVars.set_damaris_var_name_vertex_y(xyz_coord_dims,  param_names, variable_y) ;
                 damarisMeshVars.set_damaris_var_name_vertex_z(xyz_coord_dims,  param_names, variable_z) ;
                 
-                // Used to stor Damaris paramaters, which are then used to resize the 
+                // Used to store Damaris parameters, which are then used to resize the 
                 // shared memory region used to save the mesh data
-                std::vector<int> param_vertices ;
+                // there should be as many values for paramaters as names used in param_names.
+                // Each name corresponds to the value at the same position in the vector.
+                std::vector<int> param_vertices ;  
                 std::vector<int> param_connectivity ;
                 std::vector<int> param_offsets ;
                 
                 
                 param_vertices.push_back(geomData.getNVertices() ) ; 
-                damarisMeshVars.SetAll_VERTEX_SEPARATE_X_Y_Z_shmem(param_vertices) ;  // { geomData.getNVertices()  } 
+                // For the vertex data x, y and z arrays, SetAll_VERTEX_SEPARATE_X_Y_Z_shmem()  will set the arrays 
+                // size (using the paramater value) and then allocate the shared memory region. This is where we 
+                // will write the vertex data to, so that Damaris has access to it.
+                damarisMeshVars.SetAll_VERTEX_SEPARATE_X_Y_Z_shmem(param_vertices) ;  
                 
+                // Now we can return the memory that Damaris has allocated in shmem 
                 damaris::model::DamarisVar<double>* var_x =  dynamic_cast<damaris::model::DamarisVar<double>* >(damarisMeshVars.get_x()) ;
                 damaris::model::DamarisVar<double>* var_y =  dynamic_cast<damaris::model::DamarisVar<double>* >(damarisMeshVars.get_y()) ;
                 damaris::model::DamarisVar<double>* var_z =  dynamic_cast<damaris::model::DamarisVar<double>* >(damarisMeshVars.get_z()) ;
@@ -441,7 +447,9 @@ public:
                 
                 // Copy the mesh data from the Durne grid
                 long i = 0 ;
-                i = geomData.writeConnectivity(var_connectivity->data_ptr()) ;
+                Opm::GridDataOutput::ConnectivityVertexOrder vtkorder = Opm::GridDataOutput::VTK ;
+                
+                i = geomData.writeConnectivity(var_connectivity->data_ptr(), vtkorder) ;
                 if ( i  < 0)
                      DUNE_THROW(Dune::IOError, geomData.getError() );
                 std::cout << " writeConnectivity " << i << std::endl ;
@@ -463,16 +471,28 @@ public:
                 
             }
 
-                
-                
+
                 // GLOBAL_CELL_INDEX is used to reorder variable data when writing to disk 
-                // This is enabl;ed using select-file="GLOBAL_CELL_INDEX" in the <variable> XML tag
-                damaris_err = damaris_write("GLOBAL_CELL_INDEX", local_to_global.data());
-                if (damaris_err != DAMARIS_OK) {
-                    std::cerr << "ERROR rank =" << rank << " : eclwrite::writeOutput : damaris_write(\"GLOBAL_CELL_INDEX\", local_to_global.data())" 
-                              << ", Damaris error = " <<  damaris_error_string(damaris_err) << std::endl ;
+                // This is enabled using select-file="GLOBAL_CELL_INDEX" in the <variable> XML tag
+                if ( this->collectToIORank_.isParallel() ){
+                    const std::vector<int>& local_to_global =  this->collectToIORank_.localIdxToGlobalIdxMapping(); 
+                    damaris_err = damaris_write("GLOBAL_CELL_INDEX", local_to_global.data());
+                } else {
+                    std::vector<int> local_to_global_filled ;
+                    local_to_global_filled.resize(this->eclOutputModule_->getPRESSURE_size()) ;
+                    for (int i = 0 ; i < this->eclOutputModule_->getPRESSURE_size() ; i++)
+                    {
+                        local_to_global_filled[i] = i ;
+                    }
+                    damaris_err = damaris_write("GLOBAL_CELL_INDEX", local_to_global_filled.data());
                 }
                 
+                if (damaris_err != DAMARIS_OK) {
+                    std::cerr << "ERROR rank =" << rank << " : eclwrite::writeOutput : damaris_write(\"GLOBAL_CELL_INDEX\", local_to_global.data())" 
+                          << ", Damaris error = " <<  damaris_error_string(damaris_err) << std::endl ;
+                }
+                
+
                 // Currently by default we assume static grid (unchanging through the simulation)
                 // Set damarisUpdate_ to true if we want to update the geometry to sent to Damaris 
                 this->damarisUpdate_ = false; 
