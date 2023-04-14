@@ -352,7 +352,7 @@ namespace Opm
                 const Value tmp_wat = d > 0.0? (cmix_s[waterCompIdx] - rvw * cmix_s[gasCompIdx]) / d : cmix_s[waterCompIdx];
                 volumeRatio += tmp_wat / b_perfcells_dense[waterCompIdx];
 
-                const Value tmp_gas =  d > 0.0? (cmix_s[gasCompIdx] - rsw * cmix_s[waterCompIdx]) / d : cmix_s[waterCompIdx];
+                const Value tmp_gas =  d > 0.0? (cmix_s[gasCompIdx] - rsw * cmix_s[waterCompIdx]) / d : cmix_s[gasCompIdx];
                 volumeRatio += tmp_gas / b_perfcells_dense[gasCompIdx];
             } else {
                 if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
@@ -448,8 +448,27 @@ namespace Opm
                     //no oil
                     const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
                     const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
-                    perf_rates.vap_wat = getValue(rvw) * getValue(cq_s[gasCompIdx]);
-                    perf_rates.dis_gas_in_water = getValue(rsw) * getValue(cq_s[waterCompIdx]);
+
+                    const double dw = 1.0 - getValue(rvw) * getValue(rsw);
+
+                    if (dw <= 0.0) {
+                        std::ostringstream sstr;
+                        sstr << "Problematic d value " << dw << " obtained for well " << this->name()
+                             << " during computePerfRate calculations with rsw " << rsw
+                            << ", rvw " << rvw << " and pressure " << pressure
+                            << " obtaining d " << dw
+                            << " Continue as if no dissolution (rsw = 0) and vaporization (rvw = 0) "
+                            << " for this connection.";
+                        deferred_logger.debug(sstr.str());
+                    } else {
+                        // vaporized water into gas
+                        // rvw * q_gr * b_g = rvw * (q_gs - rsw * q_ws) / dw
+                        perf_rates.vap_wat = getValue(rvw) * (getValue(cq_s[gasCompIdx]) - getValue(rsw) * getValue(cq_s[waterCompIdx])) / dw;
+                        // dissolved gas in water
+                        // rsw * q_wr * b_w = rsw * (q_ws - rvw * q_gs) / dw
+                        perf_rates.dis_gas_in_water = getValue(rsw) * (getValue(cq_s[waterCompIdx]) - getValue(rvw) * getValue(cq_s[gasCompIdx])) / dw;
+                    }
+
                 }
             }
         }

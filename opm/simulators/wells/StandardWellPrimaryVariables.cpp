@@ -599,7 +599,7 @@ processFractions()
     }
 
     if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-        if (F[Water] < 0.0) {
+        if (F[pu.phase_pos[Water]] < 0.0) {
             if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                     F[pu.phase_pos[Gas]] /= (1.0 - F[pu.phase_pos[Water]]);
             }
