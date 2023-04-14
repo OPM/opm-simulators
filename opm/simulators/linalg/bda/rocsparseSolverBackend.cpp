@@ -347,6 +347,7 @@ void rocsparseSolverBackend<block_size>::gpu_pbicgstab([[maybe_unused]] WellCont
         std::ostringstream out;
         out << "rocsparseSolver::prec_apply:  " << t_prec.elapsed() << " s\n";
         out << "rocsparseSolver::spmv:        " << t_spmv.elapsed() << " s\n";
+        out << "rocsparseSolver::well:        " << t_well.elapsed() << " s\n";
         out << "rocsparseSolver::rest:        " << t_rest.elapsed() << " s\n";
         out << "rocsparseSolver::total_solve: " << res.elapsed << " s\n";
         OpmLog::info(out.str());
