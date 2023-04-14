@@ -96,11 +96,12 @@ using Dune::Timer;
 
 template <unsigned int block_size>
 rocsparseSolverBackend<block_size>::rocsparseSolverBackend(int verbosity_, int maxit_, double tolerance_, unsigned int platformID_, unsigned int deviceID_) : BdaSolver<block_size>(verbosity_, maxit_, tolerance_, platformID_, deviceID_) {
-    hipDevice_t device;
-    if(hipDeviceGet(&device, deviceID) != hipSuccess)
-    {
-        OPM_THROW(std::logic_error, "HIP Error: could not get device");
+    int numDevices = 0;
+    HIP_CHECK(hipGetDeviceCount(&numDevices));
+    if (static_cast<int>(deviceID) >= numDevices) {
+        OPM_THROW(std::runtime_error, "Error chosen too high HIP device ID");
     }
+    HIP_CHECK(hipSetDevice(deviceID));
 
     ROCSPARSE_CHECK(rocsparse_create_handle(&handle));
     ROCBLAS_CHECK(rocblas_create_handle(&blas_handle));
