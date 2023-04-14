@@ -275,7 +275,7 @@ public:
         switched_inj_groups_ = {{{"test4", Phase::SOLVENT}, "test5"}};
     }
 
-    void calcRates(const int, const int, std::vector<double>&) override
+    void calcRates(const int, const int, const std::vector<double>&, std::vector<double>&) override
     {}
 
     void calcInjRates(const int, const int, std::vector<double>&) override

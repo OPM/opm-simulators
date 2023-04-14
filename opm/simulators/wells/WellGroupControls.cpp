@@ -127,7 +127,7 @@ getGroupInjectionControl(const Group& group,
 
     // Make conversion factors for RESV <-> surface rates.
     std::vector<double> resv_coeff(pu.num_phases, 1.0);
-    rateConverter(0, well_.pvtRegionIdx(), resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
+    rateConverter(0, well_.pvtRegionIdx(), std::nullopt, resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
 
     double sales_target = 0;
     if (schedule[well_.currentStep()].gconsale().has(group.name())) {
@@ -251,7 +251,7 @@ getGroupInjectionTargetRate(const Group& group,
 
     // Make conversion factors for RESV <-> surface rates.
     std::vector<double> resv_coeff(pu.num_phases, 1.0);
-    rateConverter(0, well_.pvtRegionIdx(), resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
+    rateConverter(0, well_.pvtRegionIdx(), std::nullopt, resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
 
     double sales_target = 0;
     if (schedule[well_.currentStep()].gconsale().has(group.name())) {
@@ -353,7 +353,7 @@ void WellGroupControls::getGroupProductionControl(const Group& group,
 
     // Make conversion factors for RESV <-> surface rates.
     std::vector<double> resv_coeff(well_.phaseUsage().num_phases, 1.0);
-    rateConverter(0, well_.pvtRegionIdx(), resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
+    rateConverter(0, well_.pvtRegionIdx(), group.name(), resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
 
     // gconsale may adjust the grat target.
     // the adjusted rates is send to the targetCalculator
@@ -442,7 +442,7 @@ getGroupProductionTargetRate(const Group& group,
 
     // Make conversion factors for RESV <-> surface rates.
     std::vector<double> resv_coeff(well_.phaseUsage().num_phases, 1.0);
-    rateConverter(0, well_.pvtRegionIdx(), resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
+    rateConverter(0, well_.pvtRegionIdx(), group.name(), resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
 
     // gconsale may adjust the grat target.
     // the adjusted rates is send to the targetCalculator

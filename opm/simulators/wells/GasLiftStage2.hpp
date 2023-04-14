@@ -80,7 +80,7 @@ protected:
         GradMap& grad_map, const std::string& well_name, bool add);
     std::optional<GradInfo> calcIncOrDecGrad_(
         const std::string name, const GasLiftSingleWell& gs_well, const std::string& gr_name_dont_limit, bool increase);
-    bool checkRateAlreadyLimited_(GasLiftWellState& state, bool increase);
+    bool checkRateAlreadyLimited_(const std::string& well_name, GasLiftWellState& state, bool increase);
     GradInfo deleteDecGradItem_(const std::string& name);
     GradInfo deleteIncGradItem_(const std::string& name);
     GradInfo deleteGrad_(const std::string& name, bool increase);

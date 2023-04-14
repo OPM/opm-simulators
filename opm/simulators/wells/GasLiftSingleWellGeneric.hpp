@@ -95,9 +95,11 @@ public:
 
     std::optional<GradInfo> calcIncOrDecGradient(double oil_rate, double gas_rate,
                                                  double water_rate,
-                                                 double alq, 
+                                                 double alq,
                                                  const std::string& gr_name_dont_limit,
-                                                 bool increase) const;
+                                                 bool increase,
+                                                 bool debug_output = true
+                                                 ) const;
 
     std::unique_ptr<GasLiftWellState> runOptimize(const int iteration_idx);
 
@@ -253,11 +255,11 @@ protected:
                       const BasicRates& rates, const BasicRates& new_rates) const;
     bool checkInitialALQmodified_(double alq, double initial_alq) const;
     virtual bool checkThpControl_() const = 0;
-    virtual std::optional<double> computeBhpAtThpLimit_(double alq) const = 0;
+    virtual std::optional<double> computeBhpAtThpLimit_(double alq, bool debug_output = true) const = 0;
     std::pair<std::optional<double>,double> computeConvergedBhpAtThpLimitByMaybeIncreasingALQ_() const;
     std::pair<std::optional<BasicRates>,double> computeInitialWellRates_() const;
     std::optional<LimitedRates> computeLimitedWellRatesWithALQ_(double alq) const;
-    virtual BasicRates computeWellRates_(double bhp, bool bhp_is_limited,                                                             bool debug_output = true) const = 0;
+    virtual BasicRates computeWellRates_(double bhp, bool bhp_is_limited, bool debug_output = true) const = 0;
     std::optional<BasicRates> computeWellRatesWithALQ_(double alq) const;
     void debugCheckNegativeGradient_(double grad, double alq, double new_alq,
                                      double oil_rate, double new_oil_rate,

@@ -88,17 +88,19 @@ public:
     void init();
 
     //! \brief Copy values from well state.
-    void update(const WellState& well_state);
+    void update(const WellState& well_state, const bool stop_or_zero_rate_target);
 
     //! \brief Update values from newton update vector.
     void updateNewton(const BVectorWell& dwells,
                       const double relaxation_factor,
                       const double DFLimit,
+                      const bool stop_or_zero_rate_target,
                       const double max_pressure_change);
 
     //! \brief Copy values to well state.
     void copyToWellState(const MultisegmentWellGeneric<Scalar>& mswell,
                          const double rho,
+                         const bool stop_or_zero_rate_target,
                          WellState& well_state,
                          DeferredLogger& deferred_logger) const;
 

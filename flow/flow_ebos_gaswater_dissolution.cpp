@@ -53,6 +53,11 @@ struct EnableDisgasInWater<TypeTag, TTag::EclFlowGasWaterDissolutionProblem> {
     static constexpr bool value = true;
 };
 
+template<class TypeTag>
+struct EnableEvaporation<TypeTag, TTag::EclFlowGasWaterDissolutionProblem> {
+    static constexpr bool value = true;
+};
+
 //! The indices required by the model
 template<class TypeTag>
 struct Indices<TypeTag, TTag::EclFlowGasWaterDissolutionProblem>

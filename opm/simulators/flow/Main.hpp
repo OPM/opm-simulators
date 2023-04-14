@@ -42,6 +42,7 @@
 #include <flow/flow_ebos_onephase_energy.hpp>
 #include <flow/flow_ebos_oilwater_brine.hpp>
 #include <flow/flow_ebos_gaswater_brine.hpp>
+#include <flow/flow_ebos_gaswater_energy.hpp>
 #include <flow/flow_ebos_gaswater_dissolution.hpp>
 #include <flow/flow_ebos_gaswater_dissolution_diffuse.hpp>
 #include <flow/flow_ebos_energy.hpp>
@@ -598,6 +599,11 @@ private:
         // oil-gas-thermal
         if (!phases.active( Phase::WATER ) && phases.active( Phase::OIL ) && phases.active( Phase::GAS )) {
             return flowEbosGasOilEnergyMain(argc_, argv_, outputCout_, outputFiles_);
+        }
+
+        // water-gas-thermal
+        if (!phases.active( Phase::OIL ) && phases.active( Phase::WATER ) && phases.active( Phase::GAS )) {
+            return flowEbosGasWaterEnergyMain(argc_, argv_, outputCout_, outputFiles_);
         }
 
         return flowEbosEnergyMain(argc_, argv_, outputCout_, outputFiles_);

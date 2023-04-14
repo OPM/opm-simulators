@@ -183,6 +183,7 @@ namespace Opm {
 
             void beginEpisode()
             {
+                OPM_TIMEBLOCK(beginEpsiode);
                 beginReportStep(ebosSimulator_.episodeIndex());
             }
 
@@ -190,6 +191,7 @@ namespace Opm {
 
             void beginIteration()
             {
+                OPM_TIMEBLOCK(beginIteration);
                 assemble(ebosSimulator_.model().newtonMethod().numIterations(),
                          ebosSimulator_.timeStepSize());
             }
@@ -199,6 +201,7 @@ namespace Opm {
 
             void endTimeStep()
             {
+                OPM_TIMEBLOCK(endTimeStep);
                 timeStepSucceeded(ebosSimulator_.time(), ebosSimulator_.timeStepSize());
             }
 
@@ -270,6 +273,10 @@ namespace Opm {
             const SimulatorReportSingle& lastReport() const;
 
             void addWellContributions(SparseMatrixAdapter& jacobian) const;
+
+            // add source from wells to the reservoir matrix
+            void addReservoirSourceTerms(GlobalEqVector& residual,
+                                         std::vector<typename SparseMatrixAdapter::MatrixBlock*>& diagMatAddress) const;
 
             // called at the beginning of a report step
             void beginReportStep(const int time_step);
@@ -441,6 +448,7 @@ namespace Opm {
 
             void calcRates(const int fipnum,
                            const int pvtreg,
+                           const std::vector<double>& production_rates,
                            std::vector<double>& resv_coeff) override;
 
             void calcInjRates(const int fipnum,

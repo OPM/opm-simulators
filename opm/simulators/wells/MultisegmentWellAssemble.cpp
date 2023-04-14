@@ -34,6 +34,7 @@
 #include <opm/simulators/wells/MultisegmentWellPrimaryVariables.hpp>
 #include <opm/simulators/wells/WellAssemble.hpp>
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
+#include <opm/simulators/wells/WellHelpers.hpp>
 #include <opm/simulators/wells/WellInterfaceIndices.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
@@ -115,7 +116,7 @@ assembleControlEq(const WellState& well_state,
         return rates;
     };
 
-    if (well_.wellIsStopped()) {
+    if (well_.stopppedOrZeroRateTarget(summaryState, well_state)) {
         control_eq = primary_variables.getWQTotal();
     } else if (well_.isInjector() ) {
         // Find scaling factor to get injection rate,
@@ -163,9 +164,6 @@ assembleControlEq(const WellState& well_state,
                                                  bhp_from_thp,
                                                  control_eq,
                                                  deferred_logger);
-    } else if (rateControlWithZeroTarget(well_state.well(well_.indexOfWell()).production_cmode, prod_controls)) {
-        // Production mode, zero target. Treat as STOP.
-        control_eq = primary_variables.getWQTotal();
     } else {
         // Find rates.
         const auto rates = getRates();
@@ -243,7 +241,7 @@ assemblePressureEq(const int seg,
     // contribution from the outlet segment
     eqns.residual()[seg][SPres] -= outlet_pressure.value();
     for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-        eqns.D()[seg][outlet_segment_index][SPres][pv_idx] = -outlet_pressure.derivative(pv_idx + Indices::numEq);
+        eqns.D()[seg][outlet_segment_index][SPres][pv_idx] -= outlet_pressure.derivative(pv_idx + Indices::numEq);
     }
 }
 

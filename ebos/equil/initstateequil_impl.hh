@@ -1821,7 +1821,7 @@ cellLoop(const CellRange&      cells,
             this->rs_[cell] = Rs;
             this->rv_[cell] = Rv;
         }
-        
+
         if (watActive && gasActive) {
             this->rvw_[cell] = Rvw;
         }
@@ -1938,7 +1938,7 @@ equilibrateHorizontal(const CellRange&  cells,
 
         Rv = eqreg.evaporationCalculator()
             (cz, pressures.gas, temp, saturations.oil);
-        
+
         Rvw = eqreg.waterEvaporationCalculator()
             (cz, pressures.gas, temp, saturations.water);
     });

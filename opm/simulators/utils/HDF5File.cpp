@@ -276,14 +276,16 @@ void HDF5File::writeRootOnly(hid_t grp,
     }
 }
 
-hid_t HDF5File::getCompression(hsize_t size) const
+hid_t HDF5File::getCompression([[maybe_unused]] hsize_t size) const
 {
     hid_t dcpl = H5P_DEFAULT;
+#if H5_VERS_MINOR > 8
     if (H5Zfilter_avail(H5Z_FILTER_DEFLATE)) {
         dcpl = H5Pcreate(H5P_DATASET_CREATE);
         H5Pset_deflate(dcpl, 1);
         H5Pset_chunk(dcpl, 1, &size);
     }
+#endif
     return dcpl;
 }
 
