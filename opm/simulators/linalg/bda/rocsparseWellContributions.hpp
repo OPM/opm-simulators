@@ -22,6 +22,7 @@
 
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
 
+#include <hip/hip_runtime_api.h>
 
 #include <vector>
 
@@ -31,10 +32,14 @@ namespace Opm
 
 class WellContributionsRocsparse : public WellContributions
 {
+private:
+    hipStream_t stream;
+
 public:
     void apply_stdwells(double *d_x, double *d_y);
     void apply_mswells(double *d_x, double *d_y);
     void apply(double *d_x, double *d_y);
+    void setStream(hipStream_t stream);
 
 protected:
     /// Allocate memory for the StandardWells

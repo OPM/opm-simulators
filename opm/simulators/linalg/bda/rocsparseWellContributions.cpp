@@ -163,6 +163,10 @@ void WellContributionsRocsparse::apply(double *d_x, double *d_y){
     }
 }
 
+void WellContributionsRocsparse::setStream(hipStream_t stream_){
+    stream = stream_;
+}
+
 void WellContributionsRocsparse::APIaddMatrix(MatrixType type,
                                         int* colIndices,
                                         double* values,

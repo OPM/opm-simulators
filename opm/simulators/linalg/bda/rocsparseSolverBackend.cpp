@@ -153,6 +153,12 @@ void rocsparseSolverBackend<block_size>::gpu_pbicgstab([[maybe_unused]] WellCont
 
     Timer t_total, t_prec(false), t_spmv(false), t_rest(false);
 
+    // set stream here, the WellContributions object is destroyed every linear solve
+    // the number of wells can change every linear solve
+    if(wellContribs.getNumWells() > 0){
+        static_cast<WellContributionsRocsparse&>(wellContribs).setStream(stream);
+    }
+
 // HIP_VERSION is defined as (HIP_VERSION_MAJOR * 10000000 + HIP_VERSION_MINOR * 100000 + HIP_VERSION_PATCH)
 #if HIP_VERSION >= 50400000
     ROCSPARSE_CHECK(rocsparse_dbsrmv_ex(handle, dir, operation,
