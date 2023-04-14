@@ -438,6 +438,7 @@ private:
     {
         const bool diffusive = eclipseState_->getSimulationConfig().isDiffusive();
         const bool disgasw = eclipseState_->getSimulationConfig().hasDISGASW();
+        const bool vapwat = eclipseState_->getSimulationConfig().hasVAPWAT();
 
         // oil-gas
         if (phases.active( Phase::OIL ) && phases.active( Phase::GAS )) {
@@ -461,7 +462,7 @@ private:
 
         // gas-water
         else if ( phases.active( Phase::GAS ) && phases.active( Phase::WATER ) ) {
-            if (disgasw) {
+            if (disgasw || vapwat) {
                 if (diffusive) {
                     return flowEbosGasWaterDissolutionDiffuseMain(argc_, argv_, outputCout_, outputFiles_);
                 }
@@ -469,7 +470,7 @@ private:
             }
             if (diffusive) {
                 if (outputCout_) {
-                    std::cerr << "The DIFFUSE option is not available for the two-phase gas/water model without disgasw." << std::endl;
+                    std::cerr << "The DIFFUSE option is not available for the two-phase gas/water model without disgasw or vapwat." << std::endl;
                 }
                 return EXIT_FAILURE;
             }
