@@ -54,6 +54,7 @@
 namespace Opm
 {
 
+#ifdef __HIP__
 /// HIP kernel to apply the standard wellcontributions
 __global__ void stdwell_apply(
             const double *Cnnzs,
@@ -135,9 +136,12 @@ __global__ void stdwell_apply(
         y[colIdx*dim + c] -= temp;
     }
 }
+#endif
 
 
-void WellContributionsRocsparse::apply_stdwells(double *d_x, double *d_y){
+void WellContributionsRocsparse::apply_stdwells([[maybe_unused]] double *d_x,
+                                                [[maybe_unused]] double *d_y){
+#ifdef __HIP__
     unsigned gridDim = num_std_wells;
     unsigned blockDim = 32;
     unsigned shared_mem_size = (blockDim + 2 * dim_wells) * sizeof(double); // shared memory for localSum, z1 and z2
@@ -147,6 +151,9 @@ void WellContributionsRocsparse::apply_stdwells(double *d_x, double *d_y){
         d_x, d_y, dim, dim_wells, d_val_pointers_hip
     );
     HIP_CHECK(hipStreamSynchronize(stream));
+#else
+    OPM_THROW(std::logic_error, "Error separate wellcontributions for rocsparse only supported when compiling with hipcc");
+#endif
 }
 
 void WellContributionsRocsparse::apply_mswells(double *d_x, double *d_y){
