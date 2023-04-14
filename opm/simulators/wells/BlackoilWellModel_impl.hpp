@@ -1394,7 +1394,10 @@ namespace Opm {
         const int iterationIdx = ebosSimulator_.model().newtonMethod().numIterations();
         for (const auto& well : well_container_) {
             if (well->isOperableAndSolvable() || well->wellIsStopped()) {
-                local_report += well->getWellConvergence(this->wellState(), B_avg, local_deferredLogger, iterationIdx > param_.strict_outer_iter_wells_ );
+                const auto& summary_state = ebosSimulator_.vanguard().summaryState();
+                local_report += well->getWellConvergence(
+                        summary_state, this->wellState(), B_avg, local_deferredLogger,
+                        iterationIdx > param_.strict_outer_iter_wells_);
             } else {
                 ConvergenceReport report;
                 using CR = ConvergenceReport;
