@@ -548,11 +548,16 @@ public:
 
         // special case cells with almost only water
         // use both saturations (if the phase is enabled)
-        if (sw >= thresholdWaterFilledCell) {
+        // if dissolved gas in water is enabled we shouldn't enter
+        // here but instead switch to Rsw as primary variable
+        // as sw >= 1.0 -> gas <= 0 (i.e. gas phase disappears)
+        if (sw >= thresholdWaterFilledCell && !FluidSystem::enableDissolvedGasInWater()) {
 
             // make sure water saturations does not exceed 1.0
-            if constexpr (waterEnabled)
+            if constexpr (waterEnabled) {
                 (*this)[Indices::waterSwitchIdx] = 1.0;
+                assert(primaryVarsMeaningWater() == WaterMeaning::Sw);
+            }
             // the hydrocarbon gas saturation is set to 0.0
             if constexpr (compositionSwitchEnabled)
                 (*this)[Indices::compositionSwitchIdx] = 0.0;
