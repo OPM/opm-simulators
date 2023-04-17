@@ -30,6 +30,7 @@
 #include <opm/simulators/wells/VFPProperties.hpp>
 #include <opm/simulators/utils/MPIPacker.hpp>
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
+#include <opm/input/eclipse/Schedule/Network/Balance.hpp>
 
 #if HAVE_MPI
 #include <ebos/eclmpiserializer.hh>
@@ -1489,40 +1490,7 @@ namespace Opm {
 
 
     template<typename TypeTag>
-<<<<<<< HEAD
-    std::tuple<bool, bool, double>
-=======
-    bool
-    BlackoilWellModel<TypeTag>::
-    shouldBalanceNetwork(const int reportStepIdx, const int iterationIdx) const
-    {
-        const auto& network = schedule()[reportStepIdx].network();
-        if (!network.active()) {
-            return false;
-        }
-
-        const auto& balance = schedule()[reportStepIdx].network_balance();
-        if (balance.mode() == Network::Balance::CalcMode::TimeStepStart) {
-            return iterationIdx == 0;
-        } else if (balance.mode() == Network::Balance::CalcMode::NUPCOL) {
-            const int nupcol = schedule()[reportStepIdx].nupcol();
-            return iterationIdx < nupcol;
-        } else {
-            // We do not support any other rebalancing modes,
-            // i.e. TimeInterval based rebalancing is not available.
-            // This should be warned about elsewhere, so we choose to
-            // avoid spamming with a warning here.
-            return false;
-        }
-    }
-
-
-
-
-
-    template<typename TypeTag>
     std::pair<bool, bool>
->>>>>>> f35a6abd1 (trying to refactor the network update)
     BlackoilWellModel<TypeTag>::
     updateWellControls(DeferredLogger& deferred_logger,
                        const size_t network_update_it)

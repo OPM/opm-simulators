@@ -293,7 +293,6 @@ namespace Opm {
             void prepareTimeStep(DeferredLogger& deferred_logger);
             void initPrimaryVariablesEvaluation() const;
 
-            bool shouldBalanceNetwork(const int reportStepIndex, const int iterationIdx) const;
             std::pair<bool, bool> updateWellControls(DeferredLogger& deferred_logger, const size_t network_update_it = 0);
 
             void updateAndCommunicate(const int reportStepIdx,
