@@ -380,23 +380,58 @@ namespace Opm
         // keep a copy of the original well state
         const WellState well_state0 = well_state;
         const double dt = ebosSimulator.timeStepSize();
+        // we stop when we decide it is not openable
+        // we use this variable to recover the old well_state when we can not open the well
+        bool openable = true;
+        // Testing solving with BHP limit first
+        // TODO: we might solve with BHP limit and THP limit all together
+        well_state.well(this->indexOfWell()).production_cmode = Well::ProducerCMode::BHP;
+        const bool bhp_converged = iterateWellEquations(ebosSimulator, dt, well_state, group_state, deferred_logger);
+        if (bhp_converged) {
+            deferred_logger.debug("WellTest: Well equation for well " + this->name() +  " converged with BHP control");
+        } else {
+            deferred_logger.debug("WellTest: Well equation for well " + this->name() +  " failed in converging with BHP control");
+            openable = false;
+        }
         const auto& summary_state = ebosSimulator.vanguard().summaryState();
         const bool has_thp_limit = this->wellHasTHPConstraints(summary_state);
-        if (has_thp_limit)
-            well_state.well(this->indexOfWell()).production_cmode = Well::ProducerCMode::THP;
-        else
-            well_state.well(this->indexOfWell()).production_cmode = Well::ProducerCMode::BHP;
-
-        const bool converged = iterateWellEquations(ebosSimulator, dt, well_state, group_state, deferred_logger);
-        if (converged) {
-            deferred_logger.debug("WellTest: Well equation for well " + this->name() +  " converged");
-            return true;
+        if (openable && has_thp_limit) {
+            const double thp = well_state.well(this->indexOfWell()).thp;
+            const auto prod_controls = this->well_ecl_.isProducer() ? this->well_ecl_.productionControls(summary_state) : Well::ProductionControls(0);
+            const double thp_limit = prod_controls.thp_limit;
+            if (thp >= thp_limit) {
+                // the well can operate under BHP limit, it should be able to open
+                deferred_logger.debug("WellTest: the solution with BHP target honors the THP constraint for well " + this->name());
+            } else {
+                // the well breaks the THP limit under BHP limit, then we need to test whether it can run under THP limit
+                deferred_logger.debug("WellTest: the solution with BHP target violates the THP constraint, well " + this->name() + " needs to check the running under THP limit");
+                well_state.well(this->indexOfWell()).production_cmode = Well::ProducerCMode::THP;
+                const bool thp_converged = iterateWellEquations(ebosSimulator, dt, well_state, group_state, deferred_logger);
+                if (thp_converged) {
+                    deferred_logger.debug("WellTest: Well equation for well " + this->name() +  " converged with THP control");
+                    const double bhp = well_state.well(this->indexOfWell()).thp;
+                    const double bhp_limit = prod_controls.bhp_limit;
+                    if (bhp >= bhp_limit) {
+                        deferred_logger.debug("WellTest: the solution with THP target honors the BHP constraint for well " + this->name());
+                    } else {
+                        deferred_logger.debug("WellTest: the solution with THP target violates the BHP constraint for well " + this->name());
+                        openable = false;
+                    }
+                } else {
+                    deferred_logger.debug("WellTest: Well equation for well " + this->name() +  " failed in converging with THP control");
+                    openable = false;
+                }
+            }
         }
-        const int max_iter = param_.max_welleq_iter_;
-        deferred_logger.debug("WellTest: Well equation for well " + this->name() + " failed converging in "
-                              + std::to_string(max_iter) + " iterations");
-        well_state = well_state0;
-        return false;
+        if (openable) {
+            deferred_logger.debug("WellTest: well " + this->name() + " can be opened after solveWellForTesting");
+        } else {
+            deferred_logger.debug("WellTest: well " + this->name() + " can not be opened after solveWellForTesting");
+            well_state = well_state0;
+        }
+
+        // there is not THP constraint and it gets converged with BHP control, it can be opened
+        return openable;
     }
 
 
