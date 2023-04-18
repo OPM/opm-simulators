@@ -267,6 +267,13 @@ public:
 
     void checkWellOperability(const Simulator& ebos_simulator, const WellState& well_state, DeferredLogger& deferred_logger);
 
+    bool gliftBeginTimeStepWellTestIterateWellEquations(
+        const Simulator& ebos_simulator,
+        const double dt,
+        WellState& well_state,
+        const GroupState &group_state,
+        DeferredLogger& deferred_logger);
+
     void gliftBeginTimeStepWellTestUpdateALQ(const Simulator& ebos_simulator,
                                              WellState& well_state,
                                              DeferredLogger& deferred_logger);
