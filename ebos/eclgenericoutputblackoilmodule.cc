@@ -733,8 +733,9 @@ assignToSolution(data::Solution& sol)
     auto doInsert = [&sol](const DataEntry&       entry,
                            const data::TargetType target)
     {
-        if (!std::get<2>(entry).empty())
+        if (!std::get<2>(entry).empty()){
             return;
+        }
         
         sol.insert(std::get<std::string>(entry),
                    std::get<UnitSystem::measure>(entry),
