@@ -83,7 +83,7 @@ class BaseOutputModule
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { dim = GridView::dimension };
     enum { dimWorld = GridView::dimensionworld };
-
+    using Vector = BaseOutputWriter::Vector;
     using Tensor = BaseOutputWriter::Tensor;
 
 public:
@@ -194,6 +194,25 @@ protected:
         buffer.resize(n);
         Tensor nullMatrix(dimWorld, dimWorld, 0.0);
         std::fill(buffer.begin(), buffer.end(), nullMatrix);
+    }
+
+    void resizeVectorBuffer_(VectorBuffer& buffer,
+                             BufferType bufferType = DofBuffer)
+    {
+        size_t n;
+        if (bufferType == VertexBuffer)
+            n = static_cast<size_t>(simulator_.gridView().size(dim));
+        else if (bufferType == ElementBuffer)
+            n = static_cast<size_t>(simulator_.gridView().size(0));
+        else if (bufferType == DofBuffer)
+            n = simulator_.model().numGridDof();
+        else
+            throw std::logic_error("bufferType must be one of Dof, Vertex or Element");
+
+        buffer.resize(n);
+        Vector zerovector(dimWorld,0.0);
+        zerovector = 0.0;
+        std::fill(buffer.begin(), buffer.end(), zerovector);
     }
 
     /*!
