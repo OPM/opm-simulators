@@ -1255,13 +1255,13 @@ shouldBalanceNetwork(const int reportStepIdx, const int iterationIdx) const
 
 bool
 BlackoilWellModelGeneric::
-shouldIterateNetwork(const int reportStepIdx,
-                     const std::size_t recursion_level,
+moreNetworkIteration(const int reportStepIdx,
+                     const std::size_t iteration,
                      const double network_imbalance) const
 {
     const auto& balance = schedule()[reportStepIdx].network_balance();
     // Iterate if not converged, and number of iterations is not yet max (NETBALAN item 3).
-    return recursion_level < balance.pressure_max_iter() &&
+    return iteration < balance.pressure_max_iter() &&
            network_imbalance > balance.pressure_tolerance();
 }
 

@@ -386,8 +386,9 @@ namespace Opm {
             void assemble(const int iterationIdx,
                           const double dt);
 
-            // the function handles one itearation of updating well controls and also network related.
-            // it is possible to decouple the update of well controls and network related further
+            // well controls and network pressures affect each other and are solved in an iterative manner.
+            // the function handles one iteration of updating well controls and network pressures.
+            // it is possible to decouple the update of well controls and network pressures further.
             // the returned two booleans are {continue_due_to_network, well_group_control_changed}, respectively
             std::pair<bool, bool> updateWellControlsAndNetworkIteration(const double dt,
                                                                         const std::size_t network_update_iteration,

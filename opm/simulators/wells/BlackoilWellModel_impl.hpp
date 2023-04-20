@@ -1510,11 +1510,7 @@ namespace Opm {
             const bool network_changed = comm.sum(local_network_changed);
             const double network_imbalance = comm.max(local_network_imbalance);
             if (network_changed) {
-                const auto& balance = schedule()[episodeIdx].network_balance();
-                // Iterate if not converged, and number of iterations is not yet max (NETBALAN item 3).
-                if (network_update_it < balance.pressure_max_iter() && network_imbalance > balance.pressure_tolerance()) {
-                    more_network_update = true;
-                }
+                more_network_update = moreNetworkIteration(episodeIdx, network_update_it, network_imbalance);
             }
         }
 
