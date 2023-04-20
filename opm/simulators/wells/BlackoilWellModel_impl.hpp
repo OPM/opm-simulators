@@ -25,12 +25,13 @@
 #include <opm/grid/utility/cartesianToCompressed.hpp>
 
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
+#include <opm/input/eclipse/Schedule/Network/Balance.hpp>
+#include <opm/input/eclipse/Schedule/Network/ExtNetwork.hpp>
 
 #include <opm/simulators/wells/BlackoilWellModelConstraints.hpp>
 #include <opm/simulators/wells/VFPProperties.hpp>
 #include <opm/simulators/utils/MPIPacker.hpp>
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
-#include <opm/input/eclipse/Schedule/Network/Balance.hpp>
 
 #if HAVE_MPI
 #include <ebos/eclmpiserializer.hh>
@@ -746,7 +747,25 @@ namespace Opm {
 
         well_container_generic_.clear();
         for (auto& w : well_container_)
-          well_container_generic_.push_back(w.get());
+            well_container_generic_.push_back(w.get());
+
+        const auto& network = schedule()[time_step].network();
+        if (network.active() && !this->node_pressures_.empty()) {
+            for (auto& well: well_container_generic_) {
+                // Producers only, since we so far only support the
+                // "extended" network model (properties defined by
+                // BRANPROP and NODEPROP) which only applies to producers.
+                if (well->isProducer()) {
+                    const auto it = node_pressures_.find(well->wellEcl().groupName());
+                    if (it != node_pressures_.end()) {
+                        // The well belongs to a group which has a network nodal pressure,
+                        // set the dynamic THP constraint based on the network nodal pressure
+                        const double nodal_pressure = it->second;
+                        well->setDynamicThpLimit(nodal_pressure);
+                    }
+                }
+            }
+        }
     }
 
 
