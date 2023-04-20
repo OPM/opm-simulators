@@ -869,13 +869,17 @@ namespace Opm {
         Dune::Timer perfTimer;
         perfTimer.start();
 
-        if ( ! wellsActive() ) {
-            return;
+        {
+            const int episodeIdx = ebosSimulator_.episodeIndex();
+            const auto& network = schedule()[episodeIdx].network();
+            if ( !wellsActive() && !network.active() ) {
+                return;
+            }
         }
 
         updatePerforationIntensiveQuantities();
 
-        if (iterationIdx == 0) {
+        if (iterationIdx == 0 && wellsActive()) {
             // try-catch is needed here as updateWellControls
             // contains global communication and has either to
             // be reached by all processes or all need to abort
@@ -891,6 +895,10 @@ namespace Opm {
         }
 
         const bool well_group_control_changed = updateWellControlsAndNetwork(dt, local_deferredLogger);
+
+        if ( ! wellsActive() ) {
+            return;
+        }
 
         assembleWellEqWithoutIteration(dt, local_deferredLogger);
 
@@ -1512,12 +1520,12 @@ namespace Opm {
     updateWellControls(DeferredLogger& deferred_logger,
                        const std::size_t network_update_it)
     {
-        // Even if there are no wells active locally, we cannot
-        // return as the DeferredLogger uses global communication.
-        // For no well active globally we simply return.
-        if( !wellsActive() ) return { false, false };
-
         const int episodeIdx = ebosSimulator_.episodeIndex();
+        const auto& network = schedule()[episodeIdx].network();
+        if (!wellsActive() && !network.active()) {
+            return {false, false};
+        }
+
         const int iterationIdx = ebosSimulator_.model().newtonMethod().numIterations();
         const auto& comm = ebosSimulator_.vanguard().grid().comm();
         updateAndCommunicateGroupData(episodeIdx, iterationIdx);
