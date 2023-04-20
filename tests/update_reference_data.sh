@@ -77,10 +77,13 @@ tests[spe1_water]="flow spe1 SPE1CASE1_WATER"
 tests[spe1_spider]="flow radial_grid SPIDER_CAKESLICE"
 tests[spe1_radial]="flow radial_grid RADIAL_CAKESLICE"
 tests[spe1_import]="flow spe1 SPE1CASE1_IMPORT"
+tests[jfunc_01]="flow jfunc JFUNC-01"
+tests[pinch_nopinch_1x1x10]="flow pinch PINCH10_NOPINCH"
 tests[ctaquifer_2d_oilwater]="flow aquifer-oilwater 2D_OW_CTAQUIFER"
 tests[fetkovich_2d]="flow aquifer-fetkovich 2D_FETKOVICHAQUIFER"
 tests[numerical_aquifer_3d_1aqu]="flow aquifer-num 3D_1AQU_3CELLS"
 tests[numerical_aquifer_3d_2aqu]="flow aquifer-num 3D_2AQU_NUM"
+tests[aquflux_01]="flow aquifers AQUFLUX-01"
 tests[msw_2d_h]="flow msw_2d_h 2D_H__"
 tests[msw_3d_hfa]="flow msw_3d_hfa 3D_MSW"
 tests[polymer_oilwater]="flow polymer_oilwater 2D_OILWATER_POLYMER"
@@ -160,7 +163,9 @@ tests[wsegaicd]="flow wsegaicd BASE_MSW_WSEGAICD"
 tests[wsegvalv]="flow wsegvalv BASE_MSW_WSEGVALV"
 tests[bc_lab]="flow bc_lab BC_LAB"
 tests[pinch_multz_all]="flow pinch PINCH_MULTZ_ALL"
+tests[pinch_multzm_all]="flow pinch PINCH_MULTZ-_ALL"
 tests[pinch_multz_all_barrier]="flow pinch PINCH_MULTZ_ALL_BARRIER"
+tests[pinch_multzm_all_barrier]="flow pinch PINCH_MULTZ-_ALL_BARRIER"
 tests[model6_msw]="flow model6 1_MSW_MODEL6"
 tests[norne_reperf]="flow norne NORNE_ATW2013_B1H_RE-PERF"
 tests[compl_smry]="flow compl_smry COMPL_SMRY"
@@ -169,9 +174,7 @@ tests[co2store]="flow co2store CO2STORE"
 tests[co2store_diffusive]="flow co2store CO2STORE_DIFFUSIVE"
 tests[co2store_drsdtcon]="flow co2store CO2STORE_DRSDTCON"
 tests[co2store_energy]="flow co2store CO2STORE_ENERGY"
-tests[actionx_gconinje]="flow actionx ACTIONX_GCONINJE"
 tests[actionx_gconprod]="flow actionx ACTIONX_GCONPROD"
-tests[actionx_wconinje]="flow actionx ACTIONX_WCONINJE"
 tests[actionx_wefac]="flow actionx ACTIONX_WEFAC"
 tests[actionx_udq]="flow actionx ACTIONX_UDQ"
 tests[micp]="flow micp MICP"
@@ -273,7 +276,7 @@ else
 fi
 if [ -n "$CONVERT_ECL" ]
 then
-  for dep in opm-common opm-grid opm-material opm-models
+  for dep in opm-common opm-grid opm-models
   do
     pushd $WORKSPACE/deps/$dep > /dev/null
     name=`printf "%-14s" $dep`

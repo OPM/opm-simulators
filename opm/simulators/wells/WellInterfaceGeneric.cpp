@@ -22,6 +22,8 @@
 #include <config.h>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 
+#include <opm/common/ErrorMacros.hpp>
+
 #include <opm/input/eclipse/Schedule/Well/WellBrineProperties.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellFoamProperties.hpp>
@@ -408,6 +410,10 @@ bool WellInterfaceGeneric::thpLimitViolatedButNotSwitched() const
 
 double WellInterfaceGeneric::getALQ(const WellState& well_state) const
 {
+    // no alq for injectors.
+    if (isInjector())
+        return 0.0;
+
     return well_state.getALQ(name());
 }
 
@@ -442,6 +448,29 @@ bool WellInterfaceGeneric::isPressureControlled(const WellState& well_state) con
         return current == Well::ProducerCMode::THP ||
                current == Well::ProducerCMode::BHP;
     }
+}
+
+
+
+bool WellInterfaceGeneric::wellUnderZeroRateTarget(const SummaryState& summary_state,
+                                                   const WellState& well_state) const
+{
+    if (this->isProducer()) { // producers
+        const auto prod_controls = this->well_ecl_.productionControls(summary_state);
+        const auto prod_mode = well_state.well(this->indexOfWell()).production_cmode;
+        return wellhelpers::rateControlWithZeroProdTarget(prod_controls, prod_mode);
+    } else { // injectors
+        const auto inj_controls = this->well_ecl_.injectionControls(summary_state);
+        const auto inj_mode = well_state.well(this->indexOfWell()).injection_cmode;
+        return wellhelpers::rateControlWithZeroInjTarget(inj_controls, inj_mode);
+    }
+}
+
+bool WellInterfaceGeneric::stopppedOrZeroRateTarget(const SummaryState& summary_state,
+                                                    const WellState& well_state) const
+{
+    return (this->wellIsStopped() || this->wellUnderZeroRateTarget(summary_state, well_state));
+
 }
 
 double WellInterfaceGeneric::wmicrobes_() const

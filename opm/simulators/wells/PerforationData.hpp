@@ -20,6 +20,8 @@
 #ifndef OPM_PERFORATIONDATA_HEADER_INCLUDED
 #define OPM_PERFORATIONDATA_HEADER_INCLUDED
 
+#include <cstddef>
+
 namespace Opm
 {
 

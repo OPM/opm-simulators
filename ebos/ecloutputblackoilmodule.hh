@@ -28,14 +28,18 @@
 #define EWOMS_ECL_OUTPUT_BLACK_OIL_MODULE_HH
 
 #include <opm/common/Exceptions.hpp>
+#include <opm/common/TimingMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
-#include <opm/models/blackoil/blackoilproperties.hh>
+#include <opm/material/common/Valgrind.hpp>
+#include <opm/material/fluidmatrixinteractions/EclEpsScalingPoints.hpp>
+#include <opm/material/fluidstates/BlackOilFluidState.hpp>
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
+#include <opm/models/blackoil/blackoilproperties.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/utils/parametersystem.hh>
 #include <opm/models/utils/propertysystem.hh>
-
-#include <opm/material/common/Valgrind.hpp>
 
 #include <opm/output/data/Cells.hpp>
 #include <opm/output/eclipse/EclipseIO.hpp>
@@ -113,18 +117,22 @@ class EclOutputBlackOilModule : public EclGenericOutputBlackoilModule<GetPropTyp
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
     using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>;
+    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
     using Element = typename GridView::template Codim<0>::Entity;
     using ElementIterator = typename GridView::template Codim<0>::Iterator;
     using BaseType = EclGenericOutputBlackoilModule<FluidSystem, Scalar>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
 
+    enum { conti0EqIdx = Indices::conti0EqIdx };
     enum { numPhases = FluidSystem::numPhases };
     enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
     enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
     enum { gasCompIdx = FluidSystem::gasCompIdx };
     enum { oilCompIdx = FluidSystem::oilCompIdx };
+    enum { waterCompIdx = FluidSystem::waterCompIdx };
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
 
 public:
@@ -203,7 +211,8 @@ public:
                              isRestart,
                              simulator_.problem().vapparsActive(std::max(simulator_.episodeIndex(), 0)),
                              simulator_.problem().materialLawManager()->enableHysteresis(),
-                             simulator_.problem().tracerModel().numTracers());
+                             simulator_.problem().tracerModel().numTracers(),
+                             simulator_.problem().eclWriter()->getOutputNnc().size());
     }
 
     /*!
@@ -212,6 +221,7 @@ public:
      */
     void processElement(const ElementContext& elemCtx)
     {
+        OPM_TIMEBLOCK_LOCAL(processElement);
         if (!std::is_same<Discretization, EcfvDiscretization<TypeTag>>::value)
             return;
 
@@ -438,6 +448,7 @@ public:
                     this->failedCellsPb_.push_back(cartesianIdx);
                 }
             }
+
             if (!this->dewPointPressure_.empty()) {
                 try {
                     this->dewPointPressure_[globalDofIdx]
@@ -483,20 +494,21 @@ public:
                 }
             }
 
-
             if (!this->ppcw_.empty()) {
                 this->ppcw_[globalDofIdx] = matLawManager->oilWaterScaledEpsInfoDrainage(globalDofIdx).maxPcow;
                 // printf("ppcw_[%d] = %lg\n", globalDofIdx, ppcw_[globalDofIdx]);
             }
+
             // hack to make the intial output of rs and rv Ecl compatible.
             // For cells with swat == 1 Ecl outputs; rs = rsSat and rv=rvSat, in all but the initial step
             // where it outputs rs and rv values calculated by the initialization. To be compatible we overwrite
             // rs and rv with the values computed in the initially.
             // Volume factors, densities and viscosities need to be recalculated with the updated rs and rv values.
             // This can be removed when ebos has 100% controll over output
-            if (elemCtx.simulator().episodeIndex() < 0 && FluidSystem::phaseIsActive(oilPhaseIdx)
-                && FluidSystem::phaseIsActive(gasPhaseIdx)) {
-
+            if ((elemCtx.simulator().episodeIndex() < 0) &&
+                FluidSystem::phaseIsActive(oilPhaseIdx) &&
+                FluidSystem::phaseIsActive(gasPhaseIdx))
+            {
                 const auto& fsInitial = problem.initialFluidState(globalDofIdx);
 
                 // use initial rs and rv values
@@ -516,6 +528,7 @@ public:
                 if (!this->density_[oilPhaseIdx].empty())
                     this->density_[oilPhaseIdx][globalDofIdx]
                         = FluidSystem::density(fsInitial, oilPhaseIdx, intQuants.pvtRegionIndex());
+
                 if (!this->density_[gasPhaseIdx].empty())
                     this->density_[gasPhaseIdx][globalDofIdx]
                         = FluidSystem::density(fsInitial, gasPhaseIdx, intQuants.pvtRegionIndex());
@@ -523,22 +536,214 @@ public:
                 if (!this->invB_[oilPhaseIdx].empty())
                     this->invB_[oilPhaseIdx][globalDofIdx]
                         = FluidSystem::inverseFormationVolumeFactor(fsInitial, oilPhaseIdx, intQuants.pvtRegionIndex());
+
                 if (!this->invB_[gasPhaseIdx].empty())
                     this->invB_[gasPhaseIdx][globalDofIdx]
                         = FluidSystem::inverseFormationVolumeFactor(fsInitial, gasPhaseIdx, intQuants.pvtRegionIndex());
+
                 if (!this->viscosity_[oilPhaseIdx].empty())
                     this->viscosity_[oilPhaseIdx][globalDofIdx]
                         = FluidSystem::viscosity(fsInitial, oilPhaseIdx, intQuants.pvtRegionIndex());
+
                 if (!this->viscosity_[gasPhaseIdx].empty())
                     this->viscosity_[gasPhaseIdx][globalDofIdx]
                         = FluidSystem::viscosity(fsInitial, gasPhaseIdx, intQuants.pvtRegionIndex());
             }
 
-            // Add fluid in Place values
-            updateFluidInPlace_(elemCtx, dofIdx);
 
-            // Adding block data
+            // Adding Well RFT data
             const auto cartesianIdx = elemCtx.simulator().vanguard().cartesianIndex(globalDofIdx);
+            if (this->oilConnectionPressures_.count(cartesianIdx) > 0) {
+                this->oilConnectionPressures_[cartesianIdx] = getValue(fs.pressure(oilPhaseIdx));
+            }
+            if (this->waterConnectionSaturations_.count(cartesianIdx) > 0) {
+                this->waterConnectionSaturations_[cartesianIdx] = getValue(fs.saturation(waterPhaseIdx));
+            }
+            if (this->gasConnectionSaturations_.count(cartesianIdx) > 0) {
+                this->gasConnectionSaturations_[cartesianIdx] = getValue(fs.saturation(gasPhaseIdx));
+            }
+            if (this->wbpData_.count(cartesianIdx) > 0) {
+                if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
+                    this->wbpData_[cartesianIdx] = getValue(fs.pressure(oilPhaseIdx));
+                } else if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
+                    this->wbpData_[cartesianIdx] = getValue(fs.pressure(gasPhaseIdx));
+                } else if (FluidSystem::phaseIsActive(waterPhaseIdx)) {
+                    this->wbpData_[cartesianIdx] = getValue(fs.pressure(waterPhaseIdx));
+                }
+            }
+
+            // tracers
+            const auto& tracerModel = simulator_.problem().tracerModel();
+            if (!this->tracerConcentrations_.empty()) {
+                for (int tracerIdx = 0; tracerIdx < tracerModel.numTracers(); tracerIdx++) {
+                    if (this->tracerConcentrations_[tracerIdx].empty())
+                        continue;
+
+                    this->tracerConcentrations_[tracerIdx][globalDofIdx]
+                        = tracerModel.tracerConcentration(tracerIdx, globalDofIdx);
+                }
+            }
+        }
+    }
+
+    void processElementFlows(const ElementContext& elemCtx)
+    {
+        OPM_TIMEBLOCK_LOCAL(processElementBlockData);
+        if (!std::is_same_v<Discretization, EcfvDiscretization<TypeTag>>)
+            return;
+
+        const auto& problem = elemCtx.simulator().problem();
+        for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
+
+            unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+            if (!problem.model().linearizer().getFlowsInfo().empty()) {
+                const auto& flowsInf = problem.model().linearizer().getFlowsInfo();
+                auto flowsInfos = flowsInf[globalDofIdx];
+                for (auto& flowsInfo : flowsInfos) {
+                    if (flowsInfo.faceId == 1) {
+                        if (!this->flowsi_[gasCompIdx].empty()) {
+                            this->flowsi_[gasCompIdx][globalDofIdx]
+                                = flowsInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(gasCompIdx)];
+                        }
+                        if (!this->flowsi_[oilCompIdx].empty()) {
+                            this->flowsi_[oilCompIdx][globalDofIdx]
+                                = flowsInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(oilCompIdx)];
+                        }
+                        if (!this->flowsi_[waterCompIdx].empty()) {
+                            this->flowsi_[waterCompIdx][globalDofIdx]
+                                = flowsInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(waterCompIdx)];
+                        }
+                    }
+                    if (flowsInfo.faceId == 3) {
+                        if (!this->flowsj_[gasCompIdx].empty()) {
+                            this->flowsj_[gasCompIdx][globalDofIdx]
+                                = flowsInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(gasCompIdx)];
+                        }
+                        if (!this->flowsj_[oilCompIdx].empty()) {
+                            this->flowsj_[oilCompIdx][globalDofIdx]
+                                = flowsInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(oilCompIdx)];
+                        }
+                        if (!this->flowsj_[waterCompIdx].empty()) {
+                            this->flowsj_[waterCompIdx][globalDofIdx]
+                                = flowsInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(waterCompIdx)];
+                        }
+                    }
+                    if (flowsInfo.faceId == 5) {
+                        if (!this->flowsk_[gasCompIdx].empty()) {
+                            this->flowsk_[gasCompIdx][globalDofIdx]
+                                = flowsInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(gasCompIdx)];
+                        }
+                        if (!this->flowsk_[oilCompIdx].empty()) {
+                            this->flowsk_[oilCompIdx][globalDofIdx]
+                                = flowsInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(oilCompIdx)];
+                        }
+                        if (!this->flowsk_[waterCompIdx].empty()) {
+                            this->flowsk_[waterCompIdx][globalDofIdx]
+                                = flowsInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(waterCompIdx)];
+                        }
+                    }
+                    if (flowsInfo.faceId == -2) {
+                        if (!this->flowsn_[gasCompIdx].second.first.empty()) {
+                            this->flowsn_[gasCompIdx].second.first[flowsInfo.nncId] = flowsInfo.nncId;
+                            this->flowsn_[gasCompIdx].second.second[flowsInfo.nncId]
+                                = flowsInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(gasCompIdx)];
+                        }
+                        if (!this->flowsn_[oilCompIdx].second.first.empty()) {
+                            this->flowsn_[oilCompIdx].second.first[flowsInfo.nncId] = flowsInfo.nncId;
+                            this->flowsn_[oilCompIdx].second.second[flowsInfo.nncId]
+                                = flowsInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(oilCompIdx)];
+                        }
+                        if (!this->flowsn_[waterCompIdx].second.first.empty()) {
+                            this->flowsn_[waterCompIdx].second.first[flowsInfo.nncId] = flowsInfo.nncId;
+                            this->flowsn_[waterCompIdx].second.second[flowsInfo.nncId]
+                                = flowsInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(waterCompIdx)];
+                        }
+                    }
+                }
+            }
+
+            // flores
+            if (!problem.model().linearizer().getFloresInfo().empty()) {
+                const auto& floresInf = problem.model().linearizer().getFloresInfo();
+                auto floresInfos =floresInf[globalDofIdx];
+                for (auto& floresInfo : floresInfos) {
+                    if (floresInfo.faceId == 1) {
+                        if (!this->floresi_[gasCompIdx].empty()) {
+                            this->floresi_[gasCompIdx][globalDofIdx]
+                                = floresInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(gasCompIdx)];
+                        }
+                        if (!this->floresi_[oilCompIdx].empty()) {
+                            this->floresi_[oilCompIdx][globalDofIdx]
+                                = floresInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(oilCompIdx)];
+                        }
+                        if (!this->floresi_[waterCompIdx].empty()) {
+                            this->floresi_[waterCompIdx][globalDofIdx]
+                                = floresInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(waterCompIdx)];
+                        }
+                    }
+                    if (floresInfo.faceId == 3) {
+                        if (!this->floresj_[gasCompIdx].empty()) {
+                            this->floresj_[gasCompIdx][globalDofIdx]
+                                = floresInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(gasCompIdx)];
+                        }
+                        if (!this->floresj_[oilCompIdx].empty()) {
+                            this->floresj_[oilCompIdx][globalDofIdx]
+                                = floresInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(oilCompIdx)];
+                        }
+                        if (!this->floresj_[waterCompIdx].empty()) {
+                            this->floresj_[waterCompIdx][globalDofIdx]
+                                = floresInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(waterCompIdx)];
+                        }
+                    }
+                    if (floresInfo.faceId == 5) {
+                        if (!this->floresk_[gasCompIdx].empty()) {
+                            this->floresk_[gasCompIdx][globalDofIdx]
+                                = floresInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(gasCompIdx)];
+                        }
+                        if (!this->floresk_[oilCompIdx].empty()) {
+                            this->floresk_[oilCompIdx][globalDofIdx]
+                                = floresInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(oilCompIdx)];
+                        }
+                        if (!this->floresk_[waterCompIdx].empty()) {
+                            this->floresk_[waterCompIdx][globalDofIdx]
+                                = floresInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(waterCompIdx)];
+                        }
+                    }
+                    if (floresInfo.faceId == -2) {
+                        if (!this->floresn_[gasCompIdx].second.first.empty()) {
+                            this->floresn_[gasCompIdx].second.first[floresInfo.nncId] = floresInfo.nncId;
+                            this->floresn_[gasCompIdx].second.second[floresInfo.nncId]
+                                = floresInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(gasCompIdx)];
+                        }
+                        if (!this->floresn_[oilCompIdx].second.first.empty()) {
+                            this->floresn_[oilCompIdx].second.first[floresInfo.nncId] = floresInfo.nncId;
+                            this->floresn_[oilCompIdx].second.second[floresInfo.nncId]
+                                = floresInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(oilCompIdx)];
+                        }
+                        if (!this->floresn_[waterCompIdx].second.first.empty()) {
+                            this->floresn_[waterCompIdx].second.first[floresInfo.nncId] = floresInfo.nncId;
+                            this->floresn_[waterCompIdx].second.second[floresInfo.nncId]
+                                = floresInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(waterCompIdx)];
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    void processElementBlockData(const ElementContext& elemCtx)
+    {
+        OPM_TIMEBLOCK_LOCAL(processElementBlockData);
+        if (!std::is_same<Discretization, EcfvDiscretization<TypeTag>>::value)
+            return;
+
+        const auto& problem = elemCtx.simulator().problem();
+        for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
+                // Adding block data
+            unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+            const auto cartesianIdx = elemCtx.simulator().vanguard().cartesianIndex(globalDofIdx);
+            const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
+            const auto& fs = intQuants.fluidState();
             for (auto& val : this->blockData_) {
                 const auto& key = val.first;
                 assert(key.second > 0);
@@ -653,38 +858,6 @@ public:
                     }
                 }
             }
-
-            // Adding Well RFT data
-            if (this->oilConnectionPressures_.count(cartesianIdx) > 0) {
-                this->oilConnectionPressures_[cartesianIdx] = getValue(fs.pressure(oilPhaseIdx));
-            }
-            if (this->waterConnectionSaturations_.count(cartesianIdx) > 0) {
-                this->waterConnectionSaturations_[cartesianIdx] = getValue(fs.saturation(waterPhaseIdx));
-            }
-            if (this->gasConnectionSaturations_.count(cartesianIdx) > 0) {
-                this->gasConnectionSaturations_[cartesianIdx] = getValue(fs.saturation(gasPhaseIdx));
-            }
-            if (this->wbpData_.count(cartesianIdx) > 0) {
-                if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
-                    this->wbpData_[cartesianIdx] = getValue(fs.pressure(oilPhaseIdx));
-                } else if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
-                    this->wbpData_[cartesianIdx] = getValue(fs.pressure(gasPhaseIdx));
-                } else if (FluidSystem::phaseIsActive(waterPhaseIdx)) {
-                    this->wbpData_[cartesianIdx] = getValue(fs.pressure(waterPhaseIdx));
-                }
-            }
-
-            // tracers
-            const auto& tracerModel = simulator_.problem().tracerModel();
-            if (!this->tracerConcentrations_.empty()) {
-                for (int tracerIdx = 0; tracerIdx < tracerModel.numTracers(); tracerIdx++) {
-                    if (this->tracerConcentrations_[tracerIdx].empty())
-                        continue;
-
-                    this->tracerConcentrations_[tracerIdx][globalDofIdx]
-                        = tracerModel.tracerConcentration(tracerIdx, globalDofIdx);
-                }
-            }
         }
     }
 
@@ -719,6 +892,7 @@ public:
     template <class ActiveIndex, class CartesianIndex>
     void processFluxes(const ElementContext& elemCtx, ActiveIndex&& activeIndex, CartesianIndex&& cartesianIndex)
     {
+        OPM_TIMEBLOCK_LOCAL(processFluxes);
         const auto identifyCell = [&activeIndex, &cartesianIndex](const Element& elem) -> EclInterRegFlowMap::Cell {
             const auto cellIndex = activeIndex(elem);
 
@@ -832,6 +1006,16 @@ public:
         }
     }
 
+    void updateFluidInPlace(const ElementContext& elemCtx)
+    {
+        for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
+            updateFluidInPlace_(elemCtx, dofIdx);
+        }
+    }
+    void updateFluidInPlace(unsigned globalDofIdx,const IntensiveQuantities& intQuants, double totVolume)
+    {
+        this->updateFluidInPlace_(globalDofIdx, intQuants, totVolume);
+    }
 private:
     bool isDefunctParallelWell(std::string wname) const override
     {
@@ -845,10 +1029,18 @@ private:
 
     void updateFluidInPlace_(const ElementContext& elemCtx, unsigned dofIdx)
     {
-
         const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
-        const auto& fs = intQuants.fluidState();
         unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+        const auto totVolume = elemCtx.simulator().model().dofTotalVolume(globalDofIdx);
+        this->updateFluidInPlace_(globalDofIdx, intQuants, totVolume);
+    }
+
+    void updateFluidInPlace_(unsigned globalDofIdx,const IntensiveQuantities& intQuants, double totVolume)
+    {
+        OPM_TIMEBLOCK_LOCAL(updateFluidInPlace);
+        //const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
+        const auto& fs = intQuants.fluidState();
+        //unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
 
         // Fluid in Place calculations
 
@@ -859,7 +1051,7 @@ private:
         // PORV, MINPV and friends). Also note that because of this, the porosity
         // returned by the intensive quantities can be outside of the physical
         // range [0, 1] in pathetic cases.
-        const auto totVolume = elemCtx.simulator().model().dofTotalVolume(globalDofIdx);
+        //const auto totVolume = elemCtx.simulator().model().dofTotalVolume(globalDofIdx);
         const double pv = totVolume * intQuants.porosity().value();
 
         if (!this->pressureTimesHydrocarbonVolume_.empty() && !this->pressureTimesPoreVolume_.empty()) {
@@ -871,11 +1063,17 @@ private:
             this->dynamicPoreVolume_[globalDofIdx] = pv;
 
             Scalar hydrocarbon = 0.0;
-            if (FluidSystem::phaseIsActive(oilPhaseIdx))
-                hydrocarbon += getValue(fs.saturation(oilPhaseIdx));
-            if (FluidSystem::phaseIsActive(gasPhaseIdx))
-                hydrocarbon += getValue(fs.saturation(gasPhaseIdx));
 
+            if (!this->eclState_.runspec().co2Storage()) {
+                // Common case.  Hydrocarbon volume is fraction occupied by actual hydrocarbons.
+                if (FluidSystem::phaseIsActive(oilPhaseIdx))
+                    hydrocarbon += getValue(fs.saturation(oilPhaseIdx));
+                if (FluidSystem::phaseIsActive(gasPhaseIdx))
+                    hydrocarbon += getValue(fs.saturation(gasPhaseIdx));
+            } else {
+                // CO2 storage: Hydrocarbon volume is full pore-volume.
+                hydrocarbon = 1.0;
+            }
             this->hydrocarbonPoreVolume_[globalDofIdx] = pv * hydrocarbon;
 
             if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
@@ -894,6 +1092,7 @@ private:
         if (this->computeFip_) {
             Scalar fip[FluidSystem::numPhases];
             Scalar fipr[FluidSystem::numPhases]; // at reservoir condition
+
             for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
                 fip[phaseIdx] = 0.0;
 
@@ -944,6 +1143,68 @@ private:
                     this->fip_[Inplace::Phase::OIL][globalDofIdx] += oilInPlaceGas;
                 if (!this->fip_[Inplace::Phase::GAS].empty())
                     this->fip_[Inplace::Phase::GAS][globalDofIdx] += gasInPlaceLiquid;
+            }
+
+            if (FluidSystem::phaseIsActive(waterPhaseIdx) && FluidSystem::phaseIsActive(gasPhaseIdx)) {
+                // Gas dissolved in water and vaporized water
+                Scalar gasInPlaceWater = getValue(fs.Rsw()) * fip[waterPhaseIdx];
+                Scalar waterInPlaceGas = getValue(fs.Rvw()) * fip[gasPhaseIdx];
+
+                if (!this->fip_[Inplace::Phase::WaterInGasPhase].empty())
+                    this->fip_[Inplace::Phase::WaterInGasPhase][globalDofIdx] = waterInPlaceGas;
+
+                if (!this->fip_[Inplace::Phase::WaterInWaterPhase].empty())
+                    this->fip_[Inplace::Phase::WaterInWaterPhase][globalDofIdx] = fip[waterPhaseIdx];
+
+                // For water+gas cases the gas in water is added to the GIPL value
+                if (!this->fip_[Inplace::Phase::GasInLiquidPhase].empty() && !FluidSystem::phaseIsActive(oilPhaseIdx))
+                    this->fip_[Inplace::Phase::GasInLiquidPhase][globalDofIdx] = gasInPlaceWater;
+
+                // Add dissolved gas and vaporized water to total Fip
+                if (!this->fip_[Inplace::Phase::WATER].empty())
+                    this->fip_[Inplace::Phase::WATER][globalDofIdx] += waterInPlaceGas;
+                if (!this->fip_[Inplace::Phase::GAS].empty())
+                    this->fip_[Inplace::Phase::GAS][globalDofIdx] += gasInPlaceWater;
+            }
+            const auto& scaledDrainageInfo
+                = simulator_.problem().materialLawManager()->oilWaterScaledEpsInfoDrainage(globalDofIdx);
+            const Scalar& sgcr = scaledDrainageInfo.Sgcr;
+            if (FluidSystem::phaseIsActive(gasPhaseIdx) && !this->fip_[Inplace::Phase::CO2InGasPhaseInMob].empty()) {
+                const double sg = getValue(fs.saturation(gasPhaseIdx));
+                const double rhog = getValue(fs.density(gasPhaseIdx));
+                const double xgW = FluidSystem::phaseIsActive(waterPhaseIdx)?
+                            FluidSystem::convertRvwToXgW(getValue(fs.Rvw()), fs.pvtRegionIndex()):
+                            FluidSystem::convertRvToXgO(getValue(fs.Rv()), fs.pvtRegionIndex());
+                Scalar mM = FluidSystem::molarMass(gasCompIdx, fs.pvtRegionIndex());
+                Scalar imMobileGas = (1 - xgW) * pv * rhog * std::min(sgcr , sg) / mM;
+                this->fip_[Inplace::Phase::CO2InGasPhaseInMob][globalDofIdx] = imMobileGas;
+            }
+            if (FluidSystem::phaseIsActive(gasPhaseIdx) && !this->fip_[Inplace::Phase::CO2InGasPhaseMob].empty()) {
+                const double rhog = getValue(fs.density(gasPhaseIdx));
+                const double sg = getValue(fs.saturation(gasPhaseIdx));
+                const double xgW = FluidSystem::phaseIsActive(waterPhaseIdx)?
+                            FluidSystem::convertRvwToXgW(getValue(fs.Rvw()), fs.pvtRegionIndex()):
+                            FluidSystem::convertRvToXgO(getValue(fs.Rv()), fs.pvtRegionIndex());
+                Scalar mM = FluidSystem::molarMass(gasCompIdx, fs.pvtRegionIndex());
+                Scalar mobileGas = (1 - xgW) * pv * rhog * std::max(0.0, sg - sgcr) / mM;
+                this->fip_[Inplace::Phase::CO2InGasPhaseMob][globalDofIdx] = mobileGas*mM;
+            }
+
+            if (FluidSystem::phaseIsActive(waterPhaseIdx) && !this->fip_[Inplace::Phase::CO2InWaterPhase].empty()) {
+                const double rhow = getValue(fs.density(waterPhaseIdx));
+                const double sw = getValue(fs.saturation(waterPhaseIdx));
+                const double xwG = FluidSystem::convertRswToXwG(getValue(fs.Rsw()), fs.pvtRegionIndex());
+                Scalar mM = FluidSystem::molarMass(gasCompIdx, fs.pvtRegionIndex());
+                Scalar co2inWater = xwG * pv * rhow * sw / mM;
+                this->fip_[Inplace::Phase::CO2InWaterPhase][globalDofIdx] = co2inWater;
+            }
+            if (FluidSystem::phaseIsActive(oilPhaseIdx) && !this->fip_[Inplace::Phase::CO2InWaterPhase].empty()) {
+                const double rhoo = getValue(fs.density(oilPhaseIdx));
+                const double so = getValue(fs.saturation(oilPhaseIdx));
+                const double xoG = FluidSystem::convertRsToXoG(getValue(fs.Rs()), fs.pvtRegionIndex());
+                Scalar mM = FluidSystem::molarMass(gasCompIdx, fs.pvtRegionIndex());
+                Scalar co2inWater = xoG * pv * rhoo * so / mM;
+                this->fip_[Inplace::Phase::CO2InWaterPhase][globalDofIdx] = co2inWater;
             }
         }
     }

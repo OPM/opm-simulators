@@ -21,9 +21,12 @@
 #ifndef OPM_AQUIFERNUMERICAL_HEADER_INCLUDED
 #define OPM_AQUIFERNUMERICAL_HEADER_INCLUDED
 
-#include <opm/output/data/Aquifer.hpp>
-
 #include <opm/input/eclipse/EclipseState/Aquifer/NumericalAquifer/SingleNumericalAquifer.hpp>
+
+#include <opm/material/common/MathToolbox.hpp>
+#include <opm/material/densead/Evaluation.hpp>
+
+#include <opm/output/data/Aquifer.hpp>
 
 #include <opm/simulators/aquifers/AquiferInterface.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
@@ -86,6 +89,17 @@ public:
         }
     }
 
+    static AquiferNumerical serializationTestObject(const Simulator& ebos_simulator)
+    {
+        AquiferNumerical result({}, ebos_simulator);
+        result.flux_rate_ = 1.0;
+        result.cumulative_flux_ = 2.0;
+        result.init_pressure_ = {3.0, 4.0};
+        result.pressure_ = 5.0;
+
+        return result;
+    }
+
     void initFromRestart(const data::Aquifers& aquiferSoln) override
     {
         auto xaqPos = aquiferSoln.find(this->aquiferID());
@@ -138,6 +152,28 @@ public:
         this->pressure_ = this->calculateAquiferPressure(this->init_pressure_);
         this->flux_rate_ = 0.;
         this->cumulative_flux_ = 0.;
+    }
+
+    template<class Serializer>
+    void serializeOp(Serializer& serializer)
+    {
+        serializer(flux_rate_);
+        serializer(cumulative_flux_);
+        serializer(init_pressure_);
+        serializer(pressure_);
+    }
+
+    bool operator==(const AquiferNumerical& rhs) const
+    {
+        return this->flux_rate_ == rhs.flux_rate_ &&
+               this->cumulative_flux_ == rhs.cumulative_flux_ &&
+               this->init_pressure_ == rhs.init_pressure_ &&
+               this->pressure_ == rhs.pressure_;
+    }
+
+    double cumulativeFlux() const
+    {
+        return this->cumulative_flux_;
     }
 
 private:

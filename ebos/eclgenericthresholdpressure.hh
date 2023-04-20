@@ -72,6 +72,10 @@ public:
     void setFromRestart(const std::vector<Scalar>& values)
     { thpres_ = values; }
 
+    //! \brief Returns a fully expanded vector for restart file writing.
+    //! \details Returns the union of explicitly configured entries and defaulted values.
+    std::vector<Scalar> getRestartVector() const;
+
 protected:
     /*!
      * \brief Actually compute the threshold pressures over a face as a pre-compute step.
@@ -84,13 +88,15 @@ protected:
 
     void configureThpresft_();
 
+    void logPressures();
+
     const CartesianIndexMapper& cartMapper_;
     const GridView& gridView_;
     const ElementMapper& elementMapper_;
     const EclipseState& eclState_;
     std::vector<Scalar> thpresDefault_;
     std::vector<Scalar> thpres_;
-    unsigned numEquilRegions_;
+    unsigned numEquilRegions_{};
     std::vector<unsigned char> elemEquilRegion_;
 
     // threshold pressure accross faults. EXPERIMENTAL!

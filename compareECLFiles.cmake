@@ -168,11 +168,16 @@ endfunction()
 #   - This test class compares the output from a restarted parallel simulation
 #     to that of a non-restarted parallel simulation.
 function(add_test_compare_parallel_restarted_simulation)
-  set(oneValueArgs CASENAME FILENAME SIMULATOR ABS_TOL REL_TOL DIR MPI_PROCS RESTART_STEP)
+  set(oneValueArgs CASENAME FILENAME SIMULATOR ABS_TOL REL_TOL DIR MPI_PROCS RESTART_STEP TEST_NAME)
   set(multiValueArgs TEST_ARGS)
   cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
   if(NOT PARAM_DIR)
     set(PARAM_DIR ${PARAM_CASENAME})
+  endif()
+  if (PARAM_TEST_NAME)
+    set(TEST_NAME ${PARAM_TEST_NAME})
+  else()
+    set(TEST_NAME compareParallelRestartedSim_${PARAM_SIMULATOR}+${PARAM_FILENAME})
   endif()
   set(RESULT_PATH ${BASE_RESULT_PATH}/parallelRestart/${PARAM_SIMULATOR}+${PARAM_CASENAME})
   set(DRIVER_ARGS -i ${OPM_TESTS_ROOT}/${PARAM_DIR}
@@ -188,12 +193,11 @@ function(add_test_compare_parallel_restarted_simulation)
     list(APPEND DRIVER_ARGS -n ${PARAM_MPI_PROCS})
   endif()
 
-  opm_add_test(compareParallelRestartedSim_${PARAM_SIMULATOR}+${PARAM_FILENAME} NO_COMPILE
+  opm_add_test(${TEST_NAME} NO_COMPILE
                EXE_NAME ${PARAM_SIMULATOR}
                DRIVER_ARGS ${DRIVER_ARGS}
                TEST_ARGS ${PARAM_TEST_ARGS})
-  set_tests_properties(compareParallelRestartedSim_${PARAM_SIMULATOR}+${PARAM_FILENAME}
-                       PROPERTIES RUN_SERIAL 1)
+  set_tests_properties(${TEST_NAME} PROPERTIES RUN_SERIAL 1)
 endfunction()
 
 

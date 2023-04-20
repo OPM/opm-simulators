@@ -34,7 +34,9 @@
 #include <opm/simulators/wells/MultisegmentWellPrimaryVariables.hpp>
 #include <opm/simulators/wells/WellAssemble.hpp>
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
+#include <opm/simulators/wells/WellHelpers.hpp>
 #include <opm/simulators/wells/WellInterfaceIndices.hpp>
+#include <opm/simulators/wells/WellState.hpp>
 
 namespace Opm {
 
@@ -114,7 +116,7 @@ assembleControlEq(const WellState& well_state,
         return rates;
     };
 
-    if (well_.wellIsStopped()) {
+    if (well_.stopppedOrZeroRateTarget(summaryState, well_state)) {
         control_eq = primary_variables.getWQTotal();
     } else if (well_.isInjector() ) {
         // Find scaling factor to get injection rate,
@@ -239,7 +241,7 @@ assemblePressureEq(const int seg,
     // contribution from the outlet segment
     eqns.residual()[seg][SPres] -= outlet_pressure.value();
     for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-        eqns.D()[seg][outlet_segment_index][SPres][pv_idx] = -outlet_pressure.derivative(pv_idx + Indices::numEq);
+        eqns.D()[seg][outlet_segment_index][SPres][pv_idx] -= outlet_pressure.derivative(pv_idx + Indices::numEq);
     }
 }
 
@@ -353,7 +355,7 @@ INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,2u,0u>)
 INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,0u,0u>)
 INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>)
 INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>)
-
+INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,0u,0u>)
 // Blackoil
 INSTANCE(BlackOilIndices<0u,0u,0u,0u,false,false,0u,0u>)
 INSTANCE(BlackOilIndices<0u,0u,0u,0u,false,false,1u,0u>)

@@ -36,6 +36,7 @@
 #include <opm/simulators/wells/WellAssemble.hpp>
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 #include <opm/simulators/wells/WellInterfaceFluidSystem.hpp>
+#include <opm/simulators/wells/WellState.hpp>
 
 namespace Opm {
 
@@ -87,6 +88,8 @@ assembleControlEq(const WellState& well_state,
                   const GroupState& group_state,
                   const Schedule& schedule,
                   const SummaryState& summaryState,
+                  const Well::InjectionControls& inj_controls,
+                  const Well::ProductionControls& prod_controls,
                   const PrimaryVariables& primary_variables,
                   const double rho,
                   StandardWellEquations<Scalar,Indices::numEq>& eqns1,
@@ -113,7 +116,7 @@ assembleControlEq(const WellState& well_state,
         return rates;
     };
 
-    if (well_.wellIsStopped()) {
+    if (well_.stopppedOrZeroRateTarget(summaryState, well_state)) {
         control_eq = primary_variables.eval(PrimaryVariables::WQTotal);
     } else if (well_.isInjector()) {
         // Find injection rate.
@@ -129,8 +132,6 @@ assembleControlEq(const WellState& well_state,
                                                                    deferred_logger);
         };
 
-             // Call generic implementation.
-        const auto& inj_controls = well.injectionControls(summaryState);
         WellAssemble(well_).
             assembleControlEqInj(well_state,
                                  group_state,
@@ -154,8 +155,6 @@ assembleControlEq(const WellState& well_state,
                                                                    rho,
                                                                    deferred_logger);
         };
-           // Call generic implementation.
-        const auto& prod_controls = well.productionControls(summaryState);
         WellAssemble(well_).
             assembleControlEqProd(well_state,
                                   group_state,
@@ -272,7 +271,7 @@ INSTANCE(7u, BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>)
 INSTANCE(7u, BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,0u,0u>)
 INSTANCE(7u, BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,2u,0u>)
 INSTANCE(8u, BlackOilTwoPhaseIndices<0u,0u,2u,0u,false,false,0u,2u,0u>)
-
+INSTANCE(7u, BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,0u,0u>)
 // Blackoil
 INSTANCE(8u, BlackOilIndices<0u,0u,0u,0u,false,false,0u,0u>)
 INSTANCE(9u, BlackOilIndices<0u,0u,0u,0u,true,false,0u,0u>)

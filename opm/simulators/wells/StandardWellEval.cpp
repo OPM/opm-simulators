@@ -71,13 +71,15 @@ extendEval(const Eval& in) const
 template<class FluidSystem, class Indices, class Scalar>
 void
 StandardWellEval<FluidSystem,Indices,Scalar>::
-updateWellStateFromPrimaryVariables(WellState& well_state,
+updateWellStateFromPrimaryVariables(const bool stop_or_zero_rate_target,
+                                    WellState& well_state,
                                     DeferredLogger& deferred_logger) const
 {
     this->primary_variables_.copyToWellState(well_state, deferred_logger);
 
     WellBhpThpCalculator(baseif_).
             updateThp(connections_.rho(),
+                      stop_or_zero_rate_target,
                       [this,&well_state]() { return this->baseif_.getALQ(well_state); },
                       {FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx),
                        FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx),
@@ -151,6 +153,19 @@ getWellConvergence(const WellState& well_state,
                                   report,
                                   deferred_logger);
 
+    // for stopped well, we do not enforce the following checking to avoid dealing with sign of near-zero values
+    // for BHP or THP controlled wells, we need to make sure the flow direction is correct
+    if (!baseif_.wellIsStopped() && baseif_.isPressureControlled(well_state)) {
+        // checking the flow direction
+        const double sign = baseif_.isProducer() ? -1. : 1.;
+        const auto weight_total_flux = this->primary_variables_.value(PrimaryVariables::WQTotal) * sign;
+        constexpr int dummy_phase = -1;
+        if (weight_total_flux < 0.) {
+            report.setWellFailed(
+                    {CR::WellFailure::Type::WrongFlowDirection, CR::Severity::Normal, dummy_phase, baseif_.name()});
+        }
+    }
+
     return report;
 }
 
@@ -204,7 +219,7 @@ INSTANCE(BlackOilTwoPhaseIndices<0u,0u,1u,0u,false,true,0u,2u,0u>)
 INSTANCE(BlackOilTwoPhaseIndices<0u,0u,2u,0u,false,false,0u,2u,0u>)
 INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>)
 INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,0u,0u>)
-
+INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,0u,0u>)
 // Blackoil
 INSTANCE(BlackOilIndices<0u,0u,0u,0u,false,false,0u,0u>)
 INSTANCE(BlackOilIndices<0u,0u,0u,0u,true,false,0u,0u>)

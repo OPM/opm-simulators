@@ -154,9 +154,11 @@ public:
 
     virtual void initPrimaryVariablesEvaluation() = 0;
 
-    virtual ConvergenceReport getWellConvergence(const WellState& well_state, const std::vector<double>& B_avg, DeferredLogger& deferred_logger, const bool relax_tolerance) const = 0;
-
-    virtual void solveEqAndUpdateWellState(WellState& well_state, DeferredLogger& deferred_logger) = 0;
+    virtual ConvergenceReport getWellConvergence(const SummaryState& summary_state,
+                                                 const WellState& well_state,
+                                                 const std::vector<double>& B_avg,
+                                                 DeferredLogger& deferred_logger,
+                                                 const bool relax_tolerance) const = 0;
 
     void assembleWellEq(const Simulator& ebosSimulator,
                         const double dt,
@@ -180,7 +182,8 @@ public:
 
     /// using the solution x to recover the solution xw for wells and applying
     /// xw to update Well State
-    virtual void recoverWellSolutionAndUpdateWellState(const BVector& x,
+    virtual void recoverWellSolutionAndUpdateWellState(const SummaryState& summary_state,
+                                                       const BVector& x,
                                                        WellState& well_state,
                                                        DeferredLogger& deferred_logger) = 0;
 
@@ -201,6 +204,10 @@ public:
                                            WellState& well_state,
                                            DeferredLogger& deferred_logger) const;
 
+    virtual bool updateWellStateWithTHPTargetProd(const Simulator& ebos_simulator,
+                                                  WellState& well_state,
+                                                  DeferredLogger& deferred_logger) const = 0;
+
     enum class IndividualOrGroup { Individual, Group, Both };
     bool updateWellControl(const Simulator& ebos_simulator,
                            const IndividualOrGroup iog,
@@ -208,7 +215,9 @@ public:
                            const GroupState& group_state,
                            DeferredLogger& deferred_logger) /* const */;
 
-    virtual void updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_logger) = 0;
+    virtual void updatePrimaryVariables(const SummaryState& summary_state,
+                                        const WellState& well_state,
+                                        DeferredLogger& deferred_logger) = 0;
 
     virtual void calculateExplicitQuantities(const Simulator& ebosSimulator,
                                              const WellState& well_state,
@@ -258,6 +267,13 @@ public:
 
     void checkWellOperability(const Simulator& ebos_simulator, const WellState& well_state, DeferredLogger& deferred_logger);
 
+    bool gliftBeginTimeStepWellTestIterateWellEquations(
+        const Simulator& ebos_simulator,
+        const double dt,
+        WellState& well_state,
+        const GroupState &group_state,
+        DeferredLogger& deferred_logger);
+
     void gliftBeginTimeStepWellTestUpdateALQ(const Simulator& ebos_simulator,
                                              WellState& well_state,
                                              DeferredLogger& deferred_logger);
@@ -288,6 +304,11 @@ public:
                            WellState& well_state,
                            const GroupState& group_state,
                            DeferredLogger& deferred_logger);
+
+    const std::vector<RateVector>& connectionRates() const
+    {
+        return connectionRates_;
+    }
 
 protected:
 
@@ -354,7 +375,6 @@ protected:
                              DeferredLogger& deferred_logger);
 
     Eval getPerfCellPressure(const FluidState& fs) const;
-
 
 };
 

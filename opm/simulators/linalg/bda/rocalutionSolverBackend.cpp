@@ -26,10 +26,26 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <dune/common/timer.hh>
 
+// WellContributions are included via the solver
+// MultisegmentWellContribution includes the cuda runtime if found by CMake
+// this leads to inclusion of both amd_hip_vector_types.h and vector_types.h
+// which both define vector types like uchar2, short3 and double4.
+// Restore the value (if defined) afterwards.
+#ifdef HAVE_CUDA
+#define HIP_HAVE_CUDA_DEFINED HAVE_CUDA
+#endif
+
+#undef HAVE_CUDA
+
 #include <opm/simulators/linalg/bda/rocalutionSolverBackend.hpp>
 
 #include <rocalution.hpp>
 #include <base/matrix_formats_ind.hpp> // check if blocks are interpreted as row-major or column-major
+
+#ifdef HIP_HAVE_CUDA_DEFINED
+#define HAVE_CUDA HIP_HAVE_CUDA_DEFINED
+#undef HIP_HAVE_CUDA_DEFINED
+#endif
 
 namespace Opm
 {

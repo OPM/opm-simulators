@@ -25,6 +25,10 @@
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 
+#include <opm/input/eclipse/Schedule/Well/WellInjectionControls.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellProductionControls.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellEnums.hpp>
+
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 
 #include <fmt/format.h>
@@ -167,6 +171,47 @@ DenseMatrix transposeDenseDynMatrix(const DenseMatrix& M)
     }
     return tmp;
 }
+
+bool rateControlWithZeroProdTarget(const WellProductionControls& controls,
+                                   const WellProducerCMode mode)
+{
+    switch (mode) {
+        case WellProducerCMode::ORAT:
+            return controls.oil_rate == 0.0;
+        case WellProducerCMode::WRAT:
+            return controls.water_rate == 0.0;
+        case WellProducerCMode::GRAT:
+            return controls.gas_rate == 0.0;
+        case WellProducerCMode::LRAT:
+            return controls.liquid_rate == 0.0;
+        case WellProducerCMode::CRAT:
+            // Unsupported, will cause exception elsewhere, treat as nonzero target here.
+            return false;
+        case WellProducerCMode::RESV:
+            if (controls.prediction_mode) {
+                return controls.resv_rate == 0.0;
+            } else {
+                return controls.water_rate == 0.0 && controls.oil_rate == 0.0 && controls.gas_rate == 0.0;
+            }
+        default:
+            return false;
+    }
+}
+
+
+bool rateControlWithZeroInjTarget(const WellInjectionControls& controls,
+                                  const WellInjectorCMode mode)
+{
+    switch (mode) {
+        case WellInjectorCMode::RATE:
+            return controls.surface_rate == 0.0;
+        case WellInjectorCMode::RESV:
+            return controls.reservoir_rate == 0.0;
+        default:
+            return false;
+    }
+}
+
 
 template class ParallelStandardWellB<double>;
 

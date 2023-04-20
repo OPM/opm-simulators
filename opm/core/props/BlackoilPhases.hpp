@@ -52,14 +52,14 @@ namespace Opm
         std::array<int, MaxNumPhases + NumCryptoPhases> phase_pos;
 
         int num_phases;
-        bool has_solvent;
-        bool has_polymer;
-        bool has_energy;
+        bool has_solvent{};
+        bool has_polymer{};
+        bool has_energy{};
         // polymer molecular weight
-        bool has_polymermw;
-        bool has_foam;
-        bool has_brine;
-        bool has_zFraction;
+        bool has_polymermw{};
+        bool has_foam{};
+        bool has_brine{};
+        bool has_zFraction{};
 
     };
 

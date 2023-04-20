@@ -27,6 +27,7 @@
 #include <opm/input/eclipse/Schedule/Action/State.hpp>
 #include <opm/input/eclipse/Schedule/UDQ/UDQState.hpp>
 
+#include <opm/simulators/flow/Banners.hpp>
 #include <opm/simulators/utils/readDeck.hpp>
 
 #if HAVE_DAMARIS
@@ -140,7 +141,8 @@ void Main::initMPI()
 #endif // HAVE_MPI
 }
 
-void Main::handleVersionCmdLine_(int argc, char** argv)
+void Main::handleVersionCmdLine_(int argc, char** argv,
+                                 std::string_view moduleVersionName)
 {
     auto pos = std::find_if(argv, argv + argc,
         [](const char* arg)
@@ -149,7 +151,7 @@ void Main::handleVersionCmdLine_(int argc, char** argv)
     });
 
     if (pos != argv + argc) {
-        std::cout << "flow " << moduleVersionName() << std::endl;
+        std::cout << "flow " << moduleVersionName << std::endl;
         std::exit(EXIT_SUCCESS);
     }
 }
@@ -171,7 +173,10 @@ void Main::readDeck(const std::string& deckFilename,
                     const bool allRanksDbgPrtLog,
                     const bool strictParsing,
                     const int mpiRank,
-                    const int output_param)
+                    const int output_param,
+                    const std::string& parameters,
+                    std::string_view moduleVersion,
+                    std::string_view compileTimestamp)
 {
     auto omode = setupLogging(mpiRank,
                               deckFilename,
@@ -180,6 +185,7 @@ void Main::readDeck(const std::string& deckFilename,
                               outputCout_, "STDOUT_LOGGER", allRanksDbgPrtLog);
 
     if (outputCout_) {
+        printPRTHeader(parameters, moduleVersion, compileTimestamp);
         OpmLog::info("Reading deck file '" + deckFilename + "'");
     }
 
@@ -208,13 +214,13 @@ void Main::readDeck(const std::string& deckFilename,
 
 void Main::setupVanguard()
 {
-    EclGenericVanguard::setParams(this->setupTime_,
-                                  this->eclipseState_,
-                                  this->schedule_,
-                                  std::move(this->udqState_),
-                                  std::move(this->actionState_),
-                                  std::move(this->wtestState_),
-                                  this->summaryConfig_);
+    EclGenericVanguard::modelParams_.setupTime_ = this->setupTime_;
+    EclGenericVanguard::modelParams_.actionState_ = std::move(this->actionState_);
+    EclGenericVanguard::modelParams_.eclSchedule_ = this->schedule_;
+    EclGenericVanguard::modelParams_.eclState_ = this->eclipseState_;
+    EclGenericVanguard::modelParams_.eclSummaryConfig_ = this->summaryConfig_;
+    EclGenericVanguard::modelParams_.udqState_ = std::move(udqState_);
+    EclGenericVanguard::modelParams_.wtestState_ = std::move(wtestState_);
 }
 
 #if HAVE_DAMARIS

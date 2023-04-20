@@ -52,6 +52,12 @@ WellContributions::create(const std::string& accelerator_mode, bool useWellConn)
         OPM_THROW(std::runtime_error, "Cannot initialize well contributions: OpenCL is not enabled");
 #endif
     }
+    else if(accelerator_mode.compare("rocsparse") == 0){
+        if (!useWellConn) {
+            OPM_THROW(std::logic_error, "Error rocsparse requires --matrix-add-well-contributions=true");
+        }
+        return std::make_unique<WellContributions>();
+    }
     else if(accelerator_mode.compare("amgcl") == 0){
         if (!useWellConn) {
             OPM_THROW(std::logic_error, "Error amgcl requires --matrix-add-well-contributions=true");

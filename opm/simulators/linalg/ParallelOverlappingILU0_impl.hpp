@@ -20,10 +20,13 @@
 
 #include <opm/simulators/linalg/ParallelOverlappingILU0.hpp>
 
+#include <dune/common/version.hh>
+
 #include <dune/istl/ilu.hh>
 #include <dune/istl/owneroverlapcopy.hh>
 
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/common/TimingMacros.hpp>
 
 #include <opm/simulators/linalg/GraphColoring.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>
@@ -95,6 +98,7 @@ void ghost_last_bilu0_decomposition (M& A, size_t interiorSize)
 template<class M, class CRS, class InvVector>
 void convertToCRS(const M& A, CRS& lower, CRS& upper, InvVector& inv)
 {
+  OPM_TIMEBLOCK(convertToCRS);  
   // No need to do anything for 0 rows. Return to prevent indexing a
   // a zero sized array.
   if ( A.N() == 0 )
@@ -285,6 +289,7 @@ template<class Matrix, class Domain, class Range, class ParallelInfoT>
 void ParallelOverlappingILU0<Matrix,Domain,Range,ParallelInfoT>::
 apply (Domain& v, const Range& d)
 {
+    OPM_TIMEBLOCK(apply);
     Range& md = reorderD(d);
     Domain& mv = reorderV(v);
 
@@ -354,6 +359,7 @@ template<class Matrix, class Domain, class Range, class ParallelInfoT>
 void ParallelOverlappingILU0<Matrix,Domain,Range,ParallelInfoT>::
 update()
 {
+    OPM_TIMEBLOCK(update);
     // (For older DUNE versions the communicator might be
     // invalid if redistribution in AMG happened on the coarset level.
     // Therefore we check for nonzero size
@@ -373,8 +379,6 @@ update()
     int ilu_setup_successful = 1;
     std::string message;
     const int rank = comm_ ? comm_->communicator().rank() : 0;
-
-    std::unique_ptr<Matrix> ILU;
 
     if (redBlack_)
     {
@@ -405,17 +409,35 @@ update()
 
     try
     {
+        OPM_TIMEBLOCK(iluDecomposition);
         if (iluIteration_ == 0) {
             // create ILU-0 decomposition
             if (ordering_.empty())
             {
-                ILU = std::make_unique<Matrix>(*A_);
+                if (ILU_) {
+                    OPM_TIMEBLOCK(iluDecompositionMakeMatrix);
+                    // The ILU_ matrix is already a copy with the same
+                    // sparse structure as A_, but the values of A_ may
+                    // have changed, so we must copy all elements.
+                    for (size_t row = 0; row < A_->N(); ++row) {
+                        const auto& Arow = (*A_)[row];
+                        auto& ILUrow = (*ILU_)[row];
+                        auto Ait = Arow.begin();
+                        auto Iit = ILUrow.begin();
+                        for (; Ait != Arow.end(); ++Ait, ++Iit) {
+                            *Iit = *Ait;
+                        }
+                    }
+                } else {
+                    // First call, must duplicate matrix.
+                    ILU_ = std::make_unique<Matrix>(*A_);
+                }
             }
             else
             {
-                ILU = std::make_unique<Matrix>(A_->N(), A_->M(),
-                                               A_->nonzeroes(), Matrix::row_wise);
-                auto& newA = *ILU;
+                ILU_ = std::make_unique<Matrix>(A_->N(), A_->M(),
+                                                A_->nonzeroes(), Matrix::row_wise);
+                auto& newA = *ILU_;
                 // Create sparsity pattern
                 for (auto iter = newA.createbegin(), iend = newA.createend(); iter != iend; ++iter)
                 {
@@ -439,35 +461,35 @@ update()
             switch (milu_)
             {
             case MILU_VARIANT::MILU_1:
-                detail::milu0_decomposition ( *ILU);
+                detail::milu0_decomposition ( *ILU_);
                 break;
             case MILU_VARIANT::MILU_2:
-                detail::milu0_decomposition ( *ILU, detail::identityFunctor<typename Matrix::field_type>,
+                detail::milu0_decomposition ( *ILU_, detail::identityFunctor<typename Matrix::field_type>,
                                               detail::signFunctor<typename Matrix::field_type> );
                 break;
             case MILU_VARIANT::MILU_3:
-                detail::milu0_decomposition ( *ILU, detail::absFunctor<typename Matrix::field_type>,
+                detail::milu0_decomposition ( *ILU_, detail::absFunctor<typename Matrix::field_type>,
                                               detail::signFunctor<typename Matrix::field_type> );
                 break;
             case MILU_VARIANT::MILU_4:
-                detail::milu0_decomposition ( *ILU, detail::identityFunctor<typename Matrix::field_type>,
+                detail::milu0_decomposition ( *ILU_, detail::identityFunctor<typename Matrix::field_type>,
                                               detail::isPositiveFunctor<typename Matrix::field_type> );
                 break;
             default:
                 if (interiorSize_ == A_->N())
 #if DUNE_VERSION_LT(DUNE_GRID, 2, 8)
-                    bilu0_decomposition( *ILU );
+                    bilu0_decomposition( *ILU_ );
 #else
-                    Dune::ILU::blockILU0Decomposition( *ILU );
+                    Dune::ILU::blockILU0Decomposition( *ILU_ );
 #endif
                 else
-                    detail::ghost_last_bilu0_decomposition(*ILU, interiorSize_);
+                    detail::ghost_last_bilu0_decomposition(*ILU_, interiorSize_);
                 break;
             }
         }
         else {
             // create ILU-n decomposition
-            ILU = std::make_unique<Matrix>(A_->N(), A_->M(), Matrix::row_wise);
+            ILU_ = std::make_unique<Matrix>(A_->N(), A_->M(), Matrix::row_wise);
             std::unique_ptr<detail::Reorderer> reorderer, inverseReorderer;
             if (ordering_.empty())
             {
@@ -480,7 +502,7 @@ update()
                 inverseReorderer.reset(new detail::RealReorderer(inverseOrdering));
             }
 
-            milun_decomposition( *A_, iluIteration_, milu_, *ILU, *reorderer, *inverseReorderer );
+            milun_decomposition( *A_, iluIteration_, milu_, *ILU_, *reorderer, *inverseReorderer );
         }
     }
     catch (const Dune::MatrixBlockError& error)
@@ -501,7 +523,7 @@ update()
     }
 
     // store ILU in simple CRS format
-    detail::convertToCRS(*ILU, lower_, upper_, inv_);
+    detail::convertToCRS(*ILU_, lower_, upper_, inv_);
 }
 
 template<class Matrix, class Domain, class Range, class ParallelInfoT>

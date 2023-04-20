@@ -3,8 +3,12 @@
 #ifndef OPM_ADAPTIVE_TIME_STEPPING_EBOS_HPP
 #define OPM_ADAPTIVE_TIME_STEPPING_EBOS_HPP
 
-#include <iostream>
-#include <utility>
+#include <dune/common/version.hh>
+#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 8)
+#include <dune/istl/istlexception.hh>
+#else
+#include <dune/istl/ilu.hh>
+#endif
 
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/ErrorMacros.hpp>
@@ -17,11 +21,27 @@
 #include <opm/input/eclipse/Schedule/ScheduleState.hpp>
 #include <opm/input/eclipse/Units/Units.hpp>
 
+#include <opm/models/utils/basicproperties.hh>
+#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/propertysystem.hh>
+
+#include <opm/simulators/timestepping/AdaptiveSimulatorTimer.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
-#include <opm/simulators/timestepping/AdaptiveSimulatorTimer.hpp>
-#include <opm/simulators/timestepping/TimeStepControlInterface.hpp>
 #include <opm/simulators/timestepping/TimeStepControl.hpp>
+#include <opm/simulators/timestepping/TimeStepControlInterface.hpp>
+
+#include <algorithm>
+#include <cassert>
+#include <cmath>
+#include <memory>
+#include <ostream>
+#include <set>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace Opm::Properties {
 
@@ -233,10 +253,19 @@ struct MinTimeStepBasedOnNewtonIterations<TypeTag, TTag::FlowTimeSteppingParamet
 } // namespace Opm::Properties
 
 namespace Opm {
+
+struct StepReport;
+
+namespace detail {
+
+void logTimer(const AdaptiveSimulatorTimer& substepTimer);
+
+std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr);
+
+}
+
     // AdaptiveTimeStepping
     //---------------------
-    void logTimer(const AdaptiveSimulatorTimer& substepTimer);
-
     template<class TypeTag>
     class AdaptiveTimeSteppingEbos
     {
@@ -266,6 +295,8 @@ namespace Opm {
         }
 
     public:
+        AdaptiveTimeSteppingEbos() = default;
+
         //! \brief contructor taking parameter object
         AdaptiveTimeSteppingEbos(const UnitSystem& unitSystem,
                                  const bool terminalOutput = true)
@@ -408,11 +439,11 @@ namespace Opm {
                 // get current delta t
                 const double dt = substepTimer.currentStepLength() ;
                 if (timestepVerbose_) {
-                    logTimer(substepTimer);
+                    detail::logTimer(substepTimer);
                 }
 
                 SimulatorReportSingle substepReport;
-                std::string causeOfFailure = "";
+                std::string causeOfFailure;
                 try {
                     substepReport = solver.step(substepTimer);
                     if (solverVerbose_) {
@@ -586,7 +617,7 @@ namespace Opm {
                     } else {
                         // We are below the threshold, and will check if there are any
                         // wells we should close rather than chopping again.
-                        std::set<std::string> failing_wells = consistentlyFailingWells(solver.model().stepReports());
+                        std::set<std::string> failing_wells = detail::consistentlyFailingWells(solver.model().stepReports());
                         if (failing_wells.empty()) {
                             // Found no wells to close, chop the timestep as above.
                             chopTimestep();
@@ -656,6 +687,140 @@ namespace Opm {
             timestepAfterEvent_ = tuning.TMAXWC;
         }
 
+        template<class Serializer>
+        void serializeOp(Serializer& serializer)
+        {
+            serializer(timeStepControlType_);
+            switch (timeStepControlType_) {
+            case TimeStepControlType::HardCodedTimeStep:
+                allocAndSerialize<HardcodedTimeStepControl>(serializer);
+                break;
+            case TimeStepControlType::PIDAndIterationCount:
+                allocAndSerialize<PIDAndIterationCountTimeStepControl>(serializer);
+                break;
+            case TimeStepControlType::SimpleIterationCount:
+                allocAndSerialize<SimpleIterationCountTimeStepControl>(serializer);
+                break;
+            case TimeStepControlType::PID:
+                allocAndSerialize<PIDTimeStepControl>(serializer);
+                break;
+            }
+            serializer(restartFactor_);
+            serializer(growthFactor_);
+            serializer(maxGrowth_);
+            serializer(maxTimeStep_);
+            serializer(minTimeStep_);
+            serializer(ignoreConvergenceFailure_);
+            serializer(solverRestartMax_);
+            serializer(solverVerbose_);
+            serializer(timestepVerbose_);
+            serializer(suggestedNextTimestep_);
+            serializer(fullTimestepInitially_);
+            serializer(timestepAfterEvent_);
+            serializer(useNewtonIteration_);
+            serializer(minTimeStepBeforeShuttingProblematicWells_);
+        }
+
+        static AdaptiveTimeSteppingEbos<TypeTag> serializationTestObjectHardcoded()
+        {
+            return serializationTestObject_<HardcodedTimeStepControl>();
+        }
+
+        static AdaptiveTimeSteppingEbos<TypeTag> serializationTestObjectPID()
+        {
+            return serializationTestObject_<PIDTimeStepControl>();
+        }
+
+        static AdaptiveTimeSteppingEbos<TypeTag> serializationTestObjectPIDIt()
+        {
+            return serializationTestObject_<PIDAndIterationCountTimeStepControl>();
+        }
+
+        static AdaptiveTimeSteppingEbos<TypeTag> serializationTestObjectSimple()
+        {
+            return serializationTestObject_<SimpleIterationCountTimeStepControl>();
+        }
+
+        bool operator==(const AdaptiveTimeSteppingEbos<TypeTag>& rhs)
+        {
+            if (timeStepControlType_ != rhs.timeStepControlType_ ||
+                (timeStepControl_ && !rhs.timeStepControl_) ||
+                (!timeStepControl_ && rhs.timeStepControl_)) {
+                return false;
+            }
+
+            bool result = false;
+            switch (timeStepControlType_) {
+            case TimeStepControlType::HardCodedTimeStep:
+                result = castAndComp<HardcodedTimeStepControl>(rhs);
+                break;
+            case TimeStepControlType::PIDAndIterationCount:
+                result = castAndComp<PIDAndIterationCountTimeStepControl>(rhs);
+                break;
+            case TimeStepControlType::SimpleIterationCount:
+                result = castAndComp<SimpleIterationCountTimeStepControl>(rhs);
+                break;
+            case TimeStepControlType::PID:
+                result = castAndComp<PIDTimeStepControl>(rhs);
+                break;
+            }
+
+            return result &&
+                   this->restartFactor_ == rhs.restartFactor_ &&
+                   this->growthFactor_ == rhs.growthFactor_ &&
+                   this->maxGrowth_ == rhs.maxGrowth_ &&
+                   this->maxTimeStep_ == rhs.maxTimeStep_ &&
+                   this->minTimeStep_ == rhs.minTimeStep_ &&
+                   this->ignoreConvergenceFailure_ == rhs.ignoreConvergenceFailure_ &&
+                   this->solverRestartMax_== rhs.solverRestartMax_ &&
+                   this->solverVerbose_ == rhs.solverVerbose_ &&
+                   this->fullTimestepInitially_ == rhs.fullTimestepInitially_ &&
+                   this->timestepAfterEvent_ == rhs.timestepAfterEvent_ &&
+                   this->useNewtonIteration_ == rhs.useNewtonIteration_ &&
+                   this->minTimeStepBeforeShuttingProblematicWells_ ==
+                       rhs.minTimeStepBeforeShuttingProblematicWells_;
+        }
+
+    private:
+        template<class Controller>
+        static AdaptiveTimeSteppingEbos<TypeTag> serializationTestObject_()
+        {
+            AdaptiveTimeSteppingEbos<TypeTag> result;
+
+            result.restartFactor_ = 1.0;
+            result.growthFactor_ = 2.0;
+            result.maxGrowth_ = 3.0;
+            result.maxTimeStep_ = 4.0;
+            result.minTimeStep_ = 5.0;
+            result.ignoreConvergenceFailure_ = true;
+            result.solverRestartMax_ = 6;
+            result.solverVerbose_ = true;
+            result.timestepVerbose_ = true;
+            result.suggestedNextTimestep_ = 7.0;
+            result.fullTimestepInitially_ = true;
+            result.useNewtonIteration_ = true;
+            result.minTimeStepBeforeShuttingProblematicWells_ = 9.0;
+            result.timeStepControlType_ = Controller::Type;
+            result.timeStepControl_ = std::make_unique<Controller>(Controller::serializationTestObject());
+
+            return result;
+        }
+        template<class T, class Serializer>
+        void allocAndSerialize(Serializer& serializer)
+        {
+            if (!serializer.isSerializing()) {
+                timeStepControl_ = std::make_unique<T>();
+            }
+            serializer(*static_cast<T*>(timeStepControl_.get()));
+        }
+
+        template<class T>
+        bool castAndComp(const AdaptiveTimeSteppingEbos<TypeTag>& Rhs) const
+        {
+            const T* lhs = static_cast<const T*>(timeStepControl_.get());
+            const T* rhs = static_cast<const T*>(Rhs.timeStepControl_.get());
+            return *lhs == *rhs;
+        }
 
     protected:
         void init_(const UnitSystem& unitSystem)
@@ -665,13 +830,15 @@ namespace Opm {
 
             const double tol =  EWOMS_GET_PARAM(TypeTag, double, TimeStepControlTolerance); // 1e-1
             if (control == "pid") {
-                timeStepControl_ = TimeStepControlType(new PIDTimeStepControl(tol));
+                timeStepControl_ = std::make_unique<PIDTimeStepControl>(tol);
+                timeStepControlType_ = TimeStepControlType::PID;
             }
             else if (control == "pid+iteration") {
                 const int iterations =  EWOMS_GET_PARAM(TypeTag, int, TimeStepControlTargetIterations); // 30
                 const double decayDampingFactor = EWOMS_GET_PARAM(TypeTag, double, TimeStepControlDecayDampingFactor); // 1.0
                 const double growthDampingFactor = EWOMS_GET_PARAM(TypeTag, double, TimeStepControlGrowthDampingFactor); // 3.2
-                timeStepControl_ = TimeStepControlType(new PIDAndIterationCountTimeStepControl(iterations, decayDampingFactor, growthDampingFactor, tol));
+                timeStepControl_ = std::make_unique<PIDAndIterationCountTimeStepControl>(iterations, decayDampingFactor, growthDampingFactor, tol);
+                timeStepControlType_ = TimeStepControlType::PIDAndIterationCount;
             }
             else if (control == "pid+newtoniteration") {
                 const int iterations =  EWOMS_GET_PARAM(TypeTag, int, TimeStepControlTargetNewtonIterations); // 8
@@ -680,27 +847,30 @@ namespace Opm {
                 const double nonDimensionalMinTimeStepIterations = EWOMS_GET_PARAM(TypeTag, double, MinTimeStepBasedOnNewtonIterations); // 0.0 by default
                 // the min time step can be reduced by the newton iteration numbers
                 double minTimeStepReducedByIterations = unitSystem.to_si(UnitSystem::measure::time, nonDimensionalMinTimeStepIterations);
-                timeStepControl_ = TimeStepControlType(new PIDAndIterationCountTimeStepControl(iterations, decayDampingFactor,
-                                                                      growthDampingFactor, tol, minTimeStepReducedByIterations));
+                timeStepControl_ = std::make_unique<PIDAndIterationCountTimeStepControl>(iterations, decayDampingFactor,
+                                                                                         growthDampingFactor, tol, minTimeStepReducedByIterations);
+                timeStepControlType_ = TimeStepControlType::PIDAndIterationCount;
                 useNewtonIteration_ = true;
             }
             else if (control == "iterationcount") {
                 const int iterations =  EWOMS_GET_PARAM(TypeTag, int, TimeStepControlTargetIterations); // 30
                 const double decayrate = EWOMS_GET_PARAM(TypeTag, double, TimeStepControlDecayRate); // 0.75
                 const double growthrate = EWOMS_GET_PARAM(TypeTag, double, TimeStepControlGrowthRate); // 1.25
-                timeStepControl_ = TimeStepControlType(new SimpleIterationCountTimeStepControl(iterations, decayrate, growthrate));
+                timeStepControl_ = std::make_unique<SimpleIterationCountTimeStepControl>(iterations, decayrate, growthrate);
+                timeStepControlType_ = TimeStepControlType::SimpleIterationCount;
             }
             else if (control == "newtoniterationcount") {
                 const int iterations =  EWOMS_GET_PARAM(TypeTag, int, TimeStepControlTargetNewtonIterations); // 8
                 const double decayrate = EWOMS_GET_PARAM(TypeTag, double, TimeStepControlDecayRate); // 0.75
                 const double growthrate = EWOMS_GET_PARAM(TypeTag, double, TimeStepControlGrowthRate); // 1.25
-                timeStepControl_ = TimeStepControlType(new SimpleIterationCountTimeStepControl(iterations, decayrate, growthrate));
+                timeStepControl_ = std::make_unique<SimpleIterationCountTimeStepControl>(iterations, decayrate, growthrate);
                 useNewtonIteration_ = true;
+                timeStepControlType_ = TimeStepControlType::SimpleIterationCount;
             }
             else if (control == "hardcoded") {
                 const std::string filename = EWOMS_GET_PARAM(TypeTag, std::string, TimeStepControlFileName); // "timesteps"
-                timeStepControl_ = TimeStepControlType(new HardcodedTimeStepControl(filename));
-
+                timeStepControl_ = std::make_unique<HardcodedTimeStepControl>(filename);
+                timeStepControlType_ = TimeStepControlType::HardCodedTimeStep;
             }
             else
                 OPM_THROW(std::runtime_error,
@@ -710,61 +880,10 @@ namespace Opm {
             assert(growthFactor_ >= 1.0);
         }
 
-        template <class ProblemType>
-        std::set<std::string> consistentlyFailingWells(const std::vector<ProblemType>& sr)
-        {
-            // If there are wells that cause repeated failures, we
-            // close them, and restart the un-chopped timestep.
-            std::ostringstream msg;
-            msg << "    Excessive chopping detected in report step "
-                << sr.back().report_step << ", substep " << sr.back().current_step << "\n";
+        using TimeStepController = std::unique_ptr<TimeStepControlInterface>;
 
-            std::set<std::string> failing_wells;
-
-            // return empty set if no report exists
-            // well failures in assembly is not yet registred
-            if(sr.back().report.empty())
-                return failing_wells;
-
-            const auto& wfs = sr.back().report.back().wellFailures();
-            for (const auto& wf : wfs) {
-                msg << "        Well that failed: " << wf.wellName() << "\n";
-            }
-            msg.flush();
-            OpmLog::debug(msg.str());
-
-            // Check the last few step reports.
-            const int num_steps = 3;
-            const int rep_step = sr.back().report_step;
-            const int sub_step = sr.back().current_step;
-            const int sr_size = sr.size();
-            if (sr_size >= num_steps) {
-                for (const auto& wf : wfs) {
-                    failing_wells.insert(wf.wellName());
-                }
-                for (int s = 1; s < num_steps; ++s) {
-                    const auto& srep = sr[sr_size - 1 - s];
-                    // Report must be from same report step and substep, otherwise we have
-                    // not chopped/retried enough times on this step.
-                    if (srep.report_step != rep_step || srep.current_step != sub_step) {
-                        break;
-                    }
-                    // Get the failing wells for this step, that also failed all other steps.
-                    std::set<std::string> failing_wells_step;
-                    for (const auto& wf : srep.report.back().wellFailures()) {
-                        if (failing_wells.count(wf.wellName()) > 0) {
-                            failing_wells_step.insert(wf.wellName());
-                        }
-                    }
-                    failing_wells.swap(failing_wells_step);
-                }
-            }
-            return failing_wells;
-        }
-
-        typedef std::unique_ptr<TimeStepControlInterface> TimeStepControlType;
-
-        TimeStepControlType timeStepControl_; //!< time step control object
+        TimeStepControlType timeStepControlType_; //!< type of time step control object
+        TimeStepController timeStepControl_; //!< time step control object
         double restartFactor_;               //!< factor to multiply time step with when solver fails to converge
         double growthFactor_;                //!< factor to multiply time step when solver recovered from failed convergence
         double maxGrowth_;                   //!< factor that limits the maximum growth of a time step

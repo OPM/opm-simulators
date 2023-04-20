@@ -46,6 +46,8 @@
 #include <ebos/femcpgridcompat.hh>
 #endif // HAVE_DUNE_FEM
 
+#include <fmt/format.h>
+
 #include <algorithm>
 #include <cassert>
 #include <stdexcept>
@@ -218,6 +220,81 @@ configureThpresft_()
             for (size_t cartElemIdx : face)
                 cartElemFaultIdx_[cartElemIdx] = faultIdx;
     }
+}
+
+template<class Grid, class GridView, class ElementMapper, class Scalar>
+std::vector<Scalar>
+EclGenericThresholdPressure<Grid,GridView,ElementMapper,Scalar>::
+getRestartVector() const
+{
+    if (!enableThresholdPressure_)
+        return {};
+
+    std::vector<Scalar> result(numEquilRegions_ * numEquilRegions_, 0.0);
+    const auto& simConfig = eclState_.getSimulationConfig();
+    const auto& thpres = simConfig.getThresholdPressure();
+
+    std::size_t idx = 0;
+    for (unsigned j = 1; j <= numEquilRegions_; ++j) {
+        for (unsigned i = 1; i <= numEquilRegions_; ++i, ++idx) {
+            if (thpres.hasRegionBarrier(i, j)) {
+                if (thpres.hasThresholdPressure(i, j)) {
+                    result[idx] = thpres.getThresholdPressure(i, j);
+                } else {
+                    result[idx] = this->thpresDefault_[idx];
+                }
+            }
+        }
+    }
+
+    return result;
+}
+
+template<class Grid, class GridView, class ElementMapper, class Scalar>
+void
+EclGenericThresholdPressure<Grid,GridView,ElementMapper,Scalar>::
+logPressures()
+{
+    if (!enableThresholdPressure_)
+        return;
+
+    auto lineFormat = [this](unsigned i, unsigned j, double val)
+    {
+        const auto& units = eclState_.getUnits();
+        return fmt::format("{:4}{:>6}{:23}{:>6}{:24}{:>11.07}{:7}{}\n",
+                           " ", i,
+                           " ", j,
+                           " ", units.from_si(UnitSystem::measure::pressure, val),
+                           " ", units.name(UnitSystem::measure::pressure));
+    };
+    auto lineFormatS = [](auto s1, auto s2, auto s3)
+    {
+        return fmt::format("{:4}{:^16}{:13}{:^9}{:21}{:^18}\n",
+                           " ", s1, " ", s2, " ", s3);
+    };
+
+    std::string str = "\nLIST OF ALL NON-ZERO THRESHOLD PRESSURES\n"
+                      "----------------------------------------\n"
+                      "\n";
+    str += lineFormatS("FLOW FROM REGION", "TO REGION", "THRESHOLD PRESSURE");
+    str += lineFormatS(std::string(16, '-'), std::string(9, '-'), std::string(18, '-'));
+    const auto& simConfig = eclState_.getSimulationConfig();
+    const auto& thpres = simConfig.getThresholdPressure();
+
+    for (unsigned i = 1; i <= numEquilRegions_; ++i) {
+        for (unsigned j = (thpres.irreversible() ? 1 : i); j <= numEquilRegions_; ++j) {
+            if (thpres.hasRegionBarrier(i, j)) {
+                if (thpres.hasThresholdPressure(i, j)) {
+                    str += lineFormat(i, j, thpres.getThresholdPressure(j, i));
+                } else {
+                    std::size_t idx = (j - 1) * numEquilRegions_ + (i - 1);
+                    str += lineFormat(i, j, this->thpresDefault_[idx]);
+                }
+            }
+        }
+    }
+    str += lineFormatS(std::string(16, '-'), std::string(9, '-'), std::string(18, '-'));
+    OpmLog::note(str);
 }
 
 #if HAVE_DUNE_FEM

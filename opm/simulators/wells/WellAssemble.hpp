@@ -27,6 +27,7 @@
 #include <opm/core/props/BlackoilPhases.hpp>
 
 #include <opm/input/eclipse/Schedule/ScheduleTypes.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellEnums.hpp>
 
 #include <functional>
 
@@ -79,6 +80,8 @@ public:
 private:
     const WellInterfaceFluidSystem<FluidSystem>& well_;
 };
+
+
 
 }
 

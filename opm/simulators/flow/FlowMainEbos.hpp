@@ -22,29 +22,21 @@
 #ifndef OPM_FLOW_MAIN_EBOS_HEADER_INCLUDED
 #define OPM_FLOW_MAIN_EBOS_HEADER_INCLUDED
 
-
-#include <sys/utsname.h>
-
-#include <opm/simulators/flow/ConvergenceOutputConfiguration.hpp>
+#include <opm/simulators/flow/Banners.hpp>
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp>
-#include <opm/simulators/utils/ParallelFileMerger.hpp>
-#include <opm/simulators/utils/moduleVersion.hpp>
-#include <opm/simulators/utils/ParallelEclipseState.hpp>
-#include <flow/flow_ebos_blackoil.hpp>
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/IOConfig/IOConfig.hpp>
 #include <opm/input/eclipse/EclipseState/InitConfig/InitConfig.hpp>
-#include <opm/common/utility/String.hpp>
-
-#include <fmt/format.h>
-#include <filesystem>
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/misc/mpimanager.hh>
 #else
 #include <dune/common/parallel/mpihelper.hh>
 #endif
+
+#include <memory>
+#include <string_view>
 
 namespace Opm::Properties {
 
@@ -78,8 +70,20 @@ struct OutputInterval<TypeTag, TTag::EclFlowProblem> {
 
 } // namespace Opm::Properties
 
-namespace Opm
-{
+namespace Opm {
+namespace detail {
+
+void mergeParallelLogFiles(std::string_view output_dir,
+                           std::string_view deck_filename,
+                           bool enableLoggingFalloutWarning);
+
+void handleExtraConvergenceOutput(SimulatorReport& report,
+                                  std::string_view option,
+                                  std::string_view optionName,
+                                  std::string_view output_dir,
+                                  std::string_view base_name);
+
+}
 
     class Deck;
 
@@ -96,7 +100,7 @@ namespace Opm
         using Scalar = GetPropType<TypeTag, Properties::Scalar>;
         using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
-        typedef SimulatorFullyImplicitBlackoilEbos<TypeTag> Simulator;
+        using Simulator = SimulatorFullyImplicitBlackoilEbos<TypeTag>;
 
         FlowMainEbos(int argc, char **argv, bool output_cout, bool output_files )
             : argc_{argc}, argv_{argv},
@@ -274,45 +278,6 @@ namespace Opm
             return status;
         }
 
-        static void printBanner(Parallel::Communication comm)
-        {
-            const int lineLen = 70;
-            const std::string version = moduleVersionName();
-            const std::string banner = "This is flow "+version;
-            const int bannerPreLen = (lineLen - 2 - banner.size())/2;
-            const int bannerPostLen = bannerPreLen + (lineLen - 2 - banner.size())%2;
-            std::cout << "**********************************************************************\n";
-            std::cout << "*                                                                    *\n";
-            std::cout << "*" << std::string(bannerPreLen, ' ') << banner << std::string(bannerPostLen, ' ') << "*\n";
-            std::cout << "*                                                                    *\n";
-            std::cout << "* Flow is a simulator for fully implicit three-phase black-oil flow, *\n";
-            std::cout << "*             including solvent and polymer capabilities.            *\n";
-            std::cout << "*          For more information, see https://opm-project.org         *\n";
-            std::cout << "*                                                                    *\n";
-            std::cout << "**********************************************************************\n\n";
-
-            int threads = 1;
-
-#ifdef _OPENMP
-            // This function is called before the parallel OpenMP stuff gets initialized.
-            // That initialization happends after the deck is read and we want this message.
-            // Hence we duplicate the code of setupParallelism to get the number of threads.
-            if (getenv("OMP_NUM_THREADS"))
-                threads =  omp_get_max_threads();
-            else
-                threads = std::min(2, omp_get_max_threads());
-
-            const int input_threads = EWOMS_GET_PARAM(TypeTag, int, ThreadsPerProcess);
-
-            if (input_threads > 0)
-                threads = std::min(input_threads, omp_get_max_threads());
-#endif
-
-            int mpiSize = comm.size();
-
-            std::cout << "Using "<< mpiSize << " MPI processes with "<< threads <<" OMP threads on each \n\n";
-        }
-
         /// This is the main function of Flow.  It runs a complete simulation with the
         /// given grid and simulator classes, based on the user-specified command-line
         /// input.
@@ -340,51 +305,6 @@ namespace Opm
             SimulatorReport report = simulator_->finalize();
             runSimulatorAfterSim_(report);
             return report.success.exit_status;
-        }
-
-        // Print an ASCII-art header to the PRT and DEBUG files.
-        // \return Whether unkown keywords were seen during parsing.
-        static void printPRTHeader(bool output_cout)
-        {
-          if (output_cout) {
-              const std::string version = moduleVersion();
-              const double megabyte = 1024 * 1024;
-              unsigned num_cpu = std::thread::hardware_concurrency();
-              struct utsname arch;
-              const char* user = getlogin();
-              time_t now = std::time(0);
-              struct tm  tstruct;
-              char      tmstr[80];
-              tstruct = *localtime(&now);
-              strftime(tmstr, sizeof(tmstr), "%d-%m-%Y at %X", &tstruct);
-              const double mem_size = getTotalSystemMemory() / megabyte;
-              std::ostringstream ss;
-              ss << "\n\n\n";
-              ss << " ########  #          ######   #           #\n";
-              ss << " #         #         #      #   #         # \n";
-              ss << " #####     #         #      #    #   #   #  \n";
-              ss << " #         #         #      #     # # # #   \n";
-              ss << " #         #######    ######       #   #    \n\n";
-              ss << "Flow is a simulator for fully implicit three-phase black-oil flow,";
-              ss << " and is part of OPM.\nFor more information visit: https://opm-project.org \n\n";
-              ss << "Flow Version     =  " + version + "\n";
-              if (uname(&arch) == 0) {
-                 ss << "Machine name     =  " << arch.nodename << " (Number of logical cores: " << num_cpu;
-                 ss << ", Memory size: " << std::fixed << std::setprecision (2) << mem_size << " MB) \n";
-                 ss << "Operating system =  " << arch.sysname << " " << arch.machine << " (Kernel: " << arch.release;
-                 ss << ", " << arch.version << " )\n";
-                 ss << "Build time       =  " << compileTimestamp() << "\n";
-                 }
-              if (user) {
-                 ss << "User             =  " << user << std::endl;
-                 }
-              ss << "Simulation started on " << tmstr << " hrs\n";
-
-              ss << "Parameters used by Flow:\n";
-              Parameters::printValues<TypeTag>(ss);
-
-              OpmLog::note(ss.str());
-          }
         }
 
         EbosSimulator *getSimulatorPtr() {
@@ -464,8 +384,6 @@ namespace Opm
             ThreadManager::init();
         }
 
-
-
         void mergeParallelLogFiles()
         {
             // force closing of all log files.
@@ -475,30 +393,14 @@ namespace Opm
                 return;
             }
 
-            namespace fs = ::std::filesystem;
-            const std::string& output_dir = eclState().getIOConfig().getOutputDir();
-            fs::path output_path(output_dir);
-            fs::path deck_filename(EWOMS_GET_PARAM(TypeTag, std::string, EclDeckFileName));
-            std::string basename;
-            // Strip extension "." and ".DATA"
-            std::string extension = uppercase(deck_filename.extension().string());
-            if ( extension == ".DATA" || extension == "." )
-            {
-                basename = uppercase(deck_filename.stem().string());
-            }
-            else
-            {
-                basename = uppercase(deck_filename.filename().string());
-            }
-            std::for_each(fs::directory_iterator(output_path),
-                          fs::directory_iterator(),
-                          detail::ParallelFileMerger(output_path, basename,
-                                                     EWOMS_GET_PARAM(TypeTag, bool, EnableLoggingFalloutWarning)));
+            detail::mergeParallelLogFiles(eclState().getIOConfig().getOutputDir(),
+                                          EWOMS_GET_PARAM(TypeTag, std::string, EclDeckFileName),
+                                          EWOMS_GET_PARAM(TypeTag, bool, EnableLoggingFalloutWarning));
         }
 
         void setupEbosSimulator()
         {
-            ebosSimulator_.reset(new EbosSimulator(EclGenericVanguard::comm(), /*verbose=*/false));
+            ebosSimulator_ = std::make_unique<EbosSimulator>(EclGenericVanguard::comm(), /*verbose=*/false);
             ebosSimulator_->executionTimer().start();
             ebosSimulator_->model().applyInitialSolution();
 
@@ -585,27 +487,13 @@ namespace Opm
                 = omp_get_max_threads();
 #endif
 
-            std::ostringstream ss;
-            ss << "\n\n================    End of simulation     ===============\n\n";
-            ss << fmt::format("Number of MPI processes: {:9}\n", mpi_size_ );
-            ss << fmt::format("Threads per MPI process: {:9}\n", threads);
-            report.reportFullyImplicit(ss);
-            OpmLog::info(ss.str());
+            printFlowTrailer(mpi_size_, threads, report);
 
-            const auto extraConvOutput = ConvergenceOutputConfiguration {
-                EWOMS_GET_PARAM(TypeTag, std::string, OutputExtraConvergenceInfo),
-                R"(OutputExtraConvergenceInfo (--output-extra-convergence-info))"
-            };
-
-            if (extraConvOutput.want(ConvergenceOutputConfiguration::Option::Steps)) {
-                namespace fs = ::std::filesystem;
-
-                const auto infostep = fs::path { eclState().getIOConfig().getOutputDir() } /
-                    fs::path { eclState().getIOConfig().getBaseName() }.concat(".INFOSTEP");
-
-                std::ofstream os(infostep);
-                report.fullReports(os);
-            }
+            detail::handleExtraConvergenceOutput(report,
+                                                 EWOMS_GET_PARAM(TypeTag, std::string, OutputExtraConvergenceInfo),
+                                                 R"(OutputExtraConvergenceInfo (--output-extra-convergence-info))",
+                                                 eclState().getIOConfig().getOutputDir(),
+                                                 eclState().getIOConfig().getBaseName());
         }
 
         // Run the simulator.
@@ -658,16 +546,8 @@ namespace Opm
         void createSimulator()
         {
             // Create the simulator instance.
-            simulator_.reset(new Simulator(*ebosSimulator_));
+            simulator_ = std::make_unique<Simulator>(*ebosSimulator_);
         }
-
-        static unsigned long long getTotalSystemMemory()
-        {
-            long pages = sysconf(_SC_PHYS_PAGES);
-            long page_size = sysconf(_SC_PAGE_SIZE);
-            return pages * page_size;
-        }
-
 
         Grid& grid()
         { return ebosSimulator_->vanguard().grid(); }
@@ -684,6 +564,7 @@ namespace Opm
         bool output_cout_;
         bool output_files_;
     };
+
 } // namespace Opm
 
 #endif // OPM_FLOW_MAIN_EBOS_HEADER_INCLUDED

@@ -45,6 +45,12 @@ template<class TypeTag, class MyTypeTag>
 struct LinearSolverReduction {
     using type = UndefinedProperty;
 };
+
+template<class TypeTag, class MyTypeTag>
+struct RelaxedLinearSolverReduction {
+    using type = UndefinedProperty;
+};
+    
 template<class TypeTag, class MyTypeTag>
 struct IluRelaxation {
     using type = UndefinedProperty;
@@ -125,6 +131,11 @@ struct LinearSolverReduction<TypeTag, TTag::FlowIstlSolverParams> {
     using type = GetPropType<TypeTag, Scalar>;
     static constexpr type value = 1e-2;
 };
+template<class TypeTag>
+struct RelaxedLinearSolverReduction<TypeTag, TTag::FlowIstlSolverParams> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e-2;
+};    
 template<class TypeTag>
 struct IluRelaxation<TypeTag, TTag::FlowIstlSolverParams> {
     using type = GetPropType<TypeTag, Scalar>;
@@ -217,6 +228,7 @@ namespace Opm
     struct FlowLinearSolverParameters
     {
         double linear_solver_reduction_;
+        double relaxed_linear_solver_reduction_;
         double ilu_relaxation_;
         int    linear_solver_maxiter_;
         int    linear_solver_restart_;
@@ -242,6 +254,7 @@ namespace Opm
         {
             // TODO: these parameters have undocumented non-trivial dependencies
             linear_solver_reduction_ = EWOMS_GET_PARAM(TypeTag, double, LinearSolverReduction);
+            relaxed_linear_solver_reduction_ = EWOMS_GET_PARAM(TypeTag, double, RelaxedLinearSolverReduction);
             ilu_relaxation_ = EWOMS_GET_PARAM(TypeTag, double, IluRelaxation);
             linear_solver_maxiter_ = EWOMS_GET_PARAM(TypeTag, int, LinearSolverMaxIter);
             linear_solver_restart_ = EWOMS_GET_PARAM(TypeTag, int, LinearSolverRestart);
@@ -271,7 +284,8 @@ namespace Opm
         template <class TypeTag>
         static void registerParameters()
         {
-            EWOMS_REGISTER_PARAM(TypeTag, double, LinearSolverReduction, "The minimum reduction of the residual which the linear solver must achieve");
+            EWOMS_REGISTER_PARAM(TypeTag, double, LinearSolverReduction, "The minimum reduction of the residual which the linear solver must achieve should try to achive");
+            EWOMS_REGISTER_PARAM(TypeTag, double, RelaxedLinearSolverReduction, "The minimum reduction of the residual which the linear solver need to achieve for the solution to be accepted");
             EWOMS_REGISTER_PARAM(TypeTag, double, IluRelaxation, "The relaxation factor of the linear solver's ILU preconditioner");
             EWOMS_REGISTER_PARAM(TypeTag, int, LinearSolverMaxIter, "The maximum number of iterations of the linear solver");
             EWOMS_REGISTER_PARAM(TypeTag, int, LinearSolverRestart, "The number of iterations after which GMRES is restarted");
@@ -299,6 +313,7 @@ namespace Opm
         {
             newton_use_gmres_        = false;
             linear_solver_reduction_ = 1e-2;
+            relaxed_linear_solver_reduction_ = 1e-2;
             linear_solver_maxiter_   = 150;
             linear_solver_restart_   = 40;
             linear_solver_verbosity_ = 0;

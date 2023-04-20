@@ -74,6 +74,11 @@ public:
                       const Schedule& schedule,
                       const GridView& gridView);
 
+
+    static EclGenericProblem serializationTestObject(const EclipseState& eclState,
+                                                     const Schedule& schedule,
+                                                     const GridView& gridView);
+
     /*!
      * \copydoc FvBaseProblem::helpPreamble
      */
@@ -132,6 +137,17 @@ public:
      */
     Scalar referencePorosity(unsigned elementIdx, unsigned timeIdx) const
     { return referencePorosity_[timeIdx][elementIdx]; }
+
+
+    /*!
+     * \brief Returns the rockFraction of an element
+     *
+     * Usually 1 - porosity, but if pvmult is used to modify porosity
+     * we will apply the same multiplier to the rock fraction
+     * i.e. pvmult*(1 - porosity) and thus interpret multpv as a volume
+     * multiplier. This is to avoid negative rock volume for pvmult*porosity > 1
+     */
+    Scalar rockFraction(unsigned elementIdx, unsigned timeIdx) const;
 
     /*!
      * \brief Sets the porosity of an element
@@ -257,6 +273,32 @@ public:
 
     bool vapparsActive(int episodeIdx) const;
 
+    bool operator==(const EclGenericProblem& rhs) const;
+
+    template<class Serializer>
+    void serializeOp(Serializer& serializer)
+    {
+        serializer(maxOilSaturation_);
+        serializer(maxPolymerAdsorption_);
+        serializer(maxWaterSaturation_);
+        serializer(minOilPressure_);
+        serializer(overburdenPressure_);
+        serializer(polymerConcentration_);
+        serializer(polymerMoleWeight_);
+        serializer(solventSaturation_);
+        serializer(microbialConcentration_);
+        serializer(oxygenConcentration_);
+        serializer(ureaConcentration_);
+        serializer(biofilmConcentration_);
+        serializer(calciteConcentration_);
+        serializer(lastRv_);
+        serializer(maxDRv_);
+        serializer(convectiveDrs_);
+        serializer(lastRs_);
+        serializer(maxDRs_);
+        serializer(dRsDtOnlyFreeGas_);
+    }
+
 protected:
     bool drsdtActive_(int episodeIdx) const;
     bool drvdtActive_(int episodeIdx) const;
@@ -305,6 +347,7 @@ protected:
     void updateMiscnum_();
     void updatePlmixnum_();
     void updateKrnum_();
+    void updateImbnum_();
 
     const EclipseState& eclState_;
     const Schedule& schedule_;
@@ -320,6 +363,9 @@ protected:
     std::vector<unsigned short> krnumx_;
     std::vector<unsigned short> krnumy_;
     std::vector<unsigned short> krnumz_;
+    std::vector<unsigned short> imbnumx_;
+    std::vector<unsigned short> imbnumy_;
+    std::vector<unsigned short> imbnumz_;
 
     std::vector<RockParams> rockParams_;
     std::vector<unsigned short> rockTableIdx_;

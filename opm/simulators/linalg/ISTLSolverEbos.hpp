@@ -28,6 +28,7 @@
 
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
+#include <opm/common/TimingMacros.hpp>
 
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/common/multiphasebaseproperties.hh>
@@ -148,6 +149,8 @@ struct BdaSolverInfo
              Vector& x,
              Dune::InverseOperatorResult& result);
 
+  bool gpuActive();
+
   int numJacobiBlocks_ = 0;
 
 private:
@@ -237,6 +240,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
               converged_(false),
               matrix_()
         {
+            OPM_TIMEBLOCK(IstlSolverEbos);
             const bool on_io_rank = (simulator.gridView().comm().rank() == 0);
 #if HAVE_MPI
             comm_.reset( new CommunicationType( simulator_.vanguard().grid().comm() ) );
@@ -311,6 +315,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
 
         void prepare(const SparseMatrixAdapter& M, Vector& b)
         {
+            OPM_TIMEBLOCK(istlSolverEbosPrepare);        
             static bool firstcall = true;
 #if HAVE_MPI
             if (firstcall) {
@@ -348,7 +353,14 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             if (isParallel() && prm_.get<std::string>("preconditioner.type") != "ParOverILU0") {
                 detail::makeOverlapRowsInvalid(getMatrix(), overlapRows_);
             }
+#if COMPILE_BDA_BRIDGE
+            if(!bdaBridge->gpuActive()){
+                prepareFlexibleSolver();
+            }
+#else
             prepareFlexibleSolver();
+#endif
+
             firstcall = false;
         }
 
@@ -370,6 +382,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
 
         bool solve(Vector& x)
         {
+            OPM_TIMEBLOCK(istlSolverEbosSolve);        
             calls_ += 1;
             // Write linear system if asked for.
             const int verbosity = prm_.get<int>("verbosity", 0);
@@ -396,6 +409,12 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                                   x, result))
 #endif
             {
+                OPM_TIMEBLOCK(flexibleSolverApply);
+#if COMPILE_BDA_BRIDGE
+                if(bdaBridge->gpuActive()){
+                    prepareFlexibleSolver();
+                }
+#endif
                 assert(flexibleSolver_.solver_);
                 flexibleSolver_.solver_->apply(x, *rhs_, result);
             }
@@ -429,9 +448,17 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             // store number of iterations
             iterations_ = result.iterations;
             converged_ = result.converged;
-
+            if(!converged_){
+                if(result.reduction < parameters_.relaxed_linear_solver_reduction_){
+                    std::stringstream ss;
+                    ss<< "Full linear solver tolerance not achived. The reduction is:" << result.reduction
+                      << " after " << result.iterations << " iterations ";
+                    OpmLog::warning(ss.str());
+                    converged_ = true;
+                }
+            }
             // Check for failure of linear solver.
-            if (!parameters_.ignoreConvergenceFailure_ && !result.converged) {
+            if (!parameters_.ignoreConvergenceFailure_ && !converged_) {
                 const std::string msg("Convergence failure for linear solver.");
                 OPM_THROW_NOLOG(NumericalProblem, msg);
             }
@@ -448,7 +475,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
 
         void prepareFlexibleSolver()
         {
-
+            OPM_TIMEBLOCK(flexibleSolverPrepare);
             if (shouldCreateSolver()) {
                 std::function<Vector()> trueFunc =
                     [this]
@@ -460,7 +487,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                     auto wellOp = std::make_unique<WellModelOperator>(simulator_.problem().wellModel());
                     flexibleSolver_.wellOperator_ = std::move(wellOp);
                 }
-
+                OPM_TIMEBLOCK(flexibleSolverCreate);
                 flexibleSolver_.create(getMatrix(),
                                        isParallel(),
                                        prm_,
@@ -470,6 +497,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             }
             else
             {
+                OPM_TIMEBLOCK(flexibleSolverUpdate);        
                 flexibleSolver_.pre_->update();
             }
         }
@@ -527,6 +555,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         // conservation equations, ignoring all other terms.
         Vector getTrueImpesWeights(int pressureVarIndex) const
         {
+            OPM_TIMEBLOCK(getTrueImpesWeights);
             Vector weights(rhs_->size());
             ElementContext elemCtx(simulator_);
             Amg::getTrueImpesWeights(pressureVarIndex, weights,

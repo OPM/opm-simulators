@@ -22,7 +22,6 @@
 
 #include <opm/simulators/linalg/MILU.hpp>
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
-#include <dune/common/version.hh>
 #include <dune/istl/paamg/smoother.hh>
 
 #include <cstddef>
@@ -92,11 +91,7 @@ struct ConstructionTraits<Opm::ParallelOverlappingILU0<Matrix,Domain,Range,Paral
     using T = Opm::ParallelOverlappingILU0<Matrix,Domain,Range,ParallelInfo>;
     using Arguments = DefaultParallelConstructionArgs<T,ParallelInfo>;
 
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
     using ParallelOverlappingILU0Pointer = std::shared_ptr<T>;
-#else
-    using ParallelOverlappingILU0Pointer = T*;
-#endif
 
     static inline ParallelOverlappingILU0Pointer construct(Arguments& args)
     {
@@ -107,15 +102,6 @@ struct ConstructionTraits<Opm::ParallelOverlappingILU0<Matrix,Domain,Range,Paral
                       args.getArgs().relaxationFactor,
                       args.getArgs().getMilu()) );
     }
-
-#if ! DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
-    // this method is not needed anymore in 2.7 since std::shared_ptr is used
-    static inline void deconstruct(T* bp)
-    {
-        delete bp;
-    }
-#endif
-
 };
 
 } // end namespace Amg
@@ -342,6 +328,7 @@ protected:
     void reorderBack(const Range& reorderedV, Range& v);
 
     //! \brief The ILU0 decomposition of the matrix.
+    std::unique_ptr<Matrix> ILU_;
     CRS lower_;
     CRS upper_;
     std::vector< block_type > inv_;

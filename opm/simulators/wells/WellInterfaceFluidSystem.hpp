@@ -109,7 +109,8 @@ protected:
                                  const GroupState& group_state,
                                  const Schedule& schedule,
                                  const SummaryState& summaryState,
-                                 double efficiencyFactor) const;
+                                 double efficiencyFactor,
+                                 DeferredLogger& deferred_logger) const;
 
     // For the conversion between the surface volume rate and reservoir voidage rate
     const RateConverterType& rateConverter_;

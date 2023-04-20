@@ -224,6 +224,7 @@ computeBhpAtThpLimitInj(const std::function<std::vector<double>(const double)>& 
 }
 
 void WellBhpThpCalculator::updateThp(const double rho,
+                                     const bool stop_or_zero_rate_target,
                                      const std::function<double()>& alq_value,
                                      const std::array<unsigned,3>& active,
                                      WellState& well_state,
@@ -235,7 +236,7 @@ void WellBhpThpCalculator::updateThp(const double rho,
     auto& ws = well_state.well(well_.indexOfWell());
 
     // When there is no vaild VFP table provided, we set the thp to be zero.
-    if (!well_.isVFPActive(deferred_logger) || well_.wellIsStopped()) {
+    if (!well_.isVFPActive(deferred_logger) || stop_or_zero_rate_target) {
         ws.thp = 0;
         return;
     }
@@ -738,7 +739,7 @@ bruteForceBracket(const std::function<double(const double)>& eq,
     bool finding_bracket = false;
     low = range[0];
     high = range[1];
-    const int sample_number = 100;
+    const int sample_number = 200;
     const double interval = (high - low) / sample_number;
     double eq_low = eq(low);
     double eq_high;

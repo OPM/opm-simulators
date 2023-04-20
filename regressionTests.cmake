@@ -149,6 +149,21 @@ add_test_compareECLFiles(CASENAME spe1_radial
                            REL_TOL ${rel_tol}
                            DIR radial_grid)
 
+add_test_compareECLFiles(CASENAME jfunc_01
+                         FILENAME JFUNC-01
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR jfunc
+                         TEST_ARGS --enable-tuning=true)
+
+add_test_compareECLFiles(CASENAME pinch_nopinch_1x1x10
+                         FILENAME PINCH10_NOPINCH
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR pinch)
+
 add_test_compareECLFiles(CASENAME ctaquifer_2d_oilwater
                          FILENAME 2D_OW_CTAQUIFER
                          SIMULATOR flow
@@ -178,6 +193,13 @@ add_test_compareECLFiles(CASENAME numerical_aquifer_3d_1aqu
                          REL_TOL ${rel_tol}
                          DIR aquifer-num
                          TEST_ARGS --tolerance-cnv=0.00003 --time-step-control=pid --linear-solver=cpr_trueimpes)
+
+add_test_compareECLFiles(CASENAME aquflux_01
+                         FILENAME AQUFLUX-01
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR aquifers)
 
 add_test_compareECLFiles(CASENAME spe3
                          FILENAME SPE3CASE1
@@ -394,8 +416,22 @@ add_test_compareECLFiles(CASENAME pinch_multz_all
                          REL_TOL ${rel_tol}
                          DIR pinch)
 
+add_test_compareECLFiles(CASENAME pinch_multzm_all
+                         FILENAME PINCH_MULTZ-_ALL
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR pinch)
+
 add_test_compareECLFiles(CASENAME pinch_multz_all_barrier
                          FILENAME PINCH_MULTZ_ALL_BARRIER
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR pinch)
+
+add_test_compareECLFiles(CASENAME pinch_multzm_all_barrier
+                         FILENAME PINCH_MULTZ-_ALL_BARRIER
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
@@ -793,13 +829,6 @@ add_test_compareECLFiles(CASENAME 3d_tran_operator
                          DIR parallel_fieldprops)
 
 
-add_test_compareECLFiles(CASENAME actionx_gconinje
-                         FILENAME ACTIONX_GCONINJE
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR actionx)
-
 add_test_compareECLFiles(CASENAME actionx_gconprod
                          FILENAME ACTIONX_GCONPROD
                          SIMULATOR flow
@@ -807,13 +836,6 @@ add_test_compareECLFiles(CASENAME actionx_gconprod
                          REL_TOL ${rel_tol}
                          DIR actionx)
 
-
-add_test_compareECLFiles(CASENAME actionx_wconinje
-                         FILENAME ACTIONX_WCONINJE
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR actionx)
 
 add_test_compareECLFiles(CASENAME actionx_wefac
                          FILENAME ACTIONX_WEFAC

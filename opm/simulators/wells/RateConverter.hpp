@@ -27,14 +27,13 @@
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/RegionAttributeHelpers.hpp>
 
+#include <opm/simulators/utils/ParallelCommunication.hpp>
+
 #include <dune/grid/common/gridenums.hh>
 #include <dune/grid/common/rangegenerators.hh>
 
-#include <algorithm>
-#include <cmath>
-#include <memory>
-#include <stdexcept>
-#include <type_traits>
+#include <array>
+#include <cassert>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -106,7 +105,6 @@ namespace Opm {
                     ra.saltConcentration = 0.0;
                     ra.rsw = 0.0;
                     ra.rvw = 0.0;
-
                 }
 
                 // quantities for pore volume average
@@ -202,51 +200,9 @@ namespace Opm {
 
                 OPM_END_PARALLEL_TRY_CATCH("SurfaceToReservoirVoidage::defineState() failed: ", simulator.vanguard().grid().comm());
 
-                for (const auto& reg : rmap_.activeRegions()) {
-                      auto& ra = attr_.attributes(reg);
-                      const double hpv_sum = comm.sum(attributes_hpv[reg].pv);
-                      // TODO: should we have some epsilon here instead of zero?
-                      if (hpv_sum > 0.) {
-                          const auto& attri_hpv = attributes_hpv[reg];
-                          const double p_hpv_sum = comm.sum(attri_hpv.pressure);
-                          const double T_hpv_sum = comm.sum(attri_hpv.temperature);
-                          const double rs_hpv_sum = comm.sum(attri_hpv.rs);
-                          const double rv_hpv_sum = comm.sum(attri_hpv.rv);
-                          const double sc_hpv_sum = comm.sum(attri_hpv.saltConcentration);
-                          const double rsw_hpv_sum = comm.sum(attri_hpv.rsw);
-                          const double rvw_hpv_sum = comm.sum(attri_hpv.rvw);
-
-                          ra.pressure = p_hpv_sum / hpv_sum;
-                          ra.temperature = T_hpv_sum / hpv_sum;
-                          ra.rs = rs_hpv_sum / hpv_sum;
-                          ra.rv = rv_hpv_sum / hpv_sum;
-                          ra.rsw = rsw_hpv_sum / hpv_sum;
-                          ra.rvw = rvw_hpv_sum / hpv_sum;
-                          ra.pv = hpv_sum;
-                          ra.saltConcentration = sc_hpv_sum / hpv_sum;
-                      } else {
-                          // using the pore volume to do the averaging
-                          const auto& attri_pv = attributes_pv[reg];
-                          const double pv_sum = comm.sum(attri_pv.pv);
-                          assert(pv_sum > 0.);
-                          const double p_pv_sum = comm.sum(attri_pv.pressure);
-                          const double T_pv_sum = comm.sum(attri_pv.temperature);
-                          const double rs_pv_sum = comm.sum(attri_pv.rs);
-                          const double rv_pv_sum = comm.sum(attri_pv.rv);
-                          const double rsw_pv_sum = comm.sum(attri_pv.rsw);
-                          const double rvw_pv_sum = comm.sum(attri_pv.rvw);
-                          const double sc_pv_sum = comm.sum(attri_pv.saltConcentration);
-
-                          ra.pressure = p_pv_sum / pv_sum;
-                          ra.temperature = T_pv_sum / pv_sum;
-                          ra.rs = rs_pv_sum / pv_sum;
-                          ra.rv = rv_pv_sum / pv_sum;
-                          ra.rsw = rsw_pv_sum / pv_sum;
-                          ra.rvw = rvw_pv_sum / pv_sum;
-                          ra.pv = pv_sum;
-                          ra.saltConcentration = sc_pv_sum / pv_sum;
-                      }
-                }
+                this->sumRates(attributes_hpv,
+                               attributes_pv,
+                               comm);
             }
 
             /**
@@ -254,7 +210,7 @@ namespace Opm {
              *
              * Integral type.
              */
-            typedef typename RegionMapping<Region>::RegionId RegionId;
+            using RegionId = typename RegionMapping<Region>::RegionId;
 
             /**
              * Compute coefficients for surface-to-reservoir voidage
@@ -285,120 +241,27 @@ namespace Opm {
              */
             template <class Coeff>
             void
-            calcCoeff(const RegionId r, const int pvtRegionIdx, Coeff& coeff) const
-            {
-                const auto& pu = phaseUsage_;
-                const auto& ra = attr_.attributes(r);
-                const double p = ra.pressure;
-                const double T = ra.temperature;
-                const double saltConcentration = ra.saltConcentration;
+            calcCoeff(const RegionId r, const int pvtRegionIdx, Coeff& coeff) const;
 
-                const int   iw = RegionAttributeHelpers::PhasePos::water(pu);
-                const int   io = RegionAttributeHelpers::PhasePos::oil  (pu);
-                const int   ig = RegionAttributeHelpers::PhasePos::gas  (pu);
-
-                std::fill(& coeff[0], & coeff[0] + phaseUsage_.num_phases, 0.0);
-
-                // Actual Rsw and Rvw:
-                double Rsw = ra.rsw;
-                double Rvw = ra.rvw;
-                // Determinant of 'R' matrix
-                const double detRw = 1.0 - (Rsw * Rvw);
-
-                if (RegionAttributeHelpers::PhaseUsed::water(pu)) {
-                    // q[w]_r = 1/(bw * (1 - rsw*rvw)) * (q[w]_s - rvw*q[g]_s)
-
-                    const double bw = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rsw, saltConcentration);
-
-                    const double den = bw * detRw;
-
-                    coeff[iw] += 1.0 / den;
-
-                    if (RegionAttributeHelpers::PhaseUsed::gas(pu)) {
-                        coeff[ig] -= ra.rvw / den;
-                    }
-                }
-
-                // Actual Rs and Rv:
-                double Rs = ra.rs;
-                double Rv = ra.rv;
-
-                // Determinant of 'R' matrix
-                const double detR = 1.0 - (Rs * Rv);
-
-                // Currently we only support either gas in water or gas in oil
-                // not both
-                if(detR != 1 && detRw != 1 ) {
-                    std::string msg = "only support " + std::to_string(detR) + " " + std::to_string(detR);
-                    throw(msg);
-                }
-
-                if (RegionAttributeHelpers::PhaseUsed::oil(pu)) {
-                    // q[o]_r = 1/(bo * (1 - rs*rv)) * (q[o]_s - rv*q[g]_s)
-
-                    const double bo = FluidSystem::oilPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rs);
-                    const double den = bo * detR;
-
-                    coeff[io] += 1.0 / den;
-
-                    if (RegionAttributeHelpers::PhaseUsed::gas(pu)) {
-                        coeff[ig] -= ra.rv / den;
-                    }
-                }
-
-                if (RegionAttributeHelpers::PhaseUsed::gas(pu)) {
-                    // q[g]_r = 1/(bg * (1 - rs*rv)) * (q[g]_s - rs*q[o]_s)
-                    const double bg  = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rv, Rvw);
-                    if (FluidSystem::enableDissolvedGasInWater()) {
-                        const double denw = bg * detRw;
-                        coeff[ig] += 1.0 / denw;
-                        if (RegionAttributeHelpers::PhaseUsed::water(pu)) {
-                           coeff[iw] -= ra.rsw / denw;
-                        }
-                    } else {
-                        const double den = bg * detR;
-                        coeff[ig] += 1.0 / den;
-                        if (RegionAttributeHelpers::PhaseUsed::oil(pu)) {
-                            coeff[io] -= ra.rs / den;
-                        }
-                    }
-                }
-            }
+            template <class Coeff , class Rates>
+            void
+            calcCoeff(const RegionId r, const int pvtRegionIdx, const Rates& surface_rates, Coeff& coeff) const;
 
             template <class Coeff>
             void
-            calcInjCoeff(const RegionId r, const int pvtRegionIdx, Coeff& coeff) const
-            {
-                const auto& pu = phaseUsage_;
-                const auto& ra = attr_.attributes(r);
-                const double p = ra.pressure;
-                const double T = ra.temperature;
-                const double saltConcentration = ra.saltConcentration;
+            calcCoeff(  const int pvtRegionIdx,
+                        const double        p,
+                        const double        rs,
+                        const double        rv,
+                        const double        rsw,
+                        const double        rvw,
+                        const double        T,
+                        const double saltConcentration,
+                        Coeff& coeff) const;
 
-                const int   iw = RegionAttributeHelpers::PhasePos::water(pu);
-                const int   io = RegionAttributeHelpers::PhasePos::oil  (pu);
-                const int   ig = RegionAttributeHelpers::PhasePos::gas  (pu);
-
-                std::fill(& coeff[0], & coeff[0] + phaseUsage_.num_phases, 0.0);
-
-                if (RegionAttributeHelpers::PhaseUsed::water(pu)) {
-                    // q[w]_r = q[w]_s / bw
-
-                    const double bw = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, 0.0, saltConcentration);
-
-                    coeff[iw] = 1.0 / bw;
-                }
-
-                if (RegionAttributeHelpers::PhaseUsed::oil(pu)) {
-                    const double bo = FluidSystem::oilPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, 0.0);
-                    coeff[io] += 1.0 / bo;
-                }
-
-                if (RegionAttributeHelpers::PhaseUsed::gas(pu)) {
-                    const double bg = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, 0.0, 0.0);
-                    coeff[ig] += 1.0 / bg;
-                }
-            }
+            template <class Coeff>
+            void
+            calcInjCoeff(const RegionId r, const int pvtRegionIdx, Coeff& coeff) const;
 
             /**
              * Convert surface volume flow rates to reservoir voidage flow
@@ -426,18 +289,7 @@ namespace Opm {
             void calcReservoirVoidageRates(const RegionId r,
                                            const int      pvtRegionIdx,
                                            const Rates&   surface_rates,
-                                           Rates&         voidage_rates) const
-            {
-                const auto& ra = this->attr_.attributes(r);
-
-                this->calcReservoirVoidageRates(pvtRegionIdx,
-                                                ra.pressure, ra.rs, ra.rv, 
-                                                ra.rsw, ra.rvw, 
-                                                ra.temperature,
-                                                ra.saltConcentration,
-                                                surface_rates,
-                                                voidage_rates);
-            }
+                                           Rates&         voidage_rates) const;
 
             /**
              * Convert surface volume flow rates to reservoir voidage flow
@@ -483,96 +335,13 @@ namespace Opm {
                                            const double        T,
                                            const double        saltConcentration,
                                            const SurfaceRates& surface_rates,
-                                           VoidageRates&       voidage_rates) const
-            {
-                const auto& pu = this->phaseUsage_;
-                const auto  iw = RegionAttributeHelpers::PhasePos::water(pu);
-                const auto  io = RegionAttributeHelpers::PhasePos::oil  (pu);
-                const auto  ig = RegionAttributeHelpers::PhasePos::gas  (pu);
-
-                const auto [Rs, Rv] = this->
-                    dissolvedVaporisedRatio(io, ig, rs, rv, surface_rates);
-
-                const auto [Rsw, Rvw] = this->
-                    dissolvedVaporisedRatio(iw, ig, rsw, rvw, surface_rates);
-
-
-                std::fill_n(&voidage_rates[0], pu.num_phases, 0.0);
-
-
-                // Determinant of 'R' matrix
-                const auto detRw = 1.0 - (Rsw * Rvw);
-
-                if (RegionAttributeHelpers::PhaseUsed::water(pu)) {
-                    // q[w]_r = 1/(bw * (1 - rsw*rvw)) * (q[w]_s - rvw*q[g]_s)
-                    voidage_rates[iw] = surface_rates[iw];
-
-                    const auto bw = FluidSystem::waterPvt()
-                        .inverseFormationVolumeFactor(pvtRegionIdx, T, p,
-                                                      Rsw,
-                                                      saltConcentration);
-
-                    if (RegionAttributeHelpers::PhaseUsed::gas(pu)) {
-                        voidage_rates[iw] -= Rvw * surface_rates[ig];
-                    }
-                    voidage_rates[iw] /= bw * detRw;
-                }
-
-                // Determinant of 'R' matrix
-                const auto detR = 1.0 - (Rs * Rv);
-
-                if (RegionAttributeHelpers::PhaseUsed::oil(pu)) {
-                    // q[o]_r = 1/(bo * (1 - rs*rv)) * (q[o]_s - rv*q[g]_s)
-                    voidage_rates[io] = surface_rates[io];
-                    if (RegionAttributeHelpers::PhaseUsed::gas(pu)) {
-                        voidage_rates[io] -= Rv * surface_rates[ig];
-                    }
-
-                    const auto bo = FluidSystem::oilPvt()
-                        .inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rs);
-
-                    voidage_rates[io] /= bo * detR;
-                }
-
-                // we only support either gas in water
-                // or gas in oil
-                if(detR != 1 && detRw != 1 ) {
-                    std::string msg = "only support " + std::to_string(detR) + " " + std::to_string(detR);
-                    throw(msg);
-                }
-                if (RegionAttributeHelpers::PhaseUsed::gas(pu)) {
-                    // q[g]_r = 1/(bg * (1 - rs*rv)) * (q[g]_s - rs*q[o]_s)
-                    voidage_rates[ig] = surface_rates[ig];
-                    if (RegionAttributeHelpers::PhaseUsed::oil(pu)) {
-                        voidage_rates[ig] -= Rs * surface_rates[io];
-                    }
-                    if (RegionAttributeHelpers::PhaseUsed::water(pu)) {
-                        voidage_rates[ig] -= Rsw * surface_rates[iw];
-                    }
-
-                    const auto bg = FluidSystem::gasPvt()
-                        .inverseFormationVolumeFactor(pvtRegionIdx, T, p,
-                                                      Rv, Rvw);
-
-                    // we only support either gas in water or gas in oil
-                    if (detRw == 1) {
-                        voidage_rates[ig] /= bg * detR;
-                    } else { 
-                        voidage_rates[ig] /= bg * detRw;
-                    }
-                }
-            }
+                                           VoidageRates&       voidage_rates) const;
 
             template <class Rates>
             std::pair<double, double>
             inferDissolvedVaporisedRatio(const double rsMax,
                                          const double rvMax,
-                                         const Rates& surface_rates) const
-            {
-                const auto io = RegionAttributeHelpers::PhasePos::oil(this->phaseUsage_);
-                const auto ig = RegionAttributeHelpers::PhasePos::gas(this->phaseUsage_);
-                return this->dissolvedVaporisedRatio(io, ig, rsMax, rvMax, surface_rates);
-            }
+                                         const Rates& surface_rates) const;
 
             /**
              * Compute coefficients for surface-to-reservoir voidage
@@ -614,50 +383,45 @@ namespace Opm {
              */
             struct Attributes {
                 Attributes()
-                    : pressure   (0.0)
-                    , temperature(0.0)
-                    , rs(0.0)
-                    , rv(0.0)
-                    , rsw(0.0)
-                    , rvw(0.0)
-                    , pv(0.0)
-                    , saltConcentration(0.0)
+                    : data{0.0}
+                    , pressure(data[0])
+                    , temperature(data[1])
+                    , rs(data[2])
+                    , rv(data[3])
+                    , rsw(data[4])
+                    , rvw(data[5])
+                    , pv(data[6])
+                    , saltConcentration(data[7])
                 {}
 
-                double pressure;
-                double temperature;
-                double rs;
-                double rv;
-                double rsw;
-                double rvw;
-                double pv;
-                double saltConcentration;
+                Attributes(const Attributes& rhs)
+                    : Attributes()
+                {
+                    this->data = rhs.data;
+                }
+
+                Attributes& operator=(const Attributes& rhs)
+                {
+                    this->data = rhs.data;
+                    return *this;
+                }
+
+                std::array<double,8> data;
+                double& pressure;
+                double& temperature;
+                double& rs;
+                double& rv;
+                double& rsw;
+                double& rvw;
+                double& pv;
+                double& saltConcentration;
             };
 
+            void sumRates(std::unordered_map<RegionId,Attributes>& attributes_hpv,
+                          std::unordered_map<RegionId,Attributes>& attributes_pv,
+                          Parallel::Communication comm);
+
             RegionAttributeHelpers::RegionAttributes<RegionId, Attributes> attr_;
-
-            template <typename Rates>
-            std::pair<double, double>
-            dissolvedVaporisedRatio(const int    io,
-                                    const int    ig,
-                                    const double rs,
-                                    const double rv,
-                                    const Rates& surface_rates) const
-            {
-                if ((io < 0) || (ig < 0)) {
-                    return { rs, rv };
-                }
-                auto eps = std::copysign(1.0e-15, surface_rates[io]);
-                const auto Rs = surface_rates[ig] / (surface_rates[io] + eps);
-
-                eps = std::copysign(1.0e-15, surface_rates[ig]);
-                const auto Rv = surface_rates[io] / (surface_rates[ig] + eps);
-
-                return {
-                    std::clamp(static_cast<double>(Rs), 0.0, rs),
-                    std::clamp(static_cast<double>(Rv), 0.0, rv)
-                };
-            }
         };
 
     } // namespace RateConverter

@@ -24,18 +24,46 @@
 #include <config.h>
 #include <ebos/eclgenericvanguard.hh>
 
+#include <opm/common/utility/MemPacker.hpp>
+#include <opm/common/utility/Serializer.hpp>
+
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/utility/TimeService.hpp>
 #include <opm/input/eclipse/EclipseState/Aquifer/NumericalAquifer/NumericalAquiferCell.hpp>
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/Parser/InputErrorAction.hpp>
+#include <opm/input/eclipse/Schedule/Action/Actions.hpp>
+#include <opm/input/eclipse/Schedule/Action/ASTNode.hpp>
 #include <opm/input/eclipse/Schedule/Action/State.hpp>
+#include <opm/input/eclipse/Schedule/GasLiftOpt.hpp>
+#include <opm/input/eclipse/Schedule/Group/GConSale.hpp>
+#include <opm/input/eclipse/Schedule/Group/GConSump.hpp>
+#include <opm/input/eclipse/Schedule/Group/GuideRateConfig.hpp>
+#include <opm/input/eclipse/Schedule/Network/Balance.hpp>
+#include <opm/input/eclipse/Schedule/Network/ExtNetwork.hpp>
+#include <opm/input/eclipse/Schedule/MSW/WellSegments.hpp>
 #include <opm/input/eclipse/Schedule/OilVaporizationProperties.hpp>
+#include <opm/input/eclipse/Schedule/RFTConfig.hpp>
+#include <opm/input/eclipse/Schedule/RPTConfig.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
-#include <opm/input/eclipse/Schedule/Well/Well.hpp>
-#include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
 #include <opm/input/eclipse/Schedule/SummaryState.hpp>
+#include <opm/input/eclipse/Schedule/UDQ/UDQActive.hpp>
+#include <opm/input/eclipse/Schedule/UDQ/UDQASTNode.hpp>
+#include <opm/input/eclipse/Schedule/UDQ/UDQConfig.hpp>
 #include <opm/input/eclipse/Schedule/UDQ/UDQState.hpp>
+#include <opm/input/eclipse/Schedule/Well/NameOrder.hpp>
+#include <opm/input/eclipse/Schedule/Well/Well.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellBrineProperties.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellEconProductionLimits.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellFoamProperties.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellMICPProperties.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellPolymerProperties.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellTestConfig.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellTracerProperties.hpp>
+#include <opm/input/eclipse/Schedule/Well/WListManager.hpp>
+#include <opm/input/eclipse/Schedule/Well/WVFPEXP.hpp>
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 #include <opm/input/eclipse/Python/Python.hpp>
 #include <opm/simulators/utils/readDeck.hpp>
@@ -53,37 +81,43 @@
 
 namespace Opm {
 
-double EclGenericVanguard::setupTime_ = 0.0;
-std::shared_ptr<EclipseState> EclGenericVanguard::eclState_;
-std::shared_ptr<Schedule> EclGenericVanguard::eclSchedule_;
-std::shared_ptr<SummaryConfig> EclGenericVanguard::eclSummaryConfig_;
-std::unique_ptr<UDQState> EclGenericVanguard::udqState_;
-std::unique_ptr<Action::State> EclGenericVanguard::actionState_;
-std::unique_ptr<WellTestState> EclGenericVanguard::wtestState_;
 std::unique_ptr<Parallel::Communication> EclGenericVanguard::comm_;
+EclGenericVanguard::SimulationModelParams EclGenericVanguard::modelParams_;
 
 EclGenericVanguard::EclGenericVanguard()
+    : EclGenericVanguard(std::move(modelParams_))
+{}
+
+EclGenericVanguard::EclGenericVanguard(SimulationModelParams&& params)
     : python(std::make_shared<Python>())
 {
+    defineSimulationModel(std::move(params));
+}
+
+EclGenericVanguard::SimulationModelParams
+EclGenericVanguard::serializationTestParams()
+{
+    SimulationModelParams result;
+    result.actionState_ = std::make_unique<Action::State>(Action::State::serializationTestObject());
+    result.eclSchedule_ = std::make_unique<Schedule>(Schedule::serializationTestObject());
+    result.summaryState_ = std::make_unique<SummaryState>(SummaryState::serializationTestObject());
+    result.udqState_ = std::make_unique<UDQState>(UDQState::serializationTestObject());
+
+    return result;
 }
 
 EclGenericVanguard::~EclGenericVanguard() = default;
 
-void EclGenericVanguard::setParams(double setupTime,
-                                   std::shared_ptr<EclipseState> eclState,
-                                   std::shared_ptr<Schedule> schedule,
-                                   std::unique_ptr<UDQState> udqState,
-                                   std::unique_ptr<Action::State> actionState,
-                                   std::unique_ptr<WellTestState> wtestState,
-                                   std::shared_ptr<SummaryConfig> summaryConfig)
+void EclGenericVanguard::defineSimulationModel(SimulationModelParams&& params)
 {
-    EclGenericVanguard::setupTime_ = setupTime;
-    EclGenericVanguard::eclState_ = std::move(eclState);
-    EclGenericVanguard::eclSchedule_ = std::move(schedule);
-    EclGenericVanguard::udqState_ = std::move(udqState);
-    EclGenericVanguard::actionState_ = std::move(actionState);
-    EclGenericVanguard::wtestState_ = std::move(wtestState);
-    EclGenericVanguard::eclSummaryConfig_ = std::move(summaryConfig);
+    actionState_ = std::move(params.actionState_);
+    eclSchedule_ = std::move(params.eclSchedule_);
+    eclState_ = std::move(params.eclState_);
+    eclSummaryConfig_ = std::move(params.eclSummaryConfig_);
+    setupTime_ = params.setupTime_;
+    udqState_ = std::move(params.udqState_);
+    wtestState_ = std::move(params.wtestState_);
+    summaryState_ = std::move(params.summaryState_);
 }
 
 void EclGenericVanguard::readDeck(const std::string& filename)
@@ -91,24 +125,16 @@ void EclGenericVanguard::readDeck(const std::string& filename)
     Dune::Timer setupTimer;
     setupTimer.start();
 
-    std::shared_ptr<Opm::EclipseState> eclipseState;
-    std::shared_ptr<Opm::Schedule> schedule;
-    std::unique_ptr<Opm::UDQState> udqState;
-    std::unique_ptr<Opm::Action::State> actionState;
-    std::unique_ptr<Opm::WellTestState> wtestState;
-    std::shared_ptr<Opm::SummaryConfig> summaryConfig;
-
-    Opm::readDeck(EclGenericVanguard::comm(),
-                  filename, eclipseState, schedule, udqState,
-                  actionState, wtestState,
-                  summaryConfig, nullptr, false,
-                  false, false, {});
-
-    EclGenericVanguard::setParams(setupTimer.elapsed(),
-                                  eclipseState, schedule,
-                                  std::move(udqState),
-                                  std::move(actionState),
-                                  std::move(wtestState), summaryConfig);
+    Opm::readDeck(comm(),
+                  filename,
+                  modelParams_.eclState_,
+                  modelParams_.eclSchedule_,
+                  modelParams_.udqState_,
+                  modelParams_.actionState_,
+                  modelParams_.wtestState_,
+                  modelParams_.eclSummaryConfig_,
+                  nullptr, false, false, false, {});
+    modelParams_.setupTime_ = setupTimer.stop();
 }
 
 std::string EclGenericVanguard::canonicalDeckPath(const std::string& caseName)
@@ -197,7 +223,21 @@ void EclGenericVanguard::init()
         std::transform(caseName_.begin(), caseName_.end(), caseName_.begin(), ::toupper);
     }
 
-    this->summaryState_ = std::make_unique<SummaryState>( TimeService::from_time_t(this->eclSchedule_->getStartTime() ));
+    // set communicator if not set as in opm flow
+    if(!comm_){
+        EclGenericVanguard::setCommunication(std::make_unique<Parallel::Communication>());
+    }
+    
+    // set eclState if not already set as in opm flow
+    // it means that setParams is called
+    if(!eclState_){
+        this->readDeck(fileName_);
+        this->defineSimulationModel(std::move(this->modelParams_));
+    }
+
+    
+    if (!this->summaryState_)
+        this->summaryState_ = std::make_unique<SummaryState>( TimeService::from_time_t(this->eclSchedule_->getStartTime() ));
 
     // Initialize parallelWells with all local wells
     const auto& schedule_wells = schedule().getWellsatEnd();
@@ -220,7 +260,7 @@ void EclGenericVanguard::init()
             if (comm.rank() == 0)
             {
                 const auto& wells = this->schedule().getWellsatEnd();
-                for ( const auto& well: wells)
+                for (const auto& well : wells)
                 {
                     hasMsWell = hasMsWell || well.isMultiSegment();
                 }
@@ -261,6 +301,36 @@ bool EclGenericVanguard::drsdtconEnabled() const
 std::unordered_map<size_t, const NumericalAquiferCell*> EclGenericVanguard::allAquiferCells() const
 {
   return this->eclState_->aquifer().numericalAquifers().allAquiferCells();
+}
+
+template<>
+void EclGenericVanguard::
+serializeOp<Serializer<Serialization::MemPacker>>(Serializer<Serialization::MemPacker>& serializer)
+{
+    serializer(*summaryState_);
+    serializer(*udqState_);
+    serializer(*actionState_);
+    serializer(*eclSchedule_);
+}
+
+bool EclGenericVanguard::operator==(const EclGenericVanguard& rhs) const
+{
+    auto cmp_ptr = [](const auto& a, const auto& b)
+    {
+        if (!a && !b) {
+            return true;
+        }
+
+        if (a && b) {
+            return *a == *b;
+        }
+
+        return false;
+    };
+    return cmp_ptr(this->summaryState_, rhs.summaryState_);
+           cmp_ptr(this->udqState_, rhs.udqState_) &&
+           cmp_ptr(this->actionState_, rhs.actionState_) &&
+           cmp_ptr(this->eclSchedule_, rhs.eclSchedule_);
 }
 
 } // namespace Opm

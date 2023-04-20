@@ -22,6 +22,9 @@
 #ifndef OPM_AQUIFERINTERFACE_HEADER_INCLUDED
 #define OPM_AQUIFERINTERFACE_HEADER_INCLUDED
 
+#include <opm/models/common/multiphasebaseproperties.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
+
 #include <opm/output/data/Aquifer.hpp>
 
 namespace Opm

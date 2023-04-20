@@ -214,11 +214,7 @@ public:
         : sendMapper_(sendMapper), recvMapper_(recvMapper), elementIndices_(elementIndices)
     {}
     using DataType = int;
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
     bool fixedSize(int /*dim*/, int /*codim*/)
-#else
-    bool fixedsize(int /*dim*/, int /*codim*/)
-#endif
     {
         return true;
     }
@@ -258,11 +254,7 @@ public:
         : mapper_(mapper), elementIndices_(elementIndices)
     {}
     using DataType = int;
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
     bool fixedSize(int /*dim*/, int /*codim*/)
-#else
-    bool fixedsize(int /*dim*/, int /*codim*/)
-#endif
     {
         return true;
     }
@@ -773,7 +765,7 @@ public:
     PackUnpackInterRegFlows(const EclInterRegFlowMap& localInterRegFlows,
                             EclInterRegFlowMap&       globalInterRegFlows,
                             const bool                isIORank)
-        : localInterRegFlows_ (localInterRegFlows)
+        : localInterRegFlows_(localInterRegFlows)
         , globalInterRegFlows_(globalInterRegFlows)
     {
         if (! isIORank) { return; }
@@ -803,6 +795,68 @@ public:
     // unpack all data associated with link
     void unpack(int /*link*/, MessageBufferType& buffer)
     { this->globalInterRegFlows_.read(buffer); }
+};
+
+class PackUnpackFlows : public P2PCommunicatorType::DataHandleInterface
+{
+    const std::array<std::pair<std::string, std::pair<std::vector<int>, std::vector<double>>>, 3>& localFlows_;
+    std::array<std::pair<std::string, std::pair<std::vector<int>, std::vector<double>>>, 3>& globalFlows_;
+
+public:
+    PackUnpackFlows(const std::array<std::pair<std::string, std::pair<std::vector<int>, std::vector<double>>>, 3> & localFlows,
+                     std::array<std::pair<std::string, std::pair<std::vector<int>, std::vector<double>>>, 3>& globalFlows,
+                     const bool isIORank)
+        : localFlows_(localFlows)
+        , globalFlows_(globalFlows)
+    {
+        if (! isIORank) { return; }
+
+        MessageBufferType buffer;
+        this->pack(0, buffer);
+
+        // pass a dummy_link to satisfy virtual class
+        const int dummyLink = -1;
+        this->unpack(dummyLink, buffer);
+    }
+
+    void pack(int link, MessageBufferType& buffer)
+    {
+        if (link != 0)
+            throw std::logic_error("link in method pack is not 0 as expected");
+        for (int i = 0; i < 3; ++i) {
+            const auto& name = localFlows_[i].first;
+            buffer.write(name);
+            unsigned int size = localFlows_[i].second.first.size();
+            buffer.write(size);
+            for (unsigned int j = 0; j < size; ++j) {
+                const auto& nncIdx = localFlows_[i].second.first[j];
+                buffer.write(nncIdx);
+                const auto& flows = localFlows_[i].second.second[j];
+                buffer.write(flows);
+            }
+        }
+    }
+
+    void unpack(int /*link*/, MessageBufferType& buffer)
+    {
+        for (int i = 0; i < 3; ++i) {
+            std::string name;
+            buffer.read(name);
+            globalFlows_[i].first = name;
+            unsigned int size = 0;
+            buffer.read(size);
+            for (unsigned int j = 0; j < size; ++j) {
+                int nncIdx;
+                double data;
+                buffer.read(nncIdx);
+                buffer.read(data);
+                if (nncIdx < 0)
+                    continue;
+                // This array is initialized in the collect(...) method below   
+                globalFlows_[i].second.second[nncIdx] = data;
+            }
+        }
+    }
 };
 
 template <class Grid, class EquilGrid, class GridView>
@@ -937,7 +991,9 @@ collect(const data::Solution& localCellData,
         const data::GroupAndNetworkValues& localGroupAndNetworkData,
         const data::Aquifers& localAquiferData,
         const WellTestState& localWellTestState,
-        const EclInterRegFlowMap& localInterRegFlows)
+        const EclInterRegFlowMap& localInterRegFlows,
+        const std::array<std::pair<std::string, std::pair<std::vector<int>, std::vector<double>>>, 3>& localFlowsn,
+        const std::array<std::pair<std::string, std::pair<std::vector<int>, std::vector<double>>>, 3>& localFloresn)
 {
     globalCellData_ = {};
     globalBlockData_.clear();
@@ -947,6 +1003,8 @@ collect(const data::Solution& localCellData,
     globalAquiferData_.clear();
     globalWellTestState_.clear();
     this->globalInterRegFlows_.clear();
+    globalFlowsn_ = {};
+    globalFloresn_ = {};
 
     // index maps only have to be build when reordering is needed
     if(!needsReordering && !isParallel())
@@ -965,6 +1023,16 @@ collect(const data::Solution& localCellData,
     if (! isParallel()) {
         // no need to collect anything.
         return;
+    }
+
+    // Set the right sizes for Flowsn and Floresn
+    for (int i = 0; i < 3; ++i) {
+        unsigned int sizeFlr = localFloresn[i].second.first.size();
+        globalFloresn_[i].second.first.resize(sizeFlr, 0);
+        globalFloresn_[i].second.second.resize(sizeFlr, 0.0);
+        unsigned int sizeFlo = localFlowsn[i].second.first.size();
+        globalFlowsn_[i].second.first.resize(sizeFlo, 0);
+        globalFlowsn_[i].second.second.resize(sizeFlo, 0.0);
     }
 
     PackUnPackWellData packUnpackWellData {
@@ -1009,6 +1077,18 @@ collect(const data::Solution& localCellData,
         this->isIORank()
     };
 
+    PackUnpackFlows packUnpackFlowsn {
+        localFlowsn,
+        this->globalFlowsn_,
+        this->isIORank()
+    };
+
+    PackUnpackFlows packUnpackFloresn {
+        localFloresn,
+        this->globalFloresn_,
+        this->isIORank()
+    };
+
     toIORankComm_.exchange(packUnpackCellData);
     toIORankComm_.exchange(packUnpackWellData);
     toIORankComm_.exchange(packUnpackGroupAndNetworkData);
@@ -1017,6 +1097,8 @@ collect(const data::Solution& localCellData,
     toIORankComm_.exchange(packUnpackAquiferData);
     toIORankComm_.exchange(packUnpackWellTestState);
     toIORankComm_.exchange(packUnpackInterRegFlows);
+    toIORankComm_.exchange(packUnpackFlowsn);
+    toIORankComm_.exchange(packUnpackFloresn);
 
 #ifndef NDEBUG
     // make sure every process is on the same page

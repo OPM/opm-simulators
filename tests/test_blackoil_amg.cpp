@@ -31,12 +31,7 @@
 #include <dune/common/unused.hh>
 #include <dune/common/parallel/indexset.hh>
 #include <dune/common/parallel/plocalindex.hh>
-#include <dune/common/version.hh>
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
 #include <dune/common/parallel/communication.hh>
-#else
-#include <dune/common/parallel/collectivecommunication.hh>
-#endif
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/owneroverlapcopy.hh>
 #include <dune/istl/schwarz.hh>
@@ -277,11 +272,7 @@ void runBlackoilAmgLaplace()
     typedef Dune::OwnerOverlapCopyCommunication<GlobalId> Communication;
     typedef Dune::OverlappingSchwarzOperator<BCRSMat,Vector,Vector,Communication> Operator;
 
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
     const auto& ccomm = Dune::MPIHelper::getCommunication();
-#else
-    const auto& ccomm = Dune::MPIHelper::getCollectiveCommunication();
-#endif
 
     Communication comm(ccomm);
     int n=0;

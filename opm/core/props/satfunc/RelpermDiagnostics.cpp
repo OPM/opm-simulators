@@ -40,6 +40,8 @@
 #include <opm/input/eclipse/EclipseState/Tables/SsfnTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/SwfnTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/SwofTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/WsfTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/GsfTable.hpp>
 
 #include <opm/grid/CpGrid.hpp>
 #include <opm/grid/polyhedralgrid.hh>
@@ -123,6 +125,9 @@ namespace Opm {
         const SwofletTable& swofletTable = tableManager.getSwofletTable();
         const SgofletTable& sgofletTable = tableManager.getSgofletTable();
 
+        const TableContainer& gsfTables = tableManager.getGsfTables();
+        const TableContainer& wsfTables = tableManager.getWsfTables();
+
         // Family I test.
         bool family1 = pu.phase_used[BlackoilPhases::Liquid];
         if (pu.phase_used[BlackoilPhases::Aqua]) {
@@ -144,14 +149,30 @@ namespace Opm {
             family2 = family2 && (!sgfnTables.empty() || !sgwfnTables.empty());
         }
 
+        bool family3 = !gsfTables.empty() && !wsfTables.empty();
+
+        if (family3) {
+            const auto& phases = eclState.runspec().phases();
+            const bool co2store = eclState.runspec().co2Storage();
+            if ( !(co2store && phases.active(Phase::GAS) && phases.active(Phase::WATER))) {
+                const std::string msg = "Relative permeability input format: Saturation Family III. \n \
+                                         Only valid for CO2STORE case with GAS and WATER.";
+                OpmLog::info(msg);
+            }
+            satFamily_ = SaturationFunctionFamily::FamilyIII;
+            const std::string msg = "Relative permeability input format: Saturation Family III (GSF/WSF).";
+            OpmLog::info(msg);
+            return;
+        }
+
         if (family1 && family2) {
-            const std::string msg = "Saturation families should not be mixed.\n Use either SGOF and SWOF or SGFN, SWFN and SOF3.";
+            const std::string msg = "Saturation families should not be mixed.\n Use either SGOF and SWOF or SGFN, SWFN and SOF3";
             OpmLog::error(msg);
         }
 
         if (!family1 && !family2) {
             const std::string msg = "Saturations function must be specified using either \n \
-                             family 1 or family 2 keywords \n \
+                             family 1, family 2 or family3 keywords \n \
                              Use either SGOF and SWOF or SGFN, SWFN and SOF3.";
             OpmLog::error(msg);
         }
@@ -192,6 +213,8 @@ namespace Opm {
         const TableContainer& ssfnTables    = tableManager.getSsfnTables();
         const TableContainer& miscTables    = tableManager.getMiscTables();
         const TableContainer& msfnTables    = tableManager.getMsfnTables();
+        const TableContainer& gsfTables     = tableManager.getGsfTables();
+        const TableContainer& wsfTables     = tableManager.getWsfTables();
 
         for (int satnumIdx = 0; satnumIdx < numSatRegions; ++satnumIdx) {
             if (tableManager.hasTables("SWOF")) {
@@ -229,6 +252,12 @@ namespace Opm {
             }
             if (tableManager.hasTables("MSFN")) {
                 msfnTableCheck_(msfnTables.getTable<MsfnTable>(satnumIdx), satnumIdx+1);
+            }
+            if (tableManager.hasTables("GSF")) {
+                gsfTableCheck_(gsfTables.getTable<GsfTable>(satnumIdx), satnumIdx+1);
+            }
+            if (tableManager.hasTables("WSF")) {
+                wsfTableCheck_(wsfTables.getTable<WsfTable>(satnumIdx), satnumIdx+1);
             }
         }
 
@@ -379,7 +408,29 @@ namespace Opm {
         }
     }
 
+    void RelpermDiagnostics::wsfTableCheck_(const WsfTable& wsfTables,
+                                            const int satnumIdx)
+    {
+        const auto& sw = wsfTables.getSwColumn();
+        const auto& krw = wsfTables.getKrwColumn();
+        const std::string regionIdx = std::to_string(satnumIdx);
+        //Check sw column.
+        if (sw.front() < 0.0 || sw.back() > 1.0) {
+            const std::string msg = "In WSF table SATNUM = " + regionIdx + ", saturation should be in range [0,1].";
+            OpmLog::error(msg);
+        }
 
+        //Check krw column.
+        if (krw.front() < 0.0 || krw.back() > 1.0) {
+            const std::string msg = "In WSF table SATNUM = " + regionIdx + ", krw should be in range [0,1].";
+            OpmLog::error(msg);
+        }
+
+        if (krw.front() != 0.0) {
+            const std::string msg = "In WSF table SATNUM = " + regionIdx + ", first value of krw should be 0.";
+            OpmLog::error(msg);
+        }
+    }
 
 
 
@@ -407,7 +458,28 @@ namespace Opm {
     }
 
 
+    void RelpermDiagnostics::gsfTableCheck_(const GsfTable& gsfTables,
+                                            const int satnumIdx)
+    {
+        const auto& sg = gsfTables.getSgColumn();
+        const auto& krg = gsfTables.getKrgColumn();
+        const std::string regionIdx = std::to_string(satnumIdx);
+        //Check sg column.
+        if (sg.front() < 0.0 || sg.back() > 1.0) {
+            const std::string msg = "In GSF table SATNUM = " + regionIdx + ", saturation should be in range [0,1].";
+            OpmLog::error(msg);
+        }
 
+        //Check krg column.
+        if (krg.front() < 0.0 || krg.back() > 1.0) {
+            const std::string msg = "In GSF table SATNUM = " + regionIdx + ", krg should be in range [0,1].";
+            OpmLog::error(msg);
+        }
+        if (krg.front() != 0.0) {
+            const std::string msg = "In GSF table SATNUM = " + regionIdx + ", first value of krg should be 0.";
+            OpmLog::error(msg);
+        }
+    }
 
 
     void RelpermDiagnostics::sof3TableCheck_(const Sof3Table& sof3Tables,

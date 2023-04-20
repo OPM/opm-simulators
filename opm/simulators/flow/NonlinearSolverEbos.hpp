@@ -82,6 +82,27 @@ namespace Opm {
 
 class WellState;
 
+// Available relaxation scheme types.
+enum class NonlinearRelaxType {
+    Dampen,
+    SOR
+};
+
+namespace detail {
+
+/// Detect oscillation or stagnation in a given residual history.
+void detectOscillations(const std::vector<std::vector<double>>& residualHistory,
+                        const int it, const int numPhases, const double relaxRelTol,
+                        bool& oscillate, bool& stagnate);
+
+/// Apply a stabilization to dx, depending on dxOld and relaxation parameters.
+/// Implemention for Dune block vectors.
+template <class BVector>
+void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
+                              const double omega, NonlinearRelaxType relaxType);
+
+}
+
     /// A nonlinear solver class suitable for general fully-implicit models,
     /// as well as pressure, transport and sequential models.
     template <class TypeTag, class PhysicalModel>
@@ -90,16 +111,10 @@ class WellState;
         using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
     public:
-        // Available relaxation scheme types.
-        enum RelaxType {
-            Dampen,
-            SOR
-        };
-
         // Solver parameters controlling nonlinear process.
         struct SolverParameters
         {
-            RelaxType relaxType_;
+            NonlinearRelaxType relaxType_;
             double relaxMax_;
             double relaxIncrement_;
             double relaxRelTol_;
@@ -118,9 +133,9 @@ class WellState;
 
                 const auto& relaxationTypeString = EWOMS_GET_PARAM(TypeTag, std::string, NewtonRelaxationType);
                 if (relaxationTypeString == "dampen") {
-                    relaxType_ = Dampen;
+                    relaxType_ = NonlinearRelaxType::Dampen;
                 } else if (relaxationTypeString == "sor") {
-                    relaxType_ = SOR;
+                    relaxType_ = NonlinearRelaxType::SOR;
                 } else {
                     OPM_THROW(std::runtime_error,
                               "Unknown Relaxtion Type " + relaxationTypeString);
@@ -138,7 +153,7 @@ class WellState;
             void reset()
             {
                 // default values for the solver parameters
-                relaxType_ = Dampen;
+                relaxType_ = NonlinearRelaxType::Dampen;
                 relaxMax_ = 0.5;
                 relaxIncrement_ = 0.1;
                 relaxRelTol_ = 0.2;
@@ -279,34 +294,8 @@ class WellState;
         void detectOscillations(const std::vector<std::vector<double>>& residualHistory,
                                 const int it, bool& oscillate, bool& stagnate) const
         {
-            // The detection of oscillation in two primary variable results in the report of the detection
-            // of oscillation for the solver.
-            // Only the saturations are used for oscillation detection for the black oil model.
-            // Stagnate is not used for any treatment here.
-
-            if ( it < 2 ) {
-                oscillate = false;
-                stagnate = false;
-                return;
-            }
-
-            stagnate = true;
-            int oscillatePhase = 0;
-            const std::vector<double>& F0 = residualHistory[it];
-            const std::vector<double>& F1 = residualHistory[it - 1];
-            const std::vector<double>& F2 = residualHistory[it - 2];
-            for (int p= 0; p < model_->numPhases(); ++p){
-                const double d1 = std::abs((F0[p] - F2[p]) / F0[p]);
-                const double d2 = std::abs((F0[p] - F1[p]) / F0[p]);
-
-                oscillatePhase += (d1 < relaxRelTol()) && (relaxRelTol() < d2);
-
-                // Process is 'stagnate' unless at least one phase
-                // exhibits significant residual change.
-                stagnate = (stagnate && !(std::abs((F1[p] - F2[p]) / F2[p]) > 1.0e-3));
-            }
-
-            oscillate = (oscillatePhase > 1);
+            detail::detectOscillations(residualHistory, it, model_->numPhases(),
+                                       this->relaxRelTol(), oscillate, stagnate);
         }
 
 
@@ -315,40 +304,7 @@ class WellState;
         template <class BVector>
         void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld, const double omega) const
         {
-            // The dxOld is updated with dx.
-            // If omega is equal to 1., no relaxtion will be appiled.
-
-            BVector tempDxOld = dxOld;
-            dxOld = dx;
-
-            switch (relaxType()) {
-            case Dampen: {
-                if (omega == 1.) {
-                    return;
-                }
-                auto i = dx.size();
-                for (i = 0; i < dx.size(); ++i) {
-                    dx[i] *= omega;
-                }
-                return;
-            }
-            case SOR: {
-                if (omega == 1.) {
-                    return;
-                }
-                auto i = dx.size();
-                for (i = 0; i < dx.size(); ++i) {
-                    dx[i] *= omega;
-                    tempDxOld[i] *= (1.-omega);
-                    dx[i] += tempDxOld[i];
-                }
-                return;
-            }
-            default:
-                OPM_THROW(std::runtime_error, "Can only handle Dampen and SOR relaxation type.");
-            }
-
-            return;
+            detail::stabilizeNonlinearUpdate(dx, dxOld, omega, this->relaxType());
         }
 
         /// The greatest relaxation factor (i.e. smallest factor) allowed.
@@ -360,7 +316,7 @@ class WellState;
         { return param_.relaxIncrement_; }
 
         /// The relaxation type (Dampen or SOR).
-        enum RelaxType relaxType() const
+        NonlinearRelaxType relaxType() const
         { return param_.relaxType_; }
 
         /// The relaxation relative tolerance.
@@ -392,6 +348,7 @@ class WellState;
         int linearIterationsLast_;
         int wellIterationsLast_;
     };
+
 } // namespace Opm
 
 #endif // OPM_NON_LINEAR_SOLVER_EBOS_HPP

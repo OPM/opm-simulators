@@ -20,8 +20,12 @@
 
 #pragma once
 
+#include <opm/common/TimingMacros.hpp>
+
 #include <opm/simulators/linalg/matrixblock.hh>
+#include <opm/simulators/linalg/PropertyTree.hpp>
 #include <opm/simulators/linalg/twolevelmethodcpr.hh>
+
 #include <dune/istl/paamg/pinfo.hh>
 
 namespace Opm
@@ -31,6 +35,7 @@ namespace Opm
                                      std::shared_ptr<Communication>& commRW,
                                      const int nw)
     {
+        OPM_TIMEBLOCK(extendCommunicatorWithWells);
         // used for extending the coarse communicator pattern
         using IndexSet = typename Communication::ParallelIndexSet;
         using LocalIndex = typename IndexSet::LocalIndex;
@@ -104,6 +109,7 @@ namespace Opm
 
         virtual void createCoarseLevelSystem(const FineOperator& fineOperator) override
         {
+            OPM_TIMEBLOCK(createCoarseLevelSystem);
             using CoarseMatrix = typename CoarseOperator::matrix_type;
             const auto& fineLevelMatrix = fineOperator.getmat();
             const auto& nw = fineOperator.getNumberOfExtraEquations();
@@ -134,21 +140,12 @@ namespace Opm
                     ++createIter;
                 }
             }
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
         if constexpr (std::is_same_v<Communication, Dune::Amg::SequentialInformation>) {
             coarseLevelCommunication_ = std::make_shared<Communication>();
         } else {
             coarseLevelCommunication_ = std::make_shared<Communication>(
                 communication_->communicator(), communication_->category(), false);
         }
-#else
-        if constexpr (std::is_same_v<Communication, Dune::Amg::SequentialInformation>) {
-            coarseLevelCommunication_ = std::make_shared<Communication>();
-        } else {
-            coarseLevelCommunication_ = std::make_shared<Communication>(
-                communication_->communicator(), communication_->getSolverCategory(), false);
-        }
-#endif
         if (prm_.get<bool>("add_wells")) {
             fineOperator.addWellPressureEquationsStruct(*coarseLevelMatrix_);
             coarseLevelMatrix_->compress(); // all elemenst should be set
@@ -161,17 +158,13 @@ namespace Opm
         this->lhs_.resize(this->coarseLevelMatrix_->M());
         this->rhs_.resize(this->coarseLevelMatrix_->N());
         using OperatorArgs = typename Dune::Amg::ConstructionTraits<CoarseOperator>::Arguments;
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
         OperatorArgs oargs(coarseLevelMatrix_, *coarseLevelCommunication_);
         this->operator_ = Dune::Amg::ConstructionTraits<CoarseOperator>::construct(oargs);
-#else
-        OperatorArgs oargs(*coarseLevelMatrix_, *coarseLevelCommunication_);
-        this->operator_.reset(Dune::Amg::ConstructionTraits<CoarseOperator>::construct(oargs));
-#endif
     }
 
     virtual void calculateCoarseEntries(const FineOperator& fineOperator) override
     {
+        OPM_TIMEBLOCK(calculateCoarseEntries);
         const auto& fineMatrix = fineOperator.getmat();
         *coarseLevelMatrix_ = 0;
         auto rowCoarse = coarseLevelMatrix_->begin();
@@ -196,6 +189,7 @@ namespace Opm
             }
         }
         if (prm_.get<bool>("add_wells")) {
+            OPM_TIMEBLOCK(cprwAddWellEquation);
             assert(transpose == false); // not implemented
             bool use_well_weights = prm_.get<bool>("use_well_weights");
             fineOperator.addWellPressureEquations(*coarseLevelMatrix_, weights_, use_well_weights);
@@ -209,6 +203,7 @@ namespace Opm
 
     virtual void moveToCoarseLevel(const typename ParentType::FineRangeType& fine) override
     {
+        OPM_TIMEBLOCK(moveToCoarseLevel);
         //NB we iterate over fine assumming welldofs is at the end
         // Set coarse vector to zero
         this->rhs_ = 0;
@@ -233,6 +228,7 @@ namespace Opm
 
     virtual void moveToFineLevel(typename ParentType::FineDomainType& fine) override
     {
+        OPM_TIMEBLOCK(moveToFineLevel);
         //NB we iterate over fine assumming welldofs is at the end
         auto end = fine.end(), begin = fine.begin();
 

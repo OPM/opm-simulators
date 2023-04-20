@@ -17,44 +17,50 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "config.h"
-
+#include <config.h>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
+
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/input/eclipse/Units/Units.hpp>
 
 #include <iomanip>
 #include <ostream>
-#include <sstream>
 #include <fmt/format.h>
-#include <limits>
 
 namespace Opm
 {
-    SimulatorReportSingle::SimulatorReportSingle()
-        : pressure_time(0.0),
-          transport_time(0.0),
-          total_time(0.0),
-          solver_time(0.0),
-          assemble_time(0.0),
-          pre_post_time(0.0),
-          assemble_time_well(0.0),
-          linear_solve_setup_time(0.0),
-          linear_solve_time(0.0),
-          update_time(0.0),
-          output_write_time(0.0),
-          total_well_iterations(0),
-          total_linearizations( 0 ),
-          total_newton_iterations( 0 ),
-          total_linear_iterations( 0 ),
-          min_linear_iterations ( std::numeric_limits<unsigned int>::max() ),
-          max_linear_iterations ( 0 ),
-          converged(false),
-          well_group_control_changed(false),
-          exit_status(EXIT_SUCCESS),
-          global_time(0),
-          timestep_length(0.0)
+    SimulatorReportSingle SimulatorReportSingle::serializationTestObject()
     {
+        return SimulatorReportSingle{1.0, 2.0, 3.0, 4.0, 5.0, 6.0,
+                                     7.0, 8.0, 9.0, 10.0, 11.0,
+                                     12, 13, 14, 15, 16, 17,
+                                     true, false, 18, 19.0, 20.0};
+    }
+
+    bool SimulatorReportSingle::operator==(const SimulatorReportSingle& rhs) const
+    {
+        return this->pressure_time == rhs.pressure_time &&
+               this->transport_time == rhs.transport_time &&
+               this->total_time == rhs.total_time &&
+               this->solver_time == rhs.solver_time &&
+               this->assemble_time == rhs.assemble_time &&
+               this->pre_post_time == rhs.pre_post_time &&
+               this->assemble_time_well == rhs.assemble_time_well &&
+               this->linear_solve_setup_time == rhs.linear_solve_setup_time &&
+               this->linear_solve_time == rhs.linear_solve_time &&
+               this->update_time == rhs.update_time &&
+               this->output_write_time == rhs.output_write_time &&
+               this->total_well_iterations == rhs.total_well_iterations &&
+               this->total_linearizations == rhs.total_linearizations &&
+               this->total_newton_iterations == rhs.total_newton_iterations &&
+               this->total_linear_iterations == rhs.total_linear_iterations &&
+               this->min_linear_iterations == rhs.min_linear_iterations &&
+               this->max_linear_iterations == rhs.max_linear_iterations &&
+               this->converged == rhs.converged &&
+               this->well_group_control_changed == rhs.well_group_control_changed &&
+               this->exit_status == rhs.exit_status &&
+               this->global_time == rhs.global_time &&
+               this->timestep_length == rhs.timestep_length;
     }
 
     void SimulatorReportSingle::operator+=(const SimulatorReportSingle& sr)
@@ -86,7 +92,7 @@ namespace Opm
     }
 
 
-    void SimulatorReportSingle::reportStep(std::ostringstream& ss) const
+    void SimulatorReportSingle::reportStep(std::ostream& ss) const
     {
         if (total_well_iterations != 0) {
             ss << fmt::format("Well its={:2}", total_well_iterations);
@@ -101,6 +107,12 @@ namespace Opm
 
     void SimulatorReportSingle::reportFullyImplicit(std::ostream& os, const SimulatorReportSingle* failureReport) const
     {
+        auto noZero = [](auto val)
+        {
+            if (val == decltype(val){0})
+                return decltype(val){1};
+            return val;
+        };
         os << fmt::format("Total time (seconds):       {:9.2f} \n", total_time);
 
          os << fmt::format("Solver time (seconds):      {:9.2f} \n",
@@ -114,7 +126,7 @@ namespace Opm
             if (failureReport) {
               os << fmt::format(" (Failed: {:2.1f}; {:2.1f}%)",
                                 failureReport->assemble_time,
-                                100*failureReport->assemble_time/t);
+                                100*failureReport->assemble_time/noZero(t));
              }
             os << std::endl;
 
@@ -123,7 +135,7 @@ namespace Opm
             if (failureReport) {
               os << fmt::format(" (Failed: {:2.1f}; {:2.1f}%)",
                                 failureReport->assemble_time_well,
-                                100*failureReport->assemble_time_well/t);
+                                100*failureReport->assemble_time_well/noZero(t));
             }
             os << std::endl;
 
@@ -132,7 +144,7 @@ namespace Opm
             if (failureReport) {
               os << fmt::format(" (Failed: {:2.1f}; {:2.1f}%)",
                                 failureReport->linear_solve_time,
-                                100*failureReport->linear_solve_time/t);
+                                100*failureReport->linear_solve_time/noZero(t));
             }
             os << std::endl;
 
@@ -141,7 +153,7 @@ namespace Opm
             if (failureReport) {
               os << fmt::format(" (Failed: {:2.1f}; {:2.1f}%)",
                                 failureReport->linear_solve_setup_time,
-                                100*failureReport->linear_solve_setup_time/t);
+                                100*failureReport->linear_solve_setup_time/noZero(t));
             }
             os << std::endl;
 
@@ -150,7 +162,7 @@ namespace Opm
             if (failureReport) {
               os << fmt::format(" (Failed: {:2.1f}; {:2.1f}%)",
                                 failureReport->update_time,
-                                100*failureReport->update_time/t);
+                                100*failureReport->update_time/noZero(t));
             }
             os << std::endl;
             t = pre_post_time + (failureReport ? failureReport->pre_post_time : 0.0);
@@ -158,14 +170,13 @@ namespace Opm
             if (failureReport) {
               os << fmt::format(" (Failed: {:2.1f}; {:2.1f}%)",
                                 failureReport->pre_post_time,
-                                100*failureReport->pre_post_time/t);
+                                100*failureReport->pre_post_time/noZero(t));
             }
             os << std::endl;
 
             os << fmt::format(" Output write time (seconds): {:7.2f}", 
                               output_write_time + (failureReport ? failureReport->output_write_time : 0.0));
             os << std::endl;
-
         }
 
         int n = total_linearizations + (failureReport ? failureReport->total_linearizations : 0);
@@ -173,7 +184,7 @@ namespace Opm
         if (failureReport) {
           os << fmt::format("    (Failed: {:3}; {:2.1f}%)",
                             failureReport->total_linearizations,
-                            100.0*failureReport->total_linearizations/n);
+                            100.0*failureReport->total_linearizations/noZero(n));
         }
         os << std::endl;
 
@@ -182,7 +193,7 @@ namespace Opm
         if (failureReport) {
           os << fmt::format("    (Failed: {:3}; {:2.1f}%)",
                             failureReport->total_newton_iterations,
-                            100.0*failureReport->total_newton_iterations/n);
+                            100.0*failureReport->total_newton_iterations/noZero(n));
         }
         os << std::endl;
 
@@ -191,9 +202,23 @@ namespace Opm
         if (failureReport) {
           os << fmt::format("    (Failed: {:3}; {:2.1f}%)",
                             failureReport->total_linear_iterations,
-                            100.0*failureReport->total_linear_iterations/n);
+                            100.0*failureReport->total_linear_iterations/noZero(n));
         }
         os << std::endl;
+    }
+
+    SimulatorReport SimulatorReport::serializationTestObject()
+    {
+        return SimulatorReport{SimulatorReportSingle::serializationTestObject(),
+                               SimulatorReportSingle::serializationTestObject(),
+                               {SimulatorReportSingle::serializationTestObject()}};
+    }
+
+    bool SimulatorReport::operator==(const SimulatorReport& rhs) const
+    {
+        return this->success == rhs.success &&
+               this->failure == rhs.failure &&
+               this->stepreports == rhs.stepreports;
     }
 
     void SimulatorReport::operator+=(const SimulatorReportSingle& sr)

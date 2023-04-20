@@ -28,13 +28,12 @@
 #define EWOMS_ECL_GENERIC_VANGUARD_HH
 
 #include <opm/grid/common/GridEnums.hpp>
+
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
+
 #include <opm/simulators/utils/ParallelCommunication.hpp>
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
+
 #include <dune/common/parallel/communication.hh>
-#else
-#include <dune/common/parallel/collectivecommunication.hh>
-#endif
 
 #include <array>
 #include <cassert>
@@ -66,17 +65,33 @@ class EclGenericVanguard {
 public:
     using ParallelWellStruct = std::vector<std::pair<std::string,bool>>;
 
+    struct SimulationModelParams {
+        double setupTime_;
+        std::unique_ptr<UDQState> udqState_;
+        std::unique_ptr<Action::State> actionState_;
+        std::unique_ptr<SummaryState> summaryState_;
+        std::unique_ptr<WellTestState> wtestState_;
+        std::shared_ptr<EclipseState> eclState_;
+        std::shared_ptr<Schedule> eclSchedule_;
+        std::shared_ptr<SummaryConfig> eclSummaryConfig_;
+    };
+
+    static SimulationModelParams modelParams_;
+
     /*!
      * \brief Constructor.
      * \details Needs to be in compile unit.
      */
     EclGenericVanguard();
+    explicit EclGenericVanguard(SimulationModelParams&& params);
 
     /*!
      * \brief Destructor.
      * \details Empty, but needs to be in compile unit.
      */
     ~EclGenericVanguard();
+
+    static SimulationModelParams serializationTestParams();
 
     /*!
      * \brief Returns the canonical path to a deck file.
@@ -89,7 +104,7 @@ public:
     /*!
      * \brief Returns the wall time required to set up the simulator before it was born.
      */
-    static double setupTime()
+    double setupTime()
     { return setupTime_; }
 
     /*!
@@ -101,13 +116,7 @@ public:
     /*!
      * \brief Set the simulation configuration objects.
      */
-    static void setParams(double setupTime,
-                          std::shared_ptr<EclipseState> eclState,
-                          std::shared_ptr<Schedule> schedule,
-                          std::unique_ptr<UDQState> udqState,
-                          std::unique_ptr<Action::State> actionState,
-                          std::unique_ptr<WellTestState> wtestState,
-                          std::shared_ptr<SummaryConfig> summaryConfig);
+    void defineSimulationModel(SimulationModelParams&& params);
 
     /*!
      * \brief Return a reference to the internalized ECL deck.
@@ -248,6 +257,14 @@ public:
         return *comm_;
     }
 
+    // Private to avoid pulling schedule in header.
+    // Static state is not serialized, only use for restart.
+    template<class Serializer>
+    void serializeOp(Serializer& serializer);
+
+    // Only compares dynamic state.
+    bool operator==(const EclGenericVanguard& rhs) const;
+
 protected:
     void updateOutputDir_(std::string outputDir,
                           bool enableEclCompatFile);
@@ -258,7 +275,7 @@ protected:
 
     void init();
 
-    static double setupTime_;
+    double setupTime_;
 
     // These variables may be owned by both Python and the simulator
     static std::unique_ptr<Parallel::Communication> comm_;
@@ -285,22 +302,22 @@ protected:
     bool enableExperiments_;
 
     std::unique_ptr<SummaryState> summaryState_;
-    static std::unique_ptr<UDQState> udqState_;
-    static std::unique_ptr<Action::State> actionState_;
+    std::unique_ptr<UDQState> udqState_;
+    std::unique_ptr<Action::State> actionState_;
 
     // Observe that this instance is handled differently from the other state
     // variables, it will only be initialized for a restart run. While
     // initializing a restarted run this instance is transferred to the WGState
     // member in the well model.
-    static std::unique_ptr<WellTestState> wtestState_;
+    std::unique_ptr<WellTestState> wtestState_;
 
     // these attributes point  either to the internal  or to the external version of the
     // parser objects.
     std::shared_ptr<Python> python;
     // These variables may be owned by both Python and the simulator
-    static std::shared_ptr<EclipseState> eclState_;
-    static std::shared_ptr<Schedule> eclSchedule_;
-    static std::shared_ptr<SummaryConfig> eclSummaryConfig_;
+    std::shared_ptr<EclipseState> eclState_;
+    std::shared_ptr<Schedule> eclSchedule_;
+    std::shared_ptr<SummaryConfig> eclSummaryConfig_;
 
     /*! \brief Information about wells in parallel
      *

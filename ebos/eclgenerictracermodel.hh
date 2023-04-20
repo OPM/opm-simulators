@@ -29,7 +29,7 @@
 #define EWOMS_ECL_GENERIC_TRACER_MODEL_HH
 
 #include <opm/grid/common/CartesianIndexMapper.hpp>
-
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/models/blackoil/blackoilmodel.hh>
 
 #include <opm/simulators/linalg/matrixblock.hh>
@@ -78,6 +78,13 @@ public:
     const std::map<std::pair<std::string, std::string>, double>&
     getWellTracerRates() const {return wellTracerRate_;}
 
+    template<class Serializer>
+    void serializeOp(Serializer& serializer)
+    {
+        serializer(tracerConcentration_);
+        serializer(wellTracerRate_);
+    }
+
 protected:
     EclGenericTracerModel(const GridView& gridView,
                           const EclipseState& eclState,
@@ -108,7 +115,6 @@ protected:
     std::vector<int> tracerPhaseIdx_;
     std::vector<Dune::BlockVector<Dune::FieldVector<Scalar, 1>>> tracerConcentration_;
     std::unique_ptr<TracerMatrix> tracerMatrix_;
-    TracerVector tracerResidual_;
     std::vector<int> cartToGlobal_;
     std::vector<Dune::BlockVector<Dune::FieldVector<Scalar, 1>>> storageOfTimeIndex1_;
 

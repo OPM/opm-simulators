@@ -24,6 +24,7 @@
 #ifndef OPM_WELL_GROUP_CONTROLS_HEADER_INCLUDED
 #define OPM_WELL_GROUP_CONTROLS_HEADER_INCLUDED
 
+#include <string>
 #include <functional>
 #include <optional>
 #include <vector>
@@ -47,7 +48,7 @@ public:
     //! \brief Constructor sets reference to well.
     WellGroupControls(const WellInterfaceGeneric& well) : well_(well) {}
 
-    using RateConvFunc = std::function<void(const RegionId, const int, std::vector<double>&)>;
+    using RateConvFunc = std::function<void(const RegionId, const int, const std::optional<std::string>&, std::vector<double>&)>;
 
     template<class EvalWell>
     void getGroupInjectionControl(const Group& group,
@@ -84,7 +85,8 @@ public:
                                    const std::vector<EvalWell>& rates,
                                    const RateConvFunc& rateConverter,
                                    double efficiencyFactor,
-                                   EvalWell& control_eq) const;
+                                   EvalWell& control_eq,
+                                   DeferredLogger& deferred_logger) const;
 
     double getGroupProductionTargetRate(const Group& group,
                                         const WellState& well_state,
@@ -92,7 +94,8 @@ public:
                                         const Schedule& schedule,
                                         const SummaryState& summaryState,
                                         const RateConvFunc& rateConverter,
-                                        double efficiencyFactor) const;
+                                        double efficiencyFactor,
+                                        DeferredLogger& deferred_logger) const;
 
 private:
     const WellInterfaceGeneric& well_; //!< Reference to well interface

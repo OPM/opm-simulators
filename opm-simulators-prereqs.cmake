@@ -12,6 +12,7 @@ set (opm-simulators_CONFIG_VAR
   HAVE_AMGCL
   HAVE_VEXCL
   HAVE_ROCALUTION
+  HAVE_ROCSPARSE
   HAVE_SUITESPARSE_UMFPACK_H
   HAVE_DUNE_ISTL
   DUNE_ISTL_WITH_CHECKING
@@ -20,6 +21,7 @@ set (opm-simulators_CONFIG_VAR
   DUNE_ISTL_VERSION_REVISION
   HAVE_SUITESPARSE_UMFPACK
   HAVE_DAMARIS
+  HAVE_HDF5
   )
 
 # dependencies
@@ -43,11 +45,15 @@ set (opm-simulators_DEPS
   "SuperLU"
   # ROCALUTION from ROCM framework
   "rocalution"
+  # packages from ROCm framework
+  "rocblas"
+  "rocsparse"
   # OPM dependency
   "opm-common REQUIRED"
   "opm-grid REQUIRED"
   "opm-models REQUIRED"
   "Damaris 1.7"
+  "HDF5"
   )
 
 find_package_deps(opm-simulators)

@@ -105,6 +105,37 @@ EclGenericProblem(const EclipseState& eclState,
 }
 
 template<class GridView, class FluidSystem, class Scalar>
+EclGenericProblem<GridView,FluidSystem,Scalar>
+EclGenericProblem<GridView,FluidSystem,Scalar>::
+serializationTestObject(const EclipseState& eclState,
+                        const Schedule& schedule,
+                        const GridView& gridView)
+{
+    EclGenericProblem result(eclState, schedule, gridView);
+    result.maxOilSaturation_ = {1.0, 2.0};
+    result.maxPolymerAdsorption_ = {3.0, 4.0, 5.0};
+    result.maxWaterSaturation_ = {6.0};
+    result.minOilPressure_ = {7.0, 8.0, 9.0, 10.0};
+    result.overburdenPressure_ = {11.0};
+    result.polymerConcentration_ = {12.0};
+    result.polymerMoleWeight_ = {13.0, 14.0};
+    result.solventSaturation_ = {15.0};
+    result.microbialConcentration_ = {16.0};
+    result.oxygenConcentration_ = {17.0};
+    result.ureaConcentration_ = {18.0};
+    result.biofilmConcentration_ = {19.0};
+    result.calciteConcentration_ = {20.0};
+    result.lastRv_ = {21.0};
+    result.maxDRv_ = {22.0, 23.0};
+    result.convectiveDrs_ = {24.0, 25.0, 26.0};
+    result.lastRs_ = {27.0};
+    result.maxDRs_ = {28.0};
+    result.dRsDtOnlyFreeGas_ = {false, true};
+
+    return result;
+}
+
+template<class GridView, class FluidSystem, class Scalar>
 std::string
 EclGenericProblem<GridView,FluidSystem,Scalar>::
 helpPreamble(int,
@@ -317,6 +348,20 @@ porosity(unsigned globalSpaceIdx, unsigned timeIdx) const
 }
 
 template<class GridView, class FluidSystem, class Scalar>
+Scalar EclGenericProblem<GridView,FluidSystem,Scalar>::
+rockFraction(unsigned elementIdx, unsigned timeIdx) const
+{
+    const auto& fp = eclState_.fieldProps();
+    const std::vector<double>& poro  = fp.get_double("PORO");
+    // the reference porosity is defined as the accumulated pore volume divided by the
+    // geometric volume of the element. Note that it can
+    // be larger than 1.0 if porevolume multipliers are used
+    // to for instance implement larger boundary cells
+    Scalar porosity = poro[elementIdx];
+    return referencePorosity(elementIdx, timeIdx) / porosity * (1 - porosity);
+}
+
+template<class GridView, class FluidSystem, class Scalar>
 template<class T>
 void EclGenericProblem<GridView,FluidSystem,Scalar>::
 updateNum(const std::string& name, std::vector<T>& numbers)
@@ -368,6 +413,15 @@ updateKrnum_()
     updateNum("KRNUMX", krnumx_);
     updateNum("KRNUMY", krnumy_);
     updateNum("KRNUMZ", krnumz_);
+}
+
+template<class GridView, class FluidSystem, class Scalar>
+void EclGenericProblem<GridView,FluidSystem,Scalar>::
+updateImbnum_()
+{
+    updateNum("IMBNUMX", imbnumx_);
+    updateNum("IMBNUMY", imbnumy_);
+    updateNum("IMBNUMZ", imbnumz_);
 }
 
 template<class GridView, class FluidSystem, class Scalar>
@@ -744,6 +798,31 @@ initDRSDT_(size_t numDof,
             convectiveDrs_.resize(numDof, 1.0);
         }
     }
+}
+
+template<class GridView, class FluidSystem, class Scalar>
+bool EclGenericProblem<GridView,FluidSystem,Scalar>::
+operator==(const EclGenericProblem& rhs) const
+{
+    return this->maxOilSaturation_ == rhs.maxOilSaturation_ &&
+           this->maxPolymerAdsorption_ == rhs.maxPolymerAdsorption_ &&
+           this->maxWaterSaturation_ == rhs.maxWaterSaturation_ &&
+           this->minOilPressure_ == rhs.minOilPressure_ &&
+           this->overburdenPressure_ == rhs.overburdenPressure_ &&
+           this->polymerConcentration_ == rhs.polymerConcentration_ &&
+           this->polymerMoleWeight_ == rhs.polymerMoleWeight_ &&
+           this->solventSaturation_ == rhs.solventSaturation_ &&
+           this->microbialConcentration_ == rhs.microbialConcentration_ &&
+           this->oxygenConcentration_ == rhs.oxygenConcentration_ &&
+           this->ureaConcentration_ == rhs.ureaConcentration_ &&
+           this->biofilmConcentration_ == rhs.biofilmConcentration_ &&
+           this->calciteConcentration_ == rhs.calciteConcentration_ &&
+           this->lastRv_ == rhs.lastRv_ &&
+           this->maxDRv_ == rhs.maxDRv_ &&
+           this->convectiveDrs_ == rhs.convectiveDrs_ &&
+           this->lastRs_ == rhs.lastRs_ &&
+           this->maxDRs_ == rhs.maxDRs_ &&
+           this->dRsDtOnlyFreeGas_ == rhs.dRsDtOnlyFreeGas_;
 }
 
 #if HAVE_DUNE_FEM

@@ -33,7 +33,11 @@ namespace Opm {
 
 class GroupState {
 public:
+    GroupState() = default;
     explicit GroupState(std::size_t num_phases);
+
+    static GroupState serializationTestObject();
+
     bool operator==(const GroupState& other) const;
 
     bool has_production_rates(const std::string& gname) const;
@@ -159,9 +163,26 @@ public:
             throw std::logic_error("Internal size mismatch when distributing groupData");
     }
 
+    template<class Serializer>
+    void serializeOp(Serializer& serializer)
+    {
+        serializer(num_phases);
+        serializer(m_production_rates);
+        serializer(production_controls);
+        serializer(prod_red_rates);
+        serializer(inj_red_rates);
+        serializer(inj_surface_rates);
+        serializer(inj_resv_rates);
+        serializer(inj_rein_rates);
+        serializer(inj_vrep_rate);
+        serializer(m_grat_sales_target);
+        serializer(m_gpmaint_target);
+        serializer(injection_controls);
+        serializer(gpmaint_state);
+    }
 
 private:
-    std::size_t num_phases;
+    std::size_t num_phases{};
     std::map<std::string, std::vector<double>> m_production_rates;
     std::map<std::string, Group::ProductionCMode> production_controls;
     std::map<std::string, std::vector<double>> prod_red_rates;

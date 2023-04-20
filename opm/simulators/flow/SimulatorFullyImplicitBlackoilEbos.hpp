@@ -22,6 +22,8 @@
 #ifndef OPM_SIMULATORFULLYIMPLICITBLACKOILEBOS_HEADER_INCLUDED
 #define OPM_SIMULATORFULLYIMPLICITBLACKOILEBOS_HEADER_INCLUDED
 
+#include <dune/common/hash.hh>
+
 #include <opm/simulators/flow/BlackoilModelEbos.hpp>
 #include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
 #include <opm/simulators/flow/ConvergenceOutputConfiguration.hpp>
@@ -29,6 +31,7 @@
 #include <opm/simulators/flow/NonlinearSolverEbos.hpp>
 #include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeSteppingEbos.hpp>
+#include <opm/simulators/timestepping/ConvergenceReport.hpp>
 #include <opm/simulators/utils/moduleVersion.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
@@ -38,6 +41,8 @@
 
 #include <opm/common/ErrorMacros.hpp>
 
+#include <boost/date_time/gregorian/gregorian.hpp>
+
 #include <memory>
 #include <optional>
 #include <string>
@@ -45,6 +50,10 @@
 #include <thread>
 #include <utility>
 #include <vector>
+
+#if HAVE_HDF5
+#include <ebos/hdf5serializer.hh>
+#endif
 
 namespace Opm::Properties {
 
@@ -59,6 +68,24 @@ struct EnableTuning {
 
 template <class TypeTag, class MyTypeTag>
 struct OutputExtraConvergenceInfo
+{
+    using type = UndefinedProperty;
+};
+
+template <class TypeTag, class MyTypeTag>
+struct SaveStep
+{
+    using type = UndefinedProperty;
+};
+
+template <class TypeTag, class MyTypeTag>
+struct LoadStep
+{
+    using type = UndefinedProperty;
+};
+
+template <class TypeTag, class MyTypeTag>
+struct SaveFile
 {
     using type = UndefinedProperty;
 };
@@ -80,6 +107,24 @@ template <class TypeTag>
 struct OutputExtraConvergenceInfo<TypeTag, TTag::EclFlowProblem>
 {
     static constexpr auto* value = "none";
+};
+
+template <class TypeTag>
+struct SaveStep<TypeTag, TTag::EclFlowProblem>
+{
+    static constexpr auto* value = "";
+};
+
+template <class TypeTag>
+struct SaveFile<TypeTag, TTag::EclFlowProblem>
+{
+    static constexpr auto* value = "";
+};
+
+template <class TypeTag>
+struct LoadStep<TypeTag, TTag::EclFlowProblem>
+{
+    static constexpr int value = -1;
 };
 
 } // namespace Opm::Properties
@@ -153,6 +198,31 @@ public:
                                                                OutputExtraConvergenceInfo),
                                                R"(OutputExtraConvergenceInfo (--output-extra-convergence-info))");
         }
+
+        const std::string saveSpec = EWOMS_GET_PARAM(TypeTag, std::string, SaveStep);
+        if (saveSpec == "all") {
+            saveStride_ = 1;
+        } else if (!saveSpec.empty() && saveSpec[0] == ':') {
+            saveStride_ = std::atoi(saveSpec.c_str()+1);
+        } else if (!saveSpec.empty()) {
+            saveStep_ = std::atoi(saveSpec.c_str());
+        }
+
+        loadStep_ = EWOMS_GET_PARAM(TypeTag, int, LoadStep);
+
+        saveFile_ = EWOMS_GET_PARAM(TypeTag, std::string, SaveFile);
+        if (saveFile_.empty()) {
+            const auto& ioconfig = ebosSimulator_.vanguard().eclState().getIOConfig();
+            saveFile_ = ioconfig.fullBasePath() + ".OPMRST";
+            if (loadStep_ != -1 && !std::filesystem::exists(saveFile_)) {
+                std::filesystem::path path(ioconfig.getInputDir() + "/");
+                path.replace_filename(ioconfig.getBaseName() + ".OPMRST");
+                saveFile_ = path;
+                if (!std::filesystem::exists(saveFile_)) {
+                    OPM_THROW(std::runtime_error, "Error locating serialized restart file");
+                }
+            }
+        }
     }
 
     ~SimulatorFullyImplicitBlackoilEbos()
@@ -182,6 +252,18 @@ public:
                              "\"iterations\" generates an INFOITER file. "
                              "Combine options with commas, e.g., "
                              "\"steps,iterations\" for multiple outputs.");
+        EWOMS_REGISTER_PARAM(TypeTag, std::string, SaveStep,
+                             "Save serialized state to .OPMRST file. "
+                             "Either a specific report step, \"all\" to save "
+                             "all report steps or \":x\" to save every x'th step.");
+        EWOMS_REGISTER_PARAM(TypeTag, int, LoadStep,
+                             "Load serialized state from .OPMRST file. "
+                             "Either a specific report step, or 0 to load last "
+                             "stored report step.");
+        EWOMS_REGISTER_PARAM(TypeTag, std::string, SaveFile,
+                             "FileName for .OPMRST file used for serialized state. "
+                             "If empty, CASENAME.OPMRST is used.");
+        EWOMS_HIDE_PARAM(TypeTag, SaveFile);
     }
 
     /// Run the simulation.
@@ -246,6 +328,10 @@ public:
             return false;
         }
 
+        if (loadStep_ > -1) {
+            loadTimerInfo(timer);
+        }
+
         // Report timestep.
         if (terminalOutput_) {
             std::ostringstream ss;
@@ -281,7 +367,14 @@ public:
                + schedule().seconds(timer.currentStepNum()),
             timer.currentStepLength());
         ebosSimulator_.setEpisodeIndex(timer.currentStepNum());
+        if (loadStep_> -1) {
+            wellModel_().prepareDeserialize(loadStep_ - 1);
+            loadSimulatorState();
+            loadStep_ = -1;
+            ebosSimulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
+        }
         solver->model().beginReportStep();
+
         bool enableTUNING = EWOMS_GET_PARAM(TypeTag, bool, EnableTuning);
 
         // If sub stepping is enabled allow the solver to sub cycle
@@ -356,6 +449,8 @@ public:
             OpmLog::debug(msg);
         }
 
+        handleSave(timer);
+
         return true;
     }
 
@@ -380,6 +475,14 @@ public:
 
     const Grid& grid() const
     { return ebosSimulator_.vanguard().grid(); }
+
+    template<class Serializer>
+    void serializeOp(Serializer& serializer)
+    {
+        serializer(ebosSimulator_);
+        serializer(report_);
+        serializer(adaptiveTimeStepping_);
+    }
 
 protected:
 
@@ -445,7 +548,7 @@ protected:
                      &this->convergenceOutputObject_.value());
     }
 
-    void writeConvergenceOutput(std::vector<typename Model::StepReport>&& reports)
+    void writeConvergenceOutput(std::vector<StepReport>&& reports)
     {
         if (! this->convergenceOutputThread_.has_value()) {
             return;
@@ -471,6 +574,108 @@ protected:
         this->convergenceOutputThread_->join();
     }
 
+    //! \brief Serialization of simulator data to .OPMRST files at end of report steps.
+    void handleSave(SimulatorTimer& timer)
+    {
+        if (saveStride_ == -1 && saveStep_ == -1) {
+            return;
+        }
+
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
+
+        int nextStep = timer.currentStepNum();
+        if ((saveStep_ != -1 && nextStep == saveStep_)  ||
+            (saveStride_ != -1 && (nextStep % saveStride_) == 0)) {
+#if !HAVE_HDF5
+            OpmLog::error("Saving of serialized state requested, but no HDF5 support available.");
+#else
+            const std::string groupName = "/report_step/" + std::to_string(nextStep);
+            if (nextStep == saveStride_ || nextStep == saveStep_) {
+                std::filesystem::remove(saveFile_);
+            }
+            HDF5Serializer writer(saveFile_,
+                                  HDF5File::OpenMode::APPEND,
+                                  EclGenericVanguard::comm());
+            if (nextStep == saveStride_ || nextStep == saveStep_) {
+                std::ostringstream str;
+                Parameters::printValues<TypeTag>(str);
+                writer.writeHeader("OPM Flow",
+                                   moduleVersion(),
+                                   compileTimestamp(),
+                                   ebosSimulator_.vanguard().caseName(),
+                                   str.str(),
+                                   EclGenericVanguard::comm().size());
+
+                if (EclGenericVanguard::comm().size() > 1) {
+                    const auto& cellMapping = ebosSimulator_.vanguard().globalCell();
+                    std::size_t hash = Dune::hash_range(cellMapping.begin(), cellMapping.end());
+                    writer.write(hash, "/", "grid_checksum");
+                }
+            }
+            writer.write(*this, groupName, "simulator_data");
+            writer.write(timer, groupName, "simulator_timer",
+                         HDF5File::DataSetMode::ROOT_ONLY);
+            OpmLog::info("Serialized state written for report step " + std::to_string(nextStep));
+#endif
+        }
+
+        OPM_END_PARALLEL_TRY_CATCH("Error saving serialized state: ",
+                                   EclGenericVanguard::comm());
+    }
+
+    //! \brief Load timer info from serialized state.
+    void loadTimerInfo([[maybe_unused]] SimulatorTimer& timer)
+    {
+#if !HAVE_HDF5
+        OpmLog::error("Loading of serialized state requested, but no HDF5 support available.");
+        loadStep_ = -1;
+#else
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
+
+        HDF5Serializer reader(saveFile_,
+                              HDF5File::OpenMode::READ,
+                              EclGenericVanguard::comm());
+
+        if (loadStep_ == 0) {
+            loadStep_ = reader.lastReportStep();
+        }
+
+        OpmLog::info("Loading serialized state for report step " + std::to_string(loadStep_));
+        const std::string groupName = "/report_step/" + std::to_string(loadStep_);
+        reader.read(timer, groupName, "simulator_timer", HDF5File::DataSetMode::ROOT_ONLY);
+
+        if (EclGenericVanguard::comm().size() > 1) {
+            std::size_t stored_hash;
+            reader.read(stored_hash, "/", "grid_checksum");
+            const auto& cellMapping = ebosSimulator_.vanguard().globalCell();
+            std::size_t hash = Dune::hash_range(cellMapping.begin(), cellMapping.end());
+            if (hash != stored_hash) {
+                throw std::runtime_error("Grid hash mismatch, .SAVE file cannot be used");
+            }
+        }
+
+        OPM_END_PARALLEL_TRY_CATCH("Error loading serialized state: ",
+                                   EclGenericVanguard::comm());
+#endif
+    }
+
+    //! \brief Load simulator state from serialized state.
+    void loadSimulatorState()
+    {
+#if HAVE_HDF5
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
+
+        HDF5Serializer reader(saveFile_,
+                              HDF5File::OpenMode::READ,
+                              EclGenericVanguard::comm());
+        const std::string groupName = "/report_step/" + std::to_string(loadStep_);
+        reader.read(*this, groupName, "simulator_data");
+
+        OPM_END_PARALLEL_TRY_CATCH("Error loading serialized state: ",
+                                   EclGenericVanguard::comm());
+#endif
+    }
+
     // Data.
     Simulator& ebosSimulator_;
     std::unique_ptr<WellConnectionAuxiliaryModule<TypeTag>> wellAuxMod_;
@@ -491,6 +696,11 @@ protected:
     std::optional<ConvergenceReportQueue> convergenceOutputQueue_{};
     std::optional<ConvergenceOutputThread> convergenceOutputObject_{};
     std::optional<std::thread> convergenceOutputThread_{};
+
+    int saveStride_ = -1; //!< Stride to save serialized state at
+    int saveStep_ = -1; //!< Specific step to save serialized state at
+    int loadStep_ = -1; //!< Step to load serialized state from
+    std::string saveFile_; //!< File to load/save serialized state from/to.
 };
 
 } // namespace Opm

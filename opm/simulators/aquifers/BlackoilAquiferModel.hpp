@@ -48,6 +48,7 @@
 
 #include <vector>
 #include <type_traits>
+#include <string_view>
 
 namespace Opm
 {
@@ -112,6 +113,9 @@ public:
     template <class Restarter>
     void deserialize(Restarter& res);
 
+    template<class Serializer>
+    void serializeOp(Serializer& serializer);
+
 protected:
     // ---------      Types      ---------
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
@@ -119,10 +123,23 @@ protected:
 
     Simulator& simulator_;
 
+    // TODO: possibly better to use unorder_map here for aquifers
     std::vector<std::unique_ptr<AquiferInterface<TypeTag>>> aquifers;
 
-    // This initialization function is used to connect the parser objects with the ones needed by AquiferCarterTracy
+    // This initialization function is used to connect the parser objects
+    // with the ones needed by AquiferCarterTracy
     void init();
+
+private:
+    void createDynamicAquifers(const int episode_index);
+
+    void initializeStaticAquifers();
+
+    template <typename AquiferType, typename AquiferData>
+    std::unique_ptr<AquiferType>
+    createAnalyticAquiferPointer(const AquiferData& aqData,
+                                 const int          aquiferID,
+                                 std::string_view   aqType) const;
 };
 
 

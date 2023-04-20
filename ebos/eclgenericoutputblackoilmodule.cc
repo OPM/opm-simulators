@@ -49,6 +49,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -56,21 +57,65 @@
 
 namespace {
 
-std::string EclString(Opm::Inplace::Phase phase) {
-    switch(phase) {
-    case Opm::Inplace::Phase::WATER: return "WIP";
-    case Opm::Inplace::Phase::OIL: return "OIP";
-    case Opm::Inplace::Phase::GAS: return "GIP";
-    case Opm::Inplace::Phase::OilInLiquidPhase: return "OIPL";
-    case Opm::Inplace::Phase::OilInGasPhase: return "OIPG";
-    case Opm::Inplace::Phase::GasInLiquidPhase: return "GIPL";
-    case Opm::Inplace::Phase::GasInGasPhase: return "GIPG";
-    case Opm::Inplace::Phase::PoreVolume: return "RPV";
-    case Opm::Inplace::Phase::WaterResVolume: return "WIPR";
-    case Opm::Inplace::Phase::OilResVolume: return "OIPR";
-    case Opm::Inplace::Phase::GasResVolume: return "GIPR";
-    case Opm::Inplace::Phase::SALT: return "SIP";
-    default: throw std::logic_error(fmt::format("Phase enum with integer value: {} not recognized", static_cast<int>(phase)));
+std::string EclString(const Opm::Inplace::Phase phase)
+{
+    switch (phase) {
+    case Opm::Inplace::Phase::WATER:
+        return "WIP";
+
+    case Opm::Inplace::Phase::OIL:
+        return "OIP";
+
+    case Opm::Inplace::Phase::GAS:
+        return "GIP";
+
+    case Opm::Inplace::Phase::OilInLiquidPhase:
+        return "OIPL";
+
+    case Opm::Inplace::Phase::OilInGasPhase:
+        return "OIPG";
+
+    case Opm::Inplace::Phase::GasInLiquidPhase:
+        return "GIPL";
+
+    case Opm::Inplace::Phase::GasInGasPhase:
+        return "GIPG";
+
+    case Opm::Inplace::Phase::PoreVolume:
+        return "RPV";
+
+    case Opm::Inplace::Phase::WaterResVolume:
+        return "WIPR";
+
+    case Opm::Inplace::Phase::OilResVolume:
+        return "OIPR";
+
+    case Opm::Inplace::Phase::GasResVolume:
+        return "GIPR";
+
+    case Opm::Inplace::Phase::SALT:
+        return "SIP";
+
+    case Opm::Inplace::Phase::CO2InWaterPhase:
+        return "WCD";
+
+    case Opm::Inplace::Phase::CO2InGasPhaseInMob:
+        return "GCDI";
+
+    case Opm::Inplace::Phase::CO2InGasPhaseMob:
+        return "GCDM";
+
+    case Opm::Inplace::Phase::WaterInGasPhase:
+        return "WIPG";
+
+    case Opm::Inplace::Phase::WaterInWaterPhase:
+        return "WIPL";
+
+    default:
+        throw std::logic_error {
+            fmt::format("Phase enum with integer value: "
+                        "{} not recognized", static_cast<int>(phase))
+        };
     }
 }
 
@@ -125,6 +170,7 @@ EclGenericOutputBlackoilModule(const EclipseState& eclState,
     , enableSaltPrecipitation_(enableSaltPrecipitation)
     , enableExtbo_(enableExtbo)
     , enableMICP_(enableMICP)
+    , local_data_valid_(false)
 {
     const auto& fp = eclState_.fieldProps();
 
@@ -138,6 +184,33 @@ EclGenericOutputBlackoilModule(const EclipseState& eclState,
     for (const auto& phase : Inplace::phases()) {
         std::string key_pattern = "R" + EclString(phase) + "*";
         this->regionNodes_[phase] = summaryConfig_.keywords(key_pattern);
+    }
+
+    // Check if FLORES/FLOWS is set in any RPTRST in the schedule
+    anyFlores_ = false;     // Used for the initialization of the sparse table
+    anyFlows_ = false;
+    enableFlores_ = false;  // Used for the output of i+, j+, k+
+    enableFloresn_ = false; // Used for the special case of nnc
+    enableFlows_ = false; 
+    enableFlowsn_ = false; 
+    
+    for (const auto& block : this->schedule_) { // Uses Schedule::begin() and Schedule::end()
+        const auto& rstkw = block.rst_config().keywords;
+
+        if (! anyFlores_) {
+            anyFlores_ = rstkw.find("FLORES") != rstkw.end();
+        }
+
+        if (! anyFlows_) {
+            anyFlows_ = rstkw.find("FLOWS") != rstkw.end();
+        }
+
+        if (anyFlores_ && anyFlows_) {
+            // Terminate report step loop early if both FLORES and FLOWS
+            // have been set at some point as there's no need to search
+            // any further in that case.
+            break;
+        }
     }
 }
 
@@ -652,115 +725,197 @@ template<class FluidSystem, class Scalar>
 void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
 assignToSolution(data::Solution& sol)
 {
-    using DataEntry = std::tuple<std::string,
-                                 UnitSystem::measure,
-                                 data::TargetType,
-                                 const std::vector<Scalar>&>;
-    auto doInsert = [&sol](const DataEntry& entry)
+    using DataEntry =
+        std::tuple<std::string, UnitSystem::measure, const std::vector<Scalar>&>;
+
+    auto doInsert = [&sol](const DataEntry&       entry,
+                           const data::TargetType target)
     {
-        if (!std::get<3>(entry).empty())
-            sol.insert(std::get<0>(entry), std::get<1>(entry),
-                       std::move(std::get<3>(entry)), std::get<2>(entry));
-    };
-
-    const std::vector<DataEntry> data = {
-        {"1OVERBG",  UnitSystem::measure::gas_inverse_formation_volume_factor,   data::TargetType::RESTART_AUXILIARY, invB_[gasPhaseIdx]},
-        {"1OVERBO",  UnitSystem::measure::oil_inverse_formation_volume_factor,   data::TargetType::RESTART_AUXILIARY, invB_[oilPhaseIdx]},
-        {"1OVERBW",  UnitSystem::measure::water_inverse_formation_volume_factor, data::TargetType::RESTART_AUXILIARY, invB_[waterPhaseIdx]},
-        {"BIOFILM",  UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      cBiofilm_},
-        {"CALCITE",  UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      cCalcite_},
-        {"FOAM",     UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      cFoam_},
-        {"GASKR",    UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     relativePermeability_[gasPhaseIdx]},
-        {"GAS_DEN",  UnitSystem::measure::density,   data::TargetType::RESTART_AUXILIARY,     density_[gasPhaseIdx]},
-        {"GAS_VISC", UnitSystem::measure::viscosity, data::TargetType::RESTART_AUXILIARY,     viscosity_[gasPhaseIdx]},
-        {"KRNSW_GO", UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     krnSwMdcGo_},
-        {"KRNSW_OW", UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     krnSwMdcOw_},
-        {"MICROBES", UnitSystem::measure::density,   data::TargetType::RESTART_SOLUTION,      cMicrobes_},
-        {"OILKR",    UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     relativePermeability_[oilPhaseIdx]},
-        {"OIL_DEN",  UnitSystem::measure::density,   data::TargetType::RESTART_AUXILIARY,     density_[oilPhaseIdx]},
-        {"OIL_VISC", UnitSystem::measure::viscosity, data::TargetType::RESTART_AUXILIARY,     viscosity_[oilPhaseIdx]},
-        {"OXYGEN",   UnitSystem::measure::density,   data::TargetType::RESTART_SOLUTION,      cOxygen_},
-        {"PBUB",     UnitSystem::measure::pressure,  data::TargetType::RESTART_AUXILIARY,     bubblePointPressure_},
-        {"PCSWM_GO", UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     pcSwMdcGo_},
-        {"PCSWM_OW", UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     pcSwMdcOw_},
-        {"PDEW",     UnitSystem::measure::pressure,  data::TargetType::RESTART_AUXILIARY,     dewPointPressure_},
-        {"POLYMER",  UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      cPolymer_},
-        {"PORV_RC",  UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     rockCompPorvMultiplier_},
-        {"PPCW",     UnitSystem::measure::pressure,  data::TargetType::RESTART_SOLUTION,      ppcw_},
-        {"PRESROCC", UnitSystem::measure::pressure,  data::TargetType::RESTART_SOLUTION,      minimumOilPressure_},
-        {"PRESSURE", UnitSystem::measure::pressure,  data::TargetType::RESTART_SOLUTION,      fluidPressure_},
-        {"PCOW",     UnitSystem::measure::pressure,  data::TargetType::RESTART_SOLUTION,      pcow_},
-        {"PCOG",     UnitSystem::measure::pressure,  data::TargetType::RESTART_SOLUTION,      pcog_},
-        {"PRES_OVB", UnitSystem::measure::pressure,  data::TargetType::RESTART_SOLUTION,      overburdenPressure_},
-        {"RS",       UnitSystem::measure::gas_oil_ratio, data::TargetType::RESTART_SOLUTION,  rs_},
-        {"RSW",      UnitSystem::measure::gas_oil_ratio, data::TargetType::RESTART_SOLUTION,  rsw_},
-        {"RSSAT",    UnitSystem::measure::gas_oil_ratio, data::TargetType::RESTART_AUXILIARY, gasDissolutionFactor_},
-        {"RV",       UnitSystem::measure::oil_gas_ratio, data::TargetType::RESTART_SOLUTION,  rv_},
-        {"RVSAT",    UnitSystem::measure::oil_gas_ratio, data::TargetType::RESTART_AUXILIARY, oilVaporizationFactor_},
-        {"RVW",      UnitSystem::measure::oil_gas_ratio, data::TargetType::RESTART_AUXILIARY, rvw_},
-        {"SALT",     UnitSystem::measure::salinity,  data::TargetType::RESTART_SOLUTION,      cSalt_},
-        {"SALTP",    UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     pSalt_},
-        {"PERMFACT", UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     permFact_},
-        {"SOMAX",    UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      soMax_},
-        {"DRSDTCON", UnitSystem::measure::gas_oil_ratio_rate,  data::TargetType::RESTART_AUXILIARY,     drsdtcon_},
-        {"SSOLVENT", UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      sSol_},
-        {"SS_X",     UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      extboX_},
-        {"SS_Y",     UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      extboY_},
-        {"SS_Z",     UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      extboZ_},
-        {"STD_CO2",  UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      mFracCo2_},
-        {"STD_GAS",  UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      mFracGas_},
-        {"STD_OIL",  UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      mFracOil_},
-        {"SWMAX",    UnitSystem::measure::identity,  data::TargetType::RESTART_SOLUTION,      swMax_},
-        {"UREA",     UnitSystem::measure::density,   data::TargetType::RESTART_SOLUTION,      cUrea_},
-        {"TMULT_RC", UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     rockCompTransMultiplier_},
-        {"WATKR",    UnitSystem::measure::identity,  data::TargetType::RESTART_AUXILIARY,     relativePermeability_[waterPhaseIdx]},
-        {"WAT_DEN",  UnitSystem::measure::density,   data::TargetType::RESTART_AUXILIARY,     density_[waterPhaseIdx]},
-        {"WAT_VISC", UnitSystem::measure::viscosity, data::TargetType::RESTART_AUXILIARY,     viscosity_[waterPhaseIdx]},
-    };
-
-    for (const auto& entry : data)
-        doInsert(entry);
-
-    if (!temperature_.empty()) {
-        if (enableEnergy_)
-            sol.insert("TEMP", UnitSystem::measure::temperature, std::move(temperature_), data::TargetType::RESTART_SOLUTION);
-        else {
-            // Flow allows for initializing of non-constant initial temperature.
-            // For output of this temperature for visualization and restart set --enable-opm-restart=true
-            assert(enableTemperature_);
-            sol.insert("TEMP", UnitSystem::measure::temperature, std::move(temperature_), data::TargetType::RESTART_AUXILIARY);
+        if (std::get<2>(entry).empty()) {
+            return;
         }
+
+        sol.insert(std::get<std::string>(entry),
+                   std::get<UnitSystem::measure>(entry),
+                   std::move(std::get<2>(entry)),
+                   target);
+    };
+
+    const auto baseSolutionArrays = std::vector<DataEntry> {
+        {"1OVERBG",  UnitSystem::measure::gas_inverse_formation_volume_factor,   invB_[gasPhaseIdx]},
+        {"1OVERBO",  UnitSystem::measure::oil_inverse_formation_volume_factor,   invB_[oilPhaseIdx]},
+        {"1OVERBW",  UnitSystem::measure::water_inverse_formation_volume_factor, invB_[waterPhaseIdx]},
+        {"FLOGASI+", UnitSystem::measure::gas_surface_rate,                      flowsi_[gasCompIdx]},
+        {"FLOGASJ+", UnitSystem::measure::gas_surface_rate,                      flowsj_[gasCompIdx]},
+        {"FLOGASK+", UnitSystem::measure::gas_surface_rate,                      flowsk_[gasCompIdx]},
+        {"FLOOILI+", UnitSystem::measure::liquid_surface_rate,                   flowsi_[oilCompIdx]},
+        {"FLOOILJ+", UnitSystem::measure::liquid_surface_rate,                   flowsj_[oilCompIdx]},
+        {"FLOOILK+", UnitSystem::measure::liquid_surface_rate,                   flowsk_[oilCompIdx]},
+        {"FLOWATI+", UnitSystem::measure::liquid_surface_rate,                   flowsi_[waterCompIdx]},
+        {"FLOWATJ+", UnitSystem::measure::liquid_surface_rate,                   flowsj_[waterCompIdx]},
+        {"FLOWATK+", UnitSystem::measure::liquid_surface_rate,                   flowsk_[waterCompIdx]},
+        {"FLRGASI+", UnitSystem::measure::rate,                                  floresi_[gasCompIdx]},
+        {"FLRGASJ+", UnitSystem::measure::rate,                                  floresj_[gasCompIdx]},
+        {"FLRGASK+", UnitSystem::measure::rate,                                  floresk_[gasCompIdx]},
+        {"FLROILI+", UnitSystem::measure::rate,                                  floresi_[oilCompIdx]},
+        {"FLROILJ+", UnitSystem::measure::rate,                                  floresj_[oilCompIdx]},
+        {"FLROILK+", UnitSystem::measure::rate,                                  floresk_[oilCompIdx]},
+        {"FLRWATI+", UnitSystem::measure::rate,                                  floresi_[waterCompIdx]},
+        {"FLRWATJ+", UnitSystem::measure::rate,                                  floresj_[waterCompIdx]},
+        {"FLRWATK+", UnitSystem::measure::rate,                                  floresk_[waterCompIdx]},
+        {"FOAM",     UnitSystem::measure::identity,                              cFoam_},
+        {"GASKR",    UnitSystem::measure::identity,                              relativePermeability_[gasPhaseIdx]},
+        {"GAS_DEN",  UnitSystem::measure::density,                               density_[gasPhaseIdx]},
+        {"GAS_VISC", UnitSystem::measure::viscosity,                             viscosity_[gasPhaseIdx]},
+        {"OILKR",    UnitSystem::measure::identity,                              relativePermeability_[oilPhaseIdx]},
+        {"OIL_DEN",  UnitSystem::measure::density,                               density_[oilPhaseIdx]},
+        {"OIL_VISC", UnitSystem::measure::viscosity,                             viscosity_[oilPhaseIdx]},
+        {"PBUB",     UnitSystem::measure::pressure,                              bubblePointPressure_},
+        {"PCOG",     UnitSystem::measure::pressure,                              pcog_},
+        {"PCOW",     UnitSystem::measure::pressure,                              pcow_},
+        {"PDEW",     UnitSystem::measure::pressure,                              dewPointPressure_},
+        {"POLYMER",  UnitSystem::measure::identity,                              cPolymer_},
+        {"PPCW",     UnitSystem::measure::pressure,                              ppcw_},
+        {"PRESROCC", UnitSystem::measure::pressure,                              minimumOilPressure_},
+        {"PRESSURE", UnitSystem::measure::pressure,                              fluidPressure_},
+        {"RS",       UnitSystem::measure::gas_oil_ratio,                         rs_},
+        {"RSSAT",    UnitSystem::measure::gas_oil_ratio,                         gasDissolutionFactor_},
+        {"RV",       UnitSystem::measure::oil_gas_ratio,                         rv_},
+        {"RVSAT",    UnitSystem::measure::oil_gas_ratio,                         oilVaporizationFactor_},
+        {"SALT",     UnitSystem::measure::salinity,                              cSalt_},
+        {"SOMAX",    UnitSystem::measure::identity,                              soMax_},
+        {"SSOLVENT", UnitSystem::measure::identity,                              sSol_},
+        {"SWMAX",    UnitSystem::measure::identity,                              swMax_},
+        {"WATKR",    UnitSystem::measure::identity,                              relativePermeability_[waterPhaseIdx]},
+        {"WAT_DEN",  UnitSystem::measure::density,                               density_[waterPhaseIdx]},
+        {"WAT_VISC", UnitSystem::measure::viscosity,                             viscosity_[waterPhaseIdx]},
+    };
+
+    const auto extendedSolutionArrays = std::vector<DataEntry> {
+        {"BIOFILM",  UnitSystem::measure::identity,            cBiofilm_},
+        {"CALCITE",  UnitSystem::measure::identity,            cCalcite_},
+        {"DRSDTCON", UnitSystem::measure::gas_oil_ratio_rate,  drsdtcon_},
+        {"KRNSW_GO", UnitSystem::measure::identity,            krnSwMdcGo_},
+        {"KRNSW_OW", UnitSystem::measure::identity,            krnSwMdcOw_},
+        {"MICROBES", UnitSystem::measure::density,             cMicrobes_},
+        {"OXYGEN",   UnitSystem::measure::density,             cOxygen_},
+        {"PCSWM_GO", UnitSystem::measure::identity,            pcSwMdcGo_},
+        {"PCSWM_OW", UnitSystem::measure::identity,            pcSwMdcOw_},
+        {"PERMFACT", UnitSystem::measure::identity,            permFact_},
+        {"PORV_RC",  UnitSystem::measure::identity,            rockCompPorvMultiplier_},
+        {"PRES_OVB", UnitSystem::measure::pressure,            overburdenPressure_},
+        {"RSW",      UnitSystem::measure::gas_oil_ratio,       rsw_},
+        {"RVW",      UnitSystem::measure::oil_gas_ratio,       rvw_},
+        {"SALTP",    UnitSystem::measure::identity,            pSalt_},
+        {"SS_X",     UnitSystem::measure::identity,            extboX_},
+        {"SS_Y",     UnitSystem::measure::identity,            extboY_},
+        {"SS_Z",     UnitSystem::measure::identity,            extboZ_},
+        {"STD_CO2",  UnitSystem::measure::identity,            mFracCo2_},
+        {"STD_GAS",  UnitSystem::measure::identity,            mFracGas_},
+        {"STD_OIL",  UnitSystem::measure::identity,            mFracOil_},
+        {"TMULT_RC", UnitSystem::measure::identity,            rockCompTransMultiplier_},
+        {"UREA",     UnitSystem::measure::density,             cUrea_},
+    };
+
+    for (const auto& array : baseSolutionArrays) {
+        doInsert(array, data::TargetType::RESTART_SOLUTION);
     }
 
-    if (FluidSystem::phaseIsActive(waterPhaseIdx) && !saturation_[waterPhaseIdx].empty()) {
-        sol.insert("SWAT", UnitSystem::measure::identity, std::move(saturation_[waterPhaseIdx]), data::TargetType::RESTART_SOLUTION);
+    for (const auto& array : extendedSolutionArrays) {
+        doInsert(array, data::TargetType::RESTART_OPM_EXTENDED);
     }
-    if (FluidSystem::phaseIsActive(gasPhaseIdx) && !saturation_[gasPhaseIdx].empty()) {
-        sol.insert("SGAS", UnitSystem::measure::identity, std::move(saturation_[gasPhaseIdx]), data::TargetType::RESTART_SOLUTION);
+
+    if ((this->enableEnergy_ || this->enableTemperature_) &&
+        ! this->temperature_.empty())
+    {
+        const auto tag = this->enableEnergy_
+            ? data::TargetType::RESTART_SOLUTION
+            : data::TargetType::RESTART_OPM_EXTENDED;
+
+        sol.insert("TEMP", UnitSystem::measure::temperature,
+                   std::move(this->temperature_), tag);
+    }
+
+    if (FluidSystem::phaseIsActive(waterPhaseIdx) &&
+        ! this->saturation_[waterPhaseIdx].empty())
+    {
+        sol.insert("SWAT", UnitSystem::measure::identity,
+                   std::move(this->saturation_[waterPhaseIdx]),
+                   data::TargetType::RESTART_SOLUTION);
+    }
+
+    if (FluidSystem::phaseIsActive(gasPhaseIdx) &&
+        ! this->saturation_[gasPhaseIdx].empty())
+    {
+        sol.insert("SGAS", UnitSystem::measure::identity,
+                   std::move(this->saturation_[gasPhaseIdx]),
+                   data::TargetType::RESTART_SOLUTION);
+    }
+
+    if (eclState_.runspec().co2Storage() && !rsw_.empty()) {
+        auto mfrac = std::vector<double>(this->rsw_.size(), 0.0);
+
+        std::transform(this->rsw_.begin(), this->rsw_.end(),
+                       this->eclState_.fieldProps().get_int("PVTNUM").begin(),
+                       mfrac.begin(),
+            [](const auto& rsw, const int pvtReg)
+        {
+            const auto xwg = FluidSystem::convertRswToXwG(rsw, pvtReg - 1);
+            return FluidSystem::convertXwGToxwG(xwg, pvtReg - 1);
+        });
+
+        sol.insert("XMFCO2",
+                   UnitSystem::measure::identity,
+                   std::move(mfrac),
+                   data::TargetType::RESTART_OPM_EXTENDED);
+    }
+
+    if (eclState_.runspec().co2Storage() && !rvw_.empty()) {
+        auto mfrac = std::vector<double>(this->rvw_.size(), 0.0);
+
+        std::transform(this->rvw_.begin(), this->rvw_.end(),
+                       this->eclState_.fieldProps().get_int("PVTNUM").begin(),
+                       mfrac.begin(),
+            [](const auto& rvw, const int pvtReg)
+        {
+            const auto xgw = FluidSystem::convertRvwToXgW(rvw, pvtReg - 1);
+            return FluidSystem::convertXgWToxgW(xgw, pvtReg - 1);
+        });
+
+        sol.insert("YMFWAT",
+                   UnitSystem::measure::identity,
+                   std::move(mfrac),
+                   data::TargetType::RESTART_OPM_EXTENDED);
     }
 
     // Fluid in place
-    for (const auto& phase : Inplace::phases()) {
-        if (outputFipRestart_ && !fip_[phase].empty()) {
-            sol.insert(EclString(phase),
-                       UnitSystem::measure::volume,
-                       fip_[phase],
-                       data::TargetType::SUMMARY);
+    if (this->outputFipRestart_) {
+        for (const auto& phase : Inplace::phases()) {
+            if (! this->fip_[phase].empty()) {
+                sol.insert(EclString(phase),
+                           UnitSystem::measure::volume,
+                           this->fip_[phase],
+                           data::TargetType::SUMMARY);
+            }
         }
     }
 
-    // tracers
-    if (!tracerConcentrations_.empty()) {
-        const auto& tracers = eclState_.tracer();
-        for (std::size_t tracerIdx = 0; tracerIdx < tracers.size(); tracerIdx++) {
-            const auto& tracer = tracers[tracerIdx];
-            sol.insert(tracer.fname(), UnitSystem::measure::identity, std::move(tracerConcentrations_[tracerIdx]), data::TargetType::RESTART_TRACER_SOLUTION);
+    // Tracers
+    if (! this->tracerConcentrations_.empty()) {
+        const auto& tracers = this->eclState_.tracer();
+        for (auto tracerIdx = 0*tracers.size();
+             tracerIdx < tracers.size(); ++tracerIdx)
+        {
+            sol.insert(tracers[tracerIdx].fname(),
+                       UnitSystem::measure::identity,
+                       std::move(tracerConcentrations_[tracerIdx]),
+                       data::TargetType::RESTART_TRACER_SOLUTION);
         }
-        // We need put tracerConcentrations into a valid state.
-        // Otherwise next time we end up here outside of a restart write we will
-        // move invalidated data above (as it was moved away before and never
-        // reallocated)
-        tracerConcentrations_.resize(0);
+
+        // Put tracerConcentrations container into a valid state.  Otherwise
+        // we'll move from vectors that have already been moved from if we
+        // get here and it's not a restart step.
+        this->tracerConcentrations_.clear();
     }
 }
 
@@ -818,7 +973,7 @@ setRestart(const data::Solution& sol,
         permFact_[elemIdx] = sol.data("PERMFACT")[globalDofIndex];
     if (!soMax_.empty() && sol.has("SOMAX"))
         soMax_[elemIdx] = sol.data("SOMAX")[globalDofIndex];
-    if (!pcSwMdcOw_.empty() &&sol.has("PCSWM_OW"))
+    if (!pcSwMdcOw_.empty() && sol.has("PCSWM_OW"))
         pcSwMdcOw_[elemIdx] = sol.data("PCSWM_OW")[globalDofIndex];
     if (!krnSwMdcOw_.empty() && sol.has("KRNSW_OW"))
         krnSwMdcOw_[elemIdx] = sol.data("KRNSW_OW")[globalDofIndex];
@@ -879,9 +1034,10 @@ doAllocBuffers(unsigned bufferSize,
                const bool isRestart,
                const bool vapparsActive,
                const bool enableHysteresis,
-               unsigned numTracers)
+               unsigned numTracers,
+               unsigned numOutputNnc)
 {
-    // Only output RESTART_AUXILIARY asked for by the user.
+    // Output RESTART_OPM_EXTENDED only when explicitly requested by user.
     std::map<std::string, int> rstKeywords = schedule_.rst_keywords(reportStepNum);
     for (auto& [keyword, should_write] : rstKeywords) {
         if (this->isOutputCreationDirective_(keyword)) {
@@ -892,14 +1048,19 @@ doAllocBuffers(unsigned bufferSize,
         }
     }
 
+    if (auto& norst = rstKeywords["NORST"]; norst > 0) {
+        // Don't emit diagnostic messages about unsupported 'NORST' key.
+        norst = 0;
+    }
+
     this->outputFipRestart_ = false;
     this->computeFip_ = false;
 
     // Fluid in place
     for (const auto& phase : Inplace::phases()) {
         if (!substep || summaryConfig_.require3DField(EclString(phase))) {
-            if (rstKeywords["FIP"] > 0) {
-                rstKeywords["FIP"] = 0;
+            if (auto& fip = rstKeywords["FIP"]; fip > 0) {
+                fip = 0;
                 this->outputFipRestart_ = true;
             }
 
@@ -960,37 +1121,43 @@ doAllocBuffers(unsigned bufferSize,
         }
     }
 
-    // field data should be allocated
-    // 1) when we want to restart
-    // 2) when it is ask for by the user via restartConfig
-    // 3) when it is not a substep
-    if (!isRestart && (!schedule_.write_rst_file(reportStepNum) || substep))
+    // Field data should be allocated
+    // 1) When we want to restart
+    // 2) When it is ask for by the user via restartConfig
+    // 3) When it is not a substep
+    if (!isRestart && (!schedule_.write_rst_file(reportStepNum) || substep)) {
         return;
-
-    // always output saturation of active phases
-    for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-        if (!FluidSystem::phaseIsActive(phaseIdx))
-            continue;
-
-        saturation_[phaseIdx].resize(bufferSize, 0.0);
     }
-    // and oil pressure
+
+    // Always output saturation of active phases
+    for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+        if (! FluidSystem::phaseIsActive(phaseIdx)) {
+            continue;
+        }
+
+        this->saturation_[phaseIdx].resize(bufferSize, 0.0);
+    }
+
+    // And oil pressure
     fluidPressure_.resize(bufferSize, 0.0);
     rstKeywords["PRES"] = 0;
     rstKeywords["PRESSURE"] = 0;
 
-    // allocate memory for temperature
+    // Allocate memory for temperature
     if (enableEnergy_ || enableTemperature_) {
-        temperature_.resize(bufferSize, 0.0);
+        this->temperature_.resize(bufferSize, 0.0);
         rstKeywords["TEMP"] = 0;
     }
 
-    if (FluidSystem::phaseIsActive(oilPhaseIdx))
+    if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
         rstKeywords["SOIL"] = 0;
-    if (FluidSystem::phaseIsActive(gasPhaseIdx))
+    }
+    if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
         rstKeywords["SGAS"] = 0;
-    if (FluidSystem::phaseIsActive(waterPhaseIdx))
+    }
+    if (FluidSystem::phaseIsActive(waterPhaseIdx)) {
         rstKeywords["SWAT"] = 0;
+    }
 
     if (FluidSystem::enableDissolvedGas()) {
         rs_.resize(bufferSize, 0.0);
@@ -1009,20 +1176,31 @@ doAllocBuffers(unsigned bufferSize,
         rstKeywords["RVW"] = 0;
     }
 
-    if (schedule_[reportStepNum].oilvap().drsdtConvective())
+    if (schedule_[reportStepNum].oilvap().drsdtConvective()) {
         drsdtcon_.resize(bufferSize, 0.0);
-    if (enableSolvent_)
+    }
+
+    if (enableSolvent_) {
         sSol_.resize(bufferSize, 0.0);
-    if (enablePolymer_)
+    }
+
+    if (enablePolymer_) {
         cPolymer_.resize(bufferSize, 0.0);
-    if (enableFoam_)
+    }
+
+    if (enableFoam_) {
         cFoam_.resize(bufferSize, 0.0);
-    if (enableBrine_)
+    }
+
+    if (enableBrine_) {
         cSalt_.resize(bufferSize, 0.0);
+    }
+
     if (enableSaltPrecipitation_) {
         pSalt_.resize(bufferSize, 0.0);
         permFact_.resize(bufferSize, 0.0);
     }
+
     if (enableExtbo_) {
         extboX_.resize(bufferSize, 0.0);
         extboY_.resize(bufferSize, 0.0);
@@ -1031,7 +1209,8 @@ doAllocBuffers(unsigned bufferSize,
         mFracGas_.resize(bufferSize, 0.0);
         mFracCo2_.resize(bufferSize, 0.0);
     }
-    if (enableMICP_){
+
+    if (enableMICP_) {
         cMicrobes_.resize(bufferSize, 0.0);
         cOxygen_.resize(bufferSize, 0.0);
         cUrea_.resize(bufferSize, 0.0);
@@ -1039,8 +1218,9 @@ doAllocBuffers(unsigned bufferSize,
         cCalcite_.resize(bufferSize, 0.0);
     }
 
-    if (vapparsActive)
+    if (vapparsActive) {
         soMax_.resize(bufferSize, 0.0);
+    }
 
     if (enableHysteresis) {
         pcSwMdcOw_.resize(bufferSize, 0.0);
@@ -1076,14 +1256,86 @@ doAllocBuffers(unsigned bufferSize,
         invB_[gasPhaseIdx].resize(bufferSize, 0.0);
     }
 
-    if (rstKeywords["DEN"] > 0) {
-        rstKeywords["DEN"] = 0;
-        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-            if (!FluidSystem::phaseIsActive(phaseIdx))
-                continue;
-            density_[phaseIdx].resize(bufferSize, 0.0);
+    enableFlows_ = false;
+    enableFlowsn_ = false;
+    if (rstKeywords["FLOWS"] > 0) {
+        rstKeywords["FLOWS"] = 0;
+        enableFlows_ = true;
+
+        const std::array<int, 3> phaseIdxs = { gasPhaseIdx, oilPhaseIdx, waterPhaseIdx };
+        const std::array<int, 3> compIdxs = { gasCompIdx, oilCompIdx, waterCompIdx };
+        const auto rstName = std::array { "FLOGASN+", "FLOOILN+", "FLOWATN+" };
+
+        for (unsigned ii = 0; ii < phaseIdxs.size(); ++ii) {
+            if (FluidSystem::phaseIsActive(phaseIdxs[ii])) {
+                flowsi_[compIdxs[ii]].resize(bufferSize, 0.0);
+                flowsj_[compIdxs[ii]].resize(bufferSize, 0.0);
+                flowsk_[compIdxs[ii]].resize(bufferSize, 0.0);
+
+                if (numOutputNnc > 0) {
+                    enableFlowsn_ = true;
+
+                    flowsn_[compIdxs[ii]].first = rstName[ii];
+                    flowsn_[compIdxs[ii]].second.first.resize(numOutputNnc, -1);
+                    flowsn_[compIdxs[ii]].second.second.resize(numOutputNnc, 0.0);
+                }
+            }
         }
     }
+
+    enableFlores_ = false;
+    enableFloresn_ = false;
+    if (rstKeywords["FLORES"] > 0) {
+        rstKeywords["FLORES"] = 0;
+        enableFlores_ = true;
+
+        const std::array<int, 3> phaseIdxs = { gasPhaseIdx, oilPhaseIdx, waterPhaseIdx };
+        const std::array<int, 3> compIdxs = { gasCompIdx, oilCompIdx, waterCompIdx };
+        const auto rstName = std::array{ "FLRGASN+", "FLROILN+", "FLRWATN+" };
+
+        for (unsigned ii = 0; ii < phaseIdxs.size(); ++ii) {
+            if (FluidSystem::phaseIsActive(phaseIdxs[ii])) {
+                floresi_[compIdxs[ii]].resize(bufferSize, 0.0);
+                floresj_[compIdxs[ii]].resize(bufferSize, 0.0);
+                floresk_[compIdxs[ii]].resize(bufferSize, 0.0);
+
+                if (numOutputNnc > 0) {
+                    enableFloresn_ = true;
+
+                    floresn_[compIdxs[ii]].first = rstName[ii];
+                    floresn_[compIdxs[ii]].second.first.resize(numOutputNnc, -1);
+                    floresn_[compIdxs[ii]].second.second.resize(numOutputNnc, 0.0);
+                }
+            }
+        }
+    }
+
+    if (auto& den = rstKeywords["DEN"]; den > 0) {
+        den = 0;
+        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
+            if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                continue;
+            }
+
+            this->density_[phaseIdx].resize(bufferSize, 0.0);
+        }
+    }
+
+    if (auto& deng = rstKeywords["DENG"]; (deng > 0) && FluidSystem::phaseIsActive(gasPhaseIdx)) {
+        deng = 0;
+        this->density_[gasPhaseIdx].resize(bufferSize, 0.0);
+    }
+
+    if (auto& deno = rstKeywords["DENO"]; (deno > 0) && FluidSystem::phaseIsActive(oilPhaseIdx)) {
+        deno = 0;
+        this->density_[oilPhaseIdx].resize(bufferSize, 0.0);
+    }
+
+    if (auto& denw = rstKeywords["DENW"]; (denw > 0) && FluidSystem::phaseIsActive(waterPhaseIdx)) {
+        denw = 0;
+        this->density_[waterPhaseIdx].resize(bufferSize, 0.0);
+    }
+
     const bool hasVWAT = (rstKeywords["VISC"] > 0) || (rstKeywords["VWAT"] > 0);
     const bool hasVOIL = (rstKeywords["VISC"] > 0) || (rstKeywords["VOIL"] > 0);
     const bool hasVGAS = (rstKeywords["VISC"] > 0) || (rstKeywords["VGAS"] > 0);
@@ -1165,11 +1417,13 @@ doAllocBuffers(unsigned bufferSize,
     failedCellsPd_.clear();
 
     // Not supported in flow legacy
-    if (false)
+    if (false) {
         saturatedOilFormationVolumeFactor_.resize(bufferSize, 0.0);
-    if (false)
-        oilSaturationPressure_.resize(bufferSize, 0.0);
+    }
 
+    if (false) {
+        oilSaturationPressure_.resize(bufferSize, 0.0);
+    }
 }
 
 template<class FluidSystem, class Scalar>
@@ -1178,7 +1432,6 @@ fipUnitConvert_(std::unordered_map<Inplace::Phase, Scalar>& fip) const
 {
     const UnitSystem& units = eclState_.getUnits();
     using M = UnitSystem::measure;
-
     const auto unit_map = std::unordered_map<Inplace::Phase, M> {
         {Inplace::Phase::WATER,             M::liquid_surface_volume},
         {Inplace::Phase::OIL,               M::liquid_surface_volume},
@@ -1193,6 +1446,11 @@ fipUnitConvert_(std::unordered_map<Inplace::Phase, Scalar>& fip) const
         {Inplace::Phase::OilResVolume,      M::volume},
         {Inplace::Phase::GasResVolume,      M::volume},
         {Inplace::Phase::SALT,              M::mass},
+        {Inplace::Phase::CO2InWaterPhase,   M::moles},
+        {Inplace::Phase::CO2InGasPhaseInMob,M::moles},
+        {Inplace::Phase::CO2InGasPhaseMob,  M::moles},
+        {Inplace::Phase::WaterInWaterPhase, M::liquid_surface_volume},
+        {Inplace::Phase::WaterInGasPhase,   M::liquid_surface_volume},
     };
 
     for (auto& [phase, value] : fip) {

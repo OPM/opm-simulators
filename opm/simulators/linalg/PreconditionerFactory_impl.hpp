@@ -320,11 +320,7 @@ struct StandardPreconditioners<Operator,Dune::Amg::SequentialInformation>
             F::addCreator("amg", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
                 const std::string smoother = prm.get<std::string>("smoother", "ParOverILU0");
                 if (smoother == "ILU0" || smoother == "ParOverILU0") {
-    #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
                     using Smoother = SeqILU<M, V, V>;
-    #else
-                    using Smoother = SeqILU0<M, V, V>;
-    #endif
                     return AMGHelper<O,C,M,V>::template makeAmgPreconditioner<Smoother>(op, prm);
                 } else if (smoother == "Jac") {
                     using Smoother = SeqJac<M, V, V>;
@@ -336,11 +332,7 @@ struct StandardPreconditioners<Operator,Dune::Amg::SequentialInformation>
                     using Smoother = SeqSSOR<M, V, V>;
                     return AMGHelper<O,C,M,V>::template makeAmgPreconditioner<Smoother>(op, prm);
                 } else if (smoother == "ILUn") {
-    #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
                     using Smoother = SeqILU<M, V, V>;
-    #else
-                    using Smoother = SeqILUn<M, V, V>;
-    #endif
                     return AMGHelper<O,C,M,V>::template makeAmgPreconditioner<Smoother>(op, prm);
                 } else {
                     OPM_THROW(std::invalid_argument,
@@ -350,11 +342,7 @@ struct StandardPreconditioners<Operator,Dune::Amg::SequentialInformation>
             F::addCreator("kamg", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
                 const std::string smoother = prm.get<std::string>("smoother", "ParOverILU0");
                 if (smoother == "ILU0" || smoother == "ParOverILU0") {
-    #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
                     using Smoother = SeqILU<M, V, V>;
-    #else
-                        using Smoother = SeqILU0<M, V, V>;
-    #endif
                     return AMGHelper<O,C,M,V>::template makeAmgPreconditioner<Smoother>(op, prm, true);
                 } else if (smoother == "Jac") {
                     using Smoother = SeqJac<M, V, V>;
@@ -369,11 +357,7 @@ struct StandardPreconditioners<Operator,Dune::Amg::SequentialInformation>
                     using Smoother = SeqSSOR<M, V, V>;
                     return AMGHelper<O,C,M,V>::template makeAmgPreconditioner<Smoother>(op, prm, true);
                 } else if (smoother == "ILUn") {
-    #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 7)
                     using Smoother = SeqILU<M, V, V>;
-    #else
-                    using Smoother = SeqILUn<M, V, V>;
-    #endif
                     return AMGHelper<O,C,M,V>::template makeAmgPreconditioner<Smoother>(op, prm, true);
                 } else {
                     OPM_THROW(std::invalid_argument,

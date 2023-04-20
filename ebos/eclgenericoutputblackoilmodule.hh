@@ -189,6 +189,46 @@ public:
         return 0;
     }
 
+    const std::array<std::pair<std::string, std::pair<std::vector<int>, std::vector<double>>>, 3>& getFlowsn() const
+    {
+        return this->flowsn_;
+    }
+
+    bool hasFlowsn() const
+    {
+        return enableFlowsn_;
+    }
+
+    bool hasFlows() const
+    {
+        return enableFlows_;
+    }
+
+    bool anyFlows() const
+    {
+        return anyFlows_;
+    }
+
+    const std::array<std::pair<std::string, std::pair<std::vector<int>, std::vector<double>>>, 3>& getFloresn() const
+    {
+        return this->floresn_;
+    }
+
+    bool hasFloresn() const
+    {
+        return enableFloresn_;
+    }
+
+    bool hasFlores() const
+    {
+        return enableFlores_;
+    }
+
+    bool anyFlores() const
+    {
+        return anyFlores_;
+    }
+
     bool needInterfaceFluxes([[maybe_unused]] const bool isSubStep) const
     {
         return this->interRegionFlows_.wantInterRegflowSummary();
@@ -209,16 +249,38 @@ public:
         return this->initialInplace_.value();
     }
 
+    bool localDataValid() const{
+        return local_data_valid_;
+    }
+
+    void invalidateLocalData(){
+        local_data_valid_ = false;
+    }
+
+    void validateLocalData(){
+        local_data_valid_ = true;
+    }
+
     // Virtual destructor for safer inheritance.
     virtual ~EclGenericOutputBlackoilModule();
+
+    template<class Serializer>
+    void serializeOp(Serializer& serializer)
+    {
+        serializer(initialInplace_);
+    }
 
 protected:
     using ScalarBuffer = std::vector<Scalar>;
     using StringBuffer = std::vector<std::string>;
     enum { numPhases = FluidSystem::numPhases };
+    enum { numComponents = FluidSystem::numComponents };
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
     enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
     enum { waterPhaseIdx = FluidSystem::waterPhaseIdx };
+    enum { gasCompIdx = FluidSystem::gasCompIdx };
+    enum { oilCompIdx = FluidSystem::oilCompIdx };
+    enum { waterCompIdx = FluidSystem::waterCompIdx };
 
     EclGenericOutputBlackoilModule(const EclipseState& eclState,
                                    const Schedule& schedule,
@@ -309,7 +371,8 @@ protected:
                         const bool isRestart,
                         const bool vapparsActive,
                         const bool enableHysteresis,
-                        unsigned numTracers);
+                        unsigned numTracers,
+                        unsigned numOutputNnc);
 
     void fipUnitConvert_(std::unordered_map<Inplace::Phase, Scalar>& fip) const;
 
@@ -401,6 +464,13 @@ protected:
     bool outputFipRestart_;
     bool computeFip_;
 
+    bool anyFlows_;
+    bool anyFlores_;
+    bool enableFlows_;
+    bool enableFlores_;
+    bool enableFlowsn_;
+    bool enableFloresn_;
+
     std::unordered_map<Inplace::Phase, ScalarBuffer> fip_;
     std::unordered_map<std::string, std::vector<int>> regions_;
     std::unordered_map<Inplace::Phase, std::vector<SummaryConfigNode>> regionNodes_;
@@ -468,6 +538,16 @@ protected:
 
     std::vector<ScalarBuffer> tracerConcentrations_;
 
+    std::array<ScalarBuffer, numPhases> flowsi_;
+    std::array<ScalarBuffer, numPhases> flowsj_;
+    std::array<ScalarBuffer, numPhases> flowsk_;
+    std::array<ScalarBuffer, numPhases> floresi_;
+    std::array<ScalarBuffer, numPhases> floresj_;
+    std::array<ScalarBuffer, numPhases> floresk_;
+
+    std::array<std::pair<std::string, std::pair<std::vector<int>, ScalarBuffer>>, 3> floresn_;
+    std::array<std::pair<std::string, std::pair<std::vector<int>, ScalarBuffer>>, 3> flowsn_;
+
     std::map<size_t, Scalar> oilConnectionPressures_;
     std::map<size_t, Scalar> waterConnectionSaturations_;
     std::map<size_t, Scalar> gasConnectionSaturations_;
@@ -475,6 +555,7 @@ protected:
     std::map<std::size_t , double> wbpData_;
 
     std::optional<Inplace> initialInplace_;
+    bool local_data_valid_;
 };
 
 } // namespace Opm

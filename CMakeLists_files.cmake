@@ -40,11 +40,14 @@ list (APPEND MAIN_SOURCE_FILES
   opm/core/props/phaseUsageFromDeck.cpp
   opm/core/props/satfunc/RelpermDiagnostics.cpp
   opm/simulators/timestepping/SimulatorReport.cpp
+  opm/simulators/flow/Banners.cpp
   opm/simulators/flow/countGlobalCells.cpp
   opm/simulators/flow/ConvergenceOutputConfiguration.cpp
   opm/simulators/flow/ExtraConvergenceOutputThread.cpp
+  opm/simulators/flow/FlowMainEbos.cpp
   opm/simulators/flow/KeywordValidation.cpp
   opm/simulators/flow/Main.cpp
+  opm/simulators/flow/NonlinearSolverEbos.cpp
   opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.cpp
   opm/simulators/flow/ValidationFunctions.cpp
   opm/simulators/linalg/bda/WellContributions.cpp
@@ -81,6 +84,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/utils/gatherDeferredLogger.cpp
   opm/simulators/utils/ParallelFileMerger.cpp
   opm/simulators/utils/ParallelRestart.cpp
+  opm/simulators/utils/SerializationPackers.cpp
   opm/simulators/wells/ALQState.cpp
   opm/simulators/wells/BlackoilWellModelConstraints.cpp
   opm/simulators/wells/BlackoilWellModelGeneric.cpp
@@ -101,6 +105,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/MultisegmentWellSegments.cpp
   opm/simulators/wells/ParallelWellInfo.cpp
   opm/simulators/wells/PerfData.cpp
+  opm/simulators/wells/RateConverter.cpp
   opm/simulators/wells/SegmentState.cpp
   opm/simulators/wells/SingleWellState.cpp
   opm/simulators/wells/StandardWellAssemble.cpp
@@ -156,6 +161,9 @@ endif()
 if(ROCALUTION_FOUND)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/rocalutionSolverBackend.cpp)
 endif()
+if(rocsparse_FOUND AND rocblas_FOUND)
+  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/rocsparseSolverBackend.cpp)
+endif()
 if(COMPILE_BDA_BRIDGE)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/BdaBridge.cpp)
 endif()
@@ -170,6 +178,9 @@ if(MPI_FOUND)
                                 opm/simulators/utils/ParallelEclipseState.cpp
                                 opm/simulators/utils/ParallelSerialization.cpp
                                 opm/simulators/utils/SetupZoltanParams.cpp)
+endif()
+if(HDF5_FOUND)
+  list(APPEND MAIN_SOURCE_FILES opm/simulators/utils/HDF5File.cpp)
 endif()
 
 # originally generated with the command:
@@ -194,6 +205,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_parallelwellinfo.cpp
   tests/test_preconditionerfactory.cpp
   tests/test_relpermdiagnostics.cpp
+  tests/test_RestartSerialization.cpp
   tests/test_stoppedwells.cpp
   tests/test_timer.cpp
   tests/test_vfpproperties.cpp
@@ -216,6 +228,13 @@ if(OPENCL_FOUND)
 endif()
 if(ROCALUTION_FOUND)
   list(APPEND TEST_SOURCE_FILES tests/test_rocalutionSolver.cpp)
+endif()
+if(rocsparse_FOUND AND rocblas_FOUND)
+  list(APPEND TEST_SOURCE_FILES tests/test_rocsparseSolver.cpp)
+endif()
+if(HDF5_FOUND)
+  list(APPEND TEST_SOURCE_FILES tests/test_HDF5File.cpp)
+  list(APPEND TEST_SOURCE_FILES tests/test_HDF5Serializer.cpp)
 endif()
 
 list (APPEND TEST_DATA_FILES
@@ -280,6 +299,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/countGlobalCells.hpp
   opm/simulators/flow/BlackoilModelEbos.hpp
   opm/simulators/flow/BlackoilModelParametersEbos.hpp
+  opm/simulators/flow/Banners.hpp
   opm/simulators/flow/ConvergenceOutputConfiguration.hpp
   opm/simulators/flow/ExtraConvergenceOutputThread.hpp
   opm/simulators/flow/FlowMainEbos.hpp
@@ -297,6 +317,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/aquifers/AquiferAnalytical.hpp
   opm/simulators/aquifers/AquiferCarterTracy.hpp
   opm/simulators/aquifers/AquiferFetkovich.hpp
+  opm/simulators/aquifers/AquiferConstantFlux.hpp
   opm/simulators/aquifers/AquiferInterface.hpp
   opm/simulators/aquifers/AquiferNumerical.hpp
   opm/simulators/aquifers/BlackoilAquiferModel.hpp
@@ -322,6 +343,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/bda/Matrix.hpp
   opm/simulators/linalg/bda/MultisegmentWellContribution.hpp
   opm/simulators/linalg/bda/rocalutionSolverBackend.hpp
+  opm/simulators/linalg/bda/rocsparseSolverBackend.hpp
   opm/simulators/linalg/bda/WellContributions.hpp
   opm/simulators/linalg/amgcpr.hh
   opm/simulators/linalg/twolevelmethodcpr.hh
@@ -364,6 +386,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/utils/ParallelEclipseState.hpp
   opm/simulators/utils/ParallelRestart.hpp
   opm/simulators/utils/PropsCentroidsDataHandle.hpp
+  opm/simulators/utils/SerializationPackers.hpp
   opm/simulators/utils/VectorVectorDataHandle.hpp
   opm/simulators/wells/ALQState.hpp
   opm/simulators/wells/BlackoilWellModel.hpp
@@ -428,6 +451,18 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/WGState.hpp
   )
 
+if(HDF5_FOUND)
+  list(APPEND PUBLIC_HEADER_FILES
+    ebos/hdf5serializer.hh
+    opm/simulators/utils/HDF5File.hpp
+  )
+endif()
+
 list (APPEND EXAMPLE_SOURCE_FILES
   examples/printvfp.cpp
+)
+if(HDF5_FOUND)
+  list (APPEND EXAMPLE_SOURCE_FILES
+    examples/opmrst_inspect.cpp
   )
+endif()

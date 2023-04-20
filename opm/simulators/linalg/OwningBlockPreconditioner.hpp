@@ -20,6 +20,8 @@
 #ifndef OPM_OWNINGBLOCKPRECONDITIONER_HEADER_INCLUDED
 #define OPM_OWNINGBLOCKPRECONDITIONER_HEADER_INCLUDED
 
+#include <opm/common/TimingMacros.hpp>
+
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
 
 #include <dune/istl/schwarz.hh>
@@ -44,16 +46,19 @@ public:
 
     virtual void pre(X& x, Y& b) override
     {
+        OPM_TIMEBLOCK(pre);
         block_precond_.pre(x, b);
     }
 
     virtual void apply(X& v, const Y& d) override
     {
+        OPM_TIMEBLOCK(apply);
         block_precond_.apply(v, d);
     }
 
     virtual void post(X& x) override
     {
+        OPM_TIMEBLOCK(post);
         block_precond_.post(x);
     }
 
@@ -65,6 +70,7 @@ public:
     // The update() function does nothing for a wrapped preconditioner.
     virtual void update() override
     {
+        OPM_TIMEBLOCK(update);
         orig_precond_.update();
     }
 

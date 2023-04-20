@@ -55,6 +55,13 @@ SingleWellState::SingleWellState(const std::string& name_,
     }
 }
 
+SingleWellState SingleWellState::serializationTestObject(const ParallelWellInfo& pinfo)
+{
+    SingleWellState result("testing", pinfo, true, 1.0, {}, PhaseUsage{}, 2.0);
+    result.perf_data = PerfData::serializationTestObject();
+
+    return result;
+}
 
 void SingleWellState::init_timestep(const SingleWellState& other) {
     if (this->producer != other.producer)
@@ -276,9 +283,27 @@ void SingleWellState::update_targets(const Well& ecl_well, const SummaryState& s
         this->update_injector_targets(ecl_well, st);
 }
 
+bool SingleWellState::operator==(const SingleWellState& rhs) const
+{
+    return this->name == rhs.name &&
+           this->status == rhs.status &&
+           this->producer == rhs.producer &&
+           this->bhp == rhs.bhp &&
+           this->thp == rhs.thp &&
+           this->temperature == rhs.temperature &&
+           this->dissolved_gas_rate == rhs.dissolved_gas_rate &&
+           this->dissolved_gas_rate_in_water == rhs.dissolved_gas_rate_in_water &&
+           this->vaporized_oil_rate == rhs.vaporized_oil_rate &&
+           this->vaporized_wat_rate == rhs.vaporized_wat_rate &&
+           this->well_potentials == rhs.well_potentials &&
+           this->productivity_index == rhs.productivity_index &&
+           this->surface_rates == rhs.surface_rates &&
+           this->reservoir_rates == rhs.reservoir_rates &&
+           this->trivial_target == rhs.trivial_target &&
+           this->segments == rhs.segments &&
+           this->events == rhs.events &&
+           this->injection_cmode == rhs.injection_cmode &&
+           this->production_cmode == rhs.production_cmode;
 }
 
-
-
-
-
+}

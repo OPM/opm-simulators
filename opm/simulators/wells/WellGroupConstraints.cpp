@@ -70,7 +70,7 @@ checkGroupConstraintsInj(const Group& group,
 
     // Make conversion factors for RESV <-> surface rates.
     std::vector<double> resv_coeff(well_.phaseUsage().num_phases, 1.0);
-    rateConverter(0, well_.pvtRegionIdx(), resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
+    rateConverter(0, well_.pvtRegionIdx(), group.name(), resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
 
     const auto& ws = well_state.well(well_.indexOfWell());
     // Call check for the well's injection phase.
@@ -104,7 +104,7 @@ checkGroupConstraintsProd(const Group& group,
 {
     // Make conversion factors for RESV <-> surface rates.
     std::vector<double> resv_coeff(well_.phaseUsage().num_phases, 1.0);
-    rateConverter(0, well_.pvtRegionIdx(), resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
+    rateConverter(0, well_.pvtRegionIdx(), group.name(), resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
 
     const auto& ws = well_state.well(well_.indexOfWell());
     return WellGroupHelpers::checkGroupConstraintsProd(well_.name(),

@@ -82,7 +82,7 @@ Scalar relaxationFactorRate(const Scalar old_value,
     const Scalar original_total_rate = old_value;
     const Scalar possible_update_total_rate = old_value - newton_update;
 
-    // 0.8 here is a experimental value, which remains to be optimized
+    // 0.8 here is an experimental value, which remains to be optimized
     // if the original rate is zero or possible_update_total_rate is zero, relaxation_factor will
     // always be 1.0, more thoughts might be needed.
     if (original_total_rate * possible_update_total_rate < 0.) { // sign changed
@@ -122,7 +122,9 @@ resize(const int numWellEq)
 
 template<class FluidSystem, class Indices, class Scalar>
 void StandardWellPrimaryVariables<FluidSystem,Indices,Scalar>::
-update(const WellState& well_state, DeferredLogger& deferred_logger)
+update(const WellState& well_state,
+       const bool stop_or_zero_rate_target,
+       DeferredLogger& deferred_logger)
 {
     static constexpr int Water = BlackoilPhases::Aqua;
     static constexpr int Oil = BlackoilPhases::Liquid;
@@ -159,6 +161,9 @@ update(const WellState& well_state, DeferredLogger& deferred_logger)
         }
     } else {
             value_[WQTotal] = total_well_rate;
+            if (stop_or_zero_rate_target) {
+                value_[WQTotal] = 0.;
+            }
     }
 
     if (std::abs(total_well_rate) > 0.) {
@@ -241,6 +246,7 @@ updatePolyMW(const WellState& well_state)
 template<class FluidSystem, class Indices, class Scalar>
 void StandardWellPrimaryVariables<FluidSystem,Indices,Scalar>::
 updateNewton(const BVectorWell& dwells,
+             const bool stop_or_zero_rate_target,
              [[maybe_unused]] const double dFLimit,
              const double dBHPLimit)
 {
@@ -276,6 +282,10 @@ updateNewton(const BVectorWell& dwells,
 
     // updating the total rates Q_t
     value_[WQTotal] = value_[WQTotal] - dwells[0][WQTotal] * relaxation_factor_rate;
+    if (stop_or_zero_rate_target) {
+        value_[WQTotal] = 0.;
+    }
+    // TODO: here, we make sure it is zero for zero rated wells
 
     // updating the bottom hole pressure
     const int sign1 = dwells[0][Bhp] > 0 ? 1: -1;
@@ -745,7 +755,7 @@ INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,1u,0u>)
 INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,0u,0u>)
 INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,2u,0u>)
 INSTANCE(BlackOilTwoPhaseIndices<0u,0u,2u,0u,false,false,0u,2u,0u>)
-
+INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,0u,0u>)
 // Blackoil
 INSTANCE(BlackOilIndices<0u,0u,0u,0u,false,false,0u,0u>)
 INSTANCE(BlackOilIndices<1u,0u,0u,0u,false,false,0u,0u>)

@@ -128,7 +128,7 @@ computeWellRates_( double bhp, bool bhp_is_limited, bool debug_output ) const
 template<typename TypeTag>
 std::optional<double>
 GasLiftSingleWell<TypeTag>::
-computeBhpAtThpLimit_(double alq) const
+computeBhpAtThpLimit_(double alq, bool debug_output) const
 {
     auto bhp_at_thp_limit = this->well_.computeBhpAtThpLimitProdWithAlq(
         this->ebos_simulator_,
@@ -137,11 +137,14 @@ computeBhpAtThpLimit_(double alq) const
         this->deferred_logger_);
     if (bhp_at_thp_limit) {
         if (*bhp_at_thp_limit < this->controls_.bhp_limit) {
-            const std::string msg = fmt::format(
-                "Computed bhp ({}) from thp limit is below bhp limit ({}), (ALQ = {})."
-                " Using bhp limit instead",
-                *bhp_at_thp_limit, this->controls_.bhp_limit, alq);
-            displayDebugMessage_(msg);
+            if (debug_output && this->debug) {
+                const std::string msg = fmt::format(
+                    "Computed bhp ({}) from thp limit is below bhp limit ({}), (ALQ = {})."
+                    " Using bhp limit instead",
+                    *bhp_at_thp_limit, this->controls_.bhp_limit, alq
+                );
+                displayDebugMessage_(msg);
+            }
             bhp_at_thp_limit = this->controls_.bhp_limit;
         }
         //bhp_at_thp_limit = std::max(*bhp_at_thp_limit, this->controls_.bhp_limit);
@@ -160,7 +163,9 @@ GasLiftSingleWell<TypeTag>::
 setupPhaseVariables_()
 {
     const auto& pu = this->phase_usage_;
+#ifndef NDEBUG
     bool num_phases_ok = (pu.num_phases == 3);
+#endif
     if (pu.num_phases == 2) {
         // NOTE: We support two-phase oil-water flow, by setting the gas flow rate
         //   to zero. This is done by initializing the potential vector to zero:
@@ -176,7 +181,9 @@ setupPhaseVariables_()
              && pu.phase_used[BlackoilPhases::Liquid] == 1
              && pu.phase_used[BlackoilPhases::Vapour] == 0)
         {
+#ifndef NDEBUG
             num_phases_ok = true;  // two-phase oil-water is also supported
+#endif
         }
         else {
             throw std::logic_error("Two-phase gas lift optimization only supported"

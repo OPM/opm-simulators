@@ -144,10 +144,11 @@ namespace Opm
         void initPrimaryVariablesEvaluation() override;
 
         /// check whether the well equations get converged for this well
-        virtual ConvergenceReport getWellConvergence(const WellState& well_state,
+        virtual ConvergenceReport getWellConvergence(const SummaryState& summary_state,
+                                                     const WellState& well_state,
                                                      const std::vector<double>& B_avg,
                                                      DeferredLogger& deferred_logger,
-                                                     const bool relax_tolerance = false) const override;
+                                                     const bool relax_tolerance) const override;
 
         /// Ax = Ax - C D^-1 B x
         virtual void apply(const BVector& x, BVector& Ax) const override;
@@ -156,7 +157,8 @@ namespace Opm
 
         /// using the solution x to recover the solution xw for wells and applying
         /// xw to update Well State
-        void recoverWellSolutionAndUpdateWellState(const BVector& x,
+        void recoverWellSolutionAndUpdateWellState(const SummaryState& summary_state,
+                                                   const BVector& x,
                                                    WellState& well_state,
                                                    DeferredLogger& deferred_logger) override;
 
@@ -166,9 +168,13 @@ namespace Opm
                                            std::vector<double>& well_potentials,
                                            DeferredLogger& deferred_logger) /* const */ override;
 
-        void updatePrimaryVariables(const WellState& well_state, DeferredLogger& deferred_logger) override;
+        void updatePrimaryVariables(const SummaryState& summary_state,
+                                    const WellState& well_state,
+                                    DeferredLogger& deferred_logger) override;
 
-        virtual void solveEqAndUpdateWellState(WellState& well_state, DeferredLogger& deferred_logger) override;
+        void solveEqAndUpdateWellState(const SummaryState& summary_state,
+                                       WellState& well_state,
+                                       DeferredLogger& deferred_logger);
 
         virtual void calculateExplicitQuantities(const Simulator& ebosSimulator,
                                                  const WellState& well_state,
@@ -252,7 +258,8 @@ namespace Opm
         bool regularize_;
 
         // updating the well_state based on well solution dwells
-        void updateWellState(const BVectorWell& dwells,
+        void updateWellState(const SummaryState& summary_state,
+                             const BVectorWell& dwells,
                              WellState& well_state,
                              DeferredLogger& deferred_logger);
 
@@ -334,6 +341,9 @@ namespace Opm
             DeferredLogger& deferred_logger,
             const WellState &well_state) const;
 
+        bool updateWellStateWithTHPTargetProd(const Simulator& ebos_simulator,
+                                              WellState& well_state,
+                                              DeferredLogger& deferred_logger) const override;
 
         virtual double getRefDensity() const override;
 
@@ -356,10 +366,12 @@ namespace Opm
                                             DeferredLogger& deferred_logger) const;
 
         void updatePrimaryVariablesNewton(const BVectorWell& dwells,
-                                          const WellState& well_state,
+                                          const bool stop_or_zero_rate_target,
                                           DeferredLogger& deferred_logger);
 
-        void updateWellStateFromPrimaryVariables(WellState& well_state, DeferredLogger& deferred_logger) const;
+        void updateWellStateFromPrimaryVariables(const bool stop_or_zero_rate_target,
+                                                 WellState& well_state,
+                                                 DeferredLogger& deferred_logger) const;
 
         virtual void assembleWellEqWithoutIteration(const Simulator& ebosSimulator,
                                                     const double dt,
@@ -371,6 +383,8 @@ namespace Opm
 
         void assembleWellEqWithoutIterationImpl(const Simulator& ebosSimulator,
                                                 const double dt,
+                                                const Well::InjectionControls& inj_controls,
+                                                const Well::ProductionControls& prod_controls,
                                                 WellState& well_state,
                                                 const GroupState& group_state,
                                                 DeferredLogger& deferred_logger);

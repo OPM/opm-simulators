@@ -26,20 +26,34 @@
 
 namespace Opm {
 
+class ParallelWellInfo;
+
 /*
-  Microscopic class to handle well , group and well test state.
+  Microscopic class to handle well, group and well test state.
 */
 
 struct PhaseUsage;
 
 struct WGState {
     WGState(const PhaseUsage& pu);
+
+    static WGState serializationTestObject(const ParallelWellInfo& pinfo);
+
     void wtest_state(WellTestState wtest_state);
 
     WellState well_state;
     GroupState group_state;
     WellTestState well_test_state;
 
+    bool operator==(const WGState&) const;
+
+    template<class Serializer>
+    void serializeOp(Serializer& serializer)
+    {
+        serializer(well_state);
+        serializer(group_state);
+        serializer(well_test_state);
+    }
 };
 
 }

@@ -27,10 +27,14 @@
 #include <string>
 #include <fstream>
 #include <iostream>
+#include <limits>
 
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/input/eclipse/Units/Units.hpp>
 #include <opm/simulators/timestepping/TimeStepControl.hpp>
+
+#include <fmt/format.h>
 
 namespace Opm
 {
@@ -62,6 +66,12 @@ namespace Opm
         }
     }
 
+    SimpleIterationCountTimeStepControl
+    SimpleIterationCountTimeStepControl::serializationTestObject()
+    {
+        return {1, 1.0, 2.0, true};
+    }
+
     double SimpleIterationCountTimeStepControl::
     computeTimeStepSize( const double dt, const int iterations, const RelativeChangeInterface& /* relativeChange */, const double /*simulationTimeElapsed */) const
     {
@@ -82,6 +92,15 @@ namespace Opm
         return dtEstimate;
     }
 
+    bool SimpleIterationCountTimeStepControl::
+    operator==(const SimpleIterationCountTimeStepControl& ctrl) const
+    {
+         return this->target_iterations_ == ctrl.target_iterations_ &&
+                this->decayrate_ == ctrl.decayrate_ &&
+                this->growthrate_ == ctrl.growthrate_ &&
+                this->verbose_ == ctrl.verbose_;
+    }
+
     ////////////////////////////////////////////////////////
     //
     //  HardcodedTimeStepControl Implementation
@@ -89,7 +108,7 @@ namespace Opm
     ////////////////////////////////////////////////////////
 
     HardcodedTimeStepControl::
-    HardcodedTimeStepControl( const std::string& filename)
+    HardcodedTimeStepControl(const std::string& filename)
     {
         std::ifstream infile (filename);
         if (!infile.is_open()) {
@@ -106,11 +125,24 @@ namespace Opm
         }
     }
 
+    HardcodedTimeStepControl HardcodedTimeStepControl::serializationTestObject()
+    {
+        HardcodedTimeStepControl result;
+        result.subStepTime_ = {1.0, 2.0};
+
+        return result;
+    }
+
     double HardcodedTimeStepControl::
     computeTimeStepSize( const double /*dt */, const int /*iterations */, const RelativeChangeInterface& /* relativeChange */ , const double simulationTimeElapsed) const
     {
         auto nextTime = std::upper_bound(subStepTime_.begin(), subStepTime_.end(), simulationTimeElapsed);
         return (*nextTime - simulationTimeElapsed);
+    }
+
+    bool HardcodedTimeStepControl::operator==(const HardcodedTimeStepControl& ctrl) const
+    {
+        return this->subStepTime_ == ctrl.subStepTime_;
     }
 
 
@@ -128,6 +160,15 @@ namespace Opm
         , verbose_( verbose )
     {}
 
+    PIDTimeStepControl
+    PIDTimeStepControl::serializationTestObject()
+    {
+        PIDTimeStepControl result(1.0, true);
+        result.errors_ = {2.0, 3.0};
+
+        return result;;
+    }
+
     double PIDTimeStepControl::
     computeTimeStepSize( const double dt, const int /* iterations */, const RelativeChangeInterface& relChange, const double /*simulationTimeElapsed */) const
     {
@@ -141,16 +182,21 @@ namespace Opm
         errors_[ 2 ] = error;
         for( int i=0; i<2; ++i ) {
             assert(std::isfinite(errors_[i]));
-            assert(errors_[i]>0);
         }
 
-        if( error > tol_ )
+        if( errors_[2] > tol_ )
         {
             // adjust dt by given tolerance
             const double newDt = dt * tol_ / error;
-            if( verbose_ )
-                std::cout << "Computed step size (tol): " << unit::convert::to( newDt, unit::day ) << " (days)" << std::endl;
+            if ( verbose_ )
+                    OpmLog::info(fmt::format("Computed step size (tol): {} days", unit::convert::to( newDt, unit::day )));
             return newDt;
+        }
+        else if (errors_[1] == 0 || errors_[2] == 0.)
+        {
+            if ( verbose_ )
+                OpmLog::info("The solution between time steps does not change, there is no time step constraint from the PID time step control ");
+            return std::numeric_limits<double>::max();
         }
         else
         {
@@ -162,9 +208,16 @@ namespace Opm
                                  std::pow( tol_         / errors_[ 2 ], kI ) *
                                  std::pow( errors_[0]*errors_[0]/errors_[ 1 ]/errors_[ 2 ], kD ));
             if( verbose_ )
-                std::cout << "Computed step size (pow): " << unit::convert::to( newDt, unit::day ) << " (days)" << std::endl;
+                OpmLog::info(fmt::format("Computed step size (pow): {} days", unit::convert::to( newDt, unit::day )));
             return newDt;
         }
+    }
+
+    bool PIDTimeStepControl::operator==(const PIDTimeStepControl& ctrl) const
+    {
+        return this->tol_ == ctrl.tol_ &&
+               this->errors_ == ctrl.errors_ &&
+               this->verbose_ == ctrl.verbose_;
     }
 
 
@@ -189,6 +242,12 @@ namespace Opm
         , minTimeStepBasedOnIterations_(minTimeStepBasedOnIterations)
     {}
 
+    PIDAndIterationCountTimeStepControl
+    PIDAndIterationCountTimeStepControl::serializationTestObject()
+    {
+        return {1, 2.0, 3.0, 4.0, 5.0, true};
+    }
+
     double PIDAndIterationCountTimeStepControl::
     computeTimeStepSize( const double dt, const int iterations, const RelativeChangeInterface& relChange,  const double simulationTimeElapsed ) const
     {
@@ -209,6 +268,15 @@ namespace Opm
         }
 
         return std::min(dtEstimatePID, dtEstimateIter);
+    }
+
+    bool PIDAndIterationCountTimeStepControl::operator==(const PIDAndIterationCountTimeStepControl& ctrl) const
+    {
+        return static_cast<const PIDTimeStepControl&>(*this) == ctrl &&
+               this->target_iterations_ == ctrl.target_iterations_ &&
+               this->decayDampingFactor_ == ctrl.decayDampingFactor_ &&
+               this->growthDampingFactor_ == ctrl.growthDampingFactor_ &&
+               this->minTimeStepBasedOnIterations_ == ctrl.minTimeStepBasedOnIterations_;
     }
 
 } // end namespace Opm

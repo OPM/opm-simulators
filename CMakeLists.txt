@@ -94,6 +94,10 @@ find_package(opm-common REQUIRED)
 include(OpmInit)
 OpmSetPolicies()
 
+if(USE_MPI)
+  set(HDF5_PREFER_PARALLEL TRUE)
+endif()
+
 # not the same location as most of the other projects? this hook overrides
 macro (dir_hook)
 endmacro (dir_hook)
@@ -236,16 +240,6 @@ if(OpenCL_FOUND)
   endif()
 endif()
 
-find_package(rocalution)
-if(ROCALUTION_FOUND)
-  set(HAVE_ROCALUTION 1)
-  set(COMPILE_BDA_BRIDGE 1)
-endif()
-
-
-# read the list of components from this file (in the project directory);
-# it should set various lists with the names of the files to include
-include (CMakeLists_files.cmake)
 
 macro (config_hook)
   opm_need_version_of ("dune-common")
@@ -278,6 +272,43 @@ macro (fortran_hook)
 endmacro (fortran_hook)
 
 macro (files_hook)
+  if(hip_FOUND)
+    get_filename_component(CXX_COMPILER ${CMAKE_CXX_COMPILER} NAME)
+    if(hip_VERSION VERSION_LESS "5.3")
+      if(ROCALUTION_FOUND AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        message(WARNING " Cannot use hipcc/clang for rocalution with rocm < 5.3\n Disabling rocalutionSolver")
+        unset(ROCALUTION_FOUND)
+        unset(HAVE_ROCALUTION)
+      endif()
+    else()
+      if(rocsparse_FOUND AND rocblas_FOUND)
+        set(HAVE_ROCSPARSE 1)
+        set(COMPILE_BDA_BRIDGE 1)
+      else()
+        unset(HAVE_ROCSPARSE)
+      endif()
+    endif()
+    if(ROCALUTION_FOUND)
+      set(HAVE_ROCALUTION 1)
+      set(COMPILE_BDA_BRIDGE 1)
+    endif()
+  endif()
+  if(MPI_FOUND AND HDF5_FOUND AND NOT HDF5_IS_PARALLEL)
+    message(WARNING "When building parallel OPM flow we need a "
+      "parallel version of hdf5, but found only a serial one. "
+      "Please install a parallel hdf5 library for MPI "
+      "(e.g with apt-get install libhdf5-mpi-dev) and do a clean "
+      "rebuild (build after \"make clean\"). Continuing with "
+      "only normal restart without hdf5 file support.")
+    set(HDF5_FOUND OFF)
+    unset(HAVE_HDF5)
+  endif()
+  # read the list of components from this file (in the project directory);
+  # it should set various lists with the names of the files to include
+  # include needs to be here to make reset HDF5_FOUND available in
+  # (CMakeLists_files.cmake and because we need the created lists during
+  # then inclusion of OpmLibMain
+  include (CMakeLists_files.cmake)
 endmacro (files_hook)
 
 macro (tests_hook)
@@ -340,6 +371,30 @@ opm_add_test(test_broadcast
     -b ${PROJECT_BINARY_DIR}
 )
 
+opm_add_test(test_HDF5File_Parallel
+  DEPENDS "opmsimulators"
+  LIBRARIES opmsimulators ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
+  SOURCES
+    tests/test_HDF5File_Parallel.cpp
+  CONDITION
+    HDF5_FOUND AND MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
+  DRIVER_ARGS
+    -n 4
+    -b ${PROJECT_BINARY_DIR}
+)
+
+opm_add_test(test_HDF5Serializer_Parallel
+  DEPENDS "opmsimulators"
+  LIBRARIES opmsimulators ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
+  SOURCES
+    tests/test_HDF5Serializer_Parallel.cpp
+  CONDITION
+    HDF5_FOUND AND MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
+  DRIVER_ARGS
+    -n 4
+    -b ${PROJECT_BINARY_DIR}
+)
+
 include(OpmBashCompletion)
 
 if (NOT BUILD_FLOW)
@@ -373,7 +428,7 @@ set(FLOW_MODELS blackoil brine energy extbo foam gasoil gaswater
                 gasoil_energy brine_saltprecipitation
                 gaswater_saltprec_vapwat brine_precsalt_vapwat
                 blackoil_legacyassembly gasoildiffuse gaswater_dissolution
-                gaswater_dissolution_diffuse)
+                gaswater_dissolution_diffuse gaswater_energy)
 set(FLOW_VARIANT_MODELS brine_energy onephase onephase_energy)
 
 set(FLOW_TGTS)
@@ -489,6 +544,11 @@ endif()
 
 if(ROCALUTION_FOUND)
   target_include_directories(opmsimulators PUBLIC ${rocalution_INCLUDE_DIR}/rocalution)
+endif()
+
+if(rocsparse_FOUND AND rocblas_FOUND)
+  target_link_libraries( opmsimulators PUBLIC roc::rocsparse )
+  target_link_libraries( opmsimulators PUBLIC roc::rocblas )
 endif()
 
 if(VexCL_FOUND)

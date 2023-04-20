@@ -22,6 +22,8 @@
 #define OPM_WELLGROUPHELPERS_HEADER_INCLUDED
 
 #include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
+#include <opm/input/eclipse/EclipseState/Grid/FieldPropsManager.hpp>
+
 
 #include <map>
 #include <string>
@@ -38,6 +40,7 @@ struct PhaseUsage;
 class Schedule;
 class VFPProdProperties;
 class WellState;
+class FieldPropsManager;
 
 namespace Network { class ExtNetwork; }
 
@@ -308,6 +311,14 @@ namespace WellGroupHelpers
                                                       const SummaryState& summaryState,
                                                       const std::vector<double>& resv_coeff,
                                                       DeferredLogger& deferred_logger);
+
+    template <class AverageRegionalPressureType>
+    void setRegionAveragePressureCalculator(const Group& group,
+                                            const Schedule& schedule,
+                                            const int reportStepIdx,
+                                            const FieldPropsManager& fp,
+                                            const PhaseUsage& pu,
+                                            std::map<std::string, std::unique_ptr<AverageRegionalPressureType>>& regionalAveragePressureCalculator);
 
 
 } // namespace WellGroupHelpers
