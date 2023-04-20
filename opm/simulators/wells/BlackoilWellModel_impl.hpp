@@ -850,6 +850,44 @@ namespace Opm {
 
 
 
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    balanceNetwork(DeferredLogger& deferred_logger) {
+        const double dt = this->ebosSimulator_.timeStepSize();
+        // TODO: should we also have the group and network backed-up here in case the solution did not get converged?
+        auto& well_state = this->wellState();
+        constexpr size_t max_iter = 100;
+        bool converged = false;
+        size_t iter = 0;
+        bool changed_well_group = false;
+        do {
+            // TODO: the interface of updateWellControlsAndNetwork is not updated yet
+            // changed_well_group = updateWellControlsAndNetwork(deferred_logger, true);
+            changed_well_group = updateWellControlsAndNetwork(dt, deferred_logger);
+            assembleWellEqWithoutIteration(dt, deferred_logger);
+            converged = this->getWellConvergence(this->B_avg_, true).converged() && !changed_well_group;
+            if (converged) {
+                break;
+            }
+            ++iter;
+            for (auto& well : this->well_container_) {
+                well->solveEqAndUpdateWellState(well_state, deferred_logger);
+            }
+            this->initPrimaryVariablesEvaluation();
+        } while (iter < max_iter);
+
+        if (!converged) {
+            const std::string msg = fmt::format("balanceNetwork did not get converged with {} iterations, and unconverged "
+                                                "network balance result will be used", max_iter);
+            deferred_logger.warning(msg);
+        } else {
+            const std::string msg = fmt::format("balanceNetwork get converged with {} iterations", iter);
+            deferred_logger.debug(msg);
+        }
+    }
+
+
 
 
     template<typename TypeTag>
@@ -1751,6 +1789,31 @@ namespace Opm {
 
 
 
+    template<typename TypeTag>
+    bool
+    BlackoilWellModel<TypeTag>::
+    needRebalanceNetwork() const
+    {
+        const int reportStepIdx = ebosSimulator_.episodeIndex();
+        const auto& network = schedule()[reportStepIdx].network();
+        if (!network.active()) {
+            return false;
+        }
+
+        bool network_rebalance_necessary = false;
+        for (const auto& well : well_container_) {
+            const auto& events = this->wellState().well(well->indexOfWell()).events;
+            const bool is_partof_network = network.has_node(well->wellEcl().groupName());
+            // TODO: we might find more relevant events to be included here
+            if (is_partof_network && events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE)) {
+                network_rebalance_necessary = true;
+                break;
+            }
+        }
+        network_rebalance_necessary = comm_.max(network_rebalance_necessary);
+
+        return network_rebalance_necessary;
+    }
 
 
     template<typename TypeTag>
@@ -1758,6 +1821,8 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     prepareTimeStep(DeferredLogger& deferred_logger)
     {
+        const bool network_rebalance_necessary = this->needRebalanceNetwork();
+
         for (const auto& well : well_container_) {
             auto& events = this->wellState().well(well->indexOfWell()).events;
             if (events.hasEvent(WellState::event_mask)) {
@@ -1780,6 +1845,11 @@ namespace Opm {
             }
         }
         updatePrimaryVariables(deferred_logger);
+
+        if (network_rebalance_necessary) {
+            // this is to obtain good network solution
+            balanceNetwork(deferred_logger);
+        }
     }
 
     template<typename TypeTag>
