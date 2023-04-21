@@ -1069,6 +1069,10 @@ public:
         // used when ROCKCOMP is activated
         asImp_().updateExplicitQuantities_();
 
+        if (nonTrivialBoundaryConditions()) {
+            this->model().linearizer().updateBoundaryConditionData();
+        }
+
         wellModel_.beginTimeStep();
         if (enableAquifers_)
             aquiferModel_.beginTimeStep();
@@ -1597,17 +1601,13 @@ public:
             unsigned globalDofIdx = context.globalSpaceIndex(interiorDofIdx, timeIdx);
             unsigned pvtRegionIdx = pvtRegionIndex(context, spaceIdx, timeIdx);
             FaceDir::DirEnum dir = FaceDir::FromIntersectionIndex(indexInInside);
-            const auto& dirichlet = dirichlet_(dir)[globalDofIdx];
-            if (freebc_(dir)[globalDofIdx])
-                values.setFreeFlow(context, spaceIdx, timeIdx, boundaryFluidState(globalDofIdx, indexInInside));
-            else if (thermalbc_(dir)[globalDofIdx])
+            const auto [type, massrate] = boundaryCondition(globalDofIdx, dir);
+            if (type == BCType::THERMAL)
                 values.setThermalFlow(context, spaceIdx, timeIdx, boundaryFluidState(globalDofIdx, indexInInside));
-            else if (std::get<0>(dirichlet) != BCComponent::NONE)
+            else if (type == BCType::FREE || type == BCType::DIRICHLET)
                 values.setFreeFlow(context, spaceIdx, timeIdx, boundaryFluidState(globalDofIdx, indexInInside));
-            else {
-                // TODO account for enthalpy flux.
-                values.setMassRate(massratebc_(dir)[globalDofIdx], pvtRegionIdx);
-            }
+            else
+                values.setMassRate(massrate, pvtRegionIdx);
         }
     }
 
@@ -1892,84 +1892,87 @@ public:
     {
         OPM_TIMEBLOCK_LOCAL(boundaryFluidState);
         FaceDir::DirEnum dir = FaceDir::FromIntersectionIndex(directionId);
-        const auto& dirichlet = dirichlet_(dir)[globalDofIdx];
-        if(std::get<0>(dirichlet) == BCComponent::NONE)
-            return initialFluidStates_[globalDofIdx];
+        assert(bcindex_(dir)[globalDofIdx] > 0);
+        const auto& bc = this->simulator().vanguard().schedule()[this->episodeIndex()].bcprop[bcindex_(dir)[globalDofIdx]];
+        if (bc.bctype == BCType::DIRICHLET )
+        {
+            InitialFluidState fluidState;
+            const int pvtRegionIdx = this->pvtRegionIndex(globalDofIdx);
+            fluidState.setPvtRegionIndex(pvtRegionIdx);
 
-        InitialFluidState fluidState;
-        const int pvtRegionIdx = this->pvtRegionIndex(globalDofIdx);
-        fluidState.setPvtRegionIndex(pvtRegionIdx);
+            double pressure = initialFluidStates_[globalDofIdx].pressure(oilPhaseIdx);
+            const auto pressure_input = bc.pressure;
+            if (pressure_input) {
+                pressure = *pressure_input;
+            }
 
-        double pressure = initialFluidStates_[globalDofIdx].pressure(oilPhaseIdx);
-        const auto pressure_input = std::get<1>(dirichlet);
-        if(pressure_input)
-            pressure = *pressure_input;
+            std::array<Scalar, numPhases> pc = {0};
+            const auto& matParams = materialLawParams(globalDofIdx);
+            MaterialLaw::capillaryPressures(pc, matParams, fluidState);
+            Valgrind::CheckDefined(pressure);
+            Valgrind::CheckDefined(pc);
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                if (!FluidSystem::phaseIsActive(phaseIdx))
+                    continue;
 
-        std::array<Scalar, numPhases> pc = {0};
-        const auto& matParams = materialLawParams(globalDofIdx);
-        MaterialLaw::capillaryPressures(pc, matParams, fluidState);
-        Valgrind::CheckDefined(pressure);
-        Valgrind::CheckDefined(pc);
-        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            if (!FluidSystem::phaseIsActive(phaseIdx))
-                continue;
+                if (Indices::oilEnabled)
+                    fluidState.setPressure(phaseIdx, pressure + (pc[phaseIdx] - pc[oilPhaseIdx]));
+                else if (Indices::gasEnabled)
+                    fluidState.setPressure(phaseIdx, pressure + (pc[phaseIdx] - pc[gasPhaseIdx]));
+                else if (Indices::waterEnabled)
+                    //single (water) phase
+                    fluidState.setPressure(phaseIdx, pressure);
+            }
+            switch (bc.component) {
+                case BCComponent::OIL:
+                    if (!FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx))
+                        throw std::logic_error("oil is not active and you're trying to add oil BC");
 
-            if (Indices::oilEnabled)
-                fluidState.setPressure(phaseIdx, pressure + (pc[phaseIdx] - pc[oilPhaseIdx]));
-            else if (Indices::gasEnabled)
-                fluidState.setPressure(phaseIdx, pressure + (pc[phaseIdx] - pc[gasPhaseIdx]));
-            else if (Indices::waterEnabled)
-                //single (water) phase
-                fluidState.setPressure(phaseIdx, pressure);
+                    fluidState.setSaturation(FluidSystem::oilPhaseIdx, 1.0);
+                    break;
+                case BCComponent::GAS:
+                    if (!FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx))
+                        throw std::logic_error("gas is not active and you're trying to add gas BC");
+
+                    fluidState.setSaturation(FluidSystem::gasPhaseIdx, 1.0);
+                    break;
+                    case BCComponent::WATER:
+                    if (!FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx))
+                        throw std::logic_error("water is not active and you're trying to add water BC");
+
+                    fluidState.setSaturation(FluidSystem::waterPhaseIdx, 1.0);
+                    break;
+                case BCComponent::SOLVENT:
+                case BCComponent::POLYMER:
+                case BCComponent::NONE:
+                    throw std::logic_error("you need to specify a valid component (OIL, WATER or GAS) when DIRICHLET type is set in BC");
+                    break;
+            }
+            double temperature = initialFluidStates_[globalDofIdx].temperature(oilPhaseIdx);
+            const auto temperature_input = bc.temperature;
+            if(temperature_input)
+                temperature = *temperature_input;
+            fluidState.setTemperature(temperature);
+            fluidState.setRs(0.0);
+            fluidState.setRv(0.0);
+
+            if (FluidSystem::enableVaporizedWater())
+                fluidState.setRvw(0.0);
+
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                if (!FluidSystem::phaseIsActive(phaseIdx))
+                    continue;
+
+                const auto& b = FluidSystem::inverseFormationVolumeFactor(fluidState, phaseIdx, pvtRegionIdx);
+                fluidState.setInvB(phaseIdx, b);
+
+                const auto& rho = FluidSystem::density(fluidState, phaseIdx, pvtRegionIdx);
+                fluidState.setDensity(phaseIdx, rho);
+
+            }
+            return fluidState;
         }
-        switch (std::get<0>(dirichlet)) {
-            case BCComponent::OIL:
-                if (!FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx))
-                    throw std::logic_error("oil is not active and you're trying to add oil BC");
-
-                fluidState.setSaturation(FluidSystem::oilPhaseIdx, 1.0);
-                break;
-            case BCComponent::GAS:
-                if (!FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx))
-                    throw std::logic_error("gas is not active and you're trying to add gas BC");
-
-                fluidState.setSaturation(FluidSystem::gasPhaseIdx, 1.0);
-                break;
-                case BCComponent::WATER:
-                if (!FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx))
-                    throw std::logic_error("water is not active and you're trying to add water BC");
-
-                fluidState.setSaturation(FluidSystem::waterPhaseIdx, 1.0);
-                break;
-            case BCComponent::SOLVENT:
-            case BCComponent::POLYMER:
-            case BCComponent::NONE:
-                throw std::logic_error("you need to specify a valid component (OIL, WATER or GAS) when DIRICHLET type is set in BC");
-                break;
-        }
-        double temperature = initialFluidStates_[globalDofIdx].temperature(oilPhaseIdx);
-        const auto temperature_input = std::get<2>(dirichlet);
-        if(temperature_input)
-            temperature = *temperature_input;
-        fluidState.setTemperature(temperature);
-        fluidState.setRs(0.0);
-        fluidState.setRv(0.0);
-
-        if (FluidSystem::enableVaporizedWater())
-            fluidState.setRvw(0.0);
-
-        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            if (!FluidSystem::phaseIsActive(phaseIdx))
-                continue;
-
-            const auto& b = FluidSystem::inverseFormationVolumeFactor(fluidState, phaseIdx, pvtRegionIdx);
-            fluidState.setInvB(phaseIdx, b);
-
-            const auto& rho = FluidSystem::density(fluidState, phaseIdx, pvtRegionIdx);
-            fluidState.setDensity(phaseIdx, rho);
-
-        }
-        return fluidState;
+        return initialFluidStates_[globalDofIdx];
     }
 
     /*!
@@ -2078,16 +2081,51 @@ public:
         return this->rockCompTransMultWc_[tableIdx].eval(effectiveOilPressure, SwDeltaMax, /*extrapolation=*/true);
     }
 
-    std::pair<bool, RateVector> boundaryCondition(const unsigned int globalSpaceIdx, const int directionId)
+    std::pair<BCType, RateVector> boundaryCondition(const unsigned int globalSpaceIdx, const int directionId) const
     {
         OPM_TIMEBLOCK_LOCAL(boundaryCondition);
         if (!nonTrivialBoundaryConditions_) {
-            return { false, RateVector(0.0) };
+            return { BCType::NONE, RateVector(0.0) };
         }
         FaceDir::DirEnum dir = FaceDir::FromIntersectionIndex(directionId);
-        const auto& dirichlet = dirichlet_(dir)[globalSpaceIdx];
-        bool free = freebc_(dir)[globalSpaceIdx] || std::get<0>(dirichlet) != BCComponent::NONE;
-        return { free, massratebc_(dir)[globalSpaceIdx] };
+        const auto& schedule = this->simulator().vanguard().schedule();
+        if (bcindex_(dir)[globalSpaceIdx] == 0) {
+            return { BCType::NONE, RateVector(0.0) };
+        }
+        const auto& bc = schedule[this->episodeIndex()].bcprop[bcindex_(dir)[globalSpaceIdx]];
+        if (bc.bctype!=BCType::RATE) {
+            return { bc.bctype, RateVector(0.0) };
+        }
+
+        RateVector rate = 0.0;
+        switch (bc.component) {
+        case BCComponent::OIL:
+            rate[Indices::canonicalToActiveComponentIndex(oilCompIdx)] = bc.rate;
+            break;
+        case BCComponent::GAS:
+            rate[Indices::canonicalToActiveComponentIndex(gasCompIdx)] = bc.rate;
+            break;
+        case BCComponent::WATER:
+            rate[Indices::canonicalToActiveComponentIndex(waterCompIdx)] = bc.rate;
+            break;
+        case BCComponent::SOLVENT:
+            if constexpr (!enableSolvent)
+                throw std::logic_error("solvent is disabled and you're trying to add solvent to BC");
+
+            rate[Indices::solventSaturationIdx] = bc.rate;
+            break;
+        case BCComponent::POLYMER:
+            if constexpr (!enablePolymer)
+                throw std::logic_error("polymer is disabled and you're trying to add polymer to BC");
+
+            rate[Indices::polymerConcentrationIdx] = bc.rate;
+            break;
+        case BCComponent::NONE:
+            throw std::logic_error("you need to specify the component when RATE type is set in BC");
+            break;
+        }
+        //TODO add support for enthalpy rate
+        return {bc.bctype, rate};
     }
 
     const std::unique_ptr<EclWriterType>& eclWriter() const
@@ -2895,11 +2933,7 @@ private:
             for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx)
                 cartesianToCompressedElemIdx[vanguard.cartesianIndex(elemIdx)] = elemIdx;
 
-            massratebc_.resize(numElems, 0.0);
-            freebc_.resize(numElems, false);
-            thermalbc_.resize(numElems, false);
-            dirichlet_.resize(numElems, {BCComponent::NONE, 0.0,0.0});
-
+            bcindex_.resize(numElems, 0);
             auto loopAndApply = [&cartesianToCompressedElemIdx,
                                  &vanguard](const auto& bcface,
                                             auto apply)
@@ -2915,78 +2949,12 @@ private:
                     }
                 }
             };
-
             for (const auto& bcface : bcconfig) {
-                const auto& type = bcface.bctype;
-                if (type == BCType::RATE) {
-                    int compIdx = 0; // default initialize to avoid -Wmaybe-uninitialized warning
-
-                    switch (bcface.component) {
-                    case BCComponent::OIL:
-                        compIdx = Indices::canonicalToActiveComponentIndex(oilCompIdx);
-                        break;
-                    case BCComponent::GAS:
-                        compIdx = Indices::canonicalToActiveComponentIndex(gasCompIdx);
-                        break;
-                    case BCComponent::WATER:
-                        compIdx = Indices::canonicalToActiveComponentIndex(waterCompIdx);
-                        break;
-                    case BCComponent::SOLVENT:
-                        if constexpr (!enableSolvent)
-                            throw std::logic_error("solvent is disabled and you're trying to add solvent to BC");
-
-                        compIdx = Indices::solventSaturationIdx;
-                        break;
-                    case BCComponent::POLYMER:
-                        if constexpr (!enablePolymer)
-                            throw std::logic_error("polymer is disabled and you're trying to add polymer to BC");
-
-                        compIdx = Indices::polymerConcentrationIdx;
-                        break;
-                    case BCComponent::NONE:
-                        throw std::logic_error("you need to specify the component when RATE type is set in BC");
-                        break;
-                    }
-
-                    std::vector<RateVector>& data = massratebc_(bcface.dir);
-
-                    const Evaluation rate = bcface.rate;
+                std::vector<int>& data = bcindex_(bcface.dir);
+                const int index = bcface.index;
                     loopAndApply(bcface,
-                                 [&data,compIdx,rate](int elemIdx)
-                                 { data[elemIdx][compIdx] = rate; });
-                } else if (type == BCType::FREE) {
-                    std::vector<bool>& data = freebc_(bcface.dir);
-                    loopAndApply(bcface,
-                                 [&data](int elemIdx) { data[elemIdx] = true; });
-
-                    // TODO: either the real initial solution needs to be computed or read from the restart file
-                    const auto& eclState = simulator.vanguard().eclState();
-                    const auto& initconfig = eclState.getInitConfig();
-                    if (initconfig.restartRequested()) {
-                        throw std::logic_error("restart is not compatible with using free boundary conditions");
-                    }
-                } else if (type == BCType::THERMAL) {
-                    std::vector<bool>& data = thermalbc_(bcface.dir);
-                    loopAndApply(bcface,
-                                 [&data](int elemIdx) { data[elemIdx] = true; });
-
-                    // TODO: either the real initial solution needs to be computed or read from the restart file
-                    const auto& eclState = simulator.vanguard().eclState();
-                    const auto& initconfig = eclState.getInitConfig();
-                    if (initconfig.restartRequested()) {
-                        throw std::logic_error("restart is not compatible with using free boundary conditions");
-                    }
-                }
-                else if (type == BCType::DIRICHLET) {
-                    const auto component = bcface.component;
-                    const auto pressure = bcface.pressure;
-                    const auto temperature = bcface.temperature;
-                    std::vector<std::tuple<BCComponent, std::optional<double>, std::optional<double>>>& data = dirichlet_(bcface.dir);
-                    loopAndApply(bcface,
-                                 [&data,component,pressure,temperature](int elemIdx) { data[elemIdx] = {component, pressure, temperature}; });
-                } else {
-                    throw std::logic_error("invalid type for BC. Use FREE or RATE");
-                }
+                                 [&data,index](int elemIdx)
+                                 { data[elemIdx] = index; });
             }
         }
     }
@@ -3120,10 +3088,7 @@ private:
         }
     };
 
-    BCData<bool> freebc_;
-    BCData<bool> thermalbc_;
-    BCData<RateVector> massratebc_;
-    BCData<std::tuple<BCComponent, std::optional<double>, std::optional<double>>> dirichlet_;
+    BCData<int> bcindex_;
     bool nonTrivialBoundaryConditions_ = false;
 };
 
