@@ -160,7 +160,7 @@ public:
                                                  DeferredLogger& deferred_logger,
                                                  const bool relax_tolerance) const = 0;
 
-    virtual void solveEqAndUpdateWellState(const Simulator& ebos_simulator,
+    virtual void solveEqAndUpdateWellState(const SummaryState& summary_state,
                                            WellState& well_state,
                                            DeferredLogger& deferred_logger) = 0;
 

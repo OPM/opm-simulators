@@ -534,7 +534,7 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    solveEqAndUpdateWellState(const Simulator& ebos_simulator,
+    solveEqAndUpdateWellState(const SummaryState& summary_state,
                               WellState& well_state,
                               DeferredLogger& deferred_logger)
     {
@@ -544,7 +544,6 @@ namespace Opm
         // which is why we do not put the assembleWellEq here.
         const BVectorWell dx_well = this->linSys_.solve();
 
-        const auto& summary_state = ebos_simulator.vanguard().summaryState();
         updateWellState(summary_state, dx_well, well_state, deferred_logger);
     }
 

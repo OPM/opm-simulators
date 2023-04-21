@@ -872,7 +872,8 @@ namespace Opm {
             }
             ++iter;
             for (auto& well : this->well_container_) {
-                well->solveEqAndUpdateWellState(well_state, deferred_logger);
+                const auto& summary_state = this->ebosSimulator_.vanguard().summaryState();
+                well->solveEqAndUpdateWellState(summary_state, well_state, deferred_logger);
             }
             this->initPrimaryVariablesEvaluation();
         } while (iter < max_iter);

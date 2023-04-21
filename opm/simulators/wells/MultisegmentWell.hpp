@@ -124,7 +124,7 @@ namespace Opm
                                     const WellState& well_state,
                                     DeferredLogger& deferred_logger) override;
 
-        virtual void solveEqAndUpdateWellState(const Simulator& ebos_simulator,
+        virtual void solveEqAndUpdateWellState(const SummaryState& summary_state,
                                                WellState& well_state,
                                                DeferredLogger& deferred_logger) override; // const?
 
