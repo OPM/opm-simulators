@@ -988,12 +988,16 @@ updateNetworkPressures(const int reportStepIdx)
                 // set the dynamic THP constraint of the well accordingly.
                 const double new_limit = it->second;
                 well->setDynamicThpLimit(new_limit);
-                const SingleWellState& ws = this->wellState()[well->indexOfWell()];
+                SingleWellState& ws = this->wellState()[well->indexOfWell()];
                 const bool thp_is_limit = ws.production_cmode == Well::ProducerCMode::THP;
                 const bool will_switch_to_thp = ws.thp < new_limit;
                 if (thp_is_limit || will_switch_to_thp) {
                     active_limit_change = true;
                     network_imbalance = std::max(network_imbalance, std::fabs(new_limit - ws.thp));
+                }
+
+                if (thp_is_limit) {
+                    ws.thp = well->getTHPConstraint(summaryState_);
                 }
             }
         }
