@@ -293,7 +293,9 @@ namespace Opm {
             void prepareTimeStep(DeferredLogger& deferred_logger);
             void initPrimaryVariablesEvaluation() const;
 
-            std::pair<bool, bool> updateWellControls(DeferredLogger& deferred_logger, const std::size_t network_update_it = 0);
+            std::pair<bool, bool>
+            updateWellControls(const bool mandatory_network_balance, DeferredLogger& deferred_logger,
+                               const std::size_t network_update_it);
 
             void updateAndCommunicate(const int reportStepIdx,
                                       const int iterationIdx,
@@ -397,11 +399,14 @@ namespace Opm {
             // the function handles one iteration of updating well controls and network pressures.
             // it is possible to decouple the update of well controls and network pressures further.
             // the returned two booleans are {continue_due_to_network, well_group_control_changed}, respectively
-            std::pair<bool, bool> updateWellControlsAndNetworkIteration(const double dt,
+            std::pair<bool, bool> updateWellControlsAndNetworkIteration(const bool mandatory_network_balance,
+                                                                        const double dt,
                                                                         const std::size_t network_update_iteration,
                                                                         DeferredLogger& local_deferredLogger);
 
-            bool updateWellControlsAndNetwork(const double dt, DeferredLogger& local_deferredLogger);
+            bool updateWellControlsAndNetwork(const bool mandatory_network_balance,
+                                              const double dt,
+                                              DeferredLogger& local_deferredLogger);
 
             // called at the end of a time step
             void timeStepSucceeded(const double& simulationTime, const double dt);
