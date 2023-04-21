@@ -534,6 +534,27 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
+    solveEqAndUpdateWellState(const Simulator& ebos_simulator,
+                              WellState& well_state,
+                              DeferredLogger& deferred_logger)
+    {
+        if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
+
+        // We assemble the well equations, then we check the convergence,
+        // which is why we do not put the assembleWellEq here.
+        const BVectorWell dx_well = this->linSys_.solve();
+
+        const auto& summary_state = ebos_simulator.vanguard().summaryState();
+        updateWellState(summary_state, dx_well, well_state, deferred_logger);
+    }
+
+
+
+
+
+    template <typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
     computePerfCellPressDiffs(const Simulator& ebosSimulator)
     {
         for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
