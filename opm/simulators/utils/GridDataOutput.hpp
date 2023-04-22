@@ -1,5 +1,23 @@
 // -*- tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 // vi: set et ts=4 sw=2 sts=2:
+/*
+  Copyright 2023 Inria, Bretagne–Atlantique Research Center
+
+  This file is part of the Open Porous Media project (OPM).
+
+  OPM is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  OPM is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with OPM.  If not, see <http://www.gnu.org/licenses/>.
+*/
 
 #ifndef OPM_SIM_MESH_DATA2_HPP
 #define OPM_SIM_MESH_DATA2_HPP
@@ -9,7 +27,6 @@
 #include <dune/grid/io/file/vtk/common.hh>
 
 /** @file
-    @author Joshua Bowden
     @brief Allows model geometry data to be passed to external code - via a copy direct to input pointers. 
     
     This data extractor provides the full set of vertices (corresponding to Dune::Partition::all) and then 
