@@ -36,6 +36,7 @@
 #include "alucartesianindexmapper.hh"
 #endif // HAVE_DUNE_ALUGRID
 
+#include <opm/common/OpmLog/KeywordLocation.hpp>
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/FieldPropsManager.hpp>
@@ -477,6 +478,7 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map)
     }
     applyEditNncToGridTrans_(globalToLocal);
     applyNncToGridTrans_(globalToLocal);
+    applyEditNncrToGridTrans_(globalToLocal);
 
     //remove very small non-neighbouring transmissibilities
     removeSmallNonCartesianTransmissibilities_();
@@ -888,9 +890,37 @@ template<class Grid, class GridView, class ElementMapper, class CartesianIndexMa
 void EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 applyEditNncToGridTrans_(const std::unordered_map<std::size_t,int>& globalToLocal)
 {
-    const auto& nnc_input = eclState_.getInputNNC();
-    const auto& editNnc = nnc_input.edit();
-    if (editNnc.empty())
+    const auto& input = eclState_.getInputNNC();
+    applyEditNncToGridTransHelper_(globalToLocal, "EDITNNC",
+                                   input.edit(),
+                                   [&input](const NNCdata& nnc){
+                                       return input.edit_location(nnc);},
+                                   // Multiply transmissibility with EDITNNC value
+                                   [](double& trans, const double& rhs){ trans *= rhs;});
+}
+
+template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
+void EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+applyEditNncrToGridTrans_(const std::unordered_map<std::size_t,int>& globalToLocal)
+{
+    const auto& input = eclState_.getInputNNC();
+    applyEditNncToGridTransHelper_(globalToLocal, "EDITNNCR",
+                                   input.editr(),
+                                   [&input](const NNCdata& nnc){
+                                       return input.editr_location(nnc);},
+                                   // Replace Transmissibility with EDITNNCR value
+                                   [](double& trans, const double& rhs){ trans = rhs;});
+}
+
+template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
+void EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+applyEditNncToGridTransHelper_(const std::unordered_map<std::size_t,int>& globalToLocal,
+                               const std::string& keyword,
+                               const std::vector<NNCdata>& nncs,
+                               const std::function<KeywordLocation(const NNCdata&)>& getLocation,
+                               const std::function<void(double&, const double&)>& apply)
+{
+    if (nncs.empty())
         return;
     const auto& cartDims = cartMapper_.cartesianDimensions();
 
@@ -902,20 +932,20 @@ applyEditNncToGridTrans_(const std::unordered_map<std::size_t,int>& globalToLoca
         return fmt::format("({},{},{})", i + 1,j + 1,k + 1);
     };
 
-    auto print_warning = [&format_ijk, &nnc_input] (const NNCdata& nnc) {
-            const auto& location = nnc_input.edit_location( nnc );
-            auto warning =  fmt::format("Problem with EDITNNC keyword\n"
+    auto print_warning = [&format_ijk, &nncs, &getLocation, &keyword] (const NNCdata& nnc) {
+            const auto& location = getLocation( nnc );
+            auto warning =  fmt::format("Problem with {} keyword\n"
                                         "In {} line {} \n"
-                                        "No NNC defined for connection {} -> {}", location.filename,
+                                        "No NNC defined for connection {} -> {}", keyword, location.filename,
                                         location.lineno, format_ijk(nnc.cell1), format_ijk(nnc.cell2));
-            OpmLog::warning("EDITNNC", warning);
+            OpmLog::warning(keyword, warning);
     };
 
     // editNnc is supposed to only reference non-neighboring connections and not
     // neighboring connections. Use all entries for scaling if there is an NNC.
     // variable nnc incremented in loop body.
-    auto nnc = editNnc.begin();
-    auto end = editNnc.end();
+    auto nnc = nncs.begin();
+    auto end = nncs.end();
     std::size_t warning_count = 0;
     while (nnc != end) {
         auto c1 = nnc->cell1;
@@ -944,15 +974,15 @@ applyEditNncToGridTrans_(const std::unordered_map<std::size_t,int>& globalToLoca
         else {
             // NNC exists
             while (nnc!= end && c1==nnc->cell1 && c2==nnc->cell2) {
-                candidate->second *= nnc->trans;
+                apply(candidate->second, nnc->trans);
                 ++nnc;
             }
         }
     }
 
     if (warning_count > 0) {
-        auto warning = fmt::format("Problems with EDITNNC keyword\n"
-                                   "A total of {} connections not defined in grid", warning_count);
+        auto warning = fmt::format("Problems with {} keyword\n"
+                                   "A total of {} connections not defined in grid", keyword, warning_count);
         OpmLog::warning(warning);
     }
 }
