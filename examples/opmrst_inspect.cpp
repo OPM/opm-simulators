@@ -39,13 +39,13 @@ int main(int argc, char** argv)
         return 1;
     }
 
+    Dune::MPIHelper::instance(argc, argv);
 #if HAVE_MPI
     Opm::Parallel::Communication comm{MPI_COMM_SELF};
 #else
     Opm::Parallel::Communication comm{};
 #endif
 
-    Dune::MPIHelper::instance(argc, argv);
     Opm::HDF5Serializer ser(argv[1], Opm::HDF5File::OpenMode::READ, comm);
 
     std::tuple<std::array<std::string,5>,int> header;
