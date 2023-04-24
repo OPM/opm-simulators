@@ -39,18 +39,18 @@ int main(int argc, char** argv)
         return 1;
     }
 
+    Dune::MPIHelper::instance(argc, argv);
 #if HAVE_MPI
     Opm::Parallel::Communication comm{MPI_COMM_SELF};
 #else
     Opm::Parallel::Communication comm{};
 #endif
 
-    Dune::MPIHelper::instance(argc, argv);
     Opm::HDF5Serializer ser(argv[1], Opm::HDF5File::OpenMode::READ, comm);
 
     std::tuple<std::array<std::string,5>,int> header;
     try {
-        ser.read(header, "/", "simulator_info");
+        ser.read(header, "/", "simulator_info", Opm::HDF5File::DataSetMode::ROOT_ONLY);
     } catch(...) {
         std::cerr << "Error reading data from file, is it really a .OPMRST file?\n";
         return 2;
@@ -70,7 +70,8 @@ int main(int argc, char** argv)
     for (int step : reportSteps) {
         Opm::SimulatorTimer timer;
         try {
-            ser.read(timer, fmt::format("/report_step/{}", step), "simulator_timer");
+            ser.read(timer, fmt::format("/report_step/{}", step),
+                     "simulator_timer", Opm::HDF5File::DataSetMode::ROOT_ONLY);
         } catch (...) {
             std::cerr << "*** Failed to read timer info for level " << step << std::endl;
         }
