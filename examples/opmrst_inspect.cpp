@@ -50,7 +50,7 @@ int main(int argc, char** argv)
 
     std::tuple<std::array<std::string,5>,int> header;
     try {
-        ser.read(header, "/", "simulator_info");
+        ser.read(header, "/", "simulator_info", Opm::HDF5File::DataSetMode::ROOT_ONLY);
     } catch(...) {
         std::cerr << "Error reading data from file, is it really a .OPMRST file?\n";
         return 2;
@@ -70,7 +70,8 @@ int main(int argc, char** argv)
     for (int step : reportSteps) {
         Opm::SimulatorTimer timer;
         try {
-            ser.read(timer, fmt::format("/report_step/{}", step), "simulator_timer");
+            ser.read(timer, fmt::format("/report_step/{}", step),
+                     "simulator_timer", Opm::HDF5File::DataSetMode::ROOT_ONLY);
         } catch (...) {
             std::cerr << "*** Failed to read timer info for level " << step << std::endl;
         }
