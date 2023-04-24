@@ -1573,12 +1573,9 @@ namespace Opm {
         // network related
         bool more_network_update = false;
         if (shouldBalanceNetwork(episodeIdx, iterationIdx) || mandatory_network_balance) {
-            const auto [local_network_changed, local_network_imbalance] = updateNetworkPressures(episodeIdx);
-            const bool network_changed = comm.sum(local_network_changed);
+            const auto local_network_imbalance = updateNetworkPressures(episodeIdx);
             const double network_imbalance = comm.max(local_network_imbalance);
-            if (network_changed) {
-                more_network_update = moreNetworkIteration(episodeIdx, network_update_it, network_imbalance);
-            }
+            more_network_update = moreNetworkIteration(episodeIdx, network_update_it, network_imbalance);
         }
 
         bool changed_well_group = false;
