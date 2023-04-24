@@ -953,14 +953,14 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     updateWellControlsAndNetwork(const bool mandatory_network_balance, const double dt, DeferredLogger& local_deferredLogger)
     {
+        // TODO: adding max_iter and also the iteration that we need to use relaxed tolerance and what happens if not converged?
         // not necessarily that we always need to update once of the network solutions
         bool do_network_update = true;
         bool well_group_control_changed = false;
         std::size_t network_update_iteration = 0;
         while (do_network_update) {
             std::tie(do_network_update, well_group_control_changed) =
-                    updateWellControlsAndNetworkIteration(mandatory_network_balance, dt,
-                                                          network_update_iteration, local_deferredLogger);
+                    updateWellControlsAndNetworkIteration(mandatory_network_balance, dt,local_deferredLogger);
             ++network_update_iteration;
         }
         return well_group_control_changed;
@@ -974,11 +974,10 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     updateWellControlsAndNetworkIteration(const bool mandatory_network_balance,
                                           const double dt,
-                                          const std::size_t network_update_iteration,
                                           DeferredLogger& local_deferredLogger)
     {
         auto [well_group_control_changed, more_network_update] =
-                updateWellControls(mandatory_network_balance,local_deferredLogger,network_update_iteration);
+                updateWellControls(mandatory_network_balance, local_deferredLogger);
 
         bool alq_updated = false;
         OPM_BEGIN_PARALLEL_TRY_CATCH();
@@ -1557,8 +1556,7 @@ namespace Opm {
     template<typename TypeTag>
     std::pair<bool, bool>
     BlackoilWellModel<TypeTag>::
-    updateWellControls(const bool mandatory_network_balance, DeferredLogger& deferred_logger,
-                       const std::size_t network_update_it)
+    updateWellControls(const bool mandatory_network_balance, DeferredLogger& deferred_logger)
     {
         const int episodeIdx = ebosSimulator_.episodeIndex();
         const auto& network = schedule()[episodeIdx].network();
@@ -1575,7 +1573,8 @@ namespace Opm {
         if (shouldBalanceNetwork(episodeIdx, iterationIdx) || mandatory_network_balance) {
             const auto local_network_imbalance = updateNetworkPressures(episodeIdx);
             const double network_imbalance = comm.max(local_network_imbalance);
-            more_network_update = moreNetworkIteration(episodeIdx, network_update_it, network_imbalance);
+            const auto& balance = schedule()[episodeIdx].network_balance();
+            more_network_update = network_imbalance > balance.pressure_tolerance();
         }
 
         bool changed_well_group = false;

@@ -147,7 +147,7 @@ BOOST_AUTO_TEST_CASE(G1)
     Opm::DeferredLogger deferred_logger;
     well_model.calculateExplicitQuantities(deferred_logger);
     well_model.prepareTimeStep(deferred_logger);
-    well_model.updateWellControls(false, deferred_logger, 0);
+    well_model.updateWellControls(false, deferred_logger);
     well_model.initPrimaryVariablesEvaluation();
     Opm::WellInterface<TypeTag> *well_ptr = well_model.getWell("B-1H").get();
     StdWell *std_well = dynamic_cast<StdWell *>(well_ptr);

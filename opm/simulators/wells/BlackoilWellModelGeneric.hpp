@@ -177,10 +177,6 @@ public:
     bool shouldBalanceNetwork(const int reportStepIndex,
                               const int iterationIdx) const;
 
-    bool moreNetworkIteration(const int reportStepIdx,
-                              const std::size_t iteration,
-                              const double network_imbalance) const;
-
     template<class Serializer>
     void serializeOp(Serializer& serializer)
     {

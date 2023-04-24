@@ -294,8 +294,7 @@ namespace Opm {
             void initPrimaryVariablesEvaluation() const;
 
             std::pair<bool, bool>
-            updateWellControls(const bool mandatory_network_balance, DeferredLogger& deferred_logger,
-                               const std::size_t network_update_it);
+            updateWellControls(const bool mandatory_network_balance, DeferredLogger& deferred_logger);
 
             void updateAndCommunicate(const int reportStepIdx,
                                       const int iterationIdx,
@@ -401,7 +400,6 @@ namespace Opm {
             // the returned two booleans are {continue_due_to_network, well_group_control_changed}, respectively
             std::pair<bool, bool> updateWellControlsAndNetworkIteration(const bool mandatory_network_balance,
                                                                         const double dt,
-                                                                        const std::size_t network_update_iteration,
                                                                         DeferredLogger& local_deferredLogger);
 
             bool updateWellControlsAndNetwork(const bool mandatory_network_balance,
