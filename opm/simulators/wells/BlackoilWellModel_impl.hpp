@@ -30,6 +30,7 @@
 #include <opm/simulators/wells/VFPProperties.hpp>
 #include <opm/simulators/utils/MPIPacker.hpp>
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
+#include <opm/input/eclipse/Schedule/Network/Balance.hpp>
 
 #if HAVE_MPI
 #include <ebos/eclmpiserializer.hh>
@@ -870,7 +871,9 @@ namespace Opm {
                                            terminal_output_, grid().comm());
         }
 
-        const bool well_group_control_changed = assembleImpl(iterationIdx, dt, 0, local_deferredLogger);
+        const bool well_group_control_changed = updateWellControlsAndNetwork(dt, local_deferredLogger);
+
+        assembleWellEqWithoutIteration(dt, local_deferredLogger);
 
         // if group or well control changes we don't consider the
         // case converged
@@ -881,17 +884,34 @@ namespace Opm {
 
 
 
-
     template<typename TypeTag>
     bool
     BlackoilWellModel<TypeTag>::
-    assembleImpl(const int iterationIdx,
-                 const double dt,
-                 const std::size_t recursion_level,
-                 DeferredLogger& local_deferredLogger)
+    updateWellControlsAndNetwork(const double dt, DeferredLogger& local_deferredLogger)
     {
+        // not necessarily that we always need to update once of the network solutions
+        bool do_network_update = true;
+        bool well_group_control_changed = false;
+        std::size_t network_update_iteration = 0;
+        while (do_network_update) {
+            std::tie(do_network_update, well_group_control_changed) =
+                    updateWellControlsAndNetworkIteration(dt, network_update_iteration, local_deferredLogger);
+            ++network_update_iteration;
+        }
+        return well_group_control_changed;
+    }
 
-        auto [well_group_control_changed, network_changed, network_imbalance] = updateWellControls(local_deferredLogger);
+
+
+
+    template<typename TypeTag>
+    std::pair<bool, bool>
+    BlackoilWellModel<TypeTag>::
+    updateWellControlsAndNetworkIteration(const double dt,
+                                          const std::size_t network_update_iteration,
+                                          DeferredLogger& local_deferredLogger)
+    {
+        auto [well_group_control_changed, more_network_update] = updateWellControls(local_deferredLogger, network_update_iteration);
 
         bool alq_updated = false;
         OPM_BEGIN_PARALLEL_TRY_CATCH();
@@ -900,9 +920,10 @@ namespace Opm {
             initPrimaryVariablesEvaluation();
 
             alq_updated = maybeDoGasLiftOptimize(local_deferredLogger);
-            assembleWellEq(dt, local_deferredLogger);
+
+            prepareWellsBeforeAssembling(dt, local_deferredLogger);
         }
-        OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger, "assemble() failed: ",
+        OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger, "updateWellControlsAndNetworkIteration() failed: ",
                                        terminal_output_, grid().comm());
 
         //update guide rates
@@ -915,19 +936,12 @@ namespace Opm {
             std::vector<double> pot(numPhases(), 0.0);
             const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
             WellGroupHelpers::updateGuideRates(fieldGroup, schedule(), summaryState, this->phase_usage_, reportStepIdx, simulationTime,
-                                        this->wellState(), this->groupState(), comm, &this->guideRate_, pot, local_deferredLogger);
+                                               this->wellState(), this->groupState(), comm, &this->guideRate_, pot, local_deferredLogger);
         }
 
-        // Maybe do a recursive call to iterate network and well controls.
-        if (network_changed) {
-            if (shouldBalanceNetwork(reportStepIdx, iterationIdx) &&
-                shouldIterateNetwork(reportStepIdx, recursion_level, network_imbalance)) {
-                well_group_control_changed = assembleImpl(iterationIdx, dt, recursion_level + 1, local_deferredLogger);
-            }
-        }
-        return well_group_control_changed;
+
+        return {more_network_update, well_group_control_changed};
     }
-
 
 
 
@@ -1142,6 +1156,29 @@ namespace Opm {
             well->assembleWellEq(ebosSimulator_, dt, this->wellState(), this->groupState(), deferred_logger);
         }
     }
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    prepareWellsBeforeAssembling(const double dt, DeferredLogger& deferred_logger)
+    {
+        for (auto& well : well_container_) {
+            well->prepareWellBeforeAssembling(ebosSimulator_, dt, this->wellState(), this->groupState(), deferred_logger);
+        }
+    }
+
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    assembleWellEqWithoutIteration(const double dt, DeferredLogger& deferred_logger)
+    {
+        for (auto& well: well_container_) {
+            well->assembleWellEqWithoutIteration(ebosSimulator_, dt, this->wellState(), this->groupState(),
+                                                 deferred_logger);
+        }
+    }
+
 
     template<typename TypeTag>
     void
@@ -1451,25 +1488,31 @@ namespace Opm {
 
 
     template<typename TypeTag>
-    std::tuple<bool, bool, double>
+    std::pair<bool, bool>
     BlackoilWellModel<TypeTag>::
-    updateWellControls(DeferredLogger& deferred_logger)
+    updateWellControls(DeferredLogger& deferred_logger,
+                       const std::size_t network_update_it)
     {
         // Even if there are no wells active locally, we cannot
         // return as the DeferredLogger uses global communication.
         // For no well active globally we simply return.
-        if( !wellsActive() ) return { false, false, 0.0 };
+        if( !wellsActive() ) return { false, false };
 
         const int episodeIdx = ebosSimulator_.episodeIndex();
         const int iterationIdx = ebosSimulator_.model().newtonMethod().numIterations();
         const auto& comm = ebosSimulator_.vanguard().grid().comm();
         updateAndCommunicateGroupData(episodeIdx, iterationIdx);
 
-        const auto [local_network_changed, local_network_imbalance]
-            = shouldBalanceNetwork(episodeIdx, iterationIdx) ?
-            updateNetworkPressures(episodeIdx) : std::make_pair(false, 0.0);
-        const bool network_changed = comm.sum(local_network_changed);
-        const double network_imbalance = comm.max(local_network_imbalance);
+        // network related
+        bool more_network_update = false;
+        if (shouldBalanceNetwork(episodeIdx, iterationIdx)) {
+            const auto [local_network_changed, local_network_imbalance] = updateNetworkPressures(episodeIdx);
+            const bool network_changed = comm.sum(local_network_changed);
+            const double network_imbalance = comm.max(local_network_imbalance);
+            if (network_changed) {
+                more_network_update = moreNetworkIteration(episodeIdx, network_update_it, network_imbalance);
+            }
+        }
 
         bool changed_well_group = false;
         // Check group individual constraints.
@@ -1515,7 +1558,7 @@ namespace Opm {
         const Group& fieldGroup = schedule().getGroup("FIELD", episodeIdx);
         updateWsolvent(fieldGroup, episodeIdx,  this->nupcolWellState());
 
-        return { changed_well_group, network_changed, network_imbalance };
+        return { changed_well_group, more_network_update };
     }
 
 
