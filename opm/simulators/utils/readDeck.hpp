@@ -60,7 +60,7 @@ enum class FileOutputMode {
 void
 ensureOutputDirExists(const std::string& cmdline_output_dir);
 
-std::unique_ptr<ParseContext> setupParseContext(const bool strictParsing);
+std::unique_ptr<ParseContext> setupParseContext(const bool exitOnAllErrors);
 
 // Setup the OpmLog backends
 FileOutputMode
@@ -85,7 +85,7 @@ void readDeck(Parallel::Communication         comm,
               std::unique_ptr<WellTestState>& wtestState,
               std::shared_ptr<SummaryConfig>& summaryConfig,
               std::shared_ptr<Python>         python,
-              bool                            strictParsing,
+              const std::string&              parsingStrictness,
               bool                            initFromRestart,
               bool                            checkDeck,
               const std::optional<int>&       outputInterval);
