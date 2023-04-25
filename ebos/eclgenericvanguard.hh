@@ -296,7 +296,6 @@ protected:
 #endif
     bool enableDistributedWells_;
     std::string ignoredKeywords_;
-    bool eclStrictParsing_;
     std::optional<int> outputInterval_;
     bool useMultisegmentWell_;
     bool enableExperiments_;
