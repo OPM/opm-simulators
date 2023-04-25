@@ -504,7 +504,7 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
 
     if (parsingStrictness != "high" && parsingStrictness != "normal" && parsingStrictness != "low") {
         OPM_THROW(std::runtime_error,
-                  fmt::format("Incorrect value {} for parameter ParsingStrictness, must be 'high', 'normal', or 'low'"));
+                  fmt::format("Incorrect value {} for parameter ParsingStrictness, must be 'high', 'normal', or 'low'", parsingStrictness));
     }
 
     if (comm.rank() == 0) { // Always true when !HAVE_MPI
