@@ -232,7 +232,10 @@ public:
         EWOMS_REGISTER_PARAM(TypeTag, std::string, IgnoreKeywords,
                              "List of Eclipse keywords which should be ignored. As a ':' separated string.");
         EWOMS_REGISTER_PARAM(TypeTag, std::string, ParsingStrictness,
-                             "Set strictness of parsing process. Avaliable options are normal (stop for critical errors), high (stop for all errors) and low (as normal, except do not stop due to unsupported keywords even if marked critical");
+                             "Set strictness of parsing process. Available options are "
+                             "normal (stop for critical errors), "
+                             "high (stop for all errors) and "
+                             "low (as normal, except do not stop due to unsupported keywords even if marked critical");
         EWOMS_REGISTER_PARAM(TypeTag, bool, SchedRestart,
                              "When restarting: should we try to initialize wells and groups from historical SCHEDULE section.");
         EWOMS_REGISTER_PARAM(TypeTag, int, EdgeWeightsMethod,
