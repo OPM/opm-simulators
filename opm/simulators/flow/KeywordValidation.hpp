@@ -110,9 +110,12 @@ namespace KeywordValidation
 
         // Validate a deck, reporting warnings and errors. If there are only
         // warnings, these will be reported. If there are errors, these are
-        // reported, and execution of the program is halted.
+        // reported, and execution of the program is halted, unless the argument
+        // treat_critical_as_noncritical is true, then these also will only be
+        // reported and not cause termination.
         void validateDeck(const Deck& deck,
                           const ParseContext& parse_context,
+                          const bool treat_critical_as_noncritical,
                           ErrorGuard& error_guard) const;
 
         // Validate a single deck keyword. If a problem is encountered, add the

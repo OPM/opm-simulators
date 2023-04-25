@@ -85,6 +85,7 @@ namespace KeywordValidation
     void
     KeywordValidator::validateDeck(const Deck& deck,
                                    const ParseContext& parse_context,
+                                   const bool treat_critical_as_noncritical,
                                    ErrorGuard& error_guard) const
     {
         // Make a vector with all problems encountered in the deck.
@@ -99,18 +100,27 @@ namespace KeywordValidation
             }
         }
 
-        // First report non-critical problems as a warning.
-        auto warning_report = get_error_report(errors, true, false);
-        if (!warning_report.empty()) {
-            parse_context.handleError(
-                ParseContext::SIMULATOR_KEYWORD_NOT_SUPPORTED, warning_report, std::nullopt, error_guard);
-        }
+        if (treat_critical_as_noncritical) {
+            // Get both critical and noncritical errors.
+            auto warning_report = get_error_report(errors, true, true);
+            if (!warning_report.empty()) {
+                // Report all as warnings.
+                parse_context.handleError(ParseContext::SIMULATOR_KEYWORD_NOT_SUPPORTED, warning_report, std::nullopt, error_guard);
+            }
+        } else {
+            // First report non-critical problems as a warning.
+            auto warning_report = get_error_report(errors, true, false);
+            if (!warning_report.empty()) {
+                parse_context.handleError(
+                                          ParseContext::SIMULATOR_KEYWORD_NOT_SUPPORTED, warning_report, std::nullopt, error_guard);
+            }
 
-        // Then report critical problems as an error.
-        auto error_report = get_error_report(errors, false, true);
-        if (!error_report.empty()) {
-            parse_context.handleError(
-                ParseContext::SIMULATOR_KEYWORD_NOT_SUPPORTED_CRITICAL, error_report, std::nullopt, error_guard);
+            // Then report critical problems as an error.
+            auto error_report = get_error_report(errors, false, true);
+            if (!error_report.empty()) {
+                parse_context.handleError(
+                                          ParseContext::SIMULATOR_KEYWORD_NOT_SUPPORTED_CRITICAL, error_report, std::nullopt, error_guard);
+            }
         }
     }
 

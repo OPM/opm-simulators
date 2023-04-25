@@ -203,7 +203,7 @@ namespace {
             Opm::KeywordValidation::specialValidation()
         };
 
-        keyword_validator.validateDeck(deck, parseContext, errorGuard);
+        keyword_validator.validateDeck(deck, parseContext, true, errorGuard);
 
         if (checkDeck) {
             Opm::checkDeck(deck, parser, parseContext, errorGuard);
