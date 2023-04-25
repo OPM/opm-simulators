@@ -397,18 +397,18 @@ namespace Opm {
             // and in the well equations.
             void assemble(const int iterationIdx,
                           const double dt);
-<<<<<<< HEAD
+// <<<<<<< HEAD
 
-            // well controls and network pressures affect each other and are solved in an iterative manner.
-            // the function handles one iteration of updating well controls and network pressures.
-            // it is possible to decouple the update of well controls and network pressures further.
-            // the returned two booleans are {continue_due_to_network, well_group_control_changed}, respectively
-            std::pair<bool, bool> updateWellControlsAndNetworkIteration(const double dt,
-                                                                        const std::size_t network_update_iteration,
-                                                                        DeferredLogger& local_deferredLogger);
+//             // well controls and network pressures affect each other and are solved in an iterative manner.
+//             // the function handles one iteration of updating well controls and network pressures.
+//             // it is possible to decouple the update of well controls and network pressures further.
+//             // the returned two booleans are {continue_due_to_network, well_group_control_changed}, respectively
+//             std::pair<bool, bool> updateWellControlsAndNetworkIteration(const double dt,
+//                                                                         const std::size_t network_update_iteration,
+//                                                                         DeferredLogger& local_deferredLogger);
 
-            bool updateWellControlsAndNetwork(const double dt, DeferredLogger& local_deferredLogger);
-=======
+//             bool updateWellControlsAndNetwork(const double dt, DeferredLogger& local_deferredLogger);
+// =======
             void assembleImpl(const double dt, DeferredLogger& local_deferredLogger);
 
             // making the function that handle the update well controls and also network related
@@ -421,7 +421,7 @@ namespace Opm {
                                                   const bool relax_network_tolerance);
 
             bool updateWellControlsAndNetwork(DeferredLogger& local_deferredLogger, const bool balance_network);
->>>>>>> 42342102e (Updating PR4307 to new interface)
+// >>>>>>> 42342102e (Updating PR4307 to new interface)
 
             // called at the end of a time step
             void timeStepSucceeded(const double& simulationTime, const double dt);
