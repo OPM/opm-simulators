@@ -135,6 +135,8 @@ void outputReportStep(const SimulatorTimer& timer);
 void outputTimestampFIP(const SimulatorTimer& timer,
                         const std::string& title,
                         const std::string& version);
+void checkSerializedCmdLine(const std::string& current,
+                            const std::string& stored);
 
 /// a simulator for the blackoil model
 template<class TypeTag>
@@ -663,6 +665,12 @@ protected:
             if (hash != stored_hash) {
                 throw std::runtime_error("Grid hash mismatch, .OPMRST file cannot be used");
             }
+        }
+
+        if (EclGenericVanguard::comm().rank() == 0) {
+            std::ostringstream str;
+            Parameters::printValues<TypeTag>(str);
+            checkSerializedCmdLine(str.str(), strings[4]);
         }
 
         OPM_END_PARALLEL_TRY_CATCH("Error loading serialized state: ",
