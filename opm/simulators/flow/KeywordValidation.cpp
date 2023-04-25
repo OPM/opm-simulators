@@ -27,6 +27,7 @@
 
 #include <fmt/format.h>
 
+#include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/utility/OpmInputError.hpp>
 #include <opm/input/eclipse/Deck/Deck.hpp>
 #include <opm/input/eclipse/Deck/DeckKeyword.hpp>
@@ -118,6 +119,10 @@ namespace KeywordValidation
             // Then report critical problems as an error.
             auto error_report = get_error_report(errors, false, true);
             if (!error_report.empty()) {
+                OpmLog::info("\nOPM Flow will terminate due to unsupported critical keywords.\n"
+                             "These are keywords that would change the simulator results if supported.\n"
+                             "If you need to override this behaviour, you can use the command line argument --parsing-strictness=low,\n"
+                             "this will reduce the severity of this to a warning instead of an error.");
                 parse_context.handleError(
                                           ParseContext::SIMULATOR_KEYWORD_NOT_SUPPORTED_CRITICAL, error_report, std::nullopt, error_guard);
             }
