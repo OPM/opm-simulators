@@ -31,6 +31,7 @@
 #include <opm/input/eclipse/Deck/Deck.hpp>
 #include <opm/input/eclipse/Deck/DeckKeyword.hpp>
 #include <opm/input/eclipse/Parser/ErrorGuard.hpp>
+#include <opm/input/eclipse/Parser/InputErrorAction.hpp>
 #include <opm/input/eclipse/Parser/ParseContext.hpp>
 #include <opm/simulators/flow/KeywordValidation.hpp>
 
@@ -43,7 +44,7 @@ namespace KeywordValidation
 {
 
 
-    std::string get_error_report(const std::vector<ValidationError>& errors, const bool critical)
+    std::string get_error_report(const std::vector<ValidationError>& errors, const bool include_noncritical, const bool include_critical)
     {
         const std::string keyword_format = "  {keyword}: keyword not supported\n";
         const std::string item_format1 = "  {{keyword}}: invalid value '{}' for item {}\n";
@@ -52,7 +53,7 @@ namespace KeywordValidation
 
         std::string report;
         for (const ValidationError& err : errors) {
-            if (err.critical == critical) {
+            if ((err.critical && include_critical) || (!err.critical && include_noncritical)) {
                 if (err.item_number && err.item_value) {
                     std::string message;
                     if (err.record_number == 0) {
@@ -99,14 +100,14 @@ namespace KeywordValidation
         }
 
         // First report non-critical problems as a warning.
-        auto warning_report = get_error_report(errors, false);
+        auto warning_report = get_error_report(errors, true, false);
         if (!warning_report.empty()) {
             parse_context.handleError(
                 ParseContext::SIMULATOR_KEYWORD_NOT_SUPPORTED, warning_report, std::nullopt, error_guard);
         }
 
         // Then report critical problems as an error.
-        auto error_report = get_error_report(errors, true);
+        auto error_report = get_error_report(errors, false, true);
         if (!error_report.empty()) {
             parse_context.handleError(
                 ParseContext::SIMULATOR_KEYWORD_NOT_SUPPORTED_CRITICAL, error_report, std::nullopt, error_guard);

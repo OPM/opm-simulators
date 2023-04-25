@@ -78,11 +78,12 @@ namespace KeywordValidation
     };
 
     // Get a formatted error report from a vector of validation errors. Set
-    // critical to true if the report should contain only critical errors. If
-    // critical is false, only non-critical errors are reported. If not
-    // critical/non-critical errors are present, but the critical flag to reset
-    // them, the result will be an empty string.
-    std::string get_error_report(const std::vector<ValidationError>& errors, const bool critical);
+    // include_noncritical to true if the report should include noncritical errors, and
+    // include_critical to true if the report should include critical errors. These may
+    // be set independently. If no errors are included the result will be an empty string.
+    std::string get_error_report(const std::vector<ValidationError>& errors,
+                                 const bool include_noncritical,
+                                 const bool include_critical);
 
 
 
