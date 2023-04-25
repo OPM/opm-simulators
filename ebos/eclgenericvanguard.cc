@@ -133,7 +133,7 @@ void EclGenericVanguard::readDeck(const std::string& filename)
                   modelParams_.actionState_,
                   modelParams_.wtestState_,
                   modelParams_.eclSummaryConfig_,
-                  nullptr, false, false, false, {});
+                  nullptr, "normal", false, false, {});
     modelParams_.setupTime_ = setupTimer.stop();
 }
 
