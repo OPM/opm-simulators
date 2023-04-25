@@ -650,7 +650,7 @@ protected:
             const auto& cellMapping = ebosSimulator_.vanguard().globalCell();
             std::size_t hash = Dune::hash_range(cellMapping.begin(), cellMapping.end());
             if (hash != stored_hash) {
-                throw std::runtime_error("Grid hash mismatch, .SAVE file cannot be used");
+                throw std::runtime_error("Grid hash mismatch, .OPMRST file cannot be used");
             }
         }
 
