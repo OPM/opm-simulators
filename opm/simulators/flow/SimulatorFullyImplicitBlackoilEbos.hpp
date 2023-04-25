@@ -644,6 +644,17 @@ protected:
         const std::string groupName = "/report_step/" + std::to_string(loadStep_);
         reader.read(timer, groupName, "simulator_timer", HDF5File::DataSetMode::ROOT_ONLY);
 
+        std::tuple<std::array<std::string,5>,int> header;
+        reader.read(header, "/", "simulator_info", HDF5File::DataSetMode::ROOT_ONLY);
+        const auto& [strings, procs] = header;
+
+        if (EclGenericVanguard::comm().size() != procs) {
+            throw std::runtime_error("Number of processes (procs=" +
+                                     std::to_string(EclGenericVanguard::comm().size()) +
+                                     ") does not match .OPMRST file (procs=" +
+                                     std::to_string(procs) + ")");
+        }
+
         if (EclGenericVanguard::comm().size() > 1) {
             std::size_t stored_hash;
             reader.read(stored_hash, "/", "grid_checksum");
