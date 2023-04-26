@@ -191,6 +191,7 @@ namespace {
                  const bool               checkDeck,
                  const Opm::Parser&       parser,
                  const Opm::ParseContext& parseContext,
+                 const bool               treatCriticalAsNonCritical,
                  Opm::ErrorGuard&         errorGuard)
     {
         Opm::Deck deck(parser.parseFile(deckFilename, parseContext, errorGuard));
@@ -203,7 +204,7 @@ namespace {
             Opm::KeywordValidation::specialValidation()
         };
 
-        keyword_validator.validateDeck(deck, parseContext, errorGuard);
+        keyword_validator.validateDeck(deck, parseContext, treatCriticalAsNonCritical, errorGuard);
 
         if (checkDeck) {
             Opm::checkDeck(deck, parser, parseContext, errorGuard);
@@ -235,6 +236,7 @@ namespace {
                       std::shared_ptr<Opm::Python>         python,
                       const bool                           initFromRestart,
                       const bool                           checkDeck,
+                      const bool                           treatCriticalAsNonCritical,
                       const std::optional<int>&            outputInterval,
                       Opm::ErrorGuard&                     errorGuard)
     {
@@ -248,7 +250,7 @@ namespace {
 
         auto parser = Opm::Parser{};
         const auto deck = readDeckFile(deckFilename, checkDeck, parser,
-                                       *parseContext, errorGuard);
+                                       *parseContext, treatCriticalAsNonCritical, errorGuard);
 
         if (eclipseState == nullptr) {
             eclipseState = createEclipseState(comm, deck);
@@ -490,7 +492,7 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
                    std::unique_ptr<WellTestState>& wtestState,
                    std::shared_ptr<SummaryConfig>& summaryConfig,
                    std::shared_ptr<Python>         python,
-                   const bool                      strictParsing,
+                   const std::string&              parsingStrictness,
                    const bool                      initFromRestart,
                    const bool                      checkDeck,
                    const std::optional<int>&       outputInterval)
@@ -500,13 +502,20 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
     int parseSuccess = 1; // > 0 is success
     std::string failureMessage;
 
+    if (parsingStrictness != "high" && parsingStrictness != "normal" && parsingStrictness != "low") {
+        OPM_THROW(std::runtime_error,
+                  fmt::format("Incorrect value {} for parameter ParsingStrictness, must be 'high', 'normal', or 'low'", parsingStrictness));
+    }
+
     if (comm.rank() == 0) { // Always true when !HAVE_MPI
+        const bool exitOnAllErrors = (parsingStrictness == "high");
+        const bool treatCriticalAsNonCritical = (parsingStrictness == "low");
         try {
-            auto parseContext = setupParseContext(strictParsing);
+            auto parseContext = setupParseContext(exitOnAllErrors);
             readOnIORank(comm, deckFilename, parseContext.get(),
                          eclipseState, schedule, udqState, actionState, wtestState,
                          summaryConfig, std::move(python), initFromRestart,
-                         checkDeck, outputInterval, *errorGuard);
+                         checkDeck, treatCriticalAsNonCritical, outputInterval, *errorGuard);
         }
         catch (const OpmInputError& input_error) {
             failureMessage = input_error.what();

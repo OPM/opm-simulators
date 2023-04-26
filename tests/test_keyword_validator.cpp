@@ -277,7 +277,7 @@ ECHO
     KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items, {});
     std::vector<ValidationError> errors;
     validator.validateDeckKeyword(test_keyword, errors);
-    const auto report = get_error_report(errors, false);
+    const auto report = get_error_report(errors, true, false);
     BOOST_CHECK(report
                 == "Unsupported keywords or keyword items:\n\n"
                    "  ECHO: keyword not supported\n"
@@ -296,7 +296,7 @@ ECHO
     KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items, {});
     std::vector<ValidationError> errors;
     validator.validateDeckKeyword(test_keyword, errors);
-    const auto report = get_error_report(errors, true);
+    const auto report = get_error_report(errors, false, true);
     BOOST_CHECK(report.empty());
 }
 
@@ -311,7 +311,7 @@ NOECHO
     KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items, {});
     std::vector<ValidationError> errors;
     validator.validateDeckKeyword(test_keyword, errors);
-    const auto report = get_error_report(errors, true);
+    const auto report = get_error_report(errors, false, true);
     BOOST_CHECK(report
                 == "Unsupported keywords or keyword items:\n\n"
                    "  NOECHO: keyword not supported\n"
@@ -329,7 +329,7 @@ NOECHO
     KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items, {});
     std::vector<ValidationError> errors;
     validator.validateDeckKeyword(test_keyword, errors);
-    const auto report = get_error_report(errors, false);
+    const auto report = get_error_report(errors, true, false);
     BOOST_CHECK(report.empty());
 }
 
@@ -345,7 +345,7 @@ PINCH
     KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items, {});
     std::vector<ValidationError> errors;
     validator.validateDeckKeyword(test_keyword, errors);
-    const auto report = get_error_report(errors, false);
+    const auto report = get_error_report(errors, true, false);
     BOOST_CHECK(report
                 == "Unsupported keywords or keyword items:\n\n"
                    "  PINCH: invalid value 'FOO' for item 2\n"
@@ -368,7 +368,7 @@ COMPDAT
     KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items, {});
     std::vector<ValidationError> errors;
     validator.validateDeckKeyword(test_keyword, errors);
-    const auto report = get_error_report(errors, false);
+    const auto report = get_error_report(errors, true, false);
     BOOST_CHECK(report
                 == "Unsupported keywords or keyword items:\n\n"
                    "  COMPDAT: invalid value '0' in record 1 for item 2\n"
@@ -389,7 +389,7 @@ PINCH
     KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items, {});
     std::vector<ValidationError> errors;
     validator.validateDeckKeyword(test_keyword, errors);
-    const auto report = get_error_report(errors, true);
+    const auto report = get_error_report(errors, false, true);
     BOOST_CHECK(report.empty());
 }
 
@@ -405,7 +405,7 @@ ENDSCALE
     KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items, {});
     std::vector<ValidationError> errors;
     validator.validateDeckKeyword(test_keyword, errors);
-    const auto report = get_error_report(errors, false);
+    const auto report = get_error_report(errors, true, false);
     BOOST_CHECK(report
                 == "Unsupported keywords or keyword items:\n\n"
                    "  ENDSCALE: invalid value '0' for item 3\n"
@@ -424,7 +424,7 @@ ENDSCALE
     KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items, {});
     std::vector<ValidationError> errors;
     validator.validateDeckKeyword(test_keyword, errors);
-    const auto report = get_error_report(errors, true);
+    const auto report = get_error_report(errors, false, true);
     BOOST_CHECK(report.empty());
 }
 
@@ -440,7 +440,7 @@ ENDSCALE
     KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items, {});
     std::vector<ValidationError> errors;
     validator.validateDeckKeyword(test_keyword, errors);
-    const auto report = get_error_report(errors, true);
+    const auto report = get_error_report(errors, false, true);
     BOOST_CHECK(report
                 == "Unsupported keywords or keyword items:\n\n"
                    "  ENDSCALE: invalid value '0' for item 4\n"
@@ -459,7 +459,7 @@ ENDSCALE
     KeywordValidator validator(test_unsupported_keywords, test_string_items, test_int_items, test_double_items, {});
     std::vector<ValidationError> errors;
     validator.validateDeckKeyword(test_keyword, errors);
-    const auto report = get_error_report(errors, false);
+    const auto report = get_error_report(errors, true, false);
     BOOST_CHECK(report.empty());
 }
 
@@ -485,7 +485,7 @@ ENDSCALE
     validator.validateDeckKeyword(test_keyword2, errors);
     validator.validateDeckKeyword(test_keyword3, errors);
     validator.validateDeckKeyword(test_keyword4, errors);
-    const auto report = get_error_report(errors, false);
+    const auto report = get_error_report(errors, true, false);
     BOOST_CHECK(report
                 == "Unsupported keywords or keyword items:\n\n"
                    "  ECHO: keyword not supported\n"
@@ -516,7 +516,7 @@ ENDSCALE
     validator.validateDeckKeyword(test_keyword2, errors);
     validator.validateDeckKeyword(test_keyword3, errors);
     validator.validateDeckKeyword(test_keyword4, errors);
-    const auto report = get_error_report(errors, true);
+    const auto report = get_error_report(errors, false, true);
     BOOST_CHECK(report
                 == "Unsupported keywords or keyword items:\n\n"
                    "  NOECHO: keyword not supported\n"

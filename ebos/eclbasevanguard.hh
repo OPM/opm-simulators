@@ -65,7 +65,7 @@ struct EnableOpmRstFile {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
-struct EclStrictParsing {
+struct ParsingStrictness {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
@@ -134,8 +134,8 @@ struct EnableOpmRstFile<TypeTag, TTag::EclBaseVanguard> {
     static constexpr bool value = false;
 };
 template<class TypeTag>
-struct EclStrictParsing<TypeTag, TTag::EclBaseVanguard> {
-    static constexpr bool value = false;
+struct ParsingStrictness<TypeTag, TTag::EclBaseVanguard> {
+    static constexpr auto value = "normal";
 };
 template<class TypeTag>
 struct SchedRestart<TypeTag, TTag::EclBaseVanguard> {
@@ -231,8 +231,11 @@ public:
                              "Include OPM-specific keywords in the ECL restart file to enable restart of OPM simulators from these files");
         EWOMS_REGISTER_PARAM(TypeTag, std::string, IgnoreKeywords,
                              "List of Eclipse keywords which should be ignored. As a ':' separated string.");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, EclStrictParsing,
-                             "Use strict mode for parsing - all errors are collected before the applicaton exists.");
+        EWOMS_REGISTER_PARAM(TypeTag, std::string, ParsingStrictness,
+                             "Set strictness of parsing process. Available options are "
+                             "normal (stop for critical errors), "
+                             "high (stop for all errors) and "
+                             "low (as normal, except do not stop due to unsupported keywords even if marked critical");
         EWOMS_REGISTER_PARAM(TypeTag, bool, SchedRestart,
                              "When restarting: should we try to initialize wells and groups from historical SCHEDULE section.");
         EWOMS_REGISTER_PARAM(TypeTag, int, EdgeWeightsMethod,
@@ -290,7 +293,6 @@ public:
 #endif
         enableDistributedWells_ = EWOMS_GET_PARAM(TypeTag, bool, AllowDistributedWells);
         ignoredKeywords_ = EWOMS_GET_PARAM(TypeTag, std::string, IgnoreKeywords);
-        eclStrictParsing_ = EWOMS_GET_PARAM(TypeTag, bool, EclStrictParsing);
         int output_param = EWOMS_GET_PARAM(TypeTag, int, EclOutputInterval);
         if (output_param >= 0)
             outputInterval_ = output_param;

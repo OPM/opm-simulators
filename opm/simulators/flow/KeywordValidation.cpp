@@ -27,10 +27,12 @@
 
 #include <fmt/format.h>
 
+#include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/utility/OpmInputError.hpp>
 #include <opm/input/eclipse/Deck/Deck.hpp>
 #include <opm/input/eclipse/Deck/DeckKeyword.hpp>
 #include <opm/input/eclipse/Parser/ErrorGuard.hpp>
+#include <opm/input/eclipse/Parser/InputErrorAction.hpp>
 #include <opm/input/eclipse/Parser/ParseContext.hpp>
 #include <opm/simulators/flow/KeywordValidation.hpp>
 
@@ -43,7 +45,7 @@ namespace KeywordValidation
 {
 
 
-    std::string get_error_report(const std::vector<ValidationError>& errors, const bool critical)
+    std::string get_error_report(const std::vector<ValidationError>& errors, const bool include_noncritical, const bool include_critical)
     {
         const std::string keyword_format = "  {keyword}: keyword not supported\n";
         const std::string item_format1 = "  {{keyword}}: invalid value '{}' for item {}\n";
@@ -52,7 +54,7 @@ namespace KeywordValidation
 
         std::string report;
         for (const ValidationError& err : errors) {
-            if (err.critical == critical) {
+            if ((err.critical && include_critical) || (!err.critical && include_noncritical)) {
                 if (err.item_number && err.item_value) {
                     std::string message;
                     if (err.record_number == 0) {
@@ -84,6 +86,7 @@ namespace KeywordValidation
     void
     KeywordValidator::validateDeck(const Deck& deck,
                                    const ParseContext& parse_context,
+                                   const bool treat_critical_as_noncritical,
                                    ErrorGuard& error_guard) const
     {
         // Make a vector with all problems encountered in the deck.
@@ -98,18 +101,31 @@ namespace KeywordValidation
             }
         }
 
-        // First report non-critical problems as a warning.
-        auto warning_report = get_error_report(errors, false);
-        if (!warning_report.empty()) {
-            parse_context.handleError(
-                ParseContext::SIMULATOR_KEYWORD_NOT_SUPPORTED, warning_report, std::nullopt, error_guard);
-        }
+        if (treat_critical_as_noncritical) {
+            // Get both critical and noncritical errors.
+            auto warning_report = get_error_report(errors, true, true);
+            if (!warning_report.empty()) {
+                // Report all as warnings.
+                parse_context.handleError(ParseContext::SIMULATOR_KEYWORD_NOT_SUPPORTED, warning_report, std::nullopt, error_guard);
+            }
+        } else {
+            // First report non-critical problems as a warning.
+            auto warning_report = get_error_report(errors, true, false);
+            if (!warning_report.empty()) {
+                parse_context.handleError(
+                                          ParseContext::SIMULATOR_KEYWORD_NOT_SUPPORTED, warning_report, std::nullopt, error_guard);
+            }
 
-        // Then report critical problems as an error.
-        auto error_report = get_error_report(errors, true);
-        if (!error_report.empty()) {
-            parse_context.handleError(
-                ParseContext::SIMULATOR_KEYWORD_NOT_SUPPORTED_CRITICAL, error_report, std::nullopt, error_guard);
+            // Then report critical problems as an error.
+            auto error_report = get_error_report(errors, false, true);
+            if (!error_report.empty()) {
+                OpmLog::info("\nOPM Flow will terminate due to unsupported critical keywords.\n"
+                             "These are keywords that would change the simulator results if supported.\n"
+                             "If you need to override this behaviour, you can use the command line argument --parsing-strictness=low,\n"
+                             "this will reduce the severity of this to a warning instead of an error.");
+                parse_context.handleError(
+                                          ParseContext::SIMULATOR_KEYWORD_NOT_SUPPORTED_CRITICAL, error_report, std::nullopt, error_guard);
+            }
         }
     }
 
