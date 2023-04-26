@@ -154,13 +154,31 @@ public:
 
     virtual void initPrimaryVariablesEvaluation() = 0;
 
-    virtual ConvergenceReport getWellConvergence(const WellState& well_state, const std::vector<double>& B_avg, DeferredLogger& deferred_logger, const bool relax_tolerance) const = 0;
+    virtual ConvergenceReport getWellConvergence(const SummaryState& summary_state,
+                                                 const WellState& well_state,
+                                                 const std::vector<double>& B_avg,
+                                                 DeferredLogger& deferred_logger,
+                                                 const bool relax_tolerance) const = 0;
 
     void assembleWellEq(const Simulator& ebosSimulator,
                         const double dt,
                         WellState& well_state,
                         const GroupState& group_state,
                         DeferredLogger& deferred_logger);
+
+    void assembleWellEqWithoutIteration(const Simulator& ebosSimulator,
+                                        const double dt,
+                                        WellState& well_state,
+                                        const GroupState& group_state,
+                                        DeferredLogger& deferred_logger);
+
+    // TODO: better name or further refactoring the function to make it more clear
+    void prepareWellBeforeAssembling(const Simulator& ebosSimulator,
+                                     const double dt,
+                                     WellState& well_state,
+                                     const GroupState& group_state,
+                                     DeferredLogger& deferred_logger);
+
 
     virtual void computeWellRatesWithBhp(
         const Simulator& ebosSimulator,
@@ -262,6 +280,13 @@ public:
                      DeferredLogger& deferred_logger);
 
     void checkWellOperability(const Simulator& ebos_simulator, const WellState& well_state, DeferredLogger& deferred_logger);
+
+    bool gliftBeginTimeStepWellTestIterateWellEquations(
+        const Simulator& ebos_simulator,
+        const double dt,
+        WellState& well_state,
+        const GroupState &group_state,
+        DeferredLogger& deferred_logger);
 
     void gliftBeginTimeStepWellTestUpdateALQ(const Simulator& ebos_simulator,
                                              WellState& well_state,

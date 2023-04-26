@@ -1222,7 +1222,8 @@ namespace Opm
             this->operability_status_.can_obtain_bhp_with_thp_limit = true;
 
             const double  bhp_limit = WellBhpThpCalculator(*this).mostStrictBhpFromBhpLimits(summaryState);
-            this->operability_status_.obey_bhp_limit_with_thp_limit = (*obtain_bhp >= bhp_limit);
+            this->operability_status_.obey_bhp_limit_with_thp_limit = this->isProducer() ?
+                                                              *obtain_bhp >= bhp_limit : *obtain_bhp <= bhp_limit ;
 
             const double thp_limit = this->getTHPConstraint(summaryState);
             if (this->isProducer() && *obtain_bhp < thp_limit) {
@@ -1403,7 +1404,8 @@ namespace Opm
     template<typename TypeTag>
     ConvergenceReport
     StandardWell<TypeTag>::
-    getWellConvergence(const WellState& well_state,
+    getWellConvergence(const SummaryState& summary_state,
+                       const WellState& well_state,
                        const std::vector<double>& B_avg,
                        DeferredLogger& deferred_logger,
                        const bool relax_tolerance) const
@@ -1412,15 +1414,21 @@ namespace Opm
         // For the polymer, energy and foam cases, there is one more mass balance equations of reservoir than wells
         assert((int(B_avg.size()) == this->num_components_) || has_polymer || has_energy || has_foam || has_brine || has_zFraction || has_micp);
 
+        // using sricter tolerance for stopped wells and wells under zero rate target control.
+        constexpr double stricter_factor = 1.e-4;
+        const double tol_wells = this->stopppedOrZeroRateTarget(summary_state, well_state) ?
+                                 this->param_.tolerance_wells_ * stricter_factor : this->param_.tolerance_wells_;
+
         std::vector<double> res;
         ConvergenceReport report = this->StdWellEval::getWellConvergence(well_state,
                                                                          B_avg,
                                                                          this->param_.max_residual_allowed_,
-                                                                         this->param_.tolerance_wells_,
+                                                                         tol_wells,
                                                                          this->param_.relaxed_tolerance_flow_well_,
                                                                          relax_tolerance,
                                                                          res,
                                                                          deferred_logger);
+
         checkConvergenceExtraEqs(res, report);
 
         return report;
@@ -2083,7 +2091,7 @@ namespace Opm
         this->linSys_.extract(jacobian);
     }
 
-    
+
     template <typename TypeTag>
     void
     StandardWell<TypeTag>::addWellPressureEquations(PressureMatrix& jacobian,
@@ -2101,7 +2109,7 @@ namespace Opm
                                                well_state);
     }
 
-    
+
 
     template<typename TypeTag>
     typename StandardWell<TypeTag>::EvalWell
@@ -2506,6 +2514,7 @@ namespace Opm
         bool converged;
         bool relax_convergence = false;
         this->regularize_ = false;
+        const auto& summary_state = ebosSimulator.vanguard().summaryState();
         do {
             assembleWellEqWithoutIteration(ebosSimulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
 
@@ -2514,7 +2523,7 @@ namespace Opm
                 this->regularize_ = true;
             }
 
-            auto report = getWellConvergence(well_state, Base::B_avg_, deferred_logger, relax_convergence);
+            auto report = getWellConvergence(summary_state, well_state, Base::B_avg_, deferred_logger, relax_convergence);
 
             converged = report.converged();
             if (converged) {
@@ -2522,7 +2531,6 @@ namespace Opm
             }
 
             ++it;
-            const auto& summary_state = ebosSimulator.vanguard().summaryState();
             solveEqAndUpdateWellState(summary_state, well_state, deferred_logger);
 
             // TODO: when this function is used for well testing purposes, will need to check the controls, so that we will obtain convergence

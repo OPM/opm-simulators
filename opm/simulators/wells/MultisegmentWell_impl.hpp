@@ -185,7 +185,8 @@ namespace Opm
     template <typename TypeTag>
     ConvergenceReport
     MultisegmentWell<TypeTag>::
-    getWellConvergence(const WellState& well_state,
+    getWellConvergence(const SummaryState& /* summary_state */,
+                       const WellState& well_state,
                        const std::vector<double>& B_avg,
                        DeferredLogger& deferred_logger,
                        const bool relax_tolerance) const
@@ -199,6 +200,7 @@ namespace Opm
                                                  this->param_.tolerance_pressure_ms_wells_,
                                                  this->param_.relaxed_tolerance_pressure_ms_well_,
                                                  relax_tolerance);
+
     }
 
 
@@ -780,10 +782,10 @@ namespace Opm
         // perforation pressure is the wellbore pressure corrected to perforation depth
         // (positive sign due to convention in segments_.perforation_depth_diff() )
         perf_press = segment_pressure + perf_seg_press_diff;
-        
-        // cell pressure corrected to perforation depth 
+
+        // cell pressure corrected to perforation depth
         const Value cell_press_at_perf = pressure_cell - cell_perf_press_diff;
-        
+
         // Pressure drawdown (also used to determine direction of flow)
         const Value drawdown = cell_press_at_perf - perf_press;
 
@@ -1419,7 +1421,8 @@ namespace Opm
                 this->regularize_ = true;
             }
 
-            const auto report = getWellConvergence(well_state, Base::B_avg_, deferred_logger, relax_convergence);
+            const auto& summary_state = ebosSimulator.vanguard().summaryState();
+            const auto report = getWellConvergence(summary_state, well_state, Base::B_avg_, deferred_logger, relax_convergence);
             if (report.converged()) {
                 converged = true;
                 break;
@@ -1455,7 +1458,7 @@ namespace Opm
                     ++stagnate_count;
                     if (stagnate_count == 6) {
                         sstr << " well " << this->name() << " observes severe stagnation and/or oscillation. We relax the tolerance and check for convergence. \n";
-                        const auto reportStag = getWellConvergence(well_state, Base::B_avg_, deferred_logger, true);
+                        const auto reportStag = getWellConvergence(summary_state, well_state, Base::B_avg_, deferred_logger, true);
                         if (reportStag.converged()) {
                             converged = true;
                             sstr << " well " << this->name() << " manages to get converged with relaxed tolerances in " << it << " inner iterations";
@@ -1482,7 +1485,6 @@ namespace Opm
                 this->regularize_ = true;
                 deferred_logger.debug(sstr.str());
             }
-            const auto& summary_state = ebosSimulator.vanguard().summaryState();
             updateWellState(summary_state, dx_well, well_state, deferred_logger, relaxation_factor);
             initPrimaryVariablesEvaluation();
         }

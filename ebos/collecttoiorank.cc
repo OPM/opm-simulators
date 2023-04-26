@@ -214,11 +214,7 @@ public:
         : sendMapper_(sendMapper), recvMapper_(recvMapper), elementIndices_(elementIndices)
     {}
     using DataType = int;
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
     bool fixedSize(int /*dim*/, int /*codim*/)
-#else
-    bool fixedsize(int /*dim*/, int /*codim*/)
-#endif
     {
         return true;
     }
@@ -258,11 +254,7 @@ public:
         : mapper_(mapper), elementIndices_(elementIndices)
     {}
     using DataType = int;
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
     bool fixedSize(int /*dim*/, int /*codim*/)
-#else
-    bool fixedsize(int /*dim*/, int /*codim*/)
-#endif
     {
         return true;
     }

@@ -349,18 +349,40 @@ private:
             try {
                 deckFilename = PreVanguard::canonicalDeckPath(deckFilename);
             }
-            catch (const std::exception& e) {
-                if ( mpiRank == 0 ) {
-                    std::cerr << "Exception received: " << e.what() << ". Try '--help' for a usage description.\n";
-                }
-    #if HAVE_MPI
-                MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-    #endif
-                exitCode = EXIT_FAILURE;
-                return false;
-            }
+#if HAVE_MPI
+            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+#endif
+            exitCode = EXIT_FAILURE;
+            return false;
+        
 
-            std::string cmdline_params;
+        std::string cmdline_params;
+        if (outputCout_) {
+            printFlowBanner(EclGenericVanguard::comm().size(),
+                            getNumThreads<PreTypeTag>(),
+                            Opm::moduleVersionName());
+            std::ostringstream str;
+            Parameters::printValues<PreTypeTag>(str);
+            cmdline_params = str.str();
+        }
+
+        // Create Deck and EclipseState.
+        try {
+            this->readDeck(deckFilename,
+                           outputDir,
+                           EWOMS_GET_PARAM(PreTypeTag, std::string, OutputMode),
+                           !EWOMS_GET_PARAM(PreTypeTag, bool, SchedRestart),
+                           EWOMS_GET_PARAM(PreTypeTag, bool,  EnableLoggingFalloutWarning),
+                           EWOMS_GET_PARAM(PreTypeTag, std::string, ParsingStrictness),
+                           mpiRank,
+                           EWOMS_GET_PARAM(PreTypeTag, int, EclOutputInterval),
+                           cmdline_params,
+                           Opm::moduleVersion(),
+                           Opm::compileTimestamp());
+            setupTime_ = externalSetupTimer.elapsed();
+        }
+        catch (const std::invalid_argument& e)
+        {
             if (outputCout_) {
                 printFlowBanner(EclGenericVanguard::comm().size(),
                                 getNumThreads<PreTypeTag>(),
@@ -398,6 +420,7 @@ private:
                 return false;
             }
         }
+    }
         exitCode = EXIT_SUCCESS;
         return true;
     }
@@ -629,7 +652,7 @@ private:
                   const std::string& outputMode,
                   const bool init_from_restart_file,
                   const bool allRanksDbgPrtLog,
-                  const bool strictParsing,
+                  const std::string& parsingStrictness,
                   const int mpiRank,
                   const int output_param,
                   const std::string& parameters,

@@ -183,7 +183,7 @@ namespace Opm::GridDataOutput
         if (dimw_ == 3) {
             for (const auto& vit :   vertices(gridView_, Dune::Partitions::all) )
             {      
-                // if (i < nvertices_) // As we are templated on the Dune::PartitionSet<partitions>, this cannot change
+                // if (i < nvertices_) // As this class is templated on the Dune::PartitionSet<partitions>, this cannot change
                 auto xyz_local = vit.geometry().corner(0);  // verticies only have one corner
                 x_inout[i] = static_cast<T>(xyz_local[0]) ;
                 y_inout[i] = static_cast<T>(xyz_local[1]) ;
@@ -193,7 +193,7 @@ namespace Opm::GridDataOutput
         } else if (dimw_ == 2)  {
             for (const auto& vit :   vertices(gridView_, Dune::Partitions::all) )
             {      
-                // if (i < nvertices_) // As we are templated on the Dune::PartitionSet<partitions>, this cannot change
+                // if (i < nvertices_) // As this class is templated on the Dune::PartitionSet<partitions>, this cannot change
                 auto xyz_local = vit.geometry().corner(0);  // verticies only have one corner
                 x_inout[i] = static_cast<T>(xyz_local[0]) ;
                 y_inout[i] = static_cast<T>(xyz_local[1]) ;
@@ -220,7 +220,7 @@ namespace Opm::GridDataOutput
         if (dimw_ == 3) {
             for (const auto& vit :   vertices(gridView_, Dune::Partitions::all))
             {   
-                 // if (i < toomany) // As we are templated on the Dune::PartitionSet<partitions>, this cannot change
+                 // if (i < toomany) // As this class is templated on the Dune::PartitionSet<partitions>, this cannot change
                 auto xyz_local = vit.geometry().corner(0);
                 xyz_inout[i++] = static_cast<T>(xyz_local[0]) ;
                 xyz_inout[i++] = static_cast<T>(xyz_local[1]) ;
@@ -230,7 +230,7 @@ namespace Opm::GridDataOutput
         } else if (dimw_ == 2)  {
             for (const auto& vit :   vertices(gridView_, Dune::Partitions::all))
             {   
-                 // if (i < toomany) // As we are templated on the Dune::PartitionSet<partitions>, this cannot change
+                 // if (i < toomany) // As this class is templated on the Dune::PartitionSet<partitions>, this cannot change
                 auto xyz_local = vit.geometry().corner(0);
                 xyz_inout[i++] = static_cast<T>(xyz_local[0]) ;
                 xyz_inout[i++] = static_cast<T>(xyz_local[1]) ;
@@ -259,7 +259,7 @@ namespace Opm::GridDataOutput
         if (dimw_ == 3) {
             for (const auto& vit :   vertices(gridView_, Dune::Partitions::all))
             {     
-                //if (i < nvertices_)  // As we are templated on the Dune::PartitionSet<partitions>, this cannot change
+                //if (i < nvertices_)  // As this class is templated on the Dune::PartitionSet<partitions>, this cannot change
                 auto xyz_local = vit.geometry().corner(0);
                 xyz_inout[i] = static_cast<T>(xyz_local[0]) ;
                 xyz_inout_y[i]= static_cast<T>(xyz_local[1]) ;
@@ -269,7 +269,7 @@ namespace Opm::GridDataOutput
         } else if (dimw_ == 2)  {
             for (const auto& vit :   vertices(gridView_, Dune::Partitions::all))
             {     
-                //if (i < nvertices_)  // As we are templated on the Dune::PartitionSet<partitions>, this cannot change
+                //if (i < nvertices_)  // As this class is templated on the Dune::PartitionSet<partitions>, this cannot change
                 auto xyz_local = vit.geometry().corner(0);
                 xyz_inout[i] = static_cast<T>(xyz_local[0]) ;
                 xyz_inout_y[i]= static_cast<T>(xyz_local[1]) ;
@@ -302,7 +302,7 @@ namespace Opm::GridDataOutput
               auto cell_corners = cit.geometry().corners() ;
               for( auto vx = 0; vx < cell_corners; ++ vx )  
               {
-                  // if (i < ncorners_) // As we are templated on the Dune::PartitionSet<partitions>, this cannot change
+                  // if (i < ncorners_) // As this class is templated on the Dune::PartitionSet<partitions>, this cannot change
                   const int vxIdx = gridView_.indexSet().subIndex( cit, vx, 3 );
                   connectivity_inout[i + vx] = vxIdx ;
               }
@@ -316,7 +316,7 @@ namespace Opm::GridDataOutput
               auto cell_corners = cit.geometry().corners() ;
               for( auto vx = 0; vx < cell_corners; ++ vx )  
               {
-                  // if (i < ncorners_) { // As we are templated on the Dune::PartitionSet<partitions>, this cannot change
+                  // if (i < ncorners_) { // As this class is templated on the Dune::PartitionSet<partitions>, this cannot change
                   const int vxIdx = gridView_.indexSet().subIndex( cit, vx, 3 );
                   int vtkOrder ; 
                   vtkOrder = Dune::VTK::renumber(cit.type(), vx) ;
@@ -346,12 +346,12 @@ namespace Opm::GridDataOutput
         {  
             // const int cell_corners = cit.subEntities( 3 );  // get the full list of verticies of the cell
             auto cell_corners = cit.geometry().corners() ;
-            // if (i <= ncells_) { // As we are templated on the Dune::PartitionSet<partitions>, this cannot change
+            // if (i <= ncells_) { // As this class is templated on the Dune::PartitionSet<partitions>, this cannot change
             offsets_inout[i] = offsets_inout[i-1] +  cell_corners ;
             i++ ;
         }
 
-        return (i-1 ) ;
+        return (i-1) ;
     }
     
     /**
@@ -364,7 +364,7 @@ namespace Opm::GridDataOutput
         // types
         for (const auto& cit :  elements(gridView_, dunePartition_))
         {
-          // if (i < ncells_) { // As we are templated on the Dune::PartitionSet<partitions>, this cannot change
+          // if (i < ncells_) { // As this class is templated on the Dune::PartitionSet<partitions>, this cannot change
               I vtktype = static_cast<I>(Dune::VTK::geometryType(cit.type()));
               types_inout[i++] = vtktype ;
         }

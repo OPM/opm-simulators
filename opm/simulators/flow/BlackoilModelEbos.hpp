@@ -53,11 +53,7 @@
 #include <opm/simulators/wells/WellConnectionAuxiliaryModule.hpp>
 
 #include <dune/istl/owneroverlapcopy.hh>
-#if DUNE_VERSION_NEWER(DUNE_COMMON, 2, 7)
 #include <dune/common/parallel/communication.hh>
-#else
-#include <dune/common/parallel/collectivecommunication.hh>
-#endif
 #include <dune/common/timer.hh>
 #include <dune/common/unused.hh>
 
