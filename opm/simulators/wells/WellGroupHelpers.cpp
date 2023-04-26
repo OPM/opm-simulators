@@ -194,7 +194,7 @@ namespace WellGroupHelpers
                                          double& factor)
     {
         factor *= group.getGroupEfficiencyFactor();
-        if (group.parent() != "FIELD")
+        if (group.parent() != "FIELD" && !group.parent().empty())
             accumulateGroupEfficiencyFactor(
                 schedule.getGroup(group.parent(), reportStepIdx), schedule, reportStepIdx, factor);
     }
