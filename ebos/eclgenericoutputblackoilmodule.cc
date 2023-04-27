@@ -806,6 +806,7 @@ assignToSolution(data::Solution& sol)
         {"PERMFACT", UnitSystem::measure::identity,            permFact_},
         {"PORV_RC",  UnitSystem::measure::identity,            rockCompPorvMultiplier_},
         {"PRES_OVB", UnitSystem::measure::pressure,            overburdenPressure_},
+        {"PRESDIFF", UnitSystem::measure::pressure,            fluidPresDiff_},
         {"RSW",      UnitSystem::measure::gas_oil_ratio,       rsw_},
         {"RVW",      UnitSystem::measure::oil_gas_ratio,       rvw_},
         {"SALTP",    UnitSystem::measure::identity,            pSalt_},
