@@ -1902,18 +1902,6 @@ namespace Opm {
         return *well;
     }
 
-    template<typename TypeTag>
-    bool
-    BlackoilWellModel<TypeTag>::
-    hasWell(const std::string& well_name) const
-    {
-        return std::any_of(well_container_.begin(), well_container_.end(),
-            [&well_name](const WellInterfacePtr& elem) -> bool
-        {
-            return elem->name() == well_name;
-        });
-    }
-
 
 
 

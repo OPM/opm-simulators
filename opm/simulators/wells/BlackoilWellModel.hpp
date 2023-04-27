@@ -305,7 +305,6 @@ namespace Opm {
                                     const int iterationIdx);
 
             WellInterfacePtr getWell(const std::string& well_name) const;
-            bool hasWell(const std::string& well_name) const;
 
             using PressureMatrix = Dune::BCRSMatrix<Opm::MatrixBlock<double, 1, 1>>;
 
