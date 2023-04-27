@@ -52,7 +52,7 @@ if (OPM_ENABLE_PYTHON)
     if(PYTHON_EXECUTABLE AND NOT Python3_EXECUTABLE)
       set(Python3_EXECUTABLE ${PYTHON_EXECUTABLE})
     endif()
-    find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
+    find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module)
   endif()
   if(Python3_VERSION_MINOR LESS 3)
     # Python native namespace packages requires python >= 3.3
