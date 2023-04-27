@@ -135,6 +135,8 @@ void outputReportStep(const SimulatorTimer& timer);
 void outputTimestampFIP(const SimulatorTimer& timer,
                         const std::string& title,
                         const std::string& version);
+void checkSerializedCmdLine(const std::string& current,
+                            const std::string& stored);
 
 /// a simulator for the blackoil model
 template<class TypeTag>
@@ -644,14 +646,31 @@ protected:
         const std::string groupName = "/report_step/" + std::to_string(loadStep_);
         reader.read(timer, groupName, "simulator_timer", HDF5File::DataSetMode::ROOT_ONLY);
 
+        std::tuple<std::array<std::string,5>,int> header;
+        reader.read(header, "/", "simulator_info", HDF5File::DataSetMode::ROOT_ONLY);
+        const auto& [strings, procs] = header;
+
+        if (EclGenericVanguard::comm().size() != procs) {
+            throw std::runtime_error("Number of processes (procs=" +
+                                     std::to_string(EclGenericVanguard::comm().size()) +
+                                     ") does not match .OPMRST file (procs=" +
+                                     std::to_string(procs) + ")");
+        }
+
         if (EclGenericVanguard::comm().size() > 1) {
             std::size_t stored_hash;
             reader.read(stored_hash, "/", "grid_checksum");
             const auto& cellMapping = ebosSimulator_.vanguard().globalCell();
             std::size_t hash = Dune::hash_range(cellMapping.begin(), cellMapping.end());
             if (hash != stored_hash) {
-                throw std::runtime_error("Grid hash mismatch, .SAVE file cannot be used");
+                throw std::runtime_error("Grid hash mismatch, .OPMRST file cannot be used");
             }
+        }
+
+        if (EclGenericVanguard::comm().rank() == 0) {
+            std::ostringstream str;
+            Parameters::printValues<TypeTag>(str);
+            checkSerializedCmdLine(str.str(), strings[4]);
         }
 
         OPM_END_PARALLEL_TRY_CATCH("Error loading serialized state: ",
