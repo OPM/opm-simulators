@@ -1,6 +1,6 @@
 /*
   Copyright 2022 SINTEF Digital, Mathematics and Cybernetics.
-
+  Copyright 2023 Inria
   This file is part of the Open Porous Media project (OPM).
 
   OPM is free software: you can redistribute it and/or modify
@@ -32,7 +32,7 @@
 namespace Opm::DamarisOutput
 {
  // Initialize an XML file
- std::string initDamarisXmlFile();
+ std::string initDamarisTemplateXmlFile();
  
  // Initialize Damaris by filling in th XML file and storing it in the chosen directory
  void initializeDamaris(MPI_Comm comm, int mpiRank, std::string OutputDir, bool enableDamarisOutputCollective);

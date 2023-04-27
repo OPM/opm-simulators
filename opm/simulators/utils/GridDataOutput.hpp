@@ -351,7 +351,7 @@ namespace Opm::GridDataOutput
             i++ ;
         }
 
-        return (i-1) ;
+        return (i) ;
     }
     
     /**

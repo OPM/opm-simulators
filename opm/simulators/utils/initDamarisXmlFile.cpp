@@ -37,7 +37,7 @@ namespace Opm::DamarisOutput
 std::string initDamarisTemplateXmlFile()
 {
     std::string init_damaris = R"V0G0N(<?xml version="1.0"?>
-<simulation name="_SIM_NAME_" language="c" xmlns="http://damaris.gforge.inria.fr/damaris/model">
+<simulation name="opm-flow" language="c" xmlns="http://damaris.gforge.inria.fr/damaris/model">
 <architecture>
     <domains count="1"/>
     <dedicated cores="_DC_REGEX_" nodes="_DN_REGEX_"/>
@@ -54,16 +54,16 @@ std::string initDamarisTemplateXmlFile()
     <layout   name="zonal_layout_usmesh_integer"             type="int" dimensions="n_elements_local"   global="n_elements_total"   comment="For the field data e.g. Pressure"  />
     <variable name="GLOBAL_CELL_INDEX"    layout="zonal_layout_usmesh_integer"     type="scalar"  visualizable="false"  time-varying="false"  centering="zonal" />
     <layout   name="zonal_layout_usmesh"             type="double" dimensions="n_elements_local"   global="n_elements_total"   comment="For the field data e.g. Pressure"  />
-    <variable name="PRESSURE"    layout="zonal_layout_usmesh"     type="scalar"  visualizable="false"     unit="_PRESSURE_UNIT_"   centering="zonal"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
+    <variable name="PRESSURE"    layout="zonal_layout_usmesh"     type="scalar"  visualizable="false"     unit="Bar"   centering="zonal"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="PythonScript" />
     _MORE_VARIABLES_REGEX_
     
     
     <parameter name="n_coords_local"     type="int" value="1" />
     <layout    name="n_coords_layout"    type="double" dimensions="n_coords_local"   comment="For the individual x, y and z coordinates of the mesh vertices, these values are referenced in the topologies/topo/subelements/connectivity_pg data"  />
     <group name="coordset/coords/values"> 
-        <variable name="x"    layout="n_coords_layout"  type="scalar"  visualizable="false"  unit="m"   script="_MAKE_AVAILABLE_IN_PYTHON_" time-varying="false" />
-        <variable name="y"    layout="n_coords_layout"  type="scalar"  visualizable="false"  unit="m"   script="_MAKE_AVAILABLE_IN_PYTHON_" time-varying="false" />
-        <variable name="z"    layout="n_coords_layout"  type="scalar"  visualizable="false"  unit="m"   script="_MAKE_AVAILABLE_IN_PYTHON_" time-varying="false" />
+        <variable name="x"    layout="n_coords_layout"  type="scalar"  visualizable="false"  unit="m"   script="PythonScript" time-varying="false" />
+        <variable name="y"    layout="n_coords_layout"  type="scalar"  visualizable="false"  unit="m"   script="PythonScript" time-varying="false" />
+        <variable name="z"    layout="n_coords_layout"  type="scalar"  visualizable="false"  unit="m"   script="PythonScript" time-varying="false" />
     </group>
     
     
@@ -73,9 +73,9 @@ std::string initDamarisTemplateXmlFile()
     <layout    name="n_offsets_layout_ph"      type="int"  dimensions="n_offsets_types_ph + 1"  comment="Layout for the offsets_ph"  />
     <layout    name="n_types_layout_ph"        type="char" dimensions="n_offsets_types_ph"  comment="Layout for the types_ph "  />
     <group name="topologies/topo/elements">
-        <variable name="connectivity" layout="n_connections_layout_ph"  type="scalar"  visualizable="false"    script="_MAKE_AVAILABLE_IN_PYTHON_" time-varying="false" />
-        <variable name="offsets"      layout="n_offsets_layout_ph"    type="scalar"  visualizable="false"     script="_MAKE_AVAILABLE_IN_PYTHON_" time-varying="false" />
-        <variable name="types"        layout="n_types_layout_ph"    type="scalar"  visualizable="false"    script="_MAKE_AVAILABLE_IN_PYTHON_" time-varying="false" />
+        <variable name="connectivity" layout="n_connections_layout_ph"  type="scalar"  visualizable="false"    script="PythonScript" time-varying="false" />
+        <variable name="offsets"      layout="n_offsets_layout_ph"    type="scalar"  visualizable="false"     script="PythonScript" time-varying="false" />
+        <variable name="types"        layout="n_types_layout_ph"    type="scalar"  visualizable="false"    script="PythonScript" time-varying="false" />
     </group>
     
     
@@ -106,17 +106,17 @@ std::string initDamarisTemplateXmlFile()
 </storage>
 
 <scripts>
-    <pyscript name="PythonScript" file="_PYTHON_SCRIPT_" language="python" frequency="1" scheduler-file="" nthreads="0" keep-workers="no" />
+    <pyscript name="PythonScript" file="opm_python_script.py" language="python" frequency="1" scheduler-file="" nthreads="0" keep-workers="no" />
 </scripts>
 
 <paraview update-frequency="1" >
-        <script>_PARAVIEW_PYTHON_SCRIPT_</script>
+        <script>paraview_script.py</script>
 </paraview>
 
 <actions>
 </actions>
 
-<log FileName="_PATH_REGEX_/damaris_log/_SIM_NAME_" RotationSize="5" LogFormat="[%TimeStamp%]: %Message%"  Flush="True"  LogLevel="_LOG_LEVEL_" />
+<log FileName="_PATH_REGEX_/damaris_log/opm-flow" RotationSize="5" LogFormat="[%TimeStamp%]: %Message%"  Flush="True"  LogLevel="info" />
 
 </simulation>)V0G0N";
 
