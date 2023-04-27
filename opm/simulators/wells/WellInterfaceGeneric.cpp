@@ -192,6 +192,11 @@ double WellInterfaceGeneric::rsRvInj() const
 
 bool WellInterfaceGeneric::wellHasTHPConstraints(const SummaryState& summaryState) const
 {
+    // only wells under prediction mode can have THP constraint
+    if (!this->wellEcl().predictionMode()) {
+        return false;
+    }
+
     if (dynamic_thp_limit_) {
         return true;
     }
