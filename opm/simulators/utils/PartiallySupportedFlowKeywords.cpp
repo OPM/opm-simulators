@@ -76,7 +76,6 @@ partiallySupported()
          {
             "FOAMOPTS",
             {
-               {1,{true, allow_values<std::string> {"GAS"}, "FOAMOPTS(FOAMOPT1): only the default option of GAS is supported"}}, // TRANSPORT_PHASE
                {2,{true, allow_values<std::string> {"TAB"}, "FOAMOPTS(FOAMOPT2): only the default option of TAB is supported"}}, // MODEL
             },
          },

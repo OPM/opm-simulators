@@ -763,8 +763,26 @@ namespace Opm
 
         if constexpr (has_foam) {
             // TODO: the application of well efficiency factor has not been tested with an example yet
-            const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-            EvalWell cq_s_foam = cq_s[gasCompIdx] * this->well_efficiency_factor_;
+            auto getFoamTransportIdx = [&deferred_logger] {
+                switch (FoamModule::transportPhase()) {
+                    case Phase::WATER: {
+                        return Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+                    }
+                    case Phase::GAS: {
+                        return Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+                    }
+                    case Phase::SOLVENT: {
+                        if constexpr (has_solvent)
+                            return (unsigned)Indices::contiSolventEqIdx;
+                        else
+                            OPM_DEFLOG_THROW(std::runtime_error, "Foam transport phase is SOLVENT but SOLVENT is not activated.", deferred_logger);
+                    }
+                    default: {
+                        OPM_DEFLOG_THROW(std::runtime_error, "Foam transport phase must be GAS/WATER/SOLVENT.", deferred_logger);
+                    }
+                }
+            };
+            EvalWell cq_s_foam = cq_s[getFoamTransportIdx()] * this->well_efficiency_factor_;
             if (this->isInjector()) {
                 cq_s_foam *= this->wfoam();
             } else {

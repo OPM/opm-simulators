@@ -31,6 +31,7 @@
 #include <flow/flow_ebos_oilwater.hpp>
 #include <flow/flow_ebos_gaswater.hpp>
 #include <flow/flow_ebos_solvent.hpp>
+#include <flow/flow_ebos_solvent_foam.hpp>
 #include <flow/flow_ebos_polymer.hpp>
 #include <flow/flow_ebos_extbo.hpp>
 #include <flow/flow_ebos_foam.hpp>
@@ -222,18 +223,18 @@ private:
         }
 
         // Foam case
-        else if (phases.active(Phase::FOAM)) {
+        else if (phases.active(Phase::FOAM) && !phases.active(Phase::SOLVENT)) {
             return this->runFoam();
+        }
+
+        // Solvent case
+        else if (phases.active(Phase::SOLVENT)) {
+            return this->runSolvent(phases);
         }
 
         // Brine case
         else if (phases.active(Phase::BRINE) && !thermal) {
             return this->runBrine(phases);
-        }
-
-        // Solvent case
-        else if (phases.active(Phase::SOLVENT)) {
-            return this->runSolvent();
         }
 
         // Extended BO case
@@ -586,8 +587,11 @@ private:
         return EXIT_FAILURE;
     }
 
-    int runSolvent()
+    int runSolvent(const Phases& phases)
     {
+        if (phases.active(Phase::FOAM)) {
+            return flowEbosSolventFoamMain(argc_, argv_, outputCout_, outputFiles_);
+        }
         return flowEbosSolventMain(argc_, argv_, outputCout_, outputFiles_);
     }
 

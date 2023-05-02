@@ -283,5 +283,6 @@ INSTANCE(9u, BlackOilIndices<0u,0u,0u,1u,false,false,0u,0u>)
 INSTANCE(10u, BlackOilIndices<1u,0u,0u,0u,false,false,0u,0u>)
 INSTANCE(10u, BlackOilIndices<0u,0u,0u,1u,false,true,0u,0u>)
 INSTANCE(10u, BlackOilIndices<0u,0u,0u,1u,false,false,1u,0u>)
+INSTANCE(11u, BlackOilIndices<1u,0u,0u,0u,true,false,0u,0u>)
 
 }

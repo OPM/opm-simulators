@@ -317,5 +317,5 @@ INSTANCE_METHODS(FluidSys, DenseAd::Evaluation<double,-1,7u>)
 INSTANCE_METHODS(FluidSys, DenseAd::Evaluation<double,-1,8u>)
 INSTANCE_METHODS(FluidSys, DenseAd::Evaluation<double,-1,9u>)
 INSTANCE_METHODS(FluidSys, DenseAd::Evaluation<double,-1,10u>)
-
+INSTANCE_METHODS(FluidSys, DenseAd::Evaluation<double,-1,11u>)
 } // namespace Opm

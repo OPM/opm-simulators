@@ -269,6 +269,7 @@ INSTANCE_TARGET_CALCULATOR(DenseAd::Evaluation<double,6,0>)
 INSTANCE_TARGET_CALCULATOR(DenseAd::Evaluation<double,7,0>)
 INSTANCE_TARGET_CALCULATOR(DenseAd::Evaluation<double,8,0>)
 INSTANCE_TARGET_CALCULATOR(DenseAd::Evaluation<double,9,0>)
+INSTANCE_TARGET_CALCULATOR(DenseAd::Evaluation<double,10,0>)
 INSTANCE_TARGET_CALCULATOR(DenseAd::Evaluation<double,-1,4>)
 INSTANCE_TARGET_CALCULATOR(DenseAd::Evaluation<double,-1,5>)
 INSTANCE_TARGET_CALCULATOR(DenseAd::Evaluation<double,-1,6>)
@@ -276,7 +277,7 @@ INSTANCE_TARGET_CALCULATOR(DenseAd::Evaluation<double,-1,7>)
 INSTANCE_TARGET_CALCULATOR(DenseAd::Evaluation<double,-1,8>)
 INSTANCE_TARGET_CALCULATOR(DenseAd::Evaluation<double,-1,9>)
 INSTANCE_TARGET_CALCULATOR(DenseAd::Evaluation<double,-1,10>)
-
+INSTANCE_TARGET_CALCULATOR(DenseAd::Evaluation<double,-1,11>)
 
 } // namespace WellGroupHelpers
 
