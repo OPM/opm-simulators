@@ -108,6 +108,7 @@
 #include <opm/input/eclipse/Schedule/Well/WellTracerProperties.hpp>
 #include <opm/input/eclipse/Schedule/Well/WList.hpp>
 #include <opm/input/eclipse/Schedule/Well/WListManager.hpp>
+#include <opm/input/eclipse/Schedule/Well/WVFPDP.hpp>
 #include <opm/input/eclipse/Schedule/Well/WVFPEXP.hpp>
 #include <opm/input/eclipse/Schedule/WriteRestartFileEvents.hpp>
 #include <opm/input/eclipse/EclipseState/SimulationConfig/BCConfig.hpp>
