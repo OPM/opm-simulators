@@ -23,6 +23,7 @@
 #define OPM_SIMULATORFULLYIMPLICITBLACKOILEBOS_HEADER_INCLUDED
 
 #include <dune/common/hash.hh>
+#include <fmt/format.h>
 
 #include <opm/simulators/flow/BlackoilModelEbos.hpp>
 #include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
@@ -320,6 +321,15 @@ public:
         }
     }
 
+    void updateTUNING(const Tuning& tuning) {
+        if (tuning.XXXMBE_has_nondefault_value) {
+            modelParam_.tolerance_mb_ = tuning.XXXMBE;
+            if (terminalOutput_) {
+                OpmLog::debug(fmt::format("Setting SimulatorFullyImplicitBlackoilEbos mass balance limit (XXXMBE) to {:.2e}", tuning.XXXMBE));
+            }
+        }
+    }
+
     bool runStep(SimulatorTimer& timer)
     {
         if (schedule().exitStatus().has_value()) {
@@ -393,6 +403,10 @@ public:
                     const auto& tuning = sched_state.tuning();
                     const auto& max_next_tstep = sched_state.max_next_tstep();
                     adaptiveTimeStepping_->updateTUNING(max_next_tstep, tuning);
+                    // \Note: Assumes TUNING is only used with adaptive time-stepping
+                    // \Note: Need to update both solver (model) and simulator since solver is re-created each report step.
+                    solver->model().updateTUNING(tuning);
+                    this->updateTUNING(tuning);
                 }
             }
             bool event = events.hasEvent(ScheduleEvents::NEW_WELL) ||

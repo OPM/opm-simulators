@@ -24,6 +24,8 @@
 #ifndef OPM_BLACKOILMODELEBOS_HEADER_INCLUDED
 #define OPM_BLACKOILMODELEBOS_HEADER_INCLUDED
 
+#include <fmt/format.h>
+
 #include <ebos/eclproblem.hh>
 #include <opm/models/utils/start.hh>
 
@@ -1595,6 +1597,7 @@ namespace Opm {
             return grid_.comm().sum(errorPV);
         }
 
+
         ConvergenceReport getDomainReservoirConvergence(const double reportTime,
                                                         const double dt,
                                                         const int iteration,
@@ -1704,6 +1707,17 @@ namespace Opm {
 
 
 
+        void updateTUNING(const Tuning& tuning) {          
+            if (tuning.XXXMBE_has_nondefault_value) {
+                param_.tolerance_mb_ = tuning.XXXMBE;
+                if ( terminal_output_ ) {
+                    
+                    OpmLog::debug(fmt::format("Setting BlackoilModelEbos mass balance limit (XXXMBE) to {:.2e}", tuning.XXXMBE));
+                }
+            }
+        }
+
+
         ConvergenceReport getReservoirConvergence(const double reportTime,
                                                   const double dt,
                                                   const int iteration,
@@ -1728,7 +1742,7 @@ namespace Opm {
             auto cnvErrorPvFraction = computeCnvErrorPv(B_avg, dt);
             cnvErrorPvFraction /= (pvSum - numAquiferPvSum);
 
-            const double tol_mb  = param_.tolerance_mb_;
+            const double tol_mb  = param_.tolerance_mb_;            
             // Default value of relaxed_max_pv_fraction_ is 0.03 and min_strict_cnv_iter_ is 0.
             // For each iteration, we need to determine whether to use the relaxed CNV tolerance.
             // To disable the usage of relaxed CNV tolerance, you can set the relaxed_max_pv_fraction_ to be 0.
