@@ -57,6 +57,7 @@
 #include <opm/input/eclipse/Schedule/Well/WellTracerProperties.hpp>
 #include <opm/input/eclipse/Schedule/Well/WList.hpp>
 #include <opm/input/eclipse/Schedule/Well/WListManager.hpp>
+#include <opm/input/eclipse/Schedule/Well/WVFPDP.hpp>
 #include <opm/input/eclipse/Schedule/Well/WVFPEXP.hpp>
 
 #include <ebos/eclmpiserializer.hh>
