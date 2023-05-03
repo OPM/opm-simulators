@@ -149,8 +149,6 @@ void
 CuSeqILU0<M, X, Y, l>::update()
 {
     m_LU.updateNonzeroValues(detail::makeMatrixWithNonzeroDiagonal(m_underlyingMatrix));
-    // updateILUConfiguration();
-
     createILU();
 }
 
