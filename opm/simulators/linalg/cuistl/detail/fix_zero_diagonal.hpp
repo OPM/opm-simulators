@@ -22,56 +22,27 @@
 #include <limits>
 #include <vector>
 
-//#define CUISTL_ASSUME_NON_ZERO_DIAGONAL 1
 namespace Opm::cuistl::detail
 {
+
+/**
+ * @brief makeMatrixWithNonzeroDiagonal creates a new matrix with the zero diagonal elements (when viewed as a matrix of
+ * scalrars) set to replacementValue
+ * @param matrix the matrix to replace
+ * @param replacementValue the value to set in the diagonal elements that are zero
+ * @return a new matrix with non non-zero diagonal elements.
+ *
+ * @note This modification is needed for the CuSparse implementation of ILU0. While the the algorithm operates on block
+ * matrices, it still requires that the scalar matrix has no zero diagonal elements.
+ */
 template <class Matrix>
-std::vector<typename Matrix::field_type>
-fixZeroDiagonal(const Matrix& matrix,
-                const typename Matrix::field_type replacementValue
-                = std::numeric_limits<typename Matrix::field_type>::epsilon())
-{
-    using field_type = typename Matrix::field_type;
-    std::vector<field_type> nonZeroes(matrix.nonzeroes() * Matrix::block_type::cols * Matrix::block_type::cols, 0.0);
-
-    const auto dataPointer = static_cast<const field_type*>(&(matrix[0][0][0][0]));
-    std::copy(dataPointer, dataPointer + nonZeroes.size(), nonZeroes.begin());
-
-    // TODO: Is there a neater way of accessing the underlying CRS structure?
-    size_t currentNonzeroPointer = 0u;
-    for (auto row = matrix.begin(); row != matrix.end(); ++row) {
-        for (auto column = row->begin(); column != row->end(); ++column) {
-            if (column.index() == row.index()) {
-                for (int component = 0; component < Matrix::block_type::cols; ++component) {
-                    const auto index = currentNonzeroPointer + Matrix::block_type::cols * component + component;
-                    if (nonZeroes[index] == 0) {
-                        nonZeroes[index] = replacementValue;
-                    }
-                }
-            }
-            currentNonzeroPointer += 1;
-        }
-    }
-
-    return nonZeroes;
-}
-
-#ifdef CUISTL_ASSUME_NON_ZERO_DIAGONAL
-template <class Matrix>
-const Matrix&
-#else
-template <class Matrix>
-const Matrix&
-#endif
+const Matrix
 makeMatrixWithNonzeroDiagonal(const Matrix& matrix,
                               const typename Matrix::field_type replacementValue
                               = std::numeric_limits<typename Matrix::field_type>::epsilon())
 {
-#ifdef CUISTL_ASSUME_NON_ZERO_DIAGONAL
-    return matrix;
-#else
-    auto& newMatrix = const_cast<Matrix&>(matrix);
-    // TODO: Is this fast enough?
+    auto newMatrix = matrix;
+    // TODO: [perf] Is this fast enough?
     for (size_t row = 0; row < newMatrix.N(); ++row) {
         for (size_t component = 0; component < Matrix::block_type::cols; ++component) {
             if (newMatrix[row][row][component][component] == 0) {
@@ -81,8 +52,7 @@ makeMatrixWithNonzeroDiagonal(const Matrix& matrix,
     }
 
     return newMatrix;
-#endif
 }
-} // namespace Opm::cuistl::impl
+} // namespace Opm::cuistl::detail
 
 #endif
