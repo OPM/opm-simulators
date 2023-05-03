@@ -39,13 +39,16 @@ checkIndividualConstraints(SingleWellState& ws,
                            const SummaryState& summaryState,
                            const RateConvFunc& calcReservoirVoidageRates,
                            bool& thp_limit_violated_but_not_switched,
-                           DeferredLogger& deferred_logger) const
+                           DeferredLogger& deferred_logger,
+                           const std::optional<Well::InjectionControls>& inj_controls,
+                           const std::optional<Well::ProductionControls>& prod_controls) const
 {
     if (well_.isProducer()) {
         auto new_cmode = this->activeProductionConstraint(ws, summaryState,
                                                           calcReservoirVoidageRates,
                                                           thp_limit_violated_but_not_switched,
-                                                          deferred_logger);
+                                                          deferred_logger,
+                                                          prod_controls);
         if (new_cmode != ws.production_cmode) {
             ws.production_cmode = new_cmode;
             return true;
@@ -55,7 +58,8 @@ checkIndividualConstraints(SingleWellState& ws,
     if (well_.isInjector()) {
         auto new_cmode = this->activeInjectionConstraint(ws, summaryState,
                                                         thp_limit_violated_but_not_switched,
-                                                        deferred_logger);
+                                                        deferred_logger,
+                                                        inj_controls);
         if (new_cmode != ws.injection_cmode) {
             ws.injection_cmode = new_cmode;
             return true;
@@ -69,11 +73,12 @@ Well::InjectorCMode WellConstraints::
 activeInjectionConstraint(const SingleWellState& ws,
                           const SummaryState& summaryState,
                           bool& thp_limit_violated_but_not_switched,
-                          DeferredLogger& deferred_logger) const
+                          DeferredLogger& deferred_logger,
+                          const std::optional<Well::InjectionControls>& inj_controls) const
 {
     const PhaseUsage& pu = well_.phaseUsage();
 
-    const auto controls = well_.wellEcl().injectionControls(summaryState);
+    const auto controls = inj_controls.has_value() ? inj_controls.value() : well_.wellEcl().injectionControls(summaryState);
     const auto currentControl = ws.injection_cmode;
 
     if (controls.hasControl(Well::InjectorCMode::BHP) && currentControl != Well::InjectorCMode::BHP)
@@ -166,10 +171,11 @@ activeProductionConstraint(const SingleWellState& ws,
                            const SummaryState& summaryState,
                            const RateConvFunc& calcReservoirVoidageRates,
                            bool& thp_limit_violated_but_not_switched,
-                           DeferredLogger& deferred_logger) const
+                           DeferredLogger& deferred_logger,
+                           const std::optional<Well::ProductionControls>& prod_controls) const
 {
     const PhaseUsage& pu = well_.phaseUsage();
-    const auto controls = well_.wellEcl().productionControls(summaryState);
+    const auto controls = prod_controls.has_value() ? prod_controls.value() : well_.wellEcl().productionControls(summaryState);
     const auto currentControl = ws.production_cmode;
 
     if (controls.hasControl(Well::ProducerCMode::BHP) && currentControl != Well::ProducerCMode::BHP) {

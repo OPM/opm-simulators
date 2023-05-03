@@ -227,7 +227,9 @@ public:
                            const IndividualOrGroup iog,
                            WellState& well_state,
                            const GroupState& group_state,
-                           DeferredLogger& deferred_logger) /* const */;
+                           DeferredLogger& deferred_logger,
+                           const std::optional<Well::InjectionControls>& inj_controls = std::nullopt,
+                           const std::optional<Well::ProductionControls>& prod_controls = std::nullopt) /* const */;
 
     virtual void updatePrimaryVariables(const SummaryState& summary_state,
                                         const WellState& well_state,

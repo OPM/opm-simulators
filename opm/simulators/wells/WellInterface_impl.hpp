@@ -182,7 +182,9 @@ namespace Opm
                       const IndividualOrGroup iog,
                       WellState& well_state,
                       const GroupState& group_state,
-                      DeferredLogger& deferred_logger) /* const */
+                      DeferredLogger& deferred_logger,
+                      const std::optional<Well::InjectionControls>& inj_controls,
+                      const std::optional<Well::ProductionControls>& prod_controls) /* const */
     {
         const auto& summary_state = ebos_simulator.vanguard().summaryState();
         if (this->stopppedOrZeroRateTarget(summary_state, well_state)) {
@@ -219,7 +221,7 @@ namespace Opm
         }
         bool changed = false;
         if (iog == IndividualOrGroup::Individual) {
-            changed = this->checkIndividualConstraints(ws, summaryState, deferred_logger);
+            changed = this->checkIndividualConstraints(ws, summaryState, deferred_logger, inj_controls, prod_controls);
         } else if (iog == IndividualOrGroup::Group) {
             changed = this->checkGroupConstraints(well_state, group_state, schedule, summaryState, deferred_logger);
         } else {
