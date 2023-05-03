@@ -695,6 +695,7 @@ bisectBracket(const std::function<double(const double)>& eq,
                 eq_high = eq(high);
                 abs_high = std::fabs(eq_high);
             }
+            interval = high - low;
             ++bracket_attempts;
         }
 
