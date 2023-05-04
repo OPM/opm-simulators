@@ -35,6 +35,14 @@ struct PerforationData
     std::size_t ecl_index;
 };
 
+struct PerforationRates
+{
+    double dis_gas = 0.0;
+    double dis_gas_in_water = 0.0;
+    double vap_oil = 0.0;
+    double vap_wat = 0.0;
+};
+
 } // namespace Opm
 
 #endif // OPM_PERFORATIONDATA_HEADER_INCLUDED

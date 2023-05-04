@@ -992,8 +992,7 @@ namespace Opm
             cmix_s[comp_idx] = getValue(this->primary_variables_.surfaceVolumeFraction(seg, comp_idx));
         }
 
-        Scalar perf_dis_gas_rate = 0.0;
-        Scalar perf_vap_oil_rate = 0.0;
+        PerforationRates perf_rates;
         Scalar perf_press = 0.0;
 
         this->computePerfRate(pressure_cell,
@@ -1009,8 +1008,8 @@ namespace Opm
                               cmix_s,
                               cq_s,
                               perf_press,
-                              perf_dis_gas_rate,
-                              perf_vap_oil_rate,
+                              perf_rates.dis_gas,
+                              perf_rates.vap_oil,
                               deferred_logger);
     }
 
@@ -1621,14 +1620,16 @@ namespace Opm
                 const double Tw = this->well_index_[perf] * trans_mult;
                 std::vector<EvalWell> cq_s(this->num_components_, 0.0);
                 EvalWell perf_press;
-                double perf_dis_gas_rate = 0.;
-                double perf_vap_oil_rate = 0.;
-                computePerfRateEval(int_quants, mob, Tw, seg, perf, seg_pressure, allow_cf, cq_s, perf_press, perf_dis_gas_rate, perf_vap_oil_rate, deferred_logger);
+                PerforationRates perfRates;
+                computePerfRateEval(int_quants, mob, Tw, seg, perf, seg_pressure,
+                                    allow_cf, cq_s, perf_press,
+                                    perfRates.dis_gas,
+                                    perfRates.vap_oil, deferred_logger);
 
                 // updating the solution gas rate and solution oil rate
                 if (this->isProducer()) {
-                    ws.dissolved_gas_rate += perf_dis_gas_rate;
-                    ws.vaporized_oil_rate += perf_vap_oil_rate;
+                    ws.dissolved_gas_rate += perfRates.dis_gas;
+                    ws.vaporized_oil_rate += perfRates.vap_oil;
                 }
 
                 // store the perf pressure and rates
