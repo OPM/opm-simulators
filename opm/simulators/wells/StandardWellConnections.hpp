@@ -39,6 +39,16 @@ class StandardWellConnections
 public:
     StandardWellConnections(const WellInterfaceIndices<FluidSystem,Indices,Scalar>& well);
 
+    struct Properties
+    {
+        std::vector<Scalar> b_perf;
+        std::vector<Scalar> rsmax_perf;
+        std::vector<Scalar> rvmax_perf;
+        std::vector<Scalar> rvwmax_perf;
+        std::vector<Scalar> rswmax_perf;
+        std::vector<Scalar> surf_dens_perf;
+    };
+
     void computePropertiesForPressures(const WellState& well_state,
                                        const std::function<Scalar(int,int)>& getTemperature,
                                        const std::function<Scalar(int)>& getSaltConcentration,

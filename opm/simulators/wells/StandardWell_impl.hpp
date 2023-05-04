@@ -1576,14 +1576,21 @@ namespace Opm
          // 1. Compute properties required by computePressureDelta().
          //    Note that some of the complexity of this part is due to the function
          //    taking std::vector<double> arguments, and not Eigen objects.
-         std::vector<double> b_perf;
-         std::vector<double> rsmax_perf;
-         std::vector<double> rvmax_perf;
-         std::vector<double> rvwmax_perf;
-         std::vector<double> rswmax_perf;
-         std::vector<double> surf_dens_perf;
-         computePropertiesForWellConnectionPressures(ebosSimulator, well_state, b_perf, rsmax_perf, rvmax_perf, rvwmax_perf, rswmax_perf, surf_dens_perf);
-         computeWellConnectionDensitesPressures(ebosSimulator, well_state, b_perf, rsmax_perf, rvmax_perf, rvwmax_perf, rswmax_perf, surf_dens_perf, deferred_logger);
+         StdWellEval::StdWellConnections::Properties props;
+         computePropertiesForWellConnectionPressures(ebosSimulator, well_state,
+                                                     props.b_perf,
+                                                     props.rsmax_perf,
+                                                     props.rvmax_perf,
+                                                     props.rvwmax_perf,
+                                                     props.rswmax_perf,
+                                                     props.surf_dens_perf);
+         computeWellConnectionDensitesPressures(ebosSimulator, well_state,
+                                                props.b_perf,
+                                                props.rsmax_perf,
+                                                props.rvmax_perf,
+                                                props.rvwmax_perf,
+                                                props.rswmax_perf,
+                                                props.surf_dens_perf, deferred_logger);
     }
 
 
