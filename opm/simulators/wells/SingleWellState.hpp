@@ -58,10 +58,7 @@ public:
         serializer(bhp);
         serializer(thp);
         serializer(temperature);
-        serializer(dissolved_gas_rate);
-        serializer(dissolved_gas_rate_in_water);
-        serializer(vaporized_oil_rate);
-        serializer(vaporized_wat_rate);
+        serializer(phase_mixing_rates);
         serializer(well_potentials);
         serializer(productivity_index);
         serializer(surface_rates);
@@ -85,10 +82,15 @@ public:
     double bhp{0};
     double thp{0};
     double temperature{0};
-    double dissolved_gas_rate{0};
-    double dissolved_gas_rate_in_water{0};
-    double vaporized_oil_rate{0};
-    double vaporized_wat_rate{0};
+
+    std::array<double,4> phase_mixing_rates{};
+    enum RateIndices {
+      dissolved_gas = 0,
+      dissolved_gas_in_water = 1,
+      vaporized_oil = 2,
+      vaporized_water = 3
+    };
+
     std::vector<double> well_potentials;
     std::vector<double> productivity_index;
     std::vector<double> surface_rates;

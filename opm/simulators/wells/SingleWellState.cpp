@@ -291,10 +291,7 @@ bool SingleWellState::operator==(const SingleWellState& rhs) const
            this->bhp == rhs.bhp &&
            this->thp == rhs.thp &&
            this->temperature == rhs.temperature &&
-           this->dissolved_gas_rate == rhs.dissolved_gas_rate &&
-           this->dissolved_gas_rate_in_water == rhs.dissolved_gas_rate_in_water &&
-           this->vaporized_oil_rate == rhs.vaporized_oil_rate &&
-           this->vaporized_wat_rate == rhs.vaporized_wat_rate &&
+           this->phase_mixing_rates == rhs.phase_mixing_rates &&
            this->well_potentials == rhs.well_potentials &&
            this->productivity_index == rhs.productivity_index &&
            this->surface_rates == rhs.surface_rates &&

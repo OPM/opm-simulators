@@ -1560,10 +1560,7 @@ namespace Opm
         this->linSys_.clear();
 
         auto& ws = well_state.well(this->index_of_well_);
-        ws.dissolved_gas_rate = 0;
-        ws.dissolved_gas_rate_in_water = 0;
-        ws.vaporized_oil_rate = 0;
-        ws.vaporized_wat_rate = 0;
+        ws.phase_mixing_rates.fill(0.0);
 
         // for the black oil cases, there will be four equations,
         // the first three of them are the mass balance equations, the last one is the pressure equations.
@@ -1642,8 +1639,8 @@ namespace Opm
 
                 // updating the solution gas rate and solution oil rate
                 if (this->isProducer()) {
-                    ws.dissolved_gas_rate += perfRates.dis_gas;
-                    ws.vaporized_oil_rate += perfRates.vap_oil;
+                    ws.phase_mixing_rates[ws.dissolved_gas] += perfRates.dis_gas;
+                    ws.phase_mixing_rates[ws.vaporized_oil] += perfRates.vap_oil;
                 }
 
                 // store the perf pressure and rates
