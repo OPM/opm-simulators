@@ -79,23 +79,37 @@ Main::~Main()
     }
 #endif // HAVE_MPI
 
+    //int myrank ;
+    //myrank = EclGenericVanguard::comm().rank() ;
     EclGenericVanguard::setCommunication(nullptr);
-
+    
+    
 #if HAVE_DAMARIS
     if (enableDamarisOutput_) {
         int err;
+        std::string msg ;
         if (isSimulationRank_) {
             err = damaris_stop();
             if (err != DAMARIS_OK) {
-                std::cerr << "ERROR: Damaris library produced an error result for damaris_stop()" << std::endl;
+                msg = "\nERROR: Damaris library produced an error result for damaris_stop()\n" ;
+                OpmLog::error(msg);
             }
         }
+        if (outputCout_) {
+            msg = "\nWaiting for The Damaris server processes to finish recent iteration processing.\n\n" ;
+            std::cout << msg ;
+            // OpmLog::info(msg);
+        }
+        
         err = damaris_finalize();
         if (err != DAMARIS_OK) {
-            std::cerr << "ERROR: Damaris library produced an error result for damaris_finalize()" << std::endl;
+            msg = "\nERROR: Damaris library produced an error result for damaris_finalize()\n" ;
+            OpmLog::error(msg);
         }
     }
 #endif // HAVE_DAMARIS
+
+    
 
 #if HAVE_MPI && !HAVE_DUNE_FEM
     MPI_Finalize();

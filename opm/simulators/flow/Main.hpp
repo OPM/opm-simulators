@@ -322,6 +322,14 @@ private:
 
 #if HAVE_DAMARIS
         enableDamarisOutput_ = EWOMS_GET_PARAM(PreTypeTag, bool, EnableDamarisOutput);
+        // Reset to false as we cannot use Damaris if there is only one rank.
+        if ((enableDamarisOutput_ == true) && (EclGenericVanguard::comm().size() == 1)) {
+            std::string msg ;
+            msg = "\nUse of Damaris (command line argument --enable-damaris-output=true) has been dissabled for run with only one rank.\n" ;
+            OpmLog::info(msg);
+            enableDamarisOutput_ = false ;
+        }
+        
         if (enableDamarisOutput_) {
             this->setupDamaris(outputDir,
                                EWOMS_GET_PARAM(PreTypeTag, bool, EnableDamarisOutputCollective));
