@@ -769,8 +769,7 @@ namespace Opm
                     const std::vector<Value>& cmix_s,
                     std::vector<Value>& cq_s,
                     Value& perf_press,
-                    double& perf_dis_gas_rate,
-                    double& perf_vap_oil_rate,
+                    PerforationRates& perf_rates,
                     DeferredLogger& deferred_logger) const
     {
         // pressure difference between the segment and the perforation
@@ -887,10 +886,10 @@ namespace Opm
                 const double d = 1.0 - getValue(rv) * getValue(rs);
                 // vaporized oil into gas
                 // rv * q_gr * b_g = rv * (q_gs - rs * q_os) / d
-                perf_vap_oil_rate = getValue(rv) * (getValue(cq_s[gasCompIdx]) - getValue(rs) * getValue(cq_s[oilCompIdx])) / d;
+                perf_rates.vap_oil = getValue(rv) * (getValue(cq_s[gasCompIdx]) - getValue(rs) * getValue(cq_s[oilCompIdx])) / d;
                 // dissolved of gas in oil
                 // rs * q_or * b_o = rs * (q_os - rv * q_gs) / d
-                perf_dis_gas_rate = getValue(rs) * (getValue(cq_s[oilCompIdx]) - getValue(rv) * getValue(cq_s[gasCompIdx])) / d;
+                perf_rates.dis_gas = getValue(rs) * (getValue(cq_s[oilCompIdx]) - getValue(rv) * getValue(cq_s[gasCompIdx])) / d;
             }
         }
     }
@@ -907,8 +906,7 @@ namespace Opm
                         const bool& allow_cf,
                         std::vector<EvalWell>& cq_s,
                         EvalWell& perf_press,
-                        double& perf_dis_gas_rate,
-                        double& perf_vap_oil_rate,
+                        PerforationRates& perf_rates,
                         DeferredLogger& deferred_logger) const
 
     {
@@ -948,8 +946,7 @@ namespace Opm
                               cmix_s,
                               cq_s,
                               perf_press,
-                              perf_dis_gas_rate,
-                              perf_vap_oil_rate,
+                              perf_rates,
                               deferred_logger);
     }
 
@@ -1008,8 +1005,7 @@ namespace Opm
                               cmix_s,
                               cq_s,
                               perf_press,
-                              perf_rates.dis_gas,
-                              perf_rates.vap_oil,
+                              perf_rates,
                               deferred_logger);
     }
 
@@ -1622,9 +1618,7 @@ namespace Opm
                 EvalWell perf_press;
                 PerforationRates perfRates;
                 computePerfRateEval(int_quants, mob, Tw, seg, perf, seg_pressure,
-                                    allow_cf, cq_s, perf_press,
-                                    perfRates.dis_gas,
-                                    perfRates.vap_oil, deferred_logger);
+                                    allow_cf, cq_s, perf_press, perfRates, deferred_logger);
 
                 // updating the solution gas rate and solution oil rate
                 if (this->isProducer()) {
