@@ -37,6 +37,26 @@
 #include <functional>
 #include <numeric>
 
+
+namespace {
+
+template<class dValue, class Value>
+auto dValueError(const dValue& d,
+                 const std::string& name,
+                 const std::string& methodName,
+                 const Value& Rs,
+                 const Value& Rv,
+                 const Value& pressure)
+{
+    return fmt::format("Problematic d value {} obtained for well {}"
+                       " during {} calculations with rs {}"
+                       ", rv {} and pressure {}."
+                       " Continue as if no dissolution (rs = 0) and vaporization (rv = 0) "
+                       " for this connection.", d, name, methodName, Rs, Rv, pressure);
+}
+
+}
+
 namespace Opm
 {
 
@@ -2372,14 +2392,9 @@ namespace Opm
         const double d = 1.0 - getValue(rv) * getValue(rs);
 
         if (d <= 0.0) {
-            std::ostringstream sstr;
-            sstr << "Problematic d value " << d << " obtained for well " << this->name()
-                 << " during computePerfRate calculations with rs " << rs
-                << ", rv " << rv << " and pressure " << pressure
-                << " obtaining d " << d
-                << " Continue as if no dissolution (rs = 0) and vaporization (rv = 0) "
-                << " for this connection.";
-            deferred_logger.debug(sstr.str());
+            deferred_logger.debug(dValueError(d, this->name(),
+                                              "gasOilPerfRateInj",
+                                              rs, rv, pressure));
         } else {
             // vaporized oil into gas
             // rv * q_gr * b_g = rv * (q_gs - rs * q_os) / d
@@ -2478,14 +2493,9 @@ namespace Opm
         const double dw = 1.0 - getValue(rvw) * getValue(rsw);
 
         if (dw <= 0.0) {
-            std::ostringstream sstr;
-            sstr << "Problematic d value " << dw << " obtained for well " << this->name()
-                 << " during computePerfRate calculations with rsw " << rsw
-                << ", rvw " << rvw << " and pressure " << pressure
-                << " obtaining d " << dw
-                << " Continue as if no dissolution (rsw = 0) and vaporization (rvw = 0) "
-                << " for this connection.";
-            deferred_logger.debug(sstr.str());
+            deferred_logger.debug(dValueError(dw, this->name(),
+                                              "gasWaterPerfRateInj",
+                                              rsw, rvw, pressure));
         } else {
             // vaporized water into gas
             // rvw * q_gr * b_g = rvw * (q_gs - rsw * q_ws) / dw
@@ -2515,14 +2525,9 @@ namespace Opm
         const Value d = 1.0 - rvw * rsw;
 
         if (d <= 0.0) {
-            std::ostringstream sstr;
-            sstr << "Problematic d value " << d << " obtained for well " << this->name()
-                 << " during computePerfRate calculations with rsw " << rsw
-                 << ", rvw " << rvw << " and pressure " << pressure
-                 << " obtaining d " << d
-                 << " Continue as if no dissolution (rsw = 0) and vaporization (rvw = 0) "
-                 << " for this connection.";
-            deferred_logger.debug(sstr.str());
+            deferred_logger.debug(dValueError(d, this->name(),
+                                              "disOilVapWatVolumeRatio",
+                                              rsw, rvw, pressure));
         }
         const Value tmp_wat = d > 0.0 ? (cmix_s[waterCompIdx] - rvw * cmix_s[gasCompIdx]) / d
                                       : cmix_s[waterCompIdx];
@@ -2552,14 +2557,9 @@ namespace Opm
         const Value d = 1.0 - rv * rs;
 
         if (d <= 0.0) {
-            std::ostringstream sstr;
-            sstr << "Problematic d value " << d << " obtained for well " << this->name()
-                 << " during computePerfRate calculations with rs " << rs
-                 << ", rv " << rv << " and pressure " << pressure
-                 << " obtaining d " << d
-                 << " Continue as if no dissolution (rs = 0) and vaporization (rv = 0) "
-                 << " for this connection.";
-            deferred_logger.debug(sstr.str());
+            deferred_logger.debug(dValueError(d, this->name(),
+                                              "gasOilVolumeRatio",
+                                              rs, rv, pressure));
         }
         const Value tmp_oil = d > 0.0? (cmix_s[oilCompIdx] - rv * cmix_s[gasCompIdx]) / d : cmix_s[oilCompIdx];
         volumeRatio += tmp_oil / b_perfcells_dense[oilCompIdx];
