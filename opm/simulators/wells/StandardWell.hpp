@@ -490,6 +490,14 @@ namespace Opm
                                   const Value& rsw) const;
 
         template<class Value>
+        void gasWaterPerfRateInj(const std::vector<Value>& cq_s,
+                                 PerforationRates& perf_rates,
+                                 const Value& rvw,
+                                 const Value& rsw,
+                                 const Value& pressure,
+                                 DeferredLogger& deferred_logger) const;
+
+        template<class Value>
         void disOilVapWatVolumeRatio(Value& volumeRatio,
                                      const Value& rvw,
                                      const Value& rsw,

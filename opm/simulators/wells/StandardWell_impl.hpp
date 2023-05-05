@@ -297,29 +297,8 @@ namespace Opm
                 }
                 if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                     //no oil
-                    const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-                    const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
-
-                    const double dw = 1.0 - getValue(rvw) * getValue(rsw);
-
-                    if (dw <= 0.0) {
-                        std::ostringstream sstr;
-                        sstr << "Problematic d value " << dw << " obtained for well " << this->name()
-                             << " during computePerfRate calculations with rsw " << rsw
-                            << ", rvw " << rvw << " and pressure " << pressure
-                            << " obtaining d " << dw
-                            << " Continue as if no dissolution (rsw = 0) and vaporization (rvw = 0) "
-                            << " for this connection.";
-                        deferred_logger.debug(sstr.str());
-                    } else {
-                        // vaporized water into gas
-                        // rvw * q_gr * b_g = rvw * (q_gs - rsw * q_ws) / dw
-                        perf_rates.vap_wat = getValue(rvw) * (getValue(cq_s[gasCompIdx]) - getValue(rsw) * getValue(cq_s[waterCompIdx])) / dw;
-                        // dissolved gas in water
-                        // rsw * q_wr * b_w = rsw * (q_ws - rvw * q_gs) / dw
-                        perf_rates.dis_gas_in_water = getValue(rsw) * (getValue(cq_s[waterCompIdx]) - getValue(rvw) * getValue(cq_s[gasCompIdx])) / dw;
-                    }
-
+                    gasWaterPerfRateInj(cq_s, perf_rates, rvw, rsw,
+                                        pressure, deferred_logger);
                 }
             }
         }
@@ -2477,6 +2456,43 @@ namespace Opm
         if (this->isProducer()) {
             perf_rates.vap_wat = getValue(vap_wat);
             perf_rates.dis_gas_in_water = getValue(dis_gas_wat);
+        }
+    }
+
+
+    template <typename TypeTag>
+    template<class Value>
+    void
+    StandardWell<TypeTag>::
+    gasWaterPerfRateInj(const std::vector<Value>& cq_s,
+                        PerforationRates& perf_rates,
+                        const Value& rvw,
+                        const Value& rsw,
+                        const Value& pressure,
+                        DeferredLogger& deferred_logger) const
+
+    {
+        const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+        const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+
+        const double dw = 1.0 - getValue(rvw) * getValue(rsw);
+
+        if (dw <= 0.0) {
+            std::ostringstream sstr;
+            sstr << "Problematic d value " << dw << " obtained for well " << this->name()
+                 << " during computePerfRate calculations with rsw " << rsw
+                << ", rvw " << rvw << " and pressure " << pressure
+                << " obtaining d " << dw
+                << " Continue as if no dissolution (rsw = 0) and vaporization (rvw = 0) "
+                << " for this connection.";
+            deferred_logger.debug(sstr.str());
+        } else {
+            // vaporized water into gas
+            // rvw * q_gr * b_g = rvw * (q_gs - rsw * q_ws) / dw
+            perf_rates.vap_wat = getValue(rvw) * (getValue(cq_s[gasCompIdx]) - getValue(rsw) * getValue(cq_s[waterCompIdx])) / dw;
+            // dissolved gas in water
+            // rsw * q_wr * b_w = rsw * (q_ws - rvw * q_gs) / dw
+            perf_rates.dis_gas_in_water = getValue(rsw) * (getValue(cq_s[waterCompIdx]) - getValue(rvw) * getValue(cq_s[gasCompIdx])) / dw;
         }
     }
 
