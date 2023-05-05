@@ -442,6 +442,10 @@ namespace Opm
                                  const double vap_wat_rate,
                                  const std::vector<EvalWell>& cq_s,
                                  const IntensiveQuantities& intQuants) const;
+
+        std::tuple<Eval,Eval,Eval>
+        connectionRatesMICP(const std::vector<EvalWell>& cq_s,
+                            const IntensiveQuantities& intQuants) const;
     };
 
 }

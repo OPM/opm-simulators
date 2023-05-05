@@ -768,28 +768,10 @@ namespace Opm
         }
 
         if constexpr (has_micp) {
-            const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
-            EvalWell cq_s_microbe = cq_s[waterCompIdx];
-            if (this->isInjector()) {
-                cq_s_microbe *= this->wmicrobes();
-            } else {
-                cq_s_microbe *= this->extendEval(intQuants.microbialConcentration());
-            }
-            connectionRates[perf][Indices::contiMicrobialEqIdx] = Base::restrictEval(cq_s_microbe);
-            EvalWell cq_s_oxygen = cq_s[waterCompIdx];
-            if (this->isInjector()) {
-                cq_s_oxygen *= this->woxygen();
-            } else {
-                cq_s_oxygen *= this->extendEval(intQuants.oxygenConcentration());
-            }
-            connectionRates[perf][Indices::contiOxygenEqIdx] = Base::restrictEval(cq_s_oxygen);
-            EvalWell cq_s_urea = cq_s[waterCompIdx];
-            if (this->isInjector()) {
-                cq_s_urea *= this->wurea();
-            } else {
-                cq_s_urea *= this->extendEval(intQuants.ureaConcentration());
-            }
-            connectionRates[perf][Indices::contiUreaEqIdx] = Base::restrictEval(cq_s_urea);
+            std::tie(connectionRates[perf][Indices::contiMicrobialEqIdx],
+                     connectionRates[perf][Indices::contiOxygenEqIdx],
+                     connectionRates[perf][Indices::contiUreaEqIdx]) =
+                connectionRatesMICP(cq_s, intQuants);
         }
 
         // Store the perforation pressure for later usage.
@@ -2390,6 +2372,42 @@ namespace Opm
 
         cq_s_sm *= this->well_efficiency_factor_;
         return Base::restrictEval(cq_s_sm);
+    }
+
+
+    template <typename TypeTag>
+    std::tuple<typename StandardWell<TypeTag>::Eval,
+               typename StandardWell<TypeTag>::Eval,
+               typename StandardWell<TypeTag>::Eval>
+    StandardWell<TypeTag>::
+    connectionRatesMICP(const std::vector<EvalWell>& cq_s,
+                        const IntensiveQuantities& intQuants) const
+    {
+        const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+        EvalWell cq_s_microbe = cq_s[waterCompIdx];
+        if (this->isInjector()) {
+            cq_s_microbe *= this->wmicrobes();
+        } else {
+            cq_s_microbe *= this->extendEval(intQuants.microbialConcentration());
+        }
+
+        EvalWell cq_s_oxygen = cq_s[waterCompIdx];
+        if (this->isInjector()) {
+            cq_s_oxygen *= this->woxygen();
+        } else {
+            cq_s_oxygen *= this->extendEval(intQuants.oxygenConcentration());
+        }
+
+        EvalWell cq_s_urea = cq_s[waterCompIdx];
+        if (this->isInjector()) {
+            cq_s_urea *= this->wurea();
+        } else {
+            cq_s_urea *= this->extendEval(intQuants.ureaConcentration());
+        }
+
+        return {Base::restrictEval(cq_s_microbe),
+                Base::restrictEval(cq_s_oxygen),
+                Base::restrictEval(cq_s_urea)};
     }
 
 } // namespace Opm
