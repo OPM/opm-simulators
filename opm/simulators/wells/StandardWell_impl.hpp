@@ -762,20 +762,10 @@ namespace Opm
         }
 
         if constexpr (has_zFraction) {
-            // TODO: the application of well efficiency factor has not been tested with an example yet
-            const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-            cq_s_zfrac_effective = cq_s[gasCompIdx];
-            if (this->isInjector()) {
-                cq_s_zfrac_effective *= this->wsolvent();
-            } else if (cq_s_zfrac_effective.value() != 0.0) {
-                const double dis_gas_frac = perf_rates.dis_gas / cq_s_zfrac_effective.value();
-                cq_s_zfrac_effective *= this->extendEval(dis_gas_frac*intQuants.xVolume() + (1.0-dis_gas_frac)*intQuants.yVolume());
-            }
-            auto& perf_rate_solvent = perf_data.solvent_rates;
-            perf_rate_solvent[perf] = cq_s_zfrac_effective.value();
-
-            cq_s_zfrac_effective *= this->well_efficiency_factor_;
-            connectionRates[perf][Indices::contiZfracEqIdx] = Base::restrictEval(cq_s_zfrac_effective);
+            std::tie(connectionRates[perf][Indices::contiZfracEqIdx],
+                     cq_s_zfrac_effective) =
+                connectionRatezFraction(perf_data.solvent_rates[perf],
+                                        perf_rates.dis_gas, cq_s, intQuants);
         }
 
         if constexpr (has_brine) {
@@ -2664,6 +2654,32 @@ namespace Opm
         return {Base::restrictEval(cq_s_microbe),
                 Base::restrictEval(cq_s_oxygen),
                 Base::restrictEval(cq_s_urea)};
+    }
+
+
+    template <typename TypeTag>
+    std::tuple<typename StandardWell<TypeTag>::Eval,
+               typename StandardWell<TypeTag>::EvalWell>
+    StandardWell<TypeTag>::
+    connectionRatezFraction(double& rate,
+                            const double dis_gas_rate,
+                            const std::vector<EvalWell>& cq_s,
+                            const IntensiveQuantities& intQuants) const
+    {
+        // TODO: the application of well efficiency factor has not been tested with an example yet
+        const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+        EvalWell cq_s_zfrac_effective = cq_s[gasCompIdx];
+        if (this->isInjector()) {
+            cq_s_zfrac_effective *= this->wsolvent();
+        } else if (cq_s_zfrac_effective.value() != 0.0) {
+            const double dis_gas_frac = dis_gas_rate / cq_s_zfrac_effective.value();
+            cq_s_zfrac_effective *= this->extendEval(dis_gas_frac*intQuants.xVolume() + (1.0-dis_gas_frac)*intQuants.yVolume());
+        }
+
+        rate = cq_s_zfrac_effective.value();
+
+        cq_s_zfrac_effective *= this->well_efficiency_factor_;
+        return {Base::restrictEval(cq_s_zfrac_effective), cq_s_zfrac_effective};
     }
 
 } // namespace Opm
