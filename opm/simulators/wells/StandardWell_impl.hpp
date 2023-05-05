@@ -269,26 +269,8 @@ namespace Opm
             }
 
             if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
-                const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-                // Incorporate RS/RV factors if both oil and gas active
-                const Value d = 1.0 - rv * rs;
-
-                if (d <= 0.0) {
-                    std::ostringstream sstr;
-                    sstr << "Problematic d value " << d << " obtained for well " << this->name()
-                         << " during computePerfRate calculations with rs " << rs
-                         << ", rv " << rv << " and pressure " << pressure
-                         << " obtaining d " << d
-                         << " Continue as if no dissolution (rs = 0) and vaporization (rv = 0) "
-                         << " for this connection.";
-                    deferred_logger.debug(sstr.str());
-                }
-                const Value tmp_oil = d > 0.0? (cmix_s[oilCompIdx] - rv * cmix_s[gasCompIdx]) / d : cmix_s[oilCompIdx];
-                volumeRatio += tmp_oil / b_perfcells_dense[oilCompIdx];
-
-                const Value tmp_gas =  d > 0.0? (cmix_s[gasCompIdx] - rs * cmix_s[oilCompIdx]) / d : cmix_s[gasCompIdx];
-                volumeRatio += tmp_gas / b_perfcells_dense[gasCompIdx];
+                gasOilVolumeRatio(volumeRatio, rv, rs, pressure,
+                                  cmix_s, b_perfcells_dense, deferred_logger);
             }
             else {
                 if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
@@ -2512,6 +2494,41 @@ namespace Opm
 
         const Value tmp_gas =  d > 0.0 ? (cmix_s[gasCompIdx] - rsw * cmix_s[waterCompIdx]) / d
                                        : cmix_s[waterCompIdx];
+        volumeRatio += tmp_gas / b_perfcells_dense[gasCompIdx];
+    }
+
+
+    template <typename TypeTag>
+    template<class Value>
+    void
+    StandardWell<TypeTag>::
+    gasOilVolumeRatio(Value& volumeRatio,
+                      const Value& rv,
+                      const Value& rs,
+                      const Value& pressure,
+                      const std::vector<Value>& cmix_s,
+                      const std::vector<Value>& b_perfcells_dense,
+                      DeferredLogger& deferred_logger) const
+    {
+        const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
+        const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+        // Incorporate RS/RV factors if both oil and gas active
+        const Value d = 1.0 - rv * rs;
+
+        if (d <= 0.0) {
+            std::ostringstream sstr;
+            sstr << "Problematic d value " << d << " obtained for well " << this->name()
+                 << " during computePerfRate calculations with rs " << rs
+                 << ", rv " << rv << " and pressure " << pressure
+                 << " obtaining d " << d
+                 << " Continue as if no dissolution (rs = 0) and vaporization (rv = 0) "
+                 << " for this connection.";
+            deferred_logger.debug(sstr.str());
+        }
+        const Value tmp_oil = d > 0.0? (cmix_s[oilCompIdx] - rv * cmix_s[gasCompIdx]) / d : cmix_s[oilCompIdx];
+        volumeRatio += tmp_oil / b_perfcells_dense[oilCompIdx];
+
+        const Value tmp_gas =  d > 0.0? (cmix_s[gasCompIdx] - rs * cmix_s[oilCompIdx]) / d : cmix_s[gasCompIdx];
         volumeRatio += tmp_gas / b_perfcells_dense[gasCompIdx];
     }
 
