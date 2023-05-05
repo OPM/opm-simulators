@@ -472,6 +472,11 @@ namespace Opm
                                                       const SummaryState& summary_state,
                                                       DeferredLogger& deferred_logger) const;
 
+    private:
+        Eval connectionRateBrine(double& rate,
+                                 const double vap_wat_rate,
+                                 const std::vector<EvalWell>& cq_s,
+                                 const IntensiveQuantities& intQuants) const;
     };
 
 }
