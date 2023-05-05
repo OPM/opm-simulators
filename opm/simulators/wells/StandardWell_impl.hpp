@@ -342,10 +342,7 @@ namespace Opm
                 }
                 if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                     //no oil
-                    const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-                    const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
-                    perf_rates.vap_wat = getValue(rvw) * getValue(cq_s[gasCompIdx]);
-                    perf_rates.dis_gas_in_water = getValue(rsw) * getValue(cq_s[waterCompIdx]);
+                    computeGasWaterPerfRateInj(cq_s, perf_rates, rvw, rsw);
                 }
             }
         }
@@ -2609,6 +2606,23 @@ namespace Opm
             perf_rates.vap_wat = getValue(vap_wat);
             perf_rates.dis_gas_in_water = getValue(dis_gas_wat);
         }
+    }
+
+
+    template <typename TypeTag>
+    template<class Value>
+    void
+    StandardWell<TypeTag>::
+    computeGasWaterPerfRateInj(const std::vector<Value>& cq_s,
+                               PerforationRates& perf_rates,
+                               const Value& rvw,
+                               const Value& rsw) const
+
+    {
+        const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+        const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+        perf_rates.vap_wat = getValue(rvw) * getValue(cq_s[gasCompIdx]);
+        perf_rates.dis_gas_in_water = getValue(rsw) * getValue(cq_s[waterCompIdx]);
     }
 
 
