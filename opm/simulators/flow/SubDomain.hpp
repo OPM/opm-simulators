@@ -20,7 +20,7 @@
 #ifndef OPM_SUBDOMAIN_HEADER_INCLUDED
 #define OPM_SUBDOMAIN_HEADER_INCLUDED
 
-#include <opm/grid/common/SubGridView.hpp>
+#include <opm/grid/common/SubGridPart.hpp>
 
 #include <vector>
 
@@ -33,8 +33,8 @@ namespace Opm
         int index;
         std::vector<int> cells;
         std::vector<bool> interior;
-        Dune::SubGridView<Grid> view;
-        SubDomain(const int i, std::vector<int>&& c, std::vector<bool>&& in, Dune::SubGridView<Grid>&& v)
+        Dune::SubGridPart<Grid> view;
+        SubDomain(const int i, std::vector<int>&& c, std::vector<bool>&& in, Dune::SubGridPart<Grid>&& v)
             : index(i), cells(std::move(c)), interior(std::move(in)), view(std::move(v))
         {}
     };
