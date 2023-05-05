@@ -476,6 +476,15 @@ namespace Opm
                                          PerforationRates& perf_rates,
                                          const Value& rvw,
                                          const Value& rsw) const;
+
+        template<class Value>
+        void disOilVapWatVolumeRatio(Value& volumeRatio,
+                                     const Value& rvw,
+                                     const Value& rsw,
+                                     const Value& pressure,
+                                     const std::vector<Value>& cmix_s,
+                                     const std::vector<Value>& b_perfcells_dense,
+                                     DeferredLogger& deferred_logger) const;
     };
 
 }
