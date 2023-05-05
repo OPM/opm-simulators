@@ -443,6 +443,11 @@ namespace Opm
                                  const std::vector<EvalWell>& cq_s,
                                  const IntensiveQuantities& intQuants) const;
 
+        Eval connectionRateEnergy(const double maxOilSaturation,
+                                  const std::vector<EvalWell>& cq_s,
+                                  const IntensiveQuantities& intQuants,
+                                  DeferredLogger& deferred_logger) const;
+
         Eval connectionRateFoam(const std::vector<EvalWell>& cq_s,
                                 const IntensiveQuantities& intQuants,
                                 DeferredLogger& deferred_logger) const;

@@ -621,76 +621,9 @@ namespace Opm
         }
 
         if constexpr (has_energy) {
-            connectionRates[perf][Indices::contiEnergyEqIdx] = 0.0;
-        }
-
-        if constexpr (has_energy) {
-
-            auto fs = intQuants.fluidState();
-            for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
-                if (!FluidSystem::phaseIsActive(phaseIdx)) {
-                    continue;
-                }
-
-                // convert to reservoir conditions
-                EvalWell cq_r_thermal(this->primary_variables_.numWellEq() + Indices::numEq, 0.);
-                const unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
-                const bool both_oil_gas = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
-                if ( !both_oil_gas || FluidSystem::waterPhaseIdx == phaseIdx ) {
-                    cq_r_thermal = cq_s[activeCompIdx] / this->extendEval(fs.invB(phaseIdx));
-                } else {
-                    // remove dissolved gas and vapporized oil
-                    const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
-                    const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-                    // q_os = q_or * b_o + rv * q_gr * b_g
-                    // q_gs = q_gr * g_g + rs * q_or * b_o
-                    // q_gr = 1 / (b_g * d) * (q_gs - rs * q_os)
-                    // d = 1.0 - rs * rv
-                    const EvalWell d = this->extendEval(1.0 - fs.Rv() * fs.Rs());
-                    if (d <= 0.0) {
-                        std::ostringstream sstr;
-                        sstr << "Problematic d value " << d << " obtained for well " << this->name()
-                            << " during calculateSinglePerf with rs " << fs.Rs()
-                            << ", rv " << fs.Rv()
-                            << " obtaining d " << d
-                            << " Continue as if no dissolution (rs = 0) and vaporization (rv = 0) "
-                            << " for this connection.";
-                        deferred_logger.debug(sstr.str());
-                        cq_r_thermal = cq_s[activeCompIdx] / this->extendEval(fs.invB(phaseIdx));
-                    } else {
-                        if(FluidSystem::gasPhaseIdx == phaseIdx) {
-                            cq_r_thermal = (cq_s[gasCompIdx] - this->extendEval(fs.Rs()) * cq_s[oilCompIdx]) / (d * this->extendEval(fs.invB(phaseIdx)) );
-                        } else if(FluidSystem::oilPhaseIdx == phaseIdx) {
-                            // q_or = 1 / (b_o * d) * (q_os - rv * q_gs)
-                            cq_r_thermal = (cq_s[oilCompIdx] - this->extendEval(fs.Rv()) * cq_s[gasCompIdx]) / (d * this->extendEval(fs.invB(phaseIdx)) );
-                        }
-                    }
-                }
-
-                // change temperature for injecting fluids
-                if (this->isInjector() && cq_s[activeCompIdx] > 0.0){
-                    // only handles single phase injection now
-                    assert(this->well_ecl_.injectorType() != InjectorType::MULTI);
-                    fs.setTemperature(this->well_ecl_.temperature());
-                    typedef typename std::decay<decltype(fs)>::type::Scalar FsScalar;
-                    typename FluidSystem::template ParameterCache<FsScalar> paramCache;
-                    const unsigned pvtRegionIdx = intQuants.pvtRegionIndex();
-                    paramCache.setRegionIndex(pvtRegionIdx);
-                    paramCache.setMaxOilSat(ebosSimulator.problem().maxOilSaturation(cell_idx));
-                    paramCache.updatePhase(fs, phaseIdx);
-
-                    const auto& rho = FluidSystem::density(fs, paramCache, phaseIdx);
-                    fs.setDensity(phaseIdx, rho);
-                    const auto& h = FluidSystem::enthalpy(fs, paramCache, phaseIdx);
-                    fs.setEnthalpy(phaseIdx, h);
-                    cq_r_thermal *= this->extendEval(fs.enthalpy(phaseIdx)) * this->extendEval(fs.density(phaseIdx));
-                    connectionRates[perf][Indices::contiEnergyEqIdx] += getValue(cq_r_thermal);
-                } else {
-                    // compute the thermal flux
-                    cq_r_thermal *= this->extendEval(fs.enthalpy(phaseIdx)) * this->extendEval(fs.density(phaseIdx));
-                    connectionRates[perf][Indices::contiEnergyEqIdx] += Base::restrictEval(cq_r_thermal);
-                }
-            }
+            connectionRates[perf][Indices::contiEnergyEqIdx] =
+                connectionRateEnergy(ebosSimulator.problem().maxOilSaturation(cell_idx),
+                                     cq_s, intQuants, deferred_logger);
         }
 
         if constexpr (has_polymer) {
@@ -2329,6 +2262,89 @@ namespace Opm
 
         cq_s_sm *= this->well_efficiency_factor_;
         return Base::restrictEval(cq_s_sm);
+    }
+
+
+    template <typename TypeTag>
+    typename StandardWell<TypeTag>::Eval
+    StandardWell<TypeTag>::
+    connectionRateEnergy(const double maxOilSaturation,
+                         const std::vector<EvalWell>& cq_s,
+                         const IntensiveQuantities& intQuants,
+                         DeferredLogger& deferred_logger) const
+    {
+        auto fs = intQuants.fluidState();
+        Eval result = 0;
+        for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
+            if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                continue;
+            }
+
+            // convert to reservoir conditions
+            EvalWell cq_r_thermal(this->primary_variables_.numWellEq() + Indices::numEq, 0.);
+            const unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
+            const bool both_oil_gas = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
+            if (!both_oil_gas || FluidSystem::waterPhaseIdx == phaseIdx) {
+                cq_r_thermal = cq_s[activeCompIdx] / this->extendEval(fs.invB(phaseIdx));
+            } else {
+                // remove dissolved gas and vapporized oil
+                const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
+                const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+                // q_os = q_or * b_o + rv * q_gr * b_g
+                // q_gs = q_gr * g_g + rs * q_or * b_o
+                // q_gr = 1 / (b_g * d) * (q_gs - rs * q_os)
+                // d = 1.0 - rs * rv
+                const EvalWell d = this->extendEval(1.0 - fs.Rv() * fs.Rs());
+                if (d <= 0.0) {
+                    std::ostringstream sstr;
+                    sstr << "Problematic d value " << d << " obtained for well " << this->name()
+                        << " during calculateSinglePerf with rs " << fs.Rs()
+                        << ", rv " << fs.Rv()
+                        << " obtaining d " << d
+                        << " Continue as if no dissolution (rs = 0) and vaporization (rv = 0) "
+                        << " for this connection.";
+                    deferred_logger.debug(sstr.str());
+                    cq_r_thermal = cq_s[activeCompIdx] / this->extendEval(fs.invB(phaseIdx));
+                } else {
+                    if (FluidSystem::gasPhaseIdx == phaseIdx) {
+                        cq_r_thermal = (cq_s[gasCompIdx] -
+                                        this->extendEval(fs.Rs()) * cq_s[oilCompIdx]) /
+                                        (d * this->extendEval(fs.invB(phaseIdx)) );
+                    } else if (FluidSystem::oilPhaseIdx == phaseIdx) {
+                        // q_or = 1 / (b_o * d) * (q_os - rv * q_gs)
+                        cq_r_thermal = (cq_s[oilCompIdx] - this->extendEval(fs.Rv()) *
+                                        cq_s[gasCompIdx]) /
+                                       (d * this->extendEval(fs.invB(phaseIdx)) );
+                    }
+                }
+            }
+
+            // change temperature for injecting fluids
+            if (this->isInjector() && cq_s[activeCompIdx] > 0.0){
+                // only handles single phase injection now
+                assert(this->well_ecl_.injectorType() != InjectorType::MULTI);
+                fs.setTemperature(this->well_ecl_.temperature());
+                typedef typename std::decay<decltype(fs)>::type::Scalar FsScalar;
+                typename FluidSystem::template ParameterCache<FsScalar> paramCache;
+                const unsigned pvtRegionIdx = intQuants.pvtRegionIndex();
+                paramCache.setRegionIndex(pvtRegionIdx);
+                paramCache.setMaxOilSat(maxOilSaturation);
+                paramCache.updatePhase(fs, phaseIdx);
+
+                const auto& rho = FluidSystem::density(fs, paramCache, phaseIdx);
+                fs.setDensity(phaseIdx, rho);
+                const auto& h = FluidSystem::enthalpy(fs, paramCache, phaseIdx);
+                fs.setEnthalpy(phaseIdx, h);
+                cq_r_thermal *= this->extendEval(fs.enthalpy(phaseIdx)) * this->extendEval(fs.density(phaseIdx));
+                result += getValue(cq_r_thermal);
+            } else {
+                // compute the thermal flux
+                cq_r_thermal *= this->extendEval(fs.enthalpy(phaseIdx)) * this->extendEval(fs.density(phaseIdx));
+                result += Base::restrictEval(cq_r_thermal);
+            }
+        }
+
+        return result;
     }
 
 
