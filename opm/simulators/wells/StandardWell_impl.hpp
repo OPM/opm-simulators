@@ -750,15 +750,8 @@ namespace Opm
         }
 
         if constexpr (has_foam) {
-            // TODO: the application of well efficiency factor has not been tested with an example yet
-            const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-            EvalWell cq_s_foam = cq_s[gasCompIdx] * this->well_efficiency_factor_;
-            if (this->isInjector()) {
-                cq_s_foam *= this->wfoam();
-            } else {
-                cq_s_foam *= this->extendEval(intQuants.foamConcentration());
-            }
-            connectionRates[perf][Indices::contiFoamEqIdx] = Base::restrictEval(cq_s_foam);
+            connectionRates[perf][Indices::contiFoamEqIdx] =
+                connectionRateFoam(cq_s, intQuants);
         }
 
         if constexpr (has_zFraction) {
@@ -2618,6 +2611,24 @@ namespace Opm
 
         cq_s_sm *= this->well_efficiency_factor_;
         return Base::restrictEval(cq_s_sm);
+    }
+
+
+    template <typename TypeTag>
+    typename StandardWell<TypeTag>::Eval
+    StandardWell<TypeTag>::
+    connectionRateFoam(const std::vector<EvalWell>& cq_s,
+                       const IntensiveQuantities& intQuants) const
+    {
+        // TODO: the application of well efficiency factor has not been tested with an example yet
+        const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+        EvalWell cq_s_foam = cq_s[gasCompIdx] * this->well_efficiency_factor_;
+        if (this->isInjector()) {
+            cq_s_foam *= this->wfoam();
+        } else {
+            cq_s_foam *= this->extendEval(intQuants.foamConcentration());
+        }
+        return Base::restrictEval(cq_s_foam);
     }
 
 
