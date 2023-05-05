@@ -485,6 +485,15 @@ namespace Opm
                                      const std::vector<Value>& cmix_s,
                                      const std::vector<Value>& b_perfcells_dense,
                                      DeferredLogger& deferred_logger) const;
+
+        template<class Value>
+        void gasOilVolumeRatio(Value& volumeRatio,
+                               const Value& rv,
+                               const Value& rs,
+                               const Value& pressure,
+                               const std::vector<Value>& cmix_s,
+                               const std::vector<Value>& b_perfcells_dense,
+                               DeferredLogger& deferred_logger) const;
     };
 
 }
