@@ -762,21 +762,9 @@ namespace Opm
         }
 
         if constexpr (has_brine) {
-            // TODO: the application of well efficiency factor has not been tested with an example yet
-            const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
-            // Correction salt rate; evaporated water does not contain salt 
-            EvalWell cq_s_sm = cq_s[waterCompIdx] - perf_rates.vap_wat;
-            if (this->isInjector()) {
-                cq_s_sm *= this->wsalt();
-            } else {
-                cq_s_sm *= this->extendEval(intQuants.fluidState().saltConcentration());
-            }
-            // Note. Efficiency factor is handled in the output layer
-            auto& perf_rate_brine = perf_data.brine_rates;
-            perf_rate_brine[perf] = cq_s_sm.value();
-
-            cq_s_sm *= this->well_efficiency_factor_;
-            connectionRates[perf][Indices::contiBrineEqIdx] = Base::restrictEval(cq_s_sm);
+            connectionRates[perf][Indices::contiBrineEqIdx] =
+                connectionRateBrine(perf_data.brine_rates[perf],
+                                    perf_rates.vap_wat, cq_s, intQuants);
         }
 
         if constexpr (has_micp) {
@@ -2376,6 +2364,32 @@ namespace Opm
             this->primary_variables_.setValue(ii, it[ii]);
         }
         return num_pri_vars;
+    }
+
+
+    template <typename TypeTag>
+    typename StandardWell<TypeTag>::Eval
+    StandardWell<TypeTag>::
+    connectionRateBrine(double& rate,
+                        const double vap_wat_rate,
+                        const std::vector<EvalWell>& cq_s,
+                        const IntensiveQuantities& intQuants) const
+    {
+        // TODO: the application of well efficiency factor has not been tested with an example yet
+        const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+        // Correction salt rate; evaporated water does not contain salt
+        EvalWell cq_s_sm = cq_s[waterCompIdx] - vap_wat_rate;
+        if (this->isInjector()) {
+            cq_s_sm *= this->wsalt();
+        } else {
+            cq_s_sm *= this->extendEval(intQuants.fluidState().saltConcentration());
+        }
+
+        // Note. Efficiency factor is handled in the output layer
+        rate = cq_s_sm.value();
+
+        cq_s_sm *= this->well_efficiency_factor_;
+        return Base::restrictEval(cq_s_sm);
     }
 
 } // namespace Opm
