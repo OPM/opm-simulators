@@ -452,6 +452,11 @@ namespace Opm
                             const IntensiveQuantities& intQuants) const;
 
         std::tuple<Eval,EvalWell>
+        connectionRatePolymer(double& rate,
+                              const std::vector<EvalWell>& cq_s,
+                              const IntensiveQuantities& intQuants) const;
+
+        std::tuple<Eval,EvalWell>
         connectionRatezFraction(double& rate,
                                 const double dis_gas_rate,
                                 const std::vector<EvalWell>& cq_s,
