@@ -264,8 +264,8 @@ namespace Opm
         }
 
         // producing perforations
-        if ( drawdown > 0 )  {
-            //Do nothing if crossflow is not allowed
+        if (drawdown > 0)  {
+            // Do nothing if crossflow is not allowed
             if (!allow_cf && this->isInjector()) {
                 return;
             }
@@ -314,9 +314,8 @@ namespace Opm
                     perf_rates.dis_gas_in_water = getValue(dis_gas_wat);
                 }
             }
-
         } else {
-            //Do nothing if crossflow is not allowed
+            // Do nothing if crossflow is not allowed
             if (!allow_cf && this->isProducer()) {
                 return;
             }
@@ -399,7 +398,7 @@ namespace Opm
             }
 
             // injecting connections total volumerates at standard conditions
-            Value cqt_is = cqt_i/volumeRatio;
+            Value cqt_is = cqt_i / volumeRatio;
             for (int componentIdx = 0; componentIdx < this->numComponents(); ++componentIdx) {
                 cq_s[componentIdx] = cmix_s[componentIdx] * cqt_is;
             }
