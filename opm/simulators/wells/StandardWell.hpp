@@ -443,6 +443,10 @@ namespace Opm
                                  const std::vector<EvalWell>& cq_s,
                                  const IntensiveQuantities& intQuants) const;
 
+        Eval connectionRateFoam(const std::vector<EvalWell>& cq_s,
+                                const IntensiveQuantities& intQuants,
+                                DeferredLogger& deferred_logger) const;
+
         std::tuple<Eval,Eval,Eval>
         connectionRatesMICP(const std::vector<EvalWell>& cq_s,
                             const IntensiveQuantities& intQuants) const;
