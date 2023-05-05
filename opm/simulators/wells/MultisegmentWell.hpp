@@ -205,8 +205,7 @@ namespace Opm
                                  const bool& allow_cf,
                                  std::vector<EvalWell>& cq_s,
                                  EvalWell& perf_press,
-                                 double& perf_dis_gas_rate,
-                                 double& perf_vap_oil_rate,
+                                 PerforationRates& perf_rates,
                                  DeferredLogger& deferred_logger) const;
 
         template<class Value>
@@ -223,8 +222,7 @@ namespace Opm
                         const std::vector<Value>& cmix_s,
                         std::vector<Value>& cq_s,
                         Value& perf_press,
-                        double& perf_dis_gas_rate,
-                        double& perf_vap_oil_rate,
+                        PerforationRates& perf_rates,
                         DeferredLogger& deferred_logger) const;
 
         // compute the fluid properties, such as densities, viscosities, and so on, in the segments

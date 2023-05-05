@@ -295,10 +295,7 @@ namespace Opm
                                  const int perf,
                                  const bool allow_cf,
                                  std::vector<EvalWell>& cq_s,
-                                 double& perf_dis_gas_rate,
-                                 double& perf_dis_gas_rate_in_water,
-                                 double& perf_vap_oil_rate,
-                                 double& perf_vap_wat_rate,
+                                 PerforationRates& perf_rates,
                                  DeferredLogger& deferred_logger) const;
 
         void computePerfRateScalar(const IntensiveQuantities& intQuants,
@@ -325,10 +322,7 @@ namespace Opm
                              const Value& skin_pressure,
                              const std::vector<Value>& cmix_s,
                              std::vector<Value>& cq_s,
-                             double& perf_dis_gas_rate,
-                             double& perf_dis_gas_rate_in_water,
-                             double& perf_vap_oil_rate,
-                             double& perf_vap_wat_rate,
+                             PerforationRates& perf_rates,
                              DeferredLogger& deferred_logger) const;
 
         void computeWellRatesWithBhpIterations(const Simulator& ebosSimulator,

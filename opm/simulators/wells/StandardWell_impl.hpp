@@ -100,10 +100,7 @@ namespace Opm
                         const int perf,
                         const bool allow_cf,
                         std::vector<EvalWell>& cq_s,
-                        double& perf_dis_gas_rate,
-                        double& perf_dis_gas_rate_in_water,
-                        double& perf_vap_oil_rate,
-                        double& perf_vap_wat_rate,
+                        PerforationRates& perf_rates,
                         DeferredLogger& deferred_logger) const
     {
         const auto& fs = intQuants.fluidState();
@@ -162,10 +159,7 @@ namespace Opm
                         skin_pressure,
                         cmix_s,
                         cq_s,
-                        perf_dis_gas_rate,
-                        perf_dis_gas_rate_in_water,
-                        perf_vap_oil_rate,
-                        perf_vap_wat_rate,
+                        perf_rates,
                         deferred_logger);
     }
 
@@ -215,10 +209,7 @@ namespace Opm
             }
         }
 
-        Scalar perf_dis_gas_rate = 0.0;
-        Scalar perf_vap_oil_rate = 0.0;
-        Scalar perf_vap_wat_rate = 0.0;
-        Scalar perf_dis_gas_rate_in_water = 0.0;
+        PerforationRates perf_rates;
 
         // surface volume fraction of fluids within wellbore
         std::vector<Scalar> cmix_s(this->numComponents(), 0.0);
@@ -240,10 +231,7 @@ namespace Opm
                         skin_pressure,
                         cmix_s,
                         cq_s,
-                        perf_dis_gas_rate,
-                        perf_dis_gas_rate_in_water,
-                        perf_vap_oil_rate,
-                        perf_vap_wat_rate,
+                        perf_rates,
                         deferred_logger);
     }
 
@@ -265,10 +253,7 @@ namespace Opm
                     const Value& skin_pressure,
                     const std::vector<Value>& cmix_s,
                     std::vector<Value>& cq_s,
-                    double& perf_dis_gas_rate,
-                    double& perf_dis_gas_rate_in_water,
-                    double& perf_vap_oil_rate,
-                    double& perf_vap_wat_rate,
+                    PerforationRates& perf_rates,
                     DeferredLogger& deferred_logger) const
     {
         // Pressure drawdown (also used to determine direction of flow)
@@ -304,8 +289,8 @@ namespace Opm
 
                 // recording the perforation solution gas rate and solution oil rates
                 if (this->isProducer()) {
-                    perf_dis_gas_rate = getValue(dis_gas);
-                    perf_vap_oil_rate = getValue(vap_oil);
+                    perf_rates.dis_gas = getValue(dis_gas);
+                    perf_rates.vap_oil = getValue(vap_oil);
                 }
 
                 if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
@@ -313,7 +298,7 @@ namespace Opm
                     const Value vap_wat = rvw * cq_sGas;
                     cq_s[waterCompIdx] += vap_wat;
                     if (this->isProducer())
-                        perf_vap_wat_rate = getValue(vap_wat);
+                        perf_rates.vap_wat = getValue(vap_wat);
                 }
             } else if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                 const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
@@ -325,8 +310,8 @@ namespace Opm
                 cq_s[waterCompIdx] += vap_wat;
                 cq_s[gasCompIdx]   += dis_gas_wat;
                 if (this->isProducer()) {
-                    perf_vap_wat_rate = getValue(vap_wat);
-                    perf_dis_gas_rate_in_water = getValue(dis_gas_wat);
+                    perf_rates.vap_wat = getValue(vap_wat);
+                    perf_rates.dis_gas_in_water = getValue(dis_gas_wat);
                 }
             }
 
@@ -446,25 +431,25 @@ namespace Opm
                     } else {
                         // vaporized oil into gas
                         // rv * q_gr * b_g = rv * (q_gs - rs * q_os) / d
-                        perf_vap_oil_rate = getValue(rv) * (getValue(cq_s[gasCompIdx]) - getValue(rs) * getValue(cq_s[oilCompIdx])) / d;
+                        perf_rates.vap_oil = getValue(rv) * (getValue(cq_s[gasCompIdx]) - getValue(rs) * getValue(cq_s[oilCompIdx])) / d;
                         // dissolved of gas in oil
                         // rs * q_or * b_o = rs * (q_os - rv * q_gs) / d
-                        perf_dis_gas_rate = getValue(rs) * (getValue(cq_s[oilCompIdx]) - getValue(rv) * getValue(cq_s[gasCompIdx])) / d;
+                        perf_rates.dis_gas = getValue(rs) * (getValue(cq_s[oilCompIdx]) - getValue(rv) * getValue(cq_s[gasCompIdx])) / d;
                     }
                     if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                         // q_ws = q_wr * b_w + rvw * q_gr * b_g
                         // q_wr = 1 / b_w * (q_ws - rvw * q_gr * b_g) = 1 / b_w * (q_ws - rvw * 1 / d  (q_gs - rs * q_os))
                         // vaporized water in gas
                         // rvw * q_gr * b_g = q_ws -q_wr *b_w = rvw * (q_gs -rs *q_os) / d
-                        perf_vap_wat_rate = getValue(rvw) * (getValue(cq_s[gasCompIdx]) - getValue(rs) * getValue(cq_s[oilCompIdx])) / d;
+                        perf_rates.vap_wat = getValue(rvw) * (getValue(cq_s[gasCompIdx]) - getValue(rs) * getValue(cq_s[oilCompIdx])) / d;
                     }
                 }
                 if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                     //no oil
                     const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
                     const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
-                    perf_vap_wat_rate = getValue(rvw) * getValue(cq_s[gasCompIdx]);
-                    perf_dis_gas_rate_in_water = getValue(rsw) * getValue(cq_s[waterCompIdx]);
+                    perf_rates.vap_wat = getValue(rvw) * getValue(cq_s[gasCompIdx]);
+                    perf_rates.dis_gas_in_water = getValue(rsw) * getValue(cq_s[waterCompIdx]);
                 }
             }
         }
@@ -642,14 +627,11 @@ namespace Opm
         std::vector<EvalWell> mob(this->num_components_, {this->primary_variables_.numWellEq() + Indices::numEq, 0.});
         getMobilityEval(ebosSimulator, perf, mob, deferred_logger);
 
-        double perf_dis_gas_rate = 0.;
-        double perf_dis_gas_rate_in_water = 0.;
-        double perf_vap_oil_rate = 0.;
-        double perf_vap_wat_rate = 0.;
+        PerforationRates perf_rates;
         double trans_mult = ebosSimulator.problem().template rockCompTransMultiplier<double>(intQuants,  cell_idx);
         const double Tw = this->well_index_[perf] * trans_mult;
         computePerfRateEval(intQuants, mob, bhp, Tw, perf, allow_cf,
-                            cq_s, perf_dis_gas_rate, perf_dis_gas_rate_in_water, perf_vap_oil_rate, perf_vap_wat_rate, deferred_logger);
+                            cq_s, perf_rates, deferred_logger);
 
         auto& ws = well_state.well(this->index_of_well_);
         auto& perf_data = ws.perf_data;
@@ -667,10 +649,10 @@ namespace Opm
 
         // updating the solution gas rate and solution oil rate
         if (this->isProducer()) {
-            ws.dissolved_gas_rate += perf_dis_gas_rate;
-            ws.dissolved_gas_rate_in_water += perf_dis_gas_rate_in_water;
-            ws.vaporized_oil_rate += perf_vap_oil_rate;
-            ws.vaporized_wat_rate += perf_vap_wat_rate;
+            ws.dissolved_gas_rate += perf_rates.dis_gas;
+            ws.dissolved_gas_rate_in_water += perf_rates.dis_gas_in_water;
+            ws.vaporized_oil_rate += perf_rates.vap_oil;
+            ws.vaporized_wat_rate += perf_rates.vap_wat;
         }
 
         if constexpr (has_energy) {
@@ -786,7 +768,7 @@ namespace Opm
             if (this->isInjector()) {
                 cq_s_zfrac_effective *= this->wsolvent();
             } else if (cq_s_zfrac_effective.value() != 0.0) {
-                const double dis_gas_frac = perf_dis_gas_rate / cq_s_zfrac_effective.value();
+                const double dis_gas_frac = perf_rates.dis_gas / cq_s_zfrac_effective.value();
                 cq_s_zfrac_effective *= this->extendEval(dis_gas_frac*intQuants.xVolume() + (1.0-dis_gas_frac)*intQuants.yVolume());
             }
             auto& perf_rate_solvent = perf_data.solvent_rates;
@@ -800,7 +782,7 @@ namespace Opm
             // TODO: the application of well efficiency factor has not been tested with an example yet
             const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
             // Correction salt rate; evaporated water does not contain salt 
-            EvalWell cq_s_sm = cq_s[waterCompIdx] - perf_vap_wat_rate;
+            EvalWell cq_s_sm = cq_s[waterCompIdx] - perf_rates.vap_wat;
             if (this->isInjector()) {
                 cq_s_sm *= this->wsalt();
             } else {
@@ -2050,14 +2032,11 @@ namespace Opm
             const EvalWell& bhp = this->primary_variables_.eval(Bhp);
 
             std::vector<EvalWell> cq_s(this->num_components_, {this->primary_variables_.numWellEq() + Indices::numEq, 0.});
-            double perf_dis_gas_rate = 0.;
-            double perf_dis_gas_rate_in_water = 0.;
-            double perf_vap_oil_rate = 0.;
-            double perf_vap_wat_rate = 0.;
+            PerforationRates perf_rates;
             double trans_mult = ebos_simulator.problem().template rockCompTransMultiplier<double>(int_quant, cell_idx);
             const double Tw = this->well_index_[perf] * trans_mult;
-            computePerfRateEval(int_quant, mob, bhp, Tw, perf, allow_cf,
-                                cq_s, perf_dis_gas_rate, perf_dis_gas_rate_in_water, perf_vap_oil_rate, perf_vap_wat_rate, deferred_logger);
+            computePerfRateEval(int_quant, mob, bhp, Tw, perf, allow_cf, cq_s,
+                                perf_rates, deferred_logger);
             // TODO: make area a member
             const double area = 2 * M_PI * this->perf_rep_radius_[perf] * this->perf_length_[perf];
             const auto& material_law_manager = ebos_simulator.problem().materialLawManager();
