@@ -466,6 +466,13 @@ namespace Opm
                                 const double dis_gas_rate,
                                 const std::vector<EvalWell>& cq_s,
                                 const IntensiveQuantities& intQuants) const;
+
+        template<class Value>
+        void gasOilPerfRateProd(std::vector<Value>& cq_s,
+                                PerforationRates& perf_rates,
+                                const Value& rv,
+                                const Value& rs,
+                                const Value& rvw) const;
     };
 
 }
