@@ -23,6 +23,8 @@
 
 #include <opm/input/eclipse/Units/Units.hpp>
 
+#include <opm/material/densead/EvaluationFormat.hpp>
+
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/StandardWellAssemble.hpp>
 #include <opm/simulators/wells/VFPHelpers.hpp>
@@ -2570,14 +2572,12 @@ namespace Opm
                 // d = 1.0 - rs * rv
                 const EvalWell d = this->extendEval(1.0 - fs.Rv() * fs.Rs());
                 if (d <= 0.0) {
-                    std::ostringstream sstr;
-                    sstr << "Problematic d value " << d << " obtained for well " << this->name()
-                        << " during calculateSinglePerf with rs " << fs.Rs()
-                        << ", rv " << fs.Rv()
-                        << " obtaining d " << d
-                        << " Continue as if no dissolution (rs = 0) and vaporization (rv = 0) "
-                        << " for this connection.";
-                    deferred_logger.debug(sstr.str());
+                    deferred_logger.debug(
+                        fmt::format("Problematic d value {} obtained for well {}"
+                                    " during calculateSinglePerf with rs {}"
+                                    ", rv {}. Continue as if no dissolution (rs = 0) and"
+                                    " vaporization (rv = 0) for this connection.",
+                                    d, this->name(), fs.Rs(), fs.Rv()));
                     cq_r_thermal = cq_s[activeCompIdx] / this->extendEval(fs.invB(phaseIdx));
                 } else {
                     if (FluidSystem::gasPhaseIdx == phaseIdx) {
