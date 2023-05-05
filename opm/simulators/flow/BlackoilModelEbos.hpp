@@ -40,7 +40,7 @@
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/linalg/extractMatrix.hpp>
 
-#include <opm/grid/common/SubGridView.hpp>
+#include <opm/grid/common/SubGridPart.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/linalg/ParallelIstlInformation.hpp>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
@@ -382,7 +382,7 @@ namespace Opm {
                 for (int ix : partitions[index]) {
                     interior[ix] = true;
                 }
-                Dune::SubGridView<Grid> view(ebosSimulator_.vanguard().grid(), std::move(seeds[index]));
+                Dune::SubGridPart<Grid> view(ebosSimulator_.vanguard().grid(), std::move(seeds[index]));
                 domains_.emplace_back(index, std::move(partitions[index]), std::move(interior), std::move(view));
             }
 
