@@ -468,6 +468,15 @@ namespace Opm
                                 const IntensiveQuantities& intQuants) const;
 
         template<class Value>
+        void gasOilPerfRateInj(const std::vector<Value>& cq_s,
+                               PerforationRates& perf_rates,
+                               const Value& rv,
+                               const Value& rs,
+                               const Value& pressure,
+                               const Value& rvw,
+                               DeferredLogger& deferred_logger) const;
+
+        template<class Value>
         void gasOilPerfRateProd(std::vector<Value>& cq_s,
                                 PerforationRates& perf_rates,
                                 const Value& rv,
