@@ -389,7 +389,7 @@ namespace Opm
                 const auto& intQuants = ebosSimulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
                 // flux for each perforation
                 std::vector<Scalar> mob(this->num_components_, 0.);
-                getMobilityScalar(ebosSimulator, perf, mob);
+                getMobility(ebosSimulator, perf, mob);
                 double trans_mult = ebosSimulator.problem().template rockCompTransMultiplier<double>(intQuants, cell_idx);
                 const double Tw = this->well_index_[perf] * trans_mult;
 
@@ -716,7 +716,7 @@ namespace Opm
             };
 
             std::vector<Scalar> mob(this->num_components_, 0.0);
-            getMobilityScalar(ebosSimulator, static_cast<int>(subsetPerfID), mob);
+            getMobility(ebosSimulator, static_cast<int>(subsetPerfID), mob);
 
             const auto& fs = fluidState(subsetPerfID);
             setToZero(connPI);
@@ -1066,17 +1066,30 @@ namespace Opm
                                                deferred_logger);
     }
 
-
-
-
-
     template <typename TypeTag>
+    template<class Value>
     void
     MultisegmentWell<TypeTag>::
-    getMobilityEval(const Simulator& ebosSimulator,
-                    const int perf,
-                    std::vector<EvalWell>& mob) const
+    getMobility(const Simulator& ebosSimulator,
+                const int perf,
+                std::vector<Value>& mob) const
     {
+        auto obtain = [this](const Eval& value)
+                      {
+                          if constexpr (std::is_same_v<Value, Scalar>) {
+                              return getValue(value);
+                          } else {
+                             return this->extendEval(value);
+                          }
+                      };
+        auto relpermArray = []()
+                            {
+                                if constexpr (std::is_same_v<Value, Scalar>) {
+                                    return std::array<Scalar,3>{};
+                                } else {
+                                    return std::array<Eval,3>{};
+                                }
+                            };
         // TODO: most of this function, if not the whole function, can be moved to the base class
         const int cell_idx = this->well_cells_[perf];
         assert (int(mob.size()) == this->num_components_);
@@ -1087,23 +1100,21 @@ namespace Opm
         // based on passing the saturation table index
         const int satid = this->saturation_table_number_[perf] - 1;
         const int satid_elem = materialLawManager->satnumRegionIdx(cell_idx);
-        if( satid == satid_elem ) { // the same saturation number is used. i.e. just use the mobilty from the cell
-
+        if (satid == satid_elem) { // the same saturation number is used. i.e. just use the mobilty from the cell
             for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
                 if (!FluidSystem::phaseIsActive(phaseIdx)) {
                     continue;
                 }
 
                 const unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
-                mob[activeCompIdx] = this->extendEval(intQuants.mobility(phaseIdx));
+                mob[activeCompIdx] = obtain(intQuants.mobility(phaseIdx));
             }
             // if (has_solvent) {
             //     mob[contiSolventEqIdx] = extendEval(intQuants.solventMobility());
             // }
         } else {
-
             const auto& paramsCell = materialLawManager->connectionMaterialLawParams(satid, cell_idx);
-            std::array<Eval,3> relativePerms = { 0.0, 0.0, 0.0 };
+            auto relativePerms = relpermArray();
             MaterialLaw::relativePermeabilities(relativePerms, paramsCell, intQuants.fluidState());
 
             // reset the satnumvalue back to original
@@ -1116,63 +1127,10 @@ namespace Opm
                 }
 
                 const unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
-                mob[activeCompIdx] = this->extendEval(relativePerms[phaseIdx] / intQuants.fluidState().viscosity(phaseIdx));
+                mob[activeCompIdx] = obtain(relativePerms[phaseIdx] / intQuants.fluidState().viscosity(phaseIdx));
             }
         }
     }
-
-
-    template <typename TypeTag>
-    void
-    MultisegmentWell<TypeTag>::
-    getMobilityScalar(const Simulator& ebosSimulator,
-                      const int perf,
-                      std::vector<Scalar>& mob) const
-    {
-        // TODO: most of this function, if not the whole function, can be moved to the base class
-        const int cell_idx = this->well_cells_[perf];
-        assert (int(mob.size()) == this->num_components_);
-        const auto& intQuants = ebosSimulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/0);
-        const auto& materialLawManager = ebosSimulator.problem().materialLawManager();
-
-        // either use mobility of the perforation cell or calcualte its own
-        // based on passing the saturation table index
-        const int satid = this->saturation_table_number_[perf] - 1;
-        const int satid_elem = materialLawManager->satnumRegionIdx(cell_idx);
-        if( satid == satid_elem ) { // the same saturation number is used. i.e. just use the mobilty from the cell
-
-            for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
-                if (!FluidSystem::phaseIsActive(phaseIdx)) {
-                    continue;
-                }
-
-                const unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
-                mob[activeCompIdx] = getValue(intQuants.mobility(phaseIdx));
-            }
-            // if (has_solvent) {
-            //     mob[contiSolventEqIdx] = extendEval(intQuants.solventMobility());
-            // }
-        } else {
-
-            const auto& paramsCell = materialLawManager->connectionMaterialLawParams(satid, cell_idx);
-            std::array<Scalar,3> relativePerms = { 0.0, 0.0, 0.0 };
-            MaterialLaw::relativePermeabilities(relativePerms, paramsCell, intQuants.fluidState());
-
-            // reset the satnumvalue back to original
-            materialLawManager->connectionMaterialLawParams(satid_elem, cell_idx);
-
-            // compute the mobility
-            for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
-                if (!FluidSystem::phaseIsActive(phaseIdx)) {
-                    continue;
-                }
-
-                const unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
-                mob[activeCompIdx] = relativePerms[phaseIdx] / getValue(intQuants.fluidState().viscosity(phaseIdx));
-            }
-        }
-    }
-
 
 
 
@@ -1270,7 +1228,7 @@ namespace Opm
                 std::vector<Scalar> mob(this->num_components_, 0.0);
 
                 // TODO: maybe we should store the mobility somewhere, so that we only need to calculate it one per iteration
-                getMobilityScalar(ebos_simulator, perf, mob);
+                getMobility(ebos_simulator, perf, mob);
 
                 const int cell_idx = this->well_cells_[perf];
                 const auto& int_quantities = ebos_simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
@@ -1628,7 +1586,7 @@ namespace Opm
                 const int cell_idx = this->well_cells_[perf];
                 const auto& int_quants = ebosSimulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
                 std::vector<EvalWell> mob(this->num_components_, 0.0);
-                getMobilityEval(ebosSimulator, perf, mob);
+                getMobility(ebosSimulator, perf, mob);
                 const double trans_mult = ebosSimulator.problem().template rockCompTransMultiplier<double>(int_quants, cell_idx);
                 const double Tw = this->well_index_[perf] * trans_mult;
                 std::vector<EvalWell> cq_s(this->num_components_, 0.0);
@@ -1940,7 +1898,7 @@ namespace Opm
                 const int cell_idx = this->well_cells_[perf];
                 const auto& int_quants = ebosSimulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
                 std::vector<Scalar> mob(this->num_components_, 0.0);
-                getMobilityScalar(ebosSimulator, perf, mob);
+                getMobility(ebosSimulator, perf, mob);
                 const double trans_mult = ebosSimulator.problem().template rockCompTransMultiplier<double>(int_quants, cell_idx);
                 const double Tw = this->well_index_[perf] * trans_mult;
                 std::vector<Scalar> cq_s(this->num_components_, 0.0);
