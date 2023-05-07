@@ -36,26 +36,6 @@
 #include <functional>
 #include <numeric>
 
-
-namespace {
-
-template<class dValue, class Value>
-auto dValueError(const dValue& d,
-                 const std::string& name,
-                 const std::string& methodName,
-                 const Value& Rs,
-                 const Value& Rv,
-                 const Value& pressure)
-{
-    return fmt::format("Problematic d value {} obtained for well {}"
-                       " during {} calculations with rs {}"
-                       ", rv {} and pressure {}."
-                       " Continue as if no dissolution (rs = 0) and vaporization (rv = 0) "
-                       " for this connection.", d, name, methodName, Rs, Rv, pressure);
-}
-
-}
-
 namespace Opm
 {
 
@@ -338,8 +318,9 @@ namespace Opm
             }
 
             if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                gasOilVolumeRatio(volumeRatio, rv, rs, pressure,
-                                  cmix_s, b_perfcells_dense, deferred_logger);
+                WellPerforations<FluidSystem,Indices,Scalar,Value>(*this).
+                    gasOilVolumeRatio(volumeRatio, rv, rs, pressure,
+                                      cmix_s, b_perfcells_dense, deferred_logger);
             }
             else {
                 if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
@@ -2521,35 +2502,4 @@ namespace Opm
         const auto mt     = std::accumulate(mobility.begin(), mobility.end(), zero);
         connII[phase_pos] = connIICalc(mt.value() * fs.invB(this->flowPhaseToEbosPhaseIdx(phase_pos)).value());
     }
-
-
-    template <typename TypeTag>
-    template<class Value>
-    void
-    StandardWell<TypeTag>::
-    gasOilVolumeRatio(Value& volumeRatio,
-                      const Value& rv,
-                      const Value& rs,
-                      const Value& pressure,
-                      const std::vector<Value>& cmix_s,
-                      const std::vector<Value>& b_perfcells_dense,
-                      DeferredLogger& deferred_logger) const
-    {
-        const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
-        const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-        // Incorporate RS/RV factors if both oil and gas active
-        const Value d = 1.0 - rv * rs;
-
-        if (d <= 0.0) {
-            deferred_logger.debug(dValueError(d, this->name(),
-                                              "volumeRatioGasOil",
-                                              rs, rv, pressure));
-        }
-        const Value tmp_oil = d > 0.0? (cmix_s[oilCompIdx] - rv * cmix_s[gasCompIdx]) / d : cmix_s[oilCompIdx];
-        volumeRatio += tmp_oil / b_perfcells_dense[oilCompIdx];
-
-        const Value tmp_gas =  d > 0.0? (cmix_s[gasCompIdx] - rs * cmix_s[oilCompIdx]) / d : cmix_s[gasCompIdx];
-        volumeRatio += tmp_gas / b_perfcells_dense[gasCompIdx];
-    }
-
 } // namespace Opm

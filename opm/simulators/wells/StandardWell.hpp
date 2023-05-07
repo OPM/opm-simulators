@@ -462,16 +462,6 @@ namespace Opm
         std::optional<double> computeBhpAtThpLimitInj(const Simulator& ebos_simulator,
                                                       const SummaryState& summary_state,
                                                       DeferredLogger& deferred_logger) const;
-
-    private:
-        template<class Value>
-        void gasOilVolumeRatio(Value& volumeRatio,
-                               const Value& rv,
-                               const Value& rs,
-                               const Value& pressure,
-                               const std::vector<Value>& cmix_s,
-                               const std::vector<Value>& b_perfcells_dense,
-                               DeferredLogger& deferred_logger) const;
     };
 
 }
