@@ -171,6 +171,33 @@ gasWaterRateProd(std::vector<Value>& cq_s,
     }
 }
 
+template<class FluidSystem, class Indices, class Scalar, class Value>
+void WellPerforations<FluidSystem,Indices,Scalar,Value>::
+disOilVapWatVolumeRatio(Value& volumeRatio,
+                        const Value& rvw,
+                        const Value& rsw,
+                        const Value& pressure,
+                        const std::vector<Value>& cmix_s,
+                        const std::vector<Value>& b_perfcells_dense,
+                        DeferredLogger& deferred_logger) const
+{
+    const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+    const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+    // Incorporate RSW/RVW factors if both water and gas active
+    const Value d = 1.0 - rvw * rsw;
+
+    if (d <= 0.0) {
+        deferred_logger.debug(dValueError(d, well_.name(),
+                                          "disOilVapWatVolumeRatio",
+                                          rsw, rvw, pressure));
+    }
+    const Value tmp_wat = d > 0.0 ? (cmix_s[waterCompIdx] - rvw * cmix_s[gasCompIdx]) / d : cmix_s[waterCompIdx];
+    volumeRatio += tmp_wat / b_perfcells_dense[waterCompIdx];
+
+    const Value tmp_gas = d > 0.0 ? (cmix_s[gasCompIdx] - rsw * cmix_s[waterCompIdx]) / d : cmix_s[waterCompIdx];
+    volumeRatio += tmp_gas / b_perfcells_dense[gasCompIdx];
+}
+
 #define INSTANCE(Dim, ...) \
 template class WellPerforations<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>, \
                                 __VA_ARGS__, double, double>; \

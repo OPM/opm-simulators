@@ -323,8 +323,9 @@ namespace Opm
             Value volumeRatio = bhp * 0.0; // initialize it with the correct type
 ;
             if (FluidSystem::enableVaporizedWater() && FluidSystem::enableDissolvedGasInWater()) {
-                disOilVapWatVolumeRatio(volumeRatio, rvw, rsw, pressure,
-                                        cmix_s, b_perfcells_dense, deferred_logger);
+                WellPerforations<FluidSystem,Indices,Scalar,Value>(*this).
+                    disOilVapWatVolumeRatio(volumeRatio, rvw, rsw, pressure,
+                                            cmix_s, b_perfcells_dense, deferred_logger);
             } else {
                 if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                     const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
@@ -2519,36 +2520,6 @@ namespace Opm
         const auto zero   = EvalWell{this->primary_variables_.numWellEq() + Indices::numEq, 0.0};
         const auto mt     = std::accumulate(mobility.begin(), mobility.end(), zero);
         connII[phase_pos] = connIICalc(mt.value() * fs.invB(this->flowPhaseToEbosPhaseIdx(phase_pos)).value());
-    }
-
-
-    template <typename TypeTag>
-    template<class Value>
-    void
-    StandardWell<TypeTag>::
-    disOilVapWatVolumeRatio(Value& volumeRatio,
-                            const Value& rvw,
-                            const Value& rsw,
-                            const Value& pressure,
-                            const std::vector<Value>& cmix_s,
-                            const std::vector<Value>& b_perfcells_dense,
-                            DeferredLogger& deferred_logger) const
-    {
-        const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
-        const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-        // Incorporate RSW/RVW factors if both water and gas active
-        const Value d = 1.0 - rvw * rsw;
-
-        if (d <= 0.0) {
-            deferred_logger.debug(dValueError(d, this->name(),
-                                              "volumeRatioVapDisWat",
-                                              rsw, rvw, pressure));
-        }
-        const Value tmp_wat = d > 0.0? (cmix_s[waterCompIdx] - rvw * cmix_s[gasCompIdx]) / d : cmix_s[waterCompIdx];
-        volumeRatio += tmp_wat / b_perfcells_dense[waterCompIdx];
-
-        const Value tmp_gas =  d > 0.0? (cmix_s[gasCompIdx] - rsw * cmix_s[waterCompIdx]) / d : cmix_s[waterCompIdx];
-        volumeRatio += tmp_gas / b_perfcells_dense[gasCompIdx];
     }
 
 
