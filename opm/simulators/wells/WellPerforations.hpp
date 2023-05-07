@@ -56,6 +56,12 @@ public:
                         const Value& rs,
                         const Value& rvw) const;
 
+    //! \brief Compute rate for a producing perforation in a system with gas and water.
+    void gasWaterRateProd(std::vector<Value>& cq_s,
+                          PerforationRates& perf_rates,
+                          const Value& rvw,
+                          const Value& rsw) const;
+
 private:
     const WellIfIndices& well_; //!< Reference to well interface
 };

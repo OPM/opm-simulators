@@ -137,6 +137,27 @@ gasOilRateProd(std::vector<Value>& cq_s,
     }
 }
 
+template<class FluidSystem, class Indices, class Scalar, class Value>
+void WellPerforations<FluidSystem,Indices,Scalar,Value>::
+gasWaterRateProd(std::vector<Value>& cq_s,
+                 PerforationRates& perf_rates,
+                 const Value& rvw,
+                 const Value& rsw) const
+{
+    const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+    const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+    const Value cq_sWat = cq_s[waterCompIdx];
+    const Value cq_sGas = cq_s[gasCompIdx];
+    const Value vap_wat = rvw * cq_sGas;
+    const Value dis_gas_wat = rsw * cq_sWat;
+    cq_s[waterCompIdx] += vap_wat;
+    cq_s[gasCompIdx]   += dis_gas_wat;
+    if (well_.isProducer()) {
+        perf_rates.vap_wat = getValue(vap_wat);
+        perf_rates.dis_gas_in_water = getValue(dis_gas_wat);
+    }
+}
+
 #define INSTANCE(Dim, ...) \
 template class WellPerforations<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>, \
                                 __VA_ARGS__, double, double>; \
