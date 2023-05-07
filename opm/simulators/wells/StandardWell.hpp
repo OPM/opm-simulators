@@ -465,12 +465,6 @@ namespace Opm
 
     private:
         template<class Value>
-        void computeGasWaterPerfRateInj(const std::vector<Value>& cq_s,
-                                        PerforationRates& perf_rates,
-                                        const Value& rvw,
-                                        const Value& rsw) const;
-
-        template<class Value>
         void disOilVapWatVolumeRatio(Value& volumeRatio,
                                      const Value& rvw,
                                      const Value& rsw,

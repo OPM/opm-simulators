@@ -139,6 +139,19 @@ gasOilRateProd(std::vector<Value>& cq_s,
 
 template<class FluidSystem, class Indices, class Scalar, class Value>
 void WellPerforations<FluidSystem,Indices,Scalar,Value>::
+gasWaterRateInj(const std::vector<Value>& cq_s,
+                PerforationRates& perf_rates,
+                const Value& rvw,
+                const Value& rsw) const
+{
+    const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+    const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+    perf_rates.vap_wat = getValue(rvw) * getValue(cq_s[gasCompIdx]);
+    perf_rates.dis_gas_in_water = getValue(rsw) * getValue(cq_s[waterCompIdx]);
+}
+
+template<class FluidSystem, class Indices, class Scalar, class Value>
+void WellPerforations<FluidSystem,Indices,Scalar,Value>::
 gasWaterRateProd(std::vector<Value>& cq_s,
                  PerforationRates& perf_rates,
                  const Value& rvw,
