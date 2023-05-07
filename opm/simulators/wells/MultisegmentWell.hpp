@@ -194,27 +194,18 @@ namespace Opm
         // compute the pressure difference between the perforation and cell center
         void computePerfCellPressDiffs(const Simulator& ebosSimulator);
 
-        void computePerfRateScalar(const IntensiveQuantities& int_quants,
-                                   const std::vector<Scalar>& mob_perfcells,
-                                   const double Tw,
-                                   const int seg,
-                                   const int perf,
-                                   const Scalar& segment_pressure,
-                                   const bool& allow_cf,
-                                   std::vector<Scalar>& cq_s,
-                                   DeferredLogger& deferred_logger) const;
-
-        void computePerfRateEval(const IntensiveQuantities& int_quants,
-                                 const std::vector<EvalWell>& mob_perfcells,
-                                 const double Tw,
-                                 const int seg,
-                                 const int perf,
-                                 const EvalWell& segment_pressure,
-                                 const bool& allow_cf,
-                                 std::vector<EvalWell>& cq_s,
-                                 EvalWell& perf_press,
-                                 PerforationRates& perf_rates,
-                                 DeferredLogger& deferred_logger) const;
+        template<class Value>
+        void computePerfRate(const IntensiveQuantities& int_quants,
+                             const std::vector<Value>& mob_perfcells,
+                             const double Tw,
+                             const int seg,
+                             const int perf,
+                             const Value& segment_pressure,
+                             const bool& allow_cf,
+                             std::vector<Value>& cq_s,
+                             Value& perf_press,
+                             PerforationRates& perf_rates,
+                             DeferredLogger& deferred_logger) const;
 
         template<class Value>
         void computePerfRate(const Value& pressure_cell,
