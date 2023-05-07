@@ -28,6 +28,7 @@
 #include <opm/simulators/wells/VFPHelpers.hpp>
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 #include <opm/simulators/wells/WellConvergence.hpp>
+#include <opm/simulators/wells/WellPerforations.hpp>
 
 #include <fmt/format.h>
 
@@ -297,7 +298,8 @@ namespace Opm
             }
 
             if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                computeGasOilPerfRateProd(cq_s, perf_rates, rv, rs, rvw);
+                WellPerforations<FluidSystem,Indices,Scalar,Value>(*this).
+                    gasOilRateProd(cq_s, perf_rates, rv, rs, rvw);
             } else if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                 computeGasWaterPerfRateProd(cq_s, perf_rates, rvw, rsw);
             }
@@ -2514,42 +2516,6 @@ namespace Opm
         const auto zero   = EvalWell{this->primary_variables_.numWellEq() + Indices::numEq, 0.0};
         const auto mt     = std::accumulate(mobility.begin(), mobility.end(), zero);
         connII[phase_pos] = connIICalc(mt.value() * fs.invB(this->flowPhaseToEbosPhaseIdx(phase_pos)).value());
-    }
-
-
-    template <typename TypeTag>
-    template<class Value>
-    void
-    StandardWell<TypeTag>::
-    computeGasOilPerfRateProd(std::vector<Value>& cq_s,
-                              PerforationRates& perf_rates,
-                              const Value& rv,
-                              const Value& rs,
-                              const Value& rvw) const
-    {
-        const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
-        const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-        const Value cq_sOil = cq_s[oilCompIdx];
-        const Value cq_sGas = cq_s[gasCompIdx];
-        const Value dis_gas = rs * cq_sOil;
-        const Value vap_oil = rv * cq_sGas;
-
-        cq_s[gasCompIdx] += dis_gas;
-        cq_s[oilCompIdx] += vap_oil;
-
-        // recording the perforation solution gas rate and solution oil rates
-        if (this->isProducer()) {
-            perf_rates.dis_gas = getValue(dis_gas);
-            perf_rates.vap_oil = getValue(vap_oil);
-        }
-
-        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-            const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
-            const Value vap_wat = rvw * cq_sGas;
-            cq_s[waterCompIdx] += vap_wat;
-            if (this->isProducer())
-                perf_rates.vap_wat = getValue(vap_wat);
-        }
     }
 
 
