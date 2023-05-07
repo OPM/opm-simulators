@@ -28,6 +28,7 @@
 
 namespace Opm {
 
+class DeferredLogger;
 class PerforationRates;
 
 template<class FluidSystem, class Indices, class Scalar, class Value>
@@ -37,6 +38,16 @@ public:
 
     //! \brief Constructor sets reference to well.
     WellPerforations(const WellIfIndices& well) : well_(well) {}
+
+    //! \brief Compute rate for an injecting perforation in system with gas and oil.
+    void gasOilRateInj(const std::vector<Value>& cq_s,
+                       PerforationRates& perf_rates,
+                       const Value& rv,
+                       const Value& rs,
+                       const Value& pressure,
+                       const Value& rvw,
+                       DeferredLogger& deferred_logger) const;
+
 
     //! \brief Compute rate for a producing perforation in system with gas and oil.
     void gasOilRateProd(std::vector<Value>& cq_s,
