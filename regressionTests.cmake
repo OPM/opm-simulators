@@ -93,12 +93,12 @@ add_test_compareECLFiles(CASENAME spe1_precsalt
                          DIR spe1_precsalt)
 
 add_test_compareECLFiles(CASENAME network_balance_01
-		FILENAME NETWORK-01
-		SIMULATOR flow
-		ABS_TOL ${abs_tol}
-		REL_TOL ${rel_tol}
-		DIR network
-		TEST_ARGS --enable-tuning=true)
+		                 FILENAME NETWORK-01
+		                 SIMULATOR flow
+		                 ABS_TOL ${abs_tol}
+		                 REL_TOL ${rel_tol}
+		                 DIR network
+		                 TEST_ARGS --enable-tuning=true)
 
 add_test_compareECLFiles(CASENAME gas_precsalt
                          FILENAME GASWATER_VAPWAT_PRECSALT

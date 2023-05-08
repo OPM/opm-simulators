@@ -141,6 +141,14 @@ add_test_compare_parallel_simulation(CASENAME aquflux_01
                                      DIR aquifers
                                      TEST_ARGS --enable-tuning=true)
 
+add_test_compare_parallel_simulation(CASENAME network_balance_01
+		                             FILENAME NETWORK-01
+		                             SIMULATOR flow
+		                             ABS_TOL 0.04
+		                             REL_TOL 0.02
+		                             DIR network
+		                             TEST_ARGS --enable-tuning=true)
+
 add_test_compare_parallel_simulation(CASENAME numerical_aquifer_3d_1aqu
                                      FILENAME 3D_1AQU_3CELLS
                                      SIMULATOR flow
