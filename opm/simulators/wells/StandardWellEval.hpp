@@ -49,6 +49,7 @@ class StandardWellEval
 {
 protected:
     using PrimaryVariables = StandardWellPrimaryVariables<FluidSystem,Indices,Scalar>;
+    using StdWellConnections = StandardWellConnections<FluidSystem,Indices,Scalar>;
     static constexpr int Bhp = PrimaryVariables::Bhp;
     static constexpr int WQTotal= PrimaryVariables::WQTotal;
     static constexpr int numWellConservationEq = PrimaryVariables::numWellConservationEq;
@@ -102,7 +103,7 @@ protected:
     std::vector<double> F0_;
 
     StandardWellEquations<Scalar,Indices::numEq> linSys_; //!< Linear equation system
-    StandardWellConnections<FluidSystem,Indices,Scalar> connections_; //!< Connection level values
+    StdWellConnections connections_; //!< Connection level values
 };
 
 }

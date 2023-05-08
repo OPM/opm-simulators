@@ -39,18 +39,23 @@ class StandardWellConnections
 public:
     StandardWellConnections(const WellInterfaceIndices<FluidSystem,Indices,Scalar>& well);
 
+    struct Properties
+    {
+        std::vector<Scalar> b_perf;
+        std::vector<Scalar> rsmax_perf;
+        std::vector<Scalar> rvmax_perf;
+        std::vector<Scalar> rvwmax_perf;
+        std::vector<Scalar> rswmax_perf;
+        std::vector<Scalar> surf_dens_perf;
+    };
+
     void computePropertiesForPressures(const WellState& well_state,
                                        const std::function<Scalar(int,int)>& getTemperature,
                                        const std::function<Scalar(int)>& getSaltConcentration,
                                        const std::function<int(int)>& pvtRegionIdx,
                                        const std::function<Scalar(int)>& solventInverseFormationVolumeFactor,
                                        const std::function<Scalar(int)>& solventRefDensity,
-                                       std::vector<Scalar>& b_perf,
-                                       std::vector<Scalar>& rsmax_perf,
-                                       std::vector<Scalar>& rvmax_perf,
-                                       std::vector<Scalar>& rvwmax_perf,
-                                       std::vector<Scalar>& rswmax_perf,
-                                       std::vector<Scalar>& surf_dens_perf) const;
+                                       Properties& props) const;
 
     //! \brief Compute connection properties (densities, pressure drop, ...)
     void computeProperties(const WellState& well_state,
@@ -58,12 +63,7 @@ public:
                            const std::function<Scalar(int,int)>& mobility,
                            const std::function<Scalar(int)>& solventInverseFormationVolumeFactor,
                            const std::function<Scalar(int)>& solventMobility,
-                           const std::vector<Scalar>& b_perf,
-                           const std::vector<Scalar>& rsmax_perf,
-                           const std::vector<Scalar>& rvmax_perf,
-                           const std::vector<Scalar>& rvwmax_perf,
-                           const std::vector<Scalar>& rswmax_perf,
-                           const std::vector<Scalar>& surf_dens_perf,
+                           const Properties& props,
                            DeferredLogger& deferred_logger);
 
     //! \brief Returns density for first perforation.
@@ -82,12 +82,7 @@ private:
     // TODO: not total sure whether it is a good idea to put this function here
     // the major reason to put here is to avoid the usage of Wells struct
     void computeDensities(const std::vector<Scalar>& perfComponentRates,
-                          const std::vector<Scalar>& b_perf,
-                          const std::vector<Scalar>& rsmax_perf,
-                          const std::vector<Scalar>& rvmax_perf,
-                          const std::vector<Scalar>& rvwmax_perf,
-                          const std::vector<Scalar>& rswmax_perf,
-                          const std::vector<Scalar>& surf_dens_perf,
+                          const Properties& props,
                           DeferredLogger& deferred_logger);
 
     const WellInterfaceIndices<FluidSystem,Indices,Scalar>& well_; //!< Reference to well interface

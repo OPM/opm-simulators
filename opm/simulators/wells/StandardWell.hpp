@@ -265,23 +265,14 @@ namespace Opm
 
         // calculate the properties for the well connections
         // to calulate the pressure difference between well connections.
+        using WellConnectionProps = typename StdWellEval::StdWellConnections::Properties;
         void computePropertiesForWellConnectionPressures(const Simulator& ebosSimulator,
                                                          const WellState& well_state,
-                                                         std::vector<double>& b_perf,
-                                                         std::vector<double>& rsmax_perf,
-                                                         std::vector<double>& rvmax_perf,
-                                                         std::vector<double>& rvwmax_perf,
-                                                         std::vector<double>& rswmax_perf,
-                                                         std::vector<double>& surf_dens_perf) const;
+                                                         WellConnectionProps& props) const;
 
         void computeWellConnectionDensitesPressures(const Simulator& ebosSimulator,
                                                     const WellState& well_state,
-                                                    const std::vector<double>& b_perf,
-                                                    const std::vector<double>& rsmax_perf,
-                                                    const std::vector<double>& rvmax_perf,
-                                                    const std::vector<double>& rvwmax_perf,
-                                                    const std::vector<double>& rswmax_perf,
-                                                    const std::vector<double>& surf_dens_perf,
+                                                    const WellConnectionProps& props,
                                                     DeferredLogger& deferred_logger);
 
         void computeWellConnectionPressures(const Simulator& ebosSimulator,

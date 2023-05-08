@@ -1332,12 +1332,7 @@ namespace Opm
     StandardWell<TypeTag>::
     computePropertiesForWellConnectionPressures(const Simulator& ebosSimulator,
                                                 const WellState& well_state,
-                                                std::vector<double>& b_perf,
-                                                std::vector<double>& rsmax_perf,
-                                                std::vector<double>& rvmax_perf,
-                                                std::vector<double>& rvwmax_perf,
-                                                std::vector<double>& rswmax_perf,
-                                                std::vector<double>& surf_dens_perf) const
+                                                WellConnectionProps& props) const
     {
         std::function<Scalar(int,int)> getTemperature =
         [&ebosSimulator](int cell_idx, int phase_idx)
@@ -1371,12 +1366,7 @@ namespace Opm
                                                          getPvtRegionIdx,
                                                          getInvFac,
                                                          getSolventDensity,
-                                                         b_perf,
-                                                         rsmax_perf,
-                                                         rvmax_perf,
-                                                         rvwmax_perf,
-                                                         rswmax_perf,
-                                                         surf_dens_perf);
+                                                         props);
     }
 
 
@@ -1501,12 +1491,7 @@ namespace Opm
     StandardWell<TypeTag>::
     computeWellConnectionDensitesPressures(const Simulator& ebosSimulator,
                                            const WellState& well_state,
-                                           const std::vector<double>& b_perf,
-                                           const std::vector<double>& rsmax_perf,
-                                           const std::vector<double>& rvmax_perf,
-                                           const std::vector<double>& rvwmax_perf,
-                                           const std::vector<double>& rswmax_perf,
-                                           const std::vector<double>& surf_dens_perf,
+                                           const WellConnectionProps& props,
                                            DeferredLogger& deferred_logger)
     {
         std::function<Scalar(int,int)> invB =
@@ -1535,12 +1520,7 @@ namespace Opm
                                              mobility,
                                              invFac,
                                              solventMobility,
-                                             b_perf,
-                                             rsmax_perf,
-                                             rvmax_perf,
-                                             rvwmax_perf,
-                                             rswmax_perf,
-                                             surf_dens_perf,
+                                             props,
                                              deferred_logger);
     }
 
@@ -1558,14 +1538,10 @@ namespace Opm
          // 1. Compute properties required by computePressureDelta().
          //    Note that some of the complexity of this part is due to the function
          //    taking std::vector<double> arguments, and not Eigen objects.
-         std::vector<double> b_perf;
-         std::vector<double> rsmax_perf;
-         std::vector<double> rvmax_perf;
-         std::vector<double> rvwmax_perf;
-         std::vector<double> rswmax_perf;
-         std::vector<double> surf_dens_perf;
-         computePropertiesForWellConnectionPressures(ebosSimulator, well_state, b_perf, rsmax_perf, rvmax_perf, rvwmax_perf, rswmax_perf, surf_dens_perf);
-         computeWellConnectionDensitesPressures(ebosSimulator, well_state, b_perf, rsmax_perf, rvmax_perf, rvwmax_perf, rswmax_perf, surf_dens_perf, deferred_logger);
+         WellConnectionProps props;
+         computePropertiesForWellConnectionPressures(ebosSimulator, well_state, props);
+         computeWellConnectionDensitesPressures(ebosSimulator, well_state,
+                                                props, deferred_logger);
     }
 
 
