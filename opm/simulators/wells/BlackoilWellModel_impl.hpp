@@ -933,6 +933,8 @@ namespace Opm {
 
         const bool well_group_control_changed = updateWellControlsAndNetwork(false, dt, local_deferredLogger);
 
+        // even when there is no wells active, the network nodal pressure still need to be updated through updateWellControlsAndNetwork()
+        // but there is no need to assemble the well equations
         if ( ! wellsActive() ) {
             return;
         }
