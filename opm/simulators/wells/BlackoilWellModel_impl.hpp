@@ -1803,38 +1803,11 @@ namespace Opm {
 
 
     template<typename TypeTag>
-    bool
-    BlackoilWellModel<TypeTag>::
-    needRebalanceNetwork() const
-    {
-        const int reportStepIdx = ebosSimulator_.episodeIndex();
-        const auto& network = schedule()[reportStepIdx].network();
-        if (!network.active()) {
-            return false;
-        }
-
-        bool network_rebalance_necessary = false;
-        for (const auto& well : well_container_) {
-            const auto& events = this->wellState().well(well->indexOfWell()).events;
-            const bool is_partof_network = network.has_node(well->wellEcl().groupName());
-            // TODO: we might find more relevant events to be included here
-            if (is_partof_network && events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE)) {
-                network_rebalance_necessary = true;
-                break;
-            }
-        }
-        network_rebalance_necessary = comm_.max(network_rebalance_necessary);
-
-        return network_rebalance_necessary;
-    }
-
-
-    template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
     prepareTimeStep(DeferredLogger& deferred_logger)
     {
-        const bool network_rebalance_necessary = this->needRebalanceNetwork();
+        const bool network_rebalance_necessary = this->needRebalanceNetwork(ebosSimulator_.episodeIndex());
 
         for (const auto& well : well_container_) {
             auto& events = this->wellState().well(well->indexOfWell()).events;

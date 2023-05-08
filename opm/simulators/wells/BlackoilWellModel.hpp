@@ -372,9 +372,6 @@ namespace Opm {
             // the reservoir should stay static during this solution procedure.
             void balanceNetwork(DeferredLogger& deferred_logger);
 
-            // TODO: funciton can go to BlackoilWellModelGeneric?
-            bool needRebalanceNetwork() const;
-
             // used to better efficiency of calcuation
             mutable BVector scaleAddRes_{};
 

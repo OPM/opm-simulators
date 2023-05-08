@@ -158,6 +158,9 @@ public:
     /// Return true if any well has a THP constraint.
     bool hasTHPConstraints() const;
 
+    /// Whether it is necessary to re-balance network
+    bool needRebalanceNetwork(const int report_step) const;
+
     /// Shut down any single well
     /// Returns true if the well was actually found and shut.
     bool forceShutWellByName(const std::string& wellname,
