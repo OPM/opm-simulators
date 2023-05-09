@@ -90,7 +90,7 @@ CuVector<T>::CuVector(const CuVector<T>& other)
 template <class T>
 CuVector<T>::~CuVector()
 {
-    OPM_CUDA_SAFE_CALL(cudaFree(m_dataOnDevice));
+    OPM_CUDA_WARN_IF_ERROR(cudaFree(m_dataOnDevice));
 }
 
 template <typename T>

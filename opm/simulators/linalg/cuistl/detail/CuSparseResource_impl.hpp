@@ -98,6 +98,6 @@ CuSparseResource<T>::~CuSparseResource()
 {
     // TODO: This should probably not use this macro since it will disguise the
     // proper name of the function being called.
-    OPM_CUSPARSE_SAFE_CALL(m_deleter(m_resource));
+    OPM_CUSPARSE_WARN_IF_ERROR(m_deleter(m_resource));
 }
-} // namespace Opm::cuistl::impl
+} // namespace Opm::cuistl::detail
