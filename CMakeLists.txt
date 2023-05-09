@@ -540,19 +540,24 @@ add_custom_target(extra_test ${CMAKE_CTEST_COMMAND} -C ExtraTests)
 if(CUDA_FOUND)
   target_link_libraries( opmsimulators PUBLIC ${CUDA_cusparse_LIBRARY} )
   target_link_libraries( opmsimulators PUBLIC ${CUDA_cublas_LIBRARY} )
+  set_tests_properties(cusparseSolver PROPERTIES LABELS gpu_cuda)
 endif()
 
 if(OpenCL_FOUND)
   target_link_libraries( opmsimulators PUBLIC ${OpenCL_LIBRARIES} )
+  set_tests_properties(openclSolver solvetransposed3x3 csrToCscOffsetMap
+                       PROPERTIES LABELS gpu_opencl)
 endif()
 
 if(ROCALUTION_FOUND)
   target_include_directories(opmsimulators PUBLIC ${rocalution_INCLUDE_DIR}/rocalution)
+  set_tests_properties(rocalutionSolver PROPERTIES LABELS gpu_rocm)
 endif()
 
 if(rocsparse_FOUND AND rocblas_FOUND)
   target_link_libraries( opmsimulators PUBLIC roc::rocsparse )
   target_link_libraries( opmsimulators PUBLIC roc::rocblas )
+  set_tests_properties(rocsparseSolver PROPERTIES LABELS gpu_rocm)
 endif()
 
 if(VexCL_FOUND)

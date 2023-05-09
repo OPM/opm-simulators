@@ -198,6 +198,6 @@ BOOST_AUTO_TEST_CASE(TestCusparseSolver)
         // Test with 3x3 block solvers.
         test3(prm);
     } catch(const DeviceInitException& ) {
-        BOOST_WARN_MESSAGE(true, "Problem with initializing a device. skipping test");
+        BOOST_ERROR("Problem with initializing a device.");
     }
 }
