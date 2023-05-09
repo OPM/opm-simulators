@@ -551,6 +551,7 @@ if(CUDA_FOUND)
                        cusparse_handle
                        cuvector
                        cusparsematrix
+                       cuseqilu0
                        PROPERTIES LABELS gpu_cuda)
 endif()
 
