@@ -25,6 +25,7 @@
 #include <opm/material/densead/Evaluation.hpp>
 
 #include <opm/simulators/wells/MultisegmentWellEquations.hpp>
+#include <opm/input/eclipse/Schedule/SummaryState.hpp>
 
 #include <array>
 #include <vector>
@@ -102,6 +103,7 @@ public:
                          const double rho,
                          const bool stop_or_zero_rate_target,
                          WellState& well_state,
+                         const SummaryState& summary_state,
                          DeferredLogger& deferred_logger) const;
 
     //! \brief Returns scaled volume fraction for a component in a segment.

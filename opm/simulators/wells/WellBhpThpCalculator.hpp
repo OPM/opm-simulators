@@ -58,6 +58,7 @@ public:
                                const double bhp,
                                const double rho,
                                const std::optional<double>& alq,
+                               const double thp_limit,
                                DeferredLogger& deferred_logger) const;
 
     //! \brief Compute BHP from THP limit for a producer.
@@ -86,6 +87,7 @@ public:
                    const std::function<double()>& alq_value,
                    const std::array<unsigned,3>& active,
                    WellState& well_state,
+                   const SummaryState& summary_state,
                    DeferredLogger& deferred_logger) const;
 
   template<class EvalWell>

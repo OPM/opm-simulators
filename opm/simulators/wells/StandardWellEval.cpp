@@ -73,6 +73,7 @@ void
 StandardWellEval<FluidSystem,Indices,Scalar>::
 updateWellStateFromPrimaryVariables(const bool stop_or_zero_rate_target,
                                     WellState& well_state,
+                                    const SummaryState& summary_state,
                                     DeferredLogger& deferred_logger) const
 {
     this->primary_variables_.copyToWellState(well_state, deferred_logger);
@@ -84,7 +85,7 @@ updateWellStateFromPrimaryVariables(const bool stop_or_zero_rate_target,
                       {FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx),
                        FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx),
                        FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)},
-                      well_state, deferred_logger);
+                      well_state, summary_state, deferred_logger);
 }
 
 template<class FluidSystem, class Indices, class Scalar>
