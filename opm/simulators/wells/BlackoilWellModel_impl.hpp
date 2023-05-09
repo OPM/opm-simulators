@@ -255,6 +255,7 @@ namespace Opm {
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         {
             // test wells
+            wellTestState().update_close_on_next_step_wells(simulationTime);
             wellTesting(reportStepIdx, simulationTime, local_deferredLogger);
 
             // create the well container
