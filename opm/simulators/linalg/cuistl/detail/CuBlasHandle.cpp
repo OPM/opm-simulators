@@ -30,7 +30,7 @@ CuBlasHandle::CuBlasHandle()
 
 CuBlasHandle::~CuBlasHandle()
 {
-    OPM_CUBLAS_SAFE_CALL(cublasDestroy(m_handle));
+    OPM_CUBLAS_WARN_IF_ERROR(cublasDestroy(m_handle));
 }
 
 cublasHandle_t
