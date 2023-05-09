@@ -63,7 +63,7 @@ public:
                               const int pvt_region_index,
                               const int seg_idx) const;
 
-    EvalWell getFrictionPressureLoss(const int seg) const;
+    EvalWell getFrictionPressureLoss(const int seg, const bool return_upwind_derivatives) const;
 
     // pressure drop for Spiral ICD segment (WSEGSICD)
     EvalWell pressureDropSpiralICD(const int seg) const;

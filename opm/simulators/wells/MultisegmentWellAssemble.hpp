@@ -87,6 +87,17 @@ public:
                               const EvalWell& accelerationPressureLoss,
                               Equations& eqns) const;
 
+
+    void assembleHydroPressureLoss(const int seg, 
+                                   const int seg_upwind, 
+                                   const EvalWell& hydro_pressure_drop, 
+                                   Equations& eqs1) const;
+
+    void assemblePressureEqExtraDerivatives(const int seg, 
+                                            const int seg_upwind, 
+                                            const EvalWell& extra_derivatives, 
+                                            Equations& eqns1) const;
+
     //! \brief Assemble pressure terms.
     void assemblePressureEq(const int seg,
                             const int seg_upwind,
