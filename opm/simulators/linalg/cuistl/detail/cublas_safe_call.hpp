@@ -39,7 +39,7 @@ namespace Opm::cuistl::detail
 namespace
 {
     /**
-     * @brief getCublasErrorMessage Converts an error code returned from a cublas function a human readable string.
+     * @brief getCublasErrorCodeToString Converts an error code returned from a cublas function a human readable string.
      * @param code an error code from a cublas routine
      * @return a human readable string.
      */
